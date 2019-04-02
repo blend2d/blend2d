@@ -755,40 +755,40 @@ struct BLArc {
 //! \name Global Specializations
 //! \{
 
-template<> constexpr BLPoint blAbs(const BLPoint& a) noexcept { return BLPoint(blAbs(a.x), blAbs(a.y)); }
-template<> constexpr BLPoint blMin(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(blMin(a.x, b.x), blMin(a.y, b.y)); }
-template<> constexpr BLPoint blMax(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(blMax(a.x, b.x), blMax(a.y, b.y)); }
+template<> BL_INLINE constexpr BLPoint blAbs(const BLPoint& a) noexcept { return BLPoint(blAbs(a.x), blAbs(a.y)); }
+template<> BL_INLINE constexpr BLPoint blMin(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(blMin(a.x, b.x), blMin(a.y, b.y)); }
+template<> BL_INLINE constexpr BLPoint blMax(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(blMax(a.x, b.x), blMax(a.y, b.y)); }
 
-template<> constexpr BLSize blAbs(const BLSize& a) noexcept { return BLSize(blAbs(a.w), blAbs(a.h)); }
-template<> constexpr BLSize blMin(const BLSize& a, const BLSize& b) noexcept { return BLSize(blMin(a.w, b.w), blMin(a.h, b.h)); }
-template<> constexpr BLSize blMax(const BLSize& a, const BLSize& b) noexcept { return BLSize(blMax(a.w, b.w), blMax(a.h, b.h)); }
+template<> BL_INLINE constexpr BLSize blAbs(const BLSize& a) noexcept { return BLSize(blAbs(a.w), blAbs(a.h)); }
+template<> BL_INLINE constexpr BLSize blMin(const BLSize& a, const BLSize& b) noexcept { return BLSize(blMin(a.w, b.w), blMin(a.h, b.h)); }
+template<> BL_INLINE constexpr BLSize blMax(const BLSize& a, const BLSize& b) noexcept { return BLSize(blMax(a.w, b.w), blMax(a.h, b.h)); }
 
-static constexpr BLPoint blMin(const BLPoint& a, double b) noexcept { return BLPoint(blMin(a.x, b), blMin(a.y, b)); }
-static constexpr BLPoint blMin(double a, const BLPoint& b) noexcept { return BLPoint(blMin(a, b.x), blMin(a, b.y)); }
+static BL_INLINE constexpr BLPoint blMin(const BLPoint& a, double b) noexcept { return BLPoint(blMin(a.x, b), blMin(a.y, b)); }
+static BL_INLINE constexpr BLPoint blMin(double a, const BLPoint& b) noexcept { return BLPoint(blMin(a, b.x), blMin(a, b.y)); }
 
-static constexpr BLPoint blMax(const BLPoint& a, double b) noexcept { return BLPoint(blMax(a.x, b), blMax(a.y, b)); }
-static constexpr BLPoint blMax(double a, const BLPoint& b) noexcept { return BLPoint(blMax(a, b.x), blMax(a, b.y)); }
+static BL_INLINE constexpr BLPoint blMax(const BLPoint& a, double b) noexcept { return BLPoint(blMax(a.x, b), blMax(a.y, b)); }
+static BL_INLINE constexpr BLPoint blMax(double a, const BLPoint& b) noexcept { return BLPoint(blMax(a, b.x), blMax(a, b.y)); }
 
-static constexpr BLPoint blClamp(const BLPoint& a, double b, double c) noexcept { return blMin(c, blMax(b, a)); }
+static BL_INLINE constexpr BLPoint blClamp(const BLPoint& a, double b, double c) noexcept { return blMin(c, blMax(b, a)); }
 
 //! \}
 
 //! \name Overloaded Operators
 //! \{
 
-static constexpr BLPointI operator-(const BLPointI& self) noexcept { return BLPointI(-self.x, -self.y); }
+static BL_INLINE constexpr BLPointI operator-(const BLPointI& self) noexcept { return BLPointI(-self.x, -self.y); }
 
-static constexpr BLPointI operator+(const BLPointI& a, int b) noexcept { return BLPointI(a.x + b, a.y + b); }
-static constexpr BLPointI operator-(const BLPointI& a, int b) noexcept { return BLPointI(a.x - b, a.y - b); }
-static constexpr BLPointI operator*(const BLPointI& a, int b) noexcept { return BLPointI(a.x * b, a.y * b); }
+static BL_INLINE constexpr BLPointI operator+(const BLPointI& a, int b) noexcept { return BLPointI(a.x + b, a.y + b); }
+static BL_INLINE constexpr BLPointI operator-(const BLPointI& a, int b) noexcept { return BLPointI(a.x - b, a.y - b); }
+static BL_INLINE constexpr BLPointI operator*(const BLPointI& a, int b) noexcept { return BLPointI(a.x * b, a.y * b); }
 
-static constexpr BLPointI operator+(int a, const BLPointI& b) noexcept { return BLPointI(a + b.x, a + b.y); }
-static constexpr BLPointI operator-(int a, const BLPointI& b) noexcept { return BLPointI(a - b.x, a - b.y); }
-static constexpr BLPointI operator*(int a, const BLPointI& b) noexcept { return BLPointI(a * b.x, a * b.y); }
+static BL_INLINE constexpr BLPointI operator+(int a, const BLPointI& b) noexcept { return BLPointI(a + b.x, a + b.y); }
+static BL_INLINE constexpr BLPointI operator-(int a, const BLPointI& b) noexcept { return BLPointI(a - b.x, a - b.y); }
+static BL_INLINE constexpr BLPointI operator*(int a, const BLPointI& b) noexcept { return BLPointI(a * b.x, a * b.y); }
 
-static constexpr BLPointI operator+(const BLPointI& a, const BLPointI& b) noexcept { return BLPointI(a.x + b.x, a.y + b.y); }
-static constexpr BLPointI operator-(const BLPointI& a, const BLPointI& b) noexcept { return BLPointI(a.x - b.x, a.y - b.y); }
-static constexpr BLPointI operator*(const BLPointI& a, const BLPointI& b) noexcept { return BLPointI(a.x * b.x, a.y * b.y); }
+static BL_INLINE constexpr BLPointI operator+(const BLPointI& a, const BLPointI& b) noexcept { return BLPointI(a.x + b.x, a.y + b.y); }
+static BL_INLINE constexpr BLPointI operator-(const BLPointI& a, const BLPointI& b) noexcept { return BLPointI(a.x - b.x, a.y - b.y); }
+static BL_INLINE constexpr BLPointI operator*(const BLPointI& a, const BLPointI& b) noexcept { return BLPointI(a.x * b.x, a.y * b.y); }
 
 static BL_INLINE BLPointI& operator+=(BLPointI& a, int b) noexcept { a.reset(a.x += b, a.y + b); return a; }
 static BL_INLINE BLPointI& operator-=(BLPointI& a, int b) noexcept { a.reset(a.x -= b, a.y - b); return a; }
@@ -800,22 +800,22 @@ static BL_INLINE BLPointI& operator-=(BLPointI& a, const BLPointI& b) noexcept {
 static BL_INLINE BLPointI& operator*=(BLPointI& a, const BLPointI& b) noexcept { a.reset(a.x *= b.x, a.y * b.y); return a; }
 static BL_INLINE BLPointI& operator/=(BLPointI& a, const BLPointI& b) noexcept { a.reset(a.x /= b.x, a.y / b.y); return a; }
 
-static constexpr BLPoint operator-(const BLPoint& a) noexcept { return BLPoint(-a.x, -a.y); }
+static BL_INLINE constexpr BLPoint operator-(const BLPoint& a) noexcept { return BLPoint(-a.x, -a.y); }
 
-static constexpr BLPoint operator+(const BLPoint& a, double b) noexcept { return BLPoint(a.x + b, a.y + b); }
-static constexpr BLPoint operator-(const BLPoint& a, double b) noexcept { return BLPoint(a.x - b, a.y - b); }
-static constexpr BLPoint operator*(const BLPoint& a, double b) noexcept { return BLPoint(a.x * b, a.y * b); }
-static constexpr BLPoint operator/(const BLPoint& a, double b) noexcept { return BLPoint(a.x / b, a.y / b); }
+static BL_INLINE constexpr BLPoint operator+(const BLPoint& a, double b) noexcept { return BLPoint(a.x + b, a.y + b); }
+static BL_INLINE constexpr BLPoint operator-(const BLPoint& a, double b) noexcept { return BLPoint(a.x - b, a.y - b); }
+static BL_INLINE constexpr BLPoint operator*(const BLPoint& a, double b) noexcept { return BLPoint(a.x * b, a.y * b); }
+static BL_INLINE constexpr BLPoint operator/(const BLPoint& a, double b) noexcept { return BLPoint(a.x / b, a.y / b); }
 
-static constexpr BLPoint operator+(double a, const BLPoint& b) noexcept { return BLPoint(a + b.x, a + b.y); }
-static constexpr BLPoint operator-(double a, const BLPoint& b) noexcept { return BLPoint(a - b.x, a - b.y); }
-static constexpr BLPoint operator*(double a, const BLPoint& b) noexcept { return BLPoint(a * b.x, a * b.y); }
-static constexpr BLPoint operator/(double a, const BLPoint& b) noexcept { return BLPoint(a / b.x, a / b.y); }
+static BL_INLINE constexpr BLPoint operator+(double a, const BLPoint& b) noexcept { return BLPoint(a + b.x, a + b.y); }
+static BL_INLINE constexpr BLPoint operator-(double a, const BLPoint& b) noexcept { return BLPoint(a - b.x, a - b.y); }
+static BL_INLINE constexpr BLPoint operator*(double a, const BLPoint& b) noexcept { return BLPoint(a * b.x, a * b.y); }
+static BL_INLINE constexpr BLPoint operator/(double a, const BLPoint& b) noexcept { return BLPoint(a / b.x, a / b.y); }
 
-static constexpr BLPoint operator+(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(a.x + b.x, a.y + b.y); }
-static constexpr BLPoint operator-(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(a.x - b.x, a.y - b.y); }
-static constexpr BLPoint operator*(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(a.x * b.x, a.y * b.y); }
-static constexpr BLPoint operator/(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(a.x / b.x, a.y / b.y); }
+static BL_INLINE constexpr BLPoint operator+(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(a.x + b.x, a.y + b.y); }
+static BL_INLINE constexpr BLPoint operator-(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(a.x - b.x, a.y - b.y); }
+static BL_INLINE constexpr BLPoint operator*(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(a.x * b.x, a.y * b.y); }
+static BL_INLINE constexpr BLPoint operator/(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(a.x / b.x, a.y / b.y); }
 
 static BL_INLINE BLPoint& operator+=(BLPoint& a, double b) noexcept { a.reset(a.x + b, a.y + b); return a; }
 static BL_INLINE BLPoint& operator-=(BLPoint& a, double b) noexcept { a.reset(a.x - b, a.y - b); return a; }

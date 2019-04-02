@@ -246,6 +246,12 @@ BLResult blRuntimeFreeImpl(void* impl_, size_t implSize, uint32_t memPoolData) n
 // ============================================================================
 
 #ifdef _WIN32
+
+// Fix possible problems with MinGW not defining these.
+#ifndef ERROR_DISK_QUOTA_EXCEEDED
+  #define ERROR_DISK_QUOTA_EXCEEDED 0x0000050F
+#endif
+
 BLResult blResultFromWinError(uint32_t e) noexcept {
   switch (e) {
     case ERROR_SUCCESS                : return BL_SUCCESS;                       // 0x00000000

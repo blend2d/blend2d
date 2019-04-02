@@ -370,8 +370,6 @@ public:
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult append(const T& item) noexcept { }
-
   template<typename... Args>
   BL_INLINE BLResult append(Args&&... args) noexcept {
     if (sizeof...(args) == 1)

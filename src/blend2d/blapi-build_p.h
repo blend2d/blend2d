@@ -61,6 +61,10 @@
   #endif
 #endif
 
+#if defined(_WIN32) && !defined(_WIN32_WINNT)
+  #define _WIN32_WINNT 0x0601
+#endif
+
 // The FileSystem API works fully with 64-bit file sizes and offsets,
 // however, this feature must be enabled before including any header.
 #if !defined(_WIN32) && !defined(_LARGEFILE64_SOURCE)

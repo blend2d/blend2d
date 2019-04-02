@@ -53,6 +53,7 @@
 
   // <windows.h> is required to build Blend2D on Windows platform.
   #include <windows.h>
+  #include <synchapi.h>
 #else
   // <pthread.h> is required to build Blend2D on POSIX compliant platforms.
   #include <pthread.h>
@@ -229,7 +230,7 @@
 //! Decorates a function that is used across more than one source file, but
 //! should never be exported. Expands to a compiler-specific code that affects
 //! the visibility.
-#if !defined(BL_BUILD_STATIC) && defined(__GNUC__)
+#if defined(__GNUC__) && !defined(__MINGW32__)
   #define BL_HIDDEN __attribute__((__visibility__("hidden")))
 #else
   #define BL_HIDDEN
