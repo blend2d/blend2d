@@ -80,9 +80,12 @@ enum BLPipeFillType : uint32_t {
 };
 
 //! Fill rule mask used during composition of mask produced by analytic-rasterizer.
+//!
+//! See blfillpart.cpp how this is used. What you see in these values is
+//! mask shifted left by one bit as we expect such values in the pipeline.
 enum BLPipeFillRuleMask : uint32_t {
-  BL_PIPE_FILL_RULE_MASK_NON_ZERO = 0xFFFFFFFFu,
-  BL_PIPE_FILL_RULE_MASK_EVEN_ODD = 0x000001FFu
+  BL_PIPE_FILL_RULE_MASK_NON_ZERO = uint32_t(0xFFFFFFFFu << 1),
+  BL_PIPE_FILL_RULE_MASK_EVEN_ODD = uint32_t(0x000001FFu << 1)
 };
 
 //! Pipeline fetch-type.

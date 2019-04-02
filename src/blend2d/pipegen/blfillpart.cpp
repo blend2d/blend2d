@@ -899,19 +899,23 @@ void FillAnalyticPart::accumulateCells(const x86::Vec& acc, const x86::Vec& val)
 }
 
 void FillAnalyticPart::calcMasksFromCells(const x86::Vec& dst, const x86::Vec& src, const x86::Vec& fillRuleMask, const x86::Vec& globalAlpha, bool unpack) noexcept {
-  // TODO {AFTER BETA}: We should use just `BL_PIPE_A8_SHIFT` and remove that
-  //      shift by `1` below. The math seems okay, I haven't found an issue
-  //      while testing the idea.
-  pc->vsrai32(dst, src, BL_PIPE_A8_SHIFT + 1);
+  // This implementation is a bit tricky. In the original AGG and FreeType
+  // `A8_SHIFT + 1` is used. However, we don't do that and mask out the last
+  // bit through `fillRuleMask`. The reason we do this is that our `globalAlpha`
+  // is already preshifted by `7` bits left and we only need to shift the final
+  // mask by one bit left after it's been calculated. So instead of shifting it
+  // left later we clear the LSB bit now and that's it, we saved one instruction.
+  pc->vsrai32(dst, src, BL_PIPE_A8_SHIFT);
   pc->vand(dst, dst, fillRuleMask);
-  pc->vsubi32(dst, dst, pc->constAsMem(blCommonTable.i128_0000010000000100));
+
+  // We have to make sure that that cleared LSB bit stays zero. Since we only
+  // use SUB with even value and abs we are fine. However, that packing would not
+  // be safe if there was no "VMINI16", which makes sure we are always safe.
+  pc->vsubi32(dst, dst, pc->constAsMem(blCommonTable.i128_0000020000000200));
   pc->vabsi32(dst, dst);
 
   pc->vpacki32i16(dst, dst, dst);
-  pc->vmini16(dst, dst, pc->constAsMem(blCommonTable.i128_0100010001000100));
-
-  // Shift `dst` left so we can use `pmulhuw` (globalAlpha is already shifted by 7).
-  pc->vslli16(dst, dst, 1);
+  pc->vmini16(dst, dst, pc->constAsMem(blCommonTable.i128_0200020002000200));
 
   // Now we have a vector of 16-bit masks:
   //
