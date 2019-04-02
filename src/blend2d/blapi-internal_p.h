@@ -221,6 +221,12 @@
   #define BL_CC_HAS_ATTRIBUTE(x) 0
 #endif
 
+#if __cplusplus >= 201703L
+  #define BL_FALLTHROUGH [[fallthrough]];
+#else
+  #define BL_FALLTHROUGH /* fallthrough */
+#endif
+
 // ============================================================================
 // [Internal Macros]
 // ============================================================================

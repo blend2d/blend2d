@@ -377,7 +377,7 @@
 //! Defined to `noexcept` in C++17 mode an nothing in C mode. The reason this
 //! macro is provided is because Blend2D C API doesn't use exceptions and is
 //! marked as such.
-#if defined(__cplusplus) && _cplusplus >= 201703L
+#if defined(__cplusplus) && __cplusplus >= 201703L
   // Function typedefs are `noexcept`, however, it's not available until C++17.
   #define BL_NOEXCEPT noexcept
 #else

@@ -1694,7 +1694,7 @@ BLResult blRegionCombine(BLRegionCore* self, const BLRegionCore* a, const BLRegi
         break;
 
       op = BL_BOOLEAN_OP_OR;
-      [[fallthrough]];
+      BL_FALLTHROUGH
 
     case BL_BOOLEAN_OP_OR:
       // Check whether to use APPEND instead of OR. This is a special case, but

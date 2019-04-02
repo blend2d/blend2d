@@ -455,7 +455,6 @@ BL_INLINE void vstorei128u(void* p, const I128& x) noexcept { _mm_storeu_si128(s
 
 BL_INLINE void vstoreli64(void* p, const I128& x) noexcept { _mm_storel_epi64(static_cast<I128*>(p), x); }
 BL_INLINE void vstorehi64(void* p, const I128& x) noexcept { _mm_storeh_pd(static_cast<double*>(p), vcast<D128>(x)); }
-#endif
 
 BL_INLINE bool vhasmaski8(const I128& x, int bits0_15) noexcept { return _mm_movemask_epi8(vcast<I128>(x)) == bits0_15; }
 BL_INLINE bool vhasmaski8(const F128& x, int bits0_15) noexcept { return _mm_movemask_epi8(vcast<I128>(x)) == bits0_15; }
@@ -1244,6 +1243,8 @@ BL_INLINE void vstored256a(void* p, const D256& x) noexcept { _mm256_store_pd(st
 BL_INLINE void vstored256u(void* p, const D256& x) noexcept { _mm256_storeu_pd(static_cast<double*>(p), x); }
 
 BL_INLINE bool vhasmaskd64(const D256& x, int bits0_3) noexcept { return _mm256_movemask_pd(vcast<D256>(x)) == bits0_3; }
+#endif
+
 #endif
 
 } // {anonymous}

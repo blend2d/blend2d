@@ -1218,7 +1218,7 @@ RestartClipLoop:
 
           case BL_CLIP_FLAG_X0Y0:
             p.x = _clipBoxD.x0;
-            [[fallthrough]];
+            BL_FALLTHROUGH;
 
           case BL_CLIP_FLAG_X1Y0:
             p.y = a.y + (p.x - a.x) * d.y / d.x;
@@ -1226,7 +1226,7 @@ RestartClipLoop:
 
             if (p.y >= _clipBoxD.y0)
               break;
-            [[fallthrough]];
+            BL_FALLTHROUGH;
 
           case BL_CLIP_FLAG_Y0:
             p.y = _clipBoxD.y0;
@@ -1237,7 +1237,7 @@ RestartClipLoop:
 
           case BL_CLIP_FLAG_X0Y1:
             p.x = _clipBoxD.x0;
-            [[fallthrough]];
+            BL_FALLTHROUGH;
 
           case BL_CLIP_FLAG_X1Y1:
             p.y = a.y + (p.x - a.x) * d.y / d.x;
@@ -1245,7 +1245,7 @@ RestartClipLoop:
 
             if (p.y <= _clipBoxD.y1)
               break;
-            [[fallthrough]];
+            BL_FALLTHROUGH;
 
           case BL_CLIP_FLAG_Y1:
             p.y = _clipBoxD.y1;
@@ -1256,7 +1256,7 @@ RestartClipLoop:
 
           case BL_CLIP_FLAG_X0:
             p.x = _clipBoxD.x0;
-            [[fallthrough]];
+            BL_FALLTHROUGH;
 
           case BL_CLIP_FLAG_X1:
             p.y = a.y + (p.x - a.x) * d.y / d.x;
@@ -1318,13 +1318,13 @@ RestartClipLoop:
         switch (bFlags) {
           case BL_CLIP_FLAG_X0Y0:
             q.x = _clipBoxD.x0;
-            [[fallthrough]];
+            BL_FALLTHROUGH;
 
           case BL_CLIP_FLAG_X1Y0:
             q.y = a.y + (q.x - a.x) * d.y / d.x;
             if (q.y >= _clipBoxD.y0)
               break;
-            [[fallthrough]];
+            BL_FALLTHROUGH;
 
           case BL_CLIP_FLAG_Y0:
             q.y = _clipBoxD.y0;
@@ -1333,13 +1333,13 @@ RestartClipLoop:
 
           case BL_CLIP_FLAG_X0Y1:
             q.x = _clipBoxD.x0;
-            [[fallthrough]];
+            BL_FALLTHROUGH;
 
           case BL_CLIP_FLAG_X1Y1:
             q.y = a.y + (q.x - a.x) * d.y / d.x;
             if (q.y <= _clipBoxD.y1)
               break;
-            [[fallthrough]];
+            BL_FALLTHROUGH;
 
           case BL_CLIP_FLAG_Y1:
             q.y = _clipBoxD.y1;
@@ -1348,7 +1348,7 @@ RestartClipLoop:
 
           case BL_CLIP_FLAG_X0:
             q.x = _clipBoxD.x0;
-            [[fallthrough]];
+            BL_FALLTHROUGH;
 
           case BL_CLIP_FLAG_X1:
             q.y = a.y + (q.x - a.x) * d.y / d.x;

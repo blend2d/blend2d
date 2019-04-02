@@ -486,6 +486,7 @@ namespace BLInternal {
   template<typename T> BL_INLINE T mulOverflowImpl(const T& x, const T& y, BLOverflowFlag* of) noexcept { return mulOverflowFallback(x, y, of); }
 
   #if defined(__GNUC__) && !defined(BL_BUILD_NO_INTRINSICS)
+  #if defined(__clang__) || __GNUC__ >= 5
   #define BL_ARITH_OVERFLOW_SPECIALIZE(FUNC, T, RESULT_T, BUILTIN)            \
     template<>                                                                \
     BL_INLINE T FUNC(const T& x, const T& y, BLOverflowFlag* of) noexcept {   \
@@ -506,6 +507,7 @@ namespace BLInternal {
   BL_ARITH_OVERFLOW_SPECIALIZE(mulOverflowImpl, int64_t , long long         , __builtin_smulll_overflow)
   BL_ARITH_OVERFLOW_SPECIALIZE(mulOverflowImpl, uint64_t, unsigned long long, __builtin_umulll_overflow)
   #undef BL_ARITH_OVERFLOW_SPECIALIZE
+  #endif
   #endif
 
   // There is a bug in MSVC that makes these specializations unusable, maybe in the future...

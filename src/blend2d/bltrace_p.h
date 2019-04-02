@@ -25,7 +25,7 @@ public:
   BL_INLINE BLDebugTrace(const BLDebugTrace& other) noexcept
     : indentation(other.indentation) {}
 
-  constexpr bool enabled() const noexcept { return true; };
+  BL_INLINE bool enabled() const noexcept { return true; };
   BL_INLINE void indent() noexcept { indentation++; }
   BL_INLINE void deindent() noexcept { indentation--; }
 
@@ -53,7 +53,7 @@ public:
 //! Dummy trace - no tracing, no runtime overhead.
 class BLDummyTrace {
 public:
-  constexpr bool enabled() const noexcept { return false; };
+  BL_INLINE bool enabled() const noexcept { return false; };
   BL_INLINE void indent() noexcept {}
   BL_INLINE void deindent() noexcept {}
 
