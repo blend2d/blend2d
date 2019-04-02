@@ -19,7 +19,7 @@
 // ============================================================================
 
 //! Fixed array used by handlers, initial content should be zero initialized
-//! by the linker as it's used only in a statically allocated `BLContextRuntime`.
+//! by the linker as it's used only in a statically allocated `BLRuntimeContext`.
 template<typename Func, size_t N>
 struct BLFixedFuncArray {
   size_t size;

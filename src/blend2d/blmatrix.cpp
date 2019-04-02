@@ -578,7 +578,9 @@ UNIT(blend2d_matrix) {
                           blAbs(a.m11 - b.m11),
                           blAbs(a.m20 - b.m20),
                           blAbs(a.m21 - b.m21));
-      return diff < blEpsilon<double>();
+      // If Blend2D is compiled with FMA enabled there could be a difference
+      // greater than our blEpsilon<double>, so use a more relaxed value here.
+      return diff < 1e-8;
     };
 
     BLMatrix2D m, n;
@@ -634,14 +636,14 @@ UNIT(blend2d_matrix) {
 
           if (!compare(m, n)) {
             INFO("Matrices don't match [%s x %s]\n", testMatrixName(aType), testMatrixName(bType));
-            INFO("    [% 3.8f | % 3.8f]      [% 3.8f | % 3.8f]\n", a.m00, a.m01, b.m00, b.m01);
-            INFO("  A [% 3.8f | % 3.8f]    B [% 3.8f | % 3.8f]\n", a.m10, a.m11, b.m10, b.m11);
-            INFO("    [% 3.8f | % 3.8f]      [% 3.8f | % 3.8f]\n", a.m20, a.m21, b.m20, b.m21);
+            INFO("    [% 3.14f | % 3.14f]      [% 3.14f | % 3.14f]\n", a.m00, a.m01, b.m00, b.m01);
+            INFO("  A [% 3.14f | % 3.14f]    B [% 3.14f | % 3.14f]\n", a.m10, a.m11, b.m10, b.m11);
+            INFO("    [% 3.14f | % 3.14f]      [% 3.14f | % 3.14f]\n", a.m20, a.m21, b.m20, b.m21);
             INFO("\n");
             INFO("Operation: %s\n", post ? "M = A * B" : "M = B * A");
-            INFO("    [% 3.8f | % 3.8f]      [% 3.8f | % 3.8f]\n", m.m00, m.m01, n.m00, n.m01);
-            INFO("  M [% 3.8f | % 3.8f] != N [% 3.8f | % 3.8f]\n", m.m10, m.m11, n.m10, n.m11);
-            INFO("    [% 3.8f | % 3.8f]      [% 3.8f | % 3.8f]\n", m.m20, m.m21, n.m20, n.m21);
+            INFO("    [% 3.14f | % 3.14f]      [% 3.14f | % 3.14f]\n", m.m00, m.m01, n.m00, n.m01);
+            INFO("  M [% 3.14f | % 3.14f] != N [% 3.14f | % 3.14f]\n", m.m10, m.m11, n.m10, n.m11);
+            INFO("    [% 3.14f | % 3.14f]      [% 3.14f | % 3.14f]\n", m.m20, m.m21, n.m20, n.m21);
             EXPECT(false);
           }
         }
