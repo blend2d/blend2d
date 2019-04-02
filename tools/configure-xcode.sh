@@ -1,0 +1,14 @@
+#!/bin/sh
+
+CURRENT_DIR=`pwd`
+BUILD_DIR="build_xcode"
+BUILD_OPTIONS="-DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBLEND2D_BUILD_TEST=1"
+
+if [ -n "${ASMJIT_DIR}" ]; then
+  BUILD_OPTIONS="${BUILD_OPTIONS} -DASMJIT_DIR=\"${ASMJIT_DIR}\""
+fi
+
+mkdir -p ../${BUILD_DIR}
+cd ../${BUILD_DIR}
+eval cmake .. -G"Xcode" ${BUILD_OPTIONS}
+cd ${CURRENT_DIR}
