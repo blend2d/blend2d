@@ -122,18 +122,17 @@ struct BLCompOpSimplifyInfo {
   uint16_t srcFormat : 4;
 };
 
-enum : uint32_t {
-  BL_COMP_OP_SIMPLIFY_INFO_SIZE = BL_FORMAT_COUNT *
-                                  BL_COMP_OP_INTERNAL_COUNT *
-                                  BL_FORMAT_RESERVED_COUNT
-};
+// Initially we have used a single table, however, some older compilers would
+// reach template instantiation depth limit (as the table is not small), so the
+// implementation was changed to this instead to make sure this won't happen.
+enum : uint32_t { BL_COMP_OP_SIMPLIFY_RECORD_SIZE = BL_COMP_OP_INTERNAL_COUNT * BL_FORMAT_RESERVED_COUNT };
+typedef BLLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE> BLCompOpSimplifyInfoRecordSet;
 
-//! A lookup table that provides BLCompOpSimplifyInfo indexed as (DST_FMT x COMP_OP x SRC_FMT).
-BL_HIDDEN extern const BLLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_INFO_SIZE> blCompOpSimplifyInfoArray;
+struct BLCompOpSimplifyInfoTable { BLCompOpSimplifyInfoRecordSet data[BL_FORMAT_COUNT]; };
+BL_HIDDEN extern const BLCompOpSimplifyInfoTable blCompOpSimplifyInfoTable;
 
 static BL_INLINE const BLCompOpSimplifyInfo* blCompOpSimplifyInfoArrayOf(uint32_t compOp, uint32_t dstFormat) noexcept {
-  uint32_t index = (dstFormat * BL_COMP_OP_INTERNAL_COUNT + compOp) * BL_FORMAT_RESERVED_COUNT;
-  return &blCompOpSimplifyInfoArray[index];
+  return &blCompOpSimplifyInfoTable.data[dstFormat][compOp * BL_FORMAT_RESERVED_COUNT];
 }
 
 static BL_INLINE const BLCompOpSimplifyInfo& blCompOpSimplifyInfo(uint32_t compOp, uint32_t dstFormat, uint32_t srcFormat) noexcept {

@@ -64,7 +64,7 @@ public:
 };
 
 UNIT(blend2d_zone_tree) {
-  constexpr uint32_t kCount = 10000;
+  constexpr uint32_t kCount = 2000;
 
   BLZoneAllocator zone(4096);
   BLZoneTree<MyTreeNode> rbTree;

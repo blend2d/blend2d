@@ -11,21 +11,22 @@ dist: xenial
 
 matrix:
   include:
-    - name: "Linux GCC 4.8 [32-bit] [DBG]"
-      os: linux
-      addons:
-        apt:
-          sources: [ubuntu-toolchain-r-test]
-          packages: [g++-4.8, g++-4.8-multilib, "linux-libc-dev:i386"]
-      env: BUILD_MATRIX="BUILD_TYPE=Debug && CC=gcc-4.8 && CXX=g++-4.8" CXXFLAGS=-m32 LDFLAGS=-m32
+    # Temporarily disabled support for GCC 4.8 as it misses some AVX2 intrinsics that we use
+    #- name: "Linux GCC 4.8 [32-bit] [DBG]"
+    #  os: linux
+    #  addons:
+    #    apt:
+    #      sources: [ubuntu-toolchain-r-test]
+    #      packages: [g++-4.8, g++-4.8-multilib, "linux-libc-dev:i386"]
+    #  env: BUILD_MATRIX="BUILD_TYPE=Debug && CC=gcc-4.8 && CXX=g++-4.8" CXXFLAGS=-m32 LDFLAGS=-m32
 
-    - name: "Linux GCC 4.8 [64-bit] [DBG]"
-      os: linux
-      addons:
-        apt:
-          sources: [ubuntu-toolchain-r-test]
-          packages: [g++-4.8]
-      env: BUILD_MATRIX="BUILD_TYPE=Debug && CC=gcc-4.8 && CXX=g++-4.8"
+    #- name: "Linux GCC 4.8 [64-bit] [DBG]"
+    #  os: linux
+    #  addons:
+    #    apt:
+    #      sources: [ubuntu-toolchain-r-test]
+    #      packages: [g++-4.8]
+    #  env: BUILD_MATRIX="BUILD_TYPE=Debug && CC=gcc-4.8 && CXX=g++-4.8"
 
     - name: "Linux GCC 4.9 [32-bit] [DBG]"
       os: linux
@@ -198,7 +199,7 @@ script:
   - cd build
   - |
     if [[ "$BUILD_TOOLCHAIN" =~ ^Visual\ Studio ]]; then
-      cmake --build . --config ${BUILD_TYPE} -- -nologo -v:quiet
+      cmake --build . --config ${BUILD_TYPE} -- -nologo -v:minimal
       cd ${BUILD_TYPE}
     else
       cmake --build .

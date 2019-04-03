@@ -81,28 +81,17 @@ namespace SIMD {
 // [BLSIMD - Types]
 // ============================================================================
 
-#if BL_TARGET_SIMD_I >= 128
+#if defined(BL_TARGET_OPT_SSE2)
 typedef __m128i I128;
-#endif
-
-#if BL_TARGET_SIMD_F >= 128
-typedef __m128 F128;
-#endif
-
-#if BL_TARGET_SIMD_D >= 128
+typedef __m128  F128;
 typedef __m128d D128;
 #endif
 
-// Accessible through AVX as well (conversion and casting possible).
-#if BL_TARGET_SIMD_I >= 256 || BL_TARGET_SIMD_F >= 256 || BL_TARGET_SIMD_D >= 256
+// 256-bit types (including integers) are accessible through AVX as AVX also
+// include conversion instructions between integer types and FP types.
+#if defined(BL_TARGET_OPT_AVX)
 typedef __m256i I256;
-#endif
-
-#if BL_TARGET_SIMD_F >= 256
-typedef __m256 F256;
-#endif
-
-#if BL_TARGET_SIMD_D >= 256
+typedef __m256  F256;
 typedef __m256d D256;
 #endif
 

@@ -1024,12 +1024,26 @@ struct BLCompOpSimplifyInfoGen {
   }
 };
 
-// We go throught an additional constexpr to force the compiler to always generate
-// the lookup table at compile time. If there is a mistake leading to recursion the
-// compiler would catch it at compile-time instead of hitting it at runtime during
-// initialization.
-static constexpr const auto blCompOpSimplifyInfoArray_
-  = blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_INFO_SIZE, BLCompOpSimplifyInfoGen>();
+template<uint32_t DstFormat>
+struct BLSimplifyInfoRecordSetGen {
+  // Function called by the table generator, decompose and continue...
+  static constexpr BLCompOpSimplifyInfo value(size_t index) noexcept {
+    return BLCompOpSimplifyInfoGen::valueDecomposed_3(uint32_t(index / BL_FORMAT_RESERVED_COUNT), DstFormat, uint32_t(index % BL_FORMAT_RESERVED_COUNT));
+  }
+};
 
-const BLLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_INFO_SIZE> blCompOpSimplifyInfoArray
-  = blCompOpSimplifyInfoArray_;
+// HACK: MSVC doesn't honor constexpr functions and sometimes outputs initialization
+//       code even when the expression can be calculated at compile time. To fix this
+//       we go throught an additional constexpr to force the compiler to always generate
+//       our lookup tables at compile time.
+//
+// Additionally, if there is a mistake leading to recursion the compiler would catch it
+// at compile-time instead of hitting it at runtime during initialization.
+static_assert(BL_FORMAT_COUNT == 4, "Don't forget to add new formats to blCompOpSimplifyInfoTable");
+static constexpr const BLCompOpSimplifyInfoTable blCompOpSimplifyInfoTable_ = {
+  blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<0>>(),
+  blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<1>>(),
+  blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<2>>(),
+  blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<3>>()
+};
+const BLCompOpSimplifyInfoTable blCompOpSimplifyInfoTable = blCompOpSimplifyInfoTable_;

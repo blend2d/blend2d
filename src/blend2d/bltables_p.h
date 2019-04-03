@@ -45,8 +45,6 @@ namespace BLInternal {
     static constexpr std::size_t size() noexcept { return sizeof...(Ints); }
   };
 
-  // --------------------------------------------------------------
-
   template <class S1, class S2>
   struct _merge_and_renumber;
 

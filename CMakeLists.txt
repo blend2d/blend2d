@@ -198,8 +198,15 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
     "-fno-math-errno"
     "-fno-threadsafe-statics")
 
-  list(APPEND BLEND2D_PRIVATE_CFLAGS_REL
-    "-O2")
+  # GCC 4.X support requires -fabi-version=0 (or 6+). Please note that this
+  # is internal and only required by `blsimd_p.h` as SIMD registers are used
+  # as types in template specializations, which is not handled by older ABI.
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
+    list(APPEND BLEND2D_PRIVATE_CFLAGS "-fabi-version=0")
+  endif()
+
+  list(APPEND BLEND2D_PRIVATE_CFLAGS_DBG "-Wno-inline")
+  list(APPEND BLEND2D_PRIVATE_CFLAGS_REL "-O2")
 
   blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_REL
     "-fmerge-all-constants" # Not enabled by default, but we are fine with it.
