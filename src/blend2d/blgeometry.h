@@ -503,6 +503,9 @@ struct BLLine {
   constexpr BLLine(double x0, double y0, double x1, double y1) noexcept
     : x0(x0), y0(y0), x1(x1), y1(y1) {}
 
+  BL_INLINE bool operator==(const BLLine& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLLine& other) const noexcept { return !equals(other); }
+
   BL_INLINE void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0); }
   BL_INLINE void reset(const BLLine& other) noexcept { reset(other.x0, other.y0, other.x1, other.y1); }
   BL_INLINE void reset(double x0, double y0, double x1, double y1) noexcept {
@@ -512,6 +515,9 @@ struct BLLine {
     this->y1 = y1;
   }
 
+  BL_INLINE bool equals(const BLLine& other) const noexcept {
+    return (this->p0 == other.p0) & (this->p1 == other.p1);
+  }
   #endif
   // --------------------------------------------------------------------------
 };
@@ -647,6 +653,9 @@ struct BLCircle {
   constexpr BLCircle(double cx, double cy, double r) noexcept
     : cx(cx), cy(cy), r(r) {}
 
+  BL_INLINE bool operator==(const BLCircle& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLCircle& other) const noexcept { return !equals(other); }
+
   BL_INLINE void reset() noexcept { reset(0.0, 0.0, 0.0); }
   BL_INLINE void reset(const BLCircle& other) noexcept { reset(other.cx, other.cy, other.r); }
   BL_INLINE void reset(double cx, double cy, double r) noexcept {
@@ -655,6 +664,9 @@ struct BLCircle {
     this->r = r;
   }
 
+  BL_INLINE bool equals(const BLCircle& other) const noexcept {
+    return (this->center == other.center) & (this->r == other.r);
+  }
   #endif
   // --------------------------------------------------------------------------
 };
@@ -686,6 +698,9 @@ struct BLEllipse {
   constexpr BLEllipse(double cx, double cy, double rx, double ry) noexcept
     : cx(cx), cy(cy), rx(rx), ry(ry) {}
 
+  BL_INLINE bool operator==(const BLEllipse& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLEllipse& other) const noexcept { return !equals(other); }
+
   BL_INLINE void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0); }
   BL_INLINE void reset(const BLEllipse& other) noexcept { reset(other.cx, other.cy, other.rx, other.ry); }
   BL_INLINE void reset(double cx, double cy, double r) noexcept { reset(cx, cy, r, r); }
@@ -697,6 +712,9 @@ struct BLEllipse {
     this->ry = ry;
   }
 
+  BL_INLINE bool equals(const BLEllipse& other) const noexcept {
+    return (this->center == other.center) & (this->radius == other.radius);
+  }
   #endif
   // --------------------------------------------------------------------------
 };
@@ -727,6 +745,9 @@ struct BLArc {
   constexpr BLArc(double cx, double cy, double rx, double ry, double start, double sweep) noexcept
     : cx(cx), cy(cy), rx(rx), ry(ry), start(start), sweep(sweep) {}
 
+  BL_INLINE bool operator==(const BLArc& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLArc& other) const noexcept { return !equals(other); }
+
   BL_INLINE void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0, 0.0, 0.0); }
   BL_INLINE void reset(const BLArc& other) noexcept { reset(other.cx, other.cy, other.rx, other.ry, other.start, other.sweep); }
   BL_INLINE void reset(double cx, double cy, double rx, double ry, double start, double sweep) noexcept {
@@ -738,6 +759,12 @@ struct BLArc {
     this->sweep = sweep;
   }
 
+  BL_INLINE bool equals(const BLArc& other) const noexcept {
+    return (this->center == other.center) &
+           (this->radius == other.radius) &
+           (this->start  == other.start)  &
+           (this->sweep  == other.sweep)  ;
+  }
   #endif
   // --------------------------------------------------------------------------
 };
@@ -790,15 +817,15 @@ static BL_INLINE constexpr BLPointI operator+(const BLPointI& a, const BLPointI&
 static BL_INLINE constexpr BLPointI operator-(const BLPointI& a, const BLPointI& b) noexcept { return BLPointI(a.x - b.x, a.y - b.y); }
 static BL_INLINE constexpr BLPointI operator*(const BLPointI& a, const BLPointI& b) noexcept { return BLPointI(a.x * b.x, a.y * b.y); }
 
-static BL_INLINE BLPointI& operator+=(BLPointI& a, int b) noexcept { a.reset(a.x += b, a.y + b); return a; }
-static BL_INLINE BLPointI& operator-=(BLPointI& a, int b) noexcept { a.reset(a.x -= b, a.y - b); return a; }
-static BL_INLINE BLPointI& operator*=(BLPointI& a, int b) noexcept { a.reset(a.x *= b, a.y * b); return a; }
-static BL_INLINE BLPointI& operator/=(BLPointI& a, int b) noexcept { a.reset(a.x /= b, a.y / b); return a; }
+static BL_INLINE BLPointI& operator+=(BLPointI& a, int b) noexcept { a.reset(a.x + b, a.y + b); return a; }
+static BL_INLINE BLPointI& operator-=(BLPointI& a, int b) noexcept { a.reset(a.x - b, a.y - b); return a; }
+static BL_INLINE BLPointI& operator*=(BLPointI& a, int b) noexcept { a.reset(a.x * b, a.y * b); return a; }
+static BL_INLINE BLPointI& operator/=(BLPointI& a, int b) noexcept { a.reset(a.x / b, a.y / b); return a; }
 
-static BL_INLINE BLPointI& operator+=(BLPointI& a, const BLPointI& b) noexcept { a.reset(a.x += b.x, a.y + b.y); return a; }
-static BL_INLINE BLPointI& operator-=(BLPointI& a, const BLPointI& b) noexcept { a.reset(a.x -= b.x, a.y - b.y); return a; }
-static BL_INLINE BLPointI& operator*=(BLPointI& a, const BLPointI& b) noexcept { a.reset(a.x *= b.x, a.y * b.y); return a; }
-static BL_INLINE BLPointI& operator/=(BLPointI& a, const BLPointI& b) noexcept { a.reset(a.x /= b.x, a.y / b.y); return a; }
+static BL_INLINE BLPointI& operator+=(BLPointI& a, const BLPointI& b) noexcept { a.reset(a.x + b.x, a.y + b.y); return a; }
+static BL_INLINE BLPointI& operator-=(BLPointI& a, const BLPointI& b) noexcept { a.reset(a.x - b.x, a.y - b.y); return a; }
+static BL_INLINE BLPointI& operator*=(BLPointI& a, const BLPointI& b) noexcept { a.reset(a.x * b.x, a.y * b.y); return a; }
+static BL_INLINE BLPointI& operator/=(BLPointI& a, const BLPointI& b) noexcept { a.reset(a.x / b.x, a.y / b.y); return a; }
 
 static BL_INLINE constexpr BLPoint operator-(const BLPoint& a) noexcept { return BLPoint(-a.x, -a.y); }
 
@@ -828,9 +855,9 @@ static BL_INLINE BLPoint& operator*=(BLPoint& a, const BLPoint& b) noexcept { a.
 static BL_INLINE BLPoint& operator/=(BLPoint& a, const BLPoint& b) noexcept { a.reset(a.x / b.x, a.y / b.y); return a; }
 
 static BL_INLINE BLBox operator+(double a, const BLBox& b) noexcept { return BLBox(a + b.x0, a + b.y0, a + b.x1, a + b.y1); }
-static BL_INLINE BLBox operator-(double a, const BLBox& b) noexcept { return BLBox(a + b.x0, a - b.y0, a - b.x1, a - b.y1); }
-static BL_INLINE BLBox operator*(double a, const BLBox& b) noexcept { return BLBox(a + b.x0, a * b.y0, a * b.x1, a * b.y1); }
-static BL_INLINE BLBox operator/(double a, const BLBox& b) noexcept { return BLBox(a + b.x0, a / b.y0, a / b.x1, a / b.y1); }
+static BL_INLINE BLBox operator-(double a, const BLBox& b) noexcept { return BLBox(a - b.x0, a - b.y0, a - b.x1, a - b.y1); }
+static BL_INLINE BLBox operator*(double a, const BLBox& b) noexcept { return BLBox(a * b.x0, a * b.y0, a * b.x1, a * b.y1); }
+static BL_INLINE BLBox operator/(double a, const BLBox& b) noexcept { return BLBox(a / b.x0, a / b.y0, a / b.x1, a / b.y1); }
 
 static BL_INLINE BLBox operator+(const BLBox& a, double b) noexcept { return BLBox(a.x0 + b, a.y0 + b, a.x1 + b, a.y1 + b); }
 static BL_INLINE BLBox operator-(const BLBox& a, double b) noexcept { return BLBox(a.x0 - b, a.y0 - b, a.x1 - b, a.y1 - b); }
