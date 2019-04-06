@@ -83,13 +83,13 @@ public:
   BL_INLINE BLRWLock() noexcept : handle(SRWLOCK_INIT) {}
 
   BL_INLINE void lockRead() noexcept { AcquireSRWLockShared(&handle); }
-  BL_INLINE void lockWrite() noexcept { AcquireSRWLockWrite(&handle); }
+  BL_INLINE void lockWrite() noexcept { AcquireSRWLockExclusive(&handle); }
 
   BL_INLINE void tryLockRead() noexcept { TryAcquireSRWLockShared(&handle); }
-  BL_INLINE void tryLockWrite() noexcept { TryAcquireSRWLockWrite(&handle); }
+  BL_INLINE void tryLockWrite() noexcept { TryAcquireSRWLockExclusive(&handle); }
 
   BL_INLINE void unlockRead() noexcept { ReleaseSRWLockShared(&handle); }
-  BL_INLINE void unlockWrite() noexcept { ReleaseSRWLockWrite(&handle); }
+  BL_INLINE void unlockWrite() noexcept { ReleaseSRWLockExclusive(&handle); }
 #else
   pthread_rwlock_t handle;
 
