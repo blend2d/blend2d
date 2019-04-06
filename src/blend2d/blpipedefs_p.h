@@ -4,8 +4,8 @@
 // [License]
 // ZLIB - See LICENSE.md file in the package.
 
-#ifndef BLEND2D_BLPIPE_P_H
-#define BLEND2D_BLPIPE_P_H
+#ifndef BLEND2D_BLPIPEDEFS_P_H
+#define BLEND2D_BLPIPEDEFS_P_H
 
 #include "./blapi-internal_p.h"
 #include "./blformat_p.h"
@@ -15,6 +15,7 @@
 #include "./blruntime_p.h"
 #include "./blsupport_p.h"
 #include "./bltables_p.h"
+#include "./blsimd_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -235,7 +236,7 @@ struct BLPipeFillData {
   struct Common {
     //! Rectangle to fill.
     BLBoxI box;
-    //! Alpha value (range depends on format).
+    //! Alpha value (range depends on target pixel format).
     BLPipeValue32 alpha;
   };
 
@@ -243,7 +244,7 @@ struct BLPipeFillData {
   struct BoxAA {
     //! Rectangle to fill.
     BLBoxI box;
-    //! Alpha value (range depends on format).
+    //! Alpha value (range depends on target pixel format).
     BLPipeValue32 alpha;
   };
 
@@ -251,7 +252,7 @@ struct BLPipeFillData {
   struct BoxAU {
     //! Rectangle to fill.
     BLBoxI box;
-    //! Alpha value (range depends on format).
+    //! Alpha value (range depends on target pixel format).
     BLPipeValue32 alpha;
 
     //! Masks of top, middle and bottom part of the rect.
@@ -270,14 +271,14 @@ struct BLPipeFillData {
     //! All ones if NonZero or 0x01FF if EvenOdd.
     uint32_t fillRuleMask;
 
-    //! Rasterizer bits (marks a group of cells which are non-zero).
+    //! Shadow bit-buffer (marks a group of cells which are non-zero).
     BLBitWord* bitTopPtr;
-    //! Bit stride (in bytes).
+    //! Bit-buffer stride (in bytes).
     size_t bitStride;
 
-    //! Rasterizer cells.
+    //! Cell buffer.
     uint32_t* cellTopPtr;
-    //! Cell stride [in bytes].
+    //! Cell stride (in bytes).
     size_t cellStride;
   };
 
@@ -712,4 +713,4 @@ struct BLPipeSignature {
 //! \}
 //! \endcond
 
-#endif // BLEND2D_BLPIPE_P_H
+#endif // BLEND2D_BLPIPEDEFS_P_H

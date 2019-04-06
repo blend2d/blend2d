@@ -305,6 +305,10 @@ static BL_INLINE double blRound(double x) noexcept { double y = blFloor(x); retu
 static BL_INLINE int blNearbyToInt(float x) noexcept {
 #if defined(BL_TARGET_OPT_SSE)
   return _mm_cvtss_si32(SIMD::vcvtf32f128(x));
+#elif BL_TARGET_ARCH_X86 == 32 && defined(__GNUC__)
+  int y;
+  __asm__ __volatile__("flds %1\n" "fistpl %0\n" : "=m" (y) : "m" (x));
+  return y;
 #elif BL_TARGET_ARCH_X86 == 32 && defined(_MSC_VER)
   int y;
   __asm {
@@ -312,18 +316,18 @@ static BL_INLINE int blNearbyToInt(float x) noexcept {
     fistp dword ptr [y]
   }
   return y;
-#elif BL_TARGET_ARCH_X86 == 32 && defined(__GNUC__)
-  int y;
-  __asm__ __volatile__("flds %1\n" "fistpl %0\n" : "=m" (y) : "m" (x));
-  return y;
 #else
-  #error "[blend2d] blNearbyToInt() - Unsupported architecture or compiler."
+  return int(lrintf(x));
 #endif
 }
 
 static BL_INLINE int blNearbyToInt(double x) noexcept {
 #if defined(BL_TARGET_OPT_SSE2)
   return _mm_cvtsd_si32(SIMD::vcvtd64d128(x));
+#elif BL_TARGET_ARCH_X86 == 32 && defined(__GNUC__)
+  int y;
+  __asm__ __volatile__("fldl %1\n" "fistpl %0\n" : "=m" (y) : "m" (x));
+  return y;
 #elif BL_TARGET_ARCH_X86 == 32 && defined(_MSC_VER)
   int y;
   __asm {
@@ -331,12 +335,8 @@ static BL_INLINE int blNearbyToInt(double x) noexcept {
     fistp dword ptr [y]
   }
   return y;
-#elif BL_TARGET_ARCH_X86 == 32 && defined(__GNUC__)
-  int y;
-  __asm__ __volatile__("fldl %1\n" "fistpl %0\n" : "=m" (y) : "m" (x));
-  return y;
 #else
-  #error "[blend2d] blNearbyToInt() - Unsupported architecture or compiler."
+  return int(lrint(x));
 #endif
 }
 
@@ -363,16 +363,16 @@ static BL_INLINE int blRoundToInt(double x) noexcept { int y = blNearbyToInt(x);
 static BL_INLINE int64_t blNearbyToInt64(float x) noexcept {
 #if BL_TARGET_ARCH_X86 == 64
   return _mm_cvtss_si64(SIMD::vcvtf32f128(x));
+#elif BL_TARGET_ARCH_X86 == 32 && defined(__GNUC__)
+  int64_t y;
+  __asm__ __volatile__("flds %1\n" "fistpq %0\n" : "=m" (y) : "m" (x));
+  return y;
 #elif BL_TARGET_ARCH_X86 == 32 && defined(_MSC_VER)
   int64_t y;
   __asm {
     fld   dword ptr [x]
     fistp qword ptr [y]
   }
-  return y;
-#elif BL_TARGET_ARCH_X86 == 32 && defined(__GNUC__)
-  int64_t y;
-  __asm__ __volatile__("flds %1\n" "fistpq %0\n" : "=m" (y) : "m" (x));
   return y;
 #else
   return int64_t(llrintf(x));
@@ -382,16 +382,16 @@ static BL_INLINE int64_t blNearbyToInt64(float x) noexcept {
 static BL_INLINE int64_t blNearbyToInt64(double x) noexcept {
 #if BL_TARGET_ARCH_X86 == 64
   return _mm_cvtsd_si64(_mm_set_sd(x));
+#elif BL_TARGET_ARCH_X86 == 32 && defined(__GNUC__)
+  int64_t y;
+  __asm__ __volatile__("fldl %1\n" "fistpq %0\n" : "=m" (y) : "m" (x));
+  return y;
 #elif BL_TARGET_ARCH_X86 == 32 && defined(_MSC_VER)
   int64_t y;
   __asm {
     fld   qword ptr [x]
     fistp qword ptr [y]
   }
-  return y;
-#elif BL_TARGET_ARCH_X86 == 32 && defined(__GNUC__)
-  int64_t y;
-  __asm__ __volatile__("fldl %1\n" "fistpq %0\n" : "=m" (y) : "m" (x));
   return y;
 #else
   return int64_t(llrint(x));

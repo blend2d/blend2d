@@ -5,6 +5,8 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "../blapi-build_p.h"
+#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_PIPEGEN)
+
 #include "../pipegen/blfetchpixelptrpart_p.h"
 #include "../pipegen/blpipecompiler_p.h"
 
@@ -42,3 +44,5 @@ void FetchPixelPtrPart::fetch8(PixelARGB& p, uint32_t flags) noexcept {
 }
 
 } // {BLPipeGen}
+
+#endif

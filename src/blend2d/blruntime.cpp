@@ -7,7 +7,9 @@
 #include "./blapi-build_p.h"
 #include "./blruntime_p.h"
 
-#include <asmjit/asmjit.h>
+#ifndef BL_BUILD_NO_PIPEGEN
+  #include <asmjit/asmjit.h>
+#endif
 
 #ifndef _WIN32
   #include <errno.h>
@@ -24,6 +26,7 @@ BLRuntimeContext blRuntimeContext;
 // [BLRuntime - Initialization & Shutdown]
 // ============================================================================
 
+#ifndef BL_BUILD_NO_PIPEGEN
 static BL_INLINE uint32_t blRuntimeDetectCpuFeatures(const asmjit::CpuInfo& asmCpuInfo) noexcept {
   uint32_t features = 0;
 
@@ -40,15 +43,18 @@ static BL_INLINE uint32_t blRuntimeDetectCpuFeatures(const asmjit::CpuInfo& asmC
 
   return features;
 }
+#endif
 
 static BL_INLINE void blRuntimeDetectCpuInfo(BLRuntimeCpuInfo& rtCpuInfo) noexcept {
-  const asmjit::CpuInfo& asmCpuInfo = asmjit::CpuInfo::host();
-
   rtCpuInfo.arch = BL_TARGET_ARCH_X86  ? BL_RUNTIME_CPU_ARCH_X86  :
                    BL_TARGET_ARCH_ARM  ? BL_RUNTIME_CPU_ARCH_ARM  :
                    BL_TARGET_ARCH_MIPS ? BL_RUNTIME_CPU_ARCH_MIPS : BL_RUNTIME_CPU_ARCH_UNKNOWN;
+
+  #ifndef BL_BUILD_NO_PIPEGEN
+  const asmjit::CpuInfo& asmCpuInfo = asmjit::CpuInfo::host();
   rtCpuInfo.features = blRuntimeDetectCpuFeatures(asmCpuInfo);
   rtCpuInfo.threadCount = asmCpuInfo.hwThreadCount();
+  #endif
 }
 
 BLResult blRuntimeInit() noexcept {
@@ -72,7 +78,15 @@ BLResult blRuntimeInit() noexcept {
   blPatternRtInit(rt);
   blGradientRtInit(rt);
   blFontRtInit(rt);
+
+  #if !defined(BL_BUILD_NO_FIXED_PIPE)
+  blFixedPipeRtInit(rt);
+  #endif
+
+  #if !defined(BL_BUILD_NO_PIPEGEN)
   blPipeGenRtInit(rt);
+  #endif
+
   blContextRtInit(rt);
 
   return BL_SUCCESS;
@@ -119,24 +133,24 @@ static const BLRuntimeBuildInfo blRuntimeBuildInfo = {
   { BL_VERSION },
 
   // Build Type.
-#ifdef BL_BUILD_DEBUG
+  #ifdef BL_BUILD_DEBUG
   BL_RUNTIME_BUILD_TYPE_DEBUG,
-#else
+  #else
   BL_RUNTIME_BUILD_TYPE_RELEASE,
-#endif
+  #endif
 
   // Compiler Info.
-#if defined(__INTEL_COMPILER)
+  #if defined(__INTEL_COMPILER)
   "ICC"
-#elif defined(__clang_minor__)
+  #elif defined(__clang_minor__)
   "Clang " BL_STRINGIFY(__clang_major__) "." BL_STRINGIFY(__clang_minor__)
-#elif defined(__GNUC_MINOR__)
+  #elif defined(__GNUC_MINOR__)
   "GCC "  BL_STRINGIFY(__GNUC__) "." BL_STRINGIFY(__GNUC_MINOR__)
-#elif defined(_MSC_VER)
+  #elif defined(_MSC_VER)
   "MSC"
-#else
+  #else
   ""
-#endif
+  #endif
 };
 
 BLResult blRuntimeQueryInfo(uint32_t infoType, void* infoOut) noexcept {
@@ -192,7 +206,7 @@ BLResult blRuntimeMessageFmt(const char* fmt, ...) noexcept {
 
 BLResult blRuntimeMessageVFmt(const char* fmt, va_list ap) noexcept {
   char buf[1024];
-  std::vsnprintf(buf, BL_ARRAY_SIZE(buf), fmt, ap);
+  vsnprintf(buf, BL_ARRAY_SIZE(buf), fmt, ap);
   return blRuntimeMessageOut(buf);
 }
 
@@ -201,7 +215,11 @@ BLResult blRuntimeMessageVFmt(const char* fmt, va_list ap) noexcept {
 // ============================================================================
 
 uint32_t blRuntimeGetTickCount(void) noexcept {
+#ifndef BL_BUILD_NO_PIPEGEN
   return asmjit::OSUtils::getTickCount();
+#else
+  return 0;
+#endif
 }
 
 // ============================================================================
@@ -255,7 +273,7 @@ BLResult blRuntimeFreeImpl(void* impl_, size_t implSize, uint32_t memPoolData) n
 BLResult blResultFromWinError(uint32_t e) noexcept {
   switch (e) {
     case ERROR_SUCCESS                : return BL_SUCCESS;                       // 0x00000000
-    case ERROR_INVALID_FUNCTION       : return BL_ERROR_NOT_PERMITTED; // 0x00000001
+    case ERROR_INVALID_FUNCTION       : return BL_ERROR_NOT_PERMITTED;           // 0x00000001
     case ERROR_FILE_NOT_FOUND         : return BL_ERROR_NO_ENTRY;                // 0x00000002
     case ERROR_PATH_NOT_FOUND         : return BL_ERROR_NO_ENTRY;                // 0x00000003
     case ERROR_TOO_MANY_OPEN_FILES    : return BL_ERROR_TOO_MANY_OPEN_FILES;     // 0x00000004
@@ -264,7 +282,7 @@ BLResult blResultFromWinError(uint32_t e) noexcept {
     case ERROR_NOT_ENOUGH_MEMORY      : return BL_ERROR_OUT_OF_MEMORY;           // 0x00000008
     case ERROR_OUTOFMEMORY            : return BL_ERROR_OUT_OF_MEMORY;           // 0x0000000E
     case ERROR_INVALID_DRIVE          : return BL_ERROR_NO_ENTRY;                // 0x0000000F
-    case ERROR_CURRENT_DIRECTORY      : return BL_ERROR_NOT_PERMITTED; // 0x00000010
+    case ERROR_CURRENT_DIRECTORY      : return BL_ERROR_NOT_PERMITTED;           // 0x00000010
     case ERROR_NOT_SAME_DEVICE        : return BL_ERROR_NOT_SAME_DEVICE;         // 0x00000011
     case ERROR_NO_MORE_FILES          : return BL_ERROR_NO_MORE_FILES;           // 0x00000012
     case ERROR_WRITE_PROTECT          : return BL_ERROR_READ_ONLY_FS;            // 0x00000013
@@ -279,7 +297,7 @@ BLResult blResultFromWinError(uint32_t e) noexcept {
     case ERROR_HANDLE_DISK_FULL       : return BL_ERROR_NO_SPACE_LEFT;           // 0x00000027
     case ERROR_NOT_SUPPORTED          : return BL_ERROR_NOT_IMPLEMENTED;         // 0x00000032
     case ERROR_FILE_EXISTS            : return BL_ERROR_ALREADY_EXISTS;          // 0x00000050
-    case ERROR_CANNOT_MAKE            : return BL_ERROR_NOT_PERMITTED; // 0x00000052
+    case ERROR_CANNOT_MAKE            : return BL_ERROR_NOT_PERMITTED;           // 0x00000052
     case ERROR_INVALID_PARAMETER      : return BL_ERROR_INVALID_VALUE;           // 0x00000057
     case ERROR_NET_WRITE_FAULT        : return BL_ERROR_IO;                      // 0x00000058
     case ERROR_DRIVE_LOCKED           : return BL_ERROR_BUSY;                    // 0x0000006C
@@ -314,7 +332,7 @@ BLResult blResultFromWinError(uint32_t e) noexcept {
     case ERROR_INVALID_USER_BUFFER    : return BL_ERROR_BUSY;                    // 0x000006F8
     case ERROR_UNRECOGNIZED_MEDIA     : return BL_ERROR_IO;                      // 0x000006F9
     case ERROR_NOT_ENOUGH_QUOTA       : return BL_ERROR_OUT_OF_MEMORY;           // 0x00000718
-    case ERROR_CANT_ACCESS_FILE       : return BL_ERROR_NOT_PERMITTED; // 0x00000780
+    case ERROR_CANT_ACCESS_FILE       : return BL_ERROR_NOT_PERMITTED;           // 0x00000780
     case ERROR_CANT_RESOLVE_FILENAME  : return BL_ERROR_NO_ENTRY;                // 0x00000781
     case ERROR_OPEN_FILES             : return BL_ERROR_TRY_AGAIN;               // 0x00000961
   }

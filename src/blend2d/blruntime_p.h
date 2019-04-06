@@ -167,8 +167,15 @@ BL_HIDDEN void blImageScalerRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blPatternRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blGradientRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blFontRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blPipeGenRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blContextRtInit(BLRuntimeContext* rt) noexcept;
+
+#if !defined(BL_BUILD_NO_FIXED_PIPE)
+BL_HIDDEN void blFixedPipeRtInit(BLRuntimeContext* rt) noexcept;
+#endif
+
+#if !defined(BL_BUILD_NO_PIPEGEN)
+BL_HIDDEN void blPipeGenRtInit(BLRuntimeContext* rt) noexcept;
+#endif
 
 //! \}
 //! \endcond

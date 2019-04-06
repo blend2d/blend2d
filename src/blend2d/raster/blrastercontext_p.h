@@ -14,16 +14,20 @@
 #include "../blgradient_p.h"
 #include "../blmatrix_p.h"
 #include "../blpath_p.h"
+#include "../blpiperuntime_p.h"
 #include "../blrgba.h"
 #include "../blregion_p.h"
 #include "../blsupport_p.h"
 #include "../blzoneallocator_p.h"
-#include "../pipegen/blpiperuntime_p.h"
 #include "../raster/blanalyticrasterizer_p.h"
 #include "../raster/bledgebuilder_p.h"
 #include "../raster/blrasterdefs_p.h"
 #include "../raster/blrasterfiller_p.h"
 #include "../raster/blrasterworker_p.h"
+
+#if !defined(BL_BUILD_NO_PIPEGEN)
+  #include "../pipegen/blpipegenruntime_p.h"
+#endif
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal_raster
@@ -50,13 +54,9 @@ struct BLRasterContextImpl : public BLContextImpl {
   BLGlyphBuffer glyphBuffer;
 
   //! Pipeline runtime (either global or isolated, depending on create options).
-  //!
-  //! If this context doesn't us dynamic pipelines then `pipeRuntime` would be
-  //! nullptr. It can only be accessed when dynamic pipelines are available. In
-  //! addition, isolated runtimes are only used for testing and should be never
-  //! enabled in production, however, this should be completely transparent and
-  //! the rendering context shouldn't care if the runtime is isolated or global.
-  BLPipeGen::PipeRuntime* pipeRuntime;
+  BLPipeProvider pipeProvider;
+  //! Pipeline lookup cache (always used before attempting to use the `pipeProvider`.
+  BLPipeLookupCache pipeLookupCache;
 
   //! Context origin ID used in `data0` member of `BLContextCookie`.
   uint64_t contextOriginId;
@@ -89,14 +89,13 @@ struct BLRasterContextImpl : public BLContextImpl {
   double fpMinSafeCoordD;
   //! Maximum safe coordinate for integral transformation (scaled by 256.0 or 65536.0).
   double fpMaxSafeCoordD;
-
   //! Curve flattening tolerance scaled by `fpScaleD`.
   double toleranceFixedD;
 
   //! Fill and stroke styles.
   BLRasterContextStyleData style[BL_CONTEXT_OP_TYPE_COUNT];
 
-  //! Composition operator simplification that matched the destination format and current `compOp`.
+  //! Composition operator simplification that matches the destination format and current `compOp`.
   const BLCompOpSimplifyInfo* compOpSimplifyTable;
   //! Solid format table used to select the best pixel format for solid fills.
   uint8_t solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_COUNT];
@@ -139,7 +138,7 @@ struct BLRasterContextImpl : public BLContextImpl {
       statePool(&baseZone),
       worker(this),
       glyphBuffer(),
-      pipeRuntime(nullptr),
+      pipeProvider(),
       contextOriginId(blContextIdGenerator.next()),
       stateIdCounter(0) {
 

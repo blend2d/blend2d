@@ -31,22 +31,25 @@ set(BLEND2D_BUILD_TEST   "${BLEND2D_BUILD_TEST}"      CACHE BOOL "Build 'blend2d
 # Experimental, will be used in the future by default.
 # set(BLEND2D_BUILD_NO_CXX_LIB 1)
 # set(BLEND2D_BUILD_NO_LOGGING 1)
+# set(BLEND2D_BUILD_NO_PIPEGEN 1)
 
 # Find asmjit dependency.
-if(NOT DEFINED ASMJIT_DIR)
-  set(ASMJIT_LOOKUP_DIRS
-    "${BLEND2D_DIR}/3rdparty/asmjit"
-    "${CMAKE_CURRENT_LIST_DIR}/../asmjit"
-  )
-  foreach(dir ${ASMJIT_LOOKUP_DIRS})
-    if(EXISTS ${dir}/CMakeLists.txt)
-      set(ASMJIT_DIR "${dir}" CACHE PATH "Location of 'asmjit'")
-      break()
-    endif()
-  endforeach()
+if(NOT BLEND2D_BUILD_NO_PIPEGEN)
   if(NOT DEFINED ASMJIT_DIR)
-    message(FATAL "Unable to find asmjit, cannot continue...")
-    message(FATAL "Please visit https://blend2d.com/download.html")
+    set(ASMJIT_LOOKUP_DIRS
+      "${BLEND2D_DIR}/3rdparty/asmjit"
+      "${CMAKE_CURRENT_LIST_DIR}/../asmjit"
+    )
+    foreach(dir ${ASMJIT_LOOKUP_DIRS})
+      if(EXISTS ${dir}/CMakeLists.txt)
+        set(ASMJIT_DIR "${dir}" CACHE PATH "Location of 'asmjit'")
+        break()
+      endif()
+    endforeach()
+    if(NOT DEFINED ASMJIT_DIR)
+      message(FATAL "Unable to find asmjit, cannot continue...")
+      message(FATAL "Please visit https://blend2d.com/download.html")
+    endif()
   endif()
 endif()
 
@@ -57,7 +60,7 @@ endif()
 set(BLEND2D_MAKE_DEF "-D") # Define a preprocessor macro: "${BLEND2D_MAKE_DEF}VAR=1"
 set(BLEND2D_MAKE_INC "-I") # Define an include directory: "${BLEND2D_MAKE_INC}PATH"
 
-if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel" AND WIN32))
+if(("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
   set(BLEND2D_MAKE_DEF "/D")
   set(BLEND2D_MAKE_INC "/I")
 endif()
@@ -244,14 +247,18 @@ if(BLEND2D_BUILD_STATIC)
   list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_STATIC")
 endif()
 
+if(BLEND2D_BUILD_NO_PIPEGEN)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_NO_PIPEGEN")
+endif()
+
 # =============================================================================
 # [Blend2D - Enable SIMD]
 # =============================================================================
 
 # TODO: Detect ARM when the support is added.
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  # AVX/AVX2 doesn't need custom defs as MSVC does define __AVX[2]__
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+  # AVX/AVX2 doesn't need custom defs as MSVC|Intel does define __AVX[2]__
   # similary to other compilers. In addition, we only detect the support
   # for AVX/AVX2 as if these are available all previous instruction sets
   # are also available. If such check fails it means that we are either
@@ -260,35 +267,37 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   blend2d_detect_cflags(BLEND2D_CFLAGS_AVX "/arch:AVX")
   blend2d_detect_cflags(BLEND2D_CFLAGS_AVX2 "/arch:AVX2")
 
-  if(BLEND2D_CFLAGS_AVX2)
-    # 64-bit MSVC compiler doesn't like /arch:SSE[2] as it's implicit.
-    if(NOT CMAKE_CL_64)
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+    # Intel deprecated /arch:SSE, so it's implicit. In contrast to MSVC, Intel
+    # also provides /arch:SSE3+ options and uses the same definitions as GCC
+    # and Clang, so no magic needed here.
+    blend2d_detect_cflags(BLEND2D_CFLAGS_AVX "/arch:AVX")
+    blend2d_detect_cflags(BLEND2D_CFLAGS_AVX2 "/arch:AVX2")
+    if(BLEND2D_CFLAGS_AVX)
       list(APPEND BLEND2D_CFLAGS_SSE2 "/arch:SSE2")
-      list(APPEND BLEND2D_CFLAGS_SSE3 "/arch:SSE2")
-      list(APPEND BLEND2D_CFLAGS_SSSE3 "/arch:SSE2")
-      list(APPEND BLEND2D_CFLAGS_SSE4_1 "/arch:SSE2")
-      list(APPEND BLEND2D_CFLAGS_SSE4_2 "/arch:SSE2")
+      list(APPEND BLEND2D_CFLAGS_SSE3 "/arch:SSE3")
+      list(APPEND BLEND2D_CFLAGS_SSSE3 "/arch:SSSE3")
+      list(APPEND BLEND2D_CFLAGS_SSE4_1 "/arch:SSE4.1")
+      list(APPEND BLEND2D_CFLAGS_SSE4_2 "/arch:SSE4.2")
     endif()
-    # MSVC doesn't provide any preprocessor definitions for SSE3 and higher, thus
-    # we have to define these ourselves to match these defined by Intel|Clang|GCC.
-    list(APPEND BLEND2D_CFLAGS_SSE2 "/D__SSE2__")
-    list(APPEND BLEND2D_CFLAGS_SSE3 "/D__SSE3__")
-    list(APPEND BLEND2D_CFLAGS_SSSE3 "/D__SSSE3__")
-    list(APPEND BLEND2D_CFLAGS_SSE4_1 "/D__SSE4_1__")
-    list(APPEND BLEND2D_CFLAGS_SSE4_2 "/D__SSE4_2__")
-  endif()
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel" AND WIN32)
-  # Intel deprecated /arch:SSE, so it's implicit. In contrast to MSVC, Intel
-  # also provides /arch:SSE3+ options and uses the same definitions as GCC
-  # and Clang, so no magic needed here.
-  blend2d_detect_cflags(BLEND2D_CFLAGS_AVX "/arch:AVX")
-  blend2d_detect_cflags(BLEND2D_CFLAGS_AVX2 "/arch:AVX2")
-  if(BLEND2D_CFLAGS_AVX)
-    list(APPEND BLEND2D_CFLAGS_SSE2 "/arch:SSE2")
-    list(APPEND BLEND2D_CFLAGS_SSE3 "/arch:SSE3")
-    list(APPEND BLEND2D_CFLAGS_SSSE3 "/arch:SSSE3")
-    list(APPEND BLEND2D_CFLAGS_SSE4_1 "/arch:SSE4.1")
-    list(APPEND BLEND2D_CFLAGS_SSE4_2 "/arch:SSE4.2")
+  else()
+    if(BLEND2D_CFLAGS_AVX2)
+      # 64-bit MSVC compiler doesn't like /arch:SSE[2] as it's implicit.
+      if(NOT CMAKE_CL_64)
+        list(APPEND BLEND2D_CFLAGS_SSE2 "/arch:SSE2")
+        list(APPEND BLEND2D_CFLAGS_SSE3 "/arch:SSE2")
+        list(APPEND BLEND2D_CFLAGS_SSSE3 "/arch:SSE2")
+        list(APPEND BLEND2D_CFLAGS_SSE4_1 "/arch:SSE2")
+        list(APPEND BLEND2D_CFLAGS_SSE4_2 "/arch:SSE2")
+      endif()
+      # MSVC doesn't provide any preprocessor definitions for SSE3 and higher, thus
+      # we have to define these ourselves to match these defined by Intel|Clang|GCC.
+      list(APPEND BLEND2D_CFLAGS_SSE2 "/D__SSE2__")
+      list(APPEND BLEND2D_CFLAGS_SSE3 "/D__SSE3__")
+      list(APPEND BLEND2D_CFLAGS_SSSE3 "/D__SSSE3__")
+      list(APPEND BLEND2D_CFLAGS_SSE4_1 "/D__SSE4_1__")
+      list(APPEND BLEND2D_CFLAGS_SSE4_2 "/D__SSE4_2__")
+    endif()
   endif()
 else()
   # Assume all other compilers are compatible with GCC|Clang.
@@ -303,22 +312,18 @@ else()
   endif()
 endif()
 
+# Use SSE2 by default on X86/X64 as this is our baseline.
+if(BLEND2D_CFLAGS_SSE2)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS ${BLEND2D_CFLAGS_SSE2})
+endif()
+
 # Do not make this more complicated than it is. We assume that compiler can
 # handle either all (SSE2, SSE3, ... AVX) or nothing. We require C++11 so
 # this should exclude all old compilers where this assumption would not hold.
-if(BLEND2D_CFLAGS_AVX)
-  # Use SSE2 by default on X86.
-  list(APPEND BLEND2D_PRIVATE_CFLAGS ${BLEND2D_CFLAGS_SSE2})
-
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_OPT_SSE2")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_OPT_SSE3")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_OPT_SSSE3")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_OPT_SSE4_1")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_OPT_SSE4_2")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_OPT_AVX")
-endif()
 if(BLEND2D_CFLAGS_AVX2)
   list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_OPT_AVX2")
+elseif(BLEND2D_CFLAGS_AVX)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_OPT_AVX")
 endif()
 
 # =============================================================================
@@ -326,7 +331,6 @@ endif()
 # =============================================================================
 
 if(WIN32)
-  list(APPEND BLEND2D_DEPS user32 uuid shell32)
   # Use Unicode by default on Windows target.
   list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}_UNICODE")
 else()
@@ -337,18 +341,20 @@ endif()
 # [Blend2D - AsmJit Embedding]
 # =============================================================================
 
-if(NOT DEFINED ASMJIT_BUILD_EMBED)
-  set(ASMJIT_BUILD_EMBED TRUE CACHE BOOL "")
-endif()
+if(NOT BLEND2D_BUILD_NO_PIPEGEN)
+  if(NOT DEFINED ASMJIT_BUILD_EMBED)
+    set(ASMJIT_BUILD_EMBED TRUE CACHE BOOL "")
+  endif()
 
-include("${ASMJIT_DIR}/CMakeLists.txt")
-list(APPEND BLEND2D_DEPS ${ASMJIT_LIBS})
-list(APPEND BLEND2D_PRIVATE_CFLAGS ${ASMJIT_CFLAGS})
+  include("${ASMJIT_DIR}/CMakeLists.txt")
+  list(APPEND BLEND2D_DEPS ${ASMJIT_LIBS})
+  list(APPEND BLEND2D_PRIVATE_CFLAGS ${ASMJIT_CFLAGS})
 
-# A possibility to reduce the resulting binary size by disabling asmjit logging.
-if(BLEND2D_BUILD_NO_LOGGING)
-  message("   Disabling AsmJit logging functionality to make Blend2D smaller")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_DISABLE_LOGGING -DASMJIT_DISABLE_TEXT)
+  # A possibility to reduce the resulting binary size by disabling asmjit logging.
+  if(BLEND2D_BUILD_NO_LOGGING)
+    message("   Disabling AsmJit logging functionality to make Blend2D smaller")
+    list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_DISABLE_LOGGING -DASMJIT_DISABLE_TEXT)
+  endif()
 endif()
 
 # =============================================================================
@@ -432,8 +438,10 @@ blend2d_add_source(BLEND2D_SRC blend2d
   blpattern.cpp
   blpattern.h
   blpattern_p.h
-  blpipe.cpp
-  blpipe_p.h
+  blpipedefs.cpp
+  blpipedefs_p.h
+  blpiperuntime.cpp
+  blpiperuntime_p.h
   blpixelconverter.cpp
   blpixelconverter_avx2.cpp
   blpixelconverter_sse2.cpp
@@ -500,6 +508,11 @@ blend2d_add_source(BLEND2D_SRC blend2d/codec
   blpngops_p.h
 )
 
+blend2d_add_source(BLEND2D_SRC blend2d/fixedpipe
+  blfixedpiperuntime_p.h
+  blfixedpiperuntime.cpp
+)
+
 blend2d_add_source(BLEND2D_SRC blend2d/opentype
   blotcff.cpp
   blotcff_p.h
@@ -542,14 +555,14 @@ blend2d_add_source(BLEND2D_SRC blend2d/pipegen
   blfillpart_p.h
   blpipecompiler.cpp
   blpipecompiler_p.h
+  blpipedebug_p.h
   blpipegencore.cpp
   blpipegencore_p.h
-  blpipedebug_p.h
+  blpipegenruntime_p.h
+  blpipegenruntime.cpp
   blpipepart.cpp
   blpipepart_p.h
   blpiperegusage_p.h
-  blpiperuntime_p.h
-  blpiperuntime.cpp
 )
 
 blend2d_add_source(BLEND2D_SRC blend2d/raster
@@ -563,6 +576,7 @@ blend2d_add_source(BLEND2D_SRC blend2d/raster
   blrasterworker.cpp
   blrasterworker_p.h
 )
+
 #if(MSVC)
 #  blend2d_add_source(BLEND2D_SRC blend2d blend2d.natvis)
 #endif()

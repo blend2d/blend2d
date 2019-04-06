@@ -6,8 +6,11 @@
 
 // This is a public header file designed to be used by Blend2D users.
 // It includes all the necessary files to use Blend2D library from C
-// and C++ and it's the only header that is guaranteed to stay. Never
-// include directly header files placed in "blend2d" directory.
+// and C++ and it's the only header that is guaranteed to stay.
+//
+// Never include directly header files placed in "blend2d" directory.
+// Headers that end with "_p" suffix are private and should never be
+// included as they are not part of public API.
 
 #ifndef BLEND2D_H
 #define BLEND2D_H

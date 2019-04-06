@@ -5,6 +5,8 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "../blapi-build_p.h"
+#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_PIPEGEN)
+
 #include "../pipegen/blcompoppart_p.h"
 #include "../pipegen/blfillpart_p.h"
 #include "../pipegen/blfetchpart_p.h"
@@ -505,7 +507,7 @@ void FillAnalyticPart::compile() noexcept {
   // --------------------------------------------------------------------------
 
   // Called by Scanline iterator on the first non-zero BitWord it matches. The
-  // responsibility of BitMatch is to find the first bit in the passed BitWord
+  // responsibility of BitScan is to find the first bit in the passed BitWord
   // followed by matching the bit that ends this match. This would essentially
   // produce the first [x0, x1) span that has to be composited as 'VMask' loop.
 
@@ -528,7 +530,7 @@ void FillAnalyticPart::compile() noexcept {
   // there is still one cell that is non-zero. This makes sure it's cleared.
 
   pc->uAddMulImm(dstPtr, x0.cloneAs(dstPtr), dstBpp);      //   dstPtr += x0 * dstBpp;
-  pc->uAddMulImm(cellPtr, x0.cloneAs(cellPtr), 4);         //   cellPtr += x0 * 4;
+  pc->uAddMulImm(cellPtr, x0.cloneAs(cellPtr), 4);         //   cellPtr += x0 * sizeof(uint32_t);
 
   // Rare case - line rasterized at the end of the raster boundary. In 99% cases
   // this is a clipped line that was rasterized as vertical-only line at the end
@@ -546,7 +548,7 @@ void FillAnalyticPart::compile() noexcept {
 
   pc->vloadi128a(cov, pc->constAsMem(blCommonTable.i128_0002000000020000)); // cov[3:0] = 256 << 9;
 
-  // If `xor(bitWord, bitWordTmp)` results in non-zero value it means that the current
+  // If `bitWord ^ bitWordTmp` results in non-zero value it means that the current
   // span ends within the same BitWord, otherwise the span crosses multiple BitWords.
 
   cc->xor_(bitWord, bitWordTmp);                           //   if ((bitWord ^= bitWordTmp) != 0)
@@ -570,7 +572,7 @@ void FillAnalyticPart::compile() noexcept {
   cc->lea(bitPtr, x86::ptr(bitPtr, bwSize));               //   bitPtr += bwSize;
   cc->jnz(L_BitScan_Match);                                //   if (bitWord != 0) goto L_BitScan_Match;
 
-  cc->cmp(bitPtr, bitPtrEnd);                              //   if (bitPtr != bitPtrEnd)
+  cc->cmp(bitPtr, bitPtrEnd);                              //   if (bitPtr == bitPtrEnd)
   cc->jz(L_BitScan_End);                                   //     goto L_BitScan_End;
   cc->jmp(L_BitScan_Next);                                 //   goto L_BitScan_Next;
 
@@ -669,12 +671,12 @@ void FillAnalyticPart::compile() noexcept {
 
     compOpPart()->vMaskProc32Xmm4(dPix, PixelARGB::kPC | PixelARGB::kImmutable, m, false);
 
-    cc->add(cellPtr, 16);                                  //   cellPtr += 4 * 4;
+    cc->add(cellPtr, 16);                                  //   cellPtr += 4 * sizeof(uint32_t);
 
     pc->vzeropi(m[1]);                                     //   m1[3:0] = 0;
     pc->vstorei128u(x86::ptr(dstPtr), dPix.pc[0]);
     pc->vloadi128a(m[0], x86::ptr(cellPtr));               //   m0[3:0] = cellPtr[3:0];
-    cc->add(dstPtr, dstBpp * 4);                           //   dstPtr += dstBpp * 4;
+    cc->add(dstPtr, dstBpp * 4);                           //   dstPtr += 4 * dstBpp;
     pc->vstorei128a(x86::ptr(cellPtr), m[1]);              //   cellPtr[3:0] = 0;
 
     dPix.reset();
@@ -745,7 +747,7 @@ void FillAnalyticPart::compile() noexcept {
   cc->add(i, xOff);                                        //   i += xOff;
   cc->sub(i, x0);                                          //   i -= x0;
   cc->add(x0, i);                                          //   x0 += i;
-  pc->uAddMulImm(cellPtr, i.cloneAs(cellPtr), 4);          //   cellPtr += i * 4;
+  pc->uAddMulImm(cellPtr, i.cloneAs(cellPtr), 4);          //   cellPtr += i * sizeof(uint32_t);
 
   cc->test(cMaskAlpha, cMaskAlpha);                        //   if (cMaskAlpha != 0)
   cc->jnz(L_CLoop_Init);                                   //     goto L_CLoop_Init;
@@ -807,7 +809,7 @@ void FillAnalyticPart::compile() noexcept {
     // the number of pixels is less than `pixelsPerOneBit`.
 
     cc->bind(L_VTail_Init);                                // L_VTail_Init:
-    pc->uAddMulImm(cellPtr, i, 4);                         //   cellPtr += i * 4;
+    pc->uAddMulImm(cellPtr, i, 4);                         //   cellPtr += i * sizeof(uint32_t);
     pc->vslli128b(m[0], m[0], 6);                          //   m0[7:0] = [__, M3, M2, M1, M0, __, __, __]
     compOpPart()->enterPartialMode();                      //   <CompOpPart::enterPartialMode>
 
@@ -839,7 +841,7 @@ void FillAnalyticPart::compile() noexcept {
   // This loop is used to quickly test bitWords in `bitPtr`. In some cases the
   // whole scanline could be empty, so this loop makes sure we won't enter more
   // complicated loops if this happens. It's also used to quickly find the first
-  // bit, which is non-zero - in that case it jumps directly to BitMatch section.
+  // bit, which is non-zero - in that case it jumps directly to BitScan section.
 
   cc->bind(L_Scanline_Done0);                              // L_Scanline_Done0:
   pc->vzeropi(m[1]);                                       //   m1[3:0] = 0;
@@ -847,11 +849,9 @@ void FillAnalyticPart::compile() noexcept {
 
   cc->bind(L_Scanline_Done1);                              // L_Scanline_Done1:
   disadvanceDstPtrAndCellPtr(dstPtr,                       //   dstPtr -= x0 * dstBpp;
-                             cellPtr, x0, dstBpp);         //   cellPtr -= x0 * 4;
+                             cellPtr, x0, dstBpp);         //   cellPtr -= x0 * sizeof(uint32_t);
   cc->sub(y, 1);                                           //   if (--y == 0)
   cc->jz(L_End);                                           //     goto L_End;
-
-  // TODO: [PIPEGEN] Verify whether it's necessary.
   cc->mov(bitPtr, bitPtrEnd);                              //   bitPtr = bitPtrEnd;
 
   cc->bind(L_Scanline_AdvY);                               // L_Scanline_AdvY:
@@ -871,7 +871,7 @@ void FillAnalyticPart::compile() noexcept {
   cc->jnz(L_BitScan_Init);                                 //   if (bitWord) goto L_BitScan_Init;
 
   cc->add(xOff, pixelsPerBitWord);                         //   xOff += pixelsPerBitWord;
-  cc->cmp(bitPtr, bitPtrEnd);                              //   if (bitPtr == bitPtrEnd)
+  cc->cmp(bitPtr, bitPtrEnd);                              //   if (bitPtr != bitPtrEnd)
   cc->jnz(L_Scanline_Cont);                                //     goto L_Scanline_Cont;
 
   cc->dec(y);                                              //   if (--y)
@@ -954,3 +954,5 @@ void FillAnalyticPart::disadvanceDstPtrAndCellPtr(const x86::Gp& dstPtr, const x
 }
 
 } // {BLPipeGen}
+
+#endif

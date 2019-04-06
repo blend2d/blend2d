@@ -10,7 +10,7 @@
 #include "./blapi-internal_p.h"
 #include "./blcontext.h"
 #include "./blformat_p.h"
-#include "./blpipe_p.h"
+#include "./blpipedefs_p.h"
 #include "./bltables_p.h"
 
 //! \cond INTERNAL

@@ -9,6 +9,7 @@
 
 #include "./blrandom.h"
 #include "./blsimd_p.h"
+#include "./blsupport_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal

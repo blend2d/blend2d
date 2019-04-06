@@ -9,16 +9,25 @@
 #include "../blfont_p.h"
 #include "../blformat_p.h"
 #include "../blgeometry_p.h"
+#include "../blimage_p.h"
 #include "../blpath_p.h"
 #include "../blpathstroke_p.h"
+#include "../blpiperuntime_p.h"
 #include "../blpixelops_p.h"
 #include "../blruntime_p.h"
 #include "../blsupport_p.h"
 #include "../blzeroallocator_p.h"
-#include "../pipegen/blpiperuntime_p.h"
 #include "../raster/bledgebuilder_p.h"
 #include "../raster/blrastercontext_p.h"
 #include "../raster/blrasterfiller_p.h"
+
+#ifndef BL_BUILD_NO_FIXED_PIPE
+  #include "../fixedpipe/blfixedpiperuntime_p.h"
+#endif
+
+#ifndef BL_BUILD_NO_PIPEGEN
+  #include "../pipegen/blpipegenruntime_p.h"
+#endif
 
 // ============================================================================
 // [BLRasterContext - Globals]
@@ -26,11 +35,11 @@
 
 static BLContextVirt blRasterContextVirt;
 
-static uint32_t blRasterContextSolidDataRgba32[] = {
-  0x00000000,
-  0x00000000,
-  0xFF000000,
-  0xFFFFFFFF
+static const uint32_t blRasterContextSolidDataRgba32[] = {
+  0x00000000, // BL_COMP_OP_SOLID_ID_NONE (not solid, not used).
+  0x00000000, // BL_COMP_OP_SOLID_ID_TRANSPARENT.
+  0xFF000000, // BL_COMP_OP_SOLID_ID_OPAQUE_BLACK.
+  0xFFFFFFFF  // BL_COMP_OP_SOLID_ID_OPAQUE_WHITE.
 };
 
 // ============================================================================
@@ -184,6 +193,15 @@ static void BL_CDECL blRasterFetchDataDestroyGradient(BLRasterContextImpl* ctxI,
 static BL_INLINE void blRasterContextImplReleaseFetchData(BLRasterContextImpl* ctxI, BLRasterFetchData* fetchData) noexcept {
   if (--fetchData->refCount == 0)
     fetchData->destroy(ctxI, fetchData);
+}
+
+// ============================================================================
+// [BLRasterContext - Pipeline Lookup]
+// ============================================================================
+
+static BL_INLINE BLPipeFillFunc blRasterContextImplGetFillFunc(BLRasterContextImpl* ctxI, uint32_t signature) noexcept {
+  BLPipeFillFunc func = ctxI->pipeLookupCache.lookup<BLPipeFillFunc>(signature);
+  return func ? func : ctxI->pipeProvider.get(signature, &ctxI->pipeLookupCache);
 }
 
 // ============================================================================
@@ -671,7 +689,7 @@ static BL_INLINE BLResult blRasterContextImplProcessFillCmd(BLRasterContextImpl*
   BLPipeSignature sig(0);
   sig.add(fillCmd->baseSignature);
   sig.add(fillContext.fillSignature);
-  fillContext.setFillFunc(ctxI->pipeRuntime->getFunction(sig.value));
+  fillContext.setFillFunc(blRasterContextImplGetFillFunc(ctxI, sig.value));
   return fillContext.doWork(&ctxI->worker, fillCmd->fetchData);
 }
 
@@ -2381,24 +2399,34 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
   BL_ASSERT(image != nullptr);
   BL_ASSERT(options != nullptr);
 
-  // DEBUG: Create an isolated `PipeRuntime` If `BL_CONTEXT_CREATE_FLAG_ISOLATED_RUNTIME`
-  //        was required. It will be used to store all functions generated during
-  //        the rendering and will be destroyed together with the context.
-  BLPipeGen::PipeRuntime* pipeRuntime = nullptr;
+  BLPipeRuntime* pipeRuntime;
   BLZoneAllocator::State zoneState;
 
+  #if !defined(BL_BUILD_NO_PIPEGEN)
+  // Blend2D uses JIT pipelines.
+  pipeRuntime = &BLPipeGenRuntime::_global;
+
+  // DEBUG: Create an isolated `BLPipeGenRuntime` if specified. It will be used
+  //        to store all functions generated during the rendering and will be
+  //        destroyed together with the context.
   if (options->flags & BL_CONTEXT_CREATE_FLAG_ISOLATED_RUNTIME) {
     ctxI->baseZone.saveState(&zoneState);
-    pipeRuntime = ctxI->baseZone.newT<BLPipeGen::PipeRuntime>();
+    BLPipeGenRuntime* pipeGenRuntime = ctxI->baseZone.newT<BLPipeGenRuntime>(BL_PIPE_RUNTIME_FLAG_ISOLATED);
 
     // This should not really happen as the first block is allocated with the impl.
-    if (BL_UNLIKELY(!pipeRuntime))
+    if (BL_UNLIKELY(!pipeGenRuntime))
       return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
     if (options->flags & BL_CONTEXT_CREATE_FLAG_OVERRIDE_FEATURES) {
-      pipeRuntime->_restrictFeatures(options->cpuFeatures);
+      pipeGenRuntime->_restrictFeatures(options->cpuFeatures);
     }
+
+    pipeRuntime = pipeGenRuntime;
   }
+  #else
+  // Blend2D uses fixed pipelines.
+  pipeRuntime = &BLFixedPipeRuntime::_global;
+  #endif
 
   // Initialize the worker. We have to do this before trying to obtain mutable image.
   uint32_t format = image->impl->format;
@@ -2424,8 +2452,8 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
     // If we failed we don't want the runtime associated with the context we
     // so simply destroy it and pretend like nothing happened. Zone state is
     // restored as well (this means that reset() is not necessary in such case).
-    if (pipeRuntime) {
-      pipeRuntime->~PipeRuntime();
+    if (pipeRuntime->runtimeFlags() & BL_PIPE_RUNTIME_FLAG_ISOLATED) {
+      pipeRuntime->destroy();
       ctxI->baseZone.restoreState(&zoneState);
     }
 
@@ -2437,7 +2465,8 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
   blAtomicFetchIncRef(&imageI->writerCount);
 
   // Initialize pipe-runtime.
-  ctxI->pipeRuntime = pipeRuntime ? pipeRuntime : &BLPipeGen::PipeRuntime::_global;
+  ctxI->pipeProvider.init(pipeRuntime);
+  ctxI->pipeLookupCache.reset();
 
   // Initialize the rest of worker.
   ctxI->worker.initFullAlpha(fullAlphaI);
@@ -2526,16 +2555,16 @@ static BLResult blRasterContextImplDetach(BLRasterContextImpl* ctxI) noexcept {
   }
   ctxI->dstImage.impl = nullptr;
 
-  // Release the PipeRuntime.
-  if (ctxI->pipeRuntime != &BLPipeGen::PipeRuntime::_global) {
-    ctxI->pipeRuntime->~PipeRuntime();
-    blCallDtor(ctxI->currentState.strokeOptions);
-  }
-  ctxI->pipeRuntime = nullptr;
+  // Release PipeRuntime.
+  if (ctxI->pipeProvider.runtime()->runtimeFlags() & BL_PIPE_RUNTIME_FLAG_ISOLATED)
+    ctxI->pipeProvider.runtime()->destroy();
+  ctxI->pipeProvider.reset();
 
+  // Release all states.
   blRasterContextImplDiscardStates(ctxI, nullptr);
-  uint32_t contextFlags = ctxI->contextFlags;
+  blCallDtor(ctxI->currentState.strokeOptions);
 
+  uint32_t contextFlags = ctxI->contextFlags;
   if (contextFlags & BL_RASTER_CONTEXT_FILL_FETCH_DATA)
     blRasterContextImplDestroyValidStyle(ctxI, &ctxI->style[BL_CONTEXT_OP_TYPE_FILL]);
 
