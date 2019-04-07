@@ -9,7 +9,7 @@
 
 #include "../blcontext_p.h"
 #include "../blgeometry_p.h"
-#include "../blpipe_p.h"
+#include "../blpipedefs_p.h"
 #include "../blzoneallocator_p.h"
 #include "../raster/bledgebuilder_p.h"
 #include "../raster/blrasterdefs_p.h"

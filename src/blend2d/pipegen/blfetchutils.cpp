@@ -5,6 +5,8 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "../blapi-build_p.h"
+#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_PIPEGEN)
+
 #include "../pipegen/blfetchutils_p.h"
 
 namespace BLPipeGen {
@@ -326,3 +328,5 @@ void FetchContext8X::end() noexcept {
 }
 
 } // {BLPipeGen}
+
+#endif

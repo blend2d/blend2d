@@ -99,18 +99,14 @@
 //! \brief Global C API functions exported as `extern "C"` (C API).
 //!
 //! We do not document these functions as they are called from C++ wrappers,
-//! which should be documented. If you are using C API for embedding Blend2D
-//! in other language or C API directly then it's recommended to browse the
-//! C++ API first to get an overview of how things work and then check the
-//! relation between exported C functions and C++ API.
+//! which are documented and should be used as a reference. The most important
+//! thing in using C API is to understand how lifetime of objects is managed.
 //!
-//! Each type that requires initialization provides `Init` and `Reset` functions
+//! Each type that requires initialization provides `Init` and `Reset` functions.
 //! These functions are called by C++ constructors and destructors on C++ side
 //! and must be used the same way by C users. Although these functions return
-//! `BLResult` it's guaranteed to always be `BL_SUCCESS` and such results are
-//! only provided to make the API consistent and to make it possible to call
-//! `Reset()` functions as tail calls in case some function needs to reset
-//! something and then return.
+//! `BLResult` it's guaranteed the result is always `BL_SUCCESS` - the return
+//! value is only provided for consistency and possible tail calling.
 //!
 //! The following example should illustrate how `Init` and `Reset` works:
 //!
@@ -338,10 +334,10 @@
 //! because some compilers provide a way of overriding a global calling
 //! convention (like __vectorcall on Windows platforms), which would break the
 //! use of such callbacks.
-#if defined(_MSC_VER)
-  #define BL_CDECL __cdecl
-#elif defined(__GNUC__) && defined(__i386__) && !defined(__x86_64__)
+#if defined(__GNUC__) && defined(__i386__) && !defined(__x86_64__)
   #define BL_CDECL __attribute__((__cdecl__))
+#elif defined(_MSC_VER)
+  #define BL_CDECL __cdecl
 #else
   #define BL_CDECL
 #endif
@@ -350,10 +346,10 @@
 //!
 //! Marks functions that should always be inlined.
 
-#if defined(_MSC_VER) && !defined(BL_BUILD_DEBUG)
-  #define BL_INLINE __forceinline
-#elif defined(__GNUC__) && !defined(BL_BUILD_DEBUG)
+#if defined(__GNUC__) && !defined(BL_BUILD_DEBUG)
   #define BL_INLINE inline __attribute__((__always_inline__))
+#elif defined(_MSC_VER) && !defined(BL_BUILD_DEBUG)
+  #define BL_INLINE __forceinline
 #else
   #define BL_INLINE inline
 #endif
@@ -364,10 +360,10 @@
 //! process). This attribute is used only once by `blRuntimeAssertionFailure()`
 //! function, which is only used when assertions are enabled. This macro should
 //! be considered internal and it's not designed for Blend2D users.
-#if defined(_MSC_VER)
-  #define BL_NORETURN __declspec(noreturn)
-#elif defined(__GNUC__)
+#if defined(__GNUC__)
   #define BL_NORETURN __attribute__((noreturn))
+#elif defined(_MSC_VER)
+  #define BL_NORETURN __declspec(noreturn)
 #else
   #define BL_NORETURN
 #endif
@@ -404,12 +400,12 @@
 //! Macro that tells the C/C++ compiler that the expression `...` evaluates
 //! to true. This macro is only used by few places and should be considered
 //! internal as you shouldn't need it when using Blend2D library.
-#if defined(_MSC_VER)
-  #define BL_ASSUME(...) __assume(__VA_ARGS__)
-#elif defined(__clang__)
+#if defined(__clang__)
   #define BL_ASSUME(...) __builtin_assume(__VA_ARGS__)
 #elif defined(__GNUC__)
   #define BL_ASSUME(...) do { if (!(__VA_ARGS__)) __builtin_unreachable(); } while (0)
+#elif defined(_MSC_VER)
+  #define BL_ASSUME(...) __assume(__VA_ARGS__)
 #else
   #define BL_ASSUME(...) (void)0
 #endif
@@ -1293,7 +1289,7 @@ typedef BLArrayView BLDataView;
 
 //! \name BLArray
 //!
-//! C API uses must call either generic functions with `Item` suffix or correct
+//! C API users must call either generic functions with `Item` suffix or correct
 //! specialized functions in case of typed arrays. For example if you create a
 //! `BLArray<uint32_t>` in C then you can only modify it through functions that
 //! have either `U32` or `Item` suffix. Arrays of signed types are treated as
@@ -1548,6 +1544,7 @@ BL_API_C bool     BL_CDECL blGradientEquals(const BLGradientCore* a, const BLGra
 //! \{
 BL_API_C BLResult BL_CDECL blImageInit(BLImageCore* self) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blImageInitAs(BLImageCore* self, int w, int h, uint32_t format) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blImageInitAsFromData(BLImageCore* self, int w, int h, uint32_t format, void* pixelData, intptr_t stride, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blImageReset(BLImageCore* self) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blImageAssignMove(BLImageCore* self, BLImageCore* other) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blImageAssignWeak(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;

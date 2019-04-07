@@ -27,8 +27,7 @@ public:
   BL_NONCOPYABLE(BLMutex)
 
 #ifdef _WIN32
-  typedef SRWLOCK Handle;
-  Handle handle;
+  SRWLOCK handle;
 
   BL_INLINE BLMutex() noexcept : handle(SRWLOCK_INIT) {}
 
@@ -36,8 +35,7 @@ public:
   BL_INLINE bool tryLock() noexcept { return TryAcquireSRWLockExclusive(&handle) != 0; }
   BL_INLINE void unlock() noexcept { ReleaseSRWLockExclusive(&handle); }
 #else
-  typedef pthread_mutex_t Handle;
-  Handle handle;
+  pthread_mutex_t handle;
 
   #ifdef PTHREAD_MUTEX_INITIALIZER
   BL_INLINE BLMutex() noexcept : handle(PTHREAD_MUTEX_INITIALIZER) {}
@@ -52,10 +50,6 @@ public:
   BL_INLINE void unlock() noexcept { pthread_mutex_unlock(&handle); }
 #endif
 };
-
-// ============================================================================
-// [BLMutexGuard]
-// ============================================================================
 
 //! Mutex guard.
 //!
@@ -73,6 +67,71 @@ public:
 
   //! Unlocks the mutex that has been locked by the constructor.
   BL_INLINE ~BLMutexGuard() noexcept { this->mutex->unlock(); }
+};
+
+// ============================================================================
+// [BLRWLock]
+// ============================================================================
+
+class BLRWLock {
+public:
+  BL_NONCOPYABLE(BLRWLock)
+
+#ifdef _WIN32
+  SRWLOCK handle;
+
+  BL_INLINE BLRWLock() noexcept : handle(SRWLOCK_INIT) {}
+
+  BL_INLINE void lockRead() noexcept { AcquireSRWLockShared(&handle); }
+  BL_INLINE void lockWrite() noexcept { AcquireSRWLockExclusive(&handle); }
+
+  BL_INLINE void tryLockRead() noexcept { TryAcquireSRWLockShared(&handle); }
+  BL_INLINE void tryLockWrite() noexcept { TryAcquireSRWLockExclusive(&handle); }
+
+  BL_INLINE void unlockRead() noexcept { ReleaseSRWLockShared(&handle); }
+  BL_INLINE void unlockWrite() noexcept { ReleaseSRWLockExclusive(&handle); }
+#else
+  pthread_rwlock_t handle;
+
+  #ifdef PTHREAD_RWLOCK_INITIALIZER
+  BL_INLINE BLRWLock() noexcept : handle(PTHREAD_RWLOCK_INITIALIZER) {}
+  BL_INLINE ~BLRWLock() noexcept { pthread_rwlock_destroy(&handle); }
+  #else
+  BL_INLINE BLRWLock() noexcept { pthread_rwlock_init(&handle, nullptr); }
+  BL_INLINE ~BLRWLock() noexcept { pthread_rwlock_destroy(&handle); }
+  #endif
+
+  BL_INLINE void lockRead() noexcept { pthread_rwlock_rdlock(&handle); }
+  BL_INLINE void lockWrite() noexcept { pthread_rwlock_wrlock(&handle); }
+
+  BL_INLINE bool tryLockRead() noexcept { return pthread_rwlock_tryrdlock(&handle) == 0; }
+  BL_INLINE bool tryLockWrite() noexcept { return pthread_rwlock_trywrlock(&handle) == 0; }
+
+  BL_INLINE void unlockRead() noexcept { pthread_rwlock_unlock(&handle); }
+  BL_INLINE void unlockWrite() noexcept { pthread_rwlock_unlock(&handle); }
+#endif
+};
+
+class BLRWLockReadGuard {
+public:
+  BL_NONCOPYABLE(BLRWLockReadGuard)
+
+  BLRWLock* lock;
+
+  BL_INLINE BLRWLockReadGuard(BLRWLock& lock) noexcept : lock(&lock) { this->lock->lockRead(); }
+  BL_INLINE BLRWLockReadGuard(BLRWLock* lock) noexcept : lock(lock) { this->lock->lockRead(); }
+  BL_INLINE ~BLRWLockReadGuard() noexcept { this->lock->unlockRead(); }
+};
+
+class BLRWLockWriteGuard {
+public:
+  BL_NONCOPYABLE(BLRWLockWriteGuard)
+
+  BLRWLock* lock;
+
+  BL_INLINE BLRWLockWriteGuard(BLRWLock& lock) noexcept : lock(&lock) { this->lock->lockWrite(); }
+  BL_INLINE BLRWLockWriteGuard(BLRWLock* lock) noexcept : lock(lock) { this->lock->lockWrite(); }
+  BL_INLINE ~BLRWLockWriteGuard() noexcept { this->lock->unlockWrite(); }
 };
 
 // ============================================================================

@@ -11,7 +11,7 @@
 #include "../blcompop_p.h"
 #include "../blformat_p.h"
 #include "../blimage_p.h"
-#include "../blpipe_p.h"
+#include "../blpipedefs_p.h"
 #include "../blrgba_p.h"
 #include "../blsupport_p.h"
 #include "../bltables_p.h"

@@ -5,6 +5,8 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "../blapi-build_p.h"
+#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_PIPEGEN)
+
 #include "../pipegen/blcompoppart_p.h"
 #include "../pipegen/blfetchpatternpart_p.h"
 #include "../pipegen/blfetchutils_p.h"
@@ -2155,3 +2157,5 @@ void FetchAffinePatternPart::clampVIdx32(x86::Xmm& dst, const x86::Xmm& src, uin
 }
 
 } // {BLPipeGen}
+
+#endif

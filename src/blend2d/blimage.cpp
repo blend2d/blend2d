@@ -193,6 +193,11 @@ BLResult blImageInitAs(BLImageCore* self, int w, int h, uint32_t format) noexcep
   return blImageCreate(self, w, h, format);
 }
 
+BLResult blImageInitAsFromData(BLImageCore* self, int w, int h, uint32_t format, void* pixelData, intptr_t stride, BLDestroyImplFunc destroyFunc, void* destroyData) noexcept {
+  self->impl = &blNullImageImpl;
+  return blImageCreateFromData(self, w, h, format, pixelData, stride, destroyFunc, destroyData);
+}
+
 BLResult blImageReset(BLImageCore* self) noexcept {
   BLInternalImageImpl* selfI = blInternalCast(self->impl);
   self->impl = &blNullImageImpl;

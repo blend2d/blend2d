@@ -62,10 +62,10 @@ static const constexpr bool BL_UNALIGNED_IO_32 = BL_TARGET_ARCH_X86 != 0;
 static const constexpr bool BL_UNALIGNED_IO_64 = BL_TARGET_ARCH_X86 != 0;
 
 // Type alignment (not allowed by C++11 'alignas' keyword).
-#if defined(_MSC_VER)
-  #define BL_MISALIGN_TYPE(TYPE, N) __declspec(align(N)) TYPE
-#elif defined(__GNUC__)
+#if defined(__GNUC__)
   #define BL_MISALIGN_TYPE(TYPE, N) __attribute__((__aligned__(N))) TYPE
+#elif defined(_MSC_VER)
+  #define BL_MISALIGN_TYPE(TYPE, N) __declspec(align(N)) TYPE
 #else
   #define BL_MISALIGN_TYPE(TYPE, N) TYPE
 #endif
@@ -108,6 +108,9 @@ constexpr T blNegate(const T& x) noexcept {
   typedef typename std::make_unsigned<T>::type U;
   return T(U(0) - U(x));
 }
+
+template<typename T>
+constexpr T blBitOnes(const T& x) noexcept { return blNegate(T(-1)); }
 
 template<typename T>
 constexpr uint32_t blBitSizeOf() noexcept { return uint32_t(sizeof(T) * 8u); }
@@ -841,7 +844,7 @@ struct alignas(alignof(T)) BLWrap {
 
   //! Placement new constructor.
   BL_INLINE T* init() noexcept {
-    #ifdef _MSC_VER
+    #if defined(_MSC_VER) && !defined(__clang__)
     BL_ASSUME(_data != nullptr);
     #endif
     return new(static_cast<void*>(_data)) T;
@@ -850,7 +853,7 @@ struct alignas(alignof(T)) BLWrap {
   //! Placement new constructor with arguments.
   template<typename... Args>
   BL_INLINE T* init(Args&&... args) noexcept {
-    #ifdef _MSC_VER
+    #if defined(_MSC_VER) && !defined(__clang__)
     BL_ASSUME(_data != nullptr);
     #endif
     return new(static_cast<void*>(_data)) T(std::forward<Args>(args)...);
@@ -858,7 +861,7 @@ struct alignas(alignof(T)) BLWrap {
 
   //! Placement delete destructor.
   BL_INLINE void destroy() noexcept {
-    #ifdef _MSC_VER
+    #if defined(_MSC_VER) && !defined(__clang__)
     BL_ASSUME(_data != nullptr);
     #endif
     static_cast<T*>(static_cast<void*>(_data))->~T();

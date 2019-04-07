@@ -8,7 +8,7 @@
 #include "./blcontext.h"
 #include "./blmath_p.h"
 #include "./blmatrix_p.h"
-#include "./blpipe_p.h"
+#include "./blpipedefs_p.h"
 #include "./blsupport_p.h"
 
 // ============================================================================

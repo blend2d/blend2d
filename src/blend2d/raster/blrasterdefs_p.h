@@ -13,9 +13,8 @@
 #include "../blmatrix_p.h"
 #include "../blpattern_p.h"
 #include "../blpath_p.h"
-#include "../blpipe_p.h"
+#include "../blpipedefs_p.h"
 #include "../blvariant_p.h"
-#include "../pipegen/blpiperuntime_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal_raster

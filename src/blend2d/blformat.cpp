@@ -13,13 +13,13 @@
 // ============================================================================
 
 const BLFormatInfo blFormatInfo[BL_FORMAT_RESERVED_COUNT] = {
-  #define U 0 // Used only to distinguish between zero and Unused.
+  #define U 0 // Used only to distinguish between zero and unused.
   { 0 , blFormatFlagsStatic(0), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <Public:NONE>
   { 32, blFormatFlagsStatic(1), {{ { 8, 8, 8, 8 }, { 16, 8 , 0 , 24 } }} }, // <Public:PRGB32>
   { 32, blFormatFlagsStatic(2), {{ { 8, 8, 8, U }, { 16, 8 , 0 , U  } }} }, // <Public:XRGB32>
   { 8 , blFormatFlagsStatic(3), {{ { U, U, U, 8 }, { U , U , U , 0  } }} }, // <Public:A8>
   { 32, blFormatFlagsStatic(4), {{ { 8, 8, 8, U }, { 16, 8 , 0 , U  } }} }, // <Internal:FRGB32>
-  { 32, blFormatFlagsStatic(5), {{ { 8, 8, 8, 8 }, { 16, 8 , 0 , 24 } }} }, // <Internal:FRGB32>
+  { 32, blFormatFlagsStatic(5), {{ { 8, 8, 8, 8 }, { 16, 8 , 0 , 24 } }} }, // <Internal:ZERO32>
   { 0 , blFormatFlagsStatic(6), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <Reserved>
   { 0 , blFormatFlagsStatic(7), {{ { U, U, U, U }, { U , U , U , U  } }} }  // <Reserved>
   #undef U

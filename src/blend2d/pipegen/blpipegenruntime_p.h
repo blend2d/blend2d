@@ -4,9 +4,11 @@
 // [License]
 // ZLIB - See LICENSE.md file in the package.
 
-#ifndef BLEND2D_PIPEGEN_BLPIPERUNTIME_P_H
-#define BLEND2D_PIPEGEN_BLPIPERUNTIME_P_H
+#ifndef BLEND2D_PIPEGEN_BLPIPEGENRUNTIME_P_H
+#define BLEND2D_PIPEGEN_BLPIPEGENRUNTIME_P_H
 
+#include "../blpiperuntime_p.h"
+#include "../blthreading_p.h"
 #include "../blzoneallocator_p.h"
 #include "../pipegen/blpipegencore_p.h"
 
@@ -14,17 +16,15 @@
 //! \addtogroup blend2d_internal_pipegen
 //! \{
 
-namespace BLPipeGen {
-
 // ============================================================================
-// [BLPipeGen::FunctionCache]
+// [BLPipeFunctionCache]
 // ============================================================================
 
 //! Function cache.
 //!
 //! NOTE: No locking is preformed implicitly, it's user's responsibility to
-//! ensure only one thread is accessing `FunctionCache` at the sime time.
-class FunctionCache {
+//! ensure only one thread is accessing `BLPipeFunctionCache` at the sime time.
+class BLPipeFunctionCache {
 public:
   enum { kHeightLimit = 64 };
 
@@ -42,15 +42,18 @@ public:
   Node* _root;
   BLZoneAllocator _zone;
 
-  FunctionCache() noexcept;
-  ~FunctionCache() noexcept;
+  BLPipeFunctionCache() noexcept;
+  ~BLPipeFunctionCache() noexcept;
 
   inline void* get(uint32_t signature) const noexcept {
     Node* node = _root;
     while (node) {
       uint32_t nodeSignature = node->_signature;
-      if (nodeSignature == signature)
-        return node->_func;
+      if (nodeSignature == signature) {
+        void* func = node->_func;
+        BL_ASSUME(func != nullptr);
+        return func;
+      }
       node = node->_link[nodeSignature < signature];
     }
     return nullptr;
@@ -60,15 +63,17 @@ public:
 };
 
 // ============================================================================
-// [BLPipeGen::PipeRuntime]
+// [BLPipeGenRuntime]
 // ============================================================================
 
-class PipeRuntime {
+class BLPipeGenRuntime : public BLPipeRuntime {
 public:
   //! JIT runtime (stores JIT functions).
-  asmjit::JitRuntime _runtime;
+  asmjit::JitRuntime _jitRuntime;
+  //! Read/write lock used to read/write function cache.
+  BLRWLock _rwLock;
   //! Function cache (caches JIT functions).
-  FunctionCache _cache;
+  BLPipeFunctionCache _functionCache;
   //! Count of cached pipelines.
   size_t _pipelineCount;
 
@@ -87,8 +92,8 @@ public:
   asmjit::FileLogger _logger;
   #endif
 
-  PipeRuntime() noexcept;
-  ~PipeRuntime() noexcept;
+  explicit BLPipeGenRuntime(uint32_t runtimeFlags = 0) noexcept;
+  ~BLPipeGenRuntime() noexcept;
 
   //! Restricts CPU features not provided in the given mask. This function
   //! is only used by isolated runtimes to setup the runtime. It should never
@@ -98,20 +103,12 @@ public:
   BL_INLINE uint32_t maxPixels() const noexcept { return _maxPixels; }
   BL_INLINE void setMaxPixelStep(uint32_t value) noexcept { _maxPixels = value; }
 
-  BL_INLINE BLPipeFillFunc getFunction(uint32_t signature) noexcept {
-    BLPipeFillFunc func = (BLPipeFillFunc)_cache.get(signature);
-    return func ? func : _compileAndStore(signature);
-  }
+  BLPipeFillFunc _compileFillFunc(uint32_t signature) noexcept;
 
-  BLPipeFillFunc _compileAndStore(uint32_t signature) noexcept;
-  BLPipeFillFunc _compileFunction(uint32_t signature) noexcept;
-
-  static BLWrap<PipeRuntime> _global;
+  static BLWrap<BLPipeGenRuntime> _global;
 };
-
-} // {BLPipeGen}
 
 //! \}
 //! \endcond
 
-#endif // BLEND2D_PIPEGEN_BLPIPERUNTIME_P_H
+#endif // BLEND2D_PIPEGEN_BLPIPEGENRUNTIME_P_H

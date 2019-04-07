@@ -5,6 +5,8 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "../blapi-build_p.h"
+#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_PIPEGEN)
+
 #include "../pipegen/blcompoppart_p.h"
 #include "../pipegen/blfetchpart_p.h"
 #include "../pipegen/blfetchpatternpart_p.h"
@@ -3397,3 +3399,5 @@ void CompOpPart::vMaskProc32InvertDone(VecArray& mi, bool mImmutable) noexcept {
 }
 
 } // {BLPipeGen}
+
+#endif
