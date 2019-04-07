@@ -169,18 +169,15 @@ L_BitScan_Match:
     i = blBitCtz(bitWord);
 
 L_BitScan_End:
-    // pc->vloadi128a(m[0], x86::ptr(cellPtr));                 //   m0[3:0] = cellPtr[3:0];
     bitWordTmp = blBitOnes<BLBitWord>() << i;
     i *= PIXELS_PER_ONE_BIT;
     bitWord ^= bitWordTmp;
     i += xOff;
-    // pc->vzeropi(m[1]);                                       //   m1[3:0] = 0;
 
     // In cases where the raster width is not a multiply of `pixelsPerOneBit` we
     // must make sure we won't overflow it.
     if (i > xEnd)
       i = xEnd;
-    // pc->vstorei128a(x86::ptr(cellPtr), m[1]);                //   cellPtr[3:0] = 0;
 
     // `i` is now the number of pixels (and cells) to composite by using `vMask`.
     i -= x0;
