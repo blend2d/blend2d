@@ -5,7 +5,7 @@ Blend2D
 
   * [Home page (blend2d.com)](https://blend2d.com)
   * [Official Repository (blend2d/blend2d)](https://github.com/blend2d/blend2d)
-  * [Official Chat (gitter)](https://gitter.im/blend2d/b2d)
+  * [Official Chat (gitter)](https://gitter.im/blend2d/blend2d)
   * [Permissive Zlib license](./LICENSE.md)
 
 See [blend2d.com](https://blend2d.com) page for more details.

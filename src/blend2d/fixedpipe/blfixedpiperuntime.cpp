@@ -40,7 +40,7 @@ struct BLFixedPipe_FillBoxAA_Base {
     uint32_t w = fillData->box.x1 - fillData->box.x0;
     uint32_t h = fillData->box.y1 - fillData->box.y0;
 
-    dstStride -= intptr_t(size_t(w) * 4);
+    dstStride -= intptr_t(size_t(w) * Impl::DST_PTR);
     uint32_t msk = fillData->alpha.u;
 
     Impl impl(fetchData_);
@@ -320,7 +320,7 @@ struct BLFixedPipe_Composite_PRGB32_Src_Solid {
 
   BL_INLINE uint8_t* compositePixelOpaque(uint8_t* dstPtr) noexcept {
     blMemWriteU32a(dstPtr, src);
-    return dstPtr + 4;
+    return dstPtr + DST_BPP;
   }
 
   BL_INLINE uint8_t* compositePixelMasked(uint8_t* dstPtr, uint32_t m) noexcept {
@@ -335,7 +335,7 @@ struct BLFixedPipe_Composite_PRGB32_Src_Solid {
     ag = (ag + ((d >> 8) & 0x00FF00FFu) * m) & 0xFF00FF00u;
 
     blMemWriteU32a(dstPtr, ag | (rb >> 8));
-    return dstPtr + 4;
+    return dstPtr + DST_BPP;
   }
 
   BL_INLINE uint8_t* compositeSpanOpaque(uint8_t* dstPtr, uint32_t w) noexcept {
@@ -350,7 +350,6 @@ struct BLFixedPipe_Composite_PRGB32_Src_Solid {
     uint32_t i = w;
     do {
       dstPtr = compositePixelMasked(dstPtr, m);
-      dstPtr += 4;
     } while(--i);
     return dstPtr;
   }
