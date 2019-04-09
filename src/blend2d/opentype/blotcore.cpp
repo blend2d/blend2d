@@ -60,7 +60,7 @@ static BLResult initHead(BLOTFaceImpl* faceI, const BLFontData* fontData) noexce
     uint16_t unitsPerEm = head->unitsPerEm();
 
     if (headFlags & HeadTable::kFlagLastResortFont)
-      faceI->faceFlags |= BL_FONT_FACE_FLAG_LAST_RESORT_FONT;
+      faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_LAST_RESORT_FONT;
 
     if (headFlags & HeadTable::kFlagBaselineYEquals0)
       faceI->otFlags |= BL_OT_FACE_FLAG_BASELINE_Y_EQUALS_0;
@@ -69,7 +69,7 @@ static BLResult initHead(BLOTFaceImpl* faceI, const BLFontData* fontData) noexce
       faceI->otFlags |= BL_OT_FACE_FLAG_LSB_POINT_X_EQUALS_0;
 
     trace.info("UnitsPerEm: %u\n", unitsPerEm);
-    trace.info("LastResortFont: %s\n", stringFromBool((faceI->faceFlags & BL_FONT_FACE_FLAG_LAST_RESORT_FONT) != 0));
+    trace.info("LastResortFont: %s\n", stringFromBool((faceI->faceInfo.faceFlags & BL_FONT_FACE_FLAG_LAST_RESORT_FONT) != 0));
     trace.info("BaselineYEquals0: %s\n", stringFromBool((faceI->otFlags & BL_OT_FACE_FLAG_BASELINE_Y_EQUALS_0) != 0));
     trace.info("LSBPointXEquals0: %s\n", stringFromBool((faceI->otFlags & BL_OT_FACE_FLAG_LSB_POINT_X_EQUALS_0) != 0));
 
@@ -121,7 +121,7 @@ static BLResult initMaxP(BLOTFaceImpl* faceI, const BLFontData* fontData) noexce
       return blTraceError(BL_ERROR_INVALID_DATA);
     }
 
-    faceI->glyphCount = uint16_t(glyphCount);
+    faceI->faceInfo.glyphCount = uint16_t(glyphCount);
   }
 
   return BL_SUCCESS;
@@ -160,7 +160,7 @@ static BLResult initOS_2(BLOTFaceImpl* faceI, const BLFontData* fontData) noexce
     // Read PANOSE classification.
     memcpy(&faceI->panose, os2->v0a()->panose, sizeof(BLFontPanose));
     if (!faceI->panose.empty())
-      faceI->faceFlags |= BL_FONT_FACE_FLAG_PANOSE_DATA;
+      faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_PANOSE_DATA;
 
     // Read unicode coverage.
     faceI->unicodeCoverage.data[0] = os2->v0a()->unicodeCoverage[0].value();
@@ -168,7 +168,7 @@ static BLResult initOS_2(BLOTFaceImpl* faceI, const BLFontData* fontData) noexce
     faceI->unicodeCoverage.data[2] = os2->v0a()->unicodeCoverage[2].value();
     faceI->unicodeCoverage.data[3] = os2->v0a()->unicodeCoverage[3].value();
     if (!faceI->unicodeCoverage.empty())
-      faceI->faceFlags |= BL_FONT_FACE_FLAG_UNICODE_COVERAGE;
+      faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_UNICODE_COVERAGE;
 
     // Read strikethrough info.
     faceI->designMetrics.strikethroughPosition = os2->v0a()->yStrikeoutPosition();
@@ -188,8 +188,8 @@ static BLResult initOS_2(BLOTFaceImpl* faceI, const BLFontData* fontData) noexce
         faceI->style = BL_FONT_STYLE_OBLIQUE;
 
       if ((selectionFlags & OS2Table::kSelectionUseTypoMetrics) != 0)
-        faceI->faceFlags |= BL_FONT_FACE_FLAG_TYPOGRAPHIC_METRICS;
-      trace.info("HasTypographicMetrics: %s\n", stringFromBool((faceI->faceFlags & BL_FONT_FACE_FLAG_TYPOGRAPHIC_METRICS) != 0));
+        faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_TYPOGRAPHIC_METRICS;
+      trace.info("HasTypographicMetrics: %s\n", stringFromBool((faceI->faceInfo.faceFlags & BL_FONT_FACE_FLAG_TYPOGRAPHIC_METRICS) != 0));
 
       int ascent  = os2->v0b()->typoAscender();
       int descent = os2->v0b()->typoDescender();

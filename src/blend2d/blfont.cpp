@@ -629,6 +629,25 @@ BLResult blFontFaceCreateFromLoader(BLFontFaceCore* self, const BLFontLoaderCore
 }
 
 // ============================================================================
+// [BLFontFace - Properties]
+// ============================================================================
+
+BLResult blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) noexcept {
+  *out = blDownCast(self)->faceInfo();
+  return BL_SUCCESS;
+}
+
+BLResult blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) noexcept {
+  *out = blDownCast(self)->designMetrics();
+  return BL_SUCCESS;
+}
+
+BLResult blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self, BLFontUnicodeCoverage* out) noexcept {
+  *out = blDownCast(self)->unicodeCoverage();
+  return BL_SUCCESS;
+}
+
+// ============================================================================
 // [BLFont - Utilities]
 // ============================================================================
 
@@ -782,6 +801,25 @@ BLResult blFontCreateFromFace(BLFontCore* self, const BLFontFaceCore* face, floa
     self->impl = newI;
     return blFontImplRelease(selfI);
   }
+}
+
+// ============================================================================
+// [BLFont - Properties]
+// ============================================================================
+
+BLResult blFontGetMatrix(const BLFontCore* self, BLFontMatrix* out) noexcept {
+  *out = blDownCast(self)->matrix();
+  return BL_SUCCESS;
+}
+
+BLResult blFontGetMetrics(const BLFontCore* self, BLFontMetrics* out) noexcept {
+  *out = blDownCast(self)->metrics();
+  return BL_SUCCESS;
+}
+
+BLResult blFontGetDesignMetrics(const BLFontCore* self, BLFontDesignMetrics* out) noexcept {
+  *out = blDownCast(self)->designMetrics();
+  return BL_SUCCESS;
 }
 
 // ============================================================================

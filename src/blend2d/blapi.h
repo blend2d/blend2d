@@ -603,14 +603,15 @@ BL_DEFINE_STRUCT(BLGlyphOutlineSinkInfo);
 BL_DEFINE_STRUCT(BLGlyphPlacement);
 BL_DEFINE_STRUCT(BLGlyphRun);
 
-BL_DEFINE_STRUCT(BLFontTable);
+BL_DEFINE_STRUCT(BLFontUnicodeCoverage);
+BL_DEFINE_STRUCT(BLFontFaceInfo);
 BL_DEFINE_STRUCT(BLFontFeature);
-BL_DEFINE_STRUCT(BLFontVariation);
-BL_DEFINE_STRUCT(BLFontCoverage);
-BL_DEFINE_STRUCT(BLFontPanose);
+BL_DEFINE_STRUCT(BLFontDesignMetrics);
 BL_DEFINE_STRUCT(BLFontMatrix);
 BL_DEFINE_STRUCT(BLFontMetrics);
-BL_DEFINE_STRUCT(BLFontDesignMetrics);
+BL_DEFINE_STRUCT(BLFontPanose);
+BL_DEFINE_STRUCT(BLFontTable);
+BL_DEFINE_STRUCT(BLFontVariation);
 BL_DEFINE_STRUCT(BLTextMetrics);
 
 BL_DEFINE_STRUCT(BLFontCore);
@@ -1449,6 +1450,9 @@ BL_API_C BLResult BL_CDECL blFontPositionGlyphs(const BLFontCore* self, BLGlyphB
 BL_API_C BLResult BL_CDECL blFontApplyKerning(const BLFontCore* self, BLGlyphBufferCore* buf) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontApplyGSub(const BLFontCore* self, BLGlyphBufferCore* buf, size_t index, BLBitWord lookups) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontApplyGPos(const BLFontCore* self, BLGlyphBufferCore* buf, size_t index, BLBitWord lookups) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontGetMatrix(const BLFontCore* self, BLFontMatrix* out) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontGetMetrics(const BLFontCore* self, BLFontMetrics* out) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontGetDesignMetrics(const BLFontCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* buf, BLTextMetrics* out) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontGetGlyphBounds(const BLFontCore* self, const void* glyphIdData, intptr_t glyphIdAdvance, BLBoxI* out, size_t count) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontGetGlyphAdvances(const BLFontCore* self, const void* glyphIdData, intptr_t glyphIdAdvance, BLGlyphPlacement* out, size_t count) BL_NOEXCEPT_C;
@@ -1476,6 +1480,9 @@ BL_API_C BLResult BL_CDECL blFontFaceAssignWeak(BLFontFaceCore* self, const BLFo
 BL_API_C bool     BL_CDECL blFontFaceEquals(const BLFontFaceCore* a, const BLFontFaceCore* b) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontFaceCreateFromLoader(BLFontFaceCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self, BLFontUnicodeCoverage* out) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLFontLoader

@@ -136,7 +136,7 @@ static BLResult BL_CDECL decodeGlyph(
   typedef GlyfTable::Simple Simple;
   typedef GlyfTable::Compound Compound;
 
-  if (BL_UNLIKELY(glyphId >= faceI->glyphCount))
+  if (BL_UNLIKELY(glyphId >= faceI->faceInfo.glyphCount))
     return blTraceError(BL_ERROR_INVALID_GLYPH);
 
   BLFontTable glyfTable = faceI->glyf.glyfTable;
@@ -594,7 +594,7 @@ ContinueCompound:
 
           flags = blMemReadU16uBE(gPtr);
           glyphId = blMemReadU16uBE(gPtr + 2);
-          if (BL_UNLIKELY(glyphId >= faceI->glyphCount))
+          if (BL_UNLIKELY(glyphId >= faceI->faceInfo.glyphCount))
             goto InvalidData;
 
           arg1 = blMemReadI8(gPtr + 4);

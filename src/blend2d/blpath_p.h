@@ -19,7 +19,7 @@
 // [BLApproximationOptions]
 // ============================================================================
 
-BL_INLINE constexpr BLApproximationOptions blMakeDefaultApproximationOptions() noexcept {
+static BL_INLINE constexpr BLApproximationOptions blMakeDefaultApproximationOptions() noexcept {
   return BLApproximationOptions {
     BL_FLATTEN_MODE_DEFAULT, // Default flattening mode.
     BL_OFFSET_MODE_DEFAULT,  // Default offset mode.

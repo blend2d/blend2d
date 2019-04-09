@@ -59,11 +59,11 @@ static BLResult blOTFaceImplInitFace(BLOTFaceImpl* faceI, const BLFontData* font
     uint32_t version = !tables[1].size ? CFFData::kVersion1
                                        : CFFData::kVersion2;
 
-    faceI->outlineType = BL_FONT_OUTLINE_TYPE_CFF + version;
+    faceI->faceInfo.outlineType = BL_FONT_OUTLINE_TYPE_CFF + version;
     BL_PROPAGATE(CFFImpl::init(faceI, tables[version], version));
   }
   else if (fontData->queryTables(tables, glyfTags, 2) == 2) {
-    faceI->outlineType = BL_FONT_OUTLINE_TYPE_TRUETYPE;
+    faceI->faceInfo.outlineType = BL_FONT_OUTLINE_TYPE_TRUETYPE;
     BL_PROPAGATE(GlyfImpl::init(faceI, tables[0], tables[1]));
   }
   else {
@@ -100,8 +100,8 @@ BLResult blOTFaceImplNew(BLOTFaceImpl** dst, const BLFontLoader* loader, const B
   faceI->virt = &blOTFaceVirt;
   faceI->data.impl = blImplIncRef(fontData->impl);
   faceI->loader.impl = blImplIncRef(loader->impl);
-  faceI->faceType = uint8_t(BL_FONT_FACE_TYPE_OPENTYPE);
-  faceI->faceIndex = faceIndex;
+  faceI->faceInfo.faceType = uint8_t(BL_FONT_FACE_TYPE_OPENTYPE);
+  faceI->faceInfo.faceIndex = faceIndex;
   faceI->funcs = blNullFontFaceFuncs;
 
   blCallCtor(faceI->fullName);

@@ -520,7 +520,7 @@ static bool checkGDefTable(Validator* self, Trace trace) noexcept {
       return trace.fail("%s offset [%u] out of range [%zu:%zu]\n", name, glyphClassDefOffset, headerSize, gdef.size);
 
     if (!checkClassDefTable(self, trace, blFontSubTable(gdef, glyphClassDefOffset), name)) {
-      faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_GDEF_DATA;
+      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_GDEF_DATA;
     }
     else {
       faceI->otFlags |= BL_OT_FACE_FLAG_GLYPH_CLASS_DEF;
@@ -533,7 +533,7 @@ static bool checkGDefTable(Validator* self, Trace trace) noexcept {
       return trace.fail("%s offset [%u] out of range [%zu:%zu]\n", name, markAttachClassDefOffset, headerSize, gdef.size);
 
     if (!checkClassDefTable(self, trace, blFontSubTable(gdef, markAttachClassDefOffset), name)) {
-      faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_GDEF_DATA;
+      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_GDEF_DATA;
     }
     else {
       faceI->otFlags |= BL_OT_FACE_FLAG_MARK_ATTACH_CLASS_DEF;
@@ -2201,7 +2201,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
   if (validator.gdef.data) {
     if (BL_UNLIKELY(!checkGDefTable(&validator, trace))) {
-      faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_GDEF_DATA;
+      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_GDEF_DATA;
       return BL_SUCCESS;
     }
     faceI->layout.tables[2] = validator.tables[2];
@@ -2209,7 +2209,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
   if (validator.gsub.data) {
     if (BL_UNLIKELY(!checkGPosGSubTable(&validator, trace, LookupInfo::kKindGSub))) {
-      faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_GSUB_DATA;
+      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_GSUB_DATA;
       return BL_SUCCESS;
     }
 
@@ -2220,7 +2220,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
   if (validator.gpos.data) {
     if (BL_UNLIKELY(!checkGPosGSubTable(&validator, trace, LookupInfo::kKindGPos))) {
-      faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_GPOS_DATA;
+      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_GPOS_DATA;
       return BL_SUCCESS;
     }
 

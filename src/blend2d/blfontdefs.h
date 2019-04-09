@@ -233,184 +233,184 @@ BL_DEFINE_ENUM(BLFontStringId) {
   BL_FONT_STRING_CUSTOM_START_INDEX           = 255
 };
 
-//! Bit positions in `BLFontCoverage` structure.
+//! Bit positions in `BLFontUnicodeCoverage` structure.
 //!
 //! Each bit represents a range (or multiple ranges) of unicode characters.
-BL_DEFINE_ENUM(BLFontCoverageIndex) {
-  BL_FONT_COVERAGE_BASIC_LATIN,                              //!< [000000-00007F] Basic Latin.
-  BL_FONT_COVERAGE_LATIN1_SUPPLEMENT,                        //!< [000080-0000FF] Latin-1 Supplement.
-  BL_FONT_COVERAGE_LATIN_EXTENDED_A,                         //!< [000100-00017F] Latin Extended-A.
-  BL_FONT_COVERAGE_LATIN_EXTENDED_B,                         //!< [000180-00024F] Latin Extended-B.
-  BL_FONT_COVERAGE_IPA_EXTENSIONS,                           //!< [000250-0002AF] IPA Extensions.
+BL_DEFINE_ENUM(BLFontUnicodeCoverageIndex) {
+  BL_FONT_UC_INDEX_BASIC_LATIN,                              //!< [000000-00007F] Basic Latin.
+  BL_FONT_UC_INDEX_LATIN1_SUPPLEMENT,                        //!< [000080-0000FF] Latin-1 Supplement.
+  BL_FONT_UC_INDEX_LATIN_EXTENDED_A,                         //!< [000100-00017F] Latin Extended-A.
+  BL_FONT_UC_INDEX_LATIN_EXTENDED_B,                         //!< [000180-00024F] Latin Extended-B.
+  BL_FONT_UC_INDEX_IPA_EXTENSIONS,                           //!< [000250-0002AF] IPA Extensions.
                                                              //!< [001D00-001D7F] Phonetic Extensions.
                                                              //!< [001D80-001DBF] Phonetic Extensions Supplement.
-  BL_FONT_COVERAGE_SPACING_MODIFIER_LETTERS,                 //!< [0002B0-0002FF] Spacing Modifier Letters.
+  BL_FONT_UC_INDEX_SPACING_MODIFIER_LETTERS,                 //!< [0002B0-0002FF] Spacing Modifier Letters.
                                                              //!< [00A700-00A71F] Modifier Tone Letters.
                                                              //!< [001DC0-001DFF] Combining Diacritical Marks Supplement.
-  BL_FONT_COVERAGE_COMBINING_DIACRITICAL_MARKS,              //!< [000300-00036F] Combining Diacritical Marks.
-  BL_FONT_COVERAGE_GREEK_AND_COPTIC,                         //!< [000370-0003FF] Greek and Coptic.
-  BL_FONT_COVERAGE_COPTIC,                                   //!< [002C80-002CFF] Coptic.
-  BL_FONT_COVERAGE_CYRILLIC,                                 //!< [000400-0004FF] Cyrillic.
+  BL_FONT_UC_INDEX_COMBINING_DIACRITICAL_MARKS,              //!< [000300-00036F] Combining Diacritical Marks.
+  BL_FONT_UC_INDEX_GREEK_AND_COPTIC,                         //!< [000370-0003FF] Greek and Coptic.
+  BL_FONT_UC_INDEX_COPTIC,                                   //!< [002C80-002CFF] Coptic.
+  BL_FONT_UC_INDEX_CYRILLIC,                                 //!< [000400-0004FF] Cyrillic.
                                                              //!< [000500-00052F] Cyrillic Supplement.
                                                              //!< [002DE0-002DFF] Cyrillic Extended-A.
                                                              //!< [00A640-00A69F] Cyrillic Extended-B.
-  BL_FONT_COVERAGE_ARMENIAN,                                 //!< [000530-00058F] Armenian.
-  BL_FONT_COVERAGE_HEBREW,                                   //!< [000590-0005FF] Hebrew.
-  BL_FONT_COVERAGE_VAI,                                      //!< [00A500-00A63F] Vai.
-  BL_FONT_COVERAGE_ARABIC,                                   //!< [000600-0006FF] Arabic.
+  BL_FONT_UC_INDEX_ARMENIAN,                                 //!< [000530-00058F] Armenian.
+  BL_FONT_UC_INDEX_HEBREW,                                   //!< [000590-0005FF] Hebrew.
+  BL_FONT_UC_INDEX_VAI,                                      //!< [00A500-00A63F] Vai.
+  BL_FONT_UC_INDEX_ARABIC,                                   //!< [000600-0006FF] Arabic.
                                                              //!< [000750-00077F] Arabic Supplement.
-  BL_FONT_COVERAGE_NKO,                                      //!< [0007C0-0007FF] NKo.
-  BL_FONT_COVERAGE_DEVANAGARI,                               //!< [000900-00097F] Devanagari.
-  BL_FONT_COVERAGE_BENGALI,                                  //!< [000980-0009FF] Bengali.
-  BL_FONT_COVERAGE_GURMUKHI,                                 //!< [000A00-000A7F] Gurmukhi.
-  BL_FONT_COVERAGE_GUJARATI,                                 //!< [000A80-000AFF] Gujarati.
-  BL_FONT_COVERAGE_ORIYA,                                    //!< [000B00-000B7F] Oriya.
-  BL_FONT_COVERAGE_TAMIL,                                    //!< [000B80-000BFF] Tamil.
-  BL_FONT_COVERAGE_TELUGU,                                   //!< [000C00-000C7F] Telugu.
-  BL_FONT_COVERAGE_KANNADA,                                  //!< [000C80-000CFF] Kannada.
-  BL_FONT_COVERAGE_MALAYALAM,                                //!< [000D00-000D7F] Malayalam.
-  BL_FONT_COVERAGE_THAI,                                     //!< [000E00-000E7F] Thai.
-  BL_FONT_COVERAGE_LAO,                                      //!< [000E80-000EFF] Lao.
-  BL_FONT_COVERAGE_GEORGIAN,                                 //!< [0010A0-0010FF] Georgian.
+  BL_FONT_UC_INDEX_NKO,                                      //!< [0007C0-0007FF] NKo.
+  BL_FONT_UC_INDEX_DEVANAGARI,                               //!< [000900-00097F] Devanagari.
+  BL_FONT_UC_INDEX_BENGALI,                                  //!< [000980-0009FF] Bengali.
+  BL_FONT_UC_INDEX_GURMUKHI,                                 //!< [000A00-000A7F] Gurmukhi.
+  BL_FONT_UC_INDEX_GUJARATI,                                 //!< [000A80-000AFF] Gujarati.
+  BL_FONT_UC_INDEX_ORIYA,                                    //!< [000B00-000B7F] Oriya.
+  BL_FONT_UC_INDEX_TAMIL,                                    //!< [000B80-000BFF] Tamil.
+  BL_FONT_UC_INDEX_TELUGU,                                   //!< [000C00-000C7F] Telugu.
+  BL_FONT_UC_INDEX_KANNADA,                                  //!< [000C80-000CFF] Kannada.
+  BL_FONT_UC_INDEX_MALAYALAM,                                //!< [000D00-000D7F] Malayalam.
+  BL_FONT_UC_INDEX_THAI,                                     //!< [000E00-000E7F] Thai.
+  BL_FONT_UC_INDEX_LAO,                                      //!< [000E80-000EFF] Lao.
+  BL_FONT_UC_INDEX_GEORGIAN,                                 //!< [0010A0-0010FF] Georgian.
                                                              //!< [002D00-002D2F] Georgian Supplement.
-  BL_FONT_COVERAGE_BALINESE,                                 //!< [001B00-001B7F] Balinese.
-  BL_FONT_COVERAGE_HANGUL_JAMO,                              //!< [001100-0011FF] Hangul Jamo.
-  BL_FONT_COVERAGE_LATIN_EXTENDED_ADDITIONAL,                //!< [001E00-001EFF] Latin Extended Additional.
+  BL_FONT_UC_INDEX_BALINESE,                                 //!< [001B00-001B7F] Balinese.
+  BL_FONT_UC_INDEX_HANGUL_JAMO,                              //!< [001100-0011FF] Hangul Jamo.
+  BL_FONT_UC_INDEX_LATIN_EXTENDED_ADDITIONAL,                //!< [001E00-001EFF] Latin Extended Additional.
                                                              //!< [002C60-002C7F] Latin Extended-C.
                                                              //!< [00A720-00A7FF] Latin Extended-D.
-  BL_FONT_COVERAGE_GREEK_EXTENDED,                           //!< [001F00-001FFF] Greek Extended.
-  BL_FONT_COVERAGE_GENERAL_PUNCTUATION,                      //!< [002000-00206F] General Punctuation.
+  BL_FONT_UC_INDEX_GREEK_EXTENDED,                           //!< [001F00-001FFF] Greek Extended.
+  BL_FONT_UC_INDEX_GENERAL_PUNCTUATION,                      //!< [002000-00206F] General Punctuation.
                                                              //!< [002E00-002E7F] Supplemental Punctuation.
-  BL_FONT_COVERAGE_SUPERSCRIPTS_AND_SUBSCRIPTS,              //!< [002070-00209F] Superscripts And Subscripts.
-  BL_FONT_COVERAGE_CURRENCY_SYMBOLS,                         //!< [0020A0-0020CF] Currency Symbols.
-  BL_FONT_COVERAGE_COMBINING_DIACRITICAL_MARKS_FOR_SYMBOLS,  //!< [0020D0-0020FF] Combining Diacritical Marks For Symbols.
-  BL_FONT_COVERAGE_LETTERLIKE_SYMBOLS,                       //!< [002100-00214F] Letterlike Symbols.
-  BL_FONT_COVERAGE_NUMBER_FORMS,                             //!< [002150-00218F] Number Forms.
-  BL_FONT_COVERAGE_ARROWS,                                   //!< [002190-0021FF] Arrows.
+  BL_FONT_UC_INDEX_SUPERSCRIPTS_AND_SUBSCRIPTS,              //!< [002070-00209F] Superscripts And Subscripts.
+  BL_FONT_UC_INDEX_CURRENCY_SYMBOLS,                         //!< [0020A0-0020CF] Currency Symbols.
+  BL_FONT_UC_INDEX_COMBINING_DIACRITICAL_MARKS_FOR_SYMBOLS,  //!< [0020D0-0020FF] Combining Diacritical Marks For Symbols.
+  BL_FONT_UC_INDEX_LETTERLIKE_SYMBOLS,                       //!< [002100-00214F] Letterlike Symbols.
+  BL_FONT_UC_INDEX_NUMBER_FORMS,                             //!< [002150-00218F] Number Forms.
+  BL_FONT_UC_INDEX_ARROWS,                                   //!< [002190-0021FF] Arrows.
                                                              //!< [0027F0-0027FF] Supplemental Arrows-A.
                                                              //!< [002900-00297F] Supplemental Arrows-B.
                                                              //!< [002B00-002BFF] Miscellaneous Symbols and Arrows.
-  BL_FONT_COVERAGE_MATHEMATICAL_OPERATORS,                   //!< [002200-0022FF] Mathematical Operators.
+  BL_FONT_UC_INDEX_MATHEMATICAL_OPERATORS,                   //!< [002200-0022FF] Mathematical Operators.
                                                              //!< [002A00-002AFF] Supplemental Mathematical Operators.
                                                              //!< [0027C0-0027EF] Miscellaneous Mathematical Symbols-A.
                                                              //!< [002980-0029FF] Miscellaneous Mathematical Symbols-B.
-  BL_FONT_COVERAGE_MISCELLANEOUS_TECHNICAL,                  //!< [002300-0023FF] Miscellaneous Technical.
-  BL_FONT_COVERAGE_CONTROL_PICTURES,                         //!< [002400-00243F] Control Pictures.
-  BL_FONT_COVERAGE_OPTICAL_CHARACTER_RECOGNITION,            //!< [002440-00245F] Optical Character Recognition.
-  BL_FONT_COVERAGE_ENCLOSED_ALPHANUMERICS,                   //!< [002460-0024FF] Enclosed Alphanumerics.
-  BL_FONT_COVERAGE_BOX_DRAWING,                              //!< [002500-00257F] Box Drawing.
-  BL_FONT_COVERAGE_BLOCK_ELEMENTS,                           //!< [002580-00259F] Block Elements.
-  BL_FONT_COVERAGE_GEOMETRIC_SHAPES,                         //!< [0025A0-0025FF] Geometric Shapes.
-  BL_FONT_COVERAGE_MISCELLANEOUS_SYMBOLS,                    //!< [002600-0026FF] Miscellaneous Symbols.
-  BL_FONT_COVERAGE_DINGBATS,                                 //!< [002700-0027BF] Dingbats.
-  BL_FONT_COVERAGE_CJK_SYMBOLS_AND_PUNCTUATION,              //!< [003000-00303F] CJK Symbols And Punctuation.
-  BL_FONT_COVERAGE_HIRAGANA,                                 //!< [003040-00309F] Hiragana.
-  BL_FONT_COVERAGE_KATAKANA,                                 //!< [0030A0-0030FF] Katakana.
+  BL_FONT_UC_INDEX_MISCELLANEOUS_TECHNICAL,                  //!< [002300-0023FF] Miscellaneous Technical.
+  BL_FONT_UC_INDEX_CONTROL_PICTURES,                         //!< [002400-00243F] Control Pictures.
+  BL_FONT_UC_INDEX_OPTICAL_CHARACTER_RECOGNITION,            //!< [002440-00245F] Optical Character Recognition.
+  BL_FONT_UC_INDEX_ENCLOSED_ALPHANUMERICS,                   //!< [002460-0024FF] Enclosed Alphanumerics.
+  BL_FONT_UC_INDEX_BOX_DRAWING,                              //!< [002500-00257F] Box Drawing.
+  BL_FONT_UC_INDEX_BLOCK_ELEMENTS,                           //!< [002580-00259F] Block Elements.
+  BL_FONT_UC_INDEX_GEOMETRIC_SHAPES,                         //!< [0025A0-0025FF] Geometric Shapes.
+  BL_FONT_UC_INDEX_MISCELLANEOUS_SYMBOLS,                    //!< [002600-0026FF] Miscellaneous Symbols.
+  BL_FONT_UC_INDEX_DINGBATS,                                 //!< [002700-0027BF] Dingbats.
+  BL_FONT_UC_INDEX_CJK_SYMBOLS_AND_PUNCTUATION,              //!< [003000-00303F] CJK Symbols And Punctuation.
+  BL_FONT_UC_INDEX_HIRAGANA,                                 //!< [003040-00309F] Hiragana.
+  BL_FONT_UC_INDEX_KATAKANA,                                 //!< [0030A0-0030FF] Katakana.
                                                              //!< [0031F0-0031FF] Katakana Phonetic Extensions.
-  BL_FONT_COVERAGE_BOPOMOFO,                                 //!< [003100-00312F] Bopomofo.
+  BL_FONT_UC_INDEX_BOPOMOFO,                                 //!< [003100-00312F] Bopomofo.
                                                              //!< [0031A0-0031BF] Bopomofo Extended.
-  BL_FONT_COVERAGE_HANGUL_COMPATIBILITY_JAMO,                //!< [003130-00318F] Hangul Compatibility Jamo.
-  BL_FONT_COVERAGE_PHAGS_PA,                                 //!< [00A840-00A87F] Phags-pa.
-  BL_FONT_COVERAGE_ENCLOSED_CJK_LETTERS_AND_MONTHS,          //!< [003200-0032FF] Enclosed CJK Letters And Months.
-  BL_FONT_COVERAGE_CJK_COMPATIBILITY,                        //!< [003300-0033FF] CJK Compatibility.
-  BL_FONT_COVERAGE_HANGUL_SYLLABLES,                         //!< [00AC00-00D7AF] Hangul Syllables.
-  BL_FONT_COVERAGE_NON_PLANE,                                //!< [00D800-00DFFF] Non-Plane 0 *.
-  BL_FONT_COVERAGE_PHOENICIAN,                               //!< [010900-01091F] Phoenician.
-  BL_FONT_COVERAGE_CJK_UNIFIED_IDEOGRAPHS,                   //!< [004E00-009FFF] CJK Unified Ideographs.
+  BL_FONT_UC_INDEX_HANGUL_COMPATIBILITY_JAMO,                //!< [003130-00318F] Hangul Compatibility Jamo.
+  BL_FONT_UC_INDEX_PHAGS_PA,                                 //!< [00A840-00A87F] Phags-pa.
+  BL_FONT_UC_INDEX_ENCLOSED_CJK_LETTERS_AND_MONTHS,          //!< [003200-0032FF] Enclosed CJK Letters And Months.
+  BL_FONT_UC_INDEX_CJK_COMPATIBILITY,                        //!< [003300-0033FF] CJK Compatibility.
+  BL_FONT_UC_INDEX_HANGUL_SYLLABLES,                         //!< [00AC00-00D7AF] Hangul Syllables.
+  BL_FONT_UC_INDEX_NON_PLANE,                                //!< [00D800-00DFFF] Non-Plane 0 *.
+  BL_FONT_UC_INDEX_PHOENICIAN,                               //!< [010900-01091F] Phoenician.
+  BL_FONT_UC_INDEX_CJK_UNIFIED_IDEOGRAPHS,                   //!< [004E00-009FFF] CJK Unified Ideographs.
                                                              //!< [002E80-002EFF] CJK Radicals Supplement.
                                                              //!< [002F00-002FDF] Kangxi Radicals.
                                                              //!< [002FF0-002FFF] Ideographic Description Characters.
                                                              //!< [003400-004DBF] CJK Unified Ideographs Extension A.
                                                              //!< [020000-02A6DF] CJK Unified Ideographs Extension B.
                                                              //!< [003190-00319F] Kanbun.
-  BL_FONT_COVERAGE_PRIVATE_USE_PLANE0,                       //!< [00E000-00F8FF] Private Use (Plane 0).
-  BL_FONT_COVERAGE_CJK_STROKES,                              //!< [0031C0-0031EF] CJK Strokes.
+  BL_FONT_UC_INDEX_PRIVATE_USE_PLANE0,                       //!< [00E000-00F8FF] Private Use (Plane 0).
+  BL_FONT_UC_INDEX_CJK_STROKES,                              //!< [0031C0-0031EF] CJK Strokes.
                                                              //!< [00F900-00FAFF] CJK Compatibility Ideographs.
                                                              //!< [02F800-02FA1F] CJK Compatibility Ideographs Supplement.
-  BL_FONT_COVERAGE_ALPHABETIC_PRESENTATION_FORMS,            //!< [00FB00-00FB4F] Alphabetic Presentation Forms.
-  BL_FONT_COVERAGE_ARABIC_PRESENTATION_FORMS_A,              //!< [00FB50-00FDFF] Arabic Presentation Forms-A.
-  BL_FONT_COVERAGE_COMBINING_HALF_MARKS,                     //!< [00FE20-00FE2F] Combining Half Marks.
-  BL_FONT_COVERAGE_VERTICAL_FORMS,                           //!< [00FE10-00FE1F] Vertical Forms.
+  BL_FONT_UC_INDEX_ALPHABETIC_PRESENTATION_FORMS,            //!< [00FB00-00FB4F] Alphabetic Presentation Forms.
+  BL_FONT_UC_INDEX_ARABIC_PRESENTATION_FORMS_A,              //!< [00FB50-00FDFF] Arabic Presentation Forms-A.
+  BL_FONT_UC_INDEX_COMBINING_HALF_MARKS,                     //!< [00FE20-00FE2F] Combining Half Marks.
+  BL_FONT_UC_INDEX_VERTICAL_FORMS,                           //!< [00FE10-00FE1F] Vertical Forms.
                                                              //!< [00FE30-00FE4F] CJK Compatibility Forms.
-  BL_FONT_COVERAGE_SMALL_FORM_VARIANTS,                      //!< [00FE50-00FE6F] Small Form Variants.
-  BL_FONT_COVERAGE_ARABIC_PRESENTATION_FORMS_B,              //!< [00FE70-00FEFF] Arabic Presentation Forms-B.
-  BL_FONT_COVERAGE_HALFWIDTH_AND_FULLWIDTH_FORMS,            //!< [00FF00-00FFEF] Halfwidth And Fullwidth Forms.
-  BL_FONT_COVERAGE_SPECIALS,                                 //!< [00FFF0-00FFFF] Specials.
-  BL_FONT_COVERAGE_TIBETAN,                                  //!< [000F00-000FFF] Tibetan.
-  BL_FONT_COVERAGE_SYRIAC,                                   //!< [000700-00074F] Syriac.
-  BL_FONT_COVERAGE_THAANA,                                   //!< [000780-0007BF] Thaana.
-  BL_FONT_COVERAGE_SINHALA,                                  //!< [000D80-000DFF] Sinhala.
-  BL_FONT_COVERAGE_MYANMAR,                                  //!< [001000-00109F] Myanmar.
-  BL_FONT_COVERAGE_ETHIOPIC,                                 //!< [001200-00137F] Ethiopic.
+  BL_FONT_UC_INDEX_SMALL_FORM_VARIANTS,                      //!< [00FE50-00FE6F] Small Form Variants.
+  BL_FONT_UC_INDEX_ARABIC_PRESENTATION_FORMS_B,              //!< [00FE70-00FEFF] Arabic Presentation Forms-B.
+  BL_FONT_UC_INDEX_HALFWIDTH_AND_FULLWIDTH_FORMS,            //!< [00FF00-00FFEF] Halfwidth And Fullwidth Forms.
+  BL_FONT_UC_INDEX_SPECIALS,                                 //!< [00FFF0-00FFFF] Specials.
+  BL_FONT_UC_INDEX_TIBETAN,                                  //!< [000F00-000FFF] Tibetan.
+  BL_FONT_UC_INDEX_SYRIAC,                                   //!< [000700-00074F] Syriac.
+  BL_FONT_UC_INDEX_THAANA,                                   //!< [000780-0007BF] Thaana.
+  BL_FONT_UC_INDEX_SINHALA,                                  //!< [000D80-000DFF] Sinhala.
+  BL_FONT_UC_INDEX_MYANMAR,                                  //!< [001000-00109F] Myanmar.
+  BL_FONT_UC_INDEX_ETHIOPIC,                                 //!< [001200-00137F] Ethiopic.
                                                              //!< [001380-00139F] Ethiopic Supplement.
                                                              //!< [002D80-002DDF] Ethiopic Extended.
-  BL_FONT_COVERAGE_CHEROKEE,                                 //!< [0013A0-0013FF] Cherokee.
-  BL_FONT_COVERAGE_UNIFIED_CANADIAN_ABORIGINAL_SYLLABICS,    //!< [001400-00167F] Unified Canadian Aboriginal Syllabics.
-  BL_FONT_COVERAGE_OGHAM,                                    //!< [001680-00169F] Ogham.
-  BL_FONT_COVERAGE_RUNIC,                                    //!< [0016A0-0016FF] Runic.
-  BL_FONT_COVERAGE_KHMER,                                    //!< [001780-0017FF] Khmer.
+  BL_FONT_UC_INDEX_CHEROKEE,                                 //!< [0013A0-0013FF] Cherokee.
+  BL_FONT_UC_INDEX_UNIFIED_CANADIAN_ABORIGINAL_SYLLABICS,    //!< [001400-00167F] Unified Canadian Aboriginal Syllabics.
+  BL_FONT_UC_INDEX_OGHAM,                                    //!< [001680-00169F] Ogham.
+  BL_FONT_UC_INDEX_RUNIC,                                    //!< [0016A0-0016FF] Runic.
+  BL_FONT_UC_INDEX_KHMER,                                    //!< [001780-0017FF] Khmer.
                                                              //!< [0019E0-0019FF] Khmer Symbols.
-  BL_FONT_COVERAGE_MONGOLIAN,                                //!< [001800-0018AF] Mongolian.
-  BL_FONT_COVERAGE_BRAILLE_PATTERNS,                         //!< [002800-0028FF] Braille Patterns.
-  BL_FONT_COVERAGE_YI_SYLLABLES_AND_RADICALS,                //!< [00A000-00A48F] Yi Syllables.
+  BL_FONT_UC_INDEX_MONGOLIAN,                                //!< [001800-0018AF] Mongolian.
+  BL_FONT_UC_INDEX_BRAILLE_PATTERNS,                         //!< [002800-0028FF] Braille Patterns.
+  BL_FONT_UC_INDEX_YI_SYLLABLES_AND_RADICALS,                //!< [00A000-00A48F] Yi Syllables.
                                                              //!< [00A490-00A4CF] Yi Radicals.
-  BL_FONT_COVERAGE_TAGALOG_HANUNOO_BUHID_TAGBANWA,           //!< [001700-00171F] Tagalog.
+  BL_FONT_UC_INDEX_TAGALOG_HANUNOO_BUHID_TAGBANWA,           //!< [001700-00171F] Tagalog.
                                                              //!< [001720-00173F] Hanunoo.
                                                              //!< [001740-00175F] Buhid.
                                                              //!< [001760-00177F] Tagbanwa.
-  BL_FONT_COVERAGE_OLD_ITALIC,                               //!< [010300-01032F] Old Italic.
-  BL_FONT_COVERAGE_GOTHIC,                                   //!< [010330-01034F] Gothic.
-  BL_FONT_COVERAGE_DESERET,                                  //!< [010400-01044F] Deseret.
-  BL_FONT_COVERAGE_MUSICAL_SYMBOLS,                          //!< [01D000-01D0FF] Byzantine Musical Symbols.
+  BL_FONT_UC_INDEX_OLD_ITALIC,                               //!< [010300-01032F] Old Italic.
+  BL_FONT_UC_INDEX_GOTHIC,                                   //!< [010330-01034F] Gothic.
+  BL_FONT_UC_INDEX_DESERET,                                  //!< [010400-01044F] Deseret.
+  BL_FONT_UC_INDEX_MUSICAL_SYMBOLS,                          //!< [01D000-01D0FF] Byzantine Musical Symbols.
                                                              //!< [01D100-01D1FF] Musical Symbols.
                                                              //!< [01D200-01D24F] Ancient Greek Musical Notation.
-  BL_FONT_COVERAGE_MATHEMATICAL_ALPHANUMERIC_SYMBOLS,        //!< [01D400-01D7FF] Mathematical Alphanumeric Symbols.
-  BL_FONT_COVERAGE_PRIVATE_USE_PLANE_15_16,                  //!< [0F0000-0FFFFD] Private Use (Plane 15).
+  BL_FONT_UC_INDEX_MATHEMATICAL_ALPHANUMERIC_SYMBOLS,        //!< [01D400-01D7FF] Mathematical Alphanumeric Symbols.
+  BL_FONT_UC_INDEX_PRIVATE_USE_PLANE_15_16,                  //!< [0F0000-0FFFFD] Private Use (Plane 15).
                                                              //!< [100000-10FFFD] Private Use (Plane 16).
-  BL_FONT_COVERAGE_VARIATION_SELECTORS,                      //!< [00FE00-00FE0F] Variation Selectors.
+  BL_FONT_UC_INDEX_VARIATION_SELECTORS,                      //!< [00FE00-00FE0F] Variation Selectors.
                                                              //!< [0E0100-0E01EF] Variation Selectors Supplement.
-  BL_FONT_COVERAGE_TAGS,                                     //!< [0E0000-0E007F] Tags.
-  BL_FONT_COVERAGE_LIMBU,                                    //!< [001900-00194F] Limbu.
-  BL_FONT_COVERAGE_TAI_LE,                                   //!< [001950-00197F] Tai Le.
-  BL_FONT_COVERAGE_NEW_TAI_LUE,                              //!< [001980-0019DF] New Tai Lue.
-  BL_FONT_COVERAGE_BUGINESE,                                 //!< [001A00-001A1F] Buginese.
-  BL_FONT_COVERAGE_GLAGOLITIC,                               //!< [002C00-002C5F] Glagolitic.
-  BL_FONT_COVERAGE_TIFINAGH,                                 //!< [002D30-002D7F] Tifinagh.
-  BL_FONT_COVERAGE_YIJING_HEXAGRAM_SYMBOLS,                  //!< [004DC0-004DFF] Yijing Hexagram Symbols.
-  BL_FONT_COVERAGE_SYLOTI_NAGRI,                             //!< [00A800-00A82F] Syloti Nagri.
-  BL_FONT_COVERAGE_LINEAR_B_SYLLABARY_AND_IDEOGRAMS,         //!< [010000-01007F] Linear B Syllabary.
+  BL_FONT_UC_INDEX_TAGS,                                     //!< [0E0000-0E007F] Tags.
+  BL_FONT_UC_INDEX_LIMBU,                                    //!< [001900-00194F] Limbu.
+  BL_FONT_UC_INDEX_TAI_LE,                                   //!< [001950-00197F] Tai Le.
+  BL_FONT_UC_INDEX_NEW_TAI_LUE,                              //!< [001980-0019DF] New Tai Lue.
+  BL_FONT_UC_INDEX_BUGINESE,                                 //!< [001A00-001A1F] Buginese.
+  BL_FONT_UC_INDEX_GLAGOLITIC,                               //!< [002C00-002C5F] Glagolitic.
+  BL_FONT_UC_INDEX_TIFINAGH,                                 //!< [002D30-002D7F] Tifinagh.
+  BL_FONT_UC_INDEX_YIJING_HEXAGRAM_SYMBOLS,                  //!< [004DC0-004DFF] Yijing Hexagram Symbols.
+  BL_FONT_UC_INDEX_SYLOTI_NAGRI,                             //!< [00A800-00A82F] Syloti Nagri.
+  BL_FONT_UC_INDEX_LINEAR_B_SYLLABARY_AND_IDEOGRAMS,         //!< [010000-01007F] Linear B Syllabary.
                                                              //!< [010080-0100FF] Linear B Ideograms.
                                                              //!< [010100-01013F] Aegean Numbers.
-  BL_FONT_COVERAGE_ANCIENT_GREEK_NUMBERS,                    //!< [010140-01018F] Ancient Greek Numbers.
-  BL_FONT_COVERAGE_UGARITIC,                                 //!< [010380-01039F] Ugaritic.
-  BL_FONT_COVERAGE_OLD_PERSIAN,                              //!< [0103A0-0103DF] Old Persian.
-  BL_FONT_COVERAGE_SHAVIAN,                                  //!< [010450-01047F] Shavian.
-  BL_FONT_COVERAGE_OSMANYA,                                  //!< [010480-0104AF] Osmanya.
-  BL_FONT_COVERAGE_CYPRIOT_SYLLABARY,                        //!< [010800-01083F] Cypriot Syllabary.
-  BL_FONT_COVERAGE_KHAROSHTHI,                               //!< [010A00-010A5F] Kharoshthi.
-  BL_FONT_COVERAGE_TAI_XUAN_JING_SYMBOLS,                    //!< [01D300-01D35F] Tai Xuan Jing Symbols.
-  BL_FONT_COVERAGE_CUNEIFORM,                                //!< [012000-0123FF] Cuneiform.
+  BL_FONT_UC_INDEX_ANCIENT_GREEK_NUMBERS,                    //!< [010140-01018F] Ancient Greek Numbers.
+  BL_FONT_UC_INDEX_UGARITIC,                                 //!< [010380-01039F] Ugaritic.
+  BL_FONT_UC_INDEX_OLD_PERSIAN,                              //!< [0103A0-0103DF] Old Persian.
+  BL_FONT_UC_INDEX_SHAVIAN,                                  //!< [010450-01047F] Shavian.
+  BL_FONT_UC_INDEX_OSMANYA,                                  //!< [010480-0104AF] Osmanya.
+  BL_FONT_UC_INDEX_CYPRIOT_SYLLABARY,                        //!< [010800-01083F] Cypriot Syllabary.
+  BL_FONT_UC_INDEX_KHAROSHTHI,                               //!< [010A00-010A5F] Kharoshthi.
+  BL_FONT_UC_INDEX_TAI_XUAN_JING_SYMBOLS,                    //!< [01D300-01D35F] Tai Xuan Jing Symbols.
+  BL_FONT_UC_INDEX_CUNEIFORM,                                //!< [012000-0123FF] Cuneiform.
                                                              //!< [012400-01247F] Cuneiform Numbers and Punctuation.
-  BL_FONT_COVERAGE_COUNTING_ROD_NUMERALS,                    //!< [01D360-01D37F] Counting Rod Numerals.
-  BL_FONT_COVERAGE_SUNDANESE,                                //!< [001B80-001BBF] Sundanese.
-  BL_FONT_COVERAGE_LEPCHA,                                   //!< [001C00-001C4F] Lepcha.
-  BL_FONT_COVERAGE_OL_CHIKI,                                 //!< [001C50-001C7F] Ol Chiki.
-  BL_FONT_COVERAGE_SAURASHTRA,                               //!< [00A880-00A8DF] Saurashtra.
-  BL_FONT_COVERAGE_KAYAH_LI,                                 //!< [00A900-00A92F] Kayah Li.
-  BL_FONT_COVERAGE_REJANG,                                   //!< [00A930-00A95F] Rejang.
-  BL_FONT_COVERAGE_CHAM,                                     //!< [00AA00-00AA5F] Cham.
-  BL_FONT_COVERAGE_ANCIENT_SYMBOLS,                          //!< [010190-0101CF] Ancient Symbols.
-  BL_FONT_COVERAGE_PHAISTOS_DISC,                            //!< [0101D0-0101FF] Phaistos Disc.
-  BL_FONT_COVERAGE_CARIAN_LYCIAN_LYDIAN,                     //!< [0102A0-0102DF] Carian.
+  BL_FONT_UC_INDEX_COUNTING_ROD_NUMERALS,                    //!< [01D360-01D37F] Counting Rod Numerals.
+  BL_FONT_UC_INDEX_SUNDANESE,                                //!< [001B80-001BBF] Sundanese.
+  BL_FONT_UC_INDEX_LEPCHA,                                   //!< [001C00-001C4F] Lepcha.
+  BL_FONT_UC_INDEX_OL_CHIKI,                                 //!< [001C50-001C7F] Ol Chiki.
+  BL_FONT_UC_INDEX_SAURASHTRA,                               //!< [00A880-00A8DF] Saurashtra.
+  BL_FONT_UC_INDEX_KAYAH_LI,                                 //!< [00A900-00A92F] Kayah Li.
+  BL_FONT_UC_INDEX_REJANG,                                   //!< [00A930-00A95F] Rejang.
+  BL_FONT_UC_INDEX_CHAM,                                     //!< [00AA00-00AA5F] Cham.
+  BL_FONT_UC_INDEX_ANCIENT_SYMBOLS,                          //!< [010190-0101CF] Ancient Symbols.
+  BL_FONT_UC_INDEX_PHAISTOS_DISC,                            //!< [0101D0-0101FF] Phaistos Disc.
+  BL_FONT_UC_INDEX_CARIAN_LYCIAN_LYDIAN,                     //!< [0102A0-0102DF] Carian.
                                                              //!< [010280-01029F] Lycian.
                                                              //!< [010920-01093F] Lydian.
-  BL_FONT_COVERAGE_DOMINO_AND_MAHJONG_TILES,                 //!< [01F030-01F09F] Domino Tiles.
+  BL_FONT_UC_INDEX_DOMINO_AND_MAHJONG_TILES,                 //!< [01F030-01F09F] Domino Tiles.
                                                              //!< [01F000-01F02F] Mahjong Tiles.
-  BL_FONT_COVERAGE_INTERNAL_USAGE_123,                       //!< Reserved for internal usage (123).
-  BL_FONT_COVERAGE_INTERNAL_USAGE_124,                       //!< Reserved for internal usage (124).
-  BL_FONT_COVERAGE_INTERNAL_USAGE_125,                       //!< Reserved for internal usage (125).
-  BL_FONT_COVERAGE_INTERNAL_USAGE_126,                       //!< Reserved for internal usage (126).
-  BL_FONT_COVERAGE_INTERNAL_USAGE_127                        //!< Reserved for internal usage (127).
+  BL_FONT_UC_INDEX_INTERNAL_USAGE_123,                       //!< Reserved for internal usage (123).
+  BL_FONT_UC_INDEX_INTERNAL_USAGE_124,                       //!< Reserved for internal usage (124).
+  BL_FONT_UC_INDEX_INTERNAL_USAGE_125,                       //!< Reserved for internal usage (125).
+  BL_FONT_UC_INDEX_INTERNAL_USAGE_126,                       //!< Reserved for internal usage (126).
+  BL_FONT_UC_INDEX_INTERNAL_USAGE_127                        //!< Reserved for internal usage (127).
 };
 
 //! Text direction.
@@ -459,9 +459,7 @@ struct BLGlyphItem {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
-  BL_INLINE void reset() noexcept { this->value = 0; }
-
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
   #endif
   // --------------------------------------------------------------------------
 };
@@ -478,9 +476,7 @@ struct BLGlyphInfo {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
-  BL_INLINE void reset() noexcept { this->cluster = 0; }
-
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
   #endif
   // --------------------------------------------------------------------------
 };
@@ -498,12 +494,7 @@ struct BLGlyphPlacement {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
-  BL_INLINE void reset() noexcept {
-    this->placement.reset();
-    this->advance.reset();
-  }
-
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
   #endif
   // --------------------------------------------------------------------------
 };
@@ -523,11 +514,7 @@ struct BLGlyphMappingState {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-  BL_INLINE void reset() noexcept {
-    glyphCount = 0;
-    undefinedCount = 0;
-    undefinedFirst = 0;
-  }
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
   #endif
   // --------------------------------------------------------------------------
 };
@@ -708,6 +695,33 @@ public:
 #endif
 
 // ============================================================================
+// [BLFontFaceInfo]
+// ============================================================================
+
+//! Information of `BLFontFace`.
+struct BLFontFaceInfo {
+  //! Font-face type, see `BLFontFaceType`.
+  uint8_t faceType;
+  //! Type of outlines used by the font-face, see `BLFontOutlineType`.
+  uint8_t outlineType;
+  //! Number of glyphs provided by this font-face.
+  uint16_t glyphCount;
+
+  //! Face index in a ttf/otf collection (or zero).
+  uint32_t faceIndex;
+  //! Font-face flags, see `BLFontFaceFlags`
+  uint32_t faceFlags;
+  //! Font-face diagnostic flags, see`BLFontFaceDiagFlags`.
+  uint32_t diagFlags;
+
+  // --------------------------------------------------------------------------
+  #ifdef __cplusplus
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  #endif
+  // --------------------------------------------------------------------------
+};
+
+// ============================================================================
 // [BLFontTable]
 // ============================================================================
 
@@ -720,15 +734,10 @@ struct BLFontTable {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
-  BL_INLINE void reset() noexcept {
-    this->data = nullptr;
-    this->size = 0;
-  }
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 
   template<typename T>
   BL_INLINE const T* dataAs() const noexcept { return reinterpret_cast<const T*>(data); }
-
   #endif
   // --------------------------------------------------------------------------
 };
@@ -753,12 +762,7 @@ struct BLFontFeature {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
-  BL_INLINE void reset() noexcept {
-    this->tag = 0;
-    this->value = 0;
-  }
-
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
   #endif
   // --------------------------------------------------------------------------
 };
@@ -777,42 +781,29 @@ struct BLFontVariation {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
-  BL_INLINE void reset() noexcept {
-    this->tag = 0;
-    this->value = 0.0f;
-  }
-
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
   #endif
   // --------------------------------------------------------------------------
 };
 
 // ============================================================================
-// [BLFontCoverage]
+// [BLFontUnicodeCoverage]
 // ============================================================================
 
 //! Font unicode coverage.
 //!
 //! Unicode coverage describes which unicode characters are provided by a font.
 //! Blend2D accesses this information by reading "OS/2" table, if available.
-struct BLFontCoverage {
+struct BLFontUnicodeCoverage {
   uint32_t data[4];
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
 
-  BL_INLINE void reset() noexcept {
-    this->data[0] = 0;
-    this->data[1] = 0;
-    this->data[2] = 0;
-    this->data[3] = 0;
-  }
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 
   BL_INLINE bool empty() const noexcept {
-    return (this->data[0] |
-            this->data[1] |
-            this->data[2] |
-            this->data[3]) == 0;
+    return (this->data[0] | this->data[1] | this->data[2] | this->data[3]) == 0;
   }
 
   BL_INLINE bool hasBit(uint32_t index) const noexcept {
@@ -827,15 +818,15 @@ struct BLFontCoverage {
     this->data[index / 32] &= ~(uint32_t(1) << (index % 32));
   }
 
-  BL_INLINE bool equals(const BLFontCoverage& other) const noexcept {
+  BL_INLINE bool equals(const BLFontUnicodeCoverage& other) const noexcept {
     return blEquals(this->data[0], other.data[0]) &
            blEquals(this->data[1], other.data[1]) &
            blEquals(this->data[2], other.data[2]) &
            blEquals(this->data[3], other.data[3]) ;
   }
 
-  BL_INLINE bool operator==(const BLFontCoverage& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLFontCoverage& other) const noexcept { return !equals(other); }
+  BL_INLINE bool operator==(const BLFontUnicodeCoverage& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLFontUnicodeCoverage& other) const noexcept { return !equals(other); }
 
   #endif
   // --------------------------------------------------------------------------
@@ -906,24 +897,12 @@ struct BLFontPanose {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
-  BL_INLINE void reset() noexcept {
-    memset(this, 0, sizeof(*this));
-  }
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 
   BL_INLINE bool empty() const noexcept {
-    return (this->data[0] == 0) &
-           (this->data[1] == 0) &
-           (this->data[2] == 0) &
-           (this->data[3] == 0) &
-           (this->data[4] == 0) &
-           (this->data[5] == 0) &
-           (this->data[6] == 0) &
-           (this->data[7] == 0) &
-           (this->data[8] == 0) &
-           (this->data[9] == 0) ;
+    return (this->data[0] | this->data[1] | this->data[2] | this->data[3] | this->data[4] |
+            this->data[5] | this->data[6] | this->data[7] | this->data[8] | this->data[9] ) == 0;
   }
-
   #endif
   // --------------------------------------------------------------------------
 };
@@ -987,18 +966,16 @@ struct BLFontMetrics {
       float ascent;
       //! Font ascent (vertical orientation).
       float vAscent;
-    };
-    float ascentByOrientation[2];
-  };
-
-  union {
-    struct {
       //! Font descent (horizontal orientation).
       float descent;
       //! Font descent (vertical orientation).
       float vDescent;
     };
-    float descentByOrientation[2];
+
+    struct {
+      float ascentByOrientation[2];
+      float descentByOrientation[2];
+    };
   };
 
   //! Line gap.
@@ -1019,9 +996,7 @@ struct BLFontMetrics {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
-
   #endif
   // --------------------------------------------------------------------------
 };
@@ -1054,53 +1029,36 @@ struct BLFontDesignMetrics {
       int ascent;
       //! Ascent (vertical).
       int vAscent;
-    };
-    //! Horizontal & vertical ascents.
-    int ascentByOrientation[2];
-  };
-
-  union {
-    struct {
       //! Descent (horizontal).
       int descent;
       //! Descent (vertical).
       int vDescent;
-    };
-    //! Horizontal & vertical descents.
-    int descentByOrientation[2];
-  };
-
-  union {
-    struct {
       //! Minimum leading-side bearing (horizontal).
       int hMinLSB;
       //! Minimum leading-side bearing (vertical).
       int vMinLSB;
-    };
-    //! Minimum leading-side bearing (horizontal and vertical).
-    int minLSBByOrientation[2];
-  };
-
-  union {
-    struct {
       //! Minimum trailing-side bearing (horizontal).
       int hMinTSB;
       //! Minimum trailing-side bearing (vertical).
       int vMinTSB;
-    };
-    //! Minimum trailing-side bearing (horizontal and vertical)..
-    int minTSBByOrientation[2];
-  };
-
-  union {
-    struct {
       //! Maximum horizontal advance.
       int hMaxAdvance;
       //! Maximum vertical advance.
       int vMaxAdvance;
     };
-    //! Maximum advance width (horizontal) and height (vertical).
-    int maxAdvanceByOrientation[2];
+
+    struct {
+      //! Horizontal & vertical ascents.
+      int ascentByOrientation[2];
+      //! Horizontal & vertical descents.
+      int descentByOrientation[2];
+      //! Minimum leading-side bearing (horizontal and vertical).
+      int minLSBByOrientation[2];
+      //! Minimum trailing-side bearing (horizontal and vertical)..
+      int minTSBByOrientation[2];
+      //! Maximum advance width (horizontal) and height (vertical).
+      int maxAdvanceByOrientation[2];
+    };
   };
 
   //! Text underline position.
@@ -1114,9 +1072,7 @@ struct BLFontDesignMetrics {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
-
   #endif
   // --------------------------------------------------------------------------
 };
@@ -1132,12 +1088,7 @@ struct BLTextMetrics {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
-  BL_INLINE void reset() noexcept {
-    this->advance.reset();
-    this->boundingBox.reset();
-  }
-
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
   #endif
   // --------------------------------------------------------------------------
 };

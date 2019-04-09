@@ -78,7 +78,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
     if (!blFontTableFitsT<XHeaTable>(hhea))
       return blTraceError(BL_ERROR_INVALID_DATA);
 
-    if (!(faceI->faceFlags & BL_FONT_FACE_FLAG_TYPOGRAPHIC_METRICS)) {
+    if (!(faceI->faceInfo.faceFlags & BL_FONT_FACE_FLAG_TYPOGRAPHIC_METRICS)) {
       int ascent  = hhea->ascender();
       int descent = hhea->descender();
       int lineGap = hhea->lineGap();
@@ -94,13 +94,13 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
     BLFontTableT<XMtxTable> hmtx;
     if (fontData->queryTable(&hmtx, BL_MAKE_TAG('h', 'm', 't', 'x'))) {
-      uint32_t longMetricCount = blMin<uint32_t>(hhea->longMetricCount(), faceI->glyphCount);
+      uint32_t longMetricCount = blMin<uint32_t>(hhea->longMetricCount(), faceI->faceInfo.glyphCount);
       uint32_t longMetricDataSize = longMetricCount * sizeof(XMtxTable::LongMetric);
 
       if (longMetricDataSize > hmtx.size)
         return blTraceError(BL_ERROR_INVALID_DATA);
 
-      size_t lsbCount = blMin<size_t>((hmtx.size - longMetricDataSize) / 2u, longMetricCount - faceI->glyphCount);
+      size_t lsbCount = blMin<size_t>((hmtx.size - longMetricDataSize) / 2u, longMetricCount - faceI->faceInfo.glyphCount);
       faceI->metrics.xmtxTable[BL_TEXT_ORIENTATION_HORIZONTAL] = hmtx;
       faceI->metrics.longMetricCount[BL_TEXT_ORIENTATION_HORIZONTAL] = uint16_t(longMetricCount);
       faceI->metrics.lsbArraySize[BL_TEXT_ORIENTATION_HORIZONTAL] = uint16_t(lsbCount);
@@ -121,13 +121,13 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
     BLFontTableT<XMtxTable> vmtx;
     if (fontData->queryTable(&vmtx, BL_MAKE_TAG('v', 'm', 't', 'x'))) {
-      uint32_t longMetricCount = blMin<uint32_t>(vhea->longMetricCount(), faceI->glyphCount);
+      uint32_t longMetricCount = blMin<uint32_t>(vhea->longMetricCount(), faceI->faceInfo.glyphCount);
       uint32_t longMetricDataSize = longMetricCount * sizeof(XMtxTable::LongMetric);
 
       if (longMetricDataSize > vmtx.size)
         return blTraceError(BL_ERROR_INVALID_DATA);
 
-      size_t lsbCount = blMin<size_t>((vmtx.size - longMetricDataSize) / 2u, longMetricCount - faceI->glyphCount);
+      size_t lsbCount = blMin<size_t>((vmtx.size - longMetricDataSize) / 2u, longMetricCount - faceI->faceInfo.glyphCount);
       faceI->metrics.xmtxTable[BL_TEXT_ORIENTATION_VERTICAL] = vmtx;
       faceI->metrics.longMetricCount[BL_TEXT_ORIENTATION_VERTICAL] = uint16_t(longMetricCount);
       faceI->metrics.lsbArraySize[BL_TEXT_ORIENTATION_VERTICAL] = uint16_t(lsbCount);

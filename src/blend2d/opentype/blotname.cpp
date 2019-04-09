@@ -107,7 +107,7 @@ static void normalizeFamilyAndSubfamily(BLOTFaceImpl* faceI, Trace trace) noexce
     if (memcmp(familyName.data() + baseSize, subfamilyName.data(), subfamilyName.size()) == 0) {
       trace.warn("Subfamily '%s' is redundant, removing...\n", subfamilyName.data());
       subfamilyName.reset();
-      faceI->diagFlags |= BL_FONT_FACE_DIAG_FIXED_NAME_DATA;
+      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_FIXED_NAME_DATA;
     }
   }
 }
@@ -273,7 +273,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
         }
 
         score = 0;
-        faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_NAME_DATA;
+        faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_NAME_DATA;
       }
       else {
         // If this is a subfamily (NameId=2) on a MAC platform and it's empty
@@ -314,7 +314,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
   if (blBitMatch(nameIdMask, blBitMask<uint32_t>(BL_FONT_STRING_TYPOGRAPHIC_FAMILY_NAME, BL_FONT_STRING_TYPOGRAPHIC_SUBFAMILY_NAME))) {
     trace.info("Has Typographic FamilyName and SubfamilyName\n");
-    faceI->faceFlags |= BL_FONT_FACE_FLAG_TYPOGRAPHIC_NAMES;
+    faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_TYPOGRAPHIC_NAMES;
   }
 
   BLBitWordIterator<uint32_t> bitWordIterator(nameIdMask);

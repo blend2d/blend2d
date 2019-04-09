@@ -241,7 +241,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
   if (BL_UNLIKELY(!blFontTableFitsT<KernTable>(kern))) {
     trace.warn("Table is too small\n");
-    faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+    faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
     return BL_SUCCESS;
   }
 
@@ -284,7 +284,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
     if (minorVersion != 0) {
       trace.warn("Invalid minor version (%u)\n", minorVersion);
-      faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
       return BL_SUCCESS;
     }
 
@@ -292,7 +292,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
     // minimum size of "any" header is 4 bytes, so make sure we won't read beyond.
     if (kern.size < 8u) {
       trace.warn("InvalidSize: %zu\n", size_t(kern.size));
-      faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
       return BL_SUCCESS;
     }
 
@@ -316,7 +316,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
     // No other major version is defined by OpenType. Since KERN table has
     // been superseded by "GPOS" table there will never be any other version.
     trace.fail("Invalid version");
-    faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+    faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
     return BL_SUCCESS;
   }
 
@@ -376,13 +376,13 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
     if (length < headerSize) {
       trace.fail("Group length too small [Length=%u RemainingSize=%zu]\n", length, remainingSize);
-      faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
       return BL_SUCCESS;
     }
 
     if (length > remainingSize) {
       trace.fail("Group length exceeds the remaining space [Length=%u RemainingSize=%zu]\n", length, remainingSize);
-      faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+      faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
       return BL_SUCCESS;
     }
 
@@ -427,7 +427,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
             uint32_t fixedPairCount = (length - uint32_t(sizeof(KernTable::Format0))) / 6;
             trace.warn("Fixing the number of pairs from [%u] to [%u] to match the remaining size [%u]\n", pairCount, fixedPairCount, length);
 
-            faceI->diagFlags |= BL_FONT_FACE_DIAG_FIXED_KERN_DATA;
+            faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_FIXED_KERN_DATA;
             pairCount = fixedPairCount;
           }
 
@@ -444,7 +444,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
               return result;
             }
 
-            faceI->diagFlags |= BL_FONT_FACE_DIAG_FIXED_KERN_DATA;
+            faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_FIXED_KERN_DATA;
           }
           else {
             BLResult result = collection.sets.append(KernPairSet::makeLinked(pairDataOffset, uint32_t(pairCount)));
@@ -458,7 +458,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
         }
 
         default:
-          faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
+          faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
           break;
       }
 
@@ -479,7 +479,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
     switch (faceI->kern.collection[BL_TEXT_ORIENTATION_HORIZONTAL].format) {
       case 0:
         faceI->kern.table = kern;
-        faceI->faceFlags |= BL_FONT_FACE_FLAG_HORIZONTAL_KERNING;
+        faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_HORIZONTAL_KERNING;
         faceI->featureTags.append(BL_MAKE_TAG('k', 'e', 'r', 'n'));
 
         faceI->funcs.applyKern = applyKernPairAdjustmentFormat0;

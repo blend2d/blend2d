@@ -594,13 +594,13 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
     return BL_SUCCESS;
 
   if (!blFontTableFitsT<CMapTable>(cmap)) {
-    faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_CMAP_DATA;
+    faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_CMAP_DATA;
     return BL_SUCCESS;
   }
 
   uint32_t encodingCount = cmap->encodings.count();
   if (cmap.size < sizeof(CMapTable) + encodingCount * sizeof(CMapTable::Encoding)) {
-    faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_CMAP_DATA;
+    faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_CMAP_DATA;
     return BL_SUCCESS;
   }
 
@@ -641,7 +641,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
       case Platform::kPlatformWindows:
         if (encodingId == Platform::kWindowsEncodingSymbol) {
           thisScore = kScoreSymbolFont;
-          faceI->faceFlags |= BL_FONT_FACE_FLAG_SYMBOL_FONT;
+          faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_SYMBOL_FONT;
         }
         else if (encodingId == Platform::kWindowsEncodingUCS2 || encodingId == Platform::kWindowsEncodingUCS4) {
           thisScore = kScoreWinUnicode + encodingId;
@@ -661,11 +661,11 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
       BLResult result = validateSubTable(cmap, offset, thisFormat, thisEncoding);
       if (result != BL_SUCCESS) {
         if (result == BL_ERROR_NOT_IMPLEMENTED) {
-          faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_CMAP_FORMAT;
+          faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_CMAP_FORMAT;
         }
         else {
           validationFailed = true;
-          faceI->diagFlags |= BL_FONT_FACE_DIAG_WRONG_CMAP_DATA;
+          faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_CMAP_DATA;
         }
 
         // If we had a match before then the match from before can still be used.
@@ -679,7 +679,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
   }
 
   if (matchedScore) {
-    faceI->faceFlags |= BL_FONT_FACE_FLAG_CHAR_TO_GLYPH_MAPPING;
+    faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_CHAR_TO_GLYPH_MAPPING;
     faceI->cmap.cmapTable = cmap;
     faceI->cmap.encoding = matchedEncoding;
     return initCMapFuncs(faceI, matchedFormat);
