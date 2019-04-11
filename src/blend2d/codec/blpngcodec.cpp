@@ -1136,7 +1136,7 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* impl, BLImag
   BLFormatInfo pngFmt {};
   pngFmt.depth = sampleDepth;
 
-  if (BL_BYTE_ORDER_NATIVE == BL_BYTE_ORDER_BE)
+  if (BL_BYTE_ORDER_NATIVE == BL_BYTE_ORDER_LE)
     pngFmt.flags |= BL_FORMAT_FLAG_BYTE_SWAP;
 
   if (colorType == BL_PNG_COLOR_TYPE0_LUM && sampleDepth <= 8) {
@@ -1175,10 +1175,10 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* impl, BLImag
     }
     else if (colorType == BL_PNG_COLOR_TYPE6_RGBA) {
       pngFmt.flags |= BL_FORMAT_FLAG_RGBA;
-      pngFmt.rSize = 8; pngFmt.rShift = 16;
-      pngFmt.gSize = 8; pngFmt.gShift = 8;
-      pngFmt.bSize = 8; pngFmt.bShift = 0;
-      pngFmt.aSize = 8; pngFmt.aShift = 24;
+      pngFmt.rSize = 8; pngFmt.rShift = 24;
+      pngFmt.gSize = 8; pngFmt.gShift = 16;
+      pngFmt.bSize = 8; pngFmt.bShift = 8;
+      pngFmt.aSize = 8; pngFmt.aShift = 0;
     }
 
     if (impl->cgbi) {
@@ -1205,7 +1205,7 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* impl, BLImag
     // We, in general, process 4 odd scanlines at a time, so we need the 7th
     // buffer to have enough space to hold them as well, if not, we allocate
     // an extra buffer and use it instead. This approach is good as small
-    // images would probably require an extra buffer, but larger images can
+    // images would probably require the extra buffer, but larger images can
     // reuse the 7th.
     BL_ASSERT(steps[6].width == w);
     BL_ASSERT(steps[6].height == h / 2); // Half of the rows, rounded down.
