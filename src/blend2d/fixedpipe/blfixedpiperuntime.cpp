@@ -40,7 +40,7 @@ struct BLFixedPipe_FillBoxAA_Base {
     uint32_t w = fillData->box.x1 - fillData->box.x0;
     uint32_t h = fillData->box.y1 - fillData->box.y0;
 
-    dstStride -= intptr_t(size_t(w) * Impl::DST_PTR);
+    dstStride -= intptr_t(size_t(w) * Impl::DST_BPP);
     uint32_t msk = fillData->alpha.u;
 
     Impl impl(fetchData_);
@@ -123,7 +123,7 @@ L_BitScan_Init:
 
     // Load the given cells to `m0` and clear the BitWord and all cells it represents
     // in memory. This is important as the compositor has to clear the memory during
-    // compositing. If this is a rare case where `x0` points at the end of the raster
+    // composition. If this is a rare case where `x0` points at the end of the raster
     // there is still one cell that is non-zero. This makes sure it's cleared.
     dstPtr += x0 * DST_BPP;
     cellPtr += x0;
