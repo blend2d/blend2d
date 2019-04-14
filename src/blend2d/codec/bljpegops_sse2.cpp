@@ -151,15 +151,15 @@ static const BLJpegSSE2Constants blJpegSSE2Constants = {
 void BL_CDECL blJpegIDCT8_SSE2(uint8_t* dst, intptr_t dstStride, const int16_t* src, const uint16_t* qTable) noexcept {
   using namespace SIMD;
 
-  // Load and dequantize (the inputs are aligned to 16 bytes so this is safe).
-  I128 row0 = vmuli16(*(const I128*)(src +  0), *(const I128*)(qTable +  0));
-  I128 row1 = vmuli16(*(const I128*)(src +  8), *(const I128*)(qTable +  8));
-  I128 row2 = vmuli16(*(const I128*)(src + 16), *(const I128*)(qTable + 16));
-  I128 row3 = vmuli16(*(const I128*)(src + 24), *(const I128*)(qTable + 24));
-  I128 row4 = vmuli16(*(const I128*)(src + 32), *(const I128*)(qTable + 32));
-  I128 row5 = vmuli16(*(const I128*)(src + 40), *(const I128*)(qTable + 40));
-  I128 row6 = vmuli16(*(const I128*)(src + 48), *(const I128*)(qTable + 48));
-  I128 row7 = vmuli16(*(const I128*)(src + 56), *(const I128*)(qTable + 56));
+  // Load and dequantize (`src` is aligned to 16 bytes, `qTable` doesn't have to be).
+  I128 row0 = vmuli16(vloadi128u(qTable +  0), *(const I128*)(src +  0));
+  I128 row1 = vmuli16(vloadi128u(qTable +  8), *(const I128*)(src +  8));
+  I128 row2 = vmuli16(vloadi128u(qTable + 16), *(const I128*)(src + 16));
+  I128 row3 = vmuli16(vloadi128u(qTable + 24), *(const I128*)(src + 24));
+  I128 row4 = vmuli16(vloadi128u(qTable + 32), *(const I128*)(src + 32));
+  I128 row5 = vmuli16(vloadi128u(qTable + 40), *(const I128*)(src + 40));
+  I128 row6 = vmuli16(vloadi128u(qTable + 48), *(const I128*)(src + 48));
+  I128 row7 = vmuli16(vloadi128u(qTable + 56), *(const I128*)(src + 56));
 
   // IDCT columns.
   BL_JPEG_IDCT_IDCT_PASS_XMM(BL_JPEG_CONST_XMM(idct_col_bias), BL_JPEG_IDCT_COL_NORM)
