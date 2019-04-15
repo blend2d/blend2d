@@ -454,8 +454,11 @@ BLResult DeflateDecoder::_decode() noexcept {
         do {
           BL_DEFLATE_FILL_BITS();
 
-          uint32_t iEnd = blMin<uint32_t>(i + 8, hclen);
-          BL_DEFLATE_NEED_BITS(iEnd * 3);
+          // After FillBits the minimum bits we would have is either 25 or 57
+          // (BitWordSize - 7) if there is enough input data. So we can process
+          // either 8 or 19 loop iterations.
+          uint32_t iEnd = blMin<uint32_t>(i + (blBitSizeOf<BLBitWord>() - 7u) / 3u, hclen);
+          BL_DEFLATE_NEED_BITS((iEnd - i) * 3);
 
           do {
             uint32_t s;
