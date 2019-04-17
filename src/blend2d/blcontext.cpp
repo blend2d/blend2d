@@ -351,6 +351,22 @@ BLResult blContextStrokeGeometry(BLContextCore* self, uint32_t geometryType, con
   return self->impl->virt->strokeGeometry(self->impl, geometryType, geometryData);
 }
 
+BLResult blContextStrokeTextI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) noexcept {
+  return self->impl->virt->strokeTextI(self->impl, pt, font, text, size, encoding);
+}
+
+BLResult blContextStrokeTextD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) noexcept {
+  return self->impl->virt->strokeTextD(self->impl, pt, font, text, size, encoding);
+}
+
+BLResult blContextStrokeGlyphRunI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
+  return self->impl->virt->strokeGlyphRunI(self->impl, pt, font, glyphRun);
+}
+
+BLResult blContextStrokeGlyphRunD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
+  return self->impl->virt->strokeGlyphRunD(self->impl, pt, font, glyphRun);
+}
+
 // ============================================================================
 // [BLContext - Blit Operations]
 // ============================================================================
