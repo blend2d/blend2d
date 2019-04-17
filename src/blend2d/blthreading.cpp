@@ -104,16 +104,14 @@ BLResult blThreadEventTimedWait(BLThreadEvent* self, uint64_t microseconds) noex
 struct BLThreadEventPosixImpl {
   BLConditionVariable cond;
   BLMutex mutex;
-  uint8_t manualReset;
-  uint8_t signaled;
-  uint16_t reserved;
+  uint32_t manualReset;
+  uint32_t signaled;
 
   BL_INLINE BLThreadEventPosixImpl(bool manualReset, bool signaled) noexcept
     : cond(),
       mutex(),
       manualReset(manualReset),
-      signaled(signaled),
-      reserved(0) {}
+      signaled(signaled) {}
 };
 
 BLResult blThreadEventCreate(BLThreadEvent* self, bool manualReset, bool signaled) noexcept {
@@ -222,8 +220,6 @@ BLResult blThreadEventTimedWait(BLThreadEvent* self, uint64_t microseconds) noex
 
 class BLInternalThread : public BLThread {
 public:
-  typedef void* VoidPtr;
-
 #ifdef _WIN32
   intptr_t handle;
 #else
@@ -234,19 +230,21 @@ public:
   volatile uint32_t internalStatus;
   volatile uint32_t reserved;
 
-  volatile BLThreadWorkFunc workFunc;
-  volatile VoidPtr workData;
+  BLThreadFunc workFunc;
+  BLThreadFunc doneFunc;
+  void* workData;
 
-  BLThreadExitFunc exitFunc;
-  VoidPtr exitData;
+  BLThreadFunc exitFunc;
+  void* exitData;
 
-  BL_INLINE BLInternalThread(BLThreadExitFunc exitFunc, void* exitData) noexcept
+  BL_INLINE BLInternalThread(BLThreadFunc exitFunc, void* exitData) noexcept
     : BLThread { &blThreadVirt },
       handle {},
       event(true, false),
       internalStatus(BL_THREAD_STATUS_IDLE),
       reserved(0),
       workFunc(nullptr),
+      doneFunc(nullptr),
       workData(nullptr),
       exitFunc(exitFunc),
       exitData(exitData) {}
@@ -260,7 +258,7 @@ public:
   }
 };
 
-static BLInternalThread* blThreadNew(BLThreadExitFunc exitFunc, void* exitData) noexcept {
+static BLInternalThread* blThreadNew(BLThreadFunc exitFunc, void* exitData) noexcept {
   BLInternalThread* self = static_cast<BLInternalThread*>(malloc(sizeof(BLInternalThread)));
   if (BL_UNLIKELY(!self))
     return nullptr;
@@ -282,11 +280,15 @@ static BL_INLINE void blThreadEntryPoint(BLInternalThread* thread) noexcept {
     // Wait for some work to do.
     thread->event.wait();
 
-    BLThreadWorkFunc workFunc = thread->workFunc;
-    void* workData = thread->workData;
+    BLThreadFunc workFunc = thread->workFunc;
+    BLThreadFunc doneFunc = thread->doneFunc;
+    void* workData        = thread->workData;
 
     thread->workFunc = nullptr;
+    thread->doneFunc = nullptr;
     thread->workData = nullptr;
+
+    blAtomicThreadFence();
     thread->event.reset();
 
     // If the compare-exchange fails and the function was not provided it means that this thread is quitting.
@@ -299,10 +301,13 @@ static BL_INLINE void blThreadEntryPoint(BLInternalThread* thread) noexcept {
 
     // Again, if the compare-exchange fails it means we are quitting.
     value = BL_THREAD_STATUS_RUNNING;
-    if (!std::atomic_compare_exchange_strong((std::atomic<uint32_t>*)&thread->internalStatus, &value, uint32_t(BL_THREAD_STATUS_IDLE))) {
-      if (value == BL_THREAD_STATUS_QUITTING)
-        break;
-    }
+    bool res = !std::atomic_compare_exchange_strong((std::atomic<uint32_t>*)&thread->internalStatus, &value, uint32_t(BL_THREAD_STATUS_IDLE));
+
+    if (doneFunc)
+      doneFunc(thread, workData);
+
+    if (!res && value == BL_THREAD_STATUS_QUITTING)
+      break;
   }
 
   thread->exitFunc(thread, thread->exitData);
@@ -310,26 +315,21 @@ static BL_INLINE void blThreadEntryPoint(BLInternalThread* thread) noexcept {
 
 static uint32_t BL_CDECL blThreadStatus(const BLThread* self_) noexcept {
   const BLInternalThread* self = static_cast<const BLInternalThread*>(self_);
-  return self->internalStatus;
+  return blAtomicFetch(&self->internalStatus);
 }
 
-static BLResult BL_CDECL blThreadRun(BLThread* self_, BLThreadWorkFunc func, void* data) noexcept {
+static BLResult BL_CDECL blThreadRun(BLThread* self_, BLThreadFunc workFunc, BLThreadFunc doneFunc, void* data) noexcept {
   BLInternalThread* self = static_cast<BLInternalThread*>(self_);
-  if (self->internalStatus != BL_THREAD_STATUS_IDLE)
+  if (self->event.isSignaled())
     return blTraceError(BL_ERROR_BUSY);
 
-  self->workFunc = func;
+  self->workFunc = workFunc;
+  self->doneFunc = doneFunc;
   self->workData = data;
+  blAtomicThreadFence();
 
   self->event.signal();
   return BL_SUCCESS;
-}
-
-static bool BL_CDECL blThreadMakeIdle(BLThread* self_) noexcept {
-  const BLInternalThread* self = static_cast<const BLInternalThread*>(self_);
-
-  uint32_t expected = BL_THREAD_STATUS_RUNNING;
-  return std::atomic_compare_exchange_strong((std::atomic<uint32_t>*)&self->internalStatus, &expected, uint32_t(BL_THREAD_STATUS_IDLE));
 }
 
 static BLResult BL_CDECL blThreadQuit(BLThread* self_) noexcept {
@@ -352,7 +352,7 @@ static unsigned BL_STDCALL blThreadEntryPointWrapper(void* arg) {
   return 0;
 }
 
-BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes* attributes, BLThreadExitFunc exitFunc, void* exitData) noexcept {
+BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes* attributes, BLThreadFunc exitFunc, void* exitData) noexcept {
   BLInternalThread* thread = blThreadNew(exitFunc, exitData);
   if (BL_UNLIKELY(!thread))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
@@ -399,7 +399,7 @@ static void* blThreadEntryPointWrapper(void* arg) {
   return nullptr;
 }
 
-BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes* attributes, BLThreadExitFunc exitFunc, void* exitData) noexcept {
+BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes* attributes, BLThreadFunc exitFunc, void* exitData) noexcept {
   pthread_attr_t ptAttr;
   int err = pthread_attr_init(&ptAttr);
 
@@ -416,7 +416,7 @@ BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes*
   return result;
 }
 
-BLResult blThreadCreatePt(BLThread** threadOut, const pthread_attr_t* ptAttr, BLThreadExitFunc exitFunc, void* exitData) noexcept {
+BLResult blThreadCreatePt(BLThread** threadOut, const pthread_attr_t* ptAttr, BLThreadFunc exitFunc, void* exitData) noexcept {
   BLInternalThread* thread = blThreadNew(exitFunc, exitData);
   if (BL_UNLIKELY(!thread))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
@@ -460,6 +460,5 @@ void blThreadingRtInit(BLRuntimeContext* rt) noexcept {
   blThreadVirt.destroy = blThreadDestroy;
   blThreadVirt.status = blThreadStatus;
   blThreadVirt.run = blThreadRun;
-  blThreadVirt.makeIdle = blThreadMakeIdle;
   blThreadVirt.quit = blThreadQuit;
 }

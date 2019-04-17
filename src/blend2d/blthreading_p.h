@@ -34,19 +34,37 @@ struct BLThreadAttributes;
 // [Typedefs]
 // ============================================================================
 
-typedef void (BL_CDECL* BLThreadWorkFunc)(BLThread* thread, void* data) BL_NOEXCEPT;
-typedef void (BL_CDECL* BLThreadExitFunc)(BLThread* thread, void* data) BL_NOEXCEPT;
+typedef void (BL_CDECL* BLThreadFunc)(BLThread* thread, void* data) BL_NOEXCEPT;
 
 // ============================================================================
 // [Constants]
 // ============================================================================
 
 enum BLThreadStatus : uint32_t {
-  BL_THREAD_STATUS_NONE = 0,
-  BL_THREAD_STATUS_IDLE = 1,
-  BL_THREAD_STATUS_RUNNING = 2,
-  BL_THREAD_STATUS_QUITTING = 3
+  BL_THREAD_STATUS_IDLE = 0,
+  BL_THREAD_STATUS_RUNNING = 1,
+  BL_THREAD_STATUS_QUITTING = 2
 };
+
+// ============================================================================
+// [Atomics]
+// ============================================================================
+
+static BL_INLINE void blAtomicThreadFence(std::memory_order order = std::memory_order_acq_rel) noexcept {
+  std::atomic_thread_fence(order);
+}
+
+template<typename T>
+static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetch(const T* p, std::memory_order order = std::memory_order_relaxed) noexcept {
+  typedef typename BLInternal::StdInt<sizeof(T), 0>::Type RawT;
+  return (typename std::remove_volatile<T>::type)((const std::atomic<RawT>*)p)->load(order);
+}
+
+template<typename T>
+static BL_INLINE void blAtomicStore(T* p, typename std::remove_volatile<T>::type value, std::memory_order order = std::memory_order_acq_rel) noexcept {
+  typedef typename BLInternal::StdInt<sizeof(T), 0>::Type RawT;
+  return ((std::atomic<RawT>*)p)->store((RawT)value, order);
+}
 
 // ============================================================================
 // [Utilities]
@@ -295,8 +313,7 @@ struct BLThreadAttributes {
 struct BLThreadVirt {
   BLResult (BL_CDECL* destroy)(BLThread* self) BL_NOEXCEPT;
   uint32_t (BL_CDECL* status)(const BLThread* self) BL_NOEXCEPT;
-  BLResult (BL_CDECL* run)(BLThread* self, BLThreadWorkFunc func, void* data) BL_NOEXCEPT;
-  bool     (BL_CDECL* makeIdle)(BLThread* self) BL_NOEXCEPT;
+  BLResult (BL_CDECL* run)(BLThread* self, BLThreadFunc workFunc, BLThreadFunc doneFunc, void* data) BL_NOEXCEPT;
   BLResult (BL_CDECL* quit)(BLThread* self) BL_NOEXCEPT;
 };
 
@@ -313,12 +330,8 @@ struct BLThread {
     return virt->status(this);
   }
 
-  BL_INLINE BLResult run(BLThreadWorkFunc func, void* data) noexcept {
-    return virt->run(this, func, data);
-  }
-
-  BL_INLINE bool makeIdle() noexcept {
-    return virt->makeIdle(this);
+  BL_INLINE BLResult run(BLThreadFunc workFunc, BLThreadFunc doneFunc, void* data) noexcept {
+    return virt->run(this, workFunc, doneFunc, data);
   }
 
   BL_INLINE BLResult quit() noexcept {
@@ -328,10 +341,10 @@ struct BLThread {
   // --------------------------------------------------------------------------
 };
 
-BL_HIDDEN BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes* attributes, BLThreadExitFunc exitFunc, void* exitData) noexcept;
+BL_HIDDEN BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes* attributes, BLThreadFunc exitFunc, void* exitData) noexcept;
 
 #ifndef _WIN32
-BL_HIDDEN BLResult blThreadCreatePt(BLThread** threadOut, const pthread_attr_t* ptAttr, BLThreadExitFunc exitFunc, void* exitData) noexcept;
+BL_HIDDEN BLResult blThreadCreatePt(BLThread** threadOut, const pthread_attr_t* ptAttr, BLThreadFunc exitFunc, void* exitData) noexcept;
 BL_HIDDEN BLResult blThreadSetPtAttributes(pthread_attr_t* ptAttr, const BLThreadAttributes* src) noexcept;
 #endif
 

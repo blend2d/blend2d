@@ -430,6 +430,12 @@ struct ThreadTestData {
 static void BL_CDECL test_thread_entry(BLThread* thread, void* data_) noexcept {
   ThreadTestData* data = static_cast<ThreadTestData*>(data_);
   INFO("[#%u] Thread %p running\n", data->iter, thread);
+}
+
+static void BL_CDECL test_thread_done(BLThread* thread, void* data_) noexcept {
+  ThreadTestData* data = static_cast<ThreadTestData*>(data_);
+  INFO("[#%u] Thread %p done\n", data->iter, thread);
+
   if (blAtomicFetchSub(&data->counter) == 1)
     data->event.signal();
 }
@@ -447,17 +453,18 @@ UNIT(blend2d_thread_pool) {
   EXPECT(n == 0);
 
   INFO("Repeatedly acquiring / releasing %u threads with a simple task", kThreadCount);
-  for (uint32_t i = 0; i < 5; i++) {
+  for (uint32_t i = 0; i < 10; i++) {
     data.iter = i;
 
     INFO("[#%u] Acquiring %u threads from thread-pool", i, kThreadCount);
     uint32_t acquiredCount = tp->acquireThreads(threads, kThreadCount);
     EXPECT(acquiredCount == kThreadCount);
 
-    data.counter = kThreadCount;
+    blAtomicStore(&data.counter, kThreadCount);
     INFO("[#%u] Running %u threads", i, kThreadCount);
     for (BLThread* thread : threads) {
-      thread->run(test_thread_entry, &data);
+      BLResult result = thread->run(test_thread_entry, test_thread_done, &data);
+      EXPECT(result == BL_SUCCESS);
     }
 
     INFO("[#%u] Waiting and releasing", i);
