@@ -154,7 +154,7 @@ static BLResult BL_CDECL blMemFontDataImplDestroy(BLFontDataImpl* impl_) noexcep
   BLMemFontLoaderImpl* loaderI = impl->loaderI;
   blRuntimeFreeImpl(impl, sizeof(BLMemFontDataImpl), memPoolData);
 
-  if (blAtomicFetchDecRef(&loaderI->backRefCount) != 1)
+  if (blAtomicFetchSub(&loaderI->backRefCount) != 1)
     return BL_SUCCESS;
 
   return blMemFontLoaderImplRealDestroy(loaderI);
@@ -720,7 +720,7 @@ BLResult blFontImplDelete(BLFontImpl* impl_) noexcept {
 }
 
 static BL_INLINE BLResult blFontImplRelease(BLInternalFontImpl* impl) noexcept {
-  if (blAtomicFetchDecRef(&impl->refCount) != 1)
+  if (blAtomicFetchSub(&impl->refCount) != 1)
     return BL_SUCCESS;
   return blFontImplDelete(impl);
 }
@@ -907,9 +907,10 @@ BLResult blFontApplyGPos(const BLFontCore* self, BLGlyphBufferCore* buf, size_t 
 }
 
 BLResult blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* buf, BLTextMetrics* out) noexcept {
+  BLInternalFontImpl* selfI = blInternalCast(self->impl);
   BLInternalGlyphBufferData* gbd = blInternalCast(buf->data);
-  out->reset();
 
+  out->reset();
   if (!(gbd->flags & BL_GLYPH_BUFFER_GLYPH_ADVANCES)) {
     BL_PROPAGATE(blFontShape(self, buf));
     gbd = blInternalCast(buf->data);
@@ -933,9 +934,14 @@ BLResult blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* buf, BL
   BLBoxI glyphBounds[2];
   BLGlyphId borderGlyphs[2] = { BLGlyphId(glyphItemData[0].glyphId), BLGlyphId(glyphItemData[size - 1].glyphId) };
 
-  BL_PROPAGATE(blFontGetGlyphBounds(self, borderGlyphs, 2, glyphBounds, 2));
+  BL_PROPAGATE(blFontGetGlyphBounds(self, borderGlyphs, intptr_t(sizeof(BLGlyphId)), glyphBounds, 2));
   out->advance.reset(advanceX, advanceY);
   out->boundingBox.reset(glyphBounds[0].x0, 0.0, advanceX - placementData[size - 1].advance.x + glyphBounds[1].x1, 0.0);
+
+  const BLFontMatrix& m = selfI->matrix;
+  out->advance *= BLPoint(m.m00, m.m11);
+  out->boundingBox *= BLPoint(m.m00, m.m11);
+
   return BL_SUCCESS;
 }
 

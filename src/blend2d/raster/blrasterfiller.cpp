@@ -119,7 +119,7 @@ BLResult BL_CDECL BLRasterFiller::fillAnalyticImpl(BLRasterFiller* filler, BLRas
   // printf("NUM LINES: %u\n", unsigned(calcLines(edgeStorage)));
 
   // NOTE: This doesn't happen often, but it's possible. If, for any reason,
-  // the data in bands is all horz lines or no data at all we would trigger
+  // the data in bands is all horz lines or no data at all it would trigger
   // this condition.
   if (BL_UNLIKELY(edgeStorage->boundingBox().y0 >= edgeStorage->boundingBox().y1))
     return BL_SUCCESS;
@@ -212,7 +212,7 @@ Rasterize:
         }
 
 SaveState:
-        // The edge is not fully rasterized and crosses the next band.
+        // The edge is not fully rasterized and crosses the band.
         ras.save(current->state);
 
         *pPrev = current;

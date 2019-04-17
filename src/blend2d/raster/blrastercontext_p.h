@@ -18,6 +18,8 @@
 #include "../blrgba.h"
 #include "../blregion_p.h"
 #include "../blsupport_p.h"
+#include "../blthreading_p.h"
+#include "../blthreadpool_p.h"
 #include "../blzoneallocator_p.h"
 #include "../raster/blanalyticrasterizer_p.h"
 #include "../raster/bledgebuilder_p.h"
@@ -25,13 +27,47 @@
 #include "../raster/blrasterfiller_p.h"
 #include "../raster/blrasterworker_p.h"
 
-#if !defined(BL_BUILD_NO_PIPEGEN)
+#if !defined(BL_BUILD_NO_JIT)
   #include "../pipegen/blpipegenruntime_p.h"
 #endif
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal_raster
 //! \{
+
+// ============================================================================
+// [BLRasterAsyncData]
+// ============================================================================
+
+struct BLRasterAsyncData {
+  BLThreadPool* threadPool;
+  BLThread** threads;
+  uint32_t threadCount;
+
+  BL_INLINE BLRasterAsyncData() noexcept
+    : threadPool(nullptr),
+      threads(nullptr),
+      threadCount(0) {}
+
+  BL_INLINE void init(BLThreadPool* threadPool, BLThread** threads, uint32_t count) noexcept {
+    this->threadPool = threadPool;
+    this->threads = threads;
+    this->threadCount = count;
+  }
+
+  BL_INLINE void release() noexcept {
+    if (!threadPool)
+      return;
+
+    if (threadCount)
+      threadPool->releaseThreads(threads, threadCount);
+
+    threadPool->release();
+    threadPool = nullptr;
+    threads = nullptr;
+    threadCount = 0;
+  }
+};
 
 // ============================================================================
 // [BLRasterContextImpl]
@@ -48,25 +84,28 @@ struct BLRasterContextImpl : public BLContextImpl {
   //! Object pool used to allocate `BLRasterContextSavedState`.
   BLZonePool<BLRasterContextSavedState> statePool;
 
-  //! Single-threaded worker that also contains some states.
+  //! Destination image.
+  BLImageCore dstImage;
+  //! Destination info.
+  BLRasterContextDstInfo dstInfo;
+
+  //! Worker used by synchronous rendering that also holds part of the current state.
   BLRasterWorker worker;
-  //! Temporary text buffer used to shape a text to fill.
-  BLGlyphBuffer glyphBuffer;
+  //! Asynchronous rendering data.
+  BLRasterAsyncData asyncData;
 
   //! Pipeline runtime (either global or isolated, depending on create options).
   BLPipeProvider pipeProvider;
   //! Pipeline lookup cache (always used before attempting to use the `pipeProvider`.
   BLPipeLookupCache pipeLookupCache;
 
+  //! Temporary text buffer used to shape a text to fill.
+  BLGlyphBuffer glyphBuffer;
+
   //! Context origin ID used in `data0` member of `BLContextCookie`.
   uint64_t contextOriginId;
   //! Used to genearate unique IDs of this context.
   uint64_t stateIdCounter;
-
-  //! Destination image.
-  BLImageCore dstImage;
-  //! Destination info.
-  BLRasterContextDstInfo dstInfo;
 
   //! The current state of the context accessible from outside.
   BLContextState currentState;
@@ -136,9 +175,12 @@ struct BLRasterContextImpl : public BLContextImpl {
       cmdZone(16384 - BLZoneAllocator::kBlockOverhead, 8),
       fetchPool(&baseZone),
       statePool(&baseZone),
+      dstImage {},
+      dstInfo {},
       worker(this),
-      glyphBuffer(),
+      asyncData {},
       pipeProvider(),
+      glyphBuffer(),
       contextOriginId(blContextIdGenerator.next()),
       stateIdCounter(0) {
 
@@ -164,7 +206,7 @@ struct BLRasterContextImpl : public BLContextImpl {
 // [BLRasterContextImpl - API]
 // ============================================================================
 
-BL_HIDDEN BLResult blRasterContextImplCreate(BLContextImpl** out, BLImageCore* image, const BLContextCreateOptions* options) noexcept;
+BL_HIDDEN BLResult blRasterContextImplCreate(BLContextImpl** out, BLImageCore* image, const BLContextCreateInfo* options) noexcept;
 BL_HIDDEN void blRasterContextRtInit(BLRuntimeContext* rt) noexcept;
 
 //! \}

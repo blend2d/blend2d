@@ -250,7 +250,6 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 
 #ifdef __cplusplus
@@ -522,8 +521,8 @@ BL_DEFINE_STRUCT(BLCreateForeignInfo);
 BL_DEFINE_STRUCT(BLFileCore);
 
 BL_DEFINE_STRUCT(BLRuntimeBuildInfo);
+BL_DEFINE_STRUCT(BLRuntimeSystemInfo);
 BL_DEFINE_STRUCT(BLRuntimeMemoryInfo);
-BL_DEFINE_STRUCT(BLRuntimeCpuInfo);
 
 BL_DEFINE_STRUCT(BLStringCore);
 BL_DEFINE_STRUCT(BLStringImpl);
@@ -590,7 +589,7 @@ BL_DEFINE_STRUCT(BLContextCore);
 BL_DEFINE_STRUCT(BLContextImpl);
 BL_DEFINE_STRUCT(BLContextVirt);
 BL_DEFINE_STRUCT(BLContextCookie);
-BL_DEFINE_STRUCT(BLContextCreateOptions);
+BL_DEFINE_STRUCT(BLContextCreateInfo);
 BL_DEFINE_STRUCT(BLContextHints);
 BL_DEFINE_STRUCT(BLContextState);
 
@@ -745,6 +744,7 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_BUSY,                         //!< Device or resource busy       [EBUSY].
   BL_ERROR_INTERRUPTED,                  //!< Operation interrupted         [EINTR].
   BL_ERROR_TRY_AGAIN,                    //!< Try again                     [EAGAIN].
+  BL_ERROR_TIMED_OUT,                    //!< Timed out                     [ETIMEDOUT].
   BL_ERROR_BROKEN_PIPE,                  //!< Broken pipe                   [EPIPE].
   BL_ERROR_INVALID_SEEK,                 //!< File is not seekable          [ESPIPE].
   BL_ERROR_SYMLINK_LOOP,                 //!< Too many levels of symlinks   [ELOOP].
@@ -771,6 +771,7 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_TOO_MANY_OPEN_FILES,          //!< Too many open files           [EMFILE].
   BL_ERROR_TOO_MANY_OPEN_FILES_BY_OS,    //!< Too many open files by OS     [ENFILE].
   BL_ERROR_TOO_MANY_LINKS,               //!< Too many symbolic links on FS [EMLINK].
+  BL_ERROR_TOO_MANY_THREADS,             //!< Too many threads              [EAGAIN].
 
   BL_ERROR_FILE_EMPTY,                   //!< File is empty (not specific to any OS error).
   BL_ERROR_OPEN_FAILED,                  //!< File open failed              [Windows::ERROR_OPEN_FAILED].
@@ -1346,15 +1347,18 @@ BL_API_C bool     BL_CDECL blArrayEquals(const BLArrayCore* a, const BLArrayCore
 //! \name BLContext
 //! \{
 BL_API_C BLResult BL_CDECL blContextInit(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextInitAs(BLContextCore* self, BLImageCore* image, const BLContextCreateOptions* options) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextInitAs(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextReset(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextAssignMove(BLContextCore* self, BLContextCore* other) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextAssignWeak(BLContextCore* self, const BLContextCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextBegin(BLContextCore* self, BLImageCore* image, const BLContextCreateOptions* options) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextGetType(const BLContextCore* self) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextBegin(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextEnd(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextFlush(BLContextCore* self, uint32_t flags) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSave(BLContextCore* self, BLContextCookie* cookie) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextRestore(BLContextCore* self, const BLContextCookie* cookie) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextGetMetaMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextGetUserMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextUserToMeta(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextMatrixOp(BLContextCore* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSetHint(BLContextCore* self, uint32_t hintType, uint32_t value) BL_NOEXCEPT_C;
@@ -1364,7 +1368,6 @@ BL_API_C BLResult BL_CDECL blContextSetFlattenTolerance(BLContextCore* self, dou
 BL_API_C BLResult BL_CDECL blContextSetApproximationOptions(BLContextCore* self, const BLApproximationOptions* options) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSetCompOp(BLContextCore* self, uint32_t compOp) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSetGlobalAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetFillRule(BLContextCore* self, uint32_t fillRule) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSetFillAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextGetFillStyle(const BLContextCore* self, void* object) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextGetFillStyleRgba32(const BLContextCore* self, uint32_t* rgba32) BL_NOEXCEPT_C;
@@ -1372,6 +1375,14 @@ BL_API_C BLResult BL_CDECL blContextGetFillStyleRgba64(const BLContextCore* self
 BL_API_C BLResult BL_CDECL blContextSetFillStyle(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSetFillStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSetFillStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextSetFillRule(BLContextCore* self, uint32_t fillRule) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextSetStrokeAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextGetStrokeStyle(const BLContextCore* self, void* object) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextGetStrokeStyleRgba32(const BLContextCore* self, uint32_t* rgba32) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextGetStrokeStyleRgba64(const BLContextCore* self, uint64_t* rgba64) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextSetStrokeStyle(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextSetStrokeStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextSetStrokeStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSetStrokeWidth(BLContextCore* self, double width) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSetStrokeMiterLimit(BLContextCore* self, double miterLimit) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSetStrokeCap(BLContextCore* self, uint32_t position, uint32_t strokeCap) BL_NOEXCEPT_C;
@@ -1380,14 +1391,8 @@ BL_API_C BLResult BL_CDECL blContextSetStrokeJoin(BLContextCore* self, uint32_t 
 BL_API_C BLResult BL_CDECL blContextSetStrokeDashOffset(BLContextCore* self, double dashOffset) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSetStrokeDashArray(BLContextCore* self, const BLArrayCore* dashArray) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSetStrokeTransformOrder(BLContextCore* self, uint32_t transformOrder) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blContextGetStrokeOptions(const BLContextCore* self, BLStrokeOptionsCore* options) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextSetStrokeOptions(BLContextCore* self, const BLStrokeOptionsCore* options) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetStrokeStyle(const BLContextCore* self, void* object) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetStrokeStyleRgba32(const BLContextCore* self, uint32_t* rgba32) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetStrokeStyleRgba64(const BLContextCore* self, uint64_t* rgba64) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeStyle(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextClipToRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextClipToRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blContextRestoreClipping(BLContextCore* self) BL_NOEXCEPT_C;
@@ -1622,7 +1627,7 @@ BL_API_C BLResult BL_CDECL blPathReset(BLPathCore* self) BL_NOEXCEPT_C;
 BL_API_C size_t   BL_CDECL blPathGetSize(const BLPathCore* self) BL_NOEXCEPT_C;
 BL_API_C size_t   BL_CDECL blPathGetCapacity(const BLPathCore* self) BL_NOEXCEPT_C;
 BL_API_C const uint8_t* BL_CDECL blPathGetCommandData(const BLPathCore* self) BL_NOEXCEPT_C;
-BL_API_C const BLPoint* BL_CDECL blPathGetVertexdData(const BLPathCore* self) BL_NOEXCEPT_C;
+BL_API_C const BLPoint* BL_CDECL blPathGetVertexData(const BLPathCore* self) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blPathClear(BLPathCore* self) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blPathShrink(BLPathCore* self) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blPathReserve(BLPathCore* self, size_t n) BL_NOEXCEPT_C;

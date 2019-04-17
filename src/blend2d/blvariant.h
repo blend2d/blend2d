@@ -71,7 +71,7 @@ BL_DEFINE_ENUM(BLImplType) {
   //! Type is `BLArray<T>` where `T` is a struct of size 32.
   BL_IMPL_TYPE_ARRAY_STRUCT_32 = 25,
   //! Type is `BLPath`.
-  BL_IMPL_TYPE_PATH2D = 32,
+  BL_IMPL_TYPE_PATH = 32,
   //! Type is `BLRegion`.
   BL_IMPL_TYPE_REGION = 33,
   //! Type is `BLImage`.

@@ -665,7 +665,7 @@ struct BLPipeSignature {
   BL_INLINE uint32_t dstFormat() const noexcept { return _get(BL_PIPE_SIGNATURE_DST_FORMAT); }
   //! Extracts source pixel format from the signature.
   BL_INLINE uint32_t srcFormat() const noexcept { return _get(BL_PIPE_SIGNATURE_SRC_FORMAT); }
-  //! Extracts compositing operator from the signature.
+  //! Extracts composition operator from the signature.
   BL_INLINE uint32_t compOp() const noexcept { return _get(BL_PIPE_SIGNATURE_COMP_OP); }
   //! Extracts sweep type from the signature.
   BL_INLINE uint32_t fillType() const noexcept { return _get(BL_PIPE_SIGNATURE_FILL_TYPE); }

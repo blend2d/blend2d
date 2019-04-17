@@ -154,7 +154,6 @@
 // Build optimizations control compile-time optimizations to be used by Blend2D
 // and C++ compiler. These optimizations are not related to the code-generator
 // optimizations (JIT) that are always auto-detected at runtime.
-
 #if defined(BL_BUILD_OPT_AVX2) && !defined(BL_BUILD_OPT_AVX)
   #define BL_BUILD_OPT_AVX
 #endif

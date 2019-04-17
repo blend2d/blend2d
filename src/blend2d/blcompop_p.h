@@ -21,13 +21,13 @@
 // [Constants]
 // ============================================================================
 
-//! Additional compositing operators used internally.
+//! Additional composition operators used internally.
 enum BLCompOpInternal : uint32_t {
   //! Set destination alpha to 1 (alpha formats only).
   BL_COMP_OP_INTERNAL_ALPHA_SET = BL_COMP_OP_COUNT,
   //! Invert destination alpha   (alpha formats only).
   BL_COMP_OP_INTERNAL_ALPHA_INV,
-  //! Count of all compositing operators including internal ones..
+  //! Count of all composition operators including internal ones..
   BL_COMP_OP_INTERNAL_COUNT
 };
 

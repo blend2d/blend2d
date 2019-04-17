@@ -18,7 +18,6 @@
   #include <sys/mman.h>
   #include <sys/stat.h>
   #include <sys/types.h>
-  #include <unistd.h>
 #endif
 
 // ============================================================================
@@ -669,7 +668,7 @@ BLResult BLFileMapping::map(BLFile& file, uint32_t flags) noexcept {
 
   if (data == nullptr) {
     if (!(flags & kCopyOnFailure))
-      return blTraceError(blResultFromWinError(::GetLastError()));
+      return blTraceError(blResultFromWinError(GetLastError()));
     else
       return blFileMappingCreateCopyOfFile(this, file, flags, size);
   }

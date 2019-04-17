@@ -396,7 +396,7 @@ BLResult blArrayResize(BLArrayCore* self, size_t n, const void* fill) noexcept {
     for (j = 0; j < tupleSize; j++) {
       BLVariantImpl* impl = fillPtr[j].impl;
       if (impl->refCount != 0)
-        blAtomicFetchIncRef(&impl->refCount, n);
+        blAtomicFetchAdd(&impl->refCount, n);
     }
 
     for (i = 0; i < n; i++) {

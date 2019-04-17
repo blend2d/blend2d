@@ -33,14 +33,14 @@ static BL_INLINE void blContextStateInit(BLContextState* self) noexcept {
   self->hints.reset();
   self->compOp = uint8_t(BL_COMP_OP_SRC_OVER);
   self->fillRule = uint8_t(BL_FILL_RULE_NON_ZERO);
-  self->fillStyleType = uint8_t(BL_STYLE_TYPE_NONE);
-  self->strokeStyleType = uint8_t(BL_STYLE_TYPE_NONE);
+  self->styleType[BL_CONTEXT_OP_TYPE_FILL] = uint8_t(BL_STYLE_TYPE_NONE);
+  self->styleType[BL_CONTEXT_OP_TYPE_STROKE] = uint8_t(BL_STYLE_TYPE_NONE);
   memset(self->reserved, 0, sizeof(self->reserved));
 
   self->approximationOptions = blMakeDefaultApproximationOptions();
   self->globalAlpha = 1.0;
-  self->fillAlpha = 1.0;
-  self->strokeAlpha = 1.0;
+  self->styleAlpha[BL_CONTEXT_OP_TYPE_FILL] = 1.0;
+  self->styleAlpha[BL_CONTEXT_OP_TYPE_STROKE] = 1.0;
 
   blStrokeOptionsInit(&self->strokeOptions);
   self->metaMatrix.reset();

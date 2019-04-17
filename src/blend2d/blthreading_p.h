@@ -4,18 +4,71 @@
 // [License]
 // ZLIB - See LICENSE.md file in the package.
 
-// This header implements support functions used across Blend2D library. These
-// functions are always inline and implement simple concepts like min/max, bit
-// scanning, byte swapping, unaligned memory io, etc...
-
 #ifndef BLEND2D_BLTHREADING_P_H
 #define BLEND2D_BLTHREADING_P_H
 
 #include "./blapi-internal_p.h"
 
+#ifndef _WIN32
+  #include <sys/time.h>
+#endif
+
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
 //! \{
+
+// ============================================================================
+// [Forward Declarations]
+// ============================================================================
+
+class BLMutex;
+class BLRWLock;
+class BLConditionVariable;
+class BLThreadEvent;
+
+struct BLThread;
+struct BLThreadVirt;
+struct BLThreadAttributes;
+
+// ============================================================================
+// [Typedefs]
+// ============================================================================
+
+typedef void (BL_CDECL* BLThreadWorkFunc)(BLThread* thread, void* data) BL_NOEXCEPT;
+typedef void (BL_CDECL* BLThreadExitFunc)(BLThread* thread, void* data) BL_NOEXCEPT;
+
+// ============================================================================
+// [Constants]
+// ============================================================================
+
+enum BLThreadStatus : uint32_t {
+  BL_THREAD_STATUS_NONE = 0,
+  BL_THREAD_STATUS_IDLE = 1,
+  BL_THREAD_STATUS_RUNNING = 2,
+  BL_THREAD_STATUS_QUITTING = 3
+};
+
+// ============================================================================
+// [Utilities]
+// ============================================================================
+
+#ifdef _WIN32
+static BL_INLINE void blThreadYield() noexcept { Sleep(0); }
+#else
+static BL_INLINE void blThreadYield() noexcept { sched_yield(); }
+#endif
+
+#ifndef _WIN32
+static void blGetAbsTimeForWaitCondition(struct timespec& out, uint64_t microseconds) noexcept {
+  struct timeval now;
+  gettimeofday(&now, NULL);
+
+  out.tv_sec = (now.tv_sec + (microseconds / 1000000u));
+  out.tv_nsec = (now.tv_usec + (microseconds % 1000000u)) * 1000u;
+  out.tv_sec += out.tv_nsec / 1000000000;
+  out.tv_nsec %= 1000000000;
+}
+#endif
 
 // ============================================================================
 // [BLMutex]
@@ -39,11 +92,10 @@ public:
 
   #ifdef PTHREAD_MUTEX_INITIALIZER
   BL_INLINE BLMutex() noexcept : handle(PTHREAD_MUTEX_INITIALIZER) {}
-  BL_INLINE ~BLMutex() noexcept { pthread_mutex_destroy(&handle); }
   #else
   BL_INLINE BLMutex() noexcept { pthread_mutex_init(&handle, nullptr); }
-  BL_INLINE ~BLMutex() noexcept { pthread_mutex_destroy(&handle); }
   #endif
+  BL_INLINE ~BLMutex() noexcept { pthread_mutex_destroy(&handle); }
 
   BL_INLINE void lock() noexcept { pthread_mutex_lock(&handle); }
   BL_INLINE bool tryLock() noexcept { return pthread_mutex_trylock(&handle) == 0; }
@@ -95,11 +147,10 @@ public:
 
   #ifdef PTHREAD_RWLOCK_INITIALIZER
   BL_INLINE BLRWLock() noexcept : handle(PTHREAD_RWLOCK_INITIALIZER) {}
-  BL_INLINE ~BLRWLock() noexcept { pthread_rwlock_destroy(&handle); }
   #else
   BL_INLINE BLRWLock() noexcept { pthread_rwlock_init(&handle, nullptr); }
-  BL_INLINE ~BLRWLock() noexcept { pthread_rwlock_destroy(&handle); }
   #endif
+  BL_INLINE ~BLRWLock() noexcept { pthread_rwlock_destroy(&handle); }
 
   BL_INLINE void lockRead() noexcept { pthread_rwlock_rdlock(&handle); }
   BL_INLINE void lockWrite() noexcept { pthread_rwlock_wrlock(&handle); }
@@ -135,6 +186,156 @@ public:
 };
 
 // ============================================================================
+// [BLConditionalVariable]
+// ============================================================================
+
+class BLConditionVariable {
+public:
+  BL_NONCOPYABLE(BLConditionVariable)
+
+#ifdef _WIN32
+  CONDITION_VARIABLE handle;
+
+  BL_INLINE BLConditionVariable() noexcept { InitializeConditionVariable(&handle); }
+  BL_INLINE ~BLConditionVariable() noexcept {}
+
+  BL_INLINE void signal() noexcept { WakeConditionVariable(&handle); }
+  BL_INLINE void broadcast() noexcept { WakeAllConditionVariable(&handle); }
+
+  BL_INLINE void wait(BLMutex& mutex) noexcept {
+    SleepConditionVariableSRW(&handle, &mutex.handle, INFINITE, 0);
+  }
+
+  BL_INLINE BLResult timedWait(BLMutex& mutex, uint64_t microseconds) noexcept {
+    uint32_t milliseconds = uint32_t(blMin<uint64_t>(microseconds / 1000u, INFINITE));
+    BOOL ret = SleepConditionVariableSRW(&handle, &mutex.handle, milliseconds, 0);
+    return ret ? BL_SUCCESS : BL_ERROR_TIMED_OUT;
+  }
+#else
+  pthread_cond_t handle;
+
+  #ifdef PTHREAD_COND_INITIALIZER
+  BL_INLINE BLConditionVariable() noexcept : handle(PTHREAD_COND_INITIALIZER) {}
+  #else
+  BL_INLINE BLConditionVariable() noexcept { pthread_cond_init(&handle, nullptr); }
+  #endif
+  BL_INLINE ~BLConditionVariable() noexcept { pthread_cond_destroy(&handle); }
+
+  BL_INLINE void signal() noexcept {
+    int ret = pthread_cond_signal(&handle);
+    BL_ASSERT(ret == 0);
+  }
+
+  BL_INLINE void broadcast() noexcept {
+    int ret = pthread_cond_broadcast(&handle);
+    BL_ASSERT(ret == 0);
+  }
+
+  BL_INLINE void wait(BLMutex& mutex) noexcept {
+    int ret = pthread_cond_wait(&handle, &mutex.handle);
+    BL_ASSERT(ret == 0);
+  }
+
+  BL_INLINE BLResult timedWait(BLMutex& mutex, const struct timespec* absTime) noexcept {
+    int ret = pthread_cond_timedwait(&handle, &mutex.handle, absTime);
+    if (ret == 0)
+      return BL_SUCCESS;
+    else
+      return BL_ERROR_TIMED_OUT;
+  }
+
+  BL_INLINE BLResult timedWait(BLMutex& mutex, uint64_t microseconds) noexcept {
+    struct timespec absTime;
+    blGetAbsTimeForWaitCondition(absTime, microseconds);
+    return timedWait(mutex, &absTime);
+  }
+#endif
+};
+
+// ============================================================================
+// [BLThreadEvent]
+// ============================================================================
+
+BL_HIDDEN BLResult BL_CDECL blThreadEventCreate(BLThreadEvent* self, bool manualReset, bool signaled) noexcept;
+BL_HIDDEN BLResult BL_CDECL blThreadEventDestroy(BLThreadEvent* self) noexcept;
+BL_HIDDEN bool     BL_CDECL blThreadEventIsSignaled(const BLThreadEvent* self) noexcept;
+BL_HIDDEN BLResult BL_CDECL blThreadEventSignal(BLThreadEvent* self) noexcept;
+BL_HIDDEN BLResult BL_CDECL blThreadEventReset(BLThreadEvent* self) noexcept;
+BL_HIDDEN BLResult BL_CDECL blThreadEventWait(BLThreadEvent* self) noexcept;
+BL_HIDDEN BLResult BL_CDECL blThreadEventTimedWait(BLThreadEvent* self, uint64_t microseconds) noexcept;
+
+class BLThreadEvent {
+public:
+  BL_NONCOPYABLE(BLThreadEvent)
+
+  intptr_t handle;
+
+  explicit BL_INLINE BLThreadEvent(bool manualReset = false, bool signaled = false) noexcept {
+    blThreadEventCreate(this, manualReset, signaled);
+  }
+  BL_INLINE ~BLThreadEvent() noexcept { blThreadEventDestroy(this); }
+
+  BL_INLINE bool isInitialized() const noexcept { return handle != -1; }
+  BL_INLINE bool isSignaled() const noexcept { return blThreadEventIsSignaled(this); }
+
+  BL_INLINE BLResult signal() noexcept { return blThreadEventSignal(this); }
+  BL_INLINE BLResult reset() noexcept { return blThreadEventReset(this); }
+  BL_INLINE BLResult wait() noexcept { return blThreadEventWait(this); }
+  BL_INLINE BLResult timedWait(uint64_t microseconds) noexcept { return blThreadEventTimedWait(this, microseconds); }
+};
+
+// ============================================================================
+// [BLThread]
+// ============================================================================
+
+struct BLThreadAttributes {
+  uint32_t stackSize;
+};
+
+struct BLThreadVirt {
+  BLResult (BL_CDECL* destroy)(BLThread* self) BL_NOEXCEPT;
+  uint32_t (BL_CDECL* status)(const BLThread* self) BL_NOEXCEPT;
+  BLResult (BL_CDECL* run)(BLThread* self, BLThreadWorkFunc func, void* data) BL_NOEXCEPT;
+  bool     (BL_CDECL* makeIdle)(BLThread* self) BL_NOEXCEPT;
+  BLResult (BL_CDECL* quit)(BLThread* self) BL_NOEXCEPT;
+};
+
+struct BLThread {
+  BLThreadVirt* virt;
+
+  // --------------------------------------------------------------------------
+  #ifdef __cplusplus
+  BL_INLINE BLResult destroy() noexcept {
+    return virt->destroy(this);
+  }
+
+  BL_INLINE uint32_t status() const noexcept {
+    return virt->status(this);
+  }
+
+  BL_INLINE BLResult run(BLThreadWorkFunc func, void* data) noexcept {
+    return virt->run(this, func, data);
+  }
+
+  BL_INLINE bool makeIdle() noexcept {
+    return virt->makeIdle(this);
+  }
+
+  BL_INLINE BLResult quit() noexcept {
+    return virt->quit(this);
+  }
+  #endif
+  // --------------------------------------------------------------------------
+};
+
+BL_HIDDEN BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes* attributes, BLThreadExitFunc exitFunc, void* exitData) noexcept;
+
+#ifndef _WIN32
+BL_HIDDEN BLResult blThreadCreatePt(BLThread** threadOut, const pthread_attr_t* ptAttr, BLThreadExitFunc exitFunc, void* exitData) noexcept;
+BL_HIDDEN BLResult blThreadSetPtAttributes(pthread_attr_t* ptAttr, const BLThreadAttributes* src) noexcept;
+#endif
+
+// ============================================================================
 // [BLAtomicUInt64Generator]
 // ============================================================================
 
@@ -148,7 +349,9 @@ public:
 //! is higher than the previous one, but it doesn't have to be sequential as it
 //! uses the highest bit of LO value as an indicator to increment HI value.
 struct BLAtomicUInt64Generator {
-  #if BL_TARGET_ARCH_BITS < 64
+#if BL_TARGET_ARCH_BITS < 64
+  std::atomic<uint32_t> _hi;
+  std::atomic<uint32_t> _lo;
 
   BL_INLINE void reset() noexcept {
     _hi = 0;
@@ -185,18 +388,12 @@ struct BLAtomicUInt64Generator {
       return (uint64_t(hiValue) << 32) | loValue;
     }
   }
-
-  std::atomic<uint32_t> _hi;
-  std::atomic<uint32_t> _lo;
-
-  #else
+#else
+  std::atomic<uint64_t> _counter;
 
   BL_INLINE void reset() noexcept { _counter = 0; }
   BL_INLINE uint64_t next() noexcept { return ++_counter; }
-
-  std::atomic<uint64_t> _counter;
-
-  #endif
+#endif
 };
 
 //! \}

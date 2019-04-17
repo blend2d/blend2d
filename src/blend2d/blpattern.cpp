@@ -67,7 +67,7 @@ BLResult blPatternImplDelete(BLPatternImpl* impl_) noexcept {
 }
 
 static BL_INLINE BLResult blPatternImplRelease(BLInternalPatternImpl* impl) noexcept {
-  if (blAtomicFetchDecRef(&impl->refCount) != 1)
+  if (blAtomicFetchSub(&impl->refCount) != 1)
     return BL_SUCCESS;
   return blPatternImplDelete(impl);
 }

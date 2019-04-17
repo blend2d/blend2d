@@ -163,7 +163,9 @@ public:
     kIntrin3Vminu16,
     kIntrin3Vmaxu16,
     kIntrin3Vmulu64x32,
-    kIntrin3Vhaddpd
+    kIntrin3Vhaddpd,
+
+    kIntrin4Vpblendvb
   };
 
   enum {
@@ -1250,6 +1252,11 @@ public:
     vswizi32(dst, src, x86::Predicate::shuf(3, 2, 3, 2));
   }
 
+  template<typename DstT, typename Src1T, typename Src2T, typename CondT>
+  inline void vblendv8(const DstT& dst, const Src1T& src1, const Src2T& src2, const CondT& cond) noexcept {
+    vemit_vvvv_vvv(PackedInst::packIntrin(kIntrin4Vpblendvb), dst, src1, src2, cond);
+  }
+
   template<typename DstT, typename SrcT>
   inline void vinv255u16(const DstT& dst, const SrcT& src) noexcept {
     vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv255u16), dst, src);
@@ -1271,12 +1278,12 @@ public:
   }
 
   template<typename DstT, typename SrcT>
-  BL_NOINLINE void vduplpd(const DstT& dst, const SrcT& src) noexcept {
+  inline void vduplpd(const DstT& dst, const SrcT& src) noexcept {
     vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vduplpd), dst, src);
   }
 
   template<typename DstT, typename SrcT>
-  BL_NOINLINE void vduphpd(const DstT& dst, const SrcT& src) noexcept {
+  inline void vduphpd(const DstT& dst, const SrcT& src) noexcept {
     vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vduphpd), dst, src);
   }
 

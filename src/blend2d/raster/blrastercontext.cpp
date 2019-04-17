@@ -25,7 +25,7 @@
   #include "../fixedpipe/blfixedpiperuntime_p.h"
 #endif
 
-#ifndef BL_BUILD_NO_PIPEGEN
+#ifndef BL_BUILD_NO_JIT
   #include "../pipegen/blpipegenruntime_p.h"
 #endif
 
@@ -359,7 +359,7 @@ static BLResult blRasterContextImplSetOpStyle(BLRasterContextImpl* ctxI, uint32_
 
       style->styleType = BL_STYLE_TYPE_GRADIENT;
       style->styleFormat = gradientInfo.format;
-      style->quality = ctxI->currentState.gradientQuality;
+      style->quality = ctxI->currentState.hints.gradientQuality;
       break;
     }
 
@@ -382,7 +382,7 @@ static BLResult blRasterContextImplSetOpStyle(BLRasterContextImpl* ctxI, uint32_
 
       style->styleType = BL_STYLE_TYPE_PATTERN;
       style->styleFormat = patternI->image.format();
-      style->quality = ctxI->currentState.patternQuality;
+      style->quality = ctxI->currentState.hints.patternQuality;
       break;
     }
 
@@ -971,8 +971,8 @@ static BL_INLINE void blRasterContextImplSaveCoreState(BLRasterContextImpl* ctxI
   state->translationI = ctxI->translationI;
 
   state->globalAlpha = ctxI->currentState.globalAlpha;
-  state->fillAlpha = ctxI->currentState.fillAlpha;
-  state->strokeAlpha = ctxI->currentState.strokeAlpha;
+  state->styleAlpha[0] = ctxI->currentState.styleAlpha[0];
+  state->styleAlpha[1] = ctxI->currentState.styleAlpha[1];
 
   state->globalAlphaI = ctxI->globalAlphaI;
   state->style[0].alphaI = ctxI->style[0].alphaI;
@@ -994,8 +994,8 @@ static BL_INLINE void blRasterContextImplRestoreCoreState(BLRasterContextImpl* c
   ctxI->translationI = state->translationI;
 
   ctxI->currentState.globalAlpha = state->globalAlpha;
-  ctxI->currentState.fillAlpha = state->fillAlpha;
-  ctxI->currentState.strokeAlpha = state->strokeAlpha;
+  ctxI->currentState.styleAlpha[1] = state->styleAlpha[0];
+  ctxI->currentState.styleAlpha[1] = state->styleAlpha[1];
 
   ctxI->globalAlphaI = state->globalAlphaI;
   ctxI->style[0].alphaI = state->style[0].alphaI;
@@ -1227,21 +1227,21 @@ static BLResult BL_CDECL blRasterContextImplSetHint(BLRasterContextImpl* ctxI, u
       if (BL_UNLIKELY(value >= BL_RENDERING_QUALITY_COUNT))
         return blTraceError(BL_ERROR_INVALID_VALUE);
 
-      ctxI->currentState.renderingQuality = uint8_t(value);
+      ctxI->currentState.hints.renderingQuality = uint8_t(value);
       return BL_SUCCESS;
 
     case BL_CONTEXT_HINT_GRADIENT_QUALITY:
       if (BL_UNLIKELY(value >= BL_GRADIENT_QUALITY_COUNT))
         return blTraceError(BL_ERROR_INVALID_VALUE);
 
-      ctxI->currentState.gradientQuality = uint8_t(value);
+      ctxI->currentState.hints.gradientQuality = uint8_t(value);
       return BL_SUCCESS;
 
     case BL_CONTEXT_HINT_PATTERN_QUALITY:
       if (BL_UNLIKELY(value >= BL_PATTERN_QUALITY_COUNT))
         return blTraceError(BL_ERROR_INVALID_VALUE);
 
-      ctxI->currentState.patternQuality = uint8_t(value);
+      ctxI->currentState.hints.patternQuality = uint8_t(value);
       return BL_SUCCESS;
 
     default:
@@ -1259,9 +1259,9 @@ static BLResult BL_CDECL blRasterContextImplSetHints(BLRasterContextImpl* ctxI, 
                   gradientQuality  >= BL_GRADIENT_QUALITY_COUNT  ))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  ctxI->currentState.renderingQuality = renderingQuality;
-  ctxI->currentState.patternQuality = patternQuality;
-  ctxI->currentState.gradientQuality = gradientQuality;
+  ctxI->currentState.hints.renderingQuality = renderingQuality;
+  ctxI->currentState.hints.patternQuality = patternQuality;
+  ctxI->currentState.hints.gradientQuality = gradientQuality;
   return BL_SUCCESS;
 }
 
@@ -1346,8 +1346,8 @@ static BLResult BL_CDECL blRasterContextImplSetGlobalAlpha(BLRasterContextImpl* 
   alpha = blClamp(alpha, 0.0, 1.0);
 
   double intAlphaD = alpha * ctxI->dstInfo.fullAlphaD;
-  double fillAlphaD = intAlphaD * ctxI->currentState.fillAlpha;
-  double strokeAlphaD = intAlphaD * ctxI->currentState.strokeAlpha;
+  double fillAlphaD = intAlphaD * ctxI->currentState.styleAlpha[BL_CONTEXT_OP_TYPE_FILL];
+  double strokeAlphaD = intAlphaD * ctxI->currentState.styleAlpha[BL_CONTEXT_OP_TYPE_STROKE];
 
   uint32_t globalAlphaI = uint32_t(blRoundToInt(intAlphaD));
   uint32_t fillAlphaI = uint32_t(blRoundToInt(fillAlphaD));
@@ -1391,7 +1391,7 @@ static BLResult BL_CDECL blRasterContextImplSetFillAlpha(BLRasterContextImpl* ct
   alpha = blClamp(alpha, 0.0, 1.0);
 
   uint32_t alphaI = uint32_t(blRoundToInt(ctxI->currentState.globalAlpha * ctxI->dstInfo.fullAlphaD * alpha));
-  ctxI->currentState.fillAlpha = alpha;
+  ctxI->currentState.styleAlpha[BL_CONTEXT_OP_TYPE_FILL] = alpha;
   ctxI->style[BL_CONTEXT_OP_TYPE_FILL].alphaI = alphaI;
 
   uint32_t contextFlags = ctxI->contextFlags & ~BL_RASTER_CONTEXT_NO_FILL_ALPHA;
@@ -1538,7 +1538,7 @@ static BLResult BL_CDECL blRasterContextImplSetStrokeAlpha(BLRasterContextImpl* 
   alpha = blClamp(alpha, 0.0, 1.0);
 
   uint32_t alphaI = uint32_t(blRoundToInt(ctxI->currentState.globalAlpha * ctxI->dstInfo.fullAlphaD * alpha));
-  ctxI->currentState.strokeAlpha = alpha;
+  ctxI->currentState.styleAlpha[BL_CONTEXT_OP_TYPE_STROKE] = alpha;
   ctxI->style[BL_CONTEXT_OP_TYPE_STROKE].alphaI = alphaI;
 
   uint32_t contextFlags = ctxI->contextFlags & ~BL_RASTER_CONTEXT_NO_STROKE_ALPHA;
@@ -2177,7 +2177,7 @@ static BLResult BL_CDECL blRasterContextImplBlitImageD(BLRasterContextImpl* ctxI
       return blRasterContextImplFillClippedBoxAU(ctxI, &fillCmd, BLBoxI(ix0, iy0, ix1, iy1));
     }
     else {
-      blRasterFetchDataInitPatternFxFy(&fetchData, imgI, BLRectI(srcX, srcY, srcW, srcH), BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.patternQuality, startFx, startFy);
+      blRasterFetchDataInitPatternFxFy(&fetchData, imgI, BLRectI(srcX, srcY, srcW, srcH), BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.hints.patternQuality, startFx, startFy);
       return blRasterContextImplFillClippedBoxAU(ctxI, &fillCmd, BLBoxI(ix0, iy0, ix1, iy1));
     }
   }
@@ -2190,7 +2190,7 @@ static BLResult BL_CDECL blRasterContextImplBlitImageD(BLRasterContextImpl* ctxI
       return BL_SUCCESS;
 
     BLRectI srcRect(srcX, srcY, srcW, srcH);
-    blRasterFetchDataInitPatternAffine(&fetchData, imgI, srcRect, BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.patternQuality, m, mInv);
+    blRasterFetchDataInitPatternAffine(&fetchData, imgI, srcRect, BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.hints.patternQuality, m, mInv);
 
     BLBox finalBox(dst.x, dst.y, dst.x + double(srcW), dst.y + double(srcH));
     return blRasterContextImplFillUnsafeBox(ctxI, &fillCmd, ctxI->finalMatrixFixed, ctxI->finalMatrixFixedType, finalBox);
@@ -2334,7 +2334,7 @@ static BLResult BL_CDECL blRasterContextImplBlitScaledImageD(BLRasterContextImpl
       return BL_SUCCESS;
 
     BLRectI srcRect(srcX, srcY, srcW, srcH);
-    blRasterFetchDataInitPatternAffine(&fetchData, imgI, srcRect, BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.patternQuality, m, mInv);
+    blRasterFetchDataInitPatternAffine(&fetchData, imgI, srcRect, BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.hints.patternQuality, m, mInv);
     return blRasterContextImplFillUnsafeBox(ctxI, &fillCmd, ctxI->finalMatrixFixed, ctxI->finalMatrixFixedType, finalBox);
   }
 }
@@ -2386,7 +2386,7 @@ static BLResult BL_CDECL blRasterContextImplBlitScaledImageI(BLRasterContextImpl
       return BL_SUCCESS;
 
     BLRectI srcRect(srcX, srcY, srcW, srcH);
-    blRasterFetchDataInitPatternAffine(&fetchData, imgI, srcRect, BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.patternQuality, m, mInv);
+    blRasterFetchDataInitPatternAffine(&fetchData, imgI, srcRect, BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.hints.patternQuality, m, mInv);
     return blRasterContextImplFillUnsafeBox(ctxI, &fillCmd, ctxI->finalMatrixFixed, ctxI->finalMatrixFixedType, finalBox);
   }
 }
@@ -2395,45 +2395,12 @@ static BLResult BL_CDECL blRasterContextImplBlitScaledImageI(BLRasterContextImpl
 // [BLRasterContext - Attach / Detach]
 // ============================================================================
 
-static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLContextCreateOptions* options) noexcept {
+static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLContextCreateInfo* options) noexcept {
   BL_ASSERT(image != nullptr);
   BL_ASSERT(options != nullptr);
 
-  BLPipeRuntime* pipeRuntime;
-  BLZoneAllocator::State zoneState;
-
-  #if !defined(BL_BUILD_NO_PIPEGEN)
-  // Blend2D uses JIT pipelines.
-  pipeRuntime = &BLPipeGenRuntime::_global;
-
-  // DEBUG: Create an isolated `BLPipeGenRuntime` if specified. It will be used
-  //        to store all functions generated during the rendering and will be
-  //        destroyed together with the context.
-  if (options->flags & BL_CONTEXT_CREATE_FLAG_ISOLATED_RUNTIME) {
-    ctxI->baseZone.saveState(&zoneState);
-    BLPipeGenRuntime* pipeGenRuntime = ctxI->baseZone.newT<BLPipeGenRuntime>(BL_PIPE_RUNTIME_FLAG_ISOLATED);
-
-    // This should not really happen as the first block is allocated with the impl.
-    if (BL_UNLIKELY(!pipeGenRuntime))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
-    if (options->flags & BL_CONTEXT_CREATE_FLAG_OVERRIDE_FEATURES) {
-      pipeGenRuntime->_restrictFeatures(options->cpuFeatures);
-    }
-
-    pipeRuntime = pipeGenRuntime;
-  }
-  #else
-  // Blend2D uses fixed pipelines.
-  pipeRuntime = &BLFixedPipeRuntime::_global;
-  #endif
-
-  // Initialize the worker. We have to do this before trying to obtain mutable image.
   uint32_t format = image->impl->format;
-  int iw = image->impl->size.w;
-  int ih = image->impl->size.h;
-  double dw = double(iw);
-  double dh = double(ih);
+  BLSizeI size = image->impl->size;
 
   // TODO: Hardcoded for 8-bit alpha.
   int fpShift = 8;
@@ -2441,28 +2408,111 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
   int fullAlphaI = fpScaleI;
   double fpScaleD = double(fpScaleI);
 
-  BLResult result = ctxI->worker.initEdgeStorage(ih);
+  BLZoneAllocator::State zoneState;
+  ctxI->baseZone.saveState(&zoneState);
 
-  // Make the image mutable.
-  if (result == BL_SUCCESS) {
-    result = blImageMakeMutable(image, &ctxI->worker.dstData);
-  }
+  BLPipeRuntime* pipeRuntime = nullptr;
 
-  if (result != BL_SUCCESS) {
-    // If we failed we don't want the runtime associated with the context we
-    // so simply destroy it and pretend like nothing happened. Zone state is
-    // restored as well (this means that reset() is not necessary in such case).
-    if (pipeRuntime->runtimeFlags() & BL_PIPE_RUNTIME_FLAG_ISOLATED) {
-      pipeRuntime->destroy();
-      ctxI->baseZone.restoreState(&zoneState);
+  auto initThreads = [&]() noexcept -> BLResult {
+    // Do not use thread-pool for synchronous rendering.
+    uint32_t threadCount = options->threadCount;
+    if (!threadCount)
+      return BL_SUCCESS;
+
+    // We must enforce some hard limit here...
+    if (threadCount > BL_RUNTIME_MAX_THREAD_COUNT)
+      threadCount = BL_RUNTIME_MAX_THREAD_COUNT;
+
+    // Allocate space for threads.
+    BLThread** threads = ctxI->baseZone.allocT<BLThread*>(sizeof(BLThread*) * threadCount);
+    if (!threads)
+      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+
+    // Get global thread-pool or create an isolated one.
+    BLThreadPool* threadPool = nullptr;
+    if (options->flags & BL_CONTEXT_CREATE_FLAG_ISOLATED_THREADS) {
+      // Create an isolated `BLThreadPool` if specified.
+      threadPool = blThreadPoolCreate();
+      if (!threadPool)
+        return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    }
+    else {
+      threadPool = blThreadPoolGlobal();
     }
 
+    // Acquire threads from thread-pool.
+    uint32_t acquireFlags = 0;
+    if (options->flags & BL_CONTEXT_CREATE_FLAG_FORCE_THREADS)
+      acquireFlags = BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ALL;
+    else if (!(options->flags & BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC))
+      acquireFlags = BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ONE;
+
+    uint32_t n = threadPool->acquireThreads(threads, threadCount, acquireFlags);
+    if (!n) {
+      if (!(options->flags & BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC))
+        return blTraceError(BL_ERROR_TOO_MANY_THREADS);
+
+      threadPool->release();
+      ctxI->baseZone.restoreState(&zoneState);
+      return BL_SUCCESS;
+    }
+
+    ctxI->asyncData.init(threadPool, threads, n);
+    return BL_SUCCESS;
+  };
+
+  auto initRuntime = [&]() noexcept -> BLResult {
+    #if !defined(BL_BUILD_NO_JIT)
+    // Blend2D uses JIT pipelines.
+    pipeRuntime = &BLPipeGenRuntime::_global;
+
+    if (options->flags & BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT) {
+      // Create an isolated `BLPipeGenRuntime` if specified. It will be used
+      // to store all functions generated during the rendering and will be
+      // destroyed together with the context.
+      BLPipeGenRuntime* isolatedRT = ctxI->baseZone.newT<BLPipeGenRuntime>(BL_PIPE_RUNTIME_FLAG_ISOLATED);
+
+      // This should not really happen as the first block is allocated with the impl.
+      if (BL_UNLIKELY(!isolatedRT))
+        return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+
+      if (options->flags & BL_CONTEXT_CREATE_FLAG_OVERRIDE_CPU_FEATURES) {
+        isolatedRT->_restrictFeatures(options->cpuFeatures);
+      }
+
+      pipeRuntime = isolatedRT;
+    }
+    #else
+    // Blend2D uses fixed pipelines.
+    pipeRuntime = &BLFixedPipeRuntime::_global;
+    #endif
+
+    return BL_SUCCESS;
+  };
+
+  // Initialization.
+  BLResult result = initThreads();
+
+  if (result == BL_SUCCESS) result = initRuntime();
+  if (result == BL_SUCCESS) result = ctxI->worker.initEdgeStorage(size.h);
+  if (result == BL_SUCCESS) result = blImageMakeMutable(image, &ctxI->worker.dstData);
+
+  // Cleanup if failed.
+  if (result != BL_SUCCESS) {
+    ctxI->asyncData.release();
+
+    // If we failed we don't want the pipeline runtime associated with the
+    // context we so simply destroy it and pretend like nothing happened.
+    if (pipeRuntime->runtimeFlags() & BL_PIPE_RUNTIME_FLAG_ISOLATED)
+      pipeRuntime->destroy();
+
+    ctxI->baseZone.restoreState(&zoneState);
     return result;
   }
 
   // Increase `writerCount` of the image, will be decreased by `blRasterContextImplDetach()`.
   BLInternalImageImpl* imageI = blInternalCast(image->impl);
-  blAtomicFetchIncRef(&imageI->writerCount);
+  blAtomicFetchAdd(&imageI->writerCount);
 
   // Initialize pipe-runtime.
   ctxI->pipeProvider.init(pipeRuntime);
@@ -2473,7 +2523,7 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
   ctxI->worker.initContextDataByDstData();
 
   // Initialize destination image and worker.
-  ctxI->targetSize.reset(dw, dh);
+  ctxI->targetSize.reset(size.w, size.h);
   ctxI->dstImage.impl = imageI;
   ctxI->dstInfo.format = uint8_t(format);
   ctxI->dstInfo.is16Bit = false;
@@ -2493,21 +2543,21 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
   ctxI->fpMaskI = fpScaleI - 1;
   ctxI->fpScaleD = fpScaleD;
   ctxI->fpMinSafeCoordD = blFloor(double(blMinValue<int32_t>() + 1) * fpScaleD);
-  ctxI->fpMaxSafeCoordD = blFloor(double(blMaxValue<int32_t>() - 1 - blMax(iw, ih)) * fpScaleD);
+  ctxI->fpMaxSafeCoordD = blFloor(double(blMaxValue<int32_t>() - 1 - blMax(size.w, size.h)) * fpScaleD);
 
   // Initialize the current rendering state.
   ctxI->currentState.compOp = uint8_t(BL_COMP_OP_SRC_OVER);
   ctxI->currentState.fillRule = uint8_t(BL_FILL_RULE_NON_ZERO);
-  ctxI->currentState.fillStyleType = uint8_t(BL_STYLE_TYPE_SOLID);
-  ctxI->currentState.strokeStyleType = uint8_t(BL_STYLE_TYPE_SOLID);
+  ctxI->currentState.styleType[BL_CONTEXT_OP_TYPE_FILL] = uint8_t(BL_STYLE_TYPE_SOLID);
+  ctxI->currentState.styleType[BL_CONTEXT_OP_TYPE_STROKE] = uint8_t(BL_STYLE_TYPE_SOLID);
   ctxI->currentState.hints.reset();
   ctxI->currentState.hints.patternQuality = BL_PATTERN_QUALITY_BILINEAR;
   memset(ctxI->currentState.reserved, 0, sizeof(ctxI->currentState.reserved));
   ctxI->currentState.savedStateCount = 0;
   ctxI->currentState.approximationOptions = blMakeDefaultApproximationOptions();
   ctxI->currentState.globalAlpha = 1.0;
-  ctxI->currentState.fillAlpha = 1.0;
-  ctxI->currentState.strokeAlpha = 1.0;
+  ctxI->currentState.styleAlpha[0] = 1.0;
+  ctxI->currentState.styleAlpha[1] = 1.0;
   blCallCtor(ctxI->currentState.strokeOptions);
   ctxI->currentState.metaMatrix.reset();
   ctxI->currentState.userMatrix.reset();
@@ -2532,7 +2582,7 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
   ctxI->finalMatrix.reset();
   ctxI->finalMatrixFixed.resetToScaling(fpScaleD);
 
-  ctxI->metaClipBoxI.reset(0, 0, iw, ih);
+  ctxI->metaClipBoxI.reset(0, 0, size.w, size.h);
   ctxI->translationI.reset(0, 0);
   blRasterContextImplResetClippingToMetaClipBox(ctxI);
 
@@ -2549,11 +2599,14 @@ static BLResult blRasterContextImplDetach(BLRasterContextImpl* ctxI) noexcept {
   // image can never be used again, but it can happen in some cases (for example
   // when an asynchronous rendering is terminated and the target image released
   // with it).
-  if (blAtomicFetchDecRef(&imageI->writerCount) == 1) {
+  if (blAtomicFetchSub(&imageI->writerCount) == 1) {
     if (imageI->refCount == 0)
       blImageImplDelete(imageI);
   }
   ctxI->dstImage.impl = nullptr;
+
+  // Release Threads/ThreadPool used by asynchronous rendering.
+  ctxI->asyncData.release();
 
   // Release PipeRuntime.
   if (ctxI->pipeProvider.runtime()->runtimeFlags() & BL_PIPE_RUNTIME_FLAG_ISOLATED)
@@ -2591,7 +2644,7 @@ static BLResult blRasterContextImplDetach(BLRasterContextImpl* ctxI) noexcept {
 // [BLRasterContext - Init / Destroy]
 // ============================================================================
 
-BLResult blRasterContextImplCreate(BLContextImpl** out, BLImageCore* image, const BLContextCreateOptions* options) noexcept {
+BLResult blRasterContextImplCreate(BLContextImpl** out, BLImageCore* image, const BLContextCreateInfo* options) noexcept {
   uint16_t memPoolData;
   BLRasterContextImpl* ctxI = blRuntimeAllocImplT<BLRasterContextImpl>(sizeof(BLRasterContextImpl), &memPoolData);
 
@@ -2624,82 +2677,86 @@ static BLResult BL_CDECL blRasterContextImplDestroy(BLRasterContextImpl* ctxI) n
 // ============================================================================
 
 static void blRasterContextVirtInit(BLContextVirt* virt) noexcept {
-  blAssignFunc(&virt->destroy, blRasterContextImplDestroy);
-  blAssignFunc(&virt->flush, blRasterContextImplFlush);
+  constexpr uint32_t F = BL_CONTEXT_OP_TYPE_FILL;
+  constexpr uint32_t S = BL_CONTEXT_OP_TYPE_STROKE;
 
-  blAssignFunc(&virt->save, blRasterContextImplSave);
-  blAssignFunc(&virt->restore, blRasterContextImplRestore);
+  blAssignFunc(&virt->destroy                , blRasterContextImplDestroy);
+  blAssignFunc(&virt->flush                  , blRasterContextImplFlush);
 
-  blAssignFunc(&virt->matrixOp, blRasterContextImplMatrixOp);
-  blAssignFunc(&virt->userToMeta, blRasterContextImplUserToMeta);
+  blAssignFunc(&virt->save                   , blRasterContextImplSave);
+  blAssignFunc(&virt->restore                , blRasterContextImplRestore);
 
-  blAssignFunc(&virt->setHint, blRasterContextImplSetHint);
-  blAssignFunc(&virt->setHints, blRasterContextImplSetHints);
+  blAssignFunc(&virt->matrixOp               , blRasterContextImplMatrixOp);
+  blAssignFunc(&virt->userToMeta             , blRasterContextImplUserToMeta);
 
-  blAssignFunc(&virt->setFlattenMode, blRasterContextImplSetFlattenMode);
-  blAssignFunc(&virt->setFlattenTolerance, blRasterContextImplSetFlattenTolerance);
+  blAssignFunc(&virt->setHint                , blRasterContextImplSetHint);
+  blAssignFunc(&virt->setHints               , blRasterContextImplSetHints);
+
+  blAssignFunc(&virt->setFlattenMode         , blRasterContextImplSetFlattenMode);
+  blAssignFunc(&virt->setFlattenTolerance    , blRasterContextImplSetFlattenTolerance);
   blAssignFunc(&virt->setApproximationOptions, blRasterContextImplSetApproximationOptions);
 
-  blAssignFunc(&virt->setCompOp, blRasterContextImplSetCompOp);
-  blAssignFunc(&virt->setGlobalAlpha, blRasterContextImplSetGlobalAlpha);
+  blAssignFunc(&virt->setCompOp              , blRasterContextImplSetCompOp);
+  blAssignFunc(&virt->setGlobalAlpha         , blRasterContextImplSetGlobalAlpha);
 
-  blAssignFunc(&virt->setFillRule, blRasterContextImplSetFillRule);
-  blAssignFunc(&virt->setFillAlpha, blRasterContextImplSetFillAlpha);
-  blAssignFunc(&virt->getFillStyle, blRasterContextImplGetFillStyle);
-  blAssignFunc(&virt->getFillStyleRgba32, blRasterContextImplGetFillStyleRgba32);
-  blAssignFunc(&virt->getFillStyleRgba64, blRasterContextImplGetFillStyleRgba64);
-  blAssignFunc(&virt->setFillStyle, blRasterContextImplSetFillStyle);
-  blAssignFunc(&virt->setFillStyleRgba32, blRasterContextImplSetFillStyleRgba32);
-  blAssignFunc(&virt->setFillStyleRgba64, blRasterContextImplSetFillStyleRgba64);
+  blAssignFunc(&virt->setStyleAlpha[F]       , blRasterContextImplSetFillAlpha);
+  blAssignFunc(&virt->setStyleAlpha[S]       , blRasterContextImplSetStrokeAlpha);
+  blAssignFunc(&virt->getStyle[F]            , blRasterContextImplGetFillStyle);
+  blAssignFunc(&virt->getStyle[S]            , blRasterContextImplGetStrokeStyle);
+  blAssignFunc(&virt->getStyleRgba32[F]      , blRasterContextImplGetFillStyleRgba32);
+  blAssignFunc(&virt->getStyleRgba32[S]      , blRasterContextImplGetStrokeStyleRgba32);
+  blAssignFunc(&virt->getStyleRgba64[F]      , blRasterContextImplGetFillStyleRgba64);
+  blAssignFunc(&virt->getStyleRgba64[S]      , blRasterContextImplGetStrokeStyleRgba64);
+  blAssignFunc(&virt->setStyle[F]            , blRasterContextImplSetFillStyle);
+  blAssignFunc(&virt->setStyle[S]            , blRasterContextImplSetStrokeStyle);
+  blAssignFunc(&virt->setStyleRgba32[F]      , blRasterContextImplSetFillStyleRgba32);
+  blAssignFunc(&virt->setStyleRgba32[S]      , blRasterContextImplSetStrokeStyleRgba32);
+  blAssignFunc(&virt->setStyleRgba64[F]      , blRasterContextImplSetFillStyleRgba64);
+  blAssignFunc(&virt->setStyleRgba64[S]      , blRasterContextImplSetStrokeStyleRgba64);
 
-  blAssignFunc(&virt->setStrokeWidth, blRasterContextImplSetStrokeWidth);
-  blAssignFunc(&virt->setStrokeMiterLimit, blRasterContextImplSetStrokeMiterLimit);
-  blAssignFunc(&virt->setStrokeCap, blRasterContextImplSetStrokeCap);
-  blAssignFunc(&virt->setStrokeCaps, blRasterContextImplSetStrokeCaps);
-  blAssignFunc(&virt->setStrokeJoin, blRasterContextImplSetStrokeJoin);
+  blAssignFunc(&virt->setFillRule            , blRasterContextImplSetFillRule);
+
+  blAssignFunc(&virt->setStrokeWidth         , blRasterContextImplSetStrokeWidth);
+  blAssignFunc(&virt->setStrokeMiterLimit    , blRasterContextImplSetStrokeMiterLimit);
+  blAssignFunc(&virt->setStrokeCap           , blRasterContextImplSetStrokeCap);
+  blAssignFunc(&virt->setStrokeCaps          , blRasterContextImplSetStrokeCaps);
+  blAssignFunc(&virt->setStrokeJoin          , blRasterContextImplSetStrokeJoin);
   blAssignFunc(&virt->setStrokeTransformOrder, blRasterContextImplSetStrokeTransformOrder);
-  blAssignFunc(&virt->setStrokeDashOffset, blRasterContextImplSetStrokeDashOffset);
-  blAssignFunc(&virt->setStrokeDashArray, blRasterContextImplSetStrokeDashArray);
-  blAssignFunc(&virt->setStrokeOptions, blRasterContextImplSetStrokeOptions);
-  blAssignFunc(&virt->setStrokeAlpha, blRasterContextImplSetStrokeAlpha);
-  blAssignFunc(&virt->getStrokeStyle, blRasterContextImplGetStrokeStyle);
-  blAssignFunc(&virt->getStrokeStyleRgba32, blRasterContextImplGetStrokeStyleRgba32);
-  blAssignFunc(&virt->getStrokeStyleRgba64, blRasterContextImplGetStrokeStyleRgba64);
-  blAssignFunc(&virt->setStrokeStyle, blRasterContextImplSetStrokeStyle);
-  blAssignFunc(&virt->setStrokeStyleRgba32, blRasterContextImplSetStrokeStyleRgba32);
-  blAssignFunc(&virt->setStrokeStyleRgba64, blRasterContextImplSetStrokeStyleRgba64);
+  blAssignFunc(&virt->setStrokeDashOffset    , blRasterContextImplSetStrokeDashOffset);
+  blAssignFunc(&virt->setStrokeDashArray     , blRasterContextImplSetStrokeDashArray);
+  blAssignFunc(&virt->setStrokeOptions       , blRasterContextImplSetStrokeOptions);
 
-  blAssignFunc(&virt->clipToRectI, blRasterContextImplClipToRectI);
-  blAssignFunc(&virt->clipToRectD, blRasterContextImplClipToRectD);
-  blAssignFunc(&virt->restoreClipping, blRasterContextImplRestoreClipping);
+  blAssignFunc(&virt->clipToRectI            , blRasterContextImplClipToRectI);
+  blAssignFunc(&virt->clipToRectD            , blRasterContextImplClipToRectD);
+  blAssignFunc(&virt->restoreClipping        , blRasterContextImplRestoreClipping);
 
-  blAssignFunc(&virt->clearAll, blRasterContextImplClearAll);
-  blAssignFunc(&virt->clearRectI, blRasterContextImplClearRectI);
-  blAssignFunc(&virt->clearRectD, blRasterContextImplClearRectD);
+  blAssignFunc(&virt->clearAll               , blRasterContextImplClearAll);
+  blAssignFunc(&virt->clearRectI             , blRasterContextImplClearRectI);
+  blAssignFunc(&virt->clearRectD             , blRasterContextImplClearRectD);
 
-  blAssignFunc(&virt->fillAll, blRasterContextImplFillAll);
-  blAssignFunc(&virt->fillRectI, blRasterContextImplFillRectI);
-  blAssignFunc(&virt->fillRectD, blRasterContextImplFillRectD);
-  blAssignFunc(&virt->fillPathD, blRasterContextImplFillPathD);
-  blAssignFunc(&virt->fillGeometry, blRasterContextImplFillGeometry);
-  blAssignFunc(&virt->fillTextI, blRasterContextImplFillTextI);
-  blAssignFunc(&virt->fillTextD, blRasterContextImplFillTextD);
-  blAssignFunc(&virt->fillGlyphRunI, blRasterContextImplFillGlyphRunI);
-  blAssignFunc(&virt->fillGlyphRunD, blRasterContextImplFillGlyphRunD);
+  blAssignFunc(&virt->fillAll                , blRasterContextImplFillAll);
+  blAssignFunc(&virt->fillRectI              , blRasterContextImplFillRectI);
+  blAssignFunc(&virt->fillRectD              , blRasterContextImplFillRectD);
+  blAssignFunc(&virt->fillPathD              , blRasterContextImplFillPathD);
+  blAssignFunc(&virt->fillGeometry           , blRasterContextImplFillGeometry);
+  blAssignFunc(&virt->fillTextI              , blRasterContextImplFillTextI);
+  blAssignFunc(&virt->fillTextD              , blRasterContextImplFillTextD);
+  blAssignFunc(&virt->fillGlyphRunI          , blRasterContextImplFillGlyphRunI);
+  blAssignFunc(&virt->fillGlyphRunD          , blRasterContextImplFillGlyphRunD);
 
-  blAssignFunc(&virt->strokeRectI, blRasterContextImplStrokeRectI);
-  blAssignFunc(&virt->strokeRectD, blRasterContextImplStrokeRectD);
-  blAssignFunc(&virt->strokePathD, blRasterContextImplStrokePathD);
-  blAssignFunc(&virt->strokeGeometry, blRasterContextImplStrokeGeometry);
-  blAssignFunc(&virt->strokeTextI, blRasterContextImplStrokeTextI);
-  blAssignFunc(&virt->strokeTextD, blRasterContextImplStrokeTextD);
-  blAssignFunc(&virt->strokeGlyphRunI, blRasterContextImplStrokeGlyphRunI);
-  blAssignFunc(&virt->strokeGlyphRunD, blRasterContextImplStrokeGlyphRunD);
+  blAssignFunc(&virt->strokeRectI            , blRasterContextImplStrokeRectI);
+  blAssignFunc(&virt->strokeRectD            , blRasterContextImplStrokeRectD);
+  blAssignFunc(&virt->strokePathD            , blRasterContextImplStrokePathD);
+  blAssignFunc(&virt->strokeGeometry         , blRasterContextImplStrokeGeometry);
+  blAssignFunc(&virt->strokeTextI            , blRasterContextImplStrokeTextI);
+  blAssignFunc(&virt->strokeTextD            , blRasterContextImplStrokeTextD);
+  blAssignFunc(&virt->strokeGlyphRunI        , blRasterContextImplStrokeGlyphRunI);
+  blAssignFunc(&virt->strokeGlyphRunD        , blRasterContextImplStrokeGlyphRunD);
 
-  blAssignFunc(&virt->blitImageI, blRasterContextImplBlitImageI);
-  blAssignFunc(&virt->blitImageD, blRasterContextImplBlitImageD);
-  blAssignFunc(&virt->blitScaledImageI, blRasterContextImplBlitScaledImageI);
-  blAssignFunc(&virt->blitScaledImageD, blRasterContextImplBlitScaledImageD);
+  blAssignFunc(&virt->blitImageI             , blRasterContextImplBlitImageI);
+  blAssignFunc(&virt->blitImageD             , blRasterContextImplBlitImageD);
+  blAssignFunc(&virt->blitScaledImageI       , blRasterContextImplBlitScaledImageI);
+  blAssignFunc(&virt->blitScaledImageD       , blRasterContextImplBlitScaledImageD);
 }
 
 void blRasterContextRtInit(BLRuntimeContext* rt) noexcept {

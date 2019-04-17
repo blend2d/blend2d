@@ -162,7 +162,7 @@ static BL_INLINE BLInternalPathImpl* blPathImplNew(size_t capacity) noexcept {
   if (BL_UNLIKELY(!impl))
     return impl;
 
-  blImplInit(impl, BL_IMPL_TYPE_PATH2D, 0, memPoolData);
+  blImplInit(impl, BL_IMPL_TYPE_PATH, 0, memPoolData);
   impl->vertexData = blOffsetPtr<BLPoint>(impl, sizeof(BLInternalPathImpl));
   impl->commandData = blOffsetPtr<uint8_t>(impl->vertexData, capacity * sizeof(BLPoint));
   impl->size = 0;
@@ -311,7 +311,7 @@ const uint8_t* blPathGetCommandData(const BLPathCore* self) BL_NOEXCEPT_C {
   return self->impl->commandData;
 }
 
-const BLPoint* blPathGetVertexdData(const BLPathCore* self) BL_NOEXCEPT_C {
+const BLPoint* blPathGetVertexData(const BLPathCore* self) BL_NOEXCEPT_C {
   return self->impl->vertexData;
 }
 
@@ -1469,8 +1469,8 @@ AddBoxD:
     case BL_GEOMETRY_TYPE_ARC: {
       const BLArc* arc = static_cast<const BLArc*>(geometryData);
 
-      BLPoint c = arc->center;
-      BLPoint r = arc->radius;
+      BLPoint c(arc->cx, arc->cy);
+      BLPoint r(arc->rx, arc->ry);
       double start = arc->start;
       double sweep = arc->sweep;
 
@@ -1485,8 +1485,8 @@ AddBoxD:
     case BL_GEOMETRY_TYPE_PIE: {
       const BLArc* arc = static_cast<const BLArc*>(geometryData);
 
-      BLPoint c = arc->center;
-      BLPoint r = arc->radius;
+      BLPoint c(arc->cx, arc->cy);
+      BLPoint r(arc->rx, arc->ry);
       double start = arc->start;
       double sweep = arc->sweep;
 
@@ -2493,7 +2493,7 @@ void blPathRtInit(BLRuntimeContext* rt) noexcept {
   BL_UNUSED(rt);
 
   BLInternalPathImpl* pathI = &blNullPathImpl;
-  pathI->implType = uint8_t(BL_IMPL_TYPE_PATH2D);
+  pathI->implType = uint8_t(BL_IMPL_TYPE_PATH);
   pathI->implTraits = uint8_t(BL_IMPL_TRAIT_NULL);
   pathI->flags = BL_PATH_FLAG_EMPTY;
   blAssignBuiltInNull(pathI);

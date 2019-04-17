@@ -54,8 +54,7 @@ typedef void (BL_CDECL* BLRasterFetchDataDestroyFunc)(BLRasterContextImpl* ctxI,
 //!
 //! - `STATE_` - describe which states must be saved to `BLRasterContextSavedState`
 //!   in order to modify them. Used by `save()`, `restore()` and by all other
-//!   functions that manipulate the painter state. Initially all state flags
-//!   are unset.
+//!   functions that manipulate the state. Initially all state flags are unset.
 enum BLRasterContextFlags : uint32_t {
   BL_RASTER_CONTEXT_NO_CONDITIONAL       = 0x00000001u, //!< Used as a result from conditional expressions.
   BL_RASTER_CONTEXT_NO_RESERVED          = 0x0000000Fu, //!< Reserved for custom flags used during command dispatching.
@@ -361,10 +360,8 @@ struct alignas(16) BLRasterContextSavedState {
 
   //! Global alpha value [0, 1].
   double globalAlpha;
-  //! Fill alpha value [0, 1].
-  double fillAlpha;
-  //! Stroke alpha value [0, 1].
-  double strokeAlpha;
+  //! Fill and stroke alpha values [0, 1].
+  double styleAlpha[2];
 
   //! Final clipBox (double).
   BLBox finalClipBoxD;

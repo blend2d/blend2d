@@ -5,7 +5,7 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "../blapi-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_PIPEGEN)
+#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
 
 #include "../pipegen/blpipecompiler_p.h"
 #include "../pipegen/blpipepart_p.h"

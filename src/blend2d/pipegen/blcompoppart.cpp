@@ -5,7 +5,7 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "../blapi-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_PIPEGEN)
+#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
 
 #include "../pipegen/blcompoppart_p.h"
 #include "../pipegen/blfetchpart_p.h"
@@ -2688,7 +2688,7 @@ void CompOpPart::vMaskProc32XmmV(PixelARGB& out, uint32_t flags, VecArray& mv, u
       // else
       //   Dc'  = 2.Dc + 2.Sc - 1 - 2.Dc.Sc
       pc->vslli16(dv, dv, 1);                                    // 2.Dc
-      pc->vmov(xv, pc->constAsMem(blCommonTable.i128_00FF00FF00FF00FF));     // 1
+      pc->vmov(xv, pc->constAsMem(blCommonTable.i128_00FF00FF00FF00FF)); // 1
       pc->vsubi16(xv, xv, dv);                                   // 1 - 2.Dc
       pc->vmulu16(dv, dv, sv);                                   // Dc.Sc
       pc->vaddi16(sv, sv, sv);                                   // 2.Sc

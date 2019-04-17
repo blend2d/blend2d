@@ -801,7 +801,7 @@ static void traceCharStringOp(BLOTFaceImpl* faceI, Trace& trace, uint32_t op, co
     #undef CASE
 
     default:
-      std::snprintf(buf, BL_ARRAY_SIZE(buf), "Op #%04X", op);
+      snprintf(buf, BL_ARRAY_SIZE(buf), "Op #%04X", op);
       opName = buf;
       break;
   }
@@ -849,22 +849,22 @@ static BLResult BL_CDECL decodeGlyph(
   // [Prepare for Execution]
   // --------------------------------------------------------------------------
 
-  const uint8_t* ip    = nullptr;                // Pointer in the instruction array.
-  const uint8_t* ipEnd = nullptr;                // End of the instruction array.
+  const uint8_t* ip    = nullptr;             // Pointer in the instruction array.
+  const uint8_t* ipEnd = nullptr;             // End of the instruction array.
 
   ExecutionState cBuf[kCFFCallStackSize + 1]; // Call stack.
-  double vBuf[kCFFValueStackSizeV1 + 1];         // Value stack.
+  double vBuf[kCFFValueStackSizeV1 + 1];      // Value stack.
 
-  uint32_t cIdx = 0;                             // Call stack index.
-  uint32_t vIdx = 0;                             // Value stack index.
-  size_t bytesProcessed = 0;                     // Bytes processed, increasing counter.
+  uint32_t cIdx = 0;                          // Call stack index.
+  uint32_t vIdx = 0;                          // Value stack index.
+  size_t bytesProcessed = 0;                  // Bytes processed, increasing counter.
 
-  uint32_t hintBitCount = 0;                     // Number of bits required by 'HintMask' and 'CntrMask' operators.
-  uint32_t executionFlags = 0;                   // Execution status flags.
-  uint32_t vMinOperands = 0;                     // Minimum operands the current opcode requires (updated per opcode).
+  uint32_t hintBitCount = 0;                  // Number of bits required by 'HintMask' and 'CntrMask' operators.
+  uint32_t executionFlags = 0;                // Execution status flags.
+  uint32_t vMinOperands = 0;                  // Minimum operands the current opcode requires (updated per opcode).
 
-  double px = matrix->m20;                       // Current X coordinate.
-  double py = matrix->m21;                       // Current Y coordinate.
+  double px = matrix->m20;                    // Current X coordinate.
+  double py = matrix->m21;                    // Current Y coordinate.
 
   // Sink information.
   BLGlyphOutlineSinkInfo sinkInfo;

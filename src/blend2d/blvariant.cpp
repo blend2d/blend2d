@@ -53,7 +53,7 @@ BLResult blVariantImplDelete(BLVariantImpl* impl) noexcept {
     case BL_IMPL_TYPE_ARRAY_VAR:
       return blArrayImplDelete(reinterpret_cast<BLArrayImpl*>(impl));
 
-    case BL_IMPL_TYPE_PATH2D:
+    case BL_IMPL_TYPE_PATH:
       return blPathImplDelete(reinterpret_cast<BLPathImpl*>(impl));
 
     case BL_IMPL_TYPE_REGION:
@@ -182,7 +182,7 @@ bool blVariantEquals(const void* a, const void* b) noexcept {
     case BL_IMPL_TYPE_ARRAY_VAR:
       return blArrayEquals(reinterpret_cast<const BLArrayCore*>(a), reinterpret_cast<const BLArrayCore*>(b));
 
-    case BL_IMPL_TYPE_PATH2D:
+    case BL_IMPL_TYPE_PATH:
       return blPathEquals(reinterpret_cast<const BLPathCore*>(a), reinterpret_cast<const BLPathCore*>(b));
 
     case BL_IMPL_TYPE_REGION:

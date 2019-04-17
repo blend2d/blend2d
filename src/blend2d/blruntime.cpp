@@ -6,14 +6,10 @@
 
 #include "./blapi-build_p.h"
 #include "./blruntime_p.h"
+#include "./blsupport_p.h"
 
-#ifndef BL_BUILD_NO_PIPEGEN
+#ifndef BL_BUILD_NO_JIT
   #include <asmjit/asmjit.h>
-#endif
-
-#ifndef _WIN32
-  #include <errno.h>
-  #include <unistd.h>
 #endif
 
 // ============================================================================
@@ -23,15 +19,105 @@
 BLRuntimeContext blRuntimeContext;
 
 // ============================================================================
-// [BLRuntime - Initialization & Shutdown]
+// [BLRuntime - Build Information]
 // ============================================================================
 
-#ifndef BL_BUILD_NO_PIPEGEN
+#define BL_STRINGIFY_WRAP(N) #N
+#define BL_STRINGIFY(N) BL_STRINGIFY_WRAP(N)
+
+static const BLRuntimeBuildInfo blRuntimeBuildInfo = {
+  // Library Version.
+  { BL_VERSION },
+
+  // Build Type.
+  #ifdef BL_BUILD_DEBUG
+  BL_RUNTIME_BUILD_TYPE_DEBUG,
+  #else
+  BL_RUNTIME_BUILD_TYPE_RELEASE,
+  #endif
+
+  // Baseline CPU features.
+  0
+  #ifdef BL_TARGET_OPT_SSE2
+  | BL_RUNTIME_CPU_FEATURE_X86_SSE2
+  #endif
+  #ifdef BL_TARGET_OPT_SSE3
+  | BL_RUNTIME_CPU_FEATURE_X86_SSE3
+  #endif
+  #ifdef BL_TARGET_OPT_SSSE3
+  | BL_RUNTIME_CPU_FEATURE_X86_SSSE3
+  #endif
+  #ifdef BL_TARGET_OPT_SSE4_1
+  | BL_RUNTIME_CPU_FEATURE_X86_SSE4_1
+  #endif
+  #ifdef BL_TARGET_OPT_SSE4_2
+  | BL_RUNTIME_CPU_FEATURE_X86_SSE4_2
+  #endif
+  #ifdef BL_TARGET_OPT_AVX
+  | BL_RUNTIME_CPU_FEATURE_X86_AVX
+  #endif
+  #ifdef BL_TARGET_OPT_AVX2
+  | BL_RUNTIME_CPU_FEATURE_X86_AVX2
+  #endif
+  ,
+
+  // Supported CPU features.
+  0
+  #ifdef BL_BUILD_OPT_SSE2
+  | BL_RUNTIME_CPU_FEATURE_X86_SSE2
+  #endif
+  #ifdef BL_BUILD_OPT_SSE3
+  | BL_RUNTIME_CPU_FEATURE_X86_SSE3
+  #endif
+  #ifdef BL_BUILD_OPT_SSSE3
+  | BL_RUNTIME_CPU_FEATURE_X86_SSSE3
+  #endif
+  #ifdef BL_BUILD_OPT_SSE4_1
+  | BL_RUNTIME_CPU_FEATURE_X86_SSE4_1
+  #endif
+  #ifdef BL_BUILD_OPT_SSE4_2
+  | BL_RUNTIME_CPU_FEATURE_X86_SSE4_2
+  #endif
+  #ifdef BL_BUILD_OPT_AVX
+  | BL_RUNTIME_CPU_FEATURE_X86_AVX
+  #endif
+  #ifdef BL_BUILD_OPT_AVX2
+  | BL_RUNTIME_CPU_FEATURE_X86_AVX2
+  #endif
+  ,
+
+  // Maximum image size.
+  BL_RUNTIME_MAX_IMAGE_SIZE,
+
+  // Maximum thread count.
+  BL_RUNTIME_MAX_THREAD_COUNT,
+
+  // Reserved
+  { 0 },
+
+  // Compiler Info.
+  #if defined(__INTEL_COMPILER)
+  "ICC"
+  #elif defined(__clang_minor__)
+  "Clang " BL_STRINGIFY(__clang_major__) "." BL_STRINGIFY(__clang_minor__)
+  #elif defined(__GNUC_MINOR__)
+  "GCC "  BL_STRINGIFY(__GNUC__) "." BL_STRINGIFY(__GNUC_MINOR__)
+  #elif defined(_MSC_VER)
+  "MSC"
+  #else
+  ""
+  #endif
+};
+
+// ============================================================================
+// [BLRuntime - System Information]
+// ============================================================================
+
+#ifndef BL_BUILD_NO_JIT
 static BL_INLINE uint32_t blRuntimeDetectCpuFeatures(const asmjit::CpuInfo& asmCpuInfo) noexcept {
   uint32_t features = 0;
 
-  #if BL_TARGET_ARCH_X86
-  if (asmCpuInfo.hasFeature(asmjit::x86::Features::kSSE   )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE;
+#if BL_TARGET_ARCH_X86
   if (asmCpuInfo.hasFeature(asmjit::x86::Features::kSSE2  )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE2;
   if (asmCpuInfo.hasFeature(asmjit::x86::Features::kSSE3  )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE3;
   if (asmCpuInfo.hasFeature(asmjit::x86::Features::kSSSE3 )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSSE3;
@@ -39,34 +125,67 @@ static BL_INLINE uint32_t blRuntimeDetectCpuFeatures(const asmjit::CpuInfo& asmC
   if (asmCpuInfo.hasFeature(asmjit::x86::Features::kSSE4_2)) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_2;
   if (asmCpuInfo.hasFeature(asmjit::x86::Features::kAVX   )) features |= BL_RUNTIME_CPU_FEATURE_X86_AVX;
   if (asmCpuInfo.hasFeature(asmjit::x86::Features::kAVX2  )) features |= BL_RUNTIME_CPU_FEATURE_X86_AVX2;
-  #endif
+#endif
 
   return features;
 }
 #endif
 
-static BL_INLINE void blRuntimeDetectCpuInfo(BLRuntimeCpuInfo& rtCpuInfo) noexcept {
-  rtCpuInfo.arch = BL_TARGET_ARCH_X86  ? BL_RUNTIME_CPU_ARCH_X86  :
-                   BL_TARGET_ARCH_ARM  ? BL_RUNTIME_CPU_ARCH_ARM  :
-                   BL_TARGET_ARCH_MIPS ? BL_RUNTIME_CPU_ARCH_MIPS : BL_RUNTIME_CPU_ARCH_UNKNOWN;
+static BL_INLINE void blRuntimeInitSystemInfo(BLRuntimeSystemInfo& info) noexcept {
+  info.cpuArch = BL_TARGET_ARCH_X86  ? BL_RUNTIME_CPU_ARCH_X86  :
+                 BL_TARGET_ARCH_ARM  ? BL_RUNTIME_CPU_ARCH_ARM  :
+                 BL_TARGET_ARCH_MIPS ? BL_RUNTIME_CPU_ARCH_MIPS : BL_RUNTIME_CPU_ARCH_UNKNOWN;
 
-  #ifndef BL_BUILD_NO_PIPEGEN
+#ifndef BL_BUILD_NO_JIT
   const asmjit::CpuInfo& asmCpuInfo = asmjit::CpuInfo::host();
-  rtCpuInfo.features = blRuntimeDetectCpuFeatures(asmCpuInfo);
-  rtCpuInfo.threadCount = asmCpuInfo.hwThreadCount();
+  info.cpuFeatures = blRuntimeDetectCpuFeatures(asmCpuInfo);
+  info.coreCount = asmCpuInfo.hwThreadCount();
+  info.threadCount = asmCpuInfo.hwThreadCount();
+#endif
+
+#ifdef _WIN32
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  info.minThreadStackSize = si.dwAllocationGranularity;
+  info.allocationGranularity = si.dwAllocationGranularity;
+#else
+  #if defined(_SC_PAGESIZE)
+  info.allocationGranularity = sysconf(_SC_PAGESIZE);
+  #else
+  info.allocationGranularity = getpagesize();
   #endif
+
+  #if defined(PTHREAD_STACK_MIN)
+  info.minThreadStackSize = uint32_t(PTHREAD_STACK_MIN);
+  #elif defined(_SC_THREAD_STACK_MIN)
+  info.minThreadStackSize = sysconf(_SC_THREAD_STACK_MIN);
+  #else
+  #pragma message("Missing 'BLRuntimeSystemInfo::minStackSize' implementation")
+  info.minThreadStackSize = blMax<uint32_t>(info.allocationGranularity, 65536u);
+  #endif
+#endif
+
+  info.minWorkerStackSize = blAlignUp(blMax<uint32_t>(info.minThreadStackSize, 4096u), info.allocationGranularity);
 }
+
+// ============================================================================
+// [BLRuntime - Initialization & Shutdown]
+// ============================================================================
 
 BLResult blRuntimeInit() noexcept {
   BLRuntimeContext* rt = &blRuntimeContext;
-  if (blAtomicFetchIncRef(&rt->refCount) != 0)
+  if (blAtomicFetchAdd(&rt->refCount) != 0)
     return BL_SUCCESS;
 
-  // Setup CPU information first so we can properly initialize everything
-  // that relies on CPU info for selecting optimized functions at runtime.
-  blRuntimeDetectCpuInfo(rt->cpuInfo);
+  // Initialize system information - we need this first so we can properly
+  // initialize everything that relies on system info (thread-pool, optimized
+  // functions, etc...).
+  blRuntimeInitSystemInfo(rt->systemInfo);
 
-  // RtInit handlers.
+  // Call "Runtime Initialization" handlers.
+  // - These would automatically install shutdown handlers when necessary.
+  blThreadingRtInit(rt);
+  blThreadPoolRtInit(rt);
   blZeroAllocatorRtInit(rt);
   blMatrix2DRtInit(rt);
   blArrayRtInit(rt);
@@ -83,7 +202,7 @@ BLResult blRuntimeInit() noexcept {
   blFixedPipeRtInit(rt);
   #endif
 
-  #if !defined(BL_BUILD_NO_PIPEGEN)
+  #if !defined(BL_BUILD_NO_JIT)
   blPipeGenRtInit(rt);
   #endif
 
@@ -94,7 +213,7 @@ BLResult blRuntimeInit() noexcept {
 
 BLResult blRuntimeShutdown() noexcept {
   BLRuntimeContext* rt = &blRuntimeContext;
-  if (blAtomicFetchDecRef(&rt->refCount) != 1)
+  if (blAtomicFetchSub(&rt->refCount) != 1)
     return BL_SUCCESS;
 
   rt->shutdownHandlers.callInReverseOrder(rt);
@@ -103,7 +222,7 @@ BLResult blRuntimeShutdown() noexcept {
   return BL_SUCCESS;
 }
 
-// Static instance that will call `blRuntimeInit()` and `blRuntimeShutdown()`.
+// Static instance that calls `blRuntimeInit()` and `blRuntimeShutdown()`.
 class BLRuntimeAutoInit {
 public:
   inline BLRuntimeAutoInit() noexcept { blRuntimeInit(); }
@@ -125,34 +244,6 @@ BLResult blRuntimeCleanup(uint32_t cleanupFlags) noexcept {
 // [BLRuntime - Query Info]
 // ============================================================================
 
-#define BL_STRINGIFY_WRAP(N) #N
-#define BL_STRINGIFY(N) BL_STRINGIFY_WRAP(N)
-
-static const BLRuntimeBuildInfo blRuntimeBuildInfo = {
-  // Library Version.
-  { BL_VERSION },
-
-  // Build Type.
-  #ifdef BL_BUILD_DEBUG
-  BL_RUNTIME_BUILD_TYPE_DEBUG,
-  #else
-  BL_RUNTIME_BUILD_TYPE_RELEASE,
-  #endif
-
-  // Compiler Info.
-  #if defined(__INTEL_COMPILER)
-  "ICC"
-  #elif defined(__clang_minor__)
-  "Clang " BL_STRINGIFY(__clang_major__) "." BL_STRINGIFY(__clang_minor__)
-  #elif defined(__GNUC_MINOR__)
-  "GCC "  BL_STRINGIFY(__GNUC__) "." BL_STRINGIFY(__GNUC_MINOR__)
-  #elif defined(_MSC_VER)
-  "MSC"
-  #else
-  ""
-  #endif
-};
-
 BLResult blRuntimeQueryInfo(uint32_t infoType, void* infoOut) noexcept {
   BLRuntimeContext* rt = &blRuntimeContext;
 
@@ -163,9 +254,9 @@ BLResult blRuntimeQueryInfo(uint32_t infoType, void* infoOut) noexcept {
       return BL_SUCCESS;
     }
 
-    case BL_RUNTIME_INFO_TYPE_CPU: {
-      BLRuntimeCpuInfo* cpuInfo = static_cast<BLRuntimeCpuInfo*>(infoOut);
-      memcpy(cpuInfo, &rt->cpuInfo, sizeof(BLRuntimeCpuInfo));
+    case BL_RUNTIME_INFO_TYPE_SYSTEM: {
+      BLRuntimeSystemInfo* systemInfo = static_cast<BLRuntimeSystemInfo*>(infoOut);
+      memcpy(systemInfo, &rt->systemInfo, sizeof(BLRuntimeSystemInfo));
       return BL_SUCCESS;
     }
 
@@ -215,7 +306,7 @@ BLResult blRuntimeMessageVFmt(const char* fmt, va_list ap) noexcept {
 // ============================================================================
 
 uint32_t blRuntimeGetTickCount(void) noexcept {
-#ifndef BL_BUILD_NO_PIPEGEN
+#ifndef BL_BUILD_NO_JIT
   return asmjit::OSUtils::getTickCount();
 #else
   return 0;
@@ -313,9 +404,11 @@ BLResult blResultFromWinError(uint32_t e) noexcept {
     case ERROR_DIR_NOT_ROOT           : return BL_ERROR_NOT_ROOT_DEVICE;         // 0x00000090
     case ERROR_DIR_NOT_EMPTY          : return BL_ERROR_NOT_EMPTY;               // 0x00000091
     case ERROR_PATH_BUSY              : return BL_ERROR_BUSY;                    // 0x00000094
+    case ERROR_TOO_MANY_TCBS          : return BL_ERROR_TOO_MANY_THREADS;        // 0x0000009B
     case ERROR_BAD_ARGUMENTS          : return BL_ERROR_INVALID_VALUE;           // 0x000000A0
     case ERROR_BAD_PATHNAME           : return BL_ERROR_INVALID_FILE_NAME;       // 0x000000A1
     case ERROR_SIGNAL_PENDING         : return BL_ERROR_BUSY;                    // 0x000000A2
+    case ERROR_MAX_THRDS_REACHED      : return BL_ERROR_TOO_MANY_THREADS;        // 0x000000A4
     case ERROR_BUSY                   : return BL_ERROR_BUSY;                    // 0x000000AA
     case ERROR_ALREADY_EXISTS         : return BL_ERROR_ALREADY_EXISTS;          // 0x000000B7
     case ERROR_BAD_PIPE               : return BL_ERROR_BROKEN_PIPE;             // 0x000000E6
@@ -446,6 +539,9 @@ BLResult blResultFromPosixError(int e) noexcept {
   #endif
   #ifdef ESPIPE
     MAP(ESPIPE, BL_ERROR_INVALID_SEEK);
+  #endif
+  #ifdef ETIMEDOUT
+    MAP(ETIMEDOUT, BL_ERROR_TIMED_OUT);
   #endif
   #ifdef EXDEV
     MAP(EXDEV, BL_ERROR_NOT_SAME_DEVICE);

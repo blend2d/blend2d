@@ -238,13 +238,13 @@ public:
   BL_INLINE BLImage(int w, int h, uint32_t format) noexcept { blImageInitAs(this, w, h, format); }
   BL_INLINE ~BLImage() { blImageReset(this); }
 
-  BL_INLINE BLImage& operator=(BLImage&& other) noexcept { blImageAssignMove(this, &other); return *this; }
-  BL_INLINE BLImage& operator=(const BLImage& other) noexcept { blImageAssignWeak(this, &other); return *this; }
-
   //! \}
 
   //! \name Operator Overloads
   //! \{
+
+  BL_INLINE BLImage& operator=(BLImage&& other) noexcept { blImageAssignMove(this, &other); return *this; }
+  BL_INLINE BLImage& operator=(const BLImage& other) noexcept { blImageAssignWeak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLImage& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLImage& other) const noexcept { return !equals(other); }
@@ -265,16 +265,16 @@ public:
   //! Create a deep copy of the `other` image.
   BL_INLINE BLResult assignDeep(const BLImage& other) noexcept { return blImageAssignDeep(this, &other); }
 
-  //! Get whether the image is a built-in null instance.
+  //! Gets whether the image is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Get whether the image is empty (has no size).
+  //! Gets whether the image is empty (has no size).
   BL_INLINE bool empty() const noexcept { return impl->format == BL_FORMAT_NONE; }
 
   BL_INLINE bool equals(const BLImage& other) const noexcept { return blImageEquals(this, &other); }
 
   //! \}
 
-  //! \name Create Image
+  //! \name Create Functionality
   //! \{
 
   //! Create a new image of a specified width `w`, height `h`, and `format`.
@@ -301,13 +301,13 @@ public:
   //! \name Image Data
   //! \{
 
-  //! Get image width.
+  //! Returns image width.
   BL_INLINE int width() const noexcept { return impl->size.w; }
-  //! Get image height.
+  //! Returns image height.
   BL_INLINE int height() const noexcept { return impl->size.h; }
-  //! Get image size.
+  //! Returns image size.
   BL_INLINE const BLSizeI& size() const noexcept { return impl->size; }
-  //! Get image format, see `BLFormat`.
+  //! Returns image format, see `BLFormat`.
   BL_INLINE uint32_t format() const noexcept { return impl->format; }
 
   BL_INLINE BLResult getData(BLImageData* dataOut) const noexcept { return blImageGetData(this, dataOut); }
@@ -411,39 +411,77 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_IMAGE_CODEC;
   //! \endcond
 
+  //! \name Constructors and Destructors
+  //! \{
+
   BL_INLINE BLImageCodec() noexcept { this->impl = none().impl; }
   BL_INLINE BLImageCodec(BLImageCodec&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLImageCodec(const BLImageCodec& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLImageCodec(BLImageCodecImpl* impl) noexcept { this->impl = impl; }
   BL_INLINE ~BLImageCodec() { blImageCodecReset(this); }
 
+  //! \}
+
+  //! \name Operator Overloads
+  //! \{
+
   BL_INLINE BLImageCodec& operator=(const BLImageCodec& other) noexcept {
     blImageCodecAssignWeak(this, &other);
     return *this;
   }
 
-  //! Get whether the image codec is a built-in null instance.
-  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Get the image codec name (i.e, "PNG", "JPEG", etc...).
-  BL_INLINE const char* name() const noexcept { return impl->name; }
-  //! Get the image codec vendor (i.e. "Blend2D" for all built-in codecs).
-  BL_INLINE const char* vendor() const noexcept { return impl->vendor; }
-  //! Get a mime-type associated with the image codec's format.
-  BL_INLINE const char* mimeType() const noexcept { return impl->mimeType; }
-  //! Get a list of file extensions used to store image of this codec, separated by '|' character.
-  BL_INLINE const char* extensions() const noexcept { return impl->extensions; }
-  //! Get image codec flags, see `BLImageCodecFeatures`.
-  BL_INLINE uint32_t features() const noexcept { return impl->features; }
-  //! Get whether the image codec has a flag `flag`.
-  BL_INLINE bool hasFeature(uint32_t feature) const noexcept { return (impl->features & feature) != 0; }
+  BL_INLINE bool operator==(const BLImageCodec& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLImageCodec& other) const noexcept { return !equals(other); }
+
+  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
 
   BL_INLINE BLResult reset() noexcept { return blImageCodecReset(this); }
+  BL_INLINE void swap(BLImageCodec& other) noexcept { std::swap(this->impl, other.impl); }
+
   BL_INLINE BLResult assign(const BLImageCodec& other) noexcept { return blImageCodecAssignWeak(this, &other); }
+
+  //! Gets whether the image codec is a built-in null instance.
+  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
+
+  BL_INLINE bool equals(const BLImageCodec& other) const noexcept { return this->impl == other.impl; }
+
+  //! \}
+
+  //! \name Properties
+  //! \{
+
+  //! Returns image codec name (i.e, "PNG", "JPEG", etc...).
+  BL_INLINE const char* name() const noexcept { return impl->name; }
+  //! Returns the image codec vendor (i.e. "Blend2D" for all built-in codecs).
+  BL_INLINE const char* vendor() const noexcept { return impl->vendor; }
+  //! Returns a mime-type associated with the image codec's format.
+  BL_INLINE const char* mimeType() const noexcept { return impl->mimeType; }
+  //! Returns a list of file extensions used to store image of this codec, separated by '|' character.
+  BL_INLINE const char* extensions() const noexcept { return impl->extensions; }
+  //! Returns image codec flags, see `BLImageCodecFeatures`.
+  BL_INLINE uint32_t features() const noexcept { return impl->features; }
+  //! Gets whether the image codec has a flag `flag`.
+  BL_INLINE bool hasFeature(uint32_t feature) const noexcept { return (impl->features & feature) != 0; }
+
+  //! \}
+
+  //! \name Find Functionality
+  //! \{
 
   BL_INLINE BLResult findByName(const BLArray<BLImageCodec>& codecs, const char* name) noexcept { return blImageCodecFindByName(this, &codecs, name); }
   BL_INLINE BLResult findByData(const BLArray<BLImageCodec>& codecs, const void* data, size_t size) noexcept { return blImageCodecFindByData(this, &codecs, data, size); }
   BL_INLINE BLResult findByData(const BLArray<BLImageCodec>& codecs, const BLArrayView<uint8_t>& view) noexcept { return blImageCodecFindByData(this, &codecs, view.data, view.size); }
   BL_INLINE BLResult findByData(const BLArray<BLImageCodec>& codecs, const BLArray<uint8_t>& buffer) noexcept { return blImageCodecFindByData(this, &codecs, buffer.data(), buffer.size()); }
+
+  //! \}
+
+  //! \name Codec Functionality
+  //! \{
 
   BL_INLINE uint32_t inspectData(const BLArray<uint8_t>& buffer) const noexcept { return inspectData(buffer.view()); }
   BL_INLINE uint32_t inspectData(const BLArrayView<uint8_t>& view) const noexcept { return inspectData(view.data, view.size); }
@@ -451,6 +489,8 @@ public:
 
   BL_INLINE BLResult createDecoder(BLImageDecoder* dst) const noexcept { return blImageCodecCreateDecoder(this, reinterpret_cast<BLImageDecoderCore*>(dst)); }
   BL_INLINE BLResult createEncoder(BLImageEncoder* dst) const noexcept { return blImageCodecCreateEncoder(this, reinterpret_cast<BLImageEncoderCore*>(dst)); }
+
+  //! \}
 
   static BL_INLINE const BLImageCodec& none() noexcept { return reinterpret_cast<const BLImageCodec*>(blNone)[kImplType]; }
   static BL_INLINE BLArray<BLImageCodec>& builtInCodecs() noexcept { return *static_cast<BLArray<BLImageCodec>*>(blImageCodecBuiltInCodecs()); }
@@ -514,28 +554,60 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_IMAGE_DECODER;
   //! \endcond
 
+  //! \name Constructors and Destructors
+  //! \{
+
   BL_INLINE BLImageDecoder() noexcept { this->impl = none().impl; }
   BL_INLINE BLImageDecoder(BLImageDecoder&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLImageDecoder(const BLImageDecoder& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLImageDecoder(BLImageDecoderImpl* impl) noexcept { this->impl = impl; }
   BL_INLINE ~BLImageDecoder() { blImageDecoderReset(this); }
 
+  //! \}
+
+  //! \name Operator Overloads
+  //! \{
+
   BL_INLINE BLImageDecoder& operator=(BLImageDecoder&& other) noexcept { blImageDecoderAssignMove(this, &other); return *this; }
   BL_INLINE BLImageDecoder& operator=(const BLImageDecoder& other) noexcept { blImageDecoderAssignWeak(this, &other); return *this; }
 
-  //! Get whether the image decoder is a built-in null instance.
-  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Get the last decoding result.
-  BL_INLINE BLResult lastResult() const noexcept { return impl->lastResult; }
-  //! Get position in source buffer.
-  BL_INLINE uint64_t frameIndex() const noexcept { return impl->frameIndex; }
-  //! Get position in source buffer.
-  BL_INLINE size_t bufferIndex() const noexcept { return impl->bufferIndex; }
+  BL_INLINE bool operator==(const BLImageDecoder& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLImageDecoder& other) const noexcept { return !equals(other); }
+
+  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
 
   BL_INLINE BLResult reset() noexcept { return blImageDecoderReset(this); }
+  BL_INLINE void swap(BLImageDecoder& other) noexcept { std::swap(this->impl, other.impl); }
 
   BL_INLINE BLResult assign(BLImageDecoder&& other) noexcept { return blImageDecoderAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLImageDecoder& other) noexcept { return blImageDecoderAssignWeak(this, &other); }
+
+  //! Gets whether the image decoder is a built-in null instance.
+  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
+
+  BL_INLINE bool equals(const BLImageDecoder& other) const noexcept { return this->impl == other.impl; }
+
+  //! \}
+
+  //! \name Properties
+  //! \{
+
+  //! Returns the last decoding result.
+  BL_INLINE BLResult lastResult() const noexcept { return impl->lastResult; }
+  //! Returns the current frame index (to be decoded).
+  BL_INLINE uint64_t frameIndex() const noexcept { return impl->frameIndex; }
+  //! Returns the position in source buffer.
+  BL_INLINE size_t bufferIndex() const noexcept { return impl->bufferIndex; }
+
+  //! \}
+
+  //! \name Decoder Functionality
+  //! \{
 
   BL_INLINE BLResult restart() noexcept { return blImageDecoderRestart(this); }
 
@@ -546,6 +618,8 @@ public:
   BL_INLINE BLResult readFrame(BLImage& dst, const BLArray<uint8_t>& buffer) noexcept { return blImageDecoderReadFrame(this, &dst, buffer.data(), buffer.size()); }
   BL_INLINE BLResult readFrame(BLImage& dst, const BLArrayView<uint8_t>& view) noexcept { return blImageDecoderReadFrame(this, &dst, view.data, view.size); }
   BL_INLINE BLResult readFrame(BLImage& dst, const void* data, size_t size) noexcept { return blImageDecoderReadFrame(this, &dst, static_cast<const uint8_t*>(data), size); }
+
+  //! \}
 
   static BL_INLINE const BLImageDecoder& none() noexcept { return reinterpret_cast<const BLImageDecoder*>(blNone)[kImplType]; }
 };
@@ -607,33 +681,67 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_IMAGE_ENCODER;
   //! \endcond
 
+  //! \name Constructors and Destructors
+  //! \{
+
   BL_INLINE BLImageEncoder() noexcept { this->impl = none().impl; }
   BL_INLINE BLImageEncoder(BLImageEncoder&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLImageEncoder(const BLImageEncoder& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLImageEncoder(BLImageEncoderImpl* impl) noexcept { this->impl = impl; }
   BL_INLINE ~BLImageEncoder() { blImageEncoderReset(this); }
 
+  //! \}
+
+  //! \name Operator Overloads
+  //! \{
+
   BL_INLINE BLImageEncoder& operator=(BLImageEncoder&& other) noexcept { blImageEncoderAssignMove(this, &other); return *this; }
   BL_INLINE BLImageEncoder& operator=(const BLImageEncoder& other) noexcept { blImageEncoderAssignWeak(this, &other); return *this; }
 
-  //! Get whether the image encoder is a built-in null instance.
-  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Get the last decoding result.
-  BL_INLINE BLResult lastResult() const noexcept { return impl->lastResult; }
-  //! Get position in source buffer.
-  BL_INLINE uint64_t frameIndex() const noexcept { return impl->frameIndex; }
-  //! Get position in source buffer.
-  BL_INLINE size_t bufferIndex() const noexcept { return impl->bufferIndex; }
+  BL_INLINE bool operator==(const BLImageEncoder& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLImageEncoder& other) const noexcept { return !equals(other); }
+
+  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
 
   BL_INLINE BLResult reset() noexcept { return blImageEncoderReset(this); }
+  BL_INLINE void swap(BLImageEncoder& other) noexcept { std::swap(this->impl, other.impl); }
 
   BL_INLINE BLResult assign(BLImageEncoder&& other) noexcept { return blImageEncoderAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLImageEncoder& other) noexcept { return blImageEncoderAssignWeak(this, &other); }
 
+  //! Gets whether the image encoder is a built-in null instance.
+  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
+
+  BL_INLINE bool equals(const BLImageEncoder& other) const noexcept { return this->impl == other.impl; }
+
+  //! \}
+
+  //! \name Properties
+  //! \{
+
+  //! Returns the last decoding result.
+  BL_INLINE BLResult lastResult() const noexcept { return impl->lastResult; }
+  //! Returns the current frame index (yet to be written).
+  BL_INLINE uint64_t frameIndex() const noexcept { return impl->frameIndex; }
+  //! Returns the position in destination buffer.
+  BL_INLINE size_t bufferIndex() const noexcept { return impl->bufferIndex; }
+
+  //! \}
+
+  //! \name Encoder Functionality
+  //! \{
+
   BL_INLINE BLResult restart() noexcept { return blImageEncoderRestart(this); }
 
-  //! Encode a given image `src`.
+  //! Encodes the given `image` and writes the encoded data to the destination buffer `dst`.
   BL_INLINE BLResult writeFrame(BLArray<uint8_t>& dst, const BLImage& image) noexcept { return blImageEncoderWriteFrame(this, &dst, &image); }
+
+  //! \}
 
   static BL_INLINE const BLImageEncoder& none() noexcept { return reinterpret_cast<const BLImageEncoder*>(blNone)[kImplType]; }
 };

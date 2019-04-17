@@ -5,7 +5,7 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "../blapi-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_PIPEGEN)
+#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
 
 #include "../pipegen/blcompoppart_p.h"
 #include "../pipegen/blfetchpart_p.h"
@@ -408,7 +408,7 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
         if (hasSSE3())
           packedId = PackedInst::packAvxSse(x86::Inst::kIdVlddqu, x86::Inst::kIdLddqu);
         else
-          packedId = PackedInst::packAvxSse(x86::Inst::kIdVmovdqa, x86::Inst::kIdMovdqa);
+          packedId = PackedInst::packAvxSse(x86::Inst::kIdVmovdqu, x86::Inst::kIdMovdqu);
         break;
       }
 
@@ -1004,6 +1004,42 @@ void PipeCompiler::vemit_vvvv_vvv(uint32_t packedId, const Operand_& dst_, const
     fixVecSignature(src1, signature);
     fixVecSignature(src2, signature);
     fixVecSignature(src3, signature);
+  }
+
+  // Intrinsics support.
+  if (PackedInst::isIntrin(packedId)) {
+    switch (PackedInst::intrinId(packedId)) {
+      case kIntrin4Vpblendvb: {
+        if (hasSSE4_1()) {
+          packedId = PackedInst::packAvxSse(x86::Inst::kIdVpblendvb, x86::Inst::kIdPblendvb);
+          break;
+        }
+
+        // Blend(a, b, cond) == a ^ ((a ^ b) &  cond)
+        //                   == b ^ ((a ^ b) & ~cond)
+        if (dst.id() == src1.id()) {
+          x86::Xmm tmp = cc->newXmm("@tmp");
+          vxor(tmp, dst, src2);
+          vand(tmp, tmp, src3);
+          vxor(dst, dst, tmp);
+        }
+        else if (dst.id() == src3.id()) {
+          x86::Xmm tmp = cc->newXmm("@tmp");
+          vxor(tmp, src1, src2);
+          vandnot_a(dst, dst, tmp);
+          vxor(dst, dst, src2);
+        }
+        else {
+          vxor(dst, src2, src1);
+          vand(dst, dst, src3);
+          vxor(dst, dst, src1);
+        }
+        return;
+      }
+
+      default:
+        BL_ASSERT(!"Invalid intrinsic at vemit_vvvv_vvv()");
+    }
   }
 
   if (hasAVX()) {

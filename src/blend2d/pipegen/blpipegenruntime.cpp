@@ -5,7 +5,7 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "../blapi-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_PIPEGEN)
+#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
 
 #include "../pipegen/blcompoppart_p.h"
 #include "../pipegen/blfetchpart_p.h"
@@ -206,9 +206,9 @@ BLPipeGenRuntime::BLPipeGenRuntime(uint32_t runtimeFlags) noexcept
   _funcs.test = blPipeGenRuntimeTest;
 
   #ifndef ASMJIT_DISABLE_LOGGING
-  const uint32_t kFormatFlags = asmjit::FormatOptions::kFlagRegCasts      |
-                                asmjit::FormatOptions::kFlagAnnotations   |
-                                asmjit::FormatOptions::kFlagMachineCode   ;
+  const uint32_t kFormatFlags = asmjit::FormatOptions::kFlagRegCasts    |
+                                asmjit::FormatOptions::kFlagAnnotations |
+                                asmjit::FormatOptions::kFlagMachineCode ;
   _logger.setFile(stderr);
   _logger.addFlags(kFormatFlags);
   #endif
@@ -257,7 +257,6 @@ BLPipeFillFunc BLPipeGenRuntime::_compileFillFunc(uint32_t signature) noexcept {
 
   #ifndef ASMJIT_DISABLE_LOGGING
   if (_enableLogger) {
-    // Dump a function signature, useful when logging is enabled.
     cc.commentf("Signature 0x%08X DstFmt=%d SrcFmt=%d CompOp=%d FillType=%d FetchType=%d FetchPayload=%d",
       sig.value,
       sig.dstFormat(),
@@ -297,7 +296,7 @@ BLPipeFillFunc BLPipeGenRuntime::_compileFillFunc(uint32_t signature) noexcept {
   if (eh._err)
     return nullptr;
 
-  if (cc.finalize() != BL_SUCCESS)
+  if (cc.finalize() != asmjit::kErrorOk)
     return nullptr;
 
   #ifndef ASMJIT_DISABLE_LOGGING

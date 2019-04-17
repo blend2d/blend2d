@@ -73,8 +73,8 @@ struct BLRuntimeContext {
   //! longer be safe to use.
   volatile size_t refCount;
 
-  //! CPU Information.
-  BLRuntimeCpuInfo cpuInfo;
+  //! System information.
+  BLRuntimeSystemInfo systemInfo;
 
   // NOTE: There is only a limited number of handlers that can be added to the
   // context. The reason we do it this way is that for builds of Blend2D that
@@ -105,43 +105,43 @@ namespace {
 #ifdef BL_TARGET_OPT_SSE2
 constexpr bool blRuntimeHasSSE2(BLRuntimeContext* rt) noexcept { return true; }
 #else
-inline bool blRuntimeHasSSE2(BLRuntimeContext* rt) noexcept { return (rt->cpuInfo.features & BL_RUNTIME_CPU_FEATURE_X86_SSE2) != 0; }
+inline bool blRuntimeHasSSE2(BLRuntimeContext* rt) noexcept { return (rt->systemInfo.cpuFeatures & BL_RUNTIME_CPU_FEATURE_X86_SSE2) != 0; }
 #endif
 
 #ifdef BL_TARGET_OPT_SSE3
 constexpr bool blRuntimeHasSSE3(BLRuntimeContext* rt) noexcept { return true; }
 #else
-inline bool blRuntimeHasSSE3(BLRuntimeContext* rt) noexcept { return (rt->cpuInfo.features & BL_RUNTIME_CPU_FEATURE_X86_SSE3) != 0; }
+inline bool blRuntimeHasSSE3(BLRuntimeContext* rt) noexcept { return (rt->systemInfo.cpuFeatures & BL_RUNTIME_CPU_FEATURE_X86_SSE3) != 0; }
 #endif
 
 #ifdef BL_TARGET_OPT_SSSE3
 constexpr bool blRuntimeHasSSSE3(BLRuntimeContext* rt) noexcept { return true; }
 #else
-inline bool blRuntimeHasSSSE3(BLRuntimeContext* rt) noexcept { return (rt->cpuInfo.features & BL_RUNTIME_CPU_FEATURE_X86_SSSE3) != 0; }
+inline bool blRuntimeHasSSSE3(BLRuntimeContext* rt) noexcept { return (rt->systemInfo.cpuFeatures & BL_RUNTIME_CPU_FEATURE_X86_SSSE3) != 0; }
 #endif
 
 #ifdef BL_TARGET_OPT_SSE4_1
 constexpr bool blRuntimeHasSSE4_1(BLRuntimeContext* rt) noexcept { return true; }
 #else
-inline bool blRuntimeHasSSE4_1(BLRuntimeContext* rt) noexcept { return (rt->cpuInfo.features & BL_RUNTIME_CPU_FEATURE_X86_SSE4_1) != 0; }
+inline bool blRuntimeHasSSE4_1(BLRuntimeContext* rt) noexcept { return (rt->systemInfo.cpuFeatures & BL_RUNTIME_CPU_FEATURE_X86_SSE4_1) != 0; }
 #endif
 
 #ifdef BL_TARGET_OPT_SSE4_2
 constexpr bool blRuntimeHasSSE4_2(BLRuntimeContext* rt) noexcept { return true; }
 #else
-inline bool blRuntimeHasSSE4_2(BLRuntimeContext* rt) noexcept { return (rt->cpuInfo.features & BL_RUNTIME_CPU_FEATURE_X86_SSE4_2) != 0; }
+inline bool blRuntimeHasSSE4_2(BLRuntimeContext* rt) noexcept { return (rt->systemInfo.cpuFeatures & BL_RUNTIME_CPU_FEATURE_X86_SSE4_2) != 0; }
 #endif
 
 #ifdef BL_TARGET_OPT_AVX
 constexpr bool blRuntimeHasAVX(BLRuntimeContext* rt) noexcept { return true; }
 #else
-inline bool blRuntimeHasAVX(BLRuntimeContext* rt) noexcept { return (rt->cpuInfo.features & BL_RUNTIME_CPU_FEATURE_X86_AVX) != 0; }
+inline bool blRuntimeHasAVX(BLRuntimeContext* rt) noexcept { return (rt->systemInfo.cpuFeatures & BL_RUNTIME_CPU_FEATURE_X86_AVX) != 0; }
 #endif
 
 #ifdef BL_TARGET_OPT_AVX2
 constexpr bool blRuntimeHasAVX2(BLRuntimeContext* rt) noexcept { return true; }
 #else
-inline bool blRuntimeHasAVX2(BLRuntimeContext* rt) noexcept { return (rt->cpuInfo.features & BL_RUNTIME_CPU_FEATURE_X86_AVX2) != 0; }
+inline bool blRuntimeHasAVX2(BLRuntimeContext* rt) noexcept { return (rt->systemInfo.cpuFeatures & BL_RUNTIME_CPU_FEATURE_X86_AVX2) != 0; }
 #endif
 
 } // {anonymous}
@@ -156,6 +156,8 @@ BL_HIDDEN BL_NORETURN void blRuntimeFailure(const char* fmt, ...) noexcept;
 // [BLRuntime - Runtime Init]
 // ============================================================================
 
+BL_HIDDEN void blThreadingRtInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blThreadPoolRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blZeroAllocatorRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blMatrix2DRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blArrayRtInit(BLRuntimeContext* rt) noexcept;
@@ -173,7 +175,7 @@ BL_HIDDEN void blContextRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blFixedPipeRtInit(BLRuntimeContext* rt) noexcept;
 #endif
 
-#if !defined(BL_BUILD_NO_PIPEGEN)
+#if !defined(BL_BUILD_NO_JIT)
 BL_HIDDEN void blPipeGenRtInit(BLRuntimeContext* rt) noexcept;
 #endif
 

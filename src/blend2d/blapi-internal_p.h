@@ -51,12 +51,12 @@
   #endif
   //! \endcond
 
-  // <windows.h> is required to build Blend2D on Windows platform.
-  #include <windows.h>
-  #include <synchapi.h>
+  #include <windows.h>   // Required to build Blend2D on Windows platform.
+  #include <synchapi.h>  // Synchronization primitivess.
 #else
-  // <pthread.h> is required to build Blend2D on POSIX compliant platforms.
-  #include <pthread.h>
+  #include <errno.h>     // Need to access it in some cases.
+  #include <pthread.h>   // Required to build Blend2D on POSIX compliant platforms.
+  #include <unistd.h>    // Filesystem, sysconf, etc...
 #endif
 
 // Some intrinsics defined by MSVC compiler are useful. Most of them should be
@@ -170,6 +170,17 @@
   #define BL_NOINLINE __declspec(noinline)
 #else
   #define BL_NOINLINE
+#endif
+
+//! \def BL_STDCALL
+//!
+//! Calling convention used by Windows.
+#if defined(__GNUC__) && defined(__i386__) && !defined(__x86_64__)
+  #define BL_STDCALL __attribute__((__stdcall__))
+#elif defined(_MSC_VER)
+  #define BL_STDCALL __stdcall
+#else
+  #define BL_STDCALL
 #endif
 
 #define BL_NONCOPYABLE(...)                                                   \

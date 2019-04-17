@@ -5,7 +5,7 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "../blapi-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_PIPEGEN)
+#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
 
 #include "../pipegen/blcompoppart_p.h"
 #include "../pipegen/blfetchpatternpart_p.h"
@@ -2118,24 +2118,19 @@ void FetchAffinePatternPart::clampVIdx32(x86::Xmm& dst, const x86::Xmm& src, uin
       // Always performed on the same register.
       BL_ASSERT(dst.id() == src.id());
 
-      x86::Xmm t1 = cc->newXmm("vIdxMsk1");
-      x86::Xmm t2 = cc->newXmm("vIdxMsk2");
-
+      x86::Xmm tmp = cc->newXmm("vIdxMsk1");
       if (pc->hasSSE4_1()) {
-        pc->vcmpgti32(t1, dst, f->maxx_maxy);
-        pc->vblendv8_(dst, dst, f->corx_cory, t1);
+        pc->vcmpgti32(tmp, dst, f->maxx_maxy);
+        pc->vblendv8_(dst, dst, f->corx_cory, tmp);
       }
       else {
-        pc->vmov(t1, dst);
-        pc->vmov(t2, f->corx_cory);
-
+        // Blend(a, b, cond) == a ^ ((a ^ b) &  cond)
+        //                   == b ^ ((a ^ b) & ~cond)
+        pc->vxor(tmp, dst, f->corx_cory);
         pc->vcmpgti32(dst, dst, f->maxx_maxy);
-        pc->vand(t2, t2, dst);
-
-        pc->vandnot_a(dst, dst, t1);
-        pc->vor(dst, dst, t2);
+        pc->vandnot_a(dst, dst, tmp);
+        pc->vxor(dst, dst, f->corx_cory);
       }
-
       break;
     }
 

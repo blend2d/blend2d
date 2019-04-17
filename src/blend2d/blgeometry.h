@@ -484,15 +484,8 @@ struct BLRect {
 
 //! Line specified as [x0, y0, x1, y1] using `double` as a storage type.
 struct BLLine {
-  union {
-    struct { double x0, y0; };
-    BLPoint p0;
-  };
-
-  union {
-    struct { double x1, y1; };
-    BLPoint p1;
-  };
+  double x0, y0;
+  double x1, y1;
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
@@ -516,7 +509,8 @@ struct BLLine {
   }
 
   BL_INLINE bool equals(const BLLine& other) const noexcept {
-    return (this->p0 == other.p0) & (this->p1 == other.p1);
+    return (this->x0 == other.x0) & (this->y0 == other.y0) &
+           (this->x1 == other.x1) & (this->y1 == other.y1) ;
   }
   #endif
   // --------------------------------------------------------------------------
@@ -528,20 +522,9 @@ struct BLLine {
 
 //! Triangle data speciied as [x0, y0, x1, y1, x2, y2] using `double` as a storage type.
 struct BLTriangle {
-  union {
-    struct { double x0, y0; };
-    BLPoint p0;
-  };
-
-  union {
-    struct { double x1, y1; };
-    BLPoint p1;
-  };
-
-  union {
-    struct { double x2, y2; };
-    BLPoint p2;
-  };
+  double x0, y0;
+  double x1, y1;
+  double x2, y2;
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
@@ -567,9 +550,9 @@ struct BLTriangle {
   }
 
   BL_INLINE bool equals(const BLTriangle& other) const noexcept {
-    return (this->p0 == other.p0) &
-           (this->p1 == other.p1) &
-           (this->p2 == other.p2) ;
+    return (this->x0 == other.x0) & (this->y0 == other.y0) &
+           (this->x1 == other.x1) & (this->y1 == other.y1) &
+           (this->x2 == other.x2) & (this->y2 == other.y2) ;
   }
   #endif
   // --------------------------------------------------------------------------
@@ -581,15 +564,8 @@ struct BLTriangle {
 
 //! Rounded rectangle specified as [x, y, w, h, rx, ry] using `double` as a storage type.
 struct BLRoundRect {
-  union {
-    struct { double x, y, w, h; };
-    BLRect rect;
-  };
-
-  union {
-    struct { double rx, ry; };
-    BLPoint radius;
-  };
+  double x, y, w, h;
+  double rx, ry;
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
@@ -626,7 +602,9 @@ struct BLRoundRect {
   }
 
   BL_INLINE bool equals(const BLRoundRect& other) const noexcept {
-    return (this->rect == other.rect) & (this->radius == other.radius);
+    return (this->x  == other.x ) & (this->y  == other.y ) &
+           (this->w  == other.w ) & (this->h  == other.h ) &
+           (this->rx == other.rx) & (this->rx == other.ry) ;
   }
   #endif
   // --------------------------------------------------------------------------
@@ -638,10 +616,7 @@ struct BLRoundRect {
 
 //! Circle specified as [cx, cy, r] using `double` as a storage type.
 struct BLCircle {
-  union {
-    struct { double cx, cy; };
-    BLPoint center;
-  };
+  double cx, cy;
   double r;
 
   // --------------------------------------------------------------------------
@@ -665,7 +640,7 @@ struct BLCircle {
   }
 
   BL_INLINE bool equals(const BLCircle& other) const noexcept {
-    return (this->center == other.center) & (this->r == other.r);
+    return (this->cx == other.cx) & (this->cy == other.cy) & (this->r == other.r);
   }
   #endif
   // --------------------------------------------------------------------------
@@ -677,14 +652,8 @@ struct BLCircle {
 
 //! Ellipse specified as [cx, cy, rx, ry] using `double` as a storage type.
 struct BLEllipse {
-  union {
-    struct { double cx, cy; };
-    BLPoint center;
-  };
-  union {
-    struct { double rx, ry; };
-    BLPoint radius;
-  };
+  double cx, cy;
+  double rx, ry;
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
@@ -713,7 +682,8 @@ struct BLEllipse {
   }
 
   BL_INLINE bool equals(const BLEllipse& other) const noexcept {
-    return (this->center == other.center) & (this->radius == other.radius);
+    return (this->cx == other.cx) & (this->cy == other.cy) &
+           (this->rx == other.rx) & (this->ry == other.ry) ;
   }
   #endif
   // --------------------------------------------------------------------------
@@ -725,14 +695,8 @@ struct BLEllipse {
 
 //! Arc specified as [cx, cy, rx, ry, start, sweep[ using `double` as a storage type.
 struct BLArc {
-  union {
-    struct { double cx, cy; };
-    BLPoint center;
-  };
-  union {
-    struct { double rx, ry; };
-    BLPoint radius;
-  };
+  double cx, cy;
+  double rx, ry;
   double start;
   double sweep;
 
@@ -760,10 +724,12 @@ struct BLArc {
   }
 
   BL_INLINE bool equals(const BLArc& other) const noexcept {
-    return (this->center == other.center) &
-           (this->radius == other.radius) &
-           (this->start  == other.start)  &
-           (this->sweep  == other.sweep)  ;
+    return (this->cx    == other.cx   ) &
+           (this->cy    == other.cy   ) &
+           (this->rx    == other.rx   ) &
+           (this->ry    == other.ry   ) &
+           (this->start == other.start) &
+           (this->sweep == other.sweep) ;
   }
   #endif
   // --------------------------------------------------------------------------
@@ -863,6 +829,26 @@ static BL_INLINE BLBox operator+(const BLBox& a, double b) noexcept { return BLB
 static BL_INLINE BLBox operator-(const BLBox& a, double b) noexcept { return BLBox(a.x0 - b, a.y0 - b, a.x1 - b, a.y1 - b); }
 static BL_INLINE BLBox operator*(const BLBox& a, double b) noexcept { return BLBox(a.x0 * b, a.y0 * b, a.x1 * b, a.y1 * b); }
 static BL_INLINE BLBox operator/(const BLBox& a, double b) noexcept { return BLBox(a.x0 / b, a.y0 / b, a.x1 / b, a.y1 / b); }
+
+static BL_INLINE BLBox operator+(const BLPoint& a, const BLBox& b) noexcept { return BLBox(a.x + b.x0, a.y + b.y0, a.x + b.x1, a.y + b.y1); }
+static BL_INLINE BLBox operator-(const BLPoint& a, const BLBox& b) noexcept { return BLBox(a.x - b.x0, a.y - b.y0, a.x - b.x1, a.y - b.y1); }
+static BL_INLINE BLBox operator*(const BLPoint& a, const BLBox& b) noexcept { return BLBox(a.x * b.x0, a.y * b.y0, a.x * b.x1, a.y * b.y1); }
+static BL_INLINE BLBox operator/(const BLPoint& a, const BLBox& b) noexcept { return BLBox(a.x / b.x0, a.y / b.y0, a.x / b.x1, a.y / b.y1); }
+
+static BL_INLINE BLBox operator+(const BLBox& a, const BLPoint& b) noexcept { return BLBox(a.x0 + b.x, a.y0 + b.y, a.x1 + b.x, a.y1 + b.y); }
+static BL_INLINE BLBox operator-(const BLBox& a, const BLPoint& b) noexcept { return BLBox(a.x0 - b.x, a.y0 - b.y, a.x1 - b.x, a.y1 - b.y); }
+static BL_INLINE BLBox operator*(const BLBox& a, const BLPoint& b) noexcept { return BLBox(a.x0 * b.x, a.y0 * b.y, a.x1 * b.x, a.y1 * b.y); }
+static BL_INLINE BLBox operator/(const BLBox& a, const BLPoint& b) noexcept { return BLBox(a.x0 / b.x, a.y0 / b.y, a.x1 / b.x, a.y1 / b.y); }
+
+static BL_INLINE BLBox& operator+=(BLBox& a, double b) noexcept { a.reset(a.x0 + b, a.y0 + b, a.x1 + b, a.y1 + b); return a; }
+static BL_INLINE BLBox& operator-=(BLBox& a, double b) noexcept { a.reset(a.x0 - b, a.y0 - b, a.x1 - b, a.y1 - b); return a; }
+static BL_INLINE BLBox& operator*=(BLBox& a, double b) noexcept { a.reset(a.x0 * b, a.y0 * b, a.x1 * b, a.y1 * b); return a; }
+static BL_INLINE BLBox& operator/=(BLBox& a, double b) noexcept { a.reset(a.x0 / b, a.y0 / b, a.x1 / b, a.y1 / b); return a; }
+
+static BL_INLINE BLBox& operator+=(BLBox& a, const BLPoint& b) noexcept { a.reset(a.x0 + b.x, a.y0 + b.y, a.x1 + b.x, a.y1 + b.y); return a; }
+static BL_INLINE BLBox& operator-=(BLBox& a, const BLPoint& b) noexcept { a.reset(a.x0 - b.x, a.y0 - b.y, a.x1 - b.x, a.y1 - b.y); return a; }
+static BL_INLINE BLBox& operator*=(BLBox& a, const BLPoint& b) noexcept { a.reset(a.x0 * b.x, a.y0 * b.y, a.x1 * b.x, a.y1 * b.y); return a; }
+static BL_INLINE BLBox& operator/=(BLBox& a, const BLPoint& b) noexcept { a.reset(a.x0 / b.x, a.y0 / b.y, a.x1 / b.x, a.y1 / b.y); return a; }
 
 //! \}
 

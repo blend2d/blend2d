@@ -46,6 +46,8 @@ struct BrokenAPI {
     }
   };
 
+  static bool hasArg(const char* name) noexcept;
+
   //! Register a new unit test (called automatically by `AutoUnit` and `UNIT`).
   static void add(Unit* unit) noexcept;
 

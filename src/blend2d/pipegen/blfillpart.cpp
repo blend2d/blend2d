@@ -5,7 +5,7 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "../blapi-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_PIPEGEN)
+#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
 
 #include "../pipegen/blcompoppart_p.h"
 #include "../pipegen/blfillpart_p.h"
@@ -526,7 +526,7 @@ void FillAnalyticPart::compile() noexcept {
 
   // Load the given cells to `m0` and clear the BitWord and all cells it represents
   // in memory. This is important as the compositor has to clear the memory during
-  // compositing. If this is a rare case where `x0` points at the end of the raster
+  // composition. If this is a rare case where `x0` points at the end of the raster
   // there is still one cell that is non-zero. This makes sure it's cleared.
 
   pc->uAddMulImm(dstPtr, x0.cloneAs(dstPtr), dstBpp);      //   dstPtr += x0 * dstBpp;
@@ -641,10 +641,9 @@ void FillAnalyticPart::compile() noexcept {
     // end of the scanline. In that case `cellPtr` might already be misaligned
     // if the image width is not divisible by 4.
 
-    // TODO {AFTER BETA} It would be nice to know why unaligned read/writ is used here...
     pc->vzeropi(m[1]);                                     //   m1[3:0] = 0;
-    pc->vloadi128u(m[0], x86::ptr(cellPtr));               //   m0[3:0] = cellPtr[3:0];
-    pc->vstorei128u(x86::ptr(cellPtr), m[1]);              //   cellPtr[3:0] = 0;
+    pc->vloadi128a(m[0], x86::ptr(cellPtr));               //   m0[3:0] = cellPtr[3:0];
+    pc->vstorei128a(x86::ptr(cellPtr), m[1]);              //   cellPtr[3:0] = 0;
 
     cc->bind(L_VLoop_Init);                                // L_VLoop_Init:
 
@@ -845,7 +844,7 @@ void FillAnalyticPart::compile() noexcept {
 
   cc->bind(L_Scanline_Done0);                              // L_Scanline_Done0:
   pc->vzeropi(m[1]);                                       //   m1[3:0] = 0;
-  pc->vstorei128u(x86::ptr(cellPtr), m[1]);                //   cellPtr[3:0] = 0;
+  pc->vstorei128a(x86::ptr(cellPtr), m[1]);                //   cellPtr[3:0] = 0;
 
   cc->bind(L_Scanline_Done1);                              // L_Scanline_Done1:
   disadvanceDstPtrAndCellPtr(dstPtr,                       //   dstPtr -= x0 * dstBpp;

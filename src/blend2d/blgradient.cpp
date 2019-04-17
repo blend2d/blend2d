@@ -387,7 +387,7 @@ BLResult blGradientImplDelete(BLGradientImpl* impl_) noexcept {
 }
 
 static BLResult BL_CDECL blGradientImplRelease(BLGradientImpl* impl) noexcept {
-  if (blAtomicFetchDecRef(&impl->refCount) != 1)
+  if (blAtomicFetchSub(&impl->refCount) != 1)
     return BL_SUCCESS;
 
   return blGradientImplDelete(blInternalCast(impl));

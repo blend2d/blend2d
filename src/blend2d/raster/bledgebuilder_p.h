@@ -1203,7 +1203,7 @@ RestartClipLoop:
         }
 
         // --------------------------------------------------------------------
-        // [Line - Clip Start BLPoint]
+        // [Line - Clip Start Point]
         // --------------------------------------------------------------------
 
         // The start point of the line requires clipping.
@@ -1309,7 +1309,7 @@ RestartClipLoop:
 
       {
         // --------------------------------------------------------------------
-        // [Line - Clip End BLPoint]
+        // [Line - Clip End Point]
         // --------------------------------------------------------------------
 
         BLPoint q(_clipBoxD.x1, _clipBoxD.y1);

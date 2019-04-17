@@ -79,7 +79,7 @@ BLResult blStringImplDelete(BLStringImpl* impl) noexcept {
 }
 
 static BL_INLINE BLResult blStringImplRelease(BLStringImpl* impl) noexcept {
-  if (blAtomicFetchDecRef(&impl->refCount) != 1)
+  if (blAtomicFetchSub(&impl->refCount) != 1)
     return BL_SUCCESS;
   return blStringImplDelete(impl);
 }

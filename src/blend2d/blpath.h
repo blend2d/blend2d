@@ -322,7 +322,7 @@ struct BLPathCore {
 class BLPath : public BLPathCore {
 public:
   //! \cond INTERNAL
-  static constexpr const uint32_t kImplType = BL_IMPL_TYPE_PATH2D;
+  static constexpr const uint32_t kImplType = BL_IMPL_TYPE_PATH;
   //! \endcond
 
   //! \name Constructors and Destructors
@@ -489,8 +489,8 @@ public:
     return blPathSmoothCubicTo(this, x2, y2, x3, y3);
   }
 
-  BL_INLINE BLResult arcTo(const BLPoint& cp, const BLPoint& rp, double start, double sweep, bool forceMoveTo = false) noexcept {
-    return blPathArcTo(this, cp.x, cp.y, rp.x, rp.y, start, sweep, forceMoveTo);
+  BL_INLINE BLResult arcTo(const BLPoint& c, const BLPoint& r, double start, double sweep, bool forceMoveTo = false) noexcept {
+    return blPathArcTo(this, c.x, c.y, r.x, r.y, start, sweep, forceMoveTo);
   }
 
   BL_INLINE BLResult arcTo(double cx, double cy, double rx, double ry, double start, double sweep, bool forceMoveTo = false) noexcept {

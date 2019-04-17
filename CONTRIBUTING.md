@@ -1,0 +1,255 @@
+# Contributing to Blend2D
+
+The following is a set of guidelines for contributing to Blend2D and other repositories hosted in the [Blend2D Organization](https://github.com/blend2d) on GitHub.
+
+
+## Table of Contents
+
+* [Asking Questions](#asking-questions)
+* [Reporting Bugs](#reporting-bugs)
+* [Website Enhancement](#website-enhancement)
+* [Coding Style](#coding-style)
+
+
+## Asking Questions
+
+We prefer GitHub issues to be used for reporting bugs and similar problems. So please consider using our [Gitter Channel](https://gitter.im/blend2d/blend2d) to ask questions. It is active and may provide you quick help.
+
+* **Generic questions** should be asked on [Gitter](https://gitter.im/blend2d/blend2d) if possible
+* **Feature Suggestions** may be discussed on [Gitter](https://gitter.im/blend2d/blend2d), we will add features that match our future plans to the roadmap
+* For **C/C++ API Questions** use either [Gitter](https://gitter.im/blend2d/blend2d) or open a new issue on GitHub (see pinned issues first, we prefer to write a documentation regarding API functions that are not clear)
+* Read our [FAQ](https://blend2d.com/about.html#FAQ) as well, we would gladly improve it if you found something missing or can improve the existing content
+
+
+## Reporting Bugs
+
+A good bug report should contain the following information:
+
+* Brief and detailed bug description
+* Steps to reproduce the bug (isolated test-case is preferred but not required)
+* Build and system information (use `<blend2d-debug>` to obtain it, see below)
+
+To make the reporting bugs as easy as possible Blend2D provides a header file called `<blend2d-debug.h>`. It contains functions for C and C++ API users and can be used to query all the required information from Blend2D runtime. Additionally, the header provides functions useful for dumping the content of some Blend2D objects.
+
+Please use the snippet below in your own code and include its output in your bug report. It will help us to identify the issue quicker. Debug API is provided for both C and C++ users.
+
+```c
+#include <blend2d.h>
+#include <blend2d-debug.h>
+
+int main(int argc, char* argv[]) {
+  // This will query and dump Blend2D build and system information. We
+  // need this information to make the initial guess of where the problem
+  // could be. Some JIT and SIMD bugs can depend on this information.
+  blDebugRuntime();
+
+  // Now dump everything you have by using the following functions.
+  blDebugArray(&arr);        // Dumps the content of BLArray
+  blDebugContext(&ctx);      // Dumps the state of BLContext
+  blDebugMatrix2D(&mat);     // Dumps the content of BLMatrix2D
+  blDebugImage(&img);        // Dumps the content of BLImage (without pixels)
+  blDebugPath(&path);        // Dumps the content of BLPath
+  blDebugStrokeOptions(&so); // Dumps the content of BLStrokeOptions
+}
+```
+
+When reporting bugs related to incorrect renderings it is important to also include the rendered image together with the bug report as it will help us to understand the problem better.
+
+
+## Website Enhancement
+
+If you found a typo or have suggestions about the content on Blend2D website you can either contact us directly via email or discuss it on Gitter. Please don't open GitHub issues that are related to the website.
+
+
+## Coding Style
+
+If you plan to contribute to Blend2D make sure your follow the guidelines described in this section.
+
+
+### Source Files
+
+* Source files contain a header, which contains a project name `[Blend2D]`, description, and license that refers to `LICENSE.md` file (when you are creating a new file just copy the header from any other file)
+* Source files that include other Blend2D headers use relative paths starting with `./` or `../`
+* Header guard format is `BLEND2D_FILE_H` for root headers and `BLEND2D_PATH_FILE_H` for headers in a subdirectory
+* Source files (.cpp) must first include `blapi-build_p.h` and then other headers
+* Source files that use compiler intrinsics (SSE, AVX, NEON) must have the following suffix:
+    * X86/X64
+        * `*_sse.cpp`    - SSE
+        * `*_sse2.cpp`   - SSE2
+        * `*_sse3.cpp`   - SSE3
+        * `*_ssse3.cpp`  - SSSE3
+        * `*_sse4_1.cpp` - SSE4.1
+        * `*_sse4_2.cpp` - SSE4.2
+        * `*_avx.cpp`    - AVX
+        * `*_avx2.cpp`   - AVX2
+    * ARM/AArch64
+        * `*_neon.cpp`   - NEON
+
+
+### API Design
+
+#### Namespaces
+
+* Do not use namespaces in public API
+
+Namespaces are only used internally.
+
+
+#### C vs C++ API
+
+* Public headers must place C++ specific functionality between `#ifdef __cplusplus` and `#endif`
+* Private headers use C++ by default (no C compatibility)
+
+Since Blend2D exports only C API and can be compiled without linking to standard C++ library it cannot use functions that depend on it. Blend2D at the moment only uses atomics and some other utilities like `std::numeric_limits<>` that don't require linking to C++ standard library and it must stay like that.
+
+
+#### Exception Safety and Error Handling
+
+* Do not use exceptions or RTTI
+
+Exceptions and RTTI are never used by Blend2D. In general every public function is marked `noexcept` (or `BL_NOEXCEPT_C` for C API) that should guarantee that the compiler won't emit unwind tables even when C++ exceptions are enabled by the compiler. Blend2D users can use exceptions in their code, but Blend2D would never throw them.
+
+* Use error for error handling and propagation
+* Use `BLResult` as a return value in functions that can fail
+
+Every function that can fail must return this value. Use `BL_PROPAGATE(expression)` to return on failure, but be careful and check how it's used first.
+
+
+#### Object state
+
+* Always offer a default constructed state
+
+All Blend2D classes offer a default constructed state, which guarantees that no dynamic memory is allocated when creating a default constructed instance. Only initialization like `create()` or `begin()` would allocate memory. Use `.reset()` to get the state of any class to its default constructed state.
+
+
+### Coding Conventions
+
+If you are planning to contribute to Blend2D, please read our coding conventions carefully.
+
+* Indent by 2 spaces and never use TABs
+* Class and struct names are *CamelCased* and always start with `BL` prefix (`BLClassName`)
+* Global functions and variables are *CamelCased* and always start with `bl` prefix (`blFunctionName`)
+* Structs are used for everything that does not have initialization and must be compatible with C API
+* Classes are only used for implementing C++ API that is based on C API
+* Pointer `*` or reference `&` is part of the type, for example `void* ptr`
+* Namespaces are not indented, use the following:
+
+```c++
+namespace BLSomeNamespace {
+[...]
+} // {BLSomeNamespace}
+```
+
+* No line between a statement and opening bracket `{`:
+
+```c++
+class BLSomeClass {
+  void someFunction() {
+    for (uint32_t i = 0; i < 10; i++) {
+      if (i & 0x1) {
+        [...]
+      }
+    }
+  }
+};
+```
+
+* No spaces in a conditional expression, function declaration, and call:
+
+```c++
+// Right:
+if (x)
+  someFunction(x);
+
+/* WRONG:
+if( x )
+  someFunction ( x );
+*/
+```
+
+* If obvious, omit `== nullptr` and `!= nullptr` from conditional expressions, except asserts:
+
+```c++
+void* ptr;
+
+// Right:
+BL_ASSERT(ptr != nullptr);
+if (ptr) {
+  [...]
+}
+
+/* WRONG:
+BL_ASSERT(ptr);
+if (ptr != nullptr) {
+  [...]
+}
+*/
+```
+
+* If some branch of a condition (**if**/**else**) requires a block `{}` then all branches of that condition must be surrounded by such block:
+
+```c++
+// Right:
+if (x)
+  first();
+else
+  second();
+
+if (x) {
+  first();
+}
+else {
+  second();
+}
+
+/* WRONG:
+if (x) {
+  first();
+}
+else
+  second();
+*/
+```
+
+* There is a space between a **switch** statement and its expression; **case** statement and its content are indented:
+
+```c++
+switch (expression) {
+  case 0:
+    doSomething();
+    break;
+
+  // Case that requires a block.
+  case 1: {
+    int var = something;
+    doSomethingElseWithVar(var);
+    break;
+  }
+
+  // If the defaul should never be reached, mark it so:
+  default:
+    BL_NOT_REACHED();
+}
+```
+
+* Sometimes **case** and its content can be merged in a single line:
+
+```c++
+switch (condition) {
+  case 0: doSomething(); break;
+  case 1: doSomethingElse(); break;
+}
+```
+
+* Public enum names are *UPPER_CASED* and use `BL_` prefix.
+* Public enums usually end with `_COUNT`, which should be separated by a line.
+* Public enums are always `uint32_t`, use `BL_DEFINE_ENUM` to make sure they are properly defined in C++ mode:
+
+```c++
+BL_DEFINE_ENUM(BLSomeEnum) {
+  BL_SOME_ENUM_A = 0,
+  BL_SOME_ENUM_B = 1,
+
+  BL_SOME_ENUM_COUNT = 2
+};
+```

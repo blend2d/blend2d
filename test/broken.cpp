@@ -51,8 +51,8 @@ static bool BrokenAPI_startsWith(const char* a, const char* b) noexcept {
 // `-` as `_`.
 static bool BrokenAPI_matchesFilter(const char* a, const char* b) noexcept {
   for (size_t i = 0; ; i++) {
-    unsigned char ca = static_cast<unsigned char>(a[i]);
-    unsigned char cb = static_cast<unsigned char>(b[i]);
+    int ca = (unsigned char)a[i];
+    int cb = (unsigned char)b[i];
 
     // If filter is defined as wildcard the rest automatically matches.
     if (cb == '*')
@@ -144,6 +144,10 @@ static void BrokenAPI_listAll() noexcept {
   }
 }
 
+bool BrokenAPI::hasArg(const char* name) noexcept {
+  return _brokenGlobal.hasArg(name);
+}
+
 void BrokenAPI::add(Unit* unit) noexcept {
   Unit** pPrev = &_brokenGlobal._unitList;
   Unit* current = *pPrev;
@@ -200,46 +204,64 @@ int BrokenAPI::run(int argc, const char* argv[], Entry onBeforeRun, Entry onAfte
   return 0;
 }
 
-void BrokenAPI::info(const char* fmt, ...) noexcept {
+static void BrokenAPI_printMessage(const char* prefix, const char* fmt, va_list ap) noexcept {
   BrokenGlobal& global = _brokenGlobal;
   FILE* dst = global.file();
 
-  if (!fmt) fmt = "";
-  size_t size = strlen(fmt);
+  if (!fmt || fmt[0] == '\0') {
+    fprintf(dst, "\n");
+  }
+  else {
+    // This looks scary, but we really want to use only a single call to vfprintf()
+    // in multithreaded code. So we change the format a bit if necessary.
+    enum : unsigned { kBufferSize = 512 };
+    char staticBuffer[512];
 
-  const char* prefix = global._unitRunning ? "  " : "";
-  if (size != 0) {
-    va_list ap;
-    va_start(ap, fmt);
-    fputs(prefix, dst);
-    vfprintf(dst, fmt, ap);
-    va_end(ap);
+    size_t fmtSize = strlen(fmt);
+    size_t prefixSize = strlen(prefix);
+
+    char* fmtBuf = staticBuffer;
+    if (fmtSize > kBufferSize - 2 - prefixSize)
+      fmtBuf = static_cast<char*>(malloc(fmtSize + prefixSize + 2));
+
+    if (!fmtBuf) {
+      fprintf(dst, "%sCannot allocate buffer for vfprintf()\n", prefix);
+    }
+    else {
+      memcpy(fmtBuf, prefix, prefixSize);
+      memcpy(fmtBuf + prefixSize, fmt, fmtSize);
+
+      fmtSize += prefixSize;
+      if (fmtBuf[fmtSize - 1] != '\n')
+        fmtBuf[fmtSize++] = '\n';
+      fmtBuf[fmtSize] = '\0';
+
+      vfprintf(dst, fmtBuf, ap);
+
+      if (fmtBuf != staticBuffer)
+        free(fmtBuf);
+    }
   }
 
-  if (size == 0 || fmt[size - 1] != '\n')
-    fputs("\n", dst);
-
   fflush(dst);
+}
+
+void BrokenAPI::info(const char* fmt, ...) noexcept {
+  BrokenGlobal& global = _brokenGlobal;
+  va_list ap;
+  va_start(ap, fmt);
+  BrokenAPI_printMessage(global._unitRunning ? "  " : "", fmt, ap);
+  va_end(ap);
 }
 
 void BrokenAPI::fail(const char* file, int line, const char* fmt, ...) noexcept {
   BrokenGlobal& global = _brokenGlobal;
   FILE* dst = global.file();
 
-  if (!fmt) fmt = "";
-  size_t size = strlen(fmt);
-
-  fputs("  Failed!", dst);
-  if (size != 0) {
-    va_list ap;
-    va_start(ap, fmt);
-    fputs(" ", dst);
-    vfprintf(dst, fmt, ap);
-    va_end(ap);
-  }
-
-  if (size > 0 && fmt[size - 1] != '\n')
-    fputs("\n", dst);
+  va_list ap;
+  va_start(ap, fmt);
+  BrokenAPI_printMessage("  FAILED!", fmt, ap);
+  va_end(ap);
 
   fprintf(dst, "  File: %s (Line: %d)\n", file, line);
   fflush(dst);

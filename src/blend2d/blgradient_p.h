@@ -33,12 +33,12 @@ struct BLGradientLUT {
   const BL_INLINE T* data() const noexcept { return reinterpret_cast<const T*>(this + 1); }
 
   BL_INLINE BLGradientLUT* incRef() noexcept {
-    blAtomicFetchIncRef(&refCount);
+    blAtomicFetchAdd(&refCount);
     return this;
   }
 
   BL_INLINE bool decRefAndTest() noexcept {
-    return blAtomicFetchDecRef(&refCount) == 1;
+    return blAtomicFetchSub(&refCount) == 1;
   }
 
   BL_INLINE void release() noexcept {

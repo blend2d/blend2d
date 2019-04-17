@@ -29,18 +29,18 @@
 
 //! \ingroup blend2d_api_impl
 //!
-//! Atomically increments a reference count `x` by `n`. The old value is returned.
+//! Atomically increments `n` to value `x`. The old value is returned.
 template<typename T>
-static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetchIncRef(T* x, typename std::remove_volatile<T>::type n = 1) noexcept {
+static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetchAdd(T* x, typename std::remove_volatile<T>::type n = 1) noexcept {
   typedef typename std::remove_volatile<T>::type RawT;
   return ((std::atomic<RawT>*)x)->fetch_add(n, std::memory_order_relaxed);
 }
 
 //! \ingroup blend2d_api_impl
 //!
-//! Atomically decrements a reference count `x` by `n`. The old value is returned.
+//! Atomically decrements `n` from value `x`. The old value is returned.
 template<typename T>
-static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetchDecRef(T* x, typename std::remove_volatile<T>::type n = 1) noexcept {
+static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetchSub(T* x, typename std::remove_volatile<T>::type n = 1) noexcept {
   typedef typename std::remove_volatile<T>::type RawT;
   return ((std::atomic<RawT>*)x)->fetch_sub(n, std::memory_order_acq_rel);
 }
@@ -89,13 +89,13 @@ static BL_INLINE bool blImplIsMutable(Impl* impl) noexcept { return impl->refCou
 template<typename T>
 static BL_INLINE T* blImplIncRef(T* impl, size_t n = 1) noexcept {
   if (impl->refCount != 0)
-    blAtomicFetchIncRef(&impl->refCount, n);
+    blAtomicFetchAdd(&impl->refCount, n);
   return impl;
 }
 
 template<typename T>
 static BL_INLINE bool blImplDecRefAndTest(T* impl) noexcept {
-  return impl->refCount != 0 && blAtomicFetchDecRef(&impl->refCount) == 1;
+  return impl->refCount != 0 && blAtomicFetchSub(&impl->refCount) == 1;
 }
 
 //! \}

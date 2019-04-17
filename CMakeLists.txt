@@ -31,10 +31,10 @@ set(BLEND2D_BUILD_TEST   "${BLEND2D_BUILD_TEST}"      CACHE BOOL "Build 'blend2d
 # Experimental, will be used in the future by default.
 # set(BLEND2D_BUILD_NO_CXX_LIB 1)
 # set(BLEND2D_BUILD_NO_LOGGING 1)
-# set(BLEND2D_BUILD_NO_PIPEGEN 1)
+# set(BLEND2D_BUILD_NO_JIT 1)
 
 # Find asmjit dependency.
-if(NOT BLEND2D_BUILD_NO_PIPEGEN)
+if(NOT BLEND2D_BUILD_NO_JIT)
   if(NOT DEFINED ASMJIT_DIR)
     set(ASMJIT_LOOKUP_DIRS
       "${BLEND2D_DIR}/3rdparty/asmjit"
@@ -247,8 +247,8 @@ if(BLEND2D_BUILD_STATIC)
   list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_STATIC")
 endif()
 
-if(BLEND2D_BUILD_NO_PIPEGEN)
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_NO_PIPEGEN")
+if(BLEND2D_BUILD_NO_JIT)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_NO_JIT")
 endif()
 
 # =============================================================================
@@ -341,7 +341,7 @@ endif()
 # [Blend2D - AsmJit Embedding]
 # =============================================================================
 
-if(NOT BLEND2D_BUILD_NO_PIPEGEN)
+if(NOT BLEND2D_BUILD_NO_JIT)
   if(NOT DEFINED ASMJIT_BUILD_EMBED)
     set(ASMJIT_BUILD_EMBED TRUE CACHE BOOL "")
   endif()
@@ -377,6 +377,7 @@ set(BLEND2D_SRC "")
 
 blend2d_add_source(BLEND2D_SRC .
   blend2d.h
+  blend2d-debug.h
   blend2d-impl.h
 )
 
@@ -472,6 +473,8 @@ blend2d_add_source(BLEND2D_SRC blend2d
   bltables_p.h
   blthreading.cpp
   blthreading_p.h
+  blthreadpool.cpp
+  blthreadpool_p.h
   bltrace.cpp
   bltrace_p.h
   blunicode.cpp
