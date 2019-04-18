@@ -50,7 +50,7 @@ enum BLThreadStatus : uint32_t {
 // [Atomics]
 // ============================================================================
 
-static BL_INLINE void blAtomicThreadFence(std::memory_order order = std::memory_order_acq_rel) noexcept {
+static BL_INLINE void blAtomicThreadFence(std::memory_order order = std::memory_order_release) noexcept {
   std::atomic_thread_fence(order);
 }
 
@@ -61,7 +61,7 @@ static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetch(const T* p
 }
 
 template<typename T>
-static BL_INLINE void blAtomicStore(T* p, typename std::remove_volatile<T>::type value, std::memory_order order = std::memory_order_acq_rel) noexcept {
+static BL_INLINE void blAtomicStore(T* p, typename std::remove_volatile<T>::type value, std::memory_order order = std::memory_order_release) noexcept {
   typedef typename BLInternal::StdInt<sizeof(T), 0>::Type RawT;
   return ((std::atomic<RawT>*)p)->store((RawT)value, order);
 }

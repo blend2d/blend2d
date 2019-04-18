@@ -279,6 +279,7 @@ static BL_INLINE void blThreadEntryPoint(BLInternalThread* thread) noexcept {
   for (;;) {
     // Wait for some work to do.
     thread->event.wait();
+    blAtomicThreadFence(std::memory_order_acquire);
 
     BLThreadFunc workFunc = thread->workFunc;
     BLThreadFunc doneFunc = thread->doneFunc;
@@ -288,13 +289,13 @@ static BL_INLINE void blThreadEntryPoint(BLInternalThread* thread) noexcept {
     thread->doneFunc = nullptr;
     thread->workData = nullptr;
 
-    blAtomicThreadFence();
-    thread->event.reset();
-
     // If the compare-exchange fails and the function was not provided it means that this thread is quitting.
     uint32_t value = BL_THREAD_STATUS_IDLE;
     if (!std::atomic_compare_exchange_strong((std::atomic<uint32_t>*)&thread->internalStatus, &value, uint32_t(BL_THREAD_STATUS_RUNNING)) && !workFunc)
       break;
+
+    // Reset the event - more work can be queued from now...
+    thread->event.reset();
 
     // Run the task.
     workFunc(thread, workData);
@@ -323,12 +324,12 @@ static BLResult BL_CDECL blThreadRun(BLThread* self_, BLThreadFunc workFunc, BLT
   if (self->event.isSignaled())
     return blTraceError(BL_ERROR_BUSY);
 
+  blAtomicThreadFence(std::memory_order_release);
   self->workFunc = workFunc;
   self->doneFunc = doneFunc;
   self->workData = data;
-  blAtomicThreadFence();
-
   self->event.signal();
+
   return BL_SUCCESS;
 }
 
