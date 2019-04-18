@@ -985,11 +985,11 @@ bool blGradientEquals(const BLGradientCore* a, const BLGradientCore* b) noexcept
     return true;
 
   size_t size = aI->size;
-  bool eq = ((aI->gradientType != bI->gradientType) |
-             (aI->extendMode   != bI->extendMode  ) |
-             (aI->matrixType   != bI->matrixType  ) |
-             (aI->matrix       != bI->matrix      ) |
-             (size             != bI->size        ));
+  bool eq = (aI->gradientType == bI->gradientType) &
+            (aI->extendMode   == bI->extendMode  ) &
+            (aI->matrixType   == bI->matrixType  ) &
+            (aI->matrix       == bI->matrix      ) &
+            (size             == bI->size        ) ;
   return eq && memcmp(aI->stops, bI->stops, size * sizeof(BLGradientStop)) == 0;
 }
 
