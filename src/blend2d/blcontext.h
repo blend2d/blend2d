@@ -858,12 +858,11 @@ public:
   BL_INLINE BLResult getFillStyle(BLPattern& out) noexcept { return impl->virt->getStyle[kOpFill](impl, &out); }
   BL_INLINE BLResult getFillStyle(BLGradient& out) noexcept { return impl->virt->getStyle[kOpFill](impl, &out); }
 
-  BL_INLINE BLResult setFillStyle(const BLGradient& gradient) noexcept { return impl->virt->setStyle[kOpFill](impl, &gradient); }
-  BL_INLINE BLResult setFillStyle(const BLPattern& pattern) noexcept { return impl->virt->setStyle[kOpFill](impl, &pattern); }
-  BL_INLINE BLResult setFillStyle(const BLImage& image) noexcept { return impl->virt->setStyle[kOpFill](impl, &image); }
-  BL_INLINE BLResult setFillStyle(const BLVariant& variant) noexcept { return impl->virt->setStyle[kOpFill](impl, &variant); }
   BL_INLINE BLResult setFillStyle(const BLRgba32& rgba32) noexcept { return impl->virt->setStyleRgba32[kOpFill](impl, rgba32.value); }
   BL_INLINE BLResult setFillStyle(const BLRgba64& rgba64) noexcept { return impl->virt->setStyleRgba64[kOpFill](impl, rgba64.value); }
+  BL_INLINE BLResult setFillStyle(const BLGradient& gradient) noexcept { return impl->virt->setStyle[kOpFill](impl, &gradient); }
+  BL_INLINE BLResult setFillStyle(const BLPattern& pattern) noexcept { return impl->virt->setStyle[kOpFill](impl, &pattern); }
+  BL_INLINE BLResult setFillStyle(const BLVariant& variant) noexcept { return impl->virt->setStyle[kOpFill](impl, &variant); }
 
   //! Returns fill-rule, see `BLFillRule`.
   BL_INLINE uint32_t fillRule() const noexcept { return impl->state->fillRule; }
@@ -888,7 +887,6 @@ public:
 
   BL_INLINE BLResult setStrokeStyle(const BLRgba32& rgba32) noexcept { return impl->virt->setStyleRgba32[kOpStroke](impl, rgba32.value); }
   BL_INLINE BLResult setStrokeStyle(const BLRgba64& rgba64) noexcept { return impl->virt->setStyleRgba64[kOpStroke](impl, rgba64.value); }
-  BL_INLINE BLResult setStrokeStyle(const BLImage& image) noexcept { return impl->virt->setStyle[kOpStroke](impl, &image); }
   BL_INLINE BLResult setStrokeStyle(const BLPattern& pattern) noexcept { return impl->virt->setStyle[kOpStroke](impl, &pattern); }
   BL_INLINE BLResult setStrokeStyle(const BLGradient& gradient) noexcept { return impl->virt->setStyle[kOpStroke](impl, &gradient); }
   BL_INLINE BLResult setStrokeStyle(const BLVariant& variant) noexcept { return impl->virt->setStyle[kOpStroke](impl, &variant); }

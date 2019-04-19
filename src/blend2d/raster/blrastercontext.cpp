@@ -281,9 +281,9 @@ static BL_INLINE void blRasterContextBeforeStyleChange(BLRasterContextImpl* ctxI
   stateStyle->adjustedMatrix.reset();
 }
 
-static BL_INLINE BLResult blRasterContextImplGetOpStyle(const BLRasterContextImpl* ctxI, uint32_t opType, void* object) noexcept {
-  BL_ASSERT(opType < BL_CONTEXT_OP_TYPE_COUNT);
-  const BLRasterContextStyleData* style = &ctxI->style[opType];
+template<uint32_t OpType>
+static BLResult BL_CDECL blRasterContextImplGetStyle(const BLRasterContextImpl* ctxI, void* object) noexcept {
+  const BLRasterContextStyleData* style = &ctxI->style[OpType];
 
   if (style->styleType <= BL_STYLE_TYPE_SOLID)
     return blTraceError(BL_ERROR_INVALID_STATE);
@@ -297,9 +297,9 @@ static BL_INLINE BLResult blRasterContextImplGetOpStyle(const BLRasterContextImp
   return blVariantAssignWeak(object, &style->variant);
 }
 
-static BL_INLINE BLResult blRasterContextImplGetOpStyleRgba32(const BLRasterContextImpl* ctxI, uint32_t opType, uint32_t* rgba32) noexcept {
-  BL_ASSERT(opType < BL_CONTEXT_OP_TYPE_COUNT);
-  const BLRasterContextStyleData* style = &ctxI->style[opType];
+template<uint32_t OpType>
+static BLResult BL_CDECL blRasterContextImplGetStyleRgba32(const BLRasterContextImpl* ctxI, uint32_t* rgba32) noexcept {
+  const BLRasterContextStyleData* style = &ctxI->style[OpType];
 
   if (style->styleType != BL_STYLE_TYPE_SOLID)
     return blTraceError(BL_ERROR_INVALID_STATE);
@@ -308,9 +308,9 @@ static BL_INLINE BLResult blRasterContextImplGetOpStyleRgba32(const BLRasterCont
   return BL_SUCCESS;
 }
 
-static BL_INLINE BLResult blRasterContextImplGetOpStyleRgba64(const BLRasterContextImpl* ctxI, uint32_t opType, uint64_t* rgba64) noexcept {
-  BL_ASSERT(opType < BL_CONTEXT_OP_TYPE_COUNT);
-  const BLRasterContextStyleData* style = &ctxI->style[opType];
+template<uint32_t OpType>
+static BLResult BL_CDECL blRasterContextImplGetStyleRgba64(const BLRasterContextImpl* ctxI, uint64_t* rgba64) noexcept {
+  const BLRasterContextStyleData* style = &ctxI->style[OpType];
 
   if (style->styleType != BL_STYLE_TYPE_SOLID)
     return blTraceError(BL_ERROR_INVALID_STATE);
@@ -319,12 +319,12 @@ static BL_INLINE BLResult blRasterContextImplGetOpStyleRgba64(const BLRasterCont
   return BL_SUCCESS;
 }
 
-static BLResult blRasterContextImplSetOpStyle(BLRasterContextImpl* ctxI, uint32_t opType, const void* object) noexcept {
-  BL_ASSERT(opType < BL_CONTEXT_OP_TYPE_COUNT);
-  BLRasterContextStyleData* style = &ctxI->style[opType];
+template<uint32_t OpType>
+static BLResult BL_CDECL blRasterContextImplSetStyle(BLRasterContextImpl* ctxI, const void* object) noexcept {
+  BLRasterContextStyleData* style = &ctxI->style[OpType];
 
   uint32_t contextFlags = ctxI->contextFlags;
-  uint32_t styleFlags = (BL_RASTER_CONTEXT_BASE_FETCH_DATA | BL_RASTER_CONTEXT_STATE_BASE_STYLE) << opType;
+  uint32_t styleFlags = (BL_RASTER_CONTEXT_BASE_FETCH_DATA | BL_RASTER_CONTEXT_STATE_BASE_STYLE) << OpType;
 
   BLVariantImpl* varI = static_cast<const BLVariant*>(object)->impl;
   const BLMatrix2D* srcMatrix = nullptr;
@@ -333,9 +333,9 @@ static BLResult blRasterContextImplSetOpStyle(BLRasterContextImpl* ctxI, uint32_
   switch (varI->implType) {
     case BL_IMPL_TYPE_GRADIENT: {
       if (contextFlags & styleFlags)
-        blRasterContextBeforeStyleChange(ctxI, opType, style);
+        blRasterContextBeforeStyleChange(ctxI, OpType, style);
 
-      contextFlags &= ~(styleFlags | (BL_RASTER_CONTEXT_NO_BASE_STYLE << opType));
+      contextFlags &= ~(styleFlags | (BL_RASTER_CONTEXT_NO_BASE_STYLE << OpType));
       styleFlags = BL_RASTER_CONTEXT_BASE_FETCH_DATA;
 
       style->packed = 0;
@@ -365,9 +365,9 @@ static BLResult blRasterContextImplSetOpStyle(BLRasterContextImpl* ctxI, uint32_
 
     case BL_IMPL_TYPE_PATTERN: {
       if (contextFlags & styleFlags)
-        blRasterContextBeforeStyleChange(ctxI, opType, style);
+        blRasterContextBeforeStyleChange(ctxI, OpType, style);
 
-      contextFlags &= ~(styleFlags | (BL_RASTER_CONTEXT_NO_BASE_STYLE << opType));
+      contextFlags &= ~(styleFlags | (BL_RASTER_CONTEXT_NO_BASE_STYLE << OpType));
       styleFlags = BL_RASTER_CONTEXT_BASE_FETCH_DATA;
 
       style->packed = 0;
@@ -404,22 +404,22 @@ static BLResult blRasterContextImplSetOpStyle(BLRasterContextImpl* ctxI, uint32_
   if (BL_UNLIKELY(adjustedMatrixType >= BL_MATRIX2D_TYPE_INVALID))
     styleFlags |= BL_RASTER_CONTEXT_NO_BASE_STYLE;
 
-  ctxI->contextFlags = contextFlags | (styleFlags << opType);
+  ctxI->contextFlags = contextFlags | (styleFlags << OpType);
   style->adjustedMatrixType = uint8_t(adjustedMatrixType);
   style->variant->impl = blImplIncRef(varI);
 
   return BL_SUCCESS;
 }
 
-static BL_INLINE BLResult blRasterContextImplSetOpStyleRgba32(BLRasterContextImpl* ctxI, uint32_t opType, uint32_t rgba32) noexcept {
-  BL_ASSERT(opType < BL_CONTEXT_OP_TYPE_COUNT);
-  BLRasterContextStyleData* style = &ctxI->style[opType];
+template<uint32_t OpType>
+static BLResult BL_CDECL blRasterContextImplSetStyleRgba32(BLRasterContextImpl* ctxI, uint32_t rgba32) noexcept {
+  BLRasterContextStyleData* style = &ctxI->style[OpType];
 
   uint32_t contextFlags = ctxI->contextFlags;
-  uint32_t styleFlags = (BL_RASTER_CONTEXT_STATE_BASE_STYLE | BL_RASTER_CONTEXT_BASE_FETCH_DATA) << opType;
+  uint32_t styleFlags = (BL_RASTER_CONTEXT_STATE_BASE_STYLE | BL_RASTER_CONTEXT_BASE_FETCH_DATA) << OpType;
 
   if (contextFlags & styleFlags)
-    blRasterContextBeforeStyleChange(ctxI, opType, style);
+    blRasterContextBeforeStyleChange(ctxI, OpType, style);
 
   style->rgba64.value = blRgba64FromRgba32(rgba32);
   uint32_t solidFormatIndex = BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB;
@@ -430,7 +430,7 @@ static BL_INLINE BLResult blRasterContextImplSetOpStyleRgba32(BLRasterContextImp
                                    : BL_RASTER_CONTEXT_SOLID_FORMAT_ARGB;
   }
 
-  ctxI->contextFlags = contextFlags & ~(styleFlags | (BL_RASTER_CONTEXT_NO_BASE_STYLE << opType));
+  ctxI->contextFlags = contextFlags & ~(styleFlags | (BL_RASTER_CONTEXT_NO_BASE_STYLE << OpType));
   style->styleType = BL_STYLE_TYPE_SOLID;
   style->styleFormat = ctxI->solidFormatTable[solidFormatIndex];
   style->solidData.prgb32 = rgba32;
@@ -438,15 +438,15 @@ static BL_INLINE BLResult blRasterContextImplSetOpStyleRgba32(BLRasterContextImp
   return BL_SUCCESS;
 }
 
-static BL_INLINE BLResult blRasterContextImplSetOpStyleRgba64(BLRasterContextImpl* ctxI, uint32_t opType, uint64_t rgba64) noexcept {
-  BL_ASSERT(opType < BL_CONTEXT_OP_TYPE_COUNT);
-  BLRasterContextStyleData* style = &ctxI->style[opType];
+template<uint32_t OpType>
+static BLResult BL_CDECL blRasterContextImplSetStyleRgba64(BLRasterContextImpl* ctxI, uint64_t rgba64) noexcept {
+  BLRasterContextStyleData* style = &ctxI->style[OpType];
 
   uint32_t contextFlags = ctxI->contextFlags;
-  uint32_t styleFlags = (BL_RASTER_CONTEXT_STATE_BASE_STYLE | BL_RASTER_CONTEXT_BASE_FETCH_DATA) << opType;
+  uint32_t styleFlags = (BL_RASTER_CONTEXT_STATE_BASE_STYLE | BL_RASTER_CONTEXT_BASE_FETCH_DATA) << OpType;
 
   if (contextFlags & styleFlags)
-    blRasterContextBeforeStyleChange(ctxI, opType, style);
+    blRasterContextBeforeStyleChange(ctxI, OpType, style);
 
   style->rgba64.value = rgba64;
   uint32_t rgba32 = blRgba32FromRgba64(rgba64);
@@ -458,7 +458,7 @@ static BL_INLINE BLResult blRasterContextImplSetOpStyleRgba64(BLRasterContextImp
                                    : BL_RASTER_CONTEXT_SOLID_FORMAT_ARGB;
   }
 
-  ctxI->contextFlags = contextFlags & ~(styleFlags | (BL_RASTER_CONTEXT_NO_BASE_STYLE << opType));
+  ctxI->contextFlags = contextFlags & ~(styleFlags | (BL_RASTER_CONTEXT_NO_BASE_STYLE << OpType));
   style->styleType = BL_STYLE_TYPE_SOLID;
   style->styleFormat = ctxI->solidFormatTable[solidFormatIndex];
   style->solidData.prgb32 = rgba32;
@@ -1401,30 +1401,6 @@ static BLResult BL_CDECL blRasterContextImplSetFillAlpha(BLRasterContextImpl* ct
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplGetFillStyle(const BLRasterContextImpl* ctxI, void* object) noexcept {
-  return blRasterContextImplGetOpStyle(ctxI, BL_CONTEXT_OP_TYPE_FILL, object);
-}
-
-static BLResult BL_CDECL blRasterContextImplGetFillStyleRgba32(const BLRasterContextImpl* ctxI, uint32_t* rgba32) noexcept {
-  return blRasterContextImplGetOpStyleRgba32(ctxI, BL_CONTEXT_OP_TYPE_FILL, rgba32);
-}
-
-static BLResult BL_CDECL blRasterContextImplGetFillStyleRgba64(const BLRasterContextImpl* ctxI, uint64_t* rgba64) noexcept {
-  return blRasterContextImplGetOpStyleRgba64(ctxI, BL_CONTEXT_OP_TYPE_FILL, rgba64);
-}
-
-static BLResult BL_CDECL blRasterContextImplSetFillStyle(BLRasterContextImpl* ctxI, const void* object) noexcept {
-  return blRasterContextImplSetOpStyle(ctxI, BL_CONTEXT_OP_TYPE_FILL, object);
-}
-
-static BLResult BL_CDECL blRasterContextImplSetFillStyleRgba32(BLRasterContextImpl* ctxI, uint32_t rgba32) noexcept {
-  return blRasterContextImplSetOpStyleRgba32(ctxI, BL_CONTEXT_OP_TYPE_FILL, rgba32);
-}
-
-static BLResult BL_CDECL blRasterContextImplSetFillStyleRgba64(BLRasterContextImpl* ctxI, uint64_t rgba64) noexcept {
-  return blRasterContextImplSetOpStyleRgba64(ctxI, BL_CONTEXT_OP_TYPE_FILL, rgba64);
-}
-
 // ============================================================================
 // [BLRasterContext - Stroke Options]
 // ============================================================================
@@ -1547,30 +1523,6 @@ static BLResult BL_CDECL blRasterContextImplSetStrokeAlpha(BLRasterContextImpl* 
 
   ctxI->contextFlags = contextFlags;
   return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blRasterContextImplGetStrokeStyle(const BLRasterContextImpl* ctxI, void* object) noexcept {
-  return blRasterContextImplGetOpStyle(ctxI, BL_CONTEXT_OP_TYPE_STROKE, object);
-}
-
-static BLResult BL_CDECL blRasterContextImplGetStrokeStyleRgba32(const BLRasterContextImpl* ctxI, uint32_t* rgba32) noexcept {
-  return blRasterContextImplGetOpStyleRgba32(ctxI, BL_CONTEXT_OP_TYPE_STROKE, rgba32);
-}
-
-static BLResult BL_CDECL blRasterContextImplGetStrokeStyleRgba64(const BLRasterContextImpl* ctxI, uint64_t* rgba64) noexcept {
-  return blRasterContextImplGetOpStyleRgba64(ctxI, BL_CONTEXT_OP_TYPE_STROKE, rgba64);
-}
-
-static BLResult BL_CDECL blRasterContextImplSetStrokeStyle(BLRasterContextImpl* ctxI, const void* object) noexcept {
-  return blRasterContextImplSetOpStyle(ctxI, BL_CONTEXT_OP_TYPE_STROKE, object);
-}
-
-static BLResult BL_CDECL blRasterContextImplSetStrokeStyleRgba32(BLRasterContextImpl* ctxI, uint32_t rgba32) noexcept {
-  return blRasterContextImplSetOpStyleRgba32(ctxI, BL_CONTEXT_OP_TYPE_STROKE, rgba32);
-}
-
-static BLResult BL_CDECL blRasterContextImplSetStrokeStyleRgba64(BLRasterContextImpl* ctxI, uint64_t rgba64) noexcept {
-  return blRasterContextImplSetOpStyleRgba64(ctxI, BL_CONTEXT_OP_TYPE_STROKE, rgba64);
 }
 
 // ============================================================================
@@ -2701,18 +2653,18 @@ static void blRasterContextVirtInit(BLContextVirt* virt) noexcept {
 
   blAssignFunc(&virt->setStyleAlpha[F]       , blRasterContextImplSetFillAlpha);
   blAssignFunc(&virt->setStyleAlpha[S]       , blRasterContextImplSetStrokeAlpha);
-  blAssignFunc(&virt->getStyle[F]            , blRasterContextImplGetFillStyle);
-  blAssignFunc(&virt->getStyle[S]            , blRasterContextImplGetStrokeStyle);
-  blAssignFunc(&virt->getStyleRgba32[F]      , blRasterContextImplGetFillStyleRgba32);
-  blAssignFunc(&virt->getStyleRgba32[S]      , blRasterContextImplGetStrokeStyleRgba32);
-  blAssignFunc(&virt->getStyleRgba64[F]      , blRasterContextImplGetFillStyleRgba64);
-  blAssignFunc(&virt->getStyleRgba64[S]      , blRasterContextImplGetStrokeStyleRgba64);
-  blAssignFunc(&virt->setStyle[F]            , blRasterContextImplSetFillStyle);
-  blAssignFunc(&virt->setStyle[S]            , blRasterContextImplSetStrokeStyle);
-  blAssignFunc(&virt->setStyleRgba32[F]      , blRasterContextImplSetFillStyleRgba32);
-  blAssignFunc(&virt->setStyleRgba32[S]      , blRasterContextImplSetStrokeStyleRgba32);
-  blAssignFunc(&virt->setStyleRgba64[F]      , blRasterContextImplSetFillStyleRgba64);
-  blAssignFunc(&virt->setStyleRgba64[S]      , blRasterContextImplSetStrokeStyleRgba64);
+  blAssignFunc(&virt->getStyle[F]            , blRasterContextImplGetStyle<F>);
+  blAssignFunc(&virt->getStyle[S]            , blRasterContextImplGetStyle<S>);
+  blAssignFunc(&virt->getStyleRgba32[F]      , blRasterContextImplGetStyleRgba32<F>);
+  blAssignFunc(&virt->getStyleRgba32[S]      , blRasterContextImplGetStyleRgba32<S>);
+  blAssignFunc(&virt->getStyleRgba64[F]      , blRasterContextImplGetStyleRgba64<F>);
+  blAssignFunc(&virt->getStyleRgba64[S]      , blRasterContextImplGetStyleRgba64<S>);
+  blAssignFunc(&virt->setStyle[F]            , blRasterContextImplSetStyle<F>);
+  blAssignFunc(&virt->setStyle[S]            , blRasterContextImplSetStyle<S>);
+  blAssignFunc(&virt->setStyleRgba32[F]      , blRasterContextImplSetStyleRgba32<F>);
+  blAssignFunc(&virt->setStyleRgba32[S]      , blRasterContextImplSetStyleRgba32<S>);
+  blAssignFunc(&virt->setStyleRgba64[F]      , blRasterContextImplSetStyleRgba64<F>);
+  blAssignFunc(&virt->setStyleRgba64[S]      , blRasterContextImplSetStyleRgba64<S>);
 
   blAssignFunc(&virt->setFillRule            , blRasterContextImplSetFillRule);
 
