@@ -27,11 +27,11 @@ A good bug report should contain the following information:
 
 * Brief and detailed bug description
 * Steps to reproduce the bug (isolated test-case is preferred but not required)
-* Build and system information (use `<blend2d-debug>` to obtain it, see below)
+* Build and system information (use `<blend2d-debug.h>` to obtain it, see below)
 
-To make the reporting bugs as easy as possible Blend2D provides a header file called `<blend2d-debug.h>`. It contains functions for C and C++ API users and can be used to query all the required information from Blend2D runtime. Additionally, the header provides functions useful for dumping the content of some Blend2D objects.
+To make the reporting bugs as easy as possible Blend2D provides a header file called `<blend2d-debug.h>`. It contains functions for C and C++ API users that can be used to query useful information from Blend2D runtime and to dump the content of some Blend2D objects.
 
-Please use the snippet below in your own code and include its output in your bug report. It will help us to identify the issue quicker. Debug API is provided for both C and C++ users.
+Use the snippet below in your own code and include its output in your bug report. It will help us to identify the issue quicker. Debug API is provided for both C and C++ users.
 
 ```c
 #include <blend2d.h>
@@ -44,12 +44,12 @@ int main(int argc, char* argv[]) {
   blDebugRuntime();
 
   // Now dump everything you have by using the following functions.
-  blDebugArray(&arr);        // Dumps the content of BLArray
-  blDebugContext(&ctx);      // Dumps the state of BLContext
-  blDebugMatrix2D(&mat);     // Dumps the content of BLMatrix2D
-  blDebugImage(&img);        // Dumps the content of BLImage (without pixels)
-  blDebugPath(&path);        // Dumps the content of BLPath
-  blDebugStrokeOptions(&so); // Dumps the content of BLStrokeOptions
+  blDebugArray(&arr);         // Dumps the content of BLArray
+  blDebugContext(&ctx);       // Dumps the state of BLContext
+  blDebugMatrix2D(&mat);      // Dumps the content of BLMatrix2D
+  blDebugImage(&img);         // Dumps the content of BLImage (without pixels)
+  blDebugPath(&path);         // Dumps the content of BLPath
+  blDebugStrokeOptions(&opt); // Dumps the content of BLStrokeOptions
 }
 ```
 
@@ -63,7 +63,7 @@ If you found a typo or have suggestions about the content on Blend2D website you
 
 ## Coding Style
 
-If you plan to contribute to Blend2D make sure your follow the guidelines described in this section.
+If you plan to contribute to Blend2D make sure you follow the guidelines described in this section.
 
 
 ### Source Files
@@ -73,26 +73,25 @@ If you plan to contribute to Blend2D make sure your follow the guidelines descri
 * Header guard format is `BLEND2D_FILE_H` for root headers and `BLEND2D_PATH_FILE_H` for headers in a subdirectory
 * Source files (.cpp) must first include `blapi-build_p.h` and then other headers
 * Source files that use compiler intrinsics (SSE, AVX, NEON) must have the following suffix:
-    * X86/X64
-        * `*_sse.cpp`    - SSE
-        * `*_sse2.cpp`   - SSE2
-        * `*_sse3.cpp`   - SSE3
-        * `*_ssse3.cpp`  - SSSE3
-        * `*_sse4_1.cpp` - SSE4.1
-        * `*_sse4_2.cpp` - SSE4.2
-        * `*_avx.cpp`    - AVX
-        * `*_avx2.cpp`   - AVX2
-    * ARM/AArch64
-        * `*_neon.cpp`   - NEON
+  * X86/X64
+    * `*_sse2.cpp`   - SSE2
+    * `*_sse3.cpp`   - SSE3
+    * `*_ssse3.cpp`  - SSSE3
+    * `*_sse4_1.cpp` - SSE4.1
+    * `*_sse4_2.cpp` - SSE4.2
+    * `*_avx.cpp`    - AVX
+    * `*_avx2.cpp`   - AVX2
+  * ARM/AArch64
+    * `*_neon.cpp`   - NEON
 
 
 ### API Design
 
 #### Namespaces
 
-* Do not use namespaces in public API
+* Do not use namespaces in public API if possible
 
-Namespaces are only used internally.
+Namespaces are used mostly internally. There are few exceptions like `BLRuntime` and `BLFileSystem` though.
 
 
 #### C vs C++ API
@@ -107,7 +106,7 @@ Since Blend2D exports only C API and can be compiled without linking to standard
 
 * Do not use exceptions or RTTI
 
-Exceptions and RTTI are never used by Blend2D. In general every public function is marked `noexcept` (or `BL_NOEXCEPT_C` for C API) that should guarantee that the compiler won't emit unwind tables even when C++ exceptions are enabled by the compiler. Blend2D users can use exceptions in their code, but Blend2D would never throw them.
+Exceptions and RTTI are never used by Blend2D. In general every public function is marked `noexcept` (or `BL_NOEXCEPT_C` for C API) that should guarantee that the compiler won't emit unwind tables even when C++ exceptions are enabled at build time. Blend2D users can use exceptions in their code, but Blend2D would never throw them.
 
 * Use error for error handling and propagation
 * Use `BLResult` as a return value in functions that can fail
@@ -115,11 +114,11 @@ Exceptions and RTTI are never used by Blend2D. In general every public function 
 Every function that can fail must return this value. Use `BL_PROPAGATE(expression)` to return on failure, but be careful and check how it's used first.
 
 
-#### Object state
+#### Default Constructed State
 
-* Always offer a default constructed state
+  * Always offer a defined default constructed state.
 
-All Blend2D classes offer a default constructed state, which guarantees that no dynamic memory is allocated when creating a default constructed instance. Only initialization like `create()` or `begin()` would allocate memory. Use `.reset()` to get the state of any class to its default constructed state.
+Default constructed state guarantees that no dynamic memory is allocated when creating a default constructed instance. Only initialization like `create()` or `begin()` would allocate memory. Use `.reset()` to set the state of any class back to its default constructed state.
 
 
 ### Coding Conventions
