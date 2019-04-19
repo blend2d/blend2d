@@ -642,8 +642,8 @@ void FillAnalyticPart::compile() noexcept {
     // if the image width is not divisible by 4.
 
     pc->vzeropi(m[1]);                                     //   m1[3:0] = 0;
-    pc->vloadi128a(m[0], x86::ptr(cellPtr));               //   m0[3:0] = cellPtr[3:0];
-    pc->vstorei128a(x86::ptr(cellPtr), m[1]);              //   cellPtr[3:0] = 0;
+    pc->vloadi128u(m[0], x86::ptr(cellPtr));               //   m0[3:0] = cellPtr[3:0];
+    pc->vstorei128u(x86::ptr(cellPtr), m[1]);              //   cellPtr[3:0] = 0;
 
     cc->bind(L_VLoop_Init);                                // L_VLoop_Init:
 
@@ -842,9 +842,12 @@ void FillAnalyticPart::compile() noexcept {
   // complicated loops if this happens. It's also used to quickly find the first
   // bit, which is non-zero - in that case it jumps directly to BitScan section.
 
+  // NOTE: Storing zeros to `cellPtr` must be unaligned here as we may be at the
+  // end of the scaline.
+
   cc->bind(L_Scanline_Done0);                              // L_Scanline_Done0:
   pc->vzeropi(m[1]);                                       //   m1[3:0] = 0;
-  pc->vstorei128a(x86::ptr(cellPtr), m[1]);                //   cellPtr[3:0] = 0;
+  pc->vstorei128u(x86::ptr(cellPtr), m[1]);                //   cellPtr[3:0] = 0;
 
   cc->bind(L_Scanline_Done1);                              // L_Scanline_Done1:
   disadvanceDstPtrAndCellPtr(dstPtr,                       //   dstPtr -= x0 * dstBpp;
