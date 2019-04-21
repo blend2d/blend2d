@@ -138,7 +138,7 @@ function(blend2d_add_target target target_type src deps cflags cflags_dbg cflags
     target_compile_options(${target} PRIVATE ${cflags} $<$<CONFIG:Debug>:${cflags_dbg}> $<$<NOT:$<CONFIG:Debug>>:${cflags_rel}>)
   endif()
 
-  if(NOT BLEND2D_BUILD_STATIC)
+  if(NOT BLEND2D_BUILD_EMBED)
     install(TARGETS ${target} RUNTIME DESTINATION "bin"
                               LIBRARY DESTINATION "lib${LIB_SUFFIX}"
                               ARCHIVE DESTINATION "lib${LIB_SUFFIX}")
