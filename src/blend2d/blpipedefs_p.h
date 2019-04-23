@@ -208,10 +208,10 @@ union BLPipeValue64 {
   uint16_t u16[4];
 
 #if BL_BUILD_BYTE_ORDER == 1234
-  struct { uint32_t i32Lo, i32Hi; };
+  struct { int32_t  i32Lo, i32Hi; };
   struct { uint32_t u32Lo, u32Hi; };
 #else
-  struct { uint32_t i32Hi, i32Lo; };
+  struct { int32_t  i32Hi, i32Lo; };
   struct { uint32_t u32Hi, u32Lo; };
 #endif
 
@@ -350,8 +350,8 @@ struct BLPipeFillData {
     fx0 = 256 - fx0;
     fy0 = 256 - fy0;
 
-    if ((x0 & ~0xFF) == (x1 & ~0xFF)) { fx0 = fx1 - fx0; fx1 = 0; }
-    if ((y0 & ~0xFF) == (y1 & ~0xFF)) { fy0 = fy1 - fy0; fy1 = 0; }
+    if ((x0 & ~0xFFu) == (x1 & ~0xFFu)) { fx0 = fx1 - fx0; fx1 = 0; }
+    if ((y0 & ~0xFFu) == (y1 & ~0xFFu)) { fy0 = fy1 - fy0; fy1 = 0; }
 
     uint32_t iw = uint32_t(boxAU.box.x1 - boxAU.box.x0);
     uint32_t m0 = ((fx1 * fy0) >> 8);

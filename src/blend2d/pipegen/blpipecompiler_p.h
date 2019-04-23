@@ -93,13 +93,13 @@ public:
   //!   - Special intrinsic used only by PipeCompiler.
   struct PackedInst {
     //! Limit width of operands of vector instructions to Xmm|Ymm|Zmm.
-    enum WidthLimit {
+    enum WidthLimit : uint32_t {
       kWidthX = 0,
       kWidthY = 1,
       kWidthZ = 2
     };
 
-    enum Bits {
+    enum Bits : uint32_t {
       kSseIdShift  = 0,
       kSseIdBits   = 0xFFF,
 
@@ -251,13 +251,20 @@ public:
   // It doesn't make sense to create another ZoneAllocator.
   template<typename T>
   inline T* newPartT() noexcept {
-    return new(cc->_codeZone.alloc(sizeof(T), 8)) T(this);
+    void* p = cc->_codeZone.alloc(sizeof(T), 8);
+    if (BL_UNLIKELY(!p))
+      return nullptr;
+    return new(p) T(this);
   }
 
   template<typename T, typename... Args>
   inline T* newPartT(Args&&... args) noexcept {
-    return new(cc->_codeZone.alloc(sizeof(T), 8)) T(this, std::forward<Args>(args)...);
+    void* p = cc->_codeZone.alloc(sizeof(T), 8);
+    if (BL_UNLIKELY(!p))
+      return nullptr;
+    return new(p) T(this, std::forward<Args>(args)...);
   }
+
   FillPart* newFillPart(uint32_t fillType, FetchPart* dstPart, CompOpPart* compOpPart) noexcept;
   FetchPart* newFetchPart(uint32_t fetchType, uint32_t fetchPayload, uint32_t format) noexcept;
   CompOpPart* newCompOpPart(uint32_t compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept;
@@ -323,23 +330,23 @@ public:
   void vemit_vv_vv(uint32_t packedId, const OpArray& dst_, const Operand_& src_) noexcept;
   void vemit_vv_vv(uint32_t packedId, const OpArray& dst_, const OpArray& src_) noexcept;
 
-  void vemit_vvi_vi(uint32_t packedId, const Operand_& dst_, const Operand_& src_, int imm) noexcept;
-  void vemit_vvi_vi(uint32_t packedId, const OpArray& dst_, const Operand_& src_, int imm) noexcept;
-  void vemit_vvi_vi(uint32_t packedId, const OpArray& dst_, const OpArray& src_, int imm) noexcept;
+  void vemit_vvi_vi(uint32_t packedId, const Operand_& dst_, const Operand_& src_, uint32_t imm) noexcept;
+  void vemit_vvi_vi(uint32_t packedId, const OpArray& dst_, const Operand_& src_, uint32_t imm) noexcept;
+  void vemit_vvi_vi(uint32_t packedId, const OpArray& dst_, const OpArray& src_, uint32_t imm) noexcept;
 
-  void vemit_vvi_vvi(uint32_t packedId, const Operand_& dst_, const Operand_& src_, int imm) noexcept;
-  void vemit_vvi_vvi(uint32_t packedId, const OpArray& dst_, const Operand_& src_, int imm) noexcept;
-  void vemit_vvi_vvi(uint32_t packedId, const OpArray& dst_, const OpArray& src_, int imm) noexcept;
+  void vemit_vvi_vvi(uint32_t packedId, const Operand_& dst_, const Operand_& src_, uint32_t imm) noexcept;
+  void vemit_vvi_vvi(uint32_t packedId, const OpArray& dst_, const Operand_& src_, uint32_t imm) noexcept;
+  void vemit_vvi_vvi(uint32_t packedId, const OpArray& dst_, const OpArray& src_, uint32_t imm) noexcept;
 
   void vemit_vvv_vv(uint32_t packedId, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_) noexcept;
   void vemit_vvv_vv(uint32_t packedId, const OpArray& dst_, const Operand_& src1_, const OpArray& src2_) noexcept;
   void vemit_vvv_vv(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const Operand_& src2_) noexcept;
   void vemit_vvv_vv(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_) noexcept;
 
-  void vemit_vvvi_vvi(uint32_t packedId, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_, int imm) noexcept;
-  void vemit_vvvi_vvi(uint32_t packedId, const OpArray& dst_, const Operand_& src1_, const OpArray& src2_, int imm) noexcept;
-  void vemit_vvvi_vvi(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const Operand_& src2_, int imm) noexcept;
-  void vemit_vvvi_vvi(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_, int imm) noexcept;
+  void vemit_vvvi_vvi(uint32_t packedId, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_, uint32_t imm) noexcept;
+  void vemit_vvvi_vvi(uint32_t packedId, const OpArray& dst_, const Operand_& src1_, const OpArray& src2_, uint32_t imm) noexcept;
+  void vemit_vvvi_vvi(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const Operand_& src2_, uint32_t imm) noexcept;
+  void vemit_vvvi_vvi(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_, uint32_t imm) noexcept;
 
   void vemit_vvvv_vvv(uint32_t packedId, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_, const Operand_& src3_) noexcept;
   void vemit_vvvv_vvv(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_, const Operand_& src3_) noexcept;
@@ -348,79 +355,79 @@ public:
   #define I_EMIT_2(NAME, INST_ID)                                             \
   template<typename Op1, typename Op2>                                        \
   inline void NAME(const Op1& o1,                                             \
-                           const Op2& o2) noexcept {                          \
+                   const Op2& o2) noexcept {                                  \
     iemit2(x86::Inst::kId##INST_ID, o1, o2);                                  \
   }
 
   #define I_EMIT_3(NAME, INST_ID)                                             \
   template<typename Op1, typename Op2, typename Op3>                          \
   inline void NAME(const Op1& o1,                                             \
-                           const Op2& o2,                                     \
-                           const Op3& o3) noexcept {                          \
+                   const Op2& o2,                                             \
+                   const Op3& o3) noexcept {                                  \
     iemit3(x86::Inst::kId##INST_ID, o1, o2, o3);                              \
   }
 
   #define V_EMIT_VV_VV(NAME, PACKED_ID)                                       \
   template<typename DstT, typename SrcT>                                      \
   inline void NAME(const DstT& dst,                                           \
-                           const SrcT& src) noexcept {                        \
+                   const SrcT& src) noexcept {                                \
     vemit_vv_vv(PACKED_ID, dst, src);                                         \
   }
 
   #define V_EMIT_VVI_VI(NAME, PACKED_ID)                                      \
   template<typename DstT, typename SrcT>                                      \
   inline void NAME(const DstT& dst,                                           \
-                           const SrcT& src,                                   \
-                           int imm) noexcept {                                \
+                   const SrcT& src,                                           \
+                   uint32_t imm) noexcept {                                   \
     vemit_vvi_vi(PACKED_ID, dst, src, imm);                                   \
   }
 
   #define V_EMIT_VVI_VVI(NAME, PACKED_ID)                                     \
   template<typename DstT, typename SrcT>                                      \
   inline void NAME(const DstT& dst,                                           \
-                           const SrcT& src,                                   \
-                           int imm) noexcept {                                \
+                   const SrcT& src,                                           \
+                   uint32_t imm) noexcept {                                   \
     vemit_vvi_vvi(PACKED_ID, dst, src, imm);                                  \
   }
 
   #define V_EMIT_VVi_VVi(NAME, PACKED_ID, IMM_VALUE)                          \
   template<typename DstT, typename SrcT>                                      \
   inline void NAME(const DstT& dst,                                           \
-                           const SrcT& src) noexcept {                        \
+                   const SrcT& src) noexcept {                                \
     vemit_vvi_vvi(PACKED_ID, dst, src, IMM_VALUE);                            \
   }
 
   #define V_EMIT_VVV_VV(NAME, PACKED_ID)                                      \
   template<typename DstT, typename Src1T, typename Src2T>                     \
   inline void NAME(const DstT& dst,                                           \
-                           const Src1T& src1,                                 \
-                           const Src2T& src2) noexcept {                      \
+                   const Src1T& src1,                                         \
+                   const Src2T& src2) noexcept {                              \
     vemit_vvv_vv(PACKED_ID, dst, src1, src2);                                 \
   }
 
   #define V_EMIT_VVVI_VVI(NAME, PACKED_ID)                                    \
   template<typename DstT, typename Src1T, typename Src2T>                     \
   inline void NAME(const DstT& dst,                                           \
-                           const Src1T& src1,                                 \
-                           const Src2T& src2,                                 \
-                           int imm) noexcept {                                \
+                   const Src1T& src1,                                         \
+                   const Src2T& src2,                                         \
+                   uint32_t imm) noexcept {                                   \
     vemit_vvvi_vvi(PACKED_ID, dst, src1, src2, imm);                          \
   }
 
   #define V_EMIT_VVVi_VVi(NAME, PACKED_ID, IMM_VALUE)                         \
   template<typename DstT, typename Src1T, typename Src2T>                     \
   inline void NAME(const DstT& dst,                                           \
-                           const Src1T& src1,                                 \
-                           const Src2T& src2) noexcept {                      \
+                   const Src1T& src1,                                         \
+                   const Src2T& src2) noexcept {                              \
     vemit_vvvi_vvi(PACKED_ID, dst, src1, src2, IMM_VALUE);                    \
   }
 
   #define V_EMIT_VVVV_VVV(NAME, PACKED_ID)                                    \
   template<typename DstT, typename Src1T, typename Src2T, typename Src3T>     \
   inline void NAME(const DstT& dst,                                           \
-                           const Src1T& src1,                                 \
-                           const Src2T& src2,                                 \
-                           const Src3T& src3) noexcept {                      \
+                   const Src1T& src1,                                         \
+                   const Src2T& src2,                                         \
+                   const Src3T& src3) noexcept {                              \
     vemit_vvvv_vvv(PACKED_ID, dst, src1, src2, src3);                         \
   }
 
@@ -557,8 +564,8 @@ public:
       case 2:
       case 4:
       case 8: {
-        int shift = b == 2 ? 1 :
-                    b == 4 ? 2 : 3;
+        uint32_t shift = b == 2 ? 1 :
+                         b == 4 ? 2 : 3;
         cc->lea(dst, x86::ptr(dst, a, shift));
         return;
       }
@@ -748,9 +755,9 @@ public:
 
   inline void qzeropi(const Operand_& dst) noexcept { iemit2(x86::Inst::kIdPxor, dst, dst); }
 
-  inline void qswapi32(const Operand_& dst, const Operand_& src) noexcept { qswizi16(dst, src, x86::Predicate::shuf(1, 0, 3, 2)); }
-  inline void qdupli32(const Operand_& dst, const Operand_& src) noexcept { qswizi16(dst, src, x86::Predicate::shuf(1, 0, 1, 0)); }
-  inline void qduphi32(const Operand_& dst, const Operand_& src) noexcept { qswizi16(dst, src, x86::Predicate::shuf(3, 2, 3, 2)); }
+  inline void qswapi32(const Operand_& dst, const Operand_& src) noexcept { qswizi16(dst, src, int(x86::Predicate::shuf(1, 0, 3, 2))); }
+  inline void qdupli32(const Operand_& dst, const Operand_& src) noexcept { qswizi16(dst, src, int(x86::Predicate::shuf(1, 0, 1, 0))); }
+  inline void qduphi32(const Operand_& dst, const Operand_& src) noexcept { qswizi16(dst, src, int(x86::Predicate::shuf(3, 2, 3, 2))); }
 
   // Multiplies 64-bit `a` (QWORD) with 32-bit `b` (low DWORD).
   void qmulu64u32(const x86::Mm& d, const x86::Mm& a, const x86::Mm& b) noexcept;
@@ -1375,10 +1382,10 @@ public:
   }
 
   template<typename DstT, typename SrcT>
-  inline void vswizps(const DstT& dst, const SrcT& src, int imm) noexcept { vemit_vvi_vi(PackedInst::packIntrin(kIntrin2iVswizps), dst, src, imm); }
+  inline void vswizps(const DstT& dst, const SrcT& src, uint32_t imm) noexcept { vemit_vvi_vi(PackedInst::packIntrin(kIntrin2iVswizps), dst, src, imm); }
 
   template<typename DstT, typename SrcT>
-  inline void vswizpd(const DstT& dst, const SrcT& src, int imm) noexcept { vemit_vvi_vi(PackedInst::packIntrin(kIntrin2iVswizpd), dst, src, imm); }
+  inline void vswizpd(const DstT& dst, const SrcT& src, uint32_t imm) noexcept { vemit_vvi_vi(PackedInst::packIntrin(kIntrin2iVswizpd), dst, src, imm); }
 
   template<typename DstT, typename SrcT>
   inline void vswapps(const DstT& dst, const SrcT& src) noexcept { vswizps(dst, src, x86::Predicate::shuf(2, 3, 0, 1)); }
@@ -1395,7 +1402,7 @@ public:
 
   void xInlineMemcpyXmm(
     const x86::Mem& dPtr, bool dstAligned,
-    const x86::Mem& sPtr, bool srcAligned, int numBytes) noexcept;
+    const x86::Mem& sPtr, bool srcAligned, uint32_t numBytes) noexcept;
 
   // --------------------------------------------------------------------------
   // [Fetch Utilities]
@@ -1469,7 +1476,7 @@ public:
   inline void vExpandAlphaHi16(const Dst& d, const Src& s) noexcept { vswizhi16(d, s, x86::Predicate::shuf(3, 3, 3, 3)); }
 
   template<typename Dst, typename Src>
-  inline void vExpandAlpha16(const Dst& d, const Src& s, int useHiPart = 1) noexcept {
+  inline void vExpandAlpha16(const Dst& d, const Src& s, uint32_t useHiPart = 1) noexcept {
     vExpandAlphaLo16(d, s);
     if (useHiPart)
       vExpandAlphaHi16(d, d);

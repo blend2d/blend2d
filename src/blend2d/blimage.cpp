@@ -71,7 +71,7 @@ static BLInternalImageImpl* blImageImplNewInternal(int w, int h, uint32_t format
   BL_ASSERT(format < BL_FORMAT_COUNT);
 
   uint32_t depth = blFormatInfo[format].depth;
-  size_t stride = blImageStrideForWidth(w, depth);
+  size_t stride = blImageStrideForWidth(unsigned(w), depth);
 
   BL_ASSERT(stride != 0);
 
@@ -111,7 +111,10 @@ static BLInternalImageImpl* blImageImplNewInternal(int w, int h, uint32_t format
   return impl;
 }
 
-static void BL_CDECL blImageImplDestroyExternalDummyFunc(void* impl, void* destroyData) noexcept {}
+static void BL_CDECL blImageImplDestroyExternalDummyFunc(void* impl, void* destroyData) noexcept {
+  BL_UNUSED(impl);
+  BL_UNUSED(destroyData);
+}
 
 static BLInternalImageImpl* blImageImplNewExternal(int w, int h, uint32_t format, void* pixelData, intptr_t stride, BLDestroyImplFunc destroyFunc, void* destroyData) noexcept {
   BL_ASSERT(w > 0 && h > 0);
@@ -164,7 +167,7 @@ BLResult blImageImplDelete(BLImageImpl* impl_) noexcept {
   else {
     implSize = sizeof(BLInternalImageImpl) +
                BL_INTERNAL_IMAGE_DATA_ALIGNMENT +
-               impl->size.h * size_t(blAbs(impl->stride));
+               unsigned(impl->size.h) * size_t(blAbs(impl->stride));
   }
 
   if (implTraits & BL_IMPL_TRAIT_FOREIGN)
@@ -553,10 +556,14 @@ BLArrayCore* blImageCodecBuiltInCodecs(void) noexcept {
 // [BLImageCodec - Virtual Functions]
 // ============================================================================
 
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
+
 static BLResult BL_CDECL blImageCodecImplDestroy(BLImageCodecImpl* impl) noexcept { return BL_SUCCESS; }
 static uint32_t BL_CDECL blImageCodecImplInspectData(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept { return 0; }
 static BLResult BL_CDECL blImageCodecImplCreateDecoder(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept { return BL_ERROR_IMAGE_DECODER_NOT_PROVIDED; }
 static BLResult BL_CDECL blImageCodecImplCreateEncoder(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept { return BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED; }
+
+BL_DIAGNOSTIC_POP
 
 // ============================================================================
 // [BLImageDecoder - Init / Reset]
@@ -618,10 +625,14 @@ BLResult blImageDecoderReadFrame(BLImageDecoderCore* self, BLImageCore* imageOut
 // [BLImageDecoder - Virtual Functions]
 // ============================================================================
 
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
+
 static BLResult BL_CDECL blImageDecoderImplDestroy(BLImageDecoderImpl* impl) noexcept { return BL_SUCCESS; }
 static uint32_t BL_CDECL blImageDecoderImplRestart(BLImageDecoderImpl* impl) noexcept { return BL_ERROR_INVALID_STATE; }
 static BLResult BL_CDECL blImageDecoderImplReadInfo(BLImageDecoderImpl* impl, BLImageInfo* infoOut, const uint8_t* data, size_t size) noexcept { return BL_ERROR_INVALID_STATE; }
 static BLResult BL_CDECL blImageDecoderImplReadFrame(BLImageDecoderImpl* impl, BLImageCore* imageOut, const uint8_t* data, size_t size) noexcept { return BL_ERROR_INVALID_STATE; }
+
+BL_DIAGNOSTIC_POP
 
 // ============================================================================
 // [BLImageEncoder - Init / Reset]
@@ -678,9 +689,13 @@ BLResult blImageEncoderWriteFrame(BLImageEncoderCore* self, BLArrayCore* dst, co
 // [BLImageEncoder - Virtual Functions]
 // ============================================================================
 
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
+
 static BLResult BL_CDECL blImageEncoderImplDestroy(BLImageEncoderImpl* impl) noexcept { return BL_SUCCESS; }
 static uint32_t BL_CDECL blImageEncoderImplRestart(BLImageEncoderImpl* impl) noexcept { return BL_ERROR_INVALID_STATE; }
 static BLResult BL_CDECL blImageEncoderImplWriteFrame(BLImageEncoderImpl* impl, BLArrayCore* dst, const BLImageCore* image) noexcept { return BL_ERROR_INVALID_STATE; }
+
+BL_DIAGNOSTIC_POP
 
 // ============================================================================
 // [BLImage - Runtime Init]

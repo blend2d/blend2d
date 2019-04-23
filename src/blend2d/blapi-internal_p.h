@@ -34,9 +34,9 @@
 // We are just fine with <math.h>, however, there are some useful overloads in
 // C++'s <cmath> that are nicer to use than those in <math.h>. Mostly low level
 // functionality like blIsFinite() relies on <cmath> instead of <math.h>.
+#include <new>
 #include <cmath>
 #include <limits>
-#include <new>
 
 // Platform Specific Headers
 // -------------------------
@@ -84,41 +84,6 @@
 #else
   #define BL_PRAGMA_FAST_MATH_PUSH
   #define BL_PRAGMA_FAST_MATH_POP
-#endif
-
-// Diagnostic warnings can be turned on/off by using pragmas, however, this is
-// a compiler specific stuff we have to maintain for each compiler. Ideally we
-// should have a clean code that would compile without any warnings with all of
-// them enabled by default, but since there is a lot of nitpicks we just disable
-// some locally when needed (like unused parameter in null-impl functions, etc).
-#if defined(__INTEL_COMPILER)
-  // Not regularly tested.
-#elif defined(__clang__)
-  #define BL_DIAGNOSTIC_PUSH(...)            _Pragma("clang diagnostic push") __VA_ARGS__
-  #define BL_DIAGNOSTIC_POP                  _Pragma("clang diagnostic pop")
-  #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF  _Pragma("clang diagnostic ignored \"-Winvalid-offsetof\"")
-  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS  _Pragma("clang diagnostic ignored \"-Wunused-function\"")
-  #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")
-#elif defined(__GNUC__)
-  #define BL_DIAGNOSTIC_PUSH(...)            _Pragma("GCC diagnostic push") __VA_ARGS__
-  #define BL_DIAGNOSTIC_POP                  _Pragma("GCC diagnostic pop")
-  #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF  _Pragma("GCC diagnostic ignored \"-Winvalid-offsetof\"")
-  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS  _Pragma("GCC diagnostic ignored \"-Wunused-function\"")
-  #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
-#elif defined(_MSC_VER)
-  #define BL_DIAGNOSTIC_PUSH(...)            __pragma(warning(push)) __VA_ARGS__
-  #define BL_DIAGNOSTIC_POP                  __pragma(warning(pop))
-  #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF
-  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS
-  #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS __pragma(warning(disable: 4100))
-#endif
-
-#if !defined(BL_DIAGNOSTIC_PUSH)
-  #define BL_DIAGNOSTIC_PUSH(...)
-  #define BL_DIAGNOSTIC_POP
-  #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF
-  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS
-  #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS
 #endif
 
 #if defined(__clang__) || defined(__has_attribute__)
@@ -204,6 +169,14 @@
 #else
   #define BL_NOT_REACHED() BL_ASSUME(0)
 #endif
+
+//! Decorates a base class that has virtual functions.
+#define BL_OVERRIDE_NEW_DELETE(TYPE)                                          \
+  BL_INLINE void* operator new(size_t n) noexcept { return malloc(n); }       \
+  BL_INLINE void  operator delete(void* p) noexcept { if (p) free(p); }       \
+                                                                              \
+  BL_INLINE void* operator new(size_t, void* p) noexcept { return p; }        \
+  BL_INLINE void  operator delete(void*, void*) noexcept {}
 
 // ============================================================================
 // [Forward Declarations]
@@ -312,7 +285,7 @@ static BL_INLINE void blCallCtor(T& t) noexcept {
   BL_ASSUME(&t != nullptr);
   #endif
 
-  new (&t) T();
+  new(&t) T();
 }
 
 template<typename T>

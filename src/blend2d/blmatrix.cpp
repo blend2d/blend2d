@@ -330,8 +330,8 @@ uint32_t blMatrix2DGetType(const BLMatrix2D* self) noexcept {
   // out how to do this and this is a much better solution compared to scalar
   // versions compilers produce.
   using namespace SIMD;
-  uint32_t valueMsk = (_mm_movemask_pd(vcmpnepd(vsetd128(m00, m01), vzerod128())) << 2) |
-                      (_mm_movemask_pd(vcmpnepd(vsetd128(m10, m11), vzerod128())) << 0) ;
+  uint32_t valueMsk = uint32_t(_mm_movemask_pd(vcmpnepd(vsetd128(m00, m01), vzerod128())) << 2) |
+                      uint32_t(_mm_movemask_pd(vcmpnepd(vsetd128(m10, m11), vzerod128())) << 0) ;
   #else
   uint32_t valueMsk = (uint32_t(m00 != 0.0) << 3) | (uint32_t(m01 != 0.0) << 2) |
                       (uint32_t(m10 != 0.0) << 1) | (uint32_t(m11 != 0.0) << 0) ;

@@ -77,7 +77,7 @@ BLResult blVariantImplDelete(BLVariantImpl* impl) noexcept {
         return static_cast<const BLVariantVirt*>(impl->virt)->destroy(impl);
 
       // FATAL ERROR: Either a new impl-type was introduced or memory corrupted.
-      blRuntimeFailure("blVariantImplDelete(): Cannot delete Impl of impl-type #<%u>", implType);
+      blRuntimeFailure("[Blend2D] blVariantImplDelete(): Cannot delete Impl of impl-type #<%u>", implType);
     }
   }
 }

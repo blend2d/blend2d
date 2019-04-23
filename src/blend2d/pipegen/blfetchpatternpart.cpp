@@ -55,6 +55,8 @@ FetchSimplePatternPart::FetchSimplePatternPart(PipeCompiler* pc, uint32_t fetchT
 
     case BL_PIPE_FETCH_TYPE_PATTERN_AA_PAD:
       _maxPixels = 8;
+      BL_FALLTHROUGH
+
     case BL_PIPE_FETCH_TYPE_PATTERN_AA_REPEAT:
     case BL_PIPE_FETCH_TYPE_PATTERN_AA_ROR:
       _extendX = aaExtendTable[fetchType - BL_PIPE_FETCH_TYPE_PATTERN_AA_PAD];
@@ -707,7 +709,7 @@ void FetchSimplePatternPart::prefetchAccX() noexcept {
   BL_ASSERT(hasFracX());
 
   x86::Gp idx;
-  int shift = 0;
+  uint32_t shift = 0;
 
   // Horizontal Pad
   // --------------
@@ -771,7 +773,7 @@ void FetchSimplePatternPart::fetch1(PixelARGB& p, uint32_t flags) noexcept {
     // -------------------
 
     x86::Gp idx;
-    int shift = 0;
+    uint32_t shift = 0;
 
     if (extendX() == BL_PIPE_EXTEND_MODE_PAD) {
       idx = f->xPadded;
@@ -948,7 +950,7 @@ void FetchSimplePatternPart::fetch4(PixelARGB& p, uint32_t flags) noexcept {
     if (extendX() == BL_PIPE_EXTEND_MODE_PAD) {
       if (isPatternA()) {
         FetchContext4X fCtx(pc, &p, flags);
-        int shift = 2;
+        uint32_t shift = 2;
 
         x86::Gp idx = f->xPadded;
         x86::Mem mem = x86::ptr(f->srcp1, idx, shift);
@@ -985,7 +987,7 @@ void FetchSimplePatternPart::fetch4(PixelARGB& p, uint32_t flags) noexcept {
         FetchContext4X fCtx1(pc, &pix1, PixelARGB::kUC);
 
         x86::Gp idx = f->xPadded;
-        int shift = 2;
+        uint32_t shift = 2;
 
         x86::Mem m0 = x86::ptr(f->srcp0, idx, shift);
         x86::Mem m1 = x86::ptr(f->srcp1, idx, shift);
@@ -1028,7 +1030,7 @@ void FetchSimplePatternPart::fetch4(PixelARGB& p, uint32_t flags) noexcept {
 
       if (isPatternFx()) {
         x86::Gp idx = f->xPadded;
-        int shift = 2;
+        uint32_t shift = 2;
 
         x86::Mem m = x86::ptr(f->srcp1, idx, shift);
 
@@ -1117,7 +1119,7 @@ void FetchSimplePatternPart::fetch4(PixelARGB& p, uint32_t flags) noexcept {
 
       if (isPatternFxFy()) {
         x86::Gp idx = f->xPadded;
-        int shift = 2;
+        uint32_t shift = 2;
 
         x86::Mem mA = x86::ptr(f->srcp0, idx, shift);
         x86::Mem mB = x86::ptr(f->srcp1, idx, shift);
@@ -1308,7 +1310,7 @@ void FetchSimplePatternPart::fetch4(PixelARGB& p, uint32_t flags) noexcept {
 
       if (isPatternA()) {
         FetchContext4X fCtx(pc, &p, flags);
-        int shift = 2;
+        uint32_t shift = 2;
 
         pc->vsrai32(xIdx4, f->xVec4, 31);
         pc->vxor(xIdx4, xIdx4, f->xVec4);
@@ -1329,8 +1331,7 @@ void FetchSimplePatternPart::fetch4(PixelARGB& p, uint32_t flags) noexcept {
 
         FetchContext4X fCtx0(pc, &pix0, PixelARGB::kUC);
         FetchContext4X fCtx1(pc, &pix1, PixelARGB::kUC);
-
-        int shift = 2;
+        uint32_t shift = 2;
 
         pc->vsrai32(xIdx4, f->xVec4, 31);
         pc->vxor(xIdx4, xIdx4, f->xVec4);
@@ -1356,10 +1357,10 @@ void FetchSimplePatternPart::fetch4(PixelARGB& p, uint32_t flags) noexcept {
 
       if (isPatternFx()) {
         IndexExtractorU32 iExt(pc);
+        uint32_t shift = 2;
 
         x86::Gp idx0 = cc->newIntPtr("@idx0");
         x86::Gp idx1 = cc->newIntPtr("@idx1");
-        int shift = 2;
 
         x86::Xmm pixL = f->pixL;
         x86::Xmm pixT = cc->newXmm("@pixT");
@@ -1443,7 +1444,7 @@ void FetchSimplePatternPart::fetch4(PixelARGB& p, uint32_t flags) noexcept {
 
         x86::Gp idx0 = cc->newIntPtr("@idx0");
         x86::Gp idx1 = cc->newIntPtr("@idx1");
-        int shift = 2;
+        uint32_t shift = 2;
 
         x86::Xmm pixL = f->pixL;
         x86::Xmm pixT = cc->newXmm("@pixT");
@@ -1769,7 +1770,7 @@ void FetchAffinePatternPart::prefetch1() noexcept {
 }
 
 void FetchAffinePatternPart::fetch1(PixelARGB& p, uint32_t flags) noexcept {
-  int shift = 2;
+  uint32_t shift = 2;
 
   switch (fetchType()) {
     case BL_PIPE_FETCH_TYPE_PATTERN_AFFINE_NN_ANY: {
@@ -1921,7 +1922,7 @@ void FetchAffinePatternPart::postfetchN() noexcept {
 }
 
 void FetchAffinePatternPart::fetch4(PixelARGB& p, uint32_t flags) noexcept {
-  int shift = 2;
+  uint32_t shift = 2;
 
   switch (fetchType()) {
     case BL_PIPE_FETCH_TYPE_PATTERN_AFFINE_NN_ANY: {

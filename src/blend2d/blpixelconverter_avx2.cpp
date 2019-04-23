@@ -30,7 +30,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_xrgb32_avx2(
   dstStride -= (w * 4) + gap;
   srcStride -= (w * 4);
 
-  I256 fillMask = vseti256i32(d.fillMask);
+  I256 fillMask = vseti256u32(d.fillMask);
   I256 predicate = vdupli128(vloadi128u(d.simdData));
 
   for (uint32_t y = h; y != 0; y--) {
@@ -117,8 +117,8 @@ static BLResult BL_CDECL bl_convert_prgb32_from_argb32_avx2(
   dstStride -= (w * 4) + gap;
   srcStride -= (w * 4);
 
-  I256 a255 = vseti256i64(int64_t(0x00FF000000000000));
-  I256 fillMask = vseti256i32(d.fillMask);
+  I256 a255 = vseti256u64(0x00FF000000000000u);
+  I256 fillMask = vseti256u32(d.fillMask);
   I256 predicate = vdupli128(vloadi128u(d.simdData));
 
   for (uint32_t y = h; y != 0; y--) {

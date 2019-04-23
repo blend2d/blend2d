@@ -310,7 +310,7 @@ static BLResult BL_CDECL blImageScaleWeights(BLImageScaleContext::Data* d, uint3
   int32_t isUnbound = 0;
 
   BLMemBufferTmp<512> wMem;
-  double* wData = static_cast<double*>(wMem.alloc(kernelSize * sizeof(double)));
+  double* wData = static_cast<double*>(wMem.alloc(unsigned(kernelSize) * sizeof(double)));
 
   if (BL_UNLIKELY(!wData))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
@@ -330,7 +330,7 @@ static BLResult BL_CDECL blImageScaleWeights(BLImageScaleContext::Data* d, uint3
     }
 
     // User function can fail.
-    BL_PROPAGATE(userFunc(wData, wData, kernelSize, userData));
+    BL_PROPAGATE(userFunc(wData, wData, unsigned(kernelSize), userData));
 
     // Remove padded pixels from left and right.
     wIndex = 0;
@@ -398,8 +398,8 @@ static BLResult BL_CDECL blImageScaleWeights(BLImageScaleContext::Data* d, uint3
 
       if (wCount) {
         BL_ASSERT(left >= 0);
-        recordList[i].pos = left;
-        recordList[i].count = wCount;
+        recordList[i].pos = uint32_t(left);
+        recordList[i].count = uint32_t(wCount);
       }
     }
 
@@ -415,40 +415,40 @@ static BLResult BL_CDECL blImageScaleWeights(BLImageScaleContext::Data* d, uint3
 // ============================================================================
 
 static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
-  int dw = d->dstSize[0];
-  int sh = d->srcSize[1];
-  int kernelSize = d->kernelSize[0];
+  uint32_t dw = uint32_t(d->dstSize[0]);
+  uint32_t sh = uint32_t(d->srcSize[1]);
+  uint32_t kernelSize = uint32_t(d->kernelSize[0]);
 
   if (!d->isUnbound[BLImageScaleContext::kDirHorz]) {
-    for (int y = 0; y < sh; y++) {
+    for (uint32_t y = 0; y < sh; y++) {
       const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirHorz];
       const int32_t* weightList = d->weightList[BLImageScaleContext::kDirHorz];
 
       uint8_t* dp = dstLine;
 
-      for (int x = 0; x < dw; x++) {
+      for (uint32_t x = 0; x < dw; x++) {
         const uint8_t* sp = srcLine + recordList->pos * 4;
         const int32_t* wp = weightList;
 
-        uint32_t cr_cb = 0x00800080;
-        uint32_t ca_cg = 0x00800080;
+        uint32_t cr_cb = 0x00800080u;
+        uint32_t ca_cg = 0x00800080u;
 
-        for (int i = recordList->count; i; i--) {
-          uint32_t p0 = reinterpret_cast<const uint32_t*>(sp)[0];
-          uint32_t w0 = wp[0];
+        for (uint32_t i = recordList->count; i; i--) {
+          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t w0 = unsigned(wp[0]);
 
-          ca_cg += ((p0 >> 8) & 0x00FF00FF) * w0;
-          cr_cb += ((p0     ) & 0x00FF00FF) * w0;
+          ca_cg += ((p0 >> 8) & 0x00FF00FFu) * w0;
+          cr_cb += ((p0     ) & 0x00FF00FFu) * w0;
 
           sp += 4;
           wp += 1;
         }
-        reinterpret_cast<uint32_t*>(dp)[0] = (ca_cg & 0xFF00FF00) + ((cr_cb & 0xFF00FF00) >> 8);
+
+        blMemWriteU32a(dp, (ca_cg & 0xFF00FF00u) + ((cr_cb & 0xFF00FF00u) >> 8));
+        dp += 4;
 
         recordList += 1;
         weightList += kernelSize;
-
-        dp += 4;
       }
 
       dstLine += dstStride;
@@ -456,13 +456,13 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
     }
   }
   else {
-    for (int y = 0; y < sh; y++) {
+    for (uint32_t y = 0; y < sh; y++) {
       const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirHorz];
       const int32_t* weightList = d->weightList[BLImageScaleContext::kDirHorz];
 
       uint8_t* dp = dstLine;
 
-      for (int x = 0; x < dw; x++) {
+      for (uint32_t x = 0; x < dw; x++) {
         const uint8_t* sp = srcLine + recordList->pos * 4;
         const int32_t* wp = weightList;
 
@@ -471,14 +471,14 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
         int32_t cg = 0x80;
         int32_t cb = 0x80;
 
-        for (int i = recordList->count; i; i--) {
-          uint32_t p0 = reinterpret_cast<const uint32_t*>(sp)[0];
+        for (uint32_t i = recordList->count; i; i--) {
+          uint32_t p0 = blMemReadU32a(sp);
           int32_t w0 = wp[0];
 
-          ca += int32_t((p0 >> 24)       ) * w0;
-          cr += int32_t((p0 >> 16) & 0xFF) * w0;
-          cg += int32_t((p0 >>  8) & 0xFF) * w0;
-          cb += int32_t((p0      ) & 0xFF) * w0;
+          ca += int32_t((p0 >> 24)        ) * w0;
+          cr += int32_t((p0 >> 16) & 0xFFu) * w0;
+          cg += int32_t((p0 >>  8) & 0xFFu) * w0;
+          cb += int32_t((p0      ) & 0xFFu) * w0;
 
           sp += 4;
           wp += 1;
@@ -488,12 +488,12 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
         cr = blClamp<int32_t>(cr >> 8, 0, ca);
         cg = blClamp<int32_t>(cg >> 8, 0, ca);
         cb = blClamp<int32_t>(cb >> 8, 0, ca);
-        reinterpret_cast<uint32_t*>(dp)[0] = blRgba32Pack(cr, cg, cb, ca);
+
+        blMemWriteU32a(dp, blRgba32Pack(uint32_t(cr), uint32_t(cg), uint32_t(cb), uint32_t(ca)));
+        dp += 4;
 
         recordList += 1;
         weightList += kernelSize;
-
-        dp += 4;
       }
 
       dstLine += dstStride;
@@ -503,41 +503,40 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
 }
 
 static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
-  int dw = d->dstSize[0];
-  int sh = d->srcSize[1];
-  int kernelSize = d->kernelSize[0];
+  uint32_t dw = uint32_t(d->dstSize[0]);
+  uint32_t sh = uint32_t(d->srcSize[1]);
+  uint32_t kernelSize = uint32_t(d->kernelSize[0]);
 
   if (!d->isUnbound[BLImageScaleContext::kDirHorz]) {
-    for (int y = 0; y < sh; y++) {
+    for (uint32_t y = 0; y < sh; y++) {
       const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirHorz];
       const int32_t* weightList = d->weightList[BLImageScaleContext::kDirHorz];
 
       uint8_t* dp = dstLine;
 
-      for (int x = 0; x < dw; x++) {
+      for (uint32_t x = 0; x < dw; x++) {
         const uint8_t* sp = srcLine + recordList->pos * 4;
         const int32_t* wp = weightList;
 
-        uint32_t cx_cg = 0x00008000;
-        uint32_t cr_cb = 0x00800080;
+        uint32_t cx_cg = 0x00008000u;
+        uint32_t cr_cb = 0x00800080u;
 
-        for (int i = recordList->count; i; i--) {
-          uint32_t p0 = reinterpret_cast<const uint32_t*>(sp)[0];
-          uint32_t w0 = wp[0];
+        for (uint32_t i = recordList->count; i; i--) {
+          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t w0 = unsigned(wp[0]);
 
-          cx_cg += (p0 & 0x0000FF00) * w0;
-          cr_cb += (p0 & 0x00FF00FF) * w0;
+          cx_cg += (p0 & 0x0000FF00u) * w0;
+          cr_cb += (p0 & 0x00FF00FFu) * w0;
 
           sp += 4;
           wp += 1;
         }
 
-        reinterpret_cast<uint32_t*>(dp)[0] = 0xFF000000 + (((cx_cg & 0x00FF0000) | (cr_cb & 0xFF00FF00)) >> 8);
+        blMemWriteU32a(dp, 0xFF000000u + (((cx_cg & 0x00FF0000u) | (cr_cb & 0xFF00FF00u)) >> 8));
+        dp += 4;
 
         recordList += 1;
         weightList += kernelSize;
-
-        dp += 4;
       }
 
       dstLine += dstStride;
@@ -545,13 +544,13 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
     }
   }
   else {
-    for (int y = 0; y < sh; y++) {
+    for (uint32_t y = 0; y < sh; y++) {
       const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirHorz];
       const int32_t* weightList = d->weightList[BLImageScaleContext::kDirHorz];
 
       uint8_t* dp = dstLine;
 
-      for (int x = 0; x < dw; x++) {
+      for (uint32_t x = 0; x < dw; x++) {
         const uint8_t* sp = srcLine + recordList->pos * 4;
         const int32_t* wp = weightList;
 
@@ -559,8 +558,8 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
         int32_t cg = 0x80;
         int32_t cb = 0x80;
 
-        for (int i = recordList->count; i; i--) {
-          uint32_t p0 = reinterpret_cast<const uint32_t*>(sp)[0];
+        for (uint32_t i = recordList->count; i; i--) {
+          uint32_t p0 = blMemReadU32a(sp);
           int32_t w0 = wp[0];
 
           cr += int32_t((p0 >> 16) & 0xFF) * w0;
@@ -574,12 +573,12 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
         cr = blClamp<int32_t>(cr >> 8, 0, 255);
         cg = blClamp<int32_t>(cg >> 8, 0, 255);
         cb = blClamp<int32_t>(cb >> 8, 0, 255);
-        reinterpret_cast<uint32_t*>(dp)[0] = blRgba32Pack(cr, cg, cb, 0xFF);
+
+        blMemWriteU32a(dp, blRgba32Pack(uint32_t(cr), uint32_t(cg), uint32_t(cb), 0xFFu));
+        dp += 4;
 
         recordList += 1;
         weightList += kernelSize;
-
-        dp += 4;
       }
 
       dstLine += dstStride;
@@ -589,26 +588,26 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
 }
 
 static void BL_CDECL blImageScaleHorzA8(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
-  int dw = d->dstSize[0];
-  int sh = d->srcSize[1];
-  int kernelSize = d->kernelSize[0];
+  uint32_t dw = uint32_t(d->dstSize[0]);
+  uint32_t sh = uint32_t(d->srcSize[1]);
+  uint32_t kernelSize = uint32_t(d->kernelSize[0]);
 
   if (!d->isUnbound[BLImageScaleContext::kDirHorz]) {
-    for (int y = 0; y < sh; y++) {
+    for (uint32_t y = 0; y < sh; y++) {
       const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirHorz];
       const int32_t* weightList = d->weightList[BLImageScaleContext::kDirHorz];
 
       uint8_t* dp = dstLine;
 
-      for (int x = 0; x < dw; x++) {
+      for (uint32_t x = 0; x < dw; x++) {
         const uint8_t* sp = srcLine + recordList->pos * 1;
         const int32_t* wp = weightList;
 
         uint32_t ca = 0x80;
 
-        for (int i = recordList->count; i; i--) {
+        for (uint32_t i = recordList->count; i; i--) {
           uint32_t p0 = sp[0];
-          uint32_t w0 = wp[0];
+          uint32_t w0 = unsigned(wp[0]);
 
           ca += p0 * w0;
 
@@ -629,19 +628,19 @@ static void BL_CDECL blImageScaleHorzA8(const BLImageScaleContext::Data* d, uint
     }
   }
   else {
-    for (int y = 0; y < sh; y++) {
+    for (uint32_t y = 0; y < sh; y++) {
       const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirHorz];
       const int32_t* weightList = d->weightList[BLImageScaleContext::kDirHorz];
 
       uint8_t* dp = dstLine;
 
-      for (int x = 0; x < dw; x++) {
+      for (uint32_t x = 0; x < dw; x++) {
         const uint8_t* sp = srcLine + recordList->pos * 1;
         const int32_t* wp = weightList;
 
         int32_t ca = 0x80;
 
-        for (int i = recordList->count; i; i--) {
+        for (uint32_t i = recordList->count; i; i--) {
           uint32_t p0 = sp[0];
           int32_t w0 = wp[0];
 
@@ -670,29 +669,29 @@ static void BL_CDECL blImageScaleHorzA8(const BLImageScaleContext::Data* d, uint
 // ============================================================================
 
 static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
-  int dw = d->dstSize[0];
-  int dh = d->dstSize[1];
-  int kernelSize = d->kernelSize[BLImageScaleContext::kDirVert];
+  uint32_t dw = uint32_t(d->dstSize[0]);
+  uint32_t dh = uint32_t(d->dstSize[1]);
+  uint32_t kernelSize = uint32_t(d->kernelSize[BLImageScaleContext::kDirVert]);
 
   const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirVert];
   const int32_t* weightList = d->weightList[BLImageScaleContext::kDirVert];
 
   if (!d->isUnbound[BLImageScaleContext::kDirVert]) {
-    for (int y = 0; y < dh; y++) {
+    for (uint32_t y = 0; y < dh; y++) {
       const uint8_t* srcData = srcLine + intptr_t(recordList->pos) * srcStride;
       uint8_t* dp = dstLine;
 
-      int count = recordList->count;
-      for (int x = 0; x < dw; x++) {
+      uint32_t count = recordList->count;
+      for (uint32_t x = 0; x < dw; x++) {
         const uint8_t* sp = srcData;
         const int32_t* wp = weightList;
 
         uint32_t cr_cb = 0x00800080;
         uint32_t ca_cg = 0x00800080;
 
-        for (int i = count; i; i--) {
-          uint32_t p0 = reinterpret_cast<const uint32_t*>(sp)[0];
-          uint32_t w0 = wp[0];
+        for (uint32_t i = count; i; i--) {
+          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t w0 = unsigned(wp[0]);
 
           ca_cg += ((p0 >> 8) & 0x00FF00FF) * w0;
           cr_cb += ((p0     ) & 0x00FF00FF) * w0;
@@ -701,8 +700,7 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
           wp += 1;
         }
 
-        reinterpret_cast<uint32_t*>(dp)[0] = (ca_cg & 0xFF00FF00) + ((cr_cb & 0xFF00FF00) >> 8);
-
+        blMemWriteU32a(dp, (ca_cg & 0xFF00FF00) + ((cr_cb & 0xFF00FF00) >> 8));
         dp += 4;
         srcData += 4;
       }
@@ -714,12 +712,12 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
     }
   }
   else {
-    for (int y = 0; y < dh; y++) {
+    for (uint32_t y = 0; y < dh; y++) {
       const uint8_t* srcData = srcLine + intptr_t(recordList->pos) * srcStride;
       uint8_t* dp = dstLine;
 
-      int count = recordList->count;
-      for (int x = 0; x < dw; x++) {
+      uint32_t count = recordList->count;
+      for (uint32_t x = 0; x < dw; x++) {
         const uint8_t* sp = srcData;
         const int32_t* wp = weightList;
 
@@ -728,14 +726,14 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
         int32_t cg = 0x80;
         int32_t cb = 0x80;
 
-        for (int i = count; i; i--) {
-          uint32_t p0 = reinterpret_cast<const uint32_t*>(sp)[0];
+        for (uint32_t i = count; i; i--) {
+          uint32_t p0 = blMemReadU32a(sp);
           int32_t w0 = wp[0];
 
-          ca += int32_t((p0 >> 24)       ) * w0;
-          cr += int32_t((p0 >> 16) & 0xFF) * w0;
-          cg += int32_t((p0 >>  8) & 0xFF) * w0;
-          cb += int32_t((p0      ) & 0xFF) * w0;
+          ca += int32_t((p0 >> 24)        ) * w0;
+          cr += int32_t((p0 >> 16) & 0xFFu) * w0;
+          cg += int32_t((p0 >>  8) & 0xFFu) * w0;
+          cb += int32_t((p0      ) & 0xFFu) * w0;
 
           sp += srcStride;
           wp += 1;
@@ -745,8 +743,8 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
         cr = blClamp<int32_t>(cr >> 8, 0, ca);
         cg = blClamp<int32_t>(cg >> 8, 0, ca);
         cb = blClamp<int32_t>(cb >> 8, 0, ca);
-        reinterpret_cast<uint32_t*>(dp)[0] = blRgba32Pack(cr, cg, cb, ca);
 
+        blMemWriteU32a(dp, blRgba32Pack(uint32_t(cr), uint32_t(cg), uint32_t(cb), uint32_t(ca)));
         dp += 4;
         srcData += 4;
       }
@@ -760,39 +758,38 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
 }
 
 static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
-  int dw = d->dstSize[0];
-  int dh = d->dstSize[1];
-  int kernelSize = d->kernelSize[BLImageScaleContext::kDirVert];
+  uint32_t dw = uint32_t(d->dstSize[0]);
+  uint32_t dh = uint32_t(d->dstSize[1]);
+  uint32_t kernelSize = uint32_t(d->kernelSize[BLImageScaleContext::kDirVert]);
 
   const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirVert];
   const int32_t* weightList = d->weightList[BLImageScaleContext::kDirVert];
 
   if (!d->isUnbound[BLImageScaleContext::kDirVert]) {
-    for (int y = 0; y < dh; y++) {
+    for (uint32_t y = 0; y < dh; y++) {
       const uint8_t* srcData = srcLine + intptr_t(recordList->pos) * srcStride;
       uint8_t* dp = dstLine;
 
-      int count = recordList->count;
-      for (int x = 0; x < dw; x++) {
+      uint32_t count = recordList->count;
+      for (uint32_t x = 0; x < dw; x++) {
         const uint8_t* sp = srcData;
         const int32_t* wp = weightList;
 
-        uint32_t cx_cg = 0x00008000;
-        uint32_t cr_cb = 0x00800080;
+        uint32_t cx_cg = 0x00008000u;
+        uint32_t cr_cb = 0x00800080u;
 
-        for (int i = count; i; i--) {
-          uint32_t p0 = reinterpret_cast<const uint32_t*>(sp)[0];
-          uint32_t w0 = wp[0];
+        for (uint32_t i = count; i; i--) {
+          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t w0 = unsigned(wp[0]);
 
-          cx_cg += (p0 & 0x0000FF00) * w0;
-          cr_cb += (p0 & 0x00FF00FF) * w0;
+          cx_cg += (p0 & 0x0000FF00u) * w0;
+          cr_cb += (p0 & 0x00FF00FFu) * w0;
 
           sp += srcStride;
           wp += 1;
         }
 
-        reinterpret_cast<uint32_t*>(dp)[0] = 0xFF000000 + (((cx_cg & 0x00FF0000) | (cr_cb & 0xFF00FF00)) >> 8);
-
+        blMemWriteU32a(dp, 0xFF000000u + (((cx_cg & 0x00FF0000u) | (cr_cb & 0xFF00FF00u)) >> 8));
         dp += 4;
         srcData += 4;
       }
@@ -804,12 +801,12 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
     }
   }
   else {
-    for (int y = 0; y < dh; y++) {
+    for (uint32_t y = 0; y < dh; y++) {
       const uint8_t* srcData = srcLine + intptr_t(recordList->pos) * srcStride;
       uint8_t* dp = dstLine;
 
-      int count = recordList->count;
-      for (int x = 0; x < dw; x++) {
+      uint32_t count = recordList->count;
+      for (uint32_t x = 0; x < dw; x++) {
         const uint8_t* sp = srcData;
         const int32_t* wp = weightList;
 
@@ -817,13 +814,13 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
         int32_t cg = 0x80;
         int32_t cb = 0x80;
 
-        for (int i = count; i; i--) {
-          uint32_t p0 = reinterpret_cast<const uint32_t*>(sp)[0];
+        for (uint32_t i = count; i; i--) {
+          uint32_t p0 = blMemReadU32a(sp);
           int32_t w0 = wp[0];
 
-          cr += int32_t((p0 >> 16) & 0xFF) * w0;
-          cg += int32_t((p0 >>  8) & 0xFF) * w0;
-          cb += int32_t((p0      ) & 0xFF) * w0;
+          cr += int32_t((p0 >> 16) & 0xFFu) * w0;
+          cg += int32_t((p0 >>  8) & 0xFFu) * w0;
+          cb += int32_t((p0      ) & 0xFFu) * w0;
 
           sp += srcStride;
           wp += 1;
@@ -832,8 +829,8 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
         cr = blClamp<int32_t>(cr >> 8, 0, 255);
         cg = blClamp<int32_t>(cg >> 8, 0, 255);
         cb = blClamp<int32_t>(cb >> 8, 0, 255);
-        reinterpret_cast<uint32_t*>(dp)[0] = blRgba32Pack(cr, cg, cb, 0xFF);
 
+        blMemWriteU32a(dp, blRgba32Pack(uint32_t(cr), uint32_t(cg), uint32_t(cb), 0xFFu));
         dp += 4;
         srcData += 4;
       }
@@ -847,25 +844,25 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
 }
 
 static void BL_CDECL blImageScaleVertBytes(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t wScale) noexcept {
-  int dw = d->dstSize[0] * wScale;
-  int dh = d->dstSize[1];
-  int kernelSize = d->kernelSize[BLImageScaleContext::kDirVert];
+  uint32_t dw = uint32_t(d->dstSize[0]) * wScale;
+  uint32_t dh = uint32_t(d->dstSize[1]);
+  uint32_t kernelSize = uint32_t(d->kernelSize[BLImageScaleContext::kDirVert]);
 
   const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirVert];
   const int32_t* weightList = d->weightList[BLImageScaleContext::kDirVert];
 
   if (!d->isUnbound[BLImageScaleContext::kDirVert]) {
-    for (int y = 0; y < dh; y++) {
+    for (uint32_t y = 0; y < dh; y++) {
       const uint8_t* srcData = srcLine + intptr_t(recordList->pos) * srcStride;
       uint8_t* dp = dstLine;
 
-      int x = dw;
-      int i = 0;
-      int count = recordList->count;
+      uint32_t x = dw;
+      uint32_t i = 0;
+      uint32_t count = recordList->count;
 
       if (((intptr_t)dp & 0x7) == 0)
         goto BoundLarge;
-      i = 8 - int((intptr_t)dp & 0x7);
+      i = 8u - uint32_t((uintptr_t)dp & 0x7u);
 
 BoundSmall:
       x -= i;
@@ -875,9 +872,9 @@ BoundSmall:
 
         uint32_t c0 = 0x80;
 
-        for (int j = count; j; j--) {
+        for (uint32_t j = count; j; j--) {
           uint32_t p0 = sp[0];
-          uint32_t w0 = wp[0];
+          uint32_t w0 = unsigned(wp[0]);
 
           c0 += p0 * w0;
 
@@ -886,7 +883,6 @@ BoundSmall:
         }
 
         dp[0] = (uint8_t)(c0 >> 8);
-
         dp += 1;
         srcData += 1;
       } while (--i);
@@ -896,31 +892,30 @@ BoundLarge:
         const uint8_t* sp = srcData;
         const int32_t* wp = weightList;
 
-        uint32_t c0 = 0x00800080;
-        uint32_t c1 = 0x00800080;
-        uint32_t c2 = 0x00800080;
-        uint32_t c3 = 0x00800080;
+        uint32_t c0 = 0x00800080u;
+        uint32_t c1 = 0x00800080u;
+        uint32_t c2 = 0x00800080u;
+        uint32_t c3 = 0x00800080u;
 
-        for (int j = count; j; j--) {
-          uint32_t p0 = reinterpret_cast<const uint32_t*>(sp)[0];
-          uint32_t p1 = reinterpret_cast<const uint32_t*>(sp)[1];
-          uint32_t w0 = wp[0];
+        for (uint32_t j = count; j; j--) {
+          uint32_t p0 = blMemReadU32a(sp + 0u);
+          uint32_t p1 = blMemReadU32a(sp + 4u);
+          uint32_t w0 = unsigned(wp[0]);
 
-          c0 += ((p0     ) & 0x00FF00FF) * w0;
-          c1 += ((p0 >> 8) & 0x00FF00FF) * w0;
-          c2 += ((p1     ) & 0x00FF00FF) * w0;
-          c3 += ((p1 >> 8) & 0x00FF00FF) * w0;
+          c0 += ((p0     ) & 0x00FF00FFu) * w0;
+          c1 += ((p0 >> 8) & 0x00FF00FFu) * w0;
+          c2 += ((p1     ) & 0x00FF00FFu) * w0;
+          c3 += ((p1 >> 8) & 0x00FF00FFu) * w0;
 
           sp += srcStride;
           wp += 1;
         }
 
-        reinterpret_cast<uint32_t*>(dp)[0] = ((c0 & 0xFF00FF00) >> 8) + (c1 & 0xFF00FF00);
-        reinterpret_cast<uint32_t*>(dp)[1] = ((c2 & 0xFF00FF00) >> 8) + (c3 & 0xFF00FF00);
+        blMemWriteU32a(dp + 0u, ((c0 & 0xFF00FF00u) >> 8) + (c1 & 0xFF00FF00u));
+        blMemWriteU32a(dp + 4u, ((c2 & 0xFF00FF00u) >> 8) + (c3 & 0xFF00FF00u));
 
         dp += 8;
         srcData += 8;
-
         x -= 8;
       }
 
@@ -935,17 +930,17 @@ BoundLarge:
     }
   }
   else {
-    for (int y = 0; y < dh; y++) {
+    for (uint32_t y = 0; y < dh; y++) {
       const uint8_t* srcData = srcLine + intptr_t(recordList->pos) * srcStride;
       uint8_t* dp = dstLine;
 
-      int x = dw;
-      int i = 0;
-      int count = recordList->count;
+      uint32_t x = dw;
+      uint32_t i = 0;
+      uint32_t count = recordList->count;
 
       if (((size_t)dp & 0x3) == 0)
         goto UnboundLarge;
-      i = 4 - int((intptr_t)dp & 0x3);
+      i = 4u - uint32_t((uintptr_t)dp & 0x3u);
 
 UnboundSmall:
       x -= i;
@@ -955,7 +950,7 @@ UnboundSmall:
 
         int32_t c0 = 0x80;
 
-        for (int j = count; j; j--) {
+        for (uint32_t j = count; j; j--) {
           uint32_t p0 = sp[0];
           int32_t w0 = wp[0];
 
@@ -966,7 +961,6 @@ UnboundSmall:
         }
 
         dp[0] = (uint8_t)(uint32_t)blClamp<int32_t>(c0 >> 8, 0, 255);
-
         dp += 1;
         srcData += 1;
       } while (--i);
@@ -981,9 +975,9 @@ UnboundLarge:
         int32_t c2 = 0x80;
         int32_t c3 = 0x80;
 
-        for (int j = count; j; j--) {
-          uint32_t p0 = reinterpret_cast<const uint32_t*>(sp)[0];
-          uint32_t w0 = wp[0];
+        for (uint32_t j = count; j; j--) {
+          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t w0 = unsigned(wp[0]);
 
           c0 += ((p0      ) & 0xFF) * w0;
           c1 += ((p0 >>  8) & 0xFF) * w0;
@@ -994,15 +988,12 @@ UnboundLarge:
           wp += 1;
         }
 
-        reinterpret_cast<uint32_t*>(dp)[0] =
-          (blClamp<int32_t>(c0 >> 8, 0, 255)      ) +
-          (blClamp<int32_t>(c1 >> 8, 0, 255) <<  8) +
-          (blClamp<int32_t>(c2 >> 8, 0, 255) << 16) +
-          (blClamp<int32_t>(c3 >> 8, 0, 255) << 24) ;
-
+        blMemWriteU32a(dp, uint32_t(blClamp<int32_t>(c0 >> 8, 0, 255)      ) |
+                           uint32_t(blClamp<int32_t>(c1 >> 8, 0, 255) <<  8) |
+                           uint32_t(blClamp<int32_t>(c2 >> 8, 0, 255) << 16) |
+                           uint32_t(blClamp<int32_t>(c3 >> 8, 0, 255) << 24));
         dp += 4;
         srcData += 4;
-
         x -= 4;
       }
 
@@ -1122,8 +1113,8 @@ BLResult BLImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uin
   isUnbound[0] = false;
   isUnbound[1] = false;
 
-  size_t wWeightDataSize = size_t(to.w) * kernelSize[0] * sizeof(int32_t);
-  size_t hWeightDataSize = size_t(to.h) * kernelSize[1] * sizeof(int32_t);
+  size_t wWeightDataSize = size_t(to.w) * unsigned(kernelSize[0]) * sizeof(int32_t);
+  size_t hWeightDataSize = size_t(to.h) * unsigned(kernelSize[1]) * sizeof(int32_t);
   size_t wRecordDataSize = size_t(to.w) * sizeof(Record);
   size_t hRecordDataSize = size_t(to.h) * sizeof(Record);
   size_t dataSize = sizeof(Data) + wWeightDataSize + hWeightDataSize + wRecordDataSize + hRecordDataSize;

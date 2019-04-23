@@ -381,7 +381,7 @@ static BLResult BL_CDECL blRasterContextImplSetStyle(BLRasterContextImpl* ctxI, 
       srcMatrixType = patternI->matrixType;
 
       style->styleType = BL_STYLE_TYPE_PATTERN;
-      style->styleFormat = patternI->image.format();
+      style->styleFormat = uint8_t(patternI->image.format());
       style->quality = ctxI->currentState.hints.patternQuality;
       break;
     }
@@ -1276,7 +1276,7 @@ static BLResult BL_CDECL blRasterContextImplSetFlattenMode(BLRasterContextImpl* 
   blRasterContextImplBeforeConfigChange(ctxI);
   ctxI->contextFlags &= ~BL_RASTER_CONTEXT_STATE_CONFIG;
 
-  ctxI->currentState.approximationOptions.flattenMode = mode;
+  ctxI->currentState.approximationOptions.flattenMode = uint8_t(mode);
   blRasterContextImplFlattenToleranceChanged(ctxI);
 
   return BL_SUCCESS;
@@ -2446,7 +2446,7 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
   BLResult result = initThreads();
 
   if (result == BL_SUCCESS) result = initRuntime();
-  if (result == BL_SUCCESS) result = ctxI->worker.initEdgeStorage(size.h);
+  if (result == BL_SUCCESS) result = ctxI->worker.initEdgeStorage(uint32_t(size.h));
   if (result == BL_SUCCESS) result = blImageMakeMutable(image, &ctxI->worker.dstData);
 
   // Cleanup if failed.
@@ -2471,7 +2471,7 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
   ctxI->pipeLookupCache.reset();
 
   // Initialize the rest of worker.
-  ctxI->worker.initFullAlpha(fullAlphaI);
+  ctxI->worker.initFullAlpha(uint32_t(fullAlphaI));
   ctxI->worker.initContextDataByDstData();
 
   // Initialize destination image and worker.
@@ -2483,7 +2483,7 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
   ctxI->dstInfo.fullAlphaD = double(fullAlphaI);
 
   // Initialize members that are related to alpha and composition.
-  ctxI->globalAlphaI = fullAlphaI;
+  ctxI->globalAlphaI = uint32_t(fullAlphaI);
   ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_ARGB] = uint8_t(BL_FORMAT_PRGB32);
   ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB] = uint8_t(BL_FORMAT_FRGB32);
   ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_ZERO] = uint8_t(BL_FORMAT_ZERO32);

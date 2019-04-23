@@ -160,19 +160,24 @@ uint8_t* BL_CDECL blJpegUpsample1x1(uint8_t* dst, uint8_t* src0, uint8_t* src1, 
   BL_UNUSED(dst);
   BL_UNUSED(src1);
   BL_UNUSED(w);
+  BL_UNUSED(hs);
 
   return src0;
 }
 
 uint8_t* BL_CDECL blJpegUpsample1x2(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept {
-  uint32_t i = 0;
-  for (i = 0; i < w; i++)
+  BL_UNUSED(src1);
+  BL_UNUSED(hs);
+
+  for (uint32_t i = 0; i < w; i++)
     dst[i] = uint8_t((3 * src0[i] + src1[i] + 2) >> 2);
+
   return dst;
 }
 
 uint8_t* BL_CDECL blJpegUpsample2x1(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept {
-  uint32_t i;
+  BL_UNUSED(hs);
+  BL_UNUSED(src1);
 
   // If only one sample, can't do any interpolation.
   if (w == 1) {
@@ -183,6 +188,7 @@ uint8_t* BL_CDECL blJpegUpsample2x1(uint8_t* dst, uint8_t* src0, uint8_t* src1, 
   dst[0] = src0[0];
   dst[1] = uint8_t((src0[0] * 3 + src0[1] + 2) >> 2);
 
+  uint32_t i;
   for (i = 1; i < w - 1; i++) {
     uint32_t n = 3 * src0[i] + 2;
     dst[i * 2 + 0] = uint8_t((n + src0[i - 1]) >> 2);
@@ -196,6 +202,8 @@ uint8_t* BL_CDECL blJpegUpsample2x1(uint8_t* dst, uint8_t* src0, uint8_t* src1, 
 }
 
 uint8_t* BL_CDECL blJpegUpsample2x2(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept {
+  BL_UNUSED(hs);
+
   if (w == 1) {
     dst[0] = dst[1] = uint8_t((3 * src0[0] + src1[0] + 2) >> 2);
     return dst;
@@ -218,8 +226,11 @@ uint8_t* BL_CDECL blJpegUpsample2x2(uint8_t* dst, uint8_t* src0, uint8_t* src1, 
 }
 
 uint8_t* BL_CDECL blJpegUpsampleAny(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept {
+  BL_UNUSED(src1);
+
   for (uint32_t i = 0; i < w; i++)
     for (uint32_t j = 0; j < hs; j++)
       dst[i * hs + j] = src0[i];
+
   return dst;
 }

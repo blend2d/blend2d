@@ -14,6 +14,9 @@
 #include "../opentype/blotface_p.h"
 #include "../opentype/blotlayout_p.h"
 
+// TODO: This is not complete so we had to disable some warnings here...
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
+
 namespace BLOpenType {
 namespace LayoutImpl {
 
@@ -2034,7 +2037,7 @@ static bool checkGPosGSubTable(Validator* self, Trace trace, uint32_t kind) noex
       }
 
       faceI->layout.kinds[kind].lookupCount = uint16_t(count);
-      faceI->layout.kinds[kind].lookupListOffset = lookupListOffset;
+      faceI->layout.kinds[kind].lookupListOffset = uint16_t(lookupListOffset);
     }
   }
 
@@ -2056,7 +2059,7 @@ static bool checkGPosGSubTable(Validator* self, Trace trace, uint32_t kind) noex
       }
 
       faceI->layout.kinds[kind].featureCount = uint16_t(count);
-      faceI->layout.kinds[kind].featureListOffset = featureListOffset;
+      faceI->layout.kinds[kind].featureListOffset = uint16_t(featureListOffset);
     }
   }
 
@@ -2077,7 +2080,7 @@ static bool checkGPosGSubTable(Validator* self, Trace trace, uint32_t kind) noex
           return false;
       }
 
-      faceI->layout.kinds[kind].scriptListOffset = scriptListOffset;
+      faceI->layout.kinds[kind].scriptListOffset = uint16_t(scriptListOffset);
     }
   }
 
@@ -2236,3 +2239,5 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
 } // {LayoutImpl}
 } // {BLOpenType}
+
+BL_DIAGNOSTIC_POP

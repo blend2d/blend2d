@@ -25,7 +25,7 @@ static BL_INLINE constexpr BLApproximationOptions blMakeDefaultApproximationOpti
     BL_OFFSET_MODE_DEFAULT,  // Default offset mode.
     { 0, 0, 0, 0, 0, 0 },    // Reserved.
     0.20,                    // Default curve flattening tolerance.
-    0.10,                    // Default curve simplification tolerance.
+    0.05,                    // Default curve simplification tolerance.
     0.414213562              // Default offset parameter.
   };
 }

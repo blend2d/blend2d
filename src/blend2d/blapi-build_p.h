@@ -91,7 +91,6 @@
   #pragma warning(disable: 4102) // unreferenced label
   #pragma warning(disable: 4127) // conditional expression is constant
   #pragma warning(disable: 4201) // nameless struct/union
-  #pragma warning(disable: 4127) // conditional expression is constant
   #pragma warning(disable: 4251) // struct needs to have dll-interface
   #pragma warning(disable: 4275) // non dll-interface struct ... used
   #pragma warning(disable: 4355) // this used in base member-init list
@@ -100,11 +99,18 @@
 #elif defined(__clang__)
   #pragma clang diagnostic ignored "-Wconstant-logical-operand"
   #pragma clang diagnostic ignored "-Wunnamed-type-template-args"
+  #pragma clang diagnostic ignored "-Wunused-function"
+  #pragma clang diagnostic ignored "-Wswitch"
   #pragma clang diagnostic warning "-Wattributes"
 #elif defined(__GNUC__)
   #pragma GCC diagnostic ignored "-Wenum-compare"
+  #pragma GCC diagnostic ignored "-Wint-in-bool-context"
+  #pragma GCC diagnostic ignored "-Wunused-function"
+  #pragma GCC diagnostic ignored "-Wswitch"
   #pragma GCC diagnostic warning "-Wattributes"
-  #pragma GCC diagnostic warning "-Winline"
+  #if (__GNUC__ >= 8)
+    #pragma GCC diagnostic ignored "-Wclass-memaccess"
+  #endif
 #endif
 
 //! \endcond

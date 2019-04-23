@@ -30,7 +30,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_rgb24_ssse3(
   dstStride -= (w * 4) + gap;
   srcStride -= (w * 3);
 
-  I128 fillMask = vseti128i32(d.fillMask);
+  I128 fillMask = vseti128u32(d.fillMask);
   I128 predicate = vloadi128u(d.simdData);
 
   for (uint32_t y = h; y != 0; y--) {
@@ -148,7 +148,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_xrgb32_ssse3(
   srcStride -= (w * 4);
 
   using namespace SIMD;
-  I128 fillMask = vseti128i32(d.fillMask);
+  I128 fillMask = vseti128u32(d.fillMask);
   I128 predicate = vloadi128u(d.simdData);
 
   for (uint32_t y = h; y != 0; y--) {
@@ -236,8 +236,8 @@ static BLResult BL_CDECL bl_convert_prgb32_from_argb32_ssse3(
   srcStride -= (w * 4);
 
   I128 zero = vzeroi128();
-  I128 a255 = vseti128i64(int64_t(0x00FF000000000000));
-  I128 fillMask = vseti128i32(d.fillMask);
+  I128 a255 = vseti128u64(0x00FF000000000000u);
+  I128 fillMask = vseti128u32(d.fillMask);
   I128 predicate = vloadi128u(d.simdData);
 
   for (uint32_t y = h; y != 0; y--) {
@@ -321,8 +321,6 @@ static BL_INLINE uint32_t blPixelConverterMakePshufbPredicate32(const BLPixelCon
 
 bool blPixelConverterInitNativeFromXRGB_SSSE3(BLPixelConverterCore* self, uint32_t dstFormat, const BLFormatInfo& srcInfo) noexcept {
   BLPixelConverterData::NativeFromExternal& d = blPixelConverterGetData(self)->nativeFromExternal;
-  const BLFormatInfo& dstInfo = blPixelConverterFormatInfo[dstFormat];
-
   if (srcInfo.depth == 24) {
     // Only BYTE aligned components (888 format).
     if (!(srcInfo.flags & BL_FORMAT_FLAG_BYTE_ALIGNED))

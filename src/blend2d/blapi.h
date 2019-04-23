@@ -253,7 +253,6 @@
 #include <string.h>
 
 #ifdef __cplusplus
-  #include <new>
   #include <type_traits>
   #include <utility>
 #else
@@ -504,6 +503,61 @@
 #endif
 
 //! \}
+
+// ============================================================================
+// [Diagnostic]
+// ============================================================================
+
+//! \cond INTERNAL
+//! \name Internals
+//! \{
+
+// Diagnostic warnings can be turned on/off by using pragmas, however, this is
+// a compiler specific stuff we have to maintain for each compiler. Ideally we
+// should have a clean code that would compile without any warnings with all of
+// them enabled by default, but since there is a lot of nitpicks we just disable
+// some locally when needed (like unused parameter in null-impl functions, etc).
+#if defined(__INTEL_COMPILER)
+  // Not regularly tested.
+#elif defined(__clang__)
+  #define BL_DIAGNOSTIC_PUSH(...)              _Pragma("clang diagnostic push") __VA_ARGS__
+  #define BL_DIAGNOSTIC_POP                    _Pragma("clang diagnostic pop")
+  #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF    _Pragma("clang diagnostic ignored \"-Winvalid-offsetof\"")
+  #define BL_DIAGNOSTIC_NO_STRICT_ALIASING     _Pragma("clang diagnostic ignored \"-Wstrict-aliasing\"")
+  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS    _Pragma("clang diagnostic ignored \"-Wunused-function\"")
+  #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")
+  #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS      _Pragma("clang diagnostic ignored \"-Wextra\"")
+
+#elif defined(__GNUC__)
+  #define BL_DIAGNOSTIC_PUSH(...)              _Pragma("GCC diagnostic push") __VA_ARGS__
+  #define BL_DIAGNOSTIC_POP                    _Pragma("GCC diagnostic pop")
+  #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF    _Pragma("GCC diagnostic ignored \"-Winvalid-offsetof\"")
+  #define BL_DIAGNOSTIC_NO_STRICT_ALIASING     _Pragma("GCC diagnostic ignored \"-Wstrict-aliasing\"")
+  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS    _Pragma("GCC diagnostic ignored \"-Wunused-function\"")
+  #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
+  #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS      _Pragma("GCC diagnostic ignored \"-Wextra\"")
+#elif defined(_MSC_VER)
+  #define BL_DIAGNOSTIC_PUSH(...)              __pragma(warning(push)) __VA_ARGS__
+  #define BL_DIAGNOSTIC_POP                    __pragma(warning(pop))
+  #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF
+  #define BL_DIAGNOSTIC_NO_STRICT_ALIASING
+  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS
+  #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   __pragma(warning(disable: 4100))
+  #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS
+#endif
+
+#if !defined(BL_DIAGNOSTIC_PUSH)
+  #define BL_DIAGNOSTIC_PUSH(...)
+  #define BL_DIAGNOSTIC_POP
+  #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF
+  #define BL_DIAGNOSTIC_NO_STRICT_ALIASING
+  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS
+  #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS
+  #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS
+#endif
+
+//! \}
+//! \endcond
 
 // ============================================================================
 // [Forward Declarations]
@@ -979,32 +1033,8 @@ BL_DEFINE_ENUM(BLTextEncoding) {
 };
 
 // ============================================================================
-// [Public API (Inline)]
+// [Internal API]
 // ============================================================================
-
-//! \addtogroup blend2d_api_globals
-//! \{
-
-//! \name Debugging Functionality
-//! \{
-
-//! Returns the `result` passed.
-//!
-//! Provided for debugging purposes. Putting a breakpoint inside `blTraceError()`
-//! can help with tracing an origin of errors reported / returned by Blend2D as
-//! each error goes through this function.
-//!
-//! It's a zero-cost solution that doesn't affect release builds in any way.
-static inline BLResult blTraceError(BLResult result) BL_NOEXCEPT_C { return result; }
-
-//! \}
-
-//! \}
-
-// These are the only global functions provided in C++ mode. They are needed by
-// C++ API wrappers and can be used freely by Blend2D users as these templates
-// have specializations for some geometry types. For example `blMin(a, b)` works
-// with numbers as well as with `BLPoint`.
 
 #ifdef __cplusplus
 //! \cond INTERNAL
@@ -1060,13 +1090,53 @@ BL_DCAST_IMPL(BLVariant);
 
 #undef BL_DCAST_IMPL
 
+//! Helper to implement placement new/delete without relying on `<new>` header.
+struct PlacementNew { void* ptr; };
+
 } // {BLInternal}
 
+//! Implementation of placement new so we don't have to depend on `<new>`.
+inline void* operator new(std::size_t, const BLInternal::PlacementNew& p) {
+  BL_ASSUME(p.ptr != nullptr); // Otherwise MSVC would generate nullptr check.
+  return p.ptr;
+}
+
 //! \endcond
+#endif
+
+// ============================================================================
+// [Public API - TraceError]
+// ============================================================================
 
 //! \addtogroup blend2d_api_globals
 //! \{
+//! \name Debugging Functionality
+//! \{
 
+//! Returns the `result` passed.
+//!
+//! Provided for debugging purposes. Putting a breakpoint inside `blTraceError()`
+//! can help with tracing an origin of errors reported / returned by Blend2D as
+//! each error goes through this function.
+//!
+//! It's a zero-cost solution that doesn't affect release builds in any way.
+static inline BLResult blTraceError(BLResult result) BL_NOEXCEPT_C { return result; }
+
+//! \}
+//! \}
+
+// ============================================================================
+// [Public API - Templates]
+// ============================================================================
+
+#ifdef __cplusplus
+// These are the only global functions provided in C++ mode. They are needed by
+// C++ API wrappers and can be used freely by Blend2D users as these templates
+// have specializations for some geometry types. For example `blMin(a, b)` works
+// with numbers as well as with `BLPoint`.
+
+//! \addtogroup blend2d_api_globals
+//! \{
 //! \name Global C++ Functions
 //! \{
 
@@ -1115,7 +1185,16 @@ BL_INLINE bool blEquals(const double& a, const double& b) noexcept {
 //! \endcond
 
 //! \}
+//! \}
+#endif
 
+// ============================================================================
+// [Public API - DownCast]
+// ============================================================================
+
+#ifdef __cplusplus
+//! \addtogroup blend2d_api_globals
+//! \{
 //! \name Downcasting from Core type to C++ type.
 //! \{
 
@@ -1147,7 +1226,6 @@ static constexpr const typename BLInternal::DownCast<T>::Type* blDownCast(const 
 
 //! \}
 //! \}
-
 #endif
 
 // ============================================================================

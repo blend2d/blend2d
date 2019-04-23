@@ -7,25 +7,18 @@
 #include "./blapi-build_p.h"
 #include "./blruntime_p.h"
 
-// This file provides an experimental support for building Blend2D without C++
-// standard library. Blend2D doesn't really use any C++ features, but still
-// there are little things that require some care.
-#ifdef BL_BUILD_NO_CXX_LIB
+// This file provides support for building Blend2D without C++ standard library.
+// Blend2D doesn't really use any C++ features, but there are little things that
+// require some care.
+#ifdef BL_BUILD_NO_STDCXX
 
-// The following functions are required to be provided if we don't link to the
-// c++ standard library.
-extern "C" void __cxa_pure_virtual() noexcept {
-  blRuntimeFailure("__cxa_pure_virtual(): Pure virtual function called, terminating...");
+extern "C" {
+  // `__cxa_pure_virtual` replaces all abstract virtual functions (that have no
+  // implementation). We provide a replacement with `BL_HIDDEN` attribute to
+  // make it local to Blend2D library.
+  BL_HIDDEN void __cxa_pure_virtual() noexcept {
+    blRuntimeFailure("[Blend2D] __cxa_pure_virtual(): Pure virtual function called");
+  }
 }
 
-#if defined(_MSC_VER)
-  #define BL_NEW_DELETE_CALL BL_CDECL
-#else
-  #define BL_NEW_DELETE_CALL
-#endif
-
-void* BL_NEW_DELETE_CALL operator new(size_t size) { return malloc(size); }
-void  BL_NEW_DELETE_CALL operator delete(void* p) { if (p) free(p); }
-void  BL_NEW_DELETE_CALL operator delete(void* p, size_t) {}
-
-#endif
+#endif // BL_BUILD_NO_STDCXX

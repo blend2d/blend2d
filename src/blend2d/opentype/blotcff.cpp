@@ -177,7 +177,7 @@ static BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOu
       if (BL_UNLIKELY(expDigits >= 6))
         return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-      expValue = expValue * 10u + nib;
+      expValue = expValue * 10 + int(nib);
       expDigits += int(expValue != 0);
     }
 
@@ -372,7 +372,7 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
   indexOut->offsetSize = uint8_t(offsetSize);
   indexOut->reserved = 0;
   indexOut->payloadSize = payloadSize;
-  indexOut->totalSize = size_t(headerSize) + size_t(offsetArraySize) + size_t(payloadSize);
+  indexOut->totalSize = headerSize + offsetArraySize + payloadSize;
   indexOut->offsets = offsetArray;
   indexOut->payload = payload;
 

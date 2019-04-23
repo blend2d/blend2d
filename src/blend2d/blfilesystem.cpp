@@ -570,7 +570,7 @@ BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
   if (fstat(fd, &s) != 0)
     return blTraceError(blResultFromPosixError(errno));
 
-  *fileSizeOut = s.st_size;
+  *fileSizeOut = uint64_t(s.st_size);
   return BL_SUCCESS;
 }
 

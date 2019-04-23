@@ -80,7 +80,7 @@ void FillBoxAAPart::compile() noexcept {
   compOpPart()->init(w, y, 1);
 
   cc->neg(y);
-  pc->uLeaBpp(dstPtr, dstPtr, w, dstBpp);
+  pc->uLeaBpp(dstPtr, dstPtr, w, uint32_t(dstBpp));
   cc->neg(w);
 
   cc->add(dstPtr, cc->intptr_ptr(ctxData, BL_OFFSET_OF(BLPipeContextData, dst.pixelData)));
@@ -237,7 +237,7 @@ void FillBoxAUPart::compile() noexcept {
   compOpPart()->init(innerWidth, h, 1);
 
   cc->neg(h);
-  pc->uLeaBpp(dstPtr, dstPtr, innerWidth, dstBpp);
+  pc->uLeaBpp(dstPtr, dstPtr, innerWidth, uint32_t(dstBpp));
   cc->neg(innerWidth);
 
   cc->add(dstPtr, cc->intptr_ptr(ctxData, BL_OFFSET_OF(BLPipeContextData, dst.pixelData)));
@@ -441,7 +441,7 @@ void FillAnalyticPart::compile() noexcept {
   int bwSizeInBits = bwSize * 8;
 
   int pixelsPerOneBit = 4;
-  int pixelsPerOneBitShift = blBitCtz(pixelsPerOneBit);
+  int pixelsPerOneBitShift = int(blBitCtz(pixelsPerOneBit));
 
   int pixelsPerBitWord = pixelsPerOneBit * bwSizeInBits;
   int pixelGranularity = pixelsPerOneBit;
@@ -474,7 +474,7 @@ void FillAnalyticPart::compile() noexcept {
 
   // Initialize pipeline parts.
   dstPart()->initPtr(dstPtr);
-  compOpPart()->init(pc-> _gpNone, y, pixelGranularity);
+  compOpPart()->init(pc-> _gpNone, y, uint32_t(pixelGranularity));
 
   // y = fillData->box.y1 - fillData->box.y0;
   cc->neg(y);
@@ -514,7 +514,7 @@ void FillAnalyticPart::compile() noexcept {
   cc->bind(L_BitScan_Init);                                // L_BitScan_Init:
   pc->uCTZ(x0.cloneAs(bitWord), bitWord);                  //   x0 = ctz(bitWord);
 
-  cc->mov(x86::ptr(bitPtr, -bwSize, bwSize), 0);           //   bitPtr[-1] = 0;
+  cc->mov(x86::ptr(bitPtr, -bwSize, uint32_t(bwSize)), 0); //   bitPtr[-1] = 0;
   cc->or_(bitWordTmp, -1);                                 //   bitWordTmp = -1; (all ones).
   pc->uShl(bitWordTmp, x0);                                //   bitWordTmp <<= x0;
 
@@ -567,8 +567,8 @@ void FillAnalyticPart::compile() noexcept {
   cc->bind(L_BitScan_Next);                                // L_BitScan_Next:
   cc->or_(bitWord, -1);                                    //   bitWord = -1; (all ones);
   cc->add(xOff, pixelsPerBitWord);                         //   xOff += pixelsPerBitWord;
-  cc->xor_(bitWord, x86::ptr(bitPtr, 0, bwSize));          //   bitWord ^= bitPtr[0];
-  cc->mov(x86::ptr(bitPtr, 0, bwSize), 0);                 //   bitPtr[0] = 0;
+  cc->xor_(bitWord, x86::ptr(bitPtr, 0, uint32_t(bwSize)));//   bitWord ^= bitPtr[0];
+  cc->mov(x86::ptr(bitPtr, 0, uint32_t(bwSize)), 0);       //   bitPtr[0] = 0;
   cc->lea(bitPtr, x86::ptr(bitPtr, bwSize));               //   bitPtr += bwSize;
   cc->jnz(L_BitScan_Match);                                //   if (bitWord != 0) goto L_BitScan_Match;
 
@@ -734,7 +734,7 @@ void FillAnalyticPart::compile() noexcept {
   cc->jz(L_BitGap_Cont);                                   //   if (bitWord == 0) goto L_BitGap_Cont;
 
   cc->bind(L_BitGap_Match);                                // L_BitGap_Match:
-  cc->mov(x86::ptr(bitPtr, -bwSize, bwSize), 0);           //   bitPtr[-1] = 0;
+  cc->mov(x86::ptr(bitPtr, -bwSize, uint32_t(bwSize)), 0); //   bitPtr[-1] = 0;
   pc->uCTZ(i.cloneAs(bitWord), bitWord);                   //   i = ctz(bitWord);
   cc->mov(bitWordTmp, -1);                                 //   bitWordTmp = -1; (all ones)
   pc->vextractu16(cMaskAlpha, m[0], 0);                    //   cMaskAlpha = extracti16(m0, 0);

@@ -230,13 +230,13 @@ BLResult blJpegDecoderImplProcessMarker(BLJpegDecoderImpl* impl, uint32_t m, con
     imageInfo.flags = 0;
     imageInfo.size.reset(int(w), int(h));
     imageInfo.depth = uint16_t(componentCount * bpp);
-    imageInfo.planeCount = componentCount;
+    imageInfo.planeCount = uint16_t(componentCount);
     imageInfo.frameCount = 1;
 
     if (!isBaseline)
       imageInfo.flags |= BL_IMAGE_INFO_FLAG_PROGRESSIVE;
 
-    impl->sofMarker = sofMarker;
+    impl->sofMarker = uint8_t(sofMarker);
     impl->delayedHeight = (h == 0);
     impl->mcu.sf.w = uint8_t(mcuSfW);
     impl->mcu.sf.h = uint8_t(mcuSfH);
@@ -327,7 +327,7 @@ BLResult blJpegDecoderImplProcessMarker(BLJpegDecoderImpl* impl, uint32_t m, con
       }
       else {
         for (uint32_t k = 0; k < 64; k++, p += 2)
-          qTable[blJpegDeZigZagTable[k]] = blMemReadU16uBE(reinterpret_cast<const uint16_t*>(p));
+          qTable[blJpegDeZigZagTable[k]] = uint16_t(blMemReadU16uBE(reinterpret_cast<const uint16_t*>(p)));
       }
 
       impl->qTableMask = uint8_t(impl->qTableMask | blBitMask<uint8_t>(qId));
@@ -421,7 +421,7 @@ BLResult blJpegDecoderImplProcessMarker(BLJpegDecoderImpl* impl, uint32_t m, con
     }
 
     BLJpegDecoderSOS& sos = impl->sos;
-    sos.scCount   = scCount;
+    sos.scCount   = uint8_t(scCount);
     sos.ssStart   = uint8_t(ssStart);
     sos.ssEnd     = uint8_t(ssEnd);
     sos.saLowBit  = uint8_t(saLowBit);
@@ -514,8 +514,8 @@ BLResult blJpegDecoderImplProcessMarker(BLJpegDecoderImpl* impl, uint32_t m, con
       uint32_t thumbH = p[13];
 
       impl->statusFlags |= BL_JPEG_DECODER_DONE_JFIF;
-      impl->jfifMajor = jfifMajor;
-      impl->jfifMinor = jfifMinor;
+      impl->jfifMajor = uint8_t(jfifMajor);
+      impl->jfifMinor = uint8_t(jfifMinor);
 
       if (thumbW && thumbH) {
         uint32_t thumbSize = thumbW * thumbH * 3;
@@ -574,7 +574,7 @@ BLResult blJpegDecoderImplProcessMarker(BLJpegDecoderImpl* impl, uint32_t m, con
       if (thumbSize + 6 > remain)
         return blTraceError(BL_ERROR_INVALID_DATA);
 
-      impl->thumb.format = format;
+      impl->thumb.format = uint8_t(format);
       impl->thumb.w = uint8_t(thumbW);
       impl->thumb.h = uint8_t(thumbH);
       impl->thumb.index = impl->bufferIndex + 10;
@@ -763,7 +763,7 @@ static BLResult blJpegDecoderImplReadBaselineBlock(BLJpegDecoderImpl* impl, BLJp
         k += 16;
       }
       else {
-        k += ac;
+        k += uint32_t(ac);
 
         reader.refillIf32Bit();
         BL_PROPAGATE(reader.requireBits(s));
@@ -845,7 +845,7 @@ static BLResult blJpegDecoderImplReadProgressiveBlock(BLJpegDecoderImpl* impl, B
         if (r) {
           int32_t s = r & 15;
           k += (r >> 4) & 15;
-          reader.drop(s);
+          reader.drop(uint32_t(s));
 
           uint32_t zig = blJpegDeZigZagTable[k++];
           dst[zig] = int16_t(blBitShl(r >> 8, shift));
@@ -861,8 +861,8 @@ static BLResult blJpegDecoderImplReadProgressiveBlock(BLJpegDecoderImpl* impl, B
             if (r < 15) {
               uint32_t eobRun = 0;
               if (r) {
-                BL_PROPAGATE(reader.requireBits(r));
-                eobRun = reader.readUnsigned(r);
+                BL_PROPAGATE(reader.requireBits(uint32_t(r)));
+                eobRun = reader.readUnsigned(uint32_t(r));
               }
               stream.eobRun = eobRun + (1u << r) - 1;
               break;
@@ -870,8 +870,8 @@ static BLResult blJpegDecoderImplReadProgressiveBlock(BLJpegDecoderImpl* impl, B
             k += 16;
           }
           else {
-            k += r;
-            r = reader.readSigned(s);
+            k += uint32_t(r);
+            r = reader.readSigned(uint32_t(s));
 
             uint32_t zig = blJpegDeZigZagTable[k++];
             dst[zig] = int16_t(blBitShl(r, shift));
@@ -913,8 +913,8 @@ static BLResult blJpegDecoderImplReadProgressiveBlock(BLJpegDecoderImpl* impl, B
             if (r < 15) {
               uint32_t eobRun = 0;
               if (r) {
-                BL_PROPAGATE(reader.requireBits(r));
-                eobRun = reader.readUnsigned(r);
+                BL_PROPAGATE(reader.requireBits(uint32_t(r)));
+                eobRun = reader.readUnsigned(uint32_t(r));
               }
               stream.eobRun = eobRun + (1u << r) - 1;
               r = 64; // Force end of block.
@@ -1237,8 +1237,8 @@ static BLResult blJpegDecoderImplConvertToRgb(BLJpegDecoderImpl* impl, BLImageDa
 
     pBuffer[k] = lineBuffer + k * lineStride;
 
-    r->hs      = int(impl->mcu.sf.w) / comp.sfW;
-    r->vs      = int(impl->mcu.sf.h) / comp.sfH;
+    r->hs      = uint32_t(impl->mcu.sf.w / comp.sfW);
+    r->vs      = uint32_t(impl->mcu.sf.h / comp.sfH);
     r->ystep   = r->vs >> 1;
     r->w_lores = (w + r->hs - 1) / r->hs;
     r->ypos    = 0;
@@ -1487,7 +1487,7 @@ static BLJpegDecoderImpl* blJpegDecoderImplNew() noexcept {
   impl->virt = &blJpegDecoderVirt;
   impl->codec.impl = &blJpegCodecImpl;
   impl->handle = nullptr;
-  new (&impl->allocator) BLScopedAllocator();
+  blCallCtor(impl->allocator);
   blJpegDecoderImplRestart(impl);
 
   return impl;
@@ -1497,9 +1497,15 @@ static BLJpegDecoderImpl* blJpegDecoderImplNew() noexcept {
 // [BLJpegCodec - Interface]
 // ============================================================================
 
-static BLResult BL_CDECL blJpegCodecImplDestroy(BLJpegCodecImpl* impl) noexcept { return BL_SUCCESS; }
+static BLResult BL_CDECL blJpegCodecImplDestroy(BLJpegCodecImpl* impl) noexcept {
+  // Built-in codecs are never destroyed.
+  BL_UNUSED(impl);
+  return BL_SUCCESS;
+}
 
 static uint32_t BL_CDECL blJpegCodecImplInspectData(BLJpegCodecImpl* impl, const uint8_t* data, size_t size) noexcept {
+  BL_UNUSED(impl);
+
   // JPEG minimum size and signature (SOI).
   if (size < 2 || data[0] != 0xFF || data[1] != BL_JPEG_MARKER_SOI)
     return 0;
@@ -1512,13 +1518,18 @@ static uint32_t BL_CDECL blJpegCodecImplInspectData(BLJpegCodecImpl* impl, const
 }
 
 static BLResult BL_CDECL blJpegCodecImplCreateDecoder(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept {
+  BL_UNUSED(impl);
   BLImageDecoderCore decoder { blJpegDecoderImplNew() };
+
   if (BL_UNLIKELY(!decoder.impl))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+
   return blImageDecoderAssignMove(dst, &decoder);
 }
 
 static BLResult BL_CDECL blJpegCodecImplCreateEncoder(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept {
+  BL_UNUSED(impl);
+
   // TODO: [JPEG] Encoder
   return blTraceError(BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED);
   /*
@@ -1534,6 +1545,8 @@ static BLResult BL_CDECL blJpegCodecImplCreateEncoder(const BLImageCodecImpl* im
 // ============================================================================
 
 BLImageCodecImpl* blJpegCodecRtInit(BLRuntimeContext* rt) noexcept {
+  BL_UNUSED(rt);
+
   // Initialize JPEG ops.
   blJpegOps.idct8             = blJpegIDCT8;
   blJpegOps.convYCbCr8ToRGB32 = blJpegRGB32FromYCbCr8;

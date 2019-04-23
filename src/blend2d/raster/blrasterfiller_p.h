@@ -43,12 +43,12 @@ public:
 
   BL_INLINE void initBoxAA8bpc(uint32_t alpha, int x0, int y0, int x1, int y1) noexcept {
     this->workFunc = fillRectImpl;
-    fillSignature.addFillType(fillData.initBoxAA8bpc(alpha, x0, y0, x1, y1));
+    fillSignature.addFillType(fillData.initBoxAA8bpc(alpha, uint32_t(x0), uint32_t(y0), uint32_t(x1), uint32_t(y1)));
   }
 
   BL_INLINE void initBoxAU8bpc24x8(uint32_t alpha, int x0, int y0, int x1, int y1) noexcept {
     this->workFunc = fillRectImpl;
-    fillSignature.addFillType(fillData.initBoxAU8bpc24x8(alpha, x0, y0, x1, y1));
+    fillSignature.addFillType(fillData.initBoxAU8bpc24x8(alpha, uint32_t(x0), uint32_t(y0), uint32_t(x1), uint32_t(y1)));
   }
 
   BL_INLINE void initAnalytic(uint32_t alpha, BLEdgeStorage<int>* edgeStorage, uint32_t fillRule) noexcept {

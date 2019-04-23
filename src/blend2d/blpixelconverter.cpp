@@ -1090,14 +1090,14 @@ BLResult blPixelConverterConvert(const BLPixelConverterCore* self,
 template<typename T>
 struct BLPixelConverterUnit {
   static void fillMasks(BLFormatInfo& fi) noexcept {
-    fi.shifts[0] = T::kR ? blBitCtz(T::kR) : 0;
-    fi.shifts[1] = T::kG ? blBitCtz(T::kG) : 0;
-    fi.shifts[2] = T::kB ? blBitCtz(T::kB) : 0;
-    fi.shifts[3] = T::kA ? blBitCtz(T::kA) : 0;
-    fi.sizes[0] = T::kR ? blBitCtz(~(T::kR >> fi.shifts[0])) : 0;
-    fi.sizes[1] = T::kG ? blBitCtz(~(T::kG >> fi.shifts[1])) : 0;
-    fi.sizes[2] = T::kB ? blBitCtz(~(T::kB >> fi.shifts[2])) : 0;
-    fi.sizes[3] = T::kA ? blBitCtz(~(T::kA >> fi.shifts[3])) : 0;
+    fi.shifts[0] = uint8_t(T::kR ? blBitCtz(T::kR) : uint32_t(0));
+    fi.shifts[1] = uint8_t(T::kG ? blBitCtz(T::kG) : uint32_t(0));
+    fi.shifts[2] = uint8_t(T::kB ? blBitCtz(T::kB) : uint32_t(0));
+    fi.shifts[3] = uint8_t(T::kA ? blBitCtz(T::kA) : uint32_t(0));
+    fi.sizes[0] = uint8_t(T::kR ? blBitCtz(~(T::kR >> fi.shifts[0])) : uint32_t(0));
+    fi.sizes[1] = uint8_t(T::kG ? blBitCtz(~(T::kG >> fi.shifts[1])) : uint32_t(0));
+    fi.sizes[2] = uint8_t(T::kB ? blBitCtz(~(T::kB >> fi.shifts[2])) : uint32_t(0));
+    fi.sizes[3] = uint8_t(T::kA ? blBitCtz(~(T::kA >> fi.shifts[3])) : uint32_t(0));
   }
 
   static void testPrgb32() noexcept {

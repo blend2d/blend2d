@@ -614,7 +614,11 @@ static BL_INLINE BLResult blApproximateCubicWithQuads(const BLPoint p[4], double
       return BL_SUCCESS;
 
     // Recalculate the parameter.
+    double oldT = t;
     t = t / (1.0 - t);
+
+    if (oldT - t < 1e-3)
+      t += 0.01;
   }
 }
 

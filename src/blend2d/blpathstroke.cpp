@@ -289,6 +289,7 @@ SmoothPolyTo:
             return BL_ERROR_INVALID_GEOMETRY;
 
           BLPoint p[7];
+
           int cusp = 0;
           double tCusp = 0;
 

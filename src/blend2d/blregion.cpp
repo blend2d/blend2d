@@ -963,7 +963,7 @@ Done:
 // Reallocation is not something that should happen often so it's fine that it's
 // outside of the main implementation.
 static BLInternalRegionImpl* blRegionCombineGrow(BLInternalRegionImpl* impl, BLBoxI** dstData, size_t n, bool fitOnly) noexcept {
-  size_t size = (*dstData - impl->data);
+  size_t size = (size_t)(*dstData - impl->data);
   size_t afterSize = size + n;
 
   BL_ASSERT(impl->refCount == 1);

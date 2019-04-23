@@ -150,15 +150,15 @@ static BL_INLINE void blRuntimeInitSystemInfo(BLRuntimeSystemInfo& info) noexcep
   info.allocationGranularity = si.dwAllocationGranularity;
 #else
   #if defined(_SC_PAGESIZE)
-  info.allocationGranularity = sysconf(_SC_PAGESIZE);
+  info.allocationGranularity = uint32_t(sysconf(_SC_PAGESIZE));
   #else
-  info.allocationGranularity = getpagesize();
+  info.allocationGranularity = uint32_t(getpagesize());
   #endif
 
   #if defined(PTHREAD_STACK_MIN)
   info.minThreadStackSize = uint32_t(PTHREAD_STACK_MIN);
   #elif defined(_SC_THREAD_STACK_MIN)
-  info.minThreadStackSize = sysconf(_SC_THREAD_STACK_MIN);
+  info.minThreadStackSize = uint32_t(sysconf(_SC_THREAD_STACK_MIN));
   #else
   #pragma message("Missing 'BLRuntimeSystemInfo::minStackSize' implementation")
   info.minThreadStackSize = blMax<uint32_t>(info.allocationGranularity, 65536u);
@@ -327,7 +327,7 @@ void blRuntimeFailure(const char* fmt, ...) noexcept {
 }
 
 void blRuntimeAssertionFailure(const char* file, int line, const char* msg) noexcept {
-  blRuntimeMessageFmt("ASSERTION FAILURE: '%s' at '%s' [line %d]\n", msg, file, line);
+  blRuntimeMessageFmt("[Blend2D] ASSERTION FAILURE: '%s' at '%s' [line %d]\n", msg, file, line);
   abort();
 }
 
@@ -551,8 +551,8 @@ BLResult blResultFromPosixError(int e) noexcept {
   #undef MAP
 
   // Pass the system error if it's below our error indexing.
-  if (e != 0 && e < BL_ERROR_START_INDEX)
-    return uint32_t(e);
+  if (e != 0 && unsigned(e) < BL_ERROR_START_INDEX)
+    return uint32_t(unsigned(e));
   else
     return BL_ERROR_UNKNOWN_SYSTEM_ERROR;
 }

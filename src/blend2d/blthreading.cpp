@@ -413,6 +413,7 @@ BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes*
 
   err = pthread_attr_destroy(&ptAttr);
   BL_ASSERT(err == 0);
+  BL_UNUSED(err);
 
   return result;
 }
@@ -457,6 +458,8 @@ BLResult blThreadSetPtAttributes(pthread_attr_t* ptAttr, const BLThreadAttribute
 // ============================================================================
 
 void blThreadingRtInit(BLRuntimeContext* rt) noexcept {
+  BL_UNUSED(rt);
+
   // BLThread virtual table.
   blThreadVirt.destroy = blThreadDestroy;
   blThreadVirt.status = blThreadStatus;

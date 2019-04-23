@@ -1040,10 +1040,10 @@ struct BLSimplifyInfoRecordSetGen {
 // Additionally, if there is a mistake leading to recursion the compiler would catch it
 // at compile-time instead of hitting it at runtime during initialization.
 static_assert(BL_FORMAT_COUNT == 4, "Don't forget to add new formats to blCompOpSimplifyInfoTable");
-static constexpr const BLCompOpSimplifyInfoTable blCompOpSimplifyInfoTable_ = {
+static constexpr const BLCompOpSimplifyInfoTable blCompOpSimplifyInfoTable_ = {{
   blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<0>>(),
   blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<1>>(),
   blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<2>>(),
   blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<3>>()
-};
+}};
 const BLCompOpSimplifyInfoTable blCompOpSimplifyInfoTable = blCompOpSimplifyInfoTable_;

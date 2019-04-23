@@ -151,8 +151,8 @@ struct HeadTable {
   UInt16 lowestRecPPEM;
 
   Int16 fontDirectionHint;
-  Int16 indexToLocFormat;
-  Int16 glyphDataFormat;
+  UInt16 indexToLocFormat;
+  UInt16 glyphDataFormat;
 };
 
 // ============================================================================

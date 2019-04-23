@@ -89,18 +89,19 @@ public:
   BL_INLINE void destroy() noexcept {}
 #else
   BL_INLINE void init() noexcept {
-    int err;
+    int err1 = pthread_attr_init(&ptAttr);
+    BL_ASSERT(!err1);
+    BL_UNUSED(err1);
 
-    err = pthread_attr_init(&ptAttr);
-    BL_ASSERT(!err);
-
-    err = pthread_attr_setdetachstate(&ptAttr, PTHREAD_CREATE_DETACHED);
-    BL_ASSERT(!err);
+    int err2 = pthread_attr_setdetachstate(&ptAttr, PTHREAD_CREATE_DETACHED);
+    BL_ASSERT(!err2);
+    BL_UNUSED(err2);
   }
 
   BL_INLINE void destroy() noexcept {
     int err = pthread_attr_destroy(&ptAttr);
     BL_ASSERT(!err);
+    BL_UNUSED(err);
   }
 #endif
 };
@@ -181,9 +182,7 @@ static BLResult BL_CDECL blThreadPoolSetThreadAttributes(BLThreadPool* self_, co
   // On POSIX we try to set the attribute of `pthread_attr_t` as we want to
   // catch a possible error early instead of dealing with that later during
   // `pthread_create()`.
-  int err = blThreadSetPtAttributes(&self->ptAttr, attributes);
-  if (err)
-    return blResultFromPosixError(err);
+  BL_PROPAGATE(blThreadSetPtAttributes(&self->ptAttr, attributes));
 #endif
 
   self->threadAttributes = *attributes;

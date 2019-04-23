@@ -592,11 +592,10 @@ public:
       EXPECT(record == nullptr,
              "Address [%p:%p] collides with a newly allocated [%p:%p]\n", record->addr, record->addr + record->size, p, p + size);
 
-    record = new(malloc(sizeof(Record))) Record(p, size);
-    EXPECT(record != nullptr,
+    void* rPtr = malloc(sizeof(Record));
+    EXPECT(rPtr != nullptr,
            "Out of memory, cannot allocate 'Record'");
-
-    _records.insert(record);
+    _records.insert(new(rPtr) Record(p, size));
   }
 
   void _remove(void* p) noexcept {

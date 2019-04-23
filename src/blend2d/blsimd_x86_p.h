@@ -166,6 +166,14 @@ BL_INLINE I128 vseti128i64(int64_t x1, int64_t x0) noexcept {
                      int32_t(uint64_t(x0) >> 32), int32_t(x0 & 0xFFFFFFFFu));
 }
 
+BL_INLINE I128 vseti128u8(uint8_t x) noexcept { return vseti128i8(int8_t(x)); }
+BL_INLINE I128 vseti128u16(uint16_t x) noexcept { return vseti128i16(int16_t(x)); }
+BL_INLINE I128 vseti128u32(uint32_t x) noexcept { return vseti128i32(int32_t(x)); }
+BL_INLINE I128 vseti128u32(uint32_t x1, uint32_t x0) noexcept { return vseti128i32(int32_t(x1), int32_t(x0), int32_t(x1), int32_t(x0)); }
+BL_INLINE I128 vseti128u32(uint32_t x3, uint32_t x2, uint32_t x1, uint32_t x0) noexcept { return vseti128i32(int32_t(x3), int32_t(x2), int32_t(x1), int32_t(x0)); }
+BL_INLINE I128 vseti128u64(uint64_t x) noexcept { return vseti128i64(int64_t(x)); }
+BL_INLINE I128 vseti128u64(uint64_t x1, uint64_t x0) noexcept { return vseti128i64(int64_t(x1), int64_t(x0)); }
+
 BL_INLINE I128 vcvti32i128(int32_t x) noexcept { return _mm_cvtsi32_si128(int(x)); }
 BL_INLINE I128 vcvtu32i128(uint32_t x) noexcept { return _mm_cvtsi32_si128(int(x)); }
 
@@ -770,6 +778,34 @@ BL_INLINE I256 vseti256i64(int64_t x3, int64_t x2, int64_t x1, int64_t x0) noexc
                      int32_t(uint64_t(x2) >> 32), int32_t(x2 & 0xFFFFFFFFu),
                      int32_t(uint64_t(x1) >> 32), int32_t(x1 & 0xFFFFFFFFu),
                      int32_t(uint64_t(x0) >> 32), int32_t(x0 & 0xFFFFFFFFu));
+}
+
+BL_INLINE I256 vseti256u8(uint8_t x) noexcept { return vseti256i8(int8_t(x)); }
+BL_INLINE I256 vseti256u16(uint16_t x) noexcept { return vseti256i16(int16_t(x)); }
+BL_INLINE I256 vseti256u32(uint32_t x) noexcept { return vseti256i32(int32_t(x)); }
+BL_INLINE I256 vseti256u64(uint64_t x) noexcept { return vseti256i64(int64_t(x)); }
+
+BL_INLINE I256 vseti256u32(uint32_t x1, uint32_t x0) noexcept {
+  return vseti256i32(int32_t(x1), int32_t(x0), int32_t(x1), int32_t(x0),
+                     int32_t(x1), int32_t(x0), int32_t(x1), int32_t(x0));
+}
+
+BL_INLINE I256 vseti256u32(uint32_t x3, uint32_t x2, uint32_t x1, uint32_t x0) noexcept {
+  return vseti256i32(int32_t(x3), int32_t(x2), int32_t(x1), int32_t(x0),
+                     int32_t(x3), int32_t(x2), int32_t(x1), int32_t(x0));
+}
+
+BL_INLINE I256 vseti256u32(uint32_t x7, uint32_t x6, uint32_t x5, uint32_t x4, uint32_t x3, uint32_t x2, uint32_t x1, uint32_t x0) noexcept {
+  return vseti256i32(int32_t(x7), int32_t(x6), int32_t(x5), int32_t(x4),
+                     int32_t(x3), int32_t(x2), int32_t(x1), int32_t(x0));
+}
+
+BL_INLINE I256 vseti256u64(uint64_t x1, uint64_t x0) noexcept {
+  return vseti256i64(int64_t(x1), int64_t(x0));
+}
+
+BL_INLINE I256 vseti256u64(uint64_t x3, uint64_t x2, uint64_t x1, uint64_t x0) noexcept {
+  return vseti256i64(int64_t(x3), int64_t(x2), int64_t(x1), int64_t(x0));
 }
 
 BL_INLINE I256 vcvti32i256(int32_t x) noexcept { return vcast<I256>(vcvti32i128(x)); }

@@ -128,7 +128,7 @@ struct GSubContext {
       else
         newCapacity = blAlignUp(minCapacity + BL_GLYPH_BUFFER_AGGRESIVE_GROWTH / 2, BL_GLYPH_BUFFER_AGGRESIVE_GROWTH);
 
-      BL_PROPAGATE(gbd->ensureBuffer(1, out.index, minCapacity));
+      BL_PROPAGATE(gbd->ensureBuffer(1, out.index, newCapacity));
       gbd->getGlyphDataPtrs(1, &out.itemData, &out.infoData);
 
       return BL_SUCCESS;

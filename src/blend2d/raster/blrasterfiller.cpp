@@ -34,24 +34,6 @@ struct BLActiveEdge {
   BLActiveEdge* next;
 };
 
-// TODO: REMOVE
-static size_t calcLines(BLEdgeStorage<int>* edgeStorage) noexcept {
-  BLEdgeVector<int>** edges = edgeStorage->bandEdges();
-  size_t count = edgeStorage->bandCount();
-
-  size_t n = 0;
-
-  for (size_t bandId = 0; bandId < count; bandId++) {
-    BLEdgeVector<int>* edge = edges[bandId];
-    while (edge) {
-      n += edge->count - 1;
-      edge = edge->next;
-    }
-  }
-
-  return n;
-}
-
 static void debugEdges(BLEdgeStorage<int>* edgeStorage) noexcept {
   BLEdgeVector<int>** edges = edgeStorage->bandEdges();
   size_t count = edgeStorage->bandCount();
@@ -130,7 +112,7 @@ BLResult BL_CDECL BLRasterFiller::fillAnalyticImpl(BLRasterFiller* filler, BLRas
   const uint32_t yStart = (uint32_t(edgeStorage->boundingBox().y0)                  ) >> BL_PIPE_A8_SHIFT;
   const uint32_t yEnd   = (uint32_t(edgeStorage->boundingBox().y1) + BL_PIPE_A8_MASK) >> BL_PIPE_A8_SHIFT;
 
-  size_t requiredWidth = blAlignUp(worker->dstData.size.w + 1 + BL_PIPE_PIXELS_PER_ONE_BIT, BL_PIPE_PIXELS_PER_ONE_BIT);
+  size_t requiredWidth = blAlignUp(uint32_t(worker->dstData.size.w) + 1u + BL_PIPE_PIXELS_PER_ONE_BIT, BL_PIPE_PIXELS_PER_ONE_BIT);
   size_t requiredHeight = bandHeight;
   size_t cellAlignment = 16;
 

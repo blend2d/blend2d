@@ -59,7 +59,7 @@ static BLResult blOTFaceImplInitFace(BLOTFaceImpl* faceI, const BLFontData* font
     uint32_t version = !tables[1].size ? CFFData::kVersion1
                                        : CFFData::kVersion2;
 
-    faceI->faceInfo.outlineType = BL_FONT_OUTLINE_TYPE_CFF + version;
+    faceI->faceInfo.outlineType = uint8_t(BL_FONT_OUTLINE_TYPE_CFF + version);
     BL_PROPAGATE(CFFImpl::init(faceI, tables[version], version));
   }
   else if (fontData->queryTables(tables, glyfTags, 2) == 2) {
@@ -144,5 +144,6 @@ static BLResult BL_CDECL blOTFaceImplDestroy(BLFontFaceImpl* faceI_) noexcept {
 // ============================================================================
 
 void blOTFaceImplRtInit(BLRuntimeContext* rt) noexcept {
-  blOTFaceVirt.destroy =blOTFaceImplDestroy;
+  BL_UNUSED(rt);
+  blOTFaceVirt.destroy = blOTFaceImplDestroy;
 }

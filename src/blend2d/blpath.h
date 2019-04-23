@@ -222,6 +222,10 @@ struct BLStrokeOptionsCore {
 // ============================================================================
 
 #ifdef __cplusplus
+// Prevents the following:
+//   Base class XXX should be explicitly initialized in the copy constructor [-Wextra]
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_EXTRA_WARNINGS)
+
 //! Stroke options [C++ API].
 //!
 //! You should use this as a structure and use members of `BLStrokeOptionsCore`
@@ -241,6 +245,8 @@ public:
     endCap = uint8_t(strokeCap);
   }
 };
+
+BL_DIAGNOSTIC_POP
 #endif
 
 // ============================================================================

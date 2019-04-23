@@ -206,7 +206,7 @@ public:
     return i;
   }
 
-  static BL_INLINE const BLString& none() noexcept { return reinterpret_cast<const BLString&>(blNone[kImplType]); }
+  static BL_INLINE const BLString& none() noexcept { return reinterpret_cast<const BLString*>(blNone)[kImplType]; }
 };
 #endif
 

@@ -782,25 +782,25 @@ public:
     return impl->virt->setStyleAlpha[opType](impl, alpha);
   }
 
-  BL_INLINE BLResult getStyle(uint32_t opType, BLRgba32& out) noexcept {
+  BL_INLINE BLResult getStyle(uint32_t opType, BLRgba32& out) const noexcept {
     if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
       return blTraceError(BL_ERROR_INVALID_VALUE);
     return impl->virt->getStyleRgba32[opType](impl, &out.value);
   }
 
-  BL_INLINE BLResult getStyle(uint32_t opType, BLRgba64& out) noexcept {
+  BL_INLINE BLResult getStyle(uint32_t opType, BLRgba64& out) const noexcept {
     if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
       return blTraceError(BL_ERROR_INVALID_VALUE);
     return impl->virt->getStyleRgba64[opType](impl, &out.value);
   }
 
-  BL_INLINE BLResult getStyle(uint32_t opType, BLPattern& out) noexcept {
+  BL_INLINE BLResult getStyle(uint32_t opType, BLPattern& out) const noexcept {
     if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
       return blTraceError(BL_ERROR_INVALID_VALUE);
     return impl->virt->getStyle[opType](impl, &out);
   }
 
-  BL_INLINE BLResult getStyle(uint32_t opType, BLGradient& out) noexcept {
+  BL_INLINE BLResult getStyle(uint32_t opType, BLGradient& out) const noexcept {
     if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
       return blTraceError(BL_ERROR_INVALID_VALUE);
     return impl->virt->getStyle[opType](impl, &out);
@@ -853,10 +853,10 @@ public:
   BL_INLINE BLResult setFillAlpha(double alpha) noexcept { return impl->virt->setStyleAlpha[kOpFill](impl, alpha); }
 
   BL_INLINE uint32_t fillStyleType() const noexcept { return impl->state->styleType[kOpFill]; }
-  BL_INLINE BLResult getFillStyle(BLRgba32& out) noexcept { return impl->virt->getStyleRgba32[kOpFill](impl, &out.value); }
-  BL_INLINE BLResult getFillStyle(BLRgba64& out) noexcept { return impl->virt->getStyleRgba64[kOpFill](impl, &out.value); }
-  BL_INLINE BLResult getFillStyle(BLPattern& out) noexcept { return impl->virt->getStyle[kOpFill](impl, &out); }
-  BL_INLINE BLResult getFillStyle(BLGradient& out) noexcept { return impl->virt->getStyle[kOpFill](impl, &out); }
+  BL_INLINE BLResult getFillStyle(BLRgba32& out) const noexcept { return impl->virt->getStyleRgba32[kOpFill](impl, &out.value); }
+  BL_INLINE BLResult getFillStyle(BLRgba64& out) const noexcept { return impl->virt->getStyleRgba64[kOpFill](impl, &out.value); }
+  BL_INLINE BLResult getFillStyle(BLPattern& out) const noexcept { return impl->virt->getStyle[kOpFill](impl, &out); }
+  BL_INLINE BLResult getFillStyle(BLGradient& out) const noexcept { return impl->virt->getStyle[kOpFill](impl, &out); }
 
   BL_INLINE BLResult setFillStyle(const BLRgba32& rgba32) noexcept { return impl->virt->setStyleRgba32[kOpFill](impl, rgba32.value); }
   BL_INLINE BLResult setFillStyle(const BLRgba64& rgba64) noexcept { return impl->virt->setStyleRgba64[kOpFill](impl, rgba64.value); }
@@ -880,10 +880,10 @@ public:
   BL_INLINE BLResult setStrokeAlpha(double alpha) noexcept { return impl->virt->setStyleAlpha[kOpStroke](impl, alpha); }
 
   BL_INLINE uint32_t strokeStyleType() const noexcept { return impl->state->styleType[kOpStroke]; }
-  BL_INLINE BLResult getStrokeStyle(BLRgba32& out) noexcept { return impl->virt->getStyleRgba32[kOpStroke](impl, &out.value); }
-  BL_INLINE BLResult getStrokeStyle(BLRgba64& out) noexcept { return impl->virt->getStyleRgba64[kOpStroke](impl, &out.value); }
-  BL_INLINE BLResult getStrokeStyle(BLPattern& out) noexcept { return impl->virt->getStyle[kOpStroke](impl, &out); }
-  BL_INLINE BLResult getStrokeStyle(BLGradient& out) noexcept { return impl->virt->getStyle[kOpStroke](impl, &out); }
+  BL_INLINE BLResult getStrokeStyle(BLRgba32& out) const noexcept { return impl->virt->getStyleRgba32[kOpStroke](impl, &out.value); }
+  BL_INLINE BLResult getStrokeStyle(BLRgba64& out) const noexcept { return impl->virt->getStyleRgba64[kOpStroke](impl, &out.value); }
+  BL_INLINE BLResult getStrokeStyle(BLPattern& out) const noexcept { return impl->virt->getStyle[kOpStroke](impl, &out); }
+  BL_INLINE BLResult getStrokeStyle(BLGradient& out) const noexcept { return impl->virt->getStyle[kOpStroke](impl, &out); }
 
   BL_INLINE BLResult setStrokeStyle(const BLRgba32& rgba32) noexcept { return impl->virt->setStyleRgba32[kOpStroke](impl, rgba32.value); }
   BL_INLINE BLResult setStrokeStyle(const BLRgba64& rgba64) noexcept { return impl->virt->setStyleRgba64[kOpStroke](impl, rgba64.value); }

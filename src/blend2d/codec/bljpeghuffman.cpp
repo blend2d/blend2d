@@ -112,7 +112,7 @@ BLResult blJpegDecoderBuildHuffmanAC(BLJpegDecoderHuffmanACTable* table, const u
 
         // If the result is small enough, we can fit it in acAccel table.
         if (k >= -128 && k <= 127)
-          ac = int32_t(blBitShl(k, 8)) + int32_t(blBitShl(run, 4)) + size + mag;
+          ac = int32_t(blBitShl(k, 8)) + int32_t(blBitShl(run, 4) + size + mag);
       }
     }
 

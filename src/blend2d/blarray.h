@@ -205,13 +205,13 @@ namespace BLArrayInternal {
   template<typename T>
   BL_INLINE const T& first(const T& arg) noexcept { return arg; }
   template<typename T, typename... Args>
-  BL_INLINE const T& first(const T& arg, Args&&... args) noexcept { return arg; }
+  BL_INLINE const T& first(const T& arg, Args&&...) noexcept { return arg; }
 
   template<typename T, typename Arg0>
   BL_INLINE void copyToUninitialized(T* dst, Arg0&& src) noexcept {
     // Otherwise MSVC would emit null checks...
     BL_ASSUME(dst != nullptr);
-    new (dst) T(std::forward<Arg0>(src));
+    new(BLInternal::PlacementNew { dst }) T(std::forward<Arg0>(src));
   }
 
   template<typename T, typename Arg0, typename... Args>
@@ -336,7 +336,11 @@ public:
   BL_INLINE const T* end() const noexcept { return static_cast<const T*>(impl->data) + impl->size; }
 
   //! Get the array data as `BLArrayView<T>`.
-  BL_INLINE const BLArrayView<T>& view() const noexcept { return reinterpret_cast<const BLArrayView<T>&>(impl->view); }
+  BL_INLINE const BLArrayView<T>& view() const noexcept {
+    BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_STRICT_ALIASING)
+    return reinterpret_cast<const BLArrayView<T>&>(impl->view);
+    BL_DIAGNOSTIC_POP
+  }
 
   BL_INLINE const T& at(size_t index) const noexcept {
     BL_ASSERT(index < impl->size);

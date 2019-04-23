@@ -30,6 +30,8 @@ namespace BLPipeGen {
 //! too.
 class PipePart {
 public:
+  BL_OVERRIDE_NEW_DELETE(PipePart)
+
   //! PipePart type.
   enum Type {
     kTypeComposite        = 0,           //!< Composite two `FetchPart` parts.

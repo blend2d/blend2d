@@ -14,6 +14,30 @@
 //! \{
 
 // ============================================================================
+// [BLDummyTrace]
+// ============================================================================
+
+//! Dummy trace - no tracing, no runtime overhead.
+class BLDummyTrace {
+public:
+  BL_INLINE bool enabled() const noexcept { return false; };
+  BL_INLINE void indent() noexcept {}
+  BL_INLINE void deindent() noexcept {}
+
+  template<typename... Args>
+  BL_INLINE void out(Args&&...) noexcept {}
+
+  template<typename... Args>
+  BL_INLINE void info(Args&&...) noexcept {}
+
+  template<typename... Args>
+  BL_INLINE bool warn(Args&&...) noexcept { return false; }
+
+  template<typename... Args>
+  BL_INLINE bool fail(Args&&...) noexcept { return false; }
+};
+
+// ============================================================================
 // [BLDebugTrace]
 // ============================================================================
 
@@ -44,30 +68,6 @@ public:
   BL_HIDDEN static void log(uint32_t severity, uint32_t indentation, const char* fmt, ...) noexcept;
 
   int indentation;
-};
-
-// ============================================================================
-// [BLDummyTrace]
-// ============================================================================
-
-//! Dummy trace - no tracing, no runtime overhead.
-class BLDummyTrace {
-public:
-  BL_INLINE bool enabled() const noexcept { return false; };
-  BL_INLINE void indent() noexcept {}
-  BL_INLINE void deindent() noexcept {}
-
-  template<typename... Args>
-  BL_INLINE void out(Args&&... args) noexcept {}
-
-  template<typename... Args>
-  BL_INLINE void info(Args&&... args) noexcept {}
-
-  template<typename... Args>
-  BL_INLINE bool warn(Args&&... args) noexcept { return false; }
-
-  template<typename... Args>
-  BL_INLINE bool fail(Args&&... args) noexcept { return false; }
 };
 
 //! \}

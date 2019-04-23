@@ -40,7 +40,7 @@ BLRasterWorker::~BLRasterWorker() noexcept {
 // [BLRasterWorker - Interface]
 // ============================================================================
 
-BLResult BLRasterWorker::initEdgeStorage(int height) noexcept {
+BLResult BLRasterWorker::initEdgeStorage(uint32_t height) noexcept {
   uint32_t bandHeight = edgeStorage.bandHeight();
   uint32_t bandCount = (height + bandHeight - 1) >> blBitCtz(bandHeight);
 

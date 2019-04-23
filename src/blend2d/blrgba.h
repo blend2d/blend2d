@@ -116,10 +116,10 @@ struct BLRgba64 {
 
   BL_INLINE void reset(const BLRgba64& rgba64) noexcept { this->value = rgba64.value; }
   BL_INLINE void reset(const BLRgba32& rgba32) noexcept {
-    reset(rgba32.r | (rgba32.r << 8),
-          rgba32.g | (rgba32.g << 8),
-          rgba32.b | (rgba32.b << 8),
-          rgba32.a | (rgba32.a << 8));
+    reset(rgba32.r | (uint32_t(rgba32.r) << 8u),
+          rgba32.g | (uint32_t(rgba32.g) << 8u),
+          rgba32.b | (uint32_t(rgba32.b) << 8u),
+          rgba32.a | (uint32_t(rgba32.a) << 8u));
   }
 
   BL_INLINE bool equals(const BLRgba64& other) const noexcept { return blEquals(this->value, other.value); }

@@ -30,7 +30,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_xrgb32_sse2(
   dstStride -= (w * 4) + gap;
   srcStride -= (w * 4);
 
-  I128 fillMask = vseti128i32(d.fillMask);
+  I128 fillMask = vseti128u32(d.fillMask);
 
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
@@ -110,8 +110,8 @@ static BLResult BL_CDECL bl_convert_prgb32_from_argb32_sse2(
   srcStride -= (w * 4);
 
   I128 zero = vzeroi128();
-  I128 a255 = vseti128i64(int64_t(0x00FF000000000000));
-  I128 fillMask = vseti128i32(d.fillMask);
+  I128 a255 = vseti128u64(0x00FF000000000000u);
+  I128 fillMask = vseti128u32(d.fillMask);
 
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
@@ -174,8 +174,6 @@ static BLResult BL_CDECL bl_convert_prgb32_from_argb32_sse2(
 
 bool blPixelConverterInitNativeFromXRGB_SSE2(BLPixelConverterCore* self, uint32_t dstFormat, const BLFormatInfo& srcInfo) noexcept {
   BLPixelConverterData::NativeFromExternal& d = blPixelConverterGetData(self)->nativeFromExternal;
-  const BLFormatInfo& dstInfo = blPixelConverterFormatInfo[dstFormat];
-
   if (srcInfo.depth == 32) {
     // Only BYTE aligned components (8888 or X888 formats).
     if (!(srcInfo.flags & BL_FORMAT_FLAG_BYTE_ALIGNED))

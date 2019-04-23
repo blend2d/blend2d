@@ -243,6 +243,8 @@ typedef OpArrayT<x86::Vec> VecArray;
 // [BLPipeGen::OpAccess]
 // ============================================================================
 
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
+
 template<typename T>
 struct OpAccessImpl {
   typedef T Input;
@@ -271,6 +273,8 @@ struct OpAccess {
   template<typename OpT>
   static BL_INLINE const typename OpAccessImpl<OpT>::Output& at(const OpT& op, size_t i) noexcept { return OpAccessImpl<OpT>::at(op, i); }
 };
+
+BL_DIAGNOSTIC_POP
 
 // ============================================================================
 // [BLPipeGen::ScopedInjector]
@@ -338,7 +342,7 @@ struct JitUtils {
 //!     - "im" - Mask (not part of the pixel itself, comes from a FillPart).
 struct PixelARGB {
   //! Pixel flags.
-  enum Flags {
+  enum Flags : uint32_t {
     kPC          = 0x00000001u,          //!< Packed ARGB32 components stored in `pc`.
     kUC          = 0x00000002u,          //!< Unpacked ARGB32 components stored in `uc`.
     kUA          = 0x00000004u,          //!< Unpacked ALPHA8 stored in `ua`.

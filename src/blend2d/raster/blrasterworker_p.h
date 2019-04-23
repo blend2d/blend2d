@@ -63,7 +63,7 @@ public:
   BLRasterWorker(BLRasterContextImpl* ctxI) noexcept;
   ~BLRasterWorker() noexcept;
 
-  BLResult initEdgeStorage(int height) noexcept;
+  BLResult initEdgeStorage(uint32_t height) noexcept;
 
   BL_INLINE void initFullAlpha(uint32_t val) noexcept { fullAlpha = val; }
   BL_INLINE void initContextDataByDstData() noexcept { ctxData.dst = dstData; }

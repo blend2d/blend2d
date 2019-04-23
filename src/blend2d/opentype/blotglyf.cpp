@@ -253,7 +253,7 @@ static BLResult BL_CDECL decodeGlyph(
         // Number of vertices in TrueType sense (could be less than number of
         // points required by BLPath representation, especially if TT outline
         // contains consecutive off-curve points).
-        uint32_t vertexCount = size_t(contourArray[contourCount - 1].value()) + 1u;
+        uint32_t vertexCount = uint32_t(contourArray[contourCount - 1].value()) + 1u;
         uint8_t* flags = static_cast<uint8_t*>(tmpBuffer->alloc(vertexCount));
 
         if (BL_UNLIKELY(!flags))

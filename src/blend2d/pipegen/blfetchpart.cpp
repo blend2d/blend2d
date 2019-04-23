@@ -49,7 +49,10 @@ void FetchPart::fini() noexcept {
   _pixelGranularity = 0;
 }
 
-void FetchPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {}
+void FetchPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
+  BL_UNUSED(x);
+  BL_UNUSED(y);
+}
 void FetchPart::_finiPart() noexcept {}
 
 // ============================================================================
@@ -57,9 +60,20 @@ void FetchPart::_finiPart() noexcept {}
 // ============================================================================
 
 // By default these do nothing, only used by `SolidFetch()` this way.
-void FetchPart::advanceY() noexcept {}
-void FetchPart::startAtX(x86::Gp& x) noexcept {}
-void FetchPart::advanceX(x86::Gp& x, x86::Gp& diff) noexcept {}
+void FetchPart::advanceY() noexcept {
+  // Nothing by default.
+}
+
+void FetchPart::startAtX(x86::Gp& x) noexcept {
+  // Nothing by default.
+  BL_UNUSED(x);
+}
+
+void FetchPart::advanceX(x86::Gp& x, x86::Gp& diff) noexcept {
+  // Nothing by default.
+  BL_UNUSED(x);
+  BL_UNUSED(diff);
+}
 
 // ============================================================================
 // [BLPipeGen::FetchPart - Fetch]

@@ -247,7 +247,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
           else if (bpp == 3) {
             I128 p0, p1, p2, p3;
             I128 t0, t2;
-            I128 ext3b = vseti128i32(0x01000001);
+            I128 ext3b = vseti128u32(0x01000001u);
 
             // Process 64 BYTEs at a time.
             p0 = vcvtu32i128(blMemReadU32u(p) & 0x00FFFFFFu);
@@ -667,8 +667,8 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
           }
           */
           else if (bpp == 4) {
-            I128 m00FF = vseti128i32(0x00FF00FF);
-            I128 m01FF = vseti128i32(0x01FF01FF);
+            I128 m00FF = vseti128u32(0x00FF00FFu);
+            I128 m01FF = vseti128u32(0x01FF01FFu);
             I128 t1 = vunpackli8(vcvtu32i128(blMemReadU32a(p)), zero);
 
             // Process 16 BYTEs at a time.
@@ -870,7 +870,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             if (bpp == 3) {
               I128 pz = vunpackli8(vcvtu32i128(blMemReadU32u(p) & 0x00FFFFFFu), zero);
               I128 uz = vunpackli8(vcvtu32i128(blMemReadU32u(u) & 0x00FFFFFFu), zero);
-              I128 mask = vseti128i32(0, 0, 0x0000FFFF, 0xFFFFFFFF);
+              I128 mask = vseti128u32(0u, 0u, 0x0000FFFFu, 0xFFFFFFFFu);
 
               // Process 8 BYTEs at a time.
               while (i >= 8) {
@@ -912,9 +912,9 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
               }
             }
             else if (bpp == 4) {
-              I128 pz = vunpackli8(_mm_cvtsi32_si128(blMemReadU32a(p)), zero);
-              I128 uz = vunpackli8(_mm_cvtsi32_si128(blMemReadU32u(u)), zero);
-              I128 mask = vseti128i32(0, 0, 0xFFFFFFFF, 0xFFFFFFFF);
+              I128 pz = vunpackli8(vcvtu32i128(blMemReadU32a(p)), zero);
+              I128 uz = vunpackli8(vcvtu32i128(blMemReadU32u(u)), zero);
+              I128 mask = vseti128u32(0u, 0u, 0xFFFFFFFFu, 0xFFFFFFFFu);
 
               // Process 16 BYTEs at a time.
               while (i >= 16) {

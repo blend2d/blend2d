@@ -143,10 +143,6 @@ static constexpr size_t blPathCapacityOf(size_t implSize) noexcept {
   return blContainerCapacityOf(sizeof(BLInternalPathImpl), sizeof(BLPoint) + 1, implSize);
 }
 
-static constexpr size_t blPathMaximumCapacity() noexcept {
-  return blPathCapacityOf(SIZE_MAX);
-}
-
 static BL_INLINE size_t blPathFittingCapacity(size_t n) noexcept {
   return blContainerFittingCapacity(blPathImplSizeOf(), sizeof(BLPoint) + 1, n);
 }
@@ -1836,6 +1832,8 @@ BLResult blPathAddReversedPath(BLPathCore* self, const BLPathCore* other, const 
 // ============================================================================
 
 static BLResult blPathAddStrokedPathSink(BLPath* a, BLPath* b, BLPath* c, void* closure) noexcept {
+  BL_UNUSED(closure);
+
   BLPathAppender dst;
   BL_PROPAGATE(dst.begin(a, BL_MODIFY_OP_APPEND_GROW, b->size() + c->size()));
 

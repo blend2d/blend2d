@@ -25,8 +25,8 @@ public:
   BL_NONCOPYABLE(IndexExtractorU16)
 
   enum Strategy : uint32_t {
-    kStrategyExtractSSE2   = 0, //!< Use `PEXTRW` (SSE2) instruction.
-    kStrategyStack         = 1  //!< Write indexes on stack then load to GP.
+    kStrategyStack         = 0, //!< Write indexes on stack then load to GP.
+    kStrategyExtractSSE2   = 1  //!< Use `PEXTRW` (SSE2) instruction.
   };
 
   PipeCompiler* _pc;
@@ -60,8 +60,8 @@ public:
   BL_NONCOPYABLE(IndexExtractorU32)
 
   enum Strategy : uint32_t {
-    kStrategyExtractSSE4_1 = 0, //!< Use `PEXTRD` (SSE4.1) instruction.
-    kStrategyStack         = 1  //!< Write indexes on stack then load to GP.
+    kStrategyStack         = 0, //!< Write indexes on stack then load to GP.
+    kStrategyExtractSSE4_1 = 1  //!< Use `PEXTRD` (SSE4.1) instruction.
   };
 
   PipeCompiler* _pc;
@@ -185,7 +185,7 @@ namespace FetchUtils {
   }
 
   static void fetchARGB32_4x(
-    FetchContext4X* fcA, const x86::Mem& srcA, const x86::Xmm& idx4x, int shift) noexcept {
+    FetchContext4X* fcA, const x86::Mem& srcA, const x86::Xmm& idx4x, uint32_t shift) noexcept {
 
     x86::Mem m(srcA);
     m.setShift(shift);
@@ -198,7 +198,7 @@ namespace FetchUtils {
 
   static void fetchARGB32_4x_twice(
     FetchContext4X* fcA, const x86::Mem& srcA,
-    FetchContext4X* fcB, const x86::Mem& srcB, const x86::Xmm& idx4x, int shift) noexcept {
+    FetchContext4X* fcB, const x86::Mem& srcB, const x86::Xmm& idx4x, uint32_t shift) noexcept {
 
     x86::Mem mA(srcA);
     x86::Mem mB(srcB);

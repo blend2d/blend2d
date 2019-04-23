@@ -102,15 +102,15 @@ template<typename T> static constexpr T blMaxValue() noexcept { return std::nume
 
 namespace {
 
+template<typename T>
+constexpr T blBitOnes() noexcept { return T(~T(0)); }
+
 //! Returns `0 - x` in a safe way (no undefined behavior), works for both signed and unsigned numbers.
 template<typename T>
 constexpr T blNegate(const T& x) noexcept {
   typedef typename std::make_unsigned<T>::type U;
   return T(U(0) - U(x));
 }
-
-template<typename T>
-constexpr T blBitOnes(const T& x) noexcept { return blNegate(T(-1)); }
 
 template<typename T>
 constexpr uint32_t blBitSizeOf() noexcept { return uint32_t(sizeof(T) * 8u); }
@@ -132,9 +132,6 @@ BL_INLINE Out blBitCast(const In& x) noexcept {
   u.in = x;
   return u.out;
 }
-
-template<typename T>
-constexpr T blBitOnes() noexcept { return T(~T(0)); }
 
 //! Returns `x << y` (shift left logical) by explicitly casting `x` to an unsigned type and back.
 template<typename X, typename Y>
@@ -207,7 +204,7 @@ template<> constexpr uint64_t blFillTrailingBits(const uint64_t& x) noexcept { r
 
 //! Return a bit-mask that has `x` bit set.
 template<typename T, typename Arg>
-constexpr T blBitMask(Arg x) noexcept { return T(1u) << x; }
+constexpr T blBitMask(Arg x) noexcept { return T(T(1u) << x); }
 
 //! Return a bit-mask that has `x` bit set (multiple arguments).
 template<typename T, typename Arg, typename... Args>
@@ -598,8 +595,8 @@ BL_INLINE int32_t blMemReadI16(const void* p) noexcept {
     return int32_t(int16_t(static_cast<const U16AlignedToN*>(p)[0]));
   }
   else {
-    int32_t hi = blMemReadI8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 1 : 0));
-    int32_t lo = blMemReadU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 0 : 1));
+    int32_t hi = int32_t(blMemReadI8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 1 : 0)));
+    int32_t lo = int32_t(blMemReadU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 0 : 1)));
     return blBitShl(hi, 8) | lo;
   }
 }

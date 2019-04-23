@@ -41,7 +41,7 @@ static BL_INLINE uint32_t blRgba32Pack(uint32_t r, uint32_t g, uint32_t b, uint3
   return (a << 24) | (r << 16) | (g << 8) | (b);
 }
 
-static BL_INLINE uint32_t blRgba64Pack(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFFFu) noexcept {
+static BL_INLINE uint64_t blRgba64Pack(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFFFu) noexcept {
   BL_ASSUME(r <= 0xFFFFu);
   BL_ASSUME(g <= 0xFFFFu);
   BL_ASSUME(b <= 0xFFFFu);

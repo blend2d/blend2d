@@ -450,7 +450,7 @@ void CompOpPart::_cMaskLoopInit(uint32_t loopType) noexcept {
   BL_ASSERT(_cMaskLoopType == kCMaskLoopTypeNone);
   BL_ASSERT(_cMaskLoopHook == nullptr);
 
-  _cMaskLoopType = loopType;
+  _cMaskLoopType = uint8_t(loopType);
   _cMaskLoopHook = cc->cursor();
 }
 
@@ -1081,7 +1081,7 @@ void CompOpPart::cMaskGenericLoopXmm(x86::Gp& i) noexcept {
   }
 
   BL_ASSERT(minAlignment() > 1);
-  int alignmentMask = minAlignment() - 1;
+  int alignmentMask = int(minAlignment()) - 1;
 
   // 4+ pixels at a time.
   if (maxPixels() == 4) {
@@ -1788,7 +1788,6 @@ void CompOpPart::vMaskProc32Xmm4(PixelARGB& out, uint32_t flags, VecArray& mv, b
 
 void CompOpPart::vMaskProc32XmmV(PixelARGB& out, uint32_t flags, VecArray& mv, uint32_t n, bool mImmutable) noexcept {
   bool hasMask = !mv.empty();
-  bool isConst = hasMask && mv.isScalar();
 
   bool useDa = hasDa();
   bool useSa = hasSa() || hasMask || isLoopCMask();
@@ -2716,7 +2715,7 @@ void CompOpPart::vMaskProc32XmmV(PixelARGB& out, uint32_t flags, VecArray& mv, u
   if (compOp() == BL_COMP_OP_SCREEN) {
     // Dca' = Sca + Dca.(1 - Sca)
     // Da'  = Sa  + Da .(1 - Sa)
-    srcFetch32(s, PixelARGB::kUC | (hasMask ? 0 : int(PixelARGB::kImmutable)), n);
+    srcFetch32(s, PixelARGB::kUC | (hasMask ? uint32_t(0) : PixelARGB::kImmutable), n);
     dstFetch32(d, PixelARGB::kUC, n);
 
     VecArray& sv = s.uc;
@@ -2918,7 +2917,7 @@ void CompOpPart::vMaskProc32XmmV(PixelARGB& out, uint32_t flags, VecArray& mv, u
   if (compOp() == BL_COMP_OP_LINEAR_BURN) {
     // Dca' = Dca + Sca - Sa.Da
     // Da'  = Da  + Sa  - Sa.Da
-    srcFetch32(s, PixelARGB::kUC | (hasMask ? 0 : int(PixelARGB::kImmutable)), n);
+    srcFetch32(s, PixelARGB::kUC | (hasMask ? uint32_t(0) : PixelARGB::kImmutable), n);
     dstFetch32(d, PixelARGB::kUC, n);
 
     VecArray& sv = s.uc;
@@ -3325,7 +3324,7 @@ void CompOpPart::vMaskProc32XmmV(PixelARGB& out, uint32_t flags, VecArray& mv, u
   if (compOp() == BL_COMP_OP_EXCLUSION) {
     // Dca' = Dca + Sca - 2.Sca.Dca
     // Da'  = Da + Sa - Sa.Da
-    srcFetch32(s, PixelARGB::kUC | (hasMask ? 0 : int(PixelARGB::kImmutable)), n);
+    srcFetch32(s, PixelARGB::kUC | (hasMask ? uint32_t(0) : PixelARGB::kImmutable), n);
     dstFetch32(d, PixelARGB::kUC, n);
 
     VecArray& sv = s.uc;
@@ -3392,6 +3391,8 @@ void CompOpPart::vMaskProc32InvertMask(VecArray& mi, VecArray& mv) noexcept {
 }
 
 void CompOpPart::vMaskProc32InvertDone(VecArray& mi, bool mImmutable) noexcept {
+  BL_UNUSED(mImmutable);
+
   if (cMaskLoopType() == kCMaskLoopTypeMask) {
     if (mi[0].id() == _mask->vec.m.id())
       pc->vinv256u16(mi[0], mi[0]);

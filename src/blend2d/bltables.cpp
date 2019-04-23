@@ -47,13 +47,13 @@ const BLModuloTable blModuloTable[18] = {
 
 struct BLDiv24BitReciprocalGen {
   // Helper to calculate the reciprocal - C++11 doesn't allow variables...
-  static constexpr uint32_t value(size_t t, double d) noexcept {
+  static constexpr uint32_t calc(double d) noexcept {
     return uint32_t(d) + uint32_t(d - double(uint32_t(d)) > 0.0);
   }
 
   //! Calculates the reciprocal for `BLCommonTable::div25bit` table.
   static constexpr uint32_t value(size_t i) noexcept {
-    return value(i, i ? double(0xFF0000) / double(i) : 0.0);
+    return calc(i ? double(0xFF0000) / double(i) : 0.0);
   }
 };
 

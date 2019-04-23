@@ -881,7 +881,7 @@ static BLResult blPngDecoderImplReadInfoInternal(BLPngDecoderImpl* impl, const u
   impl->sampleCount = blPngColorTypeToSampleCountTable[colorType];
 
   impl->imageInfo.size.reset(int(w), int(h));
-  impl->imageInfo.depth = sampleDepth * uint32_t(impl->sampleCount);
+  impl->imageInfo.depth = uint16_t(sampleDepth * uint32_t(impl->sampleCount));
   impl->imageInfo.frameCount = 1;
 
   impl->bufferIndex = (size_t)(p - start);
@@ -1127,7 +1127,7 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* impl, BLImag
   // --------------------------------------------------------------------------
 
   BLImageData imageData;
-  BL_PROPAGATE(imageOut->create(w, h, format));
+  BL_PROPAGATE(imageOut->create(int(w), int(h), format));
   BL_PROPAGATE(imageOut->makeMutable(&imageData));
 
   uint8_t* dstPixels = static_cast<uint8_t*>(imageData.pixelData);
@@ -1302,9 +1302,15 @@ static BLPngDecoderImpl* blPngDecoderImplNew() noexcept {
 // [BLPngCodec - Impl]
 // ============================================================================
 
-static BLResult BL_CDECL blPngCodecImplDestroy(BLPngCodecImpl* impl) noexcept { return BL_SUCCESS; }
+static BLResult BL_CDECL blPngCodecImplDestroy(BLPngCodecImpl* impl) noexcept {
+  // Built-in codecs are never destroyed.
+  BL_UNUSED(impl);
+  return BL_SUCCESS;
+}
 
 static uint32_t BL_CDECL blPngCodecImplInspectData(BLPngCodecImpl* impl, const uint8_t* data, size_t size) noexcept {
+  BL_UNUSED(impl);
+
   // Minimum PNG size and signature.
   if (size < 8 || memcmp(data, blPngSignature, 8) != 0)
     return 0;
@@ -1313,13 +1319,18 @@ static uint32_t BL_CDECL blPngCodecImplInspectData(BLPngCodecImpl* impl, const u
 }
 
 static BLResult BL_CDECL blPngCodecImplCreateDecoder(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept {
+  BL_UNUSED(impl);
   BLImageDecoderCore decoder { blPngDecoderImplNew() };
+
   if (BL_UNLIKELY(!decoder.impl))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+
   return blImageDecoderAssignMove(dst, &decoder);
 }
 
 static BLResult BL_CDECL blPngCodecImplCreateEncoder(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept {
+  BL_UNUSED(impl);
+
   // TODO: [PNG] Encoder
   return blTraceError(BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED);
   /*

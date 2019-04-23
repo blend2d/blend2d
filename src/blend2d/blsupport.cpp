@@ -101,7 +101,7 @@ static void testBitUtils() noexcept {
   EXPECT(blBitShl<uint32_t>(0x00001111 , 16) == 0x11110000 );
   EXPECT(blBitShr<int32_t >(0x11110000u, 16) == 0x00001111u);
   EXPECT(blBitShr<uint32_t>(0x11110000u, 16) == 0x00001111u);
-  EXPECT(blBitSar<int32_t >(0xFFFF0000u, 16) == 0xFFFFFFFFu);
+  EXPECT(blBitSar<uint32_t>(0xFFFF0000u, 16) == 0xFFFFFFFFu);
 
   INFO("blBitRol() / blBitRor()");
   EXPECT(blBitRol<int32_t >(0x00100000 , 16) == 0x00000010 );

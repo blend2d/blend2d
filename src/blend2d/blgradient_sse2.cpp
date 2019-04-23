@@ -32,7 +32,7 @@ void BL_CDECL blGradientInterpolate32_SSE2(uint32_t* dPtr, uint32_t dSize, const
   I128 c1;
 
   I128 half = vseti128i32(1 << (23 - 1));
-  I128 argb64_a255 = vseti128i64(int64_t(0x00FF000000000000));
+  I128 argb64_a255 = vseti128u64(0x00FF000000000000u);
 
   uint32_t p0 = 0;
   uint32_t p1;
@@ -74,7 +74,7 @@ void BL_CDECL blGradientInterpolate32_SSE2(uint32_t* dPtr, uint32_t dSize, const
 
       // Scale `cD` by taking advantage of SSE2-FP division.
       {
-        D128 scale = vdivsd(vcvtd64d128(1 << 23), vcvti32d128(i));
+        D128 scale = vdivsd(vcvtd64d128(1 << 23), vcvti32d128(int(i)));
 
         c0 = vunpackli8(c0, c0);
         cD = vunpackli8(c1, c1);

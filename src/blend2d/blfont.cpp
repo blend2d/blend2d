@@ -79,6 +79,7 @@ static BL_INLINE bool isOpenTypeVersionTag(uint32_t tag) noexcept {
 // A callback that we use to destroy an array-impl we keep if `BLMemFontLoaderImpl`
 // was created from `BLArray<uint8_t>()`.
 static void BL_CDECL blDestroyArrayImpl(void* impl, void* arrayI) noexcept {
+  BL_UNUSED(impl);
   blArrayImplRelease(static_cast<BLArrayImpl*>(arrayI));
 }
 

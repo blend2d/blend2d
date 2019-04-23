@@ -99,6 +99,7 @@ BL_HIDDEN extern BLRuntimeContext blRuntimeContext;
 // NOTE: Must be in anonymous namespace. When the compilation unit uses certain
 // optimizations we constexpr the check and return `true` without checking CPU
 // features as the compilation unit uses them anyway [at that point].
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
 
 namespace {
 
@@ -145,6 +146,8 @@ inline bool blRuntimeHasAVX2(BLRuntimeContext* rt) noexcept { return (rt->system
 #endif
 
 } // {anonymous}
+
+BL_DIAGNOSTIC_POP
 
 // ============================================================================
 // [BLRuntime - Utilities]

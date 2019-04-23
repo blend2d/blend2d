@@ -324,10 +324,10 @@ static constexpr uint32_t signatureOfXmmYmmZmm[] = {
   x86::Zmm::kSignature
 };
 
-static inline int shuf32ToShuf64(int imm) noexcept {
-  int imm0 = (imm     ) & 1;
-  int imm1 = (imm >> 1) & 1;
-  return int(x86::Predicate::shuf(imm1 * 2, imm1 * 2 + 1, imm0 * 2, imm0 * 2 + 1));
+static inline uint32_t shuf32ToShuf64(uint32_t imm) noexcept {
+  uint32_t imm0 = uint32_t(imm     ) & 1u;
+  uint32_t imm1 = uint32_t(imm >> 1) & 1u;
+  return x86::Predicate::shuf(imm1 * 2u, imm1 * 2u + 1u, imm0 * 2u, imm0 * 2u + 1u);
 }
 
 static inline void fixVecSignature(Operand_& op, uint32_t signature) noexcept {
@@ -584,7 +584,7 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
       }
 
       default:
-        BL_ASSERT(!"Invalid intrinsic at vemit_vv_vv()");
+        BL_NOT_REACHED();
     }
   }
 
@@ -619,7 +619,7 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const OpArray& dst_, const OpA
   }
 }
 
-void PipeCompiler::vemit_vvi_vi(uint32_t packedId, const Operand_& dst_, const Operand_& src_, int imm) noexcept {
+void PipeCompiler::vemit_vvi_vi(uint32_t packedId, const Operand_& dst_, const Operand_& src_, uint32_t imm) noexcept {
   // Intrinsics support.
   if (PackedInst::isIntrin(packedId)) {
     switch (PackedInst::intrinId(packedId)) {
@@ -638,7 +638,7 @@ void PipeCompiler::vemit_vvi_vi(uint32_t packedId, const Operand_& dst_, const O
         return;
 
       default:
-        BL_ASSERT(!"Invalid intrinsic at vemit_vvi_vi()");
+        BL_NOT_REACHED();
     }
   }
 
@@ -664,7 +664,7 @@ void PipeCompiler::vemit_vvi_vi(uint32_t packedId, const Operand_& dst_, const O
   }
 }
 
-void PipeCompiler::vemit_vvi_vi(uint32_t packedId, const OpArray& dst_, const Operand_& src_, int imm) noexcept {
+void PipeCompiler::vemit_vvi_vi(uint32_t packedId, const OpArray& dst_, const Operand_& src_, uint32_t imm) noexcept {
   uint32_t dstIndex = 0;
   uint32_t dstCount = dst_.size();
 
@@ -674,7 +674,7 @@ void PipeCompiler::vemit_vvi_vi(uint32_t packedId, const OpArray& dst_, const Op
   }
 }
 
-void PipeCompiler::vemit_vvi_vi(uint32_t packedId, const OpArray& dst_, const OpArray& src_, int imm) noexcept {
+void PipeCompiler::vemit_vvi_vi(uint32_t packedId, const OpArray& dst_, const OpArray& src_, uint32_t imm) noexcept {
   uint32_t dstIndex = 0;
   uint32_t dstCount = dst_.size();
 
@@ -689,7 +689,7 @@ void PipeCompiler::vemit_vvi_vi(uint32_t packedId, const OpArray& dst_, const Op
   }
 }
 
-void PipeCompiler::vemit_vvi_vvi(uint32_t packedId, const Operand_& dst_, const Operand_& src_, int imm) noexcept {
+void PipeCompiler::vemit_vvi_vvi(uint32_t packedId, const Operand_& dst_, const Operand_& src_, uint32_t imm) noexcept {
   Operand dst(dst_);
   Operand src(src_);
 
@@ -704,7 +704,7 @@ void PipeCompiler::vemit_vvi_vvi(uint32_t packedId, const Operand_& dst_, const 
   cc->emit(instId, dst, src, imm);
 }
 
-void PipeCompiler::vemit_vvi_vvi(uint32_t packedId, const OpArray& dst_, const Operand_& src_, int imm) noexcept {
+void PipeCompiler::vemit_vvi_vvi(uint32_t packedId, const OpArray& dst_, const Operand_& src_, uint32_t imm) noexcept {
   uint32_t dstIndex = 0;
   uint32_t dstCount = dst_.size();
 
@@ -714,7 +714,7 @@ void PipeCompiler::vemit_vvi_vvi(uint32_t packedId, const OpArray& dst_, const O
   }
 }
 
-void PipeCompiler::vemit_vvi_vvi(uint32_t packedId, const OpArray& dst_, const OpArray& src_, int imm) noexcept {
+void PipeCompiler::vemit_vvi_vvi(uint32_t packedId, const OpArray& dst_, const OpArray& src_, uint32_t imm) noexcept {
   uint32_t dstIndex = 0;
   uint32_t dstCount = dst_.size();
 
@@ -897,7 +897,7 @@ void PipeCompiler::vemit_vvv_vv(uint32_t packedId, const Operand_& dst_, const O
       }
 
       default:
-        BL_ASSERT(!"Invalid intrinsic at vemit_vvv_vv()");
+        BL_NOT_REACHED();
     }
   }
 
@@ -941,7 +941,7 @@ void PipeCompiler::vemit_vvv_vv(uint32_t packedId, const OpArray& dst_, const Op
   }
 }
 
-void PipeCompiler::vemit_vvvi_vvi(uint32_t packedId, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_, int imm) noexcept {
+void PipeCompiler::vemit_vvvi_vvi(uint32_t packedId, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_, uint32_t imm) noexcept {
   Operand dst(dst_);
   Operand src1(src1_);
   Operand src2(src2_);
@@ -965,15 +965,15 @@ void PipeCompiler::vemit_vvvi_vvi(uint32_t packedId, const Operand_& dst_, const
   }
 }
 
-void PipeCompiler::vemit_vvvi_vvi(uint32_t packedId, const OpArray& dst, const Operand_& src1, const OpArray& src2, int imm) noexcept {
+void PipeCompiler::vemit_vvvi_vvi(uint32_t packedId, const OpArray& dst, const Operand_& src1, const OpArray& src2, uint32_t imm) noexcept {
   vemit_vvvi_vvi(packedId, dst, OpArray(src1), src2, imm);
 }
 
-void PipeCompiler::vemit_vvvi_vvi(uint32_t packedId, const OpArray& dst, const OpArray& src1, const Operand_& src2, int imm) noexcept {
+void PipeCompiler::vemit_vvvi_vvi(uint32_t packedId, const OpArray& dst, const OpArray& src1, const Operand_& src2, uint32_t imm) noexcept {
   vemit_vvvi_vvi(packedId, dst, src1, OpArray(src2), imm);
 }
 
-void PipeCompiler::vemit_vvvi_vvi(uint32_t packedId, const OpArray& dst, const OpArray& src1, const OpArray& src2, int imm) noexcept {
+void PipeCompiler::vemit_vvvi_vvi(uint32_t packedId, const OpArray& dst, const OpArray& src1, const OpArray& src2, uint32_t imm) noexcept {
   uint32_t dstIndex = 0;
   uint32_t dstCount = dst.size();
 
@@ -1038,7 +1038,7 @@ void PipeCompiler::vemit_vvvv_vvv(uint32_t packedId, const Operand_& dst_, const
       }
 
       default:
-        BL_ASSERT(!"Invalid intrinsic at vemit_vvvv_vvv()");
+        BL_NOT_REACHED();
     }
   }
 
@@ -1118,6 +1118,8 @@ void PipeCompiler::qmulu64u32(const x86::Mm& dst, const x86::Mm& src1, const x86
 // ============================================================================
 
 void PipeCompiler::xFetchARGB32_1x(PixelARGB& p, uint32_t flags, const x86::Mem& sMem, uint32_t sAlignment) noexcept {
+  BL_UNUSED(sAlignment);
+
   if (flags & PixelARGB::kAny) {
     newXmmArray(p.pc, 1, "c");
     vloadi32(p.pc[0], sMem);
@@ -1492,7 +1494,7 @@ void PipeCompiler::xLoopMemcpy32(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_
   BL_ASSERT(n >= 16);
   BL_ASSERT((n % 16) == 0);
 
-  int nInBytes = int(n * 4);
+  uint32_t nInBytes = n * 4u;
   x86::Xmm t0 = cc->newXmm("t0");
 
   if (granularity == 4) {
@@ -1510,10 +1512,11 @@ void PipeCompiler::xLoopMemcpy32(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_
     cc->jc(L_MainSkip);
 
     cc->bind(L_MainLoop);
-    cc->add(dst, nInBytes);
-    cc->add(src, nInBytes);
+    cc->add(dst, int(nInBytes));
+    cc->add(src, int(nInBytes));
     cc->sub(i, n);
-    xInlineMemcpyXmm(x86::ptr(dst, -nInBytes), false, x86::ptr(src, -nInBytes), false, nInBytes);
+    xInlineMemcpyXmm(x86::ptr(dst, -int(nInBytes)), false,
+                     x86::ptr(src, -int(nInBytes)), false, nInBytes);
     cc->jnc(L_MainLoop);
 
     cc->bind(L_MainSkip);
@@ -1585,11 +1588,11 @@ void PipeCompiler::xLoopMemcpy32(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_
     cc->jc(L_MainDone);
 
     cc->bind(L_MainLoop);
-    cc->add(src, nInBytes);
-    cc->add(dst, nInBytes);
+    cc->add(src, int(nInBytes));
+    cc->add(dst, int(nInBytes));
     cc->sub(i, int(n));
-    xInlineMemcpyXmm(x86::ptr(dst, -nInBytes), true,
-                     x86::ptr(src, -nInBytes), false, nInBytes);
+    xInlineMemcpyXmm(x86::ptr(dst, -int(nInBytes)), true,
+                     x86::ptr(src, -int(nInBytes)), false, nInBytes);
     cc->jnc(L_MainLoop);
 
     cc->bind(L_MainDone);
@@ -1618,7 +1621,7 @@ void PipeCompiler::xLoopMemcpy32(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_
 
 void PipeCompiler::xInlineMemcpyXmm(
   const x86::Mem& dPtr, bool dstAligned,
-  const x86::Mem& sPtr, bool srcAligned, int numBytes) noexcept {
+  const x86::Mem& sPtr, bool srcAligned, uint32_t numBytes) noexcept {
 
   x86::Mem dAdj(dPtr);
   x86::Mem sAdj(sPtr);
@@ -1638,9 +1641,9 @@ void PipeCompiler::xInlineMemcpyXmm(
                                hasSSE3() ? x86::Inst::kIdLddqu   : x86::Inst::kIdMovups;
   if (!dstAligned) storeInst = hasAVX()  ? x86::Inst::kIdVmovups : x86::Inst::kIdMovups;
 
-  int n = numBytes / 16;
+  uint32_t n = numBytes / 16;
   do {
-    int a, b = blMin<int>(numBytes, int(ASMJIT_ARRAY_SIZE(t)));
+    uint32_t a, b = blMin<uint32_t>(numBytes, ASMJIT_ARRAY_SIZE(t));
     for (a = 0; a < b; a++) { cc->emit(fetchInst, t[a], sAdj); sAdj.addOffsetLo32(16); }
     for (a = 0; a < b; a++) { cc->emit(storeInst, dAdj, t[a]); dAdj.addOffsetLo32(16); }
     n -= b;

@@ -134,7 +134,7 @@ struct BLPipeLookupCache {
     using namespace SIMD;
     static_assert(N == 8, "This code is written for N == 8");
 
-    I128 vSign = vseti128i32(int32_t(signature));
+    I128 vSign = vseti128u32(signature);
     I128 v0123 = vcmpeqi32(vloadi128u(_signs + 0), vSign);
     I128 v4567 = vcmpeqi32(vloadi128u(_signs + 4), vSign);
 

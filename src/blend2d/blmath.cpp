@@ -181,7 +181,7 @@ BLJenkinsTraubSolver::BLJenkinsTraubSolver(const double* poly, int degree) {
 }
 
 bool BLJenkinsTraubSolver::init(int degree) {
-  temp = reinterpret_cast<double*>(mem.alloc((degree + 1) * 9 * sizeof(double)));
+  temp = reinterpret_cast<double*>(mem.alloc(unsigned(degree + 1) * 9u * sizeof(double)));
 
   if (temp == nullptr)
     return false;
@@ -989,7 +989,7 @@ size_t blPolyRoots(double* dst, const double* poly, int degree, double tMin, dou
     return 0;
 
   BLJenkinsTraubSolver solver(poly, degree);
-  size_t roots = solver.solve();
+  size_t roots = unsigned(solver.solve());
 
   if (zeros)
     dst[roots++] = 0.0;

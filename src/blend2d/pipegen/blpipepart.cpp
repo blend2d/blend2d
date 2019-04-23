@@ -19,7 +19,7 @@ namespace BLPipeGen {
 PipePart::PipePart(PipeCompiler* pc, uint32_t partType) noexcept
   : pc(pc),
     cc(pc->cc),
-    _partType(partType),
+    _partType(uint8_t(partType)),
     _childrenCount(0),
     _maxOptLevelSupported(kOptLevel_None),
     _flags(0),

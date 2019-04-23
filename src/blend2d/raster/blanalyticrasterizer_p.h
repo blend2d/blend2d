@@ -256,19 +256,19 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
       _dx = -_dx;
     }
 
-    _ex0 = (  x0 >> BL_PIPE_A8_SHIFT);
-    _ey0 = (  y0 >> BL_PIPE_A8_SHIFT);
-    _ex1 = (  x1 >> BL_PIPE_A8_SHIFT);
-    _ey1 = (--y1 >> BL_PIPE_A8_SHIFT);
+    _ex0 = (  x0) >> BL_PIPE_A8_SHIFT;
+    _ey0 = (  y0) >> BL_PIPE_A8_SHIFT;
+    _ex1 = (  x1) >> BL_PIPE_A8_SHIFT;
+    _ey1 = (--y1) >> BL_PIPE_A8_SHIFT;
 
-    _fx0 = (x0 & BL_PIPE_A8_MASK);
-    _fy0 = (y0 & BL_PIPE_A8_MASK);
-    _fx1 = (x1 & BL_PIPE_A8_MASK);
-    _fy1 = (y1 & BL_PIPE_A8_MASK) + 1;
+    _fx0 = (x0 & int(BL_PIPE_A8_MASK));
+    _fy0 = (y0 & int(BL_PIPE_A8_MASK));
+    _fx1 = (x1 & int(BL_PIPE_A8_MASK));
+    _fy1 = (y1 & int(BL_PIPE_A8_MASK)) + 1;
 
     _savedFy1 = _fy1;
     if (_ey0 != _ey1)
-      _fy1 = BL_PIPE_A8_SCALE;
+      _fy1 = int(BL_PIPE_A8_SCALE);
 
     if (_ex0 == _ex1 && (_ey0 == _ey1 || _dx == 0)) {
       _flags |= kFlagVertOrSingle;
@@ -291,13 +291,13 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
     _yErr = (_dx >> 1) - 1;
 
     if (_ey0 != _ey1) {
-      uint64_t p = uint64_t(BL_PIPE_A8_SCALE - _fy0) * _dx;
+      uint64_t p = uint64_t(BL_PIPE_A8_SCALE - uint32_t(_fy0)) * uint32_t(_dx);
       _xDlt  = int(p / unsigned(_dy));
       _xErr -= int(p % unsigned(_dy));
     }
 
     if (_ex0 != _ex1) {
-      uint64_t p = uint64_t((_flags & kFlagRightToLeft) ? _fx0 : int(BL_PIPE_A8_SCALE) - _fx0) * _dy;
+      uint64_t p = uint64_t((_flags & kFlagRightToLeft) ? uint32_t(_fx0) : BL_PIPE_A8_SCALE - uint32_t(_fx0)) * uint32_t(_dy);
       _yDlt  = int(p / unsigned(_dx));
       _yErr -= int(p % unsigned(_dx));
     }
@@ -578,12 +578,12 @@ VertRightToLeftSingleInLoop:
           _fx0 += _xDlt;
           bitSet<OPTIONS>(bitPtr, unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT);
 
-          if (_fx0 <= BL_PIPE_A8_SCALE) {
+          if (_fx0 <= int(BL_PIPE_A8_SCALE)) {
             cov0 = applySignMask(uint32_t(_fy1 - _fy0));
             area = cov0 * (area + uint32_t(_fx0));
             cellMerge(cellPtr, _ex0, cov0, area);
 
-            if (_fx0 == BL_PIPE_A8_SCALE) {
+            if (_fx0 == int(BL_PIPE_A8_SCALE)) {
               _ex0++;
               _fx0 = 0;
               _yDlt += _yLift;
@@ -635,14 +635,14 @@ VertRightToLeftSingleInLoop:
             _fx0 += _xDlt;
             bitSet<OPTIONS>(bitPtr, unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT);
 
-            if (_fx0 <= BL_PIPE_A8_SCALE) {
+            if (_fx0 <= int(BL_PIPE_A8_SCALE)) {
               bitPtr = blOffsetPtr(bitPtr, bitStride<OPTIONS>());
               area = fullCover * (area + uint32_t(_fx0));
 
               cellMerge(cellPtr, _ex0, fullCover, area);
               cellPtr = blOffsetPtr(cellPtr, cellStride());
 
-              if (_fx0 < BL_PIPE_A8_SCALE)
+              if (_fx0 < int(BL_PIPE_A8_SCALE))
                 continue;
 
               _ex0++;
@@ -743,7 +743,7 @@ VertRightToLeftSingleInLoop:
           area = cover * uint32_t(_fx0 * 2 - _xDlt);
           cellMerge(cellPtr, _ex0, cover, area);
 
-          if ((xLocal & BL_PIPE_A8_MASK) == 0) {
+          if ((xLocal & int(BL_PIPE_A8_MASK)) == 0) {
             _yDlt += _yLift;
             accErrStep(_yDlt, _yErr, _yRem, _dx);
           }
@@ -759,7 +759,7 @@ VertRightToLeftSingleInLoop:
             accErrStep(_xDlt, _xErr, _xRem, _dy);
 
             _ex0 = xLocal >> BL_PIPE_A8_SHIFT;
-            _fx0 = xLocal & BL_PIPE_A8_MASK;
+            _fx0 = xLocal & int(BL_PIPE_A8_MASK);
 
             if (_fx0 == 0) {
               _fx0 = int(BL_PIPE_A8_SCALE);
@@ -775,7 +775,7 @@ HorzRightToLeftInside:
             xLocal -= _xDlt;
             {
               int exLocal = xLocal >> BL_PIPE_A8_SHIFT;
-              int fxLocal = xLocal & BL_PIPE_A8_MASK;
+              int fxLocal = xLocal & int(BL_PIPE_A8_MASK);
 
               bitFill<OPTIONS>(bitPtr, unsigned(exLocal) / BL_PIPE_PIXELS_PER_ONE_BIT, unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT);
               area = cover * uint32_t(_fx0);
@@ -815,7 +815,7 @@ HorzRightToLeftInside:
           if (OPTIONS & kOptionBandingMode) {
             if (!j) {
               _ex0 = xLocal >> BL_PIPE_A8_SHIFT;
-              _fx0 = xLocal & BL_PIPE_A8_MASK;
+              _fx0 = xLocal & int(BL_PIPE_A8_MASK);
               return _ey0 > _ey1;
             }
           }
@@ -838,7 +838,7 @@ HorzRightToLeftInside:
             _fy1 = _savedFy1;
 
             _ex0 = xLocal >> BL_PIPE_A8_SHIFT;
-            _fx0 = xLocal & BL_PIPE_A8_MASK;
+            _fx0 = xLocal & int(BL_PIPE_A8_MASK);
 
             if (_fx0 == 0) {
               _fx0 = int(BL_PIPE_A8_SCALE);
@@ -898,7 +898,7 @@ HorzRightToLeftInside:
             _xDlt = _xLift;
             accErrStep(_xDlt, _xErr, _xRem, _dy);
             _ex0 = xLocal >> BL_PIPE_A8_SHIFT;
-            _fx0 = xLocal & BL_PIPE_A8_MASK;
+            _fx0 = xLocal & int(BL_PIPE_A8_MASK);
 
 HorzLeftToRightSkip:
             _yDlt -= int(BL_PIPE_A8_SCALE);
@@ -909,7 +909,7 @@ HorzLeftToRightInside:
             xLocal += _xDlt;
             {
               int exLocal = xLocal >> BL_PIPE_A8_SHIFT;
-              int fxLocal = xLocal & BL_PIPE_A8_MASK;
+              int fxLocal = xLocal & int(BL_PIPE_A8_MASK);
               BL_ASSERT(_ex0 != exLocal);
 
               if (fxLocal == 0) {
@@ -955,7 +955,7 @@ HorzLeftToRightInside:
           if (OPTIONS & kOptionBandingMode) {
             if (!j) {
               _ex0 = xLocal >> BL_PIPE_A8_SHIFT;
-              _fx0 = xLocal & BL_PIPE_A8_MASK;
+              _fx0 = xLocal & int(BL_PIPE_A8_MASK);
               return _ey0 > _ey1;
             }
           }
@@ -978,7 +978,7 @@ HorzLeftToRightInside:
             _fy1 = _savedFy1;
 
             _ex0 = xLocal >> BL_PIPE_A8_SHIFT;
-            _fx0 = xLocal & BL_PIPE_A8_MASK;
+            _fx0 = xLocal & int(BL_PIPE_A8_MASK);
 
             if (_fx0 + _xDlt <= int(BL_PIPE_A8_SCALE)) {
               cover = applySignMask(uint32_t(_fy1));

@@ -151,6 +151,7 @@ uint32_t BLPipeFetchData::initPatternFxFy(uint32_t extendMode, uint32_t filter, 
 }
 
 uint32_t BLPipeFetchData::initPatternAffine(uint32_t extendMode, uint32_t filter, const BLMatrix2D& m, const BLMatrix2D& mInv) noexcept {
+  BL_UNUSED(m);
   BLPipeFetchData::Pattern& d = this->pattern;
 
   // Inverted transformation matrix.
@@ -427,6 +428,7 @@ static BL_INLINE uint32_t blPipeFetchDataInitLinearGradient(BLPipeFetchData* fet
 //   C*x*y: 1st delta `d`  at step `tx/ty`: C*x*ty + C*y*tx + C*tx*ty
 //   C*x*y: 2nd delta `dd` at step `tx/ty`: 2*C * tx*ty
 static BL_INLINE uint32_t blPipeFetchDataInitRadialGradient(BLPipeFetchData* fetchData, const BLRadialGradientValues& values, uint32_t extendMode, const BLMatrix2D& m, const BLMatrix2D& mInv) noexcept {
+  BL_UNUSED(m);
   BLPipeFetchData::Gradient& d = fetchData->gradient;
 
   BLPoint c(values.x0, values.y0);

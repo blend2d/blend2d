@@ -153,8 +153,6 @@ void FetchLinearGradientPart::prefetch1() noexcept {
 
 void FetchLinearGradientPart::fetch1(PixelARGB& p, uint32_t flags) noexcept {
   x86::Gp tIdx = cc->newInt32("tIdx");
-
-  x86::Xmm vIdx = f->vIdx;
   x86::Xmm vTmp = cc->newXmm("vTmp");
 
   if (isPad()) {
