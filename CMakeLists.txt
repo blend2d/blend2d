@@ -276,7 +276,11 @@ endif()
 # =============================================================================
 
 if (NOT WIN32)
-  list(APPEND BLEND2D_DEPS c m pthread rt)
+  list(APPEND BLEND2D_DEPS c m pthread)
+endif()
+
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+  list(APPEND BLEND2D_DEPS rt)
 endif()
 
 # =============================================================================
