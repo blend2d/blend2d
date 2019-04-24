@@ -115,7 +115,7 @@ function(blend2d_add_target target target_type src deps cflags cflags_dbg cflags
   target_compile_options(${target} PRIVATE ${cflags} $<$<CONFIG:Debug>:${cflags_dbg}> $<$<NOT:$<CONFIG:Debug>>:${cflags_rel}>)
   set_property(TARGET ${target} PROPERTY CXX_EXTENSIONS NO)
   set_property(TARGET ${target} PROPERTY CXX_VISIBILITY_PRESET hidden)
-  set_property(TARGET ${target} APPEND PROPERTY COMPILE_FEATURES cxx_std_11)
+  target_compile_features(${target} PUBLIC cxx_std_11)
 
   # target_link_options was added in cmake 3.13, which doesn't work for us.
   # set_property(TARGET ${target} APPEND PROPERTY LINK_OPTIONS ${BLEND2D_PRIVATE_LFLAGS})
@@ -129,12 +129,13 @@ endfunction()
 # =============================================================================
 
 if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS     /GR-    # [-] Runtime type information.
+  list(APPEND BLEND2D_PRIVATE_CFLAGS     /MP     # [+] Multi-Process Compilation.
+                                         /GR-    # [-] Runtime type information.
                                          /GF)    # [+] Eliminate duplicate strings.
   list(APPEND BLEND2D_PRIVATE_CFLAGS_DBG /GS)    # [+] Buffer security-check.
   list(APPEND BLEND2D_PRIVATE_CFLAGS_REL /GS-    # [-] Buffer security-check.
-                                         /Oi     # [+] Generate Intrinsic Functions.
-                                         /GL)    # [+] Whole Program Optimization.
+                                         /O2     # [+] Favor speed over size.
+                                         /Oi)    # [+] Generate Intrinsic Functions.
 endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
