@@ -56,8 +56,8 @@ set(BLEND2D_PRIVATE_LFLAGS "")                   # Private linker flags.
 set(BLEND2D_PRIVATE_CFLAGS "")                   # Private compiler flags independent of build type.
 set(BLEND2D_PRIVATE_CFLAGS_DBG "")               # Private compiler flags used by debug builds.
 set(BLEND2D_PRIVATE_CFLAGS_REL "")               # Private compiler flags used by release builds.
-set(BLEND2D_NO_STDCXX_LFLAGS "")                    # Private linker flags to disable linking to a standard C++ library.
-set(BLEND2D_NO_STDCXX_CFLAGS "")                    # Private compiler flags to disable linking to a standard C++ library.
+set(BLEND2D_NO_STDCXX_LFLAGS "")                 # Private linker flags to disable linking to a standard C++ library.
+set(BLEND2D_NO_STDCXX_CFLAGS "")                 # Private compiler flags to disable linking to a standard C++ library.
 
 # =============================================================================
 # [Blend2D - Utilities]
@@ -276,7 +276,7 @@ endif()
 # =============================================================================
 
 if (NOT WIN32)
-  list(APPEND BLEND2D_DEPS c m pthread)
+  list(APPEND BLEND2D_DEPS c m pthread rt)
 endif()
 
 # =============================================================================
@@ -576,6 +576,7 @@ if (NOT BLEND2D_BUILD_EMBED)
     set_property(TARGET blend2d APPEND_STRING PROPERTY LINK_FLAGS " ${link_flag}")
   endforeach()
 
+  target_compile_options(blend2d INTERFACE ${BLEND2D_CFLAGS})
   target_compile_options(blend2d PRIVATE ${BLEND2D_NO_STDCXX_CFLAGS})
 
   target_include_directories(blend2d BEFORE PRIVATE ${ASMJIT_INCLUDE_DIRS})
