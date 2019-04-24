@@ -332,9 +332,7 @@ endif()
 # [Blend2D - Source Files]
 # =============================================================================
 
-set(BLEND2D_SRC "")
-
-blend2d_add_source(BLEND2D_SRC src
+set(BLEND2D_SRC_LIST
   blend2d.h
   blend2d-debug.h
   blend2d-impl.h
@@ -446,6 +444,7 @@ blend2d_add_source(BLEND2D_SRC src
   blend2d/blzonelist_p.h
   blend2d/blzonetree.cpp
   blend2d/blzonetree_p.h
+
   blend2d/codec/blbmpcodec.cpp
   blend2d/codec/blbmpcodec_p.h
   blend2d/codec/bldeflate.cpp
@@ -462,8 +461,10 @@ blend2d_add_source(BLEND2D_SRC src
   blend2d/codec/blpngops.cpp
   blend2d/codec/blpngops_sse2.cpp
   blend2d/codec/blpngops_p.h
+
   blend2d/fixedpipe/blfixedpiperuntime_p.h
   blend2d/fixedpipe/blfixedpiperuntime.cpp
+
   blend2d/opentype/blotcff.cpp
   blend2d/opentype/blotcff_p.h
   blend2d/opentype/blotcmap.cpp
@@ -484,6 +485,7 @@ blend2d_add_source(BLEND2D_SRC src
   blend2d/opentype/blotname.cpp
   blend2d/opentype/blotname_p.h
   blend2d/opentype/blotplatform_p.h
+
   blend2d/pipegen/blcompoppart.cpp
   blend2d/pipegen/blcompoppart_p.h
   blend2d/pipegen/blfetchgradientpart.cpp
@@ -510,6 +512,7 @@ blend2d_add_source(BLEND2D_SRC src
   blend2d/pipegen/blpipepart.cpp
   blend2d/pipegen/blpipepart_p.h
   blend2d/pipegen/blpiperegusage_p.h
+
   blend2d/raster/blanalyticrasterizer_p.h
   blend2d/raster/bledgebuilder_p.h
   blend2d/raster/blrastercontext.cpp
@@ -520,6 +523,9 @@ blend2d_add_source(BLEND2D_SRC src
   blend2d/raster/blrasterworker.cpp
   blend2d/raster/blrasterworker_p.h
 )
+
+set(BLEND2D_SRC "")
+blend2d_add_source(BLEND2D_SRC src ${BLEND2D_SRC_LIST})
 
 #if (MSVC)
 #  blend2d_add_source(BLEND2D_SRC blend2d blend2d.natvis)
@@ -584,14 +590,11 @@ if (NOT BLEND2D_BUILD_EMBED)
                           ARCHIVE DESTINATION "lib${LIB_SUFFIX}")
 
   # Install 'blend2d' header files (private headers are filtered out).
-  foreach(i ${BLEND2D_SRC})
-    get_filename_component(path ${i} PATH)
-    get_filename_component(name ${i} NAME)
-    string(REGEX REPLACE "^${BLEND2D_DIR}/src/" "" targetpath "${path}")
-    if ("${name}" MATCHES "\\.h$")
-      if (NOT "${name}" MATCHES "_p\\.h$")
-        install(FILES ${i} DESTINATION "include/${targetpath}")
-      endif()
+  foreach(_src_file ${BLEND2D_SRC_LIST})
+    if ("${_src_file}" MATCHES ".h$" AND NOT "${_src_file}" MATCHES "_p.h$")
+      get_filename_component(_src_dir ${_src_file} PATH)
+      get_filename_component(_src_name ${_src_file} NAME)
+      install(FILES "${BLEND2D_DIR}/src/${_src_file}" DESTINATION "include/${_src_dir}")
     endif()
   endforeach()
 
