@@ -64,7 +64,7 @@ set(BLEND2D_NO_STDCXX_CFLAGS "")                 # Private compiler flags to dis
 # =============================================================================
 
 set(BLEND2D_MAKE_DEF "-D") # Define a preprocessor macro: "${BLEND2D_MAKE_DEF}VAR=1"
-if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
   set(BLEND2D_MAKE_DEF "/D")
 endif()
 
@@ -92,9 +92,13 @@ function(blend2d_add_source out base_dir)
 
     string(REGEX MATCH "_(sse[2|3]?|ssse3|sse4_[1|2]|avx|avx[2]?)\\.(c|cc|cxx|cpp|m|mm)$" FEATURE ${file})
     if (FEATURE)
-      # HACK: Cmake uses global variables everywhere, `CMAKE_MATCH_1` is the first capture...
+      # HACK 1: Cmake uses global variables everywhere, `CMAKE_MATCH_1` is the first capture...
       string(TOUPPER "${CMAKE_MATCH_1}" FEATURE)
-      set_property(SOURCE "${src_file}" APPEND PROPERTY COMPILE_OPTIONS ${BLEND2D_CFLAGS_${FEATURE}})
+      # HACK 2: Interestingly COMPILE_OPTIONS is not available for SOURCE files before CMake 3.11.
+      # set_property(SOURCE "${src_file}" APPEND PROPERTY COMPILE_OPTIONS ${BLEND2D_CFLAGS_${FEATURE}})
+      foreach(src_cflag ${BLEND2D_CFLAGS_${FEATURE}})
+        set_property(SOURCE "${src_file}" APPEND_STRING PROPERTY COMPILE_FLAGS " ${src_cflag}")
+      endforeach()
     endif()
   endforeach()
   source_group(TREE "${BLEND2D_DIR}" FILES ${src_array})
@@ -128,7 +132,7 @@ endfunction()
 # [Blend2D - Compiler]
 # =============================================================================
 
-if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
   list(APPEND BLEND2D_PRIVATE_CFLAGS     /MP     # [+] Multi-Process Compilation.
                                          /GR-    # [-] Runtime type information.
                                          /GF)    # [+] Eliminate duplicate strings.
@@ -217,8 +221,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" ST
     # Intel deprecated /arch:SSE, so it's implicit. In contrast to MSVC, Intel
     # also provides /arch:SSE3+ options and uses the same definitions as GCC
     # and Clang, so no magic needed here.
-    blend2d_detect_cflags(BLEND2D_CFLAGS_AVX "/arch:AVX")
-    blend2d_detect_cflags(BLEND2D_CFLAGS_AVX2 "/arch:AVX2")
     if (BLEND2D_CFLAGS_AVX)
       list(APPEND BLEND2D_CFLAGS_SSE2 "/arch:SSE2")
       list(APPEND BLEND2D_CFLAGS_SSE3 "/arch:SSE3")

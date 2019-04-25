@@ -277,12 +277,12 @@ BLResult blRuntimeQueryInfo(uint32_t infoType, void* infoOut) noexcept {
 // ============================================================================
 
 BLResult blRuntimeMessageOut(const char* msg) noexcept {
-  #if defined(_WIN32)
+#if defined(_WIN32)
+  // Support both Console and GUI applications on Windows.
   OutputDebugStringA(msg);
-  #else
-  fputs(msg, stderr);
-  #endif
+#endif
 
+  fputs(msg, stderr);
   return BL_SUCCESS;
 }
 

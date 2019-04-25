@@ -8,7 +8,7 @@
 #define BLEND2D_DEBUG_H
 
 // IMPROTANT: DO NOT USE THIS HEADER IN PRODUCTION, ONLY FOR BUG REPORTING!
-#pragma message "<blend2d-debug.h> - do not forget to remove me in production"
+#pragma message("<blend2d-debug.h> - do not forget to remove me in production")
 
 // ----------------------------------------------------------------------------
 // This file provides debug helpers that are not an part of Blend2D library.

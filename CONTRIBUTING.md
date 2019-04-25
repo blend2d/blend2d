@@ -108,17 +108,17 @@ Since Blend2D exports only C API and can be compiled without linking to standard
 
 Exceptions and RTTI are never used by Blend2D. In general every public function is marked `noexcept` (or `BL_NOEXCEPT_C` for C API) that should guarantee that the compiler won't emit unwind tables even when C++ exceptions are enabled at build time. Blend2D users can use exceptions in their code, but Blend2D would never throw them.
 
-* Use error for error handling and propagation
+* Use error codes for error handling and propagation
 * Use `BLResult` as a return value in functions that can fail
 
-Every function that can fail must return this value. Use `BL_PROPAGATE(expression)` to return on failure, but be careful and check how it's used first.
+Every function that can fail must return `BLResult`. Use `BL_PROPAGATE(expression)` to return on failure, but be careful and check how it's used first.
 
 
 #### Default Constructed State
 
   * Always offer a defined default constructed state.
 
-Default constructed state guarantees that no dynamic memory is allocated when creating a default constructed instance. Only initialization like `create()` or `begin()` would allocate memory. Use `.reset()` to set the state of any class back to its default constructed state.
+Default constructed state guarantees that no dynamic memory is allocated when creating a default constructed instance. Only initialization like `create()` or `begin()` and using setters would turn default initialized instance into an instance that uses dynamically allocated memory. Use `.reset()` to set the state of any class back to its default constructed state and to release all resources it holds.
 
 
 ### Coding Conventions
@@ -128,7 +128,8 @@ If you are planning to contribute to Blend2D, please read our coding conventions
 * Indent by 2 spaces and never use TABs
 * Class and struct names are *CamelCased* and always start with `BL` prefix (`BLClassName`)
 * Global functions and variables are *CamelCased* and always start with `bl` prefix (`blFunctionName`)
-* Structs are used for everything that does not have initialization and must be compatible with C API
+* Structs are used for everything that doesn't have initialization and must be compatible with C API
+* Structs can have utility member functions available in C++ mode like `.reset()`
 * Classes are only used for implementing C++ API that is based on C API
 * Pointer `*` or reference `&` is part of the type, for example `void* ptr`
 * Namespaces are not indented, use the following:
@@ -231,7 +232,7 @@ switch (expression) {
 }
 ```
 
-* Sometimes **case** and its content can be merged in a single line:
+* Sometimes **case** and its content can be inlined:
 
 ```c++
 switch (condition) {
@@ -240,8 +241,8 @@ switch (condition) {
 }
 ```
 
-* Public enum names are *UPPER_CASED* and use `BL_` prefix.
-* Public enums usually end with `_COUNT`, which should be separated by a line.
+* Public enum names are *UPPER_CASED* and use `BL_` prefix
+* Public enums usually end with `_COUNT`, which should be separated by an emoty line
 * Public enums are always `uint32_t`, use `BL_DEFINE_ENUM` to make sure they are properly defined in C++ mode:
 
 ```c++
