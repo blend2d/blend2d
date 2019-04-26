@@ -18,26 +18,73 @@
 
 //! File open flags, see `BLFile::open()`.
 BL_DEFINE_ENUM(BLFileOpenFlags) {
-  //! Open file for reading (O_RDONLY).
+  //! Opens the file for reading.
+  //!
+  //! The following system flags are used when opening the file:
+  //!   * `O_RDONLY` (Posix)
+  //!   * `GENERIC_READ` (Windows)
   BL_FILE_OPEN_READ = 0x00000001u,
-  //! Open file for writing (O_WRONLY).
+
+  //! Opens the file for writing:
+  //!
+  //! The following system flags are used when opening the file:
+  //!   * `O_WRONLY` (Posix)
+  //!   * `GENERIC_WRITE` (Windows)
   BL_FILE_OPEN_WRITE = 0x00000002u,
-  //! Open file for reading & writing (O_RDWR).
+
+  //! Opens the file for reading & writing.
+  //!
+  //! The following system flags are used when opening the file:
+  //!   * `O_RDWR` (Posix)
+  //!   * `GENERIC_READ | GENERIC_WRITE` (Windows)
   BL_FILE_OPEN_RW = 0x00000003u,
-  //! Create the file if it doesn't exist (O_CREAT).
+
+  //! Creates the file if it doesn't exist or opens it if it does.
+  //!
+  //! The following system flags are used when opening the file:
+  //!   * `O_CREAT` (Posix)
+  //!   * `CREATE_ALWAYS` or `OPEN_ALWAYS` depending on other flags (Windows)
   BL_FILE_OPEN_CREATE = 0x00000004u,
-  //! Always create the file, fail if it already exists (O_EXCL).
-  BL_FILE_OPEN_CREATE_ONLY = 0x00000008u,
-  //! Truncate the file (O_TRUNC).
+
+  //! Opens the file for deleting or renaming (Windows).
+  //!
+  //! Adds `DELETE` flag when opening the file to `ACCESS_MASK`.
+  BL_FILE_OPEN_DELETE = 0x00000008u,
+
+  //! Truncates the file.
+  //!
+  //! The following system flags are used when opening the file:
+  //!   * `O_TRUNC` (Posix)
+  //!   * `TRUNCATE_EXISTING` (Windows)
   BL_FILE_OPEN_TRUNCATE = 0x00000010u,
-  //! Enables FILE_SHARE_READ option (Windows).
-  BL_FILE_OPEN_SHARE_READ = 0x10000000u,
-  //! Enables FILE_SHARE_WRITE option (Windows).
-  BL_FILE_OPEN_SHARE_WRITE = 0x20000000u,
-  //! Enables both FILE_SHARE_READ and FILE_SHARE_WRITE options (Windows).
-  BL_FILE_OPEN_SHARE_RW = 0x30000000u,
-  //! Enables FILE_SHARE_DELETE option (Windows).
-  BL_FILE_OPEN_SHARE_DELETE = 0x40000000u
+
+  //! Opens the file for reading in exclusive mode (Windows).
+  //!
+  //! Exclusive mode means to not specify the `FILE_SHARE_READ` option.
+  BL_FILE_OPEN_READ_EXCLUSIVE = 0x10000000u,
+
+  //! Opens the file for writing in exclusive mode (Windows).
+  //!
+  //! Exclusive mode means to not specify the `FILE_SHARE_WRITE` option.
+  BL_FILE_OPEN_WRITE_EXCLUSIVE = 0x20000000u,
+
+  //! Opens the file for both reading and writing (Windows).
+  //!
+  //! This is a combination of both `BL_FILE_OPEN_READ_EXCLUSIVE` and
+  //! `BL_FILE_OPEN_WRITE_EXCLUSIVE`.
+  BL_FILE_OPEN_RW_EXCLUSIVE = 0x30000000u,
+
+  //! Creates the file in exclusive mode - fails if the file already exists.
+  //!
+  //! The following system flags are used when opening the file:
+  //!   * `O_EXCL` (Posix)
+  //!   * `CREATE_NEW` (Windows)
+  BL_FILE_OPEN_CREATE_EXCLUSIVE = 0x00000020u,
+
+  //! Opens the file for deleting or renaming in exclusive mode (Windows).
+  //!
+  //! Exclusive mode means to not specify the `FILE_SHARE_DELETE` option.
+  BL_FILE_OPEN_DELETE_EXCLUSIVE = 0x40000000u
 };
 
 //! File seek mode, see `BLFile::seek()`.

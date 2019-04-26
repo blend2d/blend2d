@@ -242,7 +242,7 @@ switch (condition) {
 ```
 
 * Public enum names are *UPPER_CASED* and use `BL_` prefix
-* Public enums usually end with `_COUNT`, which should be separated by an emoty line
+* Public enums usually end with `_COUNT`, which should be separated by an empty line
 * Public enums are always `uint32_t`, use `BL_DEFINE_ENUM` to make sure they are properly defined in C++ mode:
 
 ```c++

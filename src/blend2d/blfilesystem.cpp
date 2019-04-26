@@ -168,15 +168,15 @@ BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) 
   // | TRUNCATE_EXISTING       | Truncate    | Fail               |
   // +-------------------------+-------------+--------------------+
 
-  uint32_t kExtFlags = BL_FILE_OPEN_CREATE      |
-                       BL_FILE_OPEN_CREATE_ONLY |
-                       BL_FILE_OPEN_TRUNCATE    ;
+  uint32_t kExtFlags = BL_FILE_OPEN_CREATE           |
+                       BL_FILE_OPEN_CREATE_EXCLUSIVE |
+                       BL_FILE_OPEN_TRUNCATE         ;
 
   if ((openFlags & kExtFlags) && (!(openFlags & BL_FILE_OPEN_WRITE)))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   DWORD dwCreationDisposition = OPEN_EXISTING;
-  if (openFlags & BL_FILE_OPEN_CREATE_ONLY)
+  if (openFlags & BL_FILE_OPEN_CREATE_EXCLUSIVE)
     dwCreationDisposition = CREATE_NEW;
   else if ((openFlags & (BL_FILE_OPEN_CREATE | BL_FILE_OPEN_TRUNCATE)) == BL_FILE_OPEN_CREATE)
     dwCreationDisposition = OPEN_ALWAYS;
@@ -190,9 +190,13 @@ BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) 
 
   DWORD dwShareMode = 0;
 
-  if (openFlags & BL_FILE_OPEN_SHARE_READ  ) dwShareMode |= FILE_SHARE_READ;
-  if (openFlags & BL_FILE_OPEN_SHARE_WRITE ) dwShareMode |= FILE_SHARE_WRITE;
-  if (openFlags & BL_FILE_OPEN_SHARE_DELETE) dwShareMode |= FILE_SHARE_DELETE;
+  auto isShared = [&](uint32_t access, uint32_t exclusive) noexcept -> bool {
+    return (openFlags & (access | exclusive)) == access;
+  };
+
+  if (isShared(BL_FILE_OPEN_READ, BL_FILE_OPEN_READ_EXCLUSIVE)) dwShareMode |= FILE_SHARE_READ;
+  if (isShared(BL_FILE_OPEN_WRITE, BL_FILE_OPEN_WRITE_EXCLUSIVE)) dwShareMode |= FILE_SHARE_WRITE;
+  if (isShared(BL_FILE_OPEN_DELETE, BL_FILE_OPEN_DELETE_EXCLUSIVE)) dwShareMode |= FILE_SHARE_DELETE;
 
   // Other Flags
   // -----------
@@ -405,14 +409,14 @@ BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) 
   }
 
   uint32_t kExtFlags = BL_FILE_OPEN_CREATE      |
-                       BL_FILE_OPEN_CREATE_ONLY |
+                       BL_FILE_OPEN_CREATE_EXCLUSIVE |
                        BL_FILE_OPEN_TRUNCATE    ;
 
   if ((openFlags & kExtFlags) && !(openFlags & BL_FILE_OPEN_WRITE))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   if (openFlags & BL_FILE_OPEN_CREATE     ) of |= O_CREAT;
-  if (openFlags & BL_FILE_OPEN_CREATE_ONLY) of |= O_CREAT | O_EXCL;
+  if (openFlags & BL_FILE_OPEN_CREATE_EXCLUSIVE) of |= O_CREAT | O_EXCL;
   if (openFlags & BL_FILE_OPEN_TRUNCATE   ) of |= O_TRUNC;
 
   mode_t om = S_IRUSR | S_IWUSR |
