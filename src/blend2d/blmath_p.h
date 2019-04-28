@@ -489,19 +489,33 @@ static BL_INLINE double blAtan2(double y, double x) noexcept { return atan2(y, x
 
 //! Linear interpolation of `a` and `b` at `t`.
 //!
-//! Returns `a * (1 - t) + b * t`.
+//! Returns `(a - t * a) + t * b`.
 //!
 //! NOTE: This function should work with most geometric types Blend2D offers
 //! that use double precision, however, it's not compatible with integral types.
 template<typename V, typename T = double>
 static BL_INLINE V blLerp(const V& a, const V& b, const T& t) noexcept {
-  return (a * (1.0 - t)) + (b * t);
+  return (a - t * a) + t * b;
 }
 
 // Linear interpolation of `a` and `b` at `t=0.5`.
 template<typename T>
 static BL_INLINE T blLerp(const T& a, const T& b) noexcept {
-  return blLerp(a, b, 0.5);
+  return 0.5 * a + 0.5 * b;
+}
+
+//! Alternative LERP implementation that is faster, but won't handle pathological
+//! inputs. It should only be used in places in which it's known that such inputs
+//! cannot happen.
+template<typename V, typename T = double>
+static BL_INLINE V blFastLerp(const V& a, const V& b, const T& t) noexcept {
+  return a + t * (b - a);
+}
+
+//! Alternative LERP implementation at `t=0.5`.
+template<typename T>
+static BL_INLINE T blFastLerp(const T& a, const T& b) noexcept {
+  return 0.5 * (a + b);
 }
 
 // ============================================================================
