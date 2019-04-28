@@ -1052,9 +1052,6 @@ BL_INLINE F256 vpermf128(const F256& x, const F256& y) noexcept { return _mm256_
 template<int A, int B>
 BL_INLINE F256 vpermf128(const F256& x) noexcept { return vpermf128<A, B>(x, x); }
 
-BL_INLINE F256 vsplatf32f256(const F128& x) noexcept { return _mm256_broadcastss_ps(vcast<F128>(x)); }
-BL_INLINE F256 vsplatf32f256(const F256& x) noexcept { return _mm256_broadcastss_ps(vcast<F128>(x)); }
-
 BL_INLINE F256 vduplf32(const F256& x) noexcept { return vswizf32<2, 2, 0, 0>(x); }
 BL_INLINE F256 vduphf32(const F256& x) noexcept { return vswizf32<3, 3, 1, 1>(x); }
 
@@ -1069,6 +1066,14 @@ BL_INLINE F256 vduphf128(const F256& x) noexcept { return vpermf128<1, 1>(x); }
 
 BL_INLINE F256 vunpacklf32(const F256& x, const F256& y) noexcept { return _mm256_unpacklo_ps(x, y); }
 BL_INLINE F256 vunpackhf32(const F256& x, const F256& y) noexcept { return _mm256_unpackhi_ps(x, y); }
+
+#if defined(BL_TARGET_OPT_AVX2)
+BL_INLINE F256 vsplatf32f256(const F128& x) noexcept { return _mm256_broadcastss_ps(vcast<F128>(x)); }
+BL_INLINE F256 vsplatf32f256(const F256& x) noexcept { return _mm256_broadcastss_ps(vcast<F128>(x)); }
+#else
+BL_INLINE F256 vsplatf32f256(const F128& x) noexcept { return vduplf128(vswizf32<0, 0, 0, 0>(vcast<F128>(x))); }
+BL_INLINE F256 vsplatf32f256(const F256& x) noexcept { return vduplf128(vswizf32<0, 0, 0, 0>(vcast<F128>(x))); }
+#endif
 
 BL_INLINE F256 vor(const F256& x, const F256& y) noexcept { return _mm256_or_ps(x, y); }
 BL_INLINE F256 vxor(const F256& x, const F256& y) noexcept { return _mm256_xor_ps(x, y); }
@@ -1186,9 +1191,6 @@ BL_INLINE D256 vpermd128(const D256& x, const D256& y) noexcept { return _mm256_
 template<int A, int B>
 BL_INLINE D256 vpermd128(const D256& x) noexcept { return vpermd128<A, B>(x, x); }
 
-BL_INLINE D256 vsplatd64d256(const D128& x) noexcept { return _mm256_broadcastsd_pd(vcast<D128>(x)); }
-BL_INLINE D256 vsplatd64d256(const D256& x) noexcept { return _mm256_broadcastsd_pd(vcast<D128>(x)); }
-
 BL_INLINE D256 vswapd64(const D256& x) noexcept { return vswizd64<0, 1>(x); }
 BL_INLINE D256 vdupld64(const D256& x) noexcept { return vswizd64<0, 0>(x); }
 BL_INLINE D256 vduphd64(const D256& x) noexcept { return vswizd64<1, 1>(x); }
@@ -1200,6 +1202,14 @@ BL_INLINE D256 vduphd128(const D256& x) noexcept { return vpermd128<1, 1>(x); }
 
 BL_INLINE D256 vunpackld64(const D256& x, const D256& y) noexcept { return _mm256_unpacklo_pd(x, y); }
 BL_INLINE D256 vunpackhd64(const D256& x, const D256& y) noexcept { return _mm256_unpackhi_pd(x, y); }
+
+#if defined(BL_TARGET_OPT_AVX2)
+BL_INLINE D256 vsplatd64d256(const D128& x) noexcept { return _mm256_broadcastsd_pd(vcast<D128>(x)); }
+BL_INLINE D256 vsplatd64d256(const D256& x) noexcept { return _mm256_broadcastsd_pd(vcast<D128>(x)); }
+#else
+BL_INLINE D256 vsplatd64d256(const D128& x) noexcept { return vdupld128(vswizd64<0, 0>(vcast<D128>(x))); }
+BL_INLINE D256 vsplatd64d256(const D256& x) noexcept { return vdupld128(vswizd64<0, 0>(vcast<D128>(x))); }
+#endif
 
 BL_INLINE D256 vor(const D256& x, const D256& y) noexcept { return _mm256_or_pd(x, y); }
 BL_INLINE D256 vxor(const D256& x, const D256& y) noexcept { return _mm256_xor_pd(x, y); }
