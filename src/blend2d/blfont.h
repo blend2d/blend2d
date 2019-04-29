@@ -73,6 +73,7 @@ public:
   BL_INLINE BLFontData() noexcept { this->impl = none().impl; }
   BL_INLINE BLFontData(BLFontData&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLFontData(const BLFontData& other) noexcept { blVariantInitWeak(this, &other); }
+  BL_INLINE BLFontData(const BLFontLoader& loader, uint32_t faceIndex) noexcept;
   BL_INLINE explicit BLFontData(BLFontDataImpl* impl) noexcept { this->impl = impl; }
   BL_INLINE ~BLFontData() noexcept { blFontDataReset(this); }
 
@@ -106,6 +107,13 @@ public:
   BL_INLINE bool empty() const noexcept { return isNone(); }
 
   BL_INLINE bool equals(const BLFontData& other) const noexcept { return blFontDataEquals(this, &other); }
+
+  //! \}
+
+  //! \name Create Functionality
+  //! \{
+
+  BL_INLINE BLResult createFromLoader(const BLFontLoader& loader, uint32_t faceIndex) noexcept;
 
   //! \}
 
@@ -265,6 +273,16 @@ public:
   //! \name Font-Data Access
   //! \{
 
+  //! Returns `BLFontData` instance that matches the given `faceIndex`.
+  //!
+  //! Please note that this function never fails. If the `faceIndex` is out
+  //! of bounds then a default constructed instance of `BLFontData` will be
+  //! returned.
+  //!
+  //! Alternatively you can use `BLFontData::createFromLoader()`, which would
+  //! call virtual function `BLFontLoaderVirt::dataByFaceIndex()` behind the
+  //! scenes and return the appropriate error if `faceIndex` is invalid or if
+  //! the loader is not initialized.
   BL_INLINE BLFontData dataByFaceIndex(uint32_t faceIndex) const noexcept {
     return BLFontData(impl->virt->dataByFaceIndex(impl, faceIndex));
   }
@@ -273,6 +291,15 @@ public:
 
   static BL_INLINE const BLFontLoader& none() noexcept { return reinterpret_cast<const BLFontLoader*>(blNone)[kImplType]; }
 };
+
+// BLFontData API that depends on BLFontLoader.
+BL_INLINE BLFontData::BLFontData(const BLFontLoader& loader, uint32_t faceIndex) noexcept {
+  blFontDataInitFromLoader(this, &loader, faceIndex);
+}
+
+BL_INLINE BLResult BLFontData::createFromLoader(const BLFontLoader& loader, uint32_t faceIndex) noexcept {
+  return blFontDataCreateFromLoader(this, &loader, faceIndex);
+}
 #endif
 
 // ============================================================================

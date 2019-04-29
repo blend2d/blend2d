@@ -1545,12 +1545,15 @@ BL_API_C BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, con
 //! \name BLFontData
 //! \{
 BL_API_C BLResult BL_CDECL blFontDataInit(BLFontDataCore* self) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontDataInitFromLoader(BLFontDataCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontDataReset(BLFontDataCore* self) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontDataAssignMove(BLFontDataCore* self, BLFontDataCore* other) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontDataAssignWeak(BLFontDataCore* self, const BLFontDataCore* other) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontDataCreateFromLoader(BLFontDataCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) BL_NOEXCEPT_C;
 BL_API_C bool     BL_CDECL blFontDataEquals(const BLFontDataCore* a, const BLFontDataCore* b) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontDataListTags(const BLFontDataCore* self, BLArrayCore* dst) BL_NOEXCEPT_C;
 BL_API_C size_t   BL_CDECL blFontDataQueryTables(const BLFontDataCore* self, BLFontTable* dst, const BLTag* tags, size_t count) BL_NOEXCEPT_C;
+
 //! \}
 
 //! \name BLFontFace
@@ -1577,7 +1580,6 @@ BL_API_C bool     BL_CDECL blFontLoaderEquals(const BLFontLoaderCore* a, const B
 BL_API_C BLResult BL_CDECL blFontLoaderCreateFromFile(BLFontLoaderCore* self, const char* fileName, uint32_t readFlags) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontLoaderCreateFromDataArray(BLFontLoaderCore* self, const BLArrayCore* dataArray) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontLoaderCreateFromData(BLFontLoaderCore* self, const void* data, size_t size, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
-BL_API_C BLFontDataImpl* BL_CDECL blFontLoaderDataByFaceIndex(BLFontLoaderCore* self, uint32_t faceIndex) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLFormat

@@ -76,13 +76,6 @@ static BL_INLINE bool isOpenTypeVersionTag(uint32_t tag) noexcept {
          tag == BL_MAKE_TAG('t', 'r', 'u', 'e') ;
 }
 
-// A callback that we use to destroy an array-impl we keep if `BLMemFontLoaderImpl`
-// was created from `BLArray<uint8_t>()`.
-static void BL_CDECL blDestroyArrayImpl(void* impl, void* arrayI) noexcept {
-  BL_UNUSED(impl);
-  blArrayImplRelease(static_cast<BLArrayImpl*>(arrayI));
-}
-
 // ============================================================================
 // [BLFontData / BLFontLoader - Memory]
 // ============================================================================
@@ -241,6 +234,20 @@ BLResult blFontDataInit(BLFontDataCore* self) noexcept {
   return BL_SUCCESS;
 }
 
+BLResult blFontDataInitFromLoader(BLFontDataCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) noexcept {
+  BLFontLoaderImpl* loaderI = loader->impl;
+  BLFontDataImpl* dataI = loaderI->virt->dataByFaceIndex(loaderI, faceIndex);
+
+  // Always assign the impl as this is what INIT would always do. If this is
+  // NONE impl then the object would be default initialized, otherwise the
+  // impl has been already ref-counted by calling `dataByFaceIndex()`.
+  self->impl = dataI;
+
+  if (dataI->implTraits & BL_IMPL_TRAIT_NULL)
+    return blTraceError(blDownCast(loader)->empty() ? BL_ERROR_NOT_INITIALIZED : BL_ERROR_INVALID_VALUE);
+  return BL_SUCCESS;
+}
+
 BLResult blFontDataReset(BLFontDataCore* self) noexcept {
   BLFontDataImpl* selfI = self->impl;
 
@@ -264,6 +271,18 @@ BLResult blFontDataAssignWeak(BLFontDataCore* self, const BLFontDataCore* other)
 
   self->impl = blImplIncRef(otherI);
   return blImplReleaseVirt(selfI);
+}
+
+BLResult blFontDataCreateFromLoader(BLFontDataCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) noexcept {
+  BLFontLoaderImpl* loaderI = loader->impl;
+  BLFontDataImpl* oldI = self->impl;
+  BLFontDataImpl* newI = loaderI->virt->dataByFaceIndex(loaderI, faceIndex);
+
+  if (newI->implTraits & BL_IMPL_TRAIT_NULL)
+    return blTraceError(blDownCast(loader)->empty() ? BL_ERROR_NOT_INITIALIZED : BL_ERROR_INVALID_VALUE);
+
+  self->impl = newI;
+  return blImplReleaseVirt(oldI);
 }
 
 bool blFontDataEquals(const BLFontDataCore* a, const BLFontDataCore* b) noexcept {
@@ -328,6 +347,13 @@ bool blFontLoaderEquals(const BLFontLoaderCore* a, const BLFontLoaderCore* b) no
 // ============================================================================
 // [BLFontLoader - Create]
 // ============================================================================
+
+// A callback that we use to destroy an array-impl we keep if `BLMemFontLoaderImpl`
+// was created from `BLArray<T>()`.
+static void BL_CDECL blDestroyArrayImpl(void* impl, void* arrayI) noexcept {
+  BL_UNUSED(impl);
+  blArrayImplRelease(static_cast<BLArrayImpl*>(arrayI));
+}
 
 BLResult blFontLoaderCreateFromFile(BLFontLoaderCore* self, const char* fileName, uint32_t readFlags) noexcept {
   BLArray<uint8_t> buffer;
@@ -459,15 +485,6 @@ BLResult blFontLoaderCreateFromData(BLFontLoaderCore* self, const void* data, si
   self->impl = loaderI;
   return blImplReleaseVirt(oldI);
 };
-
-// ============================================================================
-// [BLFontLoader - DataByFaceIndex]
-// ============================================================================
-
-BLFontDataImpl* blFontLoaderDataByFaceIndex(BLFontLoaderCore* self, uint32_t faceIndex) noexcept {
-  BLFontLoaderImpl* selfI = self->impl;
-  return selfI->virt->dataByFaceIndex(selfI, faceIndex);
-}
 
 // ============================================================================
 // [BLFontFace - Null]
