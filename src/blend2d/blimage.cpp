@@ -5,12 +5,14 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "./blapi-build_p.h"
+#include "./blarray_p.h"
 #include "./blfilesystem.h"
 #include "./blformat.h"
 #include "./blimage_p.h"
 #include "./blimagescale_p.h"
 #include "./blruntime_p.h"
 #include "./blsupport_p.h"
+#include "./blthreading_p.h"
 #include "./codec/blbmpcodec_p.h"
 #include "./codec/bljpegcodec_p.h"
 #include "./codec/blpngcodec_p.h"
@@ -28,7 +30,8 @@ static BLWrap<BLImageCodecImpl> blNullImageCodecImpl;
 static BLWrap<BLImageEncoderImpl> blNullImageEncoderImpl;
 static BLWrap<BLImageDecoderImpl> blNullImageDecoderImpl;
 
-static BLWrap<BLArray<BLImageCodec>> blImageBuildInCodecs;
+static BLWrap<BLArray<BLImageCodec>> blImageCodecs;
+static BLWrap<BLMutex> blImageCodecsMutex;
 
 static const char blEmptyCString[] = "";
 
@@ -440,7 +443,7 @@ BLResult blImageReadFromFile(BLImageCore* self, const char* fileName, const BLAr
     return blTraceError(BL_ERROR_FILE_EMPTY);
 
   BLImageCodec codec;
-  BL_PROPAGATE(blImageCodecFindByData(&codec, codecs, buffer.data(), buffer.size()));
+  BL_PROPAGATE(blImageCodecFindByData(&codec, buffer.data(), buffer.size(), codecs));
 
   if (BL_UNLIKELY(!(codec.features() & BL_IMAGE_CODEC_FEATURE_READ)))
     return blTraceError(BL_ERROR_IMAGE_DECODER_NOT_PROVIDED);
@@ -452,7 +455,7 @@ BLResult blImageReadFromFile(BLImageCore* self, const char* fileName, const BLAr
 
 BLResult blImageReadFromData(BLImageCore* self, const void* data, size_t size, const BLArrayCore* codecs) noexcept {
   BLImageCodec codec;
-  BL_PROPAGATE(blImageCodecFindByData(&codec, codecs, data, size));
+  BL_PROPAGATE(blImageCodecFindByData(&codec, data, size, codecs));
 
   if (BL_UNLIKELY(!(codec.features() & BL_IMAGE_CODEC_FEATURE_READ)))
     return blTraceError(BL_ERROR_IMAGE_DECODER_NOT_PROVIDED);
@@ -505,24 +508,17 @@ BLResult blImageCodecAssignWeak(BLImageCodecCore* self, const BLImageCodecCore* 
 }
 
 // ============================================================================
-// [BLImageCodec - Interface]
+// [BLImageCodec - Find Internal]
 // ============================================================================
 
-uint32_t blImageCodecInspectData(const BLImageCodecCore* self, const void* data, size_t size) noexcept {
-  BLImageCodecImpl* selfI = self->impl;
-  return selfI->virt->inspectData(selfI, static_cast<const uint8_t*>(data), size);
-}
-
-BLResult blImageCodecFindByName(BLImageCodecCore* self, const BLArrayCore* codecs, const char* name) noexcept {
-  for (const auto& codec : codecs->dcast<BLArray<BLImageCodec>>().view()) {
+static BLResult blImageCodecFindByNameInternal(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
+  for (const auto& codec : codecs->dcast<BLArray<BLImageCodec>>().view())
     if (strcmp(codec.name(), name) == 0)
       return blImageCodecAssignWeak(self, &codec);
-  }
-
   return BL_ERROR_IMAGE_NO_MATCHING_CODEC;
 }
 
-BLResult blImageCodecFindByData(BLImageCodecCore* self, const BLArrayCore* codecs, const void* data, size_t size) noexcept {
+static BLResult blImageCodecFindByDataInternal(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) noexcept {
   uint32_t bestScore = 0;
   const BLImageCodec* candidate = nullptr;
 
@@ -540,6 +536,34 @@ BLResult blImageCodecFindByData(BLImageCodecCore* self, const BLArrayCore* codec
   return BL_ERROR_IMAGE_NO_MATCHING_CODEC;
 }
 
+// ============================================================================
+// [BLImageCodec - Interface]
+// ============================================================================
+
+uint32_t blImageCodecInspectData(const BLImageCodecCore* self, const void* data, size_t size) noexcept {
+  BLImageCodecImpl* selfI = self->impl;
+  return selfI->virt->inspectData(selfI, static_cast<const uint8_t*>(data), size);
+}
+
+BLResult blImageCodecFindByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
+  if (size == SIZE_MAX)
+    size = strlen(name);
+
+  if (codecs)
+    return blImageCodecFindByNameInternal(self, name, size, codecs);
+
+  BLMutexGuard guard(blImageCodecsMutex());
+  return blImageCodecFindByNameInternal(self, name, size, &blImageCodecs);
+}
+
+BLResult blImageCodecFindByData(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) noexcept {
+  if (codecs)
+    return blImageCodecFindByDataInternal(self, data, size, codecs);
+
+  BLMutexGuard guard(blImageCodecsMutex());
+  return blImageCodecFindByDataInternal(self, data, size, &blImageCodecs);
+}
+
 BLResult blImageCodecCreateDecoder(const BLImageCodecCore* self, BLImageDecoderCore* dst) noexcept {
   BLImageCodecImpl* selfI = self->impl;
   return selfI->virt->createDecoder(selfI, dst);
@@ -550,8 +574,43 @@ BLResult blImageCodecCreateEncoder(const BLImageCodecCore* self, BLImageEncoderC
   return selfI->virt->createEncoder(selfI, dst);
 }
 
-BLArrayCore* blImageCodecBuiltInCodecs(void) noexcept {
-  return &blImageBuildInCodecs;
+// ============================================================================
+// [BLImageCodec - BuiltIn]
+// ============================================================================
+
+BLResult blImageCodecArrayInitBuiltInCodecs(BLArrayCore* self) noexcept {
+  BLMutexGuard guard(blImageCodecsMutex());
+
+  self->impl = blImplIncRef(blImageCodecs->impl);
+  return BL_SUCCESS;
+}
+
+BLResult blImageCodecArrayAssignBuiltInCodecs(BLArrayCore* self) noexcept {
+  BLMutexGuard guard(blImageCodecsMutex());
+  BLArrayImpl* oldI = self->impl;
+
+  self->impl = blImplIncRef(blImageCodecs->impl);
+  return blArrayImplRelease(oldI);
+}
+
+BLResult blImageCodecAddToBuiltIn(const BLImageCodecCore* codec) noexcept {
+  BLMutexGuard guard(blImageCodecsMutex());
+  size_t existingIndex = blImageCodecs->indexOf(*blDownCast(codec));
+
+  if (existingIndex != SIZE_MAX)
+    return blTraceError(BL_ERROR_ALREADY_EXISTS);
+
+  return blImageCodecs->append(blDownCast(*codec));
+}
+
+BLResult blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* codec) noexcept {
+  BLMutexGuard guard(blImageCodecsMutex());
+  size_t existingIndex = blImageCodecs->indexOf(*blDownCast(codec));
+
+  if (existingIndex == SIZE_MAX)
+    return blTraceError(BL_ERROR_NO_ENTRY);
+
+  return blImageCodecs->remove(existingIndex);
 }
 
 // ============================================================================
@@ -705,7 +764,8 @@ BL_DIAGNOSTIC_POP
 
 static void BL_CDECL blImageRtShutdown(BLRuntimeContext* rt) noexcept {
   BL_UNUSED(rt);
-  blImageBuildInCodecs.destroy();
+  blImageCodecs.destroy();
+  blImageCodecsMutex.destroy();
 }
 
 void blImageRtInit(BLRuntimeContext* rt) noexcept {
@@ -756,14 +816,48 @@ void blImageRtInit(BLRuntimeContext* rt) noexcept {
   blAssignBuiltInNull(encoderI);
 
   // Register built-in codecs.
+  BLArray<BLImageCodec>* codecs = blImageCodecs.init();
+  blImageCodecsMutex.init();
+
   BLImageCodecCore bmpCodec  { blBmpCodecRtInit(rt)  };
   BLImageCodecCore jpegCodec { blJpegCodecRtInit(rt) };
   BLImageCodecCore pngCodec  { blPngCodecRtInit(rt)  };
 
-  BLArray<BLImageCodec>* codecs = blImageBuildInCodecs.init();
   codecs->append(blDownCast(bmpCodec));
   codecs->append(blDownCast(jpegCodec));
   codecs->append(blDownCast(pngCodec));
 
   rt->shutdownHandlers.add(blImageRtShutdown);
 }
+
+// ============================================================================
+// [BLImage - Unit Tests]
+// ============================================================================
+
+#ifdef BL_BUILD_TEST
+UNIT(blend2d_image_codecs) {
+  INFO("Testing findByName and findByData");
+  {
+    static const uint8_t pngSignature[8] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+    static const uint8_t jpgSignature[3] = { 0xFF, 0xD8, 0xFF };
+
+    BLImageCodec codec;
+    BLImageCodec bmp;
+    BLImageCodec png;
+    BLImageCodec jpg;
+
+    EXPECT(bmp.findByName("BMP") == BL_SUCCESS);
+    EXPECT(png.findByName("PNG") == BL_SUCCESS);
+    EXPECT(jpg.findByName("JPEG") == BL_SUCCESS);
+
+    EXPECT(codec.findByData("BM", 2) == BL_SUCCESS);
+    EXPECT(codec == bmp);
+
+    EXPECT(codec.findByData(pngSignature, BL_ARRAY_SIZE(pngSignature)) == BL_SUCCESS);
+    EXPECT(codec == png);
+
+    EXPECT(codec.findByData(jpgSignature, BL_ARRAY_SIZE(jpgSignature)) == BL_SUCCESS);
+    EXPECT(codec == jpg);
+  }
+}
+#endif

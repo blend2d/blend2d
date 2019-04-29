@@ -268,7 +268,7 @@ constexpr const typename BLInternalCastImpl<T>::Type* blInternalCast(const T* so
 }
 
 //! Checks whether `dataAccessFlags` is valid.
-static bool blDataAccessFlagsIsValid(uint32_t dataAccessFlags) noexcept {
+static BL_INLINE bool blDataAccessFlagsIsValid(uint32_t dataAccessFlags) noexcept {
   return dataAccessFlags == BL_DATA_ACCESS_READ ||
          dataAccessFlags == BL_DATA_ACCESS_RW;
 }

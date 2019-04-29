@@ -110,7 +110,7 @@ static BL_INLINE bool blImplDecRefAndTest(T* impl) noexcept {
 //! \name Impl Initialization and Destruction
 //! \{
 
-static uint32_t blImplTraitsFromDataAccessFlags(uint32_t dataAccessFlags) noexcept {
+static BL_INLINE uint32_t blImplTraitsFromDataAccessFlags(uint32_t dataAccessFlags) noexcept {
   return (dataAccessFlags & BL_DATA_ACCESS_RW) == BL_DATA_ACCESS_RW
     ? BL_IMPL_TRAIT_MUTABLE
     : BL_IMPL_TRAIT_IMMUTABLE;

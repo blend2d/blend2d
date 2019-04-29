@@ -319,16 +319,32 @@ public:
   //! \name Image IO
   //! \{
 
+  BL_INLINE BLResult readFromFile(const char* fileName) noexcept {
+    return blImageReadFromFile(this, fileName, nullptr);
+  }
+
   BL_INLINE BLResult readFromFile(const char* fileName, const BLArray<BLImageCodec>& codecs) noexcept {
     return blImageReadFromFile(this, fileName, &codecs);
+  }
+
+  BL_INLINE BLResult readFromData(const void* data, size_t size) noexcept {
+    return blImageReadFromData(this, data, size, nullptr);
   }
 
   BL_INLINE BLResult readFromData(const void* data, size_t size, const BLArray<BLImageCodec>& codecs) noexcept {
     return blImageReadFromData(this, data, size, &codecs);
   }
 
+  BL_INLINE BLResult readFromData(const BLArray<uint8_t>& array) noexcept {
+    return blImageReadFromData(this, array.data(), array.size(), nullptr);
+  }
+
   BL_INLINE BLResult readFromData(const BLArray<uint8_t>& array, const BLArray<BLImageCodec>& codecs) noexcept {
     return blImageReadFromData(this, array.data(), array.size(), &codecs);
+  }
+
+  BL_INLINE BLResult readFromData(const BLArrayView<uint8_t>& view) noexcept {
+    return blImageReadFromData(this, view.data, view.size, nullptr);
   }
 
   BL_INLINE BLResult readFromData(const BLArrayView<uint8_t>& view, const BLArray<BLImageCodec>& codecs) noexcept {
@@ -473,10 +489,45 @@ public:
   //! \name Find Functionality
   //! \{
 
-  BL_INLINE BLResult findByName(const BLArray<BLImageCodec>& codecs, const char* name) noexcept { return blImageCodecFindByName(this, &codecs, name); }
-  BL_INLINE BLResult findByData(const BLArray<BLImageCodec>& codecs, const void* data, size_t size) noexcept { return blImageCodecFindByData(this, &codecs, data, size); }
-  BL_INLINE BLResult findByData(const BLArray<BLImageCodec>& codecs, const BLArrayView<uint8_t>& view) noexcept { return blImageCodecFindByData(this, &codecs, view.data, view.size); }
-  BL_INLINE BLResult findByData(const BLArray<BLImageCodec>& codecs, const BLArray<uint8_t>& buffer) noexcept { return blImageCodecFindByData(this, &codecs, buffer.data(), buffer.size()); }
+  BL_INLINE BLResult findByName(const char* name) noexcept {
+    return blImageCodecFindByName(this, name, SIZE_MAX, nullptr);
+  }
+
+  BL_INLINE BLResult findByName(const char* name, const BLArray<BLImageCodec>& codecs) noexcept {
+    return blImageCodecFindByName(this, name, SIZE_MAX, &codecs);
+  }
+
+  BL_INLINE BLResult findByName(const BLStringView& name) noexcept {
+    return blImageCodecFindByName(this, name.data, name.size, nullptr);
+  }
+
+  BL_INLINE BLResult findByName(const BLStringView& name, const BLArray<BLImageCodec>& codecs) noexcept {
+    return blImageCodecFindByName(this, name.data, name.size, &codecs);
+  }
+
+  BL_INLINE BLResult findByData(const void* data, size_t size) noexcept {
+    return blImageCodecFindByData(this, data, size, nullptr);
+  }
+
+  BL_INLINE BLResult findByData(const void* data, size_t size, const BLArray<BLImageCodec>& codecs) noexcept {
+    return blImageCodecFindByData(this, data, size, &codecs);
+  }
+
+  BL_INLINE BLResult findByData(const BLArrayView<uint8_t>& view) noexcept {
+    return blImageCodecFindByData(this, view.data, view.size, nullptr);
+  }
+
+  BL_INLINE BLResult findByData(const BLArrayView<uint8_t>& view, const BLArray<BLImageCodec>& codecs) noexcept {
+    return blImageCodecFindByData(this, view.data, view.size, &codecs);
+  }
+
+  BL_INLINE BLResult findByData(const BLArray<uint8_t>& buffer) noexcept {
+    return blImageCodecFindByData(this, buffer.data(), buffer.size(), nullptr);
+  }
+
+  BL_INLINE BLResult findByData(const BLArray<uint8_t>& buffer, const BLArray<BLImageCodec>& codecs) noexcept {
+    return blImageCodecFindByData(this, buffer.data(), buffer.size(), &codecs);
+  }
 
   //! \}
 
@@ -492,8 +543,26 @@ public:
 
   //! \}
 
+  //! \name Built-In Codecs
+  //! \{
+
+  static BL_INLINE BLArray<BLImageCodec> builtInCodecs() noexcept {
+    BLArray<BLImageCodec> result(nullptr);
+    blImageCodecArrayInitBuiltInCodecs(&result);
+    return result;
+  }
+
+  static BL_INLINE BLResult addToBuiltIn(const BLImageCodec& codec) noexcept {
+    return blImageCodecAddToBuiltIn(&codec);
+  }
+
+  static BL_INLINE BLResult removeFromBuiltIn(const BLImageCodec& codec) noexcept {
+    return blImageCodecRemoveFromBuiltIn(&codec);
+  }
+
+  //! \}
+
   static BL_INLINE const BLImageCodec& none() noexcept { return reinterpret_cast<const BLImageCodec*>(blNone)[kImplType]; }
-  static BL_INLINE BLArray<BLImageCodec>& builtInCodecs() noexcept { return *static_cast<BLArray<BLImageCodec>*>(blImageCodecBuiltInCodecs()); }
 };
 #endif
 

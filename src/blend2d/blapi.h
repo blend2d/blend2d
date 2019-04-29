@@ -346,7 +346,7 @@
 
 #if defined(__GNUC__) && !defined(BL_BUILD_DEBUG)
   #define BL_INLINE inline __attribute__((__always_inline__))
-#elif defined(_MSC_VER) && !defined(BL_BUILD_DEBUG)
+#elif defined(_MSC_VER)
   #define BL_INLINE __forceinline
 #else
   #define BL_INLINE inline
@@ -808,7 +808,7 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_MEDIA_CHANGED,                //!< Media changed                 [Windows::ERROR_MEDIA_CHANGED].
   BL_ERROR_READ_ONLY_FS,                 //!< The file/FS is read-only      [EROFS].
   BL_ERROR_NO_DEVICE,                    //!< Device doesn't exist          [ENXIO].
-  BL_ERROR_NO_ENTRY,                     //!< No such file or directory     [ENOENT].
+  BL_ERROR_NO_ENTRY,                     //!< Not found, no entry (fs)      [ENOENT].
   BL_ERROR_NO_MEDIA,                     //!< No media in drive/device      [ENOMEDIUM].
   BL_ERROR_NO_MORE_DATA,                 //!< No more data / end of file    [ENODATA].
   BL_ERROR_NO_MORE_FILES,                //!< No more files                 [ENMFILE].
@@ -1553,7 +1553,6 @@ BL_API_C BLResult BL_CDECL blFontDataCreateFromLoader(BLFontDataCore* self, cons
 BL_API_C bool     BL_CDECL blFontDataEquals(const BLFontDataCore* a, const BLFontDataCore* b) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontDataListTags(const BLFontDataCore* self, BLArrayCore* dst) BL_NOEXCEPT_C;
 BL_API_C size_t   BL_CDECL blFontDataQueryTables(const BLFontDataCore* self, BLFontTable* dst, const BLTag* tags, size_t count) BL_NOEXCEPT_C;
-
 //! \}
 
 //! \name BLFontFace
@@ -1657,12 +1656,16 @@ BL_API_C BLResult BL_CDECL blImageWriteToData(const BLImageCore* self, BLArrayCo
 BL_API_C BLResult BL_CDECL blImageCodecInit(BLImageCodecCore* self) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blImageCodecReset(BLImageCodecCore* self) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blImageCodecAssignWeak(BLImageCodecCore* self, const BLImageCodecCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCodecFindByName(BLImageCodecCore* self, const BLArrayCore* codecs, const char* name) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCodecFindByData(BLImageCodecCore* self, const BLArrayCore* codecs, const void* data, size_t size) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blImageCodecFindByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blImageCodecFindByData(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
 BL_API_C uint32_t BL_CDECL blImageCodecInspectData(const BLImageCodecCore* self, const void* data, size_t size) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blImageCodecCreateDecoder(const BLImageCodecCore* self, BLImageDecoderCore* dst) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blImageCodecCreateEncoder(const BLImageCodecCore* self, BLImageEncoderCore* dst) BL_NOEXCEPT_C;
-BL_API_C BLArrayCore* BL_CDECL blImageCodecBuiltInCodecs(void) BL_NOEXCEPT_C;
+
+BL_API_C BLResult BL_CDECL blImageCodecArrayInitBuiltInCodecs(BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blImageCodecArrayAssignBuiltInCodecs(BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blImageCodecAddToBuiltIn(const BLImageCodecCore* codec) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* codec) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLImageDecoder
