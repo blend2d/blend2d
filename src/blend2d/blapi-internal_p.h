@@ -267,6 +267,12 @@ constexpr const typename BLInternalCastImpl<T>::Type* blInternalCast(const T* so
   return static_cast<const typename BLInternalCastImpl<T>::Type*>(something);
 }
 
+//! Checks whether `dataAccessFlags` is valid.
+static bool blDataAccessFlagsIsValid(uint32_t dataAccessFlags) noexcept {
+  return dataAccessFlags == BL_DATA_ACCESS_READ ||
+         dataAccessFlags == BL_DATA_ACCESS_RW;
+}
+
 //! Assigns a built-in none implementation `impl` to `blNone` - a built-in
 //! array that contains all null instances provided by Blend2D. Any code that
 //! assigns to `blNone` array must use this function as it's then easy to find.

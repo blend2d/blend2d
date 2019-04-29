@@ -8,6 +8,7 @@
 #define BLEND2D_BLAPI_IMPL_H
 
 #include "./blapi.h"
+#include "./blvariant.h"
 
 // This should be the only place in Blend2D that includes <atomic>.
 #include <atomic>
@@ -95,7 +96,13 @@ static BL_INLINE T* blImplIncRef(T* impl, size_t n = 1) noexcept {
 
 template<typename T>
 static BL_INLINE bool blImplDecRefAndTest(T* impl) noexcept {
-  return impl->refCount != 0 && blAtomicFetchSub(&impl->refCount) == 1;
+  size_t base = impl->implTraits & 0x3u;
+  // Zero `base` means it's a built-in none object or object that doesn't use
+  // reference counting. We cannot decrease the reference count of such Impl.
+  if (base == 0)
+    return false;
+
+  return blAtomicFetchSub(&impl->refCount) == base;
 }
 
 //! \}
@@ -103,9 +110,15 @@ static BL_INLINE bool blImplDecRefAndTest(T* impl) noexcept {
 //! \name Impl Initialization and Destruction
 //! \{
 
+static uint32_t blImplTraitsFromDataAccessFlags(uint32_t dataAccessFlags) noexcept {
+  return (dataAccessFlags & BL_DATA_ACCESS_RW) == BL_DATA_ACCESS_RW
+    ? BL_IMPL_TRAIT_MUTABLE
+    : BL_IMPL_TRAIT_IMMUTABLE;
+}
+
 template<typename T>
 static BL_INLINE void blImplInit(T* impl, uint32_t implType, uint32_t implTraits, uint16_t memPoolData) noexcept {
-  impl->refCount = 1;
+  impl->refCount = (implTraits & 0x3u);
   impl->implType = uint8_t(implType);
   impl->implTraits = uint8_t(implTraits);
   impl->memPoolData = memPoolData;

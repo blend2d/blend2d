@@ -98,7 +98,7 @@ static BLInternalImageImpl* blImageImplNewInternal(int w, int h, uint32_t format
   if (BL_INTERNAL_IMAGE_DATA_ALIGNMENT > sizeof(void*))
     pixelData = blAlignUp(pixelData, BL_INTERNAL_IMAGE_DATA_ALIGNMENT);
 
-  blImplInit(impl, BL_IMPL_TYPE_IMAGE, 0, memPoolData);
+  blImplInit(impl, BL_IMPL_TYPE_IMAGE, BL_IMPL_TRAIT_MUTABLE, memPoolData);
   impl->pixelData = pixelData;
   impl->stride = intptr_t(stride);
   impl->writer = nullptr;
@@ -109,11 +109,6 @@ static BLInternalImageImpl* blImageImplNewInternal(int w, int h, uint32_t format
   impl->writerCount = 0;
 
   return impl;
-}
-
-static void BL_CDECL blImageImplDestroyExternalDummyFunc(void* impl, void* destroyData) noexcept {
-  BL_UNUSED(impl);
-  BL_UNUSED(destroyData);
 }
 
 static BLInternalImageImpl* blImageImplNewExternal(int w, int h, uint32_t format, void* pixelData, intptr_t stride, BLDestroyImplFunc destroyFunc, void* destroyData) noexcept {
@@ -130,10 +125,10 @@ static BLInternalImageImpl* blImageImplNewExternal(int w, int h, uint32_t format
   BLExternalImplPreface* preface = static_cast<BLExternalImplPreface*>(p);
   BLInternalImageImpl* impl = blOffsetPtr<BLInternalImageImpl>(p, sizeof(BLExternalImplPreface));
 
-  preface->destroyFunc = destroyFunc ? destroyFunc : blImageImplDestroyExternalDummyFunc;
-  preface->destroyData = destroyData;
+  preface->destroyFunc = destroyFunc ? destroyFunc : blRuntimeDummyDestroyImplFunc;
+  preface->destroyData = destroyFunc ? destroyData : nullptr;
 
-  blImplInit(impl, BL_IMPL_TYPE_IMAGE, BL_IMPL_TRAIT_EXTERNAL, memPoolData);
+  blImplInit(impl, BL_IMPL_TYPE_IMAGE, BL_IMPL_TRAIT_MUTABLE | BL_IMPL_TRAIT_EXTERNAL, memPoolData);
   impl->pixelData = pixelData;
   impl->stride = stride;
   impl->writer = nullptr;
@@ -150,6 +145,10 @@ static BLInternalImageImpl* blImageImplNewExternal(int w, int h, uint32_t format
 BLResult blImageImplDelete(BLImageImpl* impl_) noexcept {
   BLInternalImageImpl* impl = blInternalCast(impl_);
 
+  // Postpone the deletion in case that the image still has writers attached.
+  // This is required as the rendering context doesn't manipulate the reference
+  // count of `BLImage` (otherwise it would not be possible to attach multiple
+  // rendering contexts, for example).
   if (impl->writerCount != 0)
     return BL_SUCCESS;
 
@@ -177,9 +176,9 @@ BLResult blImageImplDelete(BLImageImpl* impl_) noexcept {
 }
 
 static BL_INLINE BLResult blImageImplRelease(BLInternalImageImpl* impl) noexcept {
-  if (blAtomicFetchSub(&impl->refCount) != 1)
-    return BL_SUCCESS;
-  return blImageImplDelete(impl);
+  if (blImplDecRefAndTest(impl))
+    return blImageImplDelete(impl);
+  return BL_SUCCESS;
 }
 
 // ============================================================================
@@ -434,18 +433,21 @@ BLResult blImageScale(BLImageCore* dst, const BLImageCore* src, const BLSizeI* s
 // ============================================================================
 
 BLResult blImageReadFromFile(BLImageCore* self, const char* fileName, const BLArrayCore* codecs) noexcept {
-  BLArray<uint8_t> buf;
-  BL_PROPAGATE(BLFileSystem::readFile(fileName, buf));
+  BLArray<uint8_t> buffer;
+  BL_PROPAGATE(BLFileSystem::readFile(fileName, buffer));
+
+  if (buffer.empty())
+    return blTraceError(BL_ERROR_FILE_EMPTY);
 
   BLImageCodec codec;
-  BL_PROPAGATE(blImageCodecFindByData(&codec, codecs, buf.data(), buf.size()));
+  BL_PROPAGATE(blImageCodecFindByData(&codec, codecs, buffer.data(), buffer.size()));
 
   if (BL_UNLIKELY(!(codec.features() & BL_IMAGE_CODEC_FEATURE_READ)))
     return blTraceError(BL_ERROR_IMAGE_DECODER_NOT_PROVIDED);
 
   BLImageDecoder decoder;
   BL_PROPAGATE(codec.createDecoder(&decoder));
-  return decoder.readFrame(*blDownCast(self), buf);
+  return decoder.readFrame(*blDownCast(self), buffer);
 }
 
 BLResult blImageReadFromData(BLImageCore* self, const void* data, size_t size, const BLArrayCore* codecs) noexcept {
@@ -461,9 +463,9 @@ BLResult blImageReadFromData(BLImageCore* self, const void* data, size_t size, c
 }
 
 BLResult blImageWriteToFile(const BLImageCore* self, const char* fileName, const BLImageCodecCore* codec) noexcept {
-  BLArray<uint8_t> buf;
-  BL_PROPAGATE(blImageWriteToData(self, &buf, codec));
-  return BLFileSystem::writeFile(fileName, buf);
+  BLArray<uint8_t> buffer;
+  BL_PROPAGATE(blImageWriteToData(self, &buffer, codec));
+  return BLFileSystem::writeFile(fileName, buffer);
 }
 
 BLResult blImageWriteToData(const BLImageCore* self, BLArrayCore* dst, const BLImageCodecCore* codec) noexcept {

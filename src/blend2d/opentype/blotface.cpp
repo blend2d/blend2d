@@ -96,7 +96,7 @@ BLResult blOTFaceImplNew(BLOTFaceImpl** dst, const BLFontLoader* loader, const B
   // Zero everything so we don't have to initialize features not provided by the font.
   memset(faceI, 0, sizeof(BLOTFaceImpl));
 
-  blImplInit(faceI, BL_IMPL_TYPE_FONT_FACE, BL_IMPL_TRAIT_VIRT, memPoolData);
+  blImplInit(faceI, BL_IMPL_TYPE_FONT_FACE, BL_IMPL_TRAIT_MUTABLE | BL_IMPL_TRAIT_VIRT, memPoolData);
   faceI->virt = &blOTFaceVirt;
   faceI->data.impl = blImplIncRef(fontData->impl);
   faceI->loader.impl = blImplIncRef(loader->impl);

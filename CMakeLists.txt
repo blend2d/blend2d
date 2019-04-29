@@ -63,11 +63,6 @@ set(BLEND2D_NO_STDCXX_CFLAGS "")                 # Private compiler flags to dis
 # [Blend2D - Utilities]
 # =============================================================================
 
-set(BLEND2D_MAKE_DEF "-D") # Define a preprocessor macro: "${BLEND2D_MAKE_DEF}VAR=1"
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
-  set(BLEND2D_MAKE_DEF "/D")
-endif()
-
 # Detects C++ flags and appends all detected ones to `out`.
 function(blend2d_detect_cflags out)
   set(out_array ${${out}})
@@ -180,18 +175,18 @@ endif()
 
 if (BLEND2D_BUILD_EMBED)
   set(BLEND2D_TARGET_TYPE "EMBED")
-  list(APPEND BLEND2D_CFLAGS         "${BLEND2D_MAKE_DEF}BL_BUILD_EMBED")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_EMBED")
+  list(APPEND BLEND2D_CFLAGS         "-DBL_BUILD_EMBED")
+  list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_EMBED")
 elseif (BLEND2D_BUILD_STATIC)
   set(BLEND2D_TARGET_TYPE "STATIC")
-  list(APPEND BLEND2D_CFLAGS         "${BLEND2D_MAKE_DEF}BL_BUILD_STATIC")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_STATIC")
+  list(APPEND BLEND2D_CFLAGS         "-DBL_BUILD_STATIC")
+  list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_STATIC")
 else()
   set(BLEND2D_TARGET_TYPE "SHARED")
 endif()
 
 if (BLEND2D_BUILD_NO_JIT)
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_NO_JIT")
+  list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_NO_JIT")
 endif()
 
 # =============================================================================
@@ -214,37 +209,37 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" ST
   # are also available. If such check fails it means that we are either
   # not compiling for X86/X64 or the compiler is very old, which cannot
   # be used anyway.
-  blend2d_detect_cflags(BLEND2D_CFLAGS_AVX "/arch:AVX")
-  blend2d_detect_cflags(BLEND2D_CFLAGS_AVX2 "/arch:AVX2")
+  blend2d_detect_cflags(BLEND2D_CFLAGS_AVX "-arch:AVX")
+  blend2d_detect_cflags(BLEND2D_CFLAGS_AVX2 "-arch:AVX2")
 
   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-    # Intel deprecated /arch:SSE, so it's implicit. In contrast to MSVC, Intel
-    # also provides /arch:SSE3+ options and uses the same definitions as GCC
+    # Intel deprecated -arch:SSE, so it's implicit. In contrast to MSVC, Intel
+    # also provides -arch:SSE3+ options and uses the same definitions as GCC
     # and Clang, so no magic needed here.
     if (BLEND2D_CFLAGS_AVX)
-      list(APPEND BLEND2D_CFLAGS_SSE2 "/arch:SSE2")
-      list(APPEND BLEND2D_CFLAGS_SSE3 "/arch:SSE3")
-      list(APPEND BLEND2D_CFLAGS_SSSE3 "/arch:SSSE3")
-      list(APPEND BLEND2D_CFLAGS_SSE4_1 "/arch:SSE4.1")
-      list(APPEND BLEND2D_CFLAGS_SSE4_2 "/arch:SSE4.2")
+      list(APPEND BLEND2D_CFLAGS_SSE2 "-arch:SSE2")
+      list(APPEND BLEND2D_CFLAGS_SSE3 "-arch:SSE3")
+      list(APPEND BLEND2D_CFLAGS_SSSE3 "-arch:SSSE3")
+      list(APPEND BLEND2D_CFLAGS_SSE4_1 "-arch:SSE4.1")
+      list(APPEND BLEND2D_CFLAGS_SSE4_2 "-arch:SSE4.2")
     endif()
   else()
     if (BLEND2D_CFLAGS_AVX2)
-      # 64-bit MSVC compiler doesn't like /arch:SSE[2] as it's implicit.
+      # 64-bit MSVC compiler doesn't like -arch:SSE[2] as it's implicit.
       if (NOT CMAKE_CL_64)
-        list(APPEND BLEND2D_CFLAGS_SSE2 "/arch:SSE2")
-        list(APPEND BLEND2D_CFLAGS_SSE3 "/arch:SSE2")
-        list(APPEND BLEND2D_CFLAGS_SSSE3 "/arch:SSE2")
-        list(APPEND BLEND2D_CFLAGS_SSE4_1 "/arch:SSE2")
-        list(APPEND BLEND2D_CFLAGS_SSE4_2 "/arch:SSE2")
+        list(APPEND BLEND2D_CFLAGS_SSE2 "-arch:SSE2")
+        list(APPEND BLEND2D_CFLAGS_SSE3 "-arch:SSE2")
+        list(APPEND BLEND2D_CFLAGS_SSSE3 "-arch:SSE2")
+        list(APPEND BLEND2D_CFLAGS_SSE4_1 "-arch:SSE2")
+        list(APPEND BLEND2D_CFLAGS_SSE4_2 "-arch:SSE2")
       endif()
       # MSVC doesn't provide any preprocessor definitions for SSE3 and higher, thus
       # we have to define these ourselves to match these defined by Intel|Clang|GCC.
-      list(APPEND BLEND2D_CFLAGS_SSE2 "/D__SSE2__")
-      list(APPEND BLEND2D_CFLAGS_SSE3 "/D__SSE3__")
-      list(APPEND BLEND2D_CFLAGS_SSSE3 "/D__SSSE3__")
-      list(APPEND BLEND2D_CFLAGS_SSE4_1 "/D__SSE4_1__")
-      list(APPEND BLEND2D_CFLAGS_SSE4_2 "/D__SSE4_2__")
+      list(APPEND BLEND2D_CFLAGS_SSE2 "-D__SSE2__")
+      list(APPEND BLEND2D_CFLAGS_SSE3 "-D__SSE3__")
+      list(APPEND BLEND2D_CFLAGS_SSSE3 "-D__SSSE3__")
+      list(APPEND BLEND2D_CFLAGS_SSE4_1 "-D__SSE4_1__")
+      list(APPEND BLEND2D_CFLAGS_SSE4_2 "-D__SSE4_2__")
     endif()
   endif()
 else()
@@ -269,9 +264,9 @@ endif()
 # handle either all (SSE2, SSE3, ... AVX) or nothing. We require C++11 so
 # this should exclude all old compilers where this assumption would not hold.
 if (BLEND2D_CFLAGS_AVX2)
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_OPT_AVX2")
+  list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_OPT_AVX2")
 elseif (BLEND2D_CFLAGS_AVX)
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "${BLEND2D_MAKE_DEF}BL_BUILD_OPT_AVX")
+  list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_OPT_AVX")
 endif()
 
 # =============================================================================
@@ -313,13 +308,12 @@ if (NOT BLEND2D_BUILD_NO_JIT)
   include("${ASMJIT_DIR}/CMakeLists.txt")
   list(APPEND BLEND2D_DEPS ${ASMJIT_LIBS})
   list(APPEND BLEND2D_PRIVATE_CFLAGS ${ASMJIT_CFLAGS})
-  list(APPEND BLEND2D_PRIVATE_CFLAGS ${BLEND2D_MAKE_DEF}ASMJIT_BUILD_NO_STDCXX)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_BUILD_NO_STDCXX)
 
   # A possibility to reduce the resulting binary size by disabling asmjit logging.
   if (BLEND2D_BUILD_NO_LOGGING)
     message("   Disabling AsmJit logging functionality to make Blend2D smaller")
-    list(APPEND BLEND2D_PRIVATE_CFLAGS ${BLEND2D_MAKE_DEF}ASMJIT_DISABLE_LOGGING
-                                       ${BLEND2D_MAKE_DEF}ASMJIT_DISABLE_TEXT)
+    list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_DISABLE_LOGGING -DASMJIT_DISABLE_TEXT)
   endif()
 endif()
 
@@ -617,7 +611,6 @@ if (NOT BLEND2D_BUILD_EMBED)
       "${BLEND2D_PRIVATE_CFLAGS_DBG}"
       "${BLEND2D_PRIVATE_CFLAGS_REL}")
     target_compile_definitions(bl_test_unit PRIVATE BL_BUILD_TEST BL_BUILD_EMBED)
-
     target_include_directories(bl_test_unit BEFORE PRIVATE ${ASMJIT_INCLUDE_DIRS})
     target_include_directories(bl_test_unit BEFORE PRIVATE ${BLEND2D_INCLUDE_DIRS})
   endif()

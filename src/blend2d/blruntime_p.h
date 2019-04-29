@@ -150,6 +150,12 @@ inline bool blRuntimeHasAVX2(BLRuntimeContext* rt) noexcept { return (rt->system
 BL_DIAGNOSTIC_POP
 
 // ============================================================================
+// [BLRuntime - Impl]
+// ============================================================================
+
+BL_HIDDEN void BL_CDECL blRuntimeDummyDestroyImplFunc(void* impl, void* destroyData) noexcept;
+
+// ============================================================================
 // [BLRuntime - Utilities]
 // ============================================================================
 

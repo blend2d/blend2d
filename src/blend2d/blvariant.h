@@ -107,14 +107,18 @@ BL_DEFINE_ENUM(BLImplType) {
 
 //! Impl traits that describe some details about a Blend2D `Impl` data.
 BL_DEFINE_ENUM(BLImplTraits) {
-  //! Set if the impl is a built-in null instance (default constructed).
-  BL_IMPL_TRAIT_NULL = 0x01u,
-  //! Set if the impl provides a virtual function table (first member).
-  BL_IMPL_TRAIT_VIRT = 0x02u,
+  //! The data this container holds is mutable if `refCount == 1`.
+  BL_IMPL_TRAIT_MUTABLE = 0x01u,
+  //! The data this container holds is always immutable.
+  BL_IMPL_TRAIT_IMMUTABLE = 0x02u,
   //! Set if the impl uses an external data (data is not part of impl).
-  BL_IMPL_TRAIT_EXTERNAL = 0x10u,
+  BL_IMPL_TRAIT_EXTERNAL = 0x04u,
   //! Set if the impl was not allocated by `blRuntimeAllocImpl()`.
-  BL_IMPL_TRAIT_FOREIGN = 0x80u
+  BL_IMPL_TRAIT_FOREIGN = 0x08u,
+  //! Set if the impl provides a virtual function table (first member).
+  BL_IMPL_TRAIT_VIRT = 0x10u,
+  //! Set if the impl is a built-in null instance (default constructed).
+  BL_IMPL_TRAIT_NULL = 0x80u
 };
 
 // ============================================================================

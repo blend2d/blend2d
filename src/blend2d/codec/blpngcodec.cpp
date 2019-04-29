@@ -1289,7 +1289,7 @@ static BLPngDecoderImpl* blPngDecoderImplNew() noexcept {
   if (BL_UNLIKELY(!impl))
     return nullptr;
 
-  blImplInit(impl, BL_IMPL_TYPE_IMAGE_DECODER, BL_IMPL_TRAIT_VIRT, memPoolData);
+  blImplInit(impl, BL_IMPL_TYPE_IMAGE_DECODER, BL_IMPL_TRAIT_MUTABLE | BL_IMPL_TRAIT_VIRT, memPoolData);
   impl->virt = &blPngDecoderVirt;
   impl->codec.impl = &blPngCodecImpl;
   impl->handle = nullptr;

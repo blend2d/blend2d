@@ -30,60 +30,60 @@ static const BLRuntimeBuildInfo blRuntimeBuildInfo = {
   { BL_VERSION },
 
   // Build Type.
-  #ifdef BL_BUILD_DEBUG
+#ifdef BL_BUILD_DEBUG
   BL_RUNTIME_BUILD_TYPE_DEBUG,
-  #else
+#else
   BL_RUNTIME_BUILD_TYPE_RELEASE,
-  #endif
+#endif
 
   // Baseline CPU features.
   0
-  #ifdef BL_TARGET_OPT_SSE2
+#ifdef BL_TARGET_OPT_SSE2
   | BL_RUNTIME_CPU_FEATURE_X86_SSE2
-  #endif
-  #ifdef BL_TARGET_OPT_SSE3
+#endif
+#ifdef BL_TARGET_OPT_SSE3
   | BL_RUNTIME_CPU_FEATURE_X86_SSE3
-  #endif
-  #ifdef BL_TARGET_OPT_SSSE3
+#endif
+#ifdef BL_TARGET_OPT_SSSE3
   | BL_RUNTIME_CPU_FEATURE_X86_SSSE3
-  #endif
-  #ifdef BL_TARGET_OPT_SSE4_1
+#endif
+#ifdef BL_TARGET_OPT_SSE4_1
   | BL_RUNTIME_CPU_FEATURE_X86_SSE4_1
-  #endif
-  #ifdef BL_TARGET_OPT_SSE4_2
+#endif
+#ifdef BL_TARGET_OPT_SSE4_2
   | BL_RUNTIME_CPU_FEATURE_X86_SSE4_2
-  #endif
-  #ifdef BL_TARGET_OPT_AVX
+#endif
+#ifdef BL_TARGET_OPT_AVX
   | BL_RUNTIME_CPU_FEATURE_X86_AVX
-  #endif
-  #ifdef BL_TARGET_OPT_AVX2
+#endif
+#ifdef BL_TARGET_OPT_AVX2
   | BL_RUNTIME_CPU_FEATURE_X86_AVX2
-  #endif
+#endif
   ,
 
   // Supported CPU features.
   0
-  #ifdef BL_BUILD_OPT_SSE2
+#ifdef BL_BUILD_OPT_SSE2
   | BL_RUNTIME_CPU_FEATURE_X86_SSE2
-  #endif
-  #ifdef BL_BUILD_OPT_SSE3
+#endif
+#ifdef BL_BUILD_OPT_SSE3
   | BL_RUNTIME_CPU_FEATURE_X86_SSE3
-  #endif
-  #ifdef BL_BUILD_OPT_SSSE3
+#endif
+#ifdef BL_BUILD_OPT_SSSE3
   | BL_RUNTIME_CPU_FEATURE_X86_SSSE3
-  #endif
-  #ifdef BL_BUILD_OPT_SSE4_1
+#endif
+#ifdef BL_BUILD_OPT_SSE4_1
   | BL_RUNTIME_CPU_FEATURE_X86_SSE4_1
-  #endif
-  #ifdef BL_BUILD_OPT_SSE4_2
+#endif
+#ifdef BL_BUILD_OPT_SSE4_2
   | BL_RUNTIME_CPU_FEATURE_X86_SSE4_2
-  #endif
-  #ifdef BL_BUILD_OPT_AVX
+#endif
+#ifdef BL_BUILD_OPT_AVX
   | BL_RUNTIME_CPU_FEATURE_X86_AVX
-  #endif
-  #ifdef BL_BUILD_OPT_AVX2
+#endif
+#ifdef BL_BUILD_OPT_AVX2
   | BL_RUNTIME_CPU_FEATURE_X86_AVX2
-  #endif
+#endif
   ,
 
   // Maximum image size.
@@ -96,17 +96,17 @@ static const BLRuntimeBuildInfo blRuntimeBuildInfo = {
   { 0 },
 
   // Compiler Info.
-  #if defined(__INTEL_COMPILER)
+#if defined(__INTEL_COMPILER)
   "ICC"
-  #elif defined(__clang_minor__)
+#elif defined(__clang_minor__)
   "Clang " BL_STRINGIFY(__clang_major__) "." BL_STRINGIFY(__clang_minor__)
-  #elif defined(__GNUC_MINOR__)
+#elif defined(__GNUC_MINOR__)
   "GCC "  BL_STRINGIFY(__GNUC__) "." BL_STRINGIFY(__GNUC_MINOR__)
-  #elif defined(_MSC_VER)
+#elif defined(_MSC_VER)
   "MSC"
-  #else
-  ""
-  #endif
+#else
+  "Unknown"
+#endif
 };
 
 // ============================================================================
@@ -198,13 +198,13 @@ BLResult blRuntimeInit() noexcept {
   blGradientRtInit(rt);
   blFontRtInit(rt);
 
-  #if !defined(BL_BUILD_NO_FIXED_PIPE)
+#if !defined(BL_BUILD_NO_FIXED_PIPE)
   blFixedPipeRtInit(rt);
-  #endif
+#endif
 
-  #if !defined(BL_BUILD_NO_JIT)
+#if !defined(BL_BUILD_NO_JIT)
   blPipeGenRtInit(rt);
-  #endif
+#endif
 
   blContextRtInit(rt);
 
@@ -348,6 +348,11 @@ BLResult blRuntimeFreeImpl(void* impl_, size_t implSize, uint32_t memPoolData) n
 
   free(impl_);
   return BL_SUCCESS;
+}
+
+void BL_CDECL blRuntimeDummyDestroyImplFunc(void* impl, void* destroyData) noexcept {
+  BL_UNUSED(impl);
+  BL_UNUSED(destroyData);
 }
 
 // ============================================================================

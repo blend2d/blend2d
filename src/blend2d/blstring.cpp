@@ -47,7 +47,7 @@ static BL_INLINE BLStringImpl* blStringImplNew(size_t n) noexcept {
   if (BL_UNLIKELY(!impl))
     return impl;
 
-  blImplInit(impl, BL_IMPL_TYPE_STRING, 0, memPoolData);
+  blImplInit(impl, BL_IMPL_TYPE_STRING, BL_IMPL_TRAIT_MUTABLE, memPoolData);
   impl->data = reinterpret_cast<char*>(impl->reserved);
   impl->size = 0;
   impl->capacity = n;
@@ -79,9 +79,9 @@ BLResult blStringImplDelete(BLStringImpl* impl) noexcept {
 }
 
 static BL_INLINE BLResult blStringImplRelease(BLStringImpl* impl) noexcept {
-  if (blAtomicFetchSub(&impl->refCount) != 1)
-    return BL_SUCCESS;
-  return blStringImplDelete(impl);
+  if (blImplDecRefAndTest(impl))
+    return blStringImplDelete(impl);
+  return BL_SUCCESS;
 }
 
 static BL_NOINLINE BLResult blStringRealloc(BLStringCore* self, size_t n) noexcept {

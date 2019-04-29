@@ -22,10 +22,9 @@
 BL_HIDDEN BLResult blArrayImplDelete(BLArrayImpl* impl) noexcept;
 
 static BL_INLINE BLResult blArrayImplRelease(BLArrayImpl* impl) noexcept {
-  if (blAtomicFetchSub(&impl->refCount) != 1)
-    return BL_SUCCESS;
-
-  return blArrayImplDelete(impl);
+  if (blImplDecRefAndTest(impl))
+    return blArrayImplDelete(impl);
+  return BL_SUCCESS;
 }
 
 // ============================================================================

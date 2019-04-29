@@ -79,12 +79,12 @@ BL_DEFINE_ENUM(BLFileOpenFlags) {
   //! The following system flags are used when opening the file:
   //!   * `O_EXCL` (Posix)
   //!   * `CREATE_NEW` (Windows)
-  BL_FILE_OPEN_CREATE_EXCLUSIVE = 0x00000020u,
+  BL_FILE_OPEN_CREATE_EXCLUSIVE = 0x40000000u,
 
   //! Opens the file for deleting or renaming in exclusive mode (Windows).
   //!
   //! Exclusive mode means to not specify the `FILE_SHARE_DELETE` option.
-  BL_FILE_OPEN_DELETE_EXCLUSIVE = 0x40000000u
+  BL_FILE_OPEN_DELETE_EXCLUSIVE = 0x80000000u
 };
 
 //! File seek mode, see `BLFile::seek()`.
@@ -101,6 +101,26 @@ BL_DEFINE_ENUM(BLFileSeek) {
 
   //! Count of seek modes.
   BL_FILE_SEEK_COUNT = 3
+};
+
+//! File read flags used by `BLFileSystem::readFile()`.
+BL_DEFINE_ENUM(BLFileReadFlags) {
+  //! Use memory mapping to read the content of the file.
+  //!
+  //! The destination buffer `BLArray<>` would be configured to use the memory
+  //! mapped buffer instead of allocating its own.
+  BL_FILE_READ_MMAP_ENABLED = 0x00000001u,
+
+  //! Avoid memory mapping of small files.
+  //!
+  //! The size of small file is determined by Blend2D, however, you should
+  //! expect it to be 16kB or 64kB depending on host operating system.
+  BL_FILE_READ_MMAP_AVOID_SMALL = 0x00000002u,
+
+  //! Do not fallback to regular read if memory mapping fails. It's worth noting
+  //! that memory mapping would fail for files stored on filesystem that is not
+  //! local (like a mounted network filesystem, etc...).
+  BL_FILE_READ_MMAP_NO_FALLBACK = 0x00000008u
 };
 
 // ============================================================================
@@ -140,23 +160,28 @@ public:
   BL_INLINE BLFile() noexcept
     : BLFileCore { -1 } {}
 
-  BL_INLINE BLFile(BLFile&& other) noexcept
-    : BLFileCore { other.handle } { other.handle = -1; }
+  BL_INLINE BLFile(BLFile&& other) noexcept {
+    intptr_t h = other.handle;
+    other.handle = -1;
+    handle = h;
+  }
 
   BL_INLINE explicit BLFile(intptr_t handle) noexcept
     : BLFileCore { handle } {}
 
   BL_INLINE BLFile& operator=(BLFile&& other) noexcept {
     intptr_t h = other.handle;
+    other.handle = -1;
 
     this->close();
     this->handle = h;
-    other.handle = -1;
 
     return *this;
   }
 
   BL_INLINE ~BLFile() noexcept { blFileReset(this); }
+
+  BL_INLINE void swap(BLFile& other) noexcept { std::swap(this->handle, other.handle); }
 
   //! Get whether the file is open.
   BL_INLINE bool isOpen() const noexcept { return handle != -1; }
@@ -212,35 +237,42 @@ public:
 #ifdef __cplusplus
 //! File-system utilities.
 namespace BLFileSystem {
-  static BL_INLINE BLResult readFile(const char* fileName, BLArray<uint8_t>& dst, size_t maxSize = 0) noexcept {
-    return blFileSystemReadFile(fileName, &dst, maxSize);
-  }
 
-  static BL_INLINE BLResult writeFile(const char* fileName, const void* data, size_t size) noexcept {
-    size_t bytesWrittenOut;
-    return blFileSystemWriteFile(fileName, data, size, &bytesWrittenOut);
-  }
-
-  static BL_INLINE BLResult writeFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) noexcept {
-    return blFileSystemWriteFile(fileName, data, size, bytesWrittenOut);
-  }
-
-  static BL_INLINE BLResult writeFile(const char* fileName, const BLArrayView<uint8_t>& view) noexcept {
-    return writeFile(fileName, view.data, view.size);
-  }
-
-  static BL_INLINE BLResult writeFile(const char* fileName, const BLArrayView<uint8_t>& view, size_t* bytesWrittenOut) noexcept {
-    return writeFile(fileName, view.data, view.size, bytesWrittenOut);
-  }
-
-  static BL_INLINE BLResult writeFile(const char* fileName, const BLArray<uint8_t>& array) noexcept {
-    return writeFile(fileName, array.view());
-  }
-
-  static BL_INLINE BLResult writeFile(const char* fileName, const BLArray<uint8_t>& array, size_t* bytesWrittenOut) noexcept {
-    return writeFile(fileName, array.view(), bytesWrittenOut);
-  }
+//! Reads a file into the `dst` buffer.
+//!
+//! Optionally you can set `maxSize` to non-zero value that would restrict the
+//! maximum bytes to read to such value. In addition, `readFlags` can be used to
+//! enable file mapping. See `BLFileReadFlags` for more details.
+static BL_INLINE BLResult readFile(const char* fileName, BLArray<uint8_t>& dst, size_t maxSize = 0, uint32_t readFlags = 0) noexcept {
+  return blFileSystemReadFile(fileName, &dst, maxSize, readFlags);
 }
+
+static BL_INLINE BLResult writeFile(const char* fileName, const void* data, size_t size) noexcept {
+  size_t bytesWrittenOut;
+  return blFileSystemWriteFile(fileName, data, size, &bytesWrittenOut);
+}
+
+static BL_INLINE BLResult writeFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) noexcept {
+  return blFileSystemWriteFile(fileName, data, size, bytesWrittenOut);
+}
+
+static BL_INLINE BLResult writeFile(const char* fileName, const BLArrayView<uint8_t>& view) noexcept {
+  return writeFile(fileName, view.data, view.size);
+}
+
+static BL_INLINE BLResult writeFile(const char* fileName, const BLArrayView<uint8_t>& view, size_t* bytesWrittenOut) noexcept {
+  return writeFile(fileName, view.data, view.size, bytesWrittenOut);
+}
+
+static BL_INLINE BLResult writeFile(const char* fileName, const BLArray<uint8_t>& array) noexcept {
+  return writeFile(fileName, array.view());
+}
+
+static BL_INLINE BLResult writeFile(const char* fileName, const BLArray<uint8_t>& array, size_t* bytesWrittenOut) noexcept {
+  return writeFile(fileName, array.view(), bytesWrittenOut);
+}
+
+} // {BLFileSystem}
 #endif
 
 //! \}

@@ -329,9 +329,13 @@ bool blFontLoaderEquals(const BLFontLoaderCore* a, const BLFontLoaderCore* b) no
 // [BLFontLoader - Create]
 // ============================================================================
 
-BLResult blFontLoaderCreateFromFile(BLFontLoaderCore* self, const char* fileName) noexcept {
+BLResult blFontLoaderCreateFromFile(BLFontLoaderCore* self, const char* fileName, uint32_t readFlags) noexcept {
   BLArray<uint8_t> buffer;
-  BL_PROPAGATE(BLFileSystem::readFile(fileName, buffer));
+  BL_PROPAGATE(BLFileSystem::readFile(fileName, buffer, 0, readFlags));
+
+  if (buffer.empty())
+    return blTraceError(BL_ERROR_FILE_EMPTY);
+
   return blFontLoaderCreateFromDataArray(self, &buffer);
 }
 
@@ -410,20 +414,20 @@ BLResult blFontLoaderCreateFromData(BLFontLoaderCore* self, const void* data, si
     if (BL_UNLIKELY(!fontDataI))
       return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-    blImplInit(fontDataI, BL_IMPL_TYPE_FONT_DATA, BL_IMPL_TRAIT_VIRT, memPoolData);
+    blImplInit(fontDataI, BL_IMPL_TYPE_FONT_DATA, BL_IMPL_TRAIT_MUTABLE | BL_IMPL_TRAIT_VIRT, memPoolData);
     fontDataI->virt = &blMemFontDataVirt;
     fontDataI->data = const_cast<void*>(static_cast<const void*>(sfnt));
     fontDataI->size = size - faceOffset;
     fontDataI->flags = 0;
     fontDataI->loaderI = nullptr;
 
-    // Cannot fail as we reserved enough space for data of all font-faces.
+    // Cannot fail as we reserved enough space for data for all faces.
     fontDataArray.append(BLFontData(fontDataI));
   }
 
   // Finally - allocate the BLMemFontLoaderImpl and assign `fontDataArray` to it.
   size_t loaderSize = sizeof(BLMemFontLoaderImpl);
-  uint32_t loaderTraits = BL_IMPL_TRAIT_VIRT;
+  uint32_t loaderTraits = BL_IMPL_TRAIT_MUTABLE | BL_IMPL_TRAIT_VIRT;
 
   if (destroyFunc) {
     loaderSize += sizeof(BLExternalImplPreface);
@@ -603,9 +607,9 @@ bool blFontFaceEquals(const BLFontFaceCore* a, const BLFontFaceCore* b) noexcept
 // [BLFontFace - Create]
 // ============================================================================
 
-BLResult blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName) noexcept {
+BLResult blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName, uint32_t readFlags) noexcept {
   BLFontLoader loader;
-  BL_PROPAGATE(loader.createFromFile(fileName));
+  BL_PROPAGATE(loader.createFromFile(fileName, readFlags));
   return blFontFaceCreateFromLoader(self, &loader, 0);
 }
 
@@ -683,7 +687,7 @@ static BL_INLINE BLInternalFontImpl* blFontImplNew(BLFontFaceImpl* faceI, float 
   if (BL_UNLIKELY(!impl))
     return impl;
 
-  blImplInit(impl, BL_IMPL_TYPE_FONT, 0, memPoolData);
+  blImplInit(impl, BL_IMPL_TYPE_FONT, BL_IMPL_TRAIT_MUTABLE, memPoolData);
   impl->face.impl = blImplIncRef(faceI);
   impl->features.impl = BLArray<BLFontFeature>::none().impl;
   impl->variations.impl = BLArray<BLFontVariation>::none().impl;

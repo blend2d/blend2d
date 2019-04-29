@@ -225,8 +225,8 @@ public:
   //! \name Create Functionality
   //! \{
 
-  BL_INLINE BLResult createFromFile(const char* fileName) noexcept {
-    return blFontLoaderCreateFromFile(this, fileName);
+  BL_INLINE BLResult createFromFile(const char* fileName, uint32_t readFlags = 0) noexcept {
+    return blFontLoaderCreateFromFile(this, fileName, readFlags);
   }
 
   BL_INLINE BLResult createFromData(const BLArray<uint8_t>& data) noexcept {
@@ -402,13 +402,13 @@ public:
   //! This is a utility function that first creates a `BLFontLoader` and then
   //! calls `createFromLoader(loader, 0)`.
   //!
-  //! NOTE: This function offers a simplified creation of BLFontFace directly from
-  //! a file, but doesn't provide as much flexibility as `createFromLoader()` as
-  //! it allows to specify a `faceIndex`, which can be used to load multiple font
-  //! faces from TrueType/OpenType collections. The use of `createFromLoader()`
+  //! NOTE: This function offers a simplified creation of `BLFontFace` directly
+  //! from a file, but doesn't provide as much flexibility as `createFromLoader()`
+  //! as it allows to specify a `faceIndex`, which can be used to load multiple
+  //! font faces from TrueType/OpenType collections. The use of `createFromLoader()`
   //! is recommended for any serious font handling.
-  BL_INLINE BLResult createFromFile(const char* fileName) noexcept {
-    return blFontFaceCreateFromFile(this, fileName);
+  BL_INLINE BLResult createFromFile(const char* fileName, uint32_t readFlags = 0) noexcept {
+    return blFontFaceCreateFromFile(this, fileName, readFlags);
   }
 
   //! Creates a new `BLFontFace` from `BLFontLoader`.

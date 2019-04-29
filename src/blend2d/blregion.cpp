@@ -62,7 +62,7 @@ static BL_INLINE BLInternalRegionImpl* blRegionImplNew(size_t n) noexcept {
   if (BL_UNLIKELY(!impl))
     return impl;
 
-  blImplInit(impl, BL_IMPL_TYPE_REGION, 0, memPoolData);
+  blImplInit(impl, BL_IMPL_TYPE_REGION, BL_IMPL_TRAIT_MUTABLE, memPoolData);
   impl->data = blOffsetPtr<BLBoxI>(impl, sizeof(BLInternalRegionImpl));
   impl->size = 0;
   impl->capacity = n;

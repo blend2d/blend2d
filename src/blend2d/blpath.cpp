@@ -158,7 +158,7 @@ static BL_INLINE BLInternalPathImpl* blPathImplNew(size_t capacity) noexcept {
   if (BL_UNLIKELY(!impl))
     return impl;
 
-  blImplInit(impl, BL_IMPL_TYPE_PATH, 0, memPoolData);
+  blImplInit(impl, BL_IMPL_TYPE_PATH, BL_IMPL_TRAIT_MUTABLE, memPoolData);
   impl->vertexData = blOffsetPtr<BLPoint>(impl, sizeof(BLInternalPathImpl));
   impl->commandData = blOffsetPtr<uint8_t>(impl->vertexData, capacity * sizeof(BLPoint));
   impl->size = 0;

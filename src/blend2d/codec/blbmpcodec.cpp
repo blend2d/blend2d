@@ -596,7 +596,7 @@ static BLBmpDecoderImpl* blBmpDecoderImplNew() noexcept {
   if (BL_UNLIKELY(!impl))
     return nullptr;
 
-  blImplInit(impl, BL_IMPL_TYPE_IMAGE_DECODER, BL_IMPL_TRAIT_VIRT, memPoolData);
+  blImplInit(impl, BL_IMPL_TYPE_IMAGE_DECODER, BL_IMPL_TRAIT_MUTABLE | BL_IMPL_TRAIT_VIRT, memPoolData);
   impl->virt = &blBmpDecoderVirt;
   impl->codec.impl = &blBmpCodecImpl;
   impl->handle = nullptr;
@@ -739,7 +739,7 @@ static BLBmpEncoderImpl* blBmpEncoderImplNew() noexcept {
   if (BL_UNLIKELY(!impl))
     return nullptr;
 
-  blImplInit(impl, BL_IMPL_TYPE_IMAGE_ENCODER, BL_IMPL_TRAIT_VIRT, memPoolData);
+  blImplInit(impl, BL_IMPL_TYPE_IMAGE_ENCODER, BL_IMPL_TRAIT_MUTABLE | BL_IMPL_TRAIT_VIRT, memPoolData);
   impl->virt = &blBmpEncoderVirt;
   impl->codec.impl = &blBmpCodecImpl;
   impl->handle = nullptr;

@@ -187,10 +187,10 @@ struct BLRasterContextImpl : public BLContextImpl {
     // Initializes BLContext2DImpl.
     virt = inVirt;
     state = &currentState;
-    reservedHeader[0] = nullptr;
+    reservedHeader = nullptr;
     refCount = 1;
-    implType = BL_IMPL_TYPE_CONTEXT;
-    implTraits = BL_IMPL_TRAIT_VIRT;
+    implType = uint8_t(BL_IMPL_TYPE_CONTEXT);
+    implTraits = uint8_t(BL_IMPL_TRAIT_MUTABLE | BL_IMPL_TRAIT_VIRT);
     memPoolData = inMemPoolData;
     contextType = BL_CONTEXT_TYPE_RASTER;
     targetSize.reset();

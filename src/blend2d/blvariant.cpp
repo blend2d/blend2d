@@ -128,10 +128,10 @@ uint32_t blVariantGetImplType(const void* self) noexcept {
 // ============================================================================
 
 BLResult blVariantAssignMove(void* self, void* other) noexcept {
-  BLVariantImpl* selfI = static_cast<BLVariant*>(self)->impl;
   BLVariantImpl* otherI = static_cast<BLVariant*>(other)->impl;
-
   static_cast<BLVariant*>(other)->impl = blNone[otherI->implType].impl;
+
+  BLVariantImpl* selfI = static_cast<BLVariant*>(self)->impl;
   static_cast<BLVariant*>(self)->impl = otherI;
 
   if (blImplDecRefAndTest(selfI))

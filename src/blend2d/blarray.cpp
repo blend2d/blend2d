@@ -209,9 +209,38 @@ static BL_INLINE BLArrayImpl* blArrayImplNew(uint32_t implType, size_t capacity)
   if (BL_UNLIKELY(!impl))
     return impl;
 
-  blImplInit(impl, implType, 0, memPoolData);
+  blImplInit(impl, implType, BL_IMPL_TRAIT_MUTABLE, memPoolData);
   impl->data = blOffsetPtr<void>(impl, sizeof(BLArrayImpl));
   impl->size = 0;
+  impl->capacity = capacity;
+  impl->itemSize = uint8_t(itemSize);
+  impl->dispatchType = uint8_t(blArrayDispatchTypeByImplType(implType));
+  impl->reserved[0] = 0;
+  impl->reserved[1] = 0;
+
+  return impl;
+}
+
+static BL_INLINE BLArrayImpl* blArrayImplNewExternal(uint32_t implType, void* data, size_t size, size_t capacity, uint32_t dataAccessFlags, BLDestroyImplFunc destroyFunc, void* destroyData) noexcept {
+  size_t implSize = sizeof(BLExternalImplPreface) + sizeof(BLArrayImpl);
+  uint16_t memPoolData;
+
+  void* p = blRuntimeAllocImpl(implSize, &memPoolData);
+  if (BL_UNLIKELY(!p))
+    return nullptr;
+
+  BLExternalImplPreface* preface = static_cast<BLExternalImplPreface*>(p);
+  BLArrayImpl* impl = blOffsetPtr<BLArrayImpl>(p, sizeof(BLExternalImplPreface));
+
+  preface->destroyFunc = destroyFunc ? destroyFunc : blRuntimeDummyDestroyImplFunc;
+  preface->destroyData = destroyFunc ? destroyData : nullptr;
+
+  uint32_t itemSize = blArrayItemSizeTable[implType];
+  uint32_t implTraits = blImplTraitsFromDataAccessFlags(dataAccessFlags) | BL_IMPL_TRAIT_EXTERNAL;
+
+  blImplInit(impl, implType, implTraits, memPoolData);
+  impl->data = data;
+  impl->size = size;
   impl->capacity = capacity;
   impl->itemSize = uint8_t(itemSize);
   impl->dispatchType = uint8_t(blArrayDispatchTypeByImplType(implType));
@@ -293,6 +322,34 @@ BLResult blArrayReset(BLArrayCore* self) noexcept {
   if (blImplDecRefAndTest(selfI))
     return blArrayImplDelete(selfI);
   return BL_SUCCESS;
+}
+
+// ============================================================================
+// [BLArray - Create]
+// ============================================================================
+
+BLResult blArrayCreateFromData(BLArrayCore* self, void* data, size_t size, size_t capacity, uint32_t dataAccessFlags, BLDestroyImplFunc destroyFunc, void* destroyData) noexcept {
+  BLArrayImpl* selfI = self->impl;
+  uint32_t implType = selfI->implType;
+  size_t itemSize = selfI->itemSize;
+
+  if (BL_UNLIKELY(!itemSize))
+    return blTraceError(BL_ERROR_INVALID_STATE);
+
+  BLOverflowFlag of = 0;
+
+  size_t dataSizeInBytes = blMulOverflow(capacity, itemSize, &of);
+  BL_UNUSED(dataSizeInBytes); // We just want to know whether it has overflown.
+
+  if (BL_UNLIKELY(!capacity || capacity < size || !blDataAccessFlagsIsValid(dataAccessFlags) || of))
+    return blTraceError(BL_ERROR_INVALID_VALUE);
+
+  BLArrayImpl* newI = blArrayImplNewExternal(implType, data, size, capacity, dataAccessFlags, destroyFunc, destroyData);
+  if (BL_UNLIKELY(!newI))
+    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+
+  self->impl = newI;
+  return blArrayImplRelease(selfI);
 }
 
 // ============================================================================
@@ -1144,61 +1201,83 @@ void blArrayRtInit(BLRuntimeContext* rt) noexcept {
 UNIT(blend2d_array) {
   BLArray<int> a;
 
-  EXPECT(a.size() == 0);
+  INFO("Base functionality");
+  {
+    EXPECT(a.size() == 0);
 
-  // [42]
-  EXPECT(a.append(42) == BL_SUCCESS);
-  EXPECT(a.size() == 1);
-  EXPECT(a[0] == 42);
+    // [42]
+    EXPECT(a.append(42) == BL_SUCCESS);
+    EXPECT(a.size() == 1);
+    EXPECT(a[0] == 42);
 
-  // [42, 1, 2, 3]
-  EXPECT(a.append(1, 2, 3) == BL_SUCCESS);
-  EXPECT(a.size() == 4);
-  EXPECT(a[0] == 42);
-  EXPECT(a[1] == 1);
-  EXPECT(a[2] == 2);
-  EXPECT(a[3] == 3);
+    // [42, 1, 2, 3]
+    EXPECT(a.append(1, 2, 3) == BL_SUCCESS);
+    EXPECT(a.size() == 4);
+    EXPECT(a[0] == 42);
+    EXPECT(a[1] == 1);
+    EXPECT(a[2] == 2);
+    EXPECT(a[3] == 3);
 
-  // [10, 42, 1, 2, 3]
-  EXPECT(a.prepend(10) == BL_SUCCESS);
-  EXPECT(a.size() == 5);
-  EXPECT(a[0] == 10);
-  EXPECT(a[1] == 42);
-  EXPECT(a[2] == 1);
-  EXPECT(a[3] == 2);
-  EXPECT(a[4] == 3);
-  EXPECT(a.indexOf(4) == SIZE_MAX);
-  EXPECT(a.indexOf(3) == 4);
-  EXPECT(a.lastIndexOf(4) == SIZE_MAX);
-  EXPECT(a.lastIndexOf(10) == 0);
+    // [10, 42, 1, 2, 3]
+    EXPECT(a.prepend(10) == BL_SUCCESS);
+    EXPECT(a.size() == 5);
+    EXPECT(a[0] == 10);
+    EXPECT(a[1] == 42);
+    EXPECT(a[2] == 1);
+    EXPECT(a[3] == 2);
+    EXPECT(a[4] == 3);
+    EXPECT(a.indexOf(4) == SIZE_MAX);
+    EXPECT(a.indexOf(3) == 4);
+    EXPECT(a.lastIndexOf(4) == SIZE_MAX);
+    EXPECT(a.lastIndexOf(10) == 0);
 
-  BLArray<int> b;
-  EXPECT(b.append(10, 42, 1, 2, 3) == BL_SUCCESS);
-  EXPECT(a.equals(b));
-  EXPECT(b.append(99) == BL_SUCCESS);
-  EXPECT(!a.equals(b));
+    BLArray<int> b;
+    EXPECT(b.append(10, 42, 1, 2, 3) == BL_SUCCESS);
+    EXPECT(a.equals(b));
+    EXPECT(b.append(99) == BL_SUCCESS);
+    EXPECT(!a.equals(b));
 
-  // [10, 3]
-  EXPECT(a.remove(BLRange(1, 4)) == BL_SUCCESS);
-  EXPECT(a.size() == 2);
-  EXPECT(a[0] == 10);
-  EXPECT(a[1] == 3);
+    // [10, 3]
+    EXPECT(a.remove(BLRange(1, 4)) == BL_SUCCESS);
+    EXPECT(a.size() == 2);
+    EXPECT(a[0] == 10);
+    EXPECT(a[1] == 3);
 
-  // [10, 33, 3]
-  EXPECT(a.insert(1, 33) == BL_SUCCESS);
-  EXPECT(a.size() == 3);
-  EXPECT(a[0] == 10);
-  EXPECT(a[1] == 33);
-  EXPECT(a[2] == 3);
+    // [10, 33, 3]
+    EXPECT(a.insert(1, 33) == BL_SUCCESS);
+    EXPECT(a.size() == 3);
+    EXPECT(a[0] == 10);
+    EXPECT(a[1] == 33);
+    EXPECT(a[2] == 3);
 
-  // [10, 33, 3, 999, 1010, 2293]
-  EXPECT(a.insert(2, 999, 1010, 2293) == BL_SUCCESS);
-  EXPECT(a.size() == 6);
-  EXPECT(a[0] == 10);
-  EXPECT(a[1] == 33);
-  EXPECT(a[2] == 999);
-  EXPECT(a[3] == 1010);
-  EXPECT(a[4] == 2293);
-  EXPECT(a[5] == 3);
+    // [10, 33, 3, 999, 1010, 2293]
+    EXPECT(a.insert(2, 999, 1010, 2293) == BL_SUCCESS);
+    EXPECT(a.size() == 6);
+    EXPECT(a[0] == 10);
+    EXPECT(a[1] == 33);
+    EXPECT(a[2] == 999);
+    EXPECT(a[3] == 1010);
+    EXPECT(a[4] == 2293);
+    EXPECT(a[5] == 3);
+  }
+
+  INFO("External array");
+  {
+    int externalData[4] = { 0 };
+
+    EXPECT(a.createFromData(externalData, 0, 4, BL_DATA_ACCESS_RW) == BL_SUCCESS);
+    EXPECT(a.data() == externalData);
+
+    EXPECT(a.append(42) == BL_SUCCESS);
+    EXPECT(externalData[0] == 42);
+
+    EXPECT(a.append(1, 2, 3) == BL_SUCCESS);
+    EXPECT(externalData[3] == 3);
+
+    // Appending more items the external array can hold must reallocate it.
+    EXPECT(a.append(4) == BL_SUCCESS);
+    EXPECT(a.data() != externalData);
+    EXPECT(a.at(4) == 4);
+  }
 }
 #endif

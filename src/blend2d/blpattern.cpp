@@ -30,7 +30,7 @@ static BL_INLINE BLInternalPatternImpl* blPatternImplNew(const BLImageCore* imag
   if (BL_UNLIKELY(!impl))
     return impl;
 
-  blImplInit(impl, BL_IMPL_TYPE_PATTERN, 0, memPoolData);
+  blImplInit(impl, BL_IMPL_TYPE_PATTERN, BL_IMPL_TRAIT_MUTABLE, memPoolData);
   impl->image.impl = blImplIncRef(image->impl);
   impl->reservedHeader[0] = nullptr;
   impl->reservedHeader[1] = nullptr;
@@ -67,9 +67,9 @@ BLResult blPatternImplDelete(BLPatternImpl* impl_) noexcept {
 }
 
 static BL_INLINE BLResult blPatternImplRelease(BLInternalPatternImpl* impl) noexcept {
-  if (blAtomicFetchSub(&impl->refCount) != 1)
-    return BL_SUCCESS;
-  return blPatternImplDelete(impl);
+  if (blImplDecRefAndTest(impl))
+    return blPatternImplDelete(impl);
+  return BL_SUCCESS;
 }
 
 static BL_NOINLINE BLResult blPatternMakeMutableCopyOf(BLPatternCore* self, BLInternalPatternImpl* impl) noexcept {

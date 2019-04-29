@@ -17,85 +17,55 @@
 // [BLFileMapping]
 // ============================================================================
 
+enum : uint32_t {
+  BL_FILE_SYSTEM_SMALL_FILE_SIZE_THRESHOLD = 16 * 1024
+};
+
 //! A thin abstraction over `mmap() / munmap()` (Posix) and `FileMapping` (Windows)
 //! to create a read-only file mapping for loading fonts and other resources.
 class BLFileMapping {
 public:
-  BLFileCore _file;
+  BL_NONCOPYABLE(BLFileMapping)
 
-  #if defined(_WIN32)
+  BLFileCore _file;
+#if defined(_WIN32)
   HANDLE _fileMappingHandle;
-  #endif
+#endif
 
   void* _data;
   size_t _size;
-  uint32_t _status;
-
-  // Prevent copy-constructor and copy-assignment.
-  BL_INLINE BLFileMapping(const BLFileMapping& other) noexcept = delete;
-  BL_INLINE BLFileMapping& operator=(const BLFileMapping& other) noexcept = delete;
-
-  enum Limits : uint32_t {
-    //! Size threshold (32kB) used when `kCopySmallFiles` is enabled.
-    kSmallFileSize = 1024 * 32
-  };
-
-  enum Status : uint32_t {
-    //! File is empty (not mapped nor copied).
-    kStatusEmpty = 0,
-    //! File is memory-mapped.
-    kStatusMapped = 1,
-    //! File was copied.
-    kStatusCopied = 2
-  };
-
-  enum Flags : uint32_t {
-    //! Copy the file data if it's smaller/equal to `kSmallFileSize.
-    kCopySmallFiles       = 0x01000000u,
-    //! Copy the file data if mapping is not possible or it failed.
-    kCopyOnFailure        = 0x02000000u,
-    //! Don't close the `file` handle if the file was copied.
-    kDontCloseOnCopy      = 0x04000000u
-  };
 
   // --------------------------------------------------------------------------
   // [Construction / Destruction]
   // --------------------------------------------------------------------------
 
-  #if defined(_WIN32)
   BL_INLINE BLFileMapping() noexcept
-    : _file(),
+    : _file{-1},
+#if defined(_WIN32)
       _fileMappingHandle(INVALID_HANDLE_VALUE),
+#endif
       _data(nullptr),
-      _size(0),
-      _status(kStatusEmpty) {}
+      _size(0) {}
 
-  BL_INLINE BLFileMapping(BLFileMapping&& other) noexcept
-    : _file(std::move(other._file)),
-      _fileMappingHandle(other._fileMappingHandle),
-      _data(other._data),
-      _size(other._size),
-      _status(other._status) {
+  BL_INLINE BLFileMapping(BLFileMapping&& other) noexcept {
+    BLFileCore file = other._file;
+    other._file.handle = -1;
+    this->_file.handle = file.handle;
+
+#if defined(_WIN32)
+    HANDLE fileMappingHandle = other._fileMappingHandle;
     other._fileMappingHandle = INVALID_HANDLE_VALUE;
-    other._data = nullptr;
-    other._size = 0;
-    other._status = kStatusEmpty;
-  }
-  #else
-  BL_INLINE BLFileMapping() noexcept
-    : _data(nullptr),
-      _size(0),
-      _status(kStatusEmpty) {}
+    this->_fileMappingHandle = fileMappingHandle;
+#endif
 
-  BL_INLINE BLFileMapping(BLFileMapping&& other) noexcept
-    : _data(other._data),
-      _size(other._size),
-      _status(other._status) {
+    void* data = other._data;
     other._data = nullptr;
+    this->_data = data;
+
+    size_t size = other._size;
     other._size = 0;
-    other._status = kStatusEmpty;
+    this->_size = size;
   }
-  #endif
 
   BL_INLINE ~BLFileMapping() noexcept { unmap(); }
 
@@ -103,40 +73,33 @@ public:
   // [Accessors]
   // --------------------------------------------------------------------------
 
-  //! Get the status of the BLFileMapping, see `Status.
-  BL_INLINE uint32_t status() const noexcept { return _status; }
+  //! Returns whether the mapping is empty (i.e. not fille has been mapped).
+  BL_INLINE bool empty() const noexcept { return _size == 0; }
 
-  //! Get whether the BLFileMapping has mapped data.
-  BL_INLINE bool isMapped() const noexcept { return _status == kStatusMapped; }
-  //! Get whether the BLFileMapping has copied data.
-  BL_INLINE bool isCopied() const noexcept { return _status == kStatusCopied; }
-
-  //! Get whether the BLFileMapping is empty (no file mapped or loaded).
-  BL_INLINE bool empty() const noexcept { return _status == kStatusEmpty; }
-  //! Get whether the BLFileMapping has mapped or copied data.
-  BL_INLINE bool hasData() const noexcept { return _status != kStatusEmpty; }
-
-  //! Get raw data to the BLFileMapping content..
+  //! Returns mapped data casted to `T`.
   template<typename T = void>
-  BL_INLINE const T* data() const noexcept { return static_cast<T*>(_data); }
+  BL_INLINE T* data() noexcept { return static_cast<T*>(_data); }
+  //! Returns mapped data casted to `T` (const).
+  template<typename T = void>
+  BL_INLINE const T* data() const noexcept { return static_cast<const T*>(_data); }
 
-  //! Get the size of mapped or copied data.
+  //! Returns the size of the mapped data.
   BL_INLINE size_t size() const noexcept { return _size; }
 
-  //! Get the associated `BLFile` with `BLFileMapping` (Windows).
+  //! Returns the associated file with the mapping.
   BL_INLINE BLFile& file() noexcept { return blDownCast(_file); }
 
-  #if defined(_WIN32)
-  //! Get the BLFileMapping handle (Windows).
+#if defined(_WIN32)
+  //! Returns a Windows-specific HANDLE of file mapping.
   BL_INLINE HANDLE fileMappingHandle() const noexcept { return _fileMappingHandle; }
-  #endif
+#endif
 
   // --------------------------------------------------------------------------
   // [Map / Unmap]
   // --------------------------------------------------------------------------
 
   //! Maps file `file` to memory. Takes ownership of `file` (moves) on success.
-  BL_HIDDEN BLResult map(BLFile& file, uint32_t flags) noexcept;
+  BL_HIDDEN BLResult map(BLFile& file, size_t size, uint32_t flags = 0) noexcept;
 
   //! Unmaps previously mapped file or does nothing, if no file was mapped.
   BL_HIDDEN BLResult unmap() noexcept;
@@ -146,21 +109,28 @@ public:
   // --------------------------------------------------------------------------
 
   BL_INLINE BLFileMapping& operator=(BLFileMapping&& other) noexcept {
+    BLFileCore file = other._file;
+    other._file.handle = -1;
+
+#if defined(_WIN32)
+    HANDLE fileMappingHandle = other._fileMappingHandle;
+    other._fileMappingHandle = INVALID_HANDLE_VALUE;
+#endif
+
+    void* data = other._data;
+    other._data = nullptr;
+
+    size_t size = other._size;
+    other._size = 0;
+
     unmap();
 
-    #if defined(_WIN32)
-    _file = std::move(other._file);
-    _fileMappingHandle = other._fileMappingHandle;
-    other._fileMappingHandle = INVALID_HANDLE_VALUE;
-    #endif
-
-    _data = other._data;
-    _size = other._size;
-    _status = other._status;
-
-    other._data = nullptr;
-    other._size = 0;
-    other._status = kStatusEmpty;
+    this->_file.handle = file.handle;
+#if defined(_WIN32)
+    this->_fileMappingHandle = fileMappingHandle;
+#endif
+    this->_data = data;
+    this->_size = size;
 
     return *this;
   }

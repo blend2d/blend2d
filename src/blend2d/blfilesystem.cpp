@@ -5,7 +5,7 @@
 // ZLIB - See LICENSE.md file in the package.
 
 #include "./blapi-build_p.h"
-#include "./blarray.h"
+#include "./blarray_p.h"
 #include "./blfilesystem_p.h"
 #include "./blruntime_p.h"
 #include "./blsupport_p.h"
@@ -408,16 +408,16 @@ BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) 
       return blTraceError(BL_ERROR_INVALID_VALUE);
   }
 
-  uint32_t kExtFlags = BL_FILE_OPEN_CREATE      |
+  uint32_t kExtFlags = BL_FILE_OPEN_CREATE           |
                        BL_FILE_OPEN_CREATE_EXCLUSIVE |
-                       BL_FILE_OPEN_TRUNCATE    ;
+                       BL_FILE_OPEN_TRUNCATE         ;
 
   if ((openFlags & kExtFlags) && !(openFlags & BL_FILE_OPEN_WRITE))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  if (openFlags & BL_FILE_OPEN_CREATE     ) of |= O_CREAT;
+  if (openFlags & BL_FILE_OPEN_CREATE          ) of |= O_CREAT;
   if (openFlags & BL_FILE_OPEN_CREATE_EXCLUSIVE) of |= O_CREAT | O_EXCL;
-  if (openFlags & BL_FILE_OPEN_TRUNCATE   ) of |= O_TRUNC;
+  if (openFlags & BL_FILE_OPEN_TRUNCATE        ) of |= O_TRUNC;
 
   mode_t om = S_IRUSR | S_IWUSR |
               S_IRGRP | S_IWGRP |
@@ -582,219 +582,178 @@ BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
 #endif
 
 // ============================================================================
-// [BLFileMapping - Utilities]
-// ============================================================================
-
-static BLResult blFileMappingCreateCopyOfFile(BLFileMapping* self, BLFile& file, uint32_t flags, size_t size) noexcept {
-  BLResult result = file.seek(0, BL_FILE_SEEK_SET);
-  if (result != BL_SUCCESS && result != BL_ERROR_INVALID_SEEK)
-    return result;
-
-  void* data = malloc(size);
-  if (!data)
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
-  size_t bytesRead;
-  result = file.read(data, size, &bytesRead);
-
-  if (result != BL_SUCCESS || bytesRead != size) {
-    free(data);
-    return result ? result : blTraceError(BL_ERROR_NO_MORE_DATA);
-  }
-
-  self->unmap();
-  self->_data = data;
-  self->_size = size;
-  self->_status = BLFileMapping::kStatusCopied;
-
-  // Since we loaded the whole `file` and don't need to retain the handle we
-  // close it. This makes the API to behave the same way as if we mapped it
-  // and we kept the handle.
-  if (!(flags & BLFileMapping::kDontCloseOnCopy))
-    file.close();
-
-  return BL_SUCCESS;
-}
-
-static BLResult blFileMappingReleaseCopyOfFile(BLFileMapping* self) noexcept {
-  free(self->_data);
-  self->_data = nullptr;
-  self->_size = 0;
-  self->_status = BLFileMapping::kStatusEmpty;
-  return BL_SUCCESS;
-}
-
-static BLResult blFileMappingCheck64BitFileSize(size_t& dstSize, uint64_t srcSize) noexcept {
-  if (!srcSize)
-    return blTraceError(BL_ERROR_FILE_EMPTY);
-
-  #if BL_TARGET_ARCH_BITS < 64
-  if (srcSize > SIZE_MAX)
-    return blTraceError(BL_ERROR_FILE_TOO_LARGE);
-  #endif
-
-  dstSize = size_t(srcSize);
-  return BL_SUCCESS;
-}
-
-// ============================================================================
 // [BLFileMapping - API]
 // ============================================================================
 
 #if defined(_WIN32)
 
-BLResult BLFileMapping::map(BLFile& file, uint32_t flags) noexcept {
+BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept {
+  BL_UNUSED(flags);
+
   if (!file.isOpen())
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   DWORD dwProtect = PAGE_READONLY;
   DWORD dwDesiredAccess = FILE_MAP_READ;
 
-  // Get the size of the file.
-  size_t size;
-  uint64_t size64;
-
-  BL_PROPAGATE(file.getSize(&size64));
-  BL_PROPAGATE(blFileMappingCheck64BitFileSize(size, size64));
-
-  if ((flags & kCopySmallFiles) && size <= kSmallFileSize)
-    return blFileMappingCreateCopyOfFile(this, file, flags, size);
-
   // Create a file mapping handle and map view of file into it.
-  HANDLE hBLFileMapping = CreateFileMappingW((HANDLE)file.handle, nullptr, dwProtect, 0, 0, nullptr);
-  void* data = nullptr;
+  HANDLE hFileMapping = CreateFileMappingW((HANDLE)file.handle, nullptr, dwProtect, 0, 0, nullptr);
+  if (hFileMapping == nullptr)
+    return blTraceError(blResultFromWinError(GetLastError()));
 
-  if (hBLFileMapping != nullptr) {
-    data = MapViewOfFile(hBLFileMapping, dwDesiredAccess, 0, 0, 0);
-    if (!data)
-      CloseHandle(hBLFileMapping);
+  void* data = MapViewOfFile(hFileMapping, dwDesiredAccess, 0, 0, 0);
+  if (!data) {
+    BLResult result = blResultFromWinError(GetLastError());
+    CloseHandle(hFileMapping);
+    return blTraceError(result);
   }
 
-  if (data == nullptr) {
-    if (!(flags & kCopyOnFailure))
-      return blTraceError(blResultFromWinError(GetLastError()));
-    else
-      return blFileMappingCreateCopyOfFile(this, file, flags, size);
-  }
-  else {
-    // Succeeded, now is the time to change the content of `BLFileMapping`.
-    unmap();
+  // Succeeded, now is the time to change the content of `BLFileMapping`.
+  unmap();
 
-    _file.handle = file.takeHandle();
-    _fileMappingHandle = hBLFileMapping;
-    _data = data;
-    _size = size;
-    _status = kStatusMapped;
+  _file.handle = file.takeHandle();
+  _fileMappingHandle = hFileMapping;
+  _data = data;
+  _size = size;
 
-    return BL_SUCCESS;
-  }
+  return BL_SUCCESS;
 }
 
 BLResult BLFileMapping::unmap() noexcept {
-  switch (status()) {
-    case kStatusMapped: {
-      BLResult result = BL_SUCCESS;
-      DWORD dwError = 0;
+  if (empty())
+    return BL_SUCCESS;
 
-      if (!UnmapViewOfFile(_data))
-        dwError = GetLastError();
+  BLResult result = BL_SUCCESS;
+  DWORD err = 0;
 
-      if (!CloseHandle(_fileMappingHandle) && !dwError)
-        dwError = GetLastError();
+  if (!UnmapViewOfFile(_data))
+    err = GetLastError();
 
-      if (dwError)
-        result = blTraceError(blResultFromWinError(dwError));
+  if (!CloseHandle(_fileMappingHandle) && !err)
+    err = GetLastError();
 
-      blFileClose(&_file);
-      _fileMappingHandle = INVALID_HANDLE_VALUE;
-      _data = nullptr;
-      _size = 0;
-      _status = kStatusEmpty;
+  if (err)
+    result = blTraceError(blResultFromWinError(err));
 
-      return result;
-    }
+  blFileClose(&_file);
+  _fileMappingHandle = INVALID_HANDLE_VALUE;
+  _data = nullptr;
+  _size = 0;
 
-    case kStatusCopied:
-      return blFileMappingReleaseCopyOfFile(this);
-
-    default:
-      return BL_SUCCESS;
-  }
+  return result;
 }
 
 #else
 
-BLResult BLFileMapping::map(BLFile& file, uint32_t flags) noexcept {
+BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept {
+  BL_UNUSED(flags);
+
   if (!file.isOpen())
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   int mmapProt = PROT_READ;
   int mmapFlags = MAP_SHARED;
 
-  size_t size;
-  uint64_t size64;
-
-  BL_PROPAGATE(file.getSize(&size64));
-  BL_PROPAGATE(blFileMappingCheck64BitFileSize(size, size64));
-
-  if ((flags & kCopySmallFiles) && size <= kSmallFileSize)
-    return blFileMappingCreateCopyOfFile(this, file, flags, size);
-
   // Create the mapping.
   void* data = mmap(nullptr, size, mmapProt, mmapFlags, int(file.handle), 0);
-  if (data == (void *)-1) {
-    if (!(flags & kCopyOnFailure))
-      return blTraceError(blResultFromPosixError(errno));
-    else
-      return blFileMappingCreateCopyOfFile(this, file, flags, size);
-  }
-  else {
-    // Succeeded, now is the time to change the content of `BLFileMapping`.
-    unmap();
+  if (data == (void *)-1)
+    return blTraceError(blResultFromPosixError(errno));
 
-    _file.handle = file.takeHandle();
-    _data = data;
-    _size = size;
-    _status = kStatusMapped;
+  // Succeeded, now is the time to change the content of `BLFileMapping`.
+  unmap();
 
-    return BL_SUCCESS;
-  }
+  _file.handle = file.takeHandle();
+  _data = data;
+  _size = size;
+  return BL_SUCCESS;
 }
 
 BLResult BLFileMapping::unmap() noexcept {
-  switch (status()) {
-    case kStatusMapped: {
-      BLResult result = BL_SUCCESS;
+  if (empty())
+    return BL_SUCCESS;
 
-      // If error happened we must read `errno` now as a call to `close()` may
-      // trash it as well. We prefer the first error instead of the last one.
-      int unmapStatus = munmap(_data, _size);
-      if (unmapStatus != 0)
-        result = blTraceError(blResultFromPosixError(errno));
+  BLResult result = BL_SUCCESS;
+  int unmapStatus = munmap(_data, _size);
 
-      blFileClose(&_file);
-      _data = nullptr;
-      _size = 0;
-      _status = kStatusEmpty;
+  // If error happened we must read `errno` now as a call to `close()` may
+  // trash it. We prefer the first error instead of the last one.
+  if (unmapStatus != 0)
+    result = blTraceError(blResultFromPosixError(errno));
 
-      return result;
-    }
+  BLResult result2 = blFileClose(&_file);
+  if (result == BL_SUCCESS)
+    result = result2;
 
-    case kStatusCopied:
-      return blFileMappingReleaseCopyOfFile(this);
-
-    default:
-      return BL_SUCCESS;
-  }
+  _data = nullptr;
+  _size = 0;
+  return result;
 }
 
 #endif
 
 // ============================================================================
+// [BLFileSystem - Memory Mapped File]
+// ============================================================================
+
+class BLMemoryMappedFileArrayImpl : public BLArrayImpl {
+public:
+  BLFileMapping fileMapping;
+};
+
+void BL_CDECL blFileSystemDestroyMemoryMappedFile(void* impl_, void* destroyData) noexcept {
+  BLMemoryMappedFileArrayImpl* impl = static_cast<BLMemoryMappedFileArrayImpl*>(impl_);
+  blCallDtor(impl->fileMapping);
+}
+
+static BLResult blFileSystemCreateMemoryMappedFile(BLArray<uint8_t>* dst, BLFile& file, size_t size) noexcept {
+  // This condition must be handled before.
+  BL_ASSERT(size != 0);
+
+  BLArrayImpl* oldI = dst->impl;
+  uint32_t implSize = sizeof(BLExternalImplPreface) + sizeof(BLMemoryMappedFileArrayImpl);
+  uint32_t implTraits = BL_IMPL_TRAIT_IMMUTABLE | BL_IMPL_TRAIT_EXTERNAL;
+
+  uint16_t memPoolData;
+  void* p = blRuntimeAllocImpl(implSize, &memPoolData);
+
+  if (BL_UNLIKELY(!p))
+    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+
+  BLExternalImplPreface* preface = static_cast<BLExternalImplPreface*>(p);
+  BLMemoryMappedFileArrayImpl* impl = blOffsetPtr<BLMemoryMappedFileArrayImpl>(p, sizeof(BLExternalImplPreface));
+
+  preface->destroyFunc = blFileSystemDestroyMemoryMappedFile;
+  preface->destroyData = nullptr;
+
+  impl->data = nullptr;
+  impl->size = size;
+  impl->capacity = size;
+  impl->itemSize = 1;
+  impl->dispatchType = 0;
+  impl->reserved[0] = 0;
+  impl->reserved[1] = 0;
+
+  blImplInit(impl, BL_IMPL_TYPE_ARRAY_U8, implTraits, memPoolData);
+  blCallCtor(impl->fileMapping);
+
+  BLResult result = impl->fileMapping.map(file, size);
+  if (result != BL_SUCCESS) {
+    // No need to call fileMapping destructor as it holds no data.
+    blRuntimeFreeImpl(p, implSize, memPoolData);
+    return result;
+  }
+
+  // Mapping succeeded.
+  impl->data = impl->fileMapping.data();
+  dst->impl = impl;
+  return blArrayImplRelease(oldI);
+}
+
+// ============================================================================
 // [BLFileSystem]
 // ============================================================================
 
-BLResult blFileSystemReadFile(const char* fileName, BLArrayCore* dst_, size_t maxSize) noexcept {
+BLResult blFileSystemReadFile(const char* fileName, BLArrayCore* dst_, size_t maxSize, uint32_t readFlags) noexcept {
   BLArray<uint8_t>& dst = dst_->dcast<BLArray<uint8_t>>();
   dst.clear();
 
@@ -809,17 +768,35 @@ BLResult blFileSystemReadFile(const char* fileName, BLArrayCore* dst_, size_t ma
   BL_PROPAGATE(file.getSize(&size64));
 
   if (size64 == 0)
-    return blTraceError(BL_ERROR_FILE_EMPTY);
+    return BL_SUCCESS;
 
   if (maxSize)
     size64 = blMin<uint64_t>(size64, maxSize);
 
-  if (size64 >= uint64_t(SIZE_MAX))
+#if BL_TARGET_ARCH_BITS < 64
+  if (BL_UNLIKELY(size64 >= uint64_t(SIZE_MAX)))
     return blTraceError(BL_ERROR_FILE_TOO_LARGE);
+#endif
+
+  size_t size = size_t(size64);
+
+  // Use memory mapped file if enabled.
+  if (readFlags & BL_FILE_READ_MMAP_ENABLED) {
+    bool isSmall = size < BL_FILE_SYSTEM_SMALL_FILE_SIZE_THRESHOLD;
+    if (!(readFlags & BL_FILE_READ_MMAP_AVOID_SMALL) || !isSmall) {
+      BLResult result = blFileSystemCreateMemoryMappedFile(&dst, file, size);
+      if (result == BL_SUCCESS)
+        return result;
+
+      if (readFlags & BL_FILE_READ_MMAP_NO_FALLBACK)
+        return result;
+    }
+  }
+
 
   uint8_t* data;
-  BL_PROPAGATE(dst.modifyOp(BL_MODIFY_OP_ASSIGN_FIT, size_t(size64), &data));
-  return file.read(data, size_t(size64), &dst.impl->size);
+  BL_PROPAGATE(dst.modifyOp(BL_MODIFY_OP_ASSIGN_FIT, size, &data));
+  return file.read(data, size, &dst.impl->size);
 }
 
 BLResult blFileSystemWriteFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) noexcept {

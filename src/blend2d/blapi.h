@@ -833,6 +833,7 @@ BL_DEFINE_ENUM(BLResultCode) {
 
   BL_ERROR_UNKNOWN_SYSTEM_ERROR,         //!< Unknown system error that failed to translate to Blend2D result code.
 
+  BL_ERROR_INVALID_ALIGNMENT,            //!< Invalid data alignment.
   BL_ERROR_INVALID_SIGNATURE,            //!< Invalid data signature or header.
   BL_ERROR_INVALID_DATA,                 //!< Invalid or corrupted data.
   BL_ERROR_INVALID_STRING,               //!< Invalid string (invalid data of either UTF8, UTF16, or UTF32).
@@ -891,17 +892,14 @@ BL_DEFINE_ENUM(BLByteOrder) {
 
 //! \ingroup blend2d_api_globals
 //!
-//! Data access type.
-BL_DEFINE_ENUM(BLDataAccessType) {
-  //! Invalid or no data.
-  BL_DATA_ACCESS_TYPE_NONE = 0,
-  //! Read-only access.
-  BL_DATA_ACCESS_TYPE_RO = 1,
-  //! Read/write access.
-  BL_DATA_ACCESS_TYPE_RW = 2,
-
-  //! Count of data access types.
-  BL_DATA_ACCESS_TYPE_COUNT = 3
+//! Data access flags.
+BL_DEFINE_ENUM(BLDataAccessFlags) {
+  //! Read access.
+  BL_DATA_ACCESS_READ = 0x01u,
+  //! Write access.
+  BL_DATA_ACCESS_WRITE = 0x02u,
+  //! Read and write access.
+  BL_DATA_ACCESS_RW = 0x03u
 };
 
 //! \ingroup blend2d_api_globals
@@ -1379,6 +1377,7 @@ typedef BLArrayView BLDataView;
 //! \{
 BL_API_C BLResult BL_CDECL blArrayInit(BLArrayCore* self, uint32_t arrayTypeId) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blArrayReset(BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blArrayCreateFromData(BLArrayCore* self, void* data, size_t size, size_t capacity, uint32_t dataAccessFlags, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
 BL_API_C size_t   BL_CDECL blArrayGetSize(const BLArrayCore* self) BL_NOEXCEPT_C;
 BL_API_C size_t   BL_CDECL blArrayGetCapacity(const BLArrayCore* self) BL_NOEXCEPT_C;
 BL_API_C const void* BL_CDECL blArrayGetData(const BLArrayCore* self) BL_NOEXCEPT_C;
@@ -1515,7 +1514,7 @@ BL_API_C BLResult BL_CDECL blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut
 
 //! \name BLFileSystem
 //! \{
-BL_API_C BLResult BL_CDECL blFileSystemReadFile(const char* fileName, BLArrayCore* dst, size_t maxSize) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFileSystemReadFile(const char* fileName, BLArrayCore* dst, size_t maxSize, uint32_t readFlags) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFileSystemWriteFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
 //! \}
 
@@ -1561,7 +1560,7 @@ BL_API_C BLResult BL_CDECL blFontFaceReset(BLFontFaceCore* self) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontFaceAssignMove(BLFontFaceCore* self, BLFontFaceCore* other) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontFaceAssignWeak(BLFontFaceCore* self, const BLFontFaceCore* other) BL_NOEXCEPT_C;
 BL_API_C bool     BL_CDECL blFontFaceEquals(const BLFontFaceCore* a, const BLFontFaceCore* b) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName, uint32_t readFlags) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontFaceCreateFromLoader(BLFontFaceCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
@@ -1575,7 +1574,7 @@ BL_API_C BLResult BL_CDECL blFontLoaderReset(BLFontLoaderCore* self) BL_NOEXCEPT
 BL_API_C BLResult BL_CDECL blFontLoaderAssignMove(BLFontLoaderCore* self, BLFontLoaderCore* other) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontLoaderAssignWeak(BLFontLoaderCore* self, const BLFontLoaderCore* other) BL_NOEXCEPT_C;
 BL_API_C bool     BL_CDECL blFontLoaderEquals(const BLFontLoaderCore* a, const BLFontLoaderCore* b) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontLoaderCreateFromFile(BLFontLoaderCore* self, const char* fileName) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontLoaderCreateFromFile(BLFontLoaderCore* self, const char* fileName, uint32_t readFlags) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontLoaderCreateFromDataArray(BLFontLoaderCore* self, const BLArrayCore* dataArray) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontLoaderCreateFromData(BLFontLoaderCore* self, const void* data, size_t size, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
 BL_API_C BLFontDataImpl* BL_CDECL blFontLoaderDataByFaceIndex(BLFontLoaderCore* self, uint32_t faceIndex) BL_NOEXCEPT_C;

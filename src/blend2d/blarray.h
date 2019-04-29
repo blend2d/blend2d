@@ -322,6 +322,20 @@ public:
 
   //! \}
 
+  //! \name Create Functionality
+  //! \{
+
+  //! Create array that uses an external `data` buffer.
+  //!
+  //! \param data External data buffer to use (cannot be NULL).
+  //! \param size Size of the data buffer in items.
+  //! \param capacity Capacity of the buffer, cannot be zero or smaller than `size`.
+  BL_INLINE BLResult createFromData(T* data, size_t size, size_t capacity, uint32_t dataAccessFlags, BLDestroyImplFunc destroyFunc = nullptr, void* destroyData = nullptr) noexcept {
+    return blArrayCreateFromData(this, data, size, capacity, dataAccessFlags, destroyFunc, destroyData);
+  }
+
+  //! \}
+
   //! \name Array Storage
   //! \{
 

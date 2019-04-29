@@ -452,7 +452,7 @@ struct BLContextImpl {
   //! Current state of the context.
   const BLContextState* state;
   //! Reserved header for future use.
-  void* reservedHeader[1];
+  void* reservedHeader;
 
   //! Reference count.
   volatile size_t refCount;
