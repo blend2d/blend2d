@@ -233,13 +233,22 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" ST
         list(APPEND BLEND2D_CFLAGS_SSE4_1 "-arch:SSE2")
         list(APPEND BLEND2D_CFLAGS_SSE4_2 "-arch:SSE2")
       endif()
-      # MSVC doesn't provide any preprocessor definitions for SSE3 and higher, thus
-      # we have to define these ourselves to match these defined by Intel|Clang|GCC.
-      list(APPEND BLEND2D_CFLAGS_SSE2 "-D__SSE2__")
-      list(APPEND BLEND2D_CFLAGS_SSE3 "-D__SSE3__")
-      list(APPEND BLEND2D_CFLAGS_SSSE3 "-D__SSSE3__")
-      list(APPEND BLEND2D_CFLAGS_SSE4_1 "-D__SSE4_1__")
-      list(APPEND BLEND2D_CFLAGS_SSE4_2 "-D__SSE4_2__")
+      if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        # MSVC can generate SSE3 intrinsics even in SSE2 mode and has no switch
+        # that would explicitly enable SSE3 code generation. However, clang-cl
+        # cannot do this and requires additional flags to enable SSE3+ intrinsics.
+        list(APPEND BLEND2D_CFLAGS_SSE3 "-msse3")
+        list(APPEND BLEND2D_CFLAGS_SSSE3 "-mssse3")
+        list(APPEND BLEND2D_CFLAGS_SSE4_1 "-msse4.1")
+        list(APPEND BLEND2D_CFLAGS_SSE4_2 "-msse4.2")
+      else()
+        # MSVC doesn't provide any preprocessor definitions for SSE3 and higher,
+        # thus we have to define them ourselves to match what other compilers do.
+        list(APPEND BLEND2D_CFLAGS_SSE3 "-D__SSE3__")
+        list(APPEND BLEND2D_CFLAGS_SSSE3 "-D__SSSE3__")
+        list(APPEND BLEND2D_CFLAGS_SSE4_1 "-D__SSE4_1__")
+        list(APPEND BLEND2D_CFLAGS_SSE4_2 "-D__SSE4_2__")
+      endif()
     endif()
   endif()
 else()
