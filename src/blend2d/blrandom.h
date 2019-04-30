@@ -34,16 +34,16 @@ struct BLRandom {
 
   BL_INLINE explicit BLRandom(uint64_t seed) noexcept { reset(seed); }
 
-  //! Reset the random number generator to the given `seed`.
+  //! Resets the random number generator to the given `seed`.
   BL_INLINE void reset(uint64_t seed = 0) noexcept { blRandomReset(this, seed); }
-  //! Return a next `uint64_t` value.
+  //! Returns the next `uint64_t` value.
   BL_INLINE uint64_t nextUInt64() noexcept { return blRandomNextUInt64(this); }
-  //! Return a next `uint32_t` value.
+  //! Returns the next `uint32_t` value.
   BL_INLINE uint32_t nextUInt32() noexcept { return blRandomNextUInt32(this); }
-  //! Return a next `double` precision floating point in [0..1) range.
+  //! Returns the next `double` precision floating point in [0..1) range.
   BL_INLINE double nextDouble() noexcept { return blRandomNextDouble(this); }
 
-  //! Get whether the random number generator is equivalent to `other`.
+  //! Gets whether the random number generator is equivalent to `other`.
   BL_INLINE bool equals(const BLRandom& other) const noexcept {
     return blEquals(this->data[0], other.data[0]) &
            blEquals(this->data[1], other.data[1]);

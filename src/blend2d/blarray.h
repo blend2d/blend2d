@@ -313,9 +313,9 @@ public:
   BL_INLINE BLResult assignView(const BLArrayView<T>& view) noexcept { return blArrayAssignView(this, (const void*)view.data, view.size); }
   BL_INLINE BLResult assignView(const T* items, size_t n) noexcept { return blArrayAssignView(this, (const void*)items, n); }
 
-  //! Get whether the array is a built-in null instance.
+  //! Gets whether the array is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Get whether the array is empty.
+  //! Gets whether the array is empty.
   BL_INLINE bool empty() const noexcept { return impl->size == 0; }
 
   BL_INLINE bool equals(const BLArray<T>& other) const noexcept { return blArrayEquals(this, &other); }
@@ -330,6 +330,9 @@ public:
   //! \param data External data buffer to use (cannot be NULL).
   //! \param size Size of the data buffer in items.
   //! \param capacity Capacity of the buffer, cannot be zero or smaller than `size`.
+  //! \param dataAccessFlags Flags that describe whether the data is read-only or read-write, see `BLDataAccessFlags`.
+  //! \param destroyFunc A function that would be called when the array is destroyed (can be null if you don't need it).
+  //! \param destroyData Data passed to `destroyFunc`.
   BL_INLINE BLResult createFromData(T* data, size_t size, size_t capacity, uint32_t dataAccessFlags, BLDestroyImplFunc destroyFunc = nullptr, void* destroyData = nullptr) noexcept {
     return blArrayCreateFromData(this, data, size, capacity, dataAccessFlags, destroyFunc, destroyData);
   }
@@ -339,17 +342,17 @@ public:
   //! \name Array Storage
   //! \{
 
-  //! Get the size of the array (number of elements).
+  //! Returns the size of the array (number of elements).
   BL_INLINE size_t size() const noexcept { return impl->size; }
-  //! Get the capacity of the array (number of elements).
+  //! Returns the capacity of the array (number of elements).
   BL_INLINE size_t capacity() const noexcept { return impl->capacity; }
 
-  //! Get a pointer to the array data.
+  //! Returns a pointer to the array data.
   BL_INLINE const T* data() const noexcept { return static_cast<const T*>(impl->data); }
-  //! Get a pointer to the array data.
+  //! Returns a pointer to the array data.
   BL_INLINE const T* end() const noexcept { return static_cast<const T*>(impl->data) + impl->size; }
 
-  //! Get the array data as `BLArrayView<T>`.
+  //! Returns the array data as `BLArrayView<T>`.
   BL_INLINE const BLArrayView<T>& view() const noexcept {
     BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_STRICT_ALIASING)
     return reinterpret_cast<const BLArrayView<T>&>(impl->view);

@@ -83,9 +83,9 @@ public:
 
   //! Gets whether the glyph-buffer has `flag` set.
   BL_INLINE bool hasFlag(uint32_t flag) const noexcept { return (data->flags & flag) != 0; }
-  //! Get whether this buffer contains unicode data.
+  //! Gets whether this buffer contains unicode data.
   BL_INLINE bool hasText() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
-  //! Get whether this buffer contains glyph-id data.
+  //! Gets whether this buffer contains glyph-id data.
   BL_INLINE bool hasGlyphs() const noexcept { return !hasFlag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
 
   //! Gets whether the input string contained invalid characters (unicode encoding errors).

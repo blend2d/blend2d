@@ -414,7 +414,7 @@ static BL_INLINE int64_t blRoundToInt64(double x) noexcept { int64_t y = blNearb
 // [Fraction / Repeat]
 // ============================================================================
 
-//! Get a fractional part of `x`.
+//! Returns a fractional part of `x`.
 //!
 //! NOTE: Fractional part returned is always equal or greater than zero. The
 //! implementation is compatible to many shader implementations defined as
@@ -422,7 +422,7 @@ static BL_INLINE int64_t blRoundToInt64(double x) noexcept { int64_t y = blNearb
 template<typename T>
 static BL_INLINE T blFrac(T x) noexcept { return x - blFloor(x); }
 
-//! Repeat the given value `x` in `y`, returning a value that is always equal
+//! Repeats the given value `x` in `y`, returning a value that is always equal
 //! to or greater than zero and lesser than `y`. The return of `repeat(x, 1.0)`
 //! should be identical to the return of `frac(x)`.
 template<typename T>

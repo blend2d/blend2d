@@ -101,9 +101,9 @@ public:
   BL_INLINE BLResult assign(BLFontData&& other) noexcept { return blFontDataAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLFontData& other) noexcept { return blFontDataAssignWeak(this, &other); }
 
-  //! Get whether the font-data is a built-in null instance.
+  //! Gets whether the font-data is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Get whether the font-data is empty (which the same as `isNone()` in this case).
+  //! Gets whether the font-data is empty (which the same as `isNone()` in this case).
   BL_INLINE bool empty() const noexcept { return isNone(); }
 
   BL_INLINE bool equals(const BLFontData& other) const noexcept { return blFontDataEquals(this, &other); }
@@ -221,9 +221,9 @@ public:
   BL_INLINE BLResult assign(BLFontLoader&& other) noexcept { return blFontLoaderAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLFontLoader& other) noexcept { return blFontLoaderAssignWeak(this, &other); }
 
-  //! Get whether the font-loader is a built-in null instance.
+  //! Gets whether the font-loader is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Get whether the font-loader is empty (which the same as `isNone()` in this case).
+  //! Gets whether the font-loader is empty (which the same as `isNone()` in this case).
   BL_INLINE bool empty() const noexcept { return isNone(); }
 
   BL_INLINE bool equals(const BLFontLoader& other) const noexcept { return blFontLoaderEquals(this, &other); }

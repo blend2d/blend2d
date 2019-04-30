@@ -154,23 +154,24 @@ public:
     std::swap(_packedData, other._packedData);
   }
 
-  //! Get whether this `BLZoneAllocator` is actually a `BLZoneAllocatorTmp` that uses temporary memory.
+  //! Gets whether this `BLZoneAllocator` is actually a `BLZoneAllocatorTmp` that
+  //! uses temporary memory.
   BL_INLINE bool hasStaticBlock() const noexcept { return _hasStaticBlock != 0; }
 
-  //! Get the default block size.
+  //! Returns the default block size.
   BL_INLINE size_t blockSize() const noexcept { return _blockSize; }
-  //! Get the default block alignment.
+  //! Returns the default block alignment.
   BL_INLINE size_t blockAlignment() const noexcept { return size_t(1) << _blockAlignmentShift; }
-  //! Get remaining size of the current block.
+  //! Returns the remaining size of the current block.
   BL_INLINE size_t remainingSize() const noexcept { return (size_t)(_end - _ptr); }
 
-  //! Get the current zone cursor (dangerous).
+  //! Returns the current zone cursor (dangerous).
   //!
   //! This is a function that can be used to get exclusive access to the current
   //! block's memory buffer.
   template<typename T = uint8_t>
   BL_INLINE T* ptr() noexcept { return reinterpret_cast<T*>(_ptr); }
-  //! Get the end of the current zone block, only useful if you use `ptr()`.
+  //! Returns the end of the current zone block, only useful if you use `ptr()`.
   template<typename T = uint8_t>
   BL_INLINE T* end() noexcept { return reinterpret_cast<T*>(_end); }
 
@@ -180,7 +181,7 @@ public:
   // final size. This is used for example by BLAnalyticRasterizer to build list
   // of edges.
 
-  //! Set the current zone pointer to `ptr` (must be within the current block).
+  //! Sets the current zone pointer to `ptr` (must be within the current block).
   template<typename T>
   BL_INLINE void setPtr(T* ptr) noexcept {
     uint8_t* p = reinterpret_cast<uint8_t*>(ptr);
@@ -188,7 +189,7 @@ public:
     _ptr = p;
   }
 
-  //! Set the end zone pointer to `end` (must be within the current block).
+  //! Sets the end zone pointer to `end` (must be within the current block).
   template<typename T>
   BL_INLINE void setEnd(T* end) noexcept {
     uint8_t* p = reinterpret_cast<uint8_t*>(end);
@@ -201,7 +202,7 @@ public:
     _ptr = blMin(blAlignUp(_ptr, alignment), _end);
   }
 
-  //! Ensure the remaining size is at least equal or greater than `size`.
+  //! Ensures the remaining size is at least equal or greater than `size`.
   //!
   //! NOTE: This function doesn't respect any alignment. If you need to ensure
   //! there is enough room for an aligned allocation you need to call `align()`
@@ -230,7 +231,7 @@ public:
   //! Internal alloc function.
   BL_HIDDEN void* _alloc(size_t size, size_t alignment) noexcept;
 
-  //! Allocate the requested memory specified by `size`.
+  //! Allocates the requested memory specified by `size`.
   //!
   //! Pointer returned is valid until the `BLZoneAllocator` instance is destroyed or reset
   //! by calling `reset()`. If you plan to make an instance of C++ from the
@@ -269,7 +270,7 @@ public:
     return static_cast<void*>(ptr);
   }
 
-  //! Allocate the requested memory specified by `size` and `alignment`.
+  //! Allocates the requested memory specified by `size` and `alignment`.
   //!
   //! Performs the same operation as `BLZoneAllocator::alloc(size)` with `alignment` applied.
   BL_INLINE void* alloc(size_t size, size_t alignment) noexcept {
@@ -283,7 +284,7 @@ public:
     return static_cast<void*>(ptr);
   }
 
-  //! Allocate the requested memory specified by `size` without doing any checks.
+  //! Allocates the requested memory specified by `size` without doing any checks.
   //!
   //! Can only be called if `remainingSize()` returns size at least equal to `size`.
   BL_INLINE void* allocNoCheck(size_t size) noexcept {
@@ -294,7 +295,7 @@ public:
     return static_cast<void*>(ptr);
   }
 
-  //! Allocate the requested memory specified by `size` and `alignment` without doing any checks.
+  //! Allocates the requested memory specified by `size` and `alignment` without doing any checks.
   //!
   //! Performs the same operation as `BLZoneAllocator::allocNoCheck(size)` with `alignment` applied.
   BL_INLINE void* allocNoCheck(size_t size, size_t alignment) noexcept {
@@ -307,7 +308,7 @@ public:
     return static_cast<void*>(ptr);
   }
 
-  //! Allocate the requested memory specified by `size` and `alignment` and zero
+  //! Allocates the requested memory specified by `size` and `alignment` and clears
   //! it before returning its pointer.
   //!
   //! See `alloc()` for more details.
@@ -349,14 +350,14 @@ public:
     return new(p) T(std::forward<Args>(args)...);
   }
 
-  //! Store the current state to `state`.
+  //! Stores the current state to `state`.
   BL_INLINE void saveState(State* state) noexcept {
     state->ptr = _ptr;
     state->end = _end;
     state->block = _block;
   }
 
-  //! Restore the state of `BLZoneAllocator` to the previously saved `State`.
+  //! Restores the state of `BLZoneAllocator` from the previously saved `state`.
   BL_INLINE void restoreState(State* state) noexcept {
     Block* block = state->block;
     _ptr = state->ptr;
@@ -401,14 +402,14 @@ public:
     : _zone(zone),
       _pool(nullptr) {}
 
-  //! Reset the zone pool.
+  //! Resets the zone pool.
   //!
   //! Reset must be called after the associated `BLZoneAllocator` has been reset, otherwise
   //! the existing pool will collide with possible allocations made on the `BLZoneAllocator`
   //! object after the reset.
   BL_INLINE void reset() noexcept { _pool = nullptr; }
 
-  //! Ensure that there is at least one object in the pool.
+  //! Ensures that there is at least one object in the pool.
   BL_INLINE bool ensure() noexcept {
     if (_pool) return true;
 
@@ -420,7 +421,7 @@ public:
     return true;
   }
 
-  //! Alloc a memory (or reuse the existing allocation) of `size` (in byts).
+  //! Allocates a memory (or reuse the existing allocation) of `size` (in byts).
   BL_INLINE T* alloc() noexcept {
     Link* p = _pool;
     if (BL_UNLIKELY(p == nullptr))
@@ -438,7 +439,7 @@ public:
     return static_cast<T*>(static_cast<void*>(p));
   }
 
-  //! Pool the previously allocated memory.
+  //! Pools the previously allocated memory.
   BL_INLINE void free(T* _p) noexcept {
     BL_ASSERT(_p != nullptr);
     Link* p = reinterpret_cast<Link*>(_p);

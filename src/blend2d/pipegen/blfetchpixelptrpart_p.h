@@ -31,14 +31,14 @@ public:
 
   FetchPixelPtrPart(PipeCompiler* pc, uint32_t fetchType, uint32_t fetchPayload, uint32_t format) noexcept;
 
-  //! Initialize the pixel pointer to `p`.
+  //! Initializes the pixel pointer to `p`.
   inline void initPtr(const x86::Gp& p) noexcept { _ptr = p; }
-  //! Get the pixel-pointer.
+  //! Returns the pixel-pointer.
   inline x86::Gp& ptr() noexcept { return _ptr; }
 
-  //! Get pixel-pointer alignment.
+  //! Returns the pixel-pointer alignment.
   inline uint32_t ptrAlignment() const noexcept { return _ptrAlignment; }
-  //! Set pixel-pointer alignment.
+  //! Sets the pixel-pointer alignment.
   inline void setPtrAlignment(uint32_t alignment) noexcept { _ptrAlignment = uint8_t(alignment); }
 
   void fetch1(PixelARGB& p, uint32_t flags) noexcept override;

@@ -183,11 +183,11 @@ public:
 
   BL_INLINE void swap(BLFile& other) noexcept { std::swap(this->handle, other.handle); }
 
-  //! Get whether the file is open.
+  //! Gets whether the file is open.
   BL_INLINE bool isOpen() const noexcept { return handle != -1; }
 
-  //! Take the file handle and set the handle to invalid. After this operation
-  //! you will be the sole owner of the handle and you will be responsible for
+  //! Returns the file handle and sets to invalid. After this operation you
+  //! will be the sole owner of the handle and you will be responsible for
   //! closing it.
   BL_INLINE intptr_t takeHandle() noexcept {
     intptr_t h = this->handle;

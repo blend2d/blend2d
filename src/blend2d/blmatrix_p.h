@@ -25,12 +25,12 @@ BL_HIDDEN extern const BLMatrix2D blMatrix2DIdentity;
 // [BLMatrix2D - Utilities]
 // ============================================================================
 
-//! Get a matrix rotation angle.
+//! Returns a matrix rotation angle.
 static BL_INLINE double blMatrix2DRotationAngle(const BLMatrix2D& m) noexcept {
   return blAtan2(m.m00, m.m01);
 }
 
-//! Get an average scaling (by X and Y).
+//! Returns an average scaling (by X and Y).
 //!
 //! Basically used to calculate the approximation scale when decomposing
 //! curves into line segments.
@@ -40,7 +40,7 @@ static BL_INLINE double blMatrix2DAverageScaling(const BLMatrix2D& m) noexcept {
   return blSqrt((blSquare(x) + blSquare(y)) * 0.5);
 }
 
-//! Get an absolute scaling.
+//! Returns absolute scaling of `m`.
 static BL_INLINE BLPoint blMatrix2DAbsoluteScaling(const BLMatrix2D& m) noexcept {
   return BLPoint(blHypot(m.m00, m.m10), blHypot(m.m01, m.m11));
 }

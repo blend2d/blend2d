@@ -199,7 +199,7 @@ public:
   BL_INLINE BLVariant& operator=(BLVariant&& other) noexcept { blVariantAssignMove(this, &other); return *this; }
   BL_INLINE BLVariant& operator=(const BLVariant& other) noexcept { blVariantAssignWeak(this, &other); return *this; }
 
-  //! Get whether the variant is a built-in null instance (of any impl-type).
+  //! Gets whether the variant is a built-in null instance (of any impl-type).
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
   BL_INLINE BLResult reset() noexcept { return blVariantReset(this); }

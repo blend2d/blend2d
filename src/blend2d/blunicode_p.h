@@ -93,25 +93,25 @@ constexpr T blAsciiToLower(const T& x) noexcept { return x >= T('A') && x <= T('
 template<typename T>
 constexpr T blAsciiToUpper(const T& x) noexcept { return x >= T('a') && x <= T('z') ? T(x & ~T(0x20)) : x; }
 
-//! Get whether the unicode character `uc` is high or low surrogate.
+//! Gets whether the unicode character `uc` is high or low surrogate.
 template<typename T>
 constexpr bool blIsSurrogate(const T& uc) noexcept { return uc >= BL_CHAR_SURROGATE_FIRST && uc <= BL_CHAR_SURROGATE_LAST; }
 
-//! Get whether the unicode character `uc` is a high (leading) surrogate.
+//! Gets whether the unicode character `uc` is a high (leading) surrogate.
 template<typename T>
 constexpr bool blIsHiSurrogate(const T& uc) noexcept { return uc >= BL_CHAR_HI_SURROGATE_FIRST && uc <= BL_CHAR_HI_SURROGATE_LAST; }
 
-//! Get whether the unicode character `uc` is a low (trailing) surrogate.
+//! Gets whether the unicode character `uc` is a low (trailing) surrogate.
 template<typename T>
 constexpr bool blIsLoSurrogate(const T& uc) noexcept { return uc >= BL_CHAR_LO_SURROGATE_FIRST && uc <= BL_CHAR_LO_SURROGATE_LAST; }
 
-//! Compose `hi` and `lo` surrogates into a unicode code-point.
+//! Composes `hi` and `lo` surrogates into a unicode code-point.
 template<typename T>
 constexpr uint32_t blCharFromSurrogate(const T& hi, const T& lo) noexcept {
   return (uint32_t(hi) << 10) + uint32_t(lo) - uint32_t((BL_CHAR_SURROGATE_FIRST << 10) + BL_CHAR_LO_SURROGATE_FIRST - 0x10000u);
 }
 
-//! Decompose a unicode code-point into  `hi` and `lo` surrogates.
+//! Decomposes a unicode code-point into `hi` and `lo` surrogates.
 template<typename T>
 BL_INLINE void blCharToSurrogate(uint32_t uc, T& hi, T& lo) noexcept {
   uc -= 0x10000u;
@@ -167,7 +167,7 @@ struct BLUnicodeConversionState {
   }
 };
 
-//! Convert a string from one encoding to another.
+//! Converts a string from one encoding to another.
 //!
 //! Convert function works at a byte level. All sizes here are including those
 //! stored in a `BLUnicodeConversionState` are byte entities. So for example to convert

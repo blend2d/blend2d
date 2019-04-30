@@ -54,50 +54,50 @@ public:
 
   FetchPart(PipeCompiler* pc, uint32_t fetchType, uint32_t fetchPayload, uint32_t format) noexcept;
 
-  //! Get fetch type.
+  //! Returns the fetch type.
   BL_INLINE uint32_t fetchType() const noexcept { return _fetchType; }
 
-  //! Get whether the fetch-type equals `ft`.
+  //! Gets whether the fetch-type equals `ft`.
   BL_INLINE bool isFetchType(uint32_t ft) const noexcept { return _fetchType == ft; }
-  //! Get whether the fetch-type is between `first..last`, inclusive.
+  //! Gets whether the fetch-type is between `first..last`, inclusive.
   BL_INLINE bool isFetchType(uint32_t first, uint32_t last) const noexcept { return _fetchType >= first && _fetchType <= last; }
 
-  //! Get whether the fetch-type is solid.
+  //! Gets whether the fetch-type is solid.
   BL_INLINE bool isSolid() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_SOLID); }
 
-  //! Get whether the fetch-type is gradient.
+  //! Gets whether the fetch-type is gradient.
   BL_INLINE bool isGradient() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_GRADIENT_ANY_FIRST, BL_PIPE_FETCH_TYPE_GRADIENT_ANY_LAST); }
-  //! Get whether the fetch-type is linear gradient.
+  //! Gets whether the fetch-type is linear gradient.
   BL_INLINE bool isLinearGradient() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_GRADIENT_LINEAR_FIRST, BL_PIPE_FETCH_TYPE_GRADIENT_LINEAR_LAST); }
-  //! Get whether the fetch-type is radial gradient.
+  //! Gets whether the fetch-type is radial gradient.
   BL_INLINE bool isRadialGradient() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_GRADIENT_RADIAL_FIRST, BL_PIPE_FETCH_TYPE_GRADIENT_RADIAL_LAST); }
-  //! Get whether the fetch-type is conical gradient.
+  //! Gets whether the fetch-type is conical gradient.
   BL_INLINE bool isConicalGradient() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_GRADIENT_CONICAL_FIRST, BL_PIPE_FETCH_TYPE_GRADIENT_CONICAL_LAST); }
 
-  //! Get whether the fetch-type is pattern.
+  //! Gets whether the fetch-type is pattern.
   BL_INLINE bool isPattern() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_PATTERN_ANY_FIRST, BL_PIPE_FETCH_TYPE_PATTERN_ANY_LAST); }
-  //! Get whether the fetch is the destination (special type).
+  //! Gets whether the fetch is the destination (special type).
   BL_INLINE bool isPixelPtr() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_PIXEL_PTR); }
 
-  //! Get source pixel format.
+  //! Returns source pixel format.
   BL_INLINE uint32_t format() const noexcept { return _format; }
-  //! Get source pixel format information.
+  //! Returns source pixel format information.
   BL_INLINE BLFormatInfo formatInfo() const noexcept { return blFormatInfo[_format]; }
 
-  //! Get source bytes-per-pixel (only used when `isPattern()` is true).
+  //! Returns source bytes-per-pixel (only used when `isPattern()` is true).
   BL_INLINE uint32_t bpp() const noexcept { return _bpp; }
 
-  //! Get the maximum pixels the fetch part can fetch at a time.
+  //! Returns the maximum pixels the fetch part can fetch at a time.
   BL_INLINE uint32_t maxPixels() const noexcept { return _maxPixels; }
 
-  //! Get whether the fetched pixels contain RGB channels.
+  //! Gets whether the fetched pixels contain RGB channels.
   BL_INLINE bool hasRGB() const noexcept { return _hasRGB; }
-  //! Get whether the fetched pixels contain Alpha channel.
+  //! Gets whether the fetched pixels contain Alpha channel.
   BL_INLINE bool hasAlpha() const noexcept { return _hasAlpha; }
 
-  //! Get whether the fetch is currently initialized for a rectangular fill.
+  //! Gets whether the fetch is currently initialized for a rectangular fill.
   BL_INLINE bool isRectFill() const noexcept { return _isRectFill; }
-  //! Get pixel granularity passed to `FetchPath::init()`.
+  //! Returns the pixel granularity passed to `FetchPath::init()`.
   BL_INLINE uint32_t pixelGranularity() const noexcept { return _pixelGranularity; }
 
   BL_INLINE bool isComplexFetch() const noexcept { return _isComplexFetch; }
@@ -109,10 +109,10 @@ public:
   virtual void _initPart(x86::Gp& x, x86::Gp& y) noexcept;
   virtual void _finiPart() noexcept;
 
-  //! Advance the current y coordinate by one pixel.
+  //! Advances the current y coordinate by one pixel.
   virtual void advanceY() noexcept;
 
-  //! Initialize the current horizontal cursor of the current scanline to `x`.
+  //! Initializes the current horizontal cursor of the current scanline to `x`.
   //!
   //! NOTE: This initializer is generally called once per scanline to setup the
   //! current position by initializing it to `x`. The position is then advanced
@@ -120,15 +120,15 @@ public:
   //! there is a gap in the scanline that has to be skipped.
   virtual void startAtX(x86::Gp& x) noexcept;
 
-  //! Advance the current x coordinate by `diff` pixels, the final x position
+  //! Advances the current x coordinate by `diff` pixels. The final x position
   //! after advance will be `x`. The fetcher can decide whether to use `x`,
   //! `diff`, or both.
   virtual void advanceX(x86::Gp& x, x86::Gp& diff) noexcept;
 
-  //! Must be called before `fetch1()`.
+  //! Called before `fetch1()`.
   virtual void prefetch1() noexcept;
 
-  //! Load 1 pixel to XMM register(s) in `p` and advance by 1.
+  //! Loads 1 pixel to XMM register(s) in `p` and advance by 1.
   virtual void fetch1(PixelARGB& p, uint32_t flags) noexcept = 0;
 
   //! Called as a prolog before fetching multiple fixels at once. This must be
@@ -141,8 +141,8 @@ public:
   //! is in a vector mode because of `pixelGranularity`.
   virtual void leaveN() noexcept;
 
-  //! Must be called before a loop that calls `fetch4()` or `fetch8()`. In some
-  //! cases there will be some instructions placed between `prefetch` and `fetch`,
+  //! Called before a loop that calls `fetch4()` or `fetch8()`. In some cases
+  //! there will be some instructions placed between `prefetch` and `fetch`,
   //! which means that if the fetcher requires an expensive operation that has
   //! greater latency then it would be better to place that code into the prefetch
   //! area.
@@ -154,10 +154,10 @@ public:
   //! been entered.
   virtual void postfetchN() noexcept;
 
-  //! Fetch 4 pixels to XMM register(s) in `p` and advance by 4.
+  //! Fetches 4 pixels to XMM register(s) in `p` and advance by 4.
   virtual void fetch4(PixelARGB& p, uint32_t flags) noexcept = 0;
 
-  //! Fetch 8 pixels to XMM register(s) in `p` and advance by 8.
+  //! Fetches 8 pixels to XMM register(s) in `p` and advance by 8.
   //!
   //! NOTE: The default implementation uses `fetch4()` twice.
   virtual void fetch8(PixelARGB& p, uint32_t flags) noexcept;

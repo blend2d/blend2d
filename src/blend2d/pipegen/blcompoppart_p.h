@@ -62,36 +62,36 @@ public:
   BL_INLINE FetchPart* dstPart() const noexcept { return reinterpret_cast<FetchPart*>(_children[kIndexDstPart]); }
   BL_INLINE FetchPart* srcPart() const noexcept { return reinterpret_cast<FetchPart*>(_children[kIndexSrcPart]); }
 
-  //! Get composition operator id, see `BLCompOp`.
+  //! Returns the composition operator id, see `BLCompOp`.
   BL_INLINE uint32_t compOp() const noexcept { return _compOp; }
-  //! Get composition operator flags, see `BLCompOpFlags`.
+  //! Returns the composition operator flags, see `BLCompOpFlags`.
   BL_INLINE uint32_t compOpFlags() const noexcept { return blCompOpInfo[_compOp].flags; }
 
-  //! Get whether the destination pixel format has an alpha channel.
+  //! Gets whether the destination pixel format has an alpha channel.
   BL_INLINE bool hasDa() const noexcept { return _hasSa != 0; }
-  //! Get whether the source pixel format has an alpha channel.
+  //! Gets whether the source pixel format has an alpha channel.
   BL_INLINE bool hasSa() const noexcept { return _hasDa != 0; }
 
-  //! Get the current loop mode.
+  //! Returns the current loop mode.
   BL_INLINE uint32_t cMaskLoopType() const noexcept { return _cMaskLoopType; }
-  //! Get whether the current loop is fully opaque (no mask).
+  //! Gets whether the current loop is fully opaque (no mask).
   BL_INLINE bool isLoopOpaque() const noexcept { return _cMaskLoopType == kCMaskLoopTypeOpaque; }
-  //! Get whether the current loop is `CMask` (constant mask).
+  //! Gets whether the current loop is `CMask` (constant mask).
   BL_INLINE bool isLoopCMask() const noexcept { return _cMaskLoopType == kCMaskLoopTypeMask; }
 
-  //! Get the maximum pixels the composite part can handle at a time.
+  //! Returns the maximum pixels the composite part can handle at a time.
   //!
   //! NOTE: This value is configured in a way that it's always one if the fetch
   //! part doesn't support more. This makes it easy to use in loop compilers.
   //! In other words, the value doesn't describe the real implementation of the
   //! composite part.
   BL_INLINE uint32_t maxPixels() const noexcept { return _maxPixels; }
-  //! Get the maximum pixels the children of this part can handle.
+  //! Returns the maximum pixels the children of this part can handle.
   BL_INLINE uint32_t maxPixelsOfChildren() const noexcept { return blMin(dstPart()->maxPixels(), srcPart()->maxPixels()); }
 
-  //! Get pixel granularity passed to `init()`, otherwise the result should be zero.
+  //! Returns pixel granularity passed to `init()`, otherwise the result should be zero.
   BL_INLINE uint32_t pixelGranularity() const noexcept { return _pixelGranularity; }
-  //! Get the minimum destination alignment required to the maximum number of pixels `_maxPixels`.
+  //! Returns the minimum destination alignment required to the maximum number of pixels `_maxPixels`.
   BL_INLINE uint32_t minAlignment() const noexcept { return _minAlignment; }
 
   BL_INLINE bool isUsingSolidPre() const noexcept { return !_solidPre.pc.empty() || !_solidPre.uc.empty(); }
@@ -99,11 +99,11 @@ public:
   void init(x86::Gp& x, x86::Gp& y, uint32_t pixelGranularity) noexcept;
   void fini() noexcept;
 
-  //! Get whether the opaque fill should be optimized and placed into a separate
+  //! Gets whether the opaque fill should be optimized and placed into a separate
   //! loop.
   bool shouldOptimizeOpaqueFill() const noexcept;
 
-  //! Get whether the compositor should emit a specialized loop that contains
+  //! Gets whether the compositor should emit a specialized loop that contains
   //! an inlined version of `memcpy()` or `memset()`.
   bool shouldMemcpyOrMemsetOpaqueFill() const noexcept;
 

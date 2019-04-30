@@ -91,29 +91,29 @@ public:
   template<typename T>
   inline const T* as() const noexcept { return static_cast<const T*>(this); }
 
-  //! Get whether the part is initialized
+  //! Gets whether the part is initialized
   inline bool isPartInitialized() const noexcept { return _globalHook != nullptr; }
-  //! Get part type.
+  //! Returns the part type.
   inline uint32_t partType() const noexcept { return _partType; }
 
-  //! Get whether the part should restrict using GP registers.
+  //! Gets whether the part should restrict using GP registers.
   inline uint8_t hasLowRegs(uint32_t rKind) const noexcept { return _hasLowRegs[rKind]; }
 
-  //! Get whether the part should restrict using GP registers.
+  //! Gets whether the part should restrict using GP registers.
   inline uint8_t hasLowGpRegs() const noexcept { return hasLowRegs(x86::Reg::kGroupGp); }
-  //! Get whether the part should restrict using MM registers.
+  //! Gets whether the part should restrict using MM registers.
   inline uint8_t hasLowMmRegs() const noexcept { return hasLowRegs(x86::Reg::kGroupMm); }
-  //! Get whether the part should restrict using XMM/YMM registers.
+  //! Gets whether the part should restrict using XMM/YMM registers.
   inline uint8_t hasLowVecRegs() const noexcept { return hasLowRegs(x86::Reg::kGroupVec); }
 
   inline uint32_t flags() const noexcept { return _flags; }
 
-  //! Get the number children parts.
+  //! Returns the number children parts.
   inline uint32_t childrenCount() const noexcept { return _childrenCount; }
-  //! Get children parts as an array.
+  //! Returns children parts as an array.
   inline PipePart** children() const noexcept { return (PipePart**)_children; }
 
-  //! Prepare the part - it should call `prepare()` on all child parts.
+  //! Prepares the part - it would call `prepare()` on all child parts.
   virtual void preparePart() noexcept;
 
   //! Calls `preparePart()` on all children and also prevents calling it

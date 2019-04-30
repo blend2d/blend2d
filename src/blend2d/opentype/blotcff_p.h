@@ -208,14 +208,14 @@ struct CFFData {
       this->bias = bias;
     }
 
-    //! Get an offset to the offsets data (array of offsets).
+    //! Returns the offset to the offsets data (array of offsets).
     BL_INLINE uint32_t offsetsOffset() const noexcept { return headerSize; }
-    //! get a size of offset data (array of offsets) in bytes.
+    //! Returns the size of offset data (array of offsets) in bytes.
     BL_INLINE uint32_t offsetsSize() const noexcept { return (entryCount + 1) * offsetSize; }
 
-    //! Get an offset to the payload data.
+    //! Returns the offset to the payload data.
     BL_INLINE uint32_t payloadOffset() const noexcept { return offsetsOffset() + offsetsSize(); }
-    //! Get a payload size in bytes.
+    //! Returns the payload size in bytes.
     BL_INLINE uint32_t payloadSize() const noexcept { return dataRange.size - payloadOffset(); }
   };
 

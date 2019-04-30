@@ -32,7 +32,7 @@ public:
 
   FetchGradientPart(PipeCompiler* pc, uint32_t fetchType, uint32_t fetchPayload, uint32_t format) noexcept;
 
-  //! Get gradient extend.
+  //! Returns the gradient extend mode.
   inline uint32_t extend() const noexcept { return _extend; }
 };
 

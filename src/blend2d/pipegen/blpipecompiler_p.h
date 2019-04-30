@@ -200,9 +200,9 @@ public:
 
   void updateOptLevel() noexcept;
 
-  //! Get the optimization level of the compiler.
+  //! Returns the optimization level of the compiler.
   inline uint32_t optLevel() const noexcept { return _optLevel; }
-  //! Set the optimization level of the compiler.
+  //! Sets the optimization level of the compiler.
   inline void setOptLevel(uint32_t optLevel) noexcept { _optLevel = optLevel; }
 
   inline bool hasSSE2() const noexcept { return _optLevel >= kOptLevel_X86_SSE2; }
@@ -219,7 +219,7 @@ public:
   inline bool hasLZCNT() const noexcept { return _features.hasLZCNT(); }
   inline bool hasPOPCNT() const noexcept { return _features.hasPOPCNT(); }
 
-  //! Tell the compiler to emit EMMS at the end of the function. Only called
+  //! Tells the compiler to emit EMMS at the end of the function. Only called
   //! if the pipeline compiler or some part of it uses MMX registers.
   inline void usingMmx() noexcept { _funcNode->frame().setMmxCleanup(); }
 
@@ -1408,11 +1408,11 @@ public:
   // [Fetch Utilities]
   // --------------------------------------------------------------------------
 
-  //! Fetch 1 pixel to XMM register(s) in `p` from memory location `sMem`.
+  //! Fetches 1 pixel to XMM register(s) in `p` from memory location `sMem`.
   void xFetchARGB32_1x(PixelARGB& p, uint32_t flags, const x86::Mem& sMem, uint32_t sAlignment) noexcept;
-  //! Fetch 4 pixels to XMM register(s) in `p` from memory location `sMem`.
+  //! Fetches 4 pixels to XMM register(s) in `p` from memory location `sMem`.
   void xFetchARGB32_4x(PixelARGB& p, uint32_t flags, const x86::Mem& sMem, uint32_t sAlignment) noexcept;
-  //! Fetch 8 pixels to XMM register(s) in `p` from memory location `sMem`.
+  //! Fetches 8 pixels to XMM register(s) in `p` from memory location `sMem`.
   void xFetchARGB32_8x(PixelARGB& p, uint32_t flags, const x86::Mem& sMem, uint32_t sAlignment) noexcept;
 
   inline void xSatisfyARGB32(PixelARGB& p, uint32_t flags, uint32_t n) noexcept {
@@ -1422,15 +1422,15 @@ public:
       xSatisfyARGB32_Nx(p, flags);
   }
 
-  //! Handle all fetch `flags` in 1 fetched pixel `p`.
+  //! Handles all fetch `flags` in 1 fetched pixel `p`.
   void xSatisfyARGB32_1x(PixelARGB& p, uint32_t flags) noexcept;
-  //! Handle all fetch `flags` in 4 fetched pixels `p`.
+  //! Handles all fetch `flags` in 4 fetched pixels `p`.
   void xSatisfyARGB32_Nx(PixelARGB& p, uint32_t flags) noexcept;
 
   //! Used by `FetchPart` and `CompOpPart`.
   void xSatisfySolid(PixelARGB& p, uint32_t flags) noexcept;
 
-  //! Fill alpha channel to 1.
+  //! Fills alpha channel with 1.
   void vFillAlpha(PixelARGB& p) noexcept;
 
   // --------------------------------------------------------------------------

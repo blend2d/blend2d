@@ -143,11 +143,11 @@ enum BLJpegDecoderStatusFlags : uint32_t {
 // [BLJpegCodec - Utilities]
 // ============================================================================
 
-//! Get whether the marker `m` is a SOF marker.
+//! Gets whether the marker `m` is a SOF marker.
 static BL_INLINE bool blJpegMarkerIsSOF(uint32_t m) noexcept { return m >= BL_JPEG_MARKER_SOF0 && m <= BL_JPEG_MARKER_SOF2; }
-//! Get whether the marker `m` is an RST marker.
+//! Gets whether the marker `m` is an RST marker.
 static BL_INLINE bool blJpegMarkerIsRST(uint32_t m) noexcept { return m >= BL_JPEG_MARKER_RST && m <= BL_JPEG_MARKER_RST_LAST; }
-//! Get whether the marker `m` is an APP marker.
+//! Gets whether the marker `m` is an APP marker.
 static BL_INLINE bool blJpegMarkerIsAPP(uint32_t m) noexcept { return m >= BL_JPEG_MARKER_APP && m <= BL_JPEG_MARKER_APP_LAST; }
 
 // ============================================================================

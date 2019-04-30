@@ -58,9 +58,9 @@ struct BLRgba32 {
 
   BL_INLINE bool equals(const BLRgba32& other) const noexcept { return blEquals(this->value, other.value); }
 
-  //! Get whether the color is fully-opaque (alpha equals 0xFFFF).
+  //! Gets whether the color is fully-opaque (alpha equals 0xFFFF).
   constexpr bool isOpaque() const noexcept { return this->value >= 0xFF000000u; }
-  //! Get whether the color is fully-transparent (alpha equals 0).
+  //! Gets whether the color is fully-transparent (alpha equals 0).
   constexpr bool isTransparent() const noexcept { return this->value <= 0x00FFFFFFu; }
 
   BL_INLINE bool operator==(const BLRgba32& other) const noexcept { return  equals(other); }
@@ -124,9 +124,9 @@ struct BLRgba64 {
 
   BL_INLINE bool equals(const BLRgba64& other) const noexcept { return blEquals(this->value, other.value); }
 
-  //! Get whether the color is fully-opaque (alpha equals 0xFFFF).
+  //! Gets whether the color is fully-opaque (alpha equals 0xFFFF).
   constexpr bool isOpaque() const noexcept { return this->value >= 0xFFFF000000000000u; }
-  //! Get whether the color is fully-transparent (alpha equals 0).
+  //! Gets whether the color is fully-transparent (alpha equals 0).
   constexpr bool isTransparent() const noexcept { return this->value <= 0x0000FFFFFFFFFFFFu; }
 
   BL_INLINE bool operator==(const BLRgba64& other) const noexcept { return  equals(other); }
@@ -186,9 +186,9 @@ struct BLRgba128 {
            blEquals(this->a, other.a) ;
   }
 
-  //! Get whether the color is fully-opaque (alpha equals 1.0).
+  //! Gets whether the color is fully-opaque (alpha equals 1.0).
   constexpr bool isOpaque() const noexcept { return this->a >= 1.0; }
-  //! Get whether the color is fully-transparent (alpha equals 0.0).
+  //! Gets whether the color is fully-transparent (alpha equals 0.0).
   constexpr bool isTransparent() const noexcept { return this->a == 0.0; }
 
   BL_INLINE bool operator==(const BLRgba128& other) const noexcept { return  equals(other); }

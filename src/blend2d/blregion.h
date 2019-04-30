@@ -100,38 +100,38 @@ public:
 
   BL_INLINE explicit operator bool() const noexcept { return impl->size != 0; }
 
-  //! Get whether the region is a built-in null instance.
+  //! Gets whether the region is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Get type of the region, see `BLRegionType`.
+  //! Returns the type of the region, see `BLRegionType`.
   //!
   //! This inline method has also a C API equivalent `blRegionGetType()`.
   BL_INLINE uint32_t type() const noexcept { return uint32_t(blMin<size_t>(impl->size, BL_REGION_TYPE_COMPLEX)); }
 
-  //! Get whether the region is empty.
+  //! Gets whether the region is empty.
   BL_INLINE bool empty() const noexcept { return impl->size == 0; }
-  //! Get whether the region is one rectangle.
+  //! Gets whether the region is one rectangle.
   BL_INLINE bool isRect() const noexcept { return impl->size == 1; }
-  //! Get whether the region is complex.
+  //! Gets whether the region is complex.
   BL_INLINE bool isComplex() const noexcept { return impl->size > 1; }
 
-  //! Get region size.
+  //! Returns the region size.
   BL_INLINE size_t size() const noexcept { return impl->size; }
-  //! Get region capacity.
+  //! Returns the region capacity.
   BL_INLINE size_t capacity() const noexcept { return impl->capacity; }
-  //! Get const pointer to the region data.
+  //! Returns a const pointer to the region data.
   BL_INLINE const BLBoxI* data() const noexcept { return impl->data; }
-  //! Get a bounding box.
+  //! Returns the region's bounding box.
   BL_INLINE const BLBoxI& boundingBox() const noexcept { return impl->boundingBox; }
 
-  //! Get the region data and size as `BLRegionView`.
+  //! Returns the region data as `BLRegionView`.
   BL_INLINE const BLRegionView& view() const noexcept { return impl->view; }
 
   BL_INLINE BLResult reset() noexcept { return blRegionReset(this); }
   BL_INLINE BLResult clear() noexcept { return blRegionClear(this); }
 
-  //! Reserve at least `n` boxes in this region.
+  //! Reserves at least `n` boxes in this region.
   BL_INLINE BLResult reserve(size_t n) noexcept { return blRegionReserve(this, n); }
-  //! Shrink the region data so it consumes only memory it requires.
+  //! Shrinks the region data so it consumes only memory it requires.
   BL_INLINE BLResult shrink() noexcept { return blRegionShrink(this); }
 
   BL_INLINE BLResult assign(BLRegion&& other) noexcept { return blRegionAssignMove(this, &other); }
@@ -146,17 +146,17 @@ public:
   BL_INLINE BLResult combine(const BLRegion& region, uint32_t op) noexcept { return blRegionCombine(this, this, &region, op); }
   BL_INLINE BLResult combine(const BLBoxI& box, uint32_t op) noexcept { return blRegionCombineRB(this, this, &box, op); }
 
-  //! Translate the region by the given point `pt`.
+  //! Translates the region by the given point `pt`.
   //!
   //! Possible overflow will be handled by clipping to a maximum region boundary,
   //! so the final region could be smaller than the region before translation.
   BL_INLINE BLResult translate(const BLPointI& pt) noexcept { return blRegionTranslate(this, this, &pt); }
-  //! Translate the region by the given point `pt` and clip it to the given `clipBox`.
+  //! Translates the region by the given point `pt` and clip it to the given `clipBox`.
   BL_INLINE BLResult translateAndClip(const BLPointI& pt, const BLBoxI& clipBox) noexcept { return blRegionTranslateAndClip(this, this, &pt, &clipBox); }
-  //! Translate the region with `r` and clip it to the given `clipBox`.
+  //! Translates the region with `r` and clip it to the given `clipBox`.
   BL_INLINE BLResult intersectAndClip(const BLRegion& r, const BLBoxI& clipBox) noexcept { return blRegionIntersectAndClip(this, this, &r, &clipBox); }
 
-  //! Get whether the region is equal to the `other` region.
+  //! Gets whether this region and `other` are equal.
   BL_INLINE bool equals(const BLRegion& other) const noexcept { return blRegionEquals(this, &other); }
 
   //! Tests if a given point `pt` is in region, returns `BLHitTest`.

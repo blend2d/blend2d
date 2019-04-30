@@ -162,18 +162,18 @@ public:
       memcpy(v, other.v, _size * sizeof(Operand_));
   }
 
-  //! Reset to the construction state.
+  //! Resets `OpArray` to a default construction state.
   BL_INLINE void reset() noexcept { _size = 0; }
 
-  //! Get whether the vector is empty (has no elements).
+  //! Gets whether the vector is empty (has no elements).
   BL_INLINE bool empty() const noexcept { return _size == 0; }
-  //! Get whether the vector has only one element, which makes it scalar.
+  //! Gets whether the vector has only one element, which makes it scalar.
   BL_INLINE bool isScalar() const noexcept { return _size == 1; }
-  //! Get whether the vector has more than 1 element, which means that
+  //! Gets whether the vector has more than 1 element, which means that
   //! calling `high()` and `odd()` won't return an empty vector.
   BL_INLINE bool isVector() const noexcept { return _size > 1; }
 
-  //! Get number of vector elements.
+  //! Returns the number of vector elements.
   BL_INLINE uint32_t size() const noexcept { return _size; }
 
   BL_INLINE Operand_& operator[](size_t index) noexcept {
@@ -191,9 +191,9 @@ public:
   BL_INLINE OpArray even() const noexcept { return OpArray(*this, 0, 2, _size); }
   BL_INLINE OpArray odd() const noexcept { return OpArray(*this, _size > 1, 2, _size); }
 
-  //! Return a new vector consisting of either even (from == 0) or odd (from == 1)
-  //! elements. It's like calling `even()` and `odd()`, but can be used within a
-  //! loop that performs the same operation for both.
+  //! Returns a new vector consisting of either even (from == 0) or odd
+  //! (from == 1) elements. It's like calling `even()` and `odd()`, but
+  //! can be used within a loop that performs the same operation for both.
   BL_INLINE OpArray even_odd(uint32_t from) const noexcept { return OpArray(*this, _size > 1 ? from : 0, 2, _size); }
 
   uint32_t _size;

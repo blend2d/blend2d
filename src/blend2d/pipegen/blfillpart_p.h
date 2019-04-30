@@ -52,18 +52,18 @@ public:
     _children[kIndexCompOpPart] = reinterpret_cast<PipePart*>(part);
   }
 
-  //! Get fill type, see `BLPipeFillType`.
+  //! Returns fill type, see `BLPipeFillType`.
   inline uint32_t fillType() const noexcept { return _fillType; }
-  //! Get whether the fill type matches `fillType`.
+  //! Gets whether the fill type matches `fillType`.
   inline bool isFillType(uint32_t fillType) const noexcept { return _fillType == fillType; }
 
-  //! Get whether fill-type is a pure rectangular fill (aligned or fractional).
+  //! Gets whether fill-type is a pure rectangular fill (aligned or fractional).
   //!
   //! Rectangle fills have some properties that can be exploited by other parts.
   inline bool isRectFill() const noexcept { return _isRectFill; }
   inline bool isAnalyticFill() const noexcept { return _fillType == BL_PIPE_FILL_TYPE_ANALYTIC; }
 
-  //! Compile the fill part.
+  //! Compiles the fill part.
   virtual void compile() noexcept = 0;
 };
 
