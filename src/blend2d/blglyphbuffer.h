@@ -16,8 +16,10 @@
 // [BLGlyphBuffer - Core]
 // ============================================================================
 
-//! Glyph buffer [C Data].
-struct BLGlyphBufferData {
+//! Glyph buffer [C Interface - Impl].
+//!
+//! NOTE: This is not a `BLVariantImpl` compatible Impl.
+struct BLGlyphBufferImpl {
   union {
     struct {
       //! Glyph item data.
@@ -42,7 +44,7 @@ struct BLGlyphBufferData {
 
 //! Glyph buffer [C Interface - Core].
 struct BLGlyphBufferCore {
-  BLGlyphBufferData* data;
+  BLGlyphBufferImpl* impl;
 };
 
 // ============================================================================
@@ -70,19 +72,19 @@ public:
   BL_INLINE ~BLGlyphBuffer() noexcept { blGlyphBufferReset(this); }
 
   BL_INLINE explicit operator bool() const noexcept { return !empty(); }
-  BL_INLINE bool empty() const noexcept { return data->glyphRun.empty(); }
+  BL_INLINE bool empty() const noexcept { return impl->glyphRun.empty(); }
 
-  BL_INLINE size_t size() const noexcept { return data->size; }
-  BL_INLINE uint32_t flags() const noexcept { return data->flags; }
+  BL_INLINE size_t size() const noexcept { return impl->size; }
+  BL_INLINE uint32_t flags() const noexcept { return impl->flags; }
 
-  BL_INLINE BLGlyphItem* glyphItemData() const noexcept { return data->glyphItemData; }
-  BL_INLINE BLGlyphPlacement* placementData() const noexcept { return data->placementData; }
-  BL_INLINE BLGlyphInfo* glyphInfoData() const noexcept { return data->glyphInfoData; }
+  BL_INLINE BLGlyphItem* glyphItemData() const noexcept { return impl->glyphItemData; }
+  BL_INLINE BLGlyphPlacement* placementData() const noexcept { return impl->placementData; }
+  BL_INLINE BLGlyphInfo* glyphInfoData() const noexcept { return impl->glyphInfoData; }
 
-  BL_INLINE const BLGlyphRun& glyphRun() const noexcept { return data->glyphRun; }
+  BL_INLINE const BLGlyphRun& glyphRun() const noexcept { return impl->glyphRun; }
 
   //! Gets whether the glyph-buffer has `flag` set.
-  BL_INLINE bool hasFlag(uint32_t flag) const noexcept { return (data->flags & flag) != 0; }
+  BL_INLINE bool hasFlag(uint32_t flag) const noexcept { return (impl->flags & flag) != 0; }
   //! Gets whether this buffer contains unicode data.
   BL_INLINE bool hasText() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
   //! Gets whether this buffer contains glyph-id data.
@@ -108,7 +110,7 @@ public:
 
   //! Sets text content of this `BLGlyphBuffer`.
   //!
-  //! This is a generic function that accepts `void*` data, whicih is specified
+  //! This is a generic function that accepts `void*` data, which is specified
   //! by `encoding`. The `size` argument depends on encoding as well. If the
   //! encoding specifies byte string (LATIN1 or UTF8) then it's bytes, if the
   //! encoding specifies UTF16 or UTF32 then it would describe the number of

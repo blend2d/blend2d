@@ -12,6 +12,8 @@
 #include "./blrgba.h"
 #include "./blvariant.h"
 
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
+
 //! \addtogroup blend2d_api_styles
 //! \{
 
@@ -522,5 +524,7 @@ public:
 #endif
 
 //! \}
+
+BL_DIAGNOSTIC_POP
 
 #endif // BLEND2D_BLGRADIENT_H

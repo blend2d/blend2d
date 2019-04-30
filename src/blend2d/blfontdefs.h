@@ -9,6 +9,8 @@
 
 #include "./blgeometry.h"
 
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
+
 //! \addtogroup blend2d_api_text
 //! \{
 
@@ -1094,5 +1096,7 @@ struct BLTextMetrics {
 };
 
 //! \}
+
+BL_DIAGNOSTIC_POP
 
 #endif // BLEND2D_BLFONTDEFS_H

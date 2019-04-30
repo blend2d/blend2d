@@ -621,8 +621,8 @@ ContinueCompound:
 
           constexpr double kScaleF2x14 = 1.0 / 16384.0;
 
-          BLMatrix2D& matrix = compoundData[compoundLevel].matrix;
-          matrix.reset(1.0, 0.0, 0.0, 1.0, double(arg1), double(arg2));
+          BLMatrix2D& cm = compoundData[compoundLevel].matrix;
+          cm.reset(1.0, 0.0, 0.0, 1.0, double(arg1), double(arg2));
 
           if (flags & Compound::kAnyCompoundScale) {
             if (flags & Compound::kWeHaveScale) {
@@ -634,8 +634,8 @@ ContinueCompound:
                 goto InvalidData;
 
               double scale = double(blMemReadI16uBE(gPtr)) * kScaleF2x14;
-              matrix.m00 = scale;
-              matrix.m11 = scale;
+              cm.m00 = scale;
+              cm.m11 = scale;
               gPtr += 2;
             }
             else if (flags & Compound::kWeHaveScaleXY) {
@@ -646,8 +646,8 @@ ContinueCompound:
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
-              matrix.m00 = double(blMemReadI16uBE(gPtr + 0)) * kScaleF2x14;
-              matrix.m11 = double(blMemReadI16uBE(gPtr + 2)) * kScaleF2x14;
+              cm.m00 = double(blMemReadI16uBE(gPtr + 0)) * kScaleF2x14;
+              cm.m11 = double(blMemReadI16uBE(gPtr + 2)) * kScaleF2x14;
               gPtr += 4;
             }
             else {
@@ -658,10 +658,10 @@ ContinueCompound:
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
-              matrix.m00 = double(blMemReadI16uBE(gPtr + 0)) * kScaleF2x14;
-              matrix.m01 = double(blMemReadI16uBE(gPtr + 2)) * kScaleF2x14;
-              matrix.m10 = double(blMemReadI16uBE(gPtr + 4)) * kScaleF2x14;
-              matrix.m11 = double(blMemReadI16uBE(gPtr + 6)) * kScaleF2x14;
+              cm.m00 = double(blMemReadI16uBE(gPtr + 0)) * kScaleF2x14;
+              cm.m01 = double(blMemReadI16uBE(gPtr + 2)) * kScaleF2x14;
+              cm.m10 = double(blMemReadI16uBE(gPtr + 4)) * kScaleF2x14;
+              cm.m11 = double(blMemReadI16uBE(gPtr + 6)) * kScaleF2x14;
               gPtr += 8;
             }
 
@@ -674,15 +674,15 @@ ContinueCompound:
               // This is what FreeType does and what's not 100% according to the specificaion.
               // However, according to FreeType this would produce much better offsets so we
               // will match FreeType instead of following the specification.
-              matrix.m20 *= blLength(BLPoint(matrix.m00, matrix.m01));
-              matrix.m21 *= blLength(BLPoint(matrix.m10, matrix.m11));
+              cm.m20 *= blLength(BLPoint(cm.m00, cm.m01));
+              cm.m21 *= blLength(BLPoint(cm.m10, cm.m11));
             }
           }
 
           compoundData[compoundLevel].gPtr = gPtr;
           compoundData[compoundLevel].remainingSize = remainingSize;
           compoundData[compoundLevel].compoundFlags = flags;
-          blMatrix2DMultiply(matrix, matrix, compoundData[compoundLevel - 1].matrix);
+          blMatrix2DMultiply(cm, cm, compoundData[compoundLevel - 1].matrix);
           continue;
         }
       }

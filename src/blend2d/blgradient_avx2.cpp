@@ -34,19 +34,19 @@ void BL_CDECL blGradientInterpolate32_AVX2(uint32_t* dPtr, uint32_t dWidth, cons
   I128 half = vseti128i32(1 << (23 - 1));
   I256 argb64_a255 = vseti256u64(0x00FF000000000000u);
 
-  uint32_t p0 = 0;
-  uint32_t p1;
+  uint32_t u0 = 0;
+  uint32_t u1;
 
   size_t sIndex = size_t(sPtr[0].offset == 0.0 && sSize > 1);
   double fWidth = double(int32_t(--dWidth) << 8);
 
   do {
     c1 = vloadi128_64(&sPtr[sIndex].rgba);
-    p1 = uint32_t(blRoundToInt(sPtr[sIndex].offset * fWidth));
+    u1 = uint32_t(blRoundToInt(sPtr[sIndex].offset * fWidth));
 
-    dSpanPtr = dPtr + (p0 >> 8);
-    i = ((p1 >> 8) - (p0 >> 8));
-    p0 = p1;
+    dSpanPtr = dPtr + (u0 >> 8);
+    i = ((u1 >> 8) - (u0 >> 8));
+    u0 = u1;
 
     if (i <= 1) {
       I128 cPix = vunpackli64(c0, c1);

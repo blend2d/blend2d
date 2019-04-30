@@ -695,36 +695,36 @@ public:
   //! \name Glyphs & Text
   //! \{
 
-  BL_INLINE BLResult shape(BLGlyphBuffer& buf) const noexcept {
-    return blFontShape(this, &buf);
+  BL_INLINE BLResult shape(BLGlyphBuffer& gb) const noexcept {
+    return blFontShape(this, &gb);
   }
 
-  BL_INLINE BLResult mapTextToGlyphs(BLGlyphBuffer& buf) const noexcept {
-    return blFontMapTextToGlyphs(this, &buf, nullptr);
+  BL_INLINE BLResult mapTextToGlyphs(BLGlyphBuffer& gb) const noexcept {
+    return blFontMapTextToGlyphs(this, &gb, nullptr);
   }
 
-  BL_INLINE BLResult mapTextToGlyphs(BLGlyphBuffer& buf, BLGlyphMappingState& stateOut) const noexcept {
-    return blFontMapTextToGlyphs(this, &buf, &stateOut);
+  BL_INLINE BLResult mapTextToGlyphs(BLGlyphBuffer& gb, BLGlyphMappingState& stateOut) const noexcept {
+    return blFontMapTextToGlyphs(this, &gb, &stateOut);
   }
 
-  BL_INLINE BLResult positionGlyphs(BLGlyphBuffer& buf, uint32_t positioningFlags = 0xFFFFFFFFu) const noexcept {
-    return blFontPositionGlyphs(this, &buf, positioningFlags);
+  BL_INLINE BLResult positionGlyphs(BLGlyphBuffer& gb, uint32_t positioningFlags = 0xFFFFFFFFu) const noexcept {
+    return blFontPositionGlyphs(this, &gb, positioningFlags);
   }
 
-  BL_INLINE BLResult applyKerning(BLGlyphBuffer& buf) const noexcept {
-    return blFontApplyKerning(this, &buf);
+  BL_INLINE BLResult applyKerning(BLGlyphBuffer& gb) const noexcept {
+    return blFontApplyKerning(this, &gb);
   }
 
-  BL_INLINE BLResult applyGSub(BLGlyphBuffer& buf, size_t index, BLBitWord lookups) const noexcept {
-    return blFontApplyGSub(this, &buf, index, lookups);
+  BL_INLINE BLResult applyGSub(BLGlyphBuffer& gb, size_t index, BLBitWord lookups) const noexcept {
+    return blFontApplyGSub(this, &gb, index, lookups);
   }
 
-  BL_INLINE BLResult applyGPos(BLGlyphBuffer& buf, size_t index, BLBitWord lookups) const noexcept {
-    return blFontApplyGPos(this, &buf, index, lookups);
+  BL_INLINE BLResult applyGPos(BLGlyphBuffer& gb, size_t index, BLBitWord lookups) const noexcept {
+    return blFontApplyGPos(this, &gb, index, lookups);
   }
 
-  BL_INLINE BLResult getTextMetrics(BLGlyphBuffer& buf, BLTextMetrics& out) const noexcept {
-    return blFontGetTextMetrics(this, &buf, &out);
+  BL_INLINE BLResult getTextMetrics(BLGlyphBuffer& gb, BLTextMetrics& out) const noexcept {
+    return blFontGetTextMetrics(this, &gb, &out);
   }
 
   BL_INLINE BLResult getGlyphBounds(const void* glyphIdData, intptr_t glyphIdAdvance, BLBoxI* out, size_t count) const noexcept {

@@ -701,6 +701,8 @@ public:
 };
 
 void BL_CDECL blFileSystemDestroyMemoryMappedFile(void* impl_, void* destroyData) noexcept {
+  BL_UNUSED(destroyData);
+
   BLMemoryMappedFileArrayImpl* impl = static_cast<BLMemoryMappedFileArrayImpl*>(impl_);
   blCallDtor(impl->fileMapping);
 }

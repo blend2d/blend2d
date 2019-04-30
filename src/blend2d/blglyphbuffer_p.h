@@ -38,18 +38,18 @@ enum BLGlyphBufferEnums : uint32_t {
 // [BLGlyphBuffer - Internal Data]
 // ============================================================================
 
-struct BLInternalGlyphBufferData : public BLGlyphBufferData {
+struct BLInternalGlyphBufferImpl : public BLGlyphBufferImpl {
   uint8_t* buffer[2];
   size_t capacity[2];
 
   // Default-constructed data should not be initialized.
-  constexpr BLInternalGlyphBufferData() noexcept
-    : BLGlyphBufferData {},
+  constexpr BLInternalGlyphBufferImpl() noexcept
+    : BLGlyphBufferImpl {},
       buffer { nullptr, nullptr },
       capacity { 0, 0 } {}
 
-  static BLInternalGlyphBufferData* create() noexcept {
-    BLInternalGlyphBufferData* d = (BLInternalGlyphBufferData*)malloc(sizeof(BLInternalGlyphBufferData));
+  static BLInternalGlyphBufferImpl* create() noexcept {
+    BLInternalGlyphBufferImpl* d = (BLInternalGlyphBufferImpl*)malloc(sizeof(BLInternalGlyphBufferImpl));
     if (BL_UNLIKELY(!d))
       return nullptr;
 
@@ -109,7 +109,7 @@ struct BLInternalGlyphBufferData : public BLGlyphBufferData {
 };
 
 template<>
-struct BLInternalCastImpl<BLGlyphBufferData> { typedef BLInternalGlyphBufferData Type; };
+struct BLInternalCastImpl<BLGlyphBufferImpl> { typedef BLInternalGlyphBufferImpl Type; };
 
 static BL_INLINE void blCopyGlyphData(BLGlyphItem* itemDst, BLGlyphInfo* infoDst, const BLGlyphItem* itemSrc, const BLGlyphInfo* infoSrc, size_t n) noexcept {
   const BLGlyphItem* itemEnd = itemSrc + n;

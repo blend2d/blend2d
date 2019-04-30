@@ -167,14 +167,14 @@ BL_INLINE T blBitRorImpl(const T& x, unsigned n) noexcept {
 // MSVC is unable to emit `rol|ror` instruction when `n` is not constant so we
 // have to help it a bit. This, however, prevents us from using `constexpr`.
 #if defined(_MSC_VER)
-template<> BL_INLINE uint8_t blBitRolImpl(const uint8_t& x, unsigned n) noexcept { return uint8_t(_rotl8(x, n)); }
-template<> BL_INLINE uint8_t blBitRorImpl(const uint8_t& x, unsigned n) noexcept { return uint8_t(_rotr8(x, n)); }
-template<> BL_INLINE uint16_t blBitRolImpl(const uint16_t& x, unsigned n) noexcept { return uint16_t(_rotl16(x, n)); }
-template<> BL_INLINE uint16_t blBitRorImpl(const uint16_t& x, unsigned n) noexcept { return uint16_t(_rotr16(x, n)); }
-template<> BL_INLINE uint32_t blBitRolImpl(const uint32_t& x, unsigned n) noexcept { return uint32_t(_rotl(x, n)); }
-template<> BL_INLINE uint32_t blBitRorImpl(const uint32_t& x, unsigned n) noexcept { return uint32_t(_rotr(x, n)); }
-template<> BL_INLINE uint64_t blBitRolImpl(const uint64_t& x, unsigned n) noexcept { return uint64_t(_rotl64(x, n)); }
-template<> BL_INLINE uint64_t blBitRorImpl(const uint64_t& x, unsigned n) noexcept { return uint64_t(_rotr64(x, n)); }
+template<> BL_INLINE uint8_t blBitRolImpl(const uint8_t& x, unsigned n) noexcept { return uint8_t(_rotl8(x, uint8_t(n))); }
+template<> BL_INLINE uint8_t blBitRorImpl(const uint8_t& x, unsigned n) noexcept { return uint8_t(_rotr8(x, uint8_t(n))); }
+template<> BL_INLINE uint16_t blBitRolImpl(const uint16_t& x, unsigned n) noexcept { return uint16_t(_rotl16(x, uint8_t(n))); }
+template<> BL_INLINE uint16_t blBitRorImpl(const uint16_t& x, unsigned n) noexcept { return uint16_t(_rotr16(x, uint8_t(n))); }
+template<> BL_INLINE uint32_t blBitRolImpl(const uint32_t& x, unsigned n) noexcept { return uint32_t(_rotl(x, int(n))); }
+template<> BL_INLINE uint32_t blBitRorImpl(const uint32_t& x, unsigned n) noexcept { return uint32_t(_rotr(x, int(n))); }
+template<> BL_INLINE uint64_t blBitRolImpl(const uint64_t& x, unsigned n) noexcept { return uint64_t(_rotl64(x, int(n))); }
+template<> BL_INLINE uint64_t blBitRorImpl(const uint64_t& x, unsigned n) noexcept { return uint64_t(_rotr64(x, int(n))); }
 #endif
 
 template<typename X, typename Y>

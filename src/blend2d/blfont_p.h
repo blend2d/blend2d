@@ -153,13 +153,13 @@ struct BLInternalFontFaceFuncs {
 
   BLResult (BL_CDECL* applyGSub)(
     const BLFontFaceImpl* impl,
-    BLGlyphBuffer* buf,
+    BLGlyphBuffer* gb,
     size_t index,
     BLBitWord lookups) BL_NOEXCEPT;
 
   BLResult (BL_CDECL* applyGPos)(
     const BLFontFaceImpl* impl,
-    BLGlyphBuffer* buf,
+    BLGlyphBuffer* gb,
     size_t index,
     BLBitWord lookups) BL_NOEXCEPT;
 

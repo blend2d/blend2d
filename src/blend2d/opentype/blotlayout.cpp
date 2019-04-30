@@ -819,9 +819,9 @@ HaveMatch:
             // Copy the substitution.
             const UInt16* seq = reinterpret_cast<const UInt16*>(table.data + seqOffset + 2u);
             for (uint32_t i = 0; i < seqLength; i++) {
-              uint32_t glyphId = seq->value();
+              uint32_t value = seq->value();
 
-              outItem->value = glyphId;
+              outItem->value = value;
               *outInfo = *inInfo;
 
               outItem++;
@@ -2100,7 +2100,7 @@ static BL_INLINE BLResult applyLookup(const BLOTFaceImpl* faceI, GPosContext& ct
 }
 
 template<uint32_t Kind, typename Context>
-static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffer* buf, size_t index, BLBitWord lookups) noexcept {
+static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffer* gb, size_t index, BLBitWord lookups) noexcept {
   constexpr bool kIsGSub = (Kind == LookupInfo::kKindGSub);
 
   constexpr uint32_t kLookupCount     = kIsGSub ? uint32_t(GSubTable::kLookupCount    ) : uint32_t(GPosTable::kLookupCount    );
@@ -2115,7 +2115,7 @@ static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffe
   size_t lookupListTableCount = faceI->layout.kinds[Kind].lookupCount;
 
   Context ctx;
-  ctx.init(blInternalCast(buf->data));
+  ctx.init(blInternalCast(gb->impl));
 
   BLBitWordIterator<BLBitWord> it(lookups);
   while (it.hasNext()) {

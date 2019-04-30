@@ -51,19 +51,19 @@ public:
     fillSignature.addFillType(fillData.initBoxAU8bpc24x8(alpha, uint32_t(x0), uint32_t(y0), uint32_t(x1), uint32_t(y1)));
   }
 
-  BL_INLINE void initAnalytic(uint32_t alpha, BLEdgeStorage<int>* edgeStorage, uint32_t fillRule) noexcept {
+  BL_INLINE void initAnalytic(uint32_t alpha, BLEdgeStorage<int>* edgeStorage_, uint32_t fillRule_) noexcept {
     this->workFunc = fillAnalyticImpl;
     this->fillData.analytic.alpha.u = alpha;
     this->fillData.analytic.fillRuleMask =
-      fillRule == BL_FILL_RULE_NON_ZERO
+      fillRule_ == BL_FILL_RULE_NON_ZERO
         ? BL_PIPE_FILL_RULE_MASK_NON_ZERO
         : BL_PIPE_FILL_RULE_MASK_EVEN_ODD;
     this->fillSignature.addFillType(BL_PIPE_FILL_TYPE_ANALYTIC);
-    this->edgeStorage = edgeStorage;
+    this->edgeStorage = edgeStorage_;
   }
 
-  BL_INLINE void setFillFunc(BLPipeFillFunc fillFunc) noexcept {
-    this->fillFunc = fillFunc;
+  BL_INLINE void setFillFunc(BLPipeFillFunc fillFunc_) noexcept {
+    this->fillFunc = fillFunc_;
   }
 
   BL_INLINE BLResult doWork(BLRasterWorker* worker, const BLRasterFetchData* fetchData) noexcept {

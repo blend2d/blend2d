@@ -537,7 +537,7 @@ static BLResult BL_CDECL blNullFontFaceApplyKern(
 
 static BLResult BL_CDECL blNullFontFaceApplyGSub(
   const BLFontFaceImpl* impl,
-  BLGlyphBuffer* buf,
+  BLGlyphBuffer* gb,
   size_t index,
   BLBitWord lookups) noexcept {
 
@@ -546,7 +546,7 @@ static BLResult BL_CDECL blNullFontFaceApplyGSub(
 
 static BLResult BL_CDECL blNullFontFaceApplyGPos(
   const BLFontFaceImpl* impl,
-  BLGlyphBuffer* buf,
+  BLGlyphBuffer* gb,
   size_t index,
   BLBitWord lookups) noexcept {
 
@@ -848,19 +848,19 @@ BLResult blFontGetDesignMetrics(const BLFontCore* self, BLFontDesignMetrics* out
 // [BLFont - Shaping]
 // ============================================================================
 
-BLResult blFontShape(const BLFontCore* self, BLGlyphBufferCore* buf) noexcept {
-  BL_PROPAGATE(blFontMapTextToGlyphs(self, buf, nullptr));
-  BL_PROPAGATE(blFontPositionGlyphs(self, buf, 0xFFFFFFFFu));
+BLResult blFontShape(const BLFontCore* self, BLGlyphBufferCore* gb) noexcept {
+  BL_PROPAGATE(blFontMapTextToGlyphs(self, gb, nullptr));
+  BL_PROPAGATE(blFontPositionGlyphs(self, gb, 0xFFFFFFFFu));
 
   return BL_SUCCESS;
 }
 
-BLResult blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* buf, BLGlyphMappingState* stateOut) noexcept {
-  BLInternalGlyphBufferData* gbd = blInternalCast(buf->data);
-  if (!gbd->size)
+BLResult blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, BLGlyphMappingState* stateOut) noexcept {
+  BLInternalGlyphBufferImpl* gbI = blInternalCast(gb->impl);
+  if (!gbI->size)
     return BL_SUCCESS;
 
-  if (BL_UNLIKELY(!(gbd->flags & BL_GLYPH_RUN_FLAG_UCS4_CONTENT)))
+  if (BL_UNLIKELY(!(gbI->flags & BL_GLYPH_RUN_FLAG_UCS4_CONTENT)))
     return blTraceError(BL_ERROR_INVALID_STATE);
 
   BLGlyphMappingState state;
@@ -868,85 +868,85 @@ BLResult blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* buf, B
     stateOut = &state;
 
   BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
-  BL_PROPAGATE(faceI->funcs.mapTextToGlyphs(faceI, gbd->glyphItemData, gbd->size, stateOut));
+  BL_PROPAGATE(faceI->funcs.mapTextToGlyphs(faceI, gbI->glyphItemData, gbI->size, stateOut));
 
-  gbd->flags = gbd->flags & ~BL_GLYPH_RUN_FLAG_UCS4_CONTENT;
+  gbI->flags = gbI->flags & ~BL_GLYPH_RUN_FLAG_UCS4_CONTENT;
   if (stateOut->undefinedCount == 0)
-    gbd->flags |= BL_GLYPH_RUN_FLAG_UNDEFINED_GLYPHS;
+    gbI->flags |= BL_GLYPH_RUN_FLAG_UNDEFINED_GLYPHS;
   return BL_SUCCESS;
 }
 
-BLResult blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* buf, uint32_t positioningFlags) noexcept {
-  BLInternalGlyphBufferData* gbd = blInternalCast(buf->data);
-  if (!gbd->size)
+BLResult blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, uint32_t positioningFlags) noexcept {
+  BLInternalGlyphBufferImpl* gbI = blInternalCast(gb->impl);
+  if (!gbI->size)
     return BL_SUCCESS;
 
-  if (BL_UNLIKELY(gbd->flags & BL_GLYPH_RUN_FLAG_UCS4_CONTENT))
+  if (BL_UNLIKELY(gbI->flags & BL_GLYPH_RUN_FLAG_UCS4_CONTENT))
     return blTraceError(BL_ERROR_INVALID_STATE);
 
   BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
-  if (!(gbd->flags & BL_GLYPH_BUFFER_GLYPH_ADVANCES)) {
-    BL_PROPAGATE(gbd->ensurePlacement());
-    faceI->funcs.getGlyphAdvances(faceI, &gbd->glyphItemData->glyphId, sizeof(BLGlyphItem), gbd->placementData, gbd->size);
-    gbd->glyphRun.placementType = uint8_t(BL_GLYPH_PLACEMENT_TYPE_ADVANCE_OFFSET);
-    gbd->flags |= BL_GLYPH_BUFFER_GLYPH_ADVANCES;
+  if (!(gbI->flags & BL_GLYPH_BUFFER_GLYPH_ADVANCES)) {
+    BL_PROPAGATE(gbI->ensurePlacement());
+    faceI->funcs.getGlyphAdvances(faceI, &gbI->glyphItemData->glyphId, sizeof(BLGlyphItem), gbI->placementData, gbI->size);
+    gbI->glyphRun.placementType = uint8_t(BL_GLYPH_PLACEMENT_TYPE_ADVANCE_OFFSET);
+    gbI->flags |= BL_GLYPH_BUFFER_GLYPH_ADVANCES;
   }
 
   if (positioningFlags) {
-    faceI->funcs.applyKern(faceI, gbd->glyphItemData, gbd->placementData, gbd->size);
+    faceI->funcs.applyKern(faceI, gbI->glyphItemData, gbI->placementData, gbI->size);
   }
 
   return BL_SUCCESS;
 }
 
-BLResult blFontApplyKerning(const BLFontCore* self, BLGlyphBufferCore* buf) noexcept {
-  BLInternalGlyphBufferData* gbd = blInternalCast(buf->data);
-  if (!gbd->size)
+BLResult blFontApplyKerning(const BLFontCore* self, BLGlyphBufferCore* gb) noexcept {
+  BLInternalGlyphBufferImpl* gbI = blInternalCast(gb->impl);
+  if (!gbI->size)
     return BL_SUCCESS;
 
-  if (BL_UNLIKELY(!(gbd->placementData)))
+  if (BL_UNLIKELY(!(gbI->placementData)))
     return blTraceError(BL_ERROR_INVALID_STATE);
 
   BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
-  return faceI->funcs.applyKern(faceI, gbd->glyphItemData, gbd->placementData, gbd->size);
+  return faceI->funcs.applyKern(faceI, gbI->glyphItemData, gbI->placementData, gbI->size);
 }
 
-BLResult blFontApplyGSub(const BLFontCore* self, BLGlyphBufferCore* buf, size_t index, BLBitWord lookups) noexcept {
+BLResult blFontApplyGSub(const BLFontCore* self, BLGlyphBufferCore* gb, size_t index, BLBitWord lookups) noexcept {
   BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
-  return faceI->funcs.applyGSub(faceI, static_cast<BLGlyphBuffer*>(buf), index, lookups);
+  return faceI->funcs.applyGSub(faceI, static_cast<BLGlyphBuffer*>(gb), index, lookups);
 }
 
-BLResult blFontApplyGPos(const BLFontCore* self, BLGlyphBufferCore* buf, size_t index, BLBitWord lookups) noexcept {
-  BLInternalGlyphBufferData* gbd = blInternalCast(buf->data);
-  if (!gbd->size)
+BLResult blFontApplyGPos(const BLFontCore* self, BLGlyphBufferCore* gb, size_t index, BLBitWord lookups) noexcept {
+  BLInternalGlyphBufferImpl* gbI = blInternalCast(gb->impl);
+  if (!gbI->size)
     return BL_SUCCESS;
 
-  if (BL_UNLIKELY(!(gbd->placementData)))
+  if (BL_UNLIKELY(!(gbI->placementData)))
     return blTraceError(BL_ERROR_INVALID_STATE);
 
   BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
-  return faceI->funcs.applyGPos(faceI, static_cast<BLGlyphBuffer*>(buf), index, lookups);
+  return faceI->funcs.applyGPos(faceI, static_cast<BLGlyphBuffer*>(gb), index, lookups);
 }
 
-BLResult blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* buf, BLTextMetrics* out) noexcept {
+BLResult blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLTextMetrics* out) noexcept {
   BLInternalFontImpl* selfI = blInternalCast(self->impl);
-  BLInternalGlyphBufferData* gbd = blInternalCast(buf->data);
+  BLInternalGlyphBufferImpl* gbI = blInternalCast(gb->impl);
 
   out->reset();
-  if (!(gbd->flags & BL_GLYPH_BUFFER_GLYPH_ADVANCES)) {
-    BL_PROPAGATE(blFontShape(self, buf));
-    gbd = blInternalCast(buf->data);
+  if (!(gbI->flags & BL_GLYPH_BUFFER_GLYPH_ADVANCES)) {
+    BL_PROPAGATE(blFontShape(self, gb));
+    gbI = blInternalCast(gb->impl);
   }
 
-  size_t size = gbd->size;
+  size_t size = gbI->size;
   if (!size)
     return BL_SUCCESS;
 
   double advanceX = 0.0;
   double advanceY = 0.0;
 
-  const BLGlyphItem* glyphItemData = gbd->glyphItemData;
-  const BLGlyphPlacement* placementData = gbd->placementData;
+  const BLGlyphItem* glyphItemData = gbI->glyphItemData;
+  const BLGlyphPlacement* placementData = gbI->placementData;
 
   for (size_t i = 0; i < size; i++) {
     advanceX += double(placementData[i].advance.x);

@@ -28,9 +28,9 @@ struct DataRange {
   uint32_t size;
 
   BL_INLINE void reset() noexcept { reset(0, 0); }
-  BL_INLINE void reset(uint32_t offset, uint32_t size) noexcept {
-    this->offset = offset;
-    this->size = size;
+  BL_INLINE void reset(uint32_t offset_, uint32_t size_) noexcept {
+    this->offset = offset_;
+    this->size = size_;
   }
 };
 

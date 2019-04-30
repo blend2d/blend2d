@@ -42,9 +42,9 @@ static BL_INLINE bool operator<=(const KernTable::Pair& a, const KernMatch& b) n
 
 // Used to define a range of unsorted kerning pairs.
 struct UnsortedRange {
-  BL_INLINE void reset(uint32_t start, uint32_t end) noexcept {
-    this->start = start;
-    this->end = end;
+  BL_INLINE void reset(uint32_t start_, uint32_t end_) noexcept {
+    this->start = start_;
+    this->end = end_;
   }
 
   uint32_t start;

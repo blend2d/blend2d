@@ -93,8 +93,10 @@
   #pragma warning(disable: 4201) // nameless struct/union
   #pragma warning(disable: 4251) // struct needs to have dll-interface
   #pragma warning(disable: 4275) // non dll-interface struct ... used
+  #pragma warning(disable: 4324) // structure was padded due to alignment specifier
   #pragma warning(disable: 4355) // this used in base member-init list
   #pragma warning(disable: 4480) // specifying underlying type for enum
+  #pragma warning(disable: 4505) // unreferenced local function has been removed
   #pragma warning(disable: 4800) // forcing value to bool true or false
 #elif defined(__clang__)
   #pragma clang diagnostic ignored "-Wconstant-logical-operand"

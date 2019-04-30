@@ -17,7 +17,7 @@
 // [BLGlyphBuffer - Internals]
 // ============================================================================
 
-static const constexpr BLInternalGlyphBufferData blGlyphBufferInternalDataNone {};
+static const constexpr BLInternalGlyphBufferImpl blGlyphBufferInternalImplNone {};
 
 template<typename T>
 static BL_INLINE size_t strlenT(const T* str) noexcept {
@@ -27,16 +27,16 @@ static BL_INLINE size_t strlenT(const T* str) noexcept {
   return (size_t)(p - str);
 }
 
-static BL_INLINE BLResult blGlyphBufferEnsureData(BLGlyphBufferCore* self, BLInternalGlyphBufferData** d) noexcept {
-  *d = blInternalCast(self->data);
-  if (*d != &blGlyphBufferInternalDataNone)
+static BL_INLINE BLResult blGlyphBufferEnsureData(BLGlyphBufferCore* self, BLInternalGlyphBufferImpl** impl) noexcept {
+  *impl = blInternalCast(self->impl);
+  if (*impl != &blGlyphBufferInternalImplNone)
     return BL_SUCCESS;
 
-  *d = BLInternalGlyphBufferData::create();
-  if (BL_UNLIKELY(!*d))
+  *impl = BLInternalGlyphBufferImpl::create();
+  if (BL_UNLIKELY(!*impl))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-  self->data = *d;
+  self->impl = *impl;
   return BL_SUCCESS;
 }
 
@@ -44,7 +44,7 @@ static BL_INLINE BLResult blGlyphBufferEnsureData(BLGlyphBufferCore* self, BLInt
 // [BLGlyphBuffer - Private API]
 // ============================================================================
 
-BLResult BLInternalGlyphBufferData::ensureBuffer(size_t bufferId, size_t copySize, size_t minCapacity) noexcept {
+BLResult BLInternalGlyphBufferImpl::ensureBuffer(size_t bufferId, size_t copySize, size_t minCapacity) noexcept {
   size_t oldCapacity = capacity[bufferId];
   BL_ASSERT(copySize <= oldCapacity);
 
@@ -90,7 +90,7 @@ BLResult BLInternalGlyphBufferData::ensureBuffer(size_t bufferId, size_t copySiz
   return BL_SUCCESS;
 }
 
-static BL_INLINE BLResult blInternalGlyphBufferData_setGlyphIds(BLInternalGlyphBufferData* d, const uint16_t* ids, intptr_t advance, size_t size) noexcept {
+static BL_INLINE BLResult blInternalGlyphBufferData_setGlyphIds(BLInternalGlyphBufferImpl* d, const uint16_t* ids, intptr_t advance, size_t size) noexcept {
   BLGlyphItem* itemData = d->glyphItemData;
   BLGlyphInfo* infoData = d->glyphInfoData;
 
@@ -108,7 +108,7 @@ static BL_INLINE BLResult blInternalGlyphBufferData_setGlyphIds(BLInternalGlyphB
   return BL_SUCCESS;
 }
 
-static BL_INLINE BLResult blInternalGlyphBufferData_setLatin1Text(BLInternalGlyphBufferData* d, const char* input, size_t size) noexcept {
+static BL_INLINE BLResult blInternalGlyphBufferData_setLatin1Text(BLInternalGlyphBufferImpl* d, const char* input, size_t size) noexcept {
   BLGlyphItem* itemData = d->glyphItemData;
   BLGlyphInfo* infoData = d->glyphInfoData;
 
@@ -129,7 +129,7 @@ static BL_INLINE BLResult blInternalGlyphBufferData_setLatin1Text(BLInternalGlyp
 }
 
 template<typename Reader, typename CharType>
-static BL_INLINE BLResult blInternalGlyphBufferData_setUnicodeText(BLInternalGlyphBufferData* d, const CharType* input, size_t size) noexcept {
+static BL_INLINE BLResult blInternalGlyphBufferData_setUnicodeText(BLInternalGlyphBufferImpl* d, const CharType* input, size_t size) noexcept {
   Reader reader(input, size);
 
   BLGlyphItem* itemData = d->glyphItemData;
@@ -170,17 +170,17 @@ static BL_INLINE BLResult blInternalGlyphBufferData_setUnicodeText(BLInternalGly
 // ============================================================================
 
 BLResult blGlyphBufferInit(BLGlyphBufferCore* self) noexcept {
-  self->data = const_cast<BLInternalGlyphBufferData*>(&blGlyphBufferInternalDataNone);
+  self->impl = const_cast<BLInternalGlyphBufferImpl*>(&blGlyphBufferInternalImplNone);
   return BL_SUCCESS;
 }
 
 BLResult blGlyphBufferReset(BLGlyphBufferCore* self) noexcept {
-  BLInternalGlyphBufferData* d = blInternalCast(self->data);
-  if (d == &blGlyphBufferInternalDataNone)
+  BLInternalGlyphBufferImpl* impl = blInternalCast(self->impl);
+  if (impl == &blGlyphBufferInternalImplNone)
     return BL_SUCCESS;
 
-  d->destroy();
-  self->data = const_cast<BLInternalGlyphBufferData*>(&blGlyphBufferInternalDataNone);
+  impl->destroy();
+  self->impl = const_cast<BLInternalGlyphBufferImpl*>(&blGlyphBufferInternalImplNone);
   return BL_SUCCESS;
 }
 
@@ -189,14 +189,14 @@ BLResult blGlyphBufferReset(BLGlyphBufferCore* self) noexcept {
 // ============================================================================
 
 BLResult blGlyphBufferClear(BLGlyphBufferCore* self) noexcept {
-  BLInternalGlyphBufferData* d = blInternalCast(self->data);
+  BLInternalGlyphBufferImpl* selfI = blInternalCast(self->impl);
 
   // Would be true if the glyph-buffer is built-in 'none' instance or the data
   // is allocated, but empty.
-  if (d->size == 0)
+  if (selfI->size == 0)
     return BL_SUCCESS;
 
-  d->clear();
+  selfI->clear();
   return BL_SUCCESS;
 }
 
@@ -204,7 +204,7 @@ BLResult blGlyphBufferSetText(BLGlyphBufferCore* self, const void* data, size_t 
   if (BL_UNLIKELY(encoding >= BL_TEXT_ENCODING_COUNT))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  BLInternalGlyphBufferData* d;
+  BLInternalGlyphBufferImpl* d;
   BL_PROPAGATE(blGlyphBufferEnsureData(self, &d));
 
   switch (encoding) {
@@ -242,7 +242,7 @@ BLResult blGlyphBufferSetText(BLGlyphBufferCore* self, const void* data, size_t 
 }
 
 BLResult blGlyphBufferSetGlyphIds(BLGlyphBufferCore* self, const void* data, intptr_t advance, size_t size) noexcept {
-  BLInternalGlyphBufferData* d;
+  BLInternalGlyphBufferImpl* d;
 
   BL_PROPAGATE(blGlyphBufferEnsureData(self, &d));
   BL_PROPAGATE(d->ensureBuffer(0, 0, size));

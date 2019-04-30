@@ -9,6 +9,8 @@
 
 #include "./blapi.h"
 
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
+
 //! \addtogroup blend2d_api_styles
 //! \{
 
@@ -37,7 +39,6 @@ struct BLRgba32 {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
   BL_INLINE BLRgba32() noexcept = default;
   constexpr BLRgba32(const BLRgba32&) noexcept = default;
   constexpr explicit BLRgba32(uint32_t rgba32) noexcept : value(rgba32) {}
@@ -67,7 +68,6 @@ struct BLRgba32 {
   BL_INLINE bool operator!=(const BLRgba32& other) const noexcept { return !equals(other); }
 
   constexpr explicit operator bool() const noexcept { return this->value != 0; }
-
   #endif
   // --------------------------------------------------------------------------
 };
@@ -97,7 +97,6 @@ struct BLRgba64 {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
   BL_INLINE BLRgba64() noexcept = default;
   constexpr BLRgba64(const BLRgba64&) noexcept = default;
   constexpr explicit BLRgba64(uint64_t rgba64) noexcept : value(rgba64) {}
@@ -133,7 +132,6 @@ struct BLRgba64 {
   BL_INLINE bool operator!=(const BLRgba64& other) const noexcept { return !equals(other); }
 
   constexpr explicit operator bool() const noexcept { return this->value != 0; }
-
   #endif
   // --------------------------------------------------------------------------
 };
@@ -151,7 +149,6 @@ struct BLRgba128 {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-
   BL_INLINE BLRgba128() noexcept = default;
   constexpr BLRgba128(const BLRgba128&) noexcept = default;
 
@@ -225,5 +222,7 @@ static_assert(sizeof(BLRgba128) == 16, "'BLRgba128' struct must be exactly 16 by
 #endif
 
 //! \}
+
+BL_DIAGNOSTIC_POP
 
 #endif // BLEND2D_BLRGBA_H

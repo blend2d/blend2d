@@ -65,9 +65,9 @@ template<typename T>
 struct BLEdgePoint {
   T x, y;
 
-  BL_INLINE void reset(T x, T y) noexcept {
-    this->x = x;
-    this->y = y;
+  BL_INLINE void reset(T x_, T y_) noexcept {
+    this->x = x_;
+    this->y = y_;
   }
 };
 
@@ -977,9 +977,7 @@ DescendingLineLoopB:
                 }
                 BL_PROPAGATE(descendingAddChecked(fx1, fy1));
               }
-
-              descendingClose();
-              if (bFlags) break;
+              // [NOT REACHED HERE]
             }
             else if (fy0 > fy1) {
 AscendingLineBegin:
@@ -1046,9 +1044,7 @@ AscendingLineLoopB:
                 }
                 BL_PROPAGATE(ascendingAddChecked(fx1, fy1));
               }
-
-              ascendingClose();
-              if (bFlags) break;
+              // [NOT REACHED HERE]
             }
             else {
               a = b;
@@ -1188,7 +1184,7 @@ RestartClipLoop:
             }
           }
 
-          double borY1 = blClamp(a.y, _clipBoxD.y0, _clipBoxD.y1);
+          borY1 = blClamp(a.y, _clipBoxD.y0, _clipBoxD.y1);
           if (borY0 != borY1)
             BL_PROPAGATE(accumulateRightBorder(borY0, borY1));
 

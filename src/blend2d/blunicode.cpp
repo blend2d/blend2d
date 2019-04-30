@@ -721,8 +721,8 @@ UNIT(blend2d_unicode_io) {
     writer.reset(dst, 2);
     EXPECT(writer.write(0x20ACu) == BL_ERROR_NO_SPACE_LEFT);
     EXPECT(writer.write(0x00C1u) == BL_SUCCESS);
-    EXPECT(dst[0] == char(0xC3));
-    EXPECT(dst[1] == char(0x81));
+    EXPECT(uint8_t(dst[0]) == 0xC3u);
+    EXPECT(uint8_t(dst[1]) == 0x81u);
     EXPECT(writer.atEnd());
     EXPECT(writer.write('a') == BL_ERROR_NO_SPACE_LEFT);
   }

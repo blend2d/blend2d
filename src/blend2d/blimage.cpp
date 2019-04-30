@@ -511,9 +511,17 @@ BLResult blImageCodecAssignWeak(BLImageCodecCore* self, const BLImageCodecCore* 
 // [BLImageCodec - Find Internal]
 // ============================================================================
 
+static BL_INLINE bool blStrEq(const char* a, const char* b, size_t bSize) noexcept {
+  size_t i;
+  for (i = 0; i < bSize; i++)
+    if (a[i] == 0 || a[i] != b[i])
+      return false;
+  return a[i] == 0;
+}
+
 static BLResult blImageCodecFindByNameInternal(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
   for (const auto& codec : codecs->dcast<BLArray<BLImageCodec>>().view())
-    if (strcmp(codec.name(), name) == 0)
+    if (blStrEq(codec.name(), name, size))
       return blImageCodecAssignWeak(self, &codec);
   return BL_ERROR_IMAGE_NO_MATCHING_CODEC;
 }

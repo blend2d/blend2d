@@ -422,8 +422,6 @@ static BLResult blBmpDecoderImplReadInfoInternal(BLBmpDecoderImpl* impl, const u
   bool hasBitFields = depth > 8 && headerSize >= BL_BMP_HEADER_SIZE_WIN_V2;
   if (headerSize == BL_BMP_HEADER_SIZE_WIN_V1) {
     // Use BITFIELDS if specified.
-    uint32_t compression = impl->info.win.compression;
-
     if (compression == BL_BMP_COMPRESSION_BIT_FIELDS || compression == BL_BMP_COMPRESSION_ALPHA_BIT_FIELDS) {
       uint32_t channels = 3 + (compression == BL_BMP_COMPRESSION_ALPHA_BIT_FIELDS);
       if (depth != 16 && depth != 32)

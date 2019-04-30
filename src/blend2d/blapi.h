@@ -523,15 +523,16 @@
   #define BL_DIAGNOSTIC_PUSH(...)              _Pragma("clang diagnostic push") __VA_ARGS__
   #define BL_DIAGNOSTIC_POP                    _Pragma("clang diagnostic pop")
   #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF    _Pragma("clang diagnostic ignored \"-Winvalid-offsetof\"")
+  #define BL_DIAGNOSTIC_NO_SHADOW              _Pragma("clang diagnostic ignored \"-Wshadow\"")
   #define BL_DIAGNOSTIC_NO_STRICT_ALIASING     _Pragma("clang diagnostic ignored \"-Wstrict-aliasing\"")
   #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS    _Pragma("clang diagnostic ignored \"-Wunused-function\"")
   #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")
   #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS      _Pragma("clang diagnostic ignored \"-Wextra\"")
-
 #elif defined(__GNUC__)
   #define BL_DIAGNOSTIC_PUSH(...)              _Pragma("GCC diagnostic push") __VA_ARGS__
   #define BL_DIAGNOSTIC_POP                    _Pragma("GCC diagnostic pop")
   #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF    _Pragma("GCC diagnostic ignored \"-Winvalid-offsetof\"")
+  #define BL_DIAGNOSTIC_NO_SHADOW              _Pragma("GCC diagnostic ignored \"-Wshadow\"")
   #define BL_DIAGNOSTIC_NO_STRICT_ALIASING     _Pragma("GCC diagnostic ignored \"-Wstrict-aliasing\"")
   #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS    _Pragma("GCC diagnostic ignored \"-Wunused-function\"")
   #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
@@ -540,8 +541,9 @@
   #define BL_DIAGNOSTIC_PUSH(...)              __pragma(warning(push)) __VA_ARGS__
   #define BL_DIAGNOSTIC_POP                    __pragma(warning(pop))
   #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF
+  #define BL_DIAGNOSTIC_NO_SHADOW              __pragma(warning(disable: 4458))
   #define BL_DIAGNOSTIC_NO_STRICT_ALIASING
-  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS
+  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS    __pragma(warning(disable: 4505))
   #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   __pragma(warning(disable: 4100))
   #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS
 #endif
@@ -550,6 +552,7 @@
   #define BL_DIAGNOSTIC_PUSH(...)
   #define BL_DIAGNOSTIC_POP
   #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF
+  #define BL_DIAGNOSTIC_NO_SHADOW
   #define BL_DIAGNOSTIC_NO_STRICT_ALIASING
   #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS
   #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS
@@ -648,7 +651,7 @@ BL_DEFINE_STRUCT(BLContextHints);
 BL_DEFINE_STRUCT(BLContextState);
 
 BL_DEFINE_STRUCT(BLGlyphBufferCore);
-BL_DEFINE_STRUCT(BLGlyphBufferData);
+BL_DEFINE_STRUCT(BLGlyphBufferImpl);
 BL_DEFINE_STRUCT(BLGlyphInfo);
 BL_DEFINE_STRUCT(BLGlyphItem);
 BL_DEFINE_STRUCT(BLGlyphMappingState);
@@ -1241,6 +1244,7 @@ struct BLRange {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
+  BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
 
   //! Create an uninitialized range.
   BL_INLINE BLRange() noexcept = default;
@@ -1256,6 +1260,7 @@ struct BLRange {
 
   //! Reset the range to [0, 0).
   BL_INLINE void reset() noexcept { reset(0, 0); }
+
   //! Reset the range to [start, end).
   BL_INLINE void reset(size_t start, size_t end) noexcept {
     this->start = start;
@@ -1270,6 +1275,7 @@ struct BLRange {
   BL_INLINE bool operator==(const BLRange& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLRange& other) const noexcept { return !equals(other); }
 
+  BL_DIAGNOSTIC_POP
   #endif
   // --------------------------------------------------------------------------
 };
@@ -1318,10 +1324,12 @@ struct BLArrayView {
     this->size = 0;
   }
 
+  BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
   BL_INLINE void reset(const T* data, size_t size) noexcept {
     this->data = data;
     this->size = size;
   }
+  BL_DIAGNOSTIC_POP
 
   BL_INLINE const T* begin() const noexcept { return this->data; }
   BL_INLINE const T* end() const noexcept { return this->data + this->size; }
@@ -1526,16 +1534,16 @@ BL_API_C BLResult BL_CDECL blFontAssignMove(BLFontCore* self, BLFontCore* other)
 BL_API_C BLResult BL_CDECL blFontAssignWeak(BLFontCore* self, const BLFontCore* other) BL_NOEXCEPT_C;
 BL_API_C bool     BL_CDECL blFontEquals(const BLFontCore* a, const BLFontCore* b) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontCreateFromFace(BLFontCore* self, const BLFontFaceCore* face, float size) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontShape(const BLFontCore* self, BLGlyphBufferCore* buf) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* buf, BLGlyphMappingState* stateOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* buf, uint32_t positioningFlags) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontApplyKerning(const BLFontCore* self, BLGlyphBufferCore* buf) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontApplyGSub(const BLFontCore* self, BLGlyphBufferCore* buf, size_t index, BLBitWord lookups) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontApplyGPos(const BLFontCore* self, BLGlyphBufferCore* buf, size_t index, BLBitWord lookups) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontShape(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, BLGlyphMappingState* stateOut) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, uint32_t positioningFlags) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontApplyKerning(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontApplyGSub(const BLFontCore* self, BLGlyphBufferCore* gb, size_t index, BLBitWord lookups) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontApplyGPos(const BLFontCore* self, BLGlyphBufferCore* gb, size_t index, BLBitWord lookups) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontGetMatrix(const BLFontCore* self, BLFontMatrix* out) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontGetMetrics(const BLFontCore* self, BLFontMetrics* out) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontGetDesignMetrics(const BLFontCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* buf, BLTextMetrics* out) BL_NOEXCEPT_C;
+BL_API_C BLResult BL_CDECL blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLTextMetrics* out) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontGetGlyphBounds(const BLFontCore* self, const void* glyphIdData, intptr_t glyphIdAdvance, BLBoxI* out, size_t count) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontGetGlyphAdvances(const BLFontCore* self, const void* glyphIdData, intptr_t glyphIdAdvance, BLGlyphPlacement* out, size_t count) BL_NOEXCEPT_C;
 BL_API_C BLResult BL_CDECL blFontGetGlyphOutlines(const BLFontCore* self, uint32_t glyphId, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) BL_NOEXCEPT_C;

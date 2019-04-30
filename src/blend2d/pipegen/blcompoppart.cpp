@@ -1398,13 +1398,13 @@ void CompOpPart::cMaskProc32XmmV(PixelARGB& out, uint32_t flags, uint32_t n) noe
       else {
         dstFetch32(d, PixelARGB::kUC | PixelARGB::kUA, n);
         VecArray& dv = d.uc;
-        VecArray& xv = d.ua;
+        VecArray& da = d.ua;
 
         pc->vmulu16(dv, dv, o.im);
-        pc->vmulu16(xv, xv, o.ux);
+        pc->vmulu16(da, da, o.ux);
         pc->vsrli16(dv, dv, 8);
-        pc->vdiv255u16(xv);
-        pc->vaddi16(dv, dv, xv);
+        pc->vdiv255u16(da);
+        pc->vaddi16(dv, dv, da);
         out.uc.init(dv);
       }
 

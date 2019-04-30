@@ -297,22 +297,22 @@ struct BLRasterFillCmd {
   //! Style data to use when `_fetchData` is not available.
   BLRasterContextStyleData* styleData;
 
-  BL_INLINE void reset(const BLPipeSignature& initialSignature, uint32_t alphaI, uint32_t fillRule) noexcept {
+  BL_INLINE void reset(const BLPipeSignature& initialSignature, uint32_t alphaI_, uint32_t fillRule_) noexcept {
     this->baseSignature = initialSignature;
-    this->alphaI = alphaI;
+    this->alphaI = alphaI_;
     this->packed = 0;
-    this->fillRule = uint8_t(fillRule);
+    this->fillRule = uint8_t(fillRule_);
     this->styleData = nullptr;
   }
 
-  BL_INLINE void setFetchDataFromLocal(BLRasterFetchData* fetchData) noexcept {
-    this->fetchData = fetchData;
+  BL_INLINE void setFetchDataFromLocal(BLRasterFetchData* fetchData_) noexcept {
+    this->fetchData = fetchData_;
   }
 
-  BL_INLINE void setFetchDataFromStyle(BLRasterContextStyleData* styleData) noexcept {
-    this->solidData = styleData->solidData;
-    this->fetchData = styleData->fetchData;
-    this->styleData = styleData;
+  BL_INLINE void setFetchDataFromStyle(BLRasterContextStyleData* styleData_) noexcept {
+    this->solidData = styleData_->solidData;
+    this->fetchData = styleData_->fetchData;
+    this->styleData = styleData_;
   }
 };
 

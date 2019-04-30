@@ -30,11 +30,11 @@ struct BLAnalyticCellStorage {
   //! Cell stride [in bytes].
   size_t cellStride;
 
-  BL_INLINE void init(BLBitWord* bitPtrTop, size_t bitStride, uint32_t* cellPtrTop, size_t cellStride) noexcept {
-    this->bitPtrTop = bitPtrTop;
-    this->bitStride = bitStride;
-    this->cellPtrTop = cellPtrTop;
-    this->cellStride = cellStride;
+  BL_INLINE void init(BLBitWord* bitPtrTop_, size_t bitStride_, uint32_t* cellPtrTop_, size_t cellStride_) noexcept {
+    this->bitPtrTop = bitPtrTop_;
+    this->bitStride = bitStride_;
+    this->cellPtrTop = cellPtrTop_;
+    this->cellStride = cellStride_;
   }
 
   BL_INLINE void reset() noexcept {

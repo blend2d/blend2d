@@ -1132,7 +1132,7 @@ struct BLPixelConverterUnit {
 
     for (uint32_t i = 0; i < kCount; i++) {
       uint32_t mid = 0;
-      switch (T::kDepth) {
+      switch (uint32_t(T::kDepth)) {
         case 8 : mid = blMemReadU8(buf + i); break;
         case 16: mid = blMemReadU16u(buf + i * 2u); break;
         case 24: mid = blMemReadU24u(buf + i * 3u); break;

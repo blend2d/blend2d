@@ -2180,7 +2180,7 @@ BLResult blPathGetClosestVertex(const BLPathCore* self, const BLPoint* p, double
 // [BLPath - Hit Test]
 // ============================================================================
 
-uint32_t blPathHitTest(const BLPathCore* self, const BLPoint* p, uint32_t fillRule) noexcept {
+uint32_t blPathHitTest(const BLPathCore* self, const BLPoint* p_, uint32_t fillRule) noexcept {
   BLInternalPathImpl* selfI = blInternalCast(self->impl);
   size_t i = selfI->size;
 
@@ -2190,10 +2190,10 @@ uint32_t blPathHitTest(const BLPathCore* self, const BLPoint* p, uint32_t fillRu
   const uint8_t* cmdData = selfI->commandData;
   const BLPoint* vtxData = selfI->vertexData;
 
-  BLPoint start;
+  BLPoint start {};
   bool hasMoveTo = false;
 
-  BLPoint pt(*p);
+  BLPoint pt(*p_);
 
   double x0, y0;
   double x1, y1;

@@ -200,12 +200,12 @@ struct CFFData {
     uint8_t offsetSize;
     uint16_t bias;
 
-    BL_INLINE void reset(const DataRange& dataRange, uint32_t headerSize, uint32_t offsetSize, uint32_t entryCount, uint16_t bias) noexcept {
-      this->dataRange = dataRange;
-      this->entryCount = entryCount;
-      this->headerSize = uint8_t(headerSize);
-      this->offsetSize = uint8_t(offsetSize);
-      this->bias = bias;
+    BL_INLINE void reset(const DataRange& dataRange_, uint32_t headerSize_, uint32_t offsetSize_, uint32_t entryCount_, uint16_t bias_) noexcept {
+      this->dataRange = dataRange_;
+      this->entryCount = entryCount_;
+      this->headerSize = uint8_t(headerSize_);
+      this->offsetSize = uint8_t(offsetSize_);
+      this->bias = bias_;
     }
 
     //! Returns the offset to the offsets data (array of offsets).

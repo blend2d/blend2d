@@ -262,6 +262,7 @@ struct BLPathView {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
+  BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
 
   BL_INLINE void reset() noexcept {
     this->commandData = nullptr;
@@ -275,6 +276,7 @@ struct BLPathView {
     this->size = size;
   }
 
+  BL_DIAGNOSTIC_POP
   #endif
   // --------------------------------------------------------------------------
 };

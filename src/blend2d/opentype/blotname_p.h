@@ -57,12 +57,12 @@ struct NameTable {
     return blOffsetPtr<const NameRecord>(this, 6);
   }
 
-  BL_INLINE uint16_t langTagCount(size_t recordCount) const noexcept {
-    return blOffsetPtr<const UInt16>(this, 6 + recordCount * sizeof(NameRecord))->value();
+  BL_INLINE uint16_t langTagCount(size_t recordCount_) const noexcept {
+    return blOffsetPtr<const UInt16>(this, 6 + recordCount_ * sizeof(NameRecord))->value();
   }
 
-  BL_INLINE const LangTagRecord* langTagRecords(size_t recordCount) const noexcept {
-    return blOffsetPtr<const LangTagRecord>(this, 6 + recordCount * sizeof(NameRecord) + 2);
+  BL_INLINE const LangTagRecord* langTagRecords(size_t recordCount_) const noexcept {
+    return blOffsetPtr<const LangTagRecord>(this, 6 + recordCount_ * sizeof(NameRecord) + 2);
   }
 };
 

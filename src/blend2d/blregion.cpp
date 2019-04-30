@@ -195,7 +195,7 @@ static uint32_t blRegionAnalyzeBoxIArray(const BLBoxI* data, size_t size, size_t
   const BLBoxI* prevBand = data;
   uint32_t prevBandSum = 0;
 
-  for (;;) {
+  do {
     int y0 = data->y0;
     int y1 = data->y1;
     int x1 = data->x1;
@@ -225,7 +225,7 @@ static uint32_t blRegionAnalyzeBoxIArray(const BLBoxI* data, size_t size, size_t
     }
 
     if (prevBand->y1 == y0) {
-      if (BL_UNLIKELY(curBandSum == prevBandSum)) {
+      if (curBandSum == prevBandSum) {
         size_t prevBandSize = (size_t)(curBand - prevBand);
         size_t curBandSize = (size_t)(data - curBand);
 
@@ -236,7 +236,7 @@ static uint32_t blRegionAnalyzeBoxIArray(const BLBoxI* data, size_t size, size_t
 
     prevBand = curBand;
     prevBandSum = curBandSum;
-  }
+  } while (data != end);
 
   *sizeOut = size;
   return BL_DATA_ANALYSIS_CONFORMING;
@@ -260,7 +260,7 @@ static uint32_t blRegionAnalyzeRectIArray(const BLRectI* data, size_t size, size
   const BLRectI* prevBand = data;
   uint32_t prevBandSum = 0;
 
-  for (;;) {
+  do {
     int y0 = data->y;
     int y1;
     int x1 = data->x;
@@ -298,7 +298,7 @@ static uint32_t blRegionAnalyzeRectIArray(const BLRectI* data, size_t size, size
     }
 
     if (prevBand->y + prevBand->h == y0) {
-      if (BL_UNLIKELY(curBandSum == prevBandSum)) {
+      if (curBandSum == prevBandSum) {
         size_t prevBandSize = (size_t)(curBand - prevBand);
         size_t curBandSize = (size_t)(data - curBand);
 
@@ -309,7 +309,7 @@ static uint32_t blRegionAnalyzeRectIArray(const BLRectI* data, size_t size, size
 
     prevBand = curBand;
     prevBandSum = curBandSum;
-  }
+  } while (data != end);
 
   *sizeOut = size;
   return BL_DATA_ANALYSIS_CONFORMING;

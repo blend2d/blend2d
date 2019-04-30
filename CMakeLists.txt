@@ -128,20 +128,34 @@ endfunction()
 # =============================================================================
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS     /MP     # [+] Multi-Process Compilation.
-                                         /GR-    # [-] Runtime type information.
-                                         /GF)    # [+] Eliminate duplicate strings.
-  list(APPEND BLEND2D_PRIVATE_CFLAGS_DBG /GS)    # [+] Buffer security-check.
-  list(APPEND BLEND2D_PRIVATE_CFLAGS_REL /GS-    # [-] Buffer security-check.
-                                         /O2     # [+] Favor speed over size.
-                                         /Oi)    # [+] Generate Intrinsic Functions.
-endif()
+  list(APPEND BLEND2D_PRIVATE_CFLAGS
+    -MP                      # [+] Multi-Process Compilation.
+    -GR-                     # [-] Runtime type information.
+    -GF                      # [+] Eliminate duplicate strings.
+    -Zc:inline               # [+] Remove unreferenced COMDAT.
+    -Zc:strictStrings        # [+] Strict const qualification of string literals.
+    -Zc:threadSafeInit-      # [-] Thread-safe statics.
+    -W4)                     # [+] Warning level 4.
 
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
+  list(APPEND BLEND2D_PRIVATE_CFLAGS_DBG
+    -GS)                     # [+] Buffer security-check.
+
+  list(APPEND BLEND2D_PRIVATE_CFLAGS_REL
+    -GS-                     # [-] Buffer security-check.
+    -O2                      # [+] Favor speed over size.
+    -Oi)                     # [+] Generate Intrinsic Functions.
+
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    list(APPEND BLEND2D_PRIVATE_CFLAGS -fno-exceptions -fno-rtti -fno-math-errno)
+  endif()
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   list(APPEND BLEND2D_PRIVATE_CFLAGS -Wall -Wextra)
   list(APPEND BLEND2D_PRIVATE_CFLAGS -fno-exceptions -fno-rtti -fno-math-errno -fno-threadsafe-statics)
-  list(APPEND BLEND2D_PRIVATE_CFLAGS_DBG -Wno-inline)
   list(APPEND BLEND2D_PRIVATE_CFLAGS_REL -O2)
+
+  blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_REL
+    "-ftree-vectorize"       # We want this optimization if not enabled by default.
+    "-fmerge-all-constants") # Not enabled by default, but we are fine with it.
 
   # GCC 4.X support requires -fabi-version=0 (or 6+). Please note that this
   # is internal and only required by `blsimd_p.h` as SIMD registers are used
@@ -149,10 +163,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
     list(APPEND BLEND2D_PRIVATE_CFLAGS "-fabi-version=0")
   endif()
-
-  blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_REL
-    "-ftree-vectorize"       # We want this optimization if not enabled by default.
-    "-fmerge-all-constants") # Not enabled by default, but we are fine with it.
 
   # Support for GCC|Clang undefined behavior sanitizers.
   if (BLEND2D_BUILD_SANITIZE)
@@ -167,7 +177,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
 
   # Building Blend2D without C++ library support requires these to be setup.
   if (BLEND2D_BUILD_NO_CXX_LIB)
-    message("-- Enabling build without linking to C++ standard library")
+    message("-- Enabling build without linking to the C++ standard library")
     list(APPEND BLEND2D_NO_STDCXX_CFLAGS -nodefaultlibs -DBL_BUILD_NO_STDCXX)
     list(APPEND BLEND2D_NO_STDCXX_LFLAGS -nodefaultlibs)
   endif()

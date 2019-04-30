@@ -1862,7 +1862,7 @@ static BLResult BL_CDECL blRasterContextImplFillTextD(BLRasterContextImpl* ctxI,
     return BL_SUCCESS;
 
   BL_PROPAGATE(blDownCast(font)->shape(ctxI->glyphBuffer));
-  return blRasterContextImplFillGlyphRunD(ctxI, pt, font, &ctxI->glyphBuffer.data->glyphRun);
+  return blRasterContextImplFillGlyphRunD(ctxI, pt, font, &ctxI->glyphBuffer.impl->glyphRun);
 }
 
 static BLResult BL_CDECL blRasterContextImplFillTextI(BLRasterContextImpl* ctxI, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) noexcept {
@@ -2016,7 +2016,7 @@ static BLResult BL_CDECL blRasterContextImplStrokeTextD(BLRasterContextImpl* ctx
     return BL_SUCCESS;
 
   BL_PROPAGATE(blDownCast(font)->shape(ctxI->glyphBuffer));
-  return blRasterContextImplStrokeGlyphRunD(ctxI, pt, font, &ctxI->glyphBuffer.data->glyphRun);
+  return blRasterContextImplStrokeGlyphRunD(ctxI, pt, font, &ctxI->glyphBuffer.impl->glyphRun);
 }
 
 static BLResult BL_CDECL blRasterContextImplStrokeTextI(BLRasterContextImpl* ctxI, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) noexcept {

@@ -49,10 +49,10 @@ struct BLRasterAsyncData {
       threads(nullptr),
       threadCount(0) {}
 
-  BL_INLINE void init(BLThreadPool* threadPool, BLThread** threads, uint32_t count) noexcept {
-    this->threadPool = threadPool;
-    this->threads = threads;
-    this->threadCount = count;
+  BL_INLINE void init(BLThreadPool* threadPool_, BLThread** threads_, uint32_t count_) noexcept {
+    this->threadPool = threadPool_;
+    this->threads = threads_;
+    this->threadCount = count_;
   }
 
   BL_INLINE void release() noexcept {

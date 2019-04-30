@@ -41,10 +41,10 @@ struct GSubContext {
     size_t end;
   };
 
-  BLInternalGlyphBufferData* gbd;
+  BLInternalGlyphBufferImpl* gbd;
   WorkBuffer in, out;
 
-  BL_INLINE void init(BLInternalGlyphBufferData* gbd_) noexcept {
+  BL_INLINE void init(BLInternalGlyphBufferImpl* gbd_) noexcept {
     gbd = gbd_;
 
     in.itemData = gbd->glyphItemData;
@@ -141,9 +141,9 @@ struct GSubContext {
 // ============================================================================
 
 struct GPosContext {
-  BLInternalGlyphBufferData* gbd;
+  BLInternalGlyphBufferImpl* gbd;
 
-  BL_INLINE void init(BLInternalGlyphBufferData* gbd_) noexcept {
+  BL_INLINE void init(BLInternalGlyphBufferImpl* gbd_) noexcept {
     gbd = gbd_;
   }
 
@@ -466,7 +466,7 @@ struct GSubTable : public GAnyTable {
     */
 
     BL_INLINE const UInt16* glyphArray() const noexcept { return blOffsetPtr<const UInt16>(this, 4); }
-    BL_INLINE const SubstLookupRecord* substArray(size_t glyphCount) const noexcept { return blOffsetPtr<const SubstLookupRecord>(this, 4u + glyphCount * 2u - 2u); }
+    BL_INLINE const SubstLookupRecord* substArray(size_t glyphCount_) const noexcept { return blOffsetPtr<const SubstLookupRecord>(this, 4u + glyphCount_ * 2u - 2u); }
   };
   typedef SubRule SubClassRule;
 
@@ -491,7 +491,7 @@ struct GSubTable : public GAnyTable {
     */
 
     BL_INLINE const UInt16* coverageOffsetArray() const noexcept { return blOffsetPtr<const UInt16>(this, 6); }
-    BL_INLINE const SubstLookupRecord* substArray(size_t glyphCount) const noexcept { return blOffsetPtr<const SubstLookupRecord>(this, 6u + glyphCount * 2u); }
+    BL_INLINE const SubstLookupRecord* substArray(size_t glyphCount_) const noexcept { return blOffsetPtr<const SubstLookupRecord>(this, 6u + glyphCount_ * 2u); }
   };
 
   // --------------------------------------------------------------------------
@@ -861,9 +861,9 @@ struct LayoutData {
     uint32_t format : 4;
     uint32_t offset : 28;
 
-    BL_INLINE void reset(uint32_t format, uint32_t offset) noexcept {
-      this->format = format & 0xFu;
-      this->offset = offset & 0x0FFFFFFFu;
+    BL_INLINE void reset(uint32_t format_, uint32_t offset_) noexcept {
+      this->format = format_ & 0xFu;
+      this->offset = offset_ & 0x0FFFFFFFu;
     }
   };
 

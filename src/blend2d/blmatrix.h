@@ -9,6 +9,8 @@
 
 #include "./blgeometry.h"
 
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
+
 //! \addtogroup blend2d_api_geometry
 //! \{
 
@@ -424,5 +426,7 @@ struct BLMatrix2D {
 BL_API_C BLMapPointDArrayFunc blMatrix2DMapPointDArrayFuncs[BL_MATRIX2D_TYPE_COUNT];
 
 //! \}
+
+BL_DIAGNOSTIC_POP
 
 #endif // BLEND2D_BLMATRIX_H
