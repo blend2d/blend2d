@@ -135,6 +135,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" ST
     -Zc:inline               # [+] Remove unreferenced COMDAT.
     -Zc:strictStrings        # [+] Strict const qualification of string literals.
     -Zc:threadSafeInit-      # [-] Thread-safe statics.
+    -volatile:iso            # [+] Volatile loads and stores have standard semantics.
     -W4)                     # [+] Warning level 4.
 
   list(APPEND BLEND2D_PRIVATE_CFLAGS_DBG
@@ -154,8 +155,8 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   list(APPEND BLEND2D_PRIVATE_CFLAGS_REL -O2)
 
   blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_REL
-    "-ftree-vectorize"       # We want this optimization if not enabled by default.
-    "-fmerge-all-constants") # Not enabled by default, but we are fine with it.
+    -ftree-vectorize         # We want this optimization if not enabled by default.
+    -fmerge-all-constants)   # Not enabled by default, but we are fine with it.
 
   # GCC 4.X support requires -fabi-version=0 (or 6+). Please note that this
   # is internal and only required by `blsimd_p.h` as SIMD registers are used
