@@ -18,7 +18,7 @@ Blend2D is currently in a beta testing mode, which means that you can download a
 Language Bindings
 -----------------
 In addition to C++ and C, third party language bindings exist for a number of other languages, including:
-   * [Common Lisp](https://github.com/jl2/blend2d)
+   * [Common Lisp](https://github.com/jl2/cl-blend2d)
    * [Javascript (Node)](https://github.com/blend2d/blend2d-js)
    * [LuaJit](https://github.com/wiladams/lj2blend2d)
    * [Python](https://github.com/jwiggins/blend2d-python)
