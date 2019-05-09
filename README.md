@@ -23,6 +23,7 @@ In addition to C++ and C, third party language bindings exist for a number of ot
    * [LuaJit](https://github.com/wiladams/lj2blend2d)
    * [Python](https://github.com/jwiggins/blend2d-python)
    * [Rust](https://github.com/Veykril/blend2d-rs)
+   * [Swift](https://github.com/LuizZak/swift-blend2d)
 
 Please refer questions and/or bug reports about third party language bindings to their respective repositories.
  
