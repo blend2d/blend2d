@@ -342,7 +342,7 @@ SmoothPolyTo:
           }
           else {
             double tl;
-            blGetCubicCuspInflectionParameter(p, tCusp, tl);
+            blGetCubicInflectionParameter(p, tCusp, tl);
 
             if (tl == 0.0 && tCusp > 0.0 && tCusp < 1.0) {
               blSplitCubic(p, p, p + 3);
