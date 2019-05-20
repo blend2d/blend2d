@@ -534,7 +534,7 @@ static BL_INLINE void blGetCubicInflectionParameter(const BLPoint p[4], double& 
   BLPoint a, b, c;
   blGetCubicDerivativeCoefficients(p, a, b, c);
 
-  // To get the inflections C'(t) x C''(t) = ax^2 + bx + c = 0 needs to be solved for 't'.
+  // To get the inflections C'(t) x C''(t) = at^2 + bt + c = 0 needs to be solved for 't'.
   // The first cooefficient of the quadratic formula is also the denominator.
   double den = blCrossProduct(b, a);
   
