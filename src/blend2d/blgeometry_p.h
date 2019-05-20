@@ -534,29 +534,25 @@ static BL_INLINE void blGetCubicInflectionParameter(const BLPoint p[4], double& 
   BLPoint a, b, c;
   blGetCubicDerivativeCoefficients(p, a, b, c);
 
-  // To get the inflections C'(t) x C''(t) = at^2 + bt + c = 0 needs to be solved for 't'.
+  // To get the inflections C'(t) cross C''(t) = at^2 + bt + c = 0 needs to be solved for 't'.
   // The first cooefficient of the quadratic formula is also the denominator.
   double den = blCrossProduct(b, a);
   
-  if (den != 0)
-  {
+  if (den != 0) {
     // Two roots might exist, solve with quadratic formula ('tl' is real).
     tc = blCrossProduct(a, c) / den;
     tl = tc * tc + blCrossProduct(b, c) / den;
     
-    // If 'tl < 0' there are two complex roots (no need to solve)
-    // If 'tl == 0' there is a real double root at tc (cusp case)
+    // If 'tl < 0' there are two complex roots (no need to solve).
+    // If 'tl == 0' there is a real double root at tc (cusp case).
+	// If 'tl > 0' two real roots exist at 'tc - Sqrt(tl)' and 'tc + Sqrt(tl)'.
     if (tl > 0)
-    {
-      // Two roots (real) at 'tc - tl' and 'tc + tl' exist.
       tl = blSqrt(tl);
-    }
   }
-  else
-  {
+  else {
     // One real root might exist, solve linear case ('tl' is NaN).
     tc = -0.5 * blCrossProduct(c, b) / blCrossProduct(c, a);
-    tl = NAN;
+    tl = blNaN<double>();
   }
 }
 
