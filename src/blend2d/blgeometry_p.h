@@ -545,7 +545,7 @@ static BL_INLINE void blGetCubicInflectionParameter(const BLPoint p[4], double& 
     
     // If 'tl < 0' there are two complex roots (no need to solve).
     // If 'tl == 0' there is a real double root at tc (cusp case).
-	// If 'tl > 0' two real roots exist at 'tc - Sqrt(tl)' and 'tc + Sqrt(tl)'.
+    // If 'tl > 0' two real roots exist at 'tc - Sqrt(tl)' and 'tc + Sqrt(tl)'.
     if (tl > 0)
       tl = blSqrt(tl);
   }
