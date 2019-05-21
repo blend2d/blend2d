@@ -1991,7 +1991,7 @@ Copy:
       n = 2;
 
       // Coalesce (Case 3).
-      if ((box[0].y1 == box[1].y0) & (box[0].x0 = box[1].x0) & (box[0].x1 == box[1].x1)) {
+      if ((box[0].y1 == box[1].y0) & (box[0].x0 == box[1].x0) & (box[0].x1 == box[1].x1)) {
         box[0].y1 = box[1].y1;
         n = 1;
       }
