@@ -460,14 +460,13 @@ static BLResult blRegionMakeMutableToAppend(BLRegionCore* self, size_t n) noexce
 static BLResult blRegionAssignValidBoxIArray(BLRegionCore* self, const BLBoxI* data, size_t n) noexcept {
   BLInternalRegionImpl* selfI = blInternalCast(self->impl);
 
-  size_t size = selfI->size;
   size_t immutableMsk = blBitMaskFromBool<size_t>(!blImplIsMutable(selfI));
 
   if ((n | immutableMsk) > selfI->capacity) {
     if (BL_UNLIKELY(n > blRegionMaximumCapacity()))
       return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-    size_t capacity = blRegionFittingCapacity(size);
+    size_t capacity = blRegionFittingCapacity(n);
     BLInternalRegionImpl* newI = blRegionImplNew(capacity);
 
     if (BL_UNLIKELY(!newI))
@@ -492,14 +491,13 @@ static BLResult blRegionAssignValidBoxIArray(BLRegionCore* self, const BLBoxI* d
 static BLResult blRegionAssignValidBoxIArray(BLRegionCore* self, const BLBoxI* data, size_t n, const BLBoxI* bbox) noexcept {
   BLInternalRegionImpl* selfI = blInternalCast(self->impl);
 
-  size_t size = selfI->size;
   size_t immutableMsk = blBitMaskFromBool<size_t>(!blImplIsMutable(selfI));
 
   if ((n | immutableMsk) > selfI->capacity) {
     if (BL_UNLIKELY(n > blRegionMaximumCapacity()))
       return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-    size_t capacity = blRegionFittingCapacity(size);
+    size_t capacity = blRegionFittingCapacity(n);
     BLInternalRegionImpl* newI = blRegionImplNew(capacity);
 
     if (BL_UNLIKELY(!newI))
