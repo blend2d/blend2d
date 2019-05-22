@@ -530,17 +530,30 @@ static BL_INLINE bool blIsCubicFlat(const BLPoint p[3], double f) {
   }
 }
 
-static BL_INLINE void blGetCubicCuspInflectionParameter(const BLPoint p[4], double& tc, double& tl) noexcept {
-  BLPoint a, b, c, d;
-  blGetCubicCoefficients(p, a, b, c, d);
+static BL_INLINE void blGetCubicInflectionParameter(const BLPoint p[4], double& tc, double& tl) noexcept {
+  BLPoint a, b, c;
+  blGetCubicDerivativeCoefficients(p, a, b, c);
 
-  tc = -0.5 * blCrossProduct(c, a) / blCrossProduct(b, a);
-  tl = tc * tc - blCrossProduct(c, b) / (3.0 * blCrossProduct(b, a));
-
-  // TODO: We don't need the SQRT in stroker check.
-  // If true inflections points might exist.
-  if (tl > 0)
-    tl = blSqrt(tl);
+  // To get the inflections C'(t) cross C''(t) = at^2 + bt + c = 0 needs to be solved for 't'.
+  // The first cooefficient of the quadratic formula is also the denominator.
+  double den = blCrossProduct(b, a);
+  
+  if (den != 0) {
+    // Two roots might exist, solve with quadratic formula ('tl' is real).
+    tc = blCrossProduct(a, c) / den;
+    tl = tc * tc + blCrossProduct(b, c) / den;
+    
+    // If 'tl < 0' there are two complex roots (no need to solve).
+    // If 'tl == 0' there is a real double root at tc (cusp case).
+    // If 'tl > 0' two real roots exist at 'tc - Sqrt(tl)' and 'tc + Sqrt(tl)'.
+    if (tl > 0)
+      tl = blSqrt(tl);
+  }
+  else {
+    // One real root might exist, solve linear case ('tl' is NaN).
+    tc = -0.5 * blCrossProduct(c, b) / blCrossProduct(c, a);
+    tl = blNaN<double>();
+  }
 }
 
 static BL_INLINE BLPoint blGetCubicStartTangent(const BLPoint p[4]) noexcept {
