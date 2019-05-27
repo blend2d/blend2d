@@ -282,6 +282,10 @@ BL_DIAGNOSTIC_POP
 
 class ScopedInjector {
 public:
+  asmjit::BaseCompiler* cc;
+  asmjit::BaseNode** hook;
+  asmjit::BaseNode* prev;
+
   BL_NONCOPYABLE(ScopedInjector)
 
   BL_INLINE ScopedInjector(asmjit::BaseCompiler* cc, asmjit::BaseNode** hook) noexcept
@@ -292,14 +296,6 @@ public:
   BL_INLINE ~ScopedInjector() noexcept {
     *hook = cc->setCursor(prev);
   }
-
-  // --------------------------------------------------------------------------
-  // [Members]
-  // --------------------------------------------------------------------------
-
-  asmjit::BaseCompiler* cc;
-  asmjit::BaseNode** hook;
-  asmjit::BaseNode* prev;
 };
 
 // ============================================================================

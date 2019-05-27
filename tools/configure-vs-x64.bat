@@ -5,5 +5,5 @@ set BUILD_DIR="build_vs2019_x64"
 
 mkdir ..\%BUILD_DIR%
 cd ..\%BUILD_DIR%
-cmake .. -G"Visual Studio 16" -A x64 -DBLEND2D_BUILD_TEST=1
+cmake .. -G"Visual Studio 16" -A x64 -DBLEND2D_TEST=1
 cd %CURRENT_DIR%

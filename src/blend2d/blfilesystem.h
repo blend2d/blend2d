@@ -157,6 +157,9 @@ public:
   BL_INLINE BLFile(const BLFile& other) noexcept = delete;
   BL_INLINE BLFile& operator=(const BLFile& other) noexcept = delete;
 
+  //! \name Construction & Destruction
+  //! \{
+
   BL_INLINE BLFile() noexcept
     : BLFileCore { -1 } {}
 
@@ -181,7 +184,17 @@ public:
 
   BL_INLINE ~BLFile() noexcept { blFileReset(this); }
 
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
+
   BL_INLINE void swap(BLFile& other) noexcept { std::swap(this->handle, other.handle); }
+
+  //! \}
+
+  //! \name File API
+  //! \{
 
   //! Gets whether the file is open.
   BL_INLINE bool isOpen() const noexcept { return handle != -1; }
@@ -227,6 +240,8 @@ public:
   BL_INLINE BLResult getSize(uint64_t* sizeOut) noexcept {
     return blFileGetSize(this, sizeOut);
   }
+
+  //! \}
 };
 #endif
 

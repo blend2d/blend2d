@@ -835,9 +835,11 @@ static BL_INLINE void blMemCopyInline(void* dst, const void* src, size_t n) noex
 //! Wrapper to control construction & destruction of `T`.
 template<typename T>
 struct alignas(alignof(T)) BLWrap {
-  // --------------------------------------------------------------------------
-  // [Init / Destroy]
-  // --------------------------------------------------------------------------
+  //! Storage required to instantiate `T`.
+  char _data[sizeof(T)];
+
+  //! \name Init / Destroy
+  //! \{
 
   //! Placement new constructor.
   BL_INLINE T* init() noexcept {
@@ -864,9 +866,10 @@ struct alignas(alignof(T)) BLWrap {
     static_cast<T*>(static_cast<void*>(_data))->~T();
   }
 
-  // --------------------------------------------------------------------------
-  // [Accessors]
-  // --------------------------------------------------------------------------
+  //! \}
+
+  //! \name Accessors
+  //! \{
 
   BL_INLINE T* p() noexcept { return static_cast<T*>(static_cast<void*>(_data)); }
   BL_INLINE const T* p() const noexcept { return static_cast<const T*>(static_cast<const void*>(_data)); }
@@ -883,12 +886,7 @@ struct alignas(alignof(T)) BLWrap {
   BL_INLINE T* operator->() noexcept { return p(); }
   BL_INLINE T const* operator->() const noexcept { return p(); }
 
-  // --------------------------------------------------------------------------
-  // [Members]
-  // --------------------------------------------------------------------------
-
-  //! Storage required to instantiate `T`.
-  char _data[sizeof(T)];
+  //! \}
 };
 
 // ============================================================================

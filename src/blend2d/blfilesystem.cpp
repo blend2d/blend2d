@@ -29,6 +29,11 @@
 template<size_t N>
 class BLWinU16String {
 public:
+  uint16_t* _data;
+  size_t _size;
+  size_t _capacity;
+  uint16_t _embeddedData[N + 1];
+
   BL_NONCOPYABLE(BLWinU16String);
 
   BL_INLINE BLWinU16String() noexcept
@@ -99,15 +104,6 @@ public:
     nullTerminate();
     return BL_SUCCESS;
   }
-
-  // --------------------------------------------------------------------------
-  // [Members]
-  // --------------------------------------------------------------------------
-
-  uint16_t* _data;
-  size_t _size;
-  size_t _capacity;
-  uint16_t _embeddedData[N + 1];
 };
 
 #endif

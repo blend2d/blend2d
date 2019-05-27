@@ -797,7 +797,7 @@ void blStringRtInit(BLRuntimeContext* rt) noexcept {
 // [BLString - Unit Tests]
 // ============================================================================
 
-#if defined(BL_BUILD_TEST)
+#if defined(BL_TEST)
 UNIT(blend2d_string) {
   BLString s;
 

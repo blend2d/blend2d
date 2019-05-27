@@ -67,14 +67,21 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_FONT_DATA;
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLFontData() noexcept { this->impl = none().impl; }
   BL_INLINE BLFontData(BLFontData&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLFontData(const BLFontData& other) noexcept { blVariantInitWeak(this, &other); }
-  BL_INLINE BLFontData(const BLFontLoader& loader, uint32_t faceIndex) noexcept;
   BL_INLINE explicit BLFontData(BLFontDataImpl* impl) noexcept { this->impl = impl; }
+
+  //! Creates `BLFontData` from loader.
+  //!
+  //! This function does the same as `BLFontLoader::dataByFaceIndex(faceIndex)`.
+  //! If the `loader` is a font collection then `faceIndex` specifies the index
+  //! of the font in the collection, otherwise it must be zero.
+  BL_INLINE BLFontData(const BLFontLoader& loader, uint32_t faceIndex) noexcept;
+
   BL_INLINE ~BLFontData() noexcept { blFontDataReset(this); }
 
   //! \}
@@ -82,13 +89,13 @@ public:
   //! \name Overloaded Operators
   //! \{
 
+  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+
   BL_INLINE BLFontData& operator=(BLFontData&& other) noexcept { blFontDataAssignMove(this, &other); return *this; }
   BL_INLINE BLFontData& operator=(const BLFontData& other) noexcept { blFontDataAssignWeak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLFontData& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLFontData& other) const noexcept { return !equals(other); }
-
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
 
   //! \}
 
@@ -113,6 +120,11 @@ public:
   //! \name Create Functionality
   //! \{
 
+  //! Creates `BLFontData` from loader.
+  //!
+  //! This function does the same as `BLFontLoader::dataByFaceIndex(faceIndex)`.
+  //! If the `loader` is a font collection then `faceIndex` specifies the index
+  //! of the font in the collection, otherwise it must be zero.
   BL_INLINE BLResult createFromLoader(const BLFontLoader& loader, uint32_t faceIndex) noexcept;
 
   //! \}
@@ -121,14 +133,17 @@ public:
   //! \{
 
   BL_INLINE BLResult listTags(BLArray<BLTag>& dst) const noexcept {
+    // The same as blFontDataListTags() [C-API].
     return impl->virt->listTags(impl, &dst);
   }
 
   BL_INLINE size_t queryTable(BLFontTable* dst, BLTag tag) const noexcept {
+    // The same as blFontDataQueryTables() [C-API].
     return impl->virt->queryTables(impl, dst, &tag, 1);
   }
 
   BL_INLINE size_t queryTables(BLFontTable* dst, const BLTag* tags, size_t count) const noexcept {
+    // The same as blFontDataQueryTables() [C-API].
     return impl->virt->queryTables(impl, dst, tags, count);
   }
 
@@ -188,7 +203,7 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_FONT_LOADER;
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLFontLoader() noexcept { this->impl = none().impl; }
@@ -202,13 +217,13 @@ public:
   //! \name Overloaded Operators
   //! \{
 
+  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+
   BL_INLINE BLFontLoader& operator=(BLFontLoader&& other) noexcept { blFontLoaderAssignMove(this, &other); return *this; }
   BL_INLINE BLFontLoader& operator=(const BLFontLoader& other) noexcept { blFontLoaderAssignWeak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLFontLoader& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLFontLoader& other) const noexcept { return !equals(other); }
-
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
 
   //! \}
 
@@ -293,6 +308,7 @@ public:
 };
 
 // BLFontData API that depends on BLFontLoader.
+//! \cond
 BL_INLINE BLFontData::BLFontData(const BLFontLoader& loader, uint32_t faceIndex) noexcept {
   blFontDataInitFromLoader(this, &loader, faceIndex);
 }
@@ -300,6 +316,7 @@ BL_INLINE BLFontData::BLFontData(const BLFontLoader& loader, uint32_t faceIndex)
 BL_INLINE BLResult BLFontData::createFromLoader(const BLFontLoader& loader, uint32_t faceIndex) noexcept {
   return blFontDataCreateFromLoader(this, &loader, faceIndex);
 }
+//! \endcond
 #endif
 
 // ============================================================================
@@ -379,7 +396,7 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_FONT_FACE;
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLFontFace() noexcept { this->impl = none().impl; }
@@ -393,13 +410,13 @@ public:
   //! \name Overloaded Operators
   //! \{
 
+  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+
   BL_INLINE BLFontFace& operator=(BLFontFace&& other) noexcept { blFontFaceAssignMove(this, &other); return *this; }
   BL_INLINE BLFontFace& operator=(const BLFontFace& other) noexcept { blFontFaceAssignWeak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLFontFace& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLFontFace& other) const noexcept { return !equals(other); }
-
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
 
   //! \}
 
@@ -593,7 +610,7 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_FONT;
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLFont() noexcept { this->impl = none().impl; }
@@ -607,13 +624,13 @@ public:
   //! \name Overloaded Operators
   //! \{
 
+  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+
   BL_INLINE BLFont& operator=(BLFont&& other) noexcept { blFontAssignMove(this, &other); return *this; }
   BL_INLINE BLFont& operator=(const BLFont& other) noexcept { blFontAssignWeak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLFont& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLFont& other) const noexcept { return !equals(other); }
-
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
 
   //! \}
 

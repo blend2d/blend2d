@@ -1086,7 +1086,7 @@ BLResult blPixelConverterConvert(const BLPixelConverterCore* self,
 // [BLPixelConverter - Unit Tests]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 template<typename T>
 struct BLPixelConverterUnit {
   static void fillMasks(BLFormatInfo& fi) noexcept {

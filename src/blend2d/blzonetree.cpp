@@ -13,7 +13,7 @@
 // [BLZoneTree - Unit Tests]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 template<typename NodeT>
 struct ZoneTreeUnit {
   typedef BLZoneTree<NodeT> Tree;

@@ -126,7 +126,7 @@ struct BLMatrix2D {
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   //! Creates an uninitialized 2D matrix, you must initialize all members before use.

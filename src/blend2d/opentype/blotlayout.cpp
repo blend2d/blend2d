@@ -393,6 +393,9 @@ class CoverageIterator {
 public:
   typedef CoverageTable::Range Range;
 
+  const void* _array;
+  size_t _size;
+
   BL_INLINE uint32_t init(const BLFontTable& table) noexcept {
     const void* array = nullptr;
     uint32_t size = 0;
@@ -465,13 +468,6 @@ public:
       return glyphId >= lower->firstGlyph() && glyphId <= lower->lastGlyph();
     }
   }
-
-  // --------------------------------------------------------------------------
-  // [Members]
-  // --------------------------------------------------------------------------
-
-  const void* _array;
-  size_t _size;
 };
 
 // ============================================================================

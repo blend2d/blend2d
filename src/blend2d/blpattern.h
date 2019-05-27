@@ -69,7 +69,7 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_PATTERN;
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLPattern() noexcept { this->impl = none().impl; }

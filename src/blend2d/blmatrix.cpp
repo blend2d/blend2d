@@ -507,7 +507,7 @@ void blMatrix2DRtInit(BLRuntimeContext* rt) noexcept {
 // [BLMatrix2D - Unit Tests]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 UNIT(blend2d_matrix) {
   INFO("Testing matrix types");
   {

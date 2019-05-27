@@ -545,7 +545,7 @@ void blZeroAllocatorRtInit(BLRuntimeContext* rt) noexcept {
 // [BLZeroAllocator - Unit Tests]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 // A helper class to verify that BLZeroAllocator doesn't return addresses that overlap.
 class BLZeroAllocatorWrapper {
 public:

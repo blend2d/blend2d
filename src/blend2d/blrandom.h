@@ -28,20 +28,29 @@ struct BLRandom {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
+  //! \name Construction & Destruction
+  //! \{
 
   BL_INLINE BLRandom() noexcept = default;
   BL_INLINE BLRandom(const BLRandom&) noexcept = default;
 
   BL_INLINE explicit BLRandom(uint64_t seed) noexcept { reset(seed); }
 
+  //! \}
+
+  //! \name Overloaded Operators
+  //! \{
+
+  BL_INLINE bool operator==(const BLRandom& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLRandom& other) const noexcept { return !equals(other); }
+
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
+
   //! Resets the random number generator to the given `seed`.
   BL_INLINE void reset(uint64_t seed = 0) noexcept { blRandomReset(this, seed); }
-  //! Returns the next `uint64_t` value.
-  BL_INLINE uint64_t nextUInt64() noexcept { return blRandomNextUInt64(this); }
-  //! Returns the next `uint32_t` value.
-  BL_INLINE uint32_t nextUInt32() noexcept { return blRandomNextUInt32(this); }
-  //! Returns the next `double` precision floating point in [0..1) range.
-  BL_INLINE double nextDouble() noexcept { return blRandomNextDouble(this); }
 
   //! Gets whether the random number generator is equivalent to `other`.
   BL_INLINE bool equals(const BLRandom& other) const noexcept {
@@ -49,9 +58,19 @@ struct BLRandom {
            blEquals(this->data[1], other.data[1]);
   }
 
-  BL_INLINE bool operator==(const BLRandom& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLRandom& other) const noexcept { return !equals(other); }
+  //! \}
 
+  //! \name Next
+  //! \{
+
+  //! Returns the next `uint64_t` value.
+  BL_INLINE uint64_t nextUInt64() noexcept { return blRandomNextUInt64(this); }
+  //! Returns the next `uint32_t` value.
+  BL_INLINE uint32_t nextUInt32() noexcept { return blRandomNextUInt32(this); }
+  //! Returns the next `double` precision floating point in [0..1) range.
+  BL_INLINE double nextDouble() noexcept { return blRandomNextDouble(this); }
+
+  //! \}
   #endif
   // --------------------------------------------------------------------------
 };

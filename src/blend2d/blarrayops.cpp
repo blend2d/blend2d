@@ -12,7 +12,7 @@
 // [BLArrayOps - Unit Tests]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 template<typename T>
 static void expectSorted(const T* a, const T* b, size_t size) noexcept {
   for (size_t i = 0; i < size; i++)

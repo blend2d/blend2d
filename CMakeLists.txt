@@ -12,36 +12,54 @@ if (NOT CMAKE_PROJECT_NAME OR "${CMAKE_PROJECT_NAME}" STREQUAL "blend2d")
 endif()
 
 # =============================================================================
+# [Blend2D - Deprecated]
+# =============================================================================
+
+if (DEFINED BLEND2D_BUILD_EMBED)
+  message(DEPRECATION "BLEND2D_BUILD_EMBED is deprecated, use BLEND2D_EMBED")
+  set(BLEND2D_EMBED "${BLEND2D_BUILD_EMBED}")
+endif()
+
+if (DEFINED BLEND2D_BUILD_STATIC)
+  message(DEPRECATION "BLEND2D_BUILD_STATIC is deprecated, use BLEND2D_STATIC")
+  set(BLEND2D_STATIC "${BLEND2D_BUILD_STATIC}")
+endif()
+
+# =============================================================================
 # [Blend2D - Configuration]
 # =============================================================================
 
-if (NOT DEFINED BLEND2D_BUILD_EMBED)
-  set(BLEND2D_BUILD_EMBED FALSE)
+if (NOT DEFINED BLEND2D_DIR)
+  set(BLEND2D_DIR "${CMAKE_CURRENT_LIST_DIR}")
 endif()
 
-if (NOT DEFINED BLEND2D_BUILD_STATIC)
-  set(BLEND2D_BUILD_STATIC ${BLEND2D_BUILD_EMBED})
+if (NOT DEFINED BLEND2D_EMBED)
+  set(BLEND2D_EMBED FALSE)
 endif()
 
-if (NOT DEFINED BLEND2D_BUILD_TEST)
-  set(BLEND2D_BUILD_TEST FALSE)
+if (NOT DEFINED BLEND2D_STATIC)
+  set(BLEND2D_STATIC ${BLEND2D_EMBED})
 endif()
 
-if (NOT DEFINED BLEND2D_BUILD_NO_CXX_LIB)
-  set(BLEND2D_BUILD_NO_CXX_LIB 0)
+if (NOT DEFINED BLEND2D_TEST)
+  set(BLEND2D_TEST FALSE)
 endif()
 
-set(BLEND2D_DIR          "${CMAKE_CURRENT_LIST_DIR}"  CACHE PATH "Location of 'blend2d'")
-set(BLEND2D_BUILD_EMBED  "${BLEND2D_BUILD_EMBED}"     CACHE BOOL "Embed 'blend2d' library (no targets)")
-set(BLEND2D_BUILD_STATIC "${BLEND2D_BUILD_STATIC}"    CACHE BOOL "Build 'blend2d' library as static")
-set(BLEND2D_BUILD_TEST   "${BLEND2D_BUILD_TEST}"      CACHE BOOL "Build 'blend2d' test applications")
+if (NOT DEFINED BLEND2D_NO_STDCXX)
+  set(BLEND2D_NO_STDCXX 0)
+endif()
+
+set(BLEND2D_DIR    "${BLEND2D_DIR}"    CACHE PATH "Location of 'blend2d'")
+set(BLEND2D_TEST   "${BLEND2D_TEST}"   CACHE BOOL "Build 'blend2d' test applications")
+set(BLEND2D_EMBED  "${BLEND2D_EMBED}"  CACHE BOOL "Embed 'blend2d' library (no targets)")
+set(BLEND2D_STATIC "${BLEND2D_STATIC}" CACHE BOOL "Build 'blend2d' statically")
 
 # Experimental build options.
 # set(BLEND2D_BUILD_NO_LOGGING 1)
 # set(BLEND2D_BUILD_NO_JIT 1)
 
-if (NOT BLEND2D_BUILD_EMBED AND NOT BLEND2D_BUILD_STATIC)
-  set(BLEND2D_BUILD_NO_CXX_LIB 1)
+if (NOT BLEND2D_EMBED AND NOT BLEND2D_STATIC)
+  set(BLEND2D_NO_STDCXX 1)
 endif()
 
 # =============================================================================
@@ -75,32 +93,6 @@ function(blend2d_detect_cflags out)
     endif()
   endforeach()
   set(${out} "${out_array}" PARENT_SCOPE)
-endfunction()
-
-# Appends source files to `out` by prepending `src_dir` to each of them and by
-# adding architecture specific flags to files that require them (sse|avx|neon).
-function(blend2d_add_source out base_dir)
-  set(src_array)
-  foreach(file ${ARGN})
-    set(src_file "${BLEND2D_DIR}/${base_dir}/${file}")
-    list(APPEND src_array ${src_file})
-
-    string(REGEX MATCH "_(sse[2|3]?|ssse3|sse4_[1|2]|avx|avx[2]?)\\.(c|cc|cxx|cpp|m|mm)$" FEATURE ${file})
-    if (FEATURE)
-      # HACK 1: Cmake uses global variables everywhere, `CMAKE_MATCH_1` is the first capture...
-      string(TOUPPER "${CMAKE_MATCH_1}" FEATURE)
-      # HACK 2: Interestingly COMPILE_OPTIONS is not available for SOURCE files before CMake 3.11.
-      # set_property(SOURCE "${src_file}" APPEND PROPERTY COMPILE_OPTIONS ${BLEND2D_CFLAGS_${FEATURE}})
-      foreach(src_cflag ${BLEND2D_CFLAGS_${FEATURE}})
-        set_property(SOURCE "${src_file}" APPEND_STRING PROPERTY COMPILE_FLAGS " ${src_cflag}")
-      endforeach()
-    endif()
-  endforeach()
-  source_group(TREE "${BLEND2D_DIR}" FILES ${src_array})
-
-  set(out_tmp ${${out}})
-  list(APPEND out_tmp ${src_array})
-  set("${out}" "${out_tmp}" PARENT_SCOPE)
 endfunction()
 
 function(blend2d_add_target target target_type src deps cflags cflags_dbg cflags_rel)
@@ -166,7 +158,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   endif()
 
   # Support for GCC|Clang undefined behavior sanitizers.
-  if (BLEND2D_BUILD_SANITIZE)
+  if (BLEND2D_SANITIZE)
     blend2d_detect_cflags(BLEND2D_SANITIZE_FLAGS "-fsanitize=undefined")
     if (BLEND2D_SANITIZE_FLAGS)
       message("-- Enabling UB sanitizer via '${BLEND2D_SANITIZE_FLAGS}'")
@@ -177,23 +169,24 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   endif()
 
   # Building Blend2D without C++ library support requires these to be setup.
-  if (BLEND2D_BUILD_NO_CXX_LIB)
+  if (BLEND2D_NO_STDCXX)
     message("-- Enabling build without linking to the C++ standard library")
-    list(APPEND BLEND2D_NO_STDCXX_CFLAGS -nodefaultlibs -DBL_BUILD_NO_STDCXX)
+    list(APPEND BLEND2D_NO_STDCXX_CFLAGS -nodefaultlibs -DBL_NO_STDCXX)
     list(APPEND BLEND2D_NO_STDCXX_LFLAGS -nodefaultlibs)
   endif()
 endif()
 
-if (BLEND2D_BUILD_EMBED)
+if (BLEND2D_EMBED)
   set(BLEND2D_TARGET_TYPE "EMBED")
-  list(APPEND BLEND2D_CFLAGS         "-DBL_BUILD_EMBED")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_EMBED")
-elseif (BLEND2D_BUILD_STATIC)
+elseif (BLEND2D_STATIC)
   set(BLEND2D_TARGET_TYPE "STATIC")
-  list(APPEND BLEND2D_CFLAGS         "-DBL_BUILD_STATIC")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_STATIC")
 else()
   set(BLEND2D_TARGET_TYPE "SHARED")
+endif()
+
+if (BLEND2D_EMBED OR BLEND2D_STATIC)
+  list(APPEND BLEND2D_CFLAGS         "-DBL_STATIC")
+  list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_STATIC")
 endif()
 
 if (BLEND2D_BUILD_NO_JIT)
@@ -204,7 +197,7 @@ endif()
 # [Blend2D - Deprecated]
 # =============================================================================
 
-# TODO: Backward compatibility.
+# DEPRECATED: Will be removed int the future.
 set(BLEND2D_INCLUDE_DIR "${BLEND2D_INCLUDE_DIRS}")
 
 # =============================================================================
@@ -301,10 +294,6 @@ if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   list(APPEND BLEND2D_DEPS rt)
 endif()
 
-# =============================================================================
-# [Blend2D - AsmJit Embedding]
-# =============================================================================
-
 # Find asmjit dependency if building with JIT support.
 if (NOT BLEND2D_BUILD_NO_JIT)
   if (NOT DEFINED ASMJIT_DIR)
@@ -316,19 +305,18 @@ if (NOT BLEND2D_BUILD_NO_JIT)
       endif()
     endforeach()
     if (NOT DEFINED ASMJIT_DIR)
-      message(FATAL "Unable to find asmjit, cannot continue...")
-      message(FATAL "Please visit https://blend2d.com/download.html")
+      message(FATAL "Unable to find asmjit, please visit <https://blend2d.com/doc/build-instructions.html>")
     endif()
   endif()
 
-  if (NOT DEFINED ASMJIT_BUILD_EMBED)
-    set(ASMJIT_BUILD_EMBED TRUE CACHE BOOL "")
+  if (NOT DEFINED ASMJIT_EMBED)
+    set(ASMJIT_EMBED TRUE CACHE BOOL "")
   endif()
 
   include("${ASMJIT_DIR}/CMakeLists.txt")
   list(APPEND BLEND2D_DEPS ${ASMJIT_LIBS})
   list(APPEND BLEND2D_PRIVATE_CFLAGS ${ASMJIT_CFLAGS})
-  list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_BUILD_NO_STDCXX)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_NO_STDCXX)
 
   # A possibility to reduce the resulting binary size by disabling asmjit logging.
   if (BLEND2D_BUILD_NO_LOGGING)
@@ -345,7 +333,7 @@ list(REMOVE_DUPLICATES BLEND2D_DEPS)
 list(REMOVE_DUPLICATES BLEND2D_PRIVATE_CFLAGS)
 
 set(BLEND2D_LIBS ${BLEND2D_DEPS})
-if (NOT BLEND2D_BUILD_EMBED)
+if (NOT BLEND2D_EMBED)
   list(INSERT BLEND2D_LIBS 0 blend2d)
 endif()
 
@@ -541,16 +529,32 @@ set(BLEND2D_SRC_LIST
   blend2d/raster/blrasterfiller.cpp
   blend2d/raster/blrasterfiller_p.h
   blend2d/raster/blrasterdefs_p.h
+  blend2d/raster/blrasterworkcmd_p.h
   blend2d/raster/blrasterworker.cpp
   blend2d/raster/blrasterworker_p.h
 )
 
-set(BLEND2D_SRC "")
-blend2d_add_source(BLEND2D_SRC src ${BLEND2D_SRC_LIST})
-
 #if (MSVC)
-#  blend2d_add_source(BLEND2D_SRC blend2d blend2d.natvis)
+#  list(APPEND BLEND2D_SRC_LIST blend2d.natvis)
 #endif()
+
+set(BLEND2D_SRC "")
+foreach(src_file ${BLEND2D_SRC_LIST})
+  set(src_file "${BLEND2D_DIR}/src/${src_file}")
+  list(APPEND BLEND2D_SRC ${src_file})
+
+  string(REGEX MATCH "_(sse[2|3]?|ssse3|sse4_[1|2]|avx|avx[2]?)\\.(c|cc|cxx|cpp|m|mm)$" FEATURE ${src_file})
+  if (FEATURE)
+    # HACK 1: Cmake uses global variables everywhere, `CMAKE_MATCH_1` is the first capture...
+    string(TOUPPER "${CMAKE_MATCH_1}" FEATURE)
+    # HACK 2: Interestingly COMPILE_OPTIONS is not available for SOURCE files before CMake 3.11.
+    # set_property(SOURCE "${src_file}" APPEND PROPERTY COMPILE_OPTIONS ${BLEND2D_CFLAGS_${FEATURE}})
+    foreach(src_cflag ${BLEND2D_CFLAGS_${FEATURE}})
+      set_property(SOURCE "${src_file}" APPEND_STRING PROPERTY COMPILE_FLAGS " ${src_cflag}")
+    endforeach()
+  endif()
+endforeach()
+source_group(TREE "${BLEND2D_DIR}" FILES ${BLEND2D_SRC})
 
 # =============================================================================
 # [Blend2D - Summary]
@@ -558,30 +562,20 @@ blend2d_add_source(BLEND2D_SRC src ${BLEND2D_SRC_LIST})
 
 message("** Blend2D Summary **")
 message("   BLEND2D_DIR=${BLEND2D_DIR}")
+message("   BLEND2D_TEST=${BLEND2D_TEST}")
 message("   BLEND2D_TARGET_TYPE=${BLEND2D_TARGET_TYPE}")
-message("   BLEND2D_BUILD_TEST=${BLEND2D_BUILD_TEST}")
 message("   BLEND2D_DEPS=${BLEND2D_DEPS}")
 message("   BLEND2D_LIBS=${BLEND2D_LIBS}")
 message("   BLEND2D_CFLAGS=${BLEND2D_CFLAGS}")
-message("   BLEND2D_PRIVATE_CFLAGS=")
-
-foreach(_flag ${BLEND2D_PRIVATE_CFLAGS})
-  message("     ${_flag}")
-endforeach()
-
-foreach(_flag ${BLEND2D_PRIVATE_CFLAGS_DBG})
-  message("     ${_flag} [DEBUG]")
-endforeach()
-
-foreach(_flag ${BLEND2D_PRIVATE_CFLAGS_REL})
-  message("     ${_flag} [RELEASE]")
-endforeach()
+message("   BLEND2D_PRIVATE_CFLAGS=${BLEND2D_PRIVATE_CFLAGS}")
+message("   BLEND2D_PRIVATE_CFLAGS_DBG=${BLEND2D_PRIVATE_CFLAGS_DBG}")
+message("   BLEND2D_PRIVATE_CFLAGS_REL=${BLEND2D_PRIVATE_CFLAGS_REL}")
 
 # =============================================================================
 # [Blend2D - Targets]
 # =============================================================================
 
-if (NOT BLEND2D_BUILD_EMBED)
+if (NOT BLEND2D_EMBED)
   # Add 'blend2d' library target.
   blend2d_add_target(blend2d
     "${BLEND2D_TARGET_TYPE}"
@@ -613,16 +607,15 @@ if (NOT BLEND2D_BUILD_EMBED)
 
   # Install 'blend2d' header files (private headers are filtered out).
   foreach(_src_file ${BLEND2D_SRC_LIST})
-    if ("${_src_file}" MATCHES ".h$" AND NOT "${_src_file}" MATCHES "_p.h$")
+    if ("${_src_file}" MATCHES "\\.h$" AND NOT "${_src_file}" MATCHES "_p\\.h$")
       get_filename_component(_src_dir ${_src_file} PATH)
-      get_filename_component(_src_name ${_src_file} NAME)
       install(FILES "${BLEND2D_DIR}/src/${_src_file}" DESTINATION "include/${_src_dir}")
     endif()
   endforeach()
 
   # Add 'blend2d' tests.
-  if (BLEND2D_BUILD_TEST)
-    blend2d_add_source(BLEND2D_TEST_SRC test bl_test_unit.cpp broken.cpp broken.h)
+  if (BLEND2D_TEST)
+    set (BLEND2D_TEST_SRC test/bl_test_unit.cpp test/broken.cpp test/broken.h)
     blend2d_add_target(bl_test_unit
       EXECUTABLE
       "${BLEND2D_SRC};${ASMJIT_SRC};${BLEND2D_TEST_SRC}"
@@ -630,7 +623,7 @@ if (NOT BLEND2D_BUILD_EMBED)
       "${BLEND2D_PRIVATE_CFLAGS}"
       "${BLEND2D_PRIVATE_CFLAGS_DBG}"
       "${BLEND2D_PRIVATE_CFLAGS_REL}")
-    target_compile_definitions(bl_test_unit PRIVATE BL_BUILD_TEST BL_BUILD_EMBED)
+    target_compile_definitions(bl_test_unit PRIVATE BL_TEST BL_STATIC)
     target_include_directories(bl_test_unit BEFORE PRIVATE ${ASMJIT_INCLUDE_DIRS})
     target_include_directories(bl_test_unit BEFORE PRIVATE ${BLEND2D_INCLUDE_DIRS})
   endif()

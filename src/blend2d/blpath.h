@@ -333,7 +333,7 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_PATH;
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLPath() noexcept { this->impl = none().impl; }
@@ -348,13 +348,13 @@ public:
   //! \name Overloaded Operators
   //! \{
 
+  BL_INLINE explicit operator bool() const noexcept { return impl->size != 0; }
+
   BL_INLINE BLPath& operator=(BLPath&& other) noexcept { blPathAssignMove(this, &other); return *this; }
   BL_INLINE BLPath& operator=(const BLPath& other) noexcept { blPathAssignWeak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLPath& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLPath& other) const noexcept { return !equals(other); }
-
-  BL_INLINE explicit operator bool() const noexcept { return impl->size != 0; }
 
   //! \}
 

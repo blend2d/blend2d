@@ -10,7 +10,7 @@
 // This file provides support for building Blend2D without C++ standard library.
 // Blend2D doesn't really use any C++ features, but there are little things that
 // require some care.
-#ifdef BL_BUILD_NO_STDCXX
+#ifdef BL_NO_STDCXX
 
 extern "C" {
   // `__cxa_pure_virtual` replaces all abstract virtual functions (that have no
@@ -21,4 +21,4 @@ extern "C" {
   }
 }
 
-#endif // BL_BUILD_NO_STDCXX
+#endif // BL_NO_STDCXX

@@ -346,6 +346,12 @@ class BLUtf16Reader {
 public:
   enum : uint32_t { kCharSize = 2 };
 
+  const char* _ptr;
+  const char* _end;
+
+  size_t _utf8IndexAdd;
+  size_t _utf16SurrogateCount;
+
   BL_INLINE BLUtf16Reader(const void* data, size_t byteSize) noexcept {
     reset(data, byteSize);
   }
@@ -470,16 +476,6 @@ TruncatedString:
     constexpr uint32_t kAlignment = Flags & BL_UNICODE_IO_UNALIGNED ? 1 : 2;
     return blMemReadU16<kByteOrder, kAlignment>(ptr);
   }
-
-  // --------------------------------------------------------------------------
-  // [Members]
-  // --------------------------------------------------------------------------
-
-  const char* _ptr;
-  const char* _end;
-
-  size_t _utf8IndexAdd;
-  size_t _utf16SurrogateCount;
 };
 
 // ============================================================================

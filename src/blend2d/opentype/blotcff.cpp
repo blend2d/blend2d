@@ -1622,7 +1622,7 @@ OnReturn:
             // in1 in2 and (12 3) out {in1 && in2}
             case kCSOpAnd & 0xFFu: {
               BL_ASSERT(vMinOperands >= 2);
-              vBuf[vIdx - 2] = double((vBuf[vIdx - 1] != 0.0) & (vBuf[vIdx - 1] != 0.0));
+              vBuf[vIdx - 2] = double((vBuf[vIdx - 2] != 0.0) & (vBuf[vIdx - 1] != 0.0));
               vIdx--;
               continue;
             }
@@ -1630,7 +1630,7 @@ OnReturn:
             // in1 in2 or (12 4) out {in1 || in2}
             case kCSOpOr & 0xFFu: {
               BL_ASSERT(vMinOperands >= 2);
-              vBuf[vIdx - 2] = double((vBuf[vIdx - 1] != 0.0) | (vBuf[vIdx - 1] != 0.0));
+              vBuf[vIdx - 2] = double((vBuf[vIdx - 2] != 0.0) | (vBuf[vIdx - 1] != 0.0));
               vIdx--;
               continue;
             }
@@ -1646,7 +1646,7 @@ OnReturn:
             // s1 s2 v1 v2 ifelse (12 22) out {v1 <= v2 ? s1 : s2}
             case kCSOpIfElse & 0xFFu: {
               BL_ASSERT(vMinOperands >= 4);
-              vBuf[vIdx - 4] = vBuf[vIdx - 4 + size_t(vBuf[vIdx - 2] > vBuf[vIdx - 1])];
+              vBuf[vIdx - 4] = vBuf[vIdx - 4 + size_t(vBuf[vIdx - 2] <= vBuf[vIdx - 1])];
               vIdx -= 3;
               continue;
             }
@@ -2055,7 +2055,7 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
 // [BLOpenType::CFFImpl - Unit Tests]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 static void testReadFloat() noexcept {
   struct TestEntry {
     char data[16];

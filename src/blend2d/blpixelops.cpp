@@ -12,7 +12,7 @@
 // [BLPixelUtils - Unit Test]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 UNIT(blend2d_pixelops_xrgb32_0888_from_xrgb16_0555) {
   uint32_t c = 0;
 

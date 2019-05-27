@@ -181,29 +181,6 @@ enum DeflateState {
 
 // In-memory DEFLATE decoder.
 struct DeflateDecoder {
-  DeflateDecoder(BLArray<uint8_t>& output, void* readCtx, Deflate::ReadFunc readFunc) noexcept;
-  ~DeflateDecoder() noexcept;
-
-  BL_INLINE BLResult _ensureDstSize(size_t maxLen) noexcept {
-    size_t remain = (size_t)(_dstEnd - _dstPtr);
-    if (BL_UNLIKELY(remain < maxLen)) {
-      size_t pos = (size_t)(_dstPtr - _dstStart);
-      _dstBuffer.impl->size = pos;
-      BL_PROPAGATE(_dstBuffer.modifyOp(BL_MODIFY_OP_APPEND_GROW, maxLen, &_dstPtr));
-
-      _dstStart = _dstPtr - pos;
-      _dstEnd = _dstStart + _dstBuffer.capacity();
-    }
-
-    return BL_SUCCESS;
-  }
-
-  BLResult _decode() noexcept;
-
-  // --------------------------------------------------------------------------
-  // [Members]
-  // --------------------------------------------------------------------------
-
   //! Read context - passed to `_readFunc`.
   void* _readCtx;
   //! Read function - Callback that provides next input chunk.
@@ -232,6 +209,25 @@ struct DeflateDecoder {
 
   DeflateTable _zSize;
   DeflateTable _zDist;
+
+  DeflateDecoder(BLArray<uint8_t>& output, void* readCtx, Deflate::ReadFunc readFunc) noexcept;
+  ~DeflateDecoder() noexcept;
+
+  BL_INLINE BLResult _ensureDstSize(size_t maxLen) noexcept {
+    size_t remain = (size_t)(_dstEnd - _dstPtr);
+    if (BL_UNLIKELY(remain < maxLen)) {
+      size_t pos = (size_t)(_dstPtr - _dstStart);
+      _dstBuffer.impl->size = pos;
+      BL_PROPAGATE(_dstBuffer.modifyOp(BL_MODIFY_OP_APPEND_GROW, maxLen, &_dstPtr));
+
+      _dstStart = _dstPtr - pos;
+      _dstEnd = _dstStart + _dstBuffer.capacity();
+    }
+
+    return BL_SUCCESS;
+  }
+
+  BLResult _decode() noexcept;
 };
 
 // ============================================================================

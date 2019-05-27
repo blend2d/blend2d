@@ -108,9 +108,7 @@ static void blDebugRuntimeBuildInfo(void) {
   BLRuntimeBuildInfo info;
   blRuntimeQueryInfo(BL_RUNTIME_INFO_TYPE_BUILD, &info);
 
-  #if defined(BL_BUILD_EMBED)
-  buildMode = "Embed";
-  #elif defined(BL_BUILD_STATIC)
+  #if defined(BL_STATIC)
   buildMode = "Static";
   #else
   buildMode = "Shared";

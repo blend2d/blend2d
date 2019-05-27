@@ -70,9 +70,17 @@ struct BLExternalImplPreface {
 //! \name Impl Memory Management
 //! \{
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Implemented in 'blruntime.cpp'.
-BL_API_C void*    BL_CDECL blRuntimeAllocImpl(size_t implSize, uint16_t* memPoolDataOut) noexcept;
-BL_API_C BLResult BL_CDECL blRuntimeFreeImpl(void* impl_, size_t implSize, uint32_t memPoolData) noexcept;
+BL_API void*    BL_CDECL blRuntimeAllocImpl(size_t implSize, uint16_t* memPoolDataOut) noexcept;
+BL_API BLResult BL_CDECL blRuntimeFreeImpl(void* impl_, size_t implSize, uint32_t memPoolData) noexcept;
+
+#ifdef __cplusplus
+} // {Extern:C}
+#endif
 
 template<typename Impl>
 static BL_INLINE Impl* blRuntimeAllocImplT(size_t implSize, uint16_t* memPoolDataOut) noexcept {

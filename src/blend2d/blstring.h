@@ -65,11 +65,21 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_STRING;
   //! \endcond
 
+  //! \name Construction & Destruction
+  //! \{
+
   BL_INLINE BLString() noexcept { this->impl = none().impl; }
   BL_INLINE BLString(BLString&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLString(const BLString& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLString(BLStringImpl* impl) noexcept { this->impl = impl; }
   BL_INLINE ~BLString() noexcept { blStringReset(this); }
+
+  //! \}
+
+  //! \name Overloaded Operators
+  //! \{
+
+  BL_INLINE explicit operator bool() const noexcept { return !empty(); }
 
   BL_INLINE BLString& operator=(BLString&& other) noexcept { blStringAssignMove(this, &other); return *this; }
   BL_INLINE BLString& operator=(const BLString& other) noexcept { blStringAssignWeak(this, &other); return *this; }
@@ -95,37 +105,16 @@ public:
   BL_INLINE bool operator> (const char* str) const noexcept { return compare(str) >  0; }
   BL_INLINE bool operator>=(const char* str) const noexcept { return compare(str) >= 0; }
 
-  BL_INLINE explicit operator bool() const noexcept { return !empty(); }
   BL_INLINE char operator[](size_t index) const noexcept { return at(index); }
 
-  BL_INLINE char at(size_t index) const noexcept {
-    BL_ASSERT(index < size());
-    return data()[index];
-  }
+  //! \}
 
-  BL_INLINE bool empty() const noexcept { return impl->size == 0; }
-  BL_INLINE size_t size() const noexcept { return impl->size; }
-  BL_INLINE size_t capacity() const noexcept { return impl->capacity; }
-
-  BL_INLINE const char* data() const noexcept { return impl->data; }
-  BL_INLINE const char* end() const noexcept { return impl->data + impl->size; }
-
-  BL_INLINE const BLStringView& view() const noexcept { return impl->view; }
+  //! \name Common Functionality
+  //! \{
 
   //! Clear the content of the string without releasing its dynamically allocated data, if possible.
   BL_INLINE BLResult reset() noexcept { return blStringReset(this); }
   BL_INLINE void swap(BLString& other) noexcept { std::swap(this->impl, other.impl); }
-
-  BL_INLINE BLResult clear() noexcept { return blStringClear(this); }
-  BL_INLINE BLResult shrink() noexcept { return blStringShrink(this); }
-  BL_INLINE BLResult reserve(size_t n) noexcept { return blStringReserve(this, n); }
-  BL_INLINE BLResult resize(size_t n, char fill = '\0') noexcept { return blStringResize(this, n, fill); }
-  //! Truncate the string length to `n`.
-  BL_INLINE BLResult truncate(size_t n) noexcept { return blStringResize(this, blMin(n, impl->size), '\0'); }
-
-  BL_INLINE BLResult makeMutable(char** dataOut) noexcept { return blStringMakeMutable(this, dataOut); }
-  BL_INLINE BLResult modifyOp(uint32_t op, size_t n, char** dataOut) noexcept { return blStringModifyOp(this, op, n, dataOut); }
-  BL_INLINE BLResult insertOp(size_t index, size_t n, char** dataOut) noexcept { return blStringInsertOp(this, index, n, dataOut); }
 
   BL_INLINE BLResult assign(char c, size_t n = 1) noexcept { return blStringApplyOpChar(this, BL_MODIFY_OP_ASSIGN_FIT, c, n); }
   BL_INLINE BLResult assign(BLString&& other) noexcept { return blStringAssignMove(this, &other); }
@@ -137,6 +126,50 @@ public:
   template<typename... Args>
   BL_INLINE BLResult assignFormat(const char* fmt, Args&&... args) noexcept { return blStringApplyOpFormat(this, BL_MODIFY_OP_ASSIGN_FIT, fmt, std::forward<Args>(args)...); }
   BL_INLINE BLResult assignFormatV(const char* fmt, va_list ap) noexcept { return blStringApplyOpFormatV(this, BL_MODIFY_OP_ASSIGN_FIT, fmt, ap); }
+
+  BL_INLINE bool empty() const noexcept { return impl->size == 0; }
+
+  BL_INLINE bool equals(const BLString& other) const noexcept { return blStringEquals(this, &other); }
+  BL_INLINE bool equals(const BLStringView& view) const noexcept { return blStringEqualsData(this, view.data, view.size); }
+  BL_INLINE bool equals(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringEqualsData(this, str, n); }
+
+  BL_INLINE int compare(const BLString& other) const noexcept { return blStringCompare(this, &other); }
+  BL_INLINE int compare(const BLStringView& view) const noexcept { return blStringCompareData(this, view.data, view.size); }
+  BL_INLINE int compare(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringCompareData(this, str, n); }
+
+  //! \}
+
+  //! \name Accessors
+  //! \{
+
+  BL_INLINE char at(size_t index) const noexcept {
+    BL_ASSERT(index < size());
+    return data()[index];
+  }
+
+  BL_INLINE size_t size() const noexcept { return impl->size; }
+  BL_INLINE size_t capacity() const noexcept { return impl->capacity; }
+
+  BL_INLINE const char* data() const noexcept { return impl->data; }
+  BL_INLINE const char* end() const noexcept { return impl->data + impl->size; }
+
+  BL_INLINE const BLStringView& view() const noexcept { return impl->view; }
+
+  //! \}
+
+  //! \name String Manipulation
+  //! \{
+
+  BL_INLINE BLResult clear() noexcept { return blStringClear(this); }
+  BL_INLINE BLResult shrink() noexcept { return blStringShrink(this); }
+  BL_INLINE BLResult reserve(size_t n) noexcept { return blStringReserve(this, n); }
+  BL_INLINE BLResult resize(size_t n, char fill = '\0') noexcept { return blStringResize(this, n, fill); }
+  //! Truncate the string length to `n`.
+  BL_INLINE BLResult truncate(size_t n) noexcept { return blStringResize(this, blMin(n, impl->size), '\0'); }
+
+  BL_INLINE BLResult makeMutable(char** dataOut) noexcept { return blStringMakeMutable(this, dataOut); }
+  BL_INLINE BLResult modifyOp(uint32_t op, size_t n, char** dataOut) noexcept { return blStringModifyOp(this, op, n, dataOut); }
+  BL_INLINE BLResult insertOp(size_t index, size_t n, char** dataOut) noexcept { return blStringInsertOp(this, index, n, dataOut); }
 
   BL_INLINE BLResult append(char c, size_t n = 1) noexcept { return blStringApplyOpChar(this, BL_MODIFY_OP_APPEND_GROW, c, n); }
   BL_INLINE BLResult append(const BLStringCore& other) noexcept { return blStringApplyOpString(this, BL_MODIFY_OP_APPEND_GROW, &other); }
@@ -159,13 +192,8 @@ public:
 
   BL_INLINE BLResult remove(const BLRange& range) noexcept { return blStringRemoveRange(this, &range); }
 
-  BL_INLINE bool equals(const BLString& other) const noexcept { return blStringEquals(this, &other); }
-  BL_INLINE bool equals(const BLStringView& view) const noexcept { return blStringEqualsData(this, view.data, view.size); }
-  BL_INLINE bool equals(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringEqualsData(this, str, n); }
-
-  BL_INLINE int compare(const BLString& other) const noexcept { return blStringCompare(this, &other); }
-  BL_INLINE int compare(const BLStringView& view) const noexcept { return blStringCompareData(this, view.data, view.size); }
-  BL_INLINE int compare(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringCompareData(this, str, n); }
+  //! \name String Search
+  //! \{
 
   BL_INLINE size_t indexOf(char c) const noexcept {
     return indexOf(c, 0);
@@ -205,6 +233,8 @@ public:
 
     return i;
   }
+
+  //! \}
 
   static BL_INLINE const BLString& none() noexcept { return reinterpret_cast<const BLString*>(blNone)[kImplType]; }
 };

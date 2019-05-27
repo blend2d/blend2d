@@ -120,37 +120,6 @@ size_t blCubicRoots(double* dst, const double* poly, double tMin, double tMax) n
 
 class BLJenkinsTraubSolver {
 public:
-  // --------------------------------------------------------------------------
-  // [Construction / Destruction]
-  // --------------------------------------------------------------------------
-
-  BLJenkinsTraubSolver(const double* polynomial, int degree);
-  bool init(int degree);
-
-  // --------------------------------------------------------------------------
-  // [Helpers]
-  // --------------------------------------------------------------------------
-
-  void quad(double a, double b1, double c, double* sr, double* si, double* lr, double* li);
-  void fxshfr(int l2, int* nz);
-  void quadit(double* uu, double* vv, int* nz);
-  void realit(double sss, int* nz, int* iflag);
-  void calcsc(int* type);
-  void nextk(int* type);
-  void newest(int type, double* uu, double* vv);
-  void quadsd(int n, double* u, double* v, double* p, double* q, double* a, double* b);
-
-  // --------------------------------------------------------------------------
-  // [Solve]
-  // --------------------------------------------------------------------------
-
-  // Called by fPolyRoots_t().
-  int solve();
-
-  // --------------------------------------------------------------------------
-  // [Members]
-  // --------------------------------------------------------------------------
-
   BLMemBufferTmp<2048> mem;
   double* temp;
   double* pt;
@@ -168,6 +137,21 @@ public:
 
   int degree, n, nn, nmi, zerok;
   int itercnt;
+
+  BLJenkinsTraubSolver(const double* polynomial, int degree);
+  bool init(int degree);
+
+  void quad(double a, double b1, double c, double* sr, double* si, double* lr, double* li);
+  void fxshfr(int l2, int* nz);
+  void quadit(double* uu, double* vv, int* nz);
+  void realit(double sss, int* nz, int* iflag);
+  void calcsc(int* type);
+  void nextk(int* type);
+  void newest(int type, double* uu, double* vv);
+  void quadsd(int n, double* u, double* v, double* p, double* q, double* a, double* b);
+
+  // Called by fPolyRoots_t().
+  int solve();
 };
 
 BLJenkinsTraubSolver::BLJenkinsTraubSolver(const double* poly, int degree) {
@@ -1014,7 +998,7 @@ size_t blPolyRoots(double* dst, const double* poly, int degree, double tMin, dou
 // [BLMath{Roots} - Unit Tests]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 UNIT(blend2d_math) {
   INFO("blFloor()");
   {

@@ -11,7 +11,7 @@
 // [BLRgba - Unit Tests]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 UNIT(blend2d_rgba) {
   BLRgba32 c32(0x01, 0x02, 0x03, 0xFF);
   BLRgba64 c64(0x100, 0x200, 0x300, 0xFFFF);

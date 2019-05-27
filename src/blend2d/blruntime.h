@@ -79,7 +79,7 @@ BL_DEFINE_ENUM(BLRuntimeCleanupFlags) {
   //! Cleanup zeroed memory pool.
   BL_RUNTIME_CLEANUP_ZEROED_POOL = 0x00000002u,
   //! Cleanup thread pool (would join unused threads).
-  BL_RUNTIME_CLEANUO_THREAD_POOL = 0x00000010u,
+  BL_RUNTIME_CLEANUP_THREAD_POOL = 0x00000010u,
 
   //! Cleanup everything.
   BL_RUNTIME_CLEANUP_EVERYTHING = 0xFFFFFFFFu

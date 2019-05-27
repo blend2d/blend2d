@@ -522,7 +522,7 @@ struct BLLine {
 // [BLTriangle]
 // ============================================================================
 
-//! Triangle data speciied as [x0, y0, x1, y1, x2, y2] using `double` as a storage type.
+//! Triangle data specified as [x0, y0, x1, y1, x2, y2] using `double` as a storage type.
 struct BLTriangle {
   double x0, y0;
   double x1, y1;

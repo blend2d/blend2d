@@ -65,13 +65,27 @@ struct BLGlyphBufferCore {
 //! is complete and glyph positions were calculated.
 class BLGlyphBuffer : public BLGlyphBufferCore {
 public:
+  //! \name Constructors & Destructors
+  //! \{
+
   BL_INLINE BLGlyphBuffer(const BLGlyphBuffer&) noexcept = delete;
   BL_INLINE BLGlyphBuffer& operator=(const BLGlyphBuffer&) noexcept = delete;
 
   BL_INLINE BLGlyphBuffer() noexcept { blGlyphBufferInit(this); }
   BL_INLINE ~BLGlyphBuffer() noexcept { blGlyphBufferReset(this); }
 
+  //! \}
+
+  //! \name Overloaded Operators
+  //! \{
+
   BL_INLINE explicit operator bool() const noexcept { return !empty(); }
+
+  //! \}
+
+  //! \name Accessors
+  //! \{
+
   BL_INLINE bool empty() const noexcept { return impl->glyphRun.empty(); }
 
   BL_INLINE size_t size() const noexcept { return impl->size; }
@@ -96,6 +110,11 @@ public:
   BL_INLINE bool hasUndefinedChars() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_UNDEFINED_GLYPHS); }
   //! Gets whether one or more operation was terminated before completion because of invalid data in a font.
   BL_INLINE bool hasInvalidFontData() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_INVALID_FONT_DATA); }
+
+  //! \}
+
+  //! \name Operations
+  //! \{
 
   //! Resets the `BLGlyphBuffer` into its construction state. The content will
   //! be cleared and allocated memory released.
@@ -148,6 +167,8 @@ public:
   BL_INLINE BLResult setGlyphIds(const void* data, intptr_t advance, size_t size) noexcept {
     return blGlyphBufferSetGlyphIds(this, data, advance, size);
   }
+
+  //! \}
 };
 #endif
 

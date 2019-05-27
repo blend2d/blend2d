@@ -53,7 +53,7 @@
 //!
 //! \section main_other Other Pages
 //!
-//!   - <a href="../getting-started.html">Getting Started</a> - Covers basic
+//!   - <a href="../doc/getting-started.html">Getting Started</a> - Covers basic
 //!     setup and few sample applications
 //!   - <a href="annotated.html">Class List</a> - Provides a list of classes
 //!     sorted alphabetically
@@ -216,12 +216,19 @@
 // when Blend2D's source code is embedded directly in another project, implies
 // static build as well.
 //
-// #define BL_BUILD_EMBED           // Blend2D is embedded (implies BL_BUILD_STATIC).
-// #define BL_BUILD_STATIC          // Blend2D is a statically linked library.
+// #define BL_STATIC                // Blend2D is a statically linked library.
 
-// BL_BUILD_EMBED implies BL_BUILD_STATIC.
-#if defined(BL_BUILD_EMBED) && !defined(BL_BUILD_STATIC)
-  #define BL_BUILD_STATIC
+// DEPRECATED: Will be removed in the future.
+#if defined(BL_BUILD_EMBED) || defined(BL_BUILD_STATIC)
+  #if defined(BL_BUILD_EMBED)
+    #pragma message("'BL_BUILD_EMBED' is deprecated, use BL_STATIC")
+  #endif()
+  #if defined(BL_BUILD_STATIC)
+    #pragma message("'BL_BUILD_STATIC' is deprecated, use BL_STATIC")
+  #endif()
+  #if !defined(BL_STATIC)
+    #define BL_STATIC
+  #endif
 #endif
 
 // These definitions control the build mode and tracing support. The build mode
@@ -291,8 +298,6 @@
 //! \def BL_API
 //!
 //! A base API decorator that marks functions and variables exported by Blend2D.
-//! This decorator is internally only used to make `BL_API_C` decorator, which
-//! adds `extern "C"` for C linkage.
 #if !defined(BL_BUILD_STATIC) && !defined(BL_BUILD_EMBED)
   #if defined(_WIN32) && (defined(_MSC_VER) || defined(__MINGW32__))
     #if defined(BL_BUILD_EXPORT)
@@ -318,7 +323,7 @@
 //! \def BL_API_C
 //!
 //! A decorator that marks functions and variables exported by Blend2D to use
-//! C linkage. Public API should only use this decorator and not plain `BL_API`.
+//! C linkage.
 #if defined(__cplusplus)
   #define BL_API_C extern "C" BL_API
 #else
@@ -793,7 +798,7 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_INVALID_STATE,                //!< Invalid state                 [EFAULT].
   BL_ERROR_INVALID_HANDLE,               //!< Invalid handle or file.       [EBADF].
   BL_ERROR_VALUE_TOO_LARGE,              //!< Value too large               [EOVERFLOW].
-  BL_ERROR_NOT_INITIALIZED,              //!< Not initialize (some instance is built-in none when it shouldn't be).
+  BL_ERROR_NOT_INITIALIZED,              //!< Not initialized (some instance is built-in none when it shouldn't be).
   BL_ERROR_NOT_IMPLEMENTED,              //!< Not implemented               [ENOSYS].
   BL_ERROR_NOT_PERMITTED,                //!< Operation not permitted       [EPERM].
 
@@ -1373,6 +1378,10 @@ typedef BLArrayView BLDataView;
 //! \addtogroup blend2d_api_c_functions
 //! \{
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //! \name BLArray
 //!
 //! C API users must call either generic functions with `Item` suffix or correct
@@ -1383,408 +1392,408 @@ typedef BLArrayView BLDataView;
 //! from implementation perspective.
 //!
 //! \{
-BL_API_C BLResult BL_CDECL blArrayInit(BLArrayCore* self, uint32_t arrayTypeId) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayReset(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayCreateFromData(BLArrayCore* self, void* data, size_t size, size_t capacity, uint32_t dataAccessFlags, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
-BL_API_C size_t   BL_CDECL blArrayGetSize(const BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API_C size_t   BL_CDECL blArrayGetCapacity(const BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API_C const void* BL_CDECL blArrayGetData(const BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayClear(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayShrink(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayReserve(BLArrayCore* self, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayResize(BLArrayCore* self, size_t n, const void* fill) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayMakeMutable(BLArrayCore* self, void** dataOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayModifyOp(BLArrayCore* self, uint32_t op, size_t n, void** dataOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayInsertOp(BLArrayCore* self, size_t index, size_t n, void** dataOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayAssignMove(BLArrayCore* self, BLArrayCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayAssignWeak(BLArrayCore* self, const BLArrayCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayAssignDeep(BLArrayCore* self, const BLArrayCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayAssignView(BLArrayCore* self, const void* items, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayAppendU8(BLArrayCore* self, uint8_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayAppendU16(BLArrayCore* self, uint16_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayAppendU32(BLArrayCore* self, uint32_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayAppendU64(BLArrayCore* self, uint64_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayAppendF32(BLArrayCore* self, float value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayAppendF64(BLArrayCore* self, double value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayAppendItem(BLArrayCore* self, const void* item) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayAppendView(BLArrayCore* self, const void* items, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayInsertU8(BLArrayCore* self, size_t index, uint8_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayInsertU16(BLArrayCore* self, size_t index, uint16_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayInsertU32(BLArrayCore* self, size_t index, uint32_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayInsertU64(BLArrayCore* self, size_t index, uint64_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayInsertF32(BLArrayCore* self, size_t index, float value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayInsertF64(BLArrayCore* self, size_t index, double value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayInsertItem(BLArrayCore* self, size_t index, const void* item) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayInsertView(BLArrayCore* self, size_t index, const void* items, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayReplaceU8(BLArrayCore* self, size_t index, uint8_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayReplaceU16(BLArrayCore* self, size_t index, uint16_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayReplaceU32(BLArrayCore* self, size_t index, uint32_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayReplaceU64(BLArrayCore* self, size_t index, uint64_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayReplaceF32(BLArrayCore* self, size_t index, float value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayReplaceF64(BLArrayCore* self, size_t index, double value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayReplaceItem(BLArrayCore* self, size_t index, const void* item) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayReplaceView(BLArrayCore* self, const BLRange* range, const void* items, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayRemoveIndex(BLArrayCore* self, size_t index) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blArrayRemoveRange(BLArrayCore* self, const BLRange* range) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blArrayEquals(const BLArrayCore* a, const BLArrayCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayInit(BLArrayCore* self, uint32_t arrayTypeId) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayReset(BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayCreateFromData(BLArrayCore* self, void* data, size_t size, size_t capacity, uint32_t dataAccessFlags, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
+BL_API size_t   BL_CDECL blArrayGetSize(const BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API size_t   BL_CDECL blArrayGetCapacity(const BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API const void* BL_CDECL blArrayGetData(const BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayClear(BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayShrink(BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayReserve(BLArrayCore* self, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayResize(BLArrayCore* self, size_t n, const void* fill) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayMakeMutable(BLArrayCore* self, void** dataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayModifyOp(BLArrayCore* self, uint32_t op, size_t n, void** dataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayInsertOp(BLArrayCore* self, size_t index, size_t n, void** dataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayAssignMove(BLArrayCore* self, BLArrayCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayAssignWeak(BLArrayCore* self, const BLArrayCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayAssignDeep(BLArrayCore* self, const BLArrayCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayAssignView(BLArrayCore* self, const void* items, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayAppendU8(BLArrayCore* self, uint8_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayAppendU16(BLArrayCore* self, uint16_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayAppendU32(BLArrayCore* self, uint32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayAppendU64(BLArrayCore* self, uint64_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayAppendF32(BLArrayCore* self, float value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayAppendF64(BLArrayCore* self, double value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayAppendItem(BLArrayCore* self, const void* item) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayAppendView(BLArrayCore* self, const void* items, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayInsertU8(BLArrayCore* self, size_t index, uint8_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayInsertU16(BLArrayCore* self, size_t index, uint16_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayInsertU32(BLArrayCore* self, size_t index, uint32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayInsertU64(BLArrayCore* self, size_t index, uint64_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayInsertF32(BLArrayCore* self, size_t index, float value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayInsertF64(BLArrayCore* self, size_t index, double value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayInsertItem(BLArrayCore* self, size_t index, const void* item) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayInsertView(BLArrayCore* self, size_t index, const void* items, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayReplaceU8(BLArrayCore* self, size_t index, uint8_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayReplaceU16(BLArrayCore* self, size_t index, uint16_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayReplaceU32(BLArrayCore* self, size_t index, uint32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayReplaceU64(BLArrayCore* self, size_t index, uint64_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayReplaceF32(BLArrayCore* self, size_t index, float value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayReplaceF64(BLArrayCore* self, size_t index, double value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayReplaceItem(BLArrayCore* self, size_t index, const void* item) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayReplaceView(BLArrayCore* self, const BLRange* range, const void* items, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayRemoveIndex(BLArrayCore* self, size_t index) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayRemoveRange(BLArrayCore* self, const BLRange* range) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blArrayEquals(const BLArrayCore* a, const BLArrayCore* b) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLContext
 //! \{
-BL_API_C BLResult BL_CDECL blContextInit(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextInitAs(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextReset(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextAssignMove(BLContextCore* self, BLContextCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextAssignWeak(BLContextCore* self, const BLContextCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetType(const BLContextCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextBegin(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextEnd(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextFlush(BLContextCore* self, uint32_t flags) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSave(BLContextCore* self, BLContextCookie* cookie) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextRestore(BLContextCore* self, const BLContextCookie* cookie) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetMetaMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetUserMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextUserToMeta(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextMatrixOp(BLContextCore* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetHint(BLContextCore* self, uint32_t hintType, uint32_t value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetHints(BLContextCore* self, const BLContextHints* hints) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetFlattenMode(BLContextCore* self, uint32_t mode) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetFlattenTolerance(BLContextCore* self, double tolerance) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetApproximationOptions(BLContextCore* self, const BLApproximationOptions* options) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetCompOp(BLContextCore* self, uint32_t compOp) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetGlobalAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetFillAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetFillStyle(const BLContextCore* self, void* object) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetFillStyleRgba32(const BLContextCore* self, uint32_t* rgba32) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetFillStyleRgba64(const BLContextCore* self, uint64_t* rgba64) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetFillStyle(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetFillStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetFillStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetFillRule(BLContextCore* self, uint32_t fillRule) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetStrokeStyle(const BLContextCore* self, void* object) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetStrokeStyleRgba32(const BLContextCore* self, uint32_t* rgba32) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetStrokeStyleRgba64(const BLContextCore* self, uint64_t* rgba64) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeStyle(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeWidth(BLContextCore* self, double width) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeMiterLimit(BLContextCore* self, double miterLimit) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeCap(BLContextCore* self, uint32_t position, uint32_t strokeCap) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeCaps(BLContextCore* self, uint32_t strokeCap) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeJoin(BLContextCore* self, uint32_t strokeJoin) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeDashOffset(BLContextCore* self, double dashOffset) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeDashArray(BLContextCore* self, const BLArrayCore* dashArray) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeTransformOrder(BLContextCore* self, uint32_t transformOrder) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextGetStrokeOptions(const BLContextCore* self, BLStrokeOptionsCore* options) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextSetStrokeOptions(BLContextCore* self, const BLStrokeOptionsCore* options) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextClipToRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextClipToRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextRestoreClipping(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextClearAll(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextClearRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextClearRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextFillAll(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextFillRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextFillRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextFillPathD(BLContextCore* self, const BLPathCore* path) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextFillGeometry(BLContextCore* self, uint32_t geometryType, const void* geometryData) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextFillTextI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextFillTextD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextFillGlyphRunI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextFillGlyphRunD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextStrokeRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextStrokeRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextStrokePathD(BLContextCore* self, const BLPathCore* path) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextStrokeGeometry(BLContextCore* self, uint32_t geometryType, const void* geometryData) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextStrokeTextI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextStrokeTextD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextStrokeGlyphRunI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextStrokeGlyphRunD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextBlitImageI(BLContextCore* self, const BLPointI* pt, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextBlitImageD(BLContextCore* self, const BLPoint* pt, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextBlitScaledImageI(BLContextCore* self, const BLRectI* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blContextBlitScaledImageD(BLContextCore* self, const BLRect* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextInit(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextInitAs(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextReset(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextAssignMove(BLContextCore* self, BLContextCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextAssignWeak(BLContextCore* self, const BLContextCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetType(const BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextBegin(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextEnd(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFlush(BLContextCore* self, uint32_t flags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSave(BLContextCore* self, BLContextCookie* cookie) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextRestore(BLContextCore* self, const BLContextCookie* cookie) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetMetaMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetUserMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextUserToMeta(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextMatrixOp(BLContextCore* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetHint(BLContextCore* self, uint32_t hintType, uint32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetHints(BLContextCore* self, const BLContextHints* hints) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFlattenMode(BLContextCore* self, uint32_t mode) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFlattenTolerance(BLContextCore* self, double tolerance) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetApproximationOptions(BLContextCore* self, const BLApproximationOptions* options) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetCompOp(BLContextCore* self, uint32_t compOp) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetGlobalAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetFillStyle(const BLContextCore* self, void* object) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetFillStyleRgba32(const BLContextCore* self, uint32_t* rgba32) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetFillStyleRgba64(const BLContextCore* self, uint64_t* rgba64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillStyle(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillRule(BLContextCore* self, uint32_t fillRule) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetStrokeStyle(const BLContextCore* self, void* object) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetStrokeStyleRgba32(const BLContextCore* self, uint32_t* rgba32) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetStrokeStyleRgba64(const BLContextCore* self, uint64_t* rgba64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeStyle(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeWidth(BLContextCore* self, double width) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeMiterLimit(BLContextCore* self, double miterLimit) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeCap(BLContextCore* self, uint32_t position, uint32_t strokeCap) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeCaps(BLContextCore* self, uint32_t strokeCap) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeJoin(BLContextCore* self, uint32_t strokeJoin) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeDashOffset(BLContextCore* self, double dashOffset) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeDashArray(BLContextCore* self, const BLArrayCore* dashArray) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeTransformOrder(BLContextCore* self, uint32_t transformOrder) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetStrokeOptions(const BLContextCore* self, BLStrokeOptionsCore* options) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeOptions(BLContextCore* self, const BLStrokeOptionsCore* options) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextClipToRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextClipToRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextRestoreClipping(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextClearAll(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextClearRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextClearRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillAll(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillPathD(BLContextCore* self, const BLPathCore* path) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillGeometry(BLContextCore* self, uint32_t geometryType, const void* geometryData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillTextI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillTextD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillGlyphRunI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillGlyphRunD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokePathD(BLContextCore* self, const BLPathCore* path) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeGeometry(BLContextCore* self, uint32_t geometryType, const void* geometryData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeTextI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeTextD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeGlyphRunI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeGlyphRunD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextBlitImageI(BLContextCore* self, const BLPointI* pt, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextBlitImageD(BLContextCore* self, const BLPoint* pt, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextBlitScaledImageI(BLContextCore* self, const BLRectI* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextBlitScaledImageD(BLContextCore* self, const BLRect* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLFile
 //! \{
-BL_API_C BLResult BL_CDECL blFileInit(BLFileCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFileReset(BLFileCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFileClose(BLFileCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFileSeek(BLFileCore* self, int64_t offset, uint32_t seekType, int64_t* positionOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFileTruncate(BLFileCore* self, int64_t maxSize) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileInit(BLFileCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileReset(BLFileCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileClose(BLFileCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileSeek(BLFileCore* self, int64_t offset, uint32_t seekType, int64_t* positionOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileTruncate(BLFileCore* self, int64_t maxSize) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLFileSystem
 //! \{
-BL_API_C BLResult BL_CDECL blFileSystemReadFile(const char* fileName, BLArrayCore* dst, size_t maxSize, uint32_t readFlags) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFileSystemWriteFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileSystemReadFile(const char* fileName, BLArrayCore* dst, size_t maxSize, uint32_t readFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileSystemWriteFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLFont
 //! \{
-BL_API_C BLResult BL_CDECL blFontInit(BLFontCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontReset(BLFontCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontAssignMove(BLFontCore* self, BLFontCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontAssignWeak(BLFontCore* self, const BLFontCore* other) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blFontEquals(const BLFontCore* a, const BLFontCore* b) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontCreateFromFace(BLFontCore* self, const BLFontFaceCore* face, float size) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontShape(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, BLGlyphMappingState* stateOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, uint32_t positioningFlags) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontApplyKerning(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontApplyGSub(const BLFontCore* self, BLGlyphBufferCore* gb, size_t index, BLBitWord lookups) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontApplyGPos(const BLFontCore* self, BLGlyphBufferCore* gb, size_t index, BLBitWord lookups) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontGetMatrix(const BLFontCore* self, BLFontMatrix* out) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontGetMetrics(const BLFontCore* self, BLFontMetrics* out) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontGetDesignMetrics(const BLFontCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLTextMetrics* out) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontGetGlyphBounds(const BLFontCore* self, const void* glyphIdData, intptr_t glyphIdAdvance, BLBoxI* out, size_t count) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontGetGlyphAdvances(const BLFontCore* self, const void* glyphIdData, intptr_t glyphIdAdvance, BLGlyphPlacement* out, size_t count) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontGetGlyphOutlines(const BLFontCore* self, uint32_t glyphId, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* glyphRun, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontInit(BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontReset(BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontAssignMove(BLFontCore* self, BLFontCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontAssignWeak(BLFontCore* self, const BLFontCore* other) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blFontEquals(const BLFontCore* a, const BLFontCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontCreateFromFace(BLFontCore* self, const BLFontFaceCore* face, float size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontShape(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, BLGlyphMappingState* stateOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, uint32_t positioningFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontApplyKerning(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontApplyGSub(const BLFontCore* self, BLGlyphBufferCore* gb, size_t index, BLBitWord lookups) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontApplyGPos(const BLFontCore* self, BLGlyphBufferCore* gb, size_t index, BLBitWord lookups) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetMatrix(const BLFontCore* self, BLFontMatrix* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetMetrics(const BLFontCore* self, BLFontMetrics* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetDesignMetrics(const BLFontCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLTextMetrics* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetGlyphBounds(const BLFontCore* self, const void* glyphIdData, intptr_t glyphIdAdvance, BLBoxI* out, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetGlyphAdvances(const BLFontCore* self, const void* glyphIdData, intptr_t glyphIdAdvance, BLGlyphPlacement* out, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetGlyphOutlines(const BLFontCore* self, uint32_t glyphId, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* glyphRun, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLFontData
 //! \{
-BL_API_C BLResult BL_CDECL blFontDataInit(BLFontDataCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontDataInitFromLoader(BLFontDataCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontDataReset(BLFontDataCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontDataAssignMove(BLFontDataCore* self, BLFontDataCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontDataAssignWeak(BLFontDataCore* self, const BLFontDataCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontDataCreateFromLoader(BLFontDataCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blFontDataEquals(const BLFontDataCore* a, const BLFontDataCore* b) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontDataListTags(const BLFontDataCore* self, BLArrayCore* dst) BL_NOEXCEPT_C;
-BL_API_C size_t   BL_CDECL blFontDataQueryTables(const BLFontDataCore* self, BLFontTable* dst, const BLTag* tags, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataInit(BLFontDataCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataInitFromLoader(BLFontDataCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataReset(BLFontDataCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataAssignMove(BLFontDataCore* self, BLFontDataCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataAssignWeak(BLFontDataCore* self, const BLFontDataCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataCreateFromLoader(BLFontDataCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blFontDataEquals(const BLFontDataCore* a, const BLFontDataCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataListTags(const BLFontDataCore* self, BLArrayCore* dst) BL_NOEXCEPT_C;
+BL_API size_t   BL_CDECL blFontDataQueryTables(const BLFontDataCore* self, BLFontTable* dst, const BLTag* tags, size_t count) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLFontFace
 //! \{
-BL_API_C BLResult BL_CDECL blFontFaceInit(BLFontFaceCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontFaceReset(BLFontFaceCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontFaceAssignMove(BLFontFaceCore* self, BLFontFaceCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontFaceAssignWeak(BLFontFaceCore* self, const BLFontFaceCore* other) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blFontFaceEquals(const BLFontFaceCore* a, const BLFontFaceCore* b) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName, uint32_t readFlags) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontFaceCreateFromLoader(BLFontFaceCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self, BLFontUnicodeCoverage* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceInit(BLFontFaceCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceReset(BLFontFaceCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceAssignMove(BLFontFaceCore* self, BLFontFaceCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceAssignWeak(BLFontFaceCore* self, const BLFontFaceCore* other) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blFontFaceEquals(const BLFontFaceCore* a, const BLFontFaceCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName, uint32_t readFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceCreateFromLoader(BLFontFaceCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self, BLFontUnicodeCoverage* out) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLFontLoader
 //! \{
-BL_API_C BLResult BL_CDECL blFontLoaderInit(BLFontLoaderCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontLoaderReset(BLFontLoaderCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontLoaderAssignMove(BLFontLoaderCore* self, BLFontLoaderCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontLoaderAssignWeak(BLFontLoaderCore* self, const BLFontLoaderCore* other) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blFontLoaderEquals(const BLFontLoaderCore* a, const BLFontLoaderCore* b) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontLoaderCreateFromFile(BLFontLoaderCore* self, const char* fileName, uint32_t readFlags) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontLoaderCreateFromDataArray(BLFontLoaderCore* self, const BLArrayCore* dataArray) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blFontLoaderCreateFromData(BLFontLoaderCore* self, const void* data, size_t size, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontLoaderInit(BLFontLoaderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontLoaderReset(BLFontLoaderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontLoaderAssignMove(BLFontLoaderCore* self, BLFontLoaderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontLoaderAssignWeak(BLFontLoaderCore* self, const BLFontLoaderCore* other) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blFontLoaderEquals(const BLFontLoaderCore* a, const BLFontLoaderCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontLoaderCreateFromFile(BLFontLoaderCore* self, const char* fileName, uint32_t readFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontLoaderCreateFromDataArray(BLFontLoaderCore* self, const BLArrayCore* dataArray) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontLoaderCreateFromData(BLFontLoaderCore* self, const void* data, size_t size, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLFormat
 //! \{
-BL_API_C BLResult BL_CDECL blFormatInfoSanitize(BLFormatInfo* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFormatInfoSanitize(BLFormatInfo* self) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLGlyphBuffer
 //! \{
-BL_API_C BLResult BL_CDECL blGlyphBufferInit(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGlyphBufferReset(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGlyphBufferClear(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGlyphBufferSetText(BLGlyphBufferCore* self, const void* data, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGlyphBufferSetGlyphIds(BLGlyphBufferCore* self, const void* data, intptr_t advance, size_t size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferInit(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferReset(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferClear(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferSetText(BLGlyphBufferCore* self, const void* data, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferSetGlyphIds(BLGlyphBufferCore* self, const void* data, intptr_t advance, size_t size) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLGradient
 //! \{
-BL_API_C BLResult BL_CDECL blGradientInit(BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientInitAs(BLGradientCore* self, uint32_t type, const void* values, uint32_t extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientReset(BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientAssignMove(BLGradientCore* self, BLGradientCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientAssignWeak(BLGradientCore* self, const BLGradientCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientCreate(BLGradientCore* self, uint32_t type, const void* values, uint32_t extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientShrink(BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientReserve(BLGradientCore* self, size_t n) BL_NOEXCEPT_C;
-BL_API_C uint32_t BL_CDECL blGradientGetType(const BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientSetType(BLGradientCore* self, uint32_t type) BL_NOEXCEPT_C;
-BL_API_C double   BL_CDECL blGradientGetValue(const BLGradientCore* self, size_t index) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientSetValue(BLGradientCore* self, size_t index, double value) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientSetValues(BLGradientCore* self, size_t index, const double* values, size_t n) BL_NOEXCEPT_C;
-BL_API_C uint32_t BL_CDECL blGradientGetExtendMode(BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientSetExtendMode(BLGradientCore* self, uint32_t extendMode) BL_NOEXCEPT_C;
-BL_API_C const BLGradientStop* BL_CDECL blGradientGetStops(const BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API_C size_t BL_CDECL blGradientGetSize(const BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API_C size_t BL_CDECL blGradientGetCapacity(const BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientResetStops(BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientAssignStops(BLGradientCore* self, const BLGradientStop* stops, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientAddStopRgba32(BLGradientCore* self, double offset, uint32_t argb32) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientAddStopRgba64(BLGradientCore* self, double offset, uint64_t argb64) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientRemoveStop(BLGradientCore* self, size_t index) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientRemoveStopByOffset(BLGradientCore* self, double offset, uint32_t all) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientRemoveStops(BLGradientCore* self, const BLRange* range) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientRemoveStopsFromTo(BLGradientCore* self, double offsetMin, double offsetMax) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientReplaceStopRgba32(BLGradientCore* self, size_t index, double offset, uint32_t rgba32) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientReplaceStopRgba64(BLGradientCore* self, size_t index, double offset, uint64_t rgba64) BL_NOEXCEPT_C;
-BL_API_C size_t   BL_CDECL blGradientIndexOfStop(const BLGradientCore* self, double offset) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blGradientApplyMatrixOp(BLGradientCore* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blGradientEquals(const BLGradientCore* a, const BLGradientCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientInit(BLGradientCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientInitAs(BLGradientCore* self, uint32_t type, const void* values, uint32_t extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientReset(BLGradientCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientAssignMove(BLGradientCore* self, BLGradientCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientAssignWeak(BLGradientCore* self, const BLGradientCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientCreate(BLGradientCore* self, uint32_t type, const void* values, uint32_t extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientShrink(BLGradientCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientReserve(BLGradientCore* self, size_t n) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blGradientGetType(const BLGradientCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientSetType(BLGradientCore* self, uint32_t type) BL_NOEXCEPT_C;
+BL_API double   BL_CDECL blGradientGetValue(const BLGradientCore* self, size_t index) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientSetValue(BLGradientCore* self, size_t index, double value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientSetValues(BLGradientCore* self, size_t index, const double* values, size_t n) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blGradientGetExtendMode(BLGradientCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientSetExtendMode(BLGradientCore* self, uint32_t extendMode) BL_NOEXCEPT_C;
+BL_API const BLGradientStop* BL_CDECL blGradientGetStops(const BLGradientCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blGradientGetSize(const BLGradientCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blGradientGetCapacity(const BLGradientCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientResetStops(BLGradientCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientAssignStops(BLGradientCore* self, const BLGradientStop* stops, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientAddStopRgba32(BLGradientCore* self, double offset, uint32_t argb32) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientAddStopRgba64(BLGradientCore* self, double offset, uint64_t argb64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientRemoveStop(BLGradientCore* self, size_t index) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientRemoveStopByOffset(BLGradientCore* self, double offset, uint32_t all) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientRemoveStops(BLGradientCore* self, const BLRange* range) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientRemoveStopsFromTo(BLGradientCore* self, double offsetMin, double offsetMax) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientReplaceStopRgba32(BLGradientCore* self, size_t index, double offset, uint32_t rgba32) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientReplaceStopRgba64(BLGradientCore* self, size_t index, double offset, uint64_t rgba64) BL_NOEXCEPT_C;
+BL_API size_t   BL_CDECL blGradientIndexOfStop(const BLGradientCore* self, double offset) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientApplyMatrixOp(BLGradientCore* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blGradientEquals(const BLGradientCore* a, const BLGradientCore* b) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLImage
 //! \{
-BL_API_C BLResult BL_CDECL blImageInit(BLImageCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageInitAs(BLImageCore* self, int w, int h, uint32_t format) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageInitAsFromData(BLImageCore* self, int w, int h, uint32_t format, void* pixelData, intptr_t stride, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageReset(BLImageCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageAssignMove(BLImageCore* self, BLImageCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageAssignWeak(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageAssignDeep(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCreate(BLImageCore* self, int w, int h, uint32_t format) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCreateFromData(BLImageCore* self, int w, int h, uint32_t format, void* pixelData, intptr_t stride, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageGetData(const BLImageCore* self, BLImageData* dataOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageMakeMutable(BLImageCore* self, BLImageData* dataOut) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blImageEquals(const BLImageCore* a, const BLImageCore* b) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageScale(BLImageCore* dst, const BLImageCore* src, const BLSizeI* size, uint32_t filter, const BLImageScaleOptions* options) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageReadFromFile(BLImageCore* self, const char* fileName, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageReadFromData(BLImageCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageWriteToFile(const BLImageCore* self, const char* fileName, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageWriteToData(const BLImageCore* self, BLArrayCore* dst, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageInit(BLImageCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageInitAs(BLImageCore* self, int w, int h, uint32_t format) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageInitAsFromData(BLImageCore* self, int w, int h, uint32_t format, void* pixelData, intptr_t stride, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageReset(BLImageCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageAssignMove(BLImageCore* self, BLImageCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageAssignWeak(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageAssignDeep(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCreate(BLImageCore* self, int w, int h, uint32_t format) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCreateFromData(BLImageCore* self, int w, int h, uint32_t format, void* pixelData, intptr_t stride, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageGetData(const BLImageCore* self, BLImageData* dataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageMakeMutable(BLImageCore* self, BLImageData* dataOut) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blImageEquals(const BLImageCore* a, const BLImageCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageScale(BLImageCore* dst, const BLImageCore* src, const BLSizeI* size, uint32_t filter, const BLImageScaleOptions* options) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageReadFromFile(BLImageCore* self, const char* fileName, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageReadFromData(BLImageCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageWriteToFile(const BLImageCore* self, const char* fileName, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageWriteToData(const BLImageCore* self, BLArrayCore* dst, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLImageCodec
 //! \{
-BL_API_C BLResult BL_CDECL blImageCodecInit(BLImageCodecCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCodecReset(BLImageCodecCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCodecAssignWeak(BLImageCodecCore* self, const BLImageCodecCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCodecFindByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCodecFindByData(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API_C uint32_t BL_CDECL blImageCodecInspectData(const BLImageCodecCore* self, const void* data, size_t size) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCodecCreateDecoder(const BLImageCodecCore* self, BLImageDecoderCore* dst) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCodecCreateEncoder(const BLImageCodecCore* self, BLImageEncoderCore* dst) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecInit(BLImageCodecCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecReset(BLImageCodecCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecAssignWeak(BLImageCodecCore* self, const BLImageCodecCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecFindByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecFindByData(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blImageCodecInspectData(const BLImageCodecCore* self, const void* data, size_t size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecCreateDecoder(const BLImageCodecCore* self, BLImageDecoderCore* dst) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecCreateEncoder(const BLImageCodecCore* self, BLImageEncoderCore* dst) BL_NOEXCEPT_C;
 
-BL_API_C BLResult BL_CDECL blImageCodecArrayInitBuiltInCodecs(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCodecArrayAssignBuiltInCodecs(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCodecAddToBuiltIn(const BLImageCodecCore* codec) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* codec) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecArrayInitBuiltInCodecs(BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecArrayAssignBuiltInCodecs(BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecAddToBuiltIn(const BLImageCodecCore* codec) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* codec) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLImageDecoder
 //! \{
-BL_API_C BLResult BL_CDECL blImageDecoderInit(BLImageDecoderCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageDecoderReset(BLImageDecoderCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageDecoderAssignMove(BLImageDecoderCore* self, BLImageDecoderCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageDecoderAssignWeak(BLImageDecoderCore* self, const BLImageDecoderCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageDecoderRestart(BLImageDecoderCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageDecoderReadInfo(BLImageDecoderCore* self, BLImageInfo* infoOut, const uint8_t* data, size_t size) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageDecoderReadFrame(BLImageDecoderCore* self, BLImageCore* imageOut, const uint8_t* data, size_t size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderInit(BLImageDecoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderReset(BLImageDecoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderAssignMove(BLImageDecoderCore* self, BLImageDecoderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderAssignWeak(BLImageDecoderCore* self, const BLImageDecoderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderRestart(BLImageDecoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderReadInfo(BLImageDecoderCore* self, BLImageInfo* infoOut, const uint8_t* data, size_t size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderReadFrame(BLImageDecoderCore* self, BLImageCore* imageOut, const uint8_t* data, size_t size) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLImageEncoder
 //! \{
-BL_API_C BLResult BL_CDECL blImageEncoderInit(BLImageEncoderCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageEncoderReset(BLImageEncoderCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageEncoderAssignMove(BLImageEncoderCore* self, BLImageEncoderCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageEncoderAssignWeak(BLImageEncoderCore* self, const BLImageEncoderCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageEncoderRestart(BLImageEncoderCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blImageEncoderWriteFrame(BLImageEncoderCore* self, BLArrayCore* dst, const BLImageCore* image) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderInit(BLImageEncoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderReset(BLImageEncoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderAssignMove(BLImageEncoderCore* self, BLImageEncoderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderAssignWeak(BLImageEncoderCore* self, const BLImageEncoderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderRestart(BLImageEncoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderWriteFrame(BLImageEncoderCore* self, BLArrayCore* dst, const BLImageCore* image) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLMatrix2D
 //! \{
-BL_API_C BLResult BL_CDECL blMatrix2DSetIdentity(BLMatrix2D* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blMatrix2DSetTranslation(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blMatrix2DSetScaling(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blMatrix2DSetSkewing(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blMatrix2DSetRotation(BLMatrix2D* self, double angle, double cx, double cy) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blMatrix2DApplyOp(BLMatrix2D* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blMatrix2DInvert(BLMatrix2D* dst, const BLMatrix2D* src) BL_NOEXCEPT_C;
-BL_API_C uint32_t BL_CDECL blMatrix2DGetType(const BLMatrix2D* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DSetIdentity(BLMatrix2D* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DSetTranslation(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DSetScaling(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DSetSkewing(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DSetRotation(BLMatrix2D* self, double angle, double cx, double cy) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DApplyOp(BLMatrix2D* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DInvert(BLMatrix2D* dst, const BLMatrix2D* src) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blMatrix2DGetType(const BLMatrix2D* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLPath
 //! \{
-BL_API_C BLResult BL_CDECL blPathInit(BLPathCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathReset(BLPathCore* self) BL_NOEXCEPT_C;
-BL_API_C size_t   BL_CDECL blPathGetSize(const BLPathCore* self) BL_NOEXCEPT_C;
-BL_API_C size_t   BL_CDECL blPathGetCapacity(const BLPathCore* self) BL_NOEXCEPT_C;
-BL_API_C const uint8_t* BL_CDECL blPathGetCommandData(const BLPathCore* self) BL_NOEXCEPT_C;
-BL_API_C const BLPoint* BL_CDECL blPathGetVertexData(const BLPathCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathClear(BLPathCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathShrink(BLPathCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathReserve(BLPathCore* self, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathModifyOp(BLPathCore* self, uint32_t op, size_t n, uint8_t** cmdDataOut, BLPoint** vtxDataOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAssignMove(BLPathCore* self, BLPathCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAssignWeak(BLPathCore* self, const BLPathCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAssignDeep(BLPathCore* self, const BLPathCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathSetVertexAt(BLPathCore* self, size_t index, uint32_t cmd, double x, double y) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathMoveTo(BLPathCore* self, double x0, double y0) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathLineTo(BLPathCore* self, double x1, double y1) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathPolyTo(BLPathCore* self, const BLPoint* poly, size_t count) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathQuadTo(BLPathCore* self, double x1, double y1, double x2, double y2) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathCubicTo(BLPathCore* self, double x1, double y1, double x2, double y2, double x3, double y3) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathSmoothQuadTo(BLPathCore* self, double x2, double y2) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathSmoothCubicTo(BLPathCore* self, double x2, double y2, double x3, double y3) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathArcTo(BLPathCore* self, double x, double y, double rx, double ry, double start, double sweep, bool forceMoveTo) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathArcQuadrantTo(BLPathCore* self, double x1, double y1, double x2, double y2) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathEllipticArcTo(BLPathCore* self, double rx, double ry, double xAxisRotation, bool largeArcFlag, bool sweepFlag, double x1, double y1) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathClose(BLPathCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAddGeometry(BLPathCore* self, uint32_t geometryType, const void* geometryData, const BLMatrix2D* m, uint32_t dir) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAddBoxI(BLPathCore* self, const BLBoxI* box, uint32_t dir) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAddBoxD(BLPathCore* self, const BLBox* box, uint32_t dir) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAddRectI(BLPathCore* self, const BLRectI* rect, uint32_t dir) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAddRectD(BLPathCore* self, const BLRect* rect, uint32_t dir) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAddPath(BLPathCore* self, const BLPathCore* other, const BLRange* range) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAddTranslatedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLPoint* p) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAddTransformedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAddReversedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, uint32_t reverseMode) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathAddStrokedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLStrokeOptionsCore* options, const BLApproximationOptions* approx) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathTranslate(BLPathCore* self, const BLRange* range, const BLPoint* p) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathTransform(BLPathCore* self, const BLRange* range, const BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathFitTo(BLPathCore* self, const BLRange* range, const BLRect* rect, uint32_t fitFlags) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blPathEquals(const BLPathCore* a, const BLPathCore* b) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathGetInfoFlags(const BLPathCore* self, uint32_t* flagsOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathGetControlBox(const BLPathCore* self, BLBox* boxOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathGetBoundingBox(const BLPathCore* self, BLBox* boxOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathGetFigureRange(const BLPathCore* self, size_t index, BLRange* rangeOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathGetLastVertex(const BLPathCore* self, BLPoint* vtxOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPathGetClosestVertex(const BLPathCore* self, const BLPoint* p, double maxDistance, size_t* indexOut, double* distanceOut) BL_NOEXCEPT_C;
-BL_API_C uint32_t BL_CDECL blPathHitTest(const BLPathCore* self, const BLPoint* p, uint32_t fillRule) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathInit(BLPathCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathReset(BLPathCore* self) BL_NOEXCEPT_C;
+BL_API size_t   BL_CDECL blPathGetSize(const BLPathCore* self) BL_NOEXCEPT_C;
+BL_API size_t   BL_CDECL blPathGetCapacity(const BLPathCore* self) BL_NOEXCEPT_C;
+BL_API const uint8_t* BL_CDECL blPathGetCommandData(const BLPathCore* self) BL_NOEXCEPT_C;
+BL_API const BLPoint* BL_CDECL blPathGetVertexData(const BLPathCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathClear(BLPathCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathShrink(BLPathCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathReserve(BLPathCore* self, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathModifyOp(BLPathCore* self, uint32_t op, size_t n, uint8_t** cmdDataOut, BLPoint** vtxDataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAssignMove(BLPathCore* self, BLPathCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAssignWeak(BLPathCore* self, const BLPathCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAssignDeep(BLPathCore* self, const BLPathCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathSetVertexAt(BLPathCore* self, size_t index, uint32_t cmd, double x, double y) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathMoveTo(BLPathCore* self, double x0, double y0) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathLineTo(BLPathCore* self, double x1, double y1) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathPolyTo(BLPathCore* self, const BLPoint* poly, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathQuadTo(BLPathCore* self, double x1, double y1, double x2, double y2) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathCubicTo(BLPathCore* self, double x1, double y1, double x2, double y2, double x3, double y3) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathSmoothQuadTo(BLPathCore* self, double x2, double y2) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathSmoothCubicTo(BLPathCore* self, double x2, double y2, double x3, double y3) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathArcTo(BLPathCore* self, double x, double y, double rx, double ry, double start, double sweep, bool forceMoveTo) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathArcQuadrantTo(BLPathCore* self, double x1, double y1, double x2, double y2) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathEllipticArcTo(BLPathCore* self, double rx, double ry, double xAxisRotation, bool largeArcFlag, bool sweepFlag, double x1, double y1) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathClose(BLPathCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAddGeometry(BLPathCore* self, uint32_t geometryType, const void* geometryData, const BLMatrix2D* m, uint32_t dir) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAddBoxI(BLPathCore* self, const BLBoxI* box, uint32_t dir) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAddBoxD(BLPathCore* self, const BLBox* box, uint32_t dir) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAddRectI(BLPathCore* self, const BLRectI* rect, uint32_t dir) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAddRectD(BLPathCore* self, const BLRect* rect, uint32_t dir) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAddPath(BLPathCore* self, const BLPathCore* other, const BLRange* range) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAddTranslatedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLPoint* p) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAddTransformedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAddReversedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, uint32_t reverseMode) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathAddStrokedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLStrokeOptionsCore* options, const BLApproximationOptions* approx) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathTranslate(BLPathCore* self, const BLRange* range, const BLPoint* p) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathTransform(BLPathCore* self, const BLRange* range, const BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathFitTo(BLPathCore* self, const BLRange* range, const BLRect* rect, uint32_t fitFlags) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blPathEquals(const BLPathCore* a, const BLPathCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathGetInfoFlags(const BLPathCore* self, uint32_t* flagsOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathGetControlBox(const BLPathCore* self, BLBox* boxOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathGetBoundingBox(const BLPathCore* self, BLBox* boxOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathGetFigureRange(const BLPathCore* self, size_t index, BLRange* rangeOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathGetLastVertex(const BLPathCore* self, BLPoint* vtxOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathGetClosestVertex(const BLPathCore* self, const BLPoint* p, double maxDistance, size_t* indexOut, double* distanceOut) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blPathHitTest(const BLPathCore* self, const BLPoint* p, uint32_t fillRule) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLPattern
 //! \{
-BL_API_C BLResult BL_CDECL blPatternInit(BLPatternCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPatternInitAs(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, uint32_t extendMode, const BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPatternReset(BLPatternCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPatternAssignMove(BLPatternCore* self, BLPatternCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPatternAssignWeak(BLPatternCore* self, const BLPatternCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPatternAssignDeep(BLPatternCore* self, const BLPatternCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPatternCreate(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, uint32_t extendMode, const BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPatternSetImage(BLPatternCore* self, const BLImageCore* image, const BLRectI* area) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPatternSetArea(BLPatternCore* self, const BLRectI* area) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPatternSetExtendMode(BLPatternCore* self, uint32_t extendMode) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPatternApplyMatrixOp(BLPatternCore* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blPatternEquals(const BLPatternCore* a, const BLPatternCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternInit(BLPatternCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternInitAs(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, uint32_t extendMode, const BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternReset(BLPatternCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternAssignMove(BLPatternCore* self, BLPatternCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternAssignWeak(BLPatternCore* self, const BLPatternCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternAssignDeep(BLPatternCore* self, const BLPatternCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternCreate(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, uint32_t extendMode, const BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternSetImage(BLPatternCore* self, const BLImageCore* image, const BLRectI* area) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternSetArea(BLPatternCore* self, const BLRectI* area) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternSetExtendMode(BLPatternCore* self, uint32_t extendMode) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternApplyMatrixOp(BLPatternCore* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blPatternEquals(const BLPatternCore* a, const BLPatternCore* b) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLPixelConverter
 //! \{
-BL_API_C BLResult BL_CDECL blPixelConverterInit(BLPixelConverterCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPixelConverterInitWeak(BLPixelConverterCore* self, const BLPixelConverterCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPixelConverterReset(BLPixelConverterCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPixelConverterAssign(BLPixelConverterCore* self, const BLPixelConverterCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blPixelConverterCreate(BLPixelConverterCore* self, const BLFormatInfo* dstInfo, const BLFormatInfo* srcInfo) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPixelConverterInit(BLPixelConverterCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPixelConverterInitWeak(BLPixelConverterCore* self, const BLPixelConverterCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPixelConverterReset(BLPixelConverterCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPixelConverterAssign(BLPixelConverterCore* self, const BLPixelConverterCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPixelConverterCreate(BLPixelConverterCore* self, const BLFormatInfo* dstInfo, const BLFormatInfo* srcInfo) BL_NOEXCEPT_C;
 
-BL_API_C BLResult BL_CDECL blPixelConverterConvert(const BLPixelConverterCore* self,
+BL_API BLResult BL_CDECL blPixelConverterConvert(const BLPixelConverterCore* self,
   void* dstData, intptr_t dstStride,
   const void* srcData, intptr_t srcStride,
   uint32_t w, uint32_t h, const BLPixelConverterOptions* options) BL_NOEXCEPT_C;
@@ -1792,113 +1801,117 @@ BL_API_C BLResult BL_CDECL blPixelConverterConvert(const BLPixelConverterCore* s
 
 //! \name BLRandom
 //! \{
-BL_API_C void     BL_CDECL blRandomReset(BLRandom* self, uint64_t seed) BL_NOEXCEPT_C;
-BL_API_C uint32_t BL_CDECL blRandomNextUInt32(BLRandom* self) BL_NOEXCEPT_C;
-BL_API_C uint64_t BL_CDECL blRandomNextUInt64(BLRandom* self) BL_NOEXCEPT_C;
-BL_API_C double   BL_CDECL blRandomNextDouble(BLRandom* self) BL_NOEXCEPT_C;
+BL_API void     BL_CDECL blRandomReset(BLRandom* self, uint64_t seed) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blRandomNextUInt32(BLRandom* self) BL_NOEXCEPT_C;
+BL_API uint64_t BL_CDECL blRandomNextUInt64(BLRandom* self) BL_NOEXCEPT_C;
+BL_API double   BL_CDECL blRandomNextDouble(BLRandom* self) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLRegion
 //! \{
-BL_API_C BLResult BL_CDECL blRegionInit(BLRegionCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionReset(BLRegionCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionClear(BLRegionCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionShrink(BLRegionCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionReserve(BLRegionCore* self, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionAssignMove(BLRegionCore* self, BLRegionCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionAssignWeak(BLRegionCore* self, const BLRegionCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionAssignDeep(BLRegionCore* self, const BLRegionCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionAssignBoxI(BLRegionCore* self, const BLBoxI* src) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionAssignBoxIArray(BLRegionCore* self, const BLBoxI* data, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionAssignRectI(BLRegionCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionAssignRectIArray(BLRegionCore* self, const BLRectI* data, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionCombine(BLRegionCore* self, const BLRegionCore* a, const BLRegionCore* b, uint32_t op) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionCombineRB(BLRegionCore* self, const BLRegionCore* a, const BLBoxI* b, uint32_t op) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionCombineBR(BLRegionCore* self, const BLBoxI* a, const BLRegionCore* b, uint32_t op) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionCombineBB(BLRegionCore* self, const BLBoxI* a, const BLBoxI* b, uint32_t op) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionTranslate(BLRegionCore* self, const BLRegionCore* r, const BLPointI* pt) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionTranslateAndClip(BLRegionCore* self, const BLRegionCore* r, const BLPointI* pt, const BLBoxI* clipBox) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRegionIntersectAndClip(BLRegionCore* self, const BLRegionCore* a, const BLRegionCore* b, const BLBoxI* clipBox) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blRegionEquals(const BLRegionCore* a, const BLRegionCore* b) BL_NOEXCEPT_C;
-BL_API_C uint32_t BL_CDECL blRegionGetType(const BLRegionCore* self) BL_NOEXCEPT_C;
-BL_API_C uint32_t BL_CDECL blRegionHitTest(const BLRegionCore* self, const BLPointI* pt) BL_NOEXCEPT_C;
-BL_API_C uint32_t BL_CDECL blRegionHitTestBoxI(const BLRegionCore* self, const BLBoxI* box) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionInit(BLRegionCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionReset(BLRegionCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionClear(BLRegionCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionShrink(BLRegionCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionReserve(BLRegionCore* self, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionAssignMove(BLRegionCore* self, BLRegionCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionAssignWeak(BLRegionCore* self, const BLRegionCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionAssignDeep(BLRegionCore* self, const BLRegionCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionAssignBoxI(BLRegionCore* self, const BLBoxI* src) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionAssignBoxIArray(BLRegionCore* self, const BLBoxI* data, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionAssignRectI(BLRegionCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionAssignRectIArray(BLRegionCore* self, const BLRectI* data, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionCombine(BLRegionCore* self, const BLRegionCore* a, const BLRegionCore* b, uint32_t op) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionCombineRB(BLRegionCore* self, const BLRegionCore* a, const BLBoxI* b, uint32_t op) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionCombineBR(BLRegionCore* self, const BLBoxI* a, const BLRegionCore* b, uint32_t op) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionCombineBB(BLRegionCore* self, const BLBoxI* a, const BLBoxI* b, uint32_t op) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionTranslate(BLRegionCore* self, const BLRegionCore* r, const BLPointI* pt) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionTranslateAndClip(BLRegionCore* self, const BLRegionCore* r, const BLPointI* pt, const BLBoxI* clipBox) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionIntersectAndClip(BLRegionCore* self, const BLRegionCore* a, const BLRegionCore* b, const BLBoxI* clipBox) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blRegionEquals(const BLRegionCore* a, const BLRegionCore* b) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blRegionGetType(const BLRegionCore* self) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blRegionHitTest(const BLRegionCore* self, const BLPointI* pt) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blRegionHitTestBoxI(const BLRegionCore* self, const BLBoxI* box) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLRuntime
 //! \{
-BL_API_C BLResult BL_CDECL blRuntimeInit() BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRuntimeShutdown() BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRuntimeCleanup(uint32_t cleanupFlags) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRuntimeQueryInfo(uint32_t infoType, void* infoOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRuntimeMessageOut(const char* msg) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRuntimeMessageFmt(const char* fmt, ...) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blRuntimeMessageVFmt(const char* fmt, va_list ap) BL_NOEXCEPT_C;
-BL_API_C uint32_t BL_CDECL blRuntimeGetTickCount(void) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRuntimeInit() BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRuntimeShutdown() BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRuntimeCleanup(uint32_t cleanupFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRuntimeQueryInfo(uint32_t infoType, void* infoOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRuntimeMessageOut(const char* msg) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRuntimeMessageFmt(const char* fmt, ...) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRuntimeMessageVFmt(const char* fmt, va_list ap) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blRuntimeGetTickCount(void) BL_NOEXCEPT_C;
 
-BL_API_C BL_NORETURN void BL_CDECL blRuntimeAssertionFailure(const char* file, int line, const char* msg) BL_NOEXCEPT_C;
+BL_API BL_NORETURN void BL_CDECL blRuntimeAssertionFailure(const char* file, int line, const char* msg) BL_NOEXCEPT_C;
 
 #ifdef _WIN32
-BL_API_C BLResult BL_CDECL blResultFromWinError(uint32_t e) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blResultFromWinError(uint32_t e) BL_NOEXCEPT_C;
 #else
-BL_API_C BLResult BL_CDECL blResultFromPosixError(int e) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blResultFromPosixError(int e) BL_NOEXCEPT_C;
 #endif
 //! \}
 
 //! \name BLString
 //! \{
-BL_API_C BLResult BL_CDECL blStringInit(BLStringCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringReset(BLStringCore* self) BL_NOEXCEPT_C;
-BL_API_C size_t   BL_CDECL blStringGetSize(const BLStringCore* self) BL_NOEXCEPT_C;
-BL_API_C size_t   BL_CDECL blStringGetCapacity(const BLStringCore* self) BL_NOEXCEPT_C;
-BL_API_C const char* BL_CDECL blStringGetData(const BLStringCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringClear(BLStringCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringShrink(BLStringCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringReserve(BLStringCore* self, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringResize(BLStringCore* self, size_t n, char fill) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringMakeMutable(BLStringCore* self, char** dataOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringModifyOp(BLStringCore* self, uint32_t op, size_t n, char** dataOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringInsertOp(BLStringCore* self, size_t index, size_t n, char** dataOut) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringAssignMove(BLStringCore* self, BLStringCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringAssignWeak(BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringAssignDeep(BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringAssignData(BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringApplyOpChar(BLStringCore* self, uint32_t op, char c, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringApplyOpData(BLStringCore* self, uint32_t op, const char* str, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringApplyOpString(BLStringCore* self, uint32_t op, const BLStringCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringApplyOpFormat(BLStringCore* self, uint32_t op, const char* fmt, ...) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringApplyOpFormatV(BLStringCore* self, uint32_t op, const char* fmt, va_list ap) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringInsertChar(BLStringCore* self, size_t index, char c, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringInsertData(BLStringCore* self, size_t index, const char* str, size_t n) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringInsertString(BLStringCore* self, size_t index, const BLStringCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStringRemoveRange(BLStringCore* self, const BLRange* range) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blStringEquals(const BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blStringEqualsData(const BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C;
-BL_API_C int      BL_CDECL blStringCompare(const BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
-BL_API_C int      BL_CDECL blStringCompareData(const BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringInit(BLStringCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringReset(BLStringCore* self) BL_NOEXCEPT_C;
+BL_API size_t   BL_CDECL blStringGetSize(const BLStringCore* self) BL_NOEXCEPT_C;
+BL_API size_t   BL_CDECL blStringGetCapacity(const BLStringCore* self) BL_NOEXCEPT_C;
+BL_API const char* BL_CDECL blStringGetData(const BLStringCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringClear(BLStringCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringShrink(BLStringCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringReserve(BLStringCore* self, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringResize(BLStringCore* self, size_t n, char fill) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringMakeMutable(BLStringCore* self, char** dataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringModifyOp(BLStringCore* self, uint32_t op, size_t n, char** dataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringInsertOp(BLStringCore* self, size_t index, size_t n, char** dataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringAssignMove(BLStringCore* self, BLStringCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringAssignWeak(BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringAssignDeep(BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringAssignData(BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringApplyOpChar(BLStringCore* self, uint32_t op, char c, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringApplyOpData(BLStringCore* self, uint32_t op, const char* str, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringApplyOpString(BLStringCore* self, uint32_t op, const BLStringCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringApplyOpFormat(BLStringCore* self, uint32_t op, const char* fmt, ...) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringApplyOpFormatV(BLStringCore* self, uint32_t op, const char* fmt, va_list ap) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringInsertChar(BLStringCore* self, size_t index, char c, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringInsertData(BLStringCore* self, size_t index, const char* str, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringInsertString(BLStringCore* self, size_t index, const BLStringCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringRemoveRange(BLStringCore* self, const BLRange* range) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blStringEquals(const BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blStringEqualsData(const BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C;
+BL_API int      BL_CDECL blStringCompare(const BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
+BL_API int      BL_CDECL blStringCompareData(const BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLStrokeOptions
 //! \{
-BL_API_C BLResult BL_CDECL blStrokeOptionsInit(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStrokeOptionsInitMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStrokeOptionsInitWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStrokeOptionsReset(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStrokeOptionsAssignMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsInit(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsInitMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsInitWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsReset(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsAssignMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLVariant
 //! \{
-BL_API_C BLResult BL_CDECL blVariantInit(void* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blVariantInitMove(void* self, void* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blVariantInitWeak(void* self, const void* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blVariantReset(void* self) BL_NOEXCEPT_C;
-BL_API_C uint32_t BL_CDECL blVariantGetImplType(const void* self) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blVariantAssignMove(void* self, void* other) BL_NOEXCEPT_C;
-BL_API_C BLResult BL_CDECL blVariantAssignWeak(void* self, const void* other) BL_NOEXCEPT_C;
-BL_API_C bool     BL_CDECL blVariantEquals(const void* a, const void* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blVariantInit(void* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blVariantInitMove(void* self, void* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blVariantInitWeak(void* self, const void* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blVariantReset(void* self) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blVariantGetImplType(const void* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blVariantAssignMove(void* self, void* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blVariantAssignWeak(void* self, const void* other) BL_NOEXCEPT_C;
+BL_API bool     BL_CDECL blVariantEquals(const void* a, const void* b) BL_NOEXCEPT_C;
 //! \}
+
+#ifdef __cplusplus
+} // {Extern:C}
+#endif
 
 //! \}
 

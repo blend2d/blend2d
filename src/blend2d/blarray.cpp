@@ -1197,7 +1197,7 @@ void blArrayRtInit(BLRuntimeContext* rt) noexcept {
 // [BLArray - Unit Tests]
 // ============================================================================
 
-#if defined(BL_BUILD_TEST)
+#if defined(BL_TEST)
 UNIT(blend2d_array) {
   BLArray<int> a;
 

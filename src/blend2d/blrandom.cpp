@@ -21,7 +21,7 @@ uint64_t blRandomNextUInt64(BLRandom* self) noexcept { return blRandomNextUInt64
 // [BLRandom - Unit Tests]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 UNIT(blend2d_random) {
   // Number of iterations for tests that use loop.
   enum { kCount = 1000000 };

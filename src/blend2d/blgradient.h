@@ -65,6 +65,8 @@ struct BLGradientStop {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
+  //! \name Construction & Destruction
+  //! \{
 
   BL_INLINE BLGradientStop() noexcept = default;
   BL_INLINE BLGradientStop(const BLGradientStop& other) noexcept = default;
@@ -76,6 +78,19 @@ struct BLGradientStop {
   BL_INLINE BLGradientStop(double offset, const BLRgba64& rgba64) noexcept
     : offset(offset),
       rgba(rgba64) {}
+
+  //! \}
+
+  //! \name Overloaded Operators
+  //! \{
+
+  BL_INLINE bool operator==(const BLGradientStop& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLGradientStop& other) const noexcept { return !equals(other); }
+
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
 
   BL_INLINE void reset() noexcept {
     this->offset = 0.0;
@@ -97,9 +112,7 @@ struct BLGradientStop {
            blEquals(this->rgba  , other.rgba  ) ;
   }
 
-  BL_INLINE bool operator==(const BLGradientStop& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLGradientStop& other) const noexcept { return !equals(other); }
-
+  //! \}
   #endif
   // --------------------------------------------------------------------------
 };
@@ -117,6 +130,9 @@ struct BLLinearGradientValues {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
+  //! \name Construction & Destruction
+  //! \{
+
   BL_INLINE BLLinearGradientValues() noexcept = default;
   BL_INLINE BLLinearGradientValues(const BLLinearGradientValues& other) noexcept = default;
 
@@ -126,8 +142,14 @@ struct BLLinearGradientValues {
       x1(x1),
       y1(y1) {}
 
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
+
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 
+  //! \}
   #endif
   // --------------------------------------------------------------------------
 };
@@ -146,6 +168,8 @@ struct BLRadialGradientValues {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
+  //! \name Construction & Destruction
+  //! \{
 
   BL_INLINE BLRadialGradientValues() noexcept = default;
   BL_INLINE BLRadialGradientValues(const BLRadialGradientValues& other) noexcept = default;
@@ -157,8 +181,14 @@ struct BLRadialGradientValues {
       y1(y1),
       r0(r0) {}
 
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
+
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 
+  //! \}
   #endif
   // --------------------------------------------------------------------------
 };
@@ -175,6 +205,8 @@ struct BLConicalGradientValues {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
+  //! \name Construction & Destruction
+  //! \{
 
   BL_INLINE BLConicalGradientValues() noexcept = default;
   BL_INLINE BLConicalGradientValues(const BLConicalGradientValues& other) noexcept = default;
@@ -184,8 +216,14 @@ struct BLConicalGradientValues {
       y0(y0),
       angle(angle) {}
 
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
+
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 
+  //! \}
   #endif
   // --------------------------------------------------------------------------
 };
@@ -263,7 +301,7 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_GRADIENT;
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLGradient() noexcept { this->impl = none().impl; }

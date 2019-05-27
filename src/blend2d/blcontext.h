@@ -492,7 +492,7 @@ public:
   };
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLContext() noexcept { this->impl = none().impl; }
@@ -511,13 +511,13 @@ public:
   //! \name Overloaded Operators
   //! \{
 
+  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+
   BL_INLINE BLContext& operator=(BLContext&& other) noexcept { blContextAssignMove(this, &other); return *this; }
   BL_INLINE BLContext& operator=(const BLContext& other) noexcept { blContextAssignWeak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLContext& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLContext& other) const noexcept { return !equals(other); }
-
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
 
   //! \}
 

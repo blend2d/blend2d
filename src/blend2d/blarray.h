@@ -271,7 +271,7 @@ public:
                 "Type 'T' cannot be used with 'BLArray<T>' as it's either non-trivial or non-specialized");
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLArray() noexcept { this->impl = none().impl; }
@@ -286,13 +286,14 @@ public:
   //! \name Overloaded Operators
   //! \{
 
+  BL_INLINE explicit operator bool() const noexcept { return !empty(); }
+
   BL_INLINE BLArray& operator=(BLArray&& other) noexcept { blArrayAssignMove(this, &other); return *this; }
   BL_INLINE BLArray& operator=(const BLArray& other) noexcept { blArrayAssignWeak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLArray& other) noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLArray& other) noexcept { return !equals(other); }
 
-  BL_INLINE explicit operator bool() const noexcept { return !empty(); }
   BL_INLINE const T& operator[](size_t index) const noexcept { return at(index); }
 
   //! \}

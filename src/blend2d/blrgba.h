@@ -39,6 +39,9 @@ struct BLRgba32 {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
+  //! \name Construction & Destruction
+  //! \{
+
   BL_INLINE BLRgba32() noexcept = default;
   constexpr BLRgba32(const BLRgba32&) noexcept = default;
   constexpr explicit BLRgba32(uint32_t rgba32) noexcept : value(rgba32) {}
@@ -50,6 +53,21 @@ struct BLRgba32 {
             (g <<  8) |
             (b      ) ) {}
 
+  //! \}
+
+  //! \name Overloaded Operators
+  //! \{
+
+  constexpr explicit operator bool() const noexcept { return this->value != 0; }
+
+  BL_INLINE bool operator==(const BLRgba32& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLRgba32& other) const noexcept { return !equals(other); }
+
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
+
   BL_INLINE void reset() noexcept { this->value = 0u; }
   BL_INLINE void reset(uint32_t rgba32) noexcept { this->value = rgba32;}
   BL_INLINE void reset(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept { *this = BLRgba32(r, g, b, a); }
@@ -59,15 +77,17 @@ struct BLRgba32 {
 
   BL_INLINE bool equals(const BLRgba32& other) const noexcept { return blEquals(this->value, other.value); }
 
+  //! \}
+
+  //! \name Utilities
+  //! \{
+
   //! Gets whether the color is fully-opaque (alpha equals 0xFFFF).
   constexpr bool isOpaque() const noexcept { return this->value >= 0xFF000000u; }
   //! Gets whether the color is fully-transparent (alpha equals 0).
   constexpr bool isTransparent() const noexcept { return this->value <= 0x00FFFFFFu; }
 
-  BL_INLINE bool operator==(const BLRgba32& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLRgba32& other) const noexcept { return !equals(other); }
-
-  constexpr explicit operator bool() const noexcept { return this->value != 0; }
+  //! \}
   #endif
   // --------------------------------------------------------------------------
 };
@@ -97,6 +117,9 @@ struct BLRgba64 {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
+  //! \name Construction & Destruction
+  //! \{
+
   BL_INLINE BLRgba64() noexcept = default;
   constexpr BLRgba64(const BLRgba64&) noexcept = default;
   constexpr explicit BLRgba64(uint64_t rgba64) noexcept : value(rgba64) {}
@@ -108,6 +131,21 @@ struct BLRgba64 {
             ((uint64_t)b      ) ) {}
 
   BL_INLINE explicit BLRgba64(const BLRgba32& rgba32) noexcept { reset(rgba32); }
+
+  //! \}
+
+  //! \name Overloaded Operators
+  //! \{
+
+  constexpr explicit operator bool() const noexcept { return this->value != 0; }
+
+  BL_INLINE bool operator==(const BLRgba64& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLRgba64& other) const noexcept { return !equals(other); }
+
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
 
   BL_INLINE void reset() noexcept { this->value = 0u; }
   BL_INLINE void reset(uint64_t rgba64) noexcept { this->value = rgba64; }
@@ -123,15 +161,17 @@ struct BLRgba64 {
 
   BL_INLINE bool equals(const BLRgba64& other) const noexcept { return blEquals(this->value, other.value); }
 
+  //! \}
+
+  //! \name Utilities
+  //! \{
+
   //! Gets whether the color is fully-opaque (alpha equals 0xFFFF).
   constexpr bool isOpaque() const noexcept { return this->value >= 0xFFFF000000000000u; }
   //! Gets whether the color is fully-transparent (alpha equals 0).
   constexpr bool isTransparent() const noexcept { return this->value <= 0x0000FFFFFFFFFFFFu; }
 
-  BL_INLINE bool operator==(const BLRgba64& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLRgba64& other) const noexcept { return !equals(other); }
-
-  constexpr explicit operator bool() const noexcept { return this->value != 0; }
+  //! \}
   #endif
   // --------------------------------------------------------------------------
 };
@@ -149,6 +189,9 @@ struct BLRgba128 {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
+  //! \name Construction & Destruction
+  //! \{
+
   BL_INLINE BLRgba128() noexcept = default;
   constexpr BLRgba128(const BLRgba128&) noexcept = default;
 
@@ -158,12 +201,25 @@ struct BLRgba128 {
       b(b),
       a(a) {}
 
+  //! \}
+
+  //! \name Overloaded Operators
+  //! \{
+
   constexpr explicit operator bool() const noexcept {
     return (this->r == 0.0f) &
            (this->g == 0.0f) &
            (this->b == 0.0f) &
            (this->a == 0.0f) ;
   }
+
+  BL_INLINE bool operator==(const BLRgba128& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLRgba128& other) const noexcept { return !equals(other); }
+
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
 
   BL_INLINE void reset() noexcept {
     reset(0.0f, 0.0f, 0.0f, 0.0f);
@@ -183,14 +239,17 @@ struct BLRgba128 {
            blEquals(this->a, other.a) ;
   }
 
+  //! \}
+
+  //! \name Utilities
+  //! \{
+
   //! Gets whether the color is fully-opaque (alpha equals 1.0).
   constexpr bool isOpaque() const noexcept { return this->a >= 1.0; }
   //! Gets whether the color is fully-transparent (alpha equals 0.0).
   constexpr bool isTransparent() const noexcept { return this->a == 0.0; }
 
-  BL_INLINE bool operator==(const BLRgba128& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLRgba128& other) const noexcept { return !equals(other); }
-
+  //! \}
   #endif
   // --------------------------------------------------------------------------
 };

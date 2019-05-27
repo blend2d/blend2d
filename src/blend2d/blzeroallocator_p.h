@@ -30,6 +30,11 @@ class BLZeroBuffer {
 public:
   BL_NONCOPYABLE(BLZeroBuffer)
 
+  //! Zero allocated data.
+  uint8_t* data;
+  //! Size of the buffer.
+  size_t size;
+
   // --------------------------------------------------------------------------
   // [Construction / Destruction]
   // --------------------------------------------------------------------------
@@ -69,15 +74,6 @@ public:
       size = 0;
     }
   }
-
-  // --------------------------------------------------------------------------
-  // [Members]
-  // --------------------------------------------------------------------------
-
-  //! Zero allocated data.
-  uint8_t* data;
-  //! Size of the buffer.
-  size_t size;
 };
 
 //! \}

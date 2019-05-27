@@ -43,7 +43,7 @@ BL_DEFINE_ENUM(BLFormat) {
   //! Count of pixel formats.
   BL_FORMAT_COUNT = 4,
   //! Count of pixel formats (reserved for future use).
-  BL_FORMAT_RESERVED_COUNT = 8
+  BL_FORMAT_RESERVED_COUNT = 16
 };
 
 //! Pixel format flags.

@@ -51,7 +51,7 @@ void BLScopedAllocator::reset() noexcept {
 // [BLSupport - Unit Tests]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 template<typename T>
 BL_INLINE bool testIsConsecutiveBitMask(T x) {
   if (x == 0)

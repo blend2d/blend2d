@@ -842,7 +842,7 @@ void blImageRtInit(BLRuntimeContext* rt) noexcept {
 // [BLImage - Unit Tests]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 UNIT(blend2d_image_codecs) {
   INFO("Testing findByName and findByData");
   {

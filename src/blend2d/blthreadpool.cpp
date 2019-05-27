@@ -385,7 +385,7 @@ static void BL_CDECL blThreadPoolRtShutdown(BLRuntimeContext* rt) noexcept {
 
 static void BL_CDECL blThreadPoolRtCleanup(BLRuntimeContext* rt, uint32_t cleanupFlags) noexcept {
   BL_UNUSED(rt);
-  if (cleanupFlags & BL_RUNTIME_CLEANUO_THREAD_POOL)
+  if (cleanupFlags & BL_RUNTIME_CLEANUP_THREAD_POOL)
     blGlobalThreadPool->cleanup();
 }
 
@@ -415,7 +415,7 @@ void blThreadPoolRtInit(BLRuntimeContext* rt) noexcept {
 // [BLThreadPool - Unit Tests]
 // ============================================================================
 
-#if defined(BL_BUILD_TEST)
+#if defined(BL_TEST)
 struct ThreadTestData {
   uint32_t iter;
   volatile uint32_t counter;

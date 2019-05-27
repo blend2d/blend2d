@@ -415,7 +415,7 @@ BLResult blConvertUnicode(
 // [BLUnicode - Test]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 UNIT(blend2d_unicode) {
   struct TestEntry {
     char dst[28];

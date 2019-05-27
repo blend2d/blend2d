@@ -12,7 +12,7 @@
 // [BLZoneList - Unit Tests]
 // ============================================================================
 
-#ifdef BL_BUILD_TEST
+#ifdef BL_TEST
 class MyListNode : public BLZoneListNode<MyListNode> {};
 
 UNIT(blend2d_zone_list) {

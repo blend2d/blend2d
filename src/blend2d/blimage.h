@@ -228,7 +228,7 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_IMAGE;
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLImage() noexcept { this->impl = none().impl; }
@@ -243,13 +243,13 @@ public:
   //! \name Operator Overloads
   //! \{
 
+  BL_INLINE explicit operator bool() const noexcept { return !empty(); }
+
   BL_INLINE BLImage& operator=(BLImage&& other) noexcept { blImageAssignMove(this, &other); return *this; }
   BL_INLINE BLImage& operator=(const BLImage& other) noexcept { blImageAssignWeak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLImage& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLImage& other) const noexcept { return !equals(other); }
-
-  BL_INLINE explicit operator bool() const noexcept { return !empty(); }
 
   //! \}
 
@@ -427,7 +427,7 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_IMAGE_CODEC;
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLImageCodec() noexcept { this->impl = none().impl; }
@@ -441,6 +441,8 @@ public:
   //! \name Operator Overloads
   //! \{
 
+  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+
   BL_INLINE BLImageCodec& operator=(const BLImageCodec& other) noexcept {
     blImageCodecAssignWeak(this, &other);
     return *this;
@@ -448,8 +450,6 @@ public:
 
   BL_INLINE bool operator==(const BLImageCodec& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLImageCodec& other) const noexcept { return !equals(other); }
-
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
 
   //! \}
 
@@ -623,7 +623,7 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_IMAGE_DECODER;
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLImageDecoder() noexcept { this->impl = none().impl; }
@@ -637,13 +637,13 @@ public:
   //! \name Operator Overloads
   //! \{
 
+  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+
   BL_INLINE BLImageDecoder& operator=(BLImageDecoder&& other) noexcept { blImageDecoderAssignMove(this, &other); return *this; }
   BL_INLINE BLImageDecoder& operator=(const BLImageDecoder& other) noexcept { blImageDecoderAssignWeak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLImageDecoder& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLImageDecoder& other) const noexcept { return !equals(other); }
-
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
 
   //! \}
 
@@ -750,7 +750,7 @@ public:
   static constexpr const uint32_t kImplType = BL_IMPL_TYPE_IMAGE_ENCODER;
   //! \endcond
 
-  //! \name Constructors and Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE BLImageEncoder() noexcept { this->impl = none().impl; }
@@ -764,13 +764,13 @@ public:
   //! \name Operator Overloads
   //! \{
 
+  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+
   BL_INLINE BLImageEncoder& operator=(BLImageEncoder&& other) noexcept { blImageEncoderAssignMove(this, &other); return *this; }
   BL_INLINE BLImageEncoder& operator=(const BLImageEncoder& other) noexcept { blImageEncoderAssignWeak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLImageEncoder& other) const noexcept { return  equals(other); }
   BL_INLINE bool operator!=(const BLImageEncoder& other) const noexcept { return !equals(other); }
-
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
 
   //! \}
 
