@@ -212,7 +212,7 @@ struct BLCompOpSimplifyInfoGen {
     return d == PRGB32 && s == ZERO32 ? dstCopy(PRGB32, PRGB32) :
            d == PRGB32 && s == XRGB32 ? srcCopy(PRGB32, XRGB32) :
            d == PRGB32 && s == FRGB32 ? srcCopy(PRGB32, FRGB32) :
-           d == XRGB32 && s == PRGB32 ? srcCopy(PRGB32, PRGB32) :
+           d == XRGB32 && s == PRGB32 ? srcOver(PRGB32, PRGB32) :
            d == XRGB32 && s == ZERO32 ? dstCopy(PRGB32, PRGB32) :
            d == XRGB32 && s == XRGB32 ? srcCopy(PRGB32, XRGB32) :
            d == XRGB32 && s == FRGB32 ? makeOp(SrcOver, PRGB32, FRGB32) : makeOp(SrcOver, d, s);
