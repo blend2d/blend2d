@@ -1590,7 +1590,7 @@ AddBoxD:
       const BLBoxI* src = array->data;
 
       if (dir == BL_GEOMETRY_DIRECTION_CW) {
-        for (size_t i = n; i != 0; i--, src++) {
+        for (size_t i = n; i != 0; i -= 5, src++) {
           if (!blIsValid(*src))
             continue;
           appender.addBoxCW(src->x0, src->y0, src->x1, src->y1);
@@ -1598,7 +1598,7 @@ AddBoxD:
       }
       else {
         src += n - 1;
-        for (size_t i = n; i != 0; i--, src--) {
+        for (size_t i = n; i != 0; i -= 5, src--) {
           if (!blIsValid(*src))
             continue;
           appender.addBoxCCW(src->x0, src->y0, src->x1, src->y1);
@@ -1612,7 +1612,7 @@ AddBoxD:
       const BLBox* src = array->data;
 
       if (dir == BL_GEOMETRY_DIRECTION_CW) {
-        for (size_t i = n; i != 0; i--, src++) {
+        for (size_t i = n; i != 0; i -= 5, src++) {
           if (!blIsValid(*src))
             continue;
           appender.addBoxCW(src->x0, src->y0, src->x1, src->y1);
@@ -1620,7 +1620,7 @@ AddBoxD:
       }
       else {
         src += n - 1;
-        for (size_t i = n; i != 0; i--, src--) {
+        for (size_t i = n; i != 0; i -= 5, src--) {
           if (!blIsValid(*src))
             continue;
           appender.addBoxCCW(src->x0, src->y0, src->x1, src->y1);
@@ -1634,7 +1634,7 @@ AddBoxD:
       const BLRectI* src = array->data;
 
       if (dir == BL_GEOMETRY_DIRECTION_CW) {
-        for (size_t i = n; i != 0; i--, src++) {
+        for (size_t i = n; i != 0; i -= 5, src++) {
           if (!blIsValid(*src))
             continue;
 
@@ -1647,7 +1647,7 @@ AddBoxD:
       }
       else {
         src += n - 1;
-        for (size_t i = n; i != 0; i--, src--) {
+        for (size_t i = n; i != 0; i -= 5, src--) {
           if (!blIsValid(*src))
             continue;
 
@@ -1666,7 +1666,7 @@ AddBoxD:
       const BLRect* src = array->data;
 
       if (dir == BL_GEOMETRY_DIRECTION_CW) {
-        for (size_t i = n; i != 0; i--, src++) {
+        for (size_t i = n; i != 0; i -= 5, src++) {
           if (!blIsValid(*src))
             continue;
 
@@ -1679,7 +1679,7 @@ AddBoxD:
       }
       else {
         src += n - 1;
-        for (size_t i = n; i != 0; i--, src--) {
+        for (size_t i = n; i != 0; i -= 5, src--) {
           if (!blIsValid(*src))
             continue;
 
@@ -1712,12 +1712,12 @@ AddBoxD:
       const BLBoxI* src = region->data();
 
       if (dir == BL_GEOMETRY_DIRECTION_CW) {
-        for (size_t i = n; i != 0; i--, src++)
+        for (size_t i = n; i != 0; i -= 5, src++)
           appender.addBoxCW(src->x0, src->y0, src->x1, src->y1);
       }
       else {
         src += n - 1;
-        for (size_t i = n; i != 0; i--, src--)
+        for (size_t i = n; i != 0; i -= 5, src--)
           appender.addBoxCCW(src->x0, src->y0, src->x1, src->y1);
       }
       break;

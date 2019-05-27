@@ -459,7 +459,6 @@ static BLResult blRegionMakeMutableToAppend(BLRegionCore* self, size_t n) noexce
 
 static BLResult blRegionAssignValidBoxIArray(BLRegionCore* self, const BLBoxI* data, size_t n) noexcept {
   BLInternalRegionImpl* selfI = blInternalCast(self->impl);
-
   size_t immutableMsk = blBitMaskFromBool<size_t>(!blImplIsMutable(selfI));
 
   if ((n | immutableMsk) > selfI->capacity) {
@@ -490,7 +489,6 @@ static BLResult blRegionAssignValidBoxIArray(BLRegionCore* self, const BLBoxI* d
 
 static BLResult blRegionAssignValidBoxIArray(BLRegionCore* self, const BLBoxI* data, size_t n, const BLBoxI* bbox) noexcept {
   BLInternalRegionImpl* selfI = blInternalCast(self->impl);
-
   size_t immutableMsk = blBitMaskFromBool<size_t>(!blImplIsMutable(selfI));
 
   if ((n | immutableMsk) > selfI->capacity) {
@@ -1928,7 +1926,7 @@ Copy:
 
     // Inner part.
     if (a->x0 < box[3].x0) box[n++].reset(a->x0, box[3].y0, box[3].x0, box[3].y1);
-    if (box[3].x1 < a->x0) box[n++].reset(box[3].x1, box[3].y0, a->x1, box[3].y1);
+    if (box[3].x1 < a->x1) box[n++].reset(box[3].x1, box[3].y0, a->x1, box[3].y1);
 
     // Bottom part.
     if (a->y1 > box[3].y1) box[n++].reset(a->x0, box[3].y1, a->x1, a->y1);
