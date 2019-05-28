@@ -449,7 +449,7 @@ struct BLGlyphItem {
   union {
     uint32_t value;
     struct {
-    #if BL_BUILD_BYTE_ORDER == 1234
+    #if BL_BYTE_ORDER == 1234
       BLGlyphId glyphId;
       uint16_t reserved;
     #else

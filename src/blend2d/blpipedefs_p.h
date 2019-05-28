@@ -207,7 +207,7 @@ union BLPipeValue64 {
   int16_t i16[4];
   uint16_t u16[4];
 
-#if BL_BUILD_BYTE_ORDER == 1234
+#if BL_BYTE_ORDER == 1234
   struct { int32_t  i32Lo, i32Hi; };
   struct { uint32_t u32Lo, u32Hi; };
 #else

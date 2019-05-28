@@ -276,7 +276,7 @@
 //! \name Target Information
 //! \{
 
-//! \def BL_BUILD_BYTE_ORDER
+//! \def BL_BYTE_ORDER
 //!
 //! A compile-time constant (macro) that defines byte-order of the target. It
 //! can be either `1234` for little-endian targets or `4321` for big-endian
@@ -285,9 +285,9 @@
 //! formats or other important details.
 #if (defined(__ARMEB__)) || (defined(__MIPSEB__)) || \
     (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__))
-  #define BL_BUILD_BYTE_ORDER 4321
+  #define BL_BYTE_ORDER 4321
 #else
-  #define BL_BUILD_BYTE_ORDER 1234
+  #define BL_BYTE_ORDER 1234
 #endif
 
 //! \}
@@ -298,7 +298,7 @@
 //! \def BL_API
 //!
 //! A base API decorator that marks functions and variables exported by Blend2D.
-#if !defined(BL_BUILD_STATIC) && !defined(BL_BUILD_EMBED)
+#if !defined(BL_STATIC)
   #if defined(_WIN32) && (defined(_MSC_VER) || defined(__MINGW32__))
     #if defined(BL_BUILD_EXPORT)
       #define BL_API __declspec(dllexport)
@@ -893,9 +893,9 @@ BL_DEFINE_ENUM(BLByteOrder) {
   BL_BYTE_ORDER_BE = 1,
 
   //! Native (host) byte-order.
-  BL_BYTE_ORDER_NATIVE = BL_BUILD_BYTE_ORDER == 1234 ? BL_BYTE_ORDER_LE : BL_BYTE_ORDER_BE,
+  BL_BYTE_ORDER_NATIVE = BL_BYTE_ORDER == 1234 ? BL_BYTE_ORDER_LE : BL_BYTE_ORDER_BE,
   //! Swapped byte-order (BE if host is LE and vice versa).
-  BL_BYTE_ORDER_SWAPPED = BL_BUILD_BYTE_ORDER == 1234 ? BL_BYTE_ORDER_BE : BL_BYTE_ORDER_LE
+  BL_BYTE_ORDER_SWAPPED = BL_BYTE_ORDER == 1234 ? BL_BYTE_ORDER_BE : BL_BYTE_ORDER_LE
 };
 
 //! \ingroup blend2d_api_globals

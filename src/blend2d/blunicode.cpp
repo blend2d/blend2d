@@ -441,7 +441,7 @@ UNIT(blend2d_unicode) {
     ENTRY("Test"                            , LATIN1, "Test"                            , LATIN1, BL_SUCCESS),
     ENTRY("Test"                            , UTF8  , "Test"                            , LATIN1, BL_SUCCESS),
     ENTRY("Test"                            , UTF8  , "Test"                            , UTF8  , BL_SUCCESS),
-    #if BL_BUILD_BYTE_ORDER == 1234
+    #if BL_BYTE_ORDER == 1234
     ENTRY("Test"                            , UTF8  , "T\0e\0s\0t\0"                    , UTF16 , BL_SUCCESS),
     ENTRY("T\0e\0s\0t\0"                    , UTF16 , "Test"                            , UTF8  , BL_SUCCESS),
     #else
@@ -450,7 +450,7 @@ UNIT(blend2d_unicode) {
     #endif
 
     // Tests a Czech word (Rain in english) with diacritic marks, at most 2 BYTEs per character.
-    #if BL_BUILD_BYTE_ORDER == 1234
+    #if BL_BYTE_ORDER == 1234
     ENTRY("\x44\xC3\xA9\xC5\xA1\xC5\xA5"    , UTF8  , "\x44\x00\xE9\x00\x61\x01\x65\x01", UTF16 , BL_SUCCESS),
     ENTRY("\x44\x00\xE9\x00\x61\x01\x65\x01", UTF16 , "\x44\xC3\xA9\xC5\xA1\xC5\xA5"    , UTF8  , BL_SUCCESS),
     #else
@@ -459,7 +459,7 @@ UNIT(blend2d_unicode) {
     #endif
 
     // Tests full-width digit zero (3 BYTEs per UTF-8 character).
-    #if BL_BUILD_BYTE_ORDER == 1234
+    #if BL_BYTE_ORDER == 1234
     ENTRY("\xEF\xBC\x90"                    , UTF8  , "\x10\xFF"                        , UTF16 , BL_SUCCESS),
     ENTRY("\x10\xFF"                        , UTF16 , "\xEF\xBC\x90"                    , UTF8  , BL_SUCCESS),
     #else
@@ -468,7 +468,7 @@ UNIT(blend2d_unicode) {
     #endif
 
     // Tests `BL_CHAR_MAX` character (4 BYTEs per UTF-8 character, the highest possible unicode code-point).
-    #if BL_BUILD_BYTE_ORDER == 1234
+    #if BL_BYTE_ORDER == 1234
     ENTRY("\xF4\x8F\xBF\xBF"                , UTF8  , "\xFF\xDB\xFF\xDF"                , UTF16 , BL_SUCCESS),
     ENTRY("\xFF\xDB\xFF\xDF"                , UTF16 , "\xF4\x8F\xBF\xBF"                , UTF8  , BL_SUCCESS),
     #else
@@ -476,7 +476,7 @@ UNIT(blend2d_unicode) {
     ENTRY("\xDB\xFF\xDF\xFF"                , UTF16 , "\xF4\x8F\xBF\xBF"                , UTF8  , BL_SUCCESS),
     #endif
 
-    #if BL_BUILD_BYTE_ORDER == 1234
+    #if BL_BYTE_ORDER == 1234
     ENTRY("Test"                            , UTF8  , "T\0\0\0e\0\0\0s\0\0\0t\0\0\0"    , UTF32 , BL_SUCCESS),
     ENTRY("T\0e\0s\0t\0"                    , UTF16 , "T\0\0\0e\0\0\0s\0\0\0t\0\0\0"    , UTF32 , BL_SUCCESS),
     ENTRY("T\0\0\0e\0\0\0s\0\0\0t\0\0\0"    , UTF32 , "T\0\0\0e\0\0\0s\0\0\0t\0\0\0"    , UTF32 , BL_SUCCESS),
@@ -504,7 +504,7 @@ UNIT(blend2d_unicode) {
     ENTRY("a"                               , UTF8  , "a\xF4\x8F\xBF"                   , UTF8  , BL_ERROR_DATA_TRUNCATED),
     ENTRY("ab"                              , UTF8  , "ab\xF4\x8F\xBF"                  , UTF8  , BL_ERROR_DATA_TRUNCATED),
     ENTRY("TestString"                      , UTF8  , "TestString\xC5"                  , UTF8  , BL_ERROR_DATA_TRUNCATED),
-    #if BL_BUILD_BYTE_ORDER == 1234
+    #if BL_BYTE_ORDER == 1234
     ENTRY("T\0e\0s\0t\0S\0t\0r\0i\0n\0g\0"  , UTF16 , "TestString\xC5"                  , UTF8  , BL_ERROR_DATA_TRUNCATED),
     #else
     ENTRY("\0T\0e\0s\0t\0S\0t\0r\0i\0n\0g"  , UTF16 , "TestString\xC5"                  , UTF8  , BL_ERROR_DATA_TRUNCATED),
