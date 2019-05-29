@@ -2,7 +2,7 @@
 // 2D Vector Graphics Powered by a JIT Compiler.
 //
 // [License]
-// ZLIB - See LICENSE.md file in the package.
+// Zlib - See LICENSE.md file in the package.
 
 #ifndef BLEND2D_BLFONTDEFS_H
 #define BLEND2D_BLFONTDEFS_H
@@ -204,34 +204,62 @@ BL_DEFINE_ENUM(BLFontWeight) {
 
 //! Font string identifiers used by OpenType 'name' table.
 BL_DEFINE_ENUM(BLFontStringId) {
+  //! Copyright notice.
   BL_FONT_STRING_COPYRIGHT_NOTICE             = 0,
+  //! Font family name.
   BL_FONT_STRING_FAMILY_NAME                  = 1,
+  //! Font subfamily name.
   BL_FONT_STRING_SUBFAMILY_NAME               = 2,
+  //! Unique font identifier.
   BL_FONT_STRING_UNIQUE_IDENTIFIER            = 3,
+  //! Full font name that reflects all family and relevant subfamily descriptors.
   BL_FONT_STRING_FULL_NAME                    = 4,
+  //! Version string. Should begin with the synta `Version <number>.<number>`.
   BL_FONT_STRING_VERSION_STRING               = 5,
+  //! PostScript name for the font.
   BL_FONT_STRING_POST_SCRIPT_NAME             = 6,
+  //! Trademark notice/information for this font.
   BL_FONT_STRING_TRADEMARK                    = 7,
+  //! Manufacturer name.
   BL_FONT_STRING_MANUFACTURER_NAME            = 8,
+  //! Name of the designer of the typeface.
   BL_FONT_STRING_DESIGNER_NAME                = 9,
+  //! Description of the typeface.
   BL_FONT_STRING_DESCRIPTION                  = 10,
+  //! URL of font vendor.
   BL_FONT_STRING_VENDOR_URL                   = 11,
+  //! URL of typeface designer.
   BL_FONT_STRING_DESIGNER_URL                 = 12,
+  //! Description of how the font may be legally used.
   BL_FONT_STRING_LICENSE_DESCRIPTION          = 13,
+  //! URL where additional licensing information can be found.
   BL_FONT_STRING_LICENSE_INFO_URL             = 14,
+  //! Reserved.
   BL_FONT_STRING_RESERVED                     = 15,
+  //! Typographic family name.
   BL_FONT_STRING_TYPOGRAPHIC_FAMILY_NAME      = 16,
+  //! Typographic subfamily name.
   BL_FONT_STRING_TYPOGRAPHIC_SUBFAMILY_NAME   = 17,
+  //! Compatible full name (MAC only).
   BL_FONT_STRING_COMPATIBLE_FULL_NAME         = 18,
+  //! Sample text - font name or any other text from the designer.
   BL_FONT_STRING_SAMPLE_TEXT                  = 19,
+  //! PostScript CID findfont name.
   BL_FONT_STRING_POST_SCRIPT_CID_NAME         = 20,
+  //! WWS family name.
   BL_FONT_STRING_WWS_FAMILY_NAME              = 21,
+  //! WWS subfamily name.
   BL_FONT_STRING_WWS_SUBFAMILY_NAME           = 22,
+  //! Light background palette.
   BL_FONT_STRING_LIGHT_BACKGROUND_PALETTE     = 23,
+  //! Dark background palette.
   BL_FONT_STRING_DARK_BACKGROUND_PALETTE      = 24,
+  //! Variations PostScript name prefix.
   BL_FONT_STRING_VARIATIONS_POST_SCRIPT_PREFIX= 25,
 
+  //! Count of common font string ids.
   BL_FONT_STRING_COMMON_COUNT                 = 26,
+  //! Start of custom font string ids.
   BL_FONT_STRING_CUSTOM_START_INDEX           = 255
 };
 

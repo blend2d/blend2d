@@ -2,7 +2,7 @@
 // 2D Vector Graphics Powered by a JIT Compiler.
 //
 // [License]
-// ZLIB - See LICENSE.md file in the package.
+// Zlib - See LICENSE.md file in the package.
 
 // The DEFLATE algorithm is based on stb_image <https://github.com/nothings/stb>
 // released into PUBLIC DOMAIN. It was initially part of Blend2D's PNG decoder,

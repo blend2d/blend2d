@@ -2,7 +2,7 @@
 // 2D Vector Graphics Powered by a JIT Compiler.
 //
 // [License]
-// ZLIB - See LICENSE.md file in the package.
+// Zlib - See LICENSE.md file in the package.
 
 // This is a public header file designed to be used by Blend2D users.
 // It includes all the necessary files to use Blend2D library from C

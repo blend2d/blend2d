@@ -2,7 +2,7 @@
 // 2D Vector Graphics Powered by a JIT Compiler.
 //
 // [License]
-// ZLIB - See LICENSE.md file in the package.
+// Zlib - See LICENSE.md file in the package.
 
 #ifndef BLEND2D_BLRANDOM_H
 #define BLEND2D_BLRANDOM_H
@@ -60,7 +60,7 @@ struct BLRandom {
 
   //! \}
 
-  //! \name Next
+  //! \name Random Numbers
   //! \{
 
   //! Returns the next `uint64_t` value.

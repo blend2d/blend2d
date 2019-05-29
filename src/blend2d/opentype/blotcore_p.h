@@ -2,7 +2,7 @@
 // 2D Vector Graphics Powered by a JIT Compiler.
 //
 // [License]
-// ZLIB - See LICENSE.md file in the package.
+// Zlib - See LICENSE.md file in the package.
 
 #ifndef BLEND2D_OPENTYPE_BLOTCORE_P_H
 #define BLEND2D_OPENTYPE_BLOTCORE_P_H

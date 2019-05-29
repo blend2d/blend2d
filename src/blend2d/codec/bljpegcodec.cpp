@@ -2,7 +2,7 @@
 // 2D Vector Graphics Powered by a JIT Compiler.
 //
 // [License]
-// ZLIB - See LICENSE.md file in the package.
+// Zlib - See LICENSE.md file in the package.
 
 // The JPEG codec is based on stb_image <https://github.com/nothings/stb>
 // released into PUBLIC DOMAIN. Blend2D's JPEG codec can be distributed

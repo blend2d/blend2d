@@ -2,7 +2,7 @@
 // 2D Vector Graphics Powered by a JIT Compiler.
 //
 // [License]
-// ZLIB - See LICENSE.md file in the package.
+// Zlib - See LICENSE.md file in the package.
 
 #ifndef BLEND2D_BLAPI_H
 #define BLEND2D_BLAPI_H
@@ -126,7 +126,7 @@
 //! blImageReset(&img);
 //! ```
 //!
-//! It's worth nothing that default initialization in Blend2D costs nothing
+//! It's worth knowing that default initialization in Blend2D costs nothing
 //! and no resources are allocated, thus initialization never fails and in
 //! theory default initialized objects don't have to be reset as they don't
 //! hold any data (however never do that in practice). Resetting always resets
@@ -222,10 +222,10 @@
 #if defined(BL_BUILD_EMBED) || defined(BL_BUILD_STATIC)
   #if defined(BL_BUILD_EMBED)
     #pragma message("'BL_BUILD_EMBED' is deprecated, use BL_STATIC")
-  #endif()
+  #endif
   #if defined(BL_BUILD_STATIC)
     #pragma message("'BL_BUILD_STATIC' is deprecated, use BL_STATIC")
-  #endif()
+  #endif
   #if !defined(BL_STATIC)
     #define BL_STATIC
   #endif
@@ -1201,7 +1201,7 @@ BL_INLINE bool blEquals(const double& a, const double& b) noexcept {
 #ifdef __cplusplus
 //! \addtogroup blend2d_api_globals
 //! \{
-//! \name Downcasting from Core type to C++ type.
+//! \name Downcasting from Core type to C++ type
 //! \{
 
 //! Downcasts a core type like `BLContextCore` into a C++ type like `BLContext`.

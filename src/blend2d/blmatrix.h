@@ -2,7 +2,7 @@
 // 2D Vector Graphics Powered by a JIT Compiler.
 //
 // [License]
-// ZLIB - See LICENSE.md file in the package.
+// Zlib - See LICENSE.md file in the package.
 
 #ifndef BLEND2D_BLMATRIX_H
 #define BLEND2D_BLMATRIX_H
@@ -55,13 +55,20 @@ BL_DEFINE_ENUM(BLMatrix2DType) {
 
 //! 2D matrix data index.
 BL_DEFINE_ENUM(BLMatrix2DValue) {
+  //! Value at index 0 - M00.
   BL_MATRIX2D_VALUE_00 = 0,
+  //! Value at index 1 - M01.
   BL_MATRIX2D_VALUE_01 = 1,
+  //! Value at index 2 - M10.
   BL_MATRIX2D_VALUE_10 = 2,
+  //! Value at index 3 - M11.
   BL_MATRIX2D_VALUE_11 = 3,
+  //! Value at index 4 - M20.
   BL_MATRIX2D_VALUE_20 = 4,
+  //! Value at index 5 - M21.
   BL_MATRIX2D_VALUE_21 = 5,
 
+  //! Count of `BLMatrix2D` values.
   BL_MATRIX2D_VALUE_COUNT = 6
 };
 
