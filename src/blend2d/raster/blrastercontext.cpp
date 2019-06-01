@@ -1586,10 +1586,10 @@ static BLResult BL_CDECL blRasterContextImplClipToRectI(BLRasterContextImpl* ctx
   if (BL_TARGET_ARCH_BITS < 64) {
     BLOverflowFlag of = 0;
 
-    int x0 = blAddOverflow(rect->x, tx, &of);
-    int y0 = blAddOverflow(rect->y, ty, &of);
-    int x1 = blAddOverflow(b.x0, rect->w, &of);
-    int y1 = blAddOverflow(b.y0, rect->h, &of);
+    int x0 = blAddOverflow(tx, rect->x, &of);
+    int y0 = blAddOverflow(ty, rect->y, &of);
+    int x1 = blAddOverflow(x0, rect->w, &of);
+    int y1 = blAddOverflow(y0, rect->h, &of);
 
     if (BL_UNLIKELY(of))
       goto Use64Bit;
@@ -1602,8 +1602,8 @@ static BLResult BL_CDECL blRasterContextImplClipToRectI(BLRasterContextImpl* ctx
   else {
 Use64Bit:
     // We don't have to worry about overflow in 64-bit mode.
-    int64_t x0 = rect->x + int64_t(tx);
-    int64_t y0 = rect->y + int64_t(ty);
+    int64_t x0 = tx + int64_t(rect->x);
+    int64_t y0 = ty + int64_t(rect->y);
     int64_t x1 = x0 + int64_t(rect->w);
     int64_t y1 = y0 + int64_t(rect->h);
 
