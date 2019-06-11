@@ -119,7 +119,7 @@ InvalidData:
     result = BL_ERROR_INVALID_DATA;
   }
 
-  return BL_SUCCESS;
+  return result;
 }
 
 // ============================================================================
