@@ -135,7 +135,7 @@ struct CFFTable {
 
   //! Index table (v1).
   struct IndexV1 {
-    //! NOTE: An empty Index is represented by a `count` field with a 0 value
+    //! \note An empty Index is represented by a `count` field with a 0 value
     //! and no additional fields, thus, the total size of bytes required by a
     //! zero index is 2.
     enum : uint32_t { kMinSize = 2 };
@@ -152,7 +152,7 @@ struct CFFTable {
 
   //! Index table (v2).
   struct IndexV2 {
-    //! NOTE: An empty Index is represented by a `count` field with a 0 value
+    //! \note An empty Index is represented by a `count` field with a 0 value
     //! and no additional fields, thus, the total size of bytes required by a
     //! zero index is 4.
     enum : uint32_t { kMinSize = 4 };

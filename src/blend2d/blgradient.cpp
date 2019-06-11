@@ -810,8 +810,7 @@ BLResult blGradientAddStopRgba64(BLGradientCore* self, double offset, uint64_t r
 }
 
 BLResult blGradientRemoveStop(BLGradientCore* self, size_t index) noexcept {
-  BLRange range(index, index + 1);
-  return blGradientRemoveStops(self, &range);
+  return blGradientRemoveStops(self, index, index + 1);
 }
 
 BLResult blGradientRemoveStopByOffset(BLGradientCore* self, double offset, uint32_t all) noexcept {
@@ -836,21 +835,19 @@ BLResult blGradientRemoveStopByOffset(BLGradientCore* self, double offset, uint3
           b++;
         }
       }
-
-      BLRange range(a, b);
-      return blGradientRemoveStops(self, &range);
+      return blGradientRemoveStops(self, a, b);
     }
   }
 
   return BL_SUCCESS;
 }
 
-BLResult blGradientRemoveStops(BLGradientCore* self, const BLRange* range) noexcept {
+BLResult blGradientRemoveStops(BLGradientCore* self, size_t rStart, size_t rEnd) noexcept {
   BLInternalGradientImpl* selfI = blInternalCast(self->impl);
   size_t size = selfI->size;
 
-  size_t index = range->start;
-  size_t end = blMin(range->end, size);
+  size_t index = rStart;
+  size_t end = blMin(rEnd, size);
 
   if (BL_UNLIKELY(index > size || end < index))
     return blTraceError(BL_ERROR_INVALID_VALUE);
@@ -902,8 +899,7 @@ BLResult blGradientRemoveStopsFromTo(BLGradientCore* self, double offsetMin, dou
   if (a >= b)
     return BL_SUCCESS;
 
-  BLRange range(a, b);
-  return blGradientRemoveStops(self, &range);
+  return blGradientRemoveStops(self, a, b);
 }
 
 BLResult blGradientReplaceStopRgba32(BLGradientCore* self, size_t index, double offset, uint32_t rgba32) noexcept {

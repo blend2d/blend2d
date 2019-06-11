@@ -416,7 +416,7 @@ static BL_INLINE int64_t blRoundToInt64(double x) noexcept { int64_t y = blNearb
 
 //! Returns a fractional part of `x`.
 //!
-//! NOTE: Fractional part returned is always equal or greater than zero. The
+//! \note Fractional part returned is always equal or greater than zero. The
 //! implementation is compatible to many shader implementations defined as
 //! `frac(x) == x - floor(x)`, which would return `0.25` for `-1.75`.
 template<typename T>
@@ -491,7 +491,7 @@ static BL_INLINE double blAtan2(double y, double x) noexcept { return atan2(y, x
 //!
 //! Returns `(a - t * a) + t * b`.
 //!
-//! NOTE: This function should work with most geometric types Blend2D offers
+//! \note This function should work with most geometric types Blend2D offers
 //! that use double precision, however, it's not compatible with integral types.
 template<typename V, typename T = double>
 static BL_INLINE V blLerp(const V& a, const V& b, const T& t) noexcept {
@@ -554,7 +554,7 @@ static BL_INLINE T blFastLerp(const T& a, const T& b) noexcept {
 //!   x1 = c / q
 //!   ```
 //!
-//! NOTE: This is a branchless version designed to be easily inlineable.
+//! \note This is a branchless version designed to be easily inlineable.
 static BL_INLINE size_t blQuadRoots(double dst[2], double a, double b, double c, double tMin, double tMax) noexcept {
   double d = blMax(b * b - 4.0 * a * c, 0.0);
   double s = blSqrt(d);

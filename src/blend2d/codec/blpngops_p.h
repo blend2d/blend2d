@@ -28,7 +28,7 @@ extern BLPngOps blPngOps;
 // [BLPngOps - Utilities]
 // ============================================================================
 
-//! Gets a replacement filter for the first PNG row, because no prior row
+//! Returns a replacement filter for the first PNG row, because no prior row
 //! exists at that point. This is the only function that can replace AVG
 //! filter with `BL_PNG_FILTER_TYPE_AVG0`.
 static BL_INLINE uint32_t blPngFirstRowFilterReplacement(uint32_t filter) noexcept {

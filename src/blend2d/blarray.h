@@ -274,11 +274,15 @@ public:
   //! \name Construction & Destruction
   //! \{
 
+  //! Creates a default constructed array.
+  //!
+  //! Default constructed arrays share the default "none" instance.
   BL_INLINE BLArray() noexcept { this->impl = none().impl; }
   BL_INLINE BLArray(BLArray&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLArray(const BLArray& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLArray(BLArrayImpl* impl) noexcept { this->impl = impl; }
 
+  //! Destroys the array.
   BL_INLINE ~BLArray() noexcept { blArrayReset(this); }
 
   //! \}
@@ -286,6 +290,7 @@ public:
   //! \name Overloaded Operators
   //! \{
 
+  //! Returns `true` whether the array's length is `1` or greater.
   BL_INLINE explicit operator bool() const noexcept { return !empty(); }
 
   BL_INLINE BLArray& operator=(BLArray&& other) noexcept { blArrayAssignMove(this, &other); return *this; }
@@ -301,6 +306,8 @@ public:
   //! \name Common Functionality
   //! \{
 
+  //! Resets the array into a default constructed state by clearing its content
+  //! and releasing its memory.
   BL_INLINE BLResult reset() noexcept { return blArrayReset(this); }
   BL_INLINE void swap(BLArray<T>& other) noexcept { std::swap(this->impl, other.impl); }
 
@@ -314,11 +321,12 @@ public:
   BL_INLINE BLResult assignView(const BLArrayView<T>& view) noexcept { return blArrayAssignView(this, (const void*)view.data, view.size); }
   BL_INLINE BLResult assignView(const T* items, size_t n) noexcept { return blArrayAssignView(this, (const void*)items, n); }
 
-  //! Gets whether the array is a built-in null instance.
+  //! Tests whether the array is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Gets whether the array is empty.
+  //! Tests whether the array is empty.
   BL_INLINE bool empty() const noexcept { return impl->size == 0; }
 
+  //! Returnsn whether the content of this array and `other` matches.
   BL_INLINE bool equals(const BLArray<T>& other) const noexcept { return blArrayEquals(this, &other); }
 
   //! \}
@@ -334,6 +342,9 @@ public:
   //! \param dataAccessFlags Flags that describe whether the data is read-only or read-write, see `BLDataAccessFlags`.
   //! \param destroyFunc A function that would be called when the array is destroyed (can be null if you don't need it).
   //! \param destroyData Data passed to `destroyFunc`.
+  //!
+  //! \note The old content of the array is destroyed and replaced with an Impl
+  //! that uses the external data passed.
   BL_INLINE BLResult createFromData(T* data, size_t size, size_t capacity, uint32_t dataAccessFlags, BLDestroyImplFunc destroyFunc = nullptr, void* destroyData = nullptr) noexcept {
     return blArrayCreateFromData(this, data, size, capacity, dataAccessFlags, destroyFunc, destroyData);
   }
@@ -350,7 +361,7 @@ public:
 
   //! Returns a pointer to the array data.
   BL_INLINE const T* data() const noexcept { return static_cast<const T*>(impl->data); }
-  //! Returns a pointer to the array data.
+  //! Returns a pointer to the end of array data.
   BL_INLINE const T* end() const noexcept { return static_cast<const T*>(impl->data) + impl->size; }
 
   //! Returns the array data as `BLArrayView<T>`.
@@ -432,21 +443,27 @@ public:
 
   BL_INLINE BLResult replace(size_t index, const T& item) noexcept { return BLArrayInternal::replaceItem(this, index, Traits::pass(item)); }
 
-  BL_INLINE BLResult replaceView(const BLRange& range, BLArrayView<T>& view) noexcept { return blArrayReplaceView(this, &range, (const void*)view.data, view.size); }
-  BL_INLINE BLResult replaceView(const BLRange& range, const T* items, size_t n) noexcept { return blArrayReplaceView(this, &range, items, n); }
+  BL_INLINE BLResult replaceView(const BLRange& range, BLArrayView<T>& view) noexcept { return blArrayReplaceView(this, range.start, range.end, (const void*)view.data, view.size); }
+  BL_INLINE BLResult replaceView(const BLRange& range, const T* items, size_t n) noexcept { return blArrayReplaceView(this, range.start, range.end, items, n); }
 
+  //! Removes an item at the given `index`.
   BL_INLINE BLResult remove(size_t index) noexcept { return blArrayRemoveIndex(this, index); }
-  BL_INLINE BLResult remove(const BLRange& range) noexcept { return blArrayRemoveRange(this, &range); }
+  //! Removes items at the given `range`.
+  BL_INLINE BLResult remove(const BLRange& range) noexcept { return blArrayRemoveRange(this, range.start, range.end); }
 
   //! \}
 
   //! \name Search
   //! \{
 
+  //! Returns the first index at which a given `item` can be found in the
+  //! array, or `SIZE_MAX` if not present.
   BL_INLINE size_t indexOf(const T& item) const noexcept {
     return indexOf(item, 0);
   }
 
+  //! Returns the index at which a given `item` can be found in the array
+  //! starting from `fromIndex`, or `SIZE_MAX` if not present.
   BL_INLINE size_t indexOf(const T& item, size_t fromIndex) const noexcept {
     const T* p = data();
     size_t iEnd = size();
@@ -458,6 +475,8 @@ public:
     return SIZE_MAX;
   }
 
+  //! Returns the last index at which a given `item` can be found in the array,
+  //! or `SIZE_MAX` if not present.
   BL_INLINE size_t lastIndexOf(const T& item) const noexcept {
     const T* p = data();
     size_t i = size();
@@ -468,6 +487,8 @@ public:
     return i;
   }
 
+  //! Returns the index at which a given `item` can be found in the array
+  //! starting from `fromIndex` and ending at `0`, or `SIZE_MAX` if not present.
   BL_INLINE size_t lastIndexOf(const T& item, size_t fromIndex) const noexcept {
     const T* p = data();
     size_t i = size() - 1;

@@ -18,7 +18,7 @@
 
 //! Glyph buffer [C Interface - Impl].
 //!
-//! NOTE: This is not a `BLVariantImpl` compatible Impl.
+//! \note This is not a `BLVariantImpl` compatible Impl.
 struct BLGlyphBufferImpl {
   union {
     struct {
@@ -97,18 +97,18 @@ public:
 
   BL_INLINE const BLGlyphRun& glyphRun() const noexcept { return impl->glyphRun; }
 
-  //! Gets whether the glyph-buffer has `flag` set.
+  //! Tests whether the glyph-buffer has `flag` set.
   BL_INLINE bool hasFlag(uint32_t flag) const noexcept { return (impl->flags & flag) != 0; }
-  //! Gets whether this buffer contains unicode data.
+  //! Tests whether the buffer contains unicode data.
   BL_INLINE bool hasText() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
-  //! Gets whether this buffer contains glyph-id data.
+  //! Tests whether the buffer contains glyph-id data.
   BL_INLINE bool hasGlyphs() const noexcept { return !hasFlag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
 
-  //! Gets whether the input string contained invalid characters (unicode encoding errors).
+  //! Tests whether the input string contained invalid characters (unicode encoding errors).
   BL_INLINE bool hasInvalidChars() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_INVALID_TEXT); }
-  //! Gets whether the input string contained undefined characters that weren't mapped properly to glyphs.
+  //! Tests whether the input string contained undefined characters that weren't mapped properly to glyphs.
   BL_INLINE bool hasUndefinedChars() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_UNDEFINED_GLYPHS); }
-  //! Gets whether one or more operation was terminated before completion because of invalid data in a font.
+  //! Tests whether one or more operation was terminated before completion because of invalid data in a font.
   BL_INLINE bool hasInvalidFontData() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_INVALID_FONT_DATA); }
 
   //! \}

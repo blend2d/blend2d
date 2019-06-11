@@ -1014,14 +1014,11 @@ BLResult blArrayReplaceItem(BLArrayCore* self, size_t index, const void* item) n
   }
 }
 
-BLResult blArrayReplaceView(BLArrayCore* self, const BLRange* range, const void* items, size_t n) noexcept {
+BLResult blArrayReplaceView(BLArrayCore* self, size_t rStart, size_t rEnd, const void* items, size_t n) noexcept {
   BLArrayImpl* selfI = self->impl;
-  if (BL_UNLIKELY(!range))
-    return blArrayAssignView(self, items, n);
-
   size_t size = selfI->size;
-  size_t end = blMin(range->end, size);
-  size_t index = blMin(range->start, end);
+  size_t end = blMin(rEnd, size);
+  size_t index = blMin(rStart, end);
   size_t rangeSize = end - index;
 
   if (!rangeSize)
@@ -1087,20 +1084,16 @@ BLResult blArrayReplaceView(BLArrayCore* self, const BLRange* range, const void*
 // ============================================================================
 
 BLResult blArrayRemoveIndex(BLArrayCore* self, size_t index) noexcept {
-  BLRange range(index, index + 1);
-  return blArrayRemoveRange(self, &range);
+  return blArrayRemoveRange(self, index, index + 1);
 }
 
-BLResult blArrayRemoveRange(BLArrayCore* self, const BLRange* range) noexcept {
-  if (BL_UNLIKELY(!range))
-    return blArrayClear(self);
-
+BLResult blArrayRemoveRange(BLArrayCore* self, size_t rStart, size_t rEnd) noexcept {
   BLArrayImpl* selfI = self->impl;
   size_t size = selfI->size;
   size_t itemSize = selfI->itemSize;
 
-  size_t end = blMin(range->end, size);
-  size_t index = blMin(range->start, end);
+  size_t end = blMin(rEnd, size);
+  size_t index = blMin(rStart, end);
   size_t n = end - index;
 
   if (!n)

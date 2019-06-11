@@ -22,7 +22,7 @@
 
 //! Function cache.
 //!
-//! NOTE: No locking is preformed implicitly, it's user's responsibility to
+//! \note No locking is preformed implicitly, it's user's responsibility to
 //! ensure only one thread is accessing `BLPipeFunctionCache` at the sime time.
 class BLPipeFunctionCache {
 public:

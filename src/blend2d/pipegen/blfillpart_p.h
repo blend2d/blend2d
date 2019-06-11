@@ -54,10 +54,10 @@ public:
 
   //! Returns fill type, see `BLPipeFillType`.
   inline uint32_t fillType() const noexcept { return _fillType; }
-  //! Gets whether the fill type matches `fillType`.
+  //! Tests whether the fill type matches `fillType`.
   inline bool isFillType(uint32_t fillType) const noexcept { return _fillType == fillType; }
 
-  //! Gets whether fill-type is a pure rectangular fill (aligned or fractional).
+  //! Tests whether fill-type is a pure rectangular fill (aligned or fractional).
   //!
   //! Rectangle fills have some properties that can be exploited by other parts.
   inline bool isRectFill() const noexcept { return _isRectFill; }

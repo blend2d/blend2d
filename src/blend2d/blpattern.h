@@ -12,7 +12,7 @@
 #include "./blmatrix.h"
 #include "./blvariant.h"
 
-//! \addtogroup blend2d_api_styles
+//! \addtogroup blend2d_api_styling
 //! \{
 
 // ============================================================================
@@ -118,7 +118,7 @@ public:
   BL_INLINE BLResult assign(BLPattern&& other) noexcept { return blPatternAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLPattern& other) noexcept { return blPatternAssignWeak(this, &other); }
 
-  //! Gets whether the pattern is a built-in null instance.
+  //! Tests whether the pattern is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
   BL_INLINE bool equals(const BLPattern& other) const noexcept { return blPatternEquals(this, &other); }

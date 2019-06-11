@@ -11,7 +11,7 @@
 #include "./blformat.h"
 #include "./blgeometry.h"
 
-//! \addtogroup blend2d_api_images
+//! \addtogroup blend2d_api_imaging
 //! \{
 
 // ============================================================================

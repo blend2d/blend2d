@@ -171,7 +171,7 @@ public:
   enum {
     //! Number of reserved GP registers for general use.
     //!
-    //! NOTE: In 32-bit mode constants are absolutely addressed, however, in
+    //! \note In 32-bit mode constants are absolutely addressed, however, in
     //! 64-bit mode we can't address arbitrary 64-bit pointers, so one more
     //! register is reserved as a compensation.
     kReservedGpRegs = 1 + uint32_t(BL_TARGET_ARCH_BITS >= 64),

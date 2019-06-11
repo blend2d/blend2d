@@ -67,21 +67,21 @@ public:
   //! Returns the composition operator flags, see `BLCompOpFlags`.
   BL_INLINE uint32_t compOpFlags() const noexcept { return blCompOpInfo[_compOp].flags; }
 
-  //! Gets whether the destination pixel format has an alpha channel.
+  //! Tests whether the destination pixel format has an alpha channel.
   BL_INLINE bool hasDa() const noexcept { return _hasSa != 0; }
-  //! Gets whether the source pixel format has an alpha channel.
+  //! Tests whether the source pixel format has an alpha channel.
   BL_INLINE bool hasSa() const noexcept { return _hasDa != 0; }
 
   //! Returns the current loop mode.
   BL_INLINE uint32_t cMaskLoopType() const noexcept { return _cMaskLoopType; }
-  //! Gets whether the current loop is fully opaque (no mask).
+  //! Tests whether the current loop is fully opaque (no mask).
   BL_INLINE bool isLoopOpaque() const noexcept { return _cMaskLoopType == kCMaskLoopTypeOpaque; }
-  //! Gets whether the current loop is `CMask` (constant mask).
+  //! Tests whether the current loop is `CMask` (constant mask).
   BL_INLINE bool isLoopCMask() const noexcept { return _cMaskLoopType == kCMaskLoopTypeMask; }
 
   //! Returns the maximum pixels the composite part can handle at a time.
   //!
-  //! NOTE: This value is configured in a way that it's always one if the fetch
+  //! \note This value is configured in a way that it's always one if the fetch
   //! part doesn't support more. This makes it easy to use in loop compilers.
   //! In other words, the value doesn't describe the real implementation of the
   //! composite part.
@@ -99,11 +99,11 @@ public:
   void init(x86::Gp& x, x86::Gp& y, uint32_t pixelGranularity) noexcept;
   void fini() noexcept;
 
-  //! Gets whether the opaque fill should be optimized and placed into a separate
+  //! Tests whether the opaque fill should be optimized and placed into a separate
   //! loop.
   bool shouldOptimizeOpaqueFill() const noexcept;
 
-  //! Gets whether the compositor should emit a specialized loop that contains
+  //! Tests whether the compositor should emit a specialized loop that contains
   //! an inlined version of `memcpy()` or `memset()`.
   bool shouldMemcpyOrMemsetOpaqueFill() const noexcept;
 

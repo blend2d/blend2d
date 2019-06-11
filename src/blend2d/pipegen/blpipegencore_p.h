@@ -165,11 +165,11 @@ public:
   //! Resets `OpArray` to a default construction state.
   BL_INLINE void reset() noexcept { _size = 0; }
 
-  //! Gets whether the vector is empty (has no elements).
+  //! Tests whether the vector is empty (has no elements).
   BL_INLINE bool empty() const noexcept { return _size == 0; }
-  //! Gets whether the vector has only one element, which makes it scalar.
+  //! Tests whether the vector has only one element, which makes it scalar.
   BL_INLINE bool isScalar() const noexcept { return _size == 1; }
-  //! Gets whether the vector has more than 1 element, which means that
+  //! Tests whether the vector has more than 1 element, which means that
   //! calling `high()` and `odd()` won't return an empty vector.
   BL_INLINE bool isVector() const noexcept { return _size > 1; }
 

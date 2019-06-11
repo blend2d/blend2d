@@ -84,7 +84,7 @@ BL_DEFINE_ENUM(BLContextCreateFlags) {
   //! available. This flag will force the thread-pool to override the thread
   //! limit temporarily to fulfill the thread count requirement.
   //!
-  //! NOTE: This flag is ignored if `BLContextCreateInfo::threadCount == 0`.
+  //! \note This flag is ignored if `BLContextCreateInfo::threadCount == 0`.
   BL_CONTEXT_CREATE_FLAG_FORCE_THREADS = 0x00000001u,
 
   //! Fallback to synchronous rendering in case that acquiring threads from
@@ -93,7 +93,7 @@ BL_DEFINE_ENUM(BLContextCreateFlags) {
   //! rendering context fails to acquire at least one thread it would fallback
   //! to synchronous mode instead.
   //!
-  //! NOTE: This flag is ignored if `BLContextCreateInfo::threadCount == 0`.
+  //! \note This flag is ignored if `BLContextCreateInfo::threadCount == 0`.
   BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC = 0x00000002u,
 
   //! If this flag is specified and asynchronous rendering is enabled then
@@ -495,15 +495,53 @@ public:
   //! \name Construction & Destruction
   //! \{
 
+  //! Creates a default constructed rendering context.
+  //!
+  //! Default constructed means that the instance is valid, but uninitialized,
+  //! which means the rendering context does not have attached any target. Any
+  //! attempt to use uninitialized context results in `BL_ERROR_NOT_INITIALIZED`
+  //! error.
   BL_INLINE BLContext() noexcept { this->impl = none().impl; }
+
+  //! Move constructor.
+  //!
+  //! Moves the `other` rendering context into this one and resets the `other`.
   BL_INLINE BLContext(BLContext&& other) noexcept { blVariantInitMove(this, &other); }
+
+  //! Copy constructor.
+  //!
+  //! Creates a weak-copy of the `other` rendering context by increasing it's
+  //! internal reference counter. This context and `other` would point to the
+  //! same data and would be otherwise identical. Any change to `other` would
+  //! also affect this context.
+  //!
+  //! This function is mostly provided for C++ users that may keep a global
+  //! reference to the same rendering context, for example, otherwise sharing
+  //! is not that useful as they also share a state.
+  //!
+  //! Two weak copies of the same rendering context cannot be used by different
+  //! threads simultaneously.
   BL_INLINE BLContext(const BLContext& other) noexcept { blVariantInitWeak(this, &other); }
+
+  //! Initializes this `BLContext` class with rendering context `impl`.
+  //!
+  //! Mostly for internal purposes and to keep the API consistent.
   BL_INLINE explicit BLContext(BLContextImpl* impl) noexcept { this->impl = impl; }
 
+  //! Creates a new rendering context for rendering to the image `target`.
   BL_INLINE explicit BLContext(BLImage& target) noexcept { blContextInitAs(this, &target, nullptr); }
+  //! Creates a new rendering context for rendering to the image `target`.
+  //!
+  //! This overload accepts create options that can be used to change the
+  //! implementation of the rendering context.
   BL_INLINE BLContext(BLImage& target, const BLContextCreateInfo& options) noexcept { blContextInitAs(this, &target, &options); }
+  //! \overload
   BL_INLINE BLContext(BLImage& target, const BLContextCreateInfo* options) noexcept { blContextInitAs(this, &target, options); }
 
+  //! Destroys the rendering context.
+  //!
+  //! Waits for all operations, detaches the target from the rendering context
+  //! and then destroys it. Does nothing if the context is not initialized.
   BL_INLINE ~BLContext() noexcept { blContextReset(this); }
 
   //! \}
@@ -511,12 +549,24 @@ public:
   //! \name Overloaded Operators
   //! \{
 
+  //! Returns true if the rendering context is initialized (has target attached).
+  //!
+  //! Provided for users that want to use bool idiom in C++ to check for the
+  //! status of the object.
+  //!
+  //! ```
+  //! if (ctx) {
+  //!   // Rendering context is initialized.
+  //! }
+  //! ```
   BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
 
   BL_INLINE BLContext& operator=(BLContext&& other) noexcept { blContextAssignMove(this, &other); return *this; }
   BL_INLINE BLContext& operator=(const BLContext& other) noexcept { blContextAssignWeak(this, &other); return *this; }
 
+  //! Returns whether this and `other` point to the same rendering context.
   BL_INLINE bool operator==(const BLContext& other) const noexcept { return  equals(other); }
+  //! Returns whether this and `other` are different rendering contexts.
   BL_INLINE bool operator!=(const BLContext& other) const noexcept { return !equals(other); }
 
   //! \}
@@ -539,11 +589,16 @@ public:
   //! Returns the type of this context, see `BLContextType`.
   BL_INLINE uint32_t contextType() const noexcept { return impl->contextType; }
 
-  //! Gets whether the context is a built-in null instance.
+  //! Tests whether the context is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
+  //! Returns whether this and `other` point to the same rendering context.
   BL_INLINE bool equals(const BLContext& other) const noexcept { return this->impl == other.impl; }
 
+  //! Resets this rendering context to the default constructed one.
+  //!
+  //! Similar behavior to the destructor, but the context will still be valid
+  //! after `reset()` and would behave like a default constructed context.
   BL_INLINE BLResult reset() noexcept { return blContextReset(this); }
 
   BL_INLINE BLResult assign(BLContext&& other) noexcept { return blContextAssignMove(this, &other); }
@@ -716,6 +771,7 @@ public:
 
   //! Sets the given rendering hint `hintType` to the `value`.
   BL_INLINE BLResult setHint(uint32_t hintType, uint32_t value) noexcept { return impl->virt->setHint(impl, hintType, value); }
+  //! Sets all rendering hints of this context to the given `hints`.
   BL_INLINE BLResult setHints(const BLContextHints& hints) noexcept { return impl->virt->setHints(impl, &hints); }
 
   BL_INLINE BLResult setRenderingQuality(uint32_t value) noexcept { return setHint(BL_CONTEXT_HINT_RENDERING_QUALITY, value); }
@@ -1119,8 +1175,6 @@ public:
   BL_INLINE BLResult strokeBox(const BLBoxI& box) noexcept { return strokeGeometry(BL_GEOMETRY_TYPE_BOXI, &box); }
   // \overload
   BL_INLINE BLResult strokeBox(double x0, double y0, double x1, double y1) noexcept { return strokeBox(BLBox(x0, y0, x1, y1)); }
-  // \overload
-  BL_INLINE BLResult strokeBox(int x0, int y0, int x1, int y1) noexcept { return strokeBox(BLBoxI(x0, y0, x1, y1)); }
 
   //! Strokes a rectangle.
   BL_INLINE BLResult strokeRect(const BLRect& rect) noexcept { return impl->virt->strokeRectD(impl, &rect); }
@@ -1271,16 +1325,24 @@ public:
   //! \name Image Blitting
   //! \{
 
+  //! Blits source image `src` at coordinates specified by `dst`..
   BL_INLINE BLResult blitImage(const BLPoint& dst, const BLImage& src) noexcept { return impl->virt->blitImageD(impl, &dst, &src, nullptr); }
+  //! Blits an area of source image `src` specified by `srcArea` at coordinates specified by `dst`.
   BL_INLINE BLResult blitImage(const BLPoint& dst, const BLImage& src, const BLRectI& srcArea) noexcept { return impl->virt->blitImageD(impl, &dst, &src, &srcArea); }
 
+  //! Blits source image `src` at coordinates specified by `dst`. (int coordinates).
   BL_INLINE BLResult blitImage(const BLPointI& dst, const BLImage& src) noexcept { return impl->virt->blitImageI(impl, &dst, &src, nullptr); }
+  //! Blits an area in source image `src` specified by `srcArea` at coordinates specified by `dst`. (int coordinates).
   BL_INLINE BLResult blitImage(const BLPointI& dst, const BLImage& src, const BLRectI& srcArea) noexcept { return impl->virt->blitImageI(impl, &dst, &src, &srcArea); }
 
+  //! Blits a source image `src` scaled to fit into `dst` rectangle.
   BL_INLINE BLResult blitImage(const BLRect& dst, const BLImage& src) noexcept { return impl->virt->blitScaledImageD(impl, &dst, &src, nullptr); }
+  //! Blits an area of source image `src` specified by `srcArea` scaled to fit into `dst` rectangle.
   BL_INLINE BLResult blitImage(const BLRect& dst, const BLImage& src, const BLRectI& srcArea) noexcept { return impl->virt->blitScaledImageD(impl, &dst, &src, &srcArea); }
 
+  //! Blits a source image `src` scaled to fit into `dst` rectangle (int coordinates).
   BL_INLINE BLResult blitImage(const BLRectI& dst, const BLImage& src) noexcept { return impl->virt->blitScaledImageI(impl, &dst, &src, nullptr); }
+  //! Blits an area of source image `src` specified by `srcArea` scaled to fit into `dst` rectangle (int coordinates).
   BL_INLINE BLResult blitImage(const BLRectI& dst, const BLImage& src, const BLRectI& srcArea) noexcept { return impl->virt->blitScaledImageI(impl, &dst, &src, &srcArea); }
 
   //! \}

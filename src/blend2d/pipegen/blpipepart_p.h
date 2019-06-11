@@ -91,19 +91,19 @@ public:
   template<typename T>
   inline const T* as() const noexcept { return static_cast<const T*>(this); }
 
-  //! Gets whether the part is initialized
+  //! Tests whether the part is initialized
   inline bool isPartInitialized() const noexcept { return _globalHook != nullptr; }
   //! Returns the part type.
   inline uint32_t partType() const noexcept { return _partType; }
 
-  //! Gets whether the part should restrict using GP registers.
+  //! Tests whether the part should restrict using GP registers.
   inline uint8_t hasLowRegs(uint32_t rKind) const noexcept { return _hasLowRegs[rKind]; }
 
-  //! Gets whether the part should restrict using GP registers.
+  //! Tests whether the part should restrict using GP registers.
   inline uint8_t hasLowGpRegs() const noexcept { return hasLowRegs(x86::Reg::kGroupGp); }
-  //! Gets whether the part should restrict using MM registers.
+  //! Tests whether the part should restrict using MM registers.
   inline uint8_t hasLowMmRegs() const noexcept { return hasLowRegs(x86::Reg::kGroupMm); }
-  //! Gets whether the part should restrict using XMM/YMM registers.
+  //! Tests whether the part should restrict using XMM/YMM registers.
   inline uint8_t hasLowVecRegs() const noexcept { return hasLowRegs(x86::Reg::kGroupVec); }
 
   inline uint32_t flags() const noexcept { return _flags; }

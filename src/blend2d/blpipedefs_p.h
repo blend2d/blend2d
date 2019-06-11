@@ -94,7 +94,7 @@ enum BLPipeFillRuleMask : uint32_t {
 //! A unique id describing how pixels are fetched - supported fetchers include
 //! solid pixels, patterns (sometimes referred as blits), and gradients.
 //!
-//! NOTE: RoR is a shurtcut for repeat-or-reflect - an universal fetcher for both.
+//! \note RoR is a shurtcut for repeat-or-reflect - an universal fetcher for both.
 enum BLPipeFetchType : uint32_t {
   BL_PIPE_FETCH_TYPE_SOLID  = 0,               //!< Solid fetch.
 

@@ -66,9 +66,9 @@ struct GSubContext {
     gbd->size = out.index;
   }
 
-  //! Gets whether the `in` data is the same as `out` data.
+  //! Tests whether the `in` data is the same as `out` data.
   BL_INLINE bool inPlace() const noexcept { return in.itemData == out.itemData; }
-  //! Gets whether the index in `in` data is the same as index in `out` data.
+  //! Tests whether the index in `in` data is the same as index in `out` data.
   BL_INLINE bool isSameIndex() const noexcept { return in.index == out.index; }
 
   //! Returns the number of glyphs to be processed on input.

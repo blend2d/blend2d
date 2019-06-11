@@ -57,26 +57,26 @@ public:
   //! Returns the fetch type.
   BL_INLINE uint32_t fetchType() const noexcept { return _fetchType; }
 
-  //! Gets whether the fetch-type equals `ft`.
+  //! Tests whether the fetch-type equals `ft`.
   BL_INLINE bool isFetchType(uint32_t ft) const noexcept { return _fetchType == ft; }
-  //! Gets whether the fetch-type is between `first..last`, inclusive.
+  //! Tests whether the fetch-type is between `first..last`, inclusive.
   BL_INLINE bool isFetchType(uint32_t first, uint32_t last) const noexcept { return _fetchType >= first && _fetchType <= last; }
 
-  //! Gets whether the fetch-type is solid.
+  //! Tests whether the fetch-type is solid.
   BL_INLINE bool isSolid() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_SOLID); }
 
-  //! Gets whether the fetch-type is gradient.
+  //! Tests whether the fetch-type is gradient.
   BL_INLINE bool isGradient() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_GRADIENT_ANY_FIRST, BL_PIPE_FETCH_TYPE_GRADIENT_ANY_LAST); }
-  //! Gets whether the fetch-type is linear gradient.
+  //! Tests whether the fetch-type is linear gradient.
   BL_INLINE bool isLinearGradient() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_GRADIENT_LINEAR_FIRST, BL_PIPE_FETCH_TYPE_GRADIENT_LINEAR_LAST); }
-  //! Gets whether the fetch-type is radial gradient.
+  //! Tests whether the fetch-type is radial gradient.
   BL_INLINE bool isRadialGradient() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_GRADIENT_RADIAL_FIRST, BL_PIPE_FETCH_TYPE_GRADIENT_RADIAL_LAST); }
-  //! Gets whether the fetch-type is conical gradient.
+  //! Tests whether the fetch-type is conical gradient.
   BL_INLINE bool isConicalGradient() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_GRADIENT_CONICAL_FIRST, BL_PIPE_FETCH_TYPE_GRADIENT_CONICAL_LAST); }
 
-  //! Gets whether the fetch-type is pattern.
+  //! Tests whether the fetch-type is pattern.
   BL_INLINE bool isPattern() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_PATTERN_ANY_FIRST, BL_PIPE_FETCH_TYPE_PATTERN_ANY_LAST); }
-  //! Gets whether the fetch is the destination (special type).
+  //! Tests whether the fetch is the destination (special type).
   BL_INLINE bool isPixelPtr() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_PIXEL_PTR); }
 
   //! Returns source pixel format.
@@ -90,12 +90,12 @@ public:
   //! Returns the maximum pixels the fetch part can fetch at a time.
   BL_INLINE uint32_t maxPixels() const noexcept { return _maxPixels; }
 
-  //! Gets whether the fetched pixels contain RGB channels.
+  //! Tests whether the fetched pixels contain RGB channels.
   BL_INLINE bool hasRGB() const noexcept { return _hasRGB; }
-  //! Gets whether the fetched pixels contain Alpha channel.
+  //! Tests whether the fetched pixels contain Alpha channel.
   BL_INLINE bool hasAlpha() const noexcept { return _hasAlpha; }
 
-  //! Gets whether the fetch is currently initialized for a rectangular fill.
+  //! Tests whether the fetch is currently initialized for a rectangular fill.
   BL_INLINE bool isRectFill() const noexcept { return _isRectFill; }
   //! Returns the pixel granularity passed to `FetchPath::init()`.
   BL_INLINE uint32_t pixelGranularity() const noexcept { return _pixelGranularity; }
@@ -114,7 +114,7 @@ public:
 
   //! Initializes the current horizontal cursor of the current scanline to `x`.
   //!
-  //! NOTE: This initializer is generally called once per scanline to setup the
+  //! \note This initializer is generally called once per scanline to setup the
   //! current position by initializing it to `x`. The position is then advanced
   //! automatically by pixel fetchers and by `advanceX()`, which is used when
   //! there is a gap in the scanline that has to be skipped.
@@ -159,7 +159,7 @@ public:
 
   //! Fetches 8 pixels to XMM register(s) in `p` and advance by 8.
   //!
-  //! NOTE: The default implementation uses `fetch4()` twice.
+  //! \note The default implementation uses `fetch4()` twice.
   virtual void fetch8(PixelARGB& p, uint32_t flags) noexcept;
 };
 

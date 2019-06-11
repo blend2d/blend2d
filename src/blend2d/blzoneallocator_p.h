@@ -27,7 +27,7 @@
 //!
 //! Zone memory allocators are designed to allocate data of short lifetime.
 //!
-//! NOTE: It's not recommended to use `BLZoneAllocator` to allocate larger data
+//! \note It's not recommended to use `BLZoneAllocator` to allocate larger data
 //! structures than the initial `blockSize` passed to `BLZoneAllocator()`
 //! constructor. The block size should be always greater than the maximum `size`
 //! passed to `alloc()`. Zone is designed to handle such cases, but it may
@@ -154,7 +154,7 @@ public:
     std::swap(_packedData, other._packedData);
   }
 
-  //! Gets whether this `BLZoneAllocator` is actually a `BLZoneAllocatorTmp` that
+  //! Tests whether this `BLZoneAllocator` is actually a `BLZoneAllocatorTmp` that
   //! uses temporary memory.
   BL_INLINE bool hasStaticBlock() const noexcept { return _hasStaticBlock != 0; }
 
@@ -204,7 +204,7 @@ public:
 
   //! Ensures the remaining size is at least equal or greater than `size`.
   //!
-  //! NOTE: This function doesn't respect any alignment. If you need to ensure
+  //! \note This function doesn't respect any alignment. If you need to ensure
   //! there is enough room for an aligned allocation you need to call `align()`
   //! before calling `ensure()`.
   BL_INLINE BLResult ensure(size_t size) noexcept {
@@ -237,7 +237,7 @@ public:
   //! by calling `reset()`. If you plan to make an instance of C++ from the
   //! given pointer use placement `new` and `delete` operators:
   //!
-  //! ~~~
+  //! ```
   //! class Object { ... };
   //!
   //! // Create Zone with default block size of approximately 65536 bytes.
@@ -260,7 +260,7 @@ public:
   //!
   //! // Reset or destroy `BLZoneAllocator`.
   //! zone.reset();
-  //! ~~~
+  //! ```
   BL_INLINE void* alloc(size_t size) noexcept {
     if (BL_UNLIKELY(size > remainingSize()))
       return _alloc(size, 1);

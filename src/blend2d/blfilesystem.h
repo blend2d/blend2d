@@ -89,7 +89,7 @@ BL_DEFINE_ENUM(BLFileOpenFlags) {
 
 //! File seek mode, see `BLFile::seek()`.
 //!
-//! NOTE: Seek constants should be compatible with constants used by both POSIX
+//! \note Seek constants should be compatible with constants used by both POSIX
 //! and Windows API.
 BL_DEFINE_ENUM(BLFileSeek) {
   //! Seek from the beginning of the file (SEEK_SET).
@@ -133,7 +133,7 @@ struct BLFileCore {
   //! by Windows. On both platforms the handle is always `intptr_t` to make FFI
   //! easier (it's basically the size of a pointer / machine register).
   //!
-  //! NOTE: In C++ mode you can use `BLFileCore::Handle` or `BLFile::Handle` to
+  //! \note In C++ mode you can use `BLFileCore::Handle` or `BLFile::Handle` to
   //! get the handle type. In C mode you must use `intptr_t`. A handle of value
   //! `-1` is considered invalid and/or uninitialized. This value also matches
   //! `INVALID_HANDLE_VALUE`, which is used by Windows API and defined to -1 as
@@ -196,7 +196,7 @@ public:
   //! \name File API
   //! \{
 
-  //! Gets whether the file is open.
+  //! Tests whether the file is open.
   BL_INLINE bool isOpen() const noexcept { return handle != -1; }
 
   //! Returns the file handle and sets to invalid. After this operation you

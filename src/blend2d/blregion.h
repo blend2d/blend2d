@@ -125,12 +125,12 @@ public:
   BL_INLINE BLResult assign(const BLRectI& rect) noexcept { return blRegionAssignRectI(this, &rect); }
   BL_INLINE BLResult assign(const BLRectI* data, size_t n) noexcept { return blRegionAssignRectIArray(this, data, n); }
 
-  //! Gets whether the region is a built-in null instance.
+  //! Tests whether the region is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Gets whether the region is empty.
+  //! Tests whether the region is empty.
   BL_INLINE bool empty() const noexcept { return impl->size == 0; }
 
-  //! Gets whether this region and `other` are equal.
+  //! Tests whether this region and `other` are equal.
   BL_INLINE bool equals(const BLRegion& other) const noexcept { return blRegionEquals(this, &other); }
 
   //! \}
@@ -143,9 +143,9 @@ public:
   //! This inline method has also a C API equivalent `blRegionGetType()`.
   BL_INLINE uint32_t type() const noexcept { return uint32_t(blMin<size_t>(impl->size, BL_REGION_TYPE_COMPLEX)); }
 
-  //! Gets whether the region is one rectangle.
+  //! Tests whether the region is one rectangle.
   BL_INLINE bool isRect() const noexcept { return impl->size == 1; }
-  //! Gets whether the region is complex.
+  //! Tests whether the region is complex.
   BL_INLINE bool isComplex() const noexcept { return impl->size > 1; }
 
   //! Returns the region size.

@@ -43,7 +43,7 @@ public:
   //! are allowed and this feature is used to setup variables required by various
   //! parts of the pipeline.
   //!
-  //! NOTE: Initialization means code injection, calling `prepareSolid()` will
+  //! \note Initialization means code injection, calling `prepareSolid()` will
   //! not emit any code at the current position, it will instead inject code to
   //! the position saved by `init()`.
   void initSolidFlags(uint32_t flags) noexcept;

@@ -309,10 +309,10 @@ struct BLMatrix2D {
   //! \name Matrix Properties
   //! \{
 
-  //! Gets matrix type, see `BLMatrix2DType`.
+  //! Returns the matrix type, see `BLMatrix2DType`.
   BL_INLINE uint32_t type() const noexcept { return blMatrix2DGetType(this); }
 
-  //! Gets matrix determinant.
+  //! Calculates the matrix determinant.
   BL_INLINE double determinant() noexcept { return this->m00 * this->m11 - this->m01 * this->m10; }
 
   //! \}
@@ -427,10 +427,18 @@ struct BLMatrix2D {
   // --------------------------------------------------------------------------
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //! Array of functions for transforming points indexed by `BLMatrixType`. Each
 //! function is optimized for the respective type. This is mostly used internally,
 //! but exported for users that can take advantage of Blend2D SIMD optimziations.
-BL_API_C BLMapPointDArrayFunc blMatrix2DMapPointDArrayFuncs[BL_MATRIX2D_TYPE_COUNT];
+extern BL_API BLMapPointDArrayFunc blMatrix2DMapPointDArrayFuncs[BL_MATRIX2D_TYPE_COUNT];
+
+#ifdef __cplusplus
+} // {Extern:C}
+#endif
 
 //! \}
 

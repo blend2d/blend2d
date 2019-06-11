@@ -63,7 +63,7 @@ public:
   BL_INLINE void _makeRed() noexcept { _treeNodes[0] |= kRedMask; }
   BL_INLINE void _makeBlack() noexcept { _treeNodes[0] &= kPtrMask; }
 
-  //! Gets whether the node is RED (RED node must be non-null and must have RED flag set).
+  //! Tests whether the node is RED (RED node must be non-null and must have RED flag set).
   static BL_INLINE bool _isValidRed(BLZoneTreeNodeBase* node) noexcept { return node && node->isRed(); }
 };
 

@@ -14,7 +14,7 @@
 
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
 
-//! \addtogroup blend2d_api_styles
+//! \addtogroup blend2d_api_styling
 //! \{
 
 // ============================================================================
@@ -373,7 +373,7 @@ public:
   BL_INLINE BLResult assign(BLGradient&& other) noexcept { return blGradientAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLGradient& other) noexcept { return blGradientAssignWeak(this, &other); }
 
-  //! Gets whether the gradient is a built-in null instance.
+  //! Tests whether the gradient is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
   BL_INLINE bool equals(const BLGradient& other) const noexcept { return blGradientEquals(this, &other); }
@@ -424,16 +424,16 @@ public:
   //! \name Gradient Options
   //! \{
 
-  //! Gets the type of the gradient, see `BLGradientType`.
+  //! Returns the type of the gradient, see `BLGradientType`.
   BL_INLINE uint32_t type() const noexcept { return impl->gradientType; }
   //! Sets the gradient type, see `BLGradientType`.
   BL_INLINE BLResult setType(uint32_t type) noexcept { return blGradientSetType(this, type); }
 
-  //! Gets extend mode, see `BLExtendMode`.
+  //! Returns the gradient extend mode, see `BLExtendMode`.
   BL_INLINE uint32_t extendMode() const noexcept { return impl->extendMode; }
-  //! Set extend mode, see `BLExtendMode`.
+  //! Set the gradient extend mode, see `BLExtendMode`.
   BL_INLINE BLResult setExtendMode(uint32_t extendMode) noexcept { return blGradientSetExtendMode(this, extendMode); }
-  //! Reset extend mode to `BL_EXTEND_MODE_PAD`.
+  //! Resets the gradient extend mode to `BL_EXTEND_MODE_PAD`.
   BL_INLINE BLResult resetExtendMode() noexcept { return blGradientSetExtendMode(this, BL_EXTEND_MODE_PAD); }
 
   BL_INLINE double value(size_t index) const noexcept {
@@ -493,7 +493,7 @@ public:
   BL_INLINE BLResult addStop(double offset, const BLRgba64& rgba64) noexcept { return blGradientAddStopRgba64(this, offset, rgba64.value); }
   BL_INLINE BLResult removeStop(size_t index) noexcept { return blGradientRemoveStop(this, index); }
   BL_INLINE BLResult removeStopByOffset(double offset, bool all = true) noexcept { return blGradientRemoveStopByOffset(this, offset, all); }
-  BL_INLINE BLResult removeStops(const BLRange& range) noexcept { return blGradientRemoveStops(this, &range); }
+  BL_INLINE BLResult removeStops(const BLRange& range) noexcept { return blGradientRemoveStops(this, range.start, range.end); }
   BL_INLINE BLResult removeStopsByOffset(double offsetMin, double offsetMax) noexcept { return blGradientRemoveStopsFromTo(this, offsetMin, offsetMax); }
   BL_INLINE BLResult replaceStop(size_t index, double offset, const BLRgba32& rgba32) noexcept { return blGradientReplaceStopRgba32(this, index, offset, rgba32.value); }
   BL_INLINE BLResult replaceStop(size_t index, double offset, const BLRgba64& rgba64) noexcept { return blGradientReplaceStopRgba64(this, index, offset, rgba64.value); }

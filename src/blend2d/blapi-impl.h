@@ -54,7 +54,7 @@ static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetchSub(T* x, t
 
 //! Blend2D supports external data in almost every container. When a container
 //! is created from external data it adds a preface before its data, which
-//! stores used provided `destroyFunc` and `destroyData`.
+//! stores user provided `destroyFunc` and `destroyData`.
 //!
 //! Use `blImplDestroyExternal` to call destroy function of Impl.
 struct BLExternalImplPreface {

@@ -112,7 +112,9 @@ public:
   //! \name Common Functionality
   //! \{
 
-  //! Clear the content of the string without releasing its dynamically allocated data, if possible.
+  //! Clears the content of the string and releases its data.
+  //!
+  //! After reset the string content matches a default constructed string.
   BL_INLINE BLResult reset() noexcept { return blStringReset(this); }
   BL_INLINE void swap(BLString& other) noexcept { std::swap(this->impl, other.impl); }
 
@@ -129,30 +131,34 @@ public:
 
   BL_INLINE bool empty() const noexcept { return impl->size == 0; }
 
-  BL_INLINE bool equals(const BLString& other) const noexcept { return blStringEquals(this, &other); }
-  BL_INLINE bool equals(const BLStringView& view) const noexcept { return blStringEqualsData(this, view.data, view.size); }
-  BL_INLINE bool equals(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringEqualsData(this, str, n); }
-
-  BL_INLINE int compare(const BLString& other) const noexcept { return blStringCompare(this, &other); }
-  BL_INLINE int compare(const BLStringView& view) const noexcept { return blStringCompareData(this, view.data, view.size); }
-  BL_INLINE int compare(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringCompareData(this, str, n); }
-
   //! \}
 
   //! \name Accessors
   //! \{
 
+  //! Returns the character at the given `index`.
+  //!
+  //! \note Index must be valid and cannot be out of bounds, otherwise the
+  //! result is undefined and would trigger an assertion failure in debug mode.
   BL_INLINE char at(size_t index) const noexcept {
     BL_ASSERT(index < size());
     return data()[index];
   }
 
+  //! Returns the size of the string [in bytes].
   BL_INLINE size_t size() const noexcept { return impl->size; }
+  //! Returns the capacity of the string [in bytes].
   BL_INLINE size_t capacity() const noexcept { return impl->capacity; }
 
+  //! Returns a read-only data of the string.
   BL_INLINE const char* data() const noexcept { return impl->data; }
+  //! Returns the end of the string data.
+  //!
+  //! The returned pointer points to the null terminator, the data still can
+  //! be read, but it's not considered as string data by Blend2D anymore.
   BL_INLINE const char* end() const noexcept { return impl->data + impl->size; }
 
+  //! Returns the content of the string as `BLStringView`.
   BL_INLINE const BLStringView& view() const noexcept { return impl->view; }
 
   //! \}
@@ -160,13 +166,31 @@ public:
   //! \name String Manipulation
   //! \{
 
+  //! Clears the content of the string without releasing its dynamically allocated data, if possible.
   BL_INLINE BLResult clear() noexcept { return blStringClear(this); }
+  //! Shrinks the capacity of the string to match the current content.
   BL_INLINE BLResult shrink() noexcept { return blStringShrink(this); }
+  //! Reserves at least `n` bytes in the string for further manipulation (most probably appending).
   BL_INLINE BLResult reserve(size_t n) noexcept { return blStringReserve(this, n); }
+  //! Resizes the string to `n` and fills the additional data by `fill` pattern.
   BL_INLINE BLResult resize(size_t n, char fill = '\0') noexcept { return blStringResize(this, n, fill); }
-  //! Truncate the string length to `n`.
+
+  //! Truncates the string length to `n`.
+  //!
+  //! It does nothing if the the string length is less than `n`.
   BL_INLINE BLResult truncate(size_t n) noexcept { return blStringResize(this, blMin(n, impl->size), '\0'); }
 
+  //! Makes the string mutable.
+  //!
+  //! This operation checks whether the string is mutable and if not it makes a
+  //! deep copy of its content so it can be modified. Please not that you can
+  //! only modify the content that is defined by its length property. Even if
+  //! the string had higher capacity before `makeMutable()` it's not guaranteed
+  //! that the possible new data would match that capacity.
+  //!
+  //! If you want to make the string mutable for the purpose of appending or
+  //! making other modifications please consider using `modifyOp()` and
+  //! `insertOp()` functions instead.
   BL_INLINE BLResult makeMutable(char** dataOut) noexcept { return blStringMakeMutable(this, dataOut); }
   BL_INLINE BLResult modifyOp(uint32_t op, size_t n, char** dataOut) noexcept { return blStringModifyOp(this, op, n, dataOut); }
   BL_INLINE BLResult insertOp(size_t index, size_t n, char** dataOut) noexcept { return blStringInsertOp(this, index, n, dataOut); }
@@ -190,15 +214,38 @@ public:
   BL_INLINE BLResult insert(size_t index, const BLStringView& view) noexcept { return blStringInsertData(this, index, view.data, view.size); }
   BL_INLINE BLResult insert(size_t index, const char* str, size_t n = SIZE_MAX) noexcept { return blStringInsertData(this, index, str, n); }
 
-  BL_INLINE BLResult remove(const BLRange& range) noexcept { return blStringRemoveRange(this, &range); }
+  BL_INLINE BLResult remove(const BLRange& range) noexcept { return blStringRemoveRange(this, range.start, range.end); }
 
-  //! \name String Search
+  //! \name Equality & Comparison
   //! \{
 
+  //! Returns whether this string and `other` are equal (i.e. their contents match).
+  BL_INLINE bool equals(const BLString& other) const noexcept { return blStringEquals(this, &other); }
+  //! Returns whether this string and other string `view` are equal.
+  BL_INLINE bool equals(const BLStringView& view) const noexcept { return blStringEqualsData(this, view.data, view.size); }
+  //! Returns whether this string and the given string data `str` of length `n` are equal.
+  BL_INLINE bool equals(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringEqualsData(this, str, n); }
+
+  //! Compares this string with `other` and returns either `-1`, `0`, or `1`.
+  BL_INLINE int compare(const BLString& other) const noexcept { return blStringCompare(this, &other); }
+  //! Compares this string with other string `view` and returns either `-1`, `0`, or `1`.
+  BL_INLINE int compare(const BLStringView& view) const noexcept { return blStringCompareData(this, view.data, view.size); }
+  //! Compares this string with other string data and returns either `-1`, `0`, or `1`.
+  BL_INLINE int compare(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringCompareData(this, str, n); }
+
+  //! \}
+
+  //! \name Search
+  //! \{
+
+  //! Returns the first index at which a given character `c` can be found in
+  //! the string, or `SIZE_MAX` if not present.
   BL_INLINE size_t indexOf(char c) const noexcept {
     return indexOf(c, 0);
   }
 
+  //! Returns the index at which a given character `c` can be found in
+  //! the string starting from `fromIndex`, or `SIZE_MAX` if not present.
   BL_INLINE size_t indexOf(char c, size_t fromIndex) const noexcept {
     const char* p = data();
     size_t iEnd = size();
@@ -210,6 +257,8 @@ public:
     return SIZE_MAX;
   }
 
+  //! Returns the last index at which a given character `c` can be found in
+  //! the string, or `SIZE_MAX` if not present.
   BL_INLINE size_t lastIndexOf(char c) const noexcept {
     const char* p = data();
     size_t i = size();
@@ -220,6 +269,9 @@ public:
     return i;
   }
 
+  //! Returns the index at which a given character `c` can be found in
+  //! the string starting from `fromIndex` and ending at `0`, or `SIZE_MAX`
+  //! if not present.
   BL_INLINE size_t lastIndexOf(char c, size_t fromIndex) const noexcept {
     const char* p = data();
     size_t i = size() - 1;

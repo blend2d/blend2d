@@ -185,8 +185,16 @@ struct BLApproximationOptions {
   double offsetParameter;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //! Default approximation options used by Blend2D.
-BL_API_C const BLApproximationOptions blDefaultApproximationOptions;
+extern BL_API const BLApproximationOptions blDefaultApproximationOptions;
+
+#ifdef __cplusplus
+} // {Extern:C}
+#endif
 
 // ============================================================================
 // [BLStrokeOptions - Core]
@@ -368,12 +376,12 @@ public:
   BL_INLINE BLResult assign(const BLPath& other) noexcept { return blPathAssignWeak(this, &other);  }
   BL_INLINE BLResult assignDeep(const BLPath& other) noexcept { return blPathAssignDeep(this, &other); }
 
-  //! Gets whether the 2D path is a built-in null instance.
+  //! Tests whether the 2D path is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Gets whether the path is empty (its size equals zero).
+  //! Tests whether the path is empty (its size equals zero).
   BL_INLINE bool empty() const noexcept { return impl->size == 0; }
 
-  //! Gets whether this path and the `other` path are equal.
+  //! Tests whether this path and the `other` path are equal.
   //!
   //! The equality check is deep. The data of both paths is examined and binary
   //! compared (thus a slight difference like -0 and +0 would make the equality
@@ -385,22 +393,22 @@ public:
   //! \name Path Content
   //! \{
 
-  //! Gets path size (count of vertices used).
+  //! Returns path size (count of vertices used).
   BL_INLINE size_t size() const noexcept { return impl->size; }
-  //! Gets path capacity (count of allocated vertices).
+  //! Returns path capacity (count of allocated vertices).
   BL_INLINE size_t capacity() const noexcept { return impl->capacity; }
 
-  //! Gets path's vertex data (read-only).
+  //! Returns path's vertex data (read-only).
   BL_INLINE const BLPoint* vertexData() const noexcept { return impl->vertexData; }
-  //! Gets end of path's vertex data (read-only).
+  //! Returns the end of path's vertex data (read-only).
   BL_INLINE const BLPoint* vertexDataEnd() const noexcept { return impl->vertexData + impl->size; }
 
-  //! Gets path's command data (read-only).
+  //! Returns path's command data (read-only).
   BL_INLINE const uint8_t* commandData() const noexcept { return impl->commandData; }
-  //! Gets end of path's command data (read-only).
+  //! Returns the end of path's command data (read-only).
   BL_INLINE const uint8_t* commandDataEnd() const noexcept { return impl->commandData + impl->size; }
 
-  //! Gets the path data as a read-only `BLPathView`.
+  //! Returns the path data as a read-only `BLPathView`.
   BL_INLINE const BLPathView& view() const noexcept { return impl->view; }
 
   //! \}
@@ -408,14 +416,17 @@ public:
   //! \name Path Construction
   //! \{
 
+  //! Clears the content of the path.
   BL_INLINE BLResult clear() noexcept {
     return blPathClear(this);
   }
 
+  //! Shrinks the capacity of the path to fit the current usage.
   BL_INLINE BLResult shrink() noexcept {
     return blPathShrink(this);
   }
 
+  //! Reserves the capacity of the path for at least `n` vertices and commands.
   BL_INLINE BLResult reserve(size_t n) noexcept {
     return blPathReserve(this, n);
   }
@@ -424,103 +435,201 @@ public:
     return blPathModifyOp(this, op, n, cmdDataOut, vtxDataOut);
   }
 
+  //! Sets vertex at `index` to `cmd` and `pt`.
+  //!
+  //! Pass `BL_PATH_CMD_PRESERVE` in `cmd` to preserve the current command.
   BL_INLINE BLResult setVertexAt(size_t index, uint32_t cmd, const BLPoint& pt) noexcept {
     return blPathSetVertexAt(this, index, cmd, pt.x, pt.y);
   }
 
+  //! Sets vertex at `index` to `cmd` and `[x, y]`.
+  //!
+  //! Pass `BL_PATH_CMD_PRESERVE` in `cmd` to preserve the current command.
   BL_INLINE BLResult setVertexAt(size_t index, uint32_t cmd, double x, double y) noexcept {
     return blPathSetVertexAt(this, index, cmd, x, y);
   }
 
   //! Moves to `p0`.
+  //!
+  //! Appends `BL_PATH_CMD_MOVE[p0]` command to the path.
   BL_INLINE BLResult moveTo(const BLPoint& p0) noexcept {
     return blPathMoveTo(this, p0.x, p0.y);
   }
 
   //! Moves to `[x0, y0]`.
+  //!
+  //! Appends `BL_PATH_CMD_MOVE[x0, y0]` command to the path.
   BL_INLINE BLResult moveTo(double x0, double y0) noexcept {
     return blPathMoveTo(this, x0, y0);
   }
 
   //! Adds line to `p1`.
+  //!
+  //! Appends `BL_PATH_CMD_ON[p1]` command to the path.
   BL_INLINE BLResult lineTo(const BLPoint& p1) noexcept {
     return blPathLineTo(this, p1.x, p1.y);
   }
 
   //! Adds line to `[x1, y1]`.
+  //!
+  //! Appends `BL_PATH_CMD_ON[x1, y1]` command to the path.
   BL_INLINE BLResult lineTo(double x1, double y1) noexcept {
     return blPathLineTo(this, x1, y1);
   }
 
   //! Adds a polyline (LineTo) of the given `poly` array of size `count`.
+  //!
+  //! Appends multiple `BL_PATH_CMD_ON[x[i], y[i]]` commands to the path depending on `count` parameter.
   BL_INLINE BLResult polyTo(const BLPoint* poly, size_t count) noexcept {
     return blPathPolyTo(this, poly, count);
   }
 
   //! Adds a quadratic curve to `p1` and `p2`.
+  //!
+  //! Appends the following commands to the path:
+  //!   - `BL_PATH_CMD_QUAD[p1]`
+  //!   - `BL_PATH_CMD_ON[p2]`
+  //!
+  //! Matches SVG 'Q' path command:
+  //!   - https://www.w3.org/TR/SVG/paths.html#PathDataQuadraticBezierCommands
   BL_INLINE BLResult quadTo(const BLPoint& p1, const BLPoint& p2) noexcept {
     return blPathQuadTo(this, p1.x, p1.y, p2.x, p2.y);
   }
 
   //! Adds a quadratic curve to `[x1, y1]` and `[x2, y2]`.
+  //!
+  //! Appends the following commands to the path:
+  //!   - `BL_PATH_CMD_QUAD[x1, y1]`
+  //!   - `BL_PATH_CMD_ON[x2, y2]`
+  //!
+  //! Matches SVG 'Q' path command:
+  //!   - https://www.w3.org/TR/SVG/paths.html#PathDataQuadraticBezierCommands
   BL_INLINE BLResult quadTo(double x1, double y1, double x2, double y2) noexcept {
     return blPathQuadTo(this, x1, y1, x2, y2);
   }
 
   //! Adds a cubic curve to `p1`, `p2`, `p3`.
+  //!
+  //! Appends the following commands to the path:
+  //!   - `BL_PATH_CMD_CUBIC[p1]`
+  //!   - `BL_PATH_CMD_CUBIC[p2]`
+  //!   - `BL_PATH_CMD_ON[p3]`
+  //!
+  //! Matches SVG 'C' path command:
+  //!   - https://www.w3.org/TR/SVG/paths.html#PathDataCubicBezierCommands
   BL_INLINE BLResult cubicTo(const BLPoint& p1, const BLPoint& p2, const BLPoint& p3) noexcept {
     return blPathCubicTo(this, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
   }
 
   //! Adds a cubic curve to `[x1, y1]`, `[x2, y2]`, and `[x3, y3]`.
+  //!
+  //! Appends the following commands to the path:
+  //!   - `BL_PATH_CMD_CUBIC[x1, y1]`
+  //!   - `BL_PATH_CMD_CUBIC[x2, y2]`
+  //!   - `BL_PATH_CMD_ON[x3, y3]`
+  //!
+  //! Matches SVG 'C' path command:
+  //!   - https://www.w3.org/TR/SVG/paths.html#PathDataCubicBezierCommands
   BL_INLINE BLResult cubicTo(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
     return blPathCubicTo(this, x1, y1, x2, y2, x3, y3);
   }
 
   //! Adds a smooth quadratic curve to `p2`, calculating `p1` from last points.
+  //!
+  //! Appends the following commands to the path:
+  //!   - `BL_PATH_CMD_QUAD[calculated]`
+  //!   - `BL_PATH_CMD_ON[p2]`
+  //!
+  //! Matches SVG 'T' path command:
+  //!   - https://www.w3.org/TR/SVG/paths.html#PathDataQuadraticBezierCommands
   BL_INLINE BLResult smoothQuadTo(const BLPoint& p2) noexcept {
     return blPathSmoothQuadTo(this, p2.x, p2.y);
   }
 
   //! Adds a smooth quadratic curve to `[x2, y2]`, calculating `[x1, y1]` from last points.
+  //!
+  //! Appends the following commands to the path:
+  //!   - `BL_PATH_CMD_QUAD[calculated]`
+  //!   - `BL_PATH_CMD_ON[x2, y2]`
+  //!
+  //! Matches SVG 'T' path command:
+  //!   - https://www.w3.org/TR/SVG/paths.html#PathDataQuadraticBezierCommands
   BL_INLINE BLResult smoothQuadTo(double x2, double y2) noexcept {
     return blPathSmoothQuadTo(this, x2, y2);
   }
 
   //! Adds a smooth cubic curve to `p2` and `p3`, calculating `p1` from last points.
+  //!
+  //! Appends the following commands to the path:
+  //!   - `BL_PATH_CMD_CUBIC[calculated]`
+  //!   - `BL_PATH_CMD_CUBIC[p2]`
+  //!   - `BL_PATH_CMD_ON[p3]`
+  //!
+  //! Matches SVG 'S' path command:
+  //!   - https://www.w3.org/TR/SVG/paths.html#PathDataCubicBezierCommands
   BL_INLINE BLResult smoothCubicTo(const BLPoint& p2, const BLPoint& p3) noexcept {
     return blPathSmoothCubicTo(this, p2.x, p2.y, p3.x, p3.y);
   }
 
   //! Adds a smooth cubic curve to `[x2, y2]` and `[x3, y3]`, calculating `[x1, y1]` from last points.
+  //!
+  //! Appends the following commands to the path:
+  //!   - `BL_PATH_CMD_CUBIC[calculated]`
+  //!   - `BL_PATH_CMD_CUBIC[x2, y2]`
+  //!   - `BL_PATH_CMD_ON[x3, y3]`
+  //!
+  //! Matches SVG 'S' path command:
+  //!   - https://www.w3.org/TR/SVG/paths.html#PathDataCubicBezierCommands
   BL_INLINE BLResult smoothCubicTo(double x2, double y2, double x3, double y3) noexcept {
     return blPathSmoothCubicTo(this, x2, y2, x3, y3);
   }
 
+  //! Adds an arc to the path.
+  //!
+  //! The center of the arc is specified by `c` and radius by `r`. Both `start`
+  //! and `sweep` angles are in radians. If the last vertex doesn't match the
+  //! start of the arc then a `lineTo()` would be emitted before adding the arc.
+  //! Pass `true` in `forceMoveTo` to always emit `moveTo()` at the beginning of
+  //! the arc, which starts a new figure.
   BL_INLINE BLResult arcTo(const BLPoint& c, const BLPoint& r, double start, double sweep, bool forceMoveTo = false) noexcept {
     return blPathArcTo(this, c.x, c.y, r.x, r.y, start, sweep, forceMoveTo);
   }
 
+  //! \overload
   BL_INLINE BLResult arcTo(double cx, double cy, double rx, double ry, double start, double sweep, bool forceMoveTo = false) noexcept {
     return blPathArcTo(this, cx, cy, rx, ry, start, sweep, forceMoveTo);
   }
 
+  //! Adds an arc quadrant (90deg) to the path. The first point `p1` specifies
+  //! the quadrant corner and the last point `p2` specifies the end point.
   BL_INLINE BLResult arcQuadrantTo(const BLPoint& p1, const BLPoint& p2) noexcept {
     return blPathArcQuadrantTo(this, p1.x, p1.y, p2.x, p2.y);
   }
 
+  //! \overload
   BL_INLINE BLResult arcQuadrantTo(double x1, double y1, double x2, double y2) noexcept {
     return blPathArcQuadrantTo(this, x1, y1, x2, y2);
   }
 
+  //! Adds an elliptic arc to the path that follows the SVG specification.
+  //!
+  //! Matches SVG 'A' path command:
+  //!   - https://www.w3.org/TR/SVG/paths.html#PathDataEllipticalArcCommands
   BL_INLINE BLResult ellipticArcTo(const BLPoint& rp, double xAxisRotation, bool largeArcFlag, bool sweepFlag, const BLPoint& p1) noexcept {
     return blPathEllipticArcTo(this, rp.x, rp.y, xAxisRotation, largeArcFlag, sweepFlag, p1.x, p1.y);
   }
 
+  //! \overload
   BL_INLINE BLResult ellipticArcTo(double rx, double ry, double xAxisRotation, bool largeArcFlag, bool sweepFlag, double x1, double y1) noexcept {
     return blPathEllipticArcTo(this, rx, ry, xAxisRotation, largeArcFlag, sweepFlag, x1, y1);
   }
 
+  //! Closes the current figure.
+  //!
+  //! Appends `BL_PATH_CMD_CLOSE` to the path.
+  //!
+  //! Matches SVG 'Z' path command:
+  //!   - https://www.w3.org/TR/SVG/paths.html#PathDataClosePathCommand
   BL_INLINE BLResult close() noexcept { return blPathClose(this); }
 
   //! \}
@@ -931,12 +1040,12 @@ public:
     return blPathGetBoundingBox(this, boxOut);
   }
 
-  //! Gets a range describing a figure at the given `index`.
+  //! Returns the range describing a figure at the given `index`.
   BL_INLINE BLResult getFigureRange(size_t index, BLRange* rangeOut) const noexcept {
     return blPathGetFigureRange(this, index, rangeOut);
   }
 
-  //! Gets the last vertex of the path and stores it to `vtxOut`. If the very
+  //! Returns the last vertex of the path and stores it to `vtxOut`. If the very
   //! last command of the path is `BL_PATH_CMD_CLOSE` then the path will be
   //! iterated in reverse order to match the initial vertex of the last figure.
   BL_INLINE BLResult getLastVertex(BLPoint* vtxOut) noexcept {

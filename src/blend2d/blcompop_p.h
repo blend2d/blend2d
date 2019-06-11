@@ -35,7 +35,7 @@ enum BLCompOpInternal : uint32_t {
 enum BLCompOpSolidId : uint32_t {
   //! Source pixels are used.
   //!
-  //! NOTE: This value must be zero as it's usually combined with rendering
+  //! \note This value must be zero as it's usually combined with rendering
   //! context flags and then used for decision making about the whole command.
   BL_COMP_OP_SOLID_ID_NONE = 0,
   //! Source pixels are always treated as transparent zero (all 0).

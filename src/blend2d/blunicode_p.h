@@ -93,15 +93,15 @@ constexpr T blAsciiToLower(const T& x) noexcept { return x >= T('A') && x <= T('
 template<typename T>
 constexpr T blAsciiToUpper(const T& x) noexcept { return x >= T('a') && x <= T('z') ? T(x & ~T(0x20)) : x; }
 
-//! Gets whether the unicode character `uc` is high or low surrogate.
+//! Tests whether the unicode character `uc` is high or low surrogate.
 template<typename T>
 constexpr bool blIsSurrogate(const T& uc) noexcept { return uc >= BL_CHAR_SURROGATE_FIRST && uc <= BL_CHAR_SURROGATE_LAST; }
 
-//! Gets whether the unicode character `uc` is a high (leading) surrogate.
+//! Tests whether the unicode character `uc` is a high (leading) surrogate.
 template<typename T>
 constexpr bool blIsHiSurrogate(const T& uc) noexcept { return uc >= BL_CHAR_HI_SURROGATE_FIRST && uc <= BL_CHAR_HI_SURROGATE_LAST; }
 
-//! Gets whether the unicode character `uc` is a low (trailing) surrogate.
+//! Tests whether the unicode character `uc` is a low (trailing) surrogate.
 template<typename T>
 constexpr bool blIsLoSurrogate(const T& uc) noexcept { return uc >= BL_CHAR_LO_SURROGATE_FIRST && uc <= BL_CHAR_LO_SURROGATE_LAST; }
 

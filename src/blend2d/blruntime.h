@@ -18,7 +18,7 @@
 
 //! Blend2D runtime limits.
 //!
-//! NOTE: These constanst are used across Blend2D, but they are not designed to
+//! \note These constanst are used across Blend2D, but they are not designed to
 //! be ABI stable. New versions of Blend2D can increase certain limits without
 //! notice. Use runtime to query the limits dynamically, see `BLRuntimeBuildInfo`.
 BL_DEFINE_ENUM(BLRuntimeLimits) {

@@ -46,7 +46,7 @@ namespace Platform {
 
   //! Encoding id specific to `kPlatformMac` platform-id (deprecated).
   //!
-  //! NOTE: Apple says that this id is compatible with QuickDraw script code and
+  //! \note Apple says that this id is compatible with QuickDraw script code and
   //! the use of `kPlatformMac` is currently discouraged. Blend2D doesn't try to
   //! interpret this encoding and the enumeration is here just for reference.
   enum MacEncodingId : uint32_t {
@@ -220,7 +220,7 @@ namespace Platform {
 
   //! Primary language of Windows platform.
   //!
-  //! NOTE: Don't confuse with `WindowsLocaleId`, which is the right enumeration
+  //! \note Don't confuse with `WindowsLocaleId`, which is the right enumeration
   //! used by `languageId` records in 'cmap' and 'name' tables, see `WindowsLocaleId`.
   enum WindowsLanguageId : uint32_t {
     kWindowsLanguageNeutral                = 0x00,
@@ -347,7 +347,7 @@ namespace Platform {
   //! and geographical location. These IDs are used by `languageId` member in
   //! records stored in 'cmap' and 'name' tables.
   //!
-  //! NOTE: We omit country in cases where there is only a single country.
+  //! \note We omit country in cases where there is only a single country.
   enum WindowsLocaleId : uint32_t {
     kWindowsLocaleAfrikaans                = 0x0436,
     kWindowsLocaleAlbanian                 = 0x041C,

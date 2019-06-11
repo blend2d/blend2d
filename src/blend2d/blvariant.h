@@ -174,8 +174,16 @@ struct BLVariantCore {
   BLVariantImpl* impl;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //! Built-in none objects indexed by `BLImplType`
-BL_API_C BLVariantCore blNone[BL_IMPL_TYPE_COUNT];
+extern BL_API BLVariantCore blNone[BL_IMPL_TYPE_COUNT];
+
+#ifdef __cplusplus
+} // {Extern:C}
+#endif
 
 // ============================================================================
 // [BLVariant - C++]
@@ -199,7 +207,7 @@ public:
   BL_INLINE BLVariant& operator=(BLVariant&& other) noexcept { blVariantAssignMove(this, &other); return *this; }
   BL_INLINE BLVariant& operator=(const BLVariant& other) noexcept { blVariantAssignWeak(this, &other); return *this; }
 
-  //! Gets whether the variant is a built-in null instance (of any impl-type).
+  //! Tests whether the variant is a built-in null instance (of any impl-type).
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
   BL_INLINE BLResult reset() noexcept { return blVariantReset(this); }

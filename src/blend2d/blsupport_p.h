@@ -216,14 +216,14 @@ constexpr T blBitMask(Arg x, Args... args) noexcept { return T(blBitMask<T>(x) |
 template<typename T, typename B>
 constexpr T blBitMaskFromBool(const B& x) noexcept { return blNegate(T(x)); }
 
-//! Gets whether `x` has `n`th bit set.
+//! Tests whether `x` has `n`th bit set.
 template<typename T, typename I>
 constexpr bool blBitTest(const T& x, const I& i) noexcept {
   typedef typename std::make_unsigned<T>::type U;
   return (U(x) & (U(1) << i)) != 0;
 }
 
-//! Gets whether bits specified by `y` are all set in `x`.
+//! Tests whether bits specified by `y` are all set in `x`.
 template<typename X, typename Y>
 constexpr bool blBitMatch(const X& x, const Y& y) noexcept { return (x & y) == y; }
 
@@ -264,7 +264,7 @@ template<> BL_INLINE uint32_t blBitCtzImpl(const uint64_t& x) noexcept { unsigne
 
 //! Count trailing zeros in `x` (returns a position of a first bit set in `x`).
 //!
-//! NOTE: The input MUST NOT be zero, otherwise the result is undefined.
+//! \note The input MUST NOT be zero, otherwise the result is undefined.
 template<typename T>
 static BL_INLINE uint32_t blBitCtz(T x) noexcept { return blBitCtzImpl(blAsUIntLeast32(x)); }
 
@@ -358,7 +358,7 @@ static constexpr bool blIsAligned(const X& base, const Y& alignment) noexcept {
   return ((U)base % (U)alignment) == 0;
 }
 
-//! Gets whether the `x` is a power of two (only one bit is set).
+//! Tests whether the `x` is a power of two (only one bit is set).
 template<typename T>
 static constexpr bool blIsPowerOf2(const T& x) noexcept {
   typedef typename std::make_unsigned<T>::type U;

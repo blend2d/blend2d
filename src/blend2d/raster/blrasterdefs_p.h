@@ -322,7 +322,7 @@ struct BLRasterFillCmd {
 
 //! Structure that holds a saved state.
 //!
-//! NOTE: The struct is designed to have no gaps required by alignment so the
+//! \note The struct is designed to have no gaps required by alignment so the
 //! order of members doesn't have to make much sense.
 struct alignas(16) BLRasterContextSavedState {
   //! Link to the previous state.

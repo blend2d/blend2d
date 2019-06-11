@@ -52,7 +52,7 @@ struct BLRandom {
   //! Resets the random number generator to the given `seed`.
   BL_INLINE void reset(uint64_t seed = 0) noexcept { blRandomReset(this, seed); }
 
-  //! Gets whether the random number generator is equivalent to `other`.
+  //! Tests whether the random number generator is equivalent to `other`.
   BL_INLINE bool equals(const BLRandom& other) const noexcept {
     return blEquals(this->data[0], other.data[0]) &
            blEquals(this->data[1], other.data[1]);

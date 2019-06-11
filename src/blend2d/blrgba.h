@@ -11,7 +11,7 @@
 
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
 
-//! \addtogroup blend2d_api_styles
+//! \addtogroup blend2d_api_styling
 //! \{
 
 // ============================================================================
@@ -82,9 +82,9 @@ struct BLRgba32 {
   //! \name Utilities
   //! \{
 
-  //! Gets whether the color is fully-opaque (alpha equals 0xFFFF).
+  //! Tests whether the color is fully-opaque (alpha equals 0xFFFF).
   constexpr bool isOpaque() const noexcept { return this->value >= 0xFF000000u; }
-  //! Gets whether the color is fully-transparent (alpha equals 0).
+  //! Tests whether the color is fully-transparent (alpha equals 0).
   constexpr bool isTransparent() const noexcept { return this->value <= 0x00FFFFFFu; }
 
   //! \}
@@ -166,9 +166,9 @@ struct BLRgba64 {
   //! \name Utilities
   //! \{
 
-  //! Gets whether the color is fully-opaque (alpha equals 0xFFFF).
+  //! Tests whether the color is fully-opaque (alpha equals 0xFFFF).
   constexpr bool isOpaque() const noexcept { return this->value >= 0xFFFF000000000000u; }
-  //! Gets whether the color is fully-transparent (alpha equals 0).
+  //! Tests whether the color is fully-transparent (alpha equals 0).
   constexpr bool isTransparent() const noexcept { return this->value <= 0x0000FFFFFFFFFFFFu; }
 
   //! \}
@@ -244,9 +244,9 @@ struct BLRgba128 {
   //! \name Utilities
   //! \{
 
-  //! Gets whether the color is fully-opaque (alpha equals 1.0).
+  //! Tests whether the color is fully-opaque (alpha equals 1.0).
   constexpr bool isOpaque() const noexcept { return this->a >= 1.0; }
-  //! Gets whether the color is fully-transparent (alpha equals 0.0).
+  //! Tests whether the color is fully-transparent (alpha equals 0.0).
   constexpr bool isTransparent() const noexcept { return this->a == 0.0; }
 
   //! \}

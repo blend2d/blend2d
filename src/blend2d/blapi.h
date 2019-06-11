@@ -58,35 +58,35 @@
 //!   - <a href="annotated.html">Class List</a> - Provides a list of classes
 //!     sorted alphabetically
 
-//! \defgroup blend2d_api_globals Globals
+//! \defgroup blend2d_api_globals Global API
 //! \brief Global functions, constants,  and classes used universally across
 //! the library.
 
-//! \defgroup blend2d_api_geometry Geometry
+//! \defgroup blend2d_api_geometry Geometry API
 //! \brief Geometries, paths, and transformations.
 //!
 //! Blend2D offers various geometry structures and objects that can be used with
 //! either `BLPath` for path building or `BLContext` for rendering.
 
-//! \defgroup blend2d_api_images Images
+//! \defgroup blend2d_api_imaging Imaging API
 //! \brief Images and image codecs.
 
-//! \defgroup blend2d_api_styles Styles
+//! \defgroup blend2d_api_styling Styling API
 //! \brief Colors, gradients, and patterns.
 
-//! \defgroup blend2d_api_text Text
+//! \defgroup blend2d_api_text Text API
 //! \brief Fonts & Text support.
 
-//! \defgroup blend2d_api_rendering Rendering
+//! \defgroup blend2d_api_rendering Rendering API
 //! \brief 2D rendering context, helper structures, and constants.
 
-//! \defgroup blend2d_api_runtime Runtime
+//! \defgroup blend2d_api_runtime Runtime API
 //! \brief Interaction with Blend2D runtime.
 
-//! \defgroup blend2d_api_filesystem Filesystem
+//! \defgroup blend2d_api_filesystem Filesystem API
 //! \brief Filesystem utilities.
 
-//! \defgroup blend2d_api_impl Impl
+//! \defgroup blend2d_api_impl Impl API
 //! \brief API required for extending Blend2D functionality.
 //!
 //! Everything that is part of this group requires `<blend2d-impl.h>` to be
@@ -320,20 +320,10 @@
   #define BL_API
 #endif
 
-//! \def BL_API_C
-//!
-//! A decorator that marks functions and variables exported by Blend2D to use
-//! C linkage.
-#if defined(__cplusplus)
-  #define BL_API_C extern "C" BL_API
-#else
-  #define BL_API_C BL_API
-#endif
-
 //! \def BL_CDECL
 //!
 //! Calling convention used by all exported functions and function callbacks.
-//! If you pass callbacks to Blend2D it's strongly advised to use this macro,
+//! If you pass callbacks to Blend2D it's strongly advised to use this decorator,
 //! because some compilers provide a way of overriding a global calling
 //! convention (like __vectorcall on Windows platforms), which would break the
 //! use of such callbacks.
@@ -485,7 +475,12 @@
   #define BL_DEFINE_ENUM(NAME) enum NAME
 #endif
 
-#ifdef __cplusplus
+#if defined(BL_DOXYGEN)
+  // Only for doxygen to make these members nicer.
+  #define BL_TYPED_MEMBER(CORE_TYPE, CPP_TYPE, NAME) CPP_TYPE NAME;
+  #define BL_HAS_TYPED_MEMBERS(...)
+
+#elif defined(__cplusplus)
   // Union prevents C++ compiler from constructing / destructing its members.
   #define BL_TYPED_MEMBER(CORE_TYPE, CPP_TYPE, NAME) union { CPP_TYPE NAME; }
 
@@ -962,7 +957,7 @@ BL_DEFINE_ENUM(BLBooleanOp) {
   BL_BOOLEAN_OP_COUNT = 5
 };
 
-//! \ingroup blend2d_api_styles
+//! \ingroup blend2d_api_styling
 //!
 //! Extend mode.
 BL_DEFINE_ENUM(BLExtendMode) {
@@ -998,7 +993,7 @@ BL_DEFINE_ENUM(BLExtendMode) {
   BL_EXTEND_MODE_COMPLEX_COUNT = 9
 };
 
-//! \ingroup blend2d_api_styles
+//! \ingroup blend2d_api_styling
 //!
 //! Style type.
 BL_DEFINE_ENUM(BLStyleType) {
@@ -1316,7 +1311,7 @@ struct BLCreateForeignInfo {
 
 //! Array view of `T`.
 //!
-//! NOTE: In C mode the type of data used by `BLArrayView` is `const void*`,
+//! \note In C mode the type of data used by `BLArrayView` is `const void*`,
 //! thus it has to be retyped to a real type this view points to. There are
 //! only few specializations like `BLStringView` that point to a real type.
 template<typename T>
@@ -1384,6 +1379,9 @@ extern "C" {
 
 //! \name BLArray
 //!
+//! Array functionality is provided by \ref BLArrayCore in C-API and wrapped by
+//! \ref BLArray template in C++ API.
+//!
 //! C API users must call either generic functions with `Item` suffix or correct
 //! specialized functions in case of typed arrays. For example if you create a
 //! `BLArray<uint32_t>` in C then you can only modify it through functions that
@@ -1432,13 +1430,17 @@ BL_API BLResult BL_CDECL blArrayReplaceU64(BLArrayCore* self, size_t index, uint
 BL_API BLResult BL_CDECL blArrayReplaceF32(BLArrayCore* self, size_t index, float value) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blArrayReplaceF64(BLArrayCore* self, size_t index, double value) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blArrayReplaceItem(BLArrayCore* self, size_t index, const void* item) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayReplaceView(BLArrayCore* self, const BLRange* range, const void* items, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayReplaceView(BLArrayCore* self, size_t rStart, size_t rEnd, const void* items, size_t n) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blArrayRemoveIndex(BLArrayCore* self, size_t index) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayRemoveRange(BLArrayCore* self, const BLRange* range) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayRemoveRange(BLArrayCore* self, size_t rStart, size_t rEnd) BL_NOEXCEPT_C;
 BL_API bool     BL_CDECL blArrayEquals(const BLArrayCore* a, const BLArrayCore* b) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLContext
+//!
+//! Rendering functionality is provided by \ref BLContextCore in C-API and
+//! wrapped by \ref BLContext in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blContextInit(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextInitAs(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) BL_NOEXCEPT_C;
@@ -1517,6 +1519,10 @@ BL_API BLResult BL_CDECL blContextBlitScaledImageD(BLContextCore* self, const BL
 //! \}
 
 //! \name BLFile
+//!
+//! File read/write functionality is provided by \ref BLFileCore in C-API and
+//! wrapped by \ref BLFile in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blFileInit(BLFileCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFileReset(BLFileCore* self) BL_NOEXCEPT_C;
@@ -1530,12 +1536,20 @@ BL_API BLResult BL_CDECL blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) 
 //! \}
 
 //! \name BLFileSystem
+//!
+//! Filesystem API is provided by functions prefixed with `blFileSystem` and
+//! wrapped by \ref BLFileSystem namespace in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blFileSystemReadFile(const char* fileName, BLArrayCore* dst, size_t maxSize, uint32_t readFlags) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFileSystemWriteFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLFont
+//!
+//! Font functionality is provided by \ref BLFontCore in C-API and wrapped by
+//! \ref BLFont in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blFontInit(BLFontCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontReset(BLFontCore* self) BL_NOEXCEPT_C;
@@ -1560,6 +1574,10 @@ BL_API BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, const
 //! \}
 
 //! \name BLFontData
+//!
+//! Font-data functionality is provided by \ref BLFontDataCore in C-API and
+//! wrapped by \ref BLFontData in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blFontDataInit(BLFontDataCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontDataInitFromLoader(BLFontDataCore* self, const BLFontLoaderCore* loader, uint32_t faceIndex) BL_NOEXCEPT_C;
@@ -1573,6 +1591,10 @@ BL_API size_t   BL_CDECL blFontDataQueryTables(const BLFontDataCore* self, BLFon
 //! \}
 
 //! \name BLFontFace
+//!
+//! Font-face functionality is provided by \ref BLFontFaceCore in C-API and
+//! wrapped by \ref BLFontFace in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blFontFaceInit(BLFontFaceCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontFaceReset(BLFontFaceCore* self) BL_NOEXCEPT_C;
@@ -1587,6 +1609,10 @@ BL_API BLResult BL_CDECL blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self
 //! \}
 
 //! \name BLFontLoader
+//!
+//! Font loading functionality is provided by \ref BLFontLoaderCore in C-API
+//! and wrapped by \ref BLFontLoader in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blFontLoaderInit(BLFontLoaderCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontLoaderReset(BLFontLoaderCore* self) BL_NOEXCEPT_C;
@@ -1604,6 +1630,10 @@ BL_API BLResult BL_CDECL blFormatInfoSanitize(BLFormatInfo* self) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLGlyphBuffer
+//!
+//! Glyph-buffer functionality is provided by \ref BLGlyphBufferCore in C-API
+//! and wrapped by \ref BLGlyphBuffer in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blGlyphBufferInit(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGlyphBufferReset(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
@@ -1613,6 +1643,10 @@ BL_API BLResult BL_CDECL blGlyphBufferSetGlyphIds(BLGlyphBufferCore* self, const
 //! \}
 
 //! \name BLGradient
+//!
+//! Gradient container is provided by \ref BLGradientCore in C-API and wrapped
+//! by \ref BLGradient in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blGradientInit(BLGradientCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientInitAs(BLGradientCore* self, uint32_t type, const void* values, uint32_t extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) BL_NOEXCEPT_C;
@@ -1638,7 +1672,7 @@ BL_API BLResult BL_CDECL blGradientAddStopRgba32(BLGradientCore* self, double of
 BL_API BLResult BL_CDECL blGradientAddStopRgba64(BLGradientCore* self, double offset, uint64_t argb64) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientRemoveStop(BLGradientCore* self, size_t index) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientRemoveStopByOffset(BLGradientCore* self, double offset, uint32_t all) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientRemoveStops(BLGradientCore* self, const BLRange* range) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientRemoveStops(BLGradientCore* self, size_t rStart, size_t rEnd) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientRemoveStopsFromTo(BLGradientCore* self, double offsetMin, double offsetMax) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientReplaceStopRgba32(BLGradientCore* self, size_t index, double offset, uint32_t rgba32) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientReplaceStopRgba64(BLGradientCore* self, size_t index, double offset, uint64_t rgba64) BL_NOEXCEPT_C;
@@ -1648,6 +1682,10 @@ BL_API bool     BL_CDECL blGradientEquals(const BLGradientCore* a, const BLGradi
 //! \}
 
 //! \name BLImage
+//!
+//! Image container is provided by \ref BLImageCore in C-API and wrapped by
+//! \ref BLImage in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blImageInit(BLImageCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageInitAs(BLImageCore* self, int w, int h, uint32_t format) BL_NOEXCEPT_C;
@@ -1669,6 +1707,10 @@ BL_API BLResult BL_CDECL blImageWriteToData(const BLImageCore* self, BLArrayCore
 //! \}
 
 //! \name BLImageCodec
+//!
+//! Image codec functionality is provided by \ref BLImageCodecCore in C-API and
+//! wrapped by \ref BLImageCodec in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blImageCodecInit(BLImageCodecCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageCodecReset(BLImageCodecCore* self) BL_NOEXCEPT_C;
@@ -1686,6 +1728,10 @@ BL_API BLResult BL_CDECL blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* c
 //! \}
 
 //! \name BLImageDecoder
+//!
+//! Image decoder functionality is provided by \ref BLImageDecoderCore in C-API
+//! and wrapped by \ref BLImageDecoder in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blImageDecoderInit(BLImageDecoderCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageDecoderReset(BLImageDecoderCore* self) BL_NOEXCEPT_C;
@@ -1697,6 +1743,10 @@ BL_API BLResult BL_CDECL blImageDecoderReadFrame(BLImageDecoderCore* self, BLIma
 //! \}
 
 //! \name BLImageEncoder
+//!
+//! Image encoder functionality is provided by \ref BLImageEncoderCore in C-API
+//! and wrapped by \ref BLImageEncoder in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blImageEncoderInit(BLImageEncoderCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageEncoderReset(BLImageEncoderCore* self) BL_NOEXCEPT_C;
@@ -1707,6 +1757,10 @@ BL_API BLResult BL_CDECL blImageEncoderWriteFrame(BLImageEncoderCore* self, BLAr
 //! \}
 
 //! \name BLMatrix2D
+//!
+//! Matrix functionality is provided by \ref BLMatrix2D, C++ API adds methods to
+//! the struct when compiling in C++ mode.
+//!
 //! \{
 BL_API BLResult BL_CDECL blMatrix2DSetIdentity(BLMatrix2D* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blMatrix2DSetTranslation(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
@@ -1720,6 +1774,10 @@ BL_API BLResult BL_CDECL blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoin
 //! \}
 
 //! \name BLPath
+//!
+//! 2D path functionality is provided by \ref BLPathCore in C-API and wrapped
+//! by \ref BLPath in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blPathInit(BLPathCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathReset(BLPathCore* self) BL_NOEXCEPT_C;
@@ -1770,6 +1828,10 @@ BL_API uint32_t BL_CDECL blPathHitTest(const BLPathCore* self, const BLPoint* p,
 //! \}
 
 //! \name BLPattern
+//!
+//! Pattern functionality is provided by \ref BLPatternCore in C-API and
+//! wrapped by \ref BLPattern in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blPatternInit(BLPatternCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPatternInitAs(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, uint32_t extendMode, const BLMatrix2D* m) BL_NOEXCEPT_C;
@@ -1786,6 +1848,10 @@ BL_API bool     BL_CDECL blPatternEquals(const BLPatternCore* a, const BLPattern
 //! \}
 
 //! \name BLPixelConverter
+//!
+//! Pixel conversion functionality is provided by \ref BLPixelConverterCore
+//! in C-API and wrapped by \ref BLPixelConverter in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blPixelConverterInit(BLPixelConverterCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPixelConverterInitWeak(BLPixelConverterCore* self, const BLPixelConverterCore* other) BL_NOEXCEPT_C;
@@ -1808,6 +1874,10 @@ BL_API double   BL_CDECL blRandomNextDouble(BLRandom* self) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLRegion
+//!
+//! 2D region functionality is provided by \ref BLRegionCore in C-API and
+//! wrapped by \ref BLRegion in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blRegionInit(BLRegionCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blRegionReset(BLRegionCore* self) BL_NOEXCEPT_C;
@@ -1835,6 +1905,10 @@ BL_API uint32_t BL_CDECL blRegionHitTestBoxI(const BLRegionCore* self, const BLB
 //! \}
 
 //! \name BLRuntime
+//!
+//! Blend2D runtime functions are provided either as a C-API or wrapped by
+//! \ref BLRuntime namespace in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blRuntimeInit() BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blRuntimeShutdown() BL_NOEXCEPT_C;
@@ -1855,6 +1929,10 @@ BL_API BLResult BL_CDECL blResultFromPosixError(int e) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLString
+//!
+//! String contanter is provided by \ref BLStringCore in C-API and wrapped by
+//! \ref BLString in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blStringInit(BLStringCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStringReset(BLStringCore* self) BL_NOEXCEPT_C;
@@ -1880,7 +1958,7 @@ BL_API BLResult BL_CDECL blStringApplyOpFormatV(BLStringCore* self, uint32_t op,
 BL_API BLResult BL_CDECL blStringInsertChar(BLStringCore* self, size_t index, char c, size_t n) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStringInsertData(BLStringCore* self, size_t index, const char* str, size_t n) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStringInsertString(BLStringCore* self, size_t index, const BLStringCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringRemoveRange(BLStringCore* self, const BLRange* range) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringRemoveRange(BLStringCore* self, size_t rStart, size_t rEnd) BL_NOEXCEPT_C;
 BL_API bool     BL_CDECL blStringEquals(const BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
 BL_API bool     BL_CDECL blStringEqualsData(const BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C;
 BL_API int      BL_CDECL blStringCompare(const BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
@@ -1888,6 +1966,10 @@ BL_API int      BL_CDECL blStringCompareData(const BLStringCore* self, const cha
 //! \}
 
 //! \name BLStrokeOptions
+//!
+//! Stroke options are provided by \ref BLStrokeOptionsCore in C-API and
+//! wrapped by \ref BLStrokeOptions in C++ API.
+//!
 //! \{
 BL_API BLResult BL_CDECL blStrokeOptionsInit(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStrokeOptionsInitMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
@@ -1898,6 +1980,11 @@ BL_API BLResult BL_CDECL blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, co
 //! \}
 
 //! \name BLVariant
+//!
+//! Variant C-API can be used on any object compatible with Blend2D Impl, at
+//! the moment only \ref BLStrokeOptionsCore and \ref BLGlyphBufferCore are
+//! not compatible, all others are.
+//!
 //! \{
 BL_API BLResult BL_CDECL blVariantInit(void* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blVariantInitMove(void* self, void* other) BL_NOEXCEPT_C;

@@ -30,7 +30,7 @@ enum BLThreadPoolAcquireFlags : uint32_t {
   //! Try to acquire the number of threads specified, if it's not possible then
   //! don't acquire any threads and return.
   //!
-  //! NOTE: This flag has precedence over `BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ONE`
+  //! \note This flag has precedence over `BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ONE`
   //! and `BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ALL`, so it doesn't matter if these
   //! flags were specified or not when `BL_THREAD_POOL_ACQUIRE_FLAG_TRY` is used.
   BL_THREAD_POOL_ACQUIRE_FLAG_TRY = 0x00000001u,
@@ -70,7 +70,7 @@ struct BLThreadPool {
 
   //! Returns the number of threads that are pooled at the moment.
   //!
-  //! NOTE: This is mostly informative as it's not guaranteed that successive
+  //! \note This is mostly informative as it's not guaranteed that successive
   //! calls to `pooledThreadCount()` would return the same result as some
   //! threads may be acquired during the request by another thread.
   //!

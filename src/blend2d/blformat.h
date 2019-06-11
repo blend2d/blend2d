@@ -9,7 +9,7 @@
 
 #include "./blapi.h"
 
-//! \addtogroup blend2d_api_images
+//! \addtogroup blend2d_api_imaging
 //! \{
 
 // ============================================================================
@@ -132,8 +132,16 @@ struct BLFormatInfo {
   // --------------------------------------------------------------------------
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //! Pixel format information of Blend2D native pixel formats, see `BLFormat`.
-BL_API_C const BLFormatInfo blFormatInfo[BL_FORMAT_RESERVED_COUNT];
+extern BL_API const BLFormatInfo blFormatInfo[BL_FORMAT_RESERVED_COUNT];
+
+#ifdef __cplusplus
+} // {Extern:C}
+#endif
 
 //! \}
 

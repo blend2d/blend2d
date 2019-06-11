@@ -639,15 +639,12 @@ BLResult blStringInsertString(BLStringCore* self, size_t index, const BLStringCo
 // [BLString - Remove]
 // ============================================================================
 
-BLResult blStringRemoveRange(BLStringCore* self, const BLRange* range) noexcept {
-  if (BL_UNLIKELY(!range))
-    return blStringClear(self);
-
+BLResult blStringRemoveRange(BLStringCore* self, size_t rStart, size_t rEnd) noexcept {
   BLStringImpl* selfI = self->impl;
 
   size_t size = selfI->size;
-  size_t end = blMin(range->end, size);
-  size_t index = blMin(range->start, end);
+  size_t end = blMin(rEnd, size);
+  size_t index = blMin(rStart, end);
 
   size_t n = end - index;
   if (!n)

@@ -12,7 +12,7 @@
 #include "./blgeometry.h"
 #include "./blvariant.h"
 
-//! \addtogroup blend2d_api_images
+//! \addtogroup blend2d_api_imaging
 //! \{
 
 // ============================================================================
@@ -265,9 +265,9 @@ public:
   //! Create a deep copy of the `other` image.
   BL_INLINE BLResult assignDeep(const BLImage& other) noexcept { return blImageAssignDeep(this, &other); }
 
-  //! Gets whether the image is a built-in null instance.
+  //! Tests whether the image is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Gets whether the image is empty (has no size).
+  //! Tests whether the image is empty (has no size).
   BL_INLINE bool empty() const noexcept { return impl->format == BL_FORMAT_NONE; }
 
   BL_INLINE bool equals(const BLImage& other) const noexcept { return blImageEquals(this, &other); }
@@ -279,7 +279,7 @@ public:
 
   //! Create a new image of a specified width `w`, height `h`, and `format`.
   //!
-  //! NOTE: It's important to always test whether the function succeeded as
+  //! \note It's important to always test whether the function succeeded as
   //! allocating pixel-data can fail. If invalid arguments (invalid size or
   //! format) were passed to the function a `BL_ERROR_INVALID_VALUE` result
   //! will be returned and no data will be allocated. It's also important
@@ -461,7 +461,7 @@ public:
 
   BL_INLINE BLResult assign(const BLImageCodec& other) noexcept { return blImageCodecAssignWeak(this, &other); }
 
-  //! Gets whether the image codec is a built-in null instance.
+  //! Tests whether the image codec is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
   BL_INLINE bool equals(const BLImageCodec& other) const noexcept { return this->impl == other.impl; }
@@ -481,7 +481,7 @@ public:
   BL_INLINE const char* extensions() const noexcept { return impl->extensions; }
   //! Returns image codec flags, see `BLImageCodecFeatures`.
   BL_INLINE uint32_t features() const noexcept { return impl->features; }
-  //! Gets whether the image codec has a flag `flag`.
+  //! Tests whether the image codec has a flag `flag`.
   BL_INLINE bool hasFeature(uint32_t feature) const noexcept { return (impl->features & feature) != 0; }
 
   //! \}
@@ -656,7 +656,7 @@ public:
   BL_INLINE BLResult assign(BLImageDecoder&& other) noexcept { return blImageDecoderAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLImageDecoder& other) noexcept { return blImageDecoderAssignWeak(this, &other); }
 
-  //! Gets whether the image decoder is a built-in null instance.
+  //! Tests whether the image decoder is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
   BL_INLINE bool equals(const BLImageDecoder& other) const noexcept { return this->impl == other.impl; }
@@ -783,7 +783,7 @@ public:
   BL_INLINE BLResult assign(BLImageEncoder&& other) noexcept { return blImageEncoderAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLImageEncoder& other) noexcept { return blImageEncoderAssignWeak(this, &other); }
 
-  //! Gets whether the image encoder is a built-in null instance.
+  //! Tests whether the image encoder is a built-in null instance.
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
   BL_INLINE bool equals(const BLImageEncoder& other) const noexcept { return this->impl == other.impl; }

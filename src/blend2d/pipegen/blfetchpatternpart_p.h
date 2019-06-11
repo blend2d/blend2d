@@ -44,9 +44,9 @@ public:
 
   FetchPatternPart(PipeCompiler* pc, uint32_t fetchType, uint32_t fetchPayload, uint32_t format) noexcept;
 
-  //! Gets whether the fetch-type is simple pattern {axis-aligned or axis-unaligned}.
+  //! Tests whether the fetch-type is simple pattern {axis-aligned or axis-unaligned}.
   inline bool isSimple() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_PATTERN_SIMPLE_FIRST, BL_PIPE_FETCH_TYPE_PATTERN_SIMPLE_LAST); }
-  //! Gets whether the fetch-type is an affine pattern style.
+  //! Tests whether the fetch-type is an affine pattern style.
   inline bool isAffine() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_PATTERN_AFFINE_FIRST, BL_PIPE_FETCH_TYPE_PATTERN_AFFINE_LAST); }
 };
 
@@ -108,22 +108,22 @@ public:
 
   FetchSimplePatternPart(PipeCompiler* pc, uint32_t fetchType, uint32_t fetchPayload, uint32_t format) noexcept;
 
-  //! Gets whether the fetch-type is axis-aligned blit (no extend modes, no overflows)
+  //! Tests whether the fetch-type is axis-aligned blit (no extend modes, no overflows)
   inline bool isBlitA() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_PATTERN_AA_BLIT); }
-  //! Gets whether the fetch-type is axis-aligned pattern.
+  //! Tests whether the fetch-type is axis-aligned pattern.
   inline bool isPatternA() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_PATTERN_AA_FIRST, BL_PIPE_FETCH_TYPE_PATTERN_AA_LAST); }
-  //! Gets whether the fetch-type is a "FracBi" pattern style.
+  //! Tests whether the fetch-type is a "FracBi" pattern style.
   inline bool isPatternF() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_PATTERN_AU_FIRST, BL_PIPE_FETCH_TYPE_PATTERN_AU_LAST); }
-  //! Gets whether the fetch-type is a "FracBiX" pattern style.
+  //! Tests whether the fetch-type is a "FracBiX" pattern style.
   inline bool isPatternFx() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_PATTERN_FX_FIRST, BL_PIPE_FETCH_TYPE_PATTERN_FX_LAST); }
-  //! Gets whether the fetch-type is a "FracBiY" pattern style.
+  //! Tests whether the fetch-type is a "FracBiY" pattern style.
   inline bool isPatternFy() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_PATTERN_FY_FIRST, BL_PIPE_FETCH_TYPE_PATTERN_FY_LAST); }
-  //! Gets whether the fetch-type is a "FracBiXY" pattern style.
+  //! Tests whether the fetch-type is a "FracBiXY" pattern style.
   inline bool isPatternFxFy() const noexcept { return isFetchType(BL_PIPE_FETCH_TYPE_PATTERN_FX_FY_FIRST, BL_PIPE_FETCH_TYPE_PATTERN_FX_FY_LAST); }
 
-  //! Gets whether the fetch is pattern style that has fractional `x` or `x & y`.
+  //! Tests whether the fetch is pattern style that has fractional `x` or `x & y`.
   inline bool hasFracX() const noexcept { return isPatternFx() || isPatternFxFy(); }
-  //! Gets whether the fetch is pattern style that has fractional `y` or `x & y`.
+  //! Tests whether the fetch is pattern style that has fractional `y` or `x & y`.
   inline bool hasFracY() const noexcept { return isPatternFy() || isPatternFxFy(); }
 
   //! Returns the extend-x mode.
