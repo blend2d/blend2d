@@ -86,17 +86,17 @@ static BL_INLINE bool blIntersectBoxes(BLBox& dst, const BLBox& a, const BLBox& 
   return (dst.x0 < dst.x1) & (dst.y0 < dst.y1);
 }
 
-static BL_INLINE void blBoundBoxes(BLBox& box, const BLPoint& p) noexcept {
+static BL_INLINE void blBound(BLBox& box, const BLPoint& p) noexcept {
   box.reset(blMin(box.x0, p.x), blMin(box.y0, p.y),
             blMax(box.x1, p.x), blMax(box.y1, p.y));
 }
 
-static BL_INLINE void blBoundBoxes(BLBox& box, const BLBox& other) noexcept {
+static BL_INLINE void blBound(BLBox& box, const BLBox& other) noexcept {
   box.reset(blMin(box.x0, other.x0), blMin(box.y0, other.y0),
             blMax(box.x1, other.x1), blMax(box.y1, other.y1));
 }
 
-static BL_INLINE void blBoundBoxes(BLBoxI& box, const BLBoxI& other) noexcept {
+static BL_INLINE void blBound(BLBoxI& box, const BLBoxI& other) noexcept {
   box.reset(blMin(box.x0, other.x0), blMin(box.y0, other.y0),
             blMax(box.x1, other.x1), blMax(box.y1, other.y1));
 }

@@ -68,6 +68,8 @@ static BLResult BL_CDECL getGlyphBounds(
   BLBoxI* boxes,
   size_t count) noexcept {
 
+  BLResult result = BL_SUCCESS;
+
   const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
   BLFontTable glyfTable = faceI->glyf.glyfTable;
   BLFontTable locaTable = faceI->glyf.locaTable;
@@ -114,22 +116,23 @@ static BLResult BL_CDECL getGlyphBounds(
     // Invalid data or the glyph is not defined. In either case we just zero the box.
 InvalidData:
     boxes[i].reset();
+    result = BL_ERROR_INVALID_DATA;
   }
 
   return BL_SUCCESS;
 }
 
 // ============================================================================
-// [BLOpenType::GlyfImpl - DecodeGlyph]
+// [BLOpenType::GlyfImpl - GetGlyphOutlines]
 // ============================================================================
 
-static BLResult BL_CDECL decodeGlyph(
+static BLResult BL_CDECL getGlyphOutlines(
   const BLFontFaceImpl* faceI_,
   uint32_t glyphId,
   const BLMatrix2D* matrix,
   BLPath* out,
-  BLMemBuffer* tmpBuffer,
-  BLPathSinkFunc sink, size_t sinkGlyphIndex, void* closure) noexcept {
+  size_t* contourCountOut,
+  BLMemBuffer* tmpBuffer) noexcept {
 
   const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
 
@@ -154,11 +157,9 @@ static BLResult BL_CDECL decodeGlyph(
   compoundData[0].compoundFlags = Compound::kArgsAreXYValues;
   compoundData[0].matrix = *matrix;
 
-  BLGlyphOutlineSinkInfo sinkInfo;
-  sinkInfo.glyphIndex = sinkGlyphIndex;
-  sinkInfo.contourCount = 0;
-
   BLPathAppender appender;
+  size_t contourCountTotal = 0;
+
   for (;;) {
     size_t offset;
     size_t endOff;
@@ -235,6 +236,7 @@ static BLResult BL_CDECL decodeGlyph(
 
         const UInt16* contourArray = reinterpret_cast<const UInt16*>(gPtr);
         gPtr += contourCount * 2u;
+        contourCountTotal += contourCount;
 
         // We don't use hinting instructions, so skip them.
         size_t instructionCount = blMemReadU16uBE(gPtr);
@@ -525,12 +527,7 @@ static BLResult BL_CDECL decodeGlyph(
 
           appender.close();
         }
-
         appender.done(out);
-        if (sink) {
-          sinkInfo.contourCount = contourCount;
-          BL_PROPAGATE(sink(out, &sinkInfo, closure));
-        }
       }
       else if (contourCountSigned == -1) {
         gPtr += sizeof(GlyfTable::GlyphData);
@@ -691,9 +688,11 @@ ContinueCompound:
     break;
   }
 
+  *contourCountOut = contourCountTotal;
   return BL_SUCCESS;
 
 InvalidData:
+  *contourCountOut = 0;
   return blTraceError(BL_ERROR_INVALID_DATA);
 }
 
@@ -706,7 +705,7 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable glyfTable, BLFontTable locaTable)
   faceI->glyf.locaTable = locaTable;
 
   faceI->funcs.getGlyphBounds = getGlyphBounds;
-  faceI->funcs.decodeGlyph = decodeGlyph;
+  faceI->funcs.getGlyphOutlines = getGlyphOutlines;
 
   return BL_SUCCESS;
 }

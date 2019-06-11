@@ -6,6 +6,7 @@
 
 #include "../blapi-build_p.h"
 #include "../blfont_p.h"
+#include "../blgeometry_p.h"
 #include "../blmatrix_p.h"
 #include "../blpath_p.h"
 #include "../blsupport_p.h"
@@ -825,19 +826,18 @@ static void traceCharStringOp(BLOTFaceImpl* faceI, Trace& trace, uint32_t op, co
 #endif
 
 // ============================================================================
-// [BLOpenType::CFFImpl - DecodeGlyph - Implementation]
+// [BLOpenType::CFFImpl - Interpreter]
 // ============================================================================
 
-static BLResult BL_CDECL decodeGlyph(
+template<typename Consumer>
+static BLResult getGlyphOutlinesT(
   const BLFontFaceImpl* faceI_,
   uint32_t glyphId,
   const BLMatrix2D* matrix,
-  BLPath* out,
-  BLMemBuffer* tmpBuffer,
-  BLPathSinkFunc sink, size_t sinkGlyphIndex, void* closure) noexcept {
+  Consumer& consumer,
+  BLMemBuffer* tmpBuffer) noexcept {
 
   BL_UNUSED(tmpBuffer);
-
   const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
 
   // Will only do something if tracing is enabled.
@@ -866,20 +866,12 @@ static BLResult BL_CDECL decodeGlyph(
   double px = matrix->m20;                    // Current X coordinate.
   double py = matrix->m21;                    // Current Y coordinate.
 
-  // Sink information.
-  BLGlyphOutlineSinkInfo sinkInfo;
-  sinkInfo.glyphIndex = sinkGlyphIndex;
-  sinkInfo.contourCount = 0;
-
   const CFFData& cffInfo = faceI->cff;
   const uint8_t* cffData = faceI->cff.table.data;
 
   // Execution features describe either CFFv1 or CFFv2 environment. It contains
   // minimum operand count for each opcode (or operator) and some other data.
   const ExecutionFeaturesInfo* executionFeatures = &executionFeaturesInfo[0];
-
-  BLPathAppender appender;
-  BL_PROPAGATE(appender.beginAppend(out, 64));
 
   // This is used to perform a function (subroutine) call. Initially we set it
   // to the charstring referenced by the `glyphId`. Later, when we process a
@@ -896,12 +888,14 @@ static BLResult BL_CDECL decodeGlyph(
   }
 
   // Compiler can better optimize the transform if it knows that it won't be
-  // changed outside of this function by either calling `sink` or realloc.
+  // changed outside of this function.
   Matrix2x2 m { matrix->m00, matrix->m01, matrix->m10, matrix->m11 };
 
   // --------------------------------------------------------------------------
   // [Program | SubR - Init]
   // --------------------------------------------------------------------------
+
+  BL_PROPAGATE(consumer.begin(64));
 
 OnSubRCall:
   {
@@ -1064,16 +1058,14 @@ OnOperator:
         // |- dx1 dy1 rmoveto (21) |-
         case kCSOpRMoveTo: {
           BL_ASSERT(vMinOperands >= 2);
-          BL_PROPAGATE(appender.ensure(out, 2));
+          BL_PROPAGATE(consumer.ensure(2));
 
           if (executionFlags & kCSFlagPathOpen)
-            appender.close();
+            consumer.close();
 
           px += m.xByA(vBuf[vIdx - 2], vBuf[vIdx - 1]);
           py += m.yByA(vBuf[vIdx - 2], vBuf[vIdx - 1]);
-
-          appender.moveTo(px, py);
-          sinkInfo.contourCount++;
+          consumer.moveTo(px, py);
 
           vIdx = 0;
           executionFlags |= kCSFlagHasWidth | kCSFlagPathOpen;
@@ -1083,16 +1075,14 @@ OnOperator:
         // |- dx1 hmoveto (22) |-
         case kCSOpHMoveTo: {
           BL_ASSERT(vMinOperands >= 1);
-          BL_PROPAGATE(appender.ensure(out, 2));
+          BL_PROPAGATE(consumer.ensure(2));
 
           if (executionFlags & kCSFlagPathOpen)
-            appender.close();
+            consumer.close();
 
           px += m.xByX(vBuf[vIdx - 1]);
           py += m.yByX(vBuf[vIdx - 1]);
-
-          appender.moveTo(px, py);
-          sinkInfo.contourCount++;
+          consumer.moveTo(px, py);
 
           vIdx = 0;
           executionFlags |= kCSFlagHasWidth | kCSFlagPathOpen;
@@ -1102,16 +1092,14 @@ OnOperator:
         // |- dy1 vmoveto (4) |-
         case kCSOpVMoveTo: {
           BL_ASSERT(vMinOperands >= 1);
-          BL_PROPAGATE(appender.ensure(out, 2));
+          BL_PROPAGATE(consumer.ensure(2));
 
           if (executionFlags & kCSFlagPathOpen)
-            appender.close();
+            consumer.close();
 
           px += m.xByY(vBuf[vIdx - 1]);
           py += m.yByY(vBuf[vIdx - 1]);
-
-          appender.moveTo(px, py);
-          sinkInfo.contourCount++;
+          consumer.moveTo(px, py);
 
           vIdx = 0;
           executionFlags |= kCSFlagHasWidth | kCSFlagPathOpen;
@@ -1125,7 +1113,7 @@ OnOperator:
         // |- {dxa dya}+ rlineto (5) |-
         case kCSOpRLineTo: {
           BL_ASSERT(vMinOperands >= 2);
-          BL_PROPAGATE(appender.ensure(out, (vIdx + 1) / 2u));
+          BL_PROPAGATE(consumer.ensure((vIdx + 1) / 2u));
 
           // NOTE: The specification talks about a pair of numbers, however,
           // other implementations like FreeType allow odd number of arguments
@@ -1135,13 +1123,13 @@ OnOperator:
           while ((i += 2) <= vIdx) {
             px += m.xByA(vBuf[i - 2], vBuf[i - 1]);
             py += m.yByA(vBuf[i - 2], vBuf[i - 1]);
-            appender.lineTo(px, py);
+            consumer.lineTo(px, py);
           }
 
           if (vIdx & 1) {
             px += m.xByX(vBuf[vIdx - 1]);
             py += m.yByX(vBuf[vIdx - 1]);
-            appender.lineTo(px, py);
+            consumer.lineTo(px, py);
           }
 
           vIdx = 0;
@@ -1153,7 +1141,7 @@ OnOperator:
         case kCSOpHLineTo:
         case kCSOpVLineTo: {
           BL_ASSERT(vMinOperands >= 1);
-          BL_PROPAGATE(appender.ensure(out, vIdx));
+          BL_PROPAGATE(consumer.ensure(vIdx));
 
           size_t i = 0;
           if (b0 == kCSOpVLineTo)
@@ -1162,14 +1150,14 @@ OnOperator:
           for (;;) {
             px += m.xByX(vBuf[i]);
             py += m.yByX(vBuf[i]);
-            appender.lineTo(px, py);
+            consumer.lineTo(px, py);
 
             if (++i >= vIdx)
               break;
 OnVLineTo:
             px += m.xByY(vBuf[i]);
             py += m.yByY(vBuf[i]);
-            appender.lineTo(px, py);
+            consumer.lineTo(px, py);
 
             if (++i >= vIdx)
               break;
@@ -1186,7 +1174,7 @@ OnVLineTo:
         // |- {dxa dya dxb dyb dxc dyc}+ rrcurveto (8) |-
         case kCSOpRRCurveTo: {
           BL_ASSERT(vMinOperands >= 6);
-          BL_PROPAGATE(appender.ensure(out, vIdx / 2u));
+          BL_PROPAGATE(consumer.ensure(vIdx / 2u));
 
           size_t i = 0;
           double x1, y1, x2, y2;
@@ -1198,7 +1186,7 @@ OnVLineTo:
             y2 = y1 + m.yByA(vBuf[i - 4], vBuf[i - 3]);
             px = x2 + m.xByA(vBuf[i - 2], vBuf[i - 1]);
             py = y2 + m.yByA(vBuf[i - 2], vBuf[i - 1]);
-            appender.cubicTo(x1, y1, x2, y2, px, py);
+            consumer.cubicTo(x1, y1, x2, y2, px, py);
           }
 
           vIdx = 0;
@@ -1210,7 +1198,7 @@ OnVLineTo:
         case kCSOpVHCurveTo:
         case kCSOpHVCurveTo: {
           BL_ASSERT(vMinOperands >= 4);
-          BL_PROPAGATE(appender.ensure(out, vIdx));
+          BL_PROPAGATE(consumer.ensure(vIdx));
 
           size_t i = 0;
           double x1, y1, x2, y2;
@@ -1230,7 +1218,7 @@ OnVLineTo:
               px += m.xByX(vBuf[i]);
               py += m.yByX(vBuf[i]);
             }
-            appender.cubicTo(x1, y1, x2, y2, px, py);
+            consumer.cubicTo(x1, y1, x2, y2, px, py);
 OnVHCurveTo:
             if ((i += 4) > vIdx)
               break;
@@ -1246,7 +1234,7 @@ OnVHCurveTo:
               px += m.xByY(vBuf[i]);
               py += m.yByY(vBuf[i]);
             }
-            appender.cubicTo(x1, y1, x2, y2, px, py);
+            consumer.cubicTo(x1, y1, x2, y2, px, py);
           }
 
           vIdx = 0;
@@ -1256,7 +1244,7 @@ OnVHCurveTo:
         // |- dy1? {dxa dxb dyb dxc}+ hhcurveto (27) |-
         case kCSOpHHCurveTo: {
           BL_ASSERT(vMinOperands >= 4);
-          BL_PROPAGATE(appender.ensure(out, vIdx));
+          BL_PROPAGATE(consumer.ensure(vIdx));
 
           size_t i = 0;
           double x1, y1, x2, y2;
@@ -1275,7 +1263,7 @@ OnVHCurveTo:
             y2 = y1 + m.yByA(vBuf[i - 3], vBuf[i - 2]);
             px = x2 + m.xByX(vBuf[i - 1]);
             py = y2 + m.yByX(vBuf[i - 1]);
-            appender.cubicTo(x1, y1, x2, y2, px, py);
+            consumer.cubicTo(x1, y1, x2, y2, px, py);
           }
 
           vIdx = 0;
@@ -1285,7 +1273,7 @@ OnVHCurveTo:
         // |- dx1? {dya dxb dyb dyc}+ vvcurveto (26) |-
         case kCSOpVVCurveTo: {
           BL_ASSERT(vMinOperands >= 4);
-          BL_PROPAGATE(appender.ensure(out, vIdx));
+          BL_PROPAGATE(consumer.ensure(vIdx));
 
           size_t i = 0;
           double x1, y1, x2, y2;
@@ -1304,7 +1292,7 @@ OnVHCurveTo:
             y2 = y1 + m.yByA(vBuf[i - 3], vBuf[i - 2]);
             px = x2 + m.xByY(vBuf[i - 1]);
             py = y2 + m.yByY(vBuf[i - 1]);
-            appender.cubicTo(x1, y1, px, y2, px, py);
+            consumer.cubicTo(x1, y1, px, y2, px, py);
           }
 
           vIdx = 0;
@@ -1314,7 +1302,7 @@ OnVHCurveTo:
         // |- {dxa dya dxb dyb dxc dyc}+ dxd dyd rcurveline (24) |-
         case kCSOpRCurveLine: {
           BL_ASSERT(vMinOperands >= 8);
-          BL_PROPAGATE(appender.ensure(out, vIdx / 2u));
+          BL_PROPAGATE(consumer.ensure(vIdx / 2u));
 
           size_t i = 0;
           double x1, y1, x2, y2;
@@ -1327,12 +1315,12 @@ OnVHCurveTo:
             y2 = y1 + m.yByA(vBuf[i - 4], vBuf[i - 3]);
             px = x2 + m.xByA(vBuf[i - 2], vBuf[i - 1]);
             py = y2 + m.yByA(vBuf[i - 2], vBuf[i - 1]);
-            appender.cubicTo(x1, y1, x2, y2, px, py);
+            consumer.cubicTo(x1, y1, x2, y2, px, py);
           }
 
           px += m.xByA(vBuf[vIdx + 0], vBuf[vIdx + 1]);
           py += m.yByA(vBuf[vIdx + 0], vBuf[vIdx + 1]);
-          appender.lineTo(px, py);
+          consumer.lineTo(px, py);
 
           vIdx = 0;
           continue;
@@ -1341,7 +1329,7 @@ OnVHCurveTo:
         // |- {dxa dya}+ dxb dyb dxc dyc dxd dyd rlinecurve (25) |-
         case kCSOpRLineCurve: {
           BL_ASSERT(vMinOperands >= 8);
-          BL_PROPAGATE(appender.ensure(out, vIdx / 2u));
+          BL_PROPAGATE(consumer.ensure(vIdx / 2u));
 
           size_t i = 0;
           double x1, y1, x2, y2;
@@ -1350,7 +1338,7 @@ OnVHCurveTo:
           while ((i += 2) <= vIdx) {
             px += m.xByA(vBuf[i - 2], vBuf[i - 1]);
             py += m.yByA(vBuf[i - 2], vBuf[i - 1]);
-            appender.lineTo(px, py);
+            consumer.lineTo(px, py);
           }
 
           x1 = px + m.xByA(vBuf[vIdx + 0], vBuf[vIdx + 1]);
@@ -1359,7 +1347,7 @@ OnVHCurveTo:
           y2 = y1 + m.yByA(vBuf[vIdx + 2], vBuf[vIdx + 3]);
           px = x2 + m.xByA(vBuf[vIdx + 4], vBuf[vIdx + 5]);
           py = y2 + m.yByA(vBuf[vIdx + 4], vBuf[vIdx + 5]);
-          appender.cubicTo(x1, y1, x2, y2, px, py);
+          consumer.cubicTo(x1, y1, x2, y2, px, py);
 
           vIdx = 0;
           continue;
@@ -1513,7 +1501,7 @@ OnReturn:
             // |- dx1 dy1 dx2 dy2 dx3 dy3 dx4 dy4 dx5 dy5 dx6 dy6 fd flex (12 35) |-
             case kCSOpFlex & 0xFFu: {
               double x1, y1, x2, y2;
-              BL_PROPAGATE(appender.ensure(out, 6));
+              BL_PROPAGATE(consumer.ensure(6));
 
               x1 = px + m.xByA(vBuf[0], vBuf[1]);
               y1 = py + m.yByA(vBuf[0], vBuf[1]);
@@ -1521,7 +1509,7 @@ OnReturn:
               y2 = y1 + m.yByA(vBuf[2], vBuf[3]);
               px = x2 + m.xByA(vBuf[4], vBuf[5]);
               py = y2 + m.yByA(vBuf[4], vBuf[5]);
-              appender.cubicTo(x1, y1, x2, y2, px, py);
+              consumer.cubicTo(x1, y1, x2, y2, px, py);
 
               x1 = px + m.xByA(vBuf[6], vBuf[7]);
               y1 = py + m.yByA(vBuf[6], vBuf[7]);
@@ -1529,7 +1517,7 @@ OnReturn:
               y2 = y1 + m.yByA(vBuf[8], vBuf[9]);
               px = x2 + m.xByA(vBuf[10], vBuf[11]);
               py = y2 + m.yByA(vBuf[10], vBuf[11]);
-              appender.cubicTo(x1, y1, x2, y2, px, py);
+              consumer.cubicTo(x1, y1, x2, y2, px, py);
 
               vIdx = 0;
               continue;
@@ -1538,7 +1526,7 @@ OnReturn:
             // |- dx1 dy1 dx2 dy2 dx3 dy3 dx4 dy4 dx5 dy5 d6 flex1 (12 37) |-
             case kCSOpFlex1 & 0xFFu: {
               double x1, y1, x2, y2, x3, y3, x4, y4, x5, y5;
-              BL_PROPAGATE(appender.ensure(out, 6));
+              BL_PROPAGATE(consumer.ensure(6));
 
               x1 = px + m.xByA(vBuf[0], vBuf[1]);
               y1 = py + m.yByA(vBuf[0], vBuf[1]);
@@ -1546,7 +1534,7 @@ OnReturn:
               y2 = y1 + m.yByA(vBuf[2], vBuf[3]);
               x3 = x2 + m.xByA(vBuf[4], vBuf[5]);
               y3 = y2 + m.yByA(vBuf[4], vBuf[5]);
-              appender.cubicTo(x1, y1, x2, y2, x3, y3);
+              consumer.cubicTo(x1, y1, x2, y2, x3, y3);
 
               x4 = x3 + m.xByA(vBuf[6], vBuf[7]);
               y4 = y3 + m.yByA(vBuf[6], vBuf[7]);
@@ -1563,7 +1551,7 @@ OnReturn:
                 px = x5 + m.xByY(vBuf[10]);
                 py = y5 + m.yByY(vBuf[10]);
               }
-              appender.cubicTo(x4, y4, x5, y5, px, py);
+              consumer.cubicTo(x4, y4, x5, y5, px, py);
 
               vIdx = 0;
               continue;
@@ -1572,7 +1560,7 @@ OnReturn:
             // |- dx1 dx2 dy2 dx3 dx4 dx5 dx6 hflex (12 34) |-
             case kCSOpHFlex & 0xFFu: {
               double x1, y1, x2, y2, x3, y3, x4, y4, x5, y5;
-              BL_PROPAGATE(appender.ensure(out, 6));
+              BL_PROPAGATE(consumer.ensure(6));
 
               x1 = px + m.xByX(vBuf[0]);
               y1 = py + m.yByX(vBuf[0]);
@@ -1580,7 +1568,7 @@ OnReturn:
               y2 = y1 + m.yByA(vBuf[1], vBuf[2]);
               x3 = x2 + m.xByX(vBuf[3]);
               y3 = y2 + m.yByX(vBuf[3]);
-              appender.cubicTo(x1, y1, x2, y2, x3, y3);
+              consumer.cubicTo(x1, y1, x2, y2, x3, y3);
 
               x4 = x3 + m.xByX(vBuf[4]);
               y4 = y3 + m.yByX(vBuf[4]);
@@ -1588,7 +1576,7 @@ OnReturn:
               y5 = y4 + m.yByA(vBuf[5], -vBuf[2]);
               px = x5 + m.xByX(vBuf[6]);
               py = y5 + m.yByX(vBuf[6]);
-              appender.cubicTo(x4, y4, x5, y5, px, py);
+              consumer.cubicTo(x4, y4, x5, y5, px, py);
 
               vIdx = 0;
               continue;
@@ -1597,7 +1585,7 @@ OnReturn:
             // |- dx1 dy1 dx2 dy2 dx3 dx4 dx5 dy5 dx6 hflex1 (12 36) |-
             case kCSOpHFlex1 & 0xFFu: {
               double x1, y1, x2, y2, x3, y3, x4, y4, x5, y5;
-              BL_PROPAGATE(appender.ensure(out, 6));
+              BL_PROPAGATE(consumer.ensure(6));
 
               x1 = px + m.xByA(vBuf[0], vBuf[1]);
               y1 = py + m.yByA(vBuf[0], vBuf[1]);
@@ -1605,7 +1593,7 @@ OnReturn:
               y2 = y1 + m.yByA(vBuf[2], vBuf[3]);
               x3 = x2 + m.xByX(vBuf[4]);
               y3 = y2 + m.yByX(vBuf[4]);
-              appender.cubicTo(x1, y1, x2, y2, x3, y3);
+              consumer.cubicTo(x1, y1, x2, y2, x3, y3);
 
               x4 = x3 + m.xByX(vBuf[5]);
               y4 = y3 + m.yByX(vBuf[5]);
@@ -1613,7 +1601,7 @@ OnReturn:
               y5 = y4 + m.yByA(vBuf[6], vBuf[7]);
               px = x5 + m.xByX(vBuf[8]);
               py = y5 + m.yByX(vBuf[8]);
-              appender.cubicTo(x4, y4, x5, y5, px, py);
+              consumer.cubicTo(x4, y4, x5, y5, px, py);
 
               vIdx = 0;
               continue;
@@ -1810,20 +1798,189 @@ OnReturn:
 
 EndCharString:
   if (executionFlags & kCSFlagPathOpen) {
-    BL_PROPAGATE(appender.ensure(out, 1));
-    appender.close();
+    BL_PROPAGATE(consumer.ensure(1));
+    consumer.close();
   }
 
-  appender.done(out);
+  consumer.done();
   trace.info("[%zu bytes processed]\n", bytesProcessed);
 
-  return sink ? sink(out, &sinkInfo, closure) : BL_SUCCESS;
+  return BL_SUCCESS;
 
 InvalidData:
-  appender.done(out);
+  consumer.done();
   trace.fail("Invalid data [%zu bytes processed]\n", bytesProcessed);
 
   return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+}
+
+// ============================================================================
+// [BLOpenType::CFFImpl - GetGlyphBounds]
+// ============================================================================
+
+// Glyph outlines consumer that calculates glyph bounds.
+class GlyphBoundsConsumer {
+public:
+  BLBox bounds;
+  double cx, cy;
+
+  BL_INLINE GlyphBoundsConsumer() noexcept {}
+
+  BL_INLINE BLResult begin(size_t n) noexcept {
+    BL_UNUSED(n);
+    bounds.reset(blMaxValue<double>(), blMaxValue<double>(), blMinValue<double>(), blMinValue<double>());
+    cx = 0;
+    cy = 0;
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE void done() noexcept {}
+
+  BL_INLINE BLResult ensure(size_t n) noexcept {
+    BL_UNUSED(n);
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE void moveTo(double x0, double y0) noexcept {
+    blBound(bounds, BLPoint(x0, y0));
+    cx = x0;
+    cy = y0;
+  }
+
+  BL_INLINE void lineTo(double x1, double y1) noexcept {
+    blBound(bounds, BLPoint(x1, y1));
+    cx = x1;
+    cy = y1;
+  }
+
+  // Not used by CFF, provided for completness.
+  BL_INLINE void quadTo(double x1, double y1, double x2, double y2) noexcept {
+    blBound(bounds, BLPoint(x2, y2));
+    if (!bounds.contains(x1, y1)) {
+      BLPoint quad[3] { { cx, cy }, { x1, y1 }, { x2, y2 } };
+      BLPoint extrema;
+
+      blGetQuadExtremaPoint(quad, extrema);
+      blBound(bounds, extrema);
+    }
+    cx = x2;
+    cy = y2;
+  }
+
+  BL_INLINE void cubicTo(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
+    blBound(bounds, BLPoint(x3, y3));
+    if (!bounds.contains(x1, y1) || !bounds.contains(x2, y2)) {
+      BLPoint cubic[4] { { cx, cy }, { x1, y1 }, { x2, y2 }, { x3, y3 } };
+      BLPoint extremas[2];
+
+      blGetCubicExtremaPoints(cubic, extremas);
+      blBound(bounds, extremas[0]);
+      blBound(bounds, extremas[1]);
+    }
+    cx = x3;
+    cy = y3;
+  }
+
+  BL_INLINE void close() noexcept {}
+};
+
+static BLResult BL_CDECL getGlyphBounds(
+  const BLFontFaceImpl* faceI_,
+  const BLGlyphId* glyphIdData,
+  intptr_t glyphIdAdvance,
+  BLBoxI* boxes,
+  size_t count) noexcept {
+
+  BLResult result = BL_SUCCESS;
+  BLMatrix2D m;
+
+  BLMemBufferTmp<1024> tmpBuffer;
+  GlyphBoundsConsumer consumer;
+
+  m.reset();
+
+  for (size_t i = 0; i < count; i++) {
+    uint32_t glyphId = glyphIdData[0];
+    glyphIdData = blOffsetPtr(glyphIdData, glyphIdAdvance);
+
+    BLResult localResult = getGlyphOutlinesT<GlyphBoundsConsumer>(faceI_, glyphId, &m, consumer, &tmpBuffer);
+    if (localResult) {
+      boxes[i].reset();
+      result = localResult;
+      continue;
+    }
+    else {
+      const BLBox& bounds = consumer.bounds;
+      boxes[i].reset(blFloor(bounds.x0), blFloor(bounds.y0), blCeil(bounds.x1), blCeil(bounds.y1));
+    }
+  }
+
+  return result;
+}
+
+// ============================================================================
+// [BLOpenType::CFFImpl - GetGlyphOutlines]
+// ============================================================================
+
+// Glyph outlines consumer that appends the decoded outlines into `BLPath`.
+class GlyphOutlineConsumer {
+public:
+  BLPath* path;
+  size_t contourCount;
+  BLPathAppender appender;
+
+  BL_INLINE GlyphOutlineConsumer(BLPath* p) noexcept
+    : path(p),
+      contourCount(0) {}
+
+  BL_INLINE BLResult begin(size_t n) noexcept {
+    return appender.beginAppend(path, n);
+  }
+
+  BL_INLINE BLResult ensure(size_t n) noexcept {
+    return appender.ensure(path, n);
+  }
+
+  BL_INLINE void done() noexcept {
+    appender.done(path);
+  }
+
+  BL_INLINE void moveTo(double x0, double y0) noexcept {
+    contourCount++;
+    appender.moveTo(x0, y0);
+  }
+
+  BL_INLINE void lineTo(double x1, double y1) noexcept {
+    appender.lineTo(x1, y1);
+  }
+
+  // Not used by CFF, provided for completness.
+  BL_INLINE void quadTo(double x1, double y1, double x2, double y2) noexcept {
+    appender.quadTo(x1, y1, x2, y2);
+  }
+
+  BL_INLINE void cubicTo(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
+    appender.cubicTo(x1, y1, x2, y2, x3, y3);
+  }
+
+  BL_INLINE void close() noexcept {
+    appender.close();
+  }
+};
+
+static BLResult BL_CDECL getGlyphOutlines(
+  const BLFontFaceImpl* faceI_,
+  uint32_t glyphId,
+  const BLMatrix2D* matrix,
+  BLPath* out,
+  size_t* contourCountOut,
+  BLMemBuffer* tmpBuffer) noexcept {
+
+  GlyphOutlineConsumer consumer(out);
+  BLResult result = getGlyphOutlinesT<GlyphOutlineConsumer>(faceI_, glyphId, matrix, consumer, tmpBuffer);
+
+  *contourCountOut = consumer.contourCount;
+  return result;
 }
 
 // ============================================================================
@@ -2047,7 +2204,8 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
     charStringIndex.count,
     0);
 
-  faceI->funcs.decodeGlyph = decodeGlyph;
+  faceI->funcs.getGlyphBounds = getGlyphBounds;
+  faceI->funcs.getGlyphOutlines = getGlyphOutlines;
   return BL_SUCCESS;
 };
 

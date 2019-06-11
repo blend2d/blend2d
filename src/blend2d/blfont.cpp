@@ -526,6 +526,18 @@ static BLResult BL_CDECL blNullFontFaceGetGlyphAdvances(
   return blTraceError(BL_ERROR_NOT_INITIALIZED);
 }
 
+static BLResult BL_CDECL blNullFontFaceGetGlyphOutlines(
+  const BLFontFaceImpl* impl,
+  uint32_t glyphId,
+  const BLMatrix2D* userMatrix,
+  BLPath* out,
+  size_t* contourCountOut,
+  BLMemBuffer* tmpBuffer) noexcept {
+
+  *contourCountOut = 0;
+  return blTraceError(BL_ERROR_NOT_INITIALIZED);
+}
+
 static BLResult BL_CDECL blNullFontFaceApplyKern(
   const BLFontFaceImpl* faceI,
   BLGlyphItem* itemData,
@@ -558,17 +570,6 @@ static BLResult BL_CDECL blNullFontFacePositionGlyphs(
   BLGlyphItem* itemData,
   BLGlyphPlacement* placementData,
   size_t count) noexcept {
-
-  return blTraceError(BL_ERROR_NOT_INITIALIZED);
-}
-
-static BLResult BL_CDECL blNullFontFaceDecodeGlyph(
-  const BLFontFaceImpl* impl,
-  uint32_t glyphId,
-  const BLMatrix2D* userMatrix,
-  BLPath* out,
-  BLMemBuffer* tmpBuffer,
-  BLPathSinkFunc sink, size_t sinkGlyphIndex, void* closure) noexcept {
 
   return blTraceError(BL_ERROR_NOT_INITIALIZED);
 }
@@ -985,19 +986,29 @@ BLResult blFontGetGlyphAdvances(const BLFontCore* self, const void* glyphIdData,
 // [BLFont - Glyph Outlines]
 // ============================================================================
 
+static BLResult BL_CDECL blFontDummyPathSink(BLPathCore* path, const void* info, void* closure) noexcept {
+  return BL_SUCCESS;
+}
+
 BLResult blFontGetGlyphOutlines(const BLFontCore* self, uint32_t glyphId, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) noexcept {
   BLMatrix2D finalMatrix;
   const BLFontMatrix& fMat = self->impl->matrix;
+  const BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
 
   if (userMatrix)
     blFontMatrixMultiply(&finalMatrix, &fMat, userMatrix);
   else
     finalMatrix.reset(fMat.m00, fMat.m01, fMat.m10, fMat.m11, 0.0, 0.0);
 
-  const BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
-
   BLMemBufferTmp<BL_FONT_GET_GLYPH_OUTLINE_BUFFER_SIZE> tmpBuffer;
-  return faceI->funcs.decodeGlyph(faceI, glyphId, &finalMatrix, static_cast<BLPath*>(out), &tmpBuffer, sink, 0, closure);
+  BLGlyphOutlineSinkInfo sinkInfo;
+  BL_PROPAGATE(faceI->funcs.getGlyphOutlines(faceI, glyphId, &finalMatrix, static_cast<BLPath*>(out), &sinkInfo.contourCount, &tmpBuffer));
+
+  if (!sink)
+    return BL_SUCCESS;
+
+  sinkInfo.glyphIndex = 0;
+  return sink(out, &sinkInfo, closure);
 }
 
 BLResult blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* glyphRun, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) noexcept {
@@ -1016,14 +1027,17 @@ BLResult blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* gly
   }
 
   const BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
-
-  BLResult result = BL_SUCCESS;
   uint32_t placementType = glyphRun->placementType;
 
-  BLMemBufferTmp<BL_FONT_GET_GLYPH_OUTLINE_BUFFER_SIZE> tmpBuffer;
-  BLGlyphRunIterator it(*glyphRun);
+  if (!sink)
+    sink = blFontDummyPathSink;
 
-  auto decodeFunc = faceI->funcs.decodeGlyph;
+  BLMemBufferTmp<BL_FONT_GET_GLYPH_OUTLINE_BUFFER_SIZE> tmpBuffer;
+  BLGlyphOutlineSinkInfo sinkInfo;
+
+  BLGlyphRunIterator it(*glyphRun);
+  auto getGlyphOutlinesFunc = faceI->funcs.getGlyphOutlines;
+
   if (it.hasPlacement() && placementType != BL_GLYPH_PLACEMENT_TYPE_NONE) {
     BLMatrix2D offsetMatrix(1.0, 0.0, 0.0, 1.0, finalMatrix.m20, finalMatrix.m21);
 
@@ -1058,16 +1072,15 @@ BLResult blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* gly
         finalMatrix.m20 = px * offsetMatrix.m00 + py * offsetMatrix.m10 + ox;
         finalMatrix.m21 = px * offsetMatrix.m01 + py * offsetMatrix.m11 + oy;
 
-        result = decodeFunc(faceI, it.glyphId(), &finalMatrix, static_cast<BLPath*>(out), &tmpBuffer, sink, it.index, closure);
-        if (BL_UNLIKELY(result != BL_SUCCESS))
-          break;
+        sinkInfo.glyphIndex = it.index;
+        BL_PROPAGATE(getGlyphOutlinesFunc(faceI, it.glyphId(), &finalMatrix, blDownCast(out), &sinkInfo.contourCount, &tmpBuffer));
+        BL_PROPAGATE(sink(out, &sinkInfo, closure));
+        it.advance();
 
         px = pos.advance.x;
         py = pos.advance.y;
         ox += px * offsetMatrix.m00 + py * offsetMatrix.m10;
         oy += px * offsetMatrix.m01 + py * offsetMatrix.m11;
-
-        it.advance();
       }
     }
     else {
@@ -1076,24 +1089,23 @@ BLResult blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* gly
         finalMatrix.m20 = placement.x * offsetMatrix.m00 + placement.y * offsetMatrix.m10 + offsetMatrix.m20;
         finalMatrix.m21 = placement.x * offsetMatrix.m01 + placement.y * offsetMatrix.m11 + offsetMatrix.m21;
 
-        result = decodeFunc(faceI, it.glyphId(), &finalMatrix, static_cast<BLPath*>(out), &tmpBuffer, sink, it.index, closure);
-        if (BL_UNLIKELY(result != BL_SUCCESS))
-          break;
-
+        sinkInfo.glyphIndex = it.index;
+        BL_PROPAGATE(getGlyphOutlinesFunc(faceI, it.glyphId(), &finalMatrix, blDownCast(out), &sinkInfo.contourCount, &tmpBuffer));
+        BL_PROPAGATE(sink(out, &sinkInfo, closure));
         it.advance();
       }
     }
   }
   else {
     while (!it.atEnd()) {
-      result = decodeFunc(faceI, it.glyphId(), &finalMatrix, static_cast<BLPath*>(out), &tmpBuffer, sink, it.index, closure);
-      if (BL_UNLIKELY(result != BL_SUCCESS))
-        break;
+      sinkInfo.glyphIndex = it.index;
+      BL_PROPAGATE(getGlyphOutlinesFunc(faceI, it.glyphId(), &finalMatrix, blDownCast(out), &sinkInfo.contourCount, &tmpBuffer));
+      BL_PROPAGATE(sink(out, &sinkInfo, closure));
       it.advance();
     }
   }
 
-  return result;
+  return BL_SUCCESS;
 }
 
 // ============================================================================
@@ -1139,11 +1151,11 @@ void blFontRtInit(BLRuntimeContext* rt) noexcept {
   blNullFontFaceFuncs.mapTextToGlyphs = blNullFontFaceMapTextToGlyphs;
   blNullFontFaceFuncs.getGlyphBounds = blNullFontFaceGetGlyphBounds;
   blNullFontFaceFuncs.getGlyphAdvances = blNullFontFaceGetGlyphAdvances;
+  blNullFontFaceFuncs.getGlyphOutlines = blNullFontFaceGetGlyphOutlines;
   blNullFontFaceFuncs.applyKern = blNullFontFaceApplyKern;
   blNullFontFaceFuncs.applyGSub = blNullFontFaceApplyGSub;
   blNullFontFaceFuncs.applyGPos = blNullFontFaceApplyGPos;
   blNullFontFaceFuncs.positionGlyphs = blNullFontFacePositionGlyphs;
-  blNullFontFaceFuncs.decodeGlyph = blNullFontFaceDecodeGlyph;
 
   // Initialize BLFontFace built-in null instance.
   BLInternalFontFaceImpl* fontFaceI = &blNullFontFaceImpl;

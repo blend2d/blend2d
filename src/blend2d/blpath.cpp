@@ -563,7 +563,7 @@ public:
           moveToCount++;
           hasPrevVertex = true;
 
-          blBoundBoxes(boundingBox, vtxData[0]);
+          blBound(boundingBox, vtxData[0]);
 
           cmdData++;
           vtxData++;
@@ -574,7 +574,7 @@ public:
           if (!hasPrevVertex)
             return blTraceError(BL_ERROR_INVALID_GEOMETRY);
 
-          blBoundBoxes(boundingBox, vtxData[0]);
+          blBound(boundingBox, vtxData[0]);
 
           cmdData++;
           vtxData++;
@@ -590,7 +590,7 @@ public:
 
           flags |= BL_PATH_FLAG_QUADS;
           hasPrevVertex = true;
-          blBoundBoxes(boundingBox, vtxData[-1]);
+          blBound(boundingBox, vtxData[-1]);
 
           // Calculate tight bounding-box only when control points are outside the current one.
           const BLPoint& ctrl = vtxData[-2];
@@ -598,8 +598,8 @@ public:
           if (!(ctrl.x >= boundingBox.x0 && ctrl.y >= boundingBox.y0 && ctrl.x <= boundingBox.x1 && ctrl.y <= boundingBox.y1)) {
             BLPoint extrema;
             blGetQuadExtremaPoint(vtxData - 3, extrema);
-            blBoundBoxes(boundingBox, extrema);
-            blBoundBoxes(controlBox, vtxData[-2]);
+            blBound(boundingBox, extrema);
+            blBound(controlBox, vtxData[-2]);
           }
           break;
         }
@@ -612,7 +612,7 @@ public:
 
           flags |= BL_PATH_FLAG_CUBICS;
           hasPrevVertex = true;
-          blBoundBoxes(boundingBox, vtxData[-1]);
+          blBound(boundingBox, vtxData[-1]);
 
           // Calculate tight bounding-box only when control points are outside of the current one.
           BLPoint ctrlMin = blMin(vtxData[-3], vtxData[-2]);
@@ -621,10 +621,10 @@ public:
           if (!(ctrlMin.x >= boundingBox.x0 && ctrlMin.y >= boundingBox.y0 && ctrlMax.x <= boundingBox.x1 && ctrlMax.y <= boundingBox.y1)) {
             BLPoint extremas[2];
             blGetCubicExtremaPoints(vtxData - 4, extremas);
-            blBoundBoxes(boundingBox, extremas[0]);
-            blBoundBoxes(boundingBox, extremas[1]);
-            blBoundBoxes(controlBox, vtxData[-3]);
-            blBoundBoxes(controlBox, vtxData[-2]);
+            blBound(boundingBox, extremas[0]);
+            blBound(boundingBox, extremas[1]);
+            blBound(controlBox, vtxData[-3]);
+            blBound(controlBox, vtxData[-2]);
           }
           break;
         }

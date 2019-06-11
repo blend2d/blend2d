@@ -145,6 +145,14 @@ struct BLInternalFontFaceFuncs {
     BLGlyphPlacement* placementData,
     size_t count) BL_NOEXCEPT;
 
+  BLResult (BL_CDECL* getGlyphOutlines)(
+    const BLFontFaceImpl* impl,
+    uint32_t glyphId,
+    const BLMatrix2D* userMatrix,
+    BLPath* out,
+    size_t* contourCountOut,
+    BLMemBuffer* tmpBuffer) BL_NOEXCEPT;
+
   BLResult (BL_CDECL* applyKern)(
     const BLFontFaceImpl* faceI,
     BLGlyphItem* itemData,
@@ -168,14 +176,6 @@ struct BLInternalFontFaceFuncs {
     BLGlyphItem* itemData,
     BLGlyphPlacement* placementData,
     size_t count) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* decodeGlyph)(
-    const BLFontFaceImpl* impl,
-    uint32_t glyphId,
-    const BLMatrix2D* userMatrix,
-    BLPath* out,
-    BLMemBuffer* tmpBuffer,
-    BLPathSinkFunc sink, size_t sinkGlyphIndex, void* closure) BL_NOEXCEPT;
 };
 
 BL_HIDDEN extern BLInternalFontFaceFuncs blNullFontFaceFuncs;

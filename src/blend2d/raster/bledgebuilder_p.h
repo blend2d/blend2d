@@ -803,7 +803,7 @@ public:
   BL_INLINE BLResult done() noexcept {
     BL_PROPAGATE(flushBorderAccumulators());
     resetBorderAccumulators();
-    blBoundBoxes(_storage->_boundingBox, _bBoxI);
+    blBound(_storage->_boundingBox, _bBoxI);
     return BL_SUCCESS;
   }
 
