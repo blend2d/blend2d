@@ -1911,7 +1911,10 @@ static BLResult BL_CDECL getGlyphBounds(
     }
     else {
       const BLBox& bounds = consumer.bounds;
-      boxes[i].reset(blFloor(bounds.x0), blFloor(bounds.y0), blCeil(bounds.x1), blCeil(bounds.y1));
+      if (bounds.x0 <= bounds.x1 && bounds.y0 <= bounds.y1)
+        boxes[i].reset(blFloor(bounds.x0), blFloor(bounds.y0), blCeil(bounds.x1), blCeil(bounds.y1));
+      else
+        boxes[i].reset();
     }
   }
 

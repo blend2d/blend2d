@@ -88,6 +88,7 @@ static BLResult BL_CDECL getGlyphBounds(
       size_t index = size_t(glyphId) * 2u;
       if (BL_UNLIKELY(index + 4 > locaTable.size))
         goto InvalidData;
+
       offset = uint32_t(reinterpret_cast<const UInt16*>(locaTable.data + index + 0)->value()) * 2u;
       endOff = uint32_t(reinterpret_cast<const UInt16*>(locaTable.data + index + 2)->value()) * 2u;
     }
@@ -95,6 +96,7 @@ static BLResult BL_CDECL getGlyphBounds(
       size_t index = size_t(glyphId) * 4u;
       if (BL_UNLIKELY(index + 8 > locaTable.size))
         goto InvalidData;
+
       offset = reinterpret_cast<const UInt32*>(locaTable.data + index + 0)->value();
       endOff = reinterpret_cast<const UInt32*>(locaTable.data + index + 4)->value();
     }
