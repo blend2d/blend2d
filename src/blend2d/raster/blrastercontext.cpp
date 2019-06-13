@@ -499,7 +499,7 @@ static BL_INLINE void blRasterContextImplBeforeUserMatrixChange(BLRasterContextI
 }
 
 static BL_INLINE void blRasterContextImplUpdateFinalMatrix(BLRasterContextImpl* ctxI) noexcept {
-  blMatrix2DMultiply(ctxI->finalMatrix, ctxI->currentState.metaMatrix, ctxI->currentState.userMatrix);
+  blMatrix2DMultiply(ctxI->finalMatrix, ctxI->currentState.userMatrix, ctxI->currentState.metaMatrix);
 }
 
 static BL_INLINE void blRasterContextImplUpdateMetaMatrixFixed(BLRasterContextImpl* ctxI) noexcept {
