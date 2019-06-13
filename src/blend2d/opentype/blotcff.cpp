@@ -1818,6 +1818,8 @@ InvalidData:
 // [BLOpenType::CFFImpl - GetGlyphBounds]
 // ============================================================================
 
+namespace {
+
 // Glyph outlines consumer that calculates glyph bounds.
 class GlyphBoundsConsumer {
 public:
@@ -1856,33 +1858,46 @@ public:
   // Not used by CFF, provided for completness.
   BL_INLINE void quadTo(double x1, double y1, double x2, double y2) noexcept {
     blBound(bounds, BLPoint(x2, y2));
-    if (!bounds.contains(x1, y1)) {
-      BLPoint quad[3] { { cx, cy }, { x1, y1 }, { x2, y2 } };
-      BLPoint extrema;
-
-      blGetQuadExtremaPoint(quad, extrema);
-      blBound(bounds, extrema);
-    }
+    if (!bounds.contains(x1, y1))
+      mergeQuadExtrema(x1, y1, x2, y2);
     cx = x2;
     cy = y2;
   }
 
   BL_INLINE void cubicTo(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
     blBound(bounds, BLPoint(x3, y3));
-    if (!bounds.contains(x1, y1) || !bounds.contains(x2, y2)) {
-      BLPoint cubic[4] { { cx, cy }, { x1, y1 }, { x2, y2 }, { x3, y3 } };
-      BLPoint extremas[2];
-
-      blGetCubicExtremaPoints(cubic, extremas);
-      blBound(bounds, extremas[0]);
-      blBound(bounds, extremas[1]);
-    }
+    if (!blSubsumes(bounds, BLBox(blMin(x1, x2), blMin(y1, y2), blMax(x1, x2), blMax(y1, y2))))
+      mergeCubicExtrema(x1, y1, x2, y2, x3, y3);
     cx = x3;
     cy = y3;
   }
 
   BL_INLINE void close() noexcept {}
+
+  // We calculate extremas here as the code may expand a bit and inlining everything
+  // doesn't bring any benefits in such case, because most control points in fonts
+  // are within the bounding box defined by start/end points anyway.
+  //
+  // Making these two functions no-inline saves around 8kB.
+  BL_NOINLINE void mergeQuadExtrema(double x1, double y1, double x2, double y2) noexcept {
+    BLPoint quad[3] { { cx, cy }, { x1, y1 }, { x2, y2 } };
+    BLPoint extrema;
+
+    blGetQuadExtremaPoint(quad, extrema);
+    blBound(bounds, extrema);
+  }
+
+  BL_NOINLINE void mergeCubicExtrema(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
+    BLPoint cubic[4] { { cx, cy }, { x1, y1 }, { x2, y2 }, { x3, y3 } };
+    BLPoint extremas[2];
+
+    blGetCubicExtremaPoints(cubic, extremas);
+    blBound(bounds, extremas[0]);
+    blBound(bounds, extremas[1]);
+  }
 };
+
+} // {anonymous}
 
 static BLResult BL_CDECL getGlyphBounds(
   const BLFontFaceImpl* faceI_,
@@ -1924,6 +1939,8 @@ static BLResult BL_CDECL getGlyphBounds(
 // ============================================================================
 // [BLOpenType::CFFImpl - GetGlyphOutlines]
 // ============================================================================
+
+namespace {
 
 // Glyph outlines consumer that appends the decoded outlines into `BLPath`.
 class GlyphOutlineConsumer {
@@ -1970,6 +1987,8 @@ public:
     appender.close();
   }
 };
+
+} // {anonymous}
 
 static BLResult BL_CDECL getGlyphOutlines(
   const BLFontFaceImpl* faceI_,

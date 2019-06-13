@@ -1072,6 +1072,7 @@ BLResult BLImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uin
     case BL_IMAGE_SCALE_FILTER_USER: {
       userFunc = options->userFunc;
       userData = options->userData;
+      p.radius = options->radius;
 
       if (!userFunc)
         return blTraceError(BL_ERROR_INVALID_VALUE);
