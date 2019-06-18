@@ -68,10 +68,26 @@ public:
   //! \name Construction & Destruction
   //! \{
 
+  //! Creates a default constructed string.
+  //!
+  //! Default constructed strings share a built-in "none" instance.
   BL_INLINE BLString() noexcept { this->impl = none().impl; }
+
+  //! Move constructor.
+  //!
+  //! \note The `other` string is reset by move construction, so its state
+  //! after the move operation is the same as a default constructed string.
   BL_INLINE BLString(BLString&& other) noexcept { blVariantInitMove(this, &other); }
+
+  //! Copy constructor, performs weak copy of the data held by the `other` string.
   BL_INLINE BLString(const BLString& other) noexcept { blVariantInitWeak(this, &other); }
+
+  //! Constructor that creates a string from the given `impl`.
+  //!
+  //! \note The reference count of the passed `impl` is not increased.
   BL_INLINE explicit BLString(BLStringImpl* impl) noexcept { this->impl = impl; }
+
+  //! Destroys the string.
   BL_INLINE ~BLString() noexcept { blStringReset(this); }
 
   //! \}
@@ -79,9 +95,17 @@ public:
   //! \name Overloaded Operators
   //! \{
 
+  //! Tests whether the string has any content.
+  //!
+  //! \note This is essentially the opposite of `empty()`.
   BL_INLINE explicit operator bool() const noexcept { return !empty(); }
 
+  //! Move assignment.
+  //!
+  //! \note The `other` string is reset by move assignment, so its state
+  //! after the move operation is the same as a default constructed string.
   BL_INLINE BLString& operator=(BLString&& other) noexcept { blStringAssignMove(this, &other); return *this; }
+  //! Copy assignment, performs weak copy of the data held by the `other` string.
   BL_INLINE BLString& operator=(const BLString& other) noexcept { blStringAssignWeak(this, &other); return *this; }
 
   BL_INLINE bool operator==(const BLString& other) const noexcept { return  equals(other); }
@@ -105,6 +129,9 @@ public:
   BL_INLINE bool operator> (const char* str) const noexcept { return compare(str) >  0; }
   BL_INLINE bool operator>=(const char* str) const noexcept { return compare(str) >= 0; }
 
+  //! Returns a character at the given `index`.
+  //!
+  //! \note This is the same as calling `at(index)`.
   BL_INLINE char operator[](size_t index) const noexcept { return at(index); }
 
   //! \}
@@ -116,19 +143,41 @@ public:
   //!
   //! After reset the string content matches a default constructed string.
   BL_INLINE BLResult reset() noexcept { return blStringReset(this); }
+
+  //! Swaps the content of this string with the `other` string.
   BL_INLINE void swap(BLString& other) noexcept { std::swap(this->impl, other.impl); }
 
+  //! Replaces the content of the string by `c` character or multiple characters
+  //! if `n` is greater than one.
   BL_INLINE BLResult assign(char c, size_t n = 1) noexcept { return blStringApplyOpChar(this, BL_MODIFY_OP_ASSIGN_FIT, c, n); }
-  BL_INLINE BLResult assign(BLString&& other) noexcept { return blStringAssignMove(this, &other); }
-  BL_INLINE BLResult assign(const BLStringCore& other) noexcept { return blStringAssignWeak(this, &other); }
-  BL_INLINE BLResult assign(const BLStringView& view) noexcept { return blStringAssignData(this, view.data, view.size); }
-  BL_INLINE BLResult assign(const char* str, size_t n = SIZE_MAX) noexcept { return blStringAssignData(this, str, n); }
-  BL_INLINE BLResult assignDeep(const BLStringCore& other) noexcept { return blStringAssignDeep(this, &other); }
 
+  //! Move assignment, the same as `operator=`, but returns a `BLResult` instead of `this`.
+  BL_INLINE BLResult assign(BLString&& other) noexcept { return blStringAssignMove(this, &other); }
+
+  //! Copy assignment, the same as `operator=`, but returns a `BLResult` instead of `this`.
+  BL_INLINE BLResult assign(const BLString& other) noexcept { return blStringAssignWeak(this, &other); }
+
+  //! Replaces the string by the content described by the given string `view`.
+  BL_INLINE BLResult assign(const BLStringView& view) noexcept { return blStringAssignData(this, view.data, view.size); }
+
+  //! Replaces the string by `str` data of the given length `n`.
+  //!
+  //! \note The implementation assumes null terminated string if `n` equals to `SIZE_MAX`.
+  BL_INLINE BLResult assign(const char* str, size_t n = SIZE_MAX) noexcept { return blStringAssignData(this, str, n); }
+
+  //! Copy assignment, but creates a deep copy of the `other` string instead of weak copy.
+  BL_INLINE BLResult assignDeep(const BLString& other) noexcept { return blStringAssignDeep(this, &other); }
+
+  //! Replaces the content of the string by a result of calling `snprintf(fmt, args...)`.
   template<typename... Args>
   BL_INLINE BLResult assignFormat(const char* fmt, Args&&... args) noexcept { return blStringApplyOpFormat(this, BL_MODIFY_OP_ASSIGN_FIT, fmt, std::forward<Args>(args)...); }
+
+  //! Replaces the content of the string by a result of calling `vsnprintf(fmt, ap)`.
   BL_INLINE BLResult assignFormatV(const char* fmt, va_list ap) noexcept { return blStringApplyOpFormatV(this, BL_MODIFY_OP_ASSIGN_FIT, fmt, ap); }
 
+  //! Tests whether the string is empty (has no content).
+  //!
+  //! Returns `true` if the string's length is zero.
   BL_INLINE bool empty() const noexcept { return impl->size == 0; }
 
   //! \}
@@ -136,7 +185,7 @@ public:
   //! \name Accessors
   //! \{
 
-  //! Returns the character at the given `index`.
+  //! Returns a character at the given `index`.
   //!
   //! \note Index must be valid and cannot be out of bounds, otherwise the
   //! result is undefined and would trigger an assertion failure in debug mode.
@@ -183,20 +232,20 @@ public:
   //! Makes the string mutable.
   //!
   //! This operation checks whether the string is mutable and if not it makes a
-  //! deep copy of its content so it can be modified. Please not that you can
+  //! deep copy of its content so it can be modified. Please note that you can
   //! only modify the content that is defined by its length property. Even if
   //! the string had higher capacity before `makeMutable()` it's not guaranteed
   //! that the possible new data would match that capacity.
   //!
   //! If you want to make the string mutable for the purpose of appending or
   //! making other modifications please consider using `modifyOp()` and
-  //! `insertOp()` functions instead.
+  //! `insertOp()` instead.
   BL_INLINE BLResult makeMutable(char** dataOut) noexcept { return blStringMakeMutable(this, dataOut); }
   BL_INLINE BLResult modifyOp(uint32_t op, size_t n, char** dataOut) noexcept { return blStringModifyOp(this, op, n, dataOut); }
   BL_INLINE BLResult insertOp(size_t index, size_t n, char** dataOut) noexcept { return blStringInsertOp(this, index, n, dataOut); }
 
   BL_INLINE BLResult append(char c, size_t n = 1) noexcept { return blStringApplyOpChar(this, BL_MODIFY_OP_APPEND_GROW, c, n); }
-  BL_INLINE BLResult append(const BLStringCore& other) noexcept { return blStringApplyOpString(this, BL_MODIFY_OP_APPEND_GROW, &other); }
+  BL_INLINE BLResult append(const BLString& other) noexcept { return blStringApplyOpString(this, BL_MODIFY_OP_APPEND_GROW, &other); }
   BL_INLINE BLResult append(const BLStringView& view) noexcept { return blStringApplyOpData(this, BL_MODIFY_OP_APPEND_GROW, view.data, view.size); }
   BL_INLINE BLResult append(const char* str, size_t n = SIZE_MAX) noexcept { return blStringApplyOpData(this, BL_MODIFY_OP_APPEND_GROW, str, n); }
 
@@ -205,12 +254,12 @@ public:
   BL_INLINE BLResult appendFormatV(const char* fmt, va_list ap) noexcept { return blStringApplyOpFormatV(this, BL_MODIFY_OP_APPEND_GROW, fmt, ap); }
 
   BL_INLINE BLResult prepend(char c, size_t n = 1) noexcept { return blStringInsertChar(this, 0, c, n); }
-  BL_INLINE BLResult prepend(const BLStringCore& other) noexcept { return blStringInsertString(this, 0, &other); }
+  BL_INLINE BLResult prepend(const BLString& other) noexcept { return blStringInsertString(this, 0, &other); }
   BL_INLINE BLResult prepend(const BLStringView& view) noexcept { return blStringInsertData(this, 0, view.data, view.size); }
   BL_INLINE BLResult prepend(const char* str, size_t n = SIZE_MAX) noexcept { return blStringInsertData(this, 0, str, n); }
 
   BL_INLINE BLResult insert(size_t index, char c, size_t n = 1) noexcept { return blStringInsertChar(this, index, c, n); }
-  BL_INLINE BLResult insert(size_t index, const BLStringCore& other) noexcept { return blStringInsertString(this, index, &other); }
+  BL_INLINE BLResult insert(size_t index, const BLString& other) noexcept { return blStringInsertString(this, index, &other); }
   BL_INLINE BLResult insert(size_t index, const BLStringView& view) noexcept { return blStringInsertData(this, index, view.data, view.size); }
   BL_INLINE BLResult insert(size_t index, const char* str, size_t n = SIZE_MAX) noexcept { return blStringInsertData(this, index, str, n); }
 

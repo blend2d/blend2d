@@ -276,10 +276,21 @@ public:
 
   //! Creates a default constructed array.
   //!
-  //! Default constructed arrays share the default "none" instance.
+  //! Default constructed arrays share a built-in "none" instance.
   BL_INLINE BLArray() noexcept { this->impl = none().impl; }
+
+  //! Move constructor.
+  //!
+  //! \note The `other` array is reset by move construction, so its state
+  //! after the move operation is the same as a default constructed array.
   BL_INLINE BLArray(BLArray&& other) noexcept { blVariantInitMove(this, &other); }
+
+  //! Copy constructor, performs weak copy of the data held by the `other` array.
   BL_INLINE BLArray(const BLArray& other) noexcept { blVariantInitWeak(this, &other); }
+
+  //! Constructor that creates an array from the given `impl`.
+  //!
+  //! \note The reference count of the passed `impl` is not increased.
   BL_INLINE explicit BLArray(BLArrayImpl* impl) noexcept { this->impl = impl; }
 
   //! Destroys the array.
@@ -290,15 +301,27 @@ public:
   //! \name Overloaded Operators
   //! \{
 
-  //! Returns `true` whether the array's length is `1` or greater.
+  //! Tests whether the array has items. Returns `true` if the array is not empty.
+  //!
+  //! \note This is essentially the opposite of `empty()`.
   BL_INLINE explicit operator bool() const noexcept { return !empty(); }
 
+  //! Move assignment.
+  //!
+  //! \note The `other` array is reset by move assignment, so its state
+  //! after the move operation is the same as a default constructed array.
   BL_INLINE BLArray& operator=(BLArray&& other) noexcept { blArrayAssignMove(this, &other); return *this; }
+  //! Copy assignment, performs weak copy of the data held by the `other` array.
   BL_INLINE BLArray& operator=(const BLArray& other) noexcept { blArrayAssignWeak(this, &other); return *this; }
 
+  //! Returns true if this and `other` arrays are equal.
   BL_INLINE bool operator==(const BLArray& other) noexcept { return  equals(other); }
+  //! Returns true if this and `other` arrays are not equal.
   BL_INLINE bool operator!=(const BLArray& other) noexcept { return !equals(other); }
 
+  //! Returns a read-only reference to the array item at the given `index`.
+  //!
+  //! \note This is the same as calling `at(index)`.
   BL_INLINE const T& operator[](size_t index) const noexcept { return at(index); }
 
   //! \}
@@ -309,16 +332,32 @@ public:
   //! Resets the array into a default constructed state by clearing its content
   //! and releasing its memory.
   BL_INLINE BLResult reset() noexcept { return blArrayReset(this); }
+
+  //! Swaps the content of this array with the `other` array.
   BL_INLINE void swap(BLArray<T>& other) noexcept { std::swap(this->impl, other.impl); }
 
+  //! Move assignment, the same as `operator=`, but returns a `BLResult` instead of `this`.
   BL_INLINE BLResult assign(BLArray<T>&& other) noexcept { return blArrayAssignMove(this, &other); }
+  //! Copy assignment, the same as `operator=`, but returns a `BLResult` instead of `this`.
   BL_INLINE BLResult assign(const BLArray<T>& other) noexcept { return blArrayAssignWeak(this, &other); }
+
+  //! Copy assignment, but creates a deep copy of the `other` array instead of weak copy.
   BL_INLINE BLResult assignDeep(const BLArray<T>& other) noexcept { return blArrayAssignDeep(this, &other); }
 
+  //! Replaces the content of the array with variadic number of items passed in `args...`.
   template<typename... Args>
   BL_INLINE BLResult assign_v(Args&&... args) noexcept { return modify_v(BL_MODIFY_OP_ASSIGN_FIT, std::forward<Args>(args)...); }
 
+  //! Replaces the content of the array by items in the passed array `view`.
+  //!
+  //! \note The implementation can handle `view` pointing to the array's data
+  //! as well, so it's possible to create a slice of the array if required.
   BL_INLINE BLResult assignView(const BLArrayView<T>& view) noexcept { return blArrayAssignView(this, (const void*)view.data, view.size); }
+
+  //! Replaces the content of the array `items` of length `n`.
+  //!
+  //! \note The implementation can handle items pointing to the array's data
+  //! as well, so it's possible to create a slice of the array if required.
   BL_INLINE BLResult assignView(const T* items, size_t n) noexcept { return blArrayAssignView(this, (const void*)items, n); }
 
   //! Tests whether the array is a built-in null instance.
@@ -354,9 +393,9 @@ public:
   //! \name Array Storage
   //! \{
 
-  //! Returns the size of the array (number of elements).
+  //! Returns the size of the array (number of items).
   BL_INLINE size_t size() const noexcept { return impl->size; }
-  //! Returns the capacity of the array (number of elements).
+  //! Returns the capacity of the array (number of items).
   BL_INLINE size_t capacity() const noexcept { return impl->capacity; }
 
   //! Returns a pointer to the array data.
@@ -371,19 +410,61 @@ public:
     BL_DIAGNOSTIC_POP
   }
 
+  //! Returns a read-only reference to the array item at the given `index`.
+  //!
+  //! \note The index must be valid, which means it has to be less than the
+  //! array length. Accessing items out of range is undefined behavior that
+  //! would be catched by assertions in debug builds.
   BL_INLINE const T& at(size_t index) const noexcept {
     BL_ASSERT(index < impl->size);
     return data()[index];
   }
 
+  //! Returns a read-only reference to the first item.
+  //!
+  //! \note The array must have at least one item othewise calling `first()`
+  //! would point to the end of the array, which is not initialized, and such
+  //! reference would be invalid. Debug builds would catch this condition with
+  //! an assertion.
   BL_INLINE const T& first() const noexcept { return at(0); }
+
+  //! Returns a read-only reference to the last item.
+  //!
+  //! \note The array must have at least one item othewise calling `last()`
+  //! would point to the end of the array, which is not initialized, and such
+  //! reference would be invalid. Debug builds would catch this condition with
+  //! an assertion.
   BL_INLINE const T& last() const noexcept { return at(impl->size - 1); }
 
+  //! Clears the content of the array.
+  //!
+  //! \note If the array used dynamically allocated memory and the instance
+  //! is mutable the memory won't be released, instead, it will be ready for
+  //! reuse. Consider using `reset()` if you want to release the memory instead.
   BL_INLINE BLResult clear() noexcept { return blArrayClear(this); }
+
+  //! Shrinks the capacity of the array to fit its length.
+  //!
+  //! Some array operations like `append()` may grow the array more than necessary
+  //! to make it faster when such manipulation operations are called consecutively.
+  //! When you are done with modifications and you know the lifetime of the array
+  //! won't be short you can use `shrink()` to fit its memory requirements to the
+  //! number of items it stores, which could optimize the application's memory
+  //! requirements.
   BL_INLINE BLResult shrink() noexcept { return blArrayShrink(this); }
+
+  //! Reserves the array capacity to hold at least `n` items.
   BL_INLINE BLResult reserve(size_t n) noexcept { return blArrayReserve(this, n); }
 
+  //! Truncates the length of the array to maximum `n` items.
+  //!
+  //! If the length of the array is less than `n`n then truncation does nothing.
   BL_INLINE BLResult truncate(size_t n) noexcept { return blArrayResize(this, blMin(n, impl->size), nullptr); }
+
+  //! Resizes the array to `n` items.
+  //!
+  //! If `n` is greater than the array length then all new items will be
+  //! initialized by `fill` item.
   BL_INLINE BLResult resize(size_t n, const T& fill) noexcept { return blArrayResize(this, n, &fill); }
 
   //! \}
@@ -391,10 +472,48 @@ public:
   //! \name Array Manipulation
   //! \{
 
+  //! Makes the array mutable by possibly creating a deep copy of the data if
+  //! the array is not mutable. Stores the pointer to the beginning of mutable
+  //! data in `dataOut`.
+  //!
+  //! ```
+  //! BLArray<uint8_t> a;
+  //! if (a.append(0, 1, 2, 3, 4, 5, 6, 7) != BL_SUCCESS)
+  //!   { handle error condition }
+  //!
+  //! uint8_t* data;
+  //! if (a.makeMutable(&data) != BL_SUCCESS)
+  //!   { handle error condition }
+  //!
+  //! // `data` is a mutable pointer to array content of 8 items.
+  //! data[0] = 100;
+  //!
+  //! Calling array member functions (or C-API) could invalidate `data`.
+  //! a.append(9); // You shouldn't use `data` afterwards.
+  //! ```
   BL_INLINE BLResult makeMutable(T** dataOut) noexcept { return blArrayMakeMutable(this, (void**)dataOut); }
+
+  //! Modify operation is similar to `makeMutable`, however, the `op` argument
+  //! specifies the desired array operation, see \ref BLModifyOp. The pointer
+  //! returned in `dataOut` points to the first item to be either assigned or
+  //! appended and it points to an unititialized memory.
+  //!
+  //! Please note that assignments mean to wipe out the whole array content
+  //! and to set the length of the array to `n`. The caller is responsible
+  //! for initializing the data returned in `dataOut`.
   BL_INLINE BLResult modifyOp(uint32_t op, size_t n, T** dataOut) noexcept { return blArrayModifyOp(this, op, n, (void**)dataOut); }
+
+  //! Insert operation, the semantics is similar to `modifyOp()`, however,
+  //! items are inserted at the given `index` instead of assigned or appended.
+  //!
+  //! The caller is responsible for initializing the data returned in `dataOut`.
   BL_INLINE BLResult insertOp(size_t index, size_t n, T** dataOut) noexcept { return blArrayInsertOp(this, index, n, (void**)dataOut); }
 
+  //! Similar to `modifyOp()`, but the items to assign/append to the array
+  //! are given after the `op` argument.
+  //!
+  //! \note This is a varidic template that makes such modification easier
+  //! if you have a constant number of items to assign or append.
   template<typename... Args>
   BL_INLINE BLResult modify_v(uint32_t op, Args&&... args) noexcept {
     T* dst;
@@ -403,6 +522,7 @@ public:
     return BL_SUCCESS;
   }
 
+  //! Appends a variadic number of items items passed in `args...` to the array.
   template<typename... Args>
   BL_INLINE BLResult append(Args&&... args) noexcept {
     if (sizeof...(args) == 1)
@@ -411,9 +531,19 @@ public:
       return modify_v(BL_MODIFY_OP_APPEND_GROW, std::forward<Args>(args)...);
   }
 
+  //! Appends items to the array of the given array `view`.
+  //!
+  //! \note The implementation can handle `view` pointing to the array's data
+  //! as well, so it's possible to duplicate the given items by appending them.
   BL_INLINE BLResult appendView(const BLArrayView<T>& view) noexcept { return blArrayAppendView(this, (const void*)view.data, view.size); }
+
+  //! Appends `items` to the array of length `n`.
+  //!
+  //! \note The implementation can handle `view` pointing to the array's data
+  //! as well, so it's possible to duplicate the given items by appending them.
   BL_INLINE BLResult appendView(const T* items, size_t n) noexcept { return blArrayAppendView(this, (const void*)items, n); }
 
+  //! Prepends a variadic number of items items passed in `args...` to the array.
   template<typename... Args>
   BL_INLINE BLResult prepend(Args&&... args) noexcept {
     if (sizeof...(args) == 1)
@@ -422,9 +552,19 @@ public:
       return insert(0, std::forward<Args>(args)...);
   }
 
+  //! Prepends items to the array of the given array `view`.
+  //!
+  //! \note The implementation can handle `view` pointing to the array's data
+  //! as well, so it's possible to duplicate the given items by prepending them.
   BL_INLINE BLResult prependView(const BLArrayView<T>& view) noexcept { return blArrayInsertView(this, 0, (const void*)view.data, view.size); }
+
+  //! Prepends `items` to the array of length `n`.
+  //!
+  //! \note The implementation can handle `view` pointing to the array's data
+  //! as well, so it's possible to duplicate the given items by prepending them.
   BL_INLINE BLResult prependView(const T* items, size_t n) noexcept { return blArrayInsertView(this, 0, (const void*)items, n); }
 
+  //! Inserts a variadic number of items items passed in `args...` at the given `index`.
   template<typename... Args>
   BL_INLINE BLResult insert(size_t index, Args&&... args) noexcept {
     if (sizeof...(args) == 1) {
@@ -438,17 +578,30 @@ public:
     }
   }
 
+  //! Inserts items to the array of the given array `view` at the given `index`.
+  //!
+  //! \note The implementation can handle `view` pointing to the array's data
+  //! as well, so it's possible to duplicate the given items by inserting them.
   BL_INLINE BLResult insertView(size_t index, const BLArrayView<T>& view) noexcept { return blArrayInsertView(this, index, (const void*)view.data, view.size); }
+
+  //! Prepends `items` to the array of length `n` at the given `index`.
+  //!
+  //! \note The implementation can handle `view` pointing to the array's data
+  //! as well, so it's possible to duplicate the given items by inserting them.
   BL_INLINE BLResult insertView(size_t index, const T* items, size_t n) noexcept { return blArrayInsertView(this, index, (const void*)items, n); }
 
+  //! Replaces an item at the given `index` by `item`.
   BL_INLINE BLResult replace(size_t index, const T& item) noexcept { return BLArrayInternal::replaceItem(this, index, Traits::pass(item)); }
 
+  //! Replaces the given `range` of items by the given array `view`.
   BL_INLINE BLResult replaceView(const BLRange& range, BLArrayView<T>& view) noexcept { return blArrayReplaceView(this, range.start, range.end, (const void*)view.data, view.size); }
+
+  //! Replaces the given `range` of items by `items` of length `n`.
   BL_INLINE BLResult replaceView(const BLRange& range, const T* items, size_t n) noexcept { return blArrayReplaceView(this, range.start, range.end, items, n); }
 
   //! Removes an item at the given `index`.
   BL_INLINE BLResult remove(size_t index) noexcept { return blArrayRemoveIndex(this, index); }
-  //! Removes items at the given `range`.
+  //! Removes a `range` of items.
   BL_INLINE BLResult remove(const BLRange& range) noexcept { return blArrayRemoveRange(this, range.start, range.end); }
 
   //! \}
