@@ -29,7 +29,7 @@ struct BLLookupTable {
 // NOTE: We only need `index_sequence` and `make_index_sequence` to generate
 // our lookup tables. These were added in C++14 so we have to provide our own
 // implementation for C++11 mode.
-#if __cplusplus >= 201402L
+#if BL_STDCXX_VERSION >= 201402L
 namespace BLInternal {
   // C++14 implementation uses `std::index_sequence` and `std::make_index_sequence`.
   using std::index_sequence;
