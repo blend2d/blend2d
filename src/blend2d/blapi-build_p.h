@@ -50,8 +50,8 @@
 //! \cond NEVER
 
 // Turn off deprecation warnings when building 'blend2d'. Required as <blend2d.h>
-// other internal headers include some essential C headers which would show us
-// deprecation warnings if we use some standard C function like `snprintf()`.
+// and other headers include some essential C headers that could in some cases
+// warn about using functions such as `snprintf()`, which we use correctly.
 #ifdef _MSC_VER
   #if !defined(_CRT_SECURE_NO_DEPRECATE)
     #define _CRT_SECURE_NO_DEPRECATE
@@ -62,7 +62,7 @@
 #endif
 
 #if defined(_WIN32) && !defined(_WIN32_WINNT)
-  #define _WIN32_WINNT 0x0601
+  #define _WIN32_WINNT 0x0600
 #endif
 
 // The FileSystem API works fully with 64-bit file sizes and offsets,

@@ -88,7 +88,7 @@ public:
   //! by default, because it consumes one GP register, which is always useful.
   bool _emitStackFrames;
 
-  #ifndef ASMJIT_DISABLE_LOGGING
+  #ifndef ASMJIT_NO_LOGGING
   asmjit::FileLogger _logger;
   #endif
 

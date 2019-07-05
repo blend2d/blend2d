@@ -39,16 +39,16 @@ public:
 
   //! A single block of memory managed by `BLZoneAllocator`.
   struct Block {
-    BL_INLINE uint8_t* data() const noexcept {
-      return const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(this) + sizeof(*this));
-    }
-
     //! Link to the previous block.
     Block* prev;
     //! Link to the next block.
     Block* next;
     //! Size of the block.
     size_t size;
+
+    BL_INLINE uint8_t* data() const noexcept {
+      return const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(this) + sizeof(*this));
+    }
   };
 
   //! Saved state, used by `BLZoneAllocator::saveState()` and `BLZoneAllocator::restoreState()`.

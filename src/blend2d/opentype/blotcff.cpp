@@ -733,7 +733,7 @@ struct Matrix2x2 {
 // ============================================================================
 
 #ifdef BL_TRACE_OT_CFF
-static void traceCharStringOp(BLOTFaceImpl* faceI, Trace& trace, uint32_t op, const double* values, size_t count) noexcept {
+static void traceCharStringOp(const BLOTFaceImpl* faceI, Trace& trace, uint32_t op, const double* values, size_t count) noexcept {
   char buf[64];
   const char* opName = "";
 
@@ -1021,7 +1021,7 @@ OnSubRCall:
     else {
 OnOperator:
       #ifdef BL_TRACE_OT_CFF
-      traceCharStringOp(self, trace, b0, vBuf, vIdx);
+      traceCharStringOp(faceI, trace, b0, vBuf, vIdx);
       #endif
 
       vMinOperands = executionFeatures->baseOpStackSize[b0];
@@ -1472,7 +1472,7 @@ OnReturn:
           b0 = *ip++;
 
           #ifdef BL_TRACE_OT_CFF
-          traceCharStringOp(self, trace, 0x0C00 | b0, vBuf, vIdx);
+          traceCharStringOp(faceI, trace, 0x0C00 | b0, vBuf, vIdx);
           #endif
 
           if (BL_UNLIKELY(b0 >= ExecutionFeaturesInfo::kEscapedOpCount)) {

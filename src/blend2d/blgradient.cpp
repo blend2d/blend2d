@@ -922,10 +922,7 @@ BLResult blGradientReplaceStopRgba64(BLGradientCore* self, size_t index, double 
     return BL_SUCCESS;
   }
   else {
-    // Since we made this gradient mutable this cannot fail.
-    BLResult result = blGradientRemoveStop(self, index);
-    BL_ASSERT(result == BL_SUCCESS);
-
+    BL_PROPAGATE(blGradientRemoveStop(self, index));
     return blGradientAddStopRgba64(self, offset, rgba64);
   }
 }

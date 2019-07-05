@@ -97,7 +97,7 @@ struct BLRuntimeBuildInfo {
 
     //! Decomposed Blend2D version so it's easier to access without bit shifting.
     struct {
-    #if BL_BYTE_ORDER == 1234
+    #if BL_BYTE_ORDER == 1234 // LITTLE ENDIAN
       uint8_t patchVersion;
       uint8_t minorVersion;
       uint16_t majorVersion;

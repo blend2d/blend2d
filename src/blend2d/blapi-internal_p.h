@@ -100,15 +100,16 @@
 
 // PROBLEM: On Linux the default C++ standard library is called `libstdc++` and
 // comes with GCC. Clang can also use this standard library and in many cases
-// it's is configured to do so, however, the standard library can be older (and
+// it is configured to do so, however, the standard library can be older (and
 // thus provide less features) than the C++ version reported by the compiler via
-// `__cplusplus` macro. This means that `__cplusplus` version doesn't correspond
-// to the standard library version!
+// `__cplusplus` macro. This means that the `__cplusplus` version doesn't
+// correspond to the C++ standard library version!
 //
 // The problem is that `libstdc++` doesn't provide any version information, but
-// a timestamp, which is unreliable if you use other than GCC compiler. Since
-// we only use C++14 and higher optionally we don't have a problem to detect
-// such case and disable C++14 and higher features of the standard C++ library.
+// a timestamp, which is unreliable if you use other compiler than GCC. Since we
+// only use C++14 and higher optionally we don't have a problem to detect such
+// case and to conditionally disable C++14 and higher features of the standard
+// C++ library.
 #if defined(__GLIBCXX__) && defined(__clang__)
   #if __has_include(<string_view>) && __cplusplus >= 201703L
     #define BL_STDCXX_VERSION 201703L

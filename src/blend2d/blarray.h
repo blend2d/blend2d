@@ -473,22 +473,24 @@ public:
   //! \{
 
   //! Makes the array mutable by possibly creating a deep copy of the data if
-  //! the array is not mutable. Stores the pointer to the beginning of mutable
-  //! data in `dataOut`.
+  //! it's either read-only or shared with another array. Stores the pointer
+  //! to the beginning of mutable data in `dataOut`.
   //!
   //! ```
   //! BLArray<uint8_t> a;
-  //! if (a.append(0, 1, 2, 3, 4, 5, 6, 7) != BL_SUCCESS)
-  //!   { handle error condition }
+  //! if (a.append(0, 1, 2, 3, 4, 5, 6, 7) != BL_SUCCESS) {
+  //!   // Handle error condition.
+  //! }
   //!
   //! uint8_t* data;
-  //! if (a.makeMutable(&data) != BL_SUCCESS)
-  //!   { handle error condition }
+  //! if (a.makeMutable(&data) != BL_SUCCESS) {
+  //!   // Handle error condition.
+  //! }
   //!
   //! // `data` is a mutable pointer to array content of 8 items.
   //! data[0] = 100;
   //!
-  //! Calling array member functions (or C-API) could invalidate `data`.
+  //! // Calling array member functions (or C-API) could invalidate `data`.
   //! a.append(9); // You shouldn't use `data` afterwards.
   //! ```
   BL_INLINE BLResult makeMutable(T** dataOut) noexcept { return blArrayMakeMutable(this, (void**)dataOut); }

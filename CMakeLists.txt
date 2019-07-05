@@ -321,7 +321,7 @@ if (NOT BLEND2D_BUILD_NO_JIT)
   # A possibility to reduce the resulting binary size by disabling asmjit logging.
   if (BLEND2D_BUILD_NO_LOGGING)
     message("   Disabling AsmJit logging functionality to make Blend2D smaller")
-    list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_DISABLE_LOGGING -DASMJIT_DISABLE_TEXT)
+    list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_NO_LOGGING -DASMJIT_NO_TEXT)
   endif()
 endif()
 

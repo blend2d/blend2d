@@ -237,7 +237,8 @@ BLResult blGlyphBufferSetText(BLGlyphBufferCore* self, const void* data, size_t 
       return blInternalGlyphBufferData_setUnicodeText<BLUtf32Reader>(d, static_cast<const uint32_t*>(data), size * 4u);
 
     default:
-      BL_NOT_REACHED();
+      // Avoids a compile-time warning, should never be reached.
+      return blTraceError(BL_ERROR_INVALID_VALUE);
   }
 }
 

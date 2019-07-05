@@ -158,10 +158,10 @@ static BLResult BL_CDECL blMemFontDataImplListTags(const BLFontDataImpl* impl_, 
   using namespace BLOpenType;
 
   const BLMemFontDataImpl* impl = static_cast<const BLMemFontDataImpl*>(impl_);
+  const SFNTHeader* sfnt = blOffsetPtr<SFNTHeader>(impl->data, impl->headerOffset);
+  size_t tableCount = sfnt->numTables();
 
   // We can safely multiply `tableCount` as SFNTHeader::numTables is `UInt16`.
-  const SFNTHeader* sfnt = static_cast<const SFNTHeader*>(impl->data);
-  size_t tableCount = sfnt->numTables();
   size_t minDataSize = sizeof(SFNTHeader) + tableCount * sizeof(SFNTHeader::TableRecord);
 
   if (BL_UNLIKELY(impl->size < minDataSize)) {
@@ -182,13 +182,13 @@ static size_t BL_CDECL blMemFontDataImplQueryTables(const BLFontDataImpl* impl_,
   using namespace BLOpenType;
 
   const BLMemFontDataImpl* impl = static_cast<const BLMemFontDataImpl*>(impl_);
-
   const void* data = impl->data;
   size_t dataSize = impl->size;
 
-  // We can safely multiply `tableCount` as SFNTHeader::numTables is `UInt16`.
-  const SFNTHeader* sfnt = static_cast<const SFNTHeader*>(data);
+  const SFNTHeader* sfnt = blOffsetPtr<SFNTHeader>(data, impl->headerOffset);
   size_t tableCount = sfnt->numTables();
+
+  // We can safely multiply `tableCount` as SFNTHeader::numTables is `UInt16`.
   size_t minDataSize = sizeof(SFNTHeader) + tableCount * sizeof(SFNTHeader::TableRecord);
 
   if (BL_UNLIKELY(dataSize < minDataSize)) {
@@ -397,7 +397,7 @@ BLResult blFontLoaderCreateFromData(BLFontLoaderCore* self, const void* data, si
       return blTraceError(BL_ERROR_INVALID_DATA);
 
     size_t ttcHeaderSize = header->calcSize(faceCount);
-    if (BL_UNLIKELY(ttcHeaderSize < size))
+    if (BL_UNLIKELY(ttcHeaderSize > size))
       return blTraceError(BL_ERROR_INVALID_DATA);
 
     offsetArray = header->fonts.array();
@@ -442,12 +442,16 @@ BLResult blFontLoaderCreateFromData(BLFontLoaderCore* self, const void* data, si
 
     blImplInit(fontDataI, BL_IMPL_TYPE_FONT_DATA, BL_IMPL_TRAIT_MUTABLE | BL_IMPL_TRAIT_VIRT, memPoolData);
     fontDataI->virt = &blMemFontDataVirt;
-    fontDataI->data = const_cast<void*>(static_cast<const void*>(sfnt));
-    fontDataI->size = size - faceOffset;
+    //fontDataI->data = const_cast<void*>(static_cast<const void*>(sfnt));
+    //fontDataI->size = size - faceOffset;
+
+    fontDataI->data = const_cast<void*>(data);
+    fontDataI->size = size;
     fontDataI->flags = 0;
     fontDataI->loaderI = nullptr;
+    fontDataI->headerOffset = faceOffset;
 
-    // Cannot fail as we reserved enough space for data for all faces.
+    // Cannot fail as we reserved enough space in the array for all faces.
     fontDataArray.append(BLFontData(fontDataI));
   }
 
@@ -987,6 +991,9 @@ BLResult blFontGetGlyphAdvances(const BLFontCore* self, const void* glyphIdData,
 // ============================================================================
 
 static BLResult BL_CDECL blFontDummyPathSink(BLPathCore* path, const void* info, void* closure) noexcept {
+  BL_UNUSED(path);
+  BL_UNUSED(info);
+  BL_UNUSED(closure);
   return BL_SUCCESS;
 }
 

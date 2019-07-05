@@ -477,7 +477,7 @@ struct BLGlyphItem {
   union {
     uint32_t value;
     struct {
-    #if BL_BYTE_ORDER == 1234
+    #if BL_BYTE_ORDER == 1234 // LITTLE ENDIAN
       BLGlyphId glyphId;
       uint16_t reserved;
     #else
@@ -741,6 +741,7 @@ struct BLFontFaceInfo {
   uint32_t faceIndex;
   //! Font-face flags, see `BLFontFaceFlags`
   uint32_t faceFlags;
+
   //! Font-face diagnostic flags, see`BLFontFaceDiagFlags`.
   uint32_t diagFlags;
 

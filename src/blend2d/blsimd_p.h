@@ -66,10 +66,7 @@ On##LOOP##_MiniSkip:                                                          \
   } while (--mainLoopCnt);                                                    \
                                                                               \
 On##LOOP##_MainSkip:                                                          \
-  if (miniLoopCnt) goto On##LOOP##_MiniBegin;                                 \
-                                                                              \
-On##LOOP##_End:                                                               \
-  (void)0;
+  if (miniLoopCnt) goto On##LOOP##_MiniBegin;
 
 //! \}
 //! \endcond

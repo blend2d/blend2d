@@ -214,7 +214,7 @@ public:
 #ifdef _WIN32
   CONDITION_VARIABLE handle;
 
-  BL_INLINE BLConditionVariable() noexcept { InitializeConditionVariable(&handle); }
+  BL_INLINE BLConditionVariable() noexcept : handle(CONDITION_VARIABLE_INIT) {}
   BL_INLINE ~BLConditionVariable() noexcept {}
 
   BL_INLINE void signal() noexcept { WakeConditionVariable(&handle); }
@@ -238,11 +238,7 @@ public:
 #else
   pthread_cond_t handle;
 
-  #ifdef PTHREAD_COND_INITIALIZER
   BL_INLINE BLConditionVariable() noexcept : handle(PTHREAD_COND_INITIALIZER) {}
-  #else
-  BL_INLINE BLConditionVariable() noexcept { pthread_cond_init(&handle, nullptr); }
-  #endif
   BL_INLINE ~BLConditionVariable() noexcept { pthread_cond_destroy(&handle); }
 
   BL_INLINE void signal() noexcept {

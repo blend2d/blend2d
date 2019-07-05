@@ -33,9 +33,9 @@ struct BLFontDataVirt {
 struct BLFontDataImpl {
   //! Virtual function table.
   const BLFontDataVirt* virt;
-  //! Pointer to the start of font-data (null if the data is provided at table level).
+  //! Pointer to the start of font-data (null if the data is provided at a table level).
   void* data;
-  //! Size of `data` [in bytes] (zero if the data is provided at table level).
+  //! Size of `data` [in bytes] (zero if the data is provided at a table level).
   size_t size;
 
   //! Reference count.
@@ -48,6 +48,8 @@ struct BLFontDataImpl {
   uint16_t memPoolData;
   //! Font-data flags.
   uint32_t flags;
+  //! Offset to the font header from the beginning of `data`.
+  size_t headerOffset;
 };
 
 //! Font data [C Interface - Core].
@@ -182,6 +184,7 @@ struct BLFontLoaderImpl {
   uint16_t memPoolData;
 
   uint8_t faceType;
+  uint8_t reserved[3];
   uint32_t faceCount;
   uint32_t loaderFlags;
 };

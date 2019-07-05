@@ -44,7 +44,8 @@ struct BLRasterWorkCmdFillAnalytic {
   // TODO:
 };
 
-struct BLRasterWorkQueue {
+class BLRasterWorkQueue {
+public:
   BLZoneAllocator zone;
 
   uint8_t* cmdBuf;

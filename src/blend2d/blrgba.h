@@ -23,7 +23,7 @@ struct BLRgba32 {
   union {
     uint32_t value;
     struct {
-    #if BL_BYTE_ORDER == 1234
+    #if BL_BYTE_ORDER == 1234 // LITTLE ENDIAN
       uint32_t b : 8;
       uint32_t g : 8;
       uint32_t r : 8;
@@ -101,7 +101,7 @@ struct BLRgba64 {
   union {
     uint64_t value;
     struct {
-    #if BL_BYTE_ORDER == 1234
+    #if BL_BYTE_ORDER == 1234 // LITTLE ENDIAN
       uint32_t b : 16;
       uint32_t g : 16;
       uint32_t r : 16;
