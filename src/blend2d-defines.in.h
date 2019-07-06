@@ -1,0 +1,10 @@
+#ifndef BLEND2D_DEFINES_H
+#define BLEND2D_DEFINES_H
+
+#cmakedefine BLEND2D_STATIC
+
+#ifdef BLEND2D_STATIC
+#define BL_STATIC
+#endif // BLEND2D_STATIC
+
+#endif // BLEND2D_DEFINES_H

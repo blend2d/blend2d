@@ -605,6 +605,10 @@ if (NOT BLEND2D_EMBED)
                           LIBRARY DESTINATION "lib${LIB_SUFFIX}"
                           ARCHIVE DESTINATION "lib${LIB_SUFFIX}")
 
+  # Configure and install 'blend2d' defines header file 
+  configure_file("${BLEND2D_DIR}/src/blend2d-defines.in.h" "${CMAKE_BINARY_DIR}/blend2d-defines.h" @ONLY)
+  install(FILES "${CMAKE_BINARY_DIR}/blend2d-defines.h"  DESTINATION "include/${_src_dir}")
+
   # Install 'blend2d' header files (private headers are filtered out).
   foreach(_src_file ${BLEND2D_SRC_LIST})
     if ("${_src_file}" MATCHES "\\.h$" AND NOT "${_src_file}" MATCHES "_p\\.h$")
