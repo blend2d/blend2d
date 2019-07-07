@@ -101,18 +101,24 @@ static BLResult BL_CDECL getGlyphBounds(
       endOff = reinterpret_cast<const UInt32*>(locaTable.data + index + 4)->value();
     }
 
-    if (offset < endOff && endOff <= glyfTable.size) {
-      const uint8_t* gPtr = glyfTable.data + offset;
-      size_t remainingSize = endOff - offset;
+    if (endOff <= glyfTable.size) {
+      if (offset < endOff) {
+        const uint8_t* gPtr = glyfTable.data + offset;
+        size_t remainingSize = endOff - offset;
 
-      if (BL_UNLIKELY(remainingSize < sizeof(GlyfTable::GlyphData)))
-        goto InvalidData;
+        if (BL_UNLIKELY(remainingSize < sizeof(GlyfTable::GlyphData)))
+          goto InvalidData;
 
-      boxes[i].reset(reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMin(),
-                     reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMin(),
-                     reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMax(),
-                     reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMax());
-      continue;
+        boxes[i].reset(reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMin(),
+                       reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMin(),
+                       reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMax(),
+                       reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMax());
+        continue;
+      }
+      else {
+        boxes[i].reset();
+        continue;
+      }
     }
 
     // Invalid data or the glyph is not defined. In either case we just zero the box.
