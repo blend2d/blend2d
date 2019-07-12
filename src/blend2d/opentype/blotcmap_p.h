@@ -39,7 +39,7 @@ struct CMapTable {
   struct Encoding {
     UInt16 platformId;
     UInt16 encodingId;
-    UInt32 offset;
+    Offset32 offset;
   };
 
   struct Group {
@@ -159,8 +159,8 @@ struct CMapTable {
 
     struct VarSelector {
       UInt24 varSelector;
-      UInt32 defaultUVSOffset;
-      UInt32 nonDefaultUVSOffset;
+      Offset32 defaultUVSOffset;
+      Offset32 nonDefaultUVSOffset;
     };
 
     struct UnicodeRange {

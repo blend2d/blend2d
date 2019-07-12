@@ -33,13 +33,13 @@ struct LocaTable {
 
   /*
   union {
-    UInt16 offsetArray16[...];
-    UInt32 offsetArray32[...];
+    Offset16 offsetArray16[...];
+    Offset32 offsetArray32[...];
   };
   */
 
-  BL_INLINE const UInt16* offsetArray16() const noexcept { return blOffsetPtr<const UInt16>(this, 0); }
-  BL_INLINE const UInt32* offsetArray32() const noexcept { return blOffsetPtr<const UInt32>(this, 0); }
+  BL_INLINE const Offset16* offsetArray16() const noexcept { return blOffsetPtr<const Offset16>(this, 0); }
+  BL_INLINE const Offset32* offsetArray32() const noexcept { return blOffsetPtr<const Offset32>(this, 0); }
 };
 
 // ============================================================================

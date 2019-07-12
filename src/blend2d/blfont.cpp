@@ -72,7 +72,7 @@ BL_DIAGNOSTIC_POP
 
 static BL_INLINE bool isOpenTypeVersionTag(uint32_t tag) noexcept {
   return tag == BL_MAKE_TAG('O', 'T', 'T', 'O') ||
-         tag == BL_MAKE_TAG( 0,   1 ,  0 ,  0 ) ||
+         tag == BL_MAKE_TAG( 0 ,  1 ,  0 ,  0 ) ||
          tag == BL_MAKE_TAG('t', 'r', 'u', 'e') ;
 }
 
@@ -1187,6 +1187,6 @@ void blFontRtInit(BLRuntimeContext* rt) noexcept {
   blCallCtor(fontI->variations);
   blAssignBuiltInNull(fontI);
 
-  // Initialize implementations.
+  // Initialize OpenType implementations.
   blOTFaceImplRtInit(rt);
 }

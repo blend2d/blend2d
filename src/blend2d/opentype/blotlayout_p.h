@@ -142,9 +142,19 @@ struct GSubContext {
 
 struct GPosContext {
   BLInternalGlyphBufferImpl* gbd;
+  BLGlyphItem* itemData;
+  BLGlyphInfo* infoData;
+  BLGlyphPlacement* placementData;
+  size_t index;
+  size_t end;
 
   BL_INLINE void init(BLInternalGlyphBufferImpl* gbd_) noexcept {
     gbd = gbd_;
+    itemData = gbd->glyphItemData;
+    infoData = gbd->glyphInfoData;
+    placementData = gbd->placementData;
+    index = 0;
+    end = gbd->size;
   }
 
   BL_INLINE void done() noexcept {
@@ -187,12 +197,98 @@ struct CoverageTable {
 };
 
 // ============================================================================
+// [BLOpenType::CoverageIterator]
+// ============================================================================
+
+class CoverageIterator {
+public:
+  typedef CoverageTable::Range Range;
+
+  const void* _array;
+  size_t _size;
+
+  BL_INLINE uint32_t init(const BLFontTable& table) noexcept {
+    const void* array = nullptr;
+    uint32_t size = 0;
+    uint32_t format = 0;
+
+    if (BL_LIKELY(table.size >= CoverageTable::kMinSize)) {
+      format = table.dataAs<CoverageTable>()->format();
+      size = table.dataAs<CoverageTable>()->array.count();
+
+      uint32_t entrySize = format == 1 ? uint32_t(2u) : uint32_t(sizeof(CoverageTable::Range));
+      if (format > 2 || !size || table.size < CoverageTable::kMinSize + size * entrySize)
+        format = 0;
+
+      array = table.dataAs<CoverageTable>()->array.array();
+    }
+
+    _array = array;
+    _size = size;
+
+    return format;
+  }
+
+  template<typename T>
+  BL_INLINE const T& at(size_t index) const noexcept { return static_cast<const T*>(_array)[index]; }
+
+  template<uint32_t Format>
+  BL_INLINE BLGlyphId minGlyphId() const noexcept {
+    if (Format == 1)
+      return at<UInt16>(0).value();
+    else
+      return at<Range>(0).firstGlyph();
+  }
+
+  template<uint32_t Format>
+  BL_INLINE BLGlyphId maxGlyphId() const noexcept {
+    if (Format == 1)
+      return at<UInt16>(_size - 1).value();
+    else
+      return at<Range>(_size - 1).lastGlyph();
+  }
+
+  template<uint32_t Format>
+  BL_INLINE bool find(uint32_t glyphId, uint32_t& coverageIndex) const noexcept {
+    if (Format == 1) {
+      const UInt16* lower = static_cast<const UInt16*>(_array);
+      size_t size = _size;
+
+      while (size_t half = size / 2u) {
+        const UInt16* middle = lower + half;
+        size -= half;
+        if (middle->value() <= glyphId)
+          lower = middle;
+      }
+
+      coverageIndex = uint32_t(size_t(lower - static_cast<const UInt16*>(_array)));
+      return lower->value() == glyphId;
+    }
+    else {
+      const Range* lower = static_cast<const Range*>(_array);
+      size_t size = _size;
+
+      while (size_t half = size / 2u) {
+        const Range* middle = lower + half;
+        size -= half;
+        if (middle->lastGlyph() <= glyphId)
+          lower = middle;
+      }
+
+      coverageIndex = uint32_t(lower->startCoverageIndex()) + glyphId - lower->firstGlyph();
+      return glyphId >= lower->firstGlyph() && glyphId <= lower->lastGlyph();
+    }
+  }
+};
+
+// ============================================================================
 // [BLOpenType::ClassDefTable]
 // ============================================================================
 
 //! OpenType class-definition table.
 struct ClassDefTable {
-  enum : uint32_t { kMinSize = 4 };
+  // Let's assume that Format2 table would contain at least one record.
+  enum : uint32_t { kMinSize = 6 };
 
   struct Range {
     UInt16 firstGlyph;
@@ -219,6 +315,108 @@ struct ClassDefTable {
 
   BL_INLINE const Format1* format1() const noexcept { return blOffsetPtr<const Format1>(this, 0); }
   BL_INLINE const Format2* format2() const noexcept { return blOffsetPtr<const Format2>(this, 0); }
+};
+
+// ============================================================================
+// [BLOpenType::ClassDefIterator]
+// ============================================================================
+
+class ClassDefIterator {
+public:
+  typedef ClassDefTable::Range Range;
+
+  const void* _array;
+  size_t _size;
+  uint32_t _firstGlyph;
+
+  BL_INLINE uint32_t init(const BLFontTable& table) noexcept {
+    const void* array = nullptr;
+    uint32_t size = 0;
+    uint32_t format = 0;
+    uint32_t firstGlyph = 0;
+
+    if (BL_LIKELY(table.size >= ClassDefTable::kMinSize)) {
+      size_t requiredTableSize = 0;
+      format = table.dataAs<ClassDefTable>()->format();
+
+      switch (format) {
+        case 1: {
+          const ClassDefTable::Format1* fmt1 = table.dataAs<ClassDefTable::Format1>();
+
+          size = fmt1->classValues.count();
+          array = fmt1->classValues.array();
+          firstGlyph = fmt1->firstGlyph();
+          requiredTableSize = sizeof(ClassDefTable::Format1) + size * 2u;
+          break;
+        }
+
+        case 2: {
+          const ClassDefTable::Format2* fmt2 = table.dataAs<ClassDefTable::Format2>();
+
+          size = fmt2->ranges.count();
+          array = fmt2->ranges.array();
+          // Minimum table size that we check is 6, so we are still fine here...
+          firstGlyph = fmt2->ranges.array()[0].firstGlyph();
+          requiredTableSize = sizeof(ClassDefTable::Format2) + size * sizeof(ClassDefTable::Range);
+          break;
+        }
+
+        default:
+          format = 0;
+          break;
+      }
+
+      if (!size || requiredTableSize > table.size)
+        format = 0;
+    }
+
+    _array = array;
+    _size = size;
+    _firstGlyph = firstGlyph;
+
+    return format;
+  }
+
+  template<typename T>
+  BL_INLINE const T& at(size_t index) const noexcept { return static_cast<const T*>(_array)[index]; }
+
+  template<uint32_t Format>
+  BL_INLINE BLGlyphId minGlyphId() const noexcept {
+    return _firstGlyph;
+  }
+
+  template<uint32_t Format>
+  BL_INLINE BLGlyphId maxGlyphId() const noexcept {
+    if (Format == 1)
+      return _firstGlyph + uint32_t(_size) - 1;
+    else
+      return at<Range>(_size - 1).lastGlyph();
+  }
+
+  template<uint32_t Format>
+  BL_INLINE bool find(uint32_t glyphId, uint32_t& classValue) const noexcept {
+    if (Format == 1) {
+      size_t index = glyphId - _firstGlyph;
+      size_t fixedIndex = blMin(index, _size - 1);
+
+      classValue = at<UInt16>(fixedIndex).value();
+      return index == fixedIndex;
+    }
+    else {
+      const Range* lower = static_cast<const Range*>(_array);
+      size_t size = _size;
+
+      while (size_t half = size / 2u) {
+        const Range* middle = lower + half;
+        size -= half;
+        if (middle->lastGlyph() <= glyphId)
+          lower = middle;
+      }
+
+      classValue = lower->classValue();
+      return glyphId >= lower->firstGlyph() && glyphId <= lower->lastGlyph();
+    }
+  }
 };
 
 // ============================================================================
@@ -258,10 +456,10 @@ struct GDefTable {
     enum : uint32_t { kMinSize = 12 };
 
     F16x16 version;
-    UInt16 glyphClassDefOffset;
-    UInt16 attachListOffset;
-    UInt16 ligCaretListOffset;
-    UInt16 markAttachClassDefOffset;
+    Offset16 glyphClassDefOffset;
+    Offset16 attachListOffset;
+    Offset16 ligCaretListOffset;
+    Offset16 markAttachClassDefOffset;
   };
 
   struct HeaderV1_2 : public HeaderV1_0 {
@@ -300,15 +498,15 @@ struct GAnyTable {
     enum : uint32_t { kMinSize = 10 };
 
     F16x16 version;
-    UInt16 scriptListOffset;
-    UInt16 featureListOffset;
-    UInt16 lookupListOffset;
+    Offset16 scriptListOffset;
+    Offset16 featureListOffset;
+    Offset16 lookupListOffset;
   };
 
   struct HeaderV1_1 : public HeaderV1_0 {
     enum : uint32_t { kMinSize = 14 };
 
-    UInt32 featureVariationsOffset;
+    Offset32 featureVariationsOffset;
   };
 
   struct LookupHeader {
@@ -318,19 +516,19 @@ struct GAnyTable {
   };
 
   struct LookupHeaderWithCoverage : public LookupHeader {
-    UInt16 coverageOffset;
+    Offset16 coverageOffset;
   };
 
   struct ExtensionLookup : public LookupHeader {
     UInt16 lookupType;
-    UInt32 offset;
+    Offset32 offset;
   };
 
   typedef TagRef16 LangSysRecord;
   struct LangSysTable {
     enum : uint32_t { kMinSize = 6 };
 
-    UInt16 lookupOrderOffset;
+    Offset16 lookupOrderOffset;
     UInt16 requiredFeatureIndex;
     Array16<UInt16> featureIndexes;
   };
@@ -348,7 +546,7 @@ struct GAnyTable {
     typedef TagRef16 Record;
     typedef Array16<Record> List;
 
-    UInt16 featureParamsOffset;
+    Offset16 featureParamsOffset;
     Array16<UInt16> lookupListIndexes;
   };
 
@@ -367,7 +565,7 @@ struct GAnyTable {
 
     UInt16 lookupType;
     UInt16 lookupFlags;
-    Array16<UInt16> lookupOffsets;
+    Array16<Offset16> lookupOffsets;
     /*
     UInt16 markFilteringSet;
     */
@@ -402,8 +600,8 @@ struct GSubTable : public GAnyTable {
   };
 
   struct SubstLookupRecord {
-    UInt16 glyphSequenceIndex;
-    UInt16 lookupListIndex;
+    Offset16 glyphSequenceIndex;
+    Offset16 lookupListIndex;
   };
 
   // --------------------------------------------------------------------------
@@ -425,7 +623,7 @@ struct GSubTable : public GAnyTable {
   typedef Array16<UInt16> Sequence;
 
   struct MultipleSubst1 : public LookupHeaderWithCoverage {
-    Array16<UInt16> sequenceOffsets;
+    Array16<Offset16> sequenceOffsets;
   };
 
   // --------------------------------------------------------------------------
@@ -435,7 +633,7 @@ struct GSubTable : public GAnyTable {
   typedef Array16<UInt16> AlternateSet;
 
   struct AlternateSubst1 : public LookupHeaderWithCoverage {
-    Array16<UInt16> altSetOffsets;
+    Array16<Offset16> altSetOffsets;
   };
 
   // --------------------------------------------------------------------------
@@ -450,7 +648,7 @@ struct GSubTable : public GAnyTable {
   typedef Array16<UInt16> LigatureSet;
 
   struct LigatureSubst1 : public LookupHeaderWithCoverage {
-    Array16<UInt16> ligSetOffsets;
+    Array16<Offset16> ligSetOffsets;
   };
 
   // --------------------------------------------------------------------------
@@ -474,19 +672,19 @@ struct GSubTable : public GAnyTable {
   typedef Array16<UInt16> SubClassSet;
 
   struct ContextSubst1 : public LookupHeaderWithCoverage {
-    Array16<UInt16> subRuleSetOffsets;
+    Array16<Offset16> subRuleSetOffsets;
   };
 
   struct ContextSubst2 : public LookupHeaderWithCoverage {
-    UInt16 classDefOffset;
-    Array16<UInt16> subRuleSetOffsets;
+    Offset16 classDefOffset;
+    Array16<Offset16> subRuleSetOffsets;
   };
 
   struct ContextSubst3 : public LookupHeader {
     UInt16 glyphCount;
     UInt16 substCount;
     /*
-    UInt16 coverageOffsetArray[glyphCount];
+    Offset16 coverageOffsetArray[glyphCount];
     SubstLookupRecord substArray[substCount];
     */
 
@@ -518,24 +716,24 @@ struct GSubTable : public GAnyTable {
   typedef Array16<UInt16> ChainSubClassRuleSet;
 
   struct ChainContextSubst1 : public LookupHeaderWithCoverage {
-    Array16<UInt16> offsets;
+    Array16<Offset16> offsets;
   };
 
   struct ChainContextSubst2 : public LookupHeaderWithCoverage {
-    UInt16 backtrackClassDefOffset;
-    UInt16 inputClassDefOffset;
-    UInt16 lookaheadClassDefOffset;
-    Array16<UInt16> chainSubClassSets;
+    Offset16 backtrackClassDefOffset;
+    Offset16 inputClassDefOffset;
+    Offset16 lookaheadClassDefOffset;
+    Array16<Offset16> chainSubClassSets;
   };
 
   struct ChainContextSubst3 : public LookupHeader {
     UInt16 backtrackGlyphCount;
     /*
-    UInt16 backtrackCoverageOffsets[backtrackGlyphCount];
+    Offset16 backtrackCoverageOffsets[backtrackGlyphCount];
     UInt16 inputGlyphCount;
-    UInt16 inputCoverageOffsets[inputGlyphCount - 1];
+    Offset16 inputCoverageOffsets[inputGlyphCount - 1];
     UInt16 lookaheadGlyphCount;
-    UInt16 lookaheadCoverageOffsets[lookaheadGlyphCount];
+    Offset16 lookaheadCoverageOffsets[lookaheadGlyphCount];
     UInt16 substCount;
     SubstLookupRecord substArray[substCount];
     */
@@ -556,9 +754,9 @@ struct GSubTable : public GAnyTable {
   struct ReverseChainSingleSubst1 : public LookupHeaderWithCoverage {
     UInt16 backtrackGlyphCount;
     /*
-    UInt16 backtrackCoverageOffsets[backtrackGlyphCount];
+    Offset16 backtrackCoverageOffsets[backtrackGlyphCount];
     UInt16 lookaheadGlyphCount;
-    UInt16 lookaheadCoverageOffsets[lookaheadGlyphCount];
+    Offset16 lookaheadCoverageOffsets[lookaheadGlyphCount];
     UInt16 substGlyphCount;
     UInt16 substGlyphArray[substGlyphCount];
     */
@@ -684,10 +882,17 @@ struct GPosTable : public GAnyTable {
 
     UInt16 valueFormat1;
     UInt16 valueFormat2;
-    UInt16 classDef1Offset;
-    UInt16 classDef2Offset;
+    Offset16 classDef1Offset;
+    Offset16 classDef2Offset;
     UInt16 class1Count;
     UInt16 class2Count;
+    /*
+    struct ClassRecord {
+      ValueRecord value1;
+      ValueRecord value2;
+    };
+    ClassRecord classRecords[class1Count * class2Count];
+    */
   };
 
   // --------------------------------------------------------------------------
@@ -695,12 +900,12 @@ struct GPosTable : public GAnyTable {
   // --------------------------------------------------------------------------
 
   struct EntryExit {
-    UInt16 entryAnchorOffset;
-    UInt16 exitAnchorOffset;
+    Offset16 entryAnchorOffset;
+    Offset16 exitAnchorOffset;
   };
 
   struct CursiveAttachment1 : public LookupHeaderWithCoverage {
-    enum : uint32_t { kMinSize = 6 };
+    enum : uint32_t { kMinSize = 8 };
 
     Array16<EntryExit> entryExits;
   };
@@ -712,11 +917,11 @@ struct GPosTable : public GAnyTable {
   struct MarkToBaseAttachment1 : public LookupHeader {
     enum : uint32_t { kMinSize = 12 };
 
-    UInt16 markCoverageOffset;
-    UInt16 baseCoverageOffset;
+    Offset16 markCoverageOffset;
+    Offset16 baseCoverageOffset;
     UInt16 markClassCount;
-    UInt16 markArrayOffset;
-    UInt16 baseArrayOffset;
+    Offset16 markArrayOffset;
+    Offset16 baseArrayOffset;
   };
 
   // --------------------------------------------------------------------------
@@ -726,11 +931,11 @@ struct GPosTable : public GAnyTable {
   struct MarkToLigatureAttachment1 : public LookupHeader {
     enum : uint32_t { kMinSize = 12 };
 
-    UInt16 markCoverageOffset;
-    UInt16 ligatureCoverageOffset;
+    Offset16 markCoverageOffset;
+    Offset16 ligatureCoverageOffset;
     UInt16 markClassCount;
-    UInt16 markArrayOffset;
-    UInt16 ligatureArrayOffset;
+    Offset16 markArrayOffset;
+    Offset16 ligatureArrayOffset;
   };
 
   // --------------------------------------------------------------------------
@@ -740,11 +945,11 @@ struct GPosTable : public GAnyTable {
   struct MarkToMarkAttachment1 : public LookupHeader {
     enum : uint32_t { kMinSize = 12 };
 
-    UInt16 mark1CoverageOffset;
-    UInt16 mark2CoverageOffset;
+    Offset16 mark1CoverageOffset;
+    Offset16 mark2CoverageOffset;
     UInt16 markClassCount;
-    UInt16 mark1ArrayOffset;
-    UInt16 mark2ArrayOffset;
+    Offset16 mark1ArrayOffset;
+    Offset16 mark2ArrayOffset;
   };
 
   // --------------------------------------------------------------------------
@@ -760,7 +965,7 @@ struct GPosTable : public GAnyTable {
   struct ContextPositioning2 : public LookupHeaderWithCoverage {
     enum : uint32_t { kMinSize = 8 };
 
-    UInt16 classDefOffset;
+    Offset16 classDefOffset;
     Array16<UInt16> posClassSets;
   };
 

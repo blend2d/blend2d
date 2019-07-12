@@ -133,7 +133,7 @@ static const LookupInfo gLookupInfo[2] = {
       { uint8_t(6)  }, // Lookup Type #7 - Format #1.
       { uint8_t(8)  }, // Lookup Type #7 - Format #2.
       { uint8_t(6)  }, // Lookup Type #7 - Format #3.
-      // TODO: [OPENTYPE GSUB]
+      // TODO: [OPENTYPE GPOS]
       { uint8_t(2)  }, // Lookup Type #8 - Format #1.
       { uint8_t(2)  }, // Lookup Type #8 - Format #2.
       { uint8_t(2)  }  // Lookup Type #8 - Format #3.
@@ -175,7 +175,7 @@ static bool checkRawOffsetArray(Validator* self, Trace trace, BLFontTable data, 
   if (BL_UNLIKELY(data.size < headerSize))
     return trace.fail("%s: Table is truncated [Size=%zu RequiredSize=%zu]\n", tableName, data.size, headerSize);
 
-  const UInt16* array = data.dataAs<Array16<UInt16>>()->array();
+  const UInt16* array = data.dataAs<Array16<Offset16>>()->array();
   for (uint32_t i = 0; i < count; i++) {
     uint32_t subOffset = array[i].value();
     if (BL_UNLIKELY(subOffset < headerSize || subOffset >= data.size))
@@ -384,91 +384,6 @@ static bool checkLookupWithCoverage(Validator* self, Trace trace, BLFontTable da
 
   return checkCoverageTable(self, trace, blFontSubTable(data, coverageOffset), countCoverageEntries);
 }
-
-// ============================================================================
-// [BLOpenType::LayoutImpl - CoverageIterator]
-// ============================================================================
-
-class CoverageIterator {
-public:
-  typedef CoverageTable::Range Range;
-
-  const void* _array;
-  size_t _size;
-
-  BL_INLINE uint32_t init(const BLFontTable& table) noexcept {
-    const void* array = nullptr;
-    uint32_t size = 0;
-    uint32_t format = 0;
-
-    if (BL_LIKELY(table.size >= CoverageTable::kMinSize)) {
-      format = table.dataAs<CoverageTable>()->format();
-      size = table.dataAs<CoverageTable>()->array.count();
-
-      uint32_t entrySize = format == 1 ? uint32_t(2u) : uint32_t(sizeof(CoverageTable::Range));
-      if (format > 2 || !size || table.size < CoverageTable::kMinSize + size * entrySize)
-        format = 0;
-
-      array = table.dataAs<CoverageTable>()->array.array();
-    }
-
-    _array = array;
-    _size = size;
-
-    return format;
-  }
-
-  template<typename T>
-  BL_INLINE const T& at(size_t index) const noexcept { return static_cast<const T*>(_array)[index]; }
-
-  template<uint32_t Format>
-  BL_INLINE BLGlyphId minGlyphId() const noexcept {
-    if (Format == 1)
-      return at<UInt16>(0).value();
-    else
-      return at<Range>(0).firstGlyph();
-  }
-
-  template<uint32_t Format>
-  BL_INLINE BLGlyphId maxGlyphId() const noexcept {
-    if (Format == 1)
-      return at<UInt16>(_size - 1).value();
-    else
-      return at<Range>(_size - 1).lastGlyph();
-  }
-
-  template<uint32_t Format>
-  BL_INLINE bool find(uint32_t glyphId, uint32_t& coverageIndex) const noexcept {
-    if (Format == 1) {
-      const UInt16* lower = static_cast<const UInt16*>(_array);
-      size_t size = _size;
-
-      while (size_t half = size / 2u) {
-        const UInt16* middle = lower + half;
-        size -= half;
-        if (middle->value() <= glyphId)
-          lower = middle;
-      }
-
-      coverageIndex = uint32_t(size_t(lower - static_cast<const UInt16*>(_array)));
-      return lower->value() == glyphId;
-    }
-    else {
-      const Range* lower = static_cast<const Range*>(_array);
-      size_t size = _size;
-
-      while (size_t half = size / 2u) {
-        const Range* middle = lower + half;
-        size -= half;
-        if (middle->lastGlyph() <= glyphId)
-          lower = middle;
-      }
-
-      coverageIndex = uint32_t(lower->startCoverageIndex()) + glyphId - lower->firstGlyph();
-      return glyphId >= lower->firstGlyph() && glyphId <= lower->lastGlyph();
-    }
-  }
-};
 
 // ============================================================================
 // [BLOpenType::LayoutImpl - GDEF - Init]
@@ -712,7 +627,7 @@ static BL_INLINE bool checkGSubLookupType2Format1(Validator* self, Trace trace, 
     return trace.fail("Table is too small [Size=%zu Required=%zu]\n", table.size, headerSize);
 
   // Offsets to glyph sequences.
-  const UInt16* offsetArray = lookup->sequenceOffsets.array();
+  const Offset16* offsetArray = lookup->sequenceOffsets.array();
   size_t endOffset = table.size - 4u;
 
   for (uint32_t i = 0; i < seqSetCount; i++) {
@@ -860,7 +775,7 @@ static BL_INLINE bool checkGSubLookupType3Format1(Validator* self, Trace trace, 
     return trace.fail("Table is too small [Size=%zu Required=%zu]\n", table.size, headerSize);
 
   // Offsets to AlternateSet tables.
-  const UInt16* offsetArray = lookup->altSetOffsets.array();
+  const Offset16* offsetArray = lookup->altSetOffsets.array();
   size_t endOffset = table.size - 4u;
 
   for (uint32_t i = 0; i < altSetCount; i++) {
@@ -991,7 +906,7 @@ static BL_INLINE bool checkGSubLookupType4Format1(Validator* self, Trace trace, 
     return trace.fail("Table is too small [Size=%zu Required=%zu]\n", table.size, headerSize);
 
   // Offsets to LigatureSet tables.
-  const UInt16* ligatureSetOffsetArray = lookup->ligSetOffsets.array();
+  const Offset16* ligatureSetOffsetArray = lookup->ligSetOffsets.array();
   size_t ligatureSetOffsetEnd = table.size - 4u;
 
   for (uint32_t i = 0; i < ligatureSetCount; i++) {
@@ -1011,7 +926,7 @@ static BL_INLINE bool checkGSubLookupType4Format1(Validator* self, Trace trace, 
     if (BL_UNLIKELY(ligatureSetEnd > table.size))
       return trace.fail("LigatureSet #%u [%u] count of Ligatures [%u] overflows the table size by [%zu] bytes\n", i, ligatureCount, size_t(table.size - ligatureSetEnd));
 
-    const UInt16* ligatureOffsetArray = ligatureSet->array();
+    const Offset16* ligatureOffsetArray = ligatureSet->array();
     for (uint32_t ligatureIndex = 0; ligatureIndex < ligatureCount; ligatureIndex++) {
       uint32_t ligatureOffset = ligatureSetOffset + ligatureOffsetArray[ligatureIndex].value();
 
@@ -1033,7 +948,7 @@ static BL_INLINE bool checkGSubLookupType4Format1(Validator* self, Trace trace, 
 }
 
 static BL_INLINE bool matchLigature(
-  BLFontTableT<Array16<UInt16>> ligOffsets,
+  BLFontTableT<Array16<Offset16>> ligOffsets,
   uint32_t ligCount,
   const BLGlyphItem* inItem,
   size_t maxGlyphCount,
@@ -1103,7 +1018,7 @@ static BL_INLINE BLResult applyGSubLookupType4Format1(const BLOTFaceImpl* faceI,
         if (covIt.find<CoverageFormat>(glyphId, coverageIndex) || coverageIndex >= ligSetCount) {
           uint32_t ligSetOffset = table->ligSetOffsets.array()[coverageIndex].value();
           if (BL_LIKELY(ligSetOffset <= maxLigSetOffset)) {
-            BLFontTableT<Array16<UInt16>> ligOffsets { blFontSubTable(table, ligSetOffset) };
+            BLFontTableT<Array16<Offset16>> ligOffsets { blFontSubTable(table, ligSetOffset) };
             uint32_t ligCount = ligOffsets->count();
             if (BL_LIKELY(ligCount && ligSetOffset + ligCount * 2u <= maxLigSetOffset)) {
               uint32_t ligGlyphId;
@@ -1141,7 +1056,7 @@ OutPlace:
         if (covIt.find<CoverageFormat>(glyphId, coverageIndex) || coverageIndex >= ligSetCount) {
           uint32_t ligSetOffset = table->ligSetOffsets.array()[coverageIndex].value();
           if (BL_LIKELY(ligSetOffset <= maxLigSetOffset)) {
-            BLFontTableT<Array16<UInt16>> ligOffsets { blFontSubTable(table, ligSetOffset) };
+            BLFontTableT<Array16<Offset16>> ligOffsets { blFontSubTable(table, ligSetOffset) };
             uint32_t ligCount = ligOffsets->count();
             if (BL_LIKELY(ligCount && ligSetOffset + ligCount * 2u <= maxLigSetOffset)) {
               uint32_t ligGlyphId;
@@ -1201,7 +1116,7 @@ static BL_INLINE bool checkGSubLookupType5Format1_2(Validator* self, Trace trace
     return trace.fail("Table is too small [Size=%zu Required=%zu]\n", table.size, headerSize);
 
   // Offsets to SubRuleSet tables.
-  const UInt16* subRuleSetOffsetArray = lookup->subRuleSetOffsets.array();
+  const Offset16* subRuleSetOffsetArray = lookup->subRuleSetOffsets.array();
   size_t subRuleSetOffsetEnd = table.size - 4u;
 
   for (uint32_t i = 0; i < subRuleSetCount; i++) {
@@ -1221,7 +1136,7 @@ static BL_INLINE bool checkGSubLookupType5Format1_2(Validator* self, Trace trace
     if (BL_UNLIKELY(subRuleSetOffset > table.size))
       return trace.fail("SubRuleSet #%u [%u] count of SubRules [%u] overflows the table size by [%zu] bytes\n", i, subRuleCount, size_t(table.size - subRuleSetEnd));
 
-    const UInt16* subRuleOffsetArray = subRuleSet->array();
+    const Offset16* subRuleOffsetArray = subRuleSet->array();
     for (uint32_t subRuleIndex = 0; subRuleIndex < subRuleCount; subRuleIndex++) {
       uint32_t subRuleOffset = subRuleSetOffset + subRuleOffsetArray[subRuleIndex].value();
 
@@ -1274,7 +1189,7 @@ static BL_INLINE bool checkGSubLookupType5Format3(Validator* self, Trace trace, 
 }
 
 static BL_INLINE bool matchSubRule(
-  BLFontTableT<Array16<UInt16>> subRuleOffsets,
+  BLFontTableT<Array16<Offset16>> subRuleOffsets,
   uint32_t subRuleCount,
   const BLGlyphItem* itemData,
   uint32_t maxGlyphCount,
@@ -1354,7 +1269,7 @@ static BL_INLINE BLResult applyGSubLookupType5Format1(const BLOTFaceImpl* faceI,
       if (covIt.find<CoverageFormat>(glyphId, coverageIndex) || coverageIndex >= subRuleSetCount) {
         uint32_t subRuleSetOffset = table->subRuleSetOffsets.array()[coverageIndex].value();
         if (BL_LIKELY(subRuleSetOffset <= maxSubRuleSetOffset)) {
-          BLFontTableT<Array16<UInt16>> subRuleOffsets { blFontSubTable(table, subRuleSetOffset) };
+          BLFontTableT<Array16<Offset16>> subRuleOffsets { blFontSubTable(table, subRuleSetOffset) };
           uint32_t subRuleCount = subRuleOffsets->count();
           if (BL_LIKELY(subRuleCount && subRuleSetOffset + subRuleCount * 2u <= maxSubRuleSetOffset)) {
             const GSubTable::SubRule* subRule;
@@ -1431,68 +1346,88 @@ static bool checkGSubLookup(Validator* self, Trace trace, BLFontTable table, uin
 }
 
 static BLResult applyGSubLookup(const BLOTFaceImpl* faceI, GSubContext& ctx, BLFontTable table, uint32_t lookupId, uint32_t lookupFlags) noexcept {
+  #define GSUB_APPLY_COMMON(FN, TABLE) \
+    CoverageIterator covIt; \
+    switch (covIt.init(blFontSubTableChecked(table, table.dataAs<TABLE>()->coverageOffset()))) { \
+      case 1: return FN<1>(faceI, ctx, table, lookupFlags, covIt); \
+      case 2: return FN<2>(faceI, ctx, table, lookupFlags, covIt); \
+    }
+
   if (BL_LIKELY(table.size >= gLookupInfo[LookupInfo::kKindGSub].idEntries[lookupId].headerSize)) {
     switch (lookupId) {
       case LookupInfo::kGSubType1Format1: {
-        CoverageIterator covIt;
-        switch (covIt.init(blFontSubTableChecked(table, table.dataAs<GAnyTable::LookupHeaderWithCoverage>()->coverageOffset()))) {
-          case 1: return applyGSubLookupType1Format1<1>(faceI, ctx, table, lookupFlags, covIt);
-          case 2: return applyGSubLookupType1Format1<2>(faceI, ctx, table, lookupFlags, covIt);
-        }
+        GSUB_APPLY_COMMON(applyGSubLookupType1Format1, GSubTable::LookupHeaderWithCoverage)
         break;
       }
 
       case LookupInfo::kGSubType1Format2: {
-        CoverageIterator covIt;
-        switch (covIt.init(blFontSubTableChecked(table, table.dataAs<GAnyTable::LookupHeaderWithCoverage>()->coverageOffset()))) {
-          case 1: return applyGSubLookupType1Format2<1>(faceI, ctx, table, lookupFlags, covIt);
-          case 2: return applyGSubLookupType1Format2<2>(faceI, ctx, table, lookupFlags, covIt);
-        }
+        GSUB_APPLY_COMMON(applyGSubLookupType1Format2, GSubTable::LookupHeaderWithCoverage)
         break;
       }
 
       case LookupInfo::kGSubType2Format1: {
-        CoverageIterator covIt;
-        switch (covIt.init(blFontSubTableChecked(table, table.dataAs<GAnyTable::LookupHeaderWithCoverage>()->coverageOffset()))) {
-          case 1: return applyGSubLookupType2Format1<1>(faceI, ctx, table, lookupFlags, covIt);
-          case 2: return applyGSubLookupType2Format1<2>(faceI, ctx, table, lookupFlags, covIt);
-        }
+        GSUB_APPLY_COMMON(applyGSubLookupType2Format1, GSubTable::LookupHeaderWithCoverage)
         break;
       }
 
       case LookupInfo::kGSubType3Format1: {
-        CoverageIterator covIt;
-        switch (covIt.init(blFontSubTableChecked(table, table.dataAs<GAnyTable::LookupHeaderWithCoverage>()->coverageOffset()))) {
-          case 1: return applyGSubLookupType3Format1<1>(faceI, ctx, table, lookupFlags, covIt);
-          case 2: return applyGSubLookupType3Format1<2>(faceI, ctx, table, lookupFlags, covIt);
-        }
+        GSUB_APPLY_COMMON(applyGSubLookupType3Format1, GSubTable::LookupHeaderWithCoverage)
         break;
       }
 
       case LookupInfo::kGSubType4Format1: {
-        CoverageIterator covIt;
-        switch (covIt.init(blFontSubTableChecked(table, table.dataAs<GAnyTable::LookupHeaderWithCoverage>()->coverageOffset()))) {
-          case 1: return applyGSubLookupType4Format1<1>(faceI, ctx, table, lookupFlags, covIt);
-          case 2: return applyGSubLookupType4Format1<2>(faceI, ctx, table, lookupFlags, covIt);
-        }
+        GSUB_APPLY_COMMON(applyGSubLookupType4Format1, GSubTable::LookupHeaderWithCoverage)
         break;
       }
 
       /*
       case LookupInfo::kGSubType5Format1: {
-        CoverageIterator covIt;
-        switch (covIt.init(blFontSubTableChecked(table, table.dataAs<GAnyTable::LookupHeaderWithCoverage>()->coverageOffset()))) {
-          case 1: return applyGSubLookupType5Format1<1>(faceI, ctx, table, lookupFlags, covIt);
-          case 2: return applyGSubLookupType5Format1<2>(faceI, ctx, table, lookupFlags, covIt);
-        }
+        GSUB_APPLY_COMMON(applyGSubLookupType5Format1, GSubTable::LookupHeaderWithCoverage)
         break;
       }
       */
     }
   }
 
+  #undef GSUB_APPLY_COMMON
+
   ctx.advance(ctx.inRemaining());
   return BL_SUCCESS;
+}
+
+// ============================================================================
+// [BLOpenType::LayoutImpl - GPOS - Utilities]
+// ============================================================================
+
+template<typename T>
+static BL_INLINE const uint8_t* binarySearchGlyphIdInVarStruct(const uint8_t* array, size_t itemSize, size_t arraySize, uint32_t glyphId, size_t offset = 0) noexcept {
+  if (!arraySize)
+    return nullptr;
+
+  const uint8_t* lower = array;
+  while (size_t half = arraySize / 2u) {
+    const uint8_t* middle = lower + half * itemSize;
+    arraySize -= half;
+    if (reinterpret_cast<const T*>(middle + offset)->value() <= glyphId)
+      lower = middle;
+  }
+
+  if (reinterpret_cast<const T*>(lower + offset)->value() != glyphId)
+    lower = nullptr;
+  return lower;
+}
+
+static BL_INLINE const Int16* applyGPosValue(const Int16* p, uint32_t valueFormat, BLGlyphPlacement* glyphPlacement) noexcept {
+  int32_t v;
+  if (valueFormat & GPosTable::kValueXPlacement      ) { v = p->value(); p++; glyphPlacement->placement.x += v; }
+  if (valueFormat & GPosTable::kValueYPlacement      ) { v = p->value(); p++; glyphPlacement->placement.y += v; }
+  if (valueFormat & GPosTable::kValueXAdvance        ) { v = p->value(); p++; glyphPlacement->advance.x += v; }
+  if (valueFormat & GPosTable::kValueYAdvance        ) { v = p->value(); p++; glyphPlacement->advance.y += v; }
+  if (valueFormat & GPosTable::kValueXPlacementDevice) { v = p->value(); p++; }
+  if (valueFormat & GPosTable::kValueYPlacementDevice) { v = p->value(); p++; }
+  if (valueFormat & GPosTable::kValueXAdvanceDevice  ) { v = p->value(); p++; }
+  if (valueFormat & GPosTable::kValueYAdvanceDevice  ) { v = p->value(); p++; }
+  return p;
 }
 
 // ============================================================================
@@ -1508,13 +1443,47 @@ static BL_INLINE bool checkGPosLookupType1Format1(Validator* self, Trace trace, 
     return false;
 
   const GPosTable::SingleAdjustment1* lookup = table.dataAs<GPosTable::SingleAdjustment1>();
-  uint32_t valueDataSize = sizeOfValueRecordByFormat(lookup->valueFormat());
+  uint32_t valueRecordSize = sizeOfValueRecordByFormat(lookup->valueFormat());
 
-  size_t headerSize = sizeof(GPosTable::SingleAdjustment1) + valueDataSize;
+  size_t headerSize = sizeof(GPosTable::SingleAdjustment1) + valueRecordSize;
   if (BL_UNLIKELY(table.size < headerSize))
     return trace.fail("Table is truncated [Size=%zu Required=%zu]\n", table.size, headerSize);
 
   return true;
+}
+
+template<uint32_t CoverageFormat>
+static BL_INLINE BLResult applyGPosLookupType1Format1(const BLOTFaceImpl* faceI, GPosContext& ctx, BLFontTableT<GPosTable::SingleAdjustment1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
+  size_t index = ctx.index;
+  size_t end = ctx.end;
+
+  uint32_t minGlyphId = covIt.minGlyphId<CoverageFormat>();
+  uint32_t maxGlyphId = covIt.maxGlyphId<CoverageFormat>();
+
+  uint32_t valueFormat = table->valueFormat();
+  if (BL_UNLIKELY(!valueFormat))
+    return BL_SUCCESS;
+
+  uint32_t valueRecordSize = sizeOfValueRecordByFormat(valueFormat);
+  if (BL_UNLIKELY(table.size < GPosTable::PairAdjustment1::kMinSize + valueRecordSize))
+    return BL_SUCCESS;
+
+  BLGlyphItem* itemData = ctx.itemData;
+  BLGlyphPlacement* placementData = ctx.placementData;
+
+  for (; index < end; index++) {
+    uint32_t glyphId = itemData[index].glyphId;
+
+    if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
+      uint32_t coverageIndex;
+      if (covIt.find<CoverageFormat>(glyphId, coverageIndex)) {
+        const Int16* p = reinterpret_cast<const Int16*>(table.data + GPosTable::PairAdjustment1::kMinSize);
+        applyGPosValue(p, valueFormat, &placementData[index]);
+      }
+    }
+  }
+
+  return BL_SUCCESS;
 }
 
 static BL_INLINE bool checkGPosLookupType1Format2(Validator* self, Trace trace, BLFontTable table) noexcept {
@@ -1524,13 +1493,48 @@ static BL_INLINE bool checkGPosLookupType1Format2(Validator* self, Trace trace, 
 
   const GPosTable::SingleAdjustment2* lookup = table.dataAs<GPosTable::SingleAdjustment2>();
   uint32_t valueCount = lookup->valueCount();
-  uint32_t valueDataSize = sizeOfValueRecordByFormat(lookup->valueFormat());
+  uint32_t valueRecordSize = sizeOfValueRecordByFormat(lookup->valueFormat());
 
-  size_t headerSize = sizeof(GPosTable::SingleAdjustment2) + valueDataSize * valueCount;
+  size_t headerSize = sizeof(GPosTable::SingleAdjustment2) + valueRecordSize * valueCount;
   if (BL_UNLIKELY(table.size < headerSize))
     return trace.fail("Table is truncated [Size=%zu Required=%zu]\n", table.size, headerSize);
 
   return true;
+}
+
+template<uint32_t CoverageFormat>
+static BL_INLINE BLResult applyGPosLookupType1Format2(const BLOTFaceImpl* faceI, GPosContext& ctx, BLFontTableT<GPosTable::SingleAdjustment2> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
+  size_t index = ctx.index;
+  size_t end = ctx.end;
+
+  uint32_t minGlyphId = covIt.minGlyphId<CoverageFormat>();
+  uint32_t maxGlyphId = covIt.maxGlyphId<CoverageFormat>();
+
+  uint32_t valueFormat = table->valueFormat();
+  if (BL_UNLIKELY(!valueFormat))
+    return BL_SUCCESS;
+
+  uint32_t valueRecordCount = table->valueCount();
+  uint32_t valueRecordSize = sizeOfValueRecordByFormat(valueFormat);
+  if (BL_UNLIKELY(table.size < GPosTable::PairAdjustment1::kMinSize + valueRecordCount * valueRecordSize))
+    return BL_SUCCESS;
+
+  BLGlyphItem* itemData = ctx.itemData;
+  BLGlyphPlacement* placementData = ctx.placementData;
+
+  for (; index < end; index++) {
+    uint32_t glyphId = itemData[index].glyphId;
+
+    if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
+      uint32_t coverageIndex;
+      if (covIt.find<CoverageFormat>(glyphId, coverageIndex) && coverageIndex < valueRecordCount) {
+        const Int16* p = reinterpret_cast<const Int16*>(table.data + GPosTable::PairAdjustment1::kMinSize + coverageIndex * valueRecordSize);
+        applyGPosValue(p, valueFormat, &placementData[index]);
+      }
+    }
+  }
+
+  return BL_SUCCESS;
 }
 
 // ============================================================================
@@ -1547,14 +1551,14 @@ static BL_INLINE bool checkGPosLookupType2Format1(Validator* self, Trace trace, 
 
   const GPosTable::PairAdjustment1* lookup = table.dataAs<GPosTable::PairAdjustment1>();
   uint32_t pairSetCount = lookup->pairSetOffsets.count();
-  uint32_t valueDataSize = sizeOfValueRecordByFormat(lookup->valueFormat1()) +
-                           sizeOfValueRecordByFormat(lookup->valueFormat2()) ;
+  uint32_t valueRecordSize = 2u + sizeOfValueRecordByFormat(lookup->valueFormat1()) +
+                                  sizeOfValueRecordByFormat(lookup->valueFormat2()) ;
 
   size_t headerSize = sizeof(GPosTable::PairAdjustment1) + pairSetCount * 2u;
   if (BL_UNLIKELY(table.size < headerSize))
     return trace.fail("Table is truncated [Size=%zu Required=%zu]\n", table.size, headerSize);
 
-  const UInt16* pairSetOffsetArray = lookup->pairSetOffsets.array();
+  const Offset16* pairSetOffsetArray = lookup->pairSetOffsets.array();
   size_t offsetRangeEnd = table.size - 2u;
 
   for (uint32_t i = 0; i < pairSetCount; i++) {
@@ -1563,7 +1567,7 @@ static BL_INLINE bool checkGPosLookupType2Format1(Validator* self, Trace trace, 
       return trace.fail("Pair %u: Offset [%zu] is out of range [%zu:%zu]\n", i, pairSetOffset, headerSize, offsetRangeEnd);
 
     uint32_t valueCount = blMemReadU16uBE(table.data + pairSetOffset);
-    size_t pairSetSize = valueCount * (valueDataSize + 2u);
+    uint32_t pairSetSize = valueCount * valueRecordSize;
 
     if (pairSetSize > table.size - pairSetOffset)
       return trace.fail("Pair #%u of ValueCount [%u] requires [%zu] bytes of data, but only [%zu] bytes are available\n", i, valueCount, pairSetSize, table.size - pairSetOffset);
@@ -1572,21 +1576,80 @@ static BL_INLINE bool checkGPosLookupType2Format1(Validator* self, Trace trace, 
   return true;
 }
 
-static BL_INLINE bool checkGPosLookupType2Format2(Validator* self, Trace trace, BLFontTable table) noexcept {
+template<uint32_t CoverageFormat>
+static BL_INLINE BLResult applyGPosLookupType2Format1(const BLOTFaceImpl* faceI, GPosContext& ctx, BLFontTableT<GPosTable::PairAdjustment1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
+  size_t index = ctx.index;
+  size_t end = ctx.end;
+
+  if (end <= 1)
+    return BL_SUCCESS;
+  end--;
+
+  uint32_t minGlyphId = covIt.minGlyphId<CoverageFormat>();
+  uint32_t maxGlyphId = covIt.maxGlyphId<CoverageFormat>();
+
+  uint32_t valueFormat1 = table->valueFormat1();
+  uint32_t valueFormat2 = table->valueFormat2();
+  uint32_t pairSetCount = table->pairSetOffsets.count();
+
+  if (BL_UNLIKELY(table.size < GPosTable::PairAdjustment1::kMinSize + pairSetCount * 2u))
+    return BL_SUCCESS;
+
+  size_t valueRecordSize = 2u + sizeOfValueRecordByFormat(valueFormat1) +
+                                sizeOfValueRecordByFormat(valueFormat2) ;
+
+  BLGlyphItem* itemData = ctx.itemData;
+  BLGlyphPlacement* placementData = ctx.placementData;
+
+  uint32_t leftGlyphId = itemData[index].glyphId;
+  uint32_t rightGlyphId = 0;
+
+  for (; index < end; index++, leftGlyphId = rightGlyphId) {
+    rightGlyphId = itemData[index + 1].glyphId;
+
+    if (leftGlyphId >= minGlyphId && leftGlyphId <= maxGlyphId) {
+      uint32_t coverageIndex;
+      if (covIt.find<CoverageFormat>(leftGlyphId, coverageIndex) && coverageIndex < pairSetCount) {
+        uint32_t pairSetOffset = table->pairSetOffsets.array()[coverageIndex].value();
+        if (pairSetOffset > table.size - 2u)
+          continue;
+
+        const uint8_t* pairSetData = table.data + pairSetOffset;
+        uint32_t pairSetCount = reinterpret_cast<const UInt16*>(pairSetData)->value();
+
+        if (pairSetOffset + pairSetCount * valueRecordSize > table.size)
+          continue;
+
+        const Int16* p = reinterpret_cast<const Int16*>(
+          binarySearchGlyphIdInVarStruct<UInt16>(pairSetData, valueRecordSize, pairSetCount, rightGlyphId));
+
+        if (p) {
+          if (valueFormat1) p = applyGPosValue(p + 1, valueFormat1, &placementData[index + 0]);
+          if (valueFormat2) p = applyGPosValue(p + 0, valueFormat2, &placementData[index + 1]);
+        }
+      }
+    }
+  }
+
+  return BL_SUCCESS;
+}
+
+static BL_INLINE bool checkGPosLookupType2Format2(Validator* self, Trace trace, BLFontTableT<GPosTable::PairAdjustment2> table) noexcept {
   uint32_t countCoverageEntries;
   if (BL_UNLIKELY(!checkLookupWithCoverage(self, trace, table, sizeof(GPosTable::PairAdjustment2), countCoverageEntries)))
     return false;
 
-  const GPosTable::PairAdjustment2* lookup = table.dataAs<GPosTable::PairAdjustment2>();
-  uint32_t valueDataSize = sizeOfValueRecordByFormat(lookup->valueFormat1()) +
-                           sizeOfValueRecordByFormat(lookup->valueFormat2()) ;
-  uint32_t class1Count = lookup->class1Count();
-  uint32_t class2Count = lookup->class2Count();
-  uint32_t class1x2Count = class1Count * class2Count;
+  uint32_t class1Count = table->class1Count();
+  uint32_t class2Count = table->class2Count();
+  uint32_t valueRecordCount = class1Count * class2Count;
+
+  uint32_t valueFormat1 = table->valueFormat1();
+  uint32_t valueFormat2 = table->valueFormat2();
+  uint32_t valueRecordSize = sizeOfValueRecordByFormat(valueFormat1) + sizeOfValueRecordByFormat(valueFormat2);
 
   BLOverflowFlag of = 0;
   size_t headerSize = blAddOverflow(uint32_t(sizeof(GPosTable::PairAdjustment2)),
-                                    blMulOverflow(class1x2Count, valueDataSize, &of), &of);
+                                    blMulOverflow(valueRecordCount, valueRecordSize, &of), &of);
 
   if (BL_UNLIKELY(of))
     return trace.fail("Overflow detected when calculating header size [Class1Count=%u Class2Count=%u]\n", class1Count, class2Count);
@@ -1595,6 +1658,65 @@ static BL_INLINE bool checkGPosLookupType2Format2(Validator* self, Trace trace, 
     return trace.fail("Table is truncated [Size=%zu Required=%zu]\n", table.size, headerSize);
 
   return true;
+}
+
+template<uint32_t CoverageFormat, uint32_t ClassDef1Format, uint32_t ClassDef2Format>
+static BL_INLINE BLResult applyGPosLookupType2Format2(const BLOTFaceImpl* faceI, GPosContext& ctx, BLFontTableT<GPosTable::PairAdjustment2> table, uint32_t lookupFlags, CoverageIterator& covIt, ClassDefIterator& cd1It, ClassDefIterator& cd2It) noexcept {
+  size_t index = ctx.index;
+  size_t end = ctx.end;
+
+  if (end <= 1)
+    return BL_SUCCESS;
+  end--;
+
+  uint32_t minGlyphId = covIt.minGlyphId<CoverageFormat>();
+  uint32_t maxGlyphId = covIt.maxGlyphId<CoverageFormat>();
+
+  uint32_t valueFormat1 = table->valueFormat1();
+  uint32_t valueFormat2 = table->valueFormat2();
+  uint32_t valueRecordSize = sizeOfValueRecordByFormat(valueFormat1) + sizeOfValueRecordByFormat(valueFormat2);
+
+  uint32_t class1Count = table->class1Count();
+  uint32_t class2Count = table->class2Count();
+  uint32_t valueRecordCount = class1Count * class2Count;
+
+  BLOverflowFlag of = 0;
+  size_t requiredDataSize = blAddOverflow(uint32_t(sizeof(GPosTable::PairAdjustment2)),
+                                          blMulOverflow(valueRecordCount, valueRecordSize, &of), &of);
+
+  if (BL_UNLIKELY(table.size < requiredDataSize || of))
+    return BL_SUCCESS;
+
+  const uint8_t* valueBasePtr = table.data + sizeof(GPosTable::PairAdjustment2);
+
+  BLGlyphItem* itemData = ctx.itemData;
+  BLGlyphPlacement* placementData = ctx.placementData;
+
+  uint32_t leftGlyphId = itemData[index].glyphId;
+  uint32_t rightGlyphId = 0;
+
+  for (; index < end; index++, leftGlyphId = rightGlyphId) {
+    rightGlyphId = itemData[index + 1].glyphId;
+
+    if (leftGlyphId >= minGlyphId && leftGlyphId <= maxGlyphId) {
+      uint32_t coverageIndex;
+      if (covIt.find<CoverageFormat>(leftGlyphId, coverageIndex)) {
+        uint32_t c1;
+        uint32_t c2;
+
+        if (cd1It.find<ClassDef1Format>(leftGlyphId, c1) && cd2It.find<ClassDef2Format>(rightGlyphId, c2)) {
+          uint32_t cIndex = c1 * class2Count + c2;
+          if (cIndex < valueRecordCount) {
+            const Int16* p = blOffsetPtr<const Int16>(valueBasePtr, cIndex * valueRecordSize);
+            if (valueFormat1) p = applyGPosValue(p, valueFormat1, &placementData[index + 0]);
+            if (valueFormat2) p = applyGPosValue(p, valueFormat2, &placementData[index + 1]);
+          }
+        }
+      }
+    }
+  }
+
+  return BL_SUCCESS;
 }
 
 // ============================================================================
@@ -1726,12 +1848,66 @@ static BL_INLINE bool checkGPosLookup(Validator* self, Trace trace, BLFontTable 
   }
 }
 
+// TODO: [OPENTYPE GPOS]
 static BLResult applyGPosLookup(const BLOTFaceImpl* faceI, GPosContext& ctx, BLFontTable table, uint32_t lookupId, uint32_t lookupFlags) noexcept {
-  // TODO: [OPENTYPE GPOS]
+  // Artificial format that we use here, instead of using 1-2 we use 0-1 as it's easier to write
+  // a switch in case that multiple tables with different format options can be used by a lookup.
+  enum Format : uint32_t {
+    kFmt1 = 0,
+    kFmt2 = 1
+  };
 
-  if (BL_LIKELY(table.size < gLookupInfo[LookupInfo::kKindGPos].idEntries[lookupId].headerSize)) {
+  #define GPOS_APPLY_COMMON(FN, TABLE) \
+    CoverageIterator covIt; \
+    switch (covIt.init(blFontSubTableChecked(table, table.dataAs<TABLE>()->coverageOffset()))) { \
+      case 1: return FN<1>(faceI, ctx, table, lookupFlags, covIt); \
+      case 2: return FN<2>(faceI, ctx, table, lookupFlags, covIt); \
+    }
+
+  if (BL_LIKELY(table.size >= gLookupInfo[LookupInfo::kKindGPos].idEntries[lookupId].headerSize)) {
+    switch (lookupId) {
+      case LookupInfo::kGPosType1Format1: {
+        GPOS_APPLY_COMMON(applyGPosLookupType1Format1, GPosTable::SingleAdjustment1)
+        break;
+      }
+
+      case LookupInfo::kGPosType1Format2: {
+        GPOS_APPLY_COMMON(applyGPosLookupType1Format2, GPosTable::SingleAdjustment2)
+        break;
+      }
+
+      case LookupInfo::kGPosType2Format1: {
+        GPOS_APPLY_COMMON(applyGPosLookupType2Format1, GPosTable::PairAdjustment1)
+        break;
+      }
+
+      case LookupInfo::kGPosType2Format2: {
+        CoverageIterator covIt;
+        ClassDefIterator cd1It;
+        ClassDefIterator cd2It;
+
+        uint32_t bits = ((covIt.init(blFontSubTableChecked(table, table.dataAs<GPosTable::PairAdjustment2>()->coverageOffset()))  - 1u) << 2) |
+                        ((cd1It.init(blFontSubTableChecked(table, table.dataAs<GPosTable::PairAdjustment2>()->classDef1Offset())) - 1u) << 1) |
+                        ((cd2It.init(blFontSubTableChecked(table, table.dataAs<GPosTable::PairAdjustment2>()->classDef2Offset())) - 1u) << 0);
+
+        switch (bits) {
+          case ((kFmt1 << 2) | (kFmt1 << 1) | (kFmt1 << 0)): return applyGPosLookupType2Format2<1, 1, 1>(faceI, ctx, table, lookupFlags, covIt, cd1It, cd2It);
+          case ((kFmt1 << 2) | (kFmt1 << 1) | (kFmt2 << 0)): return applyGPosLookupType2Format2<1, 1, 2>(faceI, ctx, table, lookupFlags, covIt, cd1It, cd2It);
+          case ((kFmt1 << 2) | (kFmt2 << 1) | (kFmt1 << 0)): return applyGPosLookupType2Format2<1, 2, 1>(faceI, ctx, table, lookupFlags, covIt, cd1It, cd2It);
+          case ((kFmt1 << 2) | (kFmt2 << 1) | (kFmt2 << 0)): return applyGPosLookupType2Format2<1, 2, 2>(faceI, ctx, table, lookupFlags, covIt, cd1It, cd2It);
+          case ((kFmt2 << 2) | (kFmt1 << 1) | (kFmt1 << 0)): return applyGPosLookupType2Format2<2, 1, 1>(faceI, ctx, table, lookupFlags, covIt, cd1It, cd2It);
+          case ((kFmt2 << 2) | (kFmt1 << 1) | (kFmt2 << 0)): return applyGPosLookupType2Format2<2, 1, 2>(faceI, ctx, table, lookupFlags, covIt, cd1It, cd2It);
+          case ((kFmt2 << 2) | (kFmt2 << 1) | (kFmt1 << 0)): return applyGPosLookupType2Format2<2, 2, 1>(faceI, ctx, table, lookupFlags, covIt, cd1It, cd2It);
+          case ((kFmt2 << 2) | (kFmt2 << 1) | (kFmt2 << 0)): return applyGPosLookupType2Format2<2, 2, 2>(faceI, ctx, table, lookupFlags, covIt, cd1It, cd2It);
+        }
+        break;
+      }
+    }
+
     // TODO: [OPENTYPE GPOS]
   }
+
+  #undef GPOS_APPLY_COMMON
 
   return BL_SUCCESS;
 }
@@ -1793,9 +1969,10 @@ static bool checkLookupTable(Validator* self, Trace trace, uint32_t kind, BLFont
   if (BL_UNLIKELY(table.size < headerSize))
     return trace.fail("Table is truncated [Size=%zu Required=%zu]\n", table.size, headerSize);
 
-  const UInt16* offsetArray = table->lookupOffsets.array();
+  const Offset16* offsetArray = table->lookupOffsets.array();
   uint32_t& lookupTypes = self->faceI->layout.kinds[kind].lookupTypes;
 
+  // TODO: WHY?
   // BLArray<LayoutData::LookupEntry>& lookupEntries = self->faceI->layout.lookupEntries[kind];
 
   const LookupInfo::TypeEntry& lookupTypeInfo = gLookupInfo[kind].typeEntries[lookupType];
@@ -2021,11 +2198,11 @@ static bool checkGPosGSubTable(Validator* self, Trace trace, uint32_t kind) noex
   // --------------------------------------------------------------------------
 
   if (lookupListOffset) {
-    BLFontTableT<Array16<UInt16>> lookupListOffsets { blFontSubTable(table, lookupListOffset) };
+    BLFontTableT<Array16<Offset16>> lookupListOffsets { blFontSubTable(table, lookupListOffset) };
     uint32_t count = lookupListOffsets->count();
 
     if (count) {
-      const UInt16* array = lookupListOffsets->array();
+      const Offset16* array = lookupListOffsets->array();
       for (uint32_t i = 0; i < count; i++) {
         BLFontTableT<GAnyTable::LookupTable> lookupTable { blFontSubTable(lookupListOffsets, array[i].value()) };
         if (!checkLookupTable(self, trace, kind, lookupTable, i))
@@ -2131,7 +2308,7 @@ static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffe
       continue;
 
     uint32_t lookupEntryCount = lookupTable->lookupOffsets.count();
-    const UInt16* lookupEntryOffsets = lookupTable->lookupOffsets.array();
+    const Offset16* lookupEntryOffsets = lookupTable->lookupOffsets.array();
 
     const LookupInfo::TypeEntry& lookupTypeInfo = gLookupInfo[Kind].typeEntries[lookupType];
     size_t lookupTableMinSize = lookupType == kLookupExtension ? 8u : 6u;

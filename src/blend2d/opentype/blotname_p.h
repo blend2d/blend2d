@@ -33,17 +33,17 @@ struct NameTable {
     UInt16 languageId;
     UInt16 nameId;
     UInt16 length;
-    UInt16 offset;
+    Offset16 offset;
   };
 
   struct LangTagRecord {
     UInt16 length;
-    UInt16 offset;
+    Offset16 offset;
   };
 
   UInt16 format;
   UInt16 recordCount;
-  UInt16 stringOffset;
+  Offset16 stringOffset;
   /*
   NameRecord nameRecords[count];
   UInt16 langTagCount;

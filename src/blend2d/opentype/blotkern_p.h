@@ -92,72 +92,104 @@ struct KernTable {
   };
 
   struct Format1 {
-    struct StateHeader {
-      UInt16 stateSize;
-      UInt16 classTable;
-      UInt16 stateArray;
-      UInt16 entryTable;
-    };
-
     enum ValueBits : uint16_t {
       kValueOffsetMask      = 0x3FFFu,
       kValueNoAdvance       = 0x4000u,
       kValuePush            = 0x8000u
     };
 
+    struct StateHeader {
+      UInt16 stateSize;
+      Offset16 classTable;
+      Offset16 stateArray;
+      Offset16 entryTable;
+    };
+
     StateHeader stateHeader;
-    UInt16 valueTable;
+    Offset16 valueTable;
   };
 
   struct Format2 {
-    struct Table {
+    struct ClassTable {
       UInt16 firstGlyph;
       UInt16 glyphCount;
       /*
-      UInt16 offsetArray[glyphCount];
+      Offset16 offsetArray[glyphCount];
       */
 
-      BL_INLINE const UInt16* offsetArray() const noexcept { return blOffsetPtr<const UInt16>(this, 4); }
+      BL_INLINE const Offset16* offsetArray() const noexcept { return blOffsetPtr<const Offset16>(this, 4); }
     };
 
     UInt16 rowWidth;
-    UInt16 leftClassTable;
-    UInt16 rightClassTable;
-    UInt16 kerningArray;
+    Offset16 leftClassTable;
+    Offset16 rightClassTable;
+    Offset16 kerningArray;
+  };
+
+  struct Format3 {
+    UInt16 glyphCount;
+    UInt8 kernValueCount;
+    UInt8 leftClassCount;
+    UInt8 rightClassCount;
+    UInt8 flags;
+    /*
+    FWord kernValue[kernValueCount];
+    UInt8 leftClass[glyphCount];
+    UInt8 rightClass[glyphCount];
+    UInt8 kernIndex[leftClassCount * rightClassCount];
+    */
   };
 
   WinTableHeader header;
 };
 
 // ============================================================================
-// [BLOpenType::KernPairSet]
+// [BLOpenType::KernGroup]
 // ============================================================================
 
-//! Array of kerning pairs.
-struct KernPairSet {
+//! Kerning group.
+//!
+//! Helper data that we create for each kerning group (sub-table).
+struct KernGroup {
+  // Using the same bits as `KernTable::WinGroupHeader::Coverage` except for Horizontal.
+  enum Flags : uint32_t {
+    kFlagSynthesized = 0x01u,
+    kFlagMinimum     = 0x02u,
+    kFlagCrossStream = 0x04u,
+    kFlagOverride    = 0x08u
+  };
+
 #if BL_TARGET_ARCH_BITS < 64
-  uint32_t pairCount : 31;
-  uint32_t synthesized : 1;
+  uint32_t format : 2;
+  uint32_t flags : 4;
+  uint32_t dataSize : 26;
 #else
-  uint32_t pairCount;
-  uint32_t synthesized;
+  uint32_t format : 2;
+  uint32_t flags : 30;
+  uint32_t dataSize;
 #endif
 
   union {
     uintptr_t dataOffset;
-    KernTable::Pair* dataPtr;
+    void* dataPtr;
   };
 
-  BL_INLINE const KernTable::Pair* pairs(const void* base) const noexcept {
-    return synthesized ? dataPtr : blOffsetPtr<const KernTable::Pair>(base, dataOffset);
+  BL_INLINE bool hasFlag(uint32_t flag) const noexcept { return (flags & flag) != 0; }
+  BL_INLINE bool isSynthesized() const noexcept { return hasFlag(kFlagSynthesized); }
+  BL_INLINE bool isMinimum() const noexcept { return hasFlag(kFlagMinimum); }
+  BL_INLINE bool isCrossStream() const noexcept { return hasFlag(kFlagCrossStream); }
+  BL_INLINE bool isOverride() const noexcept { return hasFlag(kFlagOverride); }
+
+  BL_INLINE const void* calcDataPtr(const void* basePtr) const noexcept {
+    return isSynthesized() ? dataPtr : static_cast<const void*>(static_cast<const uint8_t*>(basePtr) + dataOffset);
   }
 
-  static BL_INLINE KernPairSet makeLinked(uintptr_t dataOffset, uint32_t pairCount) noexcept {
-    return KernPairSet { pairCount, false, { dataOffset } };
+  static BL_INLINE KernGroup makeReferenced(uint32_t format, uint32_t flags, uintptr_t dataOffset, uint32_t dataSize) noexcept {
+    return KernGroup { format, flags, dataSize, { dataOffset } };
   }
 
-  static BL_INLINE KernPairSet makeSynthesized(KernTable::Pair* pairs, uint32_t pairCount) noexcept {
-    return KernPairSet { pairCount, true, { (uintptr_t)pairs } };
+  static BL_INLINE KernGroup makeSynthesized(uint32_t format, int32_t flags, void* dataPtr, uint32_t dataSize) noexcept {
+    return KernGroup { format, flags | kFlagSynthesized, dataSize, { (uintptr_t)dataPtr } };
   }
 };
 
@@ -169,54 +201,24 @@ class KernCollection {
 public:
   BL_NONCOPYABLE(KernCollection)
 
-  enum HeaderType : uint32_t {
-    kHeaderNone    = 0,
-    kHeaderMac     = 1,
-    kHeaderWindows = 2
-  };
+  BLArray<KernGroup> groups;
 
-  // Using the same bits as `KernTable::WinGroupHeader::Coverage`.
-  enum Coverage : uint32_t {
-    kCoverageHorizontal   = 0x01u,
-    kCoverageMinimum      = 0x02u,
-    kCoverageCrossStream  = 0x04u,
-    kCoverageOverride     = 0x08u
-  };
+  BL_INLINE KernCollection() noexcept {}
+  BL_INLINE ~KernCollection() noexcept { releaseData(); }
 
-  uint8_t format;
-  uint8_t flags;
-  uint8_t coverage;
-  uint8_t reserved;
-  BLArray<KernPairSet> sets;
-
-  BL_INLINE KernCollection() noexcept
-    : format(0),
-      flags(0),
-      coverage(0),
-      reserved(0) {}
-
-  BL_INLINE ~KernCollection() noexcept {
-    releaseData();
-  }
-
-  BL_INLINE bool empty() const noexcept {
-    return sets.empty();
-  }
+  BL_INLINE bool empty() const noexcept { return groups.empty(); }
 
   BL_INLINE void reset() noexcept {
     releaseData();
-    format = 0;
-    flags = 0;
-    coverage = 0;
-    sets.reset();
+    groups.reset();
   }
 
   void releaseData() noexcept {
-    size_t count = sets.size();
+    size_t count = groups.size();
     for (size_t i = 0; i < count; i++) {
-      const KernPairSet& set = sets[i];
-      if (set.synthesized)
-        free(set.dataPtr);
+      const KernGroup& group = groups[i];
+      if (group.isSynthesized())
+        free(group.dataPtr);
     }
   }
 };
@@ -230,7 +232,15 @@ class KernData {
 public:
   BL_NONCOPYABLE(KernData)
 
+  enum HeaderType : uint32_t {
+    kHeaderWindows   = 0,
+    kHeaderMac       = 1
+  };
+
   BLFontTable table;
+  uint8_t headerType;
+  uint8_t headerSize;
+  uint8_t reserved[6];
   KernCollection collection[2];
 
   BL_INLINE KernData() noexcept {}

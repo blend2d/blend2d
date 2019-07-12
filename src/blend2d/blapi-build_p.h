@@ -25,10 +25,10 @@
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
-// Disable built-in statistics that are used to trace `BLFont`, `BLImage`,
-// `BLPath`, allocations that are normally available in `BLRuntimeMemoryInfo`
-// and can be queried through `BLRuntime`. These statistics use atomic operations
-// so there shouldn't be reason to disable them.
+// Disable built-in statistics that is used to trace `BLFont`, `BLImage`,
+// and `BLPath`, in addition to allocations that are normally available in
+// `BLRuntimeMemoryInfo` and can be queried through `BLRuntime`. These statistics
+// use atomic operations so there shouldn't be reason to disable them.
 //
 // #define BL_BUILD_NO_STATISTICS
 // ----------------------------------------------------------------------------

@@ -478,7 +478,8 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
 // CharString program itself). if we reach `kCFFProgramLimit` the interpreter is
 // terminated immediately.
 static constexpr uint32_t kCFFProgramLimit = 1000000;
-static constexpr uint32_t kCFFCallStackSize = 10;
+static constexpr uint32_t kCFFCallStackSize = 16;
+static constexpr uint32_t kCFFStorageSize = 32;
 
 static constexpr uint32_t kCFFValueStackSizeV1 = 48;
 static constexpr uint32_t kCFFValueStackSizeV2 = 513;
@@ -857,8 +858,12 @@ static BLResult getGlyphOutlinesT(
 
   uint32_t cIdx = 0;                          // Call stack index.
   uint32_t vIdx = 0;                          // Value stack index.
-  size_t bytesProcessed = 0;                  // Bytes processed, increasing counter.
 
+  double sBuf[kCFFStorageSize + 1];           // Storage (get/put).
+  uint32_t sMsk = 0;                          // Mask that contains which indexes in `sBuf` are used.
+  sBuf[kCFFStorageSize] = 0.0;                // Only the last item is set to zero, used for out-of-range expressions.
+
+  size_t bytesProcessed = 0;                  // Bytes processed, increasing counter.
   uint32_t hintBitCount = 0;                  // Number of bits required by 'HintMask' and 'CntrMask' operators.
   uint32_t executionFlags = 0;                // Execution status flags.
   uint32_t vMinOperands = 0;                  // Minimum operands the current opcode requires (updated per opcode).
@@ -1763,20 +1768,70 @@ OnReturn:
 
             // n(N–1)...n0 N J roll (12 30) n((J–1) % N)...n0 n(N–1)...n(J % N)
             case kCSOpRoll & 0xFFu: {
-              // TODO: [OPENTYPE CFF] ROLL
-              goto InvalidData;
+              unsigned int shift = unsigned(int(vBuf[--vIdx]));
+              unsigned int count = unsigned(int(vBuf[--vIdx]));
+
+              if (count > vIdx)
+                count = unsigned(vIdx);
+
+              if (count < 2)
+                continue;
+
+              // Always convert the shift to a positive number so we only rotate
+              // to the right and not in both directions. This is easy as the
+              // shift is always bound to [0, count) regardless of the direction.
+              if (int(shift) < 0)
+                shift = blNegate(blNegate(shift) % count) + count;
+              else
+                shift %= count;
+
+              if (shift == 0)
+                continue;
+
+              double last = 0;
+              uint32_t curIdx = blNegate(uint32_t(1));
+              uint32_t baseIdx = curIdx;
+
+              for (uint32_t i = 0; i < count; i++) {
+                if (curIdx == baseIdx) {
+                  last = vBuf[++curIdx];
+                  baseIdx = curIdx;
+                }
+
+                curIdx += shift;
+                if (curIdx >= count)
+                  curIdx -= count;
+
+                std::swap(vBuf[curIdx], last);
+              }
+
+              continue;
             }
 
             // in I put (12 20)
             case kCSOpPut & 0xFFu: {
-              // TODO: [OPENTYPE CFF] PUT
-              goto InvalidData;
+              unsigned int sIdx = unsigned(int(vBuf[vIdx - 1]));
+              if (sIdx < kCFFStorageSize) {
+                sBuf[sIdx] = vBuf[vIdx - 2];
+                sMsk |= blBitMask<uint32_t>(sIdx);
+              }
+
+              vIdx -= 2;
+              continue;
             }
 
             // I get (12 21) out
             case kCSOpGet & 0xFFu: {
-              // TODO: [OPENTYPE CFF] GET
-              goto InvalidData;
+              unsigned int sIdx = unsigned(int(vBuf[vIdx - 1]));
+
+              // When `sIdx == kCFFStorageSize` it points to `0.0` (the only value guaranteed to be set).
+              // Otherwise we check the bit in `sMsk` and won't allow to get an uninitialized value that
+              // was not stored at `sIdx` before (for security reasons).
+              if (sIdx >= kCFFStorageSize || !blBitTest(sMsk, sIdx))
+                sIdx = kCFFStorageSize;
+
+              vBuf[vIdx - 1] = sBuf[sIdx];
+              continue;
             }
 
             // Unknown operator - drop the stack and continue.

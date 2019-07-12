@@ -132,6 +132,9 @@ typedef DataType<uint32_t, BL_BYTE_ORDER_BE, 3> UInt24;
 typedef DataType<uint32_t, BL_BYTE_ORDER_BE, 4> UInt32;
 typedef DataType<uint64_t, BL_BYTE_ORDER_BE, 8> UInt64;
 
+typedef UInt16 Offset16;
+typedef UInt32 Offset32;
+
 typedef Int16 FWord;
 typedef UInt16 UFWord;
 typedef UInt16 F2x14;
@@ -172,7 +175,7 @@ struct Array32 {
 //! Replaces a lot of OpenType tables that use this structure (GDEF|GPOS|GSUB).
 struct TagRef16 {
   UInt32 tag;
-  UInt16 offset;
+  Offset16 offset;
 };
 
 } // {BLOpenType}

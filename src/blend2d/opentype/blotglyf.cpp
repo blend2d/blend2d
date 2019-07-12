@@ -61,6 +61,8 @@ struct CompoundEntry {
 // [BLOpenType::GlyfImpl - GetGlyphBounds]
 // ============================================================================
 
+static const uint8_t blBlankGlyphData[sizeof(GlyfTable::GlyphData)] = { 0 };
+
 static BLResult BL_CDECL getGlyphBounds(
   const BLFontFaceImpl* faceI_,
   const BLGlyphId* glyphIdData,
@@ -75,6 +77,8 @@ static BLResult BL_CDECL getGlyphBounds(
   BLFontTable locaTable = faceI->glyf.locaTable;
   uint32_t locaOffsetSize = faceI->locaOffsetSize();
 
+  const uint8_t* blankGlyphData = blBlankGlyphData;
+
   for (size_t i = 0; i < count; i++) {
     uint32_t glyphId = glyphIdData[0];
     glyphIdData = blOffsetPtr(glyphIdData, glyphIdAdvance);
@@ -86,7 +90,7 @@ static BLResult BL_CDECL getGlyphBounds(
     // multiplying the `glyphId` by 2 or 4 to calculate the correct index.
     if (locaOffsetSize == 2) {
       size_t index = size_t(glyphId) * 2u;
-      if (BL_UNLIKELY(index + 4 > locaTable.size))
+      if (BL_UNLIKELY(index + sizeof(UInt16) * 2 > locaTable.size))
         goto InvalidData;
 
       offset = uint32_t(reinterpret_cast<const UInt16*>(locaTable.data + index + 0)->value()) * 2u;
@@ -94,31 +98,28 @@ static BLResult BL_CDECL getGlyphBounds(
     }
     else {
       size_t index = size_t(glyphId) * 4u;
-      if (BL_UNLIKELY(index + 8 > locaTable.size))
+      if (BL_UNLIKELY(index + sizeof(UInt32) * 2 > locaTable.size))
         goto InvalidData;
 
       offset = reinterpret_cast<const UInt32*>(locaTable.data + index + 0)->value();
       endOff = reinterpret_cast<const UInt32*>(locaTable.data + index + 4)->value();
     }
 
-    if (endOff <= glyfTable.size) {
+    if (BL_LIKELY(endOff <= glyfTable.size)) {
+      const uint8_t* gPtr = blankGlyphData;
       if (offset < endOff) {
-        const uint8_t* gPtr = glyfTable.data + offset;
+        gPtr = glyfTable.data + offset;
         size_t remainingSize = endOff - offset;
 
         if (BL_UNLIKELY(remainingSize < sizeof(GlyfTable::GlyphData)))
           goto InvalidData;
+      }
 
-        boxes[i].reset(reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMin(),
-                       reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMin(),
-                       reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMax(),
-                       reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMax());
-        continue;
-      }
-      else {
-        boxes[i].reset();
-        continue;
-      }
+      boxes[i].reset(reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMin(),
+                     reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMin(),
+                     reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMax(),
+                     reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMax());
+      continue;
     }
 
     // Invalid data or the glyph is not defined. In either case we just zero the box.
@@ -176,14 +177,14 @@ static BLResult BL_CDECL getGlyphOutlines(
     // multiplying the `glyphId` by 2 or 4 to calculate the correct index.
     if (locaOffsetSize == 2) {
       size_t index = size_t(glyphId) * 2u;
-      if (BL_UNLIKELY(index + 4 > locaTable.size))
+      if (BL_UNLIKELY(index + sizeof(UInt16) * 2u > locaTable.size))
         goto InvalidData;
       offset = uint32_t(reinterpret_cast<const UInt16*>(locaTable.data + index + 0)->value()) * 2u;
       endOff = uint32_t(reinterpret_cast<const UInt16*>(locaTable.data + index + 2)->value()) * 2u;
     }
     else {
       size_t index = size_t(glyphId) * 4u;
-      if (BL_UNLIKELY(index + 8 > locaTable.size))
+      if (BL_UNLIKELY(index + sizeof(UInt32) * 2u > locaTable.size))
         goto InvalidData;
       offset = reinterpret_cast<const UInt32*>(locaTable.data + index + 0)->value();
       endOff = reinterpret_cast<const UInt32*>(locaTable.data + index + 4)->value();
