@@ -94,6 +94,8 @@
 
 #if __cplusplus >= 201703L
   #define BL_FALLTHROUGH [[fallthrough]];
+#elif defined(__GNUC__) && __GNUC__ >= 7
+  #define BL_FALLTHROUGH __attribute__((fallthrough));
 #else
   #define BL_FALLTHROUGH /* fallthrough */
 #endif

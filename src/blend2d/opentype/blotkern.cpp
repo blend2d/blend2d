@@ -619,6 +619,8 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
               return result;
             }
           }
+
+          break;
         }
 
         // Kern SubTable Format 2 - Simple NxM array of kerning values.
@@ -627,33 +629,33 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
           size_t subTableSize = length + headerSize;
 
           const KernTable::Format2* fmtData = reinterpret_cast<const KernTable::Format2*>(dataPtr);
-          uint32_t leftClassTableIndex = fmtData->leftClassTable();
-          uint32_t rightClassTableIndex = fmtData->rightClassTable();
-          uint32_t kerningArrayIndex = fmtData->kerningArray();
+          uint32_t leftClassTableOffset = fmtData->leftClassTable();
+          uint32_t rightClassTableOffset = fmtData->rightClassTable();
+          uint32_t kerningArrayOffset = fmtData->kerningArray();
 
-          if (leftClassTableIndex > subTableSize - 6u) {
-            trace.warn("Invalid offset [%u] of left ClassTable\n", unsigned(leftClassTableIndex));
+          if (leftClassTableOffset > subTableSize - 6u) {
+            trace.warn("Invalid offset [%u] of left ClassTable\n", unsigned(leftClassTableOffset));
             break;
           }
 
-          if (rightClassTableIndex > subTableSize - 6u) {
-            trace.warn("Invalid offset [%u] of right ClassTable\n", unsigned(rightClassTableIndex));
+          if (rightClassTableOffset > subTableSize - 6u) {
+            trace.warn("Invalid offset [%u] of right ClassTable\n", unsigned(rightClassTableOffset));
             break;
           }
 
-          if (kerningArrayIndex > subTableSize - 2u) {
-            trace.warn("Invalid offset [%u] of KerningArray\n", unsigned(kerningArrayIndex));
+          if (kerningArrayOffset > subTableSize - 2u) {
+            trace.warn("Invalid offset [%u] of KerningArray\n", unsigned(kerningArrayOffset));
             break;
           }
 
-          const KernTable::Format2::ClassTable* leftClassTable = blOffsetPtr<const KernTable::Format2::ClassTable>(subTable, leftClassTableIndex);
-          const KernTable::Format2::ClassTable* rightClassTable = blOffsetPtr<const KernTable::Format2::ClassTable>(subTable, rightClassTableIndex);
+          const KernTable::Format2::ClassTable* leftClassTable = blOffsetPtr<const KernTable::Format2::ClassTable>(subTable, leftClassTableOffset);
+          const KernTable::Format2::ClassTable* rightClassTable = blOffsetPtr<const KernTable::Format2::ClassTable>(subTable, rightClassTableOffset);
 
           uint32_t leftGlyphCount = leftClassTable->glyphCount();
           uint32_t rightGlyphCount = rightClassTable->glyphCount();
 
-          uint32_t leftTableSize = leftClassTableIndex + 4u + leftGlyphCount * 2u;
-          uint32_t rightTableSize = rightClassTableIndex + 4u + rightGlyphCount * 2u;
+          uint32_t leftTableSize = leftClassTableOffset + 4u + leftGlyphCount * 2u;
+          uint32_t rightTableSize = rightClassTableOffset + 4u + rightGlyphCount * 2u;
 
           if (leftTableSize > subTableSize) {
             trace.warn("Left ClassTable's GlyphCount [%u] overflows table size by [%zu] bytes\n", unsigned(leftGlyphCount), size_t(leftTableSize - subTableSize));
@@ -670,6 +672,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
             trace.fail("Cannot allocate data for a referenced kerning group of format #%u\n", unsigned(format));
             return result;
           }
+
           break;
         }
 
@@ -694,6 +697,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
             trace.fail("Cannot allocate data for a referenced kerning group of format #%u\n", unsigned(format));
             return result;
           }
+
           break;
         }
 
