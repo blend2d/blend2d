@@ -45,10 +45,6 @@ if (NOT DEFINED BLEND2D_TEST)
   set(BLEND2D_TEST FALSE)
 endif()
 
-if (NOT DEFINED BLEND2D_NO_STDCXX)
-  set(BLEND2D_NO_STDCXX 0)
-endif()
-
 set(BLEND2D_DIR    "${BLEND2D_DIR}"    CACHE PATH "Location of 'blend2d'")
 set(BLEND2D_TEST   "${BLEND2D_TEST}"   CACHE BOOL "Build 'blend2d' test applications")
 set(BLEND2D_EMBED  "${BLEND2D_EMBED}"  CACHE BOOL "Embed 'blend2d' library (no targets)")
@@ -58,8 +54,12 @@ set(BLEND2D_STATIC "${BLEND2D_STATIC}" CACHE BOOL "Build 'blend2d' statically")
 # set(BLEND2D_BUILD_NO_LOGGING 1)
 # set(BLEND2D_BUILD_NO_JIT 1)
 
-if (NOT BLEND2D_EMBED AND NOT BLEND2D_STATIC)
-  set(BLEND2D_NO_STDCXX 1)
+if (NOT DEFINED BLEND2D_NO_STDCXX)
+  if (NOT BLEND2D_EMBED AND NOT BLEND2D_STATIC)
+    set(BLEND2D_NO_STDCXX 1)
+  else()
+    set(BLEND2D_NO_STDCXX 0)
+  endif()
 endif()
 
 # =============================================================================
@@ -171,8 +171,12 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   # Building Blend2D without C++ library support requires these to be setup.
   if (BLEND2D_NO_STDCXX)
     message("-- Enabling build without linking to the C++ standard library")
-    list(APPEND BLEND2D_NO_STDCXX_CFLAGS -nodefaultlibs -DBL_NO_STDCXX)
-    list(APPEND BLEND2D_NO_STDCXX_LFLAGS -nodefaultlibs)
+    # This fails when a compiler emits a symbol which requires libgcc:
+    #   list(APPEND BLEND2D_NO_STDCXX_CFLAGS -nodefaultlibs -DBL_NO_STDCXX)
+    #   list(APPEND BLEND2D_NO_STDCXX_LFLAGS -nodefaultlibs)
+    # This has similar effect as we don't really use anything from libstdc++:
+    list(APPEND BLEND2D_NO_STDCXX_CFLAGS -DBL_NO_STDCXX)
+    list(APPEND BLEND2D_NO_STDCXX_LFLAGS -static-libstdc++)
   endif()
 endif()
 
