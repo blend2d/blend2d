@@ -214,7 +214,7 @@ before_install:
 install:
   - |
     mkdir -p 3rdparty/asmjit
-    git clone --depth=1 --branch next-wip https://github.com/asmjit/asmjit.git 3rdparty/asmjit
+    git clone --depth=1 https://github.com/asmjit/asmjit.git 3rdparty/asmjit
 
 before_script:
   - mkdir build
