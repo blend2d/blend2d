@@ -72,6 +72,7 @@ public:
   BL_INLINE BLGlyphBuffer& operator=(const BLGlyphBuffer&) noexcept = delete;
 
   BL_INLINE BLGlyphBuffer() noexcept { blGlyphBufferInit(this); }
+  BL_INLINE BLGlyphBuffer(BLGlyphBuffer&& other) noexcept { blGlyphBufferInitMove(this, &other); }
   BL_INLINE ~BLGlyphBuffer() noexcept { blGlyphBufferReset(this); }
 
   //! \}

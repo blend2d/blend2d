@@ -82,7 +82,7 @@ public:
   //! Returns the maximum pixels the composite part can handle at a time.
   //!
   //! \note This value is configured in a way that it's always one if the fetch
-  //! part doesn't support more. This makes it easy to use in loop compilers.
+  //! part doesn't support more. This makes it easy to use it in loop compilers.
   //! In other words, the value doesn't describe the real implementation of the
   //! composite part.
   BL_INLINE uint32_t maxPixels() const noexcept { return _maxPixels; }

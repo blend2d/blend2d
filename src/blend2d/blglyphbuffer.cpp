@@ -174,6 +174,13 @@ BLResult blGlyphBufferInit(BLGlyphBufferCore* self) noexcept {
   return BL_SUCCESS;
 }
 
+BLResult blGlyphBufferInitMove(BLGlyphBufferCore* self, BLGlyphBufferCore* other) noexcept {
+  BLInternalGlyphBufferImpl* impl = blInternalCast(self->impl);
+  other->impl = const_cast<BLInternalGlyphBufferImpl*>(&blGlyphBufferInternalImplNone);
+  self->impl = impl;
+  return BL_SUCCESS;
+}
+
 BLResult blGlyphBufferReset(BLGlyphBufferCore* self) noexcept {
   BLInternalGlyphBufferImpl* impl = blInternalCast(self->impl);
   if (impl == &blGlyphBufferInternalImplNone)
@@ -198,6 +205,21 @@ BLResult blGlyphBufferClear(BLGlyphBufferCore* self) noexcept {
 
   selfI->clear();
   return BL_SUCCESS;
+}
+
+size_t blGlyphBufferGetSize(const BLGlyphBufferCore* self) noexcept {
+  BLInternalGlyphBufferImpl* selfI = blInternalCast(self->impl);
+  return selfI->size;
+}
+
+uint32_t blGlyphBufferGetFlags(const BLGlyphBufferCore* self) noexcept {
+  BLInternalGlyphBufferImpl* selfI = blInternalCast(self->impl);
+  return selfI->flags;
+}
+
+const BLGlyphRun* blGlyphBufferGetGlyphRun(const BLGlyphBufferCore* self) noexcept {
+  BLInternalGlyphBufferImpl* selfI = blInternalCast(self->impl);
+  return &selfI->glyphRun;
 }
 
 BLResult blGlyphBufferSetText(BLGlyphBufferCore* self, const void* data, size_t size, uint32_t encoding) noexcept {
