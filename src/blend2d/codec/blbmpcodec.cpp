@@ -651,7 +651,8 @@ static BLResult BL_CDECL blBmpEncoderImplWriteFrame(BLBmpEncoderImpl* impl, BLAr
 
   switch (format) {
     case BL_FORMAT_PRGB32: {
-      headerSize = BL_BMP_HEADER_SIZE_WIN_V3;
+      // NOTE: Version 3 would be okay, but not all tools can read BMPv3.
+      headerSize = BL_BMP_HEADER_SIZE_WIN_V4;
       bpl = w * 4;
       bmpFmt.depth = 32;
       bmpFmt.flags = BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_PREMULTIPLIED;
