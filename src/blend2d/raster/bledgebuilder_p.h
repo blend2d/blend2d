@@ -124,6 +124,8 @@ public:
       uint32_t bandStart = (unsigned(_boundingBox.y0    ) >> _fixedBandHeightShift);
       uint32_t bandEnd   = (unsigned(_boundingBox.y1 - 1) >> _fixedBandHeightShift) + 1;
 
+      BL_ASSERT(bandEnd <= _bandCount);
+
       for (uint32_t i = bandStart; i < bandEnd; i++)
         _bandEdges[i] = nullptr;
       resetBoundingBox();
@@ -803,8 +805,12 @@ public:
   BL_INLINE BLResult done() noexcept {
     BL_PROPAGATE(flushBorderAccumulators());
     resetBorderAccumulators();
-    blBound(_storage->_boundingBox, _bBoxI);
+    mergeBoundingBox();
     return BL_SUCCESS;
+  }
+
+  BL_INLINE void mergeBoundingBox() noexcept {
+    blBound(_storage->_boundingBox, _bBoxI);
   }
 
   BL_INLINE BLResult flipSign() noexcept {

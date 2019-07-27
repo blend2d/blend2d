@@ -36,10 +36,10 @@
 static BLContextVirt blRasterContextVirt;
 
 static const uint32_t blRasterContextSolidDataRgba32[] = {
-  0x00000000, // BL_COMP_OP_SOLID_ID_NONE (not solid, not used).
-  0x00000000, // BL_COMP_OP_SOLID_ID_TRANSPARENT.
-  0xFF000000, // BL_COMP_OP_SOLID_ID_OPAQUE_BLACK.
-  0xFFFFFFFF  // BL_COMP_OP_SOLID_ID_OPAQUE_WHITE.
+  0x00000000u, // BL_COMP_OP_SOLID_ID_NONE (not solid, not used).
+  0x00000000u, // BL_COMP_OP_SOLID_ID_TRANSPARENT.
+  0xFF000000u, // BL_COMP_OP_SOLID_ID_OPAQUE_BLACK.
+  0xFFFFFFFFu  // BL_COMP_OP_SOLID_ID_OPAQUE_WHITE.
 };
 
 // ============================================================================
@@ -719,6 +719,7 @@ static BL_INLINE BLResult blRasterContextImplFillClippedEdges(BLRasterContextImp
 
   BLResult result = blRasterContextImplEnsureFetchData(ctxI, fillCmd);
   if (BL_UNLIKELY(result != BL_SUCCESS)) {
+    ctxI->worker.edgeBuilder.mergeBoundingBox();
     ctxI->worker.edgeStorage.clear();
     ctxI->worker.workerZone.clear();
     return result;
@@ -915,6 +916,7 @@ static BL_INLINE BLResult blRasterContextImplStrokeUnsafePath(BLRasterContextImp
     result = ctxI->worker.edgeBuilder.done();
 
   if (BL_UNLIKELY(result != BL_SUCCESS)) {
+    ctxI->worker.edgeBuilder.mergeBoundingBox();
     ctxI->worker.edgeStorage.clear();
     ctxI->worker.workerZone.clear();
     return result;
@@ -1845,6 +1847,7 @@ static BLResult BL_CDECL blRasterContextImplFillGlyphRunD(BLRasterContextImpl* c
     result = ctxI->worker.edgeBuilder.done();
 
   if (BL_UNLIKELY(result != BL_SUCCESS)) {
+    ctxI->worker.edgeBuilder.mergeBoundingBox();
     ctxI->worker.edgeStorage.clear();
     ctxI->worker.workerZone.clear();
     return result;
@@ -1999,6 +2002,7 @@ static BLResult BL_CDECL blRasterContextImplStrokeGlyphRunD(BLRasterContextImpl*
     result = ctxI->worker.edgeBuilder.done();
 
   if (BL_UNLIKELY(result != BL_SUCCESS)) {
+    ctxI->worker.edgeBuilder.mergeBoundingBox();
     ctxI->worker.edgeStorage.clear();
     ctxI->worker.workerZone.clear();
     return result;
