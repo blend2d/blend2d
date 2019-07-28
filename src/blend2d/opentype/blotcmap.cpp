@@ -480,7 +480,7 @@ BLResult validateSubTable(BLFontTable cmapTable, uint32_t subTableOffset, uint32
     };
 
     // ------------------------------------------------------------------------
-    // [Format 10 - Trimmed BLArray]
+    // [Format 10 - Trimmed Array]
     // ------------------------------------------------------------------------
 
     case 10: {
@@ -575,6 +575,20 @@ BLResult validateSubTable(BLFontTable cmapTable, uint32_t subTableOffset, uint32
 // [BLOpenType::CMapImpl - Init]
 // ============================================================================
 
+static bool isSupportedCMapFormat(uint32_t format) noexcept {
+  switch (format) {
+    case  0:
+    case  4:
+    case  6:
+    case 10:
+    case 12:
+    case 13:
+      return true;
+    default:
+      return false;
+  }
+}
+
 static BLResult initCMapFuncs(BLOTFaceImpl* faceI, uint32_t format) noexcept {
   switch (format) {
     case  0: faceI->funcs.mapTextToGlyphs = mapTextToGlyphsFormat0; break;
@@ -629,7 +643,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
     uint32_t encodingId = encoding.encodingId();
     uint32_t format = blOffsetPtr(cmap.dataAs<UInt16>(), offset)->value();
 
-    if (format == 8)
+    if (!isSupportedCMapFormat(format))
       continue;
 
     uint32_t thisScore = kScoreNothing;

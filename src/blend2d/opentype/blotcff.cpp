@@ -323,7 +323,7 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
   //
   // Please notice the use of `kOffsetAdjustment`. Since all offsets are
   // relative to "RELATIVE TO THE BYTE THAT PRECEDES THE OBJECT DATA" we
-  // must take that into consideration.
+  // must account that.
   uint32_t maxOffset = uint32_t(blMin<size_t>(blMaxValue<uint32_t>(), dataSize - indexSizeIncludingOffsets + CFFTable::kOffsetAdjustment));
 
   switch (offsetSize) {
@@ -830,6 +830,31 @@ static void traceCharStringOp(const BLOTFaceImpl* faceI, Trace& trace, uint32_t 
 // [BLOpenType::CFFImpl - Interpreter]
 // ============================================================================
 
+static BL_INLINE bool findGlyphInRange3(uint32_t glyphId, const uint8_t* ranges, size_t nRanges, uint32_t& fd) noexcept {
+  constexpr size_t kRangeSize = 3;
+  for (size_t i = nRanges; i != 0; i >>= 1) {
+    const uint8_t* half = ranges + (i >> 1) * kRangeSize;
+
+    // Read either the next Range3[] record or sentinel.
+    uint32_t gEnd = blMemReadU16uBE(half + kRangeSize);
+
+    if (glyphId >= gEnd) {
+      ranges = half + kRangeSize;
+      i--;
+      continue;
+    }
+
+    uint32_t gStart = blMemReadU16uBE(half);
+    if (glyphId < gStart)
+      continue;
+
+    fd = half[2]; // Read `Range3::fd`.
+    return true;
+  }
+
+  return false;
+}
+
 template<typename Consumer>
 static BLResult getGlyphOutlinesT(
   const BLFontFaceImpl* faceI_,
@@ -890,6 +915,45 @@ static BLResult getGlyphOutlinesT(
   if (BL_UNLIKELY(glyphId >= subrIndex->entryCount)) {
     trace.fail("Invalid Glyph ID\n");
     return blTraceError(BL_ERROR_INVALID_GLYPH);
+  }
+
+  // LSubR index that will be used by CallLSubR operator. CID fonts provide
+  // multiple indexes that can be used based on `glyphId`.
+  const CFFData::IndexData* localSubrIndex = &cffInfo.index[CFFData::kIndexLSubR];
+  if (cffInfo.fdSelectOffset) {
+    // We are not interested in format byte, we already know the format.
+    size_t fdSelectOffset = cffInfo.fdSelectOffset + 1;
+
+    const uint8_t* fdData = cffData + fdSelectOffset;
+    size_t fdDataSize = cffInfo.table.size - fdSelectOffset;
+
+    // There are only two formats - 0 and 3.
+    uint32_t fd = 0xFFFFFFFFu;
+    if (cffInfo.fdSelectFormat == 0) {
+      // Format 0:
+      //   UInt8 format;
+      //   UInt8 fds[nGlyphs];
+      if (glyphId < fdDataSize)
+        fd = fdData[glyphId];
+    }
+    else {
+      // Format 3:
+      //   UInt8 format;
+      //   UInt16 nRanges;
+      //   struct Range3 {
+      //     UInt16 first;
+      //     UInt8 id;
+      //   } ranges[nRanges];
+      //   UInt16 sentinel;
+      if (fdDataSize >= 2) {
+        uint32_t nRanges = blMemReadU16uBE(fdData);
+        if (fdDataSize >= 2u + nRanges * 3u + 2u)
+          findGlyphInRange3(glyphId, fdData + 2u, nRanges, fd);
+      }
+    }
+
+    if (fd < faceI->cffFDSubrIndexes.size())
+      localSubrIndex = &faceI->cffFDSubrIndexes[fd];
   }
 
   // Compiler can better optimize the transform if it knows that it won't be
@@ -1425,8 +1489,8 @@ OnVHCurveTo:
           if (BL_UNLIKELY(++cIdx >= kCFFCallStackSize))
             goto InvalidData;
 
-          subrId = uint32_t(int32_t(vBuf[--vIdx]) + int32_t(cffInfo.index[CFFData::kIndexLSubR].bias));
-          subrIndex = &cffInfo.index[CFFData::kIndexLSubR];
+          subrIndex = localSubrIndex;
+          subrId = uint32_t(int32_t(vBuf[--vIdx]) + int32_t(subrIndex->bias));
 
           if (subrId < subrIndex->entryCount)
             goto OnSubRCall;
@@ -1442,8 +1506,8 @@ OnVHCurveTo:
           if (BL_UNLIKELY(++cIdx >= kCFFCallStackSize))
             goto InvalidData;
 
-          subrId = uint32_t(int32_t(vBuf[--vIdx]) + int32_t(cffInfo.index[CFFData::kIndexGSubR].bias));
           subrIndex = &cffInfo.index[CFFData::kIndexGSubR];
+          subrId = uint32_t(int32_t(vBuf[--vIdx]) + int32_t(subrIndex->bias));
 
           if (subrId < subrIndex->entryCount)
             goto OnSubRCall;
@@ -2061,11 +2125,44 @@ static BLResult BL_CDECL getGlyphOutlines(
 }
 
 // ============================================================================
+// [BLOpenType::CIDInfo]
+// ============================================================================
+
+struct CIDInfo {
+  enum Flags : uint32_t {
+    kFlagIsCID       = 0x00000001u,
+    kFlagHasFDArray  = 0x00000002u,
+    kFlagHasFDSelect = 0x00000004u,
+    kFlagsAll        = 0x00000007u
+  };
+
+  uint32_t flags;
+  uint32_t ros[2];
+  uint32_t fdArrayOffset;
+  uint32_t fdSelectOffset;
+  uint8_t fdSelectFormat;
+};
+
+// ============================================================================
 // [BLOpenType::CFFImpl - Init]
 // ============================================================================
 
+static BL_INLINE bool isSupportedFDSelectFormat(uint32_t format) noexcept {
+  return format == 0 || format == 3;
+}
+
 BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) noexcept {
+  BLFontTableT<CFFTable> cff { fontTable };
+
   DictIterator dictIter;
+  DictEntry dictEntry;
+
+  Index nameIndex {};
+  Index topDictIndex {};
+  Index stringIndex {};
+  Index gsubrIndex {};
+  Index lsubrIndex {};
+  Index charStringIndex {};
 
   uint32_t nameOffset = 0;
   uint32_t topDictOffset = 0;
@@ -2078,12 +2175,8 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
   uint32_t privateLength = 0;
   uint32_t lsubrOffset = 0;
 
-  Index nameIndex {};
-  Index topDictIndex {};
-  Index stringIndex {};
-  Index gsubrIndex {};
-  Index lsubrIndex {};
-  Index charStringIndex {};
+  CIDInfo cid {};
+  BLArray<CFFData::IndexData> fdSubrIndexes;
 
   // --------------------------------------------------------------------------
   // [CFF Header]
@@ -2091,8 +2184,6 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
 
   if (BL_UNLIKELY(!blFontTableFitsT<CFFTable>(fontTable)))
     return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
-
-  BLFontTableT<CFFTable> cff { fontTable };
 
   // The specification says that the implementation should refuse MAJOR version,
   // which it doesn't understand. We understand version 1 & 2 (there seems to be
@@ -2154,31 +2245,58 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
 
   BL_PROPAGATE(readIndex(cff.data + topDictOffset, topDictSize, cffVersion, &topDictIndex));
   if (cffVersion == CFFData::kVersion1) {
-    // TopDict index must match NameIndex (v1).
+    // TopDict index size must match NameIndex size (v1).
     if (BL_UNLIKELY(nameIndex.count != topDictIndex.count))
       return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
   }
 
-  dictIter.reset(topDictIndex.payload + topDictIndex.offsetAt(0), topDictIndex.payloadSize);
-  while (dictIter.hasNext()) {
-    DictEntry entry;
-    BL_PROPAGATE(dictIter.next(entry));
+  {
+    uint32_t offsets[2] = { topDictIndex.offsetAt(0), topDictIndex.offsetAt(1) };
+    dictIter.reset(topDictIndex.payload + offsets[0], offsets[1] - offsets[0]);
+  }
 
-    switch (entry.op) {
+  while (dictIter.hasNext()) {
+    BL_PROPAGATE(dictIter.next(dictEntry));
+    switch (dictEntry.op) {
       case CFFTable::kDictOpTopCharStrings: {
-        if (BL_UNLIKELY(entry.count != 1))
+        if (BL_UNLIKELY(dictEntry.count != 1))
           return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-        charStringOffset = uint32_t(entry.values[0]);
+        charStringOffset = uint32_t(dictEntry.values[0]);
         break;
       }
 
       case CFFTable::kDictOpTopPrivate: {
-        if (BL_UNLIKELY(entry.count != 2))
+        if (BL_UNLIKELY(dictEntry.count != 2))
           return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-        privateOffset = uint32_t(entry.values[1]);
-        privateLength = uint32_t(entry.values[0]);
+        privateOffset = uint32_t(dictEntry.values[1]);
+        privateLength = uint32_t(dictEntry.values[0]);
+        break;
+      }
+
+      case CFFTable::kDictOpTopROS: {
+        if (dictEntry.count == 3) {
+          cid.ros[0] = uint32_t(dictEntry.values[0]);
+          cid.ros[1] = uint32_t(dictEntry.values[1]);
+          cid.flags |= CIDInfo::kFlagIsCID;
+        }
+        break;
+      }
+
+      case CFFTable::kDictOpTopFDArray: {
+        if (dictEntry.count == 1) {
+          cid.fdArrayOffset = uint32_t(dictEntry.values[0]);
+          cid.flags |= CIDInfo::kFlagHasFDArray;
+        }
+        break;
+      }
+
+      case CFFTable::kDictOpTopFDSelect: {
+        if (dictEntry.count == 1) {
+          cid.fdSelectOffset = uint32_t(dictEntry.values[0]);
+          cid.flags |= CIDInfo::kFlagHasFDSelect;
+        }
         break;
       }
     }
@@ -2217,15 +2335,13 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
 
     dictIter.reset(cff.data + privateOffset, privateLength);
     while (dictIter.hasNext()) {
-      DictEntry entry;
-      BL_PROPAGATE(dictIter.next(entry));
-
-      switch (entry.op) {
+      BL_PROPAGATE(dictIter.next(dictEntry));
+      switch (dictEntry.op) {
         case CFFTable::kDictOpPrivSubrs: {
-          if (BL_UNLIKELY(entry.count != 1))
+          if (BL_UNLIKELY(dictEntry.count != 1))
             return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-          lsubrOffset = uint32_t(entry.values[0]);
+          lsubrOffset = uint32_t(dictEntry.values[0]);
           break;
         }
       }
@@ -2255,7 +2371,105 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
   BL_PROPAGATE(readIndex(cff.data + charStringOffset, cff.size - charStringOffset, cffVersion, &charStringIndex));
 
   // --------------------------------------------------------------------------
-  // [Done - Fill CFFData]
+  // [CFF/CID]
+  // --------------------------------------------------------------------------
+
+  if ((cid.flags & CIDInfo::kFlagsAll) == CIDInfo::kFlagsAll) {
+    uint32_t fdArrayOffset = cid.fdArrayOffset;
+    uint32_t fdSelectOffset = cid.fdSelectOffset;
+
+    // CID fonts require both FDArray and FDOffset.
+    if (fdArrayOffset && fdSelectOffset) {
+      if (fdArrayOffset < beginDataOffset || fdArrayOffset >= cff.size)
+        return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+
+      if (fdSelectOffset < beginDataOffset || fdSelectOffset >= cff.size)
+        return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+
+      // The index contains offsets to the additional TopDicts. To speed up
+      // glyph processing we read these TopDicts and build our own array that
+      // will be used during glyph metrics/outline decoding.
+      Index fdArrayIndex;
+      BL_PROPAGATE(readIndex(cff.data + fdArrayOffset, cff.size - fdArrayOffset, cffVersion, &fdArrayIndex));
+      BL_PROPAGATE(fdSubrIndexes.reserve(fdArrayIndex.count));
+
+      const uint8_t* fdArrayOffsets = fdArrayIndex.offsets;
+      for (uint32_t i = 0; i < fdArrayIndex.count; i++) {
+        Index fdSubrIndex {};
+        uint32_t subrOffset = 0;
+        uint32_t subrBaseOffset = 0;
+
+        // NOTE: The offsets were already verified by `readIndex()`.
+        uint32_t offsets[2];
+        readOffsetArray(fdArrayOffsets, fdArrayIndex.offsetSize, offsets, 2);
+
+        // Offsets start from 1, we have to adjust them to start from 0.
+        offsets[0] -= CFFTable::kOffsetAdjustment;
+        offsets[1] -= CFFTable::kOffsetAdjustment;
+
+        // dictData[1] would be a private dictionary, if present...
+        BLFontTable dictData[2];
+        dictData[0].reset(fdArrayIndex.payload + offsets[0], offsets[1] - offsets[0]);
+        dictData[1].reset();
+
+        for (uint32_t d = 0; d < 2; d++) {
+          dictIter.reset(dictData[d].data, dictData[d].size);
+          while (dictIter.hasNext()) {
+            BL_PROPAGATE(dictIter.next(dictEntry));
+            switch (dictEntry.op) {
+              case CFFTable::kDictOpTopPrivate: {
+                if (BL_UNLIKELY(dictEntry.count != 2))
+                  return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+
+                uint32_t offset = uint32_t(dictEntry.values[1]);
+                uint32_t length = uint32_t(dictEntry.values[0]);
+
+                if (BL_UNLIKELY(offset < beginDataOffset || offset > cff.size || length > cff.size - offset))
+                  return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+
+                dictData[1].reset(cff.data + offset, length);
+                subrBaseOffset = offset;
+                break;
+              }
+
+              case CFFTable::kDictOpPrivSubrs: {
+                if (BL_UNLIKELY(dictEntry.count != 1))
+                  return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+
+                // The local subr `offset` is relative to the `subrBaseOffset`.
+                subrOffset = uint32_t(dictEntry.values[0]);
+                if (BL_UNLIKELY(subrOffset > cff.size - subrBaseOffset))
+                  return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+
+                subrOffset += subrBaseOffset;
+                BL_PROPAGATE(readIndex(cff.data + subrOffset, cff.size - subrOffset, cffVersion, &fdSubrIndex));
+                break;
+              }
+            }
+          }
+        }
+
+        CFFData::IndexData fdSubrIndexData;
+        fdSubrIndexData.reset(
+          DataRange { subrOffset, fdSubrIndex.totalSize },
+          fdSubrIndex.headerSize,
+          fdSubrIndex.offsetSize,
+          fdSubrIndex.count,
+          calcSubRBias(fdSubrIndex.count));
+
+        fdSubrIndexes.append(fdSubrIndexData);
+        fdArrayOffsets += fdArrayIndex.offsetSize;
+      }
+
+      // Validate FDSelect data.
+      cid.fdSelectFormat = cff.data[fdSelectOffset];
+      if (BL_UNLIKELY(!isSupportedFDSelectFormat(cid.fdSelectFormat)))
+        return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // [Done]
   // --------------------------------------------------------------------------
 
   faceI->cff.table = fontTable;
@@ -2280,6 +2494,10 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
     charStringIndex.offsetSize,
     charStringIndex.count,
     0);
+
+  faceI->cff.fdSelectOffset = cid.fdSelectOffset;
+  faceI->cff.fdSelectFormat = cid.fdSelectFormat;
+  faceI->cffFDSubrIndexes.swap(fdSubrIndexes);
 
   faceI->funcs.getGlyphBounds = getGlyphBounds;
   faceI->funcs.getGlyphOutlines = getGlyphOutlines;
@@ -2359,7 +2577,7 @@ static void testReadFloat() noexcept {
 }
 
 static void testDictIterator() noexcept {
-  // This example dump was taken from "The Compact BLFont Format Specification" Appendix D.
+  // This example dump was taken from "The Compact Font Format Specification" Appendix D.
   static const uint8_t dump[] = {
     0xF8, 0x1B, 0x00, 0xF8, 0x1C, 0x02, 0xF8, 0x1D, 0x03, 0xF8,
     0x19, 0x04, 0x1C, 0x6F, 0x00, 0x0D, 0xFB, 0x3C, 0xFB, 0x6E,

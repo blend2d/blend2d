@@ -110,6 +110,7 @@ BLResult blOTFaceImplNew(BLOTFaceImpl** dst, const BLFontLoader* loader, const B
   blCallCtor(faceI->postScriptName);
   blCallCtor(faceI->kern);
   blCallCtor(faceI->layout);
+  blCallCtor(faceI->cffFDSubrIndexes);
   blCallCtor(faceI->scriptTags);
   blCallCtor(faceI->featureTags);
 
@@ -133,6 +134,7 @@ static BLResult BL_CDECL blOTFaceImplDestroy(BLFontFaceImpl* faceI_) noexcept {
   blCallDtor(faceI->postScriptName);
   blCallDtor(faceI->kern);
   blCallDtor(faceI->layout);
+  blCallDtor(faceI->cffFDSubrIndexes);
   blCallDtor(faceI->scriptTags);
   blCallDtor(faceI->featureTags);
 

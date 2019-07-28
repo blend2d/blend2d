@@ -213,8 +213,7 @@ static size_t BL_CDECL blMemFontDataImplQueryTables(const BLFontDataImpl* impl_,
 
         if (tableOffset < dataSize && tableSize && tableSize <= dataSize - tableOffset) {
           matchCount++;
-          dst[tagIndex].data = blOffsetPtr<uint8_t>(data, tableOffset);
-          dst[tagIndex].size = tableSize;
+          dst[tagIndex].reset(blOffsetPtr<uint8_t>(data, tableOffset), tableSize);
         }
 
         break;

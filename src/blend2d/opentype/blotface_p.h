@@ -84,6 +84,8 @@ struct BLOTFaceImpl : public BLInternalFontFaceImpl {
     //! TrueType font data [glyf/loca].
     BLOpenType::GlyfData glyf;
   };
+  //! Array of LSubR indexes used by CID fonts (CFF/CFF2).
+  BLArray<BLOpenType::CFFData::IndexData> cffFDSubrIndexes;
 
   //! Script tags.
   BLArray<BLTag> scriptTags;

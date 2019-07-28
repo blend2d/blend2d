@@ -223,6 +223,11 @@ struct CFFData {
   BLFontTableT<CFFTable> table;
   //! GSubR, LSubR, and CharString indexes.
   IndexData index[kIndexCount];
+  //! Associates an FD (font dict) with a glyph by specifying an FD index for that glyph.
+  uint32_t fdSelectOffset;
+  //! Format of FDSelect data (0 or 3).
+  uint8_t fdSelectFormat;
+  uint8_t reserved[3];
 };
 
 // ============================================================================

@@ -765,7 +765,15 @@ struct BLFontTable {
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE void reset() noexcept {
+    data = nullptr;
+    size = 0;
+  }
+
+  BL_INLINE void reset(const uint8_t* data_, size_t size_) noexcept {
+    data = data_;
+    size = size_;
+  }
 
   template<typename T>
   BL_INLINE const T* dataAs() const noexcept { return reinterpret_cast<const T*>(data); }
