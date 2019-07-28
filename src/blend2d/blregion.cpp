@@ -366,6 +366,25 @@ BLResult blRegionReset(BLRegionCore* self) noexcept {
 }
 
 // ============================================================================
+// [BLRegion - Data]
+// ============================================================================
+
+size_t blRegionGetSize(const BLRegionCore* self) noexcept {
+  BLInternalRegionImpl* selfI = blInternalCast(self->impl);
+  return selfI->size;
+}
+
+size_t blRegionGetCapacity(const BLRegionCore* self) noexcept {
+  BLInternalRegionImpl* selfI = blInternalCast(self->impl);
+  return selfI->capacity;
+}
+
+const BLBoxI* blRegionGetData(const BLRegionCore* self) noexcept {
+  BLInternalRegionImpl* selfI = blInternalCast(self->impl);
+  return selfI->data;
+}
+
+// ============================================================================
 // [BLRegion - Storage]
 // ============================================================================
 

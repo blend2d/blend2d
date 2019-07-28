@@ -71,5 +71,19 @@ UNIT(blend2d_arrayops) {
     blInsertionSort(arr1, kArraySize);
     blQuickSort(arr2, kArraySize);
   }
+
+  INFO("blBinarySearch() - Testing binary search");
+  {
+    static const int arr[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+    for (size_t size = BL_ARRAY_SIZE(arr); size > 0; size--) {
+      for (size_t i = 0; i < size; i++) {
+        int value = arr[i];
+        EXPECT(blBinarySearch(arr, size, value) == i);
+        EXPECT(blBinarySearchClosestFirst(arr, size, value) == i);
+        EXPECT(blBinarySearchClosestLast(arr, size, value) == i);
+      }
+    }
+  }
 }
 #endif

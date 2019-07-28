@@ -677,16 +677,16 @@ BLResult blGradientSetExtendMode(BLGradientCore* self, uint32_t extendMode) noex
 // [BLGradient - Stops]
 // ============================================================================
 
-const BLGradientStop* blGradientGetStops(const BLGradientCore* self) noexcept {
-  return self->impl->stops;
-}
-
 size_t blGradientGetSize(const BLGradientCore* self) noexcept {
   return self->impl->size;
 }
 
 size_t blGradientGetCapacity(const BLGradientCore* self) noexcept {
   return self->impl->capacity;
+}
+
+const BLGradientStop* blGradientGetStops(const BLGradientCore* self) noexcept {
+  return self->impl->stops;
 }
 
 BLResult blGradientResetStops(BLGradientCore* self) noexcept {

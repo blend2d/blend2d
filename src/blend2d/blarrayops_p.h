@@ -22,18 +22,18 @@ static BL_INLINE size_t blBinarySearch(const T* array, size_t size, const V& val
   if (!size)
     return SIZE_MAX;
 
-  const T* lower = array;
+  const T* base = array;
   while (size_t half = size / 2u) {
-    const T* middle = lower + half;
+    const T* middle = base + half;
     size -= half;
     if (middle[0] <= value)
-      lower = middle;
+      base = middle;
   }
 
-  size_t index = size_t(lower - array);
+  size_t index = size_t(base - array);
   BL_ASSUME(index != SIZE_MAX);
 
-  return lower[0] == value ? index : SIZE_MAX;
+  return base[0] == value ? index : SIZE_MAX;
 }
 
 template<typename T, typename V>
@@ -41,18 +41,18 @@ static BL_INLINE size_t blBinarySearchClosestFirst(const T* array, size_t size, 
   if (!size)
     return 0;
 
-  const T* lower = array;
+  const T* base = array;
   while (size_t half = size / 2u) {
-    const T* middle = lower + half;
+    const T* middle = base + half;
     size -= half;
     if (middle[0] < value)
-      lower = middle;
+      base = middle;
   }
 
-  if (lower[0] < value)
-    lower++;
+  if (base[0] < value)
+    base++;
 
-  return size_t(lower - array);
+  return size_t(base - array);
 }
 
 template<typename T, typename V>
@@ -60,15 +60,15 @@ static BL_INLINE size_t blBinarySearchClosestLast(const T* array, size_t size, c
   if (!size)
     return 0;
 
-  const T* lower = array;
+  const T* base = array;
   while (size_t half = size / 2u) {
-    const T* middle = lower + half;
+    const T* middle = base + half;
     size -= half;
     if (middle[0] <= value)
-      lower = middle;
+      base = middle;
   }
 
-  return size_t(lower - array);
+  return size_t(base - array);
 }
 
 // ============================================================================

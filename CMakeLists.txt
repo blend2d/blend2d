@@ -357,6 +357,8 @@ set(BLEND2D_SRC_LIST
   blend2d/blarray.cpp
   blend2d/blarray.h
   blend2d/blarray_p.h
+  blend2d/blarrayops.cpp
+  blend2d/blarrayops_p.h
   blend2d/blbitarray.cpp
   blend2d/blbitarray.h
   blend2d/blbitarray_p.h
