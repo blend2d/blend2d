@@ -31,6 +31,24 @@ namespace LayoutImpl {
 #endif
 
 // ============================================================================
+// [BLOpenType::LayoutImpl - Debugging]
+// ============================================================================
+
+#if 0
+static void dumpGPosValue(const Int16* p, uint32_t index, uint32_t valueFormat) noexcept {
+  int32_t v;
+  if (valueFormat & GPosTable::kValueXPlacement      ) { v = p->value(); p++; printf("#%d ValueXPlacement: %d\n", index, v); }
+  if (valueFormat & GPosTable::kValueYPlacement      ) { v = p->value(); p++; printf("#%d ValueYPlacement: %d\n", index, v); }
+  if (valueFormat & GPosTable::kValueXAdvance        ) { v = p->value(); p++; printf("#%d ValueXAdvance: %d\n", index, v); }
+  if (valueFormat & GPosTable::kValueYAdvance        ) { v = p->value(); p++; printf("#%d ValueYAdvance: %d\n", index, v); }
+  if (valueFormat & GPosTable::kValueXPlacementDevice) { v = p->value(); p++; printf("#%d ValueXPlacementDevice: %d\n", index, v); }
+  if (valueFormat & GPosTable::kValueYPlacementDevice) { v = p->value(); p++; printf("#%d ValueYPlacementDevice: %d\n", index, v); }
+  if (valueFormat & GPosTable::kValueXAdvanceDevice  ) { v = p->value(); p++; printf("#%d ValueXAdvanceDevice: %d\n", index, v); }
+  if (valueFormat & GPosTable::kValueYAdvanceDevice  ) { v = p->value(); p++; printf("#%d ValueYAdvanceDevice: %d\n", index, v); }
+}
+#endif
+
+// ============================================================================
 // [BLOpenType::LayoutImpl - Validator]
 // ============================================================================
 
@@ -1404,17 +1422,17 @@ static BL_INLINE const uint8_t* binarySearchGlyphIdInVarStruct(const uint8_t* ar
   if (!arraySize)
     return nullptr;
 
-  const uint8_t* lower = array;
+  const uint8_t* ptr = array;
   while (size_t half = arraySize / 2u) {
-    const uint8_t* middle = lower + half * itemSize;
+    const uint8_t* middlePtr = ptr + half * itemSize;
     arraySize -= half;
-    if (reinterpret_cast<const T*>(middle + offset)->value() <= glyphId)
-      lower = middle;
+    if (glyphId >= reinterpret_cast<const T*>(middlePtr + offset)->value())
+      ptr = middlePtr;
   }
 
-  if (reinterpret_cast<const T*>(lower + offset)->value() != glyphId)
-    lower = nullptr;
-  return lower;
+  if (glyphId != reinterpret_cast<const T*>(ptr + offset)->value())
+    ptr = nullptr;
+  return ptr;
 }
 
 static BL_INLINE const Int16* applyGPosValue(const Int16* p, uint32_t valueFormat, BLGlyphPlacement* glyphPlacement) noexcept {
@@ -1697,7 +1715,6 @@ static BL_INLINE BLResult applyGPosLookupType2Format2(const BLOTFaceImpl* faceI,
 
   for (; index < end; index++, leftGlyphId = rightGlyphId) {
     rightGlyphId = itemData[index + 1].glyphId;
-
     if (leftGlyphId >= minGlyphId && leftGlyphId <= maxGlyphId) {
       uint32_t coverageIndex;
       if (covIt.find<CoverageFormat>(leftGlyphId, coverageIndex)) {
@@ -1990,6 +2007,7 @@ static bool checkLookupTable(Validator* self, Trace trace, uint32_t kind, BLFont
     BLFontTableT<GSubTable::LookupHeader> header { blFontSubTable(table, offset) };
     uint32_t lookupFormat = header->format();
 
+    trace.info("LookupFormat: %u\n", lookupFormat);
     if (BL_UNLIKELY(lookupFormat - 1u >= lookupTypeInfo.formatCount))
       return trace.fail("Invalid format [%u]\n", lookupFormat);
 

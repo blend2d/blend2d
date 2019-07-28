@@ -251,32 +251,32 @@ public:
   template<uint32_t Format>
   BL_INLINE bool find(uint32_t glyphId, uint32_t& coverageIndex) const noexcept {
     if (Format == 1) {
-      const UInt16* lower = static_cast<const UInt16*>(_array);
+      const UInt16* base = static_cast<const UInt16*>(_array);
       size_t size = _size;
 
       while (size_t half = size / 2u) {
-        const UInt16* middle = lower + half;
+        const UInt16* middle = base + half;
         size -= half;
-        if (middle->value() <= glyphId)
-          lower = middle;
+        if (glyphId >= middle->value())
+          base = middle;
       }
 
-      coverageIndex = uint32_t(size_t(lower - static_cast<const UInt16*>(_array)));
-      return lower->value() == glyphId;
+      coverageIndex = uint32_t(size_t(base - static_cast<const UInt16*>(_array)));
+      return base->value() == glyphId;
     }
     else {
-      const Range* lower = static_cast<const Range*>(_array);
+      const Range* base = static_cast<const Range*>(_array);
       size_t size = _size;
 
       while (size_t half = size / 2u) {
-        const Range* middle = lower + half;
+        const Range* middle = base + half;
         size -= half;
-        if (middle->lastGlyph() <= glyphId)
-          lower = middle;
+        if (glyphId >= middle->firstGlyph())
+          base = middle;
       }
 
-      coverageIndex = uint32_t(lower->startCoverageIndex()) + glyphId - lower->firstGlyph();
-      return glyphId >= lower->firstGlyph() && glyphId <= lower->lastGlyph();
+      coverageIndex = uint32_t(base->startCoverageIndex()) + glyphId - base->firstGlyph();
+      return glyphId >= base->firstGlyph() && glyphId <= base->lastGlyph();
     }
   }
 };
@@ -403,18 +403,18 @@ public:
       return index == fixedIndex;
     }
     else {
-      const Range* lower = static_cast<const Range*>(_array);
+      const Range* base = static_cast<const Range*>(_array);
       size_t size = _size;
 
       while (size_t half = size / 2u) {
-        const Range* middle = lower + half;
+        const Range* middle = base + half;
         size -= half;
-        if (middle->lastGlyph() <= glyphId)
-          lower = middle;
+        if (glyphId >= middle->firstGlyph())
+          base = middle;
       }
 
-      classValue = lower->classValue();
-      return glyphId >= lower->firstGlyph() && glyphId <= lower->lastGlyph();
+      classValue = base->classValue();
+      return glyphId >= base->firstGlyph() && glyphId <= base->lastGlyph();
     }
   }
 };

@@ -1064,25 +1064,25 @@ struct BLFontDesignMetrics {
 
   union {
     struct {
-      //! Ascent (horizontal).
+      //! Ascent (horizontal layout).
       int ascent;
-      //! Ascent (vertical).
+      //! Ascent (vertical layout).
       int vAscent;
-      //! Descent (horizontal).
+      //! Descent (horizontal layout).
       int descent;
-      //! Descent (vertical).
+      //! Descent (vertical layout).
       int vDescent;
-      //! Minimum leading-side bearing (horizontal).
+      //! Minimum leading-side bearing (horizontal layout).
       int hMinLSB;
-      //! Minimum leading-side bearing (vertical).
+      //! Minimum leading-side bearing (vertical layout).
       int vMinLSB;
-      //! Minimum trailing-side bearing (horizontal).
+      //! Minimum trailing-side bearing (horizontal layout).
       int hMinTSB;
-      //! Minimum trailing-side bearing (vertical).
+      //! Minimum trailing-side bearing (vertical layout).
       int vMinTSB;
-      //! Maximum horizontal advance.
+      //! Maximum advance (horizontal layout).
       int hMaxAdvance;
-      //! Maximum vertical advance.
+      //! Maximum advance (vertical layout).
       int vMaxAdvance;
     };
 

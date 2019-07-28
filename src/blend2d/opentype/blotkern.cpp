@@ -281,7 +281,7 @@ static BL_INLINE int32_t applyKernFormat2(const BLOTFaceImpl* faceI, const void*
 
     // Cannot overflow as both components are unsigned 16-bit integers.
     uint32_t valueOffset = leftClass + rightClass;
-    if (valueOffset > dataSize - 2u)
+    if (leftClass * rightClass == 0 || valueOffset > dataSize - 2u)
       continue;
 
     int32_t value = blOffsetPtr<const FWord>(dataPtr, valueOffset)->value();
