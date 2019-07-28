@@ -139,7 +139,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" ST
     -Oi)                     # [+] Generate Intrinsic Functions.
 
   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    list(APPEND BLEND2D_PRIVATE_CFLAGS -fno-exceptions -fno-rtti -fno-math-errno)
+    list(APPEND BLEND2D_PRIVATE_CFLAGS -clang:-fno-math-errno)
   endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   list(APPEND BLEND2D_PRIVATE_CFLAGS -Wall -Wextra)
