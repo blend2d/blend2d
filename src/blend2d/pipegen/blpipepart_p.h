@@ -20,8 +20,6 @@ namespace BLPipeGen {
 // [BLPipeGen::PipePart]
 // ============================================================================
 
-//! \ingroup blend2d_pipegen
-//!
 //! A base interface of a pipeline part.
 //!
 //! This class has basically no functionality, it just defines members that all

@@ -177,19 +177,39 @@ matrix:
       osx_image: xcode9.4
       env: BUILD_MATRIX="BUILD_TYPE=Debug" CXXFLAGS=-m32 && LDFLAGS=-m32
 
-    - name: "OSX Clang XCode 9.4 [32-bit] [REL]"
-      os: osx
-      osx_image: xcode9.4
-      env: BUILD_MATRIX="BUILD_TYPE=Release" CXXFLAGS=-m32 && LDFLAGS=-m32
-
     - name: "OSX Clang XCode 9.4 [64-bit] [DBG]"
       os: osx
       osx_image: xcode9.4
       env: BUILD_MATRIX="BUILD_TYPE=Debug"
 
-    - name: "OSX Clang XCode 9.4 [64-bit] [REL]"
+    - name: "OSX Clang XCode 10.2 [32-bit] [DBG]"
       os: osx
-      osx_image: xcode9.4
+      osx_image: xcode10.2
+      env: BUILD_MATRIX="BUILD_TYPE=Debug" CXXFLAGS=-m32 && LDFLAGS=-m32
+
+    - name: "OSX Clang XCode 10.2 [64-bit] [DBG]"
+      os: osx
+      osx_image: xcode10.2
+      env: BUILD_MATRIX="BUILD_TYPE=Debug"
+
+    - name: "OSX Clang XCode 11 [32-bit] [DBG]"
+      os: osx
+      osx_image: xcode10.2
+      env: BUILD_MATRIX="BUILD_TYPE=Debug" CXXFLAGS=-m32 && LDFLAGS=-m32
+
+    - name: "OSX Clang XCode 11 [32-bit] [REL]"
+      os: osx
+      osx_image: xcode10.2
+      env: BUILD_MATRIX="BUILD_TYPE=Release" CXXFLAGS=-m32 && LDFLAGS=-m32
+
+    - name: "OSX Clang XCode 11 [64-bit] [DBG]"
+      os: osx
+      osx_image: xcode10.2
+      env: BUILD_MATRIX="BUILD_TYPE=Debug"
+
+    - name: "OSX Clang XCode 11 [64-bit] [REL]"
+      os: osx
+      osx_image: xcode10.2
       env: BUILD_MATRIX="BUILD_TYPE=Release"
 
     - name: "Windows VS2017 [32-bit] [DBG]"

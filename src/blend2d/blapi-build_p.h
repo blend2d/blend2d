@@ -87,7 +87,6 @@
 #if defined(__INTEL_COMPILER)
   // Not regularly tested.
 #elif defined(_MSC_VER)
-  #pragma warning(push)
   #pragma warning(disable: 4102) // unreferenced label
   #pragma warning(disable: 4127) // conditional expression is constant
   #pragma warning(disable: 4201) // nameless struct/union
@@ -106,10 +105,16 @@
   #pragma clang diagnostic warning "-Wattributes"
 #elif defined(__GNUC__)
   #pragma GCC diagnostic ignored "-Wenum-compare"
-  #pragma GCC diagnostic ignored "-Wint-in-bool-context"
   #pragma GCC diagnostic ignored "-Wunused-function"
   #pragma GCC diagnostic ignored "-Wswitch"
   #pragma GCC diagnostic warning "-Wattributes"
+  #if (__GNUC__ == 4)
+    // GCC 4 has kinda broken diagnostic in this case, GCC 5+ is okay.
+    #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+  #endif
+  #if (__GNUC__ >= 7)
+    #pragma GCC diagnostic ignored "-Wint-in-bool-context"
+  #endif
   #if (__GNUC__ >= 8)
     #pragma GCC diagnostic ignored "-Wclass-memaccess"
   #endif

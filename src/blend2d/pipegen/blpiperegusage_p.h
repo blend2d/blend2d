@@ -19,8 +19,6 @@ namespace BLPipeGen {
 // [BLPipeGen::PipeRegUsage]
 // ============================================================================
 
-//! \ingroup blend2d_pipegen
-//!
 //! Registers that are used/reserved by a PipePart.
 struct PipeRegUsage {
   uint32_t _data[kNumVirtGroups];
