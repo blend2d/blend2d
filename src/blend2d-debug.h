@@ -323,7 +323,7 @@ static void blDebugArray_(const BLArrayCore* obj, const char* name, int indent) 
     }
   }
 
-  indent++;
+  indent--;
   BL_DEBUG_OUT("}\n");
 }
 
@@ -362,24 +362,31 @@ static void blDebugPath_(const BLPathCore* obj, const char* name, int indent) {
       case BL_PATH_CMD_MOVE:
         BL_DEBUG_FMT("p.moveTo(%g, %g);\n", vtx[i].x, vtx[i].y);
         i++;
-        break;
+        continue;
       case BL_PATH_CMD_ON:
         BL_DEBUG_FMT("p.lineTo(%g, %g);\n", vtx[i].x, vtx[i].y);
         i++;
-        break;
+        continue;
       case BL_PATH_CMD_QUAD:
+        if ((size - i) < 2)
+          break;
         BL_DEBUG_FMT("p.quadTo(%g, %g, %g, %g);\n", vtx[i].x, vtx[i].y, vtx[i+1].x, vtx[i+1].y);
         i += 2;
-        break;
+        continue;
       case BL_PATH_CMD_CUBIC:
+        if ((size - i) < 3)
+          break;
         BL_DEBUG_FMT("p.cubicTo(%g, %g, %g, %g, %g, %g);\n", vtx[i].x, vtx[i].y, vtx[i+1].x, vtx[i+1].y, vtx[i+2].x, vtx[i+2].y);
         i += 3;
-        break;
+        continue;
       case BL_PATH_CMD_CLOSE:
         BL_DEBUG_OUT("p.close();\n");
         i++;
-        break;
+        continue;
     }
+
+    BL_DEBUG_FMT("p.unknownCommand(%u, %g, %g);\n", cmd[i], vtx[i].x, vtx[i].y);
+    i++;
   }
 
   indent--;
