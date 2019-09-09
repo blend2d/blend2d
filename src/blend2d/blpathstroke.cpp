@@ -402,8 +402,11 @@ SmoothPolyTo:
 
       // Don't emit anything if the figure has no points (and thus no direction).
       _iter += size_t(isClosed());
-      if (!isOpen())
+      if (!isOpen()) {
+        _aOut.done(_aPath);
+        _bOut.done(_bPath);
         continue;
+      }
 
       if (isClosed()) {
         // The figure is closed => the end result is two closed figures without
