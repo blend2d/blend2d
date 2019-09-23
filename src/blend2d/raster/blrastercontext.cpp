@@ -2191,11 +2191,11 @@ static BLResult BL_CDECL blRasterContextImplBlitImageI(BLRasterContextImpl* ctxI
   if (BL_TARGET_ARCH_BITS < 64) {
     BLOverflowFlag of = 0;
 
-    int dx = int64_t(pt->x);
-    int dy = int64_t(pt->y);
+    int dx = blAddOverflow(pt->x, ctxI->translationI.x, &of);
+    int dy = blAddOverflow(pt->y, ctxI->translationI.y, &of);
 
-    int x0 = blAddOverflow(dx, ctxI->translationI.x, &of);
-    int y0 = blAddOverflow(dy, ctxI->translationI.y, &of);
+    int x0 = dx;
+    int y0 = dy;
     int x1 = blAddOverflow(x0, srcW, &of);
     int y1 = blAddOverflow(y0, srcH, &of);
 
@@ -2217,11 +2217,11 @@ static BLResult BL_CDECL blRasterContextImplBlitImageI(BLRasterContextImpl* ctxI
   }
   else {
 Use64Bit:
-    int64_t dx = int64_t(pt->x);
-    int64_t dy = int64_t(pt->y);
+    int64_t dx = int64_t(pt->x) + ctxI->translationI.x;
+    int64_t dy = int64_t(pt->y) + ctxI->translationI.y;
 
-    int64_t x0 = dx + int64_t(ctxI->translationI.x);
-    int64_t y0 = dy + int64_t(ctxI->translationI.y);
+    int64_t x0 = dx;
+    int64_t y0 = dy;
     int64_t x1 = x0 + int64_t(unsigned(srcW));
     int64_t y1 = y0 + int64_t(unsigned(srcH));
 
