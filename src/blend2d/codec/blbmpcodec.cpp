@@ -727,7 +727,7 @@ static BLResult BL_CDECL blBmpEncoderImplWriteFrame(BLBmpEncoderImpl* impl, BLAr
   // Write pixel data.
   BLPixelConverterOptions opt {};
   opt.gap = gap;
-  pc.convertRect(dstData, bpl, srcData + (intptr_t(h - 1) * srcStride), -srcStride, w, h, &opt);
+  pc.convertRect(dstData, bpl + gap, srcData + (intptr_t(h - 1) * srcStride), -srcStride, w, h, &opt);
   return BL_SUCCESS;
 }
 
