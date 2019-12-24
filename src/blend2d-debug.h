@@ -4,21 +4,20 @@
 // [License]
 // Zlib - See LICENSE.md file in the package.
 
-#ifndef BLEND2D_DEBUG_H
-#define BLEND2D_DEBUG_H
-
-// IMPROTANT: DO NOT USE THIS HEADER IN PRODUCTION, ONLY FOR BUG REPORTING!
-#pragma message("<blend2d-debug.h> - do not forget to remove me in production")
-
 // ----------------------------------------------------------------------------
-// This file provides debug helpers that are not an part of Blend2D library.
+// IMPORTANT: DO NOT USE THIS HEADER IN PRODUCTION, ONLY FOR BUG REPORTING!
+//
+// This file provides debug helpers that are not a part of Blend2D library.
 // Functions defined here are not exported, they are only provided for making
 // it easier to report bugs and to give more information about the environment
 // where such bugs happened to Blend2D developers. The functions defined below
-// are not stable and are subject to change in future Blend2D versions.
+// are not stable and are subject to change in future Blend2D releases.
 //
 // This file can be included by both C and C++ API users.
 // ----------------------------------------------------------------------------
+
+#ifndef BLEND2D_DEBUG_H
+#define BLEND2D_DEBUG_H
 
 #include <stdio.h>
 #include "./blend2d.h"

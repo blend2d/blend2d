@@ -4,8 +4,8 @@
 // [License]
 // Zlib - See LICENSE.md file in the package.
 
-#include <blend2d/blapi-build_p.h>
-#include <blend2d/blruntime.h>
+#include <blend2d/api-build_p.h>
+#include <blend2d/runtime.h>
 
 // ============================================================================
 // [Main]
