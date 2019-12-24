@@ -71,7 +71,7 @@ If you plan to contribute to Blend2D make sure you follow the guidelines describ
 * Source files contain a header, which contains a project name `[Blend2D]`, description, and license that refers to `LICENSE.md` file (when you are creating a new file just copy the header from any other file)
 * Source files that include other Blend2D headers use relative paths starting with `./` or `../`
 * Header guard format is `BLEND2D_FILE_H` for root headers and `BLEND2D_PATH_FILE_H` for headers in a subdirectory
-* Source files (.cpp) must first include `blapi-build_p.h` and then other headers
+* Source files (.cpp) must first include `api-build_p.h` and then other headers
 * Source files that use compiler intrinsics (SSE, AVX, NEON) must have the following suffix:
   * X86/X64
     * `*_sse2.cpp`   - SSE2

@@ -491,7 +491,6 @@ BLResult bl_convert_premultiply_8888_trailing_alpha_shufb_avx2(
 
   return bl_convert_premultiply_8888_template_avx2<0, true>(self, dstData, dstStride, srcData, srcStride, w, h, options);
 }
-#endif
 
 // ============================================================================
 // [BLPixelConverter - Unpremultiply (PMULLD) (AVX2)]
@@ -803,3 +802,5 @@ BLResult bl_convert_unpremultiply_8888_trailing_alpha_float_avx2(
 
   return bl_convert_unpremultiply_8888_float_template_avx2<0>(self, dstData, dstStride, srcData, srcStride, w, h, options);
 }
+
+#endif
