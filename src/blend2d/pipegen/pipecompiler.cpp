@@ -640,8 +640,7 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
             cc->emit(x86::Inst::kIdVpbroadcastd, dst, x);
           }
           else {
-            vswizli16(dst, x, x86::Predicate::shuf(0, 0, 0, 0));
-            vswizi32(dst, dst, x86::Predicate::shuf(1, 0, 1, 0));
+            vswizi32(dst, dst, x86::Predicate::shuf(0, 0, 0, 0));
           }
         }
         else {
@@ -654,8 +653,7 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
           }
           else {
             vloadi32(dst.as<x86::Vec>(), m);
-            vswizli16(dst, dst, x86::Predicate::shuf(0, 0, 0, 0));
-            vswizi32(dst, dst, x86::Predicate::shuf(1, 0, 1, 0));
+            vswizi32(dst, dst, x86::Predicate::shuf(0, 0, 0, 0));
           }
         }
 

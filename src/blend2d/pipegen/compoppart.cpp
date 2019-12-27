@@ -3956,8 +3956,6 @@ void CompOpPart::vMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags, VecA
       }
 
       out.uc.init(sv);
-      pc->xSatisfyPixel(out, flags);
-      return;
     }
     else if (useDa) {
       // if (2.Dca - Da < 0)
