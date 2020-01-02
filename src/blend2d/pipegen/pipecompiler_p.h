@@ -169,7 +169,8 @@ public:
     kIntrin3Vmulu64x32,
     kIntrin3Vhaddpd,
 
-    kIntrin4Vpblendvb
+    kIntrin4Vpblendvb,
+    kIntrin4VpblendvbDestructive
   };
 
   enum {
@@ -309,13 +310,20 @@ public:
   // [Registers / Memory]
   // --------------------------------------------------------------------------
 
-  BL_NOINLINE void newXmmArray(OpArray& dst, uint32_t n, const char* name) noexcept {
+  BL_NOINLINE void newRegArray(OpArray& dst, uint32_t n, uint32_t regType, const char* name) noexcept {
     BL_ASSERT(n <= OpArray::kMaxSize);
-
-    // Set the counter here as we don't want to hit an assert in OpArray::operator[].
     dst._size = n;
-    for (uint32_t i = 0; i < n; i++)
-      dst[i] = cc->newXmm("%s%u", name, i);
+    for (uint32_t i = 0; i < n; i++) {
+      cc->_newRegFmt(dst[i].as<asmjit::BaseReg>(), regType, "%s%i", name, i);
+    }
+  }
+
+  BL_INLINE void newXmmArray(OpArray& dst, uint32_t n, const char* name) noexcept {
+    newRegArray(dst, n, asmjit::x86::Reg::kTypeXmm, name);
+  }
+
+  BL_INLINE void newYmmArray(OpArray& dst, uint32_t n, const char* name) noexcept {
+    newRegArray(dst, n, asmjit::x86::Reg::kTypeYmm, name);
   }
 
   x86::Mem tmpStack(uint32_t size) noexcept;
@@ -1422,9 +1430,16 @@ public:
     vswizi32(dst, src, x86::Predicate::shuf(3, 2, 3, 2));
   }
 
+  // Dst = (CondBit == 0) ? Src1 : Src2;
   template<typename DstT, typename Src1T, typename Src2T, typename CondT>
   inline void vblendv8(const DstT& dst, const Src1T& src1, const Src2T& src2, const CondT& cond) noexcept {
     vemit_vvvv_vvv(PackedInst::packIntrin(kIntrin4Vpblendvb), dst, src1, src2, cond);
+  }
+
+  // Dst = (CondBit == 0) ? Src1 : Src2;
+  template<typename DstT, typename Src1T, typename Src2T, typename CondT>
+  inline void vblendv8_destructive(const DstT& dst, const Src1T& src1, const Src2T& src2, const CondT& cond) noexcept {
+    vemit_vvvv_vvv(PackedInst::packIntrin(kIntrin4VpblendvbDestructive), dst, src1, src2, cond);
   }
 
   template<typename DstT, typename SrcT>
@@ -1574,6 +1589,14 @@ public:
   template<typename DstT, typename SrcT>
   inline void vbroadcast_u64(const DstT& dst, const SrcT& src) noexcept {
     vemit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastU64), dst, src);
+  }
+
+  template<typename DstT, typename Src1T, typename Src2T>
+  BL_INLINE void vminmaxu8(const DstT& dst, const Src1T& src1, const Src2T& src2, bool isMin) noexcept {
+    if (isMin)
+      vminu8(dst, src1, src2);
+    else
+      vmaxu8(dst, src1, src2);
   }
 
   // --------------------------------------------------------------------------

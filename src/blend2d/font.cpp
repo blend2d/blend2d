@@ -72,22 +72,6 @@ static BL_INLINE bool blFontIsOpenTypeVersionTag(uint32_t tag) noexcept {
 // [BLFontData - Memory Impl]
 // ============================================================================
 
-// Users can pass their own buffer with a destroy function that gets called when
-// `BLMemFontDataImpl` is being destroyed. However, the impl stores an array
-// of `BLFontData` where each of them is implemented by `BLMemFontDataImpl` and
-// stores a back-reference to the loader. So how to avoid a circular dependency
-// that would prevent the destruction of the loader? We simply add an another
-// reference count to the loader, which counts how many `BLMemFontDataImpl`
-// instances back-reference it.
-//
-// The loader destructor is not a real destructor and it can be considered an
-// interceptor instead. It intercepts the destroy call that is caused by the
-// reference-count going to zero. When this happens we destroy all data, which
-// would call a real-destructor when the `backRefCount` goes to zero. We take
-// advantage of the fact that BLMemFontLoaderImpl's destroy function will be
-// called always before its data is destroyed as `BLArray<BLFontData>` holds
-// it.
-
 static BLFontDataVirt blMemFontDataVirt;
 
 struct BLMemFontDataImpl : public BLInternalFontDataImpl {
@@ -837,29 +821,27 @@ BLResult blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLT
   if (!size)
     return BL_SUCCESS;
 
-  double advanceX = 0.0;
-  double advanceY = 0.0;
+  BLPoint advance {};
 
   const BLGlyphItem* glyphItemData = gbI->glyphItemData;
   const BLGlyphPlacement* placementData = gbI->placementData;
 
   for (size_t i = 0; i < size; i++) {
-    advanceX += double(placementData[i].advance.x);
-    advanceY += double(placementData[i].advance.y);
+    advance += BLPoint(placementData[i].advance.x, placementData[i].advance.y);
   }
 
   BLBoxI glyphBounds[2];
   BLGlyphId borderGlyphs[2] = { BLGlyphId(glyphItemData[0].glyphId), BLGlyphId(glyphItemData[size - 1].glyphId) };
 
   BL_PROPAGATE(blFontGetGlyphBounds(self, borderGlyphs, intptr_t(sizeof(BLGlyphId)), glyphBounds, 2));
-  out->advance.reset(advanceX, advanceY);
+  out->advance = advance;
 
   double lsb = glyphBounds[0].x0;
   double rsb = placementData[size - 1].advance.x - glyphBounds[1].x1;
 
   out->leadingBearing.reset(lsb, 0);
   out->trailingBearing.reset(rsb, 0);
-  out->boundingBox.reset(glyphBounds[0].x0, 0.0, advanceX - rsb, 0.0);
+  out->boundingBox.reset(glyphBounds[0].x0, 0.0, advance.x - rsb, 0.0);
 
   const BLFontMatrix& m = selfI->matrix;
   BLPoint scalePt = BLPoint(m.m00, m.m11);

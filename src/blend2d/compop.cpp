@@ -649,7 +649,7 @@ struct BLCompOpSimplifyInfoGen {
   //     Da'  = Da  + Sa  - Sa.Da
   //
   // [Overlay PRGBxXRGB]
-  //   if (2.Dca - Da < 0)
+  //   if (2.Dca < Da)
   //     Dca' = Sc.(2.Dca - Da + 1)
   //     Da'  = 1
   //   else
@@ -663,7 +663,7 @@ struct BLCompOpSimplifyInfoGen {
   //     Dc'  = Dc + 2.Sca - Sa + (Dca.Sa - 2.Sca.Dc)
   //
   // [Overlay XRGBxXRGB]
-  //   if (2.Dc - 1 < 0)
+  //   if (2.Dc < 1)
   //     Dc'  = 2.Dc.Sc
   //   else
   //     Dc'  = 2.(Dc + Sc) - 2.Sc.Dc - 1
@@ -676,7 +676,7 @@ struct BLCompOpSimplifyInfoGen {
 
            d == A8 ? srcOver(d, s) :
 
-           makeOp(Screen, d, s);
+           makeOp(Overlay, d, s);
   }
 
   // Darken
@@ -908,11 +908,11 @@ struct BLCompOpSimplifyInfoGen {
   //
   // [PinLight PRGBxPRGB]
   //   if 2.Sca <= Sa
-  //     Dca' = min(Dca.Sa, 2.Sca.Da) + Sca.(1 - Da) + Dca.(1 - Sa)
-  //     Da'  = Da + Sa.(1 - Da)
+  //     Dca' = min(Dca + Sca - Sca.Da, Dca + Sca + Sca.Da - Dca.Sa)
+  //     Da'  = min(Da  + Sa  - Sa .Da, Da  + Sa  + Sa .Da - Da .Sa) = Da + Sa.(1 - Da)
   //   else
-  //     Dca' = max(Dca.Sa, 2.Sca.Da - Sa.Da) + Sca.(1 - Da) + Dca.(1 - Sa)
-  //     Da'  = Da + Sa.(1 - Da)
+  //     Dca' = max(Dca + Sca - Sca.Da, Dca + Sca + Sca.Da - Dca.Sa - Da.Sa)
+  //     Da'  = max(Da  + Sa  - Sa .Da, Da  + Sa  + Sa .Da - Da .Sa - Da.Sa) = Da + Sa.(1 - Da)
   //
   //   if 2.Sca.m <= Sa.m
   //     Dca' = min(Dca.Sa.m, 2.Sca.m.Da) + Sca.m.(1 - Da) + Dca.(1 - Sa.m)

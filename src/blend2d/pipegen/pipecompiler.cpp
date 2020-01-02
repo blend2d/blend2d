@@ -1117,6 +1117,7 @@ void PipeCompiler::vemit_vvvv_vvv(uint32_t packedId, const Operand_& dst_, const
   if (PackedInst::isIntrin(packedId)) {
     switch (PackedInst::intrinId(packedId)) {
       case kIntrin4Vpblendvb: {
+        // Blend(a, b, cond) == (a & ~cond) | (b & cond)
         if (hasSSE4_1()) {
           packedId = PackedInst::packAvxSse(x86::Inst::kIdVpblendvb, x86::Inst::kIdPblendvb);
           break;
@@ -1140,6 +1141,26 @@ void PipeCompiler::vemit_vvvv_vvv(uint32_t packedId, const Operand_& dst_, const
           vxor(dst, src2, src1);
           vand(dst, dst, src3);
           vxor(dst, dst, src1);
+        }
+        return;
+      }
+
+      case kIntrin4VpblendvbDestructive: {
+        // Blend(a, b, cond) == (a & ~cond) | (b & cond)
+        if (hasSSE4_1()) {
+          packedId = PackedInst::packAvxSse(x86::Inst::kIdVpblendvb, x86::Inst::kIdPblendvb);
+          break;
+        }
+
+        if (dst.id() == src3.id()) {
+          vand(src2, src2, src3);
+          vandnot_a(src3, src3, src1);
+          vor(dst, src3, src2);
+        }
+        else {
+          vand(src2, src2, src3);
+          vandnot_a(src3, src3, src1);
+          vor(dst, src2, src3);
         }
         return;
       }

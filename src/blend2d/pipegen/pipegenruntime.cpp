@@ -159,7 +159,7 @@ BLPipeFillFunc BLPipeGenRuntime::_compileFillFunc(uint32_t signature) noexcept {
 
   BLPipeSignature sig(signature);
   BL_ASSERT(sig.compOp() != BL_COMP_OP_CLEAR);    // Always simplified to SRC_COPY.
-  BL_ASSERT(sig.compOp() != BL_COMP_OP_DST_COPY); // Should never pass through rendering context.
+  BL_ASSERT(sig.compOp() != BL_COMP_OP_DST_COPY); // Should never pass through the rendering context.
 
   BLPipeGenErrorHandler eh;
   asmjit::CodeHolder code;
