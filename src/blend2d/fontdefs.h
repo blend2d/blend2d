@@ -18,22 +18,6 @@ BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
 // [Constants]
 // ============================================================================
 
-//! Flags used by `BLGlyphItem::value` member.
-//!
-//! Glyph flags are only available after code-points were mapped to glyphs as
-//! `BLGlyphItem::value` member contains either the code-point or glyph-id and
-//! glyph flags.
-BL_DEFINE_ENUM(BLGlyphItemFlags) {
-  //! Glyph is marked for operation (GSUB/GPOS). This flag should never be
-  //! set after glyph processing. It's an internal flag that is used during
-  //! processing to mark glyphs that need a second pass, but the engine
-  //! should always clear the flag after it processes marked glyphs.
-  //!
-  //! Used by:
-  //!   - GSUB::LookupType #2 Format #1 - Multiple Substitution.
-  BL_GLYPH_ITEM_FLAG_MARK = 0x80000000u
-};
-
 //! Placement of glyphs stored in a `BLGlyphRun`.
 BL_DEFINE_ENUM(BLGlyphPlacementType) {
   //! No placement (custom handling by `BLPathSinkFunc`).
@@ -50,13 +34,13 @@ BL_DEFINE_ENUM(BLGlyphPlacementType) {
 
 BL_DEFINE_ENUM(BLGlyphRunFlags) {
   //! Glyph-run contains USC-4 string and not glyphs (glyph-buffer only).
-  BL_GLYPH_RUN_FLAG_UCS4_CONTENT              = 0x10000000u,
+  BL_GLYPH_RUN_FLAG_UCS4_CONTENT = 0x10000000u,
   //! Glyph-run was created from text that was not a valid unicode.
-  BL_GLYPH_RUN_FLAG_INVALID_TEXT              = 0x20000000u,
+  BL_GLYPH_RUN_FLAG_INVALID_TEXT = 0x20000000u,
   //! Not the whole text was mapped to glyphs (contains undefined glyphs).
-  BL_GLYPH_RUN_FLAG_UNDEFINED_GLYPHS          = 0x40000000u,
+  BL_GLYPH_RUN_FLAG_UNDEFINED_GLYPHS = 0x40000000u,
   //! Encountered invalid font-data during text / glyph processing.
-  BL_GLYPH_RUN_FLAG_INVALID_FONT_DATA         = 0x80000000u
+  BL_GLYPH_RUN_FLAG_INVALID_FONT_DATA = 0x80000000u
 };
 
 //! Font-data flags.
@@ -472,40 +456,10 @@ BL_DEFINE_ENUM(BLTextOrientation) {
 };
 
 // ============================================================================
-// [BLGlyphItem]
-// ============================================================================
-
-//! Glyph item as a data structure that represents either a unicode character
-//! or glyph. It contains data used by `BLGlyphBuffer` and is visible to end
-//! users so they can inspect either the text stored in `BLGlyphBuffer` or its
-//! glyph-run representation.
-struct BLGlyphItem {
-  union {
-    uint32_t value;
-    struct {
-    #if BL_BYTE_ORDER == 1234 // LITTLE ENDIAN
-      BLGlyphId glyphId;
-      uint16_t reserved;
-    #else
-      uint16_t reserved;
-      BLGlyphId glyphId;
-    #endif
-    };
-  };
-
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
-  #endif
-  // --------------------------------------------------------------------------
-};
-
-// ============================================================================
 // [BLGlyphInfo]
 // ============================================================================
 
-//! Glyph information contains additional information to `BLGlyphItem` used by
-//! `BLGlyphBuffer`.
+//! Contains additional information associated with a glyph used by `BLGlyphBuffer`.
 struct BLGlyphInfo {
   uint32_t cluster;
   uint32_t reserved[2];
@@ -575,25 +529,32 @@ struct BLGlyphOutlineSinkInfo {
 //! rendering context. The purpose of BLGlyphRun is to allow rendering glyphs,
 //! which could be shaped by various shaping engines (Blend2D, Harfbuzz, etc).
 //!
-//! BLGlyphRun allows to render glyphs that are part of a bigger structure (for
-//! example `BLGlyphItem`), raw array like `BLGlyphId[]`, etc. Glyph placements
-//! at the moment use Blend2D's `BLGlyphPlacement` or `BLPoint`, but it's
-//! possible to extend the data type in the future.
+//! BLGlyphRun allows to render glyphs that are either stored in uint16_t[] or
+//! uint32_t[] array or part of a bigger structure (for example `hb_glyph_info_t`
+//! used by HarfBuzz). Glyph placements at the moment use Blend2D's
+//! `BLGlyphPlacement` or `BLPoint`, but it's possible to extend the data type in
+//! the future.
 //!
 //! See `BLGlyphRunPlacement` for placement modes provided by Blend2D.
 struct BLGlyphRun {
-  //! Glyph id array (abstract, incremented by `glyphIdAdvance`).
-  void* glyphIdData;
-  //! Glyph placement array (abstract, incremented by `placementAdvance`).
+  //! Glyph id data (abstract, incremented by `glyphAdvance`).
+  void* glyphData;
+  //! Glyph placement data (abstract, incremented by `placementAdvance`).
   void* placementData;
   //! Size of the glyph-run in glyph units.
   size_t size;
   //! Size of a `glyphId` - must be either 2 (uint16_t) or 4 (uint32_t) bytes.
-  uint8_t glyphIdSize;
-  //! Type of the placement, see `BLGlyphPlacementType`.
+  //!
+  //! \note Blend2D always uses 32-bit glyph-ids, thus the glyph-run returned
+  //! by `BLGlyphBuffer` has always set `glyphSize` to 4. The possibility to
+  //! render glyphs of size 2 is strictly for compatibility with text shapers
+  //! that use 16-bit glyphs, which is sufficient for TrueType and OpenType
+  //! fonts.
+  uint8_t glyphSize;
+  //! Type of placement, see `BLGlyphPlacementType`.
   uint8_t placementType;
-  //! Advance of `glyphIdData` array.
-  int8_t glyphIdAdvance;
+  //! Advance of `glyphData` array.
+  int8_t glyphAdvance;
   //! Advance of `placementData` array.
   int8_t placementAdvance;
   //! Glyph-run flags.
@@ -606,22 +567,22 @@ struct BLGlyphRun {
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 
   template<typename T>
-  BL_INLINE T* glyphIdDataAs() const noexcept { return static_cast<T*>(glyphIdData); }
+  BL_INLINE T* glyphDataAs() const noexcept { return static_cast<T*>(glyphData); }
 
   template<typename T>
   BL_INLINE T* placementDataAs() const noexcept { return static_cast<T*>(placementData); }
 
-  BL_INLINE void setGlyphIdData(const BLGlyphId* glyphIds) noexcept { setGlyphIdData(glyphIds, intptr_t(sizeof(BLGlyphId))); }
-  BL_INLINE void setGlyphItemData(const BLGlyphItem* itemData) noexcept { setGlyphIdData(itemData, intptr_t(sizeof(BLGlyphItem))); }
+  BL_INLINE void setGlyphData(const uint16_t* glyphData) noexcept { setGlyphData(glyphData, intptr_t(sizeof(uint16_t))); }
+  BL_INLINE void setGlyphData(const uint32_t* glyphData) noexcept { setGlyphData(glyphData, intptr_t(sizeof(uint32_t))); }
 
-  BL_INLINE void setGlyphIdData(const void* data, intptr_t advance) noexcept {
-    this->glyphIdData = const_cast<void*>(data);
-    this->glyphIdAdvance = int8_t(advance);
+  BL_INLINE void setGlyphData(const void* data, intptr_t advance) noexcept {
+    this->glyphData = const_cast<void*>(data);
+    this->glyphAdvance = int8_t(advance);
   }
 
   BL_INLINE void resetGlyphIdData() noexcept {
-    this->glyphIdData = nullptr;
-    this->glyphIdAdvance = 0;
+    this->glyphData = nullptr;
+    this->glyphAdvance = 0;
   }
 
   template<typename T>
@@ -659,7 +620,7 @@ struct BLGlyphRun {
 //!   BLGlyphRunIterator it(glyphRun);
 //!   if (it.hasOffsets()) {
 //!     while (!it.atEnd()) {
-//!       BLGlyphId glyphId = it.glyphId();
+//!       uint32_t glyphId = it.glyphId();
 //!       BLPoint offset = it.placement();
 //!
 //!       // Do something with `glyphId` and `offset`.
@@ -669,7 +630,7 @@ struct BLGlyphRun {
 //!   }
 //!   else {
 //!     while (!it.atEnd()) {
-//!       BLGlyphId glyphId = it.glyphId();
+//!       uint32_t glyphId = it.glyphId();
 //!
 //!       // Do something with `glyphId`.
 //!
@@ -682,9 +643,9 @@ class BLGlyphRunIterator {
 public:
   size_t index;
   size_t size;
-  void* glyphIdData;
+  void* glyphData;
   void* placementData;
-  intptr_t glyphIdAdvance;
+  intptr_t glyphAdvance;
   intptr_t placementAdvance;
 
   BL_INLINE BLGlyphRunIterator() noexcept { reset(); }
@@ -693,29 +654,29 @@ public:
   BL_INLINE void reset() noexcept {
     index = 0;
     size = 0;
-    glyphIdData = nullptr;
+    glyphData = nullptr;
     placementData = nullptr;
-    glyphIdAdvance = 0;
+    glyphAdvance = 0;
     placementAdvance = 0;
   }
 
   BL_INLINE void reset(const BLGlyphRun& glyphRun) noexcept {
     index = 0;
     size = glyphRun.size;
-    glyphIdData = glyphRun.glyphIdData;
+    glyphData = glyphRun.glyphData;
     placementData = glyphRun.placementData;
-    glyphIdAdvance = glyphRun.glyphIdAdvance;
+    glyphAdvance = glyphRun.glyphAdvance;
     placementAdvance = glyphRun.placementAdvance;
 
     if (BL_BYTE_ORDER_NATIVE == BL_BYTE_ORDER_BE)
-      glyphIdData = static_cast<uint8_t*>(glyphIdData) + (blMax<size_t>(glyphRun.glyphIdSize, 2) - 2);
+      glyphData = static_cast<uint8_t*>(glyphData) + (blMax<size_t>(glyphRun.glyphSize, 2) - 2);
   }
 
   BL_INLINE bool empty() const noexcept { return size == 0; }
   BL_INLINE bool atEnd() const noexcept { return index == size; }
   BL_INLINE bool hasPlacement() const noexcept { return placementData != nullptr; }
 
-  BL_INLINE BLGlyphId glyphId() const noexcept { return *static_cast<const BLGlyphId*>(glyphIdData); }
+  BL_INLINE uint32_t glyphId() const noexcept { return *static_cast<const uint16_t*>(glyphData); }
 
   template<typename T>
   BL_INLINE const T& placement() const noexcept { return *static_cast<const T*>(placementData); }
@@ -724,7 +685,7 @@ public:
     BL_ASSERT(!atEnd());
 
     index++;
-    glyphIdData = static_cast<uint8_t*>(glyphIdData) + glyphIdAdvance;
+    glyphData = static_cast<uint8_t*>(glyphData) + glyphAdvance;
     placementData = static_cast<uint8_t*>(placementData) + placementAdvance;
   }
 };

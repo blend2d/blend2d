@@ -53,16 +53,16 @@ struct BLInternalGlyphBufferImpl : public BLGlyphBufferImpl {
     if (BL_UNLIKELY(!d))
       return nullptr;
 
-    d->glyphItemData = nullptr;
+    d->content = nullptr;
     d->placementData = nullptr;
     d->size = 0;
-    d->glyphRun.glyphIdSize = uint8_t(sizeof(BLGlyphItem));
+    d->glyphRun.glyphSize = uint8_t(sizeof(uint32_t));
     d->glyphRun.placementType = BL_GLYPH_PLACEMENT_TYPE_NONE;
-    d->glyphRun.glyphIdAdvance = int8_t(sizeof(BLGlyphItem));
+    d->glyphRun.glyphAdvance = int8_t(sizeof(uint32_t));
     d->glyphRun.placementAdvance = int8_t(sizeof(BLGlyphPlacement));
     d->flags = 0;
 
-    d->glyphInfoData = nullptr;
+    d->infoData = nullptr;
     d->buffer[0] = nullptr;
     d->buffer[1] = nullptr;
     d->capacity[0] = 0;
@@ -88,7 +88,7 @@ struct BLInternalGlyphBufferImpl : public BLGlyphBufferImpl {
     glyphRun.placementType = BL_GLYPH_PLACEMENT_TYPE_NONE;
     glyphRun.flags = 0;
     placementData = nullptr;
-    getGlyphDataPtrs(0, &glyphItemData, &glyphInfoData);
+    getGlyphDataPtrs(0, &content, &infoData);
   }
 
   BL_HIDDEN BLResult ensureBuffer(size_t bufferId, size_t copySize, size_t minCapacity) noexcept;
@@ -104,20 +104,19 @@ struct BLInternalGlyphBufferImpl : public BLGlyphBufferImpl {
     std::swap(capacity[0], capacity[1]);
   }
 
-  BL_INLINE void getGlyphDataPtrs(size_t bufferId, BLGlyphItem** glyphItemOut, BLGlyphInfo** glyphInfoOut) noexcept {
-    *glyphItemOut = reinterpret_cast<BLGlyphItem*>(buffer[bufferId]);
-    *glyphInfoOut = reinterpret_cast<BLGlyphInfo*>(buffer[bufferId] + capacity[bufferId] * sizeof(BLGlyphItem));
+  BL_INLINE void getGlyphDataPtrs(size_t bufferId, uint32_t** glyphDataOut, BLGlyphInfo** infoDataOut) noexcept {
+    *glyphDataOut = reinterpret_cast<uint32_t*>(buffer[bufferId]);
+    *infoDataOut = reinterpret_cast<BLGlyphInfo*>(buffer[bufferId] + capacity[bufferId] * sizeof(uint32_t));
   }
 };
 
 template<>
 struct BLInternalCastImpl<BLGlyphBufferImpl> { typedef BLInternalGlyphBufferImpl Type; };
 
-static BL_INLINE void blCopyGlyphData(BLGlyphItem* itemDst, BLGlyphInfo* infoDst, const BLGlyphItem* itemSrc, const BLGlyphInfo* infoSrc, size_t n) noexcept {
-  const BLGlyphItem* itemEnd = itemSrc + n;
-  while (itemSrc != itemEnd) {
-    *itemDst++ = *itemSrc++;
-    *infoDst++ = *infoSrc++;
+static BL_INLINE void blCopyGlyphData(uint32_t* glyphDst, BLGlyphInfo* infoDst, const uint32_t* glyphSrc, const BLGlyphInfo* infoSrc, size_t n) noexcept {
+  for (size_t i = 0; i < n; i++) {
+    glyphDst[i] = glyphSrc[i];
+    infoDst[i] = infoSrc[i];
   }
 }
 

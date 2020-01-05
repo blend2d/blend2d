@@ -2020,8 +2020,8 @@ public:
 
 static BLResult BL_CDECL getGlyphBounds(
   const BLFontFaceImpl* faceI_,
-  const BLGlyphId* glyphIdData,
-  intptr_t glyphIdAdvance,
+  const uint32_t* glyphData,
+  intptr_t glyphAdvance,
   BLBoxI* boxes,
   size_t count) noexcept {
 
@@ -2034,8 +2034,8 @@ static BLResult BL_CDECL getGlyphBounds(
   m.reset();
 
   for (size_t i = 0; i < count; i++) {
-    uint32_t glyphId = glyphIdData[0];
-    glyphIdData = blOffsetPtr(glyphIdData, glyphIdAdvance);
+    uint32_t glyphId = glyphData[0];
+    glyphData = blOffsetPtr(glyphData, glyphAdvance);
 
     BLResult localResult = getGlyphOutlinesT<GlyphBoundsConsumer>(faceI_, glyphId, &m, consumer, &tmpBuffer);
     if (localResult) {

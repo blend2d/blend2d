@@ -65,8 +65,8 @@ static const uint8_t blBlankGlyphData[sizeof(GlyfTable::GlyphData)] = { 0 };
 
 static BLResult BL_CDECL getGlyphBounds(
   const BLFontFaceImpl* faceI_,
-  const BLGlyphId* glyphIdData,
-  intptr_t glyphIdAdvance,
+  const uint32_t* glyphData,
+  intptr_t glyphAdvance,
   BLBoxI* boxes,
   size_t count) noexcept {
 
@@ -80,8 +80,8 @@ static BLResult BL_CDECL getGlyphBounds(
   const uint8_t* blankGlyphData = blBlankGlyphData;
 
   for (size_t i = 0; i < count; i++) {
-    uint32_t glyphId = glyphIdData[0];
-    glyphIdData = blOffsetPtr(glyphIdData, glyphIdAdvance);
+    uint32_t glyphId = glyphData[0] & 0xFFFFu;
+    glyphData = blOffsetPtr(glyphData, glyphAdvance);
 
     size_t offset;
     size_t endOff;

@@ -678,12 +678,12 @@ public:
     return blFontGetTextMetrics(this, &gb, &out);
   }
 
-  BL_INLINE BLResult getGlyphBounds(const void* glyphIdData, intptr_t glyphIdAdvance, BLBoxI* out, size_t count) const noexcept {
-    return blFontGetGlyphBounds(this, glyphIdData, glyphIdAdvance, out, count);
+  BL_INLINE BLResult getGlyphBounds(const uint32_t* glyphData, intptr_t glyphAdvance, BLBoxI* out, size_t count) const noexcept {
+    return blFontGetGlyphBounds(this, glyphData, glyphAdvance, out, count);
   }
 
-  BL_INLINE BLResult getGlyphAdvances(const void* glyphIdData, intptr_t glyphIdAdvance, BLGlyphPlacement* out, size_t count) const noexcept {
-    return blFontGetGlyphAdvances(this, glyphIdData, glyphIdAdvance, out, count);
+  BL_INLINE BLResult getGlyphAdvances(const uint32_t* glyphData, intptr_t glyphAdvance, BLGlyphPlacement* out, size_t count) const noexcept {
+    return blFontGetGlyphAdvances(this, glyphData, glyphAdvance, out, count);
   }
 
   BL_INLINE BLResult getGlyphOutlines(uint32_t glyphId, BLPath& out, BLPathSinkFunc sink = nullptr, void* closure = nullptr) const noexcept {

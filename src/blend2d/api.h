@@ -676,7 +676,6 @@ BL_DEFINE_STRUCT(BLContextState);
 BL_DEFINE_STRUCT(BLGlyphBufferCore);
 BL_DEFINE_STRUCT(BLGlyphBufferImpl);
 BL_DEFINE_STRUCT(BLGlyphInfo);
-BL_DEFINE_STRUCT(BLGlyphItem);
 BL_DEFINE_STRUCT(BLGlyphMappingState);
 BL_DEFINE_STRUCT(BLGlyphOutlineSinkInfo);
 BL_DEFINE_STRUCT(BLGlyphPlacement);
@@ -790,16 +789,6 @@ typedef void (BL_CDECL* BLDestroyImplFunc)(void* impl, void* destroyData) BL_NOE
 //!
 //! Optional callback that can be used to consume a path data.
 typedef BLResult (BL_CDECL* BLPathSinkFunc)(BLPathCore* path, const void* info, void* closure) BL_NOEXCEPT;
-
-//! \ingroup blend2d_api_text
-//!
-//! Glyph identifier is an index to a glyph stored in a font.
-//!
-//! GlyphId is always an unsigned 16-bit integer as used by TrueType and OpenType
-//! fonts. There are some libraries that use 32-bit integers for Glyph indexes,
-//! but values above 65535 are never used in practice as font's generally do
-//! not have the ability to index more than 65535 glyphs (excluding null glyph).
-typedef uint16_t BLGlyphId;
 
 // ============================================================================
 // [Constants]
@@ -1595,8 +1584,8 @@ BL_API BLResult BL_CDECL blFontGetMatrix(const BLFontCore* self, BLFontMatrix* o
 BL_API BLResult BL_CDECL blFontGetMetrics(const BLFontCore* self, BLFontMetrics* out) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontGetDesignMetrics(const BLFontCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLTextMetrics* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetGlyphBounds(const BLFontCore* self, const void* glyphIdData, intptr_t glyphIdAdvance, BLBoxI* out, size_t count) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetGlyphAdvances(const BLFontCore* self, const void* glyphIdData, intptr_t glyphIdAdvance, BLGlyphPlacement* out, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetGlyphBounds(const BLFontCore* self, const uint32_t* glyphData, intptr_t glyphAdvance, BLBoxI* out, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetGlyphAdvances(const BLFontCore* self, const uint32_t* glyphData, intptr_t glyphAdvance, BLGlyphPlacement* out, size_t count) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontGetGlyphOutlines(const BLFontCore* self, uint32_t glyphId, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* glyphRun, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) BL_NOEXCEPT_C;
 //! \}
@@ -1668,8 +1657,11 @@ BL_API BLResult BL_CDECL blGlyphBufferClear(BLGlyphBufferCore* self) BL_NOEXCEPT
 BL_API size_t BL_CDECL blGlyphBufferGetSize(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API uint32_t BL_CDECL blGlyphBufferGetFlags(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API const BLGlyphRun* BL_CDECL blGlyphBufferGetGlyphRun(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blGlyphBufferSetText(BLGlyphBufferCore* self, const void* data, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferSetGlyphIds(BLGlyphBufferCore* self, const void* data, intptr_t advance, size_t size) BL_NOEXCEPT_C;
+BL_API const uint32_t* BL_CDECL blGlyphBufferGetContent(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API const BLGlyphInfo* BL_CDECL blGlyphBufferGetInfoData(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API const BLGlyphPlacement* BL_CDECL blGlyphBufferGetPlacementData(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API BLResult BL_CDECL blGlyphBufferSetText(BLGlyphBufferCore* self, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferSetGlyphIds(BLGlyphBufferCore* self, const void* glyphData, intptr_t glyphAdvance, size_t size) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLGradient

@@ -71,10 +71,10 @@ BLResult BLInternalGlyphBufferImpl::ensureBuffer(size_t bufferId, size_t copySiz
   if (copySize) {
     memcpy(newData,
            oldData,
-           copySize * sizeof(BLGlyphItem));
+           copySize * sizeof(uint32_t));
 
-    memcpy(newData + newCapacity * sizeof(BLGlyphItem),
-           oldData + oldCapacity * sizeof(BLGlyphItem),
+    memcpy(newData + newCapacity * sizeof(uint32_t),
+           oldData + oldCapacity * sizeof(uint32_t),
            copySize * sizeof(BLGlyphInfo));
   }
 
@@ -83,38 +83,38 @@ BLResult BLInternalGlyphBufferImpl::ensureBuffer(size_t bufferId, size_t copySiz
   capacity[bufferId] = newCapacity;
 
   if (bufferId == 0)
-    getGlyphDataPtrs(0, &glyphItemData, &glyphInfoData);
+    getGlyphDataPtrs(0, &content, &infoData);
 
   return BL_SUCCESS;
 }
 
-static BL_INLINE BLResult blInternalGlyphBufferData_setGlyphIds(BLInternalGlyphBufferImpl* d, const uint16_t* ids, intptr_t advance, size_t size) noexcept {
-  BLGlyphItem* itemData = d->glyphItemData;
-  BLGlyphInfo* infoData = d->glyphInfoData;
+static BL_INLINE BLGlyphInfo blGlyphInfoFromCluster(uint32_t cluster) noexcept {
+  return BLGlyphInfo { cluster, { 0, 0 } };
+}
+
+template<typename T>
+static BL_INLINE BLResult blInternalGlyphBufferData_setGlyphIds(BLInternalGlyphBufferImpl* d, const T* inData, intptr_t inAdvance, size_t size) noexcept {
+  uint32_t* glyphData = d->content;
+  BLGlyphInfo* infoData = d->infoData;
 
   for (size_t i = 0; i < size; i++) {
-    itemData[i].value = *ids;
-    infoData[i].cluster = uint32_t(i);
-    infoData[i].reserved[0] = 0;
-    infoData[i].reserved[1] = 0;
-    ids = blOffsetPtr(ids, advance);
+    glyphData[i] = uint32_t(inData[0]);
+    infoData[i] = blGlyphInfoFromCluster(i);
+    inData = blOffsetPtr(inData, inAdvance);
   }
 
   d->size = size;
   d->flags = 0;
-
   return BL_SUCCESS;
 }
 
 static BL_INLINE BLResult blInternalGlyphBufferData_setLatin1Text(BLInternalGlyphBufferImpl* d, const char* input, size_t size) noexcept {
-  BLGlyphItem* itemData = d->glyphItemData;
-  BLGlyphInfo* infoData = d->glyphInfoData;
+  uint32_t* textData = d->content;
+  BLGlyphInfo* infoData = d->infoData;
 
   for (size_t i = 0; i < size; i++) {
-    itemData[i].value = uint8_t(input[i]);
-    infoData[i].cluster = uint32_t(i);
-    infoData[i].reserved[0] = 0;
-    infoData[i].reserved[1] = 0;
+    textData[i] = uint8_t(input[i]);
+    infoData[i] = blGlyphInfoFromCluster(i);
   }
 
   d->size = size;
@@ -130,31 +130,26 @@ template<typename Reader, typename CharType>
 static BL_INLINE BLResult blInternalGlyphBufferData_setUnicodeText(BLInternalGlyphBufferImpl* d, const CharType* input, size_t size) noexcept {
   Reader reader(input, size);
 
-  BLGlyphItem* itemData = d->glyphItemData;
-  BLGlyphInfo* infoData = d->glyphInfoData;
+  uint32_t* textData = d->content;
+  BLGlyphInfo* infoData = d->infoData;
 
   while (reader.hasNext()) {
     uint32_t uc;
     uint32_t cluster = uint32_t(reader.nativeIndex(input));
     BLResult result = reader.next(uc);
 
-    itemData->value = uc;
-    infoData->cluster = cluster;
-    infoData->reserved[0] = 0;
-    infoData->reserved[1] = 0;
-
-    itemData++;
-    infoData++;
+    *textData++ = uc;
+    *infoData++ = blGlyphInfoFromCluster(cluster);
 
     if (BL_LIKELY(result == BL_SUCCESS))
       continue;
 
-    itemData[-1].value = BL_CHAR_REPLACEMENT;
+    textData[-1] = BL_CHAR_REPLACEMENT;
     d->flags |= BL_GLYPH_RUN_FLAG_INVALID_TEXT;
     reader.skipOneUnit();
   }
 
-  d->size = (size_t)(itemData - d->glyphItemData);
+  d->size = (size_t)(textData - d->content);
   d->flags = BL_GLYPH_RUN_FLAG_UCS4_CONTENT;
 
   if (d->size)
@@ -220,7 +215,22 @@ const BLGlyphRun* blGlyphBufferGetGlyphRun(const BLGlyphBufferCore* self) noexce
   return &selfI->glyphRun;
 }
 
-BLResult blGlyphBufferSetText(BLGlyphBufferCore* self, const void* data, size_t size, uint32_t encoding) noexcept {
+const uint32_t* blGlyphBufferGetContent(const BLGlyphBufferCore* self) noexcept {
+  BLInternalGlyphBufferImpl* selfI = blInternalCast(self->impl);
+  return selfI->content;
+}
+
+const BLGlyphInfo* blGlyphBufferGetInfoData(const BLGlyphBufferCore* self) noexcept {
+  BLInternalGlyphBufferImpl* selfI = blInternalCast(self->impl);
+  return selfI->infoData;
+}
+
+const BLGlyphPlacement* blGlyphBufferGetPlacementData(const BLGlyphBufferCore* self) noexcept {
+  BLInternalGlyphBufferImpl* selfI = blInternalCast(self->impl);
+  return selfI->placementData;
+}
+
+BLResult blGlyphBufferSetText(BLGlyphBufferCore* self, const void* text, size_t size, uint32_t encoding) noexcept {
   if (BL_UNLIKELY(encoding >= BL_TEXT_ENCODING_COUNT))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -230,31 +240,31 @@ BLResult blGlyphBufferSetText(BLGlyphBufferCore* self, const void* data, size_t 
   switch (encoding) {
     case BL_TEXT_ENCODING_LATIN1:
       if (size == SIZE_MAX)
-        size = strlen(static_cast<const char*>(data));
+        size = strlen(static_cast<const char*>(text));
 
       BL_PROPAGATE(d->ensureBuffer(0, 0, size));
-      return blInternalGlyphBufferData_setLatin1Text(d, static_cast<const char*>(data), size);
+      return blInternalGlyphBufferData_setLatin1Text(d, static_cast<const char*>(text), size);
 
     case BL_TEXT_ENCODING_UTF8:
       if (size == SIZE_MAX)
-        size = strlen(static_cast<const char*>(data));
+        size = strlen(static_cast<const char*>(text));
 
       BL_PROPAGATE(d->ensureBuffer(0, 0, size));
-      return blInternalGlyphBufferData_setUnicodeText<BLUtf8Reader>(d, static_cast<const uint8_t*>(data), size);
+      return blInternalGlyphBufferData_setUnicodeText<BLUtf8Reader>(d, static_cast<const uint8_t*>(text), size);
 
     case BL_TEXT_ENCODING_UTF16:
       if (size == SIZE_MAX)
-        size = strlenT(static_cast<const uint16_t*>(data));
+        size = strlenT(static_cast<const uint16_t*>(text));
 
       BL_PROPAGATE(d->ensureBuffer(0, 0, size));
-      return blInternalGlyphBufferData_setUnicodeText<BLUtf16Reader>(d, static_cast<const uint16_t*>(data), size * 2u);
+      return blInternalGlyphBufferData_setUnicodeText<BLUtf16Reader>(d, static_cast<const uint16_t*>(text), size * 2u);
 
     case BL_TEXT_ENCODING_UTF32:
       if (size == SIZE_MAX)
-        size = strlenT(static_cast<const uint32_t*>(data));
+        size = strlenT(static_cast<const uint32_t*>(text));
 
       BL_PROPAGATE(d->ensureBuffer(0, 0, size));
-      return blInternalGlyphBufferData_setUnicodeText<BLUtf32Reader>(d, static_cast<const uint32_t*>(data), size * 4u);
+      return blInternalGlyphBufferData_setUnicodeText<BLUtf32Reader>(d, static_cast<const uint32_t*>(text), size * 4u);
 
     default:
       // Avoids a compile-time warning, should never be reached.
@@ -262,11 +272,11 @@ BLResult blGlyphBufferSetText(BLGlyphBufferCore* self, const void* data, size_t 
   }
 }
 
-BLResult blGlyphBufferSetGlyphIds(BLGlyphBufferCore* self, const void* data, intptr_t advance, size_t size) noexcept {
+BLResult blGlyphBufferSetGlyphIds(BLGlyphBufferCore* self, const void* glyphData, intptr_t glyphAdvance, size_t size) noexcept {
   BLInternalGlyphBufferImpl* d;
 
   BL_PROPAGATE(blGlyphBufferEnsureData(self, &d));
   BL_PROPAGATE(d->ensureBuffer(0, 0, size));
 
-  return blInternalGlyphBufferData_setGlyphIds(d, static_cast<const uint16_t*>(data), advance, size);
+  return blInternalGlyphBufferData_setGlyphIds(d, static_cast<const uint16_t*>(glyphData), glyphAdvance, size);
 }

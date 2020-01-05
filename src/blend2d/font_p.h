@@ -139,21 +139,21 @@ struct BLInternalCastImpl<BLFontDataImpl> { typedef BLInternalFontDataImpl Type;
 struct BLInternalFontFaceFuncs {
   BLResult (BL_CDECL* mapTextToGlyphs)(
     const BLFontFaceImpl* impl,
-    BLGlyphItem* itemData,
+    uint32_t* content,
     size_t count,
     BLGlyphMappingState* state) BL_NOEXCEPT;
 
   BLResult (BL_CDECL* getGlyphBounds)(
     const BLFontFaceImpl* impl,
-    const BLGlyphId* glyphIdData,
-    intptr_t glyphIdAdvance,
+    const uint32_t* glyphData,
+    intptr_t glyphAdvance,
     BLBoxI* boxes,
     size_t count) BL_NOEXCEPT;
 
   BLResult (BL_CDECL* getGlyphAdvances)(
     const BLFontFaceImpl* impl,
-    const BLGlyphId* glyphIdData,
-    intptr_t glyphIdAdvance,
+    const uint32_t* glyphData,
+    intptr_t glyphAdvance,
     BLGlyphPlacement* placementData,
     size_t count) BL_NOEXCEPT;
 
@@ -167,7 +167,7 @@ struct BLInternalFontFaceFuncs {
 
   BLResult (BL_CDECL* applyKern)(
     const BLFontFaceImpl* faceI,
-    BLGlyphItem* itemData,
+    uint32_t* glyphData,
     BLGlyphPlacement* placementData,
     size_t count) BL_NOEXCEPT;
 
@@ -185,7 +185,7 @@ struct BLInternalFontFaceFuncs {
 
   BLResult (BL_CDECL* positionGlyphs)(
     const BLFontFaceImpl* impl,
-    BLGlyphItem* itemData,
+    uint32_t* glyphData,
     BLGlyphPlacement* placementData,
     size_t count) BL_NOEXCEPT;
 };

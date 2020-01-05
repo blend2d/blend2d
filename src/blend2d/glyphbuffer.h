@@ -22,8 +22,8 @@
 struct BLGlyphBufferImpl {
   union {
     struct {
-      //! Glyph item data.
-      BLGlyphItem* glyphItemData;
+      //! Text (UCS4 code-points) or glyph content.
+      uint32_t* content;
       //! Glyph placement data.
       BLGlyphPlacement* placementData;
       //! Number of either code points or glyph indexes in the glyph-buffer.
@@ -38,8 +38,8 @@ struct BLGlyphBufferImpl {
     BLGlyphRun glyphRun;
   };
 
-  //! Glyph info data - additional information of each `BLGlyphItem`.
-  BLGlyphInfo* glyphInfoData;
+  //! Glyph info data - additional information of each code-point or glyph.
+  BLGlyphInfo* infoData;
 };
 
 //! Glyph buffer [C Interface - Core].
@@ -60,8 +60,8 @@ struct BLGlyphBufferCore {
 //!
 //! Glyph buffer provides two separate buffers called 'primary' and 'secondary'
 //! that serve different purposes during processing. Primary buffer always holds
-//! actualy `BLGlyphItem` array, and secondary buffer is either used as a scratch
-//! buffer during glyph substitution or hold glyph positions after the processing
+//! actualy text/glyph array, and secondary buffer is either used as a scratch
+//! buffer during glyph substitution or to hold glyph positions after the processing
 //! is complete and glyph positions were calculated.
 class BLGlyphBuffer : public BLGlyphBufferCore {
 public:
@@ -92,9 +92,9 @@ public:
   BL_INLINE size_t size() const noexcept { return impl->size; }
   BL_INLINE uint32_t flags() const noexcept { return impl->flags; }
 
-  BL_INLINE BLGlyphItem* glyphItemData() const noexcept { return impl->glyphItemData; }
+  BL_INLINE uint32_t* content() const noexcept { return impl->content; }
+  BL_INLINE BLGlyphInfo* infoData() const noexcept { return impl->infoData; }
   BL_INLINE BLGlyphPlacement* placementData() const noexcept { return impl->placementData; }
-  BL_INLINE BLGlyphInfo* glyphInfoData() const noexcept { return impl->glyphInfoData; }
 
   BL_INLINE const BLGlyphRun& glyphRun() const noexcept { return impl->glyphRun; }
 
@@ -137,50 +137,50 @@ public:
   //! `uint16_t` or `uint32_t` code points, respectively.
   //!
   //! Null-terminated string can be specified by passing `SIZE_MAX` as `size`.
-  BL_INLINE BLResult setText(const void* data, size_t size, uint32_t encoding) noexcept {
-    return blGlyphBufferSetText(this, data, size, encoding);
+  BL_INLINE BLResult setText(const void* text, size_t size, uint32_t encoding) noexcept {
+    return blGlyphBufferSetText(this, text, size, encoding);
   }
 
   //! Sets the text content of this `BLGlyphBuffer` from LATIN1 (ISO/IEC 8859-1)
   //! string.
-  BL_INLINE BLResult setLatin1Text(const char* data, size_t size = SIZE_MAX) noexcept {
-    return blGlyphBufferSetText(this, data, size, BL_TEXT_ENCODING_LATIN1);
+  BL_INLINE BLResult setLatin1Text(const char* text, size_t size = SIZE_MAX) noexcept {
+    return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_LATIN1);
   }
 
   //! Sets the text content of this `BLGlyphBuffer` from UTF-8 encoded string.
-  //! The `size` parameter represents the length of the `data` in bytes.
-  BL_INLINE BLResult setUtf8Text(const char* data, size_t size = SIZE_MAX) noexcept {
-    return blGlyphBufferSetText(this, data, size, BL_TEXT_ENCODING_UTF8);
+  //! The `size` parameter represents the length of the `text` in bytes.
+  BL_INLINE BLResult setUtf8Text(const char* text, size_t size = SIZE_MAX) noexcept {
+    return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF8);
   }
   //! \overload
-  BL_INLINE BLResult setUtf8Text(const uint8_t* data, size_t size = SIZE_MAX) noexcept {
-    return blGlyphBufferSetText(this, data, size, BL_TEXT_ENCODING_UTF8);
+  BL_INLINE BLResult setUtf8Text(const uint8_t* text, size_t size = SIZE_MAX) noexcept {
+    return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF8);
   }
 
   //! Sets the text content of this `BLGlyphBuffer` from UTF-16 encoded string.
-  //! The `size` parameter represents the length of the `data` in 16-bit units.
-  BL_INLINE BLResult setUtf16Text(const uint16_t* data, size_t size = SIZE_MAX) noexcept {
-    return blGlyphBufferSetText(this, data, size, BL_TEXT_ENCODING_UTF16);
+  //! The `size` parameter represents the length of the `text` in 16-bit units.
+  BL_INLINE BLResult setUtf16Text(const uint16_t* text, size_t size = SIZE_MAX) noexcept {
+    return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF16);
   }
 
   //! Sets the text content of this `BLGlyphBuffer` from UTF-32 encoded string.
-  //! The `size` parameter represents the length of the `data` in 32-bit units.
-  BL_INLINE BLResult setUtf32Text(const uint32_t* data, size_t size = SIZE_MAX) noexcept {
-    return blGlyphBufferSetText(this, data, size, BL_TEXT_ENCODING_UTF32);
+  //! The `size` parameter represents the length of the `text` in 32-bit units.
+  BL_INLINE BLResult setUtf32Text(const uint32_t* text, size_t size = SIZE_MAX) noexcept {
+    return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF32);
   }
 
   //! Sets the text content of this `BLGlyphBuffer` from `wchar_t` encoded string.
-  //! The `size` parameter represents the length of the `data` in `wchar_t` units.
-  BL_INLINE BLResult setWCharText(const wchar_t* data, size_t size = SIZE_MAX) noexcept {
-    return blGlyphBufferSetText(this, data, size, BL_TEXT_ENCODING_WCHAR);
+  //! The `size` parameter represents the length of the `text` in `wchar_t` units.
+  BL_INLINE BLResult setWCharText(const wchar_t* text, size_t size = SIZE_MAX) noexcept {
+    return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_WCHAR);
   }
 
-  //! Sets the glyph content of this `BLGlyphBuffer` from either `uint16_t` array
-  //! or any structure that contains 16-bit glyph ids. The `advance` parameter
-  //! specifies the size of such structure (set to sizeof(uint16_t) for uint16_t
-  //! array) and `size` specifies how many glyph ids the passed `data` represents.
-  BL_INLINE BLResult setGlyphIds(const void* data, intptr_t advance, size_t size) noexcept {
-    return blGlyphBufferSetGlyphIds(this, data, advance, size);
+  //! Sets the glyph content of this `BLGlyphBuffer` from either `uint16_t[]` and
+  //! `uint32_t[]` array or any structure that contains 16-bit or 32-bit glyph ids.
+  //! The `glyphAdvance` parameter specifies the size of such structure and `size`
+  //! specifies how many glyph ids the passed `glyphData` represents.
+  BL_INLINE BLResult setGlyphIds(const void* glyphData, intptr_t glyphAdvance, size_t size) noexcept {
+    return blGlyphBufferSetGlyphIds(this, glyphData, glyphAdvance, size);
   }
 
   //! \}

@@ -376,7 +376,7 @@ static BLResult BL_CDECL blNullFontFaceImplDestroy(BLFontFaceImpl* impl) noexcep
 
 static BLResult BL_CDECL blNullFontFaceMapTextToGlyphs(
   const BLFontFaceImpl* impl,
-  BLGlyphItem* itemData,
+  uint32_t* content,
   size_t count,
   BLGlyphMappingState* state) noexcept {
 
@@ -386,8 +386,8 @@ static BLResult BL_CDECL blNullFontFaceMapTextToGlyphs(
 
 static BLResult BL_CDECL blNullFontFaceGetGlyphBounds(
   const BLFontFaceImpl* impl,
-  const BLGlyphId* glyphIdData,
-  intptr_t glyphIdAdvance,
+  const uint32_t* glyphData,
+  intptr_t glyphAdvance,
   BLBoxI* boxes,
   size_t count) noexcept {
 
@@ -396,8 +396,8 @@ static BLResult BL_CDECL blNullFontFaceGetGlyphBounds(
 
 static BLResult BL_CDECL blNullFontFaceGetGlyphAdvances(
   const BLFontFaceImpl* impl,
-  const BLGlyphId* glyphIdData,
-  intptr_t glyphIdAdvance,
+  const uint32_t* glyphData,
+  intptr_t glyphAdvance,
   BLGlyphPlacement* placementData,
   size_t count) noexcept {
 
@@ -418,7 +418,7 @@ static BLResult BL_CDECL blNullFontFaceGetGlyphOutlines(
 
 static BLResult BL_CDECL blNullFontFaceApplyKern(
   const BLFontFaceImpl* faceI,
-  BLGlyphItem* itemData,
+  uint32_t* glyphData,
   BLGlyphPlacement* placementData,
   size_t count) noexcept {
 
@@ -445,7 +445,7 @@ static BLResult BL_CDECL blNullFontFaceApplyGPos(
 
 static BLResult BL_CDECL blNullFontFacePositionGlyphs(
   const BLFontFaceImpl* impl,
-  BLGlyphItem* itemData,
+  uint32_t* glyphData,
   BLGlyphPlacement* placementData,
   size_t count) noexcept {
 
@@ -747,7 +747,7 @@ BLResult blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, BL
     stateOut = &state;
 
   BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
-  BL_PROPAGATE(faceI->funcs.mapTextToGlyphs(faceI, gbI->glyphItemData, gbI->size, stateOut));
+  BL_PROPAGATE(faceI->funcs.mapTextToGlyphs(faceI, gbI->content, gbI->size, stateOut));
 
   gbI->flags = gbI->flags & ~BL_GLYPH_RUN_FLAG_UCS4_CONTENT;
   if (stateOut->undefinedCount == 0)
@@ -766,13 +766,13 @@ BLResult blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, uin
   BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
   if (!(gbI->flags & BL_GLYPH_BUFFER_GLYPH_ADVANCES)) {
     BL_PROPAGATE(gbI->ensurePlacement());
-    faceI->funcs.getGlyphAdvances(faceI, &gbI->glyphItemData->glyphId, sizeof(BLGlyphItem), gbI->placementData, gbI->size);
+    faceI->funcs.getGlyphAdvances(faceI, gbI->content, sizeof(uint32_t), gbI->placementData, gbI->size);
     gbI->glyphRun.placementType = uint8_t(BL_GLYPH_PLACEMENT_TYPE_ADVANCE_OFFSET);
     gbI->flags |= BL_GLYPH_BUFFER_GLYPH_ADVANCES;
   }
 
   if (positioningFlags) {
-    faceI->funcs.applyKern(faceI, gbI->glyphItemData, gbI->placementData, gbI->size);
+    faceI->funcs.applyKern(faceI, gbI->content, gbI->placementData, gbI->size);
   }
 
   return BL_SUCCESS;
@@ -787,7 +787,7 @@ BLResult blFontApplyKerning(const BLFontCore* self, BLGlyphBufferCore* gb) noexc
     return blTraceError(BL_ERROR_INVALID_STATE);
 
   BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
-  return faceI->funcs.applyKern(faceI, gbI->glyphItemData, gbI->placementData, gbI->size);
+  return faceI->funcs.applyKern(faceI, gbI->content, gbI->placementData, gbI->size);
 }
 
 BLResult blFontApplyGSub(const BLFontCore* self, BLGlyphBufferCore* gb, size_t index, BLBitWord lookups) noexcept {
@@ -823,7 +823,7 @@ BLResult blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLT
 
   BLPoint advance {};
 
-  const BLGlyphItem* glyphItemData = gbI->glyphItemData;
+  const uint32_t* glyphData = gbI->content;
   const BLGlyphPlacement* placementData = gbI->placementData;
 
   for (size_t i = 0; i < size; i++) {
@@ -831,9 +831,9 @@ BLResult blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLT
   }
 
   BLBoxI glyphBounds[2];
-  BLGlyphId borderGlyphs[2] = { BLGlyphId(glyphItemData[0].glyphId), BLGlyphId(glyphItemData[size - 1].glyphId) };
+  uint32_t borderGlyphs[2] = { glyphData[0], glyphData[size - 1] };
 
-  BL_PROPAGATE(blFontGetGlyphBounds(self, borderGlyphs, intptr_t(sizeof(BLGlyphId)), glyphBounds, 2));
+  BL_PROPAGATE(blFontGetGlyphBounds(self, borderGlyphs, intptr_t(sizeof(uint32_t)), glyphBounds, 2));
   out->advance = advance;
 
   double lsb = glyphBounds[0].x0;
@@ -858,14 +858,14 @@ BLResult blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLT
 // [BLFont - Low-Level API]
 // ============================================================================
 
-BLResult blFontGetGlyphBounds(const BLFontCore* self, const void* glyphIdData, intptr_t glyphIdAdvance, BLBoxI* out, size_t count) noexcept {
+BLResult blFontGetGlyphBounds(const BLFontCore* self, const uint32_t* glyphData, intptr_t glyphAdvance, BLBoxI* out, size_t count) noexcept {
   BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
-  return faceI->funcs.getGlyphBounds(faceI, static_cast<const BLGlyphId*>(glyphIdData), glyphIdAdvance, out, count);
+  return faceI->funcs.getGlyphBounds(faceI, glyphData, glyphAdvance, out, count);
 }
 
-BLResult blFontGetGlyphAdvances(const BLFontCore* self, const void* glyphIdData, intptr_t glyphIdAdvance, BLGlyphPlacement* out, size_t count) noexcept {
+BLResult blFontGetGlyphAdvances(const BLFontCore* self, const uint32_t* glyphData, intptr_t glyphAdvance, BLGlyphPlacement* out, size_t count) noexcept {
   BLInternalFontFaceImpl* faceI = blInternalCast(self->impl->face.impl);
-  return faceI->funcs.getGlyphAdvances(faceI, static_cast<const BLGlyphId*>(glyphIdData), glyphIdAdvance, out, count);
+  return faceI->funcs.getGlyphAdvances(faceI, glyphData, glyphAdvance, out, count);
 }
 
 // ============================================================================

@@ -18,9 +18,9 @@ namespace CMapImpl {
 // [BLOpenType::CMapImpl - None]
 // ============================================================================
 
-static BLResult BL_CDECL mapTextToGlyphsNone(const BLFontFaceImpl* faceI_, BLGlyphItem* itemData, size_t count, BLGlyphMappingState* state) noexcept {
+static BLResult BL_CDECL mapTextToGlyphsNone(const BLFontFaceImpl* faceI_, uint32_t* content, size_t count, BLGlyphMappingState* state) noexcept {
   BL_UNUSED(faceI_);
-  BL_UNUSED(itemData);
+  BL_UNUSED(content);
   BL_UNUSED(count);
 
   state->reset();
@@ -31,30 +31,30 @@ static BLResult BL_CDECL mapTextToGlyphsNone(const BLFontFaceImpl* faceI_, BLGly
 // [BLOpenType::CMapImpl - Format0]
 // ============================================================================
 
-static BLResult BL_CDECL mapTextToGlyphsFormat0(const BLFontFaceImpl* faceI_, BLGlyphItem* itemData, size_t count, BLGlyphMappingState* state) noexcept {
+static BLResult BL_CDECL mapTextToGlyphsFormat0(const BLFontFaceImpl* faceI_, uint32_t* content, size_t count, BLGlyphMappingState* state) noexcept {
   const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
   const CMapTable::Format0* subTable = blOffsetPtr<CMapTable::Format0>(faceI->cmap.cmapTable.data, faceI->cmap.encoding.offset);
   const UInt8* glyphIdArray = subTable->glyphIdArray;
 
-  BLGlyphItem* itemPtr = itemData;
-  BLGlyphItem* itemEnd = itemData + count;
+  uint32_t* ptr = content;
+  uint32_t* end = content + count;
 
   size_t undefinedCount = 0;
   state->undefinedFirst = SIZE_MAX;
 
-  while (itemPtr != itemEnd) {
-    uint32_t codePoint = itemPtr->value;
+  while (ptr != end) {
+    uint32_t codePoint = content[0];
     uint32_t glyphId = codePoint < 256 ? uint32_t(glyphIdArray[codePoint].value()) : uint32_t(0);
 
-    itemPtr->value = glyphId;
+    content[0] = glyphId;
     if (BL_UNLIKELY(glyphId == 0)) {
       if (!undefinedCount)
-        state->undefinedFirst = (size_t)(itemPtr - itemData);
+        state->undefinedFirst = (size_t)(ptr - content);
       undefinedCount++;
     }
   }
 
-  state->glyphCount = (size_t)(itemPtr - itemData);
+  state->glyphCount = (size_t)(ptr - content);
   state->undefinedCount = undefinedCount;
 
   return BL_SUCCESS;
@@ -89,12 +89,12 @@ static BL_INLINE const UInt16* findSegmentFormat4(
   return nullptr;
 }
 
-static BLResult BL_CDECL mapTextToGlyphsFormat4(const BLFontFaceImpl* faceI_, BLGlyphItem* itemData, size_t count, BLGlyphMappingState* state) noexcept {
+static BLResult BL_CDECL mapTextToGlyphsFormat4(const BLFontFaceImpl* faceI_, uint32_t* content, size_t count, BLGlyphMappingState* state) noexcept {
   const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
   const CMapTable::Format4* subTable = blOffsetPtr<CMapTable::Format4>(faceI->cmap.cmapTable.data, faceI->cmap.encoding.offset);
 
-  BLGlyphItem* itemPtr = itemData;
-  BLGlyphItem* itemEnd = itemData + count;
+  uint32_t* ptr = content;
+  uint32_t* end = content + count;
 
   size_t undefinedCount = 0;
   state->undefinedFirst = SIZE_MAX;
@@ -113,8 +113,8 @@ static BLResult BL_CDECL mapTextToGlyphsFormat4(const BLFontFaceImpl* faceI_, BL
   uint32_t ucFirst;
   uint32_t ucLast;
 
-  while (itemPtr != itemEnd) {
-    uc = itemPtr->value;
+  while (ptr != end) {
+    uc = ptr[0];
 
 NewMatch:
     const UInt16* match = findSegmentFormat4(uc, lastCharArray, numSeg, numSearchableSeg, ucFirst, ucLast);
@@ -126,7 +126,7 @@ NewMatch:
       //   - match[2 + numSeg * 6] == idOffsetArray [Segment]
       uint32_t offset = blOffsetPtr(match, idOffsetArrayOffset)->value();
       for (;;) {
-        // If the `offset` is not zero then we have to get the BLGlyphId from `glyphArray`.
+        // If the `offset` is not zero then we have to get the GlyphId from the array.
         if (offset != 0) {
           size_t rawRemain = (size_t)(dataEnd - reinterpret_cast<const uint8_t*>(match));
           size_t rawOffset = idOffsetArrayOffset + (uc - ucFirst) * 2u + offset;
@@ -144,11 +144,11 @@ NewMatch:
         if (BL_UNLIKELY(uc == 0))
           goto UndefinedGlyph;
 
-        itemPtr->value = uc;
-        if (++itemPtr == itemEnd)
+        ptr[0] = uc;
+        if (++ptr == end)
           goto Done;
 
-        uc = itemPtr->value;
+        uc = ptr[0];
         if (uc < ucFirst || uc > ucLast)
           goto NewMatch;
       }
@@ -156,16 +156,15 @@ NewMatch:
     else {
 UndefinedGlyph:
       if (!undefinedCount)
-        state->undefinedFirst = (size_t)(itemPtr - itemData);
+        state->undefinedFirst = (size_t)(ptr - content);
 
-      itemPtr->value = 0;
-      itemPtr++;
+      *ptr++ = 0;
       undefinedCount++;
     }
   }
 
 Done:
-  state->glyphCount = (size_t)(itemPtr - itemData);
+  state->glyphCount = (size_t)(ptr - content);
   state->undefinedCount = undefinedCount;
 
   return BL_SUCCESS;
@@ -175,12 +174,12 @@ Done:
 // [BLOpenType::CMapImpl - Format6]
 // ============================================================================
 
-static BLResult BL_CDECL mapTextToGlyphsFormat6(const BLFontFaceImpl* faceI_, BLGlyphItem* itemData, size_t count, BLGlyphMappingState* state) noexcept {
+static BLResult BL_CDECL mapTextToGlyphsFormat6(const BLFontFaceImpl* faceI_, uint32_t* content, size_t count, BLGlyphMappingState* state) noexcept {
   const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
   const CMapTable::Format6* subTable = blOffsetPtr<CMapTable::Format6>(faceI->cmap.cmapTable.data, faceI->cmap.encoding.offset);
 
-  BLGlyphItem* itemPtr = itemData;
-  BLGlyphItem* itemEnd = itemData + count;
+  uint32_t* ptr = content;
+  uint32_t* end = content + count;
 
   size_t undefinedCount = 0;
   state->undefinedFirst = SIZE_MAX;
@@ -189,21 +188,19 @@ static BLResult BL_CDECL mapTextToGlyphsFormat6(const BLFontFaceImpl* faceI_, BL
   uint32_t ucCount = subTable->count();
   const UInt16* glyphIdArray = subTable->glyphIdArray();
 
-  while (itemPtr != itemEnd) {
-    uint32_t uc = itemPtr->value - ucFirst;
+  while (ptr != end) {
+    uint32_t uc = ptr[0] - ucFirst;
     uint32_t glyphId = uc < ucCount ? uint32_t(glyphIdArray[uc].value()) : uint32_t(0);
 
-    itemPtr->value = glyphId;
-    itemPtr++;
-
+    *ptr++ = glyphId;
     if (BL_UNLIKELY(glyphId == 0)) {
       if (!undefinedCount)
-        state->undefinedFirst = (size_t)(itemPtr - itemData) - 1;
+        state->undefinedFirst = (size_t)(ptr - content) - 1;
       undefinedCount++;
     }
   }
 
-  state->glyphCount = (size_t)(itemPtr - itemData);
+  state->glyphCount = (size_t)(ptr - content);
   state->undefinedCount = undefinedCount;
 
   return BL_SUCCESS;
@@ -213,12 +210,12 @@ static BLResult BL_CDECL mapTextToGlyphsFormat6(const BLFontFaceImpl* faceI_, BL
 // [BLOpenType::CMapImpl - Format10]
 // ============================================================================
 
-static BLResult BL_CDECL mapTextToGlyphsFormat10(const BLFontFaceImpl* faceI_, BLGlyphItem* itemData, size_t count, BLGlyphMappingState* state) noexcept {
+static BLResult BL_CDECL mapTextToGlyphsFormat10(const BLFontFaceImpl* faceI_, uint32_t* content, size_t count, BLGlyphMappingState* state) noexcept {
   const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
   const CMapTable::Format10* subTable = blOffsetPtr<CMapTable::Format10>(faceI->cmap.cmapTable.data, faceI->cmap.encoding.offset);
 
-  BLGlyphItem* itemPtr = itemData;
-  BLGlyphItem* itemEnd = itemData + count;
+  uint32_t* ptr = content;
+  uint32_t* end = content + count;
 
   size_t undefinedCount = 0;
   state->undefinedFirst = SIZE_MAX;
@@ -227,21 +224,20 @@ static BLResult BL_CDECL mapTextToGlyphsFormat10(const BLFontFaceImpl* faceI_, B
   uint32_t ucCount = subTable->glyphIds.count();
 
   const UInt16* glyphIdArray = subTable->glyphIds.array();
-  while (itemPtr != itemEnd) {
-    uint32_t uc = itemPtr->value - ucFirst;
+  while (ptr != end) {
+    uint32_t uc = ptr[0] - ucFirst;
     uint32_t glyphId = uc < ucCount ? uint32_t(glyphIdArray[uc].value()) : uint32_t(0);
 
-    itemPtr->value = glyphId;
-    itemPtr++;
+    *ptr++ = glyphId;
 
     if (BL_UNLIKELY(glyphId == 0)) {
       if (!undefinedCount)
-        state->undefinedFirst = (size_t)(itemPtr - itemData) - 1;
+        state->undefinedFirst = (size_t)(ptr - content) - 1;
       undefinedCount++;
     }
   }
 
-  state->glyphCount = (size_t)(itemPtr - itemData);
+  state->glyphCount = (size_t)(ptr - content);
   state->undefinedCount = undefinedCount;
 
   return BL_SUCCESS;
@@ -279,12 +275,12 @@ static BL_INLINE bool findGroupFormat12_13(
 }
 
 template<uint32_t FormatId>
-static BLResult mapTextToGlyphsFormat12_13(const BLFontFaceImpl* faceI_, BLGlyphItem* itemData, size_t count, BLGlyphMappingState* state) noexcept {
+static BLResult mapTextToGlyphsFormat12_13(const BLFontFaceImpl* faceI_, uint32_t* content, size_t count, BLGlyphMappingState* state) noexcept {
   const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
   const CMapTable::Format12_13* subTable = blOffsetPtr<CMapTable::Format12_13>(faceI->cmap.cmapTable.data, faceI->cmap.encoding.offset);
 
-  BLGlyphItem* itemPtr = itemData;
-  BLGlyphItem* itemEnd = itemData + count;
+  uint32_t* ptr = content;
+  uint32_t* end = content + count;
 
   size_t undefinedCount = 0;
   state->undefinedFirst = SIZE_MAX;
@@ -292,13 +288,13 @@ static BLResult mapTextToGlyphsFormat12_13(const BLFontFaceImpl* faceI_, BLGlyph
   const CMapTable::Group* groupArray = subTable->groups.array();
   size_t groupCount = faceI->cmap.encoding.entryCount;
 
-  while (itemPtr != itemEnd) {
+  while (ptr != end) {
     uint32_t uc;
     uint32_t ucFirst;
     uint32_t ucLast;
     uint32_t startGlyphId;
 
-    uc = itemPtr->value;
+    uc = ptr[0];
 
 NewMatch:
     if (findGroupFormat12_13(uc, groupArray, groupCount, ucFirst, ucLast, startGlyphId)) {
@@ -308,11 +304,11 @@ NewMatch:
         if (!glyphId)
           goto UndefinedGlyph;
 
-        itemPtr->value = glyphId;
-        if (++itemPtr == itemEnd)
+        *ptr = glyphId;
+        if (++ptr == end)
           goto Done;
 
-        uc = itemPtr->value;
+        uc = ptr[0];
         if (uc < ucFirst || uc > ucLast)
           goto NewMatch;
       }
@@ -320,16 +316,15 @@ NewMatch:
     else {
 UndefinedGlyph:
       if (!undefinedCount)
-        state->undefinedFirst = (size_t)(itemPtr - itemData);
+        state->undefinedFirst = (size_t)(ptr - content);
 
-      itemPtr->value = 0;
-      itemPtr++;
+      *ptr++ = 0;
       undefinedCount++;
     }
   }
 
 Done:
-  state->glyphCount = (size_t)(itemPtr - itemData);
+  state->glyphCount = (size_t)(ptr - content);
   state->undefinedCount = undefinedCount;
 
   return BL_SUCCESS;

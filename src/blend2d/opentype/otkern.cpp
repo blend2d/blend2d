@@ -207,7 +207,7 @@ static BL_INLINE int32_t combineKernValue(int32_t origVal, int32_t newVal, int32
 }
 
 // Kern SubTable Format 0 - Ordered list of kerning pairs.
-static BL_INLINE int32_t applyKernFormat0(const BLOTFaceImpl* faceI, const void* dataPtr, size_t dataSize, BLGlyphItem* itemData, BLGlyphPlacement* placementData, size_t count, int32_t mask) noexcept {
+static BL_INLINE int32_t applyKernFormat0(const BLOTFaceImpl* faceI, const void* dataPtr, size_t dataSize, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count, int32_t mask) noexcept {
   BL_UNUSED(faceI);
 
   // Format0's `dataPtr` is not a pointer to the start of the table, instead
@@ -217,10 +217,10 @@ static BL_INLINE int32_t applyKernFormat0(const BLOTFaceImpl* faceI, const void*
   size_t pairCount = dataSize;
 
   int32_t allCombined = 0;
-  uint32_t pair = uint32_t(itemData[0].glyphId) << 16;
+  uint32_t pair = glyphData[0] << 16;
 
   for (size_t i = 1; i < count; i++, pair <<= 16) {
-    pair |= uint32_t(itemData[i].glyphId);
+    pair |= glyphData[i];
 
     size_t index = findKernPair(pairData, pairCount, pair);
     if (index == SIZE_MAX)
@@ -237,7 +237,7 @@ static BL_INLINE int32_t applyKernFormat0(const BLOTFaceImpl* faceI, const void*
 }
 
 // Kern SubTable Format 2 - Simple NxM array of kerning values.
-static BL_INLINE int32_t applyKernFormat2(const BLOTFaceImpl* faceI, const void* dataPtr, size_t dataSize, BLGlyphItem* itemData, BLGlyphPlacement* placementData, size_t count, int32_t mask) noexcept {
+static BL_INLINE int32_t applyKernFormat2(const BLOTFaceImpl* faceI, const void* dataPtr, size_t dataSize, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count, int32_t mask) noexcept {
   typedef KernTable::Format2 Format2;
   typedef Format2::ClassTable ClassTable;
 
@@ -264,11 +264,11 @@ static BL_INLINE int32_t applyKernFormat2(const BLOTFaceImpl* faceI, const void*
   uint32_t rightFirstGlyph = rightClassTable->firstGlyph();
 
   int32_t allCombined = 0;
-  uint32_t leftGlyph = uint32_t(itemData[0].glyphId);
+  uint32_t leftGlyph = glyphData[0];
   uint32_t rightGlyph = 0;
 
   for (size_t i = 1; i < count; i++, leftGlyph = rightGlyph) {
-    rightGlyph = uint32_t(itemData[i].glyphId);
+    rightGlyph = glyphData[i];
 
     uint32_t leftIndex  = leftGlyph - leftFirstGlyph;
     uint32_t rightIndex = rightGlyph - rightFirstGlyph;
@@ -295,7 +295,7 @@ static BL_INLINE int32_t applyKernFormat2(const BLOTFaceImpl* faceI, const void*
 }
 
 // Kern SubTable Format 3 - Simple NxM array of kerning indexes.
-static BL_INLINE int32_t applyKernFormat3(const BLOTFaceImpl* faceI, const void* dataPtr, size_t dataSize, BLGlyphItem* itemData, BLGlyphPlacement* placementData, size_t count, int32_t mask) noexcept {
+static BL_INLINE int32_t applyKernFormat3(const BLOTFaceImpl* faceI, const void* dataPtr, size_t dataSize, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count, int32_t mask) noexcept {
   typedef KernTable::Format3 Format3;
 
   const Format3* subTable = blOffsetPtr<const Format3>(dataPtr, faceI->kern.headerSize);
@@ -313,11 +313,11 @@ static BL_INLINE int32_t applyKernFormat3(const BLOTFaceImpl* faceI, const void*
   const UInt8* indexTable = classTable + glyphCount * 2u;
 
   int32_t allCombined = 0;
-  uint32_t leftGlyph = uint32_t(itemData[0].glyphId);
+  uint32_t leftGlyph = glyphData[0];
   uint32_t rightGlyph = 0;
 
   for (size_t i = 1; i < count; i++, leftGlyph = rightGlyph) {
-    rightGlyph = uint32_t(itemData[i].glyphId);
+    rightGlyph = glyphData[i];
     if (blMax(leftGlyph, rightGlyph) >= glyphCount)
       continue;
 
@@ -342,9 +342,9 @@ static BL_INLINE int32_t applyKernFormat3(const BLOTFaceImpl* faceI, const void*
 }
 
 // Applies the data calculated by applyKernFormatN.
-static BL_INLINE void finishKern(const BLOTFaceImpl* faceI, BLGlyphItem* itemData, BLGlyphPlacement* placementData, size_t count) noexcept {
+static BL_INLINE void finishKern(const BLOTFaceImpl* faceI, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count) noexcept {
   BL_UNUSED(faceI);
-  BL_UNUSED(itemData);
+  BL_UNUSED(glyphData);
 
   for (size_t i = 1; i < count; i++) {
     placementData[i - 1].advance += placementData[i].placement;
@@ -352,7 +352,7 @@ static BL_INLINE void finishKern(const BLOTFaceImpl* faceI, BLGlyphItem* itemDat
   }
 }
 
-static BLResult BL_CDECL applyKern(const BLFontFaceImpl* faceI_, BLGlyphItem* itemData, BLGlyphPlacement* placementData, size_t count) noexcept {
+static BLResult BL_CDECL applyKern(const BLFontFaceImpl* faceI_, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count) noexcept {
   const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
   if (count < 2)
     return BL_SUCCESS;
@@ -375,16 +375,16 @@ static BLResult BL_CDECL applyKern(const BLFontFaceImpl* faceI_, BLGlyphItem* it
     int32_t mask = maskFromKernGroupFlags(kernGroup.flags);
 
     switch (format) {
-      case 0: allCombined |= applyKernFormat0(faceI, dataPtr, dataSize, itemData, placementData, count, mask); break;
-      case 2: allCombined |= applyKernFormat2(faceI, dataPtr, dataSize, itemData, placementData, count, mask); break;
-      case 3: allCombined |= applyKernFormat3(faceI, dataPtr, dataSize, itemData, placementData, count, mask); break;
+      case 0: allCombined |= applyKernFormat0(faceI, dataPtr, dataSize, glyphData, placementData, count, mask); break;
+      case 2: allCombined |= applyKernFormat2(faceI, dataPtr, dataSize, glyphData, placementData, count, mask); break;
+      case 3: allCombined |= applyKernFormat3(faceI, dataPtr, dataSize, glyphData, placementData, count, mask); break;
     }
   }
 
   // Only finish kerning if we actually did something, if no kerning pair
   // was found or all kerning pairs were zero then there is nothing to do.
   if (allCombined)
-    finishKern(faceI, itemData, placementData, count);
+    finishKern(faceI, glyphData, placementData, count);
 
   return BL_SUCCESS;
 }

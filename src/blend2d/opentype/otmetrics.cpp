@@ -39,7 +39,7 @@ static BL_INLINE const char* sizeCheckMessage(size_t size) noexcept {
 // [BLOpenType::MetricsImpl - GetGlyphAdvances]
 // ============================================================================
 
-static BLResult BL_CDECL getGlyphAdvances(const BLFontFaceImpl* faceI_, const BLGlyphId* glyphIdData, intptr_t glyphIdAdvance, BLGlyphPlacement* placementData, size_t count) noexcept {
+static BLResult BL_CDECL getGlyphAdvances(const BLFontFaceImpl* faceI_, const uint32_t* glyphData, intptr_t glyphAdvance, BLGlyphPlacement* placementData, size_t count) noexcept {
   const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
   const XMtxTable* mtxTable = faceI->metrics.xmtxTable[BL_TEXT_ORIENTATION_HORIZONTAL].dataAs<XMtxTable>();
 
@@ -51,8 +51,8 @@ static BLResult BL_CDECL getGlyphAdvances(const BLFontFaceImpl* faceI_, const BL
     return blTraceError(BL_ERROR_INVALID_DATA);
 
   for (size_t i = 0; i < count; i++) {
-    uint32_t glyphId = glyphIdData[0];
-    glyphIdData = blOffsetPtr(glyphIdData, glyphIdAdvance);
+    uint32_t glyphId = glyphData[0];
+    glyphData = blOffsetPtr(glyphData, glyphAdvance);
 
     uint32_t metricIndex = blMin(glyphId, longMetricMax);
     int32_t advance = mtxTable->lmArray()[metricIndex].advance.value();

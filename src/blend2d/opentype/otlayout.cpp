@@ -513,46 +513,43 @@ static BL_INLINE BLResult applyGSubLookupType1Format1(const BLOTFaceImpl* faceI,
   uint32_t glyphDelta = uint16_t(table->deltaGlyphId());
 
   if (ctx.inPlace() && ctx.isSameIndex()) {
-    BLGlyphItem* item = ctx.in.itemData + ctx.in.index;
-    BLGlyphItem* end = ctx.in.itemData + ctx.in.end;
+    uint32_t* ptr = ctx.in.glyphData + ctx.in.index;
+    uint32_t* end = ctx.in.glyphData + ctx.in.end;
 
-    while (item != end) {
-      uint32_t glyphId = item->glyphId;
+    while (ptr != end) {
+      uint32_t glyphId = ptr[0];
       if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
         uint32_t coverageIndex;
         if (covIt.find<CoverageFormat>(glyphId, coverageIndex))
-          item->glyphId = BLGlyphId((glyphId + glyphDelta) & 0xFFFFu);
+          ptr[0] = (glyphId + glyphDelta) & 0xFFFFu;
       }
-      item++;
+      ptr++;
     }
   }
   else {
     if (!ctx.inPlace())
       BL_PROPAGATE(ctx.prepareOut(itemCount));
 
-    BLGlyphItem* inItem = ctx.in.itemData + ctx.in.index;
+    uint32_t* inPtr = ctx.in.glyphData + ctx.in.index;
+    uint32_t* inEnd = ctx.in.glyphData + ctx.in.end;
     BLGlyphInfo* inInfo = ctx.in.infoData + ctx.in.index;
-    BLGlyphItem* inEnd = ctx.in.itemData + ctx.in.end;
 
-    BLGlyphItem* outItem = ctx.out.itemData + ctx.out.index;
+    uint32_t* outPtr  = ctx.out.glyphData + ctx.out.index;
     BLGlyphInfo* outInfo = ctx.out.infoData + ctx.out.index;
 
-    while (inItem != inEnd) {
-      uint32_t glyphId = inItem->glyphId;
+    while (inPtr != inEnd) {
+      uint32_t glyphId = inPtr[0];
       if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
         uint32_t coverageIndex;
         if (covIt.find<CoverageFormat>(glyphId, coverageIndex))
           glyphId = (glyphId + glyphDelta) & 0xFFFFu;
       }
 
-      outItem->glyphId = BLGlyphId(glyphId);
-      outItem->reserved = inItem->reserved;
-      *outInfo = *inInfo;
+      *outPtr++ = glyphId;
+      *outInfo++ = *inInfo;
 
-      inItem++;
+      inPtr++;
       inInfo++;
-      outItem++;
-      outInfo++;
     }
   }
 
@@ -573,47 +570,44 @@ static BL_INLINE BLResult applyGSubLookupType1Format2(const BLOTFaceImpl* faceI,
     return ctx.advance(itemCount);
 
   if (ctx.inPlace() && ctx.isSameIndex()) {
-    BLGlyphItem* item = ctx.in.itemData + ctx.in.index;
-    BLGlyphItem* end = ctx.in.itemData + ctx.in.end;
+    uint32_t* ptr = ctx.in.glyphData + ctx.in.index;
+    uint32_t* end = ctx.in.glyphData + ctx.in.end;
 
-    while (item != end) {
-      uint32_t glyphId = item->glyphId;
+    while (ptr != end) {
+      uint32_t glyphId = ptr[0];
       if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
         uint32_t coverageIndex;
         if (covIt.find<CoverageFormat>(glyphId, coverageIndex) || coverageIndex >= substCount)
-          item->glyphId = BLGlyphId(table->glyphs.array()[coverageIndex].value());
+          ptr[0] = table->glyphs.array()[coverageIndex].value();
       }
 
-      item++;
+      ptr++;
     }
   }
   else {
     if (!ctx.inPlace())
       BL_PROPAGATE(ctx.prepareOut(itemCount));
 
-    BLGlyphItem* inItem = ctx.in.itemData + ctx.in.index;
+    uint32_t* inPtr = ctx.in.glyphData + ctx.in.index;
+    uint32_t* inEnd = ctx.in.glyphData + ctx.in.end;
     BLGlyphInfo* inInfo = ctx.in.infoData + ctx.in.index;
-    BLGlyphItem* inEnd = ctx.in.itemData + ctx.in.end;
 
-    BLGlyphItem* outItem = ctx.out.itemData + ctx.out.index;
+    uint32_t* outPtr = ctx.out.glyphData + ctx.out.index;
     BLGlyphInfo* outInfo = ctx.out.infoData + ctx.out.index;
 
-    while (inItem != inEnd) {
-      uint32_t glyphId = inItem->glyphId;
+    while (inPtr != inEnd) {
+      uint32_t glyphId = inPtr[0];
       if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
         uint32_t coverageIndex;
         if (covIt.find<CoverageFormat>(glyphId, coverageIndex) || coverageIndex >= substCount)
           glyphId = table->glyphs.array()[coverageIndex].value();
       }
 
-      outItem->glyphId = BLGlyphId(glyphId);
-      outItem->reserved = inItem->reserved;
-      *outInfo = *inInfo;
+      *outPtr++ = glyphId;
+      *outInfo++ = *inInfo;
 
-      inItem++;
+      inPtr++;
       inInfo++;
-      outItem++;
-      outInfo++;
     }
   }
 
@@ -681,8 +675,8 @@ static BL_INLINE BLResult applyGSubLookupType2Format1(const BLOTFaceImpl* faceI,
   if (BL_UNLIKELY(table.size < GSubTable::MultipleSubst1::kMinSize + substSeqCount * 2u))
     return ctx.advance(itemCount);
 
-  BLGlyphItem* inItem = ctx.in.itemData + ctx.in.index;
-  BLGlyphItem* inEnd = ctx.in.itemData + ctx.in.end;
+  uint32_t* inPtr = ctx.in.glyphData + ctx.in.index;
+  uint32_t* inEnd = ctx.in.glyphData + ctx.in.end;
 
   // Used to mark the first unmatched glyph that will be copied to output buffer.
   size_t unmatchedStart = ctx.in.index;
@@ -695,8 +689,8 @@ static BL_INLINE BLResult applyGSubLookupType2Format1(const BLOTFaceImpl* faceI,
 
   // Detects the first substitution to be done. If there is no substitution to
   // be done then we won't force the context to allocate the output buffer.
-  while (inItem != inEnd) {
-    glyphId = inItem->glyphId;
+  while (inPtr != inEnd) {
+    glyphId = inPtr[0];
     if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
       if (covIt.find<CoverageFormat>(glyphId, coverageIndex) || coverageIndex >= substSeqCount) {
         seqOffset = table->sequenceOffsets.array()[coverageIndex].value();
@@ -711,15 +705,15 @@ static BL_INLINE BLResult applyGSubLookupType2Format1(const BLOTFaceImpl* faceI,
       }
     }
 
-    inItem++;
+    inPtr++;
   }
 
   // No match at all.
   return ctx.advance(itemCount);
 
   // Second loop - only executed if there is at least one match.
-  while (inItem != inEnd) {
-    glyphId = inItem->glyphId;
+  while (inPtr != inEnd) {
+    glyphId = inPtr[0];
     if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
       if (covIt.find<CoverageFormat>(glyphId, coverageIndex) || coverageIndex >= substSeqCount) {
         seqOffset = table->sequenceOffsets.array()[coverageIndex].value();
@@ -727,21 +721,21 @@ static BL_INLINE BLResult applyGSubLookupType2Format1(const BLOTFaceImpl* faceI,
           seqLength = blMemReadU16uBE(table.data + seqOffset);
           if (BL_LIKELY(seqLength && seqOffset + seqLength * 2u <= maxSeqOffset)) {
 HaveMatch:
-            size_t unmatchedSize = (size_t)(inItem - ctx.in.itemData) - unmatchedStart;
+            size_t unmatchedSize = (size_t)(inPtr - ctx.in.glyphData) - unmatchedStart;
             size_t requiredSize = unmatchedSize + seqLength;
 
             if (ctx.outRemaining() < requiredSize)
               BL_PROPAGATE(ctx.prepareOut(requiredSize));
 
             const BLGlyphInfo* inInfo = ctx.in.infoData + unmatchedStart;
-            BLGlyphItem* outItem = ctx.out.itemData + ctx.out.index;
+            uint32_t* outPtr = ctx.out.glyphData + ctx.out.index;
             BLGlyphInfo* outInfo = ctx.out.infoData + ctx.out.index;
 
             // Copy the unmatched data.
-            blCopyGlyphData(outItem, outInfo, ctx.in.itemData + unmatchedStart, inInfo, unmatchedSize);
+            blCopyGlyphData(outPtr, outInfo, ctx.in.glyphData + unmatchedStart, inInfo, unmatchedSize);
 
             inInfo += unmatchedSize;
-            outItem += unmatchedSize;
+            outPtr += unmatchedSize;
             outInfo += unmatchedSize;
             ctx.out.index += unmatchedSize;
 
@@ -750,11 +744,8 @@ HaveMatch:
             for (uint32_t i = 0; i < seqLength; i++) {
               uint32_t value = seq->value();
 
-              outItem->value = value;
-              *outInfo = *inInfo;
-
-              outItem++;
-              outInfo++;
+              *outPtr++ = value;
+              *outInfo++ = *inInfo;
             }
 
             unmatchedStart += unmatchedSize + 1;
@@ -763,7 +754,7 @@ HaveMatch:
       }
     }
 
-    inItem++;
+    inPtr++;
   }
 
   return BL_SUCCESS;
@@ -833,11 +824,11 @@ static BL_INLINE BLResult applyGSubLookupType3Format1(const BLOTFaceImpl* faceI,
     return ctx.advance(itemCount);
 
   if (ctx.inPlace() && ctx.isSameIndex()) {
-    BLGlyphItem* item = ctx.in.itemData + ctx.in.index;
-    BLGlyphItem* end = ctx.in.itemData + ctx.in.end;
+    uint32_t* ptr = ctx.in.glyphData + ctx.in.index;
+    uint32_t* end = ctx.in.glyphData + ctx.in.end;
 
-    while (item != end) {
-      uint32_t glyphId = item->glyphId;
+    while (ptr != end) {
+      uint32_t glyphId = ptr[0];
 
       if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
         uint32_t coverageIndex;
@@ -848,28 +839,28 @@ static BL_INLINE BLResult applyGSubLookupType3Format1(const BLOTFaceImpl* faceI,
             uint32_t altGlyphsCount = alts[-1].value();
             if (BL_LIKELY(altGlyphsCount && altSetOffset + altGlyphsCount * 2u <= maxAltSetOffset)) {
               uint32_t altGlyphIndex = (selectedIndex % altGlyphsCount);
-              item->glyphId = BLGlyphId(alts[altGlyphIndex].value());
+              ptr[0] = alts[altGlyphIndex].value();
             }
           }
         }
       }
 
-      item++;
+      ptr++;
     }
   }
   else {
     if (!ctx.inPlace())
       BL_PROPAGATE(ctx.prepareOut(itemCount));
 
-    BLGlyphItem* inItem = ctx.in.itemData + ctx.in.index;
+    uint32_t* inPtr = ctx.in.glyphData + ctx.in.index;
+    uint32_t* inEnd = ctx.in.glyphData + ctx.in.end;
     BLGlyphInfo* inInfo = ctx.in.infoData + ctx.in.index;
-    BLGlyphItem* inEnd = ctx.in.itemData + ctx.in.end;
 
-    BLGlyphItem* outItem = ctx.out.itemData + ctx.out.index;
+    uint32_t* outPtr = ctx.out.glyphData + ctx.out.index;
     BLGlyphInfo* outInfo = ctx.out.infoData + ctx.out.index;
 
-    while (inItem != inEnd) {
-      uint32_t glyphId = inItem->glyphId;
+    while (inPtr != inEnd) {
+      uint32_t glyphId = inPtr[0];
 
       if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
         uint32_t coverageIndex;
@@ -880,20 +871,17 @@ static BL_INLINE BLResult applyGSubLookupType3Format1(const BLOTFaceImpl* faceI,
             uint32_t altGlyphsCount = alts[-1].value();
             if (BL_LIKELY(altGlyphsCount && altSetOffset + altGlyphsCount * 2u <= maxAltSetOffset)) {
               uint32_t altGlyphIndex = (selectedIndex % altGlyphsCount);
-              glyphId = BLGlyphId(alts[altGlyphIndex].value());
+              glyphId = alts[altGlyphIndex].value();
             }
           }
         }
       }
 
-      outItem->glyphId = BLGlyphId(glyphId);
-      outItem->reserved = inItem->reserved;
-      *outInfo = *inInfo;
+      *outPtr++ = glyphId;
+      *outInfo++ = *inInfo;
 
-      inItem++;
+      inPtr++;
       inInfo++;
-      outItem++;
-      outInfo++;
     }
   }
 
@@ -968,7 +956,7 @@ static BL_INLINE bool checkGSubLookupType4Format1(Validator* self, Trace trace, 
 static BL_INLINE bool matchLigature(
   BLFontTableT<Array16<Offset16>> ligOffsets,
   uint32_t ligCount,
-  const BLGlyphItem* inItem,
+  const uint32_t* inGlyphData,
   size_t maxGlyphCount,
   uint32_t& ligGlyphIdOut,
   uint32_t& ligGlyphCount) noexcept {
@@ -987,7 +975,7 @@ static BL_INLINE bool matchLigature(
     if (ligGlyphCount > maxGlyphCountMinusOne)
       continue;
 
-    // This is safe - a single Ligature is 4 bytes + BLGlyphId[ligGlyphCount - 1].
+    // This is safe - a single Ligature is 4 bytes + GlyphId[ligGlyphCount - 1].
     // MaxLigOffset is 4 bytes less than the end to include the header, so we
     // only have to include `ligGlyphCount * 2u` to verify we won't read beyond.
     if (BL_UNLIKELY(ligOffset + ligGlyphCount * 2u > maxLigOffset))
@@ -996,7 +984,7 @@ static BL_INLINE bool matchLigature(
     uint32_t glyphIndex = 0;
     for (;;) {
       uint32_t glyphA = lig->glyphs.array()[glyphIndex++].value();
-      uint32_t glyphB = inItem[glyphIndex].glyphId;
+      uint32_t glyphB = inGlyphData[glyphIndex];
 
       if (glyphA != glyphB)
         break;
@@ -1024,12 +1012,12 @@ static BL_INLINE BLResult applyGSubLookupType4Format1(const BLOTFaceImpl* faceI,
   if (BL_UNLIKELY(table.size < GSubTable::LigatureSubst1::kMinSize + ligSetCount * 2u))
     return ctx.advance(itemCount);
 
-  BLGlyphItem* inItem = ctx.in.itemData + ctx.in.index;
-  BLGlyphItem* inEnd = ctx.in.itemData + ctx.in.end;
+  uint32_t* inPtr = ctx.in.glyphData + ctx.in.index;
+  uint32_t* inEnd = ctx.in.glyphData + ctx.in.end;
 
   if (ctx.inPlace() && ctx.isSameIndex()) {
-    while (inItem != inEnd) {
-      uint32_t glyphId = inItem->glyphId;
+    while (inPtr != inEnd) {
+      uint32_t glyphId = inPtr[0];
 
       if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
         uint32_t coverageIndex;
@@ -1041,10 +1029,10 @@ static BL_INLINE BLResult applyGSubLookupType4Format1(const BLOTFaceImpl* faceI,
             if (BL_LIKELY(ligCount && ligSetOffset + ligCount * 2u <= maxLigSetOffset)) {
               uint32_t ligGlyphId;
               uint32_t ligGlyphCount;
-              if (matchLigature(ligOffsets, ligCount, inItem, (size_t)(inEnd - inItem), ligGlyphId, ligGlyphCount)) {
-                inItem->glyphId = BLGlyphId(ligGlyphId);
-                inItem += ligGlyphCount;
-                ctx.in.index = (size_t)(inItem - ctx.in.itemData);
+              if (matchLigature(ligOffsets, ligCount, inPtr, (size_t)(inEnd - inPtr), ligGlyphId, ligGlyphCount)) {
+                *inPtr = ligGlyphId;
+                inPtr += ligGlyphCount;
+                ctx.in.index = (size_t)(inPtr - ctx.in.glyphData);
                 ctx.out.index = ctx.in.index;
                 goto OutPlace;
               }
@@ -1053,7 +1041,7 @@ static BL_INLINE BLResult applyGSubLookupType4Format1(const BLOTFaceImpl* faceI,
         }
       }
 
-      inItem++;
+      inPtr++;
     }
 
     ctx.in.index += itemCount;
@@ -1062,12 +1050,13 @@ static BL_INLINE BLResult applyGSubLookupType4Format1(const BLOTFaceImpl* faceI,
   }
   else {
 OutPlace:
+    uint32_t* outPtr = ctx.out.glyphData + ctx.out.index;
+
     BLGlyphInfo* inInfo = ctx.in.infoData + ctx.in.index;
-    BLGlyphItem* outItem = ctx.out.itemData + ctx.out.index;
     BLGlyphInfo* outInfo = ctx.out.infoData + ctx.out.index;
 
-    while (inItem != inEnd) {
-      uint32_t glyphId = inItem->glyphId;
+    while (inPtr != inEnd) {
+      uint32_t glyphId = inPtr[0];
 
       if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
         uint32_t coverageIndex;
@@ -1079,33 +1068,27 @@ OutPlace:
             if (BL_LIKELY(ligCount && ligSetOffset + ligCount * 2u <= maxLigSetOffset)) {
               uint32_t ligGlyphId;
               uint32_t ligGlyphCount;
-              if (matchLigature(ligOffsets, ligCount, inItem, (size_t)(inEnd - inItem), ligGlyphId, ligGlyphCount)) {
-                outItem->glyphId = BLGlyphId(ligGlyphId);
-                outItem->reserved = inItem->reserved;
-                *outInfo = *inInfo;
+              if (matchLigature(ligOffsets, ligCount, inPtr, (size_t)(inEnd - inPtr), ligGlyphId, ligGlyphCount)) {
+                *outPtr++ = ligGlyphId;
+                *outInfo++ = *inInfo;
 
-                inItem += ligGlyphCount;
+                inPtr += ligGlyphCount;
                 inInfo += ligGlyphCount;
-                outItem++;
-                outInfo++;
               }
             }
           }
         }
       }
 
-      outItem->glyphId = BLGlyphId(glyphId);
-      outItem->reserved = inItem->reserved;
-      *outInfo = *inInfo;
+      *outPtr++ = glyphId;
+      *outInfo++ = *inInfo;
 
-      inItem++;
+      inPtr++;
       inInfo++;
-      outItem++;
-      outInfo++;
     }
 
     ctx.in.index = ctx.in.end;
-    ctx.out.index = (size_t)(outItem - ctx.out.itemData);
+    ctx.out.index = (size_t)(outPtr - ctx.out.glyphData);
     return BL_SUCCESS;
   }
 }
@@ -1209,7 +1192,7 @@ static BL_INLINE bool checkGSubLookupType5Format3(Validator* self, Trace trace, 
 static BL_INLINE bool matchSubRule(
   BLFontTableT<Array16<Offset16>> subRuleOffsets,
   uint32_t subRuleCount,
-  const BLGlyphItem* itemData,
+  const uint32_t* glyphData,
   uint32_t maxGlyphCount,
   const GSubTable::SubRule** out) noexcept {
 
@@ -1228,7 +1211,7 @@ static BL_INLINE bool matchSubRule(
       continue;
 
     // This is safe - a single SubRule is 4 bytes that is followed by
-    // `BLGlyphId[glyphCount - 1]` and then by `SubstLookupRecord[substCount]`.
+    // `GlyphId[glyphCount - 1]` and then by `SubstLookupRecord[substCount]`.
     // Since we don't know whether we have a match or not we will only check
     // bounds required by matching postponing `substCount` until we have
     // an actual match.
@@ -1238,7 +1221,7 @@ static BL_INLINE bool matchSubRule(
     uint32_t glyphIndex = 0;
     for (;;) {
       uint32_t glyphA = subRule->glyphArray()[glyphIndex++].value();
-      uint32_t glyphB = itemData[glyphIndex].glyphId;
+      uint32_t glyphB = glyphData[glyphIndex];
 
       if (glyphA != glyphB)
         break;
@@ -1266,7 +1249,7 @@ static BL_INLINE BLResult applyGSubLookupType5Format1(const BLOTFaceImpl* faceI,
 
   /*
   // TODO: [OPENTYPE GSUB]
-  BLGlyphItem* itemData = buf->glyphItemData;
+  uint32_t* glyphData = buf->glyphData;
   uint32_t size = buf->size;
 
   uint32_t minGlyphId = covIt.minGlyphId<CoverageFormat>();
@@ -1280,7 +1263,7 @@ static BL_INLINE BLResult applyGSubLookupType5Format1(const BLOTFaceImpl* faceI,
   uint32_t maxSubRuleSetOffset = uint32_t(table.size) - 2u;
 
   for (i = 0; i < size; i++) {
-    uint32_t glyphId = itemData[i].glyphId;
+    uint32_t glyphId = glyphData[i];
 
     if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
       uint32_t coverageIndex;
@@ -1291,7 +1274,7 @@ static BL_INLINE BLResult applyGSubLookupType5Format1(const BLOTFaceImpl* faceI,
           uint32_t subRuleCount = subRuleOffsets->count();
           if (BL_LIKELY(subRuleCount && subRuleSetOffset + subRuleCount * 2u <= maxSubRuleSetOffset)) {
             const GSubTable::SubRule* subRule;
-            if (matchSubRule(subRuleOffsets, subRuleCount, itemData + i, size - i, &subRule)) {
+            if (matchSubRule(subRuleOffsets, subRuleCount, glyphData + i, size - i, &subRule)) {
               continue;
             }
           }
@@ -1486,12 +1469,11 @@ static BL_INLINE BLResult applyGPosLookupType1Format1(const BLOTFaceImpl* faceI,
   if (BL_UNLIKELY(table.size < GPosTable::PairAdjustment1::kMinSize + valueRecordSize))
     return BL_SUCCESS;
 
-  BLGlyphItem* itemData = ctx.itemData;
+  uint32_t* glyphData = ctx.glyphData;
   BLGlyphPlacement* placementData = ctx.placementData;
 
   for (; index < end; index++) {
-    uint32_t glyphId = itemData[index].glyphId;
-
+    uint32_t glyphId = glyphData[index];
     if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
       uint32_t coverageIndex;
       if (covIt.find<CoverageFormat>(glyphId, coverageIndex)) {
@@ -1537,12 +1519,11 @@ static BL_INLINE BLResult applyGPosLookupType1Format2(const BLOTFaceImpl* faceI,
   if (BL_UNLIKELY(table.size < GPosTable::PairAdjustment1::kMinSize + valueRecordCount * valueRecordSize))
     return BL_SUCCESS;
 
-  BLGlyphItem* itemData = ctx.itemData;
+  uint32_t* glyphData = ctx.glyphData;
   BLGlyphPlacement* placementData = ctx.placementData;
 
   for (; index < end; index++) {
-    uint32_t glyphId = itemData[index].glyphId;
-
+    uint32_t glyphId = glyphData[index];
     if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
       uint32_t coverageIndex;
       if (covIt.find<CoverageFormat>(glyphId, coverageIndex) && coverageIndex < valueRecordCount) {
@@ -1616,15 +1597,14 @@ static BL_INLINE BLResult applyGPosLookupType2Format1(const BLOTFaceImpl* faceI,
   size_t valueRecordSize = 2u + sizeOfValueRecordByFormat(valueFormat1) +
                                 sizeOfValueRecordByFormat(valueFormat2) ;
 
-  BLGlyphItem* itemData = ctx.itemData;
+  uint32_t* glyphData = ctx.glyphData;
   BLGlyphPlacement* placementData = ctx.placementData;
 
-  uint32_t leftGlyphId = itemData[index].glyphId;
+  uint32_t leftGlyphId = glyphData[index];
   uint32_t rightGlyphId = 0;
 
   for (; index < end; index++, leftGlyphId = rightGlyphId) {
-    rightGlyphId = itemData[index + 1].glyphId;
-
+    rightGlyphId = glyphData[index + 1];
     if (leftGlyphId >= minGlyphId && leftGlyphId <= maxGlyphId) {
       uint32_t coverageIndex;
       if (covIt.find<CoverageFormat>(leftGlyphId, coverageIndex) && coverageIndex < pairSetOffsetsCount) {
@@ -1707,14 +1687,14 @@ static BL_INLINE BLResult applyGPosLookupType2Format2(const BLOTFaceImpl* faceI,
 
   const uint8_t* valueBasePtr = table.data + sizeof(GPosTable::PairAdjustment2);
 
-  BLGlyphItem* itemData = ctx.itemData;
+  uint32_t* glyphData = ctx.glyphData;
   BLGlyphPlacement* placementData = ctx.placementData;
 
-  uint32_t leftGlyphId = itemData[index].glyphId;
+  uint32_t leftGlyphId = glyphData[index];
   uint32_t rightGlyphId = 0;
 
   for (; index < end; index++, leftGlyphId = rightGlyphId) {
-    rightGlyphId = itemData[index + 1].glyphId;
+    rightGlyphId = glyphData[index + 1];
     if (leftGlyphId >= minGlyphId && leftGlyphId <= maxGlyphId) {
       uint32_t coverageIndex;
       if (covIt.find<CoverageFormat>(leftGlyphId, coverageIndex)) {

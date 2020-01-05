@@ -35,7 +35,7 @@ namespace BLOpenType {
 //! allocated.
 struct GSubContext {
   struct WorkBuffer {
-    BLGlyphItem* itemData;
+    uint32_t* glyphData;
     BLGlyphInfo* infoData;
     size_t index;
     size_t end;
@@ -47,13 +47,13 @@ struct GSubContext {
   BL_INLINE void init(BLInternalGlyphBufferImpl* gbd_) noexcept {
     gbd = gbd_;
 
-    in.itemData = gbd->glyphItemData;
-    in.infoData = gbd->glyphInfoData;
+    in.glyphData = gbd->content;
+    in.infoData = gbd->infoData;
     in.index = 0;
     in.end = gbd->size;
 
-    out.itemData = gbd->glyphItemData;
-    out.infoData = gbd->glyphInfoData;
+    out.glyphData = gbd->content;
+    out.infoData = gbd->infoData;
     out.index = 0;
     out.end = gbd->capacity[0];
   }
@@ -61,13 +61,13 @@ struct GSubContext {
   BL_INLINE void done() noexcept {
     if (!inPlace()) {
       gbd->flip();
-      gbd->getGlyphDataPtrs(0, &gbd->glyphItemData, &gbd->glyphInfoData);
+      gbd->getGlyphDataPtrs(0, &gbd->content, &gbd->infoData);
     }
     gbd->size = out.index;
   }
 
   //! Tests whether the `in` data is the same as `out` data.
-  BL_INLINE bool inPlace() const noexcept { return in.itemData == out.itemData; }
+  BL_INLINE bool inPlace() const noexcept { return in.glyphData == out.glyphData; }
   //! Tests whether the index in `in` data is the same as index in `out` data.
   BL_INLINE bool isSameIndex() const noexcept { return in.index == out.index; }
 
@@ -80,7 +80,7 @@ struct GSubContext {
     BL_ASSERT(in.end - in.index >= n);
     if (!(inPlace() && isSameIndex())) {
       BL_PROPAGATE(prepareOut(n));
-      blCopyGlyphData(out.itemData, out.infoData, in.itemData, in.infoData, n);
+      blCopyGlyphData(out.glyphData, out.infoData, in.glyphData, in.infoData, n);
     }
 
     in.index += n;
@@ -92,7 +92,7 @@ struct GSubContext {
     BL_ASSERT(in.end - in.index >= n);
     BL_ASSERT(out.end - out.index >= n);
 
-    blCopyGlyphData(out.itemData, out.infoData, in.itemData, in.infoData, n);
+    blCopyGlyphData(out.glyphData, out.infoData, in.glyphData, in.infoData, n);
     in.index += n;
     out.index += n;
     return BL_SUCCESS;
@@ -107,9 +107,9 @@ struct GSubContext {
       size_t index = in.index;
       out.index = index;
       out.end = gbd->capacity[1];
-      gbd->getGlyphDataPtrs(1, &out.itemData, &out.infoData);
+      gbd->getGlyphDataPtrs(1, &out.glyphData, &out.infoData);
 
-      blCopyGlyphData(out.itemData, out.infoData, in.itemData, in.infoData, index);
+      blCopyGlyphData(out.glyphData, out.infoData, in.glyphData, in.infoData, index);
       return BL_SUCCESS;
     }
     else {
@@ -129,7 +129,7 @@ struct GSubContext {
         newCapacity = blAlignUp(minCapacity + BL_GLYPH_BUFFER_AGGRESIVE_GROWTH / 2, BL_GLYPH_BUFFER_AGGRESIVE_GROWTH);
 
       BL_PROPAGATE(gbd->ensureBuffer(1, out.index, newCapacity));
-      gbd->getGlyphDataPtrs(1, &out.itemData, &out.infoData);
+      gbd->getGlyphDataPtrs(1, &out.glyphData, &out.infoData);
 
       return BL_SUCCESS;
     }
@@ -142,7 +142,7 @@ struct GSubContext {
 
 struct GPosContext {
   BLInternalGlyphBufferImpl* gbd;
-  BLGlyphItem* itemData;
+  uint32_t* glyphData;
   BLGlyphInfo* infoData;
   BLGlyphPlacement* placementData;
   size_t index;
@@ -150,8 +150,8 @@ struct GPosContext {
 
   BL_INLINE void init(BLInternalGlyphBufferImpl* gbd_) noexcept {
     gbd = gbd_;
-    itemData = gbd->glyphItemData;
-    infoData = gbd->glyphInfoData;
+    glyphData = gbd->content;
+    infoData = gbd->infoData;
     placementData = gbd->placementData;
     index = 0;
     end = gbd->size;
@@ -233,7 +233,7 @@ public:
   BL_INLINE const T& at(size_t index) const noexcept { return static_cast<const T*>(_array)[index]; }
 
   template<uint32_t Format>
-  BL_INLINE BLGlyphId minGlyphId() const noexcept {
+  BL_INLINE uint32_t minGlyphId() const noexcept {
     if (Format == 1)
       return at<UInt16>(0).value();
     else
@@ -241,7 +241,7 @@ public:
   }
 
   template<uint32_t Format>
-  BL_INLINE BLGlyphId maxGlyphId() const noexcept {
+  BL_INLINE uint32_t maxGlyphId() const noexcept {
     if (Format == 1)
       return at<UInt16>(_size - 1).value();
     else
@@ -381,12 +381,12 @@ public:
   BL_INLINE const T& at(size_t index) const noexcept { return static_cast<const T*>(_array)[index]; }
 
   template<uint32_t Format>
-  BL_INLINE BLGlyphId minGlyphId() const noexcept {
+  BL_INLINE uint32_t minGlyphId() const noexcept {
     return _firstGlyph;
   }
 
   template<uint32_t Format>
-  BL_INLINE BLGlyphId maxGlyphId() const noexcept {
+  BL_INLINE uint32_t maxGlyphId() const noexcept {
     if (Format == 1)
       return _firstGlyph + uint32_t(_size) - 1;
     else
