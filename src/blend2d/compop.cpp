@@ -181,18 +181,18 @@ struct BLCompOpSimplifyInfoGen {
   //   Dca' = Sc                             Dca' = Sc.m + Dca.(1 - m)
   //   Da'  = 1                              Da'  = 1 .m + Da .(1 - m)
   //
-  // [Src XRGBxPRGB] ~= [Src PRGBxPRGB]
+  // [Src XRGBxPRGB]
   //   Dc'  = Sca                            Dc'  = Sca.m + Dc.(1 - m)
   //
-  // [Src XRGBxXRGB] ~= [Src PRGBxPRGB]
+  // [Src XRGBxXRGB]
   //   Dc'  = Sc                             Dc'  = Sc.m + Dc.(1 - m)
   static constexpr BLCompOpSimplifyInfo srcCopy(uint32_t d, uint32_t s) noexcept {
     return d == PRGB32 && s == ZERO32 ? makeOp(SrcCopy, PRGB32, PRGB32) :
            d == PRGB32 && s == FRGB32 ? makeOp(SrcCopy, PRGB32, PRGB32) :
 
-           d == XRGB32 && s == PRGB32 ? makeOp(SrcCopy, PRGB32, PRGB32) :
-           d == XRGB32 && s == ZERO32 ? makeOp(SrcCopy, PRGB32, PRGB32) :
-           d == XRGB32 && s == XRGB32 ? makeOp(SrcCopy, PRGB32, PRGB32) :
+           d == XRGB32 && s == PRGB32 ? makeOp(SrcCopy, PRGB32, XRGB32) :
+           d == XRGB32 && s == ZERO32 ? makeOp(SrcCopy, PRGB32, XRGB32) :
+           d == XRGB32 && s == XRGB32 ? makeOp(SrcCopy, PRGB32, XRGB32) :
            d == XRGB32 && s == FRGB32 ? makeOp(SrcCopy, PRGB32, PRGB32) :
 
            d == A8 && s == ZERO32 ? clear(A8, ZERO32) :

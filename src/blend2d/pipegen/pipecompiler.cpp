@@ -257,7 +257,7 @@ x86::Xmm PipeCompiler::constAsXmm(const void* p) noexcept {
     "xmm.zero",
     "xmm.u16_128",
     "xmm.u16_257",
-    ""
+    "xmm.alpha"
   };
 
   int constIndex = -1;
@@ -265,8 +265,9 @@ x86::Xmm PipeCompiler::constAsXmm(const void* p) noexcept {
   if      (p == blCommonTable.i128_0000000000000000) constIndex = 0; // Required if the CPU doesn't have SSE4.1.
   else if (p == blCommonTable.i128_0080008000800080) constIndex = 1; // Required by `xDiv255()` and friends.
   else if (p == blCommonTable.i128_0101010101010101) constIndex = 2; // Required by `xDiv255()` and friends.
+  else if (p == blCommonTable.i128_FF000000FF000000) constIndex = 3; // Required by fetching XRGB32 pixels as PRGB32 pixels.
 
-  if (constIndex == -1 || _persistentRegs[x86::Reg::kGroupVec] + _temporaryRegs[x86::Reg::kGroupVec] > _availableRegs[x86::Reg::kGroupVec]) {
+  if (constIndex == -1) {
     // TODO: [PIPEGEN] This works, but it's really nasty!
     x86::Mem m = constAsMem(p);
     return reinterpret_cast<x86::Xmm&>(m);
@@ -1222,11 +1223,19 @@ void PipeCompiler::xFetchPixel_1x(Pixel& p, uint32_t flags, uint32_t sFormat, co
 
   if (p.isRGBA()) {
     switch (sFormat) {
-      case BL_FORMAT_PRGB32:
+      case BL_FORMAT_PRGB32: {
+        if (flags & Pixel::kAny) {
+          newXmmArray(p.pc, 1, "c");
+          vloadi32(p.pc[0], sAdj);
+        }
+        break;
+      }
+
       case BL_FORMAT_XRGB32: {
         if (flags & Pixel::kAny) {
           newXmmArray(p.pc, 1, "c");
           vloadi32(p.pc[0], sAdj);
+          vFillAlpha255B(p.pc[0], p.pc[0]);
         }
         break;
       }
@@ -1295,8 +1304,7 @@ void PipeCompiler::xFetchPixel_4x(Pixel& p, uint32_t flags, uint32_t sFormat, co
 
   if (p.isRGBA()) {
     switch (sFormat) {
-      case BL_FORMAT_PRGB32:
-      case BL_FORMAT_XRGB32: {
+      case BL_FORMAT_PRGB32: {
         if (flags & Pixel::kPC) {
           newXmmArray(p.pc, 1, "c");
 
@@ -1312,6 +1320,21 @@ void PipeCompiler::xFetchPixel_4x(Pixel& p, uint32_t flags, uint32_t sFormat, co
           sAdj.setSize(8);
           vmovu8u16(p.uc[0], sAdj); sAdj.addOffsetLo32(8);
           vmovu8u16(p.uc[1], sAdj);
+        }
+        break;
+      }
+
+      case BL_FORMAT_XRGB32: {
+        if (flags & Pixel::kAny) {
+          newXmmArray(p.pc, 1, "c");
+          sAdj.setSize(16);
+
+          if (sAlignment == 16)
+            vloadi128a(p.pc[0], sAdj);
+          else
+            vloadi128u(p.pc[0], sAdj);
+
+          vFillAlpha255B(p.pc[0], p.pc[0]);
         }
         break;
       }
@@ -1401,9 +1424,8 @@ void PipeCompiler::xFetchPixel_8x(Pixel& p, uint32_t flags, uint32_t sFormat, co
 
   if (p.isRGBA()) {
     switch (sFormat) {
-      case BL_FORMAT_PRGB32:
-      case BL_FORMAT_XRGB32: {
-        if (flags & Pixel::kPC) {
+      case BL_FORMAT_PRGB32: {
+        if ((flags & Pixel::kPC) || !hasSSE4_1()) {
           newXmmArray(p.pc, 2, "c");
           sAdj.setSize(16);
 
@@ -1424,6 +1446,26 @@ void PipeCompiler::xFetchPixel_8x(Pixel& p, uint32_t flags, uint32_t sFormat, co
           vmovu8u16(p.uc[1], sAdj); sAdj.addOffsetLo32(8);
           vmovu8u16(p.uc[2], sAdj); sAdj.addOffsetLo32(8);
           vmovu8u16(p.uc[3], sAdj);
+        }
+        break;
+      }
+
+      case BL_FORMAT_XRGB32: {
+        if (flags & Pixel::kAny) {
+          newXmmArray(p.pc, 2, "c");
+          sAdj.setSize(16);
+
+          if (sAlignment == 16) {
+            vloadi128a(p.pc[0], sAdj); sAdj.addOffsetLo32(16);
+            vloadi128a(p.pc[1], sAdj);
+          }
+          else {
+            vloadi128u(p.pc[0], sAdj); sAdj.addOffsetLo32(16);
+            vloadi128u(p.pc[1], sAdj);
+          }
+
+          vFillAlpha255B(p.pc[0], p.pc[0]);
+          vFillAlpha255B(p.pc[1], p.pc[1]);
         }
         break;
       }
@@ -1880,10 +1922,10 @@ void PipeCompiler::vFillAlpha(Pixel& p) noexcept {
 }
 
 // ============================================================================
-// [BLPipeGen::PipeCompiler - MemSet]
+// [BLPipeGen::PipeCompiler - PixelFill]
 // ============================================================================
 
-void PipeCompiler::xInlineMemSetLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity) noexcept {
+void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity) noexcept {
   BL_ASSERT(blIsPowerOf2(itemSize));
   BL_ASSERT(itemSize <= 16u);
 
@@ -2173,10 +2215,10 @@ void PipeCompiler::xInlineMemSetLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i, ui
 }
 
 // ============================================================================
-// [BLPipeGen::PipeCompiler - MemCopy]
+// [BLPipeGen::PipeCompiler - PixelCopy]
 // ============================================================================
 
-void PipeCompiler::xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity) noexcept {
+void PipeCompiler::xInlinePixelCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity, uint32_t format) noexcept {
   BL_ASSERT(blIsPowerOf2(itemSize));
   BL_ASSERT(itemSize <= 16u);
 
@@ -2190,6 +2232,12 @@ void PipeCompiler::xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, ui
   BL_ASSERT(mainLoopSize >= granularityInBytes);
 
   x86::Xmm t0 = cc->newXmm("t0");
+  x86::Xmm fillMask;
+
+  if (format == BL_FORMAT_XRGB32)
+    fillMask = constAsXmm(blCommonTable.i128_FF000000FF000000);
+
+  cc->alloc(fillMask);
 
   // ==========================================================================
   // [Granularity >= 16 Bytes]
@@ -2213,7 +2261,7 @@ void PipeCompiler::xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, ui
       cc->add(dst, mainLoopSize);
       cc->add(src, mainLoopSize);
       cc->sub(i, mainStepInItems);
-      _xInlineMemCopySequenceXmm(x86::ptr(dst, ptrOffset), false, x86::ptr(src, ptrOffset), false, mainLoopSize);
+      _xInlineMemCopySequenceXmm(x86::ptr(dst, ptrOffset), false, x86::ptr(src, ptrOffset), false, mainLoopSize, fillMask);
       cc->jnc(L_MainLoop);
 
       cc->bind(L_MainSkip);
@@ -2227,14 +2275,14 @@ void PipeCompiler::xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, ui
     if (mainLoopSize * 2 > granularityInBytes) {
       Label L_TailLoop = cc->newLabel();
       cc->bind(L_TailLoop);
-      _xInlineMemCopySequenceXmm(x86::ptr(dst), false, x86::ptr(src), false, granularityInBytes);
+      _xInlineMemCopySequenceXmm(x86::ptr(dst), false, x86::ptr(src), false, granularityInBytes, fillMask);
       cc->add(dst, granularityInBytes);
       cc->add(src, granularityInBytes);
       cc->sub(i, itemGranularity);
       cc->jnz(L_TailLoop);
     }
     else if (mainLoopSize * 2 == granularityInBytes) {
-      _xInlineMemCopySequenceXmm(x86::ptr(dst), false, x86::ptr(src), false, granularityInBytes);
+      _xInlineMemCopySequenceXmm(x86::ptr(dst), false, x86::ptr(src), false, granularityInBytes, fillMask);
       cc->add(dst, granularityInBytes);
       cc->add(src, granularityInBytes);
     }
@@ -2298,7 +2346,7 @@ void PipeCompiler::xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, ui
       cc->add(src, mainLoopSize);
       cc->sub(i, mainStepInItems);
       int ptrOffset = - int(mainLoopSize);
-      _xInlineMemCopySequenceXmm(x86::ptr(dst, ptrOffset), true, x86::ptr(src, ptrOffset), false, mainLoopSize);
+      _xInlineMemCopySequenceXmm(x86::ptr(dst, ptrOffset), true, x86::ptr(src, ptrOffset), false, mainLoopSize, fillMask);
       cc->jnc(L_MainLoop);
 
       cc->bind(L_MainSkip);
@@ -2320,7 +2368,7 @@ void PipeCompiler::xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, ui
       cc->add(dst, 16);
       cc->add(src, 16);
       cc->sub(i, tailStepInItems);
-      _xInlineMemCopySequenceXmm(x86::ptr(dst, -16), true, x86::ptr(src, -16), false, 16);
+      _xInlineMemCopySequenceXmm(x86::ptr(dst, -16), true, x86::ptr(src, -16), false, 16, fillMask);
       cc->jnc(L_TailLoop);
 
       cc->bind(L_TailSkip);
@@ -2331,7 +2379,7 @@ void PipeCompiler::xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, ui
       cc->cmp(i, tailStepInItems);
       cc->jb(L_Finalize);
 
-      _xInlineMemCopySequenceXmm(x86::ptr(dst), true, x86::ptr(src), false, 16);
+      _xInlineMemCopySequenceXmm(x86::ptr(dst), true, x86::ptr(src), false, 16, fillMask);
       cc->add(dst, 16);
       cc->add(src, 16);
       cc->sub(i, tailStepInItems);
@@ -2423,7 +2471,7 @@ void PipeCompiler::xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, ui
       cc->jc(L_MainSkip);
 
       cc->bind(L_MainLoop);
-      _xInlineMemCopySequenceXmm(x86::ptr(dst), true, x86::ptr(src), false, mainLoopSize);
+      _xInlineMemCopySequenceXmm(x86::ptr(dst), true, x86::ptr(src), false, mainLoopSize, fillMask);
       cc->add(dst, mainLoopSize);
       cc->add(src, mainLoopSize);
       cc->sub(i, mainLoopSize);
@@ -2445,7 +2493,7 @@ void PipeCompiler::xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, ui
       cc->jc(L_TailSkip);
 
       cc->bind(L_TailLoop);
-      _xInlineMemCopySequenceXmm(x86::ptr(dst), true, x86::ptr(src), false, 16);
+      _xInlineMemCopySequenceXmm(x86::ptr(dst), true, x86::ptr(src), false, 16, fillMask);
       cc->add(dst, 16);
       cc->add(src, 16);
       cc->sub(i, 16);
@@ -2459,7 +2507,7 @@ void PipeCompiler::xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, ui
       cc->cmp(i, 16);
       cc->jb(L_Finalize);
 
-      _xInlineMemCopySequenceXmm(x86::ptr(dst), true, x86::ptr(src), false, 16);
+      _xInlineMemCopySequenceXmm(x86::ptr(dst), true, x86::ptr(src), false, 16, fillMask);
       cc->add(dst, 16);
       cc->add(src, 16);
       cc->sub(i, 16);
@@ -2472,7 +2520,7 @@ void PipeCompiler::xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, ui
     {
       cc->add(dst, i.cloneAs(dst));
       cc->add(src, i.cloneAs(src));
-      _xInlineMemCopySequenceXmm(x86::ptr(dst, -16), false, x86::ptr(src, -16), false, 16);
+      _xInlineMemCopySequenceXmm(x86::ptr(dst, -16), false, x86::ptr(src, -16), false, 16, fillMask);
     }
 
     cc->bind(L_End);
@@ -2482,7 +2530,7 @@ void PipeCompiler::xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, ui
 
 void PipeCompiler::_xInlineMemCopySequenceXmm(
   const x86::Mem& dPtr, bool dstAligned,
-  const x86::Mem& sPtr, bool srcAligned, uint32_t numBytes) noexcept {
+  const x86::Mem& sPtr, bool srcAligned, uint32_t numBytes, const x86::Vec& fillMask) noexcept {
 
   x86::Mem dAdj(dPtr);
   x86::Mem sAdj(sPtr);
@@ -2501,8 +2549,36 @@ void PipeCompiler::_xInlineMemCopySequenceXmm(
 
   do {
     uint32_t a, b = blMin<uint32_t>(n, limit);
-    for (a = 0; a < b; a++) { cc->emit(fetchInst, t[a], sAdj); sAdj.addOffsetLo32(16); }
-    for (a = 0; a < b; a++) { cc->emit(storeInst, dAdj, t[a]); dAdj.addOffsetLo32(16); }
+
+    if (hasAVX() && fillMask.isValid()) {
+      // Shortest code for this use case. AVX allows to read from unaligned
+      // memory, so if we use VEC instructions we are generally safe here.
+      for (a = 0; a < b; a++) {
+        vor(t[a], fillMask, sAdj);
+        sAdj.addOffsetLo32(16);
+      }
+
+      for (a = 0; a < b; a++) {
+        cc->emit(storeInst, dAdj, t[a]);
+        dAdj.addOffsetLo32(16);
+      }
+    }
+    else {
+      for (a = 0; a < b; a++) {
+        cc->emit(fetchInst, t[a], sAdj);
+        sAdj.addOffsetLo32(16);
+      }
+
+      for (a = 0; a < b; a++)
+        if (fillMask.isValid())
+          vor(t[a], t[a], fillMask);
+
+      for (a = 0; a < b; a++) {
+        cc->emit(storeInst, dAdj, t[a]);
+        dAdj.addOffsetLo32(16);
+      }
+    }
+
     n -= b;
   } while (n > 0);
 }

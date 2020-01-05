@@ -1620,12 +1620,12 @@ public:
     }
   }
 
-  void xInlineMemSetLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity) noexcept;
-  void xInlineMemCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity) noexcept;
+  void xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity) noexcept;
+  void xInlinePixelCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity, uint32_t format) noexcept;
 
   void _xInlineMemCopySequenceXmm(
     const x86::Mem& dPtr, bool dstAligned,
-    const x86::Mem& sPtr, bool srcAligned, uint32_t numBytes) noexcept;
+    const x86::Mem& sPtr, bool srcAligned, uint32_t numBytes, const x86::Vec& fillMask) noexcept;
 
   // --------------------------------------------------------------------------
   // [Fetch Utilities]
@@ -1734,11 +1734,9 @@ public:
   inline void vExpandAlphaPS(const Dst& d, const Src& s) noexcept { vswizi32(d, s, x86::Predicate::shuf(3, 3, 3, 3)); }
 
   template<typename DstT, typename SrcT>
-  inline void vFillAlpha255B(const DstT& dst, const SrcT& src) noexcept { vor(dst, src, constAsMem(blCommonTable.i128_FF000000FF000000)); }
+  inline void vFillAlpha255B(const DstT& dst, const SrcT& src) noexcept { vor(dst, src, constAsXmm(blCommonTable.i128_FF000000FF000000)); }
   template<typename DstT, typename SrcT>
   inline void vFillAlpha255W(const DstT& dst, const SrcT& src) noexcept { vor(dst, src, constAsMem(blCommonTable.i128_00FF000000000000)); }
-  template<typename DstT, typename SrcT>
-  inline void vFillAlpha256W(const DstT& dst, const SrcT& src) noexcept { vor(dst, src, constAsMem(blCommonTable.i128_0100000000000000)); }
 
   template<typename DstT, typename SrcT>
   inline void vZeroAlphaB(const DstT& dst, const SrcT& src) noexcept { vand(dst, src, constAsMem(blCommonTable.i128_00FFFFFF00FFFFFF)); }

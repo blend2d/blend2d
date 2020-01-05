@@ -1959,7 +1959,16 @@ void FetchSimplePatternPart::fetch4(Pixel& p, uint32_t flags) noexcept {
 }
 
 void FetchSimplePatternPart::fetch8(Pixel& p, uint32_t flags) noexcept {
-  FetchPart::fetch8(p, flags);
+  if (isBlitA()) {
+    // Blit AA
+    // -------
+
+    pc->xFetchPixel_8x(p, flags, format(), x86::ptr(f->srcp1), 4);
+    cc->add(f->srcp1, int(8 * bpp()));
+  }
+  else {
+    FetchPart::fetch8(p, flags);
+  }
 }
 
 // ============================================================================
