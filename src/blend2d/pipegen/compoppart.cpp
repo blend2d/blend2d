@@ -4845,6 +4845,7 @@ void CompOpPart::vMaskProcRGBA32InvertMask(VecArray& vn, VecArray& vm) noexcept 
     pc->newXmmArray(vn, size, "vn");
 
   if (vm.isScalar()) {
+    // TODO: Seems wrong as well, the `vmov` code-path would never execute.
     pc->vinv255u16(vn[0], vm[0]);
     for (i = 1; i < size; i++)
       pc->vmov(vn[i], vn[0]);
@@ -4858,8 +4859,8 @@ void CompOpPart::vMaskProcRGBA32InvertDone(VecArray& vn, bool mImmutable) noexce
   BL_UNUSED(mImmutable);
 
   if (cMaskLoopType() == kCMaskLoopTypeMask) {
-    if (vn[0].id() == _mask->vn.id())
-      pc->vinv255u16(vn[0], vn[0]);
+    if (vn[0].id() == _mask->vm.id())
+      pc->vinv255u16(vn, vn);
   }
 }
 
