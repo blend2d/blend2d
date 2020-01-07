@@ -495,7 +495,9 @@ struct alignas(16) BLPipeFetchData {
       int32_t minX, minY;
       //! Pattern padding maximum (width-1 and height-1).
       int32_t maxX, maxY;
-      //! Pattern correction X/Y in case that maxX/maxY was exceeded (PAD, BILINEAR)
+      //! Correction X/Y check in case that maxX/maxY was exceeded (PAD, BILINEAR)
+      int32_t chkX, chkY;
+      //! Correction X/Y values in case that maxX/maxY was exceeded (PAD, BILINEAR)
       int32_t corX, corY;
       //! Repeated tile width/height (doubled if reflected).
       double tw, th;

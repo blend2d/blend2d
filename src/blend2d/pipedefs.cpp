@@ -217,6 +217,9 @@ uint32_t BLPipeFetchData::initPatternAffine(uint32_t extendMode, uint32_t filter
   d.affine.maxX = int32_t(tw - 1);
   d.affine.maxY = int32_t(th - 1);
 
+  d.affine.chkX = int32_t(tw - 1);
+  d.affine.chkY = int32_t(tw - 1);
+
   d.affine.corX = int32_t(tw - 1);
   d.affine.corY = int32_t(th - 1);
 
@@ -236,7 +239,8 @@ uint32_t BLPipeFetchData::initPatternAffine(uint32_t extendMode, uint32_t filter
 
       if (extendX == BL_EXTEND_MODE_REPEAT) {
         ox = 0;
-        d.affine.corY = d.affine.maxX;
+        d.affine.chkX = -1;
+        d.affine.corX = d.affine.maxX;
       }
     }
     ox--;
@@ -258,6 +262,7 @@ uint32_t BLPipeFetchData::initPatternAffine(uint32_t extendMode, uint32_t filter
 
       if (extendY == BL_EXTEND_MODE_REPEAT) {
         oy = 0;
+        d.affine.chkY = -1;
         d.affine.corY = d.affine.maxY;
       }
     }

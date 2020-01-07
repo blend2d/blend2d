@@ -1153,6 +1153,8 @@ void PipeCompiler::vemit_vvvv_vvv(uint32_t packedId, const Operand_& dst_, const
           break;
         }
 
+        // Blend(a, b, cond) == a ^ ((a ^ b) &  cond)
+        //                   == b ^ ((a ^ b) & ~cond)
         if (dst.id() == src3.id()) {
           vand(src2, src2, src3);
           vandnot_a(src3, src3, src1);
