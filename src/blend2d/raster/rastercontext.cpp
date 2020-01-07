@@ -235,7 +235,8 @@ static BL_INLINE void blRasterContextImplOffsetParameterChanged(BLRasterContextI
 
 static BL_INLINE void blRasterContextInitStyleToDefault(BLRasterContextStyleData& style, uint32_t alphaI) noexcept {
   style.packed = 0;
-  style.styleFormat = BL_FORMAT_XRGB32;
+  style.styleType = BL_STYLE_TYPE_SOLID;
+  style.styleFormat = BL_FORMAT_FRGB32;
   style.alphaI = alphaI;
   style.solidData.prgb32 = 0xFF000000u;
   style.fetchData = blFetchDataSolidSentinel();
@@ -358,7 +359,8 @@ static BLResult BL_CDECL blRasterContextImplSetStyle(BLRasterContextImpl* ctxI, 
       srcMatrix = &gradientI->matrix;
       srcMatrixType = gradientI->matrixType;
 
-      style->styleType = BL_STYLE_TYPE_GRADIENT;
+      ctxI->currentState.styleType[OpType] = uint8_t(BL_STYLE_TYPE_GRADIENT);
+      style->styleType = uint8_t(BL_STYLE_TYPE_GRADIENT);
       style->styleFormat = gradientInfo.format;
       style->quality = ctxI->currentState.hints.gradientQuality;
       break;
@@ -381,7 +383,8 @@ static BLResult BL_CDECL blRasterContextImplSetStyle(BLRasterContextImpl* ctxI, 
       srcMatrix = &patternI->matrix;
       srcMatrixType = patternI->matrixType;
 
-      style->styleType = BL_STYLE_TYPE_PATTERN;
+      ctxI->currentState.styleType[OpType] = uint8_t(BL_STYLE_TYPE_PATTERN);
+      style->styleType = uint8_t(BL_STYLE_TYPE_PATTERN);
       style->styleFormat = uint8_t(patternI->image.format());
       style->quality = ctxI->currentState.hints.patternQuality;
       break;
@@ -432,10 +435,13 @@ static BLResult BL_CDECL blRasterContextImplSetStyleRgba32(BLRasterContextImpl* 
   }
 
   ctxI->contextFlags = contextFlags & ~(styleFlags | (BL_RASTER_CONTEXT_NO_BASE_STYLE << OpType));
-  style->styleType = BL_STYLE_TYPE_SOLID;
+  ctxI->currentState.styleType[OpType] = uint8_t(BL_STYLE_TYPE_SOLID);
+
+  style->styleType = uint8_t(BL_STYLE_TYPE_SOLID);
   style->styleFormat = ctxI->solidFormatTable[solidFormatIndex];
   style->solidData.prgb32 = rgba32;
   style->fetchData = blFetchDataSolidSentinel();
+
   return BL_SUCCESS;
 }
 
@@ -460,10 +466,13 @@ static BLResult BL_CDECL blRasterContextImplSetStyleRgba64(BLRasterContextImpl* 
   }
 
   ctxI->contextFlags = contextFlags & ~(styleFlags | (BL_RASTER_CONTEXT_NO_BASE_STYLE << OpType));
-  style->styleType = BL_STYLE_TYPE_SOLID;
+  ctxI->currentState.styleType[OpType] = uint8_t(BL_STYLE_TYPE_SOLID);
+
+  style->styleType = uint8_t(BL_STYLE_TYPE_SOLID);
   style->styleFormat = ctxI->solidFormatTable[solidFormatIndex];
   style->solidData.prgb32 = rgba32;
   style->fetchData = blFetchDataSolidSentinel();
+
   return BL_SUCCESS;
 }
 
@@ -988,7 +997,7 @@ static BL_INLINE void blRasterContextImplRestoreCoreState(BLRasterContextImpl* c
   ctxI->translationI = state->translationI;
 
   ctxI->currentState.globalAlpha = state->globalAlpha;
-  ctxI->currentState.styleAlpha[1] = state->styleAlpha[0];
+  ctxI->currentState.styleAlpha[0] = state->styleAlpha[0];
   ctxI->currentState.styleAlpha[1] = state->styleAlpha[1];
 
   ctxI->globalAlphaI = state->globalAlphaI;
@@ -1007,21 +1016,21 @@ static void blRasterContextImplDiscardStates(BLRasterContextImpl* ctxI, BLRaster
   uint32_t contextFlags = ctxI->contextFlags;
   do {
     if ((contextFlags & (BL_RASTER_CONTEXT_FILL_FETCH_DATA | BL_RASTER_CONTEXT_STATE_FILL_STYLE)) == BL_RASTER_CONTEXT_FILL_FETCH_DATA) {
-      uint32_t opType = BL_CONTEXT_OP_TYPE_FILL;
-      BLRasterFetchData* fetchData = savedState->style[opType].fetchData;
+      constexpr uint32_t kOpType = BL_CONTEXT_OP_TYPE_FILL;
+      BLRasterFetchData* fetchData = savedState->style[kOpType].fetchData;
 
       if (blFetchDataIsCreated(fetchData))
         blRasterContextImplReleaseFetchData(ctxI, fetchData);
-      blVariantImplRelease(savedState->style[opType].variant->impl);
+      blVariantImplRelease(savedState->style[kOpType].variant->impl);
     }
 
     if ((contextFlags & (BL_RASTER_CONTEXT_STROKE_FETCH_DATA | BL_RASTER_CONTEXT_STATE_STROKE_STYLE)) == BL_RASTER_CONTEXT_STROKE_FETCH_DATA) {
-      uint32_t opType = BL_CONTEXT_OP_TYPE_STROKE;
-      BLRasterFetchData* fetchData = savedState->style[opType].fetchData;
+      constexpr uint32_t kOpType = BL_CONTEXT_OP_TYPE_STROKE;
+      BLRasterFetchData* fetchData = savedState->style[kOpType].fetchData;
 
       if (blFetchDataIsCreated(fetchData))
         blRasterContextImplReleaseFetchData(ctxI, fetchData);
-      blVariantImplRelease(savedState->style[opType].variant->impl);
+      blVariantImplRelease(savedState->style[kOpType].variant->impl);
     }
 
     if ((contextFlags & BL_RASTER_CONTEXT_STATE_STROKE_OPTIONS) == 0) {
@@ -1104,8 +1113,10 @@ static BLResult BL_CDECL blRasterContextImplRestore(BLRasterContextImpl* ctxI, c
       blRasterContextImplRestoreClippingFromState(ctxI, savedState);
 
     if ((restoreFlags & BL_RASTER_CONTEXT_STATE_FILL_STYLE) == 0) {
-      BLRasterContextStyleData* dst = &ctxI->style[BL_CONTEXT_OP_TYPE_FILL];
-      BLRasterContextStyleData* src = &savedState->style[BL_CONTEXT_OP_TYPE_FILL];
+      constexpr uint32_t kOpType = BL_CONTEXT_OP_TYPE_FILL;
+
+      BLRasterContextStyleData* dst = &ctxI->style[kOpType];
+      BLRasterContextStyleData* src = &savedState->style[kOpType];
 
       if (restoreFlags & BL_RASTER_CONTEXT_FILL_FETCH_DATA)
         blRasterContextImplDestroyValidStyle(ctxI, dst);
@@ -1116,11 +1127,14 @@ static BLResult BL_CDECL blRasterContextImplRestore(BLRasterContextImpl* ctxI, c
 
       dst->rgba64 = src->rgba64;
       dst->adjustedMatrix = src->adjustedMatrix;
+      ctxI->currentState.styleType[kOpType] = src->styleType;
     }
 
     if ((restoreFlags & BL_RASTER_CONTEXT_STATE_STROKE_STYLE) == 0) {
-      BLRasterContextStyleData* dst = &ctxI->style[BL_CONTEXT_OP_TYPE_STROKE];
-      BLRasterContextStyleData* src = &savedState->style[BL_CONTEXT_OP_TYPE_STROKE];
+      constexpr uint32_t kOpType = BL_CONTEXT_OP_TYPE_STROKE;
+
+      BLRasterContextStyleData* dst = &ctxI->style[kOpType];
+      BLRasterContextStyleData* src = &savedState->style[kOpType];
 
       if (restoreFlags & BL_RASTER_CONTEXT_STROKE_FETCH_DATA)
         blRasterContextImplDestroyValidStyle(ctxI, dst);
@@ -1131,6 +1145,7 @@ static BLResult BL_CDECL blRasterContextImplRestore(BLRasterContextImpl* ctxI, c
 
       dst->rgba64 = src->rgba64;
       dst->adjustedMatrix = src->adjustedMatrix;
+      ctxI->currentState.styleType[kOpType] = src->styleType;
     }
 
     if ((restoreFlags & BL_RASTER_CONTEXT_STATE_STROKE_OPTIONS) == 0) {

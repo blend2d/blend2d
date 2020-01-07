@@ -332,7 +332,8 @@ struct BLContextHints {
 //! Rendering context state.
 //!
 //! This state is not meant to be created by users, it's only provided for users
-//! that want to introspect it and for C++ API that accesses it directly.
+//! that want to introspect the rendering context state and for C++ API that can
+//! access it directly for performance reasons.
 struct BLContextState {
   //! Current context hints.
   BLContextHints hints;
