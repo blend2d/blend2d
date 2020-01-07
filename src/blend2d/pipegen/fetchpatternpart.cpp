@@ -2025,7 +2025,6 @@ void FetchAffinePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   f->xx2_xy2        = cc->newXmm("f.xx2_xy2");        // Reg/Mem [fetch4].
   f->minx_miny      = cc->newXmm("f.minx_miny");      // Reg/Mem.
   f->maxx_maxy      = cc->newXmm("f.maxx_maxy");      // Reg/Mem.
-  f->chkx_chky      = cc->newXmm("f.chkx_chky");      // Reg/Mem.
   f->corx_cory      = cc->newXmm("f.corx_cory");      // Reg/Mem.
   f->tw_th          = cc->newXmm("f.tw_th");          // Reg/Mem.
 
@@ -2054,7 +2053,6 @@ void FetchAffinePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
   // Pad: [MaxY | MaxX | MinY | MinX]
   pc->vloadi128u(f->minx_miny, x86::ptr(pc->_fetchData, REL_PATTERN(affine.minX)));
-  pc->vloadi64(f->chkx_chky, x86::ptr(pc->_fetchData, REL_PATTERN(affine.chkX)));
   pc->vloadi64(f->corx_cory, x86::ptr(pc->_fetchData, REL_PATTERN(affine.corX)));
 
   if (isOptimized()) {
@@ -2065,8 +2063,6 @@ void FetchAffinePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   else {
     pc->vswizi32(f->maxx_maxy, f->minx_miny, x86::Predicate::shuf(3, 3, 2, 2)); // [MaxY|MaxY|MaxX|MaxX]
     pc->vswizi32(f->minx_miny, f->minx_miny, x86::Predicate::shuf(1, 1, 0, 0)); // [MinY|MinY|MinX|MinX]
-
-    pc->vswizi32(f->chkx_chky, f->chkx_chky, x86::Predicate::shuf(1, 1, 0, 0)); // [ChkY|ChkY|ChkX|ChkX]
     pc->vswizi32(f->corx_cory, f->corx_cory, x86::Predicate::shuf(1, 1, 0, 0)); // [CorY|CorY|CorX|CorX]
   }
 
@@ -2559,14 +2555,14 @@ void FetchAffinePatternPart::clampVIdx32(x86::Xmm& dst, const x86::Xmm& src, uin
 
       x86::Xmm tmp = cc->newXmm("vIdxMsk1");
       if (pc->hasSSE4_1()) {
-        pc->vcmpgti32(tmp, dst, f->chkx_chky);
+        pc->vcmpgti32(tmp, dst, f->maxx_maxy);
         pc->vblendv8_(dst, dst, f->corx_cory, tmp);
       }
       else {
         // Blend(a, b, cond) == a ^ ((a ^ b) &  cond)
         //                   == b ^ ((a ^ b) & ~cond)
         pc->vxor(tmp, dst, f->corx_cory);
-        pc->vcmpgti32(dst, dst, f->chkx_chky);
+        pc->vcmpgti32(dst, dst, f->maxx_maxy);
         pc->vandnot_a(dst, dst, tmp);
         pc->vxor(dst, dst, f->corx_cory);
       }
