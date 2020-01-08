@@ -103,7 +103,9 @@ uint32_t BLPipeFetchData::initPatternAxAy(uint32_t extendMode, int x, int y) noe
   return blPipeFetchDataInitPatternTxTy(this, BL_PIPE_FETCH_TYPE_PATTERN_AA_PAD, extendMode, -x, -y, false);
 }
 
-uint32_t BLPipeFetchData::initPatternFxFy(uint32_t extendMode, uint32_t filter, int64_t tx64, int64_t ty64) noexcept {
+uint32_t BLPipeFetchData::initPatternFxFy(uint32_t extendMode, uint32_t filter, uint32_t bytesPerPixel, int64_t tx64, int64_t ty64) noexcept {
+  BL_UNUSED(bytesPerPixel);
+
   BLPipeFetchData::Pattern& d = this->pattern;
 
   uint32_t fetchBase = BL_PIPE_FETCH_TYPE_PATTERN_AA_PAD;
@@ -150,11 +152,14 @@ uint32_t BLPipeFetchData::initPatternFxFy(uint32_t extendMode, uint32_t filter, 
   return blPipeFetchDataInitPatternTxTy(this, fetchBase, extendMode, tx, ty, isFractional);
 }
 
-uint32_t BLPipeFetchData::initPatternAffine(uint32_t extendMode, uint32_t filter, const BLMatrix2D& m, const BLMatrix2D& mInv) noexcept {
-  BL_UNUSED(m);
+uint32_t BLPipeFetchData::initPatternAffine(uint32_t extendMode, uint32_t filter, uint32_t bytesPerPixel, const BLMatrix2D& m) noexcept {
   BLPipeFetchData::Pattern& d = this->pattern;
 
   // Inverted transformation matrix.
+  BLMatrix2D mInv;
+  if (BLMatrix2D::invert(mInv, m) != BL_SUCCESS)
+    return BL_PIPE_FETCH_TYPE_FAILURE;
+
   double xx = mInv.m00;
   double xy = mInv.m01;
   double yx = mInv.m10;
@@ -164,6 +169,7 @@ uint32_t BLPipeFetchData::initPatternAffine(uint32_t extendMode, uint32_t filter
     return initPatternFxFy(
       extendMode,
       filter,
+      bytesPerPixel,
       blFloorToInt64(-mInv.m20 * 256.0),
       blFloorToInt64(-mInv.m21 * 256.0));
   }
@@ -324,9 +330,8 @@ uint32_t BLPipeFetchData::initPatternAffine(uint32_t extendMode, uint32_t filter
   if (extendX >= BL_EXTEND_MODE_REPEAT && d.affine.xx2.u32Hi >= uint32_t(tw)) d.affine.xx2.u32Hi %= uint32_t(tw);
   if (extendY >= BL_EXTEND_MODE_REPEAT && d.affine.xy2.u32Hi >= uint32_t(th)) d.affine.xy2.u32Hi %= uint32_t(th);
 
-  // TODO: Hardcoded for 32-bit PRGB/XRGB formats.
   if (opt) {
-    d.affine.addrMul[0] = 4;
+    d.affine.addrMul[0] = bytesPerPixel;
     d.affine.addrMul[1] = int16_t(d.src.stride);
   }
   else {
@@ -341,8 +346,13 @@ uint32_t BLPipeFetchData::initPatternAffine(uint32_t extendMode, uint32_t filter
 // [BLPipeFetchData - Init Gradient]
 // ============================================================================
 
-static BL_INLINE uint32_t blPipeFetchDataInitLinearGradient(BLPipeFetchData* fetchData, const BLLinearGradientValues& values, uint32_t extendMode, const BLMatrix2D& m, const BLMatrix2D& mInv) noexcept {
+static BL_INLINE uint32_t blPipeFetchDataInitLinearGradient(BLPipeFetchData* fetchData, const BLLinearGradientValues& values, uint32_t extendMode, const BLMatrix2D& m) noexcept {
   BLPipeFetchData::Gradient& d = fetchData->gradient;
+
+  // Inverted transformation matrix.
+  BLMatrix2D mInv;
+  if (BLMatrix2D::invert(mInv, m) != BL_SUCCESS)
+    return BL_PIPE_FETCH_TYPE_FAILURE;
 
   BLPoint p0(values.x0, values.y0);
   BLPoint p1(values.x1, values.y1);
@@ -429,9 +439,13 @@ static BL_INLINE uint32_t blPipeFetchDataInitLinearGradient(BLPipeFetchData* fet
 //
 //   C*x*y: 1st delta `d`  at step `tx/ty`: C*x*ty + C*y*tx + C*tx*ty
 //   C*x*y: 2nd delta `dd` at step `tx/ty`: 2*C * tx*ty
-static BL_INLINE uint32_t blPipeFetchDataInitRadialGradient(BLPipeFetchData* fetchData, const BLRadialGradientValues& values, uint32_t extendMode, const BLMatrix2D& m, const BLMatrix2D& mInv) noexcept {
-  BL_UNUSED(m);
+static BL_INLINE uint32_t blPipeFetchDataInitRadialGradient(BLPipeFetchData* fetchData, const BLRadialGradientValues& values, uint32_t extendMode, const BLMatrix2D& m) noexcept {
   BLPipeFetchData::Gradient& d = fetchData->gradient;
+
+  // Inverted transformation matrix.
+  BLMatrix2D mInv;
+  if (BLMatrix2D::invert(mInv, m) != BL_SUCCESS)
+    return BL_PIPE_FETCH_TYPE_FAILURE;
 
   BLPoint c(values.x0, values.y0);
   BLPoint f(values.x1, values.y1);
@@ -501,7 +515,7 @@ static BL_INLINE uint32_t blPipeFetchDataInitRadialGradient(BLPipeFetchData* fet
   return BL_PIPE_FETCH_TYPE_GRADIENT_RADIAL_PAD + extendMode;
 }
 
-static BL_INLINE uint32_t blPipeFetchDataInitConicalGradient(BLPipeFetchData* fetchData, const BLConicalGradientValues& values, uint32_t extendMode, const BLMatrix2D& m, const BLMatrix2D& mInv) noexcept {
+static BL_INLINE uint32_t blPipeFetchDataInitConicalGradient(BLPipeFetchData* fetchData, const BLConicalGradientValues& values, uint32_t extendMode, const BLMatrix2D& m) noexcept {
   BLPipeFetchData::Gradient& d = fetchData->gradient;
 
   BLPoint c(values.x0, values.y0);
@@ -511,34 +525,47 @@ static BL_INLINE uint32_t blPipeFetchDataInitConicalGradient(BLPipeFetchData* fe
   uint32_t tableId = blBitCtz(lutSize) - 8;
   BL_ASSERT(tableId < BLCommonTable::kTableCount);
 
+  BLMatrix2D mNew(m);
+  mNew.rotate(angle, c);
+
   // Invert the origin and move it to the center of the pixel.
-  c = BLPoint(0.5, 0.5) - m.mapPoint(c);
+  c = BLPoint(0.5, 0.5) - mNew.mapPoint(c);
+
+  BLMatrix2D mInv;
+  if (BLMatrix2D::invert(mInv, mNew) != BL_SUCCESS)
+    return BL_PIPE_FETCH_TYPE_FAILURE;
 
   d.conical.xx = mInv.m00;
   d.conical.xy = mInv.m01;
   d.conical.yx = mInv.m10;
   d.conical.yy = mInv.m11;
-  d.conical.ox = mInv.m20 + c.x * mInv.m00 + c.y * mInv.m10;
-  d.conical.oy = mInv.m21 + c.x * mInv.m01 + c.y * mInv.m11;
-  d.conical.consts = &blCommonTable.xmm_f_con[tableId];
+  d.conical.ox = c.x * mInv.m00 + c.y * mInv.m10;
+  d.conical.oy = c.x * mInv.m01 + c.y * mInv.m11;
 
+  d.conical.consts = &blCommonTable.xmm_f_con[tableId];
   d.conical.maxi = int(lutSize - 1);
 
   return BL_PIPE_FETCH_TYPE_GRADIENT_CONICAL;
 }
 
-uint32_t BLPipeFetchData::initGradient(uint32_t gradientType, const void* values, uint32_t extendMode, const BLGradientLUT* lut, const BLMatrix2D& m, const BLMatrix2D& mInv) noexcept {
+uint32_t BLPipeFetchData::initGradient(uint32_t gradientType, const void* values, uint32_t extendMode, const BLGradientLUT* lut, const BLMatrix2D& m) noexcept {
   // Initialize LUT.
   this->gradient.lut.data = lut->data();
   this->gradient.lut.size = uint32_t(lut->size);
 
   // Initialize gradient by type.
   switch (gradientType) {
-    case BL_GRADIENT_TYPE_LINEAR: return blPipeFetchDataInitLinearGradient(this, *static_cast<const BLLinearGradientValues*>(values), extendMode, m, mInv);
-    case BL_GRADIENT_TYPE_RADIAL: return blPipeFetchDataInitRadialGradient(this, *static_cast<const BLRadialGradientValues*>(values), extendMode, m, mInv);
-    case BL_GRADIENT_TYPE_CONICAL: return blPipeFetchDataInitConicalGradient(this, *static_cast<const BLConicalGradientValues*>(values), extendMode, m, mInv);
+    case BL_GRADIENT_TYPE_LINEAR:
+      return blPipeFetchDataInitLinearGradient(this, *static_cast<const BLLinearGradientValues*>(values), extendMode, m);
+
+    case BL_GRADIENT_TYPE_RADIAL:
+      return blPipeFetchDataInitRadialGradient(this, *static_cast<const BLRadialGradientValues*>(values), extendMode, m);
+
+    case BL_GRADIENT_TYPE_CONICAL:
+      return blPipeFetchDataInitConicalGradient(this, *static_cast<const BLConicalGradientValues*>(values), extendMode, m);
 
     default:
-      BL_NOT_REACHED();
+      // Should not happen, but be defensive.
+      return BL_PIPE_FETCH_TYPE_FAILURE;
   }
 }

@@ -122,7 +122,8 @@ enum BLPipeFetchType : uint32_t {
 
   BL_PIPE_FETCH_TYPE_COUNT,                    //!< Number of fetch types.
 
-  BL_PIPE_FETCH_TYPE_PIXEL_PTR = 0xFF,         //!< Pixel pointer, not a valid fetch type.
+  BL_PIPE_FETCH_TYPE_PIXEL_PTR = 0xFF,         //!< Pixel pointer (special value, not a valid fetch type).
+  BL_PIPE_FETCH_TYPE_FAILURE = 0xFFFFFFFFu,    //!< Invalid fetch type (special value, signalizes error).
 
   BL_PIPE_FETCH_TYPE_PATTERN_ANY_FIRST         = BL_PIPE_FETCH_TYPE_PATTERN_AA_BLIT,
   BL_PIPE_FETCH_TYPE_PATTERN_ANY_LAST          = BL_PIPE_FETCH_TYPE_PATTERN_AFFINE_BI_OPT,
@@ -624,21 +625,21 @@ struct alignas(16) BLPipeFetchData {
   BL_HIDDEN uint32_t initPatternFxFy(
     uint32_t extendMode,
     uint32_t filter,
+    uint32_t bytesPerPixel,
     int64_t tx64, int64_t ty64) noexcept;
 
   BL_HIDDEN uint32_t initPatternAffine(
     uint32_t extendMode,
     uint32_t filter,
-    const BLMatrix2D& m,
-    const BLMatrix2D& mInv) noexcept;
+    uint32_t bytesPerPixel,
+    const BLMatrix2D& m) noexcept;
 
   BL_HIDDEN uint32_t initGradient(
     uint32_t gradientType,
     const void* values,
     uint32_t extendMode,
     const BLGradientLUT* lut,
-    const BLMatrix2D& m,
-    const BLMatrix2D& mInv) noexcept;
+    const BLMatrix2D& m) noexcept;
 };
 
 // ============================================================================

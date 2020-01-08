@@ -96,41 +96,38 @@ static BL_INLINE void blRasterFetchDataInitPatternBlit(BLRasterFetchData* fetchD
 static BL_INLINE void blRasterFetchDataInitPatternFxFy(BLRasterFetchData* fetchData, const BLImageImpl* imgI, const BLRectI& area, uint32_t extendMode, uint32_t quality, int64_t txFixed, int64_t tyFixed) noexcept {
   blRasterFetchDataInitPatternSource(fetchData, imgI, area);
 
-  uint32_t fetchType = fetchData->data.initPatternFxFy(extendMode, quality, txFixed, tyFixed);
+  uint32_t fetchType = fetchData->data.initPatternFxFy(extendMode, quality, imgI->depth / 8, txFixed, tyFixed);
   fetchData->fetchType = uint8_t(fetchType);
   fetchData->fetchFormat = uint8_t(imgI->format);
 }
 
-static BL_INLINE void blRasterFetchDataInitPatternAffine(BLRasterFetchData* fetchData, const BLImageImpl* imgI, const BLRectI& area, uint32_t extendMode, uint32_t quality, const BLMatrix2D& m, const BLMatrix2D& mInv) noexcept {
+static BL_INLINE bool blRasterFetchDataInitPatternAffine(BLRasterFetchData* fetchData, const BLImageImpl* imgI, const BLRectI& area, uint32_t extendMode, uint32_t quality, const BLMatrix2D& m) noexcept {
   blRasterFetchDataInitPatternSource(fetchData, imgI, area);
 
-  uint32_t fetchType = fetchData->data.initPatternAffine(extendMode, quality, m, mInv);
+  uint32_t fetchType = fetchData->data.initPatternAffine(extendMode, quality, imgI->depth / 8, m);
   fetchData->fetchType = uint8_t(fetchType);
   fetchData->fetchFormat = uint8_t(imgI->format);
+  return fetchType != BL_PIPE_FETCH_TYPE_FAILURE;
 }
 
-static BL_INLINE void blRasterFetchDataInitGradient(BLRasterFetchData* fetchData, const BLGradientImpl* gradientI, const BLGradientLUT* lut, const BLMatrix2D& m, const BLMatrix2D& mInv, uint32_t format) noexcept {
-  uint32_t fetchType = fetchData->data.initGradient(gradientI->gradientType, gradientI->values, gradientI->extendMode, lut, m, mInv);
+static BL_INLINE bool blRasterFetchDataInitGradient(BLRasterFetchData* fetchData, const BLGradientImpl* gradientI, const BLGradientLUT* lut, const BLMatrix2D& m, uint32_t format) noexcept {
+  uint32_t fetchType = fetchData->data.initGradient(gradientI->gradientType, gradientI->values, gradientI->extendMode, lut, m);
   fetchData->fetchType = uint8_t(fetchType);
   fetchData->fetchFormat = uint8_t(format);
+  return fetchType != BL_PIPE_FETCH_TYPE_FAILURE;
 }
 
 // Create a new `BLRasterFetchData` from a `style`.
 //
 // Returns a `BLRasterFetchData` instance with reference count set to 1.
 static BLRasterFetchData* blRasterContextImplCreateFetchData(BLRasterContextImpl* ctxI, BLRasterContextStyleData* style) noexcept {
-  const BLMatrix2D& m = style->adjustedMatrix;
-  BLMatrix2D mInv;
-
-  // TODO: Failed to invert the matrix?
-  if (BL_UNLIKELY(BLMatrix2D::invert(mInv, m) != BL_SUCCESS))
-    return nullptr;
-
   BLRasterFetchData* fetchData = ctxI->fetchPool.alloc();
   if (BL_UNLIKELY(!fetchData))
     return nullptr;
 
   BLVariantImpl* styleI = style->variant->impl;
+  const BLMatrix2D& m = style->adjustedMatrix;
+
   switch (styleI->implType) {
     case BL_IMPL_TYPE_GRADIENT: {
       BLGradientImpl* gradientI = style->gradient->impl;
@@ -139,7 +136,9 @@ static BLRasterFetchData* blRasterContextImplCreateFetchData(BLRasterContextImpl
       if (BL_UNLIKELY(!lut))
         break;
 
-      blRasterFetchDataInitGradient(fetchData, gradientI, lut, m, mInv, style->styleFormat);
+      if (!blRasterFetchDataInitGradient(fetchData, gradientI, lut, m, style->styleFormat))
+        break;
+
       fetchData->refCount = 1;
       fetchData->destroy = blRasterFetchDataDestroyGradient;
       fetchData->gradientLut = lut->incRef();
@@ -158,7 +157,9 @@ static BLRasterFetchData* blRasterContextImplCreateFetchData(BLRasterContextImpl
       if (BL_UNLIKELY(!area.w))
         break;
 
-      blRasterFetchDataInitPatternAffine(fetchData, imgI, area, patternI->extendMode, style->quality, m, mInv);
+      if (!blRasterFetchDataInitPatternAffine(fetchData, imgI, area, patternI->extendMode, style->quality, m))
+        break;
+
       fetchData->refCount = 1;
       fetchData->destroy = blRasterFetchDataDestroyPattern;
       fetchData->imageI = blImplIncRef(imgI);
@@ -2156,14 +2157,11 @@ static BLResult BL_CDECL blRasterContextImplBlitImageD(BLRasterContextImpl* ctxI
   }
   else {
     BLMatrix2D m(ctxI->finalMatrix);
-    BLMatrix2D mInv;
-
     m.translate(dst.x, dst.y);
-    if (BLMatrix2D::invert(mInv, m) != BL_SUCCESS)
-      return BL_SUCCESS;
 
     BLRectI srcRect(srcX, srcY, srcW, srcH);
-    blRasterFetchDataInitPatternAffine(&fetchData, imgI, srcRect, BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.hints.patternQuality, m, mInv);
+    if (!blRasterFetchDataInitPatternAffine(&fetchData, imgI, srcRect, BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.hints.patternQuality, m))
+      return BL_SUCCESS;
 
     BLBox finalBox(dst.x, dst.y, dst.x + double(srcW), dst.y + double(srcH));
     return blRasterContextImplFillUnsafeBox(ctxI, &fillCmd, ctxI->finalMatrixFixed, ctxI->finalMatrixFixedType, finalBox);
@@ -2300,14 +2298,13 @@ static BLResult BL_CDECL blRasterContextImplBlitScaledImageD(BLRasterContextImpl
     BLMatrix2D m(rect->w / double(srcW), 0.0,
                  0.0, rect->h / double(srcH),
                  rect->x, rect->y);
-    blMatrix2DMultiply(m, m, ctxI->finalMatrix);
 
-    BLMatrix2D mInv;
-    if (BLMatrix2D::invert(mInv, m) != BL_SUCCESS)
+    blMatrix2DMultiply(m, m, ctxI->finalMatrix);
+    BLRectI srcRect(srcX, srcY, srcW, srcH);
+
+    if (!blRasterFetchDataInitPatternAffine(&fetchData, imgI, srcRect, BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.hints.patternQuality, m))
       return BL_SUCCESS;
 
-    BLRectI srcRect(srcX, srcY, srcW, srcH);
-    blRasterFetchDataInitPatternAffine(&fetchData, imgI, srcRect, BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.hints.patternQuality, m, mInv);
     return blRasterContextImplFillUnsafeBox(ctxI, &fillCmd, ctxI->finalMatrixFixed, ctxI->finalMatrixFixedType, finalBox);
   }
 }
@@ -2352,14 +2349,13 @@ static BLResult BL_CDECL blRasterContextImplBlitScaledImageI(BLRasterContextImpl
     BLMatrix2D m(double(rect->w) / double(srcW), 0.0,
                  0.0, double(rect->h) / double(srcH),
                  double(rect->x), double(rect->y));
-    blMatrix2DMultiply(m, m, ctxI->finalMatrix);
 
-    BLMatrix2D mInv;
-    if (BLMatrix2D::invert(mInv, m) != BL_SUCCESS)
+    blMatrix2DMultiply(m, m, ctxI->finalMatrix);
+    BLRectI srcRect(srcX, srcY, srcW, srcH);
+
+    if (!blRasterFetchDataInitPatternAffine(&fetchData, imgI, srcRect, BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.hints.patternQuality, m))
       return BL_SUCCESS;
 
-    BLRectI srcRect(srcX, srcY, srcW, srcH);
-    blRasterFetchDataInitPatternAffine(&fetchData, imgI, srcRect, BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, ctxI->currentState.hints.patternQuality, m, mInv);
     return blRasterContextImplFillUnsafeBox(ctxI, &fillCmd, ctxI->finalMatrixFixed, ctxI->finalMatrixFixedType, finalBox);
   }
 }
