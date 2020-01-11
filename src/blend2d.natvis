@@ -1,54 +1,103 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<!-- blend2d visualizer for Visual Studio (natvis) -->
+<!-- Blend2D natvis support for Visual Studio -->
 
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-  <Type Name="BLStringImpl">
-    <DisplayString>{data, s8}</DisplayString>
+  <!-- ImageWatch extensions allows to show the content of BLImage in Visual Studio. -->
+  <UIVisualizer ServiceId="{A452AFEA-3DF6-46BB-9177-C0B08F318025}" Id="1" MenuName="Add to Image Watch"/>
+
+  <Type Name="BLRgba32">
+    <DisplayString>#{value, xb}</DisplayString>
     <Expand HideRawView="true">
-      <Item Name="data" ExcludeView="simple">data, s8</Item>
-      <Item Name="size" ExcludeView="simple">size, d</Item>
-      <Item Name="capacity" ExcludeView="simple">capacity, d</Item>
-      <Item Name="refCount" ExcludeView="simple">refCount, d</Item>
-      <Item Name="implType" ExcludeView="simple">(BLImplType)implType</Item>
-      <Item Name="implTraits" ExcludeView="simple">implTraits, x</Item>
-      <Item Name="memPoolData" ExcludeView="simple">memPoolData</Item>
+      <Item Name="r" ExcludeView="simple">r, d</Item>
+      <Item Name="g" ExcludeView="simple">g, d</Item>
+      <Item Name="b" ExcludeView="simple">b, d</Item>
+      <Item Name="a" ExcludeView="simple">a, d</Item>
+      <Item Name="value" ExcludeView="simple">value, x</Item>
     </Expand>
   </Type>
-
-  <Type Name="BLArrayImpl">
+  
+  <Type Name="BLStringImpl">
+    <DisplayString>StringImpl {{ refCount={refCount, d} }}</DisplayString>
+    <StringView>data,s8</StringView>
     <Expand HideRawView="true">
+      <Item Name="refCount" ExcludeView="simple">refCount, d</Item>
+      <Item Name="implType" ExcludeView="simple">(BLImplType)implType</Item>
+      <Item Name="implTraits" ExcludeView="simple">(BLImplTraits)implTraits</Item>
+      <Item Name="memPoolData" ExcludeView="simple">memPoolData</Item>
       <Item Name="data" ExcludeView="simple">data</Item>
       <Item Name="size" ExcludeView="simple">size, d</Item>
       <Item Name="capacity" ExcludeView="simple">capacity, d</Item>
-      <Item Name="refCount" ExcludeView="simple">refCount, d</Item>
-      <Item Name="implType" ExcludeView="simple">(BLImplType)implType</Item>
-      <Item Name="implTraits" ExcludeView="simple">implTraits, x</Item>
-      <Item Name="memPoolData" ExcludeView="simple">memPoolData</Item>
+      <ArrayItems>
+        <Size>size + 1</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
     </Expand>
   </Type>
 
-  <Type Name="BLPathImpl">
+  <Type Name="BLStringCore">
+    <AlternativeType Name="BLString" />
+    <DisplayString>{impl-&gt;data, s8}</DisplayString>
+    <StringView>impl-&gt;data,s8</StringView>
     <Expand HideRawView="true">
-      <Synthetic Name="commandData">
-        <ArrayItems>
-          <Size>size</Size>
-          <ValuePointer>commandData</ValuePointer>
-        </ArrayItems>
-      </Synthetic>
-      <Synthetic Name="vertexData">
-        <ArrayItems>
-          <Size>size</Size>
-          <ValuePointer>vertexData</ValuePointer>
-        </ArrayItems>
-      </Synthetic>
-      <Item Name="size" ExcludeView="simple">size, d</Item>
-      <Item Name="capacity" ExcludeView="simple">capacity, d</Item>
-      <Item Name="flags" ExcludeView="simple">capacity, x</Item>
+      <Item Name="impl" ExcludeView="simple">impl</Item>
+    </Expand>
+  </Type>
+  
+  <Type Name="BLArrayImpl">
+    <DisplayString>ArrayImpl {{ refCount={refCount, d} }}</DisplayString>
+    <Expand HideRawView="true">
       <Item Name="refCount" ExcludeView="simple">refCount, d</Item>
       <Item Name="implType" ExcludeView="simple">(BLImplType)implType</Item>
-      <Item Name="implTraits" ExcludeView="simple">implTraits, x</Item>
+      <Item Name="implTraits" ExcludeView="simple">(BLImplTraits)implTraits</Item>
       <Item Name="memPoolData" ExcludeView="simple">memPoolData</Item>
+      <Item Name="data" ExcludeView="simple">data</Item>
+      <Item Name="size" ExcludeView="simple">size, d</Item>
+      <Item Name="capacity" ExcludeView="simple">capacity, d</Item>
+      <ArrayItems>
+        <Size>size</Size>
+        <ValuePointer Condition="implType == BL_IMPL_TYPE_ARRAY_VAR">(const BLVariant*)data</ValuePointer>
+        <ValuePointer Condition="implType == BL_IMPL_TYPE_ARRAY_I8">(const int8_t*)data</ValuePointer>
+        <ValuePointer Condition="implType == BL_IMPL_TYPE_ARRAY_U8">(const uint8_t*)data</ValuePointer>
+        <ValuePointer Condition="implType == BL_IMPL_TYPE_ARRAY_I16">(const int16_t*)data</ValuePointer>
+        <ValuePointer Condition="implType == BL_IMPL_TYPE_ARRAY_U16">(const uint16_t*)data</ValuePointer>
+        <ValuePointer Condition="implType == BL_IMPL_TYPE_ARRAY_I32">(const int32_t*)data</ValuePointer>
+        <ValuePointer Condition="implType == BL_IMPL_TYPE_ARRAY_U32">(const uint32_t*)data</ValuePointer>
+        <ValuePointer Condition="implType == BL_IMPL_TYPE_ARRAY_I64">(const int32_t*)data</ValuePointer>
+        <ValuePointer Condition="implType == BL_IMPL_TYPE_ARRAY_U64">(const uint32_t*)data</ValuePointer>
+        <ValuePointer Condition="implType == BL_IMPL_TYPE_ARRAY_F32">(const float*)data</ValuePointer>
+        <ValuePointer Condition="implType == BL_IMPL_TYPE_ARRAY_F64">(const double*)data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="BLArrayCore">
+    <AlternativeType Name="BLArray&lt;*&gt;" />
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_I8">Array&lt;int8_t&gt; {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_U8">Array&lt;uint8_t&gt; {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_I16">Array&lt;int16_t&gt; {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_U16">Array&lt;uint16_t&gt; {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_I32">Array&lt;int32_t&gt; {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_U32">Array&lt;uint32_t&gt; {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_I64">Array&lt;int64_t&gt; {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_U64">Array&lt;uint64_t&gt; {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_F32">Array&lt;float&gt; {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_F64">Array&lt;double&gt; {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
+    <DisplayString>Array&lt;&gt; {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="impl" ExcludeView="simple">impl</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLRegionImpl">
+    <DisplayString>RegionImpl {{ refCount={refCount, d} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="refCount" ExcludeView="simple">refCount, d</Item>
+      <Item Name="implType" ExcludeView="simple">(BLImplType)implType</Item>
+      <Item Name="implTraits" ExcludeView="simple">(BLImplTraits)implTraits</Item>
+      <Item Name="memPoolData" ExcludeView="simple">memPoolData</Item>
+      <Item Name="data" ExcludeView="simple">data</Item>
+      <Item Name="size" ExcludeView="simple">size, d</Item>
+      <Item Name="capacity" ExcludeView="simple">capacity, d</Item>
       <ArrayItems>
         <Size>size</Size>
         <ValuePointer>data</ValuePointer>
@@ -56,74 +105,445 @@
     </Expand>
   </Type>
 
-  <Type Name="BLRegionImpl">
+  <Type Name="BLRegionCore">
+    <AlternativeType Name="BLRegion" />
+    <DisplayString>Region {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
     <Expand HideRawView="true">
-      <Synthetic Name="data">
-        <ArrayItems>
-          <Size>size</Size>
-          <ValuePointer>data</ValuePointer>
-        </ArrayItems>
-      </Synthetic>
-      <Item Name="size" ExcludeView="simple">size, d</Item>
-      <Item Name="capacity" ExcludeView="simple">capacity, d</Item>
-      <Item Name="refCount" ExcludeView="simple">refCount, d</Item>
-      <Item Name="implType" ExcludeView="simple">(BLImplType)implType</Item>
-      <Item Name="implTraits" ExcludeView="simple">implTraits, x</Item>
-      <Item Name="memPoolData" ExcludeView="simple">memPoolData</Item>
+      <Item Name="impl" ExcludeView="simple">impl</Item>
     </Expand>
   </Type>
 
-  <!-- ImageWatch simply doesn't work so it's disabled...
-  <UIVisualizer ServiceId="{A452AFEA-3DF6-46BB-9177-C0B08F318025}" Id="1" MenuName="Add to BLImage Watch"/>
-  <Type Name="BLImage" Priority="High">
+  <Type Name="BLPathImpl">
+    <DisplayString>PathImpl {{ refCount={refCount, d} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="refCount" ExcludeView="simple">refCount, d</Item>
+      <Item Name="implType" ExcludeView="simple">(BLImplType)implType</Item>
+      <Item Name="implTraits" ExcludeView="simple">(BLImplTraits)implTraits</Item>
+      <Item Name="memPoolData" ExcludeView="simple">memPoolData</Item>
+      <Synthetic Name="commandData">
+        <Expand>
+          <IndexListItems>
+            <Size>size</Size>
+            <ValueNode>(BLPathCmd)commandData[$i]</ValueNode>
+          </IndexListItems>
+        </Expand>
+      </Synthetic>
+      <Synthetic Name="vertexData">
+        <Expand>
+          <ArrayItems>
+            <Size>size</Size>
+            <ValuePointer>vertexData</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+      <Item Name="size" ExcludeView="simple">size, d</Item>
+      <Item Name="capacity" ExcludeView="simple">capacity, d</Item>
+      <Item Name="flags" ExcludeView="simple">(BLPathFlags)flags</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLPath">
+    <AlternativeType Name="BLPathCore" />
+    <DisplayString>{{ size={impl-&gt;size, d} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="impl" ExcludeView="simple">impl</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLStrokeOptionsCore">
+    <AlternativeType Name="BLStrokeOptions" />
+    <Expand HideRawView="true">
+      <Item Name="startCap">(BLStrokeCap)startCap</Item>
+      <Item Name="endCap">(BLStrokeCap)endCap</Item>
+      <Item Name="join">(BLStrokeJoin)join</Item>
+      <Item Name="transformOrder">(BLStrokeTransformOrder)transformOrder</Item>
+      <Item Name="reserved">reserved</Item>
+      <Item Name="width">width</Item>
+      <Item Name="miterLimit">miterLimit</Item>
+      <Item Name="dashOffset">dashOffset</Item>
+      <Item Name="dashArray">dashArray</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLImageImpl">
+    <DisplayString>ImageImpl {{ refCount={refCount, d} }}</DisplayString>
+  </Type>
+
+  <Type Name="BLImageCore">
+    <AlternativeType Name="BLImage" />
     <UIVisualizer ServiceId="{A452AFEA-3DF6-46BB-9177-C0B08F318025}" Id="1" />
   </Type>
 
-  <Type Name="BLImageImpl" Priority="High">
-    <Intrinsic Name="format" Expression="(impl()-&gt;_pfi._format)"/>
-    <Expand>
+  <Type Name="BLImageCore">
+    <AlternativeType Name="BLImage" />
+    <DisplayString>Image {{ size={impl-&gt;size.w}x{impl-&gt;size.h} format={(BLFormat)impl-&gt;format} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="impl">impl</Item>
+
+      <!-- ImageWatch specific fields -->
       <Synthetic Name="[type]">
         <DisplayString>UINT8</DisplayString>
       </Synthetic>
       <Synthetic Name="[channels]">
-        <DisplayString>BGRA</DisplayString>
+        <DisplayString Condition="impl-&gt;format == 1">BGRA</DisplayString>
+        <DisplayString Condition="impl-&gt;format == 2">BGRA</DisplayString>
+        <DisplayString Condition="impl-&gt;format == 3">1</DisplayString>
+        <DisplayString>1</DisplayString>
+      </Synthetic>
+      <Item Name="[width]">impl-&gt;size.w</Item>
+      <Item Name="[height]">impl-&gt;size.h</Item>
+      <Item Name="[data]">(void*)(impl-&gt;pixelData)</Item>
+      <Item Name="[stride]">impl-&gt;stride</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLImageData">
+    <UIVisualizer ServiceId="{A452AFEA-3DF6-46BB-9177-C0B08F318025}" Id="1" />
+  </Type>
+
+  <Type Name="BLImageData">
+    <DisplayString>ImageData {{ size={size.w}x{size.h} format={(BLFormat)format} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="format">(BLFormat)format</Item>
+      <Item Name="flags">flags, x</Item>
+
+      <!-- ImageWatch specific fields -->
+      <Synthetic Name="[type]">
+        <DisplayString>UINT8</DisplayString>
+      </Synthetic>
+      <Synthetic Name="[channels]">
+        <DisplayString Condition="format == 1">BGRA</DisplayString>
+        <DisplayString Condition="format == 2">BGRA</DisplayString>
+        <DisplayString Condition="format == 3">1</DisplayString>
+        <DisplayString>1</DisplayString>
       </Synthetic>
       <Item Name="[width]">size.w</Item>
       <Item Name="[height]">size.h</Item>
-      <Item Name="[data]">pixelData</Item>
+      <Item Name="[data]">(void*)(pixelData)</Item>
       <Item Name="[stride]">stride</Item>
     </Expand>
   </Type>
-  -->
 
-  <Type Name="BLArray&lt;*&gt;" Priority="High">
-    <DisplayString>{{ [size={impl-&gt;size, d} capacity={impl-&gt;capacity, d}] }}</DisplayString>
+  <Type Name="BLImageCodecImpl">
+    <DisplayString>ImageCodecImpl {{ refCount={refCount, d} }}</DisplayString>
+  </Type>
+ 
+  <Type Name="BLImageCodecCore">
+    <AlternativeType Name="BLImageCodec" />
+    <DisplayString>ImageCodec {{ name={impl-&gt;name, s8} }}</DisplayString>
     <Expand HideRawView="true">
       <Item Name="impl" ExcludeView="simple">impl</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLImageDecoderImpl">
+    <DisplayString>ImageDecoderImpl {{ refCount={refCount, d} }}</DisplayString>
+  </Type>
+
+  <Type Name="BLImageDecoderCore">
+    <AlternativeType Name="BLImageDecoder" />
+    <DisplayString>ImageDecoder {{ name={impl-&gt;name, s8} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="impl" ExcludeView="simple">impl</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLImageEncoderImpl">
+    <DisplayString>ImageEncoderImpl {{ refCount={refCount, d} }}</DisplayString>
+  </Type>
+
+  <Type Name="BLImageEncoderCore">
+    <AlternativeType Name="BLImageEncoder" />
+    <DisplayString>ImageEncoder {{ name={impl-&gt;name, s8} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="impl" ExcludeView="simple">impl</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLGradientImpl">
+    <DisplayString>GradientImpl {{ refCount={refCount, d} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="refCount" ExcludeView="simple">refCount, d</Item>
+      <Item Name="implType" ExcludeView="simple">(BLImplType)implType</Item>
+      <Item Name="implTraits" ExcludeView="simple">(BLImplTraits)implTraits</Item>
+      <Item Name="memPoolData" ExcludeView="simple">memPoolData</Item>
+      <Item Name="stops" ExcludeView="simple">stops</Item>
+      <Item Name="size" ExcludeView="simple">size, d</Item>
+      <Item Name="capacity" ExcludeView="simple">capacity, d</Item>
+      <Item Name="gradientType" ExcludeView="simple">(BLGradientType)gradientType</Item>
+      <Item Name="extendMode" ExcludeView="simple">(BLExtendMode)extendMode</Item>
+      <Item Name="matrix" ExcludeView="simple">matrix</Item>
+      <Item Name="matrixType" ExcludeView="simple">(BLMatrix2DType)matrixType</Item>
+      <Item Name="values" ExcludeView="simple" Condition="gradientType == BL_GRADIENT_TYPE_LINEAR">linear</Item>
+      <Item Name="values" ExcludeView="simple" Condition="gradientType == BL_GRADIENT_TYPE_RADIAL">radial</Item>
+      <Item Name="values" ExcludeView="simple" Condition="gradientType == BL_GRADIENT_TYPE_CONICAL">conical</Item>
       <ArrayItems>
-        <Size>impl-&gt;size</Size>
-        <ValuePointer>($T1*)(impl-&gt;data)</ValuePointer>
+        <Size>size</Size>
+        <ValuePointer>stops</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>
 
-  <Type Name="BLVariant">
+  <Type Name="BLGradientCore">
+    <AlternativeType Name="BLGradient" />
+    <DisplayString>Gradient {{ size={impl-&gt;size, d} capacity={impl-&gt;capacity, d} }}</DisplayString>
     <Expand HideRawView="true">
-      <Item Name="impl" Condition="impl-&gt;implType &gt;= BL_IMPL_TYPE_ARRAY_VAR &amp;&amp; implType &lt;= BL_IMPL_TYPE_ARRAY_STRUCT_32" ExcludeView="simple">(BLArrayImpl*)impl</Item>
+      <Item Name="impl" ExcludeView="simple">impl</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLPatternImpl">
+    <DisplayString>PatternImpl {{ refCount={refCount, d} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="refCount" ExcludeView="simple">refCount, d</Item>
+      <Item Name="implType" ExcludeView="simple">(BLImplType)implType</Item>
+      <Item Name="implTraits" ExcludeView="simple">(BLImplTraits)implTraits</Item>
+      <Item Name="memPoolData" ExcludeView="simple">memPoolData</Item>
+      <Item Name="patternType" ExcludeView="simple">patternType</Item>
+      <Item Name="image" ExcludeView="simple">image</Item>
+      <Item Name="area" ExcludeView="simple">area</Item>
+      <Item Name="extendMode" ExcludeView="simple">(BLExtendMode)extendMode</Item>
+      <Item Name="matrix" ExcludeView="simple">matrix</Item>
+      <Item Name="matrixType" ExcludeView="simple">(BLMatrix2DType)matrixType</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLPatternCore">
+    <AlternativeType Name="BLPattern" />
+    <DisplayString>Pattern {{ size={impl-&gt;area.w, d}x{impl-&gt;area.h, d} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="impl" ExcludeView="simple">impl</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLContextHints">
+    <Expand HideRawView="true">
+      <Item Name="renderingQuality">(BLRenderingQuality)renderingQuality</Item>
+      <Item Name="gradientQuality">(BLGradientQuality)gradientQuality</Item>
+      <Item Name="patternQuality">(BLPatternQuality)patternQuality</Item>
+      <Item Name="hints">hints</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLContextState">
+    <Expand HideRawView="true">
+      <Item Name="hints">hints</Item>
+      <Item Name="compOp">(BLCompOp)compOp</Item>
+      <Item Name="globalAlpha">globalAlpha</Item>
+
+      <Item Name="styleType">styleType</Item>
+      <Item Name="styleAlpha">styleAlpha</Item>
+
+      <Item Name="fillRule">(BLFillRule)fillRule</Item>
+      <Item Name="fillType">(BLStyleType)styleType[0]</Item>
+      <Item Name="fillAlpha">styleAlpha[0]</Item>
+
+      <Item Name="strokeType">(BLStyleType)styleType[1]</Item>
+      <Item Name="strokeAlpha">styleAlpha[1]</Item>
+      <Item Name="strokeOptions">strokeOptions</Item>
+      <Item Name="approximationOptions">approximationOptions</Item>
+
+      <Item Name="metaMatrix">metaMatrix</Item>
+      <Item Name="userMatrix">userMatrix</Item>
+
+      <Item Name="savedStateCount">savedStateCount, d</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLContextImpl">
+    <DisplayString>ContextImpl {{ refCount={refCount, d} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="refCount" ExcludeView="simple">refCount, d</Item>
+      <Item Name="implType" ExcludeView="simple">(BLImplType)implType</Item>
+      <Item Name="implTraits" ExcludeView="simple">(BLImplTraits)implTraits</Item>
+      <Item Name="memPoolData" ExcludeView="simple">memPoolData</Item>
+
+      <Item Name="virt" ExcludeView="simple">virt</Item>
+      <Item Name="contextType" ExcludeView="simple">(BLContextType)contextType</Item>
+      <Item Name="targetSize" ExcludeView="simple">targetSize</Item>
+      <Item Name="state" ExcludeView="simple">state</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLContextCore">
+    <AlternativeType Name="BLContext" />
+    <DisplayString>Context {{ targetSize={impl-&gt;targetSize.w, d}x{impl-&gt;targetSize.h} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="impl" ExcludeView="simple">impl</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLFontFaceImpl">
+    <DisplayString>FontFaceImpl {{ refCount={refCount, d} }}</DisplayString>
+  </Type>
+
+  <Type Name="BLFontFaceCore">
+    <AlternativeType Name="BLFontFace" />
+    <DisplayString>FontFace  {{ name={impl-&gt;fullName, s8} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="impl" ExcludeView="simple">impl</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLFontImpl">
+    <DisplayString>FontImpl {{ refCount={refCount, d} }}</DisplayString>
+  </Type>
+
+  <Type Name="BLFontCore">
+    <AlternativeType Name="BLFont" />
+    <DisplayString>Font {{ name={impl-&gt;face.impl-&gt;fullName, s8} size={impl-&gt;metrics.size} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="impl" ExcludeView="simple">impl</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLGlyphBufferImpl">
+    <DisplayString>GlyphBufferImpl</DisplayString>
+    <Expand HideRawView="true">
+
+      <Synthetic Name="content">
+        <DisplayString>{ content }</DisplayString>
+        <Expand>
+          <ArrayItems>
+            <Size>size</Size>
+            <ValuePointer>content</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+
+      <Synthetic Name="infoData">
+        <DisplayString>{ infoData }</DisplayString>
+        <Expand>
+          <ArrayItems>
+            <Size>size</Size>
+            <ValuePointer>infoData</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+
+      <Synthetic Name="placementData">
+        <DisplayString>{ placementData }</DisplayString>
+        <Expand>
+          <ArrayItems>
+            <Size>size</Size>
+            <ValuePointer>placementData</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+ 
+      <Item Name="size">size, d</Item>
+      <Item Name="flags">(BLGlyphRunFlags)flags</Item>
+      <Item Name="glyphRun">glyphRun</Item>
+
+      <Item Name="buffer">((BLInternalGlyphBufferImpl *)this)->buffer</Item>
+      <Item Name="capacity">((BLInternalGlyphBufferImpl *)this)->capacity</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLGlyphBufferCore">
+    <AlternativeType Name="BLGlyphBuffer" />
+    <DisplayString>GlyphBuffer {{ size={impl-&gt;size, d} }}</DisplayString>
+    <Expand HideRawView="true">
+      <Item Name="impl" ExcludeView="simple">impl</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLGlyphRun">
+    <DisplayString>GlyphRun {{ size={size, d} }}</DisplayString>
+    <Expand HideRawView="true">
+      <!-- glyphData is either uint16_t or uint32_t - show just void* when not initialized -->
+      <Item Name="glyphData" Condition="glyphSize != 2 &amp;&amp; glyphSize != 4">glyphData</Item>
+      <Synthetic Name="glyphData" Condition="glyphSize == 2 || glyphSize == 4">
+        <DisplayString>{ glyphData }</DisplayString>
+        <Expand>
+          <IndexListItems Condition="glyphSize == 2">
+            <Size>size</Size>
+            <ValueNode>*((uint16_t*)( (char*)glyphData + ($i * glyphAdvance) ))</ValueNode>
+          </IndexListItems>
+          <IndexListItems Condition="glyphSize == 4">
+            <Size>size</Size>
+            <ValueNode>*((uint32_t*)( (char*)glyphData + ($i * glyphAdvance) ))</ValueNode>
+          </IndexListItems>
+        </Expand>
+      </Synthetic>
+
+      <Item Name="placementData" Condition="placementType == BL_GLYPH_PLACEMENT_TYPE_NONE">placementData</Item>
+      <Synthetic Name="placementData" Condition="placementType != BL_GLYPH_PLACEMENT_TYPE_NONE">
+        <DisplayString>{ placementData }</DisplayString>
+        <Expand>
+          <IndexListItems Condition="placementType == BL_GLYPH_PLACEMENT_TYPE_ADVANCE_OFFSET">
+            <Size>size</Size>
+            <ValueNode>*((BLGlyphPlacement*)( (char*)placementData + ($i * placementAdvance) ))</ValueNode>
+          </IndexListItems>
+          <IndexListItems Condition="placementType != BL_GLYPH_PLACEMENT_TYPE_ADVANCE_OFFSET">
+            <Size>size</Size>
+            <ValueNode>*((BLPoint*)( (char*)placementData + ($i * placementAdvance) ))</ValueNode>
+          </IndexListItems>
+        </Expand>
+      </Synthetic>
+
+      <Item Name="size">size</Item>
+      <Item Name="glyphSize">glyphSize</Item>
+      <Item Name="glyphAdvance">glyphAdvance</Item>
+      <Item Name="placementType">(BLGlyphPlacementType)placementType</Item>
+      <Item Name="placementAdvance">placementAdvance</Item>
+      <Item Name="flags">(BLGlyphRunFlags)flags</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BLVariantCore">
+    <AlternativeType Name="BLVariant" />
+
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_VAR"     >Array&lt;BLVariant&gt; {{ size={((BLArrayImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_I8"      >Array&lt;int8_t&gt; {{ size={((BLArrayImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_U8"      >Array&lt;uint8_t&gt; {{ size={((BLArrayImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_I16"     >Array&lt;int16_t&gt; {{ size={((BLArrayImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_U16"     >Array&lt;uint16_t&gt; {{ size={((BLArrayImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_I32"     >Array&lt;int32_t&gt; {{ size={((BLArrayImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_U32"     >Array&lt;uint32_t&gt; {{ size={((BLArrayImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_I64"     >Array&lt;int64_t&gt; {{ size={((BLArrayImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_U64"     >Array&lt;uint64_t&gt; {{ size={((BLArrayImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_F32"     >Array&lt;float&gt; {{ size={((BLArrayImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_ARRAY_F64"     >Array&lt;double&gt; {{ size={((BLArrayImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_STRING"        >String {{ size={((BLStringImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_PATH"          >Path {{ size={((BLPathImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_REGION"        >Region {{ size={((BLRegionImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_IMAGE"         >Image {{ size={((BLImageImpl*)impl)-&gt;size.w}x{((BLImageImpl*)impl)-&gt;size.h} format={(BLFormat)(((BLImageImpl*)impl)-&gt;format)} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_IMAGE_CODEC"   >ImageCodec {{ name={((BLImageCodecImpl*)impl)-&gt;name, s8} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_IMAGE_DECODER" >ImageDecoder {{ name={((BLImageDecoderImpl*)impl)-&gt;codec.impl-&gt;name, s8} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_IMAGE_ENCODER" >ImageEncoder {{ name={((BLImageEncoderImpl*)impl)-&gt;codec.impl-&gt;name, s8} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_GRADIENT"      >Gradient {{ size={((BLGradientImpl*)impl)-&gt;size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_PATTERN"       >Pattern</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_CONTEXT"       >Context  {{ targetSize={((BLContextImpl*)impl)-&gt;targetSize.w, d}x{((BLContextImpl*)impl)-&gt;targetSize.h} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_FONT"          >Font {{ name={((BLFontImpl*)impl)-&gt;face.impl-&gt;fullName} size={((BLFontImpl*)impl)-&gt;metrics.size} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_FONT_FACE"     >FontFace {{ name={((BLFontFaceImpl*)impl)-&gt;fullName} }}</DisplayString>
+    <DisplayString Condition="impl-&gt;implType == BL_IMPL_TYPE_FONT_DATA"     >FontData</DisplayString>
+    <DisplayString>{(BLImplType)impl-&gt;implType}</DisplayString>
+
+    <Expand HideRawView="true">
+      <Item Name="impl" Condition="impl-&gt;implType &gt;= BL_IMPL_TYPE_ARRAY_VAR &amp;&amp; impl-&gt;implType &lt;= BL_IMPL_TYPE_ARRAY_STRUCT_32" ExcludeView="simple">(BLArrayImpl*)impl</Item>
       <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_STRING"        ExcludeView="simple">(BLStringImpl*)impl</Item>
+      <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_PATH"          ExcludeView="simple">(BLPathImpl*)impl</Item>
+      <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_REGION"        ExcludeView="simple">(BLRegionImpl*)impl</Item>
       <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_IMAGE"         ExcludeView="simple">(BLImageImpl*)impl</Item>
       <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_IMAGE_CODEC"   ExcludeView="simple">(BLImageCodecImpl*)impl</Item>
       <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_IMAGE_DECODER" ExcludeView="simple">(BLImageDecoderImpl*)impl</Item>
       <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_IMAGE_ENCODER" ExcludeView="simple">(BLImageEncoderImpl*)impl</Item>
-      <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_PATTERN"       ExcludeView="simple">(BLPatternImpl*)impl</Item>
       <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_GRADIENT"      ExcludeView="simple">(BLGradientImpl*)impl</Item>
-      <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_PATH"          ExcludeView="simple">(BLPathImpl*)impl</Item>
-      <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_REGION"        ExcludeView="simple">(BLRegionImpl*)impl</Item>
+      <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_PATTERN"       ExcludeView="simple">(BLPatternImpl*)impl</Item>
       <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_CONTEXT"       ExcludeView="simple">(BLContextImpl*)impl</Item>
       <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_FONT"          ExcludeView="simple">(BLFontImpl*)impl</Item>
       <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_FONT_FACE"     ExcludeView="simple">(BLFontFaceImpl*)impl</Item>
       <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_FONT_DATA"     ExcludeView="simple">(BLFontDataImpl*)impl</Item>
-      <Item Name="impl" Condition="impl-&gt;implType == BL_IMPL_TYPE_FONT_LOADER"   ExcludeView="simple">(BLFontLoaderImpl*)impl</Item>
+      <Item Name="impl" Condition="impl-&gt;implType &gt;= BL_IMPL_TYPE_COUNT"      ExcludeView="simple">impl</Item>
     </Expand>
   </Type>
-</AutoVisualizer>
+ 
+  <!-- Internals -->
+  
+  <Type Name="BLWrap&lt;*&gt;">
+    <Expand HideRawView="true">
+      <ExpandedItem>*(($T1*)_data)</ExpandedItem>
+    </Expand>
+  </Type>
+ </AutoVisualizer>

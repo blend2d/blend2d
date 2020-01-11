@@ -12,20 +12,6 @@ if (NOT CMAKE_PROJECT_NAME OR "${CMAKE_PROJECT_NAME}" STREQUAL "blend2d")
 endif()
 
 # =============================================================================
-# [Blend2D - Deprecated]
-# =============================================================================
-
-if (DEFINED BLEND2D_BUILD_EMBED)
-  message(DEPRECATION "BLEND2D_BUILD_EMBED is deprecated, use BLEND2D_EMBED")
-  set(BLEND2D_EMBED "${BLEND2D_BUILD_EMBED}")
-endif()
-
-if (DEFINED BLEND2D_BUILD_STATIC)
-  message(DEPRECATION "BLEND2D_BUILD_STATIC is deprecated, use BLEND2D_STATIC")
-  set(BLEND2D_STATIC "${BLEND2D_BUILD_STATIC}")
-endif()
-
-# =============================================================================
 # [Blend2D - Configuration]
 # =============================================================================
 
@@ -43,6 +29,10 @@ endif()
 
 if (NOT DEFINED BLEND2D_TEST)
   set(BLEND2D_TEST FALSE)
+endif()
+
+if (NOT DEFINED BLEND2D_NO_NATVIS)
+  set(BLEND2D_NO_NATVIS FALSE)
 endif()
 
 set(BLEND2D_DIR    "${BLEND2D_DIR}"    CACHE PATH "Location of 'blend2d'")
@@ -116,7 +106,7 @@ function(blend2d_add_target target target_type src deps cflags cflags_dbg cflags
 endfunction()
 
 # =============================================================================
-# [Blend2D - Compiler]
+# [Blend2D - Compiler Support]
 # =============================================================================
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
@@ -198,11 +188,14 @@ if (BLEND2D_BUILD_NO_JIT)
 endif()
 
 # =============================================================================
-# [Blend2D - Deprecated]
+# [Blend2D - Linker Support]
 # =============================================================================
 
-# DEPRECATED: Will be removed int the future.
-set(BLEND2D_INCLUDE_DIR "${BLEND2D_INCLUDE_DIRS}")
+if (WIN32)
+  if(CMAKE_LINKER MATCHES "link\\.exe" OR CMAKE_LINKER MATCHES "lld-link\\.exe")
+    set(BLEND2D_LINKER_SUPPORTS_NATVIS TRUE)
+  endif()
+endif()
 
 # =============================================================================
 # [Blend2D - Enable SIMD]
@@ -557,9 +550,9 @@ set(BLEND2D_SRC_LIST
   blend2d/threading/threadpool_p.h
 )
 
-#if (MSVC)
-#  list(APPEND BLEND2D_SRC_LIST blend2d.natvis)
-#endif()
+if (MSVC AND NOT BLEND2D_NO_NATVIS)
+  list(APPEND BLEND2D_SRC_LIST blend2d.natvis)
+endif()
 
 set(BLEND2D_SRC "")
 foreach(src_file ${BLEND2D_SRC_LIST})
@@ -575,6 +568,12 @@ foreach(src_file ${BLEND2D_SRC_LIST})
     foreach(src_cflag ${BLEND2D_CFLAGS_${FEATURE}})
       set_property(SOURCE "${src_file}" APPEND_STRING PROPERTY COMPILE_FLAGS " ${src_cflag}")
     endforeach()
+  endif()
+
+  if (src_file MATCHES "\\.natvis")
+    if (BLEND2D_LINKER_SUPPORTS_NATVIS)
+      LIST(APPEND BLEND2D_PRIVATE_LFLAGS "-natvis:${src_file}")
+    endif()
   endif()
 endforeach()
 source_group(TREE "${BLEND2D_DIR}" FILES ${BLEND2D_SRC})
