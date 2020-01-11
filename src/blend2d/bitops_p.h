@@ -79,13 +79,13 @@ struct BLParametrizedBitOps {
     return kIsLSB ? bool((x >> index) & 0x1) : bool((x >> (index ^ Index(blBitSizeOf<T>() - 1))) & 0x1);
   }
 
-  template<typename T>
-  static BL_INLINE constexpr T indexAsMask(uint32_t n) noexcept {
+  template<typename T, typename N>
+  static BL_INLINE constexpr T indexAsMask(const N& n) noexcept {
     return kIsLSB ? blBitShl(T(1), n) : blBitShr(blNonZeroMsbMask<T>(), n);
   }
 
-  template<typename T>
-  static BL_INLINE constexpr T nonZeroBitMask(uint32_t n = 1) noexcept {
+  template<typename T, typename N>
+  static BL_INLINE constexpr T nonZeroBitMask(const N& n = 1) noexcept {
     return kIsLSB ? blNonZeroLsbMask<T>(n) : blNonZeroMsbMask<T>(n);
   }
 

@@ -43,7 +43,7 @@ void IndexExtractor::begin(uint32_t type, const x86::Mem& mem, uint32_t memSize)
 
   _type = type;
   _mem = mem;
-  _memSize = memSize;
+  _memSize = uint16_t(memSize);
 
   switch (_type) {
     case kTypeInt16:

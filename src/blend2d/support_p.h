@@ -282,13 +282,13 @@ template<> BL_INLINE constexpr uint16_t blFillTrailingBits(const uint16_t& x) no
 template<> BL_INLINE constexpr uint32_t blFillTrailingBits(const uint32_t& x) noexcept { return blBitShrOr(x, 1, 2, 4, 8, 16); }
 template<> BL_INLINE constexpr uint64_t blFillTrailingBits(const uint64_t& x) noexcept { return blBitShrOr(x, 1, 2, 4, 8, 16, 32); }
 
-template<typename T>
-static BL_INLINE constexpr T blNonZeroLsbMask(uint32_t n = 1) noexcept {
-  return blBitShr(blBitOnes<T>(), blBitSizeOf<T>() - n);
+template<typename T, typename N = uint32_t>
+static BL_INLINE constexpr T blNonZeroLsbMask(const N& n = 1) noexcept {
+  return blBitShr(blBitOnes<T>(), N(blBitSizeOf<T>()) - n);
 }
 
-template<typename T>
-static BL_INLINE constexpr T blNonZeroMsbMask(uint32_t n = 1) noexcept {
+template<typename T, typename N = uint32_t>
+static BL_INLINE constexpr T blNonZeroMsbMask(const N& n = 1) noexcept {
   return blBitSar(blBitShl(T(1), blBitSizeOf<T>() - 1u), n - 1u);
 }
 

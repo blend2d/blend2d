@@ -31,6 +31,7 @@ struct BLCompOpInfoGen {
 
       op == BL_COMP_OP_PLUS               ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
       op == BL_COMP_OP_MINUS              ? F(TYPE_C) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
+      op == BL_COMP_OP_MODULATE           ? F(TYPE_B) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | 0              :
       op == BL_COMP_OP_MULTIPLY           ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | F(NOP_IF_DA_0) | F(NOP_IF_SA_0) :
       op == BL_COMP_OP_SCREEN             ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
       op == BL_COMP_OP_OVERLAY            ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
@@ -107,6 +108,7 @@ struct BLCompOpSimplifyInfoGen {
     Clear       = BL_COMP_OP_CLEAR,
     Plus        = BL_COMP_OP_PLUS,
     Minus       = BL_COMP_OP_MINUS,
+    Modulate    = BL_COMP_OP_MODULATE,
     Multiply    = BL_COMP_OP_MULTIPLY,
     Screen      = BL_COMP_OP_SCREEN,
     Overlay     = BL_COMP_OP_OVERLAY,
@@ -555,6 +557,43 @@ struct BLCompOpSimplifyInfoGen {
            makeOp(Minus, d, s);
   }
 
+  // Modulate
+  // --------
+  //
+  // [Modulate PRGBxPRGB]
+  //   Dca' = Dca.Sca
+  //   Da'  = Da .Sa
+  //
+  //   Dca' = Dca.Sca.m + Dca.(1 - m)
+  //   Da'  = Da .Sa .m + Da .(1 - m)
+  //
+  // [Modulate PRGBxXRGB]
+  //   Dca' = Dca.Sc
+  //   Da'  = Da .1
+  //
+  //   Dca' = Dca.Sc.m + Dca.(1 - m)
+  //   Da'  = Da .1 .m + Da .(1 - m) = Da
+  //
+  // [Modulate XRGBxPRGB]
+  //   Dc' = Dc.Sca
+  //   Dc' = Dc.Sca.m + Dc.(1 - m)
+  //
+  // [Modulate XRGBxXRGB]
+  //   Dc' = Dc.Sc
+  //   Dc' = Dc.Sc.m + Dc.(1 - m)
+  static constexpr BLCompOpSimplifyInfo modulate(uint32_t d, uint32_t s) noexcept {
+    return d == PRGB32 && s == ZERO32 ? transparent(SrcCopy, PRGB32, PRGB32) :
+           d == PRGB32 && s == FRGB32 ? modulate(PRGB32, PRGB32) :
+
+           d == XRGB32 && s == ZERO32 ? opaqueBlack(SrcCopy, PRGB32, PRGB32) :
+           d == XRGB32 && s == FRGB32 ? modulate(XRGB32, PRGB32) :
+           d == XRGB32 && s == XRGB32 ? modulate(XRGB32, PRGB32) :
+
+           d == A8 || s == A8 ? dstIn(d, s) :
+
+           makeOp(Modulate, d, s);
+  }
+
   // Multiply
   // --------
   //
@@ -564,13 +603,6 @@ struct BLCompOpSimplifyInfoGen {
   //
   //   Dca' = Dca.(Sca.m + 1 - Sa.m) + Sca.m(1 - Da)
   //   Da'  = Da .(Sa .m + 1 - Sa.m) + Sa .m(1 - Da) = Da + Sa.m(1 - Da)
-  //
-  // [Multiply PRGBxPRGB]
-  //   Dca' = Dca + Sca.(1 - Da)
-  //   Da'  = Da  + Sa.(1 - Da)
-  //
-  //   Dca' = Dca + Sca.m(1 - Da)
-  //   Da'  = Da  + Sa .m(1 - Da)
   //
   // [Multiply PRGBxXRGB]
   //   Dca' = Sc.(Dca + 1 - Da)
@@ -1160,9 +1192,9 @@ struct BLCompOpSimplifyInfoGen {
   static constexpr BLCompOpSimplifyInfo valueDecomposed_2(uint32_t compOp, uint32_t d, uint32_t s) noexcept {
     return compOp == BL_COMP_OP_XOR          ? xor_(d, s)        :
            compOp == BL_COMP_OP_CLEAR        ? clear(d, s)       :
-           compOp == BL_COMP_OP_CLEAR        ? clear(d, s)       :
            compOp == BL_COMP_OP_PLUS         ? plus(d, s)        :
            compOp == BL_COMP_OP_MINUS        ? minus(d, s)       :
+           compOp == BL_COMP_OP_MODULATE     ? modulate(d, s)    :
            compOp == BL_COMP_OP_MULTIPLY     ? multiply(d, s)    :
            compOp == BL_COMP_OP_SCREEN       ? screen(d, s)      :
            compOp == BL_COMP_OP_OVERLAY      ? overlay(d, s)     :

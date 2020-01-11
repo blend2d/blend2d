@@ -77,6 +77,7 @@ CompOpPart::CompOpPart(PipeCompiler* pc, uint32_t compOp, FetchPart* dstPart, Fe
         case BL_COMP_OP_CLEAR       : maxPixels = 8; break;
         case BL_COMP_OP_PLUS        : maxPixels = 8; break;
         case BL_COMP_OP_MINUS       : maxPixels = 4; break;
+        case BL_COMP_OP_MODULATE    : maxPixels = 8; break;
         case BL_COMP_OP_MULTIPLY    : maxPixels = 8; break;
         case BL_COMP_OP_SCREEN      : maxPixels = 8; break;
         case BL_COMP_OP_OVERLAY     : maxPixels = 4; break;
@@ -2195,10 +2196,12 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
     }
 
     // ------------------------------------------------------------------------
-    // [CMaskInit - RGBA32 - Solid - SrcIn / SrcOut]
+    // [CMaskInit - RGBA32 - Solid - SrcIn | SrcOut | Modulate]
     // ------------------------------------------------------------------------
 
-    else if (compOp() == BL_COMP_OP_SRC_IN || compOp() == BL_COMP_OP_SRC_OUT) {
+    else if (compOp() == BL_COMP_OP_SRC_IN ||
+             compOp() == BL_COMP_OP_SRC_OUT ||
+             compOp() == BL_COMP_OP_MODULATE) {
       if (!hasMask) {
         // Xca = Sca
         // Xa  = Sa
@@ -2223,10 +2226,13 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
     }
 
     // ------------------------------------------------------------------------
-    // [CMaskInit - RGBA32 - Solid - SrcAtop / Xor / Darken / Lighten]
+    // [CMaskInit - RGBA32 - Solid - SrcAtop | Xor | Darken | Lighten]
     // ------------------------------------------------------------------------
 
-    else if (compOp() == BL_COMP_OP_SRC_ATOP || compOp() == BL_COMP_OP_XOR || compOp() == BL_COMP_OP_DARKEN || compOp() == BL_COMP_OP_LIGHTEN) {
+    else if (compOp() == BL_COMP_OP_SRC_ATOP ||
+             compOp() == BL_COMP_OP_XOR ||
+             compOp() == BL_COMP_OP_DARKEN ||
+             compOp() == BL_COMP_OP_LIGHTEN) {
       if (!hasMask) {
         // Xca = Sca
         // Xa  = Sa
@@ -2589,10 +2595,12 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
     }
 
     // ------------------------------------------------------------------------
-    // [CMaskInit - RGBA32 - Solid - LinearBurn / Difference / Exclusion]
+    // [CMaskInit - RGBA32 - Solid - LinearBurn | Difference | Exclusion]
     // ------------------------------------------------------------------------
 
-    else if (compOp() == BL_COMP_OP_LINEAR_BURN || compOp() == BL_COMP_OP_DIFFERENCE || compOp() == BL_COMP_OP_EXCLUSION) {
+    else if (compOp() == BL_COMP_OP_LINEAR_BURN ||
+             compOp() == BL_COMP_OP_DIFFERENCE ||
+             compOp() == BL_COMP_OP_EXCLUSION) {
       if (!hasMask) {
         // Xca = Sca
         // Xa  = Sa
@@ -2871,7 +2879,7 @@ void CompOpPart::cMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags) noex
     }
 
     // ------------------------------------------------------------------------
-    // [CMaskProc - RGBA32 - DstIn / DstOut]
+    // [CMaskProc - RGBA32 - DstIn | DstOut]
     // ------------------------------------------------------------------------
 
     if (compOp() == BL_COMP_OP_DST_IN || compOp() == BL_COMP_OP_DST_OUT) {
@@ -2889,7 +2897,7 @@ void CompOpPart::cMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags) noex
     }
 
     // ------------------------------------------------------------------------
-    // [CMaskProc - RGBA32 - DstAtop / Xor / Multiply]
+    // [CMaskProc - RGBA32 - DstAtop | Xor | Multiply]
     // ------------------------------------------------------------------------
 
     if (compOp() == BL_COMP_OP_DST_ATOP || compOp() == BL_COMP_OP_XOR || compOp() == BL_COMP_OP_MULTIPLY) {
@@ -3007,6 +3015,39 @@ void CompOpPart::cMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags) noex
         }
       }
 
+      pc->xSatisfyPixel(out, flags);
+      return;
+    }
+
+    // ------------------------------------------------------------------------
+    // [CMaskProc - RGBA32 - Modulate]
+    // ------------------------------------------------------------------------
+
+    if (compOp() == BL_COMP_OP_MODULATE) {
+      dstFetch(d, Pixel::kUC, n);
+      VecArray& dv = d.uc;
+
+      if (!hasMask) {
+        // Dca' = Dca.Xca
+        // Da'  = Da .Xa
+        pc->vmulu16(dv, dv, o.ux);
+        pc->vdiv255u16(dv);
+      }
+      else {
+        // Dca' = Dca.Sca.m + Dca.(1 - m)
+        // Da'  = Da .Sa .m + Da .(1 - m)
+
+        pc->vmulu16(xv, dv, o.ux);
+        pc->vmulu16(dv, dv, o.vn);
+
+        pc->vaddi16(dv, dv, xv);
+        pc->vdiv255u16(dv);
+      }
+
+      if (!useDa)
+        pc->vFillAlpha255W(dv, dv);
+
+      out.uc.init(dv);
       pc->xSatisfyPixel(out, flags);
       return;
     }
@@ -3788,6 +3829,52 @@ void CompOpPart::vMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags, VecA
       }
     }
 
+    pc->xSatisfyPixel(out, flags);
+    return;
+  }
+
+  // --------------------------------------------------------------------------
+  // [VMaskProc - RGBA32 - Modulate]
+  // --------------------------------------------------------------------------
+
+  if (compOp() == BL_COMP_OP_MODULATE) {
+    VecArray& dv = d.uc;
+
+    if (!hasMask) {
+      // Dca' = Dca.Sca
+      // Da'  = Da .Sa
+      srcFetch(s, Pixel::kUC | Pixel::kImmutable, n);
+      dstFetch(d, Pixel::kUC, n);
+
+      VecArray& sv = s.uc;
+      pc->vmulu16(dv, dv, sv);
+      pc->vdiv255u16(dv);
+    }
+    else {
+      // Dca' = Dca.Sca.m + Dca.(1 - m)
+      // Da'  = Da .Sa .m + Da .(1 - m)
+      srcFetch(s, Pixel::kUC, n);
+      dstFetch(d, Pixel::kUC, n);
+
+      VecArray& sv = s.uc;
+      VecArray vn;
+
+      pc->vmulu16(sv, sv, vm);
+      vMaskProcRGBA32InvertMask(vn, vm);
+      pc->vdiv255u16(sv);
+
+      pc->vmulu16(sv, sv, dv);
+      pc->vmulu16(dv, dv, vn);
+      vMaskProcRGBA32InvertDone(vn, mImmutable);
+
+      pc->vaddi16(dv, dv, sv);
+      pc->vdiv255u16(dv);
+    }
+
+    if (!useDa)
+      pc->vFillAlpha255W(dv, dv);
+
+    out.uc.init(dv);
     pc->xSatisfyPixel(out, flags);
     return;
   }

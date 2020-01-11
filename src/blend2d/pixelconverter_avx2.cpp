@@ -676,8 +676,8 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_float_template_avx2(
   I256 alphaMask = vseti256u32(0xFFu << A_Shift);
   I256 componentMask = vseti256u32(0xFFu);
 
-  F256 const255 = vsetf256(255.0001);
-  F256 lessThanOne = vsetf256(0.1);
+  F256 const255 = vsetf256(255.0001f);
+  F256 lessThanOne = vsetf256(0.1f);
 
   // Alpha byte-index that can be used by instructions that perform shuffling.
   constexpr uint32_t AI = A_Shift / 8u;

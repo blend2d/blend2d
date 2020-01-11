@@ -164,37 +164,39 @@ BL_DEFINE_ENUM(BLCompOp) {
   BL_COMP_OP_PLUS = 12,
   //! Minus.
   BL_COMP_OP_MINUS = 13,
+  //! Modulate.
+  BL_COMP_OP_MODULATE = 14,
   //! Multiply.
-  BL_COMP_OP_MULTIPLY = 14,
+  BL_COMP_OP_MULTIPLY = 15,
   //! Screen.
-  BL_COMP_OP_SCREEN = 15,
+  BL_COMP_OP_SCREEN = 16,
   //! Overlay.
-  BL_COMP_OP_OVERLAY = 16,
+  BL_COMP_OP_OVERLAY = 17,
   //! Darken.
-  BL_COMP_OP_DARKEN = 17,
+  BL_COMP_OP_DARKEN = 18,
   //! Lighten.
-  BL_COMP_OP_LIGHTEN = 18,
+  BL_COMP_OP_LIGHTEN = 19,
   //! Color dodge.
-  BL_COMP_OP_COLOR_DODGE = 19,
+  BL_COMP_OP_COLOR_DODGE = 20,
   //! Color burn.
-  BL_COMP_OP_COLOR_BURN = 20,
+  BL_COMP_OP_COLOR_BURN = 21,
   //! Linear burn.
-  BL_COMP_OP_LINEAR_BURN = 21,
+  BL_COMP_OP_LINEAR_BURN = 22,
   //! Linear light.
-  BL_COMP_OP_LINEAR_LIGHT = 22,
+  BL_COMP_OP_LINEAR_LIGHT = 23,
   //! Pin light.
-  BL_COMP_OP_PIN_LIGHT = 23,
+  BL_COMP_OP_PIN_LIGHT = 24,
   //! Hard-light.
-  BL_COMP_OP_HARD_LIGHT = 24,
+  BL_COMP_OP_HARD_LIGHT = 25,
   //! Soft-light.
-  BL_COMP_OP_SOFT_LIGHT = 25,
+  BL_COMP_OP_SOFT_LIGHT = 26,
   //! Difference.
-  BL_COMP_OP_DIFFERENCE = 26,
+  BL_COMP_OP_DIFFERENCE = 27,
   //! Exclusion.
-  BL_COMP_OP_EXCLUSION = 27,
+  BL_COMP_OP_EXCLUSION = 28,
 
   //! Count of composition & blending operators.
-  BL_COMP_OP_COUNT = 28
+  BL_COMP_OP_COUNT = 29
 };
 
 //! Gradient rendering quality.
