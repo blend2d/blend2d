@@ -1,4 +1,4 @@
-Copyright (c) 2017-2019, The Blend2D Team
+Copyright (c) 2017-2020, The Blend2D Team
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages

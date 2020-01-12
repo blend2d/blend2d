@@ -564,23 +564,23 @@ struct BLCompOpSimplifyInfoGen {
   //   Dca' = Dca.Sca
   //   Da'  = Da .Sa
   //
-  //   Dca' = Dca.Sca.m + Dca.(1 - m)
-  //   Da'  = Da .Sa .m + Da .(1 - m)
+  //   Dca' = Dca.(Sca.m + 1 - m)
+  //   Da'  = Da .(Sa .m + 1 - m)
   //
   // [Modulate PRGBxXRGB]
   //   Dca' = Dca.Sc
   //   Da'  = Da .1
   //
-  //   Dca' = Dca.Sc.m + Dca.(1 - m)
-  //   Da'  = Da .1 .m + Da .(1 - m) = Da
+  //   Dca' = Dca.(Sc.m + 1 - m)
+  //   Da'  = Da .(1 .m + 1 - m) = Da
   //
   // [Modulate XRGBxPRGB]
   //   Dc' = Dc.Sca
-  //   Dc' = Dc.Sca.m + Dc.(1 - m)
+  //   Dc' = Dc.(Sca.m + 1 - m)
   //
   // [Modulate XRGBxXRGB]
   //   Dc' = Dc.Sc
-  //   Dc' = Dc.Sc.m + Dc.(1 - m)
+  //   Dc' = Dc.(Sc.m + 1 - m)
   static constexpr BLCompOpSimplifyInfo modulate(uint32_t d, uint32_t s) noexcept {
     return d == PRGB32 && s == ZERO32 ? transparent(SrcCopy, PRGB32, PRGB32) :
            d == PRGB32 && s == FRGB32 ? modulate(PRGB32, PRGB32) :
@@ -611,19 +611,20 @@ struct BLCompOpSimplifyInfoGen {
   //   Dca' = Dca.(Sc.m + 1 - 1.m) + Sc.m(1 - Da)
   //   Da'  = Da .(1 .m + 1 - 1.m) + 1 .m(1 - Da) = Da + Sa.m(1 - Da)
   //
-  // [Multiply XRGBxPRGB]
+  // [Multiply XRGBxPRGB] ~= [Modulate XRGBxPRGB]
   //   Dc'  = Dc.(Sca   + 1 - Sa  )
   //   Dc'  = Dc.(Sca.m + 1 - Sa.m)
   //
-  // [Multiply XRGBxXRGB]
-  //   Dc'  = Dc.(Sc   + 1 - 1  )
-  //   Dc'  = Dc.(Sc.m + 1 - 1.m)
+  // [Multiply XRGBxXRGB] ~= [Modulate XRGBxXRGB]
+  //   Dc'  = Dc.Sc
+  //   Dc'  = Dc.(Sc.m + 1 - m)
   static constexpr BLCompOpSimplifyInfo multiply(uint32_t d, uint32_t s) noexcept {
     return d == PRGB32 && s == ZERO32 ? dstCopy(d, s) :
            d == PRGB32 && s == FRGB32 ? multiply(PRGB32, XRGB32) :
 
            d == XRGB32 && s == ZERO32 ? dstCopy(d, s) :
-           d == XRGB32 && s == FRGB32 ? multiply(XRGB32, XRGB32) :
+           d == XRGB32 && s == FRGB32 ? modulate(XRGB32, XRGB32) :
+           d == XRGB32 && s == XRGB32 ? modulate(XRGB32, XRGB32) :
 
            d == A8 || s == A8 ? dstOver(d, s) :
 

@@ -2196,12 +2196,11 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
     }
 
     // ------------------------------------------------------------------------
-    // [CMaskInit - RGBA32 - Solid - SrcIn | SrcOut | Modulate]
+    // [CMaskInit - RGBA32 - Solid - SrcIn | SrcOut]
     // ------------------------------------------------------------------------
 
     else if (compOp() == BL_COMP_OP_SRC_IN ||
-             compOp() == BL_COMP_OP_SRC_OUT ||
-             compOp() == BL_COMP_OP_MODULATE) {
+             compOp() == BL_COMP_OP_SRC_OUT) {
       if (!hasMask) {
         // Xca = Sca
         // Xa  = Sa
@@ -2498,6 +2497,33 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
           pc->vZeroAlphaW(o.ux, s.uc[0]);
           pc->vinv255u16(o.vn, o.vm);
         }
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // [CMaskInit - RGBA32 - Solid - Modulate]
+    // ------------------------------------------------------------------------
+
+    else if (compOp() == BL_COMP_OP_MODULATE) {
+      if (!hasMask) {
+        // Xca = Sca
+        // Xa  = Sa
+        srcPart()->as<FetchSolidPart>()->initSolidFlags(Pixel::kUC);
+
+        o.ux = s.uc[0];
+        cc->alloc(o.ux);
+      }
+      else {
+        // Xca = Sca * m + (1 - m)
+        // Xa  = Sa  * m + (1 - m)
+        srcPart()->as<FetchSolidPart>()->initSolidFlags(Pixel::kUC);
+
+        o.ux = cc->newXmm("o.uc0");
+
+        pc->vmulu16(o.ux, s.uc[0], vm);
+        pc->vdiv255u16(o.ux);
+        pc->vaddi16(o.ux, o.ux, C_MEM(i128_00FF00FF00FF00FF));
+        pc->vsubi16(o.ux, o.ux, vm);
       }
     }
 
@@ -3027,22 +3053,10 @@ void CompOpPart::cMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags) noex
       dstFetch(d, Pixel::kUC, n);
       VecArray& dv = d.uc;
 
-      if (!hasMask) {
-        // Dca' = Dca.Xca
-        // Da'  = Da .Xa
-        pc->vmulu16(dv, dv, o.ux);
-        pc->vdiv255u16(dv);
-      }
-      else {
-        // Dca' = Dca.Sca.m + Dca.(1 - m)
-        // Da'  = Da .Sa .m + Da .(1 - m)
-
-        pc->vmulu16(xv, dv, o.ux);
-        pc->vmulu16(dv, dv, o.vn);
-
-        pc->vaddi16(dv, dv, xv);
-        pc->vdiv255u16(dv);
-      }
+      // Dca' = Dca.Xca
+      // Da'  = Da .Xa
+      pc->vmulu16(dv, dv, o.ux);
+      pc->vdiv255u16(dv);
 
       if (!useDa)
         pc->vFillAlpha255W(dv, dv);
@@ -3851,24 +3865,22 @@ void CompOpPart::vMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags, VecA
       pc->vdiv255u16(dv);
     }
     else {
-      // Dca' = Dca.Sca.m + Dca.(1 - m)
-      // Da'  = Da .Sa .m + Da .(1 - m)
+      // Dca' = Dca.(Sca.m + 1 - m)
+      // Da'  = Da .(Sa .m + 1 - m)
       srcFetch(s, Pixel::kUC, n);
       dstFetch(d, Pixel::kUC, n);
 
       VecArray& sv = s.uc;
-      VecArray vn;
+      VecArray& dv = d.uc;
 
       pc->vmulu16(sv, sv, vm);
-      vMaskProcRGBA32InvertMask(vn, vm);
       pc->vdiv255u16(sv);
-
-      pc->vmulu16(sv, sv, dv);
-      pc->vmulu16(dv, dv, vn);
-      vMaskProcRGBA32InvertDone(vn, mImmutable);
-
-      pc->vaddi16(dv, dv, sv);
+      pc->vaddi16(sv, sv, C_MEM(i128_00FF00FF00FF00FF));
+      pc->vsubi16(sv, sv, vm);
+      pc->vmulu16(dv, dv, sv);
       pc->vdiv255u16(dv);
+
+      out.uc.init(dv);
     }
 
     if (!useDa)
@@ -3885,9 +3897,9 @@ void CompOpPart::vMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags, VecA
 
   if (compOp() == BL_COMP_OP_MULTIPLY) {
     if (!hasMask) {
-      // Dca' = Dca.(Sca + 1 - Sa) + Sca.(1 - Da)
-      // Da'  = Da .(Sa  + 1 - Sa) + Sa .(1 - Da)
       if (useDa && useSa) {
+        // Dca' = Dca.(Sca + 1 - Sa) + Sca.(1 - Da)
+        // Da'  = Da .(Sa  + 1 - Sa) + Sa .(1 - Da)
         srcFetch(s, Pixel::kUC | Pixel::kImmutable, n);
         dstFetch(d, Pixel::kUC, n);
 
@@ -3914,9 +3926,9 @@ void CompOpPart::vMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags, VecA
         pc->vdiv255u16(dv);
         out.uc.init(dv);
       }
-      // Dca' = Sc.(Dca + 1 - Da)
-      // Da'  = 1 .(Da  + 1 - Da) = 1
       else if (useDa) {
+        // Dca' = Sc.(Dca + 1 - Da)
+        // Da'  = 1 .(Da  + 1 - Da) = 1
         srcFetch(s, Pixel::kUC | Pixel::kImmutable, n);
         dstFetch(d, Pixel::kUC, n);
 
@@ -3931,9 +3943,9 @@ void CompOpPart::vMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags, VecA
         pc->vdiv255u16(dv);
         out.uc.init(dv);
       }
-      // Dc'  = Dc.(Sca + 1 - Sa)
-      // Da'  = Da.(Sa  + 1 - Sa)
       else if (hasSa()) {
+        // Dc'  = Dc.(Sca + 1 - Sa)
+        // Da'  = Da.(Sa  + 1 - Sa)
         srcFetch(s, Pixel::kUC | Pixel::kImmutable, n);
         dstFetch(d, Pixel::kUC, n);
 
@@ -3948,9 +3960,8 @@ void CompOpPart::vMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags, VecA
         pc->vdiv255u16(dv);
         out.uc.init(dv);
       }
-      // Dc'  = Dc.Sc
-      // Da'  = Da.Sa
       else {
+        // Dc' = Dc.Sc
         srcFetch(s, Pixel::kUC | Pixel::kImmutable, n);
         dstFetch(d, Pixel::kUC, n);
 
@@ -3963,9 +3974,9 @@ void CompOpPart::vMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags, VecA
       }
     }
     else {
-      // Dca' = Dca.(Sca.m + 1 - Sa.m) + Sca.m(1 - Da)
-      // Da'  = Da .(Sa .m + 1 - Sa.m) + Sa .m(1 - Da)
       if (useDa) {
+        // Dca' = Dca.(Sca.m + 1 - Sa.m) + Sca.m(1 - Da)
+        // Da'  = Da .(Sa .m + 1 - Sa.m) + Sa .m(1 - Da)
         srcFetch(s, Pixel::kUC, n);
         dstFetch(d, Pixel::kUC, n);
 
