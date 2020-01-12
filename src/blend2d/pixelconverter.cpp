@@ -1644,7 +1644,7 @@ static BLResult blPixelConverterInitCopyOr8888(BLPixelConverterCore* self, const
   BLPixelConverterData::MemCopyData& d = blPixelConverterGetData(self)->memCopyData;
 
   d.internalFlags = BL_PIXEL_CONVERTER_INTERNAL_FLAG_INITIALIZED | BL_PIXEL_CONVERTER_INTERNAL_FLAG_RAW_COPY ;
-  d.bytesPerPixel = di.depth / 8u;
+  d.bytesPerPixel = uint8_t(di.depth / 8u);
 
   // Required to handle Copy32, XRGB32<-PRGB32, and PRGB32<-XRGB32 conversions.
   uint32_t commonFlags = di.flags & si.flags;
@@ -1752,7 +1752,7 @@ static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLF
         BLPixelConverterData::MemCopyData& d = blPixelConverterGetData(self)->memCopyData;
         d.internalFlags = BL_PIXEL_CONVERTER_INTERNAL_FLAG_INITIALIZED |
                           BL_PIXEL_CONVERTER_INTERNAL_FLAG_RAW_COPY ;
-        d.bytesPerPixel = di.depth / 8u;
+        d.bytesPerPixel = uint8_t(di.depth / 8u);
 
         #ifdef BL_BUILD_OPT_AVX2
         if (blRuntimeHasAVX2(&blRuntimeContext)) {

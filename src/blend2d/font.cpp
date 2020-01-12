@@ -281,6 +281,9 @@ BLResult blFontDataCreateFromData(BLFontDataCore* self, const void* data, size_t
   if (BL_UNLIKELY(dataSize < kMinSize))
     return blTraceError(BL_ERROR_INVALID_DATA);
 
+  if (BL_UNLIKELY(sizeof(size_t) > 4 && dataSize > 0xFFFFFFFFu))
+    return blTraceError(BL_ERROR_DATA_TOO_LARGE);
+
   uint32_t headerTag = blOffsetPtr<const UInt32>(data, 0)->value();
   uint32_t faceCount = 1;
   uint32_t dataFlags = 0;
@@ -750,7 +753,7 @@ BLResult blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, BL
   BL_PROPAGATE(faceI->funcs.mapTextToGlyphs(faceI, gbI->content, gbI->size, stateOut));
 
   gbI->flags = gbI->flags & ~BL_GLYPH_RUN_FLAG_UCS4_CONTENT;
-  if (stateOut->undefinedCount == 0)
+  if (stateOut->undefinedCount > 0)
     gbI->flags |= BL_GLYPH_RUN_FLAG_UNDEFINED_GLYPHS;
   return BL_SUCCESS;
 }
@@ -827,7 +830,7 @@ BLResult blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLT
   const BLGlyphPlacement* placementData = gbI->placementData;
 
   for (size_t i = 0; i < size; i++) {
-    advance += BLPoint(placementData[i].advance.x, placementData[i].advance.y);
+    advance += BLPoint(placementData[i].advance);
   }
 
   BLBoxI glyphBounds[2];

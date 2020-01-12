@@ -95,7 +95,7 @@ struct BLPixelConverterCore {
 #ifdef __cplusplus
 //! Pixel converter [C++ API].
 //!
-//! Provides interface to convert pixels between various pixel formats. The
+//! Provides an interface to convert pixels between various pixel formats. The
 //! primary purpose of this class is to allow efficient conversion between
 //! pixel formats used natively by Blend2D and pixel formats used elsewhere,
 //! for example image codecs or native framebuffers.

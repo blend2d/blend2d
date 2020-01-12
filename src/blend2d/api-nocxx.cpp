@@ -8,8 +8,8 @@
 #include "./runtime_p.h"
 
 // This file provides support for building Blend2D without C++ standard library.
-// Blend2D doesn't really use any C++ features, but there are little things that
-// require some care.
+// Blend2D doesn't really use any C++ features that would require a C++ runtime
+// library, but there are little things here and there that require some attention.
 #ifdef BL_NO_STDCXX
 
 extern "C" {

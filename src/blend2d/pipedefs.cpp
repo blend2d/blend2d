@@ -331,7 +331,7 @@ uint32_t BLPipeFetchData::initPatternAffine(uint32_t extendMode, uint32_t filter
   if (extendY >= BL_EXTEND_MODE_REPEAT && d.affine.xy2.u32Hi >= uint32_t(th)) d.affine.xy2.u32Hi %= uint32_t(th);
 
   if (opt) {
-    d.affine.addrMul[0] = bytesPerPixel;
+    d.affine.addrMul[0] = int16_t(bytesPerPixel);
     d.affine.addrMul[1] = int16_t(d.src.stride);
   }
   else {

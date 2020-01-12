@@ -1660,8 +1660,9 @@ BL_API const BLGlyphRun* BL_CDECL blGlyphBufferGetGlyphRun(const BLGlyphBufferCo
 BL_API const uint32_t* BL_CDECL blGlyphBufferGetContent(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API const BLGlyphInfo* BL_CDECL blGlyphBufferGetInfoData(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API const BLGlyphPlacement* BL_CDECL blGlyphBufferGetPlacementData(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blGlyphBufferSetText(BLGlyphBufferCore* self, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferSetGlyphIds(BLGlyphBufferCore* self, const void* glyphData, intptr_t glyphAdvance, size_t size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferSetText(BLGlyphBufferCore* self, const void* textData, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferSetGlyphs(BLGlyphBufferCore* self, const uint32_t* glyphData, size_t size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferSetGlyphsFromStruct(BLGlyphBufferCore* self, const void* glyphData, size_t size, size_t glyphIdSize, intptr_t glyphIdAdvance) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLGradient

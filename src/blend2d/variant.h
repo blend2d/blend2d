@@ -142,12 +142,11 @@ struct BLVariantImpl {
   // IMPL HEADER
   // -----------
   //
-  // [32-bit: 12 bytes]
+  // [32-bit: 16 bytes]
   // [64-bit: 24 bytes]
 
-  //! Union that provides either one `virt` table pointer and two reserved
-  //! fields at index [1] and [2] in case of object or 3 reserved fields in
-  //! case of value.
+  //! Union that provides either one `virt` table pointer or an arbitrary header
+  //! if the object doesn't have virtual function table.
   union {
     //! Virtual function table (only available to impls with `BL_IMPL_TRAIT_VIRT`
     //! trait).
@@ -215,6 +214,9 @@ public:
 
   //! Tests whether the variant is a built-in null instance (of any impl-type).
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
+
+  //! Returns the type of the object, see `BLImplType` for more details.
+  BL_INLINE uint32_t implType() const noexcept { return impl->implType; }
 
   BL_INLINE BLResult reset() noexcept { return blVariantReset(this); }
 

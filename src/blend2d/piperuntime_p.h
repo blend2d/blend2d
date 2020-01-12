@@ -47,7 +47,7 @@ enum BLPipeRuntimeFlags : uint32_t {
 
 //! This is a base class used by either `BLPipeGenRuntime` (for dynamic piplines)
 //! or `BLFixedPipeRuntime` for static pipelines. The purpose of this class is
-//! to create interface that is used by the rendering context so it doesn't
+//! to create an interface that is used by the rendering context so it doesn't
 //! have to know which kind of pipelines it uses.
 struct BLPipeRuntime {
   //! Type of the runtime, see `BLPipeRuntimeType`.

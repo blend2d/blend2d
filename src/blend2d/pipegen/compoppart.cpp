@@ -149,6 +149,11 @@ bool CompOpPart::shouldOptimizeOpaqueFill() const noexcept {
   if (compOpFlags() & BL_COMP_OP_FLAG_TYPE_A)
     return false;
 
+  // Modulate operator just needs to multiply source with mask and add (1 - m)
+  // to it.
+  if (compOp() == BL_COMP_OP_MODULATE)
+    return false;
+
   // We assume that in all other cases there is a benefit of using optimized
   // `cMask` loop for a fully opaque mask.
   return true;
@@ -2057,9 +2062,13 @@ void CompOpPart::vMaskProcA8Xmm(Pixel& out, uint32_t n, uint32_t flags, VecArray
   // --------------------------------------------------------------------------
 
   if (compOp() == BL_COMP_OP_PLUS) {
-    // Da' = Clamp(Da + Sa)
-    // Da' = Clamp(Da + Sa.m)
-    if (hasMask) {
+    if (!hasMask) {
+      // Da' = Clamp(Da + Sa)
+      srcFetch(s, Pixel::kPA | Pixel::kImmutable, n);
+      dstFetch(d, Pixel::kPA, n);
+    }
+    else {
+      // Da' = Clamp(Da + Sa.m)
       srcFetch(s, Pixel::kUA, n);
       dstFetch(d, Pixel::kPA, n);
 
@@ -2068,10 +2077,6 @@ void CompOpPart::vMaskProcA8Xmm(Pixel& out, uint32_t n, uint32_t flags, VecArray
 
       s.pa = sa.even();
       pc->vpacki16u8(s.pa, s.pa, sa.odd());
-    }
-    else {
-      srcFetch(s, Pixel::kPA | Pixel::kImmutable, n);
-      dstFetch(d, Pixel::kPA, n);
     }
 
     pc->vaddsu8(d.pa, d.pa, s.pa);
@@ -2085,9 +2090,13 @@ void CompOpPart::vMaskProcA8Xmm(Pixel& out, uint32_t n, uint32_t flags, VecArray
   // --------------------------------------------------------------------------
 
   if (compOp() == BL_COMP_OP_INTERNAL_ALPHA_INV) {
-    // Da' = 1 - Da
-    // Da' = Da.(1 - m) + (1 - Da).m
-    if (hasMask) {
+    if (!hasMask) {
+      // Da' = 1 - Da
+      dstFetch(d, Pixel::kUA, n);
+      pc->vinv255u16(da, da);
+    }
+    else {
+      // Da' = Da.(1 - m) + (1 - Da).m
       dstFetch(d, Pixel::kUA, n);
       pc->vinv255u16(xv, vm);
       pc->vmulu16(xv, xv, da);
@@ -2095,10 +2104,6 @@ void CompOpPart::vMaskProcA8Xmm(Pixel& out, uint32_t n, uint32_t flags, VecArray
       pc->vmulu16(da, da, vm);
       pc->vaddi16(da, da, xv);
       pc->vdiv255u16(da);
-    }
-    else {
-      dstFetch(d, Pixel::kUA, n);
-      pc->vinv255u16(da, da);
     }
 
     out.ua = da;
@@ -2392,23 +2397,19 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
         cc->alloc(o.uy);
       }
       else {
-        // Xca = Sca * m
-        // Xa  = Sa  * m
-        // Yca = 1 - m.(1 - Sa)
-        // Ya  = 1 - m.(1 - Sa)
+        // Xca = Sca.m
+        // Xa  = Sa .m
+        // Yca = Sa .m + (1 - m)
+        // Ya  = Sa .m + (1 - m)
         srcPart()->as<FetchSolidPart>()->initSolidFlags(Pixel::kUC | Pixel::kUA);
 
         o.ux = cc->newXmm("o.ux");
         o.uy = cc->newXmm("o.uy");
 
-        pc->vmov(o.uy, s.ua[0]);
-        pc->vinv255u16(o.uy, o.uy);
-
         pc->vmulu16(o.ux, s.uc[0], vm);
-        pc->vmulu16(o.uy, o.uy, vm);
-
-        pc->vdiv255u16_2x(o.ux, o.uy);
-        pc->vinv255u16(o.uy, o.uy);
+        pc->vinv255u16(o.uy, vm);
+        pc->vdiv255u16(o.ux);
+        pc->vaddi16(o.uy, o.uy, o.ux);
       }
     }
 
@@ -2927,9 +2928,9 @@ void CompOpPart::cMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags) noex
     // ------------------------------------------------------------------------
 
     if (compOp() == BL_COMP_OP_DST_ATOP || compOp() == BL_COMP_OP_XOR || compOp() == BL_COMP_OP_MULTIPLY) {
-      // Dca' = Xca.(1 - Da) + Dca.Yca
-      // Da'  = Xa .(1 - Da) + Da .Ya
       if (useDa) {
+        // Dca' = Xca.(1 - Da) + Dca.Yca
+        // Da'  = Xa .(1 - Da) + Da .Ya
         dstFetch(d, Pixel::kUC, n);
         VecArray& dv = d.uc;
 
@@ -2942,9 +2943,9 @@ void CompOpPart::cMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags) noex
         pc->vdiv255u16(dv);
         out.uc.init(dv);
       }
-      // Dca' = Dca.Yca
-      // Da'  = Da .Ya
       else {
+        // Dca' = Dca.Yca
+        // Da'  = Da .Ya
         dstFetch(d, Pixel::kUC, n);
         VecArray& dv = d.uc;
 
@@ -2980,9 +2981,9 @@ void CompOpPart::cMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags) noex
 
     if (compOp() == BL_COMP_OP_MINUS) {
       if (!hasMask) {
-        // Dca' = Clamp(Dca - Xca) + Yca.(1 - Da)
-        // Da'  = Da + Ya.(1 - Da)
         if (useDa) {
+          // Dca' = Clamp(Dca - Xca) + Yca.(1 - Da)
+          // Da'  = Da + Ya.(1 - Da)
           dstFetch(d, Pixel::kUC, n);
           VecArray& dv = d.uc;
 
@@ -2995,9 +2996,9 @@ void CompOpPart::cMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags) noex
           pc->vaddi16(dv, dv, xv);
           out.uc.init(dv);
         }
-        // Dca' = Clamp(Dca - Xca)
-        // Da'  = <unchanged>
         else {
+          // Dca' = Clamp(Dca - Xca)
+          // Da'  = <unchanged>
           dstFetch(d, Pixel::kPC, n);
           VecArray& dh = d.pc;
 
@@ -3006,9 +3007,9 @@ void CompOpPart::cMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags) noex
         }
       }
       else {
-        // Dca' = (Clamp(Dca - Xca) + Yca.(1 - Da)).m + Dca.(1 - m)
-        // Da'  = Da + Ya.(1 - Da)
         if (useDa) {
+          // Dca' = (Clamp(Dca - Xca) + Yca.(1 - Da)).m + Dca.(1 - m)
+          // Da'  = Da + Ya.(1 - Da)
           dstFetch(d, Pixel::kUC, n);
           VecArray& dv = d.uc;
 
@@ -3025,9 +3026,9 @@ void CompOpPart::cMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags) noex
           pc->vdiv255u16(dv);
           out.uc.init(dv);
         }
-        // Dca' = Clamp(Dca - Xca).m + Dca.(1 - m)
-        // Da'  = <unchanged>
         else {
+          // Dca' = Clamp(Dca - Xca).m + Dca.(1 - m)
+          // Da'  = <unchanged>
           dstFetch(d, Pixel::kUC, n);
           VecArray& dv = d.uc;
 
@@ -3853,6 +3854,7 @@ void CompOpPart::vMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags, VecA
 
   if (compOp() == BL_COMP_OP_MODULATE) {
     VecArray& dv = d.uc;
+    VecArray& sv = s.uc;
 
     if (!hasMask) {
       // Dca' = Dca.Sca
@@ -3860,7 +3862,6 @@ void CompOpPart::vMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags, VecA
       srcFetch(s, Pixel::kUC | Pixel::kImmutable, n);
       dstFetch(d, Pixel::kUC, n);
 
-      VecArray& sv = s.uc;
       pc->vmulu16(dv, dv, sv);
       pc->vdiv255u16(dv);
     }
@@ -3869,9 +3870,6 @@ void CompOpPart::vMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags, VecA
       // Da'  = Da .(Sa .m + 1 - m)
       srcFetch(s, Pixel::kUC, n);
       dstFetch(d, Pixel::kUC, n);
-
-      VecArray& sv = s.uc;
-      VecArray& dv = d.uc;
 
       pc->vmulu16(sv, sv, vm);
       pc->vdiv255u16(sv);
@@ -4942,15 +4940,7 @@ void CompOpPart::vMaskProcRGBA32InvertMask(VecArray& vn, VecArray& vm) noexcept 
   if (vn.empty())
     pc->newXmmArray(vn, size, "vn");
 
-  if (vm.isScalar()) {
-    // TODO: Seems wrong as well, the `vmov` code-path would never execute.
-    pc->vinv255u16(vn[0], vm[0]);
-    for (i = 1; i < size; i++)
-      pc->vmov(vn[i], vn[0]);
-  }
-  else {
-    pc->vinv255u16(vn, vm);
-  }
+  pc->vinv255u16(vn, vm);
 }
 
 void CompOpPart::vMaskProcRGBA32InvertDone(VecArray& vn, bool mImmutable) noexcept {
