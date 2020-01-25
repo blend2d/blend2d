@@ -35,10 +35,11 @@ if (NOT DEFINED BLEND2D_NO_NATVIS)
   set(BLEND2D_NO_NATVIS FALSE)
 endif()
 
-set(BLEND2D_DIR    "${BLEND2D_DIR}"    CACHE PATH "Location of 'blend2d'")
-set(BLEND2D_TEST   "${BLEND2D_TEST}"   CACHE BOOL "Build 'blend2d' test applications")
-set(BLEND2D_EMBED  "${BLEND2D_EMBED}"  CACHE BOOL "Embed 'blend2d' library (no targets)")
-set(BLEND2D_STATIC "${BLEND2D_STATIC}" CACHE BOOL "Build 'blend2d' statically")
+set(BLEND2D_DIR      "${BLEND2D_DIR}"      CACHE PATH "Location of 'blend2d'")
+set(BLEND2D_TEST     "${BLEND2D_TEST}"     CACHE BOOL "Build 'blend2d' test applications")
+set(BLEND2D_EMBED    "${BLEND2D_EMBED}"    CACHE BOOL "Embed 'blend2d' library (no targets)")
+set(BLEND2D_STATIC   "${BLEND2D_STATIC}"   CACHE BOOL "Build 'blend2d' statically")
+set(BLEND2D_SANITIZE "${BLEND2D_SANITIZE}" CACHE STRING "List of sanitizers to use")
 
 # Experimental build options.
 # set(BLEND2D_BUILD_NO_LOGGING 1)
@@ -66,6 +67,8 @@ set(BLEND2D_PRIVATE_CFLAGS_DBG "")               # Private compiler flags used b
 set(BLEND2D_PRIVATE_CFLAGS_REL "")               # Private compiler flags used by release builds.
 set(BLEND2D_NO_STDCXX_LFLAGS "")                 # Private linker flags to disable linking to a standard C++ library.
 set(BLEND2D_NO_STDCXX_CFLAGS "")                 # Private compiler flags to disable linking to a standard C++ library.
+set(BLEND2D_SANITIZE_CFLAGS "")                  # Compiler flags required by currently enabled sanitizers.
+set(BLEND2D_SANITIZE_LFLAGS "")                  # Linker flags required by currently enabled sanitizers.
 
 # =============================================================================
 # [Blend2D - Utilities]
@@ -73,16 +76,40 @@ set(BLEND2D_NO_STDCXX_CFLAGS "")                 # Private compiler flags to dis
 
 # Detects C++ flags and appends all detected ones to `out`.
 function(blend2d_detect_cflags out)
-  set(out_array ${${out}})
-  foreach(flag ${ARGN})
-    string(REGEX REPLACE "[+]" "x" flag_signature "${flag}")
-    string(REGEX REPLACE "[-=:;/.\]" "_" flag_signature "${flag_signature}")
-    check_cxx_compiler_flag(${flag} "__CxxFlag_${flag_signature}")
-    if (${__CxxFlag_${flag_signature}})
-      list(APPEND out_array "${flag}")
+  set(_out_array ${${out}})
+  foreach(_flag ${ARGN})
+    string(REGEX REPLACE "[+]" "x" _flag_signature "${_flag}")
+    string(REGEX REPLACE "[-=:;/.\]" "_" _flag_signature "${_flag_signature}")
+    check_cxx_compiler_flag(${_flag} "__CxxFlag_${_flag_signature}")
+    if (${__CxxFlag_${_flag_signature}})
+      list(APPEND _out_array "${_flag}")
     endif()
   endforeach()
-  set(${out} "${out_array}" PARENT_SCOPE)
+  set(${out} "${_out_array}" PARENT_SCOPE)
+endfunction()
+
+# Support for various sanitizers provided by C/C++ compilers.
+function(blend2d_detect_sanitizers out)
+  set(_out_array ${${out}})
+  set(_flags "")
+
+  foreach(_arg ${ARGN})
+    string(REPLACE "," ";" _arg "${_arg}")
+    list(APPEND _flags ${_arg})
+  endforeach()
+
+  foreach(_flag ${_flags})
+    if (NOT "${_flag}" MATCHES "^-fsanitize=")
+      SET(_flag "-fsanitize=${_flag}")
+    endif()
+
+    # Sanitizers also require link flags, see CMAKE_REQUIRED_FLAGS.
+    set(CMAKE_REQUIRED_FLAGS "${_flag}")
+    blend2d_detect_cflags(_out_array ${_flag})
+    unset(CMAKE_REQUIRED_FLAGS)
+  endforeach()
+
+  set(${out} "${_out_array}" PARENT_SCOPE)
 endfunction()
 
 function(blend2d_add_target target target_type src deps cflags cflags_dbg cflags_rel)
@@ -98,10 +125,10 @@ function(blend2d_add_target target target_type src deps cflags cflags_dbg cflags
   set_property(TARGET ${target} PROPERTY CXX_VISIBILITY_PRESET hidden)
   target_compile_features(${target} PUBLIC cxx_std_11)
 
-  # target_link_options was added in cmake 3.13, which doesn't work for us.
-  # set_property(TARGET ${target} APPEND PROPERTY LINK_OPTIONS ${BLEND2D_PRIVATE_LFLAGS})
-  foreach(link_flag ${BLEND2D_PRIVATE_LFLAGS})
-    set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " ${link_flag}")
+  # target_link_options was added in cmake 3.13, which doesn't work for us:
+  # set_property(TARGET ${target} APPEND PROPERTY LINK_OPTIONS ${link_flags})
+  foreach(_link_flag ${BLEND2D_PRIVATE_LFLAGS} ${BLEND2D_SANITIZE_LFLAGS})
+    set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " ${_link_flag}")
   endforeach()
 endfunction()
 
@@ -129,7 +156,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" ST
     -Oi)                     # [+] Generate Intrinsic Functions.
 
   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    list(APPEND BLEND2D_PRIVATE_CFLAGS -fno-exceptions -fno-rtti -fno-math-errno)
+    list(APPEND BLEND2D_PRIVATE_CFLAGS -clang:-fno-rtti -clang:-fno-math-errno)
   endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   list(APPEND BLEND2D_PRIVATE_CFLAGS -Wall -Wextra)
@@ -147,17 +174,6 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
     list(APPEND BLEND2D_PRIVATE_CFLAGS "-fabi-version=0")
   endif()
 
-  # Support for GCC|Clang undefined behavior sanitizers.
-  if (BLEND2D_SANITIZE)
-    blend2d_detect_cflags(BLEND2D_SANITIZE_FLAGS "-fsanitize=undefined")
-    if (BLEND2D_SANITIZE_FLAGS)
-      message("-- Enabling UB sanitizer via '${BLEND2D_SANITIZE_FLAGS}'")
-      # TODO: I don't undertand why this is necessary, it's not nice.
-      list(APPEND BLEND2D_PRIVATE_LFLAGS ${BLEND2D_SANITIZE_FLAGS})
-      list(APPEND BLEND2D_PRIVATE_CFLAGS ${BLEND2D_SANITIZE_FLAGS})
-    endif()
-  endif()
-
   # Building Blend2D without C++ library support requires these to be setup.
   if (BLEND2D_NO_STDCXX)
     message("-- Enabling build without linking to the C++ standard library")
@@ -170,6 +186,28 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   endif()
 endif()
 
+# Support for sanitizers.
+if (BLEND2D_SANITIZE)
+  blend2d_detect_sanitizers(BLEND2D_SANITIZE_CFLAGS ${BLEND2D_SANITIZE})
+  if (BLEND2D_SANITIZE_CFLAGS)
+    message("-- Enabling sanitizers: '${BLEND2D_SANITIZE_CFLAGS}'")
+
+    # Linker must receive the same flags as the compiler when it comes to sanitizers.
+    set(BLEND2D_SANITIZE_LFLAGS ${BLEND2D_SANITIZE_CFLAGS})
+
+    # Don't omit frame pointer if sanitizers are enabled.
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
+      list(APPEND BLEND2D_SANITIZE_CFLAGS -Oy-)
+    else()
+      list(APPEND BLEND2D_SANITIZE_CFLAGS -fno-omit-frame-pointer -g)
+    endif()
+
+    list(APPEND BLEND2D_PRIVATE_CFLAGS ${BLEND2D_SANITIZE_CFLAGS})
+    list(APPEND BLEND2D_PRIVATE_LFLAGS ${BLEND2D_SANITIZE_LFLAGS})
+  endif()
+endif()
+
+# Target type.
 if (BLEND2D_EMBED)
   set(BLEND2D_TARGET_TYPE "EMBED")
 elseif (BLEND2D_STATIC)
@@ -654,7 +692,7 @@ if (NOT BLEND2D_EMBED)
 
     # Other tests link Blend2D either statically or dynamically according to the
     # user settings.
-    blend2d_add_target(bl_test_fuzzer EXECUTABLE test/bl_test_fuzzer.cpp Blend2D::Blend2D "" "" "")
+    blend2d_add_target(bl_test_fuzzer EXECUTABLE test/bl_test_fuzzer.cpp Blend2D::Blend2D "${BLEND2D_SANITIZE_CFLAGS}" "" "")
   endif()
 endif()
 

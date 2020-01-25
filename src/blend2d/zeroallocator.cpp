@@ -685,12 +685,12 @@ UNIT(zero_allocator, -6) {
   INFO("Shuffling...");
   blZeroAllocatorTestShuffle(ptrArray, unsigned(kCount), prng);
 
-  INFO("Releasing 50% blocks...");
+  INFO("Releasing 50%% blocks...");
   for (i = 0; i < kCount / 2; i++)
     wrapper.release(ptrArray[i]);
   blZeroAllocatorTestUsage();
 
-  INFO("Allocating 50% blocks again...");
+  INFO("Allocating 50%% blocks again...");
   for (i = 0; i < kCount / 2; i++)
     ptrArray[i] = wrapper.alloc((prng.nextUInt32() % 8000) + 128);
   blZeroAllocatorTestUsage();

@@ -285,7 +285,8 @@ static BL_INLINE void blRasterContextBeforeStyleChange(BLRasterContextImpl* ctxI
 }
 
 template<uint32_t OpType>
-static BLResult BL_CDECL blRasterContextImplGetStyle(const BLRasterContextImpl* ctxI, void* object) noexcept {
+static BLResult BL_CDECL blRasterContextImplGetStyle(const BLContextImpl* baseImpl, void* object) noexcept {
+  const BLRasterContextImpl* ctxI = static_cast<const BLRasterContextImpl*>(baseImpl);
   const BLRasterContextStyleData* style = &ctxI->style[OpType];
 
   if (style->styleType <= BL_STYLE_TYPE_SOLID)
@@ -301,7 +302,8 @@ static BLResult BL_CDECL blRasterContextImplGetStyle(const BLRasterContextImpl* 
 }
 
 template<uint32_t OpType>
-static BLResult BL_CDECL blRasterContextImplGetStyleRgba32(const BLRasterContextImpl* ctxI, uint32_t* rgba32) noexcept {
+static BLResult BL_CDECL blRasterContextImplGetStyleRgba32(const BLContextImpl* baseImpl, uint32_t* rgba32) noexcept {
+  const BLRasterContextImpl* ctxI = static_cast<const BLRasterContextImpl*>(baseImpl);
   const BLRasterContextStyleData* style = &ctxI->style[OpType];
 
   if (style->styleType != BL_STYLE_TYPE_SOLID)
@@ -312,7 +314,8 @@ static BLResult BL_CDECL blRasterContextImplGetStyleRgba32(const BLRasterContext
 }
 
 template<uint32_t OpType>
-static BLResult BL_CDECL blRasterContextImplGetStyleRgba64(const BLRasterContextImpl* ctxI, uint64_t* rgba64) noexcept {
+static BLResult BL_CDECL blRasterContextImplGetStyleRgba64(const BLContextImpl* baseImpl, uint64_t* rgba64) noexcept {
+  const BLRasterContextImpl* ctxI = static_cast<const BLRasterContextImpl*>(baseImpl);
   const BLRasterContextStyleData* style = &ctxI->style[OpType];
 
   if (style->styleType != BL_STYLE_TYPE_SOLID)
@@ -323,7 +326,8 @@ static BLResult BL_CDECL blRasterContextImplGetStyleRgba64(const BLRasterContext
 }
 
 template<uint32_t OpType>
-static BLResult BL_CDECL blRasterContextImplSetStyle(BLRasterContextImpl* ctxI, const void* object) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStyle(BLContextImpl* baseImpl, const void* object) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   BLRasterContextStyleData* style = &ctxI->style[OpType];
 
   uint32_t contextFlags = ctxI->contextFlags;
@@ -417,7 +421,8 @@ static BLResult BL_CDECL blRasterContextImplSetStyle(BLRasterContextImpl* ctxI, 
 }
 
 template<uint32_t OpType>
-static BLResult BL_CDECL blRasterContextImplSetStyleRgba32(BLRasterContextImpl* ctxI, uint32_t rgba32) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStyleRgba32(BLContextImpl* baseImpl, uint32_t rgba32) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   BLRasterContextStyleData* style = &ctxI->style[OpType];
 
   uint32_t contextFlags = ctxI->contextFlags;
@@ -447,7 +452,8 @@ static BLResult BL_CDECL blRasterContextImplSetStyleRgba32(BLRasterContextImpl* 
 }
 
 template<uint32_t OpType>
-static BLResult BL_CDECL blRasterContextImplSetStyleRgba64(BLRasterContextImpl* ctxI, uint64_t rgba64) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStyleRgba64(BLContextImpl* baseImpl, uint64_t rgba64) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   BLRasterContextStyleData* style = &ctxI->style[OpType];
 
   uint32_t contextFlags = ctxI->contextFlags;
@@ -931,7 +937,9 @@ static BL_INLINE BLResult blRasterContextImplStrokeUnsafePath(BLRasterContextImp
 // [BLRasterContext - Flush]
 // ============================================================================
 
-BLResult BL_CDECL blRasterContextImplFlush(BLRasterContextImpl* ctxI, uint32_t flags) noexcept {
+BLResult BL_CDECL blRasterContextImplFlush(BLContextImpl* baseImpl, uint32_t flags) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   BL_UNUSED(ctxI);
   BL_UNUSED(flags);
 
@@ -1050,8 +1058,10 @@ static void blRasterContextImplDiscardStates(BLRasterContextImpl* ctxI, BLRaster
   ctxI->contextFlags = contextFlags;
 }
 
-static BLResult BL_CDECL blRasterContextImplSave(BLRasterContextImpl* ctxI, BLContextCookie* cookie) noexcept {
+static BLResult BL_CDECL blRasterContextImplSave(BLContextImpl* baseImpl, BLContextCookie* cookie) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   BLRasterContextSavedState* newState = ctxI->statePool.alloc();
+
   if (BL_UNLIKELY(!newState))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
@@ -1075,8 +1085,10 @@ static BLResult BL_CDECL blRasterContextImplSave(BLRasterContextImpl* ctxI, BLCo
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplRestore(BLRasterContextImpl* ctxI, const BLContextCookie* cookie) noexcept {
+static BLResult BL_CDECL blRasterContextImplRestore(BLContextImpl* baseImpl, const BLContextCookie* cookie) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   BLRasterContextSavedState* savedState = ctxI->savedState;
+
   if (BL_UNLIKELY(!savedState))
     return blTraceError(BL_ERROR_NO_STATES_TO_RESTORE);
 
@@ -1190,7 +1202,9 @@ static BLResult BL_CDECL blRasterContextImplRestore(BLRasterContextImpl* ctxI, c
 // [BLRasterContext - Transformations]
 // ============================================================================
 
-static BLResult BL_CDECL blRasterContextImplMatrixOp(BLRasterContextImpl* ctxI, uint32_t opType, const void* opData) noexcept {
+static BLResult BL_CDECL blRasterContextImplMatrixOp(BLContextImpl* baseImpl, uint32_t opType, const void* opData) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   blRasterContextImplBeforeUserMatrixChange(ctxI);
   BL_PROPAGATE(blMatrix2DApplyOp(&ctxI->currentState.userMatrix, opType, opData));
 
@@ -1198,7 +1212,9 @@ static BLResult BL_CDECL blRasterContextImplMatrixOp(BLRasterContextImpl* ctxI, 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplUserToMeta(BLRasterContextImpl* ctxI) noexcept {
+static BLResult BL_CDECL blRasterContextImplUserToMeta(BLContextImpl* baseImpl) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   constexpr uint32_t kUserAndMetaFlags = BL_RASTER_CONTEXT_STATE_META_MATRIX |
                                          BL_RASTER_CONTEXT_STATE_USER_MATRIX ;
 
@@ -1231,7 +1247,9 @@ static BLResult BL_CDECL blRasterContextImplUserToMeta(BLRasterContextImpl* ctxI
 // [BLRasterContext - Rendering Hints]
 // ============================================================================
 
-static BLResult BL_CDECL blRasterContextImplSetHint(BLRasterContextImpl* ctxI, uint32_t hintType, uint32_t value) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetHint(BLContextImpl* baseImpl, uint32_t hintType, uint32_t value) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   switch (hintType) {
     case BL_CONTEXT_HINT_RENDERING_QUALITY:
       if (BL_UNLIKELY(value >= BL_RENDERING_QUALITY_COUNT))
@@ -1259,7 +1277,9 @@ static BLResult BL_CDECL blRasterContextImplSetHint(BLRasterContextImpl* ctxI, u
   }
 }
 
-static BLResult BL_CDECL blRasterContextImplSetHints(BLRasterContextImpl* ctxI, const BLContextHints* hints) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetHints(BLContextImpl* baseImpl, const BLContextHints* hints) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   uint8_t renderingQuality = hints->renderingQuality;
   uint8_t patternQuality = hints->patternQuality;
   uint8_t gradientQuality = hints->gradientQuality;
@@ -1279,7 +1299,9 @@ static BLResult BL_CDECL blRasterContextImplSetHints(BLRasterContextImpl* ctxI, 
 // [BLRasterContext - Approximation Options]
 // ============================================================================
 
-static BLResult BL_CDECL blRasterContextImplSetFlattenMode(BLRasterContextImpl* ctxI, uint32_t mode) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetFlattenMode(BLContextImpl* baseImpl, uint32_t mode) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(mode >= BL_FLATTEN_MODE_COUNT))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1292,7 +1314,9 @@ static BLResult BL_CDECL blRasterContextImplSetFlattenMode(BLRasterContextImpl* 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplSetFlattenTolerance(BLRasterContextImpl* ctxI, double tolerance) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetFlattenTolerance(BLContextImpl* baseImpl, double tolerance) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(blIsNaN(tolerance)))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1308,7 +1332,9 @@ static BLResult BL_CDECL blRasterContextImplSetFlattenTolerance(BLRasterContextI
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplSetApproximationOptions(BLRasterContextImpl* ctxI, const BLApproximationOptions* options) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetApproximationOptions(BLContextImpl* baseImpl, const BLApproximationOptions* options) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   uint32_t flattenMode = options->flattenMode;
   uint32_t offsetMode = options->offsetMode;
 
@@ -1339,7 +1365,9 @@ static BLResult BL_CDECL blRasterContextImplSetApproximationOptions(BLRasterCont
 // [BLRasterContext - Compositing Options]
 // ============================================================================
 
-static BLResult BL_CDECL blRasterContextImplSetCompOp(BLRasterContextImpl* ctxI, uint32_t compOp) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetCompOp(BLContextImpl* baseImpl, uint32_t compOp) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(compOp >= BL_COMP_OP_COUNT))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1349,7 +1377,9 @@ static BLResult BL_CDECL blRasterContextImplSetCompOp(BLRasterContextImpl* ctxI,
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplSetGlobalAlpha(BLRasterContextImpl* ctxI, double alpha) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetGlobalAlpha(BLContextImpl* baseImpl, double alpha) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(blIsNaN(alpha)))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1386,7 +1416,9 @@ static BLResult BL_CDECL blRasterContextImplSetGlobalAlpha(BLRasterContextImpl* 
 // [BLRasterContext - Fill Options]
 // ============================================================================
 
-static BLResult BL_CDECL blRasterContextImplSetFillRule(BLRasterContextImpl* ctxI, uint32_t fillRule) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetFillRule(BLContextImpl* baseImpl, uint32_t fillRule) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(fillRule >= BL_FILL_RULE_COUNT))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1394,7 +1426,9 @@ static BLResult BL_CDECL blRasterContextImplSetFillRule(BLRasterContextImpl* ctx
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplSetFillAlpha(BLRasterContextImpl* ctxI, double alpha) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetFillAlpha(BLContextImpl* baseImpl, double alpha) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(blIsNaN(alpha)))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1415,7 +1449,9 @@ static BLResult BL_CDECL blRasterContextImplSetFillAlpha(BLRasterContextImpl* ct
 // [BLRasterContext - Stroke Options]
 // ============================================================================
 
-static BLResult BL_CDECL blRasterContextImplSetStrokeWidth(BLRasterContextImpl* ctxI, double width) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStrokeWidth(BLContextImpl* baseImpl, double width) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   blRasterContextImplBeforeStrokeChange(ctxI);
   ctxI->contextFlags &= ~(BL_RASTER_CONTEXT_NO_STROKE_OPTIONS    |
                           BL_RASTER_CONTEXT_STATE_STROKE_OPTIONS |
@@ -1425,7 +1461,9 @@ static BLResult BL_CDECL blRasterContextImplSetStrokeWidth(BLRasterContextImpl* 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplSetStrokeMiterLimit(BLRasterContextImpl* ctxI, double miterLimit) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStrokeMiterLimit(BLContextImpl* baseImpl, double miterLimit) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   blRasterContextImplBeforeStrokeChange(ctxI);
   ctxI->contextFlags &= ~(BL_RASTER_CONTEXT_NO_STROKE_OPTIONS    |
                           BL_RASTER_CONTEXT_STATE_STROKE_OPTIONS |
@@ -1435,7 +1473,9 @@ static BLResult BL_CDECL blRasterContextImplSetStrokeMiterLimit(BLRasterContextI
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplSetStrokeCap(BLRasterContextImpl* ctxI, uint32_t position, uint32_t strokeCap) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStrokeCap(BLContextImpl* baseImpl, uint32_t position, uint32_t strokeCap) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(position >= BL_STROKE_CAP_POSITION_COUNT || strokeCap >= BL_STROKE_CAP_COUNT))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1446,7 +1486,9 @@ static BLResult BL_CDECL blRasterContextImplSetStrokeCap(BLRasterContextImpl* ct
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplSetStrokeCaps(BLRasterContextImpl* ctxI, uint32_t strokeCap) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStrokeCaps(BLContextImpl* baseImpl, uint32_t strokeCap) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(strokeCap >= BL_STROKE_CAP_COUNT))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1458,7 +1500,9 @@ static BLResult BL_CDECL blRasterContextImplSetStrokeCaps(BLRasterContextImpl* c
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplSetStrokeJoin(BLRasterContextImpl* ctxI, uint32_t strokeJoin) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStrokeJoin(BLContextImpl* baseImpl, uint32_t strokeJoin) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(strokeJoin >= BL_STROKE_JOIN_COUNT))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1469,7 +1513,9 @@ static BLResult BL_CDECL blRasterContextImplSetStrokeJoin(BLRasterContextImpl* c
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplSetStrokeDashOffset(BLRasterContextImpl* ctxI, double dashOffset) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStrokeDashOffset(BLContextImpl* baseImpl, double dashOffset) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   blRasterContextImplBeforeStrokeChange(ctxI);
   ctxI->contextFlags &= ~(BL_RASTER_CONTEXT_NO_STROKE_OPTIONS    |
                           BL_RASTER_CONTEXT_STATE_STROKE_OPTIONS |
@@ -1479,7 +1525,9 @@ static BLResult BL_CDECL blRasterContextImplSetStrokeDashOffset(BLRasterContextI
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplSetStrokeDashArray(BLRasterContextImpl* ctxI, const BLArrayCore* dashArray) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStrokeDashArray(BLContextImpl* baseImpl, const BLArrayCore* dashArray) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(dashArray->impl->implType != BL_IMPL_TYPE_ARRAY_F64))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1492,7 +1540,9 @@ static BLResult BL_CDECL blRasterContextImplSetStrokeDashArray(BLRasterContextIm
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplSetStrokeTransformOrder(BLRasterContextImpl* ctxI, uint32_t transformOrder) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStrokeTransformOrder(BLContextImpl* baseImpl, uint32_t transformOrder) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(transformOrder >= BL_STROKE_TRANSFORM_ORDER_COUNT))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1503,7 +1553,9 @@ static BLResult BL_CDECL blRasterContextImplSetStrokeTransformOrder(BLRasterCont
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplSetStrokeOptions(BLRasterContextImpl* ctxI, const BLStrokeOptionsCore* options) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStrokeOptions(BLContextImpl* baseImpl, const BLStrokeOptionsCore* options) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(options->startCap >= BL_STROKE_CAP_COUNT ||
                   options->endCap >= BL_STROKE_CAP_COUNT ||
                   options->join >= BL_STROKE_JOIN_COUNT ||
@@ -1517,7 +1569,9 @@ static BLResult BL_CDECL blRasterContextImplSetStrokeOptions(BLRasterContextImpl
   return blStrokeOptionsAssignWeak(&ctxI->currentState.strokeOptions, options);
 }
 
-static BLResult BL_CDECL blRasterContextImplSetStrokeAlpha(BLRasterContextImpl* ctxI, double alpha) noexcept {
+static BLResult BL_CDECL blRasterContextImplSetStrokeAlpha(BLContextImpl* baseImpl, double alpha) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (BL_UNLIKELY(blIsNaN(alpha)))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1539,7 +1593,7 @@ static BLResult BL_CDECL blRasterContextImplSetStrokeAlpha(BLRasterContextImpl* 
 // [BLRasterContext - Clip Operations]
 // ============================================================================
 
-static BLResult BL_CDECL blRasterContextImplClipToFinalBox(BLRasterContextImpl* ctxI, const BLBox& inputBox) noexcept {
+static BLResult blRasterContextImplClipToFinalBox(BLRasterContextImpl* ctxI, const BLBox& inputBox) noexcept {
   BLBox b;
   blRasterContextImplBeforeClipBoxChange(ctxI);
 
@@ -1570,13 +1624,17 @@ static BLResult BL_CDECL blRasterContextImplClipToFinalBox(BLRasterContextImpl* 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplClipToRectD(BLRasterContextImpl* ctxI, const BLRect* rect) noexcept {
+static BLResult BL_CDECL blRasterContextImplClipToRectD(BLContextImpl* baseImpl, const BLRect* rect) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   // TODO: Non-rectangular clipping is not supperted yet (affine transformation).
   BLBox inputBox = BLBox(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
   return blRasterContextImplClipToFinalBox(ctxI, blMatrix2DMapBox(ctxI->finalMatrix, inputBox));
 }
 
-static BLResult BL_CDECL blRasterContextImplClipToRectI(BLRasterContextImpl* ctxI, const BLRectI* rect) noexcept {
+static BLResult BL_CDECL blRasterContextImplClipToRectI(BLContextImpl* baseImpl, const BLRectI* rect) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   // Don't bother if the current ClipBox is not aligned or the translation is not integral.
   if (ctxI->workerCtx.clipMode != BL_CLIP_MODE_ALIGNED_RECT || !(ctxI->contextFlags & BL_RASTER_CONTEXT_INTEGRAL_TRANSLATION)) {
     BLRect rectD;
@@ -1639,7 +1697,8 @@ Use64Bit:
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplRestoreClipping(BLRasterContextImpl* ctxI) noexcept {
+static BLResult BL_CDECL blRasterContextImplRestoreClipping(BLContextImpl* baseImpl) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   BLRasterContextSavedState* state = ctxI->savedState;
 
   if (!(ctxI->contextFlags & BL_RASTER_CONTEXT_STATE_CLIP)) {
@@ -1664,7 +1723,9 @@ static BLResult BL_CDECL blRasterContextImplRestoreClipping(BLRasterContextImpl*
 // [BLRasterContext - Clear Operations]
 // ============================================================================
 
-static BLResult BL_CDECL blRasterContextImplClearAll(BLRasterContextImpl* ctxI) noexcept {
+static BLResult BL_CDECL blRasterContextImplClearAll(BLContextImpl* baseImpl) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   BLRasterFillCmd fillCmd;
   uint32_t status = blRasterContextImplPrepareClear(ctxI, &fillCmd, BL_RASTER_CONTEXT_PREFERRED_FILL_RULE, BL_RASTER_CONTEXT_NO_CLEAR_FLAGS_FORCE);
 
@@ -1681,7 +1742,9 @@ static BLResult BL_CDECL blRasterContextImplClearAll(BLRasterContextImpl* ctxI) 
   return blRasterContextImplFillClippedBoxAU(ctxI, &fillCmd, box);
 }
 
-static BLResult BL_CDECL blRasterContextImplClearRectI(BLRasterContextImpl* ctxI, const BLRectI* rect) noexcept {
+static BLResult BL_CDECL blRasterContextImplClearRectI(BLContextImpl* baseImpl, const BLRectI* rect) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   BLRasterFillCmd fillCmd;
   uint32_t status = blRasterContextImplPrepareClear(ctxI, &fillCmd, BL_RASTER_CONTEXT_PREFERRED_FILL_RULE, BL_RASTER_CONTEXT_NO_CLEAR_FLAGS);
 
@@ -1691,7 +1754,9 @@ static BLResult BL_CDECL blRasterContextImplClearRectI(BLRasterContextImpl* ctxI
   return blRasterContextImplFillUnsafeRectI(ctxI, &fillCmd, *rect);
 }
 
-static BLResult BL_CDECL blRasterContextImplClearRectD(BLRasterContextImpl* ctxI, const BLRect* rect) noexcept {
+static BLResult BL_CDECL blRasterContextImplClearRectD(BLContextImpl* baseImpl, const BLRect* rect) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   BLRasterFillCmd fillCmd;
   uint32_t status = blRasterContextImplPrepareClear(ctxI, &fillCmd, BL_RASTER_CONTEXT_PREFERRED_FILL_RULE, BL_RASTER_CONTEXT_NO_CLEAR_FLAGS);
 
@@ -1706,7 +1771,9 @@ static BLResult BL_CDECL blRasterContextImplClearRectD(BLRasterContextImpl* ctxI
 // [BLRasterContext - Fill Operations]
 // ============================================================================
 
-static BLResult BL_CDECL blRasterContextImplFillAll(BLRasterContextImpl* ctxI) noexcept {
+static BLResult BL_CDECL blRasterContextImplFillAll(BLContextImpl* baseImpl) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   BLRasterFillCmd fillCmd;
   uint32_t status = blRasterContextImplPrepareFill(ctxI, &fillCmd, &ctxI->style[BL_CONTEXT_OP_TYPE_FILL], BL_RASTER_CONTEXT_PREFERRED_FILL_RULE, BL_RASTER_CONTEXT_NO_FILL_FLAGS_FORCE);
 
@@ -1723,17 +1790,19 @@ static BLResult BL_CDECL blRasterContextImplFillAll(BLRasterContextImpl* ctxI) n
   return blRasterContextImplFillClippedBoxAU(ctxI, &fillCmd, box);
 }
 
-static BLResult BL_CDECL blRasterContextImplFillRectI(BLRasterContextImpl* ctxI, const BLRectI* rect) noexcept {
+static BLResult BL_CDECL blRasterContextImplFillRectI(BLContextImpl* baseImpl, const BLRectI* rect) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   BLRasterFillCmd fillCmd;
   uint32_t status = blRasterContextImplPrepareFill(ctxI, &fillCmd, &ctxI->style[BL_CONTEXT_OP_TYPE_FILL], BL_RASTER_CONTEXT_PREFERRED_FILL_RULE, BL_RASTER_CONTEXT_NO_FILL_FLAGS);
-
   if (status == BL_RASTER_CONTEXT_FILL_STATUS_NOP)
     return BL_SUCCESS;
-
   return blRasterContextImplFillUnsafeRectI(ctxI, &fillCmd, *rect);
 }
 
-static BLResult BL_CDECL blRasterContextImplFillRectD(BLRasterContextImpl* ctxI, const BLRect* rect) noexcept {
+static BLResult BL_CDECL blRasterContextImplFillRectD(BLContextImpl* baseImpl, const BLRect* rect) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   BLRasterFillCmd fillCmd;
   uint32_t status = blRasterContextImplPrepareFill(ctxI, &fillCmd, &ctxI->style[BL_CONTEXT_OP_TYPE_FILL], BL_RASTER_CONTEXT_PREFERRED_FILL_RULE, BL_RASTER_CONTEXT_NO_FILL_FLAGS);
 
@@ -1744,7 +1813,9 @@ static BLResult BL_CDECL blRasterContextImplFillRectD(BLRasterContextImpl* ctxI,
   return blRasterContextImplFillUnsafeBox(ctxI, &fillCmd, ctxI->finalMatrixFixed, ctxI->finalMatrixFixedType, boxD);
 }
 
-static BLResult BL_CDECL blRasterContextImplFillGeometry(BLRasterContextImpl* ctxI, uint32_t geometryType, const void* geometryData) noexcept {
+static BLResult BL_CDECL blRasterContextImplFillGeometry(BLContextImpl* baseImpl, uint32_t geometryType, const void* geometryData) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   BLRasterFillCmd fillCmd;
   uint32_t status = blRasterContextImplPrepareFill(ctxI, &fillCmd, &ctxI->style[BL_CONTEXT_OP_TYPE_FILL], ctxI->currentState.fillRule, BL_RASTER_CONTEXT_NO_FILL_FLAGS);
 
@@ -1814,11 +1885,13 @@ static BLResult BL_CDECL blRasterContextImplFillGeometry(BLRasterContextImpl* ct
   }
 }
 
-static BLResult BL_CDECL blRasterContextImplFillPathD(BLRasterContextImpl* ctxI, const BLPathCore* path) noexcept {
+static BLResult BL_CDECL blRasterContextImplFillPathD(BLContextImpl* baseImpl, const BLPathCore* path) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   return blRasterContextImplFillGeometry(ctxI, BL_GEOMETRY_TYPE_PATH, path);
 }
 
-static BLResult BL_CDECL blRasterContextImplFillGlyphRunD(BLRasterContextImpl* ctxI, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
+static BLResult BL_CDECL blRasterContextImplFillGlyphRunD(BLContextImpl* baseImpl, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   if (blDownCast(font)->isNone())
     return blTraceError(BL_ERROR_NOT_INITIALIZED);
 
@@ -1864,12 +1937,14 @@ static BLResult BL_CDECL blRasterContextImplFillGlyphRunD(BLRasterContextImpl* c
   return blRasterContextImplFillClippedEdges(ctxI, &fillCmd);
 }
 
-static BLResult BL_CDECL blRasterContextImplFillGlyphRunI(BLRasterContextImpl* ctxI, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
+static BLResult BL_CDECL blRasterContextImplFillGlyphRunI(BLContextImpl* baseImpl, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   BLPoint ptD(pt->x, pt->y);
   return blRasterContextImplFillGlyphRunD(ctxI, &ptD, font, glyphRun);
 }
 
-static BLResult BL_CDECL blRasterContextImplFillTextD(BLRasterContextImpl* ctxI, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) noexcept {
+static BLResult BL_CDECL blRasterContextImplFillTextD(BLContextImpl* baseImpl, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   if (blDownCast(font)->isNone())
     return blTraceError(BL_ERROR_NOT_INITIALIZED);
 
@@ -1881,7 +1956,8 @@ static BLResult BL_CDECL blRasterContextImplFillTextD(BLRasterContextImpl* ctxI,
   return blRasterContextImplFillGlyphRunD(ctxI, pt, font, &ctxI->glyphBuffer.impl->glyphRun);
 }
 
-static BLResult BL_CDECL blRasterContextImplFillTextI(BLRasterContextImpl* ctxI, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) noexcept {
+static BLResult BL_CDECL blRasterContextImplFillTextI(BLContextImpl* baseImpl, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   BLPoint ptD(pt->x, pt->y);
   return blRasterContextImplFillTextD(ctxI, &ptD, font, text, size, encoding);
 }
@@ -1890,7 +1966,9 @@ static BLResult BL_CDECL blRasterContextImplFillTextI(BLRasterContextImpl* ctxI,
 // [BLRasterContext - Stroke Operations]
 // ============================================================================
 
-static BLResult BL_CDECL blRasterContextImplStrokeRectI(BLRasterContextImpl* ctxI, const BLRectI* rect) noexcept {
+static BLResult BL_CDECL blRasterContextImplStrokeRectI(BLContextImpl* baseImpl, const BLRectI* rect) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   BLRasterFillCmd fillCmd;
   uint32_t status = blRasterContextImplPrepareFill(ctxI, &fillCmd, &ctxI->style[BL_CONTEXT_OP_TYPE_STROKE], BL_FILL_RULE_NON_ZERO, BL_RASTER_CONTEXT_NO_STROKE_FLAGS);
 
@@ -1904,7 +1982,9 @@ static BLResult BL_CDECL blRasterContextImplStrokeRectI(BLRasterContextImpl* ctx
   return blRasterContextImplStrokeUnsafePath(ctxI, &fillCmd, &path);
 }
 
-static BLResult BL_CDECL blRasterContextImplStrokeRectD(BLRasterContextImpl* ctxI, const BLRect* rect) noexcept {
+static BLResult BL_CDECL blRasterContextImplStrokeRectD(BLContextImpl* baseImpl, const BLRect* rect) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   BLRasterFillCmd fillCmd;
   uint32_t status = blRasterContextImplPrepareFill(ctxI, &fillCmd, &ctxI->style[BL_CONTEXT_OP_TYPE_STROKE], BL_FILL_RULE_NON_ZERO, BL_RASTER_CONTEXT_NO_STROKE_FLAGS);
 
@@ -1918,7 +1998,9 @@ static BLResult BL_CDECL blRasterContextImplStrokeRectD(BLRasterContextImpl* ctx
   return blRasterContextImplStrokeUnsafePath(ctxI, &fillCmd, &path);
 }
 
-static BLResult BL_CDECL blRasterContextImplStrokeGeometry(BLRasterContextImpl* ctxI, uint32_t geometryType, const void* geometryData) noexcept {
+static BLResult BL_CDECL blRasterContextImplStrokeGeometry(BLContextImpl* baseImpl, uint32_t geometryType, const void* geometryData) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (geometryType == BL_GEOMETRY_TYPE_RECTD)
     return blRasterContextImplStrokeRectD(ctxI, static_cast<const BLRect*>(geometryData));
 
@@ -1944,11 +2026,14 @@ static BLResult BL_CDECL blRasterContextImplStrokeGeometry(BLRasterContextImpl* 
   return blRasterContextImplStrokeUnsafePath(ctxI, &fillCmd, path);
 }
 
-static BLResult BL_CDECL blRasterContextImplStrokePathD(BLRasterContextImpl* ctxI, const BLPathCore* path) noexcept {
+static BLResult BL_CDECL blRasterContextImplStrokePathD(BLContextImpl* baseImpl, const BLPathCore* path) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   return blRasterContextImplStrokeGeometry(ctxI, BL_GEOMETRY_TYPE_PATH, path);
 }
 
-static BLResult BL_CDECL blRasterContextImplStrokeGlyphRunD(BLRasterContextImpl* ctxI, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
+static BLResult BL_CDECL blRasterContextImplStrokeGlyphRunD(BLContextImpl* baseImpl, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (blDownCast(font)->isNone())
     return blTraceError(BL_ERROR_NOT_INITIALIZED);
 
@@ -2019,12 +2104,14 @@ static BLResult BL_CDECL blRasterContextImplStrokeGlyphRunD(BLRasterContextImpl*
   return blRasterContextImplFillClippedEdges(ctxI, &fillCmd);
 }
 
-static BLResult BL_CDECL blRasterContextImplStrokeGlyphRunI(BLRasterContextImpl* ctxI, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
+static BLResult BL_CDECL blRasterContextImplStrokeGlyphRunI(BLContextImpl* baseImpl, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   BLPoint ptD(pt->x, pt->y);
   return blRasterContextImplStrokeGlyphRunD(ctxI, &ptD, font, glyphRun);
 }
 
-static BLResult BL_CDECL blRasterContextImplStrokeTextD(BLRasterContextImpl* ctxI, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) noexcept {
+static BLResult BL_CDECL blRasterContextImplStrokeTextD(BLContextImpl* baseImpl, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   if (blDownCast(font)->isNone())
     return blTraceError(BL_ERROR_NOT_INITIALIZED);
 
@@ -2036,7 +2123,8 @@ static BLResult BL_CDECL blRasterContextImplStrokeTextD(BLRasterContextImpl* ctx
   return blRasterContextImplStrokeGlyphRunD(ctxI, pt, font, &ctxI->glyphBuffer.impl->glyphRun);
 }
 
-static BLResult BL_CDECL blRasterContextImplStrokeTextI(BLRasterContextImpl* ctxI, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) noexcept {
+static BLResult BL_CDECL blRasterContextImplStrokeTextI(BLContextImpl* baseImpl, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   BLPoint ptD(pt->x, pt->y);
   return blRasterContextImplStrokeTextD(ctxI, &ptD, font, text, size, encoding);
 }
@@ -2080,7 +2168,8 @@ static BL_INLINE uint32_t blRasterContextImplPrepareBlit(BLRasterContextImpl* ct
   return BL_RASTER_CONTEXT_FILL_STATUS_SOLID;
 }
 
-static BLResult BL_CDECL blRasterContextImplBlitImageD(BLRasterContextImpl* ctxI, const BLPoint* pt, const BLImageCore* img, const BLRectI* imgArea) noexcept {
+static BLResult BL_CDECL blRasterContextImplBlitImageD(BLContextImpl* baseImpl, const BLPoint* pt, const BLImageCore* img, const BLRectI* imgArea) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   const BLImageImpl* imgI = img->impl;
 
   BLPoint dst(*pt);
@@ -2168,7 +2257,9 @@ static BLResult BL_CDECL blRasterContextImplBlitImageD(BLRasterContextImpl* ctxI
   }
 }
 
-static BLResult BL_CDECL blRasterContextImplBlitImageI(BLRasterContextImpl* ctxI, const BLPointI* pt, const BLImageCore* img, const BLRectI* imgArea) noexcept {
+static BLResult BL_CDECL blRasterContextImplBlitImageI(BLContextImpl* baseImpl, const BLPointI* pt, const BLImageCore* img, const BLRectI* imgArea) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (!(ctxI->contextFlags & BL_RASTER_CONTEXT_INTEGRAL_TRANSLATION)) {
     BLPoint ptD(pt->x, pt->y);
     return blRasterContextImplBlitImageD(ctxI, &ptD, img, imgArea);
@@ -2262,7 +2353,8 @@ Use64Bit:
   return blRasterContextImplFillClippedBoxAA(ctxI, &fillCmd, dstBox);
 }
 
-static BLResult BL_CDECL blRasterContextImplBlitScaledImageD(BLRasterContextImpl* ctxI, const BLRect* rect, const BLImageCore* img, const BLRectI* imgArea) noexcept {
+static BLResult BL_CDECL blRasterContextImplBlitScaledImageD(BLContextImpl* baseImpl, const BLRect* rect, const BLImageCore* img, const BLRectI* imgArea) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   const BLImageImpl* imgI = img->impl;
 
   int srcX = 0;
@@ -2309,7 +2401,8 @@ static BLResult BL_CDECL blRasterContextImplBlitScaledImageD(BLRasterContextImpl
   }
 }
 
-static BLResult BL_CDECL blRasterContextImplBlitScaledImageI(BLRasterContextImpl* ctxI, const BLRectI* rect, const BLImageCore* img, const BLRectI* imgArea) noexcept {
+static BLResult BL_CDECL blRasterContextImplBlitScaledImageI(BLContextImpl* baseImpl, const BLRectI* rect, const BLImageCore* img, const BLRectI* imgArea) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   const BLImageImpl* imgI = img->impl;
 
   int srcX = 0;
@@ -2595,7 +2688,9 @@ BLResult blRasterContextImplCreate(BLContextImpl** out, BLImageCore* image, cons
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blRasterContextImplDestroy(BLRasterContextImpl* ctxI) noexcept {
+static BLResult BL_CDECL blRasterContextImplDestroy(BLContextImpl* baseImpl) noexcept {
+  BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
+
   if (ctxI->dstImage.impl)
     blRasterContextImplDetach(ctxI);
 
@@ -2612,83 +2707,83 @@ static void blRasterContextVirtInit(BLContextVirt* virt) noexcept {
   constexpr uint32_t F = BL_CONTEXT_OP_TYPE_FILL;
   constexpr uint32_t S = BL_CONTEXT_OP_TYPE_STROKE;
 
-  blAssignFunc(&virt->destroy                , blRasterContextImplDestroy);
-  blAssignFunc(&virt->flush                  , blRasterContextImplFlush);
+  virt->destroy                 = blRasterContextImplDestroy;
+  virt->flush                   = blRasterContextImplFlush;
 
-  blAssignFunc(&virt->save                   , blRasterContextImplSave);
-  blAssignFunc(&virt->restore                , blRasterContextImplRestore);
+  virt->save                    = blRasterContextImplSave;
+  virt->restore                 = blRasterContextImplRestore;
 
-  blAssignFunc(&virt->matrixOp               , blRasterContextImplMatrixOp);
-  blAssignFunc(&virt->userToMeta             , blRasterContextImplUserToMeta);
+  virt->matrixOp                = blRasterContextImplMatrixOp;
+  virt->userToMeta              = blRasterContextImplUserToMeta;
 
-  blAssignFunc(&virt->setHint                , blRasterContextImplSetHint);
-  blAssignFunc(&virt->setHints               , blRasterContextImplSetHints);
+  virt->setHint                 = blRasterContextImplSetHint;
+  virt->setHints                = blRasterContextImplSetHints;
 
-  blAssignFunc(&virt->setFlattenMode         , blRasterContextImplSetFlattenMode);
-  blAssignFunc(&virt->setFlattenTolerance    , blRasterContextImplSetFlattenTolerance);
-  blAssignFunc(&virt->setApproximationOptions, blRasterContextImplSetApproximationOptions);
+  virt->setFlattenMode          = blRasterContextImplSetFlattenMode;
+  virt->setFlattenTolerance     = blRasterContextImplSetFlattenTolerance;
+  virt->setApproximationOptions = blRasterContextImplSetApproximationOptions;
 
-  blAssignFunc(&virt->setCompOp              , blRasterContextImplSetCompOp);
-  blAssignFunc(&virt->setGlobalAlpha         , blRasterContextImplSetGlobalAlpha);
+  virt->setCompOp               = blRasterContextImplSetCompOp;
+  virt->setGlobalAlpha          = blRasterContextImplSetGlobalAlpha;
 
-  blAssignFunc(&virt->setStyleAlpha[F]       , blRasterContextImplSetFillAlpha);
-  blAssignFunc(&virt->setStyleAlpha[S]       , blRasterContextImplSetStrokeAlpha);
-  blAssignFunc(&virt->getStyle[F]            , blRasterContextImplGetStyle<F>);
-  blAssignFunc(&virt->getStyle[S]            , blRasterContextImplGetStyle<S>);
-  blAssignFunc(&virt->getStyleRgba32[F]      , blRasterContextImplGetStyleRgba32<F>);
-  blAssignFunc(&virt->getStyleRgba32[S]      , blRasterContextImplGetStyleRgba32<S>);
-  blAssignFunc(&virt->getStyleRgba64[F]      , blRasterContextImplGetStyleRgba64<F>);
-  blAssignFunc(&virt->getStyleRgba64[S]      , blRasterContextImplGetStyleRgba64<S>);
-  blAssignFunc(&virt->setStyle[F]            , blRasterContextImplSetStyle<F>);
-  blAssignFunc(&virt->setStyle[S]            , blRasterContextImplSetStyle<S>);
-  blAssignFunc(&virt->setStyleRgba32[F]      , blRasterContextImplSetStyleRgba32<F>);
-  blAssignFunc(&virt->setStyleRgba32[S]      , blRasterContextImplSetStyleRgba32<S>);
-  blAssignFunc(&virt->setStyleRgba64[F]      , blRasterContextImplSetStyleRgba64<F>);
-  blAssignFunc(&virt->setStyleRgba64[S]      , blRasterContextImplSetStyleRgba64<S>);
+  virt->setStyleAlpha[F]        = blRasterContextImplSetFillAlpha;
+  virt->setStyleAlpha[S]        = blRasterContextImplSetStrokeAlpha;
+  virt->getStyle[F]             = blRasterContextImplGetStyle<F>;
+  virt->getStyle[S]             = blRasterContextImplGetStyle<S>;
+  virt->getStyleRgba32[F]       = blRasterContextImplGetStyleRgba32<F>;
+  virt->getStyleRgba32[S]       = blRasterContextImplGetStyleRgba32<S>;
+  virt->getStyleRgba64[F]       = blRasterContextImplGetStyleRgba64<F>;
+  virt->getStyleRgba64[S]       = blRasterContextImplGetStyleRgba64<S>;
+  virt->setStyle[F]             = blRasterContextImplSetStyle<F>;
+  virt->setStyle[S]             = blRasterContextImplSetStyle<S>;
+  virt->setStyleRgba32[F]       = blRasterContextImplSetStyleRgba32<F>;
+  virt->setStyleRgba32[S]       = blRasterContextImplSetStyleRgba32<S>;
+  virt->setStyleRgba64[F]       = blRasterContextImplSetStyleRgba64<F>;
+  virt->setStyleRgba64[S]       = blRasterContextImplSetStyleRgba64<S>;
 
-  blAssignFunc(&virt->setFillRule            , blRasterContextImplSetFillRule);
+  virt->setFillRule             = blRasterContextImplSetFillRule;
 
-  blAssignFunc(&virt->setStrokeWidth         , blRasterContextImplSetStrokeWidth);
-  blAssignFunc(&virt->setStrokeMiterLimit    , blRasterContextImplSetStrokeMiterLimit);
-  blAssignFunc(&virt->setStrokeCap           , blRasterContextImplSetStrokeCap);
-  blAssignFunc(&virt->setStrokeCaps          , blRasterContextImplSetStrokeCaps);
-  blAssignFunc(&virt->setStrokeJoin          , blRasterContextImplSetStrokeJoin);
-  blAssignFunc(&virt->setStrokeTransformOrder, blRasterContextImplSetStrokeTransformOrder);
-  blAssignFunc(&virt->setStrokeDashOffset    , blRasterContextImplSetStrokeDashOffset);
-  blAssignFunc(&virt->setStrokeDashArray     , blRasterContextImplSetStrokeDashArray);
-  blAssignFunc(&virt->setStrokeOptions       , blRasterContextImplSetStrokeOptions);
+  virt->setStrokeWidth          = blRasterContextImplSetStrokeWidth;
+  virt->setStrokeMiterLimit     = blRasterContextImplSetStrokeMiterLimit;
+  virt->setStrokeCap            = blRasterContextImplSetStrokeCap;
+  virt->setStrokeCaps           = blRasterContextImplSetStrokeCaps;
+  virt->setStrokeJoin           = blRasterContextImplSetStrokeJoin;
+  virt->setStrokeTransformOrder = blRasterContextImplSetStrokeTransformOrder;
+  virt->setStrokeDashOffset     = blRasterContextImplSetStrokeDashOffset;
+  virt->setStrokeDashArray      = blRasterContextImplSetStrokeDashArray;
+  virt->setStrokeOptions        = blRasterContextImplSetStrokeOptions;
 
-  blAssignFunc(&virt->clipToRectI            , blRasterContextImplClipToRectI);
-  blAssignFunc(&virt->clipToRectD            , blRasterContextImplClipToRectD);
-  blAssignFunc(&virt->restoreClipping        , blRasterContextImplRestoreClipping);
+  virt->clipToRectI             = blRasterContextImplClipToRectI;
+  virt->clipToRectD             = blRasterContextImplClipToRectD;
+  virt->restoreClipping         = blRasterContextImplRestoreClipping;
 
-  blAssignFunc(&virt->clearAll               , blRasterContextImplClearAll);
-  blAssignFunc(&virt->clearRectI             , blRasterContextImplClearRectI);
-  blAssignFunc(&virt->clearRectD             , blRasterContextImplClearRectD);
+  virt->clearAll                = blRasterContextImplClearAll;
+  virt->clearRectI              = blRasterContextImplClearRectI;
+  virt->clearRectD              = blRasterContextImplClearRectD;
 
-  blAssignFunc(&virt->fillAll                , blRasterContextImplFillAll);
-  blAssignFunc(&virt->fillRectI              , blRasterContextImplFillRectI);
-  blAssignFunc(&virt->fillRectD              , blRasterContextImplFillRectD);
-  blAssignFunc(&virt->fillPathD              , blRasterContextImplFillPathD);
-  blAssignFunc(&virt->fillGeometry           , blRasterContextImplFillGeometry);
-  blAssignFunc(&virt->fillTextI              , blRasterContextImplFillTextI);
-  blAssignFunc(&virt->fillTextD              , blRasterContextImplFillTextD);
-  blAssignFunc(&virt->fillGlyphRunI          , blRasterContextImplFillGlyphRunI);
-  blAssignFunc(&virt->fillGlyphRunD          , blRasterContextImplFillGlyphRunD);
+  virt->fillAll                 = blRasterContextImplFillAll;
+  virt->fillRectI               = blRasterContextImplFillRectI;
+  virt->fillRectD               = blRasterContextImplFillRectD;
+  virt->fillPathD               = blRasterContextImplFillPathD;
+  virt->fillGeometry            = blRasterContextImplFillGeometry;
+  virt->fillTextI               = blRasterContextImplFillTextI;
+  virt->fillTextD               = blRasterContextImplFillTextD;
+  virt->fillGlyphRunI           = blRasterContextImplFillGlyphRunI;
+  virt->fillGlyphRunD           = blRasterContextImplFillGlyphRunD;
 
-  blAssignFunc(&virt->strokeRectI            , blRasterContextImplStrokeRectI);
-  blAssignFunc(&virt->strokeRectD            , blRasterContextImplStrokeRectD);
-  blAssignFunc(&virt->strokePathD            , blRasterContextImplStrokePathD);
-  blAssignFunc(&virt->strokeGeometry         , blRasterContextImplStrokeGeometry);
-  blAssignFunc(&virt->strokeTextI            , blRasterContextImplStrokeTextI);
-  blAssignFunc(&virt->strokeTextD            , blRasterContextImplStrokeTextD);
-  blAssignFunc(&virt->strokeGlyphRunI        , blRasterContextImplStrokeGlyphRunI);
-  blAssignFunc(&virt->strokeGlyphRunD        , blRasterContextImplStrokeGlyphRunD);
+  virt->strokeRectI             = blRasterContextImplStrokeRectI;
+  virt->strokeRectD             = blRasterContextImplStrokeRectD;
+  virt->strokePathD             = blRasterContextImplStrokePathD;
+  virt->strokeGeometry          = blRasterContextImplStrokeGeometry;
+  virt->strokeTextI             = blRasterContextImplStrokeTextI;
+  virt->strokeTextD             = blRasterContextImplStrokeTextD;
+  virt->strokeGlyphRunI         = blRasterContextImplStrokeGlyphRunI;
+  virt->strokeGlyphRunD         = blRasterContextImplStrokeGlyphRunD;
 
-  blAssignFunc(&virt->blitImageI             , blRasterContextImplBlitImageI);
-  blAssignFunc(&virt->blitImageD             , blRasterContextImplBlitImageD);
-  blAssignFunc(&virt->blitScaledImageI       , blRasterContextImplBlitScaledImageI);
-  blAssignFunc(&virt->blitScaledImageD       , blRasterContextImplBlitScaledImageD);
+  virt->blitImageI              = blRasterContextImplBlitImageI;
+  virt->blitImageD              = blRasterContextImplBlitImageD;
+  virt->blitScaledImageI        = blRasterContextImplBlitScaledImageI;
+  virt->blitScaledImageD        = blRasterContextImplBlitScaledImageD;
 }
 
 void blRasterContextRtInit(BLRuntimeContext* rt) noexcept {

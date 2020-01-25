@@ -1575,10 +1575,10 @@ BLImageCodecImpl* blJpegCodecRtInit(BLRuntimeContext* rt) noexcept {
   // blAssignFunc(&blJpegEncoderVirt.writeFrame, blJpegEncoderWriteFrame);
 
   // Initialize JPEG codec virtual functions.
-  blAssignFunc(&blJpegCodecVirt.destroy, blJpegCodecImplDestroy);
-  blAssignFunc(&blJpegCodecVirt.inspectData, blJpegCodecImplInspectData);
-  blAssignFunc(&blJpegCodecVirt.createDecoder, blJpegCodecImplCreateDecoder);
-  blAssignFunc(&blJpegCodecVirt.createEncoder, blJpegCodecImplCreateEncoder);
+  blJpegCodecVirt.destroy = blJpegCodecImplDestroy;
+  blJpegCodecVirt.inspectData = blJpegCodecImplInspectData;
+  blJpegCodecVirt.createDecoder = blJpegCodecImplCreateDecoder;
+  blJpegCodecVirt.createEncoder = blJpegCodecImplCreateEncoder;
 
   // Initialize JPEG codec built-in instance.
   BLJpegCodecImpl* codecI = &blJpegCodecImpl;

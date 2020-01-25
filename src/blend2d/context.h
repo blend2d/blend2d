@@ -397,9 +397,9 @@ struct BLContextVirt {
 
   // Allows to dispatch fill/stroke by `BLContextOpType`.
   BLResult (BL_CDECL* setStyleAlpha[2]       )(BLContextImpl* impl, double alpha) BL_NOEXCEPT;
-  BLResult (BL_CDECL* getStyle[2]            )(BLContextImpl* impl, void* object) BL_NOEXCEPT;
-  BLResult (BL_CDECL* getStyleRgba32[2]      )(BLContextImpl* impl, uint32_t* rgba32) BL_NOEXCEPT;
-  BLResult (BL_CDECL* getStyleRgba64[2]      )(BLContextImpl* impl, uint64_t* rgba64) BL_NOEXCEPT;
+  BLResult (BL_CDECL* getStyle[2]            )(const BLContextImpl* impl, void* object) BL_NOEXCEPT;
+  BLResult (BL_CDECL* getStyleRgba32[2]      )(const BLContextImpl* impl, uint32_t* rgba32) BL_NOEXCEPT;
+  BLResult (BL_CDECL* getStyleRgba64[2]      )(const BLContextImpl* impl, uint64_t* rgba64) BL_NOEXCEPT;
   BLResult (BL_CDECL* setStyle[2]            )(BLContextImpl* impl, const void* object) BL_NOEXCEPT;
   BLResult (BL_CDECL* setStyleRgba32[2]      )(BLContextImpl* impl, uint32_t rgba32) BL_NOEXCEPT;
   BLResult (BL_CDECL* setStyleRgba64[2]      )(BLContextImpl* impl, uint64_t rgba64) BL_NOEXCEPT;

@@ -422,18 +422,42 @@ BLResult blContextBlitScaledImageD(BLContextCore* self, const BLRect* rect, cons
 // [BLNullContext - Impl]
 // ============================================================================
 
+// NullContext implementation does nothing. These functions consistently return
+// `BL_ERROR_INVALID_STATE` to inform the caller that the context is not usable.
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
 
-static BLResult BL_CDECL blNullContextImplNop(BLContextImpl*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL blNullContextImplU32(BLContextImpl*, uint32_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL blNullContextImplU64(BLContextImpl*, uint64_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL blNullContextImplDbl(BLContextImpl*, double) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL blNullContextImplPtr(BLContextImpl*, const void*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL blNullContextImplU32Ptr(BLContextImpl*, const void*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL blNullContextImplU32U32(BLContextImpl*, uint32_t, uint32_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL blNullContextImplText(BLContextImpl*, const void*, const BLFontCore*, const void*, size_t, uint32_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL blNullContextImplGlyphRun(BLContextImpl*, const void*, const BLFontCore*, const BLGlyphRun*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL blNullContextImplBlit(BLContextImpl*, const void*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplNoArgs(BLContextImpl*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplSetUInt32(BLContextImpl*, uint32_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplSetUInt64(BLContextImpl*, uint64_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplSetDouble(BLContextImpl*, double) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplSetVoidPtr(BLContextImpl*, const void*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplSet2xUInt32(BLContextImpl*, uint32_t, uint32_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+static BLResult BL_CDECL blNullContextImplSave(BLContextImpl*, BLContextCookie*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplRestore(BLContextImpl*, const BLContextCookie*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+static BLResult BL_CDECL blNullContextImplGetStyle(const BLContextImpl*, void*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplGetStyleRgb32(const BLContextImpl*, uint32_t*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplGetStyleRgb64(const BLContextImpl*, uint64_t*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+static BLResult BL_CDECL blNullContextImplSetHints(BLContextImpl*, const BLContextHints*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplSetApproximationOptions(BLContextImpl*, const BLApproximationOptions*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplSetStrokeDashArray(BLContextImpl*, const BLArrayCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplSetStrokeOptions(BLContextImpl*, const BLStrokeOptionsCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+static BLResult BL_CDECL blNullContextImplDoRectI(BLContextImpl*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplDoRectD(BLContextImpl*, const BLRect*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplDoPathD(BLContextImpl*, const BLPathCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplDoGeometry(BLContextImpl*, uint32_t, const void*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplDoTextI(BLContextImpl*, const BLPointI*, const BLFontCore*, const void*, size_t, uint32_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplDoTextD(BLContextImpl*, const BLPoint*, const BLFontCore*, const void*, size_t, uint32_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplDoGlyphRunI(BLContextImpl*, const BLPointI*, const BLFontCore*, const BLGlyphRun*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplDoGlyphRunD(BLContextImpl*, const BLPoint*, const BLFontCore*, const BLGlyphRun*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+static BLResult BL_CDECL blNullContextImplBlitImageI(BLContextImpl*, const BLPointI*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplBlitImageD(BLContextImpl*, const BLPoint*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplBlitScaledImageI(BLContextImpl*, const BLRectI*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplBlitScaledImageD(BLContextImpl*, const BLRect*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
 
 BL_DIAGNOSTIC_POP
 
@@ -453,83 +477,83 @@ void blContextRtInit(BLRuntimeContext* rt) noexcept {
   // Initialize null context virtual functions.
   BLContextVirt* virt = &blNullContextVirt;
 
-  blAssignFunc(&virt->destroy                , blNullContextImplNop);
-  blAssignFunc(&virt->flush                  , blNullContextImplU32);
+  virt->destroy                 = blNullContextImplNoArgs;
+  virt->flush                   = blNullContextImplSetUInt32;
 
-  blAssignFunc(&virt->save                   , blNullContextImplPtr);
-  blAssignFunc(&virt->restore                , blNullContextImplPtr);
+  virt->save                    = blNullContextImplSave;
+  virt->restore                 = blNullContextImplRestore;
 
-  blAssignFunc(&virt->userToMeta             , blNullContextImplNop);
-  blAssignFunc(&virt->matrixOp               , blNullContextImplU32Ptr);
+  virt->userToMeta              = blNullContextImplNoArgs;
+  virt->matrixOp                = blNullContextImplDoGeometry;
 
-  blAssignFunc(&virt->setHint                , blNullContextImplU32U32);
-  blAssignFunc(&virt->setHints               , blNullContextImplPtr);
+  virt->setHint                 = blNullContextImplSet2xUInt32;
+  virt->setHints                = blNullContextImplSetHints;
 
-  blAssignFunc(&virt->setFlattenMode         , blNullContextImplU32);
-  blAssignFunc(&virt->setFlattenTolerance    , blNullContextImplDbl);
-  blAssignFunc(&virt->setApproximationOptions, blNullContextImplPtr);
+  virt->setFlattenMode          = blNullContextImplSetUInt32;
+  virt->setFlattenTolerance     = blNullContextImplSetDouble;
+  virt->setApproximationOptions = blNullContextImplSetApproximationOptions;
 
-  blAssignFunc(&virt->setCompOp              , blNullContextImplU32);
-  blAssignFunc(&virt->setGlobalAlpha         , blNullContextImplDbl);
+  virt->setCompOp               = blNullContextImplSetUInt32;
+  virt->setGlobalAlpha          = blNullContextImplSetDouble;
 
-  blAssignFunc(&virt->setStyleAlpha[F]       , blNullContextImplDbl);
-  blAssignFunc(&virt->setStyleAlpha[S]       , blNullContextImplDbl);
-  blAssignFunc(&virt->getStyle[F]            , blNullContextImplPtr);
-  blAssignFunc(&virt->getStyle[S]            , blNullContextImplPtr);
-  blAssignFunc(&virt->getStyleRgba32[F]      , blNullContextImplPtr);
-  blAssignFunc(&virt->getStyleRgba32[S]      , blNullContextImplPtr);
-  blAssignFunc(&virt->getStyleRgba64[F]      , blNullContextImplPtr);
-  blAssignFunc(&virt->getStyleRgba64[S]      , blNullContextImplPtr);
-  blAssignFunc(&virt->setStyle[F]            , blNullContextImplPtr);
-  blAssignFunc(&virt->setStyle[S]            , blNullContextImplPtr);
-  blAssignFunc(&virt->setStyleRgba32[F]      , blNullContextImplU32);
-  blAssignFunc(&virt->setStyleRgba32[S]      , blNullContextImplU32);
-  blAssignFunc(&virt->setStyleRgba64[F]      , blNullContextImplU64);
-  blAssignFunc(&virt->setStyleRgba64[S]      , blNullContextImplU64);
+  virt->setStyleAlpha[F]        = blNullContextImplSetDouble;
+  virt->setStyleAlpha[S]        = blNullContextImplSetDouble;
+  virt->getStyle[F]             = blNullContextImplGetStyle;
+  virt->getStyle[S]             = blNullContextImplGetStyle;
+  virt->getStyleRgba32[F]       = blNullContextImplGetStyleRgb32;
+  virt->getStyleRgba32[S]       = blNullContextImplGetStyleRgb32;
+  virt->getStyleRgba64[F]       = blNullContextImplGetStyleRgb64;
+  virt->getStyleRgba64[S]       = blNullContextImplGetStyleRgb64;
+  virt->setStyle[F]             = blNullContextImplSetVoidPtr;
+  virt->setStyle[S]             = blNullContextImplSetVoidPtr;
+  virt->setStyleRgba32[F]       = blNullContextImplSetUInt32;
+  virt->setStyleRgba32[S]       = blNullContextImplSetUInt32;
+  virt->setStyleRgba64[F]       = blNullContextImplSetUInt64;
+  virt->setStyleRgba64[S]       = blNullContextImplSetUInt64;
 
-  blAssignFunc(&virt->setFillRule            , blNullContextImplU32);
+  virt->setFillRule             = blNullContextImplSetUInt32;
 
-  blAssignFunc(&virt->setStrokeWidth         , blNullContextImplDbl);
-  blAssignFunc(&virt->setStrokeMiterLimit    , blNullContextImplDbl);
-  blAssignFunc(&virt->setStrokeCap           , blNullContextImplU32U32);
-  blAssignFunc(&virt->setStrokeCaps          , blNullContextImplU32);
-  blAssignFunc(&virt->setStrokeJoin          , blNullContextImplU32);
-  blAssignFunc(&virt->setStrokeTransformOrder, blNullContextImplU32);
-  blAssignFunc(&virt->setStrokeDashOffset    , blNullContextImplDbl);
-  blAssignFunc(&virt->setStrokeDashArray     , blNullContextImplPtr);
-  blAssignFunc(&virt->setStrokeOptions       , blNullContextImplPtr);
+  virt->setStrokeWidth          = blNullContextImplSetDouble;
+  virt->setStrokeMiterLimit     = blNullContextImplSetDouble;
+  virt->setStrokeCap            = blNullContextImplSet2xUInt32;
+  virt->setStrokeCaps           = blNullContextImplSetUInt32;
+  virt->setStrokeJoin           = blNullContextImplSetUInt32;
+  virt->setStrokeTransformOrder = blNullContextImplSetUInt32;
+  virt->setStrokeDashOffset     = blNullContextImplSetDouble;
+  virt->setStrokeDashArray      = blNullContextImplSetStrokeDashArray;
+  virt->setStrokeOptions        = blNullContextImplSetStrokeOptions;
 
-  blAssignFunc(&virt->clipToRectI            , blNullContextImplPtr);
-  blAssignFunc(&virt->clipToRectD            , blNullContextImplPtr);
-  blAssignFunc(&virt->restoreClipping        , blNullContextImplNop);
+  virt->clipToRectI             = blNullContextImplDoRectI;
+  virt->clipToRectD             = blNullContextImplDoRectD;
+  virt->restoreClipping         = blNullContextImplNoArgs;
 
-  blAssignFunc(&virt->clearAll               , blNullContextImplNop);
-  blAssignFunc(&virt->clearRectI             , blNullContextImplPtr);
-  blAssignFunc(&virt->clearRectD             , blNullContextImplPtr);
+  virt->clearAll                = blNullContextImplNoArgs;
+  virt->clearRectI              = blNullContextImplDoRectI;
+  virt->clearRectD              = blNullContextImplDoRectD;
 
-  blAssignFunc(&virt->fillAll                , blNullContextImplNop);
-  blAssignFunc(&virt->fillRectI              , blNullContextImplPtr);
-  blAssignFunc(&virt->fillRectD              , blNullContextImplPtr);
-  blAssignFunc(&virt->fillPathD              , blNullContextImplPtr);
-  blAssignFunc(&virt->fillGeometry           , blNullContextImplU32Ptr);
-  blAssignFunc(&virt->fillTextI              , blNullContextImplText);
-  blAssignFunc(&virt->fillTextD              , blNullContextImplText);
-  blAssignFunc(&virt->fillGlyphRunI          , blNullContextImplGlyphRun);
-  blAssignFunc(&virt->fillGlyphRunD          , blNullContextImplGlyphRun);
+  virt->fillAll                 = blNullContextImplNoArgs;
+  virt->fillRectI               = blNullContextImplDoRectI;
+  virt->fillRectD               = blNullContextImplDoRectD;
+  virt->fillPathD               = blNullContextImplDoPathD;
+  virt->fillGeometry            = blNullContextImplDoGeometry;
+  virt->fillTextI               = blNullContextImplDoTextI;
+  virt->fillTextD               = blNullContextImplDoTextD;
+  virt->fillGlyphRunI           = blNullContextImplDoGlyphRunI;
+  virt->fillGlyphRunD           = blNullContextImplDoGlyphRunD;
 
-  blAssignFunc(&virt->strokeRectI            , blNullContextImplPtr);
-  blAssignFunc(&virt->strokeRectD            , blNullContextImplPtr);
-  blAssignFunc(&virt->strokePathD            , blNullContextImplPtr);
-  blAssignFunc(&virt->strokeGeometry         , blNullContextImplU32Ptr);
-  blAssignFunc(&virt->strokeTextI            , blNullContextImplText);
-  blAssignFunc(&virt->strokeTextD            , blNullContextImplText);
-  blAssignFunc(&virt->strokeGlyphRunI        , blNullContextImplGlyphRun);
-  blAssignFunc(&virt->strokeGlyphRunD        , blNullContextImplGlyphRun);
+  virt->strokeRectI             = blNullContextImplDoRectI;
+  virt->strokeRectD             = blNullContextImplDoRectD;
+  virt->strokePathD             = blNullContextImplDoPathD;
+  virt->strokeGeometry          = blNullContextImplDoGeometry;
+  virt->strokeTextI             = blNullContextImplDoTextI;
+  virt->strokeTextD             = blNullContextImplDoTextD;
+  virt->strokeGlyphRunI         = blNullContextImplDoGlyphRunI;
+  virt->strokeGlyphRunD         = blNullContextImplDoGlyphRunD;
 
-  blAssignFunc(&virt->blitImageI             , blNullContextImplBlit);
-  blAssignFunc(&virt->blitImageD             , blNullContextImplBlit);
-  blAssignFunc(&virt->blitScaledImageI       , blNullContextImplBlit);
-  blAssignFunc(&virt->blitScaledImageD       , blNullContextImplBlit);
+  virt->blitImageI              = blNullContextImplBlitImageI;
+  virt->blitImageD              = blNullContextImplBlitImageD;
+  virt->blitScaledImageI        = blNullContextImplBlitScaledImageI;
+  virt->blitScaledImageD        = blNullContextImplBlitScaledImageD;
 
   // Initialize null context built-in instance.
   BLContextImpl* contextI = &blNullContextImpl;

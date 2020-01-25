@@ -1361,10 +1361,10 @@ BLImageCodecImpl* blPngCodecRtInit(BLRuntimeContext* rt) noexcept {
   // blAssignFunc(&blPngEncoderVirt.writeFrame, blPngEncoderImplWriteFrame);
 
   // Initialize PNG codec virtual functions.
-  blAssignFunc(&blPngCodecVirt.destroy, blPngCodecImplDestroy);
-  blAssignFunc(&blPngCodecVirt.inspectData, blPngCodecImplInspectData);
-  blAssignFunc(&blPngCodecVirt.createDecoder, blPngCodecImplCreateDecoder);
-  blAssignFunc(&blPngCodecVirt.createEncoder, blPngCodecImplCreateEncoder);
+  blPngCodecVirt.destroy = blPngCodecImplDestroy;
+  blPngCodecVirt.inspectData = blPngCodecImplInspectData;
+  blPngCodecVirt.createDecoder = blPngCodecImplCreateDecoder;
+  blPngCodecVirt.createEncoder = blPngCodecImplCreateEncoder;
 
   // Initialize PNG codec built-in instance.
   BLPngCodecImpl* codecI = &blPngCodecImpl;

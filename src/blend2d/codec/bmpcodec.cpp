@@ -845,10 +845,10 @@ BLImageCodecImpl* blBmpCodecRtInit(BLRuntimeContext* rt) noexcept {
   blAssignFunc(&blBmpEncoderVirt.writeFrame, blBmpEncoderImplWriteFrame);
 
   // Initialize BMP codec virtual functions.
-  blAssignFunc(&blBmpCodecVirt.destroy, blBmpCodecImplDestroy);
-  blAssignFunc(&blBmpCodecVirt.inspectData, blBmpCodecImplInspectData);
-  blAssignFunc(&blBmpCodecVirt.createDecoder, blBmpCodecImplCreateDecoder);
-  blAssignFunc(&blBmpCodecVirt.createEncoder, blBmpCodecImplCreateEncoder);
+  blBmpCodecVirt.destroy = blBmpCodecImplDestroy;
+  blBmpCodecVirt.inspectData = blBmpCodecImplInspectData;
+  blBmpCodecVirt.createDecoder = blBmpCodecImplCreateDecoder;
+  blBmpCodecVirt.createEncoder = blBmpCodecImplCreateEncoder;
 
   // Initialize BMP codec built-in instance.
   BLBmpCodecImpl* codecI = &blBmpCodecImpl;
@@ -868,3 +868,4 @@ BLImageCodecImpl* blBmpCodecRtInit(BLRuntimeContext* rt) noexcept {
 
   return codecI;
 }
+\
