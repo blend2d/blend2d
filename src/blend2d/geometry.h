@@ -695,7 +695,7 @@ struct BLEllipse {
 // [BLArc]
 // ============================================================================
 
-//! Arc specified as [cx, cy, rx, ry, start, sweep[ using `double` as a storage type.
+//! Arc specified as [cx, cy, rx, ry, start, sweep] using `double` as a storage type.
 struct BLArc {
   double cx, cy;
   double rx, ry;

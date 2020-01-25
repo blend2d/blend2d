@@ -50,13 +50,6 @@
 //! The documentation is split into the following groups:
 //!
 //! $$DOCS_GROUP_OVERVIEW$$
-//!
-//! \section main_other Other Pages
-//!
-//!   - <a href="../doc/getting-started.html">Getting Started</a> - Covers basic
-//!     setup and few sample applications
-//!   - <a href="annotated.html">Class List</a> - Provides a list of classes
-//!     sorted alphabetically
 
 //! \defgroup blend2d_api_globals Global API
 //! \brief Global functions, constants,  and classes used universally across

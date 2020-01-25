@@ -393,6 +393,25 @@ static void blDebugPath_(const BLPathCore* obj, const char* name, int indent) {
 }
 
 // ============================================================================
+// [BLDebug - Region]
+// ============================================================================
+
+static void blDebugRegion_(const BLRegionCore* obj, const char* name, int indent) {
+  size_t size = blRegionGetSize(obj);
+  const BLBoxI* data = blRegionGetData(obj);
+
+  BL_DEBUG_FMT("%s: {\n", name);
+  indent++;
+
+  for (size_t i = 0; i < size; i++) {
+    BL_DEBUG_FMT("[%zu] { x0: %d, y0: %d, x1: %d, y1: %d }\n", i, data[i].x0, data[i].y0, data[i].x1, data[i].y1);
+  }
+
+  indent--;
+  BL_DEBUG_OUT("}\n");
+}
+
+// ============================================================================
 // [BLDebug - Context]
 // ============================================================================
 
@@ -463,6 +482,10 @@ static void blDebugVariant_(const void* obj, const char* name, int indent) {
       blDebugPath_((const BLPathCore*)obj, name, indent);
       break;
 
+    case BL_IMPL_TYPE_REGION:
+      blDebugRegion_((const BLRegionCore*)obj, name, indent);
+      break;
+
     case BL_IMPL_TYPE_CONTEXT:
       blDebugContext_((const BLContextCore*)obj, name, indent);
       break;
@@ -502,6 +525,11 @@ static void blDebugImage(const BLImageCore* obj) {
 //! Dumps BLPathCore or BLPath.
 static void blDebugPath(const BLPathCore* obj) {
   return blDebugPath_(obj, "BLPath", 0);
+}
+
+//! Dumps BLRegionCore or BLRegion.
+static void blDebugRegion(const BLRegionCore* obj) {
+  return blDebugRegion_(obj, "BLRegion", 0);
 }
 
 //! Dumps BLContextCore or BLContext.

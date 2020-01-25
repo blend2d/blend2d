@@ -1003,10 +1003,10 @@ static BLInternalRegionImpl* blRegionCombineGrow(BLInternalRegionImpl* impl, BLB
   return newI;
 }
 
-// A low-level function that performs the boolean operation of two regions,
+// A low-level function that performs a boolean operation of two regions,
 // Box+Region or Region+Box combinations. This function does raw processing
-// and doesn't special case anything, thus, all special cases must be dealed
-// with before.
+// and doesn't special case anything, thus, all special cases must be handled
+// by the caller before.
 static BLResult blRegionCombineInternal(
   BLRegionCore* dst,
   const BLBoxI* aData, size_t aSize, const BLBoxI& aBoundingBox,
@@ -1593,6 +1593,8 @@ Done:
     dstI->boundingBox.reset(dstBBoxX0, dstI->data[0].y0, dstBBoxX1, dstData[-1].y1);
 
   BL_ASSERT(blRegionImplIsValid(dstI));
+
+  dst->impl = dstI;
   return oldI ? blRegionImplRelease(oldI) : BL_SUCCESS;
 
 OutOfMemory:
@@ -1641,7 +1643,7 @@ OnMergeA:
 
   if (booleanOp == BL_BOOLEAN_OP_OR) {
     // Special case for OR. The bounding box can be easily calculated
-    // by using `A | B`. We don't have to do anthing else than that.
+    // by using `A | B`. We don't have to do anything else than that.
     do {
       BL_ASSERT(dstData != dstEnd);
       dstData->reset(aData->x0, aData->y0, aData->x1, aData->y1);
