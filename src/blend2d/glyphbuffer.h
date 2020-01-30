@@ -35,6 +35,12 @@ struct BLGlyphBufferImpl {
     };
 
     //! Glyph run data that can be passed directly to the rendering context.
+    //!
+    //! Glyph run shares data with other members like `content`, `placementData`,
+    //! `size`, and `flags`. When working with data it's better to access these
+    //! members directly as they are typed, whereas `BLGlyphRun` stores pointers
+    //! as `const void*` as it offers more flexibility, which `BLGlyphRun` doesn't
+    //! need.
     BLGlyphRun glyphRun;
   };
 
@@ -60,7 +66,7 @@ struct BLGlyphBufferCore {
 //!
 //! Glyph buffer provides two separate buffers called 'primary' and 'secondary'
 //! that serve different purposes during processing. Primary buffer always holds
-//! actualy text/glyph array, and secondary buffer is either used as a scratch
+//! actual text/glyph array, and secondary buffer is either used as a scratch
 //! buffer during glyph substitution or to hold glyph positions after the processing
 //! is complete and glyph positions were calculated.
 class BLGlyphBuffer : public BLGlyphBufferCore {

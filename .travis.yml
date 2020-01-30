@@ -202,25 +202,25 @@ matrix:
       os: osx
       osx_image: xcode9.4
 
-    - name: "OSX Clang XCode 10.2 [64-bit] [DBG]"
+    - name: "OSX Clang XCode 10.3 [64-bit] [DBG]"
       env: BUILD_MATRIX="BUILD_TYPE=Debug"
       os: osx
-      osx_image: xcode10.2
+      osx_image: xcode10.3
 
-    - name: "OSX Clang XCode 10.2 [64-bit] [REL]"
+    - name: "OSX Clang XCode 10.3 [64-bit] [REL]"
       env: BUILD_MATRIX="BUILD_TYPE=Release"
       os: osx
-      osx_image: xcode10.2
+      osx_image: xcode10.3
 
-    - name: "OSX Clang XCode 11 [64-bit] [DBG]"
+    - name: "OSX Clang XCode 11.3 [64-bit] [DBG]"
       env: BUILD_MATRIX="BUILD_TYPE=Debug"
       os: osx
-      osx_image: xcode11
+      osx_image: xcode11.3
 
-    - name: "OSX Clang XCode 11 [64-bit] [REL]"
+    - name: "OSX Clang XCode 11.3 [64-bit] [REL]"
       env: BUILD_MATRIX="BUILD_TYPE=Release"
       os: osx
-      osx_image: xcode11
+      osx_image: xcode11.3
 
     - name: "Windows VS2017 [32-bit] [DBG]"
       env: BUILD_MATRIX="BUILD_TYPE=Debug" BUILD_TOOLCHAIN="Visual Studio 15 2017"

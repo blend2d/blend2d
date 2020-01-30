@@ -105,7 +105,7 @@ BLPipeGenRuntime::BLPipeGenRuntime(uint32_t runtimeFlags) noexcept
     _pipelineCount(0),
     _cpuFeatures(asmjit::CpuInfo::host().features()),
     _maxPixels(0),
-    _enableLogger(false),
+    _enableLogger(true),
     _emitStackFrames(false) {
 
   // Setup the `BLPipeRuntime` base.

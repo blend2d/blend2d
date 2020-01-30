@@ -94,6 +94,12 @@ static void debugEdges(BLEdgeStorage<int>* edgeStorage) noexcept {
 }
 
 BLResult BL_CDECL BLRasterFiller::fillAnalyticImpl(BLRasterFiller* filler, BLRasterWorkerContext* workerCtx, const BLRasterFetchData* fetchData) noexcept {
+  // Rasterizer options to use - do not change unless you are improving
+  // the existing rasterizers.
+  constexpr uint32_t kRasterizerOptions =
+    BLAnalyticRasterizer::kOptionBandOffset     |
+    BLAnalyticRasterizer::kOptionRecordMinXMaxX ;
+
   // Can only be called if there is something to fill.
   BLEdgeStorage<int>* edgeStorage = filler->edgeStorage;
 
@@ -140,12 +146,12 @@ BLResult BL_CDECL BLRasterFiller::fillAnalyticImpl(BLRasterFiller* filler, BLRas
 
   uint32_t bandId = unsigned(edgeStorage->boundingBox().y0) >> fixedBandHeightShift;
   uint32_t bandLast = unsigned(edgeStorage->boundingBox().y1 - 1) >> fixedBandHeightShift;
+  uint32_t dstWidth = uint32_t(workerCtx->dstData.size.w);
 
-  filler->fillData.analytic.box.x0 = 0;
-  filler->fillData.analytic.box.x1 = int(workerCtx->dstData.size.w);
-  filler->fillData.analytic.box.y0 = 0; // Overwritten before calling `fillFunc`.
-  filler->fillData.analytic.box.y1 = 0; // Overwritten before calling `fillFunc`.
+  // Overwritten before calling `fillFunc`.
+  filler->fillData.analytic.box.reset();
 
+  // Same for all bands.
   filler->fillData.analytic.bitTopPtr = cellStorage.bitPtrTop;
   filler->fillData.analytic.bitStride = cellStorage.bitStride;
   filler->fillData.analytic.cellTopPtr = cellStorage.cellPtrTop;
@@ -163,6 +169,7 @@ BLResult BL_CDECL BLRasterFiller::fillAnalyticImpl(BLRasterFiller* filler, BLRas
     BLActiveEdge** pPrev = &active;
     BLActiveEdge* current = *pPrev;
 
+    ras.resetBounds();
     ras._bandEnd = blMin((bandId + 1) * bandHeight, yEnd) - 1;
 
     while (current) {
@@ -171,7 +178,7 @@ BLResult BL_CDECL BLRasterFiller::fillAnalyticImpl(BLRasterFiller* filler, BLRas
 
       for (;;) {
 Rasterize:
-        if (ras.template rasterize<BLAnalyticRasterizer::kOptionBandOffset | BLAnalyticRasterizer::kOptionBandingMode>()) {
+        if (ras.template rasterize<kRasterizerOptions | BLAnalyticRasterizer::kOptionBandingMode>()) {
           // The edge is fully rasterized.
           BLEdgePoint<int>* pts = current->cur;
           while (pts != current->end) {
@@ -227,7 +234,7 @@ SaveState:
             continue;
 
           if (uint32_t(ras._ey1) <= ras._bandEnd) {
-            ras.template rasterize<BLAnalyticRasterizer::kOptionBandOffset>();
+            ras.template rasterize<kRasterizerOptions>();
           }
           else {
             current = pooled;
@@ -248,12 +255,16 @@ SaveState:
     }
 
     // Makes `active` or the last `BLActiveEdge->next` null. It's important,
-    // because we don't unlink during edge pooling as we can do it here.
+    // because we don't unlink during edge pooling as we want to do it here.
     *pPrev = nullptr;
 
-    filler->fillData.analytic.box.y0 = int(ras._bandOffset);
-    filler->fillData.analytic.box.y1 = int(ras._bandEnd) + 1;
-    filler->fillFunc(&workerCtx->ctxData, &filler->fillData, fetchData);
+    if (ras.hasBounds()) {
+      filler->fillData.analytic.box.x1 = int(blMin(dstWidth, blAlignUp(ras._cellMaxX, BL_PIPE_PIXELS_PER_ONE_BIT)));
+      filler->fillData.analytic.box.x1 = int(dstWidth);
+      filler->fillData.analytic.box.y0 = int(ras._bandOffset);
+      filler->fillData.analytic.box.y1 = int(ras._bandEnd) + 1;
+      filler->fillFunc(&workerCtx->ctxData, &filler->fillData, fetchData);
+    }
 
     ras._bandOffset = (ras._bandOffset + bandHeight) & ~bandHeightMask;
   } while (++bandId <= bandLast);

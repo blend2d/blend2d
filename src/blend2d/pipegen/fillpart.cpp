@@ -391,7 +391,9 @@ void FillAnalyticPart::compile() noexcept {
 
   x86::Gp bitPtr         = cc->newIntPtr("bitPtr");        // Reg.
   x86::Gp bitPtrEnd      = cc->newIntPtr("bitPtrEnd");     // Reg/Mem.
-  x86::Gp bitStride      = cc->newIntPtr("bitStride");     // Mem.
+
+  x86::Gp bitPtrRunLen   = cc->newIntPtr("bitPtrRunLen");  // Mem.
+  x86::Gp bitPtrSkipLen  = cc->newIntPtr("bitPtrSkipLen"); // Mem.
 
   x86::Gp cellPtr        = cc->newIntPtr("cellPtr");       // Reg.
   x86::Gp cellStride     = cc->newIntPtr("cellStride");    // Mem.
@@ -399,6 +401,7 @@ void FillAnalyticPart::compile() noexcept {
   x86::Gp x0             = cc->newUInt32("x0");            // Reg
   x86::Gp xOff           = cc->newUInt32("xOff");          // Reg/Mem.
   x86::Gp xEnd           = cc->newUInt32("xEnd");          // Mem.
+  x86::Gp xStart         = cc->newUInt32("xStart");        // Mem.
 
   x86::Gp y              = cc->newUInt32("y");             // Reg/Mem.
   x86::Gp i              = cc->newUInt32("i");             // Reg.
@@ -407,8 +410,8 @@ void FillAnalyticPart::compile() noexcept {
   x86::Gp bitWord        = cc->newUIntPtr("bitWord");      // Reg/Mem.
   x86::Gp bitWordTmp     = cc->newUIntPtr("bitWordTmp");   // Reg/Tmp.
 
-  x86::Xmm globalAlpha   = cc->newXmm("globalAlpha");      // Mem.
   x86::Xmm cov           = cc->newXmm("cov");              // Reg.
+  x86::Xmm globalAlpha   = cc->newXmm("globalAlpha");      // Mem.
   x86::Xmm fillRuleMask  = cc->newXmm("fillRuleMask");     // Mem.
 
   VecArray m;
@@ -423,6 +426,8 @@ void FillAnalyticPart::compile() noexcept {
   int pixelsPerOneBitShift = int(blBitCtz(pixelsPerOneBit));
 
   int pixelsPerBitWord = pixelsPerOneBit * bwSizeInBits;
+  int pixelsPerBitWordShift = int(blBitCtz(pixelsPerBitWord));
+
   int pixelGranularity = pixelsPerOneBit;
 
   Pixel dPix(pixelType);
@@ -443,7 +448,7 @@ void FillAnalyticPart::compile() noexcept {
   cc->add(dstPtr, cc->intptr_ptr(ctxData, BL_OFFSET_OF(BLPipeContextData, dst.pixelData)));
 
   // Initialize cell pointers.
-  cc->mov(bitStride , cc->intptr_ptr(fillData, BL_OFFSET_OF(BLPipeFillData::Analytic, bitStride)));
+  cc->mov(bitPtrSkipLen, cc->intptr_ptr(fillData, BL_OFFSET_OF(BLPipeFillData::Analytic, bitStride)));
   cc->mov(cellStride, cc->intptr_ptr(fillData, BL_OFFSET_OF(BLPipeFillData::Analytic, cellStride)));
 
   cc->mov(bitPtr, cc->intptr_ptr(fillData, BL_OFFSET_OF(BLPipeFillData::Analytic, bitTopPtr)));
@@ -457,8 +462,24 @@ void FillAnalyticPart::compile() noexcept {
   cc->neg(y);
   cc->add(y, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::Analytic, box.y1)));
 
-  // xEnd = fillData->box.x1;
+  // Decompose the original `bitStride` to bitPtrRunLen + bitPtrSkipLen, where:
+  //   `bitPtrRunLen` - Number of BitWords (in byte units) active in this band.
+  //   `bitPtrRunSkip` - Number of BitWords (in byte units) to skip for this band.
+  cc->mov(xStart, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::Analytic, box.x0)));
+  cc->shr(xStart, pixelsPerBitWordShift);
+
   cc->mov(xEnd, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::Analytic, box.x1)));
+  cc->mov(bitPtrRunLen.r32(), xEnd);
+  cc->shr(bitPtrRunLen.r32(), pixelsPerBitWordShift);
+
+  cc->sub(bitPtrRunLen.r32(), xStart);
+  cc->inc(bitPtrRunLen.r32());
+  cc->shl(bitPtrRunLen, blBitCtz(bwSize));
+  cc->sub(bitPtrSkipLen, bitPtrRunLen);
+
+  // Make `xStart` to become the X offset of the first active BitWord.
+  cc->lea(bitPtr, x86::ptr(bitPtr, xStart.cloneAs(bitPtr), blBitCtz(bwSize)));
+  cc->shl(xStart, pixelsPerBitWordShift);
 
   pc->vbroadcast_u16(globalAlpha, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::Analytic, alpha)));
   // We shift left by 7 bits so we can use `pmulhuw` in `calcMasksFromCells()`.
@@ -522,7 +543,7 @@ void FillAnalyticPart::compile() noexcept {
   cc->jnz(L_BitScan_Match);                                //     goto L_BitScan_Match;
 
   // Okay, so the span crosses multiple BitWords. Firstly we have to make sure this was
-  // not the last one. If that's the case we must terminate the scannling immediately.
+  // not the last one. If that's the case we must terminate the scanning immediately.
 
   cc->mov(i, bwSizeInBits);                                //   i = bwSizeInBits;
   cc->cmp(bitPtr, bitPtrEnd);                              //   if (bitPtr == bitPtrEnd)
@@ -890,14 +911,15 @@ void FillAnalyticPart::compile() noexcept {
 
   cc->bind(L_Scanline_AdvY);                               // L_Scanline_AdvY:
   cc->add(dstPtr, dstStride);                              //   dstPtr += dstStride;
+  cc->add(bitPtr, bitPtrSkipLen);                          //   bitPtr += bitPtrSkipLen;
   cc->add(cellPtr, cellStride);                            //   cellPtr += cellStride;
   compOpPart()->advanceY();                                //   <CompOpPart::AdvanceY>
 
   cc->bind(L_Scanline_Init);                               // L_Scanline_Init:
-  cc->xor_(xOff, xOff);                                    //   xOff = 0;
+  cc->mov(xOff, xStart);                                   //   xOff = xStart;
   cc->mov(bitPtrEnd, bitPtr);                              //   bitPtrEnd = bitPtr;
+  cc->add(bitPtrEnd, bitPtrRunLen);                        //   bitPtrEnd += bitPtrRunLen;
   cc->xor_(bitWord, bitWord);                              //   bitWord = 0;
-  cc->add(bitPtrEnd, bitStride);                           //   bitPtrEnd += bitStride;
 
   cc->bind(L_Scanline_Cont);                               // L_Scanline_Cont:
   cc->or_(bitWord, x86::ptr(bitPtr));                      //   bitWord |= bitPtr[0];

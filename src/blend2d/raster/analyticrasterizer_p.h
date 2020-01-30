@@ -147,15 +147,23 @@ struct BLAnalyticRasterizerState {
 //! processes so the buffer is ready for another rasterization. Blend2D does
 //! this implicitly, so this is just a note for anyone wondering how this works.
 struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
+  // Compile-time dispatched features the rasterizer supports.
   enum Options : uint32_t {
-    // Other features the rasterizer supports.
-    kOptionBandOffset     = 0x0004u, // Take BandOffset into consideration.
-    kOptionBandingMode    = 0x0008u, // Rasterizer uses banding technique.
-    kOptionEasyBitStride  = 0x0010u  // BitStride is equal to sizeof(BLBitWord).
+    //! Rasterizer uses banding technique.
+    kOptionBandingMode = 0x0004u,
+    //! Takes `_bandOffset` into consideration.
+    kOptionBandOffset = 0x0008u,
+    //! BitStride is equal to sizeof(BLBitWord).
+    kOptionEasyBitStride = 0x0010u,
+    //! Record minimum and maximum X coordinate so the compositor can optimize
+    //! bit scanning - this means it would start at BitWord that has minimum X
+    //! and end at BitWord that has maximum X.
+    kOptionRecordMinXMaxX = 0x0020u
   };
 
   //! BitWords and Cells, initialized by `init()`, never modified.
   BLAnalyticCellStorage _cellStorage;
+
   //! Sign mask.
   uint32_t _signMask;
   //! Height of a rendering band (number of scanlines).
@@ -164,6 +172,11 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
   uint32_t _bandOffset;
   //! End of the current band (_bandOffset + _bandHeight - 1).
   uint32_t _bandEnd;
+
+  //! Recorded minimum X, only updated when `kOptionRecordMinXMaxX` is set.
+  uint32_t _cellMinX;
+  //! Recorded maximum X, only updated when `kOptionRecordMinXMaxX` is set.
+  uint32_t _cellMaxX;
 
   // --------------------------------------------------------------------------
   // [Init]
@@ -190,6 +203,8 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
     _bandHeight = bandHeight;
     _bandOffset = bandOffset;
     _bandEnd = bandOffset + bandHeight - 1;
+
+    resetBounds();
   }
 
   // --------------------------------------------------------------------------
@@ -219,6 +234,19 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
   BL_INLINE uint32_t signMask() const noexcept { return _signMask; }
   BL_INLINE void setSignMask(uint32_t signMask) noexcept { _signMask = signMask; }
   BL_INLINE void setSignMaskFromBit(uint32_t signBit) noexcept { _signMask = blNegate(signBit); }
+
+  // --------------------------------------------------------------------------
+  // [Global Bounds]
+  // --------------------------------------------------------------------------
+
+  BL_INLINE bool hasBounds() const noexcept {
+    return _cellMinX <= _cellMaxX;
+  }
+
+  BL_INLINE void resetBounds() noexcept {
+    _cellMinX = std::numeric_limits<uint32_t>::max();
+    _cellMaxX = 0;
+  }
 
   // --------------------------------------------------------------------------
   // [Save / Restore]
@@ -346,6 +374,11 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
       uint32_t cover;
       uint32_t area = uint32_t(_fx0) + uint32_t(_fx1);
 
+      if (OPTIONS & kOptionRecordMinXMaxX) {
+        _cellMinX = blMin(_cellMinX, unsigned(_ex0));
+        _cellMaxX = blMax(_cellMaxX, unsigned(_ex0));
+      }
+
       size_t bitIndex = unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT;
       BLBitWord bitMask = BLBitWord(0x1) << (bitIndex % blBitSizeOf<BLBitWord>());
 
@@ -425,6 +458,11 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
         // ....xx...
         // ...xx....
         // ...x.....
+        if (OPTIONS & kOptionRecordMinXMaxX) {
+          _cellMinX = blMin(_cellMinX, unsigned(_ex1));
+          _cellMaxX = blMax(_cellMaxX, unsigned(_ex0));
+        }
+
         for (;;) {
           // First and/or last scanline is a special-case that must consider `_fy0` and `_fy1`.
           // If this is a rasterizer that uses banding then this case will also be executed as
@@ -568,6 +606,11 @@ VertRightToLeftSingleInLoop:
         // ...xx....
         // ....xx...
         // .....x...
+        if (OPTIONS & kOptionRecordMinXMaxX) {
+          _cellMinX = blMin(_cellMinX, unsigned(_ex0));
+          _cellMaxX = blMax(_cellMaxX, unsigned(_ex1));
+        }
+
         for (;;) {
           // First and/or last scanline is a special-case that must consider `_fy0` and `_fy1`.
           // If this is a rasterizer that uses banding then this case will also be executed as
@@ -716,6 +759,11 @@ VertRightToLeftSingleInLoop:
         // ..xxxxx..
         // xxx......
         // .........
+        if (OPTIONS & kOptionRecordMinXMaxX) {
+          _cellMinX = blMin(_cellMinX, unsigned(_ex1));
+          _cellMaxX = blMax(_cellMaxX, unsigned(_ex0));
+        }
+
         if (_flags & kFlagInitialScanline) {
           _flags &= ~kFlagInitialScanline;
 
@@ -865,6 +913,11 @@ HorzRightToLeftInside:
         // ..xxxxx..
         // ......xxx
         // .........
+        if (OPTIONS & kOptionRecordMinXMaxX) {
+          _cellMinX = blMin(_cellMinX, unsigned(_ex0));
+          _cellMaxX = blMax(_cellMaxX, unsigned(_ex1));
+        }
+
         if (_flags & kFlagInitialScanline) {
           _flags &= ~kFlagInitialScanline;
 

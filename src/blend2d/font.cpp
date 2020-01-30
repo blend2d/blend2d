@@ -345,7 +345,7 @@ BLResult blFontDataCreateFromData(BLFontDataCore* self, const void* data, size_t
   blCallCtor(newI->faceCache, std::move(faceCache));
 
   newI->data = const_cast<void*>(static_cast<const void*>(data));;
-  newI->dataSize = dataSize;
+  newI->dataSize = uint32_t(dataSize);
   newI->offsetArrayIndex = offsetArrayIndex;
 
   BLFontDataImpl* oldI = self->impl;
