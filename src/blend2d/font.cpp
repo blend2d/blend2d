@@ -90,6 +90,8 @@ static BLResult blMemFontDataImplRealDestroy(BLMemFontDataImpl* impl) noexcept {
   uint32_t implTraits = impl->implTraits;
   uint32_t memPoolData = impl->memPoolData;
 
+  blCallDtor(impl->faceCache);
+
   if (implTraits & BL_IMPL_TRAIT_EXTERNAL) {
     implSize += sizeof(BLExternalImplPreface);
     implBase -= sizeof(BLExternalImplPreface);
