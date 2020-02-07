@@ -156,6 +156,23 @@ struct BLFormatInfo {
     aShift = a;
   }
 
+  //! Query Blend2D `format` and copy it to this format info, see `BLFormat`.
+  //!
+  //! Copies data from `blFormatInfo()` to this `BLFormatInfo` struct and returns
+  //! `BL_SUCCESS` if the `format` was valid, otherwise the `BLFormatInfo` is
+  //! reset and `BL_ERROR_INVALID_VALUE` is returned.
+  //!
+  //! \note The `BL_FORMAT_NONE` is considered invalid format, thus if it's
+  //! passed to `query()` the return value would be `BL_ERROR_INVALID_VALUE`.
+  BL_INLINE BLResult query(uint32_t format) noexcept { return blFormatInfoQuery(this, format); }
+
+  //! Sanitize this `BLFormatInfo`.
+  //!
+  //! Sanitizer verifies whether the format is valid and updates the format
+  //! information about flags to values that Blend2D expects. For example
+  //! format flags are properly examined and simplified if possible, byte-swap
+  //! is implicitly performed for formats where a single component matches one
+  //! byte, etc...
   BL_INLINE BLResult sanitize() noexcept { return blFormatInfoSanitize(this); }
 
   BL_INLINE bool operator==(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) == 0; }

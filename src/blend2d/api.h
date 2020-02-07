@@ -1632,8 +1632,9 @@ BL_API BLResult BL_CDECL blFontManagerAssignWeak(BLFontManagerCore* self, const 
 BL_API bool BL_CDECL blFontManagerEquals(const BLFontManagerCore* a, const BLFontManagerCore* b) BL_NOEXCEPT_C;
 //! \}
 
-//! \name BLFormat
+//! \name BLFormatInfo
 //! \{
+BL_API BLResult BL_CDECL blFormatInfoQuery(BLFormatInfo* self, uint32_t format) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFormatInfoSanitize(BLFormatInfo* self) BL_NOEXCEPT_C;
 //! \}
 

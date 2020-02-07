@@ -58,6 +58,20 @@ static constexpr const auto blPixelConverterComponentIndexesTable =
   blLookupTable<uint8_t, 16, BLPixelConverterComponentIndexesGen>();
 
 // ============================================================================
+// [BLFormatInfo - Query]
+// ============================================================================
+
+BLResult blFormatInfoQuery(BLFormatInfo* self, uint32_t format) noexcept {
+  if (BL_UNLIKELY(format == BL_FORMAT_NONE || format >= BL_FORMAT_COUNT)) {
+    self->reset();
+    return blTraceError(BL_ERROR_INVALID_VALUE);
+  }
+
+  *self = blFormatInfo[format];
+  return BL_SUCCESS;
+}
+
+// ============================================================================
 // [BLFormatInfo - Sanitize]
 // ============================================================================
 
