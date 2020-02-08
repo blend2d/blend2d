@@ -1871,6 +1871,49 @@ BLResult blPathAddStrokedPath(BLPathCore* self, const BLPathCore* other, const B
 }
 
 // ============================================================================
+// [BLPath - Path Manipulation]
+// ============================================================================
+
+BLResult blPathRemoveRange(BLPathCore* self, const BLRange* range) noexcept {
+  BLInternalPathImpl* selfI = blInternalCast(self->impl);
+  size_t start, n;
+
+  if (!blPathRangeCheck(selfI, range, &start, &n))
+    return BL_SUCCESS;
+
+  size_t size = selfI->size;
+  size_t end = start + n;
+
+  if (n == size)
+    return blPathClear(self);
+
+  BLPoint* vtxData = selfI->vertexData;
+  uint8_t* cmdData = selfI->commandData;
+
+  size_t sizeAfter = size - n;
+  if (!blImplIsMutable(selfI)) {
+    size_t newCapacity = blPathFittingCapacity(sizeAfter);
+    BLInternalPathImpl* newI = blPathImplNew(newCapacity);
+
+    if (BL_UNLIKELY(!newI))
+      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+
+    newI->size = sizeAfter;
+    blPathCopyData(newI->commandData, newI->vertexData, cmdData, vtxData, start);
+    blPathCopyData(newI->commandData + start, newI->vertexData + start, cmdData + end, vtxData + end, size - end);
+
+    self->impl = newI;
+    return blPathImplRelease(selfI);
+  }
+  else {
+    blPathCopyData(cmdData + start, vtxData + start, cmdData + end, vtxData + end, size - end);
+    selfI->size = sizeAfter;
+    selfI->flags = BL_PATH_FLAG_DIRTY;
+    return BL_SUCCESS;
+  }
+}
+
+// ============================================================================
 // [BLPath - Path Transformations]
 // ============================================================================
 

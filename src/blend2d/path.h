@@ -978,6 +978,15 @@ public:
 
   //! \}
 
+  //! \name Manipulation
+  //! \{
+
+  BL_INLINE BLResult removeRange(const BLRange& range) noexcept {
+    return blPathRemoveRange(this, &range);
+  }
+
+  //! \}
+
   //! \name Transformations
   //! \{
 
