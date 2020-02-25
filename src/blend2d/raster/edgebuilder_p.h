@@ -1831,10 +1831,37 @@ RestartClipLoop:
     if ((yStart >= yEnd) | (yEnd <= _clipBoxD.y0))
       return BL_SUCCESS;
 
+    // This delta should be okay even for 16-bit AA.
+    double kDeltaLimit = 0.00001;
+    double xDelta = blAbs(monoCurve.first().x - monoCurve.last().x);
+
     uint32_t completelyOut = 0;
     typename MonoCurveT::SplitStep step;
 
-    if (monoCurve.isLeftToRight()) {
+    if (xDelta < kDeltaLimit) {
+      // Straight-Line
+      // -------------
+
+      yStart = blMax(yStart, _clipBoxD.y0);
+
+      double xMin = blMin(monoCurve.first().x, monoCurve.last().x);
+      double xMax = blMax(monoCurve.first().x, monoCurve.last().x);
+
+      if (xMax <= _clipBoxD.x0) {
+        BL_PROPAGATE(accumulateLeftBorder(yStart, yEnd, signBit));
+      }
+      else if (xMin >= _clipBoxD.x1) {
+        BL_PROPAGATE(accumulateRightBorder(yStart, yEnd, signBit));
+      }
+      else {
+        BL_PROPAGATE(appender.openAt(monoCurve.first().x, yStart));
+        BL_PROPAGATE(appender.addLine(monoCurve.last().x, yEnd));
+        BL_PROPAGATE(appender.close());
+      }
+
+      return BL_SUCCESS;
+    }
+    else if (monoCurve.isLeftToRight()) {
       // Left-To-Right
       // ------------>
       //
