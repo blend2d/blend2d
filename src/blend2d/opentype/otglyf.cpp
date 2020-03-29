@@ -115,10 +115,14 @@ static BLResult BL_CDECL getGlyphBounds(
           goto InvalidData;
       }
 
-      boxes[i].reset(reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMin(),
-                     reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMin(),
-                     reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMax(),
-                     reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMax());
+      int xMin = reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMin();
+      int xMax = reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->xMax();
+
+      // Y coordinates in fonts are bottom to top, we convert them to top-to-bottom.
+      int yMin = -reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMax();
+      int yMax = -reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->yMin();
+
+      boxes[i].reset(xMin, yMin, xMax, yMax);
       continue;
     }
 
