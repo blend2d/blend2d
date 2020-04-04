@@ -65,8 +65,17 @@ BLResult blContextAssignWeak(BLContextCore* self, const BLContextCore* other) no
 // [BLContext - Properties]
 // ============================================================================
 
-BLResult blContextGetType(const BLContextCore* self) noexcept {
+uint32_t blContextGetType(const BLContextCore* self) noexcept {
   return self->impl->contextType;
+}
+
+BLResult blContextGetTargetSize(const BLContextCore* self, BLSize* targetSizeOut) noexcept {
+  *targetSizeOut = self->impl->state->targetSize;
+  return BL_SUCCESS;
+}
+
+BLImageCore* blContextGetTargetImage(const BLContextCore* self) noexcept {
+  return const_cast<BLImageCore*>(&self->impl->state->targetImage);
 }
 
 // ============================================================================

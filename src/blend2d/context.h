@@ -337,6 +337,12 @@ struct BLContextHints {
 //! that want to introspect the rendering context state and for C++ API that can
 //! access it directly for performance reasons.
 struct BLContextState {
+  //! Target image or image object with nullptr impl in case that the rendering
+  //! context doesn't render to an image.
+  BLImageCore targetImage;
+  //! Current size of the target in abstract units, pixels if rendering to `BLImage`.
+  BLSize targetSize;
+
   //! Current context hints.
   BLContextHints hints;
   //! Current composition operator.
@@ -465,8 +471,6 @@ struct BLContextImpl {
   //! Type of the context, see `BLContextType`.
   uint32_t contextType;
 
-  //! Current size of the target in abstract units, pixels if rendering to `BLImage`.
-  BLSize targetSize;
   //! Current state of the context.
   const BLContextState* state;
 };
@@ -576,12 +580,26 @@ public:
   //! \name Target Information
   //! \{
 
-  //! Returns target size in abstract units (pixels in case of `BLImage`).
-  BL_INLINE BLSize targetSize() const noexcept { return impl->targetSize; }
-  //! Returns target width in abstract units (pixels in case of `BLImage`).
-  BL_INLINE double targetWidth() const noexcept { return impl->targetSize.w; }
-  //! Returns target height in abstract units (pixels in case of `BLImage`).
-  BL_INLINE double targetHeight() const noexcept { return impl->targetSize.h; }
+  //! Returns the target size in abstract units (pixels in case of `BLImage`).
+  BL_INLINE BLSize targetSize() const noexcept { return impl->state->targetSize; }
+  //! Returns the target width in abstract units (pixels in case of `BLImage`).
+  BL_INLINE double targetWidth() const noexcept { return impl->state->targetSize.w; }
+  //! Returns the target height in abstract units (pixels in case of `BLImage`).
+  BL_INLINE double targetHeight() const noexcept { return impl->state->targetSize.h; }
+
+  //! Returns the target image or null if there is no target image.
+  //!
+  //! \note The rendering context doesn't own the image, but it increases its
+  //! writer count, which means that the image will not be destroyed even when
+  //! user destroys it during the rendering (in such case it will be destroyed
+  //! after the rendering ends when the writer count goes to zero). This means
+  //! that the rendering context must hold the image and not the pointer to
+  //! the `BLImage` passed to either the constructor or `begin()` function. So
+  //! the returned pointer is not the same as the pointer passed to `begin()`,
+  //! but it points to the same impl.
+  BL_INLINE BLImage* targetImage() const noexcept {
+    return const_cast<BLImage*>(blDownCast(&impl->state->targetImage));
+  }
 
   //! \}
 

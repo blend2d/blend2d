@@ -2547,8 +2547,9 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
     ctxI->workerCtx.initContextDataByDstData();
 
     // Initialize destination image and worker.
-    ctxI->targetSize.reset(size.w, size.h);
-    ctxI->dstImage.impl = imageI;
+    ctxI->currentState.targetImage.impl = imageI;
+    ctxI->currentState.targetSize.reset(size.w, size.h);
+
     ctxI->dstInfo.format = uint8_t(format);
     ctxI->dstInfo.is16Bit = false;
     ctxI->dstInfo.fullAlphaI = uint32_t(fullAlphaI);
@@ -2616,7 +2617,7 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
 
 static BLResult blRasterContextImplDetach(BLRasterContextImpl* ctxI) noexcept {
   // Release the ImageImpl.
-  BLInternalImageImpl* imageI = blInternalCast(ctxI->dstImage.impl);
+  BLInternalImageImpl* imageI = blInternalCast(ctxI->currentState.targetImage.impl);
   BL_ASSERT(imageI != nullptr);
 
   // If the image was dereferenced during rendering it's our responsibility to
@@ -2628,7 +2629,7 @@ static BLResult blRasterContextImplDetach(BLRasterContextImpl* ctxI) noexcept {
     if (imageI->refCount == 0)
       blImageImplDelete(imageI);
   }
-  ctxI->dstImage.impl = nullptr;
+  ctxI->currentState.targetImage.impl = nullptr;
 
   // Release Threads/WorkerContexts used by asynchronous rendering.
   ctxI->workerMgr.reset();
@@ -2691,7 +2692,7 @@ BLResult blRasterContextImplCreate(BLContextImpl** out, BLImageCore* image, cons
 static BLResult BL_CDECL blRasterContextImplDestroy(BLContextImpl* baseImpl) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
 
-  if (ctxI->dstImage.impl)
+  if (ctxI->currentState.targetImage.impl)
     blRasterContextImplDetach(ctxI);
 
   uint32_t memPoolData = ctxI->memPoolData;

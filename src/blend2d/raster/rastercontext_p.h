@@ -51,8 +51,6 @@ public:
   //! Object pool used to allocate `BLRasterContextSavedState`.
   BLZonePool<BLRasterContextSavedState> statePool;
 
-  //! Destination image.
-  BLImageCore dstImage;
   //! Destination info.
   BLRasterContextDstInfo dstInfo;
 
@@ -146,7 +144,6 @@ public:
       cmdZone(16384 - BLZoneAllocator::kBlockOverhead, 8),
       fetchPool(&baseZone),
       statePool(&baseZone),
-      dstImage {},
       dstInfo {},
       workerCtx(this),
       workerMgr(),
@@ -162,7 +159,7 @@ public:
     implTraits = uint8_t(BL_IMPL_TRAIT_MUTABLE | BL_IMPL_TRAIT_VIRT);
     memPoolData = inMemPoolData;
     contextType = BL_CONTEXT_TYPE_RASTER;
-    targetSize.reset();
+    currentState.targetImage.impl = nullptr;
     state = &currentState;
   }
 

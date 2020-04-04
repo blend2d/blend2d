@@ -1457,7 +1457,9 @@ BL_API BLResult BL_CDECL blContextInitAs(BLContextCore* self, BLImageCore* image
 BL_API BLResult BL_CDECL blContextReset(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextAssignMove(BLContextCore* self, BLContextCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextAssignWeak(BLContextCore* self, const BLContextCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextGetType(const BLContextCore* self) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blContextGetType(const BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetTargetSize(const BLContextCore* self, BLSize* targetSizeOut) BL_NOEXCEPT_C;
+BL_API BLImageCore* BL_CDECL blContextGetTargetImage(const BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextBegin(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextEnd(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextFlush(BLContextCore* self, uint32_t flags) BL_NOEXCEPT_C;
