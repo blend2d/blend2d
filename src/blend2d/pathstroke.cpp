@@ -592,8 +592,10 @@ SmoothPolyTo:
 
     BLPoint p1 = poly[0];
     BLPoint v1 = p1 - _p0;
-    BLPoint n1 = blNormal(blUnitVector(v1));
+    if (blLengthSq(v1) < BL_STROKE_LENGTH_EPSILON_SQ)
+      return BL_SUCCESS;
 
+    BLPoint n1 = blNormal(blUnitVector(v1));
     if (!isOpen())
       BL_PROPAGATE(openLineTo(p1, n1));
     else
@@ -607,6 +609,8 @@ SmoothPolyTo:
     for (size_t i = 1; i < count; i++) {
       p1 = poly[i];
       v1 = p1 - _p0;
+      if (blLengthSq(v1) < BL_STROKE_LENGTH_EPSILON_SQ)
+        continue;
       n1 = blNormal(blUnitVector(v1));
 
       BL_PROPAGATE(joinCusp(n1));
