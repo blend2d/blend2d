@@ -201,7 +201,7 @@ static size_t BL_CDECL blMemFontDataImplQueryTables(const BLFontDataImpl* impl_,
 }
 
 // ============================================================================
-// [BLFontData - Init / Reset]
+// [BLFontData - Init / Destroy]
 // ============================================================================
 
 BLResult blFontDataInit(BLFontDataCore* self) noexcept {
@@ -209,9 +209,18 @@ BLResult blFontDataInit(BLFontDataCore* self) noexcept {
   return BL_SUCCESS;
 }
 
+BLResult blFontDataDestroy(BLFontDataCore* self) noexcept {
+  BLFontDataImpl* selfI = self->impl;
+  self->impl = nullptr;
+  return blImplReleaseVirt(selfI);
+}
+
+// ============================================================================
+// [BLFontData - Reset]
+// ============================================================================
+
 BLResult blFontDataReset(BLFontDataCore* self) noexcept {
   BLFontDataImpl* selfI = self->impl;
-
   self->impl = &blNullFontDataImpl;
   return blImplReleaseVirt(selfI);
 }
@@ -386,7 +395,7 @@ static BLResult BL_CDECL blNullFontFaceMapTextToGlyphs(
   BLGlyphMappingState* state) noexcept {
 
   state->reset();
-  return blTraceError(BL_ERROR_NOT_INITIALIZED);
+  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL blNullFontFaceGetGlyphBounds(
@@ -396,7 +405,7 @@ static BLResult BL_CDECL blNullFontFaceGetGlyphBounds(
   BLBoxI* boxes,
   size_t count) noexcept {
 
-  return blTraceError(BL_ERROR_NOT_INITIALIZED);
+  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL blNullFontFaceGetGlyphAdvances(
@@ -406,7 +415,7 @@ static BLResult BL_CDECL blNullFontFaceGetGlyphAdvances(
   BLGlyphPlacement* placementData,
   size_t count) noexcept {
 
-  return blTraceError(BL_ERROR_NOT_INITIALIZED);
+  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL blNullFontFaceGetGlyphOutlines(
@@ -418,7 +427,7 @@ static BLResult BL_CDECL blNullFontFaceGetGlyphOutlines(
   BLMemBuffer* tmpBuffer) noexcept {
 
   *contourCountOut = 0;
-  return blTraceError(BL_ERROR_NOT_INITIALIZED);
+  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL blNullFontFaceApplyKern(
@@ -427,7 +436,7 @@ static BLResult BL_CDECL blNullFontFaceApplyKern(
   BLGlyphPlacement* placementData,
   size_t count) noexcept {
 
-  return blTraceError(BL_ERROR_NOT_INITIALIZED);
+  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL blNullFontFaceApplyGSub(
@@ -436,7 +445,7 @@ static BLResult BL_CDECL blNullFontFaceApplyGSub(
   size_t index,
   BLBitWord lookups) noexcept {
 
-  return blTraceError(BL_ERROR_NOT_INITIALIZED);
+  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL blNullFontFaceApplyGPos(
@@ -445,7 +454,7 @@ static BLResult BL_CDECL blNullFontFaceApplyGPos(
   size_t index,
   BLBitWord lookups) noexcept {
 
-  return blTraceError(BL_ERROR_NOT_INITIALIZED);
+  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 static BLResult BL_CDECL blNullFontFacePositionGlyphs(
@@ -454,19 +463,29 @@ static BLResult BL_CDECL blNullFontFacePositionGlyphs(
   BLGlyphPlacement* placementData,
   size_t count) noexcept {
 
-  return blTraceError(BL_ERROR_NOT_INITIALIZED);
+  return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 }
 
 BL_DIAGNOSTIC_POP
 
 // ============================================================================
-// [BLFontFace - Init / Reset]
+// [BLFontFace - Init / Destroy]
 // ============================================================================
 
 BLResult blFontFaceInit(BLFontFaceCore* self) noexcept {
   self->impl = &blNullFontFaceImpl;
   return BL_SUCCESS;
 }
+
+BLResult blFontFaceDestroy(BLFontFaceCore* self) noexcept {
+  BLInternalFontFaceImpl* selfI = blInternalCast(self->impl);
+  self->impl = nullptr;
+  return blImplReleaseVirt(selfI);
+}
+
+// ============================================================================
+// [BLFontFace - Reset]
+// ============================================================================
 
 BLResult blFontFaceReset(BLFontFaceCore* self) noexcept {
   BLInternalFontFaceImpl* selfI = blInternalCast(self->impl);
@@ -632,13 +651,23 @@ static BL_INLINE BLResult blFontImplRelease(BLInternalFontImpl* impl) noexcept {
 }
 
 // ============================================================================
-// [BLFont - Init / Reset]
+// [BLFont - Init / Destroy]
 // ============================================================================
 
 BLResult blFontInit(BLFontCore* self) noexcept {
   self->impl = &blNullFontImpl;
   return BL_SUCCESS;
 }
+
+BLResult blFontDestroy(BLFontCore* self) noexcept {
+  BLInternalFontImpl* selfI = blInternalCast(self->impl);
+  self->impl = nullptr;
+  return blFontImplRelease(selfI);
+}
+
+// ============================================================================
+// [BLFont - Reset]
+// ============================================================================
 
 BLResult blFontReset(BLFontCore* self) noexcept {
   BLInternalFontImpl* selfI = blInternalCast(self->impl);
@@ -682,7 +711,7 @@ bool blFontEquals(const BLFontCore* a, const BLFontCore* b) noexcept {
 
 BLResult blFontCreateFromFace(BLFontCore* self, const BLFontFaceCore* face, float size) noexcept {
   if (blDownCast(face)->isNone())
-    return blTraceError(BL_ERROR_NOT_INITIALIZED);
+    return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 
   BLInternalFontImpl* selfI = blInternalCast(self->impl);
   if (selfI->refCount == 1) {

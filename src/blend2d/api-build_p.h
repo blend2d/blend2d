@@ -87,16 +87,19 @@
 #if defined(__INTEL_COMPILER)
   // Not regularly tested.
 #elif defined(_MSC_VER)
-  #pragma warning(disable: 4102) // unreferenced label
-  #pragma warning(disable: 4127) // conditional expression is constant
-  #pragma warning(disable: 4201) // nameless struct/union
-  #pragma warning(disable: 4251) // struct needs to have dll-interface
-  #pragma warning(disable: 4275) // non dll-interface struct ... used
-  #pragma warning(disable: 4324) // structure was padded due to alignment specifier
-  #pragma warning(disable: 4355) // this used in base member-init list
-  #pragma warning(disable: 4480) // specifying underlying type for enum
-  #pragma warning(disable: 4505) // unreferenced local function has been removed
-  #pragma warning(disable: 4800) // forcing value to bool true or false
+  #pragma warning(disable: 4102) // Unreferenced label.
+  #pragma warning(disable: 4127) // Conditional expression is constant.
+  #pragma warning(disable: 4201) // Nameless struct/union.
+  #pragma warning(disable: 4251) // Struct needs to have dll-interface.
+  #pragma warning(disable: 4275) // Non dll-interface struct ... used.
+  #pragma warning(disable: 4324) // Structure was padded due to alignment specifier.
+  #pragma warning(disable: 4355) // This used in base member-init list.
+  #pragma warning(disable: 4458) // declaration of 'X' hides class member.
+  #pragma warning(disable: 4480) // Specifying underlying type for enum.
+  #pragma warning(disable: 4505) // Unreferenced local function has been removed.
+  #pragma warning(disable: 4800) // Forcing value to bool true or false.
+  #pragma warning(disable: 4582) // Constructor is not implicitly called.
+  #pragma warning(disable: 4583) // Destructor is not implicitly called.
 #elif defined(__clang__)
   #pragma clang diagnostic ignored "-Wconstant-logical-operand"
   #pragma clang diagnostic ignored "-Wunnamed-type-template-args"
@@ -164,6 +167,15 @@
   #endif
 #endif
 
+// Defined when it's safe to assume that std::atomic<uint64_t> would be non
+// locking. We can always assume this on X86 architecture (even 32-bit), but
+// we don't assume this on other architectures like ARM.
+#if BL_TARGET_ARCH_BITS >= 64 || BL_TARGET_ARCH_X86 != 0
+  #define BL_TARGET_HAS_ATOMIC_64B 1
+#else
+  #define BL_TARGET_HAS_ATOMIC_64B 0
+#endif
+
 // Build optimizations control compile-time optimizations to be used by Blend2D
 // and C++ compiler. These optimizations are not related to the code-generator
 // optimizations (JIT) that are always auto-detected at runtime.
@@ -225,12 +237,12 @@
 
 // Don't build PipeGen at all if the host architecture doesn't support
 // instruction sets required.
-#if !defined(BL_BUILD_NO_PIPEGEN) && BL_TARGET_ARCH_X86 == 0
-  #define BL_BUILD_NO_PIPEGEN
+#if !defined(BL_BUILD_NO_JIT) && BL_TARGET_ARCH_X86 == 0
+  #define BL_BUILD_NO_JIT
 #endif
 
 // Make sure we build either PipeGen or FixedPipe, but not both.
-#if defined(BL_BUILD_NO_PIPEGEN)
+#if defined(BL_BUILD_NO_JIT)
   #if defined(BL_BUILD_NO_FIXED_PIPE)
     #undef BL_BUILD_NO_FIXED_PIPE
   #endif

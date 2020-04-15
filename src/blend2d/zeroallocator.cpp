@@ -44,7 +44,7 @@ constexpr X blZeroAllocatorNumGranularized(X base, Y granularity) noexcept {
 class BLZeroAllocator {
 public:
   BL_NONCOPYABLE(BLZeroAllocator)
-  typedef BLPrivateBitOps BitOps;
+  typedef BLPrivateBitOps<BLBitWord> BitOps;
 
   enum : uint32_t {
     kBlockAlignment = 64,
@@ -304,8 +304,8 @@ public:
             uint32_t searchStart = block->_searchStart;
             uint32_t searchEnd = block->_searchEnd;
 
-            BitOps::BitVectorFlipIterator<BLBitWord> it(
-              block->_bitVector, blZeroAllocatorNumGranularized(searchEnd, blBitSizeOf<BLBitWord>()), searchStart, blBitOnes<BLBitWord>());
+            BitOps::BitVectorFlipIterator it(
+              block->_bitVector, blZeroAllocatorNumGranularized(searchEnd, BitOps::kNumBits), searchStart, BitOps::ones());
 
             // If there is unused area available then there has to be at least one match.
             BL_ASSERT(it.hasNext());

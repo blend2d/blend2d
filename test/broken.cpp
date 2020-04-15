@@ -287,5 +287,5 @@ void BrokenAPI::fail(const char* file, int line, const char* expression, const c
   fprintf(dst, "  SOURCE: %s (Line: %d)\n", file, line);
   fflush(dst);
 
-  exit(1);
+  abort();
 }

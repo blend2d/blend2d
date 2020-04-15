@@ -73,8 +73,8 @@ enum BLPipeExtendMode : uint32_t {
 //! A unique id describing how a mask of each filled pixel is calculated.
 enum BLPipeFillType : uint32_t {
   BL_PIPE_FILL_TYPE_NONE          = 0,         //!< None or uninitialized.
-  BL_PIPE_FILL_TYPE_BOX_AA        = 1,         //!< Fill axis-aligned box.
-  BL_PIPE_FILL_TYPE_BOX_AU        = 2,         //!< Fill axis-unaligned box.
+  BL_PIPE_FILL_TYPE_BOX_A         = 1,         //!< Fill axis-aligned box.
+  BL_PIPE_FILL_TYPE_BOX_U         = 2,         //!< Fill axis-unaligned box.
   BL_PIPE_FILL_TYPE_ANALYTIC      = 3,         //!< Fill analytic non-zero/even-odd.
 
   BL_PIPE_FILL_TYPE_COUNT         = 4          //!< Count of fill types.
@@ -94,7 +94,7 @@ enum BLPipeFillRuleMask : uint32_t {
 //! A unique id describing how pixels are fetched - supported fetchers include
 //! solid pixels, patterns (sometimes referred as blits), and gradients.
 //!
-//! \note RoR is a shurtcut for repeat-or-reflect - an universal fetcher for both.
+//! \note RoR is a shurtcut for repeat-or-reflect - a universal fetcher for both.
 enum BLPipeFetchType : uint32_t {
   BL_PIPE_FETCH_TYPE_SOLID  = 0,               //!< Solid fetch.
 
@@ -181,7 +181,7 @@ enum BLPipeSignatureMasks : uint32_t {
 // [Typedefs]
 // ============================================================================
 
-typedef void (BL_CDECL* BLPipeFillFunc)(void* ctxData, void* fillData, const void* fetchData) BL_NOEXCEPT;
+typedef void (BL_CDECL* BLPipeFillFunc)(void* ctxData, const void* fillData, const void* fetchData) BL_NOEXCEPT;
 
 // ============================================================================
 // [BLPipeValue32]
@@ -242,7 +242,7 @@ struct BLPipeFillData {
   };
 
   //! Rectangle (axis-aligned).
-  struct BoxAA {
+  struct BoxA {
     //! Rectangle to fill.
     BLBoxI box;
     //! Alpha value (range depends on target pixel format).
@@ -250,7 +250,7 @@ struct BLPipeFillData {
   };
 
   //! Rectangle (axis-unaligned).
-  struct BoxAU {
+  struct BoxU {
     //! Rectangle to fill.
     BLBoxI box;
     //! Alpha value (range depends on target pixel format).
@@ -269,7 +269,7 @@ struct BLPipeFillData {
   };
 
   struct Analytic {
-    //! Fill boundary (x0 is ignored, x1 acts as maxWidth, y0/y1 are used normally).
+    //! Fill boundary.
     BLBoxI box;
     //! Alpha value (range depends on format).
     BLPipeValue32 alpha;
@@ -289,20 +289,20 @@ struct BLPipeFillData {
 
   union {
     Common common;
-    BoxAA boxAA;
-    BoxAU boxAU;
+    BoxA boxAA;
+    BoxU boxAU;
     Analytic analytic;
   };
 
-  inline void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 
   // --------------------------------------------------------------------------
   // [Init]
   // --------------------------------------------------------------------------
 
-  inline uint32_t initBoxAA8bpc(uint32_t alpha, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1) noexcept {
+  BL_INLINE bool initBoxA8bpc(uint32_t alpha, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1) noexcept {
     // The rendering engine should never pass out-of-range alpha.
-    BL_ASSERT(alpha <= 256);
+    BL_ASSERT(alpha <= 255);
 
     // The rendering engine should never pass invalid box to the pipeline.
     BL_ASSERT(x0 < x1);
@@ -310,20 +310,25 @@ struct BLPipeFillData {
 
     boxAA.alpha.u = alpha;
     boxAA.box.reset(int(x0), int(y0), int(x1), int(y1));
-    return BL_PIPE_FILL_TYPE_BOX_AA;
+
+    return true;
   }
 
   template<typename T>
-  inline uint32_t initBoxAU8bpcT(uint32_t alpha, T x0, T y0, T x1, T y1) noexcept {
-    return initBoxAU8bpc24x8(alpha, uint32_t(blTruncToInt(x0 * T(256))),
-                                    uint32_t(blTruncToInt(y0 * T(256))),
-                                    uint32_t(blTruncToInt(x1 * T(256))),
-                                    uint32_t(blTruncToInt(y1 * T(256))));
+  BL_INLINE bool initBoxU8bpcT(uint32_t alpha, T x0, T y0, T x1, T y1) noexcept {
+    return initBoxU8bpc24x8(alpha, uint32_t(blTruncToInt(x0 * T(256))),
+                                   uint32_t(blTruncToInt(y0 * T(256))),
+                                   uint32_t(blTruncToInt(x1 * T(256))),
+                                   uint32_t(blTruncToInt(y1 * T(256))));
   }
 
-  uint32_t initBoxAU8bpc24x8(uint32_t alpha, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1) noexcept {
+  bool initBoxU8bpc24x8(uint32_t alpha, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1) noexcept {
     // The rendering engine should never pass out-of-range alpha.
-    BL_ASSERT(alpha <= 256);
+    BL_ASSERT(alpha <= 255);
+
+    // The rendering engine should never pass invalid box to the pipeline.
+    BL_ASSERT(x0 < x1);
+    BL_ASSERT(y0 < y1);
 
     uint32_t ax0 = x0 >> 8;
     uint32_t ay0 = y0 >> 8;
@@ -332,14 +337,6 @@ struct BLPipeFillData {
 
     boxAU.alpha.u = alpha;
     boxAU.box.reset(int(ax0), int(ay0), int(ax1), int(ay1));
-
-    // Special case - coordinates are very close (nothing to render).
-    if (x0 >= x1 || y0 >= y1)
-      return BL_PIPE_FILL_TYPE_NONE;
-
-    // Special case - aligned box.
-    if (((x0 | x1 | y0 | y1) & 0xFFu) == 0u)
-      return BL_PIPE_FILL_TYPE_BOX_AA;
 
     uint32_t fx0 = x0 & 0xFFu;
     uint32_t fy0 = y0 & 0xFFu;
@@ -376,7 +373,7 @@ struct BLPipeFillData {
     }
 
     if (!m1)
-      return BL_PIPE_FILL_TYPE_NONE;
+      return false;
 
     // Border case - if alpha is too low it can cause `m0` or `m2` to be zero,
     // which would then confuse the pipeline as it would think to stop instead
@@ -385,7 +382,7 @@ struct BLPipeFillData {
       m0 = m1;
       boxAU.box.y0++;
       if (boxAU.box.y0 == boxAU.box.y1)
-        return BL_PIPE_FILL_TYPE_NONE;
+        return false;
     }
 
     uint32_t ih = uint32_t(boxAU.box.y1 - boxAU.box.y0);
@@ -419,17 +416,21 @@ struct BLPipeFillData {
       boxAU.innerWidth = 0;
     }
 
-    return BL_PIPE_FILL_TYPE_BOX_AU;
+    return true;
   }
 
-  inline uint32_t initAnalytic(uint32_t alpha, BLBitWord* bitTopPtr, size_t bitStride, uint32_t* cellTopPtr, size_t cellStride) noexcept {
+  BL_INLINE bool initAnalytic(uint32_t alpha, uint32_t fillRule, BLBitWord* bitTopPtr, size_t bitStride, uint32_t* cellTopPtr, size_t cellStride) noexcept {
     analytic.alpha.u = alpha;
+    analytic.fillRuleMask =
+      (fillRule == BL_FILL_RULE_NON_ZERO)
+        ? BL_PIPE_FILL_RULE_MASK_NON_ZERO
+        : BL_PIPE_FILL_RULE_MASK_EVEN_ODD;
     analytic.bitTopPtr = bitTopPtr;
     analytic.bitStride = bitStride;
     analytic.cellTopPtr = cellTopPtr;
     analytic.cellStride = cellStride;
 
-    return BL_PIPE_FILL_TYPE_ANALYTIC;
+    return true;
   }
 };
 
@@ -442,8 +443,12 @@ struct alignas(16) BLPipeFetchData {
   //! Solid fetch data.
   struct Solid {
     union {
-      //! 32-bit ARGB, premultiplied.
-      uint32_t prgb32;
+      struct {
+        //! 32-bit ARGB, premultiplied.
+        uint32_t prgb32;
+        //! Reserved in case 32-bit data is used.
+        uint32_t reserved32;
+      };
       //! 64-bit ARGB, premultiplied.
       uint64_t prgb64;
     };
@@ -610,9 +615,9 @@ struct alignas(16) BLPipeFetchData {
     pattern.src.size.reset(w, h);
   }
 
-  BL_INLINE uint32_t initPatternBlit() noexcept {
-    pattern.simple.tx = 0;
-    pattern.simple.ty = 0;
+  BL_INLINE uint32_t initPatternBlit(int x, int y) noexcept {
+    pattern.simple.tx = x;
+    pattern.simple.ty = y;
     pattern.simple.rx = 0;
     pattern.simple.ry = 0;
     return BL_PIPE_FETCH_TYPE_PATTERN_AA_BLIT;
@@ -676,8 +681,10 @@ struct BLPipeSignature {
 
   //! Reset all values to zero.
   BL_INLINE void reset() noexcept { this->value = 0; }
-  //! Reset all values to other signature.
+  //! Reset all values to `v`.
   BL_INLINE void reset(uint32_t v) noexcept { this->value = v; }
+  //! Reset all values to the `other` signature.
+  BL_INLINE void reset(const BLPipeSignature& other) noexcept { this->value = other.value; }
 
   //! Set the signature from a packed 32-bit integer.
   BL_INLINE void setValue(uint32_t v) noexcept { this->value = v; }

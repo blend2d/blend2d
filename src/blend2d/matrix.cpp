@@ -473,14 +473,6 @@ BL_DIAGNOSTIC_POP
 // [BLMatrix2D - Runtime Init]
 // ============================================================================
 
-#ifdef BL_BUILD_OPT_SSE2
-BL_HIDDEN void blMatrix2DRtInit_SSE2(BLRuntimeContext* rt) noexcept;
-#endif
-
-#ifdef BL_BUILD_OPT_AVX
-BL_HIDDEN void blMatrix2DRtInit_AVX(BLRuntimeContext* rt) noexcept;
-#endif
-
 void blMatrix2DRtInit(BLRuntimeContext* rt) noexcept {
   #if !defined(BL_TARGET_OPT_SSE2)
   BL_UNUSED(rt);

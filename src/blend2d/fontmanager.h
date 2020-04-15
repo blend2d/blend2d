@@ -63,7 +63,7 @@ public:
   BL_INLINE BLFontManager(BLFontManager&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLFontManager(const BLFontManager& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLFontManager(BLFontManagerImpl* impl) noexcept { this->impl = impl; }
-  BL_INLINE ~BLFontManager() noexcept { blFontManagerReset(this); }
+  BL_INLINE ~BLFontManager() noexcept { blFontManagerDestroy(this); }
 
   //! \}
 

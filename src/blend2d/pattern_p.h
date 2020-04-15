@@ -15,7 +15,7 @@
 //! \{
 
 // ============================================================================
-// [BLPattern [Internal[]
+// [BLPattern - Internal]
 // ============================================================================
 
 //! Internal implementation that extends `BLPatternImpl`.
@@ -27,6 +27,26 @@ template<>
 struct BLInternalCastImpl<BLPatternImpl> { typedef BLInternalPatternImpl Type; };
 
 BL_HIDDEN BLResult blPatternImplDelete(BLPatternImpl* impl_) noexcept;
+
+// ============================================================================
+// [BLPattern - Utilities]
+// ============================================================================
+
+static BL_INLINE bool blPatternIsAreaValid(const BLRectI& area, const BLSizeI& size) noexcept {
+  typedef unsigned U;
+  return bool((U(area.x) < U(size.w)) &
+              (U(area.y) < U(size.h)) &
+              (U(area.w) <= U(size.w) - U(area.x)) &
+              (U(area.h) <= U(size.h) - U(area.y)));
+}
+
+static BL_INLINE bool blPatternIsAreaValidAndNonZero(const BLRectI& area, const BLSizeI& size) noexcept {
+  typedef unsigned U;
+  return bool((U(area.x) < U(size.w)) &
+              (U(area.y) < U(size.h)) &
+              (U(area.w) - U(1) < U(size.w) - U(area.x)) &
+              (U(area.h) - U(1) < U(size.h) - U(area.y)));
+}
 
 //! \}
 //! \endcond

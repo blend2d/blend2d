@@ -14,7 +14,7 @@
 
 // Zero size block used by `BLZoneAllocator` that doesn't have any memory allocated.
 // Should be allocated in read-only memory and should never be modified.
-const BLZoneAllocator::Block BLZoneAllocator::_zeroBlock = { nullptr, nullptr, 0 };
+const BLZoneAllocator::ZeroBlock BLZoneAllocator::_zeroBlock = { { 0 }, { nullptr, nullptr, 0 } };
 
 // ============================================================================
 // [BLZoneAllocator - Init / Reset]
@@ -46,10 +46,10 @@ void BLZoneAllocator::_init(size_t blockSize, size_t blockAlignment, void* stati
 void BLZoneAllocator::reset() noexcept {
   // Can't be altered.
   Block* cur = _block;
-  if (cur == &_zeroBlock)
+  if (cur == &_zeroBlock.block)
     return;
 
-  Block* initial = const_cast<BLZoneAllocator::Block*>(&_zeroBlock);
+  Block* initial = const_cast<BLZoneAllocator::Block*>(&_zeroBlock.block);
   _ptr = initial->data();
   _end = initial->data();
   _block = initial;
@@ -93,69 +93,72 @@ void* BLZoneAllocator::_alloc(size_t size, size_t alignment) noexcept {
   size_t rawBlockAlignment = blockAlignment();
   size_t minimumAlignment = blMax<size_t>(alignment, rawBlockAlignment);
 
-  // If the `BLZoneAllocator` has been cleared the current block doesn't have to be the
-  // last one. Check if there is a block that can be used instead of allocating
+  // If the `BLZoneAllocator` has been cleared the current block doesn't have to be
+  // the last one. Check if there is a block that can be used instead of allocating
   // a new one. If there is a `next` block it's completely unused, we don't have
   // to check for remaining bytes in that case.
   if (next) {
     uint8_t* ptr = blAlignUp(next->data(), minimumAlignment);
-    uint8_t* end = blAlignDown(next->data() + next->size, rawBlockAlignment);
+    uint8_t* end = next->data() + next->size;
 
     if (size <= (size_t)(end - ptr)) {
       _block = next;
       _ptr = ptr + size;
-      _end = blAlignDown(next->data() + next->size, rawBlockAlignment);
+      _end = next->data() + next->size;
       return static_cast<void*>(ptr);
     }
   }
 
-  size_t blockAlignmentOverhead = alignment - blMin<size_t>(alignment, BL_ALLOC_ALIGNMENT);
-  size_t newSize = blMax(blockSize(), size);
-
   // Prevent arithmetic overflow.
-  if (BL_UNLIKELY(newSize > SIZE_MAX - kBlockSize - blockAlignmentOverhead))
+  size_t newSize = blMax(blockSize(), size);
+  if (BL_UNLIKELY(newSize > SIZE_MAX - kBlockSize - kMaxAlignment))
     return nullptr;
 
   // Allocate new block - we add alignment overhead to `newSize`, which becomes the
   // new block size, and we also add `kBlockOverhead` to the allocator as it includes
   // members of `BLZoneAllocator::Block` structure.
-  newSize += blockAlignmentOverhead;
+  newSize += kMaxAlignment;
   Block* newBlock = static_cast<Block*>(malloc(newSize + kBlockSize));
 
   if (BL_UNLIKELY(!newBlock))
     return nullptr;
 
+  // Adjust newSize so the end of the block is aligned to maximum alignment. We will
+  // lose some bytes at the end of the block, but we will never go beyond the end of
+  // the block on alignment allocation request.
+  //
+  // NOTE: There was a bug in the past regarding this, do not remove this code.
+  newSize = (size_t)(blAlignDown(newBlock->data() + newSize, kMaxAlignment) - newBlock->data());
+
   // Align the pointer to `minimumAlignment` and adjust the size of this block
   // accordingly. It's the same as using `minimumAlignment - blAlignUpDiff()`,
   // just written differently.
-  {
-    newBlock->prev = nullptr;
-    newBlock->next = nullptr;
-    newBlock->size = newSize;
+  newBlock->prev = nullptr;
+  newBlock->next = nullptr;
+  newBlock->size = newSize;
 
-    if (curBlock != &_zeroBlock) {
-      newBlock->prev = curBlock;
-      curBlock->next = newBlock;
+  if (curBlock != &_zeroBlock.block) {
+    newBlock->prev = curBlock;
+    curBlock->next = newBlock;
 
-      // Does only happen if there is a next block, but the requested memory
-      // can't fit into it. In this case a new buffer is allocated and inserted
-      // between the current block and the next one.
-      if (next) {
-        newBlock->next = next;
-        next->prev = newBlock;
-      }
+    // Does only happen if there is a next block, but the requested memory
+    // can't fit into it. In this case a new buffer is allocated and inserted
+    // between the current block and the next one.
+    if (next) {
+      newBlock->next = next;
+      next->prev = newBlock;
     }
-
-    uint8_t* ptr = blAlignUp(newBlock->data(), minimumAlignment);
-    uint8_t* end = blAlignDown(newBlock->data() + newSize, rawBlockAlignment);
-
-    _ptr = ptr + size;
-    _end = end;
-    _block = newBlock;
-
-    BL_ASSERT(_ptr <= _end);
-    return static_cast<void*>(ptr);
   }
+
+  uint8_t* ptr = blAlignUp(newBlock->data(), minimumAlignment);
+  uint8_t* end = newBlock->data() + newSize;
+
+  _ptr = ptr + size;
+  _end = end;
+  _block = newBlock;
+
+  BL_ASSERT(_ptr <= _end);
+  return static_cast<void*>(ptr);
 }
 
 void* BLZoneAllocator::allocZeroed(size_t size, size_t alignment) noexcept {

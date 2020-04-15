@@ -19,12 +19,14 @@
 // [BLImage - Internal]
 // ============================================================================
 
-enum : uint32_t { BL_INTERNAL_IMAGE_DATA_ALIGNMENT = 8 };
+enum : uint32_t {
+  BL_INTERNAL_IMAGE_SMALL_DATA_ALIGNMENT = 8,
+  BL_INTERNAL_IMAGE_LARGE_DATA_ALIGNMENT = 64,
+  BL_INTERNAL_IMAGE_LARGE_DATA_THRESHOLD = 1024
+};
 
 //! Internal implementation that extends `BLImagetImpl`.
 struct BLInternalImageImpl : public BLImageImpl {
-  //! Non-null if the image has a writer.
-  volatile void* writer;
   //! Count of writers that write to this image.
   //!
   //! Writers don't increase the reference count of the image to keep it
@@ -36,9 +38,12 @@ struct BLInternalImageImpl : public BLImageImpl {
 template<>
 struct BLInternalCastImpl<BLImageImpl> { typedef BLInternalImageImpl Type; };
 
-static BL_INLINE size_t blImageStrideForWidth(uint32_t width, uint32_t depth) noexcept {
-  return depth <= 8 ? (size_t(width) * depth + 7u) / 8u
-                    : blAlignUp<size_t>(size_t(width) * (depth / 8u), (depth <= 32) ? 4 : 8);
+static BL_INLINE size_t blImageStrideForWidth(uint32_t width, uint32_t depth, BLOverflowFlag* of) noexcept {
+  if (depth <= 8)
+    return (size_t(width) * depth + 7u) / 8u;
+
+  size_t bytesPerPixel = size_t(depth / 8u);
+  return blMulOverflow(size_t(width), bytesPerPixel, of);
 }
 
 BL_HIDDEN BLResult blImageImplDelete(BLImageImpl* impl) noexcept;

@@ -18,14 +18,14 @@ static void testBitArrayOps() {
 
   INFO("BLParametrizedBitOps<BL_BIT_ORDER_LSB>::bitArrayFill");
   memset(bits, 0, sizeof(bits));
-  BLLsbBitOps::bitArrayFill(bits, 1, 94);
+  BLLSBBitOps<uint32_t>::bitArrayFill(bits, 1, 94);
   EXPECT(bits[0] == 0xFFFFFFFEu);
   EXPECT(bits[1] == 0xFFFFFFFFu);
   EXPECT(bits[2] == 0x7FFFFFFFu);
 
   INFO("BLParametrizedBitOps<BL_BIT_ORDER_MSB>::bitArrayFill");
   memset(bits, 0, sizeof(bits));
-  BLMsbBitOps::bitArrayFill(bits, 1, 94);
+  BLMSBBitOps<uint32_t>::bitArrayFill(bits, 1, 94);
   EXPECT(bits[0] == 0x7FFFFFFFu);
   EXPECT(bits[1] == 0xFFFFFFFFu);
   EXPECT(bits[2] == 0xFFFFFFFEu);
@@ -33,7 +33,7 @@ static void testBitArrayOps() {
 
 static void testBitIterator() {
   INFO("BLParametrizedBitOps<BL_BIT_ORDER_LSB>::BitIterator<uint32_t>");
-  BLLsbBitOps::BitIterator<uint32_t> lsbIt(0x40000010u);
+  BLLSBBitOps<uint32_t>::BitIterator lsbIt(0x40000010u);
 
   EXPECT(lsbIt.hasNext());
   EXPECT(lsbIt.next() == 4);
@@ -42,7 +42,7 @@ static void testBitIterator() {
   EXPECT(!lsbIt.hasNext());
 
   INFO("BLParametrizedBitOps<BL_BIT_ORDER_MSB>::BitIterator<uint32_t>");
-  BLMsbBitOps::BitIterator<uint32_t> msbIt(0x40000010u);
+  BLMSBBitOps<uint32_t>::BitIterator msbIt(0x40000010u);
 
   EXPECT(msbIt.hasNext());
   EXPECT(msbIt.next() == 1);
@@ -56,7 +56,7 @@ static void testBitVectorIterator() {
   static const uint32_t msbBits[] = { 0x00000001u, 0x80000000u };
 
   INFO("BLParametrizedBitOps<BL_BIT_ORDER_LSB>::BitVectorIterator<uint32_t>");
-  BLLsbBitOps::BitVectorIterator<uint32_t> lsbIt(lsbBits, BL_ARRAY_SIZE(lsbBits));
+  BLLSBBitOps<uint32_t>::BitVectorIterator lsbIt(lsbBits, BL_ARRAY_SIZE(lsbBits));
 
   EXPECT(lsbIt.hasNext());
   EXPECT(lsbIt.next() == 0);
@@ -65,7 +65,7 @@ static void testBitVectorIterator() {
   EXPECT(!lsbIt.hasNext());
 
   INFO("BLParametrizedBitOps<BL_BIT_ORDER_MSB>::BitVectorIterator<uint32_t>");
-  BLMsbBitOps::BitVectorIterator<uint32_t> msbIt(msbBits, BL_ARRAY_SIZE(msbBits));
+  BLMSBBitOps<uint32_t>::BitVectorIterator msbIt(msbBits, BL_ARRAY_SIZE(msbBits));
 
   EXPECT(msbIt.hasNext());
   EXPECT(msbIt.next() == 31);
@@ -79,7 +79,7 @@ static void testBitVectorFlipIterator() {
   static const uint32_t msbBits[] = { 0x0FFFFFFFu, 0xFFFFFF00u };
 
   INFO("BLParametrizedBitOps<BL_BIT_ORDER_LSB>::BitVectorFlipIterator<uint32_t>");
-  BLLsbBitOps::BitVectorFlipIterator<uint32_t> lsbIt(lsbBits, BL_ARRAY_SIZE(lsbBits));
+  BLLSBBitOps<uint32_t>::BitVectorFlipIterator lsbIt(lsbBits, BL_ARRAY_SIZE(lsbBits));
   EXPECT(lsbIt.hasNext());
   EXPECT(lsbIt.nextAndFlip() == 4);
   EXPECT(lsbIt.hasNext());
@@ -87,7 +87,7 @@ static void testBitVectorFlipIterator() {
   EXPECT(!lsbIt.hasNext());
 
   INFO("BLParametrizedBitOps<BL_BIT_ORDER_MSB>::BitVectorFlipIterator<uint32_t>");
-  BLMsbBitOps::BitVectorFlipIterator<uint32_t> msbIt(msbBits, BL_ARRAY_SIZE(msbBits));
+  BLMSBBitOps<uint32_t>::BitVectorFlipIterator msbIt(msbBits, BL_ARRAY_SIZE(msbBits));
   EXPECT(msbIt.hasNext());
   EXPECT(msbIt.nextAndFlip() == 4);
   EXPECT(msbIt.hasNext());

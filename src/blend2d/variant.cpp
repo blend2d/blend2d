@@ -78,13 +78,13 @@ BLResult blVariantImplDelete(BLVariantImpl* impl) noexcept {
         return static_cast<const BLVariantVirt*>(impl->virt)->destroy(impl);
 
       // FATAL ERROR: Either a new impl-type was introduced or memory corrupted.
-      blRuntimeFailure("[Blend2D] blVariantImplDelete(): Cannot delete Impl of impl-type #<%u>", implType);
+      blRuntimeFailure("[Blend2D] blVariantImplDelete(): Cannot delete unknown impl of type #<%u>", implType);
     }
   }
 }
 
 // ============================================================================
-// [BLVariant - Init / Reset]
+// [BLVariant - Init / Destroy]
 // ============================================================================
 
 BLResult blVariantInit(void* self) noexcept {
@@ -105,6 +105,19 @@ BLResult blVariantInitWeak(void* self, const void* other) noexcept {
   static_cast<BLVariant*>(self)->impl = blImplIncRef(static_cast<const BLVariant*>(other)->impl);
   return BL_SUCCESS;
 }
+
+BLResult blVariantDestroy(void* self) noexcept {
+  BLVariantImpl* selfI = static_cast<BLVariant*>(self)->impl;
+  static_cast<BLVariant*>(self)->impl = nullptr;
+
+  if (blImplDecRefAndTest(selfI))
+    return blVariantImplDelete(selfI);
+  return BL_SUCCESS;
+}
+
+// ============================================================================
+// [BLVariant - Reset]
+// ============================================================================
 
 BLResult blVariantReset(void* self) noexcept {
   BLVariantImpl* selfI = static_cast<BLVariant*>(self)->impl;

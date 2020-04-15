@@ -428,7 +428,7 @@ static BL_INLINE BLResult blGradientMakeMutable(BLGradientCore* self, bool copyC
 }
 
 // ============================================================================
-// [BLGradient - Init / Reset]
+// [BLGradient - Init / Destroy]
 // ============================================================================
 
 BLResult blGradientInit(BLGradientCore* self) noexcept {
@@ -471,6 +471,15 @@ BLResult blGradientInitAs(BLGradientCore* self, uint32_t type, const void* value
 
   return BL_SUCCESS;
 }
+
+BLResult blGradientDestroy(BLGradientCore* self) noexcept {
+  BLInternalGradientImpl* selfI = blInternalCast(self->impl);
+  self->impl = nullptr;
+  return blGradientImplRelease(selfI);
+}
+// ============================================================================
+// [BLGradient - Reset]
+// ============================================================================
 
 BLResult blGradientReset(BLGradientCore* self) noexcept {
   BLInternalGradientImpl* selfI = blInternalCast(self->impl);

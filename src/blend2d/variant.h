@@ -207,7 +207,7 @@ public:
   BL_INLINE BLVariant(BLVariant&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLVariant(const BLVariant& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLVariant(BLVariantImpl* impl) noexcept { this->impl = impl; }
-  BL_INLINE ~BLVariant() noexcept { blVariantReset(this); }
+  BL_INLINE ~BLVariant() noexcept { blVariantDestroy(this); }
 
   BL_INLINE BLVariant& operator=(BLVariant&& other) noexcept { blVariantAssignMove(this, &other); return *this; }
   BL_INLINE BLVariant& operator=(const BLVariant& other) noexcept { blVariantAssignWeak(this, &other); return *this; }

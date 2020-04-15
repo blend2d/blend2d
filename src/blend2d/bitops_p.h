@@ -64,52 +64,55 @@ namespace {
 //! ARM and other architectures only implement LZCNT (count leading zeros) and
 //! counting trailing zeros means emitting more instructions to workaround the
 //! missing instruction.
-template<uint32_t BitOrder>
+template<uint32_t BitOrder, typename T>
 struct BLParametrizedBitOps {
+  typedef typename std::make_unsigned<T>::type U;
+
   enum : uint32_t {
     kBitOrder = BitOrder,
     kReverseBitOrder = BitOrder ^ 1u,
-
     kIsLSB = (kBitOrder == BL_BIT_ORDER_LSB),
-    kIsMSB = (kBitOrder == BL_BIT_ORDER_MSB)
+    kIsMSB = (kBitOrder == BL_BIT_ORDER_MSB),
+
+    kNumBits = blBitSizeOf<T>()
   };
 
-  template<typename T, typename Index>
+  static BL_INLINE constexpr T zero() noexcept { return T(0); }
+  static BL_INLINE constexpr T ones() noexcept { return blBitOnes<T>(); }
+
+  template<typename Index>
   static BL_INLINE constexpr bool hasBit(const T& x, const Index& index) noexcept {
-    return kIsLSB ? bool((x >> index) & 0x1) : bool((x >> (index ^ Index(blBitSizeOf<T>() - 1))) & 0x1);
+    return kIsLSB ? bool((x >> index) & 0x1) : bool((x >> (index ^ Index(kNumBits - 1))) & 0x1);
   }
 
-  template<typename T, typename N>
+  template<typename N>
   static BL_INLINE constexpr T indexAsMask(const N& n) noexcept {
     return kIsLSB ? blBitShl(T(1), n) : blBitShr(blNonZeroMsbMask<T>(), n);
   }
 
-  template<typename T, typename N>
+  template<typename N>
   static BL_INLINE constexpr T nonZeroBitMask(const N& n = 1) noexcept {
     return kIsLSB ? blNonZeroLsbMask<T>(n) : blNonZeroMsbMask<T>(n);
   }
 
-  template<typename T, typename Count>
+  template<typename Count>
   static BL_INLINE constexpr T shiftForward(const T& x, const Count& y) noexcept {
     return kIsLSB ? blBitShl(x, y) : blBitShr(x, y);
   }
 
-  template<typename T, typename Count>
+  template<typename Count>
   static BL_INLINE constexpr T shiftBackward(const T& x, const Count& y) noexcept {
     return kIsLSB ? blBitShr(x, y) : blBitShl(x, y);
   }
 
-  template<typename T>
-  static BL_INLINE constexpr uint32_t countZerosForward(const T& x) noexcept {
+  static BL_INLINE uint32_t countZerosForward(const T& x) noexcept {
     return kIsLSB ? blBitCtz(x) : blBitClz(x);
   }
 
-  template<typename T>
-  static BL_INLINE constexpr uint32_t countZerosBackward(const T& x) noexcept {
+  static BL_INLINE uint32_t countZerosBackward(const T& x) noexcept {
     return kIsLSB ? blBitClz(x) : blBitCtz(x);
   }
 
-  template<typename T>
   static BL_INLINE int compare(const T& x, const T& y) noexcept {
     T xv = kIsLSB ? blBitSwap(x) : x;
     T yv = kIsLSB ? blBitSwap(y) : y;
@@ -117,67 +120,60 @@ struct BLParametrizedBitOps {
     return int(xv > yv) - int(xv < yv);
   }
 
-  template<typename T>
   static BL_INLINE void bitArraySetBit(T* buf, size_t index) noexcept {
-    size_t vecIndex = index / blBitSizeOf<T>();
-    size_t bitIndex = index % blBitSizeOf<T>();
+    size_t vecIndex = index / kNumBits;
+    size_t bitIndex = index % kNumBits;
 
-    buf[vecIndex] |= indexAsMask<T>(bitIndex);
+    buf[vecIndex] |= indexAsMask(bitIndex);
   }
 
-  template<typename T>
   static BL_INLINE void bitArrayClearBit(T* buf, size_t index) noexcept {
-    size_t vecIndex = index / blBitSizeOf<T>();
-    size_t bitIndex = index % blBitSizeOf<T>();
+    size_t vecIndex = index / kNumBits;
+    size_t bitIndex = index % kNumBits;
 
-    buf[vecIndex] &= ~indexAsMask<T>(bitIndex);
+    buf[vecIndex] &= ~indexAsMask(bitIndex);
   }
 
-  template<typename T, class BitOp, class FullOp>
+  template<class BitOp, class FullOp>
   static BL_INLINE void bitArrayOp(T* buf, size_t index, size_t count) noexcept {
     if (count == 0)
       return;
 
-    constexpr T kFillMask = blBitOnes<T>();
-    constexpr size_t kTSizeInBits = blBitSizeOf<T>();
-
-    size_t vecIndex = index / kTSizeInBits; // T[]
-    size_t bitIndex = index % kTSizeInBits; // T[][]
-
-    buf += vecIndex;
+    size_t vecIndex = index / kNumBits; // T[]
+    size_t bitIndex = index % kNumBits; // T[][]
 
     // The first BitWord requires special handling to preserve bits outside the fill region.
-    size_t firstNBits = blMin<size_t>(kTSizeInBits - bitIndex, count);
-    T firstNBitsMask = shiftForward(nonZeroBitMask<T>(firstNBits), bitIndex);
+    size_t firstNBits = blMin<size_t>(kNumBits - bitIndex, count);
+    T firstNBitsMask = shiftForward(nonZeroBitMask(firstNBits), bitIndex);
 
-    buf[0] = BitOp::op(buf[0], firstNBitsMask);
-    buf++;
+    buf[vecIndex] = BitOp::op(buf[vecIndex], firstNBitsMask);
     count -= firstNBits;
+    if (count == 0)
+      return;
+    vecIndex++;
 
     // All bits between the first and last affected BitWords can be just filled.
-    while (count >= kTSizeInBits) {
-      buf[0] = FullOp::op(buf[0], kFillMask);
-      buf++;
-      count -= kTSizeInBits;
+    while (count >= kNumBits) {
+      buf[vecIndex] = FullOp::op(buf[vecIndex], ones());
+      vecIndex++;
+      count -= kNumBits;
     }
 
     // The last BitWord requires special handling as well.
     if (count) {
-      T lastNBitsMask = nonZeroBitMask<T>(count);
-      buf[0] = BitOp::op(buf[0], lastNBitsMask);
+      T lastNBitsMask = nonZeroBitMask(count);
+      buf[vecIndex] = BitOp::op(buf[vecIndex], lastNBitsMask);
     }
   }
 
   //! Fill `count` of bits in bit-vector `buf` starting at bit-index `index`.
-  template<typename T>
   static BL_INLINE void bitArrayFill(T* buf, size_t index, size_t count) noexcept {
-    bitArrayOp<T, BLBitOperator::Or, BLBitOperator::Assign>(buf, index, count);
+    bitArrayOp<BLBitOperator::Or, BLBitOperator::Assign>(buf, index, count);
   }
 
   //! Clear `count` of bits in bit-vector `buf` starting at bit-index `index`.
-  template<typename T>
   static BL_INLINE void bitArrayClear(T* buf, size_t index, size_t count) noexcept {
-    bitArrayOp<T, BLBitOperator::AndNot, BLBitOperator::AssignNot>(buf, index, count);
+    bitArrayOp<BLBitOperator::AndNot, BLBitOperator::AssignNot>(buf, index, count);
   }
 
   //! Iterates over each bit in a number which is set to 1.
@@ -193,7 +189,6 @@ struct BLParametrizedBitOps {
   //!   printf("Bit at %u is set\n", unsigned(bitIndex));
   //! }
   //! ```
-  template<typename T>
   class BitIterator {
   public:
     T _bitWord;
@@ -207,12 +202,11 @@ struct BLParametrizedBitOps {
     BL_INLINE uint32_t next() noexcept {
       BL_ASSERT(_bitWord != 0);
       uint32_t index = countZerosForward(_bitWord);
-      _bitWord ^= indexAsMask<T>(index);
+      _bitWord ^= indexAsMask(index);
       return index;
     }
   };
 
-  template<typename T>
   class BitVectorIterator {
   public:
     const T* _ptr;
@@ -225,16 +219,16 @@ struct BLParametrizedBitOps {
     }
 
     BL_INLINE void init(const T* data, size_t numBitWords, size_t start = 0) noexcept {
-      const T* ptr = data + (start / blBitSizeOf<T>());
+      const T* ptr = data + (start / kNumBits);
 
-      size_t idx = blAlignDown(start, blBitSizeOf<T>());
-      size_t end = numBitWords * blBitSizeOf<T>();
+      size_t idx = blAlignDown(start, kNumBits);
+      size_t end = numBitWords * kNumBits;
 
       T bitWord = T(0);
       if (idx < end) {
-        T firstNBitsMask = shiftForward(blBitOnes<T>(), start % blBitSizeOf<T>());
+        T firstNBitsMask = shiftForward(ones(), start % kNumBits);
         bitWord = *ptr++ & firstNBitsMask;
-        while (!bitWord && (idx += blBitSizeOf<T>()) < end)
+        while (!bitWord && (idx += kNumBits) < end)
           bitWord = *ptr++;
       }
 
@@ -252,10 +246,10 @@ struct BLParametrizedBitOps {
       BL_ASSERT(_current != T(0));
 
       uint32_t cnt = countZerosForward(_current);
-      T bitWord = _current ^ indexAsMask<T>(cnt);
+      T bitWord = _current ^ indexAsMask(cnt);
 
       size_t n = _idx + cnt;
-      while (!bitWord && (_idx += blBitSizeOf<T>()) < _end)
+      while (!bitWord && (_idx += kNumBits) < _end)
         bitWord = *_ptr++;
 
       _current = bitWord;
@@ -268,7 +262,6 @@ struct BLParametrizedBitOps {
     }
   };
 
-  template<typename T>
   class BitVectorFlipIterator {
   public:
     BL_INLINE BitVectorFlipIterator(const T* data, size_t numBitWords, size_t start = 0, T xorMask = 0) noexcept {
@@ -276,16 +269,16 @@ struct BLParametrizedBitOps {
     }
 
     BL_INLINE void init(const T* data, size_t numBitWords, size_t start = 0, T xorMask = 0) noexcept {
-      const T* ptr = data + (start / blBitSizeOf<T>());
+      const T* ptr = data + (start / kNumBits);
 
-      size_t idx = blAlignDown(start, blBitSizeOf<T>());
-      size_t end = numBitWords * blBitSizeOf<T>();
+      size_t idx = blAlignDown(start, kNumBits);
+      size_t end = numBitWords * kNumBits;
 
       T bitWord = T(0);
       if (idx < end) {
-        T firstNBitsMask = shiftForward(blBitOnes<T>(), start % blBitSizeOf<T>());
+        T firstNBitsMask = shiftForward(ones(), start % kNumBits);
         bitWord = (*ptr++ ^ xorMask) & firstNBitsMask;
-        while (!bitWord && (idx += blBitSizeOf<T>()) < end)
+        while (!bitWord && (idx += kNumBits) < end)
           bitWord = *ptr++ ^ xorMask;
       }
 
@@ -304,10 +297,10 @@ struct BLParametrizedBitOps {
       BL_ASSERT(_current != T(0));
 
       uint32_t cnt = countZerosForward(_current);
-      T bitWord = _current ^ indexAsMask<T>(cnt);
+      T bitWord = _current ^ indexAsMask(cnt);
 
       size_t n = _idx + cnt;
-      while (!bitWord && (_idx += blBitSizeOf<T>()) < _end)
+      while (!bitWord && (_idx += kNumBits) < _end)
         bitWord = *_ptr++ ^ _xorMask;
 
       _current = bitWord;
@@ -318,11 +311,11 @@ struct BLParametrizedBitOps {
       BL_ASSERT(_current != T(0));
 
       uint32_t cnt = countZerosForward(_current);
-      T bitWord = _current ^ shiftForward(blBitOnes<T>(), cnt);
-      _xorMask ^= blBitOnes<T>();
+      T bitWord = _current ^ shiftForward(ones(), cnt);
+      _xorMask ^= ones();
 
       size_t n = _idx + cnt;
-      while (!bitWord && (_idx += blBitSizeOf<T>()) < _end)
+      while (!bitWord && (_idx += kNumBits) < _end)
         bitWord = *_ptr++ ^ _xorMask;
 
       _current = bitWord;
@@ -344,11 +337,17 @@ struct BLParametrizedBitOps {
 
 } // {anonymous}
 
-typedef BLParametrizedBitOps<BL_BIT_ORDER_LSB> BLLsbBitOps;
-typedef BLParametrizedBitOps<BL_BIT_ORDER_MSB> BLMsbBitOps;
+template<typename T>
+using BLLSBBitOps = BLParametrizedBitOps<BL_BIT_ORDER_LSB, T>;
 
-typedef BLParametrizedBitOps<BL_BIT_ORDER_PUBLIC> BLPublicBitOps;
-typedef BLParametrizedBitOps<BL_BIT_ORDER_PRIVATE> BLPrivateBitOps;
+template<typename T>
+using BLMSBBitOps = BLParametrizedBitOps<BL_BIT_ORDER_MSB, T>;
+
+template<typename T>
+using BLPublicBitOps = BLParametrizedBitOps<BL_BIT_ORDER_PUBLIC, T>;
+
+template<typename T>
+using BLPrivateBitOps = BLParametrizedBitOps<BL_BIT_ORDER_PRIVATE, T>;
 
 // ============================================================================
 // [BLPopCountContext]

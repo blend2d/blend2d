@@ -12,6 +12,8 @@
 #include "../pipegen/fetchutils_p.h"
 #include "../pipegen/pipecompiler_p.h"
 
+#include "../pipegen/pipedebug_p.h"
+
 namespace BLPipeGen {
 
 #define REL_PATTERN(FIELD) BL_OFFSET_OF(BLPipeFetchData::Pattern, FIELD)
@@ -104,9 +106,8 @@ FetchSimplePatternPart::FetchSimplePatternPart(PipeCompiler* pc, uint32_t fetchT
 
 void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   if (isBlitA()) {
-    // This is a special-case designed only for rectangular blits, the engine
-    // pre-translates the coordinates so it doesn't have to do anything but
-    // fetch pixels.
+    // This is a special-case designed only for rectangular blits that never
+    // go out of image bounds (this implies that no extend mode is applied).
     BL_ASSERT(isRectFill());
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -114,8 +115,13 @@ void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
     f->srcp1        = cc->newIntPtr("f.srcp1");       // Reg.
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    cc->mov(f->srcp1, x86::ptr(pc->_fetchData, REL_PATTERN(src.pixelData)));
+    cc->mov(f->srcp1.r32(), y.r32());
+    cc->sub(f->srcp1.r32(), x86::ptr(pc->_fetchData, REL_PATTERN(simple.ty)));
+
+    cc->imul(f->srcp1, x86::ptr(pc->_fetchData, REL_PATTERN(src.stride)));
     cc->mov(f->stride.r32(), x86::ptr(pc->_fetchData, REL_PATTERN(src.size.w)));
+
+    cc->add(f->srcp1, x86::ptr(pc->_fetchData, REL_PATTERN(src.pixelData)));
     pc->uPrefetch(x86::ptr(f->srcp1));
 
     pc->uMul(f->stride, f->stride, -int(bpp()));

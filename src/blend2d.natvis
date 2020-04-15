@@ -360,7 +360,6 @@
 
       <Item Name="virt" ExcludeView="simple">virt</Item>
       <Item Name="contextType" ExcludeView="simple">(BLContextType)contextType</Item>
-      <Item Name="targetSize" ExcludeView="simple">targetSize</Item>
       <Item Name="state" ExcludeView="simple">state</Item>
     </Expand>
   </Type>

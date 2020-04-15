@@ -91,7 +91,7 @@ public:
     blPatternInitAs(this, &image, &area, extendMode, &m);
   }
 
-  BL_INLINE ~BLPattern() noexcept { blPatternReset(this); }
+  BL_INLINE ~BLPattern() noexcept { blPatternDestroy(this); }
 
   //! \}
 

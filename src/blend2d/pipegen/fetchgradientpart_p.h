@@ -118,7 +118,7 @@ public:
     x86::Xmm vmaxi; // Maximum table index, basically `precision - 1` (mask).
     x86::Xmm vmaxf; // Like `vmaxi`, but converted to `float`.
 
-    // These are only used by `radialFetch4()` and restored by `radialLeaveN()`.
+    // 4+ pixels.
     x86::Xmm d_b_prev;
     x86::Xmm dd_bd_prev;
   };

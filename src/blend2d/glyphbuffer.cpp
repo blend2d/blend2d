@@ -19,14 +19,6 @@
 
 static const constexpr BLInternalGlyphBufferImpl blGlyphBufferInternalImplNone {};
 
-template<typename T>
-static BL_INLINE size_t strlenT(const T* str) noexcept {
-  const T* p = str;
-  while (*p)
-    p++;
-  return (size_t)(p - str);
-}
-
 static BL_INLINE BLResult blGlyphBufferEnsureData(BLGlyphBufferCore* self, BLInternalGlyphBufferImpl** impl) noexcept {
   *impl = blInternalCast(self->impl);
   if (*impl != &blGlyphBufferInternalImplNone)
@@ -160,7 +152,7 @@ static BL_INLINE BLResult blInternalGlyphBufferData_setUnicodeText(BLInternalGly
 }
 
 // ============================================================================
-// [BLGlyphBuffer - Init / Reset]
+// [BLGlyphBuffer - Init / Destroy]
 // ============================================================================
 
 BLResult blGlyphBufferInit(BLGlyphBufferCore* self) noexcept {
@@ -175,13 +167,25 @@ BLResult blGlyphBufferInitMove(BLGlyphBufferCore* self, BLGlyphBufferCore* other
   return BL_SUCCESS;
 }
 
+BLResult blGlyphBufferDestroy(BLGlyphBufferCore* self) noexcept {
+  BLInternalGlyphBufferImpl* impl = blInternalCast(self->impl);
+  self->impl = nullptr;
+
+  if (impl != &blGlyphBufferInternalImplNone)
+    impl->destroy();
+  return BL_SUCCESS;
+}
+
+// ============================================================================
+// [BLGlyphBuffer - Reset]
+// ============================================================================
+
 BLResult blGlyphBufferReset(BLGlyphBufferCore* self) noexcept {
   BLInternalGlyphBufferImpl* impl = blInternalCast(self->impl);
-  if (impl == &blGlyphBufferInternalImplNone)
-    return BL_SUCCESS;
-
-  impl->destroy();
   self->impl = const_cast<BLInternalGlyphBufferImpl*>(&blGlyphBufferInternalImplNone);
+
+  if (impl != &blGlyphBufferInternalImplNone)
+    impl->destroy();
   return BL_SUCCESS;
 }
 
@@ -255,14 +259,14 @@ BLResult blGlyphBufferSetText(BLGlyphBufferCore* self, const void* textData, siz
 
     case BL_TEXT_ENCODING_UTF16:
       if (size == SIZE_MAX)
-        size = strlenT(static_cast<const uint16_t*>(textData));
+        size = blStrLen(static_cast<const uint16_t*>(textData));
 
       BL_PROPAGATE(d->ensureBuffer(0, 0, size));
       return blInternalGlyphBufferData_setUnicodeText<BLUtf16Reader>(d, static_cast<const uint16_t*>(textData), size * 2u);
 
     case BL_TEXT_ENCODING_UTF32:
       if (size == SIZE_MAX)
-        size = strlenT(static_cast<const uint32_t*>(textData));
+        size = blStrLen(static_cast<const uint32_t*>(textData));
 
       BL_PROPAGATE(d->ensureBuffer(0, 0, size));
       return blInternalGlyphBufferData_setUnicodeText<BLUtf32Reader>(d, static_cast<const uint32_t*>(textData), size * 4u);

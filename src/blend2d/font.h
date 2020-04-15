@@ -77,7 +77,7 @@ public:
   BL_INLINE BLFontData(BLFontData&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLFontData(const BLFontData& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLFontData(BLFontDataImpl* impl) noexcept { this->impl = impl; }
-  BL_INLINE ~BLFontData() noexcept { blFontDataReset(this); }
+  BL_INLINE ~BLFontData() noexcept { blFontDataDestroy(this); }
 
   //! \}
 
@@ -295,7 +295,7 @@ public:
   BL_INLINE BLFontFace(BLFontFace&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLFontFace(const BLFontFace& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLFontFace(BLFontFaceImpl* impl) noexcept { this->impl = impl; }
-  BL_INLINE ~BLFontFace() noexcept { blFontFaceReset(this); }
+  BL_INLINE ~BLFontFace() noexcept { blFontFaceDestroy(this); }
 
   //! \}
 
@@ -551,7 +551,7 @@ public:
   BL_INLINE BLFont(BLFont&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLFont(const BLFont& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLFont(BLFontImpl* impl) noexcept { this->impl = impl; }
-  BL_INLINE ~BLFont() noexcept { blFontReset(this); }
+  BL_INLINE ~BLFont() noexcept { blFontDestroy(this); }
 
   //! \}
 

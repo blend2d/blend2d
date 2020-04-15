@@ -302,7 +302,7 @@ static BL_NOINLINE BLResult blArrayRealloc(BLArrayCore* self, size_t capacity) n
 }
 
 // ============================================================================
-// [BLArray - Init / Reset]
+// [BLArray - Init / Destroy]
 // ============================================================================
 
 BLResult blArrayInit(BLArrayCore* self, uint32_t arrayTypeId) noexcept {
@@ -314,6 +314,19 @@ BLResult blArrayInit(BLArrayCore* self, uint32_t arrayTypeId) noexcept {
   self->impl = &blNullArrayImpl[arrayTypeId];
   return BL_SUCCESS;
 }
+
+BLResult blArrayDestroy(BLArrayCore* self) noexcept {
+  BLArrayImpl* selfI = self->impl;
+  self->impl = nullptr;
+
+  if (blImplDecRefAndTest(selfI))
+    return blArrayImplDelete(selfI);
+  return BL_SUCCESS;
+}
+
+// ============================================================================
+// [BLArray - Reset]
+// ============================================================================
 
 BLResult blArrayReset(BLArrayCore* self) noexcept {
   BLArrayImpl* selfI = self->impl;

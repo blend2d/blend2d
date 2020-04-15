@@ -93,7 +93,7 @@ public:
   BL_INLINE BLRegion(const BLRegion& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLRegion(BLRegionImpl* impl) noexcept { this->impl = impl; }
 
-  BL_INLINE ~BLRegion() noexcept { blRegionReset(this); }
+  BL_INLINE ~BLRegion() noexcept { blRegionDestroy(this); }
 
   //! \}
 

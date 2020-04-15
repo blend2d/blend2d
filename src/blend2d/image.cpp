@@ -59,21 +59,21 @@ static BLInternalImageImpl* blImageImplNewInternal(int w, int h, uint32_t format
   BL_ASSERT(w > 0 && h > 0);
   BL_ASSERT(format < BL_FORMAT_COUNT);
 
+  BLOverflowFlag of = 0;
   uint32_t depth = blFormatInfo[format].depth;
-  size_t stride = blImageStrideForWidth(unsigned(w), depth);
-
-  BL_ASSERT(stride != 0);
+  size_t stride = blImageStrideForWidth(unsigned(w), depth, &of);
 
   size_t baseSize = sizeof(BLInternalImageImpl);
-  size_t implSize;
+  size_t implSize = blMulOverflow<size_t>(size_t(h), stride, &of);
 
-  if (BL_INTERNAL_IMAGE_DATA_ALIGNMENT > sizeof(void*))
-    baseSize += BL_INTERNAL_IMAGE_DATA_ALIGNMENT - sizeof(void*);
+  size_t dataAlignment = implSize <= BL_INTERNAL_IMAGE_LARGE_DATA_THRESHOLD
+    ? BL_INTERNAL_IMAGE_SMALL_DATA_ALIGNMENT
+    : BL_INTERNAL_IMAGE_LARGE_DATA_ALIGNMENT;
 
-  BLOverflowFlag of = 0;
-  implSize = blMulOverflow<size_t>(size_t(h), stride, &of);
+  if (dataAlignment > BL_ALLOC_ALIGNMENT)
+    baseSize += dataAlignment - BL_ALLOC_ALIGNMENT;
+
   implSize = blAddOverflow<size_t>(baseSize, implSize, &of);
-
   if (BL_UNLIKELY(of))
     return nullptr;
 
@@ -84,13 +84,12 @@ static BLInternalImageImpl* blImageImplNewInternal(int w, int h, uint32_t format
     return impl;
 
   uint8_t* pixelData = reinterpret_cast<uint8_t*>(impl) + sizeof(BLInternalImageImpl);
-  if (BL_INTERNAL_IMAGE_DATA_ALIGNMENT > sizeof(void*))
-    pixelData = blAlignUp(pixelData, BL_INTERNAL_IMAGE_DATA_ALIGNMENT);
+  if (dataAlignment > BL_ALLOC_ALIGNMENT)
+    pixelData = blAlignUp(pixelData, dataAlignment);
 
   blImplInit(impl, BL_IMPL_TYPE_IMAGE, BL_IMPL_TRAIT_MUTABLE, memPoolData);
   impl->pixelData = pixelData;
   impl->stride = intptr_t(stride);
-  impl->writer = nullptr;
   impl->format = uint8_t(format);
   impl->flags = uint8_t(0);
   impl->depth = uint16_t(depth);
@@ -120,7 +119,6 @@ static BLInternalImageImpl* blImageImplNewExternal(int w, int h, uint32_t format
   blImplInit(impl, BL_IMPL_TYPE_IMAGE, BL_IMPL_TRAIT_MUTABLE | BL_IMPL_TRAIT_EXTERNAL, memPoolData);
   impl->pixelData = pixelData;
   impl->stride = stride;
-  impl->writer = nullptr;
   impl->format = uint8_t(format);
   impl->flags = uint8_t(0);
   impl->depth = uint16_t(blFormatInfo[format].depth);
@@ -153,9 +151,14 @@ BLResult blImageImplDelete(BLImageImpl* impl_) noexcept {
     blImplDestroyExternal(impl);
   }
   else {
-    implSize = sizeof(BLInternalImageImpl) +
-               BL_INTERNAL_IMAGE_DATA_ALIGNMENT +
-               unsigned(impl->size.h) * size_t(blAbs(impl->stride));
+    size_t dataSize = uintptr_t(blAbs(impl->stride)) * uint32_t(impl->size.h);
+    size_t dataAlignment = dataSize <= BL_INTERNAL_IMAGE_LARGE_DATA_THRESHOLD
+      ? BL_INTERNAL_IMAGE_SMALL_DATA_ALIGNMENT
+      : BL_INTERNAL_IMAGE_LARGE_DATA_ALIGNMENT;
+
+    implSize = sizeof(BLInternalImageImpl) + dataSize;
+    if (dataAlignment > BL_ALLOC_ALIGNMENT)
+      implSize += dataAlignment - BL_ALLOC_ALIGNMENT;
   }
 
   if (implTraits & BL_IMPL_TRAIT_FOREIGN)
@@ -171,7 +174,7 @@ static BL_INLINE BLResult blImageImplRelease(BLInternalImageImpl* impl) noexcept
 }
 
 // ============================================================================
-// [BLImage - Init / Reset]
+// [BLImage - Init / Destroy]
 // ============================================================================
 
 BLResult blImageInit(BLImageCore* self) noexcept {
@@ -188,6 +191,16 @@ BLResult blImageInitAsFromData(BLImageCore* self, int w, int h, uint32_t format,
   self->impl = &blNullImageImpl;
   return blImageCreateFromData(self, w, h, format, pixelData, stride, destroyFunc, destroyData);
 }
+
+BLResult blImageDestroy(BLImageCore* self) noexcept {
+  BLInternalImageImpl* selfI = blInternalCast(self->impl);
+  self->impl = nullptr;
+  return blImageImplRelease(selfI);
+}
+
+// ============================================================================
+// [BLImage - Reset]
+// ============================================================================
 
 BLResult blImageReset(BLImageCore* self) noexcept {
   BLInternalImageImpl* selfI = blInternalCast(self->impl);
@@ -476,7 +489,7 @@ BLResult blImageScale(BLImageCore* dst, const BLImageCore* src, const BLSizeI* s
 }
 
 // ============================================================================
-// [BLImage - Read / Write]
+// [BLImage - Read]
 // ============================================================================
 
 BLResult blImageReadFromFile(BLImageCore* self, const char* fileName, const BLArrayCore* codecs) noexcept {
@@ -509,10 +522,25 @@ BLResult blImageReadFromData(BLImageCore* self, const void* data, size_t size, c
   return decoder.readFrame(*blDownCast(self), data, size);
 }
 
-BLResult blImageWriteToFile(const BLImageCore* self, const char* fileName, const BLImageCodecCore* codec) noexcept {
+// ============================================================================
+// [BLImage - Write]
+// ============================================================================
+
+static BLResult blImageWriteToFileInternal(const BLImageCore* self, const char* fileName, const BLImageCodecCore* codec) noexcept {
   BLArray<uint8_t> buffer;
   BL_PROPAGATE(blImageWriteToData(self, &buffer, codec));
   return BLFileSystem::writeFile(fileName, buffer);
+}
+
+BLResult blImageWriteToFile(const BLImageCore* self, const char* fileName, const BLImageCodecCore* codec) noexcept {
+  if (!codec) {
+    BLImageCodec localCodec;
+    BL_PROPAGATE(localCodec.findByExtension(fileName));
+    return blImageWriteToFileInternal(self, fileName, &localCodec);
+  }
+  else {
+    return blImageWriteToFileInternal(self, fileName, codec);
+  }
 }
 
 BLResult blImageWriteToData(const BLImageCore* self, BLArrayCore* dst, const BLImageCodecCore* codec) noexcept {

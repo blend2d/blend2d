@@ -8,7 +8,7 @@
 #ifdef BL_TARGET_OPT_SSE2
 
 #include "./geometry.h"
-#include "./matrix.h"
+#include "./matrix_p.h"
 #include "./runtime_p.h"
 #include "./simd_p.h"
 #include "./support_p.h"
@@ -374,7 +374,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine_SSE2(const BLMatrix2D* s
 // [BLMatrix2D - Runtime Init [SSE2]]
 // ============================================================================
 
-BL_HIDDEN void blMatrix2DRtInit_SSE2(BLRuntimeContext* rt) noexcept {
+void blMatrix2DRtInit_SSE2(BLRuntimeContext* rt) noexcept {
   BL_UNUSED(rt);
   BLMapPointDArrayFunc* funcs = blMatrix2DMapPointDArrayFuncs;
 

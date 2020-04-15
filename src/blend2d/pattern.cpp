@@ -88,18 +88,8 @@ static BL_INLINE BLResult blPatternMakeMutable(BLPatternCore* self) noexcept {
     return BL_SUCCESS;
 }
 
-static BL_INLINE bool blPatternIsAreaValid(const BLRectI* area, int w, int h) noexcept {
-  if ((unsigned(area->x) <= unsigned(w)) &
-      (unsigned(area->y) <= unsigned(h)) &
-      ((unsigned(area->w) - unsigned(area->x)) <= unsigned(w)) &
-      ((unsigned(area->h) - unsigned(area->y)) <= unsigned(h)))
-    return true;
-
-  return false;
-}
-
 // ============================================================================
-// [BLPattern - Init / Reset]
+// [BLPattern - Init / Destroy]
 // ============================================================================
 
 BLResult blPatternInit(BLPatternCore* self) noexcept {
@@ -113,7 +103,7 @@ BLResult blPatternInitAs(BLPatternCore* self, const BLImageCore* image, const BL
 
   if (!area)
     area = &blPatternNoArea;
-  else if (BL_UNLIKELY(!blPatternIsAreaValid(area, image->impl->size.w, image->impl->size.h)))
+  else if (BL_UNLIKELY(!blPatternIsAreaValid(*area, image->impl->size)))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   if (BL_UNLIKELY(extendMode >= BL_EXTEND_MODE_COMPLEX_COUNT))
@@ -132,6 +122,16 @@ BLResult blPatternInitAs(BLPatternCore* self, const BLImageCore* image, const BL
   self->impl = impl;
   return BL_SUCCESS;
 }
+
+BLResult blPatternDestroy(BLPatternCore* self) noexcept {
+  BLInternalPatternImpl* selfI = blInternalCast(self->impl);
+  self->impl = nullptr;
+  return blPatternImplRelease(selfI);
+}
+
+// ============================================================================
+// [BLPattern - Reset]
+// ============================================================================
 
 BLResult blPatternReset(BLPatternCore* self) noexcept {
   BLInternalPatternImpl* selfI = blInternalCast(self->impl);
@@ -182,7 +182,7 @@ BLResult blPatternCreate(BLPatternCore* self, const BLImageCore* image, const BL
 
   if (!area)
     area = &blPatternNoArea;
-  else if (BL_UNLIKELY(!blPatternIsAreaValid(area, image->impl->size.w, image->impl->size.h)))
+  else if (BL_UNLIKELY(!blPatternIsAreaValid(*area, image->impl->size)))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   if (BL_UNLIKELY(extendMode >= BL_EXTEND_MODE_COMPLEX_COUNT))
@@ -222,7 +222,7 @@ BLResult blPatternSetImage(BLPatternCore* self, const BLImageCore* image, const 
 
   if (!area)
     area = &blPatternNoArea;
-  else if (!blPatternIsAreaValid(area, image->impl->size.w, image->impl->size.h))
+  else if (!blPatternIsAreaValid(*area, image->impl->size))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   BL_PROPAGATE(blPatternMakeMutable(self));
@@ -238,7 +238,7 @@ BLResult blPatternSetArea(BLPatternCore* self, const BLRectI* area) noexcept {
   }
   else {
     BLImageImpl* imageImpl = self->impl->image.impl;
-    if (!blPatternIsAreaValid(area, imageImpl->size.w, imageImpl->size.h))
+    if (!blPatternIsAreaValid(*area, imageImpl->size))
       return blTraceError(BL_ERROR_INVALID_VALUE);
   }
 

@@ -17,8 +17,6 @@
 // [Forward Declarations]
 // ============================================================================
 
-class BLThreadEvent;
-
 struct BLThread;
 struct BLThreadVirt;
 struct BLThreadAttributes;
@@ -37,48 +35,6 @@ enum BLThreadStatus : uint32_t {
   BL_THREAD_STATUS_IDLE = 0,
   BL_THREAD_STATUS_RUNNING = 1,
   BL_THREAD_STATUS_QUITTING = 2
-};
-
-// ============================================================================
-// [Utilities]
-// ============================================================================
-
-#ifdef _WIN32
-static BL_INLINE void blThreadYield() noexcept { Sleep(0); }
-#else
-static BL_INLINE void blThreadYield() noexcept { sched_yield(); }
-#endif
-
-// ============================================================================
-// [BLThreadEvent]
-// ============================================================================
-
-BL_HIDDEN BLResult BL_CDECL blThreadEventCreate(BLThreadEvent* self, bool manualReset, bool signaled) noexcept;
-BL_HIDDEN BLResult BL_CDECL blThreadEventDestroy(BLThreadEvent* self) noexcept;
-BL_HIDDEN bool     BL_CDECL blThreadEventIsSignaled(const BLThreadEvent* self) noexcept;
-BL_HIDDEN BLResult BL_CDECL blThreadEventSignal(BLThreadEvent* self) noexcept;
-BL_HIDDEN BLResult BL_CDECL blThreadEventReset(BLThreadEvent* self) noexcept;
-BL_HIDDEN BLResult BL_CDECL blThreadEventWait(BLThreadEvent* self) noexcept;
-BL_HIDDEN BLResult BL_CDECL blThreadEventTimedWait(BLThreadEvent* self, uint64_t microseconds) noexcept;
-
-class BLThreadEvent {
-public:
-  BL_NONCOPYABLE(BLThreadEvent)
-
-  intptr_t handle;
-
-  BL_INLINE explicit BLThreadEvent(bool manualReset = false, bool signaled = false) noexcept {
-    blThreadEventCreate(this, manualReset, signaled);
-  }
-  BL_INLINE ~BLThreadEvent() noexcept { blThreadEventDestroy(this); }
-
-  BL_INLINE bool isInitialized() const noexcept { return handle != -1; }
-  BL_INLINE bool isSignaled() const noexcept { return blThreadEventIsSignaled(this); }
-
-  BL_INLINE BLResult signal() noexcept { return blThreadEventSignal(this); }
-  BL_INLINE BLResult reset() noexcept { return blThreadEventReset(this); }
-  BL_INLINE BLResult wait() noexcept { return blThreadEventWait(this); }
-  BL_INLINE BLResult waitFor(uint64_t microseconds) noexcept { return blThreadEventTimedWait(this, microseconds); }
 };
 
 // ============================================================================

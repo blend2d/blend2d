@@ -868,4 +868,3 @@ BLImageCodecImpl* blBmpCodecRtInit(BLRuntimeContext* rt) noexcept {
 
   return codecI;
 }
-\

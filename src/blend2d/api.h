@@ -8,8 +8,8 @@
 #define BLEND2D_API_H
 
 // This header can only be included by either <blend2d.h> or by Blend2D headers
-// during the build. Prevent users including <blend2d/> headers by accident and
-// prevent not including "blend2d/blapi-build_p.h" during the build.
+// during the build. Prevent users including <blend2d/...> headers by accident
+// and prevent not including "blend2d/blapi-build_p.h" during the Blend2D build.
 #if !defined(BLEND2D_H) && !defined(BLEND2D_API_BUILD_P_H)
   #pragma message("Include either <blend2d.h> or <blend2d-impl.h> to use Blend2D library")
 #endif
@@ -95,39 +95,48 @@
 //! which are documented and should be used as a reference. The most important
 //! thing in using C API is to understand how lifetime of objects is managed.
 //!
-//! Each type that requires initialization provides `Init` and `Reset` functions.
-//! These functions are called by C++ constructors and destructors on C++ side
-//! and must be used the same way by C users. Although these functions return
+//! Each type that requires initialization provides `Init`, 'Destroy', and `Reset`
+//! functions. Init/Destroy are called by C++ constructors and destructors on C++
+//! side and must be used the same way by C users. Although these functions return
 //! `BLResult` it's guaranteed the result is always `BL_SUCCESS` - the return
 //! value is only provided for consistency and possible tail calling.
 //!
-//! The following example should illustrate how `Init` and `Reset` works:
+//! The following example should illustrate how `Init` and `Destroy` works:
 //!
 //! ```
 //! BLImageCore img;
 //! blImageInit(&img);
 //! blImageCreate(&img, 128, 128, BL_FORMAT_PRGB32);
-//! blImageReset(&img);
+//! blImageDestroy(&img);
 //! ```
 //!
 //! Some init functions may provide shortcuts for the most used scenarios that
-//! merge initialization and resource allocation into a single function.
+//! merge initialization and resource allocation into a single function:
 //!
 //! ```
 //! BLImageCore img;
 //! blImageInitAs(&img, 128, 128, BL_FORMAT_PRGB32);
-//! blImageReset(&img);
+//! blImageDestroy(&img);
 //! ```
 //!
 //! It's worth knowing that default initialization in Blend2D costs nothing
 //! and no resources are allocated, thus initialization never fails and in
-//! theory default initialized objects don't have to be reset as they don't
-//! hold any data (however never do that in practice). Resetting always resets
-//! the object into its default initialized form, so you can reuse such object
-//! afterwards (after reset it's still properly initialized) or consider it
-//! destroyed.
+//! theory default initialized objects don't have to be destroyed as they don't
+//! hold any data that would have to be deallocated (however never do that in
+//! practice).
 //!
-//! The following example should explain how init/reset works:
+//! There is a distinction between 'Destroy' and 'Reset' functionality. Destroy
+//! would destroy the object and put it into a non-reusable state. Thus if the
+//! object is used by accident it should crash on null-pointer access. In the
+//! contrary resetting  the object with 'Reset' explicitly states that the
+//! instance will be reused so 'Reset' basically destroys the object and puts
+//! it into its default initialized state for further use. This means that it's
+//! not needed to explicitly call 'Destroy' on instance that was reset, and it
+//! also is not needed for a default constructed instance. However, we recommend
+//! to not count on this behavior and to always properly initialize and destroy
+//! Blend2D objects.
+//!
+//! The following example should explain how init/reset can avoid destroy:
 //!
 //! \code
 //! BLImageCore img;
@@ -141,20 +150,27 @@
 //! // data. If this succeeds the image will have to be reset to destroy the
 //! // data it holds.
 //! BLResult result = blImageCreate(&img, 128, 128, BL_FORMAT_PRGB32);
-//! if (result != BL_SUCCESS) {
-//!   // If function fails it should behave like it was never called, so `img`
-//!   // would still be default initialized in this case. this means that you
-//!   // don't have to reset it explicitly although the C++ API would do it in
-//!   // image destructor.
+//!
+//! // If function fails it should behave like it was never called, so `img`
+//! // would still be default initialized in this case. this means that you
+//! // don't have to destroy it explicitly although the C++ API would do it in
+//! // BLImage destructor.
+//! if (result != BL_SUCCESS)
 //!   return result;
-//! }
 //!
 //! // Resetting image would destroy its data and make it default constructed.
 //! blImageReset(&img);
 //!
-//! // You can still use the image after it has been reset as the data it holds
-//! // is still valid, but the image is of course empty.
-//! printf("%d", blImageEquals(&img, &img));
+//! // You can still use the image after it has been reset, however, since the
+//! // image is default initialized it's empty.
+//! printf("%p", img.impl);
+//!
+//! // The instance is still valid, to make it invalid we can destroy it for good.
+//! blImageDestroy(&img);
+//!
+//! // At the moment null will be printed, but that's implementation dependent
+//! // and such behavior can change at any time.
+//! printf("%p", img.impl);
 //! \endcode
 
 //! \cond INTERNAL
@@ -253,6 +269,8 @@
 #include <string.h>
 
 #ifdef __cplusplus
+  #include <cmath>
+  #include <limits>
   #include <type_traits>
   #include <utility>
 #else
@@ -645,7 +663,7 @@ BL_DEFINE_STRUCT(BLImageEncoderVirt);
 
 BL_DEFINE_STRUCT(BLRgba32);
 BL_DEFINE_STRUCT(BLRgba64);
-BL_DEFINE_STRUCT(BLRgba128);
+BL_DEFINE_STRUCT(BLRgba);
 
 BL_DEFINE_STRUCT(BLGradientCore);
 BL_DEFINE_STRUCT(BLGradientImpl);
@@ -657,6 +675,8 @@ BL_DEFINE_STRUCT(BLConicalGradientValues);
 
 BL_DEFINE_STRUCT(BLPatternCore);
 BL_DEFINE_STRUCT(BLPatternImpl);
+
+BL_DEFINE_STRUCT(BLStyleCore);
 
 BL_DEFINE_STRUCT(BLContextCore);
 BL_DEFINE_STRUCT(BLContextImpl);
@@ -718,6 +738,7 @@ class BLImageDecoder;
 class BLImageEncoder;
 class BLPattern;
 class BLGradient;
+class BLStyle;
 class BLContext;
 class BLPixelConverter;
 class BLGlyphBuffer;
@@ -801,7 +822,7 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_INVALID_STATE,                //!< Invalid state                 [EFAULT].
   BL_ERROR_INVALID_HANDLE,               //!< Invalid handle or file.       [EBADF].
   BL_ERROR_VALUE_TOO_LARGE,              //!< Value too large               [EOVERFLOW].
-  BL_ERROR_NOT_INITIALIZED,              //!< Not initialized (some instance is built-in none when it shouldn't be).
+  BL_ERROR_NOT_INITIALIZED,              //!< Object not initialized.
   BL_ERROR_NOT_IMPLEMENTED,              //!< Not implemented               [ENOSYS].
   BL_ERROR_NOT_PERMITTED,                //!< Operation not permitted       [EPERM].
 
@@ -877,6 +898,7 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_JPEG_MULTIPLE_SOF,            //!< Multiple SOF markers (JPEG).
   BL_ERROR_JPEG_UNSUPPORTED_SOF,         //!< Unsupported SOF marker (JPEG).
 
+  BL_ERROR_FONT_NOT_INITIALIZED,         //!< Font doesn't have any data as it's not initialized.
   BL_ERROR_FONT_NO_CHARACTER_MAPPING,    //!< Font has no character to glyph mapping data.
   BL_ERROR_FONT_MISSING_IMPORTANT_TABLE, //!< Font has missing an important table.
   BL_ERROR_FONT_FEATURE_NOT_AVAILABLE,   //!< Font feature is not available.
@@ -1002,23 +1024,6 @@ BL_DEFINE_ENUM(BLExtendMode) {
   BL_EXTEND_MODE_COMPLEX_COUNT = 9
 };
 
-//! \ingroup blend2d_api_styling
-//!
-//! Style type.
-BL_DEFINE_ENUM(BLStyleType) {
-  //! No style, nothing will be paint.
-  BL_STYLE_TYPE_NONE = 0,
-  //! Solid color style.
-  BL_STYLE_TYPE_SOLID = 1,
-  //! Pattern style.
-  BL_STYLE_TYPE_PATTERN = 2,
-  //! Gradient style.
-  BL_STYLE_TYPE_GRADIENT = 3,
-
-  //! Count of style types.
-  BL_STYLE_TYPE_COUNT = 4
-};
-
 //! \ingroup blend2d_api_text
 //!
 //! Text encoding.
@@ -1095,6 +1100,7 @@ BL_DCAST_IMPL(BLPixelConverter);
 BL_DCAST_IMPL(BLRegion);
 BL_DCAST_IMPL(BLString);
 BL_DCAST_IMPL(BLStrokeOptions);
+BL_DCAST_IMPL(BLStyle);
 BL_DCAST_IMPL(BLVariant);
 
 #undef BL_DCAST_IMPL
@@ -1151,6 +1157,19 @@ static inline BLResult blTraceError(BLResult result) BL_NOEXCEPT_C { return resu
 //! \name Global C++ Functions
 //! \{
 
+//! Bit-cast `x` of `In` type to the given `Out` type.
+//!
+//! Useful to bit-cast between integers and floating points. The size of `Out`
+//! and `In` must be the same otherwise the compilation would fail. Bit casting
+//! is used by `blEquals` to implement bit equality for floating point types.
+template<typename Out, typename In>
+static BL_INLINE Out blBitCast(const In& x) noexcept {
+  static_assert(sizeof(Out) == sizeof(In),
+                "The size of 'In' and 'Out' types must match");
+  union { In in; Out out; } u = { x };
+  return u.out;
+}
+
 //! Returns an absolute value of `a`.
 template<typename T>
 BL_INLINE constexpr T blAbs(const T& a) noexcept { return T(a < 0 ? -a : a); }
@@ -1184,14 +1203,12 @@ BL_INLINE bool blEquals(const T& a, const T& b) noexcept { return a == b; }
 //! \cond
 template<>
 BL_INLINE bool blEquals(const float& a, const float& b) noexcept {
-  union { float f32[2]; uint32_t u32[2]; } view {{ a, b }};
-  return view.u32[0] == view.u32[1];
+  return blBitCast<uint32_t>(a) == blBitCast<uint32_t>(b);
 }
 
 template<>
 BL_INLINE bool blEquals(const double& a, const double& b) noexcept {
-  union { double f64[2]; uint64_t u64[2]; } view {{ a, b }};
-  return view.u64[0] == view.u64[1];
+  return blBitCast<uint64_t>(a) == blBitCast<uint64_t>(b);
 }
 //! \endcond
 
@@ -1401,6 +1418,7 @@ extern "C" {
 //!
 //! \{
 BL_API BLResult BL_CDECL blArrayInit(BLArrayCore* self, uint32_t arrayTypeId) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blArrayDestroy(BLArrayCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blArrayReset(BLArrayCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blArrayCreateFromData(BLArrayCore* self, void* data, size_t size, size_t capacity, uint32_t dataAccessFlags, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
 BL_API size_t BL_CDECL blArrayGetSize(const BLArrayCore* self) BL_NOEXCEPT_C BL_PURE;
@@ -1454,6 +1472,7 @@ BL_API bool BL_CDECL blArrayEquals(const BLArrayCore* a, const BLArrayCore* b) B
 //! \{
 BL_API BLResult BL_CDECL blContextInit(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextInitAs(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextDestroy(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextReset(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextAssignMove(BLContextCore* self, BLContextCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextAssignWeak(BLContextCore* self, const BLContextCore* other) BL_NOEXCEPT_C;
@@ -1463,6 +1482,7 @@ BL_API BLImageCore* BL_CDECL blContextGetTargetImage(const BLContextCore* self) 
 BL_API BLResult BL_CDECL blContextBegin(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextEnd(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextFlush(BLContextCore* self, uint32_t flags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextQueryProperty(const BLContextCore* self, uint32_t propertyId, void* valueOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSave(BLContextCore* self, BLContextCookie* cookie) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextRestore(BLContextCore* self, const BLContextCookie* cookie) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextGetMetaMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
@@ -1477,20 +1497,20 @@ BL_API BLResult BL_CDECL blContextSetApproximationOptions(BLContextCore* self, c
 BL_API BLResult BL_CDECL blContextSetCompOp(BLContextCore* self, uint32_t compOp) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetGlobalAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetFillAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextGetFillStyle(const BLContextCore* self, void* object) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextGetFillStyleRgba32(const BLContextCore* self, uint32_t* rgba32) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextGetFillStyleRgba64(const BLContextCore* self, uint64_t* rgba64) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetFillStyle(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetFillStyle(const BLContextCore* self, BLStyleCore* styleOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillStyle(BLContextCore* self, const BLStyleCore* style) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillStyleRgba(BLContextCore* self, const BLRgba* rgba) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetFillStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetFillStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillStyleObject(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetFillRule(BLContextCore* self, uint32_t fillRule) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextGetStrokeStyle(const BLContextCore* self, void* object) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextGetStrokeStyleRgba32(const BLContextCore* self, uint32_t* rgba32) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextGetStrokeStyleRgba64(const BLContextCore* self, uint64_t* rgba64) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeStyle(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetStrokeStyle(const BLContextCore* self, BLStyleCore* styleOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeStyle(BLContextCore* self, const BLStyleCore* style) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba(BLContextCore* self, const BLRgba* rgba) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeStyleObject(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeWidth(BLContextCore* self, double width) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeMiterLimit(BLContextCore* self, double miterLimit) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeCap(BLContextCore* self, uint32_t position, uint32_t strokeCap) BL_NOEXCEPT_C;
@@ -1564,6 +1584,7 @@ BL_API BLResult BL_CDECL blFileSystemWriteFile(const char* fileName, const void*
 //!
 //! \{
 BL_API BLResult BL_CDECL blFontInit(BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDestroy(BLFontCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontReset(BLFontCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontAssignMove(BLFontCore* self, BLFontCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontAssignWeak(BLFontCore* self, const BLFontCore* other) BL_NOEXCEPT_C;
@@ -1592,6 +1613,7 @@ BL_API BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, const
 //!
 //! \{
 BL_API BLResult BL_CDECL blFontDataInit(BLFontDataCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataDestroy(BLFontDataCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontDataReset(BLFontDataCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontDataAssignMove(BLFontDataCore* self, BLFontDataCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontDataAssignWeak(BLFontDataCore* self, const BLFontDataCore* other) BL_NOEXCEPT_C;
@@ -1610,6 +1632,7 @@ BL_API size_t BL_CDECL blFontDataQueryTables(const BLFontDataCore* self, uint32_
 //!
 //! \{
 BL_API BLResult BL_CDECL blFontFaceInit(BLFontFaceCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceDestroy(BLFontFaceCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontFaceReset(BLFontFaceCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontFaceAssignMove(BLFontFaceCore* self, BLFontFaceCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontFaceAssignWeak(BLFontFaceCore* self, const BLFontFaceCore* other) BL_NOEXCEPT_C;
@@ -1628,6 +1651,7 @@ BL_API BLResult BL_CDECL blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self
 //!
 //! \{
 BL_API BLResult BL_CDECL blFontManagerInit(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerDestroy(BLFontManagerCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontManagerReset(BLFontManagerCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontManagerAssignMove(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontManagerAssignWeak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
@@ -1648,6 +1672,7 @@ BL_API BLResult BL_CDECL blFormatInfoSanitize(BLFormatInfo* self) BL_NOEXCEPT_C;
 //! \{
 BL_API BLResult BL_CDECL blGlyphBufferInit(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGlyphBufferInitMove(BLGlyphBufferCore* self, BLGlyphBufferCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferDestroy(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGlyphBufferReset(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGlyphBufferClear(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
 BL_API size_t BL_CDECL blGlyphBufferGetSize(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
@@ -1669,6 +1694,7 @@ BL_API BLResult BL_CDECL blGlyphBufferSetGlyphsFromStruct(BLGlyphBufferCore* sel
 //! \{
 BL_API BLResult BL_CDECL blGradientInit(BLGradientCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientInitAs(BLGradientCore* self, uint32_t type, const void* values, uint32_t extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientDestroy(BLGradientCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientReset(BLGradientCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientAssignMove(BLGradientCore* self, BLGradientCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientAssignWeak(BLGradientCore* self, const BLGradientCore* other) BL_NOEXCEPT_C;
@@ -1709,6 +1735,7 @@ BL_API bool BL_CDECL blGradientEquals(const BLGradientCore* a, const BLGradientC
 BL_API BLResult BL_CDECL blImageInit(BLImageCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageInitAs(BLImageCore* self, int w, int h, uint32_t format) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageInitAsFromData(BLImageCore* self, int w, int h, uint32_t format, void* pixelData, intptr_t stride, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDestroy(BLImageCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageReset(BLImageCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageAssignMove(BLImageCore* self, BLImageCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageAssignWeak(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
@@ -1733,9 +1760,11 @@ BL_API BLResult BL_CDECL blImageWriteToData(const BLImageCore* self, BLArrayCore
 //!
 //! \{
 BL_API BLResult BL_CDECL blImageCodecInit(BLImageCodecCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecDestroy(BLImageCodecCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageCodecReset(BLImageCodecCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageCodecAssignWeak(BLImageCodecCore* self, const BLImageCodecCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageCodecFindByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecFindByExtension(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageCodecFindByData(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
 BL_API uint32_t BL_CDECL blImageCodecInspectData(const BLImageCodecCore* self, const void* data, size_t size) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageCodecCreateDecoder(const BLImageCodecCore* self, BLImageDecoderCore* dst) BL_NOEXCEPT_C;
@@ -1754,6 +1783,7 @@ BL_API BLResult BL_CDECL blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* c
 //!
 //! \{
 BL_API BLResult BL_CDECL blImageDecoderInit(BLImageDecoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderDestroy(BLImageDecoderCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageDecoderReset(BLImageDecoderCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageDecoderAssignMove(BLImageDecoderCore* self, BLImageDecoderCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageDecoderAssignWeak(BLImageDecoderCore* self, const BLImageDecoderCore* other) BL_NOEXCEPT_C;
@@ -1769,6 +1799,7 @@ BL_API BLResult BL_CDECL blImageDecoderReadFrame(BLImageDecoderCore* self, BLIma
 //!
 //! \{
 BL_API BLResult BL_CDECL blImageEncoderInit(BLImageEncoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderDestroy(BLImageEncoderCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageEncoderReset(BLImageEncoderCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageEncoderAssignMove(BLImageEncoderCore* self, BLImageEncoderCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageEncoderAssignWeak(BLImageEncoderCore* self, const BLImageEncoderCore* other) BL_NOEXCEPT_C;
@@ -1800,6 +1831,7 @@ BL_API BLResult BL_CDECL blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoin
 //!
 //! \{
 BL_API BLResult BL_CDECL blPathInit(BLPathCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathDestroy(BLPathCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathReset(BLPathCore* self) BL_NOEXCEPT_C;
 BL_API size_t BL_CDECL blPathGetSize(const BLPathCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API size_t BL_CDECL blPathGetCapacity(const BLPathCore* self) BL_NOEXCEPT_C BL_PURE;
@@ -1856,6 +1888,7 @@ BL_API uint32_t BL_CDECL blPathHitTest(const BLPathCore* self, const BLPoint* p,
 //! \{
 BL_API BLResult BL_CDECL blPatternInit(BLPatternCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPatternInitAs(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, uint32_t extendMode, const BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternDestroy(BLPatternCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPatternReset(BLPatternCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPatternAssignMove(BLPatternCore* self, BLPatternCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPatternAssignWeak(BLPatternCore* self, const BLPatternCore* other) BL_NOEXCEPT_C;
@@ -1876,6 +1909,7 @@ BL_API bool     BL_CDECL blPatternEquals(const BLPatternCore* a, const BLPattern
 //! \{
 BL_API BLResult BL_CDECL blPixelConverterInit(BLPixelConverterCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPixelConverterInitWeak(BLPixelConverterCore* self, const BLPixelConverterCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPixelConverterDestroy(BLPixelConverterCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPixelConverterReset(BLPixelConverterCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPixelConverterAssign(BLPixelConverterCore* self, const BLPixelConverterCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPixelConverterCreate(BLPixelConverterCore* self, const BLFormatInfo* dstInfo, const BLFormatInfo* srcInfo, uint32_t createFlags) BL_NOEXCEPT_C;
@@ -1901,6 +1935,7 @@ BL_API double   BL_CDECL blRandomNextDouble(BLRandom* self) BL_NOEXCEPT_C;
 //!
 //! \{
 BL_API BLResult BL_CDECL blRegionInit(BLRegionCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blRegionDestroy(BLRegionCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blRegionReset(BLRegionCore* self) BL_NOEXCEPT_C;
 BL_API size_t BL_CDECL blRegionGetSize(const BLRegionCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API size_t BL_CDECL blRegionGetCapacity(const BLRegionCore* self) BL_NOEXCEPT_C BL_PURE;
@@ -1959,6 +1994,7 @@ BL_API BLResult BL_CDECL blResultFromPosixError(int e) BL_NOEXCEPT_C;
 //!
 //! \{
 BL_API BLResult BL_CDECL blStringInit(BLStringCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringDestroy(BLStringCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStringReset(BLStringCore* self) BL_NOEXCEPT_C;
 BL_API size_t BL_CDECL blStringGetSize(const BLStringCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API size_t BL_CDECL blStringGetCapacity(const BLStringCore* self) BL_NOEXCEPT_C BL_PURE;
@@ -1998,9 +2034,36 @@ BL_API int BL_CDECL blStringCompareData(const BLStringCore* self, const char* st
 BL_API BLResult BL_CDECL blStrokeOptionsInit(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStrokeOptionsInitMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStrokeOptionsInitWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsDestroy(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStrokeOptionsReset(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStrokeOptionsAssignMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
+//! \}
+
+//! \name BLStyle
+//!
+//! \{
+BL_API BLResult BL_CDECL blStyleInit(BLStyleCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleInitMove(BLStyleCore* self, BLStyleCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleInitWeak(BLStyleCore* self, const BLStyleCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleInitRgba(BLStyleCore* self, const BLRgba* rgba) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleInitRgba32(BLStyleCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleInitRgba64(BLStyleCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleInitObject(BLStyleCore* self, const void* object) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleDestroy(BLStyleCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleReset(BLStyleCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleAssignMove(BLStyleCore* self, BLStyleCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleAssignWeak(BLStyleCore* self, const BLStyleCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleAssignRgba(BLStyleCore* self, const BLRgba* rgba) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleAssignRgba32(BLStyleCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleAssignRgba64(BLStyleCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleAssignObject(BLStyleCore* self, const void* object) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blStyleGetType(const BLStyleCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleGetRgba(const BLStyleCore* self, BLRgba* rgbaOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleGetRgba32(const BLStyleCore* self, uint32_t* rgba32Out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleGetRgba64(const BLStyleCore* self, uint64_t* rgba64Out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStyleGetObject(const BLStyleCore* self, void* object) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blStyleEquals(const BLStyleCore* a, const BLStyleCore* b) BL_NOEXCEPT_C;
 //! \}
 
 //! \name BLVariant
@@ -2013,11 +2076,12 @@ BL_API BLResult BL_CDECL blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, co
 BL_API BLResult BL_CDECL blVariantInit(void* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blVariantInitMove(void* self, void* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blVariantInitWeak(void* self, const void* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blVariantDestroy(void* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blVariantReset(void* self) BL_NOEXCEPT_C;
 BL_API uint32_t BL_CDECL blVariantGetImplType(const void* self) BL_NOEXCEPT_C BL_PURE;
 BL_API BLResult BL_CDECL blVariantAssignMove(void* self, void* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blVariantAssignWeak(void* self, const void* other) BL_NOEXCEPT_C;
-BL_API bool     BL_CDECL blVariantEquals(const void* a, const void* b) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blVariantEquals(const void* a, const void* b) BL_NOEXCEPT_C;
 //! \}
 
 #ifdef __cplusplus

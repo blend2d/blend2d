@@ -214,7 +214,7 @@ public:
   BL_INLINE BLImage(const BLImage& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLImage(BLImageImpl* impl) noexcept { this->impl = impl; }
   BL_INLINE BLImage(int w, int h, uint32_t format) noexcept { blImageInitAs(this, w, h, format); }
-  BL_INLINE ~BLImage() { blImageReset(this); }
+  BL_INLINE ~BLImage() { blImageDestroy(this); }
 
   //! \}
 
@@ -336,6 +336,10 @@ public:
 
   BL_INLINE BLResult readFromData(const BLArrayView<uint8_t>& view, const BLArray<BLImageCodec>& codecs) noexcept {
     return blImageReadFromData(this, view.data, view.size, &codecs);
+  }
+
+  BL_INLINE BLResult writeToFile(const char* fileName) noexcept {
+    return blImageWriteToFile(this, fileName, nullptr);
   }
 
   BL_INLINE BLResult writeToFile(const char* fileName, const BLImageCodec& codec) noexcept {

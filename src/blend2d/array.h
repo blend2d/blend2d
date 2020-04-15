@@ -295,7 +295,7 @@ public:
   BL_INLINE explicit BLArray(BLArrayImpl* impl) noexcept { this->impl = impl; }
 
   //! Destroys the array.
-  BL_INLINE ~BLArray() noexcept { blArrayReset(this); }
+  BL_INLINE ~BLArray() noexcept { blArrayDestroy(this); }
 
   //! \}
 

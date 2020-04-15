@@ -103,13 +103,23 @@ static BL_NOINLINE BLResult blStringRealloc(BLStringCore* self, size_t n) noexce
 }
 
 // ============================================================================
-// [BLString - Init / Reset]
+// [BLString - Init / Destroy]
 // ============================================================================
 
 BLResult blStringInit(BLStringCore* self) noexcept {
   self->impl = &blNullStringImpl;
   return BL_SUCCESS;
 }
+
+BLResult blStringDestroy(BLStringCore* self) noexcept {
+  BLStringImpl* selfI = self->impl;
+  self->impl = nullptr;
+  return blStringImplRelease(selfI);
+}
+
+// ============================================================================
+// [BLString - Reset]
+// ============================================================================
 
 BLResult blStringReset(BLStringCore* self) noexcept {
   BLStringImpl* selfI = self->impl;

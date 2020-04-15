@@ -9,6 +9,7 @@
 #include "./image_p.h"
 #include "./imagecodec.h"
 #include "./runtime_p.h"
+#include "./string_p.h"
 #include "./support_p.h"
 #include "./codec/bmpcodec_p.h"
 #include "./codec/jpegcodec_p.h"
@@ -33,13 +34,23 @@ static BLWrap<BLSharedMutex> blImageCodecsMutex;
 static const char blEmptyCString[] = "";
 
 // ============================================================================
-// [BLImageCodec - Init / Reset]
+// [BLImageCodec - Init / Destroy]
 // ============================================================================
 
 BLResult blImageCodecInit(BLImageCodecCore* self) noexcept {
   self->impl = &blNullImageCodecImpl;
   return BL_SUCCESS;
 }
+
+BLResult blImageCodecDestroy(BLImageCodecCore* self) noexcept {
+  BLImageCodecImpl* selfI = self->impl;
+  self->impl = nullptr;
+  return blImplReleaseVirt(selfI);
+}
+
+// ============================================================================
+// [BLImageCodec - Reset]
+// ============================================================================
 
 BLResult blImageCodecReset(BLImageCodecCore* self) noexcept {
   BLImageCodecImpl* selfI = self->impl;
@@ -63,19 +74,48 @@ BLResult blImageCodecAssignWeak(BLImageCodecCore* self, const BLImageCodecCore* 
 // [BLImageCodec - Find Internal]
 // ============================================================================
 
-static BL_INLINE bool blStrEq(const char* a, const char* b, size_t bSize) noexcept {
-  size_t i;
-  for (i = 0; i < bSize; i++)
-    if (a[i] == 0 || a[i] != b[i])
-      return false;
-  return a[i] == 0;
+static bool blImageCodecMatchExtension(const char* extensions, const char* match, size_t matchSize) noexcept {
+  while (*extensions) {
+    // Match each extension in `extensions` string list delimited by '|'.
+    const char* p = extensions;
+    while (*p && *p != '|')
+      p++;
+
+    size_t extSize = (size_t)(p - extensions);
+    if (extSize == matchSize && blMemEqI(extensions, match, matchSize))
+      return true;
+
+    if (*p == '|')
+      p++;
+    extensions = p;
+  }
+  return false;
+}
+
+// Returns possibly advanced `match` and fixes the `size`.
+static const char* blImageCodecKeepOnlyExtensionInMatch(const char* match, size_t& size) noexcept {
+  const char* end = match + size;
+  const char* p = end;
+
+  while (p != match && p[-1] != '.')
+    p--;
+
+  size = (size_t)(end - p);
+  return p;
 }
 
 static BLResult blImageCodecFindByNameInternal(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
   for (const auto& codec : codecs->dcast<BLArray<BLImageCodec>>().view())
-    if (blStrEq(codec.name(), name, size))
+    if (blStrEqI(codec.name(), name, size))
       return blImageCodecAssignWeak(self, &codec);
-  return BL_ERROR_IMAGE_NO_MATCHING_CODEC;
+  return blTraceError(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
+}
+
+static BLResult blImageCodecFindByExtensionInternal(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
+  for (const auto& codec : codecs->dcast<BLArray<BLImageCodec>>().view())
+    if (blImageCodecMatchExtension(codec.extensions(), name, size))
+      return blImageCodecAssignWeak(self, &codec);
+  return blTraceError(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
 }
 
 static BLResult blImageCodecFindByDataInternal(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) noexcept {
@@ -93,7 +133,7 @@ static BLResult blImageCodecFindByDataInternal(BLImageCodecCore* self, const voi
   if (candidate)
     return blImageCodecAssignWeak(self, candidate);
 
-  return BL_ERROR_IMAGE_NO_MATCHING_CODEC;
+  return blTraceError(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
 }
 
 // ============================================================================
@@ -109,10 +149,24 @@ BLResult blImageCodecFindByName(BLImageCodecCore* self, const char* name, size_t
   if (size == SIZE_MAX)
     size = strlen(name);
 
+  if (!size)
+    return blTraceError(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
+
   if (codecs)
     return blImageCodecFindByNameInternal(self, name, size, codecs);
   else
     return blImageCodecsMutex->protectShared([&] { return blImageCodecFindByNameInternal(self, name, size, &blImageCodecs); });
+}
+
+BLResult blImageCodecFindByExtension(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
+  if (size == SIZE_MAX)
+    size = strlen(name);
+
+  name = blImageCodecKeepOnlyExtensionInMatch(name, size);
+  if (codecs)
+    return blImageCodecFindByExtensionInternal(self, name, size, codecs);
+  else
+    return blImageCodecsMutex->protectShared([&] { return blImageCodecFindByExtensionInternal(self, name, size, &blImageCodecs); });
 }
 
 BLResult blImageCodecFindByData(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) noexcept {
@@ -179,13 +233,23 @@ static BLResult BL_CDECL blImageCodecImplCreateEncoder(const BLImageCodecImpl* i
 BL_DIAGNOSTIC_POP
 
 // ============================================================================
-// [BLImageDecoder - Init / Reset]
+// [BLImageDecoder - Init / Destroy]
 // ============================================================================
 
 BLResult blImageDecoderInit(BLImageDecoderCore* self) noexcept {
   self->impl = &blNullImageDecoderImpl;
   return BL_SUCCESS;
 }
+
+BLResult blImageDecoderDestroy(BLImageDecoderCore* self) noexcept {
+  BLImageDecoderImpl* selfI = self->impl;
+  self->impl = nullptr;
+  return blImplReleaseVirt(selfI);
+}
+
+// ============================================================================
+// [BLImageDecoder - Reset]
+// ============================================================================
 
 BLResult blImageDecoderReset(BLImageDecoderCore* self) noexcept {
   BLImageDecoderImpl* selfI = self->impl;
@@ -248,13 +312,23 @@ static BLResult BL_CDECL blImageDecoderImplReadFrame(BLImageDecoderImpl* impl, B
 BL_DIAGNOSTIC_POP
 
 // ============================================================================
-// [BLImageEncoder - Init / Reset]
+// [BLImageEncoder - Init / Destroy]
 // ============================================================================
 
 BLResult blImageEncoderInit(BLImageEncoderCore* self) noexcept {
   self->impl = &blNullImageEncoderImpl;
   return BL_SUCCESS;
 }
+
+BLResult blImageEncoderDestroy(BLImageEncoderCore* self) noexcept {
+  BLImageEncoderImpl* selfI = self->impl;
+  self->impl = nullptr;
+  return blImplReleaseVirt(selfI);
+}
+
+// ============================================================================
+// [BLImageEncoder - Reset]
+// ============================================================================
 
 BLResult blImageEncoderReset(BLImageEncoderCore* self) noexcept {
   BLImageEncoderImpl* selfI = self->impl;
@@ -394,6 +468,27 @@ UNIT(image_codecs) {
     EXPECT(bmp.findByName("BMP") == BL_SUCCESS);
     EXPECT(png.findByName("PNG") == BL_SUCCESS);
     EXPECT(jpg.findByName("JPEG") == BL_SUCCESS);
+
+    EXPECT(codec.findByExtension("bmp") == BL_SUCCESS);
+    EXPECT(codec == bmp);
+
+    EXPECT(codec.findByExtension(".bmp") == BL_SUCCESS);
+    EXPECT(codec == bmp);
+
+    EXPECT(codec.findByExtension("SomeFile.BMp") == BL_SUCCESS);
+    EXPECT(codec == bmp);
+
+    EXPECT(codec.findByExtension("png") == BL_SUCCESS);
+    EXPECT(codec == png);
+
+    EXPECT(codec.findByExtension(".png") == BL_SUCCESS);
+    EXPECT(codec == png);
+
+    EXPECT(codec.findByExtension(".jpg") == BL_SUCCESS);
+    EXPECT(codec == jpg);
+
+    EXPECT(codec.findByExtension(".jpeg") == BL_SUCCESS);
+    EXPECT(codec == jpg);
 
     EXPECT(codec.findByData(bmpSignature, BL_ARRAY_SIZE(bmpSignature)) == BL_SUCCESS);
     EXPECT(codec == bmp);

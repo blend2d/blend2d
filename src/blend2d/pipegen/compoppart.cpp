@@ -7,6 +7,7 @@
 #include "../api-build_p.h"
 #if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
 
+#include "../runtime_p.h"
 #include "../pipegen/compoppart_p.h"
 #include "../pipegen/fetchpart_p.h"
 #include "../pipegen/fetchpatternpart_p.h"
@@ -51,7 +52,7 @@ CompOpPart::CompOpPart(PipeCompiler* pc, uint32_t compOp, FetchPart* dstPart, Fe
   // Limit the maximum pixel-step to 4 it the style is not solid and the target
   // is not 64-bit. There's not enough registers to process 8 pixels in parallel
   // in 32-bit mode.
-  if (BL_TARGET_ARCH_BITS < 64 && !isSolid && _pixelType != Pixel::kTypeAlpha)
+  if (blRuntimeIs32Bit() && !isSolid && _pixelType != Pixel::kTypeAlpha)
     pixelLimit = 4;
 
   // Decrease the maximum pixels to 4 if the source is complex to fetch.

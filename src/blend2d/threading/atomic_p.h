@@ -40,22 +40,29 @@ static BL_INLINE bool blAtomicCompareExchange(T* ptr, typename std::remove_volat
   return std::atomic_compare_exchange_strong(((std::atomic<ValueType>*)ptr), expected, desired);
 }
 
+template<typename T>
+static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetchOr(T* x, typename std::remove_volatile<T>::type value, std::memory_order order) noexcept {
+  typedef typename std::remove_volatile<T>::type RawT;
+  return ((std::atomic<RawT>*)x)->fetch_or(value, order);
+}
+
 // ============================================================================
 // [BLAtomicUInt64Generator]
 // ============================================================================
 
-//! A context that can be used to generate unique 64-bit IDs in a thread-safe
-//! manner. It uses atomic operations to make the generation as fast as possible
-//! and provides an implementation for both 32-bit and 64-bit targets.
+//! A highly and optimized 64-bit ID generator that can be used to generate IDs
+//! of objects to uniquely identify them. The implementation uses atomics that
+//! access a global counter and a thread-local variables that access a local
+//! counter, which makes it faster than using atomics for each `next()` call.
 //!
-//! The implementation chooses a different startegy between 32-bit and 64-bit
-//! hosts. On a 64-bit host the implementation always returns sequential IDs
-//! starting from 1, on 32-bit host the implementation would always return a
-//! number which is higher than the previous one, but it doesn't have to be
-//! sequential as it uses the highest bit of LO value as an indicator to
-//! increment HI value.
-struct BLAtomicUInt64Generator {
-#if BL_TARGET_ARCH_BITS < 64
+//! TODO: Use the new implementation that uses TLS instead of this.
+struct alignas(BL_CACHE_LINE_SIZE) BLAtomicUInt64Generator {
+#if BL_TARGET_HAS_ATOMIC_64B
+  std::atomic<uint64_t> _counter;
+
+  BL_INLINE void reset() noexcept { _counter = 0; }
+  BL_INLINE uint64_t next() noexcept { return ++_counter; }
+#else
   std::atomic<uint32_t> _hi;
   std::atomic<uint32_t> _lo;
 
@@ -94,11 +101,6 @@ struct BLAtomicUInt64Generator {
       return (uint64_t(hiValue) << 32) | loValue;
     }
   }
-#else
-  std::atomic<uint64_t> _counter;
-
-  BL_INLINE void reset() noexcept { _counter = 0; }
-  BL_INLINE uint64_t next() noexcept { return ++_counter; }
 #endif
 };
 

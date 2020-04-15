@@ -200,19 +200,6 @@ BL_INLINE constexpr size_t blBitWordCountFromBitCount(size_t nBits) noexcept {
   return (nBits + blBitSizeOf<T>() - 1) / blBitSizeOf<T>();
 }
 
-//! Bit-cast `x` of `In` type to the given `Out` type.
-//!
-//! Useful to bit-cast between integers and floating points. The size of `Out`
-//! and `In` must be the same otherwise the compilation would fail. Bit casting
-//! is used by `blEquals` to implement bit equality for floating point types.
-template<typename Out, typename In>
-BL_INLINE Out blBitCast(const In& x) noexcept {
-  static_assert(sizeof(Out) == sizeof(In), "The size of 'In' and 'Out' must match");
-  union { In in; Out out; } u;
-  u.in = x;
-  return u.out;
-}
-
 //! Returns `x << y` (shift left logical) by explicitly casting `x` to an unsigned type and back.
 template<typename X, typename Y>
 BL_INLINE constexpr X blBitShl(const X& x, const Y& y) noexcept {

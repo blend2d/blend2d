@@ -1320,8 +1320,8 @@ OnVHCurveTo:
 
           // Odd argument case.
           if (vIdx & 0x1) {
-            px += m.xByY(vBuf[0]);
-            py += m.yByY(vBuf[0]);
+            px += m.xByY(vBuf[i]);
+            py += m.yByY(vBuf[i]);
             i++;
           }
 
@@ -1349,8 +1349,8 @@ OnVHCurveTo:
 
           // Odd argument case.
           if (vIdx & 0x1) {
-            px += m.xByX(vBuf[0]);
-            py += m.yByX(vBuf[0]);
+            px += m.xByX(vBuf[i]);
+            py += m.yByX(vBuf[i]);
             i++;
           }
 
@@ -1361,7 +1361,7 @@ OnVHCurveTo:
             y2 = y1 + m.yByA(vBuf[i - 3], vBuf[i - 2]);
             px = x2 + m.xByY(vBuf[i - 1]);
             py = y2 + m.yByY(vBuf[i - 1]);
-            consumer.cubicTo(x1, y1, px, y2, px, py);
+            consumer.cubicTo(x1, y1, x2, y2, px, py);
           }
 
           vIdx = 0;

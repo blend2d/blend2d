@@ -8,130 +8,239 @@
 #define BLEND2D_RASTER_RASTERCOMMAND_P_H
 
 #include "../geometry_p.h"
-#include "../image.h"
-#include "../path.h"
 #include "../pipedefs_p.h"
-#include "../region.h"
-#include "../zeroallocator_p.h"
 #include "../zoneallocator_p.h"
 #include "../raster/edgebuilder_p.h"
 #include "../raster/rasterdefs_p.h"
+#include "../raster/rastercontextstyle_p.h"
+#include "../raster/rasterfetchdata_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal_raster
 //! \{
 
+// ============================================================================
+// [Forward Declarations]
+// ============================================================================
+
 struct BLRasterFetchData;
+
+// ============================================================================
+// [Constants]
+// ============================================================================
 
 //! Raster command type.
 enum BLRasterCommandType : uint32_t {
   BL_RASTER_COMMAND_TYPE_NONE = 0,
-  BL_RASTER_COMMAND_TYPE_FILL_RECTA = 1,
-  BL_RASTER_COMMAND_TYPE_FILL_RECTU = 2,
-  BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC = 3
+
+  BL_RASTER_COMMAND_TYPE_FILL_BOX_A = 1,
+  BL_RASTER_COMMAND_TYPE_FILL_BOX_U = 2,
+
+  BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_BASE = 3,
+  BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_NON_ZERO = BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_BASE + BL_FILL_RULE_NON_ZERO,
+  BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_EVEN_ODD = BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_BASE + BL_FILL_RULE_EVEN_ODD
 };
 
-//! Raster command flags.
-enum BLRasterCommandFlags : uint32_t {
-  BL_RASTER_COMMAND_FLAG_FETCH_DATA = 0x01u
-};
+// ============================================================================
+// [BLRasterCommand]
+// ============================================================================
 
 //! Raster command data.
 struct BLRasterCommand {
-  uint8_t type;
-  uint8_t flags;
-  uint16_t alpha;
-  uint32_t pipeSignature;
+  //! \name Command Core Data
+  //! \{
 
-  union {
-    BLPipeFetchData::Solid solidData;
-    BLRasterFetchData* fetchData;
-  };
-
-  union {
-    BLRectI rect;
+  //! Analytic rasterizer data used by the synchronous rendering context.
+  struct AnalyticSync {
+    //! Edge storage is used directly by the synchronous rendering context.
     BLEdgeStorage<int>* edgeStorage;
   };
-};
 
-class BLRasterCommandQueue {
-public:
-  BL_NONCOPYABLE(BLRasterCommandQueue)
+  //! Analytic rasterizer data used by the asynchronous rendering context.
+  struct AnalyticAsync {
+    //! Points to the start of the first edge. Edges that start in next
+    //! bands are linked next after edges of the previous band, which makes
+    //! it possible to only store the start of the list.
+    const BLEdgeVector<int>* edges;
+    //! Topmost Y coordinate used to skip quickly the whole band if the worker
+    //! is not there yet.
+    int fixedY0;
+    //! Index of state slot that is used by to keep track of the command progress,
+    //! The index refers to a table where a command-specific state data is stored.
+    uint32_t stateSlotIndex;
+  };
 
-  uint8_t* _cmdBuf;
-  uint8_t* _cmdPtr;
-  uint8_t* _cmdEnd;
-  size_t _queueCapacity;
+  //! Either rectangular data or data for analytic rasterizer depending on
+  //! the command type.
+  union {
+    //! Data used by FillBoxA and FillBoxU.
+    BLBoxI _boxI;
+    //! Data used by analytic rasterizer in case of synchronous rendering.
+    AnalyticSync _analyticSync;
+    //! Data used by analytic rasterizer in case of asynchronous rendering.
+    AnalyticAsync _analyticAsync;
+  };
 
-  BL_INLINE BLRasterCommandQueue() noexcept
-    : _cmdBuf(nullptr),
-      _cmdPtr(nullptr),
-      _cmdEnd(nullptr),
-      _queueCapacity(0) {}
+  //! Global alpha value.
+  uint32_t _alpha;
+  //! Command type, see `BLRasterCommandType`.
+  uint8_t _type;
+  //! Command flags, see `BLRasterCommandFlags`.
+  uint8_t _flags;
+  //! Reserved.
+  uint16_t _reserved;
 
-  BL_INLINE ~BLRasterCommandQueue() noexcept {
-    free(_cmdBuf);
+  //! \}
+
+  //! \name Command Source Data
+  //! \{
+
+  //! Source data - either solid data or pointer to `fetchData`.
+  BLRasterContextStyleSource _source;
+
+  //! \}
+
+  //! \name Command Pipeline Data
+  //! \{
+
+  union {
+    //! Pipeline fill function.
+    //!
+    //! Always filled by a synchronous rendering context. Asynchronous rendering
+    //! context would only fill the function if it's available or use this address
+    //! as `_fillPrev` in case that asynchronous pipeline compilation is enabled.
+    BLPipeFillFunc _fillFunc;
+    //! Link to the previous command that uses the same fill function (with the
+    //! same signature). This is only used by asynchronous rendering context to
+    //! make it possible to patch all commands that use the same fill function
+    //! after the function is compiled by a worker thread.
+    BLRasterCommand* _fillPrev;
+  };
+
+  //! \}
+
+  //! \name Command Core Initialization
+  //! \{
+
+  BL_INLINE void initCommand(uint32_t alpha) noexcept {
+    _alpha = alpha;
+    _type = 0;
+    _flags = 0;
+    _reserved = 0;
   }
 
-  BL_INLINE void swap(BLRasterCommandQueue& other) noexcept {
-    std::swap(_cmdBuf, other._cmdBuf);
-    std::swap(_cmdPtr, other._cmdPtr);
-    std::swap(_cmdEnd, other._cmdEnd);
-    std::swap(_queueCapacity, other._queueCapacity);
+  BL_INLINE void initFillBoxA(const BLBoxI& boxA) noexcept {
+    _boxI = boxA;
+    _type = BL_RASTER_COMMAND_TYPE_FILL_BOX_A;
   }
 
-  BL_INLINE bool empty() const noexcept {
-    return _cmdPtr == _cmdBuf;
+  BL_INLINE void initFillBoxU(const BLBoxI& boxU) noexcept {
+    _boxI = boxU;
+    _type = BL_RASTER_COMMAND_TYPE_FILL_BOX_U;
   }
 
-  BL_INLINE bool full() const noexcept {
-    return _cmdPtr == _cmdEnd;
+  BL_INLINE void initFillAnalyticSync(uint32_t fillRule, BLEdgeStorage<int>* edgeStorage) noexcept {
+    BL_ASSERT(fillRule < BL_FILL_RULE_COUNT);
+
+    _analyticSync.edgeStorage = edgeStorage;
+    _type = uint8_t(BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_BASE + fillRule);
   }
 
-  BL_INLINE size_t queueSize() const noexcept {
-    return (size_t)(_cmdPtr - _cmdBuf) / sizeof(BLRasterCommand);
+  //! Initialize the command (asynchronous)
+  //!
+  //! \note `edges` may be null in case that this command requires a job to build the
+  //! edges. In this case both `edges` and `fixedY0` members will be changed when such
+  //! job completes.
+  BL_INLINE void initFillAnalyticAsync(uint32_t fillRule, BLEdgeVector<int>* edges) noexcept {
+    BL_ASSERT(fillRule < BL_FILL_RULE_COUNT);
+
+    _analyticAsync.edges = edges;
+    _analyticAsync.fixedY0 = 0;
+    _type = uint8_t(BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_BASE + fillRule);
   }
 
-  BL_INLINE size_t queueCapacity() const noexcept {
-    return _queueCapacity;
+  BL_INLINE void setEdgesAsync(BLEdgeStorage<int>* edgeStorage) noexcept {
+    _analyticAsync.edges = edgeStorage->flattenEdgeLinks();
+    _analyticAsync.fixedY0 = edgeStorage->boundingBox().y0;
   }
 
-  BL_INLINE BLResult clear() noexcept {
-    _cmdPtr = _cmdBuf;
-    return BL_SUCCESS;
+  //! \}
+
+  //! \name Command Source Initialization
+  //! \{
+
+  BL_INLINE void initFetchSolid(const BLPipeFetchData::Solid& solidData) noexcept {
+    _source.solid = solidData;
   }
 
-  BL_INLINE BLResult reset() noexcept {
-    free(_cmdBuf);
-    _cmdBuf = nullptr;
-    _cmdPtr = nullptr;
-    _cmdEnd = nullptr;
-    _queueCapacity = 0;
-    return BL_SUCCESS;
+  BL_INLINE void initFetchData(BLRasterFetchData* fetchData) noexcept {
+    _source.fetchData = fetchData;
+    _flags |= BL_RASTER_COMMAND_FLAG_FETCH_DATA;
   }
 
-  BLResult reset(size_t capacity) noexcept {
-    BL_ASSERT(capacity > 0);
-    if (capacity != _queueCapacity) {
-      uint8_t* newPtr = nullptr;
+  //! \}
 
-      if (capacity == 0) {
-        free(_cmdBuf);
-      }
-      else {
-        newPtr = static_cast<uint8_t*>(realloc(_cmdBuf, capacity * sizeof(BLRasterCommand)));
-        if (!newPtr)
-          return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-      }
+  //! \name Command Pipeline Initialization
+  //! \{
 
-      _cmdBuf = newPtr;
-      _cmdEnd = _cmdBuf + capacity * sizeof(BLRasterCommand);
-      _queueCapacity = capacity;
-    }
-
-    _cmdPtr = _cmdBuf;
-    return BL_SUCCESS;
+  BL_INLINE void initFillFunc(BLPipeFillFunc fillFunc) noexcept {
+    _fillFunc = fillFunc;
   }
+
+  //! \}
+
+  //! \name Accessors
+  //! \{
+
+  BL_INLINE uint32_t type() const noexcept { return _type; }
+  BL_INLINE uint32_t flags() const noexcept { return _flags; }
+  BL_INLINE uint32_t alpha() const noexcept { return _alpha; }
+  BL_INLINE BLPipeFillFunc fillFunc() const noexcept { return _fillFunc; }
+
+  BL_INLINE bool isBoxA() const noexcept { return type() == BL_RASTER_COMMAND_TYPE_FILL_BOX_A; }
+  BL_INLINE bool isBoxU() const noexcept { return type() == BL_RASTER_COMMAND_TYPE_FILL_BOX_U; }
+  BL_INLINE const BLBoxI& boxI() const noexcept { return _boxI; }
+
+  BL_INLINE bool isAnalytic() const noexcept {
+    return type() >= BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_BASE &&
+           type() <  BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_BASE + BL_FILL_RULE_COUNT;
+  }
+
+  BL_INLINE bool hasFlag(uint32_t flag) const noexcept { return (_flags & flag) != 0; }
+  BL_INLINE bool hasFetchData() const noexcept { return hasFlag(BL_RASTER_COMMAND_FLAG_FETCH_DATA); }
+
+  BL_INLINE uint32_t analyticFillRule() const noexcept {
+    BL_ASSERT(isAnalytic());
+    return type() - BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_BASE;
+  }
+
+  BL_INLINE const BLEdgeStorage<int>* analyticEdgesSync() const noexcept {
+    BL_ASSERT(isAnalytic());
+    return _analyticSync.edgeStorage;
+  }
+
+  BL_INLINE const BLEdgeVector<int>* analyticEdgesAsync() const noexcept {
+    return _analyticAsync.edges;
+  }
+
+  //! Returns a pointer to `BLPipeFillData` that is only valid when the command type
+  //! is `BL_RASTER_COMMAND_TYPE_FILL_BOX_A`. It casts `_rect` member to the requested
+  //! data type as it's compatible. This trick cannot be used for any other command
+  //! types.
+  BL_INLINE const void* getPipeFillDataOfBoxA() const noexcept {
+    BL_ASSERT(type() == BL_RASTER_COMMAND_TYPE_FILL_BOX_A);
+    return &_boxI;
+  }
+
+  //! Returns `_solidData` or `_fetchData` casted properly to `BLPipeFetchData` type.
+  BL_INLINE const void* getPipeFetchData() const noexcept {
+    const void* data = &_source.solid;
+    if (hasFetchData())
+      data = &_source.fetchData->_data;
+    return data;
+  }
+
+  //! \}
 };
 
 //! \}

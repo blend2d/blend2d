@@ -79,7 +79,7 @@ public:
 
   BL_INLINE BLGlyphBuffer() noexcept { blGlyphBufferInit(this); }
   BL_INLINE BLGlyphBuffer(BLGlyphBuffer&& other) noexcept { blGlyphBufferInitMove(this, &other); }
-  BL_INLINE ~BLGlyphBuffer() noexcept { blGlyphBufferReset(this); }
+  BL_INLINE ~BLGlyphBuffer() noexcept { blGlyphBufferDestroy(this); }
 
   //! \}
 

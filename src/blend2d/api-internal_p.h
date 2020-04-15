@@ -283,6 +283,9 @@ enum BLInternalConsts : uint32_t {
   //! Initial size of BLGradientImpl of a newly allocated gradient [in bytes].
   BL_ALLOC_HINT_GRADIENT = 256,
 
+  //! Size of a CPU cache-line or a minimum size if multiple CPUs are used.
+  //!
+  //! Mostly depends on architecture, we use 64 bytes by default.
   BL_CACHE_LINE_SIZE = 64,
 
   //! To make checks for APPEND operation easier.

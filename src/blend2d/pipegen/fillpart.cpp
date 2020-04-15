@@ -32,10 +32,10 @@ FillPart::FillPart(PipeCompiler* pc, uint32_t fillType, FetchPixelPtrPart* dstPa
 }
 
 // ============================================================================
-// [BLPipeGen::FillBoxAAPart - Construction / Destruction]
+// [BLPipeGen::FillBoxAPart - Construction / Destruction]
 // ============================================================================
 
-FillBoxAAPart::FillBoxAAPart(PipeCompiler* pc, uint32_t fillType, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept
+FillBoxAPart::FillBoxAPart(PipeCompiler* pc, uint32_t fillType, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept
   : FillPart(pc, fillType, dstPart, compOpPart) {
 
   _maxSimdWidthSupported = 16;
@@ -46,10 +46,10 @@ FillBoxAAPart::FillBoxAAPart(PipeCompiler* pc, uint32_t fillType, FetchPixelPtrP
 }
 
 // ============================================================================
-// [BLPipeGen::FillBoxAAPart - Compile]
+// [BLPipeGen::FillBoxAPart - Compile]
 // ============================================================================
 
-void FillBoxAAPart::compile() noexcept {
+void FillBoxAPart::compile() noexcept {
   _initGlobalHook(cc->cursor());
 
   x86::Gp ctxData        = pc->_ctxData;
@@ -70,10 +70,10 @@ void FillBoxAAPart::compile() noexcept {
   // --------------------------------------------------------------------------
 
   cc->mov(dstPtr, cc->intptr_ptr(ctxData, BL_OFFSET_OF(BLPipeContextData, dst.stride)));
-  cc->mov(y, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxAA, box.y0)));
+  cc->mov(y, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxA, box.y0)));
 
   cc->mov(dstStride, dstPtr);
-  cc->mov(w, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxAA, box.x0)));
+  cc->mov(w, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxA, box.x0)));
   cc->imul(dstPtr, y.cloneAs(dstPtr));
 
   dstPart()->initPtr(dstPtr);
@@ -84,10 +84,10 @@ void FillBoxAAPart::compile() noexcept {
   cc->neg(w);
 
   cc->add(dstPtr, cc->intptr_ptr(ctxData, BL_OFFSET_OF(BLPipeContextData, dst.pixelData)));
-  cc->add(w, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxAA, box.x1)));
+  cc->add(w, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxA, box.x1)));
 
   pc->uMul(x, w, dstBpp);
-  cc->add(y, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxAA, box.y1)));
+  cc->add(y, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxA, box.y1)));
   cc->sub(dstStride, x.cloneAs(dstStride));
 
   // --------------------------------------------------------------------------
@@ -101,7 +101,7 @@ void FillBoxAAPart::compile() noexcept {
 
     Label L_End  = cc->newLabel();
 
-    cc->mov(sm, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxAA, alpha)));
+    cc->mov(sm, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxA, alpha)));
     pc->uJumpIfNotOpaqueMask(sm, L_SemiAlpha_Init);
 
     // Full Alpha
@@ -148,7 +148,7 @@ void FillBoxAAPart::compile() noexcept {
   else {
     Label L_AnyAlphaLoop = cc->newLabel();
 
-    compOpPart()->cMaskInit(x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxAA, alpha)));
+    compOpPart()->cMaskInit(x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxA, alpha)));
 
     cc->bind(L_AnyAlphaLoop);
     cc->mov(x, w);
@@ -170,10 +170,10 @@ void FillBoxAAPart::compile() noexcept {
 }
 
 // ============================================================================
-// [BLPipeGen::FillBoxAUPart - Construction / Destruction]
+// [BLPipeGen::FillBoxUPart - Construction / Destruction]
 // ============================================================================
 
-FillBoxAUPart::FillBoxAUPart(PipeCompiler* pc, uint32_t fillType, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept
+FillBoxUPart::FillBoxUPart(PipeCompiler* pc, uint32_t fillType, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept
   : FillPart(pc, fillType, dstPart, compOpPart) {
 
   _maxSimdWidthSupported = 16;
@@ -184,10 +184,10 @@ FillBoxAUPart::FillBoxAUPart(PipeCompiler* pc, uint32_t fillType, FetchPixelPtrP
 }
 
 // ============================================================================
-// [BLPipeGen::FillBoxAUPart - Compile]
+// [BLPipeGen::FillBoxUPart - Compile]
 // ============================================================================
 
-void FillBoxAUPart::compile() noexcept {
+void FillBoxUPart::compile() noexcept {
   _initGlobalHook(cc->cursor());
 
   Label L_VertLoop       = cc->newLabel();
@@ -222,10 +222,10 @@ void FillBoxAUPart::compile() noexcept {
   x86::Gp xTmp = cc->newUInt32("@xTmp");
 
   cc->mov(dstPtr, cc->intptr_ptr(ctxData, BL_OFFSET_OF(BLPipeContextData, dst.stride)));
-  cc->mov(y, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxAU, box.y0)));
+  cc->mov(y, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxU, box.y0)));
 
   cc->mov(dstStride, dstPtr);
-  cc->mov(xTmp, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxAU, box.x0)));
+  cc->mov(xTmp, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxU, box.x0)));
   cc->imul(dstPtr, y.cloneAs(dstPtr));
 
   dstPart()->initPtr(dstPtr);
@@ -235,15 +235,15 @@ void FillBoxAUPart::compile() noexcept {
   cc->neg(xTmp);
 
   cc->add(dstPtr, cc->intptr_ptr(ctxData, BL_OFFSET_OF(BLPipeContextData, dst.pixelData)));
-  cc->add(xTmp, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxAU, box.x1)));
+  cc->add(xTmp, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxU, box.x1)));
 
   pc->uMul(xTmp, xTmp, dstBpp);
   cc->sub(dstStride, xTmp.cloneAs(dstStride));
 
-  cc->mov(startWidth, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxAU, startWidth)));
-  cc->mov(innerWidth, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxAU, innerWidth)));
+  cc->mov(startWidth, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxU, startWidth)));
+  cc->mov(innerWidth, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::BoxU, innerWidth)));
 
-  cc->lea(pMasks, x86::ptr(fillData, BL_OFFSET_OF(BLPipeFillData::BoxAU, masks)));
+  cc->lea(pMasks, x86::ptr(fillData, BL_OFFSET_OF(BLPipeFillData::BoxU, masks)));
   cc->mov(y, 1);
 
   // --------------------------------------------------------------------------

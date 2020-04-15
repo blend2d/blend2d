@@ -44,8 +44,8 @@ class FetchSolidPart;
 class FetchPatternPart;
 
 class FillPart;
-class FillBoxAAPart;
-class FillBoxAUPart;
+class FillBoxAPart;
+class FillBoxUPart;
 class FillAnalyticPart;
 
 // ============================================================================
@@ -121,6 +121,11 @@ public:
   BL_INLINE OpArray(const Operand_& op0, const Operand_& op1, const Operand_& op2) noexcept { init(op0, op1, op2); }
   BL_INLINE OpArray(const Operand_& op0, const Operand_& op1, const Operand_& op2, const Operand_& op3) noexcept { init(op0, op1, op2, op3); }
   BL_INLINE OpArray(const OpArray& other) noexcept { init(other); }
+
+  BL_INLINE OpArray& operator=(const OpArray& other) noexcept {
+    init(other);
+    return *this;
+  }
 
 protected:
   // Used internally to implement `low()`, `high()`, `even()`, and `odd()`.
@@ -221,6 +226,11 @@ public:
   BL_INLINE OpArrayT(const T& op0, const T& op1, const T& op2) noexcept : OpArray(op0, op1, op2) {}
   BL_INLINE OpArrayT(const T& op0, const T& op1, const T& op2, const T& op3) noexcept : OpArray(op0, op1, op2, op3) {}
   BL_INLINE OpArrayT(const OpArrayT<T>& other) noexcept : OpArray(other) {}
+
+  BL_INLINE OpArrayT& operator=(const OpArrayT<T>& other) noexcept {
+    init(other);
+    return *this;
+  }
 
 protected:
   BL_INLINE OpArrayT(const OpArrayT<T>& other, uint32_t n, uint32_t from, uint32_t inc) noexcept : OpArray(other, n, from, inc) {}

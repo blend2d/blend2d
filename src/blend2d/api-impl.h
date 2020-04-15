@@ -77,6 +77,7 @@ extern "C" {
 
 // Implemented in 'blruntime.cpp'.
 BL_API void*    BL_CDECL blRuntimeAllocImpl(size_t implSize, uint16_t* memPoolDataOut) noexcept;
+BL_API void*    BL_CDECL blRuntimeAllocAlignedImpl(size_t implSize, size_t alignment, uint16_t* memPoolDataOut) noexcept;
 BL_API BLResult BL_CDECL blRuntimeFreeImpl(void* impl_, size_t implSize, uint32_t memPoolData) noexcept;
 
 #ifdef __cplusplus
@@ -86,6 +87,11 @@ BL_API BLResult BL_CDECL blRuntimeFreeImpl(void* impl_, size_t implSize, uint32_
 template<typename Impl>
 static BL_INLINE Impl* blRuntimeAllocImplT(size_t implSize, uint16_t* memPoolDataOut) noexcept {
   return static_cast<Impl*>(blRuntimeAllocImpl(implSize, memPoolDataOut));
+}
+
+template<typename Impl>
+static BL_INLINE Impl* blRuntimeAllocAlignedImplT(size_t implSize, size_t alignment, uint16_t* memPoolDataOut) noexcept {
+  return static_cast<Impl*>(blRuntimeAllocAlignedImpl(implSize, alignment, memPoolDataOut));
 }
 
 //! \}

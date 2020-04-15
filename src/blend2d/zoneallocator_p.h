@@ -49,26 +49,32 @@ public:
     BL_INLINE uint8_t* data() const noexcept {
       return const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(this) + sizeof(*this));
     }
+
+    BL_INLINE uint8_t* end() const noexcept {
+      return data() + size;
+    }
   };
 
-  //! Saved state, used by `BLZoneAllocator::saveState()` and `BLZoneAllocator::restoreState()`.
-  struct State {
-    //! Current pointer.
-    uint8_t* ptr;
-    //! End pointer.
-    uint8_t* end;
-    //! Current block.
-    Block* block;
+  //! Zero block, used by a default constructed ZoneAllocator, which doesn't
+  //! hold any allocated block. This block must be properly aligned so when
+  //! zone aligns its current pointer to check for aligned allocation it would
+  //! not overflow past the end of the block - which is the same as the
+  //! beginning of the block as it has no size.
+  struct alignas(64) ZeroBlock {
+    uint8_t padding[64 - sizeof(Block)];
+    Block block;
   };
+
+  typedef uint8_t* StatePtr;
 
   enum Limits : size_t {
-    kBlockSize = sizeof(Block),
-    kBlockOverhead = BL_ALLOC_OVERHEAD + sizeof(Block),
-
-    kMinBlockSize = 64, // The number is ridiculously small, but still possible.
+    kMinBlockSize = 1024, // Safe bet - it must be greater than `kMaxAlignment`.
     kMaxBlockSize = size_t(1) << (sizeof(size_t) * 8 - 4 - 1),
     kMinAlignment = 1,
-    kMaxAlignment = 64
+    kMaxAlignment = 64,
+
+    kBlockSize = sizeof(Block),
+    kBlockOverhead = sizeof(Block) + kMaxAlignment + BL_ALLOC_OVERHEAD,
   };
 
   //! Pointer in the current block.
@@ -90,11 +96,10 @@ public:
     size_t _packedData;
   };
 
-  static BL_HIDDEN const Block _zeroBlock;
+  static BL_HIDDEN const ZeroBlock _zeroBlock;
 
-  // --------------------------------------------------------------------------
-  // [Construction / Destruction]
-  // --------------------------------------------------------------------------
+  //! \name Construction / Destruction
+  //! \{
 
   //! Create a new `BLZoneAllocator`.
   //!
@@ -120,11 +125,15 @@ public:
   //! allocated by it. It performs implicit `reset()`.
   BL_INLINE ~BLZoneAllocator() noexcept { reset(); }
 
-  // --------------------------------------------------------------------------
-  // [Init / Reset]
-  // --------------------------------------------------------------------------
-
   BL_HIDDEN void _init(size_t blockSize, size_t blockAlignment, void* staticData, size_t staticSize) noexcept;
+
+  //! Reset the `BLZoneAllocator` invalidating all blocks allocated.
+  BL_HIDDEN void reset() noexcept;
+
+  //! \}
+
+  //! \name Basic Operations
+  //! \{
 
   //! Invalidates all allocations and moves the current block pointer to the
   //! first block. It's similar to `reset()`, however, it doesn't free blocks
@@ -136,13 +145,6 @@ public:
     _assignBlock(cur);
   }
 
-  //! Reset the `BLZoneAllocator` invalidating all blocks allocated.
-  BL_HIDDEN void reset() noexcept;
-
-  // --------------------------------------------------------------------------
-  // [Swap]
-  // --------------------------------------------------------------------------
-
   BL_INLINE void swap(BLZoneAllocator& other) noexcept {
     // This could lead to a disaster.
     BL_ASSERT(!this->hasStaticBlock());
@@ -153,6 +155,11 @@ public:
     std::swap(_block, other._block);
     std::swap(_packedData, other._packedData);
   }
+
+  //! \}
+
+  //! \name Accessors
+  //! \{
 
   //! Tests whether this `BLZoneAllocator` is actually a `BLZoneAllocatorTmp` that
   //! uses temporary memory.
@@ -217,16 +224,21 @@ public:
   BL_INLINE void _assignBlock(Block* block) noexcept {
     size_t alignment = blockAlignment();
     _ptr = blAlignUp(block->data(), alignment);
-    _end = blAlignDown(block->data() + block->size, alignment);
+    _end = block->data() + block->size;
     _block = block;
   }
 
   BL_INLINE void _assignZeroBlock() noexcept {
-    Block* block = const_cast<Block*>(&_zeroBlock);
+    Block* block = const_cast<Block*>(&_zeroBlock.block);
     _ptr = block->data();
     _end = block->data();
     _block = block;
   }
+
+  //! \}
+
+  //! \name Allocation
+  //! \{
 
   //! Internal alloc function.
   BL_HIDDEN void* _alloc(size_t size, size_t alignment) noexcept;
@@ -320,6 +332,13 @@ public:
     return static_cast<T*>(alloc(size, alignment));
   }
 
+  template<typename T>
+  BL_INLINE T* allocNoAlignT(size_t size = sizeof(T)) noexcept {
+    T* ptr = static_cast<T*>(alloc(size));
+    BL_ASSERT(blIsAligned(ptr, alignof(T)));
+    return ptr;
+  }
+
   //! Like `allocNoCheck()`, but the return pointer is casted to `T*`.
   template<typename T>
   BL_INLINE T* allocNoCheckT(size_t size = sizeof(T), size_t alignment = alignof(T)) noexcept {
@@ -350,20 +369,72 @@ public:
     return new(p) T(std::forward<Args>(args)...);
   }
 
+  //! \}
+
+  //! \name State Management
+  //! \{
+
   //! Stores the current state to `state`.
-  BL_INLINE void saveState(State* state) noexcept {
-    state->ptr = _ptr;
-    state->end = _end;
-    state->block = _block;
+  BL_INLINE StatePtr saveState() noexcept {
+    return _ptr;
   }
 
   //! Restores the state of `BLZoneAllocator` from the previously saved `state`.
-  BL_INLINE void restoreState(State* state) noexcept {
-    Block* block = state->block;
-    _ptr = state->ptr;
-    _end = state->end;
+  BL_INLINE void restoreState(StatePtr p) noexcept {
+    Block* block = _block;
+    size_t alignment = blockAlignment();
+
+    while (p < block->data() || p >= block->end()) {
+      if (!block->prev) {
+        // Special case - can happen in case that the allocator didn't
+        // have allocated any block when `saveState()` was called. In
+        // that case we won't restore to the shared null block, instead
+        // we restore to the first block the allocator has.
+        p = blAlignUp(block->data(), alignment);
+        break;
+      }
+      block = block->prev;
+    }
+
     _block = block;
+    _ptr = p;
+    _end = block->end();
   }
+
+  //! \}
+
+  //! \name Block Management
+  //! \{
+
+  //! Returns a past block - a block used before the current one, or null if this
+  //! is the first block. Use together with `reusePastBlock()`.
+  BL_INLINE Block* pastBlock() const noexcept { return _block->prev; }
+
+  //! Moves the passed block after the current block and makes the block after
+  //! the given `block` first.
+  BL_INLINE void reusePastBlock(Block* pastLast) noexcept {
+    BL_ASSERT(pastLast != nullptr); // Cannot be null, check for null block before.
+    BL_ASSERT(pastLast != _block);  // Cannot be the current block, must be paster.
+
+    Block* pastFirst = pastLast;
+    while (pastFirst->prev)
+      pastFirst = pastFirst->prev;
+
+    // Makes `pastNext` the first block.
+    Block* pastNext = pastLast->next;
+    pastNext->prev = nullptr;
+
+    // Link [pastFirst:pastLast] between `_block` and next.
+    Block* next = _block->next;
+
+    _block->next = pastFirst;
+    pastFirst->prev = _block;
+
+    next->prev = pastLast;
+    pastLast->next = next;
+  }
+
+  //! \}
 };
 
 // ============================================================================
@@ -395,12 +466,10 @@ public:
   BL_NONCOPYABLE(BLZonePool)
 
   struct Link { Link* next; };
-  BLZoneAllocator* _zone;
   Link* _pool;
 
-  BL_INLINE BLZonePool(BLZoneAllocator* zone) noexcept
-    : _zone(zone),
-      _pool(nullptr) {}
+  BL_INLINE BLZonePool() noexcept
+    : _pool(nullptr) {}
 
   //! Resets the zone pool.
   //!
@@ -410,10 +479,10 @@ public:
   BL_INLINE void reset() noexcept { _pool = nullptr; }
 
   //! Ensures that there is at least one object in the pool.
-  BL_INLINE bool ensure() noexcept {
+  BL_INLINE bool ensure(BLZoneAllocator& zone) noexcept {
     if (_pool) return true;
 
-    Link* p = static_cast<Link*>(_zone->alloc(SizeOfT));
+    Link* p = static_cast<Link*>(zone.alloc(SizeOfT));
     if (p == nullptr) return false;
 
     p->next = nullptr;
@@ -422,10 +491,10 @@ public:
   }
 
   //! Allocates a memory (or reuse the existing allocation) of `size` (in byts).
-  BL_INLINE T* alloc() noexcept {
+  BL_INLINE T* alloc(BLZoneAllocator& zone) noexcept {
     Link* p = _pool;
     if (BL_UNLIKELY(p == nullptr))
-      return static_cast<T*>(_zone->alloc(SizeOfT));
+      return static_cast<T*>(zone.alloc(SizeOfT));
     _pool = p->next;
     return static_cast<T*>(static_cast<void*>(p));
   }

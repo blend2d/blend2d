@@ -33,7 +33,7 @@ static BLFontManagerImpl* blFontManagerImplNew() noexcept {
 }
 
 // ============================================================================
-// [BLFontManager - Init / Reset]
+// [BLFontManager - Init / Destroy]
 // ============================================================================
 
 BLResult blFontManagerInit(BLFontManagerCore* self) noexcept {
@@ -41,9 +41,18 @@ BLResult blFontManagerInit(BLFontManagerCore* self) noexcept {
   return BL_SUCCESS;
 }
 
+BLResult blFontManagerDestroy(BLFontManagerCore* self) noexcept {
+  BLFontManagerImpl* selfI = self->impl;
+  self->impl = nullptr;
+  return blImplReleaseVirt(selfI);
+}
+
+// ============================================================================
+// [BLFontManager - Reset]
+// ============================================================================
+
 BLResult blFontManagerReset(BLFontManagerCore* self) noexcept {
   BLFontManagerImpl* selfI = self->impl;
-
   self->impl = &blNullFontManagerImpl;
   return blImplReleaseVirt(selfI);
 }

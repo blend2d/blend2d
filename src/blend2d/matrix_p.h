@@ -71,6 +71,18 @@ static BL_INLINE void blMatrix2DMultiply(BLMatrix2D& dst, const BLMatrix2D& a, c
             a.m20 * b.m01 + a.m21 * b.m11 + b.m21);
 }
 
+// ============================================================================
+// [BLMatrix2D - Runtime Initialization]
+// ============================================================================
+
+#ifdef BL_BUILD_OPT_SSE2
+BL_HIDDEN void blMatrix2DRtInit_SSE2(BLRuntimeContext* rt) noexcept;
+#endif
+
+#ifdef BL_BUILD_OPT_AVX
+BL_HIDDEN void blMatrix2DRtInit_AVX(BLRuntimeContext* rt) noexcept;
+#endif
+
 //! \}
 //! \endcond
 

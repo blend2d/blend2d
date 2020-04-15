@@ -123,13 +123,16 @@ struct BLRuntimeContext {
 BL_HIDDEN extern BLRuntimeContext blRuntimeContext;
 
 // ============================================================================
-// [BLRuntime - Cpu Features]
+// [BLRuntime - Architecture & Cpu Features]
 // ============================================================================
 
 // NOTE: Must be in anonymous namespace. When the compilation unit uses certain
 // optimizations we constexpr the check and return `true` without checking CPU
 // features as the compilation unit uses them anyway [at that point].
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
+
+//! Returns true if the target architecture is 32-bit.
+static constexpr bool blRuntimeIs32Bit() noexcept { return BL_TARGET_ARCH_BITS < 64; }
 
 namespace {
 

@@ -107,7 +107,7 @@ static BL_INLINE void blPixelConverterAddRef(BLPixelConverterCore* self) noexcep
   blAtomicFetchAdd(d->refCount);
 }
 
-static BL_INLINE void blPixelConverterRelease(BLPixelConverterCore* self) noexcept {
+static void blPixelConverterRelease(BLPixelConverterCore* self) noexcept {
   BLPixelConverterData* d = blPixelConverterGetData(self);
 
   uint32_t flags = d->internalFlags;
@@ -131,7 +131,7 @@ static BL_INLINE void blPixelConverterCopyRef(BLPixelConverterCore* self, const 
 }
 
 // ============================================================================
-// [BLPixelConverter - Init / Reset]
+// [BLPixelConverter - Init / Destroy]
 // ============================================================================
 
 BLResult blPixelConverterInit(BLPixelConverterCore* self) noexcept {
@@ -143,6 +143,16 @@ BLResult blPixelConverterInitWeak(BLPixelConverterCore* self, const BLPixelConve
   blPixelConverterCopyRef(self, other);
   return BL_SUCCESS;
 }
+
+BLResult blPixelConverterDestroy(BLPixelConverterCore* self) noexcept {
+  blPixelConverterRelease(self);
+  self->convertFunc = nullptr;
+  return BL_SUCCESS;
+}
+
+// ============================================================================
+// [BLPixelConverter - Reset]
+// ============================================================================
 
 BLResult blPixelConverterReset(BLPixelConverterCore* self) noexcept {
   blPixelConverterRelease(self);

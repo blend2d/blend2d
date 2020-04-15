@@ -7,6 +7,7 @@
 #ifndef BLEND2D_RASTER_ANALYTICRASTERIZER_P_H
 #define BLEND2D_RASTER_ANALYTICRASTERIZER_P_H
 
+#include "../bitops_p.h"
 #include "../support_p.h"
 #include "../raster/rasterdefs_p.h"
 
@@ -75,16 +76,30 @@ namespace BLAnalyticRasterizerUtils {
     static_assert(sizeof(AccT) == sizeof(IterT),
                   "Accumulator and iterator must have the same size");
 
-    constexpr uint32_t kSizeOfTInBits = blBitSizeOf<IterT>();
-    typedef typename std::make_signed<IterT>::type S;
-
     iter -= step;
 
     // Contains all ones if the iterator has underflown (requires correction).
-    IterT mask = IterT(S(iter) >> (kSizeOfTInBits - 1));
+    IterT mask = IterT(blBitSar(iter, blBitSizeOf<IterT>() - 1));
 
     acc -= AccT(mask);         // if (iter < 0) acc++;
     iter += mask & correction; // if (iter < 0) iter += correction;
+  }
+
+  template<typename AccT, typename IterT, typename CountT>
+  static BL_INLINE void accErrMultiStep(AccT& acc, IterT& iter, const IterT& step, const IterT& correction, const CountT& count) noexcept {
+    static_assert(sizeof(AccT) == sizeof(IterT),
+                  "Accumulator and iterator must have the same size");
+
+    int64_t i = int64_t(iter);
+    i -= int64_t(uint64_t(step) * uint32_t(count));
+
+    if (i < 0) {
+      int n = int(((uint64_t(-i) + correction - 1) / uint64_t(correction)));
+      acc += AccT(n);
+      i += int64_t(correction) * n;
+    }
+
+    iter = IterT(i);
   }
 }
 
@@ -160,6 +175,9 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
     //! and end at BitWord that has maximum X.
     kOptionRecordMinXMaxX = 0x0020u
   };
+
+  //! Bit operations that the rasterizer uses.
+  typedef BLPrivateBitOps<BLBitWord> BitOps;
 
   //! BitWords and Cells, initialized by `init()`, never modified.
   BLAnalyticCellStorage _cellStorage;
@@ -265,6 +283,8 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
   // --------------------------------------------------------------------------
 
   BL_INLINE bool prepare(int x0, int y0, int x1, int y1) noexcept {
+    using BLAnalyticRasterizerUtils::accErrStep;
+
     // Line should be already reversed in case it has a negative sign.
     BL_ASSERT(y0 <= y1);
 
@@ -322,16 +342,112 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
       uint64_t p = uint64_t(BL_PIPE_A8_SCALE - uint32_t(_fy0)) * uint32_t(_dx);
       _xDlt  = int(p / unsigned(_dy));
       _xErr -= int(p % unsigned(_dy));
+      accErrStep(_xDlt, _xErr, 0, _dy);
     }
 
     if (_ex0 != _ex1) {
       uint64_t p = uint64_t((_flags & kFlagRightToLeft) ? uint32_t(_fx0) : BL_PIPE_A8_SCALE - uint32_t(_fx0)) * uint32_t(_dy);
       _yDlt  = int(p / unsigned(_dx));
       _yErr -= int(p % unsigned(_dx));
+      accErrStep(_yDlt, _yErr, 0, _dx);
     }
 
     _yDlt += _fy0;
     return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // [advance]
+  // --------------------------------------------------------------------------
+
+  BL_INLINE void advanceToY(int yTarget) noexcept {
+    using BLAnalyticRasterizerUtils::accErrStep;
+    using BLAnalyticRasterizerUtils::accErrMultiStep;
+
+    if (yTarget <= _ey0)
+      return;
+    BL_ASSERT(yTarget <= _ey1);
+
+    if (!(_flags & kFlagVertOrSingle)) {
+      int ny = yTarget - _ey0;
+
+      _xDlt += _xLift * (ny - 1);
+      accErrMultiStep(_xDlt, _xErr, _xRem, _dy, ny - 1);
+
+      if (_flags & kFlagRightToLeft) {
+        _fx0 -= _xDlt;
+        if (_fx0 < 0) {
+          int nx = -(_fx0 >> BL_PIPE_A8_SHIFT);
+          BL_ASSERT(nx <= _ex0 - _ex1);
+          _ex0 -= nx;
+          _fx0 &= BL_PIPE_A8_MASK;
+
+          accErrMultiStep(_yDlt, _yErr, _yRem, _dx, nx);
+          _yDlt += _yLift * nx;
+        }
+
+        if (!(_dy >= _dx)) {
+          if (!_fx0) {
+            _fx0 = BL_PIPE_A8_SCALE;
+            _ex0--;
+
+            accErrStep(_yDlt, _yErr, _yRem, _dx);
+            _yDlt += _yLift;
+          }
+        }
+
+        if (yTarget == _ey1 && _dy >= _dx) {
+          _fy1 = _savedFy1;
+          _xDlt = ((_ex0 - _ex1) << BL_PIPE_A8_SHIFT) + _fx0 - _fx1;
+          BL_ASSERT(_xDlt >= 0);
+        }
+        else {
+          _xDlt = _xLift;
+          accErrStep(_xDlt, _xErr, _xRem, _dy);
+        }
+      }
+      else {
+        _fx0 += _xDlt;
+        if (_fx0 >= int(BL_PIPE_A8_SCALE)) {
+          int nx = (_fx0 >> BL_PIPE_A8_SHIFT);
+          BL_ASSERT(nx <= _ex1 - _ex0);
+          _ex0 += nx;
+          _fx0 &= BL_PIPE_A8_MASK;
+
+          accErrMultiStep(_yDlt, _yErr, _yRem, _dx, nx);
+          _yDlt += _yLift * nx;
+        }
+
+        if (yTarget == _ey1 && _dy >= _dx) {
+          _fy1 = _savedFy1;
+          _xDlt = ((_ex1 - _ex0) << BL_PIPE_A8_SHIFT) + _fx1 - _fx0;
+          BL_ASSERT(_xDlt >= 0);
+        }
+        else {
+          _xDlt = _xLift;
+          accErrStep(_xDlt, _xErr, _xRem, _dy);
+        }
+      }
+
+      if (_dy >= _dx) {
+        _yDlt &= BL_PIPE_A8_MASK;
+      }
+      else {
+        int y = ny;
+        if (_flags & kFlagInitialScanline)
+          y--;
+        _yDlt -= y * BL_PIPE_A8_SCALE;
+        BL_ASSERT(_yDlt >= 0);
+      }
+    }
+    else {
+      if (yTarget == _ey1)
+        _fy1 = _savedFy1;
+    }
+
+    _fy0 = 0;
+    _ey0 = yTarget;
+    _flags &= ~kFlagInitialScanline;
   }
 
   // --------------------------------------------------------------------------
@@ -374,20 +490,18 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
       uint32_t cover;
       uint32_t area = uint32_t(_fx0) + uint32_t(_fx1);
 
-      if (OPTIONS & kOptionRecordMinXMaxX) {
-        _cellMinX = blMin(_cellMinX, unsigned(_ex0));
-        _cellMaxX = blMax(_cellMaxX, unsigned(_ex0));
-      }
+      updateMinX<OPTIONS>(_ex0);
+      updateMaxX<OPTIONS>(_ex0);
 
       size_t bitIndex = unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT;
-      BLBitWord bitMask = BLBitWord(0x1) << (bitIndex % blBitSizeOf<BLBitWord>());
+      BLBitWord bitMask = BitOps::indexAsMask(bitIndex % blBitSizeOf<BLBitWord>());
 
       bitPtr += (bitIndex / blBitSizeOf<BLBitWord>());
       cellPtr += unsigned(_ex0);
 
-      // First scanline or a line that occupies a single cell only. In case of banding
-      // support this code can run multiple times, but it's safe as we adjust both
-      // `_fy0` and `_fy1` accordingly.
+      // First scanline or a line that occupies a single cell only. In case
+      // of banding support this code can run multiple times, but it's safe
+      // as we adjust both `_fy0` and `_fy1` accordingly.
       cover = applySignMask(uint32_t(_fy1 - _fy0));
 
       cellMerge(cellPtr, 0, cover, cover * area);
@@ -458,10 +572,7 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
         // ....xx...
         // ...xx....
         // ...x.....
-        if (OPTIONS & kOptionRecordMinXMaxX) {
-          _cellMinX = blMin(_cellMinX, unsigned(_ex1));
-          _cellMaxX = blMax(_cellMaxX, unsigned(_ex0));
-        }
+        updateMaxX<OPTIONS>(_ex0);
 
         for (;;) {
           // First and/or last scanline is a special-case that must consider `_fy0` and `_fy1`.
@@ -509,6 +620,7 @@ VertRightToLeftSingleFirstOrLast:
           cellPtr = blOffsetPtr(cellPtr, cellStride());
 
           if (!i) {
+            updateMinX<OPTIONS>(_ex0);
             if (OPTIONS & kOptionBandingMode) {
               if (_ey0 > _ey1)
                 return true;
@@ -583,10 +695,13 @@ VertRightToLeftSingleInLoop:
               BL_ASSERT(_xDlt >= 0);
 
               // Border case, last scanline is the first scanline in the next band.
-              if (_ey0 == _ey1)
+              if (_ey0 == _ey1) {
+                updateMinX<OPTIONS>(_ex0);
                 return false;
+              }
             }
             else {
+              updateMinX<OPTIONS>(_ex0);
               _xDlt = _xLift;
               accErrStep(_xDlt, _xErr, _xRem, _dy);
               return false;
@@ -606,10 +721,7 @@ VertRightToLeftSingleInLoop:
         // ...xx....
         // ....xx...
         // .....x...
-        if (OPTIONS & kOptionRecordMinXMaxX) {
-          _cellMinX = blMin(_cellMinX, unsigned(_ex0));
-          _cellMaxX = blMax(_cellMaxX, unsigned(_ex1));
-        }
+        updateMinX<OPTIONS>(_ex0);
 
         for (;;) {
           // First and/or last scanline is a special-case that must consider `_fy0` and `_fy1`.
@@ -656,6 +768,8 @@ VertRightToLeftSingleInLoop:
           cellPtr = blOffsetPtr(cellPtr, cellStride());
 
           if (!i) {
+            updateMaxX<OPTIONS>(_ex0);
+
             if (OPTIONS & kOptionBandingMode) {
               if (_ey0 > _ey1)
                 return true;
@@ -726,10 +840,13 @@ VertRightToLeftSingleInLoop:
               BL_ASSERT(_xDlt >= 0);
 
               // Border case, last scanline is the first scanline in the next band.
-              if (_ey0 == _ey1)
+              if (_ey0 == _ey1) {
+                updateMaxX<OPTIONS>(_ex0);
                 return false;
+              }
             }
             else {
+              updateMaxX<OPTIONS>(_ex0);
               _xDlt = _xLift;
               accErrStep(_xDlt, _xErr, _xRem, _dy);
               return false;
@@ -745,8 +862,9 @@ VertRightToLeftSingleInLoop:
     }
     else {
       // Since both first and last scanlines are special we set `i` to one and then repeatedly
-      // to number of scanlines in middle, and then to `1` again for the last one. Since this
-      // is a horizontally oriented line this overhead is fine and makes the rasterizer cleaner.
+      // to number of scanlines in the middle, and then to `1` again for the last one. Since
+      // this is a horizontally oriented line this overhead is fine and makes the rasterizer
+      // cleaner.
       size_t j = 1;
       int xLocal = (_ex0 << BL_PIPE_A8_SHIFT) + _fx0;
 
@@ -759,24 +877,13 @@ VertRightToLeftSingleInLoop:
         // ..xxxxx..
         // xxx......
         // .........
-        if (OPTIONS & kOptionRecordMinXMaxX) {
-          _cellMinX = blMin(_cellMinX, unsigned(_ex1));
-          _cellMaxX = blMax(_cellMaxX, unsigned(_ex0));
-        }
+        updateMaxX<OPTIONS>(_ex0);
 
         if (_flags & kFlagInitialScanline) {
           _flags &= ~kFlagInitialScanline;
 
           j = i;
           i = 1;
-
-          if (_fx0 == 0) {
-            _fx0 = BL_PIPE_A8_SCALE;
-            _ex0--;
-
-            _yDlt += _yLift;
-            accErrStep(_yDlt, _yErr, _yRem, _dx);
-          }
 
           cover = applySignMask(uint32_t(_yDlt - _fy0));
           BL_ASSERT(int32_t(cover) >= -int32_t(BL_PIPE_A8_SCALE) && int32_t(cover) <= int32_t(BL_PIPE_A8_SCALE));
@@ -796,23 +903,19 @@ VertRightToLeftSingleInLoop:
             accErrStep(_yDlt, _yErr, _yRem, _dx);
           }
 
+          _xDlt = _xLift;
+          accErrStep(_xDlt, _xErr, _xRem, _dy);
+
           bitPtr = blOffsetPtr(bitPtr, bitStride<OPTIONS>());
           cellPtr = blOffsetPtr(cellPtr, cellStride());
+
           i--;
         }
 
         for (;;) {
           while (i) {
-            _xDlt = _xLift;
-            accErrStep(_xDlt, _xErr, _xRem, _dy);
-
-            _ex0 = xLocal >> BL_PIPE_A8_SHIFT;
-            _fx0 = xLocal & int(BL_PIPE_A8_MASK);
-
-            if (_fx0 == 0) {
-              _fx0 = int(BL_PIPE_A8_SCALE);
-              _ex0--;
-            }
+            _ex0 = ((xLocal - 1) >> BL_PIPE_A8_SHIFT);
+            _fx0 = ((xLocal - 1) & int(BL_PIPE_A8_MASK)) + 1;
 
 HorzRightToLeftSkip:
             _yDlt -= int(BL_PIPE_A8_SCALE);
@@ -851,6 +954,9 @@ HorzRightToLeftInside:
               }
             }
 
+            _xDlt = _xLift;
+            accErrStep(_xDlt, _xErr, _xRem, _dy);
+
             bitPtr = blOffsetPtr(bitPtr, bitStride<OPTIONS>());
             cellPtr = blOffsetPtr(cellPtr, cellStride());
 
@@ -862,14 +968,17 @@ HorzRightToLeftInside:
 
           if (OPTIONS & kOptionBandingMode) {
             if (!j) {
-              _ex0 = xLocal >> BL_PIPE_A8_SHIFT;
-              _fx0 = xLocal & int(BL_PIPE_A8_MASK);
+              updateMinX<OPTIONS>(_ex0);
+              _ex0 = ((xLocal - 1) >> BL_PIPE_A8_SHIFT);
+              _fx0 = ((xLocal - 1) & int(BL_PIPE_A8_MASK)) + 1;
               return _ey0 > _ey1;
             }
           }
           else {
-            if (!j)
+            if (!j) {
+              updateMinX<OPTIONS>(_ex0);
               return true;
+            }
           }
 
           i = j - 1;
@@ -885,13 +994,8 @@ HorzRightToLeftInside:
             _xDlt = xLocal - ((_ex1 << BL_PIPE_A8_SHIFT) + _fx1);
             _fy1 = _savedFy1;
 
-            _ex0 = xLocal >> BL_PIPE_A8_SHIFT;
-            _fx0 = xLocal & int(BL_PIPE_A8_MASK);
-
-            if (_fx0 == 0) {
-              _fx0 = int(BL_PIPE_A8_SCALE);
-              _ex0--;
-            }
+            _ex0 = ((xLocal - 1) >> BL_PIPE_A8_SHIFT);
+            _fx0 = ((xLocal - 1) & int(BL_PIPE_A8_MASK)) + 1;
 
             if (_fx0 - _xDlt >= 0) {
               cover = applySignMask(uint32_t(_fy1));
@@ -900,6 +1004,7 @@ HorzRightToLeftInside:
               cellMerge(cellPtr, _ex0, cover, area);
               bitSet<OPTIONS>(bitPtr, unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT);
 
+              updateMinX<OPTIONS>(_ex0);
               return true;
             }
 
@@ -913,10 +1018,7 @@ HorzRightToLeftInside:
         // ..xxxxx..
         // ......xxx
         // .........
-        if (OPTIONS & kOptionRecordMinXMaxX) {
-          _cellMinX = blMin(_cellMinX, unsigned(_ex0));
-          _cellMaxX = blMax(_cellMaxX, unsigned(_ex1));
-        }
+        updateMinX<OPTIONS>(_ex0);
 
         if (_flags & kFlagInitialScanline) {
           _flags &= ~kFlagInitialScanline;
@@ -941,19 +1043,22 @@ HorzRightToLeftInside:
             accErrStep(_yDlt, _yErr, _yRem, _dx);
           }
 
+          _xDlt = _xLift;
+          accErrStep(_xDlt, _xErr, _xRem, _dy);
+
           bitPtr = blOffsetPtr(bitPtr, bitStride<OPTIONS>());
           cellPtr = blOffsetPtr(cellPtr, cellStride());
+
           i--;
         }
 
         for (;;) {
           while (i) {
-            _xDlt = _xLift;
-            accErrStep(_xDlt, _xErr, _xRem, _dy);
             _ex0 = xLocal >> BL_PIPE_A8_SHIFT;
             _fx0 = xLocal & int(BL_PIPE_A8_MASK);
 
 HorzLeftToRightSkip:
+            //_yDlt &= int(BL_PIPE_A8_MASK);
             _yDlt -= int(BL_PIPE_A8_SCALE);
             cover = applySignMask(uint32_t(_yDlt));
             BL_ASSERT(int32_t(cover) >= -int32_t(BL_PIPE_A8_SCALE) && int32_t(cover) <= int32_t(BL_PIPE_A8_SCALE));
@@ -961,14 +1066,10 @@ HorzLeftToRightSkip:
 HorzLeftToRightInside:
             xLocal += _xDlt;
             {
-              int exLocal = xLocal >> BL_PIPE_A8_SHIFT;
-              int fxLocal = xLocal & int(BL_PIPE_A8_MASK);
-              BL_ASSERT(_ex0 != exLocal);
+              BL_ASSERT(_ex0 != (xLocal >> BL_PIPE_A8_SHIFT));
 
-              if (fxLocal == 0) {
-                fxLocal = BL_PIPE_A8_SCALE;
-                exLocal--;
-              }
+              int exLocal = (xLocal - 1) >> BL_PIPE_A8_SHIFT;
+              int fxLocal = ((xLocal - 1) & int(BL_PIPE_A8_MASK)) + 1;
 
               bitFill<OPTIONS>(bitPtr, unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT, unsigned(exLocal) / BL_PIPE_PIXELS_PER_ONE_BIT);
               area = cover * (uint32_t(_fx0) + BL_PIPE_A8_SCALE);
@@ -996,6 +1097,9 @@ HorzLeftToRightInside:
               }
             }
 
+            _xDlt = _xLift;
+            accErrStep(_xDlt, _xErr, _xRem, _dy);
+
             bitPtr = blOffsetPtr(bitPtr, bitStride<OPTIONS>());
             cellPtr = blOffsetPtr(cellPtr, cellStride());
 
@@ -1007,14 +1111,17 @@ HorzLeftToRightInside:
 
           if (OPTIONS & kOptionBandingMode) {
             if (!j) {
+              updateMaxX<OPTIONS>(_ex0);
               _ex0 = xLocal >> BL_PIPE_A8_SHIFT;
               _fx0 = xLocal & int(BL_PIPE_A8_MASK);
               return _ey0 > _ey1;
             }
           }
           else {
-            if (!j)
+            if (!j) {
+              updateMaxX<OPTIONS>(_ex0);
               return true;
+            }
           }
 
           i = j - 1;
@@ -1040,6 +1147,7 @@ HorzLeftToRightInside:
               cellMerge(cellPtr, _ex0, cover, area);
               bitSet<OPTIONS>(bitPtr, unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT);
 
+              updateMaxX<OPTIONS>(_ex0);
               return true;
             }
 
@@ -1048,6 +1156,22 @@ HorzLeftToRightInside:
         }
       }
     }
+  }
+
+  // --------------------------------------------------------------------------
+  // [Min/Max Helpers]
+  // --------------------------------------------------------------------------
+
+  template<uint32_t OPTIONS, typename T>
+  BL_INLINE void updateMinX(const T& x) noexcept {
+    if (OPTIONS & kOptionRecordMinXMaxX)
+      _cellMinX = blMin(_cellMinX, unsigned(x));
+  }
+
+  template<uint32_t OPTIONS, typename T>
+  BL_INLINE void updateMaxX(const T& x) noexcept {
+    if (OPTIONS & kOptionRecordMinXMaxX)
+      _cellMaxX = blMax(_cellMaxX, unsigned(x));
   }
 
   // --------------------------------------------------------------------------
@@ -1060,9 +1184,9 @@ HorzLeftToRightInside:
     typedef typename std::make_unsigned<X>::type U;
 
     if (OPTIONS & kOptionEasyBitStride)
-      bitPtr[0] |= BLBitWord(1u) << U(x);
+      bitPtr[0] |= BitOps::indexAsMask(U(x));
     else
-      bitPtr[U(x) / blBitSizeOf<BLBitWord>()] |= BLBitWord(1u) << (U(x) % blBitSizeOf<BLBitWord>());
+      BitOps::bitArraySetBit(bitPtr, U(x));
   }
 
   //! Fill bits between `first` and `last` (inclusive) in a bit-vector starting at `bitPtr`.
@@ -1073,24 +1197,25 @@ HorzLeftToRightInside:
     BL_ASSERT(first <= last);
 
     if (OPTIONS & kOptionEasyBitStride) {
-      BL_ASSERT(first < blBitSizeOf<BLBitWord>());
-      BL_ASSERT(last < blBitSizeOf<BLBitWord>());
+      BL_ASSERT(first < BitOps::kNumBits);
+      BL_ASSERT(last < BitOps::kNumBits);
 
-      bitPtr[0] |= (~BLBitWord(0) << U(first)) ^ (~BLBitWord(1) << U(last));
+      bitPtr[0] |= BitOps::shiftForward(BitOps::ones(), U(first)) ^
+                   BitOps::shiftForward(BitOps::ones() ^ BitOps::indexAsMask(0), U(last));
     }
     else {
-      size_t idxCur = U(first) / blBitSizeOf<BLBitWord>();
-      size_t idxEnd = U(last) / blBitSizeOf<BLBitWord>();
+      size_t idxCur = U(first) / BitOps::kNumBits;
+      size_t idxEnd = U(last) / BitOps::kNumBits;
 
-      BLBitWord mask = blBitOnes<BLBitWord>() << (U(first) % blBitSizeOf<BLBitWord>());
+      BLBitWord mask = BitOps::shiftForward(BitOps::ones(), U(first) % BitOps::kNumBits);
       if (idxCur != idxEnd) {
         bitPtr[idxCur] |= mask;
-        mask |= blBitOnes<BLBitWord>();
+        mask = BitOps::ones();
         while (++idxCur != idxEnd)
           bitPtr[idxCur] = mask;
       }
 
-      mask ^= (~BLBitWord(1)) << (U(last) % blBitSizeOf<BLBitWord>());
+      mask ^= BitOps::shiftForward(BitOps::ones() ^ BitOps::indexAsMask(0), U(last) % BitOps::kNumBits);
       bitPtr[idxCur] |= mask;
     }
   }

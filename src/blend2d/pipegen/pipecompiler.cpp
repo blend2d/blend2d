@@ -111,11 +111,11 @@ void PipeCompiler::endFunction() noexcept {
 // ============================================================================
 
 FillPart* PipeCompiler::newFillPart(uint32_t fillType, FetchPart* dstPart, CompOpPart* compOpPart) noexcept {
-  if (fillType == BL_PIPE_FILL_TYPE_BOX_AA)
-    return newPartT<FillBoxAAPart>(fillType, dstPart->as<FetchPixelPtrPart>(), compOpPart);
+  if (fillType == BL_PIPE_FILL_TYPE_BOX_A)
+    return newPartT<FillBoxAPart>(fillType, dstPart->as<FetchPixelPtrPart>(), compOpPart);
 
-  if (fillType == BL_PIPE_FILL_TYPE_BOX_AU)
-    return newPartT<FillBoxAUPart>(fillType, dstPart->as<FetchPixelPtrPart>(), compOpPart);
+  if (fillType == BL_PIPE_FILL_TYPE_BOX_U)
+    return newPartT<FillBoxUPart>(fillType, dstPart->as<FetchPixelPtrPart>(), compOpPart);
 
   if (fillType == BL_PIPE_FILL_TYPE_ANALYTIC)
     return newPartT<FillAnalyticPart>(fillType, dstPart->as<FetchPixelPtrPart>(), compOpPart);

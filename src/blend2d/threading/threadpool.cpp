@@ -9,6 +9,7 @@
 #include "../runtime_p.h"
 #include "../support_p.h"
 #include "../threading/atomic_p.h"
+#include "../threading/conditionvariable_p.h"
 #include "../threading/mutex_p.h"
 #include "../threading/threadpool_p.h"
 
@@ -38,51 +39,53 @@ public:
   volatile uint32_t pooledThreadCount;
   volatile uint32_t acquiredThreadCount;
   volatile uint32_t destroyWaitTimeInMS;
+  volatile uint32_t waitingOnDestroy;
 
   BLMutex mutex;
-  BLThreadEvent threadsDestroyed;
+  BLConditionVariable destroyCondition;
   BLThreadAttributes threadAttributes;
   BitArray pooledThreadBits;
   BLThread* threads[kMaxThreadCount];
 
 #ifdef _WIN32
+  // Nothing Windows-specific at the moment.
 #else
   pthread_attr_t ptAttr;
 #endif
 
   // No need to explicitly initialize anything as it should be zero initialized.
-  BLInternalThreadPool() noexcept
+  explicit BLInternalThreadPool(size_t initialRefCount = 1) noexcept
     : BLThreadPool { &blThreadPoolVirt },
-      refCount(1),
+      refCount(initialRefCount),
       stackSize(0),
       maxThreadCount(kMaxThreadCount),
       createdThreadCount(0),
       pooledThreadCount(0),
       acquiredThreadCount(0),
-      destroyWaitTimeInMS(200),
+      destroyWaitTimeInMS(100),
+      waitingOnDestroy(0),
       mutex(),
-      threadsDestroyed(true, true),
+      destroyCondition(),
       threadAttributes {},
       pooledThreadBits {},
       threads {} { init(); }
 
   ~BLInternalThreadPool() noexcept {
-    if (isInitialized()) {
-      uint32_t tries = 3;
-      uint64_t waitTime = (uint64_t(destroyWaitTimeInMS) * 1000u) / tries;
+    uint32_t numTries = 5;
+    uint64_t waitTime = (uint64_t(destroyWaitTimeInMS) * 1000u) / numTries;
 
-      do {
-        cleanup();
-        if (threadsDestroyed.waitFor(waitTime) == BL_SUCCESS)
+    do {
+      cleanup();
+
+      BLLockGuard<BLMutex> guard(mutex);
+      if (blAtomicFetch(&createdThreadCount) != 0) {
+        waitingOnDestroy = 1;
+        if (destroyCondition.waitFor(mutex, waitTime) == BL_SUCCESS)
           break;
-      } while (--tries);
+      }
+    } while (--numTries);
 
-      destroy();
-    }
-  }
-
-  BL_INLINE bool isInitialized() noexcept {
-    return threadsDestroyed.isInitialized();
+    destroy();
   }
 
 #ifdef _WIN32
@@ -120,14 +123,7 @@ BLThreadPool* blThreadPoolCreate() noexcept {
   void* p = malloc(sizeof(BLInternalThreadPool));
   if (!p)
     return nullptr;
-
-  BLInternalThreadPool* self = new(p) BLInternalThreadPool();
-  if (!self->isInitialized()) {
-    blThreadPoolDestroy(self);
-    return nullptr;
-  }
-
-  return self;
+  return new(p) BLInternalThreadPool();
 }
 
 // ============================================================================
@@ -171,7 +167,7 @@ static BLResult BL_CDECL blThreadPoolSetThreadAttributes(BLThreadPool* self_, co
   //               implementations may enforce alignment to page-size.
   //   - WINDOWS - Minimum stack size is `SYSTEM_INFO::dwAllocationGranularity`,
   //               alignment should follow the granularity as well, however,
-  //               WinAPI would align if the argument is mistaligned.
+  //               WinAPI would align stack size if it's not properly aligned.
   uint32_t stackSize = attributes->stackSize;
   if (stackSize) {
     const BLRuntimeSystemInfo& si = blRuntimeContext.systemInfo;
@@ -198,9 +194,10 @@ static void blThreadPoolThreadExitFunc(BLThread* thread, void* data) noexcept {
   BLInternalThreadPool* threadPool = static_cast<BLInternalThreadPool*>(data);
   thread->destroy();
 
-  // Signal `threadsDestroyed` event when `createdThreadCount` goes to zero.
-  if (blAtomicFetchSub(&threadPool->createdThreadCount) == 1)
-    threadPool->threadsDestroyed.signal();
+  if (blAtomicFetchSub(&threadPool->createdThreadCount) == 1) {
+    if (threadPool->mutex.protect([&]() { return threadPool->waitingOnDestroy; }))
+      threadPool->destroyCondition.signal();
+  }
 }
 
 static uint32_t BL_CDECL blThreadPoolCleanup(BLThreadPool* self_) noexcept {
@@ -296,9 +293,6 @@ static uint32_t blThreadPoolAcquireThreadsInternal(BLInternalThreadPool* self, B
       }
     }
 
-    if (blAtomicFetchAdd(&self->createdThreadCount, createThreadCount) == 0)
-      self->threadsDestroyed.reset();
-
     while (i < createThreadCount) {
       #ifdef _WIN32
       BLResult result = blThreadCreate(&threads[i], &self->threadAttributes, blThreadPoolThreadExitFunc, self);
@@ -308,13 +302,9 @@ static uint32_t blThreadPoolAcquireThreadsInternal(BLInternalThreadPool* self, B
 
       // Failed to create a thread?
       if (result != BL_SUCCESS) {
-        uint32_t sub = createThreadCount - i;
-        if (blAtomicFetchSub(&self->createdThreadCount, sub) == sub)
-          self->threadsDestroyed.signal();
-
+        blAtomicFetchSub(&self->createdThreadCount, createThreadCount - i);
         if ((flags & (BL_THREAD_POOL_ACQUIRE_FLAG_TRY | BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ALL)) == 0)
           break;
-
         blThreadPoolReleaseThreadsInternal(self, threads, i);
         return result;
       }
@@ -405,7 +395,7 @@ void blThreadPoolRtInit(BLRuntimeContext* rt) noexcept {
   BLThreadAttributes attrs {};
   attrs.stackSize = rt->systemInfo.minWorkerStackSize;
 
-  blGlobalThreadPool.init();
+  blGlobalThreadPool.init(0);
   blGlobalThreadPool->setThreadAttributes(attrs);
 
   rt->shutdownHandlers.add(blThreadPoolRtShutdown);
@@ -420,11 +410,14 @@ void blThreadPoolRtInit(BLRuntimeContext* rt) noexcept {
 struct ThreadTestData {
   uint32_t iter;
   volatile uint32_t counter;
-  BLThreadEvent event;
+  volatile bool waiting;
+  BLMutex mutex;
+  BLConditionVariable condition;
 
   ThreadTestData() noexcept
-    : counter(0),
-      event(false, false) {}
+    : iter(0),
+      counter(0),
+      waiting(false) {}
 };
 
 static void BL_CDECL test_thread_entry(BLThread* thread, void* data_) noexcept {
@@ -437,7 +430,8 @@ static void BL_CDECL test_thread_done(BLThread* thread, void* data_) noexcept {
   INFO("[#%u] Thread %p done\n", data->iter, thread);
 
   if (blAtomicFetchSub(&data->counter) == 1)
-    data->event.signal();
+    if (data->mutex.protect([&]() { return data->waiting; }))
+      data->condition.signal();
 }
 
 UNIT(thread_pool) {
@@ -468,7 +462,13 @@ UNIT(thread_pool) {
     }
 
     INFO("[#%u] Waiting and releasing", i);
-    data.event.wait();
+    {
+      BLLockGuard<BLMutex> guard(data.mutex);
+      data.waiting = true;
+      while (blAtomicFetch(&data.counter) != 0)
+        data.condition.wait(data.mutex);
+    }
+
     tp->releaseThreads(threads, kThreadCount);
   }
 

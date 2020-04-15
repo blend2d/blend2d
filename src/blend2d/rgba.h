@@ -48,10 +48,7 @@ struct BLRgba32 {
 
   BL_INLINE explicit BLRgba32(const BLRgba64& rgba64) noexcept { reset(rgba64); }
   BL_INLINE BLRgba32(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept
-    : value((a << 24) |
-            (r << 16) |
-            (g <<  8) |
-            (b      ) ) {}
+    : value((a << 24) | (r << 16) | (g << 8) | b) {}
 
   //! \}
 
@@ -91,6 +88,22 @@ struct BLRgba32 {
   #endif
   // --------------------------------------------------------------------------
 };
+
+#ifdef __cplusplus
+static BL_INLINE BLRgba32 blMin(const BLRgba32& a, const BLRgba32& b) noexcept {
+  return BLRgba32(blMin((a.value >> 16) & 0xFFu, (b.value >> 16) & 0xFFu),
+                  blMin((a.value >>  8) & 0xFFu, (b.value >>  8) & 0xFFu),
+                  blMin((a.value      ) & 0xFFu, (b.value      ) & 0xFFu),
+                  blMin((a.value >> 24) & 0xFFu, (b.value >> 24) & 0xFFu));
+}
+
+static BL_INLINE BLRgba32 blMax(const BLRgba32& a, const BLRgba32& b) noexcept {
+  return BLRgba32(blMax((a.value >> 16) & 0xFFu, (b.value >> 16) & 0xFFu),
+                  blMax((a.value >>  8) & 0xFFu, (b.value >>  8) & 0xFFu),
+                  blMax((a.value      ) & 0xFFu, (b.value      ) & 0xFFu),
+                  blMax((a.value >> 24) & 0xFFu, (b.value >> 24) & 0xFFu));
+}
+#endif
 
 // ============================================================================
 // [BLRgba64]
@@ -176,12 +189,28 @@ struct BLRgba64 {
   // --------------------------------------------------------------------------
 };
 
+#ifdef __cplusplus
+static BL_INLINE BLRgba64 blMin(const BLRgba64& a, const BLRgba64& b) noexcept {
+  return BLRgba64(blMin(uint32_t((a.value >> 32) & 0xFFFFu), uint32_t((b.value >> 32) & 0xFFFFu)),
+                  blMin(uint32_t((a.value >> 16) & 0xFFFFu), uint32_t((b.value >> 16) & 0xFFFFu)),
+                  blMin(uint32_t((a.value      ) & 0xFFFFu), uint32_t((b.value      ) & 0xFFFFu)),
+                  blMin(uint32_t((a.value >> 48) & 0xFFFFu), uint32_t((b.value >> 48) & 0xFFFFu)));
+}
+
+static BL_INLINE BLRgba64 blMax(const BLRgba64& a, const BLRgba64& b) noexcept {
+  return BLRgba64(blMax(uint32_t((a.value >> 32) & 0xFFFFu), uint32_t((b.value >> 32) & 0xFFFFu)),
+                  blMax(uint32_t((a.value >> 16) & 0xFFFFu), uint32_t((b.value >> 16) & 0xFFFFu)),
+                  blMax(uint32_t((a.value      ) & 0xFFFFu), uint32_t((b.value      ) & 0xFFFFu)),
+                  blMax(uint32_t((a.value >> 48) & 0xFFFFu), uint32_t((b.value >> 48) & 0xFFFFu)));
+}
+#endif
+
 // ============================================================================
-// [BLRgba128]
+// [BLRgba]
 // ============================================================================
 
 //! 128-bit RGBA color stored as 4 32-bit floating point values in [RGBA] order.
-struct BLRgba128 {
+struct BLRgba {
   float r;
   float g;
   float b;
@@ -192,14 +221,26 @@ struct BLRgba128 {
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLRgba128() noexcept = default;
-  constexpr BLRgba128(const BLRgba128&) noexcept = default;
+  BL_INLINE BLRgba() noexcept = default;
+  constexpr BLRgba(const BLRgba&) noexcept = default;
 
-  constexpr BLRgba128(float r, float g, float b, float a = 1.0f) noexcept
+  constexpr BLRgba(float r, float g, float b, float a = 1.0f) noexcept
     : r(r),
       g(g),
       b(b),
       a(a) {}
+
+  BL_INLINE BLRgba(const BLRgba32& rgba32) noexcept
+    : r(float(int(rgba32.r)) * (1.0f / 255.0f)),
+      g(float(int(rgba32.g)) * (1.0f / 255.0f)),
+      b(float(int(rgba32.b)) * (1.0f / 255.0f)),
+      a(float(int(rgba32.a)) * (1.0f / 255.0f)) {}
+
+  BL_INLINE BLRgba(const BLRgba64& rgba64) noexcept
+    : r(float(int(rgba64.r)) * (1.0f / 65535.0f)),
+      g(float(int(rgba64.g)) * (1.0f / 65535.0f)),
+      b(float(int(rgba64.b)) * (1.0f / 65535.0f)),
+      a(float(int(rgba64.a)) * (1.0f / 65535.0f)) {}
 
   //! \}
 
@@ -213,8 +254,8 @@ struct BLRgba128 {
            (this->a == 0.0f) ;
   }
 
-  BL_INLINE bool operator==(const BLRgba128& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLRgba128& other) const noexcept { return !equals(other); }
+  BL_INLINE bool operator==(const BLRgba& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLRgba& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -225,6 +266,18 @@ struct BLRgba128 {
     reset(0.0f, 0.0f, 0.0f, 0.0f);
   }
 
+  BL_INLINE void reset(const BLRgba32& rgba32) noexcept {
+    *this = BLRgba(rgba32);
+  }
+
+  BL_INLINE void reset(const BLRgba64& rgba64) noexcept {
+    *this = BLRgba(rgba64);
+  }
+
+  BL_INLINE void reset(const BLRgba& other) noexcept {
+    reset(other.r, other.g, other.b, other.a);
+  }
+
   BL_INLINE void reset(float r, float g, float b, float a = 1.0f) noexcept {
     this->r = r;
     this->g = g;
@@ -232,11 +285,26 @@ struct BLRgba128 {
     this->a = a;
   }
 
-  BL_INLINE bool equals(const BLRgba128& other) const noexcept {
+  BL_INLINE bool equals(const BLRgba32& rgba32) const noexcept {
+    return equals(BLRgba(rgba32));
+  }
+
+  BL_INLINE bool equals(const BLRgba64& rgba64) const noexcept {
+    return equals(BLRgba(rgba64));
+  }
+
+  BL_INLINE bool equals(const BLRgba& other) const noexcept {
     return blEquals(this->r, other.r) &
            blEquals(this->g, other.g) &
            blEquals(this->b, other.b) &
            blEquals(this->a, other.a) ;
+  }
+
+  BL_INLINE bool equals(float r, float g, float b, float a = 1.0f) const noexcept {
+    return blEquals(this->r, r) &
+           blEquals(this->g, g) &
+           blEquals(this->b, b) &
+           blEquals(this->a, a) ;
   }
 
   //! \}
@@ -253,6 +321,24 @@ struct BLRgba128 {
   #endif
   // --------------------------------------------------------------------------
 };
+
+#ifdef __cplusplus
+template<>
+constexpr BL_INLINE BLRgba blMin(const BLRgba& a, const BLRgba& b) noexcept {
+  return BLRgba(blMin(a.r, b.r),
+                blMin(a.g, b.g),
+                blMin(a.b, b.b),
+                blMin(a.a, b.a));
+}
+
+template<>
+constexpr BL_INLINE BLRgba blMax(const BLRgba& a, const BLRgba& b) noexcept {
+  return BLRgba(blMax(a.r, b.r),
+                blMax(a.g, b.g),
+                blMax(a.b, b.b),
+                blMax(a.a, b.a));
+}
+#endif
 
 // ============================================================================
 // [Out of Class]
@@ -275,9 +361,9 @@ BL_INLINE void BLRgba32::reset(const BLRgba64& rgba64) noexcept {
 // ============================================================================
 
 #ifdef __cplusplus
+static_assert(sizeof(BLRgba) == 16, "'BLRgba' struct must be exactly 16 bytes long");
 static_assert(sizeof(BLRgba32) == 4, "'BLRgba32' struct must be exactly 4 bytes long");
 static_assert(sizeof(BLRgba64) == 8, "'BLRgba64' struct must be exactly 8 bytes long");
-static_assert(sizeof(BLRgba128) == 16, "'BLRgba128' struct must be exactly 16 bytes long");
 #endif
 
 //! \}

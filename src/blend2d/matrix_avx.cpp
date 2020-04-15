@@ -8,7 +8,7 @@
 #ifdef BL_TARGET_OPT_AVX
 
 #include "./geometry.h"
-#include "./matrix.h"
+#include "./matrix_p.h"
 #include "./runtime_p.h"
 #include "./simd_p.h"
 #include "./support_p.h"
@@ -190,7 +190,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine_AVX(const BLMatrix2D* se
 // [BLMatrix2D - Runtime Init [AVX]]
 // ============================================================================
 
-BL_HIDDEN void blMatrix2DRtInit_AVX(BLRuntimeContext* rt) noexcept {
+void blMatrix2DRtInit_AVX(BLRuntimeContext* rt) noexcept {
   BL_UNUSED(rt);
   BLMapPointDArrayFunc* funcs = blMatrix2DMapPointDArrayFuncs;
 

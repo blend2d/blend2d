@@ -35,6 +35,15 @@ BL_DEFINE_ENUM(BLGeometryDirection) {
 //! to work with all geometry types. Please note that each type provided here
 //! requires to pass a matching struct or class to the function that consumes
 //! a `geometryType` and `geometryData` arguments.
+//!
+//! \cond INTERNAL
+//! \note Always modify `BL_GEOMETRY_TYPE_SIMPLE_LAST` and related functions
+//! when adding a new type to `BLGeometryType` enum. Some functions just pass
+//! the geometry type and data to another function, but the rendering context
+//! must copy simple types to a render job, which means that it must know which
+//! type is simple and also sizes of all simple types, see `geometry_p.h` for
+//! more details about handling simple types.
+//! \endcond
 BL_DEFINE_ENUM(BLGeometryType) {
   //! No geometry provided.
   BL_GEOMETRY_TYPE_NONE = 0,
@@ -84,7 +93,14 @@ BL_DEFINE_ENUM(BLGeometryType) {
   BL_GEOMETRY_TYPE_REGION = 22,
 
   //! Count of geometry types.
-  BL_GEOMETRY_TYPE_COUNT = 23
+  BL_GEOMETRY_TYPE_COUNT = 23,
+
+  //! \cond INTERNAL
+
+  //! The last simple type.
+  BL_GEOMETRY_TYPE_SIMPLE_LAST = BL_GEOMETRY_TYPE_TRIANGLE
+
+  //! \endcond
 };
 
 //! Fill rule.

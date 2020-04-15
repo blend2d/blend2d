@@ -771,10 +771,8 @@ BLResult blFileSystemReadFile(const char* fileName, BLArrayCore* dst_, size_t ma
   if (maxSize)
     size64 = blMin<uint64_t>(size64, maxSize);
 
-#if BL_TARGET_ARCH_BITS < 64
-  if (BL_UNLIKELY(size64 >= uint64_t(SIZE_MAX)))
+  if (blRuntimeIs32Bit() && BL_UNLIKELY(size64 >= uint64_t(SIZE_MAX)))
     return blTraceError(BL_ERROR_FILE_TOO_LARGE);
-#endif
 
   size_t size = size_t(size64);
 

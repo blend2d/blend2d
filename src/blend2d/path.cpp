@@ -29,7 +29,7 @@ static BLWrap<BLInternalPathImpl> blNullPathImpl;
 const BLApproximationOptions blDefaultApproximationOptions = blMakeDefaultApproximationOptions();
 
 // ============================================================================
-// [BLStrokeOptions - Init / Reset]
+// [BLStrokeOptions - Init / Destroy]
 // ============================================================================
 
 BLResult blStrokeOptionsInit(BLStrokeOptionsCore* self) noexcept {
@@ -66,6 +66,17 @@ BLResult blStrokeOptionsInitMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore*
 
   return BL_SUCCESS;
 }
+
+BLResult blStrokeOptionsDestroy(BLStrokeOptionsCore* self) noexcept {
+  blArrayImplRelease(self->dashArray.impl);
+  // Safety, it would crash if it's used.
+  self->dashArray.impl = nullptr;
+  return BL_SUCCESS;
+}
+
+// ============================================================================
+// [BLStrokeOptions - Reset]
+// ============================================================================
 
 BLResult blStrokeOptionsReset(BLStrokeOptionsCore* self) noexcept {
   self->hints = 0;
@@ -277,13 +288,23 @@ static BL_INLINE BLResult blPathPrepareAdd(BLPathCore* self, size_t n, uint8_t**
 }
 
 // ============================================================================
-// [BLPath - Init / Reset]
+// [BLPath - Init / Destroy]
 // ============================================================================
 
 BLResult blPathInit(BLPathCore* self) noexcept {
   self->impl = BLPath::none().impl;
   return BL_SUCCESS;
 }
+
+BLResult blPathDestroy(BLPathCore* self) noexcept {
+  BLInternalPathImpl* selfI = blInternalCast(self->impl);
+  self->impl = nullptr;
+  return blPathImplRelease(selfI);
+}
+
+// ============================================================================
+// [BLPath - Reset]
+// ============================================================================
 
 BLResult blPathReset(BLPathCore* self) noexcept {
   BLInternalPathImpl* selfI = blInternalCast(self->impl);

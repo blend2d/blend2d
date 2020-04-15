@@ -89,7 +89,7 @@ public:
   BL_INLINE explicit BLString(BLStringImpl* impl) noexcept { this->impl = impl; }
 
   //! Destroys the string.
-  BL_INLINE ~BLString() noexcept { blStringReset(this); }
+  BL_INLINE ~BLString() noexcept { blStringDestroy(this); }
 
   //! \}
 

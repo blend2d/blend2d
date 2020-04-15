@@ -349,7 +349,7 @@ public:
     blGradientInitAs(this, BL_GRADIENT_TYPE_CONICAL, &values, extendMode, stops, n, &m);
   }
 
-  BL_INLINE ~BLGradient() noexcept { blGradientReset(this); }
+  BL_INLINE ~BLGradient() noexcept { blGradientDestroy(this); }
 
   //! \}
 

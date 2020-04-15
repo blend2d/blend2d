@@ -167,7 +167,7 @@ static BL_INLINE void blRuntimeInitSystemInfo(BLRuntimeContext* rt) noexcept {
   #endif
 #endif
 
-  info.minWorkerStackSize = blAlignUp(blMax<uint32_t>(info.minThreadStackSize, 4096u), info.allocationGranularity);
+  info.minWorkerStackSize = blAlignUp(blMax<uint32_t>(info.minThreadStackSize, 8192u), info.allocationGranularity);
 }
 
 static BL_INLINE void blRuntimeInitOptimizationInfo(BLRuntimeContext* rt) noexcept {
@@ -380,11 +380,28 @@ void* blRuntimeAllocImpl(size_t implSize, uint16_t* memPoolDataOut) noexcept {
   return malloc(implSize);
 }
 
+void* blRuntimeAllocAlignedImpl(size_t implSize, size_t alignment, uint16_t* memPoolDataOut) noexcept {
+  *memPoolDataOut = 0;
+
+  if (alignment <= BL_ALLOC_ALIGNMENT)
+    return malloc(implSize);
+
+  BL_ASSERT(blIsPowerOf2(alignment));
+  void* ptr = malloc(implSize + alignment - BL_ALLOC_ALIGNMENT);
+
+  if (!ptr)
+    return nullptr;
+
+  void* alignedPtr = blAlignUp(ptr, alignment);
+  *memPoolDataOut = uint16_t(uintptr_t(alignedPtr) - uintptr_t(ptr));
+  return alignedPtr;
+}
+
 BLResult blRuntimeFreeImpl(void* impl_, size_t implSize, uint32_t memPoolData) noexcept {
   BL_UNUSED(implSize);
-  BL_UNUSED(memPoolData);
 
-  free(impl_);
+  void* unalignedPtr = static_cast<void*>(static_cast<uint8_t*>(impl_) - memPoolData);
+  free(unalignedPtr);
   return BL_SUCCESS;
 }
 

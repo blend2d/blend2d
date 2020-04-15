@@ -7,6 +7,7 @@
 #ifndef BLEND2D_PIPEGEN_PIPECOMPILER_P_H
 #define BLEND2D_PIPEGEN_PIPECOMPILER_P_H
 
+#include "../runtime_p.h"
 #include "../pipegen/pipegencore_p.h"
 #include "../pipegen/piperegusage_p.h"
 
@@ -179,7 +180,7 @@ public:
     //! \note In 32-bit mode constants are absolutely addressed, however, in
     //! 64-bit mode we can't address arbitrary 64-bit pointers, so one more
     //! register is reserved as a compensation.
-    kReservedGpRegs = 1 + uint32_t(BL_TARGET_ARCH_BITS >= 64),
+    kReservedGpRegs = 1 + uint32_t(!blRuntimeIs32Bit()),
     //! Number of spare MM registers to always reserve (not used).
     kReservedMmRegs = 0,
     //! Number of spare XMM|YMM|ZMM registers to always reserve.

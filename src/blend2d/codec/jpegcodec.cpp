@@ -44,10 +44,6 @@ static const uint8_t blJpegDeZigZagTable[64 + 16] = {
   63, 63, 63, 63, 63, 63, 63, 63
 };
 
-// TIFF Header used by EXIF (LE or BE).
-static const uint8_t blJpegExifLE[4] = { 0x49, 0x49, 0x2A, 0x00 };
-static const uint8_t blJpegExifBE[4] = { 0x4D, 0x4D, 0x00, 0x2A };
-
 // ============================================================================
 // [BLJpegDecoderImpl - Process Marker]
 // ============================================================================
@@ -175,7 +171,6 @@ BLResult blJpegDecoderImplProcessMarker(BLJpegDecoderImpl* impl, uint32_t m, con
         return blTraceError(BL_ERROR_INVALID_DATA);
 
       // Save to BLJpegDecoderComponent.
-      // printf("COMPONENT %u %ux%u quantId=%u\n", compId, sfW, sfH, quantId);
       comp->compId  = uint8_t(compId);
       comp->sfW     = uint8_t(sfW);
       comp->sfH     = uint8_t(sfH);
@@ -1007,8 +1002,6 @@ BLResult blJpegDecoderImplProcessStream(BLJpegDecoderImpl* impl, const uint8_t* 
     mcuH = (comp->pxH + BL_JPEG_DCT_SIZE - 1) / BL_JPEG_DCT_SIZE;
   }
 
-  // printf("SOS %s MCU{%ux%u} scCount=%u\n", isBaseline ? "BASELINE" : "PROGRESSIVE", mcuW, mcuH, scCount);
-
   // Initialize decoder runs (each run specifies one component per scan).
   BLJpegDecoderRun runs[4];
   for (i = 0; i < scCount; i++) {
@@ -1060,8 +1053,6 @@ BLResult blJpegDecoderImplProcessStream(BLJpegDecoderImpl* impl, const uint8_t* 
 
       run->advance[0] = sfW * blockSize;
       run->advance[1] = sfH * blockStride - (mcuW - 1) * run->advance[0];
-
-      // printf("  COMP #%u [%ux%u] {count=%u advance[0]=%u advance[1]=%u} SOS{start=%u end=%u}\n", comp->compId, sfW, sfH, run->count, run->advance[0], run->advance[1], sos.ssStart, sos.ssEnd);
     }
   }
 

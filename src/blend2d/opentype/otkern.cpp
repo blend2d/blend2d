@@ -667,7 +667,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
             break;
           }
 
-          BLResult result = collection.groups.append(KernGroup::makeReferenced(format, groupFlags, offset - headerSize, subTableSize));
+          BLResult result = collection.groups.append(KernGroup::makeReferenced(format, groupFlags, offset - headerSize, uint32_t(subTableSize)));
           if (result != BL_SUCCESS) {
             trace.fail("Cannot allocate data for a referenced kerning group of format #%u\n", unsigned(format));
             return result;
@@ -692,7 +692,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
             break;
           }
 
-          BLResult result = collection.groups.append(KernGroup::makeReferenced(format, groupFlags, offset - headerSize, subTableSize));
+          BLResult result = collection.groups.append(KernGroup::makeReferenced(format, groupFlags, offset - headerSize, uint32_t(subTableSize)));
           if (result != BL_SUCCESS) {
             trace.fail("Cannot allocate data for a referenced kerning group of format #%u\n", unsigned(format));
             return result;

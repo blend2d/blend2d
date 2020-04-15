@@ -30,6 +30,8 @@ static constexpr const double BL_CONTEXT_MAXIMUM_TOLERANCE = 0.50;
 // ============================================================================
 
 static BL_INLINE void blContextStateInit(BLContextState* self) noexcept {
+  self->targetImage = nullptr;
+  self->targetSize.reset();
   self->hints.reset();
   self->compOp = uint8_t(BL_COMP_OP_SRC_OVER);
   self->fillRule = uint8_t(BL_FILL_RULE_NON_ZERO);

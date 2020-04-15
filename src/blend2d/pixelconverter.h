@@ -49,7 +49,7 @@ BL_DEFINE_ENUM(BLPixelConverterCreateFlags) {
   //! set as well, otherwise this flag would be ignored.
   BL_PIXEL_CONVERTER_CREATE_FLAG_ALTERABLE_PALETTE = 0x00000002u,
 
-  //! When there is no built-in conversion betweeb the given pixel formats it's
+  //! When there is no built-in conversion between the given pixel formats it's
   //! possible to use an intermediate format that is used during conversion. In
   //! such case the base pixel converter creates two more converters that are
   //! then used internally.
@@ -121,7 +121,7 @@ public:
 
   //! Destroys the pixel-converter and releases all resources allocated by it.
   BL_INLINE ~BLPixelConverter() noexcept {
-    blPixelConverterReset(this);
+    blPixelConverterDestroy(this);
   }
 
   BL_INLINE BLPixelConverter& operator=(const BLPixelConverter& other) noexcept {

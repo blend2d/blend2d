@@ -68,16 +68,16 @@ public:
 };
 
 // ============================================================================
-// [BLPipeGen::FillBoxAAPart]
+// [BLPipeGen::FillBoxAPart]
 // ============================================================================
 
-class FillBoxAAPart final : public FillPart {
+class FillBoxAPart final : public FillPart {
 public:
   // --------------------------------------------------------------------------
   // [Construction / Destruction]
   // --------------------------------------------------------------------------
 
-  FillBoxAAPart(PipeCompiler* pc, uint32_t fillType, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept;
+  FillBoxAPart(PipeCompiler* pc, uint32_t fillType, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept;
 
   // --------------------------------------------------------------------------
   // [Compile]
@@ -87,16 +87,16 @@ public:
 };
 
 // ============================================================================
-// [BLPipeGen::FillBoxAUPart]
+// [BLPipeGen::FillBoxUPart]
 // ============================================================================
 
-class FillBoxAUPart final : public FillPart {
+class FillBoxUPart final : public FillPart {
 public:
   // --------------------------------------------------------------------------
   // [Construction / Destruction]
   // --------------------------------------------------------------------------
 
-  FillBoxAUPart(PipeCompiler* pc, uint32_t fillType, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept;
+  FillBoxUPart(PipeCompiler* pc, uint32_t fillType, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept;
 
   // --------------------------------------------------------------------------
   // [Compile]

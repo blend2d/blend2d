@@ -62,7 +62,7 @@ UNIT(arrayops, -9) {
   {
     constexpr size_t kArraySize = 5;
 
-    float arr1[kArraySize] = { 1.0f, 0.0f, 3.0f, -1.0f, blNaN<double>() };
+    float arr1[kArraySize] = { 1.0f, 0.0f, 3.0f, -1.0f, blNaN<float>() };
     float arr2[kArraySize] = { };
 
     memcpy(arr2, arr1, kArraySize * sizeof(float));

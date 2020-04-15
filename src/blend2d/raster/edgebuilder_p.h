@@ -11,6 +11,7 @@
 #include "../geometry_p.h"
 #include "../math_p.h"
 #include "../path_p.h"
+#include "../pipedefs_p.h"
 #include "../support_p.h"
 #include "../zoneallocator_p.h"
 
@@ -88,12 +89,46 @@ struct alignas(8) BLEdgeVector {
 };
 
 // ============================================================================
+// [BLEdgeList]
+// ============================================================================
+
+template<typename CoordT>
+struct BLEdgeList {
+  BLEdgeVector<CoordT>* _first;
+  BLEdgeVector<CoordT>* _last;
+
+  BL_INLINE void reset() noexcept {
+    _first = nullptr;
+    _last = nullptr;
+  }
+
+  BL_INLINE bool empty() const noexcept { return _last == nullptr; }
+
+  BL_INLINE BLEdgeVector<CoordT>* first() const noexcept { return _first; }
+  BL_INLINE BLEdgeVector<CoordT>* last() const noexcept { return _last; }
+
+  BL_INLINE void append(BLEdgeVector<CoordT>* item) noexcept {
+    item->next = nullptr;
+    if (empty()) {
+      _first = item;
+      _last = item;
+    }
+    else {
+      _last->next = item;
+      _last = item;
+    }
+  }
+};
+
+// ============================================================================
 // [BLEdgeStorage]
 // ============================================================================
 
 template<typename CoordT>
 class BLEdgeStorage {
 public:
+  //! Start edge vectors of each band.
+  BLEdgeList<CoordT>* _bandEdges;
   //! Length of `_bandEdges` array.
   uint32_t _bandCount;
   //! Capacity of `_bandEdges` array.
@@ -102,8 +137,6 @@ public:
   uint32_t _bandHeight;
   //! Shift to get a bandId from a fixed-point y coordinate.
   uint32_t _fixedBandHeightShift;
-  //! Edges per each band (only used if banding is enabled).
-  BLEdgeVector<CoordT>** _bandEdges;
   //! Bounding box in fixed-point.
   BLBoxI _boundingBox;
 
@@ -111,11 +144,11 @@ public:
   BL_INLINE BLEdgeStorage(const BLEdgeStorage& other) noexcept = default;
 
   BL_INLINE void reset() noexcept {
+    _bandEdges = nullptr;
     _bandCount = 0;
     _bandCapacity = 0;
     _bandHeight = 0;
     _fixedBandHeightShift = 0;
-    _bandEdges = 0;
     resetBoundingBox();
   }
 
@@ -127,32 +160,56 @@ public:
       BL_ASSERT(bandEnd <= _bandCount);
 
       for (uint32_t i = bandStart; i < bandEnd; i++)
-        _bandEdges[i] = nullptr;
+        _bandEdges[i].reset();
       resetBoundingBox();
     }
   }
 
   BL_INLINE bool empty() const noexcept { return _boundingBox.y0 == blMaxValue<int>(); }
+
+  BL_INLINE BLEdgeList<CoordT>* bandEdges() const noexcept { return _bandEdges; }
   BL_INLINE uint32_t bandCount() const noexcept { return _bandCount; }
   BL_INLINE uint32_t bandCapacity() const noexcept { return _bandCapacity; }
   BL_INLINE uint32_t bandHeight() const noexcept { return _bandHeight; }
   BL_INLINE uint32_t fixedBandHeightShift() const noexcept { return _fixedBandHeightShift; }
-
-  BL_INLINE BLEdgeVector<CoordT>** bandEdges() const noexcept { return _bandEdges; }
   BL_INLINE const BLBoxI& boundingBox() const noexcept { return _boundingBox; }
 
-  BL_INLINE void setBandEdges(BLEdgeVector<CoordT>** edges, uint32_t capacity) noexcept {
-    _bandEdges = edges;
-    _bandCapacity = capacity;
-  }
-
-  BL_INLINE void setBandHeight(uint32_t bandHeightInPixels) noexcept {
-    _bandHeight = bandHeightInPixels;
-    _fixedBandHeightShift = blBitCtz(bandHeightInPixels) + BL_PIPE_A8_SHIFT;
+  BL_INLINE void initData(BLEdgeList<CoordT>* bandEdges, uint32_t bandCount, uint32_t bandCapacity, uint32_t bandHeight) noexcept {
+    _bandEdges = bandEdges;
+    _bandCount = bandCount;
+    _bandCapacity = bandCapacity;
+    _bandHeight = bandHeight;
+    _fixedBandHeightShift = blBitCtz(bandHeight) + BL_PIPE_A8_SHIFT;
   }
 
   BL_INLINE void resetBoundingBox() noexcept {
     _boundingBox.reset(blMaxValue<int>(), blMaxValue<int>(), blMinValue<int>(), blMinValue<int>());
+  }
+
+  BL_INLINE BLEdgeVector<CoordT>* flattenEdgeLinks() noexcept {
+    BLEdgeList<int>* bandEdges = this->bandEdges();
+
+    size_t bandId = unsigned(boundingBox().y0) >> fixedBandHeightShift();
+    size_t bandLast = unsigned(boundingBox().y1 - 1) >> fixedBandHeightShift();
+
+    BLEdgeVector<CoordT>* first = bandEdges[bandId].first();
+    BLEdgeVector<CoordT>* current = bandEdges[bandId].last();
+
+    // The first band must always be non-null as it starts the edges.
+    BL_ASSERT(first != nullptr);
+    BL_ASSERT(current != nullptr);
+
+    bandEdges[bandId].reset();
+    while (++bandId <= bandLast) {
+      BLEdgeVector<int>* bandFirst = bandEdges[bandId].first();
+      if (!bandFirst)
+        continue;
+      current->next = bandFirst;
+      current = bandEdges[bandId].last();
+      bandEdges[bandId].reset();
+    }
+
+    return first;
   }
 };
 
@@ -208,24 +265,24 @@ public:
 // [BLEdgeSourcePoly]
 // ============================================================================
 
-template<class Transform = BLEdgeTransformNone>
+template<class PointType, class Transform = BLEdgeTransformNone>
 class BLEdgeSourcePoly {
 public:
   Transform _transform;
-  const BLPoint* _srcPtr;
-  const BLPoint* _srcEnd;
+  const PointType* _srcPtr;
+  const PointType* _srcEnd;
 
   BL_INLINE BLEdgeSourcePoly(const Transform& transform) noexcept
     : _transform(transform),
       _srcPtr(nullptr),
       _srcEnd(nullptr) {}
 
-  BL_INLINE BLEdgeSourcePoly(const Transform& transform, const BLPoint* srcPtr, size_t count) noexcept
+  BL_INLINE BLEdgeSourcePoly(const Transform& transform, const PointType* srcPtr, size_t count) noexcept
     : _transform(transform),
       _srcPtr(srcPtr),
       _srcEnd(srcPtr + count) {}
 
-  BL_INLINE void reset(const BLPoint* srcPtr, size_t count) noexcept {
+  BL_INLINE void reset(const PointType* srcPtr, size_t count) noexcept {
     _srcPtr = srcPtr;
     _srcEnd = srcPtr + count;
   }
@@ -234,7 +291,7 @@ public:
     if (_srcPtr == _srcEnd)
       return false;
 
-    _transform.apply(initial, _srcPtr[0]);
+    _transform.apply(initial, BLPoint(_srcPtr[0].x, _srcPtr[0].y));
     _srcPtr++;
     return true;
   }
@@ -247,7 +304,7 @@ public:
   constexpr bool isCubicTo() const noexcept { return false; }
 
   BL_INLINE void nextLineTo(BLPoint& pt1) noexcept {
-    _transform.apply(pt1, _srcPtr[0]);
+    _transform.apply(pt1, BLPoint(_srcPtr[0].x, _srcPtr[0].y));
     _srcPtr++;
   }
 
@@ -259,11 +316,11 @@ public:
     return true;
   }
 
-  inline void nextQuadTo(BLPoint&, BLPoint&) noexcept {}
-  inline bool maybeNextQuadTo(BLPoint&, BLPoint&) noexcept { return false; }
+  BL_INLINE void nextQuadTo(BLPoint&, BLPoint&) noexcept {}
+  BL_INLINE bool maybeNextQuadTo(BLPoint&, BLPoint&) noexcept { return false; }
 
-  inline void nextCubicTo(BLPoint&, BLPoint&, BLPoint&) noexcept {}
-  inline bool maybeNextCubicTo(BLPoint&, BLPoint&, BLPoint&) noexcept { return false; }
+  BL_INLINE void nextCubicTo(BLPoint&, BLPoint&, BLPoint&) noexcept {}
+  BL_INLINE bool maybeNextCubicTo(BLPoint&, BLPoint&, BLPoint&) noexcept { return false; }
 };
 
 // ============================================================================
@@ -386,8 +443,11 @@ public:
 // [BLEdgeSource{Specializations}]
 // ============================================================================
 
-typedef BLEdgeSourcePoly<BLEdgeTransformScale> BLEdgeSourcePolyScale;
-typedef BLEdgeSourcePoly<BLEdgeTransformAffine> BLEdgeSourcePolyAffine;
+template<class PointType>
+using BLEdgeSourcePolyScale = BLEdgeSourcePoly<PointType, BLEdgeTransformScale>;
+
+template<class PointType>
+using BLEdgeSourcePolyAffine = BLEdgeSourcePoly<PointType, BLEdgeTransformAffine>;
 
 typedef BLEdgeSourcePath<BLEdgeTransformScale> BLEdgeSourcePathScale;
 typedef BLEdgeSourcePath<BLEdgeTransformAffine> BLEdgeSourcePathAffine;
@@ -672,9 +732,9 @@ public:
   // Shorthands and Working Variables
   // --------------------------------
 
-  //! Bands (shortcut to `_storage->_bands`).
-  BLEdgeVector<CoordT>** _bands;
-  //! Shift to get bandId from fixed coordinate (shortcut to `_storage->_fixedBandHeightShift`).
+  //! Bands (shortcut to `_storage->bandEdges()`).
+  BLEdgeList<CoordT>* _bandEdges;
+  //! Shift to get bandId from fixed coordinate (shortcut to `_storage->fixedBandHeightShift()`).
   uint32_t _fixedBandHeightShift;
   uint32_t _signFlip;
   //! Current point in edge-vector.
@@ -766,7 +826,7 @@ public:
                 blTruncToInt(clipBox.x1),
                 blTruncToInt(clipBox.y1)),
       _flattenToleranceSq(toleranceSq),
-      _bands(nullptr),
+      _bandEdges(nullptr),
       _fixedBandHeightShift(0),
       _signFlip(0),
       _ptr(nullptr),
@@ -790,8 +850,8 @@ public:
   }
 
   BL_INLINE void begin() noexcept {
-    _bands = _storage->_bandEdges;
-    _fixedBandHeightShift = _storage->_fixedBandHeightShift;
+    _bandEdges = _storage->bandEdges();
+    _fixedBandHeightShift = _storage->fixedBandHeightShift();
     _signFlip = 0;
     _ptr = nullptr;
     _end = nullptr;
@@ -820,13 +880,29 @@ public:
     return BL_SUCCESS;
   }
 
-  BL_NOINLINE BLResult addPoly(const BLPoint* pts, size_t size, const BLMatrix2D& m, uint32_t mType) noexcept {
+  //! A convenience function that calls `begin()`, `addPoly()`, and `done()`.
+  template<class PointType>
+  BL_INLINE BLResult initFromPoly(const PointType* pts, size_t size, const BLMatrix2D& m, uint32_t mType) noexcept {
+    begin();
+    BL_PROPAGATE(addPoly(pts, size, m, mType));
+    return done();
+  }
+
+  //! A convenience function that calls `begin()`, `addPath()`, and `done()`.
+  BL_INLINE BLResult initFromPath(const BLPathView& view, bool closed, const BLMatrix2D& m, uint32_t mType) noexcept {
+    begin();
+    BL_PROPAGATE(addPath(view, closed, m, mType));
+    return done();
+  }
+
+  template<class PointType>
+  BL_NOINLINE BLResult addPoly(const PointType* pts, size_t size, const BLMatrix2D& m, uint32_t mType) noexcept {
     if (mType <= BL_MATRIX2D_TYPE_SCALE) {
-      BLEdgeSourcePolyScale source(BLEdgeTransformScale(m), pts, size);
+      BLEdgeSourcePolyScale<PointType> source(BLEdgeTransformScale(m), pts, size);
       return addFromSource(source, true);
     }
     else {
-      BLEdgeSourcePolyAffine source(BLEdgeTransformAffine(m), pts, size);
+      BLEdgeSourcePolyAffine<PointType> source(BLEdgeTransformAffine(m), pts, size);
       return addFromSource(source, true);
     }
   }
@@ -1267,7 +1343,8 @@ RestartClipLoop:
             break;
 
           default:
-            BL_NOT_REACHED();
+            // Possibly caused by NaNs.
+            return blTraceError(BL_ERROR_INVALID_GEOMETRY);
         }
 
         if (aFlags) {
@@ -1357,7 +1434,8 @@ RestartClipLoop:
             break;
 
           default:
-            BL_NOT_REACHED();
+            // Possibly caused by NaNs.
+            return blTraceError(BL_ERROR_INVALID_GEOMETRY);
         }
 
         BL_PROPAGATE(addLineSegment(p.x, p.y, q.x, q.y));
@@ -2287,8 +2365,8 @@ RightToLeft_AddLine:
 
   BL_INLINE void _linkEdge(BLEdgeVector<CoordT>* edge, int y0) noexcept {
     size_t bandId = size_t(unsigned(y0) >> _fixedBandHeightShift);
-    edge->next = _bands[bandId];
-    _bands[bandId] = edge;
+    BL_ASSERT(bandId < _storage->bandCount());
+    _bandEdges[bandId].append(edge);
   }
 
   // --------------------------------------------------------------------------

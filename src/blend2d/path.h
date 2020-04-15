@@ -243,10 +243,15 @@ public:
   BL_INLINE BLStrokeOptions() noexcept { blStrokeOptionsInit(this); }
   BL_INLINE BLStrokeOptions(BLStrokeOptions&& other) noexcept { blStrokeOptionsInitMove(this, &other); }
   BL_INLINE BLStrokeOptions(const BLStrokeOptions& other) noexcept { blStrokeOptionsInitWeak(this, &other); }
-  BL_INLINE ~BLStrokeOptions() noexcept { blStrokeOptionsReset(this); }
+  BL_INLINE ~BLStrokeOptions() noexcept { blStrokeOptionsDestroy(this); }
 
   BL_INLINE BLStrokeOptions& operator=(BLStrokeOptions&& other) noexcept { blStrokeOptionsAssignMove(this, &other); return *this; }
   BL_INLINE BLStrokeOptions& operator=(const BLStrokeOptions& other) noexcept { blStrokeOptionsAssignWeak(this, &other); return *this; }
+
+  BL_INLINE BLResult reset() noexcept { return blStrokeOptionsReset(this); }
+
+  BL_INLINE BLResult assign(BLStrokeOptions&& other) noexcept { return blStrokeOptionsAssignMove(this, &other); }
+  BL_INLINE BLResult assign(const BLStrokeOptions& other) noexcept { return blStrokeOptionsAssignWeak(this, &other); }
 
   BL_INLINE void setCaps(uint32_t strokeCap) noexcept {
     startCap = uint8_t(strokeCap);
@@ -349,7 +354,7 @@ public:
   BL_INLINE BLPath(const BLPath& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLPath(BLPathImpl* impl) noexcept { this->impl = impl; }
 
-  BL_INLINE ~BLPath() noexcept { blPathReset(this); }
+  BL_INLINE ~BLPath() noexcept { blPathDestroy(this); }
 
   //! \}
 

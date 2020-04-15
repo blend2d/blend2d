@@ -6,6 +6,7 @@
 
 #include "./api-build_p.h"
 #include "./context_p.h"
+#include "./image_p.h"
 #include "./runtime_p.h"
 #include "./raster/rastercontext_p.h"
 
@@ -20,7 +21,7 @@ static BLContextVirt blNullContextVirt;
 static BLWrap<BLContextImpl> blNullContextImpl;
 
 // ============================================================================
-// [BLContext - Init / Reset]
+// [BLContext - Init / Destroy]
 // ============================================================================
 
 BLResult blContextInit(BLContextCore* self) noexcept {
@@ -32,6 +33,16 @@ BLResult blContextInitAs(BLContextCore* self, BLImageCore* image, const BLContex
   self->impl = BLContext::none().impl;
   return blContextBegin(self, image, options);
 }
+
+BLResult blContextDestroy(BLContextCore* self) noexcept {
+  BLContextImpl* selfI = self->impl;
+  self->impl = nullptr;
+  return blImplReleaseVirt(selfI);
+}
+
+// ============================================================================
+// [BLContext - Reset]
+// ============================================================================
 
 BLResult blContextReset(BLContextCore* self) noexcept {
   BLContextImpl* selfI = self->impl;
@@ -75,7 +86,7 @@ BLResult blContextGetTargetSize(const BLContextCore* self, BLSize* targetSizeOut
 }
 
 BLImageCore* blContextGetTargetImage(const BLContextCore* self) noexcept {
-  return const_cast<BLImageCore*>(&self->impl->state->targetImage);
+  return self->impl->state->targetImage;
 }
 
 // ============================================================================
@@ -86,11 +97,6 @@ BLResult blContextBegin(BLContextCore* self, BLImageCore* image, const BLContext
   // Reject empty images.
   if (blDownCast(image)->empty())
     return blTraceError(BL_ERROR_INVALID_VALUE);
-
-  // Reject images that already have a writer.
-  BLInternalImageImpl* imageI = blInternalCast(image->impl);
-  if (imageI->writer != nullptr)
-    return blTraceError(BL_ERROR_BUSY);
 
   BLContextCreateInfo noOptions {};
   if (!options)
@@ -115,6 +121,14 @@ BLResult blContextEnd(BLContextCore* self) noexcept {
 
 BLResult blContextFlush(BLContextCore* self, uint32_t flags) noexcept {
   return self->impl->virt->flush(self->impl, flags);
+}
+
+// ============================================================================
+// [BLContext - Query Property]
+// ============================================================================
+
+BLResult blContextQueryProperty(const BLContextCore* self, uint32_t propertyId, void* valueOut) noexcept {
+  return self->impl->virt->queryProperty(self->impl, propertyId, valueOut);
 }
 
 // ============================================================================
@@ -199,20 +213,16 @@ BLResult blContextSetFillAlpha(BLContextCore* self, double alpha) noexcept {
   return self->impl->virt->setStyleAlpha[BL_CONTEXT_OP_TYPE_FILL](self->impl, alpha);
 }
 
-BLResult blContextGetFillStyle(const BLContextCore* self, void* object) noexcept {
-  return self->impl->virt->getStyle[BL_CONTEXT_OP_TYPE_FILL](self->impl, object);
+BLResult blContextGetFillStyle(const BLContextCore* self, BLStyleCore* styleOut) noexcept {
+  return self->impl->virt->getStyle[BL_CONTEXT_OP_TYPE_FILL](self->impl, styleOut);
 }
 
-BLResult blContextGetFillStyleRgba32(const BLContextCore* self, uint32_t* rgba32) noexcept {
-  return self->impl->virt->getStyleRgba32[BL_CONTEXT_OP_TYPE_FILL](self->impl, rgba32);
+BLResult blContextSetFillStyle(BLContextCore* self, const BLStyleCore* style) noexcept {
+  return self->impl->virt->setStyle[BL_CONTEXT_OP_TYPE_FILL](self->impl, style);
 }
 
-BLResult blContextGetFillStyleRgba64(const BLContextCore* self, uint64_t* rgba64) noexcept {
-  return self->impl->virt->getStyleRgba64[BL_CONTEXT_OP_TYPE_FILL](self->impl, rgba64);
-}
-
-BLResult blContextSetFillStyle(BLContextCore* self, const void* object) noexcept {
-  return self->impl->virt->setStyle[BL_CONTEXT_OP_TYPE_FILL](self->impl, object);
+BLResult blContextSetFillStyleRgba(BLContextCore* self, const BLRgba* rgba) noexcept {
+  return self->impl->virt->setStyleRgba[BL_CONTEXT_OP_TYPE_FILL](self->impl, rgba);
 }
 
 BLResult blContextSetFillStyleRgba32(BLContextCore* self, uint32_t rgba32) noexcept {
@@ -221,6 +231,10 @@ BLResult blContextSetFillStyleRgba32(BLContextCore* self, uint32_t rgba32) noexc
 
 BLResult blContextSetFillStyleRgba64(BLContextCore* self, uint64_t rgba64) noexcept {
   return self->impl->virt->setStyleRgba64[BL_CONTEXT_OP_TYPE_FILL](self->impl, rgba64);
+}
+
+BLResult blContextSetFillStyleObject(BLContextCore* self, const void* object) noexcept {
+  return self->impl->virt->setStyleObject[BL_CONTEXT_OP_TYPE_FILL](self->impl, object);
 }
 
 BLResult blContextSetFillRule(BLContextCore* self, uint32_t fillRule) noexcept {
@@ -235,20 +249,16 @@ BLResult blContextSetStrokeAlpha(BLContextCore* self, double alpha) noexcept {
   return self->impl->virt->setStyleAlpha[BL_CONTEXT_OP_TYPE_STROKE](self->impl, alpha);
 }
 
-BLResult blContextGetStrokeStyle(const BLContextCore* self, void* object) noexcept {
-  return self->impl->virt->getStyle[BL_CONTEXT_OP_TYPE_STROKE](self->impl, object);
+BLResult blContextGetStrokeStyle(const BLContextCore* self, BLStyleCore* styleOut) noexcept {
+  return self->impl->virt->getStyle[BL_CONTEXT_OP_TYPE_STROKE](self->impl, styleOut);
 }
 
-BLResult blContextGetStrokeStyleRgba32(const BLContextCore* self, uint32_t* rgba32) noexcept {
-  return self->impl->virt->getStyleRgba32[BL_CONTEXT_OP_TYPE_STROKE](self->impl, rgba32);
+BLResult blContextSetStrokeStyle(BLContextCore* self, const BLStyleCore* style) noexcept {
+  return self->impl->virt->setStyle[BL_CONTEXT_OP_TYPE_STROKE](self->impl, style);
 }
 
-BLResult blContextGetStrokeStyleRgba64(const BLContextCore* self, uint64_t* rgba64) noexcept {
-  return self->impl->virt->getStyleRgba64[BL_CONTEXT_OP_TYPE_STROKE](self->impl, rgba64);
-}
-
-BLResult blContextSetStrokeStyle(BLContextCore* self, const void* object) noexcept {
-  return self->impl->virt->setStyle[BL_CONTEXT_OP_TYPE_STROKE](self->impl, object);
+BLResult blContextSetStrokeStyleRgba(BLContextCore* self, const BLRgba* rgba) noexcept {
+  return self->impl->virt->setStyleRgba[BL_CONTEXT_OP_TYPE_STROKE](self->impl, rgba);
 }
 
 BLResult blContextSetStrokeStyleRgba32(BLContextCore* self, uint32_t rgba32) noexcept {
@@ -257,6 +267,10 @@ BLResult blContextSetStrokeStyleRgba32(BLContextCore* self, uint32_t rgba32) noe
 
 BLResult blContextSetStrokeStyleRgba64(BLContextCore* self, uint64_t rgba64) noexcept {
   return self->impl->virt->setStyleRgba64[BL_CONTEXT_OP_TYPE_STROKE](self->impl, rgba64);
+}
+
+BLResult blContextSetStrokeStyleObject(BLContextCore* self, const void* object) noexcept {
+  return self->impl->virt->setStyleObject[BL_CONTEXT_OP_TYPE_STROKE](self->impl, object);
 }
 
 BLResult blContextSetStrokeWidth(BLContextCore* self, double width) noexcept {
@@ -442,12 +456,28 @@ static BLResult BL_CDECL blNullContextImplSetDouble(BLContextImpl*, double) noex
 static BLResult BL_CDECL blNullContextImplSetVoidPtr(BLContextImpl*, const void*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
 static BLResult BL_CDECL blNullContextImplSet2xUInt32(BLContextImpl*, uint32_t, uint32_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
 
+static BLResult BL_CDECL blNullContextImplQueryProperty(const BLContextImpl*, uint32_t propertyId, void* valueOut) noexcept {
+  switch (propertyId) {
+    case BL_CONTEXT_PROPERTY_THREAD_COUNT:
+      *static_cast<uint32_t*>(valueOut) = 0;
+      return BL_SUCCESS;
+
+    case BL_CONTEXT_PROPERTY_ACCUMULATED_ERROR_FLAGS:
+      *static_cast<uint32_t*>(valueOut) = 0;
+      return BL_SUCCESS;
+
+    default:
+      *static_cast<uint32_t*>(valueOut) = 0;
+      return blTraceError(BL_ERROR_INVALID_VALUE);
+  }
+}
+
 static BLResult BL_CDECL blNullContextImplSave(BLContextImpl*, BLContextCookie*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
 static BLResult BL_CDECL blNullContextImplRestore(BLContextImpl*, const BLContextCookie*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
 
-static BLResult BL_CDECL blNullContextImplGetStyle(const BLContextImpl*, void*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL blNullContextImplGetStyleRgb32(const BLContextImpl*, uint32_t*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL blNullContextImplGetStyleRgb64(const BLContextImpl*, uint64_t*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplGetStyle(const BLContextImpl*, BLStyleCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplSetStyle(BLContextImpl*, const BLStyleCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL blNullContextImplSetRgba(BLContextImpl*, const BLRgba*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
 
 static BLResult BL_CDECL blNullContextImplSetHints(BLContextImpl*, const BLContextHints*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
 static BLResult BL_CDECL blNullContextImplSetApproximationOptions(BLContextImpl*, const BLApproximationOptions*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
@@ -470,24 +500,14 @@ static BLResult BL_CDECL blNullContextImplBlitScaledImageD(BLContextImpl*, const
 
 BL_DIAGNOSTIC_POP
 
-// ============================================================================
-// [BLContext - Runtime Init]
-// ============================================================================
-
-void blContextRtInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
-
+static void blNullContextVirtInit(BLContextVirt* virt) noexcept {
   constexpr uint32_t F = BL_CONTEXT_OP_TYPE_FILL;
   constexpr uint32_t S = BL_CONTEXT_OP_TYPE_STROKE;
 
-  // Initialize null context state.
-  blContextStateInit(&blNullContextState);
-
-  // Initialize null context virtual functions.
-  BLContextVirt* virt = &blNullContextVirt;
-
   virt->destroy                 = blNullContextImplNoArgs;
   virt->flush                   = blNullContextImplSetUInt32;
+
+  virt->queryProperty           = blNullContextImplQueryProperty;
 
   virt->save                    = blNullContextImplSave;
   virt->restore                 = blNullContextImplRestore;
@@ -509,16 +529,16 @@ void blContextRtInit(BLRuntimeContext* rt) noexcept {
   virt->setStyleAlpha[S]        = blNullContextImplSetDouble;
   virt->getStyle[F]             = blNullContextImplGetStyle;
   virt->getStyle[S]             = blNullContextImplGetStyle;
-  virt->getStyleRgba32[F]       = blNullContextImplGetStyleRgb32;
-  virt->getStyleRgba32[S]       = blNullContextImplGetStyleRgb32;
-  virt->getStyleRgba64[F]       = blNullContextImplGetStyleRgb64;
-  virt->getStyleRgba64[S]       = blNullContextImplGetStyleRgb64;
-  virt->setStyle[F]             = blNullContextImplSetVoidPtr;
-  virt->setStyle[S]             = blNullContextImplSetVoidPtr;
+  virt->setStyle[F]             = blNullContextImplSetStyle;
+  virt->setStyle[S]             = blNullContextImplSetStyle;
+  virt->setStyleRgba[F]         = blNullContextImplSetRgba;
+  virt->setStyleRgba[S]         = blNullContextImplSetRgba;
   virt->setStyleRgba32[F]       = blNullContextImplSetUInt32;
   virt->setStyleRgba32[S]       = blNullContextImplSetUInt32;
   virt->setStyleRgba64[F]       = blNullContextImplSetUInt64;
   virt->setStyleRgba64[S]       = blNullContextImplSetUInt64;
+  virt->setStyleObject[F]       = blNullContextImplSetVoidPtr;
+  virt->setStyleObject[S]       = blNullContextImplSetVoidPtr;
 
   virt->setFillRule             = blNullContextImplSetUInt32;
 
@@ -563,6 +583,21 @@ void blContextRtInit(BLRuntimeContext* rt) noexcept {
   virt->blitImageD              = blNullContextImplBlitImageD;
   virt->blitScaledImageI        = blNullContextImplBlitScaledImageI;
   virt->blitScaledImageD        = blNullContextImplBlitScaledImageD;
+}
+
+// ============================================================================
+// [BLContext - Runtime Init]
+// ============================================================================
+
+void blContextRtInit(BLRuntimeContext* rt) noexcept {
+  BL_UNUSED(rt);
+
+  // Initialize null context state.
+  blContextStateInit(&blNullContextState);
+
+  // Initialize null context virtual functions.
+  BLContextVirt* virt = &blNullContextVirt;
+  blNullContextVirtInit(virt);
 
   // Initialize null context built-in instance.
   BLContextImpl* contextI = &blNullContextImpl;

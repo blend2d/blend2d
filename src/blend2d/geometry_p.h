@@ -8,12 +8,27 @@
 #define BLEND2D_GEOMETRY_P_H
 
 #include "./geometry.h"
+#include "./lookuptable_p.h"
 #include "./math_p.h"
 #include "./support_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
 //! \{
+
+// ============================================================================
+// [blSimpleGeometrySize]
+// ============================================================================
+
+BL_HIDDEN extern const BLLookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1> blSimpleGeometrySize;
+
+// ============================================================================
+// [blIsSimpleGeometryType]
+// ============================================================================
+
+static BL_INLINE bool blIsSimpleGeometryType(uint32_t geometryType) noexcept {
+  return geometryType <= BL_GEOMETRY_TYPE_SIMPLE_LAST;
+}
 
 // ============================================================================
 // [Math Extensions]
@@ -537,12 +552,12 @@ static BL_INLINE void blGetCubicInflectionParameter(const BLPoint p[4], double& 
   // To get the inflections C'(t) cross C''(t) = at^2 + bt + c = 0 needs to be solved for 't'.
   // The first cooefficient of the quadratic formula is also the denominator.
   double den = blCrossProduct(b, a);
-  
+
   if (den != 0) {
     // Two roots might exist, solve with quadratic formula ('tl' is real).
     tc = blCrossProduct(a, c) / den;
     tl = tc * tc + blCrossProduct(b, c) / den;
-    
+
     // If 'tl < 0' there are two complex roots (no need to solve).
     // If 'tl == 0' there is a real double root at tc (cusp case).
     // If 'tl > 0' two real roots exist at 'tc - Sqrt(tl)' and 'tc + Sqrt(tl)'.

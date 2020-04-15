@@ -15,6 +15,15 @@
 #ifndef BLEND2D_H
 #define BLEND2D_H
 
+#if defined(_MSC_VER)
+  #pragma warning(push)
+  #pragma warning(disable: 4201) // Nameless struct/union.
+  #pragma warning(disable: 4324) // Structure was padded due to alignment specifier.
+  #pragma warning(disable: 4458) // declaration of 'X' hides class member.
+  #pragma warning(disable: 4582) // constructor is not implicitly called.
+  #pragma warning(disable: 4583) // destructor is not implicitly called.
+#endif
+
 #include "./blend2d/api.h"
 #include "./blend2d/array.h"
 #include "./blend2d/bitarray.h"
@@ -38,6 +47,11 @@
 #include "./blend2d/rgba.h"
 #include "./blend2d/runtime.h"
 #include "./blend2d/string.h"
+#include "./blend2d/style.h"
 #include "./blend2d/variant.h"
+
+#if defined(_MSC_VER)
+  #pragma warning(pop)
+#endif
 
 #endif // BLEND2D_H

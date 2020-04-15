@@ -14,7 +14,6 @@ Documentation
 -------------
 
   * [Documentation Index](https://blend2d.com/doc/index.html)
-  * [API Reference Index](https://blend2d.com/api/index.html)
 
 Bindings
 --------

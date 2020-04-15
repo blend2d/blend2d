@@ -7,13 +7,14 @@
 #include "../api-build_p.h"
 #if !defined(BL_BUILD_NO_FIXED_PIPE)
 
-#include "./fixedpiperuntime_p.h"
+#include "../bitops_p.h"
+#include "../fixedpipe/fixedpiperuntime_p.h"
 
 // IMPORTANT: This is a work-in-progress fixed pipeline implementation that can
 // be used on devices where JIT is not available. It can also be used as a
 // reference implementation to see what JIT compiled pipelines are doing. Please
 // note that these pipelines were written to match JIT compiled pipelines so we
-// are not afraid to use 'goto'.
+// are not afraid of using 'goto'.
 
 // ============================================================================
 // [Globals]
@@ -26,10 +27,10 @@ BLWrap<BLFixedPipeRuntime> BLFixedPipeRuntime::_global;
 // ============================================================================
 
 template<typename Impl>
-struct BLFixedPipe_FillBoxAA_Base {
-  static BLResult BL_CDECL pipeline(void* ctxData_, void* fillData_, const void* fetchData_) noexcept {
+struct BLFixedPipe_FillBoxA_Base {
+  static void BL_CDECL pipeline(void* ctxData_, const void* fillData_, const void* fetchData_) noexcept {
     BLPipeContextData* ctxData = static_cast<BLPipeContextData*>(ctxData_);
-    BLPipeFillData::BoxAA* fillData = static_cast<BLPipeFillData::BoxAA*>(fillData_);
+    const BLPipeFillData::BoxA* fillData = static_cast<const BLPipeFillData::BoxA*>(fillData_);
 
     intptr_t dstStride = ctxData->dst.stride;
     uint8_t* dstPtr = static_cast<uint8_t*>(ctxData->dst.pixelData);
@@ -37,8 +38,8 @@ struct BLFixedPipe_FillBoxAA_Base {
     dstPtr += size_t(uint32_t(fillData->box.x0)) * Impl::DST_BPP;
     dstPtr += intptr_t(uint32_t(fillData->box.y0)) * dstStride;
 
-    uint32_t w = fillData->box.x1 - fillData->box.x0;
-    uint32_t h = fillData->box.y1 - fillData->box.y0;
+    uint32_t w = uint32_t(fillData->box.x1) - uint32_t(fillData->box.x0);
+    uint32_t h = uint32_t(fillData->box.y1) - uint32_t(fillData->box.y0);
 
     dstStride -= intptr_t(size_t(w) * Impl::DST_BPP);
     uint32_t msk = fillData->alpha.u;
@@ -60,8 +61,6 @@ struct BLFixedPipe_FillBoxAA_Base {
         h--;
       }
     }
-
-    return BL_SUCCESS;
   }
 };
 
@@ -73,9 +72,11 @@ struct BLFixedPipe_FillAnalytic_Base {
     PIXELS_PER_BIT_WORD = PIXELS_PER_ONE_BIT * blBitSizeOf<BLBitWord>()
   };
 
-  static BLResult BL_CDECL pipeline(void* ctxData_, void* fillData_, const void* fetchData_) noexcept {
+  typedef BLPrivateBitOps<BLBitWord> BitOps;
+
+  static void BL_CDECL pipeline(void* ctxData_, const void* fillData_, const void* fetchData_) noexcept {
     BLPipeContextData* ctxData = static_cast<BLPipeContextData*>(ctxData_);
-    BLPipeFillData::Analytic* fillData = static_cast<BLPipeFillData::Analytic*>(fillData_);
+    const BLPipeFillData::Analytic* fillData = static_cast<const BLPipeFillData::Analytic*>(fillData_);
 
     uint32_t y = uint32_t(fillData->box.y0);
     intptr_t dstStride = ctxData->dst.stride;
@@ -116,9 +117,9 @@ struct BLFixedPipe_FillAnalytic_Base {
     // followed by matching the bit that ends this match. This would essentially
     // produce the first [x0, x1) span that has to be composited as 'VMask' loop.
 L_BitScan_Init:
-    x0 = blBitCtz(bitWord);
+    x0 = BitOps::countZerosForward(bitWord);
     bitPtr[-1] = 0;
-    bitWordTmp = blBitOnes<BLBitWord>() << x0;
+    bitWordTmp = BitOps::shiftForward(BitOps::ones(), x0);
     x0 = x0 * PIXELS_PER_ONE_BIT + xOff;
 
     // Load the given cells to `m0` and clear the BitWord and all cells it represents
@@ -145,8 +146,8 @@ L_BitScan_Init:
       goto L_BitScan_Match;
 
     // Okay, so the span crosses multiple BitWords. Firstly we have to make sure this was
-    // not the last one. If that's the case we must terminate the scannling immediately.
-    i = blBitSizeOf<BLBitWord>();
+    // not the last one. If that's the case we must terminate the scanning immediately.
+    i = BitOps::kNumBits;
     if (bitPtr == bitPtrEnd)
       goto L_BitScan_End;
 
@@ -154,7 +155,7 @@ L_BitScan_Init:
     // have all bits set to 1.
 L_BitScan_Next:
     for (;;) {
-      bitWord = blBitOnes<BLBitWord>() ^ bitPtr[0];
+      bitWord = BitOps::ones() ^ bitPtr[0];
       *bitPtr++ = 0;
       xOff += PIXELS_PER_BIT_WORD;
 
@@ -166,10 +167,10 @@ L_BitScan_Next:
     }
 
 L_BitScan_Match:
-    i = blBitCtz(bitWord);
+    i = BitOps::countZerosForward(bitWord);
 
 L_BitScan_End:
-    bitWordTmp = blBitOnes<BLBitWord>() << i;
+    bitWordTmp = BitOps::shiftForward(BitOps::ones(), i);
     i *= PIXELS_PER_ONE_BIT;
     bitWord ^= bitWordTmp;
     i += xOff;
@@ -222,11 +223,11 @@ VLoop_CalcMsk:
       xOff += PIXELS_PER_BIT_WORD;
       if (bitPtr == bitPtrEnd)
         goto L_Scanline_Done1;
-      bitWord |= *bitPtr++;
+      bitWord = *bitPtr++;
     }
 
-    i = blBitCtz(bitWord);
-    bitWord ^= blBitOnes<BLBitWord>() << i;
+    i = BitOps::countZerosForward(bitWord);
+    bitWord ^= BitOps::shiftForward(BitOps::ones(), i);
     bitPtr[-1] = 0;
 
     i = i * PIXELS_PER_ONE_BIT + xOff - x0;
@@ -271,7 +272,7 @@ L_Scanline_Done1:
     cellPtr -= x0;
 
     if (--y == 0)
-      goto L_End;
+      return;
 
     bitPtr = bitPtrEnd;
     do {
@@ -291,9 +292,6 @@ L_Scanline_Init:
         xOff += PIXELS_PER_BIT_WORD;
       } while (bitPtr != bitPtrEnd);
     } while (--y);
-
-L_End:
-    return BL_SUCCESS;
   }
 
   static BL_INLINE uint32_t calcMask(uint32_t cov, uint32_t fillRuleMask, uint32_t globalAlpha) noexcept {
@@ -342,7 +340,7 @@ struct BLFixedPipe_Composite_PRGB32_Src_Solid {
     uint32_t i = w;
     do {
       dstPtr = compositePixelOpaque(dstPtr);
-    } while(--i);
+    } while (--i);
     return dstPtr;
   }
 
@@ -350,7 +348,7 @@ struct BLFixedPipe_Composite_PRGB32_Src_Solid {
     uint32_t i = w;
     do {
       dstPtr = compositePixelMasked(dstPtr, m);
-    } while(--i);
+    } while (--i);
     return dstPtr;
   }
 };
@@ -365,8 +363,8 @@ static BLPipeFillFunc BL_CDECL blPipeGenRuntimeGet(BLPipeRuntime* self_, uint32_
 
   BLPipeSignature s(signature);
   switch (s.fillType()) {
-    case BL_PIPE_FILL_TYPE_BOX_AA:
-      func = BLFixedPipe_FillBoxAA_Base<BLFixedPipe_Composite_PRGB32_Src_Solid>::pipeline;
+    case BL_PIPE_FILL_TYPE_BOX_A:
+      func = BLFixedPipe_FillBoxA_Base<BLFixedPipe_Composite_PRGB32_Src_Solid>::pipeline;
       break;
 
     case BL_PIPE_FILL_TYPE_ANALYTIC:

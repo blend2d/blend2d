@@ -351,13 +351,23 @@ static bool blRegionImplIsValid(const BLInternalRegionImpl* impl) noexcept {
 }
 
 // ============================================================================
-// [BLRegion - Init / Reset]
+// [BLRegion - Init / Destroy]
 // ============================================================================
 
 BLResult blRegionInit(BLRegionCore* self) noexcept {
   self->impl = BLRegion::none().impl;
   return BL_SUCCESS;
 }
+
+BLResult blRegionDestroy(BLRegionCore* self) noexcept {
+  BLInternalRegionImpl* selfI = blInternalCast(self->impl);
+  self->impl = nullptr;
+  return blRegionImplRelease(selfI);
+}
+
+// ============================================================================
+// [BLRegion - Reset]
+// ============================================================================
 
 BLResult blRegionReset(BLRegionCore* self) noexcept {
   BLInternalRegionImpl* selfI = blInternalCast(self->impl);

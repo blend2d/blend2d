@@ -103,7 +103,7 @@ public:
   BL_INLINE BLImageCodec(BLImageCodec&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLImageCodec(const BLImageCodec& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLImageCodec(BLImageCodecImpl* impl) noexcept { this->impl = impl; }
-  BL_INLINE ~BLImageCodec() { blImageCodecReset(this); }
+  BL_INLINE ~BLImageCodec() { blImageCodecDestroy(this); }
 
   //! \}
 
@@ -172,6 +172,22 @@ public:
 
   BL_INLINE BLResult findByName(const BLStringView& name, const BLArray<BLImageCodec>& codecs) noexcept {
     return blImageCodecFindByName(this, name.data, name.size, &codecs);
+  }
+
+  BL_INLINE BLResult findByExtension(const char* name) noexcept {
+    return blImageCodecFindByExtension(this, name, SIZE_MAX, nullptr);
+  }
+
+  BL_INLINE BLResult findByExtension(const char* name, const BLArray<BLImageCodec>& codecs) noexcept {
+    return blImageCodecFindByExtension(this, name, SIZE_MAX, &codecs);
+  }
+
+  BL_INLINE BLResult findByExtension(const BLStringView& name) noexcept {
+    return blImageCodecFindByExtension(this, name.data, name.size, nullptr);
+  }
+
+  BL_INLINE BLResult findByExtension(const BLStringView& name, const BLArray<BLImageCodec>& codecs) noexcept {
+    return blImageCodecFindByExtension(this, name.data, name.size, &codecs);
   }
 
   BL_INLINE BLResult findByData(const void* data, size_t size) noexcept {
@@ -299,7 +315,7 @@ public:
   BL_INLINE BLImageDecoder(BLImageDecoder&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLImageDecoder(const BLImageDecoder& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLImageDecoder(BLImageDecoderImpl* impl) noexcept { this->impl = impl; }
-  BL_INLINE ~BLImageDecoder() { blImageDecoderReset(this); }
+  BL_INLINE ~BLImageDecoder() { blImageDecoderDestroy(this); }
 
   //! \}
 
@@ -426,7 +442,7 @@ public:
   BL_INLINE BLImageEncoder(BLImageEncoder&& other) noexcept { blVariantInitMove(this, &other); }
   BL_INLINE BLImageEncoder(const BLImageEncoder& other) noexcept { blVariantInitWeak(this, &other); }
   BL_INLINE explicit BLImageEncoder(BLImageEncoderImpl* impl) noexcept { this->impl = impl; }
-  BL_INLINE ~BLImageEncoder() { blImageEncoderReset(this); }
+  BL_INLINE ~BLImageEncoder() { blImageEncoderDestroy(this); }
 
   //! \}
 

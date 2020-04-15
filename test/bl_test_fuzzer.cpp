@@ -12,7 +12,7 @@
 // other features like stroking.
 
 #include <blend2d.h>
-#include <math.h>
+#include <cmath>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -115,7 +115,7 @@ public:
     double y = _rnd.nextDouble();
     double v = x + y;
 
-    if (isfinite(v))
+    if (std::isfinite(v))
       return v;
     else
       return 0.0;

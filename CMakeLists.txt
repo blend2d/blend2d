@@ -160,12 +160,16 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" ST
   endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   list(APPEND BLEND2D_PRIVATE_CFLAGS -Wall -Wextra)
-  list(APPEND BLEND2D_PRIVATE_CFLAGS -fno-exceptions -fno-rtti -fno-math-errno -fno-threadsafe-statics)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS -fno-exceptions -fno-rtti -fno-math-errno)
   list(APPEND BLEND2D_PRIVATE_CFLAGS_REL -O2)
 
+  blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS
+    -fno-threadsafe-statics      # We don't use this C++11 feature.
+    -fno-semantic-interposition) # Do not allow semantic interposition (Clang uses this by default).
+
   blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_REL
-    -ftree-vectorize         # We want this optimization if not enabled by default.
-    -fmerge-all-constants)   # Not enabled by default, but we are fine with it.
+    -ftree-vectorize             # We want this optimization if not enabled by default.
+    -fmerge-all-constants)       # Not enabled by default, but we are fine with it.
 
   # GCC 4.X support requires -fabi-version=0 (or 6+). Please note that this
   # is internal and only required by `blsimd_p.h` as SIMD registers are used
@@ -431,6 +435,7 @@ set(BLEND2D_SRC_LIST
   blend2d/imagecodec.h
   blend2d/imagescale.cpp
   blend2d/imagescale_p.h
+  blend2d/lookuptable_p.h
   blend2d/math.cpp
   blend2d/math_p.h
   blend2d/matrix.cpp
@@ -476,6 +481,9 @@ set(BLEND2D_SRC_LIST
   blend2d/string.cpp
   blend2d/string.h
   blend2d/string_p.h
+  blend2d/style.cpp
+  blend2d/style.h
+  blend2d/style_p.h
   blend2d/support.cpp
   blend2d/support_p.h
   blend2d/tables.cpp
@@ -566,18 +574,35 @@ set(BLEND2D_SRC_LIST
   blend2d/pipegen/pipepart_p.h
   blend2d/pipegen/piperegusage_p.h
 
+  blend2d/raster/analyticrasterizer.cpp
   blend2d/raster/analyticrasterizer_p.h
   blend2d/raster/edgebuilder_p.h
   blend2d/raster/rastercommand_p.h
+  blend2d/raster/rastercommandprocasync_p.h
+  blend2d/raster/rastercommandprocsync_p.h
+  blend2d/raster/rastercommandserializer_p.h
   blend2d/raster/rastercontext.cpp
   blend2d/raster/rastercontext_p.h
+  blend2d/raster/rastercontextops.cpp
+  blend2d/raster/rastercontextops_p.h
+  blend2d/raster/rastercontextstate_p.h
+  blend2d/raster/rastercontextstyle_p.h
+  blend2d/raster/rasterdebug_p.h
   blend2d/raster/rasterdefs_p.h
-  blend2d/raster/rasterfiller.cpp
-  blend2d/raster/rasterfiller_p.h
-  blend2d/raster/rasterworkercontext.cpp
-  blend2d/raster/rasterworkercontext_p.h
+  blend2d/raster/rasterfetchdata.cpp
+  blend2d/raster/rasterfetchdata_p.h
+  blend2d/raster/rasterjob_p.h
+  blend2d/raster/rasterjobproc_p.h
+  blend2d/raster/rasterworkbatch_p.h
+  blend2d/raster/rasterworkdata.cpp
+  blend2d/raster/rasterworkdata_p.h
   blend2d/raster/rasterworkermanager.cpp
   blend2d/raster/rasterworkermanager_p.h
+  blend2d/raster/rasterworkproc.cpp
+  blend2d/raster/rasterworkproc_p.h
+  blend2d/raster/rasterworkqueue_p.h
+  blend2d/raster/rasterworksynchronization.cpp
+  blend2d/raster/rasterworksynchronization_p.h
 
   blend2d/threading/atomic_p.h
   blend2d/threading/conditionvariable_p.h
