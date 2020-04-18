@@ -9,7 +9,7 @@
 
 // This header can only be included by either <blend2d.h> or by Blend2D headers
 // during the build. Prevent users including <blend2d/...> headers by accident
-// and prevent not including "blend2d/blapi-build_p.h" during the Blend2D build.
+// and prevent not including "blend2d/api-build_p.h" during the Blend2D build.
 #if !defined(BLEND2D_H) && !defined(BLEND2D_API_BUILD_P_H)
   #pragma message("Include either <blend2d.h> or <blend2d-impl.h> to use Blend2D library")
 #endif
@@ -1976,7 +1976,6 @@ BL_API BLResult BL_CDECL blRuntimeQueryInfo(uint32_t infoType, void* infoOut) BL
 BL_API BLResult BL_CDECL blRuntimeMessageOut(const char* msg) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blRuntimeMessageFmt(const char* fmt, ...) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blRuntimeMessageVFmt(const char* fmt, va_list ap) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blRuntimeGetTickCount(void) BL_NOEXCEPT_C;
 
 BL_API BL_NORETURN void BL_CDECL blRuntimeAssertionFailure(const char* file, int line, const char* msg) BL_NOEXCEPT_C;
 

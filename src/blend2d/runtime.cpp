@@ -340,18 +340,6 @@ BLResult blRuntimeMessageVFmt(const char* fmt, va_list ap) noexcept {
 }
 
 // ============================================================================
-// [BLRuntime - GetCpuTicks]
-// ============================================================================
-
-uint32_t blRuntimeGetTickCount(void) noexcept {
-#ifndef BL_BUILD_NO_JIT
-  return asmjit::OSUtils::getTickCount();
-#else
-  return 0;
-#endif
-}
-
-// ============================================================================
 // [BLRuntime - Failure]
 // ============================================================================
 

@@ -18,7 +18,7 @@
 // C Headers
 // ---------
 
-// NOTE: Some headers are already included by <blapi.h>. This should be useful
+// NOTE: Some headers are already included by <api.h>. This should be useful
 // for creating an overview of what Blend2D really needs globally to be included.
 #include <math.h>
 #include <stdarg.h>

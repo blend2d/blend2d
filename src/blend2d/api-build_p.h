@@ -279,7 +279,7 @@
 //! \cond INTERNAL
 
 //! Export mode is on when `BL_BUILD_EXPORT` is defined - this MUST be defined
-//! before including any other header as "blapi.h" uses `BL_BUILD_EXPORT` to
+//! before including any other header as "api.h" uses `BL_BUILD_EXPORT` to
 //! define a proper `BL_API` decorator that is used by all exported functions
 //! and variables.
 #define BL_BUILD_EXPORT

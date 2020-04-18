@@ -250,10 +250,6 @@ static BL_INLINE BLResult message(const char* fmt, Args&&... args) noexcept {
   return blRuntimeMessageFmt(fmt, std::forward<Args>(args)...);
 }
 
-static BL_INLINE uint32_t getTickCount() noexcept {
-  return blRuntimeGetTickCount();
-}
-
 } // {BLRuntime}
 #endif
 
