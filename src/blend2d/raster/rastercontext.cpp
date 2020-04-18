@@ -455,7 +455,7 @@ static BLResult BL_CDECL blRasterContextImplSetStyleObject(BLContextImpl* baseIm
       fetchData->_extendMode = patternI->extendMode;
 
       style->packed = 0;
-      style->source.reset();
+      style->imageArea = area;
 
       if (BL_UNLIKELY(!area.w)) {
         styleFlags |= BL_RASTER_CONTEXT_NO_BASE_STYLE;
