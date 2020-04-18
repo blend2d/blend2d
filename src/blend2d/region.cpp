@@ -140,7 +140,7 @@ static BL_INLINE BLBoxI blAsBox(const BLRectI& rect) noexcept { return BLBoxI(re
 //! Checks whether two bands (of the same size) must coalesce.
 static BL_INLINE bool blRegionMustCoalesce(const BLBoxI* aBand, const BLBoxI* bBand, size_t n) noexcept {
   size_t i = 0;
-  while (i < n && (aBand[i].x0 == bBand[i].x0) & (aBand[i].x1 == bBand[i].x1))
+  while (i < n && ((aBand[i].x0 == bBand[i].x0) & (aBand[i].x1 == bBand[i].x1)))
     i++;
   return i == n;
 }
@@ -153,9 +153,13 @@ static BL_INLINE bool blRegionMustCoalesce(const BLRectI* aBand, const BLRectI* 
   return i == n;
 }
 
-static BL_INLINE void blRegionSetBandY1(BLBoxI* band, size_t n, int y1) noexcept {
-  for (size_t i = 0; i < n; i++)
-    band[i].y1 = y1;
+static BL_INLINE BLBoxI* blRegionSetBandY1(BLBoxI* band, size_t n, int y1) noexcept {
+  BL_ASSERT(n > 0);
+  BLBoxI* end = band + n;
+  do {
+    band->y1 = y1;
+  } while (++band != end);
+  return band;
 }
 
 // Get the end band of the current horizontal rectangle list.
@@ -172,13 +176,32 @@ static BL_INLINE BLBoxI* blRegionCoalesce(BLBoxI* p, BLBoxI* curBand, int y1, si
   size_t bandSize = (size_t)(p - curBand);
   if (*prevBandSize == bandSize) {
     BLBoxI* prevBand = curBand - bandSize;
-    if (prevBand->y1 == curBand->y0 && blRegionMustCoalesce(prevBand, curBand, bandSize)) {
-      blRegionSetBandY1(prevBand, bandSize, y1);
-      return curBand;
-    }
+    if (prevBand->y1 == curBand->y0 && blRegionMustCoalesce(prevBand, curBand, bandSize))
+      return blRegionSetBandY1(prevBand, bandSize, y1);
   }
   *prevBandSize = bandSize;
   return p;
+}
+
+static BL_INLINE BLBoxI* blRegionCoalesceUnknownBand(BLBoxI* regionStart, BLBoxI* bandStart, BLBoxI* bandEnd) noexcept {
+  size_t bandSize = (size_t)(bandEnd - bandStart);
+  size_t beforeSize = (size_t)(bandStart - regionStart);
+
+  if (beforeSize < bandSize)
+    return bandEnd;
+
+  int latestBandY0 = bandStart->y0;
+  BLBoxI* prevBand = bandStart - bandSize;
+
+  // Quick Reject: The previous and current bands have different length.
+  if (prevBand[0].y1 != latestBandY0 || (beforeSize > bandSize && prevBand[-1].y1 == latestBandY0))
+    return bandEnd;
+
+  // Check whether both bands have the same boxes and coalesce if necessary.
+  if (!blRegionMustCoalesce(prevBand, bandStart, bandSize))
+    return bandEnd;
+  else
+    return blRegionSetBandY1(prevBand, bandSize, bandStart->y1);
 }
 
 // ============================================================================
@@ -737,71 +760,45 @@ static BL_INLINE bool blRegionCanAppend(const BLBoxI& a, const BLBoxI& b) noexce
 //   SSSS  SSSS <- Second coalesce
 //   ..........
 static BLBoxI* blRegionAppendInternal(BLBoxI* dstStart, BLBoxI* dstData, const BLBoxI* srcData, const BLBoxI* srcEnd) noexcept {
-  BLBoxI* prevBand = dstData;
-  int y0 = srcData->y0;
+  if (dstData != dstStart) {
+    // First Coalesce.
+    if (dstData[-1].y0 == srcData->y0) {
+      // This is a prerequisite of `blRegionAppendInternal()`.
+      BL_ASSERT(dstData[-1].y1 == dstData[-1].y1);
 
-  if (dstData != dstStart && dstData[-1].y0 == y0) {
-    // This must be checked before calling this function.
-    int y1 = dstData[-1].y1;
-    BL_ASSERT(dstData[-1].y1 == y1);
+      int y0 = srcData->y0;
+      BLBoxI* dstBand = dstData - 1;
 
-    // BLBoxI* pMark = dstData;
+      while (dstBand != dstStart && dstBand[-1].y0 == dstData->y0)
+        dstBand--;
 
-    // Merge the last destination rectangle with the first source one? (Case 1).
-    if (dstData[-1].x1 == srcData->x0) {
-      dstData[-1].x1 = srcData->x1;
-      srcData++;
+      // Merge the last destination rectangle with the first source one? (Case 1).
+      if (dstData[-1].x1 == srcData->x0) {
+        dstData[-1].x1 = srcData->x1;
+        srcData++;
+      }
+
+      // Append the remaining part of the band.
+      while (srcData != srcEnd && srcData->y0 == y0)
+        *dstData++ = *srcData++;
+
+      dstData = blRegionCoalesceUnknownBand(dstStart, dstBand, dstData);
     }
 
-    // Append the remaining part of the band.
-    while (srcData != srcEnd && srcData->y0 == y0)
-      *dstData++ = *srcData++;
+    // Second coalesce.
+    if (srcData != srcEnd && srcData->y0 == dstData[-1].y1) {
+      int y0 = srcData->y0;
+      BLBoxI* dstBand = dstData;
 
-    // Find the beginning of the current band. It's called `prevBand` here
-    // as it will be the previous band after we handle this special case.
-    while (--prevBand != dstStart && prevBand[-1].y0 == y0)
-      continue;
+      do {
+        *dstData++ = *srcData++;
+      } while (srcData != srcEnd && srcData->y0 == y0);
 
-    // Attempt to coalesce the last two consecutive bands.
-    size_t bandSize = (size_t)(dstData - prevBand);
-    if (prevBand != dstStart && prevBand[-1].y1 == y0) {
-      size_t beforeSize = (size_t)(prevBand - dstStart);
-
-      // The size of previous band must be exactly same as `bandSize`.
-      if (beforeSize == bandSize || (beforeSize > bandSize && prevBand[bandSize - 1].y1 != y0)) {
-        if (blRegionMustCoalesce(prevBand - bandSize, prevBand, bandSize)) {
-          prevBand -= bandSize;
-          dstData -= bandSize;
-          blRegionSetBandY1(prevBand, bandSize, y1);
-        }
-      }
-    }
-
-    // If the second band of source data is consecutive we have to attempt to
-    // coalesce this one as well. Since we know the beginning of the previous
-    // band this is a bit easier than before.
-    if (srcData != srcEnd) {
-      y0 = srcData->y0;
-      if (y0 == y1) {
-        // Append the whole band, terminate at its end.
-        BLBoxI* curBand = dstData;
-        y1 = srcData->y1;
-
-        do {
-          *dstData++ = *srcData++;
-        } while (srcData != srcEnd && srcData->y0 == y0);
-
-        if ((size_t)(dstData - curBand) == bandSize) {
-          if (blRegionMustCoalesce(prevBand, curBand, bandSize)) {
-            dstData -= bandSize;
-            blRegionSetBandY1(prevBand, bandSize, y1);
-          }
-        }
-      }
+      dstData = blRegionCoalesceUnknownBand(dstStart, dstBand, dstData);
     }
   }
 
-  // Simply append the rest of source as there is no way it would need coalescing.
+  // Simply append the rest of the source as there is no way it would need coalescing.
   while (srcData != srcEnd)
     *dstData++ = *srcData++;
 
@@ -844,6 +841,8 @@ static BLResult blRegionAppendAB(
   dstI->size = (size_t)(dstData - dstStart);
   dstI->boundingBox.reset(blMin(aBoundingBox.x0, bBoundingBox.x1), dstStart[0].y0,
                           blMax(aBoundingBox.x1, bBoundingBox.x1), dstData[-1].y1);
+
+  BL_ASSERT(blRegionImplIsValid(dstI));
   return BL_SUCCESS;
 }
 
@@ -1991,8 +1990,11 @@ Copy:
       if (a->x0 > b->x0)
         std::swap(a, b);
 
-      if (a->x0 < box[3].x0) box[n++].reset(a->x0, box[3].y0, box[3].x0, box[3].y1);
-      if (b->x1 > box[3].x1) box[n++].reset(box[3].x1, box[3].y0, b->x1, box[3].y1);
+      int minX = a->x0;
+      int maxX = blMax(a->x1, b->x1);
+
+      if (minX < box[3].x0) box[n++].reset(minX, box[3].y0, box[3].x0, box[3].y1);
+      if (maxX > box[3].x1) box[n++].reset(box[3].x1, box[3].y0, maxX, box[3].y1);
 
       // Bottom part.
       if (a->y1 > b->y1) std::swap(a, b);
@@ -2660,3 +2662,53 @@ void blRegionRtInit(BLRuntimeContext* rt) noexcept {
   blInitBuiltInNull(regionI, BL_IMPL_TYPE_REGION, 0);
   blAssignBuiltInNull(regionI);
 }
+
+// ============================================================================
+// [BLRegion - Unit Tests]
+// ============================================================================
+
+#if defined(BL_TEST)
+UNIT(region) {
+  BLRegion r;
+
+  INFO("Combine functionality");
+  {
+    EXPECT(r.size() == 0);
+
+    EXPECT(r.combine(BLBoxI(100, 100, 200, 200), BL_BOOLEAN_OP_OR) == BL_SUCCESS);
+    EXPECT(r.size() == 1);
+    EXPECT(r.data()[0] == BLBoxI(100, 100, 200, 200));
+
+    EXPECT(r.combine(BLBoxI(200, 100, 300, 200), BL_BOOLEAN_OP_OR) == BL_SUCCESS);
+    EXPECT(r.size() == 1);
+    EXPECT(r.data()[0] == BLBoxI(100, 100, 300, 200));
+
+    EXPECT(r.combine(BLBoxI(100, 200, 200, 300), BL_BOOLEAN_OP_OR) == BL_SUCCESS);
+    EXPECT(r.size() == 2);
+    EXPECT(r.data()[0] == BLBoxI(100, 100, 300, 200));
+    EXPECT(r.data()[1] == BLBoxI(100, 200, 200, 300));
+
+    EXPECT(r.combine(BLBoxI(200, 200, 300, 300), BL_BOOLEAN_OP_OR) == BL_SUCCESS);
+    EXPECT(r.size() == 1);
+    EXPECT(r.data()[0] == BLBoxI(100, 100, 300, 300));
+
+    EXPECT(r.combine(BLBoxI(150, 150, 250, 250), BL_BOOLEAN_OP_XOR) == BL_SUCCESS);
+    EXPECT(r.size() == 4);
+    EXPECT(r.data()[0] == BLBoxI(100, 100, 300, 150));
+    EXPECT(r.data()[1] == BLBoxI(100, 150, 150, 250));
+    EXPECT(r.data()[2] == BLBoxI(250, 150, 300, 250));
+    EXPECT(r.data()[3] == BLBoxI(100, 250, 300, 300));
+
+    EXPECT(r.combine(BLBoxI(125, 125, 275, 275), BL_BOOLEAN_OP_AND) == BL_SUCCESS);
+    EXPECT(r.size() == 4);
+    EXPECT(r.data()[0] == BLBoxI(125, 125, 275, 150));
+    EXPECT(r.data()[1] == BLBoxI(125, 150, 150, 250));
+    EXPECT(r.data()[2] == BLBoxI(250, 150, 275, 250));
+    EXPECT(r.data()[3] == BLBoxI(125, 250, 275, 275));
+
+    EXPECT(r.combine(BLBoxI(150, 150, 250, 250), BL_BOOLEAN_OP_OR) == BL_SUCCESS);
+    EXPECT(r.size() == 1);
+    EXPECT(r.data()[0] == BLBoxI(125, 125, 275, 275));
+  }
+}
+#endif
