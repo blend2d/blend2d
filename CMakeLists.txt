@@ -326,11 +326,14 @@ endif()
 # =============================================================================
 
 if (NOT WIN32)
-  list(APPEND BLEND2D_DEPS c m pthread)
-endif()
-
-if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-  list(APPEND BLEND2D_DEPS rt)
+  if (HAIKU)
+    list(APPEND BLEND2D_DEPS root m pthread)
+  else()
+    list(APPEND BLEND2D_DEPS c m pthread)
+  endif()
+  if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+    list(APPEND BLEND2D_DEPS rt)
+  endif()
 endif()
 
 # Find asmjit dependency if building with JIT support.
