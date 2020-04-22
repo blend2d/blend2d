@@ -482,10 +482,10 @@ BLResult blPathAssignDeep(BLPathCore* self, const BLPathCore* other) noexcept {
 // ============================================================================
 
 static const double blArc90DegStepsTable[] = {
-  BL_MATH_PI_DIV_2,
-  BL_MATH_PI,
-  BL_MATH_1p5_PI,
-  BL_MATH_2_PI
+  BL_M_PI_DIV_2,
+  BL_M_PI,
+  BL_M_1p5_PI,
+  BL_M_2_PI
 };
 
 static void blArcToCubicSpline(BLPathAppender& dst, BLPoint c, BLPoint r, double startAngle, double sweepAngle, uint8_t initialCmd, bool maybeRedundantLineTo = false) noexcept {
@@ -505,8 +505,8 @@ static void blArcToCubicSpline(BLPathAppender& dst, BLPoint c, BLPoint r, double
   BLPoint vc(1.0, 1.0);
   BLPoint v2;
 
-  if (sweepAngle >= BL_MATH_2_PI - blEpsilon<double>()) {
-    sweepAngle = BL_MATH_2_PI;
+  if (sweepAngle >= BL_M_2_PI - blEpsilon<double>()) {
+    sweepAngle = BL_M_2_PI;
     v2 = v1;
   }
   else {
@@ -534,7 +534,7 @@ static void blArcToCubicSpline(BLPathAppender& dst, BLPoint c, BLPoint r, double
     v1 = blNormal(v1);
     BLPoint p1 = m.mapPoint(vc);
     BLPoint p2 = m.mapPoint(v1);
-    dst.cubicTo(p0 + (p1 - p0) * BL_MATH_KAPPA, p2 + (p1 - p2) * BL_MATH_KAPPA, p2);
+    dst.cubicTo(p0 + (p1 - p0) * BL_M_KAPPA, p2 + (p1 - p2) * BL_M_KAPPA, p2);
 
     // Full circle.
     if (++i == 4)
@@ -909,8 +909,8 @@ BLResult blPathArcQuadrantTo(BLPathCore* self, double x1, double y1, double x2, 
   BLPoint p1(x1, y1);
   BLPoint p2(x2, y2);
 
-  vtxData[0].reset(p0 + (p1 - p0) * BL_MATH_KAPPA);
-  vtxData[1].reset(p2 + (p1 - p2) * BL_MATH_KAPPA);
+  vtxData[0].reset(p0 + (p1 - p0) * BL_M_KAPPA);
+  vtxData[1].reset(p2 + (p1 - p2) * BL_M_KAPPA);
   vtxData[2].reset(p2);
 
   cmdData[0] = BL_PATH_CMD_CUBIC;
@@ -1008,7 +1008,7 @@ BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry, double xAxi
   if (sweepFlag) {
     // Correct the angle if necessary.
     if (sweepAngle < 0) {
-      sweepAngle += BL_MATH_2_PI;
+      sweepAngle += BL_M_2_PI;
     }
 
     // |  v1.X  v1.Y  0 |   | v2.X |   | v1.X * v2.X + v1.Y * v2.Y |
@@ -1018,7 +1018,7 @@ BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry, double xAxi
   }
   else {
     if (sweepAngle > 0) {
-      sweepAngle -= BL_MATH_2_PI;
+      sweepAngle -= BL_M_2_PI;
     }
 
     // Flip Y.
@@ -1035,9 +1035,9 @@ BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry, double xAxi
   // The the number of 90deg segments we are gonna need. If `i == 1` it means
   // we need one 90deg segment and one smaller segment handled after the loop.
   size_t i = 3;
-  if (sweepAngle < BL_MATH_1p5_PI   + BL_MATH_ANGLE_EPSILON) i = 2;
-  if (sweepAngle < BL_MATH_PI       + BL_MATH_ANGLE_EPSILON) i = 1;
-  if (sweepAngle < BL_MATH_PI_DIV_2 + BL_MATH_ANGLE_EPSILON) i = 0;
+  if (sweepAngle < BL_M_1p5_PI   + BL_M_ANGLE_EPSILON) i = 2;
+  if (sweepAngle < BL_M_PI       + BL_M_ANGLE_EPSILON) i = 1;
+  if (sweepAngle < BL_M_PI_DIV_2 + BL_M_ANGLE_EPSILON) i = 0;
 
   BLPathAppender appender;
   BL_PROPAGATE(appender.begin(self, BL_MODIFY_OP_APPEND_GROW, (i + 1) * 3));
@@ -1415,8 +1415,8 @@ AddBoxD:
       if (dir != BL_GEOMETRY_DIRECTION_CW)
         ry = -ry;
 
-      kx = rx * BL_MATH_KAPPA;
-      ky = ry * BL_MATH_KAPPA;
+      kx = rx * BL_M_KAPPA;
+      ky = ry * BL_M_KAPPA;
 
       appender.moveTo(x0 + rx, y0);
       appender.cubicTo(x0 + rx, y0 + ky, x0 + kx, y0 + ry, x0     , y0 + ry);
@@ -1445,8 +1445,8 @@ AddBoxD:
       if (BL_UNLIKELY(!(rx > blEpsilon<double>() && ry > blEpsilon<double>())))
         goto AddBoxD;
 
-      double kx = rx * (1.0 - BL_MATH_KAPPA);
-      double ky = ry * (1.0 - BL_MATH_KAPPA);
+      double kx = rx * (1.0 - BL_M_KAPPA);
+      double ky = ry * (1.0 - BL_M_KAPPA);
 
       if (dir == BL_GEOMETRY_DIRECTION_CW) {
         appender.moveTo(x0 + rx, y0);
@@ -2394,7 +2394,7 @@ OnLine:
               blGetQuadCoefficients(left, a, b, c);
 
               // { At^2 + Bt + C } -> { t(At + B) + C }
-              if (blQuadRoots(ti, a.y, b.y, c.y - pt.y, BL_MATH_AFTER_0, BL_MATH_BEFORE_1) >= 1)
+              if (blQuadRoots(ti, a.y, b.y, c.y - pt.y, BL_M_AFTER_0, BL_M_BEFORE_1) >= 1)
                 ix = ti[0] * (a.x * ti[0] + b.x) + c.x;
               else if (pt.y - minY < maxY - pt.y)
                 ix = p[0].x;
@@ -2449,8 +2449,8 @@ OnLine:
             3.0 * (-p[0].y + 3.0 * (p[1].y - p[2].y) + p[3].y),
             6.0 * ( p[0].y - 2.0 * (p[1].y + p[2].y)         ),
             3.0 * (-p[0].y +       (p[1].y         )         ),
-            BL_MATH_AFTER_0,
-            BL_MATH_BEFORE_1);
+            BL_M_AFTER_0,
+            BL_M_BEFORE_1);
           tArray[tLength++] = 1.0;
 
           rght[0] = p[0];
@@ -2491,7 +2491,7 @@ OnLine:
               blGetCubicCoefficients(left, a, b, c, d);
 
               // { At^3 + Bt^2 + Ct + D } -> { ((At + B)t + C)t + D }
-              if (blCubicRoots(ti, a.y, b.y, c.y, d.y - pt.y, BL_MATH_AFTER_0, BL_MATH_BEFORE_1) >= 1)
+              if (blCubicRoots(ti, a.y, b.y, c.y, d.y - pt.y, BL_M_AFTER_0, BL_M_BEFORE_1) >= 1)
                 ix = ((a.x * ti[0] + b.x) * ti[0] + c.x) * ti[0] + d.x;
               else if (pt.y - minY < maxY - pt.y)
                 ix = p[0].x;

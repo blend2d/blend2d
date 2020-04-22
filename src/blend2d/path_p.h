@@ -270,8 +270,8 @@ public:
     cmd += 3;
 
     BLPoint p0 = vtx[-1];
-    vtx[0] = p0 + (p1 - p0) * BL_MATH_KAPPA;
-    vtx[1] = p2 + (p1 - p2) * BL_MATH_KAPPA;
+    vtx[0] = p0 + (p1 - p0) * BL_M_KAPPA;
+    vtx[1] = p2 + (p1 - p2) * BL_M_KAPPA;
     vtx[2] = p2;
     vtx += 3;
   }

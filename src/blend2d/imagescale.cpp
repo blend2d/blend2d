@@ -213,7 +213,7 @@ static BLResult BL_CDECL blImageScaleHanningFunc(double* dst, const double* tArr
 
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
-    dst[i] = t <= 1.0 ? 0.5 + 0.5 * blCos(t * BL_MATH_PI) : 0.0;
+    dst[i] = t <= 1.0 ? 0.5 + 0.5 * blCos(t * BL_M_PI) : 0.0;
   }
 
   return BL_SUCCESS;
@@ -233,11 +233,11 @@ static BLResult BL_CDECL blImageScaleCatromFunc(double* dst, const double* tArra
 
 static BLResult BL_CDECL blImageScaleBesselFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
   BL_UNUSED(data);
-  constexpr double x = BL_MATH_PI * 0.25;
+  constexpr double x = BL_M_PI * 0.25;
 
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
-    dst[i] = t == 0.0 ? x : t <= 3.2383 ? blBessel(t * BL_MATH_PI, 1) / (2.0 * t) : 0.0;
+    dst[i] = t == 0.0 ? x : t <= 3.2383 ? blBessel(t * BL_M_PI, 1) / (2.0 * t) : 0.0;
   }
 
   return BL_SUCCESS;
@@ -248,7 +248,7 @@ static BLResult BL_CDECL blImageScaleSincFunc(double* dst, const double* tArray,
 
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
-    dst[i] = t == 0.0 ? 1.0 : t <= r ? blSinXDivX(t * BL_MATH_PI) : 0.0;
+    dst[i] = t == 0.0 ? 1.0 : t <= r ? blSinXDivX(t * BL_M_PI) : 0.0;
   }
 
   return BL_SUCCESS;
@@ -256,8 +256,8 @@ static BLResult BL_CDECL blImageScaleSincFunc(double* dst, const double* tArray,
 
 static BLResult BL_CDECL blImageScaleLanczosFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
   const double r = static_cast<const BLImageScaleBuiltInParams*>(data)->radius;
-  const double x = BL_MATH_PI;
-  const double y = BL_MATH_PI / r;
+  const double x = BL_M_PI;
+  const double y = BL_M_PI / r;
 
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
@@ -269,8 +269,8 @@ static BLResult BL_CDECL blImageScaleLanczosFunc(double* dst, const double* tArr
 
 static BLResult BL_CDECL blImageScaleBlackmanFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
   const double r = static_cast<const BLImageScaleBuiltInParams*>(data)->radius;
-  const double x = BL_MATH_PI;
-  const double y = BL_MATH_PI / r;
+  const double x = BL_M_PI;
+  const double y = BL_M_PI / r;
 
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];

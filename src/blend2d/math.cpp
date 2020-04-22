@@ -74,8 +74,8 @@ size_t blCubicRoots(double* dst, const double* poly, double tMin, double tMax) n
 
     nRoots = 3;
     dst[0] = sub + t * blCos(phi);
-    dst[1] = sub - t * blCos(phi + BL_MATH_PI_DIV_3);
-    dst[2] = sub - t * blCos(phi - BL_MATH_PI_DIV_3);
+    dst[1] = sub - t * blCos(phi + BL_M_PI_DIV_3);
+    dst[2] = sub - t * blCos(phi - BL_M_PI_DIV_3);
 
     // Sort.
     if (dst[0] > dst[1]) std::swap(dst[0], dst[1]);

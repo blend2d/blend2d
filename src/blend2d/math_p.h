@@ -16,21 +16,20 @@
 // [Global Constants]
 // ============================================================================
 
-static constexpr double BL_MATH_PI            = 3.14159265358979323846;  //!< pi.
-static constexpr double BL_MATH_1p5_PI        = 4.71238898038468985769;  //!< pi * 1.5.
-static constexpr double BL_MATH_2_PI          = 6.28318530717958647692;  //!< pi * 2.
-static constexpr double BL_MATH_PI_DIV_2      = 1.57079632679489661923;  //!< pi / 2.
-static constexpr double BL_MATH_PI_DIV_3      = 1.04719755119659774615;  //!< pi / 3.
-static constexpr double BL_MATH_PI_DIV_4      = 0.78539816339744830962;  //!< pi / 4.
+static constexpr double BL_M_PI            = 3.14159265358979323846;  //!< pi.
+static constexpr double BL_M_1p5_PI        = 4.71238898038468985769;  //!< pi * 1.5.
+static constexpr double BL_M_2_PI          = 6.28318530717958647692;  //!< pi * 2.
+static constexpr double BL_M_PI_DIV_2      = 1.57079632679489661923;  //!< pi / 2.
+static constexpr double BL_M_PI_DIV_3      = 1.04719755119659774615;  //!< pi / 3.
+static constexpr double BL_M_PI_DIV_4      = 0.78539816339744830962;  //!< pi / 4.
+static constexpr double BL_M_SQRT_0p5      = 0.70710678118654746172;  //!< sqrt(0.5).
+static constexpr double BL_M_SQRT_2        = 1.41421356237309504880;  //!< sqrt(2).
+static constexpr double BL_M_SQRT_3        = 1.73205080756887729353;  //!< sqrt(3).
 
-static constexpr double BL_SQRT_0p5           = 0.70710678118654746172;  //!< sqrt(0.5).
-static constexpr double BL_SQRT_2             = 1.41421356237309504880;  //!< sqrt(2).
-static constexpr double BL_SQRT_3             = 1.73205080756887729353;  //!< sqrt(3).
+static constexpr double BL_M_AFTER_0       = 1e-40;                   //!< Safe value after 0.0 for root finding/intervals.
+static constexpr double BL_M_BEFORE_1      = 0.999999999999999889;    //!< Safe value before 1.0 for root finding/intervals.
 
-static constexpr double BL_MATH_AFTER_0       = 0.49e-323;               //!< First value after 0.0.
-static constexpr double BL_MATH_BEFORE_1      = 0.999999999999999889;    //!< First value before 1.0.
-
-static constexpr double BL_MATH_ANGLE_EPSILON = 1e-8;
+static constexpr double BL_M_ANGLE_EPSILON = 1e-8;
 
 //! Constant that is used to approximate elliptic arcs with cubic curves.
 //! Since it's an approximation there are various approaches that can be
@@ -51,7 +50,7 @@ static constexpr double BL_MATH_ANGLE_EPSILON = 1e-8;
 //! can be used to reduce the maximum error to 0.00019608. We don't use the
 //! alternative, because we need to caculate the KAPPA for arcs that are not
 //! 90deg, in that case the KAPPA must be calculated for such angles.
-static constexpr double BL_MATH_KAPPA = 0.55228474983;
+static constexpr double BL_M_KAPPA = 0.55228474983;
 
 // ============================================================================
 // [Helper Functions]

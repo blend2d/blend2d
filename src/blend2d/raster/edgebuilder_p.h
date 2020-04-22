@@ -1760,14 +1760,14 @@ RestartClipLoop:
         tCount = (tCusp > 0.0) & (tCusp < 1.0);
 
         // Find inflections.
-        tCount += blQuadRoots(tArray + tCount, q0 * 6.0, q1 * 6.0, q2 * 2.0, BL_MATH_AFTER_0, BL_MATH_BEFORE_1);
+        tCount += blQuadRoots(tArray + tCount, q0 * 6.0, q1 * 6.0, q2 * 2.0, BL_M_AFTER_0, BL_M_BEFORE_1);
 
         // Find extremas.
         BLPoint Da, Db, Dc;
         blGetCubicDerivativeCoefficients(spline, Da, Db, Dc);
 
-        tCount += blQuadRoots(tArray + tCount, Da.x, Db.x, Dc.x, BL_MATH_AFTER_0, BL_MATH_BEFORE_1);
-        tCount += blQuadRoots(tArray + tCount, Da.y, Db.y, Dc.y, BL_MATH_AFTER_0, BL_MATH_BEFORE_1);
+        tCount += blQuadRoots(tArray + tCount, Da.x, Db.x, Dc.x, BL_M_AFTER_0, BL_M_BEFORE_1);
+        tCount += blQuadRoots(tArray + tCount, Da.y, Db.y, Dc.y, BL_M_AFTER_0, BL_M_BEFORE_1);
       }
 
       BLPoint* splinePtr = spline;
