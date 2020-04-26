@@ -3315,8 +3315,12 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
     if (options->threadCount) {
       ctxI->ensureWorkerMgr();
       result = ctxI->workerMgr->init(ctxI, options);
-      if (result != BL_SUCCESS) break;
-      ctxI->renderingMode = BL_RASTER_RENDERING_MODE_ASYNC;
+
+      if (result != BL_SUCCESS)
+        break;
+
+      if (ctxI->workerMgr->isActive())
+        ctxI->renderingMode = BL_RASTER_RENDERING_MODE_ASYNC;
     }
 
     // Step 3: Initialize pipeline runtime (JIT or fixed).

@@ -79,36 +79,15 @@ BL_DEFINE_ENUM(BLContextFlushFlags) {
 
 //! Rendering context create-flags.
 BL_DEFINE_ENUM(BLContextCreateFlags) {
-  //! When creating an asynchronous rendering context that uses threads for
-  //! rendering, the rendering context can sometimes allocate less threads
-  //! than specified if the built-in thread-pool doesn't have enough threads
-  //! available. This flag will force the thread-pool to override the thread
-  //! limit temporarily to allocate at least one thread.
-  //!
-  //! \note This flag is ignored if `BLContextCreateInfo::threadCount <= 1`.
-  //! If it's specified with `BL_CONTEXT_CREATE_FLAG_FORCE_ALL_THREADS` then
-  //! the latter has a precedence.
-  BL_CONTEXT_CREATE_FLAG_FORCE_ONE_THREAD = 0x00000001u,
-
-  //! When creating an asynchronous rendering context that uses threads for
-  //! rendering, the rendering context can sometimes allocate less threads
-  //! than specified if the built-in thread-pool doesn't have enough threads
-  //! available. This flag will force the thread-pool to override the thread
-  //! limit temporarily to fulfill the thread count requirement completely.
-  //!
-  //! \note This flag is ignored if `BLContextCreateInfo::threadCount <= 1`.
-  BL_CONTEXT_CREATE_FLAG_FORCE_ALL_THREADS = 0x00000002u,
-
-  //! Fallbacks to a synchronous rendering in case that acquiring threads
-  //! from the thread-pool failed. This flag only makes sense when the
+  //! Fallbacks to a synchronous rendering in case that the rendering engine
+  //! wasn't able to acquire threads. This flag only makes sense when the
   //! asynchronous mode was specified by having `threadCount` greater than 0.
   //! If the rendering context fails to acquire at least one thread it would
-  //! fallback to synchronous mode instead of staying asynchronous with no
-  //! worker threads, which is possible.
+  //! fallback to synchronous mode with no worker threads.
   //!
   //! \note If this flag is specified with `threadCount == 1` it means to
   //! immedialy fallback to synchronous rendering. It's only practical to
-  //! use this flag with 2 threads and higher.
+  //! use this flag with 2 or more requested threads.
   BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC = 0x00000008u,
 
   //! If this flag is specified and asynchronous rendering is enabled then
@@ -162,26 +141,29 @@ BL_DEFINE_ENUM(BLContextErrorFlags) {
   //! The rendering context returned or encountered `BL_ERROR_INVALID_VALUE`,
   //! which is mostly related to function argument handling. It's very likely
   //! some argument was wrong when calling `BLContext` API.
-  BL_CONTEXT_ERROR_FLAG_INVALID_VALUE    = 0x00000001u,
+  BL_CONTEXT_ERROR_FLAG_INVALID_VALUE = 0x00000001u,
 
-  //! Invalid state describes something wrong, for example pipeline compilation
-  //! problem.
-  BL_CONTEXT_ERROR_FLAG_INVALID_STATE    = 0x00000002u,
+  //! Invalid state describes something wrong, for example a pipeline compilation
+  //! error.
+  BL_CONTEXT_ERROR_FLAG_INVALID_STATE = 0x00000002u,
 
   //! The rendering context has encountered invalid geometry.
   BL_CONTEXT_ERROR_FLAG_INVALID_GEOMETRY = 0x00000004u,
 
   //! The rendering context has encountered invalid glyph.
-  BL_CONTEXT_ERROR_FLAG_INVALID_GLYPH    = 0x00000008u,
+  BL_CONTEXT_ERROR_FLAG_INVALID_GLYPH = 0x00000008u,
 
   //! The rendering context has encountered invalid or uninitialized font.
-  BL_CONTEXT_ERROR_FLAG_INVALID_FONT     = 0x00000010u,
+  BL_CONTEXT_ERROR_FLAG_INVALID_FONT = 0x00000010u,
+
+  //! Thread pool was exhausted and couldn't acquire the requested number of threads.
+  BL_CONTEXT_ERROR_FLAG_THREAD_POOL_EXHAUSTED = 0x20000000u,
 
   //! Out of memory condition.
-  BL_CONTEXT_ERROR_FLAG_OUT_OF_MEMORY    = 0x40000000u,
+  BL_CONTEXT_ERROR_FLAG_OUT_OF_MEMORY = 0x40000000u,
 
   //! Unknown error, which we don't have flag for.
-  BL_CONTEXT_ERROR_FLAG_UNKNOWN_ERROR    = 0x80000000u
+  BL_CONTEXT_ERROR_FLAG_UNKNOWN_ERROR = 0x80000000u
 };
 
 //! Clip mode.

@@ -213,56 +213,80 @@ BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes*
 // ============================================================================
 
 #ifndef _WIN32
+static std::atomic<size_t> blThreadMinimumProbedStackSize;
+
 static void* blThreadEntryPointWrapper(void* arg) noexcept {
   blThreadEntryPoint(static_cast<BLInternalThread*>(arg));
   return nullptr;
 }
 
 BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes* attributes, BLThreadFunc exitFunc, void* exitData) noexcept {
-  pthread_attr_t ptAttr;
+  size_t defaultStackSize = 0;
+  size_t currentStackSize = attributes->stackSize;
+  size_t minimumProbedStackSize = blThreadMinimumProbedStackSize.load(std::memory_order_relaxed);
 
+  if (currentStackSize)
+    currentStackSize = blMax<size_t>(currentStackSize, minimumProbedStackSize);
+
+  pthread_attr_t ptAttr;
   int err = pthread_attr_init(&ptAttr);
   if (err)
     return blResultFromPosixError(err);
 
-  BLResult result = blThreadSetPtAttributes(&ptAttr, attributes);
-  if (result == BL_SUCCESS)
-    result = blThreadCreatePt(threadOut, &ptAttr, exitFunc, exitData);
+  // We bail to the default stack-size if we are not able to probe
+  // a small workable stack-size. 8MB is a safe guess if this fails.
+  err = pthread_attr_getstacksize(&ptAttr, &defaultStackSize);
+  if (err)
+    defaultStackSize = 1024u * 1024u * 8u;
 
-  err = pthread_attr_destroy(&ptAttr);
-  BL_ASSERT(err == 0);
-  BL_UNUSED(err);
-
-  return result;
-}
-
-BLResult blThreadCreatePt(BLThread** threadOut, const pthread_attr_t* ptAttr, BLThreadFunc exitFunc, void* exitData) noexcept {
-  BLInternalThread* thread = blThreadNew(exitFunc, exitData);
-  if (BL_UNLIKELY(!thread))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
-  int err = pthread_create(&thread->handle, ptAttr, blThreadEntryPointWrapper, thread);
-  if (!err) {
-    *threadOut = thread;
-    return BL_SUCCESS;
-  }
-  else {
-    thread->~BLInternalThread();
-    free(thread);
-
-    *threadOut = nullptr;
+  // This should never fail, but...
+  err = pthread_attr_setdetachstate(&ptAttr, PTHREAD_CREATE_DETACHED);
+  if (err) {
+    err = pthread_attr_destroy(&ptAttr);
     return blResultFromPosixError(err);
   }
-}
 
-BLResult blThreadSetPtAttributes(pthread_attr_t* ptAttr, const BLThreadAttributes* src) noexcept {
-  pthread_attr_setdetachstate(ptAttr, PTHREAD_CREATE_DETACHED);
-  if (src->stackSize) {
-    int err = pthread_attr_setstacksize(ptAttr, src->stackSize);
-    if (err)
-      return blResultFromPosixError(err);
+  BLInternalThread* thread = blThreadNew(exitFunc, exitData);
+  if (BL_UNLIKELY(!thread)) {
+    err = pthread_attr_destroy(&ptAttr);
+    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
   }
-  return BL_SUCCESS;
+
+  // Probe loop - Since some implementations fail to create a thread with
+  // small stack-size, we would probe a safe value in this case and use
+  // it the next time we want to create a thread as a minimum so we don't
+  // have to probe it again.
+  uint32_t probeCount = 0;
+  for (;;) {
+    if (currentStackSize)
+      pthread_attr_setstacksize(&ptAttr, currentStackSize);
+
+    err = pthread_create(&thread->handle, &ptAttr, blThreadEntryPointWrapper, thread);
+    bool done = !err || !currentStackSize || currentStackSize >= defaultStackSize;
+
+    if (done) {
+      pthread_attr_destroy(&ptAttr);
+
+      if (!err) {
+        if (probeCount) {
+          blThreadMinimumProbedStackSize.store(currentStackSize, std::memory_order_relaxed);
+        }
+
+        *threadOut = thread;
+        return BL_SUCCESS;
+      }
+      else {
+        thread->~BLInternalThread();
+        free(thread);
+
+        *threadOut = nullptr;
+        return blResultFromPosixError(err);
+      }
+    }
+
+    currentStackSize <<= 1;
+    probeCount++;
+  }
 }
 #endif
 

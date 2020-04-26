@@ -67,44 +67,47 @@ BLResult BLRasterWorkerManager::init(BLRasterContextImpl* ctxI, const BLContextC
     }
 
     // Acquire threads passed to thread-pool.
+    BLResult reason = BL_SUCCESS;
     uint32_t acquireThreadFlags = 0;
-    if (initFlags & BL_CONTEXT_CREATE_FLAG_FORCE_ALL_THREADS)
-      acquireThreadFlags = BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ALL;
-    else if (initFlags & BL_CONTEXT_CREATE_FLAG_FORCE_ONE_THREAD)
-      acquireThreadFlags = BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ONE;
+    uint32_t n = threadPool->acquireThreads(workerThreads, workerCount, acquireThreadFlags, &reason);
 
-    BLResult result = BL_SUCCESS;
-    uint32_t n = threadPool->acquireThreads(workerThreads, workerCount, acquireThreadFlags);
+    if (reason != BL_SUCCESS)
+      ctxI->syncWorkData.accumulateError(reason);
 
-    if (!n) {
-      if (!(initFlags & BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC))
-        result = blTraceError(BL_ERROR_TOO_MANY_THREADS);
-    }
-    else {
-      for (uint32_t i = 0; i < n; i++) {
-        // NOTE: We really want work data to be aligned to the cache line as each
-        // instance will be used from a different thread. This means that they should
-        // not interfere with each other as that could slow down things significantly.
-        BLRasterWorkData* workData = zone.allocT<BLRasterWorkData>(blAlignUp(sizeof(BLRasterWorkData), BL_CACHE_LINE_SIZE), BL_CACHE_LINE_SIZE);
-        workDataStorage[i] = workData;
+    for (uint32_t i = 0; i < n; i++) {
+      // NOTE: We really want work data to be aligned to the cache line as each
+      // instance will be used from a different thread. This means that they should
+      // not interfere with each other as that could slow down things significantly.
+      BLRasterWorkData* workData = zone.allocT<BLRasterWorkData>(blAlignUp(sizeof(BLRasterWorkData), BL_CACHE_LINE_SIZE), BL_CACHE_LINE_SIZE);
+      workDataStorage[i] = workData;
 
-        if (!workData) {
-          result = blTraceError(BL_ERROR_OUT_OF_MEMORY);
-          break;
-        }
+      if (!workData) {
+        ctxI->syncWorkData.accumulateError(blTraceError(BL_ERROR_OUT_OF_MEMORY));
+        threadPool->releaseThreads(workerThreads, n);
+        n = 0;
+        break;
       }
     }
 
-    if (result != BL_SUCCESS || !n) {
+    if (!n) {
       threadPool->release();
-      zone.restoreState(zoneState);
-      return result;
-    }
+      threadPool = nullptr;
 
-    // Now it's time to safely initialize worker contexts.
-    for (uint32_t i = 0; i < n; i++) {
-      workDataStorage[i] = new(workDataStorage[i]) BLRasterWorkData(ctxI, i);
-      workDataStorage[i]->initBandData(ctxI->bandHeight(), ctxI->bandCount());
+      workerThreads = nullptr;
+      workDataStorage = nullptr;
+      zone.restoreState(zoneState);
+
+      // Fallback to synchronous rendering - nothing else to clean up as we haven't
+      // initialized anything.
+      if (initFlags & BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC)
+        return BL_SUCCESS;
+    }
+    else {
+      // Initialize worker contexts.
+      for (uint32_t i = 0; i < n; i++) {
+        workDataStorage[i] = new(workDataStorage[i]) BLRasterWorkData(ctxI, i);
+        workDataStorage[i]->initBandData(ctxI->bandHeight(), ctxI->bandCount());
+      }
     }
 
     _threadPool = threadPool;

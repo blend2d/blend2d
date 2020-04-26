@@ -68,12 +68,13 @@ BLResult BLRasterWorkData::accumulateError(BLResult error) noexcept {
     // Should not happen.
     case BL_SUCCESS: break;
 
-    case BL_ERROR_INVALID_VALUE       : _accumulatedErrorFlags = BL_CONTEXT_ERROR_FLAG_INVALID_VALUE   ; break;
-    case BL_ERROR_INVALID_GEOMETRY    : _accumulatedErrorFlags = BL_CONTEXT_ERROR_FLAG_INVALID_GEOMETRY; break;
-    case BL_ERROR_INVALID_GLYPH       : _accumulatedErrorFlags = BL_CONTEXT_ERROR_FLAG_INVALID_GLYPH   ; break;
-    case BL_ERROR_FONT_NOT_INITIALIZED: _accumulatedErrorFlags = BL_CONTEXT_ERROR_FLAG_INVALID_FONT    ; break;
-    case BL_ERROR_OUT_OF_MEMORY       : _accumulatedErrorFlags = BL_CONTEXT_ERROR_FLAG_OUT_OF_MEMORY   ; break;
-    default                           : _accumulatedErrorFlags = BL_CONTEXT_ERROR_FLAG_UNKNOWN_ERROR   ; break;
+    case BL_ERROR_INVALID_VALUE        : _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_INVALID_VALUE        ; break;
+    case BL_ERROR_INVALID_GEOMETRY     : _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_INVALID_GEOMETRY     ; break;
+    case BL_ERROR_INVALID_GLYPH        : _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_INVALID_GLYPH        ; break;
+    case BL_ERROR_FONT_NOT_INITIALIZED : _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_INVALID_FONT         ; break;
+    case BL_ERROR_THREAD_POOL_EXHAUSTED: _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_THREAD_POOL_EXHAUSTED; break;
+    case BL_ERROR_OUT_OF_MEMORY        : _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_OUT_OF_MEMORY        ; break;
+    default                            : _accumulatedErrorFlags |= BL_CONTEXT_ERROR_FLAG_UNKNOWN_ERROR        ; break;
   }
   return error;
 }

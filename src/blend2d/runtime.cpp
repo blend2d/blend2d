@@ -8,6 +8,9 @@
 #include "./runtime_p.h"
 #include "./support_p.h"
 
+// PTHREAD_STACK_MIN would be defined either by <pthread.h> or <limits.h>.
+#include <limits.h>
+
 #ifndef BL_BUILD_NO_JIT
   #include <asmjit/asmjit.h>
 #endif
@@ -148,7 +151,7 @@ static BL_INLINE void blRuntimeInitSystemInfo(BLRuntimeContext* rt) noexcept {
 #ifdef _WIN32
   SYSTEM_INFO si;
   GetSystemInfo(&si);
-  info.minThreadStackSize = si.dwAllocationGranularity;
+  info.threadStackSize = si.dwAllocationGranularity;
   info.allocationGranularity = si.dwAllocationGranularity;
 #else
   #if defined(_SC_PAGESIZE)
@@ -158,16 +161,21 @@ static BL_INLINE void blRuntimeInitSystemInfo(BLRuntimeContext* rt) noexcept {
   #endif
 
   #if defined(PTHREAD_STACK_MIN)
-  info.minThreadStackSize = uint32_t(PTHREAD_STACK_MIN);
+  info.threadStackSize = uint32_t(PTHREAD_STACK_MIN);
   #elif defined(_SC_THREAD_STACK_MIN)
-  info.minThreadStackSize = uint32_t(sysconf(_SC_THREAD_STACK_MIN));
+  info.threadStackSize = uint32_t(sysconf(_SC_THREAD_STACK_MIN));
   #else
   #pragma message("Missing 'BLRuntimeSystemInfo::minStackSize' implementation")
-  info.minThreadStackSize = blMax<uint32_t>(info.allocationGranularity, 65536u);
+  info.threadStackSize = blMax<uint32_t>(info.allocationGranularity, 65536u);
   #endif
 #endif
 
-  info.minWorkerStackSize = blAlignUp(blMax<uint32_t>(info.minThreadStackSize, 8192u), info.allocationGranularity);
+  // NOTE: It seems that on some archs 16kB stack-size is the bare minimum
+  // even when sysconf() or PTHREAD_STACK_MIN report a smaller value. Even
+  // if we don't need it we slighly increase the bare minimum to 32kB to
+  // make it safer especially on archs that has a bit register file.
+  info.threadStackSize = blAlignUp(
+    blMax<uint32_t>(info.threadStackSize, 32768), info.allocationGranularity);;
 }
 
 static BL_INLINE void blRuntimeInitOptimizationInfo(BLRuntimeContext* rt) noexcept {

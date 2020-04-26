@@ -858,6 +858,7 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_TOO_MANY_OPEN_FILES_BY_OS,    //!< Too many open files by OS     [ENFILE].
   BL_ERROR_TOO_MANY_LINKS,               //!< Too many symbolic links on FS [EMLINK].
   BL_ERROR_TOO_MANY_THREADS,             //!< Too many threads              [EAGAIN].
+  BL_ERROR_THREAD_POOL_EXHAUSTED,        //!< Thread pool is exhausted and couldn't acquire the requested thread count.
 
   BL_ERROR_FILE_EMPTY,                   //!< File is empty (not specific to any OS error).
   BL_ERROR_OPEN_FAILED,                  //!< File open failed              [Windows::ERROR_OPEN_FAILED].

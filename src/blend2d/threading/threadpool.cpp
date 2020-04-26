@@ -47,12 +47,6 @@ public:
   BitArray pooledThreadBits;
   BLThread* threads[kMaxThreadCount];
 
-#ifdef _WIN32
-  // Nothing Windows-specific at the moment.
-#else
-  pthread_attr_t ptAttr;
-#endif
-
   // No need to explicitly initialize anything as it should be zero initialized.
   explicit BLInternalThreadPool(size_t initialRefCount = 1) noexcept
     : BLThreadPool { &blThreadPoolVirt },
@@ -88,26 +82,8 @@ public:
     destroy();
   }
 
-#ifdef _WIN32
   BL_INLINE void init() noexcept {}
   BL_INLINE void destroy() noexcept {}
-#else
-  BL_INLINE void init() noexcept {
-    int err1 = pthread_attr_init(&ptAttr);
-    BL_ASSERT(!err1);
-    BL_UNUSED(err1);
-
-    int err2 = pthread_attr_setdetachstate(&ptAttr, PTHREAD_CREATE_DETACHED);
-    BL_ASSERT(!err2);
-    BL_UNUSED(err2);
-  }
-
-  BL_INLINE void destroy() noexcept {
-    int err = pthread_attr_destroy(&ptAttr);
-    BL_ASSERT(!err);
-    BL_UNUSED(err);
-  }
-#endif
 };
 
 // ============================================================================
@@ -171,16 +147,9 @@ static BLResult BL_CDECL blThreadPoolSetThreadAttributes(BLThreadPool* self_, co
   uint32_t stackSize = attributes->stackSize;
   if (stackSize) {
     const BLRuntimeSystemInfo& si = blRuntimeContext.systemInfo;
-    if (stackSize < si.minThreadStackSize || !blIsAligned(stackSize, si.allocationGranularity))
+    if (stackSize < si.threadStackSize || !blIsAligned(stackSize, si.allocationGranularity))
       return blTraceError(BL_ERROR_INVALID_VALUE);
   }
-
-#ifndef _WIN32
-  // On POSIX we try to set the attribute of `pthread_attr_t` as we want to
-  // catch a possible error early instead of dealing with that later during
-  // `pthread_create()`.
-  BL_PROPAGATE(blThreadSetPtAttributes(&self->ptAttr, attributes));
-#endif
 
   self->threadAttributes = *attributes;
   return BL_SUCCESS;
@@ -260,12 +229,18 @@ static void blThreadPoolReleaseThreadsInternal(BLInternalThreadPool* self, BLThr
     self->pooledThreadBits.data[bwIndex] = mask ^ blBitOnes<BLBitWord>();
   } while (i < n && ++bwIndex < BLInternalThreadPool::BitArray::kFixedArraySize);
 
+  // This shouldn't happen. What is acquired must be released. If more threads
+  // are released than acquired it means the API was used wrongly. Not sure we
+  // want to recover.
+  BL_ASSERT(i == n);
+
   self->pooledThreadCount += n;
   self->acquiredThreadCount -= n;
 }
 
-static uint32_t blThreadPoolAcquireThreadsInternal(BLInternalThreadPool* self, BLThread** threads, uint32_t n, uint32_t flags) noexcept {
-  uint32_t i = 0;
+static uint32_t blThreadPoolAcquireThreadsInternal(BLInternalThreadPool* self, BLThread** threads, uint32_t n, uint32_t flags, BLResult* reasonOut) noexcept {
+  BLResult reason = BL_SUCCESS;
+  uint32_t nAcquired = 0;
 
   uint32_t pooledThreadCount = self->pooledThreadCount;
   uint32_t acquiredThreadCount = self->acquiredThreadCount;
@@ -275,47 +250,40 @@ static uint32_t blThreadPoolAcquireThreadsInternal(BLInternalThreadPool* self, B
     uint32_t remainingThreadCount = self->maxThreadCount - (acquiredThreadCount + pooledThreadCount);
 
     if (createThreadCount > remainingThreadCount) {
-      // Return if it's not possible to fulfill the `exact` requirement.
-      if (flags & BL_THREAD_POOL_ACQUIRE_FLAG_TRY)
+      if (flags & BL_THREAD_POOL_ACQUIRE_FLAG_ALL_OR_NOTHING) {
+        *reasonOut = BL_ERROR_THREAD_POOL_EXHAUSTED;
         return 0;
-
-      if (flags & BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ALL) {
-        // Acquire / create the number of threads as required.
       }
-      else if (flags & BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ONE) {
-        // Acquire / create at least one thread, we have to create it if it's not pooled.
-        if (!pooledThreadCount)
-          createThreadCount = 1;
-      }
-      else {
-        // Create maximum number of threads that would not exceed `maxThreadCount`.
-        createThreadCount = remainingThreadCount;
-      }
+      createThreadCount = remainingThreadCount;
     }
 
-    while (i < createThreadCount) {
-      #ifdef _WIN32
-      BLResult result = blThreadCreate(&threads[i], &self->threadAttributes, blThreadPoolThreadExitFunc, self);
-      #else
-      BLResult result = blThreadCreatePt(&threads[i], &self->ptAttr, blThreadPoolThreadExitFunc, self);
-      #endif
+    while (nAcquired < createThreadCount) {
+      reason = blThreadCreate(&threads[nAcquired], &self->threadAttributes, blThreadPoolThreadExitFunc, self);
 
-      // Failed to create a thread?
-      if (result != BL_SUCCESS) {
-        blAtomicFetchSub(&self->createdThreadCount, createThreadCount - i);
-        if ((flags & (BL_THREAD_POOL_ACQUIRE_FLAG_TRY | BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ALL)) == 0)
-          break;
-        blThreadPoolReleaseThreadsInternal(self, threads, i);
-        return result;
+      if (reason != BL_SUCCESS) {
+        if (flags & BL_THREAD_POOL_ACQUIRE_FLAG_ALL_OR_NOTHING) {
+          self->acquiredThreadCount += nAcquired;
+          blAtomicFetchAdd(&self->createdThreadCount, nAcquired);
+
+          blThreadPoolReleaseThreadsInternal(self, threads, nAcquired);
+          *reasonOut = reason;
+          return 0;
+        }
+
+        // Don't try again... The `reason` will be propagated to the caller.
+        break;
       }
-      i++;
+
+      nAcquired++;
     }
+
+    blAtomicFetchAdd(&self->createdThreadCount, nAcquired);
   }
 
   uint32_t bwIndex = 0;
-  uint32_t prevI = i;
+  uint32_t nAcqPrev = nAcquired;
 
-  while (i < n) {
+  while (nAcquired < n) {
     BLBitWord mask = self->pooledThreadBits.data[bwIndex];
     BLBitWordIterator<BLBitWord> it(mask);
 
@@ -329,8 +297,8 @@ static uint32_t blThreadPoolAcquireThreadsInternal(BLInternalThreadPool* self, B
       BL_ASSERT(thread != nullptr);
       self->threads[threadIndex] = nullptr;
 
-      threads[i] = thread;
-      if (++i >= n)
+      threads[nAcquired] = thread;
+      if (++nAcquired == n)
         break;
     };
 
@@ -339,16 +307,18 @@ static uint32_t blThreadPoolAcquireThreadsInternal(BLInternalThreadPool* self, B
       break;
   }
 
-  self->pooledThreadCount = pooledThreadCount - (i - prevI);
-  self->acquiredThreadCount = acquiredThreadCount + i;
-  return i;
+  self->pooledThreadCount -= nAcquired - nAcqPrev;
+  self->acquiredThreadCount += nAcquired;
+
+  *reasonOut = reason;
+  return nAcquired;
 }
 
-static uint32_t BL_CDECL blThreadPoolAcquireThreads(BLThreadPool* self_, BLThread** threads, uint32_t n, uint32_t flags) noexcept {
+static uint32_t BL_CDECL blThreadPoolAcquireThreads(BLThreadPool* self_, BLThread** threads, uint32_t n, uint32_t flags, BLResult* reason) noexcept {
   BLInternalThreadPool* self = static_cast<BLInternalThreadPool*>(self_);
   BLLockGuard<BLMutex> guard(self->mutex);
 
-  return blThreadPoolAcquireThreadsInternal(self, threads, n, flags);
+  return blThreadPoolAcquireThreadsInternal(self, threads, n, flags, reason);
 }
 
 static void BL_CDECL blThreadPoolReleaseThreads(BLThreadPool* self_, BLThread** threads, uint32_t n) noexcept {
@@ -393,7 +363,7 @@ void blThreadPoolRtInit(BLRuntimeContext* rt) noexcept {
 
   // BLThreadPool built-in global instance.
   BLThreadAttributes attrs {};
-  attrs.stackSize = rt->systemInfo.minWorkerStackSize;
+  attrs.stackSize = rt->systemInfo.threadStackSize;
 
   blGlobalThreadPool.init(0);
   blGlobalThreadPool->setThreadAttributes(attrs);
@@ -435,27 +405,36 @@ static void BL_CDECL test_thread_done(BLThread* thread, void* data_) noexcept {
 }
 
 UNIT(thread_pool) {
-  BLThreadPool* tp = blThreadPoolGlobal();
+  BLInternalThreadPool* tp = static_cast<BLInternalThreadPool*>(blThreadPoolGlobal());
   ThreadTestData data;
 
   constexpr uint32_t kThreadCount = 4;
   BLThread* threads[kThreadCount];
 
-  // Try to allocate 10000 threads - must fail as it's over all limits.
+  // Allocating more threads than an internal limit for must always fail.
   INFO("Trying to allocate very high number of threads that should fail");
-  uint32_t n = tp->acquireThreads(nullptr, 10000, BL_THREAD_POOL_ACQUIRE_FLAG_TRY);
-  EXPECT(n == 0);
+  {
+    BLResult reason;
+    uint32_t n = tp->acquireThreads(nullptr, 1000000, BL_THREAD_POOL_ACQUIRE_FLAG_ALL_OR_NOTHING, &reason);
+
+    EXPECT(n == 0);
+    EXPECT(reason == BL_ERROR_THREAD_POOL_EXHAUSTED);
+  }
 
   INFO("Repeatedly acquiring / releasing %u threads with a simple task", kThreadCount);
   for (uint32_t i = 0; i < 10; i++) {
     data.iter = i;
 
     INFO("[#%u] Acquiring %u threads from thread-pool", i, kThreadCount);
-    uint32_t acquiredCount = tp->acquireThreads(threads, kThreadCount);
-    EXPECT(acquiredCount == kThreadCount);
+    BLResult reason;
+    uint32_t n = tp->acquireThreads(threads, kThreadCount, 0, &reason);
 
-    blAtomicStore(&data.counter, kThreadCount);
-    INFO("[#%u] Running %u threads", i, kThreadCount);
+    EXPECT(reason == BL_SUCCESS);
+    EXPECT(n == kThreadCount);
+    EXPECT(tp->createdThreadCount == kThreadCount);
+
+    blAtomicStore(&data.counter, n);
+    INFO("[#%u] Running %u threads", i, n);
     for (BLThread* thread : threads) {
       BLResult result = thread->run(test_thread_entry, test_thread_done, &data);
       EXPECT(result == BL_SUCCESS);
@@ -469,7 +448,7 @@ UNIT(thread_pool) {
         data.condition.wait(data.mutex);
     }
 
-    tp->releaseThreads(threads, kThreadCount);
+    tp->releaseThreads(threads, n);
   }
 
 

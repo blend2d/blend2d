@@ -27,22 +27,9 @@ struct BLThreadPoolVirt;
 // ============================================================================
 
 enum BLThreadPoolAcquireFlags : uint32_t {
-  //! Try to acquire the number of threads specified, if it's not possible then
-  //! don't acquire any threads and return.
-  //!
-  //! \note This flag has precedence over `BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ONE`
-  //! and `BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ALL`, so it doesn't matter if these
-  //! flags were specified or not when `BL_THREAD_POOL_ACQUIRE_FLAG_TRY` is used.
-  BL_THREAD_POOL_ACQUIRE_FLAG_TRY = 0x00000001u,
-
-  //! Force to acquire / create at least one thread.
-  BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ONE = 0x00000002u,
-
-  //! Force to acquire / create extra threads even when the thread-pool is full,
-  //! these threads will be then destroyed upon release. This mode ensures that
-  //! the user gets the number of threads asked for, but with a possible
-  //! overhead of creating additional threads when necessary.
-  BL_THREAD_POOL_ACQUIRE_FLAG_FORCE_ALL = 0x00000004u
+  //! Try to acquire `n` threads, and if it's not possible then don't acquire
+  //! any threads and return 0 with `BL_ERROR_THREAD_POOL_EXHAUSTED` reason.
+  BL_THREAD_POOL_ACQUIRE_FLAG_ALL_OR_NOTHING = 0x00000001u
 };
 
 // ============================================================================
@@ -56,7 +43,7 @@ struct BLThreadPoolVirt {
   uint32_t (BL_CDECL* pooledThreadCount)(const BLThreadPool* self) BL_NOEXCEPT;
   BLResult (BL_CDECL* setThreadAttributes)(BLThreadPool* self, const BLThreadAttributes* attributes) BL_NOEXCEPT;
   uint32_t (BL_CDECL* cleanup)(BLThreadPool* self) BL_NOEXCEPT;
-  uint32_t (BL_CDECL* acquireThreads)(BLThreadPool* self, BLThread** threads, uint32_t n, uint32_t flags) BL_NOEXCEPT;
+  uint32_t (BL_CDECL* acquireThreads)(BLThreadPool* self, BLThread** threads, uint32_t n, uint32_t flags, BLResult* reason) BL_NOEXCEPT;
   void     (BL_CDECL* releaseThreads)(BLThreadPool* self, BLThread** threads, uint32_t n) BL_NOEXCEPT;
 };
 
@@ -112,8 +99,8 @@ struct BLThreadPool {
   //! and if it's not possible then no threads will be acquired. If `exact` is
   //! `false` then the number of acquired threads can be less than `n` in case
   //! that acquiring `n` threads is not possible due to reaching `maxThreadCount()`.
-  BL_INLINE uint32_t acquireThreads(BLThread** threads, uint32_t n, uint32_t flags = 0) noexcept {
-    return virt->acquireThreads(this, threads, n, flags);
+  BL_INLINE uint32_t acquireThreads(BLThread** threads, uint32_t n, uint32_t flags, BLResult* reason) noexcept {
+    return virt->acquireThreads(this, threads, n, flags, reason);
   }
 
   //! Release `n` threads that were previously acquired by `acquireThreads()`.

@@ -165,11 +165,10 @@ struct BLRuntimeSystemInfo {
   uint32_t coreCount;
   //! Number of threads of the host CPU/CPUs.
   uint32_t threadCount;
-
-  //! Minimum stack size of system threads (operating system specific).
-  uint32_t minThreadStackSize;
-  //! Minimum stack size of worker threads used by Blend2D.
-  uint32_t minWorkerStackSize;
+  //! Minimum stack size of a worker thread used by Blend2D.
+  uint32_t threadStackSize;
+  //! Removed field.
+  uint32_t removed;
   //! Allocation granularity of virtual memory (includes thread's stack).
   uint32_t allocationGranularity;
   //! Reserved for future use.

@@ -175,16 +175,14 @@ static void blDebugRuntimeSystemInfo(void) {
     "  CpuArch: %s [%u bit]\n"
     "  CpuFeatures: %s\n"
     "  ThreadCount: %u\n"
-    "  MinThreadStackSize: %u\n"
-    "  MinWorkerStackSize: %u\n"
+    "  ThreadStackSize: %u\n"
     "  AllocationGranularity: %u\n"
     "}\n",
     os,
     blDebugGetEnumAsString(info.cpuArch, cpuArchEnum), sizeof(void*) >= 8 ? 64 : 32,
     cpuFeatures,
     info.threadCount,
-    info.minThreadStackSize,
-    info.minWorkerStackSize,
+    info.threadStackSize,
     info.allocationGranularity);
 }
 
