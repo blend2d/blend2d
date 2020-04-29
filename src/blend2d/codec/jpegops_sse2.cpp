@@ -72,55 +72,55 @@ static const BLJpegSSE2Constants blJpegSSE2Constants = {
 };
 #undef DATA_4X
 
-#define BL_JPEG_CONST_XMM(C) (*(const I128*)(blJpegSSE2Constants.C))
+#define BL_JPEG_CONST_XMM(C) (*(const Vec128I*)(blJpegSSE2Constants.C))
 
-#define BL_JPEG_IDCT_INTERLEAVE8_XMM(a, b) { I128 t = a; a = _mm_unpacklo_epi8(a, b); b = _mm_unpackhi_epi8(t, b); }
-#define BL_JPEG_IDCT_INTERLEAVE16_XMM(a, b) { I128 t = a; a = _mm_unpacklo_epi16(a, b); b = _mm_unpackhi_epi16(t, b); }
+#define BL_JPEG_IDCT_INTERLEAVE8_XMM(a, b) { Vec128I t = a; a = _mm_unpacklo_epi8(a, b); b = _mm_unpackhi_epi8(t, b); }
+#define BL_JPEG_IDCT_INTERLEAVE16_XMM(a, b) { Vec128I t = a; a = _mm_unpacklo_epi16(a, b); b = _mm_unpackhi_epi16(t, b); }
 
 // out(0) = c0[even]*x + c0[odd]*y (in 16-bit, out 32-bit).
 // out(1) = c1[even]*x + c1[odd]*y (in 16-bit, out 32-bit).
 #define BL_JPEG_IDCT_ROTATE_XMM(dst0, dst1, x, y, c0, c1) \
-  I128 c0##_l = _mm_unpacklo_epi16(x, y); \
-  I128 c0##_h = _mm_unpackhi_epi16(x, y); \
+  Vec128I c0##_l = _mm_unpacklo_epi16(x, y); \
+  Vec128I c0##_h = _mm_unpackhi_epi16(x, y); \
   \
-  I128 dst0##_l = vmaddi16i32(c0##_l, BL_JPEG_CONST_XMM(c0)); \
-  I128 dst0##_h = vmaddi16i32(c0##_h, BL_JPEG_CONST_XMM(c0)); \
-  I128 dst1##_l = vmaddi16i32(c0##_l, BL_JPEG_CONST_XMM(c1)); \
-  I128 dst1##_h = vmaddi16i32(c0##_h, BL_JPEG_CONST_XMM(c1));
+  Vec128I dst0##_l = v_madd_i16_i32(c0##_l, BL_JPEG_CONST_XMM(c0)); \
+  Vec128I dst0##_h = v_madd_i16_i32(c0##_h, BL_JPEG_CONST_XMM(c0)); \
+  Vec128I dst1##_l = v_madd_i16_i32(c0##_l, BL_JPEG_CONST_XMM(c1)); \
+  Vec128I dst1##_h = v_madd_i16_i32(c0##_h, BL_JPEG_CONST_XMM(c1));
 
 // out = in << 12 (in 16-bit, out 32-bit)
 #define BL_JPEG_IDCT_WIDEN_XMM(dst, in) \
-  I128 dst##_l = vsrai32<4>(_mm_unpacklo_epi16(vzeroi128(), in)); \
-  I128 dst##_h = vsrai32<4>(_mm_unpackhi_epi16(vzeroi128(), in));
+  Vec128I dst##_l = v_sra_i32<4>(_mm_unpacklo_epi16(v_zero_i128(), in)); \
+  Vec128I dst##_h = v_sra_i32<4>(_mm_unpackhi_epi16(v_zero_i128(), in));
 
 // Wide add (32-bit).
 #define BL_JPEG_IDCT_WADD_XMM(dst, a, b) \
-  I128 dst##_l = vaddi32(a##_l, b##_l); \
-  I128 dst##_h = vaddi32(a##_h, b##_h);
+  Vec128I dst##_l = v_add_i32(a##_l, b##_l); \
+  Vec128I dst##_h = v_add_i32(a##_h, b##_h);
 
 // Wide sub (32-bit).
 #define BL_JPEG_IDCT_WSUB_XMM(dst, a, b) \
-  I128 dst##_l = vsubi32(a##_l, b##_l); \
-  I128 dst##_h = vsubi32(a##_h, b##_h);
+  Vec128I dst##_l = v_sub_i32(a##_l, b##_l); \
+  Vec128I dst##_h = v_sub_i32(a##_h, b##_h);
 
 // Butterfly a/b, add bias, then shift by `norm` and pack to 16-bit.
 #define BL_JPEG_IDCT_BFLY_XMM(dst0, dst1, a, b, bias, norm) { \
-  I128 abiased_l = vaddi32(a##_l, bias); \
-  I128 abiased_h = vaddi32(a##_h, bias); \
+  Vec128I abiased_l = v_add_i32(a##_l, bias); \
+  Vec128I abiased_h = v_add_i32(a##_h, bias); \
   \
   BL_JPEG_IDCT_WADD_XMM(sum, abiased, b) \
   BL_JPEG_IDCT_WSUB_XMM(diff, abiased, b) \
   \
-  dst0 = vpacki32i16(vsrai32<norm>(sum_l), vsrai32<norm>(sum_h)); \
-  dst1 = vpacki32i16(vsrai32<norm>(diff_l), vsrai32<norm>(diff_h)); \
+  dst0 = v_packs_i32_i16(v_sra_i32<norm>(sum_l), v_sra_i32<norm>(sum_h)); \
+  dst1 = v_packs_i32_i16(v_sra_i32<norm>(diff_l), v_sra_i32<norm>(diff_h)); \
 }
 
 #define BL_JPEG_IDCT_IDCT_PASS_XMM(bias, norm) { \
   /* Even part. */ \
   BL_JPEG_IDCT_ROTATE_XMM(t2e, t3e, row2, row6, idct_rot0a, idct_rot0b) \
   \
-  I128 sum04 = _mm_add_epi16(row0, row4); \
-  I128 dif04 = _mm_sub_epi16(row0, row4); \
+  Vec128I sum04 = _mm_add_epi16(row0, row4); \
+  Vec128I dif04 = _mm_sub_epi16(row0, row4); \
   \
   BL_JPEG_IDCT_WIDEN_XMM(t0e, sum04) \
   BL_JPEG_IDCT_WIDEN_XMM(t1e, dif04) \
@@ -133,8 +133,8 @@ static const BLJpegSSE2Constants blJpegSSE2Constants = {
   /* Odd part */ \
   BL_JPEG_IDCT_ROTATE_XMM(y0o, y2o, row7, row3, idct_rot2a, idct_rot2b) \
   BL_JPEG_IDCT_ROTATE_XMM(y1o, y3o, row5, row1, idct_rot3a, idct_rot3b) \
-  I128 sum17 = _mm_add_epi16(row1, row7); \
-  I128 sum35 = _mm_add_epi16(row3, row5); \
+  Vec128I sum17 = _mm_add_epi16(row1, row7); \
+  Vec128I sum35 = _mm_add_epi16(row3, row5); \
   BL_JPEG_IDCT_ROTATE_XMM(y4o,y5o, sum17, sum35, idct_rot1a, idct_rot1b) \
   \
   BL_JPEG_IDCT_WADD_XMM(x4, y0o, y4o) \
@@ -152,14 +152,14 @@ void BL_CDECL blJpegIDCT8_SSE2(uint8_t* dst, intptr_t dstStride, const int16_t* 
   using namespace SIMD;
 
   // Load and dequantize (`src` is aligned to 16 bytes, `qTable` doesn't have to be).
-  I128 row0 = vmuli16(vloadi128u(qTable +  0), *(const I128*)(src +  0));
-  I128 row1 = vmuli16(vloadi128u(qTable +  8), *(const I128*)(src +  8));
-  I128 row2 = vmuli16(vloadi128u(qTable + 16), *(const I128*)(src + 16));
-  I128 row3 = vmuli16(vloadi128u(qTable + 24), *(const I128*)(src + 24));
-  I128 row4 = vmuli16(vloadi128u(qTable + 32), *(const I128*)(src + 32));
-  I128 row5 = vmuli16(vloadi128u(qTable + 40), *(const I128*)(src + 40));
-  I128 row6 = vmuli16(vloadi128u(qTable + 48), *(const I128*)(src + 48));
-  I128 row7 = vmuli16(vloadi128u(qTable + 56), *(const I128*)(src + 56));
+  Vec128I row0 = v_mul_i16(v_loadu_i128(qTable +  0), *(const Vec128I*)(src +  0));
+  Vec128I row1 = v_mul_i16(v_loadu_i128(qTable +  8), *(const Vec128I*)(src +  8));
+  Vec128I row2 = v_mul_i16(v_loadu_i128(qTable + 16), *(const Vec128I*)(src + 16));
+  Vec128I row3 = v_mul_i16(v_loadu_i128(qTable + 24), *(const Vec128I*)(src + 24));
+  Vec128I row4 = v_mul_i16(v_loadu_i128(qTable + 32), *(const Vec128I*)(src + 32));
+  Vec128I row5 = v_mul_i16(v_loadu_i128(qTable + 40), *(const Vec128I*)(src + 40));
+  Vec128I row6 = v_mul_i16(v_loadu_i128(qTable + 48), *(const Vec128I*)(src + 48));
+  Vec128I row7 = v_mul_i16(v_loadu_i128(qTable + 56), *(const Vec128I*)(src + 56));
 
   // IDCT columns.
   BL_JPEG_IDCT_IDCT_PASS_XMM(BL_JPEG_CONST_XMM(idct_col_bias), BL_JPEG_IDCT_COL_NORM)
@@ -184,10 +184,10 @@ void BL_CDECL blJpegIDCT8_SSE2(uint8_t* dst, intptr_t dstStride, const int16_t* 
   BL_JPEG_IDCT_IDCT_PASS_XMM(BL_JPEG_CONST_XMM(idct_row_bias), BL_JPEG_IDCT_ROW_NORM)
 
   // Pack to 8-bit unsigned integers with saturation.
-  row0 = vpacki16u8(row0, row1);        // [a0a1a2a3|a4a5a6a7|b0b1b2b3|b4b5b6b7]
-  row2 = vpacki16u8(row2, row3);        // [c0c1c2c3|c4c5c6c7|d0d1d2d3|d4d5d6d7]
-  row4 = vpacki16u8(row4, row5);        // [e0e1e2e3|e4e5e6e7|f0f1f2f3|f4f5f6f7]
-  row6 = vpacki16u8(row6, row7);        // [g0g1g2g3|g4g5g6g7|h0h1h2h3|h4h5h6h7]
+  row0 = v_packs_i16_u8(row0, row1);        // [a0a1a2a3|a4a5a6a7|b0b1b2b3|b4b5b6b7]
+  row2 = v_packs_i16_u8(row2, row3);        // [c0c1c2c3|c4c5c6c7|d0d1d2d3|d4d5d6d7]
+  row4 = v_packs_i16_u8(row4, row5);        // [e0e1e2e3|e4e5e6e7|f0f1f2f3|f4f5f6f7]
+  row6 = v_packs_i16_u8(row6, row7);        // [g0g1g2g3|g4g5g6g7|h0h1h2h3|h4h5h6h7]
 
   // Transpose.
   BL_JPEG_IDCT_INTERLEAVE8_XMM(row0, row4)  // [a0e0a1e1|a2e2a3e3|a4e4a5e5|a6e6a7e7] | [b0f0b1f1|b2f2b3f3|b4f4b5f5|b6f6b7f7]
@@ -202,17 +202,17 @@ void BL_CDECL blJpegIDCT8_SSE2(uint8_t* dst, intptr_t dstStride, const int16_t* 
   uint8_t* dst1 = dst + dstStride;
   intptr_t dstStride2 = dstStride * 2;
 
-  vstoreli64(dst0, row0); dst0 += dstStride2;
-  vstorehi64(dst1, row0); dst1 += dstStride2;
+  v_storel_i64(dst0, row0); dst0 += dstStride2;
+  v_storeh_i64(dst1, row0); dst1 += dstStride2;
 
-  vstoreli64(dst0, row4); dst0 += dstStride2;
-  vstorehi64(dst1, row4); dst1 += dstStride2;
+  v_storel_i64(dst0, row4); dst0 += dstStride2;
+  v_storeh_i64(dst1, row4); dst1 += dstStride2;
 
-  vstoreli64(dst0, row2); dst0 += dstStride2;
-  vstorehi64(dst1, row2); dst1 += dstStride2;
+  v_storel_i64(dst0, row2); dst0 += dstStride2;
+  v_storeh_i64(dst1, row2); dst1 += dstStride2;
 
-  vstoreli64(dst0, row6);
-  vstorehi64(dst1, row6);
+  v_storel_i64(dst0, row6);
+  v_storeh_i64(dst1, row6);
 }
 
 // ============================================================================
@@ -224,53 +224,53 @@ void BL_CDECL blJpegRGB32FromYCbCr8_SSE2(uint8_t* dst, const uint8_t* pY, const 
   uint32_t i = count;
 
   while (i >= 8) {
-    I128 yy = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(pY));
-    I128 cb = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(pCb));
-    I128 cr = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(pCr));
+    Vec128I yy = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(pY));
+    Vec128I cb = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(pCb));
+    Vec128I cr = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(pCr));
 
-    yy = vmovli64u8u16(yy);
-    cb = vaddi16(vmovli64u8u16(cb), BL_JPEG_CONST_XMM(ycbcr_tosigned));
-    cr = vaddi16(vmovli64u8u16(cr), BL_JPEG_CONST_XMM(ycbcr_tosigned));
+    yy = v_unpack_lo_u8_u16(yy);
+    cb = v_add_i16(v_unpack_lo_u8_u16(cb), BL_JPEG_CONST_XMM(ycbcr_tosigned));
+    cr = v_add_i16(v_unpack_lo_u8_u16(cr), BL_JPEG_CONST_XMM(ycbcr_tosigned));
 
-    I128 r_l = vmaddi16i32(_mm_unpacklo_epi16(yy, cr), BL_JPEG_CONST_XMM(ycbcr_yycrMul));
-    I128 r_h = vmaddi16i32(_mm_unpackhi_epi16(yy, cr), BL_JPEG_CONST_XMM(ycbcr_yycrMul));
+    Vec128I r_l = v_madd_i16_i32(_mm_unpacklo_epi16(yy, cr), BL_JPEG_CONST_XMM(ycbcr_yycrMul));
+    Vec128I r_h = v_madd_i16_i32(_mm_unpackhi_epi16(yy, cr), BL_JPEG_CONST_XMM(ycbcr_yycrMul));
 
-    I128 b_l = vmaddi16i32(_mm_unpacklo_epi16(yy, cb), BL_JPEG_CONST_XMM(ycbcr_yycbMul));
-    I128 b_h = vmaddi16i32(_mm_unpackhi_epi16(yy, cb), BL_JPEG_CONST_XMM(ycbcr_yycbMul));
+    Vec128I b_l = v_madd_i16_i32(_mm_unpacklo_epi16(yy, cb), BL_JPEG_CONST_XMM(ycbcr_yycbMul));
+    Vec128I b_h = v_madd_i16_i32(_mm_unpackhi_epi16(yy, cb), BL_JPEG_CONST_XMM(ycbcr_yycbMul));
 
-    I128 g_l = vmaddi16i32(_mm_unpacklo_epi16(cb, cr), BL_JPEG_CONST_XMM(ycbcr_cbcrMul));
-    I128 g_h = vmaddi16i32(_mm_unpackhi_epi16(cb, cr), BL_JPEG_CONST_XMM(ycbcr_cbcrMul));
+    Vec128I g_l = v_madd_i16_i32(_mm_unpacklo_epi16(cb, cr), BL_JPEG_CONST_XMM(ycbcr_cbcrMul));
+    Vec128I g_h = v_madd_i16_i32(_mm_unpackhi_epi16(cb, cr), BL_JPEG_CONST_XMM(ycbcr_cbcrMul));
 
-    g_l = vaddi32(g_l, vslli32<BL_JPEG_YCBCR_PREC>(vmovli64u16u32(yy)));
-    g_h = vaddi32(g_h, vslli32<BL_JPEG_YCBCR_PREC>(vmovhi64u16u32(yy)));
+    g_l = v_add_i32(g_l, v_sll_i32<BL_JPEG_YCBCR_PREC>(v_unpack_lo_u16_u32(yy)));
+    g_h = v_add_i32(g_h, v_sll_i32<BL_JPEG_YCBCR_PREC>(v_unpack_hi_u16_u32(yy)));
 
-    r_l = vaddi32(r_l, BL_JPEG_CONST_XMM(ycbcr_round));
-    r_h = vaddi32(r_h, BL_JPEG_CONST_XMM(ycbcr_round));
+    r_l = v_add_i32(r_l, BL_JPEG_CONST_XMM(ycbcr_round));
+    r_h = v_add_i32(r_h, BL_JPEG_CONST_XMM(ycbcr_round));
 
-    b_l = vaddi32(b_l, BL_JPEG_CONST_XMM(ycbcr_round));
-    b_h = vaddi32(b_h, BL_JPEG_CONST_XMM(ycbcr_round));
+    b_l = v_add_i32(b_l, BL_JPEG_CONST_XMM(ycbcr_round));
+    b_h = v_add_i32(b_h, BL_JPEG_CONST_XMM(ycbcr_round));
 
-    g_l = vaddi32(g_l, BL_JPEG_CONST_XMM(ycbcr_round));
-    g_h = vaddi32(g_h, BL_JPEG_CONST_XMM(ycbcr_round));
+    g_l = v_add_i32(g_l, BL_JPEG_CONST_XMM(ycbcr_round));
+    g_h = v_add_i32(g_h, BL_JPEG_CONST_XMM(ycbcr_round));
 
-    r_l = vsrai32<BL_JPEG_YCBCR_PREC>(r_l);
-    r_h = vsrai32<BL_JPEG_YCBCR_PREC>(r_h);
+    r_l = v_sra_i32<BL_JPEG_YCBCR_PREC>(r_l);
+    r_h = v_sra_i32<BL_JPEG_YCBCR_PREC>(r_h);
 
-    b_l = vsrai32<BL_JPEG_YCBCR_PREC>(b_l);
-    b_h = vsrai32<BL_JPEG_YCBCR_PREC>(b_h);
+    b_l = v_sra_i32<BL_JPEG_YCBCR_PREC>(b_l);
+    b_h = v_sra_i32<BL_JPEG_YCBCR_PREC>(b_h);
 
-    g_l = vsrai32<BL_JPEG_YCBCR_PREC>(g_l);
-    g_h = vsrai32<BL_JPEG_YCBCR_PREC>(g_h);
+    g_l = v_sra_i32<BL_JPEG_YCBCR_PREC>(g_l);
+    g_h = v_sra_i32<BL_JPEG_YCBCR_PREC>(g_h);
 
-    __m128i r = vpackzzdb(r_l, r_h);
-    __m128i g = vpackzzdb(g_l, g_h);
-    __m128i b = vpackzzdb(b_l, b_h);
+    __m128i r = v_packz_u32_u8(r_l, r_h);
+    __m128i g = v_packz_u32_u8(g_l, g_h);
+    __m128i b = v_packz_u32_u8(b_l, b_h);
 
-    __m128i ra = vunpackli8(r, BL_JPEG_CONST_XMM(ycbcr_allones));
-    __m128i bg = vunpackli8(b, g);
+    __m128i ra = v_interleave_lo_i8(r, BL_JPEG_CONST_XMM(ycbcr_allones));
+    __m128i bg = v_interleave_lo_i8(b, g);
 
-    __m128i bgra0 = vunpackli16(bg, ra);
-    __m128i bgra1 = vunpackhi16(bg, ra);
+    __m128i bgra0 = v_interleave_lo_i16(bg, ra);
+    __m128i bgra1 = v_interleave_hi_i16(bg, ra);
 
     _mm_storeu_si128(reinterpret_cast<__m128i*>(dst +  0), bgra0);
     _mm_storeu_si128(reinterpret_cast<__m128i*>(dst + 16), bgra1);

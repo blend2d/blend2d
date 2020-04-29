@@ -279,7 +279,7 @@ x86::Xmm PipeCompiler::constAsXmm(const void* p) noexcept {
 
     if (constIndex == 0) {
       asmjit::BaseNode* prevNode = cc->setCursor(_funcInit);
-      vzerops(xmm);
+      v_zero_f(xmm);
       _funcInit = cc->setCursor(prevNode);
     }
     else {
@@ -288,7 +288,7 @@ x86::Xmm PipeCompiler::constAsXmm(const void* p) noexcept {
       x86::Mem m = constAsMem(p);
 
       asmjit::BaseNode* prevNode = cc->setCursor(_funcInit);
-      vloadps_128a(xmm, m);
+      v_loada_f128(xmm, m);
       _funcInit = cc->setCursor(prevNode);
     }
 
@@ -416,7 +416,7 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
         }
 
         vemit_xmov(dst, src, 8);
-        vunpackli8(dst, dst, constAsXmm(blCommonTable.i128_0000000000000000));
+        v_interleave_lo_i8(dst, dst, constAsXmm(blCommonTable.i128_0000000000000000));
         return;
       }
 
@@ -427,8 +427,8 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
         }
 
         vemit_xmov(dst, src, 4);
-        vunpackli8(dst, dst, constAsXmm(blCommonTable.i128_0000000000000000));
-        vunpackli16(dst, dst, constAsXmm(blCommonTable.i128_0000000000000000));
+        v_interleave_lo_i8(dst, dst, constAsXmm(blCommonTable.i128_0000000000000000));
+        v_interleave_lo_i16(dst, dst, constAsXmm(blCommonTable.i128_0000000000000000));
         return;
       }
 
@@ -439,7 +439,7 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
         }
 
         vemit_xmov(dst, src, 8);
-        vunpackli16(dst, dst, constAsXmm(blCommonTable.i128_0000000000000000));
+        v_interleave_lo_i16(dst, dst, constAsXmm(blCommonTable.i128_0000000000000000));
         return;
       }
 
@@ -451,14 +451,14 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
 
         if (isSameReg(dst, src)) {
           x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
-          vzeropi(tmp);
-          vsubi8(tmp, tmp, dst);
-          vminu8(dst, dst, tmp);
+          v_zero_i(tmp);
+          v_sub_i8(tmp, tmp, dst);
+          v_min_u8(dst, dst, tmp);
         }
         else {
-          vzeropi(dst);
-          vsubi8(dst, dst, src);
-          vminu8(dst, dst, src);
+          v_zero_i(dst);
+          v_sub_i8(dst, dst, src);
+          v_min_u8(dst, dst, src);
         }
         return;
       }
@@ -471,14 +471,14 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
 
         if (isSameReg(dst, src)) {
           x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
-          vzeropi(tmp);
-          vsubi16(tmp, tmp, dst);
-          vmaxi16(dst, dst, tmp);
+          v_zero_i(tmp);
+          v_sub_i16(tmp, tmp, dst);
+          v_max_i16(dst, dst, tmp);
         }
         else {
-          vzeropi(dst);
-          vsubi16(dst, dst, src);
-          vmaxi16(dst, dst, src);
+          v_zero_i(dst);
+          v_sub_i16(dst, dst, src);
+          v_max_i16(dst, dst, src);
         }
         return;
       }
@@ -491,20 +491,20 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
 
         x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
 
-        vmov(tmp, src);
-        vsrai32(tmp, tmp, 31);
-        vxor(dst, src, tmp);
-        vsubi32(dst, dst, tmp);
+        v_mov(tmp, src);
+        v_sra_i32(tmp, tmp, 31);
+        v_xor(dst, src, tmp);
+        v_sub_i32(dst, dst, tmp);
         return;
       }
 
       case kIntrin2Vabsi64: {
         x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
 
-        vduphi32(tmp, src);
-        vsrai32(tmp, tmp, 31);
-        vxor(dst, src, tmp);
-        vsubi32(dst, dst, tmp);
+        v_duph_i32(tmp, src);
+        v_sra_i32(tmp, tmp, 31);
+        v_xor(dst, src, tmp);
+        v_sub_i32(dst, dst, tmp);
         return;
       }
 
@@ -512,11 +512,11 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
         Operand u16_255 = constAsXmm(blCommonTable.i128_00FF00FF00FF00FF);
 
         if (hasAVX() || isSameReg(dst, src)) {
-          vxor(dst, src, u16_255);
+          v_xor(dst, src, u16_255);
         }
         else {
-          vmov(dst, u16_255);
-          vxor(dst, dst, src);
+          v_mov(dst, u16_255);
+          v_xor(dst, dst, src);
         }
         return;
       }
@@ -525,16 +525,16 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
         x86::Vec u16_0100 = constAsXmm(blCommonTable.i128_0100010001000100);
 
         if (!isSameReg(dst, src)) {
-          vmov(dst, u16_0100);
-          vsubi16(dst, dst, src);
+          v_mov(dst, u16_0100);
+          v_sub_i16(dst, dst, src);
         }
         else if (hasSSSE3()) {
-          vsubi16(dst, dst, u16_0100);
-          vabsi16(dst, dst);
+          v_sub_i16(dst, dst, u16_0100);
+          v_abs_i16(dst, dst);
         }
         else {
-          vxor(dst, dst, constAsXmm(blCommonTable.i128_FFFFFFFFFFFFFFFF));
-          vaddi16(dst, dst, u16_0100);
+          v_xor(dst, dst, constAsXmm(blCommonTable.i128_FFFFFFFFFFFFFFFF));
+          v_add_i16(dst, dst, u16_0100);
         }
         return;
       }
@@ -543,11 +543,11 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
         Operand u32_255 = constAsXmm(blCommonTable.i128_000000FF000000FF);
 
         if (hasAVX() || isSameReg(dst, src)) {
-          vxor(dst, src, u32_255);
+          v_xor(dst, src, u32_255);
         }
         else {
-          vmov(dst, u32_255);
-          vxor(dst, dst, src);
+          v_mov(dst, u32_255);
+          v_xor(dst, dst, src);
         }
         return;
       }
@@ -560,23 +560,23 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
 
       case kIntrin2Vduplpd: {
         if (hasSSE3())
-          vmovduplpd_(dst, src);
+          vmov_dupl_2xf32_(dst, src);
         else if (hasAVX())
-          vunpacklpd(dst, src, src);
+          v_interleave_lo_f64(dst, src, src);
         else if (isSameReg(dst, src))
-          vunpacklpd(dst, dst, src);
+          v_interleave_lo_f64(dst, dst, src);
         else
-          vdupli64(dst, src);
+          v_dupl_i64(dst, src);
         return;
       }
 
       case kIntrin2Vduphpd: {
         if (hasAVX())
-          vunpackhpd(dst, src, src);
+          v_interleave_hi_f64(dst, src, src);
         if (isSameReg(dst, src))
-          vunpackhpd(dst, dst, src);
+          v_interleave_hi_f64(dst, dst, src);
         else
-          vduphi64(dst, src);
+          v_duph_i64(dst, src);
         return;
       }
 
@@ -587,7 +587,7 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
           Operand x(src);
           // Reg <- BroadcastW(Reg).
           if (src.as<x86::Reg>().isGp()) {
-            vmovsi32(dst.as<x86::Vec>().xmm(), src.as<x86::Gp>().r32());
+            s_mov_i32(dst.as<x86::Vec>().xmm(), src.as<x86::Gp>().r32());
             x = dst;
           }
 
@@ -595,8 +595,8 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
             cc->emit(x86::Inst::kIdVpbroadcastw, dst, x);
           }
           else {
-            vswizli16(dst, x, x86::Predicate::shuf(0, 0, 0, 0));
-            vswizi32(dst, dst, x86::Predicate::shuf(1, 0, 1, 0));
+            v_swizzle_lo_i16(dst, x, x86::Predicate::shuf(0, 0, 0, 0));
+            v_swizzle_i32(dst, dst, x86::Predicate::shuf(1, 0, 1, 0));
           }
         }
         else {
@@ -610,16 +610,16 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
           else {
             if (m.size() >= 4) {
               m.setSize(4);
-              vloadi32(dst, m);
+              v_load_i32(dst, m);
             }
             else {
               m.setSize(2);
-              vzeropi(dst);
-              vinsertu16(dst, dst, m, 0);
+              v_zero_i(dst);
+              v_insert_u16(dst, dst, m, 0);
             }
 
-            vswizli16(dst, dst, x86::Predicate::shuf(0, 0, 0, 0));
-            vswizi32(dst, dst, x86::Predicate::shuf(1, 0, 1, 0));
+            v_swizzle_lo_i16(dst, dst, x86::Predicate::shuf(0, 0, 0, 0));
+            v_swizzle_i32(dst, dst, x86::Predicate::shuf(1, 0, 1, 0));
           }
         }
 
@@ -633,7 +633,7 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
           Operand x(src);
           // Reg <- BroadcastW(Reg).
           if (src.as<x86::Reg>().isGp()) {
-            vmovsi32(dst.as<x86::Vec>().xmm(), src.as<x86::Gp>().r32());
+            s_mov_i32(dst.as<x86::Vec>().xmm(), src.as<x86::Gp>().r32());
             x = dst;
           }
 
@@ -641,7 +641,7 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
             cc->emit(x86::Inst::kIdVpbroadcastd, dst, x);
           }
           else {
-            vswizi32(dst, dst, x86::Predicate::shuf(0, 0, 0, 0));
+            v_swizzle_i32(dst, dst, x86::Predicate::shuf(0, 0, 0, 0));
           }
         }
         else {
@@ -653,8 +653,8 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
             cc->emit(x86::Inst::kIdVpbroadcastd, dst, m);
           }
           else {
-            vloadi32(dst.as<x86::Vec>(), m);
-            vswizi32(dst, dst, x86::Predicate::shuf(0, 0, 0, 0));
+            v_load_i32(dst.as<x86::Vec>(), m);
+            v_swizzle_i32(dst, dst, x86::Predicate::shuf(0, 0, 0, 0));
           }
         }
 
@@ -668,11 +668,11 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
           Operand x(src);
           // Reg <- BroadcastW(Reg).
           if (src.as<x86::Reg>().isGp()) {
-            vmovsi64(dst.as<x86::Vec>().xmm(), src.as<x86::Gp>().r64());
+            s_mov_i64(dst.as<x86::Vec>().xmm(), src.as<x86::Gp>().r64());
             x = dst;
           }
 
-          vswizi32(dst, dst, x86::Predicate::shuf(1, 0, 1, 0));
+          v_swizzle_i32(dst, dst, x86::Predicate::shuf(1, 0, 1, 0));
         }
         else {
           // Reg <- BroadcastW(Mem).
@@ -683,8 +683,8 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
             cc->emit(x86::Inst::kIdVpbroadcastq, dst, m);
           }
           else {
-            vloadi64(dst.as<x86::Vec>(), m);
-            vswizi32(dst, dst, x86::Predicate::shuf(1, 0, 1, 0));
+            v_load_i64(dst.as<x86::Vec>(), m);
+            v_swizzle_i32(dst, dst, x86::Predicate::shuf(1, 0, 1, 0));
           }
         }
 
@@ -733,16 +733,16 @@ void PipeCompiler::vemit_vvi_vi(uint32_t packedId, const Operand_& dst_, const O
     switch (PackedInst::intrinId(packedId)) {
       case kIntrin2iVswizps:
         if (isSameReg(dst_, src_) || hasAVX())
-          vshufps(dst_, src_, src_, imm);
+          v_shuffle_f32(dst_, src_, src_, imm);
         else
-          vswizi32(dst_, src_, imm);
+          v_swizzle_i32(dst_, src_, imm);
         return;
 
       case kIntrin2iVswizpd:
         if (isSameReg(dst_, src_) || hasAVX())
-          vshufpd(dst_, src_, src_, imm);
+          v_shuffle_f64(dst_, src_, src_, imm);
         else
-          vswizi32(dst_, src_, shuf32ToShuf64(imm));
+          v_swizzle_i32(dst_, src_, shuf32ToShuf64(imm));
         return;
 
       default:
@@ -857,7 +857,7 @@ void PipeCompiler::vemit_vvv_vv(uint32_t packedId, const Operand_& dst_, const O
         //   dst'.u64[0] = src_.u64[1];
         //   dst'.u64[1] = src_.u64[0];
         if (isSameReg(src1_, src2_)) {
-          vswapi64(dst_, src1_);
+          v_swap_i64(dst_, src1_);
           return;
         }
 
@@ -866,11 +866,11 @@ void PipeCompiler::vemit_vvv_vv(uint32_t packedId, const Operand_& dst_, const O
         //   dst'.u64[1] = dst_.u64[0];
         if (isSameReg(dst_, src2_) && !hasAVX()) {
           if (hasSSSE3()) {
-            valignr8_(dst_, dst_, src1_, 8);
+            v_alignr_u8_(dst_, dst_, src1_, 8);
           }
           else {
-            vshufpd(dst_, dst_, src1_, x86::Predicate::shuf(1, 0));
-            vswapi64(dst_, dst_);
+            v_shuffle_f64(dst_, dst_, src1_, x86::Predicate::shuf(1, 0));
+            v_swap_i64(dst_, dst_);
           }
           return;
         }
@@ -878,7 +878,7 @@ void PipeCompiler::vemit_vvv_vv(uint32_t packedId, const Operand_& dst_, const O
         // Common Case:
         //   dst'.u64[0] = src1.u64[1];
         //   dst'.u64[1] = src2.u64[0];
-        vshufpd(dst_, src1_, src2_, x86::Predicate::shuf(0, 1));
+        v_shuffle_f64(dst_, src1_, src2_, x86::Predicate::shuf(0, 1));
         return;
       }
 
@@ -887,7 +887,7 @@ void PipeCompiler::vemit_vvv_vv(uint32_t packedId, const Operand_& dst_, const O
         //   dst'.d64[0] = src_.d64[1];
         //   dst'.d64[1] = src_.d64[0];
         if (isSameReg(src1_, src2_)) {
-          vswappd(dst_, src1_);
+          v_swap_f64(dst_, src1_);
           return;
         }
 
@@ -895,15 +895,15 @@ void PipeCompiler::vemit_vvv_vv(uint32_t packedId, const Operand_& dst_, const O
         //   dst'.d64[0] = src1.d64[1];
         //   dst'.d64[1] = dst_.d64[0];
         if (isSameReg(dst_, src2_) && !hasAVX()) {
-          vshufpd(dst_, dst_, src1_, x86::Predicate::shuf(1, 0));
-          vswappd(dst_, dst_);
+          v_shuffle_f64(dst_, dst_, src1_, x86::Predicate::shuf(1, 0));
+          v_swap_f64(dst_, dst_);
           return;
         }
 
         // Common Case:
         //   dst'.d64[0] = src1.d64[1];
         //   dst'.d64[1] = src2.d64[0];
-        vshufpd(dst_, src1_, src2_, x86::Predicate::shuf(0, 1));
+        v_shuffle_f64(dst_, src1_, src2_, x86::Predicate::shuf(0, 1));
         return;
       }
 
@@ -914,7 +914,7 @@ void PipeCompiler::vemit_vvv_vv(uint32_t packedId, const Operand_& dst_, const O
         }
 
         if (isSameReg(src1, src2)) {
-          vmov(dst, src1);
+          v_mov(dst, src1);
           return;
         }
 
@@ -922,8 +922,8 @@ void PipeCompiler::vemit_vvv_vv(uint32_t packedId, const Operand_& dst_, const O
           std::swap(src1, src2);
 
         x86::Xmm tmp = cc->newXmm("@tmp");
-        vsubsu16(tmp, src1, src2);
-        vsubi16(dst, src1, tmp);
+        v_subs_u16(tmp, src1, src2);
+        v_sub_i16(dst, src1, tmp);
         return;
       }
 
@@ -934,15 +934,15 @@ void PipeCompiler::vemit_vvv_vv(uint32_t packedId, const Operand_& dst_, const O
         }
 
         if (isSameReg(src1, src2)) {
-          vmov(dst, src1);
+          v_mov(dst, src1);
           return;
         }
 
         if (isSameReg(dst, src2))
           std::swap(src1, src2);
 
-        vsubsu16(dst, src1, src2);
-        vaddi16(dst, dst, src2);
+        v_subs_u16(dst, src1, src2);
+        v_add_i16(dst, dst, src2);
         return;
       }
 
@@ -950,27 +950,27 @@ void PipeCompiler::vemit_vvv_vv(uint32_t packedId, const Operand_& dst_, const O
         if (isSameReg(dst, src1)) {
           x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
 
-          vswizi32(tmp, dst, x86::Predicate::shuf(2, 3, 0, 1));
-          vmulxllu32(dst, dst, src2);
-          vmulxllu32(tmp, tmp, src2);
-          vslli64(tmp, tmp, 32);
-          vaddi64(dst, dst, tmp);
+          v_swizzle_i32(tmp, dst, x86::Predicate::shuf(2, 3, 0, 1));
+          v_mulx_ll_u32_(dst, dst, src2);
+          v_mulx_ll_u32_(tmp, tmp, src2);
+          v_sll_i64(tmp, tmp, 32);
+          v_add_i64(dst, dst, tmp);
         }
         else if (isSameReg(dst, src2)) {
           x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
 
-          vswizi32(tmp, src1, x86::Predicate::shuf(2, 3, 0, 1));
-          vmulxllu32(tmp, tmp, dst);
-          vmulxllu32(dst, dst, src1);
-          vslli64(tmp, tmp, 32);
-          vaddi64(dst, dst, tmp);
+          v_swizzle_i32(tmp, src1, x86::Predicate::shuf(2, 3, 0, 1));
+          v_mulx_ll_u32_(tmp, tmp, dst);
+          v_mulx_ll_u32_(dst, dst, src1);
+          v_sll_i64(tmp, tmp, 32);
+          v_add_i64(dst, dst, tmp);
         }
         else {
-          vswizi32(dst, src1, x86::Predicate::shuf(2, 3, 0, 1));
-          vmulxllu32(dst, dst, src2);
-          vmulxllu32(src1, src1, src2);
-          vslli64(dst, dst, 32);
-          vaddi64(dst, dst, src1);
+          v_swizzle_i32(dst, src1, x86::Predicate::shuf(2, 3, 0, 1));
+          v_mulx_ll_u32_(dst, dst, src2);
+          v_mulx_ll_u32_(src1, src1, src2);
+          v_sll_i64(dst, dst, 32);
+          v_add_i64(dst, dst, src1);
         }
         return;
       }
@@ -985,21 +985,21 @@ void PipeCompiler::vemit_vvv_vv(uint32_t packedId, const Operand_& dst_, const O
           if (isSameReg(dst, src1)) {
             // dst = haddpd(dst, dst);
             x86::Xmm tmp = cc->newXmmPd("@tmp");
-            vswappd(tmp, dst);
-            vaddpd(dst, dst, tmp);
+            v_swap_f64(tmp, dst);
+            v_add_f64(dst, dst, tmp);
           }
           else {
             // dst = haddpd(src1, src1);
-            vswappd(dst, src1);
-            vaddpd(dst, dst, src1);
+            v_swap_f64(dst, src1);
+            v_add_f64(dst, dst, src1);
           }
         }
         else {
           x86::Xmm tmp = cc->newXmmPd("@tmp");
           // dst = haddpd(src1, src2);
-          vunpackhpd(tmp, src1, src2);
-          vunpacklpd(dst, src1, src2);
-          vaddpd(dst, dst, tmp);
+          v_interleave_hi_f64(tmp, src1, src2);
+          v_interleave_lo_f64(dst, src1, src2);
+          v_add_f64(dst, dst, tmp);
         }
         return;
       }
@@ -1128,20 +1128,20 @@ void PipeCompiler::vemit_vvvv_vvv(uint32_t packedId, const Operand_& dst_, const
         //                   == b ^ ((a ^ b) & ~cond)
         if (dst.id() == src1.id()) {
           x86::Xmm tmp = cc->newXmm("@tmp");
-          vxor(tmp, dst, src2);
-          vand(tmp, tmp, src3);
-          vxor(dst, dst, tmp);
+          v_xor(tmp, dst, src2);
+          v_and(tmp, tmp, src3);
+          v_xor(dst, dst, tmp);
         }
         else if (dst.id() == src3.id()) {
           x86::Xmm tmp = cc->newXmm("@tmp");
-          vxor(tmp, src1, src2);
-          vandnot_a(dst, dst, tmp);
-          vxor(dst, dst, src2);
+          v_xor(tmp, src1, src2);
+          v_nand(dst, dst, tmp);
+          v_xor(dst, dst, src2);
         }
         else {
-          vxor(dst, src2, src1);
-          vand(dst, dst, src3);
-          vxor(dst, dst, src1);
+          v_xor(dst, src2, src1);
+          v_and(dst, dst, src3);
+          v_xor(dst, dst, src1);
         }
         return;
       }
@@ -1156,14 +1156,14 @@ void PipeCompiler::vemit_vvvv_vvv(uint32_t packedId, const Operand_& dst_, const
         // Blend(a, b, cond) == a ^ ((a ^ b) &  cond)
         //                   == b ^ ((a ^ b) & ~cond)
         if (dst.id() == src3.id()) {
-          vand(src2, src2, src3);
-          vandnot_a(src3, src3, src1);
-          vor(dst, src3, src2);
+          v_and(src2, src2, src3);
+          v_nand(src3, src3, src1);
+          v_or(dst, src3, src2);
         }
         else {
-          vand(src2, src2, src3);
-          vandnot_a(src3, src3, src1);
-          vor(dst, src2, src3);
+          v_and(src2, src2, src3);
+          v_nand(src3, src3, src1);
+          v_or(dst, src2, src3);
         }
         return;
       }
@@ -1228,7 +1228,7 @@ void PipeCompiler::xFetchPixel_1x(Pixel& p, uint32_t flags, uint32_t sFormat, co
       case BL_FORMAT_PRGB32: {
         if (flags & Pixel::kAny) {
           newXmmArray(p.pc, 1, "c");
-          vloadi32(p.pc[0], sAdj);
+          v_load_i32(p.pc[0], sAdj);
         }
         break;
       }
@@ -1236,7 +1236,7 @@ void PipeCompiler::xFetchPixel_1x(Pixel& p, uint32_t flags, uint32_t sFormat, co
       case BL_FORMAT_XRGB32: {
         if (flags & Pixel::kAny) {
           newXmmArray(p.pc, 1, "c");
-          vloadi32(p.pc[0], sAdj);
+          v_load_i32(p.pc[0], sAdj);
           vFillAlpha255B(p.pc[0], p.pc[0]);
         }
         break;
@@ -1250,16 +1250,16 @@ void PipeCompiler::xFetchPixel_1x(Pixel& p, uint32_t flags, uint32_t sFormat, co
           }
           else if (hasSSE4_1()) {
             newXmmArray(p.uc, 1, "c");
-            vzeropi(p.uc[0]);
-            vinsertu8_(p.uc[0], p.uc[0], sAdj, 0);
-            vswizli16(p.uc[0], p.uc[0], x86::Predicate::shuf(0, 0, 0, 0));
+            v_zero_i(p.uc[0]);
+            v_insert_u8_(p.uc[0], p.uc[0], sAdj, 0);
+            v_swizzle_lo_i16(p.uc[0], p.uc[0], x86::Predicate::shuf(0, 0, 0, 0));
           }
           else {
             newXmmArray(p.uc, 1, "c");
             x86::Gp scalar = cc->newUInt32();
             load8(scalar, sAdj);
-            vmovsi32(p.uc[0], scalar);
-            vswizli16(p.uc[0], p.uc[0], x86::Predicate::shuf(0, 0, 0, 0));
+            s_mov_i32(p.uc[0], scalar);
+            v_swizzle_lo_i16(p.uc[0], p.uc[0], x86::Predicate::shuf(0, 0, 0, 0));
           }
         }
 
@@ -1312,9 +1312,9 @@ void PipeCompiler::xFetchPixel_4x(Pixel& p, uint32_t flags, uint32_t sFormat, co
 
           sAdj.setSize(16);
           if (sAlignment == 16)
-            vloadi128a(p.pc[0], sAdj);
+            v_loada_i128(p.pc[0], sAdj);
           else
-            vloadi128u(p.pc[0], sAdj);
+            v_loadu_i128(p.pc[0], sAdj);
         }
         else {
           newXmmArray(p.uc, 2, "c");
@@ -1332,9 +1332,9 @@ void PipeCompiler::xFetchPixel_4x(Pixel& p, uint32_t flags, uint32_t sFormat, co
           sAdj.setSize(16);
 
           if (sAlignment == 16)
-            vloadi128a(p.pc[0], sAdj);
+            v_loada_i128(p.pc[0], sAdj);
           else
-            vloadi128u(p.pc[0], sAdj);
+            v_loadu_i128(p.pc[0], sAdj);
 
           vFillAlpha255B(p.pc[0], p.pc[0]);
         }
@@ -1346,19 +1346,19 @@ void PipeCompiler::xFetchPixel_4x(Pixel& p, uint32_t flags, uint32_t sFormat, co
         if (flags & Pixel::kPC) {
           newXmmArray(p.pc, 1, "c");
 
-          vloadi32(p.pc[0], sAdj);
-          vunpackli8(p.pc[0], p.pc[0], p.pc[0]);
-          vunpackli16(p.pc[0], p.pc[0], p.pc[0]);
+          v_load_i32(p.pc[0], sAdj);
+          v_interleave_lo_i8(p.pc[0], p.pc[0], p.pc[0]);
+          v_interleave_lo_i16(p.pc[0], p.pc[0], p.pc[0]);
         }
         else {
           newXmmArray(p.uc, 2, "c");
 
-          vloadi32(p.uc[0], sAdj);
-          vunpackli8(p.uc[0], p.uc[0], p.uc[0]);
+          v_load_i32(p.uc[0], sAdj);
+          v_interleave_lo_i8(p.uc[0], p.uc[0], p.uc[0]);
           vmovu8u16(p.uc[0], p.uc[0]);
 
-          vswizi32(p.uc[1], p.uc[0], x86::Predicate::shuf(3, 3, 2, 2));
-          vswizi32(p.uc[0], p.uc[0], x86::Predicate::shuf(1, 1, 0, 0));
+          v_swizzle_i32(p.uc[1], p.uc[0], x86::Predicate::shuf(3, 3, 2, 2));
+          v_swizzle_i32(p.uc[0], p.uc[0], x86::Predicate::shuf(1, 1, 0, 0));
         }
         break;
       }
@@ -1377,15 +1377,15 @@ void PipeCompiler::xFetchPixel_4x(Pixel& p, uint32_t flags, uint32_t sFormat, co
         sAdj.setSize(16);
 
         if (sAlignment == 16)
-          vloadi128a(a, sAdj);
+          v_loada_i128(a, sAdj);
         else
-          vloadi128u(a, sAdj);
+          v_loadu_i128(a, sAdj);
 
-        vsrli32(a, a, 24);
-        vpacki32i16(a, a, a);
+        v_srl_i32(a, a, 24);
+        v_packs_i32_i16(a, a, a);
 
         if (flags & Pixel::kPA) {
-          vpacki16u8(a, a, a);
+          v_packs_i16_u8(a, a, a);
           p.pa.init(a);
         }
         else {
@@ -1398,7 +1398,7 @@ void PipeCompiler::xFetchPixel_4x(Pixel& p, uint32_t flags, uint32_t sFormat, co
         x86::Xmm a = cc->newXmm("a");
         sAdj.setSize(4);
 
-        vloadi32(a, sAdj);
+        v_load_i32(a, sAdj);
 
         if (flags & Pixel::kPC) {
           p.pa.init(a);
@@ -1432,12 +1432,12 @@ void PipeCompiler::xFetchPixel_8x(Pixel& p, uint32_t flags, uint32_t sFormat, co
           sAdj.setSize(16);
 
           if (sAlignment == 16) {
-            vloadi128a(p.pc[0], sAdj); sAdj.addOffsetLo32(16);
-            vloadi128a(p.pc[1], sAdj);
+            v_loada_i128(p.pc[0], sAdj); sAdj.addOffsetLo32(16);
+            v_loada_i128(p.pc[1], sAdj);
           }
           else {
-            vloadi128u(p.pc[0], sAdj); sAdj.addOffsetLo32(16);
-            vloadi128u(p.pc[1], sAdj);
+            v_loadu_i128(p.pc[0], sAdj); sAdj.addOffsetLo32(16);
+            v_loadu_i128(p.pc[1], sAdj);
           }
         }
         else {
@@ -1458,12 +1458,12 @@ void PipeCompiler::xFetchPixel_8x(Pixel& p, uint32_t flags, uint32_t sFormat, co
           sAdj.setSize(16);
 
           if (sAlignment == 16) {
-            vloadi128a(p.pc[0], sAdj); sAdj.addOffsetLo32(16);
-            vloadi128a(p.pc[1], sAdj);
+            v_loada_i128(p.pc[0], sAdj); sAdj.addOffsetLo32(16);
+            v_loada_i128(p.pc[1], sAdj);
           }
           else {
-            vloadi128u(p.pc[0], sAdj); sAdj.addOffsetLo32(16);
-            vloadi128u(p.pc[1], sAdj);
+            v_loadu_i128(p.pc[0], sAdj); sAdj.addOffsetLo32(16);
+            v_loadu_i128(p.pc[1], sAdj);
           }
 
           vFillAlpha255B(p.pc[0], p.pc[0]);
@@ -1477,31 +1477,31 @@ void PipeCompiler::xFetchPixel_8x(Pixel& p, uint32_t flags, uint32_t sFormat, co
         if (flags & Pixel::kPC) {
           newXmmArray(p.pc, 2, "c");
 
-          vloadi32(p.pc[0], sAdj);
-          vloadi32(p.pc[1], sAdj);
+          v_load_i32(p.pc[0], sAdj);
+          v_load_i32(p.pc[1], sAdj);
 
-          vunpackli8(p.pc[0], p.pc[0], p.pc[0]);
-          vunpackli8(p.pc[1], p.pc[1], p.pc[1]);
+          v_interleave_lo_i8(p.pc[0], p.pc[0], p.pc[0]);
+          v_interleave_lo_i8(p.pc[1], p.pc[1], p.pc[1]);
 
-          vunpackli16(p.pc[0], p.pc[0], p.pc[0]);
-          vunpackli16(p.pc[1], p.pc[1], p.pc[1]);
+          v_interleave_lo_i16(p.pc[0], p.pc[0], p.pc[0]);
+          v_interleave_lo_i16(p.pc[1], p.pc[1], p.pc[1]);
         }
         else {
           newXmmArray(p.uc, 4, "c");
 
-          vloadi32(p.uc[0], sAdj);
-          vloadi32(p.uc[2], sAdj);
+          v_load_i32(p.uc[0], sAdj);
+          v_load_i32(p.uc[2], sAdj);
 
-          vunpackli8(p.uc[0], p.uc[0], p.uc[0]);
-          vunpackli8(p.uc[2], p.uc[2], p.uc[2]);
+          v_interleave_lo_i8(p.uc[0], p.uc[0], p.uc[0]);
+          v_interleave_lo_i8(p.uc[2], p.uc[2], p.uc[2]);
 
           vmovu8u16(p.uc[0], p.uc[0]);
           vmovu8u16(p.uc[2], p.uc[2]);
 
-          vswizi32(p.uc[1], p.uc[0], x86::Predicate::shuf(3, 3, 2, 2));
-          vswizi32(p.uc[3], p.uc[2], x86::Predicate::shuf(3, 3, 2, 2));
-          vswizi32(p.uc[0], p.uc[0], x86::Predicate::shuf(1, 1, 0, 0));
-          vswizi32(p.uc[2], p.uc[2], x86::Predicate::shuf(1, 1, 0, 0));
+          v_swizzle_i32(p.uc[1], p.uc[0], x86::Predicate::shuf(3, 3, 2, 2));
+          v_swizzle_i32(p.uc[3], p.uc[2], x86::Predicate::shuf(3, 3, 2, 2));
+          v_swizzle_i32(p.uc[0], p.uc[0], x86::Predicate::shuf(1, 1, 0, 0));
+          v_swizzle_i32(p.uc[2], p.uc[2], x86::Predicate::shuf(1, 1, 0, 0));
         }
         break;
       }
@@ -1518,22 +1518,22 @@ void PipeCompiler::xFetchPixel_8x(Pixel& p, uint32_t flags, uint32_t sFormat, co
         sAdj.setSize(16);
 
         if (sAlignment >= 16) {
-          vloadi128a(a0, sAdj);
+          v_loada_i128(a0, sAdj);
           sAdj.addOffset(16);
-          vloadi128a(a1, sAdj);
+          v_loada_i128(a1, sAdj);
         }
         else {
-          vloadi128u(a0, sAdj);
+          v_loadu_i128(a0, sAdj);
           sAdj.addOffset(16);
-          vloadi128u(a1, sAdj);
+          v_loadu_i128(a1, sAdj);
         }
 
-        vsrli32(a0, a0, 24);
-        vsrli32(a1, a1, 24);
-        vpacki32i16(a0, a0, a1);
+        v_srl_i32(a0, a0, 24);
+        v_srl_i32(a1, a1, 24);
+        v_packs_i32_i16(a0, a0, a1);
 
         if (flags & Pixel::kPA) {
-          vpacki16u8(a0, a0, a0);
+          v_packs_i16_u8(a0, a0, a0);
           p.pa.init(a0);
         }
         else {
@@ -1547,15 +1547,15 @@ void PipeCompiler::xFetchPixel_8x(Pixel& p, uint32_t flags, uint32_t sFormat, co
         sAdj.setSize(8);
 
         if (flags & Pixel::kPA) {
-          vloadi64(a, sAdj);
+          v_load_i64(a, sAdj);
           p.pa.init(a);
         }
         else {
           if (hasSSE4_1()) {
-            vloadi64_u8u16_(a, sAdj);
+            v_load_i64_u8u16_(a, sAdj);
           }
           else {
-            vloadi64(a, sAdj);
+            v_load_i64(a, sAdj);
             vmovu8u16(a, a);
           }
           p.ua.init(a);
@@ -1608,8 +1608,8 @@ void PipeCompiler::_xSatisfyPixelRGBA(Pixel& p, uint32_t flags) noexcept {
     // Emit pshuflw/pshufhw sequence for every unpacked pixel.
     newXmmArray(p.ua, p.uc.size(), "a");
 
-    vswizli16(p.ua, p.uc, x86::Predicate::shuf(3, 3, 3, 3));
-    vswizhi16(p.ua, p.ua, x86::Predicate::shuf(3, 3, 3, 3));
+    v_swizzle_lo_i16(p.ua, p.uc, x86::Predicate::shuf(3, 3, 3, 3));
+    v_swizzle_hi_i16(p.ua, p.ua, x86::Predicate::shuf(3, 3, 3, 3));
   }
 
   if ((flags & Pixel::kPC) && p.pc.empty()) {
@@ -1620,7 +1620,7 @@ void PipeCompiler::_xSatisfyPixelRGBA(Pixel& p, uint32_t flags) noexcept {
     // Emit pack sequence.
     p.pc.init(p.uc.even());
     rename(p.pc, "pc");
-    vpacki16u8(p.pc, p.uc.even(), p.uc.odd());
+    v_packs_i16_u8(p.pc, p.uc.even(), p.uc.odd());
     p.uc.reset();
   }
   else if ((flags & Pixel::kUC) && p.uc.empty()) {
@@ -1650,16 +1650,16 @@ void PipeCompiler::_xSatisfyPixelRGBA(Pixel& p, uint32_t flags) noexcept {
     // This time we have to really fetch A8/IA8, if we haven't before.
     if (!p.uc.empty()) {
       newXmmArray(p.ua, p.uc.size(), "ua");
-      vswizli16(p.ua, p.uc, x86::Predicate::shuf(3, 3, 3, 3));
+      v_swizzle_lo_i16(p.ua, p.uc, x86::Predicate::shuf(3, 3, 3, 3));
       if (p.count() > 1)
-        vswizhi16(p.ua, p.ua, x86::Predicate::shuf(3, 3, 3, 3));
+        v_swizzle_hi_i16(p.ua, p.ua, x86::Predicate::shuf(3, 3, 3, 3));
     }
     else {
       BL_ASSERT(!p.pc.empty());
       if (p.count() <= 2) {
         newXmmArray(p.ua, 1, "ua");
-        vswizli16(p.ua[0], p.pc[0], x86::Predicate::shuf(1, 1, 1, 1));
-        vsrli16(p.ua[0], p.ua[0], 8);
+        v_swizzle_lo_i16(p.ua[0], p.pc[0], x86::Predicate::shuf(1, 1, 1, 1));
+        v_srl_i16(p.ua[0], p.ua[0], 8);
       }
       else {
         newXmmArray(p.ua, p.pc.size() * 2, "ua");
@@ -1674,7 +1674,7 @@ void PipeCompiler::_xSatisfyPixelRGBA(Pixel& p, uint32_t flags) noexcept {
     p.ua.reset();
 
     rename(p.uia, "uia");
-    vinv255u16(p.uia, p.uia);
+    v_inv255_u16(p.uia, p.uia);
   }
 }
 
@@ -1698,7 +1698,7 @@ void PipeCompiler::_xSatisfyPixelAlpha(Pixel& p, uint32_t flags) noexcept {
     // Emit pack sequence.
     p.pa.init(p.ua.even());
     rename(p.pa, "pa");
-    vpacki16u8(p.pa, p.ua.even(), p.ua.odd());
+    v_packs_i16_u8(p.pa, p.ua.even(), p.ua.odd());
     p.ua.reset();
   }
   else if ((flags & Pixel::kUA) && p.ua.empty()) {
@@ -1760,8 +1760,8 @@ void PipeCompiler::_xSatisfySolidRGBA(Pixel& p, uint32_t flags) noexcept {
     BL_ASSERT(!p.uc.empty());
     newXmmArray(p.pc, 1, "pixel.pc");
 
-    vmov(p.pc[0], p.uc[0]);
-    vpacki16u8(p.pc[0], p.pc[0], p.pc[0]);
+    v_mov(p.pc[0], p.uc[0]);
+    v_packs_i16_u8(p.pc[0], p.pc[0], p.pc[0]);
   }
 
   if ((flags & Pixel::kUC) && p.uc.empty()) {
@@ -1775,13 +1775,13 @@ void PipeCompiler::_xSatisfySolidRGBA(Pixel& p, uint32_t flags) noexcept {
     newXmmArray(p.ua, 1, "pixel.ua");
 
     if (!p.uc.empty()) {
-      vswizli16(p.ua[0], p.uc[0], x86::Predicate::shuf(3, 3, 3, 3));
-      vswizi32(p.ua[0], p.ua[0], x86::Predicate::shuf(1, 0, 1, 0));
+      v_swizzle_lo_i16(p.ua[0], p.uc[0], x86::Predicate::shuf(3, 3, 3, 3));
+      v_swizzle_i32(p.ua[0], p.ua[0], x86::Predicate::shuf(1, 0, 1, 0));
     }
     else {
-      vswizli16(p.ua[0], p.pc[0], x86::Predicate::shuf(1, 1, 1, 1));
-      vswizi32(p.ua[0], p.ua[0], x86::Predicate::shuf(1, 0, 1, 0));
-      vsrli16(p.ua[0], p.ua[0], 8);
+      v_swizzle_lo_i16(p.ua[0], p.pc[0], x86::Predicate::shuf(1, 1, 1, 1));
+      v_swizzle_i32(p.ua[0], p.ua[0], x86::Predicate::shuf(1, 0, 1, 0));
+      v_srl_i16(p.ua[0], p.ua[0], 8);
     }
   }
 
@@ -1789,18 +1789,18 @@ void PipeCompiler::_xSatisfySolidRGBA(Pixel& p, uint32_t flags) noexcept {
     newXmmArray(p.uia, 1, "pixel.uia");
 
     if (!p.ua.empty()) {
-      vmov(p.uia[0], p.ua[0]);
+      v_mov(p.uia[0], p.ua[0]);
     }
     else if (!p.uc.empty()) {
-      vswizli16(p.uia[0], p.uc[0], x86::Predicate::shuf(3, 3, 3, 3));
-      vswizi32(p.uia[0], p.uia[0], x86::Predicate::shuf(1, 0, 1, 0));
+      v_swizzle_lo_i16(p.uia[0], p.uc[0], x86::Predicate::shuf(3, 3, 3, 3));
+      v_swizzle_i32(p.uia[0], p.uia[0], x86::Predicate::shuf(1, 0, 1, 0));
     }
     else {
-      vswizli16(p.uia[0], p.pc[0], x86::Predicate::shuf(1, 1, 1, 1));
-      vswizi32(p.uia[0], p.uia[0], x86::Predicate::shuf(1, 0, 1, 0));
-      vsrli16(p.uia[0], p.uia[0], 8);
+      v_swizzle_lo_i16(p.uia[0], p.pc[0], x86::Predicate::shuf(1, 1, 1, 1));
+      v_swizzle_i32(p.uia[0], p.uia[0], x86::Predicate::shuf(1, 0, 1, 0));
+      v_srl_i16(p.uia[0], p.uia[0], 8);
     }
-    vinv255u16(p.uia[0], p.uia[0]);
+    v_inv255_u16(p.uia[0], p.uia[0]);
   }
 }
 
@@ -1811,7 +1811,7 @@ void PipeCompiler::_xSatisfySolidAlpha(Pixel& p, uint32_t flags) noexcept {
   if ((flags & Pixel::kPA) && p.pa.empty()) {
     BL_ASSERT(!p.ua.empty());
     newXmmArray(p.pa, 1, "pixel.pa");
-    vpacki16u8(p.pa[0], p.ua[0], p.ua[0]);
+    v_packs_i16_u8(p.pa[0], p.ua[0], p.ua[0]);
   }
 
   // TODO: A8 pipeline - finalize solid-alpha.
@@ -1830,16 +1830,16 @@ void PipeCompiler::xFetchUnpackedA8_2x(const x86::Xmm& dst, uint32_t format, con
   }
 
   if (hasSSE4_1()) {
-    vzeropi(dst);
-    vinsertu8_(dst, dst, m0, 0);
-    vinsertu8_(dst, dst, m1, 2);
+    v_zero_i(dst);
+    v_insert_u8_(dst, dst, m0, 0);
+    v_insert_u8_(dst, dst, m1, 2);
   }
   else {
     x86::Gp aGp = cc->newUInt32("aGp");
     cc->movzx(aGp, m1);
     cc->shl(aGp, 16);
     cc->mov(aGp.r8(), m0);
-    vmovsi32(dst, aGp);
+    s_mov_i32(dst, aGp);
   }
 }
 
@@ -1852,14 +1852,14 @@ void PipeCompiler::xAssignUnpackedAlphaValues(Pixel& p, uint32_t flags, x86::Xmm
   if (p.isRGBA()) {
     switch (p.count()) {
       case 1: {
-        vswizli16(v0, v0, x86::Predicate::shuf(0, 0, 0, 0));
+        v_swizzle_lo_i16(v0, v0, x86::Predicate::shuf(0, 0, 0, 0));
         p.uc.init(v0);
         break;
       }
 
       case 2: {
-        vunpackli16(v0, v0, v0);
-        vswizi32(v0, v0, x86::Predicate::shuf(1, 1, 0, 0));
+        v_interleave_lo_i16(v0, v0, v0);
+        v_swizzle_i32(v0, v0, x86::Predicate::shuf(1, 1, 0, 0));
         p.uc.init(v0);
         break;
       }
@@ -1867,9 +1867,9 @@ void PipeCompiler::xAssignUnpackedAlphaValues(Pixel& p, uint32_t flags, x86::Xmm
       case 4: {
         x86::Xmm v1 = cc->newXmm();
 
-        vunpackli16(v0, v0, v0);
-        vswizi32(v1, v0, x86::Predicate::shuf(3, 3, 2, 2));
-        vswizi32(v0, v0, x86::Predicate::shuf(1, 1, 0, 0));
+        v_interleave_lo_i16(v0, v0, v0);
+        v_swizzle_i32(v1, v0, x86::Predicate::shuf(3, 3, 2, 2));
+        v_swizzle_i32(v0, v0, x86::Predicate::shuf(1, 1, 0, 0));
         p.uc.init(v0, v1);
         break;
       }
@@ -1879,13 +1879,13 @@ void PipeCompiler::xAssignUnpackedAlphaValues(Pixel& p, uint32_t flags, x86::Xmm
         x86::Xmm v2 = cc->newXmm();
         x86::Xmm v3 = cc->newXmm();
 
-        vunpackhi16(v2, v0, v0);
-        vunpackli16(v0, v0, v0);
+        v_interleave_hi_i16(v2, v0, v0);
+        v_interleave_lo_i16(v0, v0, v0);
 
-        vswizi32(v1, v0, x86::Predicate::shuf(3, 3, 2, 2));
-        vswizi32(v0, v0, x86::Predicate::shuf(1, 1, 0, 0));
-        vswizi32(v3, v2, x86::Predicate::shuf(3, 3, 2, 2));
-        vswizi32(v2, v2, x86::Predicate::shuf(1, 1, 0, 0));
+        v_swizzle_i32(v1, v0, x86::Predicate::shuf(3, 3, 2, 2));
+        v_swizzle_i32(v0, v0, x86::Predicate::shuf(1, 1, 0, 0));
+        v_swizzle_i32(v3, v2, x86::Predicate::shuf(3, 3, 2, 2));
+        v_swizzle_i32(v2, v2, x86::Predicate::shuf(1, 1, 0, 0));
 
         p.uc.init(v0, v1, v2, v3);
         break;
@@ -1902,7 +1902,7 @@ void PipeCompiler::xAssignUnpackedAlphaValues(Pixel& p, uint32_t flags, x86::Xmm
       case 1: {
         BL_ASSERT(flags & Pixel::kSA);
         x86::Gp sa = cc->newUInt32("sa");
-        vextractu16(sa, vec, 0);
+        v_extract_u16(sa, vec, 0);
         p.sa = sa;
         break;
       }
@@ -1963,7 +1963,7 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
       cc->add(dst, mainLoopSize);
       cc->sub(i, mainStepInItems);
       for (j = 0; j < mainLoopSize; j += 16u)
-        vstorei128u(x86::ptr(dst, int(j) - int(mainLoopSize)), src);
+        v_storeu_i128(x86::ptr(dst, int(j) - int(mainLoopSize)), src);
       cc->jnc(L_MainLoop);
 
       cc->bind(L_MainSkip);
@@ -1978,14 +1978,14 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
       Label L_TailLoop = cc->newLabel();
       cc->bind(L_TailLoop);
       for (j = 0; j < granularityInBytes; j += 16u)
-        vstorei128u(x86::ptr(dst, int(j)), src);
+        v_storeu_i128(x86::ptr(dst, int(j)), src);
       cc->add(dst, granularityInBytes);
       cc->sub(i, itemGranularity);
       cc->jnz(L_TailLoop);
     }
     else if (mainLoopSize * 2 == granularityInBytes) {
       for (j = 0; j < granularityInBytes; j += 16u)
-        vstorei128u(x86::ptr(dst, int(j)), src);
+        v_storeu_i128(x86::ptr(dst, int(j)), src);
       cc->add(dst, granularityInBytes);
     }
 
@@ -2020,7 +2020,7 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
         cc->shl(iptr, sizeShift);
       cc->add(iptr, dst);
 
-      vstorei128u(x86::ptr(dst), src);
+      v_storeu_i128(x86::ptr(dst), src);
       cc->add(dst, 16);
       cc->and_(dst, -1 ^ int(alignPattern));
 
@@ -2044,7 +2044,7 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
       cc->add(dst, mainLoopSize);
       cc->sub(i, mainStepInItems);
       for (j = 0; j < mainLoopSize; j += 16u)
-        vstorei128a(x86::ptr(dst, int(j) - int(mainLoopSize)), src);
+        v_storea_i128(x86::ptr(dst, int(j) - int(mainLoopSize)), src);
       cc->jnc(L_MainLoop);
 
       cc->bind(L_MainSkip);
@@ -2065,7 +2065,7 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
       cc->bind(L_TailLoop);
       cc->add(dst, 16);
       cc->sub(i, tailStepInItems);
-      vstorei128a(x86::ptr(dst, -16), src);
+      v_storea_i128(x86::ptr(dst, -16), src);
       cc->jnc(L_TailLoop);
 
       cc->bind(L_TailSkip);
@@ -2076,7 +2076,7 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
       cc->cmp(i, tailStepInItems);
       cc->jb(L_Finalize);
 
-      vstorei128a(x86::ptr(dst), src);
+      v_storea_i128(x86::ptr(dst), src);
       cc->add(dst, 16);
       cc->sub(i, tailStepInItems);
       cc->jz(L_End);
@@ -2092,13 +2092,13 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
       cc->cmp(i, 8u / itemSize);
       cc->jb(L_Store1);
 
-      vstorei64(x86::ptr(dst), src);
+      v_store_i64(x86::ptr(dst), src);
       cc->add(dst, 8);
       cc->sub(i, 8u / itemSize);
       cc->jz(L_End);
 
       cc->bind(L_Store1);
-      vstorei32(x86::ptr(dst), src);
+      v_store_i32(x86::ptr(dst), src);
       cc->add(dst, 4);
     }
 
@@ -2127,7 +2127,7 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
       cc->ja(L_Large);
 
       x86::Gp srcGp = cc->newInt32("srcGp");
-      vmovsi32(srcGp, src);
+      s_mov_i32(srcGp, src);
 
       cc->bind(L_Small);
       cc->mov(ptr_8(dst), srcGp.r8());
@@ -2141,7 +2141,7 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
       x86::Gp iptr = i.cloneAs(dst);
       cc->add(iptr, dst);
 
-      vstorei128u(x86::ptr(dst), src);
+      v_storeu_i128(x86::ptr(dst), src);
       cc->add(dst, 16);
       cc->and_(dst, -16);
 
@@ -2163,7 +2163,7 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
       cc->add(dst, mainLoopSize);
       cc->sub(i, mainLoopSize);
       for (j = 0; j < mainLoopSize; j += 16u)
-        vstorei128a(x86::ptr(dst, int(j) - int(mainLoopSize)), src);
+        v_storea_i128(x86::ptr(dst, int(j) - int(mainLoopSize)), src);
       cc->jnc(L_MainLoop);
 
       cc->bind(L_MainSkip);
@@ -2184,7 +2184,7 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
       cc->bind(L_TailLoop);
       cc->add(dst, 16);
       cc->sub(i, 16);
-      vstorei128a(x86::ptr(dst, -16), src);
+      v_storea_i128(x86::ptr(dst, -16), src);
       cc->jnc(L_TailLoop);
 
       cc->bind(L_TailSkip);
@@ -2195,7 +2195,7 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
       cc->cmp(i, 16);
       cc->jb(L_Finalize);
 
-      vstorei128a(x86::ptr(dst, int(j)), src);
+      v_storea_i128(x86::ptr(dst, int(j)), src);
       cc->add(dst, 16);
       cc->sub(i, 16);
       cc->jz(L_End);
@@ -2206,7 +2206,7 @@ void PipeCompiler::xInlinePixelFillLoop(x86::Gp& dst, x86::Vec& src, x86::Gp& i,
 
     {
       cc->add(dst, i.cloneAs(dst));
-      vstorei128u(x86::ptr(dst, -16), src);
+      v_storeu_i128(x86::ptr(dst, -16), src);
     }
 
     cc->bind(L_End);
@@ -2316,13 +2316,13 @@ void PipeCompiler::xInlinePixelCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, 
       cc->jb(L_Finalize);
 
       x86::Gp iptr = i.cloneAs(dst);
-      vloadi128u(t0, x86::ptr(src));
+      v_loadu_i128(t0, x86::ptr(src));
       if (sizeShift)
         cc->shl(iptr, sizeShift);
 
       cc->add(iptr, dst);
       cc->sub(src, dst);
-      vstorei128u(x86::ptr(dst), t0);
+      v_storeu_i128(x86::ptr(dst), t0);
       cc->add(dst, 16);
       cc->and_(dst, -1 ^ int(alignPattern));
 
@@ -2398,17 +2398,17 @@ void PipeCompiler::xInlinePixelCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, 
       cc->cmp(i, 8u / itemSize);
       cc->jb(L_Store1);
 
-      vloadi64(t0, x86::ptr(src));
+      v_load_i64(t0, x86::ptr(src));
       cc->add(src, 8);
-      vstorei64(x86::ptr(dst), t0);
+      v_store_i64(x86::ptr(dst), t0);
       cc->add(dst, 8);
       cc->sub(i, 8u / itemSize);
       cc->jz(L_End);
 
       cc->bind(L_Store1);
-      vloadi32(t0, x86::ptr(src));
+      v_load_i32(t0, x86::ptr(src));
       cc->add(src, 4);
-      vstorei32(x86::ptr(dst), t0);
+      v_store_i32(x86::ptr(dst), t0);
       cc->add(dst, 4);
     }
 
@@ -2449,11 +2449,11 @@ void PipeCompiler::xInlinePixelCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, 
       cc->jmp(L_End);
 
       cc->bind(L_Large);
-      vloadi128u(t0, x86::ptr(src));
+      v_loadu_i128(t0, x86::ptr(src));
       cc->add(iptr, dst);
       cc->sub(src, dst);
 
-      vstorei128u(x86::ptr(dst), t0);
+      v_storeu_i128(x86::ptr(dst), t0);
       cc->add(dst, 16);
       cc->and_(dst, -16);
 
@@ -2556,7 +2556,7 @@ void PipeCompiler::_xInlineMemCopySequenceXmm(
       // Shortest code for this use case. AVX allows to read from unaligned
       // memory, so if we use VEC instructions we are generally safe here.
       for (a = 0; a < b; a++) {
-        vor(t[a], fillMask, sAdj);
+        v_or(t[a], fillMask, sAdj);
         sAdj.addOffsetLo32(16);
       }
 
@@ -2573,7 +2573,7 @@ void PipeCompiler::_xInlineMemCopySequenceXmm(
 
       for (a = 0; a < b; a++)
         if (fillMask.isValid())
-          vor(t[a], t[a], fillMask);
+          v_or(t[a], t[a], fillMask);
 
       for (a = 0; a < b; a++) {
         cc->emit(storeInst, dAdj, t[a]);

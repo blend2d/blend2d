@@ -160,7 +160,7 @@ Rasterize:
           const BLEdgePoint<int>* pts = current->cur;
           while (pts != current->end) {
             pts++;
-            if (!ras.prepare(pts[-2].x, pts[-2].y, pts[-1].x, pts[-1].y))
+            if (!ras.prepare(pts[-2], pts[-1]))
               continue;
 
             current->cur = pts;
@@ -207,7 +207,7 @@ SaveState:
         edges = edges->next;
         do {
           pts++;
-          if (!ras.prepare(pts[-2].x, pts[-2].y, pts[-1].x, pts[-1].y))
+          if (!ras.prepare(pts[-2], pts[-1]))
             continue;
 
           if (uint32_t(ras._ey1) <= ras._bandEnd) {

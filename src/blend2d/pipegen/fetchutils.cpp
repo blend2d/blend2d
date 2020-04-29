@@ -30,9 +30,9 @@ void IndexExtractor::begin(uint32_t type, const x86::Vec& vec) noexcept {
   x86::Mem mem = _pc->tmpStack(vecSize);
 
   if (vecSize <= 16)
-    _pc->vstorei128a(mem, vec);
+    _pc->v_storea_i128(mem, vec);
   else
-    _pc->vstorei256u(mem, vec);
+    _pc->v_storeu_i256(mem, vec);
 
   begin(type, mem, vec.size());
 }
@@ -188,20 +188,20 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
     if (finalize) {
       // The last pixel -> Convert to XMM.
       if (aAcc.size() == 8) {
-        _pc->vmovsi64(aTmp, aAcc);
+        _pc->s_mov_i64(aTmp, aAcc);
       }
       else if (_fetchIndex == 7) {
         if (_pc->hasSSE4_1()) {
-          _pc->vinsertu32_(aTmp, aTmp, aAcc, 1);
+          _pc->v_insert_u32_(aTmp, aTmp, aAcc, 1);
         }
         else {
           x86::Xmm aHi = cc->newXmm("@aHi");
-          _pc->vmovsi32(aHi, aAcc);
-          _pc->vunpackli32(aTmp, aTmp, aHi);
+          _pc->s_mov_i32(aHi, aAcc);
+          _pc->v_interleave_lo_i32(aTmp, aTmp, aHi);
         }
       }
       else {
-        _pc->vmovsi32(aTmp, aAcc);
+        _pc->s_mov_i32(aTmp, aAcc);
       }
 
       if (_a8FetchShift == 8 && !(_fetchFlags & (Pixel::kPA | Pixel::kPC)))
@@ -210,7 +210,7 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
     else if (_fetchIndex == 3 && aAcc.size() == 4) {
       // Not the last pixel, but we have to convert to XMM as we have no more
       // space in the GP accumulator. This should only happen in 32-bit mode.
-      _pc->vmovsi32(aTmp, aAcc);
+      _pc->s_mov_i32(aTmp, aAcc);
     }
   }
   else if (_pixel->isRGBA()) {
@@ -226,98 +226,98 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
     if (!_pc->hasSSE4_1()) {
       switch (_fetchIndex) {
         case 0:
-          _pc->vloadi32(p0, src);
+          _pc->v_load_i32(p0, src);
           break;
 
         case 1:
-          _pc->vloadi32(pTmp0, src);
+          _pc->v_load_i32(pTmp0, src);
           break;
 
         case 2:
-          _pc->vunpackli32(p0, p0, pTmp0);
+          _pc->v_interleave_lo_i32(p0, p0, pTmp0);
           if (isPC)
-            _pc->vloadi32(pTmp0, src);
+            _pc->v_load_i32(pTmp0, src);
           else
-            _pc->vloadi32(uc[1], src);
+            _pc->v_load_i32(uc[1], src);
           break;
 
         case 3:
-          _pc->vloadi32(pTmp1, src);
+          _pc->v_load_i32(pTmp1, src);
           break;
 
         case 4:
           if (isPC) {
-            _pc->vunpackli32(pTmp0, pTmp0, pTmp1);
-            _pc->vunpackli64(p0, p0, pTmp0);
+            _pc->v_interleave_lo_i32(pTmp0, pTmp0, pTmp1);
+            _pc->v_interleave_lo_i64(p0, p0, pTmp0);
           }
           else {
-            _pc->vunpackli32(uc[1], uc[1], pTmp1);
+            _pc->v_interleave_lo_i32(uc[1], uc[1], pTmp1);
           }
 
-          _pc->vloadi32(p1, src);
+          _pc->v_load_i32(p1, src);
           break;
 
         case 5:
-          _pc->vloadi32(pTmp0, src);
+          _pc->v_load_i32(pTmp0, src);
           break;
 
         case 6:
-          _pc->vunpackli32(p1, p1, pTmp0);
+          _pc->v_interleave_lo_i32(p1, p1, pTmp0);
           if (isPC)
-            _pc->vloadi32(pTmp0, src);
+            _pc->v_load_i32(pTmp0, src);
           else
-            _pc->vloadi32(uc[3], src);
+            _pc->v_load_i32(uc[3], src);
           break;
 
         case 7:
-          _pc->vloadi32(pTmp1, src);
+          _pc->v_load_i32(pTmp1, src);
           break;
       }
     }
     else {
       switch (_fetchIndex) {
         case 0:
-          _pc->vloadi32(p0, src);
+          _pc->v_load_i32(p0, src);
           break;
 
         case 1:
-          _pc->vinsertu32_(p0, p0, src, 1);
+          _pc->v_insert_u32_(p0, p0, src, 1);
           break;
 
         case 2:
           if (isPC)
-            _pc->vinsertu32_(p0, p0, src, 2);
+            _pc->v_insert_u32_(p0, p0, src, 2);
           else
-            _pc->vloadi32(uc[1], src);
+            _pc->v_load_i32(uc[1], src);
           break;
 
         case 3:
           if (isPC)
-            _pc->vinsertu32_(p0, p0, src, 3);
+            _pc->v_insert_u32_(p0, p0, src, 3);
           else
-            _pc->vinsertu32_(uc[1], uc[1], src, 1);
+            _pc->v_insert_u32_(uc[1], uc[1], src, 1);
           break;
 
         case 4:
-          _pc->vloadi32(p1, src);
+          _pc->v_load_i32(p1, src);
           break;
 
         case 5:
-          _pc->vinsertu32_(p1, p1, src, 1);
+          _pc->v_insert_u32_(p1, p1, src, 1);
           break;
 
         case 6:
           if (isPC)
-            _pc->vinsertu32_(p1, p1, src, 2);
+            _pc->v_insert_u32_(p1, p1, src, 2);
           else
-            _pc->vloadi32(uc[3], src);
+            _pc->v_load_i32(uc[3], src);
           break;
 
         case 7:
           if (isPC)
-            _pc->vinsertu32_(p1, p1, src, 3);
+            _pc->v_insert_u32_(p1, p1, src, 3);
           else
-            _pc->vinsertu32_(uc[3], uc[3], src, 1);
+            _pc->v_insert_u32_(uc[3], uc[3], src, 1);
           break;
       }
     }
@@ -380,34 +380,34 @@ void FetchContext::_fetchAll(const x86::Mem& src, uint32_t srcShift, IndexExtrac
         extractor.extract(idx1, indexes[4]);
 
         cb(0, cbData);
-        _pc->vloadi32(pc0, src0);
+        _pc->v_load_i32(pc0, src0);
         extractor.extract(idx0, indexes[1]);
 
         cb(1, cbData);
-        _pc->vloadi32(pc1, src1);
+        _pc->v_load_i32(pc1, src1);
         extractor.extract(idx1, indexes[5]);
 
         cb(2, cbData);
-        _pc->vinsertu32_(pc0, pc0, src0, 1);
+        _pc->v_insert_u32_(pc0, pc0, src0, 1);
         extractor.extract(idx0, indexes[2]);
 
         cb(3, cbData);
-        _pc->vinsertu32_(pc1, pc1, src1, 1);
+        _pc->v_insert_u32_(pc1, pc1, src1, 1);
         extractor.extract(idx1, indexes[6]);
 
         cb(4, cbData);
-        _pc->vinsertu32_(pc0, pc0, src0, 2);
+        _pc->v_insert_u32_(pc0, pc0, src0, 2);
         extractor.extract(idx0, indexes[3]);
 
         cb(5, cbData);
-        _pc->vinsertu32_(pc1, pc1, src1, 2);
+        _pc->v_insert_u32_(pc1, pc1, src1, 2);
         extractor.extract(idx1, indexes[7]);
 
         cb(6, cbData);
-        _pc->vinsertu32_(pc0, pc0, src0, 3);
+        _pc->v_insert_u32_(pc0, pc0, src0, 3);
 
         cb(7, cbData);
-        _pc->vinsertu32_(pc1, pc1, src1, 3);
+        _pc->v_insert_u32_(pc1, pc1, src1, 3);
 
         _fetchIndex = 8;
         _fetchDone = true;
@@ -469,8 +469,8 @@ void FetchContext::end() noexcept {
           case 4: {
             x86::Vec& a0 = _pixel->pc[0];
 
-            _pc->vunpackli8(a0, a0, a0);
-            _pc->vunpackli16(a0, a0, a0);
+            _pc->v_interleave_lo_i8(a0, a0, a0);
+            _pc->v_interleave_lo_i16(a0, a0, a0);
             break;
           }
 
@@ -478,10 +478,10 @@ void FetchContext::end() noexcept {
             x86::Vec& a0 = _pixel->pc[0];
             x86::Vec& a1 = _pixel->pc[1];
 
-            _pc->vunpackhi8(a1, a0, a0);
-            _pc->vunpackli8(a0, a0, a0);
-            _pc->vunpackhi16(a1, a1, a1);
-            _pc->vunpackli16(a0, a0, a0);
+            _pc->v_interleave_hi_i8(a1, a0, a0);
+            _pc->v_interleave_lo_i8(a0, a0, a0);
+            _pc->v_interleave_hi_i16(a1, a1, a1);
+            _pc->v_interleave_lo_i16(a0, a0, a0);
             break;
           }
 
@@ -495,10 +495,10 @@ void FetchContext::end() noexcept {
             x86::Vec& a0 = _pixel->uc[0];
             x86::Vec& a1 = _pixel->uc[1];
 
-            _pc->vunpackli16(a0, a0, a0);
+            _pc->v_interleave_lo_i16(a0, a0, a0);
 
-            _pc->vswizi32(a1, a0, x86::Predicate::shuf(3, 3, 2, 2));
-            _pc->vswizi32(a0, a0, x86::Predicate::shuf(1, 1, 0, 0));
+            _pc->v_swizzle_i32(a1, a0, x86::Predicate::shuf(3, 3, 2, 2));
+            _pc->v_swizzle_i32(a0, a0, x86::Predicate::shuf(1, 1, 0, 0));
             break;
           }
 
@@ -508,13 +508,13 @@ void FetchContext::end() noexcept {
             x86::Vec& a2 = _pixel->uc[2];
             x86::Vec& a3 = _pixel->uc[3];
 
-            _pc->vunpackhi16(a2, a0, a0);
-            _pc->vunpackli16(a0, a0, a0);
+            _pc->v_interleave_hi_i16(a2, a0, a0);
+            _pc->v_interleave_lo_i16(a0, a0, a0);
 
-            _pc->vswizi32(a3, a2, x86::Predicate::shuf(3, 3, 2, 2));
-            _pc->vswizi32(a1, a0, x86::Predicate::shuf(3, 3, 2, 2));
-            _pc->vswizi32(a2, a2, x86::Predicate::shuf(1, 1, 0, 0));
-            _pc->vswizi32(a0, a0, x86::Predicate::shuf(1, 1, 0, 0));
+            _pc->v_swizzle_i32(a3, a2, x86::Predicate::shuf(3, 3, 2, 2));
+            _pc->v_swizzle_i32(a1, a0, x86::Predicate::shuf(3, 3, 2, 2));
+            _pc->v_swizzle_i32(a2, a2, x86::Predicate::shuf(1, 1, 0, 0));
+            _pc->v_swizzle_i32(a0, a0, x86::Predicate::shuf(1, 1, 0, 0));
             break;
           }
 
@@ -531,12 +531,12 @@ void FetchContext::end() noexcept {
     if (!_pc->hasSSE4_1()) {
       if (_fetchFlags & Pixel::kPC) {
         const x86::Vec& pcLast = _pixel->pc[_pixel->pc.size() - 1];
-        _pc->vunpackli32(pTmp0, pTmp0, pTmp1);
-        _pc->vunpackli64(pcLast, pcLast, pTmp0);
+        _pc->v_interleave_lo_i32(pTmp0, pTmp0, pTmp1);
+        _pc->v_interleave_lo_i64(pcLast, pcLast, pTmp0);
       }
       else {
         const x86::Vec& ucLast = _pixel->uc[_pixel->uc.size() - 1];
-        _pc->vunpackli32(ucLast, ucLast, pTmp1);
+        _pc->v_interleave_lo_i32(ucLast, ucLast, pTmp1);
       }
     }
 

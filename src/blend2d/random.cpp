@@ -44,12 +44,12 @@ UNIT(random) {
     BLRandom a(0);
     BLRandom b(0);
 
-    SIMD::I128 bLo = blRandomNextUInt64AsI128Inline(&b);
-    SIMD::I128 bHi = SIMD::vswizi32<2, 3, 0, 1>(bLo);
+    SIMD::Vec128I bLo = blRandomNextUInt64AsI128Inline(&b);
+    SIMD::Vec128I bHi = SIMD::v_swizzle_i32<2, 3, 0, 1>(bLo);
 
     uint64_t aVal = a.nextUInt64();
-    uint64_t bVal = (uint64_t(SIMD::vcvti128i32(bLo))      ) +
-                    (uint64_t(SIMD::vcvti128i32(bHi)) << 32) ;
+    uint64_t bVal = (uint64_t(SIMD::v_get_i32(bLo))      ) +
+                    (uint64_t(SIMD::v_get_i32(bHi)) << 32) ;
 
     EXPECT(aVal == bVal);
   }

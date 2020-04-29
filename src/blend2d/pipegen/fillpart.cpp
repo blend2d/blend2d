@@ -481,12 +481,12 @@ void FillAnalyticPart::compile() noexcept {
   cc->lea(bitPtr, x86::ptr(bitPtr, xStart.cloneAs(bitPtr), blBitCtz(bwSize)));
   cc->shl(xStart, pixelsPerBitWordShift);
 
-  pc->vbroadcast_u16(globalAlpha, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::Analytic, alpha)));
+  pc->v_broadcast_u16(globalAlpha, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::Analytic, alpha)));
   // We shift left by 7 bits so we can use `pmulhuw` in `calcMasksFromCells()`.
-  pc->vslli16(globalAlpha, globalAlpha, 7);
+  pc->v_sll_i16(globalAlpha, globalAlpha, 7);
 
   // Initialize fill-rule.
-  pc->vbroadcast_u32(fillRuleMask, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::Analytic, fillRuleMask)));
+  pc->v_broadcast_u32(fillRuleMask, x86::ptr_32(fillData, BL_OFFSET_OF(BLPipeFillData::Analytic, fillRuleMask)));
 
   cc->jmp(L_Scanline_Init);
 
@@ -534,7 +534,7 @@ void FillAnalyticPart::compile() noexcept {
   compOpPart()->startAtX(x0);                              //   <CompOpPart::StartAtX>
   compOpPart()->prefetchN();                               //   <CompOpPart::PrefetchN>
 
-  pc->vloadi128a(cov, pc->constAsMem(blCommonTable.i128_0002000000020000)); // cov[3:0] = 256 << 9;
+  pc->v_loada_i128(cov, pc->constAsMem(blCommonTable.i128_0002000000020000)); // cov[3:0] = 256 << 9;
 
   // If `bitWord ^ bitWordTmp` results in non-zero value it means that the current
   // span ends within the same BitWord, otherwise the span crosses multiple BitWords.
@@ -568,21 +568,21 @@ void FillAnalyticPart::compile() noexcept {
   pc->uCTZ(i.cloneAs(bitWord), bitWord);                   //   i = ctz(bitWord);
 
   cc->bind(L_BitScan_End);                                 // L_BitScan_End:
-  pc->vloadi128a(m[0], x86::ptr(cellPtr));                 //   m0[3:0] = cellPtr[3:0];
+  pc->v_loada_i128(m[0], x86::ptr(cellPtr));               //   m0[3:0] = cellPtr[3:0];
   cc->or_(bitWordTmp, -1);                                 //   bitWordTmp = -1; (all ones).
   pc->uShl(bitWordTmp, bitWordTmp, i);                     //   bitWordTmp <<= i;
   cc->shl(i, pixelsPerOneBitShift);                        //   i <<= pixelsPerOneBitShift;
 
   cc->xor_(bitWord, bitWordTmp);                           //   bitWord ^= bitWordTmp;
   cc->add(i, xOff);                                        //   i += xOff;
-  pc->vzeropi(m[1]);                                       //   m1[3:0] = 0;
+  pc->v_zero_i(m[1]);                                      //   m1[3:0] = 0;
 
   // In cases where the raster width is not a multiply of `pixelsPerOneBit` we
   // must make sure we won't overflow it.
 
   cc->cmp(i, xEnd);                                        //   if (i > xEnd)
   cc->cmova(i, xEnd);                                      //     i = xEnd;
-  pc->vstorei128a(x86::ptr(cellPtr), m[1]);                //   cellPtr[3:0] = 0;
+  pc->v_storea_i128(x86::ptr(cellPtr), m[1]);              //   cellPtr[3:0] = 0;
 
   // `i` is now the number of pixels (and cells) to composite by using `vMask`.
 
@@ -603,10 +603,10 @@ void FillAnalyticPart::compile() noexcept {
       compOpPart()->enterPartialMode();                    //   <CompOpPart::enterPartialMode>
 
     if (pixelType == Pixel::kTypeRGBA) {
-      pc->vslli128b(m[0], m[0], 6);                        //   m0[7:0] = [__, M3, M2, M1, M0, __, __, __]
+      pc->v_sllb_i128(m[0], m[0], 6);                      //   m0[7:0] = [__, M3, M2, M1, M0, __, __, __]
 
       cc->bind(L_VLoop_Step);                              // L_VLoop_Step:
-      pc->vswizli16(m[0], m[0], shuf(3, 3, 3, 3));         //   m0[7:0] = [__, M3, M2, M1, M0, M0, M0, M0]
+      pc->v_swizzle_lo_i16(m[0], m[0], shuf(3, 3, 3, 3));  //   m0[7:0] = [__, M3, M2, M1, M0, M0, M0, M0]
 
       compOpPart()->vMaskProcRGBA32Xmm(dPix, 1, Pixel::kPC | Pixel::kImmutable, m, true);
 
@@ -616,13 +616,13 @@ void FillAnalyticPart::compile() noexcept {
       cc->sub(i, 1);                                       //   i--;
       cc->add(dstPtr, dstBpp);                             //   dstPtr += dstBpp;
       cc->add(cellPtr, 4);                                 //   cellPtr += 4;
-      pc->vsrli128b(m[0], m[0], 2);                        //   m0[7:0] = [0, m[7:1]]
+      pc->v_srlb_i128(m[0], m[0], 2);                      //   m0[7:0] = [0, m[7:1]]
     }
     else if (pixelType == Pixel::kTypeAlpha) {
       cc->bind(L_VLoop_Step);                              // L_VLoop_Step:
 
       x86::Gp msk = cc->newUInt32();
-      pc->vextractu16(msk, m[0], 0);
+      pc->v_extract_u16(msk, m[0], 0);
 
       compOpPart()->vMaskProcA8Gp(dPix, Pixel::kSA | Pixel::kImmutable, msk, false);
 
@@ -632,7 +632,7 @@ void FillAnalyticPart::compile() noexcept {
       cc->sub(i, 1);                                       //   i--;
       cc->add(dstPtr, dstBpp);                             //   dstPtr += dstBpp;
       cc->add(cellPtr, 4);                                 //   cellPtr += 4;
-      pc->vsrli128b(m[0], m[0], 2);                        //   m0[7:0] = [0, m[7:1]]
+      pc->v_srlb_i128(m[0], m[0], 2);                      //   m0[7:0] = [0, m[7:1]]
     }
 
     if (pixelGranularity >= 4)
@@ -648,9 +648,9 @@ void FillAnalyticPart::compile() noexcept {
     // end of the scanline. In that case `cellPtr` might already be misaligned
     // if the image width is not divisible by 4.
 
-    pc->vzeropi(m[1]);                                     //   m1[3:0] = 0;
-    pc->vloadi128u(m[0], x86::ptr(cellPtr));               //   m0[3:0] = cellPtr[3:0];
-    pc->vstorei128u(x86::ptr(cellPtr), m[1]);              //   cellPtr[3:0] = 0;
+    pc->v_zero_i(m[1]);                                    //   m1[3:0] = 0;
+    pc->v_loadu_i128(m[0], x86::ptr(cellPtr));             //   m0[3:0] = cellPtr[3:0];
+    pc->v_storeu_i128(x86::ptr(cellPtr), m[1]);            //   cellPtr[3:0] = 0;
 
     cc->bind(L_VLoop_Init);                                // L_VLoop_Init:
 
@@ -672,9 +672,9 @@ void FillAnalyticPart::compile() noexcept {
     cc->bind(L_VLoop_Cont);                                // L_VLoop_Cont:
 
     if (pixelType == Pixel::kTypeRGBA) {
-      pc->vunpackli16(m[0], m[0], m[0]);                   //   m0 = [M3, M3, M2, M2, M1, M1, M0, M0]
-      pc->vswizi32(m[1], m[0], shuf(3, 3, 2, 2));          //   m1 = [M3, M3, M3, M3, M2, M2, M2, M2]
-      pc->vswizi32(m[0], m[0], shuf(1, 1, 0, 0));          //   m0 = [M1, M1, M1, M1, M0, M0, M0, M0]
+      pc->v_interleave_lo_i16(m[0], m[0], m[0]);           //   m0 = [M3, M3, M2, M2, M1, M1, M0, M0]
+      pc->v_swizzle_i32(m[1], m[0], shuf(3, 3, 2, 2));     //   m1 = [M3, M3, M3, M3, M2, M2, M2, M2]
+      pc->v_swizzle_i32(m[0], m[0], shuf(1, 1, 0, 0));     //   m0 = [M1, M1, M1, M1, M0, M0, M0, M0]
 
       compOpPart()->vMaskProcRGBA32Xmm(dPix, 4, Pixel::kPC | Pixel::kImmutable, m, false);
     }
@@ -683,18 +683,18 @@ void FillAnalyticPart::compile() noexcept {
     }
 
     cc->add(cellPtr, 16);                                  //   cellPtr += 4 * sizeof(uint32_t);
-    pc->vzeropi(m[1]);                                     //   m1[3:0] = 0;
+    pc->v_zero_i(m[1]);                                    //   m1[3:0] = 0;
 
     if (pixelType == Pixel::kTypeRGBA) {
       pc->xStorePixel(dstPtr, dPix.pc[0], 4, dstBpp, 1);
     }
     else if (pixelType == Pixel::kTypeAlpha) {
-      pc->vstorei32(x86::ptr(dstPtr), dPix.pa[0]);
+      pc->v_store_i32(x86::ptr(dstPtr), dPix.pa[0]);
     }
 
-    pc->vloadi128a(m[0], x86::ptr(cellPtr));               //   m0[3:0] = cellPtr[3:0];
+    pc->v_loada_i128(m[0], x86::ptr(cellPtr));             //   m0[3:0] = cellPtr[3:0];
     cc->add(dstPtr, dstBpp * 4);                           //   dstPtr += 4 * dstBpp;
-    pc->vstorei128a(x86::ptr(cellPtr), m[1]);              //   cellPtr[3:0] = 0;
+    pc->v_storea_i128(x86::ptr(cellPtr), m[1]);            //   cellPtr[3:0] = 0;
 
     dPix.resetAllExceptType();
 
@@ -755,7 +755,7 @@ void FillAnalyticPart::compile() noexcept {
   cc->mov(x86::ptr(bitPtr, -bwSize, uint32_t(bwSize)), 0); //   bitPtr[-1] = 0;
   pc->uCTZ(i.cloneAs(bitWord), bitWord);                   //   i = ctz(bitWord);
   cc->mov(bitWordTmp, -1);                                 //   bitWordTmp = -1; (all ones)
-  pc->vextractu16(cMaskAlpha, m[0], 0);                    //   cMaskAlpha = extracti16(m0, 0);
+  pc->v_extract_u16(cMaskAlpha, m[0], 0);                  //   cMaskAlpha = extracti16(m0, 0);
 
   pc->uShl(bitWordTmp, bitWordTmp, i);                     //   bitWordTmp <<= i;
   pc->uShl(i, i, imm(pixelsPerOneBitShift));               //   i <<= pixelsPerOneBitShift;
@@ -805,15 +805,15 @@ void FillAnalyticPart::compile() noexcept {
 
   if (pixelType == Pixel::kTypeRGBA) {
     if (compOpPart()->maxPixels() > 1)
-      pc->vswizi32(m[0], m[0], shuf(0, 0, 0, 0));          //   m0 = [M0, M0, M0, M0, M0, M0, M0, M0]
+      pc->v_swizzle_i32(m[0], m[0], shuf(0, 0, 0, 0));     //   m0 = [M0, M0, M0, M0, M0, M0, M0, M0]
   }
   else if (pixelType == Pixel::kTypeAlpha) {
     // TODO: Is this right? As RGBA doesn't require this shuffle, it seems we can assume [M0, M0, M0, M0].
     if (compOpPart()->maxPixels() > 1)
-      pc->vswizli16(m[0], m[0], shuf(0, 0, 0, 0));         //   m0 = [__, __, __, __, M0, M0, M0, M0]
+      pc->v_swizzle_lo_i16(m[0], m[0], shuf(0, 0, 0, 0));  //   m0 = [__, __, __, __, M0, M0, M0, M0]
 
     if (compOpPart()->maxPixels() > 4)
-      pc->vswizi32(m[0], m[0], shuf(0, 0, 0, 0));          //   m0 = [M0, M0, M0, M0, M0, M0, M0, M0]
+      pc->v_swizzle_i32(m[0], m[0], shuf(0, 0, 0, 0));     //   m0 = [M0, M0, M0, M0, M0, M0, M0, M0]
   }
 
   compOpPart()->cMaskInit(cMaskAlpha, m[0]);
@@ -838,17 +838,17 @@ void FillAnalyticPart::compile() noexcept {
     if (pixelType == Pixel::kTypeRGBA) {
       cc->bind(L_VTail_Init);                              // L_VTail_Init:
       pc->uAddMulImm(cellPtr, i, 4);                       //   cellPtr += i * sizeof(uint32_t);
-      pc->vslli128b(m[0], m[0], 6);                        //   m0[7:0] = [__, M3, M2, M1, M0, __, __, __]
+      pc->v_sllb_i128(m[0], m[0], 6);                      //   m0[7:0] = [__, M3, M2, M1, M0, __, __, __]
       compOpPart()->enterPartialMode();                    //   <CompOpPart::enterPartialMode>
 
       cc->bind(L_VTail_Cont);                              // L_VTail_Cont:
-      pc->vswizli16(m[0], m[0], shuf(3, 3, 3, 3));         //   m0[7:0] = [__, M3, M2, M1, M0, M0, M0, M0]
+      pc->v_swizzle_lo_i16(m[0], m[0], shuf(3, 3, 3, 3));  //   m0[7:0] = [__, M3, M2, M1, M0, M0, M0, M0]
 
       compOpPart()->vMaskProcRGBA32Xmm(dPix, 1, Pixel::kPC | Pixel::kImmutable, m, true);
 
       pc->xStorePixel(dstPtr, dPix.pc[0], 1, dstBpp, 1);
       cc->add(dstPtr, dstBpp);                             //   dstPtr += dstBpp;
-      pc->vsrli128b(m[0], m[0], 2);                        //   m0[7:0] = [0, m[7:1]]
+      pc->v_srlb_i128(m[0], m[0], 2);                      //   m0[7:0] = [0, m[7:1]]
       compOpPart()->nextPartialPixel();                    //   <CompOpPart::nextPartialPixel>
 
       dPix.resetAllExceptType();
@@ -866,12 +866,12 @@ void FillAnalyticPart::compile() noexcept {
       compOpPart()->enterPartialMode();                    //   <CompOpPart::enterPartialMode>
 
       cc->bind(L_VTail_Cont);                              // L_VTail_Cont:
-      pc->vextractu16(mScalar, m[0], 0);
+      pc->v_extract_u16(mScalar, m[0], 0);
       compOpPart()->vMaskProcA8Gp(dPix, Pixel::kSA | Pixel::kImmutable, mScalar, false);
 
       pc->store8(x86::ptr(dstPtr), dPix.sa);
       cc->add(dstPtr, dstBpp);                             //   dstPtr += dstBpp;
-      pc->vsrli128b(m[0], m[0], 2);                        //   m0[7:0] = [0, m[7:1]]
+      pc->v_srlb_i128(m[0], m[0], 2);                      //   m0[7:0] = [0, m[7:1]]
       compOpPart()->nextPartialPixel();                    //   <CompOpPart::nextPartialPixel>
 
       dPix.resetAllExceptType();
@@ -899,8 +899,8 @@ void FillAnalyticPart::compile() noexcept {
   // end of the scaline.
 
   cc->bind(L_Scanline_Done0);                              // L_Scanline_Done0:
-  pc->vzeropi(m[1]);                                       //   m1[3:0] = 0;
-  pc->vstorei128u(x86::ptr(cellPtr), m[1]);                //   cellPtr[3:0] = 0;
+  pc->v_zero_i(m[1]);                                      //   m1[3:0] = 0;
+  pc->v_storeu_i128(x86::ptr(cellPtr), m[1]);              //   cellPtr[3:0] = 0;
 
   cc->bind(L_Scanline_Done1);                              // L_Scanline_Done1:
   disadvanceDstPtrAndCellPtr(dstPtr,                       //   dstPtr -= x0 * dstBpp;
@@ -945,13 +945,13 @@ void FillAnalyticPart::compile() noexcept {
 void FillAnalyticPart::accumulateCells(const x86::Vec& acc, const x86::Vec& val) noexcept {
   x86::Vec tmp = cc->newSimilarReg<x86::Vec>(val, "vAccTmp");
 
-  pc->vslli128b(tmp, val, 4);                              //   tmp[3:0]  = [  c2 |  c1 |  c0 |  0  ];
-  pc->vaddi32(val, val, tmp);                              //   val[3:0]  = [c3:c2|c2:c1|c1:c0|  c0 ];
-  pc->vaddi32(acc, acc, val);                              //   acc[3:0] += val[3:0];
+  pc->v_sllb_i128(tmp, val, 4);                            //   tmp[3:0]  = [  c2 |  c1 |  c0 |  0  ];
+  pc->v_add_i32(val, val, tmp);                            //   val[3:0]  = [c3:c2|c2:c1|c1:c0|  c0 ];
+  pc->v_add_i32(acc, acc, val);                            //   acc[3:0] += val[3:0];
 
-  pc->vslli128b(val, val, 8);                              //   val[3:0]  = [c1:c0|  c0 |  0  |  0  ];
-  pc->vaddi32(val, val, acc);                              //   val[3:0] += acc[3:0];
-  pc->vswizi32(acc, val, x86::Predicate::shuf(3, 3, 3, 3));
+  pc->v_sllb_i128(val, val, 8);                            //   val[3:0]  = [c1:c0|  c0 |  0  |  0  ];
+  pc->v_add_i32(val, val, acc);                            //   val[3:0] += acc[3:0];
+  pc->v_swizzle_i32(acc, val, x86::Predicate::shuf(3, 3, 3, 3));
 }
 
 void FillAnalyticPart::calcMasksFromCells(const x86::Vec& dst, const x86::Vec& src, const x86::Vec& fillRuleMask, const x86::Vec& globalAlpha, bool unpack) noexcept {
@@ -961,17 +961,17 @@ void FillAnalyticPart::calcMasksFromCells(const x86::Vec& dst, const x86::Vec& s
   // is already preshifted by `7` bits left and we only need to shift the final
   // mask by one bit left after it's been calculated. So instead of shifting it
   // left later we clear the LSB bit now and that's it, we saved one instruction.
-  pc->vsrai32(dst, src, BL_PIPE_A8_SHIFT);
-  pc->vand(dst, dst, fillRuleMask);
+  pc->v_sra_i32(dst, src, BL_PIPE_A8_SHIFT);
+  pc->v_and(dst, dst, fillRuleMask);
 
   // We have to make sure that that cleared LSB bit stays zero. Since we only
   // use SUB with even value and abs we are fine. However, that packing would not
   // be safe if there was no "VMINI16", which makes sure we are always safe.
-  pc->vsubi32(dst, dst, pc->constAsMem(blCommonTable.i128_0000020000000200));
-  pc->vabsi32(dst, dst);
+  pc->v_sub_i32(dst, dst, pc->constAsMem(blCommonTable.i128_0000020000000200));
+  pc->v_abs_i32(dst, dst);
 
-  pc->vpacki32i16(dst, dst, dst);
-  pc->vmini16(dst, dst, pc->constAsMem(blCommonTable.i128_0200020002000200));
+  pc->v_packs_i32_i16(dst, dst, dst);
+  pc->v_min_i16(dst, dst, pc->constAsMem(blCommonTable.i128_0200020002000200));
 
   // Now we have a vector of 16-bit masks:
   //
@@ -981,10 +981,10 @@ void FillAnalyticPart::calcMasksFromCells(const x86::Vec& dst, const x86::Vec& s
   //
   //   [M3, M3, M2, M2, M1, M1, M0, M0]
   if (unpack)
-    pc->vunpackli16(dst, dst, dst);
+    pc->v_interleave_lo_i16(dst, dst, dst);
 
   // Multiply masks by global alpha, this would output masks in [0, 255] range.
-  pc->vmulhu16(dst, dst, globalAlpha);
+  pc->v_mulh_u16(dst, dst, globalAlpha);
 }
 
 void FillAnalyticPart::disadvanceDstPtrAndCellPtr(const x86::Gp& dstPtr, const x86::Gp& cellPtr, const x86::Gp& x, int dstBpp) noexcept {

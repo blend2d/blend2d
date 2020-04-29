@@ -65,36 +65,36 @@ void FetchLinearGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
   cc->mov(f->table, x86::ptr(pc->_fetchData, REL_GRADIENT(lut.data)));
 
-  pc->vmovsi32(f->py, y);
-  pc->vbroadcast_u64(f->dy, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.dy.u64)));
-  pc->vdupli64(f->py, f->py);
+  pc->s_mov_i32(f->py, y);
+  pc->v_broadcast_u64(f->dy, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.dy.u64)));
+  pc->v_dupl_i64(f->py, f->py);
 
   pc->vMulU64xU32Lo(f->py, f->dy, f->py);
-  pc->vloadi128u(f->pt, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.pt)));
-  pc->vaddi64(f->py, f->py, f->pt);
+  pc->v_loadu_i128(f->pt, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.pt)));
+  pc->v_add_i64(f->py, f->py, f->pt);
 
-  pc->vbroadcast_u64(f->dt, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.dt.u64)));
-  pc->vbroadcast_u64(f->dt2, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.dt2.u64)));
+  pc->v_broadcast_u64(f->dt, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.dt.u64)));
+  pc->v_broadcast_u64(f->dt2, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.dt2.u64)));
 
   if (isRoR()) {
-    pc->vbroadcast_u64(f->rep, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.rep.u64)));
+    pc->v_broadcast_u64(f->rep, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.rep.u64)));
   }
 
-  pc->vbroadcast_u32(f->msk, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.msk.u)));
+  pc->v_broadcast_u32(f->msk, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.msk.u)));
 
   // If we cannot use `packusdw`, which was introduced by SSE4.1 we subtract
   // 32768 from the pointer and use `packssdw` instead. However, if we do this,
   // we have to adjust everything else accordingly.
   if (isPad() && !pc->hasSSE4_1()) {
-    pc->vsubi32(f->py, f->py, pc->constAsMem(blCommonTable.i128_0000080000000800));
-    pc->vsubi16(f->msk, f->msk, pc->constAsMem(blCommonTable.i128_8000800080008000));
+    pc->v_sub_i32(f->py, f->py, pc->constAsMem(blCommonTable.i128_0000080000000800));
+    pc->v_sub_i16(f->msk, f->msk, pc->constAsMem(blCommonTable.i128_8000800080008000));
   }
 
   if (isRectFill()) {
-    pc->vmovsi32(f->pt, x);
-    pc->vdupli64(f->pt, f->pt);
+    pc->s_mov_i32(f->pt, x);
+    pc->v_dupl_i64(f->pt, f->pt);
     pc->vMulU64xU32Lo(f->pt, f->dt, f->pt);
-    pc->vaddi64(f->py, f->py, f->pt);
+    pc->v_add_i64(f->py, f->py, f->pt);
   }
 
   if (pixelGranularity() > 1)
@@ -108,11 +108,11 @@ void FetchLinearGradientPart::_finiPart() noexcept {}
 // ============================================================================
 
 void FetchLinearGradientPart::advanceY() noexcept {
-  pc->vaddi64(f->py, f->py, f->dy);
+  pc->v_add_i64(f->py, f->py, f->dy);
 }
 
 void FetchLinearGradientPart::startAtX(x86::Gp& x) noexcept {
-  pc->vmov(f->pt, f->py);
+  pc->v_mov(f->pt, f->py);
 
   if (!isRectFill())
     advanceX(x, x);
@@ -122,10 +122,10 @@ void FetchLinearGradientPart::advanceX(x86::Gp& x, x86::Gp& diff) noexcept {
   BL_UNUSED(x);
 
   x86::Xmm delta = cc->newXmm("f.delta");
-  pc->vmovsi32(delta, diff);
-  pc->vdupli64(delta, delta);
+  pc->s_mov_i32(delta, diff);
+  pc->v_dupl_i64(delta, delta);
   pc->vMulU64xU32Lo(delta, f->dt, delta);
-  pc->vaddi64(f->pt, f->pt, delta);
+  pc->v_add_i64(f->pt, f->pt, delta);
 }
 
 // ============================================================================
@@ -137,7 +137,7 @@ void FetchLinearGradientPart::prefetch1() noexcept {
     // Nothing...
   }
   else {
-    pc->vand(f->pt, f->pt, f->rep);
+    pc->v_and(f->pt, f->pt, f->rep);
   }
 }
 
@@ -147,34 +147,34 @@ void FetchLinearGradientPart::fetch1(Pixel& p, uint32_t flags) noexcept {
 
   if (isPad()) {
     if (pc->hasSSE4_1()) {
-      pc->vpacki32u16_(vTmp, f->pt, f->pt);
-      pc->vminu16(vTmp, vTmp, f->msk);
-      pc->vaddi64(f->pt, f->pt, f->dt);
+      pc->v_packs_i32_u16_(vTmp, f->pt, f->pt);
+      pc->v_min_u16(vTmp, vTmp, f->msk);
+      pc->v_add_i64(f->pt, f->pt, f->dt);
 
-      pc->vextractu16(gIdx, vTmp, 1);
+      pc->v_extract_u16(gIdx, vTmp, 1);
       fetchGradientPixel1(p, flags, x86::ptr(f->table, gIdx, 2));
       pc->xSatisfyPixel(p, flags);
     }
     else {
-      pc->vpacki32i16(vTmp, f->pt, f->pt);
-      pc->vmini16(vTmp, vTmp, f->msk);
-      pc->vaddi16(vTmp, vTmp, pc->constAsMem(blCommonTable.i128_8000800080008000));
-      pc->vaddi64(f->pt, f->pt, f->dt);
+      pc->v_packs_i32_i16(vTmp, f->pt, f->pt);
+      pc->v_min_i16(vTmp, vTmp, f->msk);
+      pc->v_add_i16(vTmp, vTmp, pc->constAsMem(blCommonTable.i128_8000800080008000));
+      pc->v_add_i64(f->pt, f->pt, f->dt);
 
-      pc->vextractu16(gIdx, vTmp, 1);
+      pc->v_extract_u16(gIdx, vTmp, 1);
       fetchGradientPixel1(p, flags, x86::ptr(f->table, gIdx, 2));
       pc->xSatisfyPixel(p, flags);
     }
   }
   else {
-    pc->vxor(vTmp, f->pt, f->msk);
-    pc->vmini16(vTmp, vTmp, f->pt);
-    pc->vaddi64(f->pt, f->pt, f->dt);
+    pc->v_xor(vTmp, f->pt, f->msk);
+    pc->v_min_i16(vTmp, vTmp, f->pt);
+    pc->v_add_i64(f->pt, f->pt, f->dt);
 
-    pc->vextractu16(gIdx, vTmp, 2);
+    pc->v_extract_u16(gIdx, vTmp, 2);
     fetchGradientPixel1(p, flags, x86::ptr(f->table, gIdx, 2));
 
-    pc->vand(f->pt, f->pt, f->rep);
+    pc->v_and(f->pt, f->pt, f->rep);
     pc->xSatisfyPixel(p, flags);
   }
 }
@@ -186,23 +186,23 @@ void FetchLinearGradientPart::prefetchN() noexcept {
   x86::Xmm vIdx = f->vIdx;
 
   if (isPad()) {
-    pc->vmov(vIdx, f->pt);
-    pc->vaddi64(f->pt, f->pt, f->dt2);
-    pc->vshufi32(vIdx, vIdx, f->pt, x86::Predicate::shuf(3, 1, 3, 1));
-    pc->vaddi64(f->pt, f->pt, f->dt2);
+    pc->v_mov(vIdx, f->pt);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
+    pc->v_shuffle_i32(vIdx, vIdx, f->pt, x86::Predicate::shuf(3, 1, 3, 1));
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
   }
   else {
-    pc->vand(vIdx, f->pt, f->rep);
-    pc->vaddi64(f->pt, f->pt, f->dt2);
-    pc->vand(f->pt, f->pt, f->rep);
-    pc->vshufi32(vIdx, vIdx, f->pt, x86::Predicate::shuf(3, 1, 3, 1));
-    pc->vaddi64(f->pt, f->pt, f->dt2);
+    pc->v_and(vIdx, f->pt, f->rep);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
+    pc->v_and(f->pt, f->pt, f->rep);
+    pc->v_shuffle_i32(vIdx, vIdx, f->pt, x86::Predicate::shuf(3, 1, 3, 1));
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
   }
 }
 
 void FetchLinearGradientPart::postfetchN() noexcept {
-  pc->vsubi64(f->pt, f->pt, f->dt2);
-  pc->vsubi64(f->pt, f->pt, f->dt2);
+  pc->v_sub_i64(f->pt, f->pt, f->dt2);
+  pc->v_sub_i64(f->pt, f->pt, f->dt2);
 }
 
 void FetchLinearGradientPart::fetch4(Pixel& p, uint32_t flags) noexcept {
@@ -216,47 +216,47 @@ void FetchLinearGradientPart::fetch4(Pixel& p, uint32_t flags) noexcept {
     const uint8_t srcIndexes[4] = { 0, 1, 2, 3 };
 
     if (pc->hasSSE4_1()) {
-      pc->vpacki32u16_(vIdx, vIdx, vIdx);
-      pc->vminu16(vIdx, vIdx, f->msk);
+      pc->v_packs_i32_u16_(vIdx, vIdx, vIdx);
+      pc->v_min_u16(vIdx, vIdx, f->msk);
     }
     else {
-      pc->vpacki32i16(vIdx, vIdx, vIdx);
-      pc->vmini16(vIdx, vIdx, f->msk);
-      pc->vaddi16(vIdx, vIdx, pc->constAsMem(blCommonTable.i128_8000800080008000));
+      pc->v_packs_i32_i16(vIdx, vIdx, vIdx);
+      pc->v_min_i16(vIdx, vIdx, f->msk);
+      pc->v_add_i16(vIdx, vIdx, pc->constAsMem(blCommonTable.i128_8000800080008000));
     }
 
     iExt.begin(IndexExtractor::kTypeUInt16, vIdx);
-    pc->vmov(vIdx, f->pt);
-    pc->vaddi64(f->pt, f->pt, f->dt2);
+    pc->v_mov(vIdx, f->pt);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
 
     fCtx.fetchAll(x86::ptr(f->table), srcShift, iExt, srcIndexes, [&](uint32_t step) {
       switch (step) {
-        case 3: pc->vshufi32(vIdx, vIdx, f->pt, x86::Predicate::shuf(3, 1, 3, 1)); break;
+        case 3: pc->v_shuffle_i32(vIdx, vIdx, f->pt, x86::Predicate::shuf(3, 1, 3, 1)); break;
       }
     });
 
-    pc->vaddi64(f->pt, f->pt, f->dt2);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
     fCtx.end();
   }
   else {
     const uint8_t srcIndexes[4] = { 0, 2, 4, 6 };
 
     x86::Xmm vTmp = cc->newXmm("vTmp");
-    pc->vxor(vTmp, vIdx, f->msk);
-    pc->vmini16(vTmp, vTmp, vIdx);
-    pc->vand(vIdx, f->pt, f->rep);
+    pc->v_xor(vTmp, vIdx, f->msk);
+    pc->v_min_i16(vTmp, vTmp, vIdx);
+    pc->v_and(vIdx, f->pt, f->rep);
 
     iExt.begin(IndexExtractor::kTypeUInt16, vTmp);
-    pc->vaddi64(f->pt, f->pt, f->dt2);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
 
     fCtx.fetchAll(x86::ptr(f->table), srcShift, iExt, srcIndexes, [&](uint32_t step) {
       switch (step) {
-        case 2: pc->vand(f->pt, f->pt, f->rep); break;
-        case 3: pc->vshufi32(vIdx, vIdx, f->pt, x86::Predicate::shuf(3, 1, 3, 1)); break;
+        case 2: pc->v_and(f->pt, f->pt, f->rep); break;
+        case 3: pc->v_shuffle_i32(vIdx, vIdx, f->pt, x86::Predicate::shuf(3, 1, 3, 1)); break;
       }
     });
 
-    pc->vaddi64(f->pt, f->pt, f->dt2);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
     fCtx.end();
   }
 
@@ -274,59 +274,59 @@ void FetchLinearGradientPart::fetch8(Pixel& p, uint32_t flags) noexcept {
   const uint8_t srcIndexes[8] = { 4, 5, 6, 7, 0, 1, 2, 3 };
 
   if (isPad()) {
-    pc->vmov(vTmp, f->pt);
-    pc->vaddi64(f->pt, f->pt, f->dt2);
-    pc->vshufi32(vTmp, vTmp, f->pt, x86::Predicate::shuf(3, 1, 3, 1));
-    pc->vaddi64(f->pt, f->pt, f->dt2);
+    pc->v_mov(vTmp, f->pt);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
+    pc->v_shuffle_i32(vTmp, vTmp, f->pt, x86::Predicate::shuf(3, 1, 3, 1));
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
 
     if (pc->hasSSE4_1()) {
-      pc->vpacki32u16_(vTmp, vTmp, vIdx);
-      pc->vmov(vIdx, f->pt);
-      pc->vminu16(vTmp, vTmp, f->msk);
+      pc->v_packs_i32_u16_(vTmp, vTmp, vIdx);
+      pc->v_mov(vIdx, f->pt);
+      pc->v_min_u16(vTmp, vTmp, f->msk);
     }
     else {
-      pc->vpacki32i16(vTmp, vTmp, vIdx);
-      pc->vmini16(vTmp, vTmp, f->msk);
-      pc->vaddi16(vTmp, vTmp, pc->constAsMem(blCommonTable.i128_8000800080008000));
-      pc->vmov(vIdx, f->pt);
+      pc->v_packs_i32_i16(vTmp, vTmp, vIdx);
+      pc->v_min_i16(vTmp, vTmp, f->msk);
+      pc->v_add_i16(vTmp, vTmp, pc->constAsMem(blCommonTable.i128_8000800080008000));
+      pc->v_mov(vIdx, f->pt);
     }
 
     iExt.begin(IndexExtractor::kTypeUInt16, vTmp);
-    pc->vaddi64(f->pt, f->pt, f->dt2);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
 
     fCtx.fetchAll(x86::ptr(f->table), srcShift, iExt, srcIndexes, [&](uint32_t step) {
       switch (step) {
-        case 7: pc->vshufi32(vIdx, vIdx, f->pt, x86::Predicate::shuf(3, 1, 3, 1)); break;
+        case 7: pc->v_shuffle_i32(vIdx, vIdx, f->pt, x86::Predicate::shuf(3, 1, 3, 1)); break;
       }
     });
 
-    pc->vaddi64(f->pt, f->pt, f->dt2);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
     fCtx.end();
   }
   else {
-    pc->vand(vTmp, f->pt, f->rep);
-    pc->vaddi64(f->pt, f->pt, f->dt2);
-    pc->vand(f->pt, f->pt, f->rep);
-    pc->vshufi32(vTmp, vTmp, f->pt, x86::Predicate::shuf(3, 1, 3, 1));
+    pc->v_and(vTmp, f->pt, f->rep);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
+    pc->v_and(f->pt, f->pt, f->rep);
+    pc->v_shuffle_i32(vTmp, vTmp, f->pt, x86::Predicate::shuf(3, 1, 3, 1));
 
-    pc->vpacki32i16(vTmp, vTmp, vIdx);
-    pc->vaddi64(f->pt, f->pt, f->dt2);
+    pc->v_packs_i32_i16(vTmp, vTmp, vIdx);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
 
-    pc->vxor(vIdx, vTmp, f->msk);
-    pc->vmini16(vTmp, vTmp, vIdx);
+    pc->v_xor(vIdx, vTmp, f->msk);
+    pc->v_min_i16(vTmp, vTmp, vIdx);
     iExt.begin(IndexExtractor::kTypeUInt16, vTmp);
 
-    pc->vand(vIdx, f->pt, f->rep);
-    pc->vaddi64(f->pt, f->pt, f->dt2);
+    pc->v_and(vIdx, f->pt, f->rep);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
 
     fCtx.fetchAll(x86::ptr(f->table), srcShift, iExt, srcIndexes, [&](uint32_t step) {
       switch (step) {
-        case 0: pc->vand(f->pt, f->pt, f->rep); break;
-        case 7: pc->vshufi32(vIdx, vIdx, f->pt, x86::Predicate::shuf(3, 1, 3, 1)); break;
+        case 0: pc->v_and(f->pt, f->pt, f->rep); break;
+        case 7: pc->v_shuffle_i32(vIdx, vIdx, f->pt, x86::Predicate::shuf(3, 1, 3, 1)); break;
       }
     });
 
-    pc->vaddi64(f->pt, f->pt, f->dt2);
+    pc->v_add_i64(f->pt, f->pt, f->dt2);
     fCtx.end();
   }
 
@@ -384,44 +384,44 @@ void FetchRadialGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
   cc->mov(f->table, x86::ptr(pc->_fetchData, REL_GRADIENT(lut.data)));
 
-  pc->vloadpd_128u(f->ax_ay, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.ax)));
-  pc->vloadpd_128u(f->fx_fy, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.fx)));
+  pc->v_loadu_d128(f->ax_ay, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.ax)));
+  pc->v_loadu_d128(f->fx_fy, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.fx)));
 
-  pc->vloadpd_128u(f->da_ba  , x86::ptr(pc->_fetchData, REL_GRADIENT(radial.dd)));
-  pc->vloadpd_128u(f->ddx_ddy, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.ddx)));
+  pc->v_loadu_d128(f->da_ba  , x86::ptr(pc->_fetchData, REL_GRADIENT(radial.dd)));
+  pc->v_loadu_d128(f->ddx_ddy, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.ddx)));
 
-  pc->vzerops(f->scale);
-  pc->vcvtsdss(f->scale, f->scale, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.scale)));
+  pc->v_zero_f(f->scale);
+  pc->s_cvt_f64_f32(f->scale, f->scale, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.scale)));
 
-  pc->vloadsd(f->ddd, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.ddd)));
-  pc->vduplpd(f->ddd, f->ddd);
+  pc->v_load_f64(f->ddd, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.ddd)));
+  pc->v_dupl_f64(f->ddd, f->ddd);
   pc->vexpandlps(f->scale, f->scale);
 
-  pc->vloadpd_128u(f->xx_xy, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.xx)));
-  pc->vloadpd_128u(f->yx_yy, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.yx)));
+  pc->v_loadu_d128(f->xx_xy, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.xx)));
+  pc->v_loadu_d128(f->yx_yy, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.yx)));
 
-  pc->vzeropd(f->px_py);
-  pc->vcvtsisd(f->px_py, f->px_py, y);
-  pc->vloadpd_128u(off, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.ox)));
+  pc->v_zero_d(f->px_py);
+  pc->s_cvt_int_f64(f->px_py, f->px_py, y);
+  pc->v_loadu_d128(off, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.ox)));
 
-  pc->vduplpd(f->px_py, f->px_py);
-  pc->vmulpd(f->px_py, f->px_py, f->yx_yy);
-  pc->vaddpd(f->px_py, f->px_py, off);
+  pc->v_dupl_f64(f->px_py, f->px_py);
+  pc->v_mul_f64(f->px_py, f->px_py, f->yx_yy);
+  pc->v_add_f64(f->px_py, f->px_py, off);
 
-  pc->vloadi32(f->vmaxi, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.maxi)));
+  pc->v_load_i32(f->vmaxi, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.maxi)));
   pc->vexpandli32(f->vmaxi, f->vmaxi);
-  pc->vmovsi32(f->maxi, f->vmaxi);
+  pc->s_mov_i32(f->maxi, f->vmaxi);
 
   if (extend() == BL_EXTEND_MODE_PAD) {
-    pc->vcvti32ps(f->vmaxf, f->vmaxi);
+    pc->v_cvt_i32_f32(f->vmaxf, f->vmaxi);
   }
 
   if (isRectFill()) {
-    pc->vzeropd(off);
-    pc->vcvtsisd(off, off, x);
-    pc->vduplpd(off, off);
-    pc->vmulpd(off, off, f->xx_xy);
-    pc->vaddpd(f->px_py, f->px_py, off);
+    pc->v_zero_d(off);
+    pc->s_cvt_int_f64(off, off, x);
+    pc->v_dupl_f64(off, off);
+    pc->v_mul_f64(off, off, f->xx_xy);
+    pc->v_add_f64(f->px_py, f->px_py, off);
   }
 }
 
@@ -432,7 +432,7 @@ void FetchRadialGradientPart::_finiPart() noexcept {}
 // ============================================================================
 
 void FetchRadialGradientPart::advanceY() noexcept {
-  pc->vaddpd(f->px_py, f->px_py, f->yx_yy);
+  pc->v_add_f64(f->px_py, f->px_py, f->yx_yy);
 }
 
 void FetchRadialGradientPart::startAtX(x86::Gp& x) noexcept {
@@ -442,11 +442,11 @@ void FetchRadialGradientPart::startAtX(x86::Gp& x) noexcept {
   else {
     x86::Xmm px_py = cc->newXmmPd("@px_py");
 
-    pc->vzeropd(px_py);
-    pc->vcvtsisd(px_py, px_py, x);
-    pc->vduplpd(px_py, px_py);
-    pc->vmulpd(px_py, px_py, f->xx_xy);
-    pc->vaddpd(px_py, px_py, f->px_py);
+    pc->v_zero_d(px_py);
+    pc->s_cvt_int_f64(px_py, px_py, x);
+    pc->v_dupl_f64(px_py, px_py);
+    pc->v_mul_f64(px_py, px_py, f->xx_xy);
+    pc->v_add_f64(px_py, px_py, f->px_py);
 
     precalc(px_py);
   }
@@ -462,11 +462,11 @@ void FetchRadialGradientPart::advanceX(x86::Gp& x, x86::Gp& diff) noexcept {
     x86::Xmm px_py = cc->newXmmPd("@px_py");
 
     // TODO: [PIPEGEN] Duplicated code :(
-    pc->vzeropd(px_py);
-    pc->vcvtsisd(px_py, px_py, x);
-    pc->vduplpd(px_py, px_py);
-    pc->vmulpd(px_py, px_py, f->xx_xy);
-    pc->vaddpd(px_py, px_py, f->px_py);
+    pc->v_zero_d(px_py);
+    pc->s_cvt_int_f64(px_py, px_py, x);
+    pc->v_dupl_f64(px_py, px_py);
+    pc->v_mul_f64(px_py, px_py, f->xx_xy);
+    pc->v_add_f64(px_py, px_py, f->px_py);
 
     precalc(px_py);
   }
@@ -477,32 +477,32 @@ void FetchRadialGradientPart::advanceX(x86::Gp& x, x86::Gp& diff) noexcept {
 // ============================================================================
 
 void FetchRadialGradientPart::prefetch1() noexcept {
-  pc->vcvtpdps(f->value, f->d_b);
-  pc->vandps(f->value, f->value, pc->constAsMem(blCommonTable.f128_abs_lo));
-  pc->vsqrtss(f->value, f->value, f->value);
+  pc->v_cvt_f64_f32(f->value, f->d_b);
+  pc->v_and_f32(f->value, f->value, pc->constAsMem(blCommonTable.f128_abs_lo));
+  pc->s_sqrt_f32(f->value, f->value, f->value);
 }
 
 void FetchRadialGradientPart::fetch1(Pixel& p, uint32_t flags) noexcept {
   x86::Xmm x0 = cc->newXmmPs("@x0");
   x86::Gp gIdx = cc->newInt32("@gIdx");
 
-  pc->vswizi32(x0, f->value, x86::Predicate::shuf(1, 1, 1, 1));
-  pc->vaddpd(f->d_b, f->d_b, f->dd_bd);
+  pc->v_swizzle_i32(x0, f->value, x86::Predicate::shuf(1, 1, 1, 1));
+  pc->v_add_f64(f->d_b, f->d_b, f->dd_bd);
 
-  pc->vaddss(x0, x0, f->value);
-  pc->vcvtpdps(f->value, f->d_b);
+  pc->s_add_f32(x0, x0, f->value);
+  pc->v_cvt_f64_f32(f->value, f->d_b);
 
-  pc->vmulss(x0, x0, f->scale);
-  pc->vandps(f->value, f->value, pc->constAsMem(blCommonTable.f128_abs_lo));
+  pc->s_mul_f32(x0, x0, f->scale);
+  pc->v_and_f32(f->value, f->value, pc->constAsMem(blCommonTable.f128_abs_lo));
 
   if (extend() == BL_EXTEND_MODE_PAD) {
-    pc->vmaxss(x0, x0, pc->constAsXmm(blCommonTable.i128_0000000000000000));
-    pc->vminss(x0, x0, f->vmaxf);
+    pc->s_max_f32(x0, x0, pc->constAsXmm(blCommonTable.i128_0000000000000000));
+    pc->s_min_f32(x0, x0, f->vmaxf);
   }
 
-  pc->vaddsd(f->dd_bd, f->dd_bd, f->ddd);
-  pc->vcvttsssi(gIdx, x0);
-  pc->vsqrtss(f->value, f->value, f->value);
+  pc->s_add_f64(f->dd_bd, f->dd_bd, f->ddd);
+  pc->s_cvtt_f32_int(gIdx, x0);
+  pc->s_sqrt_f32(f->value, f->value, f->value);
 
   if (extend() == BL_EXTEND_MODE_REPEAT) {
     cc->and_(gIdx, f->maxi);
@@ -537,30 +537,30 @@ void FetchRadialGradientPart::prefetchN() noexcept {
   pc->vmovaps(f->d_b_prev, f->d_b);     // Save `d_b`.
   pc->vmovaps(f->dd_bd_prev, f->dd_bd); // Save `dd_bd`.
 
-  pc->vcvtpdps(x0, d_b);
-  pc->vaddpd(d_b, d_b, dd_bd);
-  pc->vaddsd(dd_bd, dd_bd, ddd);
+  pc->v_cvt_f64_f32(x0, d_b);
+  pc->v_add_f64(d_b, d_b, dd_bd);
+  pc->s_add_f64(dd_bd, dd_bd, ddd);
 
-  pc->vcvtpdps(x1, d_b);
-  pc->vaddpd(d_b, d_b, dd_bd);
-  pc->vaddsd(dd_bd, dd_bd, ddd);
-  pc->vshufps(x0, x0, x1, x86::Predicate::shuf(1, 0, 1, 0));
+  pc->v_cvt_f64_f32(x1, d_b);
+  pc->v_add_f64(d_b, d_b, dd_bd);
+  pc->s_add_f64(dd_bd, dd_bd, ddd);
+  pc->v_shuffle_f32(x0, x0, x1, x86::Predicate::shuf(1, 0, 1, 0));
 
-  pc->vcvtpdps(x1, d_b);
-  pc->vaddpd(d_b, d_b, dd_bd);
-  pc->vaddsd(dd_bd, dd_bd, ddd);
+  pc->v_cvt_f64_f32(x1, d_b);
+  pc->v_add_f64(d_b, d_b, dd_bd);
+  pc->s_add_f64(dd_bd, dd_bd, ddd);
 
-  pc->vcvtpdps(x2, d_b);
-  pc->vaddpd(d_b, d_b, dd_bd);
-  pc->vaddsd(dd_bd, dd_bd, ddd);
-  pc->vshufps(x1, x1, x2, x86::Predicate::shuf(1, 0, 1, 0));
+  pc->v_cvt_f64_f32(x2, d_b);
+  pc->v_add_f64(d_b, d_b, dd_bd);
+  pc->s_add_f64(dd_bd, dd_bd, ddd);
+  pc->v_shuffle_f32(x1, x1, x2, x86::Predicate::shuf(1, 0, 1, 0));
 
-  pc->vshufps(value, x0, x1, x86::Predicate::shuf(2, 0, 2, 0));
-  pc->vandps(value, value, pc->constAsMem(blCommonTable.f128_abs));
-  pc->vsqrtps(value, value);
+  pc->v_shuffle_f32(value, x0, x1, x86::Predicate::shuf(2, 0, 2, 0));
+  pc->v_and_f32(value, value, pc->constAsMem(blCommonTable.f128_abs));
+  pc->v_sqrt_f32(value, value);
 
-  pc->vshufps(x0, x0, x1, x86::Predicate::shuf(3, 1, 3, 1));
-  pc->vaddps(value, value, x0);
+  pc->v_shuffle_f32(x0, x0, x1, x86::Predicate::shuf(3, 1, 3, 1));
+  pc->v_add_f32(value, value, x0);
 }
 
 void FetchRadialGradientPart::postfetchN() noexcept {
@@ -585,73 +585,73 @@ void FetchRadialGradientPart::fetch4(Pixel& p, uint32_t flags) noexcept {
   uint32_t srcShift = 2;
   const uint8_t srcIndexes[4] = { 0, 2, 4, 6 };
 
-  pc->vmulps(value, value, f->scale);
-  pc->vcvtpdps(x0, d_b);
+  pc->v_mul_f32(value, value, f->scale);
+  pc->v_cvt_f64_f32(x0, d_b);
 
   pc->vmovaps(f->d_b_prev, d_b);     // Save `d_b_prev`.
   pc->vmovaps(f->dd_bd_prev, dd_bd); // Save `dd_bd_prev`.
 
   if (extend() == BL_EXTEND_MODE_PAD)
-    pc->vmaxps(value, value, pc->constAsXmm(blCommonTable.i128_0000000000000000));
+    pc->v_max_f32(value, value, pc->constAsXmm(blCommonTable.i128_0000000000000000));
 
-  pc->vaddpd(d_b, d_b, dd_bd);
-  pc->vaddsd(dd_bd, dd_bd, ddd);
+  pc->v_add_f64(d_b, d_b, dd_bd);
+  pc->s_add_f64(dd_bd, dd_bd, ddd);
 
   if (extend() == BL_EXTEND_MODE_PAD)
-    pc->vminps(value, value, f->vmaxf);
+    pc->v_min_f32(value, value, f->vmaxf);
 
-  pc->vcvtpdps(x1, d_b);
-  pc->vaddpd(d_b, d_b, dd_bd);
+  pc->v_cvt_f64_f32(x1, d_b);
+  pc->v_add_f64(d_b, d_b, dd_bd);
 
-  pc->vcvtpsi32(x3, value);
-  pc->vaddsd(dd_bd, dd_bd, ddd);
+  pc->v_cvt_f32_i32(x3, value);
+  pc->s_add_f64(dd_bd, dd_bd, ddd);
 
   if (extend() == BL_EXTEND_MODE_REPEAT) {
-    pc->vand(x3, x3, f->vmaxi);
+    pc->v_and(x3, x3, f->vmaxi);
   }
 
   if (extend() == BL_EXTEND_MODE_REFLECT) {
     x86::Xmm t = cc->newXmm("t");
     pc->vmovaps(t, f->vmaxi);
 
-    pc->vand(x3, x3, t);
-    pc->vsubi32(t, t, x3);
-    pc->vmini16(x3, x3, t);
+    pc->v_and(x3, x3, t);
+    pc->v_sub_i32(t, t, x3);
+    pc->v_min_i16(x3, x3, t);
   }
 
-  pc->vshufps(x0, x0, x1, x86::Predicate::shuf(1, 0, 1, 0));
+  pc->v_shuffle_f32(x0, x0, x1, x86::Predicate::shuf(1, 0, 1, 0));
   iExt.begin(IndexExtractor::kTypeUInt16, x3);
 
-  pc->vcvtpdps(x1, d_b);
-  pc->vaddpd(d_b, d_b, dd_bd);
+  pc->v_cvt_f64_f32(x1, d_b);
+  pc->v_add_f64(d_b, d_b, dd_bd);
 
   fCtx.fetchAll(x86::ptr(f->table), srcShift, iExt, srcIndexes, [&](uint32_t step) {
     switch (step) {
       case 0:
         pc->vmovaps(value, x0);
-        pc->vcvtpdps(x2, d_b);
+        pc->v_cvt_f64_f32(x2, d_b);
         break;
       case 1:
-        pc->vaddsd(dd_bd, dd_bd, ddd);
-        pc->vshufps(x1, x1, x2, x86::Predicate::shuf(1, 0, 1, 0));
+        pc->s_add_f64(dd_bd, dd_bd, ddd);
+        pc->v_shuffle_f32(x1, x1, x2, x86::Predicate::shuf(1, 0, 1, 0));
         break;
       case 2:
-        pc->vshufps(x0, x0, x1, x86::Predicate::shuf(2, 0, 2, 0));
-        pc->vandps(x0, x0, pc->constAsMem(blCommonTable.f128_abs));
+        pc->v_shuffle_f32(x0, x0, x1, x86::Predicate::shuf(2, 0, 2, 0));
+        pc->v_and_f32(x0, x0, pc->constAsMem(blCommonTable.f128_abs));
         break;
       case 3:
-        pc->vsqrtps(x0, x0);
-        pc->vaddpd(d_b, d_b, dd_bd);
+        pc->v_sqrt_f32(x0, x0);
+        pc->v_add_f64(d_b, d_b, dd_bd);
         break;
     }
   });
 
-  pc->vshufps(value, value, x1, x86::Predicate::shuf(3, 1, 3, 1));
-  pc->vaddsd(dd_bd, dd_bd, ddd);
+  pc->v_shuffle_f32(value, value, x1, x86::Predicate::shuf(3, 1, 3, 1));
+  pc->s_add_f64(dd_bd, dd_bd, ddd);
   fCtx.end();
 
   pc->xSatisfyPixel(p, flags);
-  pc->vaddps(value, value, x0);
+  pc->v_add_f32(value, value, x0);
 }
 
 void FetchRadialGradientPart::precalc(x86::Xmm& px_py) noexcept {
@@ -662,21 +662,21 @@ void FetchRadialGradientPart::precalc(x86::Xmm& px_py) noexcept {
   x86::Xmm x1 = cc->newXmmPd("@x1");
   x86::Xmm x2 = cc->newXmmPd("@x2");
 
-  pc->vmulpd(d_b, px_py, f->ax_ay);                   // [Ax.Px                             | Ay.Py         ]
-  pc->vmulpd(x0, px_py, f->fx_fy);                    // [Fx.Px                             | Fy.Py         ]
-  pc->vmulpd(x1, px_py, f->ddx_ddy);                  // [Ddx.Px                            | Ddy.Py        ]
+  pc->v_mul_f64(d_b, px_py, f->ax_ay);                   // [Ax.Px                             | Ay.Py         ]
+  pc->v_mul_f64(x0, px_py, f->fx_fy);                    // [Fx.Px                             | Fy.Py         ]
+  pc->v_mul_f64(x1, px_py, f->ddx_ddy);                  // [Ddx.Px                            | Ddy.Py        ]
 
-  pc->vmulpd(d_b, d_b, px_py);                        // [Ax.Px^2                           | Ay.Py^2       ]
-  pc->vhaddpd(d_b, d_b, x0);                          // [Ax.Px^2 + Ay.Py^2                 | Fx.Px + Fy.Py ]
+  pc->v_mul_f64(d_b, d_b, px_py);                        // [Ax.Px^2                           | Ay.Py^2       ]
+  pc->v_hadd_f64(d_b, d_b, x0);                          // [Ax.Px^2 + Ay.Py^2                 | Fx.Px + Fy.Py ]
 
-  pc->vswappd(x2, x0);
-  pc->vmulsd(x2, x2, x0);                             // [Fx.Px.Fy.Py                       | ?             ]
-  pc->vaddsd(x2, x2, x2);                             // [2.Fx.Px.Fy.Py                     | ?             ]
-  pc->vaddsd(d_b, d_b, x2);                           // [Ax.Px^2 + Ay.Py^2 + 2.Fx.Px.Fy.Py | Fx.Px + Fy.Py ]
-  pc->vaddsd(dd_bd, f->da_ba, x1);                    // [Dd + Ddx.Px                       | Bd            ]
+  pc->v_swap_f64(x2, x0);
+  pc->s_mul_f64(x2, x2, x0);                             // [Fx.Px.Fy.Py                       | ?             ]
+  pc->s_add_f64(x2, x2, x2);                             // [2.Fx.Px.Fy.Py                     | ?             ]
+  pc->s_add_f64(d_b, d_b, x2);                           // [Ax.Px^2 + Ay.Py^2 + 2.Fx.Px.Fy.Py | Fx.Px + Fy.Py ]
+  pc->s_add_f64(dd_bd, f->da_ba, x1);                    // [Dd + Ddx.Px                       | Bd            ]
 
-  pc->vswappd(x1, x1);
-  pc->vaddsd(dd_bd, dd_bd, x1);                       // [Dd + Ddx.Px + Ddy.Py              | Bd            ]
+  pc->v_swap_f64(x1, x1);
+  pc->s_add_f64(dd_bd, dd_bd, x1);                       // [Dd + Ddx.Px + Ddy.Py              | Bd            ]
 }
 
 // ============================================================================
@@ -725,25 +725,25 @@ void FetchConicalGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
   cc->mov(f->table, x86::ptr(pc->_fetchData, REL_GRADIENT(lut.data)));
 
-  pc->vzeropd(f->hx_hy);
-  pc->vcvtsisd(f->hx_hy, f->hx_hy, y);
+  pc->v_zero_d(f->hx_hy);
+  pc->s_cvt_int_f64(f->hx_hy, f->hx_hy, y);
 
-  pc->vloadpd_128u(f->xx_xy, x86::ptr(pc->_fetchData, REL_GRADIENT(conical.xx)));
-  pc->vloadpd_128u(f->yx_yy, x86::ptr(pc->_fetchData, REL_GRADIENT(conical.yx)));
-  pc->vloadpd_128u(off    , x86::ptr(pc->_fetchData, REL_GRADIENT(conical.ox)));
+  pc->v_loadu_d128(f->xx_xy, x86::ptr(pc->_fetchData, REL_GRADIENT(conical.xx)));
+  pc->v_loadu_d128(f->yx_yy, x86::ptr(pc->_fetchData, REL_GRADIENT(conical.yx)));
+  pc->v_loadu_d128(off    , x86::ptr(pc->_fetchData, REL_GRADIENT(conical.ox)));
 
-  pc->vduplpd(f->hx_hy, f->hx_hy);
-  pc->vmulpd(f->hx_hy, f->hx_hy, f->yx_yy);
-  pc->vaddpd(f->hx_hy, f->hx_hy, off);
+  pc->v_dupl_f64(f->hx_hy, f->hx_hy);
+  pc->v_mul_f64(f->hx_hy, f->hx_hy, f->yx_yy);
+  pc->v_add_f64(f->hx_hy, f->hx_hy, off);
 
   cc->mov(f->consts, x86::ptr(pc->_fetchData, REL_GRADIENT(conical.consts)));
 
   if (isRectFill()) {
-    pc->vzeropd(off);
-    pc->vcvtsisd(off, off, x);
-    pc->vduplpd(off, off);
-    pc->vmulpd(off, off, f->xx_xy);
-    pc->vaddpd(f->hx_hy, f->hx_hy, off);
+    pc->v_zero_d(off);
+    pc->s_cvt_int_f64(off, off, x);
+    pc->v_dupl_f64(off, off);
+    pc->v_mul_f64(off, off, f->xx_xy);
+    pc->v_add_f64(f->hx_hy, f->hx_hy, off);
   }
 
   // Setup constants used by 4+ pixel fetches.
@@ -752,19 +752,19 @@ void FetchConicalGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
     f->xx_0123 = cc->newXmmPs("f.xx_0123"); // Mem.
     f->xy_0123 = cc->newXmmPs("f.xy_0123"); // Mem.
 
-    pc->vcvtpdps(f->xy_0123, f->xx_xy);
-    pc->vmulpd(f->xx4_xy4, f->xx_xy, pc->constAsMem(blCommonTable.d128_4));
+    pc->v_cvt_f64_f32(f->xy_0123, f->xx_xy);
+    pc->v_mul_f64(f->xx4_xy4, f->xx_xy, pc->constAsMem(blCommonTable.d128_4));
 
-    pc->vswizi32(f->xx_0123, f->xy_0123, x86::Predicate::shuf(0, 0, 0, 0));
-    pc->vswizi32(f->xy_0123, f->xy_0123, x86::Predicate::shuf(1, 1, 1, 1));
+    pc->v_swizzle_i32(f->xx_0123, f->xy_0123, x86::Predicate::shuf(0, 0, 0, 0));
+    pc->v_swizzle_i32(f->xy_0123, f->xy_0123, x86::Predicate::shuf(1, 1, 1, 1));
 
-    pc->vmulps(f->xx_0123, f->xx_0123, pc->constAsMem(blCommonTable.f128_3_2_1_0));
-    pc->vmulps(f->xy_0123, f->xy_0123, pc->constAsMem(blCommonTable.f128_3_2_1_0));
+    pc->v_mul_f32(f->xx_0123, f->xx_0123, pc->constAsMem(blCommonTable.f128_3_2_1_0));
+    pc->v_mul_f32(f->xy_0123, f->xy_0123, pc->constAsMem(blCommonTable.f128_3_2_1_0));
   }
 
-  pc->vloadi32(f->vmaxi, x86::ptr(pc->_fetchData, REL_GRADIENT(conical.maxi)));
+  pc->v_load_i32(f->vmaxi, x86::ptr(pc->_fetchData, REL_GRADIENT(conical.maxi)));
   pc->vexpandli32(f->vmaxi, f->vmaxi);
-  pc->vmovsi32(f->maxi, f->vmaxi);
+  pc->s_mov_i32(f->maxi, f->vmaxi);
 }
 
 void FetchConicalGradientPart::_finiPart() noexcept {}
@@ -774,7 +774,7 @@ void FetchConicalGradientPart::_finiPart() noexcept {}
 // ============================================================================
 
 void FetchConicalGradientPart::advanceY() noexcept {
-  pc->vaddpd(f->hx_hy, f->hx_hy, f->yx_yy);
+  pc->v_add_f64(f->hx_hy, f->hx_hy, f->yx_yy);
 }
 
 void FetchConicalGradientPart::startAtX(x86::Gp& x) noexcept {
@@ -782,11 +782,11 @@ void FetchConicalGradientPart::startAtX(x86::Gp& x) noexcept {
     pc->vmovapd(f->px_py, f->hx_hy);
   }
   else {
-    pc->vzeropd(f->px_py);
-    pc->vcvtsisd(f->px_py, f->px_py, x);
-    pc->vduplpd(f->px_py, f->px_py);
-    pc->vmulpd(f->px_py, f->px_py, f->xx_xy);
-    pc->vaddpd(f->px_py, f->px_py, f->hx_hy);
+    pc->v_zero_d(f->px_py);
+    pc->s_cvt_int_f64(f->px_py, f->px_py, x);
+    pc->v_dupl_f64(f->px_py, f->px_py);
+    pc->v_mul_f64(f->px_py, f->px_py, f->xx_xy);
+    pc->v_add_f64(f->px_py, f->px_py, f->hx_hy);
   }
 }
 
@@ -800,11 +800,11 @@ void FetchConicalGradientPart::advanceX(x86::Gp& x, x86::Gp& diff) noexcept {
     pc->vmovapd(px_py, hx_hy);
   }
   else {
-    pc->vzeropd(px_py);
-    pc->vcvtsisd(px_py, px_py, x);
-    pc->vduplpd(px_py, px_py);
-    pc->vmulpd(px_py, px_py, f->xx_xy);
-    pc->vaddpd(px_py, px_py, hx_hy);
+    pc->v_zero_d(px_py);
+    pc->s_cvt_int_f64(px_py, px_py, x);
+    pc->v_dupl_f64(px_py, px_py);
+    pc->v_mul_f64(px_py, px_py, f->xx_xy);
+    pc->v_add_f64(px_py, px_py, hx_hy);
   }
 }
 
@@ -823,49 +823,49 @@ void FetchConicalGradientPart::fetch1(Pixel& p, uint32_t flags) noexcept {
 
   x86::Gp gIdx = cc->newInt32("@gIdx");
 
-  pc->vcvtpdps(x0, px_py);
+  pc->v_cvt_f64_f32(x0, px_py);
   pc->vmovaps(x1, pc->constAsMem(blCommonTable.f128_abs));
   pc->vmovaps(x2, pc->constAsMem(blCommonTable.f128_1e_m20));
 
-  pc->vandps(x1, x1, x0);
-  pc->vaddpd(px_py, px_py, f->xx_xy);
+  pc->v_and_f32(x1, x1, x0);
+  pc->v_add_f64(px_py, px_py, f->xx_xy);
 
-  pc->vswizi32(x3, x1, x86::Predicate::shuf(2, 3, 0, 1));
-  pc->vmaxss(x2, x2, x1);
+  pc->v_swizzle_i32(x3, x1, x86::Predicate::shuf(2, 3, 0, 1));
+  pc->s_max_f32(x2, x2, x1);
 
-  pc->vmaxss(x2, x2, x3);
-  pc->vminss(x3, x3, x1);
+  pc->s_max_f32(x2, x2, x3);
+  pc->s_min_f32(x3, x3, x1);
 
-  pc->vcmpss(x1, x1, x3, x86::Predicate::kCmpEQ);
-  pc->vdivss(x3, x3, x2);
+  pc->s_cmp_f32(x1, x1, x3, x86::Predicate::kCmpEQ);
+  pc->s_div_f32(x3, x3, x2);
 
-  pc->vsrai32(x0, x0, 31);
-  pc->vandps(x1, x1, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_4)));
+  pc->v_sra_i32(x0, x0, 31);
+  pc->v_and_f32(x1, x1, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_4)));
 
-  pc->vmulss(x2, x3, x3);
-  pc->vandps(x0, x0, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_extra)));
+  pc->s_mul_f32(x2, x3, x3);
+  pc->v_and_f32(x0, x0, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_extra)));
 
-  pc->vmulss(x4, x2, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q3)));
-  pc->vaddss(x4, x4, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q2)));
+  pc->s_mul_f32(x4, x2, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q3)));
+  pc->s_add_f32(x4, x4, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q2)));
 
-  pc->vmulss(x4, x4, x2);
-  pc->vaddss(x4, x4, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q1)));
+  pc->s_mul_f32(x4, x4, x2);
+  pc->s_add_f32(x4, x4, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q1)));
 
-  pc->vmulss(x2, x2, x4);
-  pc->vaddss(x2, x2, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q0)));
+  pc->s_mul_f32(x2, x2, x4);
+  pc->s_add_f32(x2, x2, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q0)));
 
-  pc->vmulss(x2, x2, x3);
-  pc->vsubss(x2, x2, x1);
+  pc->s_mul_f32(x2, x2, x3);
+  pc->s_sub_f32(x2, x2, x1);
 
-  pc->vswizps(x1, x0, x86::Predicate::shuf(2, 3, 0, 1));
-  pc->vandps(x2, x2, pc->constAsMem(blCommonTable.f128_abs));
+  pc->v_swizzle_f32(x1, x0, x86::Predicate::shuf(2, 3, 0, 1));
+  pc->v_and_f32(x2, x2, pc->constAsMem(blCommonTable.f128_abs));
 
-  pc->vsubss(x2, x2, x0);
-  pc->vandps(x2, x2, pc->constAsMem(blCommonTable.f128_abs));
+  pc->s_sub_f32(x2, x2, x0);
+  pc->v_and_f32(x2, x2, pc->constAsMem(blCommonTable.f128_abs));
 
-  pc->vsubss(x2, x2, x1);
-  pc->vandps(x2, x2, pc->constAsMem(blCommonTable.f128_abs));
-  pc->vcvttsssi(gIdx, x2);
+  pc->s_sub_f32(x2, x2, x1);
+  pc->v_and_f32(x2, x2, pc->constAsMem(blCommonTable.f128_abs));
+  pc->s_cvtt_f32_int(gIdx, x2);
   cc->and_(gIdx.r32(), f->maxi.r32());
 
   fetchGradientPixel1(p, flags, x86::ptr(f->table, gIdx, 2));
@@ -882,54 +882,54 @@ void FetchConicalGradientPart::prefetchN() noexcept {
   x86::Xmm& x4 = f->x4;
   x86::Xmm& x5 = f->x5;
 
-  pc->vcvtpdps(x1, px_py);
+  pc->v_cvt_f64_f32(x1, px_py);
   pc->vmovaps(x2, pc->constAsMem(blCommonTable.f128_abs));
 
-  pc->vswizps(x0, x1, x86::Predicate::shuf(0, 0, 0, 0));
-  pc->vswizps(x1, x1, x86::Predicate::shuf(1, 1, 1, 1));
+  pc->v_swizzle_f32(x0, x1, x86::Predicate::shuf(0, 0, 0, 0));
+  pc->v_swizzle_f32(x1, x1, x86::Predicate::shuf(1, 1, 1, 1));
 
-  pc->vaddps(x0, x0, f->xx_0123);
-  pc->vaddps(x1, x1, f->xy_0123);
+  pc->v_add_f32(x0, x0, f->xx_0123);
+  pc->v_add_f32(x1, x1, f->xy_0123);
 
   pc->vmovaps(x4, pc->constAsMem(blCommonTable.f128_1e_m20));
-  pc->vandps(x3, x2, x1);
-  pc->vandps(x2, x2, x0);
+  pc->v_and_f32(x3, x2, x1);
+  pc->v_and_f32(x2, x2, x0);
 
-  pc->vmaxps(x4, x4, x2);
-  pc->vmaxps(x4, x4, x3);
-  pc->vminps(x3, x3, x2);
+  pc->v_max_f32(x4, x4, x2);
+  pc->v_max_f32(x4, x4, x3);
+  pc->v_min_f32(x3, x3, x2);
 
-  pc->vcmpps(x2, x2, x3, x86::Predicate::kCmpEQ);
-  pc->vdivps(x3, x3, x4);
+  pc->v_cmp_f32(x2, x2, x3, x86::Predicate::kCmpEQ);
+  pc->v_div_f32(x3, x3, x4);
 
-  pc->vsrai32(x0, x0, 31);
-  pc->vandps(x2, x2, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_4)));
+  pc->v_sra_i32(x0, x0, 31);
+  pc->v_and_f32(x2, x2, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_4)));
 
-  pc->vsrai32(x1, x1, 31);
-  pc->vandps(x0, x0, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_2)));
+  pc->v_sra_i32(x1, x1, 31);
+  pc->v_and_f32(x0, x0, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_2)));
 
-  pc->vmulps(x5, x3, x3);
-  pc->vandps(x1, x1, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_1)));
+  pc->v_mul_f32(x5, x3, x3);
+  pc->v_and_f32(x1, x1, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_1)));
 
-  pc->vmulps(x4, x5, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q3)));
-  pc->vaddps(x4, x4, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q2)));
+  pc->v_mul_f32(x4, x5, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q3)));
+  pc->v_add_f32(x4, x4, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q2)));
 
-  pc->vmulps(x4, x4, x5);
-  pc->vaddps(x4, x4, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q1)));
+  pc->v_mul_f32(x4, x4, x5);
+  pc->v_add_f32(x4, x4, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q1)));
 
-  pc->vmulps(x5, x5, x4);
-  pc->vaddps(x5, x5, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q0)));
+  pc->v_mul_f32(x5, x5, x4);
+  pc->v_add_f32(x5, x5, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q0)));
 
-  pc->vmulps(x5, x5, x3);
-  pc->vsubps(x5, x5, x2);
+  pc->v_mul_f32(x5, x5, x3);
+  pc->v_sub_f32(x5, x5, x2);
 
-  pc->vandps(x5, x5, pc->constAsMem(blCommonTable.f128_abs));
+  pc->v_and_f32(x5, x5, pc->constAsMem(blCommonTable.f128_abs));
 
-  pc->vsubps(x5, x5, x0);
-  pc->vandps(x5, x5, pc->constAsMem(blCommonTable.f128_abs));
+  pc->v_sub_f32(x5, x5, x0);
+  pc->v_and_f32(x5, x5, pc->constAsMem(blCommonTable.f128_abs));
 
-  pc->vsubps(x5, x5, x1);
-  pc->vandps(x5, x5, pc->constAsMem(blCommonTable.f128_abs));
+  pc->v_sub_f32(x5, x5, x1);
+  pc->v_and_f32(x5, x5, pc->constAsMem(blCommonTable.f128_abs));
 }
 
 void FetchConicalGradientPart::fetch4(Pixel& p, uint32_t flags) noexcept {
@@ -948,70 +948,70 @@ void FetchConicalGradientPart::fetch4(Pixel& p, uint32_t flags) noexcept {
   FetchContext fCtx(pc, &p, 4, format(), flags);
   IndexExtractor iExt(pc);
 
-  pc->vaddpd(px_py, px_py, f->xx4_xy4);
-  pc->vandps(x5, x5, pc->constAsMem(blCommonTable.f128_abs));
+  pc->v_add_f64(px_py, px_py, f->xx4_xy4);
+  pc->v_and_f32(x5, x5, pc->constAsMem(blCommonTable.f128_abs));
 
-  pc->vcvtpdps(x1, px_py);
+  pc->v_cvt_f64_f32(x1, px_py);
   pc->vmovaps(x2, pc->constAsMem(blCommonTable.f128_abs));
 
-  pc->vswizps(x0, x1, x86::Predicate::shuf(0, 0, 0, 0));
-  pc->vswizps(x1, x1, x86::Predicate::shuf(1, 1, 1, 1));
+  pc->v_swizzle_f32(x0, x1, x86::Predicate::shuf(0, 0, 0, 0));
+  pc->v_swizzle_f32(x1, x1, x86::Predicate::shuf(1, 1, 1, 1));
 
-  pc->vaddps(x0, x0, f->xx_0123);
-  pc->vaddps(x1, x1, f->xy_0123);
+  pc->v_add_f32(x0, x0, f->xx_0123);
+  pc->v_add_f32(x1, x1, f->xy_0123);
 
   pc->vmovaps(x4, pc->constAsMem(blCommonTable.f128_1e_m20));
-  pc->vandps(x3, x2, x1);
-  pc->vandps(x2, x2, x0);
+  pc->v_and_f32(x3, x2, x1);
+  pc->v_and_f32(x2, x2, x0);
 
-  pc->vmaxps(x4, x4, x2);
-  pc->vcvttpsi32(x5, x5);
+  pc->v_max_f32(x4, x4, x2);
+  pc->v_cvtt_f32_i32(x5, x5);
 
-  pc->vmaxps(x4, x4, x3);
-  pc->vminps(x3, x3, x2);
+  pc->v_max_f32(x4, x4, x3);
+  pc->v_min_f32(x3, x3, x2);
 
-  pc->vcmpps(x2, x2, x3, x86::Predicate::kCmpEQ);
-  pc->vand(x5, x5, f->vmaxi);
-  pc->vdivps(x3, x3, x4);
+  pc->v_cmp_f32(x2, x2, x3, x86::Predicate::kCmpEQ);
+  pc->v_and(x5, x5, f->vmaxi);
+  pc->v_div_f32(x3, x3, x4);
 
   iExt.begin(IndexExtractor::kTypeUInt16, x5);
-  pc->vsrai32(x0, x0, 31);
-  pc->vandps(x2, x2, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_4)));
+  pc->v_sra_i32(x0, x0, 31);
+  pc->v_and_f32(x2, x2, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_4)));
   iExt.extract(idx0, 0);
 
-  pc->vsrai32(x1, x1, 31);
-  pc->vandps(x0, x0, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_2)));
+  pc->v_sra_i32(x1, x1, 31);
+  pc->v_and_f32(x0, x0, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_2)));
   iExt.extract(idx1, 2);
 
   fCtx.fetchPixel(x86::ptr(f->table, idx0, 2));
   iExt.extract(idx0, 4);
-  pc->vmulps(x4, x3, x3);
+  pc->v_mul_f32(x4, x3, x3);
 
   fCtx.fetchPixel(x86::ptr(f->table, idx1, 2));
   iExt.extract(idx1, 6);
 
   pc->vmovaps(x5, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q3)));
-  pc->vmulps(x5, x5, x4);
-  pc->vandps(x1, x1, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_1)));
-  pc->vaddps(x5, x5, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q2)));
-  pc->vmulps(x5, x5, x4);
+  pc->v_mul_f32(x5, x5, x4);
+  pc->v_and_f32(x1, x1, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, n_div_1)));
+  pc->v_add_f32(x5, x5, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q2)));
+  pc->v_mul_f32(x5, x5, x4);
   fCtx.fetchPixel(x86::ptr(f->table, idx0, 2));
 
-  pc->vaddps(x5, x5, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q1)));
-  pc->vmulps(x5, x5, x4);
-  pc->vaddps(x5, x5, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q0)));
-  pc->vmulps(x5, x5, x3);
+  pc->v_add_f32(x5, x5, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q1)));
+  pc->v_mul_f32(x5, x5, x4);
+  pc->v_add_f32(x5, x5, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conical, q0)));
+  pc->v_mul_f32(x5, x5, x3);
   fCtx.fetchPixel(x86::ptr(f->table, idx1, 2));
 
-  pc->vsubps(x5, x5, x2);
-  pc->vandps(x5, x5, pc->constAsMem(blCommonTable.f128_abs));
-  pc->vsubps(x5, x5, x0);
+  pc->v_sub_f32(x5, x5, x2);
+  pc->v_and_f32(x5, x5, pc->constAsMem(blCommonTable.f128_abs));
+  pc->v_sub_f32(x5, x5, x0);
 
   fCtx.end();
-  pc->vandps(x5, x5, pc->constAsMem(blCommonTable.f128_abs));
+  pc->v_and_f32(x5, x5, pc->constAsMem(blCommonTable.f128_abs));
 
   pc->xSatisfyPixel(p, flags);
-  pc->vsubps(x5, x5, x1);
+  pc->v_sub_f32(x5, x5, x1);
 }
 
 } // {BLPipeGen}

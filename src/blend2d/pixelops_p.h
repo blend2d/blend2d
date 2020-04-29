@@ -103,14 +103,14 @@ static BL_INLINE uint32_t prgb32_8888_from_argb32_8888(uint32_t val32, uint32_t 
 #if BL_TARGET_SIMD_I
   using namespace SIMD;
 
-  I128 p0 = vcvtu32i128(val32);
-  I128 a0 = vcvtu32i128(_a | 0x00FF0000u);
+  Vec128I p0 = v_i128_from_u32(val32);
+  Vec128I a0 = v_i128_from_u32(_a | 0x00FF0000u);
 
-  p0 = vmovli64u8u16(p0);
-  a0 = vswizli16<1, 0, 0, 0>(a0);
-  p0 = vdiv255u16(vmuli16(p0, a0));
-  p0 = vpackzzwb(p0);
-  return vcvti128u32(p0);
+  p0 = v_unpack_lo_u8_u16(p0);
+  a0 = v_swizzle_lo_i16<1, 0, 0, 0>(a0);
+  p0 = v_div255_u16(v_mul_i16(p0, a0));
+  p0 = v_packz_u16_u8(p0);
+  return v_get_u32(p0);
 #else
   uint32_t rb = val32;
   uint32_t ag = val32;
@@ -136,13 +136,13 @@ static BL_INLINE uint32_t prgb32_8888_from_argb32_8888(uint32_t val32) noexcept 
 #if BL_TARGET_SIMD_I
   using namespace SIMD;
 
-  I128 p0 = vmovli64u8u16(vcvtu32i128(val32));
-  I128 a0 = vswizli16<3, 3, 3, 3>(p0);
+  Vec128I p0 = v_unpack_lo_u8_u16(v_i128_from_u32(val32));
+  Vec128I a0 = v_swizzle_lo_i16<3, 3, 3, 3>(p0);
 
-  p0 = vor(p0, v_const_as<I128>(blCommonTable.i128_00FF000000000000));
-  p0 = vdiv255u16(vmuli16(p0, a0));
-  p0 = vpackzzwb(p0);
-  return vcvti128u32(p0);
+  p0 = v_or(p0, v_const_as<Vec128I>(blCommonTable.i128_00FF000000000000));
+  p0 = v_div255_u16(v_mul_i16(p0, a0));
+  p0 = v_packz_u16_u8(p0);
+  return v_get_u32(p0);
 #else
   return prgb32_8888_from_argb32_8888(val32, val32 >> 24);
 #endif

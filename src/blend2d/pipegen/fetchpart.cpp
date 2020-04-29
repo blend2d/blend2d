@@ -151,19 +151,19 @@ void FetchPart::fetch8(Pixel& p, uint32_t flags) noexcept {
     if (flags & Pixel::kPA) {
       p.pa.init(x.pa[0]);
       pc->rename(p.pa, "pa");
-      pc->vunpackli32(x.pa[0], x.pa[0], y.pa[0]);
+      pc->v_interleave_lo_i32(x.pa[0], x.pa[0], y.pa[0]);
     }
 
     if (flags & Pixel::kUA) {
       p.ua.init(x.ua[0]);
       pc->rename(p.ua, "ua");
-      pc->vunpackli64(x.ua[0], x.ua[0], y.ua[0]);
+      pc->v_interleave_lo_i64(x.ua[0], x.ua[0], y.ua[0]);
     }
 
     if (flags & Pixel::kUIA) {
       p.uia.init(x.uia[0]);
       pc->rename(p.uia, "uia");
-      pc->vunpackli64(x.uia[0], x.uia[0], y.uia[0]);
+      pc->v_interleave_lo_i64(x.uia[0], x.uia[0], y.uia[0]);
     }
 
     p.setImmutable(x.isImmutable());

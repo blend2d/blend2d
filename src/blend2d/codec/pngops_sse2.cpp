@@ -36,29 +36,29 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
   #define BL_PNG_PAETH(DST, A, B, C)                                          \
     do {                                                                      \
-      I128 MinAB = vmini16(A, B);                                             \
-      I128 MaxAB = vmaxi16(A, B);                                             \
-      I128 DivAB = vmulhu16(vsubi16(MaxAB, MinAB), rcp3);                     \
+      Vec128I MinAB = v_min_i16(A, B);                                             \
+      Vec128I MaxAB = v_max_i16(A, B);                                             \
+      Vec128I DivAB = v_mulh_u16(v_sub_i16(MaxAB, MinAB), rcp3);                     \
                                                                               \
-      MinAB = vsubi16(MinAB, C);                                              \
-      MaxAB = vsubi16(MaxAB, C);                                              \
+      MinAB = v_sub_i16(MinAB, C);                                              \
+      MaxAB = v_sub_i16(MaxAB, C);                                              \
                                                                               \
-      DST = vaddi16(C  , vandnot_a(vsrai16<15>(vaddi16(DivAB, MinAB)), MaxAB)); \
-      DST = vaddi16(DST, vandnot_a(vsrai16<15>(vsubi16(DivAB, MaxAB)), MinAB)); \
+      DST = v_add_i16(C  , v_nand(v_sra_i16<15>(v_add_i16(DivAB, MinAB)), MaxAB)); \
+      DST = v_add_i16(DST, v_nand(v_sra_i16<15>(v_sub_i16(DivAB, MaxAB)), MinAB)); \
     } while (0)
 
   #define BL_PNG_SLL_ADDB_1X(P0, T0, SHIFT)                                   \
     do {                                                                      \
-      T0 = vslli128b<SHIFT>(P0);                                              \
-      P0 = vaddi8(P0, T0);                                                    \
+      T0 = v_sllb_i128<SHIFT>(P0);                                              \
+      P0 = v_add_i8(P0, T0);                                                    \
     } while (0)
 
   #define BL_PNG_SLL_ADDB_2X(P0, T0, P1, T1, SHIFT)                           \
     do {                                                                      \
-      T0 = vslli128b<SHIFT>(P0);                                              \
-      T1 = vslli128b<SHIFT>(P1);                                              \
-      P0 = vaddi8(P0, T0);                                                    \
-      P1 = vaddi8(P1, T1);                                                    \
+      T0 = v_sllb_i128<SHIFT>(P0);                                              \
+      T1 = v_sllb_i128<SHIFT>(P1);                                              \
+      P0 = v_add_i8(P0, T0);                                                    \
+      P1 = v_add_i8(P1, T1);                                                    \
     } while (0)
 
   for (;;) {
@@ -130,44 +130,44 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             p[bpp] = blPngSumFilter(p[bpp], p[0]);
 
           if (bpp == 1) {
-            I128 p0, p1, p2, p3;
-            I128 t0, t2;
+            Vec128I p0, p1, p2, p3;
+            Vec128I t0, t2;
 
             // Process 64 BYTEs at a time.
-            p0 = vcvtu32i128(p[0]);
+            p0 = v_i128_from_u32(p[0]);
             while (i >= 64) {
-              p0 = vaddi8(p0, *reinterpret_cast<I128*>(p + 1));
-              p1 = vloadi128a(p + 17);
-              p2 = vloadi128a(p + 33);
-              p3 = vloadi128a(p + 49);
+              p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 1));
+              p1 = v_loada_i128(p + 17);
+              p2 = v_loada_i128(p + 33);
+              p3 = v_loada_i128(p + 49);
 
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t2, 1);
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t2, 2);
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t2, 4);
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t2, 8);
-              vstorei128a(p + 1, p0);
+              v_storea_i128(p + 1, p0);
 
-              p0 = vsrli128b<15>(p0);
-              t2 = vsrli128b<15>(p2);
-              p1 = vaddi8(p1, p0);
-              p3 = vaddi8(p3, t2);
+              p0 = v_srlb_i128<15>(p0);
+              t2 = v_srlb_i128<15>(p2);
+              p1 = v_add_i8(p1, p0);
+              p3 = v_add_i8(p3, t2);
 
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t2, 1);
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t2, 2);
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t2, 4);
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t2, 8);
-              vstorei128a(p + 17, p1);
+              v_storea_i128(p + 17, p1);
 
-              p1 = vunpackhi8(p1, p1);
-              p1 = vunpackhi16(p1, p1);
-              p1 = vswizi32<3, 3, 3, 3>(p1);
+              p1 = v_interleave_hi_i8(p1, p1);
+              p1 = v_interleave_hi_i16(p1, p1);
+              p1 = v_swizzle_i32<3, 3, 3, 3>(p1);
 
-              p2 = vaddi8(p2, p1);
-              p3 = vaddi8(p3, p1);
+              p2 = v_add_i8(p2, p1);
+              p3 = v_add_i8(p3, p1);
 
-              vstorei128a(p + 33, p2);
-              vstorei128a(p + 49, p3);
-              p0 = vsrli128b<15>(p3);
+              v_storea_i128(p + 33, p2);
+              v_storea_i128(p + 49, p3);
+              p0 = v_srlb_i128<15>(p3);
 
               p += 64;
               i -= 64;
@@ -175,56 +175,56 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
             // Process 16 BYTEs at a time.
             while (i >= 16) {
-              p0 = vaddi8(p0, *reinterpret_cast<I128*>(p + 1));
+              p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 1));
 
               BL_PNG_SLL_ADDB_1X(p0, t0, 1);
               BL_PNG_SLL_ADDB_1X(p0, t0, 2);
               BL_PNG_SLL_ADDB_1X(p0, t0, 4);
               BL_PNG_SLL_ADDB_1X(p0, t0, 8);
 
-              vstorei128a(p + 1, p0);
-              p0 = vsrli128b<15>(p0);
+              v_storea_i128(p + 1, p0);
+              p0 = v_srlb_i128<15>(p0);
 
               p += 16;
               i -= 16;
             }
           }
           else if (bpp == 2) {
-            I128 p0, p1, p2, p3;
-            I128 t0, t2;
+            Vec128I p0, p1, p2, p3;
+            Vec128I t0, t2;
 
             // Process 64 BYTEs at a time.
-            p0 = vcvtu32i128(blMemReadU16a(p));
+            p0 = v_i128_from_u32(blMemReadU16a(p));
             while (i >= 64) {
-              p0 = vaddi8(p0, *reinterpret_cast<I128*>(p + 2));
-              p1 = vloadi128a(p + 18);
-              p2 = vloadi128a(p + 34);
-              p3 = vloadi128a(p + 50);
+              p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 2));
+              p1 = v_loada_i128(p + 18);
+              p2 = v_loada_i128(p + 34);
+              p3 = v_loada_i128(p + 50);
 
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t2, 2);
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t2, 4);
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t2, 8);
-              vstorei128a(p + 2, p0);
+              v_storea_i128(p + 2, p0);
 
-              p0 = vsrli128b<14>(p0);
-              t2 = vsrli128b<14>(p2);
-              p1 = vaddi8(p1, p0);
-              p3 = vaddi8(p3, t2);
+              p0 = v_srlb_i128<14>(p0);
+              t2 = v_srlb_i128<14>(p2);
+              p1 = v_add_i8(p1, p0);
+              p3 = v_add_i8(p3, t2);
 
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t2, 2);
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t2, 4);
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t2, 8);
-              vstorei128a(p + 18, p1);
+              v_storea_i128(p + 18, p1);
 
-              p1 = vunpackhi16(p1, p1);
-              p1 = vswizi32<3, 3, 3, 3>(p1);
+              p1 = v_interleave_hi_i16(p1, p1);
+              p1 = v_swizzle_i32<3, 3, 3, 3>(p1);
 
-              p2 = vaddi8(p2, p1);
-              p3 = vaddi8(p3, p1);
+              p2 = v_add_i8(p2, p1);
+              p3 = v_add_i8(p3, p1);
 
-              vstorei128a(p + 34, p2);
-              vstorei128a(p + 50, p3);
-              p0 = vsrli128b<14>(p3);
+              v_storea_i128(p + 34, p2);
+              v_storea_i128(p + 50, p3);
+              p0 = v_srlb_i128<14>(p3);
 
               p += 64;
               i -= 64;
@@ -232,62 +232,62 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
             // Process 16 BYTEs at a time.
             while (i >= 16) {
-              p0 = vaddi8(p0, *reinterpret_cast<I128*>(p + 2));
+              p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 2));
               BL_PNG_SLL_ADDB_1X(p0, t0, 2);
               BL_PNG_SLL_ADDB_1X(p0, t0, 4);
               BL_PNG_SLL_ADDB_1X(p0, t0, 8);
 
-              vstorei128a(p + 2, p0);
-              p0 = vsrli128b<14>(p0);
+              v_storea_i128(p + 2, p0);
+              p0 = v_srlb_i128<14>(p0);
 
               p += 16;
               i -= 16;
             }
           }
           else if (bpp == 3) {
-            I128 p0, p1, p2, p3;
-            I128 t0, t2;
-            I128 ext3b = vseti128u32(0x01000001u);
+            Vec128I p0, p1, p2, p3;
+            Vec128I t0, t2;
+            Vec128I ext3b = v_fill_i128_u32(0x01000001u);
 
             // Process 64 BYTEs at a time.
-            p0 = vcvtu32i128(blMemReadU32u(p) & 0x00FFFFFFu);
+            p0 = v_i128_from_u32(blMemReadU32u(p) & 0x00FFFFFFu);
             while (i >= 64) {
-              p0 = vaddi8(p0, *reinterpret_cast<I128*>(p + 3));
-              p1 = vloadi128a(p + 19);
-              p2 = vloadi128a(p + 35);
+              p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 3));
+              p1 = v_loada_i128(p + 19);
+              p2 = v_loada_i128(p + 35);
 
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t2, 3);
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t2, 6);
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t2, 12);
 
-              p3 = vloadi128a(p + 51);
-              t0 = vsrli128b<13>(p0);
-              t2 = vsrli128b<13>(p2);
+              p3 = v_loada_i128(p + 51);
+              t0 = v_srlb_i128<13>(p0);
+              t2 = v_srlb_i128<13>(p2);
 
-              p1 = vaddi8(p1, t0);
-              p3 = vaddi8(p3, t2);
+              p1 = v_add_i8(p1, t0);
+              p3 = v_add_i8(p3, t2);
 
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t2, 3);
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t2, 6);
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t2, 12);
-              vstorei128a(p + 3, p0);
+              v_storea_i128(p + 3, p0);
 
-              p0 = vswizi32<3, 3, 3, 3>(p1);
-              p0 = vsrli32<8>(p0);
+              p0 = v_swizzle_i32<3, 3, 3, 3>(p1);
+              p0 = v_srl_i32<8>(p0);
               p0 = _mm_mul_epu32(p0, ext3b);
 
-              p0 = vswizli16<0, 2, 1, 0>(p0);
-              p0 = vswizhi16<1, 0, 2, 1>(p0);
+              p0 = v_swizzle_lo_i16<0, 2, 1, 0>(p0);
+              p0 = v_swizzle_hi_i16<1, 0, 2, 1>(p0);
 
-              vstorei128a(p + 19, p1);
-              p2 = vaddi8(p2, p0);
-              p0 = vswizi32<1, 3, 2, 1>(p0);
+              v_storea_i128(p + 19, p1);
+              p2 = v_add_i8(p2, p0);
+              p0 = v_swizzle_i32<1, 3, 2, 1>(p0);
 
-              vstorei128a(p + 35, p2);
-              p0 = vaddi8(p0, p3);
+              v_storea_i128(p + 35, p2);
+              p0 = v_add_i8(p0, p3);
 
-              vstorei128a(p + 51, p0);
-              p0 = vsrli128b<13>(p0);
+              v_storea_i128(p + 51, p0);
+              p0 = v_srlb_i128<13>(p0);
 
               p += 64;
               i -= 64;
@@ -295,53 +295,53 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
             // Process 16 BYTEs at a time.
             while (i >= 16) {
-              p0 = vaddi8(p0, *reinterpret_cast<I128*>(p + 3));
+              p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 3));
 
               BL_PNG_SLL_ADDB_1X(p0, t0, 3);
               BL_PNG_SLL_ADDB_1X(p0, t0, 6);
               BL_PNG_SLL_ADDB_1X(p0, t0, 12);
 
-              vstorei128a(p + 3, p0);
-              p0 = vsrli128b<13>(p0);
+              v_storea_i128(p + 3, p0);
+              p0 = v_srlb_i128<13>(p0);
 
               p += 16;
               i -= 16;
             }
           }
           else if (bpp == 4) {
-            I128 p0, p1, p2, p3;
-            I128 t0, t1, t2;
+            Vec128I p0, p1, p2, p3;
+            Vec128I t0, t1, t2;
 
             // Process 64 BYTEs at a time.
-            p0 = vcvtu32i128(blMemReadU32a(p));
+            p0 = v_i128_from_u32(blMemReadU32a(p));
             while (i >= 64) {
-              p0 = vaddi8(p0, *reinterpret_cast<I128*>(p + 4));
-              p1 = vloadi128a(p + 20);
-              p2 = vloadi128a(p + 36);
-              p3 = vloadi128a(p + 52);
+              p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 4));
+              p1 = v_loada_i128(p + 20);
+              p2 = v_loada_i128(p + 36);
+              p3 = v_loada_i128(p + 52);
 
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t1, 4);
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t1, 8);
-              vstorei128a(p + 4, p0);
+              v_storea_i128(p + 4, p0);
 
-              p0 = vsrli128b<12>(p0);
-              t2 = vsrli128b<12>(p2);
+              p0 = v_srlb_i128<12>(p0);
+              t2 = v_srlb_i128<12>(p2);
 
-              p1 = vaddi8(p1, p0);
-              p3 = vaddi8(p3, t2);
+              p1 = v_add_i8(p1, p0);
+              p3 = v_add_i8(p3, t2);
 
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t1, 4);
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t1, 8);
 
-              p0 = vswizi32<3, 3, 3, 3>(p1);
-              vstorei128a(p + 20, p1);
+              p0 = v_swizzle_i32<3, 3, 3, 3>(p1);
+              v_storea_i128(p + 20, p1);
 
-              p2 = vaddi8(p2, p0);
-              p0 = vaddi8(p0, p3);
+              p2 = v_add_i8(p2, p0);
+              p0 = v_add_i8(p0, p3);
 
-              vstorei128a(p + 36, p2);
-              vstorei128a(p + 52, p0);
-              p0 = vsrli128b<12>(p0);
+              v_storea_i128(p + 36, p2);
+              v_storea_i128(p + 52, p0);
+              p0 = v_srlb_i128<12>(p0);
 
               p += 64;
               i -= 64;
@@ -349,59 +349,59 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
             // Process 16 BYTEs at a time.
             while (i >= 16) {
-              p0 = vaddi8(p0, *reinterpret_cast<I128*>(p + 4));
+              p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 4));
 
               BL_PNG_SLL_ADDB_1X(p0, t0, 4);
               BL_PNG_SLL_ADDB_1X(p0, t0, 8);
-              vstorei128a(p + 4, p0);
-              p0 = vsrli128b<12>(p0);
+              v_storea_i128(p + 4, p0);
+              p0 = v_srlb_i128<12>(p0);
 
               p += 16;
               i -= 16;
             }
           }
           else if (bpp == 6) {
-            I128 p0, p1, p2, p3;
-            I128 t0, t1;
+            Vec128I p0, p1, p2, p3;
+            Vec128I t0, t1;
 
-            p0 = vloadi128_64(p);
-            p0 = vslli64<16>(p0);
-            p0 = vsrli64<16>(p0);
+            p0 = v_load_i64(p);
+            p0 = v_sll_i64<16>(p0);
+            p0 = v_srl_i64<16>(p0);
 
             // Process 64 BYTEs at a time.
             while (i >= 64) {
-              p0 = vaddi8(p0, *reinterpret_cast<I128*>(p + 6));
-              p1 = vloadi128a(p + 22);
-              p2 = vloadi128a(p + 38);
+              p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 6));
+              p1 = v_loada_i128(p + 22);
+              p2 = v_loada_i128(p + 38);
 
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t1, 6);
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t1, 12);
 
-              p3 = vloadi128a(p + 54);
-              vstorei128a(p + 6, p0);
+              p3 = v_loada_i128(p + 54);
+              v_storea_i128(p + 6, p0);
 
-              p0 = vsrli128b<10>(p0);
-              t1 = vsrli128b<10>(p2);
+              p0 = v_srlb_i128<10>(p0);
+              t1 = v_srlb_i128<10>(p2);
 
-              p1 = vaddi8(p1, p0);
-              p3 = vaddi8(p3, t1);
+              p1 = v_add_i8(p1, p0);
+              p3 = v_add_i8(p3, t1);
 
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t1, 6);
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t1, 12);
-              p0 = vduphi64(p1);
+              p0 = v_duph_i64(p1);
 
-              p0 = vswizli16<1, 3, 2, 1>(p0);
-              p0 = vswizhi16<2, 1, 3, 2>(p0);
+              p0 = v_swizzle_lo_i16<1, 3, 2, 1>(p0);
+              p0 = v_swizzle_hi_i16<2, 1, 3, 2>(p0);
 
-              vstorei128a(p + 22, p1);
-              p2 = vaddi8(p2, p0);
-              p0 = vswizi32<1, 3, 2, 1>(p0);
+              v_storea_i128(p + 22, p1);
+              p2 = v_add_i8(p2, p0);
+              p0 = v_swizzle_i32<1, 3, 2, 1>(p0);
 
-              vstorei128a(p + 38, p2);
-              p0 = vaddi8(p0, p3);
+              v_storea_i128(p + 38, p2);
+              p0 = v_add_i8(p0, p3);
 
-              vstorei128a(p + 54, p0);
-              p0 = vsrli128b<10>(p0);
+              v_storea_i128(p + 54, p0);
+              p0 = v_srlb_i128<10>(p0);
 
               p += 64;
               i -= 64;
@@ -409,48 +409,48 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
             // Process 16 BYTEs at a time.
             while (i >= 16) {
-              p0 = vaddi8(p0, *reinterpret_cast<I128*>(p + 6));
+              p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 6));
 
               BL_PNG_SLL_ADDB_1X(p0, t0, 6);
               BL_PNG_SLL_ADDB_1X(p0, t0, 12);
 
-              vstorei128a(p + 6, p0);
-              p0 = vsrli128b<10>(p0);
+              v_storea_i128(p + 6, p0);
+              p0 = v_srlb_i128<10>(p0);
 
               p += 16;
               i -= 16;
             }
           }
           else if (bpp == 8) {
-            I128 p0, p1, p2, p3;
-            I128 t0, t1, t2;
+            Vec128I p0, p1, p2, p3;
+            Vec128I t0, t1, t2;
 
             // Process 64 BYTEs at a time.
-            p0 = vloadi128_64(p);
+            p0 = v_load_i64(p);
             while (i >= 64) {
-              p0 = vaddi8(p0, *reinterpret_cast<I128*>(p + 8));
-              p1 = vloadi128a(p + 24);
-              p2 = vloadi128a(p + 40);
-              p3 = vloadi128a(p + 56);
+              p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 8));
+              p1 = v_loada_i128(p + 24);
+              p2 = v_loada_i128(p + 40);
+              p3 = v_loada_i128(p + 56);
 
               BL_PNG_SLL_ADDB_2X(p0, t0, p2, t1, 8);
-              vstorei128a(p + 8, p0);
+              v_storea_i128(p + 8, p0);
 
-              p0 = vsrli128b<8>(p0);
-              t2 = vduphi64(p2);
-              p1 = vaddi8(p1, p0);
+              p0 = v_srlb_i128<8>(p0);
+              t2 = v_duph_i64(p2);
+              p1 = v_add_i8(p1, p0);
 
               BL_PNG_SLL_ADDB_2X(p1, t0, p3, t1, 8);
-              p0 = vduphi64(p1);
-              p3 = vaddi8(p3, t2);
-              vstorei128a(p + 24, p1);
+              p0 = v_duph_i64(p1);
+              p3 = v_add_i8(p3, t2);
+              v_storea_i128(p + 24, p1);
 
-              p2 = vaddi8(p2, p0);
-              p0 = vaddi8(p0, p3);
+              p2 = v_add_i8(p2, p0);
+              p0 = v_add_i8(p0, p3);
 
-              vstorei128a(p + 40, p2);
-              vstorei128a(p + 56, p0);
-              p0 = vsrli128b<8>(p0);
+              v_storea_i128(p + 40, p2);
+              v_storea_i128(p + 56, p0);
+              p0 = v_srlb_i128<8>(p0);
 
               p += 64;
               i -= 64;
@@ -458,11 +458,11 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
             // Process 16 BYTEs at a time.
             while (i >= 16) {
-              p0 = vaddi8(p0, *reinterpret_cast<I128*>(p + 8));
+              p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 8));
               BL_PNG_SLL_ADDB_1X(p0, t0, 8);
 
-              vstorei128a(p + 8, p0);
-              p0 = vsrli128b<8>(p0);
+              v_storea_i128(p + 8, p0);
+              p0 = v_srlb_i128<8>(p0);
 
               p += 16;
               i -= 16;
@@ -510,28 +510,28 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
           // Process 64 BYTEs at a time.
           while (i >= 64) {
-            I128 u0 = vloadi128u(u);
-            I128 u1 = vloadi128u(u + 16);
+            Vec128I u0 = v_loadu_i128(u);
+            Vec128I u1 = v_loadu_i128(u + 16);
 
-            I128 p0 = vloadi128a(p);
-            I128 p1 = vloadi128a(p + 16);
+            Vec128I p0 = v_loada_i128(p);
+            Vec128I p1 = v_loada_i128(p + 16);
 
-            I128 u2 = vloadi128u(u + 32);
-            I128 u3 = vloadi128u(u + 48);
+            Vec128I u2 = v_loadu_i128(u + 32);
+            Vec128I u3 = v_loadu_i128(u + 48);
 
-            p0 = vaddi8(p0, u0);
-            p1 = vaddi8(p1, u1);
+            p0 = v_add_i8(p0, u0);
+            p1 = v_add_i8(p1, u1);
 
-            I128 p2 = vloadi128a(p + 32);
-            I128 p3 = vloadi128a(p + 48);
+            Vec128I p2 = v_loada_i128(p + 32);
+            Vec128I p3 = v_loada_i128(p + 48);
 
-            p2 = vaddi8(p2, u2);
-            p3 = vaddi8(p3, u3);
+            p2 = v_add_i8(p2, u2);
+            p3 = v_add_i8(p3, u3);
 
-            vstorei128a(p     , p0);
-            vstorei128a(p + 16, p1);
-            vstorei128a(p + 32, p2);
-            vstorei128a(p + 48, p3);
+            v_storea_i128(p     , p0);
+            v_storea_i128(p + 16, p1);
+            v_storea_i128(p + 32, p2);
+            v_storea_i128(p + 48, p3);
 
             p += 64;
             u += 64;
@@ -540,11 +540,11 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
           // Process 8 BYTEs at a time.
           while (i >= 8) {
-            I128 u0 = vloadi128_64(u);
-            I128 p0 = vloadi128_64(p);
+            Vec128I u0 = v_load_i64(u);
+            Vec128I p0 = v_load_i64(p);
 
-            p0 = vaddi8(p0, u0);
-            vstorei64(p, p0);
+            p0 = v_add_i8(p0, u0);
+            v_store_i64(p, p0);
 
             p += 8;
             u += 8;
@@ -593,7 +593,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
         if (i >= 32) {
           // Align to 16-BYTE boundary.
           uint32_t j = uint32_t(blAlignUpDiff(uintptr_t(p + bpp), 16));
-          I128 zero = vzeroi128();
+          Vec128I zero = v_zero_i128();
 
           for (i -= j; j != 0; j--, p++, u++)
             p[bpp] = blPngSumFilter(p[bpp], blPngAvgFilter(p[0], u[0]));
@@ -614,38 +614,38 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
             // Process 8 BYTEs at a time.
             while (i >= 8) {
-              I128 p0 = vloadi128_64(p + 1);
-              I128 u0 = vloadi128_64(u);
+              Vec128I p0 = v_load_i64(p + 1);
+              Vec128I u0 = v_load_i64(u);
 
-              p0 = vunpackli8(p0, zero);
-              u0 = vunpackli8(u0, zero);
+              p0 = v_interleave_lo_i8(p0, zero);
+              u0 = v_interleave_lo_i8(u0, zero);
 
-              p0 = vslli16<1>(p0);
-              p0 = vaddi16(p0, u0);
+              p0 = v_sll_i16<1>(p0);
+              p0 = v_add_i16(p0, u0);
 
-              t1 = vcvti128u32(p0);
-              p0 = vsrli128b<4>(p0);
+              t1 = v_get_u32(p0);
+              p0 = v_srlb_i128<4>(p0);
               t0 = ((t0 + t1) >> 1) & 0xFF; t1 >>= 16;
               p[1] = uint8_t(t0);
 
               t0 = ((t0 + t1) >> 1) & 0xFF;
-              t1 = vcvti128u32(p0);
-              p0 = vsrli128b<4>(p0);
+              t1 = v_get_u32(p0);
+              p0 = v_srlb_i128<4>(p0);
               p[2] = uint8_t(t0);
 
               t0 = ((t0 + t1) >> 1) & 0xFF; t1 >>= 16;
               p[3] = uint8_t(t0);
 
               t0 = ((t0 + t1) >> 1) & 0xFF;
-              t1 = vcvti128u32(p0);
-              p0 = vsrli128b<4>(p0);
+              t1 = v_get_u32(p0);
+              p0 = v_srlb_i128<4>(p0);
               p[4] = uint8_t(t0);
 
               t0 = ((t0 + t1) >> 1) & 0xFF; t1 >>= 16;
               p[5] = uint8_t(t0);
 
               t0 = ((t0 + t1) >> 1) & 0xFF;
-              t1 = vcvti128u32(p0);
+              t1 = v_get_u32(p0);
               p[6] = uint8_t(t0);
 
               t0 = ((t0 + t1) >> 1) & 0xFF; t1 >>= 16;
@@ -667,56 +667,56 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
           }
           */
           else if (bpp == 4) {
-            I128 m00FF = vseti128u32(0x00FF00FFu);
-            I128 m01FF = vseti128u32(0x01FF01FFu);
-            I128 t1 = vunpackli8(vcvtu32i128(blMemReadU32a(p)), zero);
+            Vec128I m00FF = v_fill_i128_u32(0x00FF00FFu);
+            Vec128I m01FF = v_fill_i128_u32(0x01FF01FFu);
+            Vec128I t1 = v_interleave_lo_i8(v_i128_from_u32(blMemReadU32a(p)), zero);
 
             // Process 16 BYTEs at a time.
             while (i >= 16) {
-              I128 p0, p1;
-              I128 u0, u1;
+              Vec128I p0, p1;
+              Vec128I u0, u1;
 
-              p0 = vloadi128a(p + 4);
-              u0 = vloadi128u(u);
+              p0 = v_loada_i128(p + 4);
+              u0 = v_loadu_i128(u);
 
               p1 = p0;                       // HI | Move Ln
-              p0 = vunpackli8(p0, zero);     // LO | Unpack Ln
+              p0 = v_interleave_lo_i8(p0, zero);     // LO | Unpack Ln
 
               u1 = u0;                       // HI | Move Up
-              p0 = vslli16<1>(p0);           // LO | << 1
+              p0 = v_sll_i16<1>(p0);           // LO | << 1
 
-              u0 = vunpackli8(u0, zero);     // LO | Unpack Up
-              p0 = vaddi16(p0, t1);          // LO | Add Last
+              u0 = v_interleave_lo_i8(u0, zero);     // LO | Unpack Up
+              p0 = v_add_i16(p0, t1);          // LO | Add Last
 
-              p1 = vunpackhi8(p1, zero);     // HI | Unpack Ln
-              p0 = vaddi16(p0, u0);          // LO | Add Up
-              p0 = vand(p0, m01FF);          // LO | & 0x01FE
+              p1 = v_interleave_hi_i8(p1, zero);     // HI | Unpack Ln
+              p0 = v_add_i16(p0, u0);          // LO | Add Up
+              p0 = v_and(p0, m01FF);          // LO | & 0x01FE
 
-              u1 = vunpackhi8(u1, zero);     // HI | Unpack Up
-              t1 = vslli128b<8>(p0);         // LO | Get Last
-              p0 = vslli16<1>(p0);           // LO | << 1
+              u1 = v_interleave_hi_i8(u1, zero);     // HI | Unpack Up
+              t1 = v_sllb_i128<8>(p0);         // LO | Get Last
+              p0 = v_sll_i16<1>(p0);           // LO | << 1
 
-              p1 = vslli16<1>(p1);           // HI | << 1
-              p0 = vaddi16(p0, t1);          // LO | Add Last
-              p0 = vsrli16<2>(p0);           // LO | >> 2
+              p1 = v_sll_i16<1>(p1);           // HI | << 1
+              p0 = v_add_i16(p0, t1);          // LO | Add Last
+              p0 = v_srl_i16<2>(p0);           // LO | >> 2
 
-              p1 = vaddi16(p1, u1);          // HI | Add Up
-              p0 = vand(p0, m00FF);          // LO | & 0x00FF
-              t1 = vsrli128b<8>(p0);         // LO | Get Last
+              p1 = v_add_i16(p1, u1);          // HI | Add Up
+              p0 = v_and(p0, m00FF);          // LO | & 0x00FF
+              t1 = v_srlb_i128<8>(p0);         // LO | Get Last
 
-              p1 = vaddi16(p1, t1);          // HI | Add Last
-              p1 = vand(p1, m01FF);          // HI | & 0x01FE
+              p1 = v_add_i16(p1, t1);          // HI | Add Last
+              p1 = v_and(p1, m01FF);          // HI | & 0x01FE
 
-              t1 = vslli128b<8>(p1);         // HI | Get Last
-              p1 = vslli16<1>(p1);           // HI | << 1
+              t1 = v_sllb_i128<8>(p1);         // HI | Get Last
+              p1 = v_sll_i16<1>(p1);           // HI | << 1
 
-              t1 = vaddi16(t1, p1);          // HI | Add Last
-              t1 = vsrli16<2>(t1);           // HI | >> 2
-              t1 = vand(t1, m00FF);          // HI | & 0x00FF
+              t1 = v_add_i16(t1, p1);          // HI | Add Last
+              t1 = v_srl_i16<2>(t1);           // HI | >> 2
+              t1 = v_and(t1, m00FF);          // HI | & 0x00FF
 
-              p0 = vpackzzwb(p0, t1);
-              t1 = vsrli128b<8>(t1);         // HI | Get Last
-              vstorei128a(p + 4, p0);
+              p0 = v_packz_u16_u8(p0, t1);
+              t1 = v_srlb_i128<8>(t1);         // HI | Get Last
+              v_storea_i128(p + 4, p0);
 
               p += 16;
               u += 16;
@@ -724,55 +724,55 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             }
           }
           else if (bpp == 6) {
-            I128 t1 = vloadi128_64(p);
+            Vec128I t1 = v_load_i64(p);
 
             // Process 16 BYTEs at a time.
             while (i >= 16) {
-              I128 p0, p1, p2;
-              I128 u0, u1, u2;
+              Vec128I p0, p1, p2;
+              Vec128I u0, u1, u2;
 
-              u0 = vloadi128u(u);
-              t1 = vunpackli8(t1, zero);
-              p0 = vloadi128a(p + 6);
+              u0 = v_loadu_i128(u);
+              t1 = v_interleave_lo_i8(t1, zero);
+              p0 = v_loada_i128(p + 6);
 
-              p1 = vsrli128b<6>(p0);         // P1 | Extract
-              u1 = vsrli128b<6>(u0);         // P1 | Extract
+              p1 = v_srlb_i128<6>(p0);         // P1 | Extract
+              u1 = v_srlb_i128<6>(u0);         // P1 | Extract
 
-              p2 = vsrli128b<12>(p0);        // P2 | Extract
-              u2 = vsrli128b<12>(u0);        // P2 | Extract
+              p2 = v_srlb_i128<12>(p0);        // P2 | Extract
+              u2 = v_srlb_i128<12>(u0);        // P2 | Extract
 
-              p0 = vunpackli8(p0, zero);     // P0 | Unpack
-              u0 = vunpackli8(u0, zero);     // P0 | Unpack
+              p0 = v_interleave_lo_i8(p0, zero);     // P0 | Unpack
+              u0 = v_interleave_lo_i8(u0, zero);     // P0 | Unpack
 
-              p1 = vunpackli8(p1, zero);     // P1 | Unpack
-              u1 = vunpackli8(u1, zero);     // P1 | Unpack
+              p1 = v_interleave_lo_i8(p1, zero);     // P1 | Unpack
+              u1 = v_interleave_lo_i8(u1, zero);     // P1 | Unpack
 
-              p2 = vunpackli8(p2, zero);     // P2 | Unpack
-              u2 = vunpackli8(u2, zero);     // P2 | Unpack
+              p2 = v_interleave_lo_i8(p2, zero);     // P2 | Unpack
+              u2 = v_interleave_lo_i8(u2, zero);     // P2 | Unpack
 
-              u0 = vaddi16(u0, t1);          // P0 | Add Last
-              u0 = vsrli16<1>(u0);           // P0 | >> 1
-              p0 = vaddi8(p0, u0);           // P0 | Add (Up+Last)/2
+              u0 = v_add_i16(u0, t1);          // P0 | Add Last
+              u0 = v_srl_i16<1>(u0);           // P0 | >> 1
+              p0 = v_add_i8(p0, u0);           // P0 | Add (Up+Last)/2
 
-              u1 = vaddi16(u1, p0);          // P1 | Add P0
-              u1 = vsrli16<1>(u1);           // P1 | >> 1
-              p1 = vaddi8(p1, u1);           // P1 | Add (Up+Last)/2
+              u1 = v_add_i16(u1, p0);          // P1 | Add P0
+              u1 = v_srl_i16<1>(u1);           // P1 | >> 1
+              p1 = v_add_i8(p1, u1);           // P1 | Add (Up+Last)/2
 
-              u2 = vaddi16(u2, p1);          // P2 | Add P1
-              u2 = vsrli16<1>(u2);           // P2 | >> 1
-              p2 = vaddi8(p2, u2);           // P2 | Add (Up+Last)/2
+              u2 = v_add_i16(u2, p1);          // P2 | Add P1
+              u2 = v_srl_i16<1>(u2);           // P2 | >> 1
+              p2 = v_add_i8(p2, u2);           // P2 | Add (Up+Last)/2
 
-              p0 = vslli128b<4>(p0);
-              p0 = vpackzzwb(p0, p1);
-              p0 = vslli128b<2>(p0);
-              p0 = vsrli128b<4>(p0);
+              p0 = v_sllb_i128<4>(p0);
+              p0 = v_packz_u16_u8(p0, p1);
+              p0 = v_sllb_i128<2>(p0);
+              p0 = v_srlb_i128<4>(p0);
 
-              p2 = vpackzzwb(p2, p2);
-              p2 = vslli128b<12>(p2);
-              p0 = vor(p0, p2);
+              p2 = v_packz_u16_u8(p2, p2);
+              p2 = v_sllb_i128<12>(p2);
+              p0 = v_or(p0, p2);
 
-              vstorei128a(p + 6, p0);
-              t1 = vsrli128b<10>(p0);
+              v_storea_i128(p + 6, p0);
+              t1 = v_srlb_i128<10>(p0);
 
               p += 16;
               u += 16;
@@ -781,33 +781,33 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
           }
           else if (bpp == 8) {
             // Process 16 BYTEs at a time.
-            I128 t1 = vunpackli8(vloadi128_64(p), zero);
+            Vec128I t1 = v_interleave_lo_i8(v_load_i64(p), zero);
 
             while (i >= 16) {
-              I128 p0, p1;
-              I128 u0, u1;
+              Vec128I p0, p1;
+              Vec128I u0, u1;
 
-              u0 = vloadi128u(u);
-              p0 = vloadi128a(p + 8);
+              u0 = v_loadu_i128(u);
+              p0 = v_loada_i128(p + 8);
 
               u1 = u0;                       // HI | Move Up
               p1 = p0;                       // HI | Move Ln
-              u0 = vunpackli8(u0, zero);     // LO | Unpack Up
-              p0 = vunpackli8(p0, zero);     // LO | Unpack Ln
+              u0 = v_interleave_lo_i8(u0, zero);     // LO | Unpack Up
+              p0 = v_interleave_lo_i8(p0, zero);     // LO | Unpack Ln
 
-              u0 = vaddi16(u0, t1);          // LO | Add Last
-              p1 = vunpackhi8(p1, zero);     // HI | Unpack Ln
-              u0 = vsrli16<1>(u0);           // LO | >> 1
-              u1 = vunpackhi8(u1, zero);     // HI | Unpack Up
+              u0 = v_add_i16(u0, t1);          // LO | Add Last
+              p1 = v_interleave_hi_i8(p1, zero);     // HI | Unpack Ln
+              u0 = v_srl_i16<1>(u0);           // LO | >> 1
+              u1 = v_interleave_hi_i8(u1, zero);     // HI | Unpack Up
 
-              p0 = vaddi8(p0, u0);           // LO | Add (Up+Last)/2
-              u1 = vaddi16(u1, p0);          // HI | Add LO
-              u1 = vsrli16<1>(u1);           // HI | >> 1
-              p1 = vaddi8(p1, u1);           // HI | Add (Up+LO)/2
+              p0 = v_add_i8(p0, u0);           // LO | Add (Up+Last)/2
+              u1 = v_add_i16(u1, p0);          // HI | Add LO
+              u1 = v_srl_i16<1>(u1);           // HI | >> 1
+              p1 = v_add_i8(p1, u1);           // HI | Add (Up+LO)/2
 
-              p0 = vpackzzwb(p0, p1);
+              p0 = v_packz_u16_u8(p0, p1);
               t1 = p1;                       // HI | Get Last
-              vstorei128a(p + 8, p0);
+              v_storea_i128(p + 8, p0);
 
               p += 16;
               u += 16;
@@ -856,8 +856,8 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             // Align to 16-BYTE boundary.
             uint32_t j = uint32_t(blAlignUpDiff(uintptr_t(p + bpp), 16));
 
-            I128 zero = vzeroi128();
-            I128 rcp3 = vseti128i16(0xAB << 7);
+            Vec128I zero = v_zero_i128();
+            Vec128I rcp3 = v_fill_i128_i16(0xAB << 7);
 
             for (i -= j; j != 0; j--, p++, u++)
               p[bpp] = blPngSumFilter(p[bpp], blPngPaethFilter(p[0], u[bpp], u[0]));
@@ -868,43 +868,43 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             }
             */
             if (bpp == 3) {
-              I128 pz = vunpackli8(vcvtu32i128(blMemReadU32u(p) & 0x00FFFFFFu), zero);
-              I128 uz = vunpackli8(vcvtu32i128(blMemReadU32u(u) & 0x00FFFFFFu), zero);
-              I128 mask = vseti128u32(0u, 0u, 0x0000FFFFu, 0xFFFFFFFFu);
+              Vec128I pz = v_interleave_lo_i8(v_i128_from_u32(blMemReadU32u(p) & 0x00FFFFFFu), zero);
+              Vec128I uz = v_interleave_lo_i8(v_i128_from_u32(blMemReadU32u(u) & 0x00FFFFFFu), zero);
+              Vec128I mask = v_fill_i128_u32(0u, 0u, 0x0000FFFFu, 0xFFFFFFFFu);
 
               // Process 8 BYTEs at a time.
               while (i >= 8) {
-                I128 p0, p1;
-                I128 u0, u1;
+                Vec128I p0, p1;
+                Vec128I u0, u1;
 
-                u0 = vloadi128_64(u + 3);
-                p0 = vloadi128_64(p + 3);
+                u0 = v_load_i64(u + 3);
+                p0 = v_load_i64(p + 3);
 
-                u0 = vunpackli8(u0, zero);
-                p0 = vunpackli8(p0, zero);
-                u1 = vsrli128b<6>(u0);
+                u0 = v_interleave_lo_i8(u0, zero);
+                p0 = v_interleave_lo_i8(p0, zero);
+                u1 = v_srlb_i128<6>(u0);
 
                 BL_PNG_PAETH(uz, pz, u0, uz);
-                uz = vand(uz, mask);
-                p0 = vaddi8(p0, uz);
+                uz = v_and(uz, mask);
+                p0 = v_add_i8(p0, uz);
 
                 BL_PNG_PAETH(uz, p0, u1, u0);
-                uz = vand(uz, mask);
-                uz = vslli128b<6>(uz);
-                p0 = vaddi8(p0, uz);
+                uz = v_and(uz, mask);
+                uz = v_sllb_i128<6>(uz);
+                p0 = v_add_i8(p0, uz);
 
-                p1 = vsrli128b<6>(p0);
-                u0 = vsrli128b<6>(u1);
+                p1 = v_srlb_i128<6>(p0);
+                u0 = v_srlb_i128<6>(u1);
 
                 BL_PNG_PAETH(u0, p1, u0, u1);
-                u0 = vslli128b<12>(u0);
+                u0 = v_sllb_i128<12>(u0);
 
-                p0 = vaddi8(p0, u0);
-                pz = vsrli128b<10>(p0);
-                uz = vsrli128b<4>(u1);
+                p0 = v_add_i8(p0, u0);
+                pz = v_srlb_i128<10>(p0);
+                uz = v_srlb_i128<4>(u1);
 
-                p0 = vpackzzwb(p0, p0);
-                vstorei64(p + 3, p0);
+                p0 = v_packz_u16_u8(p0, p0);
+                v_store_i64(p + 3, p0);
 
                 p += 8;
                 u += 8;
@@ -912,45 +912,45 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
               }
             }
             else if (bpp == 4) {
-              I128 pz = vunpackli8(vcvtu32i128(blMemReadU32a(p)), zero);
-              I128 uz = vunpackli8(vcvtu32i128(blMemReadU32u(u)), zero);
-              I128 mask = vseti128u32(0u, 0u, 0xFFFFFFFFu, 0xFFFFFFFFu);
+              Vec128I pz = v_interleave_lo_i8(v_i128_from_u32(blMemReadU32a(p)), zero);
+              Vec128I uz = v_interleave_lo_i8(v_i128_from_u32(blMemReadU32u(u)), zero);
+              Vec128I mask = v_fill_i128_u32(0u, 0u, 0xFFFFFFFFu, 0xFFFFFFFFu);
 
               // Process 16 BYTEs at a time.
               while (i >= 16) {
-                I128 p0, p1;
-                I128 u0, u1;
+                Vec128I p0, p1;
+                Vec128I u0, u1;
 
-                p0 = vloadi128a(p + 4);
-                u0 = vloadi128u(u + 4);
+                p0 = v_loada_i128(p + 4);
+                u0 = v_loadu_i128(u + 4);
 
-                p1 = vunpackhi8(p0, zero);
-                p0 = vunpackli8(p0, zero);
-                u1 = vunpackhi8(u0, zero);
-                u0 = vunpackli8(u0, zero);
+                p1 = v_interleave_hi_i8(p0, zero);
+                p0 = v_interleave_lo_i8(p0, zero);
+                u1 = v_interleave_hi_i8(u0, zero);
+                u0 = v_interleave_lo_i8(u0, zero);
 
                 BL_PNG_PAETH(uz, pz, u0, uz);
-                uz = vand(uz, mask);
-                p0 = vaddi8(p0, uz);
-                uz = vswapi64(u0);
+                uz = v_and(uz, mask);
+                p0 = v_add_i8(p0, uz);
+                uz = v_swap_i64(u0);
 
                 BL_PNG_PAETH(u0, p0, uz, u0);
-                u0 = vslli128b<8>(u0);
-                p0 = vaddi8(p0, u0);
-                pz = vsrli128b<8>(p0);
+                u0 = v_sllb_i128<8>(u0);
+                p0 = v_add_i8(p0, u0);
+                pz = v_srlb_i128<8>(p0);
 
                 BL_PNG_PAETH(uz, pz, u1, uz);
-                uz = vand(uz, mask);
-                p1 = vaddi8(p1, uz);
-                uz = vswapi64(u1);
+                uz = v_and(uz, mask);
+                p1 = v_add_i8(p1, uz);
+                uz = v_swap_i64(u1);
 
                 BL_PNG_PAETH(u1, p1, uz, u1);
-                u1 = vslli128b<8>(u1);
-                p1 = vaddi8(p1, u1);
-                pz = vsrli128b<8>(p1);
+                u1 = v_sllb_i128<8>(u1);
+                p1 = v_add_i8(p1, u1);
+                pz = v_srlb_i128<8>(p1);
 
-                p0 = vpackzzwb(p0, p1);
-                vstorei128a(p + 4, p0);
+                p0 = v_packz_u16_u8(p0, p1);
+                v_storea_i128(p + 4, p0);
 
                 p += 16;
                 u += 16;
@@ -958,53 +958,53 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
               }
             }
             else if (bpp == 6) {
-              I128 pz = vunpackli8(vloadi128_64(p), zero);
-              I128 uz = vunpackli8(vloadi128_64(u), zero);
+              Vec128I pz = v_interleave_lo_i8(v_load_i64(p), zero);
+              Vec128I uz = v_interleave_lo_i8(v_load_i64(u), zero);
 
               // Process 16 BYTEs at a time.
               while (i >= 16) {
-                I128 p0, p1, p2;
-                I128 u0, u1, u2;
+                Vec128I p0, p1, p2;
+                Vec128I u0, u1, u2;
 
-                p0 = vloadi128a(p + 6);
-                u0 = vloadi128u(u + 6);
+                p0 = v_loada_i128(p + 6);
+                u0 = v_loadu_i128(u + 6);
 
-                p1 = vsrli128b<6>(p0);
-                p0 = vunpackli8(p0, zero);
-                u1 = vsrli128b<6>(u0);
-                u0 = vunpackli8(u0, zero);
+                p1 = v_srlb_i128<6>(p0);
+                p0 = v_interleave_lo_i8(p0, zero);
+                u1 = v_srlb_i128<6>(u0);
+                u0 = v_interleave_lo_i8(u0, zero);
 
                 BL_PNG_PAETH(uz, pz, u0, uz);
-                p0 = vaddi8(p0, uz);
-                p2 = vsrli128b<6>(p1);
-                u2 = vsrli128b<6>(u1);
-                p1 = vunpackli8(p1, zero);
-                u1 = vunpackli8(u1, zero);
+                p0 = v_add_i8(p0, uz);
+                p2 = v_srlb_i128<6>(p1);
+                u2 = v_srlb_i128<6>(u1);
+                p1 = v_interleave_lo_i8(p1, zero);
+                u1 = v_interleave_lo_i8(u1, zero);
 
                 BL_PNG_PAETH(u0, p0, u1, u0);
-                p1 = vaddi8(p1, u0);
-                p2 = vunpackli8(p2, zero);
-                u2 = vunpackli8(u2, zero);
+                p1 = v_add_i8(p1, u0);
+                p2 = v_interleave_lo_i8(p2, zero);
+                u2 = v_interleave_lo_i8(u2, zero);
 
                 BL_PNG_PAETH(u0, p1, u2, u1);
-                p2 = vaddi8(p2, u0);
+                p2 = v_add_i8(p2, u0);
 
-                p0 = vslli128b<4>(p0);
-                p0 = vpackzzwb(p0, p1);
-                p0 = vslli128b<2>(p0);
-                p0 = vsrli128b<4>(p0);
+                p0 = v_sllb_i128<4>(p0);
+                p0 = v_packz_u16_u8(p0, p1);
+                p0 = v_sllb_i128<2>(p0);
+                p0 = v_srlb_i128<4>(p0);
 
-                p2 = vdupli64(p2);
-                u2 = vdupli64(u2);
+                p2 = v_dupl_i64(p2);
+                u2 = v_dupl_i64(u2);
 
-                pz = vswizi32<3, 3, 1, 0>(vunpackhi32(p1, p2));
-                uz = vswizi32<3, 3, 1, 0>(vunpackhi32(u1, u2));
+                pz = v_swizzle_i32<3, 3, 1, 0>(v_interleave_hi_i32(p1, p2));
+                uz = v_swizzle_i32<3, 3, 1, 0>(v_interleave_hi_i32(u1, u2));
 
-                p2 = vpackzzwb(p2, p2);
-                p2 = vslli128b<12>(p2);
+                p2 = v_packz_u16_u8(p2, p2);
+                p2 = v_sllb_i128<12>(p2);
 
-                p0 = vor(p0, p2);
-                vstorei128a(p + 6, p0);
+                p0 = v_or(p0, p2);
+                v_storea_i128(p + 6, p0);
 
                 p += 16;
                 u += 16;
@@ -1012,31 +1012,31 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
               }
             }
             else if (bpp == 8) {
-              I128 pz = vunpackli8(vloadi128_64(p), zero);
-              I128 uz = vunpackli8(vloadi128_64(u), zero);
+              Vec128I pz = v_interleave_lo_i8(v_load_i64(p), zero);
+              Vec128I uz = v_interleave_lo_i8(v_load_i64(u), zero);
 
               // Process 16 BYTEs at a time.
               while (i >= 16) {
-                I128 p0, p1;
-                I128 u0, u1;
+                Vec128I p0, p1;
+                Vec128I u0, u1;
 
-                p0 = vloadi128a(p + 8);
-                u0 = vloadi128u(u + 8);
+                p0 = v_loada_i128(p + 8);
+                u0 = v_loadu_i128(u + 8);
 
-                p1 = vunpackhi8(p0, zero);
-                p0 = vunpackli8(p0, zero);
-                u1 = vunpackhi8(u0, zero);
-                u0 = vunpackli8(u0, zero);
+                p1 = v_interleave_hi_i8(p0, zero);
+                p0 = v_interleave_lo_i8(p0, zero);
+                u1 = v_interleave_hi_i8(u0, zero);
+                u0 = v_interleave_lo_i8(u0, zero);
 
                 BL_PNG_PAETH(uz, pz, u0, uz);
-                p0 = vaddi8(p0, uz);
+                p0 = v_add_i8(p0, uz);
 
                 BL_PNG_PAETH(pz, p0, u1, u0);
-                pz = vaddi8(pz, p1);
+                pz = v_add_i8(pz, p1);
                 uz = u1;
 
-                p0 = vpackzzwb(p0, pz);
-                vstorei128a(p + 8, p0);
+                p0 = v_packz_u16_u8(p0, pz);
+                v_storea_i128(p + 8, p0);
 
                 p += 16;
                 u += 16;

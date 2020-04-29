@@ -61,7 +61,7 @@ void FetchSolidPart::initSolidFlags(uint32_t flags) noexcept {
       if ((flags & (Pixel::kPC | Pixel::kUC | Pixel::kUA | Pixel::kUIA)) && s.pc.empty()) {
         s.pc.init(cc->newXmm("pixel.pc"));
         x86::Vec& pix = s.pc[0];
-        pc->vbroadcast_u32(pix, x86::ptr_32(pc->_fetchData));
+        pc->v_broadcast_u32(pix, x86::ptr_32(pc->_fetchData));
       }
       break;
 
@@ -73,7 +73,7 @@ void FetchSolidPart::initSolidFlags(uint32_t flags) noexcept {
 
       if (flags & (Pixel::kPA | Pixel::kUA | Pixel::kUIA) && s.ua.empty()) {
         s.ua.init(cc->newXmm("pixel.ua"));
-        pc->vbroadcast_u16(s.ua[0], s.sa);
+        pc->v_broadcast_u16(s.ua[0], s.sa);
       }
       break;
   }
@@ -103,22 +103,22 @@ void FetchSolidPart::fetch1(Pixel& p, uint32_t flags) noexcept {
       else {
         if (flags & Pixel::kPC) {
           p.pc.init(cc->newXmm("p.pc0"));
-          pc->vmov(p.pc[0], s.pc[0]);
+          pc->v_mov(p.pc[0], s.pc[0]);
         }
 
         if (flags & Pixel::kUC) {
           p.uc.init(cc->newXmm("p.uc0"));
-          pc->vmov(p.uc[0], s.uc[0]);
+          pc->v_mov(p.uc[0], s.uc[0]);
         }
 
         if (flags & Pixel::kUA) {
           p.ua.init(cc->newXmm("p.ua0"));
-          pc->vmov(p.ua[0], s.ua[0]);
+          pc->v_mov(p.ua[0], s.ua[0]);
         }
 
         if (flags & Pixel::kUIA) {
           p.uia.init(cc->newXmm("p.uia0"));
-          pc->vmov(p.uia[0], s.uia[0]);
+          pc->v_mov(p.uia[0], s.uia[0]);
         }
       }
     }
@@ -163,22 +163,22 @@ void FetchSolidPart::fetch4(Pixel& p, uint32_t flags) noexcept {
     else {
       if (flags & Pixel::kPC) {
         pc->newXmmArray(p.pc, pCount, "p.pc");
-        pc->vmov(p.pc, s.pc[0]);
+        pc->v_mov(p.pc, s.pc[0]);
       }
 
       if (flags & Pixel::kUC) {
         pc->newXmmArray(p.uc, uCount, "p.uc");
-        pc->vmov(p.uc, s.uc[0]);
+        pc->v_mov(p.uc, s.uc[0]);
       }
 
       if (flags & Pixel::kUA) {
         pc->newXmmArray(p.ua, uCount, "p.ua");
-        pc->vmov(p.ua, s.ua[0]);
+        pc->v_mov(p.ua, s.ua[0]);
       }
 
       if (flags & Pixel::kUIA) {
         pc->newXmmArray(p.uia, uCount, "p.uia");
-        pc->vmov(p.uia, s.uia[0]);
+        pc->v_mov(p.uia, s.uia[0]);
       }
     }
   }
@@ -197,17 +197,17 @@ void FetchSolidPart::fetch4(Pixel& p, uint32_t flags) noexcept {
     else {
       if (flags & Pixel::kPA) {
         pc->newXmmArray(p.pa, pCount, "p.pa");
-        pc->vmov(p.pa[0], s.pa[0]);
+        pc->v_mov(p.pa[0], s.pa[0]);
       }
 
       if (flags & Pixel::kUA) {
         pc->newXmmArray(p.ua, uCount, "p.ua");
-        pc->vmov(p.ua, s.ua[0]);
+        pc->v_mov(p.ua, s.ua[0]);
       }
 
       if (flags & Pixel::kUIA) {
         pc->newXmmArray(p.uia, uCount, "p.uia");
-        pc->vmov(p.uia, s.uia[0]);
+        pc->v_mov(p.uia, s.uia[0]);
       }
     }
   }

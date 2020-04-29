@@ -303,7 +303,7 @@ EdgeDone:
         const BLEdgePoint<int>* pts = current->cur;
         while (pts != current->end) {
           pts++;
-          if (pts[-1].y <= bandFixedY0 || !ras.prepare(pts[-2].x, pts[-2].y, pts[-1].x, pts[-1].y))
+          if (pts[-1].y <= bandFixedY0 || !ras.prepare(pts[-2], pts[-1]))
             continue;
 
           current->cur = pts;
@@ -359,7 +359,7 @@ SaveState:
 
       do {
         pts++;
-        if (pts[-1].y <= bandFixedY0 || !ras.prepare(pts[-2].x, pts[-2].y, pts[-1].x, pts[-1].y))
+        if (pts[-1].y <= bandFixedY0 || !ras.prepare(pts[-2], pts[-1]))
           continue;
 
         ras.advanceToY(bandY0);

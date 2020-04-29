@@ -17,12 +17,12 @@ using namespace SIMD;
 // [BLPixelConverter - Utilities (AVX2)]
 // ============================================================================
 
-static BL_INLINE I128 vpshufb_or(const I128& x, const I128& predicate, const I128& or_mask) noexcept {
-  return vor(vpshufb(x, predicate), or_mask);
+static BL_INLINE Vec128I vpshufb_or(const Vec128I& x, const Vec128I& predicate, const Vec128I& or_mask) noexcept {
+  return v_or(v_shuffle_i8(x, predicate), or_mask);
 }
 
-static BL_INLINE I256 vpshufb_or(const I256& x, const I256& predicate, const I256& or_mask) noexcept {
-  return vor(vpshufb(x, predicate), or_mask);
+static BL_INLINE Vec256I vpshufb_or(const Vec256I& x, const Vec256I& predicate, const Vec256I& or_mask) noexcept {
+  return v_or(v_shuffle_i8(x, predicate), or_mask);
 }
 
 // ============================================================================
@@ -53,11 +53,11 @@ BLResult bl_convert_copy_avx2(
     size_t i = byteWidth;
 
     while_nounroll (i >= 64) {
-      I256 p0 = vloadi256u(srcData +  0);
-      I256 p1 = vloadi256u(srcData + 32);
+      Vec256I p0 = v_loadu_i256(srcData +  0);
+      Vec256I p1 = v_loadu_i256(srcData + 32);
 
-      vstorei256u(dstData +  0, p0);
-      vstorei256u(dstData + 32, p1);
+      v_storeu_i256(dstData +  0, p0);
+      v_storeu_i256(dstData + 32, p1);
 
       dstData += 64;
       srcData += 64;
@@ -65,7 +65,7 @@ BLResult bl_convert_copy_avx2(
     }
 
     while_nounroll (i >= 16) {
-      vstorei128u(dstData, vloadi128u(srcData));
+      v_storeu_i128(dstData, v_loadu_i128(srcData));
 
       dstData += 16;
       srcData += 16;
@@ -75,7 +75,7 @@ BLResult bl_convert_copy_avx2(
     if (i) {
       dstData += i;
       srcData += i;
-      vstorei128u(dstData - 16, vloadi128u(srcData - 16));
+      v_storeu_i128(dstData - 16, v_loadu_i128(srcData - 16));
     }
 
     dstData = blPixelConverterFillGap(dstData, gap);
@@ -102,22 +102,22 @@ BLResult bl_convert_copy_or_8888_avx2(
   dstStride -= uintptr_t(w) * 4 + gap;
   srcStride -= uintptr_t(w) * 4;
 
-  I256 fillMask = vseti256u32(blPixelConverterGetData(self)->memCopyData.fillMask);
+  Vec256I fillMask = v_fill_i256_u32(blPixelConverterGetData(self)->memCopyData.fillMask);
   const BLCommonTable::LoadStoreM32* loadStoreM32 = blCommonTable.load_store_m32;
 
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
     while_nounroll (i >= 32) {
-      I256 p0 = vloadi256u(srcData +  0);
-      I256 p1 = vloadi256u(srcData + 32);
-      I256 p2 = vloadi256u(srcData + 64);
-      I256 p3 = vloadi256u(srcData + 96);
+      Vec256I p0 = v_loadu_i256(srcData +  0);
+      Vec256I p1 = v_loadu_i256(srcData + 32);
+      Vec256I p2 = v_loadu_i256(srcData + 64);
+      Vec256I p3 = v_loadu_i256(srcData + 96);
 
-      vstorei256u(dstData +  0, vor(p0, fillMask));
-      vstorei256u(dstData + 32, vor(p1, fillMask));
-      vstorei256u(dstData + 64, vor(p2, fillMask));
-      vstorei256u(dstData + 96, vor(p3, fillMask));
+      v_storeu_i256(dstData +  0, v_or(p0, fillMask));
+      v_storeu_i256(dstData + 32, v_or(p1, fillMask));
+      v_storeu_i256(dstData + 64, v_or(p2, fillMask));
+      v_storeu_i256(dstData + 96, v_or(p3, fillMask));
 
       dstData += 128;
       srcData += 128;
@@ -125,8 +125,8 @@ BLResult bl_convert_copy_or_8888_avx2(
     }
 
     while_nounroll (i >= 8) {
-      I256 p0 = vloadi256u(srcData);
-      vstorei256u(dstData, vor(p0, fillMask));
+      Vec256I p0 = v_loadu_i256(srcData);
+      v_storeu_i256(dstData, v_or(p0, fillMask));
 
       dstData += 32;
       srcData += 32;
@@ -134,9 +134,9 @@ BLResult bl_convert_copy_or_8888_avx2(
     }
 
     if (i) {
-      I256 msk = loadStoreM32[i].as<I256>();
-      I256 p0 = vloadi256_mask32(srcData, msk);
-      vstorei256_mask32(dstData, vor(p0, fillMask), msk);
+      Vec256I msk = loadStoreM32[i].as<Vec256I>();
+      Vec256I p0 = v_loadu_i256_mask32(srcData, msk);
+      v_storeu_i256_mask32(dstData, v_or(p0, fillMask), msk);
 
       dstData += i * 4;
       srcData += i * 4;
@@ -168,27 +168,27 @@ BLResult bl_convert_copy_shufb_8888_avx2(
   const BLPixelConverterData::ShufbData& d = blPixelConverterGetData(self)->shufbData;
   const BLCommonTable::LoadStoreM32* loadStoreM32 = blCommonTable.load_store_m32;
 
-  I256 fillMask = vseti256u32(d.fillMask);
-  I256 predicate = vdupli128(vloadi128u(d.shufbPredicate));
+  Vec256I fillMask = v_fill_i256_u32(d.fillMask);
+  Vec256I predicate = v_dupl_i128(v_loadu_i128(d.shufbPredicate));
 
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
     while_nounroll (i >= 32) {
-      I256 p0 = vloadi256u(srcData +  0);
-      I256 p1 = vloadi256u(srcData + 32);
-      I256 p2 = vloadi256u(srcData + 64);
-      I256 p3 = vloadi256u(srcData + 96);
+      Vec256I p0 = v_loadu_i256(srcData +  0);
+      Vec256I p1 = v_loadu_i256(srcData + 32);
+      Vec256I p2 = v_loadu_i256(srcData + 64);
+      Vec256I p3 = v_loadu_i256(srcData + 96);
 
       p0 = vpshufb_or(p0, predicate, fillMask);
       p1 = vpshufb_or(p1, predicate, fillMask);
       p2 = vpshufb_or(p2, predicate, fillMask);
       p3 = vpshufb_or(p3, predicate, fillMask);
 
-      vstorei256u(dstData +  0, p0);
-      vstorei256u(dstData + 32, p1);
-      vstorei256u(dstData + 64, p2);
-      vstorei256u(dstData + 96, p3);
+      v_storeu_i256(dstData +  0, p0);
+      v_storeu_i256(dstData + 32, p1);
+      v_storeu_i256(dstData + 64, p2);
+      v_storeu_i256(dstData + 96, p3);
 
       dstData += 128;
       srcData += 128;
@@ -196,11 +196,11 @@ BLResult bl_convert_copy_shufb_8888_avx2(
     }
 
     while_nounroll (i >= 8) {
-      I256 p0 = vloadi256u(srcData);
+      Vec256I p0 = v_loadu_i256(srcData);
 
-      p0 = vpshufb(p0, predicate);
-      p0 = vor(p0, fillMask);
-      vstorei256u(dstData, p0);
+      p0 = v_shuffle_i8(p0, predicate);
+      p0 = v_or(p0, fillMask);
+      v_storeu_i256(dstData, p0);
 
       dstData += 32;
       srcData += 32;
@@ -208,12 +208,12 @@ BLResult bl_convert_copy_shufb_8888_avx2(
     }
 
     if (i) {
-      I256 msk = loadStoreM32[i].as<I256>();
-      I256 p0 = vloadi256_mask32(srcData, msk);
+      Vec256I msk = loadStoreM32[i].as<Vec256I>();
+      Vec256I p0 = v_loadu_i256_mask32(srcData, msk);
 
-      p0 = vpshufb(p0, predicate);
-      p0 = vor(p0, fillMask);
-      vstorei256_mask32(dstData, p0, msk);
+      p0 = v_shuffle_i8(p0, predicate);
+      p0 = v_or(p0, fillMask);
+      v_storeu_i256_mask32(dstData, p0, msk);
 
       dstData += i * 4;
       srcData += i * 4;
@@ -246,47 +246,47 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
   const BLPixelConverterData::ShufbData& d = blPixelConverterGetData(self)->shufbData;
   const BLCommonTable::LoadStoreM32* loadStoreM32 = blCommonTable.load_store_m32;
 
-  I256 fillMask = vseti256u32(d.fillMask);
-  I256 predicate = vdupli128(vloadi128u(d.shufbPredicate));
+  Vec256I fillMask = v_fill_i256_u32(d.fillMask);
+  Vec256I predicate = v_dupl_i128(v_loadu_i128(d.shufbPredicate));
 
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
     while_nounroll (i >= 32) {
-      I256 p0, p1, p2, p3;
-      I256 q0, q1, q2, q3;
+      Vec256I p0, p1, p2, p3;
+      Vec256I q0, q1, q2, q3;
 
-      p0 = vloadi256_128u(srcData +  0);             // [x5|z4 y4 x4|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
-      p1 = vloadi256_128u(srcData + 16);             // [yA|xA|z9 y9|x9 z8 y8 x8|z7 y7 x7 z6|y6 x6 z5 y5]
-      p3 = vloadi256_128u(srcData + 32);             // [zF yF xF zE|yE xE zD yD|xD zC yC xC|zB yB xB zA]
+      p0 = v_loadu_i256_128(srcData +  0);             // [x5|z4 y4 x4|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
+      p1 = v_loadu_i256_128(srcData + 16);             // [yA|xA|z9 y9|x9 z8 y8 x8|z7 y7 x7 z6|y6 x6 z5 y5]
+      p3 = v_loadu_i256_128(srcData + 32);             // [zF yF xF zE|yE xE zD yD|xD zC yC xC|zB yB xB zA]
 
-      p2 = vpalignr<8>(p3, p1);                      // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
-      p1 = vpalignr<12>(p1, p0);                     // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
-      p3 = vsrli128b<4>(p3);                         // [-- -- -- --|zF yF xF zE|yE xE zD yD|xD zC yC xC]
+      p2 = v_alignr_i8<8>(p3, p1);                      // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
+      p1 = v_alignr_i8<12>(p1, p0);                     // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
+      p3 = v_srlb_i128<4>(p3);                         // [-- -- -- --|zF yF xF zE|yE xE zD yD|xD zC yC xC]
 
-      p0 = vunpackli128(p0, p1);
-      p2 = vunpackli128(p2, p3);
+      p0 = v_interleave_lo_i128(p0, p1);
+      p2 = v_interleave_lo_i128(p2, p3);
 
-      q0 = vloadi256_128u(srcData + 48);             // [x5|z4 y4 x4|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
-      q1 = vloadi256_128u(srcData + 64);             // [yA|xA|z9 y9|x9 z8 y8 x8|z7 y7 x7 z6|y6 x6 z5 y5]
-      q3 = vloadi256_128u(srcData + 80);             // [zF yF xF zE|yE xE zD yD|xD zC yC xC|zB yB xB zA]
+      q0 = v_loadu_i256_128(srcData + 48);             // [x5|z4 y4 x4|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
+      q1 = v_loadu_i256_128(srcData + 64);             // [yA|xA|z9 y9|x9 z8 y8 x8|z7 y7 x7 z6|y6 x6 z5 y5]
+      q3 = v_loadu_i256_128(srcData + 80);             // [zF yF xF zE|yE xE zD yD|xD zC yC xC|zB yB xB zA]
 
-      q2 = vpalignr<8>(q3, q1);                      // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
-      q1 = vpalignr<12>(q1, q0);                     // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
-      q3 = vsrli128b<4>(q3);                         // [-- -- -- --|zF yF xF zE|yE xE zD yD|xD zC yC xC]
+      q2 = v_alignr_i8<8>(q3, q1);                      // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
+      q1 = v_alignr_i8<12>(q1, q0);                     // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
+      q3 = v_srlb_i128<4>(q3);                         // [-- -- -- --|zF yF xF zE|yE xE zD yD|xD zC yC xC]
 
-      q0 = vunpackli128(q0, q1);
-      q2 = vunpackli128(q2, q3);
+      q0 = v_interleave_lo_i128(q0, q1);
+      q2 = v_interleave_lo_i128(q2, q3);
 
       p0 = vpshufb_or(p0, predicate, fillMask);
       p2 = vpshufb_or(p2, predicate, fillMask);
       q0 = vpshufb_or(q0, predicate, fillMask);
       q2 = vpshufb_or(q2, predicate, fillMask);
 
-      vstorei256u(dstData +  0, p0);
-      vstorei256u(dstData + 32, p2);
-      vstorei256u(dstData + 64, q0);
-      vstorei256u(dstData + 96, q2);
+      v_storeu_i256(dstData +  0, p0);
+      v_storeu_i256(dstData + 32, p2);
+      v_storeu_i256(dstData + 64, q0);
+      v_storeu_i256(dstData + 96, q2);
 
       dstData += 128;
       srcData += 96;
@@ -294,17 +294,17 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
     }
 
     while_nounroll (i >= 8) {
-      I128 p0, p1;
+      Vec128I p0, p1;
 
-      p0 = vloadi128u(srcData);                      // [x5|z4 y4 x4|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
-      p1 = vloadi128_64(srcData + 16);               // [-- -- -- --|-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5]
-      p1 = vpalignr<12>(p1, p0);                     // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
+      p0 = v_loadu_i128(srcData);                      // [x5|z4 y4 x4|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
+      p1 = v_load_i64(srcData + 16);               // [-- -- -- --|-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5]
+      p1 = v_alignr_i8<12>(p1, p0);                     // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
 
-      p0 = vpshufb_or(p0, vcast<I128>(predicate), vcast<I128>(fillMask));
-      p1 = vpshufb_or(p1, vcast<I128>(predicate), vcast<I128>(fillMask));
+      p0 = vpshufb_or(p0, v_cast<Vec128I>(predicate), v_cast<Vec128I>(fillMask));
+      p1 = vpshufb_or(p1, v_cast<Vec128I>(predicate), v_cast<Vec128I>(fillMask));
 
-      vstorei128u(dstData +  0, p0);
-      vstorei128u(dstData + 16, p1);
+      v_storeu_i128(dstData +  0, p0);
+      v_storeu_i128(dstData + 16, p1);
 
       dstData += 32;
       srcData += 24;
@@ -312,13 +312,13 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
     }
 
     if (i >= 4) {
-      I128 p0;
+      Vec128I p0;
 
-      p0 = vloadi128_64(srcData);                    // [-- -- -- --|-- -- -- --|y2 x2 z1 y1|x1 z0 y0 x0]
-      p0 = vinsertm32<2>(p0, srcData + 8);           // [-- -- -- --|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
+      p0 = v_load_i64(srcData);                    // [-- -- -- --|-- -- -- --|y2 x2 z1 y1|x1 z0 y0 x0]
+      p0 = v_insertm_u32<2>(p0, srcData + 8);           // [-- -- -- --|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
 
-      p0 = vpshufb_or(p0, vcast<I128>(predicate), vcast<I128>(fillMask));
-      vstorei128u(dstData, p0);
+      p0 = vpshufb_or(p0, v_cast<Vec128I>(predicate), v_cast<Vec128I>(fillMask));
+      v_storeu_i128(dstData, p0);
 
       dstData += 16;
       srcData += 12;
@@ -326,19 +326,19 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
     }
 
     if (i) {
-      I128 p0 = vzeroi128();
-      I128 msk = loadStoreM32[i].as<I128>();
+      Vec128I p0 = v_zero_i128();
+      Vec128I msk = loadStoreM32[i].as<Vec128I>();
 
-      p0 = vinsertm24<0>(p0, srcData + 0);           // [-- -- -- --|-- -- -- z2|y2 x2 z1 y1|x1 z0 y0 x0]
+      p0 = v_insertm_u24<0>(p0, srcData + 0);           // [-- -- -- --|-- -- -- z2|y2 x2 z1 y1|x1 z0 y0 x0]
       if (i >= 2) {
-        p0 = vinsertm24<3>(p0, srcData + 3);         // [-- -- -- --|-- -- -- --|-- -- z1 y1|x1 z0 y0 x0]
+        p0 = v_insertm_u24<3>(p0, srcData + 3);         // [-- -- -- --|-- -- -- --|-- -- z1 y1|x1 z0 y0 x0]
         if (i >= 3) {
-          p0 = vinsertm24<6>(p0, srcData + 6);       // [-- -- -- --|-- -- -- z2|y2 x2 z1 y1|x1 z0 y0 x0]
+          p0 = v_insertm_u24<6>(p0, srcData + 6);       // [-- -- -- --|-- -- -- z2|y2 x2 z1 y1|x1 z0 y0 x0]
         }
       }
 
-      p0 = vpshufb_or(p0, vcast<I128>(predicate), vcast<I128>(fillMask));
-      vstorei128_mask32(dstData, p0, msk);
+      p0 = vpshufb_or(p0, v_cast<Vec128I>(predicate), v_cast<Vec128I>(fillMask));
+      v_storeu_i128_mask32(dstData, p0, msk);
 
       dstData += i * 4;
       srcData += i * 3;
@@ -372,14 +372,14 @@ static BL_INLINE BLResult bl_convert_premultiply_8888_template_avx2(
   const BLPixelConverterData::PremultiplyData& d = blPixelConverterGetData(self)->premultiplyData;
   const BLCommonTable::LoadStoreM32* loadStoreM32 = blCommonTable.load_store_m32;
 
-  I256 zero = vzeroi256();
-  I256 a255 = vseti256u64(uint64_t(0xFFu) << (A_Shift * 2));
+  Vec256I zero = v_zero_i256();
+  Vec256I a255 = v_fill_i256_u64(uint64_t(0xFFu) << (A_Shift * 2));
 
-  I256 fillMask = vseti256u32(d.fillMask);
-  I256 predicate;
+  Vec256I fillMask = v_fill_i256_u32(d.fillMask);
+  Vec256I predicate;
 
   if (UseShufB)
-    predicate = vdupli128(vloadi128u(d.shufbPredicate));
+    predicate = v_dupl_i128(v_loadu_i128(d.shufbPredicate));
 
   // Alpha byte-index that can be used by instructions that perform shuffling.
   constexpr uint32_t AI = A_Shift / 8u;
@@ -388,36 +388,36 @@ static BL_INLINE BLResult bl_convert_premultiply_8888_template_avx2(
     uint32_t i = w;
 
     while_nounroll (i >= 16) {
-      I256 p0, p1, p2, p3;
+      Vec256I p0, p1, p2, p3;
 
-      p0 = vloadi256u(srcData +  0);
-      p2 = vloadi256u(srcData + 32);
-      if (UseShufB) p0 = vpshufb(p0, predicate);
-      if (UseShufB) p2 = vpshufb(p2, predicate);
+      p0 = v_loadu_i256(srcData +  0);
+      p2 = v_loadu_i256(srcData + 32);
+      if (UseShufB) p0 = v_shuffle_i8(p0, predicate);
+      if (UseShufB) p2 = v_shuffle_i8(p2, predicate);
 
-      p1 = vunpackhi8(p0, zero);
-      p0 = vunpackli8(p0, zero);
-      p3 = vunpackhi8(p2, zero);
-      p2 = vunpackli8(p2, zero);
+      p1 = v_interleave_hi_i8(p0, zero);
+      p0 = v_interleave_lo_i8(p0, zero);
+      p3 = v_interleave_hi_i8(p2, zero);
+      p2 = v_interleave_lo_i8(p2, zero);
 
-      p0 = vmuli16(vor(p0, a255), vswizi16<AI, AI, AI, AI>(p0));
-      p1 = vmuli16(vor(p1, a255), vswizi16<AI, AI, AI, AI>(p1));
-      p2 = vmuli16(vor(p2, a255), vswizi16<AI, AI, AI, AI>(p2));
-      p3 = vmuli16(vor(p3, a255), vswizi16<AI, AI, AI, AI>(p3));
+      p0 = v_mul_i16(v_or(p0, a255), v_swizzle_i16<AI, AI, AI, AI>(p0));
+      p1 = v_mul_i16(v_or(p1, a255), v_swizzle_i16<AI, AI, AI, AI>(p1));
+      p2 = v_mul_i16(v_or(p2, a255), v_swizzle_i16<AI, AI, AI, AI>(p2));
+      p3 = v_mul_i16(v_or(p3, a255), v_swizzle_i16<AI, AI, AI, AI>(p3));
 
-      p0 = vdiv255u16(p0);
-      p1 = vdiv255u16(p1);
-      p2 = vdiv255u16(p2);
-      p3 = vdiv255u16(p3);
+      p0 = v_div255_u16(p0);
+      p1 = v_div255_u16(p1);
+      p2 = v_div255_u16(p2);
+      p3 = v_div255_u16(p3);
 
-      p0 = vpacki16u8(p0, p1);
-      p2 = vpacki16u8(p2, p3);
+      p0 = v_packs_i16_u8(p0, p1);
+      p2 = v_packs_i16_u8(p2, p3);
 
-      p0 = vor(p0, fillMask);
-      p2 = vor(p2, fillMask);
+      p0 = v_or(p0, fillMask);
+      p2 = v_or(p2, fillMask);
 
-      vstorei256u(dstData +  0, p0);
-      vstorei256u(dstData + 32, p2);
+      v_storeu_i256(dstData +  0, p0);
+      v_storeu_i256(dstData + 32, p2);
 
       dstData += 64;
       srcData += 64;
@@ -427,25 +427,25 @@ static BL_INLINE BLResult bl_convert_premultiply_8888_template_avx2(
     while_nounroll (i) {
       uint32_t n = blMin(i, uint32_t(8));
 
-      I256 p0, p1;
-      I256 msk = loadStoreM32[n].as<I256>();
+      Vec256I p0, p1;
+      Vec256I msk = loadStoreM32[n].as<Vec256I>();
 
-      p0 = vloadi256_mask32(srcData, msk);
-      if (UseShufB) p0 = vpshufb(p0, predicate);
+      p0 = v_loadu_i256_mask32(srcData, msk);
+      if (UseShufB) p0 = v_shuffle_i8(p0, predicate);
 
-      p1 = vunpackhi8(p0, zero);
-      p0 = vunpackli8(p0, zero);
+      p1 = v_interleave_hi_i8(p0, zero);
+      p0 = v_interleave_lo_i8(p0, zero);
 
-      p0 = vmuli16(vor(p0, a255), vswizi16<AI, AI, AI, AI>(p0));
-      p1 = vmuli16(vor(p1, a255), vswizi16<AI, AI, AI, AI>(p1));
+      p0 = v_mul_i16(v_or(p0, a255), v_swizzle_i16<AI, AI, AI, AI>(p0));
+      p1 = v_mul_i16(v_or(p1, a255), v_swizzle_i16<AI, AI, AI, AI>(p1));
 
-      p0 = vdiv255u16(p0);
-      p1 = vdiv255u16(p1);
+      p0 = v_div255_u16(p0);
+      p1 = v_div255_u16(p1);
 
-      p0 = vpacki16u8(p0, p1);
-      p0 = vor(p0, fillMask);
+      p0 = v_packs_i16_u8(p0, p1);
+      p0 = v_or(p0, fillMask);
 
-      vstorei256_mask32(dstData, p0, msk);
+      v_storeu_i256_mask32(dstData, p0, msk);
 
       dstData += n * 4;
       srcData += n * 4;
@@ -514,9 +514,9 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_pmulld_template_avx2(
   const uint32_t* rcpTable = blCommonTable.unpremultiplyRcp;
   const BLCommonTable::LoadStoreM32* loadStoreM32 = blCommonTable.load_store_m32;
 
-  I256 alphaMask = vseti256u32(0xFFu << A_Shift);
-  I256 componentMask = vseti256u32(0xFFu);
-  I256 rnd = vseti256u32(0x8000u);
+  Vec256I alphaMask = v_fill_i256_u32(0xFFu << A_Shift);
+  Vec256I componentMask = v_fill_i256_u32(0xFFu);
+  Vec256I rnd = v_fill_i256_u32(0x8000u);
 
   // Alpha byte-index that can be used by instructions that perform shuffling.
   constexpr uint32_t AI = A_Shift / 8u;
@@ -528,43 +528,43 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_pmulld_template_avx2(
     uint32_t i = w;
 
     while_nounroll (i >= 8) {
-      I256 pix = vloadi256u(srcData);
+      Vec256I pix = v_loadu_i256(srcData);
 
-      I256 rcp0 = vloadi256_32(rcpTable + srcData[0 * 4 + AI]);
-      I256 rcp4 = vloadi256_32(rcpTable + srcData[4 * 4 + AI]);
+      Vec256I rcp0 = v_load_i256_32(rcpTable + srcData[0 * 4 + AI]);
+      Vec256I rcp4 = v_load_i256_32(rcpTable + srcData[4 * 4 + AI]);
 
-      rcp0 = vinsertum32<1>(rcp0, rcpTable + srcData[1 * 4 + AI]);
-      rcp4 = vinsertum32<1>(rcp4, rcpTable + srcData[5 * 4 + AI]);
+      rcp0 = v_insertm_u32<1>(rcp0, rcpTable + srcData[1 * 4 + AI]);
+      rcp4 = v_insertm_u32<1>(rcp4, rcpTable + srcData[5 * 4 + AI]);
 
-      rcp0 = vinsertum32<2>(rcp0, rcpTable + srcData[2 * 4 + AI]);
-      rcp4 = vinsertum32<2>(rcp4, rcpTable + srcData[6 * 4 + AI]);
+      rcp0 = v_insertm_u32<2>(rcp0, rcpTable + srcData[2 * 4 + AI]);
+      rcp4 = v_insertm_u32<2>(rcp4, rcpTable + srcData[6 * 4 + AI]);
 
-      rcp0 = vinsertum32<3>(rcp0, rcpTable + srcData[3 * 4 + AI]);
-      rcp4 = vinsertum32<3>(rcp4, rcpTable + srcData[7 * 4 + AI]);
+      rcp0 = v_insertm_u32<3>(rcp0, rcpTable + srcData[3 * 4 + AI]);
+      rcp4 = v_insertm_u32<3>(rcp4, rcpTable + srcData[7 * 4 + AI]);
 
-      rcp0 = vunpackli128(rcp0, rcp4);
+      rcp0 = v_interleave_lo_i128(rcp0, rcp4);
 
-      I256 pr = vsrli32<RI * 8>(pix);
-      I256 pg = vsrli32<GI * 8>(pix);
-      I256 pb = vsrli32<BI * 8>(pix);
+      Vec256I pr = v_srl_i32<RI * 8>(pix);
+      Vec256I pg = v_srl_i32<GI * 8>(pix);
+      Vec256I pb = v_srl_i32<BI * 8>(pix);
 
-      if (RI != 3) pr = vand(pr, componentMask);
-      if (GI != 3) pg = vand(pg, componentMask);
-      if (BI != 3) pb = vand(pb, componentMask);
+      if (RI != 3) pr = v_and(pr, componentMask);
+      if (GI != 3) pg = v_and(pg, componentMask);
+      if (BI != 3) pb = v_and(pb, componentMask);
 
-      pr = vmulu32(pr, rcp0);
-      pg = vmulu32(pg, rcp0);
-      pb = vmulu32(pb, rcp0);
+      pr = v_mul_u32(pr, rcp0);
+      pg = v_mul_u32(pg, rcp0);
+      pb = v_mul_u32(pb, rcp0);
 
-      pix = vand(pix, alphaMask);
-      pr = vslli32<RI * 8>(vsrli32<16>(vaddi32(pr, rnd)));
-      pg = vslli32<GI * 8>(vsrli32<16>(vaddi32(pg, rnd)));
-      pb = vslli32<BI * 8>(vsrli32<16>(vaddi32(pb, rnd)));
+      pix = v_and(pix, alphaMask);
+      pr = v_sll_i32<RI * 8>(v_srl_i32<16>(v_add_i32(pr, rnd)));
+      pg = v_sll_i32<GI * 8>(v_srl_i32<16>(v_add_i32(pg, rnd)));
+      pb = v_sll_i32<BI * 8>(v_srl_i32<16>(v_add_i32(pb, rnd)));
 
-      pix = vor(pix, pr);
-      pix = vor(pix, pg);
-      pix = vor(pix, pb);
-      vstorei256u(dstData, pix);
+      pix = v_or(pix, pr);
+      pix = v_or(pix, pg);
+      pix = v_or(pix, pb);
+      v_storeu_i256(dstData, pix);
 
       dstData += 32;
       srcData += 32;
@@ -572,57 +572,57 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_pmulld_template_avx2(
     }
 
     if (i) {
-      I256 msk = loadStoreM32[i].as<I256>();
-      I256 pix = vloadi256_mask32(srcData, msk);
-      I256 pixHi = vpermi128<1, 1>(pix);
+      Vec256I msk = loadStoreM32[i].as<Vec256I>();
+      Vec256I pix = v_loadu_i256_mask32(srcData, msk);
+      Vec256I pixHi = v_permute_i128<1, 1>(pix);
 
-      size_t idx0 = vextractu8<0 * 4 + AI>(pix);
-      size_t idx4 = vextractu8<0 * 4 + AI>(pixHi);
+      size_t idx0 = v_extract_u8<0 * 4 + AI>(pix);
+      size_t idx4 = v_extract_u8<0 * 4 + AI>(pixHi);
 
-      I256 rcp0 = vloadi256_32(rcpTable + idx0);
-      I256 rcp4 = vloadi256_32(rcpTable + idx4);
+      Vec256I rcp0 = v_load_i256_32(rcpTable + idx0);
+      Vec256I rcp4 = v_load_i256_32(rcpTable + idx4);
 
-      size_t idx1 = vextractu8<1 * 4 + AI>(pix);
-      size_t idx5 = vextractu8<1 * 4 + AI>(pixHi);
+      size_t idx1 = v_extract_u8<1 * 4 + AI>(pix);
+      size_t idx5 = v_extract_u8<1 * 4 + AI>(pixHi);
 
-      rcp0 = vinsertum32<1>(rcp0, rcpTable + idx1);
-      rcp4 = vinsertum32<1>(rcp4, rcpTable + idx5);
+      rcp0 = v_insertm_u32<1>(rcp0, rcpTable + idx1);
+      rcp4 = v_insertm_u32<1>(rcp4, rcpTable + idx5);
 
-      size_t idx2 = vextractu8<2 * 4 + AI>(pix);
-      size_t idx6 = vextractu8<2 * 4 + AI>(pixHi);
+      size_t idx2 = v_extract_u8<2 * 4 + AI>(pix);
+      size_t idx6 = v_extract_u8<2 * 4 + AI>(pixHi);
 
-      rcp0 = vinsertum32<2>(rcp0, rcpTable + idx2);
-      rcp4 = vinsertum32<2>(rcp4, rcpTable + idx6);
+      rcp0 = v_insertm_u32<2>(rcp0, rcpTable + idx2);
+      rcp4 = v_insertm_u32<2>(rcp4, rcpTable + idx6);
 
-      size_t idx3 = vextractu8<3 * 4 + AI>(pix);
-      size_t idx7 = vextractu8<3 * 4 + AI>(pixHi);
+      size_t idx3 = v_extract_u8<3 * 4 + AI>(pix);
+      size_t idx7 = v_extract_u8<3 * 4 + AI>(pixHi);
 
-      rcp0 = vinsertum32<3>(rcp0, rcpTable + idx3);
-      rcp4 = vinsertum32<3>(rcp4, rcpTable + idx7);
+      rcp0 = v_insertm_u32<3>(rcp0, rcpTable + idx3);
+      rcp4 = v_insertm_u32<3>(rcp4, rcpTable + idx7);
 
-      rcp0 = vunpackli128(rcp0, rcp4);
+      rcp0 = v_interleave_lo_i128(rcp0, rcp4);
 
-      I256 pr = vsrli32<RI * 8>(pix);
-      I256 pg = vsrli32<GI * 8>(pix);
-      I256 pb = vsrli32<BI * 8>(pix);
+      Vec256I pr = v_srl_i32<RI * 8>(pix);
+      Vec256I pg = v_srl_i32<GI * 8>(pix);
+      Vec256I pb = v_srl_i32<BI * 8>(pix);
 
-      if (RI != 3) pr = vand(pr, componentMask);
-      if (GI != 3) pg = vand(pg, componentMask);
-      if (BI != 3) pb = vand(pb, componentMask);
+      if (RI != 3) pr = v_and(pr, componentMask);
+      if (GI != 3) pg = v_and(pg, componentMask);
+      if (BI != 3) pb = v_and(pb, componentMask);
 
-      pr = vmulu32(pr, rcp0);
-      pg = vmulu32(pg, rcp0);
-      pb = vmulu32(pb, rcp0);
+      pr = v_mul_u32(pr, rcp0);
+      pg = v_mul_u32(pg, rcp0);
+      pb = v_mul_u32(pb, rcp0);
 
-      pix = vand(pix, alphaMask);
-      pr = vslli32<RI * 8>(vsrli32<16>(vaddi32(pr, rnd)));
-      pg = vslli32<GI * 8>(vsrli32<16>(vaddi32(pg, rnd)));
-      pb = vslli32<BI * 8>(vsrli32<16>(vaddi32(pb, rnd)));
+      pix = v_and(pix, alphaMask);
+      pr = v_sll_i32<RI * 8>(v_srl_i32<16>(v_add_i32(pr, rnd)));
+      pg = v_sll_i32<GI * 8>(v_srl_i32<16>(v_add_i32(pg, rnd)));
+      pb = v_sll_i32<BI * 8>(v_srl_i32<16>(v_add_i32(pb, rnd)));
 
-      pix = vor(pix, pr);
-      pix = vor(pix, pg);
-      pix = vor(pix, pb);
-      vstorei256_mask32(dstData, pix, msk);
+      pix = v_or(pix, pr);
+      pix = v_or(pix, pg);
+      pix = v_or(pix, pb);
+      v_storeu_i256_mask32(dstData, pix, msk);
 
       dstData += i * 4;
       srcData += i * 4;
@@ -673,11 +673,11 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_float_template_avx2(
 
   const BLCommonTable::LoadStoreM32* loadStoreM32 = blCommonTable.load_store_m32;
 
-  I256 alphaMask = vseti256u32(0xFFu << A_Shift);
-  I256 componentMask = vseti256u32(0xFFu);
+  Vec256I alphaMask = v_fill_i256_u32(0xFFu << A_Shift);
+  Vec256I componentMask = v_fill_i256_u32(0xFFu);
 
-  F256 const255 = vsetf256(255.0001f);
-  F256 lessThanOne = vsetf256(0.1f);
+  Vec256F const255 = v_fill_f256(255.0001f);
+  Vec256F lessThanOne = v_fill_f256(0.1f);
 
   // Alpha byte-index that can be used by instructions that perform shuffling.
   constexpr uint32_t AI = A_Shift / 8u;
@@ -689,44 +689,44 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_float_template_avx2(
     uint32_t i = w;
 
     while_nounroll (i >= 8) {
-      I256 pix = vloadi256u(srcData);
-      I256 pa = vsrli32<AI * 8>(pix);
-      I256 pr = vsrli32<RI * 8>(pix);
+      Vec256I pix = v_loadu_i256(srcData);
+      Vec256I pa = v_srl_i32<AI * 8>(pix);
+      Vec256I pr = v_srl_i32<RI * 8>(pix);
 
-      if (AI != 3) pa = vand(pa, componentMask);
-      if (RI != 3) pr = vand(pr, componentMask);
+      if (AI != 3) pa = v_and(pa, componentMask);
+      if (RI != 3) pr = v_and(pr, componentMask);
 
-      F256 fa = vcvti256f256(pa);
-      F256 fr = vcvti256f256(pr);
+      Vec256F fa = v_cvt_i32_f32(pa);
+      Vec256F fr = v_cvt_i32_f32(pr);
 
-      fa = vdivps(const255, vmaxps(fa, lessThanOne));
+      fa = v_div_f32(const255, v_max_f32(fa, lessThanOne));
 
-      I256 pg = vsrli32<GI * 8>(pix);
-      I256 pb = vsrli32<BI * 8>(pix);
+      Vec256I pg = v_srl_i32<GI * 8>(pix);
+      Vec256I pb = v_srl_i32<BI * 8>(pix);
 
-      if (GI != 3) pg = vand(pg, componentMask);
-      if (BI != 3) pb = vand(pb, componentMask);
+      if (GI != 3) pg = v_and(pg, componentMask);
+      if (BI != 3) pb = v_and(pb, componentMask);
 
-      F256 fg = vcvti256f256(pg);
-      F256 fb = vcvti256f256(pb);
+      Vec256F fg = v_cvt_i32_f32(pg);
+      Vec256F fb = v_cvt_i32_f32(pb);
 
-      fr = vmulps(fr, fa);
-      fg = vmulps(fg, fa);
-      fb = vmulps(fb, fa);
+      fr = v_mul_f32(fr, fa);
+      fg = v_mul_f32(fg, fa);
+      fb = v_mul_f32(fb, fa);
 
-      pix = vand(pix, alphaMask);
-      pr = vcvtf256i256(fr);
-      pg = vcvtf256i256(fg);
-      pb = vcvtf256i256(fb);
+      pix = v_and(pix, alphaMask);
+      pr = v_cvt_f32_i32(fr);
+      pg = v_cvt_f32_i32(fg);
+      pb = v_cvt_f32_i32(fb);
 
-      pr = vslli32<RI * 8>(pr);
-      pg = vslli32<GI * 8>(pg);
-      pb = vslli32<BI * 8>(pb);
+      pr = v_sll_i32<RI * 8>(pr);
+      pg = v_sll_i32<GI * 8>(pg);
+      pb = v_sll_i32<BI * 8>(pb);
 
-      pix = vor(pix, pr);
-      pix = vor(pix, pg);
-      pix = vor(pix, pb);
-      vstorei256u(dstData, pix);
+      pix = v_or(pix, pr);
+      pix = v_or(pix, pg);
+      pix = v_or(pix, pb);
+      v_storeu_i256(dstData, pix);
 
       dstData += 32;
       srcData += 32;
@@ -734,46 +734,46 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_float_template_avx2(
     }
 
     if (i) {
-      I256 msk = loadStoreM32[i].as<I256>();
-      I256 pix = vloadi256_mask32(srcData, msk);
+      Vec256I msk = loadStoreM32[i].as<Vec256I>();
+      Vec256I pix = v_loadu_i256_mask32(srcData, msk);
 
-      I256 pa = vsrli32<AI * 8>(pix);
-      I256 pr = vsrli32<RI * 8>(pix);
+      Vec256I pa = v_srl_i32<AI * 8>(pix);
+      Vec256I pr = v_srl_i32<RI * 8>(pix);
 
-      if (AI != 3) pa = vand(pa, componentMask);
-      if (RI != 3) pr = vand(pr, componentMask);
+      if (AI != 3) pa = v_and(pa, componentMask);
+      if (RI != 3) pr = v_and(pr, componentMask);
 
-      F256 fa = vcvti256f256(pa);
-      F256 fr = vcvti256f256(pr);
+      Vec256F fa = v_cvt_i32_f32(pa);
+      Vec256F fr = v_cvt_i32_f32(pr);
 
-      fa = vdivps(const255, vmaxps(fa, lessThanOne));
+      fa = v_div_f32(const255, v_max_f32(fa, lessThanOne));
 
-      I256 pg = vsrli32<GI * 8>(pix);
-      I256 pb = vsrli32<BI * 8>(pix);
+      Vec256I pg = v_srl_i32<GI * 8>(pix);
+      Vec256I pb = v_srl_i32<BI * 8>(pix);
 
-      if (GI != 3) pg = vand(pg, componentMask);
-      if (BI != 3) pb = vand(pb, componentMask);
+      if (GI != 3) pg = v_and(pg, componentMask);
+      if (BI != 3) pb = v_and(pb, componentMask);
 
-      F256 fg = vcvti256f256(pg);
-      F256 fb = vcvti256f256(pb);
+      Vec256F fg = v_cvt_i32_f32(pg);
+      Vec256F fb = v_cvt_i32_f32(pb);
 
-      fr = vmulps(fr, fa);
-      fg = vmulps(fg, fa);
-      fb = vmulps(fb, fa);
+      fr = v_mul_f32(fr, fa);
+      fg = v_mul_f32(fg, fa);
+      fb = v_mul_f32(fb, fa);
 
-      pix = vand(pix, alphaMask);
-      pr = vcvtf256i256(fr);
-      pg = vcvtf256i256(fg);
-      pb = vcvtf256i256(fb);
+      pix = v_and(pix, alphaMask);
+      pr = v_cvt_f32_i32(fr);
+      pg = v_cvt_f32_i32(fg);
+      pb = v_cvt_f32_i32(fb);
 
-      pr = vslli32<RI * 8>(pr);
-      pg = vslli32<GI * 8>(pg);
-      pb = vslli32<BI * 8>(pb);
+      pr = v_sll_i32<RI * 8>(pr);
+      pg = v_sll_i32<GI * 8>(pg);
+      pb = v_sll_i32<BI * 8>(pb);
 
-      pix = vor(pix, pr);
-      pix = vor(pix, pg);
-      pix = vor(pix, pb);
-      vstorei256_mask32(dstData, pix, msk);
+      pix = v_or(pix, pr);
+      pix = v_or(pix, pg);
+      pix = v_or(pix, pb);
+      v_storeu_i256_mask32(dstData, pix, msk);
 
       dstData += i * 4;
       srcData += i * 4;

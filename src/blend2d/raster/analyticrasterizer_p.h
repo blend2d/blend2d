@@ -10,6 +10,7 @@
 #include "../bitops_p.h"
 #include "../support_p.h"
 #include "../raster/rasterdefs_p.h"
+#include "../raster/edgebuilder_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal_raster
@@ -282,21 +283,21 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
   // [Prepare]
   // --------------------------------------------------------------------------
 
-  BL_INLINE bool prepare(int x0, int y0, int x1, int y1) noexcept {
+  BL_INLINE bool prepareRef(const BLEdgePoint<int>& p0, const BLEdgePoint<int>& p1) noexcept {
     using BLAnalyticRasterizerUtils::accErrStep;
 
     // Line should be already reversed in case it has a negative sign.
-    BL_ASSERT(y0 <= y1);
+    BL_ASSERT(p0.y <= p1.y);
 
     // Should not happen regularly, but in some edge cases this can happen in
     // cases where a curve was flatenned into line sergments that don't change
     // vertically or produced by `BLEdgeBuilderFromSource` that doesn't eliminate
     // strictly horizontal edges.
-    if (y0 == y1)
+    if (p0.y == p1.y)
       return false;
 
-    _dx = x1 - x0;
-    _dy = y1 - y0;
+    _dx = p1.x - p0.x;
+    _dy = p1.y - p0.y;
     _flags = kFlagInitialScanline;
 
     if (_dx < 0) {
@@ -304,15 +305,15 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
       _dx = -_dx;
     }
 
-    _ex0 = (  x0) >> BL_PIPE_A8_SHIFT;
-    _ey0 = (  y0) >> BL_PIPE_A8_SHIFT;
-    _ex1 = (  x1) >> BL_PIPE_A8_SHIFT;
-    _ey1 = (--y1) >> BL_PIPE_A8_SHIFT;
+    _ex0 = (p0.x    ) >> BL_PIPE_A8_SHIFT;
+    _ey0 = (p0.y    ) >> BL_PIPE_A8_SHIFT;
+    _ex1 = (p1.x    ) >> BL_PIPE_A8_SHIFT;
+    _ey1 = (p1.y - 1) >> BL_PIPE_A8_SHIFT;
 
-    _fx0 = (x0 & int(BL_PIPE_A8_MASK));
-    _fy0 = (y0 & int(BL_PIPE_A8_MASK));
-    _fx1 = (x1 & int(BL_PIPE_A8_MASK));
-    _fy1 = (y1 & int(BL_PIPE_A8_MASK)) + 1;
+    _fx0 = ((p0.x    ) & int(BL_PIPE_A8_MASK));
+    _fy0 = ((p0.y    ) & int(BL_PIPE_A8_MASK));
+    _fx1 = ((p1.x    ) & int(BL_PIPE_A8_MASK));
+    _fy1 = ((p1.y - 1) & int(BL_PIPE_A8_MASK)) + 1;
 
     _savedFy1 = _fy1;
     if (_ey0 != _ey1)
@@ -354,6 +355,10 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
 
     _yDlt += _fy0;
     return true;
+  }
+
+  BL_INLINE bool prepare(const BLEdgePoint<int>& p0, const BLEdgePoint<int>& p1) noexcept {
+    return prepareRef(p0, p1);
   }
 
   // --------------------------------------------------------------------------

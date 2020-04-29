@@ -904,167 +904,177 @@ public:
 
   // Integer SIMD - Core.
 
-  V_EMIT_VV_VV(vmov          , PACK_AVX_SSE(Vmovaps    , Movaps    , Z))       // AVX  | SSE2
-  V_EMIT_VV_VV(vmov64        , PACK_AVX_SSE(Vmovq      , Movq      , X))       // AVX  | SSE2
+  V_EMIT_VV_VV(v_mov               , PACK_AVX_SSE(Vmovaps    , Movaps    , Z))       // AVX  | SSE2
+  V_EMIT_VV_VV(v_mov_i64           , PACK_AVX_SSE(Vmovq      , Movq      , X))       // AVX  | SSE2
 
-  V_EMIT_VV_VV(vmovi8i16_    , PACK_AVX_SSE(Vpmovsxbw  , Pmovsxbw  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(vmovu8u16_    , PACK_AVX_SSE(Vpmovzxbw  , Pmovzxbw  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(vmovi8i32_    , PACK_AVX_SSE(Vpmovsxbd  , Pmovsxbd  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(vmovu8u32_    , PACK_AVX_SSE(Vpmovzxbd  , Pmovzxbd  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(vmovi8i64_    , PACK_AVX_SSE(Vpmovsxbq  , Pmovsxbq  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(vmovu8u64_    , PACK_AVX_SSE(Vpmovzxbq  , Pmovzxbq  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VV_VV(v_mov_i8_i16_       , PACK_AVX_SSE(Vpmovsxbw  , Pmovsxbw  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VV_VV(v_mov_u8_i16_       , PACK_AVX_SSE(Vpmovzxbw  , Pmovzxbw  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VV_VV(v_mov_i8_i32_       , PACK_AVX_SSE(Vpmovsxbd  , Pmovsxbd  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VV_VV(v_mov_u8_i32_       , PACK_AVX_SSE(Vpmovzxbd  , Pmovzxbd  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VV_VV(v_mov_i8_i64_       , PACK_AVX_SSE(Vpmovsxbq  , Pmovsxbq  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VV_VV(v_mov_u8_u64_       , PACK_AVX_SSE(Vpmovzxbq  , Pmovzxbq  , Z))       // AVX2 | SSE4.1
 
-  V_EMIT_VV_VV(vmovi16i32_   , PACK_AVX_SSE(Vpmovsxwd  , Pmovsxwd  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(vmovu16u32_   , PACK_AVX_SSE(Vpmovzxwd  , Pmovzxwd  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(vmovi16i64_   , PACK_AVX_SSE(Vpmovsxwq  , Pmovsxwq  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(vmovu16u64_   , PACK_AVX_SSE(Vpmovzxwq  , Pmovzxwq  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VV_VV(v_mov_i16_i32_      , PACK_AVX_SSE(Vpmovsxwd  , Pmovsxwd  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VV_VV(v_mov_u16_u32_      , PACK_AVX_SSE(Vpmovzxwd  , Pmovzxwd  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VV_VV(v_mov_i16_i64_      , PACK_AVX_SSE(Vpmovsxwq  , Pmovsxwq  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VV_VV(v_mov_u16_u64_      , PACK_AVX_SSE(Vpmovzxwq  , Pmovzxwq  , Z))       // AVX2 | SSE4.1
 
-  V_EMIT_VV_VV(vmovi32i64_   , PACK_AVX_SSE(Vpmovsxdq  , Pmovsxdq  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(vmovu32u64_   , PACK_AVX_SSE(Vpmovzxdq  , Pmovzxdq  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VV_VV(v_mov_i32_i64_      , PACK_AVX_SSE(Vpmovsxdq  , Pmovsxdq  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VV_VV(v_mov_u32_u64_      , PACK_AVX_SSE(Vpmovzxdq  , Pmovzxdq  , Z))       // AVX2 | SSE4.1
 
-  V_EMIT_VV_VV(vmovmsku8     , PACK_AVX_SSE(Vpmovmskb  , Pmovmskb  , Z))       // AVX2 | SSE2
+  V_EMIT_VV_VV(v_mov_mask_u8       , PACK_AVX_SSE(Vpmovmskb  , Pmovmskb  , Z))       // AVX2 | SSE2
 
-  V_EMIT_VVVI_VVI(vinsertu8_ , PACK_AVX_SSE(Vpinsrb    , Pinsrb    , X))       // AVX2 | SSE4_1
-  V_EMIT_VVVI_VVI(vinsertu16 , PACK_AVX_SSE(Vpinsrw    , Pinsrw    , X))       // AVX2 | SSE2
-  V_EMIT_VVVI_VVI(vinsertu32_, PACK_AVX_SSE(Vpinsrd    , Pinsrd    , X))       // AVX2 | SSE4_1
-  V_EMIT_VVVI_VVI(vinsertu64_, PACK_AVX_SSE(Vpinsrq    , Pinsrq    , X))       // AVX2 | SSE4_1
+  V_EMIT_VVVI_VVI(v_insert_u8_     , PACK_AVX_SSE(Vpinsrb    , Pinsrb    , X))       // AVX2 | SSE4_1
+  V_EMIT_VVVI_VVI(v_insert_u16     , PACK_AVX_SSE(Vpinsrw    , Pinsrw    , X))       // AVX2 | SSE2
+  V_EMIT_VVVI_VVI(v_insert_u32_    , PACK_AVX_SSE(Vpinsrd    , Pinsrd    , X))       // AVX2 | SSE4_1
+  V_EMIT_VVVI_VVI(v_insert_u64_    , PACK_AVX_SSE(Vpinsrq    , Pinsrq    , X))       // AVX2 | SSE4_1
 
-  V_EMIT_VVI_VVI(vextractu8_ , PACK_AVX_SSE(Vpextrb    , Pextrb    , X))       // AVX2 | SSE4_1
-  V_EMIT_VVI_VVI(vextractu16 , PACK_AVX_SSE(Vpextrw    , Pextrw    , X))       // AVX2 | SSE2
-  V_EMIT_VVI_VVI(vextractu32_, PACK_AVX_SSE(Vpextrd    , Pextrd    , X))       // AVX2 | SSE4_1
-  V_EMIT_VVI_VVI(vextractu64_, PACK_AVX_SSE(Vpextrq    , Pextrq    , X))       // AVX2 | SSE4_1
+  V_EMIT_VVI_VVI(v_extract_u8_     , PACK_AVX_SSE(Vpextrb    , Pextrb    , X))       // AVX2 | SSE4_1
+  V_EMIT_VVI_VVI(v_extract_u16     , PACK_AVX_SSE(Vpextrw    , Pextrw    , X))       // AVX2 | SSE2
+  V_EMIT_VVI_VVI(v_extract_u32_    , PACK_AVX_SSE(Vpextrd    , Pextrd    , X))       // AVX2 | SSE4_1
+  V_EMIT_VVI_VVI(v_extract_u64_    , PACK_AVX_SSE(Vpextrq    , Pextrq    , X))       // AVX2 | SSE4_1
 
-  V_EMIT_VVV_VV(vunpackli8   , PACK_AVX_SSE(Vpunpcklbw , Punpcklbw , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vunpackhi8   , PACK_AVX_SSE(Vpunpckhbw , Punpckhbw , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vunpackli16  , PACK_AVX_SSE(Vpunpcklwd , Punpcklwd , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vunpackhi16  , PACK_AVX_SSE(Vpunpckhwd , Punpckhwd , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vunpackli32  , PACK_AVX_SSE(Vpunpckldq , Punpckldq , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vunpackhi32  , PACK_AVX_SSE(Vpunpckhdq , Punpckhdq , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vunpackli64  , PACK_AVX_SSE(Vpunpcklqdq, Punpcklqdq, Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vunpackhi64  , PACK_AVX_SSE(Vpunpckhqdq, Punpckhqdq, Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_or               , PACK_AVX_SSE(Vpor       , Por       , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_or_f32           , PACK_AVX_SSE(Vorps      , Orps      , Z))       // AVX  | SSE
+  V_EMIT_VVV_VV(v_or_f64           , PACK_AVX_SSE(Vorpd      , Orpd      , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(v_xor              , PACK_AVX_SSE(Vpxor      , Pxor      , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_xor_f32          , PACK_AVX_SSE(Vxorps     , Xorps     , Z))       // AVX  | SSE
+  V_EMIT_VVV_VV(v_xor_f64          , PACK_AVX_SSE(Vxorpd     , Xorpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(v_and              , PACK_AVX_SSE(Vpand      , Pand      , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_and_f32          , PACK_AVX_SSE(Vandps     , Andps     , Z))       // AVX  | SSE
+  V_EMIT_VVV_VV(v_and_f64          , PACK_AVX_SSE(Vandpd     , Andpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(v_nand             , PACK_AVX_SSE(Vpandn     , Pandn     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_nand_f32         , PACK_AVX_SSE(Vandnps    , Andnps    , Z))       // AVX  | SSE
+  V_EMIT_VVV_VV(v_nand_f64         , PACK_AVX_SSE(Vandnpd    , Andnpd    , Z))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(vpacki32i16  , PACK_AVX_SSE(Vpackssdw  , Packssdw  , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vpacki32u16_ , PACK_AVX_SSE(Vpackusdw  , Packusdw  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(vpacki16i8   , PACK_AVX_SSE(Vpacksswb  , Packsswb  , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vpacki16u8   , PACK_AVX_SSE(Vpackuswb  , Packuswb  , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VI(v_sll_i16          , PACK_AVX_SSE(Vpsllw     , Psllw     , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VI(v_sll_i32          , PACK_AVX_SSE(Vpslld     , Pslld     , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VI(v_sll_i64          , PACK_AVX_SSE(Vpsllq     , Psllq     , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VI(v_srl_i16          , PACK_AVX_SSE(Vpsrlw     , Psrlw     , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VI(v_srl_i32          , PACK_AVX_SSE(Vpsrld     , Psrld     , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VI(v_srl_i64          , PACK_AVX_SSE(Vpsrlq     , Psrlq     , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VI(v_sra_i16          , PACK_AVX_SSE(Vpsraw     , Psraw     , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VI(v_sra_i32          , PACK_AVX_SSE(Vpsrad     , Psrad     , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VI(v_sllb_i128        , PACK_AVX_SSE(Vpslldq    , Pslldq    , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VI(v_srlb_i128        , PACK_AVX_SSE(Vpsrldq    , Psrldq    , Z))       // AVX2 | SSE2
 
-  V_EMIT_VVV_VV(vswizi8v_    , PACK_AVX_SSE(Vpshufb    , Pshufb    , Z))       // AVX2 | SSSE3
-  V_EMIT_VVI_VVI(vswizli16   , PACK_AVX_SSE(Vpshuflw   , Pshuflw   , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VVI(vswizhi16   , PACK_AVX_SSE(Vpshufhw   , Pshufhw   , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VVI(vswizi32    , PACK_AVX_SSE(Vpshufd    , Pshufd    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_shuffle_i8       , PACK_AVX_SSE(Vpshufb    , Pshufb    , Z))       // AVX2 | SSSE3
+  V_EMIT_VVVI_VVI(v_shuffle_f32    , PACK_AVX_SSE(Vshufps    , Shufps    , Z))       // AVX  | SSE
+  V_EMIT_VVVI_VVI(v_shuffle_f64    , PACK_AVX_SSE(Vshufpd    , Shufpd    , Z))       // AVX  | SSE2
 
-  V_EMIT_VVVI_VVI(vshufi32   , PACK_AVX_SSE(Vshufps    , Shufps    , Z))       // AVX  | SSE
-  V_EMIT_VVVI_VVI(vshufi64   , PACK_AVX_SSE(Vshufpd    , Shufpd    , Z))       // AVX  | SSE2
+  V_EMIT_VVI_VVI(v_swizzle_lo_i16  , PACK_AVX_SSE(Vpshuflw   , Pshuflw   , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VVI(v_swizzle_hi_i16  , PACK_AVX_SSE(Vpshufhw   , Pshufhw   , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VVI(v_swizzle_i32     , PACK_AVX_SSE(Vpshufd    , Pshufd    , Z))       // AVX2 | SSE2
 
-  V_EMIT_VVV_VV(vand         , PACK_AVX_SSE(Vpand      , Pand      , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vandnot_a    , PACK_AVX_SSE(Vpandn     , Pandn     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vor          , PACK_AVX_SSE(Vpor       , Por       , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vxor         , PACK_AVX_SSE(Vpxor      , Pxor      , Z))       // AVX2 | SSE2
+  V_EMIT_VVVI_VVI(v_shuffle_i32    , PACK_AVX_SSE(Vshufps    , Shufps    , Z))       // AVX  | SSE
+  V_EMIT_VVVI_VVI(v_shuffle_i64    , PACK_AVX_SSE(Vshufpd    , Shufpd    , Z))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(vavgu8       , PACK_AVX_SSE(Vpavgb     , Pavgb     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vavgu16      , PACK_AVX_SSE(Vpavgw     , Pavgw     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_lo_i8 , PACK_AVX_SSE(Vpunpcklbw , Punpcklbw , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_hi_i8 , PACK_AVX_SSE(Vpunpckhbw , Punpckhbw , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_lo_i16, PACK_AVX_SSE(Vpunpcklwd , Punpcklwd , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_hi_i16, PACK_AVX_SSE(Vpunpckhwd , Punpckhwd , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_lo_i32, PACK_AVX_SSE(Vpunpckldq , Punpckldq , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_hi_i32, PACK_AVX_SSE(Vpunpckhdq , Punpckhdq , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_lo_i64, PACK_AVX_SSE(Vpunpcklqdq, Punpcklqdq, Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_hi_i64, PACK_AVX_SSE(Vpunpckhqdq, Punpckhqdq, Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_lo_f32, PACK_AVX_SSE(Vunpcklps  , Unpcklps  , Z))       // AVX  | SSE
+  V_EMIT_VVV_VV(v_interleave_lo_f64, PACK_AVX_SSE(Vunpcklpd  , Unpcklpd  , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(v_interleave_hi_f32, PACK_AVX_SSE(Vunpckhps  , Unpckhps  , Z))       // AVX  | SSE
+  V_EMIT_VVV_VV(v_interleave_hi_f64, PACK_AVX_SSE(Vunpckhpd  , Unpckhpd  , Z))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(vsigni8_     , PACK_AVX_SSE(Vpsignb    , Psignb    , Z))       // AVX2 | SSSE3
-  V_EMIT_VVV_VV(vsigni16_    , PACK_AVX_SSE(Vpsignw    , Psignw    , Z))       // AVX2 | SSSE3
-  V_EMIT_VVV_VV(vsigni32_    , PACK_AVX_SSE(Vpsignd    , Psignd    , Z))       // AVX2 | SSSE3
+  V_EMIT_VVV_VV(v_packs_i32_i16    , PACK_AVX_SSE(Vpackssdw  , Packssdw  , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_packs_i32_u16_   , PACK_AVX_SSE(Vpackusdw  , Packusdw  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVV_VV(v_packs_i16_i8     , PACK_AVX_SSE(Vpacksswb  , Packsswb  , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_packs_i16_u8     , PACK_AVX_SSE(Vpackuswb  , Packuswb  , Z))       // AVX2 | SSE2
 
-  V_EMIT_VVV_VV(vaddi8       , PACK_AVX_SSE(Vpaddb     , Paddb     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vaddi16      , PACK_AVX_SSE(Vpaddw     , Paddw     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vaddi32      , PACK_AVX_SSE(Vpaddd     , Paddd     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vaddi64      , PACK_AVX_SSE(Vpaddq     , Paddq     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_avg_u8           , PACK_AVX_SSE(Vpavgb     , Pavgb     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_avg_u16          , PACK_AVX_SSE(Vpavgw     , Pavgw     , Z))       // AVX2 | SSE2
 
-  V_EMIT_VVV_VV(vaddsi8      , PACK_AVX_SSE(Vpaddsb    , Paddsb    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vaddsu8      , PACK_AVX_SSE(Vpaddusb   , Paddusb   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vaddsi16     , PACK_AVX_SSE(Vpaddsw    , Paddsw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vaddsu16     , PACK_AVX_SSE(Vpaddusw   , Paddusw   , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_sign_i8_         , PACK_AVX_SSE(Vpsignb    , Psignb    , Z))       // AVX2 | SSSE3
+  V_EMIT_VVV_VV(v_sign_i16_        , PACK_AVX_SSE(Vpsignw    , Psignw    , Z))       // AVX2 | SSSE3
+  V_EMIT_VVV_VV(v_sign_i32_        , PACK_AVX_SSE(Vpsignd    , Psignd    , Z))       // AVX2 | SSSE3
 
-  V_EMIT_VVV_VV(vsubi8       , PACK_AVX_SSE(Vpsubb     , Psubb     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vsubi16      , PACK_AVX_SSE(Vpsubw     , Psubw     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vsubi32      , PACK_AVX_SSE(Vpsubd     , Psubd     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vsubi64      , PACK_AVX_SSE(Vpsubq     , Psubq     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_add_i8           , PACK_AVX_SSE(Vpaddb     , Paddb     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_add_i16          , PACK_AVX_SSE(Vpaddw     , Paddw     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_add_i32          , PACK_AVX_SSE(Vpaddd     , Paddd     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_add_i64          , PACK_AVX_SSE(Vpaddq     , Paddq     , Z))       // AVX2 | SSE2
 
-  V_EMIT_VVV_VV(vsubsi8      , PACK_AVX_SSE(Vpsubsb    , Psubsb    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vsubsi16     , PACK_AVX_SSE(Vpsubsw    , Psubsw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vsubsu8      , PACK_AVX_SSE(Vpsubusb   , Psubusb   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vsubsu16     , PACK_AVX_SSE(Vpsubusw   , Psubusw   , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_sub_i8           , PACK_AVX_SSE(Vpsubb     , Psubb     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_sub_i16          , PACK_AVX_SSE(Vpsubw     , Psubw     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_sub_i32          , PACK_AVX_SSE(Vpsubd     , Psubd     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_sub_i64          , PACK_AVX_SSE(Vpsubq     , Psubq     , Z))       // AVX2 | SSE2
 
-  V_EMIT_VVV_VV(vmuli16      , PACK_AVX_SSE(Vpmullw    , Pmullw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vmulu16      , PACK_AVX_SSE(Vpmullw    , Pmullw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vmulhi16     , PACK_AVX_SSE(Vpmulhw    , Pmulhw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vmulhu16     , PACK_AVX_SSE(Vpmulhuw   , Pmulhuw   , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_adds_i8          , PACK_AVX_SSE(Vpaddsb    , Paddsb    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_adds_u8          , PACK_AVX_SSE(Vpaddusb   , Paddusb   , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_adds_i16         , PACK_AVX_SSE(Vpaddsw    , Paddsw    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_adds_u16         , PACK_AVX_SSE(Vpaddusw   , Paddusw   , Z))       // AVX2 | SSE2
 
-  V_EMIT_VVV_VV(vmuli32_     , PACK_AVX_SSE(Vpmulld    , Pmulld    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(vmulu32_     , PACK_AVX_SSE(Vpmulld    , Pmulld    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(vmulxlli32_  , PACK_AVX_SSE(Vpmuldq    , Pmuldq    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(vmulxllu32   , PACK_AVX_SSE(Vpmuludq   , Pmuludq   , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_subs_i8          , PACK_AVX_SSE(Vpsubsb    , Psubsb    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_subs_i16         , PACK_AVX_SSE(Vpsubsw    , Psubsw    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_subs_u8          , PACK_AVX_SSE(Vpsubusb   , Psubusb   , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_subs_u16         , PACK_AVX_SSE(Vpsubusw   , Psubusw   , Z))       // AVX2 | SSE2
 
-  V_EMIT_VVVi_VVi(vmulxllu64_, PACK_AVX_SSE(Vpclmulqdq , Pclmulqdq , Z), 0x00) // AVX2 | PCLMULQDQ
-  V_EMIT_VVVi_VVi(vmulxhlu64_, PACK_AVX_SSE(Vpclmulqdq , Pclmulqdq , Z), 0x01) // AVX2 | PCLMULQDQ
-  V_EMIT_VVVi_VVi(vmulxlhu64_, PACK_AVX_SSE(Vpclmulqdq , Pclmulqdq , Z), 0x10) // AVX2 | PCLMULQDQ
-  V_EMIT_VVVi_VVi(vmulxhhu64_, PACK_AVX_SSE(Vpclmulqdq , Pclmulqdq , Z), 0x11) // AVX2 | PCLMULQDQ
+  V_EMIT_VVV_VV(v_mul_i16          , PACK_AVX_SSE(Vpmullw    , Pmullw    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_mul_u16          , PACK_AVX_SSE(Vpmullw    , Pmullw    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_mulh_i16         , PACK_AVX_SSE(Vpmulhw    , Pmulhw    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_mulh_u16         , PACK_AVX_SSE(Vpmulhuw   , Pmulhuw   , Z))       // AVX2 | SSE2
 
-  V_EMIT_VVV_VV(vmini8_      , PACK_AVX_SSE(Vpminsb    , Pminsb    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(vmaxi8_      , PACK_AVX_SSE(Vpmaxsb    , Pmaxsb    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(vminu8       , PACK_AVX_SSE(Vpminub    , Pminub    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vmaxu8       , PACK_AVX_SSE(Vpmaxub    , Pmaxub    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_mul_i32_         , PACK_AVX_SSE(Vpmulld    , Pmulld    , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVV_VV(v_mul_u32_         , PACK_AVX_SSE(Vpmulld    , Pmulld    , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVV_VV(v_mulx_ll_i32_     , PACK_AVX_SSE(Vpmuldq    , Pmuldq    , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVV_VV(v_mulx_ll_u32_     , PACK_AVX_SSE(Vpmuludq   , Pmuludq   , Z))       // AVX2 | SSE2
 
-  V_EMIT_VVV_VV(vmini16      , PACK_AVX_SSE(Vpminsw    , Pminsw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vmaxi16      , PACK_AVX_SSE(Vpmaxsw    , Pmaxsw    , Z))       // AVX2 | SSE2
+  V_EMIT_VVVi_VVi(v_mulx_ll_u64_   , PACK_AVX_SSE(Vpclmulqdq , Pclmulqdq , Z), 0x00) // AVX2 | PCLMULQDQ
+  V_EMIT_VVVi_VVi(v_mulx_hl_u64_   , PACK_AVX_SSE(Vpclmulqdq , Pclmulqdq , Z), 0x01) // AVX2 | PCLMULQDQ
+  V_EMIT_VVVi_VVi(v_mulx_lh_u64_   , PACK_AVX_SSE(Vpclmulqdq , Pclmulqdq , Z), 0x10) // AVX2 | PCLMULQDQ
+  V_EMIT_VVVi_VVi(v_mulx_hh_u64_   , PACK_AVX_SSE(Vpclmulqdq , Pclmulqdq , Z), 0x11) // AVX2 | PCLMULQDQ
 
-  V_EMIT_VVV_VV(vmini32_     , PACK_AVX_SSE(Vpminsd    , Pminsd    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(vmaxi32_     , PACK_AVX_SSE(Vpmaxsd    , Pmaxsd    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(vminu32_     , PACK_AVX_SSE(Vpminud    , Pminud    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(vmaxu32_     , PACK_AVX_SSE(Vpmaxud    , Pmaxud    , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVV_VV(v_min_i8_          , PACK_AVX_SSE(Vpminsb    , Pminsb    , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVV_VV(v_min_u8           , PACK_AVX_SSE(Vpminub    , Pminub    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_min_i16          , PACK_AVX_SSE(Vpminsw    , Pminsw    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_min_i32_         , PACK_AVX_SSE(Vpminsd    , Pminsd    , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVV_VV(v_min_u32_         , PACK_AVX_SSE(Vpminud    , Pminud    , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVV_VV(v_max_i8_          , PACK_AVX_SSE(Vpmaxsb    , Pmaxsb    , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVV_VV(v_max_u8           , PACK_AVX_SSE(Vpmaxub    , Pmaxub    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_max_i16          , PACK_AVX_SSE(Vpmaxsw    , Pmaxsw    , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_max_i32_         , PACK_AVX_SSE(Vpmaxsd    , Pmaxsd    , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVV_VV(v_max_u32_         , PACK_AVX_SSE(Vpmaxud    , Pmaxud    , Z))       // AVX2 | SSE4.1
 
-  V_EMIT_VVV_VV(vcmpeqi8     , PACK_AVX_SSE(Vpcmpeqb   , Pcmpeqb   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vcmpeqi16    , PACK_AVX_SSE(Vpcmpeqw   , Pcmpeqw   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vcmpeqi32    , PACK_AVX_SSE(Vpcmpeqd   , Pcmpeqd   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vcmpeqi64_   , PACK_AVX_SSE(Vpcmpeqq   , Pcmpeqq   , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVV_VV(v_cmp_eq_i8        , PACK_AVX_SSE(Vpcmpeqb   , Pcmpeqb   , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_cmp_eq_i16       , PACK_AVX_SSE(Vpcmpeqw   , Pcmpeqw   , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_cmp_eq_i32       , PACK_AVX_SSE(Vpcmpeqd   , Pcmpeqd   , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_cmp_eq_i64_      , PACK_AVX_SSE(Vpcmpeqq   , Pcmpeqq   , Z))       // AVX2 | SSE4.1
 
-  V_EMIT_VVV_VV(vcmpgti8     , PACK_AVX_SSE(Vpcmpgtb   , Pcmpgtb   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vcmpgti16    , PACK_AVX_SSE(Vpcmpgtw   , Pcmpgtw   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vcmpgti32    , PACK_AVX_SSE(Vpcmpgtd   , Pcmpgtd   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(vcmpgti64_   , PACK_AVX_SSE(Vpcmpgtq   , Pcmpgtq   , Z))       // AVX2 | SSE4.2
+  V_EMIT_VVV_VV(v_cmp_gt_i8        , PACK_AVX_SSE(Vpcmpgtb   , Pcmpgtb   , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_cmp_gt_i16       , PACK_AVX_SSE(Vpcmpgtw   , Pcmpgtw   , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_cmp_gt_i32       , PACK_AVX_SSE(Vpcmpgtd   , Pcmpgtd   , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_cmp_gt_i64_      , PACK_AVX_SSE(Vpcmpgtq   , Pcmpgtq   , Z))       // AVX2 | SSE4.2
 
-  V_EMIT_VVI_VI(vslli16      , PACK_AVX_SSE(Vpsllw     , Psllw     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(vsrli16      , PACK_AVX_SSE(Vpsrlw     , Psrlw     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(vsrai16      , PACK_AVX_SSE(Vpsraw     , Psraw     , Z))       // AVX2 | SSE2
+  V_EMIT_VVVV_VVV(v_blendv_u8_     , PACK_AVX_SSE(Vpblendvb  , Pblendvb  , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVVI_VVI(v_blend_u16_     , PACK_AVX_SSE(Vpblendw   , Pblendw   , Z))       // AVX2 | SSE4.1
 
-  V_EMIT_VVI_VI(vslli32      , PACK_AVX_SSE(Vpslld     , Pslld     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(vsrli32      , PACK_AVX_SSE(Vpsrld     , Psrld     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(vsrai32      , PACK_AVX_SSE(Vpsrad     , Psrad     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_hadd_i16_        , PACK_AVX_SSE(Vphaddw    , Phaddw    , Z))       // AVX2 | SSSE3
+  V_EMIT_VVV_VV(v_hadd_i32_        , PACK_AVX_SSE(Vphaddd    , Phaddd    , Z))       // AVX2 | SSSE3
 
-  V_EMIT_VVI_VI(vslli64      , PACK_AVX_SSE(Vpsllq     , Psllq     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(vsrli64      , PACK_AVX_SSE(Vpsrlq     , Psrlq     , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_hsub_i16_        , PACK_AVX_SSE(Vphsubw    , Phsubw    , Z))       // AVX2 | SSSE3
+  V_EMIT_VVV_VV(v_hsub_i32_        , PACK_AVX_SSE(Vphsubd    , Phsubd    , Z))       // AVX2 | SSSE3
 
-  V_EMIT_VVI_VI(vslli128b    , PACK_AVX_SSE(Vpslldq    , Pslldq    , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(vsrli128b    , PACK_AVX_SSE(Vpsrldq    , Psrldq    , Z))       // AVX2 | SSE2
-
-  V_EMIT_VVVV_VVV(vblendv8_  , PACK_AVX_SSE(Vpblendvb  , Pblendvb  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVVI_VVI(vblend16_  , PACK_AVX_SSE(Vpblendw   , Pblendw   , Z))       // AVX2 | SSE4.1
-
-  V_EMIT_VVV_VV(vhaddi16_    , PACK_AVX_SSE(Vphaddw    , Phaddw    , Z))       // AVX2 | SSSE3
-  V_EMIT_VVV_VV(vhaddi32_    , PACK_AVX_SSE(Vphaddd    , Phaddd    , Z))       // AVX2 | SSSE3
-
-  V_EMIT_VVV_VV(vhsubi16_    , PACK_AVX_SSE(Vphsubw    , Phsubw    , Z))       // AVX2 | SSSE3
-  V_EMIT_VVV_VV(vhsubi32_    , PACK_AVX_SSE(Vphsubd    , Phsubd    , Z))       // AVX2 | SSSE3
-
-  V_EMIT_VVV_VV(vhaddsi16_   , PACK_AVX_SSE(Vphaddsw   , Phaddsw   , Z))       // AVX2 | SSSE3
-  V_EMIT_VVV_VV(vhsubsi16_   , PACK_AVX_SSE(Vphsubsw   , Phsubsw   , Z))       // AVX2 | SSSE3
+  V_EMIT_VVV_VV(v_hadds_i16_       , PACK_AVX_SSE(Vphaddsw   , Phaddsw   , Z))       // AVX2 | SSSE3
+  V_EMIT_VVV_VV(v_hsubs_i16_       , PACK_AVX_SSE(Vphsubsw   , Phsubsw   , Z))       // AVX2 | SSSE3
 
   // Integer SIMD - Miscellaneous.
 
-  V_EMIT_VV_VV(vtest_        , PACK_AVX_SSE(Vptest     , Ptest     , Z))       // AVX2 | SSE4_1
+  V_EMIT_VV_VV(v_test_             , PACK_AVX_SSE(Vptest     , Ptest     , Z))       // AVX2 | SSE4_1
 
   // Integer SIMD - Consult X86 manual before using these...
 
-  V_EMIT_VVV_VV(vsadu8       , PACK_AVX_SSE(Vpsadbw    , Psadbw    , Z))       // AVX2 | SSE2      [dst.u64[0..X] = SUM{0.7}(ABS(src1.u8[N] - src2.u8[N]))))]
-  V_EMIT_VVV_VV(vmulrhi16_   , PACK_AVX_SSE(Vpmulhrsw  , Pmulhrsw  , Z))       // AVX2 | SSSE3     [dst.i16[0..X] = ((((src1.i16[0] * src2.i16[0])) >> 14)) + 1)) >> 1))]
-  V_EMIT_VVV_VV(vmaddsu8i8_  , PACK_AVX_SSE(Vpmaddubsw , Pmaddubsw , Z))       // AVX2 | SSSE3     [dst.i16[0..X] = SAT(src1.u8[0] * src2.i8[0] + src1.u8[1] * src2.i8[1]))
-  V_EMIT_VVV_VV(vmaddi16     , PACK_AVX_SSE(Vpmaddwd   , Pmaddwd   , Z))       // AVX2 | SSE2      [dst.i32[0..X] = (src1.i16[0] * src2.i16[0] + src1.i16[1] * src2.i16[1]))
-  V_EMIT_VVVI_VVI(vmpsadu8_  , PACK_AVX_SSE(Vmpsadbw   , Mpsadbw   , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVVI_VVI(valignr8_  , PACK_AVX_SSE(Vpalignr   , Palignr   , Z))       // AVX2 | SSSE3
-  V_EMIT_VV_VV(vhminposu16_  , PACK_AVX_SSE(Vphminposuw, Phminposuw, Z))       // AVX2 | SSE4_1
+  V_EMIT_VVV_VV(v_sad_u8           , PACK_AVX_SSE(Vpsadbw    , Psadbw    , Z))       // AVX2 | SSE2      [dst.u64[0..X] = SUM{0.7}(ABS(src1.u8[N] - src2.u8[N]))))]
+  V_EMIT_VVV_VV(v_mulrh_i16_       , PACK_AVX_SSE(Vpmulhrsw  , Pmulhrsw  , Z))       // AVX2 | SSSE3     [dst.i16[0..X] = ((((src1.i16[0] * src2.i16[0])) >> 14)) + 1)) >> 1))]
+  V_EMIT_VVV_VV(v_madds_u8_i8_     , PACK_AVX_SSE(Vpmaddubsw , Pmaddubsw , Z))       // AVX2 | SSSE3     [dst.i16[0..X] = SAT(src1.u8[0] * src2.i8[0] + src1.u8[1] * src2.i8[1]))
+  V_EMIT_VVV_VV(v_madd_i16_i32     , PACK_AVX_SSE(Vpmaddwd   , Pmaddwd   , Z))       // AVX2 | SSE2      [dst.i32[0..X] = (src1.i16[0] * src2.i16[0] + src1.i16[1] * src2.i16[1]))
+  V_EMIT_VVVI_VVI(v_mpsad_u8_      , PACK_AVX_SSE(Vmpsadbw   , Mpsadbw   , Z))       // AVX2 | SSE4.1
+  V_EMIT_VVVI_VVI(v_alignr_u8_     , PACK_AVX_SSE(Vpalignr   , Palignr   , Z))       // AVX2 | SSSE3
+  V_EMIT_VV_VV(v_hmin_pos_u16_     , PACK_AVX_SSE(Vphminposuw, Phminposuw, Z))       // AVX2 | SSE4_1
 
   // Floating Point - Core.
 
@@ -1085,158 +1095,147 @@ public:
   V_EMIT_VV_VV(vmovduplps_   , PACK_AVX_SSE(Vmovsldup  , Movsldup  , Z))       // AVX  | SSE3
   V_EMIT_VV_VV(vmovduphps_   , PACK_AVX_SSE(Vmovshdup  , Movshdup  , Z))       // AVX  | SSE3
 
-  V_EMIT_VV_VV(vmovduplpd_   , PACK_AVX_SSE(Vmovddup   , Movddup   , Z))       // AVX  | SSE3
+  V_EMIT_VV_VV(vmov_dupl_2xf32_   , PACK_AVX_SSE(Vmovddup   , Movddup   , Z))       // AVX  | SSE3
 
-  V_EMIT_VV_VV(vmovmskps     , PACK_AVX_SSE(Vmovmskps  , Movmskps  , Z))       // AVX  | SSE
-  V_EMIT_VV_VV(vmovmskpd     , PACK_AVX_SSE(Vmovmskpd  , Movmskpd  , Z))       // AVX  | SSE2
+  V_EMIT_VV_VV(v_move_mask_f32     , PACK_AVX_SSE(Vmovmskps  , Movmskps  , Z))       // AVX  | SSE
+  V_EMIT_VV_VV(v_move_mask_f64     , PACK_AVX_SSE(Vmovmskpd  , Movmskpd  , Z))       // AVX  | SSE2
 
-  V_EMIT_VVI_VVI(vinsertss_  , PACK_AVX_SSE(Vinsertps  , Insertps  , X))       // AVX  | SSE4_1
-  V_EMIT_VVI_VVI(vextractss_ , PACK_AVX_SSE(Vextractps , Extractps , X))       // AVX  | SSE4_1
+  V_EMIT_VVI_VVI(v_insert_f32_     , PACK_AVX_SSE(Vinsertps  , Insertps  , X))       // AVX  | SSE4_1
+  V_EMIT_VVI_VVI(v_extract_f32_    , PACK_AVX_SSE(Vextractps , Extractps , X))       // AVX  | SSE4_1
 
-  V_EMIT_VVV_VV(vunpacklps   , PACK_AVX_SSE(Vunpcklps  , Unpcklps  , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(vunpacklpd   , PACK_AVX_SSE(Vunpcklpd  , Unpcklpd  , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(vunpackhps   , PACK_AVX_SSE(Vunpckhps  , Unpckhps  , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(vunpackhpd   , PACK_AVX_SSE(Vunpckhpd  , Unpckhpd  , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(s_add_f32          , PACK_AVX_SSE(Vaddss     , Addss     , X))       // AVX  | SSE
+  V_EMIT_VVV_VV(s_add_f64          , PACK_AVX_SSE(Vaddsd     , Addsd     , X))       // AVX  | SSE2
+  V_EMIT_VVV_VV(s_sub_f32          , PACK_AVX_SSE(Vsubss     , Subss     , X))       // AVX  | SSE
+  V_EMIT_VVV_VV(s_sub_f64          , PACK_AVX_SSE(Vsubsd     , Subsd     , X))       // AVX  | SSE2
+  V_EMIT_VVV_VV(s_mul_f32          , PACK_AVX_SSE(Vmulss     , Mulss     , X))       // AVX  | SSE
+  V_EMIT_VVV_VV(s_mul_f64          , PACK_AVX_SSE(Vmulsd     , Mulsd     , X))       // AVX  | SSE2
+  V_EMIT_VVV_VV(s_div_f32          , PACK_AVX_SSE(Vdivss     , Divss     , X))       // AVX  | SSE
+  V_EMIT_VVV_VV(s_div_f64          , PACK_AVX_SSE(Vdivsd     , Divsd     , X))       // AVX  | SSE2
+  V_EMIT_VVV_VV(s_min_f32          , PACK_AVX_SSE(Vminss     , Minss     , X))       // AVX  | SSE
+  V_EMIT_VVV_VV(s_min_f64          , PACK_AVX_SSE(Vminsd     , Minsd     , X))       // AVX  | SSE2
+  V_EMIT_VVV_VV(s_max_f32          , PACK_AVX_SSE(Vmaxss     , Maxss     , X))       // AVX  | SSE
+  V_EMIT_VVV_VV(s_max_f64          , PACK_AVX_SSE(Vmaxsd     , Maxsd     , X))       // AVX  | SSE2
 
-  V_EMIT_VVVI_VVI(vshufps    , PACK_AVX_SSE(Vshufps    , Shufps    , Z))       // AVX  | SSE
-  V_EMIT_VVVI_VVI(vshufpd    , PACK_AVX_SSE(Vshufpd    , Shufpd    , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(s_rcp_f32          , PACK_AVX_SSE(Vrcpss     , Rcpss     , X))       // AVX  | SSE
+  V_EMIT_VVV_VV(s_rsqrt_f32        , PACK_AVX_SSE(Vrsqrtss   , Rsqrtss   , X))       // AVX  | SSE
+  V_EMIT_VVV_VV(s_sqrt_f32         , PACK_AVX_SSE(Vsqrtss    , Sqrtss    , X))       // AVX  | SSE
+  V_EMIT_VVV_VV(s_sqrt_f64         , PACK_AVX_SSE(Vsqrtsd    , Sqrtsd    , X))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(vandps       , PACK_AVX_SSE(Vandps     , Andps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(vandpd       , PACK_AVX_SSE(Vandpd     , Andpd     , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(vandnot_aps  , PACK_AVX_SSE(Vandnps    , Andnps    , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(vandnot_apd  , PACK_AVX_SSE(Vandnpd    , Andnpd    , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(vorps        , PACK_AVX_SSE(Vorps      , Orps      , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(vorpd        , PACK_AVX_SSE(Vorpd      , Orpd      , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(vxorps       , PACK_AVX_SSE(Vxorps     , Xorps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(vxorpd       , PACK_AVX_SSE(Vxorpd     , Xorpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVVI_VVI(s_round_f32_     , PACK_AVX_SSE(Vroundss   , Roundss   , X))       // AVX  | SSE4.1
+  V_EMIT_VVVI_VVI(s_round_f64_     , PACK_AVX_SSE(Vroundsd   , Roundsd   , X))       // AVX  | SSE4.1
+  V_EMIT_VVVI_VVI(s_cmp_f32        , PACK_AVX_SSE(Vcmpss     , Cmpss     , X))       // AVX  | SSE
+  V_EMIT_VVVI_VVI(s_cmp_f64        , PACK_AVX_SSE(Vcmpsd     , Cmpsd     , X))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(vaddss       , PACK_AVX_SSE(Vaddss     , Addss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(vaddsd       , PACK_AVX_SSE(Vaddsd     , Addsd     , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(vaddps       , PACK_AVX_SSE(Vaddps     , Addps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(vaddpd       , PACK_AVX_SSE(Vaddpd     , Addpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(v_add_f32          , PACK_AVX_SSE(Vaddps     , Addps     , Z))       // AVX  | SSE
+  V_EMIT_VVV_VV(v_add_f64          , PACK_AVX_SSE(Vaddpd     , Addpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(v_sub_f32          , PACK_AVX_SSE(Vsubps     , Subps     , Z))       // AVX  | SSE
+  V_EMIT_VVV_VV(v_sub_f64          , PACK_AVX_SSE(Vsubpd     , Subpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(v_mul_f32          , PACK_AVX_SSE(Vmulps     , Mulps     , Z))       // AVX  | SSE
+  V_EMIT_VVV_VV(v_mul_f64          , PACK_AVX_SSE(Vmulpd     , Mulpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(v_div_f32          , PACK_AVX_SSE(Vdivps     , Divps     , Z))       // AVX  | SSE
+  V_EMIT_VVV_VV(v_div_f64          , PACK_AVX_SSE(Vdivpd     , Divpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(v_min_f32          , PACK_AVX_SSE(Vminps     , Minps     , Z))       // AVX  | SSE
+  V_EMIT_VVV_VV(v_min_f64          , PACK_AVX_SSE(Vminpd     , Minpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(v_max_f32          , PACK_AVX_SSE(Vmaxps     , Maxps     , Z))       // AVX  | SSE
+  V_EMIT_VVV_VV(v_max_f64          , PACK_AVX_SSE(Vmaxpd     , Maxpd     , Z))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(vsubss       , PACK_AVX_SSE(Vsubss     , Subss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(vsubsd       , PACK_AVX_SSE(Vsubsd     , Subsd     , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(vsubps       , PACK_AVX_SSE(Vsubps     , Subps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(vsubpd       , PACK_AVX_SSE(Vsubpd     , Subpd     , Z))       // AVX  | SSE2
+  V_EMIT_VV_VV(v_rcp_f32           , PACK_AVX_SSE(Vrcpps     , Rcpps     , Z))       // AVX  | SSE
+  V_EMIT_VV_VV(v_rsqrt_f32         , PACK_AVX_SSE(Vrsqrtps   , Rsqrtps   , Z))       // AVX  | SSE
+  V_EMIT_VV_VV(v_sqrt_f32          , PACK_AVX_SSE(Vsqrtps    , Sqrtps    , Z))       // AVX  | SSE
+  V_EMIT_VV_VV(v_sqrt_f64          , PACK_AVX_SSE(Vsqrtpd    , Sqrtpd    , Z))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(vaddsubps_   , PACK_AVX_SSE(Vaddsubps  , Addsubps  , Z))       // AVX  | SSE3
-  V_EMIT_VVV_VV(vaddsubpd_   , PACK_AVX_SSE(Vaddsubpd  , Addsubpd  , Z))       // AVX  | SSE3
+  V_EMIT_VVI_VVI(v_round_f32_      , PACK_AVX_SSE(Vroundps   , Roundps   , Z))       // AVX  | SSE4.1
+  V_EMIT_VVI_VVI(v_round_f64_      , PACK_AVX_SSE(Vroundpd   , Roundpd   , Z))       // AVX  | SSE4.1
+  V_EMIT_VVVI_VVI(v_cmp_f32        , PACK_AVX_SSE(Vcmpps     , Cmpps     , Z))       // AVX  | SSE
+  V_EMIT_VVVI_VVI(v_cmp_f64        , PACK_AVX_SSE(Vcmppd     , Cmppd     , Z))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(vmulss       , PACK_AVX_SSE(Vmulss     , Mulss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(vmulsd       , PACK_AVX_SSE(Vmulsd     , Mulsd     , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(vmulps       , PACK_AVX_SSE(Vmulps     , Mulps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(vmulpd       , PACK_AVX_SSE(Vmulpd     , Mulpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(v_addsub_f32_      , PACK_AVX_SSE(Vaddsubps  , Addsubps  , Z))       // AVX  | SSE3
+  V_EMIT_VVV_VV(v_addsub_f64_      , PACK_AVX_SSE(Vaddsubpd  , Addsubpd  , Z))       // AVX  | SSE3
+  V_EMIT_VVVI_VVI(v_dot_f32_       , PACK_AVX_SSE(Vdpps      , Dpps      , Z))       // AVX  | SSE4.1
+  V_EMIT_VVVI_VVI(v_dot_f64_       , PACK_AVX_SSE(Vdppd      , Dppd      , Z))       // AVX  | SSE4.1
 
-  V_EMIT_VVV_VV(vdivss       , PACK_AVX_SSE(Vdivss     , Divss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(vdivsd       , PACK_AVX_SSE(Vdivsd     , Divsd     , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(vdivps       , PACK_AVX_SSE(Vdivps     , Divps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(vdivpd       , PACK_AVX_SSE(Vdivpd     , Divpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVVV_VVV(v_blendv_f32_    , PACK_AVX_SSE(Vblendvps  , Blendvps  , Z))       // AVX  | SSE4.1
+  V_EMIT_VVVV_VVV(v_blendv_f64_    , PACK_AVX_SSE(Vblendvpd  , Blendvpd  , Z))       // AVX  | SSE4.1
+  V_EMIT_VVVI_VVI(v_blend_f32_     , PACK_AVX_SSE(Vblendps   , Blendps   , Z))       // AVX  | SSE4.1
+  V_EMIT_VVVI_VVI(v_blend_f64_     , PACK_AVX_SSE(Vblendpd   , Blendpd   , Z))       // AVX  | SSE4.1
 
-  V_EMIT_VVV_VV(vminss       , PACK_AVX_SSE(Vminss     , Minss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(vminsd       , PACK_AVX_SSE(Vminsd     , Minsd     , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(vminps       , PACK_AVX_SSE(Vminps     , Minps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(vminpd       , PACK_AVX_SSE(Vminpd     , Minpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(s_cvt_f32_f64      , PACK_AVX_SSE(Vcvtss2sd  , Cvtss2sd  , X))       // AVX  | SSE2
+  V_EMIT_VVV_VV(s_cvt_f64_f32      , PACK_AVX_SSE(Vcvtsd2ss  , Cvtsd2ss  , X))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(vmaxss       , PACK_AVX_SSE(Vmaxss     , Maxss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(vmaxsd       , PACK_AVX_SSE(Vmaxsd     , Maxsd     , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(vmaxps       , PACK_AVX_SSE(Vmaxps     , Maxps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(vmaxpd       , PACK_AVX_SSE(Vmaxpd     , Maxpd     , Z))       // AVX  | SSE2
+  V_EMIT_VVV_VV(s_cvt_int_f32      , PACK_AVX_SSE(Vcvtsi2ss  , Cvtsi2ss  , X))       // AVX  | SSE
+  V_EMIT_VVV_VV(s_cvt_int_f64      , PACK_AVX_SSE(Vcvtsi2sd  , Cvtsi2sd  , X))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(vsqrtss      , PACK_AVX_SSE(Vsqrtss    , Sqrtss    , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(vsqrtsd      , PACK_AVX_SSE(Vsqrtsd    , Sqrtsd    , X))       // AVX  | SSE2
-  V_EMIT_VV_VV(vsqrtps       , PACK_AVX_SSE(Vsqrtps    , Sqrtps    , Z))       // AVX  | SSE
-  V_EMIT_VV_VV(vsqrtpd       , PACK_AVX_SSE(Vsqrtpd    , Sqrtpd    , Z))       // AVX  | SSE2
+  V_EMIT_VV_VV(s_cvt_f32_int       , PACK_AVX_SSE(Vcvtss2si  , Cvtss2si  , X))       // AVX  | SSE
+  V_EMIT_VV_VV(s_cvt_f64_int       , PACK_AVX_SSE(Vcvtsd2si  , Cvtsd2si  , X))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(vrcpss       , PACK_AVX_SSE(Vrcpss     , Rcpss     , X))       // AVX  | SSE
-  V_EMIT_VV_VV(vrcpps        , PACK_AVX_SSE(Vrcpps     , Rcpps     , Z))       // AVX  | SSE
+  V_EMIT_VV_VV(s_cvtt_f32_int      , PACK_AVX_SSE(Vcvttss2si , Cvttss2si , X))       // AVX  | SSE
+  V_EMIT_VV_VV(s_cvtt_f64_int      , PACK_AVX_SSE(Vcvttsd2si , Cvttsd2si , X))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(vrsqrtss     , PACK_AVX_SSE(Vrsqrtss   , Rsqrtss   , X))       // AVX  | SSE
-  V_EMIT_VV_VV(vrsqrtps      , PACK_AVX_SSE(Vrsqrtps   , Rsqrtps   , Z))       // AVX  | SSE
+  V_EMIT_VV_VV(v_cvt_f32_f64       , PACK_AVX_SSE(Vcvtps2pd  , Cvtps2pd  , Z))       // AVX  | SSE2
+  V_EMIT_VV_VV(v_cvt_f64_f32       , PACK_AVX_SSE(Vcvtpd2ps  , Cvtpd2ps  , Z))       // AVX  | SSE2
 
-  V_EMIT_VVVI_VVI(vdpps_     , PACK_AVX_SSE(Vdpps      , Dpps      , Z))       // AVX  | SSE4.1
-  V_EMIT_VVVI_VVI(vdppd_     , PACK_AVX_SSE(Vdppd      , Dppd      , Z))       // AVX  | SSE4.1
+  V_EMIT_VV_VV(v_cvt_i32_f32       , PACK_AVX_SSE(Vcvtdq2ps  , Cvtdq2ps  , Z))       // AVX  | SSE2
+  V_EMIT_VV_VV(v_cvt_i32_f64       , PACK_AVX_SSE(Vcvtdq2pd  , Cvtdq2pd  , Z))       // AVX  | SSE2
 
-  V_EMIT_VVVI_VVI(vroundss_   , PACK_AVX_SSE(Vroundss  , Roundss   , X))       // AVX  | SSE4.1
-  V_EMIT_VVVI_VVI(vroundsd_   , PACK_AVX_SSE(Vroundsd  , Roundsd   , X))       // AVX  | SSE4.1
-  V_EMIT_VVI_VVI(vroundps_    , PACK_AVX_SSE(Vroundps  , Roundps   , Z))       // AVX  | SSE4.1
-  V_EMIT_VVI_VVI(vroundpd_    , PACK_AVX_SSE(Vroundpd  , Roundpd   , Z))       // AVX  | SSE4.1
+  V_EMIT_VV_VV(v_cvt_f32_i32       , PACK_AVX_SSE(Vcvtps2dq  , Cvtps2dq  , Z))       // AVX  | SSE2
+  V_EMIT_VV_VV(v_cvt_f64_i32       , PACK_AVX_SSE(Vcvtpd2dq  , Cvtpd2dq  , Z))       // AVX  | SSE2
 
-  V_EMIT_VVVI_VVI(vcmpss      , PACK_AVX_SSE(Vcmpss    , Cmpss     , X))       // AVX  | SSE
-  V_EMIT_VVVI_VVI(vcmpsd      , PACK_AVX_SSE(Vcmpsd    , Cmpsd     , X))       // AVX  | SSE2
-  V_EMIT_VVVI_VVI(vcmpps      , PACK_AVX_SSE(Vcmpps    , Cmpps     , Z))       // AVX  | SSE
-  V_EMIT_VVVI_VVI(vcmppd      , PACK_AVX_SSE(Vcmppd    , Cmppd     , Z))       // AVX  | SSE2
+  V_EMIT_VV_VV(v_cvtt_f32_i32      , PACK_AVX_SSE(Vcvttps2dq , Cvttps2dq , Z))       // AVX  | SSE2
+  V_EMIT_VV_VV(v_cvtt_f64_i32      , PACK_AVX_SSE(Vcvttpd2dq , Cvttpd2dq , Z))       // AVX  | SSE2
 
-  V_EMIT_VVVV_VVV(vblendvps_ , PACK_AVX_SSE(Vblendvps  , Blendvps  , Z))       // AVX  | SSE4.1
-  V_EMIT_VVVV_VVV(vblendvpd_ , PACK_AVX_SSE(Vblendvpd  , Blendvpd  , Z))       // AVX  | SSE4.1
-  V_EMIT_VVVI_VVI(vblendps_  , PACK_AVX_SSE(Vblendps   , Blendps   , Z))       // AVX  | SSE4.1
-  V_EMIT_VVVI_VVI(vblendpd_  , PACK_AVX_SSE(Vblendpd   , Blendpd   , Z))       // AVX  | SSE4.1
-
-  V_EMIT_VV_VV(vcvti32ps     , PACK_AVX_SSE(Vcvtdq2ps  , Cvtdq2ps  , Z))       // AVX  | SSE2
-  V_EMIT_VV_VV(vcvtpdps      , PACK_AVX_SSE(Vcvtpd2ps  , Cvtpd2ps  , Z))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(vcvti32pd     , PACK_AVX_SSE(Vcvtdq2pd  , Cvtdq2pd  , Z))       // AVX  | SSE2
-  V_EMIT_VV_VV(vcvtpspd      , PACK_AVX_SSE(Vcvtps2pd  , Cvtps2pd  , Z))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(vcvtpsi32     , PACK_AVX_SSE(Vcvtps2dq  , Cvtps2dq  , Z))       // AVX  | SSE2
-  V_EMIT_VV_VV(vcvtpdi32     , PACK_AVX_SSE(Vcvtpd2dq  , Cvtpd2dq  , Z))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(vcvttpsi32    , PACK_AVX_SSE(Vcvttps2dq , Cvttps2dq , Z))       // AVX  | SSE2
-  V_EMIT_VV_VV(vcvttpdi32    , PACK_AVX_SSE(Vcvttpd2dq , Cvttpd2dq , Z))       // AVX  | SSE2
-
-  V_EMIT_VVV_VV(vcvtsdss     , PACK_AVX_SSE(Vcvtsd2ss  , Cvtsd2ss  , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(vcvtsssd     , PACK_AVX_SSE(Vcvtss2sd  , Cvtss2sd  , X))       // AVX  | SSE2
-
-  V_EMIT_VVV_VV(vcvtsiss     , PACK_AVX_SSE(Vcvtsi2ss  , Cvtsi2ss  , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(vcvtsisd     , PACK_AVX_SSE(Vcvtsi2sd  , Cvtsi2sd  , X))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(vcvtsssi      , PACK_AVX_SSE(Vcvtss2si  , Cvtss2si  , X))       // AVX  | SSE
-  V_EMIT_VV_VV(vcvtsdsi      , PACK_AVX_SSE(Vcvtsd2si  , Cvtsd2si  , X))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(vcvttsssi     , PACK_AVX_SSE(Vcvttss2si , Cvttss2si , X))       // AVX  | SSE
-  V_EMIT_VV_VV(vcvttsdsi     , PACK_AVX_SSE(Vcvttsd2si , Cvttsd2si , X))       // AVX  | SSE2
-
-  V_EMIT_VVV_VV(vhaddps_     , PACK_AVX_SSE(Vhaddps    , Haddps    , Z))       // AVX  | SSE3
-  V_EMIT_VVV_VV(vhaddpd_     , PACK_AVX_SSE(Vhaddpd    , Haddpd    , Z))       // AVX  | SSE3
-  V_EMIT_VVV_VV(vhsubps_     , PACK_AVX_SSE(Vhsubps    , Hsubps    , Z))       // AVX  | SSE3
-  V_EMIT_VVV_VV(vhsubpd_     , PACK_AVX_SSE(Vhsubpd    , Hsubpd    , Z))       // AVX  | SSE3
+  V_EMIT_VVV_VV(v_hadd_f32_        , PACK_AVX_SSE(Vhaddps    , Haddps    , Z))       // AVX  | SSE3
+  V_EMIT_VVV_VV(v_hadd_f64_        , PACK_AVX_SSE(Vhaddpd    , Haddpd    , Z))       // AVX  | SSE3
+  V_EMIT_VVV_VV(v_hsub_f32_        , PACK_AVX_SSE(Vhsubps    , Hsubps    , Z))       // AVX  | SSE3
+  V_EMIT_VVV_VV(v_hsub_f64_        , PACK_AVX_SSE(Vhsubpd    , Hsubpd    , Z))       // AVX  | SSE3
 
   // Floating Point - Miscellaneous.
 
-  V_EMIT_VV_VV(vcomiss       , PACK_AVX_SSE(Vcomiss    , Comiss    , X))       // AVX  | SSE
-  V_EMIT_VV_VV(vcomisd       , PACK_AVX_SSE(Vcomisd    , Comisd    , X))       // AVX  | SSE2
-  V_EMIT_VV_VV(vucomiss      , PACK_AVX_SSE(Vucomiss   , Ucomiss   , X))       // AVX  | SSE
-  V_EMIT_VV_VV(vucomisd      , PACK_AVX_SSE(Vucomisd   , Ucomisd   , X))       // AVX  | SSE2
+  V_EMIT_VV_VV(s_comi_f32          , PACK_AVX_SSE(Vcomiss    , Comiss    , X))       // AVX  | SSE
+  V_EMIT_VV_VV(s_comi_f64          , PACK_AVX_SSE(Vcomisd    , Comisd    , X))       // AVX  | SSE2
+  V_EMIT_VV_VV(s_ucomi_f32         , PACK_AVX_SSE(Vucomiss   , Ucomiss   , X))       // AVX  | SSE
+  V_EMIT_VV_VV(s_ucomi_f64         , PACK_AVX_SSE(Vucomisd   , Ucomisd   , X))       // AVX  | SSE2
 
   // Initialization.
 
-  inline void vzeropi(const Operand_& dst) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vpxor , Pxor , Z), dst, dst, dst); }
-  inline void vzerops(const Operand_& dst) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vxorps, Xorps, Z), dst, dst, dst); }
-  inline void vzeropd(const Operand_& dst) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vxorpd, Xorpd, Z), dst, dst, dst); }
+  inline void v_zero_i(const Operand_& dst) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vpxor , Pxor , Z), dst, dst, dst); }
+  inline void v_zero_f(const Operand_& dst) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vxorps, Xorps, Z), dst, dst, dst); }
+  inline void v_zero_d(const Operand_& dst) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vxorpd, Xorpd, Z), dst, dst, dst); }
 
-  inline void vzeropi(const OpArray& dst) noexcept { for (uint32_t i = 0; i < dst.size(); i++) vzeropi(dst[i]); }
-  inline void vzerops(const OpArray& dst) noexcept { for (uint32_t i = 0; i < dst.size(); i++) vzerops(dst[i]); }
-  inline void vzeropd(const OpArray& dst) noexcept { for (uint32_t i = 0; i < dst.size(); i++) vzeropd(dst[i]); }
+  inline void v_zero_i(const OpArray& dst) noexcept { for (uint32_t i = 0; i < dst.size(); i++) v_zero_i(dst[i]); }
+  inline void v_zero_f(const OpArray& dst) noexcept { for (uint32_t i = 0; i < dst.size(); i++) v_zero_f(dst[i]); }
+  inline void v_zero_d(const OpArray& dst) noexcept { for (uint32_t i = 0; i < dst.size(); i++) v_zero_d(dst[i]); }
 
   // Conversion.
 
-  inline void vmovsi32(const x86::Vec& dst, const x86::Gp& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovd, Movd, X), dst, src); }
-  inline void vmovsi64(const x86::Vec& dst, const x86::Gp& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovq, Movq, X), dst, src); }
+  inline void s_mov_i32(const x86::Vec& dst, const x86::Gp& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovd, Movd, X), dst, src); }
+  inline void s_mov_i64(const x86::Vec& dst, const x86::Gp& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovq, Movq, X), dst, src); }
 
-  inline void vmovsi32(const x86::Gp& dst, const x86::Vec& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovd, Movd, X), dst, src); }
-  inline void vmovsi64(const x86::Gp& dst, const x86::Vec& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovq, Movq, X), dst, src); }
+  inline void s_mov_i32(const x86::Gp& dst, const x86::Vec& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovd, Movd, X), dst, src); }
+  inline void s_mov_i64(const x86::Gp& dst, const x86::Vec& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovq, Movq, X), dst, src); }
 
   // Memory Load & Store.
 
-  BL_NOINLINE void vloadi8(const Operand_& dst, const x86::Mem& src) noexcept {
+  BL_NOINLINE void v_load_i8(const Operand_& dst, const x86::Mem& src) noexcept {
     if (hasSSE4_1()) {
-      vzeropi(dst);
-      vinsertu8_(dst, dst, src, 0);
+      v_zero_i(dst);
+      v_insert_u8_(dst, dst, src, 0);
     }
     else {
       x86::Gp tmp = cc->newUInt32("@tmp");
       load8(tmp, src);
-      vmovsi32(dst.as<x86::Xmm>(), tmp);
+      s_mov_i32(dst.as<x86::Xmm>(), tmp);
+    }
+  }
+
+  BL_NOINLINE void v_load_i16(const Operand_& dst, const x86::Mem& src) noexcept {
+    if (hasSSE4_1()) {
+      v_zero_i(dst);
+      v_insert_u16(dst, dst, src, 0);
+    }
+    else {
+      x86::Gp tmp = cc->newUInt32("@tmp");
+      load16(tmp, src);
+      s_mov_i32(dst.as<x86::Xmm>(), tmp);
     }
   }
 
@@ -1251,109 +1250,95 @@ public:
     cc->movzx(reg, mHi);
     cc->shl(reg, 16);
     cc->mov(reg.r8(), mLo);
-    vmovsi32(dst.as<x86::Xmm>(), reg);
+    s_mov_i32(dst.as<x86::Xmm>(), reg);
   }
 
-  BL_NOINLINE void vloadi16(const Operand_& dst, const x86::Mem& src) noexcept {
-    if (hasSSE4_1()) {
-      vzeropi(dst);
-      vinsertu16(dst, dst, src, 0);
-    }
-    else {
-      x86::Gp tmp = cc->newUInt32("@tmp");
-      load16(tmp, src);
-      vmovsi32(dst.as<x86::Xmm>(), tmp);
-    }
-  }
+  inline void v_load_i32(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovd, Movd, X), dst, src); }
+  inline void v_load_i64(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovq, Movq, X), dst, src); }
+  inline void v_load_f32(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovss, Movss, X), dst, src); }
+  inline void v_load_f64(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovsd, Movsd, X), dst, src); }
 
-  inline void vloadi32(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovd, Movd, X), dst, src); }
-  inline void vloadi64(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovq, Movq, X), dst, src); }
+  inline void v_loadl_2xf32(const Operand_& dst, const Operand_& src1, const x86::Mem& src2) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vmovlps, Movlps, X), dst, src1, src2); }
+  inline void v_loadh_2xf32(const Operand_& dst, const Operand_& src1, const x86::Mem& src2) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vmovhps, Movhps, X), dst, src1, src2); }
 
-  inline void vloadi128a(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, X), dst, src); }
-  inline void vloadi128u(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, X), dst, src); }
-  inline void vloadi128u_ro(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vloadi128uRO), dst, src); }
+  inline void v_loadl_f64(const Operand_& dst, const Operand_& src1, const x86::Mem& src2) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vmovlpd, Movlpd, X), dst, src1, src2); }
+  inline void v_loadh_f64(const Operand_& dst, const Operand_& src1, const x86::Mem& src2) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vmovhpd, Movhpd, X), dst, src1, src2); }
 
-  inline void vloadi256a(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, Y), dst, src); }
-  inline void vloadi256u(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, Y), dst, src); }
-  inline void vloadi256u_ro(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vloadi128uRO), dst, src); }
+  inline void v_loada_i128(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, X), dst, src); }
+  inline void v_loadu_i128(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, X), dst, src); }
+  inline void v_loadu_i128_ro(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vloadi128uRO), dst, src); }
 
-  inline void vloadi64_u8u16_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovzxbw, Pmovzxbw, X), dst, src); }
-  inline void vloadi32_u8u32_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovzxbd, Pmovzxbd, X), dst, src); }
-  inline void vloadi16_u8u64_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovzxbq, Pmovzxbq, X), dst, src); }
-  inline void vloadi64_u16u32_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovzxwd, Pmovzxwd, X), dst, src); }
-  inline void vloadi32_u16u64_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovzxwq, Pmovzxwq, X), dst, src); }
-  inline void vloadi64_u32u64_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovzxdq, Pmovzxdq, X), dst, src); }
+  inline void v_loada_f128(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, X), dst, src); }
+  inline void v_loadu_f128(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, X), dst, src); }
+  inline void v_loada_d128(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovapd, Movaps, X), dst, src); }
+  inline void v_loadu_d128(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovupd, Movups, X), dst, src); }
 
-  inline void vloadi64_i8i16_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovsxbw, Pmovsxbw, X), dst, src); }
-  inline void vloadi32_i8i32_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovsxbd, Pmovsxbd, X), dst, src); }
-  inline void vloadi16_i8i64_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovsxbq, Pmovsxbq, X), dst, src); }
-  inline void vloadi64_i16i32_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovsxwd, Pmovsxwd, X), dst, src); }
-  inline void vloadi32_i16i64_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovsxwq, Pmovsxwq, X), dst, src); }
-  inline void vloadi64_i32i64_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovsxdq, Pmovsxdq, X), dst, src); }
+  inline void v_loada_i256(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, Y), dst, src); }
+  inline void v_loadu_i256(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, Y), dst, src); }
+  inline void v_loadu_i256_ro(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vloadi128uRO), dst, src); }
 
-  inline void vstorei32(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovd, Movd, X), dst, src); }
-  inline void vstorei64(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovq, Movq, X), dst, src); }
+  inline void v_loada_f256(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, Y), dst, src); }
+  inline void v_loadu_f256(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, Y), dst, src); }
+  inline void v_loada_d256(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovapd, Movaps, Y), dst, src); }
+  inline void v_loadu_d256(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovupd, Movups, Y), dst, src); }
 
-  inline void vstorei128a(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, X), dst, src); }
-  inline void vstorei128u(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, X), dst, src); }
+  inline void v_load_i64_u8u16_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovzxbw, Pmovzxbw, X), dst, src); }
+  inline void v_load_i32_u8u32_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovzxbd, Pmovzxbd, X), dst, src); }
+  inline void v_load_i16_u8u64_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovzxbq, Pmovzxbq, X), dst, src); }
+  inline void v_load_i64_u16u32_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovzxwd, Pmovzxwd, X), dst, src); }
+  inline void v_load_i32_u16u64_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovzxwq, Pmovzxwq, X), dst, src); }
+  inline void v_load_i64_u32u64_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovzxdq, Pmovzxdq, X), dst, src); }
 
-  inline void vstorei128x(const x86::Mem& dst, const x86::Vec& src, uint32_t alignment) noexcept {
+  inline void v_load_i64_i8i16_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovsxbw, Pmovsxbw, X), dst, src); }
+  inline void v_load_i32_i8i32_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovsxbd, Pmovsxbd, X), dst, src); }
+  inline void v_load_i16_i8i64_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovsxbq, Pmovsxbq, X), dst, src); }
+  inline void v_load_i64_i16i32_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovsxwd, Pmovsxwd, X), dst, src); }
+  inline void v_load_i32_i16i64_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovsxwq, Pmovsxwq, X), dst, src); }
+  inline void v_load_i64_i32i64_(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vpmovsxdq, Pmovsxdq, X), dst, src); }
+
+  inline void v_store_i32(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovd, Movd, X), dst, src); }
+  inline void v_store_i64(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovq, Movq, X), dst, src); }
+
+  inline void v_store_f32(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovss, Movss, X), dst, src); }
+  inline void v_store_f64(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovsd, Movsd, X), dst, src); }
+
+  inline void v_storel_2xf32(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovlps, Movlps, X), dst, src); }
+  inline void v_storeh_2xf32(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovhps, Movhps, X), dst, src); }
+
+  inline void v_storel_f64(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovsd , Movsd , X), dst, src); }
+  inline void v_storeh_f64(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovhpd, Movhpd, X), dst, src); }
+
+  inline void v_storea_i128(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, X), dst, src); }
+  inline void v_storeu_i128(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, X), dst, src); }
+  inline void v_storea_f128(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, X), dst, src); }
+  inline void v_storeu_f128(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, X), dst, src); }
+  inline void v_storea_d128(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovapd, Movaps, X), dst, src); }
+  inline void v_storeu_d128(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovupd, Movups, X), dst, src); }
+
+  inline void v_storex_i128(const x86::Mem& dst, const x86::Vec& src, uint32_t alignment) noexcept {
     if (alignment >= 16)
-      vstorei128a(dst, src);
+      v_storea_i128(dst, src);
     else
-      vstorei128u(dst, src);
+      v_storeu_i128(dst, src);
   }
 
-  inline void vstorei256a(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, Y), dst, src); }
-  inline void vstorei256u(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, Y), dst, src); }
+  inline void v_storea_i256(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, Y), dst, src); }
+  inline void v_storeu_i256(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, Y), dst, src); }
+  inline void v_storea_f256(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, Y), dst, src); }
+  inline void v_storeu_f256(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, Y), dst, src); }
+  inline void v_storea_d256(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovapd, Movaps, Y), dst, src); }
+  inline void v_storeu_d256(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovupd, Movups, Y), dst, src); }
 
-  inline void vstorei256x(const x86::Mem& dst, const x86::Vec& src, uint32_t alignment) noexcept {
+  inline void v_storex_i256(const x86::Mem& dst, const x86::Vec& src, uint32_t alignment) noexcept {
     if (alignment >= 32)
-      vstorei256a(dst, src);
+      v_storea_i256(dst, src);
     else
-      vstorei256u(dst, src);
+      v_storeu_i256(dst, src);
   }
-
-  inline void vloadss(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovss, Movss, X), dst, src); }
-  inline void vloadsd(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovsd, Movsd, X), dst, src); }
-
-  inline void vloadps_64l(const Operand_& dst, const Operand_& src1, const x86::Mem& src2) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vmovlps, Movlps, X), dst, src1, src2); }
-  inline void vloadps_64h(const Operand_& dst, const Operand_& src1, const x86::Mem& src2) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vmovhps, Movhps, X), dst, src1, src2); }
-  inline void vloadpd_64l(const Operand_& dst, const Operand_& src1, const x86::Mem& src2) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vmovlpd, Movlpd, X), dst, src1, src2); }
-  inline void vloadpd_64h(const Operand_& dst, const Operand_& src1, const x86::Mem& src2) noexcept { vemit_vvv_vv(PACK_AVX_SSE(Vmovhpd, Movhpd, X), dst, src1, src2); }
-
-  inline void vloadps_128a(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, X), dst, src); }
-  inline void vloadps_128u(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, X), dst, src); }
-  inline void vloadpd_128a(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovapd, Movaps, X), dst, src); }
-  inline void vloadpd_128u(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovupd, Movups, X), dst, src); }
-
-  inline void vloadps_256a(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, Y), dst, src); }
-  inline void vloadps_256u(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, Y), dst, src); }
-  inline void vloadpd_256a(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovapd, Movaps, Y), dst, src); }
-  inline void vloadpd_256u(const Operand_& dst, const x86::Mem& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovupd, Movups, Y), dst, src); }
-
-  inline void vstoress(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovss, Movss, X), dst, src); }
-  inline void vstoresd(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovsd, Movsd, X), dst, src); }
-
-  inline void vstoreps_64l(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovlps, Movlps, X), dst, src); }
-  inline void vstoreps_64h(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovhps, Movhps, X), dst, src); }
-
-  inline void vstorepd_64l(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovsd , Movsd , X), dst, src); }
-  inline void vstorepd_64h(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovhpd, Movhpd, X), dst, src); }
-
-  inline void vstoreps_128a(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, X), dst, src); }
-  inline void vstoreps_128u(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, X), dst, src); }
-  inline void vstorepd_128a(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovapd, Movaps, X), dst, src); }
-  inline void vstorepd_128u(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovupd, Movups, X), dst, src); }
-
-  inline void vstoreps_256a(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, Y), dst, src); }
-  inline void vstoreps_256u(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, Y), dst, src); }
-  inline void vstorepd_256a(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovapd, Movaps, Y), dst, src); }
-  inline void vstorepd_256u(const x86::Mem& dst, const Operand_& src) noexcept { vemit_vv_vv(PACK_AVX_SSE(Vmovupd, Movups, Y), dst, src); }
 
   // Intrinsics:
   //
-  //   - vmov{x}{y}   - Move with sign or zero extension from {x} to {y}. Similar
+  //   - v_mov{x}{y}   - Move with sign or zero extension from {x} to {y}. Similar
   //                    to instructions like `pmovzx..`, `pmovsx..`, and `punpckl..`
   //
   //   - vswap{x}     - Swap low and high elements. If the vector has more than 2
@@ -1367,143 +1352,99 @@ public:
   //                    duplication operation is performed.
 
   template<typename DstT, typename SrcT>
-  inline void vmovu8u16(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vmovu8u16), dst, src);
-  }
+  inline void vmovu8u16(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vmovu8u16), dst, src); }
 
   template<typename DstT, typename SrcT>
-  inline void vmovu8u32(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vmovu8u32), dst, src);
-  }
+  inline void vmovu8u32(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vmovu8u32), dst, src); }
 
   template<typename DstT, typename SrcT>
-  inline void vmovu16u32(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vmovu16u32), dst, src);
-  }
+  inline void vmovu16u32(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vmovu16u32), dst, src); }
 
   template<typename DstT, typename SrcT>
-  inline void vabsi8(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi8), dst, src);
-  }
+  inline void v_abs_i8(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi8), dst, src); }
 
   template<typename DstT, typename SrcT>
-  inline void vabsi16(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi16), dst, src);
-  }
+  inline void v_abs_i16(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi16), dst, src); }
 
   template<typename DstT, typename SrcT>
-  inline void vabsi32(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi32), dst, src);
-  }
+  inline void v_abs_i32(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi32), dst, src); }
 
   template<typename DstT, typename SrcT>
-  inline void vabsi64(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi64), dst, src);
-  }
+  inline void v_abs_i64(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi64), dst, src); }
 
   template<typename DstT, typename SrcT>
-  inline void vswapi32(const DstT& dst, const SrcT& src) noexcept {
-    vswizi32(dst, src, x86::Predicate::shuf(2, 3, 0, 1));
-  }
+  inline void v_swap_i32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_i32(dst, src, x86::Predicate::shuf(2, 3, 0, 1)); }
 
   template<typename DstT, typename SrcT>
-  inline void vswapi64(const DstT& dst, const SrcT& src) noexcept {
-    vswizi32(dst, src, x86::Predicate::shuf(1, 0, 3, 2));
-  }
+  inline void v_swap_i64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_i32(dst, src, x86::Predicate::shuf(1, 0, 3, 2)); }
 
   template<typename DstT, typename SrcT>
-  inline void vdupli32(const DstT& dst, const SrcT& src) noexcept {
-    vswizi32(dst, src, x86::Predicate::shuf(2, 2, 0, 0));
-  }
+  inline void v_dupl_i32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_i32(dst, src, x86::Predicate::shuf(2, 2, 0, 0)); }
 
   template<typename DstT, typename SrcT>
-  inline void vduphi32(const DstT& dst, const SrcT& src) noexcept {
-    vswizi32(dst, src, x86::Predicate::shuf(3, 3, 1, 1));
-  }
+  inline void v_duph_i32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_i32(dst, src, x86::Predicate::shuf(3, 3, 1, 1)); }
 
   template<typename DstT, typename SrcT>
-  inline void vdupli64(const DstT& dst, const SrcT& src) noexcept {
-    vswizi32(dst, src, x86::Predicate::shuf(1, 0, 1, 0));
-  }
+  inline void v_dupl_i64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_i32(dst, src, x86::Predicate::shuf(1, 0, 1, 0)); }
 
   template<typename DstT, typename SrcT>
-  inline void vduphi64(const DstT& dst, const SrcT& src) noexcept {
-    vswizi32(dst, src, x86::Predicate::shuf(3, 2, 3, 2));
-  }
+  inline void v_duph_i64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_i32(dst, src, x86::Predicate::shuf(3, 2, 3, 2)); }
 
   // Dst = (CondBit == 0) ? Src1 : Src2;
   template<typename DstT, typename Src1T, typename Src2T, typename CondT>
-  inline void vblendv8(const DstT& dst, const Src1T& src1, const Src2T& src2, const CondT& cond) noexcept {
+  inline void v_blendv_u8(const DstT& dst, const Src1T& src1, const Src2T& src2, const CondT& cond) noexcept {
     vemit_vvvv_vvv(PackedInst::packIntrin(kIntrin4Vpblendvb), dst, src1, src2, cond);
   }
 
   // Dst = (CondBit == 0) ? Src1 : Src2;
   template<typename DstT, typename Src1T, typename Src2T, typename CondT>
-  inline void vblendv8_destructive(const DstT& dst, const Src1T& src1, const Src2T& src2, const CondT& cond) noexcept {
+  inline void v_blendv_u8_destructive(const DstT& dst, const Src1T& src1, const Src2T& src2, const CondT& cond) noexcept {
     vemit_vvvv_vvv(PackedInst::packIntrin(kIntrin4VpblendvbDestructive), dst, src1, src2, cond);
   }
 
   template<typename DstT, typename SrcT>
-  inline void vinv255u16(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv255u16), dst, src);
-  }
+  inline void v_inv255_u16(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv255u16), dst, src); }
+  template<typename DstT, typename SrcT>
+  inline void v_inv256_u16(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv256u16), dst, src); }
+  template<typename DstT, typename SrcT>
+  inline void v_inv255_u32(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv255u32), dst, src); }
+  template<typename DstT, typename SrcT>
+  inline void v_inv256_u32(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv256u32), dst, src); }
 
   template<typename DstT, typename SrcT>
-  inline void vinv256u16(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv256u16), dst, src);
-  }
-
+  inline void v_dupl_f64(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vduplpd), dst, src); }
   template<typename DstT, typename SrcT>
-  inline void vinv255u32(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv255u32), dst, src);
-  }
-
-  template<typename DstT, typename SrcT>
-  inline void vinv256u32(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv256u32), dst, src);
-  }
-
-  template<typename DstT, typename SrcT>
-  inline void vduplpd(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vduplpd), dst, src);
-  }
-
-  template<typename DstT, typename SrcT>
-  inline void vduphpd(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vduphpd), dst, src);
-  }
+  inline void v_duph_f64(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2Vduphpd), dst, src); }
 
   template<typename DstT, typename Src1T, typename Src2T>
-  inline void vhaddpd(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
-    vemit_vvv_vv(PackedInst::packIntrin(kIntrin3Vhaddpd), dst, src1, src2);
-  }
+  inline void v_hadd_f64(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept { vemit_vvv_vv(PackedInst::packIntrin(kIntrin3Vhaddpd), dst, src1, src2); }
 
   template<typename DstT, typename SrcT>
   inline void vexpandli32(const DstT& dst, const SrcT& src) noexcept {
-    vswizi32(dst, src, x86::Predicate::shuf(0, 0, 0, 0));
+    v_swizzle_i32(dst, src, x86::Predicate::shuf(0, 0, 0, 0));
   }
 
   // dst.u64[0] = src1.u64[1];
   // dst.u64[1] = src2.u64[0];
   template<typename DstT, typename Src1T, typename Src2T>
-  inline void vcombhli64(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
+  inline void v_combine_hl_i64(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
     vemit_vvv_vv(PackedInst::packIntrin(kIntrin3Vcombhli64), dst, src1, src2);
   }
 
   // dst.d64[0] = src1.d64[1];
   // dst.d64[1] = src2.d64[0];
   template<typename DstT, typename Src1T, typename Src2T>
-  inline void vcombhld64(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
+  inline void v_combine_hl_f64(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
     vemit_vvv_vv(PackedInst::packIntrin(kIntrin3Vcombhld64), dst, src1, src2);
   }
 
   template<typename DstT, typename Src1T, typename Src2T>
-  inline void vminu16(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
+  inline void v_min_u16(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
     vemit_vvv_vv(PackedInst::packIntrin(kIntrin3Vminu16), dst, src1, src2);
   }
 
   template<typename DstT, typename Src1T, typename Src2T>
-  inline void vmaxu16(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
+  inline void v_max_u16(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
     vemit_vvv_vv(PackedInst::packIntrin(kIntrin3Vmaxu16), dst, src1, src2);
   }
 
@@ -1514,51 +1455,31 @@ public:
   }
 
   template<typename DstT, typename SrcT>
-  BL_NOINLINE void vmul257hu16(const DstT& dst, const SrcT& src) {
-    vmulhu16(dst, src, constAsXmm(blCommonTable.i128_0101010101010101));
+  BL_NOINLINE void v_mulh257_u16(const DstT& dst, const SrcT& src) {
+    v_mulh_u16(dst, src, constAsXmm(blCommonTable.i128_0101010101010101));
   }
 
   // TODO: [PIPEGEN] Consolidate this to only one implementation.
   template<typename DstSrcT>
-  BL_NOINLINE void vdiv255u16(const DstSrcT& x) {
-    vaddi16(x, x, constAsXmm(blCommonTable.i128_0080008000800080));
-    vmul257hu16(x, x);
+  BL_NOINLINE void v_div255_u16(const DstSrcT& x) {
+    v_add_i16(x, x, constAsXmm(blCommonTable.i128_0080008000800080));
+    v_mulh257_u16(x, x);
   }
 
   template<typename DstSrcT>
-  BL_NOINLINE void vdiv255u16_2x(
+  BL_NOINLINE void v_div255_u16_2x(
     const DstSrcT& v0,
     const DstSrcT& v1) noexcept {
 
     x86::Xmm i128_0080008000800080 = constAsXmm(blCommonTable.i128_0080008000800080);
     x86::Xmm i128_0101010101010101 = constAsXmm(blCommonTable.i128_0101010101010101);
 
-    vaddi16(v0, v0, i128_0080008000800080);
-    vaddi16(v1, v1, i128_0080008000800080);
+    v_add_i16(v0, v0, i128_0080008000800080);
+    v_add_i16(v1, v1, i128_0080008000800080);
 
-    vmulhu16(v0, v0, i128_0101010101010101);
-    vmulhu16(v1, v1, i128_0101010101010101);
+    v_mulh_u16(v0, v0, i128_0101010101010101);
+    v_mulh_u16(v1, v1, i128_0101010101010101);
   }
-
-  template<typename DstSrcT>
-  BL_NOINLINE void vdiv255u16_3x(
-    const DstSrcT& v0,
-    const DstSrcT& v1,
-    const DstSrcT& v2) noexcept {
-
-    x86::Xmm i128_0080008000800080 = constAsXmm(blCommonTable.i128_0080008000800080);
-    x86::Xmm i128_0101010101010101 = constAsXmm(blCommonTable.i128_0101010101010101);
-
-    vaddi16(v0, v0, i128_0080008000800080);
-    vaddi16(v1, v1, i128_0080008000800080);
-
-    vmulhu16(v0, v0, i128_0101010101010101);
-    vmulhu16(v1, v1, i128_0101010101010101);
-
-    vaddi16(v2, v2, i128_0080008000800080);
-    vmulhu16(v2, v2, i128_0101010101010101);
-  }
-
 
   template<typename DstT, typename SrcT>
   inline void vexpandlps(const DstT& dst, const SrcT& src) noexcept {
@@ -1566,38 +1487,28 @@ public:
   }
 
   template<typename DstT, typename SrcT>
-  inline void vswizps(const DstT& dst, const SrcT& src, uint32_t imm) noexcept { vemit_vvi_vi(PackedInst::packIntrin(kIntrin2iVswizps), dst, src, imm); }
+  inline void v_swizzle_f32(const DstT& dst, const SrcT& src, uint32_t imm) noexcept { vemit_vvi_vi(PackedInst::packIntrin(kIntrin2iVswizps), dst, src, imm); }
+  template<typename DstT, typename SrcT>
+  inline void v_swizzle_f64(const DstT& dst, const SrcT& src, uint32_t imm) noexcept { vemit_vvi_vi(PackedInst::packIntrin(kIntrin2iVswizpd), dst, src, imm); }
 
   template<typename DstT, typename SrcT>
-  inline void vswizpd(const DstT& dst, const SrcT& src, uint32_t imm) noexcept { vemit_vvi_vi(PackedInst::packIntrin(kIntrin2iVswizpd), dst, src, imm); }
+  inline void v_swap_f32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_f32(dst, src, x86::Predicate::shuf(2, 3, 0, 1)); }
+  template<typename DstT, typename SrcT>
+  inline void v_swap_f64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_f64(dst, src, x86::Predicate::shuf(0, 1)); }
 
   template<typename DstT, typename SrcT>
-  inline void vswapps(const DstT& dst, const SrcT& src) noexcept { vswizps(dst, src, x86::Predicate::shuf(2, 3, 0, 1)); }
-
+  inline void v_broadcast_u16(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastU16), dst, src); }
   template<typename DstT, typename SrcT>
-  inline void vswappd(const DstT& dst, const SrcT& src) noexcept { vswizpd(dst, src, x86::Predicate::shuf(0, 1)); }
-
+  inline void v_broadcast_u32(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastU32), dst, src); }
   template<typename DstT, typename SrcT>
-  inline void vbroadcast_u16(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastU16), dst, src);
-  }
-
-  template<typename DstT, typename SrcT>
-  inline void vbroadcast_u32(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastU32), dst, src);
-  }
-
-  template<typename DstT, typename SrcT>
-  inline void vbroadcast_u64(const DstT& dst, const SrcT& src) noexcept {
-    vemit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastU64), dst, src);
-  }
+  inline void v_broadcast_u64(const DstT& dst, const SrcT& src) noexcept { vemit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastU64), dst, src); }
 
   template<typename DstT, typename Src1T, typename Src2T>
   BL_INLINE void vminmaxu8(const DstT& dst, const Src1T& src1, const Src2T& src2, bool isMin) noexcept {
     if (isMin)
-      vminu8(dst, src1, src2);
+      v_min_u8(dst, src1, src2);
     else
-      vmaxu8(dst, src1, src2);
+      v_max_u8(dst, src1, src2);
   }
 
   // --------------------------------------------------------------------------
@@ -1612,12 +1523,12 @@ public:
     m.setSize(1);
 
     if (hasSSE4_1()) {
-      vinsertu8_(dst, dst, m, wordIndex * 2u);
+      v_insert_u8_(dst, dst, m, wordIndex * 2u);
     }
     else {
       x86::Gp tmp = cc->newUInt32("@tmp");
       cc->movzx(tmp, m);
-      vinsertu16(dst, dst, tmp, wordIndex);
+      v_insert_u16(dst, dst, tmp, wordIndex);
     }
   }
 
@@ -1667,18 +1578,18 @@ public:
 
     switch (numBytes) {
       case 4:
-        vstorei32(dMem, vSrc);
+        v_store_i32(dMem, vSrc);
         break;
 
       case 8:
-        vstorei64(dMem, vSrc);
+        v_store_i64(dMem, vSrc);
         break;
 
       case 16:
         if (dAlignment == 16)
-          vstorei128a(dMem, vSrc);
+          v_storea_i128(dMem, vSrc);
         else
-          vstorei128u(dMem, vSrc);
+          v_storeu_i128(dMem, vSrc);
         break;
 
       default:
@@ -1687,7 +1598,7 @@ public:
   }
 
   inline void xStore32_ARGB(const x86::Gp& dPtr, const x86::Vec& vSrc) noexcept {
-    vstorei32(x86::ptr_32(dPtr), vSrc);
+    v_store_i32(x86::ptr_32(dPtr), vSrc);
   }
 
   BL_NOINLINE void xMovzxBW_LoHi(const x86::Vec& d0, const x86::Vec& d1, const x86::Vec& s) noexcept {
@@ -1695,34 +1606,34 @@ public:
 
     if (hasSSE4_1()) {
       if (d0.id() == s.id()) {
-        vswizi32(d1, d0, x86::Predicate::shuf(1, 0, 3, 2));
-        vmovu8u16_(d0, d0);
-        vmovu8u16_(d1, d1);
+        v_swizzle_i32(d1, d0, x86::Predicate::shuf(1, 0, 3, 2));
+        v_mov_u8_i16_(d0, d0);
+        v_mov_u8_i16_(d1, d1);
       }
       else {
         vmovu8u16(d0, s);
-        vswizi32(d1, s, x86::Predicate::shuf(1, 0, 3, 2));
+        v_swizzle_i32(d1, s, x86::Predicate::shuf(1, 0, 3, 2));
         vmovu8u16(d1, d1);
       }
     }
     else {
       x86::Xmm i128_0000000000000000 = constAsXmm(blCommonTable.i128_0000000000000000);
       if (d1.id() != s.id()) {
-        vunpackhi8(d1, s, i128_0000000000000000);
-        vunpackli8(d0, s, i128_0000000000000000);
+        v_interleave_hi_i8(d1, s, i128_0000000000000000);
+        v_interleave_lo_i8(d0, s, i128_0000000000000000);
       }
       else {
-        vunpackli8(d0, s, i128_0000000000000000);
-        vunpackhi8(d1, s, i128_0000000000000000);
+        v_interleave_lo_i8(d0, s, i128_0000000000000000);
+        v_interleave_hi_i8(d1, s, i128_0000000000000000);
       }
     }
   }
 
   template<typename Dst, typename Src>
-  inline void vExpandAlphaLo16(const Dst& d, const Src& s) noexcept { vswizli16(d, s, x86::Predicate::shuf(3, 3, 3, 3)); }
+  inline void vExpandAlphaLo16(const Dst& d, const Src& s) noexcept { v_swizzle_lo_i16(d, s, x86::Predicate::shuf(3, 3, 3, 3)); }
 
   template<typename Dst, typename Src>
-  inline void vExpandAlphaHi16(const Dst& d, const Src& s) noexcept { vswizhi16(d, s, x86::Predicate::shuf(3, 3, 3, 3)); }
+  inline void vExpandAlphaHi16(const Dst& d, const Src& s) noexcept { v_swizzle_hi_i16(d, s, x86::Predicate::shuf(3, 3, 3, 3)); }
 
   template<typename Dst, typename Src>
   inline void vExpandAlpha16(const Dst& d, const Src& s, uint32_t useHiPart = 1) noexcept {
@@ -1732,46 +1643,46 @@ public:
   }
 
   template<typename Dst, typename Src>
-  inline void vExpandAlphaPS(const Dst& d, const Src& s) noexcept { vswizi32(d, s, x86::Predicate::shuf(3, 3, 3, 3)); }
+  inline void vExpandAlphaPS(const Dst& d, const Src& s) noexcept { v_swizzle_i32(d, s, x86::Predicate::shuf(3, 3, 3, 3)); }
 
   template<typename DstT, typename SrcT>
-  inline void vFillAlpha255B(const DstT& dst, const SrcT& src) noexcept { vor(dst, src, constAsXmm(blCommonTable.i128_FF000000FF000000)); }
+  inline void vFillAlpha255B(const DstT& dst, const SrcT& src) noexcept { v_or(dst, src, constAsXmm(blCommonTable.i128_FF000000FF000000)); }
   template<typename DstT, typename SrcT>
-  inline void vFillAlpha255W(const DstT& dst, const SrcT& src) noexcept { vor(dst, src, constAsMem(blCommonTable.i128_00FF000000000000)); }
+  inline void vFillAlpha255W(const DstT& dst, const SrcT& src) noexcept { v_or(dst, src, constAsMem(blCommonTable.i128_00FF000000000000)); }
 
   template<typename DstT, typename SrcT>
-  inline void vZeroAlphaB(const DstT& dst, const SrcT& src) noexcept { vand(dst, src, constAsMem(blCommonTable.i128_00FFFFFF00FFFFFF)); }
+  inline void vZeroAlphaB(const DstT& dst, const SrcT& src) noexcept { v_and(dst, src, constAsMem(blCommonTable.i128_00FFFFFF00FFFFFF)); }
   template<typename DstT, typename SrcT>
-  inline void vZeroAlphaW(const DstT& dst, const SrcT& src) noexcept { vand(dst, src, constAsMem(blCommonTable.i128_0000FFFFFFFFFFFF)); }
+  inline void vZeroAlphaW(const DstT& dst, const SrcT& src) noexcept { v_and(dst, src, constAsMem(blCommonTable.i128_0000FFFFFFFFFFFF)); }
 
   template<typename DstT, typename SrcT>
-  inline void vNegAlpha8B(const DstT& dst, const SrcT& src) noexcept { vxor(dst, src, constAsMem(blCommonTable.i128_FF000000FF000000)); }
+  inline void vNegAlpha8B(const DstT& dst, const SrcT& src) noexcept { v_xor(dst, src, constAsMem(blCommonTable.i128_FF000000FF000000)); }
   template<typename DstT, typename SrcT>
-  inline void vNegAlpha8W(const DstT& dst, const SrcT& src) noexcept { vxor(dst, src, constAsMem(blCommonTable.i128_00FF000000000000)); }
+  inline void vNegAlpha8W(const DstT& dst, const SrcT& src) noexcept { v_xor(dst, src, constAsMem(blCommonTable.i128_00FF000000000000)); }
 
   template<typename DstT, typename SrcT>
-  inline void vNegRgb8B(const DstT& dst, const SrcT& src) noexcept { vxor(dst, src, constAsMem(blCommonTable.i128_00FFFFFF00FFFFFF)); }
+  inline void vNegRgb8B(const DstT& dst, const SrcT& src) noexcept { v_xor(dst, src, constAsMem(blCommonTable.i128_00FFFFFF00FFFFFF)); }
   template<typename DstT, typename SrcT>
-  inline void vNegRgb8W(const DstT& dst, const SrcT& src) noexcept { vxor(dst, src, constAsMem(blCommonTable.i128_000000FF00FF00FF)); }
+  inline void vNegRgb8W(const DstT& dst, const SrcT& src) noexcept { v_xor(dst, src, constAsMem(blCommonTable.i128_000000FF00FF00FF)); }
 
   // d = int(floor(a / b) * b).
   template<typename XmmOrMem>
   BL_NOINLINE void vmodpd(const x86::Xmm& d, const x86::Xmm& a, const XmmOrMem& b) noexcept {
     if (hasSSE4_1()) {
-      vdivpd(d, a, b);
-      vroundpd_(d, d, x86::Predicate::kRoundTrunc | x86::Predicate::kRoundInexact);
-      vmulpd(d, d, b);
+      v_div_f64(d, a, b);
+      v_round_f64_(d, d, x86::Predicate::kRoundTrunc | x86::Predicate::kRoundInexact);
+      v_mul_f64(d, d, b);
     }
     else {
       x86::Xmm t = cc->newXmm("vmodpdTmp");
 
-      vdivpd(d, a, b);
-      vcvttpdi32(t, d);
-      vcvti32pd(t, t);
-      vcmppd(d, d, t, x86::Predicate::kCmpLT | x86::Predicate::kCmpUNORD);
-      vandpd(d, d, constAsMem(blCommonTable.d128_m1));
-      vaddpd(d, d, t);
-      vmulpd(d, d, b);
+      v_div_f64(d, a, b);
+      v_cvtt_f64_i32(t, d);
+      v_cvt_i32_f64(t, t);
+      v_cmp_f64(d, d, t, x86::Predicate::kCmpLT | x86::Predicate::kCmpUNORD);
+      v_and_f64(d, d, constAsMem(blCommonTable.d128_m1));
+      v_add_f64(d, d, t);
+      v_mul_f64(d, d, b);
     }
   }
 
@@ -1781,16 +1692,16 @@ public:
     x86::Xmm t0 = cc->newXmm("t0");
     x86::Xmm t1 = cc->newXmm("t1");
 
-    vswizi32(t1, b, x86::Predicate::shuf(3, 3, 2, 0));
-    vswizi32(d , a, x86::Predicate::shuf(2, 0, 3, 1));
+    v_swizzle_i32(t1, b, x86::Predicate::shuf(3, 3, 2, 0));
+    v_swizzle_i32(d , a, x86::Predicate::shuf(2, 0, 3, 1));
 
-    vcvti32pd(t1, t1);
-    vcvti32pd(t0, d);
+    v_cvt_i32_f64(t1, t1);
+    v_cvt_i32_f64(t0, d);
     vmodpd(t0, t0, t1);
-    vcvttpdi32(t0, t0);
+    v_cvtt_f64_i32(t0, t0);
 
-    vsubi32(d, d, t0);
-    vswizi32(d, d, x86::Predicate::shuf(1, 3, 0, 2));
+    v_sub_i32(d, d, t0);
+    v_swizzle_i32(d, d, x86::Predicate::shuf(1, 3, 0, 2));
   }
 
   // Performs 32-bit unsigned modulo of 32-bit `a` (hi DWORD) with 64-bit `b` (DOUBLE).
@@ -1798,28 +1709,28 @@ public:
   BL_NOINLINE void xModI64HIxDouble(const x86::Xmm& d, const XmmOrMem_A& a, const XmmOrMem_B& b) noexcept {
     x86::Xmm t0 = cc->newXmm("t0");
 
-    vswizi32(d, a, x86::Predicate::shuf(2, 0, 3, 1));
-    vcvti32pd(t0, d);
+    v_swizzle_i32(d, a, x86::Predicate::shuf(2, 0, 3, 1));
+    v_cvt_i32_f64(t0, d);
     vmodpd(t0, t0, b);
-    vcvttpdi32(t0, t0);
+    v_cvtt_f64_i32(t0, t0);
 
-    vsubi32(d, d, t0);
-    vswizi32(d, d, x86::Predicate::shuf(1, 3, 0, 2));
+    v_sub_i32(d, d, t0);
+    v_swizzle_i32(d, d, x86::Predicate::shuf(1, 3, 0, 2));
   }
 
   BL_NOINLINE void xExtractUnpackedAFromPackedARGB32_1(const x86::Xmm& d, const x86::Xmm& s) noexcept {
-    vswizli16(d, s, x86::Predicate::shuf(1, 1, 1, 1));
-    vsrli16(d, d, 8);
+    v_swizzle_lo_i16(d, s, x86::Predicate::shuf(1, 1, 1, 1));
+    v_srl_i16(d, d, 8);
   }
 
   BL_NOINLINE void xExtractUnpackedAFromPackedARGB32_2(const x86::Xmm& d, const x86::Xmm& s) noexcept {
     if (hasSSSE3()) {
-      vswizi8v_(d, s, constAsMem(blCommonTable.i128_pshufb_packed_argb32_2x_lo_to_unpacked_a8));
+      v_shuffle_i8(d, s, constAsMem(blCommonTable.i128_pshufb_packed_argb32_2x_lo_to_unpacked_a8));
     }
     else {
-      vswizli16(d, s, x86::Predicate::shuf(3, 3, 1, 1));
-      vswizi32(d, d, x86::Predicate::shuf(1, 1, 0, 0));
-      vsrli16(d, d, 8);
+      v_swizzle_lo_i16(d, s, x86::Predicate::shuf(3, 3, 1, 1));
+      v_swizzle_i32(d, d, x86::Predicate::shuf(1, 1, 0, 0));
+      v_srl_i16(d, d, 8);
     }
   }
 
@@ -1828,50 +1739,50 @@ public:
 
     if (hasSSSE3()) {
       if (d0.id() == s.id()) {
-        vswizi8v_(d1, s, constAsMem(blCommonTable.i128_pshufb_packed_argb32_2x_hi_to_unpacked_a8));
-        vswizi8v_(d0, s, constAsMem(blCommonTable.i128_pshufb_packed_argb32_2x_lo_to_unpacked_a8));
+        v_shuffle_i8(d1, s, constAsMem(blCommonTable.i128_pshufb_packed_argb32_2x_hi_to_unpacked_a8));
+        v_shuffle_i8(d0, s, constAsMem(blCommonTable.i128_pshufb_packed_argb32_2x_lo_to_unpacked_a8));
       }
       else {
-        vswizi8v_(d0, s, constAsMem(blCommonTable.i128_pshufb_packed_argb32_2x_lo_to_unpacked_a8));
-        vswizi8v_(d1, s, constAsMem(blCommonTable.i128_pshufb_packed_argb32_2x_hi_to_unpacked_a8));
+        v_shuffle_i8(d0, s, constAsMem(blCommonTable.i128_pshufb_packed_argb32_2x_lo_to_unpacked_a8));
+        v_shuffle_i8(d1, s, constAsMem(blCommonTable.i128_pshufb_packed_argb32_2x_hi_to_unpacked_a8));
       }
     }
     else {
       if (d1.id() != s.id()) {
-        vswizhi16(d1, s, x86::Predicate::shuf(3, 3, 1, 1));
-        vswizli16(d0, s, x86::Predicate::shuf(3, 3, 1, 1));
+        v_swizzle_hi_i16(d1, s, x86::Predicate::shuf(3, 3, 1, 1));
+        v_swizzle_lo_i16(d0, s, x86::Predicate::shuf(3, 3, 1, 1));
 
-        vswizi32(d1, d1, x86::Predicate::shuf(3, 3, 2, 2));
-        vswizi32(d0, d0, x86::Predicate::shuf(1, 1, 0, 0));
+        v_swizzle_i32(d1, d1, x86::Predicate::shuf(3, 3, 2, 2));
+        v_swizzle_i32(d0, d0, x86::Predicate::shuf(1, 1, 0, 0));
 
-        vsrli16(d1, d1, 8);
-        vsrli16(d0, d0, 8);
+        v_srl_i16(d1, d1, 8);
+        v_srl_i16(d0, d0, 8);
       }
       else {
-        vswizli16(d0, s, x86::Predicate::shuf(3, 3, 1, 1));
-        vswizhi16(d1, s, x86::Predicate::shuf(3, 3, 1, 1));
+        v_swizzle_lo_i16(d0, s, x86::Predicate::shuf(3, 3, 1, 1));
+        v_swizzle_hi_i16(d1, s, x86::Predicate::shuf(3, 3, 1, 1));
 
-        vswizi32(d0, d0, x86::Predicate::shuf(1, 1, 0, 0));
-        vswizi32(d1, d1, x86::Predicate::shuf(3, 3, 2, 2));
+        v_swizzle_i32(d0, d0, x86::Predicate::shuf(1, 1, 0, 0));
+        v_swizzle_i32(d1, d1, x86::Predicate::shuf(3, 3, 2, 2));
 
-        vsrli16(d0, d0, 8);
-        vsrli16(d1, d1, 8);
+        v_srl_i16(d0, d0, 8);
+        v_srl_i16(d1, d1, 8);
       }
     }
   }
 
   BL_NOINLINE void xPackU32ToU16Lo(const x86::Vec& d0, const x86::Vec& s0) noexcept {
     if (hasSSE4_1()) {
-      vpacki32u16_(d0, s0, s0);
+      v_packs_i32_u16_(d0, s0, s0);
     }
     else if (hasSSSE3()) {
-      vswizi8v_(d0, s0, constAsMem(blCommonTable.i128_pshufb_u32_to_u16_lo));
+      v_shuffle_i8(d0, s0, constAsMem(blCommonTable.i128_pshufb_u32_to_u16_lo));
     }
     else {
       // Sign extend and then use `packssdw()`.
-      vslli32(d0, s0, 16);
-      vsrai32(d0, d0, 16);
-      vpacki32i16(d0, d0, d0);
+      v_sll_i32(d0, s0, 16);
+      v_sra_i32(d0, d0, 16);
+      v_packs_i32_i16(d0, d0, d0);
     }
   }
 

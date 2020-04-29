@@ -56,8 +56,8 @@ static BL_INLINE uint64_t blRgba64Pack(uint32_t r, uint32_t g, uint32_t b, uint3
 static BL_INLINE uint64_t blRgba64FromRgba32(uint32_t src) noexcept {
 #if defined(BL_BUILD_OPT_SSE2)
   using namespace SIMD;
-  I128 src128 = vcvtu32i128(src);
-  return vcvti128u64(vunpackli8(src128, src128));
+  Vec128I src128 = v_i128_from_u32(src);
+  return v_get_u64(v_interleave_lo_i8(src128, src128));
 #else
   return BLRgba64(BLRgba32(src)).value;
 #endif
@@ -66,7 +66,7 @@ static BL_INLINE uint64_t blRgba64FromRgba32(uint32_t src) noexcept {
 static BL_INLINE uint32_t blRgba32FromRgba64(uint64_t src) noexcept {
 #if defined(BL_BUILD_OPT_SSE2)
   using namespace SIMD;
-  return vcvti128u32(vpacki16u8(vsrli16<8>(vcvtu64i128(src))));
+  return v_get_u32(v_packs_i16_u8(v_srl_i16<8>(v_i128_from_u64(src))));
 #else
   return BLRgba32(BLRgba64(src)).value;
 #endif
