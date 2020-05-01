@@ -2778,7 +2778,7 @@ static BLResult blRasterContextImplStrokeGlyphRunInternal(
   BLRasterCoreCommandSerializerAsync& serializer,
   const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
 
-  return blRasterContextImplEnqueueFillOrStrokeGlyphRun<BL_RASTER_COMMAND_CATEGORY_CORE, BL_CONTEXT_OP_TYPE_FILL>(ctxI, serializer, pt, font, glyphRun);
+  return blRasterContextImplEnqueueFillOrStrokeGlyphRun<BL_RASTER_COMMAND_CATEGORY_CORE, BL_CONTEXT_OP_TYPE_STROKE>(ctxI, serializer, pt, font, glyphRun);
 }
 
 template<uint32_t RenderingMode>
