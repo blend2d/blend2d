@@ -259,10 +259,8 @@
 //! \cond NEVER
 
 // Make sure '#ifdef'ed unit tests are not disabled by IDE.
-#ifndef BL_TEST
-  #if defined(__INTELLISENSE__)
-    #define BL_TEST
-  #endif
+#if !defined(BL_TEST) && defined(__INTELLISENSE__)
+  #define BL_TEST
 #endif
 
 // Include a unit testing package if this is a `blend2d_test_unit` build.

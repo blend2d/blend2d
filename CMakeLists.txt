@@ -112,25 +112,38 @@ function(blend2d_detect_sanitizers out)
   set(${out} "${_out_array}" PARENT_SCOPE)
 endfunction()
 
-function(blend2d_add_target target target_type src deps cflags cflags_dbg cflags_rel)
-  if ("${target_type}" STREQUAL "EXECUTABLE")
-    add_executable(${target} ${src})
+function(blend2d_add_target target target_type)
+  set(single_val "")
+  set(multi_val SOURCES LIBRARIES CFLAGS CFLAGS_DBG CFLAGS_REL)
+  cmake_parse_arguments("X" "" "${single_val}" "${multi_val}" ${ARGN})
+
+  if ("${target_type}" MATCHES "^(EXECUTABLE|TEST)$")
+    add_executable(${target} ${X_SOURCES})
   else()
-    add_library(${target} ${target_type} ${src})
+    add_library(${target} ${target_type} ${X_SOURCES})
   endif()
 
-  target_link_libraries(${target} ${deps})
-  target_compile_options(${target} PRIVATE ${cflags} $<$<CONFIG:Debug>:${cflags_dbg}> $<$<NOT:$<CONFIG:Debug>>:${cflags_rel}>)
+  target_link_libraries(${target} PRIVATE ${X_LIBRARIES})
+
+  # target_link_options was added in cmake v3.13, don't use it for now...
+  foreach(link_flag ${BLEND2D_SANITIZE_LFLAGS})
+    set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " ${link_flag}")
+  endforeach()
+
+  if (${CMAKE_VERSION} VERSION_LESS "3.8.0")
+    set_property(TARGET ${target} PROPERTY CXX_STANDARD 11)
+  else()
+    target_compile_features(${target} PUBLIC cxx_std_11)
+  endif()
   set_property(TARGET ${target} PROPERTY CXX_EXTENSIONS NO)
   set_property(TARGET ${target} PROPERTY CXX_VISIBILITY_PRESET hidden)
-  target_compile_features(${target} PUBLIC cxx_std_11)
+  target_compile_options(${target} PRIVATE ${X_CFLAGS} ${BLEND2D_SANITIZE_CFLAGS} $<$<CONFIG:Debug>:${X_CFLAGS_DBG}> $<$<NOT:$<CONFIG:Debug>>:${X_CFLAGS_REL}>)
 
-  # target_link_options was added in cmake 3.13, which doesn't work for us:
-  # set_property(TARGET ${target} APPEND PROPERTY LINK_OPTIONS ${link_flags})
-  foreach(_link_flag ${BLEND2D_PRIVATE_LFLAGS} ${BLEND2D_SANITIZE_LFLAGS})
-    set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " ${_link_flag}")
-  endforeach()
+  if ("${target_type}" STREQUAL "TEST")
+    add_test(NAME ${target} COMMAND ${target})
+  endif()
 endfunction()
+
 
 # =============================================================================
 # [Blend2D - Compiler Support]
@@ -665,13 +678,12 @@ message("   BLEND2D_PRIVATE_CFLAGS_REL=${BLEND2D_PRIVATE_CFLAGS_REL}")
 
 if (NOT BLEND2D_EMBED)
   # Add 'blend2d' library target.
-  blend2d_add_target(blend2d
-    "${BLEND2D_TARGET_TYPE}"
-    "${BLEND2D_SRC};${ASMJIT_SRC}"
-    "${BLEND2D_DEPS}"
-    "${BLEND2D_PRIVATE_CFLAGS}"
-    "${BLEND2D_PRIVATE_CFLAGS_DBG}"
-    "${BLEND2D_PRIVATE_CFLAGS_REL}")
+  blend2d_add_target(blend2d    ${BLEND2D_TARGET_TYPE}
+                     SOURCES    ${BLEND2D_SRC} ${ASMJIT_SRC}
+                     LIBRARIES  ${BLEND2D_DEPS}
+                     CFLAGS     ${BLEND2D_PRIVATE_CFLAGS}
+                     CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
+                     CFLAGS_REL ${BLEND2D_PRIVATE_CFLAGS_REL})
 
   # target_link_options was added in cmake 3.13, which doesn't work for us.
   # target_link_options(blend2d PRIVATE ${BLEND2D_NO_STDCXX_LFLAGS})
@@ -688,39 +700,43 @@ if (NOT BLEND2D_EMBED)
   # Add Blend2D::Blend2D target (alias to blend2d).
   add_library(Blend2D::Blend2D ALIAS blend2d)
 
-  # Install 'blend2d' target (shared or static).
-  install(TARGETS blend2d RUNTIME DESTINATION "bin"
-                          LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                          ARCHIVE DESTINATION "lib${LIB_SUFFIX}")
-
-  # Install 'blend2d' header files (private headers are filtered out).
-  foreach(_src_file ${BLEND2D_SRC_LIST})
-    if ("${_src_file}" MATCHES "\\.h$" AND NOT "${_src_file}" MATCHES "_p\\.h$")
-      get_filename_component(_src_dir ${_src_file} PATH)
-      install(FILES "${BLEND2D_DIR}/src/${_src_file}" DESTINATION "include/${_src_dir}")
-    endif()
-  endforeach()
+  # Add Blend2D install instructions (library and public headers).
+  if (NOT BLEND2D_NO_INSTALL)
+    install(TARGETS blend2d RUNTIME DESTINATION "bin"
+                            LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+                            ARCHIVE DESTINATION "lib${LIB_SUFFIX}")
+    foreach(_src_file ${BLEND2D_SRC_LIST})
+      if ("${_src_file}" MATCHES "\\.h$" AND NOT "${_src_file}" MATCHES "_p\\.h$")
+        get_filename_component(_src_dir ${_src_file} PATH)
+        install(FILES "${BLEND2D_DIR}/src/${_src_file}" DESTINATION "include/${_src_dir}")
+      endif()
+    endforeach()
+  endif()
 
   # Add 'blend2d' tests.
   if (BLEND2D_TEST)
-    # Unit tests are so much different compared to other tests, they need the whole
-    # source-code to be compiled with the unit test executable with `UNIT()` tests
-    # enabled.
-    set (BLEND2D_TEST_SRC test/bl_test_unit.cpp test/broken.cpp test/broken.h)
-    blend2d_add_target(bl_test_unit
-      EXECUTABLE
-      "${BLEND2D_SRC};${ASMJIT_SRC};${BLEND2D_TEST_SRC}"
-      "${BLEND2D_DEPS}"
-      "${BLEND2D_PRIVATE_CFLAGS}"
-      "${BLEND2D_PRIVATE_CFLAGS_DBG}"
-      "${BLEND2D_PRIVATE_CFLAGS_REL}")
-    target_compile_definitions(bl_test_unit PRIVATE BL_TEST BL_STATIC)
+    enable_testing()
+
+    # Special target that always uses embedded Blend2D.
+    blend2d_add_target(bl_test_unit TEST
+                      SOURCES    ${BLEND2D_SRC}
+                                 ${ASMJIT_SRC}
+                                 test/bl_test_unit.cpp
+                                 test/broken.cpp
+                                 test/broken.h
+                      LIBRARIES  ${BLEND2D_DEPS}
+                      CFLAGS     ${BLEND2D_PRIVATE_CFLAGS}
+                                 -DBL_TEST
+                                 -DBL_STATIC
+                      CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
+                      CFLAGS_REL ${BLEND2D_PRIVATE_CFLAGS_REL})
     target_include_directories(bl_test_unit BEFORE PRIVATE ${ASMJIT_INCLUDE_DIRS})
     target_include_directories(bl_test_unit BEFORE PRIVATE ${BLEND2D_INCLUDE_DIRS})
 
-    # Other tests link Blend2D either statically or dynamically according to the
-    # user settings.
-    blend2d_add_target(bl_test_fuzzer EXECUTABLE test/bl_test_fuzzer.cpp Blend2D::Blend2D "${BLEND2D_SANITIZE_CFLAGS}" "" "")
+    blend2d_add_target(bl_test_fuzzer TEST
+                       SOURCES test/bl_test_fuzzer.cpp
+                       LIBRARIES Blend2D::Blend2D
+                       CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
   endif()
 endif()
 

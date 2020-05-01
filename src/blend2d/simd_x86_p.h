@@ -300,7 +300,7 @@ BL_INLINE Vec128I v_i128_from_i64(int64_t x) noexcept { return _mm_loadl_epi64(r
 #endif
 BL_INLINE Vec128I v_i128_from_u64(uint64_t x) noexcept { return v_i128_from_i64(int64_t(x)); }
 
-#if BL_TARGET_ARCH_BITS >= 64 && defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER)
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER)
 // See: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70708
 BL_INLINE Vec128F v_f128_from_f32(float x) noexcept {
   Vec128F reg;
