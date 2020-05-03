@@ -42,8 +42,11 @@ set(BLEND2D_STATIC   "${BLEND2D_STATIC}"   CACHE BOOL "Build 'blend2d' staticall
 set(BLEND2D_SANITIZE "${BLEND2D_SANITIZE}" CACHE STRING "List of sanitizers to use")
 
 # Experimental build options.
-# set(BLEND2D_BUILD_NO_LOGGING 1)
-# set(BLEND2D_BUILD_NO_JIT 1)
+# set(BLEND2D_NO_JIT 1)
+# set(BLEND2D_NO_JIT_LOGGING 1)
+# set(BLEND2D_NO_TLS 1)
+# set(BLEND2D_NO_INTRINSICS 1)
+# set(BLEND2D_NO_STDCXX 1)
 
 if (NOT DEFINED BLEND2D_NO_STDCXX)
   if (NOT BLEND2D_EMBED AND NOT BLEND2D_STATIC)
@@ -65,10 +68,10 @@ set(BLEND2D_PRIVATE_LFLAGS "")                   # Private linker flags.
 set(BLEND2D_PRIVATE_CFLAGS "")                   # Private compiler flags independent of build type.
 set(BLEND2D_PRIVATE_CFLAGS_DBG "")               # Private compiler flags used by debug builds.
 set(BLEND2D_PRIVATE_CFLAGS_REL "")               # Private compiler flags used by release builds.
-set(BLEND2D_NO_STDCXX_LFLAGS "")                 # Private linker flags to disable linking to a standard C++ library.
-set(BLEND2D_NO_STDCXX_CFLAGS "")                 # Private compiler flags to disable linking to a standard C++ library.
 set(BLEND2D_SANITIZE_CFLAGS "")                  # Compiler flags required by currently enabled sanitizers.
 set(BLEND2D_SANITIZE_LFLAGS "")                  # Linker flags required by currently enabled sanitizers.
+set(BLEND2D_NO_STDCXX_CFLAGS "")                 # Private compiler flags to disable linking to a standard C++ library.
+set(BLEND2D_NO_STDCXX_LFLAGS "")                 # Private linker flags to disable linking to a standard C++ library.
 
 # =============================================================================
 # [Blend2D - Utilities]
@@ -137,7 +140,7 @@ function(blend2d_add_target target target_type)
   endif()
   set_property(TARGET ${target} PROPERTY CXX_EXTENSIONS NO)
   set_property(TARGET ${target} PROPERTY CXX_VISIBILITY_PRESET hidden)
-  target_compile_options(${target} PRIVATE ${X_CFLAGS} ${BLEND2D_SANITIZE_CFLAGS} $<$<CONFIG:Debug>:${X_CFLAGS_DBG}> $<$<NOT:$<CONFIG:Debug>>:${X_CFLAGS_REL}>)
+  target_compile_options(${target} PRIVATE ${X_CFLAGS} ${BLEND2D_SANITIZE_CFLAGS} $<IF:$<CONFIG:Debug>,${X_CFLAGS_DBG},${X_CFLAGS_REL}>)
 
   if ("${target_type}" STREQUAL "TEST")
     add_test(NAME ${target} COMMAND ${target})
@@ -195,10 +198,10 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   if (BLEND2D_NO_STDCXX)
     message("-- Enabling build without linking to the C++ standard library")
     # This fails when a compiler emits a symbol which requires libgcc:
-    #   list(APPEND BLEND2D_NO_STDCXX_CFLAGS -nodefaultlibs -DBL_NO_STDCXX)
+    #   list(APPEND BLEND2D_NO_STDCXX_CFLAGS -nodefaultlibs -DBL_BUILD_NO_STDCXX)
     #   list(APPEND BLEND2D_NO_STDCXX_LFLAGS -nodefaultlibs)
     # This has similar effect as we don't really use anything from libstdc++:
-    list(APPEND BLEND2D_NO_STDCXX_CFLAGS -DBL_NO_STDCXX)
+    list(APPEND BLEND2D_NO_STDCXX_CFLAGS -DBL_BUILD_NO_STDCXX)
     list(APPEND BLEND2D_NO_STDCXX_LFLAGS -static-libstdc++)
   endif()
 endif()
@@ -238,8 +241,16 @@ if (BLEND2D_EMBED OR BLEND2D_STATIC)
   list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_STATIC")
 endif()
 
-if (BLEND2D_BUILD_NO_JIT)
+if (BLEND2D_NO_JIT)
   list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_NO_JIT")
+endif()
+
+if (BLEND2D_NO_TLS)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_NO_TLS")
+endif()
+
+if (BLEND2D_NO_INTRINSICS)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_NO_INTRINSICS")
 endif()
 
 # =============================================================================
@@ -350,7 +361,7 @@ if (NOT WIN32)
 endif()
 
 # Find asmjit dependency if building with JIT support.
-if (NOT BLEND2D_BUILD_NO_JIT)
+if (NOT BLEND2D_NO_JIT)
   if (NOT DEFINED ASMJIT_DIR)
     foreach(dir "${BLEND2D_DIR}/3rdparty/asmjit"
                 "${CMAKE_CURRENT_LIST_DIR}/../asmjit")
@@ -374,7 +385,7 @@ if (NOT BLEND2D_BUILD_NO_JIT)
   list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_NO_STDCXX)
 
   # A possibility to reduce the resulting binary size by disabling asmjit logging.
-  if (BLEND2D_BUILD_NO_LOGGING)
+  if (BLEND2D_NO_JIT_LOGGING)
     message("   Disabling AsmJit logging functionality to make Blend2D smaller")
     list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_NO_LOGGING -DASMJIT_NO_TEXT)
   endif()
@@ -627,6 +638,8 @@ set(BLEND2D_SRC_LIST
   blend2d/threading/thread_p.h
   blend2d/threading/threadpool.cpp
   blend2d/threading/threadpool_p.h
+  blend2d/threading/uniqueidgenerator.cpp
+  blend2d/threading/uniqueidgenerator_p.h
 )
 
 if (MSVC AND NOT BLEND2D_NO_NATVIS)
@@ -649,12 +662,13 @@ foreach(src_file ${BLEND2D_SRC_LIST})
     endforeach()
   endif()
 
-  if (src_file MATCHES "\\.natvis")
+  if ("${src_file}" MATCHES "\\.natvis")
     if (BLEND2D_LINKER_SUPPORTS_NATVIS)
-      LIST(APPEND BLEND2D_PRIVATE_LFLAGS "-natvis:${src_file}")
+      list(APPEND BLEND2D_PRIVATE_LFLAGS "-natvis:${src_file}")
     endif()
   endif()
 endforeach()
+
 source_group(TREE "${BLEND2D_DIR}" FILES ${BLEND2D_SRC})
 
 # =============================================================================
@@ -719,17 +733,17 @@ if (NOT BLEND2D_EMBED)
 
     # Special target that always uses embedded Blend2D.
     blend2d_add_target(bl_test_unit TEST
-                      SOURCES    ${BLEND2D_SRC}
-                                 ${ASMJIT_SRC}
-                                 test/bl_test_unit.cpp
-                                 test/broken.cpp
-                                 test/broken.h
-                      LIBRARIES  ${BLEND2D_DEPS}
-                      CFLAGS     ${BLEND2D_PRIVATE_CFLAGS}
-                                 -DBL_TEST
-                                 -DBL_STATIC
-                      CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
-                      CFLAGS_REL ${BLEND2D_PRIVATE_CFLAGS_REL})
+                       SOURCES    ${BLEND2D_SRC}
+                                  ${ASMJIT_SRC}
+                                  test/bl_test_unit.cpp
+                                  test/broken.cpp
+                                  test/broken.h
+                       LIBRARIES  ${BLEND2D_DEPS}
+                       CFLAGS     ${BLEND2D_PRIVATE_CFLAGS}
+                                  -DBL_TEST
+                                  -DBL_STATIC
+                       CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
+                       CFLAGS_REL ${BLEND2D_PRIVATE_CFLAGS_REL})
     target_include_directories(bl_test_unit BEFORE PRIVATE ${ASMJIT_INCLUDE_DIRS})
     target_include_directories(bl_test_unit BEFORE PRIVATE ${BLEND2D_INCLUDE_DIRS})
 

@@ -1,13 +1,31 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
 #include "./api-build_p.h"
 #include "./array.h"
 #include "./array_p.h"
 #include "./runtime_p.h"
+#include "./string_p.h"
 #include "./support_p.h"
 #include "./tables_p.h"
 #include "./variant_p.h"
@@ -134,7 +152,7 @@ static void* BL_CDECL blArrayCopyVariantData(void* dst_, const void* src_, size_
     dst->impl = blImplIncRef(src->impl);
 
     dst = blOffsetPtr(dst, sizeof(BLVariant));
-    src = blOffsetPtr(dst, sizeof(BLVariant));
+    src = blOffsetPtr(src, sizeof(BLVariant));
   }
 
   return dst_;
@@ -153,7 +171,7 @@ static void* BL_CDECL blArrayReplaceVariantData(void* dst_, const void* src_, si
     blVariantImplRelease(replacedImpl);
 
     dst = blOffsetPtr(dst, sizeof(BLVariant));
-    src = blOffsetPtr(dst, sizeof(BLVariant));
+    src = blOffsetPtr(src, sizeof(BLVariant));
   }
 
   return dst_;
@@ -885,7 +903,7 @@ BLResult blArrayInsertView(BLArrayCore* self, size_t index, const void* items, s
       rawCopyData = funcs.copyData;
 
     rawCopyData(dst, src, index * itemSize);
-    rawCopyData(dst + endIndex * itemSize, src + index * itemSize, (size - endIndex) * itemSize);
+    rawCopyData(dst + endIndex * itemSize, src + index * itemSize, (size - index) * itemSize);
     funcs.copyData(dst + index * itemSize, items, n * itemSize);
 
     return blArrayImplRelease(selfI);
@@ -908,7 +926,7 @@ BLResult blArrayInsertView(BLArrayCore* self, size_t index, const void* items, s
     // Move the memory in-place making space for items to insert. For example
     // if the destination points to [ABCDEF] and we want to insert 4 items we
     // would get [____ABCDEF].
-    memmove(dst + nInBytes, dst, (size - endIndex) * itemSize);
+    memmove(dst + nInBytes, dst, (size - index) * itemSize);
 
     // Split the [src:srcEnd] into LEAD and TRAIL slices and shift TRAIL slice
     // in a way to cancel the `memmove()` if `src` overlaps `dst`. In practice
@@ -929,15 +947,15 @@ BLResult blArrayInsertView(BLArrayCore* self, size_t index, const void* items, s
     // [abcdBCD____efgh]
     //
     //         |--| <- Copy shifted trailing data.
-    // [abcdBCDEFGHdefgh]
+    // [abcdBCDEFGHefgh]
 
     // Leading area precedes `dst` - nothing changed in here and if this is
-    // the whole are then there was no overlap that we would have to deal with.
+    // the whole area then there was no overlap that we would have to deal with.
     size_t nLeadBytes = 0;
     if (src < dst) {
       nLeadBytes = blMin<size_t>((size_t)(dst - src), nInBytes);
-
       funcs.copyData(dst, src, nLeadBytes);
+
       dst += nLeadBytes;
       src += nLeadBytes;
     }
@@ -1180,10 +1198,10 @@ bool blArrayEquals(const BLArrayCore* a, const BLArrayCore* b) noexcept {
 }
 
 // ===========================================================================
-// [BLArray - Runtime Init]
+// [BLArray - Runtime]
 // ===========================================================================
 
-void blArrayRtInit(BLRuntimeContext* rt) noexcept {
+void blArrayOnInit(BLRuntimeContext* rt) noexcept {
   BL_UNUSED(rt);
 
   for (uint32_t implType = BL_IMPL_TYPE_ARRAY_FIRST; implType <= BL_IMPL_TYPE_ARRAY_LAST; implType++) {
@@ -1203,10 +1221,9 @@ void blArrayRtInit(BLRuntimeContext* rt) noexcept {
 
 #if defined(BL_TEST)
 UNIT(array) {
-  BLArray<int> a;
-
   INFO("Base functionality");
   {
+    BLArray<int> a;
     EXPECT(a.size() == 0);
 
     // [42]
@@ -1263,10 +1280,20 @@ UNIT(array) {
     EXPECT(a[3] == 1010);
     EXPECT(a[4] == 2293);
     EXPECT(a[5] == 3);
+
+    EXPECT(a.insert(6, 1) == BL_SUCCESS);
+    EXPECT(a[6] == 1);
+
+    EXPECT(a.clear() == BL_SUCCESS);
+    EXPECT(a.insert(0, 1) == BL_SUCCESS);
+    EXPECT(a.insert(1, 2) == BL_SUCCESS);
+    EXPECT(a[0] == 1);
+    EXPECT(a[1] == 2);
   }
 
   INFO("External array");
   {
+    BLArray<int> a;
     int externalData[4] = { 0 };
 
     EXPECT(a.createFromData(externalData, 0, 4, BL_DATA_ACCESS_RW) == BL_SUCCESS);
@@ -1282,6 +1309,38 @@ UNIT(array) {
     EXPECT(a.append(4) == BL_SUCCESS);
     EXPECT(a.data() != externalData);
     EXPECT(a.at(4) == 4);
+  }
+
+  INFO("String array");
+  {
+    BLArray<BLString> a;
+    EXPECT(a.size() == 0);
+
+    a.append(BLString("Hello"));
+    EXPECT(a.size() == 1);
+    EXPECT(a[0].equals("Hello"));
+
+    a.insert(0, BLString("Blend2D"));
+    EXPECT(a.size() == 2);
+    EXPECT(a[0].equals("Blend2D"));
+    EXPECT(a[1].equals("Hello"));
+
+    a.insert(2, BLString("World!"));
+    EXPECT(a.size() == 3);
+    EXPECT(a[0].equals("Blend2D"));
+    EXPECT(a[1].equals("Hello"));
+    EXPECT(a[2].equals("World!"));
+
+    a.insertView(1, a.view());
+    EXPECT(a.size() == 6);
+    for (const BLString& str : a)
+      printf("%s\n", str.data());
+    EXPECT(a[0].equals("Blend2D"));
+    EXPECT(a[1].equals("Blend2D"));
+    EXPECT(a[2].equals("Hello"));
+    EXPECT(a[3].equals("World!"));
+    EXPECT(a[4].equals("Hello"));
+    EXPECT(a[5].equals("World!"));
   }
 }
 #endif

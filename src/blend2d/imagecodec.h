@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_IMAGECODEC_H
-#define BLEND2D_IMAGECODEC_H
+#ifndef BLEND2D_IMAGECODEC_H_INCLUDED
+#define BLEND2D_IMAGECODEC_H_INCLUDED
 
 #include "./array.h"
 #include "./image.h"
@@ -117,8 +134,8 @@ public:
     return *this;
   }
 
-  BL_INLINE bool operator==(const BLImageCodec& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLImageCodec& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE bool operator==(const BLImageCodec& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE bool operator!=(const BLImageCodec& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -131,8 +148,10 @@ public:
   BL_INLINE BLResult assign(const BLImageCodec& other) noexcept { return blImageCodecAssignWeak(this, &other); }
 
   //! Tests whether the image codec is a built-in null instance.
+  BL_NODISCARD
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
+  BL_NODISCARD
   BL_INLINE bool equals(const BLImageCodec& other) const noexcept { return this->impl == other.impl; }
 
   //! \}
@@ -141,16 +160,27 @@ public:
   //! \{
 
   //! Returns image codec name (i.e, "PNG", "JPEG", etc...).
+  BL_NODISCARD
   BL_INLINE const char* name() const noexcept { return impl->name; }
+
   //! Returns the image codec vendor (i.e. "Blend2D" for all built-in codecs).
+  BL_NODISCARD
   BL_INLINE const char* vendor() const noexcept { return impl->vendor; }
+
   //! Returns a mime-type associated with the image codec's format.
+  BL_NODISCARD
   BL_INLINE const char* mimeType() const noexcept { return impl->mimeType; }
+
   //! Returns a list of file extensions used to store image of this codec, separated by '|' character.
+  BL_NODISCARD
   BL_INLINE const char* extensions() const noexcept { return impl->extensions; }
+
   //! Returns image codec flags, see `BLImageCodecFeatures`.
+  BL_NODISCARD
   BL_INLINE uint32_t features() const noexcept { return impl->features; }
+
   //! Tests whether the image codec has a flag `flag`.
+  BL_NODISCARD
   BL_INLINE bool hasFeature(uint32_t feature) const noexcept { return (impl->features & feature) != 0; }
 
   //! \}
@@ -219,8 +249,13 @@ public:
   //! \name Codec Functionality
   //! \{
 
+  BL_NODISCARD
   BL_INLINE uint32_t inspectData(const BLArray<uint8_t>& buffer) const noexcept { return inspectData(buffer.view()); }
+
+  BL_NODISCARD
   BL_INLINE uint32_t inspectData(const BLArrayView<uint8_t>& view) const noexcept { return inspectData(view.data, view.size); }
+
+  BL_NODISCARD
   BL_INLINE uint32_t inspectData(const void* data, size_t size) const noexcept { return blImageCodecInspectData(this, static_cast<const uint8_t*>(data), size); }
 
   BL_INLINE BLResult createDecoder(BLImageDecoder* dst) const noexcept { return blImageCodecCreateDecoder(this, reinterpret_cast<BLImageDecoderCore*>(dst)); }
@@ -247,6 +282,7 @@ public:
 
   //! \}
 
+  BL_NODISCARD
   static BL_INLINE const BLImageCodec& none() noexcept { return reinterpret_cast<const BLImageCodec*>(blNone)[kImplType]; }
 };
 #endif
@@ -327,8 +363,8 @@ public:
   BL_INLINE BLImageDecoder& operator=(BLImageDecoder&& other) noexcept { blImageDecoderAssignMove(this, &other); return *this; }
   BL_INLINE BLImageDecoder& operator=(const BLImageDecoder& other) noexcept { blImageDecoderAssignWeak(this, &other); return *this; }
 
-  BL_INLINE bool operator==(const BLImageDecoder& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLImageDecoder& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE bool operator==(const BLImageDecoder& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE bool operator!=(const BLImageDecoder& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -342,8 +378,10 @@ public:
   BL_INLINE BLResult assign(const BLImageDecoder& other) noexcept { return blImageDecoderAssignWeak(this, &other); }
 
   //! Tests whether the image decoder is a built-in null instance.
+  BL_NODISCARD
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
+  BL_NODISCARD
   BL_INLINE bool equals(const BLImageDecoder& other) const noexcept { return this->impl == other.impl; }
 
   //! \}
@@ -352,10 +390,15 @@ public:
   //! \{
 
   //! Returns the last decoding result.
+  BL_NODISCARD
   BL_INLINE BLResult lastResult() const noexcept { return impl->lastResult; }
+
   //! Returns the current frame index (to be decoded).
+  BL_NODISCARD
   BL_INLINE uint64_t frameIndex() const noexcept { return impl->frameIndex; }
+
   //! Returns the position in source buffer.
+  BL_NODISCARD
   BL_INLINE size_t bufferIndex() const noexcept { return impl->bufferIndex; }
 
   //! \}
@@ -375,6 +418,7 @@ public:
 
   //! \}
 
+  BL_NODISCARD
   static BL_INLINE const BLImageDecoder& none() noexcept { return reinterpret_cast<const BLImageDecoder*>(blNone)[kImplType]; }
 };
 #endif
@@ -454,8 +498,8 @@ public:
   BL_INLINE BLImageEncoder& operator=(BLImageEncoder&& other) noexcept { blImageEncoderAssignMove(this, &other); return *this; }
   BL_INLINE BLImageEncoder& operator=(const BLImageEncoder& other) noexcept { blImageEncoderAssignWeak(this, &other); return *this; }
 
-  BL_INLINE bool operator==(const BLImageEncoder& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLImageEncoder& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE bool operator==(const BLImageEncoder& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE bool operator!=(const BLImageEncoder& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -469,8 +513,10 @@ public:
   BL_INLINE BLResult assign(const BLImageEncoder& other) noexcept { return blImageEncoderAssignWeak(this, &other); }
 
   //! Tests whether the image encoder is a built-in null instance.
+  BL_NODISCARD
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
+  BL_NODISCARD
   BL_INLINE bool equals(const BLImageEncoder& other) const noexcept { return this->impl == other.impl; }
 
   //! \}
@@ -479,10 +525,15 @@ public:
   //! \{
 
   //! Returns the last decoding result.
+  BL_NODISCARD
   BL_INLINE BLResult lastResult() const noexcept { return impl->lastResult; }
+
   //! Returns the current frame index (yet to be written).
+  BL_NODISCARD
   BL_INLINE uint64_t frameIndex() const noexcept { return impl->frameIndex; }
+
   //! Returns the position in destination buffer.
+  BL_NODISCARD
   BL_INLINE size_t bufferIndex() const noexcept { return impl->bufferIndex; }
 
   //! \}
@@ -497,10 +548,11 @@ public:
 
   //! \}
 
+  BL_NODISCARD
   static BL_INLINE const BLImageEncoder& none() noexcept { return reinterpret_cast<const BLImageEncoder*>(blNone)[kImplType]; }
 };
 #endif
 
 //! \}
 
-#endif // BLEND2D_IMAGECODEC_H
+#endif // BLEND2D_IMAGECODEC_H_INCLUDED

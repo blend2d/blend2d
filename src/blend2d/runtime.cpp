@@ -1,8 +1,25 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
 #include "./api-build_p.h"
 #include "./runtime_p.h"
@@ -20,6 +37,7 @@
 // ============================================================================
 
 BLRuntimeContext blRuntimeContext;
+BLRuntimeResourceLiveInfo blRuntimeResourceLiveInfo;
 
 // ============================================================================
 // [BLRuntime - Build Information]
@@ -228,31 +246,31 @@ BLResult blRuntimeInit() noexcept {
 
   // Call "Runtime Initialization" handlers.
   // - These would automatically install shutdown handlers when necessary.
-  blThreadRtInit(rt);
-  blThreadPoolRtInit(rt);
-  blZeroAllocatorRtInit(rt);
-  blMatrix2DRtInit(rt);
-  blArrayRtInit(rt);
-  blStringRtInit(rt);
-  blPathRtInit(rt);
-  blRegionRtInit(rt);
-  blImageRtInit(rt);
-  blImageCodecRtInit(rt);
-  blImageScalerRtInit(rt);
-  blPatternRtInit(rt);
-  blGradientRtInit(rt);
-  blFontRtInit(rt);
-  blFontManagerRtInit(rt);
+  blThreadOnInit(rt);
+  blThreadPoolOnInit(rt);
+  blZeroAllocatorOnInit(rt);
+  blMatrix2DOnInit(rt);
+  blArrayOnInit(rt);
+  blStringOnInit(rt);
+  blPathOnInit(rt);
+  blRegionOnInit(rt);
+  blImageOnInit(rt);
+  blImageCodecOnInit(rt);
+  blImageScalerOnInit(rt);
+  blPatternOnInit(rt);
+  blGradientOnInit(rt);
+  blFontOnInit(rt);
+  blFontManagerOnInit(rt);
 
 #if !defined(BL_BUILD_NO_FIXED_PIPE)
-  blFixedPipeRtInit(rt);
+  blFixedPipeOnInit(rt);
 #endif
 
 #if !defined(BL_BUILD_NO_JIT)
-  blPipeGenRtInit(rt);
+  blPipeGenOnInit(rt);
 #endif
 
-  blContextRtInit(rt);
+  blContextOnInit(rt);
 
   return BL_SUCCESS;
 }
@@ -264,6 +282,8 @@ BLResult blRuntimeShutdown() noexcept {
 
   rt->shutdownHandlers.callInReverseOrder(rt);
   rt->shutdownHandlers.reset();
+  rt->cleanupHandlers.reset();
+  rt->resourceInfoHandlers.reset();
 
   return BL_SUCCESS;
 }
@@ -306,10 +326,12 @@ BLResult blRuntimeQueryInfo(uint32_t infoType, void* infoOut) noexcept {
       return BL_SUCCESS;
     }
 
-    case BL_RUNTIME_INFO_TYPE_MEMORY: {
-      BLRuntimeMemoryInfo* memoryInfo = static_cast<BLRuntimeMemoryInfo*>(infoOut);
-      memoryInfo->reset();
-      rt->memoryInfoHandlers.call(rt, memoryInfo);
+    case BL_RUNTIME_INFO_TYPE_RESOURCE: {
+      BLRuntimeResourceInfo* resourceInfo = static_cast<BLRuntimeResourceInfo*>(infoOut);
+      resourceInfo->reset();
+      resourceInfo->fileHandleCount = blRuntimeResourceLiveInfo.fileHandleCount();
+      resourceInfo->fileMappingCount = blRuntimeResourceLiveInfo.fileMappingCount();
+      rt->resourceInfoHandlers.call(rt, resourceInfo);
       return BL_SUCCESS;
     }
 

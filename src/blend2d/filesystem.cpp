@@ -1,8 +1,25 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
 #include "./api-build_p.h"
 #include "./array_p.h"
@@ -10,6 +27,7 @@
 #include "./runtime_p.h"
 #include "./support_p.h"
 #include "./unicode_p.h"
+#include "./threading/atomic_p.h"
 
 #ifndef _WIN32
   #include <errno.h>
@@ -220,6 +238,7 @@ BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) 
 
   blFileClose(self);
   self->handle = intptr_t(handle);
+  blRuntimeResourceLiveInfo.incrementFileHandleCount();
 
   return BL_SUCCESS;
 }
@@ -233,6 +252,7 @@ BLResult blFileClose(BLFileCore* self) noexcept {
     BOOL result = CloseHandle(handle);
 
     self->handle = -1;
+    blRuntimeResourceLiveInfo.decrementFileHandleCount();
     if (!result)
       return blTraceError(blResultFromWinError(GetLastError()));
   }
@@ -429,6 +449,7 @@ BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) 
 
   blFileClose(self);
   self->handle = intptr_t(fd);
+  blRuntimeResourceLiveInfo.incrementFileHandleCount();
 
   return BL_SUCCESS;
 }
@@ -440,8 +461,9 @@ BLResult blFileClose(BLFileCore* self) noexcept {
 
     // NOTE: Even when `close()` fails the handle cannot be used again as it
     // could have already been reused. The failure is just to inform the user
-    // that something failed and that there may be data-loss.
+    // that something failed and that there may be data-loss or handle leakage.
     self->handle = -1;
+    blRuntimeResourceLiveInfo.decrementFileHandleCount();
 
     if (BL_UNLIKELY(result != 0))
       return blTraceError(blResultFromPosixError(errno));
@@ -607,10 +629,10 @@ BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept 
   // Succeeded, now is the time to change the content of `BLFileMapping`.
   unmap();
 
-  _file.handle = file.takeHandle();
   _fileMappingHandle = hFileMapping;
   _data = data;
   _size = size;
+  blRuntimeResourceLiveInfo.incrementFileMappingCount();
 
   return BL_SUCCESS;
 }
@@ -631,10 +653,10 @@ BLResult BLFileMapping::unmap() noexcept {
   if (err)
     result = blTraceError(blResultFromWinError(err));
 
-  blFileClose(&_file);
   _fileMappingHandle = INVALID_HANDLE_VALUE;
   _data = nullptr;
   _size = 0;
+  blRuntimeResourceLiveInfo.decrementFileMappingCount();
 
   return result;
 }
@@ -658,9 +680,10 @@ BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept 
   // Succeeded, now is the time to change the content of `BLFileMapping`.
   unmap();
 
-  _file.handle = file.takeHandle();
   _data = data;
   _size = size;
+  blRuntimeResourceLiveInfo.incrementFileMappingCount();
+
   return BL_SUCCESS;
 }
 
@@ -676,12 +699,10 @@ BLResult BLFileMapping::unmap() noexcept {
   if (unmapStatus != 0)
     result = blTraceError(blResultFromPosixError(errno));
 
-  BLResult result2 = blFileClose(&_file);
-  if (result == BL_SUCCESS)
-    result = result2;
-
   _data = nullptr;
   _size = 0;
+  blRuntimeResourceLiveInfo.decrementFileMappingCount();
+
   return result;
 }
 
@@ -748,7 +769,7 @@ static BLResult blFileSystemCreateMemoryMappedFile(BLArray<uint8_t>* dst, BLFile
 }
 
 // ============================================================================
-// [BLFileSystem]
+// [BLFileSystem - Read / Write File]
 // ============================================================================
 
 BLResult blFileSystemReadFile(const char* fileName, BLArrayCore* dst_, size_t maxSize, uint32_t readFlags) noexcept {

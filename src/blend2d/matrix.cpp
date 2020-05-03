@@ -1,8 +1,25 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
 #include "./api-build_p.h"
 #include "./math_p.h"
@@ -470,10 +487,10 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine(const BLMatrix2D* self, 
 BL_DIAGNOSTIC_POP
 
 // ============================================================================
-// [BLMatrix2D - Runtime Init]
+// [BLMatrix2D - Runtime]
 // ============================================================================
 
-void blMatrix2DRtInit(BLRuntimeContext* rt) noexcept {
+void blMatrix2DOnInit(BLRuntimeContext* rt) noexcept {
   #if !defined(BL_TARGET_OPT_SSE2)
   BL_UNUSED(rt);
   BLMapPointDArrayFunc* funcs = blMatrix2DMapPointDArrayFuncs;
@@ -487,11 +504,11 @@ void blMatrix2DRtInit(BLRuntimeContext* rt) noexcept {
   #endif
 
   #ifdef BL_BUILD_OPT_SSE2
-  if (blRuntimeHasSSE2(rt)) blMatrix2DRtInit_SSE2(rt);
+  if (blRuntimeHasSSE2(rt)) blMatrix2DOnInit_SSE2(rt);
   #endif
 
   #ifdef BL_BUILD_OPT_AVX
-  if (blRuntimeHasAVX(rt)) blMatrix2DRtInit_AVX(rt);
+  if (blRuntimeHasAVX(rt)) blMatrix2DOnInit_AVX(rt);
   #endif
 }
 

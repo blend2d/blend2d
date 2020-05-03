@@ -1,47 +1,83 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// ZLIB - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
 // This is an internal header file that is always included first by each source
 // file. This means that any macros we might need to define to build 'blend2d'
 // can be defined here instead of passing them to the compiler through command
 // line.
 
-#ifndef BLEND2D_API_BUILD_P_H
-#define BLEND2D_API_BUILD_P_H
+#ifndef BLEND2D_API_BUILD_P_H_INCLUDED
+#define BLEND2D_API_BUILD_P_H_INCLUDED
 
 // ============================================================================
 // [Build - Configuration]
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-// Disable most of compiler intrinsics used by Blend2D. Disabling them is only
-// useful for testing fallback functions as these intrinsics improve performance
-// in general.
+// #define BL_BUILD_NO_JIT
 //
+// Disables JIT pipeline generator. This should be turned off automatically by
+// Blend2D's CMakeLists.txt on architectures for which JIT compilatation is
+// either not available or not allowed.
+// ----------------------------------------------------------------------------
+
+// ----------------------------------------------------------------------------
+// #define BL_BUILD_NO_TLS
+//
+// Disables all use of thread_local feature. Provided for compatibility with
+// plataforms where thread local storage is either very expensive to use or
+// not supported at all.
+// ----------------------------------------------------------------------------
+
+// ----------------------------------------------------------------------------
 // #define BL_BUILD_NO_INTRINSICS
-// ----------------------------------------------------------------------------
-
-// ----------------------------------------------------------------------------
-// Disable built-in statistics that is used to trace `BLFont`, `BLImage`,
-// and `BLPath`, in addition to allocations that are normally available in
-// `BLRuntimeMemoryInfo` and can be queried through `BLRuntime`. These statistics
-// use atomic operations so there shouldn't be reason to disable them.
 //
-// #define BL_BUILD_NO_STATISTICS
+// Disable most of compiler intrinsics used by Blend2D. Disabling them is only
+// useful for testing fallback functions as otherwise there is no other way to
+// test them.
 // ----------------------------------------------------------------------------
 
-// Blend2D provides traces that can be enabled during development. Traces can
-// help to understand how certain things work and can be used to track bugs.
+// ----------------------------------------------------------------------------
+// #define BL_BUILD_NO_STDCXX
+//
+// Informs Blend2D that it's compiled without linking to the standard C++
+// library. This macro must be only defined by a build system that understands
+// what has to be done to make this possible.
+//
+// Please see CMakeLists.txt for more details.
+// ----------------------------------------------------------------------------
 
+// ----------------------------------------------------------------------------
 // #define BL_TRACE_OT_ALL          // Trace OpenType features (all).
 // #define BL_TRACE_OT_CFF          // Trace OpenType CFF|CFF2 ('CFF ', 'CFF2).
 // #define BL_TRACE_OT_CORE         // Trace OpenType core     ('OS/2', 'head', 'maxp', 'post').
 // #define BL_TRACE_OT_KERN         // Trace OpenType kerning  ('kern').
 // #define BL_TRACE_OT_LAYOUT       // Trace OpenType layout   ('BASE', 'GDEF', 'GPOS', 'GSUB', 'JSTF').
 // #define BL_TRACE_OT_NAME         // Trace OpenType name     ('name').
+//
+// Blend2D provides traces that can be enabled during development. Traces can
+// help to understand how certain things work and can be used to track bugs.
+// ----------------------------------------------------------------------------
 
 // ============================================================================
 // [Build - Requirements]
@@ -292,4 +328,4 @@
 #include "./api-impl.h"
 #include "./api-internal_p.h"
 
-#endif // BLEND2D_API_BUILD_P_H
+#endif // BLEND2D_API_BUILD_P_H_INCLUDED

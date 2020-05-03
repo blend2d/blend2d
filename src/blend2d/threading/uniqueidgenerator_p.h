@@ -21,27 +21,28 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#include <blend2d/api-build_p.h>
-#include <blend2d/runtime.h>
+#ifndef BLEND2D_THREADING_UNIQUEIDGENERATOR_P_H_INCLUDED
+#define BLEND2D_THREADING_UNIQUEIDGENERATOR_P_H_INCLUDED
+
+#include "../threading/atomic_p.h"
+
+//! \cond INTERNAL
+//! \addtogroup blend2d_internal
+//! \{
 
 // ============================================================================
-// [Main]
+// [blGenerateUniqueId]
 // ============================================================================
 
-int main(int argc, const char* argv[]) {
-  BLRuntimeBuildInfo buildInfo;
-  BLRuntime::queryBuildInfo(&buildInfo);
+enum BLUniqueIdDomain : uint32_t {
+  BL_UNIQUE_ID_DOMAIN_ANY = 0,
+  BL_UNIQUE_ID_DOMAIN_CONTEXT = 1,
+  BL_UNIQUE_ID_DOMAIN_COUNT
+};
 
-  INFO(
-    "Blend2D Unit Tests [use --help for command line options]\n"
-    "  Version    : %u.%u.%u\n"
-    "  Build Type : %s\n"
-    "  Compiled By: %s\n\n",
-    buildInfo.majorVersion,
-    buildInfo.minorVersion,
-    buildInfo.patchVersion,
-    buildInfo.buildType == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
-    buildInfo.compilerInfo);
+BL_HIDDEN BLUniqueId blGenerateUniqueId(uint32_t domain) noexcept;
 
-  return BrokenAPI::run(argc, argv);
-}
+//! \}
+//! \endcond
+
+#endif // BLEND2D_THREADING_UNIQUEIDGENERATOR_P_H_INCLUDED

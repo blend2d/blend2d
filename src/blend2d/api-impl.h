@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_API_IMPL_H
-#define BLEND2D_API_IMPL_H
+#ifndef BLEND2D_API_IMPL_H_INCLUDED
+#define BLEND2D_API_IMPL_H_INCLUDED
 
 #include "./api.h"
 #include "./variant.h"
@@ -32,18 +49,26 @@
 //!
 //! Atomically increments `n` to value `x`. The old value is returned.
 template<typename T>
-static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetchAdd(T* x, typename std::remove_volatile<T>::type n = 1) noexcept {
+static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetchAdd(
+  T* x,
+  typename std::remove_volatile<T>::type n = 1,
+  std::memory_order order = std::memory_order_relaxed) noexcept {
+
   typedef typename std::remove_volatile<T>::type RawT;
-  return ((std::atomic<RawT>*)x)->fetch_add(n, std::memory_order_relaxed);
+  return ((std::atomic<RawT>*)x)->fetch_add(n, order);
 }
 
 //! \ingroup blend2d_api_impl
 //!
 //! Atomically decrements `n` from value `x`. The old value is returned.
 template<typename T>
-static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetchSub(T* x, typename std::remove_volatile<T>::type n = 1) noexcept {
+static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetchSub(
+  T* x,
+  typename std::remove_volatile<T>::type n = 1,
+  std::memory_order order = std::memory_order_acq_rel) noexcept {
+
   typedef typename std::remove_volatile<T>::type RawT;
-  return ((std::atomic<RawT>*)x)->fetch_sub(n, std::memory_order_acq_rel);
+  return ((std::atomic<RawT>*)x)->fetch_sub(n, order);
 }
 
 //! \}
@@ -173,4 +198,4 @@ static BL_INLINE void blAssignFunc(T** dst, F f) noexcept { *(void**)dst = (void
 
 //! \}
 
-#endif // BLEND2D_API_IMPL_H
+#endif // BLEND2D_API_IMPL_H_INCLUDED

@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_GLYPHBUFFER_H
-#define BLEND2D_GLYPHBUFFER_H
+#ifndef BLEND2D_GLYPHBUFFER_H_INCLUDED
+#define BLEND2D_GLYPHBUFFER_H_INCLUDED
 
 #include "./fontdefs.h"
 
@@ -93,29 +110,49 @@ public:
   //! \name Accessors
   //! \{
 
+  BL_NODISCARD
   BL_INLINE bool empty() const noexcept { return impl->glyphRun.empty(); }
 
+  BL_NODISCARD
   BL_INLINE size_t size() const noexcept { return impl->size; }
+
+  BL_NODISCARD
   BL_INLINE uint32_t flags() const noexcept { return impl->flags; }
 
+  BL_NODISCARD
   BL_INLINE uint32_t* content() const noexcept { return impl->content; }
+
+  BL_NODISCARD
   BL_INLINE BLGlyphInfo* infoData() const noexcept { return impl->infoData; }
+
+  BL_NODISCARD
   BL_INLINE BLGlyphPlacement* placementData() const noexcept { return impl->placementData; }
 
+  BL_NODISCARD
   BL_INLINE const BLGlyphRun& glyphRun() const noexcept { return impl->glyphRun; }
 
   //! Tests whether the glyph-buffer has `flag` set.
+  BL_NODISCARD
   BL_INLINE bool hasFlag(uint32_t flag) const noexcept { return (impl->flags & flag) != 0; }
+
   //! Tests whether the buffer contains unicode data.
+  BL_NODISCARD
   BL_INLINE bool hasText() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
+
   //! Tests whether the buffer contains glyph-id data.
+  BL_NODISCARD
   BL_INLINE bool hasGlyphs() const noexcept { return !hasFlag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
 
   //! Tests whether the input string contained invalid characters (unicode encoding errors).
+  BL_NODISCARD
   BL_INLINE bool hasInvalidChars() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_INVALID_TEXT); }
+
   //! Tests whether the input string contained undefined characters that weren't mapped properly to glyphs.
+  BL_NODISCARD
   BL_INLINE bool hasUndefinedChars() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_UNDEFINED_GLYPHS); }
+
   //! Tests whether one or more operation was terminated before completion because of invalid data in a font.
+  BL_NODISCARD
   BL_INLINE bool hasInvalidFontData() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_INVALID_FONT_DATA); }
 
   //! \}
@@ -201,4 +238,4 @@ public:
 
 //! \}
 
-#endif // BLEND2D_GLYPHBUFFER_H
+#endif // BLEND2D_GLYPHBUFFER_H_INCLUDED

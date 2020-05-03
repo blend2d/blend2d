@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_VARIANT_H
-#define BLEND2D_VARIANT_H
+#ifndef BLEND2D_VARIANT_H_INCLUDED
+#define BLEND2D_VARIANT_H_INCLUDED
 
 #include "./api.h"
 
@@ -213,9 +230,11 @@ public:
   BL_INLINE BLVariant& operator=(const BLVariant& other) noexcept { blVariantAssignWeak(this, &other); return *this; }
 
   //! Tests whether the variant is a built-in null instance (of any impl-type).
+  BL_NODISCARD
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
   //! Returns the type of the object, see `BLImplType` for more details.
+  BL_NODISCARD
   BL_INLINE uint32_t implType() const noexcept { return impl->implType; }
 
   BL_INLINE BLResult reset() noexcept { return blVariantReset(this); }
@@ -225,12 +244,14 @@ public:
   BL_INLINE BLResult assign(BLVariant&& other) noexcept { return blVariantAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLVariant& other) noexcept { return blVariantAssignWeak(this, &other); }
 
+  BL_NODISCARD
   BL_INLINE bool equals(const BLVariant& other) const noexcept { return blVariantEquals(this, &other); }
 
+  BL_NODISCARD
   static BL_INLINE const BLVariant& none() noexcept { return reinterpret_cast<const BLVariant*>(blNone)[BL_IMPL_TYPE_NULL]; }
 };
 #endif
 
 //! \}
 
-#endif // BLEND2D_VARIANT_H
+#endif // BLEND2D_VARIANT_H_INCLUDED

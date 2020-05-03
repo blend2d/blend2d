@@ -1,14 +1,34 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_RUNTIME_P_H
-#define BLEND2D_RUNTIME_P_H
+#ifndef BLEND2D_RUNTIME_P_H_INCLUDED
+#define BLEND2D_RUNTIME_P_H_INCLUDED
 
 #include "./api-internal_p.h"
 #include "./runtime.h"
+#include "./threading/atomic_p.h"
+
+#include <atomic>
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -74,6 +94,44 @@ struct BLRuntimeOptimizationInfo {
 };
 
 // ============================================================================
+// [BLRuntime - Resource Live Info]
+// ============================================================================
+
+//! Live information that will be copied to BLRuntimeResourceInfo upon request.
+struct BLRuntimeResourceLiveInfo {
+  struct alignas(BL_CACHE_LINE_SIZE) {
+    volatile size_t _fileHandleCount;
+    volatile size_t _fileMappingCount;
+  };
+
+  BL_INLINE size_t fileHandleCount() const noexcept {
+    return blAtomicFetch(&_fileHandleCount, std::memory_order_relaxed);
+  }
+
+  BL_INLINE void incrementFileHandleCount() noexcept {
+    blAtomicFetchAdd(&_fileHandleCount, 1u, std::memory_order_relaxed);
+  }
+
+  BL_INLINE void decrementFileHandleCount() noexcept {
+    blAtomicFetchSub(&_fileHandleCount, 1u, std::memory_order_relaxed);
+  }
+
+  BL_INLINE size_t fileMappingCount() const noexcept {
+    return blAtomicFetch(&_fileMappingCount, std::memory_order_relaxed);
+  }
+
+  BL_INLINE void incrementFileMappingCount() noexcept {
+    blAtomicFetchAdd(&_fileMappingCount, 1u, std::memory_order_relaxed);
+  }
+
+  BL_INLINE void decrementFileMappingCount() noexcept {
+    blAtomicFetchSub(&_fileMappingCount, 1u, std::memory_order_relaxed);
+  }
+};
+
+BL_HIDDEN extern BLRuntimeResourceLiveInfo blRuntimeResourceLiveInfo;
+
+// ============================================================================
 // [BLRuntime - Context]
 // ============================================================================
 
@@ -87,7 +145,7 @@ struct BLRuntimeContext {
   //! Cleanup handler.
   typedef void (BL_CDECL* CleanupFunc)(BLRuntimeContext* rt, uint32_t cleanupFlags) BL_NOEXCEPT;
   //! MemoryInfo handler.
-  typedef void (BL_CDECL* MemoryInfoFunc)(BLRuntimeContext* rt, BLRuntimeMemoryInfo* memoryInfo) BL_NOEXCEPT;
+  typedef void (BL_CDECL* ResourceInfoFunc)(BLRuntimeContext* rt, BLRuntimeResourceInfo* resourceInfo) BL_NOEXCEPT;
 
   //! Counts how many times `blRuntimeInit()` has been called.
   //!
@@ -103,12 +161,12 @@ struct BLRuntimeContext {
   //! System information.
   BLRuntimeSystemInfo systemInfo;
 
-  //! Extended optimization information.
+  //! Optimization information.
   BLRuntimeOptimizationInfo optimizationInfo;
 
   // NOTE: There is only a limited number of handlers that can be added to the
   // context. The reason we do it this way is that for builds of Blend2D that
-  // have conditionally disabled some features it's easier to have only `RtInit()`
+  // have conditionally disabled some features it's easier to have only `OnInit()`
   // handlers and let them register cleanup/shutdown handlers when needed.
 
   //! Shutdown handlers (always traversed from last to first).
@@ -116,7 +174,7 @@ struct BLRuntimeContext {
   //! Cleanup handlers (always executed from first to last).
   BLFixedFuncArray<CleanupFunc, 8> cleanupHandlers;
   //! MemoryInfo handlers (always traversed from first to last).
-  BLFixedFuncArray<MemoryInfoFunc, 8> memoryInfoHandlers;
+  BLFixedFuncArray<ResourceInfoFunc, 8> resourceInfoHandlers;
 };
 
 //! Instance of a global runtime context.
@@ -195,35 +253,35 @@ BL_HIDDEN void BL_CDECL blRuntimeDummyDestroyImplFunc(void* impl, void* destroyD
 BL_HIDDEN BL_NORETURN void blRuntimeFailure(const char* fmt, ...) noexcept;
 
 // ============================================================================
-// [BLRuntime - Runtime Init]
+// [BLRuntime - Runtime]
 // ============================================================================
 
-BL_HIDDEN void blThreadRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blThreadPoolRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blZeroAllocatorRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blMatrix2DRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blArrayRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blStringRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blPathRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blRegionRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blImageRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blImageCodecRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blImageScalerRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blPatternRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blGradientRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blFontRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blFontManagerRtInit(BLRuntimeContext* rt) noexcept;
-BL_HIDDEN void blContextRtInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blThreadOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blThreadPoolOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blZeroAllocatorOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blMatrix2DOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blArrayOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blStringOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blPathOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blRegionOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blImageOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blImageCodecOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blImageScalerOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blPatternOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blGradientOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blFontOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blFontManagerOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blContextOnInit(BLRuntimeContext* rt) noexcept;
 
 #if !defined(BL_BUILD_NO_FIXED_PIPE)
-BL_HIDDEN void blFixedPipeRtInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blFixedPipeOnInit(BLRuntimeContext* rt) noexcept;
 #endif
 
 #if !defined(BL_BUILD_NO_JIT)
-BL_HIDDEN void blPipeGenRtInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blPipeGenOnInit(BLRuntimeContext* rt) noexcept;
 #endif
 
 //! \}
 //! \endcond
 
-#endif // BLEND2D_RUNTIME_P_H
+#endif // BLEND2D_RUNTIME_P_H_INCLUDED

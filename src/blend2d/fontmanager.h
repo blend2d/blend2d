@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_FONTMANAGER_H
-#define BLEND2D_FONTMANAGER_H
+#ifndef BLEND2D_FONTMANAGER_H_INCLUDED
+#define BLEND2D_FONTMANAGER_H_INCLUDED
 
 #include "./font.h"
 #include "./string.h"
@@ -49,7 +66,7 @@ struct BLFontManagerCore {
 // ============================================================================
 
 #ifdef __cplusplus
-//! Font data [C++ API].
+//! Font manager [C++ API].
 class BLFontManager : public BLFontManagerCore {
 public:
   //! \cond INTERNAL
@@ -70,8 +87,6 @@ public:
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
-
   BL_INLINE BLFontManager& operator=(BLFontManager&& other) noexcept { blFontManagerAssignMove(this, &other); return *this; }
   BL_INLINE BLFontManager& operator=(const BLFontManager& other) noexcept { blFontManagerAssignWeak(this, &other); return *this; }
 
@@ -90,10 +105,10 @@ public:
   BL_INLINE BLResult assign(const BLFontManager& other) noexcept { return blFontManagerAssignWeak(this, &other); }
 
   //! Tests whether the font-data is a built-in null instance.
+  BL_NODISCARD
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Tests whether the font-data is empty (which the same as `isNone()` in this case).
-  BL_INLINE bool empty() const noexcept { return isNone(); }
 
+  BL_NODISCARD
   BL_INLINE bool equals(const BLFontManager& other) const noexcept { return blFontManagerEquals(this, &other); }
 
   //! \}
@@ -101,22 +116,82 @@ public:
   //! \name Create Functionality
   //! \{
 
+  BL_INLINE BLResult create() noexcept { return blFontManagerCreate(this); }
+
   //! \}
 
-  //! \name Query Functionality
+  //! Returns the number of BLFontFace instances the font manager holds.
+  BL_NODISCARD
+  BL_INLINE size_t faceCount() const noexcept { return blFontManagerGetFaceCount(this); }
+
+  //! Returns the number of unique font families the font manager holds.
+  BL_NODISCARD
+  BL_INLINE size_t familyCount() const noexcept { return blFontManagerGetFamilyCount(this); }
+
+  //! \name Face Management
   //! \{
 
+  //! Tests whether the font manager contains the given font `face`.
+  BL_NODISCARD
+  BL_INLINE bool hasFace(const BLFontFace& face) const noexcept {
+    return blFontManagerHasFace(this, &face);
+  }
+
+  //! Adds a font `face` to the font manager.
+  //!
+  //! Important conditions:
+  //!   * `BL_SUCCESS` is returned if the `face` was successfully added to font
+  //!     manager or if font manager already held it.
+  //!   * `BL_ERROR_FONT_NOT_INITIALIZED` is returned if the font `face` is invalid.
+  //!   * `BL_ERROR_OUT_OF_MEMORY` is returned if memory allocation failed.
+  BL_INLINE BLResult addFace(const BLFontFace& face) noexcept {
+    return blFontManagerAddFace(this, &face);
+  }
+
+  //! Queries a font face by family `name` and stores the result to `out`.
+  BL_INLINE BLResult queryFace(const char* name, BLFontFace& out) const noexcept {
+    return blFontManagerQueryFace(this, name, SIZE_MAX, nullptr, &out);
+  }
+
+  //! \overload
+  BL_INLINE BLResult queryFace(const BLStringView& name, BLFontFace& out) const noexcept {
+    return blFontManagerQueryFace(this, name.data, name.size, nullptr, &out);
+  }
+
+  //! Queries a font face by family `name` and stores the result to `out`.
+  //!
+  //! A `properties` parameter contains query properties that the query engine
+  //! will consider when doing the match. The best candidate will be selected
+  //! based on the following rules:
+  //!
+  //!   * Style has the highest priority.
+  //!   * Weight has the lowest priority.
+  BL_INLINE BLResult queryFace(const char* name, const BLFontQueryProperties& properties, BLFontFace& out) const noexcept {
+    return blFontManagerQueryFace(this, name, SIZE_MAX, &properties, &out);
+  }
+
+  //! \overload
+  BL_INLINE BLResult queryFace(const BLStringView& name, const BLFontQueryProperties& properties, BLFontFace& out) const noexcept {
+    return blFontManagerQueryFace(this, name.data, name.size, &properties, &out);
+  }
+
+  //! Queries all font-faces by family `name` and stores the result to `out`.
+  BL_INLINE BLResult queryFacesByFamilyName(const char* name, BLArray<BLFontFace>& out) const noexcept {
+    return blFontManagerQueryFacesByFamilyName(this, name, SIZE_MAX, &out);
+  }
+
+  //! \overload
+  BL_INLINE BLResult queryFacesByFamilyName(const BLStringView& name, BLArray<BLFontFace>& out) const noexcept {
+    return blFontManagerQueryFacesByFamilyName(this, name.data, name.size, &out);
+  }
+
   //! \}
 
-  //! \name Accessors
-  //! \{
-
-  //! \}
-
+  BL_NODISCARD
   static BL_INLINE const BLFontManager& none() noexcept { return reinterpret_cast<const BLFontManager*>(blNone)[kImplType]; }
 };
 #endif
 
 //! \}
 
-#endif // BLEND2D_FONTMANAGER_H
+#endif // BLEND2D_FONTMANAGER_H_INCLUDED

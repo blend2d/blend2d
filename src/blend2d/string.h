@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_STRING_H
-#define BLEND2D_STRING_H
+#ifndef BLEND2D_STRING_H_INCLUDED
+#define BLEND2D_STRING_H_INCLUDED
 
 #include "./variant.h"
 
@@ -88,6 +105,25 @@ public:
   //! \note The reference count of the passed `impl` is not increased.
   BL_INLINE explicit BLString(BLStringImpl* impl) noexcept { this->impl = impl; }
 
+  //! Constructor that creates a string from the given data specified by `str`
+  //! and `size`. If `size` is `SIZE_MAX` the string is assumed to be null
+  //! terminated.
+  //!
+  //! This is a convenience function that doesn't provide error handling. The
+  //! only way to check whether the string allocation failed is to call `isNone()`
+  //! after the string has been constructed. If `size` is non-zero and `isNone()`
+  //! returns true then the initialization failed on out of memory condition.
+  BL_INLINE explicit BLString(const char* str, size_t size = SIZE_MAX) noexcept {
+    blStringInitWithData(this, str, size);
+  }
+
+  //! Constructor that creates a string from the given string `view`.
+  //!
+  //! \note See other constructors for more details.
+  BL_INLINE explicit BLString(const BLStringView& view) noexcept {
+    blStringInitWithData(this, view.data, view.size);
+  }
+
   //! Destroys the string.
   BL_INLINE ~BLString() noexcept { blStringDestroy(this); }
 
@@ -109,30 +145,31 @@ public:
   //! Copy assignment, performs weak copy of the data held by the `other` string.
   BL_INLINE BLString& operator=(const BLString& other) noexcept { blStringAssignWeak(this, &other); return *this; }
 
-  BL_INLINE bool operator==(const BLString& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLString& other) const noexcept { return !equals(other); }
-  BL_INLINE bool operator< (const BLString& other) const noexcept { return compare(other) <  0; }
-  BL_INLINE bool operator<=(const BLString& other) const noexcept { return compare(other) <= 0; }
-  BL_INLINE bool operator> (const BLString& other) const noexcept { return compare(other) >  0; }
-  BL_INLINE bool operator>=(const BLString& other) const noexcept { return compare(other) >= 0; }
+  BL_NODISCARD BL_INLINE bool operator==(const BLString& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE bool operator!=(const BLString& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE bool operator< (const BLString& other) const noexcept { return compare(other) <  0; }
+  BL_NODISCARD BL_INLINE bool operator<=(const BLString& other) const noexcept { return compare(other) <= 0; }
+  BL_NODISCARD BL_INLINE bool operator> (const BLString& other) const noexcept { return compare(other) >  0; }
+  BL_NODISCARD BL_INLINE bool operator>=(const BLString& other) const noexcept { return compare(other) >= 0; }
 
-  BL_INLINE bool operator==(const BLStringView& view) const noexcept { return  equals(view); }
-  BL_INLINE bool operator!=(const BLStringView& view) const noexcept { return !equals(view); }
-  BL_INLINE bool operator< (const BLStringView& view) const noexcept { return compare(view) <  0; }
-  BL_INLINE bool operator<=(const BLStringView& view) const noexcept { return compare(view) <= 0; }
-  BL_INLINE bool operator> (const BLStringView& view) const noexcept { return compare(view) >  0; }
-  BL_INLINE bool operator>=(const BLStringView& view) const noexcept { return compare(view) >= 0; }
+  BL_NODISCARD BL_INLINE bool operator==(const BLStringView& view) const noexcept { return  equals(view); }
+  BL_NODISCARD BL_INLINE bool operator!=(const BLStringView& view) const noexcept { return !equals(view); }
+  BL_NODISCARD BL_INLINE bool operator< (const BLStringView& view) const noexcept { return compare(view) <  0; }
+  BL_NODISCARD BL_INLINE bool operator<=(const BLStringView& view) const noexcept { return compare(view) <= 0; }
+  BL_NODISCARD BL_INLINE bool operator> (const BLStringView& view) const noexcept { return compare(view) >  0; }
+  BL_NODISCARD BL_INLINE bool operator>=(const BLStringView& view) const noexcept { return compare(view) >= 0; }
 
-  BL_INLINE bool operator==(const char* str) const noexcept { return  equals(str); }
-  BL_INLINE bool operator!=(const char* str) const noexcept { return !equals(str); }
-  BL_INLINE bool operator< (const char* str) const noexcept { return compare(str) <  0; }
-  BL_INLINE bool operator<=(const char* str) const noexcept { return compare(str) <= 0; }
-  BL_INLINE bool operator> (const char* str) const noexcept { return compare(str) >  0; }
-  BL_INLINE bool operator>=(const char* str) const noexcept { return compare(str) >= 0; }
+  BL_NODISCARD BL_INLINE bool operator==(const char* str) const noexcept { return  equals(str); }
+  BL_NODISCARD BL_INLINE bool operator!=(const char* str) const noexcept { return !equals(str); }
+  BL_NODISCARD BL_INLINE bool operator< (const char* str) const noexcept { return compare(str) <  0; }
+  BL_NODISCARD BL_INLINE bool operator<=(const char* str) const noexcept { return compare(str) <= 0; }
+  BL_NODISCARD BL_INLINE bool operator> (const char* str) const noexcept { return compare(str) >  0; }
+  BL_NODISCARD BL_INLINE bool operator>=(const char* str) const noexcept { return compare(str) >= 0; }
 
   //! Returns a character at the given `index`.
   //!
   //! \note This is the same as calling `at(index)`.
+  BL_NODISCARD
   BL_INLINE const char& operator[](size_t index) const noexcept { return at(index); }
 
   //! \}
@@ -179,6 +216,7 @@ public:
   //! Tests whether the string is empty (has no content).
   //!
   //! Returns `true` if the string's length is zero.
+  BL_NODISCARD
   BL_INLINE bool empty() const noexcept { return impl->size == 0; }
 
   //! \}
@@ -190,25 +228,37 @@ public:
   //!
   //! \note Index must be valid and cannot be out of bounds, otherwise the
   //! result is undefined and would trigger an assertion failure in debug mode.
+  BL_NODISCARD
   BL_INLINE const char& at(size_t index) const noexcept {
     BL_ASSERT(index < size());
     return data()[index];
   }
 
   //! Returns the size of the string [in bytes].
+  BL_NODISCARD
   BL_INLINE size_t size() const noexcept { return impl->size; }
+
   //! Returns the capacity of the string [in bytes].
+  BL_NODISCARD
   BL_INLINE size_t capacity() const noexcept { return impl->capacity; }
 
-  //! Returns a read-only data of the string.
+  //! Returns a pointer to the data of the string.
+  BL_NODISCARD
   BL_INLINE const char* data() const noexcept { return impl->data; }
-  //! Returns the end of the string data.
+
+  //! Returns a pointer to the beginning of string data (iterator compatibility).
+  BL_NODISCARD
+  BL_INLINE const char* begin() const noexcept { return impl->data + impl->size; }
+
+  //! Returns a pointer to the end of string data (iterator compatibility).
   //!
   //! The returned pointer points to the null terminator, the data still can
   //! be read, but it's not considered as string data by Blend2D anymore.
+  BL_NODISCARD
   BL_INLINE const char* end() const noexcept { return impl->data + impl->size; }
 
   //! Returns the content of the string as `BLStringView`.
+  BL_NODISCARD
   BL_INLINE const BLStringView& view() const noexcept { return impl->view; }
 
   //! \}
@@ -270,17 +320,27 @@ public:
   //! \{
 
   //! Returns whether this string and `other` are equal (i.e. their contents match).
+  BL_NODISCARD
   BL_INLINE bool equals(const BLString& other) const noexcept { return blStringEquals(this, &other); }
+
   //! Returns whether this string and other string `view` are equal.
+  BL_NODISCARD
   BL_INLINE bool equals(const BLStringView& view) const noexcept { return blStringEqualsData(this, view.data, view.size); }
+
   //! Returns whether this string and the given string data `str` of length `n` are equal.
+  BL_NODISCARD
   BL_INLINE bool equals(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringEqualsData(this, str, n); }
 
   //! Compares this string with `other` and returns either `-1`, `0`, or `1`.
+  BL_NODISCARD
   BL_INLINE int compare(const BLString& other) const noexcept { return blStringCompare(this, &other); }
+
   //! Compares this string with other string `view` and returns either `-1`, `0`, or `1`.
+  BL_NODISCARD
   BL_INLINE int compare(const BLStringView& view) const noexcept { return blStringCompareData(this, view.data, view.size); }
+
   //! Compares this string with other string data and returns either `-1`, `0`, or `1`.
+  BL_NODISCARD
   BL_INLINE int compare(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringCompareData(this, str, n); }
 
   //! \}
@@ -290,12 +350,14 @@ public:
 
   //! Returns the first index at which a given character `c` can be found in
   //! the string, or `SIZE_MAX` if not present.
+  BL_NODISCARD
   BL_INLINE size_t indexOf(char c) const noexcept {
     return indexOf(c, 0);
   }
 
   //! Returns the index at which a given character `c` can be found in
   //! the string starting from `fromIndex`, or `SIZE_MAX` if not present.
+  BL_NODISCARD
   BL_INLINE size_t indexOf(char c, size_t fromIndex) const noexcept {
     const char* p = data();
     size_t iEnd = size();
@@ -309,6 +371,7 @@ public:
 
   //! Returns the last index at which a given character `c` can be found in
   //! the string, or `SIZE_MAX` if not present.
+  BL_NODISCARD
   BL_INLINE size_t lastIndexOf(char c) const noexcept {
     const char* p = data();
     size_t i = size();
@@ -322,6 +385,7 @@ public:
   //! Returns the index at which a given character `c` can be found in
   //! the string starting from `fromIndex` and ending at `0`, or `SIZE_MAX`
   //! if not present.
+  BL_NODISCARD
   BL_INLINE size_t lastIndexOf(char c, size_t fromIndex) const noexcept {
     const char* p = data();
     size_t i = size() - 1;
@@ -338,10 +402,11 @@ public:
 
   //! \}
 
+  BL_NODISCARD
   static BL_INLINE const BLString& none() noexcept { return reinterpret_cast<const BLString*>(blNone)[kImplType]; }
 };
 #endif
 
 //! \}
 
-#endif // BLEND2D_STRING_H
+#endif // BLEND2D_STRING_H_INCLUDED

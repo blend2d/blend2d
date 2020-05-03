@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_FILESYSTEM_P_H
-#define BLEND2D_FILESYSTEM_P_H
+#ifndef BLEND2D_FILESYSTEM_P_H_INCLUDED
+#define BLEND2D_FILESYSTEM_P_H_INCLUDED
 
 #include "./filesystem.h"
 
@@ -27,44 +44,40 @@ class BLFileMapping {
 public:
   BL_NONCOPYABLE(BLFileMapping)
 
-  BLFileCore _file;
+  void* _data;
+  size_t _size;
+
 #if defined(_WIN32)
   HANDLE _fileMappingHandle;
 #endif
-
-  void* _data;
-  size_t _size;
 
   // --------------------------------------------------------------------------
   // [Construction / Destruction]
   // --------------------------------------------------------------------------
 
   BL_INLINE BLFileMapping() noexcept
-    : _file{-1},
+    : _data(nullptr),
+      _size(0)
 #if defined(_WIN32)
-      _fileMappingHandle(INVALID_HANDLE_VALUE),
+      , _fileMappingHandle(INVALID_HANDLE_VALUE)
 #endif
-      _data(nullptr),
-      _size(0) {}
+  {}
 
   BL_INLINE BLFileMapping(BLFileMapping&& other) noexcept {
-    BLFileCore file = other._file;
-    other._file.handle = -1;
-    this->_file.handle = file.handle;
+    void* data = other._data;
+    size_t size = other._size;
+
+    other._data = nullptr;
+    other._size = 0;
+
+    this->_data = data;
+    this->_size = size;
 
 #if defined(_WIN32)
     HANDLE fileMappingHandle = other._fileMappingHandle;
     other._fileMappingHandle = INVALID_HANDLE_VALUE;
     this->_fileMappingHandle = fileMappingHandle;
 #endif
-
-    void* data = other._data;
-    other._data = nullptr;
-    this->_data = data;
-
-    size_t size = other._size;
-    other._size = 0;
-    this->_size = size;
   }
 
   BL_INLINE ~BLFileMapping() noexcept { unmap(); }
@@ -73,24 +86,27 @@ public:
   // [Accessors]
   // --------------------------------------------------------------------------
 
-  //! Returns whether the mapping is empty (i.e. not fille has been mapped).
+  //! Returns whether the mapping is empty (i.e. not file has been mapped).
+  BL_NODISCARD
   BL_INLINE bool empty() const noexcept { return _size == 0; }
 
   //! Returns mapped data casted to `T`.
   template<typename T = void>
+  BL_NODISCARD
   BL_INLINE T* data() noexcept { return static_cast<T*>(_data); }
+
   //! Returns mapped data casted to `T` (const).
   template<typename T = void>
+  BL_NODISCARD
   BL_INLINE const T* data() const noexcept { return static_cast<const T*>(_data); }
 
   //! Returns the size of the mapped data.
+  BL_NODISCARD
   BL_INLINE size_t size() const noexcept { return _size; }
 
-  //! Returns the associated file with the mapping.
-  BL_INLINE BLFile& file() noexcept { return blDownCast(_file); }
-
 #if defined(_WIN32)
-  //! Returns a Windows-specific HANDLE of file mapping.
+  //! Returns a Windows-specific HANDLE of the mapped object.
+  BL_NODISCARD
   BL_INLINE HANDLE fileMappingHandle() const noexcept { return _fileMappingHandle; }
 #endif
 
@@ -109,28 +125,24 @@ public:
   // --------------------------------------------------------------------------
 
   BL_INLINE BLFileMapping& operator=(BLFileMapping&& other) noexcept {
-    BLFileCore file = other._file;
-    other._file.handle = -1;
+    void* data = other._data;
+    size_t size = other._size;
+
+    other._data = nullptr;
+    other._size = 0;
 
 #if defined(_WIN32)
     HANDLE fileMappingHandle = other._fileMappingHandle;
     other._fileMappingHandle = INVALID_HANDLE_VALUE;
 #endif
 
-    void* data = other._data;
-    other._data = nullptr;
-
-    size_t size = other._size;
-    other._size = 0;
-
     unmap();
 
-    this->_file.handle = file.handle;
+    this->_data = data;
+    this->_size = size;
 #if defined(_WIN32)
     this->_fileMappingHandle = fileMappingHandle;
 #endif
-    this->_data = data;
-    this->_size = size;
 
     return *this;
   }
@@ -139,4 +151,4 @@ public:
 //! \}
 //! \endcond
 
-#endif // BLEND2D_FILESYSTEM_P_H
+#endif // BLEND2D_FILESYSTEM_P_H_INCLUDED

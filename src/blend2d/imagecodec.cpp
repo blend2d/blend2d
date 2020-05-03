@@ -1,8 +1,25 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
 #include "./api-build_p.h"
 #include "./array_p.h"
@@ -385,16 +402,16 @@ static BLResult BL_CDECL blImageEncoderImplWriteFrame(BLImageEncoderImpl* impl, 
 BL_DIAGNOSTIC_POP
 
 // ============================================================================
-// [BLImageCodec - Runtime Init]
+// [BLImageCodec - Runtime]
 // ============================================================================
 
-static void BL_CDECL blImageCodecRtShutdown(BLRuntimeContext* rt) noexcept {
+static void BL_CDECL blImageCodecOnShutdown(BLRuntimeContext* rt) noexcept {
   BL_UNUSED(rt);
   blImageCodecs.destroy();
   blImageCodecsMutex.destroy();
 }
 
-void blImageCodecRtInit(BLRuntimeContext* rt) noexcept {
+void blImageCodecOnInit(BLRuntimeContext* rt) noexcept {
   blImageCodecsMutex.init();
 
   BLImageCodecVirt* codecV = &blNullImageCodecVirt;
@@ -437,15 +454,15 @@ void blImageCodecRtInit(BLRuntimeContext* rt) noexcept {
 
   // Register built-in codecs.
   BLArray<BLImageCodec>* codecs = blImageCodecs.init();
-  BLImageCodecCore bmpCodec { blBmpCodecRtInit(rt) };
-  BLImageCodecCore jpegCodec { blJpegCodecRtInit(rt) };
-  BLImageCodecCore pngCodec { blPngCodecRtInit(rt) };
+  BLImageCodecCore bmpCodec { blBmpCodecOnInit(rt) };
+  BLImageCodecCore jpegCodec { blJpegCodecOnInit(rt) };
+  BLImageCodecCore pngCodec { blPngCodecOnInit(rt) };
 
   codecs->append(blDownCast(bmpCodec));
   codecs->append(blDownCast(jpegCodec));
   codecs->append(blDownCast(pngCodec));
 
-  rt->shutdownHandlers.add(blImageCodecRtShutdown);
+  rt->shutdownHandlers.add(blImageCodecOnShutdown);
 }
 
 // ============================================================================

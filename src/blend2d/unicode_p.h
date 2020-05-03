@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_UNICODE_P_H
-#define BLEND2D_UNICODE_P_H
+#ifndef BLEND2D_UNICODE_P_H_INCLUDED
+#define BLEND2D_UNICODE_P_H_INCLUDED
 
 #include "./support_p.h"
 
@@ -67,46 +84,57 @@ enum BLUnicodeIOFlags : uint32_t {
 namespace {
 
 template<typename T>
+BL_NODISCARD
 BL_INLINE uint32_t blUtf8CharSize(const T& c) noexcept {
   typedef typename std::make_unsigned<T>::type U;
   return blUtf8SizeData[U(c)];
 }
 
 template<typename T>
+BL_NODISCARD
 BL_INLINE bool blIsValidUtf8(const T& c) noexcept {
   typedef typename std::make_unsigned<T>::type U;
   return U(c) < 128 || (U(c) - U(194) < U(245 - 194));
 }
 
 template<typename T>
+BL_NODISCARD
 constexpr bool blIsAsciiAlpha(const T& x) noexcept { return T(x | 0x20) >= T('a') && T(x | 0x20) <= T('z'); }
 
 template<typename T>
+BL_NODISCARD
 constexpr bool blIsAsciiDigit(const T& x) noexcept { return x >= T('0') && x <= T('9'); }
 
 template<typename T>
+BL_NODISCARD
 constexpr bool blIsAsciiAlnum(const T& x) noexcept { return blIsAsciiAlpha(x) || (x >= T('0') && x <= T('9')); }
 
 template<typename T>
+BL_NODISCARD
 constexpr T blAsciiToLower(const T& x) noexcept { return x >= T('A') && x <= T('Z') ? T(x |  T(0x20)) : x; }
 
 template<typename T>
+BL_NODISCARD
 constexpr T blAsciiToUpper(const T& x) noexcept { return x >= T('a') && x <= T('z') ? T(x & ~T(0x20)) : x; }
 
 //! Tests whether the unicode character `uc` is high or low surrogate.
 template<typename T>
+BL_NODISCARD
 constexpr bool blIsSurrogate(const T& uc) noexcept { return uc >= BL_CHAR_SURROGATE_FIRST && uc <= BL_CHAR_SURROGATE_LAST; }
 
 //! Tests whether the unicode character `uc` is a high (leading) surrogate.
 template<typename T>
+BL_NODISCARD
 constexpr bool blIsHiSurrogate(const T& uc) noexcept { return uc >= BL_CHAR_HI_SURROGATE_FIRST && uc <= BL_CHAR_HI_SURROGATE_LAST; }
 
 //! Tests whether the unicode character `uc` is a low (trailing) surrogate.
 template<typename T>
+BL_NODISCARD
 constexpr bool blIsLoSurrogate(const T& uc) noexcept { return uc >= BL_CHAR_LO_SURROGATE_FIRST && uc <= BL_CHAR_LO_SURROGATE_LAST; }
 
 //! Composes `hi` and `lo` surrogates into a unicode code-point.
 template<typename T>
+BL_NODISCARD
 constexpr uint32_t blCharFromSurrogate(const T& hi, const T& lo) noexcept {
   return (uint32_t(hi) << 10) + uint32_t(lo) - uint32_t((BL_CHAR_SURROGATE_FIRST << 10) + BL_CHAR_LO_SURROGATE_FIRST - 0x10000u);
 }
@@ -205,13 +233,25 @@ public:
     _utf16SurrogateCount = 0;
   }
 
+  BL_NODISCARD
   BL_INLINE bool hasNext() const noexcept { return _ptr != _end; }
+
+  BL_NODISCARD
   BL_INLINE size_t remainingByteSize() const noexcept { return (size_t)(_end - _ptr); }
 
+  BL_NODISCARD
   BL_INLINE size_t byteIndex(const void* start) const noexcept { return (size_t)(_ptr - static_cast<const char*>(start)); }
+
+  BL_NODISCARD
   BL_INLINE size_t utf8Index(const void* start) const noexcept { return byteIndex(start); }
+
+  BL_NODISCARD
   BL_INLINE size_t utf16Index(const void* start) const noexcept { return utf32Index(start) + _utf16SurrogateCount; }
+
+  BL_NODISCARD
   BL_INLINE size_t utf32Index(const void* start) const noexcept { return byteIndex(start) - _utf32IndexSubtract; }
+
+  BL_NODISCARD
   BL_INLINE size_t nativeIndex(const void* start) const noexcept { return utf8Index(start); }
 
   template<uint32_t Flags = 0>
@@ -325,6 +365,7 @@ TruncatedString:
   }
 
   template<uint32_t Flags = 0>
+  BL_NODISCARD
   BL_INLINE BLResult validate() noexcept {
     BLResult result = BL_SUCCESS;
     while (hasNext()) {
@@ -371,13 +412,25 @@ public:
   // [Accessors]
   // --------------------------------------------------------------------------
 
+  BL_NODISCARD
   BL_INLINE bool hasNext() const noexcept { return _ptr != _end; }
+
+  BL_NODISCARD
   BL_INLINE size_t remainingByteSize() const noexcept { return (size_t)(_end - _ptr); }
 
+  BL_NODISCARD
   BL_INLINE size_t byteIndex(const void* start) const noexcept { return (size_t)(_ptr - static_cast<const char*>(start)); }
+
+  BL_NODISCARD
   BL_INLINE size_t utf8Index(const void* start) const noexcept { return utf16Index(start) + _utf8IndexAdd; }
+
+  BL_NODISCARD
   BL_INLINE size_t utf16Index(const void* start) const noexcept { return byteIndex(start) / 2u; }
+
+  BL_NODISCARD
   BL_INLINE size_t utf32Index(const void* start) const noexcept { return utf16Index(start) - _utf16SurrogateCount; }
+
+  BL_NODISCARD
   BL_INLINE size_t nativeIndex(const void* start) const noexcept { return utf16Index(start); }
 
   // --------------------------------------------------------------------------
@@ -455,6 +508,7 @@ TruncatedString:
   // --------------------------------------------------------------------------
 
   template<uint32_t Flags = 0>
+  BL_NODISCARD
   BL_INLINE BLResult validate() noexcept {
     BLResult result = BL_SUCCESS;
     while (hasNext()) {
@@ -471,6 +525,7 @@ TruncatedString:
   // --------------------------------------------------------------------------
 
   template<uint32_t Flags = 0>
+  BL_NODISCARD
   static BL_INLINE uint32_t readU16(const char* ptr) noexcept {
     constexpr uint32_t kByteOrder = Flags & BL_UNICODE_IO_BYTE_SWAP ? BL_BYTE_ORDER_SWAPPED : BL_BYTE_ORDER_NATIVE;
     constexpr uint32_t kAlignment = Flags & BL_UNICODE_IO_UNALIGNED ? 1 : 2;
@@ -504,13 +559,25 @@ public:
     _utf16SurrogateCount = 0;
   }
 
+  BL_NODISCARD
   BL_INLINE bool hasNext() const noexcept { return _ptr != _end; }
+
+  BL_NODISCARD
   BL_INLINE size_t remainingByteSize() const noexcept { return (size_t)(_end - _ptr); }
 
+  BL_NODISCARD
   BL_INLINE size_t byteIndex(const void* start) const noexcept { return (size_t)(_ptr - static_cast<const char*>(start)); }
+
+  BL_NODISCARD
   BL_INLINE size_t utf8Index(const void* start) const noexcept { return utf32Index(start) + _utf16SurrogateCount + _utf8IndexAdd; }
+
+  BL_NODISCARD
   BL_INLINE size_t utf16Index(const void* start) const noexcept { return utf32Index(start) + _utf16SurrogateCount; }
+
+  BL_NODISCARD
   BL_INLINE size_t utf32Index(const void* start) const noexcept { return byteIndex(start) / 4u; }
+
+  BL_NODISCARD
   BL_INLINE size_t nativeIndex(const void* start) const noexcept { return utf32Index(start); }
 
   template<uint32_t Flags = 0>
@@ -546,6 +613,7 @@ public:
   }
 
   template<uint32_t Flags = 0>
+  BL_NODISCARD
   BL_INLINE BLResult validate() noexcept {
     BLResult result = BL_SUCCESS;
     while (hasNext()) {
@@ -558,6 +626,7 @@ public:
   }
 
   template<uint32_t Flags = 0>
+  BL_NODISCARD
   static BL_INLINE uint32_t readU32(const char* ptr) noexcept {
     constexpr uint32_t kByteOrder = Flags & BL_UNICODE_IO_BYTE_SWAP ? BL_BYTE_ORDER_SWAPPED : BL_BYTE_ORDER_NATIVE;
     constexpr uint32_t kAlignment = Flags & BL_UNICODE_IO_UNALIGNED ? 1 : 4;
@@ -586,11 +655,13 @@ public:
     _end = dst + size;
   }
 
-  BL_INLINE size_t index(const char* start) const noexcept {
-    return (size_t)(_ptr - start);
-  }
+  BL_NODISCARD
+  BL_INLINE size_t index(const char* start) const noexcept { return (size_t)(_ptr - start); }
 
+  BL_NODISCARD
   BL_INLINE bool atEnd() const noexcept { return _ptr == _end; }
+
+  BL_NODISCARD
   BL_INLINE size_t remainingSize() const noexcept { return (size_t)(_end - _ptr); }
 
   BL_INLINE BLResult write(uint32_t uc) noexcept {
@@ -736,11 +807,13 @@ public:
     _end = dst + size;
   }
 
-  BL_INLINE size_t index(const uint16_t* start) const noexcept {
-    return (size_t)(_ptr - start);
-  }
+  BL_NODISCARD
+  BL_INLINE size_t index(const uint16_t* start) const noexcept { return (size_t)(_ptr - start); }
 
+  BL_NODISCARD
   BL_INLINE bool atEnd() const noexcept { return _ptr == _end; }
+
+  BL_NODISCARD
   BL_INLINE size_t remainingSize() const noexcept { return (size_t)(_end - _ptr); }
 
   BL_INLINE BLResult write(uint32_t uc) noexcept {
@@ -831,11 +904,13 @@ public:
     _end = dst + size;
   }
 
-  BL_INLINE size_t index(const uint32_t* start) const noexcept {
-    return (size_t)(_ptr - start);
-  }
+  BL_NODISCARD
+  BL_INLINE size_t index(const uint32_t* start) const noexcept { return (size_t)(_ptr - start); }
 
+  BL_NODISCARD
   BL_INLINE bool atEnd() const noexcept { return _ptr == _end; }
+
+  BL_NODISCARD
   BL_INLINE size_t remainingSize() const noexcept { return (size_t)(_end - _ptr); }
 
   BL_INLINE BLResult write(uint32_t uc) noexcept {
@@ -855,4 +930,4 @@ public:
 //! \}
 //! \endcond
 
-#endif // BLEND2D_UNICODE_P_H
+#endif // BLEND2D_UNICODE_P_H_INCLUDED

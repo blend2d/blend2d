@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_PATH_H
-#define BLEND2D_PATH_H
+#ifndef BLEND2D_PATH_H_INCLUDED
+#define BLEND2D_PATH_H_INCLUDED
 
 #include "./array.h"
 #include "./geometry.h"
@@ -366,8 +383,8 @@ public:
   BL_INLINE BLPath& operator=(BLPath&& other) noexcept { blPathAssignMove(this, &other); return *this; }
   BL_INLINE BLPath& operator=(const BLPath& other) noexcept { blPathAssignWeak(this, &other); return *this; }
 
-  BL_INLINE bool operator==(const BLPath& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLPath& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE bool operator==(const BLPath& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE bool operator!=(const BLPath& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -382,8 +399,11 @@ public:
   BL_INLINE BLResult assignDeep(const BLPath& other) noexcept { return blPathAssignDeep(this, &other); }
 
   //! Tests whether the 2D path is a built-in null instance.
+  BL_NODISCARD
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
+
   //! Tests whether the path is empty (its size equals zero).
+  BL_NODISCARD
   BL_INLINE bool empty() const noexcept { return impl->size == 0; }
 
   //! Tests whether this path and the `other` path are equal.
@@ -391,6 +411,7 @@ public:
   //! The equality check is deep. The data of both paths is examined and binary
   //! compared (thus a slight difference like -0 and +0 would make the equality
   //! check to fail).
+  BL_NODISCARD
   BL_INLINE bool equals(const BLPath& other) const noexcept { return blPathEquals(this, &other); }
 
   //! \}
@@ -399,21 +420,31 @@ public:
   //! \{
 
   //! Returns path size (count of vertices used).
+  BL_NODISCARD
   BL_INLINE size_t size() const noexcept { return impl->size; }
+
   //! Returns path capacity (count of allocated vertices).
+  BL_NODISCARD
   BL_INLINE size_t capacity() const noexcept { return impl->capacity; }
 
   //! Returns path's vertex data (read-only).
+  BL_NODISCARD
   BL_INLINE const BLPoint* vertexData() const noexcept { return impl->vertexData; }
+
   //! Returns the end of path's vertex data (read-only).
+  BL_NODISCARD
   BL_INLINE const BLPoint* vertexDataEnd() const noexcept { return impl->vertexData + impl->size; }
 
   //! Returns path's command data (read-only).
+  BL_NODISCARD
   BL_INLINE const uint8_t* commandData() const noexcept { return impl->commandData; }
+
   //! Returns the end of path's command data (read-only).
+  BL_NODISCARD
   BL_INLINE const uint8_t* commandDataEnd() const noexcept { return impl->commandData + impl->size; }
 
   //! Returns the path data as a read-only `BLPathView`.
+  BL_NODISCARD
   BL_INLINE const BLPathView& view() const noexcept { return impl->view; }
 
   //! \}
@@ -1081,16 +1112,18 @@ public:
   //! \{
 
   //! Hit tests the given point `p` by respecting the given `fillRule`.
+  BL_NODISCARD
   BL_INLINE uint32_t hitTest(const BLPoint& p, uint32_t fillRule) const noexcept {
     return blPathHitTest(this, &p, fillRule);
   }
 
   //! \}
 
+  BL_NODISCARD
   static BL_INLINE const BLPath& none() noexcept { return reinterpret_cast<const BLPath*>(blNone)[kImplType]; }
 };
 #endif
 
 //! \}
 
-#endif // BLEND2D_PATH_H
+#endif // BLEND2D_PATH_H_INCLUDED

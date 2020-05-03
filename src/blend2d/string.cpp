@@ -1,8 +1,25 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
 #include "./api-build_p.h"
 #include "./array_p.h"
@@ -15,6 +32,12 @@
 
 static BLWrap<BLStringImpl> blNullStringImpl;
 static const char blNullStringData[1] = "";
+
+// ============================================================================
+// [BLString - Forward Declarations]
+// ============================================================================
+
+static BLResult blStringModifyAndCopy(BLStringCore* self, uint32_t op, const char* str, size_t n) noexcept;
 
 // ============================================================================
 // [BLString - Internal]
@@ -109,6 +132,17 @@ static BL_NOINLINE BLResult blStringRealloc(BLStringCore* self, size_t n) noexce
 BLResult blStringInit(BLStringCore* self) noexcept {
   self->impl = &blNullStringImpl;
   return BL_SUCCESS;
+}
+
+BLResult blStringInitWithData(BLStringCore* self, const char* str, size_t size) noexcept {
+  if (size == SIZE_MAX)
+    size = strlen(str);
+
+  self->impl = &blNullStringImpl;
+  if (size == 0)
+    return BL_SUCCESS;
+
+  return blStringModifyAndCopy(self, BL_MODIFY_OP_ASSIGN_FIT, str, size);
 }
 
 BLResult blStringDestroy(BLStringCore* self) noexcept {
@@ -408,35 +442,39 @@ static BLResult blStringInsertAndCopy(BLStringCore* self, size_t index, const ch
     char* dst = newI->data;
     char* src = selfI->data;
 
+    // NOTE: +1 includes a NULL terminator.
     memcpy(dst, src, index);
-    memcpy(dst + endIndex, src +  index, size - index);
+    memcpy(dst + endIndex, src +  index, size - index + 1);
 
     self->impl = newI;
     newI->size = sizeAfter;
 
     memcpy(dst + index, str, n);
+
     return blStringImplRelease(selfI);
   }
   else {
     selfI->size = sizeAfter;
 
-    char* data = selfI->data;
-    char* dataEnd = data + size;
+    char* dst = selfI->data;
+    char* dstEnd = dst + size;
 
     // The destination would point into the first byte that will be modified.
     // So for example if the data is `[ABCDEF]` and we are inserting at index
-    // 1 then the `data` would point to `[BCDEF]`.
-    data += index;
-    dataEnd += n;
+    // 1 then the `dst` would point to `[BCDEF]`.
+    dst += index;
+    dstEnd += n;
 
     // Move the memory in-place making space for items to insert. For example
     // if the destination points to [ABCDEF] and we want to insert 4 items we
     // would get [____ABCDEF].
-    memmove(data + n, data, size - index);
+    //
+    // NOTE: +1 includes a NULL terminator.
+    memmove(dst + n, dst, size - index + 1);
 
     // Split the [str:strEnd] into LEAD and TRAIL slices and shift TRAIL slice
-    // in a way to cancel the `memmove()` if `str` overlaps `data`. In practice
-    // if there is an overlap the [str:strEnd] source should be within [data:dataEnd]
+    // in a way to cancel the `memmove()` if `str` overlaps `dst`. In practice
+    // if there is an overlap the [str:strEnd] source should be within [dst:dstEnd]
     // as it doesn't make sense to insert something which is outside of the current
     // valid area.
     //
@@ -453,24 +491,24 @@ static BLResult blStringInsertAndCopy(BLStringCore* self, size_t index, const ch
     // [abcdBCD____efgh]
     //
     //         |--| <- Copy shifted trailing data.
-    // [abcdBCDEFGHdefgh]
+    // [abcdBCDEFGHefgh]
 
-    // Leading area precedes `data` - nothing changed in here and if this is
-    // the whole ares then there was no overlap that we would have to deal with.
+    // Leading area precedes `dst` - nothing changed in here and if this is
+    // the whole area then there was no overlap that we would have to deal with.
     size_t nLeadBytes = 0;
-    if (str < data) {
-      nLeadBytes = blMin<size_t>((size_t)(data - str), n);
-      memcpy(data, str, nLeadBytes);
+    if (str < dst) {
+      nLeadBytes = blMin<size_t>((size_t)(dst - str), n);
+      memcpy(dst, str, nLeadBytes);
 
-      data += nLeadBytes;
+      dst += nLeadBytes;
       str += nLeadBytes;
     }
 
     // Trailing area - we either shift none or all of it.
-    if (str < dataEnd)
+    if (str < dstEnd)
       str += n; // Shift source in case of overlap.
 
-    memcpy(data, str, n - nLeadBytes);
+    memcpy(dst, str, n - nLeadBytes);
     return BL_SUCCESS;
   }
 }
@@ -785,10 +823,10 @@ int blStringCompareData(const BLStringCore* self, const char* str, size_t n) noe
 }
 
 // ============================================================================
-// [BLString - Runtime Init]
+// [BLString - Runtime]
 // ============================================================================
 
-void blStringRtInit(BLRuntimeContext* rt) noexcept {
+void blStringOnInit(BLRuntimeContext* rt) noexcept {
   BL_UNUSED(rt);
 
   BLStringImpl* stringI = &blNullStringImpl;
@@ -860,7 +898,13 @@ UNIT(string) {
   EXPECT(s.remove(BLRange(1, 11)) == BL_SUCCESS);
   EXPECT(s.equals("az"));
 
+  EXPECT(s.insert(1, s.view()) == BL_SUCCESS);
+  EXPECT(s.equals("aazz"));
+
   EXPECT(s.insert(1, "xxx") == BL_SUCCESS);
+  EXPECT(s.equals("axxxazz"));
+
+  EXPECT(s.remove(BLRange(4, 6)) == BL_SUCCESS);
   EXPECT(s.equals("axxxz"));
 
   BLString x(s);
@@ -870,6 +914,9 @@ UNIT(string) {
   x = s;
   EXPECT(s.remove(BLRange(1, 11)) == BL_SUCCESS);
   EXPECT(s.equals("axz"));
+
+  EXPECT(s.insert(3, "APPENDED") == BL_SUCCESS);
+  EXPECT(s.equals("axzAPPENDED"));
 
   EXPECT(s.reserve(1024) == BL_SUCCESS);
   EXPECT(s.capacity() >= 1024);

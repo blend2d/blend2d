@@ -1,8 +1,25 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
 #include "./api-build_p.h"
 #include "./support_p.h"
@@ -199,10 +216,10 @@ static void testSafeArith() noexcept {
   EXPECT(blAddOverflow<int32_t>(-2147483647, -1, &of) == -2147483647 - 1 && !of);
   EXPECT(blAddOverflow<int32_t>(-1, -2147483647, &of) == -2147483647 - 1 && !of);
 
-  blAddOverflow<int32_t>(2147483647, 1, &of); EXPECT(of); of = 0;
-  blAddOverflow<int32_t>(1, 2147483647, &of); EXPECT(of); of = 0;
-  blAddOverflow<int32_t>(-2147483647, -2, &of); EXPECT(of); of = 0;
-  blAddOverflow<int32_t>(-2, -2147483647, &of); EXPECT(of); of = 0;
+  (void)blAddOverflow<int32_t>(2147483647, 1, &of); EXPECT(of); of = 0;
+  (void)blAddOverflow<int32_t>(1, 2147483647, &of); EXPECT(of); of = 0;
+  (void)blAddOverflow<int32_t>(-2147483647, -2, &of); EXPECT(of); of = 0;
+  (void)blAddOverflow<int32_t>(-2, -2147483647, &of); EXPECT(of); of = 0;
 
   EXPECT(blAddOverflow<uint32_t>(0u, 0u, &of) == 0 && !of);
   EXPECT(blAddOverflow<uint32_t>(0u, 1u, &of) == 1 && !of);
@@ -213,12 +230,12 @@ static void testSafeArith() noexcept {
   EXPECT(blAddOverflow<uint32_t>(0xFFFFFFFFu, 0u, &of) == 0xFFFFFFFFu && !of);
   EXPECT(blAddOverflow<uint32_t>(0u, 0xFFFFFFFFu, &of) == 0xFFFFFFFFu && !of);
 
-  blAddOverflow<uint32_t>(0xFFFFFFFFu, 1u, &of); EXPECT(of); of = 0;
-  blAddOverflow<uint32_t>(1u, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
+  (void)blAddOverflow<uint32_t>(0xFFFFFFFFu, 1u, &of); EXPECT(of); of = 0;
+  (void)blAddOverflow<uint32_t>(1u, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
 
-  blAddOverflow<uint32_t>(0x80000000u, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
-  blAddOverflow<uint32_t>(0xFFFFFFFFu, 0x80000000u, &of); EXPECT(of); of = 0;
-  blAddOverflow<uint32_t>(0xFFFFFFFFu, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
+  (void)blAddOverflow<uint32_t>(0x80000000u, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
+  (void)blAddOverflow<uint32_t>(0xFFFFFFFFu, 0x80000000u, &of); EXPECT(of); of = 0;
+  (void)blAddOverflow<uint32_t>(0xFFFFFFFFu, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
 
   INFO("blSubOverflow()");
   EXPECT(blSubOverflow<int32_t>(0, 0, &of) ==  0 && !of);
@@ -234,14 +251,14 @@ static void testSafeArith() noexcept {
   EXPECT(blSubOverflow<int32_t>(-2147483647 - 0, -2147483647 - 0, &of) == 0 && !of);
   EXPECT(blSubOverflow<int32_t>(-2147483647 - 1, -2147483647 - 1, &of) == 0 && !of);
 
-  blSubOverflow<int32_t>(-2, 2147483647, &of); EXPECT(of); of = 0;
-  blSubOverflow<int32_t>(-2147483647, 2, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<int32_t>(-2, 2147483647, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<int32_t>(-2147483647, 2, &of); EXPECT(of); of = 0;
 
-  blSubOverflow<int32_t>(-2147483647    , 2147483647, &of); EXPECT(of); of = 0;
-  blSubOverflow<int32_t>(-2147483647 - 1, 2147483647, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<int32_t>(-2147483647    , 2147483647, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<int32_t>(-2147483647 - 1, 2147483647, &of); EXPECT(of); of = 0;
 
-  blSubOverflow<int32_t>(2147483647, -2147483647 - 0, &of); EXPECT(of); of = 0;
-  blSubOverflow<int32_t>(2147483647, -2147483647 - 1, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<int32_t>(2147483647, -2147483647 - 0, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<int32_t>(2147483647, -2147483647 - 1, &of); EXPECT(of); of = 0;
 
   EXPECT(blSubOverflow<uint32_t>(0, 0, &of) ==  0 && !of);
   EXPECT(blSubOverflow<uint32_t>(1, 0, &of) ==  1 && !of);
@@ -249,17 +266,17 @@ static void testSafeArith() noexcept {
   EXPECT(blSubOverflow<uint32_t>(0xFFFFFFFFu, 0u, &of) == 0xFFFFFFFFu && !of);
   EXPECT(blSubOverflow<uint32_t>(0xFFFFFFFFu, 0xFFFFFFFFu, &of) == 0u && !of);
 
-  blSubOverflow<uint32_t>(0u, 1u, &of); EXPECT(of); of = 0;
-  blSubOverflow<uint32_t>(1u, 2u, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<uint32_t>(0u, 1u, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<uint32_t>(1u, 2u, &of); EXPECT(of); of = 0;
 
-  blSubOverflow<uint32_t>(0u, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
-  blSubOverflow<uint32_t>(1u, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<uint32_t>(0u, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<uint32_t>(1u, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
 
-  blSubOverflow<uint32_t>(0u, 0x7FFFFFFFu, &of); EXPECT(of); of = 0;
-  blSubOverflow<uint32_t>(1u, 0x7FFFFFFFu, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<uint32_t>(0u, 0x7FFFFFFFu, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<uint32_t>(1u, 0x7FFFFFFFu, &of); EXPECT(of); of = 0;
 
-  blSubOverflow<uint32_t>(0x7FFFFFFEu, 0x7FFFFFFFu, &of); EXPECT(of); of = 0;
-  blSubOverflow<uint32_t>(0xFFFFFFFEu, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<uint32_t>(0x7FFFFFFEu, 0x7FFFFFFFu, &of); EXPECT(of); of = 0;
+  (void)blSubOverflow<uint32_t>(0xFFFFFFFEu, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
 
   INFO("blMulOverflow()");
   EXPECT(blMulOverflow<int32_t>(0, 0, &of) == 0 && !of);
@@ -282,15 +299,15 @@ static void testSafeArith() noexcept {
   EXPECT(blMulOverflow<int32_t>(-2147483647 - 1, 1, &of) == -2147483647 - 1 && !of);
   EXPECT(blMulOverflow<int32_t>(1, -2147483647 - 1, &of) == -2147483647 - 1 && !of);
 
-  blMulOverflow<int32_t>( 65535,  65535, &of); EXPECT(of); of = 0;
-  blMulOverflow<int32_t>( 65535, -65535, &of); EXPECT(of); of = 0;
-  blMulOverflow<int32_t>(-65535,  65535, &of); EXPECT(of); of = 0;
-  blMulOverflow<int32_t>(-65535, -65535, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int32_t>( 65535,  65535, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int32_t>( 65535, -65535, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int32_t>(-65535,  65535, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int32_t>(-65535, -65535, &of); EXPECT(of); of = 0;
 
-  blMulOverflow<int32_t>( 2147483647    ,  2147483647    , &of); EXPECT(of); of = 0;
-  blMulOverflow<int32_t>( 2147483647    , -2147483647 - 1, &of); EXPECT(of); of = 0;
-  blMulOverflow<int32_t>(-2147483647 - 1,  2147483647    , &of); EXPECT(of); of = 0;
-  blMulOverflow<int32_t>(-2147483647 - 1, -2147483647 - 1, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int32_t>( 2147483647    ,  2147483647    , &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int32_t>( 2147483647    , -2147483647 - 1, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int32_t>(-2147483647 - 1,  2147483647    , &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int32_t>(-2147483647 - 1, -2147483647 - 1, &of); EXPECT(of); of = 0;
 
   EXPECT(blMulOverflow<uint32_t>(0, 0, &of) == 0 && !of);
   EXPECT(blMulOverflow<uint32_t>(0, 1, &of) == 0 && !of);
@@ -303,11 +320,11 @@ static void testSafeArith() noexcept {
   EXPECT(blMulOverflow<uint32_t>(0xFFFFFFFFu, 1, &of) == 0xFFFFFFFFu && !of);
   EXPECT(blMulOverflow<uint32_t>(1, 0xFFFFFFFFu, &of) == 0xFFFFFFFFu && !of);
 
-  blMulOverflow<uint32_t>(0xFFFFFFFFu, 2, &of); EXPECT(of); of = 0;
-  blMulOverflow<uint32_t>(2, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<uint32_t>(0xFFFFFFFFu, 2, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<uint32_t>(2, 0xFFFFFFFFu, &of); EXPECT(of); of = 0;
 
-  blMulOverflow<uint32_t>(0x80000000u, 2, &of); EXPECT(of); of = 0;
-  blMulOverflow<uint32_t>(2, 0x80000000u, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<uint32_t>(0x80000000u, 2, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<uint32_t>(2, 0x80000000u, &of); EXPECT(of); of = 0;
 
   EXPECT(blMulOverflow<int64_t>(0, 0, &of) == 0 && !of);
   EXPECT(blMulOverflow<int64_t>(0, 1, &of) == 0 && !of);
@@ -342,13 +359,13 @@ static void testSafeArith() noexcept {
   EXPECT(blMulOverflow<int64_t>(int64_t(0x7FFFFFFFFFFFFFFF), int64_t(1), &of) == int64_t(0x7FFFFFFFFFFFFFFF) && !of);
   EXPECT(blMulOverflow<int64_t>(int64_t(1), int64_t(0x7FFFFFFFFFFFFFFF), &of) == int64_t(0x7FFFFFFFFFFFFFFF) && !of);
 
-  blMulOverflow<int64_t>(int64_t(0x7FFFFFFFFFFFFFFF), int64_t(2), &of); EXPECT(of); of = 0;
-  blMulOverflow<int64_t>(int64_t(2), int64_t(0x7FFFFFFFFFFFFFFF), &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int64_t>(int64_t(0x7FFFFFFFFFFFFFFF), int64_t(2), &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int64_t>(int64_t(2), int64_t(0x7FFFFFFFFFFFFFFF), &of); EXPECT(of); of = 0;
 
-  blMulOverflow<int64_t>(int64_t( 0x7FFFFFFFFFFFFFFF), int64_t( 0x7FFFFFFFFFFFFFFF), &of); EXPECT(of); of = 0;
-  blMulOverflow<int64_t>(int64_t( 0x7FFFFFFFFFFFFFFF), int64_t(-0x7FFFFFFFFFFFFFFF), &of); EXPECT(of); of = 0;
-  blMulOverflow<int64_t>(int64_t(-0x7FFFFFFFFFFFFFFF), int64_t( 0x7FFFFFFFFFFFFFFF), &of); EXPECT(of); of = 0;
-  blMulOverflow<int64_t>(int64_t(-0x7FFFFFFFFFFFFFFF), int64_t(-0x7FFFFFFFFFFFFFFF), &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int64_t>(int64_t( 0x7FFFFFFFFFFFFFFF), int64_t( 0x7FFFFFFFFFFFFFFF), &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int64_t>(int64_t( 0x7FFFFFFFFFFFFFFF), int64_t(-0x7FFFFFFFFFFFFFFF), &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int64_t>(int64_t(-0x7FFFFFFFFFFFFFFF), int64_t( 0x7FFFFFFFFFFFFFFF), &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<int64_t>(int64_t(-0x7FFFFFFFFFFFFFFF), int64_t(-0x7FFFFFFFFFFFFFFF), &of); EXPECT(of); of = 0;
 
   EXPECT(blMulOverflow<uint64_t>(0, 0, &of) == 0 && !of);
   EXPECT(blMulOverflow<uint64_t>(0, 1, &of) == 0 && !of);
@@ -361,11 +378,11 @@ static void testSafeArith() noexcept {
   EXPECT(blMulOverflow<uint64_t>(0xFFFFFFFFFFFFFFFFu, 1, &of) == 0xFFFFFFFFFFFFFFFFu && !of);
   EXPECT(blMulOverflow<uint64_t>(1, 0xFFFFFFFFFFFFFFFFu, &of) == 0xFFFFFFFFFFFFFFFFu && !of);
 
-  blMulOverflow<uint64_t>(0xFFFFFFFFFFFFFFFFu, 2, &of); EXPECT(of); of = 0;
-  blMulOverflow<uint64_t>(2, 0xFFFFFFFFFFFFFFFFu, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<uint64_t>(0xFFFFFFFFFFFFFFFFu, 2, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<uint64_t>(2, 0xFFFFFFFFFFFFFFFFu, &of); EXPECT(of); of = 0;
 
-  blMulOverflow<uint64_t>(0x8000000000000000u, 2, &of); EXPECT(of); of = 0;
-  blMulOverflow<uint64_t>(2, 0x8000000000000000u, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<uint64_t>(0x8000000000000000u, 2, &of); EXPECT(of); of = 0;
+  (void)blMulOverflow<uint64_t>(2, 0x8000000000000000u, &of); EXPECT(of); of = 0;
 }
 
 static void testReadWrite() noexcept {

@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_FONTDEFS_H
-#define BLEND2D_FONTDEFS_H
+#ifndef BLEND2D_FONTDEFS_H_INCLUDED
+#define BLEND2D_FONTDEFS_H_INCLUDED
 
 #include "./geometry.h"
 
@@ -62,61 +79,61 @@ BL_DEFINE_ENUM(BLFontFaceType) {
 
 BL_DEFINE_ENUM(BLFontFaceFlags) {
   //! Font uses typographic family and subfamily names.
-  BL_FONT_FACE_FLAG_TYPOGRAPHIC_NAMES         = 0x00000001u,
+  BL_FONT_FACE_FLAG_TYPOGRAPHIC_NAMES = 0x00000001u,
   //! Font uses typographic metrics.
-  BL_FONT_FACE_FLAG_TYPOGRAPHIC_METRICS       = 0x00000002u,
+  BL_FONT_FACE_FLAG_TYPOGRAPHIC_METRICS = 0x00000002u,
   //! Character to glyph mapping is available.
-  BL_FONT_FACE_FLAG_CHAR_TO_GLYPH_MAPPING     = 0x00000004u,
+  BL_FONT_FACE_FLAG_CHAR_TO_GLYPH_MAPPING = 0x00000004u,
   //! Horizontal glyph metrics (advances, side bearings) is available.
-  BL_FONT_FACE_FLAG_HORIZONTAL_METIRCS        = 0x00000010u,
+  BL_FONT_FACE_FLAG_HORIZONTAL_METIRCS = 0x00000010u,
   //! Vertical glyph metrics (advances, side bearings) is available.
-  BL_FONT_FACE_FLAG_VERTICAL_METRICS          = 0x00000020u,
+  BL_FONT_FACE_FLAG_VERTICAL_METRICS = 0x00000020u,
   //! Legacy horizontal kerning feature ('kern' table with horizontal kerning data).
-  BL_FONT_FACE_FLAG_HORIZONTAL_KERNING        = 0x00000040u,
+  BL_FONT_FACE_FLAG_HORIZONTAL_KERNING = 0x00000040u,
   //! Legacy vertical kerning feature ('kern' table with vertical kerning data).
-  BL_FONT_FACE_FLAG_VERTICAL_KERNING          = 0x00000080u,
+  BL_FONT_FACE_FLAG_VERTICAL_KERNING = 0x00000080u,
   //! OpenType features (GDEF, GPOS, GSUB) are available.
-  BL_FONT_FACE_FLAG_OPENTYPE_FEATURES         = 0x00000100u,
+  BL_FONT_FACE_FLAG_OPENTYPE_FEATURES = 0x00000100u,
   //! Panose classification is available.
-  BL_FONT_FACE_FLAG_PANOSE_DATA               = 0x00000200u,
+  BL_FONT_FACE_FLAG_PANOSE_DATA = 0x00000200u,
   //! Unicode coverage information is available.
-  BL_FONT_FACE_FLAG_UNICODE_COVERAGE          = 0x00000400u,
+  BL_FONT_FACE_FLAG_UNICODE_COVERAGE = 0x00000400u,
   //! Baseline for font at `y` equals 0.
-  BL_FONT_FACE_FLAG_BASELINE_Y_EQUALS_0       = 0x00001000u,
+  BL_FONT_FACE_FLAG_BASELINE_Y_EQUALS_0 = 0x00001000u,
   //! Left sidebearing point at `x == 0` (TT only).
-  BL_FONT_FACE_FLAG_LSB_POINT_X_EQUALS_0      = 0x00002000u,
+  BL_FONT_FACE_FLAG_LSB_POINT_X_EQUALS_0 = 0x00002000u,
   //! Unicode variation sequences feature is available.
-  BL_FONT_FACE_FLAG_VARIATION_SEQUENCES       = 0x10000000u,
+  BL_FONT_FACE_FLAG_VARIATION_SEQUENCES = 0x10000000u,
   //! OpenType Font Variations feature is available.
-  BL_FONT_FACE_FLAG_OPENTYPE_VARIATIONS       = 0x20000000u,
+  BL_FONT_FACE_FLAG_OPENTYPE_VARIATIONS = 0x20000000u,
   //! This is a symbol font.
-  BL_FONT_FACE_FLAG_SYMBOL_FONT               = 0x40000000u,
+  BL_FONT_FACE_FLAG_SYMBOL_FONT = 0x40000000u,
   //! This is a last resort font.
-  BL_FONT_FACE_FLAG_LAST_RESORT_FONT          = 0x80000000u
+  BL_FONT_FACE_FLAG_LAST_RESORT_FONT = 0x80000000u
 };
 
 BL_DEFINE_ENUM(BLFontFaceDiagFlags) {
   //! Wront data in 'name' table.
-  BL_FONT_FACE_DIAG_WRONG_NAME_DATA           = 0x00000001u,
+  BL_FONT_FACE_DIAG_WRONG_NAME_DATA = 0x00000001u,
   //! Fixed data read from 'name' table and possibly fixed font family/subfamily name.
-  BL_FONT_FACE_DIAG_FIXED_NAME_DATA           = 0x00000002u,
+  BL_FONT_FACE_DIAG_FIXED_NAME_DATA = 0x00000002u,
 
   //! Wrong data in 'kern' table [kerning disabled].
-  BL_FONT_FACE_DIAG_WRONG_KERN_DATA           = 0x00000004u,
+  BL_FONT_FACE_DIAG_WRONG_KERN_DATA = 0x00000004u,
   //! Fixed data read from 'kern' table so it can be used.
-  BL_FONT_FACE_DIAG_FIXED_KERN_DATA           = 0x00000008u,
+  BL_FONT_FACE_DIAG_FIXED_KERN_DATA = 0x00000008u,
 
   //! Wrong data in 'cmap' table.
-  BL_FONT_FACE_DIAG_WRONG_CMAP_DATA           = 0x00000010u,
+  BL_FONT_FACE_DIAG_WRONG_CMAP_DATA = 0x00000010u,
   //! Wrong format in 'cmap' (sub)table.
-  BL_FONT_FACE_DIAG_WRONG_CMAP_FORMAT         = 0x00000020u,
+  BL_FONT_FACE_DIAG_WRONG_CMAP_FORMAT = 0x00000020u,
 
   //! Wrong data in 'GDEF' table.
-  BL_FONT_FACE_DIAG_WRONG_GDEF_DATA           = 0x00000100u,
+  BL_FONT_FACE_DIAG_WRONG_GDEF_DATA = 0x00000100u,
   //! Wrong data in 'GPOS' table.
-  BL_FONT_FACE_DIAG_WRONG_GPOS_DATA           = 0x00000400u,
+  BL_FONT_FACE_DIAG_WRONG_GPOS_DATA = 0x00000400u,
   //! Wrong data in 'GSUB' table.
-  BL_FONT_FACE_DIAG_WRONG_GSUB_DATA           = 0x00001000u
+  BL_FONT_FACE_DIAG_WRONG_GSUB_DATA = 0x00001000u
 };
 
 //! Format of an outline stored in a font.
@@ -726,6 +743,28 @@ struct BLFontFaceInfo {
 };
 
 // ============================================================================
+// [BLFontQueryProperties]
+// ============================================================================
+
+//! Properties that can be used to query \ref BLFont and \ref BLFontFace.
+//!
+//! \sa BLFontManager.
+struct BLFontQueryProperties {
+  //! Font style.
+  uint32_t style;
+  //! Font weight.
+  uint32_t weight;
+  //! Font stretch.
+  uint32_t stretch;
+
+  // --------------------------------------------------------------------------
+  #ifdef __cplusplus
+  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  #endif
+  // --------------------------------------------------------------------------
+};
+
+// ============================================================================
 // [BLFontTable]
 // ============================================================================
 
@@ -1140,4 +1179,4 @@ struct BLTextMetrics {
 
 BL_DIAGNOSTIC_POP
 
-#endif // BLEND2D_FONTDEFS_H
+#endif // BLEND2D_FONTDEFS_H_INCLUDED

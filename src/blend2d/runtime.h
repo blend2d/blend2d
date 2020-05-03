@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_RUNTIME_H
-#define BLEND2D_RUNTIME_H
+#ifndef BLEND2D_RUNTIME_H_INCLUDED
+#define BLEND2D_RUNTIME_H_INCLUDED
 
 #include "./api.h"
 
@@ -32,10 +49,11 @@ BL_DEFINE_ENUM(BLRuntimeLimits) {
 BL_DEFINE_ENUM(BLRuntimeInfoType) {
   //! Blend2D build information.
   BL_RUNTIME_INFO_TYPE_BUILD = 0,
-  //! System information (includes CPU architecture, features, cores, etc...).
+  //! System information (includes CPU architecture, features, core count, etc...).
   BL_RUNTIME_INFO_TYPE_SYSTEM = 1,
-  //! Runtime information regarding memory used, reserved, etc...
-  BL_RUNTIME_INFO_TYPE_MEMORY = 2,
+  //! Resources information (includes Blend2D memory consumption, file handles
+  //! used, etc...)
+  BL_RUNTIME_INFO_TYPE_RESOURCE = 2,
 
   //! Count of runtime information types.
   BL_RUNTIME_INFO_TYPE_COUNT = 3
@@ -182,12 +200,11 @@ struct BLRuntimeSystemInfo {
 };
 
 // ============================================================================
-// [BLRuntime - MemoryInfo]
+// [BLRuntime - ResourceInfo]
 // ============================================================================
 
-//! Blend2D memory information that provides how much memory Blend2D allocated
-//! and some other details about memory use.
-struct BLRuntimeMemoryInfo {
+//! Provides information about resources allocated by Blend2D.
+struct BLRuntimeResourceInfo {
   //! Virtual memory used at this time.
   size_t vmUsed;
   //! Virtual memory reserved (allocated internally).
@@ -208,6 +225,24 @@ struct BLRuntimeMemoryInfo {
 
   //! Count of dynamic pipelines created and cached.
   size_t dynamicPipelineCount;
+
+  //! Number of active file handles used by Blend2D.
+  //!
+  //! \note File handles are counted by `BLFile` - when a file is opened a
+  //! global counter is incremented and when it's closed it's decremented.
+  //! This means that this number represents the actual use of `BLFile` and
+  //! doesn't consider the origin of the use (it's either Blend2D or user).
+  size_t fileHandleCount;
+
+  //! Number of active file mappings used by Blend2D.
+  //!
+  //! \note Blend2D maps file content to `BLArray<uint8_t>` container, so this
+  //! number represents the actual number of `BLArray<uint8_t>` instances that
+  //! contain a mapped file.
+  size_t fileMappingCount;
+
+  //! Reserved for future use.
+  size_t reserved[5];
 
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
@@ -236,8 +271,8 @@ static BL_INLINE BLResult querySystemInfo(BLRuntimeSystemInfo* out) noexcept {
   return blRuntimeQueryInfo(BL_RUNTIME_INFO_TYPE_SYSTEM, out);
 }
 
-static BL_INLINE BLResult queryMemoryInfo(BLRuntimeMemoryInfo* out) noexcept {
-  return blRuntimeQueryInfo(BL_RUNTIME_INFO_TYPE_MEMORY, out);
+static BL_INLINE BLResult queryResourceInfo(BLRuntimeResourceInfo* out) noexcept {
+  return blRuntimeQueryInfo(BL_RUNTIME_INFO_TYPE_RESOURCE, out);
 }
 
 static BL_INLINE BLResult message(const char* msg) noexcept {
@@ -254,4 +289,4 @@ static BL_INLINE BLResult message(const char* fmt, Args&&... args) noexcept {
 
 //! \}
 
-#endif // BLEND2D_RUNTIME_H
+#endif // BLEND2D_RUNTIME_H_INCLUDED

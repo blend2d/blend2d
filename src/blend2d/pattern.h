@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_PATTERN_H
-#define BLEND2D_PATTERN_H
+#ifndef BLEND2D_PATTERN_H_INCLUDED
+#define BLEND2D_PATTERN_H_INCLUDED
 
 #include "./geometry.h"
 #include "./image.h"
@@ -101,8 +118,8 @@ public:
   BL_INLINE BLPattern& operator=(BLPattern&& other) noexcept { blPatternAssignMove(this, &other); return *this; }
   BL_INLINE BLPattern& operator=(const BLPattern& other) noexcept { blPatternAssignWeak(this, &other); return *this; }
 
-  BL_INLINE bool operator==(const BLPattern& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLPattern& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE bool operator==(const BLPattern& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE bool operator!=(const BLPattern& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -117,8 +134,10 @@ public:
   BL_INLINE BLResult assign(const BLPattern& other) noexcept { return blPatternAssignWeak(this, &other); }
 
   //! Tests whether the pattern is a built-in null instance.
+  BL_NODISCARD
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
+  BL_NODISCARD
   BL_INLINE bool equals(const BLPattern& other) const noexcept { return blPatternEquals(this, &other); }
 
   //! \}
@@ -147,12 +166,16 @@ public:
   //! \name Pattern Source
   //! \{
 
+  BL_NODISCARD
   BL_INLINE const BLImage& image() const noexcept { return impl->image; }
+
+  BL_NODISCARD
+  BL_INLINE const BLRectI& area() const noexcept { return impl->area; }
+
   BL_INLINE BLResult setImage(const BLImage& image) noexcept { return blPatternSetImage(this, &image, nullptr); }
   BL_INLINE BLResult setImage(const BLImage& image, const BLRectI& area) noexcept { return blPatternSetImage(this, &image, &area); }
   BL_INLINE BLResult resetImage() noexcept { return setImage(BLImage::none()); }
 
-  BL_INLINE const BLRectI& area() const noexcept { return impl->area; }
   BL_INLINE BLResult setArea(const BLRectI& area) noexcept { return blPatternSetArea(this, &area); }
   BL_INLINE BLResult resetArea() noexcept { return setArea(BLRectI(0, 0, 0, 0)); }
 
@@ -161,7 +184,9 @@ public:
   //! \name Pattern Options
   //! \{
 
+  BL_NODISCARD
   BL_INLINE uint32_t extendMode() const noexcept { return impl->extendMode; }
+
   BL_INLINE BLResult setExtendMode(uint32_t extendMode) noexcept { return blPatternSetExtendMode(this, extendMode); }
   BL_INLINE BLResult resetExtendMode() noexcept { return setExtendMode(BL_EXTEND_MODE_REPEAT); }
 
@@ -170,8 +195,13 @@ public:
   //! \name Transformations
   //! \{
 
+  BL_NODISCARD
   BL_INLINE bool hasMatrix() const noexcept { return impl->matrixType != BL_MATRIX2D_TYPE_IDENTITY; }
+
+  BL_NODISCARD
   BL_INLINE uint32_t matrixType() const noexcept { return impl->matrixType; }
+
+  BL_NODISCARD
   BL_INLINE const BLMatrix2D& matrix() const noexcept { return impl->matrix; }
 
   //! Applies a matrix operation to the current transformation matrix (internal).
@@ -223,10 +253,11 @@ public:
 
   //! \}
 
+  BL_NODISCARD
   static BL_INLINE const BLPattern& none() noexcept { return reinterpret_cast<const BLPattern*>(blNone)[kImplType]; }
 };
 #endif
 
 //! \}
 
-#endif // BLEND2D_PATTERN_H
+#endif // BLEND2D_PATTERN_H_INCLUDED

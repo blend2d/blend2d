@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_RASTER_RASTERCONTEXT_P_H
-#define BLEND2D_RASTER_RASTERCONTEXT_P_H
+#ifndef BLEND2D_RASTER_RASTERCONTEXT_P_H_INCLUDED
+#define BLEND2D_RASTER_RASTERCONTEXT_P_H_INCLUDED
 
 #include "../api-internal_p.h"
 #include "../compop_p.h"
@@ -30,6 +47,7 @@
 #include "../raster/rasterworkdata_p.h"
 #include "../raster/rasterworkermanager_p.h"
 #include "../raster/rasterworkqueue_p.h"
+#include "../threading/uniqueidgenerator_p.h"
 
 #if !defined(BL_BUILD_NO_JIT)
   #include "../pipegen/pipegenruntime_p.h"
@@ -325,7 +343,7 @@ public:
       precisionInfo {},
       syncWorkData(this),
       pipeProvider(),
-      contextOriginId(blContextIdGenerator.next()),
+      contextOriginId(blGenerateUniqueId(BL_UNIQUE_ID_DOMAIN_CONTEXT)),
       stateIdCounter(0),
       renderingMode(uint8_t(BL_RASTER_RENDERING_MODE_SYNC)),
       workerMgrInitialized(false),
@@ -447,9 +465,9 @@ public:
 // ============================================================================
 
 BL_HIDDEN BLResult blRasterContextImplCreate(BLContextImpl** out, BLImageCore* image, const BLContextCreateInfo* options) noexcept;
-BL_HIDDEN void blRasterContextRtInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blRasterContextOnInit(BLRuntimeContext* rt) noexcept;
 
 //! \}
 //! \endcond
 
-#endif // BLEND2D_RASTER_RASTERCONTEXT_P_H
+#endif // BLEND2D_RASTER_RASTERCONTEXT_P_H_INCLUDED

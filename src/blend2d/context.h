@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_CONTEXT_H
-#define BLEND2D_CONTEXT_H
+#ifndef BLEND2D_CONTEXT_H_INCLUDED
+#define BLEND2D_CONTEXT_H_INCLUDED
 
 #include "./font.h"
 #include "./geometry.h"
@@ -332,9 +349,10 @@ struct BLContextCookie {
   // --------------------------------------------------------------------------
   #ifdef __cplusplus
 
-  BL_INLINE bool operator==(const BLContextCookie& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLContextCookie& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE bool operator==(const BLContextCookie& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE bool operator!=(const BLContextCookie& other) const noexcept { return !equals(other); }
 
+  BL_NODISCARD
   BL_INLINE bool empty() const noexcept {
     return this->data[0] == 0 && this->data[1] == 0;
   }
@@ -347,6 +365,7 @@ struct BLContextCookie {
     this->data[1] = data1;
   }
 
+  BL_NODISCARD
   BL_INLINE bool equals(const BLContextCookie& other) const noexcept {
     return blEquals(this->data[0], other.data[0]) &
            blEquals(this->data[1], other.data[1]);
@@ -627,9 +646,9 @@ public:
   BL_INLINE BLContext& operator=(const BLContext& other) noexcept { blContextAssignWeak(this, &other); return *this; }
 
   //! Returns whether this and `other` point to the same rendering context.
-  BL_INLINE bool operator==(const BLContext& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE bool operator==(const BLContext& other) const noexcept { return  equals(other); }
   //! Returns whether this and `other` are different rendering contexts.
-  BL_INLINE bool operator!=(const BLContext& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE bool operator!=(const BLContext& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -637,10 +656,15 @@ public:
   //! \{
 
   //! Returns the target size in abstract units (pixels in case of `BLImage`).
+  BL_NODISCARD
   BL_INLINE BLSize targetSize() const noexcept { return impl->state->targetSize; }
+
   //! Returns the target width in abstract units (pixels in case of `BLImage`).
+  BL_NODISCARD
   BL_INLINE double targetWidth() const noexcept { return impl->state->targetSize.w; }
+
   //! Returns the target height in abstract units (pixels in case of `BLImage`).
+  BL_NODISCARD
   BL_INLINE double targetHeight() const noexcept { return impl->state->targetSize.h; }
 
   //! Returns the target image or null if there is no target image.
@@ -653,6 +677,7 @@ public:
   //! the `BLImage` passed to either the constructor or `begin()` function. So
   //! the returned pointer is not the same as the pointer passed to `begin()`,
   //! but it points to the same impl.
+  BL_NODISCARD
   BL_INLINE BLImage* targetImage() const noexcept { return blDownCast(impl->state->targetImage); }
 
   //! \}
@@ -661,12 +686,15 @@ public:
   //! \{
 
   //! Returns the type of this context, see `BLContextType`.
+  BL_NODISCARD
   BL_INLINE uint32_t contextType() const noexcept { return impl->contextType; }
 
   //! Tests whether the context is a built-in null instance.
+  BL_NODISCARD
   BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
   //! Returns whether this and `other` point to the same rendering context.
+  BL_NODISCARD
   BL_INLINE bool equals(const BLContext& other) const noexcept { return this->impl == other.impl; }
 
   //! Resets this rendering context to the default constructed one.
@@ -709,6 +737,7 @@ public:
 
   //! \cond INTERNAL
   template<typename T>
+  BL_NODISCARD
   BL_INLINE T _queryPropertyT(uint32_t propertyId) const noexcept {
     T result {};
     queryProperty(propertyId, &result);
@@ -722,6 +751,7 @@ public:
   //! otherwise it describes the number of threads used for asynchronous rendering
   //! which include the user thread. For example if the returned value is `2` it
   //! means that the rendering context uses the user thread and one more worker.
+  BL_NODISCARD
   BL_INLINE uint32_t queryThreadCount() const noexcept {
     return _queryPropertyT<uint32_t>(BL_CONTEXT_PROPERTY_THREAD_COUNT);
   }
@@ -729,6 +759,7 @@ public:
   //! Queries accumulated errors as flags, see \ref BLContextErrorFlags.
   //!
   //! Errors may accumulate during the lifetime of the rendering context.
+  BL_NODISCARD
   BL_INLINE uint32_t queryAccumulatedErrorFlags() const noexcept {
     return _queryPropertyT<uint32_t>(BL_CONTEXT_PROPERTY_ACCUMULATED_ERROR_FLAGS);
   }
@@ -739,6 +770,7 @@ public:
   //! \{
 
   //! Returns the number of saved states in the context (0 means no saved states).
+  BL_NODISCARD
   BL_INLINE size_t savedStateCount() const noexcept { return impl->state->savedStateCount; }
 
   //! Saves the current rendering context state.
@@ -800,12 +832,14 @@ public:
   //! `userToMeta()`, which would update meta-matrix and clear user-matrix.
   //!
   //! See `userMatrix()` and `userToMeta()`.
+  BL_NODISCARD
   BL_INLINE const BLMatrix2D& metaMatrix() const noexcept { return impl->state->metaMatrix; }
 
   //! Returns user-matrix.
   //!
   //! User matrix contains all transformations that happened to the rendering
   //! context unless the context was restored or `userToMeta()` was called.
+  BL_NODISCARD
   BL_INLINE const BLMatrix2D& userMatrix() const noexcept { return impl->state->userMatrix; }
 
   //! Applies a matrix operation to the current transformation matrix (internal).
@@ -876,6 +910,7 @@ public:
   //! \{
 
   //! Returns rendering hints.
+  BL_NODISCARD
   BL_INLINE const BLContextHints& hints() const noexcept { return impl->state->hints; }
 
   //! Sets the given rendering hint `hintType` to the `value`.
@@ -893,15 +928,20 @@ public:
   //! \{
 
   //! Returns approximation options.
+  BL_NODISCARD
   BL_INLINE const BLApproximationOptions& approximationOptions() const noexcept { return impl->state->approximationOptions; }
 
   //! Returns flatten mode (how curves are flattened), see `BLFlattenMmode`.
+  BL_NODISCARD
   BL_INLINE uint32_t flattenMode() const noexcept { return impl->state->approximationOptions.flattenMode; }
+
   //! Sets flatten `mode` (how curves are flattened), see `BLFlattenMmode`.
   BL_INLINE BLResult setFlattenMode(uint32_t mode) noexcept { return impl->virt->setFlattenMode(impl, mode); }
 
   //! Returns tolerance used for curve flattening.
+  BL_NODISCARD
   BL_INLINE double flattenTolerance() const noexcept { return impl->state->approximationOptions.flattenTolerance; }
+
   //! Sets tolerance used for curve flattening.
   BL_INLINE BLResult setFlattenTolerance(double tolerance) noexcept { return impl->virt->setFlattenTolerance(impl, tolerance); }
 
@@ -911,12 +951,16 @@ public:
   //! \{
 
   //! Returns composition operator.
+  BL_NODISCARD
   BL_INLINE uint32_t compOp() const noexcept { return impl->state->compOp; }
+
   //! Sets composition operator to `compOp`, see `BLCompOp`.
   BL_INLINE BLResult setCompOp(uint32_t compOp) noexcept { return impl->virt->setCompOp(impl, compOp); }
 
   //! Returns global alpha value.
+  BL_NODISCARD
   BL_INLINE double globalAlpha() const noexcept { return impl->state->globalAlpha; }
+
   //! Sets global alpha value.
   BL_INLINE BLResult setGlobalAlpha(double alpha) noexcept { return impl->virt->setGlobalAlpha(impl, alpha); }
 
@@ -925,6 +969,7 @@ public:
   //! \name Style Options
   //! \{
 
+  BL_NODISCARD
   BL_INLINE uint32_t styleType(uint32_t opType) const noexcept {
     return opType <= BL_CONTEXT_OP_TYPE_COUNT ? uint32_t(impl->state->styleType[opType]) : uint32_t(0);
   }
@@ -981,6 +1026,7 @@ public:
   //!
   //! The function behaves like `fillAlpha()` or `strokeAlpha()` depending on
   //! `opType` value, see `BLContextOpType`.
+  BL_NODISCARD
   BL_INLINE double styleAlpha(uint32_t opType) const noexcept {
     return opType < BL_CONTEXT_OP_TYPE_COUNT ? impl->state->styleAlpha[opType] : 0.0;
   }
@@ -1000,7 +1046,9 @@ public:
   //! \name Fill Style & Options
   //! \{
 
+  BL_NODISCARD
   BL_INLINE uint32_t fillStyleType() const noexcept { return impl->state->styleType[kOpFill]; }
+
   BL_INLINE BLResult getFillStyle(BLStyle& out) const noexcept { return impl->virt->getStyle[kOpFill](impl, &out); }
 
   BL_INLINE BLResult setFillStyle(const BLStyle& style) noexcept { return impl->virt->setStyle[kOpFill](impl, &style); }
@@ -1011,12 +1059,16 @@ public:
   BL_INLINE BLResult setFillStyle(const BLGradient& gradient) noexcept { return impl->virt->setStyleObject[kOpFill](impl, &gradient); }
 
   //! Returns fill alpha value.
+  BL_NODISCARD
   BL_INLINE double fillAlpha() const noexcept { return impl->state->styleAlpha[kOpFill]; }
+
   //! Sets fill `alpha` value.
   BL_INLINE BLResult setFillAlpha(double alpha) noexcept { return impl->virt->setStyleAlpha[kOpFill](impl, alpha); }
 
   //! Returns fill-rule, see `BLFillRule`.
+  BL_NODISCARD
   BL_INLINE uint32_t fillRule() const noexcept { return impl->state->fillRule; }
+
   //! Sets fill-rule, see `BLFillRule`.
   BL_INLINE BLResult setFillRule(uint32_t fillRule) noexcept { return impl->virt->setFillRule(impl, fillRule); }
 
@@ -1025,7 +1077,9 @@ public:
   //! \name Stroke Style & Options
   //! \{
 
+  BL_NODISCARD
   BL_INLINE uint32_t strokeStyleType() const noexcept { return impl->state->styleType[kOpStroke]; }
+
   BL_INLINE BLResult getStrokeStyle(BLStyle& out) const noexcept { return impl->virt->getStyle[kOpStroke](impl, &out); }
 
   BL_INLINE BLResult setStrokeStyle(const BLStyle& style) noexcept { return impl->virt->setStyle[kOpStroke](impl, &style); }
@@ -1036,22 +1090,39 @@ public:
   BL_INLINE BLResult setStrokeStyle(const BLGradient& gradient) noexcept { return impl->virt->setStyleObject[kOpStroke](impl, &gradient); }
 
   //! Returns stroke width.
+  BL_NODISCARD
   BL_INLINE double strokeWidth() const noexcept { return impl->state->strokeOptions.width; }
+
   //! Returns stroke miter-limit.
+  BL_NODISCARD
   BL_INLINE double strokeMiterLimit() const noexcept { return impl->state->strokeOptions.miterLimit; }
+
   //! Returns stroke join, see `BLStrokeJoin`.
+  BL_NODISCARD
   BL_INLINE uint32_t strokeJoin() const noexcept { return impl->state->strokeOptions.join; }
+
   //! Returns stroke start-cap, see `BLStrokeCap`.
+  BL_NODISCARD
   BL_INLINE uint32_t strokeStartCap() const noexcept { return impl->state->strokeOptions.startCap; }
+
   //! Returns stroke end-cap, see `BLStrokeCap`.
+  BL_NODISCARD
   BL_INLINE uint32_t strokeEndCap() const noexcept { return impl->state->strokeOptions.endCap; }
+
   //! Returns stroke dash-offset.
+  BL_NODISCARD
   BL_INLINE double strokeDashOffset() const noexcept { return impl->state->strokeOptions.dashOffset; }
+
   //! Returns stroke dash-array.
+  BL_NODISCARD
   BL_INLINE const BLArray<double>& strokeDashArray() const noexcept { return impl->state->strokeOptions.dashArray; }
+
   //! Returns stroke transform order, see `BLStrokeTransformOrder`.
+  BL_NODISCARD
   BL_INLINE uint32_t strokeTransformOrder() const noexcept { return impl->state->strokeOptions.transformOrder; }
+
   //! Returns stroke options as a reference to `BLStrokeOptions`.
+  BL_NODISCARD
   BL_INLINE const BLStrokeOptions& strokeOptions() const noexcept { return impl->state->strokeOptions; }
 
   //! Sets stroke width to `width`.
@@ -1078,7 +1149,9 @@ public:
   BL_INLINE BLResult setStrokeOptions(const BLStrokeOptions& options) noexcept { return impl->virt->setStrokeOptions(impl, &options); }
 
   //! Returns stroke alpha value.
+  BL_NODISCARD
   BL_INLINE double strokeAlpha() const noexcept { return impl->state->styleAlpha[kOpStroke]; }
+
   //! Sets stroke alpha value to `alpha`.
   BL_INLINE BLResult setStrokeAlpha(double alpha) noexcept { return impl->virt->setStyleAlpha[kOpStroke](impl, alpha); }
 
@@ -1460,6 +1533,7 @@ public:
 
   //! \}
 
+  BL_NODISCARD
   static BL_INLINE const BLContext& none() noexcept {
     return reinterpret_cast<const BLContext*>(blNone)[kImplType];
   }
@@ -1468,4 +1542,4 @@ public:
 
 //! \}
 
-#endif // BLEND2D_CONTEXT_H
+#endif // BLEND2D_CONTEXT_H_INCLUDED

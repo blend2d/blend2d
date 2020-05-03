@@ -1,11 +1,28 @@
-// [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_RGBA_H
-#define BLEND2D_RGBA_H
+#ifndef BLEND2D_RGBA_H_INCLUDED
+#define BLEND2D_RGBA_H_INCLUDED
 
 #include "./api.h"
 
@@ -57,8 +74,8 @@ struct BLRgba32 {
 
   BL_INLINE explicit operator bool() const noexcept { return this->value != 0; }
 
-  BL_INLINE bool operator==(const BLRgba32& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLRgba32& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE bool operator==(const BLRgba32& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE bool operator!=(const BLRgba32& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -72,6 +89,7 @@ struct BLRgba32 {
   BL_INLINE void reset(const BLRgba32& rgba32) noexcept { value = rgba32.value; }
   BL_INLINE void reset(const BLRgba64& rgba64) noexcept;
 
+  BL_NODISCARD
   BL_INLINE bool equals(const BLRgba32& other) const noexcept { return blEquals(this->value, other.value); }
 
   //! \}
@@ -80,8 +98,11 @@ struct BLRgba32 {
   //! \{
 
   //! Tests whether the color is fully-opaque (alpha equals 0xFFFF).
+  BL_NODISCARD
   BL_INLINE bool isOpaque() const noexcept { return this->value >= 0xFF000000u; }
+
   //! Tests whether the color is fully-transparent (alpha equals 0).
+  BL_NODISCARD
   BL_INLINE bool isTransparent() const noexcept { return this->value <= 0x00FFFFFFu; }
 
   //! \}
@@ -180,8 +201,11 @@ struct BLRgba64 {
   //! \{
 
   //! Tests whether the color is fully-opaque (alpha equals 0xFFFF).
+  BL_NODISCARD
   BL_INLINE bool isOpaque() const noexcept { return this->value >= 0xFFFF000000000000u; }
+
   //! Tests whether the color is fully-transparent (alpha equals 0).
+  BL_NODISCARD
   BL_INLINE bool isTransparent() const noexcept { return this->value <= 0x0000FFFFFFFFFFFFu; }
 
   //! \}
@@ -190,6 +214,7 @@ struct BLRgba64 {
 };
 
 #ifdef __cplusplus
+BL_NODISCARD
 static BL_INLINE BLRgba64 blMin(const BLRgba64& a, const BLRgba64& b) noexcept {
   return BLRgba64(blMin(uint32_t((a.value >> 32) & 0xFFFFu), uint32_t((b.value >> 32) & 0xFFFFu)),
                   blMin(uint32_t((a.value >> 16) & 0xFFFFu), uint32_t((b.value >> 16) & 0xFFFFu)),
@@ -197,6 +222,7 @@ static BL_INLINE BLRgba64 blMin(const BLRgba64& a, const BLRgba64& b) noexcept {
                   blMin(uint32_t((a.value >> 48) & 0xFFFFu), uint32_t((b.value >> 48) & 0xFFFFu)));
 }
 
+BL_NODISCARD
 static BL_INLINE BLRgba64 blMax(const BLRgba64& a, const BLRgba64& b) noexcept {
   return BLRgba64(blMax(uint32_t((a.value >> 32) & 0xFFFFu), uint32_t((b.value >> 32) & 0xFFFFu)),
                   blMax(uint32_t((a.value >> 16) & 0xFFFFu), uint32_t((b.value >> 16) & 0xFFFFu)),
@@ -254,8 +280,8 @@ struct BLRgba {
            (this->a == 0.0f) ;
   }
 
-  BL_INLINE bool operator==(const BLRgba& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLRgba& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE bool operator==(const BLRgba& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE bool operator!=(const BLRgba& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -285,14 +311,17 @@ struct BLRgba {
     this->a = a;
   }
 
+  BL_NODISCARD
   BL_INLINE bool equals(const BLRgba32& rgba32) const noexcept {
     return equals(BLRgba(rgba32));
   }
 
+  BL_NODISCARD
   BL_INLINE bool equals(const BLRgba64& rgba64) const noexcept {
     return equals(BLRgba(rgba64));
   }
 
+  BL_NODISCARD
   BL_INLINE bool equals(const BLRgba& other) const noexcept {
     return blEquals(this->r, other.r) &
            blEquals(this->g, other.g) &
@@ -300,6 +329,7 @@ struct BLRgba {
            blEquals(this->a, other.a) ;
   }
 
+  BL_NODISCARD
   BL_INLINE bool equals(float r, float g, float b, float a = 1.0f) const noexcept {
     return blEquals(this->r, r) &
            blEquals(this->g, g) &
@@ -313,8 +343,11 @@ struct BLRgba {
   //! \{
 
   //! Tests whether the color is fully-opaque (alpha equals 1.0).
+  BL_NODISCARD
   constexpr bool isOpaque() const noexcept { return this->a >= 1.0; }
+
   //! Tests whether the color is fully-transparent (alpha equals 0.0).
+  BL_NODISCARD
   constexpr bool isTransparent() const noexcept { return this->a == 0.0; }
 
   //! \}
@@ -324,6 +357,7 @@ struct BLRgba {
 
 #ifdef __cplusplus
 template<>
+BL_NODISCARD
 constexpr BL_INLINE BLRgba blMin(const BLRgba& a, const BLRgba& b) noexcept {
   return BLRgba(blMin(a.r, b.r),
                 blMin(a.g, b.g),
@@ -332,6 +366,7 @@ constexpr BL_INLINE BLRgba blMin(const BLRgba& a, const BLRgba& b) noexcept {
 }
 
 template<>
+BL_NODISCARD
 constexpr BL_INLINE BLRgba blMax(const BLRgba& a, const BLRgba& b) noexcept {
   return BLRgba(blMax(a.r, b.r),
                 blMax(a.g, b.g),
@@ -370,4 +405,4 @@ static_assert(sizeof(BLRgba64) == 8, "'BLRgba64' struct must be exactly 8 bytes 
 
 BL_DIAGNOSTIC_POP
 
-#endif // BLEND2D_RGBA_H
+#endif // BLEND2D_RGBA_H_INCLUDED

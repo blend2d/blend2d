@@ -1,18 +1,76 @@
-// // [Blend2D]
-// 2D Vector Graphics Powered by a JIT Compiler.
+// // Blend2D - 2D Vector Graphics Powered by a JIT Compiler
 //
-// [License]
-// Zlib - See LICENSE.md file in the package.
+//  * Official Blend2D Home Page: https://blend2d.com
+//  * Official Github Repository: https://github.com/blend2d/blend2d
+//
+// Copyright (c) 2017-2020 The Blend2D Authors
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef BLEND2D_ZONEHASH_P_H
-#define BLEND2D_ZONEHASH_P_H
+#ifndef BLEND2D_ZONEHASH_P_H_INCLUDED
+#define BLEND2D_ZONEHASH_P_H_INCLUDED
 
 #include "./api-internal_p.h"
+#include "./unicode_p.h"
 #include "./zoneallocator_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
 //! \{
+
+// ============================================================================
+// [blHashString]
+// ============================================================================
+
+static BL_INLINE uint32_t blHashRound(uint32_t hash, uint32_t c) noexcept {
+  return hash * 65599u + c;
+}
+
+static BL_INLINE uint32_t blHashRoundCI(uint32_t hash, uint32_t c) noexcept {
+  return hash * 65599u + blAsciiToLower(c);
+}
+
+// Gets a hash of the given string `data` of size `size`. Size must be valid
+// as this function doesn't check for a null terminator and allows it in the
+// middle of the string.
+static BL_INLINE uint32_t blHashString(const char* data, size_t size) noexcept {
+  uint32_t hashCode = 0;
+  for (uint32_t i = 0; i < size; i++)
+    hashCode = blHashRound(hashCode, uint8_t(data[i]));
+  return hashCode;
+}
+
+static BL_INLINE uint32_t blHashString(const BLStringView& view) noexcept {
+  return blHashString(view.data, view.size);
+}
+
+// Gets a hash of the given string `data` of size `size`. Size must be valid
+// as this function doesn't check for a null terminator and allows it in the
+// middle of the string.
+static BL_INLINE uint32_t blHashStringCI(const char* data, size_t size) noexcept {
+  uint32_t hashCode = 0;
+  for (uint32_t i = 0; i < size; i++)
+    hashCode = blHashRoundCI(hashCode, uint8_t(data[i]));
+  return hashCode;
+}
+
+static BL_INLINE uint32_t blHashStringCI(const BLStringView& view) noexcept {
+  return blHashStringCI(view.data, view.size);
+}
 
 // ============================================================================
 // [BLZoneHashNode]
@@ -207,6 +265,11 @@ public:
   BL_INLINE BLZoneHashMap(BLZoneHashMap&& other) noexcept
     : BLZoneHashMap(other) {}
 
+  BL_INLINE ~BLZoneHashMap() noexcept {
+    if (!std::is_trivially_destructible<NodeT>::value)
+      _destroy();
+  }
+
   //! \}
 
   //! \name Utilities
@@ -216,16 +279,33 @@ public:
     BLZoneHashBase::_swap(other);
   }
 
+  void _destroy() noexcept {
+    for (size_t i = 0; i < _bucketCount; i++) {
+      NodeT* node = static_cast<NodeT*>(_data[i]);
+      if (node) {
+        do {
+          NodeT* next = static_cast<NodeT*>(node->_hashNext);
+          blCallDtor(*node);
+          node = next;
+        } while (node);
+        _data[i] = nullptr;
+      }
+    }
+  }
+
   //! \}
 
-  //! \name Manipulation
+  //! \name Functionality
   //! \{
+
+  BL_INLINE NodeT* nodesByHashCode(uint32_t hashCode) const noexcept {
+    uint32_t hashMod = _calcMod(hashCode);
+    return static_cast<NodeT*>(_data[hashMod]);
+  }
 
   template<typename KeyT>
   BL_INLINE NodeT* get(const KeyT& key) const noexcept {
-    uint32_t hashMod = _calcMod(key.hashCode());
-    NodeT* node = static_cast<NodeT*>(_data[hashMod]);
-
+    NodeT* node = nodesByHashCode(key.hashCode());
     while (node && !key.matches(node))
       node = static_cast<NodeT*>(node->_hashNext);
     return node;
@@ -235,7 +315,7 @@ public:
   BL_INLINE bool remove(NodeT* node) noexcept { return _remove(node); }
 
   template<typename Lambda>
-  BL_INLINE void forEach(const Lambda& f) const noexcept {
+  BL_INLINE void forEach(Lambda&& f) const noexcept {
     BLZoneHashNode** buckets = _data;
     uint32_t bucketCount = _bucketCount;
 
@@ -255,4 +335,4 @@ public:
 //! \}
 //! \endcond
 
-#endif // BLEND2D_ZONEHASH_P_H
+#endif // BLEND2D_ZONEHASH_P_H_INCLUDED
