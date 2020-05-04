@@ -24,7 +24,7 @@ static constexpr double BL_M_2_PI          = 6.28318530717958647692;  //!< pi * 
 static constexpr double BL_M_PI_DIV_2      = 1.57079632679489661923;  //!< pi / 2.
 static constexpr double BL_M_PI_DIV_3      = 1.04719755119659774615;  //!< pi / 3.
 static constexpr double BL_M_PI_DIV_4      = 0.78539816339744830962;  //!< pi / 4.
-static constexpr double BL_M_SQRT_0p5      = 0.70710678118654746172;  //!< sqrt(0.5).
+static constexpr double BL_M_SQRT_0p5      = 0.7071067811865476;      //!< sqrt(0.5).
 static constexpr double BL_M_SQRT_2        = 1.41421356237309504880;  //!< sqrt(2).
 static constexpr double BL_M_SQRT_3        = 1.73205080756887729353;  //!< sqrt(3).
 

@@ -266,6 +266,22 @@ public:
     vtx += 2;
   }
 
+  BL_INLINE void conicTo(const BLPoint& p1, const BLPoint& p2, double w) noexcept {
+    conicTo(p1.x, p1.y, p2.x, p2.y, w);
+  }
+
+  BL_INLINE void conicTo(double x1, double y1, double x2, double y2, double w) noexcept {
+    BL_ASSERT(remainingSize() >= 3);
+    cmd[0].value = BL_PATH_CMD_CONIC;
+    cmd[1].value = BL_PATH_CMD_WEIGHT;
+    cmd[2].value = BL_PATH_CMD_ON;
+    cmd += 2;
+    vtx[0].reset(x1, y1);
+    vtx[2].reset(w, blNaN<double>());
+    vtx[1].reset(x2, y2);
+    vtx += 2;
+  }
+
   BL_INLINE void cubicTo(const BLPoint& p1, const BLPoint& p2, const BLPoint& p3) noexcept {
     return cubicTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
   }
@@ -285,36 +301,7 @@ public:
   }
 
   BL_INLINE void arcQuadrantTo(const BLPoint& p1, const BLPoint& p2) noexcept {
-    BL_ASSERT(remainingSize() >= 3);
-
-    cmd[0].value = BL_PATH_CMD_CUBIC;
-    cmd[1].value = BL_PATH_CMD_CUBIC;
-    cmd[2].value = BL_PATH_CMD_ON;
-
-    BLPoint p0 = vtx[-1];
-    vtx[0] = p0 + (p1 - p0) * BL_M_KAPPA;
-    vtx[1] = p2 + (p1 - p2) * BL_M_KAPPA;
-    vtx[2] = p2;
-
-    cmd += 3;
-    vtx += 3;
-  }
-
-  BL_INLINE void conicTo(const BLPoint& p1, const BLPoint& p2, double w) noexcept {
-    BL_ASSERT(remainingSize() >= 3);
-    double k = 4.0 * w / (3.0 * (1.0 + w));
-
-    cmd[0].value = BL_PATH_CMD_CUBIC;
-    cmd[1].value = BL_PATH_CMD_CUBIC;
-    cmd[2].value = BL_PATH_CMD_ON;
-
-    BLPoint p0 = vtx[-1];
-    vtx[0] = p0 + (p1 - p0) * k;
-    vtx[1] = p2 + (p1 - p2) * k;
-    vtx[2] = p2;
-
-    cmd += 3;
-    vtx += 3;
+    conicTo(p1, p2, BL_M_SQRT_0p5);
   }
 
   BL_INLINE void addVertex(uint8_t cmd_, const BLPoint& p) noexcept {

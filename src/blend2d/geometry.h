@@ -143,8 +143,14 @@ struct BLPointI {
   BL_NODISCARD BL_INLINE bool operator==(const BLPointI& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLPointI& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0, 0); }
-  BL_INLINE void reset(const BLPointI& other) noexcept { reset(other.x, other.y); }
+  BL_INLINE void reset() noexcept {
+    reset(0, 0);
+  }
+
+  BL_INLINE void reset(const BLPointI& other) noexcept {
+    reset(other.x, other.y);
+  }
+
   BL_INLINE void reset(int x, int y) noexcept {
     this->x = x;
     this->y = y;
@@ -176,8 +182,14 @@ struct BLSizeI {
   BL_NODISCARD BL_INLINE bool operator==(const BLSizeI& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLSizeI& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0, 0); }
-  BL_INLINE void reset(const BLSizeI& other) noexcept { reset(other.w, other.h); }
+  BL_INLINE void reset() noexcept {
+    reset(0, 0);
+  }
+
+  BL_INLINE void reset(const BLSizeI& other) noexcept {
+    reset(other.w, other.h);
+  }
+
   BL_INLINE void reset(int w, int h) noexcept {
     this->w = w;
     this->h = h;
@@ -213,8 +225,14 @@ struct BLBoxI {
   BL_NODISCARD BL_INLINE bool operator==(const BLBoxI& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLBoxI& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0, 0, 0, 0); }
-  BL_INLINE void reset(const BLBoxI& other) noexcept { reset(other.x0, other.y0, other.x1, other.y1); }
+  BL_INLINE void reset() noexcept {
+    reset(0, 0, 0, 0);
+  }
+
+  BL_INLINE void reset(const BLBoxI& other) noexcept {
+    reset(other.x0, other.y0, other.x1, other.y1);
+  }
+
   BL_INLINE void reset(int x0, int y0, int x1, int y1) noexcept {
     this->x0 = x0;
     this->y0 = y0;
@@ -265,8 +283,14 @@ struct BLRectI {
   BL_NODISCARD BL_INLINE bool operator==(const BLRectI& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLRectI& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0, 0, 0, 0); }
-  BL_INLINE void reset(const BLRectI& other) noexcept { reset(other.x, other.y, other.w, other.h); }
+  BL_INLINE void reset() noexcept {
+    reset(0, 0, 0, 0);
+  }
+
+  BL_INLINE void reset(const BLRectI& other) noexcept {
+    reset(other.x, other.y, other.w, other.h);
+  }
+
   BL_INLINE void reset(int x, int y, int w, int h) noexcept {
     this->x = x;
     this->y = y;
@@ -306,8 +330,14 @@ struct BLPoint {
   BL_NODISCARD BL_INLINE bool operator==(const BLPoint& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLPoint& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0, 0); }
-  BL_INLINE void reset(const BLPoint& other) noexcept { reset(other.x, other.y); }
+  BL_INLINE void reset() noexcept {
+    reset(0, 0);
+  }
+
+  BL_INLINE void reset(const BLPoint& other) noexcept {
+    reset(other.x, other.y);
+  }
+
   BL_INLINE void reset(double x, double y) noexcept {
     this->x = x;
     this->y = y;
@@ -343,8 +373,14 @@ struct BLSize {
   BL_NODISCARD BL_INLINE bool operator==(const BLSize& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLSize& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0, 0); }
-  BL_INLINE void reset(const BLSize& other) noexcept { reset(other.w, other.h); }
+  BL_INLINE void reset() noexcept {
+    reset(0, 0);
+  }
+
+  BL_INLINE void reset(const BLSize& other) noexcept {
+    reset(other.w, other.h);
+  }
+
   BL_INLINE void reset(double w, double h) noexcept {
     this->w = w;
     this->h = h;
@@ -386,8 +422,14 @@ struct BLBox {
   BL_NODISCARD BL_INLINE bool operator==(const BLBox& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLBox& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0); }
-  BL_INLINE void reset(const BLBox& other) noexcept { reset(other.x0, other.y0, other.x1, other.y1); }
+  BL_INLINE void reset() noexcept {
+    reset(0.0, 0.0, 0.0, 0.0);
+  }
+
+  BL_INLINE void reset(const BLBox& other) noexcept {
+    reset(other.x0, other.y0, other.x1, other.y1);
+  }
+
   BL_INLINE void reset(double x0, double y0, double x1, double y1) noexcept {
     this->x0 = x0;
     this->y0 = y0;
@@ -441,8 +483,14 @@ struct BLRect {
   BL_NODISCARD BL_INLINE bool operator==(const BLRect& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLRect& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0); }
-  BL_INLINE void reset(const BLRect& other) noexcept { reset(other.x, other.y, other.w, other.h); }
+  BL_INLINE void reset() noexcept {
+    reset(0.0, 0.0, 0.0, 0.0);
+  }
+
+  BL_INLINE void reset(const BLRect& other) noexcept {
+    reset(other.x, other.y, other.w, other.h);
+  }
+
   BL_INLINE void reset(double x, double y, double w, double h) noexcept {
     this->x = x;
     this->y = y;
@@ -477,8 +525,14 @@ struct BLLine {
   BL_NODISCARD BL_INLINE bool operator==(const BLLine& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLLine& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0); }
-  BL_INLINE void reset(const BLLine& other) noexcept { reset(other.x0, other.y0, other.x1, other.y1); }
+  BL_INLINE void reset() noexcept {
+    reset(0.0, 0.0, 0.0, 0.0);
+  }
+
+  BL_INLINE void reset(const BLLine& other) noexcept {
+    reset(other.x0, other.y0, other.x1, other.y1);
+  }
+
   BL_INLINE void reset(double x0, double y0, double x1, double y1) noexcept {
     this->x0 = x0;
     this->y0 = y0;
@@ -488,8 +542,10 @@ struct BLLine {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLLine& other) const noexcept {
-    return (this->x0 == other.x0) & (this->y0 == other.y0) &
-           (this->x1 == other.x1) & (this->y1 == other.y1) ;
+    return bool(unsigned(blEquals(x0, other.x0)) &
+                unsigned(blEquals(y0, other.y0)) &
+                unsigned(blEquals(x1, other.x1)) &
+                unsigned(blEquals(y1, other.y1)));
   }
 #endif
 };
@@ -512,8 +568,14 @@ struct BLTriangle {
   BL_NODISCARD BL_INLINE bool operator==(const BLTriangle& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLTriangle& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0, 0.0, 0.0); }
-  BL_INLINE void reset(const BLTriangle& other) noexcept { reset(other.x0, other.y0, other.x1, other.y1, other.x2, other.y2); }
+  BL_INLINE void reset() noexcept {
+    reset(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  }
+
+  BL_INLINE void reset(const BLTriangle& other) noexcept {
+    reset(other.x0, other.y0, other.x1, other.y1, other.x2, other.y2);
+  }
+
   BL_INLINE void reset(double x0, double y0, double x1, double y1, double x2, double y2) noexcept {
     this->x0 = x0;
     this->y0 = y0;
@@ -525,9 +587,12 @@ struct BLTriangle {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLTriangle& other) const noexcept {
-    return (this->x0 == other.x0) & (this->y0 == other.y0) &
-           (this->x1 == other.x1) & (this->y1 == other.y1) &
-           (this->x2 == other.x2) & (this->y2 == other.y2) ;
+    return bool(unsigned(blEquals(x0, other.x0)) &
+                unsigned(blEquals(y0, other.y0)) &
+                unsigned(blEquals(x1, other.x1)) &
+                unsigned(blEquals(y1, other.y1)) &
+                unsigned(blEquals(x2, other.x2)) &
+                unsigned(blEquals(y2, other.y2)));
   }
 #endif
 };
@@ -558,9 +623,17 @@ struct BLRoundRect {
   BL_NODISCARD BL_INLINE bool operator==(const BLRoundRect& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLRoundRect& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0, 0.0, 0.0); }
-  BL_INLINE void reset(const BLRoundRect& other) noexcept { reset(other.x, other.y, other.w, other.h, other.rx, other.ry); }
-  BL_INLINE void reset(double x, double y, double w, double h, double r) noexcept { reset(x, y, w, h, r, r); }
+  BL_INLINE void reset() noexcept {
+    reset(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  }
+
+  BL_INLINE void reset(const BLRoundRect& other) noexcept {
+    reset(other.x, other.y, other.w, other.h, other.rx, other.ry);
+  }
+
+  BL_INLINE void reset(double x, double y, double w, double h, double r) noexcept {
+    reset(x, y, w, h, r, r);
+  }
 
   BL_INLINE void reset(double x, double y, double w, double h, double rx, double ry) noexcept {
     this->x = x;
@@ -573,9 +646,12 @@ struct BLRoundRect {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLRoundRect& other) const noexcept {
-    return (this->x  == other.x ) & (this->y  == other.y ) &
-           (this->w  == other.w ) & (this->h  == other.h ) &
-           (this->rx == other.rx) & (this->rx == other.ry) ;
+    return bool(unsigned(blEquals(x , other.x )) &
+                unsigned(blEquals(y , other.y )) &
+                unsigned(blEquals(w , other.w )) &
+                unsigned(blEquals(h , other.h )) &
+                unsigned(blEquals(rx, other.rx)) &
+                unsigned(blEquals(rx, other.ry)));
   }
 #endif
 };
@@ -597,8 +673,14 @@ struct BLCircle {
   BL_NODISCARD BL_INLINE bool operator==(const BLCircle& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLCircle& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0.0, 0.0, 0.0); }
-  BL_INLINE void reset(const BLCircle& other) noexcept { reset(other.cx, other.cy, other.r); }
+  BL_INLINE void reset() noexcept {
+    reset(0.0, 0.0, 0.0);
+  }
+
+  BL_INLINE void reset(const BLCircle& other) noexcept {
+    reset(other.cx, other.cy, other.r);
+  }
+
   BL_INLINE void reset(double cx, double cy, double r) noexcept {
     this->cx = cx;
     this->cy = cy;
@@ -607,7 +689,9 @@ struct BLCircle {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLCircle& other) const noexcept {
-    return (this->cx == other.cx) & (this->cy == other.cy) & (this->r == other.r);
+    return bool(unsigned(blEquals(cx, other.cx)) &
+                unsigned(blEquals(cy, other.cy)) &
+                unsigned(blEquals(r , other.r )));
   }
 #endif
 };
@@ -632,9 +716,17 @@ struct BLEllipse {
   BL_NODISCARD BL_INLINE bool operator==(const BLEllipse& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLEllipse& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0); }
-  BL_INLINE void reset(const BLEllipse& other) noexcept { reset(other.cx, other.cy, other.rx, other.ry); }
-  BL_INLINE void reset(double cx, double cy, double r) noexcept { reset(cx, cy, r, r); }
+  BL_INLINE void reset() noexcept {
+    reset(0.0, 0.0, 0.0, 0.0);
+  }
+
+  BL_INLINE void reset(const BLEllipse& other) noexcept {
+    reset(other.cx, other.cy, other.rx, other.ry);
+  }
+
+  BL_INLINE void reset(double cx, double cy, double r) noexcept {
+    reset(cx, cy, r, r);
+  }
 
   BL_INLINE void reset(double cx, double cy, double rx, double ry) noexcept {
     this->cx = cx;
@@ -645,8 +737,10 @@ struct BLEllipse {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLEllipse& other) const noexcept {
-    return (this->cx == other.cx) & (this->cy == other.cy) &
-           (this->rx == other.rx) & (this->ry == other.ry) ;
+    return bool(unsigned(blEquals(cx, other.cx)) &
+                unsigned(blEquals(cy, other.cy)) &
+                unsigned(blEquals(rx, other.rx)) &
+                unsigned(blEquals(ry, other.ry)));
   }
 #endif
 };
@@ -670,8 +764,14 @@ struct BLArc {
   BL_NODISCARD BL_INLINE bool operator==(const BLArc& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLArc& other) const noexcept { return !equals(other); }
 
-  BL_INLINE void reset() noexcept { reset(0.0, 0.0, 0.0, 0.0, 0.0, 0.0); }
-  BL_INLINE void reset(const BLArc& other) noexcept { reset(other.cx, other.cy, other.rx, other.ry, other.start, other.sweep); }
+  BL_INLINE void reset() noexcept {
+    reset(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  }
+
+  BL_INLINE void reset(const BLArc& other) noexcept {
+    reset(other.cx, other.cy, other.rx, other.ry, other.start, other.sweep);
+  }
+
   BL_INLINE void reset(double cx, double cy, double rx, double ry, double start, double sweep) noexcept {
     this->cx = cx;
     this->cy = cy;
@@ -683,12 +783,12 @@ struct BLArc {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLArc& other) const noexcept {
-    return (this->cx    == other.cx   ) &
-           (this->cy    == other.cy   ) &
-           (this->rx    == other.rx   ) &
-           (this->ry    == other.ry   ) &
-           (this->start == other.start) &
-           (this->sweep == other.sweep) ;
+    return bool(unsigned(blEquals(cx   , other.cx   )) &
+                unsigned(blEquals(cy   , other.cy   )) &
+                unsigned(blEquals(rx   , other.rx   )) &
+                unsigned(blEquals(ry   , other.ry   )) &
+                unsigned(blEquals(start, other.start)) &
+                unsigned(blEquals(sweep, other.sweep)));
   }
 #endif
 };

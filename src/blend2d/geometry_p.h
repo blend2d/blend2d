@@ -21,11 +21,11 @@ namespace BLGeometry {
 //! \name Geometry Type Size
 //! \{
 
-static BL_INLINE bool isSimpleGeometryType(uint32_t geometryType) noexcept {
+BL_HIDDEN extern const BLLookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1> blGeometryTypeSizeTable;
+
+static BL_INLINE bool isSimpleGeometryType(BLGeometryType geometryType) noexcept {
   return geometryType <= BL_GEOMETRY_TYPE_SIMPLE_LAST;
 }
-
-BL_HIDDEN extern const BLLookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1> blGeometryTypeSizeTable;
 
 //! \}
 
@@ -133,21 +133,21 @@ static BL_INLINE bool overlaps(const BLBox& a, const BLBox& b) noexcept { return
 //!
 //! \{
 
-static BL_INLINE void getQuadCoefficients(const BLPoint p[3], BLPoint& a, BLPoint& b, BLPoint& c) noexcept {
+static BL_INLINE void getQuadCoefficients(const BLPoint p[3], BLPoint& aOut, BLPoint& bOut, BLPoint& cOut) noexcept {
   BLPoint v1 = p[1] - p[0];
   BLPoint v2 = p[2] - p[1];
 
-  a = v2 - v1;
-  b = v1 + v1;
-  c = p[0];
+  aOut = v2 - v1;
+  bOut = v1 + v1;
+  cOut = p[0];
 }
 
-static BL_INLINE void getQuadDerivativeCoefficients(const BLPoint p[3], BLPoint& a, BLPoint& b) noexcept {
+static BL_INLINE void getQuadDerivativeCoefficients(const BLPoint p[3], BLPoint& aOut, BLPoint& bOut) noexcept {
   BLPoint v1 = p[1] - p[0];
   BLPoint v2 = p[2] - p[1];
 
-  a = 2.0 * v2 - 2.0 * v1;
-  b = 2.0 * v1;
+  aOut = 2.0 * v2 - 2.0 * v1;
+  bOut = 2.0 * v1;
 }
 
 static BL_INLINE BLPoint evalQuad(const BLPoint p[3], double t) noexcept {
@@ -424,6 +424,27 @@ public:
   }
 };
 
+//! \name Conic Bézier Curve Operations
+//!
+//! \{
+
+static BL_INLINE void splitConic(const BLPoint p[4], BLPoint aOut[4], BLPoint bOut[4]) noexcept {
+  BLPoint p01(blLerp(p[0], p[1]));
+  BLPoint p12(blLerp(p[1], p[2]));
+
+  aOut[0] = p[0];
+  aOut[1] = p01;
+  bOut[1] = p12;
+
+  // TODO: [CONIC] Not right...
+  aOut[2] = p[2]; // Weights.
+  bOut[2] = p[2];
+
+  bOut[3] = p[3];
+  aOut[3] = blLerp(p01, p12);
+  bOut[0] = aOut[3];
+}
+
 //! \}
 
 //! \name Cubic Bézier Curve Operations
@@ -447,7 +468,6 @@ public:
 //! ```
 //!
 //! \{
-
 
 static BL_INLINE void getCubicCoefficients(const BLPoint p[4], BLPoint& a, BLPoint& b, BLPoint& c, BLPoint& d) noexcept {
   BLPoint v1 = p[1] - p[0];
@@ -593,20 +613,20 @@ static BL_INLINE BLPoint cubicEndTangent(const BLPoint p[4]) noexcept {
   return out;
 }
 
-static BL_INLINE void splitCubic(const BLPoint p[4], BLPoint a[4], BLPoint b[4]) noexcept {
+static BL_INLINE void splitCubic(const BLPoint p[4], BLPoint aOut[4], BLPoint bOut[4]) noexcept {
   BLPoint p01(blLerp(p[0], p[1]));
   BLPoint p12(blLerp(p[1], p[2]));
   BLPoint p23(blLerp(p[2], p[3]));
 
-  a[0] = p[0];
-  a[1] = p01;
-  b[2] = p23;
-  b[3] = p[3];
+  aOut[0] = p[0];
+  aOut[1] = p01;
+  bOut[2] = p23;
+  bOut[3] = p[3];
 
-  a[2] = blLerp(p01, p12);
-  b[1] = blLerp(p12, p23);
-  a[3] = blLerp(a[2], b[1]);
-  b[0] = a[3];
+  aOut[2] = blLerp(p01, p12);
+  bOut[1] = blLerp(p12, p23);
+  aOut[3] = blLerp(aOut[2], bOut[1]);
+  bOut[0] = aOut[3];
 }
 
 static BL_INLINE void splitCubic(const BLPoint p[4], BLPoint a[4], BLPoint b[4], double t) noexcept {

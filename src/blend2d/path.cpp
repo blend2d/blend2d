@@ -675,6 +675,29 @@ public:
           break;
         }
 
+        case BL_PATH_CMD_CONIC: {
+          cmdData += 3;
+          vtxData += 3;
+          if (cmdData > cmdEnd || !hasPrevVertex)
+            return blTraceError(BL_ERROR_INVALID_GEOMETRY);
+
+          flags |= BL_PATH_FLAG_CONICS;
+          hasPrevVertex = true;
+          BLGeometry::bound(boundingBox, vtxData[-1]);
+
+          // Calculate tight bounding-box only when control points are outside the current one.
+          const BLPoint& ctrl = vtxData[-3];
+
+          if (!(ctrl.x >= boundingBox.x0 && ctrl.y >= boundingBox.y0 && ctrl.x <= boundingBox.x1 && ctrl.y <= boundingBox.y1)) {
+            // TODO [Conic]: Conic bounding box.
+            BLPoint extrema = BLGeometry::quadExtremaPoint(vtxData - 3);
+            BLGeometry::bound(boundingBox, extrema);
+            BLGeometry::bound(controlBox, vtxData[-2]);
+          }
+
+          break;
+        }
+
         case BL_PATH_CMD_CUBIC: {
           cmdData += 3;
           vtxData += 3;
@@ -984,6 +1007,25 @@ BL_API_IMPL BLResult blPathQuadTo(BLPathCore* self, double x1, double y1, double
   return BL_SUCCESS;
 }
 
+BL_API_IMPL BLResult blPathConicTo(BLPathCore* self, double x1, double y1, double x2, double y2, double w) noexcept {
+  using namespace BLPathPrivate;
+  BL_ASSERT(self->_d.isPath());
+
+  uint8_t* cmdData;
+  BLPoint* vtxData;
+  BL_PROPAGATE(prepareAdd(self, 3, &cmdData, &vtxData));
+
+  vtxData[0].reset(x1, y1);
+  vtxData[1].reset(w, blNaN<double>());
+  vtxData[2].reset(x2, y2);
+
+  cmdData[0] = BL_PATH_CMD_CONIC;
+  cmdData[1] = BL_PATH_CMD_WEIGHT;
+  cmdData[2] = BL_PATH_CMD_ON;
+
+  return BL_SUCCESS;
+}
+
 BL_API_IMPL BLResult blPathCubicTo(BLPathCore* self, double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
   using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
@@ -1096,26 +1138,16 @@ BL_API_IMPL BLResult blPathArcQuadrantTo(BLPathCore* self, double x1, double y1,
   using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
-  BLPathPrivateImpl* selfI = getImpl(self);
-  size_t size = selfI->size;
-
-  if (BL_UNLIKELY(!size || selfI->commandData[size - 1u] >= BL_PATH_CMD_CLOSE))
-    return blTraceError(BL_ERROR_NO_MATCHING_VERTEX);
-
   uint8_t* cmdData;
   BLPoint* vtxData;
   BL_PROPAGATE(prepareAdd(self, 3, &cmdData, &vtxData));
 
-  BLPoint p0 = vtxData[-1];
-  BLPoint p1(x1, y1);
-  BLPoint p2(x2, y2);
+  vtxData[0].reset(x1, y1);
+  vtxData[1].reset(BL_M_SQRT_0p5, blNaN<double>());
+  vtxData[2].reset(x2, y2);
 
-  vtxData[0].reset(p0 + (p1 - p0) * BL_M_KAPPA);
-  vtxData[1].reset(p2 + (p1 - p2) * BL_M_KAPPA);
-  vtxData[2].reset(p2);
-
-  cmdData[0] = BL_PATH_CMD_CUBIC;
-  cmdData[1] = BL_PATH_CMD_CUBIC;
+  cmdData[0] = BL_PATH_CMD_CONIC;
+  cmdData[1] = BL_PATH_CMD_WEIGHT;
   cmdData[2] = BL_PATH_CMD_ON;
 
   return BL_SUCCESS;
@@ -2532,6 +2564,15 @@ OnLine:
             }
           } while ((splinePtr += 2) != splineEnd);
         }
+        break;
+      }
+
+      case BL_PATH_CMD_CONIC: {
+        BL_ASSERT(hasMoveTo);
+        BL_ASSERT(i >= 3);
+
+        // TODO [Conic]: Conic hit testing.
+        BL_ASSERT(0);
         break;
       }
 

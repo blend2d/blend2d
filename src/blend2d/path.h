@@ -24,13 +24,23 @@ BL_DEFINE_ENUM(BLPathCmd) {
   BL_PATH_CMD_ON = 1,
   //! Quad-to control point.
   BL_PATH_CMD_QUAD = 2,
+  //! Conic-to control point followed by \ref BL_PATH_CMD_WEIGHT.
+  BL_PATH_CMD_CONIC = 3,
   //! Cubic-to control point (always used as a pair of commands).
-  BL_PATH_CMD_CUBIC = 3,
+  BL_PATH_CMD_CUBIC = 4,
   //! Close path.
-  BL_PATH_CMD_CLOSE = 4,
+  BL_PATH_CMD_CLOSE = 5,
+
+  //! Conic weight.
+  //!
+  //! \note This is not a point. This is a pair of values from which only
+  //! the first (x) is used to represent weight as used by conic curve. The
+  //! other value (y) is always set to NaN by Blend2D, but can be arbitrary
+  //! as it has no meaning.
+  BL_PATH_CMD_WEIGHT = 6,
 
   //! Maximum value of `BLPathCmd`.
-  BL_PATH_CMD_MAX_VALUE = 4
+  BL_PATH_CMD_MAX_VALUE = 6
 
   BL_FORCE_ENUM_UINT32(BL_PATH_CMD)
 };
@@ -51,8 +61,10 @@ BL_DEFINE_ENUM(BLPathFlags) {
   BL_PATH_FLAG_MULTIPLE = 0x00000002u,
   //! Path contains one or more quad curves.
   BL_PATH_FLAG_QUADS = 0x00000004u,
-  //! Path contains one or more cubic curves.
-  BL_PATH_FLAG_CUBICS = 0x00000008u,
+  //! Path contains conic curves (at least one).
+  BL_PATH_FLAG_CONICS = 0x00000008u,
+  //! Path contains cubic curves (at least one).
+  BL_PATH_FLAG_CUBICS = 0x00000010u,
   //! Path is invalid.
   BL_PATH_FLAG_INVALID = 0x40000000u,
   //! Flags are dirty (not reflecting the current status).
@@ -268,6 +280,7 @@ BL_API BLResult BL_CDECL blPathMoveTo(BLPathCore* self, double x0, double y0) BL
 BL_API BLResult BL_CDECL blPathLineTo(BLPathCore* self, double x1, double y1) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathPolyTo(BLPathCore* self, const BLPoint* poly, size_t count) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathQuadTo(BLPathCore* self, double x1, double y1, double x2, double y2) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathConicTo(BLPathCore* self, double x1, double y1, double x2, double y2, double w) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathCubicTo(BLPathCore* self, double x1, double y1, double x2, double y2, double x3, double y3) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathSmoothQuadTo(BLPathCore* self, double x2, double y2) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathSmoothCubicTo(BLPathCore* self, double x2, double y2, double x3, double y3) BL_NOEXCEPT_C;
@@ -576,6 +589,10 @@ public:
   //!   - https://www.w3.org/TR/SVG/paths.html#PathDataQuadraticBezierCommands
   BL_INLINE BLResult quadTo(double x1, double y1, double x2, double y2) noexcept {
     return blPathQuadTo(this, x1, y1, x2, y2);
+  }
+
+  BL_INLINE BLResult conicTo(double x1, double y1, double x2, double y2, double w) noexcept {
+    return blPathConicTo(this, x1, y1, x2, y2, w);
   }
 
   //! Adds a cubic curve to `p1`, `p2`, `p3`.

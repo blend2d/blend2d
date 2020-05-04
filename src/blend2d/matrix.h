@@ -8,8 +8,6 @@
 
 #include "geometry.h"
 
-BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
-
 //! \addtogroup blend2d_api_geometry
 //! \{
 
@@ -184,10 +182,10 @@ struct BLMatrix2D {
   //!   [m10 m11]
   //!   [m20 m21]
   //! ```
-  BL_INLINE constexpr BLMatrix2D(double m00, double m01, double m10, double m11, double m20, double m21) noexcept
-    : m00(m00), m01(m01),
-      m10(m10), m11(m11),
-      m20(m20), m21(m21) {}
+  BL_INLINE constexpr BLMatrix2D(double p00, double p01, double p10, double p11, double p20, double p21) noexcept
+    : m00(p00), m01(p01),
+      m10(p10), m11(p11),
+      m20(p20), m21(p21) {}
 
   //! \}
 
@@ -296,13 +294,13 @@ struct BLMatrix2D {
   }
 
   //! Resets matrix to [`m00`, `m01`, `m10`, `m11`, `m20`, `m21`].
-  BL_INLINE void reset(double m00, double m01, double m10, double m11, double m20, double m21) noexcept {
-    this->m00 = m00;
-    this->m01 = m01;
-    this->m10 = m10;
-    this->m11 = m11;
-    this->m20 = m20;
-    this->m21 = m21;
+  BL_INLINE void reset(double p00, double p01, double p10, double p11, double p20, double p21) noexcept {
+    m00 = p00;
+    m01 = p01;
+    m10 = p10;
+    m11 = p11;
+    m20 = p20;
+    m21 = p21;
   }
 
   //! Resets matrix to translation.
@@ -370,11 +368,11 @@ struct BLMatrix2D {
 
   //! Returns the matrix type, see `BLMatrix2DType`.
   BL_NODISCARD
-  BL_INLINE BLMatrix2DType type() const noexcept { return blMatrix2DGetType(this); }
+  BL_INLINE BLMatrix2DType type() const noexcept { return (BLMatrix2DType)blMatrix2DGetType(this); }
 
   //! Calculates the matrix determinant.
   BL_NODISCARD
-  BL_INLINE double determinant() const noexcept { return this->m00 * this->m11 - this->m01 * this->m10; }
+  BL_INLINE double determinant() const noexcept { return m00 * m11 - m01 * m10; }
 
   //! \}
 
@@ -382,9 +380,8 @@ struct BLMatrix2D {
   //! \{
 
   BL_INLINE BLResult translate(double x, double y) noexcept {
-    this->m20 += x * this->m00 + y * this->m10;
-    this->m21 += x * this->m01 + y * this->m11;
-
+    m20 += x * m00 + y * m10;
+    m21 += x * m01 + y * m11;
     return BL_SUCCESS;
   }
 
@@ -393,11 +390,10 @@ struct BLMatrix2D {
 
   BL_INLINE BLResult scale(double xy) noexcept { return scale(xy, xy); }
   BL_INLINE BLResult scale(double x, double y) noexcept {
-    this->m00 *= x;
-    this->m01 *= x;
-    this->m10 *= y;
-    this->m11 *= y;
-
+    m00 *= x;
+    m01 *= x;
+    m10 *= y;
+    m11 *= y;
     return BL_SUCCESS;
   }
 
@@ -421,9 +417,8 @@ struct BLMatrix2D {
   }
 
   BL_INLINE BLResult postTranslate(double x, double y) noexcept {
-    this->m20 += x;
-    this->m21 += y;
-
+    m20 += x;
+    m21 += y;
     return BL_SUCCESS;
   }
 
@@ -432,13 +427,12 @@ struct BLMatrix2D {
 
   BL_INLINE BLResult postScale(double xy) noexcept { return postScale(xy, xy); }
   BL_INLINE BLResult postScale(double x, double y) noexcept {
-    this->m00 *= x;
-    this->m01 *= y;
-    this->m10 *= x;
-    this->m11 *= y;
-    this->m20 *= x;
-    this->m21 *= y;
-
+    m00 *= x;
+    m01 *= y;
+    m10 *= x;
+    m11 *= y;
+    m20 *= x;
+    m21 *= y;
     return BL_SUCCESS;
   }
 
@@ -491,7 +485,5 @@ struct BLMatrix2D {
 //! \}
 
 //! \}
-
-BL_DIAGNOSTIC_POP
 
 #endif // BLEND2D_MATRIX_H_INCLUDED

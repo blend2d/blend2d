@@ -8,8 +8,6 @@
 
 #include "geometry.h"
 
-BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
-
 //! \addtogroup blend2d_api_text
 //! \{
 
@@ -1034,8 +1032,8 @@ struct BLFontPanose {
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 
   BL_INLINE bool empty() const noexcept {
-    return (this->data[0] | this->data[1] | this->data[2] | this->data[3] | this->data[4] |
-            this->data[5] | this->data[6] | this->data[7] | this->data[8] | this->data[9] ) == 0;
+    return (data[0] | data[1] | data[2] | data[3] | data[4] |
+            data[5] | data[6] | data[7] | data[8] | data[9] ) == 0;
   }
 #endif
 };
@@ -1057,23 +1055,23 @@ struct BLFontMatrix {
   BL_INLINE BLFontMatrix() noexcept = default;
   BL_INLINE BLFontMatrix(const BLFontMatrix& other) noexcept = default;
 
-  BL_INLINE BLFontMatrix(double m00, double m01, double m10, double m11) noexcept
-    : m00(m00), m01(m01), m10(m10), m11(m11) {}
+  BL_INLINE BLFontMatrix(double p00, double p01, double p10, double p11) noexcept
+    : m00(p00), m01(p01), m10(p10), m11(p11) {}
 
   BL_INLINE BLFontMatrix& operator=(const BLFontMatrix& other) noexcept = default;
 
   BL_INLINE void reset() noexcept {
-    this->m00 = 1.0;
-    this->m01 = 0.0;
-    this->m10 = 0.0;
-    this->m11 = 1.0;
+    m00 = 1.0;
+    m01 = 0.0;
+    m10 = 0.0;
+    m11 = 1.0;
   }
 
-  BL_INLINE void reset(double m00, double m01, double m10, double m11) noexcept {
-    this->m00 = m00;
-    this->m01 = m01;
-    this->m10 = m10;
-    this->m11 = m11;
+  BL_INLINE void reset(double p00, double p01, double p10, double p11) noexcept {
+    m00 = p00;
+    m01 = p01;
+    m10 = p10;
+    m11 = p11;
   }
 #endif
 };
@@ -1222,7 +1220,5 @@ struct BLTextMetrics {
 //! \}
 
 //! \}
-
-BL_DIAGNOSTIC_POP
 
 #endif // BLEND2D_FONTDEFS_H_INCLUDED
