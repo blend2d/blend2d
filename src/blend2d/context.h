@@ -1409,7 +1409,7 @@ public:
   BL_INLINE BLResult strokePolyline(const BLPoint* poly, size_t n) noexcept { return strokePolyline(BLArrayView<BLPoint>{poly, n}); }
 
   //! Strokes a polyline.
-  BL_INLINE BLResult strokePolyline(const BLArrayView<BLPointI>& poly) noexcept { return strokeGeometry(BL_GEOMETRY_TYPE_POLYLINED, &poly); }
+  BL_INLINE BLResult strokePolyline(const BLArrayView<BLPointI>& poly) noexcept { return strokeGeometry(BL_GEOMETRY_TYPE_POLYLINEI, &poly); }
   //! \overload
   BL_INLINE BLResult strokePolyline(const BLPointI* poly, size_t n) noexcept { return strokePolyline(BLArrayView<BLPointI>{poly, n}); }
 
