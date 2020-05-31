@@ -68,8 +68,7 @@ public:
   virtual ~BLPipeGenErrorHandler() noexcept {}
 
   void handleError(asmjit::Error err, const char* message, asmjit::BaseEmitter* origin) override {
-    BL_UNUSED(origin);
-
+    blUnused(origin);
     _err = err;
     blRuntimeMessageFmt("BLPipeGen assembling error: %s\n", message);
   }
@@ -108,7 +107,7 @@ static BLPipeFillFunc BL_CDECL blPipeGenRuntimeGet(BLPipeRuntime* self_, uint32_
 }
 
 static BLPipeFillFunc BL_CDECL blPipeGenRuntimeTest(BLPipeRuntime* self_, uint32_t signature, BLPipeLookupCache* cache) noexcept {
-  BL_UNUSED(cache);
+  blUnused(cache);
 
   BLPipeGenRuntime* self = static_cast<BLPipeGenRuntime*>(self_);
   BLPipeFillFunc func = self->_mutex.protectShared([&] { return (BLPipeFillFunc)self->_functionCache.get(signature); });
@@ -181,7 +180,7 @@ BLPipeFillFunc BLPipeGenRuntime::_compileFillFunc(uint32_t signature) noexcept {
   BLPipeGenErrorHandler eh;
   asmjit::CodeHolder code;
 
-  code.init(_jitRuntime.codeInfo());
+  code.init(_jitRuntime.environment());
   code.setErrorHandler(&eh);
 
   #ifndef ASMJIT_NO_LOGGING
@@ -190,6 +189,9 @@ BLPipeFillFunc BLPipeGenRuntime::_compileFillFunc(uint32_t signature) noexcept {
   #endif
 
   asmjit::x86::Compiler cc(&code);
+  cc.addEncodingOptions(
+    asmjit::BaseEmitter::kEncodingOptionOptimizeForSize |
+    asmjit::BaseEmitter::kEncodingOptionOptimizedAlign);
 
   #ifndef ASMJIT_NO_LOGGING
   if (_enableLogger) {
@@ -246,7 +248,7 @@ BLPipeFillFunc BLPipeGenRuntime::_compileFillFunc(uint32_t signature) noexcept {
 // ============================================================================
 
 static void BL_CDECL blPipeGenOnResourceInfo(BLRuntimeContext* rt, BLRuntimeResourceInfo* resourceInfo) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   BLPipeGenRuntime& pipeGenRuntime = BLPipeGenRuntime::_global();
   asmjit::JitAllocator::Statistics pipeStats = pipeGenRuntime._jitRuntime.allocator()->statistics();
@@ -259,7 +261,7 @@ static void BL_CDECL blPipeGenOnResourceInfo(BLRuntimeContext* rt, BLRuntimeReso
 }
 
 static void BL_CDECL blPipeGenOnShutdown(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
   BLPipeGenRuntime::_global.destroy();
 }
 

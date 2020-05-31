@@ -114,7 +114,7 @@ static BL_INLINE BLPath* blRasterJobGetGeometryAsPath(BLRasterWorkData* workData
 }
 
 static BL_INLINE void blRasterJobFinalizeGeometryData(BLRasterWorkData* workData, BLRasterJobData_GeometryOp* job) noexcept {
-  BL_UNUSED(workData);
+  blUnused(workData);
   if (job->geometryType() == BL_GEOMETRY_TYPE_PATH)
     job->geometryData<BLPath>()->~BLPath();
 }

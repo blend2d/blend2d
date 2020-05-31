@@ -37,7 +37,7 @@
 static BLResult BL_CDECL blMatrix2DMapPointDArrayIdentity_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
-  BL_UNUSED(self);
+  blUnused(self);
   if (dst == src)
     return BL_SUCCESS;
 
@@ -208,7 +208,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine_AVX(const BLMatrix2D* se
 // ============================================================================
 
 void blMatrix2DOnInit_AVX(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
   BLMapPointDArrayFunc* funcs = blMatrix2DMapPointDArrayFuncs;
 
   blAssignFunc(&funcs[BL_MATRIX2D_TYPE_IDENTITY ], blMatrix2DMapPointDArrayIdentity_AVX);

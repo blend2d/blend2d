@@ -19,9 +19,3 @@ mkdir -p ../${BUILD_DIR}_rel
 cd ../${BUILD_DIR}_rel
 eval cmake .. -DCMAKE_BUILD_TYPE=Release ${BUILD_OPTIONS}
 cd ${CURRENT_DIR}
-
-echo "** Configuring '${BUILD_DIR}_san' [Sanitizer Build] **"
-mkdir -p ../${BUILD_DIR}_san
-cd ../${BUILD_DIR}_san
-eval cmake .. -DCMAKE_BUILD_TYPE=Debug ${BUILD_OPTIONS} -DBLEND2D_SANITIZE=1
-cd ${CURRENT_DIR}

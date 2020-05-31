@@ -330,9 +330,6 @@ void FillBoxUPart::compile() noexcept {
     compOpPart()->cMaskGenericLoop(x);
     compOpPart()->cMaskFini();
 
-    if (hasLowGpRegs())
-      cc->alloc(masks);
-
     cc->shr(masks, 8);
     cc->mov(x, 1);
     cc->jmp(L_VMaskInit);
@@ -434,7 +431,7 @@ void FillAnalyticPart::compile() noexcept {
   VecArray m;
   pc->newXmmArray(m, 2, "m");
 
-  int dstBpp = int(dstPart()->bpp());
+  uint32_t dstBpp = dstPart()->bpp();
   int bwSize = int(sizeof(BLBitWord));
   int bwSizeInBits = bwSize * 8;
 
@@ -534,7 +531,7 @@ void FillAnalyticPart::compile() noexcept {
   // composition. If this is a rare case where `x0` points at the end of the raster
   // there is still one cell that is non-zero. This makes sure it's cleared.
 
-  pc->uAddMulImm(dstPtr, x0.cloneAs(dstPtr), dstBpp);      //   dstPtr += x0 * dstBpp;
+  pc->uAddMulImm(dstPtr, x0.cloneAs(dstPtr), int(dstBpp)); //   dstPtr += x0 * dstBpp;
   pc->uAddMulImm(cellPtr, x0.cloneAs(cellPtr), 4);         //   cellPtr += x0 * sizeof(uint32_t);
 
   // Rare case - line rasterized at the end of the raster boundary. In 99% cases
@@ -787,7 +784,7 @@ void FillAnalyticPart::compile() noexcept {
   cc->jnz(L_CLoop_Init);                                   //     goto L_CLoop_Init;
 
   // Fully-Transparent span where `cMaskAlpha == 0`.
-  pc->uAddMulImm(dstPtr, i.cloneAs(dstPtr), dstBpp);       //   dstPtr += i * dstBpp;
+  pc->uAddMulImm(dstPtr, i.cloneAs(dstPtr), int(dstBpp));  //   dstPtr += i * dstBpp;
 
   compOpPart()->postfetchN();
   compOpPart()->advanceX(x0, i);
@@ -921,7 +918,7 @@ void FillAnalyticPart::compile() noexcept {
 
   cc->bind(L_Scanline_Done1);                              // L_Scanline_Done1:
   disadvanceDstPtrAndCellPtr(dstPtr,                       //   dstPtr -= x0 * dstBpp;
-                             cellPtr, x0, dstBpp);         //   cellPtr -= x0 * sizeof(uint32_t);
+                             cellPtr, x0, int(dstBpp));    //   cellPtr -= x0 * sizeof(uint32_t);
   cc->sub(y, 1);                                           //   if (--y == 0)
   cc->jz(L_End);                                           //     goto L_End;
   cc->mov(bitPtr, bitPtrEnd);                              //   bitPtr = bitPtrEnd;

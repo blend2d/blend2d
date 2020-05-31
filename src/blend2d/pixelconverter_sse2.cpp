@@ -51,7 +51,7 @@ BLResult bl_convert_copy_sse2(
     options = &blPixelConverterDefaultOptions;
 
   const size_t gap = options->gap;
-  dstStride -= uintptr_t(byteWidth) + intptr_t(gap);
+  dstStride -= uintptr_t(byteWidth) + uintptr_t(gap);
   srcStride -= uintptr_t(byteWidth);
 
   for (uint32_t y = h; y != 0; y--) {
@@ -261,7 +261,7 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_template_sse2(
   uint8_t* dstData, intptr_t dstStride,
   const uint8_t* srcData, intptr_t srcStride, uint32_t w, uint32_t h, const BLPixelConverterOptions* options) noexcept {
 
-  BL_UNUSED(self);
+  blUnused(self);
 
   if (!options)
     options = &blPixelConverterDefaultOptions;

@@ -2673,7 +2673,7 @@ uint32_t blRegionHitTestBoxI(const BLRegionCore* self, const BLBoxI* box) noexce
 // ============================================================================
 
 void blRegionOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   BLInternalRegionImpl* regionI = &blNullRegionImpl;
   blInitBuiltInNull(regionI, BL_IMPL_TYPE_REGION, 0);

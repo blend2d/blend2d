@@ -163,7 +163,10 @@ struct BLCompOpSimplifyInfo {
 // Initially we have used a single table, however, some older compilers would
 // reach template instantiation depth limit (as the table is not small), so the
 // implementation was changed to this instead to make sure this won't happen.
-enum : uint32_t { BL_COMP_OP_SIMPLIFY_RECORD_SIZE = BL_COMP_OP_INTERNAL_COUNT * BL_FORMAT_RESERVED_COUNT };
+enum : uint32_t {
+  BL_COMP_OP_SIMPLIFY_RECORD_SIZE
+    = uint32_t(BL_COMP_OP_INTERNAL_COUNT) * uint32_t(BL_FORMAT_RESERVED_COUNT)
+};
 typedef BLLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE> BLCompOpSimplifyInfoRecordSet;
 
 struct BLCompOpSimplifyInfoTable { BLCompOpSimplifyInfoRecordSet data[BL_FORMAT_COUNT]; };

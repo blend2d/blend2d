@@ -136,8 +136,7 @@ static BL_INLINE void blArrayFillPattern(T* dst, T src, size_t n) noexcept {
 }
 
 static BLResult BL_CDECL blArrayDestroySimpleData(void* dst, size_t nBytes) noexcept {
-  BL_UNUSED(dst);
-  BL_UNUSED(nBytes);
+  blUnused(dst, nBytes);
   return BL_SUCCESS;
 }
 
@@ -370,7 +369,7 @@ BLResult blArrayCreateFromData(BLArrayCore* self, void* data, size_t size, size_
   BLOverflowFlag of = 0;
 
   size_t dataSizeInBytes = blMulOverflow(capacity, itemSize, &of);
-  BL_UNUSED(dataSizeInBytes); // We just want to know whether it has overflown.
+  blUnused(dataSizeInBytes); // We just want to know whether it has overflown.
 
   if (BL_UNLIKELY(!capacity || capacity < size || !blDataAccessFlagsIsValid(dataAccessFlags) || of))
     return blTraceError(BL_ERROR_INVALID_VALUE);
@@ -1202,7 +1201,7 @@ bool blArrayEquals(const BLArrayCore* a, const BLArrayCore* b) noexcept {
 // ===========================================================================
 
 void blArrayOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   for (uint32_t implType = BL_IMPL_TYPE_ARRAY_FIRST; implType <= BL_IMPL_TYPE_ARRAY_LAST; implType++) {
     BLArrayImpl* arrayI = &blNullArrayImpl[implType];

@@ -136,7 +136,7 @@ void FetchLinearGradientPart::startAtX(x86::Gp& x) noexcept {
 }
 
 void FetchLinearGradientPart::advanceX(x86::Gp& x, x86::Gp& diff) noexcept {
-  BL_UNUSED(x);
+  blUnused(x);
 
   x86::Xmm delta = cc->newXmm("f.delta");
   pc->s_mov_i32(delta, diff);
@@ -470,7 +470,7 @@ void FetchRadialGradientPart::startAtX(x86::Gp& x) noexcept {
 }
 
 void FetchRadialGradientPart::advanceX(x86::Gp& x, x86::Gp& diff) noexcept {
-  BL_UNUSED(diff);
+  blUnused(diff);
 
   if (isRectFill()) {
     precalc(f->px_py);
@@ -808,7 +808,7 @@ void FetchConicalGradientPart::startAtX(x86::Gp& x) noexcept {
 }
 
 void FetchConicalGradientPart::advanceX(x86::Gp& x, x86::Gp& diff) noexcept {
-  BL_UNUSED(diff);
+  blUnused(diff);
 
   x86::Xmm& hx_hy = f->hx_hy;
   x86::Xmm& px_py = f->px_py;

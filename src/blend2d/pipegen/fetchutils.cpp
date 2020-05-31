@@ -88,7 +88,7 @@ void IndexExtractor::extract(const x86::Gp& dst, uint32_t index) noexcept {
   x86::Mem m = _mem;
   x86::Compiler* cc = _pc->cc;
 
-  m.setSize(int(_indexSize));
+  m.setSize(_indexSize);
   m.addOffset(int(index * _indexSize));
 
   switch (_type) {

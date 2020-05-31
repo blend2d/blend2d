@@ -416,7 +416,7 @@ void* blRuntimeAllocAlignedImpl(size_t implSize, size_t alignment, uint16_t* mem
 }
 
 BLResult blRuntimeFreeImpl(void* impl_, size_t implSize, uint32_t memPoolData) noexcept {
-  BL_UNUSED(implSize);
+  blUnused(implSize);
 
   void* unalignedPtr = static_cast<void*>(static_cast<uint8_t*>(impl_) - memPoolData);
   free(unalignedPtr);
@@ -424,8 +424,7 @@ BLResult blRuntimeFreeImpl(void* impl_, size_t implSize, uint32_t memPoolData) n
 }
 
 void BL_CDECL blRuntimeDummyDestroyImplFunc(void* impl, void* destroyData) noexcept {
-  BL_UNUSED(impl);
-  BL_UNUSED(destroyData);
+  blUnused(impl, destroyData);
 }
 
 // ============================================================================

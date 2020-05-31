@@ -58,7 +58,7 @@ UNIT(analytic_rasterizer) {
     INFO("Testing advanceToY() correctness [bandHeight=%u]", bandHeight);
 
     // TODO: Wrap this logic into something, now it's duplicated 3x.
-    size_t requiredWidth = blAlignUp(w + 1u + BL_PIPE_PIXELS_PER_ONE_BIT, BL_PIPE_PIXELS_PER_ONE_BIT);
+    size_t requiredWidth = blAlignUp(uint32_t(w) + 1u + BL_PIPE_PIXELS_PER_ONE_BIT, BL_PIPE_PIXELS_PER_ONE_BIT);
     size_t requiredHeight = bandHeight;
     size_t cellAlignment = 16;
 
@@ -140,7 +140,7 @@ UNIT(analytic_rasterizer) {
         if (isFinished)
           break;
 
-        b.advanceToY(bandY1);
+        b.advanceToY(int(bandY1));
         bool statesMustMatch = blCheckRasterizerState(a, b);
 
         EXPECT(statesMustMatch,

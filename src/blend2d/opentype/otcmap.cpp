@@ -36,10 +36,7 @@ namespace CMapImpl {
 // ============================================================================
 
 static BLResult BL_CDECL mapTextToGlyphsNone(const BLFontFaceImpl* faceI_, uint32_t* content, size_t count, BLGlyphMappingState* state) noexcept {
-  BL_UNUSED(faceI_);
-  BL_UNUSED(content);
-  BL_UNUSED(count);
-
+  blUnused(faceI_, content, count);
   state->reset();
   return blTraceError(BL_ERROR_FONT_NO_CHARACTER_MAPPING);
 }

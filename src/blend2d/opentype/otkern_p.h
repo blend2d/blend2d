@@ -205,7 +205,7 @@ struct KernGroup {
     return KernGroup { format, flags, dataSize, { dataOffset } };
   }
 
-  static BL_INLINE KernGroup makeSynthesized(uint32_t format, int32_t flags, void* dataPtr, uint32_t dataSize) noexcept {
+  static BL_INLINE KernGroup makeSynthesized(uint32_t format, uint32_t flags, void* dataPtr, uint32_t dataSize) noexcept {
     return KernGroup { format, flags | kFlagSynthesized, dataSize, { (uintptr_t)dataPtr } };
   }
 };

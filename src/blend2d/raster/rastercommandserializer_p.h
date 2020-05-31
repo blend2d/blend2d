@@ -50,7 +50,7 @@ struct BLRasterCommandSerializerStorage<BL_RASTER_RENDERING_MODE_SYNC> {
 
   BL_INLINE BLResult initStorage(BLRasterContextImpl* ctxI) noexcept {
     // Synchronous rendering doesn't use command storage.
-    BL_UNUSED(ctxI);
+    blUnused(ctxI);
     return BL_SUCCESS;
   }
 };
@@ -169,7 +169,7 @@ struct BLRasterBlitCommandSerializer<BL_RASTER_RENDERING_MODE_SYNC> : public BLR
   BLRasterFetchData _fetchData;
 
   BL_INLINE BLResult initFetchDataForBlit(BLRasterContextImpl* ctxI) noexcept {
-    BL_UNUSED(ctxI);
+    blUnused(ctxI);
 
     command().initFetchData(&_fetchData);
     return BL_SUCCESS;
@@ -177,7 +177,7 @@ struct BLRasterBlitCommandSerializer<BL_RASTER_RENDERING_MODE_SYNC> : public BLR
 
   BL_INLINE void rollbackFetchData(BLRasterContextImpl* ctxI) noexcept {
     // Nothing in synchronous rendering case.
-    BL_UNUSED(ctxI);
+    blUnused(ctxI);
   }
 
   BL_INLINE BLRasterFetchData* fetchData() { return &_fetchData; }

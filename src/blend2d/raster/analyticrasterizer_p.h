@@ -108,11 +108,13 @@ namespace BLAnalyticRasterizerUtils {
     static_assert(sizeof(AccT) == sizeof(IterT),
                   "Accumulator and iterator must have the same size");
 
-    int64_t i = int64_t(iter);
+    typedef typename std::make_unsigned<IterT>::type U;
+
+    int64_t i = int64_t(U(iter));
     i -= int64_t(uint64_t(step) * uint32_t(count));
 
     if (i < 0) {
-      int n = int(((uint64_t(-i) + correction - 1) / uint64_t(correction)));
+      int n = int(((uint64_t(-i) + U(correction) - 1u) / uint64_t(correction)));
       acc += AccT(n);
       i += int64_t(correction) * n;
     }
@@ -458,7 +460,7 @@ struct BLAnalyticRasterizer : public BLAnalyticRasterizerState {
         int y = ny;
         if (_flags & kFlagInitialScanline)
           y--;
-        _yDlt -= y * BL_PIPE_A8_SCALE;
+        _yDlt -= y * int(BL_PIPE_A8_SCALE);
         BL_ASSERT(_yDlt >= 0);
       }
     }

@@ -103,7 +103,7 @@ BL_DEFINE_ENUM(BLContextCreateFlags) {
   //! fallback to synchronous mode with no worker threads.
   //!
   //! \note If this flag is specified with `threadCount == 1` it means to
-  //! immedialy fallback to synchronous rendering. It's only practical to
+  //! immediately fallback to synchronous rendering. It's only practical to
   //! use this flag with 2 or more requested threads.
   BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC = 0x00000008u,
 

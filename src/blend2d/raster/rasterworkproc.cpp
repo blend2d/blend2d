@@ -214,14 +214,14 @@ void blRasterWorkProc(BLRasterWorkData* workData) noexcept {
 // ============================================================================
 
 void blRasterWorkThreadEntry(BLThread* thread, void* data) noexcept {
-  BL_UNUSED(thread);
+  blUnused(thread);
 
   BLRasterWorkData* workData = static_cast<BLRasterWorkData*>(data);
   blRasterWorkProc(workData);
 }
 
 void blRasterWorkThreadDone(BLThread* thread, void* data) noexcept {
-  BL_UNUSED(thread);
+  blUnused(thread);
 
   BLRasterWorkData* workData = static_cast<BLRasterWorkData*>(data);
   workData->batch->_synchronization->threadDone();

@@ -422,7 +422,7 @@ BLResult blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoint* dst, const BL
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS)
 
 static BLResult BL_CDECL blMatrix2DMapPointDArrayIdentity(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
-  BL_UNUSED(self);
+  blUnused(self);
   if (dst == src)
     return BL_SUCCESS;
 
@@ -491,8 +491,8 @@ BL_DIAGNOSTIC_POP
 // ============================================================================
 
 void blMatrix2DOnInit(BLRuntimeContext* rt) noexcept {
-  #if !defined(BL_TARGET_OPT_SSE2)
-  BL_UNUSED(rt);
+#if !defined(BL_TARGET_OPT_SSE2)
+  blUnused(rt);
   BLMapPointDArrayFunc* funcs = blMatrix2DMapPointDArrayFuncs;
 
   blAssignFunc(&funcs[BL_MATRIX2D_TYPE_IDENTITY ], blMatrix2DMapPointDArrayIdentity);
@@ -501,15 +501,15 @@ void blMatrix2DOnInit(BLRuntimeContext* rt) noexcept {
   blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SWAP     ], blMatrix2DMapPointDArraySwap);
   blAssignFunc(&funcs[BL_MATRIX2D_TYPE_AFFINE   ], blMatrix2DMapPointDArrayAffine);
   blAssignFunc(&funcs[BL_MATRIX2D_TYPE_INVALID  ], blMatrix2DMapPointDArrayAffine);
-  #endif
+#endif
 
-  #ifdef BL_BUILD_OPT_SSE2
+#ifdef BL_BUILD_OPT_SSE2
   if (blRuntimeHasSSE2(rt)) blMatrix2DOnInit_SSE2(rt);
-  #endif
+#endif
 
-  #ifdef BL_BUILD_OPT_AVX
+#ifdef BL_BUILD_OPT_AVX
   if (blRuntimeHasAVX(rt)) blMatrix2DOnInit_AVX(rt);
-  #endif
+#endif
 }
 
 // ============================================================================

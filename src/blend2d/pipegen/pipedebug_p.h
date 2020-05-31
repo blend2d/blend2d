@@ -39,15 +39,15 @@ namespace BLPipeGen {
 //! Pipeline debugging.
 struct PipeDebug {
   static void printGp(x86::Compiler& cc, const char* key, const x86::Gp& reg) noexcept {
-    asmjit::FuncCallNode* x;
+    asmjit::InvokeNode* invokeNode;
 
     if (reg.size() <= 4)
-      x = cc.call(imm(_printGp32Cb), asmjit::FuncSignatureT<void, void*, int32_t>(asmjit::CallConv::kIdHost));
+      cc.invoke(&invokeNode, imm(_printGp32Cb), asmjit::FuncSignatureT<void, void*, int32_t>(asmjit::CallConv::kIdHost));
     else
-      x = cc.call(imm(_printGp64Cb), asmjit::FuncSignatureT<void, void*, int64_t>(asmjit::CallConv::kIdHost));
+      cc.invoke(&invokeNode, imm(_printGp64Cb), asmjit::FuncSignatureT<void, void*, int64_t>(asmjit::CallConv::kIdHost));
 
-    x->setArg(0, imm(key));
-    x->setArg(1, reg);
+    invokeNode->setArg(0, imm(key));
+    invokeNode->setArg(1, reg);
   }
 
   static void _printGp32Cb(const char* key, int32_t value) noexcept {
@@ -65,12 +65,13 @@ struct PipeDebug {
     cc.movupd(m, reg);
     cc.lea(a, m);
 
-    asmjit::FuncCallNode* x = cc.call(
+    asmjit::InvokeNode* invokeNode;
+    cc.invoke(&invokeNode,
       imm(_printXmmPiCb),
       asmjit::FuncSignatureT<void, void*, int>(asmjit::CallConv::kIdHost));
 
-    x->setArg(0, imm(key));
-    x->setArg(1, a);
+    invokeNode->setArg(0, imm(key));
+    invokeNode->setArg(1, a);
   }
 
   static void _printXmmPiCb(const char* key, const void* data) noexcept {
@@ -89,12 +90,13 @@ struct PipeDebug {
     cc.movupd(m, reg);
     cc.lea(a, m);
 
-    asmjit::FuncCallNode* x = cc.call(
+    asmjit::InvokeNode* invokeNode;
+    cc.invoke(&invokeNode,
       imm(_printXmmPsCb),
       asmjit::FuncSignatureT<void, void*, int>(asmjit::CallConv::kIdHost));
 
-    x->setArg(0, imm(key));
-    x->setArg(1, a);
+    invokeNode->setArg(0, imm(key));
+    invokeNode->setArg(1, a);
   }
 
   static void _printXmmPsCb(const char* key, const void* data) noexcept {
@@ -116,12 +118,13 @@ struct PipeDebug {
     cc.movupd(m, reg);
     cc.lea(a, m);
 
-    asmjit::FuncCallNode* x = cc.call(
+    asmjit::InvokeNode* invokeNode;
+    cc.invoke(&invokeNode,
       imm(_printXmmPdCb),
       asmjit::FuncSignatureT<void, void*, int>(asmjit::CallConv::kIdHost));
 
-    x->setArg(0, imm(key));
-    x->setArg(1, a);
+    invokeNode->setArg(0, imm(key));
+    invokeNode->setArg(1, a);
   }
 
   static void _printXmmPdCb(const char* key, const void* data) noexcept {

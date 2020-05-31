@@ -312,7 +312,7 @@ BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes*
 // ============================================================================
 
 void blThreadOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   // BLThread virtual table.
   blThreadVirt.destroy = blThreadDestroy;

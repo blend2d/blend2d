@@ -357,12 +357,12 @@ BLThreadPool* blThreadPoolGlobal() noexcept { return &blGlobalThreadPool; }
 // ============================================================================
 
 static void BL_CDECL blThreadPoolOnShutdown(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
   blGlobalThreadPool.destroy();
 }
 
 static void BL_CDECL blThreadPoolRtCleanup(BLRuntimeContext* rt, uint32_t cleanupFlags) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
   if (cleanupFlags & BL_RUNTIME_CLEANUP_THREAD_POOL)
     blGlobalThreadPool->cleanup();
 }
@@ -382,7 +382,7 @@ void blThreadPoolOnInit(BLRuntimeContext* rt) noexcept {
   BLThreadAttributes attrs {};
   attrs.stackSize = rt->systemInfo.threadStackSize;
 
-  blGlobalThreadPool.init(0);
+  blGlobalThreadPool.init(0u);
   blGlobalThreadPool->setThreadAttributes(attrs);
 
   rt->shutdownHandlers.add(blThreadPoolOnShutdown);

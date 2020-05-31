@@ -332,7 +332,7 @@ public:
     BL_ASSERT(n <= OpArray::kMaxSize);
     dst._size = n;
     for (uint32_t i = 0; i < n; i++) {
-      cc->_newRegFmt(dst[i].as<asmjit::BaseReg>(), regType, "%s%i", name, i);
+      cc->_newRegFmt(&dst[i].as<asmjit::BaseReg>(), regType, "%s%i", name, i);
     }
   }
 
@@ -541,7 +541,7 @@ public:
   //! dst = src1 + [src2].
   BL_NOINLINE void uAdd(const x86::Gp& dst, const x86::Gp& src1, const Imm& src2) noexcept {
     if (dst.id() != src1.id() && src2.isInt32()) {
-      cc->lea(dst, x86::ptr(src1, src2.i32()));
+      cc->lea(dst, x86::ptr(src1, src2.valueAs<int32_t>()));
     }
     else {
       if (dst.id() != src1.id())

@@ -88,13 +88,13 @@ public:
   BL_INLINE void signal() noexcept {
     int ret = pthread_cond_signal(&handle);
     BL_ASSERT(ret == 0);
-    BL_UNUSED(ret);
+    blUnused(ret);
   }
 
   BL_INLINE void broadcast() noexcept {
     int ret = pthread_cond_broadcast(&handle);
     BL_ASSERT(ret == 0);
-    BL_UNUSED(ret);
+    blUnused(ret);
   }
 
   BL_INLINE BLResult wait(BLMutex& mutex) noexcept {

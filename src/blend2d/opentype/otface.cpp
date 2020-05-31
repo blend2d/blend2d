@@ -166,6 +166,6 @@ BLResult blOTFaceImplNew(BLOTFaceImpl** dst, const BLFontData* fontData, uint32_
 // ============================================================================
 
 void blOTFaceImplOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
   blOTFaceVirt.destroy = blOTFaceImplDestroy;
 }

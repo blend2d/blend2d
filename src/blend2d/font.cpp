@@ -55,20 +55,17 @@ static BLFontFaceVirt blNullFontFaceVirt;
 static BLFontDataVirt blNullFontDataVirt;
 
 static BLResult BL_CDECL blNullFontDataImplDestroy(BLFontDataImpl* impl) noexcept {
-  BL_UNUSED(impl);
+  blUnused(impl);
   return BL_SUCCESS;
 }
 
 static BLResult BL_CDECL blNullFontDataImplListTags(const BLFontDataImpl* impl, uint32_t faceIndex, BLArrayCore* out) noexcept {
-  BL_UNUSED(impl);
-  BL_UNUSED(faceIndex);
+  blUnused(impl, faceIndex);
   return blArrayClear(out);
 }
 
 static size_t BL_CDECL blNullFontDataImplQueryTables(const BLFontDataImpl* impl, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t n) noexcept {
-  BL_UNUSED(impl);
-  BL_UNUSED(faceIndex);
-  BL_UNUSED(tags);
+  blUnused(impl, faceIndex, tags);
   for (size_t i = 0; i < n; i++)
     dst[i].reset();
   return 0;
@@ -278,7 +275,7 @@ bool blFontDataEquals(const BLFontDataCore* a, const BLFontDataCore* b) noexcept
 // A callback that we use to destroy an array-impl we keep if `BLMemFontLoaderImpl`
 // was created from `BLArray<T>()`.
 static void BL_CDECL blDestroyArrayImpl(void* impl, void* arrayI) noexcept {
-  BL_UNUSED(impl);
+  blUnused(impl);
   blArrayImplRelease(static_cast<BLArrayImpl*>(arrayI));
 }
 
@@ -923,9 +920,7 @@ BLResult blFontGetGlyphAdvances(const BLFontCore* self, const uint32_t* glyphDat
 // ============================================================================
 
 static BLResult BL_CDECL blFontDummyPathSink(BLPathCore* path, const void* info, void* closure) noexcept {
-  BL_UNUSED(path);
-  BL_UNUSED(info);
-  BL_UNUSED(closure);
+  blUnused(path, info, closure);
   return BL_SUCCESS;
 }
 
@@ -1052,7 +1047,7 @@ BLResult blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* gly
 // ============================================================================
 
 void blFontOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   // Initialize BLFontData built-in null instance.
   blNullFontDataVirt.destroy = blNullFontDataImplDestroy;

@@ -121,10 +121,9 @@ uint32_t BLPipeFetchData::initPatternAxAy(uint32_t extendMode, int x, int y) noe
 }
 
 uint32_t BLPipeFetchData::initPatternFxFy(uint32_t extendMode, uint32_t filter, uint32_t bytesPerPixel, int64_t tx64, int64_t ty64) noexcept {
-  BL_UNUSED(bytesPerPixel);
+  blUnused(bytesPerPixel);
 
   BLPipeFetchData::Pattern& d = this->pattern;
-
   uint32_t fetchBase = BL_PIPE_FETCH_TYPE_PATTERN_AA_PAD;
   uint32_t wx = uint32_t(tx64 & 0xFF);
   uint32_t wy = uint32_t(ty64 & 0xFF);

@@ -95,14 +95,16 @@ void PipeCompiler::initSimdWidth() noexcept {
 // ============================================================================
 
 void PipeCompiler::beginFunction() noexcept {
+  uint32_t registerCount = cc->is32Bit() ? 8u : 16u;
+
   // Setup constants first.
-  _availableRegs[x86::Reg::kGroupGp  ] = cc->gpCount() - kReservedGpRegs;
+  _availableRegs[x86::Reg::kGroupGp  ] = registerCount - kReservedGpRegs;
   _availableRegs[x86::Reg::kGroupMm  ] = 8             - kReservedMmRegs;
-  _availableRegs[x86::Reg::kGroupVec ] = cc->gpCount() - kReservedVecRegs;
+  _availableRegs[x86::Reg::kGroupVec ] = registerCount - kReservedVecRegs;
   _availableRegs[x86::Reg::kGroupKReg] = 8;
 
   // Function prototype and arguments.
-  _funcNode = cc->addFunc(asmjit::FuncSignatureT<void, void*, void*, void*>(asmjit::CallConv::kIdHostCDecl));
+  _funcNode = cc->addFunc(asmjit::FuncSignatureT<void, void*, void*, void*>(asmjit::CallConv::kIdCDecl));
   _funcInit = cc->cursor();
   _funcEnd = _funcNode->endNode()->prev();
 
@@ -239,9 +241,7 @@ void PipeCompiler::_initCommonTablePtr() noexcept {
     asmjit::BaseNode* prevNode = cc->setCursor(_funcInit);
     _commonTablePtr = cc->newIntPtr("commonTablePtr");
 
-    cc->alloc(_commonTablePtr);
     cc->mov(_commonTablePtr, (int64_t)global + _commonTableOff);
-
     _funcInit = cc->setCursor(prevNode);
   }
 }
@@ -252,7 +252,7 @@ x86::Mem PipeCompiler::constAsMem(const void* p) noexcept {
   BL_ASSERT((uintptr_t)p >= (uintptr_t)global &&
             (uintptr_t)p <  (uintptr_t)global + sizeof(BLCommonTable));
 
-  if (asmjit::ArchInfo::kIdHost == asmjit::ArchInfo::kIdX86) {
+  if (cc->is32Bit()) {
     // 32-bit mode - These constants will never move in memory so the absolute
     // addressing is a win/win as we can save one GP register that can be used
     // for something else.
@@ -570,7 +570,7 @@ void PipeCompiler::vemit_vv_vv(uint32_t packedId, const Operand_& dst_, const Op
       }
 
       case kIntrin2Vinv256u32: {
-        BL_ASSERT(!"Implemented");
+        BL_ASSERT(false);
         // TODO: [PIPEGEN]
         return;
       }
@@ -1234,8 +1234,8 @@ void PipeCompiler::vemit_vvvv_vvv(uint32_t packedId, const OpArray& dst, const O
 // ============================================================================
 
 void PipeCompiler::xFetchPixel_1x(Pixel& p, uint32_t flags, uint32_t sFormat, const x86::Mem& sMem, uint32_t sAlignment) noexcept {
-  BL_UNUSED(sAlignment);
   BL_ASSERT(p.type() != Pixel::kTypeNone);
+  blUnused(sAlignment);
 
   p.setCount(1);
   x86::Mem sAdj(sMem);
@@ -2255,8 +2255,6 @@ void PipeCompiler::xInlinePixelCopyLoop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, 
 
   if (format == BL_FORMAT_XRGB32)
     fillMask = constAsXmm(blCommonTable.i128_FF000000FF000000);
-
-  cc->alloc(fillMask);
 
   // ==========================================================================
   // [Granularity >= 16 Bytes]

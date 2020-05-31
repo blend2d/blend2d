@@ -1320,12 +1320,12 @@ static BLPngDecoderImpl* blPngDecoderImplNew() noexcept {
 
 static BLResult BL_CDECL blPngCodecImplDestroy(BLImageCodecImpl* impl) noexcept {
   // Built-in codecs are never destroyed.
-  BL_UNUSED(impl);
+  blUnused(impl);
   return BL_SUCCESS;
 }
 
 static uint32_t BL_CDECL blPngCodecImplInspectData(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept {
-  BL_UNUSED(impl);
+  blUnused(impl);
 
   // Minimum PNG size and signature.
   if (size < 8 || memcmp(data, blPngSignature, 8) != 0)
@@ -1335,7 +1335,7 @@ static uint32_t BL_CDECL blPngCodecImplInspectData(const BLImageCodecImpl* impl,
 }
 
 static BLResult BL_CDECL blPngCodecImplCreateDecoder(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept {
-  BL_UNUSED(impl);
+  blUnused(impl);
   BLImageDecoderCore decoder { blPngDecoderImplNew() };
 
   if (BL_UNLIKELY(!decoder.impl))
@@ -1345,7 +1345,7 @@ static BLResult BL_CDECL blPngCodecImplCreateDecoder(const BLImageCodecImpl* imp
 }
 
 static BLResult BL_CDECL blPngCodecImplCreateEncoder(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept {
-  BL_UNUSED(impl);
+  blUnused(impl);
 
   // TODO: [PNG] Encoder
   return blTraceError(BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED);

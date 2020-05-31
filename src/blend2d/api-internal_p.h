@@ -147,6 +147,10 @@
   #define BL_STDCXX_VERSION __cplusplus
 #endif
 
+//! \cond INTERNAL
+//! \addtogroup blend2d_api_globals
+//! \{
+
 // ============================================================================
 // [Internal Macros]
 // ============================================================================
@@ -200,8 +204,6 @@
 #define BL_NONCOPYABLE(...)                                                   \
   __VA_ARGS__(const __VA_ARGS__& other) = delete;                             \
   __VA_ARGS__& operator=(const __VA_ARGS__& other) = delete;
-
-#define BL_UNUSED(X) (void)(X)
 
 #define BL_ARRAY_SIZE(X) uint32_t(sizeof(X) / sizeof(X[0]))
 #define BL_OFFSET_OF(STRUCT, MEMBER) ((int)(offsetof(STRUCT, MEMBER)))
@@ -331,6 +333,10 @@ enum BLDataAnalysis : uint32_t {
 // ============================================================================
 // [Internal Functions]
 // ============================================================================
+
+//! Used to silence warnings about unused arguments or variables.
+template<typename... Args>
+static BL_INLINE void blUnused(Args&&...) noexcept {}
 
 template<typename T>
 struct BLInternalCastImpl { T Type; };

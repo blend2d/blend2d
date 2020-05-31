@@ -67,7 +67,7 @@ BLResult blRasterContextBuildPathEdges(BLRasterWorkData* workData, const BLPathV
 // ============================================================================
 
 BLResult blRasterContextFillGlyphRunSinkFunc(BLPathCore* path, const void* info, void* closure_) noexcept {
-  BL_UNUSED(info);
+  blUnused(info);
 
   BLRasterContextEdgeBuilderSink* sink = static_cast<BLRasterContextEdgeBuilderSink*>(closure_);
   BLEdgeBuilder<int>* edgeBuilder = sink->edgeBuilder;
@@ -92,7 +92,7 @@ BLResult blRasterContextStrokeGeometrySinkFunc(BLPath* a, BLPath* b, BLPath* c, 
 }
 
 BLResult blRasterContextStrokeGlyphRunSinkFunc(BLPathCore* path, const void* info, void* closure_) noexcept {
-  BL_UNUSED(info);
+  blUnused(info);
 
   BLRasterContextStrokeGlyphRunSink* sink = static_cast<BLRasterContextStrokeGlyphRunSink*>(closure_);
   BLPath* a = &sink->paths[0];

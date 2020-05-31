@@ -219,8 +219,8 @@ struct BLRasterCommand {
   BL_INLINE const BLBoxI& boxI() const noexcept { return _boxI; }
 
   BL_INLINE bool isAnalytic() const noexcept {
-    return type() >= BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_BASE &&
-           type() <  BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_BASE + BL_FILL_RULE_COUNT;
+    return type() >= uint32_t(BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_BASE) &&
+           type() <  uint32_t(BL_RASTER_COMMAND_TYPE_FILL_ANALYTIC_BASE) + uint32_t(BL_FILL_RULE_COUNT);
   }
 
   BL_INLINE bool hasFlag(uint32_t flag) const noexcept { return (_flags & flag) != 0; }

@@ -52,7 +52,7 @@ static void blZeroAllocatorVerifyIfZeroed(uint8_t* ptr, size_t size) noexcept {
 //! granularized by `granularity`. This function can be used to calculate
 //! the number of BitWords to represent N bits, for example.
 template<typename X, typename Y>
-constexpr X blZeroAllocatorNumGranularized(X base, Y granularity) noexcept {
+static constexpr X blZeroAllocatorNumGranularized(X base, Y granularity) noexcept {
   typedef typename BLInternal::StdInt<sizeof(X), 1>::Type U;
   return X((U(base) + U(granularity) - 1) / U(granularity));
 }
@@ -530,18 +530,18 @@ void blZeroAllocatorRelease(void* ptr, size_t size) noexcept {
 // ============================================================================
 
 static void BL_CDECL blZeroAllocatorOnShutdown(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
   blZeroMemAllocator.destroy();
 }
 
 static void BL_CDECL blZeroAllocatorRtCleanup(BLRuntimeContext* rt, uint32_t cleanupFlags) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
   if (cleanupFlags & BL_RUNTIME_CLEANUP_ZEROED_POOL)
     blZeroMemAllocator->cleanup();
 }
 
 static void BL_CDECL blZeroAllocatorOnResourceInfo(BLRuntimeContext* rt, BLRuntimeResourceInfo* resourceInfo) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
   blZeroMemAllocator->onResourceInfo(resourceInfo);
 }
 

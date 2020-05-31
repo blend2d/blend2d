@@ -51,8 +51,8 @@ enum BLBitOrder : uint32_t {
 namespace {
 namespace BLBitOperator {
 
-struct Assign    { template<typename T> static BL_INLINE T op(T a, T b) noexcept { BL_UNUSED(a); return  b; } };
-struct AssignNot { template<typename T> static BL_INLINE T op(T a, T b) noexcept { BL_UNUSED(a); return ~b; } };
+struct Assign    { template<typename T> static BL_INLINE T op(T a, T b) noexcept { blUnused(a); return  b; } };
+struct AssignNot { template<typename T> static BL_INLINE T op(T a, T b) noexcept { blUnused(a); return ~b; } };
 struct And       { template<typename T> static BL_INLINE T op(T a, T b) noexcept { return  a &  b; } };
 struct AndNot    { template<typename T> static BL_INLINE T op(T a, T b) noexcept { return  a & ~b; } };
 struct NotAnd    { template<typename T> static BL_INLINE T op(T a, T b) noexcept { return ~a &  b; } };

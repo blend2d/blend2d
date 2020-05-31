@@ -580,6 +580,9 @@ BLResult blStringApplyOpFormatV(BLStringCore* self, uint32_t op, const char* fmt
   int fmtResult;
   size_t outputSize;
 
+  va_list apCopy;
+  va_copy(apCopy, ap);
+
   if ((remaining & mutableMsk) >= 64) {
     // We include null terminator in buffer size as this is what 'vsnprintf' expects.
     // BLString always reserves one byte for null terminator so this is perfectly safe.
@@ -627,12 +630,12 @@ BLResult blStringApplyOpFormatV(BLStringCore* self, uint32_t op, const char* fmt
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
   char* dst = newI->data;
-  fmtResult = vsnprintf(dst + index, remaining + 1, fmt, ap);
+  fmtResult = vsnprintf(dst + index, remaining + 1, fmt, apCopy);
 
   // This should always match. If it doesn't then it means that some other thread
-  // must have changed some value where `ap` points and it caused `vsnprintf` to
-  // format a different string. If this happens we fail as there is no reason to
-  // try again...
+  // must have changed some value where `apCopy` points and it caused `vsnprintf`
+  // to format a different string. If this happens we fail as there is no reason
+  // to try again...
   if (BL_UNLIKELY(size_t(unsigned(fmtResult)) != outputSize)) {
     blStringImplDelete(newI);
     return blTraceError(BL_ERROR_INVALID_VALUE);
@@ -827,7 +830,7 @@ int blStringCompareData(const BLStringCore* self, const char* str, size_t n) noe
 // ============================================================================
 
 void blStringOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   BLStringImpl* stringI = &blNullStringImpl;
   blInitBuiltInNull(stringI, BL_IMPL_TYPE_STRING, 0);
@@ -859,7 +862,7 @@ UNIT(string) {
   EXPECT(s.compare("b?"   ) < 0);
   EXPECT(s.compare("b?", 2) < 0);
   EXPECT(s.compare("c"    ) < 0);
-  EXPECT(s.compare("c",  1) < 0);
+  EXPECT(s.compare("c" , 1) < 0);
   EXPECT(s.compare("c?"   ) < 0);
   EXPECT(s.compare("c?", 2) < 0);
 

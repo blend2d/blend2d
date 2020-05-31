@@ -199,7 +199,7 @@ static BL_INLINE uint32_t sizeOfValueRecordByFormat(uint32_t valueFormat) noexce
 // ============================================================================
 
 static bool checkRawOffsetArray(Validator* self, Trace trace, BLFontTable data, const char* tableName) noexcept {
-  BL_UNUSED(self);
+  blUnused(self);
 
   if (BL_UNLIKELY(data.size < 2u))
     return trace.fail("%s: Table is too small [Size=%zu]\n", tableName, data.size);
@@ -221,7 +221,7 @@ static bool checkRawOffsetArray(Validator* self, Trace trace, BLFontTable data, 
 }
 
 static bool checkTagRef16Array(Validator* self, Trace trace, BLFontTable data, const char* tableName) noexcept {
-  BL_UNUSED(self);
+  blUnused(self);
 
   if (BL_UNLIKELY(data.size < 2u))
     return trace.fail("%s is too small [Size=%zu]\n", tableName, data.size);

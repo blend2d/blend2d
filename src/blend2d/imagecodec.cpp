@@ -406,7 +406,8 @@ BL_DIAGNOSTIC_POP
 // ============================================================================
 
 static void BL_CDECL blImageCodecOnShutdown(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
+
   blImageCodecs.destroy();
   blImageCodecsMutex.destroy();
 }

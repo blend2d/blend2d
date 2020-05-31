@@ -44,7 +44,7 @@
 // TODO: [Rendering Context] SIMD idea: shift left by 24 and check whether all bytes are zero.
 static BL_INLINE bool blRasterIsBoxAligned24x8(const BLBoxI& box) noexcept {
   if (blRuntimeIs32Bit()) {
-    return ((box.x0 | box.y0 | box.x1 | box.y1) & 0xFFu) == 0;
+    return ((box.x0 | box.y0 | box.x1 | box.y1) & 0xFF) == 0;
   }
   else {
     // Compilers like this one more than the previous code in 64-bit mode.

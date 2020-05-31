@@ -322,7 +322,7 @@ bool blPatternEquals(const BLPatternCore* a, const BLPatternCore* b) noexcept {
 // ============================================================================
 
 void blPatternOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   BLInternalPatternImpl* patternI = &blNullPatternImpl;
   blInitBuiltInNull(patternI, BL_IMPL_TYPE_PATTERN, 0);

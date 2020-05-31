@@ -317,7 +317,7 @@ struct BLPipeFillData {
   // [Init]
   // --------------------------------------------------------------------------
 
-  BL_INLINE bool initBoxA8bpc(uint32_t alpha, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1) noexcept {
+  BL_INLINE bool initBoxA8bpc(uint32_t alpha, int x0, int y0, int x1, int y1) noexcept {
     // The rendering engine should never pass out-of-range alpha.
     BL_ASSERT(alpha <= 255);
 
@@ -333,13 +333,13 @@ struct BLPipeFillData {
 
   template<typename T>
   BL_INLINE bool initBoxU8bpcT(uint32_t alpha, T x0, T y0, T x1, T y1) noexcept {
-    return initBoxU8bpc24x8(alpha, uint32_t(blTruncToInt(x0 * T(256))),
-                                   uint32_t(blTruncToInt(y0 * T(256))),
-                                   uint32_t(blTruncToInt(x1 * T(256))),
-                                   uint32_t(blTruncToInt(y1 * T(256))));
+    return initBoxU8bpc24x8(alpha, blTruncToInt(x0 * T(256)),
+                                   blTruncToInt(y0 * T(256)),
+                                   blTruncToInt(x1 * T(256)),
+                                   blTruncToInt(y1 * T(256)));
   }
 
-  bool initBoxU8bpc24x8(uint32_t alpha, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1) noexcept {
+  bool initBoxU8bpc24x8(uint32_t alpha, int x0, int y0, int x1, int y1) noexcept {
     // The rendering engine should never pass out-of-range alpha.
     BL_ASSERT(alpha <= 255);
 
@@ -347,18 +347,18 @@ struct BLPipeFillData {
     BL_ASSERT(x0 < x1);
     BL_ASSERT(y0 < y1);
 
-    uint32_t ax0 = x0 >> 8;
-    uint32_t ay0 = y0 >> 8;
-    uint32_t ax1 = x1 >> 8;
-    uint32_t ay1 = y1 >> 8;
+    uint32_t ax0 = uint32_t(x0) >> 8;
+    uint32_t ay0 = uint32_t(y0) >> 8;
+    uint32_t ax1 = uint32_t(x1) >> 8;
+    uint32_t ay1 = uint32_t(y1) >> 8;
 
     boxAU.alpha.u = alpha;
     boxAU.box.reset(int(ax0), int(ay0), int(ax1), int(ay1));
 
-    uint32_t fx0 = x0 & 0xFFu;
-    uint32_t fy0 = y0 & 0xFFu;
-    uint32_t fx1 = x1 & 0xFFu;
-    uint32_t fy1 = y1 & 0xFFu;
+    uint32_t fx0 = uint32_t(x0) & 0xFFu;
+    uint32_t fy0 = uint32_t(y0) & 0xFFu;
+    uint32_t fx1 = uint32_t(x1) & 0xFFu;
+    uint32_t fy1 = uint32_t(y1) & 0xFFu;
 
     boxAU.box.x1 += fx1 != 0;
     boxAU.box.y1 += fy1 != 0;

@@ -606,7 +606,7 @@ BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
 #if defined(_WIN32)
 
 BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept {
-  BL_UNUSED(flags);
+  blUnused(flags);
 
   if (!file.isOpen())
     return blTraceError(BL_ERROR_INVALID_VALUE);
@@ -664,7 +664,7 @@ BLResult BLFileMapping::unmap() noexcept {
 #else
 
 BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept {
-  BL_UNUSED(flags);
+  blUnused(flags);
 
   if (!file.isOpen())
     return blTraceError(BL_ERROR_INVALID_VALUE);
@@ -718,7 +718,7 @@ public:
 };
 
 void BL_CDECL blFileSystemDestroyMemoryMappedFile(void* impl_, void* destroyData) noexcept {
-  BL_UNUSED(destroyData);
+  blUnused(destroyData);
 
   BLMemoryMappedFileArrayImpl* impl = static_cast<BLMemoryMappedFileArrayImpl*>(impl_);
   blCallDtor(impl->fileMapping);

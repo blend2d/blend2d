@@ -580,7 +580,7 @@ void CompOpPart::cMaskGenericLoopXmm(x86::Gp& i) noexcept {
   }
 
   BL_ASSERT(minAlignment() >= 1);
-  int alignmentMask = int(minAlignment()) - 1;
+  unsigned int alignmentMask = minAlignment() - 1;
 
   // 4+ pixels at a time [no alignment].
   if (maxPixels() == 4 && minAlignment() == 1) {
@@ -2192,8 +2192,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
         pc->v_sll_i16(o.ux, s.uc[0], 8);
         pc->v_sub_i16(o.ux, o.ux, s.uc[0]);
         pc->v_add_i16(o.ux, o.ux, pc->constAsXmm(blCommonTable.i128_0080008000800080));
-
-        cc->alloc(o.uy);
       }
       else {
         // Xca = Sca * m + 0.5 <Rounding>
@@ -2230,7 +2228,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
         srcPart()->as<FetchSolidPart>()->initSolidFlags(Pixel::kUC);
 
         o.ux = s.uc[0];
-        cc->alloc(o.ux);
       }
       else {
         // Xca = Sca * m
@@ -2264,9 +2261,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
 
         o.ux = s.uc[0];
         o.uy = s.uia[0];
-
-        cc->alloc(o.ux);
-        cc->alloc(o.uy);
       }
       else {
         // Xca = Sca * m
@@ -2306,7 +2300,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
         srcPart()->as<FetchSolidPart>()->initSolidFlags(Pixel::kUC);
 
         o.ux = s.uc[0];
-        cc->alloc(o.ux);
       }
       else {
         // Xca = Sca * m
@@ -2330,7 +2323,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
         srcPart()->as<FetchSolidPart>()->initSolidFlags(Pixel::kUA);
 
         o.ux = s.ua[0];
-        cc->alloc(o.ux);
       }
       else {
         // Xca = 1 - m.(1 - Sa)
@@ -2359,7 +2351,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
           srcPart()->as<FetchSolidPart>()->initSolidFlags(Pixel::kUIA);
 
           o.ux = s.uia[0];
-          cc->alloc(o.ux);
         }
         // Xca = 1 - Sa
         // Xa  = 1
@@ -2410,9 +2401,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
 
         o.ux = s.uc[0];
         o.uy = s.ua[0];
-
-        cc->alloc(o.ux);
-        cc->alloc(o.uy);
       }
       else {
         // Xca = Sca.m
@@ -2442,7 +2430,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
         srcPart()->as<FetchSolidPart>()->initSolidFlags(Pixel::kPC);
 
         o.px = s.pc[0];
-        cc->alloc(o.px);
       }
       else {
         // Xca = Sca * m
@@ -2472,7 +2459,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
           o.ux = cc->newXmm("ux");
           o.uy = s.uc[0];
 
-          cc->alloc(o.uy);
           pc->v_mov(o.ux, o.uy);
           pc->vZeroAlphaW(o.ux, o.ux);
         }
@@ -2530,7 +2516,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
         srcPart()->as<FetchSolidPart>()->initSolidFlags(Pixel::kUC);
 
         o.ux = s.uc[0];
-        cc->alloc(o.ux);
       }
       else {
         // Xca = Sca * m + (1 - m)
@@ -2562,7 +2547,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
           o.ux = s.uc[0];
           o.uy = cc->newXmm("uy");
 
-          cc->alloc(o.ux);
           pc->v_mov(o.uy, s.uia[0]);
           pc->v_add_i16(o.uy, o.uy, o.ux);
         }
@@ -2616,8 +2600,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
         pc->v_sll_i16(o.ux, s.uc[0], 8);
         pc->v_sub_i16(o.ux, o.ux, s.uc[0]);
         pc->v_add_i16(o.ux, o.ux, pc->constAsXmm(blCommonTable.i128_0080008000800080));
-
-        cc->alloc(o.uy);
       }
       else {
         // Xca = Sca * m + 0.5 <Rounding>
@@ -2655,9 +2637,6 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
 
         o.ux = s.uc[0];
         o.uy = s.ua[0];
-
-        cc->alloc(o.ux);
-        cc->alloc(o.uy);
       }
       else {
         // Xca = Sca * m
@@ -4962,7 +4941,7 @@ void CompOpPart::vMaskProcRGBA32InvertMask(VecArray& vn, VecArray& vm) noexcept 
 }
 
 void CompOpPart::vMaskProcRGBA32InvertDone(VecArray& vn, bool mImmutable) noexcept {
-  BL_UNUSED(mImmutable);
+  blUnused(mImmutable);
 
   if (cMaskLoopType() == kCMaskLoopTypeMask) {
     if (vn[0].id() == _mask->vm.id())

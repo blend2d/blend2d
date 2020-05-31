@@ -800,12 +800,12 @@ static BLBmpEncoderImpl* blBmpEncoderImplNew() noexcept {
 
 static BLResult BL_CDECL blBmpCodecImplDestroy(BLImageCodecImpl* impl) noexcept {
   // Built-in codecs are never destroyed.
-  BL_UNUSED(impl);
+  blUnused(impl);
   return BL_SUCCESS;
 };
 
 static uint32_t BL_CDECL blBmpCodecImplInspectData(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept {
-  BL_UNUSED(impl);
+  blUnused(impl);
 
   // BMP minimum size and signature (BM).
   if (size < 2 || data[0] != 0x42 || data[1] != 0x4D)
@@ -824,7 +824,7 @@ static uint32_t BL_CDECL blBmpCodecImplInspectData(const BLImageCodecImpl* impl,
 }
 
 static BLResult BL_CDECL blBmpCodecImplCreateDecoder(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept {
-  BL_UNUSED(impl);
+  blUnused(impl);
   BLImageDecoderCore decoder { blBmpDecoderImplNew() };
 
   if (BL_UNLIKELY(!decoder.impl))
@@ -834,7 +834,7 @@ static BLResult BL_CDECL blBmpCodecImplCreateDecoder(const BLImageCodecImpl* imp
 }
 
 static BLResult BL_CDECL blBmpCodecImplCreateEncoder(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept {
-  BL_UNUSED(impl);
+  blUnused(impl);
   BLImageEncoderCore encoder { blBmpEncoderImplNew() };
 
   if (BL_UNLIKELY(!encoder.impl))
@@ -848,7 +848,7 @@ static BLResult BL_CDECL blBmpCodecImplCreateEncoder(const BLImageCodecImpl* imp
 // ============================================================================
 
 BLImageCodecImpl* blBmpCodecOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   // Initialize BMP decoder virtual functions.
   blAssignFunc(&blBmpDecoderVirt.destroy, blBmpDecoderImplDestroy);

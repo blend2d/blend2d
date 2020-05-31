@@ -880,7 +880,7 @@ static BLResult getGlyphOutlinesT(
   Consumer& consumer,
   BLMemBuffer* tmpBuffer) noexcept {
 
-  BL_UNUSED(tmpBuffer);
+  blUnused(tmpBuffer);
   const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
 
   // Will only do something if tracing is enabled.
@@ -1965,7 +1965,7 @@ public:
   BL_INLINE GlyphBoundsConsumer() noexcept {}
 
   BL_INLINE BLResult begin(size_t n) noexcept {
-    BL_UNUSED(n);
+    blUnused(n);
     bounds.reset(blMaxValue<double>(), blMaxValue<double>(), blMinValue<double>(), blMinValue<double>());
     cx = 0;
     cy = 0;
@@ -1975,7 +1975,7 @@ public:
   BL_INLINE void done() noexcept {}
 
   BL_INLINE BLResult ensure(size_t n) noexcept {
-    BL_UNUSED(n);
+    blUnused(n);
     return BL_SUCCESS;
   }
 

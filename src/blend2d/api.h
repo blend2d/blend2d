@@ -122,8 +122,14 @@
 //!
 //! ```
 //! BLImageCore img;
+//!
+//! // Initializes the BLImage object, always succeeds.
 //! blImageInit(&img);
+//!
+//! // Creates image data, note how it's called on an already initialized object.
 //! blImageCreate(&img, 128, 128, BL_FORMAT_PRGB32);
+//!
+//! // Destroys the BLImage object, always succeeds.
 //! blImageDestroy(&img);
 //! ```
 //!
@@ -132,7 +138,11 @@
 //!
 //! ```
 //! BLImageCore img;
+//!
+//! // Combines blImageInit() with blImageCreate().
 //! blImageInitAs(&img, 128, 128, BL_FORMAT_PRGB32);
+//!
+//! // Destroys the data, doesn't have to be called if blImageInitAs() failed.
 //! blImageDestroy(&img);
 //! ```
 //!
@@ -155,7 +165,7 @@
 //!
 //! The following example should explain how init/reset can avoid destroy:
 //!
-//! \code
+//! ```
 //! BLImageCore img;
 //!
 //! // Now image is default constructed/initialized. if you did just this and
@@ -188,7 +198,7 @@
 //! // At the moment null will be printed, but that's implementation dependent
 //! // and such behavior can change at any time.
 //! printf("%p", img.impl);
-//! \endcode
+//! ```
 
 //! \cond INTERNAL
 
@@ -529,7 +539,7 @@
   #define BL_DEFINE_ENUM(NAME) enum NAME
 #endif
 
-#if defined(BL_DOXYGEN)
+#if defined(_DOXYGEN)
   // Only for doxygen to make these members nicer.
   #define BL_HAS_TYPED_MEMBERS(...)
   #define BL_TYPED_MEMBER(CORE_TYPE, CPP_TYPE, NAME) CPP_TYPE NAME;
@@ -1718,8 +1728,8 @@ BL_API BLResult BL_CDECL blFontManagerReset(BLFontManagerCore* self) BL_NOEXCEPT
 BL_API BLResult BL_CDECL blFontManagerAssignMove(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontManagerAssignWeak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontManagerCreate(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerGetFaceCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerGetFamilyCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blFontManagerGetFaceCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blFontManagerGetFamilyCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
 BL_API bool BL_CDECL blFontManagerHasFace(const BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontManagerAddFace(BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontManagerQueryFace(const BLFontManagerCore* self, const char* name, size_t nameSize, const BLFontQueryProperties* properties, BLFontFaceCore* out) BL_NOEXCEPT_C;

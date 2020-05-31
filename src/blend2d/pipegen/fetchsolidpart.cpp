@@ -51,6 +51,7 @@ FetchSolidPart::FetchSolidPart(PipeCompiler* pc, uint32_t fetchType, uint32_t fe
 // ============================================================================
 
 void FetchSolidPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
+  blUnused(x, y);
   if (_pixel.type() != _pixelType) {
     _pixel.setType(_pixelType);
   }
@@ -58,9 +59,6 @@ void FetchSolidPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
     // The type should never change after it's been assigned.
     BL_ASSERT(_pixel.type() == _pixelType);
   }
-
-  BL_UNUSED(x);
-  BL_UNUSED(y);
 }
 
 void FetchSolidPart::_finiPart() noexcept {}

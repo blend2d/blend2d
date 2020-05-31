@@ -513,7 +513,7 @@ static BLResult BL_CDECL bl_convert_unpremultiply_8888(
   uint8_t* dstData, intptr_t dstStride,
   const uint8_t* srcData, intptr_t srcStride, uint32_t w, uint32_t h, const BLPixelConverterOptions* options) noexcept {
 
-  BL_UNUSED(self);
+  blUnused(self);
 
   if (!options)
     options = &blPixelConverterDefaultOptions;
@@ -1760,7 +1760,7 @@ static BLResult blPixelConverterInitUnpremultiply8888(BLPixelConverterCore* self
 }
 
 static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
-  BL_UNUSED(createFlags);
+  blUnused(createFlags);
 
   uint32_t depth = di.depth;
   uint32_t commonFlags = di.flags & si.flags;
@@ -1888,7 +1888,7 @@ static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLF
 // ============================================================================
 
 static BLResult blPixelConverterInit8From8888(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
-  BL_UNUSED(createFlags);
+  blUnused(createFlags);
   BLPixelConverterData::X8FromRgb32Data& d = blPixelConverterGetData(self)->x8FromRgb32Data;
 
   uint32_t commonFlags = di.flags & si.flags;
@@ -1906,7 +1906,7 @@ static BLResult blPixelConverterInit8From8888(BLPixelConverterCore* self, const 
 // ============================================================================
 
 static BLResult blPixelConverterInit8888From8(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
-  BL_UNUSED(createFlags);
+  blUnused(createFlags);
   uint32_t rgbMask = blPixelConverterCalcRgbMask32(di);
 
   BLPixelConverterData::Rgb32FromX8Data& d = blPixelConverterGetData(self)->rgb32FromX8Data;
@@ -1941,8 +1941,7 @@ static BLResult blPixelConverterInit8888From8(BLPixelConverterCore* self, const 
 // ============================================================================
 
 static BLResult blPixelConverterInit8888From888(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
-  BL_UNUSED(self);
-  BL_UNUSED(createFlags);
+  blUnused(self, createFlags);
 
   uint32_t commonFlags = di.flags & si.flags;
 
@@ -1974,7 +1973,7 @@ static BLResult blPixelConverterInit8888From888(BLPixelConverterCore* self, cons
 // ============================================================================
 
 static BLResult blPixelConverterInit8888FromForeign(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
-  BL_UNUSED(createFlags);
+  blUnused(createFlags);
 
   BL_ASSERT(di.depth == 32);
   BL_ASSERT(di.flags & BL_FORMAT_FLAG_BYTE_ALIGNED);
@@ -2082,7 +2081,7 @@ static BLResult blPixelConverterInit8888FromForeign(BLPixelConverterCore* self, 
 // ============================================================================
 
 static BLResult blPixelConverterInitForeignFrom8888(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
-  BL_UNUSED(createFlags);
+  blUnused(createFlags);
 
   BL_ASSERT(si.depth == 32);
   BL_ASSERT(si.flags & BL_FORMAT_FLAG_BYTE_ALIGNED);
@@ -2207,7 +2206,7 @@ static BLResult BL_CDECL bl_convert_multi_step(
 
         dstData += n * dstBytesPerPixel;
         srcData += n * srcBytesPerPixel;
-        workOpt.origin += n;
+        workOpt.origin.x += int(n);
 
         i -= n;
       }
@@ -2234,7 +2233,7 @@ static BLResult BL_CDECL bl_convert_multi_step(
   }
   else {
     // Process all scanlines as the `intermediateBuffer` is large enough.
-    uintptr_t intermediateStride = uintptr_t(w) * d.intermediateBytesPerPixel;
+    intptr_t intermediateStride = intptr_t(w) * d.intermediateBytesPerPixel;
     srcToIntermediate(&ctx->first, intermediateData, intermediateStride, srcData, srcStride, w, h, nullptr);
     return intermediateToDst(&ctx->second, dstData, dstStride, intermediateData, intermediateStride, w, h, &workOpt);
   }
@@ -2275,7 +2274,7 @@ static BLResult blPixelConverterInitMultiStepInternal(BLPixelConverterCore* self
 }
 
 static BLResult blPixelConverterInitMultiStep(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
-  BL_UNUSED(createFlags);
+  blUnused(createFlags);
 
   // We have foreign pixel formats on both input and output. This means that we
   // will create two converters and convert through a native pixel format as

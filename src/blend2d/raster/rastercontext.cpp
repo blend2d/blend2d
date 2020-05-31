@@ -166,7 +166,7 @@ static BL_INLINE void blRasterContextImplFlattenToleranceChanged(BLRasterContext
 }
 
 static BL_INLINE void blRasterContextImplOffsetParameterChanged(BLRasterContextImpl* ctxI) noexcept {
-  BL_UNUSED(ctxI);
+  blUnused(ctxI);
 }
 
 // ============================================================================
@@ -724,7 +724,7 @@ static BL_INLINE uint32_t blRasterContextImplPrepareFill(BLRasterContextImpl* ct
 
 template<uint32_t Category, uint32_t RenderingMode>
 static BL_INLINE bool blRasterContextImplEnsureFetchData(BLRasterContextImpl* ctxI, BLRasterCoreCommandSerializer<RenderingMode>& serializer) noexcept {
-  BL_UNUSED(ctxI);
+  blUnused(ctxI);
 
   if (serializer.command().hasFetchData()) {
     BLRasterFetchData* fetchData = serializer.command()._source.fetchData;
@@ -1784,7 +1784,7 @@ static BL_INLINE BLRasterSharedBaseStrokeState* blRasterContextImplEnsureStrokeS
 // ============================================================================
 
 static void BL_CDECL blRasterContextImplDestroyAsyncBlitData(BLRasterContextImpl* ctxI, BLRasterFetchData* fetchData) noexcept {
-  BL_UNUSED(ctxI);
+  blUnused(ctxI);
 
   BLImageImpl* imgI = fetchData->_image->impl;
   if (blImplDecRefAndTest(imgI))
@@ -2916,17 +2916,13 @@ static BL_INLINE uint32_t blRasterContextImplPrepareBlit(BLRasterContextImpl* ct
 // ============================================================================
 
 static BL_INLINE BLResult blRasterContextImplFinalizeBlit(BLRasterContextImpl* ctxI, BLRasterBlitCommandSerializerSync& serializer, BLResult result) noexcept {
-  BL_UNUSED(ctxI);
-  BL_UNUSED(serializer);
-
+  blUnused(ctxI, serializer);
   return result;
 }
 
 static BL_INLINE BLResult blRasterContextImplFinalizeBlit(BLRasterContextImpl* ctxI, BLRasterBlitCommandSerializerAsync& serializer, BLResult result) noexcept {
-  if (!serializer.enqueued(ctxI)) {
+  if (!serializer.enqueued(ctxI))
     serializer.rollbackFetchData(ctxI);
-  }
-
   return result;
 }
 
@@ -3262,7 +3258,7 @@ static BLResult BL_CDECL blRasterContextImplBlitScaledImageI(BLContextImpl* base
 
 static uint32_t blRasterContextImplCalculateBandHeight(uint32_t format, const BLSizeI& size, const BLContextCreateInfo* options) noexcept {
   // TODO: [Rendering Context] We should use the format and calculate how many bytes are used by raster storage per band.
-  BL_UNUSED(format);
+  blUnused(format);
 
   // Maximum band height we start at is 64, then decrease to 16.
   uint32_t kMinBandHeight = 8;
@@ -3665,7 +3661,7 @@ static void blRasterContextVirtInit(BLContextVirt* virt) noexcept {
 }
 
 void blRasterContextOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
   blRasterContextVirtInit<BL_RASTER_RENDERING_MODE_SYNC>(&blRasterContextSyncVirt);
   blRasterContextVirtInit<BL_RASTER_RENDERING_MODE_ASYNC>(&blRasterContextAsyncVirt);
 }

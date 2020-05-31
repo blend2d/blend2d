@@ -159,14 +159,14 @@ BLResult blFontManagerCreate(BLFontManagerCore* self) noexcept {
 // [BLFontManager - Accessors]
 // ============================================================================
 
-BLResult blFontManagerGetFaceCount(const BLFontManagerCore* self) noexcept {
+size_t blFontManagerGetFaceCount(const BLFontManagerCore* self) noexcept {
   BLInternalFontManagerImpl* selfI = blInternalCast(self->impl);
   BLSharedLockGuard<BLSharedMutex> guard(selfI->mutex);
 
   return selfI->faceCount;
 }
 
-BLResult blFontManagerGetFamilyCount(const BLFontManagerCore* self) noexcept {
+size_t blFontManagerGetFamilyCount(const BLFontManagerCore* self) noexcept {
   BLInternalFontManagerImpl* selfI = blInternalCast(self->impl);
   BLSharedLockGuard<BLSharedMutex> guard(selfI->mutex);
 
@@ -323,7 +323,7 @@ struct BLFontPreparedQuery {
 };
 
 static bool blFontManagerPrepareQuery(const BLInternalFontManagerImpl* impl, const char* name, size_t nameSize, BLFontPreparedQuery* out) noexcept {
-  BL_UNUSED(impl);
+  blUnused(impl);
 
   if (nameSize == SIZE_MAX)
     nameSize = strlen(name);
@@ -498,7 +498,7 @@ BLResult blFontManagerQueryFace(
 // ============================================================================
 
 void blFontManagerOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   // Initialize BLFontManager virtual functions.
   blFontManagerVirt.destroy = blFontManagerImplDestroy;

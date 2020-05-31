@@ -990,7 +990,7 @@ BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry, double xAxi
   v = (pp1 - pp0) * 0.5;
   BLPoint pc = pp0 + v;
 
-  // If lenght^2 >= 1 the point is already the center.
+  // If length^2 >= 1 the point is already the center.
   double len2 = blLengthSq(v);
   if (len2 < 1.0) {
     v = blSqrt(1.0 / len2 - 1.0) * blNormal(v);
@@ -1870,7 +1870,7 @@ BLResult blPathAddReversedPath(BLPathCore* self, const BLPathCore* other, const 
 // ============================================================================
 
 static BLResult blPathAddStrokedPathSink(BLPath* a, BLPath* b, BLPath* c, void* closure) noexcept {
-  BL_UNUSED(closure);
+  blUnused(closure);
 
   BLPathAppender dst;
   BL_PROPAGATE(dst.begin(a, BL_MODIFY_OP_APPEND_GROW, b->size() + c->size()));
@@ -2569,7 +2569,7 @@ OnLine:
 // ============================================================================
 
 void blPathOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   BLInternalPathImpl* pathI = &blNullPathImpl;
   blInitBuiltInNull(pathI, BL_IMPL_TYPE_PATH, 0);

@@ -1242,9 +1242,9 @@ struct BLCompOpSimplifyInfoGen {
 
   // Function called by the table generator, decompose and continue...
   static constexpr BLCompOpSimplifyInfo value(size_t index) noexcept {
-    return valueDecomposed(uint32_t((index / BL_FORMAT_RESERVED_COUNT) % BL_COMP_OP_INTERNAL_COUNT),
-                           uint32_t(index / (BL_COMP_OP_INTERNAL_COUNT * BL_FORMAT_RESERVED_COUNT)),
-                           uint32_t(index % BL_FORMAT_RESERVED_COUNT));
+    return valueDecomposed(uint32_t((index / uint32_t(BL_FORMAT_RESERVED_COUNT)) % uint32_t(BL_COMP_OP_INTERNAL_COUNT)),
+                           uint32_t(index / (uint32_t(BL_COMP_OP_INTERNAL_COUNT) * uint32_t(BL_FORMAT_RESERVED_COUNT))),
+                           uint32_t(index % uint32_t(BL_FORMAT_RESERVED_COUNT)));
   }
 };
 

@@ -155,7 +155,7 @@ static BL_INLINE double blBlackman(double x, double y) noexcept {
 // ============================================================================
 
 static BLResult BL_CDECL blImageScaleNearestFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  BL_UNUSED(data);
+  blUnused(data);
 
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
@@ -166,7 +166,7 @@ static BLResult BL_CDECL blImageScaleNearestFunc(double* dst, const double* tArr
 }
 
 static BLResult BL_CDECL blImageScaleBilinearFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  BL_UNUSED(data);
+  blUnused(data);
 
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
@@ -177,7 +177,7 @@ static BLResult BL_CDECL blImageScaleBilinearFunc(double* dst, const double* tAr
 }
 
 static BLResult BL_CDECL blImageScaleBicubicFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  BL_UNUSED(data);
+  blUnused(data);
   constexpr double k2Div3 = 2.0 / 3.0;
 
   // 0.5t^3 - t^2 + 2/3 == (0.5t - 1.0) t^2 + 2/3
@@ -191,7 +191,7 @@ static BLResult BL_CDECL blImageScaleBicubicFunc(double* dst, const double* tArr
 }
 
 static BLResult BL_CDECL blImageScaleBellFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  BL_UNUSED(data);
+  blUnused(data);
 
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
@@ -203,7 +203,7 @@ static BLResult BL_CDECL blImageScaleBellFunc(double* dst, const double* tArray,
 }
 
 static BLResult BL_CDECL blImageScaleGaussFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  BL_UNUSED(data);
+  blUnused(data);
   constexpr double x = 0.7978845608; // sqrt(2 / PI);
 
   for (size_t i = 0; i < n; i++) {
@@ -215,7 +215,7 @@ static BLResult BL_CDECL blImageScaleGaussFunc(double* dst, const double* tArray
 }
 
 static BLResult BL_CDECL blImageScaleHermiteFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  BL_UNUSED(data);
+  blUnused(data);
 
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
@@ -226,7 +226,7 @@ static BLResult BL_CDECL blImageScaleHermiteFunc(double* dst, const double* tArr
 }
 
 static BLResult BL_CDECL blImageScaleHanningFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  BL_UNUSED(data);
+  blUnused(data);
 
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
@@ -237,7 +237,7 @@ static BLResult BL_CDECL blImageScaleHanningFunc(double* dst, const double* tArr
 }
 
 static BLResult BL_CDECL blImageScaleCatromFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  BL_UNUSED(data);
+  blUnused(data);
 
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
@@ -249,7 +249,7 @@ static BLResult BL_CDECL blImageScaleCatromFunc(double* dst, const double* tArra
 }
 
 static BLResult BL_CDECL blImageScaleBesselFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  BL_UNUSED(data);
+  blUnused(data);
   constexpr double x = BL_M_PI * 0.25;
 
   for (size_t i = 0; i < n; i++) {
@@ -1193,7 +1193,7 @@ BLResult BLImageScaleContext::processVertData(uint8_t* dstLine, intptr_t dstStri
 // ============================================================================
 
 void blImageScalerOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   blImageScaleOps.weights = blImageScaleWeights;
 

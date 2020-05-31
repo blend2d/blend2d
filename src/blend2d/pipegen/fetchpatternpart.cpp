@@ -616,8 +616,7 @@ void FetchSimplePatternPart::startAtX(x86::Gp& x) noexcept {
 }
 
 void FetchSimplePatternPart::advanceX(x86::Gp& x, x86::Gp& diff) noexcept {
-  BL_UNUSED(x);
-
+  blUnused(x);
   x86::Gp fx32 = f->x.r32();
 
   if (pixelGranularity() > 1)
@@ -2133,7 +2132,7 @@ void FetchAffinePatternPart::startAtX(x86::Gp& x) noexcept {
 }
 
 void FetchAffinePatternPart::advanceX(x86::Gp& x, x86::Gp& diff) noexcept {
-  BL_UNUSED(x);
+  blUnused(x);
   BL_ASSERT(!isRectFill());
 
   if (pixelGranularity() > 1)

@@ -225,7 +225,7 @@ static BL_INLINE int32_t combineKernValue(int32_t origVal, int32_t newVal, int32
 
 // Kern SubTable Format 0 - Ordered list of kerning pairs.
 static BL_INLINE int32_t applyKernFormat0(const BLOTFaceImpl* faceI, const void* dataPtr, size_t dataSize, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count, int32_t mask) noexcept {
-  BL_UNUSED(faceI);
+  blUnused(faceI);
 
   // Format0's `dataPtr` is not a pointer to the start of the table, instead
   // it points to kerning pairs that are either references to the original
@@ -360,9 +360,7 @@ static BL_INLINE int32_t applyKernFormat3(const BLOTFaceImpl* faceI, const void*
 
 // Applies the data calculated by applyKernFormatN.
 static BL_INLINE void finishKern(const BLOTFaceImpl* faceI, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count) noexcept {
-  BL_UNUSED(faceI);
-  BL_UNUSED(glyphData);
-
+  blUnused(faceI, glyphData);
   for (size_t i = 1; i < count; i++) {
     placementData[i - 1].advance += placementData[i].placement;
     placementData[i].placement.reset();

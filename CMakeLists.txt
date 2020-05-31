@@ -175,7 +175,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" ST
     list(APPEND BLEND2D_PRIVATE_CFLAGS -clang:-fno-rtti -clang:-fno-math-errno)
   endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS -Wall -Wextra)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS -Wall -Wextra -Wconversion)
   list(APPEND BLEND2D_PRIVATE_CFLAGS -fno-exceptions -fno-rtti -fno-math-errno -fno-finite-math-only)
   list(APPEND BLEND2D_PRIVATE_CFLAGS_REL -O2)
 
@@ -185,7 +185,8 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
 
   blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_REL
     -ftree-vectorize             # We want this optimization if not enabled by default.
-    -fmerge-all-constants)       # Not enabled by default, but we are fine with it.
+    -fmerge-all-constants        # Not enabled by default, but we are fine with it.
+    -fno-enforce-eh-specs)       # Blend2D code should never throw, so we don't need this.
 
   # GCC 4.X support requires -fabi-version=0 (or 6+). Please note that this
   # is internal and only required by `blsimd_p.h` as SIMD registers are used

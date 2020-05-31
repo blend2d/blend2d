@@ -606,7 +606,7 @@ static void blNullContextVirtInit(BLContextVirt* virt) noexcept {
 // ============================================================================
 
 void blContextOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   // Initialize null context state.
   blContextStateInit(&blNullContextState);

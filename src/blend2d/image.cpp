@@ -574,7 +574,7 @@ BLResult blImageWriteToData(const BLImageCore* self, BLArrayCore* dst, const BLI
 // ============================================================================
 
 void blImageOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   BLInternalImageImpl* imageI = &blNullImageImpl;
   blInitBuiltInNull(imageI, BL_IMPL_TYPE_IMAGE, 0);

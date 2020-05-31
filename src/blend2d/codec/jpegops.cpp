@@ -174,17 +174,13 @@ void BL_CDECL blJpegRGB32FromYCbCr8(uint8_t* dst, const uint8_t* pY, const uint8
 // ============================================================================
 
 uint8_t* BL_CDECL blJpegUpsample1x1(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept {
-  BL_UNUSED(dst);
-  BL_UNUSED(src1);
-  BL_UNUSED(w);
-  BL_UNUSED(hs);
+  blUnused(dst, src1, w, hs);
 
   return src0;
 }
 
 uint8_t* BL_CDECL blJpegUpsample1x2(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept {
-  BL_UNUSED(src1);
-  BL_UNUSED(hs);
+  blUnused(src1, hs);
 
   for (uint32_t i = 0; i < w; i++)
     dst[i] = uint8_t((3 * src0[i] + src1[i] + 2) >> 2);
@@ -193,8 +189,7 @@ uint8_t* BL_CDECL blJpegUpsample1x2(uint8_t* dst, uint8_t* src0, uint8_t* src1, 
 }
 
 uint8_t* BL_CDECL blJpegUpsample2x1(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept {
-  BL_UNUSED(hs);
-  BL_UNUSED(src1);
+  blUnused(hs, src1);
 
   // If only one sample, can't do any interpolation.
   if (w == 1) {
@@ -219,7 +214,7 @@ uint8_t* BL_CDECL blJpegUpsample2x1(uint8_t* dst, uint8_t* src0, uint8_t* src1, 
 }
 
 uint8_t* BL_CDECL blJpegUpsample2x2(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept {
-  BL_UNUSED(hs);
+  blUnused(hs);
 
   if (w == 1) {
     dst[0] = dst[1] = uint8_t((3 * src0[0] + src1[0] + 2) >> 2);
@@ -243,7 +238,7 @@ uint8_t* BL_CDECL blJpegUpsample2x2(uint8_t* dst, uint8_t* src0, uint8_t* src1, 
 }
 
 uint8_t* BL_CDECL blJpegUpsampleAny(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept {
-  BL_UNUSED(src1);
+  blUnused(src1);
 
   for (uint32_t i = 0; i < w; i++)
     for (uint32_t j = 0; j < hs; j++)

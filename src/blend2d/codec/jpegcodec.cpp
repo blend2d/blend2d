@@ -1507,12 +1507,12 @@ static BLJpegDecoderImpl* blJpegDecoderImplNew() noexcept {
 
 static BLResult BL_CDECL blJpegCodecImplDestroy(BLImageCodecImpl* impl) noexcept {
   // Built-in codecs are never destroyed.
-  BL_UNUSED(impl);
+  blUnused(impl);
   return BL_SUCCESS;
 }
 
 static uint32_t BL_CDECL blJpegCodecImplInspectData(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept {
-  BL_UNUSED(impl);
+  blUnused(impl);
 
   // JPEG minimum size and signature (SOI).
   if (size < 2 || data[0] != 0xFF || data[1] != BL_JPEG_MARKER_SOI)
@@ -1526,7 +1526,7 @@ static uint32_t BL_CDECL blJpegCodecImplInspectData(const BLImageCodecImpl* impl
 }
 
 static BLResult BL_CDECL blJpegCodecImplCreateDecoder(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept {
-  BL_UNUSED(impl);
+  blUnused(impl);
   BLImageDecoderCore decoder { blJpegDecoderImplNew() };
 
   if (BL_UNLIKELY(!decoder.impl))
@@ -1536,7 +1536,7 @@ static BLResult BL_CDECL blJpegCodecImplCreateDecoder(const BLImageCodecImpl* im
 }
 
 static BLResult BL_CDECL blJpegCodecImplCreateEncoder(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept {
-  BL_UNUSED(impl);
+  blUnused(impl);
 
   // TODO: [JPEG] Encoder
   return blTraceError(BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED);
@@ -1553,7 +1553,7 @@ static BLResult BL_CDECL blJpegCodecImplCreateEncoder(const BLImageCodecImpl* im
 // ============================================================================
 
 BLImageCodecImpl* blJpegCodecOnInit(BLRuntimeContext* rt) noexcept {
-  BL_UNUSED(rt);
+  blUnused(rt);
 
   // Initialize JPEG ops.
   blJpegOps.idct8             = blJpegIDCT8;

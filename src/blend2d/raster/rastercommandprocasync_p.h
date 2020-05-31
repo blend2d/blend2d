@@ -214,8 +214,8 @@ static bool blRasterCommandProcAsync_FillAnalytic(BLRasterCommandProcAsyncData& 
   BLRasterWorkData& workData = *procData.workData();
   BLRasterWorkProcAsyncState::Analytic& procState = procData.stateDataAt(command._analyticAsync.stateSlotIndex).analytic;
 
-  int bandFixedY0 = procData.bandFixedY0();
-  int bandFixedY1 = procData.bandFixedY1();
+  uint32_t bandFixedY0 = procData.bandFixedY0();
+  uint32_t bandFixedY1 = procData.bandFixedY1();
 
   const BLEdgeVector<int>* edges;
   BLActiveEdge<int>* active;
@@ -229,7 +229,7 @@ static bool blRasterCommandProcAsync_FillAnalytic(BLRasterCommandProcAsyncData& 
       return true;
 
     // Don't do anything if we haven't advanced enough.
-    if (command._analyticAsync.fixedY0 >= bandFixedY1) {
+    if (command._analyticAsync.fixedY0 >= int(bandFixedY1)) {
       procState.edges = edges;
       procState.active = active;
       return false;
@@ -237,15 +237,15 @@ static bool blRasterCommandProcAsync_FillAnalytic(BLRasterCommandProcAsyncData& 
   }
   else {
     // Don't do anything if we haven't advanced enough.
-    if (command._analyticAsync.fixedY0 >= bandFixedY1)
+    if (command._analyticAsync.fixedY0 >= int(bandFixedY1))
       return false;
 
     edges = procState.edges;
     active = procState.active;
   }
 
-  int bandY0 = procData.bandY0();
-  int bandY1 = procData.bandY1();
+  uint32_t bandY0 = procData.bandY0();
+  uint32_t bandY1 = procData.bandY1();
   uint32_t bandHeight = workData.bandHeight();
 
   // TODO:
@@ -302,7 +302,7 @@ static bool blRasterCommandProcAsync_FillAnalytic(BLRasterCommandProcAsyncData& 
   while (current) {
     // Skipped.
     ras.setSignMaskFromBit(current->signBit);
-    if (current->state._ey1 < bandY0)
+    if (current->state._ey1 < int(bandY0))
       goto EdgeDone;
     ras.restore(current->state);
 
@@ -310,7 +310,7 @@ static bool blRasterCommandProcAsync_FillAnalytic(BLRasterCommandProcAsyncData& 
     // into the correct band as it's not guaranteed that the next band would
     // be consecutive.
 AdvanceY:
-    ras.advanceToY(bandY0);
+    ras.advanceToY(int(bandY0));
 
     for (;;) {
 Rasterize:
@@ -320,14 +320,14 @@ EdgeDone:
         const BLEdgePoint<int>* pts = current->cur;
         while (pts != current->end) {
           pts++;
-          if (pts[-1].y <= bandFixedY0 || !ras.prepare(pts[-2], pts[-1]))
+          if (pts[-1].y <= int(bandFixedY0) || !ras.prepare(pts[-2], pts[-1]))
             continue;
 
           current->cur = pts;
           if (uint32_t(ras._ey0) > ras._bandEnd)
             goto SaveState;
 
-          if (ras._ey0 < bandY0)
+          if (ras._ey0 < int(bandY0))
             goto AdvanceY;
 
           goto Rasterize;
@@ -364,22 +364,22 @@ SaveState:
       const BLEdgePoint<int>* pts = edges->pts + 1;
       const BLEdgePoint<int>* end = edges->pts + edges->count;
 
-      if (pts[-1].y >= bandFixedY1)
+      if (pts[-1].y >= int(bandFixedY1))
         break;
 
       uint32_t signBit = edges->signBit;
       ras.setSignMaskFromBit(signBit);
 
       edges = edges->next;
-      if (end[-1].y <= bandFixedY0)
+      if (end[-1].y <= int(bandFixedY0))
         continue;
 
       do {
         pts++;
-        if (pts[-1].y <= bandFixedY0 || !ras.prepare(pts[-2], pts[-1]))
+        if (pts[-1].y <= int(bandFixedY0) || !ras.prepare(pts[-2], pts[-1]))
           continue;
 
-        ras.advanceToY(bandY0);
+        ras.advanceToY(int(bandY0));
         if (uint32_t(ras._ey1) <= ras._bandEnd) {
           ras.template rasterize<kRasterizerOptions>();
         }
@@ -395,7 +395,7 @@ SaveState:
           if (uint32_t(ras._ey0) > ras._bandEnd)
             goto SaveState;
 
-          if (ras._ey0 < bandY0)
+          if (ras._ey0 < int(bandY0))
             goto AdvanceY;
 
           goto Rasterize;
