@@ -175,7 +175,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" ST
     list(APPEND BLEND2D_PRIVATE_CFLAGS -clang:-fno-rtti -clang:-fno-math-errno)
   endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS -Wall -Wextra -Wconversion)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS -Wall -Wextra)
   list(APPEND BLEND2D_PRIVATE_CFLAGS -fno-exceptions -fno-rtti -fno-math-errno -fno-finite-math-only)
   list(APPEND BLEND2D_PRIVATE_CFLAGS_REL -O2)
 
