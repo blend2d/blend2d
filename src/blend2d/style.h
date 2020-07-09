@@ -219,7 +219,7 @@ public:
   BL_INLINE BLResult getRgba(BLRgba* out) const noexcept { return blStyleGetRgba(this, out); }
   BL_INLINE BLResult getRgba32(BLRgba32* out) const noexcept { return blStyleGetRgba32(this, &out->value); }
   BL_INLINE BLResult getRgba64(BLRgba64* out) const noexcept { return blStyleGetRgba64(this, &out->value); }
-  BL_INLINE BLResult getGradient(BLPattern* out) const noexcept { return blStyleGetObject(this, out); }
+  BL_INLINE BLResult getPattern(BLPattern* out) const noexcept { return blStyleGetObject(this, out); }
   BL_INLINE BLResult getGradient(BLGradient* out) const noexcept { return blStyleGetObject(this, out); }
 
   BL_NODISCARD
