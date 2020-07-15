@@ -209,7 +209,7 @@ static BL_INLINE void blRasterContextBeforeStyleChange(BLRasterContextImpl* ctxI
   stateStyle->packed = style->packed;
   // `stateStyle->alpha` has been already set by `BLRasterContextImpl::save()`.
   stateStyle->source = style->source;
-  stateStyle->rgba64 = style->rgba64;
+  stateStyle->rgba = style->rgba;
   stateStyle->adjustedMatrix.reset();
 }
 
@@ -1038,7 +1038,7 @@ static BLResult BL_CDECL blRasterContextImplRestore(BLContextImpl* baseImpl, con
 
       dst->packed = src->packed;
       dst->source = src->source;
-      dst->rgba64 = src->rgba64;
+      dst->rgba = src->rgba;
       dst->adjustedMatrix = src->adjustedMatrix;
       ctxI->internalState.styleType[kOpType] = src->styleType;
     }
@@ -1054,7 +1054,7 @@ static BLResult BL_CDECL blRasterContextImplRestore(BLContextImpl* baseImpl, con
 
       dst->packed = src->packed;
       dst->source = src->source;
-      dst->rgba64 = src->rgba64;
+      dst->rgba = src->rgba;
       dst->adjustedMatrix = src->adjustedMatrix;
       ctxI->internalState.styleType[kOpType] = src->styleType;
     }
