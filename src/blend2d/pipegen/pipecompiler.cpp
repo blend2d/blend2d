@@ -341,7 +341,7 @@ static constexpr uint32_t signatureOfXmmYmmZmm[] = {
 static inline uint32_t shuf32ToShuf64(uint32_t imm) noexcept {
   uint32_t imm0 = uint32_t(imm     ) & 1u;
   uint32_t imm1 = uint32_t(imm >> 1) & 1u;
-  return x86::Predicate::shuf(imm1 * 2u, imm1 * 2u + 1u, imm0 * 2u, imm0 * 2u + 1u);
+  return x86::Predicate::shuf(imm1 * 2u + 1u, imm1 * 2u, imm0 * 2u + 1u, imm0 * 2u);
 }
 
 static inline void fixVecSignature(Operand_& op, uint32_t signature) noexcept {
