@@ -934,8 +934,10 @@ static void blRasterContextImplDiscardStates(BLRasterContextImpl* ctxI, BLRaster
 
     if ((contextFlags & (BL_RASTER_CONTEXT_STROKE_FETCH_DATA | BL_RASTER_CONTEXT_STATE_STROKE_STYLE)) == BL_RASTER_CONTEXT_STROKE_FETCH_DATA) {
       constexpr uint32_t kOpType = BL_CONTEXT_OP_TYPE_STROKE;
-      BLRasterFetchData* fetchData = savedState->style[kOpType].source.fetchData;
-      fetchData->release(ctxI);
+      if (savedState->style[kOpType].hasFetchData()) {
+        BLRasterFetchData* fetchData = savedState->style[kOpType].source.fetchData;
+        fetchData->release(ctxI);
+      }
     }
 
     if ((contextFlags & BL_RASTER_CONTEXT_STATE_STROKE_OPTIONS) == 0) {
@@ -3485,18 +3487,6 @@ static BLResult blRasterContextImplDetach(BLRasterContextImpl* ctxI) noexcept {
 
   blRasterContextImplFlush(ctxI, BL_CONTEXT_FLUSH_SYNC);
 
-  // If the image was dereferenced during rendering it's our responsibility to
-  // destroy it. This is not useful from the consumer's perspective as the
-  // resulting image can never be used again, but it can happen in some cases
-  // (for example when an asynchronous rendering is terminated and the target
-  // image released with it).
-  if (blAtomicFetchSub(&imageI->writerCount) == 1) {
-    if (imageI->refCount == 0)
-      blImageImplDelete(imageI);
-  }
-  ctxI->dstImage.impl = nullptr;
-  ctxI->dstData.reset();
-
   // Release Threads/WorkerContexts used by asynchronous rendering.
   if (ctxI->workerMgrInitialized)
     ctxI->workerMgr->reset();
@@ -3530,6 +3520,18 @@ static BLResult blRasterContextImplDetach(BLRasterContextImpl* ctxI) noexcept {
   ctxI->savedStatePool.reset();
   ctxI->syncWorkData.ctxData.reset();
   ctxI->syncWorkData.workZone.clear();
+
+  // If the image was dereferenced during rendering it's our responsibility to
+  // destroy it. This is not useful from the consumer's perspective as the
+  // resulting image can never be used again, but it can happen in some cases
+  // (for example when an asynchronous rendering is terminated and the target
+  // image released with it).
+  if (blAtomicFetchSub(&imageI->writerCount) == 1) {
+    if (imageI->refCount == 0)
+      blImageImplDelete(imageI);
+  }
+  ctxI->dstImage.impl = nullptr;
+  ctxI->dstData.reset();
 
   return BL_SUCCESS;
 }
