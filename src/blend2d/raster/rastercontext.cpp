@@ -179,7 +179,7 @@ static BL_INLINE void blRasterContextInitStyleToDefault(BLRasterContextImpl* ctx
   style.styleFormat = ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB];
   style.alphaI = alphaI;
   style.source.solid = ctxI->solidFetchDataTable[BL_COMP_OP_SOLID_ID_OPAQUE_BLACK];
-  style.rgba64.value = 0xFFFF000000000000u;
+  style.assignRgba64(0xFFFF000000000000u);
   style.adjustedMatrix.reset();
 }
 
@@ -228,10 +228,9 @@ static BLResult BL_CDECL blRasterContextImplGetStyle(const BLContextImpl* baseIm
   // expect GetStyle() be called more than SetStyle().
   switch (style->styleType) {
     case BL_STYLE_TYPE_SOLID: {
-      uint32_t tag = style->tagging.tag;
-      if (tag == blBitCast<uint32_t>(blNaN<float>()) + 0)
+      if (style->isRgba32())
         blDownCast(styleOut)->rgba.reset(style->rgba32);
-      else if (tag == blBitCast<uint32_t>(blNaN<float>()) + 1)
+      else if (style->isRgba64())
         blDownCast(styleOut)->rgba.reset(style->rgba64);
       else
         blDownCast(styleOut)->rgba.reset(style->rgba);
@@ -285,8 +284,8 @@ static BLResult BL_CDECL blRasterContextImplSetStyleRgba(BLContextImpl* baseImpl
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
   BLRasterContextStyleData* style = &ctxI->internalState.style[kOpType];
 
-  BLRgba solid = *rgba;
-  if (!blStyleIsValidRgba(solid))
+  BLRgba norm = *rgba;
+  if (!blStyleIsValidRgba(norm))
     return blRasterContextImplSetStyleNone<kOpType>(ctxI);
 
   uint32_t contextFlags = ctxI->contextFlags;
@@ -296,15 +295,15 @@ static BLResult BL_CDECL blRasterContextImplSetStyleRgba(BLContextImpl* baseImpl
     blRasterContextBeforeStyleChange(ctxI, kOpType, style);
 
   contextFlags &= ~(styleFlags | (BL_RASTER_CONTEXT_NO_BASE_STYLE << kOpType));
-  solid = blClamp(solid, BLRgba(0.0f, 0.0f, 0.0f, 0.0f),
-                         BLRgba(1.0f, 1.0f, 1.0f, 1.0f));
-  style->rgba = solid;
+  norm = blClamp(norm, BLRgba(0.0f, 0.0f, 0.0f, 0.0f),
+                       BLRgba(1.0f, 1.0f, 1.0f, 1.0f));
+  style->assignRgba(norm);
 
   // Premultiply and convert to RGBA32.
-  float aScale = solid.a * 255.0f;
-  uint32_t r = uint32_t(blRoundToInt(solid.r * aScale));
-  uint32_t g = uint32_t(blRoundToInt(solid.g * aScale));
-  uint32_t b = uint32_t(blRoundToInt(solid.b * aScale));
+  float aScale = norm.a * 255.0f;
+  uint32_t r = uint32_t(blRoundToInt(norm.r * aScale));
+  uint32_t g = uint32_t(blRoundToInt(norm.g * aScale));
+  uint32_t b = uint32_t(blRoundToInt(norm.b * aScale));
   uint32_t a = uint32_t(blRoundToInt(aScale));
   uint32_t rgba32 = BLRgba32(r, g, b, a).value;
 
@@ -335,8 +334,7 @@ static BLResult BL_CDECL blRasterContextImplSetStyleRgba32(BLContextImpl* baseIm
   if (contextFlags & styleFlags)
     blRasterContextBeforeStyleChange(ctxI, kOpType, style);
 
-  style->rgba32.value = rgba32;
-  style->tagging.tag = blBitCast<uint32_t>(blNaN<float>()) + 0;
+  style->assignRgba32(rgba32);
 
   uint32_t solidFormatIndex = BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB;
   if (!blRgba32IsFullyOpaque(rgba32)) {
@@ -367,8 +365,7 @@ static BLResult BL_CDECL blRasterContextImplSetStyleRgba64(BLContextImpl* baseIm
   if (contextFlags & styleFlags)
     blRasterContextBeforeStyleChange(ctxI, kOpType, style);
 
-  style->rgba64.value = rgba64;
-  style->tagging.tag = blBitCast<uint32_t>(blNaN<float>()) + 1;
+  style->assignRgba64(rgba64);
 
   uint32_t solidFormatIndex = BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB;
   uint32_t rgba32 = blRgba32FromRgba64(rgba64);

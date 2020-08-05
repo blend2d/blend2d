@@ -53,6 +53,9 @@ union BLRasterContextStyleSource {
 //! the rendering context it has to calculate the style transformation matrix
 //! and a few other things that could degrade the style into a solid fill.
 struct BLRasterContextStyleData {
+  static BL_INLINE uint32_t solidRgba32Tag() noexcept { return blBitCast<uint32_t>(blNaN<float>()) + 0u; }
+  static BL_INLINE uint32_t solidRgba64Tag() noexcept { return blBitCast<uint32_t>(blNaN<float>()) + 1u; }
+
   union {
     uint32_t packed;
     struct {
@@ -91,6 +94,23 @@ struct BLRasterContextStyleData {
 
   //! Adjusted matrix.
   BLMatrix2D adjustedMatrix;
+
+  BL_INLINE bool isRgba32() const noexcept { return tagging.tag == solidRgba32Tag(); }
+  BL_INLINE bool isRgba64() const noexcept { return tagging.tag == solidRgba64Tag(); }
+
+  BL_INLINE void assignRgba(const BLRgba& value) noexcept {
+    rgba = value;
+  }
+
+  BL_INLINE void assignRgba32(uint32_t value) noexcept {
+    rgba32.value = value;
+    tagging.tag = solidRgba32Tag();
+  }
+
+  BL_INLINE void assignRgba64(uint64_t value) noexcept {
+    rgba64.value = value;
+    tagging.tag = solidRgba64Tag();
+  }
 
   BL_INLINE bool hasFetchData() const noexcept {
     return (cmdFlags & BL_RASTER_COMMAND_FLAG_FETCH_DATA) != 0;
