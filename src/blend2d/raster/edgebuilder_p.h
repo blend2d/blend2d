@@ -171,12 +171,11 @@ public:
 
   BL_INLINE void clear() noexcept {
     if (!empty()) {
-      uint32_t bandStart = (unsigned(_boundingBox.y0    ) >> _fixedBandHeightShift);
-      uint32_t bandEnd   = (unsigned(_boundingBox.y1 - 1) >> _fixedBandHeightShift) + 1;
+      uint32_t bandStart = (unsigned(_boundingBox.y0) >> _fixedBandHeightShift);
+      uint32_t bandLast  = (unsigned(_boundingBox.y1) >> _fixedBandHeightShift);
+      BL_ASSERT(bandLast < _bandCount);
 
-      BL_ASSERT(bandEnd <= _bandCount);
-
-      for (uint32_t i = bandStart; i < bandEnd; i++)
+      for (uint32_t i = bandStart; i <= bandLast; i++)
         _bandEdges[i].reset();
       resetBoundingBox();
     }
@@ -207,7 +206,8 @@ public:
     BLEdgeList<int>* bandEdges = this->bandEdges();
 
     size_t bandId = unsigned(boundingBox().y0) >> fixedBandHeightShift();
-    size_t bandLast = unsigned(boundingBox().y1 - 1) >> fixedBandHeightShift();
+    size_t bandLast = unsigned(boundingBox().y1) >> fixedBandHeightShift();
+    BL_ASSERT(bandLast < bandCount());
 
     BLEdgeVector<CoordT>* first = bandEdges[bandId].first();
     BLEdgeVector<CoordT>* current = bandEdges[bandId].last();

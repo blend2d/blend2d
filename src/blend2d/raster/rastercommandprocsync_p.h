@@ -136,7 +136,7 @@ static BL_NOINLINE BLResult blRasterCommandProcSync_FillAnalytic(BLRasterWorkDat
   uint32_t fixedBandHeightShift = edgeStorage->fixedBandHeightShift();
 
   uint32_t bandId = unsigned(edgeStorage->boundingBox().y0) >> fixedBandHeightShift;
-  uint32_t bandLast = unsigned(edgeStorage->boundingBox().y1 - 1) >> fixedBandHeightShift;
+  uint32_t bandLast = unsigned(edgeStorage->boundingBox().y1) >> fixedBandHeightShift;
   uint32_t dstWidth = uint32_t(workData.dstSize().w);
 
   BLPipeFillFunc fillFunc = command.fillFunc();
