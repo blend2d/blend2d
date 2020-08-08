@@ -1332,8 +1332,6 @@ UNIT(array) {
 
     a.insertView(1, a.view());
     EXPECT(a.size() == 6);
-    for (const BLString& str : a)
-      printf("%s\n", str.data());
     EXPECT(a[0].equals("Blend2D"));
     EXPECT(a[1].equals("Blend2D"));
     EXPECT(a[2].equals("Hello"));

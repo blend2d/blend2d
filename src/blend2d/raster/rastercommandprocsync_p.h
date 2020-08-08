@@ -133,10 +133,8 @@ static BL_NOINLINE BLResult blRasterCommandProcSync_FillAnalytic(BLRasterWorkDat
   BLActiveEdge<int>* pooled = nullptr;
 
   BLEdgeList<int>* bandEdges = edgeStorage->bandEdges();
-  uint32_t fixedBandHeightShift = edgeStorage->fixedBandHeightShift();
-
-  uint32_t bandId = unsigned(edgeStorage->boundingBox().y0) >> fixedBandHeightShift;
-  uint32_t bandLast = unsigned(edgeStorage->boundingBox().y1) >> fixedBandHeightShift;
+  uint32_t bandId = edgeStorage->bandStartFromBBox();
+  uint32_t bandEnd = edgeStorage->bandEndFromBBox();
   uint32_t dstWidth = uint32_t(workData.dstSize().w);
 
   BLPipeFillFunc fillFunc = command.fillFunc();
@@ -262,7 +260,7 @@ SaveState:
     }
 
     ras._bandOffset = (ras._bandOffset + bandHeight) & ~bandHeightMask;
-  } while (++bandId <= bandLast);
+  } while (++bandId < bandEnd);
 
   workZone->clear();
   return BL_SUCCESS;

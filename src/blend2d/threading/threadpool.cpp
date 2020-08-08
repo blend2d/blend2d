@@ -64,7 +64,6 @@ public:
   BitArray pooledThreadBits;
   BLThread* threads[kMaxThreadCount];
 
-  // No need to explicitly initialize anything as it should be zero initialized.
   explicit BLInternalThreadPool(size_t initialRefCount = 1) noexcept
     : BLThreadPool { &blThreadPoolVirt },
       refCount(initialRefCount),
@@ -82,11 +81,21 @@ public:
       threads {} { init(); }
 
   ~BLInternalThreadPool() noexcept {
+    if (blAtomicFetch(&createdThreadCount) != 0)
+      performExitCleanup();
+
+    destroy();
+  }
+
+  BL_INLINE void init() noexcept {}
+  BL_INLINE void destroy() noexcept {}
+
+  void performExitCleanup() {
     uint32_t numTries = 5;
     uint64_t waitTime = (uint64_t(destroyWaitTimeInMS) * 1000u) / numTries;
 
     do {
-      cleanup();
+      cleanup(BL_THREAD_QUIT_ON_EXIT);
 
       BLLockGuard<BLMutex> guard(mutex);
       if (blAtomicFetch(&createdThreadCount) != 0) {
@@ -95,12 +104,7 @@ public:
           break;
       }
     } while (--numTries);
-
-    destroy();
   }
-
-  BL_INLINE void init() noexcept {}
-  BL_INLINE void destroy() noexcept {}
 };
 
 // ============================================================================
@@ -186,7 +190,7 @@ static void blThreadPoolThreadExitFunc(BLThread* thread, void* data) noexcept {
   }
 }
 
-static uint32_t BL_CDECL blThreadPoolCleanup(BLThreadPool* self_) noexcept {
+static uint32_t BL_CDECL blThreadPoolCleanup(BLThreadPool* self_, uint32_t threadQuitFlags) noexcept {
   BLInternalThreadPool* self = static_cast<BLInternalThreadPool*>(self_);
   BLLockGuard<BLMutex> guard(self->mutex);
 
@@ -206,7 +210,7 @@ static uint32_t BL_CDECL blThreadPoolCleanup(BLThreadPool* self_) noexcept {
       BLThread* thread = self->threads[threadIndex];
 
       self->threads[threadIndex] = nullptr;
-      thread->quit();
+      thread->quit(threadQuitFlags);
 
       n++;
     }

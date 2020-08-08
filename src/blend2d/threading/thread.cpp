@@ -167,16 +167,33 @@ static BLResult BL_CDECL blThreadRun(BLThread* self_, BLThreadFunc workFunc, BLT
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blThreadQuit(BLThread* self_) noexcept {
+static BLResult BL_CDECL blThreadQuit(BLThread* self_, uint32_t quitFlags) noexcept {
   BLInternalThread* self = static_cast<BLInternalThread*>(self_);
 
+  // Update status to `BL_THREAD_STATUS_QUITTING` must be guarted as more threads
+  // may want this thread to quit. Just return if the thread is already quitting.
   {
     BLLockGuard<BLMutex> guard(self->mutex);
     if (self->internalStatus == BL_THREAD_STATUS_QUITTING)
       return BL_SUCCESS;
-
     self->internalStatus = BL_THREAD_STATUS_QUITTING;
   }
+
+#ifdef _WIN32
+  // Windows specific - it could happen that after returning from main() all
+  // threads are terminated even before calling static destructors or DllMain().
+  // This means that the thread could be already terminated and we executed the
+  // regular code-path we would get stuck forever during the cleanup.
+  if (quitFlags & BL_THREAD_QUIT_ON_EXIT) {
+    DWORD result = WaitForSingleObject((HANDLE)self->handle, 0);
+    if (result == WAIT_OBJECT_0) {
+      // The thread was already terminated by the runtime. Call 'exitFunc'
+      // manually so the object can be released properly from our side.
+      self->exitFunc(self, self->exitData);
+      return BL_SUCCESS;
+    }
+  }
+#endif
 
   self->condition.signal();
   return BL_SUCCESS;
@@ -206,7 +223,7 @@ BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes*
     flags = STACK_SIZE_PARAM_IS_A_RESERVATION;
 
   HANDLE handle = (HANDLE)_beginthreadex(nullptr, stackSize, blThreadEntryPointWrapper, thread, flags, nullptr);
-  if (handle == (HANDLE)-1)
+  if (handle == (HANDLE)0)
     result = BL_ERROR_BUSY;
   else
     thread->handle = (intptr_t)handle;

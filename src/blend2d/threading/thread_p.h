@@ -54,6 +54,10 @@ enum BLThreadStatus : uint32_t {
   BL_THREAD_STATUS_QUITTING = 2
 };
 
+enum BLThreadQuitFlags : uint32_t {
+  BL_THREAD_QUIT_ON_EXIT = 0x00000001u
+};
+
 // ============================================================================
 // [BLThread]
 // ============================================================================
@@ -66,7 +70,7 @@ struct BLThreadVirt {
   BLResult (BL_CDECL* destroy)(BLThread* self) BL_NOEXCEPT;
   uint32_t (BL_CDECL* status)(const BLThread* self) BL_NOEXCEPT;
   BLResult (BL_CDECL* run)(BLThread* self, BLThreadFunc workFunc, BLThreadFunc doneFunc, void* data) BL_NOEXCEPT;
-  BLResult (BL_CDECL* quit)(BLThread* self) BL_NOEXCEPT;
+  BLResult (BL_CDECL* quit)(BLThread* self, uint32_t quitFlags) BL_NOEXCEPT;
 };
 
 struct BLThread {
@@ -86,8 +90,8 @@ struct BLThread {
     return virt->run(this, workFunc, doneFunc, data);
   }
 
-  BL_INLINE BLResult quit() noexcept {
-    return virt->quit(this);
+  BL_INLINE BLResult quit(uint32_t quitFlags = 0) noexcept {
+    return virt->quit(this, quitFlags);
   }
   #endif
   // --------------------------------------------------------------------------

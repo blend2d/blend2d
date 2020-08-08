@@ -752,6 +752,11 @@ if (NOT BLEND2D_EMBED)
                        SOURCES test/bl_test_fuzzer.cpp
                        LIBRARIES Blend2D::Blend2D
                        CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
+
+    blend2d_add_target(bl_test_verify_mt TEST
+                       SOURCES test/bl_test_verify_mt.cpp
+                       LIBRARIES Blend2D::Blend2D
+                       CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
   endif()
 endif()
 

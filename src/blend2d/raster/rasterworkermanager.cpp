@@ -64,8 +64,8 @@ BLResult BLRasterWorkerManager::init(BLRasterContextImpl* ctxI, const BLContextC
 
   // Allocate space for worker threads data.
   if (workerCount) {
-    BLThread** workerThreads = zone.allocT<BLThread*>(workerCount * sizeof(void*));
-    BLRasterWorkData** workDataStorage = zone.allocT<BLRasterWorkData*>(workerCount * sizeof(void*));
+    BLThread** workerThreads = zone.allocT<BLThread*>(blAlignUp(workerCount * sizeof(void*), 8));
+    BLRasterWorkData** workDataStorage = zone.allocT<BLRasterWorkData*>(blAlignUp(workerCount * sizeof(void*), 8));
 
     if (!workerThreads || !workDataStorage) {
       zone.restoreState(zoneState);

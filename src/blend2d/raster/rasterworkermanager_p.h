@@ -61,6 +61,8 @@ class BLRasterWorkerManager {
 public:
   BL_NONCOPYABLE(BLRasterWorkerManager)
 
+  enum : uint32_t { kAllocatorAlignment = 8 };
+
   //! Zone allocator used to allocate commands and jobs.
   BLZoneAllocator _allocator;
 
@@ -99,7 +101,7 @@ public:
   uint32_t _stateSlotCount;
 
   BL_INLINE BLRasterWorkerManager() noexcept
-    : _allocator(65536 - BLZoneAllocator::kBlockOverhead, 8),
+    : _allocator(131072 - BLZoneAllocator::kBlockOverhead, kAllocatorAlignment),
       _currentBatch(nullptr),
       _jobQueueAppender(),
       _commandQueueAppender(),
@@ -163,7 +165,7 @@ public:
   //! \{
 
   BL_INLINE BLRasterJobQueue* newJobQueue() noexcept {
-    void* p = _allocator.allocT<BLRasterJobQueue>(BLRasterJobQueue::sizeOf());
+    void* p = _allocator.allocNoAlignT<BLRasterJobQueue>(blAlignUp(BLRasterJobQueue::sizeOf(), kAllocatorAlignment));
     return p ? new (p) BLRasterJobQueue() : nullptr;
   }
 
@@ -202,7 +204,7 @@ public:
   //! \{
 
   BL_INLINE BLRasterFetchQueue* newFetchQueue() noexcept {
-    void* p = _allocator.allocT<BLRasterFetchQueue>(BLRasterFetchQueue::sizeOf());
+    void* p = _allocator.allocNoAlignT<BLRasterFetchQueue>(blAlignUp(BLRasterFetchQueue::sizeOf(), kAllocatorAlignment));
     return p ? new (p) BLRasterFetchQueue() : nullptr;
   }
 
@@ -242,7 +244,7 @@ public:
   }
 
   BL_INLINE BLRasterCommandQueue* newCommandQueue() noexcept {
-    void* p = _allocator.allocT<BLRasterCommandQueue>(BLRasterCommandQueue::sizeOf());
+    void* p = _allocator.allocNoAlignT<BLRasterCommandQueue>(blAlignUp(BLRasterCommandQueue::sizeOf(), kAllocatorAlignment));
     return p ? new (p) BLRasterCommandQueue() : nullptr;
   }
 

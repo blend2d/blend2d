@@ -1727,7 +1727,9 @@ static BL_INLINE BLRasterSharedFillState* blRasterContextImplEnsureFillState(BLR
   BLRasterSharedFillState* sharedFillState = ctxI->sharedFillState;
 
   if (!(ctxI->contextFlags & BL_RASTER_CONTEXT_SHARED_FILL_STATE)) {
-    sharedFillState = ctxI->workerMgr()._allocator.allocNoAlignT<BLRasterSharedFillState>();
+    sharedFillState = ctxI->workerMgr()._allocator.allocNoAlignT<BLRasterSharedFillState>(
+      blAlignUp(sizeof(BLRasterSharedFillState), BLRasterWorkerManager::kAllocatorAlignment));
+
     if (BL_UNLIKELY(!sharedFillState))
       return nullptr;
 
@@ -1748,8 +1750,8 @@ static const uint32_t blRasterSharedStrokeStateFlags[BL_STROKE_TRANSFORM_ORDER_C
 };
 
 static const uint32_t blRasterSharedStrokeStateSize[BL_STROKE_TRANSFORM_ORDER_COUNT] = {
-  uint32_t(sizeof(BLRasterSharedBaseStrokeState)),
-  uint32_t(sizeof(BLRasterSharedExtendedStrokeState))
+  uint32_t(blAlignUp(sizeof(BLRasterSharedBaseStrokeState), BLRasterWorkerManager::kAllocatorAlignment)),
+  uint32_t(blAlignUp(sizeof(BLRasterSharedExtendedStrokeState), BLRasterWorkerManager::kAllocatorAlignment))
 };
 
 static BL_INLINE BLRasterSharedBaseStrokeState* blRasterContextImplEnsureStrokeState(BLRasterContextImpl* ctxI) noexcept {
@@ -1973,15 +1975,14 @@ static BL_INLINE BLResult blRasterContextImplEnqueueFillOrStrokeGlyphRun(
   const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
 
   size_t size = glyphRun->size;
-  size_t glyphDataSize = size * sizeof(uint32_t);
-  size_t placementDataSize = size * sizeof(BLGlyphPlacementRawData);
+  size_t glyphDataSize = blAlignUp(size * sizeof(uint32_t), BLRasterWorkerManager::kAllocatorAlignment);
+  size_t placementDataSize = blAlignUp(size * sizeof(BLGlyphPlacementRawData), BLRasterWorkerManager::kAllocatorAlignment);
 
-  uint32_t* glyphData = ctxI->workerMgr()._allocator.template allocT<uint32_t>(glyphDataSize, 8);
-  BLGlyphPlacementRawData* placementData = ctxI->workerMgr()._allocator.template allocT<BLGlyphPlacementRawData>(placementDataSize, 8);
+  uint32_t* glyphData = ctxI->workerMgr()._allocator.template allocNoAlignT<uint32_t>(glyphDataSize);
+  BLGlyphPlacementRawData* placementData = ctxI->workerMgr()._allocator.template allocNoAlignT<BLGlyphPlacementRawData>(placementDataSize);
 
-  if (BL_UNLIKELY(!glyphData || !placementData)) {
+  if (BL_UNLIKELY(!glyphData || !placementData))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-  }
 
   BLGlyphRunIterator it(*glyphRun);
   uint32_t* dstGlyphData = glyphData;
@@ -1996,7 +1997,7 @@ static BL_INLINE BLResult blRasterContextImplEnqueueFillOrStrokeGlyphRun(
   serializer.initFillAnalyticAsync(BL_FILL_RULE_NON_ZERO, nullptr);
   return blRasterContextImplEnqueueCommandWithJob<Category, OpType, BLRasterJobData_TextOp>(
     ctxI, serializer,
-    sizeof(BLRasterJobData_TextOp),
+    blAlignUp(sizeof(BLRasterJobData_TextOp), BLRasterWorkerManager::kAllocatorAlignment),
     [&](BLRasterJobData_TextOp* job) {
       job->initCoordinates(*pt);
       job->initFont(*font);
@@ -2038,7 +2039,7 @@ static BL_INLINE BLResult blRasterContextImplEnqueueFillOrStrokeText(
     serializer.initFillAnalyticAsync(BL_FILL_RULE_NON_ZERO, nullptr);
     result = blRasterContextImplEnqueueCommandWithJob<Category, OpType, BLRasterJobData_TextOp>(
       ctxI, serializer,
-      sizeof(BLRasterJobData_TextOp),
+      blAlignUp(sizeof(BLRasterJobData_TextOp), BLRasterWorkerManager::kAllocatorAlignment),
       [&](BLRasterJobData_TextOp* job) {
         job->initCoordinates(*pt);
         job->initFont(*font);
@@ -2210,15 +2211,17 @@ static BL_INLINE BLResult blRasterContextImplFillUnsafeBox(
   const BLBox& box, const BLMatrix2D& m, uint32_t mType) noexcept {
 
   if (mType <= BL_MATRIX2D_TYPE_SWAP) {
-    BLBox finalBox = blMatrix2DMapBox(m, box);
-
-    if (!blIntersectBoxes(finalBox, finalBox, ctxI->finalClipBoxFixedD()))
-      return BL_SUCCESS;
+    BLBox finalBox;
+    blIntersectBoxes(finalBox, blMatrix2DMapBox(m, box), ctxI->finalClipBoxFixedD());
 
     BLBoxI finalBoxFixed(blTruncToInt(finalBox.x0),
                          blTruncToInt(finalBox.y0),
                          blTruncToInt(finalBox.x1),
                          blTruncToInt(finalBox.y1));
+
+    if (finalBoxFixed.x0 >= finalBoxFixed.x1 || finalBoxFixed.y0 >= finalBoxFixed.y1)
+      return BL_SUCCESS;
+
     return blRasterContextImplFillClippedBoxU<Category>(ctxI, serializer, finalBoxFixed);
   }
   else {

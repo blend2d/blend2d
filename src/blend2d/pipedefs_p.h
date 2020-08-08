@@ -374,7 +374,7 @@ struct BLPipeFillData {
 
     uint32_t m0 = (fx1 * fy0_a) >> 16;
     uint32_t m1 = (fx1 * alpha) >>  8;
-    uint32_t m2 = (fx1 * fy0_a) >> 16;
+    uint32_t m2 = (fx1 * fy1_a) >> 16;
 
     uint32_t iw = uint32_t(boxAU.box.x1 - boxAU.box.x0);
     if (iw > 2) {

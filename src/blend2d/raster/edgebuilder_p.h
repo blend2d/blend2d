@@ -202,12 +202,23 @@ public:
     _boundingBox.reset(blMaxValue<int>(), blMaxValue<int>(), blMinValue<int>(), blMinValue<int>());
   }
 
+  BL_INLINE uint32_t bandStartFromBBox() const noexcept {
+    return unsigned(boundingBox().y0) >> fixedBandHeightShift();
+  }
+
+  BL_INLINE uint32_t bandEndFromBBox() const noexcept {
+    // NOTE: Calculating `bandEnd` is tricky, because in some rare cases
+    // the bounding box can end exactly at some band's initial coordinate.
+    // In such case we don't know whether the band has data there or not,
+    // so we must consider it initially.
+    return blMin((unsigned(boundingBox().y1) >> fixedBandHeightShift()) + 1, bandCount());
+  }
+
   BL_INLINE BLEdgeVector<CoordT>* flattenEdgeLinks() noexcept {
     BLEdgeList<int>* bandEdges = this->bandEdges();
 
-    size_t bandId = unsigned(boundingBox().y0) >> fixedBandHeightShift();
-    size_t bandLast = unsigned(boundingBox().y1) >> fixedBandHeightShift();
-    BL_ASSERT(bandLast < bandCount());
+    size_t bandId = bandStartFromBBox();
+    size_t bandEnd = bandEndFromBBox();
 
     BLEdgeVector<CoordT>* first = bandEdges[bandId].first();
     BLEdgeVector<CoordT>* current = bandEdges[bandId].last();
@@ -217,7 +228,7 @@ public:
     BL_ASSERT(current != nullptr);
 
     bandEdges[bandId].reset();
-    while (++bandId <= bandLast) {
+    while (++bandId < bandEnd) {
       BLEdgeVector<int>* bandFirst = bandEdges[bandId].first();
       if (!bandFirst)
         continue;

@@ -59,7 +59,7 @@ struct BLThreadPoolVirt {
   uint32_t (BL_CDECL* maxThreadCount)(const BLThreadPool* self) BL_NOEXCEPT;
   uint32_t (BL_CDECL* pooledThreadCount)(const BLThreadPool* self) BL_NOEXCEPT;
   BLResult (BL_CDECL* setThreadAttributes)(BLThreadPool* self, const BLThreadAttributes* attributes) BL_NOEXCEPT;
-  uint32_t (BL_CDECL* cleanup)(BLThreadPool* self) BL_NOEXCEPT;
+  uint32_t (BL_CDECL* cleanup)(BLThreadPool* self, uint32_t threadQuitFlags) BL_NOEXCEPT;
   uint32_t (BL_CDECL* acquireThreads)(BLThreadPool* self, BLThread** threads, uint32_t n, uint32_t flags, BLResult* reason) BL_NOEXCEPT;
   void     (BL_CDECL* releaseThreads)(BLThreadPool* self, BLThread** threads, uint32_t n) BL_NOEXCEPT;
 };
@@ -106,8 +106,8 @@ struct BLThreadPool {
   //! not be called often, it's ideal to call it when application was minimized,
   //! for example, or when the application knows that it completed an expensive
   //! task, etc...
-  BL_INLINE uint32_t cleanup() noexcept {
-    return virt->cleanup(this);
+  BL_INLINE uint32_t cleanup(uint32_t threadQuitFlags = 0) noexcept {
+    return virt->cleanup(this, threadQuitFlags);
   }
 
   //! Acquire `n` threads and store `BLThread*` to the given `threads` array.

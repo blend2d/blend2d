@@ -291,3 +291,4 @@ script:
 
   - eval "$RUN_CMD ./bl_test_unit --quick"
   - eval "$RUN_CMD ./bl_test_fuzzer --count=1000"
+  - eval "$RUN_CMD ./bl_test_verify_mt --count=1000"
