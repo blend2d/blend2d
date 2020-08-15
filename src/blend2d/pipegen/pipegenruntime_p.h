@@ -104,7 +104,7 @@ public:
   uint32_t _maxPixels;
 
   //! Whether to turn on asmjit's logging feature.
-  bool _enableLogger;
+  bool _loggerEnabled;
   //! Whether to emit correct stack frames to make debugging easier. Disabled
   //! by default, because it consumes one GP register, which is always useful.
   bool _emitStackFrames;
@@ -123,6 +123,7 @@ public:
 
   BL_INLINE uint32_t maxPixels() const noexcept { return _maxPixels; }
   BL_INLINE void setMaxPixelStep(uint32_t value) noexcept { _maxPixels = value; }
+  BL_INLINE void setLoggerEnabled(bool value) noexcept { _loggerEnabled = value; }
 
   BLPipeFillFunc _compileFillFunc(uint32_t signature) noexcept;
 

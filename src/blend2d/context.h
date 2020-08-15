@@ -126,10 +126,16 @@ BL_DEFINE_ENUM(BLContextCreateFlags) {
   //! rendering context is destroyed the JIT runtime is destroyed with it with
   //! all compiled pipelines. This flag is only useful for testing, debugging,
   //! and isolated benchmarking.
-  BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT = 0x02000000u,
+  BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_RUNTIME = 0x02000000u,
+
+  //! Enables logging to stderr of isolated runtime.
+  //!
+  //! \note Must be used with \ref BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_RUNTIME
+  //! otherwise it would have no effect.
+  BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_LOGGING = 0x04000000u,
 
   //! Override CPU features when creating isolated context.
-  BL_CONTEXT_CREATE_FLAG_OVERRIDE_CPU_FEATURES = 0x04000000u
+  BL_CONTEXT_CREATE_FLAG_OVERRIDE_CPU_FEATURES = 0x08000000u
 };
 
 //! Specifies a rendering context property that can be specific to the rendering

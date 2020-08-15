@@ -3342,7 +3342,7 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
 #if !defined(BL_BUILD_NO_JIT)
     pipeRuntime = &BLPipeGenRuntime::_global;
 
-    if (options->flags & BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT) {
+    if (options->flags & BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_RUNTIME) {
       // Create an isolated `BLPipeGenRuntime` if specified. It will be used
       // to store all functions generated during the rendering and will be
       // destroyed together with the context.
@@ -3352,6 +3352,11 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
       if (BL_UNLIKELY(!isolatedRT)) {
         result = blTraceError(BL_ERROR_OUT_OF_MEMORY);
         break;
+      }
+
+      // Enable logger if required.
+      if (options->flags & BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_LOGGING) {
+        isolatedRT->setLoggerEnabled(true);
       }
 
       // Feature restrictions are related to JIT compiler - it allows us to test the

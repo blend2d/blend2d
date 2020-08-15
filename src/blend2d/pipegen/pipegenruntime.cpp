@@ -121,7 +121,7 @@ BLPipeGenRuntime::BLPipeGenRuntime(uint32_t runtimeFlags) noexcept
     _pipelineCount(0),
     _cpuFeatures(asmjit::CpuInfo::host().features()),
     _maxPixels(0),
-    _enableLogger(false),
+    _loggerEnabled(false),
     _emitStackFrames(false) {
 
   // Setup the `BLPipeRuntime` base.
@@ -137,18 +137,19 @@ BLPipeGenRuntime::BLPipeGenRuntime(uint32_t runtimeFlags) noexcept
   _funcs.get = blPipeGenRuntimeGet;
   _funcs.test = blPipeGenRuntimeTest;
 
-  #ifndef ASMJIT_NO_LOGGING
+#ifndef ASMJIT_NO_LOGGING
   const uint32_t kFormatFlags = asmjit::FormatOptions::kFlagRegCasts    |
                                 asmjit::FormatOptions::kFlagAnnotations |
-                                asmjit::FormatOptions::kFlagMachineCode ;
+                                asmjit::FormatOptions::kFlagMachineCode |
+                                asmjit::FormatOptions::kFlagDebugPasses ;
   _logger.setFile(stderr);
   _logger.addFlags(kFormatFlags);
-  #endif
+#endif
 }
 BLPipeGenRuntime::~BLPipeGenRuntime() noexcept {}
 
 void BLPipeGenRuntime::_restrictFeatures(uint32_t mask) noexcept {
-  #if BL_TARGET_ARCH_X86
+#if BL_TARGET_ARCH_X86
   if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX2)) {
     _cpuFeatures.remove(asmjit::x86::Features::kAVX2);
     if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX)) {
@@ -167,7 +168,7 @@ void BLPipeGenRuntime::_restrictFeatures(uint32_t mask) noexcept {
       }
     }
   }
-  #endif
+#endif
 }
 
 BLPipeFillFunc BLPipeGenRuntime::_compileFillFunc(uint32_t signature) noexcept {
@@ -183,18 +184,18 @@ BLPipeFillFunc BLPipeGenRuntime::_compileFillFunc(uint32_t signature) noexcept {
   code.init(_jitRuntime.environment());
   code.setErrorHandler(&eh);
 
-  #ifndef ASMJIT_NO_LOGGING
-  if (_enableLogger)
+#ifndef ASMJIT_NO_LOGGING
+  if (_loggerEnabled)
     code.setLogger(&_logger);
-  #endif
+#endif
 
   asmjit::x86::Compiler cc(&code);
   cc.addEncodingOptions(
     asmjit::BaseEmitter::kEncodingOptionOptimizeForSize |
     asmjit::BaseEmitter::kEncodingOptionOptimizedAlign);
 
-  #ifndef ASMJIT_NO_LOGGING
-  if (_enableLogger) {
+#ifndef ASMJIT_NO_LOGGING
+  if (_loggerEnabled) {
     cc.commentf("Signature 0x%08X DstFmt=%d SrcFmt=%d CompOp=%d FillType=%d FetchType=%d FetchPayload=%d",
       sig.value,
       sig.dstFormat(),
@@ -204,7 +205,7 @@ BLPipeFillFunc BLPipeGenRuntime::_compileFillFunc(uint32_t signature) noexcept {
       sig.fetchType(),
       sig.fetchPayload());
   }
-  #endif
+#endif
 
   // Construct the pipeline and compile it.
   {
@@ -233,10 +234,10 @@ BLPipeFillFunc BLPipeGenRuntime::_compileFillFunc(uint32_t signature) noexcept {
   if (cc.finalize() != asmjit::kErrorOk)
     return nullptr;
 
-  #ifndef ASMJIT_NO_LOGGING
-  if (_enableLogger)
+#ifndef ASMJIT_NO_LOGGING
+  if (_loggerEnabled)
     _logger.logf("[Pipeline size: %u bytes]\n\n", uint32_t(code.codeSize()));
-  #endif
+#endif
 
   BLPipeFillFunc func = nullptr;
   _jitRuntime.add(&func, &code);
