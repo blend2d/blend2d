@@ -103,7 +103,7 @@ void FetchLinearGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   // 32768 from the pointer and use `packssdw` instead. However, if we do this,
   // we have to adjust everything else accordingly.
   if (isPad() && !pc->hasSSE4_1()) {
-    pc->v_sub_i32(f->py, f->py, pc->constAsMem(blCommonTable.i128_0000080000000800));
+    pc->v_sub_i32(f->py, f->py, pc->constAsMem(blCommonTable.i128_0000800000008000));
     pc->v_sub_i16(f->msk, f->msk, pc->constAsMem(blCommonTable.i128_8000800080008000));
   }
 
