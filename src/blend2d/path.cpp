@@ -867,7 +867,7 @@ BLResult blPathSmoothCubicTo(BLPathCore* self, double x2, double y2, double x3, 
 
   uint8_t* cmdData;
   BLPoint* vtxData;
-  BL_PROPAGATE(blPathPrepareAdd(self, 2, &cmdData, &vtxData));
+  BL_PROPAGATE(blPathPrepareAdd(self, 3, &cmdData, &vtxData));
 
   double x1 = vtxData[-1].x;
   double y1 = vtxData[-1].y;
