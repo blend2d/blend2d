@@ -256,6 +256,34 @@ struct BLRuntimeResourceInfo {
 // ============================================================================
 
 #ifdef __cplusplus
+//! Blend2D runtime initializer.
+//!
+//! Calls \ref blRuntimeInit() on entry and \ref blRuntimeShutdown() on exit.
+//!
+//! When using Blend2D as shared library the initialization and shutdown of the
+//! library is guaranteed by the loader, however, when Blend2D is compiled as a
+//! static library and user uses static Blend2D instances it's possible that the
+//! instance is created before Blend2D is initialized - in that case is undefined
+//! behavior and most likely a crash. BLRuntimeInitializer can be used in such
+//! compilation unit to ensure that the initialization is called first. The
+//! initializer can be used more than once as Blend2D uses a counter so it would
+//! only initialize and shutdown the library once.
+//!
+//! \note The default initializer of the library uses GCC/clang extension
+//! `__attribute__((init_priority(102))` if supported by the compiler. The
+//! priority is the second lowest number that is available to user code. If you
+//! are using such attribute yourself and want something initialized before
+//! Blend2D you should use `__attribute__((init_priority(101)))`.
+class BLRuntimeInitializer {
+public:
+  // Disable copy and assignment - only used to statically initialize Blend2D.
+  inline BLRuntimeInitializer(const BLRuntimeInitializer&) = delete;
+  inline BLRuntimeInitializer& operator=(const BLRuntimeInitializer&) = delete;
+
+  inline BLRuntimeInitializer() noexcept { blRuntimeInit(); }
+  inline ~BLRuntimeInitializer() noexcept { blRuntimeShutdown(); }
+};
+
 //! Interface to access Blend2D runtime (wraps C-API).
 namespace BLRuntime {
 

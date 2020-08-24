@@ -288,13 +288,7 @@ BLResult blRuntimeShutdown() noexcept {
   return BL_SUCCESS;
 }
 
-// Static instance that calls `blRuntimeInit()` and `blRuntimeShutdown()`.
-class BLRuntimeAutoInit {
-public:
-  inline BLRuntimeAutoInit() noexcept { blRuntimeInit(); }
-  inline ~BLRuntimeAutoInit() noexcept { blRuntimeShutdown(); }
-};
-static BLRuntimeAutoInit blRuntimeAutoInit;
+static BL_RUNTIME_INITIALIZER BLRuntimeInitializer blRuntimeAutoInit;
 
 // ============================================================================
 // [BLRuntime - Cleanup]

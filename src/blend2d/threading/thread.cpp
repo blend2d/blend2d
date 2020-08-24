@@ -193,6 +193,8 @@ static BLResult BL_CDECL blThreadQuit(BLThread* self_, uint32_t quitFlags) noexc
       return BL_SUCCESS;
     }
   }
+#else
+  blUnused(quitFlags);
 #endif
 
   self->condition.signal();

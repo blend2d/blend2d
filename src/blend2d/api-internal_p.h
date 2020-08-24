@@ -250,6 +250,19 @@
       return resultToPropagate;                                               \
   } while (0)
 
+//! \def BL_RUNTIME_INITIALIZER
+//!
+//! Static initialization in C++ is full of surpsises and basically nothing is
+//! guaranteed. When Blend2D is compiled as a shared library everything is fine,
+//! however, when it's compiled as a static library and user uses statically
+//! allocated Blend2D objects then the object may initialize even before the
+//! library - this tries to solve that issue.
+#if defined(__clang__) || (defined(__GNUC__) && !defined(__APPLE__))
+  #define BL_RUNTIME_INITIALIZER __attribute__((init_priority(102)))
+#else
+  #define BL_RUNTIME_INITIALIZER
+#endif
+
 // ============================================================================
 // [Forward Declarations]
 // ============================================================================
