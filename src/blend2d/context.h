@@ -616,14 +616,14 @@ public:
   BL_INLINE explicit BLContext(BLContextImpl* impl) noexcept { this->impl = impl; }
 
   //! Creates a new rendering context for rendering to the image `target`.
-  BL_INLINE explicit BLContext(BLImage& target) noexcept { blContextInitAs(this, &target, nullptr); }
+  BL_INLINE explicit BLContext(BLImageCore& target) noexcept { blContextInitAs(this, &target, nullptr); }
   //! Creates a new rendering context for rendering to the image `target`.
   //!
   //! This overload accepts create options that can be used to change the
   //! implementation of the rendering context.
-  BL_INLINE BLContext(BLImage& target, const BLContextCreateInfo& createInfo) noexcept { blContextInitAs(this, &target, &createInfo); }
+  BL_INLINE BLContext(BLImageCore& target, const BLContextCreateInfo& createInfo) noexcept { blContextInitAs(this, &target, &createInfo); }
   //! \overload
-  BL_INLINE BLContext(BLImage& target, const BLContextCreateInfo* createInfo) noexcept { blContextInitAs(this, &target, createInfo); }
+  BL_INLINE BLContext(BLImageCore& target, const BLContextCreateInfo* createInfo) noexcept { blContextInitAs(this, &target, createInfo); }
 
   //! Destroys the rendering context.
   //!
@@ -717,11 +717,11 @@ public:
   //! If this operation succeeds then the rendering context will have exclusive
   //! access to the image data. This means that no other renderer can use it
   //! during rendering.
-  BL_INLINE BLResult begin(BLImage& image) noexcept { return blContextBegin(this, &image, nullptr); }
+  BL_INLINE BLResult begin(BLImageCore& image) noexcept { return blContextBegin(this, &image, nullptr); }
   //! \overload
-  BL_INLINE BLResult begin(BLImage& image, const BLContextCreateInfo& createInfo) noexcept { return blContextBegin(this, &image, &createInfo); }
+  BL_INLINE BLResult begin(BLImageCore& image, const BLContextCreateInfo& createInfo) noexcept { return blContextBegin(this, &image, &createInfo); }
   //! \overload
-  BL_INLINE BLResult begin(BLImage& image, const BLContextCreateInfo* createInfo) noexcept { return blContextBegin(this, &image, createInfo); }
+  BL_INLINE BLResult begin(BLImageCore& image, const BLContextCreateInfo* createInfo) noexcept { return blContextBegin(this, &image, createInfo); }
 
   //! Waits for completion of all render commands and detaches the rendering
   //! context from the rendering target. After `end()` completes the rendering
@@ -980,13 +980,13 @@ public:
     return opType <= BL_CONTEXT_OP_TYPE_COUNT ? uint32_t(impl->state->styleType[opType]) : uint32_t(0);
   }
 
-  BL_INLINE BLResult getStyle(uint32_t opType, BLStyle& styleOut) const noexcept {
+  BL_INLINE BLResult getStyle(uint32_t opType, BLStyleCore& styleOut) const noexcept {
     if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
       return blTraceError(BL_ERROR_INVALID_VALUE);
     return impl->virt->getStyle[opType](impl, &styleOut);
   }
 
-  BL_INLINE BLResult setStyle(uint32_t opType, const BLStyle& style) noexcept {
+  BL_INLINE BLResult setStyle(uint32_t opType, const BLStyleCore& style) noexcept {
     if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
       return blTraceError(BL_ERROR_INVALID_VALUE);
     return impl->virt->setStyle[opType](impl, &style);
@@ -1010,19 +1010,19 @@ public:
     return impl->virt->setStyleRgba64[opType](impl, rgba64.value);
   }
 
-  BL_INLINE BLResult setStyle(uint32_t opType, const BLPattern& pattern) noexcept {
+  BL_INLINE BLResult setStyle(uint32_t opType, const BLPatternCore& pattern) noexcept {
     if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
       return blTraceError(BL_ERROR_INVALID_VALUE);
     return impl->virt->setStyleObject[opType](impl, &pattern);
   }
 
-  BL_INLINE BLResult setStyle(uint32_t opType, const BLGradient& gradient) noexcept {
+  BL_INLINE BLResult setStyle(uint32_t opType, const BLGradientCore& gradient) noexcept {
     if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
       return blTraceError(BL_ERROR_INVALID_VALUE);
     return impl->virt->setStyleObject[opType](impl, &gradient);
   }
 
-  BL_INLINE BLResult setStyle(uint32_t opType, const BLImage& image) noexcept {
+  BL_INLINE BLResult setStyle(uint32_t opType, const BLImageCore& image) noexcept {
     if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
       return blTraceError(BL_ERROR_INVALID_VALUE);
     return impl->virt->setStyleObject[opType](impl, &image);
@@ -1055,14 +1055,14 @@ public:
   BL_NODISCARD
   BL_INLINE uint32_t fillStyleType() const noexcept { return impl->state->styleType[kOpFill]; }
 
-  BL_INLINE BLResult getFillStyle(BLStyle& out) const noexcept { return impl->virt->getStyle[kOpFill](impl, &out); }
+  BL_INLINE BLResult getFillStyle(BLStyleCore& out) const noexcept { return impl->virt->getStyle[kOpFill](impl, &out); }
 
-  BL_INLINE BLResult setFillStyle(const BLStyle& style) noexcept { return impl->virt->setStyle[kOpFill](impl, &style); }
+  BL_INLINE BLResult setFillStyle(const BLStyleCore& style) noexcept { return impl->virt->setStyle[kOpFill](impl, &style); }
   BL_INLINE BLResult setFillStyle(const BLRgba& rgba) noexcept { return impl->virt->setStyleRgba[kOpFill](impl, &rgba); }
   BL_INLINE BLResult setFillStyle(const BLRgba32& rgba32) noexcept { return impl->virt->setStyleRgba32[kOpFill](impl, rgba32.value); }
   BL_INLINE BLResult setFillStyle(const BLRgba64& rgba64) noexcept { return impl->virt->setStyleRgba64[kOpFill](impl, rgba64.value); }
-  BL_INLINE BLResult setFillStyle(const BLPattern& pattern) noexcept { return impl->virt->setStyleObject[kOpFill](impl, &pattern); }
-  BL_INLINE BLResult setFillStyle(const BLGradient& gradient) noexcept { return impl->virt->setStyleObject[kOpFill](impl, &gradient); }
+  BL_INLINE BLResult setFillStyle(const BLPatternCore& pattern) noexcept { return impl->virt->setStyleObject[kOpFill](impl, &pattern); }
+  BL_INLINE BLResult setFillStyle(const BLGradientCore& gradient) noexcept { return impl->virt->setStyleObject[kOpFill](impl, &gradient); }
 
   //! Returns fill alpha value.
   BL_NODISCARD
@@ -1086,14 +1086,14 @@ public:
   BL_NODISCARD
   BL_INLINE uint32_t strokeStyleType() const noexcept { return impl->state->styleType[kOpStroke]; }
 
-  BL_INLINE BLResult getStrokeStyle(BLStyle& out) const noexcept { return impl->virt->getStyle[kOpStroke](impl, &out); }
+  BL_INLINE BLResult getStrokeStyle(BLStyleCore& out) const noexcept { return impl->virt->getStyle[kOpStroke](impl, &out); }
 
-  BL_INLINE BLResult setStrokeStyle(const BLStyle& style) noexcept { return impl->virt->setStyle[kOpStroke](impl, &style); }
+  BL_INLINE BLResult setStrokeStyle(const BLStyleCore& style) noexcept { return impl->virt->setStyle[kOpStroke](impl, &style); }
   BL_INLINE BLResult setStrokeStyle(const BLRgba& rgba) noexcept { return impl->virt->setStyleRgba[kOpStroke](impl, &rgba); }
   BL_INLINE BLResult setStrokeStyle(const BLRgba32& rgba32) noexcept { return impl->virt->setStyleRgba32[kOpStroke](impl, rgba32.value); }
   BL_INLINE BLResult setStrokeStyle(const BLRgba64& rgba64) noexcept { return impl->virt->setStyleRgba64[kOpStroke](impl, rgba64.value); }
-  BL_INLINE BLResult setStrokeStyle(const BLPattern& pattern) noexcept { return impl->virt->setStyleObject[kOpStroke](impl, &pattern); }
-  BL_INLINE BLResult setStrokeStyle(const BLGradient& gradient) noexcept { return impl->virt->setStyleObject[kOpStroke](impl, &gradient); }
+  BL_INLINE BLResult setStrokeStyle(const BLPatternCore& pattern) noexcept { return impl->virt->setStyleObject[kOpStroke](impl, &pattern); }
+  BL_INLINE BLResult setStrokeStyle(const BLGradientCore& gradient) noexcept { return impl->virt->setStyleObject[kOpStroke](impl, &gradient); }
 
   //! Returns stroke width.
   BL_NODISCARD
@@ -1288,48 +1288,48 @@ public:
   BL_INLINE BLResult fillRectArray(const BLRectI* data, size_t n) noexcept { return fillRectArray(BLArrayView<BLRectI>{data, n}); }
 
   //! Fills the given `region`.
-  BL_INLINE BLResult fillRegion(const BLRegion& region) noexcept { return fillGeometry(BL_GEOMETRY_TYPE_REGION, &region); }
+  BL_INLINE BLResult fillRegion(const BLRegionCore& region) noexcept { return fillGeometry(BL_GEOMETRY_TYPE_REGION, &region); }
 
   //! Fills the given `path`.
-  BL_INLINE BLResult fillPath(const BLPath& path) noexcept { return fillGeometry(BL_GEOMETRY_TYPE_PATH, &path); }
+  BL_INLINE BLResult fillPath(const BLPathCore& path) noexcept { return fillGeometry(BL_GEOMETRY_TYPE_PATH, &path); }
 
   //! Fills the passed UTF-8 text by using the given `font`.
-  BL_INLINE BLResult fillUtf8Text(const BLPointI& dst, const BLFont& font, const char* text, size_t size = SIZE_MAX) noexcept {
+  BL_INLINE BLResult fillUtf8Text(const BLPointI& dst, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
     return impl->virt->fillTextI(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF8);
   }
 
   //! Fills the passed UTF-8 text by using the given `font`.
-  BL_INLINE BLResult fillUtf8Text(const BLPoint& dst, const BLFont& font, const char* text, size_t size = SIZE_MAX) noexcept {
+  BL_INLINE BLResult fillUtf8Text(const BLPoint& dst, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
     return impl->virt->fillTextD(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF8);
   }
 
   //! Fills the passed UTF-16 text by using the given `font`.
-  BL_INLINE BLResult fillUtf16Text(const BLPointI& dst, const BLFont& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
+  BL_INLINE BLResult fillUtf16Text(const BLPointI& dst, const BLFontCore& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
     return impl->virt->fillTextI(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF16);
   }
 
   //! Fills the passed UTF-16 text by using the given `font`.
-  BL_INLINE BLResult fillUtf16Text(const BLPoint& dst, const BLFont& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
+  BL_INLINE BLResult fillUtf16Text(const BLPoint& dst, const BLFontCore& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
     return impl->virt->fillTextD(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF16);
   }
 
   //! Fills the passed UTF-32 text by using the given `font`.
-  BL_INLINE BLResult fillUtf32Text(const BLPointI& dst, const BLFont& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
+  BL_INLINE BLResult fillUtf32Text(const BLPointI& dst, const BLFontCore& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
     return impl->virt->fillTextI(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF32);
   }
 
   //! Fills the passed UTF-32 text by using the given `font`.
-  BL_INLINE BLResult fillUtf32Text(const BLPoint& dst, const BLFont& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
+  BL_INLINE BLResult fillUtf32Text(const BLPoint& dst, const BLFontCore& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
     return impl->virt->fillTextD(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF32);
   }
 
   //! Fills the passed `glyphRun` by using the given `font`.
-  BL_INLINE BLResult fillGlyphRun(const BLPointI& dst, const BLFont& font, const BLGlyphRun& glyphRun) noexcept {
+  BL_INLINE BLResult fillGlyphRun(const BLPointI& dst, const BLFontCore& font, const BLGlyphRun& glyphRun) noexcept {
     return impl->virt->fillGlyphRunI(impl, &dst, &font, &glyphRun);
   }
 
   //! Fills the passed `glyphRun` by using the given `font`.
-  BL_INLINE BLResult fillGlyphRun(const BLPoint& dst, const BLFont& font, const BLGlyphRun& glyphRun) noexcept {
+  BL_INLINE BLResult fillGlyphRun(const BLPoint& dst, const BLFontCore& font, const BLGlyphRun& glyphRun) noexcept {
     return impl->virt->fillGlyphRunD(impl, &dst, &font, &glyphRun);
   }
 
@@ -1450,45 +1450,45 @@ public:
   BL_INLINE BLResult strokeRectArray(const BLRectI* data, size_t n) noexcept { return strokeRectArray(BLArrayView<BLRectI>{data, n}); }
 
   //! Strokes a path.
-  BL_INLINE BLResult strokePath(const BLPath& path) noexcept { return strokeGeometry(BL_GEOMETRY_TYPE_PATH, &path); }
+  BL_INLINE BLResult strokePath(const BLPathCore& path) noexcept { return strokeGeometry(BL_GEOMETRY_TYPE_PATH, &path); }
 
   //! Strokes the passed UTF-8 text by using the given `font`.
-  BL_INLINE BLResult strokeUtf8Text(const BLPointI& dst, const BLFont& font, const char* text, size_t size = SIZE_MAX) noexcept {
+  BL_INLINE BLResult strokeUtf8Text(const BLPointI& dst, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
     return impl->virt->strokeTextI(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF8);
   }
 
   //! Strokes the passed UTF-8 text by using the given `font`.
-  BL_INLINE BLResult strokeUtf8Text(const BLPoint& dst, const BLFont& font, const char* text, size_t size = SIZE_MAX) noexcept {
+  BL_INLINE BLResult strokeUtf8Text(const BLPoint& dst, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
     return impl->virt->strokeTextD(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF8);
   }
 
   //! Strokes the passed UTF-16 text by using the given `font`.
-  BL_INLINE BLResult strokeUtf16Text(const BLPointI& dst, const BLFont& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
+  BL_INLINE BLResult strokeUtf16Text(const BLPointI& dst, const BLFontCore& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
     return impl->virt->strokeTextI(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF16);
   }
 
   //! Strokes the passed UTF-16 text by using the given `font`.
-  BL_INLINE BLResult strokeUtf16Text(const BLPoint& dst, const BLFont& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
+  BL_INLINE BLResult strokeUtf16Text(const BLPoint& dst, const BLFontCore& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
     return impl->virt->strokeTextD(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF16);
   }
 
   //! Strokes the passed UTF-32 text by using the given `font`.
-  BL_INLINE BLResult strokeUtf32Text(const BLPointI& dst, const BLFont& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
+  BL_INLINE BLResult strokeUtf32Text(const BLPointI& dst, const BLFontCore& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
     return impl->virt->strokeTextI(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF32);
   }
 
   //! Strokes the passed UTF-32 text by using the given `font`.
-  BL_INLINE BLResult strokeUtf32Text(const BLPoint& dst, const BLFont& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
+  BL_INLINE BLResult strokeUtf32Text(const BLPoint& dst, const BLFontCore& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
     return impl->virt->strokeTextD(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF32);
   }
 
   //! Strokes the passed `glyphRun` by using the given `font`.
-  BL_INLINE BLResult strokeGlyphRun(const BLPointI& dst, const BLFont& font, const BLGlyphRun& glyphRun) noexcept {
+  BL_INLINE BLResult strokeGlyphRun(const BLPointI& dst, const BLFontCore& font, const BLGlyphRun& glyphRun) noexcept {
     return impl->virt->strokeGlyphRunI(impl, &dst, &font, &glyphRun);
   }
 
   //! Strokes the passed `glyphRun` by using the given `font`.
-  BL_INLINE BLResult strokeGlyphRun(const BLPoint& dst, const BLFont& font, const BLGlyphRun& glyphRun) noexcept {
+  BL_INLINE BLResult strokeGlyphRun(const BLPoint& dst, const BLFontCore& font, const BLGlyphRun& glyphRun) noexcept {
     return impl->virt->strokeGlyphRunD(impl, &dst, &font, &glyphRun);
   }
 
@@ -1498,42 +1498,42 @@ public:
   //! \{
 
   //! Blits source image `src` at coordinates specified by `dst`..
-  BL_INLINE BLResult blitImage(const BLPoint& dst, const BLImage& src) noexcept {
+  BL_INLINE BLResult blitImage(const BLPoint& dst, const BLImageCore& src) noexcept {
     return impl->virt->blitImageD(impl, &dst, &src, nullptr);
   }
 
   //! Blits an area of source image `src` specified by `srcArea` at coordinates specified by `dst`.
-  BL_INLINE BLResult blitImage(const BLPoint& dst, const BLImage& src, const BLRectI& srcArea) noexcept {
+  BL_INLINE BLResult blitImage(const BLPoint& dst, const BLImageCore& src, const BLRectI& srcArea) noexcept {
     return impl->virt->blitImageD(impl, &dst, &src, &srcArea);
   }
 
   //! Blits source image `src` at coordinates specified by `dst`. (int coordinates).
-  BL_INLINE BLResult blitImage(const BLPointI& dst, const BLImage& src) noexcept {
+  BL_INLINE BLResult blitImage(const BLPointI& dst, const BLImageCore& src) noexcept {
     return impl->virt->blitImageI(impl, &dst, &src, nullptr);
   }
 
   //! Blits an area in source image `src` specified by `srcArea` at coordinates specified by `dst`. (int coordinates).
-  BL_INLINE BLResult blitImage(const BLPointI& dst, const BLImage& src, const BLRectI& srcArea) noexcept {
+  BL_INLINE BLResult blitImage(const BLPointI& dst, const BLImageCore& src, const BLRectI& srcArea) noexcept {
     return impl->virt->blitImageI(impl, &dst, &src, &srcArea);
   }
 
   //! Blits a source image `src` scaled to fit into `dst` rectangle.
-  BL_INLINE BLResult blitImage(const BLRect& dst, const BLImage& src) noexcept {
+  BL_INLINE BLResult blitImage(const BLRect& dst, const BLImageCore& src) noexcept {
     return impl->virt->blitScaledImageD(impl, &dst, &src, nullptr);
   }
 
   //! Blits an area of source image `src` specified by `srcArea` scaled to fit into `dst` rectangle.
-  BL_INLINE BLResult blitImage(const BLRect& dst, const BLImage& src, const BLRectI& srcArea) noexcept {
+  BL_INLINE BLResult blitImage(const BLRect& dst, const BLImageCore& src, const BLRectI& srcArea) noexcept {
     return impl->virt->blitScaledImageD(impl, &dst, &src, &srcArea);
   }
 
   //! Blits a source image `src` scaled to fit into `dst` rectangle (int coordinates).
-  BL_INLINE BLResult blitImage(const BLRectI& dst, const BLImage& src) noexcept {
+  BL_INLINE BLResult blitImage(const BLRectI& dst, const BLImageCore& src) noexcept {
     return impl->virt->blitScaledImageI(impl, &dst, &src, nullptr);
   }
 
   //! Blits an area of source image `src` specified by `srcArea` scaled to fit into `dst` rectangle (int coordinates).
-  BL_INLINE BLResult blitImage(const BLRectI& dst, const BLImage& src, const BLRectI& srcArea) noexcept {
+  BL_INLINE BLResult blitImage(const BLRectI& dst, const BLImageCore& src, const BLRectI& srcArea) noexcept {
     return impl->virt->blitScaledImageI(impl, &dst, &src, &srcArea);
   }
 

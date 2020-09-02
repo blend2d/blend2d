@@ -1,9 +1,17 @@
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 cmake_policy(PUSH)
-cmake_policy(SET CMP0063 NEW) # Honor visibility properties.
+
+if(POLICY CMP0063)
+  cmake_policy(SET CMP0063 NEW) # Honor visibility properties.
+endif()
+
+if(POLICY CMP0092)
+  cmake_policy(SET CMP0092 NEW) # Don't add -W3 warning level by default.
+endif()
 
 include(CheckCXXCompilerFlag)
+include(GNUInstallDirs)
 
 # Don't create a project if it was already created by another CMakeLists.txt.
 # This allows one library to embed another library without a project collision.
@@ -700,30 +708,41 @@ if (NOT BLEND2D_EMBED)
                      CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
                      CFLAGS_REL ${BLEND2D_PRIVATE_CFLAGS_REL})
 
+  target_compile_options(blend2d PRIVATE ${BLEND2D_NO_STDCXX_CFLAGS})
+  target_compile_options(blend2d INTERFACE ${BLEND2D_CFLAGS})
+
+  target_include_directories(blend2d BEFORE PRIVATE ${ASMJIT_INCLUDE_DIRS})
+  target_include_directories(blend2d BEFORE INTERFACE
+                             $<BUILD_INTERFACE:${BLEND2D_INCLUDE_DIRS}>
+                             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
   # target_link_options was added in cmake 3.13, which doesn't work for us.
   # target_link_options(blend2d PRIVATE ${BLEND2D_NO_STDCXX_LFLAGS})
   foreach(link_flag ${BLEND2D_NO_STDCXX_LFLAGS})
     set_property(TARGET blend2d APPEND_STRING PROPERTY LINK_FLAGS " ${link_flag}")
   endforeach()
 
-  target_compile_options(blend2d INTERFACE ${BLEND2D_CFLAGS})
-  target_compile_options(blend2d PRIVATE ${BLEND2D_NO_STDCXX_CFLAGS})
-
-  target_include_directories(blend2d BEFORE PRIVATE ${ASMJIT_INCLUDE_DIRS})
-  target_include_directories(blend2d BEFORE INTERFACE ${BLEND2D_INCLUDE_DIRS})
-
-  # Add Blend2D::Blend2D target (alias to blend2d).
+  # Add blend2d::blend2d alias.
+  add_library(blend2d::blend2d ALIAS blend2d)
+  # TODO: [CMAKE] Deprecated alias - we use projectname::libraryname convention now.
   add_library(Blend2D::Blend2D ALIAS blend2d)
 
   # Add Blend2D install instructions (library and public headers).
   if (NOT BLEND2D_NO_INSTALL)
-    install(TARGETS blend2d RUNTIME DESTINATION "bin"
-                            LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                            ARCHIVE DESTINATION "lib${LIB_SUFFIX}")
+    install(TARGETS blend2d
+            EXPORT blend2d-config
+            RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+            ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+            LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+            INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+    install(EXPORT blend2d-config
+            NAMESPACE blend2d::
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/blend2d")
+
     foreach(_src_file ${BLEND2D_SRC_LIST})
       if ("${_src_file}" MATCHES "\\.h$" AND NOT "${_src_file}" MATCHES "_p\\.h$")
         get_filename_component(_src_dir ${_src_file} PATH)
-        install(FILES "${BLEND2D_DIR}/src/${_src_file}" DESTINATION "include/${_src_dir}")
+        install(FILES "${BLEND2D_DIR}/src/${_src_file}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${_src_dir}")
       endif()
     endforeach()
   endif()
@@ -750,12 +769,12 @@ if (NOT BLEND2D_EMBED)
 
     blend2d_add_target(bl_test_fuzzer TEST
                        SOURCES test/bl_test_fuzzer.cpp
-                       LIBRARIES Blend2D::Blend2D
+                       LIBRARIES blend2d::blend2d
                        CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
 
     blend2d_add_target(bl_test_verify_mt TEST
                        SOURCES test/bl_test_verify_mt.cpp
-                       LIBRARIES Blend2D::Blend2D
+                       LIBRARIES blend2d::blend2d
                        CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
   endif()
 endif()

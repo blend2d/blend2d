@@ -133,7 +133,7 @@ public:
 
   //! Tests whether the font manager contains the given font `face`.
   BL_NODISCARD
-  BL_INLINE bool hasFace(const BLFontFace& face) const noexcept {
+  BL_INLINE bool hasFace(const BLFontFaceCore& face) const noexcept {
     return blFontManagerHasFace(this, &face);
   }
 
@@ -144,17 +144,17 @@ public:
   //!     manager or if font manager already held it.
   //!   * `BL_ERROR_FONT_NOT_INITIALIZED` is returned if the font `face` is invalid.
   //!   * `BL_ERROR_OUT_OF_MEMORY` is returned if memory allocation failed.
-  BL_INLINE BLResult addFace(const BLFontFace& face) noexcept {
+  BL_INLINE BLResult addFace(const BLFontFaceCore& face) noexcept {
     return blFontManagerAddFace(this, &face);
   }
 
   //! Queries a font face by family `name` and stores the result to `out`.
-  BL_INLINE BLResult queryFace(const char* name, BLFontFace& out) const noexcept {
+  BL_INLINE BLResult queryFace(const char* name, BLFontFaceCore& out) const noexcept {
     return blFontManagerQueryFace(this, name, SIZE_MAX, nullptr, &out);
   }
 
   //! \overload
-  BL_INLINE BLResult queryFace(const BLStringView& name, BLFontFace& out) const noexcept {
+  BL_INLINE BLResult queryFace(const BLStringView& name, BLFontFaceCore& out) const noexcept {
     return blFontManagerQueryFace(this, name.data, name.size, nullptr, &out);
   }
 
@@ -166,12 +166,12 @@ public:
   //!
   //!   * Style has the highest priority.
   //!   * Weight has the lowest priority.
-  BL_INLINE BLResult queryFace(const char* name, const BLFontQueryProperties& properties, BLFontFace& out) const noexcept {
+  BL_INLINE BLResult queryFace(const char* name, const BLFontQueryProperties& properties, BLFontFaceCore& out) const noexcept {
     return blFontManagerQueryFace(this, name, SIZE_MAX, &properties, &out);
   }
 
   //! \overload
-  BL_INLINE BLResult queryFace(const BLStringView& name, const BLFontQueryProperties& properties, BLFontFace& out) const noexcept {
+  BL_INLINE BLResult queryFace(const BLStringView& name, const BLFontQueryProperties& properties, BLFontFaceCore& out) const noexcept {
     return blFontManagerQueryFace(this, name.data, name.size, &properties, &out);
   }
 
