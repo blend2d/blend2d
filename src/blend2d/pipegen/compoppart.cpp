@@ -2836,7 +2836,7 @@ void CompOpPart::cMaskProcRGBA32Xmm(Pixel& out, uint32_t n, uint32_t flags) noex
         VecArray& dv = d.uc;
 
         pc->vExpandAlpha16(xv, dv, kUseHi);
-        pc->v_inv255_u16(dv, dv);
+        pc->v_inv255_u16(xv, xv);
         pc->v_mul_u16(xv, xv, o.ux);
         pc->v_mul_u16(dv, dv, o.vn);
         pc->v_add_i16(dv, dv, xv);
