@@ -273,7 +273,6 @@ public:
   }
 
   BL_INLINE BLRasterCommand* currentCommandData() noexcept {
-    BL_ASSERT(!_commandQueueAppender.full());
     return _commandQueueAppender._ptr;
   }
 
