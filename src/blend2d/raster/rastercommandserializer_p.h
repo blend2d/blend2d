@@ -189,8 +189,7 @@ struct BLRasterBlitCommandSerializer<BL_RASTER_RENDERING_MODE_ASYNC> : public BL
   BL_INLINE BLResult initFetchDataForBlit(BLRasterContextImpl* ctxI) noexcept {
     // We allocate on worker manager pool as it's easier to roll it back in
     // case that this command is not added to the queue for various reasons.
-    BLRasterFetchData* fetchData = ctxI->workerMgr()._allocator.allocT<BLRasterFetchData>(
-      sizeof(BLRasterFetchData), BLRasterWorkerManager::kAllocatorAlignment);
+    BLRasterFetchData* fetchData = ctxI->workerMgr()._allocator.allocT<BLRasterFetchData>();
 
     if (BL_UNLIKELY(!fetchData))
       return blTraceError(BL_ERROR_OUT_OF_MEMORY);
