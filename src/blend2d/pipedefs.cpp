@@ -532,6 +532,9 @@ static BL_INLINE uint32_t blPipeFetchDataInitRadialGradient(BLPipeFetchData* fet
 }
 
 static BL_INLINE uint32_t blPipeFetchDataInitConicalGradient(BLPipeFetchData* fetchData, const BLConicalGradientValues& values, uint32_t extendMode, const BLMatrix2D& m) noexcept {
+  // TODO: Extend mode is not used.
+  blUnused(extendMode);
+
   BLPipeFetchData::Gradient& d = fetchData->gradient;
 
   BLPoint c(values.x0, values.y0);

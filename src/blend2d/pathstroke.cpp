@@ -45,7 +45,6 @@ static constexpr double BL_STROKE_LENGHT_EPSILON = 1e-10;
 static constexpr double BL_STROKE_LENGTH_EPSILON_SQ = blSquare(BL_STROKE_LENGHT_EPSILON);
 
 static constexpr double BL_STROKE_COLLINEARITY_EPSILON = 1e-10;
-static constexpr double BL_STROKE_COLLINEARITY_EPSILON_SQ = blSquare(BL_STROKE_COLLINEARITY_EPSILON);
 
 static constexpr double BL_STROKE_CUSP_T_THRESHOLD = 1e-10;
 static constexpr double BL_STROKE_DEGENERATE_FLATNESS = 1e-6;
@@ -819,6 +818,8 @@ SmoothPolyTo:
 
   // Calculates round join to `pb` (dull angle), only used by offseting cusps.
   BL_INLINE BLResult dullRoundJoin(BLPathAppender& out, uint32_t side, const BLPoint& n1, const BLPoint& w1) noexcept {
+    blUnused(n1);
+
     BLPoint pa = out.vtx[-1];
     BLPoint pb = _p0 + w1;
     BLPoint n2 = blNormal(blUnitVector(pb - pa));

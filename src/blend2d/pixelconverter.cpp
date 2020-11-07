@@ -1728,6 +1728,8 @@ static BLResult blPixelConverterInitPremultiply8888(BLPixelConverterCore* self, 
 }
 
 static BLResult blPixelConverterInitUnpremultiply8888(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si) noexcept {
+  blUnused(si);
+
   BLPixelConverterData::PremultiplyData& d = blPixelConverterGetData(self)->premultiplyData;
 
   uint32_t aShift = di.shifts[3];
@@ -2081,7 +2083,7 @@ static BLResult blPixelConverterInit8888FromForeign(BLPixelConverterCore* self, 
 // ============================================================================
 
 static BLResult blPixelConverterInitForeignFrom8888(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
-  blUnused(createFlags);
+  blUnused(si, createFlags);
 
   BL_ASSERT(si.depth == 32);
   BL_ASSERT(si.flags & BL_FORMAT_FLAG_BYTE_ALIGNED);

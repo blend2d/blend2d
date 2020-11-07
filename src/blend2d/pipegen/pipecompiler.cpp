@@ -323,6 +323,9 @@ x86::Mem PipeCompiler::tmpStack(uint32_t size) noexcept {
   BL_ASSERT(blIsPowerOf2(size));
   BL_ASSERT(size <= 32);
 
+  // Only used by asserts.
+  blUnused(size);
+
   if (!_tmpStack.baseId())
     _tmpStack = cc->newStack(32, 16, "tmpStack");
   return _tmpStack;

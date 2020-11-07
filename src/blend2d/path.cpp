@@ -1991,6 +1991,7 @@ BLResult blPathFitTo(BLPathCore* self, const BLRange* range, const BLRect* rect,
   BL_PROPAGATE(updater.update(BLPathView { selfI->commandData + start, selfI->vertexData + start, n }, true));
 
   // TODO: Honor `fitFlags`.
+  blUnused(fitFlags);
 
   const BLBox& bBox = updater.boundingBox;
 

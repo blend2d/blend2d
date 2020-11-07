@@ -696,8 +696,8 @@ namespace BLInternal {
   template<typename T> BL_INLINE T subOverflowImpl(const T& x, const T& y, BLOverflowFlag* of) noexcept { return subOverflowFallback(x, y, of); }
   template<typename T> BL_INLINE T mulOverflowImpl(const T& x, const T& y, BLOverflowFlag* of) noexcept { return mulOverflowFallback(x, y, of); }
 
-  #if defined(__GNUC__) && !defined(BL_BUILD_NO_INTRINSICS)
-  #if defined(__clang__) || __GNUC__ >= 5
+#if defined(__GNUC__) && !defined(BL_BUILD_NO_INTRINSICS)
+#if defined(__clang__) || __GNUC__ >= 5
   #define BL_ARITH_OVERFLOW_SPECIALIZE(FUNC, T, RESULT_T, BUILTIN)            \
     template<>                                                                \
     BL_INLINE T FUNC(const T& x, const T& y, BLOverflowFlag* of) noexcept {   \
@@ -715,11 +715,18 @@ namespace BLInternal {
   BL_ARITH_OVERFLOW_SPECIALIZE(subOverflowImpl, uint64_t, unsigned long long, __builtin_usubll_overflow)
   BL_ARITH_OVERFLOW_SPECIALIZE(mulOverflowImpl, int32_t , int               , __builtin_smul_overflow  )
   BL_ARITH_OVERFLOW_SPECIALIZE(mulOverflowImpl, uint32_t, unsigned int      , __builtin_umul_overflow  )
+
+  // Do not use these in 32-bit mode as some compilers would instead emit a call
+  // into a helper function (__mulodi4, for example), which could then fail if
+  // the resulting binary is not linked to the compiler runtime library.
+  #if BL_TARGET_ARCH_BITS == 64
   BL_ARITH_OVERFLOW_SPECIALIZE(mulOverflowImpl, int64_t , long long         , __builtin_smulll_overflow)
   BL_ARITH_OVERFLOW_SPECIALIZE(mulOverflowImpl, uint64_t, unsigned long long, __builtin_umulll_overflow)
+  #endif
+
   #undef BL_ARITH_OVERFLOW_SPECIALIZE
-  #endif
-  #endif
+#endif
+#endif
 
   // There is a bug in MSVC that makes these specializations unusable, maybe in the future...
   #if defined(_MSC_VER) && 0

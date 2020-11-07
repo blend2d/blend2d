@@ -453,6 +453,9 @@ static bool checkGDefTable(Validator* self, Trace trace) noexcept {
   uint32_t markGlyphSetsDefOffset   = version >= 0x00010002u ? uint32_t(gdef->v1_2()->markGlyphSetsDefOffset()) : uint32_t(0);
   uint32_t itemVarStoreOffset       = version >= 0x00010003u ? uint32_t(gdef->v1_3()->itemVarStoreOffset()    ) : uint32_t(0);
 
+  // TODO: Unfinished.
+  blUnused(attachListOffset, ligCaretListOffset, markGlyphSetsDefOffset, itemVarStoreOffset);
+
   // Some fonts have incorrect value of `GlyphClassDefOffset` set to 10. This
   // collides with the header which is 12 bytes. It's probably a result of some
   // broken tool used to write such fonts in the past. We simply fix this issue
@@ -2062,6 +2065,9 @@ static bool checkFeatureTable(Validator* self, Trace trace, uint32_t kind, BLFon
   uint32_t featureParamsOffset = table->featureParamsOffset();
   uint32_t lookupListCount = table->lookupListIndexes.count();
 
+  // TOOD: Unfinished
+  blUnused(featureParamsOffset);
+
   size_t headerSize = 4u + lookupListCount * 2u;
   if (BL_UNLIKELY(table.size < headerSize))
     return trace.fail("Table is truncated [Size=%zu Required=%zu]\n", table.size, headerSize);
@@ -2093,6 +2099,9 @@ static bool checkScriptTable(Validator* self, Trace trace, uint32_t kind, BLFont
   uint32_t langSysCount = table->langSysOffsets.count();
   uint32_t langSysDefault = table->langSysDefault();
 
+  // TODO: Not used.
+  blUnused(langSysDefault);
+
   size_t headerSize = 4u + langSysCount * 2u;
   if (BL_UNLIKELY(table.size < headerSize))
     return trace.fail("Table is truncated [Size=%zu Required=%zu]\n", table.size, headerSize);
@@ -2116,6 +2125,9 @@ static bool checkScriptTable(Validator* self, Trace trace, uint32_t kind, BLFont
     uint32_t lookupOrderOffset = langSys->lookupOrderOffset();
     uint32_t requiredFeatureIndex = langSys->requiredFeatureIndex();
     uint32_t featureIndexCount = langSys->featureIndexes.count();
+
+    // TODO: Not used.
+    blUnused(lookupOrderOffset);
 
     size_t langSysTableSize = (GAnyTable::LangSysTable::kMinSize) + featureIndexCount * 2u;
     if (langSys.size < langSysTableSize)

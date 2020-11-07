@@ -81,9 +81,7 @@ void IndexExtractor::begin(uint32_t type, const x86::Mem& mem, uint32_t memSize)
 void IndexExtractor::extract(const x86::Gp& dst, uint32_t index) noexcept {
   BL_ASSERT(dst.size() >= 4);
   BL_ASSERT(_type != kTypeNone);
-
-  uint32_t offset = index * _indexSize;
-  BL_ASSERT(offset + _indexSize <= _memSize);
+  BL_ASSERT((index + 1u) * _indexSize <= _memSize);
 
   x86::Mem m = _mem;
   x86::Compiler* cc = _pc->cc;

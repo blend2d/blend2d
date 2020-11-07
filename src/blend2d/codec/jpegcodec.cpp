@@ -1537,6 +1537,7 @@ static BLResult BL_CDECL blJpegCodecImplCreateDecoder(const BLImageCodecImpl* im
 
 static BLResult BL_CDECL blJpegCodecImplCreateEncoder(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept {
   blUnused(impl);
+  blUnused(dst);
 
   // TODO: [JPEG] Encoder
   return blTraceError(BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED);

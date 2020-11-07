@@ -499,7 +499,9 @@ static constexpr uint32_t kCFFCallStackSize = 16;
 static constexpr uint32_t kCFFStorageSize = 32;
 
 static constexpr uint32_t kCFFValueStackSizeV1 = 48;
-static constexpr uint32_t kCFFValueStackSizeV2 = 513;
+
+// TODO: Required by CFF2.
+// static constexpr uint32_t kCFFValueStackSizeV2 = 513;
 
 // We use `double` precision in our implementation, so this constant is used
 // to convert a fixed-point (as specified by CFF and CFF2)
