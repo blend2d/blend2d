@@ -1,0 +1,27 @@
+{
+  "diagnostics": {
+    "asan": { "definitions": ["BLEND2D_SANITIZE=address"] },
+    "ubsan": { "definitions": ["BLEND2D_SANITIZE=undefined"] }
+  },
+
+  "valgrind_arguments": [
+    "--leak-check=full",
+    "--show-reachable=yes",
+    "--track-origins=yes"
+  ],
+
+  "tests": [
+    {
+      "cmd": ["bl_test_unit", "--quick"],
+      "optional": true
+    },
+    {
+      "cmd": ["bl_test_fuzzer", "--count=2000"],
+      "optional": true
+    },
+    {
+      "cmd": ["bl_test_verify_mt", "--count=2000"],
+      "optional": true
+    }
+  ]
+}
