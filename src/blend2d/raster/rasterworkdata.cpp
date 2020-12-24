@@ -46,7 +46,7 @@ BLRasterWorkData::BLRasterWorkData(BLRasterContextImpl* ctxI, uint32_t workerId)
 
 BLRasterWorkData::~BLRasterWorkData() noexcept {
   if (edgeStorage.bandEdges())
-    blZeroAllocatorRelease(edgeStorage.bandEdges(), edgeStorage.bandCapacity() * sizeof(void*));
+    blZeroAllocatorRelease(edgeStorage.bandEdges(), edgeStorage.bandCapacity() * kEdgeListSize);
 }
 
 // ============================================================================
@@ -65,8 +65,8 @@ BLResult BLRasterWorkData::initBandData(uint32_t bandHeight, uint32_t bandCount)
   BLEdgeList<int>* edges = static_cast<BLEdgeList<int>*>(
     blZeroAllocatorResize(
       edgeStorage.bandEdges(),
-      edgeStorage.bandCapacity() * sizeof(BLEdgeList<int>),
-      bandCount * sizeof(BLEdgeList<int>),
+      edgeStorage.bandCapacity() * kEdgeListSize,
+      bandCount * kEdgeListSize,
       &allocatedSize));
 
   if (BL_UNLIKELY(!edges)) {
@@ -74,7 +74,7 @@ BLResult BLRasterWorkData::initBandData(uint32_t bandHeight, uint32_t bandCount)
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
   }
 
-  uint32_t bandCapacity = uint32_t(allocatedSize / sizeof(BLEdgeList<int>));
+  uint32_t bandCapacity = uint32_t(allocatedSize / kEdgeListSize);
   _bandHeight = bandHeight;
   edgeStorage.initData(edges, bandCount, bandCapacity, bandHeight);
   return BL_SUCCESS;

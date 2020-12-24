@@ -59,6 +59,7 @@ public:
   BL_NONCOPYABLE(BLRasterWorkData)
 
   enum : uint32_t { kSyncWorkerId = 0xFFFFFFFFu };
+  enum : size_t { kEdgeListSize = sizeof(BLEdgeList<int>) };
 
   //! Rendering context impl.
   BLRasterContextImpl* ctxI;
