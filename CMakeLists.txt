@@ -702,7 +702,7 @@ message("   BLEND2D_PRIVATE_CFLAGS_REL=${BLEND2D_PRIVATE_CFLAGS_REL}")
 if (NOT BLEND2D_EMBED)
   # Add 'blend2d' library target.
   blend2d_add_target(blend2d    ${BLEND2D_TARGET_TYPE}
-                     SOURCES    ${BLEND2D_SRC} ${ASMJIT_SRC}
+                     SOURCES    ${BLEND2D_SRC}
                      LIBRARIES  ${BLEND2D_DEPS}
                      CFLAGS     ${BLEND2D_PRIVATE_CFLAGS}
                      CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
