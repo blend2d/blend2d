@@ -754,7 +754,6 @@ if (NOT BLEND2D_EMBED)
     # Special target that always uses embedded Blend2D.
     blend2d_add_target(bl_test_unit TEST
                        SOURCES    ${BLEND2D_SRC}
-                                  ${ASMJIT_SRC}
                                   test/bl_test_unit.cpp
                                   test/broken.cpp
                                   test/broken.h
