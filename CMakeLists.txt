@@ -680,9 +680,9 @@ endforeach()
 
 source_group(TREE "${BLEND2D_DIR}" FILES ${BLEND2D_SRC})
 
-set(SRC_FILES ${BLEND2D_SRC})
+set(BLEND2D_ALL_SRC_FILES ${BLEND2D_SRC})
 if (ASMJIT_EMBED)
-  set(SRC_FILES "${SRC_FILES};${ASMJIT_SRC}")
+  list(APPEND BLEND2D_ALL_SRC_FILES ${ASMJIT_SRC})
 endif()
 
 # =============================================================================
@@ -707,7 +707,7 @@ message("   BLEND2D_PRIVATE_CFLAGS_REL=${BLEND2D_PRIVATE_CFLAGS_REL}")
 if (NOT BLEND2D_EMBED)
   # Add 'blend2d' library target.
   blend2d_add_target(blend2d    ${BLEND2D_TARGET_TYPE}
-                     SOURCES    ${SRC_FILES}
+                     SOURCES    ${BLEND2D_ALL_SRC_FILES}
                      LIBRARIES  ${BLEND2D_DEPS}
                      CFLAGS     ${BLEND2D_PRIVATE_CFLAGS}
                      CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
@@ -758,7 +758,7 @@ if (NOT BLEND2D_EMBED)
 
     # Special target that always uses embedded Blend2D.
     blend2d_add_target(bl_test_unit TEST
-                       SOURCES    ${SRC_FILES}
+                       SOURCES    ${BLEND2D_ALL_SRC_FILES}
                                   test/bl_test_unit.cpp
                                   test/broken.cpp
                                   test/broken.h
