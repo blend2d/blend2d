@@ -644,7 +644,10 @@ static BL_INLINE BLResult blApproximateCubicWithQuads(const BLPoint p[4], double
 
   for (;;) {
     BLPoint quads[5];
-    t = blMin(t, 1.0);
+    t = blMin(1.0, t);
+
+    if (t >= 0.999)
+      t = 1.0;
 
     // Split the cubic:
     //   - cubic[0:3] contains the part before `t`.

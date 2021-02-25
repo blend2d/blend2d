@@ -862,7 +862,7 @@ SmoothPolyTo:
         BL_PROPAGATE(_bOut.ensure(_bPath, 2));
 
         double t = blGetQuadParameterAtAngle(iter.part, m);
-        if (t <= blEpsilon<double>() || t > 1.0 - blEpsilon<double>())
+        if (!(t >= blEpsilon<double>()) || !(t <= 1.0 - blEpsilon<double>()))
           t = 1.0;
 
         BLPoint part[3];
