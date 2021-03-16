@@ -439,8 +439,13 @@ BLResult blPathModifyOp(BLPathCore* self, uint32_t op, size_t n, uint8_t** cmdDa
 
 static BL_INLINE BLResult blPathMakeMutable(BLPathCore* self) noexcept {
   BLInternalPathImpl* selfI = blInternalCast(self->impl);
-  if (!blImplIsMutable(selfI))
-    return blPathRealloc(self, blPathFittingCapacity(selfI->size));
+
+  if (!blImplIsMutable(selfI)) {
+    BL_PROPAGATE(blPathRealloc(self, blPathFittingCapacity(selfI->size)));
+    selfI = blInternalCast(self->impl);
+  }
+
+  selfI->flags = BL_PATH_FLAG_DIRTY;
   return BL_SUCCESS;
 }
 // ============================================================================
@@ -758,7 +763,6 @@ BLResult blPathSetVertexAt(BLPathCore* self, size_t index, uint32_t cmd, double 
   // NOTE: We don't check `cmd` as we don't care of the value. Invalid commands
   // must always be handled by all Blend2D functions anyway so let it fail at
   // some other place if the given `cmd` is invalid.
-  selfI->flags = BL_PATH_FLAG_DIRTY;
   selfI->commandData[index] = cmd & 0xFFu;
   selfI->vertexData[index].reset(x, y);
 
