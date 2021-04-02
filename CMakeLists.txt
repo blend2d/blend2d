@@ -276,8 +276,6 @@ endif()
 # [Blend2D - Enable SIMD]
 # =============================================================================
 
-# TODO: Detect ARM when the support is added.
-
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
   # AVX/AVX2 doesn't need custom defs as MSVC|Intel does define __AVX[2]__
   # similary to other compilers. In addition, we only detect the support
@@ -327,7 +325,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" ST
       endif()
     endif()
   endif()
-else()
+elseif (NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
   # Assume all other compilers are compatible with GCC|Clang.
   blend2d_detect_cflags(BLEND2D_CFLAGS_AVX "-mavx")
   blend2d_detect_cflags(BLEND2D_CFLAGS_AVX2 "-mavx2")
