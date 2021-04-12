@@ -178,7 +178,7 @@ BLResult blGlyphBufferInit(BLGlyphBufferCore* self) noexcept {
 }
 
 BLResult blGlyphBufferInitMove(BLGlyphBufferCore* self, BLGlyphBufferCore* other) noexcept {
-  BLInternalGlyphBufferImpl* impl = blInternalCast(self->impl);
+  BLInternalGlyphBufferImpl* impl = blInternalCast(other->impl);
   other->impl = const_cast<BLInternalGlyphBufferImpl*>(&blGlyphBufferInternalImplNone);
   self->impl = impl;
   return BL_SUCCESS;
