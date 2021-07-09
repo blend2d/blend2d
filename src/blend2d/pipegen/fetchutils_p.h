@@ -285,7 +285,7 @@ namespace FetchUtils {
 
   //! Fetch 1xPRGB pixel by doing a bilinear interpolation with its neighbors.
   //!
-  //! Weights = {256-wy, wy, 256-wy, wy, 256-wx, wx, 256-wx, wx}
+  //! Weights = {256-wy, 256-wy, wy, wy, 256-wx, 256-wx, wx, wx}
   template<typename Pixels, typename Stride>
   BL_NOINLINE void xFilterBilinearARGB32_1x(
     PipeCompiler* pc,
@@ -342,13 +342,16 @@ namespace FetchUtils {
 
     pc->v_mul_u16(pixTop, pixTop, pixTmp0);
     pc->v_mul_u16(pixBot, pixBot, pixTmp1);
+
     pc->v_add_i16(pixBot, pixBot, pixTop);
+    pc->v_srl_i16(pixBot, pixBot, 8);
 
     pc->v_swizzle_i32(pixTop, weights, x86::Predicate::shuf(0, 0, 1, 1));
-    pc->v_mulh_u16(pixTop, pixTop, pixBot);
+    pc->v_mul_u16(pixTop, pixTop, pixBot);
 
     pc->v_swizzle_i32(pixTmp0, pixTop, x86::Predicate::shuf(1, 0, 3, 2));
     pc->v_add_i16(pixTmp0, pixTmp0, pixTop);
+    pc->v_srl_i16(pixTmp0, pixTmp0, 8);
   }
 }
 
