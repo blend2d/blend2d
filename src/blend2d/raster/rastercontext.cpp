@@ -705,6 +705,7 @@ static BL_INLINE uint32_t blRasterContextImplPrepareFill(BLRasterContextImpl* ct
 
   // The combination of a destination format, source format, and compOp results
   // in a solid fill, so initialize the command accordingly to `solidId` type.
+  serializer.clearFetchFlags();
   serializer.initFetchSolid(ctxI->solidFetchDataTable[solidId]);
 
   // If there are bits in `nopFlags` it means there is nothing to render as

@@ -146,6 +146,10 @@ struct BLRasterCoreCommandSerializer : public BLRasterCommandSerializerStorage<R
   BL_INLINE void initFillFunc(BLPipeFillFunc fillFunc) noexcept {
     command().initFillFunc(fillFunc);
   }
+
+  BL_INLINE void clearFetchFlags() noexcept {
+    command()._flags &= ~BL_RASTER_COMMAND_FLAG_FETCH_DATA;
+  }
 };
 
 typedef BLRasterCoreCommandSerializer<BL_RASTER_RENDERING_MODE_SYNC> BLRasterCoreCommandSerializerSync;
