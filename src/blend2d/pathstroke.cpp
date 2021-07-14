@@ -201,7 +201,11 @@ public:
     while (!_iter.atEnd()) {
       // Start of the figure.
       if (BL_UNLIKELY(_iter.cmd[0] != BL_PATH_CMD_MOVE)) {
-        return blTraceError(BL_ERROR_INVALID_GEOMETRY);
+        if (_iter.cmd[0] != BL_PATH_CMD_CLOSE)
+          return blTraceError(BL_ERROR_INVALID_GEOMETRY);
+
+        _iter++;
+        continue;
       }
 
       _aInitialSize = _aPath->size();
