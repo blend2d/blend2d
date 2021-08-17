@@ -1497,7 +1497,7 @@ void PipeCompiler::xFetchPixel_8x(Pixel& p, uint32_t flags, uint32_t sFormat, co
         if (flags & Pixel::kPC) {
           newXmmArray(p.pc, 2, "c");
 
-          v_load_i32(p.pc[0], sAdj);
+          v_load_i32(p.pc[0], sAdj); sAdj.addOffsetLo32(4);
           v_load_i32(p.pc[1], sAdj);
 
           v_interleave_lo_i8(p.pc[0], p.pc[0], p.pc[0]);
@@ -1509,7 +1509,7 @@ void PipeCompiler::xFetchPixel_8x(Pixel& p, uint32_t flags, uint32_t sFormat, co
         else {
           newXmmArray(p.uc, 4, "c");
 
-          v_load_i32(p.uc[0], sAdj);
+          v_load_i32(p.uc[0], sAdj); sAdj.addOffsetLo32(4);
           v_load_i32(p.uc[2], sAdj);
 
           v_interleave_lo_i8(p.uc[0], p.uc[0], p.uc[0]);
