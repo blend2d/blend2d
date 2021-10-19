@@ -2213,7 +2213,8 @@ static BL_INLINE BLResult blRasterContextImplFillUnsafeBox(
 
   if (mType <= BL_MATRIX2D_TYPE_SWAP) {
     BLBox finalBox;
-    blIntersectBoxes(finalBox, blMatrix2DMapBox(m, box), ctxI->finalClipBoxFixedD());
+    if (!blIntersectBoxes(finalBox, blMatrix2DMapBox(m, box), ctxI->finalClipBoxFixedD()))
+      return BL_SUCCESS;
 
     BLBoxI finalBoxFixed(blTruncToInt(finalBox.x0),
                          blTruncToInt(finalBox.y0),
