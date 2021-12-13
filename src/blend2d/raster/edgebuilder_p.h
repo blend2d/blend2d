@@ -1,311 +1,116 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_RASTER_EDGEBUILDER_P_H_INCLUDED
 #define BLEND2D_RASTER_EDGEBUILDER_P_H_INCLUDED
 
-#include "../arrayops_p.h"
 #include "../geometry_p.h"
 #include "../math_p.h"
 #include "../path_p.h"
-#include "../pipedefs_p.h"
-#include "../support_p.h"
-#include "../zoneallocator_p.h"
+#include "../pipeline/pipedefs_p.h"
+#include "../raster/edgestorage_p.h"
+#include "../support/algorithm_p.h"
+#include "../support/arenaallocator_p.h"
+#include "../support/traits_p.h"
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_internal_raster
+//! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-// ============================================================================
-// [BLClipShift / BLClipFlags]
-// ============================================================================
+namespace BLRasterEngine {
 
-enum BLClipShift : uint32_t {
-  BL_CLIP_SHIFT_X0  = 0,
-  BL_CLIP_SHIFT_Y0  = 1,
-  BL_CLIP_SHIFT_X1  = 2,
-  BL_CLIP_SHIFT_Y1  = 3
+enum ClipShift : uint32_t {
+  kClipShiftX0  = 0,
+  kClipShiftY0  = 1,
+  kClipShiftX1  = 2,
+  kClipShiftY1  = 3
 };
 
-enum BLClipFlags: uint32_t {
-  BL_CLIP_FLAG_NONE = 0u,
-  BL_CLIP_FLAG_X0   = 1u << BL_CLIP_SHIFT_X0,
-  BL_CLIP_FLAG_Y0   = 1u << BL_CLIP_SHIFT_Y0,
-  BL_CLIP_FLAG_X1   = 1u << BL_CLIP_SHIFT_X1,
-  BL_CLIP_FLAG_Y1   = 1u << BL_CLIP_SHIFT_Y1,
+enum ClipFlags: uint32_t {
+  kClipFlagNone = 0u,
+  kClipFlagX0   = 1u << kClipShiftX0,
+  kClipFlagY0   = 1u << kClipShiftY0,
+  kClipFlagX1   = 1u << kClipShiftX1,
+  kClipFlagY1   = 1u << kClipShiftY1,
 
-  BL_CLIP_FLAG_X0X1 = BL_CLIP_FLAG_X0 | BL_CLIP_FLAG_X1,
-  BL_CLIP_FLAG_Y0Y1 = BL_CLIP_FLAG_Y0 | BL_CLIP_FLAG_Y1,
+  kClipFlagX0X1 = kClipFlagX0 | kClipFlagX1,
+  kClipFlagY0Y1 = kClipFlagY0 | kClipFlagY1,
 
-  BL_CLIP_FLAG_X0Y0 = BL_CLIP_FLAG_X0 | BL_CLIP_FLAG_Y0,
-  BL_CLIP_FLAG_X1Y0 = BL_CLIP_FLAG_X1 | BL_CLIP_FLAG_Y0,
+  kClipFlagX0Y0 = kClipFlagX0 | kClipFlagY0,
+  kClipFlagX1Y0 = kClipFlagX1 | kClipFlagY0,
 
-  BL_CLIP_FLAG_X0Y1 = BL_CLIP_FLAG_X0 | BL_CLIP_FLAG_Y1,
-  BL_CLIP_FLAG_X1Y1 = BL_CLIP_FLAG_X1 | BL_CLIP_FLAG_Y1
+  kClipFlagX0Y1 = kClipFlagX0 | kClipFlagY1,
+  kClipFlagX1Y1 = kClipFlagX1 | kClipFlagY1
 };
 
-static BL_INLINE uint32_t blClipCalcX0Flags(const BLPoint& pt, const BLBox& box) noexcept { return (uint32_t(!(pt.x >= box.x0)) << BL_CLIP_SHIFT_X0); }
-static BL_INLINE uint32_t blClipCalcX1Flags(const BLPoint& pt, const BLBox& box) noexcept { return (uint32_t(!(pt.x <= box.x1)) << BL_CLIP_SHIFT_X1); }
-static BL_INLINE uint32_t blClipCalcY0Flags(const BLPoint& pt, const BLBox& box) noexcept { return (uint32_t(!(pt.y >= box.y0)) << BL_CLIP_SHIFT_Y0); }
-static BL_INLINE uint32_t blClipCalcY1Flags(const BLPoint& pt, const BLBox& box) noexcept { return (uint32_t(!(pt.y <= box.y1)) << BL_CLIP_SHIFT_Y1); }
+static BL_INLINE uint32_t blClipCalcX0Flags(const BLPoint& pt, const BLBox& box) noexcept { return (uint32_t(!(pt.x >= box.x0)) << kClipShiftX0); }
+static BL_INLINE uint32_t blClipCalcX1Flags(const BLPoint& pt, const BLBox& box) noexcept { return (uint32_t(!(pt.x <= box.x1)) << kClipShiftX1); }
+static BL_INLINE uint32_t blClipCalcY0Flags(const BLPoint& pt, const BLBox& box) noexcept { return (uint32_t(!(pt.y >= box.y0)) << kClipShiftY0); }
+static BL_INLINE uint32_t blClipCalcY1Flags(const BLPoint& pt, const BLBox& box) noexcept { return (uint32_t(!(pt.y <= box.y1)) << kClipShiftY1); }
 
 static BL_INLINE uint32_t blClipCalcXFlags(const BLPoint& pt, const BLBox& box) noexcept { return blClipCalcX0Flags(pt, box) | blClipCalcX1Flags(pt, box); }
 static BL_INLINE uint32_t blClipCalcYFlags(const BLPoint& pt, const BLBox& box) noexcept { return blClipCalcY0Flags(pt, box) | blClipCalcY1Flags(pt, box); }
 static BL_INLINE uint32_t blClipCalcXYFlags(const BLPoint& pt, const BLBox& box) noexcept { return blClipCalcXFlags(pt, box) | blClipCalcYFlags(pt, box); }
 
-// ============================================================================
-// [BLEdgePoint]
-// ============================================================================
+//! \name Edge Transformations
+//! \{
 
-//! Parametrized point used by edge builder that should represent either 16-bit
-//! or 32-bit fixed point.
-template<typename T>
-struct BLEdgePoint {
-  T x, y;
-
-  BL_INLINE void reset(T x_, T y_) noexcept {
-    this->x = x_;
-    this->y = y_;
-  }
-};
-
-// ============================================================================
-// [BLEdgeVector]
-// ============================================================================
-
-template<typename CoordT>
-struct alignas(8) BLEdgeVector {
-  BLEdgeVector<CoordT>* next;
-  size_t signBit : 1;
-  size_t count : blBitSizeOf<size_t>() - 1;
-  BLEdgePoint<CoordT> pts[1];
-
-  static constexpr uint32_t minSizeOf() noexcept {
-    return uint32_t(sizeof(BLEdgeVector<CoordT>) + sizeof(BLEdgePoint<CoordT>));
-  }
-};
-
-// ============================================================================
-// [BLEdgeList]
-// ============================================================================
-
-template<typename CoordT>
-struct BLEdgeList {
-  BLEdgeVector<CoordT>* _first;
-  BLEdgeVector<CoordT>* _last;
-
-  BL_INLINE void reset() noexcept {
-    _first = nullptr;
-    _last = nullptr;
-  }
-
-  BL_INLINE bool empty() const noexcept { return _last == nullptr; }
-
-  BL_INLINE BLEdgeVector<CoordT>* first() const noexcept { return _first; }
-  BL_INLINE BLEdgeVector<CoordT>* last() const noexcept { return _last; }
-
-  BL_INLINE void append(BLEdgeVector<CoordT>* item) noexcept {
-    item->next = nullptr;
-    if (empty()) {
-      _first = item;
-      _last = item;
-    }
-    else {
-      _last->next = item;
-      _last = item;
-    }
-  }
-};
-
-// ============================================================================
-// [BLEdgeStorage]
-// ============================================================================
-
-template<typename CoordT>
-class BLEdgeStorage {
+class EdgeTransformNone {
 public:
-  //! Start edge vectors of each band.
-  BLEdgeList<CoordT>* _bandEdges;
-  //! Length of `_bandEdges` array.
-  uint32_t _bandCount;
-  //! Capacity of `_bandEdges` array.
-  uint32_t _bandCapacity;
-  //! Height of a single band (in pixels).
-  uint32_t _bandHeight;
-  //! Shift to get a bandId from a fixed-point y coordinate.
-  uint32_t _fixedBandHeightShift;
-  //! Bounding box in fixed-point.
-  BLBoxI _boundingBox;
-
-  BL_INLINE BLEdgeStorage() noexcept { reset(); }
-  BL_INLINE BLEdgeStorage(const BLEdgeStorage& other) noexcept = default;
-
-  BL_INLINE void reset() noexcept {
-    _bandEdges = nullptr;
-    _bandCount = 0;
-    _bandCapacity = 0;
-    _bandHeight = 0;
-    _fixedBandHeightShift = 0;
-    resetBoundingBox();
-  }
-
-  BL_INLINE void clear() noexcept {
-    if (!empty()) {
-      uint32_t bandStart = (unsigned(_boundingBox.y0) >> _fixedBandHeightShift);
-      uint32_t bandLast  = (unsigned(_boundingBox.y1) >> _fixedBandHeightShift);
-      BL_ASSERT(bandLast < _bandCount);
-
-      for (uint32_t i = bandStart; i <= bandLast; i++)
-        _bandEdges[i].reset();
-      resetBoundingBox();
-    }
-  }
-
-  BL_INLINE bool empty() const noexcept { return _boundingBox.y0 == blMaxValue<int>(); }
-
-  BL_INLINE BLEdgeList<CoordT>* bandEdges() const noexcept { return _bandEdges; }
-  BL_INLINE uint32_t bandCount() const noexcept { return _bandCount; }
-  BL_INLINE uint32_t bandCapacity() const noexcept { return _bandCapacity; }
-  BL_INLINE uint32_t bandHeight() const noexcept { return _bandHeight; }
-  BL_INLINE uint32_t fixedBandHeightShift() const noexcept { return _fixedBandHeightShift; }
-  BL_INLINE const BLBoxI& boundingBox() const noexcept { return _boundingBox; }
-
-  BL_INLINE void initData(BLEdgeList<CoordT>* bandEdges, uint32_t bandCount, uint32_t bandCapacity, uint32_t bandHeight) noexcept {
-    _bandEdges = bandEdges;
-    _bandCount = bandCount;
-    _bandCapacity = bandCapacity;
-    _bandHeight = bandHeight;
-    _fixedBandHeightShift = blBitCtz(bandHeight) + BL_PIPE_A8_SHIFT;
-  }
-
-  BL_INLINE void resetBoundingBox() noexcept {
-    _boundingBox.reset(blMaxValue<int>(), blMaxValue<int>(), blMinValue<int>(), blMinValue<int>());
-  }
-
-  BL_INLINE uint32_t bandStartFromBBox() const noexcept {
-    return unsigned(boundingBox().y0) >> fixedBandHeightShift();
-  }
-
-  BL_INLINE uint32_t bandEndFromBBox() const noexcept {
-    // NOTE: Calculating `bandEnd` is tricky, because in some rare cases
-    // the bounding box can end exactly at some band's initial coordinate.
-    // In such case we don't know whether the band has data there or not,
-    // so we must consider it initially.
-    return blMin((unsigned(boundingBox().y1) >> fixedBandHeightShift()) + 1, bandCount());
-  }
-
-  BL_INLINE BLEdgeVector<CoordT>* flattenEdgeLinks() noexcept {
-    BLEdgeList<int>* bandEdges = this->bandEdges();
-
-    size_t bandId = bandStartFromBBox();
-    size_t bandEnd = bandEndFromBBox();
-
-    BLEdgeVector<CoordT>* first = bandEdges[bandId].first();
-    BLEdgeVector<CoordT>* current = bandEdges[bandId].last();
-
-    // The first band must always be non-null as it starts the edges.
-    BL_ASSERT(first != nullptr);
-    BL_ASSERT(current != nullptr);
-
-    bandEdges[bandId].reset();
-    while (++bandId < bandEnd) {
-      BLEdgeVector<int>* bandFirst = bandEdges[bandId].first();
-      if (!bandFirst)
-        continue;
-      current->next = bandFirst;
-      current = bandEdges[bandId].last();
-      bandEdges[bandId].reset();
-    }
-
-    return first;
-  }
-};
-
-// ============================================================================
-// [BLEdgeTransformNone]
-// ============================================================================
-
-class BLEdgeTransformNone {
-public:
-  BL_INLINE BLEdgeTransformNone() noexcept {}
+  BL_INLINE EdgeTransformNone() noexcept {}
   BL_INLINE void apply(BLPoint& dst, const BLPoint& src) noexcept { dst = src; }
 };
 
-// ============================================================================
-// [BLEdgeTransformScale]
-// ============================================================================
-
-class BLEdgeTransformScale {
+class EdgeTransformScale {
 public:
   double sx, sy;
   double tx, ty;
 
-  BL_INLINE BLEdgeTransformScale(const BLMatrix2D& matrix) noexcept
+  BL_INLINE EdgeTransformScale(const BLMatrix2D& matrix) noexcept
     : sx(matrix.m00),
       sy(matrix.m11),
       tx(matrix.m20),
       ty(matrix.m21) {}
-  BL_INLINE BLEdgeTransformScale(const BLEdgeTransformScale& other) noexcept = default;
+  BL_INLINE EdgeTransformScale(const EdgeTransformScale& other) noexcept = default;
 
   BL_INLINE void apply(BLPoint& dst, const BLPoint& src) noexcept {
     dst.reset(src.x * sx + tx, src.y * sy + ty);
   }
 };
 
-// ============================================================================
-// [BLEdgeTransformAffine]
-// ============================================================================
-
-class BLEdgeTransformAffine {
+class EdgeTransformAffine {
 public:
   BLMatrix2D matrix;
 
-  BL_INLINE BLEdgeTransformAffine(const BLMatrix2D& matrix) noexcept
+  BL_INLINE EdgeTransformAffine(const BLMatrix2D& matrix) noexcept
     : matrix(matrix) {}
-  BL_INLINE BLEdgeTransformAffine(const BLEdgeTransformAffine& other) noexcept = default;
+  BL_INLINE EdgeTransformAffine(const EdgeTransformAffine& other) noexcept = default;
 
   BL_INLINE void apply(BLPoint& dst, const BLPoint& src) noexcept {
     dst = matrix.mapPoint(src);
   }
 };
 
-// ============================================================================
-// [BLEdgeSourcePoly]
-// ============================================================================
+//! \}
 
-template<class PointType, class Transform = BLEdgeTransformNone>
-class BLEdgeSourcePoly {
+//! \name Edge Source Data
+//! \{
+
+template<class PointType, class Transform = EdgeTransformNone>
+class EdgeSourcePoly {
 public:
   Transform _transform;
   const PointType* _srcPtr;
   const PointType* _srcEnd;
 
-  BL_INLINE BLEdgeSourcePoly(const Transform& transform) noexcept
+  BL_INLINE EdgeSourcePoly(const Transform& transform) noexcept
     : _transform(transform),
       _srcPtr(nullptr),
       _srcEnd(nullptr) {}
 
-  BL_INLINE BLEdgeSourcePoly(const Transform& transform, const PointType* srcPtr, size_t count) noexcept
+  BL_INLINE EdgeSourcePoly(const Transform& transform, const PointType* srcPtr, size_t count) noexcept
     : _transform(transform),
       _srcPtr(srcPtr),
       _srcEnd(srcPtr + count) {}
@@ -326,10 +131,10 @@ public:
 
   BL_INLINE void beforeNextBegin() noexcept {}
 
-  constexpr bool isClose() const noexcept { return false; }
+  BL_INLINE constexpr bool isClose() const noexcept { return false; }
   BL_INLINE bool isLineTo() const noexcept { return _srcPtr != _srcEnd; }
-  constexpr bool isQuadTo() const noexcept { return false; }
-  constexpr bool isCubicTo() const noexcept { return false; }
+  BL_INLINE constexpr bool isQuadTo() const noexcept { return false; }
+  BL_INLINE constexpr bool isCubicTo() const noexcept { return false; }
 
   BL_INLINE void nextLineTo(BLPoint& pt1) noexcept {
     _transform.apply(pt1, BLPoint(_srcPtr[0].x, _srcPtr[0].y));
@@ -351,12 +156,8 @@ public:
   BL_INLINE bool maybeNextCubicTo(BLPoint&, BLPoint&, BLPoint&) noexcept { return false; }
 };
 
-// ============================================================================
-// [BLEdgeSourcePath]
-// ============================================================================
-
-template<class Transform = BLEdgeTransformNone>
-class BLEdgeSourcePath {
+template<class Transform = EdgeTransformNone>
+class EdgeSourcePath {
 public:
   Transform _transform;
   const BLPoint* _vtxPtr;
@@ -364,26 +165,18 @@ public:
   const uint8_t* _cmdEnd;
   const uint8_t* _cmdEndMinus2;
 
-  BL_INLINE BLEdgeSourcePath(const Transform& transform) noexcept
+  BL_INLINE EdgeSourcePath(const Transform& transform) noexcept
     : _transform(transform),
       _vtxPtr(nullptr),
       _cmdPtr(nullptr),
       _cmdEnd(nullptr),
       _cmdEndMinus2(nullptr) {}
 
-  BL_INLINE BLEdgeSourcePath(const Transform& transform, const BLPathView& view) noexcept
-    : _transform(transform),
-      _vtxPtr(view.vertexData),
-      _cmdPtr(view.commandData),
-      _cmdEnd(view.commandData + view.size),
-      _cmdEndMinus2(_cmdEnd - 2) {}
+  BL_INLINE EdgeSourcePath(const Transform& transform, const BLPathView& view) noexcept
+    : _transform(transform) { reset(view.vertexData, view.commandData, view.size); }
 
-  BL_INLINE BLEdgeSourcePath(const Transform& transform, const BLPoint* vtxData, const uint8_t* cmdData, size_t count) noexcept
-    : _transform(transform),
-      _vtxPtr(vtxData),
-      _cmdPtr(cmdData),
-      _cmdEnd(cmdData + count),
-      _cmdEndMinus2(_cmdEnd - 2) {}
+  BL_INLINE EdgeSourcePath(const Transform& transform, const BLPoint* vtxData, const uint8_t* cmdData, size_t count) noexcept
+    : _transform(transform) { reset(vtxData, cmdData, count); }
 
   BL_INLINE void reset(const BLPoint* vtxData, const uint8_t* cmdData, size_t count) noexcept {
     _vtxPtr = vtxData;
@@ -393,8 +186,7 @@ public:
   }
 
   BL_INLINE void reset(const BLPath& path) noexcept {
-    const BLPathImpl* pathI = path.impl;
-    reset(pathI->vertexData, pathI->commandData, pathI->size);
+    reset(path.vertexData(), path.commandData(), path.size());
   }
 
   BL_INLINE bool begin(BLPoint& initial) noexcept {
@@ -467,25 +259,134 @@ public:
   }
 };
 
-// ============================================================================
-// [BLEdgeSource{Specializations}]
-// ============================================================================
+// Stroke sink never produces invalid paths, thus:
+//   - this path will only have a single figure.
+//   - we don't have to check whether the path is valid, it was produced by our stroker, which produces valid paths.
+template<class Transform = EdgeTransformNone>
+class EdgeSourceReversePathFromStrokeSink {
+public:
+  Transform _transform;
+  const BLPoint* _vtxPtr;
+  const uint8_t* _cmdPtr;
+  const uint8_t* _cmdStart;
+  bool _mustClose;
+
+  BL_INLINE EdgeSourceReversePathFromStrokeSink(const Transform& transform) noexcept
+    : _transform(transform),
+      _vtxPtr(nullptr),
+      _cmdPtr(nullptr),
+      _cmdStart(nullptr),
+      _mustClose(false) {}
+
+  BL_INLINE EdgeSourceReversePathFromStrokeSink(const Transform& transform, const BLPathView& view) noexcept
+    : _transform(transform) { reset(view.vertexData, view.commandData, view.size); }
+
+  BL_INLINE EdgeSourceReversePathFromStrokeSink(const Transform& transform, const BLPoint* vtxData, const uint8_t* cmdData, size_t count) noexcept
+    : _transform(transform) { reset(vtxData, cmdData, count); }
+
+  BL_INLINE void reset(const BLPoint* vtxData, const uint8_t* cmdData, size_t count) noexcept {
+    _vtxPtr = vtxData + count;
+    _cmdPtr = cmdData + count;
+    _cmdStart = cmdData;
+    _mustClose = count > 0 && _cmdPtr[-1] == BL_PATH_CMD_CLOSE;
+
+    _cmdPtr -= size_t(_mustClose);
+    _vtxPtr -= size_t(_mustClose);
+  }
+
+  BL_INLINE void reset(const BLPath& path) noexcept {
+    reset(path.vertexData(), path.commandData(), path.size());
+  }
+
+  BL_INLINE bool begin(BLPoint& initial) noexcept {
+    if (_cmdPtr == _cmdStart)
+      return false;
+
+    // The only check we do - if the path doesn't end with on-point, we won't process the path.
+    uint32_t cmd = _cmdPtr[-1];
+    if (cmd != BL_PATH_CMD_ON)
+      return false;
+
+    _cmdPtr--;
+    _vtxPtr--;
+    _transform.apply(initial, _vtxPtr[0]);
+    return true;
+  }
+
+  BL_INLINE bool mustClose() const noexcept { return _mustClose; }
+
+  BL_INLINE void beforeNextBegin() noexcept {}
+
+  BL_INLINE bool isClose() const noexcept { return false; }
+  BL_INLINE bool isLineTo() const noexcept { return _cmdPtr != _cmdStart && _cmdPtr[-1] <= BL_PATH_CMD_ON; }
+  BL_INLINE bool isQuadTo() const noexcept { return _cmdPtr != _cmdStart && _cmdPtr[-1] == BL_PATH_CMD_QUAD; }
+  BL_INLINE bool isCubicTo() const noexcept { return _cmdPtr != _cmdStart && _cmdPtr[-1] == BL_PATH_CMD_CUBIC; }
+
+  BL_INLINE void nextLineTo(BLPoint& pt1) noexcept {
+    _cmdPtr--;
+    _vtxPtr--;
+    _transform.apply(pt1, _vtxPtr[0]);
+  }
+
+  BL_INLINE bool maybeNextLineTo(BLPoint& pt1) noexcept {
+    if (!isLineTo())
+      return false;
+
+    nextLineTo(pt1);
+    return true;
+  }
+
+  BL_INLINE void nextQuadTo(BLPoint& pt1, BLPoint& pt2) noexcept {
+    _cmdPtr -= 2;
+    _vtxPtr -= 2;
+    _transform.apply(pt1, _vtxPtr[1]);
+    _transform.apply(pt2, _vtxPtr[0]);
+  }
+
+  BL_INLINE bool maybeNextQuadTo(BLPoint& pt1, BLPoint& pt2) noexcept {
+    if (!isQuadTo())
+      return false;
+
+    nextQuadTo(pt1, pt2);
+    return true;
+  }
+
+  BL_INLINE void nextCubicTo(BLPoint& pt1, BLPoint& pt2, BLPoint& pt3) noexcept {
+    _cmdPtr -= 3;
+    _vtxPtr -= 3;
+    _transform.apply(pt1, _vtxPtr[2]);
+    _transform.apply(pt2, _vtxPtr[1]);
+    _transform.apply(pt3, _vtxPtr[0]);
+  }
+
+  BL_INLINE bool maybeNextCubicTo(BLPoint& pt1, BLPoint& pt2, BLPoint& pt3) noexcept {
+    if (!isCubicTo())
+      return false;
+
+    nextCubicTo(pt1, pt2, pt3);
+    return true;
+  }
+};
 
 template<class PointType>
-using BLEdgeSourcePolyScale = BLEdgeSourcePoly<PointType, BLEdgeTransformScale>;
+using EdgeSourcePolyScale = EdgeSourcePoly<PointType, EdgeTransformScale>;
 
 template<class PointType>
-using BLEdgeSourcePolyAffine = BLEdgeSourcePoly<PointType, BLEdgeTransformAffine>;
+using EdgeSourcePolyAffine = EdgeSourcePoly<PointType, EdgeTransformAffine>;
 
-typedef BLEdgeSourcePath<BLEdgeTransformScale> BLEdgeSourcePathScale;
-typedef BLEdgeSourcePath<BLEdgeTransformAffine> BLEdgeSourcePathAffine;
+typedef EdgeSourcePath<EdgeTransformScale> EdgeSourcePathScale;
+typedef EdgeSourcePath<EdgeTransformAffine> EdgeSourcePathAffine;
 
-// ============================================================================
-// [BLFlattenMonoData]
-// ============================================================================
+typedef EdgeSourceReversePathFromStrokeSink<EdgeTransformScale> EdgeSourceReversePathFromStrokeSinkScale;
+typedef EdgeSourceReversePathFromStrokeSink<EdgeTransformAffine> EdgeSourceReversePathFromStrokeSinkAffine;
 
-//! Base data (mostly stack) used by `BLFlattenMonoQuad` and `BLFlattenMonoCubic`.
-class BLFlattenMonoData {
+//! \}
+
+//! \name Edge Flattening
+//! \{
+
+//! Base data (mostly stack) used by `FlattenMonoQuad` and `FlattenMonoCubic`.
+class FlattenMonoData {
 public:
   enum : size_t {
     kRecursionLimit = 32,
@@ -498,14 +399,10 @@ public:
   BLPoint _stack[kStackSizeTotal];
 };
 
-// ============================================================================
-// [BLFlattenMonoQuad]
-// ============================================================================
-
 //! Helper to flatten a monotonic quad curve.
-class BLFlattenMonoQuad {
+class FlattenMonoQuad {
 public:
-  BLFlattenMonoData& _flattenData;
+  FlattenMonoData& _flattenData;
   double _toleranceSq;
   BLPoint* _stackPtr;
   BLPoint _p0, _p1, _p2;
@@ -522,7 +419,7 @@ public:
     BLPoint p012;
   };
 
-  BL_INLINE explicit BLFlattenMonoQuad(BLFlattenMonoData& flattenData, double toleranceSq) noexcept
+  BL_INLINE explicit FlattenMonoQuad(FlattenMonoData& flattenData, double toleranceSq) noexcept
     : _flattenData(flattenData),
       _toleranceSq(toleranceSq) {}
 
@@ -545,7 +442,7 @@ public:
   BL_INLINE const BLPoint& last() const noexcept { return _p2; }
 
   BL_INLINE bool canPop() const noexcept { return _stackPtr != _flattenData._stack; }
-  BL_INLINE bool canPush() const noexcept { return _stackPtr != _flattenData._stack + BLFlattenMonoData::kStackSizeQuad; }
+  BL_INLINE bool canPush() const noexcept { return _stackPtr != _flattenData._stack + FlattenMonoData::kStackSizeQuad; }
 
   BL_INLINE bool isLeftToRight() const noexcept { return first().x < last().x; }
 
@@ -566,8 +463,8 @@ public:
     BLPoint v1 = _p1 - _p0;
     BLPoint v2 = _p2 - _p0;
 
-    double d = blCrossProduct(v2, v1);
-    double lenSq = blLengthSq(v2);
+    double d = BLGeometry::cross(v2, v1);
+    double lenSq = BLGeometry::lengthSq(v2);
 
     step.value = d * d;
     step.limit = _toleranceSq * lenSq;
@@ -607,14 +504,10 @@ public:
   }
 };
 
-// ============================================================================
-// [BLFlattenMonoCubic]
-// ============================================================================
-
 //! Helper to flatten a monotonic cubic curve.
-class BLFlattenMonoCubic {
+class FlattenMonoCubic {
 public:
-  BLFlattenMonoData& _flattenData;
+  FlattenMonoData& _flattenData;
   double _toleranceSq;
   BLPoint* _stackPtr;
   BLPoint _p0, _p1, _p2, _p3;
@@ -634,7 +527,7 @@ public:
     BLPoint p0123;
   };
 
-  BL_INLINE explicit BLFlattenMonoCubic(BLFlattenMonoData& flattenData, double toleranceSq) noexcept
+  BL_INLINE explicit FlattenMonoCubic(FlattenMonoData& flattenData, double toleranceSq) noexcept
     : _flattenData(flattenData),
       _toleranceSq(toleranceSq) {}
 
@@ -659,7 +552,7 @@ public:
   BL_INLINE const BLPoint& last() const noexcept { return _p3; }
 
   BL_INLINE bool canPop() const noexcept { return _stackPtr != _flattenData._stack; }
-  BL_INLINE bool canPush() const noexcept { return _stackPtr != _flattenData._stack + BLFlattenMonoData::kStackSizeCubic; }
+  BL_INLINE bool canPush() const noexcept { return _stackPtr != _flattenData._stack + FlattenMonoData::kStackSizeCubic; }
 
   BL_INLINE bool isLeftToRight() const noexcept { return first().x < last().x; }
 
@@ -683,9 +576,9 @@ public:
   BL_INLINE bool isFlat(SplitStep& step) const noexcept {
     BLPoint v = _p3 - _p0;
 
-    double d1Sq = blSquare(blCrossProduct(v, _p1 - _p0));
-    double d2Sq = blSquare(blCrossProduct(v, _p2 - _p0));
-    double lenSq = blLengthSq(v);
+    double d1Sq = blSquare(BLGeometry::cross(v, _p1 - _p0));
+    double d2Sq = blSquare(BLGeometry::cross(v, _p2 - _p0));
+    double lenSq = BLGeometry::lengthSq(v);
 
     step.value = blMax(d1Sq, d2Sq);
     step.limit = _toleranceSq * lenSq;
@@ -694,11 +587,11 @@ public:
   }
 
   BL_INLINE void split(SplitStep& step) const noexcept {
-    step.p01   = (_p0 + _p1) * 0.5;
-    step.p12   = (_p1 + _p2) * 0.5;
-    step.p23   = (_p2 + _p3) * 0.5;
-    step.p012  = (step.p01  + step.p12 ) * 0.5;
-    step.p123  = (step.p12  + step.p23 ) * 0.5;
+    step.p01 = (_p0 + _p1) * 0.5;
+    step.p12 = (_p1 + _p2) * 0.5;
+    step.p23 = (_p2 + _p3) * 0.5;
+    step.p012 = (step.p01 + step.p12 ) * 0.5;
+    step.p123 = (step.p12 + step.p23 ) * 0.5;
     step.p0123 = (step.p012 + step.p123) * 0.5;
   }
 
@@ -732,23 +625,24 @@ public:
   }
 };
 
-// ============================================================================
-// [BLEdgeBuilder<>]
-// ============================================================================
+//! \}
+
+//! \name Edge Builder
+//! \{
 
 template<typename CoordT>
-class BLEdgeBuilder {
+class EdgeBuilder {
 public:
-  static constexpr uint32_t kEdgeOffset = uint32_t(sizeof(BLEdgeVector<CoordT>) - sizeof(BLEdgePoint<CoordT>));
-  static constexpr uint32_t kMinEdgeSize = uint32_t(sizeof(BLEdgeVector<CoordT>) + sizeof(BLEdgePoint<CoordT>));
+  static constexpr uint32_t kEdgeOffset = uint32_t(sizeof(EdgeVector<CoordT>) - sizeof(EdgePoint<CoordT>));
+  static constexpr uint32_t kMinEdgeSize = uint32_t(sizeof(EdgeVector<CoordT>) + sizeof(EdgePoint<CoordT>));
 
-  // Storage and Constaints
-  // ----------------------
+  //! \name Edge Storage
+  //! \{
 
-  //! Zone memory used to allocate BLEdgeVector[].
-  BLZoneAllocator* _zone;
+  //! Zone memory used to allocate EdgeVector[].
+  BLArenaAllocator* _zone;
   //! Edge storage the builder adds edges to.
-  BLEdgeStorage<int>* _storage;
+  EdgeStorage<int>* _storage;
 
   //! ClipBox already scaled to fixed-point in `double` precision.
   BLBox _clipBoxD;
@@ -757,18 +651,19 @@ public:
   //! Curve flattening tolerance
   double _flattenToleranceSq;
 
-  // Shorthands and Working Variables
-  // --------------------------------
+  //! \}
+
+  //! \name Shorthands and Working Variables
+  //! \{
 
   //! Bands (shortcut to `_storage->bandEdges()`).
-  BLEdgeList<CoordT>* _bandEdges;
+  EdgeList<CoordT>* _bandEdges;
   //! Shift to get bandId from fixed coordinate (shortcut to `_storage->fixedBandHeightShift()`).
   uint32_t _fixedBandHeightShift;
-  uint32_t _signFlip;
   //! Current point in edge-vector.
-  BLEdgePoint<CoordT>* _ptr;
+  EdgePoint<CoordT>* _ptr;
   //! Last point the builder can go.
-  BLEdgePoint<CoordT>* _end;
+  EdgePoint<CoordT>* _end;
 
   //! Current bounding box, must be flushed.
   BLBoxI _bBoxI;
@@ -777,23 +672,25 @@ public:
   double _borderAccX1Y0;
   double _borderAccX1Y1;
 
-  // --------------------------------------------------------------------------
-  // [State]
-  // --------------------------------------------------------------------------
+  //! \}
+
+  //! \name State
+  //! \{
 
   //! Working state that is only used during path/poly processing.
   struct State {
     BLPoint a;
     uint32_t aFlags;
-    BLFlattenMonoData flattenData;
+    FlattenMonoData flattenData;
   };
 
-  // --------------------------------------------------------------------------
-  // [Appender]
-  // --------------------------------------------------------------------------
+  //! \}
+
+  //! \name Appender
+  //! \{
 
   struct Appender {
-    BL_INLINE Appender(BLEdgeBuilder& builder, uint32_t signBit = 0) noexcept
+    BL_INLINE Appender(EdgeBuilder& builder, uint32_t signBit = 0) noexcept
       : _builder(builder),
         _signBit(signBit) {}
 
@@ -834,18 +731,19 @@ public:
       return BL_SUCCESS;
     }
 
-    BLEdgeBuilder<CoordT>& _builder;
+    EdgeBuilder<CoordT>& _builder;
     uint32_t _signBit;
   };
 
-  // --------------------------------------------------------------------------
-  // [Interface]
-  // --------------------------------------------------------------------------
+  //! \}
 
-  BL_INLINE BLEdgeBuilder(BLZoneAllocator* zone, BLEdgeStorage<int>* storage) noexcept
-    : BLEdgeBuilder(zone, storage, BLBox {}, 0.0) {}
+  //! \name Construction & Destruction
+  //! \{
 
-  BL_INLINE BLEdgeBuilder(BLZoneAllocator* zone, BLEdgeStorage<int>* storage, const BLBox& clipBox, double toleranceSq) noexcept
+  BL_INLINE EdgeBuilder(BLArenaAllocator* zone, EdgeStorage<int>* storage) noexcept
+    : EdgeBuilder(zone, storage, BLBox {}, 0.0) {}
+
+  BL_INLINE EdgeBuilder(BLArenaAllocator* zone, EdgeStorage<int>* storage, const BLBox& clipBox, double toleranceSq) noexcept
     : _zone(zone),
       _storage(storage),
       _clipBoxD(clipBox),
@@ -856,14 +754,18 @@ public:
       _flattenToleranceSq(toleranceSq),
       _bandEdges(nullptr),
       _fixedBandHeightShift(0),
-      _signFlip(0),
       _ptr(nullptr),
       _end(nullptr),
-      _bBoxI(blMaxValue<int>(), blMaxValue<int>(), blMinValue<int>(), blMinValue<int>()),
+      _bBoxI(BLTraits::maxValue<int>(), BLTraits::maxValue<int>(), BLTraits::minValue<int>(), BLTraits::minValue<int>()),
       _borderAccX0Y0(clipBox.y0),
       _borderAccX0Y1(clipBox.y0),
       _borderAccX1Y0(clipBox.y0),
       _borderAccX1Y1(clipBox.y0) {}
+
+  //! \}
+
+  //! \name Accessors
+  //! \{
 
   BL_INLINE void setClipBox(const BLBox& clipBox) noexcept {
     _clipBoxD.reset(clipBox);
@@ -877,13 +779,21 @@ public:
     _flattenToleranceSq = toleranceSq;
   }
 
+  BL_INLINE void mergeBoundingBox() noexcept {
+    BLGeometry::bound(_storage->_boundingBox, _bBoxI);
+  }
+
+  //! \}
+
+  //! \name Begin & End
+  //! \{
+
   BL_INLINE void begin() noexcept {
     _bandEdges = _storage->bandEdges();
     _fixedBandHeightShift = _storage->fixedBandHeightShift();
-    _signFlip = 0;
     _ptr = nullptr;
     _end = nullptr;
-    _bBoxI.reset(blMaxValue<int>(), blMaxValue<int>(), blMinValue<int>(), blMinValue<int>());
+    _bBoxI.reset(BLTraits::maxValue<int>(), BLTraits::maxValue<int>(), BLTraits::minValue<int>(), BLTraits::minValue<int>());
     _borderAccX0Y0 = _clipBoxD.y0;
     _borderAccX0Y1 = _clipBoxD.y0;
     _borderAccX1Y0 = _clipBoxD.y0;
@@ -897,16 +807,10 @@ public:
     return BL_SUCCESS;
   }
 
-  BL_INLINE void mergeBoundingBox() noexcept {
-    blBound(_storage->_boundingBox, _bBoxI);
-  }
+  //! \}
 
-  BL_INLINE BLResult flipSign() noexcept {
-    BL_PROPAGATE(flushBorderAccumulators());
-    resetBorderAccumulators();
-    _signFlip ^= 1;
-    return BL_SUCCESS;
-  }
+  //! \name Begin + Add + End Shortcuts
+  //! \{
 
   //! A convenience function that calls `begin()`, `addPoly()`, and `done()`.
   template<class PointType>
@@ -923,27 +827,63 @@ public:
     return done();
   }
 
+  //! \}
+
+  //! \name Add Geometry
+  //! \{
+
   template<class PointType>
-  BL_NOINLINE BLResult addPoly(const PointType* pts, size_t size, const BLMatrix2D& m, uint32_t mType) noexcept {
-    if (mType <= BL_MATRIX2D_TYPE_SCALE) {
-      BLEdgeSourcePolyScale<PointType> source(BLEdgeTransformScale(m), pts, size);
-      return addFromSource(source, true);
-    }
-    else {
-      BLEdgeSourcePolyAffine<PointType> source(BLEdgeTransformAffine(m), pts, size);
-      return addFromSource(source, true);
-    }
+  BL_INLINE BLResult addPoly(const PointType* pts, size_t size, const BLMatrix2D& m, uint32_t mType) noexcept {
+    if (mType <= BL_MATRIX2D_TYPE_SCALE)
+      return _addPolyScale(pts, size, m);
+    else
+      return _addPolyAffine(pts, size, m);
   }
 
-  BL_NOINLINE BLResult addPath(const BLPathView& view, bool closed, const BLMatrix2D& m, uint32_t mType) noexcept {
-    if (mType <= BL_MATRIX2D_TYPE_SCALE) {
-      BLEdgeSourcePathScale source(BLEdgeTransformScale(m), view);
-      return addFromSource(source, closed);
-    }
-    else {
-      BLEdgeSourcePathAffine source(BLEdgeTransformAffine(m), view);
-      return addFromSource(source, closed);
-    }
+  template<class PointType>
+  BL_NOINLINE BLResult _addPolyScale(const PointType* pts, size_t size, const BLMatrix2D& m) noexcept {
+    EdgeSourcePolyScale<PointType> source(EdgeTransformScale(m), pts, size);
+    return addFromSource(source, true);
+  }
+
+  template<class PointType>
+  BL_NOINLINE BLResult _addPolyAffine(const PointType* pts, size_t size, const BLMatrix2D& m) noexcept {
+    EdgeSourcePolyAffine<PointType> source(EdgeTransformAffine(m), pts, size);
+    return addFromSource(source, true);
+  }
+
+  BL_INLINE BLResult addPath(const BLPathView& view, bool closed, const BLMatrix2D& m, uint32_t mType) noexcept {
+    if (mType <= BL_MATRIX2D_TYPE_SCALE)
+      return _addPathScale(view, closed, m);
+    else
+      return _addPathAffine(view, closed, m);
+  }
+
+  BL_NOINLINE BLResult _addPathScale(BLPathView view, bool closed, const BLMatrix2D& m) noexcept {
+    EdgeSourcePathScale source(EdgeTransformScale(m), view);
+    return addFromSource(source, closed);
+  }
+
+  BL_NOINLINE BLResult _addPathAffine(BLPathView view, bool closed, const BLMatrix2D& m) noexcept {
+    EdgeSourcePathAffine source(EdgeTransformAffine(m), view);
+    return addFromSource(source, closed);
+  }
+
+  BL_INLINE BLResult addReversePathFromStrokeSink(const BLPathView& view, const BLMatrix2D& m, uint32_t mType) noexcept {
+    if (mType <= BL_MATRIX2D_TYPE_SCALE)
+      return _addReversePathFromStrokeSinkScale(view, m);
+    else
+      return _addReversePathFromStrokeSinkAffine(view, m);
+  }
+
+  BL_NOINLINE BLResult _addReversePathFromStrokeSinkScale(BLPathView view, const BLMatrix2D& m) noexcept {
+    EdgeSourceReversePathFromStrokeSinkScale source(EdgeTransformScale(m), view);
+    return addFromSource(source, source.mustClose());
+  }
+
+  BL_NOINLINE BLResult _addReversePathFromStrokeSinkAffine(BLPathView view, const BLMatrix2D& m) noexcept {
+    EdgeSourceReversePathFromStrokeSinkAffine source(EdgeTransformAffine(m), view);
+    return addFromSource(source, source.mustClose());
   }
 
   template<class Source>
@@ -983,9 +923,48 @@ LineTo:
     return BL_SUCCESS;
   }
 
-  // --------------------------------------------------------------------------
-  // [LineTo]
-  // --------------------------------------------------------------------------
+  BL_INLINE BLResult addLineSegment(double x0, double y0, double x1, double y1) noexcept {
+    int fx0 = blTruncToInt(x0);
+    int fy0 = blTruncToInt(y0);
+    int fx1 = blTruncToInt(x1);
+    int fy1 = blTruncToInt(y1);
+
+    if (fy0 == fy1)
+      return BL_SUCCESS;
+
+    if (fy0 < fy1) {
+      _bBoxI.y0 = blMin(_bBoxI.y0, fy0);
+      _bBoxI.y1 = blMax(_bBoxI.y1, fy1);
+      return addClosedLine(fx0, fy0, fx1, fy1, 0);
+    }
+    else {
+      _bBoxI.y0 = blMin(_bBoxI.y0, fy1);
+      _bBoxI.y1 = blMax(_bBoxI.y1, fy0);
+      return addClosedLine(fx1, fy1, fx0, fy0, 1);
+    }
+  }
+
+  BL_INLINE BLResult addClosedLine(CoordT x0, CoordT y0, CoordT x1, CoordT y1, uint32_t signBit) noexcept {
+    // Must be correct, the rasterizer won't check this.
+    BL_ASSERT(y0 < y1);
+
+    EdgeVector<CoordT>* edge = static_cast<EdgeVector<CoordT>*>(_zone->alloc(kMinEdgeSize));
+    if (BL_UNLIKELY(!edge))
+      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+
+    edge->pts[0].reset(x0, y0);
+    edge->pts[1].reset(x1, y1);
+    edge->signBit = signBit;
+    edge->count = 2;
+
+    _linkEdge(edge, y0);
+    return BL_SUCCESS;
+  }
+
+  //! \}
+
+  //! \name Low-Level API - Line To
+  //! \{
 
   // Terminology:
   //
@@ -1004,15 +983,14 @@ LineTo:
     BLPoint p, d;
     uint32_t bFlags;
 
-    // BLEdgePoint coordinates.
+    // EdgePoint coordinates.
     int fx0, fy0;
     int fx1, fy1;
 
     do {
       if (!aFlags) {
-        // --------------------------------------------------------------------
-        // [Line - Unclipped]
-        // --------------------------------------------------------------------
+        // Line - Unclipped
+        // ----------------
 
         bFlags = blClipCalcXYFlags(b, _clipBoxD);
         if (!bFlags) {
@@ -1177,15 +1155,14 @@ BeforeClipEndPoint:
         d = b - a;
       }
       else {
-        // --------------------------------------------------------------------
-        // [Line - Partically or Completely Clipped]
-        // --------------------------------------------------------------------
+        // Line - Partically or Completely Clipped
+        // ---------------------------------------
 
         double borY0;
         double borY1;
 
 RestartClipLoop:
-        if (aFlags & BL_CLIP_FLAG_Y0) {
+        if (aFlags & kClipFlagY0) {
           // Quickly skip all lines that are out of ClipBox or at its border.
           for (;;) {
             if (_clipBoxD.y0 < b.y) break;               // xxxxxxxxxxxxxxxxxxx
@@ -1206,7 +1183,7 @@ RestartClipLoop:
 
           if (commonFlags) {
             borY1 = blMin(_clipBoxD.y1, b.y);
-            if (commonFlags & BL_CLIP_FLAG_X0)
+            if (commonFlags & kClipFlagX0)
               BL_PROPAGATE(accumulateLeftBorder(borY0, borY1));
             else
               BL_PROPAGATE(accumulateRightBorder(borY0, borY1));
@@ -1216,7 +1193,7 @@ RestartClipLoop:
             continue;
           }
         }
-        else if (aFlags & BL_CLIP_FLAG_Y1) {
+        else if (aFlags & kClipFlagY1) {
           // Quickly skip all lines that are out of ClipBox or at its border.
           for (;;) {
             if (_clipBoxD.y1 > b.y) break;               // ...................
@@ -1237,7 +1214,7 @@ RestartClipLoop:
 
           if (commonFlags) {
             borY1 = blMax(_clipBoxD.y0, b.y);
-            if (commonFlags & BL_CLIP_FLAG_X0)
+            if (commonFlags & kClipFlagX0)
               BL_PROPAGATE(accumulateLeftBorder(borY0, borY1));
             else
               BL_PROPAGATE(accumulateRightBorder(borY0, borY1));
@@ -1247,7 +1224,7 @@ RestartClipLoop:
             continue;
           }
         }
-        else if (aFlags & BL_CLIP_FLAG_X0) {
+        else if (aFlags & kClipFlagX0) {
           borY0 = blClamp(a.y, _clipBoxD.y0, _clipBoxD.y1);
 
           // Quickly skip all lines that are out of ClipBox or at its border.
@@ -1308,9 +1285,8 @@ RestartClipLoop:
           borY0 = borY1;
         }
 
-        // --------------------------------------------------------------------
-        // [Line - Clip Start Point]
-        // --------------------------------------------------------------------
+        // Line - Clip Start Point
+        // -----------------------
 
         // The start point of the line requires clipping.
         d = b - a;
@@ -1318,15 +1294,15 @@ RestartClipLoop:
         p.y = _clipBoxD.y1;
 
         switch (aFlags) {
-          case BL_CLIP_FLAG_NONE:
+          case kClipFlagNone:
             p = a;
             break;
 
-          case BL_CLIP_FLAG_X0Y0:
+          case kClipFlagX0Y0:
             p.x = _clipBoxD.x0;
             BL_FALLTHROUGH
 
-          case BL_CLIP_FLAG_X1Y0:
+          case kClipFlagX1Y0:
             p.y = a.y + (p.x - a.x) * d.y / d.x;
             aFlags = blClipCalcYFlags(p, _clipBoxD);
 
@@ -1334,18 +1310,18 @@ RestartClipLoop:
               break;
             BL_FALLTHROUGH
 
-          case BL_CLIP_FLAG_Y0:
+          case kClipFlagY0:
             p.y = _clipBoxD.y0;
             p.x = a.x + (p.y - a.y) * d.x / d.y;
 
             aFlags = blClipCalcXFlags(p, _clipBoxD);
             break;
 
-          case BL_CLIP_FLAG_X0Y1:
+          case kClipFlagX0Y1:
             p.x = _clipBoxD.x0;
             BL_FALLTHROUGH
 
-          case BL_CLIP_FLAG_X1Y1:
+          case kClipFlagX1Y1:
             p.y = a.y + (p.x - a.x) * d.y / d.x;
             aFlags = blClipCalcYFlags(p, _clipBoxD);
 
@@ -1353,18 +1329,18 @@ RestartClipLoop:
               break;
             BL_FALLTHROUGH
 
-          case BL_CLIP_FLAG_Y1:
+          case kClipFlagY1:
             p.y = _clipBoxD.y1;
             p.x = a.x + (p.y - a.y) * d.x / d.y;
 
             aFlags = blClipCalcXFlags(p, _clipBoxD);
             break;
 
-          case BL_CLIP_FLAG_X0:
+          case kClipFlagX0:
             p.x = _clipBoxD.x0;
             BL_FALLTHROUGH
 
-          case BL_CLIP_FLAG_X1:
+          case kClipFlagX1:
             p.y = a.y + (p.x - a.x) * d.y / d.x;
 
             aFlags = blClipCalcYFlags(p, _clipBoxD);
@@ -1415,49 +1391,48 @@ RestartClipLoop:
       }
 
       {
-        // --------------------------------------------------------------------
-        // [Line - Clip End Point]
-        // --------------------------------------------------------------------
+        // Line - Clip End Point
+        // ---------------------
 
         BLPoint q(_clipBoxD.x1, _clipBoxD.y1);
 
         BL_ASSERT(bFlags != 0);
         switch (bFlags) {
-          case BL_CLIP_FLAG_X0Y0:
+          case kClipFlagX0Y0:
             q.x = _clipBoxD.x0;
             BL_FALLTHROUGH
 
-          case BL_CLIP_FLAG_X1Y0:
+          case kClipFlagX1Y0:
             q.y = a.y + (q.x - a.x) * d.y / d.x;
             if (q.y >= _clipBoxD.y0)
               break;
             BL_FALLTHROUGH
 
-          case BL_CLIP_FLAG_Y0:
+          case kClipFlagY0:
             q.y = _clipBoxD.y0;
             q.x = a.x + (q.y - a.y) * d.x / d.y;
             break;
 
-          case BL_CLIP_FLAG_X0Y1:
+          case kClipFlagX0Y1:
             q.x = _clipBoxD.x0;
             BL_FALLTHROUGH
 
-          case BL_CLIP_FLAG_X1Y1:
+          case kClipFlagX1Y1:
             q.y = a.y + (q.x - a.x) * d.y / d.x;
             if (q.y <= _clipBoxD.y1)
               break;
             BL_FALLTHROUGH
 
-          case BL_CLIP_FLAG_Y1:
+          case kClipFlagY1:
             q.y = _clipBoxD.y1;
             q.x = a.x + (q.y - a.y) * d.x / d.y;
             break;
 
-          case BL_CLIP_FLAG_X0:
+          case kClipFlagX0:
             q.x = _clipBoxD.x0;
             BL_FALLTHROUGH
 
-          case BL_CLIP_FLAG_X1:
+          case kClipFlagX1:
             q.y = a.y + (q.x - a.x) * d.y / d.x;
             break;
 
@@ -1484,9 +1459,10 @@ RestartClipLoop:
     return BL_SUCCESS;
   }
 
-  // --------------------------------------------------------------------------
-  // [QuadTo / QuadSpline]
-  // --------------------------------------------------------------------------
+  //! \}
+
+  //! \name Low-Level API - Quad To
+  //! \{
 
   // Terminology:
   //
@@ -1495,7 +1471,7 @@ RestartClipLoop:
   //   'p2' - Quad end point.
 
   template<class Source>
-  BL_INLINE BLResult quadTo(Source& source, State& state) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult quadTo(Source& source, State& state) noexcept {
     // 2 extremas and 1 terminating `1.0` value.
     constexpr uint32_t kMaxTCount = 2 + 1;
 
@@ -1516,7 +1492,7 @@ RestartClipLoop:
       if (commonFlags) {
         uint32_t end = 0;
 
-        if (commonFlags & BL_CLIP_FLAG_Y0) {
+        if (commonFlags & kClipFlagY0) {
           // CLIPPED OUT: Above top (fast).
           for (;;) {
             p0 = p2;
@@ -1528,7 +1504,7 @@ RestartClipLoop:
               break;
           }
         }
-        else if (commonFlags & BL_CLIP_FLAG_Y1) {
+        else if (commonFlags & kClipFlagY1) {
           // CLIPPED OUT: Below bottom (fast).
           for (;;) {
             p0 = p2;
@@ -1544,7 +1520,7 @@ RestartClipLoop:
           // CLIPPED OUT: Before left or after right (border-line required).
           double y0 = blClamp(p0.y, _clipBoxD.y0, _clipBoxD.y1);
 
-          if (commonFlags & BL_CLIP_FLAG_X0) {
+          if (commonFlags & kClipFlagX0) {
             for (;;) {
               p0 = p2;
               end = !source.isQuadTo();
@@ -1588,7 +1564,7 @@ RestartClipLoop:
 
       {
         BLPoint extremaTs = (p0 - p1) / (p0 - p1 * 2.0 + p2);
-        blGetQuadCoefficients(spline, Pa, Pb, Pc);
+        BLGeometry::getQuadCoefficients(spline, Pa, Pb, Pc);
 
         double extremaT0 = blMin(extremaTs.x, extremaTs.y);
         double extremaT1 = blMax(extremaTs.x, extremaTs.y);
@@ -1638,7 +1614,7 @@ RestartClipLoop:
       }
 
       Appender appender(*this);
-      BLFlattenMonoQuad monoCurve(state.flattenData, _flattenToleranceSq);
+      FlattenMonoQuad monoCurve(state.flattenData, _flattenToleranceSq);
 
       uint32_t anyFlags = p0Flags | p1Flags | p2Flags;
       if (anyFlags) {
@@ -1646,7 +1622,7 @@ RestartClipLoop:
         do {
           uint32_t signBit = splinePtr[0].y > splinePtr[2].y;
           BL_PROPAGATE(
-            flattenUnsafeMonoCurve<BLFlattenMonoQuad>(monoCurve, appender, splinePtr, signBit)
+            flattenUnsafeMonoCurve<FlattenMonoQuad>(monoCurve, appender, splinePtr, signBit)
           );
         } while ((splinePtr += 2) != splineEnd);
 
@@ -1658,7 +1634,7 @@ RestartClipLoop:
         do {
           uint32_t signBit = splinePtr[0].y > splinePtr[2].y;
           BL_PROPAGATE(
-            flattenSafeMonoCurve<BLFlattenMonoQuad>(monoCurve, appender, splinePtr, signBit)
+            flattenSafeMonoCurve<FlattenMonoQuad>(monoCurve, appender, splinePtr, signBit)
           );
         } while ((splinePtr += 2) != splineEnd);
 
@@ -1670,9 +1646,10 @@ RestartClipLoop:
     }
   }
 
-  // --------------------------------------------------------------------------
-  // [CubicTo / CubicSpline]
-  // --------------------------------------------------------------------------
+  //! \}
+
+  //! \name Low-Level API - Cubic To
+  //! \{
 
   // Terminology:
   //
@@ -1682,7 +1659,7 @@ RestartClipLoop:
   //   'p3' - Cubic end point.
 
   template<class Source>
-  BL_INLINE BLResult cubicTo(Source& source, State& state) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult cubicTo(Source& source, State& state) noexcept {
     // 4 extremas, 2 inflections, 1 cusp, and 1 terminating `1.0` value.
     constexpr uint32_t kMaxTCount = 4 + 2 + 1 + 1;
 
@@ -1705,7 +1682,7 @@ RestartClipLoop:
       if (commonFlags) {
         uint32_t end = 0;
 
-        if (commonFlags & BL_CLIP_FLAG_Y0) {
+        if (commonFlags & kClipFlagY0) {
           // CLIPPED OUT: Above top (fast).
           for (;;) {
             p0 = p3;
@@ -1717,7 +1694,7 @@ RestartClipLoop:
               break;
           }
         }
-        else if (commonFlags & BL_CLIP_FLAG_Y1) {
+        else if (commonFlags & kClipFlagY1) {
           // CLIPPED OUT: Below bottom (fast).
           for (;;) {
             p0 = p3;
@@ -1733,7 +1710,7 @@ RestartClipLoop:
           // CLIPPED OUT: Before left or after right (border-line required).
           double y0 = blClamp(p0.y, _clipBoxD.y0, _clipBoxD.y1);
 
-          if (commonFlags & BL_CLIP_FLAG_X0) {
+          if (commonFlags & kClipFlagX0) {
             for (;;) {
               p0 = p3;
               end = !source.isCubicTo();
@@ -1776,11 +1753,11 @@ RestartClipLoop:
       size_t tCount = 0;
 
       {
-        blGetCubicCoefficients(spline, Pa, Pb, Pc, Pd);
+        BLGeometry::getCubicCoefficients(spline, Pa, Pb, Pc, Pd);
 
-        double q0 = blCrossProduct(Pb, Pa);
-        double q1 = blCrossProduct(Pc, Pa);
-        double q2 = blCrossProduct(Pc, Pb);
+        double q0 = BLGeometry::cross(Pb, Pa);
+        double q1 = BLGeometry::cross(Pc, Pa);
+        double q2 = BLGeometry::cross(Pc, Pb);
 
         // Find cusp.
         double tCusp = (q1 / q0) * -0.5;
@@ -1792,7 +1769,7 @@ RestartClipLoop:
 
         // Find extremas.
         BLPoint Da, Db, Dc;
-        blGetCubicDerivativeCoefficients(spline, Da, Db, Dc);
+        BLGeometry::getCubicDerivativeCoefficients(spline, Da, Db, Dc);
 
         tCount += blQuadRoots(tArray + tCount, Da.x, Db.x, Dc.x, BL_M_AFTER_0, BL_M_BEFORE_1);
         tCount += blQuadRoots(tArray + tCount, Da.y, Db.y, Dc.y, BL_M_AFTER_0, BL_M_BEFORE_1);
@@ -1805,7 +1782,7 @@ RestartClipLoop:
       if (tCount) {
         BLPoint last = p3;
 
-        blInsertionSort(tArray, tCount);
+        BLAlgorithm::insertionSort(tArray, tCount);
         tArray[tCount++] = 1.0;
         BL_ASSERT(tCount <= kMaxTCount);
 
@@ -1846,7 +1823,7 @@ RestartClipLoop:
       }
 
       Appender appender(*this);
-      BLFlattenMonoCubic monoCurve(state.flattenData, _flattenToleranceSq);
+      FlattenMonoCubic monoCurve(state.flattenData, _flattenToleranceSq);
 
       uint32_t anyFlags = p0Flags | p1Flags | p2Flags | p3Flags;
       if (anyFlags) {
@@ -1854,7 +1831,7 @@ RestartClipLoop:
         do {
           uint32_t signBit = splinePtr[0].y > splinePtr[3].y;
           BL_PROPAGATE(
-            flattenUnsafeMonoCurve<BLFlattenMonoCubic>(monoCurve, appender, splinePtr, signBit)
+            flattenUnsafeMonoCurve<FlattenMonoCubic>(monoCurve, appender, splinePtr, signBit)
           );
         } while ((splinePtr += 3) != splineEnd);
 
@@ -1866,7 +1843,7 @@ RestartClipLoop:
         do {
           uint32_t signBit = splinePtr[0].y > splinePtr[3].y;
           BL_PROPAGATE(
-            flattenSafeMonoCurve<BLFlattenMonoCubic>(monoCurve, appender, splinePtr, signBit)
+            flattenSafeMonoCurve<FlattenMonoCubic>(monoCurve, appender, splinePtr, signBit)
           );
         } while ((splinePtr += 3) != splineEnd);
 
@@ -1878,9 +1855,10 @@ RestartClipLoop:
     }
   }
 
-  // --------------------------------------------------------------------------
-  // [Curve Utilities]
-  // --------------------------------------------------------------------------
+  //! \}
+
+  //! \name Curve Helpers
+  //! \{
 
   template<typename MonoCurveT>
   BL_INLINE BLResult flattenSafeMonoCurve(MonoCurveT& monoCurve, Appender& appender, const BLPoint* src, uint32_t signBit) noexcept {
@@ -1902,9 +1880,8 @@ RestartClipLoop:
           continue;
         }
         else {
-          // The curve is either invalid or the tolerance is too strict.
-          // We shouldn't get INF nor NaNs here as we know we are within
-          // the clipBox.
+          // The curve is either invalid or the tolerance is too strict. We shouldn't get INF nor NaNs here as
+          //  we know we are within the clipBox.
           BL_ASSERT(step.isFinite());
         }
       }
@@ -1921,10 +1898,9 @@ RestartClipLoop:
 
   // Clips and flattens a monotonic curve - works for both quadratics and cubics.
   //
-  // The idea behind this function is to quickly subdivide to find the intersection
-  // with ClipBox. When the intersection is found the intersecting line is clipped
-  // and the subdivision continues until the end of the curve or until another
-  // intersection is found, which would be the end of the curve. The algorithm
+  // The idea behind this function is to quickly subdivide to find the intersection with ClipBox. When the
+  // intersection is found the intersecting line is clipped and the subdivision continues until the end of
+  // the curve or until another intersection is found, which would be the end of the curve. The algorithm
   // handles all cases and accumulates border lines when necessary.
   template<typename MonoCurveT>
   BL_INLINE BLResult flattenUnsafeMonoCurve(MonoCurveT& monoCurve, Appender& appender, const BLPoint* src, uint32_t signBit) noexcept {
@@ -2025,7 +2001,7 @@ RestartClipLoop:
 
           monoCurve.pop();
         }
-        completelyOut <<= BL_CLIP_SHIFT_X1;
+        completelyOut <<= kClipShiftX1;
       }
       else if (yStart < _clipBoxD.y1) {
         if (monoCurve.first().x < _clipBoxD.x0) {
@@ -2076,7 +2052,7 @@ LeftToRight_BeforeX0_Pop:
 
             monoCurve.pop();
           }
-          completelyOut <<= BL_CLIP_SHIFT_X0;
+          completelyOut <<= kClipShiftX0;
         }
         else if (monoCurve.first().x < _clipBoxD.x1) {
           // VISIBLE CASE
@@ -2119,10 +2095,10 @@ LeftToRight_AddLine:
             monoCurve.pop();
           }
           appender.close();
-          completelyOut <<= BL_CLIP_SHIFT_X1;
+          completelyOut <<= kClipShiftX1;
         }
         else {
-          completelyOut = BL_CLIP_FLAG_X1;
+          completelyOut = kClipFlagX1;
         }
       }
       else {
@@ -2187,7 +2163,7 @@ LeftToRight_AddLine:
 
           monoCurve.pop();
         }
-        completelyOut <<= BL_CLIP_SHIFT_X0;
+        completelyOut <<= kClipShiftX0;
       }
       else if (yStart < _clipBoxD.y1) {
         if (monoCurve.first().x > _clipBoxD.x1) {
@@ -2238,7 +2214,7 @@ RightToLeft_AfterX1_Pop:
 
             monoCurve.pop();
           }
-          completelyOut <<= BL_CLIP_SHIFT_X1;
+          completelyOut <<= kClipShiftX1;
         }
         else if (monoCurve.first().x > _clipBoxD.x0) {
           // VISIBLE CASE
@@ -2281,10 +2257,10 @@ RightToLeft_AddLine:
             monoCurve.pop();
           }
           appender.close();
-          completelyOut <<= BL_CLIP_SHIFT_X0;
+          completelyOut <<= kClipShiftX0;
         }
         else {
-          completelyOut = BL_CLIP_FLAG_X0;
+          completelyOut = kClipFlagX0;
         }
       }
       else {
@@ -2293,7 +2269,7 @@ RightToLeft_AddLine:
     }
 
     if (completelyOut && yStart < yEnd) {
-      if (completelyOut & BL_CLIP_FLAG_X0)
+      if (completelyOut & kClipFlagX0)
         BL_PROPAGATE(accumulateLeftBorder(yStart, yEnd, signBit));
       else
         BL_PROPAGATE(accumulateRightBorder(yStart, yEnd, signBit));
@@ -2302,16 +2278,17 @@ RightToLeft_AddLine:
     return BL_SUCCESS;
   }
 
-  // --------------------------------------------------------------------------
-  // [Raw Edge Building]
-  // --------------------------------------------------------------------------
+  //! \}
+
+  //! \name Raw Edge Building
+  //! \{
 
   BL_INLINE bool hasSpaceInEdgeVector() const noexcept { return _ptr != _end; }
 
   BL_INLINE BLResult ascendingOpen() noexcept {
     BL_PROPAGATE(_zone->ensure(kMinEdgeSize));
-    _ptr = _zone->end<BLEdgePoint<CoordT>>();
-    _end = _zone->ptr<BLEdgeVector<CoordT>>()->pts;
+    _ptr = _zone->end<EdgePoint<CoordT>>();
+    _end = _zone->ptr<EdgeVector<CoordT>>()->pts;
     return BL_SUCCESS;
   }
 
@@ -2323,7 +2300,7 @@ RightToLeft_AddLine:
 
   BL_INLINE BLResult ascendingAddChecked(CoordT x, CoordT y, uint32_t signBit = 1) noexcept {
     if (BL_UNLIKELY(!hasSpaceInEdgeVector())) {
-      const BLEdgePoint<CoordT>* last = ascendingLast();
+      const EdgePoint<CoordT>* last = ascendingLast();
       ascendingClose(signBit);
       BL_PROPAGATE(ascendingOpen());
       _ptr--;
@@ -2336,20 +2313,20 @@ RightToLeft_AddLine:
   }
 
   BL_INLINE void ascendingClose(uint32_t signBit = 1) noexcept {
-    BLEdgeVector<CoordT>* edge = reinterpret_cast<BLEdgeVector<CoordT>*>(reinterpret_cast<uint8_t*>(_ptr) - kEdgeOffset);
-    edge->signBit = signBit ^ _signFlip;
-    edge->count = (size_t)(_zone->end<BLEdgePoint<CoordT>>() - _ptr);
+    EdgeVector<CoordT>* edge = reinterpret_cast<EdgeVector<CoordT>*>(reinterpret_cast<uint8_t*>(_ptr) - kEdgeOffset);
+    edge->signBit = signBit;
+    edge->count = (size_t)(_zone->end<EdgePoint<CoordT>>() - _ptr);
 
     _zone->setEnd(edge);
     _linkEdge(edge, _ptr[0].y);
   }
 
-  BL_INLINE BLEdgePoint<CoordT>* ascendingLast() const noexcept { return _ptr; }
+  BL_INLINE EdgePoint<CoordT>* ascendingLast() const noexcept { return _ptr; }
 
   BL_INLINE BLResult descendingOpen() noexcept {
     BL_PROPAGATE(_zone->ensure(kMinEdgeSize));
-    _ptr = _zone->ptr<BLEdgeVector<CoordT>>()->pts;
-    _end = _zone->end<BLEdgePoint<CoordT>>();
+    _ptr = _zone->ptr<EdgeVector<CoordT>>()->pts;
+    _end = _zone->end<EdgePoint<CoordT>>();
     return BL_SUCCESS;
   }
 
@@ -2360,10 +2337,10 @@ RightToLeft_AddLine:
   }
 
   BL_INLINE BLResult descendingAddChecked(CoordT x, CoordT y, uint32_t signBit = 0) noexcept {
-    BL_ASSERT(_zone->ptr<BLEdgeVector<CoordT>>()->pts == _ptr || _ptr[-1].y <= y);
+    BL_ASSERT(_zone->ptr<EdgeVector<CoordT>>()->pts == _ptr || _ptr[-1].y <= y);
 
     if (BL_UNLIKELY(!hasSpaceInEdgeVector())) {
-      const BLEdgePoint<CoordT>* last = descendingLast();
+      const EdgePoint<CoordT>* last = descendingLast();
       descendingClose(signBit);
       BL_PROPAGATE(descendingOpen());
       _ptr->reset(last->x, last->y);
@@ -2376,8 +2353,8 @@ RightToLeft_AddLine:
   }
 
   BL_INLINE void descendingClose(uint32_t signBit = 0) noexcept {
-    BLEdgeVector<CoordT>* edge = _zone->ptr<BLEdgeVector<CoordT>>();
-    edge->signBit = signBit ^ _signFlip;
+    EdgeVector<CoordT>* edge = _zone->ptr<EdgeVector<CoordT>>();
+    edge->signBit = signBit;
     edge->count = (size_t)(_ptr - edge->pts);
 
     _zone->setPtr(_ptr);
@@ -2388,18 +2365,19 @@ RightToLeft_AddLine:
     // Nothing needed here...
   }
 
-  BL_INLINE BLEdgePoint<CoordT>* descendingFirst() const noexcept { return _zone->ptr<BLEdgeVector<CoordT>>()->pts; };
-  BL_INLINE BLEdgePoint<CoordT>* descendingLast() const noexcept { return _ptr - 1; }
+  BL_INLINE EdgePoint<CoordT>* descendingFirst() const noexcept { return _zone->ptr<EdgeVector<CoordT>>()->pts; };
+  BL_INLINE EdgePoint<CoordT>* descendingLast() const noexcept { return _ptr - 1; }
 
-  BL_INLINE void _linkEdge(BLEdgeVector<CoordT>* edge, int y0) noexcept {
+  BL_INLINE void _linkEdge(EdgeVector<CoordT>* edge, int y0) noexcept {
     size_t bandId = size_t(unsigned(y0) >> _fixedBandHeightShift);
     BL_ASSERT(bandId < _storage->bandCount());
     _bandEdges[bandId].append(edge);
   }
 
-  // --------------------------------------------------------------------------
-  // [Border Accumulation]
-  // --------------------------------------------------------------------------
+  //! \}
+
+  //! \name Border Accumulation
+  //! \{
 
   BL_INLINE void resetBorderAccumulators() noexcept {
     _borderAccX0Y0 = _borderAccX0Y1;
@@ -2479,52 +2457,16 @@ RightToLeft_AddLine:
     return addClosedLine(_clipBoxI.x1, minY, _clipBoxI.x1, maxY, uint32_t(accY0 > accY1));
   }
 
+  //! \}
+
   // TODO: This should go somewhere else, also the name doesn't make much sense...
   static BL_INLINE double dx_div_dy(const BLPoint& d) noexcept { return d.x / d.y; }
   static BL_INLINE double dy_div_dx(const BLPoint& d) noexcept { return d.y / d.x; }
-
-  // --------------------------------------------------------------------------
-  // [High-Level Utilities]
-  // --------------------------------------------------------------------------
-
-  BL_INLINE BLResult addLineSegment(double x0, double y0, double x1, double y1) noexcept {
-    int fx0 = blTruncToInt(x0);
-    int fy0 = blTruncToInt(y0);
-    int fx1 = blTruncToInt(x1);
-    int fy1 = blTruncToInt(y1);
-
-    if (fy0 == fy1)
-      return BL_SUCCESS;
-
-    if (fy0 < fy1) {
-      _bBoxI.y0 = blMin(_bBoxI.y0, fy0);
-      _bBoxI.y1 = blMax(_bBoxI.y1, fy1);
-      return addClosedLine(fx0, fy0, fx1, fy1, 0);
-    }
-    else {
-      _bBoxI.y0 = blMin(_bBoxI.y0, fy1);
-      _bBoxI.y1 = blMax(_bBoxI.y1, fy0);
-      return addClosedLine(fx1, fy1, fx0, fy0, 1);
-    }
-  }
-
-  BL_INLINE BLResult addClosedLine(CoordT x0, CoordT y0, CoordT x1, CoordT y1, uint32_t signBit) noexcept {
-    // Must be correct, the rasterizer won't check this.
-    BL_ASSERT(y0 < y1);
-
-    BLEdgeVector<CoordT>* edge = static_cast<BLEdgeVector<CoordT>*>(_zone->alloc(kMinEdgeSize));
-    if (BL_UNLIKELY(!edge))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
-    edge->pts[0].reset(x0, y0);
-    edge->pts[1].reset(x1, y1);
-    edge->signBit = signBit ^ _signFlip;
-    edge->count = 2;
-
-    _linkEdge(edge, y0);
-    return BL_SUCCESS;
-  }
 };
+
+//! \}
+
+} // {BLRasterEngine}
 
 //! \}
 //! \endcond

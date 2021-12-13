@@ -1,30 +1,14 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
-#include "../bitarray_p.h"
 #include "../runtime_p.h"
-#include "../support_p.h"
+#include "../support/bitops_p.h"
+#include "../support/fixedbitarray_p.h"
+#include "../support/intops_p.h"
+#include "../support/wrap_p.h"
 #include "../threading/atomic_p.h"
 #include "../threading/conditionvariable_p.h"
 #include "../threading/mutex_p.h"
@@ -34,15 +18,13 @@
   #include <process.h>
 #endif
 
-// ============================================================================
-// [Globals]
-// ============================================================================
+// ThreadPool - Globals
+// ====================
 
 static BLThreadPoolVirt blThreadPoolVirt;
 
-// ============================================================================
-// [BLThreadPool - Internal]
-// ============================================================================
+// ThreadPool - Internal
+// =====================
 
 class BLInternalThreadPool : public BLThreadPool {
 public:
@@ -107,25 +89,23 @@ public:
   }
 };
 
-// ============================================================================
-// [BLThreadPool - Create / Destroy]
-// ============================================================================
+// ThreadPool - Create & Destroy
+// =============================
+
+BLThreadPool* blThreadPoolCreate() noexcept {
+  void* p = malloc(sizeof(BLInternalThreadPool));
+  if (!p)
+    return nullptr;
+  return new(BLInternal::PlacementNew{p}) BLInternalThreadPool();
+}
 
 static void blThreadPoolDestroy(BLInternalThreadPool* self) noexcept {
   self->~BLInternalThreadPool();
   free(self);
 }
 
-BLThreadPool* blThreadPoolCreate() noexcept {
-  void* p = malloc(sizeof(BLInternalThreadPool));
-  if (!p)
-    return nullptr;
-  return new(p) BLInternalThreadPool();
-}
-
-// ============================================================================
-// [BLThreadPool - AddRef / Release]
-// ============================================================================
+// ThreadPool - AddRef & Release
+// =============================
 
 static BLThreadPool* BL_CDECL blThreadPoolAddRef(BLThreadPool* self_) noexcept {
   BLInternalThreadPool* self = static_cast<BLInternalThreadPool*>(self_);
@@ -141,9 +121,8 @@ static BLResult BL_CDECL blThreadPoolRelease(BLThreadPool* self_) noexcept {
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLThreadPool - Properties]
-// ============================================================================
+// ThreadPool - Accessors
+// ======================
 
 static uint32_t BL_CDECL blThreadPoolMaxThreadCount(const BLThreadPool* self_) noexcept {
   const BLInternalThreadPool* self = static_cast<const BLInternalThreadPool*>(self_);
@@ -160,15 +139,13 @@ static BLResult BL_CDECL blThreadPoolSetThreadAttributes(BLThreadPool* self_, co
   BLLockGuard<BLMutex> guard(self->mutex);
 
   // Verify that the provided `stackSize` is okay.
-  //   - POSIX   - Minimum stack size is `PTHREAD_STACK_MIN` and some
-  //               implementations may enforce alignment to page-size.
-  //   - WINDOWS - Minimum stack size is `SYSTEM_INFO::dwAllocationGranularity`,
-  //               alignment should follow the granularity as well, however,
-  //               WinAPI would align stack size if it's not properly aligned.
+  //   - POSIX   - Minimum stack size is `PTHREAD_STACK_MIN`, some implementations enforce alignment to a page-size.
+  //   - WINDOWS - Minimum stack size is `SYSTEM_INFO::dwAllocationGranularity`, alignment should follow the
+  //               granularity as well, however, WinAPI would align stack size if it's not properly aligned.
   uint32_t stackSize = attributes->stackSize;
   if (stackSize) {
     const BLRuntimeSystemInfo& si = blRuntimeContext.systemInfo;
-    if (stackSize < si.threadStackSize || !blIsAligned(stackSize, si.allocationGranularity))
+    if (stackSize < si.threadStackSize || !BLIntOps::isAligned(stackSize, si.allocationGranularity))
       return blTraceError(BL_ERROR_INVALID_VALUE);
   }
 
@@ -176,9 +153,8 @@ static BLResult BL_CDECL blThreadPoolSetThreadAttributes(BLThreadPool* self_, co
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLThreadPool - Cleanup]
-// ============================================================================
+// ThreadPool - Cleanup
+// ====================
 
 static void blThreadPoolThreadExitFunc(BLThread* thread, void* data) noexcept {
   BLInternalThreadPool* threadPool = static_cast<BLInternalThreadPool*>(data);
@@ -206,7 +182,7 @@ static uint32_t BL_CDECL blThreadPoolCleanup(BLThreadPool* self_, uint32_t threa
     BLBitWordIterator<BLBitWord> it(mask);
 
     while (it.hasNext()) {
-      uint32_t threadIndex = bwIndex * blBitSizeOf<BLBitWord>() + it.next();
+      uint32_t threadIndex = bwIndex * BLIntOps::bitSizeOf<BLBitWord>() + it.next();
       BLThread* thread = self->threads[threadIndex];
 
       self->threads[threadIndex] = nullptr;
@@ -221,23 +197,22 @@ static uint32_t BL_CDECL blThreadPoolCleanup(BLThreadPool* self_, uint32_t threa
   return n;
 }
 
-// ============================================================================
-// [BLThreadPool - Acquire / Release]
-// ============================================================================
+// ThreadPool - Acquire & Release
+// ==============================
 
 static void blThreadPoolReleaseThreadsInternal(BLInternalThreadPool* self, BLThread** threads, uint32_t n) noexcept {
   uint32_t i = 0;
   uint32_t bwIndex = 0;
 
   do {
-    BLBitWord mask = self->pooledThreadBits.data[bwIndex] ^ blBitOnes<BLBitWord>();
+    BLBitWord mask = self->pooledThreadBits.data[bwIndex] ^ BLIntOps::allOnes<BLBitWord>();
     BLBitWordIterator<BLBitWord> it(mask);
 
     while (it.hasNext()) {
       uint32_t bit = it.next();
-      mask ^= blBitAt<BLBitWord>(bit);
+      mask ^= BLIntOps::lsbBitAt<BLBitWord>(bit);
 
-      uint32_t threadIndex = bwIndex * blBitSizeOf<BLBitWord>() + bit;
+      uint32_t threadIndex = bwIndex * BLIntOps::bitSizeOf<BLBitWord>() + bit;
       BL_ASSERT(self->threads[threadIndex] == nullptr);
 
       BLThread* thread = threads[i];
@@ -247,12 +222,11 @@ static void blThreadPoolReleaseThreadsInternal(BLInternalThreadPool* self, BLThr
         break;
     }
 
-    self->pooledThreadBits.data[bwIndex] = mask ^ blBitOnes<BLBitWord>();
+    self->pooledThreadBits.data[bwIndex] = mask ^ BLIntOps::allOnes<BLBitWord>();
   } while (i < n && ++bwIndex < BLInternalThreadPool::BitArray::kFixedArraySize);
 
-  // This shouldn't happen. What is acquired must be released. If more threads
-  // are released than acquired it means the API was used wrongly. Not sure we
-  // want to recover.
+  // This shouldn't happen. What is acquired must be released. If more threads are released than acquired it means
+  // the API was used wrongly. Not sure we want to recover.
   BL_ASSERT(i == n);
 
   self->pooledThreadCount += n;
@@ -310,9 +284,9 @@ static uint32_t blThreadPoolAcquireThreadsInternal(BLInternalThreadPool* self, B
 
     while (it.hasNext()) {
       uint32_t bit = it.next();
-      mask ^= blBitAt<BLBitWord>(bit);
+      mask ^= BLIntOps::lsbBitAt<BLBitWord>(bit);
 
-      uint32_t threadIndex = bwIndex * blBitSizeOf<BLBitWord>() + bit;
+      uint32_t threadIndex = bwIndex * BLIntOps::bitSizeOf<BLBitWord>() + bit;
       BLThread* thread = self->threads[threadIndex];
 
       BL_ASSERT(thread != nullptr);
@@ -349,30 +323,28 @@ static void BL_CDECL blThreadPoolReleaseThreads(BLThreadPool* self_, BLThread** 
   return blThreadPoolReleaseThreadsInternal(self, threads, n);
 }
 
-// ============================================================================
-// [BLThreadPool - Global]
-// ============================================================================
+// ThreadPool - Global
+// ===================
 
 static BLWrap<BLInternalThreadPool> blGlobalThreadPool;
 BLThreadPool* blThreadPoolGlobal() noexcept { return &blGlobalThreadPool; }
 
-// ============================================================================
-// [BLThreadPool - RuntimeInit]
-// ============================================================================
+// ThreadPool - Runtime Registration
+// =================================
 
 static void BL_CDECL blThreadPoolOnShutdown(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
   blGlobalThreadPool.destroy();
 }
 
-static void BL_CDECL blThreadPoolRtCleanup(BLRuntimeContext* rt, uint32_t cleanupFlags) noexcept {
+static void BL_CDECL blThreadPoolRtCleanup(BLRuntimeContext* rt, BLRuntimeCleanupFlags cleanupFlags) noexcept {
   blUnused(rt);
   if (cleanupFlags & BL_RUNTIME_CLEANUP_THREAD_POOL)
     blGlobalThreadPool->cleanup();
 }
 
-void blThreadPoolOnInit(BLRuntimeContext* rt) noexcept {
-  // BLThreadPool virtual table.
+void blThreadPoolRtInit(BLRuntimeContext* rt) noexcept {
+  // ThreadPool virtual table.
   blThreadPoolVirt.addRef = blThreadPoolAddRef;
   blThreadPoolVirt.release = blThreadPoolRelease;
   blThreadPoolVirt.maxThreadCount = blThreadPoolMaxThreadCount;
@@ -382,7 +354,7 @@ void blThreadPoolOnInit(BLRuntimeContext* rt) noexcept {
   blThreadPoolVirt.acquireThreads = blThreadPoolAcquireThreads;
   blThreadPoolVirt.releaseThreads = blThreadPoolReleaseThreads;
 
-  // BLThreadPool built-in global instance.
+  // ThreadPool built-in global instance.
   BLThreadAttributes attrs {};
   attrs.stackSize = rt->systemInfo.threadStackSize;
 
@@ -393,15 +365,14 @@ void blThreadPoolOnInit(BLRuntimeContext* rt) noexcept {
   rt->cleanupHandlers.add(blThreadPoolRtCleanup);
 }
 
-// ============================================================================
-// [BLThreadPool - Unit Tests]
-// ============================================================================
+// ThreadPool - Tests
+// ==================
 
 #if defined(BL_TEST)
 struct ThreadTestData {
   uint32_t iter;
   volatile uint32_t counter;
-  volatile bool waiting;
+  volatile uint32_t waiting;
   BLMutex mutex;
   BLConditionVariable condition;
 
@@ -414,15 +385,13 @@ struct ThreadTestData {
 static void BL_CDECL test_thread_entry(BLThread* thread, void* data_) noexcept {
   ThreadTestData* data = static_cast<ThreadTestData*>(data_);
   INFO("[#%u] Thread %p running\n", data->iter, thread);
-}
 
-static void BL_CDECL test_thread_done(BLThread* thread, void* data_) noexcept {
-  ThreadTestData* data = static_cast<ThreadTestData*>(data_);
-  INFO("[#%u] Thread %p done\n", data->iter, thread);
-
-  if (blAtomicFetchSub(&data->counter) == 1)
-    if (data->mutex.protect([&]() { return data->waiting; }))
+  if (blAtomicFetchSub(&data->counter) == 1) {
+    if (data->mutex.protect([&]() { return data->waiting; })) {
+      INFO("[#%u] Thread %p signaling to main thread\n", data->iter, thread);
       data->condition.signal();
+    }
+  }
 }
 
 UNIT(thread_pool) {
@@ -438,8 +407,8 @@ UNIT(thread_pool) {
     BLResult reason;
     uint32_t n = tp->acquireThreads(nullptr, 1000000, BL_THREAD_POOL_ACQUIRE_FLAG_ALL_OR_NOTHING, &reason);
 
-    EXPECT(n == 0);
-    EXPECT(reason == BL_ERROR_THREAD_POOL_EXHAUSTED);
+    EXPECT_EQ(n, 0u);
+    EXPECT_EQ(reason, BL_ERROR_THREAD_POOL_EXHAUSTED);
   }
 
   INFO("Repeatedly acquiring / releasing %u threads with a simple task", kThreadCount);
@@ -450,15 +419,15 @@ UNIT(thread_pool) {
     BLResult reason;
     uint32_t n = tp->acquireThreads(threads, kThreadCount, 0, &reason);
 
-    EXPECT(reason == BL_SUCCESS);
-    EXPECT(n == kThreadCount);
-    EXPECT(tp->createdThreadCount == kThreadCount);
+    EXPECT_SUCCESS(reason);
+    EXPECT_EQ(n, kThreadCount);
+    EXPECT_EQ(tp->createdThreadCount, kThreadCount);
 
     blAtomicStore(&data.counter, n);
     INFO("[#%u] Running %u threads", i, n);
     for (BLThread* thread : threads) {
-      BLResult result = thread->run(test_thread_entry, test_thread_done, &data);
-      EXPECT(result == BL_SUCCESS);
+      BLResult result = thread->run(test_thread_entry, &data);
+      EXPECT_SUCCESS(result);
     }
 
     INFO("[#%u] Waiting and releasing", i);

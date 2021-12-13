@@ -1,25 +1,7 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_CODEC_JPEGCODEC_P_H_INCLUDED
 #define BLEND2D_CODEC_JPEGCODEC_P_H_INCLUDED
@@ -28,17 +10,13 @@
 #include "../image_p.h"
 #include "../imagecodec.h"
 #include "../pixelconverter.h"
-#include "../scopedallocator_p.h"
-#include "../support_p.h"
+#include "../runtime_p.h"
 #include "../codec/jpeghuffman_p.h"
+#include "../support/scopedallocator_p.h"
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_internal_codecs
+//! \addtogroup blend2d_codec_impl
 //! \{
-
-// ============================================================================
-// [BLJpegCodec - Constants]
-// ============================================================================
 
 enum BLJpegConstants : uint32_t {
   BL_JPEG_DCT_SIZE              = 8,           //!< Size of JPEG's DCT block (N).
@@ -158,20 +136,12 @@ enum BLJpegDecoderStatusFlags : uint32_t {
   BL_JPEG_DECODER_HAS_THUMB     = 0x80000000u
 };
 
-// ============================================================================
-// [BLJpegCodec - Utilities]
-// ============================================================================
-
 //! Tests whether the marker `m` is a SOF marker.
 static BL_INLINE bool blJpegMarkerIsSOF(uint32_t m) noexcept { return m >= BL_JPEG_MARKER_SOF0 && m <= BL_JPEG_MARKER_SOF2; }
 //! Tests whether the marker `m` is an RST marker.
 static BL_INLINE bool blJpegMarkerIsRST(uint32_t m) noexcept { return m >= BL_JPEG_MARKER_RST && m <= BL_JPEG_MARKER_RST_LAST; }
 //! Tests whether the marker `m` is an APP marker.
 static BL_INLINE bool blJpegMarkerIsAPP(uint32_t m) noexcept { return m >= BL_JPEG_MARKER_APP && m <= BL_JPEG_MARKER_APP_LAST; }
-
-// ============================================================================
-// [BLJpegCodec - Structs]
-// ============================================================================
 
 template<typename T>
 struct alignas(16) BLJpegBlock {
@@ -201,10 +171,6 @@ struct BLJpegMcuInfo {
 
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 };
-
-// ============================================================================
-// [BLJpegDecoder - Structs]
-// ============================================================================
 
 struct BLJpegDecoderComponent {
   //! Raster data.
@@ -283,10 +249,6 @@ struct BLJpegDecoderThumbnail {
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 };
 
-// ============================================================================
-// [BLJpegDecoder - Impl]
-// ============================================================================
-
 struct BLJpegDecoderImpl : public BLImageDecoderImpl {
   //! JPEG memory allocator (can allocate aligned blocks and keep track of them).
   BLScopedAllocator allocator;
@@ -330,23 +292,11 @@ struct BLJpegDecoderImpl : public BLImageDecoderImpl {
   BLJpegBlock<uint16_t> qTable[4];
 };
 
-// ============================================================================
-// [BLJpegEncoder - Impl]
-// ============================================================================
-
 struct BLJpegEncoderImpl : public BLImageEncoderImpl {};
-
-// ============================================================================
-// [BLJpegCodec - Impl]
-// ============================================================================
 
 struct BLJpegCodecImpl : public BLImageCodecImpl {};
 
-// ============================================================================
-// [BLJpegCodec - Runtime]
-// ============================================================================
-
-BL_HIDDEN BLImageCodecImpl* blJpegCodecOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blJpegCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
 
 //! \}
 //! \endcond

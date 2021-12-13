@@ -1,128 +1,148 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_STRING_H_INCLUDED
 #define BLEND2D_STRING_H_INCLUDED
 
-#include "./variant.h"
+#include "object.h"
 
 //! \addtogroup blend2d_api_globals
 //! \{
 
-// ============================================================================
-// [BLString - Core]
-// ============================================================================
+//! \name BLString - C API
+//!
+//! \{
 
-//! Byte string [C Interface - Impl].
-struct BLStringImpl {
-  //! String capacity [in bytes].
+//! \cond INTERNAL
+//! Byte string [Impl].
+struct BLStringImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! String size [in bytes].
+  size_t size;
+  //! String data capacity [in bytes].
   size_t capacity;
 
-  //! Reference count.
-  volatile size_t refCount;
-  //! Impl type.
-  uint8_t implType;
-  //! Impl traits.
-  uint8_t implTraits;
-  //! Memory pool data.
-  uint16_t memPoolData;
-
-  //! Reserved, must be zero.
-  uint32_t reserved;
-
-  union {
-    struct {
-      //! String data [null terminated].
-      char* data;
-      //! String size [in bytes].
-      size_t size;
-    };
-    //! String data and size as `BLStringView`.
-    BLStringView view;
-  };
-};
-
-//! Byte string [C Interface - Core].
-struct BLStringCore {
-  BLStringImpl* impl;
-};
-
-// ============================================================================
-// [BLString - C++]
-// ============================================================================
-
 #ifdef __cplusplus
+  BL_INLINE BLStringImpl() noexcept = default;
+
+  BL_INLINE constexpr BLStringImpl(size_t sizeIn, size_t capacityIn) noexcept
+    : size(sizeIn),
+      capacity(capacityIn) {}
+
+  //! String data [null terminated] follows BLStringImpl data.
+  BL_NODISCARD
+  BL_INLINE char* data() noexcept { return reinterpret_cast<char*>(this) + sizeof(BLStringImpl); }
+#endif
+};
+//! \endcond
+
+//! Byte string [C API].
+struct BLStringCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+};
+
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blStringInit(BLStringCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringInitMove(BLStringCore* self, BLStringCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringInitWeak(BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringInitWithData(BLStringCore* self, const char* str, size_t size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringDestroy(BLStringCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringReset(BLStringCore* self) BL_NOEXCEPT_C;
+BL_API const char* BL_CDECL blStringGetData(const BLStringCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API size_t BL_CDECL blStringGetSize(const BLStringCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API size_t BL_CDECL blStringGetCapacity(const BLStringCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API BLResult BL_CDECL blStringClear(BLStringCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringShrink(BLStringCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringReserve(BLStringCore* self, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringResize(BLStringCore* self, size_t n, char fill) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringMakeMutable(BLStringCore* self, char** dataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringModifyOp(BLStringCore* self, BLModifyOp op, size_t n, char** dataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringInsertOp(BLStringCore* self, size_t index, size_t n, char** dataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringAssignMove(BLStringCore* self, BLStringCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringAssignWeak(BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringAssignDeep(BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringAssignData(BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringApplyOpChar(BLStringCore* self, BLModifyOp op, char c, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringApplyOpData(BLStringCore* self, BLModifyOp op, const char* str, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringApplyOpString(BLStringCore* self, BLModifyOp op, const BLStringCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringApplyOpFormat(BLStringCore* self, BLModifyOp op, const char* fmt, ...) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringApplyOpFormatV(BLStringCore* self, BLModifyOp op, const char* fmt, va_list ap) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringInsertChar(BLStringCore* self, size_t index, char c, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringInsertData(BLStringCore* self, size_t index, const char* str, size_t n) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringInsertString(BLStringCore* self, size_t index, const BLStringCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringRemoveIndex(BLStringCore* self, size_t index) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStringRemoveRange(BLStringCore* self, size_t rStart, size_t rEnd) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blStringEquals(const BLStringCore* a, const BLStringCore* b) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL blStringEqualsData(const BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C BL_PURE;
+BL_API int BL_CDECL blStringCompare(const BLStringCore* a, const BLStringCore* b) BL_NOEXCEPT_C BL_PURE;
+BL_API int BL_CDECL blStringCompareData(const BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C BL_PURE;
+
+BL_END_C_DECLS
+
+//! \}
+
+//! \name BLString - C++ API
+//! \{
+#ifdef __cplusplus
+
 //! Byte string [C++ API].
 //!
-//! Blend2D always uses UTF-8 encoding in public APIs so all strings are assumed
-//! UTF-8 by default. However, `BLString` can hold arbitrary byte sequence and
-//! act as a raw byte-string when this functionality is required.
+//! Blend2D always uses UTF-8 encoding in public APIs so all strings are assumed UTF-8 by default. However, `BLString`
+//! can hold arbitrary byte sequence and act as a raw byte-string when this functionality is required.
 class BLString : public BLStringCore {
 public:
   //! \cond INTERNAL
-  static constexpr const uint32_t kImplType = BL_IMPL_TYPE_STRING;
+  enum : uint32_t {
+    //! Capacity of an SSO string - depends actually on architecture endianness.
+    kSSOCapacity =
+      BL_BYTE_ORDER == 1234
+        ? BLObjectDetail::kStaticDataSize + 2u
+        : BLObjectDetail::kStaticDataSize - 1u,
+
+    //! String signature of an empty SSO string (with size XORed with `kSSOCapacity`).
+    //!
+    //! This mask can be used to get quickly SSO string size.
+    kSSOEmptySignature = (BL_OBJECT_INFO_MARKER_FLAG) |
+                         (BL_OBJECT_TYPE_STRING << BL_OBJECT_INFO_TYPE_SHIFT) |
+                         (kSSOCapacity << BL_OBJECT_INFO_A_SHIFT)
+
+  };
+
+  BL_INLINE BLStringImpl* _impl() const noexcept { return static_cast<BLStringImpl*>(_d.impl); }
   //! \endcond
 
   //! \name Construction & Destruction
   //! \{
 
-  //! Creates a default constructed string.
-  //!
-  //! Default constructed strings share a built-in "none" instance.
-  BL_INLINE BLString() noexcept { this->impl = none().impl; }
+  //! Creates an empty string.
+  BL_INLINE BLString() noexcept {
+    _d.initStatic(BL_OBJECT_TYPE_STRING, BLObjectInfo::packFields(kSSOCapacity));
+  }
 
   //! Move constructor.
   //!
-  //! \note The `other` string is reset by move construction, so its state
-  //! after the move operation is the same as a default constructed string.
-  BL_INLINE BLString(BLString&& other) noexcept { blVariantInitMove(this, &other); }
+  //! \note The `other` string is always reset by a move construction, so it becomes an empty string.
+  BL_INLINE BLString(BLString&& other) noexcept {
+    _d = other._d;
+    other._d.initStatic(BL_OBJECT_TYPE_STRING, BLObjectInfo::packFields(kSSOCapacity));
+  }
 
   //! Copy constructor, performs weak copy of the data held by the `other` string.
-  BL_INLINE BLString(const BLString& other) noexcept { blVariantInitWeak(this, &other); }
-
-  //! Constructor that creates a string from the given `impl`.
-  //!
-  //! \note The reference count of the passed `impl` is not increased.
-  BL_INLINE explicit BLString(BLStringImpl* impl) noexcept { this->impl = impl; }
-
-  //! Constructor that creates a string from the given data specified by `str`
-  //! and `size`. If `size` is `SIZE_MAX` the string is assumed to be null
-  //! terminated.
-  //!
-  //! This is a convenience function that doesn't provide error handling. The
-  //! only way to check whether the string allocation failed is to call `isNone()`
-  //! after the string has been constructed. If `size` is non-zero and `isNone()`
-  //! returns true then the initialization failed on out of memory condition.
-  BL_INLINE explicit BLString(const char* str, size_t size = SIZE_MAX) noexcept {
-    blStringInitWithData(this, str, size);
-  }
+  BL_INLINE BLString(const BLString& other) noexcept { blStringInitWeak(this, &other); }
 
   //! Constructor that creates a string from the given string `view`.
   //!
   //! \note See other constructors for more details.
-  BL_INLINE explicit BLString(const BLStringView& view) noexcept {
-    blStringInitWithData(this, view.data, view.size);
-  }
+  BL_INLINE explicit BLString(const BLStringView& view) noexcept { blStringInitWithData(this, view.data, view.size); }
+
+  //! Constructor that creates a string from the given data specified by `str` and `size`. If `size` is `SIZE_MAX`
+  //! the string is assumed to be null terminated.
+  //!
+  //! This is a convenience function that doesn't provide error handling. If size exceeds small string capacity
+  //! and dynamic allocation failed then a default empty string would be constructed.
+  BL_INLINE explicit BLString(const char* str, size_t size = SIZE_MAX) noexcept { blStringInitWithData(this, str, size); }
 
   //! Destroys the string.
   BL_INLINE ~BLString() noexcept { blStringDestroy(this); }
@@ -139,8 +159,7 @@ public:
 
   //! Move assignment.
   //!
-  //! \note The `other` string is reset by move assignment, so its state
-  //! after the move operation is the same as a default constructed string.
+  //! \note The `other` string is reset by move construction, so it becomes an empty string.
   BL_INLINE BLString& operator=(BLString&& other) noexcept { blStringAssignMove(this, &other); return *this; }
   //! Copy assignment, performs weak copy of the data held by the `other` string.
   BL_INLINE BLString& operator=(const BLString& other) noexcept { blStringAssignWeak(this, &other); return *this; }
@@ -183,16 +202,90 @@ public:
   BL_INLINE BLResult reset() noexcept { return blStringReset(this); }
 
   //! Swaps the content of this string with the `other` string.
-  BL_INLINE void swap(BLString& other) noexcept { std::swap(this->impl, other.impl); }
+  BL_INLINE void swap(BLString& other) noexcept { _d.swap(other._d); }
 
-  //! Replaces the content of the string by `c` character or multiple characters
-  //! if `n` is greater than one.
+  //! \}
+
+  //! \name Accessors
+  //! \{
+
+  //! Tests whether the string is empty (has no content).
+  //!
+  //! Returns `true` if the string's length is zero.
+  BL_NODISCARD
+  BL_INLINE bool empty() const noexcept { return size() == 0; }
+
+  //! Returns a character at the given `index`.
+  //!
+  //! \note Index must be valid and cannot be out of bounds - there is an assertion.
+  BL_NODISCARD
+  BL_INLINE const char& at(size_t index) const noexcept {
+    BL_ASSERT(index <= size());
+    return data()[index];
+  }
+
+  //! Returns the size of the string [in bytes].
+  BL_NODISCARD
+  BL_INLINE size_t size() const noexcept {
+    return _d.sso() ? size_t((_d.info.bits ^ kSSOEmptySignature) >> BL_OBJECT_INFO_A_SHIFT) : _impl()->size;
+  }
+
+  //! Returns the capacity of the string [in bytes].
+  BL_NODISCARD
+  BL_INLINE size_t capacity() const noexcept { return _d.sso() ? size_t(kSSOCapacity) : _impl()->capacity; }
+
+  //! Returns a pointer to the data of the string.
+  BL_NODISCARD
+  BL_INLINE const char* data() const noexcept { return _d.sso() ? _d.char_data : _impl()->data(); }
+
+  //! Returns a pointer to the beginning of string data (iterator compatibility).
+  BL_NODISCARD
+  BL_INLINE const char* begin() const noexcept { return data(); }
+
+  //! Returns a pointer to the end of string data (iterator compatibility).
+  //!
+  //! The returned pointer points to the string null terminator.
+  BL_NODISCARD
+  BL_INLINE const char* end() const noexcept { return data() + size(); }
+
+  //! Returns the content of the string as `BLStringView`.
+  BL_NODISCARD
+  BL_INLINE BLStringView view() const noexcept { return BLStringView { data(), size() }; }
+
+  //! \}
+
+  //! \name Data Manipulation
+  //! \{
+
+  //! Clears the content of the string without releasing its dynamically allocated data, if possible.
+  BL_INLINE BLResult clear() noexcept { return blStringClear(this); }
+  //! Shrinks the capacity of the string to match the actual content.
+  BL_INLINE BLResult shrink() noexcept { return blStringShrink(this); }
+  //! Reserves at least `n` bytes in the string for further manipulation (most probably appending).
+  BL_INLINE BLResult reserve(size_t n) noexcept { return blStringReserve(this, n); }
+  //! Resizes the string to `n` and fills the additional data by `fill` pattern.
+  BL_INLINE BLResult resize(size_t n, char fill = '\0') noexcept { return blStringResize(this, n, fill); }
+
+  //! Makes the string mutable.
+  //!
+  //! This operation checks whether the string is mutable and if not it makes a deep copy of its content so it can be
+  //! modified. Please note that you can only modify the content that is defined by its length property. Even if the
+  //! string had higher capacity before `makeMutable()` it's not guaranteed that the possible new data would match that
+  //! capacity.
+  //!
+  //! If you want to make the string mutable for the purpose of appending or making other modifications please consider
+  //! using `modifyOp()` and `insertOp()` instead.
+  BL_INLINE BLResult makeMutable(char** dataOut) noexcept { return blStringMakeMutable(this, dataOut); }
+  BL_INLINE BLResult modifyOp(BLModifyOp op, size_t n, char** dataOut) noexcept { return blStringModifyOp(this, op, n, dataOut); }
+  BL_INLINE BLResult insertOp(size_t index, size_t n, char** dataOut) noexcept { return blStringInsertOp(this, index, n, dataOut); }
+
+  //! Replaces the content of the string by `c` character or multiple characters if `n` is greater than one.
   BL_INLINE BLResult assign(char c, size_t n = 1) noexcept { return blStringApplyOpChar(this, BL_MODIFY_OP_ASSIGN_FIT, c, n); }
 
-  //! Move assignment, the same as `operator=`, but returns a `BLResult` instead of `this`.
+  //! Move assignment, the same as `operator=()`, but returns a `BLResult` instead of `this`.
   BL_INLINE BLResult assign(BLString&& other) noexcept { return blStringAssignMove(this, &other); }
 
-  //! Copy assignment, the same as `operator=`, but returns a `BLResult` instead of `this`.
+  //! Copy assignment, the same as `operator=()`, but returns a `BLResult` instead of `this`.
   BL_INLINE BLResult assign(const BLString& other) noexcept { return blStringAssignWeak(this, &other); }
 
   //! Replaces the string by the content described by the given string `view`.
@@ -213,87 +306,10 @@ public:
   //! Replaces the content of the string by a result of calling `vsnprintf(fmt, ap)`.
   BL_INLINE BLResult assignFormatV(const char* fmt, va_list ap) noexcept { return blStringApplyOpFormatV(this, BL_MODIFY_OP_ASSIGN_FIT, fmt, ap); }
 
-  //! Tests whether the string is empty (has no content).
-  //!
-  //! Returns `true` if the string's length is zero.
-  BL_NODISCARD
-  BL_INLINE bool empty() const noexcept { return impl->size == 0; }
-
-  //! \}
-
-  //! \name Accessors
-  //! \{
-
-  //! Returns a character at the given `index`.
-  //!
-  //! \note Index must be valid and cannot be out of bounds, otherwise the
-  //! result is undefined and would trigger an assertion failure in debug mode.
-  BL_NODISCARD
-  BL_INLINE const char& at(size_t index) const noexcept {
-    BL_ASSERT(index < size());
-    return data()[index];
-  }
-
-  //! Returns the size of the string [in bytes].
-  BL_NODISCARD
-  BL_INLINE size_t size() const noexcept { return impl->size; }
-
-  //! Returns the capacity of the string [in bytes].
-  BL_NODISCARD
-  BL_INLINE size_t capacity() const noexcept { return impl->capacity; }
-
-  //! Returns a pointer to the data of the string.
-  BL_NODISCARD
-  BL_INLINE const char* data() const noexcept { return impl->data; }
-
-  //! Returns a pointer to the beginning of string data (iterator compatibility).
-  BL_NODISCARD
-  BL_INLINE const char* begin() const noexcept { return impl->data + impl->size; }
-
-  //! Returns a pointer to the end of string data (iterator compatibility).
-  //!
-  //! The returned pointer points to the null terminator, the data still can
-  //! be read, but it's not considered as string data by Blend2D anymore.
-  BL_NODISCARD
-  BL_INLINE const char* end() const noexcept { return impl->data + impl->size; }
-
-  //! Returns the content of the string as `BLStringView`.
-  BL_NODISCARD
-  BL_INLINE const BLStringView& view() const noexcept { return impl->view; }
-
-  //! \}
-
-  //! \name String Manipulation
-  //! \{
-
-  //! Clears the content of the string without releasing its dynamically allocated data, if possible.
-  BL_INLINE BLResult clear() noexcept { return blStringClear(this); }
-  //! Shrinks the capacity of the string to match the actual content.
-  BL_INLINE BLResult shrink() noexcept { return blStringShrink(this); }
-  //! Reserves at least `n` bytes in the string for further manipulation (most probably appending).
-  BL_INLINE BLResult reserve(size_t n) noexcept { return blStringReserve(this, n); }
-  //! Resizes the string to `n` and fills the additional data by `fill` pattern.
-  BL_INLINE BLResult resize(size_t n, char fill = '\0') noexcept { return blStringResize(this, n, fill); }
-
   //! Truncates the string length to `n`.
   //!
   //! It does nothing if the the string length is less than `n`.
-  BL_INLINE BLResult truncate(size_t n) noexcept { return blStringResize(this, blMin(n, impl->size), '\0'); }
-
-  //! Makes the string mutable.
-  //!
-  //! This operation checks whether the string is mutable and if not it makes a
-  //! deep copy of its content so it can be modified. Please note that you can
-  //! only modify the content that is defined by its length property. Even if
-  //! the string had higher capacity before `makeMutable()` it's not guaranteed
-  //! that the possible new data would match that capacity.
-  //!
-  //! If you want to make the string mutable for the purpose of appending or
-  //! making other modifications please consider using `modifyOp()` and
-  //! `insertOp()` instead.
-  BL_INLINE BLResult makeMutable(char** dataOut) noexcept { return blStringMakeMutable(this, dataOut); }
-  BL_INLINE BLResult modifyOp(uint32_t op, size_t n, char** dataOut) noexcept { return blStringModifyOp(this, op, n, dataOut); }
-  BL_INLINE BLResult insertOp(size_t index, size_t n, char** dataOut) noexcept { return blStringInsertOp(this, index, n, dataOut); }
+  BL_INLINE BLResult truncate(size_t n) noexcept { return n < size() ? blStringResize(this, n, '\0') : BLResult(BL_SUCCESS); }
 
   BL_INLINE BLResult append(char c, size_t n = 1) noexcept { return blStringApplyOpChar(this, BL_MODIFY_OP_APPEND_GROW, c, n); }
   BL_INLINE BLResult append(const BLString& other) noexcept { return blStringApplyOpString(this, BL_MODIFY_OP_APPEND_GROW, &other); }
@@ -314,6 +330,7 @@ public:
   BL_INLINE BLResult insert(size_t index, const BLStringView& view) noexcept { return blStringInsertData(this, index, view.data, view.size); }
   BL_INLINE BLResult insert(size_t index, const char* str, size_t n = SIZE_MAX) noexcept { return blStringInsertData(this, index, str, n); }
 
+  BL_INLINE BLResult remove(size_t index) noexcept { return blStringRemoveIndex(this, index); }
   BL_INLINE BLResult remove(const BLRange& range) noexcept { return blStringRemoveRange(this, range.start, range.end); }
 
   //! \name Equality & Comparison
@@ -348,19 +365,16 @@ public:
   //! \name Search
   //! \{
 
-  //! Returns the first index at which a given character `c` can be found in
-  //! the string, or `SIZE_MAX` if not present.
+  //! Returns the first index at which a given character `c` can be found in the string, or `SIZE_MAX` if not present.
   BL_NODISCARD
-  BL_INLINE size_t indexOf(char c) const noexcept {
-    return indexOf(c, 0);
-  }
+  BL_INLINE size_t indexOf(char c) const noexcept { return indexOf(c, 0); }
 
-  //! Returns the index at which a given character `c` can be found in
-  //! the string starting from `fromIndex`, or `SIZE_MAX` if not present.
+  //! Returns the index at which a given character `c` can be found in the string starting from `fromIndex`, or `SIZE_MAX`
+  //! if not present.
   BL_NODISCARD
   BL_INLINE size_t indexOf(char c, size_t fromIndex) const noexcept {
-    const char* p = data();
     size_t iEnd = size();
+    const char* p = data();
 
     for (size_t i = fromIndex; i < iEnd; i++)
       if (p[i] == c)
@@ -369,12 +383,11 @@ public:
     return SIZE_MAX;
   }
 
-  //! Returns the last index at which a given character `c` can be found in
-  //! the string, or `SIZE_MAX` if not present.
+  //! Returns the last index at which a given character `c` can be found in the string, or `SIZE_MAX` if not present.
   BL_NODISCARD
   BL_INLINE size_t lastIndexOf(char c) const noexcept {
-    const char* p = data();
     size_t i = size();
+    const char* p = data();
 
     while (--i != SIZE_MAX && !(p[i] == c))
       continue;
@@ -382,13 +395,12 @@ public:
     return i;
   }
 
-  //! Returns the index at which a given character `c` can be found in
-  //! the string starting from `fromIndex` and ending at `0`, or `SIZE_MAX`
-  //! if not present.
+  //! Returns the index at which a given character `c` can be found in the string starting from `fromIndex` and ending
+  //! at `0`, or `SIZE_MAX` if not present.
   BL_NODISCARD
   BL_INLINE size_t lastIndexOf(char c, size_t fromIndex) const noexcept {
-    const char* p = data();
     size_t i = size() - 1;
+    const char* p = data();
 
     if (i == SIZE_MAX)
       return i;
@@ -401,11 +413,10 @@ public:
   }
 
   //! \}
-
-  BL_NODISCARD
-  static BL_INLINE const BLString& none() noexcept { return reinterpret_cast<const BLString*>(blNone)[kImplType]; }
 };
+
 #endif
+//! \}
 
 //! \}
 

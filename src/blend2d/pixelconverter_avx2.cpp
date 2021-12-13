@@ -1,38 +1,18 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
+#include "api-build_p.h"
 #ifdef BL_BUILD_OPT_AVX2
 
-#include "./pixelconverter_p.h"
-#include "./simd_p.h"
-#include "./support_p.h"
+#include "pixelconverter_p.h"
+#include "simd_p.h"
 
 using namespace SIMD;
 
-// ============================================================================
-// [BLPixelConverter - Utilities (AVX2)]
-// ============================================================================
+// PixelConverter - Utilities (AVX2)
+// =================================
 
 static BL_INLINE Vec128I vpshufb_or(const Vec128I& x, const Vec128I& predicate, const Vec128I& or_mask) noexcept {
   return v_or(v_shuffle_i8(x, predicate), or_mask);
@@ -42,9 +22,8 @@ static BL_INLINE Vec256I vpshufb_or(const Vec256I& x, const Vec256I& predicate, 
   return v_or(v_shuffle_i8(x, predicate), or_mask);
 }
 
-// ============================================================================
-// [BLPixelConverter - Copy (AVX2)]
-// ============================================================================
+// PixelConverter - Copy (AVX2)
+// ============================
 
 BLResult bl_convert_copy_avx2(
   const BLPixelConverterCore* self,
@@ -69,7 +48,8 @@ BLResult bl_convert_copy_avx2(
   for (uint32_t y = h; y != 0; y--) {
     size_t i = byteWidth;
 
-    while_nounroll (i >= 64) {
+    BL_NOUNROLL
+    while (i >= 64) {
       Vec256I p0 = v_loadu_i256(srcData +  0);
       Vec256I p1 = v_loadu_i256(srcData + 32);
 
@@ -81,7 +61,8 @@ BLResult bl_convert_copy_avx2(
       i -= 64;
     }
 
-    while_nounroll (i >= 16) {
+    BL_NOUNROLL
+    while (i >= 16) {
       v_storeu_i128(dstData, v_loadu_i128(srcData));
 
       dstData += 16;
@@ -103,9 +84,8 @@ BLResult bl_convert_copy_avx2(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Copy|Or (AVX2)]
-// ============================================================================
+// PixelConverter - Copy|Or (AVX2)
+// ===============================
 
 BLResult bl_convert_copy_or_8888_avx2(
   const BLPixelConverterCore* self,
@@ -120,12 +100,13 @@ BLResult bl_convert_copy_or_8888_avx2(
   srcStride -= uintptr_t(w) * 4;
 
   Vec256I fillMask = v_fill_i256_u32(blPixelConverterGetData(self)->memCopyData.fillMask);
-  const BLCommonTable::LoadStoreM32* loadStoreM32 = blCommonTable.load_store_m32;
+  Vec256I loadStoreMask = v_load_i64_i8_i32(&blCommonTable.loadstore16_lo8_msk8[w & 7]);
 
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 32) {
+    BL_NOUNROLL
+    while (i >= 32) {
       Vec256I p0 = v_loadu_i256(srcData +  0);
       Vec256I p1 = v_loadu_i256(srcData + 32);
       Vec256I p2 = v_loadu_i256(srcData + 64);
@@ -141,7 +122,8 @@ BLResult bl_convert_copy_or_8888_avx2(
       i -= 32;
     }
 
-    while_nounroll (i >= 8) {
+    BL_NOUNROLL
+    while (i >= 8) {
       Vec256I p0 = v_loadu_i256(srcData);
       v_storeu_i256(dstData, v_or(p0, fillMask));
 
@@ -151,9 +133,8 @@ BLResult bl_convert_copy_or_8888_avx2(
     }
 
     if (i) {
-      Vec256I msk = loadStoreM32[i].as<Vec256I>();
-      Vec256I p0 = v_loadu_i256_mask32(srcData, msk);
-      v_storeu_i256_mask32(dstData, v_or(p0, fillMask), msk);
+      Vec256I p0 = v_loadu_i256_mask32(srcData, loadStoreMask);
+      v_storeu_i256_mask32(dstData, v_or(p0, fillMask), loadStoreMask);
 
       dstData += i * 4;
       srcData += i * 4;
@@ -166,9 +147,9 @@ BLResult bl_convert_copy_or_8888_avx2(
 
   return BL_SUCCESS;
 }
-// ============================================================================
-// [BLPixelConverter - Copy|Shufb (AVX2)]
-// ============================================================================
+
+// PixelConverter - Copy|Shufb (AVX2)
+// ==================================
 
 BLResult bl_convert_copy_shufb_8888_avx2(
   const BLPixelConverterCore* self,
@@ -183,15 +164,16 @@ BLResult bl_convert_copy_shufb_8888_avx2(
   srcStride -= uintptr_t(w) * 4;
 
   const BLPixelConverterData::ShufbData& d = blPixelConverterGetData(self)->shufbData;
-  const BLCommonTable::LoadStoreM32* loadStoreM32 = blCommonTable.load_store_m32;
 
   Vec256I fillMask = v_fill_i256_u32(d.fillMask);
   Vec256I predicate = v_dupl_i128(v_loadu_i128(d.shufbPredicate));
+  Vec256I loadStoreMask = v_load_i64_i8_i32(&blCommonTable.loadstore16_lo8_msk8[w & 7]);
 
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 32) {
+    BL_NOUNROLL
+    while (i >= 32) {
       Vec256I p0 = v_loadu_i256(srcData +  0);
       Vec256I p1 = v_loadu_i256(srcData + 32);
       Vec256I p2 = v_loadu_i256(srcData + 64);
@@ -212,7 +194,8 @@ BLResult bl_convert_copy_shufb_8888_avx2(
       i -= 32;
     }
 
-    while_nounroll (i >= 8) {
+    BL_NOUNROLL
+    while (i >= 8) {
       Vec256I p0 = v_loadu_i256(srcData);
 
       p0 = v_shuffle_i8(p0, predicate);
@@ -225,12 +208,11 @@ BLResult bl_convert_copy_shufb_8888_avx2(
     }
 
     if (i) {
-      Vec256I msk = loadStoreM32[i].as<Vec256I>();
-      Vec256I p0 = v_loadu_i256_mask32(srcData, msk);
+      Vec256I p0 = v_loadu_i256_mask32(srcData, loadStoreMask);
 
       p0 = v_shuffle_i8(p0, predicate);
       p0 = v_or(p0, fillMask);
-      v_storeu_i256_mask32(dstData, p0, msk);
+      v_storeu_i256_mask32(dstData, p0, loadStoreMask);
 
       dstData += i * 4;
       srcData += i * 4;
@@ -244,9 +226,8 @@ BLResult bl_convert_copy_shufb_8888_avx2(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - RGB32 <- RGB24 (AVX2)]
-// ============================================================================
+// PixelConverter - RGB32 <- RGB24 (AVX2)
+// ======================================
 
 BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
   const BLPixelConverterCore* self,
@@ -261,7 +242,7 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
   srcStride -= uintptr_t(w) * 3;
 
   const BLPixelConverterData::ShufbData& d = blPixelConverterGetData(self)->shufbData;
-  const BLCommonTable::LoadStoreM32* loadStoreM32 = blCommonTable.load_store_m32;
+  Vec128I loadStoreMask = v_load_i32_i8_i32(&blCommonTable.loadstore16_lo8_msk8[w & 3]);
 
   Vec256I fillMask = v_fill_i256_u32(d.fillMask);
   Vec256I predicate = v_dupl_i128(v_loadu_i128(d.shufbPredicate));
@@ -269,7 +250,8 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 32) {
+    BL_NOUNROLL
+    while (i >= 32) {
       Vec256I p0, p1, p2, p3;
       Vec256I q0, q1, q2, q3;
 
@@ -277,8 +259,8 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
       p1 = v_loadu_i256_128(srcData + 16);             // [yA|xA|z9 y9|x9 z8 y8 x8|z7 y7 x7 z6|y6 x6 z5 y5]
       p3 = v_loadu_i256_128(srcData + 32);             // [zF yF xF zE|yE xE zD yD|xD zC yC xC|zB yB xB zA]
 
-      p2 = v_alignr_i8<8>(p3, p1);                      // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
-      p1 = v_alignr_i8<12>(p1, p0);                     // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
+      p2 = v_alignr_i8<8>(p3, p1);                     // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
+      p1 = v_alignr_i8<12>(p1, p0);                    // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
       p3 = v_srlb_i128<4>(p3);                         // [-- -- -- --|zF yF xF zE|yE xE zD yD|xD zC yC xC]
 
       p0 = v_interleave_lo_i128(p0, p1);
@@ -288,8 +270,8 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
       q1 = v_loadu_i256_128(srcData + 64);             // [yA|xA|z9 y9|x9 z8 y8 x8|z7 y7 x7 z6|y6 x6 z5 y5]
       q3 = v_loadu_i256_128(srcData + 80);             // [zF yF xF zE|yE xE zD yD|xD zC yC xC|zB yB xB zA]
 
-      q2 = v_alignr_i8<8>(q3, q1);                      // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
-      q1 = v_alignr_i8<12>(q1, q0);                     // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
+      q2 = v_alignr_i8<8>(q3, q1);                     // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
+      q1 = v_alignr_i8<12>(q1, q0);                    // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
       q3 = v_srlb_i128<4>(q3);                         // [-- -- -- --|zF yF xF zE|yE xE zD yD|xD zC yC xC]
 
       q0 = v_interleave_lo_i128(q0, q1);
@@ -310,12 +292,13 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
       i -= 32;
     }
 
-    while_nounroll (i >= 8) {
+    BL_NOUNROLL
+    while (i >= 8) {
       Vec128I p0, p1;
 
       p0 = v_loadu_i128(srcData);                      // [x5|z4 y4 x4|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
-      p1 = v_load_i64(srcData + 16);               // [-- -- -- --|-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5]
-      p1 = v_alignr_i8<12>(p1, p0);                     // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
+      p1 = v_load_i64(srcData + 16);                   // [-- -- -- --|-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5]
+      p1 = v_alignr_i8<12>(p1, p0);                    // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
 
       p0 = vpshufb_or(p0, v_cast<Vec128I>(predicate), v_cast<Vec128I>(fillMask));
       p1 = vpshufb_or(p1, v_cast<Vec128I>(predicate), v_cast<Vec128I>(fillMask));
@@ -331,8 +314,8 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
     if (i >= 4) {
       Vec128I p0;
 
-      p0 = v_load_i64(srcData);                    // [-- -- -- --|-- -- -- --|y2 x2 z1 y1|x1 z0 y0 x0]
-      p0 = v_insertm_u32<2>(p0, srcData + 8);           // [-- -- -- --|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
+      p0 = v_load_i64(srcData);                        // [-- -- -- --|-- -- -- --|y2 x2 z1 y1|x1 z0 y0 x0]
+      p0 = v_insertm_u32<2>(p0, srcData + 8);          // [-- -- -- --|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
 
       p0 = vpshufb_or(p0, v_cast<Vec128I>(predicate), v_cast<Vec128I>(fillMask));
       v_storeu_i128(dstData, p0);
@@ -344,18 +327,16 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
 
     if (i) {
       Vec128I p0 = v_zero_i128();
-      Vec128I msk = loadStoreM32[i].as<Vec128I>();
-
-      p0 = v_insertm_u24<0>(p0, srcData + 0);           // [-- -- -- --|-- -- -- z2|y2 x2 z1 y1|x1 z0 y0 x0]
+      p0 = v_insertm_u24<0>(p0, srcData + 0);          // [-- -- -- --|-- -- -- --|-- -- -- --|-- z0 y0 x0]
       if (i >= 2) {
-        p0 = v_insertm_u24<3>(p0, srcData + 3);         // [-- -- -- --|-- -- -- --|-- -- z1 y1|x1 z0 y0 x0]
+        p0 = v_insertm_u24<3>(p0, srcData + 3);        // [-- -- -- --|-- -- -- --|-- -- z1 y1|x1 z0 y0 x0]
         if (i >= 3) {
-          p0 = v_insertm_u24<6>(p0, srcData + 6);       // [-- -- -- --|-- -- -- z2|y2 x2 z1 y1|x1 z0 y0 x0]
+          p0 = v_insertm_u24<6>(p0, srcData + 6);      // [-- -- -- --|-- -- -- z2|y2 x2 z1 y1|x1 z0 y0 x0]
         }
       }
 
       p0 = vpshufb_or(p0, v_cast<Vec128I>(predicate), v_cast<Vec128I>(fillMask));
-      v_storeu_i128_mask32(dstData, p0, msk);
+      v_storeu_i128_mask32(dstData, p0, loadStoreMask);
 
       dstData += i * 4;
       srcData += i * 3;
@@ -369,9 +350,8 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Premultiply (AVX2)]
-// ============================================================================
+// PixelConverter - Premultiply (AVX2)
+// ===================================
 
 template<uint32_t A_Shift, bool UseShufB>
 static BL_INLINE BLResult bl_convert_premultiply_8888_template_avx2(
@@ -387,7 +367,6 @@ static BL_INLINE BLResult bl_convert_premultiply_8888_template_avx2(
   srcStride -= uintptr_t(w) * 4;
 
   const BLPixelConverterData::PremultiplyData& d = blPixelConverterGetData(self)->premultiplyData;
-  const BLCommonTable::LoadStoreM32* loadStoreM32 = blCommonTable.load_store_m32;
 
   Vec256I zero = v_zero_i256();
   Vec256I a255 = v_fill_i256_u64(uint64_t(0xFFu) << (A_Shift * 2));
@@ -398,17 +377,22 @@ static BL_INLINE BLResult bl_convert_premultiply_8888_template_avx2(
   if (UseShufB)
     predicate = v_dupl_i128(v_loadu_i128(d.shufbPredicate));
 
+  Vec256I loadStoreMaskLo = v_load_i64_i8_i32(&blCommonTable.loadstore16_lo8_msk8[w & 15]);
+  Vec256I loadStoreMaskHi = v_load_i64_i8_i32(&blCommonTable.loadstore16_hi8_msk8[w & 15]);
+
   // Alpha byte-index that can be used by instructions that perform shuffling.
   constexpr uint32_t AI = A_Shift / 8u;
 
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 16) {
+    BL_NOUNROLL
+    while (i >= 16) {
       Vec256I p0, p1, p2, p3;
 
       p0 = v_loadu_i256(srcData +  0);
       p2 = v_loadu_i256(srcData + 32);
+
       if (UseShufB) p0 = v_shuffle_i8(p0, predicate);
       if (UseShufB) p2 = v_shuffle_i8(p2, predicate);
 
@@ -441,32 +425,41 @@ static BL_INLINE BLResult bl_convert_premultiply_8888_template_avx2(
       i -= 16;
     }
 
-    while_nounroll (i) {
-      uint32_t n = blMin(i, uint32_t(8));
+    if (i) {
+      Vec256I p0, p1, p2, p3;
 
-      Vec256I p0, p1;
-      Vec256I msk = loadStoreM32[n].as<Vec256I>();
+      p0 = v_loadu_i256_mask32(srcData +  0, loadStoreMaskLo);
+      p2 = v_loadu_i256_mask32(srcData + 32, loadStoreMaskHi);
 
-      p0 = v_loadu_i256_mask32(srcData, msk);
       if (UseShufB) p0 = v_shuffle_i8(p0, predicate);
+      if (UseShufB) p2 = v_shuffle_i8(p2, predicate);
 
       p1 = v_interleave_hi_i8(p0, zero);
       p0 = v_interleave_lo_i8(p0, zero);
+      p3 = v_interleave_hi_i8(p2, zero);
+      p2 = v_interleave_lo_i8(p2, zero);
 
       p0 = v_mul_i16(v_or(p0, a255), v_swizzle_i16<AI, AI, AI, AI>(p0));
       p1 = v_mul_i16(v_or(p1, a255), v_swizzle_i16<AI, AI, AI, AI>(p1));
+      p2 = v_mul_i16(v_or(p2, a255), v_swizzle_i16<AI, AI, AI, AI>(p2));
+      p3 = v_mul_i16(v_or(p3, a255), v_swizzle_i16<AI, AI, AI, AI>(p3));
 
       p0 = v_div255_u16(p0);
       p1 = v_div255_u16(p1);
+      p2 = v_div255_u16(p2);
+      p3 = v_div255_u16(p3);
 
       p0 = v_packs_i16_u8(p0, p1);
+      p2 = v_packs_i16_u8(p2, p3);
+
       p0 = v_or(p0, fillMask);
+      p2 = v_or(p2, fillMask);
 
-      v_storeu_i256_mask32(dstData, p0, msk);
+      v_storeu_i256_mask32(dstData +  0, p0, loadStoreMaskLo);
+      v_storeu_i256_mask32(dstData + 32, p2, loadStoreMaskHi);
 
-      dstData += n * 4;
-      srcData += n * 4;
-      i -= n;
+      dstData += i * 4;
+      srcData += i * 4;
     }
 
     dstData = blPixelConverterFillGap(dstData, gap);
@@ -509,9 +502,8 @@ BLResult bl_convert_premultiply_8888_trailing_alpha_shufb_avx2(
   return bl_convert_premultiply_8888_template_avx2<0, true>(self, dstData, dstStride, srcData, srcStride, w, h, options);
 }
 
-// ============================================================================
-// [BLPixelConverter - Unpremultiply (PMULLD) (AVX2)]
-// ============================================================================
+// PixelConverter - Unpremultiply (PMULLD) (AVX2)
+// ==============================================
 
 template<uint32_t A_Shift>
 static BL_INLINE BLResult bl_convert_unpremultiply_8888_pmulld_template_avx2(
@@ -529,10 +521,11 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_pmulld_template_avx2(
   srcStride -= uintptr_t(w) * 4u;
 
   const uint32_t* rcpTable = blCommonTable.unpremultiplyRcp;
-  const BLCommonTable::LoadStoreM32* loadStoreM32 = blCommonTable.load_store_m32;
 
   Vec256I alphaMask = v_fill_i256_u32(0xFFu << A_Shift);
   Vec256I componentMask = v_fill_i256_u32(0xFFu);
+  Vec256I loadStoreMask = v_load_i64_i8_i32(&blCommonTable.loadstore16_lo8_msk8[w & 7]);
+
   Vec256I rnd = v_fill_i256_u32(0x8000u);
 
   // Alpha byte-index that can be used by instructions that perform shuffling.
@@ -544,7 +537,8 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_pmulld_template_avx2(
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 8) {
+    BL_NOUNROLL
+    while (i >= 8) {
       Vec256I pix = v_loadu_i256(srcData);
 
       Vec256I rcp0 = v_load_i256_32(rcpTable + srcData[0 * 4 + AI]);
@@ -589,8 +583,7 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_pmulld_template_avx2(
     }
 
     if (i) {
-      Vec256I msk = loadStoreM32[i].as<Vec256I>();
-      Vec256I pix = v_loadu_i256_mask32(srcData, msk);
+      Vec256I pix = v_loadu_i256_mask32(srcData, loadStoreMask);
       Vec256I pixHi = v_permute_i128<1, 1>(pix);
 
       size_t idx0 = v_extract_u8<0 * 4 + AI>(pix);
@@ -639,7 +632,7 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_pmulld_template_avx2(
       pix = v_or(pix, pr);
       pix = v_or(pix, pg);
       pix = v_or(pix, pb);
-      v_storeu_i256_mask32(dstData, pix, msk);
+      v_storeu_i256_mask32(dstData, pix, loadStoreMask);
 
       dstData += i * 4;
       srcData += i * 4;
@@ -669,9 +662,8 @@ BLResult bl_convert_unpremultiply_8888_trailing_alpha_pmulld_avx2(
   return bl_convert_unpremultiply_8888_pmulld_template_avx2<0>(self, dstData, dstStride, srcData, srcStride, w, h, options);
 }
 
-// ============================================================================
-// [BLPixelConverter - Unpremultiply (FLOAT) (AVX2)]
-// ============================================================================
+// PixelConverter - Unpremultiply (FLOAT) (AVX2)
+// =============================================
 
 template<uint32_t A_Shift>
 static BL_INLINE BLResult bl_convert_unpremultiply_8888_float_template_avx2(
@@ -688,10 +680,9 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_float_template_avx2(
   dstStride -= uintptr_t(w) * 4u + gap;
   srcStride -= uintptr_t(w) * 4u;
 
-  const BLCommonTable::LoadStoreM32* loadStoreM32 = blCommonTable.load_store_m32;
-
   Vec256I alphaMask = v_fill_i256_u32(0xFFu << A_Shift);
   Vec256I componentMask = v_fill_i256_u32(0xFFu);
+  Vec256I loadStoreMask = v_load_i64_i8_i32(&blCommonTable.loadstore16_lo8_msk8[w & 7]);
 
   Vec256F const255 = v_fill_f256(255.0001f);
   Vec256F lessThanOne = v_fill_f256(0.1f);
@@ -705,7 +696,8 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_float_template_avx2(
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 8) {
+    BL_NOUNROLL
+    while (i >= 8) {
       Vec256I pix = v_loadu_i256(srcData);
       Vec256I pa = v_srl_i32<AI * 8>(pix);
       Vec256I pr = v_srl_i32<RI * 8>(pix);
@@ -751,8 +743,7 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_float_template_avx2(
     }
 
     if (i) {
-      Vec256I msk = loadStoreM32[i].as<Vec256I>();
-      Vec256I pix = v_loadu_i256_mask32(srcData, msk);
+      Vec256I pix = v_loadu_i256_mask32(srcData, loadStoreMask);
 
       Vec256I pa = v_srl_i32<AI * 8>(pix);
       Vec256I pr = v_srl_i32<RI * 8>(pix);
@@ -790,7 +781,7 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_float_template_avx2(
       pix = v_or(pix, pr);
       pix = v_or(pix, pg);
       pix = v_or(pix, pb);
-      v_storeu_i256_mask32(dstData, pix, msk);
+      v_storeu_i256_mask32(dstData, pix, loadStoreMask);
 
       dstData += i * 4;
       srcData += i * 4;

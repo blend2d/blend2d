@@ -1,55 +1,47 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_PATTERN_P_H_INCLUDED
 #define BLEND2D_PATTERN_P_H_INCLUDED
 
-#include "./api-internal_p.h"
-#include "./pattern.h"
+#include "api-internal_p.h"
+#include "object_p.h"
+#include "pattern.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
 //! \{
 
-// ============================================================================
-// [BLPattern - Internal]
-// ============================================================================
+//! \name Pattern - Private Structs
+//! \{
 
-//! Internal implementation that extends `BLPatternImpl`.
-struct BLInternalPatternImpl : public BLPatternImpl {
+//! Private implementation that extends \ref BLPatternImpl.
+struct BLPatternPrivateImpl : public BLPatternImpl {
   // Nothing at the moment.
 };
 
-template<>
-struct BLInternalCastImpl<BLPatternImpl> { typedef BLInternalPatternImpl Type; };
+//! \}
 
-BL_HIDDEN BLResult blPatternImplDelete(BLPatternImpl* impl_) noexcept;
+//! \name Pattern - Private API
+//! \{
 
-// ============================================================================
-// [BLPattern - Utilities]
-// ============================================================================
+namespace BLPatternPrivate {
 
-static BL_INLINE bool blPatternIsAreaValid(const BLRectI& area, const BLSizeI& size) noexcept {
+static BL_INLINE BLPatternPrivateImpl* getImpl(const BLPatternCore* self) noexcept {
+  return static_cast<BLPatternPrivateImpl*>(self->_d.impl);
+}
+
+BL_HIDDEN BLResult freeImpl(BLPatternPrivateImpl* impl, BLObjectInfo info) noexcept;
+
+static BL_INLINE BLExtendMode getExtendMode(const BLPatternCore* self) noexcept { return (BLExtendMode)self->_d.info.bField(); }
+static BL_INLINE BLMatrix2DType getMatrixType(const BLPatternCore* self) noexcept { return (BLMatrix2DType)self->_d.info.cField(); }
+
+static BL_INLINE void setExtendMode(BLObjectInfo& info, BLExtendMode extendMode) noexcept { info.setBField(uint32_t(extendMode)); }
+static BL_INLINE void setMatrixType(BLObjectInfo& info, BLMatrix2DType matrixType) noexcept { info.setCField(uint32_t(matrixType)); }
+
+static BL_INLINE bool isAreaValid(const BLRectI& area, const BLSizeI& size) noexcept {
   typedef unsigned U;
   return bool((U(area.x) < U(size.w)) &
               (U(area.y) < U(size.h)) &
@@ -57,13 +49,17 @@ static BL_INLINE bool blPatternIsAreaValid(const BLRectI& area, const BLSizeI& s
               (U(area.h) <= U(size.h) - U(area.y)));
 }
 
-static BL_INLINE bool blPatternIsAreaValidAndNonZero(const BLRectI& area, const BLSizeI& size) noexcept {
+static BL_INLINE bool isAreaValidAndNonZero(const BLRectI& area, const BLSizeI& size) noexcept {
   typedef unsigned U;
   return bool((U(area.x) < U(size.w)) &
               (U(area.y) < U(size.h)) &
               (U(area.w) - U(1) < U(size.w) - U(area.x)) &
               (U(area.h) - U(1) < U(size.h) - U(area.y)));
 }
+
+} // {BLPatternPrivate}
+
+//! \}
 
 //! \}
 //! \endcond

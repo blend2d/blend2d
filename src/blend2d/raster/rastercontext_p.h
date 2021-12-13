@@ -1,25 +1,7 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_RASTER_RASTERCONTEXT_P_H_INCLUDED
 #define BLEND2D_RASTER_RASTERCONTEXT_P_H_INCLUDED
@@ -31,35 +13,30 @@
 #include "../gradient_p.h"
 #include "../matrix_p.h"
 #include "../path_p.h"
-#include "../piperuntime_p.h"
 #include "../rgba.h"
-#include "../region_p.h"
-#include "../support_p.h"
-#include "../zoneallocator_p.h"
+#include "../pipeline/piperuntime_p.h"
 #include "../raster/analyticrasterizer_p.h"
 #include "../raster/edgebuilder_p.h"
-#include "../raster/rastercommand_p.h"
-#include "../raster/rastercontextstate_p.h"
-#include "../raster/rastercontextstyle_p.h"
 #include "../raster/rasterdefs_p.h"
-#include "../raster/rasterfetchdata_p.h"
-#include "../raster/rasterjob_p.h"
-#include "../raster/rasterworkdata_p.h"
-#include "../raster/rasterworkermanager_p.h"
-#include "../raster/rasterworkqueue_p.h"
+#include "../raster/rendercommand_p.h"
+#include "../raster/renderfetchdata_p.h"
+#include "../raster/renderjob_p.h"
+#include "../raster/renderqueue_p.h"
+#include "../raster/rendertargetinfo_p.h"
+#include "../raster/statedata_p.h"
+#include "../raster/styledata_p.h"
+#include "../raster/workdata_p.h"
+#include "../raster/workermanager_p.h"
+#include "../support/arenaallocator_p.h"
 #include "../threading/uniqueidgenerator_p.h"
 
 #if !defined(BL_BUILD_NO_JIT)
-  #include "../pipegen/pipegenruntime_p.h"
+  #include "../pipeline/jit/pipegenruntime_p.h"
 #endif
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_internal_raster
+//! \addtogroup blend2d_raster_engine_impl
 //! \{
-
-// ============================================================================
-// [Constants]
-// ============================================================================
 
 //! Rendering mode.
 enum BLRasterRenderingMode : uint32_t {
@@ -85,7 +62,7 @@ enum BLRasterRenderingMode : uint32_t {
 //!   shared was changed. Then before a command is enqueued such flags are checked
 //!   and the shared state is created when necessary.
 //!
-//! - `STATE_` - describe which states must be saved to `BLRasterContextSavedState`
+//! - `STATE_` - describe which states must be saved to `SavedState`
 //!   in order to modify them. Used by `save()`, `restore()` and by all other
 //!   functions that manipulate the state. Initially all state flags are unset.
 enum BLRasterContextFlags : uint32_t {
@@ -259,45 +236,39 @@ static constexpr const uint32_t BL_RASTER_CONTEXT_MINIMUM_ASYNC_PATH_SIZE = 10;
 //! anyway.
 static constexpr const uint32_t BL_RASTER_CONTEXT_MAXIMUM_EMBEDDED_TEXT_SIZE = 256;
 
-// ============================================================================
-// [BLRasterContextImpl]
-// ============================================================================
-
 //! Raster rendering context implementation (software-accelerated).
 class BLRasterContextImpl : public BLContextImpl {
 public:
   BL_NONCOPYABLE(BLRasterContextImpl)
 
   //! Zone allocator used to allocate base data structures required by `BLRasterContextImpl`.
-  BLZoneAllocator baseZone;
-  //! Object pool used to allocate `BLRasterFetchData`.
-  BLZonePool<BLRasterFetchData> fetchDataPool;
-  //! Object pool used to allocate `BLRasterContextSavedState`.
-  BLZonePool<BLRasterContextSavedState> savedStatePool;
+  BLArenaAllocator baseZone;
+  //! Object pool used to allocate `RenderFetchData`.
+  BLArenaPool<BLRasterEngine::RenderFetchData> fetchDataPool;
+  //! Object pool used to allocate `SavedState`.
+  BLArenaPool<BLRasterEngine::SavedState> savedStatePool;
 
   //! Destination image.
   BLImageCore dstImage;
   //! Destination image data.
   BLImageData dstData;
   //! Precision information.
-  BLRasterContextPrecisionInfo precisionInfo;
+  BLRasterEngine::RenderTargetInfo renderTargetInfo;
   //! Minimum safe coordinate for integral transformation (scaled by 256.0 or 65536.0).
   double fpMinSafeCoordD;
   //! Maximum safe coordinate for integral transformation (scaled by 256.0 or 65536.0).
   double fpMaxSafeCoordD;
 
-  //! Work data used by synchronous rendering that also holds part of the current
-  //! state. This worker is not used to do actual rendering in async mode, in such
-  //! case it's only used to hold certain states that are only needed by the
-  //! rendering context itself.
-  BLRasterWorkData syncWorkData;
-  //! Worker manager (only used by asynchronous rendering context).
-  BLWrap<BLRasterWorkerManager> workerMgr;
+  //! Work data used by synchronous rendering that also holds part of the
+  //! current state. In async mode the work data can still be used by user
+  //! thread in case it's allowed, otherwise it would only hold some states
+  //! that are used by the rendering context directly.
+  BLRasterEngine::WorkData syncWorkData;
 
   //! Pipeline runtime (either global or isolated, depending on create-options).
-  BLPipeProvider pipeProvider;
+  BLPipeline::PipeProvider pipeProvider;
   //! Pipeline lookup cache (always used before attempting to use `pipeProvider`).
-  BLPipeLookupCache pipeLookupCache;
+  BLPipeline::PipeLookupCache pipeLookupCache;
 
   //! Context origin ID used in `data0` member of `BLContextCookie`.
   uint64_t contextOriginId;
@@ -305,14 +276,14 @@ public:
   uint64_t stateIdCounter;
 
   //! Link to the previous saved state that will be restored by `BLContext::restore()`.
-  BLRasterContextSavedState* savedState;
+  BLRasterEngine::SavedState* savedState;
   //! An actual shared fill-state (asynchronous rendering).
-  BLRasterSharedFillState* sharedFillState;
+  BLRasterEngine::SharedFillState* sharedFillState;
   //! An actual shared stroke-state (asynchronous rendering).
-  BLRasterSharedBaseStrokeState* sharedStrokeState;
+  BLRasterEngine::SharedBaseStrokeState* sharedStrokeState;
 
   //! The current state of the rendering context, the `BLContextState` part is public.
-  BLRasterContextState internalState;
+  BLRasterEngine::RasterContextState internalState;
 
   //! Rendering mode.
   uint8_t renderingMode;
@@ -324,9 +295,12 @@ public:
   //! Composition operator simplification that matches the destination format and current `compOp`.
   const BLCompOpSimplifyInfo* compOpSimplifyInfo;
   //! Table that contains solid fetch data that is used by simplified solid fills, see `BLCompOpSolidId`.
-  const BLPipeFetchData::Solid* solidFetchDataTable;
+  const BLPipeline::FetchData::Solid* solidFetchDataTable;
   //! Solid format table used to select the best pixel format for solid fills.
   uint8_t solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_COUNT];
+
+  //! Worker manager (only used by asynchronous rendering context).
+  BLWrap<BLRasterEngine::WorkerManager> workerMgr;
 
   //! Static buffer used by `baseZone` for the first block.
   uint64_t staticBuffer[2048 / sizeof(uint64_t)];
@@ -334,27 +308,23 @@ public:
   //! \name Construction / Destruction
   //! \{
 
-  BL_INLINE BLRasterContextImpl(BLContextVirt* inVirt, uint16_t inMemPoolData) noexcept
-    : baseZone(8192 - BLZoneAllocator::kBlockOverhead, 16, staticBuffer, sizeof(staticBuffer)),
+  BL_INLINE BLRasterContextImpl(BLContextVirt* virtIn) noexcept
+    : baseZone(8192 - BLArenaAllocator::kBlockOverhead, 16, staticBuffer, sizeof(staticBuffer)),
       fetchDataPool(),
       savedStatePool(),
       dstImage {},
       dstData {},
-      precisionInfo {},
+      renderTargetInfo {},
       syncWorkData(this),
       pipeProvider(),
-      contextOriginId(blGenerateUniqueId(BL_UNIQUE_ID_DOMAIN_CONTEXT)),
+      contextOriginId(BLUniqueIdGenerator::generateId(BLUniqueIdGenerator::Domain::kContext)),
       stateIdCounter(0),
       renderingMode(uint8_t(BL_RASTER_RENDERING_MODE_SYNC)),
       workerMgrInitialized(false),
       contextFlags(0) {
 
     // Initializes BLRasterContext2DImpl.
-    virt = inVirt;
-    refCount = 1;
-    implType = uint8_t(BL_IMPL_TYPE_CONTEXT);
-    implTraits = uint8_t(BL_IMPL_TRAIT_MUTABLE | BL_IMPL_TRAIT_VIRT);
-    memPoolData = inMemPoolData;
+    virt = virtIn;
     contextType = BL_CONTEXT_TYPE_RASTER;
     state = &internalState;
   }
@@ -368,14 +338,14 @@ public:
   //! \name Memory Management
   //! \{
 
-  BL_INLINE BLZoneAllocator& fetchDataZone() noexcept { return baseZone; }
-  BL_INLINE BLZoneAllocator& savedStateZone() noexcept { return baseZone; }
+  BL_INLINE BLArenaAllocator& fetchDataZone() noexcept { return baseZone; }
+  BL_INLINE BLArenaAllocator& savedStateZone() noexcept { return baseZone; }
 
-  BL_INLINE BLRasterFetchData* allocFetchData() noexcept { return fetchDataPool.alloc(fetchDataZone()); }
-  BL_INLINE void freeFetchData(BLRasterFetchData* fetchData) noexcept { fetchDataPool.free(fetchData); }
+  BL_INLINE BLRasterEngine::RenderFetchData* allocFetchData() noexcept { return fetchDataPool.alloc(fetchDataZone()); }
+  BL_INLINE void freeFetchData(BLRasterEngine::RenderFetchData* fetchData) noexcept { fetchDataPool.free(fetchData); }
 
-  BL_INLINE BLRasterContextSavedState* allocSavedState() noexcept { return savedStatePool.alloc(savedStateZone()); }
-  BL_INLINE void freeSavedState(BLRasterContextSavedState* state) noexcept { savedStatePool.free(state); }
+  BL_INLINE BLRasterEngine::SavedState* allocSavedState() noexcept { return savedStatePool.alloc(savedStateZone()); }
+  BL_INLINE void freeSavedState(BLRasterEngine::SavedState* state) noexcept { savedStatePool.free(state); }
 
   BL_INLINE void ensureWorkerMgr() noexcept {
     if (!workerMgrInitialized) {
@@ -401,8 +371,8 @@ public:
   }
 
   BL_INLINE uint32_t format() const noexcept { return dstData.format; }
-  BL_INLINE double fpScaleD() const noexcept { return precisionInfo.fpScaleD; }
-  BL_INLINE double fullAlphaD() const noexcept { return precisionInfo.fullAlphaD; }
+  BL_INLINE double fpScaleD() const noexcept { return renderTargetInfo.fpScaleD; }
+  BL_INLINE double fullAlphaD() const noexcept { return renderTargetInfo.fullAlphaD; }
 
   BL_INLINE uint32_t bandCount() const noexcept { return syncWorkData.bandCount(); }
   BL_INLINE uint32_t bandHeight() const noexcept { return syncWorkData.bandHeight(); }
@@ -422,7 +392,7 @@ public:
   BL_INLINE uint32_t globalAlphaI() const noexcept { return internalState.globalAlphaI; }
   BL_INLINE double globalAlphaD() const noexcept { return internalState.globalAlpha; }
 
-  BL_INLINE const BLRasterContextStyleData* getStyle(size_t index) const noexcept { return &internalState.style[index]; }
+  BL_INLINE const BLRasterEngine::StyleData* getStyle(size_t index) const noexcept { return &internalState.style[index]; }
 
   BL_INLINE uint8_t metaMatrixType() const noexcept { return internalState.metaMatrixType; }
   BL_INLINE uint8_t metaMatrixFixedType() const noexcept { return internalState.metaMatrixFixedType; }
@@ -445,6 +415,7 @@ public:
   BL_INLINE const BLBoxI& finalClipBoxI() const noexcept { return internalState.finalClipBoxI; }
   BL_INLINE const BLBox& finalClipBoxD() const noexcept { return internalState.finalClipBoxD; }
 
+  BL_INLINE const BLBoxI& finalClipBoxFixedI() const noexcept { return syncWorkData.edgeBuilder._clipBoxI; }
   BL_INLINE const BLBox& finalClipBoxFixedD() const noexcept { return syncWorkData.edgeBuilder._clipBoxD; }
   BL_INLINE void setFinalClipBoxFixedD(const BLBox& clipBox) { syncWorkData.edgeBuilder.setClipBox(clipBox); }
 
@@ -453,18 +424,12 @@ public:
   //! \name Error Accumulation
   //! \{
 
-  BL_INLINE BLResult accumulateError(BLResult error) noexcept {
-    return syncWorkData.accumulateError(error);
-  }
+  BL_INLINE BLResult accumulateError(BLResult error) noexcept { return syncWorkData.accumulateError(error); }
 
   //! \}
 };
 
-// ============================================================================
-// [BLRasterContextImpl - API]
-// ============================================================================
-
-BL_HIDDEN BLResult blRasterContextImplCreate(BLContextImpl** out, BLImageCore* image, const BLContextCreateInfo* options) noexcept;
+BL_HIDDEN BLResult blRasterContextInitImpl(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) noexcept;
 BL_HIDDEN void blRasterContextOnInit(BLRuntimeContext* rt) noexcept;
 
 //! \}

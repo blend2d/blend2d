@@ -1,50 +1,43 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_RANDOM_H_INCLUDED
 #define BLEND2D_RANDOM_H_INCLUDED
 
-#include "./api.h"
+#include "api.h"
 
 //! \addtogroup blend2d_api_globals
 //! \{
 
-// ============================================================================
-// [BLRandom]
-// ============================================================================
+//! \name BLRandom - C API
+//! \{
 
-//! Simple pseudo random number generator.
-//!
-//! The current implementation uses a PRNG called `XORSHIFT+`, which has 64-bit
-//! seed, 128 bits of state, and full period `2^128 - 1`.
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blRandomReset(BLRandom* self, uint64_t seed) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blRandomNextUInt32(BLRandom* self) BL_NOEXCEPT_C;
+BL_API uint64_t BL_CDECL blRandomNextUInt64(BLRandom* self) BL_NOEXCEPT_C;
+BL_API double BL_CDECL blRandomNextDouble(BLRandom* self) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+
+//! \}
+
+//! \name BLRandom - C/C++ API
+//! \{
+
+//! Simple pseudo random number generator based on `XORSHIFT+`, which has 64-bit seed, 128 bits of state, and full
+//! period `2^128 - 1`.
 //!
 //! Based on a paper by Sebastiano Vigna:
 //!   http://vigna.di.unimi.it/ftp/papers/xorshiftplus.pdf
 struct BLRandom {
+  //! PRNG state.
   uint64_t data[2];
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
+#ifdef __cplusplus
   //! \name Construction & Destruction
   //! \{
 
@@ -73,8 +66,7 @@ struct BLRandom {
 
   //! Tests whether the random number generator is equivalent to `other`.
   //!
-  //! Random number generator would only be equivalent to `other` if it was
-  //! initialized from the same seed and has the same internal state.
+  //! \note It would return true only when its internal state matches `other`'s internal state.
   BL_NODISCARD
   BL_INLINE bool equals(const BLRandom& other) const noexcept {
     return blEquals(this->data[0], other.data[0]) &
@@ -86,23 +78,23 @@ struct BLRandom {
   //! \name Random Numbers
   //! \{
 
-  //! Returns the next pseudo-random `uint64_t` value and advances its state.
+  //! Returns the next pseudo-random `uint64_t` value and advances PRNG state.
   BL_NODISCARD
   BL_INLINE uint64_t nextUInt64() noexcept { return blRandomNextUInt64(this); }
 
-  //! Returns the next pseudo-random `uint32_t` value and advances its state.
+  //! Returns the next pseudo-random `uint32_t` value and advances PRNG state.
   BL_NODISCARD
   BL_INLINE uint32_t nextUInt32() noexcept { return blRandomNextUInt32(this); }
 
-  //! Returns the next pseudo-random `double` precision floating point in [0..1)
-  //! range and advances its state.
+  //! Returns the next pseudo-random `double` precision floating point in [0..1) range and advances PRNG state.
   BL_NODISCARD
   BL_INLINE double nextDouble() noexcept { return blRandomNextDouble(this); }
 
   //! \}
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
+
+//! \}
 
 //! \}
 

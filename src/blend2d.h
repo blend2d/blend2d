@@ -1,9 +1,9 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
+// SPDX-License-Identifier: Zlib
+// Official GitHub Repository: https://github.com/blend2d/blend2d
 //
-// Copyright (c) 2017-2020 The Blend2D Authors
+// Copyright (c) 2008-2021 The Blend2D Authors
 //
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
@@ -43,31 +43,30 @@
   #pragma warning(disable: 4583) // destructor is not implicitly called.
 #endif
 
-#include "./blend2d/api.h"
-#include "./blend2d/array.h"
-#include "./blend2d/bitarray.h"
-#include "./blend2d/context.h"
-#include "./blend2d/filesystem.h"
-#include "./blend2d/font.h"
-#include "./blend2d/fontdefs.h"
-#include "./blend2d/fontmanager.h"
-#include "./blend2d/format.h"
-#include "./blend2d/geometry.h"
-#include "./blend2d/glyphbuffer.h"
-#include "./blend2d/gradient.h"
-#include "./blend2d/image.h"
-#include "./blend2d/imagecodec.h"
-#include "./blend2d/matrix.h"
-#include "./blend2d/path.h"
-#include "./blend2d/pattern.h"
-#include "./blend2d/pixelconverter.h"
-#include "./blend2d/random.h"
-#include "./blend2d/region.h"
-#include "./blend2d/rgba.h"
-#include "./blend2d/runtime.h"
-#include "./blend2d/string.h"
-#include "./blend2d/style.h"
-#include "./blend2d/variant.h"
+#include "blend2d/api.h"
+#include "blend2d/array.h"
+#include "blend2d/bitset.h"
+#include "blend2d/context.h"
+#include "blend2d/filesystem.h"
+#include "blend2d/font.h"
+#include "blend2d/fontdefs.h"
+#include "blend2d/fontmanager.h"
+#include "blend2d/format.h"
+#include "blend2d/geometry.h"
+#include "blend2d/glyphbuffer.h"
+#include "blend2d/gradient.h"
+#include "blend2d/image.h"
+#include "blend2d/imagecodec.h"
+#include "blend2d/matrix.h"
+#include "blend2d/object.h"
+#include "blend2d/path.h"
+#include "blend2d/pattern.h"
+#include "blend2d/pixelconverter.h"
+#include "blend2d/random.h"
+#include "blend2d/rgba.h"
+#include "blend2d/runtime.h"
+#include "blend2d/string.h"
+#include "blend2d/var.h"
 
 #if defined(_MSC_VER)
   #pragma warning(pop)

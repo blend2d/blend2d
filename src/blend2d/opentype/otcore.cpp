@@ -1,25 +1,7 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
 #include "../trace_p.h"
@@ -30,9 +12,8 @@
 namespace BLOpenType {
 namespace CoreImpl {
 
-// ============================================================================
-// [BLOpenType::CoreImpl - Trace]
-// ============================================================================
+// OpenType::CoreImpl - Trace
+// ==========================
 
 #if defined(BL_TRACE_OT_ALL) || defined(BL_TRACE_OT_CORE)
 #define Trace BLDebugTrace
@@ -40,9 +21,8 @@ namespace CoreImpl {
 #define Trace BLDummyTrace
 #endif
 
-// ============================================================================
-// [BLOpenType::CoreImpl - Utilities]
-// ============================================================================
+// OpenType::CoreImpl - Utilities
+// ==============================
 
 static BL_INLINE const char* stringFromBool(bool value) noexcept {
   static const char str[] = "False\0\0\0True";
@@ -53,16 +33,15 @@ static BL_INLINE const char* sizeCheckMessage(size_t size) noexcept {
   return size ? "Table is truncated" : "Table not found";
 }
 
-// ============================================================================
-// [BLOpenType::CoreImpl - Init]
-// ============================================================================
+// OpenType::CoreImpl - Init
+// =========================
 
-static BLResult initHead(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
+static BLResult initHead(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
   BLFontTableT<HeadTable> head;
   fontData->queryTable(faceI->faceInfo.faceIndex, &head, BL_MAKE_TAG('h', 'e', 'a', 'd'));
 
   Trace trace;
-  trace.info("BLOTFaceImpl::InitHead [Size=%zu]\n", head.size);
+  trace.info("BLOpenType::OTFaceImpl::InitHead [Size=%zu]\n", head.size);
   trace.indent();
 
   if (!blFontTableFitsT<HeadTable>(head)) {
@@ -121,19 +100,18 @@ static BLResult initHead(BLOTFaceImpl* faceI, const BLFontData* fontData) noexce
     faceI->designMetrics.unitsPerEm = unitsPerEm;
     faceI->designMetrics.lowestPPEM = lowestPPEM;
     faceI->designMetrics.glyphBoundingBox = bbox;
-    faceI->otFlags |= indexToLocFormat == 0 ? BL_OT_FACE_FLAG_LOCA_OFFSET_16
-                                            : BL_OT_FACE_FLAG_LOCA_OFFSET_32;
+    faceI->otFlags |= indexToLocFormat == 0 ? OTFaceFlags::kLocaOffset16 : OTFaceFlags::kLocaOffset32;
   }
 
   return BL_SUCCESS;
 }
 
-static BLResult initMaxP(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
+static BLResult initMaxP(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
   BLFontTableT<MaxPTable> maxp;
   fontData->queryTable(faceI->faceInfo.faceIndex, &maxp, BL_MAKE_TAG('m', 'a', 'x', 'p'));
 
   Trace trace;
-  trace.info("BLOTFaceImpl::InitMaxP [Size=%zu]\n", maxp.size);
+  trace.info("BLOpenType::OTFaceImpl::InitMaxP [Size=%zu]\n", maxp.size);
   trace.indent();
 
   if (!blFontTableFitsT<MaxPTable>(maxp)) {
@@ -156,12 +134,12 @@ static BLResult initMaxP(BLOTFaceImpl* faceI, const BLFontData* fontData) noexce
   return BL_SUCCESS;
 }
 
-static BLResult initOS_2(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
+static BLResult initOS_2(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
   BLFontTableT<OS2Table> os2;
   fontData->queryTable(faceI->faceInfo.faceIndex, &os2, BL_MAKE_TAG('O', 'S', '/', '2'));
 
   Trace trace;
-  trace.info("BLOTFaceImpl::InitOS/2 [Size=%zu]\n", os2.size);
+  trace.info("BLOpenType::OTFaceImpl::InitOS/2 [Size=%zu]\n", os2.size);
   trace.indent();
 
   if (!blFontTableFitsT<OS2Table>(os2)) {
@@ -248,12 +226,12 @@ static BLResult initOS_2(BLOTFaceImpl* faceI, const BLFontData* fontData) noexce
   return BL_SUCCESS;
 }
 
-static BLResult initPost(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
+static BLResult initPost(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
   BLFontTableT<PostTable> post;
   fontData->queryTable(faceI->faceInfo.faceIndex, &post, BL_MAKE_TAG('p', 'o', 's', 't'));
 
   Trace trace;
-  trace.info("BLOTFaceImpl::InitPost [Size=%zu]\n", post.size);
+  trace.info("BLOpenType::OTFaceImpl::InitPost [Size=%zu]\n", post.size);
   trace.indent();
 
   if (!blFontTableFitsT<PostTable>(post)) {
@@ -274,7 +252,7 @@ static BLResult initPost(BLOTFaceImpl* faceI, const BLFontData* fontData) noexce
   return BL_SUCCESS;
 }
 
-BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
+BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
   BL_PROPAGATE(initHead(faceI, fontData));
   BL_PROPAGATE(initMaxP(faceI, fontData));
   BL_PROPAGATE(initOS_2(faceI, fontData));

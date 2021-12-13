@@ -1,29 +1,11 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
-#include "./runtime_p.h"
-#include "./support_p.h"
+#include "api-build_p.h"
+#include "runtime_p.h"
+#include "support/intops_p.h"
 
 // PTHREAD_STACK_MIN would be defined either by <pthread.h> or <limits.h>.
 #include <limits.h>
@@ -32,23 +14,21 @@
   #include <asmjit/asmjit.h>
 #endif
 
-// ============================================================================
-// [Global Variables]
-// ============================================================================
+// BLRuntime - Runtime Context
+// ===========================
 
 BLRuntimeContext blRuntimeContext;
-BLRuntimeResourceLiveInfo blRuntimeResourceLiveInfo;
 
-// ============================================================================
-// [BLRuntime - Build Information]
-// ============================================================================
-
-#define BL_STRINGIFY_WRAP(N) #N
-#define BL_STRINGIFY(N) BL_STRINGIFY_WRAP(N)
+// BLRuntime - Build Information
+// =============================
 
 static const BLRuntimeBuildInfo blRuntimeBuildInfo = {
-  // Library Version.
-  { BL_VERSION },
+  // Blend2D major version.
+  (BL_VERSION >> 16),
+  // Blend2D minor version.
+  (BL_VERSION >> 8) & 0xFF,
+  // Blend2D patch version.
+  (BL_VERSION >> 0) & 0xFF,
 
   // Build Type.
 #ifdef BL_BUILD_DEBUG
@@ -130,22 +110,21 @@ static const BLRuntimeBuildInfo blRuntimeBuildInfo = {
 #endif
 };
 
-// ============================================================================
-// [BLRuntime - System Information]
-// ============================================================================
+// BLRuntime - System Information
+// ==============================
 
 #ifndef BL_BUILD_NO_JIT
 static BL_INLINE uint32_t blRuntimeDetectCpuFeatures(const asmjit::CpuInfo& asmCpuInfo) noexcept {
   uint32_t features = 0;
 
 #if BL_TARGET_ARCH_X86
-  if (asmCpuInfo.hasFeature(asmjit::x86::Features::kSSE2  )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE2;
-  if (asmCpuInfo.hasFeature(asmjit::x86::Features::kSSE3  )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE3;
-  if (asmCpuInfo.hasFeature(asmjit::x86::Features::kSSSE3 )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSSE3;
-  if (asmCpuInfo.hasFeature(asmjit::x86::Features::kSSE4_1)) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_1;
-  if (asmCpuInfo.hasFeature(asmjit::x86::Features::kSSE4_2)) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_2;
-  if (asmCpuInfo.hasFeature(asmjit::x86::Features::kAVX   )) features |= BL_RUNTIME_CPU_FEATURE_X86_AVX;
-  if (asmCpuInfo.hasFeature(asmjit::x86::Features::kAVX2  )) features |= BL_RUNTIME_CPU_FEATURE_X86_AVX2;
+  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSE2  )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE2;
+  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSE3  )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE3;
+  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSSE3 )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSSE3;
+  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSE4_1)) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_1;
+  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSE4_2)) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_2;
+  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX   )) features |= BL_RUNTIME_CPU_FEATURE_X86_AVX;
+  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX2  )) features |= BL_RUNTIME_CPU_FEATURE_X86_AVX2;
 #endif
 
   return features;
@@ -172,37 +151,37 @@ static BL_INLINE void blRuntimeInitSystemInfo(BLRuntimeContext* rt) noexcept {
   info.threadStackSize = si.dwAllocationGranularity;
   info.allocationGranularity = si.dwAllocationGranularity;
 #else
-  #if defined(_SC_PAGESIZE)
+# if defined(_SC_PAGESIZE)
   info.allocationGranularity = uint32_t(sysconf(_SC_PAGESIZE));
-  #else
+# else
   info.allocationGranularity = uint32_t(getpagesize());
-  #endif
+# endif
 
-  #if defined(PTHREAD_STACK_MIN)
+# if defined(PTHREAD_STACK_MIN)
   info.threadStackSize = uint32_t(PTHREAD_STACK_MIN);
-  #elif defined(_SC_THREAD_STACK_MIN)
+# elif defined(_SC_THREAD_STACK_MIN)
   info.threadStackSize = uint32_t(sysconf(_SC_THREAD_STACK_MIN));
-  #else
-  #pragma message("Missing 'BLRuntimeSystemInfo::minStackSize' implementation")
+# else
+# pragma message("Missing 'BLRuntimeSystemInfo::minStackSize' implementation")
   info.threadStackSize = blMax<uint32_t>(info.allocationGranularity, 65536u);
-  #endif
+# endif
 #endif
 
-  // NOTE: It seems that on some archs 16kB stack-size is the bare minimum
-  // even when sysconf() or PTHREAD_STACK_MIN report a smaller value. Even
-  // if we don't need it we slighly increase the bare minimum to 32kB to
-  // make it safer especially on archs that has a bit register file.
-  info.threadStackSize = blAlignUp(
-    blMax<uint32_t>(info.threadStackSize, 32768), info.allocationGranularity);;
+  // NOTE: It seems that on some archs 16kB stack-size is the bare minimum even when sysconf() or PTHREAD_STACK_MIN
+  // report a smaller value. Even if we don't need it we slighly increase the bare minimum to 64kB to make it safer
+  // especially on archs that have a big register file. In addition, some compilers like GCC/clang will use stack
+  // slot for every variable in code, which means that heavily inlined code may need relatively large stack when
+  // compiled in debug mode.
+  info.threadStackSize = BLIntOps::alignUp(blMax<uint32_t>(info.threadStackSize, 65536), info.allocationGranularity);
 }
 
 static BL_INLINE void blRuntimeInitOptimizationInfo(BLRuntimeContext* rt) noexcept {
   BLRuntimeOptimizationInfo& info = rt->optimizationInfo;
 
 #ifndef BL_BUILD_NO_JIT
-  const asmjit::CpuInfo& asmCpuInfo = asmjit::CpuInfo::host();
 
 #if BL_TARGET_ARCH_X86
+  const asmjit::CpuInfo& asmCpuInfo = asmjit::CpuInfo::host();
   if (asmCpuInfo.isVendor("AMD")) {
     info.cpuVendor = BL_RUNTIME_CPU_VENDOR_AMD;
     info.cpuHints |= BL_RUNTIME_CPU_HINT_FAST_PSHUFB;
@@ -227,55 +206,54 @@ static BL_INLINE void blRuntimeInitOptimizationInfo(BLRuntimeContext* rt) noexce
 #endif
 }
 
-// ============================================================================
-// [BLRuntime - Initialization & Shutdown]
-// ============================================================================
+// BLRuntime - API - Initialization & Shutdown
+// ===========================================
 
-BLResult blRuntimeInit() noexcept {
+BL_API_IMPL BLResult blRuntimeInit() noexcept {
   BLRuntimeContext* rt = &blRuntimeContext;
   if (blAtomicFetchAdd(&rt->refCount) != 0)
     return BL_SUCCESS;
 
-  // Initialize system information - we need this first so we can properly
-  // initialize everything that relies on system info (thread-pool, optimized
-  // functions, etc...).
+  // Initializes system information - we need this first so we can properly initialize everything that relies
+  // on system or CPU features (futex, thread-pool, SIMD optimized operations, etc...).
   blRuntimeInitSystemInfo(rt);
 
   // Initialize optimization information.
   blRuntimeInitOptimizationInfo(rt);
 
-  // Call "Runtime Initialization" handlers.
-  // - These would automatically install shutdown handlers when necessary.
-  blThreadOnInit(rt);
-  blThreadPoolOnInit(rt);
-  blZeroAllocatorOnInit(rt);
-  blMatrix2DOnInit(rt);
-  blArrayOnInit(rt);
-  blStringOnInit(rt);
-  blPathOnInit(rt);
-  blRegionOnInit(rt);
-  blImageOnInit(rt);
-  blImageCodecOnInit(rt);
-  blImageScalerOnInit(rt);
-  blPatternOnInit(rt);
-  blGradientOnInit(rt);
-  blFontOnInit(rt);
-  blFontManagerOnInit(rt);
+  // Call "Runtime Registration" handlers - These would automatically install shutdown handlers when necessary.
+  blFuxexRtInit(rt);
+  blThreadRtInit(rt);
+  blThreadPoolRtInit(rt);
+  blZeroAllocatorRtInit(rt);
+  blPixelOpsRtInit(rt);
+  blBitSetRtInit(rt);
+  blArrayRtInit(rt);
+  blStringRtInit(rt);
+  blTransformRtInit(rt);
+  blPath2DRtInit(rt);
+  blImageRtInit(rt);
+  blImageCodecRtInit(rt);
+  blImageScaleRtInit(rt);
+  blPatternRtInit(rt);
+  blGradientRtInit(rt);
+  blFontRtInit(rt);
+  blFontManagerRtInit(rt);
 
 #if !defined(BL_BUILD_NO_FIXED_PIPE)
-  blFixedPipeOnInit(rt);
+  blStaticPipelineRtInit(rt);
 #endif
 
 #if !defined(BL_BUILD_NO_JIT)
-  blPipeGenOnInit(rt);
+  blDynamicPipelineRtInit(rt);
 #endif
 
-  blContextOnInit(rt);
+  blContextRtInit(rt);
 
   return BL_SUCCESS;
 }
 
-BLResult blRuntimeShutdown() noexcept {
+BL_API_IMPL BLResult blRuntimeShutdown() noexcept {
   BLRuntimeContext* rt = &blRuntimeContext;
   if (blAtomicFetchSub(&rt->refCount) != 1)
     return BL_SUCCESS;
@@ -290,21 +268,19 @@ BLResult blRuntimeShutdown() noexcept {
 
 static BL_RUNTIME_INITIALIZER BLRuntimeInitializer blRuntimeAutoInit;
 
-// ============================================================================
-// [BLRuntime - Cleanup]
-// ============================================================================
+// BLRuntime - API - Cleanup
+// =========================
 
-BLResult blRuntimeCleanup(uint32_t cleanupFlags) noexcept {
+BL_API_IMPL BLResult blRuntimeCleanup(BLRuntimeCleanupFlags cleanupFlags) noexcept {
   BLRuntimeContext* rt = &blRuntimeContext;
   rt->cleanupHandlers.call(rt, cleanupFlags);
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLRuntime - Query Info]
-// ============================================================================
+// BLRuntime - API - Query Info
+// ============================
 
-BLResult blRuntimeQueryInfo(uint32_t infoType, void* infoOut) noexcept {
+BL_API_IMPL BLResult blRuntimeQueryInfo(BLRuntimeInfoType infoType, void* infoOut) noexcept {
   BLRuntimeContext* rt = &blRuntimeContext;
 
   switch (infoType) {
@@ -323,8 +299,6 @@ BLResult blRuntimeQueryInfo(uint32_t infoType, void* infoOut) noexcept {
     case BL_RUNTIME_INFO_TYPE_RESOURCE: {
       BLRuntimeResourceInfo* resourceInfo = static_cast<BLRuntimeResourceInfo*>(infoOut);
       resourceInfo->reset();
-      resourceInfo->fileHandleCount = blRuntimeResourceLiveInfo.fileHandleCount();
-      resourceInfo->fileMappingCount = blRuntimeResourceLiveInfo.fileMappingCount();
       rt->resourceInfoHandlers.call(rt, resourceInfo);
       return BL_SUCCESS;
     }
@@ -334,11 +308,10 @@ BLResult blRuntimeQueryInfo(uint32_t infoType, void* infoOut) noexcept {
   }
 }
 
-// ============================================================================
-// [BLRuntime - Message]
-// ============================================================================
+// BLRuntime - API - Message
+// =========================
 
-BLResult blRuntimeMessageOut(const char* msg) noexcept {
+BL_API_IMPL BLResult blRuntimeMessageOut(const char* msg) noexcept {
 #if defined(_WIN32)
   // Support both Console and GUI applications on Windows.
   OutputDebugStringA(msg);
@@ -348,7 +321,7 @@ BLResult blRuntimeMessageOut(const char* msg) noexcept {
   return BL_SUCCESS;
 }
 
-BLResult blRuntimeMessageFmt(const char* fmt, ...) noexcept {
+BL_API_IMPL BLResult blRuntimeMessageFmt(const char* fmt, ...) noexcept {
   va_list ap;
   va_start(ap, fmt);
   BLResult result = blRuntimeMessageVFmt(fmt, ap);
@@ -357,15 +330,14 @@ BLResult blRuntimeMessageFmt(const char* fmt, ...) noexcept {
   return result;
 }
 
-BLResult blRuntimeMessageVFmt(const char* fmt, va_list ap) noexcept {
+BL_API_IMPL BLResult blRuntimeMessageVFmt(const char* fmt, va_list ap) noexcept {
   char buf[1024];
   vsnprintf(buf, BL_ARRAY_SIZE(buf), fmt, ap);
   return blRuntimeMessageOut(buf);
 }
 
-// ============================================================================
-// [BLRuntime - Failure]
-// ============================================================================
+// BLRuntime - API - Failure
+// =========================
 
 void blRuntimeFailure(const char* fmt, ...) noexcept {
   va_list ap;
@@ -376,54 +348,13 @@ void blRuntimeFailure(const char* fmt, ...) noexcept {
   abort();
 }
 
-void blRuntimeAssertionFailure(const char* file, int line, const char* msg) noexcept {
+BL_API_IMPL void blRuntimeAssertionFailure(const char* file, int line, const char* msg) noexcept {
   blRuntimeMessageFmt("[Blend2D] ASSERTION FAILURE: '%s' at '%s' [line %d]\n", msg, file, line);
   abort();
 }
 
-// ============================================================================
-// [BLRuntime - Alloc / Free]
-// ============================================================================
-
-// We use 'malloc/free' implementation at the moment.
-
-void* blRuntimeAllocImpl(size_t implSize, uint16_t* memPoolDataOut) noexcept {
-  *memPoolDataOut = 0;
-  return malloc(implSize);
-}
-
-void* blRuntimeAllocAlignedImpl(size_t implSize, size_t alignment, uint16_t* memPoolDataOut) noexcept {
-  *memPoolDataOut = 0;
-
-  if (alignment <= BL_ALLOC_ALIGNMENT)
-    return malloc(implSize);
-
-  BL_ASSERT(blIsPowerOf2(alignment));
-  void* ptr = malloc(implSize + alignment - BL_ALLOC_ALIGNMENT);
-
-  if (!ptr)
-    return nullptr;
-
-  void* alignedPtr = blAlignUp(ptr, alignment);
-  *memPoolDataOut = uint16_t(uintptr_t(alignedPtr) - uintptr_t(ptr));
-  return alignedPtr;
-}
-
-BLResult blRuntimeFreeImpl(void* impl_, size_t implSize, uint32_t memPoolData) noexcept {
-  blUnused(implSize);
-
-  void* unalignedPtr = static_cast<void*>(static_cast<uint8_t*>(impl_) - memPoolData);
-  free(unalignedPtr);
-  return BL_SUCCESS;
-}
-
-void BL_CDECL blRuntimeDummyDestroyImplFunc(void* impl, void* destroyData) noexcept {
-  blUnused(impl, destroyData);
-}
-
-// ============================================================================
-// [BLRuntime - ResultFrom{Win|Posix}Error]
-// ============================================================================
+// BLRuntime - ResultFrom{Win|Posix}Error
+// ======================================
 
 #ifdef _WIN32
 
@@ -432,7 +363,7 @@ void BL_CDECL blRuntimeDummyDestroyImplFunc(void* impl, void* destroyData) noexc
   #define ERROR_DISK_QUOTA_EXCEEDED 0x0000050F
 #endif
 
-BLResult blResultFromWinError(uint32_t e) noexcept {
+BL_API_IMPL BLResult blResultFromWinError(uint32_t e) noexcept {
   switch (e) {
     case ERROR_SUCCESS                : return BL_SUCCESS;                       // 0x00000000
     case ERROR_INVALID_FUNCTION       : return BL_ERROR_NOT_PERMITTED;           // 0x00000001
@@ -511,7 +442,7 @@ BLResult blResultFromWinError(uint32_t e) noexcept {
 
 #else
 
-BLResult blResultFromPosixError(int e) noexcept {
+BL_API_IMPL BLResult blResultFromPosixError(int e) noexcept {
   #define MAP(C_ERROR, BL_ERROR) case C_ERROR: return BL_ERROR
 
   switch (e) {
@@ -600,7 +531,7 @@ BLResult blResultFromPosixError(int e) noexcept {
     MAP(ENXIO, BL_ERROR_NO_DEVICE);
   #endif
   #ifdef EOVERFLOW
-    MAP(EOVERFLOW, BL_ERROR_VALUE_TOO_LARGE);
+    MAP(EOVERFLOW, BL_ERROR_OVERFLOW);
   #endif
   #ifdef EPERM
     MAP(EPERM, BL_ERROR_NOT_PERMITTED);

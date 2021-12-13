@@ -1,48 +1,26 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_MATRIX_H_INCLUDED
 #define BLEND2D_MATRIX_H_INCLUDED
 
-#include "./geometry.h"
+#include "geometry.h"
 
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
 
 //! \addtogroup blend2d_api_geometry
 //! \{
 
-// ============================================================================
-// [Typedefs]
-// ============================================================================
+// TODO: Remove from public API.
 
-//! A generic function that can be used to transform an array of points that use
-//! `double` precision coordinates. This function will be 99.99% of time used with
-//! `BLMatrix2D` so the `ctx` would point to a `const BLMatrix2D*` instance.
+//! A generic function that can be used to transform an array of points that use `double` precision coordinates. This
+//! function will be 99.99% of time used with `BLMatrix2D` so the `ctx` would point to a `const BLMatrix2D*` instance.
 typedef BLResult (BL_CDECL* BLMapPointDArrayFunc)(const void* ctx, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT;
 
-// ============================================================================
-// [Constants]
-// ============================================================================
+//! \name BLMatrix Constants
+//! \{
 
 //! 2D matrix type that can be obtained by calling `BLMatrix2D::type()`.
 //!
@@ -66,8 +44,10 @@ BL_DEFINE_ENUM(BLMatrix2DType) {
   //! Invalid/degenerate matrix not useful for transformations.
   BL_MATRIX2D_TYPE_INVALID = 5,
 
-  //! Count of matrix types.
-  BL_MATRIX2D_TYPE_COUNT = 6
+  //! Maximum value of `BLMatrix2DType`.
+  BL_MATRIX2D_TYPE_MAX_VALUE = 5
+
+  BL_FORCE_ENUM_UINT32(BL_MATRIX2D_TYPE)
 };
 
 //! 2D matrix data index.
@@ -86,7 +66,9 @@ BL_DEFINE_ENUM(BLMatrix2DValue) {
   BL_MATRIX2D_VALUE_21 = 5,
 
   //! Count of `BLMatrix2D` values.
-  BL_MATRIX2D_VALUE_COUNT = 6
+  BL_MATRIX2D_VALUE_MAX_VALUE = 5
+
+  BL_FORCE_ENUM_UINT32(BL_MATRIX2D_VALUE)
 };
 
 //! 2D matrix operation.
@@ -122,20 +104,47 @@ BL_DEFINE_ENUM(BLMatrix2DOp) {
   //! Post-transform this matrix by other `BLMatrix2D`.
   BL_MATRIX2D_OP_POST_TRANSFORM = 13,
 
-  //! Count of matrix operations.
-  BL_MATRIX2D_OP_COUNT = 14
+  //! Maximum value of `BLMatrix2DOp`.
+  BL_MATRIX2D_OP_MAX_VALUE = 13
+
+  BL_FORCE_ENUM_UINT32(BL_MATRIX2D_OP)
 };
 
-// ============================================================================
-// [BLMatrix2D]
-// ============================================================================
+//! \}
 
-//! 2D matrix represents an affine transformation matrix that can be used to
-//! transform geometry and images.
+//! \name BLMatrix2D - C API
+//!
+//! Functions that initialize and manipulate \ref BLMatrix2D content.
+//!
+//! \{
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blMatrix2DSetIdentity(BLMatrix2D* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DSetTranslation(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DSetScaling(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DSetSkewing(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DSetRotation(BLMatrix2D* self, double angle, double cx, double cy) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DApplyOp(BLMatrix2D* self, BLMatrix2DOp opType, const void* opData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DInvert(BLMatrix2D* dst, const BLMatrix2D* src) BL_NOEXCEPT_C;
+BL_API BLMatrix2DType BL_CDECL blMatrix2DGetType(const BLMatrix2D* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT_C;
+
+//! Array of functions for transforming points indexed by `BLMatrixType`. Each function is optimized for the respective
+//! type. This is mostly used internally, but exported for users that can take advantage of Blend2D SIMD optimziations.
+extern BL_API BLMapPointDArrayFunc blMatrix2DMapPointDArrayFuncs[BL_MATRIX2D_TYPE_MAX_VALUE + 1];
+
+BL_END_C_DECLS
+//! \}
+
+//! \name BLMatrix C/C++ API
+//! \{
+
+//! 2D matrix represents an affine transformation matrix that can be used to transform geometry and images.
 struct BLMatrix2D {
+  // TODO: Remove the union, keep only m[] array.
   union {
     //! Matrix values, use `BL_MATRIX2D_VALUE` indexes to get a particular one.
-    double m[BL_MATRIX2D_VALUE_COUNT];
+    double m[BL_MATRIX2D_VALUE_MAX_VALUE + 1];
     //! Matrix values that map `m` to named values that can be used directly.
     struct {
       double m00;
@@ -147,8 +156,17 @@ struct BLMatrix2D {
     };
   };
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
+#ifdef __cplusplus
+  //! \cond INTERNAL
+  enum : uint32_t {
+    k00 = BL_MATRIX2D_VALUE_00,
+    k01 = BL_MATRIX2D_VALUE_01,
+    k10 = BL_MATRIX2D_VALUE_10,
+    k11 = BL_MATRIX2D_VALUE_11,
+    k20 = BL_MATRIX2D_VALUE_20,
+    k21 = BL_MATRIX2D_VALUE_21
+  };
+  //! \endcond
 
   //! \name Construction & Destruction
   //! \{
@@ -157,7 +175,7 @@ struct BLMatrix2D {
   BL_INLINE BLMatrix2D() noexcept = default;
 
   //! Creates a new matrix initialized to a copy of `src` matrix.
-  constexpr BLMatrix2D(const BLMatrix2D& src) noexcept = default;
+  BL_INLINE constexpr BLMatrix2D(const BLMatrix2D& src) noexcept = default;
 
   //! Creates a new matrix initialized to:
   //!
@@ -166,7 +184,7 @@ struct BLMatrix2D {
   //!   [m10 m11]
   //!   [m20 m21]
   //! ```
-  constexpr BLMatrix2D(double m00, double m01, double m10, double m11, double m20, double m21) noexcept
+  BL_INLINE constexpr BLMatrix2D(double m00, double m01, double m10, double m11, double m20, double m21) noexcept
     : m00(m00), m01(m01),
       m10(m10), m11(m11),
       m20(m20), m21(m21) {}
@@ -178,35 +196,35 @@ struct BLMatrix2D {
 
   //! Creates a new matrix initialized to identity.
   BL_NODISCARD
-  static constexpr BLMatrix2D makeIdentity() noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, 0.0, 0.0); }
+  static BL_INLINE constexpr BLMatrix2D makeIdentity() noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, 0.0, 0.0); }
 
   //! \overload
   BL_NODISCARD
-  static constexpr BLMatrix2D makeTranslation(double x, double y) noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, x, y); }
+  static BL_INLINE constexpr BLMatrix2D makeTranslation(double x, double y) noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, x, y); }
 
   //! Creates a new matrix initialized to translation.
   BL_NODISCARD
-  static constexpr BLMatrix2D makeTranslation(const BLPointI& p) noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, double(p.x), double(p.y)); }
+  static BL_INLINE constexpr BLMatrix2D makeTranslation(const BLPointI& p) noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, double(p.x), double(p.y)); }
 
   //! \overload
   BL_NODISCARD
-  static constexpr BLMatrix2D makeTranslation(const BLPoint& p) noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, p.x, p.y); }
+  static BL_INLINE constexpr BLMatrix2D makeTranslation(const BLPoint& p) noexcept { return BLMatrix2D(1.0, 0.0, 0.0, 1.0, p.x, p.y); }
 
   //! Creates a new matrix initialized to scaling.
   BL_NODISCARD
-  static constexpr BLMatrix2D makeScaling(double xy) noexcept { return BLMatrix2D(xy, 0.0, 0.0, xy, 0.0, 0.0); }
+  static BL_INLINE constexpr BLMatrix2D makeScaling(double xy) noexcept { return BLMatrix2D(xy, 0.0, 0.0, xy, 0.0, 0.0); }
 
   //! \overload
   BL_NODISCARD
-  static constexpr BLMatrix2D makeScaling(double x, double y) noexcept { return BLMatrix2D(x, 0.0, 0.0, y, 0.0, 0.0); }
+  static BL_INLINE constexpr BLMatrix2D makeScaling(double x, double y) noexcept { return BLMatrix2D(x, 0.0, 0.0, y, 0.0, 0.0); }
 
   //! \overload
   BL_NODISCARD
-  static constexpr BLMatrix2D makeScaling(const BLPointI& p) noexcept { return BLMatrix2D(double(p.x), 0.0, 0.0, double(p.y), 0.0, 0.0); }
+  static BL_INLINE constexpr BLMatrix2D makeScaling(const BLPointI& p) noexcept { return BLMatrix2D(double(p.x), 0.0, 0.0, double(p.y), 0.0, 0.0); }
 
   //! \overload
   BL_NODISCARD
-  static constexpr BLMatrix2D makeScaling(const BLPoint& p) noexcept { return BLMatrix2D(p.x, 0.0, 0.0, p.y, 0.0, 0.0); }
+  static BL_INLINE constexpr BLMatrix2D makeScaling(const BLPoint& p) noexcept { return BLMatrix2D(p.x, 0.0, 0.0, p.y, 0.0, 0.0); }
 
   //! Creates a new matrix initialized to rotation.
   BL_NODISCARD
@@ -325,6 +343,8 @@ struct BLMatrix2D {
   //! \name Overloaded Operators
   //! \{
 
+  BL_INLINE BLMatrix2D& operator=(const BLMatrix2D& other) noexcept = default;
+
   BL_NODISCARD BL_INLINE bool operator==(const BLMatrix2D& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLMatrix2D& other) const noexcept { return !equals(other); }
 
@@ -350,7 +370,7 @@ struct BLMatrix2D {
 
   //! Returns the matrix type, see `BLMatrix2DType`.
   BL_NODISCARD
-  BL_INLINE uint32_t type() const noexcept { return blMatrix2DGetType(this); }
+  BL_INLINE BLMatrix2DType type() const noexcept { return blMatrix2DGetType(this); }
 
   //! Calculates the matrix determinant.
   BL_NODISCARD
@@ -368,7 +388,7 @@ struct BLMatrix2D {
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult translate(const BLPointI& p) noexcept { return translate(BLPoint(p)); }
+  BL_INLINE BLResult translate(const BLPointI& p) noexcept { return translate(double(p.x), double(p.y)); }
   BL_INLINE BLResult translate(const BLPoint& p) noexcept { return translate(p.x, p.y); }
 
   BL_INLINE BLResult scale(double xy) noexcept { return scale(xy, xy); }
@@ -381,7 +401,7 @@ struct BLMatrix2D {
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult scale(const BLPointI& p) noexcept { return scale(BLPoint(p)); }
+  BL_INLINE BLResult scale(const BLPointI& p) noexcept { return scale(double(p.x), double(p.y)); }
   BL_INLINE BLResult scale(const BLPoint& p) noexcept { return scale(p.x, p.y); }
 
   BL_INLINE BLResult skew(double x, double y) noexcept { return skew(BLPoint(x, y)); }
@@ -407,7 +427,7 @@ struct BLMatrix2D {
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult postTranslate(const BLPointI& p) noexcept { return postTranslate(BLPoint(p)); }
+  BL_INLINE BLResult postTranslate(const BLPointI& p) noexcept { return postTranslate(double(p.x), double(p.y)); }
   BL_INLINE BLResult postTranslate(const BLPoint& p) noexcept { return postTranslate(p.x, p.y); }
 
   BL_INLINE BLResult postScale(double xy) noexcept { return postScale(xy, xy); }
@@ -421,19 +441,21 @@ struct BLMatrix2D {
 
     return BL_SUCCESS;
   }
-  BL_INLINE BLResult postScale(const BLPointI& p) noexcept { return postScale(BLPoint(p)); }
+
+  BL_INLINE BLResult postScale(const BLPointI& p) noexcept { return postScale(double(p.x), double(p.y)); }
   BL_INLINE BLResult postScale(const BLPoint& p) noexcept { return postScale(p.x, p.y); }
 
   BL_INLINE BLResult postSkew(double x, double y) noexcept { return postSkew(BLPoint(x, y)); }
   BL_INLINE BLResult postSkew(const BLPoint& p) noexcept { return blMatrix2DApplyOp(this, BL_MATRIX2D_OP_POST_SKEW, &p); }
 
   BL_INLINE BLResult postRotate(double angle) noexcept { return blMatrix2DApplyOp(this, BL_MATRIX2D_OP_POST_ROTATE, &angle); }
+
   BL_INLINE BLResult postRotate(double angle, double x, double y) noexcept {
     double params[3] = { angle, x, y };
     return blMatrix2DApplyOp(this, BL_MATRIX2D_OP_POST_ROTATE_PT, params);
   }
 
-  BL_INLINE BLResult postRotate(double angle, const BLPointI& p) noexcept { return postRotate(angle, BLPoint(p)); }
+  BL_INLINE BLResult postRotate(double angle, const BLPointI& p) noexcept { return postRotate(angle, double(p.x), double(p.y)); }
   BL_INLINE BLResult postRotate(double angle, const BLPoint& p) noexcept { return postRotate(angle, p.x, p.y); }
 
   BL_INLINE BLResult postTransform(const BLMatrix2D& m) noexcept { return blMatrix2DApplyOp(this, BL_MATRIX2D_OP_POST_TRANSFORM, &m); }
@@ -463,23 +485,10 @@ struct BLMatrix2D {
   static BL_INLINE BLResult invert(BLMatrix2D& dst, const BLMatrix2D& src) noexcept { return blMatrix2DInvert(&dst, &src); }
 
   //! \}
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//! Array of functions for transforming points indexed by `BLMatrixType`. Each
-//! function is optimized for the respective type. This is mostly used internally,
-//! but exported for users that can take advantage of Blend2D SIMD optimziations.
-extern BL_API BLMapPointDArrayFunc blMatrix2DMapPointDArrayFuncs[BL_MATRIX2D_TYPE_COUNT];
-
-#ifdef __cplusplus
-} // {Extern:C}
-#endif
+//! \}
 
 //! \}
 

@@ -1,41 +1,23 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_GLYPHBUFFER_H_INCLUDED
 #define BLEND2D_GLYPHBUFFER_H_INCLUDED
 
-#include "./fontdefs.h"
+#include "fontdefs.h"
 
 //! \addtogroup blend2d_api_text
 //! \{
 
-// ============================================================================
-// [BLGlyphBuffer - Core]
-// ============================================================================
-
-//! Glyph buffer [C Interface - Impl].
+//! \name BLGlyphBuffer - C API
 //!
-//! \note This is not a `BLVariantImpl` compatible Impl.
+//! \{
+
+//! Glyph buffer [Impl].
+//!
+//! \note This is not a `BLObjectImpl` compatible Impl.
 struct BLGlyphBufferImpl {
   union {
     struct {
@@ -53,11 +35,9 @@ struct BLGlyphBufferImpl {
 
     //! Glyph run data that can be passed directly to the rendering context.
     //!
-    //! Glyph run shares data with other members like `content`, `placementData`,
-    //! `size`, and `flags`. When working with data it's better to access these
-    //! members directly as they are typed, whereas `BLGlyphRun` stores pointers
-    //! as `const void*` as it offers more flexibility, which `BLGlyphRun` doesn't
-    //! need.
+    //! Glyph run shares data with other members like `content`, `placementData`, `size`, and `flags`. When working
+    //! with data it's better to access these members directly as they are typed, whereas `BLGlyphRun` stores pointers
+    //! as `const void*` as it offers more flexibility, which `BLGlyphRun` doesn't need.
     BLGlyphRun glyphRun;
   };
 
@@ -65,27 +45,46 @@ struct BLGlyphBufferImpl {
   BLGlyphInfo* infoData;
 };
 
-//! Glyph buffer [C Interface - Core].
+//! Glyph buffer [C API].
 struct BLGlyphBufferCore {
   BLGlyphBufferImpl* impl;
 };
 
-// ============================================================================
-// [BLGlyphBuffer - C++]
-// ============================================================================
+BL_BEGIN_C_DECLS
 
+BL_API BLResult BL_CDECL blGlyphBufferInit(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferInitMove(BLGlyphBufferCore* self, BLGlyphBufferCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferDestroy(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferReset(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferClear(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blGlyphBufferGetSize(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API uint32_t BL_CDECL blGlyphBufferGetFlags(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API const BLGlyphRun* BL_CDECL blGlyphBufferGetGlyphRun(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API const uint32_t* BL_CDECL blGlyphBufferGetContent(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API const BLGlyphInfo* BL_CDECL blGlyphBufferGetInfoData(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API const BLGlyphPlacement* BL_CDECL blGlyphBufferGetPlacementData(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API BLResult BL_CDECL blGlyphBufferSetText(BLGlyphBufferCore* self, const void* textData, size_t size, BLTextEncoding encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferSetGlyphs(BLGlyphBufferCore* self, const uint32_t* glyphData, size_t size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGlyphBufferSetGlyphsFromStruct(BLGlyphBufferCore* self, const void* glyphData, size_t size, size_t glyphIdSize, intptr_t glyphIdAdvance) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+
+//! \}
+
+//! \name BLGlyphBuffer - C++ API
+//!
+//! \{
 #ifdef __cplusplus
+
 //! Glyph buffer [C++ API].
 //!
-//! Can hold either text or glyphs and provides basic memory management that is
-//! used for text shaping, character to glyph mapping, glyph substitution, and
-//! glyph positioning.
+//! Can hold either text or glyphs and provides basic memory management that is used for text shaping, character to
+//! glyph mapping, glyph substitution, and glyph positioning.
 //!
-//! Glyph buffer provides two separate buffers called 'primary' and 'secondary'
-//! that serve different purposes during processing. Primary buffer always holds
-//! actual text/glyph array, and secondary buffer is either used as a scratch
-//! buffer during glyph substitution or to hold glyph positions after the processing
-//! is complete and glyph positions were calculated.
+//! Glyph buffer provides two separate buffers called 'primary' and 'secondary' that serve different purposes during
+//! processing. Primary buffer always holds actual text/glyph array, and secondary buffer is either used as a scratch
+//! buffer during glyph substitution or to hold glyph positions after the processing is complete and glyph positions
+//! were calculated.
 class BLGlyphBuffer : public BLGlyphBufferCore {
 public:
   //! \name Constructors & Destructors
@@ -160,8 +159,8 @@ public:
   //! \name Operations
   //! \{
 
-  //! Resets the `BLGlyphBuffer` into its construction state. The content will
-  //! be cleared and allocated memory released.
+  //! Resets the `BLGlyphBuffer` into its construction state. The content will be cleared and allocated memory
+  //! released.
   BL_INLINE BLResult reset() noexcept {
     return blGlyphBufferReset(this);
   }
@@ -173,25 +172,23 @@ public:
 
   //! Assigns a text content of this `BLGlyphBuffer`.
   //!
-  //! This is a generic function that accepts `void*` data, which is specified
-  //! by `encoding`. The `size` argument depends on encoding as well. If the
-  //! encoding specifies byte string (LATIN1 or UTF8) then it's bytes, if the
-  //! encoding specifies UTF16 or UTF32 then it would describe the number of
-  //! `uint16_t` or `uint32_t` code points, respectively.
+  //! This is a generic function that accepts `void*` data, which is specified by `encoding`. The `size` argument
+  //! depends on encoding as well. If the encoding specifies byte string (LATIN1 or UTF8) then it's bytes, if the
+  //! encoding specifies UTF16 or UTF32 then it would describe the number of `uint16_t` or `uint32_t` code points,
+  //! respectively.
   //!
   //! Null-terminated string can be specified by passing `SIZE_MAX` as `size`.
-  BL_INLINE BLResult setText(const void* textData, size_t size, uint32_t encoding) noexcept {
+  BL_INLINE BLResult setText(const void* textData, size_t size, BLTextEncoding encoding) noexcept {
     return blGlyphBufferSetText(this, textData, size, encoding);
   }
 
-  //! Assigns a text content of this `BLGlyphBuffer` from LATIN1 (ISO/IEC 8859-1)
-  //! string.
+  //! Assigns a text content of this `BLGlyphBuffer` from LATIN1 (ISO/IEC 8859-1) string.
   BL_INLINE BLResult setLatin1Text(const char* text, size_t size = SIZE_MAX) noexcept {
     return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_LATIN1);
   }
 
-  //! Assigns a text content of this `BLGlyphBuffer` from UTF-8 encoded string.
-  //! The `size` parameter represents the length of the `text` in bytes.
+  //! Assigns a text content of this `BLGlyphBuffer` from UTF-8 encoded string. The `size` parameter represents the
+  //! length of the `text` in bytes.
   BL_INLINE BLResult setUtf8Text(const char* text, size_t size = SIZE_MAX) noexcept {
     return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF8);
   }
@@ -200,20 +197,20 @@ public:
     return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF8);
   }
 
-  //! Assigns a text content of this `BLGlyphBuffer` from UTF-16 encoded string.
-  //! The `size` parameter represents the length of the `text` in 16-bit units.
+  //! Assigns a text content of this `BLGlyphBuffer` from UTF-16 encoded string. The `size` parameter represents the
+  //! length of the `text` in 16-bit units.
   BL_INLINE BLResult setUtf16Text(const uint16_t* text, size_t size = SIZE_MAX) noexcept {
     return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF16);
   }
 
-  //! Assigns a text content of this `BLGlyphBuffer` from UTF-32 encoded string.
-  //! The `size` parameter represents the length of the `text` in 32-bit units.
+  //! Assigns a text content of this `BLGlyphBuffer` from UTF-32 encoded string. The `size` parameter represents the
+  //! length of the `text` in 32-bit units.
   BL_INLINE BLResult setUtf32Text(const uint32_t* text, size_t size = SIZE_MAX) noexcept {
     return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF32);
   }
 
-  //! Assigns a text content of this `BLGlyphBuffer` from `wchar_t` encoded string.
-  //! The `size` parameter represents the length of the `text` in `wchar_t` units.
+  //! Assigns a text content of this `BLGlyphBuffer` from `wchar_t` encoded string. The `size` parameter represents
+  //! the length of the `text` in `wchar_t` units.
   BL_INLINE BLResult setWCharText(const wchar_t* text, size_t size = SIZE_MAX) noexcept {
     return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_WCHAR);
   }
@@ -223,18 +220,18 @@ public:
     return blGlyphBufferSetGlyphs(this, glyphData, size);
   }
 
-  //! Assigns a glyph content of this `BLGlyphBuffer` from an array of glyphs or
-  //! from a foreign structure that contains glyphs and possibly other members that
-  //! have to be skipped. The glyph size can be either 16-bit (2) or 32-bit (4).
-  //! The last parameter `glyphAdvance` specifies how many bytes to advance after
-  //! a glyph value is read.
+  //! Assigns a glyph content of this `BLGlyphBuffer` from an array of glyphs or from a foreign structure that contains
+  //! glyphs and possibly other members that have to be skipped. The glyph size can be either 16-bit (2) or 32-bit (4).
+  //! The last parameter `glyphAdvance` specifies how many bytes to advance after a glyph value is read.
   BL_INLINE BLResult setGlyphsFromStruct(const void* glyphData, size_t size, size_t glyphIdSize, intptr_t glyphAdvance) noexcept {
     return blGlyphBufferSetGlyphsFromStruct(this, glyphData, size, glyphIdSize, glyphAdvance);
   }
 
 //! \}
 };
+
 #endif
+//! \}
 
 //! \}
 

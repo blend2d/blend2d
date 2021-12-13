@@ -1,32 +1,13 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
 #include "../codec/jpeghuffman_p.h"
 
-// ============================================================================
-// [BLJpegDecoder - BuildHuffmanTable]
-// ============================================================================
+// JpegDecoder - BuildHuffmanTable
+// ===============================
 
 static BLResult blJpegDecoderBuildHuffmanTable(BLJpegDecoderHuffmanTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept {
   uint32_t i;
@@ -122,14 +103,14 @@ BLResult blJpegDecoderBuildHuffmanAC(BLJpegDecoderHuffmanACTable* table, const u
       if (mag != 0 && size + mag <= BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS) {
         // Magnitude code followed by receive/extend code.
         int32_t k = ((i << size) & BL_JPEG_DECODER_HUFFMAN_ACCEL_MASK) >> (BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS - mag);
-        int32_t m = blBitShl(1, mag - 1);
+        int32_t m = BLIntOps::shl(1, mag - 1);
 
         if (k < m)
-          k += blBitShl(-1, mag) + 1;
+          k += BLIntOps::shl(-1, mag) + 1;
 
         // If the result is small enough, we can fit it in acAccel table.
         if (k >= -128 && k <= 127)
-          ac = int32_t(blBitShl(k, 8)) + int32_t(blBitShl(run, 4) + size + mag);
+          ac = int32_t(BLIntOps::shl(k, 8)) + int32_t(BLIntOps::shl(run, 4) + size + mag);
       }
     }
 

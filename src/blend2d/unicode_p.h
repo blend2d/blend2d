@@ -1,30 +1,13 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_UNICODE_P_H_INCLUDED
 #define BLEND2D_UNICODE_P_H_INCLUDED
 
-#include "./support_p.h"
+#include "support/intops_p.h"
+#include "support/memops_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -167,7 +150,7 @@ struct BLUnicodeValidationState {
   BL_INLINE bool hasSMP() const noexcept { return utf16Index != utf32Index; }
 };
 
-BL_HIDDEN BLResult blValidateUnicode(const void* data, size_t sizeInBytes, uint32_t encoding, BLUnicodeValidationState& state) noexcept;
+BL_HIDDEN BLResult blValidateUnicode(const void* data, size_t sizeInBytes, BLTextEncoding encoding, BLUnicodeValidationState& state) noexcept;
 
 static BL_INLINE BLResult blValidateUtf8(const char* data, size_t size, BLUnicodeValidationState& state) noexcept {
   return blValidateUnicode(data, size, BL_TEXT_ENCODING_UTF8, state);
@@ -264,7 +247,7 @@ public:
   BL_INLINE BLResult next(uint32_t& uc, size_t& ucSizeInBytes) noexcept {
     BL_ASSERT(hasNext());
 
-    uc = blMemReadU8(_ptr);
+    uc = BLMemOps::readU8(_ptr);
     ucSizeInBytes = 1;
 
     _ptr++;
@@ -287,7 +270,7 @@ public:
           goto TruncatedString;
 
         // All consecutive bytes must be '10xxxxxx'.
-        uint32_t b1 = blMemReadU8(_ptr - 1) ^ 0x80u;
+        uint32_t b1 = BLMemOps::readU8(_ptr - 1) ^ 0x80u;
         uc = ((uc + kMultiByte - 0xC0u) << 6) + b1;
 
         if (BL_UNLIKELY(b1 > 0x3Fu))
@@ -305,8 +288,8 @@ public:
         if (BL_UNLIKELY(_ptr > _end))
           goto TruncatedString;
 
-        uint32_t b1 = blMemReadU8(_ptr - 2) ^ 0x80u;
-        uint32_t b2 = blMemReadU8(_ptr - 1) ^ 0x80u;
+        uint32_t b1 = BLMemOps::readU8(_ptr - 2) ^ 0x80u;
+        uint32_t b2 = BLMemOps::readU8(_ptr - 1) ^ 0x80u;
         uc = ((uc + kMultiByte - 0xE0u) << 12) + (b1 << 6) + b2;
 
         // 1. All consecutive bytes must be '10xxxxxx'.
@@ -332,9 +315,9 @@ public:
             goto TruncatedString;
         }
 
-        uint32_t b1 = blMemReadU8(_ptr - 3) ^ 0x80u;
-        uint32_t b2 = blMemReadU8(_ptr - 2) ^ 0x80u;
-        uint32_t b3 = blMemReadU8(_ptr - 1) ^ 0x80u;
+        uint32_t b1 = BLMemOps::readU8(_ptr - 3) ^ 0x80u;
+        uint32_t b2 = BLMemOps::readU8(_ptr - 2) ^ 0x80u;
+        uint32_t b3 = BLMemOps::readU8(_ptr - 1) ^ 0x80u;
         uc = ((uc + kMultiByte - 0xF0u) << 18) + (b1 << 12) + (b2 << 6) + b3;
 
         // 1. All consecutive bytes must be '10xxxxxx'.
@@ -403,7 +386,7 @@ public:
 
   BL_INLINE void reset(const void* data, size_t byteSize) noexcept {
     _ptr = static_cast<const char*>(data);
-    _end = static_cast<const char*>(data) + blAlignDown(byteSize, 2);
+    _end = static_cast<const char*>(data) + BLIntOps::alignDown(byteSize, 2);
     _utf8IndexAdd = 0;
     _utf16SurrogateCount = 0;
   }
@@ -529,7 +512,7 @@ TruncatedString:
   static BL_INLINE uint32_t readU16(const char* ptr) noexcept {
     constexpr uint32_t kByteOrder = Flags & BL_UNICODE_IO_BYTE_SWAP ? BL_BYTE_ORDER_SWAPPED : BL_BYTE_ORDER_NATIVE;
     constexpr uint32_t kAlignment = Flags & BL_UNICODE_IO_UNALIGNED ? 1 : 2;
-    return blMemReadU16<kByteOrder, kAlignment>(ptr);
+    return BLMemOps::readU16<kByteOrder, kAlignment>(ptr);
   }
 };
 
@@ -554,7 +537,7 @@ public:
 
   BL_INLINE void reset(const void* data, size_t byteSize) noexcept {
     _ptr = static_cast<const char*>(data);
-    _end = static_cast<const char*>(data) + blAlignDown(byteSize, 4);
+    _end = static_cast<const char*>(data) + BLIntOps::alignDown(byteSize, 4);
     _utf8IndexAdd = 0;
     _utf16SurrogateCount = 0;
   }
@@ -630,7 +613,7 @@ public:
   static BL_INLINE uint32_t readU32(const char* ptr) noexcept {
     constexpr uint32_t kByteOrder = Flags & BL_UNICODE_IO_BYTE_SWAP ? BL_BYTE_ORDER_SWAPPED : BL_BYTE_ORDER_NATIVE;
     constexpr uint32_t kAlignment = Flags & BL_UNICODE_IO_UNALIGNED ? 1 : 4;
-    return blMemReadU32<kByteOrder, kAlignment>(ptr);
+    return BLMemOps::readU32<kByteOrder, kAlignment>(ptr);
   }
 };
 
@@ -829,7 +812,7 @@ public:
     if (BL_UNLIKELY(atEnd()))
       return blTraceError(BL_ERROR_NO_SPACE_LEFT);
 
-    _blMemWriteU16(_ptr, uc);
+    _writeMemU16(_ptr, uc);
     _ptr++;
     return BL_SUCCESS;
   }
@@ -837,7 +820,7 @@ public:
   BL_INLINE BLResult writeBMPUnsafe(uint32_t uc) noexcept {
     BL_ASSERT(remainingSize() >= 1);
 
-    _blMemWriteU16(_ptr, uc);
+    _writeMemU16(_ptr, uc);
     _ptr++;
     return BL_SUCCESS;
   }
@@ -854,8 +837,8 @@ public:
     uint32_t hi, lo;
     blCharToSurrogate(uc, hi, lo);
 
-    _blMemWriteU16(_ptr - 2, hi);
-    _blMemWriteU16(_ptr - 1, lo);
+    _writeMemU16(_ptr - 2, hi);
+    _writeMemU16(_ptr - 1, lo);
     return BL_SUCCESS;
   }
 
@@ -866,8 +849,8 @@ public:
     uint32_t hi, lo;
     blCharToSurrogate(uc, hi, lo);
 
-    _blMemWriteU16(_ptr + 0, hi);
-    _blMemWriteU16(_ptr + 1, lo);
+    _writeMemU16(_ptr + 0, hi);
+    _writeMemU16(_ptr + 1, lo);
 
     _ptr += 2;
     return BL_SUCCESS;
@@ -877,8 +860,8 @@ public:
   // [Utilities]
   // --------------------------------------------------------------------------
 
-  static BL_INLINE void _blMemWriteU16(void* dst, uint32_t value) noexcept {
-    blMemWriteU16<ByteOrder, Alignment>(dst, value);
+  static BL_INLINE void _writeMemU16(void* dst, uint32_t value) noexcept {
+    BLMemOps::writeU16<ByteOrder, Alignment>(dst, value);
   }
 };
 
@@ -917,13 +900,13 @@ public:
     if (BL_UNLIKELY(atEnd()))
       return blTraceError(BL_ERROR_NO_SPACE_LEFT);
 
-    _blMemWriteU32(_ptr, uc);
+    _writeMemU32(_ptr, uc);
     _ptr++;
     return BL_SUCCESS;
   }
 
-  static BL_INLINE void _blMemWriteU32(void* dst, uint32_t value) noexcept {
-    blMemWriteU32<ByteOrder, Alignment>(dst, value);
+  static BL_INLINE void _writeMemU32(void* dst, uint32_t value) noexcept {
+    BLMemOps::writeU32<ByteOrder, Alignment>(dst, value);
   }
 };
 

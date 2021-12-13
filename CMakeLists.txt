@@ -19,9 +19,8 @@ endif()
 include(CheckCXXCompilerFlag)
 include(GNUInstallDirs)
 
-# =============================================================================
-# [Blend2D - Configuration]
-# =============================================================================
+# Blend2D - Configuration
+# =======================
 
 if (NOT DEFINED BLEND2D_DIR)
   set(BLEND2D_DIR "${CMAKE_CURRENT_LIST_DIR}")
@@ -53,6 +52,7 @@ set(BLEND2D_SANITIZE "${BLEND2D_SANITIZE}" CACHE STRING "List of sanitizers to u
 # set(BLEND2D_NO_JIT 1)
 # set(BLEND2D_NO_JIT_LOGGING 1)
 # set(BLEND2D_NO_TLS 1)
+# set(BLEND2D_NO_FUTEX 1)
 # set(BLEND2D_NO_INTRINSICS 1)
 # set(BLEND2D_NO_STDCXX 1)
 
@@ -64,9 +64,8 @@ if (NOT DEFINED BLEND2D_NO_STDCXX)
   endif()
 endif()
 
-# =============================================================================
-# [Blend2D - Project]
-# =============================================================================
+# Blend2D - Project
+# =================
 
 set(BLEND2D_INCLUDE_DIRS "${BLEND2D_DIR}/src")   # Include directory is the same as source dir.
 set(BLEND2D_DEPS "")                             # Blend2D dependencies (libraries) for the linker.
@@ -81,9 +80,8 @@ set(BLEND2D_SANITIZE_LFLAGS "")                  # Linker flags required by curr
 set(BLEND2D_NO_STDCXX_CFLAGS "")                 # Private compiler flags to disable linking to a standard C++ library.
 set(BLEND2D_NO_STDCXX_LFLAGS "")                 # Private linker flags to disable linking to a standard C++ library.
 
-# =============================================================================
-# [Blend2D - Utilities]
-# =============================================================================
+# Blend2D - Utilities
+# ===================
 
 # Detects C++ flags and appends all detected ones to `out`.
 function(blend2d_detect_cflags out)
@@ -138,6 +136,7 @@ function(blend2d_add_target target target_type)
     add_executable(${target} ${X_SOURCES})
   else()
     add_library(${target} ${target_type} ${X_SOURCES})
+    set_target_properties(${target} PROPERTIES DEFINE_SYMBOL "")
   endif()
 
   target_link_libraries(${target} PRIVATE ${X_LIBRARIES})
@@ -162,15 +161,15 @@ function(blend2d_add_target target target_type)
 endfunction()
 
 
-# =============================================================================
-# [Blend2D - Compiler Support]
-# =============================================================================
+# Blend2D - Compiler Support
+# ==========================
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
   list(APPEND BLEND2D_PRIVATE_CFLAGS
     -MP                      # [+] Multi-Process Compilation.
     -GR-                     # [-] Runtime type information.
     -GF                      # [+] Eliminate duplicate strings.
+    -Zc:__cplusplus          # [+] Conforming __cplusplus definition.
     -Zc:inline               # [+] Remove unreferenced COMDAT.
     -Zc:strictStrings        # [+] Strict const qualification of string literals.
     -Zc:threadSafeInit-      # [-] Thread-safe statics.
@@ -252,25 +251,32 @@ else()
 endif()
 
 if (BLEND2D_EMBED OR BLEND2D_STATIC)
-  list(APPEND BLEND2D_CFLAGS         "-DBL_STATIC")
+  list(APPEND BLEND2D_CFLAGS "-DBL_STATIC")
   list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_STATIC")
 endif()
 
+if (BLEND2D_NO_FUTEX)
+  message("-- Disabling futex support (BL_BUILD_NO_FUTEX)")
+  list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_NO_FUTEX")
+endif()
+
 if (BLEND2D_NO_JIT)
+  message("-- Disabling JIT compiler support (BL_BUILD_NO_JIT)")
   list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_NO_JIT")
 endif()
 
 if (BLEND2D_NO_TLS)
+  message("-- Disabling thread local storage support (BL_BUILD_NO_TLS)")
   list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_NO_TLS")
 endif()
 
 if (BLEND2D_NO_INTRINSICS)
+  message("-- Disabling compiler intrinsics in C++ code (BL_BUILD_NO_INTRINSICS)")
   list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_NO_INTRINSICS")
 endif()
 
-# =============================================================================
-# [Blend2D - Linker Support]
-# =============================================================================
+# Blend2D - Linker Support
+# ========================
 
 if (WIN32)
   if(CMAKE_LINKER MATCHES "link\\.exe" OR CMAKE_LINKER MATCHES "lld-link\\.exe")
@@ -278,9 +284,8 @@ if (WIN32)
   endif()
 endif()
 
-# =============================================================================
-# [Blend2D - Enable SIMD]
-# =============================================================================
+# Blend2D - Enable SIMD
+# =====================
 
 # TODO: Detect ARM when the support is added.
 
@@ -360,9 +365,8 @@ elseif (BLEND2D_CFLAGS_AVX)
   list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_OPT_AVX")
 endif()
 
-# =============================================================================
-# [Blend2D - Dependencies]
-# =============================================================================
+# Blend2D - Dependencies
+# ======================
 
 if (NOT WIN32)
   if (HAIKU)
@@ -401,14 +405,13 @@ if (NOT BLEND2D_NO_JIT)
 
   # A possibility to reduce the resulting binary size by disabling asmjit logging.
   if (BLEND2D_NO_JIT_LOGGING)
-    message("   Disabling AsmJit logging functionality to make Blend2D smaller")
+    message("-- Disabling AsmJit logging functionality (PipeGen)")
     list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_NO_LOGGING -DASMJIT_NO_TEXT)
   endif()
 endif()
 
-# =============================================================================
-# [Blend2D - Finalize Build Options]
-# =============================================================================
+# Blend2D - Finalize Build Options
+# ================================
 
 list(REMOVE_DUPLICATES BLEND2D_DEPS)
 list(REMOVE_DUPLICATES BLEND2D_PRIVATE_CFLAGS)
@@ -418,9 +421,8 @@ if (NOT BLEND2D_EMBED)
   list(INSERT BLEND2D_LIBS 0 blend2d)
 endif()
 
-# =============================================================================
-# [Blend2D - Source Files]
-# =============================================================================
+# Blend2D - Source Files
+# ======================
 
 set(BLEND2D_SRC_LIST
   blend2d.h
@@ -428,19 +430,16 @@ set(BLEND2D_SRC_LIST
   blend2d-impl.h
   blend2d/api.h
   blend2d/api-build_p.h
+  blend2d/api-globals.cpp
   blend2d/api-impl.h
   blend2d/api-internal_p.h
   blend2d/api-nocxx.cpp
   blend2d/array.cpp
   blend2d/array.h
   blend2d/array_p.h
-  blend2d/arrayops.cpp
-  blend2d/arrayops_p.h
-  blend2d/bitarray.cpp
-  blend2d/bitarray.h
-  blend2d/bitarray_p.h
-  blend2d/bitops.cpp
-  blend2d/bitops_p.h
+  blend2d/bitset.cpp
+  blend2d/bitset.h
+  blend2d/bitset_p.h
   blend2d/compop.cpp
   blend2d/compop_p.h
   blend2d/context.cpp
@@ -466,8 +465,6 @@ set(BLEND2D_SRC_LIST
   blend2d/glyphbuffer.h
   blend2d/glyphbuffer_p.h
   blend2d/gradient.cpp
-  blend2d/gradient_avx2.cpp
-  blend2d/gradient_sse2.cpp
   blend2d/gradient.h
   blend2d/gradient_p.h
   blend2d/image.cpp
@@ -477,7 +474,6 @@ set(BLEND2D_SRC_LIST
   blend2d/imagecodec.h
   blend2d/imagescale.cpp
   blend2d/imagescale_p.h
-  blend2d/lookuptable_p.h
   blend2d/math.cpp
   blend2d/math_p.h
   blend2d/matrix.cpp
@@ -485,6 +481,9 @@ set(BLEND2D_SRC_LIST
   blend2d/matrix_sse2.cpp
   blend2d/matrix.h
   blend2d/matrix_p.h
+  blend2d/object.cpp
+  blend2d/object.h
+  blend2d/object_p.h
   blend2d/path.cpp
   blend2d/path.h
   blend2d/path_p.h
@@ -493,65 +492,39 @@ set(BLEND2D_SRC_LIST
   blend2d/pattern.cpp
   blend2d/pattern.h
   blend2d/pattern_p.h
-  blend2d/pipedefs.cpp
-  blend2d/pipedefs_p.h
-  blend2d/piperuntime.cpp
-  blend2d/piperuntime_p.h
   blend2d/pixelconverter.cpp
   blend2d/pixelconverter_avx2.cpp
   blend2d/pixelconverter_sse2.cpp
   blend2d/pixelconverter_ssse3.cpp
   blend2d/pixelconverter.h
   blend2d/pixelconverter_p.h
-  blend2d/pixelops.cpp
-  blend2d/pixelops_p.h
   blend2d/random.cpp
   blend2d/random.h
   blend2d/random_p.h
-  blend2d/region.cpp
-  blend2d/region.h
-  blend2d/region_p.h
   blend2d/rgba.cpp
   blend2d/rgba.h
   blend2d/runtime.cpp
   blend2d/runtime.h
   blend2d/runtime_p.h
-  blend2d/scopedallocator.cpp
-  blend2d/scopedallocator_p.h
   blend2d/simd_p.h
   blend2d/simd_x86_p.h
   blend2d/string.cpp
   blend2d/string.h
   blend2d/string_p.h
-  blend2d/style.cpp
-  blend2d/style.h
-  blend2d/style_p.h
-  blend2d/support.cpp
-  blend2d/support_p.h
   blend2d/tables.cpp
   blend2d/tables_p.h
   blend2d/trace.cpp
   blend2d/trace_p.h
   blend2d/unicode.cpp
   blend2d/unicode_p.h
-  blend2d/variant.cpp
-  blend2d/variant.h
-  blend2d/variant_p.h
+  blend2d/var.cpp
+  blend2d/var.h
+  blend2d/var_p.h
   blend2d/zeroallocator.cpp
   blend2d/zeroallocator_p.h
-  blend2d/zoneallocator.cpp
-  blend2d/zoneallocator_p.h
-  blend2d/zonehash.cpp
-  blend2d/zonehash_p.h
-  blend2d/zonelist.cpp
-  blend2d/zonelist_p.h
-  blend2d/zonetree.cpp
-  blend2d/zonetree_p.h
 
   blend2d/codec/bmpcodec.cpp
   blend2d/codec/bmpcodec_p.h
-  blend2d/codec/deflate.cpp
-  blend2d/codec/deflate_p.h
   blend2d/codec/jpegcodec.cpp
   blend2d/codec/jpegcodec_p.h
   blend2d/codec/jpeghuffman.cpp
@@ -565,8 +538,14 @@ set(BLEND2D_SRC_LIST
   blend2d/codec/pngops_sse2.cpp
   blend2d/codec/pngops_p.h
 
-  blend2d/fixedpipe/fixedpiperuntime_p.h
-  blend2d/fixedpipe/fixedpiperuntime.cpp
+  blend2d/compression/checksum.cpp
+  blend2d/compression/checksum_p.h
+  blend2d/compression/deflatedecoder.cpp
+  blend2d/compression/deflatedecoder_p.h
+  blend2d/compression/deflatedefs_p.h
+  blend2d/compression/deflateencoder.cpp
+  blend2d/compression/deflateencoder_p.h
+  blend2d/compression/matchfinder_p.h
 
   blend2d/opentype/otcff.cpp
   blend2d/opentype/otcff_p.h
@@ -589,68 +568,120 @@ set(BLEND2D_SRC_LIST
   blend2d/opentype/otname_p.h
   blend2d/opentype/otplatform_p.h
 
-  blend2d/pipegen/compoppart.cpp
-  blend2d/pipegen/compoppart_p.h
-  blend2d/pipegen/fetchgradientpart.cpp
-  blend2d/pipegen/fetchgradientpart_p.h
-  blend2d/pipegen/fetchpart.cpp
-  blend2d/pipegen/fetchpart_p.h
-  blend2d/pipegen/fetchpatternpart.cpp
-  blend2d/pipegen/fetchpatternpart_p.h
-  blend2d/pipegen/fetchpixelptrpart.cpp
-  blend2d/pipegen/fetchpixelptrpart_p.h
-  blend2d/pipegen/fetchsolidpart.cpp
-  blend2d/pipegen/fetchsolidpart_p.h
-  blend2d/pipegen/fetchutils.cpp
-  blend2d/pipegen/fetchutils_p.h
-  blend2d/pipegen/fillpart.cpp
-  blend2d/pipegen/fillpart_p.h
-  blend2d/pipegen/pipecompiler.cpp
-  blend2d/pipegen/pipecompiler_p.h
-  blend2d/pipegen/pipedebug_p.h
-  blend2d/pipegen/pipegencore.cpp
-  blend2d/pipegen/pipegencore_p.h
-  blend2d/pipegen/pipegenruntime_p.h
-  blend2d/pipegen/pipegenruntime.cpp
-  blend2d/pipegen/pipepart.cpp
-  blend2d/pipegen/pipepart_p.h
-  blend2d/pipegen/piperegusage_p.h
+  blend2d/pipeline/pipedefs.cpp
+  blend2d/pipeline/pipedefs_p.h
+  blend2d/pipeline/piperuntime.cpp
+  blend2d/pipeline/piperuntime_p.h
+
+  blend2d/pipeline/jit/compoppart.cpp
+  blend2d/pipeline/jit/compoppart_p.h
+  blend2d/pipeline/jit/fetchgradientpart.cpp
+  blend2d/pipeline/jit/fetchgradientpart_p.h
+  blend2d/pipeline/jit/fetchpart.cpp
+  blend2d/pipeline/jit/fetchpart_p.h
+  blend2d/pipeline/jit/fetchpatternpart.cpp
+  blend2d/pipeline/jit/fetchpatternpart_p.h
+  blend2d/pipeline/jit/fetchpixelptrpart.cpp
+  blend2d/pipeline/jit/fetchpixelptrpart_p.h
+  blend2d/pipeline/jit/fetchsolidpart.cpp
+  blend2d/pipeline/jit/fetchsolidpart_p.h
+  blend2d/pipeline/jit/fetchutils.cpp
+  blend2d/pipeline/jit/fetchutils_p.h
+  blend2d/pipeline/jit/fillpart.cpp
+  blend2d/pipeline/jit/fillpart_p.h
+  blend2d/pipeline/jit/jitbase_p.h
+  blend2d/pipeline/jit/pipecompiler.cpp
+  blend2d/pipeline/jit/pipecompiler_p.h
+  blend2d/pipeline/jit/pipedebug_p.h
+  blend2d/pipeline/jit/pipegencore.cpp
+  blend2d/pipeline/jit/pipegencore_p.h
+  blend2d/pipeline/jit/pipegenruntime_p.h
+  blend2d/pipeline/jit/pipegenruntime.cpp
+  blend2d/pipeline/jit/pipepart.cpp
+  blend2d/pipeline/jit/pipepart_p.h
+
+  blend2d/pipeline/reference/compopgeneric_p.h
+  blend2d/pipeline/reference/fetchgeneric_p.h
+  blend2d/pipeline/reference/fillgeneric_p.h
+  blend2d/pipeline/reference/fixedpiperuntime_p.h
+  blend2d/pipeline/reference/fixedpiperuntime.cpp
+  blend2d/pipeline/reference/pixelbufferptr_p.h
+  blend2d/pipeline/reference/pixelgeneric_p.h
+
+  blend2d/pixelops/interpolation.cpp
+  blend2d/pixelops/interpolation_avx2.cpp
+  blend2d/pixelops/interpolation_sse2.cpp
+  blend2d/pixelops/funcs.cpp
+  blend2d/pixelops/funcs_p.h
+  blend2d/pixelops/scalar.cpp
+  blend2d/pixelops/scalar_p.h
 
   blend2d/raster/analyticrasterizer.cpp
   blend2d/raster/analyticrasterizer_p.h
+  blend2d/raster/debugging_p.h
   blend2d/raster/edgebuilder_p.h
-  blend2d/raster/rastercommand_p.h
-  blend2d/raster/rastercommandprocasync_p.h
-  blend2d/raster/rastercommandprocsync_p.h
-  blend2d/raster/rastercommandserializer_p.h
+  blend2d/raster/edgestorage_p.h
   blend2d/raster/rastercontext.cpp
   blend2d/raster/rastercontext_p.h
   blend2d/raster/rastercontextops.cpp
   blend2d/raster/rastercontextops_p.h
-  blend2d/raster/rastercontextstate_p.h
-  blend2d/raster/rastercontextstyle_p.h
-  blend2d/raster/rasterdebug_p.h
   blend2d/raster/rasterdefs_p.h
-  blend2d/raster/rasterfetchdata.cpp
-  blend2d/raster/rasterfetchdata_p.h
-  blend2d/raster/rasterjob_p.h
-  blend2d/raster/rasterjobproc_p.h
-  blend2d/raster/rasterworkbatch_p.h
-  blend2d/raster/rasterworkdata.cpp
-  blend2d/raster/rasterworkdata_p.h
-  blend2d/raster/rasterworkermanager.cpp
-  blend2d/raster/rasterworkermanager_p.h
-  blend2d/raster/rasterworkproc.cpp
-  blend2d/raster/rasterworkproc_p.h
-  blend2d/raster/rasterworkqueue_p.h
-  blend2d/raster/rasterworksynchronization.cpp
-  blend2d/raster/rasterworksynchronization_p.h
+  blend2d/raster/renderbatch_p.h
+  blend2d/raster/rendercommand_p.h
+  blend2d/raster/rendercommandprocasync_p.h
+  blend2d/raster/rendercommandprocsync_p.h
+  blend2d/raster/rendercommandserializer_p.h
+  blend2d/raster/renderfetchdata.cpp
+  blend2d/raster/renderfetchdata_p.h
+  blend2d/raster/renderjob_p.h
+  blend2d/raster/renderjobproc_p.h
+  blend2d/raster/renderqueue_p.h
+  blend2d/raster/rendertargetinfo.cpp
+  blend2d/raster/rendertargetinfo_p.h
+  blend2d/raster/statedata_p.h
+  blend2d/raster/styledata_p.h
+  blend2d/raster/workdata.cpp
+  blend2d/raster/workdata_p.h
+  blend2d/raster/workermanager.cpp
+  blend2d/raster/workermanager_p.h
+  blend2d/raster/workerproc.cpp
+  blend2d/raster/workerproc_p.h
+  blend2d/raster/workersynchronization.cpp
+  blend2d/raster/workersynchronization_p.h
+
+  blend2d/support/algorithm.cpp
+  blend2d/support/algorithm_p.h
+  blend2d/support/arenaallocator.cpp
+  blend2d/support/arenaallocator_p.h
+  blend2d/support/arenahashmap.cpp
+  blend2d/support/arenahashmap_p.h
+  blend2d/support/arenalist.cpp
+  blend2d/support/arenalist_p.h
+  blend2d/support/arenatree.cpp
+  blend2d/support/arenatree_p.h
+  blend2d/support/bitops.cpp
+  blend2d/support/bitops_p.h
+  blend2d/support/fixedbitarray_p.h
+  blend2d/support/hashops_p.h
+  blend2d/support/intops.cpp
+  blend2d/support/intops_p.h
+  blend2d/support/lookuptable_p.h
+  blend2d/support/memops.cpp
+  blend2d/support/memops_p.h
+  blend2d/support/scopedallocator.cpp
+  blend2d/support/scopedallocator_p.h
+  blend2d/support/scopedbuffer_p.h
+  blend2d/support/stringops_p.h
+  blend2d/support/wrap_p.h
 
   blend2d/threading/atomic_p.h
   blend2d/threading/conditionvariable_p.h
+  blend2d/threading/futex.cpp
+  blend2d/threading/futex_p.h
   blend2d/threading/mutex_p.h
   blend2d/threading/thread.cpp
   blend2d/threading/thread_p.h
+  blend2d/threading/threadingutils_p.h
   blend2d/threading/threadpool.cpp
   blend2d/threading/threadpool_p.h
   blend2d/threading/uniqueidgenerator.cpp
@@ -691,9 +722,8 @@ if (ASMJIT_EMBED)
   list(APPEND BLEND2D_ALL_SRC_FILES ${ASMJIT_SRC})
 endif()
 
-# =============================================================================
-# [Blend2D - Summary]
-# =============================================================================
+# Blend2D - Summary
+# =================
 
 message("** Blend2D Summary **")
 message("   BLEND2D_DIR=${BLEND2D_DIR}")
@@ -706,9 +736,8 @@ message("   BLEND2D_PRIVATE_CFLAGS=${BLEND2D_PRIVATE_CFLAGS}")
 message("   BLEND2D_PRIVATE_CFLAGS_DBG=${BLEND2D_PRIVATE_CFLAGS_DBG}")
 message("   BLEND2D_PRIVATE_CFLAGS_REL=${BLEND2D_PRIVATE_CFLAGS_REL}")
 
-# =============================================================================
-# [Blend2D - Targets]
-# =============================================================================
+# Blend2D - Targets
+# =================
 
 if (NOT BLEND2D_EMBED)
   # Add 'blend2d' library target.

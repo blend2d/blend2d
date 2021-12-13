@@ -1,40 +1,23 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
+#include "api-build_p.h"
 #ifdef BL_TARGET_OPT_SSE2
 
-#include "./geometry.h"
-#include "./matrix_p.h"
-#include "./runtime_p.h"
-#include "./simd_p.h"
-#include "./support_p.h"
+#include "geometry.h"
+#include "matrix_p.h"
+#include "runtime_p.h"
+#include "simd_p.h"
+#include "support/intops_p.h"
 
-// ============================================================================
-// [BLMatrix2D - MapPointDArray [SSE2]]
-// ============================================================================
+namespace BLTransformPrivate {
 
-static BLResult BL_CDECL blMatrix2DMapPointDArrayIdentity_SSE2(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+// Transform - MapPointDArray (SSE2)
+// =================================
+
+static BLResult BL_CDECL mapPointDArrayIdentity_SSE2(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   blUnused(self);
@@ -42,7 +25,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayIdentity_SSE2(const BLMatrix2D*
     return BL_SUCCESS;
 
   size_t i = size;
-  if (blIsAligned(((uintptr_t)dst | (uintptr_t)src), 16)) {
+  if (BLIntOps::isAligned(((uintptr_t)dst | (uintptr_t)src), 16)) {
     while (i >= 4) {
       Vec128D s0 = v_loada_d128(src + 0);
       Vec128D s1 = v_loada_d128(src + 1);
@@ -83,13 +66,13 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayIdentity_SSE2(const BLMatrix2D*
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blMatrix2DMapPointDArrayTranslate_SSE2(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL mapPointDArrayTranslate_SSE2(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   size_t i = size;
   Vec128D m20_m21 = v_loadu_d128(&self->m20);
 
-  if (blIsAligned(((uintptr_t)dst | (uintptr_t)src), 16)) {
+  if (BLIntOps::isAligned(((uintptr_t)dst | (uintptr_t)src), 16)) {
     while (i >= 4) {
       Vec128D s0 = v_loada_d128(src + 0);
       Vec128D s1 = v_loada_d128(src + 1);
@@ -145,14 +128,14 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayTranslate_SSE2(const BLMatrix2D
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blMatrix2DMapPointDArrayScale_SSE2(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL mapPointDArrayScale_SSE2(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   size_t i = size;
   Vec128D m00_m11 = v_fill_d128(self->m11, self->m00);
   Vec128D m20_m21 = v_loadu_d128(&self->m20);
 
-  if (blIsAligned(((uintptr_t)dst | (uintptr_t)src), 16)) {
+  if (BLIntOps::isAligned(((uintptr_t)dst | (uintptr_t)src), 16)) {
     while (i >= 4) {
       Vec128D s0 = v_loada_d128(src + 0);
       Vec128D s1 = v_loada_d128(src + 1);
@@ -208,14 +191,14 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayScale_SSE2(const BLMatrix2D* se
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blMatrix2DMapPointDArraySwap_SSE2(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL mapPointDArraySwap_SSE2(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   Vec128D m01_m10 = v_fill_d128(self->m01, self->m10);
   Vec128D m20_m21 = v_loadu_d128(&self->m20);
 
   size_t i = size;
-  if (blIsAligned(((uintptr_t)dst | (uintptr_t)src), 16)) {
+  if (BLIntOps::isAligned(((uintptr_t)dst | (uintptr_t)src), 16)) {
     while (i >= 4) {
       Vec128D s0 = v_loada_d128(src + 0);
       Vec128D s1 = v_loada_d128(src + 1);
@@ -283,7 +266,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArraySwap_SSE2(const BLMatrix2D* sel
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine_SSE2(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL mapPointDArrayAffine_SSE2(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   size_t i = size;
@@ -291,7 +274,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine_SSE2(const BLMatrix2D* s
   Vec128D m10_m01 = v_fill_d128(self->m01, self->m10);
   Vec128D m20_m21 = v_loadu_d128(&self->m20);
 
-  if (blIsAligned(((uintptr_t)dst | (uintptr_t)src), 16)) {
+  if (BLIntOps::isAligned(((uintptr_t)dst | (uintptr_t)src), 16)) {
     while (i >= 4) {
       Vec128D s0 = v_loada_d128(src + 0);
       Vec128D s1 = v_loada_d128(src + 1);
@@ -387,20 +370,21 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine_SSE2(const BLMatrix2D* s
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLMatrix2D - Runtime Init [SSE2]]
-// ============================================================================
+// Transform - Runtime Registration (SSE2)
+// =======================================
 
-void blMatrix2DOnInit_SSE2(BLRuntimeContext* rt) noexcept {
+void blTransformRtInit_SSE2(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
   BLMapPointDArrayFunc* funcs = blMatrix2DMapPointDArrayFuncs;
 
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_IDENTITY ], blMatrix2DMapPointDArrayIdentity_SSE2);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_TRANSLATE], blMatrix2DMapPointDArrayTranslate_SSE2);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SCALE    ], blMatrix2DMapPointDArrayScale_SSE2);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SWAP     ], blMatrix2DMapPointDArraySwap_SSE2);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_AFFINE   ], blMatrix2DMapPointDArrayAffine_SSE2);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_INVALID  ], blMatrix2DMapPointDArrayAffine_SSE2);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_IDENTITY ], mapPointDArrayIdentity_SSE2);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_TRANSLATE], mapPointDArrayTranslate_SSE2);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SCALE    ], mapPointDArrayScale_SSE2);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SWAP     ], mapPointDArraySwap_SSE2);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_AFFINE   ], mapPointDArrayAffine_SSE2);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_INVALID  ], mapPointDArrayAffine_SSE2);
 }
+
+} // {BLTransformPrivate}
 
 #endif

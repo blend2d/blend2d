@@ -1,59 +1,37 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_RANDOM_P_H_INCLUDED
 #define BLEND2D_RANDOM_P_H_INCLUDED
 
-#include "./random.h"
-#include "./simd_p.h"
-#include "./support_p.h"
+#include "random.h"
+#include "simd_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
 //! \{
 
-// ============================================================================
-// [Constants]
-// ============================================================================
+namespace BLRandomPrivate {
 
-//! Shift constants used by `BLRandom` implementation.
-enum BLInternalRandomShifts : uint32_t {
-  // Constants suggested as `23/18/5`.
-  BL_RANDOM_STEP1_SHL = 23,
-  BL_RANDOM_STEP2_SHR = 18,
-  BL_RANDOM_STEP3_SHR = 5,
+//! \name Constants
+//! \{
 
-  // Number of bits needed to shift right to extract mantissa.
-  BL_RANDOM_MANTISSA_SHIFT = 64 - 52
-};
+// Constants suggested as `23/18/5`.
+static constexpr uint32_t kStep1Shift = 23;
+static constexpr uint32_t kStep2Shift = 18;
+static constexpr uint32_t kStep3Shift = 5;
 
-// ============================================================================
-// [BLRandom - Inline]
-// ============================================================================
+//! Number of bits needed to shift right to extract mantissa.
+static constexpr uint32_t kMantissaShift = 64 - 52;
 
-namespace {
+//! \}
 
-BL_INLINE void blRandomResetInline(BLRandom* self, uint64_t seed) noexcept {
+//! \name Inline API (Private)
+//! \{
+
+static BL_INLINE void resetSeed(BLRandom* self, uint64_t seed) noexcept {
   // The number is arbitrary, it means nothing.
   const uint64_t kZeroSeed = 0x1F0A2BE71D163FA0u;
 
@@ -68,13 +46,13 @@ BL_INLINE void blRandomResetInline(BLRandom* self, uint64_t seed) noexcept {
   }
 }
 
-BL_INLINE uint64_t blRandomNextUInt64Inline(BLRandom* self) noexcept {
+static BL_INLINE uint64_t nextUInt64(BLRandom* self) noexcept {
   uint64_t x = self->data[0];
   uint64_t y = self->data[1];
 
-  x ^= x << BL_RANDOM_STEP1_SHL;
-  y ^= y >> BL_RANDOM_STEP3_SHR;
-  x ^= x >> BL_RANDOM_STEP2_SHR;
+  x ^= x << kStep1Shift;
+  y ^= y >> kStep3Shift;
+  x ^= x >> kStep2Shift;
   x ^= y;
 
   self->data[0] = y;
@@ -83,23 +61,24 @@ BL_INLINE uint64_t blRandomNextUInt64Inline(BLRandom* self) noexcept {
   return x + y;
 }
 
-BL_INLINE uint32_t blRandomNextUInt32Inline(BLRandom* self) noexcept {
-  return uint32_t(blRandomNextUInt64Inline(self) >> 32);
+static BL_INLINE uint32_t nextUInt32(BLRandom* self) noexcept {
+  return uint32_t(nextUInt64(self) >> 32);
 }
 
 #ifdef BL_TARGET_OPT_SSE2
-//! High-performance SIMD implementation. Better utilizes CPU in 32-bit mode
-//! and it's a better candidate for `blRandomNextDouble()` in general on X86 as
-//! it returns a SIMD register, which is easier to convert to `double` than GP.
-BL_INLINE __m128i blRandomNextUInt64AsI128Inline(BLRandom* self) noexcept {
+
+//! High-performance SIMD implementation. Better utilizes CPU in 32-bit mode and it's a better candidate for
+//! `blRandomNextDouble()` in general on X86 as it returns a SIMD register, which is easier to convert to `double`
+//! than GP.
+static BL_INLINE __m128i nextUInt64AsI128(BLRandom* self) noexcept {
   using namespace SIMD;
 
   Vec128I x = v_load_i64(&self->data[0]);
   Vec128I y = v_load_i64(&self->data[1]);
 
-  x = v_xor(x, v_sll_i64<BL_RANDOM_STEP1_SHL>(x));
-  y = v_xor(y, v_srl_i64<BL_RANDOM_STEP3_SHR>(y));
-  x = v_xor(x, v_srl_i64<BL_RANDOM_STEP2_SHR>(x));
+  x = v_xor(x, v_sll_i64<kStep1Shift>(x));
+  y = v_xor(y, v_srl_i64<kStep3Shift>(y));
+  x = v_xor(x, v_srl_i64<kStep2Shift>(x));
   x = v_xor(x, y);
   v_store_i64(&self->data[0], y);
   v_store_i64(&self->data[1], x);
@@ -107,24 +86,29 @@ BL_INLINE __m128i blRandomNextUInt64AsI128Inline(BLRandom* self) noexcept {
   return v_add_i64(x, y);
 }
 
-BL_INLINE double blRandomNextDoubleInline(BLRandom* self) noexcept {
+static BL_INLINE double nextDouble(BLRandom* self) noexcept {
   using namespace SIMD;
 
   Vec128I kExpMsk128 = _mm_set_epi32(0x3FF00000, 0, 0x3FF00000, 0);
-  Vec128I x = blRandomNextUInt64AsI128Inline(self);
-  Vec128I y = v_srl_i64<BL_RANDOM_MANTISSA_SHIFT>(x);
+  Vec128I x = nextUInt64AsI128(self);
+  Vec128I y = v_srl_i64<kMantissaShift>(x);
   Vec128I z = v_or(y, kExpMsk128);
   return v_get_f64(v_cast<Vec128D>(z)) - 1.0;
 }
+
 #else
-BL_INLINE double blRandomNextDoubleInline(BLRandom* self) noexcept {
+
+static BL_INLINE double nextDouble(BLRandom* self) noexcept {
   uint64_t kExpMsk = 0x3FF0000000000000u;
-  uint64_t u = (blRandomNextUInt64Inline(self) >> BL_RANDOM_MANTISSA_SHIFT) | kExpMsk;
+  uint64_t u = (nextUInt64(self) >> kMantissaShift) | kExpMsk;
   return blBitCast<double>(u) - 1.0;
 }
+
 #endif
 
-} // {anonymous}
+//! \}
+
+} // {BLRandomPrivate}
 
 //! \}
 //! \endcond

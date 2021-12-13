@@ -1,40 +1,19 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_OPENTYPE_OTCORE_P_H_INCLUDED
 #define BLEND2D_OPENTYPE_OTCORE_P_H_INCLUDED
 
 #include "../opentype/otdefs_p.h"
+#include "../support/ptrops_p.h"
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_internal_opentype
+//! \addtogroup blend2d_opentype_impl
 //! \{
 
 namespace BLOpenType {
-
-// ============================================================================
-// [BLOpenType::SFNTHeader]
-// ============================================================================
 
 //! OpenType 'SFNT' header.
 //!
@@ -63,12 +42,8 @@ struct SFNTHeader {
   UInt16 entrySelector;
   UInt16 rangeShift;
 
-  BL_INLINE const TableRecord* tableRecords() const noexcept { return blOffsetPtr<const TableRecord>(this, sizeof(SFNTHeader)); }
+  BL_INLINE const TableRecord* tableRecords() const noexcept { return BLPtrOps::offset<const TableRecord>(this, sizeof(SFNTHeader)); }
 };
-
-// ============================================================================
-// [BLOpenType::TTCFHeader]
-// ============================================================================
 
 //! OpenType 'TTCF' header.
 //!
@@ -102,10 +77,6 @@ struct TTCFHeader {
   UInt32 dsigOffset;
   */
 };
-
-// ============================================================================
-// [BLOpenType::HeadTable]
-// ============================================================================
 
 //! OpenType 'head' table.
 //!
@@ -172,10 +143,6 @@ struct HeadTable {
   UInt16 glyphDataFormat;
 };
 
-// ============================================================================
-// [BLOpenType::MaxPTable]
-// ============================================================================
-
 //! OpenType 'maxp' table.
 //!
 //! External Resources:
@@ -209,13 +176,9 @@ struct MaxPTable {
 
   V0_5 header;
 
-  BL_INLINE const V0_5* v0_5() const noexcept { return blOffsetPtr<const V0_5>(this, 0); }
-  BL_INLINE const V1_0* v1_0() const noexcept { return blOffsetPtr<const V1_0>(this, 0); }
+  BL_INLINE const V0_5* v0_5() const noexcept { return BLPtrOps::offset<const V0_5>(this, 0); }
+  BL_INLINE const V1_0* v1_0() const noexcept { return BLPtrOps::offset<const V1_0>(this, 0); }
 };
-
-// ============================================================================
-// [BLOpenType::OS2Table]
-// ============================================================================
 
 //! OpenType 'OS/2' table.
 //!
@@ -300,16 +263,12 @@ struct OS2Table {
 
   V0A header;
 
-  BL_INLINE const V0A* v0a() const noexcept { return blOffsetPtr<const V0A>(this, 0); }
-  BL_INLINE const V0B* v0b() const noexcept { return blOffsetPtr<const V0B>(this, 0); }
-  BL_INLINE const V1* v1() const noexcept { return blOffsetPtr<const V1>(this, 0); }
-  BL_INLINE const V2* v2() const noexcept { return blOffsetPtr<const V2>(this, 0); }
-  BL_INLINE const V5* v5() const noexcept { return blOffsetPtr<const V5>(this, 0); }
+  BL_INLINE const V0A* v0a() const noexcept { return BLPtrOps::offset<const V0A>(this, 0); }
+  BL_INLINE const V0B* v0b() const noexcept { return BLPtrOps::offset<const V0B>(this, 0); }
+  BL_INLINE const V1* v1() const noexcept { return BLPtrOps::offset<const V1>(this, 0); }
+  BL_INLINE const V2* v2() const noexcept { return BLPtrOps::offset<const V2>(this, 0); }
+  BL_INLINE const V5* v5() const noexcept { return BLPtrOps::offset<const V5>(this, 0); }
 };
-
-// ============================================================================
-// [BLOpenType::PostTable]
-// ============================================================================
 
 //! OpenType 'post' table.
 //!
@@ -329,12 +288,9 @@ struct PostTable {
   UInt32 maxMemType1;
 };
 
-// ============================================================================
-// [BLOpenType::CoreImpl]
-// ============================================================================
 
 namespace CoreImpl {
-  BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept;
+BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept;
 } // {CoreImpl}
 
 } // {BLOpenType}

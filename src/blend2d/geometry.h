@@ -1,39 +1,17 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_GEOMETRY_H_INCLUDED
 #define BLEND2D_GEOMETRY_H_INCLUDED
 
-#include "./api.h"
+#include "api.h"
 
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
 
 //! \addtogroup blend2d_api_geometry
 //! \{
-
-// ============================================================================
-// [Constants]
-// ============================================================================
 
 //! Direction of a geometry used by geometric primitives and paths.
 BL_DEFINE_ENUM(BLGeometryDirection) {
@@ -43,23 +21,22 @@ BL_DEFINE_ENUM(BLGeometryDirection) {
   BL_GEOMETRY_DIRECTION_CW = 1,
   //! Counter-clockwise direction.
   BL_GEOMETRY_DIRECTION_CCW = 2
+
+  BL_FORCE_ENUM_UINT32(BL_GEOMETRY_DIRECTION)
 };
 
 //! Geometry type.
 //!
-//! Geometry describes a shape or path that can be either rendered or added to
-//! a BLPath container. Both `BLPath` and `BLContext` provide functionality
-//! to work with all geometry types. Please note that each type provided here
-//! requires to pass a matching struct or class to the function that consumes
-//! a `geometryType` and `geometryData` arguments.
+//! Geometry describes a shape or path that can be either rendered or added to a BLPath container. Both \ref BLPath
+//! and \ref BLContext provide functionality to work with all geometry types. Please note that each type provided
+//! here requires to pass a matching struct or class to the function that consumes a `geometryType` and `geometryData`
+//! arguments.
 //!
 //! \cond INTERNAL
-//! \note Always modify `BL_GEOMETRY_TYPE_SIMPLE_LAST` and related functions
-//! when adding a new type to `BLGeometryType` enum. Some functions just pass
-//! the geometry type and data to another function, but the rendering context
-//! must copy simple types to a render job, which means that it must know which
-//! type is simple and also sizes of all simple types, see `geometry_p.h` for
-//! more details about handling simple types.
+//! \note Always modify `BL_GEOMETRY_TYPE_SIMPLE_LAST` and related functions when adding a new type to `BLGeometryType`
+//! enum. Some functions just pass the geometry type and data to another function, but the rendering context must copy
+//! simple types to a render job, which means that it must know which type is simple and also sizes of all simple
+//! types, see `geometry_p.h` for more details about handling simple types.
 //! \endcond
 BL_DEFINE_ENUM(BLGeometryType) {
   //! No geometry provided.
@@ -106,11 +83,9 @@ BL_DEFINE_ENUM(BLGeometryType) {
   BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTD = 20,
   //! BLPath (or BLPathCore).
   BL_GEOMETRY_TYPE_PATH = 21,
-  //! BLRegion (or BLRegionCore).
-  BL_GEOMETRY_TYPE_REGION = 22,
 
-  //! Count of geometry types.
-  BL_GEOMETRY_TYPE_COUNT = 23,
+  //! Maximum value of `BLGeometryType`.
+  BL_GEOMETRY_TYPE_MAX_VALUE = 21,
 
   //! \cond INTERNAL
 
@@ -118,6 +93,8 @@ BL_DEFINE_ENUM(BLGeometryType) {
   BL_GEOMETRY_TYPE_SIMPLE_LAST = BL_GEOMETRY_TYPE_TRIANGLE
 
   //! \endcond
+
+  BL_FORCE_ENUM_UINT32(BL_GEOMETRY_TYPE)
 };
 
 //! Fill rule.
@@ -127,8 +104,10 @@ BL_DEFINE_ENUM(BLFillRule) {
   //! Even-odd fill-rule.
   BL_FILL_RULE_EVEN_ODD = 1,
 
-  //! Count of fill rule types.
-  BL_FILL_RULE_COUNT = 2
+  //! Maximum value of `BLFillRule`.
+  BL_FILL_RULE_MAX_VALUE = 1
+
+  BL_FORCE_ENUM_UINT32(BL_FILL_RULE)
 };
 
 //! Hit-test result.
@@ -142,26 +121,24 @@ BL_DEFINE_ENUM(BLHitTest) {
 
   //!< Hit test failed (invalid argument, NaNs, etc).
   BL_HIT_TEST_INVALID = 0xFFFFFFFFu
-};
 
-// ============================================================================
-// [BLPointI]
-// ============================================================================
+  BL_FORCE_ENUM_UINT32(BL_HIT_TEST)
+};
 
 //! Point specified as [x, y] using `int` as a storage type.
 struct BLPointI {
   int x;
   int y;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLPointI() noexcept = default;
-  constexpr BLPointI(const BLPointI&) noexcept = default;
+  BL_INLINE constexpr BLPointI(const BLPointI&) noexcept = default;
 
-  constexpr BLPointI(int x, int y) noexcept
+  BL_INLINE constexpr BLPointI(int x, int y) noexcept
     : x(x),
       y(y) {}
+
+  BL_INLINE BLPointI& operator=(const BLPointI& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLPointI& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLPointI& other) const noexcept { return !equals(other); }
@@ -178,29 +155,23 @@ struct BLPointI {
     return blEquals(this->x, other.x) &
            blEquals(this->y, other.y) ;
   }
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLSizeI]
-// ============================================================================
 
 //! Size specified as [w, h] using `int` as a storage type.
 struct BLSizeI {
   int w;
   int h;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLSizeI() noexcept = default;
-  constexpr BLSizeI(const BLSizeI&) noexcept = default;
+  BL_INLINE constexpr BLSizeI(const BLSizeI&) noexcept = default;
 
-  constexpr BLSizeI(int w, int h) noexcept
+  BL_INLINE constexpr BLSizeI(int w, int h) noexcept
     : w(w),
       h(h) {}
+
+  BL_INLINE BLSizeI& operator=(const BLSizeI& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLSizeI& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLSizeI& other) const noexcept { return !equals(other); }
@@ -217,14 +188,8 @@ struct BLSizeI {
     return blEquals(this->w, other.w) &
            blEquals(this->h, other.h) ;
   }
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLBoxI]
-// ============================================================================
 
 //! Box specified as [x0, y0, x1, y1] using `int` as a storage type.
 struct BLBoxI {
@@ -233,17 +198,17 @@ struct BLBoxI {
   int x1;
   int y1;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLBoxI() noexcept = default;
-  constexpr BLBoxI(const BLBoxI&) noexcept = default;
+  BL_INLINE constexpr BLBoxI(const BLBoxI&) noexcept = default;
 
-  constexpr BLBoxI(int x0, int y0, int x1, int y1) noexcept
+  BL_INLINE constexpr BLBoxI(int x0, int y0, int x1, int y1) noexcept
     : x0(x0),
       y0(y0),
       x1(x1),
       y1(y1) {}
+
+  BL_INLINE BLBoxI& operator=(const BLBoxI& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLBoxI& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLBoxI& other) const noexcept { return !equals(other); }
@@ -275,14 +240,8 @@ struct BLBoxI {
 
   BL_NODISCARD
   BL_INLINE bool contains(const BLPointI& pt) const noexcept { return contains(pt.x, pt.y); }
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLRectI]
-// ============================================================================
 
 //! Rectangle specified as [x, y, w, h] using `int` as a storage type.
 struct BLRectI {
@@ -291,17 +250,17 @@ struct BLRectI {
   int w;
   int h;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLRectI() noexcept = default;
-  constexpr BLRectI(const BLRectI&) noexcept = default;
+  BL_INLINE constexpr BLRectI(const BLRectI&) noexcept = default;
 
-  constexpr BLRectI(int x, int y, int w, int h) noexcept
+  BL_INLINE constexpr BLRectI(int x, int y, int w, int h) noexcept
     : x(x),
       y(y),
       w(w),
       h(h) {}
+
+  BL_INLINE BLRectI& operator=(const BLRectI& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLRectI& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLRectI& other) const noexcept { return !equals(other); }
@@ -322,33 +281,27 @@ struct BLRectI {
            blEquals(this->w, other.w) &
            blEquals(this->h, other.h) ;
   }
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLPoint]
-// ============================================================================
 
 //! Point specified as [x, y] using `double` as a storage type.
 struct BLPoint {
   double x;
   double y;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLPoint() noexcept = default;
-  constexpr BLPoint(const BLPoint&) noexcept = default;
+  BL_INLINE constexpr BLPoint(const BLPoint&) noexcept = default;
 
-  constexpr BLPoint(const BLPointI& other) noexcept
+  BL_INLINE constexpr BLPoint(const BLPointI& other) noexcept
     : x(other.x),
       y(other.y) {}
 
-  constexpr BLPoint(double x, double y) noexcept
+  BL_INLINE constexpr BLPoint(double x, double y) noexcept
     : x(x),
       y(y) {}
+
+  BL_INLINE BLPoint& operator=(const BLPoint& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLPoint& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLPoint& other) const noexcept { return !equals(other); }
@@ -365,33 +318,27 @@ struct BLPoint {
     return blEquals(this->x, other.x) &
            blEquals(this->y, other.y) ;
   }
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLSize]
-// ============================================================================
 
 //! Size specified as [w, h] using `double` as a storage type.
 struct BLSize {
   double w;
   double h;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLSize() noexcept = default;
-  constexpr BLSize(const BLSize&) noexcept = default;
+  BL_INLINE constexpr BLSize(const BLSize&) noexcept = default;
 
-  constexpr BLSize(double w, double h) noexcept
+  BL_INLINE constexpr BLSize(double w, double h) noexcept
     : w(w),
       h(h) {}
 
-  constexpr BLSize(const BLSizeI& other) noexcept
+  BL_INLINE constexpr BLSize(const BLSizeI& other) noexcept
     : w(other.w),
       h(other.h) {}
+
+  BL_INLINE BLSize& operator=(const BLSize& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLSize& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLSize& other) const noexcept { return !equals(other); }
@@ -408,14 +355,8 @@ struct BLSize {
     return blEquals(this->w, other.w) &
            blEquals(this->h, other.h) ;
   }
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLBox]
-// ============================================================================
 
 //! Box specified as [x0, y0, x1, y1] using `double` as a storage type.
 struct BLBox {
@@ -424,23 +365,23 @@ struct BLBox {
   double x1;
   double y1;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLBox() noexcept = default;
-  constexpr BLBox(const BLBox&) noexcept = default;
+  BL_INLINE constexpr BLBox(const BLBox&) noexcept = default;
 
-  constexpr BLBox(const BLBoxI& other) noexcept
+  BL_INLINE constexpr BLBox(const BLBoxI& other) noexcept
     : x0(other.x0),
       y0(other.y0),
       x1(other.x1),
       y1(other.y1) {}
 
-  constexpr BLBox(double x0, double y0, double x1, double y1) noexcept
+  BL_INLINE constexpr BLBox(double x0, double y0, double x1, double y1) noexcept
     : x0(x0),
       y0(y0),
       x1(x1),
       y1(y1) {}
+
+  BL_INLINE BLBox& operator=(const BLBox& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLBox& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLBox& other) const noexcept { return !equals(other); }
@@ -472,14 +413,8 @@ struct BLBox {
 
   BL_NODISCARD
   BL_INLINE bool contains(const BLPoint& pt) const noexcept { return contains(pt.x, pt.y); }
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLRect]
-// ============================================================================
 
 //! Rectangle specified as [x, y, w, h] using `double` as a storage type.
 struct BLRect {
@@ -488,20 +423,20 @@ struct BLRect {
   double w;
   double h;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLRect() noexcept = default;
-  constexpr BLRect(const BLRect&) noexcept = default;
+  BL_INLINE constexpr BLRect(const BLRect&) noexcept = default;
 
-  constexpr BLRect(const BLRectI& other) noexcept
+  BL_INLINE constexpr BLRect(const BLRectI& other) noexcept
     : x(other.x),
       y(other.y),
       w(other.w),
       h(other.h) {}
 
-  constexpr BLRect(double x, double y, double w, double h) noexcept
+  BL_INLINE constexpr BLRect(double x, double y, double w, double h) noexcept
     : x(x), y(y), w(w), h(h) {}
+
+  BL_INLINE BLRect& operator=(const BLRect& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLRect& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLRect& other) const noexcept { return !equals(other); }
@@ -522,28 +457,22 @@ struct BLRect {
            blEquals(this->w, other.w) &
            blEquals(this->h, other.h) ;
   }
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLLine]
-// ============================================================================
 
 //! Line specified as [x0, y0, x1, y1] using `double` as a storage type.
 struct BLLine {
   double x0, y0;
   double x1, y1;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLLine() noexcept = default;
-  constexpr BLLine(const BLLine&) noexcept = default;
+  BL_INLINE constexpr BLLine(const BLLine&) noexcept = default;
 
-  constexpr BLLine(double x0, double y0, double x1, double y1) noexcept
+  BL_INLINE constexpr BLLine(double x0, double y0, double x1, double y1) noexcept
     : x0(x0), y0(y0), x1(x1), y1(y1) {}
+
+  BL_INLINE BLLine& operator=(const BLLine& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLLine& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLLine& other) const noexcept { return !equals(other); }
@@ -562,13 +491,8 @@ struct BLLine {
     return (this->x0 == other.x0) & (this->y0 == other.y0) &
            (this->x1 == other.x1) & (this->y1 == other.y1) ;
   }
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLTriangle]
-// ============================================================================
 
 //! Triangle data specified as [x0, y0, x1, y1, x2, y2] using `double` as a storage type.
 struct BLTriangle {
@@ -576,14 +500,14 @@ struct BLTriangle {
   double x1, y1;
   double x2, y2;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLTriangle() noexcept = default;
-  constexpr BLTriangle(const BLTriangle&) noexcept = default;
+  BL_INLINE constexpr BLTriangle(const BLTriangle&) noexcept = default;
 
-  constexpr BLTriangle(double x0, double y0, double x1, double y1, double x2, double y2) noexcept
+  BL_INLINE constexpr BLTriangle(double x0, double y0, double x1, double y1, double x2, double y2) noexcept
     : x0(x0), y0(y0), x1(x1), y1(y1), x2(x2), y2(y2) {}
+
+  BL_INLINE BLTriangle& operator=(const BLTriangle& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLTriangle& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLTriangle& other) const noexcept { return !equals(other); }
@@ -605,36 +529,31 @@ struct BLTriangle {
            (this->x1 == other.x1) & (this->y1 == other.y1) &
            (this->x2 == other.x2) & (this->y2 == other.y2) ;
   }
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLRoundRect]
-// ============================================================================
 
 //! Rounded rectangle specified as [x, y, w, h, rx, ry] using `double` as a storage type.
 struct BLRoundRect {
   double x, y, w, h;
   double rx, ry;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLRoundRect() noexcept = default;
-  constexpr BLRoundRect(const BLRoundRect&) noexcept = default;
+  BL_INLINE constexpr BLRoundRect(const BLRoundRect&) noexcept = default;
 
-  constexpr BLRoundRect(const BLRect& rect, double r) noexcept
+  BL_INLINE constexpr BLRoundRect(const BLRect& rect, double r) noexcept
     : x(rect.x), y(rect.y), w(rect.w), h(rect.h), rx(r), ry(r) {}
 
-  constexpr BLRoundRect(const BLRect& rect, double rx, double ry) noexcept
+  BL_INLINE constexpr BLRoundRect(const BLRect& rect, double rx, double ry) noexcept
     : x(rect.x), y(rect.y), w(rect.w), h(rect.h), rx(rx), ry(ry) {}
 
-  constexpr BLRoundRect(double x, double y, double w, double h, double r) noexcept
+  BL_INLINE constexpr BLRoundRect(double x, double y, double w, double h, double r) noexcept
     : x(x), y(y), w(w), h(h), rx(r), ry(r) {}
 
-  constexpr BLRoundRect(double x, double y, double w, double h, double rx, double ry) noexcept
+  BL_INLINE constexpr BLRoundRect(double x, double y, double w, double h, double rx, double ry) noexcept
     : x(x), y(y), w(w), h(h), rx(rx), ry(ry) {}
+
+  BL_INLINE BLRoundRect& operator=(const BLRoundRect& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLRoundRect& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLRoundRect& other) const noexcept { return !equals(other); }
@@ -658,27 +577,22 @@ struct BLRoundRect {
            (this->w  == other.w ) & (this->h  == other.h ) &
            (this->rx == other.rx) & (this->rx == other.ry) ;
   }
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLCircle]
-// ============================================================================
 
 //! Circle specified as [cx, cy, r] using `double` as a storage type.
 struct BLCircle {
   double cx, cy;
   double r;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLCircle() noexcept = default;
-  constexpr BLCircle(const BLCircle&) noexcept = default;
+  BL_INLINE constexpr BLCircle(const BLCircle&) noexcept = default;
 
-  constexpr BLCircle(double cx, double cy, double r) noexcept
+  BL_INLINE constexpr BLCircle(double cx, double cy, double r) noexcept
     : cx(cx), cy(cy), r(r) {}
+
+  BL_INLINE BLCircle& operator=(const BLCircle& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLCircle& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLCircle& other) const noexcept { return !equals(other); }
@@ -695,30 +609,25 @@ struct BLCircle {
   BL_INLINE bool equals(const BLCircle& other) const noexcept {
     return (this->cx == other.cx) & (this->cy == other.cy) & (this->r == other.r);
   }
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLEllipse]
-// ============================================================================
 
 //! Ellipse specified as [cx, cy, rx, ry] using `double` as a storage type.
 struct BLEllipse {
   double cx, cy;
   double rx, ry;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLEllipse() noexcept = default;
-  constexpr BLEllipse(const BLEllipse&) noexcept = default;
+  BL_INLINE constexpr BLEllipse(const BLEllipse&) noexcept = default;
 
-  constexpr BLEllipse(double cx, double cy, double r) noexcept
+  BL_INLINE constexpr BLEllipse(double cx, double cy, double r) noexcept
     : cx(cx), cy(cy), rx(r), ry(r) {}
 
-  constexpr BLEllipse(double cx, double cy, double rx, double ry) noexcept
+  BL_INLINE constexpr BLEllipse(double cx, double cy, double rx, double ry) noexcept
     : cx(cx), cy(cy), rx(rx), ry(ry) {}
+
+  BL_INLINE BLEllipse& operator=(const BLEllipse& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLEllipse& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLEllipse& other) const noexcept { return !equals(other); }
@@ -739,13 +648,8 @@ struct BLEllipse {
     return (this->cx == other.cx) & (this->cy == other.cy) &
            (this->rx == other.rx) & (this->ry == other.ry) ;
   }
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLArc]
-// ============================================================================
 
 //! Arc specified as [cx, cy, rx, ry, start, sweep] using `double` as a storage type.
 struct BLArc {
@@ -754,14 +658,14 @@ struct BLArc {
   double start;
   double sweep;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE BLArc() noexcept = default;
-  constexpr BLArc(const BLArc&) noexcept = default;
+  BL_INLINE constexpr BLArc(const BLArc&) noexcept = default;
 
-  constexpr BLArc(double cx, double cy, double rx, double ry, double start, double sweep) noexcept
+  BL_INLINE constexpr BLArc(double cx, double cy, double rx, double ry, double start, double sweep) noexcept
     : cx(cx), cy(cy), rx(rx), ry(ry), start(start), sweep(sweep) {}
+
+  BL_INLINE BLArc& operator=(const BLArc& other) noexcept = default;
 
   BL_NODISCARD BL_INLINE bool operator==(const BLArc& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLArc& other) const noexcept { return !equals(other); }
@@ -786,15 +690,10 @@ struct BLArc {
            (this->start == other.start) &
            (this->sweep == other.sweep) ;
   }
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
 
 //! \}
-
-// ============================================================================
-// [Globals Functions]
-// ============================================================================
 
 #ifdef __cplusplus
 //! \addtogroup blend2d_api_geometry
@@ -875,25 +774,25 @@ static BL_INLINE BLPoint& operator-=(BLPoint& a, const BLPoint& b) noexcept { a.
 static BL_INLINE BLPoint& operator*=(BLPoint& a, const BLPoint& b) noexcept { a.reset(a.x * b.x, a.y * b.y); return a; }
 static BL_INLINE BLPoint& operator/=(BLPoint& a, const BLPoint& b) noexcept { a.reset(a.x / b.x, a.y / b.y); return a; }
 
-static BL_INLINE BLBox operator+(double a, const BLBox& b) noexcept { return BLBox(a + b.x0, a + b.y0, a + b.x1, a + b.y1); }
-static BL_INLINE BLBox operator-(double a, const BLBox& b) noexcept { return BLBox(a - b.x0, a - b.y0, a - b.x1, a - b.y1); }
-static BL_INLINE BLBox operator*(double a, const BLBox& b) noexcept { return BLBox(a * b.x0, a * b.y0, a * b.x1, a * b.y1); }
-static BL_INLINE BLBox operator/(double a, const BLBox& b) noexcept { return BLBox(a / b.x0, a / b.y0, a / b.x1, a / b.y1); }
+static BL_INLINE constexpr BLBox operator+(double a, const BLBox& b) noexcept { return BLBox(a + b.x0, a + b.y0, a + b.x1, a + b.y1); }
+static BL_INLINE constexpr BLBox operator-(double a, const BLBox& b) noexcept { return BLBox(a - b.x0, a - b.y0, a - b.x1, a - b.y1); }
+static BL_INLINE constexpr BLBox operator*(double a, const BLBox& b) noexcept { return BLBox(a * b.x0, a * b.y0, a * b.x1, a * b.y1); }
+static BL_INLINE constexpr BLBox operator/(double a, const BLBox& b) noexcept { return BLBox(a / b.x0, a / b.y0, a / b.x1, a / b.y1); }
 
-static BL_INLINE BLBox operator+(const BLBox& a, double b) noexcept { return BLBox(a.x0 + b, a.y0 + b, a.x1 + b, a.y1 + b); }
-static BL_INLINE BLBox operator-(const BLBox& a, double b) noexcept { return BLBox(a.x0 - b, a.y0 - b, a.x1 - b, a.y1 - b); }
-static BL_INLINE BLBox operator*(const BLBox& a, double b) noexcept { return BLBox(a.x0 * b, a.y0 * b, a.x1 * b, a.y1 * b); }
-static BL_INLINE BLBox operator/(const BLBox& a, double b) noexcept { return BLBox(a.x0 / b, a.y0 / b, a.x1 / b, a.y1 / b); }
+static BL_INLINE constexpr BLBox operator+(const BLBox& a, double b) noexcept { return BLBox(a.x0 + b, a.y0 + b, a.x1 + b, a.y1 + b); }
+static BL_INLINE constexpr BLBox operator-(const BLBox& a, double b) noexcept { return BLBox(a.x0 - b, a.y0 - b, a.x1 - b, a.y1 - b); }
+static BL_INLINE constexpr BLBox operator*(const BLBox& a, double b) noexcept { return BLBox(a.x0 * b, a.y0 * b, a.x1 * b, a.y1 * b); }
+static BL_INLINE constexpr BLBox operator/(const BLBox& a, double b) noexcept { return BLBox(a.x0 / b, a.y0 / b, a.x1 / b, a.y1 / b); }
 
-static BL_INLINE BLBox operator+(const BLPoint& a, const BLBox& b) noexcept { return BLBox(a.x + b.x0, a.y + b.y0, a.x + b.x1, a.y + b.y1); }
-static BL_INLINE BLBox operator-(const BLPoint& a, const BLBox& b) noexcept { return BLBox(a.x - b.x0, a.y - b.y0, a.x - b.x1, a.y - b.y1); }
-static BL_INLINE BLBox operator*(const BLPoint& a, const BLBox& b) noexcept { return BLBox(a.x * b.x0, a.y * b.y0, a.x * b.x1, a.y * b.y1); }
-static BL_INLINE BLBox operator/(const BLPoint& a, const BLBox& b) noexcept { return BLBox(a.x / b.x0, a.y / b.y0, a.x / b.x1, a.y / b.y1); }
+static BL_INLINE constexpr BLBox operator+(const BLPoint& a, const BLBox& b) noexcept { return BLBox(a.x + b.x0, a.y + b.y0, a.x + b.x1, a.y + b.y1); }
+static BL_INLINE constexpr BLBox operator-(const BLPoint& a, const BLBox& b) noexcept { return BLBox(a.x - b.x0, a.y - b.y0, a.x - b.x1, a.y - b.y1); }
+static BL_INLINE constexpr BLBox operator*(const BLPoint& a, const BLBox& b) noexcept { return BLBox(a.x * b.x0, a.y * b.y0, a.x * b.x1, a.y * b.y1); }
+static BL_INLINE constexpr BLBox operator/(const BLPoint& a, const BLBox& b) noexcept { return BLBox(a.x / b.x0, a.y / b.y0, a.x / b.x1, a.y / b.y1); }
 
-static BL_INLINE BLBox operator+(const BLBox& a, const BLPoint& b) noexcept { return BLBox(a.x0 + b.x, a.y0 + b.y, a.x1 + b.x, a.y1 + b.y); }
-static BL_INLINE BLBox operator-(const BLBox& a, const BLPoint& b) noexcept { return BLBox(a.x0 - b.x, a.y0 - b.y, a.x1 - b.x, a.y1 - b.y); }
-static BL_INLINE BLBox operator*(const BLBox& a, const BLPoint& b) noexcept { return BLBox(a.x0 * b.x, a.y0 * b.y, a.x1 * b.x, a.y1 * b.y); }
-static BL_INLINE BLBox operator/(const BLBox& a, const BLPoint& b) noexcept { return BLBox(a.x0 / b.x, a.y0 / b.y, a.x1 / b.x, a.y1 / b.y); }
+static BL_INLINE constexpr BLBox operator+(const BLBox& a, const BLPoint& b) noexcept { return BLBox(a.x0 + b.x, a.y0 + b.y, a.x1 + b.x, a.y1 + b.y); }
+static BL_INLINE constexpr BLBox operator-(const BLBox& a, const BLPoint& b) noexcept { return BLBox(a.x0 - b.x, a.y0 - b.y, a.x1 - b.x, a.y1 - b.y); }
+static BL_INLINE constexpr BLBox operator*(const BLBox& a, const BLPoint& b) noexcept { return BLBox(a.x0 * b.x, a.y0 * b.y, a.x1 * b.x, a.y1 * b.y); }
+static BL_INLINE constexpr BLBox operator/(const BLBox& a, const BLPoint& b) noexcept { return BLBox(a.x0 / b.x, a.y0 / b.y, a.x1 / b.x, a.y1 / b.y); }
 
 static BL_INLINE BLBox& operator+=(BLBox& a, double b) noexcept { a.reset(a.x0 + b, a.y0 + b, a.x1 + b, a.y1 + b); return a; }
 static BL_INLINE BLBox& operator-=(BLBox& a, double b) noexcept { a.reset(a.x0 - b, a.y0 - b, a.x1 - b, a.y1 - b); return a; }

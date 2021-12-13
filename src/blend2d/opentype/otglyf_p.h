@@ -1,25 +1,7 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_OPENTYPE_OTGLYF_P_H_INCLUDED
 #define BLEND2D_OPENTYPE_OTGLYF_P_H_INCLUDED
@@ -28,16 +10,13 @@
 #include "../matrix_p.h"
 #include "../path_p.h"
 #include "../opentype/otdefs_p.h"
+#include "../support/ptrops_p.h"
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_internal_opentype
+//! \addtogroup blend2d_opentype_impl
 //! \{
 
 namespace BLOpenType {
-
-// ============================================================================
-// [BLOpenType::LocaTable]
-// ============================================================================
 
 //! OpenType 'loca' table.
 //!
@@ -55,13 +34,9 @@ struct LocaTable {
   };
   */
 
-  BL_INLINE const Offset16* offsetArray16() const noexcept { return blOffsetPtr<const Offset16>(this, 0); }
-  BL_INLINE const Offset32* offsetArray32() const noexcept { return blOffsetPtr<const Offset32>(this, 0); }
+  BL_INLINE const Offset16* offsetArray16() const noexcept { return BLPtrOps::offset<const Offset16>(this, 0); }
+  BL_INLINE const Offset32* offsetArray32() const noexcept { return BLPtrOps::offset<const Offset32>(this, 0); }
 };
-
-// ============================================================================
-// [BLOpenType::GlyfTable]
-// ============================================================================
 
 //! OpenType 'glyf' table.
 //!
@@ -132,18 +107,14 @@ struct GlyfTable {
     FWord xMax;
     FWord yMax;
 
-    const Simple* simple() const noexcept { return blOffsetPtr<const Simple>(this, sizeof(GlyphData)); }
-    const Compound* compound() const noexcept { return blOffsetPtr<const Compound>(this, sizeof(GlyphData)); }
+    const Simple* simple() const noexcept { return BLPtrOps::offset<const Simple>(this, sizeof(GlyphData)); }
+    const Compound* compound() const noexcept { return BLPtrOps::offset<const Compound>(this, sizeof(GlyphData)); }
   };
 
   /*
   GlyphData glyphData[...] // Indexed by LOCA.
   */
 };
-
-// ============================================================================
-// [BLOpenType::GlyfData]
-// ============================================================================
 
 struct GlyfData {
   //! Content of 'glyf' table.
@@ -152,12 +123,8 @@ struct GlyfData {
   BLFontTable locaTable;
 };
 
-// ============================================================================
-// [BLOpenType::GlyfImpl]
-// ============================================================================
-
 namespace GlyfImpl {
-  BLResult init(BLOTFaceImpl* faceI, BLFontTable glyfTable, BLFontTable locaTable) noexcept;
+BLResult init(OTFaceImpl* faceI, BLFontTable glyfTable, BLFontTable locaTable) noexcept;
 } // {GlyfImpl}
 
 } // {BLOpenType}

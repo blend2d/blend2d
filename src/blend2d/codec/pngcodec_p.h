@@ -1,25 +1,7 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_CODEC_PNGCODEC_P_H_INCLUDED
 #define BLEND2D_CODEC_PNGCODEC_P_H_INCLUDED
@@ -28,15 +10,11 @@
 #include "../image_p.h"
 #include "../imagecodec.h"
 #include "../pixelconverter.h"
-#include "../support_p.h"
+#include "../runtime_p.h"
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_internal_codecs
+//! \addtogroup blend2d_codec_impl
 //! \{
-
-// ============================================================================
-// [BLPngDecoderStatusFlags]
-// ============================================================================
 
 enum BLPngDecoderStatusFlags : uint32_t {
   BL_PNG_DECODER_STATUS_SEEN_IHDR = 0x00000001u,
@@ -46,10 +24,6 @@ enum BLPngDecoderStatusFlags : uint32_t {
   BL_PNG_DECODER_STATUS_SEEN_tRNS = 0x00000020u,
   BL_PNG_DECODER_STATUS_SEEN_CgBI = 0x00000040u
 };
-
-// ============================================================================
-// [BLPngColorType]
-// ============================================================================
 
 enum BLPngColorType : uint32_t {
   //! Each pixel is a grayscale sample (1/2/4/8/16-bits per sample).
@@ -64,10 +38,6 @@ enum BLPngColorType : uint32_t {
   BL_PNG_COLOR_TYPE6_RGBA = 6
 };
 
-// ============================================================================
-// [BLPngFilterType]
-// ============================================================================
-
 enum PngFilterType : uint32_t {
   BL_PNG_FILTER_TYPE_NONE  = 0,
   BL_PNG_FILTER_TYPE_SUB   = 1,
@@ -79,10 +49,6 @@ enum PngFilterType : uint32_t {
   //! Synthetic filter used only by Blend2D's reverse-filter implementation.
   BL_PNG_FILTER_TYPE_AVG0  = 5
 };
-
-// ============================================================================
-// [BLPngCodec - DecoderImpl]
-// ============================================================================
 
 struct BLPngDecoderImpl : public BLImageDecoderImpl {
   //! Decoder image information.
@@ -99,23 +65,13 @@ struct BLPngDecoderImpl : public BLImageDecoderImpl {
   uint8_t cgbi;
 };
 
-// ============================================================================
-// [BLPngCodec - EncoderImpl]
-// ============================================================================
-
-struct BLPngEncoderImpl : public BLImageEncoderImpl {};
-
-// ============================================================================
-// [BLPngCodec - Impl]
-// ============================================================================
+struct BLPngEncoderImpl : public BLImageEncoderImpl {
+  uint8_t compressionLevel;
+};
 
 struct BLPngCodecImpl : public BLImageCodecImpl {};
 
-// ============================================================================
-// [BLPngCodec - Runtime]
-// ============================================================================
-
-BL_HIDDEN BLImageCodecImpl* blPngCodecOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blPngCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
 
 //! \}
 //! \endcond

@@ -1,31 +1,15 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
 #ifdef BL_TARGET_OPT_SSE2
 
 #include "../simd_p.h"
 #include "../codec/pngops_p.h"
+#include "../support/intops_p.h"
+#include "../support/memops_p.h"
 
 // ============================================================================
 // [BLPngOps [InverseFilter@SSE2]]
@@ -142,7 +126,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
         if (i >= 32) {
           // Align to 16-BYTE boundary.
-          uint32_t j = uint32_t(blAlignUpDiff(uintptr_t(p + bpp), 16));
+          uint32_t j = uint32_t(BLIntOps::alignUpDiff(uintptr_t(p + bpp), 16));
           for (i -= j; j != 0; j--, p++)
             p[bpp] = blPngSumFilter(p[bpp], p[0]);
 
@@ -211,7 +195,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             Vec128I t0, t2;
 
             // Process 64 BYTEs at a time.
-            p0 = v_i128_from_u32(blMemReadU16a(p));
+            p0 = v_i128_from_u32(BLMemOps::readU16a(p));
             while (i >= 64) {
               p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 2));
               p1 = v_loada_i128(p + 18);
@@ -267,7 +251,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             Vec128I ext3b = v_fill_i128_u32(0x01000001u);
 
             // Process 64 BYTEs at a time.
-            p0 = v_i128_from_u32(blMemReadU32u(p) & 0x00FFFFFFu);
+            p0 = v_i128_from_u32(BLMemOps::readU32u(p) & 0x00FFFFFFu);
             while (i >= 64) {
               p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 3));
               p1 = v_loada_i128(p + 19);
@@ -330,7 +314,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             Vec128I t0, t1, t2;
 
             // Process 64 BYTEs at a time.
-            p0 = v_i128_from_u32(blMemReadU32a(p));
+            p0 = v_i128_from_u32(BLMemOps::readU32a(p));
             while (i >= 64) {
               p0 = v_add_i8(p0, *reinterpret_cast<Vec128I*>(p + 4));
               p1 = v_loada_i128(p + 20);
@@ -521,7 +505,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
         if (i >= 24) {
           // Align to 16-BYTE boundary.
-          uint32_t j = uint32_t(blAlignUpDiff(uintptr_t(p), 16));
+          uint32_t j = uint32_t(BLIntOps::alignUpDiff(uintptr_t(p), 16));
           for (i -= j; j != 0; j--, p++, u++)
             p[0] = blPngSumFilter(p[0], u[0]);
 
@@ -609,7 +593,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
         if (i >= 32) {
           // Align to 16-BYTE boundary.
-          uint32_t j = uint32_t(blAlignUpDiff(uintptr_t(p + bpp), 16));
+          uint32_t j = uint32_t(BLIntOps::alignUpDiff(uintptr_t(p + bpp), 16));
           Vec128I zero = v_zero_i128();
 
           for (i -= j; j != 0; j--, p++, u++)
@@ -686,7 +670,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
           else if (bpp == 4) {
             Vec128I m00FF = v_fill_i128_u32(0x00FF00FFu);
             Vec128I m01FF = v_fill_i128_u32(0x01FF01FFu);
-            Vec128I t1 = v_interleave_lo_i8(v_i128_from_u32(blMemReadU32a(p)), zero);
+            Vec128I t1 = v_interleave_lo_i8(v_i128_from_u32(BLMemOps::readU32a(p)), zero);
 
             // Process 16 BYTEs at a time.
             while (i >= 16) {
@@ -871,7 +855,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
           if (i >= 32) {
             // Align to 16-BYTE boundary.
-            uint32_t j = uint32_t(blAlignUpDiff(uintptr_t(p + bpp), 16));
+            uint32_t j = uint32_t(BLIntOps::alignUpDiff(uintptr_t(p + bpp), 16));
 
             Vec128I zero = v_zero_i128();
             Vec128I rcp3 = v_fill_i128_i16(0xAB << 7);
@@ -885,8 +869,8 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             }
             */
             if (bpp == 3) {
-              Vec128I pz = v_interleave_lo_i8(v_i128_from_u32(blMemReadU32u(p) & 0x00FFFFFFu), zero);
-              Vec128I uz = v_interleave_lo_i8(v_i128_from_u32(blMemReadU32u(u) & 0x00FFFFFFu), zero);
+              Vec128I pz = v_interleave_lo_i8(v_i128_from_u32(BLMemOps::readU32u(p) & 0x00FFFFFFu), zero);
+              Vec128I uz = v_interleave_lo_i8(v_i128_from_u32(BLMemOps::readU32u(u) & 0x00FFFFFFu), zero);
               Vec128I mask = v_fill_i128_u32(0u, 0u, 0x0000FFFFu, 0xFFFFFFFFu);
 
               // Process 8 BYTEs at a time.
@@ -929,8 +913,8 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
               }
             }
             else if (bpp == 4) {
-              Vec128I pz = v_interleave_lo_i8(v_i128_from_u32(blMemReadU32a(p)), zero);
-              Vec128I uz = v_interleave_lo_i8(v_i128_from_u32(blMemReadU32u(u)), zero);
+              Vec128I pz = v_interleave_lo_i8(v_i128_from_u32(BLMemOps::readU32a(p)), zero);
+              Vec128I uz = v_interleave_lo_i8(v_i128_from_u32(BLMemOps::readU32u(u)), zero);
               Vec128I mask = v_fill_i128_u32(0u, 0u, 0xFFFFFFFFu, 0xFFFFFFFFu);
 
               // Process 16 BYTEs at a time.

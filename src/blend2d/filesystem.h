@@ -1,40 +1,25 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_FILESYSTEM_H_INCLUDED
 #define BLEND2D_FILESYSTEM_H_INCLUDED
 
-#include "./array.h"
+#include "array.h"
 
 //! \addtogroup blend2d_api_filesystem
 //! \{
 
-// ============================================================================
-// [Constants]
-// ============================================================================
+//! \name BLFile API Constants
+//!
+//! \{
 
 //! File open flags, see `BLFile::open()`.
 BL_DEFINE_ENUM(BLFileOpenFlags) {
+  //! No flags.
+  BL_FILE_OPEN_NO_FLAGS = 0u,
+
   //! Opens the file for reading.
   //!
   //! The following system flags are used when opening the file:
@@ -102,6 +87,8 @@ BL_DEFINE_ENUM(BLFileOpenFlags) {
   //!
   //! Exclusive mode means to not specify the `FILE_SHARE_DELETE` option.
   BL_FILE_OPEN_DELETE_EXCLUSIVE = 0x80000000u
+
+  BL_FORCE_ENUM_UINT32(BL_FILE_OPEN)
 };
 
 //! File seek mode, see `BLFile::seek()`.
@@ -116,58 +103,85 @@ BL_DEFINE_ENUM(BLFileSeekType) {
   //! Seek from the end of the file (SEEK_END).
   BL_FILE_SEEK_END = 2,
 
-  //! Count of seek modes.
-  BL_FILE_SEEK_COUNT = 3
+  //! Maximum value of `BLFileSeekType`.
+  BL_FILE_SEEK_MAX_VALUE = 3
+
+  BL_FORCE_ENUM_UINT32(BL_FILE_SEEK)
 };
 
 //! File read flags used by `BLFileSystem::readFile()`.
 BL_DEFINE_ENUM(BLFileReadFlags) {
+  //! No flags.
+  BL_FILE_READ_NO_FLAGS = 0u,
+
   //! Use memory mapping to read the content of the file.
   //!
-  //! The destination buffer `BLArray<>` would be configured to use the memory
-  //! mapped buffer instead of allocating its own.
+  //! The destination buffer `BLArray<>` would be configured to use the memory mapped buffer instead of allocating its
+  //! own.
   BL_FILE_READ_MMAP_ENABLED = 0x00000001u,
 
   //! Avoid memory mapping of small files.
   //!
-  //! The size of small file is determined by Blend2D, however, you should
-  //! expect it to be 16kB or 64kB depending on host operating system.
+  //! The size of small file is determined by Blend2D, however, you should expect it to be 16kB or 64kB depending on
+  //! host operating system.
   BL_FILE_READ_MMAP_AVOID_SMALL = 0x00000002u,
 
-  //! Do not fallback to regular read if memory mapping fails. It's worth noting
-  //! that memory mapping would fail for files stored on filesystem that is not
-  //! local (like a mounted network filesystem, etc...).
+  //! Do not fallback to regular read if memory mapping fails. It's worth noting that memory mapping would fail for
+  //! files stored on filesystem that is not local (like a mounted network filesystem, etc...).
   BL_FILE_READ_MMAP_NO_FALLBACK = 0x00000008u
+
+  BL_FORCE_ENUM_UINT32(BL_FILE_READ)
 };
 
-// ============================================================================
-// [BLFile - Core]
-// ============================================================================
+//! \}
 
-//! A thin abstraction over a native OS file IO [C Interface - Core].
+//! \name BLFile C API Structs
+//!
+//! \{
+
+//! A thin abstraction over a native OS file IO [C API].
 struct BLFileCore {
-  //! A file handle - either a file descriptor used by POSIX or file handle used
-  //! by Windows. On both platforms the handle is always `intptr_t` to make FFI
-  //! easier (it's basically the size of a pointer / machine register).
+  //! A file handle - either a file descriptor used by POSIX or file handle used by Windows. On both platforms the
+  //! handle is always `intptr_t` to make FFI easier (it's basically the size of a pointer / machine register).
   //!
-  //! \note In C++ mode you can use `BLFileCore::Handle` or `BLFile::Handle` to
-  //! get the handle type. In C mode you must use `intptr_t`. A handle of value
-  //! `-1` is considered invalid and/or uninitialized. This value also matches
-  //! `INVALID_HANDLE_VALUE`, which is used by Windows API and defined to -1 as
-  //! well.
+  //! \note In C++ mode you can use `BLFileCore::Handle` or `BLFile::Handle` to get the handle type. In C mode you
+  //! must use `intptr_t`. A handle of value `-1` is considered invalid and/or uninitialized. This value also matches
+  //! `INVALID_HANDLE_VALUE`, which is used by Windows API and defined to -1 as well.
   intptr_t handle;
 };
 
-// ============================================================================
-// [BLFile - C++]
-// ============================================================================
+//! \}
+
+BL_BEGIN_C_DECLS
+//! \name BLFile C API Functions
+//!
+//! File read/write functionality is provided by \ref BLFileCore in C API and wrapped by \ref BLFile in C++ API.
+//!
+//! \{
+BL_API BLResult BL_CDECL blFileInit(BLFileCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileReset(BLFileCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileOpen(BLFileCore* self, const char* fileName, BLFileOpenFlags openFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileClose(BLFileCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileSeek(BLFileCore* self, int64_t offset, BLFileSeekType seekType, int64_t* positionOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileTruncate(BLFileCore* self, int64_t maxSize) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) BL_NOEXCEPT_C;
+
+BL_API BLResult BL_CDECL blFileSystemReadFile(const char* fileName, BLArrayCore* dst, size_t maxSize, BLFileReadFlags readFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileSystemWriteFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
+//! \}
+BL_END_C_DECLS
 
 #ifdef __cplusplus
+//! \name BLFile C++ API
+//!
+//! \{
+
 //! A thin abstraction over a native OS file IO [C++ API].
 //!
-//! A thin wrapper around a native OS file support. The file handle is always
-//! `intptr_t` and it refers to either a file descriptor on POSIX targets and
-//! file handle on Windows targets.
+//! A thin wrapper around a native OS file support. The file handle is always `intptr_t` and it refers to either
+//! a file descriptor on POSIX targets and file handle on Windows targets.
 class BLFile : public BLFileCore {
 public:
   // Prevent copy-constructor and copy-assignment.
@@ -210,13 +224,13 @@ public:
 
   //! \}
 
-  //! \name File API
+  //! \name Interface
   //! \{
 
   //! Tests whether the file is open.
   BL_INLINE bool isOpen() const noexcept { return handle != -1; }
 
-  BL_INLINE BLResult open(const char* fileName, uint32_t openFlags) noexcept {
+  BL_INLINE BLResult open(const char* fileName, BLFileOpenFlags openFlags) noexcept {
     return blFileOpen(this, fileName, openFlags);
   }
 
@@ -225,12 +239,12 @@ public:
     return blFileClose(this);
   }
 
-  BL_INLINE BLResult seek(int64_t offset, uint32_t seekType) noexcept {
+  BL_INLINE BLResult seek(int64_t offset, BLFileSeekType seekType) noexcept {
     int64_t positionOut;
     return blFileSeek(this, offset, seekType, &positionOut);
   }
 
-  BL_INLINE BLResult seek(int64_t offset, uint32_t seekType, int64_t* positionOut) noexcept {
+  BL_INLINE BLResult seek(int64_t offset, BLFileSeekType seekType, int64_t* positionOut) noexcept {
     return blFileSeek(this, offset, seekType, positionOut);
   }
 
@@ -252,22 +266,15 @@ public:
 
   //! \}
 };
-#endif
 
-// ============================================================================
-// [BLFileSystem]
-// ============================================================================
-
-#ifdef __cplusplus
 //! File-system utilities.
 namespace BLFileSystem {
 
 //! Reads a file into the `dst` buffer.
 //!
-//! Optionally you can set `maxSize` to non-zero value that would restrict the
-//! maximum bytes to read to such value. In addition, `readFlags` can be used to
-//! enable file mapping. See `BLFileReadFlags` for more details.
-static BL_INLINE BLResult readFile(const char* fileName, BLArray<uint8_t>& dst, size_t maxSize = 0, uint32_t readFlags = 0) noexcept {
+//! Optionally you can set `maxSize` to non-zero value that would restrict the maximum bytes to read to such
+//! value. In addition, `readFlags` can be used to enable file mapping. See `BLFileReadFlags` for more details.
+static BL_INLINE BLResult readFile(const char* fileName, BLArray<uint8_t>& dst, size_t maxSize = 0, BLFileReadFlags readFlags = BL_FILE_READ_NO_FLAGS) noexcept {
   return blFileSystemReadFile(fileName, &dst, maxSize, readFlags);
 }
 
@@ -297,6 +304,8 @@ static BL_INLINE BLResult writeFile(const char* fileName, const BLArray<uint8_t>
 }
 
 } // {BLFileSystem}
+
+//! \}
 #endif
 
 //! \}

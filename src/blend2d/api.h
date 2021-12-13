@@ -1,39 +1,30 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_API_H_INCLUDED
 #define BLEND2D_API_H_INCLUDED
 
-// This header can only be included by either <blend2d.h> or by Blend2D headers
-// during the build. Prevent users including <blend2d/...> headers by accident
-// and prevent not including "blend2d/api-build_p.h" during the Blend2D build.
+// This header can only be included by either <blend2d.h> or by internal Blend2D headers. Prevent users including
+// <blend2d/...> headers by accident and prevent not including "blend2d/api-build_p.h" during the Blend2D compilation.
 #if !defined(BLEND2D_H_INCLUDED) && !defined(BLEND2D_API_BUILD_P_H_INCLUDED)
   #pragma message("Include either <blend2d.h> or <blend2d-impl.h> to use Blend2D library")
 #endif
 
-// ----------------------------------------------------------------------------
-// [Documentation]
-// ----------------------------------------------------------------------------
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#ifdef __cplusplus
+  #include <cmath>
+  #include <limits>
+  #include <type_traits>
+  #include <utility>
+#else
+  #include <stdbool.h>
+#endif
 
 //! \mainpage API Reference
 //!
@@ -41,26 +32,21 @@
 //!
 //! \section main_introduction Introduction
 //!
-//! Blend2D API consists of enumerations, functions, structs, and C++ classes.
-//! Common concepts like enumerations and POD structs are shared between C and
-//! C++. Some structs contain extra functionality like `BLSomething::reset()`
-//! that is only available to C++ users, however, such functionality is only
-//! provided for convenience and doesn't affect how Blend2D can be used from C.
+//! Blend2D API consists of enumerations, functions, structs, and C++ classes. Common concepts like enumerations and
+//! POD structs are shared between C and C++. Some structs contain extra functionality like `BLSomething::reset()`
+//! that is only available to C++ users, however, such functionality is only provided for convenience and doesn't
+//! affect how Blend2D can be used from C.
 //!
-//! Blend2D C++ API is in fact build on top of the C API and all C++ functions
-//! are inlines that call C API without any overhead. It would require double
-//! effort to document both C and C++ APIs separately so we have decided to only
-//! document C++ API and to only list \ref blend2d_api_c_functions "C API" for
-//! users that need it. The C API should be straightforward and matches very
-//! well the C++ part.
+//! Blend2D C++ API is in fact build on top of the C API and all C++ functions are inlines that call C API without any
+//! overhead. It would require double effort to document both C and C++ APIs separately so we have decided to only
+//! document C++ API and to only list \ref blend2d_api_c_functions "C API" for users that need it. The C API should be
+//! straightforward and matches very well the C++ part.
 //!
 //! \section main_important Important
 //!
-//! Doxygen sorts struct members in anonymous structs and unions and we haven't
-//! figured out how to turn this off. This means that the order of members in
-//! "Public Attributes" doesn't have to reflect the original struct packing.
-//! So please always double-check struct members in case you plan to use
-//! braces-based initialization of simple structs.
+//! Doxygen sorts struct members in anonymous structs and unions and we haven't figured out how to turn this off. This
+//! means that the order of members in "Public Attributes" doesn't have to reflect the original struct packing. Always
+//! double-check struct members in case you plan to use a brace initialization of simple structs.
 //!
 //! \section main_groups Groups
 //!
@@ -87,8 +73,8 @@
 //! \defgroup blend2d_api_text Text API
 //! \brief Fonts & Text support.
 
-//! \defgroup blend2d_api_rendering Rendering API
-//! \brief 2D rendering context, helper structures, and constants.
+//! \defgroup blend2d_api_rendering Rendering Context
+//! \brief 2D rendering context API, structures, and constants.
 
 //! \defgroup blend2d_api_runtime Runtime API
 //! \brief Interaction with Blend2D runtime.
@@ -108,15 +94,13 @@
 //! \defgroup blend2d_api_c_functions C API
 //! \brief Global C API functions exported as `extern "C"` (C API).
 //!
-//! We do not document these functions as they are called from C++ wrappers,
-//! which are documented and should be used as a reference. The most important
-//! thing in using C API is to understand how lifetime of objects is managed.
+//! We do not document these functions as they are called from C++ wrappers, which are documented and should be used
+//! as a reference. The most important thing in using C API is to understand how lifetime of objects is managed.
 //!
-//! Each type that requires initialization provides `Init`, 'Destroy', and `Reset`
-//! functions. Init/Destroy are called by C++ constructors and destructors on C++
-//! side and must be used the same way by C users. Although these functions return
-//! `BLResult` it's guaranteed the result is always `BL_SUCCESS` - the return
-//! value is only provided for consistency and possible tail calling.
+//! Each type that requires initialization provides `Init`, 'Destroy', and `Reset` functions. Init/Destroy are called
+//! by C++ constructors and destructors on C++ side and must be used the same way by C users. Although these functions
+//! return `BLResult` it's guaranteed the result is always `BL_SUCCESS` - the return value is only provided for
+//! consistency and possible tail calling.
 //!
 //! The following example should illustrate how `Init` and `Destroy` works:
 //!
@@ -146,58 +130,49 @@
 //! blImageDestroy(&img);
 //! ```
 //!
-//! It's worth knowing that default initialization in Blend2D costs nothing
-//! and no resources are allocated, thus initialization never fails and in
-//! theory default initialized objects don't have to be destroyed as they don't
-//! hold any data that would have to be deallocated (however never do that in
-//! practice).
+//! It's worth knowing that default initialization in Blend2D costs nothing and no resources are allocated, thus
+//! initialization never fails and in theory default initialized objects don't have to be destroyed as they don't
+//! hold any data that would have to be deallocated (however never do that in practice).
 //!
-//! There is a distinction between 'Destroy' and 'Reset' functionality. Destroy
-//! would destroy the object and put it into a non-reusable state. Thus if the
-//! object is used by accident it should crash on null-pointer access. In the
-//! contrary resetting  the object with 'Reset' explicitly states that the
-//! instance will be reused so 'Reset' basically destroys the object and puts
-//! it into its default initialized state for further use. This means that it's
-//! not needed to explicitly call 'Destroy' on instance that was reset, and it
-//! also is not needed for a default constructed instance. However, we recommend
-//! to not count on this behavior and to always properly initialize and destroy
-//! Blend2D objects.
+//! There is a distinction between 'destroy()' and 'reset()' functionality. Destroy would destroy the object and
+//! put it into a non-reusable state. Thus if the object is used by accident it should crash on null-pointer access.
+//! On the contrary, resetting the object with 'reset()' explicitly states that the instance will be reused so
+//! 'reset()' basically destroys the object and puts it into its default constructed state for further use. This
+//! means that it's not needed to explicitly call 'destroy()' on instance that was reset, and it also is not needed
+//! for a default constructed instance. However, we recommend to not count on this behavior and to always properly
+//! initialize and destroy Blend2D objects.
 //!
 //! The following example should explain how init/reset can avoid destroy:
 //!
 //! ```
 //! BLImageCore img;
 //!
-//! // Now image is default constructed/initialized. if you did just this and
-//! // abandon it then no resources will be leaked as default construction is
-//! // not allocating any resources nor increasing any reference counters.
+//! // Now image is default constructed/initialized. if you did just this and abandon it then no resources will
+//! // be leaked as default construction is not allocating any resources nor increasing any reference counters.
 //! blImageInit(&img);
 //!
-//! // Now image will have to dynamically allocate some memory to store pixel
-//! // data. If this succeeds the image will have to be reset to destroy the
-//! // data it holds.
+//! // Now image will have to dynamically allocate some memory to store pixel data. If this succeeds the image
+//! // will have to be explicitly destroyed when it's no longer needed to release the associated data it holds.
 //! BLResult result = blImageCreate(&img, 128, 128, BL_FORMAT_PRGB32);
 //!
-//! // If function fails it should behave like it was never called, so `img`
-//! // would still be default initialized in this case. this means that you
-//! // don't have to destroy it explicitly although the C++ API would do it in
-//! // BLImage destructor.
+//! // If `blImageCreate()` failed it leaves the object in the state it was prior to the call. Most of API calls
+//! // in Blend2D behave like this (it's transactional). This means that if the call failed the `img` would still
+//! // be default constructed and the function can simply return without leaking any resources. In C++ API the
+//! // compiler would emit a call to `blImageDestroy()` implicitly, but that's just how RAII works.
 //! if (result != BL_SUCCESS)
 //!   return result;
 //!
 //! // Resetting image would destroy its data and make it default constructed.
 //! blImageReset(&img);
 //!
-//! // You can still use the image after it has been reset, however, since the
-//! // image is default initialized it's empty.
+//! // The instance is valid after `reset()` - it's now a default constructed instance as created by `blImageInit()`.
 //! printf("%p", img.impl);
 //!
-//! // The instance is still valid, to make it invalid we can destroy it for good.
+//! // Calling `blImageDestroy()` would make the instance invalid.
 //! blImageDestroy(&img);
 //!
-//! // At the moment null will be printed, but that's implementation dependent
-//! // and such behavior can change at any time.
-//! printf("%p", img.impl);
+//! // Calling any method except initialization such as `blImageInit()` on invalid instance is UNDEFINED BEHAVIOR!
+//! blImageCreate(&img, 128, 128, BL_FORMAT_PRGB32); // Can crash, can corrupt memory, can succeed, never do that!
 //! ```
 
 //! \cond INTERNAL
@@ -206,27 +181,27 @@
 //!
 //! \brief Internal API.
 
-//! \defgroup blend2d_internal_codecs Codecs
+//! \defgroup blend2d_codec_impl Codecs
 //!
 //! \brief Codecs implementation.
 
-//! \defgroup blend2d_internal_raster Raster
+//! \defgroup blend2d_raster_engine_impl Raster
 //!
 //! \brief Raster rendering context.
 
-//! \defgroup blend2d_internal_pipegen PipeGen
+//! \defgroup blend2d_pipeline_jit JIT pipeline compiler
 //!
-//! \brief Pipeline generator.
+//! \brief JIT pipeline compiler.
 
-//! \defgroup blend2d_internal_opentype OpenType
+//! \defgroup blend2d_pipeline_reference Reference pipeline implementation
+//!
+//! \brief Reference pipeline implementation.
+
+//! \defgroup blend2d_opentype_impl OpenType
 //!
 //! \brief OpenType implementation.
 
 //! \endcond
-
-// ============================================================================
-// [Version]
-// ============================================================================
 
 //! \addtogroup blend2d_api_macros
 //! \{
@@ -238,41 +213,21 @@
 #define BL_MAKE_VERSION(MAJOR, MINOR, PATCH) (((MAJOR) << 16) | ((MINOR) << 8) | (PATCH))
 
 //! Blend2D library version.
-#define BL_VERSION BL_MAKE_VERSION(0, 0, 1)
+#define BL_VERSION BL_MAKE_VERSION(0, 0, 17)
 
 //! \}
 
 //! \}
 
-// ============================================================================
-// [Build Options]
-// ============================================================================
-
-// These definitions can be used to enable static library build. Embed is used
-// when Blend2D's source code is embedded directly in another project, implies
-// static build as well.
+// These definitions can be used to enable static library build. Embed is used when Blend2D's source code is embedded
+// directly in another project, implies static build as well.
 //
 // #define BL_STATIC                // Blend2D is a statically linked library.
 
-// DEPRECATED: Will be removed in the future.
-#if defined(BL_BUILD_EMBED) || defined(BL_BUILD_STATIC)
-  #if defined(BL_BUILD_EMBED)
-    #pragma message("'BL_BUILD_EMBED' is deprecated, use BL_STATIC")
-  #endif
-  #if defined(BL_BUILD_STATIC)
-    #pragma message("'BL_BUILD_STATIC' is deprecated, use BL_STATIC")
-  #endif
-  #if !defined(BL_STATIC)
-    #define BL_STATIC
-  #endif
-#endif
-
-// These definitions control the build mode and tracing support. The build mode
-// should be auto-detected at compile time, but it's possible to override it in
-// case that the auto-detection fails.
+// These definitions control the build mode and tracing support. The build mode should be auto-detected at compile
+// time, but it's possible to override it in case that the auto-detection fails.
 //
-// Tracing is a feature that is never compiled by default and it's only used to
-// debug Blend2D itself.
+// Tracing is a feature that is never compiled by default and it's only used to debug Blend2D itself.
 //
 // #define BL_BUILD_DEBUG           // Define to enable debug-mode.
 // #define BL_BUILD_RELEASE         // Define to enable release-mode.
@@ -286,27 +241,8 @@
   #endif
 #endif
 
-// ============================================================================
-// [Dependencies]
-// ============================================================================
-
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
-
-#ifdef __cplusplus
-  #include <cmath>
-  #include <limits>
-  #include <type_traits>
-  #include <utility>
-#else
-  #include <stdbool.h>
-#endif
-
-// ============================================================================
-// [Public Macros]
-// ============================================================================
+// Public Macros
+// =============
 
 //! \addtogroup blend2d_api_macros
 //! \{
@@ -316,11 +252,9 @@
 
 //! \def BL_BYTE_ORDER
 //!
-//! A compile-time constant (macro) that defines byte-order of the target. It
-//! can be either `1234` for little-endian targets or `4321` for big-endian
-//! targets. Blend2D uses this macro internally, but it's also available to
-//! end users as sometimes it could be important for deciding between pixel
-//! formats or other important details.
+//! A compile-time constant (macro) that defines byte-order of the target. It can be either `1234` for little-endian
+//! targets or `4321` for big-endian targets. Blend2D uses this macro internally, but it's also available to end
+//! users as sometimes it could be important for deciding between pixel formats or other important details.
 #if (defined(__ARMEB__)) || (defined(__MIPSEB__)) || \
     (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__))
   #define BL_BYTE_ORDER 4321
@@ -360,11 +294,9 @@
 
 //! \def BL_CDECL
 //!
-//! Calling convention used by all exported functions and function callbacks.
-//! If you pass callbacks to Blend2D it's strongly advised to use this decorator,
-//! because some compilers provide a way of overriding a global calling
-//! convention (like __vectorcall on Windows platforms), which would break the
-//! use of such callbacks.
+//! Calling convention used by all exported functions and function callbacks. If you pass callbacks to Blend2D it's
+//! strongly advised to decorate the callback explicitly as some compilers provide a way of overriding a global
+//! calling convention (like __vectorcall on Windows platform), which would break the use of such callbacks.
 #if defined(__GNUC__) && defined(__i386__) && !defined(__x86_64__)
   #define BL_CDECL __attribute__((__cdecl__))
 #elif defined(_MSC_VER)
@@ -376,8 +308,7 @@
 //! \def BL_INLINE
 //!
 //! Marks functions that should always be inlined.
-
-#if defined(__GNUC__) && !defined(BL_BUILD_DEBUG)
+#if defined(__GNUC__)
   #define BL_INLINE inline __attribute__((__always_inline__))
 #elif defined(_MSC_VER)
   #define BL_INLINE __forceinline
@@ -387,9 +318,8 @@
 
 //! \def BL_NORETURN
 //!
-//! Function attribute used by functions that never return (that terminate the
-//! process). This attribute is used only once by `blRuntimeAssertionFailure()`
-//! function, which is only used when assertions are enabled. This macro should
+//! Function attribute used by functions that never return (that terminate the process). This attribute is used only
+//! once by `blRuntimeAssertionFailure()` function, which is only used when assertions are enabled. This macro should
 //! be considered internal and it's not designed for Blend2D users.
 #if defined(__GNUC__)
   #define BL_NORETURN __attribute__((__noreturn__))
@@ -401,8 +331,7 @@
 
 //! \def BL_NODISCARD
 //!
-//! Tells the compiler to issue a warning in case that the return value of a
-//! function was not used.
+//! Tells the compiler to issue a warning in case that the return value of a function was not used.
 #if defined(__cplusplus) && __cplusplus >= 201703L
   #define BL_NODISCARD [[nodiscard]]
 #elif defined(__clang__)
@@ -414,9 +343,8 @@
 
 //! \def BL_NOEXCEPT
 //!
-//! Defined to `noexcept` in C++17 mode an nothing in C mode. The reason this
-//! macro is provided is because Blend2D C API doesn't use exceptions and is
-//! marked as such.
+//! Defined to `noexcept` in C++17 mode an nothing in C mode. The reason this macro is provided is because Blend2D
+//! C API doesn't use exceptions and is marked as such.
 #if defined(__cplusplus) && __cplusplus >= 201703L
   // Function typedefs are `noexcept`, however, it's not available until C++17.
   #define BL_NOEXCEPT noexcept
@@ -426,8 +354,8 @@
 
 //! \def BL_NOEXCEPT_C
 //!
-//! Defined to `noexcept` in C++11 mode an nothing in C mode. This is used to
-//! mark Blend2D C API, which is `noexcept` by design.
+//! Defined to `noexcept` in C++11 mode an nothing in C mode. This is used to mark Blend2D C API, which is `noexcept`
+//! by design.
 #if defined(__cplusplus)
   #define BL_NOEXCEPT_C noexcept
 #else
@@ -436,9 +364,9 @@
 
 //! \def BL_PURE
 //!
-//! Function attribute that describes functions that have no side effects.
-//! The macro expands to `__attribute__((__pure__))` when compiling with GCC
-//! or Clang if the attribute is supported, otherwise it expands to nothing.
+//! Function attribute that describes functions that have no side effects. The macro expands to
+//! `__attribute__((__pure__))` when compiling with GCC or Clang if the attribute is supported, otherwise it expands
+//! to nothing.
 #if defined(__clang_major__) && __clang_major__ >= 6
   #define BL_PURE __attribute__((__pure__))
 #elif defined(__GNUC__) && __GNUC__ >= 6
@@ -454,9 +382,8 @@
 
 //! \def BL_ASSUME(...)
 //!
-//! Macro that tells the C/C++ compiler that the expression `...` evaluates
-//! to true. This macro is only used by few places and should be considered
-//! internal as you shouldn't need it when using Blend2D library.
+//! Macro that tells the C/C++ compiler that the expression `...` evaluates to true. This macro is only used by few
+//! places and should be considered internal as you shouldn't need it when using Blend2D library.
 #if defined(__clang__)
   #define BL_ASSUME(...) __builtin_assume(__VA_ARGS__)
 #elif defined(__GNUC__)
@@ -501,9 +428,8 @@
   #define BL_ASSERT(EXP) ((void)0)
 #endif
 
-//! Executes the code within the macro and returns if it returned any value other
-//! than `BL_SUCCESS`. This macro is heavily used across the library for error
-//! handling.
+//! Executes the code within the macro and returns if it returned any value other than `BL_SUCCESS`. This macro is
+//! heavily used across the library for error handling.
 #define BL_PROPAGATE(...)                                                     \
   do {                                                                        \
     BLResult resultToPropagate = (__VA_ARGS__);                               \
@@ -530,14 +456,24 @@
 //!
 //! Defines an enumeration used by Blend2D that is `uint32_t`.
 
-//! \}
-//! \endcond
+//! \def BL_FORCE_ENUM_UINT32(ENUM_VALUE_PREFIX)
+//!
+//! Forces an enumeration to be represented as 32-bit unsigned integer.
+//!
+//! This must be used in public C API, because when compiled by a C compiler (not C++ compiler) the enums won't
+//! have type information (it's a C++ feature). So this macro adds an additional enum value that would force the
+//! C compiler to make the type unsigned and at 32-bit.
 
 #ifdef __cplusplus
   #define BL_DEFINE_ENUM(NAME) enum NAME : uint32_t
+  #define BL_FORCE_ENUM_UINT32(ENUM_VALUE_PREFIX)
 #else
-  #define BL_DEFINE_ENUM(NAME) enum NAME
+  #define BL_DEFINE_ENUM(NAME) typedef enum NAME NAME; enum NAME
+  #define BL_FORCE_ENUM_UINT32(ENUM_VALUE_PREFIX) ,ENUM_VALUE_PREFIX##_FORCE_UINT = 0xFFFFFFFFu
 #endif
+
+//! \}
+//! \endcond
 
 #if defined(_DOXYGEN)
   // Only for doxygen to make these members nicer.
@@ -564,21 +500,24 @@
   #define BL_TYPED_MEMBER(CORE_TYPE, CPP_TYPE, NAME) CORE_TYPE NAME
 #endif
 
-//! \}
+#ifdef __cplusplus
+  #define BL_BEGIN_C_DECLS extern "C" {
+  #define BL_END_C_DECLS } /* {ExternC} */
+#else
+  #define BL_BEGIN_C_DECLS
+  #define BL_END_C_DECLS
+#endif
 
-// ============================================================================
-// [Diagnostic]
-// ============================================================================
+//! \}
 
 //! \cond INTERNAL
 //! \name Internals
 //! \{
 
-// Diagnostic warnings can be turned on/off by using pragmas, however, this is
-// a compiler specific stuff we have to maintain for each compiler. Ideally we
-// should have a clean code that would compile without any warnings with all of
-// them enabled by default, but since there is a lot of nitpicks we just disable
-// some locally when needed (like unused parameter in null-impl functions, etc).
+// Diagnostic warnings can be turned on/off by using pragmas, however, this is a compiler specific stuff we have to
+// maintain for each compiler. Ideally we should have a clean code that would compile without any warnings with all
+// of them enabled by default, but since there is a lot of nitpicks we just disable some locally when needed (like
+// unused parameter in null-impl functions, etc).
 #if defined(__INTEL_COMPILER)
   // Not regularly tested.
 #elif defined(__clang__)
@@ -624,152 +563,175 @@
 //! \}
 //! \endcond
 
-// ============================================================================
-// [Forward Declarations]
-// ============================================================================
+// Forward Declarations
+// ====================
 
 #ifdef __cplusplus
-  #define BL_DEFINE_STRUCT(NAME) struct NAME
+  #define BL_FORWARD_DECLARE_STRUCT(NAME) struct NAME
 #else
-  #define BL_DEFINE_STRUCT(NAME) typedef struct NAME NAME
+  #define BL_FORWARD_DECLARE_STRUCT(NAME) typedef struct NAME NAME
 #endif
 
-BL_DEFINE_STRUCT(BLRange);
-BL_DEFINE_STRUCT(BLRandom);
-BL_DEFINE_STRUCT(BLCreateForeignInfo);
-BL_DEFINE_STRUCT(BLFileCore);
+#ifdef __cplusplus
+  #define BL_FORWARD_DECLARE_UNION(NAME) union NAME
+#else
+  #define BL_FORWARD_DECLARE_UNION(NAME) typedef union NAME NAME
+#endif
 
-BL_DEFINE_STRUCT(BLRuntimeBuildInfo);
-BL_DEFINE_STRUCT(BLRuntimeSystemInfo);
-BL_DEFINE_STRUCT(BLRuntimeResourceInfo);
+#ifdef __cplusplus
+  #define BL_FORWARD_DECLARE_ENUM(NAME) enum NAME : uint32_t
+#else
+  #define BL_FORWARD_DECLARE_ENUM(NAME) typedef enum NAME NAME
+#endif
 
-BL_DEFINE_STRUCT(BLStringCore);
-BL_DEFINE_STRUCT(BLStringImpl);
+BL_FORWARD_DECLARE_STRUCT(BLRange);
+BL_FORWARD_DECLARE_STRUCT(BLRandom);
+BL_FORWARD_DECLARE_STRUCT(BLFileCore);
 
-BL_DEFINE_STRUCT(BLArrayCore);
-BL_DEFINE_STRUCT(BLArrayImpl);
+BL_FORWARD_DECLARE_STRUCT(BLRuntimeBuildInfo);
+BL_FORWARD_DECLARE_STRUCT(BLRuntimeSystemInfo);
+BL_FORWARD_DECLARE_STRUCT(BLRuntimeResourceInfo);
 
-BL_DEFINE_STRUCT(BLVariantCore);
-BL_DEFINE_STRUCT(BLVariantImpl);
+BL_FORWARD_DECLARE_STRUCT(BLRgba);
+BL_FORWARD_DECLARE_STRUCT(BLRgba32);
+BL_FORWARD_DECLARE_STRUCT(BLRgba64);
 
-BL_DEFINE_STRUCT(BLPointI);
-BL_DEFINE_STRUCT(BLPoint);
-BL_DEFINE_STRUCT(BLSizeI);
-BL_DEFINE_STRUCT(BLSize);
-BL_DEFINE_STRUCT(BLBoxI);
-BL_DEFINE_STRUCT(BLBox);
-BL_DEFINE_STRUCT(BLRectI);
-BL_DEFINE_STRUCT(BLRect);
-BL_DEFINE_STRUCT(BLLine);
-BL_DEFINE_STRUCT(BLTriangle);
-BL_DEFINE_STRUCT(BLRoundRect);
-BL_DEFINE_STRUCT(BLCircle);
-BL_DEFINE_STRUCT(BLEllipse);
-BL_DEFINE_STRUCT(BLArc);
-BL_DEFINE_STRUCT(BLMatrix2D);
-BL_DEFINE_STRUCT(BLApproximationOptions);
-BL_DEFINE_STRUCT(BLStrokeOptionsCore);
+BL_FORWARD_DECLARE_STRUCT(BLPoint);
+BL_FORWARD_DECLARE_STRUCT(BLPointI);
+BL_FORWARD_DECLARE_STRUCT(BLSize);
+BL_FORWARD_DECLARE_STRUCT(BLSizeI);
+BL_FORWARD_DECLARE_STRUCT(BLBox);
+BL_FORWARD_DECLARE_STRUCT(BLBoxI);
+BL_FORWARD_DECLARE_STRUCT(BLRect);
+BL_FORWARD_DECLARE_STRUCT(BLRectI);
+BL_FORWARD_DECLARE_STRUCT(BLLine);
+BL_FORWARD_DECLARE_STRUCT(BLTriangle);
+BL_FORWARD_DECLARE_STRUCT(BLRoundRect);
+BL_FORWARD_DECLARE_STRUCT(BLCircle);
+BL_FORWARD_DECLARE_STRUCT(BLEllipse);
+BL_FORWARD_DECLARE_STRUCT(BLArc);
 
-BL_DEFINE_STRUCT(BLPathCore);
-BL_DEFINE_STRUCT(BLPathImpl);
-BL_DEFINE_STRUCT(BLPathView);
+BL_FORWARD_DECLARE_STRUCT(BLMatrix2D);
+BL_FORWARD_DECLARE_STRUCT(BLApproximationOptions);
+BL_FORWARD_DECLARE_STRUCT(BLStrokeOptionsCore);
 
-BL_DEFINE_STRUCT(BLRegionCore);
-BL_DEFINE_STRUCT(BLRegionImpl);
+BL_FORWARD_DECLARE_STRUCT(BLFormatInfo);
 
-BL_DEFINE_STRUCT(BLFormatInfo);
-BL_DEFINE_STRUCT(BLImageCore);
-BL_DEFINE_STRUCT(BLImageImpl);
-BL_DEFINE_STRUCT(BLImageData);
-BL_DEFINE_STRUCT(BLImageInfo);
-BL_DEFINE_STRUCT(BLImageScaleOptions);
+BL_FORWARD_DECLARE_STRUCT(BLObjectCore);
+BL_FORWARD_DECLARE_STRUCT(BLObjectImpl);
+BL_FORWARD_DECLARE_STRUCT(BLObjectVirt);
+BL_FORWARD_DECLARE_STRUCT(BLObjectVirtBase);
+BL_FORWARD_DECLARE_STRUCT(BLObjectInfo);
+BL_FORWARD_DECLARE_STRUCT(BLObjectExternalInfo);
+BL_FORWARD_DECLARE_UNION(BLObjectDetail);
 
-BL_DEFINE_STRUCT(BLPixelConverterCore);
-BL_DEFINE_STRUCT(BLPixelConverterOptions);
+BL_FORWARD_DECLARE_STRUCT(BLArrayCore);
+BL_FORWARD_DECLARE_STRUCT(BLArrayImpl);
 
-BL_DEFINE_STRUCT(BLImageCodecCore);
-BL_DEFINE_STRUCT(BLImageCodecImpl);
-BL_DEFINE_STRUCT(BLImageCodecVirt);
+BL_FORWARD_DECLARE_STRUCT(BLBitSetCore);
+BL_FORWARD_DECLARE_STRUCT(BLBitSetData);
+BL_FORWARD_DECLARE_STRUCT(BLBitSetImpl);
+BL_FORWARD_DECLARE_STRUCT(BLBitSetSegment);
+BL_FORWARD_DECLARE_STRUCT(BLBitSetBuilderCore);
 
-BL_DEFINE_STRUCT(BLImageDecoderCore);
-BL_DEFINE_STRUCT(BLImageDecoderImpl);
-BL_DEFINE_STRUCT(BLImageDecoderVirt);
+BL_FORWARD_DECLARE_STRUCT(BLStringCore);
+BL_FORWARD_DECLARE_STRUCT(BLStringImpl);
 
-BL_DEFINE_STRUCT(BLImageEncoderCore);
-BL_DEFINE_STRUCT(BLImageEncoderImpl);
-BL_DEFINE_STRUCT(BLImageEncoderVirt);
+BL_FORWARD_DECLARE_STRUCT(BLPathCore);
+BL_FORWARD_DECLARE_STRUCT(BLPathImpl);
+BL_FORWARD_DECLARE_STRUCT(BLPathView);
 
-BL_DEFINE_STRUCT(BLRgba32);
-BL_DEFINE_STRUCT(BLRgba64);
-BL_DEFINE_STRUCT(BLRgba);
+BL_FORWARD_DECLARE_STRUCT(BLImageData);
+BL_FORWARD_DECLARE_STRUCT(BLImageInfo);
+BL_FORWARD_DECLARE_STRUCT(BLImageScaleOptions);
 
-BL_DEFINE_STRUCT(BLGradientCore);
-BL_DEFINE_STRUCT(BLGradientImpl);
-BL_DEFINE_STRUCT(BLGradientStop);
+BL_FORWARD_DECLARE_STRUCT(BLImageCore);
+BL_FORWARD_DECLARE_STRUCT(BLImageImpl);
 
-BL_DEFINE_STRUCT(BLLinearGradientValues);
-BL_DEFINE_STRUCT(BLRadialGradientValues);
-BL_DEFINE_STRUCT(BLConicalGradientValues);
+BL_FORWARD_DECLARE_STRUCT(BLImageCodecCore);
+BL_FORWARD_DECLARE_STRUCT(BLImageCodecImpl);
+BL_FORWARD_DECLARE_STRUCT(BLImageCodecVirt);
 
-BL_DEFINE_STRUCT(BLPatternCore);
-BL_DEFINE_STRUCT(BLPatternImpl);
+BL_FORWARD_DECLARE_STRUCT(BLImageDecoderCore);
+BL_FORWARD_DECLARE_STRUCT(BLImageDecoderImpl);
+BL_FORWARD_DECLARE_STRUCT(BLImageDecoderVirt);
 
-BL_DEFINE_STRUCT(BLStyleCore);
+BL_FORWARD_DECLARE_STRUCT(BLImageEncoderCore);
+BL_FORWARD_DECLARE_STRUCT(BLImageEncoderImpl);
+BL_FORWARD_DECLARE_STRUCT(BLImageEncoderVirt);
 
-BL_DEFINE_STRUCT(BLContextCore);
-BL_DEFINE_STRUCT(BLContextImpl);
-BL_DEFINE_STRUCT(BLContextVirt);
-BL_DEFINE_STRUCT(BLContextCookie);
-BL_DEFINE_STRUCT(BLContextCreateInfo);
-BL_DEFINE_STRUCT(BLContextHints);
-BL_DEFINE_STRUCT(BLContextState);
+BL_FORWARD_DECLARE_STRUCT(BLPixelConverterCore);
+BL_FORWARD_DECLARE_STRUCT(BLPixelConverterOptions);
 
-BL_DEFINE_STRUCT(BLGlyphBufferCore);
-BL_DEFINE_STRUCT(BLGlyphBufferImpl);
-BL_DEFINE_STRUCT(BLGlyphInfo);
-BL_DEFINE_STRUCT(BLGlyphMappingState);
-BL_DEFINE_STRUCT(BLGlyphOutlineSinkInfo);
-BL_DEFINE_STRUCT(BLGlyphPlacement);
-BL_DEFINE_STRUCT(BLGlyphRun);
+BL_FORWARD_DECLARE_STRUCT(BLGradientCore);
+BL_FORWARD_DECLARE_STRUCT(BLGradientImpl);
+BL_FORWARD_DECLARE_STRUCT(BLGradientStop);
 
-BL_DEFINE_STRUCT(BLFontUnicodeCoverage);
-BL_DEFINE_STRUCT(BLFontFaceInfo);
-BL_DEFINE_STRUCT(BLFontQueryProperties);
-BL_DEFINE_STRUCT(BLFontFeature);
-BL_DEFINE_STRUCT(BLFontDesignMetrics);
-BL_DEFINE_STRUCT(BLFontMatrix);
-BL_DEFINE_STRUCT(BLFontMetrics);
-BL_DEFINE_STRUCT(BLFontPanose);
-BL_DEFINE_STRUCT(BLFontTable);
-BL_DEFINE_STRUCT(BLFontVariation);
-BL_DEFINE_STRUCT(BLTextMetrics);
+BL_FORWARD_DECLARE_STRUCT(BLLinearGradientValues);
+BL_FORWARD_DECLARE_STRUCT(BLRadialGradientValues);
+BL_FORWARD_DECLARE_STRUCT(BLConicalGradientValues);
 
-BL_DEFINE_STRUCT(BLFontCore);
-BL_DEFINE_STRUCT(BLFontImpl);
-BL_DEFINE_STRUCT(BLFontVirt);
+BL_FORWARD_DECLARE_STRUCT(BLPatternCore);
+BL_FORWARD_DECLARE_STRUCT(BLPatternImpl);
 
-BL_DEFINE_STRUCT(BLFontFaceCore);
-BL_DEFINE_STRUCT(BLFontFaceImpl);
-BL_DEFINE_STRUCT(BLFontFaceVirt);
+BL_FORWARD_DECLARE_STRUCT(BLContextCookie);
+BL_FORWARD_DECLARE_STRUCT(BLContextCreateInfo);
+BL_FORWARD_DECLARE_STRUCT(BLContextHints);
+BL_FORWARD_DECLARE_STRUCT(BLContextState);
 
-BL_DEFINE_STRUCT(BLFontDataCore);
-BL_DEFINE_STRUCT(BLFontDataImpl);
-BL_DEFINE_STRUCT(BLFontDataVirt);
+BL_FORWARD_DECLARE_STRUCT(BLContextCore);
+BL_FORWARD_DECLARE_STRUCT(BLContextImpl);
+BL_FORWARD_DECLARE_STRUCT(BLContextVirt);
 
-BL_DEFINE_STRUCT(BLFontManagerCore);
-BL_DEFINE_STRUCT(BLFontManagerImpl);
-BL_DEFINE_STRUCT(BLFontManagerVirt);
+BL_FORWARD_DECLARE_STRUCT(BLGlyphBufferCore);
+BL_FORWARD_DECLARE_STRUCT(BLGlyphBufferImpl);
+BL_FORWARD_DECLARE_STRUCT(BLGlyphInfo);
+BL_FORWARD_DECLARE_STRUCT(BLGlyphMappingState);
+BL_FORWARD_DECLARE_STRUCT(BLGlyphOutlineSinkInfo);
+BL_FORWARD_DECLARE_STRUCT(BLGlyphPlacement);
+BL_FORWARD_DECLARE_STRUCT(BLGlyphRun);
 
-#undef BL_DEFINE_STRUCT
+BL_FORWARD_DECLARE_STRUCT(BLFontUnicodeCoverage);
+BL_FORWARD_DECLARE_STRUCT(BLFontFaceInfo);
+BL_FORWARD_DECLARE_STRUCT(BLFontQueryProperties);
+BL_FORWARD_DECLARE_STRUCT(BLFontFeature);
+BL_FORWARD_DECLARE_STRUCT(BLFontDesignMetrics);
+BL_FORWARD_DECLARE_STRUCT(BLFontMatrix);
+BL_FORWARD_DECLARE_STRUCT(BLFontMetrics);
+BL_FORWARD_DECLARE_STRUCT(BLFontPanose);
+BL_FORWARD_DECLARE_STRUCT(BLFontTable);
+BL_FORWARD_DECLARE_STRUCT(BLFontVariation);
+BL_FORWARD_DECLARE_STRUCT(BLTextMetrics);
+
+BL_FORWARD_DECLARE_STRUCT(BLFontCore);
+BL_FORWARD_DECLARE_STRUCT(BLFontImpl);
+
+BL_FORWARD_DECLARE_STRUCT(BLFontDataCore);
+BL_FORWARD_DECLARE_STRUCT(BLFontDataImpl);
+BL_FORWARD_DECLARE_STRUCT(BLFontDataVirt);
+
+BL_FORWARD_DECLARE_STRUCT(BLFontFaceCore);
+BL_FORWARD_DECLARE_STRUCT(BLFontFaceImpl);
+BL_FORWARD_DECLARE_STRUCT(BLFontFaceVirt);
+
+BL_FORWARD_DECLARE_STRUCT(BLFontManagerCore);
+BL_FORWARD_DECLARE_STRUCT(BLFontManagerImpl);
+BL_FORWARD_DECLARE_STRUCT(BLFontManagerVirt);
+
+BL_FORWARD_DECLARE_STRUCT(BLVarCore);
+
+#undef BL_FORWARD_DECLARE_ENUM
+#undef BL_FORWARD_DECLARE_UNION
+#undef BL_FORWARD_DECLARE_STRUCT
 
 // C++ API.
 #ifdef __cplusplus
 class BLFile;
-class BLVariant;
 template<typename T> class BLArray;
+class BLBitSet;
+template<uint32_t> class BLBitSetBuilderT;
 class BLString;
 class BLPath;
-class BLRegion;
 class BLStrokeOptions;
 class BLImage;
 class BLImageCodec;
@@ -777,7 +739,6 @@ class BLImageDecoder;
 class BLImageEncoder;
 class BLPattern;
 class BLGradient;
-class BLStyle;
 class BLContext;
 class BLPixelConverter;
 class BLGlyphBuffer;
@@ -786,21 +747,21 @@ class BLFont;
 class BLFontData;
 class BLFontFace;
 class BLFontManager;
+class BLVar;
+
+using BLBitSetBuilder = BLBitSetBuilderT<512>;
 #endif
 
-// ============================================================================
-// [Public Types]
-// ============================================================================
+// Public Types
+// ============
 
 //! \ingroup blend2d_api_globals
 //!
 //! Result code used by most Blend2D functions (32-bit unsigned integer).
 //!
-//! The `BLResultCode` enumeration contains Blend2D result codes that contain
-//! Blend2D specific set of errors and an extended set of errors that can come
-//! from WIN32 or POSIX APIs. Since the success result code is zero it's
-//! recommended to use the following check to determine whether a call failed
-//! or not:
+//! The `BLResultCode` enumeration contains Blend2D result codes that contain Blend2D specific set of errors and
+//! an extended set of errors that can come from WIN32 or POSIX APIs. Since the success result code is zero it's
+//! recommended to use the following check to determine whether a call failed or not:
 //!
 //! ```
 //! BLResult result = doSomething();
@@ -812,53 +773,38 @@ typedef uint32_t BLResult;
 
 //! \ingroup blend2d_api_globals
 //!
-//! A type used to store a pack of bits (typedef to `uintptr_t`).
-//!
-//! BitWord should be equal in size to a machine word.
-typedef uintptr_t BLBitWord;
-
-//! \ingroup blend2d_api_globals
-//!
 //! Tag is a 32-bit integer consisting of 4 characters in the following format:
 //!
 //! ```
 //! tag = ((a << 24) | (b << 16) | (c << 8) | d)
 //! ```
 //!
-//! Tags are used extensively by OpenType fonts and other binary formats like
-//! PNG. In most cases TAGs should only contain ASCII letters, digits, and spaces.
+//! Tags are used extensively by OpenType fonts and other binary formats like PNG. In most cases TAGs should only
+//! contain ASCII letters, digits, and spaces.
 //!
-//! Blend2D uses `BLTag` in public and internal APIs to distinguish between a
-//! regular `uint32_t` and tag.
+//! Blend2D uses `BLTag` in public and internal APIs to distinguish between a regular `uint32_t` and tag.
 typedef uint32_t BLTag;
 
 //! \ingroup blend2d_api_globals
 //!
 //! Unique identifier that can be used for caching purposes.
 //!
-//! Some objects such as \ref BLImage and \ref BLFontFace have assigned an
-//! unique identifier that can be used to identify such objects for caching
-//! purposes. This identifier is never zero, so zero can be safely used as
+//! Some objects such as \ref BLImage and \ref BLFontFace have assigned an unique identifier that can be used to
+//! identify such objects for caching purposes. This identifier is never zero, so zero can be safely used as
 //! "uncached".
 //!
-//! \note Unique identifier is per-process. It's implemented as an increasing
-//! global or thread-local counter in a way that identifiers would not collide.
+//! \note Unique identifier is per-process. It's implemented as an increasing global or thread-local counter in
+//! a way that identifiers would not collide.
 typedef uint64_t BLUniqueId;
 
 //! \ingroup blend2d_api_globals
 //!
-//! A function callback that is called when an Impl is destroyed. It's often used
-//! to notify that a data passed to a certain Impl is no longer in use.
-typedef void (BL_CDECL* BLDestroyImplFunc)(void* impl, void* destroyData) BL_NOEXCEPT;
+//! BLUnknown is `void` - it's used in places that accept pointer to `BLVarCore` or any `BLObjectCore` compatible
+//! object.
+typedef void BLUnknown;
 
-//! \ingroup blend2d_api_geometry
-//!
-//! Optional callback that can be used to consume a path data.
-typedef BLResult (BL_CDECL* BLPathSinkFunc)(BLPathCore* path, const void* info, void* closure) BL_NOEXCEPT;
-
-// ============================================================================
-// [Constants]
-// ============================================================================
+// Public Constants
+// ================
 
 //! \ingroup blend2d_api_globals
 //!
@@ -873,7 +819,8 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_INVALID_VALUE,                //!< Invalid value/argument        [EINVAL].
   BL_ERROR_INVALID_STATE,                //!< Invalid state                 [EFAULT].
   BL_ERROR_INVALID_HANDLE,               //!< Invalid handle or file.       [EBADF].
-  BL_ERROR_VALUE_TOO_LARGE,              //!< Value too large               [EOVERFLOW].
+  BL_ERROR_INVALID_CONVERSION,           //!< Invalid conversion.
+  BL_ERROR_OVERFLOW,                     //!< Overflow or value too large   [EOVERFLOW].
   BL_ERROR_NOT_INITIALIZED,              //!< Object not initialized.
   BL_ERROR_NOT_IMPLEMENTED,              //!< Not implemented               [ENOSYS].
   BL_ERROR_NOT_PERMITTED,                //!< Operation not permitted       [EPERM].
@@ -922,6 +869,7 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_INVALID_SIGNATURE,            //!< Invalid data signature or header.
   BL_ERROR_INVALID_DATA,                 //!< Invalid or corrupted data.
   BL_ERROR_INVALID_STRING,               //!< Invalid string (invalid data of either UTF8, UTF16, or UTF32).
+  BL_ERROR_INVALID_KEY,                  //!< Invalid key or property.
   BL_ERROR_DATA_TRUNCATED,               //!< Truncated data (more data required than memory/stream provides).
   BL_ERROR_DATA_TOO_LARGE,               //!< Input data too large to be processed.
   BL_ERROR_DECOMPRESSION_FAILED,         //!< Decompression failed due to invalid data (RLE, Huffman, etc).
@@ -929,6 +877,7 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_INVALID_GEOMETRY,             //!< Invalid geometry (invalid path data or shape).
   BL_ERROR_NO_MATCHING_VERTEX,           //!< Returned when there is no matching vertex in path data.
 
+  BL_ERROR_INVALID_CREATE_FLAGS,         //!< Invalid create flags (BLContext).
   BL_ERROR_NO_MATCHING_COOKIE,           //!< No matching cookie (BLContext).
   BL_ERROR_NO_STATES_TO_RESTORE,         //!< No states to restore (BLContext).
 
@@ -960,6 +909,8 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_FONT_PROGRAM_TERMINATED,      //!< Font program terminated because the execution reached the limit.
 
   BL_ERROR_INVALID_GLYPH                 //!< Invalid glyph identifier.
+
+  BL_FORCE_ENUM_UINT32(BL_ERROR)
 };
 
 //! \ingroup blend2d_api_globals
@@ -975,18 +926,24 @@ BL_DEFINE_ENUM(BLByteOrder) {
   BL_BYTE_ORDER_NATIVE = BL_BYTE_ORDER == 1234 ? BL_BYTE_ORDER_LE : BL_BYTE_ORDER_BE,
   //! Swapped byte-order (BE if host is LE and vice versa).
   BL_BYTE_ORDER_SWAPPED = BL_BYTE_ORDER == 1234 ? BL_BYTE_ORDER_BE : BL_BYTE_ORDER_LE
+
+  BL_FORCE_ENUM_UINT32(BL_BYTE_ORDER)
 };
 
 //! \ingroup blend2d_api_globals
 //!
 //! Data access flags.
 BL_DEFINE_ENUM(BLDataAccessFlags) {
+  //! No data access flags.
+  BL_DATA_ACCESS_NO_FLAGS = 0x00u,
   //! Read access.
   BL_DATA_ACCESS_READ = 0x01u,
   //! Write access.
   BL_DATA_ACCESS_WRITE = 0x02u,
   //! Read and write access.
   BL_DATA_ACCESS_RW = 0x03u
+
+  BL_FORCE_ENUM_UINT32(BL_DATA_ACCESS)
 };
 
 //! \ingroup blend2d_api_globals
@@ -1002,25 +959,29 @@ BL_DEFINE_ENUM(BLDataSourceType) {
   //! Custom data source.
   BL_DATA_SOURCE_TYPE_CUSTOM = 3,
 
-  //! Count of data source types.
-  BL_DATA_SOURCE_TYPE_COUNT = 4
+  //! Maximum value `BLDataSourceType`.
+  BL_DATA_SOURCE_TYPE_MAX_VALUE = 3
+
+  BL_FORCE_ENUM_UINT32(BL_DATA_SOURCE_TYPE)
 };
 
 //! \ingroup blend2d_api_globals
 //!
 //! Modification operation applied to Blend2D containers.
 BL_DEFINE_ENUM(BLModifyOp) {
-  //! Assign operation and reserve only space to fit the input.
+  //! Assign operation, which reserves space only to fit the requested input.
   BL_MODIFY_OP_ASSIGN_FIT = 0,
-  //! Assign operation and reserve more capacity for growing.
+  //! Assign operation, which takes into consideration successive appends.
   BL_MODIFY_OP_ASSIGN_GROW = 1,
-  //! Append operation and reserve only space to fit the input.
+  //! Append operation, which reserves space only to fit the current and appended content.
   BL_MODIFY_OP_APPEND_FIT = 2,
-  //! Append operation and reserve more capacity for growing.
+  //! Append operation, which takes into consideration successive appends.
   BL_MODIFY_OP_APPEND_GROW = 3,
 
-  //! Count of data operations.
-  BL_MODIFY_OP_COUNT = 4
+  //! Maximum value of `BLModifyOp`.
+  BL_MODIFY_OP_MAX_VALUE = 3
+
+  BL_FORCE_ENUM_UINT32(BL_MODIFY_OP)
 };
 
 //! \ingroup blend2d_api_globals
@@ -1036,10 +997,14 @@ BL_DEFINE_ENUM(BLBooleanOp) {
   //! Result = A ^ B.
   BL_BOOLEAN_OP_XOR = 3,
   //! Result = A & ~B.
-  BL_BOOLEAN_OP_SUB = 4,
+  BL_BOOLEAN_OP_AND_NOT = 4,
+  //! Result = ~A & B.
+  BL_BOOLEAN_OP_NOT_AND = 5,
 
-  //! Count of boolean operations.
-  BL_BOOLEAN_OP_COUNT = 5
+  //! Maximum value of `BLBooleanOp`.
+  BL_BOOLEAN_OP_MAX_VALUE = 5
+
+  BL_FORCE_ENUM_UINT32(BL_BOOLEAN_OP)
 };
 
 //! \ingroup blend2d_api_styling
@@ -1055,27 +1020,31 @@ BL_DEFINE_ENUM(BLExtendMode) {
 
   //! Alias to `BL_EXTEND_MODE_PAD`.
   BL_EXTEND_MODE_PAD_X_PAD_Y = 0,
-  //! Alias to `BL_EXTEND_MODE_REPEAT`.
-  BL_EXTEND_MODE_REPEAT_X_REPEAT_Y = 1,
-  //! Alias to `BL_EXTEND_MODE_REFLECT`.
-  BL_EXTEND_MODE_REFLECT_X_REFLECT_Y = 2,
   //! Pad X and repeat Y.
   BL_EXTEND_MODE_PAD_X_REPEAT_Y = 3,
   //! Pad X and reflect Y.
   BL_EXTEND_MODE_PAD_X_REFLECT_Y = 4,
+
+  //! Alias to `BL_EXTEND_MODE_REPEAT`.
+  BL_EXTEND_MODE_REPEAT_X_REPEAT_Y = 1,
   //! Repeat X and pad Y.
   BL_EXTEND_MODE_REPEAT_X_PAD_Y = 5,
   //! Repeat X and reflect Y.
   BL_EXTEND_MODE_REPEAT_X_REFLECT_Y = 6,
+
+  //! Alias to `BL_EXTEND_MODE_REFLECT`.
+  BL_EXTEND_MODE_REFLECT_X_REFLECT_Y = 2,
   //! Reflect X and pad Y.
   BL_EXTEND_MODE_REFLECT_X_PAD_Y = 7,
   //! Reflect X and repeat Y.
   BL_EXTEND_MODE_REFLECT_X_REPEAT_Y = 8,
 
   //! Count of simple extend modes (that use the same value for X and Y).
-  BL_EXTEND_MODE_SIMPLE_COUNT = 3,
+  BL_EXTEND_MODE_SIMPLE_MAX = 2,
   //! Count of complex extend modes (that can use independent values for X and Y).
-  BL_EXTEND_MODE_COMPLEX_COUNT = 9
+  BL_EXTEND_MODE_COMPLEX_MAX = 8
+
+  BL_FORCE_ENUM_UINT32(BL_EXTEND_MODE)
 };
 
 //! \ingroup blend2d_api_text
@@ -1097,13 +1066,14 @@ BL_DEFINE_ENUM(BLTextEncoding) {
     = sizeof(wchar_t) == 4 ? BL_TEXT_ENCODING_UTF32 :
       sizeof(wchar_t) == 2 ? BL_TEXT_ENCODING_UTF16 : BL_TEXT_ENCODING_UTF8,
 
-  //! Count of text supported text encodings.
-  BL_TEXT_ENCODING_COUNT = 4
+  //! Maximum value of `BLTextEncoding`.
+  BL_TEXT_ENCODING_MAX_VALUE = 3
+
+  BL_FORCE_ENUM_UINT32(BL_TEXT_ENCODING)
 };
 
-// ============================================================================
-// [Internal API]
-// ============================================================================
+// Internal API
+// ============
 
 #ifdef __cplusplus
 //! \cond INTERNAL
@@ -1115,9 +1085,8 @@ namespace BLInternal {
 
 //! StdInt provides an integer defined by <stdint.h> by size and signedness.
 //!
-//! This struct is visible to Blend2D users, because it's required by the
-//! `BLArray<>` template. However, it's still considered internal and should
-//! not be used outside of Blend2D source code.
+//! This struct is visible to Blend2D users, because it's required by the `BLArray<>` template. However, it's
+//! still considered internal and should not be used outside of Blend2D source code.
 template<size_t Size, unsigned Unsigned>
 struct StdInt {};
 
@@ -1130,18 +1099,58 @@ template<> struct StdInt<4, 1> { typedef uint32_t Type; };
 template<> struct StdInt<8, 0> { typedef int64_t  Type; };
 template<> struct StdInt<8, 1> { typedef uint64_t Type; };
 
-//! Implementation of `blDownCast()`, which can be used to downcast a Blend2D
-//! core struct / object into its C++ counterpart. The cast is always safe.
+template<uint64_t kInput>
+struct ConstCTZ {
+  enum : uint32_t {
+    kValue = (kInput & (uint64_t(1) <<  0)) ?  0 : (kInput & (uint64_t(1) <<  1)) ?  1 :
+             (kInput & (uint64_t(1) <<  2)) ?  2 : (kInput & (uint64_t(1) <<  3)) ?  3 :
+             (kInput & (uint64_t(1) <<  4)) ?  4 : (kInput & (uint64_t(1) <<  5)) ?  5 :
+             (kInput & (uint64_t(1) <<  6)) ?  6 : (kInput & (uint64_t(1) <<  7)) ?  7 :
+             (kInput & (uint64_t(1) <<  8)) ?  8 : (kInput & (uint64_t(1) <<  9)) ?  9 :
+             (kInput & (uint64_t(1) << 10)) ? 10 : (kInput & (uint64_t(1) << 11)) ? 11 :
+             (kInput & (uint64_t(1) << 12)) ? 12 : (kInput & (uint64_t(1) << 13)) ? 13 :
+             (kInput & (uint64_t(1) << 14)) ? 14 : (kInput & (uint64_t(1) << 15)) ? 15 :
+             (kInput & (uint64_t(1) << 16)) ? 16 : (kInput & (uint64_t(1) << 17)) ? 17 :
+             (kInput & (uint64_t(1) << 18)) ? 18 : (kInput & (uint64_t(1) << 19)) ? 19 :
+             (kInput & (uint64_t(1) << 20)) ? 20 : (kInput & (uint64_t(1) << 21)) ? 21 :
+             (kInput & (uint64_t(1) << 22)) ? 22 : (kInput & (uint64_t(1) << 23)) ? 23 :
+             (kInput & (uint64_t(1) << 24)) ? 24 : (kInput & (uint64_t(1) << 25)) ? 25 :
+             (kInput & (uint64_t(1) << 26)) ? 26 : (kInput & (uint64_t(1) << 27)) ? 27 :
+             (kInput & (uint64_t(1) << 28)) ? 28 : (kInput & (uint64_t(1) << 29)) ? 29 :
+             (kInput & (uint64_t(1) << 30)) ? 30 : (kInput & (uint64_t(1) << 31)) ? 31 :
+             (kInput & (uint64_t(1) << 32)) ? 32 : (kInput & (uint64_t(1) << 33)) ? 33 :
+             (kInput & (uint64_t(1) << 34)) ? 34 : (kInput & (uint64_t(1) << 35)) ? 35 :
+             (kInput & (uint64_t(1) << 36)) ? 36 : (kInput & (uint64_t(1) << 37)) ? 37 :
+             (kInput & (uint64_t(1) << 38)) ? 38 : (kInput & (uint64_t(1) << 39)) ? 39 :
+             (kInput & (uint64_t(1) << 40)) ? 40 : (kInput & (uint64_t(1) << 41)) ? 41 :
+             (kInput & (uint64_t(1) << 42)) ? 42 : (kInput & (uint64_t(1) << 43)) ? 43 :
+             (kInput & (uint64_t(1) << 44)) ? 44 : (kInput & (uint64_t(1) << 45)) ? 45 :
+             (kInput & (uint64_t(1) << 46)) ? 46 : (kInput & (uint64_t(1) << 47)) ? 47 :
+             (kInput & (uint64_t(1) << 48)) ? 48 : (kInput & (uint64_t(1) << 49)) ? 49 :
+             (kInput & (uint64_t(1) << 50)) ? 50 : (kInput & (uint64_t(1) << 51)) ? 51 :
+             (kInput & (uint64_t(1) << 52)) ? 52 : (kInput & (uint64_t(1) << 53)) ? 53 :
+             (kInput & (uint64_t(1) << 54)) ? 54 : (kInput & (uint64_t(1) << 55)) ? 55 :
+             (kInput & (uint64_t(1) << 56)) ? 56 : (kInput & (uint64_t(1) << 57)) ? 57 :
+             (kInput & (uint64_t(1) << 58)) ? 58 : (kInput & (uint64_t(1) << 59)) ? 59 :
+             (kInput & (uint64_t(1) << 60)) ? 60 : (kInput & (uint64_t(1) << 61)) ? 61 :
+             (kInput & (uint64_t(1) << 62)) ? 62 : (kInput & (uint64_t(1) << 63)) ? 63 : 64
+  };
+};
+
+//! Implementation of `blDownCast()`, which can be used to downcast a Blend2D core struct / object into its C++
+//! counterpart. The cast is always safe.
 template<typename T>
-struct DownCast { T Type; };
+struct DownCast { typedef T Type; };
 
 #define BL_DCAST_IMPL(T) template<> struct DownCast<T##Core> { typedef T Type; }
 
+BL_DCAST_IMPL(BLBitSet);
 BL_DCAST_IMPL(BLContext);
 BL_DCAST_IMPL(BLFile);
 BL_DCAST_IMPL(BLFont);
 BL_DCAST_IMPL(BLFontData);
 BL_DCAST_IMPL(BLFontFace);
+BL_DCAST_IMPL(BLFontManager);
 BL_DCAST_IMPL(BLGlyphBuffer);
 BL_DCAST_IMPL(BLGradient);
 BL_DCAST_IMPL(BLImage);
@@ -1151,31 +1160,107 @@ BL_DCAST_IMPL(BLImageEncoder);
 BL_DCAST_IMPL(BLPath);
 BL_DCAST_IMPL(BLPattern);
 BL_DCAST_IMPL(BLPixelConverter);
-BL_DCAST_IMPL(BLRegion);
 BL_DCAST_IMPL(BLString);
 BL_DCAST_IMPL(BLStrokeOptions);
-BL_DCAST_IMPL(BLStyle);
-BL_DCAST_IMPL(BLVariant);
+BL_DCAST_IMPL(BLVar);
 
 #undef BL_DCAST_IMPL
+
+// These are required to properly use the C API from C++ BLArray<T>. Category provides a rough overview of `BLArray<T>`
+// type category (like int, float) and the other APIs provide some basic traits that the implementation needs.
+enum TypeCategory : uint32_t {
+  kTypeCategoryUnknown = 0,
+  kTypeCategoryBool    = 1,
+  kTypeCategoryInt     = 2,
+  kTypeCategoryFloat   = 3,
+  kTypeCategoryPtr     = 4,
+  kTypeCategoryStruct  = 5,
+  kTypeCategoryObject  = 6
+};
+
+template<typename T>
+struct TypeTraits {
+  enum : uint32_t {
+    kCategory = std::is_pointer<T>::value ? kTypeCategoryPtr :
+                std::is_integral<T>::value ? kTypeCategoryInt :
+                std::is_floating_point<T>::value ? kTypeCategoryFloat : kTypeCategoryStruct
+  };
+};
+
+template<>
+struct TypeTraits<bool> {
+  enum : uint32_t {
+    kCategory = kTypeCategoryBool
+  };
+};
+
+// BLArrayCore and BLArray<T> specialization.
+template<>
+struct TypeTraits<BLArrayCore> {
+  enum : uint32_t {
+    kCategory = kTypeCategoryObject
+  };
+};
+
+template<typename T>
+struct TypeTraits<BLArray<T>> {
+  enum : uint32_t {
+    kCategory = kTypeCategoryObject
+  };
+};
+
+// Other types compatible with BLObjectCore.
+#define BL_DEFINE_OBJECT_TRAITS(T)     \
+  template<>                           \
+  struct TypeTraits<T##Core> {         \
+    enum : uint32_t {                  \
+      kCategory = kTypeCategoryObject  \
+    };                                 \
+  };                                   \
+                                       \
+  template<>                           \
+  struct TypeTraits<T> {               \
+    enum : uint32_t {                  \
+      kCategory = kTypeCategoryObject  \
+    };                                 \
+  };
+
+BL_DEFINE_OBJECT_TRAITS(BLBitSet)
+BL_DEFINE_OBJECT_TRAITS(BLContext)
+BL_DEFINE_OBJECT_TRAITS(BLFont)
+BL_DEFINE_OBJECT_TRAITS(BLFontData)
+BL_DEFINE_OBJECT_TRAITS(BLFontFace)
+BL_DEFINE_OBJECT_TRAITS(BLFontManager)
+BL_DEFINE_OBJECT_TRAITS(BLGradient)
+BL_DEFINE_OBJECT_TRAITS(BLImage)
+BL_DEFINE_OBJECT_TRAITS(BLImageCodec)
+BL_DEFINE_OBJECT_TRAITS(BLImageDecoder)
+BL_DEFINE_OBJECT_TRAITS(BLImageEncoder)
+BL_DEFINE_OBJECT_TRAITS(BLPath)
+BL_DEFINE_OBJECT_TRAITS(BLPattern)
+BL_DEFINE_OBJECT_TRAITS(BLString)
+BL_DEFINE_OBJECT_TRAITS(BLVar)
+
+#undef BL_DEFINE_OBJECT_TRAITS
 
 //! Helper to implement placement new/delete without relying on `<new>` header.
 struct PlacementNew { void* ptr; };
 
 } // {BLInternal}
 
-//! Implementation of placement new so we don't have to depend on `<new>`.
-inline void* operator new(std::size_t, const BLInternal::PlacementNew& p) {
-  BL_ASSUME(p.ptr != nullptr); // Otherwise MSVC would generate nullptr check.
+//! Implementation of a placement new so we don't have to depend on `<new>`.
+BL_INLINE void* operator new(std::size_t, const BLInternal::PlacementNew& p) {
+#if defined(_MSC_VER) && !defined(__clang__)
+  BL_ASSUME(p.ptr != nullptr); // Otherwise MSVC would emit a nullptr check.
+#endif
   return p.ptr;
 }
 
 //! \endcond
 #endif
 
-// ============================================================================
-// [Public API - TraceError]
-// ============================================================================
+// Public API - TraceError
+// =======================
 
 //! \addtogroup blend2d_api_globals
 //! \{
@@ -1185,9 +1270,8 @@ inline void* operator new(std::size_t, const BLInternal::PlacementNew& p) {
 
 //! Returns the `result` passed.
 //!
-//! Provided for debugging purposes. Putting a breakpoint inside `blTraceError()`
-//! can help with tracing an origin of errors reported / returned by Blend2D as
-//! each error goes through this function.
+//! Provided for debugging purposes. Putting a breakpoint inside `blTraceError()` can help with tracing an origin
+//! of errors reported / returned by Blend2D as each error goes through this function.
 //!
 //! It's a zero-cost solution that doesn't affect release builds in any way.
 BL_NODISCARD
@@ -1196,27 +1280,58 @@ static inline BLResult blTraceError(BLResult result) BL_NOEXCEPT_C { return resu
 //! \}
 //! \}
 
-// ============================================================================
-// [Public API - Templates]
-// ============================================================================
+// Public API - Templates
+// ======================
 
 #ifdef __cplusplus
-// These are the only global functions provided in C++ mode. They are needed by
-// C++ API wrappers and can be used freely by Blend2D users as these templates
-// have specializations for some geometry types. For example `blMin(a, b)` works
-// with numbers as well as with `BLPoint`.
+// These are the only global functions provided in C++ mode. They are needed by C++ API wrappers and can be used
+// freely by Blend2D users as these templates have specializations for some geometry types. For example `blMin(a, b)`
+// works with numbers as well as with `BLPoint`.
 
 //! \addtogroup blend2d_api_globals
 //! \{
+
+//! \name Explicit Construction & Destruction.
+//!
+//! These should be only necessary when extending Blend2D.
+//!
+//! \{
+
+//! Constructs an instance in place (calls its constructor) with optional `args`.
+template<typename T, typename... Args>
+static BL_INLINE void blCallCtor(T& instance, Args&&... args) noexcept {
+  // Only needed by MSVC as otherwise it could generate null-pointer check before calling the constructor. If the
+  // assumption is used with GCC or Clang it would emit a "-Wtautological-undefined-compare" warning so we really
+  // have to only enable this for compilers that don't have the necessary diagnostics to remove the nullptr check.
+#if defined(_MSC_VER) && !defined(__clang__)
+  BL_ASSUME(&instance != nullptr);
+#endif
+
+  new(BLInternal::PlacementNew{&instance}) T(std::forward<Args>(args)...);
+}
+
+//! Destroys an instance in place (calls its destructor).
+template<typename T>
+static BL_INLINE void blCallDtor(T& instance) noexcept {
+  // Only needed by MSVC as otherwise it could generate null-pointer check before calling the destructor. If the
+  // assumption is used with GCC or Clang it would emit a "-Wtautological-undefined-compare" warning so we really
+  // have to only enable this for compilers that don't have the necessary diagnostics to remove the nullptr check.
+#if defined(_MSC_VER) && !defined(__clang__)
+  BL_ASSUME(&instance != nullptr);
+#endif
+
+  instance.~T();
+}
+
+//! \}
 
 //! \name Global C++ Functions
 //! \{
 
 //! Bit-cast `x` of `In` type to the given `Out` type.
 //!
-//! Useful to bit-cast between integers and floating points. The size of `Out`
-//! and `In` must be the same otherwise the compilation would fail. Bit casting
-//! is used by `blEquals` to implement bit equality for floating point types.
+//! Useful to bit-cast between integers and floating points. The size of `Out` and `In` must be the same otherwise the
+//! compilation would fail. Bit casting is used by `blEquals` to implement bit equality for floating point types.
 template<typename Out, typename In>
 BL_NODISCARD
 static BL_INLINE Out blBitCast(const In& x) noexcept {
@@ -1281,165 +1396,145 @@ BL_INLINE bool blEquals(const double& a, const double& b) noexcept {
 //! \}
 #endif
 
-// ============================================================================
-// [Public API - DownCast]
-// ============================================================================
-
 #ifdef __cplusplus
 //! \addtogroup blend2d_api_globals
 //! \{
-//! \name Downcasting from Core type to C++ type
+
+//! \name Downcasting from C API type to C++ type
 //! \{
 
-//! Downcasts a core type like `BLContextCore` into a C++ type like `BLContext`.
-//! Intended to be used by C++ users that work with C API as well (by either
-//! providing it directly or using some other code that uses Blend2D C API).
+//! Downcasts a core type like `BLContextCore` into a C++ type like `BLContext`. Intended to be used by C++ users
+//! that work with C API as well (by either providing it directly or using some other code that uses Blend2D C API).
 template<typename T>
 BL_NODISCARD
 static BL_INLINE constexpr typename BLInternal::DownCast<T>::Type& blDownCast(T& ref) noexcept {
-  return reinterpret_cast<typename BLInternal::DownCast<T>::Type&>(ref);
+  return static_cast<typename BLInternal::DownCast<T>::Type&>(ref);
 }
 
 //! \overload
 template<typename T>
 BL_NODISCARD
 static BL_INLINE constexpr const typename BLInternal::DownCast<T>::Type& blDownCast(const T& ref) noexcept {
-  return reinterpret_cast<const typename BLInternal::DownCast<T>::Type&>(ref);
+  return static_cast<const typename BLInternal::DownCast<T>::Type&>(ref);
 }
 
 //! \overload
 template<typename T>
 BL_NODISCARD
 static BL_INLINE constexpr typename BLInternal::DownCast<T>::Type* blDownCast(T* ptr) noexcept {
-  return reinterpret_cast<typename BLInternal::DownCast<T>::Type*>(ptr);
+  return static_cast<typename BLInternal::DownCast<T>::Type*>(ptr);
 }
 
 //! \overload
 template<typename T>
 BL_NODISCARD
 static BL_INLINE constexpr const typename BLInternal::DownCast<T>::Type* blDownCast(const T* ptr) noexcept {
-  return reinterpret_cast<const typename BLInternal::DownCast<T>::Type*>(ptr);
+  return static_cast<const typename BLInternal::DownCast<T>::Type*>(ptr);
 }
 
 //! \}
+
 //! \}
 #endif
-
-// ============================================================================
-// [BLRange]
-// ============================================================================
 
 //! \addtogroup blend2d_api_globals
 //! \{
 
-//! Provides start and end indexes. It's used to specify a range of an operation
-//! related to indexed containers like `BLArray`, `BLPath`, `BLGradient`, etc...
+//! Provides start and end indexes. It has the same semantics as Slices in other programming languages - range is
+//! always within [star, end) internal (start is inclusive, end is exclusive). It's used to specify a range of an
+//! operation of indexed containers like `BLString`, `BLArray`, `BLGradient`, `BLPath`, etc...
 struct BLRange {
   size_t start;
   size_t end;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-  BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
+#ifdef __cplusplus
+  //! \name Construction & Destruction
+  //! \{
 
   //! Create an uninitialized range.
   BL_INLINE BLRange() noexcept = default;
   //! Create a copy of `other` range.
-  constexpr BLRange(const BLRange&) noexcept = default;
+  BL_INLINE constexpr BLRange(const BLRange& other) noexcept = default;
 
-  //! Create a range from `start` to `end`.
-  constexpr explicit BLRange(size_t start, size_t end) noexcept
-    : start(start),
-      end(end) {}
+  //! Create a range from `rstart` to `rEnd`.
+  BL_INLINE constexpr explicit BLRange(size_t rStart, size_t rEnd) noexcept
+    : start(rStart),
+      end(rEnd) {}
 
   BL_NODISCARD
-  static constexpr BLRange everything() noexcept { return BLRange(0, SIZE_MAX); }
+  static BL_INLINE constexpr BLRange everything() noexcept { return BLRange(0, SIZE_MAX); }
+
+  //! \}
+
+  //! \name Overloaded Operators
+  //! \{
+
+  BL_INLINE BLRange& operator=(const BLRange& other) noexcept = default;
+
+  BL_NODISCARD
+  BL_INLINE bool operator==(const BLRange& other) const noexcept { return equals(other); }
+
+  BL_NODISCARD
+  BL_INLINE bool operator!=(const BLRange& other) const noexcept { return !equals(other); }
+
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
 
   //! Reset the range to [0, 0).
   BL_INLINE void reset() noexcept { reset(0, 0); }
 
   //! Reset the range to [start, end).
-  BL_INLINE void reset(size_t start, size_t end) noexcept {
-    this->start = start;
-    this->end = end;
+  BL_INLINE void reset(size_t rStart, size_t rEnd) noexcept {
+    start = rStart;
+    end = rEnd;
   }
+
+  //! \}
+
+  //! \name Equality & Comparison
+  //! \{
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLRange& other) const noexcept {
-    return blEquals(this->start, other.start) &
-           blEquals(this->end  , other.end  ) ;
+    return blEquals(start, other.start) &
+           blEquals(end  , other.end  ) ;
   }
 
-  BL_NODISCARD BL_INLINE bool operator==(const BLRange& other) const noexcept { return  equals(other); }
-  BL_NODISCARD BL_INLINE bool operator!=(const BLRange& other) const noexcept { return !equals(other); }
-
-  BL_DIAGNOSTIC_POP
-  #endif
-  // --------------------------------------------------------------------------
+  //! \}
+#endif
 };
-
-//! \}
-
-// ============================================================================
-// [BLCreateForeignInfo]
-// ============================================================================
-
-//! \addtogroup blend2d_api_globals
-//! \{
-
-//! Structure passed to a constructor (initializer) that provides foreign data
-//! that should be used to allocate its Impl (and data if it's a container).
-struct BLCreateForeignInfo {
-  void* data;
-  size_t size;
-  BLDestroyImplFunc destroyFunc;
-  void* destroyData;
-};
-
-//! \}
-
-// ============================================================================
-// [BLArrayView]
-// ============================================================================
-
-//! \addtogroup blend2d_api_globals
-//! \{
 
 #ifdef __cplusplus
 
 //! Array view of `T`.
 //!
-//! \note In C mode the type of data used by `BLArrayView` is `const void*`,
-//! thus it has to be retyped to a real type this view points to. There are
-//! only few specializations like `BLStringView` that point to a real type.
+//! \note In C mode the type of data used by `BLArrayView` is `const void*`, thus it has to be retyped to a real
+//! type this view points to. There are only few specializations like `BLStringView` that point to a real type.
 template<typename T>
 struct BLArrayView {
   const T* data;
   size_t size;
 
   BL_INLINE void reset() noexcept {
-    this->data = nullptr;
-    this->size = 0;
+    data = nullptr;
+    size = 0;
   }
 
-  BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
-  BL_INLINE void reset(const T* data, size_t size) noexcept {
-    this->data = data;
-    this->size = size;
+  BL_INLINE void reset(const T* dataIn, size_t sizeIn) noexcept {
+    data = dataIn;
+    size = sizeIn;
   }
-  BL_DIAGNOSTIC_POP
 
-  BL_INLINE const T* begin() const noexcept { return this->data; }
-  BL_INLINE const T* end() const noexcept { return this->data + this->size; }
+  BL_INLINE const T* begin() const noexcept { return data; }
+  BL_INLINE const T* end() const noexcept { return data + size; }
 };
 
 // In C++ mode these are just typedefs of `BLArrayView<Type>`.
 
 //! View of char[] data used by String.
 typedef BLArrayView<char> BLStringView;
-
-//! View of BLBoxI[] data used by Region.
-typedef BLArrayView<BLBoxI> BLRegionView;
 
 //! View of untyped data.
 typedef BLArrayView<void> BLDataView;
@@ -1454,7 +1549,6 @@ typedef BLArrayView<void> BLDataView;
 
 BL_DEFINE_ARRAY_VIEW(BLArrayView, void);
 BL_DEFINE_ARRAY_VIEW(BLStringView, char);
-BL_DEFINE_ARRAY_VIEW(BLRegionView, BLBoxI);
 
 typedef BLArrayView BLDataView;
 
@@ -1464,708 +1558,9 @@ typedef BLArrayView BLDataView;
 
 //! \}
 
-// ============================================================================
-// [C Interface - Core]
-// ============================================================================
-
-//! \addtogroup blend2d_api_c_functions
-//! \{
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//! \name BLArray
-//!
-//! Array functionality is provided by \ref BLArrayCore in C-API and wrapped by
-//! \ref BLArray template in C++ API.
-//!
-//! C API users must call either generic functions with `Item` suffix or correct
-//! specialized functions in case of typed arrays. For example if you create a
-//! `BLArray<uint32_t>` in C then you can only modify it through functions that
-//! have either `U32` or `Item` suffix. Arrays of signed types are treated as
-//! arrays of unsigned types at API level as there is no difference between them
-//! from implementation perspective.
-//!
-//! \{
-BL_API BLResult BL_CDECL blArrayInit(BLArrayCore* self, uint32_t arrayTypeId) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayDestroy(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayReset(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayCreateFromData(BLArrayCore* self, void* data, size_t size, size_t capacity, uint32_t dataAccessFlags, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blArrayGetSize(const BLArrayCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API size_t BL_CDECL blArrayGetCapacity(const BLArrayCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const void* BL_CDECL blArrayGetData(const BLArrayCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blArrayClear(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayShrink(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayReserve(BLArrayCore* self, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayResize(BLArrayCore* self, size_t n, const void* fill) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayMakeMutable(BLArrayCore* self, void** dataOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayModifyOp(BLArrayCore* self, uint32_t op, size_t n, void** dataOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayInsertOp(BLArrayCore* self, size_t index, size_t n, void** dataOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayAssignMove(BLArrayCore* self, BLArrayCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayAssignWeak(BLArrayCore* self, const BLArrayCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayAssignDeep(BLArrayCore* self, const BLArrayCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayAssignView(BLArrayCore* self, const void* items, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayAppendU8(BLArrayCore* self, uint8_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayAppendU16(BLArrayCore* self, uint16_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayAppendU32(BLArrayCore* self, uint32_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayAppendU64(BLArrayCore* self, uint64_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayAppendF32(BLArrayCore* self, float value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayAppendF64(BLArrayCore* self, double value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayAppendItem(BLArrayCore* self, const void* item) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayAppendView(BLArrayCore* self, const void* items, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayInsertU8(BLArrayCore* self, size_t index, uint8_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayInsertU16(BLArrayCore* self, size_t index, uint16_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayInsertU32(BLArrayCore* self, size_t index, uint32_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayInsertU64(BLArrayCore* self, size_t index, uint64_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayInsertF32(BLArrayCore* self, size_t index, float value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayInsertF64(BLArrayCore* self, size_t index, double value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayInsertItem(BLArrayCore* self, size_t index, const void* item) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayInsertView(BLArrayCore* self, size_t index, const void* items, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayReplaceU8(BLArrayCore* self, size_t index, uint8_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayReplaceU16(BLArrayCore* self, size_t index, uint16_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayReplaceU32(BLArrayCore* self, size_t index, uint32_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayReplaceU64(BLArrayCore* self, size_t index, uint64_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayReplaceF32(BLArrayCore* self, size_t index, float value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayReplaceF64(BLArrayCore* self, size_t index, double value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayReplaceItem(BLArrayCore* self, size_t index, const void* item) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayReplaceView(BLArrayCore* self, size_t rStart, size_t rEnd, const void* items, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayRemoveIndex(BLArrayCore* self, size_t index) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blArrayRemoveRange(BLArrayCore* self, size_t rStart, size_t rEnd) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blArrayEquals(const BLArrayCore* a, const BLArrayCore* b) BL_NOEXCEPT_C BL_PURE;
-//! \}
-
-//! \name BLContext
-//!
-//! Rendering functionality is provided by \ref BLContextCore in C-API and
-//! wrapped by \ref BLContext in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blContextInit(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextInitAs(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextDestroy(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextReset(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextAssignMove(BLContextCore* self, BLContextCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextAssignWeak(BLContextCore* self, const BLContextCore* other) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blContextGetType(const BLContextCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blContextGetTargetSize(const BLContextCore* self, BLSize* targetSizeOut) BL_NOEXCEPT_C;
-BL_API BLImageCore* BL_CDECL blContextGetTargetImage(const BLContextCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextBegin(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextEnd(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextFlush(BLContextCore* self, uint32_t flags) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextQueryProperty(const BLContextCore* self, uint32_t propertyId, void* valueOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSave(BLContextCore* self, BLContextCookie* cookie) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextRestore(BLContextCore* self, const BLContextCookie* cookie) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextGetMetaMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextGetUserMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextUserToMeta(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextMatrixOp(BLContextCore* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetHint(BLContextCore* self, uint32_t hintType, uint32_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetHints(BLContextCore* self, const BLContextHints* hints) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetFlattenMode(BLContextCore* self, uint32_t mode) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetFlattenTolerance(BLContextCore* self, double tolerance) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetApproximationOptions(BLContextCore* self, const BLApproximationOptions* options) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetCompOp(BLContextCore* self, uint32_t compOp) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetGlobalAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetFillAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextGetFillStyle(const BLContextCore* self, BLStyleCore* styleOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetFillStyle(BLContextCore* self, const BLStyleCore* style) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetFillStyleRgba(BLContextCore* self, const BLRgba* rgba) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetFillStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetFillStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetFillStyleObject(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetFillRule(BLContextCore* self, uint32_t fillRule) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextGetStrokeStyle(const BLContextCore* self, BLStyleCore* styleOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeStyle(BLContextCore* self, const BLStyleCore* style) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba(BLContextCore* self, const BLRgba* rgba) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeStyleObject(BLContextCore* self, const void* object) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeWidth(BLContextCore* self, double width) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeMiterLimit(BLContextCore* self, double miterLimit) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeCap(BLContextCore* self, uint32_t position, uint32_t strokeCap) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeCaps(BLContextCore* self, uint32_t strokeCap) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeJoin(BLContextCore* self, uint32_t strokeJoin) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeDashOffset(BLContextCore* self, double dashOffset) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeDashArray(BLContextCore* self, const BLArrayCore* dashArray) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeTransformOrder(BLContextCore* self, uint32_t transformOrder) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextGetStrokeOptions(const BLContextCore* self, BLStrokeOptionsCore* options) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeOptions(BLContextCore* self, const BLStrokeOptionsCore* options) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextClipToRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextClipToRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextRestoreClipping(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextClearAll(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextClearRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextClearRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextFillAll(BLContextCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextFillRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextFillRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextFillPathD(BLContextCore* self, const BLPathCore* path) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextFillGeometry(BLContextCore* self, uint32_t geometryType, const void* geometryData) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextFillTextI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextFillTextD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextFillGlyphRunI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextFillGlyphRunD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextStrokeRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextStrokeRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextStrokePathD(BLContextCore* self, const BLPathCore* path) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextStrokeGeometry(BLContextCore* self, uint32_t geometryType, const void* geometryData) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextStrokeTextI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextStrokeTextD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextStrokeGlyphRunI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextStrokeGlyphRunD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextBlitImageI(BLContextCore* self, const BLPointI* pt, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextBlitImageD(BLContextCore* self, const BLPoint* pt, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextBlitScaledImageI(BLContextCore* self, const BLRectI* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextBlitScaledImageD(BLContextCore* self, const BLRect* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLFile
-//!
-//! File read/write functionality is provided by \ref BLFileCore in C-API and
-//! wrapped by \ref BLFile in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blFileInit(BLFileCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileReset(BLFileCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileClose(BLFileCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileSeek(BLFileCore* self, int64_t offset, uint32_t seekType, int64_t* positionOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileTruncate(BLFileCore* self, int64_t maxSize) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLFileSystem
-//!
-//! Filesystem API is provided by functions prefixed with `blFileSystem` and
-//! wrapped by \ref BLFileSystem namespace in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blFileSystemReadFile(const char* fileName, BLArrayCore* dst, size_t maxSize, uint32_t readFlags) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFileSystemWriteFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLFont
-//!
-//! Font functionality is provided by \ref BLFontCore in C-API and wrapped by
-//! \ref BLFont in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blFontInit(BLFontCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontDestroy(BLFontCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontReset(BLFontCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontAssignMove(BLFontCore* self, BLFontCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontAssignWeak(BLFontCore* self, const BLFontCore* other) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontEquals(const BLFontCore* a, const BLFontCore* b) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontCreateFromFace(BLFontCore* self, const BLFontFaceCore* face, float size) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontShape(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, BLGlyphMappingState* stateOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, uint32_t positioningFlags) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontApplyKerning(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontApplyGSub(const BLFontCore* self, BLGlyphBufferCore* gb, size_t index, BLBitWord lookups) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontApplyGPos(const BLFontCore* self, BLGlyphBufferCore* gb, size_t index, BLBitWord lookups) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetMatrix(const BLFontCore* self, BLFontMatrix* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetMetrics(const BLFontCore* self, BLFontMetrics* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetDesignMetrics(const BLFontCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLTextMetrics* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetGlyphBounds(const BLFontCore* self, const uint32_t* glyphData, intptr_t glyphAdvance, BLBoxI* out, size_t count) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetGlyphAdvances(const BLFontCore* self, const uint32_t* glyphData, intptr_t glyphAdvance, BLGlyphPlacement* out, size_t count) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetGlyphOutlines(const BLFontCore* self, uint32_t glyphId, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* glyphRun, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLFontData
-//!
-//! Font-data functionality is provided by \ref BLFontDataCore in C-API and
-//! wrapped by \ref BLFontData in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blFontDataInit(BLFontDataCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontDataDestroy(BLFontDataCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontDataReset(BLFontDataCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontDataAssignMove(BLFontDataCore* self, BLFontDataCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontDataAssignWeak(BLFontDataCore* self, const BLFontDataCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontDataCreateFromFile(BLFontDataCore* self, const char* fileName, uint32_t readFlags) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontDataCreateFromDataArray(BLFontDataCore* self, const BLArrayCore* dataArray) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontDataCreateFromData(BLFontDataCore* self, const void* data, size_t dataSize, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontDataEquals(const BLFontDataCore* a, const BLFontDataCore* b) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontDataListTags(const BLFontDataCore* self, uint32_t faceIndex, BLArrayCore* dst) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontDataQueryTables(const BLFontDataCore* self, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t count) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLFontFace
-//!
-//! Font-face functionality is provided by \ref BLFontFaceCore in C-API and
-//! wrapped by \ref BLFontFace in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blFontFaceInit(BLFontFaceCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceDestroy(BLFontFaceCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceReset(BLFontFaceCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceAssignMove(BLFontFaceCore* self, BLFontFaceCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceAssignWeak(BLFontFaceCore* self, const BLFontFaceCore* other) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontFaceEquals(const BLFontFaceCore* a, const BLFontFaceCore* b) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName, uint32_t readFlags) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceCreateFromData(BLFontFaceCore* self, const BLFontDataCore* fontData, uint32_t faceIndex) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self, BLFontUnicodeCoverage* out) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLFontManager
-//!
-//! Font management functionality is provided by \ref BLFontManagerCore in C-API
-//! and wrapped by \ref BLFontManager in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blFontManagerInit(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerInitNew(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerDestroy(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerReset(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerAssignMove(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerAssignWeak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerCreate(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontManagerGetFaceCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontManagerGetFamilyCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontManagerHasFace(const BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerAddFace(BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerQueryFace(const BLFontManagerCore* self, const char* name, size_t nameSize, const BLFontQueryProperties* properties, BLFontFaceCore* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerQueryFacesByFamilyName(const BLFontManagerCore* self, const char* name, size_t nameSize, BLArrayCore* out) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontManagerEquals(const BLFontManagerCore* a, const BLFontManagerCore* b) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLFormatInfo
-//! \{
-BL_API BLResult BL_CDECL blFormatInfoQuery(BLFormatInfo* self, uint32_t format) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFormatInfoSanitize(BLFormatInfo* self) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLGlyphBuffer
-//!
-//! Glyph-buffer functionality is provided by \ref BLGlyphBufferCore in C-API
-//! and wrapped by \ref BLGlyphBuffer in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blGlyphBufferInit(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferInitMove(BLGlyphBufferCore* self, BLGlyphBufferCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferDestroy(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferReset(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferClear(BLGlyphBufferCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blGlyphBufferGetSize(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API uint32_t BL_CDECL blGlyphBufferGetFlags(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const BLGlyphRun* BL_CDECL blGlyphBufferGetGlyphRun(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const uint32_t* BL_CDECL blGlyphBufferGetContent(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const BLGlyphInfo* BL_CDECL blGlyphBufferGetInfoData(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const BLGlyphPlacement* BL_CDECL blGlyphBufferGetPlacementData(const BLGlyphBufferCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blGlyphBufferSetText(BLGlyphBufferCore* self, const void* textData, size_t size, uint32_t encoding) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferSetGlyphs(BLGlyphBufferCore* self, const uint32_t* glyphData, size_t size) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGlyphBufferSetGlyphsFromStruct(BLGlyphBufferCore* self, const void* glyphData, size_t size, size_t glyphIdSize, intptr_t glyphIdAdvance) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLGradient
-//!
-//! Gradient container is provided by \ref BLGradientCore in C-API and wrapped
-//! by \ref BLGradient in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blGradientInit(BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientInitAs(BLGradientCore* self, uint32_t type, const void* values, uint32_t extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientDestroy(BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientReset(BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientAssignMove(BLGradientCore* self, BLGradientCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientAssignWeak(BLGradientCore* self, const BLGradientCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientCreate(BLGradientCore* self, uint32_t type, const void* values, uint32_t extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientShrink(BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientReserve(BLGradientCore* self, size_t n) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blGradientGetType(const BLGradientCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blGradientSetType(BLGradientCore* self, uint32_t type) BL_NOEXCEPT_C;
-BL_API double BL_CDECL blGradientGetValue(const BLGradientCore* self, size_t index) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blGradientSetValue(BLGradientCore* self, size_t index, double value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientSetValues(BLGradientCore* self, size_t index, const double* values, size_t n) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blGradientGetExtendMode(BLGradientCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blGradientSetExtendMode(BLGradientCore* self, uint32_t extendMode) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blGradientGetSize(const BLGradientCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API size_t BL_CDECL blGradientGetCapacity(const BLGradientCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const BLGradientStop* BL_CDECL blGradientGetStops(const BLGradientCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blGradientResetStops(BLGradientCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientAssignStops(BLGradientCore* self, const BLGradientStop* stops, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientAddStopRgba32(BLGradientCore* self, double offset, uint32_t argb32) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientAddStopRgba64(BLGradientCore* self, double offset, uint64_t argb64) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientRemoveStop(BLGradientCore* self, size_t index) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientRemoveStopByOffset(BLGradientCore* self, double offset, uint32_t all) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientRemoveStops(BLGradientCore* self, size_t rStart, size_t rEnd) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientRemoveStopsFromTo(BLGradientCore* self, double offsetMin, double offsetMax) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientReplaceStopRgba32(BLGradientCore* self, size_t index, double offset, uint32_t rgba32) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientReplaceStopRgba64(BLGradientCore* self, size_t index, double offset, uint64_t rgba64) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blGradientIndexOfStop(const BLGradientCore* self, double offset) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blGradientApplyMatrixOp(BLGradientCore* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blGradientEquals(const BLGradientCore* a, const BLGradientCore* b) BL_NOEXCEPT_C BL_PURE;
-//! \}
-
-//! \name BLImage
-//!
-//! Image container is provided by \ref BLImageCore in C-API and wrapped by
-//! \ref BLImage in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blImageInit(BLImageCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageInitAs(BLImageCore* self, int w, int h, uint32_t format) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageInitAsFromData(BLImageCore* self, int w, int h, uint32_t format, void* pixelData, intptr_t stride, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDestroy(BLImageCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageReset(BLImageCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageAssignMove(BLImageCore* self, BLImageCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageAssignWeak(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageAssignDeep(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCreate(BLImageCore* self, int w, int h, uint32_t format) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCreateFromData(BLImageCore* self, int w, int h, uint32_t format, void* pixelData, intptr_t stride, BLDestroyImplFunc destroyFunc, void* destroyData) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageGetData(const BLImageCore* self, BLImageData* dataOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageMakeMutable(BLImageCore* self, BLImageData* dataOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageConvert(BLImageCore* self, uint32_t format) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blImageEquals(const BLImageCore* a, const BLImageCore* b) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageScale(BLImageCore* dst, const BLImageCore* src, const BLSizeI* size, uint32_t filter, const BLImageScaleOptions* options) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageReadFromFile(BLImageCore* self, const char* fileName, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageReadFromData(BLImageCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageWriteToFile(const BLImageCore* self, const char* fileName, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageWriteToData(const BLImageCore* self, BLArrayCore* dst, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLImageCodec
-//!
-//! Image codec functionality is provided by \ref BLImageCodecCore in C-API and
-//! wrapped by \ref BLImageCodec in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blImageCodecInit(BLImageCodecCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecDestroy(BLImageCodecCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecReset(BLImageCodecCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecAssignWeak(BLImageCodecCore* self, const BLImageCodecCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecFindByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecFindByExtension(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecFindByData(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blImageCodecInspectData(const BLImageCodecCore* self, const void* data, size_t size) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecCreateDecoder(const BLImageCodecCore* self, BLImageDecoderCore* dst) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecCreateEncoder(const BLImageCodecCore* self, BLImageEncoderCore* dst) BL_NOEXCEPT_C;
-
-BL_API BLResult BL_CDECL blImageCodecArrayInitBuiltInCodecs(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecArrayAssignBuiltInCodecs(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecAddToBuiltIn(const BLImageCodecCore* codec) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* codec) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLImageDecoder
-//!
-//! Image decoder functionality is provided by \ref BLImageDecoderCore in C-API
-//! and wrapped by \ref BLImageDecoder in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blImageDecoderInit(BLImageDecoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderDestroy(BLImageDecoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderReset(BLImageDecoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderAssignMove(BLImageDecoderCore* self, BLImageDecoderCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderAssignWeak(BLImageDecoderCore* self, const BLImageDecoderCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderRestart(BLImageDecoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderReadInfo(BLImageDecoderCore* self, BLImageInfo* infoOut, const uint8_t* data, size_t size) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderReadFrame(BLImageDecoderCore* self, BLImageCore* imageOut, const uint8_t* data, size_t size) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLImageEncoder
-//!
-//! Image encoder functionality is provided by \ref BLImageEncoderCore in C-API
-//! and wrapped by \ref BLImageEncoder in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blImageEncoderInit(BLImageEncoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderDestroy(BLImageEncoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderReset(BLImageEncoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderAssignMove(BLImageEncoderCore* self, BLImageEncoderCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderAssignWeak(BLImageEncoderCore* self, const BLImageEncoderCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderRestart(BLImageEncoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderWriteFrame(BLImageEncoderCore* self, BLArrayCore* dst, const BLImageCore* image) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLMatrix2D
-//!
-//! Matrix functionality is provided by \ref BLMatrix2D, C++ API adds methods to
-//! the struct when compiling in C++ mode.
-//!
-//! \{
-BL_API BLResult BL_CDECL blMatrix2DSetIdentity(BLMatrix2D* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DSetTranslation(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DSetScaling(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DSetSkewing(BLMatrix2D* self, double x, double y) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DSetRotation(BLMatrix2D* self, double angle, double cx, double cy) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DApplyOp(BLMatrix2D* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DInvert(BLMatrix2D* dst, const BLMatrix2D* src) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blMatrix2DGetType(const BLMatrix2D* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLPath
-//!
-//! 2D path functionality is provided by \ref BLPathCore in C-API and wrapped
-//! by \ref BLPath in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blPathInit(BLPathCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathDestroy(BLPathCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathReset(BLPathCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blPathGetSize(const BLPathCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API size_t BL_CDECL blPathGetCapacity(const BLPathCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const uint8_t* BL_CDECL blPathGetCommandData(const BLPathCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const BLPoint* BL_CDECL blPathGetVertexData(const BLPathCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blPathClear(BLPathCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathShrink(BLPathCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathReserve(BLPathCore* self, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathModifyOp(BLPathCore* self, uint32_t op, size_t n, uint8_t** cmdDataOut, BLPoint** vtxDataOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAssignMove(BLPathCore* self, BLPathCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAssignWeak(BLPathCore* self, const BLPathCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAssignDeep(BLPathCore* self, const BLPathCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathSetVertexAt(BLPathCore* self, size_t index, uint32_t cmd, double x, double y) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathMoveTo(BLPathCore* self, double x0, double y0) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathLineTo(BLPathCore* self, double x1, double y1) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathPolyTo(BLPathCore* self, const BLPoint* poly, size_t count) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathQuadTo(BLPathCore* self, double x1, double y1, double x2, double y2) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathCubicTo(BLPathCore* self, double x1, double y1, double x2, double y2, double x3, double y3) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathSmoothQuadTo(BLPathCore* self, double x2, double y2) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathSmoothCubicTo(BLPathCore* self, double x2, double y2, double x3, double y3) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathArcTo(BLPathCore* self, double x, double y, double rx, double ry, double start, double sweep, bool forceMoveTo) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathArcQuadrantTo(BLPathCore* self, double x1, double y1, double x2, double y2) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathEllipticArcTo(BLPathCore* self, double rx, double ry, double xAxisRotation, bool largeArcFlag, bool sweepFlag, double x1, double y1) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathClose(BLPathCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAddGeometry(BLPathCore* self, uint32_t geometryType, const void* geometryData, const BLMatrix2D* m, uint32_t dir) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAddBoxI(BLPathCore* self, const BLBoxI* box, uint32_t dir) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAddBoxD(BLPathCore* self, const BLBox* box, uint32_t dir) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAddRectI(BLPathCore* self, const BLRectI* rect, uint32_t dir) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAddRectD(BLPathCore* self, const BLRect* rect, uint32_t dir) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAddPath(BLPathCore* self, const BLPathCore* other, const BLRange* range) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAddTranslatedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLPoint* p) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAddTransformedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAddReversedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, uint32_t reverseMode) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathAddStrokedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLStrokeOptionsCore* options, const BLApproximationOptions* approx) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathRemoveRange(BLPathCore* self, const BLRange* range) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathTranslate(BLPathCore* self, const BLRange* range, const BLPoint* p) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathTransform(BLPathCore* self, const BLRange* range, const BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathFitTo(BLPathCore* self, const BLRange* range, const BLRect* rect, uint32_t fitFlags) BL_NOEXCEPT_C;
-BL_API bool     BL_CDECL blPathEquals(const BLPathCore* a, const BLPathCore* b) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathGetInfoFlags(const BLPathCore* self, uint32_t* flagsOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathGetControlBox(const BLPathCore* self, BLBox* boxOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathGetBoundingBox(const BLPathCore* self, BLBox* boxOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathGetFigureRange(const BLPathCore* self, size_t index, BLRange* rangeOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathGetLastVertex(const BLPathCore* self, BLPoint* vtxOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPathGetClosestVertex(const BLPathCore* self, const BLPoint* p, double maxDistance, size_t* indexOut, double* distanceOut) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blPathHitTest(const BLPathCore* self, const BLPoint* p, uint32_t fillRule) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLPattern
-//!
-//! Pattern functionality is provided by \ref BLPatternCore in C-API and
-//! wrapped by \ref BLPattern in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blPatternInit(BLPatternCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPatternInitAs(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, uint32_t extendMode, const BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPatternDestroy(BLPatternCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPatternReset(BLPatternCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPatternAssignMove(BLPatternCore* self, BLPatternCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPatternAssignWeak(BLPatternCore* self, const BLPatternCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPatternAssignDeep(BLPatternCore* self, const BLPatternCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPatternCreate(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, uint32_t extendMode, const BLMatrix2D* m) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPatternSetImage(BLPatternCore* self, const BLImageCore* image, const BLRectI* area) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPatternSetArea(BLPatternCore* self, const BLRectI* area) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPatternSetExtendMode(BLPatternCore* self, uint32_t extendMode) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPatternApplyMatrixOp(BLPatternCore* self, uint32_t opType, const void* opData) BL_NOEXCEPT_C;
-BL_API bool     BL_CDECL blPatternEquals(const BLPatternCore* a, const BLPatternCore* b) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLPixelConverter
-//!
-//! Pixel conversion functionality is provided by \ref BLPixelConverterCore
-//! in C-API and wrapped by \ref BLPixelConverter in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blPixelConverterInit(BLPixelConverterCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPixelConverterInitWeak(BLPixelConverterCore* self, const BLPixelConverterCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPixelConverterDestroy(BLPixelConverterCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPixelConverterReset(BLPixelConverterCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPixelConverterAssign(BLPixelConverterCore* self, const BLPixelConverterCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blPixelConverterCreate(BLPixelConverterCore* self, const BLFormatInfo* dstInfo, const BLFormatInfo* srcInfo, uint32_t createFlags) BL_NOEXCEPT_C;
-
-BL_API BLResult BL_CDECL blPixelConverterConvert(const BLPixelConverterCore* self,
-  void* dstData, intptr_t dstStride,
-  const void* srcData, intptr_t srcStride,
-  uint32_t w, uint32_t h, const BLPixelConverterOptions* options) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLRandom
-//! \{
-BL_API BLResult BL_CDECL blRandomReset(BLRandom* self, uint64_t seed) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blRandomNextUInt32(BLRandom* self) BL_NOEXCEPT_C;
-BL_API uint64_t BL_CDECL blRandomNextUInt64(BLRandom* self) BL_NOEXCEPT_C;
-BL_API double   BL_CDECL blRandomNextDouble(BLRandom* self) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLRegion
-//!
-//! 2D region functionality is provided by \ref BLRegionCore in C-API and
-//! wrapped by \ref BLRegion in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blRegionInit(BLRegionCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionDestroy(BLRegionCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionReset(BLRegionCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blRegionGetSize(const BLRegionCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API size_t BL_CDECL blRegionGetCapacity(const BLRegionCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const BLBoxI* BL_CDECL blRegionGetData(const BLRegionCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blRegionClear(BLRegionCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionShrink(BLRegionCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionReserve(BLRegionCore* self, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionAssignMove(BLRegionCore* self, BLRegionCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionAssignWeak(BLRegionCore* self, const BLRegionCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionAssignDeep(BLRegionCore* self, const BLRegionCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionAssignBoxI(BLRegionCore* self, const BLBoxI* src) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionAssignBoxIArray(BLRegionCore* self, const BLBoxI* data, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionAssignRectI(BLRegionCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionAssignRectIArray(BLRegionCore* self, const BLRectI* data, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionCombine(BLRegionCore* self, const BLRegionCore* a, const BLRegionCore* b, uint32_t booleanOp) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionCombineRB(BLRegionCore* self, const BLRegionCore* a, const BLBoxI* b, uint32_t booleanOp) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionCombineBR(BLRegionCore* self, const BLBoxI* a, const BLRegionCore* b, uint32_t booleanOp) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionCombineBB(BLRegionCore* self, const BLBoxI* a, const BLBoxI* b, uint32_t booleanOp) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionTranslate(BLRegionCore* self, const BLRegionCore* r, const BLPointI* pt) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionTranslateAndClip(BLRegionCore* self, const BLRegionCore* r, const BLPointI* pt, const BLBoxI* clipBox) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRegionIntersectAndClip(BLRegionCore* self, const BLRegionCore* a, const BLRegionCore* b, const BLBoxI* clipBox) BL_NOEXCEPT_C;
-BL_API bool     BL_CDECL blRegionEquals(const BLRegionCore* a, const BLRegionCore* b) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blRegionGetType(const BLRegionCore* self) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blRegionHitTest(const BLRegionCore* self, const BLPointI* pt) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blRegionHitTestBoxI(const BLRegionCore* self, const BLBoxI* box) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLRuntime
-//!
-//! Blend2D runtime functions are provided either as a C-API or wrapped by
-//! \ref BLRuntime namespace in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blRuntimeInit() BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRuntimeShutdown() BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRuntimeCleanup(uint32_t cleanupFlags) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRuntimeQueryInfo(uint32_t infoType, void* infoOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRuntimeMessageOut(const char* msg) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRuntimeMessageFmt(const char* fmt, ...) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blRuntimeMessageVFmt(const char* fmt, va_list ap) BL_NOEXCEPT_C;
-
+BL_BEGIN_C_DECLS
 BL_API BL_NORETURN void BL_CDECL blRuntimeAssertionFailure(const char* file, int line, const char* msg) BL_NOEXCEPT_C;
-
-#ifdef _WIN32
-BL_API BLResult BL_CDECL blResultFromWinError(uint32_t e) BL_NOEXCEPT_C;
-#else
-BL_API BLResult BL_CDECL blResultFromPosixError(int e) BL_NOEXCEPT_C;
-#endif
-//! \}
-
-//! \name BLString
-//!
-//! String contanter is provided by \ref BLStringCore in C-API and wrapped by
-//! \ref BLString in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blStringInit(BLStringCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringInitWithData(BLStringCore* self, const char* str, size_t size) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringDestroy(BLStringCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringReset(BLStringCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blStringGetSize(const BLStringCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API size_t BL_CDECL blStringGetCapacity(const BLStringCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API const char* BL_CDECL blStringGetData(const BLStringCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blStringClear(BLStringCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringShrink(BLStringCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringReserve(BLStringCore* self, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringResize(BLStringCore* self, size_t n, char fill) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringMakeMutable(BLStringCore* self, char** dataOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringModifyOp(BLStringCore* self, uint32_t op, size_t n, char** dataOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringInsertOp(BLStringCore* self, size_t index, size_t n, char** dataOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringAssignMove(BLStringCore* self, BLStringCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringAssignWeak(BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringAssignDeep(BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringAssignData(BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringApplyOpChar(BLStringCore* self, uint32_t op, char c, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringApplyOpData(BLStringCore* self, uint32_t op, const char* str, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringApplyOpString(BLStringCore* self, uint32_t op, const BLStringCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringApplyOpFormat(BLStringCore* self, uint32_t op, const char* fmt, ...) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringApplyOpFormatV(BLStringCore* self, uint32_t op, const char* fmt, va_list ap) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringInsertChar(BLStringCore* self, size_t index, char c, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringInsertData(BLStringCore* self, size_t index, const char* str, size_t n) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringInsertString(BLStringCore* self, size_t index, const BLStringCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStringRemoveRange(BLStringCore* self, size_t rStart, size_t rEnd) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blStringEquals(const BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C BL_PURE;
-BL_API bool BL_CDECL blStringEqualsData(const BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C BL_PURE;
-BL_API int BL_CDECL blStringCompare(const BLStringCore* self, const BLStringCore* other) BL_NOEXCEPT_C BL_PURE;
-BL_API int BL_CDECL blStringCompareData(const BLStringCore* self, const char* str, size_t n) BL_NOEXCEPT_C BL_PURE;
-//! \}
-
-//! \name BLStrokeOptions
-//!
-//! Stroke options are provided by \ref BLStrokeOptionsCore in C-API and
-//! wrapped by \ref BLStrokeOptions in C++ API.
-//!
-//! \{
-BL_API BLResult BL_CDECL blStrokeOptionsInit(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStrokeOptionsInitMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStrokeOptionsInitWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStrokeOptionsDestroy(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStrokeOptionsReset(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStrokeOptionsAssignMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLStyle
-//!
-//! \{
-BL_API BLResult BL_CDECL blStyleInit(BLStyleCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleInitMove(BLStyleCore* self, BLStyleCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleInitWeak(BLStyleCore* self, const BLStyleCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleInitRgba(BLStyleCore* self, const BLRgba* rgba) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleInitRgba32(BLStyleCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleInitRgba64(BLStyleCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleInitObject(BLStyleCore* self, const void* object) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleDestroy(BLStyleCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleReset(BLStyleCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleAssignMove(BLStyleCore* self, BLStyleCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleAssignWeak(BLStyleCore* self, const BLStyleCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleAssignRgba(BLStyleCore* self, const BLRgba* rgba) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleAssignRgba32(BLStyleCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleAssignRgba64(BLStyleCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleAssignObject(BLStyleCore* self, const void* object) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blStyleGetType(const BLStyleCore* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blStyleGetRgba(const BLStyleCore* self, BLRgba* rgbaOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleGetRgba32(const BLStyleCore* self, uint32_t* rgba32Out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleGetRgba64(const BLStyleCore* self, uint64_t* rgba64Out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStyleGetObject(const BLStyleCore* self, void* object) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blStyleEquals(const BLStyleCore* a, const BLStyleCore* b) BL_NOEXCEPT_C;
-//! \}
-
-//! \name BLVariant
-//!
-//! Variant C-API can be used on any object compatible with Blend2D Impl, at
-//! the moment only \ref BLStrokeOptionsCore and \ref BLGlyphBufferCore are
-//! not compatible, all others are.
-//!
-//! \{
-BL_API BLResult BL_CDECL blVariantInit(void* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVariantInitMove(void* self, void* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVariantInitWeak(void* self, const void* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVariantDestroy(void* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVariantReset(void* self) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blVariantGetImplType(const void* self) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blVariantAssignMove(void* self, void* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blVariantAssignWeak(void* self, const void* other) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blVariantEquals(const void* a, const void* b) BL_NOEXCEPT_C;
-//! \}
-
-#ifdef __cplusplus
-} // {Extern:C}
-#endif
+BL_END_C_DECLS
 
 //! \}
 

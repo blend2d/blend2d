@@ -1,31 +1,14 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_THREADING_CONDITIONVARIABLE_P_H_INCLUDED
 #define BLEND2D_THREADING_CONDITIONVARIABLE_P_H_INCLUDED
 
 #include "../api-internal_p.h"
 #include "../threading/mutex_p.h"
+#include "../threading/threadingutils_p.h"
 
 #ifndef _WIN32
   #include <sys/time.h>
@@ -35,21 +18,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-#ifndef _WIN32
-static void blGetAbsTimeForWaitCondition(struct timespec& out, uint64_t microseconds) noexcept {
-  struct timeval now;
-  gettimeofday(&now, nullptr);
-
-  out.tv_sec = now.tv_sec + int64_t(microseconds / 1000000u);
-  out.tv_nsec = (now.tv_usec + int64_t(microseconds % 1000000u)) * 1000;
-  out.tv_sec += out.tv_nsec / 1000000000;
-  out.tv_nsec %= 1000000000;
-}
-#endif
-
-// ============================================================================
-// [BLConditionalVariable]
-// ============================================================================
+//! \name Condition Variable
+//! \{
 
 class BLConditionVariable {
 public:
@@ -104,7 +74,7 @@ public:
 
   BL_INLINE BLResult waitFor(BLMutex& mutex, uint64_t microseconds) noexcept {
     struct timespec absTime;
-    blGetAbsTimeForWaitCondition(absTime, microseconds);
+    BLThreadingUtils::getAbsTimeForWaitCondition(absTime, microseconds);
     return waitUntil(mutex, &absTime);
   }
 
@@ -118,6 +88,8 @@ public:
   }
 #endif
 };
+
+//! \}
 
 //! \}
 //! \endcond

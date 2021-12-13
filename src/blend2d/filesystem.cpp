@@ -1,33 +1,15 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
-#include "./array_p.h"
-#include "./filesystem_p.h"
-#include "./runtime_p.h"
-#include "./support_p.h"
-#include "./unicode_p.h"
-#include "./threading/atomic_p.h"
+#include "api-build_p.h"
+#include "array_p.h"
+#include "filesystem_p.h"
+#include "runtime_p.h"
+#include "unicode_p.h"
+#include "support/ptrops_p.h"
+#include "threading/atomic_p.h"
 
 #ifndef _WIN32
   #include <errno.h>
@@ -38,28 +20,27 @@
   #include <sys/types.h>
 #endif
 
-// ============================================================================
-// [BLWinU16String]
-// ============================================================================
-
 #ifdef _WIN32
 
+// BLUtf16StringTmp
+// ================
+
 template<size_t N>
-class BLWinU16String {
+class BLUtf16StringTmp {
 public:
   uint16_t* _data;
   size_t _size;
   size_t _capacity;
   uint16_t _embeddedData[N + 1];
 
-  BL_NONCOPYABLE(BLWinU16String);
+  BL_NONCOPYABLE(BLUtf16StringTmp);
 
-  BL_INLINE BLWinU16String() noexcept
+  BL_INLINE BLUtf16StringTmp() noexcept
     : _data(_embeddedData),
       _size(0),
       _capacity(N) {}
 
-  BL_INLINE ~BLWinU16String() noexcept {
+  BL_INLINE ~BLUtf16StringTmp() noexcept {
     if (_data != _embeddedData)
       free(_data);
   }
@@ -126,30 +107,34 @@ public:
 
 #endif
 
-// ============================================================================
-// [BLFile]
-// ============================================================================
+// BLFile - Utilities
+// ==================
 
-// Just a helper to case to `BLFile` and call its `isOpen()` as this is the
-// only thing we need from C++ API here.
-static BL_INLINE bool blFileIsOpen(const BLFileCore* self) noexcept {
+// Just a helper to cast to `BLFile` and call its `isOpen()` as this is the only thing we need from C++ API here.
+static BL_INLINE bool isFileOpen(const BLFileCore* self) noexcept {
   return static_cast<const BLFile*>(self)->isOpen();
 }
 
-BLResult blFileInit(BLFileCore* self) noexcept {
+// BLFile - API - Construction & Destruction
+// =========================================
+
+BL_API_IMPL BLResult blFileInit(BLFileCore* self) noexcept {
   self->handle = -1;
   return BL_SUCCESS;
 }
 
-BLResult blFileReset(BLFileCore* self) noexcept {
+BL_API_IMPL BLResult blFileReset(BLFileCore* self) noexcept {
   return blFileClose(self);
 }
 
 #ifdef _WIN32
 
-static const constexpr DWORD BL_FILE_BUFFER_RW_SIZE = 32 * 1024 * 1024; // 32 MB.
+// BLFile - API - Windows Implementation
+// =====================================
 
-BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) noexcept {
+static const constexpr DWORD kFileBufferSize = 32 * 1024 * 1024; // 32 MB.
+
+BL_API_IMPL BLResult blFileOpen(BLFileCore* self, const char* fileName, BLFileOpenFlags openFlags) noexcept {
   // Desired Access
   // --------------
   //
@@ -167,8 +152,8 @@ BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) 
   // Creation Disposition
   // --------------------
   //
-  // Since WinAPI documentation is so brief here is a better explanation
-  // about various CreationDisposition modes, reformatted from SO:
+  // Since WinAPI documentation is so brief here is a better explanation about various CreationDisposition modes,
+  // reformatted from SO:
   //
   //   https://stackoverflow.com/questions/14469607/difference-between-open-always-and-create-always-in-createfile-of-windows-api
   //
@@ -218,10 +203,9 @@ BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) 
   DWORD dwFlagsAndAttributes = 0;
   LPSECURITY_ATTRIBUTES lpSecurityAttributes = nullptr;
 
-  // NOTE: Do not close the file before calling `CreateFileW()`. We should
-  // behave atomically, which means that we won't close the existing file
-  // if `CreateFileW()` fails...
-  BLWinU16String<1024> fileNameW;
+  // NOTE: Do not close the file before calling `CreateFileW()`. We should behave atomically, which means that
+  // we won't close the existing file if `CreateFileW()` fails...
+  BLUtf16StringTmp<1024> fileNameW;
   BL_PROPAGATE(fileNameW.fromUtf8(fileName));
 
   HANDLE handle = CreateFileW(
@@ -238,21 +222,18 @@ BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) 
 
   blFileClose(self);
   self->handle = intptr_t(handle);
-  blRuntimeResourceLiveInfo.incrementFileHandleCount();
 
   return BL_SUCCESS;
 }
 
-BLResult blFileClose(BLFileCore* self) noexcept {
-  // Not sure what should happen if `CloseHandle()` fails, if the handle is
-  // invalid or the close can be called again? To ensure compatibility with
-  // POSIX implementation we just make it invalid.
-  if (blFileIsOpen(self)) {
+BL_API_IMPL BLResult blFileClose(BLFileCore* self) noexcept {
+  // Not sure what should happen if `CloseHandle()` fails, if the handle is invalid or the close can be called
+  // again? To ensure compatibility with POSIX implementation we just make it invalid.
+  if (isFileOpen(self)) {
     HANDLE handle = (HANDLE)self->handle;
     BOOL result = CloseHandle(handle);
 
     self->handle = -1;
-    blRuntimeResourceLiveInfo.decrementFileHandleCount();
     if (!result)
       return blTraceError(blResultFromWinError(GetLastError()));
   }
@@ -260,7 +241,7 @@ BLResult blFileClose(BLFileCore* self) noexcept {
   return BL_SUCCESS;
 }
 
-BLResult blFileSeek(BLFileCore* self, int64_t offset, uint32_t seekType, int64_t* positionOut) noexcept {
+BL_API_IMPL BLResult blFileSeek(BLFileCore* self, int64_t offset, BLFileSeekType seekType, int64_t* positionOut) noexcept {
   *positionOut = -1;
 
   DWORD dwMoveMethod = 0;
@@ -273,7 +254,7 @@ BLResult blFileSeek(BLFileCore* self, int64_t offset, uint32_t seekType, int64_t
       return blTraceError(BL_ERROR_INVALID_VALUE);
   }
 
-  if (!blFileIsOpen(self))
+  if (!isFileOpen(self))
     return blTraceError(BL_ERROR_INVALID_HANDLE);
 
   LARGE_INTEGER to;
@@ -292,9 +273,9 @@ BLResult blFileSeek(BLFileCore* self, int64_t offset, uint32_t seekType, int64_t
   return BL_SUCCESS;
 }
 
-BLResult blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadOut) noexcept {
+BL_API_IMPL BLResult blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadOut) noexcept {
   *bytesReadOut = 0;
-  if (!blFileIsOpen(self))
+  if (!isFileOpen(self))
     return blTraceError(BL_ERROR_INVALID_HANDLE);
 
   BOOL result = true;
@@ -304,7 +285,7 @@ BLResult blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadO
   size_t bytesReadTotal = 0;
 
   while (remainingSize) {
-    DWORD localSize = static_cast<DWORD>(blMin<size_t>(remainingSize, BL_FILE_BUFFER_RW_SIZE));
+    DWORD localSize = static_cast<DWORD>(blMin<size_t>(remainingSize, kFileBufferSize));
     DWORD bytesRead = 0;
 
     result = ReadFile(handle, buffer, localSize, &bytesRead, nullptr);
@@ -314,7 +295,7 @@ BLResult blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadO
     if (bytesRead < localSize || !result)
       break;
 
-    buffer = blOffsetPtr(buffer, bytesRead);
+    buffer = BLPtrOps::offset(buffer, bytesRead);
   }
 
   *bytesReadOut = bytesReadTotal;
@@ -329,9 +310,9 @@ BLResult blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadO
   }
 }
 
-BLResult blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* bytesWrittenOut) noexcept {
+BL_API_IMPL BLResult blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* bytesWrittenOut) noexcept {
   *bytesWrittenOut = 0;
-  if (!blFileIsOpen(self))
+  if (!isFileOpen(self))
     return blTraceError(BL_ERROR_INVALID_HANDLE);
 
   HANDLE handle = (HANDLE)self->handle;
@@ -341,7 +322,7 @@ BLResult blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* byt
   size_t bytesWrittenTotal = 0;
 
   while (remainingSize) {
-    DWORD localSize = static_cast<DWORD>(blMin<size_t>(remainingSize, BL_FILE_BUFFER_RW_SIZE));
+    DWORD localSize = static_cast<DWORD>(blMin<size_t>(remainingSize, kFileBufferSize));
     DWORD bytesWritten = 0;
 
     result = WriteFile(handle, buffer, localSize, &bytesWritten, nullptr);
@@ -351,7 +332,7 @@ BLResult blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* byt
     if (bytesWritten < localSize || !result)
       break;
 
-    buffer = blOffsetPtr(buffer, bytesWritten);
+    buffer = BLPtrOps::offset(buffer, bytesWritten);
   }
 
   *bytesWrittenOut = bytesWrittenTotal;
@@ -361,8 +342,8 @@ BLResult blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* byt
   return BL_SUCCESS;
 }
 
-BLResult blFileTruncate(BLFileCore* self, int64_t maxSize) noexcept {
-  if (!blFileIsOpen(self))
+BL_API_IMPL BLResult blFileTruncate(BLFileCore* self, int64_t maxSize) noexcept {
+  if (!isFileOpen(self))
     return blTraceError(BL_ERROR_INVALID_HANDLE);
 
   if (BL_UNLIKELY(maxSize < 0))
@@ -383,9 +364,9 @@ BLResult blFileTruncate(BLFileCore* self, int64_t maxSize) noexcept {
     return BL_SUCCESS;
 }
 
-BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
+BL_API_IMPL BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
   *fileSizeOut = 0;
-  if (!blFileIsOpen(self))
+  if (!isFileOpen(self))
     return blTraceError(BL_ERROR_INVALID_HANDLE);
 
   LARGE_INTEGER size;
@@ -400,6 +381,9 @@ BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
 
 #else
 
+// BLFile - API - POSIX Implementation
+// ===================================
+
 // These OSes use 64-bit offsets by default.
 #if defined(__APPLE__    ) || \
     defined(__HAIKU__    ) || \
@@ -413,7 +397,7 @@ BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
   #define BL_FILE64_API(NAME) NAME##64
 #endif
 
-BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) noexcept {
+BL_API_IMPL BLResult blFileOpen(BLFileCore* self, const char* fileName, BLFileOpenFlags openFlags) noexcept {
   int of = 0;
 
   switch (openFlags & BL_FILE_OPEN_RW) {
@@ -439,9 +423,8 @@ BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) 
               S_IRGRP | S_IWGRP |
               S_IROTH | S_IWOTH ;
 
-  // NOTE: Do not close the file before calling `open()`. We should
-  // behave atomically, which means that we won't close the existing
-  // file if `open()` fails...
+  // NOTE: Do not close the file before calling `open()`. We should behave atomically, which means that we won't
+  // close the existing file if `open()` fails...
   int fd = BL_FILE64_API(open)(fileName, of, om);
   if (fd < 0) {
     return blTraceError(blResultFromPosixError(errno));
@@ -449,21 +432,18 @@ BLResult blFileOpen(BLFileCore* self, const char* fileName, uint32_t openFlags) 
 
   blFileClose(self);
   self->handle = intptr_t(fd);
-  blRuntimeResourceLiveInfo.incrementFileHandleCount();
 
   return BL_SUCCESS;
 }
 
-BLResult blFileClose(BLFileCore* self) noexcept {
-  if (blFileIsOpen(self)) {
+BL_API_IMPL BLResult blFileClose(BLFileCore* self) noexcept {
+  if (isFileOpen(self)) {
     int fd = int(self->handle);
     int result = close(fd);
 
-    // NOTE: Even when `close()` fails the handle cannot be used again as it
-    // could have already been reused. The failure is just to inform the user
-    // that something failed and that there may be data-loss or handle leakage.
+    // NOTE: Even when `close()` fails the handle cannot be used again as it could have already been reused. The
+    // failure is just to inform the user that something failed and that there may be data-loss or handle leakage.
     self->handle = -1;
-    blRuntimeResourceLiveInfo.decrementFileHandleCount();
 
     if (BL_UNLIKELY(result != 0))
       return blTraceError(blResultFromPosixError(errno));
@@ -472,7 +452,7 @@ BLResult blFileClose(BLFileCore* self) noexcept {
   return BL_SUCCESS;
 }
 
-BLResult blFileSeek(BLFileCore* self, int64_t offset, uint32_t seekType, int64_t* positionOut) noexcept {
+BL_API_IMPL BLResult blFileSeek(BLFileCore* self, int64_t offset, BLFileSeekType seekType, int64_t* positionOut) noexcept {
   *positionOut = -1;
 
   int whence = 0;
@@ -485,7 +465,7 @@ BLResult blFileSeek(BLFileCore* self, int64_t offset, uint32_t seekType, int64_t
       return blTraceError(BL_ERROR_INVALID_VALUE);
   }
 
-  if (!blFileIsOpen(self))
+  if (!isFileOpen(self))
     return blTraceError(BL_ERROR_INVALID_HANDLE);
 
   int fd = int(self->handle);
@@ -505,56 +485,76 @@ BLResult blFileSeek(BLFileCore* self, int64_t offset, uint32_t seekType, int64_t
   return BL_SUCCESS;
 }
 
-BLResult blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadOut) noexcept {
+BL_API_IMPL BLResult blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadOut) noexcept {
   typedef std::make_signed<size_t>::type SignedSizeT;
 
-  *bytesReadOut = 0;
-  if (!blFileIsOpen(self))
+  if (!isFileOpen(self)) {
+    *bytesReadOut = 0;
     return blTraceError(BL_ERROR_INVALID_HANDLE);
-
-  int fd = int(self->handle);
-  SignedSizeT result = read(fd, buffer, n);
-
-  if (result < 0) {
-    int e = errno;
-
-    // Returned when the file was not open for reading.
-    if (e == EBADF)
-      return blTraceError(BL_ERROR_NOT_PERMITTED);
-
-    return blTraceError(blResultFromPosixError(e));
   }
 
-  *bytesReadOut = size_t(result);
+  int fd = int(self->handle);
+  size_t bytesRead = 0;
+
+  for (;;) {
+    SignedSizeT result = read(fd, buffer, n - bytesRead);
+    if (result < 0) {
+      int e = errno;
+      *bytesReadOut = bytesRead;
+
+      // Returned when the file was not open for reading.
+      if (e == EBADF)
+        return blTraceError(BL_ERROR_NOT_PERMITTED);
+
+      return blTraceError(blResultFromPosixError(e));
+    }
+    else {
+      bytesRead += size_t(result);
+      if (bytesRead == n || result == 0)
+        break;
+    }
+  }
+
+  *bytesReadOut = bytesRead;
   return BL_SUCCESS;
 }
 
-BLResult blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* bytesWrittenOut) noexcept {
+BL_API_IMPL BLResult blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* bytesWrittenOut) noexcept {
   typedef std::make_signed<size_t>::type SignedSizeT;
 
-  *bytesWrittenOut = 0;
-  if (!blFileIsOpen(self))
+  if (!isFileOpen(self)) {
+    *bytesWrittenOut = 0;
     return blTraceError(BL_ERROR_INVALID_HANDLE);
-
-  int fd = int(self->handle);
-  SignedSizeT result = write(fd, buffer, n);
-
-  if (result < 0) {
-    int e = errno;
-
-    // These are the two errors that would be returned if the file was open for read-only.
-    if (e == EBADF || e == EINVAL)
-      return blTraceError(BL_ERROR_NOT_PERMITTED);
-
-    return blTraceError(blResultFromPosixError(e));
   }
 
-  *bytesWrittenOut = size_t(result);
+  int fd = int(self->handle);
+  size_t bytesWritten = 0;
+
+  for (;;) {
+    SignedSizeT result = write(fd, buffer, n - bytesWritten);
+    if (result < 0) {
+      int e = errno;
+      *bytesWrittenOut = bytesWritten;
+
+      // These are the two errors that would be returned if the file was open for read-only.
+      if (e == EBADF || e == EINVAL)
+        return blTraceError(BL_ERROR_NOT_PERMITTED);
+
+      return blTraceError(blResultFromPosixError(e));
+    }
+    else {
+      bytesWritten += size_t(result);
+      if (bytesWritten == n || result == 0)
+        break;
+    }
+  }
+
+  *bytesWrittenOut = bytesWritten;
   return BL_SUCCESS;
 }
 
-BLResult blFileTruncate(BLFileCore* self, int64_t maxSize) noexcept {
-  if (!blFileIsOpen(self))
+BL_API_IMPL BLResult blFileTruncate(BLFileCore* self, int64_t maxSize) noexcept {
+  if (!isFileOpen(self))
     return blTraceError(BL_ERROR_INVALID_HANDLE);
 
   if (maxSize < 0)
@@ -581,9 +581,9 @@ BLResult blFileTruncate(BLFileCore* self, int64_t maxSize) noexcept {
   }
 }
 
-BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
+BL_API_IMPL BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
   *fileSizeOut = 0;
-  if (!blFileIsOpen(self))
+  if (!isFileOpen(self))
     return blTraceError(BL_ERROR_INVALID_HANDLE);
 
   int fd = int(self->handle);
@@ -599,11 +599,10 @@ BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
 #undef BL_FILE64_API
 #endif
 
-// ============================================================================
-// [BLFileMapping - API]
-// ============================================================================
-
 #if defined(_WIN32)
+
+// BLFileMapping - Windows Implementation
+// ======================================
 
 BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept {
   blUnused(flags);
@@ -626,13 +625,12 @@ BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept 
     return blTraceError(result);
   }
 
-  // Succeeded, now is the time to change the content of `BLFileMapping`.
+  // Succeeded, now is the time to change the content of `FileMapping`.
   unmap();
 
   _fileMappingHandle = hFileMapping;
   _data = data;
   _size = size;
-  blRuntimeResourceLiveInfo.incrementFileMappingCount();
 
   return BL_SUCCESS;
 }
@@ -656,12 +654,14 @@ BLResult BLFileMapping::unmap() noexcept {
   _fileMappingHandle = INVALID_HANDLE_VALUE;
   _data = nullptr;
   _size = 0;
-  blRuntimeResourceLiveInfo.decrementFileMappingCount();
 
   return result;
 }
 
 #else
+
+// BLFileMapping - POSIX Implementation
+// ====================================
 
 BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept {
   blUnused(flags);
@@ -682,7 +682,6 @@ BLResult BLFileMapping::map(BLFile& file, size_t size, uint32_t flags) noexcept 
 
   _data = data;
   _size = size;
-  blRuntimeResourceLiveInfo.incrementFileMappingCount();
 
   return BL_SUCCESS;
 }
@@ -701,83 +700,60 @@ BLResult BLFileMapping::unmap() noexcept {
 
   _data = nullptr;
   _size = 0;
-  blRuntimeResourceLiveInfo.decrementFileMappingCount();
 
   return result;
 }
 
 #endif
 
-// ============================================================================
-// [BLFileSystem - Memory Mapped File]
-// ============================================================================
+// BLFileSystem - Memory Mapped File
+// =================================
 
-class BLMemoryMappedFileArrayImpl : public BLArrayImpl {
-public:
-  BLFileMapping fileMapping;
-};
-
-void BL_CDECL blFileSystemDestroyMemoryMappedFile(void* impl_, void* destroyData) noexcept {
-  blUnused(destroyData);
-
-  BLMemoryMappedFileArrayImpl* impl = static_cast<BLMemoryMappedFileArrayImpl*>(impl_);
-  blCallDtor(impl->fileMapping);
+static void BL_CDECL destroyMemoryMappedFile(void* impl, void* externalData, void* userData) noexcept {
+  blUnused(impl, externalData);
+  BLFileMapping* fileMapping = static_cast<BLFileMapping*>(userData);
+  blCallDtor(*fileMapping);
 }
 
-static BLResult blFileSystemCreateMemoryMappedFile(BLArray<uint8_t>* dst, BLFile& file, size_t size) noexcept {
+static BLResult createMemoryMappedFile(BLArray<uint8_t>* dst, BLFile& file, size_t size) noexcept {
   // This condition must be handled before.
   BL_ASSERT(size != 0);
 
-  BLArrayImpl* oldI = dst->impl;
-  uint32_t implSize = sizeof(BLExternalImplPreface) + sizeof(BLMemoryMappedFileArrayImpl);
-  uint32_t implTraits = BL_IMPL_TRAIT_IMMUTABLE | BL_IMPL_TRAIT_EXTERNAL;
+  BLFileMapping fileMapping;
+  BL_PROPAGATE(fileMapping.map(file, size));
 
-  uint16_t memPoolData;
-  void* p = blRuntimeAllocImpl(implSize, &memPoolData);
+  BLObjectImplSize implSize(sizeof(BLArrayImpl));
+  BLObjectInfo info = BLObjectInfo::packType(BL_OBJECT_TYPE_ARRAY_UINT8) | BL_OBJECT_INFO_IMMUTABLE_FLAG;
 
-  if (BL_UNLIKELY(!p))
+  BLObjectExternalInfo* externalInfo;
+  void* externalOptData;
+
+  BLArrayCore newO;
+  BLArrayImpl* impl = blObjectDetailAllocImplExternalT<BLArrayImpl>(&newO, info, implSize, &externalInfo, &externalOptData);
+
+  if (BL_UNLIKELY(!impl))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-  BLExternalImplPreface* preface = static_cast<BLExternalImplPreface*>(p);
-  BLMemoryMappedFileArrayImpl* impl = blOffsetPtr<BLMemoryMappedFileArrayImpl>(p, sizeof(BLExternalImplPreface));
-
-  preface->destroyFunc = blFileSystemDestroyMemoryMappedFile;
-  preface->destroyData = nullptr;
-
-  impl->data = nullptr;
+  impl->data = fileMapping.data<void>();
   impl->size = size;
   impl->capacity = size;
-  impl->itemSize = 1;
-  impl->dispatchType = 0;
-  impl->reserved[0] = 0;
-  impl->reserved[1] = 0;
 
-  blImplInit(impl, BL_IMPL_TYPE_ARRAY_U8, implTraits, memPoolData);
-  blCallCtor(impl->fileMapping);
+  externalInfo->destroyFunc = destroyMemoryMappedFile;
+  externalInfo->userData = externalOptData;
+  blCallCtor(*static_cast<BLFileMapping*>(externalOptData), std::move(fileMapping));
 
-  BLResult result = impl->fileMapping.map(file, size);
-  if (result != BL_SUCCESS) {
-    // No need to call fileMapping destructor as it holds no data.
-    blRuntimeFreeImpl(p, implSize, memPoolData);
-    return result;
-  }
-
-  // Mapping succeeded.
-  impl->data = impl->fileMapping.data();
-  dst->impl = impl;
-  return blArrayImplRelease(oldI);
+  return BLArrayPrivate::replaceInstance(dst, &newO);
 }
 
-// ============================================================================
-// [BLFileSystem - Read / Write File]
-// ============================================================================
+// BLFileSystem - Read & Write File
+// ================================
 
-BLResult blFileSystemReadFile(const char* fileName, BLArrayCore* dst_, size_t maxSize, uint32_t readFlags) noexcept {
+BL_API_IMPL BLResult blFileSystemReadFile(const char* fileName, BLArrayCore* dst_, size_t maxSize, BLFileReadFlags readFlags) noexcept {
+  if (BL_UNLIKELY(dst_->_d.rawType() != BL_OBJECT_TYPE_ARRAY_UINT8))
+    return blTraceError(BL_ERROR_INVALID_STATE);
+
   BLArray<uint8_t>& dst = dst_->dcast<BLArray<uint8_t>>();
   dst.clear();
-
-  if (BL_UNLIKELY(dst.impl->implType != BL_IMPL_TYPE_ARRAY_U8))
-    return blTraceError(BL_ERROR_INVALID_STATE);
 
   BLFile file;
   BL_PROPAGATE(file.open(fileName, BL_FILE_OPEN_READ));
@@ -797,11 +773,11 @@ BLResult blFileSystemReadFile(const char* fileName, BLArrayCore* dst_, size_t ma
 
   size_t size = size_t(size64);
 
-  // Use memory mapped file if enabled.
+  // Use memory mapped file IO if enabled.
   if (readFlags & BL_FILE_READ_MMAP_ENABLED) {
-    bool isSmall = size < BL_FILE_SYSTEM_SMALL_FILE_SIZE_THRESHOLD;
+    bool isSmall = size < BLFileMapping::kSmallFileSizeThreshold;
     if (!(readFlags & BL_FILE_READ_MMAP_AVOID_SMALL) || !isSmall) {
-      BLResult result = blFileSystemCreateMemoryMappedFile(&dst, file, size);
+      BLResult result = createMemoryMappedFile(&dst, file, size);
       if (result == BL_SUCCESS)
         return result;
 
@@ -810,16 +786,19 @@ BLResult blFileSystemReadFile(const char* fileName, BLArrayCore* dst_, size_t ma
     }
   }
 
-
   uint8_t* data;
   BL_PROPAGATE(dst.modifyOp(BL_MODIFY_OP_ASSIGN_FIT, size, &data));
-  return file.read(data, size, &dst.impl->size);
+
+  size_t bytesRead;
+  BLResult result = file.read(data, size, &bytesRead);
+  dst.resize(bytesRead, 0);
+  return result;
 }
 
-BLResult blFileSystemWriteFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) noexcept {
+BL_API_IMPL BLResult blFileSystemWriteFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) noexcept {
   *bytesWrittenOut = 0;
 
   BLFile file;
-  BL_PROPAGATE(file.open(fileName, BL_FILE_OPEN_WRITE | BL_FILE_OPEN_CREATE | BL_FILE_OPEN_TRUNCATE));
+  BL_PROPAGATE(file.open(fileName, BLFileOpenFlags(BL_FILE_OPEN_WRITE | BL_FILE_OPEN_CREATE | BL_FILE_OPEN_TRUNCATE)));
   return size ? file.write(data, size , bytesWrittenOut) : BL_SUCCESS;
 }

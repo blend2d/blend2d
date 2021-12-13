@@ -1,85 +1,78 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_FONTMANAGER_H_INCLUDED
 #define BLEND2D_FONTMANAGER_H_INCLUDED
 
-#include "./font.h"
-#include "./string.h"
+#include "font.h"
+#include "object.h"
+#include "string.h"
 
 //! \addtogroup blend2d_api_text
 //! \{
 
-// ============================================================================
-// [BLFontManager - Core]
-// ============================================================================
+//! \name BLFontManager C API
+//!
+//! \{
 
-//! Font manager [C Interface - Virtual Function Table].
-struct BLFontManagerVirt {
-  BLResult (BL_CDECL* destroy)(BLFontManagerImpl* impl) BL_NOEXCEPT;
+//! Font manager [Virtual Function Table].
+struct BLFontManagerVirt BL_CLASS_INHERITS(BLObjectVirt) {
+  BL_DEFINE_VIRT_BASE
 };
 
-//! Font manager [C Interface - Impl].
-struct BLFontManagerImpl {
+//! Font manager [Impl].
+struct BLFontManagerImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Virtual function table.
   const BLFontManagerVirt* virt;
-
-  //! Reference count.
-  volatile size_t refCount;
-  //! Impl type.
-  uint8_t implType;
-  //! Impl traits.
-  uint8_t implTraits;
-  //! Memory pool data.
-  uint16_t memPoolData;
-  //! Reserved for future use, must be zero.
-  uint8_t reserved[4];
 };
 
-//! Font manager [C Interface - Core].
-struct BLFontManagerCore {
-  BLFontManagerImpl* impl;
+//! Font manager [C API].
+struct BLFontManagerCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
 };
 
-// ============================================================================
-// [BLFontManager - C++]
-// ============================================================================
+BL_BEGIN_C_DECLS
 
+BL_API BLResult BL_CDECL blFontManagerInit(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerInitMove(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerInitWeak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerInitNew(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerDestroy(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerReset(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerAssignMove(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerAssignWeak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerCreate(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blFontManagerGetFaceCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blFontManagerGetFamilyCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontManagerHasFace(const BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerAddFace(BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerQueryFace(const BLFontManagerCore* self, const char* name, size_t nameSize, const BLFontQueryProperties* properties, BLFontFaceCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerQueryFacesByFamilyName(const BLFontManagerCore* self, const char* name, size_t nameSize, BLArrayCore* out) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontManagerEquals(const BLFontManagerCore* a, const BLFontManagerCore* b) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+//! \}
+
+//! \name BLFontManager C++ API
+//!
+//! \{
 #ifdef __cplusplus
+
 //! Font manager [C++ API].
 class BLFontManager : public BLFontManagerCore {
 public:
   //! \cond INTERNAL
-  static constexpr const uint32_t kImplType = BL_IMPL_TYPE_FONT_MANAGER;
+  BL_INLINE BLFontManagerImpl* _impl() const noexcept { return static_cast<BLFontManagerImpl*>(_d.impl); }
   //! \endcond
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLFontManager() noexcept { this->impl = none().impl; }
-  BL_INLINE BLFontManager(BLFontManager&& other) noexcept { blVariantInitMove(this, &other); }
-  BL_INLINE BLFontManager(const BLFontManager& other) noexcept { blVariantInitWeak(this, &other); }
-  BL_INLINE explicit BLFontManager(BLFontManagerImpl* impl) noexcept { this->impl = impl; }
+  BL_INLINE BLFontManager() noexcept { blFontManagerInit(this); }
+  BL_INLINE BLFontManager(BLFontManager&& other) noexcept { blFontManagerInitMove(this, &other); }
+  BL_INLINE BLFontManager(const BLFontManager& other) noexcept { blFontManagerInitWeak(this, &other); }
   BL_INLINE ~BLFontManager() noexcept { blFontManagerDestroy(this); }
 
   //! \}
@@ -99,14 +92,14 @@ public:
   //! \{
 
   BL_INLINE BLResult reset() noexcept { return blFontManagerReset(this); }
-  BL_INLINE void swap(BLFontManager& other) noexcept { std::swap(this->impl, other.impl); }
+  BL_INLINE void swap(BLFontManager& other) noexcept { _d.swap(other._d); }
 
   BL_INLINE BLResult assign(BLFontManager&& other) noexcept { return blFontManagerAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLFontManager& other) noexcept { return blFontManagerAssignWeak(this, &other); }
 
-  //! Tests whether the font-data is a built-in null instance.
+  //! Tests whether the font-manager is a valid FontManager and not a built-in default instance.
   BL_NODISCARD
-  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
+  BL_INLINE bool isValid() const noexcept { return _d.refCountedFlag(); }
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLFontManager& other) const noexcept { return blFontManagerEquals(this, &other); }
@@ -140,10 +133,10 @@ public:
   //! Adds a font `face` to the font manager.
   //!
   //! Important conditions:
-  //!   * `BL_SUCCESS` is returned if the `face` was successfully added to font
-  //!     manager or if font manager already held it.
-  //!   * `BL_ERROR_FONT_NOT_INITIALIZED` is returned if the font `face` is invalid.
-  //!   * `BL_ERROR_OUT_OF_MEMORY` is returned if memory allocation failed.
+  //!   - `BL_SUCCESS` is returned if the `face` was successfully added to font manager or if font manager already
+  //!     held it.
+  //!   - `BL_ERROR_FONT_NOT_INITIALIZED` is returned if the font `face` is invalid.
+  //!   - `BL_ERROR_OUT_OF_MEMORY` is returned if memory allocation failed.
   BL_INLINE BLResult addFace(const BLFontFaceCore& face) noexcept {
     return blFontManagerAddFace(this, &face);
   }
@@ -160,12 +153,11 @@ public:
 
   //! Queries a font face by family `name` and stores the result to `out`.
   //!
-  //! A `properties` parameter contains query properties that the query engine
-  //! will consider when doing the match. The best candidate will be selected
-  //! based on the following rules:
+  //! A `properties` parameter contains query properties that the query engine will consider when doing the match.
+  //! The best candidate will be selected based on the following rules:
   //!
-  //!   * Style has the highest priority.
-  //!   * Weight has the lowest priority.
+  //!   - Style has the highest priority.
+  //!   - Weight has the lowest priority.
   BL_INLINE BLResult queryFace(const char* name, const BLFontQueryProperties& properties, BLFontFaceCore& out) const noexcept {
     return blFontManagerQueryFace(this, name, SIZE_MAX, &properties, &out);
   }
@@ -186,12 +178,9 @@ public:
   }
 
   //! \}
-
-  BL_NODISCARD
-  static BL_INLINE const BLFontManager& none() noexcept { return reinterpret_cast<const BLFontManager*>(blNone)[kImplType]; }
 };
-#endif
 
+#endif
 //! \}
 
 #endif // BLEND2D_FONTMANAGER_H_INCLUDED

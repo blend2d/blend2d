@@ -1,60 +1,42 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
-#include "./math_p.h"
-#include "./matrix_p.h"
-#include "./runtime_p.h"
-#include "./simd_p.h"
+#include "api-build_p.h"
+#include "math_p.h"
+#include "matrix_p.h"
+#include "runtime_p.h"
+#include "simd_p.h"
 
-// ============================================================================
-// [BLMatrix2D - Global Variables]
-// ============================================================================
+BLMapPointDArrayFunc blMatrix2DMapPointDArrayFuncs[BL_MATRIX2D_TYPE_MAX_VALUE + 1];
 
-const BLMatrix2D blMatrix2DIdentity { 1.0, 0.0, 0.0, 1.0, 0.0, 0.0 };
+namespace BLTransformPrivate {
 
-BLMapPointDArrayFunc blMatrix2DMapPointDArrayFuncs[BL_MATRIX2D_TYPE_COUNT];
+// BLTransform - Global Variables
+// ==============================
 
-// ============================================================================
-// [BLMatrix2D - Reset]
-// ============================================================================
+const BLMatrix2D identityTransform { 1.0, 0.0, 0.0, 1.0, 0.0, 0.0 };
 
-BLResult blMatrix2DSetIdentity(BLMatrix2D* self) noexcept {
+// BLTransform - API - Reset
+// =========================
+
+BL_API_IMPL BLResult blMatrix2DSetIdentity(BLMatrix2D* self) noexcept {
   self->reset(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
   return BL_SUCCESS;
 }
 
-BLResult blMatrix2DSetTranslation(BLMatrix2D* self, double x, double y) noexcept {
+BL_API_IMPL BLResult blMatrix2DSetTranslation(BLMatrix2D* self, double x, double y) noexcept {
   self->reset(1.0, 0.0, 0.0, 1.0, x, y);
   return BL_SUCCESS;
 }
 
-BLResult blMatrix2DSetScaling(BLMatrix2D* self, double x, double y) noexcept {
+BL_API_IMPL BLResult blMatrix2DSetScaling(BLMatrix2D* self, double x, double y) noexcept {
   self->reset(x, 0.0, 0.0, y, 0.0, 0.0);
   return BL_SUCCESS;
 }
 
-BLResult blMatrix2DSetSkewing(BLMatrix2D* self, double x, double y) noexcept {
+BL_API_IMPL BLResult blMatrix2DSetSkewing(BLMatrix2D* self, double x, double y) noexcept {
   double xTan = blTan(x);
   double yTan = blTan(y);
 
@@ -62,7 +44,7 @@ BLResult blMatrix2DSetSkewing(BLMatrix2D* self, double x, double y) noexcept {
   return BL_SUCCESS;
 }
 
-BLResult blMatrix2DSetRotation(BLMatrix2D* self, double angle, double x, double y) noexcept {
+BL_API_IMPL BLResult blMatrix2DSetRotation(BLMatrix2D* self, double angle, double x, double y) noexcept {
   double as = blSin(angle);
   double ac = blCos(angle);
 
@@ -70,11 +52,88 @@ BLResult blMatrix2DSetRotation(BLMatrix2D* self, double angle, double x, double 
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLMatrix2D - Ops]
-// ============================================================================
+// BLTransform - API - Accessors
+// =============================
 
-BLResult blMatrix2DApplyOp(BLMatrix2D* self, uint32_t opType, const void* opData) noexcept {
+BL_API_IMPL BLMatrix2DType blMatrix2DGetType(const BLMatrix2D* self) noexcept {
+  double m00 = self->m00;
+  double m01 = self->m01;
+  double m10 = self->m10;
+  double m11 = self->m11;
+  double m20 = self->m20;
+  double m21 = self->m21;
+
+  const uint32_t kBit00 = 1u << 3;
+  const uint32_t kBit01 = 1u << 2;
+  const uint32_t kBit10 = 1u << 1;
+  const uint32_t kBit11 = 1u << 0;
+
+  #if defined(BL_TARGET_OPT_SSE2)
+
+  // NOTE: Ideally this should be somewhere else, but for simplicity and easier
+  // displatch it was placed here. We do this as C++ compilers still cannot figure
+  // out how to do this and this is a much better solution compared to scalar
+  // versions compilers produce.
+  using namespace SIMD;
+  uint32_t valueMsk = uint32_t(_mm_movemask_pd(v_cmp_ne_f64(v_fill_d128(m00, m01), v_zero_d128())) << 2) |
+                      uint32_t(_mm_movemask_pd(v_cmp_ne_f64(v_fill_d128(m10, m11), v_zero_d128())) << 0) ;
+  #else
+  uint32_t valueMsk = (uint32_t(m00 != 0.0) << 3) | (uint32_t(m01 != 0.0) << 2) |
+                      (uint32_t(m10 != 0.0) << 1) | (uint32_t(m11 != 0.0) << 0) ;
+  #endif
+
+  // Bit-table that contains ones for `valueMsk` combinations that are considered valid.
+  uint32_t validTab = (0u << (0      | 0      | 0      | 0     )) | // [m00==0 m01==0 m10==0 m11==0]
+                      (0u << (0      | 0      | 0      | kBit11)) | // [m00==0 m01==0 m10==0 m11!=0]
+                      (0u << (0      | 0      | kBit10 | 0     )) | // [m00==0 m01==0 m10!=0 m11==0]
+                      (1u << (0      | 0      | kBit10 | kBit11)) | // [m00==0 m01==0 m10!=0 m11!=0]
+                      (0u << (0      | kBit01 | 0      | 0     )) | // [m00==0 m01!=0 m10==0 m11==0]
+                      (0u << (0      | kBit01 | 0      | kBit11)) | // [m00==0 m01!=0 m10==0 m11!=0]
+                      (1u << (0      | kBit01 | kBit10 | 0     )) | // [m00==0 m01!=0 m10!=0 m11==0] [SWAP]
+                      (1u << (0      | kBit01 | kBit10 | kBit11)) | // [m00==0 m01!=0 m10!=0 m11!=0]
+                      (0u << (kBit00 | 0      | 0      | 0     )) | // [m00!=0 m01==0 m10==0 m11==0]
+                      (1u << (kBit00 | 0      | 0      | kBit11)) | // [m00!=0 m01==0 m10==0 m11!=0] [SCALE]
+                      (0u << (kBit00 | 0      | kBit10 | 0     )) | // [m00!=0 m01==0 m10!=0 m11==0]
+                      (1u << (kBit00 | 0      | kBit10 | kBit11)) | // [m00!=0 m01==0 m10!=0 m11!=0] [AFFINE]
+                      (1u << (kBit00 | kBit01 | 0      | 0     )) | // [m00!=0 m01!=0 m10==0 m11==0]
+                      (1u << (kBit00 | kBit01 | 0      | kBit11)) | // [m00!=0 m01!=0 m10==0 m11!=0] [AFFINE]
+                      (1u << (kBit00 | kBit01 | kBit10 | 0     )) | // [m00!=0 m01!=0 m10!=0 m11==0] [AFFINE]
+                      (1u << (kBit00 | kBit01 | kBit10 | kBit11)) ; // [m00!=0 m01!=0 m10!=0 m11!=0] [AFFINE]
+
+  double d = m00 * m11 - m01 * m10;
+  if (!((1u << valueMsk) & validTab) || !blIsFinite(d) || !blIsFinite(m20) || !blIsFinite(m21))
+    return BL_MATRIX2D_TYPE_INVALID;
+
+  // Matrix is not swap/affine if:
+  //   [. 0]
+  //   [0 .]
+  //   [. .]
+  if (valueMsk != (kBit00 | kBit11))
+    return (valueMsk == (kBit01 | kBit10))
+      ? BL_MATRIX2D_TYPE_SWAP
+      : BL_MATRIX2D_TYPE_AFFINE;
+
+  // Matrix is not scaling if:
+  //   [1 .]
+  //   [. 1]
+  //   [. .]
+  if (!((m00 == 1.0) & (m11 == 1.0)))
+    return BL_MATRIX2D_TYPE_SCALE;
+
+  // Matrix is not translation if:
+  //   [. .]
+  //   [. .]
+  //   [0 0]
+  if (!((m20 == 0.0) & (m21 == 0.0)))
+    return BL_MATRIX2D_TYPE_TRANSLATE;
+
+  return BL_MATRIX2D_TYPE_IDENTITY;
+}
+
+// BLTransform - API - Operations
+// ==============================
+
+BL_API_IMPL BLResult blMatrix2DApplyOp(BLMatrix2D* self, BLMatrix2DOp opType, const void* opData) noexcept {
   BLMatrix2D* a = self;
   const double* data = static_cast<const double*>(opData);
 
@@ -300,7 +359,7 @@ BLResult blMatrix2DApplyOp(BLMatrix2D* self, uint32_t opType, const void* opData
   }
 }
 
-BLResult blMatrix2DInvert(BLMatrix2D* dst, const BLMatrix2D* src) noexcept {
+BL_API_IMPL BLResult blMatrix2DInvert(BLMatrix2D* dst, const BLMatrix2D* src) noexcept {
   double d = src->m00 * src->m11 - src->m01 * src->m10;
 
   if (d == 0.0)
@@ -323,90 +382,10 @@ BLResult blMatrix2DInvert(BLMatrix2D* dst, const BLMatrix2D* src) noexcept {
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLMatrix2D - Type]
-// ============================================================================
+// BLTransform - API - Map
+// =======================
 
-uint32_t blMatrix2DGetType(const BLMatrix2D* self) noexcept {
-  double m00 = self->m00;
-  double m01 = self->m01;
-  double m10 = self->m10;
-  double m11 = self->m11;
-  double m20 = self->m20;
-  double m21 = self->m21;
-
-  const uint32_t kBit00 = 1u << 3;
-  const uint32_t kBit01 = 1u << 2;
-  const uint32_t kBit10 = 1u << 1;
-  const uint32_t kBit11 = 1u << 0;
-
-  #if defined(BL_TARGET_OPT_SSE2)
-
-  // NOTE: Ideally this should be somewhere else, but for simplicity and easier
-  // displatch it was placed here. We do this as C++ compilers still cannot figure
-  // out how to do this and this is a much better solution compared to scalar
-  // versions compilers produce.
-  using namespace SIMD;
-  uint32_t valueMsk = uint32_t(_mm_movemask_pd(v_cmp_ne_f64(v_fill_d128(m00, m01), v_zero_d128())) << 2) |
-                      uint32_t(_mm_movemask_pd(v_cmp_ne_f64(v_fill_d128(m10, m11), v_zero_d128())) << 0) ;
-  #else
-  uint32_t valueMsk = (uint32_t(m00 != 0.0) << 3) | (uint32_t(m01 != 0.0) << 2) |
-                      (uint32_t(m10 != 0.0) << 1) | (uint32_t(m11 != 0.0) << 0) ;
-  #endif
-
-  // Bit-table that contains ones for `valueMsk` combinations that are considered valid.
-  uint32_t validTab = (0u << (0      | 0      | 0      | 0     )) | // [m00==0 m01==0 m10==0 m11==0]
-                      (0u << (0      | 0      | 0      | kBit11)) | // [m00==0 m01==0 m10==0 m11!=0]
-                      (0u << (0      | 0      | kBit10 | 0     )) | // [m00==0 m01==0 m10!=0 m11==0]
-                      (1u << (0      | 0      | kBit10 | kBit11)) | // [m00==0 m01==0 m10!=0 m11!=0]
-                      (0u << (0      | kBit01 | 0      | 0     )) | // [m00==0 m01!=0 m10==0 m11==0]
-                      (0u << (0      | kBit01 | 0      | kBit11)) | // [m00==0 m01!=0 m10==0 m11!=0]
-                      (1u << (0      | kBit01 | kBit10 | 0     )) | // [m00==0 m01!=0 m10!=0 m11==0] [SWAP]
-                      (1u << (0      | kBit01 | kBit10 | kBit11)) | // [m00==0 m01!=0 m10!=0 m11!=0]
-                      (0u << (kBit00 | 0      | 0      | 0     )) | // [m00!=0 m01==0 m10==0 m11==0]
-                      (1u << (kBit00 | 0      | 0      | kBit11)) | // [m00!=0 m01==0 m10==0 m11!=0] [SCALE]
-                      (0u << (kBit00 | 0      | kBit10 | 0     )) | // [m00!=0 m01==0 m10!=0 m11==0]
-                      (1u << (kBit00 | 0      | kBit10 | kBit11)) | // [m00!=0 m01==0 m10!=0 m11!=0] [AFFINE]
-                      (1u << (kBit00 | kBit01 | 0      | 0     )) | // [m00!=0 m01!=0 m10==0 m11==0]
-                      (1u << (kBit00 | kBit01 | 0      | kBit11)) | // [m00!=0 m01!=0 m10==0 m11!=0] [AFFINE]
-                      (1u << (kBit00 | kBit01 | kBit10 | 0     )) | // [m00!=0 m01!=0 m10!=0 m11==0] [AFFINE]
-                      (1u << (kBit00 | kBit01 | kBit10 | kBit11)) ; // [m00!=0 m01!=0 m10!=0 m11!=0] [AFFINE]
-
-  double d = m00 * m11 - m01 * m10;
-  if (!((1u << valueMsk) & validTab) || !blIsFinite(d) || !blIsFinite(m20) || !blIsFinite(m21))
-    return BL_MATRIX2D_TYPE_INVALID;
-
-  // Matrix is not swap/affine if:
-  //   [. 0]
-  //   [0 .]
-  //   [. .]
-  if (valueMsk != (kBit00 | kBit11))
-    return (valueMsk == (kBit01 | kBit10))
-      ? BL_MATRIX2D_TYPE_SWAP
-      : BL_MATRIX2D_TYPE_AFFINE;
-
-  // Matrix is not scaling if:
-  //   [1 .]
-  //   [. 1]
-  //   [. .]
-  if (!((m00 == 1.0) & (m11 == 1.0)))
-    return BL_MATRIX2D_TYPE_SCALE;
-
-  // Matrix is not translation if:
-  //   [. .]
-  //   [. .]
-  //   [0 0]
-  if (!((m20 == 0.0) & (m21 == 0.0)))
-    return BL_MATRIX2D_TYPE_TRANSLATE;
-
-  return BL_MATRIX2D_TYPE_IDENTITY;
-}
-
-// ============================================================================
-// [BLMatrix2D - Map]
-// ============================================================================
-
-BLResult blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) noexcept {
+BL_API_IMPL BLResult blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) noexcept {
   uint32_t matrixType = BL_MATRIX2D_TYPE_AFFINE;
 
   if (count >= BL_MATRIX_TYPE_MINIMUM_SIZE)
@@ -415,9 +394,8 @@ BLResult blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoint* dst, const BL
   return blMatrix2DMapPointDArrayFuncs[matrixType](self, dst, src, count);
 }
 
-// ============================================================================
-// [BLMatrix2D - MapPointDArray]
-// ============================================================================
+// BLTransform - MapPointDArray
+// ============================
 
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS)
 
@@ -486,11 +464,24 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine(const BLMatrix2D* self, 
 
 BL_DIAGNOSTIC_POP
 
-// ============================================================================
-// [BLMatrix2D - Runtime]
-// ============================================================================
+} // {BLTransformPrivate}
 
-void blMatrix2DOnInit(BLRuntimeContext* rt) noexcept {
+// BLTransform - Runtime Registration
+// ==================================
+
+namespace BLTransformPrivate {
+
+#ifdef BL_BUILD_OPT_SSE2
+BL_HIDDEN void blTransformRtInit_SSE2(BLRuntimeContext* rt) noexcept;
+#endif
+
+#ifdef BL_BUILD_OPT_AVX
+BL_HIDDEN void blTransformRtInit_AVX(BLRuntimeContext* rt) noexcept;
+#endif
+
+} // {BLTransformPrivate}
+
+void blTransformRtInit(BLRuntimeContext* rt) noexcept {
 #if !defined(BL_TARGET_OPT_SSE2)
   blUnused(rt);
   BLMapPointDArrayFunc* funcs = blMatrix2DMapPointDArrayFuncs;
@@ -504,17 +495,18 @@ void blMatrix2DOnInit(BLRuntimeContext* rt) noexcept {
 #endif
 
 #ifdef BL_BUILD_OPT_SSE2
-  if (blRuntimeHasSSE2(rt)) blMatrix2DOnInit_SSE2(rt);
+  if (blRuntimeHasSSE2(rt))
+    BLTransformPrivate::blTransformRtInit_SSE2(rt);
 #endif
 
 #ifdef BL_BUILD_OPT_AVX
-  if (blRuntimeHasAVX(rt)) blMatrix2DOnInit_AVX(rt);
+  if (blRuntimeHasAVX(rt))
+    BLTransformPrivate::blTransformRtInit_AVX(rt);
 #endif
 }
 
-// ============================================================================
-// [BLMatrix2D - Unit Tests]
-// ============================================================================
+// BLTransform - Tests
+// ===================
 
 #ifdef BL_TEST
 UNIT(matrix) {
@@ -523,22 +515,22 @@ UNIT(matrix) {
     BLMatrix2D m;
 
     m = BLMatrix2D::makeIdentity();
-    EXPECT(m.type() == BL_MATRIX2D_TYPE_IDENTITY);
+    EXPECT_EQ(m.type(), BL_MATRIX2D_TYPE_IDENTITY);
 
     m = BLMatrix2D::makeTranslation(1.0, 2.0);
-    EXPECT(m.type() == BL_MATRIX2D_TYPE_TRANSLATE);
+    EXPECT_EQ(m.type(), BL_MATRIX2D_TYPE_TRANSLATE);
 
     m = BLMatrix2D::makeScaling(2.0, 2.0);
-    EXPECT(m.type() == BL_MATRIX2D_TYPE_SCALE);
+    EXPECT_EQ(m.type(), BL_MATRIX2D_TYPE_SCALE);
 
     m.m10 = 3.0;
-    EXPECT(m.type() == BL_MATRIX2D_TYPE_AFFINE);
+    EXPECT_EQ(m.type(), BL_MATRIX2D_TYPE_AFFINE);
 
     m.reset(0.0, 1.0, 1.0, 0.0, 0.0, 0.0);
-    EXPECT(m.type() == BL_MATRIX2D_TYPE_SWAP);
+    EXPECT_EQ(m.type(), BL_MATRIX2D_TYPE_SWAP);
 
     m.reset(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-    EXPECT(m.type() == BL_MATRIX2D_TYPE_INVALID);
+    EXPECT_EQ(m.type(), BL_MATRIX2D_TYPE_INVALID);
   }
 
   INFO("Testing whether special-case transformations match matrix multiplication");
@@ -653,7 +645,7 @@ UNIT(matrix) {
             INFO("    [% 3.14f | % 3.14f]      [% 3.14f | % 3.14f]\n", m.m00, m.m01, n.m00, n.m01);
             INFO("  M [% 3.14f | % 3.14f] != N [% 3.14f | % 3.14f]\n", m.m10, m.m11, n.m10, n.m11);
             INFO("    [% 3.14f | % 3.14f]      [% 3.14f | % 3.14f]\n", m.m20, m.m21, n.m20, n.m21);
-            EXPECT(false);
+            EXPECT_TRUE(false);
           }
         }
       }

@@ -1,42 +1,20 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_API_INTERNAL_P_H_INCLUDED
 #define BLEND2D_API_INTERNAL_P_H_INCLUDED
 
-// ============================================================================
-// [Dependencies]
-// ============================================================================
-
-#include "./api.h"
-#include "./api-impl.h"
-#include "./variant.h"
+#include "api.h"
+#include "api-impl.h"
+#include "object.h"
 
 // C Headers
-// ---------
+// =========
 
-// NOTE: Some headers are already included by <api.h>. This should be useful
-// for creating an overview of what Blend2D really needs globally to be included.
+// NOTE: Some headers are already included by <api.h>. This should be useful for creating an overview of what
+// Blend2D really needs globally to be included.
 #include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -46,17 +24,16 @@
 #include <string.h>
 
 // C++ Headers
-// -----------
+// ===========
 
-// We are just fine with <math.h>, however, there are some useful overloads in
-// C++'s <cmath> that are nicer to use than those in <math.h>. Mostly low level
-// functionality like blIsFinite() relies on <cmath> instead of <math.h>.
-#include <new>
+// We are just fine with <math.h>, however, there are some useful overloads in C++'s <cmath> that are nicer to use
+// than those in <math.h>. Mostly low-level functionality like blIsFinite() relies on <cmath> instead of <math.h>.
 #include <cmath>
 #include <limits>
+#include <type_traits>
 
 // Platform Specific Headers
-// -------------------------
+// =========================
 
 #ifdef _WIN32
   //! \cond NEVER
@@ -76,16 +53,17 @@
   #include <unistd.h>    // Filesystem, sysconf, etc...
 #endif
 
-// Some intrinsics defined by MSVC compiler are useful. Most of them should be
-// used by "blsupport_p.h" that provides a lot of support functions used across
-// the library.
+// Some intrinsics defined by MSVC compiler are useful and used across the library.
 #ifdef _MSC_VER
   #include <intrin.h>
 #endif
 
-// ============================================================================
-// [Compiler Macros]
-// ============================================================================
+//! \cond INTERNAL
+//! \addtogroup blend2d_api_globals
+//! \{
+
+// C++ Compiler Support
+// ====================
 
 #if defined(__clang__)
   #define BL_CLANG_AT_LEAST(MAJOR, MINOR) ((MAJOR > __clang_major__) || (MAJOR == __clang_major__ && MINOR >= __clang_minor__))
@@ -93,14 +71,12 @@
   #define BL_CLANG_AT_LEAST(MAJOR, MINOR) 0
 #endif
 
-// Some compilers won't optimize our stuff if we won't tell them. However, we
-// have to be careful as Blend2D doesn't use fast-math by default. So when
-// applicable we turn some optimizations on and off locally, but not globally.
+// Some compilers won't optimize our stuff if we won't tell them. However, we have to be careful as Blend2D doesn't
+// use fast-math by default. So when applicable we turn some optimizations on and off locally, but not globally.
 //
-// This has also a lot of downsides. For example all wrappers in "std" namespace
-// are compiled with default flags so even when we force the compiler to follow
-// certain behavior it would only work if we use the "original" functions and
-// not those wrapped in `std` namespace (so use floor and not std::floor, etc).
+// This has also a lot of downsides. For example all wrappers in "std" namespace are compiled with default flags so
+// even when we force the compiler to follow certain behavior it would only work if we use the "original" functions
+// and not those wrapped in `std` namespace (so use floor and not std::floor, etc).
 #if defined(_MSC_VER) && !defined(__clang__)
   #define BL_PRAGMA_FAST_MATH_PUSH __pragma(float_control(precise, off, push))
   #define BL_PRAGMA_FAST_MATH_POP __pragma(float_control(pop))
@@ -123,18 +99,16 @@
   #define BL_FALLTHROUGH /* fallthrough */
 #endif
 
-// PROBLEM: On Linux the default C++ standard library is called `libstdc++` and
-// comes with GCC. Clang can also use this standard library and in many cases
-// it is configured to do so, however, the standard library can be older (and
-// thus provide less features) than the C++ version reported by the compiler via
-// `__cplusplus` macro. This means that the `__cplusplus` version doesn't
-// correspond to the C++ standard library version!
-//
-// The problem is that `libstdc++` doesn't provide any version information, but
-// a timestamp, which is unreliable if you use other compiler than GCC. Since we
-// only use C++14 and higher optionally we don't have a problem to detect such
-// case and to conditionally disable C++14 and higher features of the standard
-// C++ library.
+//! \def BL_STDCXX_VERSION
+//!
+//! PROBLEM: On Linux the default C++ standard library is called `libstdc++` and comes with GCC. Clang can also use
+//! this standard library and in many cases it is configured to do so, however, the standard library can be older
+//! (and thus provide less features) than the C++ version reported by the compiler via `__cplusplus` macro. This means
+//! that the `__cplusplus` version doesn't correspond to the C++ standard library version!
+//!
+//! The problem is that `libstdc++` doesn't provide any version information, but a timestamp, which is unreliable if
+//! you use other compiler than GCC. Since we only use C++14 and higher optionally we don't have a problem to detect
+//! such case and to conditionally disable C++14 and higher features of the standard  C++ library.
 #if defined(__GLIBCXX__) && defined(__clang__)
   #if __has_include(<string_view>) && __cplusplus >= 201703L
     #define BL_STDCXX_VERSION 201703L
@@ -147,19 +121,10 @@
   #define BL_STDCXX_VERSION __cplusplus
 #endif
 
-//! \cond INTERNAL
-//! \addtogroup blend2d_api_globals
-//! \{
-
-// ============================================================================
-// [Internal Macros]
-// ============================================================================
-
 //! \def BL_HIDDEN
 //!
-//! Decorates a function that is used across more than one source file, but
-//! should never be exported. Expands to a compiler-specific code that affects
-//! the visibility.
+//! Decorates a function that is used across more than one source file, but should never be exported. Expands to
+//! a compiler-specific code that affects the visibility.
 #if defined(__GNUC__) && !defined(__MINGW32__)
   #define BL_HIDDEN __attribute__((__visibility__("hidden")))
 #else
@@ -168,9 +133,8 @@
 
 //! \def BL_OPTIMIZE
 //!
-//! Decorates a function that should be highly optimized by C++ compiler. In
-//! general Blend2D uses "-O2" optimization level on GCC and Clang, this macro
-//! would change the optimization level to "-O3" for the decorated function.
+//! Decorates a function that should be highly optimized by C++ compiler. In general Blend2D uses "-O2" optimization
+//! level on GCC and Clang, this macro would change the optimization level to "-O3" for the decorated function.
 #if !defined(BL_BUILD_DEBUG) && (BL_CC_HAS_ATTRIBUTE(__optimize__) || (!defined(__clang__) && defined(__GNUC__)))
   #define BL_OPTIMIZE __attribute__((__optimize__("O3")))
 #else
@@ -179,9 +143,8 @@
 
 //! \def BL_NOINLINE
 //!
-//! Decorates a function that should never be inlined. Sometimes used by Blend2D
-//! to decorate functions that are either called rarely or that are called from
-//! other code in corner cases - like buffer reallocation, etc...
+//! Decorates a function that should never be inlined. Sometimes used by Blend2D to decorate functions that are
+//! either called rarely or that are called from other code in corner cases - like buffer reallocation, etc...
 #if defined(__GNUC__)
   #define BL_NOINLINE __attribute__((noinline))
 #elif defined(_MSC_VER)
@@ -201,12 +164,71 @@
   #define BL_STDCALL
 #endif
 
+//! \def BL_UNALIGNED_TYPE(TYPE, ALIGNMENT)
+//!
+//! Defines a type, that is aligned to less than its native alignment. In general this is not supported by the
+//! C++ alignas() keyword, which only allows to increase the alignment. Compilers that support unaligned types
+//! can generate nicer code when such type is accessed and UBSAN would not complain about such accesses, if
+//! properly annotated.
+#if defined(__GNUC__)
+  #define BL_UNALIGNED_TYPE(TYPE, ALIGNMENT) __attribute__((__aligned__(ALIGNMENT))) __attribute__((__may_alias__)) TYPE
+#elif defined(_MSC_VER)
+  #define BL_UNALIGNED_TYPE(TYPE, ALIGNMENT) __declspec(align(ALIGNMENT)) TYPE
+#else
+  #define BL_UNALIGNED_TYPE(TYPE, ALIGNMENT) TYPE
+#endif
+
+//! \def BL_NOUNROLL
+//!
+//! Compiler-specific macro that annotates a do/for/while loop to not get unrolled.
+#if defined(__INTEL_COMPILER)
+  #define BL_NOUNROLL __pragma(nounroll)
+#elif defined(__clang__) && BL_CLANG_AT_LEAST(3, 6)
+  #define BL_NOUNROLL _Pragma("nounroll")
+#elif defined(__GNUC__) && (__GNUC__ >= 8)
+  #define BL_NOUNROLL _Pragma("GCC unroll 1")
+#else
+  #define BL_NOUNROLL
+#endif
+
+//! \def BL_RUNTIME_INITIALIZER
+//!
+//! Static initialization in C++ is full of surpsises and basically nothing is guaranteed. When Blend2D is compiled
+//! as a shared library everything is fine, however, when it's compiled as a static library and user uses statically
+//! allocated Blend2D objects then the object may initialize even before the library - this tries to solve that issue.
+#if defined(__clang__) || (defined(__GNUC__) && !defined(__APPLE__))
+  #define BL_RUNTIME_INITIALIZER __attribute__((init_priority(102)))
+#else
+  #define BL_RUNTIME_INITIALIZER
+#endif
+
+#if defined(BL_BUILD_DEBUG) && !defined(__OPTIMIZE__)
+  #define BL_INLINE_IF_NOT_DEBUG
+#else
+  #define BL_INLINE_IF_NOT_DEBUG BL_INLINE
+#endif
+
+//! \def BL_API_IMPL
+//!
+//! Decorator used to mark all functions and variables that are exported - it expands to "extern C", which ensures
+//! that an exported function or variable can be implemented within a private namespace and it would still be exported
+//! properly.
+#define BL_API_IMPL extern "C" BL_API
+
+#define BL_STRINGIFY_WRAP(N) #N
+#define BL_STRINGIFY(N) BL_STRINGIFY_WRAP(N)
+
+#define BL_STATIC_ASSERT(...) static_assert(__VA_ARGS__, "Failed BL_STATIC_ASSERT(" #__VA_ARGS__ ")")
+
+// Internal C++ Macros
+// ===================
+
+//! \def BL_NONCOPYABLE
+//!
+//! Makes a class noncopyable by making its copy constructor and copy assignment operator deleted.
 #define BL_NONCOPYABLE(...)                                                   \
   __VA_ARGS__(const __VA_ARGS__& other) = delete;                             \
   __VA_ARGS__& operator=(const __VA_ARGS__& other) = delete;
-
-#define BL_ARRAY_SIZE(X) uint32_t(sizeof(X) / sizeof(X[0]))
-#define BL_OFFSET_OF(STRUCT, MEMBER) ((int)(offsetof(STRUCT, MEMBER)))
 
 //! \def BL_NOT_REACHED()
 //!
@@ -221,26 +243,10 @@
   #define BL_NOT_REACHED() BL_ASSUME(0)
 #endif
 
-#if defined(__INTEL_COMPILER)
-  #define BL_NOUNROLL __pragma(nounroll)
-#elif defined(__clang__) && BL_CLANG_AT_LEAST(3, 6)
-  #define BL_NOUNROLL _Pragma("nounroll")
-#elif defined(__GNUC__) && (__GNUC__ >= 8)
-  #define BL_NOUNROLL _Pragma("GCC unroll 1")
-#else
-  #define BL_NOUNROLL
-#endif
+#define BL_RESTRICT
 
-#define for_nounroll BL_NOUNROLL for
-#define while_nounroll BL_NOUNROLL while
-
-//! Decorates a base class that has virtual functions.
-#define BL_OVERRIDE_NEW_DELETE(TYPE)                                          \
-  BL_INLINE void* operator new(size_t n) noexcept { return malloc(n); }       \
-  BL_INLINE void  operator delete(void* p) noexcept { if (p) free(p); }       \
-                                                                              \
-  BL_INLINE void* operator new(size_t, void* p) noexcept { return p; }        \
-  BL_INLINE void  operator delete(void*, void*) noexcept {}
+#define BL_ARRAY_SIZE(X) uint32_t(sizeof(X) / sizeof(X[0]))
+#define BL_OFFSET_OF(STRUCT, MEMBER) ((int)(offsetof(STRUCT, MEMBER)))
 
 //! Like BL_PROPAGATE, but propagates everything except `BL_RESULT_NOTHING`.
 #define BL_PROPAGATE_IF_NOT_NOTHING(...)                                      \
@@ -250,87 +256,166 @@
       return resultToPropagate;                                               \
   } while (0)
 
-//! \def BL_RUNTIME_INITIALIZER
+//! Decorates a base class that has virtual functions.
+#define BL_OVERRIDE_NEW_DELETE(TYPE)                                          \
+  BL_INLINE void* operator new(size_t n) noexcept { return malloc(n); }       \
+  BL_INLINE void  operator delete(void* p) noexcept { if (p) free(p); }       \
+                                                                              \
+  BL_INLINE void* operator new(size_t, const BLInternal::PlacementNew& p) noexcept { return p.ptr; } \
+  BL_INLINE void  operator delete(void*, void*) noexcept {}
+
+//! \def BL_DEFINE_ENUM_FLAGS(T)
 //!
-//! Static initialization in C++ is full of surpsises and basically nothing is
-//! guaranteed. When Blend2D is compiled as a shared library everything is fine,
-//! however, when it's compiled as a static library and user uses statically
-//! allocated Blend2D objects then the object may initialize even before the
-//! library - this tries to solve that issue.
-#if defined(__clang__) || (defined(__GNUC__) && !defined(__APPLE__))
-  #define BL_RUNTIME_INITIALIZER __attribute__((init_priority(102)))
+//! Defines operations for enumeration flags.
+#ifdef _DOXYGEN
+  #define BL_DEFINE_ENUM_FLAGS(T)
 #else
-  #define BL_RUNTIME_INITIALIZER
+  #define BL_DEFINE_ENUM_FLAGS(T)                                             \
+    static BL_INLINE constexpr T operator~(T a) noexcept {                    \
+      return T(~(std::underlying_type<T>::type)(a));                          \
+    }                                                                         \
+                                                                              \
+    static BL_INLINE constexpr T operator|(T a, T b) noexcept {               \
+      return T((std::underlying_type<T>::type)(a) |                           \
+              (std::underlying_type<T>::type)(b));                            \
+    }                                                                         \
+    static BL_INLINE constexpr T operator&(T a, T b) noexcept {               \
+      return T((std::underlying_type<T>::type)(a) &                           \
+              (std::underlying_type<T>::type)(b));                            \
+    }                                                                         \
+    static BL_INLINE constexpr T operator^(T a, T b) noexcept {               \
+      return T((std::underlying_type<T>::type)(a) ^                           \
+              (std::underlying_type<T>::type)(b));                            \
+    }                                                                         \
+                                                                              \
+    static BL_INLINE T& operator|=(T& a, T b) noexcept {                      \
+      a = T((std::underlying_type<T>::type)(a) |                              \
+            (std::underlying_type<T>::type)(b));                              \
+      return a;                                                               \
+    }                                                                         \
+    static BL_INLINE T& operator&=(T& a, T b) noexcept {                      \
+      a = T((std::underlying_type<T>::type)(a) &                              \
+            (std::underlying_type<T>::type)(b));                              \
+      return a;                                                               \
+    }                                                                         \
+    static BL_INLINE T& operator^=(T& a, T b) noexcept {                      \
+      a = T((std::underlying_type<T>::type)(a) ^                              \
+            (std::underlying_type<T>::type)(b));                              \
+      return a;                                                               \
+    }
 #endif
 
-// ============================================================================
-// [Forward Declarations]
-// ============================================================================
+//! \def BL_DEFINE_STRONG_TYPE(C, T)
+//!
+//! Defines a strong type `C` that wraps a value of `T`.
+#define BL_DEFINE_STRONG_TYPE(C, T)                                           \
+struct C {                                                                    \
+  T _v;                                                                       \
+                                                                              \
+  BL_INLINE C() = default;                                                    \
+  BL_INLINE constexpr explicit C(T x) noexcept : _v(x) {}                     \
+  BL_INLINE constexpr C(const C& other) noexcept = default;                   \
+                                                                              \
+  BL_INLINE constexpr T value() const noexcept { return _v; }                 \
+                                                                              \
+  BL_INLINE T* valuePtr() noexcept { return &_v; }                            \
+  BL_INLINE const T* valuePtr() const noexcept { return &_v; }                \
+                                                                              \
+  BL_INLINE C& operator=(T x) noexcept { _v = x; return *this; };             \
+  BL_INLINE C& operator=(const C& x) noexcept = default;                      \
+                                                                              \
+  BL_INLINE constexpr C operator+(T x) const noexcept { return C(_v + x); }   \
+  BL_INLINE constexpr C operator-(T x) const noexcept { return C(_v - x); }   \
+  BL_INLINE constexpr C operator*(T x) const noexcept { return C(_v * x); }   \
+  BL_INLINE constexpr C operator/(T x) const noexcept { return C(_v / x); }   \
+                                                                              \
+  BL_INLINE constexpr C operator+(const C& x) const noexcept { return C(_v + x._v); } \
+  BL_INLINE constexpr C operator-(const C& x) const noexcept { return C(_v - x._v); } \
+  BL_INLINE constexpr C operator*(const C& x) const noexcept { return C(_v * x._v); } \
+  BL_INLINE constexpr C operator/(const C& x) const noexcept { return C(_v / x._v); } \
+                                                                              \
+  BL_INLINE C& operator+=(T x) noexcept { _v += x; return *this; }            \
+  BL_INLINE C& operator-=(T x) noexcept { _v -= x; return *this; }            \
+  BL_INLINE C& operator*=(T x) noexcept { _v *= x; return *this; }            \
+  BL_INLINE C& operator/=(T x) noexcept { _v /= x; return *this; }            \
+                                                                              \
+  BL_INLINE C& operator+=(const C& x) noexcept { _v += x._v; return *this; }  \
+  BL_INLINE C& operator-=(const C& x) noexcept { _v -= x._v; return *this; }  \
+  BL_INLINE C& operator*=(const C& x) noexcept { _v *= x._v; return *this; }  \
+  BL_INLINE C& operator/=(const C& x) noexcept { _v /= x._v; return *this; }  \
+                                                                              \
+  BL_INLINE bool operator==(T x) const noexcept { return _v == x; }           \
+  BL_INLINE bool operator!=(T x) const noexcept { return _v != x; }           \
+  BL_INLINE bool operator> (T x) const noexcept { return _v >  x; }           \
+  BL_INLINE bool operator>=(T x) const noexcept { return _v >= x; }           \
+  BL_INLINE bool operator< (T x) const noexcept { return _v <  x; }           \
+  BL_INLINE bool operator<=(T x) const noexcept { return _v <= x; }           \
+                                                                              \
+  BL_INLINE bool operator==(const C& x) const noexcept { return _v == x._v; } \
+  BL_INLINE bool operator!=(const C& x) const noexcept { return _v != x._v; } \
+  BL_INLINE bool operator> (const C& x) const noexcept { return _v >  x._v; } \
+  BL_INLINE bool operator>=(const C& x) const noexcept { return _v >= x._v; } \
+  BL_INLINE bool operator< (const C& x) const noexcept { return _v <  x._v; } \
+  BL_INLINE bool operator<=(const C& x) const noexcept { return _v <= x._v; } \
+};
 
-struct BLRuntimeContext;
+// Internal Types
+// ==============
 
-// ============================================================================
-// [Internal Constants]
-// ============================================================================
+//! A type used to store a pack of bits (typedef to `uintptr_t`).
+//!
+//! BitWord should be equal in size to a machine word.
+typedef uintptr_t BLBitWord;
+
+// Internal Constants
+// ==================
+
+//! To make checks for APPEND operation easier.
+static constexpr BLModifyOp BL_MODIFY_OP_APPEND_START = BLModifyOp(2);
+//! Mask that can be used to check whether `BLModifyOp` has a grow hint.
+static constexpr BLModifyOp BL_MODIFY_OP_GROW_MASK = BLModifyOp(1);
+
+static BL_INLINE constexpr bool blModifyOpIsAssign(BLModifyOp modifyOp) noexcept { return modifyOp < BL_MODIFY_OP_APPEND_START; }
+static BL_INLINE constexpr bool blModifyOpIsAppend(BLModifyOp modifyOp) noexcept { return modifyOp >= BL_MODIFY_OP_APPEND_START; }
+static BL_INLINE constexpr bool blModifyOpDoesGrow(BLModifyOp modifyOp) noexcept { return (modifyOp & BL_MODIFY_OP_GROW_MASK) != 0; }
 
 //! Internal constants and limits used across the library.
-enum BLInternalConsts : uint32_t {
-  //! BLResult value that is used internally to signalize that the function
-  //! didn't succeed, but also didn't fail. This is not an error state.
-  //!
-  //! At the moment this is only used by `BLPixelConverter` when setting up
-  //! optimized conversion functions.
-  //!
-  //! \note This result code can be never propagated to the user code!
-  BL_RESULT_NOTHING = 0xFFFFFFFFu,
-
-  // --------------------------------------------------------------------------
-  // System allocator properties and some limits used by Blend2D.
-  // --------------------------------------------------------------------------
-
-  //! Host memory allocator overhead (estimated).
-  BL_ALLOC_OVERHEAD = uint32_t(sizeof(void*)) * 4,
-  //! Host memory allocator alignment (must match!).
-  BL_ALLOC_ALIGNMENT = 8,
-
-  //! Limits a doubling of a container size after the limit size [in bytes] is
-  //! reached [8MB]. After the size is reached the container will grow in [8MB]
-  //! chunks.
-  BL_ALLOC_GROW_LIMIT = 1 << 23,
-
-  // --------------------------------------------------------------------------
-  // Alloc hints are specified in bytes. Each container will be allocated to
-  // `BL_ALLOC_HINT_...` bytes initially when a first item is added
-  // to it.
-  // --------------------------------------------------------------------------
-
-  //! Initial size of BLStringImpl of a newly allocated string [in bytes].
-  BL_ALLOC_HINT_STRING = 64,
-  //! Initial size of BLArrayImpl of a newly allocated array [in bytes].
-  BL_ALLOC_HINT_ARRAY = 128,
-  //! Initial size of BLRegionImpl of a newly allocated region [in bytes].
-  BL_ALLOC_HINT_REGION = 256,
-  //! Initial size of BLPathImpl of a newly allocated path [in bytes].
-  BL_ALLOC_HINT_PATH2D = 512,
-  //! Initial size of BLGradientImpl of a newly allocated gradient [in bytes].
-  BL_ALLOC_HINT_GRADIENT = 256,
+enum : uint32_t {
+  // Target CPU Properties Known at Compile Time
+  // -------------------------------------------
 
   //! Size of a CPU cache-line or a minimum size if multiple CPUs are used.
   //!
   //! Mostly depends on architecture, we use 64 bytes by default.
   BL_CACHE_LINE_SIZE = 64,
 
-  //! To make checks for APPEND operation easier.
-  BL_MODIFY_OP_APPEND_START = 2,
-  //! Mask that can be used to check whether `BLModifyOp` has a grow hint.
-  BL_MODIFY_OP_GROW_MASK = 0x1,
+  // Blend2D Limits and System Allocator Properties
+  // ----------------------------------------------
+
+  //! Host memory allocator overhead (estimated).
+  BL_ALLOC_OVERHEAD = uint32_t(sizeof(void*)) * 4,
+  //! Host memory allocator alignment (can be lower than reality, but cannot be higher).
+  BL_ALLOC_ALIGNMENT = 8,
+
+  //! Limits a doubling of a container size after the limit size [in bytes] has reached 8MB. The container will
+  //! use a more conservative approach after the threshold has been reached.
+  BL_ALLOC_GROW_LIMIT = 1 << 23,
+
+  // Alloc Hints Used by Blend2D Containers
+  // --------------------------------------
 
   //! Minimum vertices to amortize the check of a matrix type.
   BL_MATRIX_TYPE_MINIMUM_SIZE = 16,
 
   //! Maximum number of faces per a single font collection.
-  BL_FONT_DATA_MAX_FACE_COUNT = 256
+  BL_FONT_DATA_MAX_FACE_COUNT = 256,
 
+  //! BLResult value that is used internally to signalize that the function didn't succeed, but also didn't fail.
+  //! This is not an error state. At the moment this is only used by `BLPixelConverter` when setting up optimized
+  //! conversion functions.
+  //!
+  //! \note This result code can be never propagated to the user code!
+  BL_RESULT_NOTHING = 0xFFFFFFFFu
 };
 
 //! Analysis result that describes whether an unknown input is conforming.
@@ -343,32 +428,24 @@ enum BLDataAnalysis : uint32_t {
   BL_DATA_ANALYSIS_INVALID_VALUE = 2
 };
 
-// ============================================================================
-// [Internal Functions]
-// ============================================================================
+// Internal C++ Functions
+// ======================
 
 //! Used to silence warnings about unused arguments or variables.
 template<typename... Args>
 static BL_INLINE void blUnused(Args&&...) noexcept {}
 
 template<typename T>
-struct BLInternalCastImpl { T Type; };
-
-//! Casts a public `T` type into an internal implementation/data of that type.
-//! For example `BLPathImpl` would be casted to `BLInternalPathImpl`. Used
-//! by Blend2D as a shortcut to prevent using more verbose `static_cast<>` in
-//! code that requires a lot of such casts (in most cases public API which is
-//! then casting public interfaces into an internal ones).
-template<typename T>
-constexpr typename BLInternalCastImpl<T>::Type* blInternalCast(T* something) noexcept {
-  return static_cast<typename BLInternalCastImpl<T>::Type*>(something);
+static BL_INLINE constexpr bool blTestFlag(const T& x, const T& y) noexcept {
+  return ((typename std::underlying_type<T>::type)(x & y)) != 0;
 }
 
-//! \overload
-template<typename T>
-constexpr const typename BLInternalCastImpl<T>::Type* blInternalCast(const T* something) noexcept {
-  return static_cast<const typename BLInternalCastImpl<T>::Type*>(something);
-}
+// TODO: Remove.
+template<typename T, typename F>
+static BL_INLINE void blAssignFunc(T** dst, F f) noexcept { *(void**)dst = (void*)f; }
+
+// Miscellaneous Internals
+// =======================
 
 //! Checks whether `dataAccessFlags` is valid.
 static BL_INLINE bool blDataAccessFlagsIsValid(uint32_t dataAccessFlags) noexcept {
@@ -376,52 +453,7 @@ static BL_INLINE bool blDataAccessFlagsIsValid(uint32_t dataAccessFlags) noexcep
          dataAccessFlags == BL_DATA_ACCESS_RW;
 }
 
-//! Initializes the built-in 'none' implementation.
-template<typename T>
-static BL_INLINE void blInitBuiltInNull(T* impl, uint32_t implType, uint32_t implTraits) noexcept {
-  impl->refCount = SIZE_MAX;
-  impl->implType = uint8_t(implType);
-  impl->implTraits = uint8_t(implTraits | BL_IMPL_TRAIT_NULL);
-}
-
-//! Assigns a built-in none implementation `impl` to `blNone` - a built-in
-//! array that contains all null instances provided by Blend2D. Any code that
-//! assigns to `blNone` array must use this function as it's then easy to find.
-template<typename T>
-static BL_INLINE void blAssignBuiltInNull(T* impl) noexcept {
-  *reinterpret_cast<T**>((void **)blNone + impl->implType) = impl;
-}
-
-template<typename T>
-static BL_INLINE void blCallCtor(T& t) noexcept {
-  // Only needed by MSVC as otherwise it could generate null-pointer check
-  // before calling the constructor (as null pointer is allowed). GCC and
-  // clang can emit a "-Wtautological-undefined-compare" warning and that's
-  // the main reason it's only enabled for MSVC.
-  #if defined(_MSC_VER) && !defined(__clang__)
-  BL_ASSUME(&t != nullptr);
-  #endif
-
-  new(&t) T();
-}
-
-template<typename T, typename... Args>
-static BL_INLINE void blCallCtor(T& t, Args&&... args) noexcept {
-  // Only needed by MSVC as otherwise it could generate null-pointer check
-  // before calling the constructor (as null pointer is allowed). GCC and
-  // clang can emit a "-Wtautological-undefined-compare" warning and that's
-  // the main reason it's only enabled for MSVC.
-  #if defined(_MSC_VER) && !defined(__clang__)
-  BL_ASSUME(&t != nullptr);
-  #endif
-
-  new(&t) T(std::forward<Args>(args)...);
-}
-
-template<typename T>
-static BL_INLINE void blCallDtor(T& t) noexcept {
-  t.~T();
-}
+static BL_INLINE void blPrefetchW(const void* p) { (void)p; }
 
 //! \}
 //! \endcond

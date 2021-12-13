@@ -1,43 +1,24 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_OPENTYPE_OTDEFS_P_H_INCLUDED
 #define BLEND2D_OPENTYPE_OTDEFS_P_H_INCLUDED
 
 #include "../api-internal_p.h"
 #include "../font_p.h"
-#include "../support_p.h"
+#include "../support/memops_p.h"
+#include "../support/ptrops_p.h"
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_internal_opentype
+//! \addtogroup blend2d_opentype_impl
 //! \{
 
+//! \namespace BLOpenType
 //! Low-level OpenType functionality, not exposed to users directly.
-namespace BLOpenType {
 
-// ============================================================================
-// [BLOpenType::DataRange]
-// ============================================================================
+namespace BLOpenType {
 
 //! A range that specifies offset and size of a data table or some part of it.
 struct DataRange {
@@ -51,66 +32,60 @@ struct DataRange {
   }
 };
 
-// ============================================================================
-// [BLOpenType::DataAccess]
-// ============================================================================
-
 template<size_t Size>
 struct DataAccess {};
 
 template<>
 struct DataAccess<1> {
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return blMemReadU8(data); }
+  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return BLMemOps::readU8(data); }
 
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { blMemWriteU8(data, value); }
+  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { BLMemOps::writeU8(data, value); }
 };
 
 template<>
 struct DataAccess<2> {
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return blMemReadU16<ByteOrder, Alignment>(data); }
+  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return BLMemOps::readU16<ByteOrder, Alignment>(data); }
 
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { blMemWriteU16<ByteOrder, Alignment>(data, value); }
+  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { BLMemOps::writeU16<ByteOrder, Alignment>(data, value); }
 };
 
 template<>
 struct DataAccess<3> {
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return blMemReadU24u<ByteOrder>(data); }
+  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return BLMemOps::readU24u<ByteOrder>(data); }
 
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { blMemWriteU24u<ByteOrder>(data, value); }
+  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { BLMemOps::writeU24u<ByteOrder>(data, value); }
 };
 
 template<>
 struct DataAccess<4> {
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return blMemReadU32<ByteOrder, Alignment>(data); }
+  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return BLMemOps::readU32<ByteOrder, Alignment>(data); }
 
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { blMemWriteU32<ByteOrder, Alignment>(data, value); }
+  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { BLMemOps::writeU32<ByteOrder, Alignment>(data, value); }
 };
 
 template<>
 struct DataAccess<8> {
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE uint64_t readValue(const uint8_t* data) noexcept { return blMemReadU64<ByteOrder, Alignment>(data); }
+  static BL_INLINE uint64_t readValue(const uint8_t* data) noexcept { return BLMemOps::readU64<ByteOrder, Alignment>(data); }
 
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE void writeValue(uint8_t* data, uint64_t value) noexcept { blMemWriteU64<ByteOrder, Alignment>(data, value); }
+  static BL_INLINE void writeValue(uint8_t* data, uint64_t value) noexcept { BLMemOps::writeU64<ByteOrder, Alignment>(data, value); }
 };
-
-// ============================================================================
-// [BLOpenType::DataType]
-// ============================================================================
 
 #pragma pack(push, 1)
 template<typename T, uint32_t ByteOrder, size_t Size>
 struct DataType {
   uint8_t data[Size];
+
+  BL_INLINE DataType(const DataType& other) noexcept = default;
 
   template<size_t Alignment = 1>
   BL_INLINE T value() const noexcept { return T(DataAccess<Size>::template readValue<ByteOrder, Alignment>(data));  }
@@ -159,33 +134,21 @@ typedef UInt32 F16x16;
 typedef UInt32 CheckSum;
 typedef Int64 DateTime;
 
-// ============================================================================
-// [BLOpenType::Array16]
-// ============================================================================
-
 template<typename T>
 struct Array16 {
   enum : uint32_t { kMinSize = 2 };
 
   UInt16 count;
-  BL_INLINE const T* array() const noexcept { return blOffsetPtr<const T>(this, 2); }
+  BL_INLINE const T* array() const noexcept { return BLPtrOps::offset<const T>(this, 2); }
 };
-
-// ============================================================================
-// [BLOpenType::Array32]
-// ============================================================================
 
 template<typename T>
 struct Array32 {
   enum : uint32_t { kMinSize = 4 };
 
   UInt32 count;
-  BL_INLINE const T* array() const noexcept { return blOffsetPtr<const T>(this, 4); }
+  BL_INLINE const T* array() const noexcept { return BLPtrOps::offset<const T>(this, 4); }
 };
-
-// ============================================================================
-// [BLOpenType::TagRef16]
-// ============================================================================
 
 //! Tag and offset.
 //!

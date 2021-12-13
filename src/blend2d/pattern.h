@@ -1,110 +1,110 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_PATTERN_H_INCLUDED
 #define BLEND2D_PATTERN_H_INCLUDED
 
-#include "./geometry.h"
-#include "./image.h"
-#include "./matrix.h"
-#include "./variant.h"
+#include "geometry.h"
+#include "image.h"
+#include "matrix.h"
+#include "object.h"
 
 //! \addtogroup blend2d_api_styling
 //! \{
 
-// ============================================================================
-// [BLPattern - Core]
-// ============================================================================
+//! \name BLPattern - C API
+//!
+//! \{
 
-//! Pattern [C Interface - Impl].
-struct BLPatternImpl {
+//! Pattern [Impl].
+//!
+//! The following properties are stored in BLObjectInfo:
+//!
+//!   - Pattern extend mode is stored in BLObjectInfo's 'b' field.
+//!   - Pattern matrix type is stored in BLObjectInfo's 'c' field.
+struct BLPatternImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Image used by the pattern.
   BL_TYPED_MEMBER(BLImageCore, BLImage, image);
 
-  //! Reference count.
-  volatile size_t refCount;
-  //! Impl type.
-  uint8_t implType;
-  //! Impl traits.
-  uint8_t implTraits;
-  //! Memory pool data.
-  uint16_t memPoolData;
-
-  //! Reserved, must be zero.
-  uint8_t patternType;
-  //! Pattern extend mode, see `BLExtendMode`.
-  uint8_t extendMode;
-  //! Type of the transformation matrix.
-  uint8_t matrixType;
-  //! Reserved, must be zero.
-  uint8_t reserved[1];
-
-  //! Pattern transformation matrix.
-  BLMatrix2D matrix;
   //! Image area to use.
   BLRectI area;
+  //! Pattern transformation matrix.
+  BLMatrix2D matrix;
 
   BL_HAS_TYPED_MEMBERS(BLPatternImpl)
 };
 
-//! Pattern [C Interface - Core].
-struct BLPatternCore {
-  BLPatternImpl* impl;
+//! Pattern [C API].
+struct BLPatternCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
 };
 
-// ============================================================================
-// [BLPattern - C++]
-// ============================================================================
+BL_BEGIN_C_DECLS
 
+BL_API BLResult BL_CDECL blPatternInit(BLPatternCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternInitMove(BLPatternCore* self, BLPatternCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternInitWeak(BLPatternCore* self, const BLPatternCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternInitAs(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, BLExtendMode extendMode, const BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternDestroy(BLPatternCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternReset(BLPatternCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternAssignMove(BLPatternCore* self, BLPatternCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternAssignWeak(BLPatternCore* self, const BLPatternCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternAssignDeep(BLPatternCore* self, const BLPatternCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternCreate(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, BLExtendMode extendMode, const BLMatrix2D* m) BL_NOEXCEPT_C;
+
+BL_API BLResult BL_CDECL blPatternGetImage(const BLPatternCore* self, BLImageCore* image) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternSetImage(BLPatternCore* self, const BLImageCore* image, const BLRectI* area) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternResetImage(BLPatternCore* self) BL_NOEXCEPT_C;
+
+BL_API BLResult BL_CDECL blPatternGetArea(const BLPatternCore* self, BLRectI* areaOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternSetArea(BLPatternCore* self, const BLRectI* area) BL_NOEXCEPT_C;
+
+BL_API BLExtendMode BL_CDECL blPatternGetExtendMode(const BLPatternCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API BLResult BL_CDECL blPatternSetExtendMode(BLPatternCore* self, BLExtendMode extendMode) BL_NOEXCEPT_C;
+
+BL_API BLMatrix2DType BL_CDECL blPatternGetMatrixType(const BLPatternCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API BLResult BL_CDECL blPatternGetMatrix(const BLPatternCore* self, BLMatrix2D* matrixOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPatternApplyMatrixOp(BLPatternCore* self, BLMatrix2DOp opType, const void* opData) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blPatternEquals(const BLPatternCore* a, const BLPatternCore* b) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+
+//! \}
+
+//! \name BLPattern - C++ API
+//!
+//! \{
 #ifdef __cplusplus
+
 //! Pattern [C++ API].
 class BLPattern : public BLPatternCore {
 public:
   //! \cond INTERNAL
-  static constexpr const uint32_t kImplType = BL_IMPL_TYPE_PATTERN;
+  BL_INLINE BLPatternImpl* _impl() const noexcept { return static_cast<BLPatternImpl*>(_d.impl); }
   //! \endcond
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLPattern() noexcept { this->impl = none().impl; }
-  BL_INLINE BLPattern(BLPattern&& other) noexcept { blVariantInitMove(this, &other); }
-  BL_INLINE BLPattern(const BLPattern& other) noexcept { blVariantInitWeak(this, &other); }
-  BL_INLINE explicit BLPattern(BLPatternImpl* impl) noexcept { this->impl = impl; }
+  BL_INLINE BLPattern() noexcept { blPatternInit(this); }
+  BL_INLINE BLPattern(BLPattern&& other) noexcept { blPatternInitMove(this, &other); }
+  BL_INLINE BLPattern(const BLPattern& other) noexcept { blPatternInitWeak(this, &other); }
 
-  BL_INLINE explicit BLPattern(const BLImage& image, uint32_t extendMode = BL_EXTEND_MODE_REPEAT) noexcept {
+  BL_INLINE explicit BLPattern(const BLImage& image, BLExtendMode extendMode = BL_EXTEND_MODE_REPEAT) noexcept {
     blPatternInitAs(this, &image, nullptr, extendMode, nullptr);
   }
 
-  BL_INLINE BLPattern(const BLImage& image, uint32_t extendMode, const BLMatrix2D& m) noexcept {
+  BL_INLINE BLPattern(const BLImage& image, BLExtendMode extendMode, const BLMatrix2D& m) noexcept {
     blPatternInitAs(this, &image, nullptr, extendMode, &m);
   }
 
-  BL_INLINE BLPattern(const BLImage& image, const BLRectI& area, uint32_t extendMode = BL_EXTEND_MODE_REPEAT) noexcept {
+  BL_INLINE BLPattern(const BLImage& image, const BLRectI& area, BLExtendMode extendMode = BL_EXTEND_MODE_REPEAT) noexcept {
     blPatternInitAs(this, &image, &area, extendMode, nullptr);
   }
 
-  BL_INLINE BLPattern(const BLImage& image, const BLRectI& area, uint32_t extendMode, const BLMatrix2D& m) noexcept {
+  BL_INLINE BLPattern(const BLImage& image, const BLRectI& area, BLExtendMode extendMode, const BLMatrix2D& m) noexcept {
     blPatternInitAs(this, &image, &area, extendMode, &m);
   }
 
@@ -128,14 +128,10 @@ public:
 
   BL_INLINE BLResult reset() noexcept { return blPatternReset(this); }
 
-  BL_INLINE void swap(BLPattern& other) noexcept { std::swap(this->impl, other.impl); }
+  BL_INLINE void swap(BLPattern& other) noexcept { _d.swap(other._d); }
 
   BL_INLINE BLResult assign(BLPattern&& other) noexcept { return blPatternAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLPattern& other) noexcept { return blPatternAssignWeak(this, &other); }
-
-  //! Tests whether the pattern is a built-in null instance.
-  BL_NODISCARD
-  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLPattern& other) const noexcept { return blPatternEquals(this, &other); }
@@ -145,50 +141,63 @@ public:
   //! \name Create Pattern
   //! \{
 
-  BL_INLINE BLResult create(const BLImage& image, uint32_t extendMode = BL_EXTEND_MODE_REPEAT) noexcept {
+  BL_INLINE BLResult create(const BLImage& image, BLExtendMode extendMode = BL_EXTEND_MODE_REPEAT) noexcept {
     return blPatternCreate(this, &image, nullptr, extendMode, nullptr);
   }
 
-  BL_INLINE BLResult create(const BLImage& image, uint32_t extendMode, const BLMatrix2D& m) noexcept {
+  BL_INLINE BLResult create(const BLImage& image, BLExtendMode extendMode, const BLMatrix2D& m) noexcept {
     return blPatternCreate(this, &image, nullptr, extendMode, &m);
   }
 
-  BL_INLINE BLResult create(const BLImage& image, const BLRectI& area, uint32_t extendMode = BL_EXTEND_MODE_REPEAT) noexcept {
+  BL_INLINE BLResult create(const BLImage& image, const BLRectI& area, BLExtendMode extendMode = BL_EXTEND_MODE_REPEAT) noexcept {
     return blPatternCreate(this, &image, &area, extendMode, nullptr);
   }
 
-  BL_INLINE BLResult create(const BLImage& image, const BLRectI& area, uint32_t extendMode, const BLMatrix2D& m) noexcept {
+  BL_INLINE BLResult create(const BLImage& image, const BLRectI& area, BLExtendMode extendMode, const BLMatrix2D& m) noexcept {
     return blPatternCreate(this, &image, &area, extendMode, &m);
   }
 
   //! \}
 
-  //! \name Pattern Source
+  //! \name Accessors
   //! \{
 
   BL_NODISCARD
-  BL_INLINE const BLImage& image() const noexcept { return impl->image; }
+  BL_INLINE BLImage getImage() const noexcept {
+    BLImage imageOut;
+    blPatternGetImage(this, &imageOut);
+    return imageOut;
+  }
 
   BL_NODISCARD
-  BL_INLINE const BLRectI& area() const noexcept { return impl->area; }
+  BL_INLINE BLRectI area() const noexcept {
+    BLRectI areaOut;
+    blPatternGetArea(this, &areaOut);
+    return areaOut;
+  }
 
-  BL_INLINE BLResult setImage(const BLImage& image) noexcept { return blPatternSetImage(this, &image, nullptr); }
-  BL_INLINE BLResult setImage(const BLImage& image, const BLRectI& area) noexcept { return blPatternSetImage(this, &image, &area); }
-  BL_INLINE BLResult resetImage() noexcept { return setImage(BLImage::none()); }
+  BL_INLINE BLResult setImage(const BLImageCore& image) noexcept { return blPatternSetImage(this, &image, nullptr); }
+  BL_INLINE BLResult setImage(const BLImageCore& image, const BLRectI& area) noexcept { return blPatternSetImage(this, &image, &area); }
+  BL_INLINE BLResult resetImage() noexcept { return blPatternResetImage(this); }
 
   BL_INLINE BLResult setArea(const BLRectI& area) noexcept { return blPatternSetArea(this, &area); }
   BL_INLINE BLResult resetArea() noexcept { return setArea(BLRectI(0, 0, 0, 0)); }
 
-  //! \}
-
-  //! \name Pattern Options
-  //! \{
-
   BL_NODISCARD
-  BL_INLINE uint32_t extendMode() const noexcept { return impl->extendMode; }
+  BL_INLINE BLExtendMode extendMode() const noexcept { return (BLExtendMode)_d.bField(); }
 
-  BL_INLINE BLResult setExtendMode(uint32_t extendMode) noexcept { return blPatternSetExtendMode(this, extendMode); }
-  BL_INLINE BLResult resetExtendMode() noexcept { return setExtendMode(BL_EXTEND_MODE_REPEAT); }
+  BL_INLINE BLResult setExtendMode(BLExtendMode extendMode) noexcept {
+    if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX))
+      return blTraceError(BL_ERROR_INVALID_VALUE);
+
+    _d.info.setBField(uint32_t(extendMode));
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE BLResult resetExtendMode() noexcept {
+    _d.info.setBField(uint32_t(BL_EXTEND_MODE_REPEAT));
+    return BL_SUCCESS;
+  }
 
   //! \}
 
@@ -196,23 +205,31 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE bool hasMatrix() const noexcept { return impl->matrixType != BL_MATRIX2D_TYPE_IDENTITY; }
+  BL_INLINE bool hasMatrix() const noexcept { return _d.cField() != BL_MATRIX2D_TYPE_IDENTITY; }
 
   BL_NODISCARD
-  BL_INLINE uint32_t matrixType() const noexcept { return impl->matrixType; }
+  BL_INLINE BLMatrix2DType matrixType() const noexcept { return (BLMatrix2DType)_d.cField(); }
 
   BL_NODISCARD
-  BL_INLINE const BLMatrix2D& matrix() const noexcept { return impl->matrix; }
+  BL_INLINE BLMatrix2D matrix() const noexcept {
+    BLMatrix2D matrixOut;
+    blPatternGetMatrix(this, &matrixOut);
+    return matrixOut;
+  }
+
+  BL_INLINE BLResult getMatrix(BLMatrix2D* matrixOut) const noexcept {
+    return blPatternGetMatrix(this, matrixOut);
+  }
 
   //! Applies a matrix operation to the current transformation matrix (internal).
-  BL_INLINE BLResult _applyMatrixOp(uint32_t opType, const void* opData) noexcept {
+  BL_INLINE BLResult _applyMatrixOp(BLMatrix2DOp opType, const void* opData) noexcept {
     return blPatternApplyMatrixOp(this, opType, opData);
   }
 
   //! \cond INTERNAL
   //! Applies a matrix operation to the current transformation matrix (internal).
   template<typename... Args>
-  BL_INLINE BLResult _applyMatrixOpV(uint32_t opType, Args&&... args) noexcept {
+  BL_INLINE BLResult _applyMatrixOpV(BLMatrix2DOp opType, Args&&... args) noexcept {
     double opData[] = { double(args)... };
     return blPatternApplyMatrixOp(this, opType, opData);
   }
@@ -252,11 +269,10 @@ public:
   BL_INLINE BLResult postTransform(const BLMatrix2D& m) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_POST_TRANSFORM, &m); }
 
   //! \}
-
-  BL_NODISCARD
-  static BL_INLINE const BLPattern& none() noexcept { return reinterpret_cast<const BLPattern*>(blNone)[kImplType]; }
 };
+
 #endif
+//! \}
 
 //! \}
 

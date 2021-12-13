@@ -1,25 +1,7 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_CODEC_BMPCODEC_P_H_INCLUDED
 #define BLEND2D_CODEC_BMPCODEC_P_H_INCLUDED
@@ -28,25 +10,17 @@
 #include "../image_p.h"
 #include "../imagecodec.h"
 #include "../pixelconverter.h"
-#include "../support_p.h"
+#include "../support/intops_p.h"
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_internal_codecs
+//! \addtogroup blend2d_codec_impl
 //! \{
-
-// ============================================================================
-// [Forward Declarations]
-// ============================================================================
 
 struct BLBmpFileHeader;
 struct BLBmpInfoHeader;
 
 struct BLBmpOS2InfoHeader;
 struct BLBmpWinInfoHeader;
-
-// ============================================================================
-// [BLBmpCodec - Constants]
-// ============================================================================
 
 enum BLBmpHeaderSize : uint32_t {
   BL_BMP_HEADER_SIZE_OS2_V1           = 12,
@@ -88,10 +62,6 @@ enum : uint32_t {
   BL_BMP_RLE_BACKGROUND               = 0x00000000u
 };
 
-// ============================================================================
-// [BLBmpCodec - Structs]
-// ============================================================================
-
 //! Bitmap file signature [2 Bytes].
 struct BLBmpFileSignature {
   //! Bitmap signature data - "BM".
@@ -110,8 +80,8 @@ struct BLBmpFileHeader {
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 
   BL_INLINE void byteSwap() {
-    fileSize          = blByteSwap32(fileSize);
-    imageOffset       = blByteSwap32(imageOffset);
+    fileSize          = BLIntOps::byteSwap32(fileSize);
+    imageOffset       = BLIntOps::byteSwap32(imageOffset);
   }
 };
 
@@ -136,11 +106,11 @@ struct BLBmpInfoHeader {
     uint16_t bitsPerPixel;
 
     BL_INLINE void byteSwap() noexcept {
-      headerSize      = blByteSwap32(headerSize);
-      width           = blByteSwap16(width);
-      height          = blByteSwap16(height);
-      planes          = blByteSwap16(planes);
-      bitsPerPixel    = blByteSwap16(bitsPerPixel);
+      headerSize      = BLIntOps::byteSwap32(headerSize);
+      width           = BLIntOps::byteSwap16(width);
+      height          = BLIntOps::byteSwap16(height);
+      planes          = BLIntOps::byteSwap16(planes);
+      bitsPerPixel    = BLIntOps::byteSwap16(bitsPerPixel);
     }
   };
 
@@ -216,37 +186,37 @@ struct BLBmpInfoHeader {
     uint32_t reserved;
 
     BL_INLINE void byteSwap() noexcept {
-      headerSize      = blByteSwap32(headerSize);
-      width           = blByteSwap32(width);
-      height          = blByteSwap32(height);
-      planes          = blByteSwap16(planes);
-      bitsPerPixel    = blByteSwap16(bitsPerPixel);
-      compression     = blByteSwap32(compression);
-      imageSize       = blByteSwap32(imageSize);
-      horzResolution  = blByteSwap32(horzResolution);
-      vertResolution  = blByteSwap32(vertResolution);
-      colorsUsed      = blByteSwap32(colorsUsed);
-      colorsImportant = blByteSwap32(colorsImportant);
-      rMask           = blByteSwap32(rMask);
-      gMask           = blByteSwap32(gMask);
-      bMask           = blByteSwap32(bMask);
-      aMask           = blByteSwap32(aMask);
-      colorspace      = blByteSwap32(colorspace);
-      r.x             = blByteSwap32(r.x);
-      r.y             = blByteSwap32(r.y);
-      r.z             = blByteSwap32(r.z);
-      g.x             = blByteSwap32(g.x);
-      g.y             = blByteSwap32(g.y);
-      g.z             = blByteSwap32(g.z);
-      b.x             = blByteSwap32(b.x);
-      b.y             = blByteSwap32(b.y);
-      b.z             = blByteSwap32(b.z);
-      rGamma          = blByteSwap32(rGamma);
-      gGamma          = blByteSwap32(gGamma);
-      bGamma          = blByteSwap32(bGamma);
-      intent          = blByteSwap32(intent);
-      profileData     = blByteSwap32(profileData);
-      profileSize     = blByteSwap32(profileSize);
+      headerSize      = BLIntOps::byteSwap32(headerSize);
+      width           = BLIntOps::byteSwap32(width);
+      height          = BLIntOps::byteSwap32(height);
+      planes          = BLIntOps::byteSwap16(planes);
+      bitsPerPixel    = BLIntOps::byteSwap16(bitsPerPixel);
+      compression     = BLIntOps::byteSwap32(compression);
+      imageSize       = BLIntOps::byteSwap32(imageSize);
+      horzResolution  = BLIntOps::byteSwap32(horzResolution);
+      vertResolution  = BLIntOps::byteSwap32(vertResolution);
+      colorsUsed      = BLIntOps::byteSwap32(colorsUsed);
+      colorsImportant = BLIntOps::byteSwap32(colorsImportant);
+      rMask           = BLIntOps::byteSwap32(rMask);
+      gMask           = BLIntOps::byteSwap32(gMask);
+      bMask           = BLIntOps::byteSwap32(bMask);
+      aMask           = BLIntOps::byteSwap32(aMask);
+      colorspace      = BLIntOps::byteSwap32(colorspace);
+      r.x             = BLIntOps::byteSwap32(r.x);
+      r.y             = BLIntOps::byteSwap32(r.y);
+      r.z             = BLIntOps::byteSwap32(r.z);
+      g.x             = BLIntOps::byteSwap32(g.x);
+      g.y             = BLIntOps::byteSwap32(g.y);
+      g.z             = BLIntOps::byteSwap32(g.z);
+      b.x             = BLIntOps::byteSwap32(b.x);
+      b.y             = BLIntOps::byteSwap32(b.y);
+      b.z             = BLIntOps::byteSwap32(b.z);
+      rGamma          = BLIntOps::byteSwap32(rGamma);
+      gGamma          = BLIntOps::byteSwap32(gGamma);
+      bGamma          = BLIntOps::byteSwap32(bGamma);
+      intent          = BLIntOps::byteSwap32(intent);
+      profileData     = BLIntOps::byteSwap32(profileData);
+      profileSize     = BLIntOps::byteSwap32(profileSize);
     }
   };
 
@@ -259,10 +229,6 @@ struct BLBmpInfoHeader {
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 };
 
-// ============================================================================
-// [BLBmpCodec - DecoderImpl]
-// ============================================================================
-
 struct BLBmpDecoderImpl : public BLImageDecoderImpl {
   BLImageInfo imageInfo;
   BLBmpFileHeader file;
@@ -271,23 +237,11 @@ struct BLBmpDecoderImpl : public BLImageDecoderImpl {
   uint32_t stride;
 };
 
-// ============================================================================
-// [BLBmpCodec - EncoderImpl]
-// ============================================================================
-
 struct BLBmpEncoderImpl : public BLImageEncoderImpl {};
-
-// ============================================================================
-// [BLBmpCodec - Impl]
-// ============================================================================
 
 struct BLBmpCodecImpl : public BLImageCodecImpl {};
 
-// ============================================================================
-// [BLBmpCodec - Runtime]
-// ============================================================================
-
-BL_HIDDEN BLImageCodecImpl* blBmpCodecOnInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blBmpCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
 
 //! \}
 //! \endcond

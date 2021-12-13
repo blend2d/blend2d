@@ -1,82 +1,56 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
-#include "./compop_p.h"
-
-// ============================================================================
-// [BLCompOpInfo]
-// ============================================================================
+#include "api-build_p.h"
+#include "compop_p.h"
 
 struct BLCompOpInfoGen {
-  #define F(VALUE) BL_COMP_OP_FLAG_##VALUE
+  #define F(VALUE) BLCompOpFlags::VALUE
 
   static constexpr BLCompOpInfo value(size_t op) noexcept {
-    return BLCompOpInfo {
-      op == BL_COMP_OP_SRC_OVER           ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_SRC_COPY           ? F(TYPE_B) | 0     | 0     | F(SC) | F(SA) | 0              | 0              :
-      op == BL_COMP_OP_SRC_IN             ? F(TYPE_B) | 0     | F(DA) | F(SC) | F(SA) | F(NOP_IF_DA_0) | 0              :
-      op == BL_COMP_OP_SRC_OUT            ? F(TYPE_B) | 0     | F(DA) | F(SC) | F(SA) | 0              | 0              :
-      op == BL_COMP_OP_SRC_ATOP           ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | F(NOP_IF_DA_0) | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_DST_OVER           ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | F(NOP_IF_DA_1) | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_DST_COPY           ? F(TYPE_C) | F(DC) | F(DA) | 0     | 0     | F(NOP)         | F(NOP)         :
-      op == BL_COMP_OP_DST_IN             ? F(TYPE_B) | F(DC) | F(DA) | 0     | F(SA) | 0              | F(NOP_IF_SA_1) :
-      op == BL_COMP_OP_DST_OUT            ? F(TYPE_A) | F(DC) | F(DA) | 0     | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_DST_ATOP           ? F(TYPE_B) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | 0              :
-      op == BL_COMP_OP_XOR                ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_CLEAR              ? F(TYPE_C) | 0     | 0     | 0     | 0     | F(NOP_IF_DA_0) | 0              :
+    return BLCompOpInfo { uint16_t(
+      op == BL_COMP_OP_SRC_OVER           ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_SRC_COPY           ? F(kTypeB) | F(kNone) | F(kNone) | F(kSc)   | F(kSa)   | F(kNone)       | F(kNone)       :
+      op == BL_COMP_OP_SRC_IN             ? F(kTypeB) | F(kNone) | F(kDa)   | F(kSc)   | F(kSa)   | F(kNopIfDaEq0) | F(kNone)       :
+      op == BL_COMP_OP_SRC_OUT            ? F(kTypeB) | F(kNone) | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNone)       :
+      op == BL_COMP_OP_SRC_ATOP           ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNopIfDaEq0) | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_DST_OVER           ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNopIfDaEq1) | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_DST_COPY           ? F(kTypeC) | F(kDc)   | F(kDa)   | F(kNone) | F(kNone) | F(kNop)        | F(kNop)        :
+      op == BL_COMP_OP_DST_IN             ? F(kTypeB) | F(kDc)   | F(kDa)   | F(kNone) | F(kSa)   | F(kNone)       | F(kNopIfSaEq1) :
+      op == BL_COMP_OP_DST_OUT            ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kNone) | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_DST_ATOP           ? F(kTypeB) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNone)       :
+      op == BL_COMP_OP_XOR                ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_CLEAR              ? F(kTypeC) | F(kNone) | F(kNone) | F(kNone) | F(kNone) | F(kNopIfDaEq0) | F(kNone)       :
 
-      op == BL_COMP_OP_PLUS               ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_MINUS              ? F(TYPE_C) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_MODULATE           ? F(TYPE_B) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | 0              :
-      op == BL_COMP_OP_MULTIPLY           ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | F(NOP_IF_DA_0) | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_SCREEN             ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_OVERLAY            ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_DARKEN             ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_LIGHTEN            ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_COLOR_DODGE        ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_COLOR_BURN         ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_LINEAR_BURN        ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_LINEAR_LIGHT       ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_PIN_LIGHT          ? F(TYPE_C) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_HARD_LIGHT         ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_SOFT_LIGHT         ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_DIFFERENCE         ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
-      op == BL_COMP_OP_EXCLUSION          ? F(TYPE_A) | F(DC) | F(DA) | F(SC) | F(SA) | 0              | F(NOP_IF_SA_0) :
+      op == BL_COMP_OP_PLUS               ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_MINUS              ? F(kTypeC) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_MODULATE           ? F(kTypeB) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNopIfDaEq0) | F(kNone)       :
+      op == BL_COMP_OP_MULTIPLY           ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNopIfDaEq0) | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_SCREEN             ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_OVERLAY            ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_DARKEN             ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_LIGHTEN            ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_COLOR_DODGE        ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_COLOR_BURN         ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_LINEAR_BURN        ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_LINEAR_LIGHT       ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_PIN_LIGHT          ? F(kTypeC) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_HARD_LIGHT         ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_SOFT_LIGHT         ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_DIFFERENCE         ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
+      op == BL_COMP_OP_EXCLUSION          ? F(kTypeA) | F(kDc)   | F(kDa)   | F(kSc)   | F(kSa)   | F(kNone)       | F(kNopIfSaEq0) :
 
-      op == BL_COMP_OP_INTERNAL_ALPHA_INV ? F(TYPE_C) | 0     | F(DA) | 0     | 0     | 0              | 0              : 0
-    };
+      op == BL_COMP_OP_INTERNAL_ALPHA_INV ? F(kTypeC) | F(kNone) | F(kDa)   | F(kNone) | F(kNone) | F(kNone)       | F(kNone)       : F(kNone)
+    ) };
   }
 
   #undef F
 };
 
 const BLLookupTable<BLCompOpInfo, BL_COMP_OP_INTERNAL_COUNT> blCompOpInfo =
-  blLookupTable<BLCompOpInfo, BL_COMP_OP_INTERNAL_COUNT, BLCompOpInfoGen>();
-
-// ============================================================================
-// [BLCompOpSimplifyInfo]
-// ============================================================================
+  blMakeLookupTable<BLCompOpInfo, BL_COMP_OP_INTERNAL_COUNT, BLCompOpInfoGen>();
 
 // Legend:
 //
@@ -145,28 +119,28 @@ struct BLCompOpSimplifyInfoGen {
   };
 
   static constexpr BLCompOpSimplifyInfo makeOp(uint32_t compOp, uint32_t d, uint32_t s) noexcept {
-    return BLCompOpSimplifyInfo::make(compOp, d, s, BL_COMP_OP_SOLID_ID_NONE);
+    return BLCompOpSimplifyInfo::make(compOp, d, s, BLCompOpSolidId::kNone);
   }
 
   static constexpr BLCompOpSimplifyInfo transparent(uint32_t compOp, uint32_t d, uint32_t s) noexcept {
-    return BLCompOpSimplifyInfo::make(compOp, d, s, BL_COMP_OP_SOLID_ID_TRANSPARENT);
+    return BLCompOpSimplifyInfo::make(compOp, d, s, BLCompOpSolidId::kTransparent);
   }
 
   static constexpr BLCompOpSimplifyInfo opaqueBlack(uint32_t compOp, uint32_t d, uint32_t s) noexcept {
-    return BLCompOpSimplifyInfo::make(compOp, d, s, BL_COMP_OP_SOLID_ID_OPAQUE_BLACK);
+    return BLCompOpSimplifyInfo::make(compOp, d, s, BLCompOpSolidId::kOpaqueBlack);
   }
 
   static constexpr BLCompOpSimplifyInfo opaqueWhite(uint32_t compOp, uint32_t d, uint32_t s) noexcept {
-    return BLCompOpSimplifyInfo::make(compOp, d, s, BL_COMP_OP_SOLID_ID_OPAQUE_WHITE);
+    return BLCompOpSimplifyInfo::make(compOp, d, s, BLCompOpSolidId::kOpaqueWhite);
   }
 
   static constexpr BLCompOpSimplifyInfo opaqueAlpha(uint32_t compOp, uint32_t d, uint32_t s) noexcept {
-    return BLCompOpSimplifyInfo::make(compOp, d, s, BL_COMP_OP_SOLID_ID_OPAQUE_WHITE);
+    return BLCompOpSimplifyInfo::make(compOp, d, s, BLCompOpSolidId::kOpaqueWhite);
   }
 
   // Internal Formats:
   static constexpr BLCompOpSimplifyInfo alphaInv(uint32_t d, uint32_t s) noexcept {
-    return BLCompOpSimplifyInfo::make(AlphaInv, d, s, BL_COMP_OP_SOLID_ID_OPAQUE_WHITE);
+    return BLCompOpSimplifyInfo::make(AlphaInv, d, s, BLCompOpSolidId::kOpaqueWhite);
   }
 
   // Clear
@@ -1263,11 +1237,11 @@ struct BLSimplifyInfoRecordSetGen {
 //
 // Additionally, if there is a mistake leading to recursion the compiler would catch it
 // at compile-time instead of hitting it at runtime during initialization.
-static_assert(BL_FORMAT_COUNT == 4, "Don't forget to add new formats to blCompOpSimplifyInfoTable");
+static_assert(BL_FORMAT_MAX_VALUE == 3u, "Don't forget to add new formats to blCompOpSimplifyInfoTable");
 static constexpr const BLCompOpSimplifyInfoTable blCompOpSimplifyInfoTable_ = {{
-  blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<0>>(),
-  blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<1>>(),
-  blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<2>>(),
-  blLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<3>>()
+  blMakeLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<0>>(),
+  blMakeLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<1>>(),
+  blMakeLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<2>>(),
+  blMakeLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE, BLSimplifyInfoRecordSetGen<3>>()
 }};
 const BLCompOpSimplifyInfoTable blCompOpSimplifyInfoTable = blCompOpSimplifyInfoTable_;

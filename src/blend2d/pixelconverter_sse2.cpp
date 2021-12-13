@@ -1,38 +1,19 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
+#include "api-build_p.h"
 #ifdef BL_BUILD_OPT_SSE2
 
-#include "./pixelconverter_p.h"
-#include "./simd_p.h"
-#include "./support_p.h"
+#include "pixelconverter_p.h"
+#include "simd_p.h"
+#include "support/memops_p.h"
 
 using namespace SIMD;
 
-// ============================================================================
-// [BLPixelConverter - Copy (SSE2)]
-// ============================================================================
+// PixelConverter - Copy (SSE2)
+// ============================
 
 BLResult bl_convert_copy_sse2(
   const BLPixelConverterCore* self,
@@ -64,7 +45,8 @@ BLResult bl_convert_copy_sse2(
     dstData += alignment;
     srcData += alignment;
 
-    while_nounroll (i >= 64) {
+    BL_NOUNROLL
+    while (i >= 64) {
       Vec128I p0 = v_loadu_i128(srcData +  0);
       Vec128I p1 = v_loadu_i128(srcData + 16);
       Vec128I p2 = v_loadu_i128(srcData + 32);
@@ -80,7 +62,8 @@ BLResult bl_convert_copy_sse2(
       i -= 64;
     }
 
-    while_nounroll (i >= 16) {
+    BL_NOUNROLL
+    while (i >= 16) {
       v_storea_i128(dstData, v_loadu_i128(srcData));
 
       dstData += 16;
@@ -102,9 +85,8 @@ BLResult bl_convert_copy_sse2(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Copy|Or (SSE2)]
-// ============================================================================
+// PixelConverter - Copy|Or (SSE2)
+// ===============================
 
 BLResult bl_convert_copy_or_8888_sse2(
   const BLPixelConverterCore* self,
@@ -123,7 +105,8 @@ BLResult bl_convert_copy_or_8888_sse2(
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 16) {
+    BL_NOUNROLL
+    while (i >= 16) {
       Vec128I p0 = v_loadu_i128(srcData +  0);
       Vec128I p1 = v_loadu_i128(srcData + 16);
       Vec128I p2 = v_loadu_i128(srcData + 32);
@@ -139,7 +122,8 @@ BLResult bl_convert_copy_or_8888_sse2(
       i -= 16;
     }
 
-    while_nounroll (i >= 4) {
+    BL_NOUNROLL
+    while (i >= 4) {
       Vec128I p0 = v_loadu_i128(srcData);
       v_storeu_i128(dstData, v_or(p0, fillMask));
 
@@ -148,7 +132,8 @@ BLResult bl_convert_copy_or_8888_sse2(
       i -= 4;
     }
 
-    while_nounroll (i) {
+    BL_NOUNROLL
+    while (i) {
       Vec128I p0 = v_load_i32(srcData);
       v_store_i32(dstData, v_or(p0, fillMask));
 
@@ -165,9 +150,8 @@ BLResult bl_convert_copy_or_8888_sse2(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Premultiply (SSE2)]
-// ============================================================================
+// PixelConverter - Premultiply (SSE2)
+// ===================================
 
 template<uint32_t A_Shift>
 static BL_INLINE BLResult bl_convert_premultiply_8888_template_sse2(
@@ -193,7 +177,8 @@ static BL_INLINE BLResult bl_convert_premultiply_8888_template_sse2(
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 4) {
+    BL_NOUNROLL
+    while (i >= 4) {
       Vec128I p0, p1;
 
       p0 = v_loadu_i128(srcData);
@@ -211,7 +196,8 @@ static BL_INLINE BLResult bl_convert_premultiply_8888_template_sse2(
       i -= 4;
     }
 
-    while_nounroll (i) {
+    BL_NOUNROLL
+    while (i) {
       Vec128I p0;
 
       p0 = v_load_i32(srcData);
@@ -251,9 +237,8 @@ BLResult bl_convert_premultiply_8888_trailing_alpha_sse2(
   return bl_convert_premultiply_8888_template_sse2<0>(self, dstData, dstStride, srcData, srcStride, w, h, options);
 }
 
-// ============================================================================
-// [BLPixelConverter - Unpremultiply (SSE2)]
-// ============================================================================
+// PixelConverter - Unpremultiply (SSE2)
+// =====================================
 
 template<uint32_t A_Shift>
 static BL_INLINE BLResult bl_convert_unpremultiply_8888_template_sse2(
@@ -290,7 +275,8 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_template_sse2(
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 4) {
+    BL_NOUNROLL
+    while (i >= 4) {
       Vec128I pix = v_loadu_i128(srcData);
       size_t idx0 = srcData[0 * 4 + AI];
       size_t idx1 = srcData[1 * 4 + AI];
@@ -347,7 +333,9 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_template_sse2(
     }
 
     Vec128I zero = v_zero_i128();
-    while_nounroll (i) {
+
+    BL_NOUNROLL
+    while (i) {
       Vec128I pix = v_load_i32(srcData);
       size_t idx0 = srcData[AI];
 
@@ -397,9 +385,8 @@ BLResult bl_convert_unpremultiply_8888_trailing_alpha_sse2(
   return bl_convert_unpremultiply_8888_template_sse2<0>(self, dstData, dstStride, srcData, srcStride, w, h, options);
 }
 
-// ============================================================================
-// [BLPixelConverter - RGB32 From A8/L8 (SSE2)]
-// ============================================================================
+// BLPixelConverter - RGB32 From A8/L8 (SSE2)
+// ==========================================
 
 BLResult bl_convert_8888_from_x8_sse2(
   const BLPixelConverterCore* self,
@@ -423,7 +410,8 @@ BLResult bl_convert_8888_from_x8_sse2(
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 16) {
+    BL_NOUNROLL
+    while (i >= 16) {
       Vec128I p0, p1, p2, p3;
 
       p0 = v_loadu_i128(srcData);
@@ -456,7 +444,8 @@ BLResult bl_convert_8888_from_x8_sse2(
       i -= 16;
     }
 
-    while_nounroll (i >= 4) {
+    BL_NOUNROLL
+    while (i >= 4) {
       Vec128I p0 = v_load_i32(srcData);
 
       p0 = v_interleave_lo_i8(p0, p0);
@@ -471,8 +460,9 @@ BLResult bl_convert_8888_from_x8_sse2(
       i -= 4;
     }
 
-    while_nounroll (i) {
-      blMemWriteU32u(dstData, ((uint32_t(srcData[0]) * 0x01010101u) & zeroMask32) | fillMask32);
+    BL_NOUNROLL
+    while (i) {
+      BLMemOps::writeU32u(dstData, ((uint32_t(srcData[0]) * 0x01010101u) & zeroMask32) | fillMask32);
       dstData += 4;
       srcData += 1;
       i--;

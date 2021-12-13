@@ -1,31 +1,13 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_SIMD_X86_P_H_INCLUDED
 #define BLEND2D_SIMD_X86_P_H_INCLUDED
 
-#include "./support_p.h"
-#include "./tables_p.h"
+#include "tables_p.h"
+#include "support/memops_p.h"
 
 #if defined(_MSC_VER)
   #include <intrin.h>
@@ -67,14 +49,12 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! SIMD namespace contains helper functions to access SIMD intrinsics. The
-//! names of these functions correspond to names of functions used by pipeline
-//! generator (BLPipe).
+//! SIMD namespace contains helper functions to access SIMD intrinsics. The names of these functions correspond to
+//! names of functions used by the dynamic pipeline generator.
 namespace SIMD {
 
-// ============================================================================
-// [SIMD - Features]
-// ============================================================================
+// SIMD - Features
+// ===============
 
 #if defined(BL_TARGET_OPT_AVX2)
   #define BL_TARGET_SIMD_I 256
@@ -94,35 +74,39 @@ namespace SIMD {
   #define BL_TARGET_SIMD_D 0
 #endif
 
-// ============================================================================
-// [SIMD - Types]
-// ============================================================================
+// SIMD - Types
+// ============
 
 #if defined(BL_TARGET_OPT_SSE2)
 typedef __m128i Vec128I;
 typedef __m128  Vec128F;
 typedef __m128d Vec128D;
+
+typedef BL_UNALIGNED_TYPE(__m128i, 1) Vec128I_Unaligned;
+typedef BL_UNALIGNED_TYPE(__m128 , 1) Vec128F_Unaligned;
+typedef BL_UNALIGNED_TYPE(__m128d, 1) Vec128D_Unaligned;
 #endif
 
-// 256-bit types (including integers) are accessible through AVX as AVX also
-// include conversion instructions between integer types and FP types.
+// 256-bit types (including integers) are accessible through AVX as AVX also include conversion instructions between
+// integer types and FP types.
 #if defined(BL_TARGET_OPT_AVX)
 typedef __m256i Vec256I;
 typedef __m256  Vec256F;
 typedef __m256d Vec256D;
+
+typedef BL_UNALIGNED_TYPE(__m256i, 1) Vec256I_Unaligned;
+typedef BL_UNALIGNED_TYPE(__m256 , 1) Vec256F_Unaligned;
+typedef BL_UNALIGNED_TYPE(__m256d, 1) Vec256D_Unaligned;
 #endif
 
 // Must be in anonymous namespace.
 namespace {
 
-// ============================================================================
-// [SIMD - Cast]
-// ============================================================================
+// SIMD - Cast
+// ===========
 
 template<typename Out, typename In>
-BL_INLINE const Out& v_const_as(const In* c) noexcept {
-  return *reinterpret_cast<const Out*>(c);
-}
+BL_INLINE const Out& v_const_as(const In* c) noexcept { return *reinterpret_cast<const Out*>(c); }
 
 template<typename DstT, typename SrcT>
 BL_INLINE DstT v_cast(const SrcT& x) noexcept { return x; }
@@ -156,12 +140,8 @@ template<> BL_INLINE Vec256D v_cast(const Vec256I& x) noexcept { return _mm256_c
 template<> BL_INLINE Vec256I v_cast(const Vec256D& x) noexcept { return _mm256_castpd_si256(x); }
 #endif
 
-// ============================================================================
-// [SIMD - Vec128]
-// ============================================================================
-
-// Zero Value
-// ----------
+// SIMD - Vec128 - Zero
+// ====================
 
 #if defined(BL_TARGET_OPT_SSE2)
 BL_INLINE Vec128I v_zero_i128() noexcept { return _mm_setzero_si128(); }
@@ -169,8 +149,8 @@ BL_INLINE Vec128F v_zero_f128() noexcept { return _mm_setzero_ps(); }
 BL_INLINE Vec128D v_zero_d128() noexcept { return _mm_setzero_pd(); }
 #endif
 
-// Fill Value
-// ----------
+// SIMD - Vec128 - Fill Value
+// ==========================
 
 #if defined(BL_TARGET_OPT_SSE2)
 BL_INLINE Vec128I v_fill_i128_i8(int8_t x) noexcept { return _mm_set1_epi8(x); }
@@ -206,11 +186,12 @@ BL_INLINE Vec128D v_fill_d128(double x) noexcept { return _mm_set1_pd(x); }
 BL_INLINE Vec128D v_fill_d128(double x1, double x0) noexcept { return _mm_set_pd(x1, x0); }
 #endif
 
-// Load & Store
-// ------------
+// SIMD - Vec128 - Load & Store
+// ============================
 
 #if defined(BL_TARGET_OPT_SSE2)
-BL_INLINE Vec128I v_load_i32(const void* p) noexcept { return _mm_cvtsi32_si128(int(*(BLMisalignedUInt<uint32_t, 1>::T*)(p))); }
+BL_INLINE Vec128I v_load_i16(const void* p) noexcept { return _mm_cvtsi32_si128(*static_cast<BL_UNALIGNED_TYPE(const uint16_t, 1)*>(p)); }
+BL_INLINE Vec128I v_load_i32(const void* p) noexcept { return _mm_cvtsi32_si128(*static_cast<BL_UNALIGNED_TYPE(const int, 1)*>(p)); }
 BL_INLINE Vec128F v_load_f32(const void* p) noexcept { return _mm_load_ss(static_cast<const float*>(p)); }
 BL_INLINE Vec128I v_load_i64(const void* p) noexcept { return _mm_loadl_epi64(static_cast<const Vec128I*>(p)); }
 BL_INLINE Vec128F v_load_2xf32(const void* p) noexcept { return v_cast<Vec128F>(v_load_i64(p)); }
@@ -228,6 +209,23 @@ BL_INLINE Vec128F v_loadl_2xf32(const Vec128F& x, const void* p) noexcept { retu
 BL_INLINE Vec128F v_loadh_2xf32(const Vec128F& x, const void* p) noexcept { return _mm_loadh_pi(x, static_cast<const __m64*>(p)); }
 BL_INLINE Vec128D v_loadl_f64(const Vec128D& x, const void* p) noexcept { return _mm_loadl_pd(x, static_cast<const double*>(p)); }
 BL_INLINE Vec128D v_loadh_f64(const Vec128D& x, const void* p) noexcept { return _mm_loadh_pd(x, static_cast<const double*>(p)); }
+
+#if defined(BL_TARGET_OPT_SSE4_1) && defined(_MSC_VER) && !defined(__clang__)
+// MSCV won't emit a single instruction if we use v_load_iXX() to load from memory.
+BL_INLINE Vec128I v_load_i64_i8_i16(const void* p) noexcept { return _mm_cvtepi8_epi16(*static_cast<const Vec128I_Unaligned*>(p)); }
+BL_INLINE Vec128I v_load_i64_u8_u16(const void* p) noexcept { return _mm_cvtepu8_epi16(*static_cast<const Vec128I_Unaligned*>(p)); }
+BL_INLINE Vec128I v_load_i32_i8_i32(const void* p) noexcept { return _mm_cvtepi8_epi32(*static_cast<const Vec128I_Unaligned*>(p)); }
+BL_INLINE Vec128I v_load_i32_u8_u32(const void* p) noexcept { return _mm_cvtepu8_epi32(*static_cast<const Vec128I_Unaligned*>(p)); }
+BL_INLINE Vec128I v_load_i16_i8_i64(const void* p) noexcept { return _mm_cvtepi8_epi64(*static_cast<const Vec128I_Unaligned*>(p)); }
+BL_INLINE Vec128I v_load_i16_u8_u64(const void* p) noexcept { return _mm_cvtepu8_epi64(*static_cast<const Vec128I_Unaligned*>(p)); }
+#elif defined(BL_TARGET_OPT_SSE4_1)
+BL_INLINE Vec128I v_load_i64_i8_i16(const void* p) noexcept { return _mm_cvtepi8_epi16(v_load_i64(p)); }
+BL_INLINE Vec128I v_load_i64_u8_u16(const void* p) noexcept { return _mm_cvtepu8_epi16(v_load_i64(p)); }
+BL_INLINE Vec128I v_load_i32_i8_i32(const void* p) noexcept { return _mm_cvtepi8_epi32(v_load_i32(p)); }
+BL_INLINE Vec128I v_load_i32_u8_u32(const void* p) noexcept { return _mm_cvtepu8_epi32(v_load_i32(p)); }
+BL_INLINE Vec128I v_load_i16_i8_i64(const void* p) noexcept { return _mm_cvtepi8_epi64(v_load_i16(p)); }
+BL_INLINE Vec128I v_load_i16_u8_u64(const void* p) noexcept { return _mm_cvtepu8_epi64(v_load_i16(p)); }
+#endif
 
 #if defined(BL_TARGET_OPT_AVX2)
 BL_INLINE Vec128I v_load_i128_mask32(const void* p, const Vec128I& mask) noexcept { return _mm_maskload_epi32(static_cast<const int*>(p), mask); }
@@ -267,8 +265,8 @@ BL_INLINE void v_storeu_128f_mask32(void* p, const Vec128F& x, const Vec128F& ma
 BL_INLINE void v_storeu_128d_mask64(void* p, const Vec128D& x, const Vec128D& mask) noexcept { _mm_maskstore_pd(static_cast<double*>(p), v_cast<Vec128I>(mask), x); }
 #endif
 
-// Insert & Extract
-// ----------------
+// SIMD - Vec128 - Insert & Extract
+// ================================
 
 #if defined(BL_TARGET_OPT_SSE4_1)
 template<uint32_t I>
@@ -279,20 +277,20 @@ template<uint32_t I>
 BL_INLINE Vec128I v_insert_u32(const Vec128I& x, uint32_t y) noexcept { return _mm_insert_epi32(x, int(y), I); }
 
 template<uint32_t I>
-BL_INLINE Vec128I v_insertm_u8(const Vec128I& x, const void* p) noexcept { return _mm_insert_epi8(x, blMemReadU8(p), I); }
+BL_INLINE Vec128I v_insertm_u8(const Vec128I& x, const void* p) noexcept { return _mm_insert_epi8(x, BLMemOps::readU8(p), I); }
 template<uint32_t I>
-BL_INLINE Vec128I v_insertm_u16(const Vec128I& x, const void* p) noexcept { return _mm_insert_epi16(x, blMemReadU16u(p), I); }
+BL_INLINE Vec128I v_insertm_u16(const Vec128I& x, const void* p) noexcept { return _mm_insert_epi16(x, BLMemOps::readU16u(p), I); }
 template<uint32_t I>
-BL_INLINE Vec128I v_insertm_u32(const Vec128I& x, const void* p) noexcept { return _mm_insert_epi32(x, blMemReadU32u(p), I); }
+BL_INLINE Vec128I v_insertm_u32(const Vec128I& x, const void* p) noexcept { return _mm_insert_epi32(x, BLMemOps::readU32u(p), I); }
 
 // Convenience function used by RGB24 fetchers.
 template<uint32_t I>
 BL_INLINE Vec128I v_insertm_u24(const Vec128I& x, const void* p) noexcept {
   const uint8_t* p8 = static_cast<const uint8_t*>(p);
   if ((I & 0x1) == 0)
-    return _mm_insert_epi8(_mm_insert_epi16(x, blMemReadU16u(p8), I / 2), blMemReadU8(p8 + 2), I + 2);
+    return _mm_insert_epi8(_mm_insert_epi16(x, BLMemOps::readU16u(p8), I / 2), BLMemOps::readU8(p8 + 2), I + 2);
   else
-    return _mm_insert_epi16(_mm_insert_epi8(x, blMemReadU8(p8), I), blMemReadU16u(p8 + 1), (I + 1) / 2);
+    return _mm_insert_epi16(_mm_insert_epi8(x, BLMemOps::readU8(p8), I), BLMemOps::readU16u(p8 + 1), (I + 1) / 2);
 }
 
 template<uint32_t I>
@@ -303,8 +301,8 @@ template<uint32_t I>
 BL_INLINE uint32_t v_extract_u32(const Vec128I& x) noexcept { return uint32_t(_mm_extract_epi32(x, I)); }
 #endif
 
-// Conversion
-// ----------
+// SIMD - Vec128 - Conversion
+// ==========================
 
 #if defined(BL_TARGET_OPT_SSE2)
 BL_INLINE Vec128I v_i128_from_i32(int32_t x) noexcept { return _mm_cvtsi32_si128(int(x)); }
@@ -386,8 +384,8 @@ BL_INLINE Vec128D v_cvt_2xf32_f64(const Vec128F& x) noexcept { return _mm_cvtps_
 
 #endif
 
-// Shuffling & Permutations
-// ------------------------
+// SIMD - Vec128 - Shuffling & Permutations
+// ========================================
 
 #if defined(BL_TARGET_OPT_SSSE3)
 BL_INLINE Vec128I v_shuffle_i8(const Vec128I& x, const Vec128I& y) noexcept { return _mm_shuffle_epi8(x, y); }
@@ -481,8 +479,8 @@ BL_INLINE Vec128F v_broadcast_f128_64(const void* p) noexcept { return v_dupl_2x
 BL_INLINE Vec128D v_broadcast_d128_64(const void* p) noexcept { return v_dupl_f64(v_load_f64(p)); }
 #endif
 
-// Bitwise Operations & Masking
-// ----------------------------
+// SIMD - Vec128 - Bitwise Operations & Masking
+// ============================================
 
 #if defined(BL_TARGET_OPT_SSE2)
 BL_INLINE Vec128I v_or(const Vec128I& x, const Vec128I& y) noexcept { return _mm_or_si128(x, y); }
@@ -525,6 +523,12 @@ template<uint8_t N_BITS> BL_INLINE Vec128I v_sra_i32(const Vec128I& x) noexcept 
 template<uint8_t N_BYTES> BL_INLINE Vec128I v_sllb_i128(const Vec128I& x) noexcept { return N_BYTES ? _mm_slli_si128(x, N_BYTES) : x; }
 template<uint8_t N_BYTES> BL_INLINE Vec128I v_srlb_i128(const Vec128I& x) noexcept { return N_BYTES ? _mm_srli_si128(x, N_BYTES) : x; }
 
+#if defined(BL_TARGET_OPT_SSE4_1)
+BL_INLINE bool v_test_zero(const Vec128I& x) noexcept { return _mm_testz_si128(x, x); }
+#else
+BL_INLINE bool v_test_zero(const Vec128I& x) noexcept { return !_mm_movemask_epi8(_mm_cmpeq_epi8(x, _mm_setzero_si128())); }
+#endif
+
 BL_INLINE bool v_test_mask_i8(const Vec128I& x, uint32_t bits0_15) noexcept { return _mm_movemask_epi8(v_cast<Vec128I>(x)) == int(bits0_15); }
 BL_INLINE bool v_test_mask_i32(const Vec128I& x, uint32_t bits0_3) noexcept { return _mm_movemask_ps(v_cast<Vec128F>(x)) == int(bits0_3); }
 BL_INLINE bool v_test_mask_i64(const Vec128I& x, uint32_t bits0_1) noexcept { return _mm_movemask_pd(v_cast<Vec128D>(x)) == int(bits0_1); }
@@ -533,8 +537,8 @@ BL_INLINE bool v_test_mask_f32(const Vec128F& x, uint32_t bits0_3) noexcept { re
 BL_INLINE bool v_test_mask_f64(const Vec128D& x, uint32_t bits0_1) noexcept { return _mm_movemask_pd(v_cast<Vec128D>(x)) == int(bits0_1); }
 #endif
 
-// Integer Packing & Unpacking
-// ---------------------------
+// SIMD - Vec128 - Integer Packing & Unpacking
+// ===========================================
 
 #if defined(BL_TARGET_OPT_SSE2)
 BL_INLINE Vec128I v_packs_i16_i8(const Vec128I& x, const Vec128I& y) noexcept { return _mm_packs_epi16(x, y); }
@@ -579,18 +583,18 @@ BL_INLINE Vec128I v_packz_u32_u16(const Vec128I& x) noexcept { return v_packs_i3
 BL_INLINE Vec128I v_packz_u32_u16(const Vec128I& x, const Vec128I& y) noexcept { return v_packs_i32_u16(x, y); }
 #else
 BL_INLINE Vec128I v_packz_u32_u16(const Vec128I& x) noexcept {
-  return v_shuffle_i8(x, v_const_as<Vec128I>(blCommonTable.i128_pshufb_u32_to_u16_lo));
+  return v_shuffle_i8(x, v_const_as<Vec128I>(&blCommonTable.i128_pshufb_u32_to_u16_lo));
 }
 
 BL_INLINE Vec128I v_packz_u32_u16(const Vec128I& x, const Vec128I& y) noexcept {
-  Vec128I xLo = v_shuffle_i8(x, v_const_as<Vec128I>(blCommonTable.i128_pshufb_u32_to_u16_lo));
-  Vec128I yLo = v_shuffle_i8(y, v_const_as<Vec128I>(blCommonTable.i128_pshufb_u32_to_u16_lo));
+  Vec128I xLo = v_shuffle_i8(x, v_const_as<Vec128I>(&blCommonTable.i128_pshufb_u32_to_u16_lo));
+  Vec128I yLo = v_shuffle_i8(y, v_const_as<Vec128I>(&blCommonTable.i128_pshufb_u32_to_u16_lo));
   return _mm_unpacklo_epi64(xLo, yLo);
 }
 #endif
 
 #if defined(BL_TARGET_OPT_SSSE3)
-BL_INLINE Vec128I v_packz_u32_u8(const Vec128I& x) noexcept { return v_shuffle_i8(x, v_const_as<Vec128I>(blCommonTable.i128_pshufb_u32_to_u8_lo)); }
+BL_INLINE Vec128I v_packz_u32_u8(const Vec128I& x) noexcept { return v_shuffle_i8(x, v_const_as<Vec128I>(&blCommonTable.i128_pshufb_u32_to_u8_lo)); }
 #else
 BL_INLINE Vec128I v_packz_u32_u8(const Vec128I& x) noexcept { return v_packs_i16_u8(v_packs_i32_i16(x)); }
 #endif
@@ -613,8 +617,8 @@ BL_INLINE Vec128I v_unpack_hi_u8_u16(const Vec128I& x) noexcept { return _mm_unp
 BL_INLINE Vec128I v_unpack_hi_u16_u32(const Vec128I& x) noexcept { return _mm_unpackhi_epi16(x, _mm_setzero_si128()); }
 BL_INLINE Vec128I v_unpack_hi_u32_u64(const Vec128I& x) noexcept { return _mm_unpackhi_epi32(x, _mm_setzero_si128()); }
 
-// Integer Operations
-// ------------------
+// SIMD - Vec128 - Integer Operations
+// ==================================
 
 #if defined(BL_TARGET_OPT_SSE2)
 BL_INLINE Vec128I v_add_i8(const Vec128I& x, const Vec128I& y) noexcept { return _mm_add_epi8(x, y); }
@@ -699,13 +703,13 @@ BL_INLINE Vec128I v_abs_i32(const Vec128I& x) noexcept { Vec128I y = v_sra_i32<3
 #endif
 
 BL_INLINE Vec128I v_div255_u16(const Vec128I& x) noexcept {
-  Vec128I y = v_add_i16(x, v_const_as<Vec128I>(blCommonTable.i128_0080008000800080));
-  return v_mulh_u16(y, v_const_as<Vec128I>(blCommonTable.i128_0101010101010101));
+  Vec128I y = v_add_i16(x, v_const_as<Vec128I>(&blCommonTable.i128_0080008000800080));
+  return v_mulh_u16(y, v_const_as<Vec128I>(&blCommonTable.i128_0101010101010101));
 }
 #endif
 
-// Floating Point Operations
-// -------------------------
+// SIMD - Vec128 - Floating Point Operations
+// =========================================
 
 #if defined(BL_TARGET_OPT_SSE2)
 BL_INLINE Vec128F s_add_f32(const Vec128F& x, const Vec128F& y) noexcept { return _mm_add_ss(x, y); }
@@ -767,12 +771,8 @@ BL_INLINE Vec128F v_cmp_lt_f32(const Vec128F& x, const Vec128F& y) noexcept { re
 BL_INLINE Vec128D v_cmp_lt_f64(const Vec128D& x, const Vec128D& y) noexcept { return _mm_cmplt_pd(x, y); }
 #endif
 
-// ============================================================================
-// [SIMD::Vec256]
-// ============================================================================
-
-// Zero Value
-// ----------
+// SIMD - Vec256 - Zero Value
+// ==========================
 
 #if defined(BL_TARGET_OPT_AVX)
 BL_INLINE Vec256I v_zero_i256() noexcept { return _mm256_setzero_si256(); }
@@ -780,8 +780,8 @@ BL_INLINE Vec256F v_zero_f256() noexcept { return _mm256_setzero_ps(); }
 BL_INLINE Vec256D v_zero_d256() noexcept { return _mm256_setzero_pd(); }
 #endif
 
-// Fill Value
-// ----------
+// SIMD - Vec256 - Fill Value
+// ==========================
 
 #if defined(BL_TARGET_OPT_AVX2)
 BL_INLINE Vec256I v_fill_i256_i8(int8_t x) noexcept { return _mm256_set1_epi8(x); }
@@ -797,7 +797,6 @@ BL_INLINE Vec256I v_fill_i256_i64(int64_t x) noexcept { return _mm256_set1_epi64
 #else
 BL_INLINE Vec256I v_fill_i256_i64(int64_t x) noexcept { return v_fill_i256_i32(int32_t(uint64_t(x) >> 32), int32_t(x & 0xFFFFFFFFu)); }
 #endif
-
 
 BL_INLINE Vec256I v_fill_i256_i64(int64_t x1, int64_t x0) noexcept {
   return v_fill_i256_i32(int32_t(uint64_t(x1) >> 32), int32_t(x1 & 0xFFFFFFFFu),
@@ -853,8 +852,8 @@ BL_INLINE Vec256D v_fill_d256(double x1, double x0) noexcept { return _mm256_set
 BL_INLINE Vec256D v_fill_d256(double x3, double x2, double x1, double x0) noexcept { return _mm256_set_pd(x3, x2, x1, x0); }
 #endif
 
-// Load & Store
-// ------------
+// SIMD - Vec256 - Load & Store
+// ============================
 
 #if defined(BL_TARGET_OPT_AVX2)
 BL_INLINE Vec256I v_load_i256_32(const void* p) noexcept { return v_cast<Vec256I>(v_load_i32(p)); }
@@ -866,6 +865,24 @@ BL_INLINE Vec256I v_loadu_i256(const void* p) noexcept { return _mm256_loadu_si2
 
 BL_INLINE Vec256I v_loadu_i256_mask32(const void* p, const Vec256I& mask) noexcept { return _mm256_maskload_epi32(static_cast<const int*>(p), mask); }
 BL_INLINE Vec256I v_loadu_i256_mask64(const void* p, const Vec256I& mask) noexcept { return _mm256_maskload_epi64(static_cast<const long long*>(p), mask); }
+
+BL_INLINE Vec256I v_loada_i128_i8_i16(const void* p) noexcept { return _mm256_cvtepi8_epi16(*static_cast<const Vec128I*>(p)); }
+BL_INLINE Vec256I v_loadu_i128_i8_i16(const void* p) noexcept { return _mm256_cvtepi8_epi16(*static_cast<const Vec128I_Unaligned*>(p)); }
+BL_INLINE Vec256I v_loada_i128_u8_u16(const void* p) noexcept { return _mm256_cvtepu8_epi16(*static_cast<const Vec128I*>(p)); }
+BL_INLINE Vec256I v_loadu_i128_u8_u16(const void* p) noexcept { return _mm256_cvtepu8_epi16(*static_cast<const Vec128I_Unaligned*>(p)); }
+
+// MSCV won't emit a single instruction if we use v_load_iXX() to load from memory.
+#if defined(_MSC_VER) && !defined(__clang__)
+BL_INLINE Vec256I v_load_i64_i8_i32(const void* p) noexcept { return _mm256_cvtepi8_epi32(*static_cast<const Vec128I_Unaligned*>(p)); }
+BL_INLINE Vec256I v_load_i64_u8_u32(const void* p) noexcept { return _mm256_cvtepu8_epi32(*static_cast<const Vec128I_Unaligned*>(p)); }
+BL_INLINE Vec256I v_load_i32_i8_i64(const void* p) noexcept { return _mm256_cvtepi8_epi64(*static_cast<const Vec128I_Unaligned*>(p)); }
+BL_INLINE Vec256I v_load_i32_u8_u64(const void* p) noexcept { return _mm256_cvtepu8_epi64(*static_cast<const Vec128I_Unaligned*>(p)); }
+#else
+BL_INLINE Vec256I v_load_i64_i8_i32(const void* p) noexcept { return _mm256_cvtepi8_epi32(v_load_i64(p)); }
+BL_INLINE Vec256I v_load_i64_u8_u32(const void* p) noexcept { return _mm256_cvtepu8_epi32(v_load_i64(p)); }
+BL_INLINE Vec256I v_load_i32_i8_i64(const void* p) noexcept { return _mm256_cvtepi8_epi64(v_load_i32(p)); }
+BL_INLINE Vec256I v_load_i32_u8_u64(const void* p) noexcept { return _mm256_cvtepu8_epi64(v_load_i32(p)); }
+#endif
 
 BL_INLINE void v_store_i32(void* p, const Vec256I& x) noexcept { v_store_i32(p, v_cast<Vec128I>(x)); }
 BL_INLINE void v_store_i64(void* p, const Vec256I& x) noexcept { v_store_i64(p, v_cast<Vec128I>(x)); }
@@ -916,8 +933,8 @@ BL_INLINE void v_storeu_256f_mask32(void* p, const Vec256F& x, const Vec256F& ma
 BL_INLINE void v_storeu_256d_mask64(void* p, const Vec256D& x, const Vec256D& mask) noexcept { _mm256_maskstore_pd(static_cast<double*>(p), v_cast<Vec256I>(mask), x); }
 #endif
 
-// Insert & Extract
-// ----------------
+// SIMD - Vec256 - Insert & Extract
+// ================================
 
 #if defined(BL_TARGET_OPT_AVX2)
 template<uint32_t I>
@@ -928,11 +945,11 @@ template<uint32_t I>
 BL_INLINE Vec256I v_insert_u32(const Vec256I& x, uint32_t y) noexcept { return _mm256_insert_epi32(x, y, I); }
 
 template<uint32_t I>
-BL_INLINE Vec256I v_insertm_u8(const Vec256I& x, const void* p) noexcept { return _mm256_insert_epi8(x, blMemReadU8(p), I); }
+BL_INLINE Vec256I v_insertm_u8(const Vec256I& x, const void* p) noexcept { return _mm256_insert_epi8(x, BLMemOps::readU8(p), I); }
 template<uint32_t I>
-BL_INLINE Vec256I v_insertm_u16(const Vec256I& x, const void* p) noexcept { return _mm256_insert_epi16(x, blMemReadU16u(p), I); }
+BL_INLINE Vec256I v_insertm_u16(const Vec256I& x, const void* p) noexcept { return _mm256_insert_epi16(x, BLMemOps::readU16u(p), I); }
 template<uint32_t I>
-BL_INLINE Vec256I v_insertm_u32(const Vec256I& x, const void* p) noexcept { return _mm256_insert_epi32(x, blMemReadU32u(p), I); }
+BL_INLINE Vec256I v_insertm_u32(const Vec256I& x, const void* p) noexcept { return _mm256_insert_epi32(x, BLMemOps::readU32u(p), I); }
 
 template<uint32_t I>
 BL_INLINE uint32_t v_extract_u8(const Vec256I& x) noexcept { return uint32_t(_mm256_extract_epi8(x, I)); }
@@ -942,8 +959,8 @@ template<uint32_t I>
 BL_INLINE uint32_t v_extract_u32(const Vec256I& x) noexcept { return uint32_t(_mm256_extract_epi32(x, I)); }
 #endif
 
-// Conversion
-// ----------
+// SIMD - Vec256 - Conversion
+// ==========================
 
 #if defined(BL_TARGET_OPT_AVX)
 BL_INLINE int32_t v_get_i32(const Vec256I& x) noexcept { return v_get_i32(v_cast<Vec128I>(x)); }
@@ -985,8 +1002,8 @@ BL_INLINE Vec128I v_cvt_f64_i32(const Vec256D& x) noexcept { return _mm256_cvtpd
 BL_INLINE Vec128I v_cvtt_f64_i32(const Vec256D& x) noexcept { return _mm256_cvttpd_epi32(x); }
 #endif
 
-// Shuffling & Permutations
-// ------------------------
+// SIMD - Vec256 - Shuffling & Permutations
+// ========================================
 
 #if defined(BL_TARGET_OPT_AVX2)
 BL_INLINE Vec256I v_shuffle_i8(const Vec256I& x, const Vec256I& y) noexcept { return _mm256_shuffle_epi8(x, y); }
@@ -1128,8 +1145,8 @@ BL_INLINE Vec256D v_broadcast_d256_64(const void* p) noexcept { return _mm256_br
 BL_INLINE Vec256D v_broadcast_d256_128(const void* p) noexcept { return _mm256_broadcast_pd(static_cast<const __m128d*>(p)); }
 #endif
 
-// Bitwise Operations & Masking
-// ----------------------------
+// SIMD - Vec256 - Bitwise Operations & Masking
+// ============================================
 
 #if defined(BL_TARGET_OPT_AVX2)
 BL_INLINE Vec256I v_or(const Vec256I& x, const Vec256I& y) noexcept { return _mm256_or_si256(x, y); }
@@ -1175,12 +1192,14 @@ BL_INLINE Vec256D v_nand(const Vec256D& x, const Vec256D& y) noexcept { return _
 BL_INLINE Vec256F v_blend_mask(const Vec256F& x, const Vec256F& y, const Vec256F& mask) noexcept { return v_or(v_nand(mask, x), v_and(y, mask)); }
 BL_INLINE Vec256D v_blend_mask(const Vec256D& x, const Vec256D& y, const Vec256D& mask) noexcept { return v_or(v_nand(mask, x), v_and(y, mask)); }
 
+BL_INLINE bool v_test_zero(const Vec256I& x) noexcept { return _mm256_testz_si256(x, x); }
+
 BL_INLINE bool v_test_mask_f32(const Vec256F& x, int bits0_7) noexcept { return _mm256_movemask_ps(x) == bits0_7; }
 BL_INLINE bool v_test_mask_f64(const Vec256D& x, int bits0_3) noexcept { return _mm256_movemask_pd(x) == bits0_3; }
 #endif
 
-// Integer Packing & Unpacking
-// ---------------------------
+// SIMD - Vec256 - Integer Packing & Unpacking
+// ===========================================
 
 #if defined(BL_TARGET_OPT_AVX2)
 BL_INLINE Vec256I v_packs_i16_i8(const Vec256I& x) noexcept { return _mm256_packs_epi16(x, x); }
@@ -1212,8 +1231,8 @@ BL_INLINE Vec256I v_unpack256_u16_u64(const Vec128I& x) noexcept { return _mm256
 BL_INLINE Vec256I v_unpack256_u32_u64(const Vec128I& x) noexcept { return _mm256_cvtepu32_epi64(x); }
 #endif
 
-// Integer Operations
-// ------------------
+// SIMD - Vec256 - Integer Operations
+// ==================================
 
 #if defined(BL_TARGET_OPT_AVX2)
 BL_INLINE Vec256I v_add_i8(const Vec256I& x, const Vec256I& y) noexcept { return _mm256_add_epi8(x, y); }
@@ -1264,13 +1283,13 @@ BL_INLINE Vec256I v_cmp_gt_i16(const Vec256I& x, const Vec256I& y) noexcept { re
 BL_INLINE Vec256I v_cmp_gt_i32(const Vec256I& x, const Vec256I& y) noexcept { return _mm256_cmpgt_epi32(x, y); }
 
 BL_INLINE Vec256I v_div255_u16(const Vec256I& x) noexcept {
-  Vec256I y = v_add_i16(x, v_const_as<Vec256I>(blCommonTable.i256_0080008000800080));
-  return v_mulh_u16(y, v_const_as<Vec256I>(blCommonTable.i256_0101010101010101));
+  Vec256I y = v_add_i16(x, v_const_as<Vec256I>(&blCommonTable.i256_0080008000800080));
+  return v_mulh_u16(y, v_const_as<Vec256I>(&blCommonTable.i256_0101010101010101));
 }
 #endif
 
-// Floating Point Operations
-// -------------------------
+// SIMD - Vec256 - Floating Point Operations
+// =========================================
 
 #if defined(BL_TARGET_OPT_AVX)
 BL_INLINE Vec256F s_add_f32(const Vec256F& x, const Vec256F& y) noexcept { return v_cast<Vec256F>(s_add_f32(v_cast<Vec128F>(x), v_cast<Vec128F>(y))); }

@@ -1,40 +1,19 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_OPENTYPE_OTCMAP_P_H_INCLUDED
 #define BLEND2D_OPENTYPE_OTCMAP_P_H_INCLUDED
 
 #include "../opentype/otdefs_p.h"
+#include "../support/ptrops_p.h"
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_internal_opentype
+//! \addtogroup blend2d_opentype_impl
 //! \{
 
 namespace BLOpenType {
-
-// ============================================================================
-// [BLOpenType::CMapTable]
-// ============================================================================
 
 //! OpenType 'cmap' table.
 //!
@@ -42,9 +21,8 @@ namespace BLOpenType {
 //!   - https://docs.microsoft.com/en-us/typography/opentype/spec/cmap
 //!   - https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6cmap.html
 //!
-//! Some names inside this table do not match 1:1 specifications of Apple and
-//! MS as they diverge as well. In general the naming was normalized to be
-//! consistent in the following:
+//! Some names inside this table do not match 1:1 specifications of Apple and MS as they diverge as well. In general
+//! the naming was normalized to be consistent in the following:
 //!   - `first` - First character or glyph included in the set.
 //!   - `last`  - Last character or glyph included in the set.
 //!   - `end`   - First character or glyph excluded from the set.
@@ -93,8 +71,8 @@ struct CMapTable {
     UInt16 glyphIdArray[];
     */
 
-    BL_INLINE const SubHeader* subHeaderArray() const noexcept { return blOffsetPtr<const SubHeader>(this, sizeof(Format2)); }
-    BL_INLINE const UInt16* glyphIdArray(size_t nSub) const noexcept { return blOffsetPtr<const UInt16>(this, sizeof(Format2) + nSub * sizeof(SubHeader)); }
+    BL_INLINE const SubHeader* subHeaderArray() const noexcept { return BLPtrOps::offset<const SubHeader>(this, sizeof(Format2)); }
+    BL_INLINE const UInt16* glyphIdArray(size_t nSub) const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(Format2) + nSub * sizeof(SubHeader)); }
   };
 
   struct Format4 {
@@ -116,11 +94,11 @@ struct CMapTable {
     UInt16 glyphIdArray[];
     */
 
-    BL_INLINE const UInt16* lastCharArray() const noexcept { return blOffsetPtr<const UInt16>(this, sizeof(*this)); }
-    BL_INLINE const UInt16* firstCharArray(size_t numSeg) const noexcept { return blOffsetPtr<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 2u); }
-    BL_INLINE const UInt16* idDeltaArray(size_t numSeg) const noexcept { return blOffsetPtr<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 4u); }
-    BL_INLINE const UInt16* idOffsetArray(size_t numSeg) const noexcept { return blOffsetPtr<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 6u); }
-    BL_INLINE const UInt16* glyphIdArray(size_t numSeg) const noexcept { return blOffsetPtr<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 8u); }
+    BL_INLINE const UInt16* lastCharArray() const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(*this)); }
+    BL_INLINE const UInt16* firstCharArray(size_t numSeg) const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 2u); }
+    BL_INLINE const UInt16* idDeltaArray(size_t numSeg) const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 4u); }
+    BL_INLINE const UInt16* idOffsetArray(size_t numSeg) const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 6u); }
+    BL_INLINE const UInt16* glyphIdArray(size_t numSeg) const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 8u); }
   };
 
   struct Format6 {
@@ -135,7 +113,7 @@ struct CMapTable {
     UInt16 glyphIdArray[count];
     */
 
-    BL_INLINE const UInt16* glyphIdArray() const noexcept { return blOffsetPtr<const UInt16>(this, sizeof(Format6)); }
+    BL_INLINE const UInt16* glyphIdArray() const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(Format6)); }
   };
 
   //! This format is dead and it's not supported by Blend2D [only defined for reference].
@@ -207,10 +185,6 @@ struct CMapTable {
   Array16<Encoding> encodings;
 };
 
-// ============================================================================
-// [BLOpenType::CMapEncoding]
-// ============================================================================
-
 struct CMapEncoding {
   //! Offset to get the sub-table of this encoding.
   uint32_t offset;
@@ -219,10 +193,6 @@ struct CMapEncoding {
 
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 };
-
-// ============================================================================
-// [BLOpenType::CMapData]
-// ============================================================================
 
 //! Character to glyph mapping data for making it easier to use `CMapTable`.
 struct CMapData {
@@ -234,22 +204,19 @@ struct CMapData {
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 };
 
-// ============================================================================
-// [BLOpenType::CMapImpl]
-// ============================================================================
-
 namespace CMapImpl {
 
-//! Validate a CMapTable::Encoding subtable of any format at `subTableOffset`.
-//! On success a valid `CMapEncoding` is written to `encodingOut`, otherwise
-//! an error is returned and `encodingOut` is kept unchanged.
+//! Validates a CMapTable::Encoding subtable of any format at `subTableOffset`. On success a valid `CMapEncoding`
+//! is written to `encodingOut`, otherwise an error is returned and `encodingOut` is kept unchanged.
 BL_HIDDEN BLResult validateSubTable(BLFontTable cmapTable, uint32_t subTableOffset, uint32_t& formatOut, CMapEncoding& encodingOut) noexcept;
 
-//! Find the best encoding in the provided 'cmap' and store this information
-//! into the given `faceI` instance. The function will return `BL_SUCCESS` even
-//! if there is no encoding to be used, however, in such case the character to
-//! glyph mapping feature will not be available to the users of this font-face.
-BL_HIDDEN BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept;
+//! Populates character coverage of the given font-face into `out` bit-set.
+BL_HIDDEN BLResult populateCharacterCoverage(const OTFaceImpl* faceI, BLBitSet* out) noexcept;
+
+//! Tries to find the best encoding in the provided 'cmap' and store this information into the given `faceI`
+//! instance. The function will return `BL_SUCCESS` even if there is no encoding to be used, however, in such
+//! case the character to glyph mapping feature will not be available to the users of this font-face.
+BL_HIDDEN BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept;
 
 } // {CMapImpl}
 

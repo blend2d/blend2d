@@ -1,57 +1,37 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
-#include "./api-impl.h"
-#include "./format_p.h"
-#include "./image.h"
-#include "./pixelconverter_p.h"
-#include "./pixelops_p.h"
-#include "./runtime_p.h"
-#include "./support_p.h"
-#include "./tables_p.h"
+#include "api-build_p.h"
+#include "api-impl.h"
+#include "format_p.h"
+#include "image.h"
+#include "pixelconverter_p.h"
+#include "runtime_p.h"
+#include "tables_p.h"
+#include "pixelops/scalar_p.h"
+#include "support/intops_p.h"
+#include "support/memops_p.h"
+#include "support/ptrops_p.h"
 
 #ifdef BL_TEST
-#include "./random.h"
+  #include "random.h"
 #endif
 
-// ============================================================================
-// [BLPixelConverter - Globals]
-// ============================================================================
+// PixelConverter - Globals
+// ========================
 
 const BLPixelConverterOptions blPixelConverterDefaultOptions {};
 
-// ============================================================================
-// [BLPixelConverter - Tables]
-// ============================================================================
+// PixelConverter - Tables
+// =======================
 
-// A table that contains shifts of native 32-bit pixel format. The only reason
-// to have this in a table is a fact that a blue component is shifted by 8 (the
-// same as green) to be at the right place, because there is no way to calculate
-// the constants of component that has to stay within the low 8 bits as `scale`
-// value is calculated by doubling the size until it reaches the required depth,
-// so for example depth of 5 would scale to 10, depth 3 would scale to 9, and
-// depths 1-2 would scale to 8.
+// A table that contains shifts of native 32-bit pixel format. The only reason to have this in a table is a fact that
+// a blue component is shifted by 8 (the same as green) to be at the right place, because there is no way to calculate
+// the constants of component that has to stay within the low 8 bits as `scale` value is calculated by doubling the
+// size until it reaches the required depth, so for example depth of 5 would scale to 10, depth 3 would scale to 9,
+// and depths 1-2 would scale to 8.
 static constexpr const uint8_t blPixelConverterNative32FromForeignShiftTable[] = {
   16, // [0x00FF0000] R.
   8 , // [0x0000FF00] G.
@@ -59,9 +39,8 @@ static constexpr const uint8_t blPixelConverterNative32FromForeignShiftTable[] =
   24  // [0xFF000000] A.
 };
 
-// ============================================================================
-// [BLPixelConverter - Uninitialized]
-// ============================================================================
+// PixelConverter - Uninitialized
+// ==============================
 
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
 
@@ -75,9 +54,8 @@ static BLResult BL_CDECL bl_convert_func_not_initialized(
 
 BL_DIAGNOSTIC_POP
 
-// ============================================================================
-// [BLPixelConverter - Utilities]
-// ============================================================================
+// PixelConverter - Utilities
+// ==========================
 
 static BL_INLINE bool blPixelConverterIsIndexedDepth(uint32_t depth) noexcept {
   return depth == 1 || depth == 2 || depth == 4 || depth == 8;
@@ -107,9 +85,8 @@ static bool blPixelConverterPaletteFormatFromFormatFlags(BLFormatInfo& fi, uint3
   }
 }
 
-// ============================================================================
-// [BLPixelConverter - Memory Management]
-// ============================================================================
+// PixelConverter - Memory Management
+// ==================================
 
 static BL_INLINE void blPixelConverterZeroInitialize(BLPixelConverterCore* self) noexcept {
   memset(self, 0, sizeof(BLPixelConverterCore));
@@ -147,9 +124,8 @@ static BL_INLINE void blPixelConverterCopyRef(BLPixelConverterCore* self, const 
   blPixelConverterAddRef(self);
 }
 
-// ============================================================================
-// [BLPixelConverter - Init / Destroy]
-// ============================================================================
+// PixelConverter - Init & Destroy
+// ===============================
 
 BLResult blPixelConverterInit(BLPixelConverterCore* self) noexcept {
   blPixelConverterZeroInitialize(self);
@@ -167,9 +143,8 @@ BLResult blPixelConverterDestroy(BLPixelConverterCore* self) noexcept {
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Reset]
-// ============================================================================
+// PixelConverter - Reset
+// ======================
 
 BLResult blPixelConverterReset(BLPixelConverterCore* self) noexcept {
   blPixelConverterRelease(self);
@@ -177,9 +152,8 @@ BLResult blPixelConverterReset(BLPixelConverterCore* self) noexcept {
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Assign]
-// ============================================================================
+// PixelConverter - Assign
+// =======================
 
 BLResult blPixelConverterAssign(BLPixelConverterCore* self, const BLPixelConverterCore* other) noexcept {
   if (self == other)
@@ -190,11 +164,10 @@ BLResult blPixelConverterAssign(BLPixelConverterCore* self, const BLPixelConvert
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Create]
-// ============================================================================
+// PixelConverter - Create
+// =======================
 
-BLResult blPixelConverterCreate(BLPixelConverterCore* self, const BLFormatInfo* dstInfo, const BLFormatInfo* srcInfo, uint32_t createFlags) noexcept {
+BLResult blPixelConverterCreate(BLPixelConverterCore* self, const BLFormatInfo* dstInfo, const BLFormatInfo* srcInfo, BLPixelConverterCreateFlags createFlags) noexcept {
   BLFormatInfo di = *dstInfo;
   BLFormatInfo si = *srcInfo;
 
@@ -210,9 +183,8 @@ BLResult blPixelConverterCreate(BLPixelConverterCore* self, const BLFormatInfo* 
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Convert]
-// ============================================================================
+// PixelConverter - Convert
+// ========================
 
 BLResult blPixelConverterConvert(const BLPixelConverterCore* self,
   void* dstData, intptr_t dstStride,
@@ -223,56 +195,54 @@ BLResult blPixelConverterConvert(const BLPixelConverterCore* self,
                                  static_cast<const uint8_t*>(srcData), srcStride, w, h, options);
 }
 
-// ============================================================================
-// [BLPixelConverter - Pixel Access]
-// ============================================================================
+// PixelConverter - Pixel Access
+// =============================
 
 struct BLPixelAccess8 {
   enum : uint32_t { kSize = 1 };
 
-  static BL_INLINE uint32_t fetchA(const void* p) noexcept { return blMemReadU8(p); }
-  static BL_INLINE uint32_t fetchU(const void* p) noexcept { return blMemReadU8(p); }
+  static BL_INLINE uint32_t fetchA(const void* p) noexcept { return BLMemOps::readU8(p); }
+  static BL_INLINE uint32_t fetchU(const void* p) noexcept { return BLMemOps::readU8(p); }
 
-  static BL_INLINE void storeA(void* p, uint32_t v) noexcept { blMemWriteU8(p, uint16_t(v)); }
-  static BL_INLINE void storeU(void* p, uint32_t v) noexcept { blMemWriteU8(p, uint16_t(v)); }
+  static BL_INLINE void storeA(void* p, uint32_t v) noexcept { BLMemOps::writeU8(p, uint16_t(v)); }
+  static BL_INLINE void storeU(void* p, uint32_t v) noexcept { BLMemOps::writeU8(p, uint16_t(v)); }
 };
 
 template<uint32_t ByteOrder>
 struct BLPixelAccess16 {
   enum : uint32_t { kSize = 2 };
 
-  static BL_INLINE uint32_t fetchA(const void* p) noexcept { return blMemReadU16<ByteOrder, 2>(p); }
-  static BL_INLINE uint32_t fetchU(const void* p) noexcept { return blMemReadU16<ByteOrder, 1>(p); }
+  static BL_INLINE uint32_t fetchA(const void* p) noexcept { return BLMemOps::readU16<ByteOrder, 2>(p); }
+  static BL_INLINE uint32_t fetchU(const void* p) noexcept { return BLMemOps::readU16<ByteOrder, 1>(p); }
 
-  static BL_INLINE void storeA(void* p, uint32_t v) noexcept { blMemWriteU16<ByteOrder, 2>(p, uint16_t(v)); }
-  static BL_INLINE void storeU(void* p, uint32_t v) noexcept { blMemWriteU16<ByteOrder, 1>(p, uint16_t(v)); }
+  static BL_INLINE void storeA(void* p, uint32_t v) noexcept { BLMemOps::writeU16<ByteOrder, 2>(p, uint16_t(v)); }
+  static BL_INLINE void storeU(void* p, uint32_t v) noexcept { BLMemOps::writeU16<ByteOrder, 1>(p, uint16_t(v)); }
 };
 
 template<uint32_t ByteOrder>
 struct BLPixelAccess24 {
   enum : uint32_t { kSize = 3 };
 
-  static BL_INLINE uint32_t fetchA(const void* p) noexcept { return blMemReadU24u<ByteOrder>(p); }
-  static BL_INLINE uint32_t fetchU(const void* p) noexcept { return blMemReadU24u<ByteOrder>(p); }
+  static BL_INLINE uint32_t fetchA(const void* p) noexcept { return BLMemOps::readU24u<ByteOrder>(p); }
+  static BL_INLINE uint32_t fetchU(const void* p) noexcept { return BLMemOps::readU24u<ByteOrder>(p); }
 
-  static BL_INLINE void storeA(void* p, uint32_t v) noexcept { blMemWriteU24u<ByteOrder>(p, v); }
-  static BL_INLINE void storeU(void* p, uint32_t v) noexcept { blMemWriteU24u<ByteOrder>(p, v); }
+  static BL_INLINE void storeA(void* p, uint32_t v) noexcept { BLMemOps::writeU24u<ByteOrder>(p, v); }
+  static BL_INLINE void storeU(void* p, uint32_t v) noexcept { BLMemOps::writeU24u<ByteOrder>(p, v); }
 };
 
 template<uint32_t ByteOrder>
 struct BLPixelAccess32 {
   enum : uint32_t { kSize = 4 };
 
-  static BL_INLINE uint32_t fetchA(const void* p) noexcept { return blMemReadU32<ByteOrder, 4>(p); }
-  static BL_INLINE uint32_t fetchU(const void* p) noexcept { return blMemReadU32<ByteOrder, 1>(p); }
+  static BL_INLINE uint32_t fetchA(const void* p) noexcept { return BLMemOps::readU32<ByteOrder, 4>(p); }
+  static BL_INLINE uint32_t fetchU(const void* p) noexcept { return BLMemOps::readU32<ByteOrder, 1>(p); }
 
-  static BL_INLINE void storeA(void* p, uint32_t v) noexcept { blMemWriteU32<ByteOrder, 4>(p, v); }
-  static BL_INLINE void storeU(void* p, uint32_t v) noexcept { blMemWriteU32<ByteOrder, 1>(p, v); }
+  static BL_INLINE void storeA(void* p, uint32_t v) noexcept { BLMemOps::writeU32<ByteOrder, 4>(p, v); }
+  static BL_INLINE void storeU(void* p, uint32_t v) noexcept { BLMemOps::writeU32<ByteOrder, 1>(p, v); }
 };
 
-// ============================================================================
-// [BLPixelConverter - Copy]
-// ============================================================================
+// PixelConverter - Copy
+// =====================
 
 BLResult bl_convert_copy(
   const BLPixelConverterCore* self,
@@ -282,7 +252,6 @@ BLResult bl_convert_copy(
   if (!options)
     options = &blPixelConverterDefaultOptions;
 
-  const bool hasUnalignedIO = BL_UNALIGNED_IO_32 != 0;
   const size_t bytesPerPixel = blPixelConverterGetData(self)->memCopyData.bytesPerPixel;
   const size_t byteWidth = size_t(w) * bytesPerPixel;
 
@@ -293,22 +262,22 @@ BLResult bl_convert_copy(
   for (uint32_t y = h; y != 0; y--) {
     size_t i = byteWidth;
 
-    if (!hasUnalignedIO && (uintptr_t)dstData == (uintptr_t)srcData) {
+    if (!BLMemOps::kUnalignedMem32 && (uintptr_t)dstData == (uintptr_t)srcData) {
       while (i && ((uintptr_t)dstData) & 0x03) {
         *dstData++ = *srcData++;
         i--;
       }
 
       while (i >= 16) {
-        uint32_t p0 = blMemReadU32a(srcData +  0);
-        uint32_t p1 = blMemReadU32a(srcData +  4);
-        uint32_t p2 = blMemReadU32a(srcData +  8);
-        uint32_t p3 = blMemReadU32a(srcData + 12);
+        uint32_t p0 = BLMemOps::readU32a(srcData +  0);
+        uint32_t p1 = BLMemOps::readU32a(srcData +  4);
+        uint32_t p2 = BLMemOps::readU32a(srcData +  8);
+        uint32_t p3 = BLMemOps::readU32a(srcData + 12);
 
-        blMemWriteU32a(dstData +  0, p0);
-        blMemWriteU32a(dstData +  4, p1);
-        blMemWriteU32a(dstData +  8, p2);
-        blMemWriteU32a(dstData + 12, p3);
+        BLMemOps::writeU32a(dstData +  0, p0);
+        BLMemOps::writeU32a(dstData +  4, p1);
+        BLMemOps::writeU32a(dstData +  8, p2);
+        BLMemOps::writeU32a(dstData + 12, p3);
 
         dstData += 16;
         srcData += 16;
@@ -316,7 +285,7 @@ BLResult bl_convert_copy(
       }
 
       while (i >= 4) {
-        blMemWriteU32a(dstData, blMemReadU32a(srcData));
+        BLMemOps::writeU32a(dstData, BLMemOps::readU32a(srcData));
         dstData += 4;
         srcData += 4;
         i -= 4;
@@ -324,15 +293,15 @@ BLResult bl_convert_copy(
     }
     else {
       while (i >= 16) {
-        uint32_t p0 = blMemReadU32u(srcData +  0);
-        uint32_t p1 = blMemReadU32u(srcData +  4);
-        uint32_t p2 = blMemReadU32u(srcData +  8);
-        uint32_t p3 = blMemReadU32u(srcData + 12);
+        uint32_t p0 = BLMemOps::readU32u(srcData +  0);
+        uint32_t p1 = BLMemOps::readU32u(srcData +  4);
+        uint32_t p2 = BLMemOps::readU32u(srcData +  8);
+        uint32_t p3 = BLMemOps::readU32u(srcData + 12);
 
-        blMemWriteU32u(dstData +  0, p0);
-        blMemWriteU32u(dstData +  4, p1);
-        blMemWriteU32u(dstData +  8, p2);
-        blMemWriteU32u(dstData + 12, p3);
+        BLMemOps::writeU32u(dstData +  0, p0);
+        BLMemOps::writeU32u(dstData +  4, p1);
+        BLMemOps::writeU32u(dstData +  8, p2);
+        BLMemOps::writeU32u(dstData + 12, p3);
 
         dstData += 16;
         srcData += 16;
@@ -340,7 +309,7 @@ BLResult bl_convert_copy(
       }
 
       while (i >= 4) {
-        blMemWriteU32u(dstData, blMemReadU32u(srcData));
+        BLMemOps::writeU32u(dstData, BLMemOps::readU32u(srcData));
         dstData += 4;
         srcData += 4;
         i -= 4;
@@ -360,9 +329,8 @@ BLResult bl_convert_copy(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Copy|Or]
-// ============================================================================
+// PixelConverter - Copy|Or
+// ========================
 
 BLResult bl_convert_copy_or_8888(
   const BLPixelConverterCore* self,
@@ -372,7 +340,6 @@ BLResult bl_convert_copy_or_8888(
   if (!options)
     options = &blPixelConverterDefaultOptions;
 
-  const bool hasUnalignedIO = BL_UNALIGNED_IO_32 != 0;
   const uint32_t fillMask = blPixelConverterGetData(self)->memCopyData.fillMask;
 
   const size_t gap = options->gap;
@@ -381,17 +348,17 @@ BLResult bl_convert_copy_or_8888(
 
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
-    if (!hasUnalignedIO && (uintptr_t)dstData == (uintptr_t)srcData) {
+    if (!BLMemOps::kUnalignedMem32 && (uintptr_t)dstData == (uintptr_t)srcData) {
       while (i >= 4) {
-        uint32_t p0 = blMemReadU32a(srcData +  0);
-        uint32_t p1 = blMemReadU32a(srcData +  4);
-        uint32_t p2 = blMemReadU32a(srcData +  8);
-        uint32_t p3 = blMemReadU32a(srcData + 12);
+        uint32_t p0 = BLMemOps::readU32a(srcData +  0);
+        uint32_t p1 = BLMemOps::readU32a(srcData +  4);
+        uint32_t p2 = BLMemOps::readU32a(srcData +  8);
+        uint32_t p3 = BLMemOps::readU32a(srcData + 12);
 
-        blMemWriteU32a(dstData +  0, p0 | fillMask);
-        blMemWriteU32a(dstData +  4, p1 | fillMask);
-        blMemWriteU32a(dstData +  8, p2 | fillMask);
-        blMemWriteU32a(dstData + 12, p3 | fillMask);
+        BLMemOps::writeU32a(dstData +  0, p0 | fillMask);
+        BLMemOps::writeU32a(dstData +  4, p1 | fillMask);
+        BLMemOps::writeU32a(dstData +  8, p2 | fillMask);
+        BLMemOps::writeU32a(dstData + 12, p3 | fillMask);
 
         dstData += 16;
         srcData += 16;
@@ -399,7 +366,7 @@ BLResult bl_convert_copy_or_8888(
       }
 
       while (i) {
-        blMemWriteU32a(dstData, blMemReadU32a(srcData) | fillMask);
+        BLMemOps::writeU32a(dstData, BLMemOps::readU32a(srcData) | fillMask);
         dstData += 4;
         srcData += 4;
         i--;
@@ -407,15 +374,15 @@ BLResult bl_convert_copy_or_8888(
     }
     else {
       while (i >= 4) {
-        uint32_t p0 = blMemReadU32u(srcData +  0);
-        uint32_t p1 = blMemReadU32u(srcData +  4);
-        uint32_t p2 = blMemReadU32u(srcData +  8);
-        uint32_t p3 = blMemReadU32u(srcData + 12);
+        uint32_t p0 = BLMemOps::readU32u(srcData +  0);
+        uint32_t p1 = BLMemOps::readU32u(srcData +  4);
+        uint32_t p2 = BLMemOps::readU32u(srcData +  8);
+        uint32_t p3 = BLMemOps::readU32u(srcData + 12);
 
-        blMemWriteU32u(dstData +  0, p0 | fillMask);
-        blMemWriteU32u(dstData +  4, p1 | fillMask);
-        blMemWriteU32u(dstData +  8, p2 | fillMask);
-        blMemWriteU32u(dstData + 12, p3 | fillMask);
+        BLMemOps::writeU32u(dstData +  0, p0 | fillMask);
+        BLMemOps::writeU32u(dstData +  4, p1 | fillMask);
+        BLMemOps::writeU32u(dstData +  8, p2 | fillMask);
+        BLMemOps::writeU32u(dstData + 12, p3 | fillMask);
 
         dstData += 16;
         srcData += 16;
@@ -423,7 +390,7 @@ BLResult bl_convert_copy_or_8888(
       }
 
       while (i) {
-        blMemWriteU32u(dstData, blMemReadU32u(srcData) | fillMask);
+        BLMemOps::writeU32u(dstData, BLMemOps::readU32u(srcData) | fillMask);
         dstData += 4;
         srcData += 4;
         i--;
@@ -438,9 +405,8 @@ BLResult bl_convert_copy_or_8888(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Premultiply / Unpremultiply]
-// ============================================================================
+// PixelConverter - Premultiply & Unpremultiply
+// ============================================
 
 static BLResult BL_CDECL bl_convert_premultiply_8888(
   const BLPixelConverterCore* self,
@@ -460,9 +426,9 @@ static BLResult BL_CDECL bl_convert_premultiply_8888(
   const uint32_t fillMask = d.fillMask;
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!BL_UNALIGNED_IO_32 && blIsAligned((uintptr_t)dstData | (uintptr_t)srcData, 4)) {
+    if (!BLMemOps::kUnalignedMem32 && BLIntOps::isAligned((uintptr_t)dstData | (uintptr_t)srcData, 4)) {
       for (uint32_t i = w; i != 0; i--) {
-        uint32_t pix = blMemReadU32a(srcData);
+        uint32_t pix = BLMemOps::readU32a(srcData);
         uint32_t a = (pix >> alphaShift) & 0xFFu;
 
         pix |= alphaMask;
@@ -473,7 +439,7 @@ static BLResult BL_CDECL bl_convert_premultiply_8888(
         c0 = (c0 + ((c0 >> 8) & 0x00FF00FFu)) & 0xFF00FF00u;
         c1 = (c1 + ((c1 >> 8) & 0x00FF00FFu)) & 0xFF00FF00u;
 
-        blMemWriteU32a(dstData, (c0 >> 8) | c1 | fillMask);
+        BLMemOps::writeU32a(dstData, (c0 >> 8) | c1 | fillMask);
 
         dstData += 4;
         srcData += 4;
@@ -481,7 +447,7 @@ static BLResult BL_CDECL bl_convert_premultiply_8888(
     }
     else {
       for (uint32_t i = w; i != 0; i--) {
-        uint32_t pix = blMemReadU32u(srcData);
+        uint32_t pix = BLMemOps::readU32u(srcData);
         uint32_t a = (pix >> alphaShift) & 0xFFu;
 
         pix |= alphaMask;
@@ -492,7 +458,7 @@ static BLResult BL_CDECL bl_convert_premultiply_8888(
         c0 = (c0 + ((c0 >> 8) & 0x00FF00FFu)) & 0xFF00FF00u;
         c1 = (c1 + ((c1 >> 8) & 0x00FF00FFu)) & 0xFF00FF00u;
 
-        blMemWriteU32u(dstData, (c0 >> 8) | c1 | fillMask);
+        BLMemOps::writeU32u(dstData, (c0 >> 8) | c1 | fillMask);
 
         dstData += 4;
         srcData += 4;
@@ -527,16 +493,16 @@ static BLResult BL_CDECL bl_convert_unpremultiply_8888(
   const uint32_t B_Shift = (A_Shift + 24u) % 32u;
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!BL_UNALIGNED_IO_32 && blIsAligned((uintptr_t)dstData | (uintptr_t)srcData, 4)) {
+    if (!BLMemOps::kUnalignedMem32 && BLIntOps::isAligned((uintptr_t)dstData | (uintptr_t)srcData, 4)) {
       for (uint32_t i = w; i != 0; i--) {
-        uint32_t pix = blMemReadU32a(srcData);
+        uint32_t pix = BLMemOps::readU32a(srcData);
         uint32_t r = (pix >> R_Shift) & 0xFFu;
         uint32_t g = (pix >> G_Shift) & 0xFFu;
         uint32_t b = (pix >> B_Shift) & 0xFFu;
         uint32_t a = (pix >> A_Shift) & 0xFFu;
 
-        BLPixelOps::unpremultiply_rgb_8bit(r, g, b, a);
-        blMemWriteU32a(dstData, (r << R_Shift) | (g << G_Shift) | (b << B_Shift) | (a << A_Shift));
+        BLPixelOps::Scalar::unpremultiply_rgb_8bit(r, g, b, a);
+        BLMemOps::writeU32a(dstData, (r << R_Shift) | (g << G_Shift) | (b << B_Shift) | (a << A_Shift));
 
         dstData += 4;
         srcData += 4;
@@ -544,14 +510,14 @@ static BLResult BL_CDECL bl_convert_unpremultiply_8888(
     }
     else {
       for (uint32_t i = w; i != 0; i--) {
-        uint32_t pix = blMemReadU32u(srcData);
+        uint32_t pix = BLMemOps::readU32u(srcData);
         uint32_t r = (pix >> R_Shift) & 0xFFu;
         uint32_t g = (pix >> G_Shift) & 0xFFu;
         uint32_t b = (pix >> B_Shift) & 0xFFu;
         uint32_t a = (pix >> A_Shift) & 0xFFu;
 
-        BLPixelOps::unpremultiply_rgb_8bit(r, g, b, a);
-        blMemWriteU32u(dstData, (r << R_Shift) | (g << G_Shift) | (b << B_Shift) | (a << A_Shift));
+        BLPixelOps::Scalar::unpremultiply_rgb_8bit(r, g, b, a);
+        BLMemOps::writeU32u(dstData, (r << R_Shift) | (g << G_Shift) | (b << B_Shift) | (a << A_Shift));
 
         dstData += 4;
         srcData += 4;
@@ -566,9 +532,8 @@ static BLResult BL_CDECL bl_convert_unpremultiply_8888(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - A8 From PRGB32/ARGB32]
-// ============================================================================
+// PixelConverter - A8 From PRGB32/ARGB32
+// ======================================
 
 BLResult bl_convert_a8_from_8888(
   const BLPixelConverterCore* self,
@@ -603,9 +568,8 @@ BLResult bl_convert_a8_from_8888(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - RGB32 From A8/L8]
-// ============================================================================
+// PixelConverter - RGB32 From A8/L8
+// =================================
 
 BLResult bl_convert_8888_from_x8(
   const BLPixelConverterCore* self,
@@ -624,16 +588,16 @@ BLResult bl_convert_8888_from_x8(
   const uint32_t zeroMask = d.zeroMask;
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!BL_UNALIGNED_IO_32 && blIsAligned(dstData, 4)) {
+    if (!BLMemOps::kUnalignedMem32 && BLIntOps::isAligned(dstData, 4)) {
       for (uint32_t i = w; i != 0; i--) {
-        blMemWriteU32a(dstData, ((uint32_t(srcData[0]) * 0x01010101u) & zeroMask) | fillMask);
+        BLMemOps::writeU32a(dstData, ((uint32_t(srcData[0]) * 0x01010101u) & zeroMask) | fillMask);
         dstData += 4;
         srcData += 1;
       }
     }
     else {
       for (uint32_t i = w; i != 0; i--) {
-        blMemWriteU32u(dstData, ((uint32_t(srcData[0]) * 0x01010101u) & zeroMask) | fillMask);
+        BLMemOps::writeU32u(dstData, ((uint32_t(srcData[0]) * 0x01010101u) & zeroMask) | fillMask);
         dstData += 4;
         srcData += 1;
       }
@@ -647,15 +611,12 @@ BLResult bl_convert_8888_from_x8(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Any <- Indexed1]
-// ============================================================================
+// PixelConverter - Any <- Indexed1
+// ================================
 
-// Instead of doing a table lookup each time we create a XOR mask that is
-// used to get the second color value from the first one. This allows to
-// remove the lookup completely. The only requirement is that we need all
-// zeros or ones depending on the source value (see the implementation, it
-// uses signed right shift to fill these bits in).
+// Instead of doing a table lookup each time we create a XOR mask that is used to get the second color value from
+// the first one. This allows to remove the lookup completely. The only requirement is that we need all zeros or
+// ones depending on the source value (see the implementation, it uses signed right shift to fill these bits in).
 
 template<typename PixelAccess>
 static BLResult BL_CDECL bl_convert_any_from_indexed1(
@@ -684,14 +645,14 @@ static BLResult BL_CDECL bl_convert_any_from_indexed1(
         uint32_t b0 = uint32_t(*srcData++) << 24;
         uint32_t b1 = b0 << 1;
 
-        PixelAccess::storeU(dstData + 0 * kPixelSize, blBitSar(b0, 31)); b0 <<= 2;
-        PixelAccess::storeU(dstData + 1 * kPixelSize, blBitSar(b1, 31)); b1 <<= 2;
-        PixelAccess::storeU(dstData + 2 * kPixelSize, blBitSar(b0, 31)); b0 <<= 2;
-        PixelAccess::storeU(dstData + 3 * kPixelSize, blBitSar(b1, 31)); b1 <<= 2;
-        PixelAccess::storeU(dstData + 4 * kPixelSize, blBitSar(b0, 31)); b0 <<= 2;
-        PixelAccess::storeU(dstData + 5 * kPixelSize, blBitSar(b1, 31)); b1 <<= 2;
-        PixelAccess::storeU(dstData + 6 * kPixelSize, blBitSar(b0, 31));
-        PixelAccess::storeU(dstData + 7 * kPixelSize, blBitSar(b1, 31));
+        PixelAccess::storeU(dstData + 0 * kPixelSize, BLIntOps::sar(b0, 31)); b0 <<= 2;
+        PixelAccess::storeU(dstData + 1 * kPixelSize, BLIntOps::sar(b1, 31)); b1 <<= 2;
+        PixelAccess::storeU(dstData + 2 * kPixelSize, BLIntOps::sar(b0, 31)); b0 <<= 2;
+        PixelAccess::storeU(dstData + 3 * kPixelSize, BLIntOps::sar(b1, 31)); b1 <<= 2;
+        PixelAccess::storeU(dstData + 4 * kPixelSize, BLIntOps::sar(b0, 31)); b0 <<= 2;
+        PixelAccess::storeU(dstData + 5 * kPixelSize, BLIntOps::sar(b1, 31)); b1 <<= 2;
+        PixelAccess::storeU(dstData + 6 * kPixelSize, BLIntOps::sar(b0, 31));
+        PixelAccess::storeU(dstData + 7 * kPixelSize, BLIntOps::sar(b1, 31));
 
         dstData += 8 * kPixelSize;
         i -= 8;
@@ -700,7 +661,7 @@ static BLResult BL_CDECL bl_convert_any_from_indexed1(
       if (i) {
         uint32_t b0 = uint32_t(*srcData++) << 24;
         do {
-          PixelAccess::storeU(dstData, blBitSar(b0, 31));
+          PixelAccess::storeU(dstData, BLIntOps::sar(b0, 31));
           dstData += kPixelSize;
           b0 <<= 1;
         } while (--i);
@@ -721,14 +682,14 @@ static BLResult BL_CDECL bl_convert_any_from_indexed1(
         uint32_t b0 = uint32_t(*srcData++) << 24;
         uint32_t b1 = b0 << 1;
 
-        PixelAccess::storeU(dstData + 0 * kPixelSize, c0 ^ (cm & blBitSar(b0, 31))); b0 <<= 2;
-        PixelAccess::storeU(dstData + 1 * kPixelSize, c0 ^ (cm & blBitSar(b1, 31))); b1 <<= 2;
-        PixelAccess::storeU(dstData + 2 * kPixelSize, c0 ^ (cm & blBitSar(b0, 31))); b0 <<= 2;
-        PixelAccess::storeU(dstData + 3 * kPixelSize, c0 ^ (cm & blBitSar(b1, 31))); b1 <<= 2;
-        PixelAccess::storeU(dstData + 4 * kPixelSize, c0 ^ (cm & blBitSar(b0, 31))); b0 <<= 2;
-        PixelAccess::storeU(dstData + 5 * kPixelSize, c0 ^ (cm & blBitSar(b1, 31))); b1 <<= 2;
-        PixelAccess::storeU(dstData + 6 * kPixelSize, c0 ^ (cm & blBitSar(b0, 31))); b0 <<= 2;
-        PixelAccess::storeU(dstData + 7 * kPixelSize, c0 ^ (cm & blBitSar(b1, 31))); b1 <<= 2;
+        PixelAccess::storeU(dstData + 0 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b0, 31))); b0 <<= 2;
+        PixelAccess::storeU(dstData + 1 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b1, 31))); b1 <<= 2;
+        PixelAccess::storeU(dstData + 2 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b0, 31))); b0 <<= 2;
+        PixelAccess::storeU(dstData + 3 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b1, 31))); b1 <<= 2;
+        PixelAccess::storeU(dstData + 4 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b0, 31))); b0 <<= 2;
+        PixelAccess::storeU(dstData + 5 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b1, 31))); b1 <<= 2;
+        PixelAccess::storeU(dstData + 6 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b0, 31))); b0 <<= 2;
+        PixelAccess::storeU(dstData + 7 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b1, 31))); b1 <<= 2;
 
         dstData += 8 * kPixelSize;
         i -= 8;
@@ -737,7 +698,7 @@ static BLResult BL_CDECL bl_convert_any_from_indexed1(
       if (i) {
         uint32_t b0 = uint32_t(*srcData++) << 24;
         do {
-          PixelAccess::storeU(dstData, c0 ^ (cm & blBitSar(b0, 31)));
+          PixelAccess::storeU(dstData, c0 ^ (cm & BLIntOps::sar(b0, 31)));
           dstData += kPixelSize;
           b0 <<= 1;
         } while (--i);
@@ -752,9 +713,8 @@ static BLResult BL_CDECL bl_convert_any_from_indexed1(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Any <- Indexed2]
-// ============================================================================
+// PixelConverter - Any <- Indexed2
+// ================================
 
 template<typename PixelAccess>
 static BLResult BL_CDECL bl_convert_any_from_indexed2(
@@ -766,8 +726,8 @@ static BLResult BL_CDECL bl_convert_any_from_indexed2(
     options = &blPixelConverterDefaultOptions;
 
   const uint32_t kPixelSize = PixelAccess::kSize;
-  const uint32_t kShiftToLeadingByte = (blBitSizeOf<uintptr_t>() - 8);
-  const uint32_t kShiftToTableIndex  = (blBitSizeOf<uintptr_t>() - 2);
+  const uint32_t kShiftToLeadingByte = (BLIntOps::bitSizeOf<uintptr_t>() - 8);
+  const uint32_t kShiftToTableIndex  = (BLIntOps::bitSizeOf<uintptr_t>() - 2);
 
   const size_t gap = options->gap;
   dstStride -= uintptr_t(w) * kPixelSize + gap;
@@ -813,9 +773,8 @@ static BLResult BL_CDECL bl_convert_any_from_indexed2(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Any <- Indexed4]
-// ============================================================================
+// PixelConverter - Any <- Indexed4
+// ================================
 
 template<typename PixelAccess>
 static BLResult BL_CDECL bl_convert_any_from_indexed4(
@@ -865,9 +824,8 @@ static BLResult BL_CDECL bl_convert_any_from_indexed4(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Any <- Indexed8]
-// ============================================================================
+// PixelConverter - Any <- Indexed8
+// ================================
 
 // Special case - used when no copy of the palette is required.
 static BLResult BL_CDECL bl_convert_a8_from_indexed8_pal32(
@@ -931,15 +889,13 @@ static BLResult BL_CDECL bl_convert_any_from_indexed8(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - ByteShuffle]
-// ============================================================================
+// PixelConverter - ByteShuffle
+// ============================
 
 // TODO:
 
-// ============================================================================
-// [BLPixelConverter - Native32 <- XRGB|ARGB|PRGB]
-// ============================================================================
+// PixelConverter - Native32 <- XRGB|ARGB|PRGB
+// ===========================================
 
 template<typename PixelAccess, bool AlwaysUnaligned>
 static BLResult BL_CDECL bl_convert_xrgb32_from_xrgb_any(
@@ -970,14 +926,14 @@ static BLResult BL_CDECL bl_convert_xrgb32_from_xrgb_any(
   uint32_t fillMask = d.fillMask;
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && blIsAligned(srcData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(srcData, PixelAccess::kSize)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = PixelAccess::fetchA(srcData);
         uint32_t r = (((pix >> rShift) & rMask) * rScale) & 0x00FF0000u;
         uint32_t g = (((pix >> gShift) & gMask) * gScale) & 0x0000FF00u;
         uint32_t b = (((pix >> bShift) & bMask) * bScale) >> 8;
 
-        blMemWriteU32a(dstData, r | g | b | fillMask);
+        BLMemOps::writeU32a(dstData, r | g | b | fillMask);
 
         dstData += 4;
         srcData += PixelAccess::kSize;
@@ -990,7 +946,7 @@ static BLResult BL_CDECL bl_convert_xrgb32_from_xrgb_any(
         uint32_t g = (((pix >> gShift) & gMask) * gScale) & 0x0000FF00u;
         uint32_t b = (((pix >> bShift) & bMask) * bScale) >> 8;
 
-        blMemWriteU32a(dstData, r | g | b | fillMask);
+        BLMemOps::writeU32a(dstData, r | g | b | fillMask);
 
         dstData += 4;
         srcData += PixelAccess::kSize;
@@ -1035,7 +991,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_argb_any(
   uint32_t aScale = d.scale[3];
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && blIsAligned(srcData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(srcData, PixelAccess::kSize)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = PixelAccess::fetchA(srcData);
         uint32_t _a = ((((pix >> aShift) & aMask) * aScale) >> 24);
@@ -1054,7 +1010,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_argb_any(
         ag = (ag + ((ag >> 8) & 0x00FF00FFu)) & 0xFF00FF00u;
 
         rb >>= 8;
-        blMemWriteU32a(dstData, ag + rb);
+        BLMemOps::writeU32a(dstData, ag + rb);
 
         dstData += 4;
         srcData += PixelAccess::kSize;
@@ -1079,7 +1035,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_argb_any(
         ag = (ag + ((ag >> 8) & 0x00FF00FFu)) & 0xFF00FF00u;
 
         rb >>= 8;
-        blMemWriteU32a(dstData, ag | rb);
+        BLMemOps::writeU32a(dstData, ag | rb);
 
         dstData += 4;
         srcData += PixelAccess::kSize;
@@ -1124,7 +1080,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_prgb_any(
   uint32_t aScale = d.scale[3];
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && blIsAligned(srcData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(srcData, PixelAccess::kSize)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = PixelAccess::fetchA(srcData);
         uint32_t r = ((pix >> rShift) & rMask) * rScale;
@@ -1135,7 +1091,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_prgb_any(
         uint32_t ag = (a + (g     )) & 0xFF00FF00u;
         uint32_t rb = (r + (b >> 8)) & 0x00FF00FFu;
 
-        blMemWriteU32a(dstData, ag | rb);
+        BLMemOps::writeU32a(dstData, ag | rb);
 
         dstData += 4;
         srcData += PixelAccess::kSize;
@@ -1152,7 +1108,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_prgb_any(
         uint32_t ag = (a + (g     )) & 0xFF00FF00u;
         uint32_t rb = (r + (b >> 8)) & 0x00FF00FFu;
 
-        blMemWriteU32a(dstData, ag | rb);
+        BLMemOps::writeU32a(dstData, ag | rb);
 
         dstData += 4;
         srcData += PixelAccess::kSize;
@@ -1197,7 +1153,7 @@ static BLResult BL_CDECL bl_convert_argb32_from_prgb_any(
   uint32_t aScale = d.scale[3];
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && blIsAligned(srcData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(srcData, PixelAccess::kSize)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = PixelAccess::fetchA(srcData);
         uint32_t r = (((pix >> rShift) & rMask) * rScale) >> 16;
@@ -1205,8 +1161,8 @@ static BLResult BL_CDECL bl_convert_argb32_from_prgb_any(
         uint32_t b = (((pix >> bShift) & bMask) * bScale) >> 8;
         uint32_t a = (((pix >> aShift) & aMask) * aScale) >> 24;
 
-        BLPixelOps::unpremultiply_rgb_8bit(r, g, b, a);
-        blMemWriteU32a(dstData, (a << 24) | (r << 16) | (g << 8) | b);
+        BLPixelOps::Scalar::unpremultiply_rgb_8bit(r, g, b, a);
+        BLMemOps::writeU32a(dstData, (a << 24) | (r << 16) | (g << 8) | b);
 
         dstData += 4;
         srcData += PixelAccess::kSize;
@@ -1214,14 +1170,14 @@ static BLResult BL_CDECL bl_convert_argb32_from_prgb_any(
     }
     else {
       for (uint32_t i = w; i != 0; i--) {
-        uint32_t pix = PixelAccess::fetchA(srcData);
+        uint32_t pix = PixelAccess::fetchU(srcData);
         uint32_t r = (((pix >> rShift) & rMask) * rScale) >> 16;
         uint32_t g = (((pix >> gShift) & gMask) * gScale) >> 8;
         uint32_t b = (((pix >> bShift) & bMask) * bScale) >> 8;
         uint32_t a = (((pix >> aShift) & aMask) * aScale) >> 24;
 
-        BLPixelOps::unpremultiply_rgb_8bit(r, g, b, a);
-        blMemWriteU32a(dstData, (a << 24) | (r << 16) | (g << 8) | b);
+        BLPixelOps::Scalar::unpremultiply_rgb_8bit(r, g, b, a);
+        BLMemOps::writeU32a(dstData, (a << 24) | (r << 16) | (g << 8) | b);
 
         dstData += 4;
         srcData += PixelAccess::kSize;
@@ -1236,9 +1192,8 @@ static BLResult BL_CDECL bl_convert_argb32_from_prgb_any(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - XRGB|ARGB|PRGB <- Native32]
-// ============================================================================
+// PixelConverter - XRGB|ARGB|PRGB <- Native32
+// ===========================================
 
 template<typename PixelAccess, bool AlwaysUnaligned>
 static BLResult BL_CDECL bl_convert_xrgb_any_from_xrgb32(
@@ -1265,9 +1220,9 @@ static BLResult BL_CDECL bl_convert_xrgb_any_from_xrgb32(
   uint32_t fillMask = d.fillMask;
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && blIsAligned(dstData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, PixelAccess::kSize)) {
       for (uint32_t i = w; i != 0; i--) {
-        uint32_t pix = blMemReadU32a(srcData);
+        uint32_t pix = BLMemOps::readU32a(srcData);
 
         uint32_t r = ((pix >> 16) & 0xFFu) * 0x01010101u;
         uint32_t g = ((pix >>  8) & 0xFFu) * 0x01010101u;
@@ -1282,7 +1237,7 @@ static BLResult BL_CDECL bl_convert_xrgb_any_from_xrgb32(
     }
     else {
       for (uint32_t i = w; i != 0; i--) {
-        uint32_t pix = blMemReadU32u(srcData);
+        uint32_t pix = BLMemOps::readU32u(srcData);
 
         uint32_t r = ((pix >> 16) & 0xFFu) * 0x01010101u;
         uint32_t g = ((pix >>  8) & 0xFFu) * 0x01010101u;
@@ -1331,9 +1286,9 @@ static BLResult BL_CDECL bl_convert_argb_any_from_prgb32(
   const uint32_t* unpremultiplyRcp = blCommonTable.unpremultiplyRcp;
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && blIsAligned(dstData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, PixelAccess::kSize)) {
       for (uint32_t i = w; i != 0; i--) {
-        uint32_t pix = blMemReadU32a(srcData);
+        uint32_t pix = BLMemOps::readU32a(srcData);
 
         uint32_t a = pix >> 24;
         uint32_t rcp = unpremultiplyRcp[a];
@@ -1353,7 +1308,7 @@ static BLResult BL_CDECL bl_convert_argb_any_from_prgb32(
     }
     else {
       for (uint32_t i = w; i != 0; i--) {
-        uint32_t pix = blMemReadU32u(srcData);
+        uint32_t pix = BLMemOps::readU32u(srcData);
 
         uint32_t a = pix >> 24;
         uint32_t rcp = unpremultiplyRcp[a];
@@ -1405,9 +1360,9 @@ static BLResult BL_CDECL bl_convert_prgb_any_from_prgb32(
   uint32_t aShift = d.shifts[3];
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && blIsAligned(dstData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, PixelAccess::kSize)) {
       for (uint32_t i = w; i != 0; i--) {
-        uint32_t pix = blMemReadU32a(srcData);
+        uint32_t pix = BLMemOps::readU32a(srcData);
 
         uint32_t r = ((pix >> 16) & 0xFFu) * 0x01010101u;
         uint32_t g = ((pix >>  8) & 0xFFu) * 0x01010101u;
@@ -1424,7 +1379,7 @@ static BLResult BL_CDECL bl_convert_prgb_any_from_prgb32(
     }
     else {
       for (uint32_t i = w; i != 0; i--) {
-        uint32_t pix = blMemReadU32u(srcData);
+        uint32_t pix = BLMemOps::readU32u(srcData);
 
         uint32_t r = ((pix >> 16) & 0xFFu) * 0x01010101u;
         uint32_t g = ((pix >>  8) & 0xFFu) * 0x01010101u;
@@ -1448,9 +1403,8 @@ static BLResult BL_CDECL bl_convert_prgb_any_from_prgb32(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Init - Utilities]
-// ============================================================================
+// PixelConverter - Init - Utilities
+// =================================
 
 static BL_INLINE BLResult blPixelConverterInitFuncC(BLPixelConverterCore* self, BLPixelConverterFunc func, uint32_t flags = 0) noexcept {
   self->convertFunc = func;
@@ -1469,7 +1423,7 @@ static uint32_t blPixelConverterCalcRgbMask32(const BLFormatInfo& fmtInfo) noexc
   uint32_t mask = 0;
   for (uint32_t i = 0; i < 3; i++)
     if (fmtInfo.sizes[i])
-      mask |= blNonZeroLsbMask<uint32_t>(fmtInfo.sizes[i]) << fmtInfo.shifts[i];
+      mask |= BLIntOps::nonZeroLsbMask<uint32_t>(fmtInfo.sizes[i]) << fmtInfo.shifts[i];
   return mask;
 }
 
@@ -1477,7 +1431,7 @@ static uint32_t blPixelConverterCalcFillMask32(const BLFormatInfo& fmtInfo) noex
   uint32_t mask = 0;
   for (uint32_t i = 0; i < 4; i++)
     if (fmtInfo.sizes[i])
-      mask |= blNonZeroLsbMask<uint32_t>(fmtInfo.sizes[i]) << fmtInfo.shifts[i];
+      mask |= BLIntOps::nonZeroLsbMask<uint32_t>(fmtInfo.sizes[i]) << fmtInfo.shifts[i];
   return ~mask;
 }
 
@@ -1539,11 +1493,10 @@ static void blPixelConverterCalcPshufbPredicate32From32(uint32_t out[4], const B
   out[3] = predicate;
 }
 
-// ============================================================================
-// [BLPixelConverter - Init - Indexed]
-// ============================================================================
+// PixelConverter - Init - Indexed
+// ===============================
 
-static BLResult blPixelConverterInitIndexed(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
+static BLResult blPixelConverterInitIndexed(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, BLPixelConverterCreateFlags createFlags) noexcept {
   BLPixelConverterData::IndexedData& d = blPixelConverterGetData(self)->indexedData;
 
   // Bail if the source depth doesn't match any supported one.
@@ -1567,17 +1520,14 @@ static BLResult blPixelConverterInitIndexed(BLPixelConverterCore* self, const BL
     }
   }
 
-  // We need a temporary pixel converter to convert the palette to the
-  // destination pixel format. This operation should not allocate any memory
-  // as the converter will convert native pixel format (BLRgba32) into a
-  // possibly non-native one although a native pixel format is used most of
-  // the time.
+  // We need a temporary pixel converter to convert the palette to the destination pixel format. This operation should
+  // not allocate any memory as the converter will convert native pixel format (BLRgba32) into a possibly non-native
+  // one although a native pixel format is used most of the time.
   BLPixelConverterCore palCvt;
-  BL_PROPAGATE(blPixelConverterInitInternal(&palCvt, di, paletteFormatInfo, 0));
+  BL_PROPAGATE(blPixelConverterInitInternal(&palCvt, di, paletteFormatInfo, BL_PIXEL_CONVERTER_CREATE_NO_FLAGS));
 
-  // If the source depth is 8 bits it means that we either use the source
-  // format's palette or make a copy of it depending on `createFlags` and
-  // the destination format as well.
+  // If the source depth is 8 bits it means that we either use the source format's palette or make a copy of it
+  // depending on `createFlags` and the destination format as well.
   void* palette = nullptr;
   uint32_t paletteSize = 1u << si.depth;
   uint32_t paletteSizeInBytes = paletteSize * (di.depth / 8u);
@@ -1648,7 +1598,7 @@ static BLResult blPixelConverterInitIndexed(BLPixelConverterCore* self, const BL
   d.internalFlags = uint8_t(internalFlags);
 
   if (internalFlags & BL_PIXEL_CONVERTER_INTERNAL_FLAG_DYNAMIC_DATA) {
-    size_t* refCount = blOffsetPtr<size_t>(palette, paletteSizeInBytes);
+    size_t* refCount = BLPtrOps::offset<size_t>(palette, paletteSizeInBytes);
     *refCount = 1;
 
     d.dynamic.table = palette;
@@ -1663,9 +1613,8 @@ static BLResult blPixelConverterInitIndexed(BLPixelConverterCore* self, const BL
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Init - Simple]
-// ============================================================================
+// PixelConverter - Init - Simple
+// ==============================
 
 static BLResult blPixelConverterInitCopyOr8888(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si) noexcept {
   BLPixelConverterData::MemCopyData& d = blPixelConverterGetData(self)->memCopyData;
@@ -1761,7 +1710,7 @@ static BLResult blPixelConverterInitUnpremultiply8888(BLPixelConverterCore* self
   return BL_RESULT_NOTHING;
 }
 
-static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
+static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, BLPixelConverterCreateFlags createFlags) noexcept {
   blUnused(createFlags);
 
   uint32_t depth = di.depth;
@@ -1802,7 +1751,7 @@ static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLF
       }
 
       // Premultiply / Unpremultiply.
-      if (blBitMatch(commonFlags, BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_BYTE_ALIGNED) && di.flags == (si.flags ^ kP)) {
+      if (BLIntOps::bitMatch(commonFlags, BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_BYTE_ALIGNED) && di.flags == (si.flags ^ kP)) {
         // Premultiply / Unpremultiply: 32-bit format where the alpha is either first or last.
         if (depth == 32) {
           // If we can do any alpha index it's okay, but generally prefer only
@@ -1814,7 +1763,7 @@ static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLF
         }
       }
     }
-    else if (depth == 32 && blBitMatch(commonFlags, BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_BYTE_ALIGNED)) {
+    else if (depth == 32 && BLIntOps::bitMatch(commonFlags, BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_BYTE_ALIGNED)) {
       // Copy:
       //   PRGB32 <- XRGB32 - Copy with or-mask.
       //   ARGB32 <- XRGB32 - Copy with or-mask.
@@ -1830,7 +1779,7 @@ static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLF
   }
   else {
     #ifdef BL_BUILD_OPT_SSSE3
-    if (depth == 32 && blBitMatch(commonFlags, BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_BYTE_ALIGNED)) {
+    if (depth == 32 && BLIntOps::bitMatch(commonFlags, BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_BYTE_ALIGNED)) {
       // Handle the following conversions (Shufb|Or):
       //   XRGB32 <- XRGB32 - Shuffle with or-mask
       //   ARGB32 <- XRGB32 - Shuffle with or-mask (opaque alpha)
@@ -1842,7 +1791,7 @@ static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLF
       bool dstAlpha = (di.flags & kA) != 0;
       bool srcAlpha = (si.flags & kA) != 0;
 
-      if (sameAlpha || !srcAlpha || (!dstAlpha && blBitMatch(si.flags, kP))) {
+      if (sameAlpha || !srcAlpha || (!dstAlpha && BLIntOps::bitMatch(si.flags, kP))) {
         BLPixelConverterData::ShufbData& d = blPixelConverterGetData(self)->shufbData;
         blPixelConverterCalcPshufbPredicate32From32(d.shufbPredicate, di, si);
 
@@ -1885,16 +1834,15 @@ static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLF
   return BL_RESULT_NOTHING;
 }
 
-// ============================================================================
-// [BLPixelConverter - Init - 8 From 8888]
-// ============================================================================
+// PixelConverter - Init - 8 From 8888
+// ===================================
 
-static BLResult blPixelConverterInit8From8888(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
+static BLResult blPixelConverterInit8From8888(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, BLPixelConverterCreateFlags createFlags) noexcept {
   blUnused(createFlags);
   BLPixelConverterData::X8FromRgb32Data& d = blPixelConverterGetData(self)->x8FromRgb32Data;
 
   uint32_t commonFlags = di.flags & si.flags;
-  if (blBitMatch(commonFlags, BL_FORMAT_FLAG_ALPHA | BL_FORMAT_FLAG_BYTE_ALIGNED)) {
+  if (BLIntOps::bitMatch(commonFlags, BL_FORMAT_FLAG_ALPHA | BL_FORMAT_FLAG_BYTE_ALIGNED)) {
     d.bytesPerPixel = uint8_t(si.depth / 8u);
     d.alphaShift = uint8_t(si.shifts[3]);
     return blPixelConverterInitFuncC(self, bl_convert_a8_from_8888);
@@ -1903,11 +1851,10 @@ static BLResult blPixelConverterInit8From8888(BLPixelConverterCore* self, const 
   return BL_RESULT_NOTHING;
 }
 
-// ============================================================================
-// [BLPixelConverter - Init - 8888 From 8]
-// ============================================================================
+// PixelConverter - Init - 8888 From 8
+// ===================================
 
-static BLResult blPixelConverterInit8888From8(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
+static BLResult blPixelConverterInit8888From8(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, BLPixelConverterCreateFlags createFlags) noexcept {
   blUnused(createFlags);
   uint32_t rgbMask = blPixelConverterCalcRgbMask32(di);
 
@@ -1918,10 +1865,10 @@ static BLResult blPixelConverterInit8888From8(BLPixelConverterCore* self, const 
     // ?RGB32 <- L8.
     d.fillMask = ~rgbMask;
   }
-  else if (blBitMatch(di.flags, BL_FORMAT_FLAG_ALPHA | BL_FORMAT_FLAG_PREMULTIPLIED)) {
+  else if (BLIntOps::bitMatch(di.flags, BL_FORMAT_FLAG_ALPHA | BL_FORMAT_FLAG_PREMULTIPLIED)) {
     // PRGB32 <- A8 - RGB channels are set to A, alpha channel is kept.
   }
-  else if (blBitMatch(di.flags, BL_FORMAT_FLAG_ALPHA)) {
+  else if (BLIntOps::bitMatch(di.flags, BL_FORMAT_FLAG_ALPHA)) {
     // ARGB32 <- A8 - RGB channels are set to 255, alpha channel is kept.
     d.fillMask = rgbMask;
   }
@@ -1938,11 +1885,10 @@ static BLResult blPixelConverterInit8888From8(BLPixelConverterCore* self, const 
   return blPixelConverterInitFuncC(self, bl_convert_8888_from_x8);
 }
 
-// ============================================================================
-// [BLPixelConverter - Init - 8888 From 888]
-// ============================================================================
+// PixelConverter - Init - 8888 From 888
+// =====================================
 
-static BLResult blPixelConverterInit8888From888(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
+static BLResult blPixelConverterInit8888From888(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, BLPixelConverterCreateFlags createFlags) noexcept {
   blUnused(self, createFlags);
 
   uint32_t commonFlags = di.flags & si.flags;
@@ -1970,11 +1916,10 @@ static BLResult blPixelConverterInit8888From888(BLPixelConverterCore* self, cons
   return BL_RESULT_NOTHING;
 }
 
-// ============================================================================
-// [BLPixelConverter - Init - NativeFromForeign]
-// ============================================================================
+// PixelConverter - Init - NativeFromForeign
+// =========================================
 
-static BLResult blPixelConverterInit8888FromForeign(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
+static BLResult blPixelConverterInit8888FromForeign(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, BLPixelConverterCreateFlags createFlags) noexcept {
   blUnused(createFlags);
 
   BL_ASSERT(di.depth == 32);
@@ -2009,12 +1954,11 @@ static BLResult blPixelConverterInit8888FromForeign(BLPixelConverterCore* self, 
       size = 8;
     }
 
-    d.masks[i] = blNonZeroLsbMask<uint32_t>(size);
+    d.masks[i] = BLIntOps::nonZeroLsbMask<uint32_t>(size);
     d.shifts[i] = uint8_t(shift);
 
-    // Calculate a scale constant that will be used to expand bits in case
-    // that the source contains less than 8 bits. We do it by adding `size`
-    // to the `scaledSize` until we reach the required bit-depth.
+    // Calculate a scale constant that will be used to expand bits in case that the source contains less than 8 bits.
+    // We do it by adding `size`  to the `scaledSize` until we reach the required bit-depth.
     uint32_t scale = 0x1;
     uint32_t scaledSize = size;
 
@@ -2040,14 +1984,14 @@ static BLResult blPixelConverterInit8888FromForeign(BLPixelConverterCore* self, 
     case 16:
       // TODO:
       if (isSrcPremultiplied)
-        func = hasSrcHostBO ? bl_convert_prgb32_from_prgb_any<BLPixelAccess16<BL_BYTE_ORDER_NATIVE >, BL_UNALIGNED_IO_16>
-                            : bl_convert_prgb32_from_prgb_any<BLPixelAccess16<BL_BYTE_ORDER_SWAPPED>, BL_UNALIGNED_IO_16>;
+        func = hasSrcHostBO ? bl_convert_prgb32_from_prgb_any<BLPixelAccess16<BL_BYTE_ORDER_NATIVE >, BLMemOps::kUnalignedMem16>
+                            : bl_convert_prgb32_from_prgb_any<BLPixelAccess16<BL_BYTE_ORDER_SWAPPED>, BLMemOps::kUnalignedMem16>;
       else if (isSrcRGBA)
-        func = hasSrcHostBO ? bl_convert_prgb32_from_argb_any<BLPixelAccess16<BL_BYTE_ORDER_NATIVE >, BL_UNALIGNED_IO_16>
-                            : bl_convert_prgb32_from_argb_any<BLPixelAccess16<BL_BYTE_ORDER_SWAPPED>, BL_UNALIGNED_IO_16>;
+        func = hasSrcHostBO ? bl_convert_prgb32_from_argb_any<BLPixelAccess16<BL_BYTE_ORDER_NATIVE >, BLMemOps::kUnalignedMem16>
+                            : bl_convert_prgb32_from_argb_any<BLPixelAccess16<BL_BYTE_ORDER_SWAPPED>, BLMemOps::kUnalignedMem16>;
       else
-        func = hasSrcHostBO ? bl_convert_xrgb32_from_xrgb_any<BLPixelAccess16<BL_BYTE_ORDER_NATIVE >, BL_UNALIGNED_IO_16>
-                            : bl_convert_xrgb32_from_xrgb_any<BLPixelAccess16<BL_BYTE_ORDER_SWAPPED>, BL_UNALIGNED_IO_16>;
+        func = hasSrcHostBO ? bl_convert_xrgb32_from_xrgb_any<BLPixelAccess16<BL_BYTE_ORDER_NATIVE >, BLMemOps::kUnalignedMem16>
+                            : bl_convert_xrgb32_from_xrgb_any<BLPixelAccess16<BL_BYTE_ORDER_SWAPPED>, BLMemOps::kUnalignedMem16>;
       break;
 
     case 24:
@@ -2064,14 +2008,14 @@ static BLResult blPixelConverterInit8888FromForeign(BLPixelConverterCore* self, 
 
     case 32:
       if (isSrcPremultiplied)
-        func = hasSrcHostBO ? bl_convert_prgb32_from_prgb_any<BLPixelAccess32<BL_BYTE_ORDER_NATIVE >, BL_UNALIGNED_IO_32>
-                            : bl_convert_prgb32_from_prgb_any<BLPixelAccess32<BL_BYTE_ORDER_SWAPPED>, BL_UNALIGNED_IO_32>;
+        func = hasSrcHostBO ? bl_convert_prgb32_from_prgb_any<BLPixelAccess32<BL_BYTE_ORDER_NATIVE >, BLMemOps::kUnalignedMem32>
+                            : bl_convert_prgb32_from_prgb_any<BLPixelAccess32<BL_BYTE_ORDER_SWAPPED>, BLMemOps::kUnalignedMem32>;
       else if (isSrcRGBA)
-        func = hasSrcHostBO ? bl_convert_prgb32_from_argb_any<BLPixelAccess32<BL_BYTE_ORDER_NATIVE >, BL_UNALIGNED_IO_32>
-                            : bl_convert_prgb32_from_argb_any<BLPixelAccess32<BL_BYTE_ORDER_SWAPPED>, BL_UNALIGNED_IO_32>;
+        func = hasSrcHostBO ? bl_convert_prgb32_from_argb_any<BLPixelAccess32<BL_BYTE_ORDER_NATIVE >, BLMemOps::kUnalignedMem32>
+                            : bl_convert_prgb32_from_argb_any<BLPixelAccess32<BL_BYTE_ORDER_SWAPPED>, BLMemOps::kUnalignedMem32>;
       else
-        func = hasSrcHostBO ? bl_convert_xrgb32_from_xrgb_any<BLPixelAccess32<BL_BYTE_ORDER_NATIVE >, BL_UNALIGNED_IO_32>
-                            : bl_convert_xrgb32_from_xrgb_any<BLPixelAccess32<BL_BYTE_ORDER_SWAPPED>, BL_UNALIGNED_IO_32>;
+        func = hasSrcHostBO ? bl_convert_xrgb32_from_xrgb_any<BLPixelAccess32<BL_BYTE_ORDER_NATIVE >, BLMemOps::kUnalignedMem32>
+                            : bl_convert_xrgb32_from_xrgb_any<BLPixelAccess32<BL_BYTE_ORDER_SWAPPED>, BLMemOps::kUnalignedMem32>;
       break;
 
     default:
@@ -2081,11 +2025,10 @@ static BLResult blPixelConverterInit8888FromForeign(BLPixelConverterCore* self, 
   return blPixelConverterInitFuncC(self, func);
 }
 
-// ============================================================================
-// [BLPixelConverter - Init - ForeignFromNative]
-// ============================================================================
+// PixelConverter - Init - ForeignFromNative
+// =========================================
 
-static BLResult blPixelConverterInitForeignFrom8888(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
+static BLResult blPixelConverterInitForeignFrom8888(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, BLPixelConverterCreateFlags createFlags) noexcept {
   blUnused(si, createFlags);
 
   BL_ASSERT(si.depth == 32);
@@ -2111,7 +2054,7 @@ static BLResult blPixelConverterInitForeignFrom8888(BLPixelConverterCore* self, 
       uint32_t shift = di.shifts[i];
 
       if (size != 0) {
-        mask = blNonZeroLsbMask<uint32_t>(size) << shift;
+        mask = BLIntOps::nonZeroLsbMask<uint32_t>(size) << shift;
         shift = 32 - size - shift;
       }
 
@@ -2123,14 +2066,14 @@ static BLResult blPixelConverterInitForeignFrom8888(BLPixelConverterCore* self, 
     switch (di.depth) {
       case 16:
         if (isDstPremultiplied)
-          func = hasDstHostBO ? bl_convert_prgb_any_from_prgb32<BLPixelAccess16<BL_BYTE_ORDER_NATIVE>, BL_UNALIGNED_IO_16>
-                              : bl_convert_prgb_any_from_prgb32<BLPixelAccess16<BL_BYTE_ORDER_SWAPPED>, BL_UNALIGNED_IO_16>;
+          func = hasDstHostBO ? bl_convert_prgb_any_from_prgb32<BLPixelAccess16<BL_BYTE_ORDER_NATIVE>, BLMemOps::kUnalignedMem16>
+                              : bl_convert_prgb_any_from_prgb32<BLPixelAccess16<BL_BYTE_ORDER_SWAPPED>, BLMemOps::kUnalignedMem16>;
         else if (isDstRGBA)
-          func = hasDstHostBO ? bl_convert_argb_any_from_prgb32<BLPixelAccess16<BL_BYTE_ORDER_NATIVE>, BL_UNALIGNED_IO_16>
-                              : bl_convert_argb_any_from_prgb32<BLPixelAccess16<BL_BYTE_ORDER_SWAPPED>, BL_UNALIGNED_IO_16>;
+          func = hasDstHostBO ? bl_convert_argb_any_from_prgb32<BLPixelAccess16<BL_BYTE_ORDER_NATIVE>, BLMemOps::kUnalignedMem16>
+                              : bl_convert_argb_any_from_prgb32<BLPixelAccess16<BL_BYTE_ORDER_SWAPPED>, BLMemOps::kUnalignedMem16>;
         else
-          func = hasDstHostBO ? bl_convert_xrgb_any_from_xrgb32<BLPixelAccess16<BL_BYTE_ORDER_NATIVE>, BL_UNALIGNED_IO_16>
-                              : bl_convert_xrgb_any_from_xrgb32<BLPixelAccess16<BL_BYTE_ORDER_SWAPPED>, BL_UNALIGNED_IO_16>;
+          func = hasDstHostBO ? bl_convert_xrgb_any_from_xrgb32<BLPixelAccess16<BL_BYTE_ORDER_NATIVE>, BLMemOps::kUnalignedMem16>
+                              : bl_convert_xrgb_any_from_xrgb32<BLPixelAccess16<BL_BYTE_ORDER_SWAPPED>, BLMemOps::kUnalignedMem16>;
         break;
 
       case 24:
@@ -2147,14 +2090,14 @@ static BLResult blPixelConverterInitForeignFrom8888(BLPixelConverterCore* self, 
 
       case 32:
         if (isDstPremultiplied)
-          func = hasDstHostBO ? bl_convert_prgb_any_from_prgb32<BLPixelAccess32<BL_BYTE_ORDER_NATIVE>, BL_UNALIGNED_IO_32>
-                              : bl_convert_prgb_any_from_prgb32<BLPixelAccess32<BL_BYTE_ORDER_SWAPPED>, BL_UNALIGNED_IO_32>;
+          func = hasDstHostBO ? bl_convert_prgb_any_from_prgb32<BLPixelAccess32<BL_BYTE_ORDER_NATIVE>, BLMemOps::kUnalignedMem32>
+                              : bl_convert_prgb_any_from_prgb32<BLPixelAccess32<BL_BYTE_ORDER_SWAPPED>, BLMemOps::kUnalignedMem32>;
         else if (isDstRGBA)
-          func = hasDstHostBO ? bl_convert_argb_any_from_prgb32<BLPixelAccess32<BL_BYTE_ORDER_NATIVE>, BL_UNALIGNED_IO_32>
-                              : bl_convert_argb_any_from_prgb32<BLPixelAccess32<BL_BYTE_ORDER_SWAPPED>, BL_UNALIGNED_IO_32>;
+          func = hasDstHostBO ? bl_convert_argb_any_from_prgb32<BLPixelAccess32<BL_BYTE_ORDER_NATIVE>, BLMemOps::kUnalignedMem32>
+                              : bl_convert_argb_any_from_prgb32<BLPixelAccess32<BL_BYTE_ORDER_SWAPPED>, BLMemOps::kUnalignedMem32>;
         else
-          func = hasDstHostBO ? bl_convert_xrgb_any_from_xrgb32<BLPixelAccess32<BL_BYTE_ORDER_NATIVE>, BL_UNALIGNED_IO_32>
-                              : bl_convert_xrgb_any_from_xrgb32<BLPixelAccess32<BL_BYTE_ORDER_SWAPPED>, BL_UNALIGNED_IO_32>;
+          func = hasDstHostBO ? bl_convert_xrgb_any_from_xrgb32<BLPixelAccess32<BL_BYTE_ORDER_NATIVE>, BLMemOps::kUnalignedMem32>
+                              : bl_convert_xrgb_any_from_xrgb32<BLPixelAccess32<BL_BYTE_ORDER_SWAPPED>, BLMemOps::kUnalignedMem32>;
         break;
 
       default:
@@ -2165,9 +2108,8 @@ static BLResult blPixelConverterInitForeignFrom8888(BLPixelConverterCore* self, 
   }
 }
 
-// ============================================================================
-// [BLPixelConverter - Init - Multi-Step]
-// ============================================================================
+// PixelConverter - Init - Multi-Step
+// ==================================
 
 static BLResult BL_CDECL bl_convert_multi_step(
   const BLPixelConverterCore* self,
@@ -2177,8 +2119,8 @@ static BLResult BL_CDECL bl_convert_multi_step(
   const BLPixelConverterData::MultiStepData& d = blPixelConverterGetData(self)->multiStepData;
   uint32_t intermediatePixelCount = d.intermediatePixelCount;
 
-  // NOTE: We use uintptr_t so the buffer gets properly aligned. In general we
-  // don't need a higher alignment than 32-bit or 64-bit depending on target.
+  // NOTE: We use uintptr_t so the buffer gets properly aligned. In general we don't need a higher alignment than
+  // 32-bit or 64-bit depending on the target.
   uintptr_t intermediateStorage[BL_PIXEL_CONVERTER_MULTISTEP_BUFFER_SIZE / sizeof(uintptr_t)];
   uint8_t* intermediateData = reinterpret_cast<uint8_t*>(intermediateStorage);
 
@@ -2207,7 +2149,7 @@ static BLResult BL_CDECL bl_convert_multi_step(
       srcData = srcLine;
 
       while (i) {
-        uint32_t n = blMin(n, intermediatePixelCount);
+        uint32_t n = blMin(i, intermediatePixelCount);
 
         srcToIntermediate(&ctx->first, intermediateData, 0, srcData, srcStride, n, 1, nullptr);
         intermediateToDst(&ctx->second, dstData, dstStride, intermediateData, 0, n, 1, &workOpt);
@@ -2255,7 +2197,7 @@ static BLResult blPixelConverterInitMultiStepInternal(BLPixelConverterCore* self
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
   BLResult result;
-  uint32_t customFlags = BL_PIXEL_CONVERTER_CREATE_FLAG_NO_MULTI_STEP;
+  BLPixelConverterCreateFlags customFlags = BL_PIXEL_CONVERTER_CREATE_FLAG_NO_MULTI_STEP;
 
   memset(ctx, 0, sizeof(*ctx));
   if ((result = blPixelConverterInitInternal(&ctx->first, intermediate, si, customFlags)) != BL_SUCCESS ||
@@ -2281,13 +2223,12 @@ static BLResult blPixelConverterInitMultiStepInternal(BLPixelConverterCore* self
   return blPixelConverterInitFuncC(self, bl_convert_multi_step, internalFlags);
 }
 
-static BLResult blPixelConverterInitMultiStep(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
+static BLResult blPixelConverterInitMultiStep(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, BLPixelConverterCreateFlags createFlags) noexcept {
   blUnused(createFlags);
 
-  // We have foreign pixel formats on both input and output. This means that we
-  // will create two converters and convert through a native pixel format as
-  // otherwise it would not be possible to convert the pixels by using built-in
-  // converters.
+  // We have foreign pixel formats on both input and output. This means that we will create two converters and
+  // convert through a native pixel format as otherwise it would not be possible to convert the pixels by using
+  // built-in converters.
 
   const uint32_t kA = BL_FORMAT_FLAG_ALPHA;
   const uint32_t kP = BL_FORMAT_FLAG_PREMULTIPLIED;
@@ -2306,11 +2247,10 @@ static BLResult blPixelConverterInitMultiStep(BLPixelConverterCore* self, const 
   return BL_RESULT_NOTHING;
 }
 
-// ============================================================================
-// [BLPixelConverter - Init - Internal]
-// ============================================================================
+// PixelConverter - Init - Internal
+// ================================
 
-BLResult blPixelConverterInitInternal(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept {
+BLResult blPixelConverterInitInternal(BLPixelConverterCore* self, const BLFormatInfo& di, const BLFormatInfo& si, BLPixelConverterCreateFlags createFlags) noexcept {
   uint32_t commonFlags = di.flags & si.flags;
   // Convert - Indexed destination is not supported.
   if (di.flags & BL_FORMAT_FLAG_INDEXED)
@@ -2326,28 +2266,28 @@ BLResult blPixelConverterInitInternal(BLPixelConverterCore* self, const BLFormat
 
   if (di.depth == 8 && si.depth == 32) {
     // Convert - A8 <- ARGB32|PRGB32.
-    if (blBitMatch(commonFlags, BL_FORMAT_FLAG_ALPHA | BL_FORMAT_FLAG_BYTE_ALIGNED))
+    if (BLIntOps::bitMatch(commonFlags, BL_FORMAT_FLAG_ALPHA | BL_FORMAT_FLAG_BYTE_ALIGNED))
       BL_PROPAGATE_IF_NOT_NOTHING(blPixelConverterInit8From8888(self, di, si, createFlags));
   }
 
   // Convert - ?RGB32 <- A8|L8.
   if (di.depth == 32 && si.depth == 8) {
-    if (blBitMatch(commonFlags, BL_FORMAT_FLAG_BYTE_ALIGNED) && (di.flags & BL_FORMAT_FLAG_RGB) != 0)
+    if (BLIntOps::bitMatch(commonFlags, BL_FORMAT_FLAG_BYTE_ALIGNED) && (di.flags & BL_FORMAT_FLAG_RGB) != 0)
       BL_PROPAGATE_IF_NOT_NOTHING(blPixelConverterInit8888From8(self, di, si, createFlags));
   }
 
   // Convert - ?RGB32 <- RGB24.
   if (di.depth == 32 && si.depth == 24) {
-    if (blBitMatch(commonFlags, BL_FORMAT_FLAG_BYTE_ALIGNED | BL_FORMAT_FLAG_RGB))
+    if (BLIntOps::bitMatch(commonFlags, BL_FORMAT_FLAG_BYTE_ALIGNED | BL_FORMAT_FLAG_RGB))
       BL_PROPAGATE_IF_NOT_NOTHING(blPixelConverterInit8888From888(self, di, si, createFlags));
   }
 
   // Convert - ?RGB32 <- Foreign.
-  if (di.depth == 32 && blBitMatch(di.flags, BL_FORMAT_FLAG_BYTE_ALIGNED))
+  if (di.depth == 32 && BLIntOps::bitMatch(di.flags, BL_FORMAT_FLAG_BYTE_ALIGNED))
     BL_PROPAGATE_IF_NOT_NOTHING(blPixelConverterInit8888FromForeign(self, di, si, createFlags));
 
   // Convert - Foreign <- ?RGB32.
-  if (si.depth == 32 && blBitMatch(si.flags, BL_FORMAT_FLAG_BYTE_ALIGNED))
+  if (si.depth == 32 && BLIntOps::bitMatch(si.flags, BL_FORMAT_FLAG_BYTE_ALIGNED))
     BL_PROPAGATE_IF_NOT_NOTHING(blPixelConverterInitForeignFrom8888(self, di, si, createFlags));
 
   // Convert - Foreign <- Foreign.
@@ -2358,9 +2298,8 @@ BLResult blPixelConverterInitInternal(BLPixelConverterCore* self, const BLFormat
   return blTraceError(BL_ERROR_NOT_IMPLEMENTED);
 }
 
-// ============================================================================
-// [BLPixelConverter - Unit Tests]
-// ============================================================================
+// PixelConverter - Tests
+// ======================
 
 #ifdef BL_TEST
 
@@ -2395,77 +2334,69 @@ static void testRgb32A8Conversions() noexcept {
   BLPixelConverter cvtPrgb32FromA8;
   BLPixelConverter cvtA8FromPrgb32;
 
-  EXPECT(cvtXrgb32FromA8.create(xrgb32Format, a8Format) == BL_SUCCESS);
-  EXPECT(cvtArgb32FromA8.create(argb32Format, a8Format) == BL_SUCCESS);
-  EXPECT(cvtPrgb32FromA8.create(prgb32Format, a8Format) == BL_SUCCESS);
-  EXPECT(cvtA8FromPrgb32.create(a8Format, prgb32Format) == BL_SUCCESS);
+  EXPECT_SUCCESS(cvtXrgb32FromA8.create(xrgb32Format, a8Format));
+  EXPECT_SUCCESS(cvtArgb32FromA8.create(argb32Format, a8Format));
+  EXPECT_SUCCESS(cvtPrgb32FromA8.create(prgb32Format, a8Format));
+  EXPECT_SUCCESS(cvtA8FromPrgb32.create(a8Format, prgb32Format));
 
   // This would test the conversion and also whether the SIMD implementation
   // is okay. We test for 1..256 pixels and verify all pixels from 0..255.
   for (n = 1; n < 256; n++) {
     memset(rgb32, 0, sizeof(rgb32));
-    EXPECT(cvtXrgb32FromA8.convertSpan(rgb32, srcX8, n) == BL_SUCCESS);
+    EXPECT_SUCCESS(cvtXrgb32FromA8.convertSpan(rgb32, srcX8, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
         uint32_t p0 = rgb32[i];
         uint32_t p1 = (uint32_t(srcX8[i]) * 0x01010101u) | 0xFF000000u;
-        EXPECT(p0 == p1,
-               "[%u] XRGB32<-A8 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
+        EXPECT_EQ(p0, p1).message("[%u] XRGB32<-A8 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
       }
       else {
-        EXPECT(rgb32[i] == 0,
-               "[%u] Detected buffer overrun after XRGB32<-A8 conversion", i);
+        EXPECT_EQ(rgb32[i], 0u).message("[%u] Detected buffer overrun after XRGB32<-A8 conversion", i);
       }
     }
 
     memset(rgb32, 0, sizeof(rgb32));
-    EXPECT(cvtArgb32FromA8.convertSpan(rgb32, srcX8, n) == BL_SUCCESS);
+    EXPECT_SUCCESS(cvtArgb32FromA8.convertSpan(rgb32, srcX8, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
         uint32_t p0 = rgb32[i];
         uint32_t p1 = (uint32_t(srcX8[i]) * 0x01010101u) | 0x00FFFFFFu;
-        EXPECT(p0 == p1,
-               "[%u] ARGB32<-A8 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
+        EXPECT_EQ(p0, p1).message("[%u] ARGB32<-A8 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
       }
       else {
-        EXPECT(rgb32[i] == 0,
-               "[%u] Detected buffer overrun after ARGB32<-A8 conversion", i);
+        EXPECT_EQ(rgb32[i], 0u).message("[%u] Detected buffer overrun after ARGB32<-A8 conversion", i);
       }
     }
 
     memset(rgb32, 0, sizeof(rgb32));
-    EXPECT(cvtPrgb32FromA8.convertSpan(rgb32, srcX8, n) == BL_SUCCESS);
+    EXPECT_SUCCESS(cvtPrgb32FromA8.convertSpan(rgb32, srcX8, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
         uint32_t p0 = rgb32[i];
         uint32_t p1 = uint32_t(srcX8[i]) * 0x01010101u;
-        EXPECT(p0 == p1,
-               "[%u] PRGB32<-A8 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
+        EXPECT_EQ(p0, p1).message("[%u] PRGB32<-A8 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
       }
       else {
-        EXPECT(rgb32[i] == 0,
-               "[%u] Detected buffer overrun after PRGB32<-A8 conversion", i);
+        EXPECT_EQ(rgb32[i], 0u).message("[%u] Detected buffer overrun after PRGB32<-A8 conversion", i);
       }
     }
   }
 
   for (n = 1; n < 256; n++) {
     memset(dstX8, 0, sizeof(dstX8));
-    EXPECT(cvtA8FromPrgb32.convertSpan(dstX8, rgb32, n) == BL_SUCCESS);
+    EXPECT_SUCCESS(cvtA8FromPrgb32.convertSpan(dstX8, rgb32, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
         uint32_t p0 = srcX8[i];
         uint32_t p1 = dstX8[i];
-        EXPECT(p0 == p1,
-               "[%u] A8<-PRGB32 conversion error OUT[%02X] != EXP[%02X]", i, p0, p1);
+        EXPECT_EQ(p0, p1).message("[%u] A8<-PRGB32 conversion error OUT[%02X] != EXP[%02X]", i, p0, p1);
       }
       else {
-        EXPECT(dstX8[i] == 0,
-               "[%u] Detected buffer overrun after A8<-PRGB32 conversion", i);
+        EXPECT_EQ(dstX8[i], 0u).message("[%u] Detected buffer overrun after A8<-PRGB32 conversion", i);
       }
     }
   }
@@ -2504,82 +2435,82 @@ static void testRgb32Rgb24Conversions() noexcept {
   BLPixelConverter cvtBgr24FromRgb32;
   BLPixelConverter cvtRgb24FromRgb32;
 
-  EXPECT(cvtRgb32FromRgb24.create(rgb32Format, rgb24Format) == BL_SUCCESS);
-  EXPECT(cvtRgb32FromBgr24.create(rgb32Format, bgr24Format) == BL_SUCCESS);
+  EXPECT_SUCCESS(cvtRgb32FromRgb24.create(rgb32Format, rgb24Format));
+  EXPECT_SUCCESS(cvtRgb32FromBgr24.create(rgb32Format, bgr24Format));
 
-  EXPECT(cvtRgb24FromRgb32.create(rgb24Format, rgb32Format) == BL_SUCCESS);
-  EXPECT(cvtBgr24FromRgb32.create(bgr24Format, rgb32Format) == BL_SUCCESS);
+  EXPECT_SUCCESS(cvtRgb24FromRgb32.create(rgb24Format, rgb32Format));
+  EXPECT_SUCCESS(cvtBgr24FromRgb32.create(bgr24Format, rgb32Format));
 
   // This would test the conversion and also whether the SIMD implementation
   // is okay. We test for 1..256 pixels and verify all pixels from 0..255.
   for (n = 1; n < 256; n++) {
     memset(rgb32, 0, sizeof(rgb32));
-    EXPECT(cvtRgb32FromRgb24.convertSpan(rgb32, srcRgb24, n) == BL_SUCCESS);
+    EXPECT_SUCCESS(cvtRgb32FromRgb24.convertSpan(rgb32, srcRgb24, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
         uint32_t p0 = rgb32[i];
-        uint32_t p1 = blRgba32Pack(srcRgb24[i * 3 + 0], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 2]);
-        EXPECT(p0 == p1,
-               "[%u] RGB32<-RGB24 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
+        uint32_t p1 = BLRgbaPrivate::packRgba32(srcRgb24[i * 3 + 0], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 2]);
+        EXPECT_EQ(p0, p1)
+          .message("[%u] RGB32<-RGB24 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
       }
       else {
-        EXPECT(rgb32[i] == 0,
-               "[%u] Detected buffer overrun after RGB32<-RGB24 conversion", i);
+        EXPECT_EQ(rgb32[i], 0u)
+          .message("[%u] Detected buffer overrun after RGB32<-RGB24 conversion", i);
       }
     }
   }
 
   for (n = 1; n < 256; n++) {
     memset(dstRgb24, 0, sizeof(dstRgb24));
-    EXPECT(cvtRgb24FromRgb32.convertSpan(dstRgb24, rgb32, n) == BL_SUCCESS);
+    EXPECT_SUCCESS(cvtRgb24FromRgb32.convertSpan(dstRgb24, rgb32, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
-        EXPECT(memcmp(dstRgb24 + i * 3, srcRgb24 + i * 3, 3) == 0,
-               "[%u] RGB24<-RGB32 conversion error OUT[%02X|%02X|%02X] != EXP[%02X|%02X|%02X]", i,
-               dstRgb24[i * 3 + 0], dstRgb24[i * 3 + 1], dstRgb24[i * 3 + 2],
-               srcRgb24[i * 3 + 0], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 2]);
+        EXPECT_EQ(memcmp(dstRgb24 + i * 3, srcRgb24 + i * 3, 3), 0)
+          .message("[%u] RGB24<-RGB32 conversion error OUT[%02X|%02X|%02X] != EXP[%02X|%02X|%02X]", i,
+                   dstRgb24[i * 3 + 0], dstRgb24[i * 3 + 1], dstRgb24[i * 3 + 2],
+                   srcRgb24[i * 3 + 0], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 2]);
       }
       else {
-        EXPECT(memcmp(dstRgb24 + i * 3, allZeros, 3) == 0,
-               "[%u] Detected buffer overrun after RGB24<-RGB32 conversion", i);
+        EXPECT_EQ(memcmp(dstRgb24 + i * 3, allZeros, 3), 0)
+          .message("[%u] Detected buffer overrun after RGB24<-RGB32 conversion", i);
       }
     }
   }
 
   for (n = 1; n < 256; n++) {
     memset(rgb32, 0, sizeof(rgb32));
-    EXPECT(cvtRgb32FromBgr24.convertSpan(rgb32, srcRgb24, n) == BL_SUCCESS);
+    EXPECT_SUCCESS(cvtRgb32FromBgr24.convertSpan(rgb32, srcRgb24, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
         uint32_t p0 = rgb32[i];
-        uint32_t p1 = blRgba32Pack(srcRgb24[i * 3 + 2], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 0]);
-        EXPECT(p0 == p1,
-               "[%u] RGB32<-BGR24 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
+        uint32_t p1 = BLRgbaPrivate::packRgba32(srcRgb24[i * 3 + 2], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 0]);
+        EXPECT_EQ(p0, p1)
+          .message("[%u] RGB32<-BGR24 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
       }
       else {
-        EXPECT(rgb32[i] == 0,
-               "[%u] Detected buffer overrun after RGB32<-BGR24 conversion", i);
+        EXPECT_EQ(rgb32[i], 0u)
+          .message("[%u] Detected buffer overrun after RGB32<-BGR24 conversion", i);
       }
     }
   }
 
   for (n = 1; n < 256; n++) {
     memset(dstRgb24, 0, sizeof(dstRgb24));
-    EXPECT(cvtBgr24FromRgb32.convertSpan(dstRgb24, rgb32, n) == BL_SUCCESS);
+    EXPECT_SUCCESS(cvtBgr24FromRgb32.convertSpan(dstRgb24, rgb32, n));
 
     for (i = 0; i < 256; i++) {
       if (i < n) {
-        EXPECT(memcmp(dstRgb24 + i * 3, srcRgb24 + i * 3, 3) == 0,
-               "[%u] BGR24<-RGB32 conversion error OUT[%02X|%02X|%02X] != EXP[%02X|%02X|%02X]", i,
-               dstRgb24[i * 3 + 0], dstRgb24[i * 3 + 1], dstRgb24[i * 3 + 2],
-               srcRgb24[i * 3 + 0], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 2]);
+        EXPECT_EQ(memcmp(dstRgb24 + i * 3, srcRgb24 + i * 3, 3), 0)
+          .message("[%u] BGR24<-RGB32 conversion error OUT[%02X|%02X|%02X] != EXP[%02X|%02X|%02X]", i,
+                    dstRgb24[i * 3 + 0], dstRgb24[i * 3 + 1], dstRgb24[i * 3 + 2],
+                    srcRgb24[i * 3 + 0], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 2]);
       }
       else {
-        EXPECT(memcmp(dstRgb24 + i * 3, allZeros, 3) == 0,
-               "[%u] Detected buffer overrun after BGR24<-RGB32 conversion", i);
+        EXPECT_EQ(memcmp(dstRgb24 + i * 3, allZeros, 3), 0)
+          .message("[%u] Detected buffer overrun after BGR24<-RGB32 conversion", i);
       }
     }
   }
@@ -2646,15 +2577,15 @@ static void testPremultiplyConversions() noexcept {
     BLPixelConverter cvt1;
     BLPixelConverter cvt2;
 
-    EXPECT(cvt1.create(premultipliedFmt[f], unpremultipliedFmt[f]) == BL_SUCCESS);
-    EXPECT(cvt2.create(unpremultipliedFmt[f], premultipliedFmt[f]) == BL_SUCCESS);
+    EXPECT_SUCCESS(cvt1.create(premultipliedFmt[f], unpremultipliedFmt[f]));
+    EXPECT_SUCCESS(cvt2.create(unpremultipliedFmt[f], premultipliedFmt[f]));
 
     for (n = 1; n < N; n++) {
       memset(dst, 0, sizeof(dst));
       memset(unp, 0, sizeof(unp));
 
-      EXPECT(cvt1.convertSpan(dst, src, n) == BL_SUCCESS);
-      EXPECT(cvt2.convertSpan(unp, dst, n) == BL_SUCCESS);
+      EXPECT_SUCCESS(cvt1.convertSpan(dst, src, n));
+      EXPECT_SUCCESS(cvt2.convertSpan(unp, dst, n));
 
       for (i = 0; i < n; i++) {
         if (i < n) {
@@ -2673,25 +2604,28 @@ static void testPremultiplyConversions() noexcept {
           else
             s3 = 0xFF;
 
-          uint32_t e0 = blUdiv255(s0 * a);
-          uint32_t e1 = blUdiv255(s1 * a);
-          uint32_t e2 = blUdiv255(s2 * a);
-          uint32_t e3 = blUdiv255(s3 * a);
+          uint32_t e0 = BLPixelOps::Scalar::udiv255(s0 * a);
+          uint32_t e1 = BLPixelOps::Scalar::udiv255(s1 * a);
+          uint32_t e2 = BLPixelOps::Scalar::udiv255(s2 * a);
+          uint32_t e3 = BLPixelOps::Scalar::udiv255(s3 * a);
           uint32_t ep = (e0 << 24) | (e1 << 16) | (e2 << 8) | e3;
 
-          EXPECT(dp == ep, "[%u] OUT[0x%08X] != EXP[0x%08X] <- Premultiply(SRC[0x%08X])", i, dp, ep, sp);
+          EXPECT_EQ(dp, ep)
+            .message("[%u] OUT[0x%08X] != EXP[0x%08X] <- Premultiply(SRC[0x%08X])", i, dp, ep, sp);
 
           if (leadingAlpha)
-            BLPixelOps::unpremultiply_rgb_8bit(e1, e2, e3, e0);
+            BLPixelOps::Scalar::unpremultiply_rgb_8bit(e1, e2, e3, e0);
           else
-            BLPixelOps::unpremultiply_rgb_8bit(e0, e1, e2, e3);
+            BLPixelOps::Scalar::unpremultiply_rgb_8bit(e0, e1, e2, e3);
 
           ep = (e0 << 24) | (e1 << 16) | (e2 << 8) | e3;
-          EXPECT(up == ep, "[%u] OUT[0x%08X] != EXP[0x%08X] <- Unpremultiply(DST[0x%08X])", i, up, ep, dp);
+          EXPECT_EQ(up, ep)
+            .message("[%u] OUT[0x%08X] != EXP[0x%08X] <- Unpremultiply(DST[0x%08X])", i, up, ep, dp);
         }
         else {
           uint32_t dp = dst[i];
-          EXPECT(dp == 0, "[%u] Detected buffer overrun", i);
+          EXPECT_EQ(dp, 0u)
+            .message("[%u] Detected buffer overrun", i);
         }
       }
     }
@@ -2704,14 +2638,14 @@ static void testPremultiplyConversions() noexcept {
 template<typename T>
 struct BLPixelConverterGenericTest {
   static void fillMasks(BLFormatInfo& fi) noexcept {
-    fi.shifts[0] = uint8_t(T::kR ? blBitCtz(T::kR) : uint32_t(0));
-    fi.shifts[1] = uint8_t(T::kG ? blBitCtz(T::kG) : uint32_t(0));
-    fi.shifts[2] = uint8_t(T::kB ? blBitCtz(T::kB) : uint32_t(0));
-    fi.shifts[3] = uint8_t(T::kA ? blBitCtz(T::kA) : uint32_t(0));
-    fi.sizes[0] = uint8_t(T::kR ? blBitCtz(~(T::kR >> fi.shifts[0])) : uint32_t(0));
-    fi.sizes[1] = uint8_t(T::kG ? blBitCtz(~(T::kG >> fi.shifts[1])) : uint32_t(0));
-    fi.sizes[2] = uint8_t(T::kB ? blBitCtz(~(T::kB >> fi.shifts[2])) : uint32_t(0));
-    fi.sizes[3] = uint8_t(T::kA ? blBitCtz(~(T::kA >> fi.shifts[3])) : uint32_t(0));
+    fi.shifts[0] = uint8_t(T::kR ? BLIntOps::ctz(T::kR) : uint32_t(0));
+    fi.shifts[1] = uint8_t(T::kG ? BLIntOps::ctz(T::kG) : uint32_t(0));
+    fi.shifts[2] = uint8_t(T::kB ? BLIntOps::ctz(T::kB) : uint32_t(0));
+    fi.shifts[3] = uint8_t(T::kA ? BLIntOps::ctz(T::kA) : uint32_t(0));
+    fi.sizes[0] = uint8_t(T::kR ? BLIntOps::ctz(~(T::kR >> fi.shifts[0])) : uint32_t(0));
+    fi.sizes[1] = uint8_t(T::kG ? BLIntOps::ctz(~(T::kG >> fi.shifts[1])) : uint32_t(0));
+    fi.sizes[2] = uint8_t(T::kB ? BLIntOps::ctz(~(T::kB >> fi.shifts[2])) : uint32_t(0));
+    fi.sizes[3] = uint8_t(T::kA ? BLIntOps::ctz(~(T::kA >> fi.shifts[3])) : uint32_t(0));
   }
 
   static void testPrgb32() noexcept {
@@ -2725,8 +2659,11 @@ struct BLPixelConverterGenericTest {
     fi.depth = T::kDepth;
     fi.flags = fi.sizes[3] ? BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_PREMULTIPLIED : BL_FORMAT_FLAG_RGB;
 
-    EXPECT(from.create(fi, blFormatInfo[BL_FORMAT_PRGB32]) == BL_SUCCESS, "%s: Failed to create from [%dbpp 0x%08X 0x%08X 0x%08X 0x%08X]", T::formatString(), T::kDepth, T::kR, T::kG, T::kB, T::kA);
-    EXPECT(back.create(blFormatInfo[BL_FORMAT_PRGB32], fi) == BL_SUCCESS, "%s: Failed to create to [%dbpp 0x%08X 0x%08X 0x%08X 0x%08X]", T::formatString(), T::kDepth, T::kR, T::kG, T::kB, T::kA);
+    EXPECT_SUCCESS(from.create(fi, blFormatInfo[BL_FORMAT_PRGB32]))
+      .message("%s: Failed to create from [%dbpp 0x%08X 0x%08X 0x%08X 0x%08X]", T::formatString(), T::kDepth, T::kR, T::kG, T::kB, T::kA);
+
+    EXPECT_SUCCESS(back.create(blFormatInfo[BL_FORMAT_PRGB32], fi))
+      .message("%s: Failed to create to [%dbpp 0x%08X 0x%08X 0x%08X 0x%08X]", T::formatString(), T::kDepth, T::kR, T::kG, T::kB, T::kA);
 
     enum : uint32_t { kCount = 8 };
 
@@ -2747,15 +2684,15 @@ struct BLPixelConverterGenericTest {
     for (uint32_t i = 0; i < kCount; i++) {
       uint32_t mid = 0;
       switch (uint32_t(T::kDepth)) {
-        case 8 : mid = blMemReadU8(buf + i); break;
-        case 16: mid = blMemReadU16u(buf + i * 2u); break;
-        case 24: mid = blMemReadU24u(buf + i * 3u); break;
-        case 32: mid = blMemReadU32u(buf + i * 4u); break;
+        case 8 : mid = BLMemOps::readU8(buf + i); break;
+        case 16: mid = BLMemOps::readU16u(buf + i * 2u); break;
+        case 24: mid = BLMemOps::readU24u(buf + i * 3u); break;
+        case 32: mid = BLMemOps::readU32u(buf + i * 4u); break;
       }
 
-      EXPECT(dst[i] == src[i],
-        "%s: [%u] Dst(%08X) <- 0x%08X <- Src(0x%08X) [%dbpp %08X|%08X|%08X|%08X]",
-        T::formatString(), i, dst[i], mid, src[i], T::kDepth, T::kA, T::kR, T::kG, T::kB);
+      EXPECT_EQ(dst[i], src[i])
+        .message("%s: [%u] Dst(%08X) <- 0x%08X <- Src(0x%08X) [%dbpp %08X|%08X|%08X|%08X]",
+                 T::formatString(), i, dst[i], mid, src[i], T::kDepth, T::kA, T::kR, T::kG, T::kB);
     }
   }
 

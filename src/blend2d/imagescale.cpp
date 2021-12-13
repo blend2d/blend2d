@@ -1,38 +1,21 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
-#include "./imagescale_p.h"
-#include "./math_p.h"
-#include "./format_p.h"
-#include "./geometry_p.h"
-#include "./rgba_p.h"
-#include "./runtime_p.h"
-#include "./support_p.h"
+#include "api-build_p.h"
+#include "imagescale_p.h"
+#include "math_p.h"
+#include "format_p.h"
+#include "geometry_p.h"
+#include "rgba_p.h"
+#include "runtime_p.h"
+#include "support/memops_p.h"
+#include "support/ptrops_p.h"
+#include "support/scopedbuffer_p.h"
 
-// ============================================================================
-// [BLImageScale - Global Variables]
-// ============================================================================
+// BLImageScale - Globals
+// ======================
 
 static constexpr const BLImageScaleOptions blImageScaleOptionsNone = {
   nullptr,   // UserFunc.
@@ -45,20 +28,18 @@ static constexpr const BLImageScaleOptions blImageScaleOptionsNone = {
   }}
 };
 
-// ============================================================================
-// [BLImageScale - Ops]
-// ============================================================================
+// BLImageScale - Ops
+// ==================
 
 struct BLImageScaleOps {
   BLResult (BL_CDECL* weights)(BLImageScaleContext::Data* d, uint32_t dir, BLImageScaleUserFunc func, const void* data) BL_NOEXCEPT;
-  void (BL_CDECL* horz[BL_FORMAT_COUNT])(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) BL_NOEXCEPT;
-  void (BL_CDECL* vert[BL_FORMAT_COUNT])(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) BL_NOEXCEPT;
+  void (BL_CDECL* horz[BL_FORMAT_MAX_VALUE + 1])(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) BL_NOEXCEPT;
+  void (BL_CDECL* vert[BL_FORMAT_MAX_VALUE + 1])(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) BL_NOEXCEPT;
 };
-static BLImageScaleOps blImageScaleOps;
+static BLImageScaleOps imageScaleOps;
 
-// ============================================================================
-// [BLImageScale - BuiltInParams]
-// ============================================================================
+// BLImageScale - BuiltInParams
+// ============================
 
 // Data needed by some functions that take additional parameters.
 struct BLImageScaleBuiltInParams {
@@ -85,9 +66,8 @@ struct BLImageScaleBuiltInParams {
   }
 };
 
-// ============================================================================
-// [BLImageScale - Utilities]
-// ============================================================================
+// BLImageScale - Utilities
+// ========================
 
 // Calculates a Bessel function of first kind of order `n`.
 //
@@ -150,9 +130,8 @@ static BL_INLINE double blBlackman(double x, double y) noexcept {
   return blSinXDivX(x) * (0.42 + 0.5 * blCos(y) + 0.08 * blCos(y * 2.0));
 }
 
-// ============================================================================
-// [BLImageScale - Functions]
-// ============================================================================
+// BLImageScale - Functions
+// ========================
 
 static BLResult BL_CDECL blImageScaleNearestFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
   blUnused(data);
@@ -309,9 +288,8 @@ static BLResult BL_CDECL blImageScaleMitchellFunc(double* dst, const double* tAr
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLImageScale - Weights]
-// ============================================================================
+// BLImageScale - Weights
+// ======================
 
 static BLResult BL_CDECL blImageScaleWeights(BLImageScaleContext::Data* d, uint32_t dir, BLImageScaleUserFunc userFunc, const void* userData) noexcept {
   int32_t* weightList = d->weightList[dir];
@@ -326,7 +304,7 @@ static BLResult BL_CDECL blImageScaleWeights(BLImageScaleContext::Data* d, uint3
   double scale = d->scale[dir];
   int32_t isUnbound = 0;
 
-  BLMemBufferTmp<512> wMem;
+  BLScopedBufferTmp<512> wMem;
   double* wData = static_cast<double*>(wMem.alloc(unsigned(kernelSize) * sizeof(double)));
 
   if (BL_UNLIKELY(!wData))
@@ -427,9 +405,8 @@ static BLResult BL_CDECL blImageScaleWeights(BLImageScaleContext::Data* d, uint3
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLImageScale - Horz]
-// ============================================================================
+// BLImageScale - Horz
+// ===================
 
 static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
   uint32_t dw = uint32_t(d->dstSize[0]);
@@ -451,7 +428,7 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
         uint32_t ca_cg = 0x00800080u;
 
         for (uint32_t i = recordList->count; i; i--) {
-          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t p0 = BLMemOps::readU32a(sp);
           uint32_t w0 = unsigned(wp[0]);
 
           ca_cg += ((p0 >> 8) & 0x00FF00FFu) * w0;
@@ -461,7 +438,7 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
           wp += 1;
         }
 
-        blMemWriteU32a(dp, (ca_cg & 0xFF00FF00u) + ((cr_cb & 0xFF00FF00u) >> 8));
+        BLMemOps::writeU32a(dp, (ca_cg & 0xFF00FF00u) + ((cr_cb & 0xFF00FF00u) >> 8));
         dp += 4;
 
         recordList += 1;
@@ -489,7 +466,7 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
         int32_t cb = 0x80;
 
         for (uint32_t i = recordList->count; i; i--) {
-          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t p0 = BLMemOps::readU32a(sp);
           int32_t w0 = wp[0];
 
           ca += int32_t((p0 >> 24)        ) * w0;
@@ -506,7 +483,7 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
         cg = blClamp<int32_t>(cg >> 8, 0, ca);
         cb = blClamp<int32_t>(cb >> 8, 0, ca);
 
-        blMemWriteU32a(dp, blRgba32Pack(uint32_t(cr), uint32_t(cg), uint32_t(cb), uint32_t(ca)));
+        BLMemOps::writeU32a(dp, BLRgbaPrivate::packRgba32(uint32_t(cr), uint32_t(cg), uint32_t(cb), uint32_t(ca)));
         dp += 4;
 
         recordList += 1;
@@ -539,7 +516,7 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
         uint32_t cr_cb = 0x00800080u;
 
         for (uint32_t i = recordList->count; i; i--) {
-          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t p0 = BLMemOps::readU32a(sp);
           uint32_t w0 = unsigned(wp[0]);
 
           cx_cg += (p0 & 0x0000FF00u) * w0;
@@ -549,7 +526,7 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
           wp += 1;
         }
 
-        blMemWriteU32a(dp, 0xFF000000u + (((cx_cg & 0x00FF0000u) | (cr_cb & 0xFF00FF00u)) >> 8));
+        BLMemOps::writeU32a(dp, 0xFF000000u + (((cx_cg & 0x00FF0000u) | (cr_cb & 0xFF00FF00u)) >> 8));
         dp += 4;
 
         recordList += 1;
@@ -576,7 +553,7 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
         int32_t cb = 0x80;
 
         for (uint32_t i = recordList->count; i; i--) {
-          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t p0 = BLMemOps::readU32a(sp);
           int32_t w0 = wp[0];
 
           cr += int32_t((p0 >> 16) & 0xFF) * w0;
@@ -591,7 +568,7 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
         cg = blClamp<int32_t>(cg >> 8, 0, 255);
         cb = blClamp<int32_t>(cb >> 8, 0, 255);
 
-        blMemWriteU32a(dp, blRgba32Pack(uint32_t(cr), uint32_t(cg), uint32_t(cb), 0xFFu));
+        BLMemOps::writeU32a(dp, BLRgbaPrivate::packRgba32(uint32_t(cr), uint32_t(cg), uint32_t(cb), 0xFFu));
         dp += 4;
 
         recordList += 1;
@@ -667,7 +644,7 @@ static void BL_CDECL blImageScaleHorzA8(const BLImageScaleContext::Data* d, uint
           wp += 1;
         }
 
-        dp[0] = blClampToByte(ca >> 8);
+        dp[0] = BLIntOps::clampToByte(ca >> 8);
 
         recordList += 1;
         weightList += kernelSize;
@@ -681,9 +658,8 @@ static void BL_CDECL blImageScaleHorzA8(const BLImageScaleContext::Data* d, uint
   }
 }
 
-// ============================================================================
-// [BLImageScale - Vert]
-// ============================================================================
+// BLImageScale - Vert
+// ===================
 
 static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
   uint32_t dw = uint32_t(d->dstSize[0]);
@@ -707,7 +683,7 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
         uint32_t ca_cg = 0x00800080;
 
         for (uint32_t i = count; i; i--) {
-          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t p0 = BLMemOps::readU32a(sp);
           uint32_t w0 = unsigned(wp[0]);
 
           ca_cg += ((p0 >> 8) & 0x00FF00FF) * w0;
@@ -717,7 +693,7 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
           wp += 1;
         }
 
-        blMemWriteU32a(dp, (ca_cg & 0xFF00FF00) + ((cr_cb & 0xFF00FF00) >> 8));
+        BLMemOps::writeU32a(dp, (ca_cg & 0xFF00FF00) + ((cr_cb & 0xFF00FF00) >> 8));
         dp += 4;
         srcData += 4;
       }
@@ -744,7 +720,7 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
         int32_t cb = 0x80;
 
         for (uint32_t i = count; i; i--) {
-          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t p0 = BLMemOps::readU32a(sp);
           int32_t w0 = wp[0];
 
           ca += int32_t((p0 >> 24)        ) * w0;
@@ -761,7 +737,7 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
         cg = blClamp<int32_t>(cg >> 8, 0, ca);
         cb = blClamp<int32_t>(cb >> 8, 0, ca);
 
-        blMemWriteU32a(dp, blRgba32Pack(uint32_t(cr), uint32_t(cg), uint32_t(cb), uint32_t(ca)));
+        BLMemOps::writeU32a(dp, BLRgbaPrivate::packRgba32(uint32_t(cr), uint32_t(cg), uint32_t(cb), uint32_t(ca)));
         dp += 4;
         srcData += 4;
       }
@@ -796,7 +772,7 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
         uint32_t cr_cb = 0x00800080u;
 
         for (uint32_t i = count; i; i--) {
-          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t p0 = BLMemOps::readU32a(sp);
           uint32_t w0 = unsigned(wp[0]);
 
           cx_cg += (p0 & 0x0000FF00u) * w0;
@@ -806,7 +782,7 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
           wp += 1;
         }
 
-        blMemWriteU32a(dp, 0xFF000000u + (((cx_cg & 0x00FF0000u) | (cr_cb & 0xFF00FF00u)) >> 8));
+        BLMemOps::writeU32a(dp, 0xFF000000u + (((cx_cg & 0x00FF0000u) | (cr_cb & 0xFF00FF00u)) >> 8));
         dp += 4;
         srcData += 4;
       }
@@ -832,7 +808,7 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
         int32_t cb = 0x80;
 
         for (uint32_t i = count; i; i--) {
-          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t p0 = BLMemOps::readU32a(sp);
           int32_t w0 = wp[0];
 
           cr += int32_t((p0 >> 16) & 0xFFu) * w0;
@@ -847,7 +823,7 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
         cg = blClamp<int32_t>(cg >> 8, 0, 255);
         cb = blClamp<int32_t>(cb >> 8, 0, 255);
 
-        blMemWriteU32a(dp, blRgba32Pack(uint32_t(cr), uint32_t(cg), uint32_t(cb), 0xFFu));
+        BLMemOps::writeU32a(dp, BLRgbaPrivate::packRgba32(uint32_t(cr), uint32_t(cg), uint32_t(cb), 0xFFu));
         dp += 4;
         srcData += 4;
       }
@@ -915,8 +891,8 @@ BoundLarge:
         uint32_t c3 = 0x00800080u;
 
         for (uint32_t j = count; j; j--) {
-          uint32_t p0 = blMemReadU32a(sp + 0u);
-          uint32_t p1 = blMemReadU32a(sp + 4u);
+          uint32_t p0 = BLMemOps::readU32a(sp + 0u);
+          uint32_t p1 = BLMemOps::readU32a(sp + 4u);
           uint32_t w0 = unsigned(wp[0]);
 
           c0 += ((p0     ) & 0x00FF00FFu) * w0;
@@ -928,8 +904,8 @@ BoundLarge:
           wp += 1;
         }
 
-        blMemWriteU32a(dp + 0u, ((c0 & 0xFF00FF00u) >> 8) + (c1 & 0xFF00FF00u));
-        blMemWriteU32a(dp + 4u, ((c2 & 0xFF00FF00u) >> 8) + (c3 & 0xFF00FF00u));
+        BLMemOps::writeU32a(dp + 0u, ((c0 & 0xFF00FF00u) >> 8) + (c1 & 0xFF00FF00u));
+        BLMemOps::writeU32a(dp + 4u, ((c2 & 0xFF00FF00u) >> 8) + (c3 & 0xFF00FF00u));
 
         dp += 8;
         srcData += 8;
@@ -993,7 +969,7 @@ UnboundLarge:
         int32_t c3 = 0x80;
 
         for (uint32_t j = count; j; j--) {
-          uint32_t p0 = blMemReadU32a(sp);
+          uint32_t p0 = BLMemOps::readU32a(sp);
           uint32_t w0 = unsigned(wp[0]);
 
           c0 += ((p0      ) & 0xFF) * w0;
@@ -1005,7 +981,7 @@ UnboundLarge:
           wp += 1;
         }
 
-        blMemWriteU32a(dp, uint32_t(blClamp<int32_t>(c0 >> 8, 0, 255)      ) |
+        BLMemOps::writeU32a(dp, uint32_t(blClamp<int32_t>(c0 >> 8, 0, 255)      ) |
                            uint32_t(blClamp<int32_t>(c1 >> 8, 0, 255) <<  8) |
                            uint32_t(blClamp<int32_t>(c2 >> 8, 0, 255) << 16) |
                            uint32_t(blClamp<int32_t>(c3 >> 8, 0, 255) << 24));
@@ -1030,9 +1006,8 @@ static void BL_CDECL blImageScaleVertA8(const BLImageScaleContext::Data* d, uint
   blImageScaleVertBytes(d, dstLine, dstStride, srcLine, srcStride, 1);
 }
 
-// ============================================================================
-// [BLImageScale - Reset]
-// ============================================================================
+// BLImageScale - Reset
+// ====================
 
 BLResult BLImageScaleContext::reset() noexcept {
   free(data);
@@ -1040,9 +1015,8 @@ BLResult BLImageScaleContext::reset() noexcept {
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLImageScale - Interface]
-// ============================================================================
+// BLImageScale - Create
+// =====================
 
 BLResult BLImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uint32_t filter, const BLImageScaleOptions* options) noexcept {
   if (!options)
@@ -1052,11 +1026,10 @@ BLResult BLImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uin
   BLImageScaleUserFunc userFunc;
   const void* userData = &p;
 
-  // --------------------------------------------------------------------------
-  // [Setup Parameters]
-  // --------------------------------------------------------------------------
+  // Setup Parameters
+  // ----------------
 
-  if (!blIsValid(to) || !blIsValid(from))
+  if (!BLGeometry::isValid(to) || !BLGeometry::isValid(from))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   switch (filter) {
@@ -1101,9 +1074,8 @@ BLResult BLImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uin
   if (!(p.radius >= 1.0 && p.radius <= 16.0))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  // --------------------------------------------------------------------------
-  // [Setup Weights]
-  // --------------------------------------------------------------------------
+  // Setup Weights
+  // -------------
 
   double scale[2];
   double factor[2];
@@ -1161,7 +1133,7 @@ BLResult BLImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uin
   d->radius[1] = radius[1];
 
   // Distribute the memory buffer.
-  uint8_t* dataPtr = blOffsetPtr<uint8_t>(d, sizeof(Data));
+  uint8_t* dataPtr = BLPtrOps::offset<uint8_t>(d, sizeof(Data));
 
   d->weightList[kDirHorz] = reinterpret_cast<int32_t*>(dataPtr); dataPtr += wWeightDataSize;
   d->weightList[kDirVert] = reinterpret_cast<int32_t*>(dataPtr); dataPtr += hWeightDataSize;
@@ -1170,38 +1142,40 @@ BLResult BLImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uin
 
   // Built-in filters will probably never fail, however, custom filters can and
   // it wouldn't be safe to just continue.
-  BL_PROPAGATE(blImageScaleOps.weights(d, kDirHorz, userFunc, userData));
-  BL_PROPAGATE(blImageScaleOps.weights(d, kDirVert, userFunc, userData));
+  BL_PROPAGATE(imageScaleOps.weights(d, kDirHorz, userFunc, userData));
+  BL_PROPAGATE(imageScaleOps.weights(d, kDirVert, userFunc, userData));
 
   return BL_SUCCESS;
 }
 
+// BLImageScale - Process
+// ======================
+
 BLResult BLImageScaleContext::processHorzData(uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t format) const noexcept {
   BL_ASSERT(isInitialized());
-  blImageScaleOps.horz[format](this->data, dstLine, dstStride, srcLine, srcStride);
+  imageScaleOps.horz[format](this->data, dstLine, dstStride, srcLine, srcStride);
   return BL_SUCCESS;
 }
 
 BLResult BLImageScaleContext::processVertData(uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t format) const noexcept {
   BL_ASSERT(isInitialized());
-  blImageScaleOps.vert[format](this->data, dstLine, dstStride, srcLine, srcStride);
+  imageScaleOps.vert[format](this->data, dstLine, dstStride, srcLine, srcStride);
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLImageScale - Runtime]
-// ============================================================================
+// BLImageScale - Runtime Registration
+// ===================================
 
-void blImageScalerOnInit(BLRuntimeContext* rt) noexcept {
+void blImageScaleRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
-  blImageScaleOps.weights = blImageScaleWeights;
+  imageScaleOps.weights = blImageScaleWeights;
 
-  blImageScaleOps.horz[BL_FORMAT_PRGB32] = blImageScaleHorzPrgb32;
-  blImageScaleOps.horz[BL_FORMAT_XRGB32] = blImageScaleHorzXrgb32;
-  blImageScaleOps.horz[BL_FORMAT_A8    ] = blImageScaleHorzA8;
+  imageScaleOps.horz[BL_FORMAT_PRGB32] = blImageScaleHorzPrgb32;
+  imageScaleOps.horz[BL_FORMAT_XRGB32] = blImageScaleHorzXrgb32;
+  imageScaleOps.horz[BL_FORMAT_A8    ] = blImageScaleHorzA8;
 
-  blImageScaleOps.vert[BL_FORMAT_PRGB32] = blImageScaleVertPrgb32;
-  blImageScaleOps.vert[BL_FORMAT_XRGB32] = blImageScaleVertXrgb32;
-  blImageScaleOps.vert[BL_FORMAT_A8    ] = blImageScaleVertA8;
+  imageScaleOps.vert[BL_FORMAT_PRGB32] = blImageScaleVertPrgb32;
+  imageScaleOps.vert[BL_FORMAT_XRGB32] = blImageScaleVertXrgb32;
+  imageScaleOps.vert[BL_FORMAT_A8    ] = blImageScaleVertA8;
 }

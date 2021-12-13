@@ -1,33 +1,14 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
-#include "./format_p.h"
-#include "./tables_p.h"
+#include "api-build_p.h"
+#include "format_p.h"
+#include "tables_p.h"
 
-// ============================================================================
-// [BLFormatInfo - Globals]
-// ============================================================================
+// BLFormatInfo - Globals
+// ======================
 
 const BLFormatInfo blFormatInfo[BL_FORMAT_RESERVED_COUNT] = {
   #define U 0 // Used only to distinguish between zero and unused.
@@ -53,14 +34,12 @@ const BLFormatInfo blFormatInfo[BL_FORMAT_RESERVED_COUNT] = {
 static_assert(BL_FORMAT_INTERNAL_COUNT == 6,
               "New formats must be added to 'blFormatInfo' table");
 
-// ============================================================================
-// [BLFormatInfo - Tables]
-// ============================================================================
+// BLFormatInfo - Tables
+// =====================
 
-// Indexes of components based on format flags that describe components. Each
-// bit in the mask describes RGBA components (in order). Thus 0x1 descrines red
-// component, 0x2 green 0x4 blue, and 0x8 alpha. Components can be combined so
-// 0x7 describes RGB and 0xF RGBA.
+// Indexes of components based on format flags that describe components. Each bit in the mask describes RGBA components
+// (in order). Thus 0x1 descrines red component, 0x2 green 0x4 blue, and 0x8 alpha. Components can be combined so 0x7
+// describes RGB and 0xF RGBA.
 struct BLPixelConverterComponentIndexesGen {
   static constexpr uint8_t value(size_t i) noexcept {
     return i == BL_FORMAT_FLAG_RGB   ? uint8_t(0x7) :
@@ -72,14 +51,13 @@ struct BLPixelConverterComponentIndexesGen {
 };
 
 static constexpr const auto blPixelConverterComponentIndexesTable =
-  blLookupTable<uint8_t, 16, BLPixelConverterComponentIndexesGen>();
+  blMakeLookupTable<uint8_t, 16, BLPixelConverterComponentIndexesGen>();
 
-// ============================================================================
-// [BLFormatInfo - Query]
-// ============================================================================
+// BLFormatInfo - Query
+// ====================
 
-BLResult blFormatInfoQuery(BLFormatInfo* self, uint32_t format) noexcept {
-  if (BL_UNLIKELY(format == BL_FORMAT_NONE || format >= BL_FORMAT_COUNT)) {
+BLResult blFormatInfoQuery(BLFormatInfo* self, BLFormat format) noexcept {
+  if (BL_UNLIKELY(format == BL_FORMAT_NONE || format > BL_FORMAT_MAX_VALUE)) {
     self->reset();
     return blTraceError(BL_ERROR_INVALID_VALUE);
   }
@@ -88,9 +66,8 @@ BLResult blFormatInfoQuery(BLFormatInfo* self, uint32_t format) noexcept {
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLFormatInfo - Sanitize]
-// ============================================================================
+// BLFormatInfo - Sanitize
+// =======================
 
 static BL_INLINE bool blFormatInfoIsDepthValid(uint32_t depth) noexcept {
   switch (depth) {
@@ -135,7 +112,6 @@ BLResult blFormatInfoSanitize(BLFormatInfo* self) noexcept {
   }
   else {
     // Check whether RGB|A components are correct.
-    uint64_t masksAsU64[4];
     uint64_t masksCombined = 0;
 
     // Check whether pixel components are specified correctly.
@@ -152,12 +128,10 @@ BLResult blFormatInfoSanitize(BLFormatInfo* self) noexcept {
         if (componentIndexes & (1u << i))
           return blTraceError(BL_ERROR_INVALID_VALUE);
 
-        // Undefined size (0) must have zero shift as well. As it's not
-        // used it doesn't make sense to assign it a value.
+        // Undefined size (0) must have zero shift as well. As it's not used it doesn't make sense to assign
+        // it a value.
         if (shift != 0)
           return blTraceError(BL_ERROR_INVALID_VALUE);
-
-        masksAsU64[i] = 0;
       }
       else {
         // Fail if this component must not be provided.
@@ -181,7 +155,7 @@ BLResult blFormatInfoSanitize(BLFormatInfo* self) noexcept {
           crossesByteBoundary = true;
 
         // Does the mask overlap with others?
-        uint64_t maskAsU64 = uint64_t(blNonZeroLsbMask<uint32_t>(size)) << shift;
+        uint64_t maskAsU64 = uint64_t(BLIntOps::nonZeroLsbMask<uint32_t>(size)) << shift;
         if (masksCombined & maskAsU64) {
           masksOverlap = true;
           // Alpha channels cannot overlap.
@@ -189,12 +163,11 @@ BLResult blFormatInfoSanitize(BLFormatInfo* self) noexcept {
             return blTraceError(BL_ERROR_INVALID_VALUE);
         }
 
-        masksAsU64[i] = maskAsU64;
         masksCombined |= maskAsU64;
       }
     }
 
-    if (blNonZeroLsbMask<uint64_t>(f.depth) ^ masksCombined)
+    if (BLIntOps::nonZeroLsbMask<uint64_t>(f.depth) ^ masksCombined)
       hasUndefinedBits = true;
 
     // Unset `BL_FORMAT_FLAG_PREMULTIPLIED` if the format doesn't have alpha.

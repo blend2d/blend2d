@@ -1,64 +1,40 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_ZEROALLOCATOR_P_H_INCLUDED
 #define BLEND2D_ZEROALLOCATOR_P_H_INCLUDED
 
-#include "./api-internal_p.h"
+#include "api-internal_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
 //! \{
 
-// ============================================================================
-// [BLZeroMem]
-// ============================================================================
-
 BL_HIDDEN void* blZeroAllocatorAlloc(size_t size, size_t* allocatedSize) noexcept;
 BL_HIDDEN void* blZeroAllocatorResize(void* prevPtr, size_t prevSize, size_t size, size_t* allocatedSize) noexcept;
 BL_HIDDEN void  blZeroAllocatorRelease(void* ptr, size_t size) noexcept;
-
-// ============================================================================
-// [BLZeroBuffer]
-// ============================================================================
 
 //! Memory buffer that is initially zeroed and that must be zeroed upon release.
 class BLZeroBuffer {
 public:
   BL_NONCOPYABLE(BLZeroBuffer)
 
+  //! \name Members
+  //! \{
+
   //! Zero allocated data.
-  uint8_t* data;
+  uint8_t* data = nullptr;
   //! Size of the buffer.
-  size_t size;
+  size_t size = 0;
 
-  // --------------------------------------------------------------------------
-  // [Construction / Destruction]
-  // --------------------------------------------------------------------------
+  //! \}
 
-  BL_INLINE BLZeroBuffer() noexcept
-    : data(nullptr),
-      size(0) {}
+  //! \name Construction & Destruction
+  //! \{
+
+  BL_INLINE BLZeroBuffer() noexcept = default;
 
   BL_INLINE BLZeroBuffer(BLZeroBuffer&& other) noexcept
     : data(other.data),
@@ -72,9 +48,10 @@ public:
       blZeroAllocatorRelease(data, size);
   }
 
-  // --------------------------------------------------------------------------
-  // [Allocation]
-  // --------------------------------------------------------------------------
+  //! \}
+
+  //! \name Allocation
+  //! \{
 
   BL_NODISCARD
   BL_INLINE BLResult ensure(size_t minimumSize) noexcept {
@@ -92,6 +69,8 @@ public:
       size = 0;
     }
   }
+
+  //! \}
 };
 
 //! \}

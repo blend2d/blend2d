@@ -1,338 +1,407 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
-#include "./matrix_p.h"
-#include "./pattern_p.h"
-#include "./runtime_p.h"
-#include "./support_p.h"
-#include "./variant.h"
+#include "api-build_p.h"
+#include "image_p.h"
+#include "matrix_p.h"
+#include "object_p.h"
+#include "pattern_p.h"
+#include "runtime_p.h"
 
-// ============================================================================
-// [Global Variables]
-// ============================================================================
+namespace BLPatternPrivate {
 
-static BLWrap<BLInternalPatternImpl> blNullPatternImpl;
+// BLPattern - Globals
+// ===================
+
+static BLObjectEthernalImpl<BLPatternPrivateImpl> defaultImpl;
 
 static constexpr const BLRectI blPatternNoArea(0, 0, 0, 0);
 
-// ============================================================================
-// [BLPattern - Internals]
-// ============================================================================
+// BLPattern - Internals
+// =====================
 
-static BL_INLINE BLInternalPatternImpl* blPatternImplNew(const BLImageCore* image, const BLRectI* area, uint32_t extendMode, uint32_t matrixType, const BLMatrix2D* matrix) noexcept {
-  uint16_t memPoolData;
-  BLInternalPatternImpl* impl = blRuntimeAllocImplT<BLInternalPatternImpl>(sizeof(BLInternalPatternImpl), &memPoolData);
+static BL_INLINE BLResult blPatternImplAlloc(
+  BLPatternCore* self,
+  const BLImageCore* image,
+  const BLRectI* area,
+  BLExtendMode extendMode,
+  BLMatrix2DType matrixType,
+  const BLMatrix2D* matrix) noexcept {
 
+  BLPatternPrivateImpl* impl = blObjectDetailAllocImplT<BLPatternPrivateImpl>(self, BLObjectInfo::packType(BL_OBJECT_TYPE_PATTERN));
   if (BL_UNLIKELY(!impl))
-    return impl;
+    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-  blImplInit(impl, BL_IMPL_TYPE_PATTERN, BL_IMPL_TRAIT_MUTABLE, memPoolData);
-  impl->image.impl = blImplIncRef(image->impl);
-  impl->patternType = 0;
-  impl->extendMode = uint8_t(extendMode);
-  impl->matrixType = uint8_t(matrixType);
-  impl->reserved[0] = 0;
+  setExtendMode(self->_d.info, extendMode);
+  setMatrixType(self->_d.info, matrixType);
+
+  blCallCtor(impl->image, *blDownCast(image));
   impl->matrix = *matrix;
   impl->area = *area;
 
-  return impl;
-}
-
-// Cannot be static, called by `BLVariant` implementation.
-BLResult blPatternImplDelete(BLPatternImpl* impl_) noexcept {
-  BLInternalPatternImpl* impl = blInternalCast(impl_);
-  blImageReset(&impl->image);
-
-  uint8_t* implBase = reinterpret_cast<uint8_t*>(impl);
-  size_t implSize = sizeof(BLInternalPatternImpl);
-  uint32_t implTraits = impl->implTraits;
-  uint32_t memPoolData = impl->memPoolData;
-
-  if (implTraits & BL_IMPL_TRAIT_EXTERNAL) {
-    implSize += sizeof(BLExternalImplPreface);
-    implBase -= sizeof(BLExternalImplPreface);
-    blImplDestroyExternal(impl);
-  }
-
-  if (implTraits & BL_IMPL_TRAIT_FOREIGN)
-    return BL_SUCCESS;
-  else
-    return blRuntimeFreeImpl(implBase, implSize, memPoolData);
-}
-
-static BL_INLINE BLResult blPatternImplRelease(BLInternalPatternImpl* impl) noexcept {
-  if (blImplDecRefAndTest(impl))
-    return blPatternImplDelete(impl);
   return BL_SUCCESS;
 }
 
-static BL_NOINLINE BLResult blPatternMakeMutableCopyOf(BLPatternCore* self, BLInternalPatternImpl* impl) noexcept {
-  BLInternalPatternImpl* newI = blPatternImplNew(&impl->image, &impl->area, impl->extendMode, impl->matrixType, &impl->matrix);
-  if (BL_UNLIKELY(!newI))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+BLResult freeImpl(BLPatternPrivateImpl* impl, BLObjectInfo info) noexcept {
+  blImageReset(&impl->image);
 
-  BLInternalPatternImpl* oldI = blInternalCast(self->impl);
-  self->impl = newI;
-  return blPatternImplRelease(oldI);
+  return blObjectDetailFreeImpl(impl, info.bits);
+}
+
+static BL_INLINE bool blPatternPrivateIsMutable(const BLPatternCore* self) noexcept {
+  const size_t* refCountPtr = blObjectImplGetRefCountPtr(self->_d.impl);
+  return *refCountPtr == 1;
+}
+
+static BL_INLINE BLResult blPatternPrivateRelease(BLPatternCore* self) noexcept {
+  BLPatternPrivateImpl* impl = getImpl(self);
+  BLObjectInfo info = self->_d.info;
+
+  if (info.refCountedFlag() && blObjectImplDecRefAndTest(impl, info))
+    return freeImpl(impl, info);
+
+  return BL_SUCCESS;
+}
+
+static BL_INLINE BLResult blPatternPrivateReplace(BLPatternCore* self, const BLPatternCore* other) noexcept {
+  BLPatternPrivateImpl* impl = getImpl(self);
+  BLObjectInfo info = self->_d.info;
+
+  self->_d = other->_d;
+
+  if (info.refCountedFlag() && blObjectImplDecRefAndTest(impl, info))
+    return freeImpl(impl, info);
+
+  return BL_SUCCESS;
+}
+
+static BL_NOINLINE BLResult blPatternMakeMutableCopyOf(BLPatternCore* self, const BLPatternCore* other) noexcept {
+  BLPatternPrivateImpl* otherI = getImpl(other);
+
+  BLPatternCore newO;
+  BL_PROPAGATE(blPatternImplAlloc(
+    &newO,
+    &otherI->image,
+    &otherI->area,
+    getExtendMode(self),
+    getMatrixType(self),
+    &otherI->matrix));
+
+  return blPatternPrivateReplace(self, &newO);
 }
 
 static BL_INLINE BLResult blPatternMakeMutable(BLPatternCore* self) noexcept {
-  BLInternalPatternImpl* selfI = blInternalCast(self->impl);
-  if (!blImplIsMutable(selfI))
-    return blPatternMakeMutableCopyOf(self, selfI);
+  if (!blPatternPrivateIsMutable(self))
+    return blPatternMakeMutableCopyOf(self, self);
   else
     return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPattern - Init / Destroy]
-// ============================================================================
+// BLPattern - API - Init & Destroy
+// ================================
 
-BLResult blPatternInit(BLPatternCore* self) noexcept {
-  self->impl = &blNullPatternImpl;
+BL_API_IMPL BLResult blPatternInit(BLPatternCore* self) noexcept {
+  self->_d = blObjectDefaults[BL_OBJECT_TYPE_PATTERN]._d;
+
   return BL_SUCCESS;
 }
 
-BLResult blPatternInitAs(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, uint32_t extendMode, const BLMatrix2D* matrix) noexcept {
+BL_API_IMPL BLResult blPatternInitMove(BLPatternCore* self, BLPatternCore* other) noexcept {
+  BL_ASSERT(self != other);
+  BL_ASSERT(other->_d.isPattern());
+
+  self->_d = other->_d;
+  other->_d = blObjectDefaults[BL_OBJECT_TYPE_PATTERN]._d;
+
+  return BL_SUCCESS;
+}
+
+BL_API_IMPL BLResult blPatternInitWeak(BLPatternCore* self, const BLPatternCore* other) noexcept {
+  BL_ASSERT(self != other);
+  BL_ASSERT(other->_d.isPattern());
+
+  return blObjectPrivateInitWeakTagged(self, other);
+}
+
+BL_API_IMPL BLResult blPatternInitAs(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, BLExtendMode extendMode, const BLMatrix2D* matrix) noexcept {
+  self->_d = blObjectDefaults[BL_OBJECT_TYPE_PATTERN]._d;
+
   if (!image)
-    image = &BLImage::none();
+    image = static_cast<BLImageCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE]);
 
   if (!area)
     area = &blPatternNoArea;
-  else if (BL_UNLIKELY(!blPatternIsAreaValid(*area, image->impl->size)))
+  else if (BL_UNLIKELY(!isAreaValid(*area, blDownCast(image)->size())))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  if (BL_UNLIKELY(extendMode >= BL_EXTEND_MODE_COMPLEX_COUNT))
+  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  uint32_t matrixType = BL_MATRIX2D_TYPE_IDENTITY;
+  BLMatrix2DType matrixType = BL_MATRIX2D_TYPE_IDENTITY;
   if (!matrix)
-    matrix = &blMatrix2DIdentity;
+    matrix = &BLTransformPrivate::identityTransform;
   else
     matrixType = matrix->type();
 
-  BLInternalPatternImpl* impl = blPatternImplNew(image, area, extendMode, matrixType, matrix);
-  if (BL_UNLIKELY(!impl))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
-  self->impl = impl;
-  return BL_SUCCESS;
+  return blPatternImplAlloc(self, image, area, extendMode, matrixType, matrix);
 }
 
-BLResult blPatternDestroy(BLPatternCore* self) noexcept {
-  BLInternalPatternImpl* selfI = blInternalCast(self->impl);
-  self->impl = nullptr;
-  return blPatternImplRelease(selfI);
+BL_API_IMPL BLResult blPatternDestroy(BLPatternCore* self) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
+  return blPatternPrivateRelease(self);
 }
 
-// ============================================================================
-// [BLPattern - Reset]
-// ============================================================================
+// BLPattern - API - Reset
+// =======================
 
-BLResult blPatternReset(BLPatternCore* self) noexcept {
-  BLInternalPatternImpl* selfI = blInternalCast(self->impl);
-  self->impl = &blNullPatternImpl;
-  return blPatternImplRelease(selfI);
+BL_API_IMPL BLResult blPatternReset(BLPatternCore* self) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
+  return blPatternPrivateReplace(self, static_cast<BLPatternCore*>(&blObjectDefaults[BL_OBJECT_TYPE_PATTERN]));
 }
 
-// ============================================================================
-// [BLPattern - Assign / Create]
-// ============================================================================
+// BLPattern - API - Assign
+// ========================
 
-BLResult blPatternAssignMove(BLPatternCore* self, BLPatternCore* other) noexcept {
-  BLInternalPatternImpl* selfI = blInternalCast(self->impl);
-  BLInternalPatternImpl* otherI = blInternalCast(other->impl);
+BL_API_IMPL BLResult blPatternAssignMove(BLPatternCore* self, BLPatternCore* other) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(other->_d.isPattern());
 
-  self->impl = otherI;
-  other->impl = &blNullPatternImpl;
-
-  return blPatternImplRelease(selfI);
+  BLPatternCore tmp = *other;
+  other->_d = blObjectDefaults[BL_OBJECT_TYPE_PATTERN]._d;
+  return blPatternPrivateReplace(self, &tmp);
 }
 
-BLResult blPatternAssignWeak(BLPatternCore* self, const BLPatternCore* other) noexcept {
-  BLInternalPatternImpl* selfI = blInternalCast(self->impl);
-  BLInternalPatternImpl* otherI = blInternalCast(other->impl);
+BL_API_IMPL BLResult blPatternAssignWeak(BLPatternCore* self, const BLPatternCore* other) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(other->_d.isPattern());
 
-  self->impl = blImplIncRef(otherI);
-  return blPatternImplRelease(selfI);
+  blObjectPrivateAddRefTagged(other);
+  return blPatternPrivateReplace(self, other);
 }
 
-BLResult blPatternAssignDeep(BLPatternCore* self, const BLPatternCore* other) noexcept {
-  BLInternalPatternImpl* selfI = blInternalCast(self->impl);
-  BLInternalPatternImpl* otherI = blInternalCast(other->impl);
+BL_API_IMPL BLResult blPatternAssignDeep(BLPatternCore* self, const BLPatternCore* other) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+  BL_ASSERT(other->_d.isPattern());
 
-  if (!blImplIsMutable(selfI))
-    return blPatternMakeMutableCopyOf(self, otherI);
+  if (!blPatternPrivateIsMutable(self))
+    return blPatternMakeMutableCopyOf(self, other);
 
-  selfI->patternType = 0;
-  selfI->extendMode = otherI->extendMode;
-  selfI->matrixType = otherI->matrixType;
+  BLPatternPrivateImpl* selfI = getImpl(self);
+  BLPatternPrivateImpl* otherI = getImpl(other);
+
+  self->_d.info.setBField(other->_d.info.bField());
+  self->_d.info.setCField(other->_d.info.cField());
   selfI->matrix = otherI->matrix;
   selfI->area = otherI->area;
   return blImageAssignWeak(&selfI->image, &otherI->image);
 }
 
-BLResult blPatternCreate(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, uint32_t extendMode, const BLMatrix2D* matrix) noexcept {
+// BLPattern - API - Create
+// ========================
+
+BL_API_IMPL BLResult blPatternCreate(BLPatternCore* self, const BLImageCore* image, const BLRectI* area, BLExtendMode extendMode, const BLMatrix2D* matrix) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
   if (!image)
-    image = &BLImage::none();
+    image = static_cast<BLImageCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE]);
 
   if (!area)
     area = &blPatternNoArea;
-  else if (BL_UNLIKELY(!blPatternIsAreaValid(*area, image->impl->size)))
+  else if (BL_UNLIKELY(!isAreaValid(*area, blDownCast(image)->size())))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  if (BL_UNLIKELY(extendMode >= BL_EXTEND_MODE_COMPLEX_COUNT))
+  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  uint32_t matrixType = BL_MATRIX2D_TYPE_IDENTITY;
+  BLMatrix2DType matrixType = BL_MATRIX2D_TYPE_IDENTITY;
   if (!matrix)
-    matrix = &blMatrix2DIdentity;
+    matrix = &BLTransformPrivate::identityTransform;
   else
     matrixType = matrix->type();
 
-  BLInternalPatternImpl* selfI = blInternalCast(self->impl);
-  if (!blImplIsMutable(selfI)) {
-    BLInternalPatternImpl* newI = blPatternImplNew(image, area, extendMode, matrixType, matrix);
-    if (BL_UNLIKELY(!newI))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+  if (!blPatternPrivateIsMutable(self)) {
+    BLPatternCore newO;
+    BL_PROPAGATE(blPatternImplAlloc(&newO, image, area, extendMode, matrixType, matrix));
 
-    self->impl = newI;
-    return blPatternImplRelease(selfI);
+    return blPatternPrivateReplace(self, &newO);
   }
   else {
-    selfI->extendMode = uint8_t(extendMode);
-    selfI->matrixType = uint8_t(matrixType);
-    selfI->matrix = *matrix;
+    BLPatternPrivateImpl* selfI = getImpl(self);
+
+    setExtendMode(self->_d.info, extendMode);
+    setMatrixType(self->_d.info, matrixType);
     selfI->area = *area;
+    selfI->matrix = *matrix;
+
     return blImageAssignWeak(&selfI->image, image);
   }
 }
 
-// ============================================================================
-// [BLPattern - Properties]
-// ============================================================================
+// BLPattern - API - Image & Area
+// ==============================
 
-BLResult blPatternSetImage(BLPatternCore* self, const BLImageCore* image, const BLRectI* area) noexcept {
+BL_API_IMPL BLResult blPatternGetImage(const BLPatternCore* self, BLImageCore* image) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
+  BLPatternPrivateImpl* selfI = getImpl(self);
+  return blImageAssignWeak(image, &selfI->image);
+}
+
+BL_API_IMPL BLResult blPatternSetImage(BLPatternCore* self, const BLImageCore* image, const BLRectI* area) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
   if (!image)
-    image = &BLImage::none();
+    image = static_cast<BLImageCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE]);
 
   if (!area)
     area = &blPatternNoArea;
-  else if (!blPatternIsAreaValid(*area, image->impl->size))
+  else if (!isAreaValid(*area, blDownCast(image)->size()))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   BL_PROPAGATE(blPatternMakeMutable(self));
-  BLInternalPatternImpl* selfI = blInternalCast(self->impl);
+  BLPatternPrivateImpl* selfI = getImpl(self);
 
   selfI->area = *area;
   return blImageAssignWeak(&selfI->image, image);
 }
 
-BLResult blPatternSetArea(BLPatternCore* self, const BLRectI* area) noexcept {
+BL_API_IMPL BLResult blPatternResetImage(BLPatternCore* self) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
+  return blPatternSetImage(self, nullptr, nullptr);
+}
+
+BL_API_IMPL BLResult blPatternGetArea(const BLPatternCore* self, BLRectI* areaOut) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
+  BLPatternPrivateImpl* selfI = getImpl(self);
+  *areaOut = selfI->area;
+  return BL_SUCCESS;
+}
+
+BL_API_IMPL BLResult blPatternSetArea(BLPatternCore* self, const BLRectI* area) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
   if (!area) {
     area = &blPatternNoArea;
   }
   else {
-    BLImageImpl* imageImpl = self->impl->image.impl;
-    if (!blPatternIsAreaValid(*area, imageImpl->size))
+    BLPatternPrivateImpl* selfI = getImpl(self);
+    BLImageImpl* imageI = BLImagePrivate::getImpl(&selfI->image);
+
+    if (!isAreaValid(*area, imageI->size))
       return blTraceError(BL_ERROR_INVALID_VALUE);
   }
 
   BL_PROPAGATE(blPatternMakeMutable(self));
-  BLInternalPatternImpl* selfI = blInternalCast(self->impl);
+  BLPatternPrivateImpl* selfI = getImpl(self);
 
   selfI->area = *area;
   return BL_SUCCESS;
 }
 
-BLResult blPatternSetExtendMode(BLPatternCore* self, uint32_t extendMode) noexcept {
-  if (BL_UNLIKELY(extendMode >= BL_EXTEND_MODE_COMPLEX_COUNT))
+// BLPattern - API - Extend Mode
+// =============================
+
+BL_API_IMPL BLExtendMode blPatternGetExtendMode(const BLPatternCore* self) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
+  return getExtendMode(self);
+}
+
+BL_API_IMPL BLResult blPatternSetExtendMode(BLPatternCore* self, BLExtendMode extendMode) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
+  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  BL_PROPAGATE(blPatternMakeMutable(self));
-  BLInternalPatternImpl* selfI = blInternalCast(self->impl);
-
-  selfI->extendMode = uint8_t(extendMode);
+  setExtendMode(self->_d.info, extendMode);
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPattern - Matrix]
-// ============================================================================
+// BLPattern - API - Matrix
+// ========================
 
-BLResult blPatternApplyMatrixOp(BLPatternCore* self, uint32_t opType, const void* opData) noexcept {
-  if (BL_UNLIKELY(opType >= BL_MATRIX2D_OP_COUNT))
+BL_API_IMPL BLMatrix2DType blPatternGetMatrixType(const BLPatternCore* self) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
+  return getMatrixType(self);
+}
+
+BL_API_IMPL BLResult blPatternGetMatrix(const BLPatternCore* self, BLMatrix2D* matrixOut) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
+  if (getMatrixType(self) == BL_MATRIX2D_TYPE_IDENTITY) {
+    matrixOut->reset();
+  }
+  else {
+    BLPatternPrivateImpl* selfI = getImpl(self);
+    *matrixOut = selfI->matrix;
+  }
+
+  return BL_SUCCESS;
+}
+
+BL_API_IMPL BLResult blPatternApplyMatrixOp(BLPatternCore* self, BLMatrix2DOp opType, const void* opData) noexcept {
+  BL_ASSERT(self->_d.isPattern());
+
+  if (BL_UNLIKELY(uint32_t(opType) > BL_MATRIX2D_OP_MAX_VALUE))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  BLInternalPatternImpl* selfI = blInternalCast(self->impl);
-  if (opType == 0 && selfI->matrixType == BL_MATRIX2D_TYPE_IDENTITY)
+  if (opType == BL_MATRIX2D_OP_RESET && getMatrixType(self) == BL_MATRIX2D_TYPE_IDENTITY)
     return BL_SUCCESS;
 
   BL_PROPAGATE(blPatternMakeMutable(self));
-  selfI = blInternalCast(self->impl);
+  BLPatternPrivateImpl* selfI = getImpl(self);
 
   blMatrix2DApplyOp(&selfI->matrix, opType, opData);
-  selfI->matrixType = uint8_t(selfI->matrix.type());
+  setMatrixType(self->_d.info, selfI->matrix.type());
 
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPattern - Equals]
-// ============================================================================
+// BLPattern - API - Equality & Comparison
+// =======================================
 
-bool blPatternEquals(const BLPatternCore* a, const BLPatternCore* b) noexcept {
-  const BLPatternImpl* aI = a->impl;
-  const BLPatternImpl* bI = b->impl;
+BL_API_IMPL bool blPatternEquals(const BLPatternCore* a, const BLPatternCore* b) noexcept {
+  BL_ASSERT(a->_d.isPattern());
+  BL_ASSERT(b->_d.isPattern());
+
+  bool eq = (getExtendMode(a) == getExtendMode(b)) &
+            (getMatrixType(a) == getMatrixType(b)) ;
+
+  if (!eq)
+    return false;
+
+  const BLPatternPrivateImpl* aI = getImpl(a);
+  const BLPatternPrivateImpl* bI = getImpl(b);
 
   if (aI == bI)
     return true;
 
-  bool eq = (aI->patternType == bI->patternType) &
-            (aI->extendMode  == bI->extendMode ) &
-            (aI->matrixType  == bI->matrixType ) &
-            (aI->matrix      == bI->matrix     ) &
-            (aI->area        == bI->area       ) ;
-  return eq && aI->image == bI->image;
+  if (!((aI->matrix == bI->matrix) & (aI->area == bI->area)))
+    return false;
+
+  return aI->image == bI->image;
 }
 
-// ============================================================================
-// [BLPattern - Runtime]
-// ============================================================================
+} // {BLPatternPrivate}
 
-void blPatternOnInit(BLRuntimeContext* rt) noexcept {
+// BLPattern - Runtime Registration
+// ================================
+
+void blPatternRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
-  BLInternalPatternImpl* patternI = &blNullPatternImpl;
-  blInitBuiltInNull(patternI, BL_IMPL_TYPE_PATTERN, 0);
-  blCallCtor(patternI->image);
-  patternI->patternType = 0;
-  patternI->extendMode = uint8_t(BL_EXTEND_MODE_REPEAT);
-  patternI->matrix.reset();
-  patternI->area.reset(0, 0, 0, 0);
-  blAssignBuiltInNull(patternI);
+  blCallCtor(BLPatternPrivate::defaultImpl.impl->image);
+  BLPatternPrivate::defaultImpl.impl->matrix.reset();
 
-  // Checks whether the initialization order is correct.
-  BL_ASSERT(patternI->image.impl != nullptr);
+  blObjectDefaults[BL_OBJECT_TYPE_PATTERN]._d.initDynamic(
+    BL_OBJECT_TYPE_PATTERN,
+    BLObjectInfo::packFields(0u, BL_EXTEND_MODE_REPEAT),
+    &BLPatternPrivate::defaultImpl.impl);
 }

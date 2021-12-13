@@ -1,41 +1,20 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_OPENTYPE_OTCFF_P_H_INCLUDED
 #define BLEND2D_OPENTYPE_OTCFF_P_H_INCLUDED
 
 #include "../font_p.h"
 #include "../opentype/otdefs_p.h"
+#include "../support/ptrops_p.h"
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_internal_opentype
+//! \addtogroup blend2d_opentype_impl
 //! \{
 
 namespace BLOpenType {
-
-// ============================================================================
-// [BLOpenType::CFFTable]
-// ============================================================================
 
 //! OpenType 'CFF' or 'CFF2' table (Compact Font Format).
 //!
@@ -59,13 +38,11 @@ namespace BLOpenType {
 //!   - http://wwwimages.adobe.com/www.adobe.com/content/dam/acom/en/devnet/font/pdfs/5176.CFF.pdf
 //!   - http://wwwimages.adobe.com/www.adobe.com/content/dam/acom/en/devnet/font/pdfs/5177.Type2.pdf
 //!
-//! NOTE 1: The term `VarOffset` that is used inside CFF code means that the
-//! offset size is variable and must be previously specified by an `offsetSize`
-//! field.
+//! NOTE 1: The term `VarOffset` that is used inside CFF code means that the offset size is variable and must
+//!  be previously specified by an `offsetSize` field.
 //!
-//! NOTE 2: Many enums inside this structure are just for reference purposes.
-//! They would be useful if we want to implement support for RAW PostScript
-//! fonts (CFF) that are not part of OpenType.
+//! NOTE 2: Many enums inside this structure are just for reference purposes. They would be useful if we want
+//! to implement support for RAW PostScript fonts (CFF) that are not part of OpenType.
 struct CFFTable {
   enum : uint32_t { kMinSize = 4 };
   enum : uint32_t { kOffsetAdjustment = 1 };
@@ -152,9 +129,8 @@ struct CFFTable {
 
   //! Index table (v1).
   struct IndexV1 {
-    //! \note An empty Index is represented by a `count` field with a 0 value
-    //! and no additional fields, thus, the total size of bytes required by a
-    //! zero index is 2.
+    //! \note An empty Index is represented by a `count` field with a 0 value and no additional fields, thus,
+    //! the total size of bytes required by a zero index is 2.
     enum : uint32_t { kMinSize = 2 };
 
     UInt16 count;
@@ -164,14 +140,13 @@ struct CFFTable {
     UInt8 data[...];
     */
 
-    BL_INLINE const uint8_t* offsetArray() const noexcept { return blOffsetPtr<const uint8_t>(this, 3); }
+    BL_INLINE const uint8_t* offsetArray() const noexcept { return BLPtrOps::offset<const uint8_t>(this, 3); }
   };
 
   //! Index table (v2).
   struct IndexV2 {
-    //! \note An empty Index is represented by a `count` field with a 0 value
-    //! and no additional fields, thus, the total size of bytes required by a
-    //! zero index is 4.
+    //! \note An empty Index is represented by a `count` field with a 0 value and no additional fields, thus,
+    //! the total size of bytes required by a zero index is 4.
     enum : uint32_t { kMinSize = 4 };
 
     UInt32 count;
@@ -181,19 +156,16 @@ struct CFFTable {
     UInt8 data[...];
     */
 
-    BL_INLINE const uint8_t* offsetArray() const noexcept { return blOffsetPtr<const uint8_t>(this, 5); }
+    BL_INLINE const uint8_t* offsetArray() const noexcept { return BLPtrOps::offset<const uint8_t>(this, 5); }
   };
 
   Header header;
 
-  BL_INLINE const HeaderV1* headerV1() const noexcept { return blOffsetPtr<const HeaderV1>(this, 0); }
-  BL_INLINE const HeaderV2* headerV2() const noexcept { return blOffsetPtr<const HeaderV2>(this, 0); }
+  BL_INLINE const HeaderV1* headerV1() const noexcept { return BLPtrOps::offset<const HeaderV1>(this, 0); }
+  BL_INLINE const HeaderV2* headerV2() const noexcept { return BLPtrOps::offset<const HeaderV2>(this, 0); }
 };
 
-// ============================================================================
-// [BLOpenType::CFFData]
-// ============================================================================
-
+//! CFF data stored in \ref OTFontFace.
 struct CFFData {
   //! CFF version.
   enum Version : uint32_t {
@@ -247,12 +219,8 @@ struct CFFData {
   uint8_t reserved[3];
 };
 
-// ============================================================================
-// [BLOpenType::CFFImpl]
-// ============================================================================
-
 namespace CFFImpl {
-  BL_HIDDEN BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) noexcept;
+BL_HIDDEN BLResult init(OTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) noexcept;
 } // {CFFImpl}
 
 } // {BLOpenType}

@@ -1,25 +1,7 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 // The JPEG codec is based on stb_image <https://github.com/nothings/stb>
 // released into PUBLIC DOMAIN. Blend2D's JPEG codec can be distributed
@@ -27,9 +9,10 @@
 
 #include "../api-build_p.h"
 #include "../rgba_p.h"
-#include "../support_p.h"
 #include "../codec/jpegcodec_p.h"
 #include "../codec/jpegops_p.h"
+#include "../support/intops_p.h"
+#include "../support/memops_p.h"
 
 // ============================================================================
 // [Global Variables]
@@ -135,14 +118,14 @@ void BL_CDECL blJpegIDCT8(uint8_t* dst, intptr_t dstStride, const int16_t* src, 
     x2 += BL_JPEG_IDCT_ROW_BIAS;
     x3 += BL_JPEG_IDCT_ROW_BIAS;
 
-    dst[0] = blClampToByte((x0 + t3) >> BL_JPEG_IDCT_ROW_NORM);
-    dst[7] = blClampToByte((x0 - t3) >> BL_JPEG_IDCT_ROW_NORM);
-    dst[1] = blClampToByte((x1 + t2) >> BL_JPEG_IDCT_ROW_NORM);
-    dst[6] = blClampToByte((x1 - t2) >> BL_JPEG_IDCT_ROW_NORM);
-    dst[2] = blClampToByte((x2 + t1) >> BL_JPEG_IDCT_ROW_NORM);
-    dst[5] = blClampToByte((x2 - t1) >> BL_JPEG_IDCT_ROW_NORM);
-    dst[3] = blClampToByte((x3 + t0) >> BL_JPEG_IDCT_ROW_NORM);
-    dst[4] = blClampToByte((x3 - t0) >> BL_JPEG_IDCT_ROW_NORM);
+    dst[0] = BLIntOps::clampToByte((x0 + t3) >> BL_JPEG_IDCT_ROW_NORM);
+    dst[7] = BLIntOps::clampToByte((x0 - t3) >> BL_JPEG_IDCT_ROW_NORM);
+    dst[1] = BLIntOps::clampToByte((x1 + t2) >> BL_JPEG_IDCT_ROW_NORM);
+    dst[6] = BLIntOps::clampToByte((x1 - t2) >> BL_JPEG_IDCT_ROW_NORM);
+    dst[2] = BLIntOps::clampToByte((x2 + t1) >> BL_JPEG_IDCT_ROW_NORM);
+    dst[5] = BLIntOps::clampToByte((x2 - t1) >> BL_JPEG_IDCT_ROW_NORM);
+    dst[3] = BLIntOps::clampToByte((x3 + t0) >> BL_JPEG_IDCT_ROW_NORM);
+    dst[4] = BLIntOps::clampToByte((x3 - t0) >> BL_JPEG_IDCT_ROW_NORM);
   }
 }
 
@@ -160,11 +143,11 @@ void BL_CDECL blJpegRGB32FromYCbCr8(uint8_t* dst, const uint8_t* pY, const uint8
     int g = yy - cr * BL_JPEG_YCBCR_FIXED(0.71414) - cb * BL_JPEG_YCBCR_FIXED(0.34414);
     int b = yy + cb * BL_JPEG_YCBCR_FIXED(1.77200);
 
-    uint32_t rgba32 = blRgba32Pack(
-      blClampToByte(r >> BL_JPEG_YCBCR_PREC),
-      blClampToByte(g >> BL_JPEG_YCBCR_PREC),
-      blClampToByte(b >> BL_JPEG_YCBCR_PREC));
-    blMemWriteU32a(dst, rgba32);
+    uint32_t rgba32 = BLRgbaPrivate::packRgba32(
+      BLIntOps::clampToByte(r >> BL_JPEG_YCBCR_PREC),
+      BLIntOps::clampToByte(g >> BL_JPEG_YCBCR_PREC),
+      BLIntOps::clampToByte(b >> BL_JPEG_YCBCR_PREC));
+    BLMemOps::writeU32a(dst, rgba32);
     dst += 4;
   }
 }

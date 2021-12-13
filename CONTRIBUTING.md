@@ -242,7 +242,7 @@ switch (condition) {
 ```
 
 * Public enum names are *UPPER_CASED* and use `BL_` prefix
-* Public enums usually end with `_COUNT`, which should be separated by an empty line
+* Public enums usually end with `_MAX_VALUE`, which should be separated by an empty line
 * Public enums are always `uint32_t`, use `BL_DEFINE_ENUM` to make sure they are properly defined in C++ mode:
 
 ```c++
@@ -250,6 +250,6 @@ BL_DEFINE_ENUM(BLSomeEnum) {
   BL_SOME_ENUM_A = 0,
   BL_SOME_ENUM_B = 1,
 
-  BL_SOME_ENUM_COUNT = 2
+  BL_SOME_ENUM_MAX_VALUE = 1
 };
 ```

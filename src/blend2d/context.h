@@ -1,45 +1,25 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_CONTEXT_H_INCLUDED
 #define BLEND2D_CONTEXT_H_INCLUDED
 
-#include "./font.h"
-#include "./geometry.h"
-#include "./image.h"
-#include "./matrix.h"
-#include "./path.h"
-#include "./rgba.h"
-#include "./region.h"
-#include "./style.h"
-#include "./variant.h"
+#include "font.h"
+#include "geometry.h"
+#include "image.h"
+#include "matrix.h"
+#include "object.h"
+#include "path.h"
+#include "rgba.h"
+#include "var.h"
 
 //! \addtogroup blend2d_api_rendering
 //! \{
 
-// ============================================================================
-// [Constants]
-// ============================================================================
+//! \name BLContext - Constants
+//! \{
 
 //! Rendering context type.
 BL_DEFINE_ENUM(BLContextType) {
@@ -56,8 +36,10 @@ BL_DEFINE_ENUM(BLContextType) {
   //! Software-accelerated rendering context.
   BL_CONTEXT_TYPE_RASTER = 3,
 
-  //! Count of rendering context types.
-  BL_CONTEXT_TYPE_COUNT = 4
+  //! Maximum value of `BLContextType`.
+  BL_CONTEXT_TYPE_MAX_VALUE = 3
+
+  BL_FORCE_ENUM_UINT32(BL_CONTEXT_TYPE)
 };
 
 //! Rendering context hint.
@@ -69,105 +51,94 @@ BL_DEFINE_ENUM(BLContextHint) {
   //! Pattern quality.
   BL_CONTEXT_HINT_PATTERN_QUALITY = 2,
 
-  //! Count of rendering context hints.
-  BL_CONTEXT_HINT_COUNT = 8
+  //! Maximum value of `BLContextHint`.
+  BL_CONTEXT_HINT_MAX_VALUE = 7
+
+  BL_FORCE_ENUM_UINT32(BL_CONTEXT_HINT)
 };
 
 //! Describes a rendering operation type - fill or stroke.
 //!
-//! The rendering context allows to get and set fill & stroke options directly
-//! or via "style" functions that take the rendering operation type (`opType`)
-//! and dispatch the call to the right function.
+//! The rendering context allows to get and set fill & stroke options directly or via "style" functions that take
+//! the rendering operation type (`opType`) and dispatch the call to the right function.
 BL_DEFINE_ENUM(BLContextOpType) {
   //! Fill operation type.
   BL_CONTEXT_OP_TYPE_FILL = 0,
   //! Stroke operation type.
   BL_CONTEXT_OP_TYPE_STROKE = 1,
 
-  //! Count of rendering operations.
-  BL_CONTEXT_OP_TYPE_COUNT = 2
+  //! Maximum value of `BLContextOpType`
+  BL_CONTEXT_OP_TYPE_MAX_VALUE = 1
+
+  BL_FORCE_ENUM_UINT32(BL_CONTEXT_OP_TYPE)
 };
 
 //! Rendering context flush-flags, use with `BLContext::flush()`.
 BL_DEFINE_ENUM(BLContextFlushFlags) {
+  BL_CONTEXT_FLUSH_NO_FLAGS = 0u,
+
   //! Flush the command queue and wait for its completion (will block).
   BL_CONTEXT_FLUSH_SYNC = 0x80000000u
+
+  BL_FORCE_ENUM_UINT32(BL_CONTEXT_FLUSH)
 };
 
 //! Rendering context create-flags.
 BL_DEFINE_ENUM(BLContextCreateFlags) {
-  //! Fallbacks to a synchronous rendering in case that the rendering engine
-  //! wasn't able to acquire threads. This flag only makes sense when the
-  //! asynchronous mode was specified by having `threadCount` greater than 0.
-  //! If the rendering context fails to acquire at least one thread it would
-  //! fallback to synchronous mode with no worker threads.
-  //!
-  //! \note If this flag is specified with `threadCount == 1` it means to
-  //! immediately fallback to synchronous rendering. It's only practical to
-  //! use this flag with 2 or more requested threads.
-  BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC = 0x00000008u,
+  //! No flags.
+  BL_CONTEXT_CREATE_NO_FLAGS = 0u,
 
-  //! If this flag is specified and asynchronous rendering is enabled then
-  //! the context would create its own isolated thread-pool, which is useful
-  //! for debugging purposes.
+  //! Disables JIT pipeline generator.
+  BL_CONTEXT_CREATE_FLAG_DISABLE_JIT = 0x00000001u,
+
+  //! Fallbacks to a synchronous rendering in case that the rendering engine wasn't able to acquire threads. This
+  //! flag only makes sense when the asynchronous mode was specified by having `threadCount` greater than 0. If the
+  //! rendering context fails to acquire at least one thread it would fallback to synchronous mode with no worker
+  //! threads.
   //!
-  //! Do not use this flag in production as rendering contexts with isolated
-  //! thread-pool have to create and destroy all threads they use. This flag
-  //! is only useful for testing, debugging, and isolated benchmarking.
+  //! \note If this flag is specified with `threadCount == 1` it means to immediately fallback to synchronous
+  //! rendering. It's only practical to use this flag with 2 or more requested threads.
+  BL_CONTEXT_CREATE_FLAG_FALLBACK_TO_SYNC = 0x00100000u,
+
+  //! If this flag is specified and asynchronous rendering is enabled then the context would create its own isolated
+  //! thread-pool, which is useful for debugging purposes.
+  //!
+  //! Do not use this flag in production as rendering contexts with isolated thread-pool have to create and destroy all
+  //! threads they use. This flag is only useful for testing, debugging, and isolated benchmarking.
   BL_CONTEXT_CREATE_FLAG_ISOLATED_THREAD_POOL = 0x01000000u,
 
-  //! If this flag is specified and JIT pipeline generation enabled then the
-  //! rendering context would create its own isolated JIT runtime. which is
-  //! useful for debugging purposes. This flag will be ignored if JIT pipeline
-  //! generation is either not supported or was disabled by other flags.
+  //! If this flag is specified and JIT pipeline generation enabled then the rendering context would create its own
+  //! isolated JIT runtime. which is useful for debugging purposes. This flag will be ignored if JIT pipeline
+  //! compilation is either not supported or was disabled by other flags.
   //!
-  //! Do not use this flag in production as rendering contexts with isolated
-  //! JIT runtime do not use global pipeline cache, that's it, after the
-  //! rendering context is destroyed the JIT runtime is destroyed with it with
-  //! all compiled pipelines. This flag is only useful for testing, debugging,
-  //! and isolated benchmarking.
+  //! Do not use this flag in production as rendering contexts with isolated JIT runtime do not use global pipeline
+  //! cache, that's it, after the rendering context is destroyed the JIT runtime is destroyed with it with all
+  //! compiled pipelines. This flag is only useful for testing, debugging, and isolated benchmarking.
   BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_RUNTIME = 0x02000000u,
 
   //! Enables logging to stderr of isolated runtime.
   //!
-  //! \note Must be used with \ref BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_RUNTIME
-  //! otherwise it would have no effect.
+  //! \note Must be used with \ref BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_RUNTIME otherwise it would have no effect.
   BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_LOGGING = 0x04000000u,
 
   //! Override CPU features when creating isolated context.
   BL_CONTEXT_CREATE_FLAG_OVERRIDE_CPU_FEATURES = 0x08000000u
+
+  BL_FORCE_ENUM_UINT32(BL_CONTEXT_CREATE_FLAG)
 };
 
-//! Specifies a rendering context property that can be specific to the rendering
-//! context implementation and that doesn't have its own C and C++ API. Different
-//! rendering context implementations may expose various properties that users
-//! can query to get more details about the rendering context itself, rendering
-//! details (like optimizations or possibly limitations), memory details, and
-//! other information that was collected during the rendering.
-//!
-//! Properties are never part of the rendering context state - they are stateless
-//! and are not subject to `save()` and `restore()`. Many properties are purely
-//! informative, but some not, e.g. `BL_CONTEXT_PROPERTY_ACCUMULATED_ERROR_FLAGS`.
-BL_DEFINE_ENUM(BLContextProperty) {
-  //! Number of threads that the rendering context uses for rendering.
-  BL_CONTEXT_PROPERTY_THREAD_COUNT = 0,
-
-  //! Accumulated errors collected during the lifetime of the rendering context.
-  BL_CONTEXT_PROPERTY_ACCUMULATED_ERROR_FLAGS = 10
-};
-
-//! Error flags that are accumulated during the rendering context lifetime and
-//! that can be queried through `BLContext::queryAccumulatedErrorFlags()`. The
-//! reason why these flags exist is that errors can happen during asynchronous
-//! rendering, and there is no way the user can catch these errors.
+//! Error flags that are accumulated during the rendering context lifetime and that can be queried through
+//! `BLContext::queryAccumulatedErrorFlags()`. The reason why these flags exist is that errors can happen during
+//! asynchronous rendering, and there is no way the user can catch these errors.
 BL_DEFINE_ENUM(BLContextErrorFlags) {
-  //! The rendering context returned or encountered `BL_ERROR_INVALID_VALUE`,
-  //! which is mostly related to function argument handling. It's very likely
-  //! some argument was wrong when calling `BLContext` API.
+  //! No flags.
+  BL_CONTEXT_ERROR_NO_FLAGS = 0u,
+
+  //! The rendering context returned or encountered `BL_ERROR_INVALID_VALUE`, which is mostly related to the function
+  //! argument handling. It's very likely some argument was wrong when calling `BLContext` API.
   BL_CONTEXT_ERROR_FLAG_INVALID_VALUE = 0x00000001u,
 
-  //! Invalid state describes something wrong, for example a pipeline compilation
-  //! error.
+  //! Invalid state describes something wrong, for example a pipeline compilation error.
   BL_CONTEXT_ERROR_FLAG_INVALID_STATE = 0x00000002u,
 
   //! The rendering context has encountered invalid geometry.
@@ -187,6 +158,8 @@ BL_DEFINE_ENUM(BLContextErrorFlags) {
 
   //! Unknown error, which we don't have flag for.
   BL_CONTEXT_ERROR_FLAG_UNKNOWN_ERROR = 0x80000000u
+
+  BL_FORCE_ENUM_UINT32(BL_CONTEXT_ERROR_FLAG)
 };
 
 //! Clip mode.
@@ -200,6 +173,8 @@ BL_DEFINE_ENUM(BLClipMode) {
 
   //! Count of clip modes.
   BL_CLIP_MODE_COUNT = 3
+
+  BL_FORCE_ENUM_UINT32(BL_CLIP_MODE)
 };
 
 //! Composition & blending operator.
@@ -264,7 +239,9 @@ BL_DEFINE_ENUM(BLCompOp) {
   BL_COMP_OP_EXCLUSION = 28,
 
   //! Count of composition & blending operators.
-  BL_COMP_OP_COUNT = 29
+  BL_COMP_OP_MAX_VALUE = 28
+
+  BL_FORCE_ENUM_UINT32(BL_COMP_OP)
 };
 
 //! Gradient rendering quality.
@@ -272,8 +249,10 @@ BL_DEFINE_ENUM(BLGradientQuality) {
   //! Nearest neighbor.
   BL_GRADIENT_QUALITY_NEAREST = 0,
 
-  //! Count of gradient quality options.
-  BL_GRADIENT_QUALITY_COUNT = 1
+  //! Maximum value of `BLGradientQuality`.
+  BL_GRADIENT_QUALITY_MAX_VALUE = 0
+
+  BL_FORCE_ENUM_UINT32(BL_GRADIENT_QUALITY)
 };
 
 //! Pattern quality.
@@ -283,8 +262,10 @@ BL_DEFINE_ENUM(BLPatternQuality) {
   //! Bilinear.
   BL_PATTERN_QUALITY_BILINEAR = 1,
 
-  //! Count of pattern quality options.
-  BL_PATTERN_QUALITY_COUNT = 2
+  //! Maximum value of `BLPatternQuality`.
+  BL_PATTERN_QUALITY_MAX_VALUE = 1
+
+  BL_FORCE_ENUM_UINT32(BL_PATTERN_QUALITY)
 };
 
 //! Rendering quality.
@@ -292,32 +273,33 @@ BL_DEFINE_ENUM(BLRenderingQuality) {
   //! Render using anti-aliasing.
   BL_RENDERING_QUALITY_ANTIALIAS = 0,
 
-  //! Count of rendering quality options.
-  BL_RENDERING_QUALITY_COUNT = 1
+  //! Maximum value of `BLRenderingQuality`.
+  BL_RENDERING_QUALITY_MAX_VALUE = 0
+
+  BL_FORCE_ENUM_UINT32(BL_RENDERING_QUALITY)
 };
 
-// ============================================================================
-// [BLContext - CreateInfo]
-// ============================================================================
+//! \}
+
+//! \name BLContext - Structs
+//! \{
 
 //! Information that can be used to customize the rendering context.
 struct BLContextCreateInfo {
-  //! Create flags, see `BLContextCreateFlags`.
+  //! Create flags, see \ref BLContextCreateFlags.
   uint32_t flags;
 
   //! Number of worker threads to use for asynchronous rendering, if non-zero.
   //!
-  //! If `threadCount` is zero it means to initialize the context for synchronous
-  //! rendering. This means that every operation will take effect immediately.
-  //! If `threadCount` is `1` it means that the rendering will be asynchronous,
-  //! but no thread would be acquired from a thread-pool, because the user thread
-  //! will be used as a worker. And finally, if `threadCount` is greater than `1`
-  //! then total of `threadCount - 1` threads will be acquired from thread-pool
-  //! and used as additional workers.
+  //! If `threadCount` is zero it means to initialize the context for synchronous rendering. This means that every
+  //! operation will take effect immediately. If `threadCount` is `1` it means that the rendering will be asynchronous,
+  //! but no thread would be acquired from a thread-pool, because the user thread will be used as a worker. And
+  //! finally, if `threadCount` is greater than `1` then total of `threadCount - 1` threads will be acquired from
+  //! thread-pool and used as additional workers.
   uint32_t threadCount;
 
-  //! CPU features to use in isolated JIT runtime (if supported), only used
-  //! when `flags` contains `BL_CONTEXT_CREATE_FLAG_OVERRIDE_CPU_FEATURES`.
+  //! CPU features to use in isolated JIT runtime (if supported), only used when `flags` contains
+  //! `BL_CONTEXT_CREATE_FLAG_OVERRIDE_CPU_FEATURES`.
   uint32_t cpuFeatures;
 
   //! Maximum number of commands to be queued.
@@ -330,31 +312,20 @@ struct BLContextCreateInfo {
   //! Reserved for future use, must be zero.
   uint32_t reserved[4];
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
+#ifdef __cplusplus
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
 
-// ============================================================================
-// [BLContext - Cookie]
-// ============================================================================
-
-//! Holds an arbitrary 128-bit value (cookie) that can be used to match other
-//! cookies. Blend2D uses cookies in places where it allows to "lock" some
-//! state that can only be unlocked by a matching cookie. Please don't confuse
-//! cookies with a security of any kind, it's just an arbitrary data that must
-//! match to proceed with a certain operation.
+//! Holds an arbitrary 128-bit value (cookie) that can be used to match other cookies. Blend2D uses cookies in places
+//! where it allows to "lock" some state that can only be unlocked by a matching cookie. Please don't confuse cookies
+//! with a security of any kind, it's just an arbitrary data that must match to proceed with a certain operation.
 //!
-//! Cookies can be used with `BLContext::save()` and `BLContext::restore()`
-//! operations.
+//! Cookies can be used with \ref BLContext::save() and \ref BLContext::restore() operations.
 struct BLContextCookie {
   uint64_t data[2];
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_NODISCARD BL_INLINE bool operator==(const BLContextCookie& other) const noexcept { return  equals(other); }
   BL_NODISCARD BL_INLINE bool operator!=(const BLContextCookie& other) const noexcept { return !equals(other); }
 
@@ -376,14 +347,8 @@ struct BLContextCookie {
     return blEquals(this->data[0], other.data[0]) &
            blEquals(this->data[1], other.data[1]);
   }
-
   #endif
-  // --------------------------------------------------------------------------
 };
-
-// ============================================================================
-// [BLContext - Hints]
-// ============================================================================
 
 //! Rendering context hints.
 struct BLContextHints {
@@ -394,30 +359,26 @@ struct BLContextHints {
       uint8_t patternQuality;
     };
 
-    uint8_t hints[BL_CONTEXT_HINT_COUNT];
+    uint8_t hints[BL_CONTEXT_HINT_MAX_VALUE + 1];
   };
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
 
-// ============================================================================
-// [BLContext - State]
-// ============================================================================
+//! \}
 
+//! \name BLContext - C API
+//! \{
+
+//! \cond INTERNAL
 //! Rendering context state.
 //!
-//! This state is not meant to be created by users, it's only provided for users
-//! that want to introspect the rendering context state and for C++ API that can
-//! access it directly for performance reasons.
+//! This state is not meant to be created by users, it's only provided for users that want to introspect the rendering
+//! context state and for C++ API that accesses it directly for performance reasons.
 struct BLContextState {
-  //! Target image or image object with nullptr impl in case that the rendering
-  //! context doesn't render to an image.
+  //! Target image or image object with nullptr impl in case that the rendering context doesn't render to an image.
   BLImageCore* targetImage;
   //! Current size of the target in abstract units, pixels if rendering to `BLImage`.
   BLSize targetSize;
@@ -428,8 +389,7 @@ struct BLContextState {
   uint8_t compOp;
   //! Current fill rule.
   uint8_t fillRule;
-  //! Current type of a style for fill and stroke operations, see `BLContextOpType`
-  //! that describes indexes and `BLStyleType` that describes styles.
+  //! Current type of a style object of fill and stroke operations indexed by \ref BLContextOpType.
   uint8_t styleType[2];
   //! Reserved for future use, must be zero.
   uint8_t reserved[4];
@@ -456,51 +416,45 @@ struct BLContextState {
   BL_HAS_TYPED_MEMBERS(BLContextState)
 };
 
-// ============================================================================
-// [BLContext - Core]
-// ============================================================================
-
 //! Rendering context [C Interface - Virtual Function Table].
-struct BLContextVirt {
-  BLResult (BL_CDECL* destroy                )(BLContextImpl* impl) BL_NOEXCEPT;
-  BLResult (BL_CDECL* flush                  )(BLContextImpl* impl, uint32_t flags) BL_NOEXCEPT;
+struct BLContextVirt BL_CLASS_INHERITS(BLObjectVirt) {
+  BL_DEFINE_VIRT_BASE
 
-  BLResult (BL_CDECL* queryProperty          )(const BLContextImpl* impl, uint32_t propertyId, void* valueOut) BL_NOEXCEPT;
+  BLResult (BL_CDECL* flush                  )(BLContextImpl* impl, BLContextFlushFlags flags) BL_NOEXCEPT;
 
   BLResult (BL_CDECL* save                   )(BLContextImpl* impl, BLContextCookie* cookie) BL_NOEXCEPT;
   BLResult (BL_CDECL* restore                )(BLContextImpl* impl, const BLContextCookie* cookie) BL_NOEXCEPT;
 
-  BLResult (BL_CDECL* matrixOp               )(BLContextImpl* impl, uint32_t opType, const void* opData) BL_NOEXCEPT;
+  BLResult (BL_CDECL* matrixOp               )(BLContextImpl* impl, BLMatrix2DOp opType, const void* opData) BL_NOEXCEPT;
   BLResult (BL_CDECL* userToMeta             )(BLContextImpl* impl) BL_NOEXCEPT;
 
-  BLResult (BL_CDECL* setHint                )(BLContextImpl* impl, uint32_t hintType, uint32_t value) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setHint                )(BLContextImpl* impl, BLContextHint hintType, uint32_t value) BL_NOEXCEPT;
   BLResult (BL_CDECL* setHints               )(BLContextImpl* impl, const BLContextHints* hints) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setFlattenMode         )(BLContextImpl* impl, uint32_t mode) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setFlattenMode         )(BLContextImpl* impl, BLFlattenMode mode) BL_NOEXCEPT;
   BLResult (BL_CDECL* setFlattenTolerance    )(BLContextImpl* impl, double tolerance) BL_NOEXCEPT;
   BLResult (BL_CDECL* setApproximationOptions)(BLContextImpl* impl, const BLApproximationOptions* options) BL_NOEXCEPT;
 
-  BLResult (BL_CDECL* setCompOp              )(BLContextImpl* impl, uint32_t compOp) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setCompOp              )(BLContextImpl* impl, BLCompOp compOp) BL_NOEXCEPT;
   BLResult (BL_CDECL* setGlobalAlpha         )(BLContextImpl* impl, double alpha) BL_NOEXCEPT;
 
   // Allows to dispatch fill/stroke by `BLContextOpType`.
   BLResult (BL_CDECL* setStyleAlpha[2]       )(BLContextImpl* impl, double alpha) BL_NOEXCEPT;
-  BLResult (BL_CDECL* getStyle[2]            )(const BLContextImpl* impl, BLStyleCore* out) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStyle[2]            )(BLContextImpl* impl, const BLStyleCore* style) BL_NOEXCEPT;
+  BLResult (BL_CDECL* getStyle[2]            )(const BLContextImpl* impl, BLVarCore* out) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStyle[2]            )(BLContextImpl* impl, const BLUnknown* var) BL_NOEXCEPT;
   BLResult (BL_CDECL* setStyleRgba[2]        )(BLContextImpl* impl, const BLRgba* rgba) BL_NOEXCEPT;
   BLResult (BL_CDECL* setStyleRgba32[2]      )(BLContextImpl* impl, uint32_t rgba32) BL_NOEXCEPT;
   BLResult (BL_CDECL* setStyleRgba64[2]      )(BLContextImpl* impl, uint64_t rgba64) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStyleObject[2]      )(BLContextImpl* impl, const void* object) BL_NOEXCEPT;
 
-  BLResult (BL_CDECL* setFillRule            )(BLContextImpl* impl, uint32_t fillRule) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setFillRule            )(BLContextImpl* impl, BLFillRule fillRule) BL_NOEXCEPT;
 
   BLResult (BL_CDECL* setStrokeWidth         )(BLContextImpl* impl, double width) BL_NOEXCEPT;
   BLResult (BL_CDECL* setStrokeMiterLimit    )(BLContextImpl* impl, double miterLimit) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeCap           )(BLContextImpl* impl, uint32_t position, uint32_t strokeCap) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeCaps          )(BLContextImpl* impl, uint32_t strokeCap) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeJoin          )(BLContextImpl* impl, uint32_t strokeJoin) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeCap           )(BLContextImpl* impl, BLStrokeCapPosition position, BLStrokeCap strokeCap) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeCaps          )(BLContextImpl* impl, BLStrokeCap strokeCap) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeJoin          )(BLContextImpl* impl, BLStrokeJoin strokeJoin) BL_NOEXCEPT;
   BLResult (BL_CDECL* setStrokeDashOffset    )(BLContextImpl* impl, double dashOffset) BL_NOEXCEPT;
   BLResult (BL_CDECL* setStrokeDashArray     )(BLContextImpl* impl, const BLArrayCore* dashArray) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeTransformOrder)(BLContextImpl* impl, uint32_t transformOrder) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeTransformOrder)(BLContextImpl* impl, BLStrokeTransformOrder transformOrder) BL_NOEXCEPT;
   BLResult (BL_CDECL* setStrokeOptions       )(BLContextImpl* impl, const BLStrokeOptionsCore* options) BL_NOEXCEPT;
 
   BLResult (BL_CDECL* clipToRectI            )(BLContextImpl* impl, const BLRectI* rect) BL_NOEXCEPT;
@@ -515,18 +469,20 @@ struct BLContextVirt {
   BLResult (BL_CDECL* fillRectI              )(BLContextImpl* impl, const BLRectI* rect) BL_NOEXCEPT;
   BLResult (BL_CDECL* fillRectD              )(BLContextImpl* impl, const BLRect* rect) BL_NOEXCEPT;
   BLResult (BL_CDECL* fillPathD              )(BLContextImpl* impl, const BLPathCore* path) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillGeometry           )(BLContextImpl* impl, uint32_t geometryType, const void* geometryData) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillTextI              )(BLContextImpl* impl, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillTextD              )(BLContextImpl* impl, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillGeometry           )(BLContextImpl* impl, BLGeometryType geometryType, const void* geometryData) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillTextI              )(BLContextImpl* impl, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillTextD              )(BLContextImpl* impl, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) BL_NOEXCEPT;
   BLResult (BL_CDECL* fillGlyphRunI          )(BLContextImpl* impl, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT;
   BLResult (BL_CDECL* fillGlyphRunD          )(BLContextImpl* impl, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillMaskI              )(BLContextImpl* impl, const BLPointI* pt, const BLImageCore* mask, const BLRectI* maskArea) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillMaskD              )(BLContextImpl* impl, const BLPoint* pt, const BLImageCore* mask, const BLRectI* maskArea) BL_NOEXCEPT;
 
   BLResult (BL_CDECL* strokeRectI            )(BLContextImpl* impl, const BLRectI* rect) BL_NOEXCEPT;
   BLResult (BL_CDECL* strokeRectD            )(BLContextImpl* impl, const BLRect* rect) BL_NOEXCEPT;
   BLResult (BL_CDECL* strokePathD            )(BLContextImpl* impl, const BLPathCore* path) BL_NOEXCEPT;
-  BLResult (BL_CDECL* strokeGeometry         )(BLContextImpl* impl, uint32_t geometryType, const void* geometryData) BL_NOEXCEPT;
-  BLResult (BL_CDECL* strokeTextI            )(BLContextImpl* impl, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT;
-  BLResult (BL_CDECL* strokeTextD            )(BLContextImpl* impl, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, uint32_t encoding) BL_NOEXCEPT;
+  BLResult (BL_CDECL* strokeGeometry         )(BLContextImpl* impl, BLGeometryType geometryType, const void* geometryData) BL_NOEXCEPT;
+  BLResult (BL_CDECL* strokeTextI            )(BLContextImpl* impl, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) BL_NOEXCEPT;
+  BLResult (BL_CDECL* strokeTextD            )(BLContextImpl* impl, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) BL_NOEXCEPT;
   BLResult (BL_CDECL* strokeGlyphRunI        )(BLContextImpl* impl, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT;
   BLResult (BL_CDECL* strokeGlyphRunD        )(BLContextImpl* impl, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT;
 
@@ -536,47 +492,138 @@ struct BLContextVirt {
   BLResult (BL_CDECL* blitScaledImageD       )(BLContextImpl* impl, const BLRect* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT;
 };
 
-//! Rendering context [C Interface - Impl].
-struct BLContextImpl {
+//! Rendering context [Impl].
+struct BLContextImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Virtual function table.
   const BLContextVirt* virt;
-
-  //! Reference count.
-  volatile size_t refCount;
-  //! Impl type.
-  uint8_t implType;
-  //! Impl traits.
-  uint8_t implTraits;
-  //! Memory pool data.
-  uint16_t memPoolData;
-  //! Type of the context, see `BLContextType`.
-  uint32_t contextType;
-
   //! Current state of the context.
   const BLContextState* state;
-};
 
-//! Rendering context [C Interface - Core].
-struct BLContextCore {
-  BLContextImpl* impl;
+  //! Type of the rendering context, see \ref BLContextType.
+  uint32_t contextType;
 };
+//! \endcond
 
-// ============================================================================
-// [BLContext - C++]
-// ============================================================================
+//! Rendering context [C API].
+struct BLContextCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
 
 #ifdef __cplusplus
+  //! \name Impl Utilities
+  //! \{
+
+  //! Returns Impl of the rendering context (only provided for use cases that implement BLContext).
+  template<typename T = BLContextImpl>
+  BL_INLINE T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
+
+  //! \}
+#endif
+};
+
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blContextInit(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextInitMove(BLContextCore* self, BLContextCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextInitWeak(BLContextCore* self, const BLContextCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextInitAs(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* cci) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextDestroy(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextReset(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextAssignMove(BLContextCore* self, BLContextCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextAssignWeak(BLContextCore* self, const BLContextCore* other) BL_NOEXCEPT_C;
+BL_API BLContextType BL_CDECL blContextGetType(const BLContextCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API BLResult BL_CDECL blContextGetTargetSize(const BLContextCore* self, BLSize* targetSizeOut) BL_NOEXCEPT_C;
+BL_API BLImageCore* BL_CDECL blContextGetTargetImage(const BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextBegin(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* cci) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextEnd(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFlush(BLContextCore* self, BLContextFlushFlags flags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSave(BLContextCore* self, BLContextCookie* cookie) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextRestore(BLContextCore* self, const BLContextCookie* cookie) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetMetaMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetUserMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextUserToMeta(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextMatrixOp(BLContextCore* self, BLMatrix2DOp opType, const void* opData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetHint(BLContextCore* self, BLContextHint hintType, uint32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetHints(BLContextCore* self, const BLContextHints* hints) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFlattenMode(BLContextCore* self, BLFlattenMode mode) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFlattenTolerance(BLContextCore* self, double tolerance) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetApproximationOptions(BLContextCore* self, const BLApproximationOptions* options) BL_NOEXCEPT_C;
+BL_API BLCompOp BL_CDECL blContextGetCompOp(const BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetCompOp(BLContextCore* self, BLCompOp compOp) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetGlobalAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetFillStyle(const BLContextCore* self, BLVarCore* varOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillStyle(BLContextCore* self, const BLUnknown* var) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillStyleRgba(BLContextCore* self, const BLRgba* rgba) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetFillRule(BLContextCore* self, BLFillRule fillRule) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetStrokeStyle(const BLContextCore* self, BLVarCore* varOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeStyle(BLContextCore* self, const BLUnknown* var) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba(BLContextCore* self, const BLRgba* rgba) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeWidth(BLContextCore* self, double width) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeMiterLimit(BLContextCore* self, double miterLimit) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeCap(BLContextCore* self, BLStrokeCapPosition position, BLStrokeCap strokeCap) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeCaps(BLContextCore* self, BLStrokeCap strokeCap) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeJoin(BLContextCore* self, BLStrokeJoin strokeJoin) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeDashOffset(BLContextCore* self, double dashOffset) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeDashArray(BLContextCore* self, const BLArrayCore* dashArray) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeTransformOrder(BLContextCore* self, BLStrokeTransformOrder transformOrder) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetStrokeOptions(const BLContextCore* self, BLStrokeOptionsCore* options) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeOptions(BLContextCore* self, const BLStrokeOptionsCore* options) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextClipToRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextClipToRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextRestoreClipping(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextClearAll(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextClearRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextClearRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillAll(BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillPathD(BLContextCore* self, const BLPathCore* path) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillGeometry(BLContextCore* self, BLGeometryType geometryType, const void* geometryData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillTextI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillTextD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillGlyphRunI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillGlyphRunD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillMaskI(BLContextCore* self, const BLPointI* pt, const BLImageCore* mask, const BLRectI* maskArea) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextFillMaskD(BLContextCore* self, const BLPoint* pt, const BLImageCore* mask, const BLRectI* maskArea) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokePathD(BLContextCore* self, const BLPathCore* path) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeGeometry(BLContextCore* self, BLGeometryType geometryType, const void* geometryData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeTextI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeTextD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeGlyphRunI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextStrokeGlyphRunD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextBlitImageI(BLContextCore* self, const BLPointI* pt, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextBlitImageD(BLContextCore* self, const BLPoint* pt, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextBlitScaledImageI(BLContextCore* self, const BLRectI* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextBlitScaledImageD(BLContextCore* self, const BLRect* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+//! \}
+
+//! \name BLContext - C++ API
+//! \{
+#ifdef __cplusplus
+
 //! Rendering context [C++ API].
 class BLContext : public BLContextCore {
 public:
   //! \cond INTERNAL
-  static constexpr const uint32_t kImplType = BL_IMPL_TYPE_CONTEXT;
+  // This macro is here so stepping-in into BLContext API doesn't step into _impl() method.
+  #define BL_CONTEXT_IMPL() static_cast<BLContextImpl*>(_d.impl)
 
   // Only used by `BLContext` to make invocation of functions in `BLContextVirt`.
   enum OpType : uint32_t {
     kOpFill = BL_CONTEXT_OP_TYPE_FILL,
     kOpStroke = BL_CONTEXT_OP_TYPE_STROKE
   };
+
+  BL_INLINE BLContextImpl* _impl() const noexcept { return static_cast<BLContextImpl*>(_d.impl); }
   //! \endcond
 
   //! \name Construction & Destruction
@@ -584,36 +631,26 @@ public:
 
   //! Creates a default constructed rendering context.
   //!
-  //! Default constructed means that the instance is valid, but uninitialized,
-  //! which means the rendering context does not have attached any target. Any
-  //! attempt to use uninitialized context results in `BL_ERROR_NOT_INITIALIZED`
-  //! error.
-  BL_INLINE BLContext() noexcept { this->impl = none().impl; }
+  //! Default constructed means that the instance is valid, but uninitialized,  which means the rendering context does
+  //! not have attached any target. Any attempt to use uninitialized context results in `BL_ERROR_NOT_INITIALIZED` error.
+  BL_INLINE BLContext() noexcept { blContextInit(this); }
 
   //! Move constructor.
   //!
   //! Moves the `other` rendering context into this one and resets the `other`.
-  BL_INLINE BLContext(BLContext&& other) noexcept { blVariantInitMove(this, &other); }
+  BL_INLINE BLContext(BLContext&& other) noexcept { blContextInitMove(this, &other); }
 
   //! Copy constructor.
   //!
-  //! Creates a weak-copy of the `other` rendering context by increasing it's
-  //! internal reference counter. This context and `other` would point to the
-  //! same data and would be otherwise identical. Any change to `other` would
-  //! also affect this context.
+  //! Creates a weak-copy of the `other` rendering context by increasing it's internal reference counter. This context
+  //! and `other` would point to the same data and would be otherwise identical. Any change to `other` would also
+  //! affect this context.
   //!
-  //! This function is mostly provided for C++ users that may keep a global
-  //! reference to the same rendering context, for example, otherwise sharing
-  //! is not that useful as they also share a state.
+  //! This function is mostly provided for C++ users that may keep a global reference to the same rendering context,
+  //! for example, otherwise sharing is not that useful as they also share a state.
   //!
-  //! Two weak copies of the same rendering context cannot be used by different
-  //! threads simultaneously.
-  BL_INLINE BLContext(const BLContext& other) noexcept { blVariantInitWeak(this, &other); }
-
-  //! Initializes this `BLContext` class with rendering context `impl`.
-  //!
-  //! Mostly for internal purposes and to keep the API consistent.
-  BL_INLINE explicit BLContext(BLContextImpl* impl) noexcept { this->impl = impl; }
+  //! Two weak copies of the same rendering context cannot be used by different threads simultaneously.
+  BL_INLINE BLContext(const BLContext& other) noexcept { blContextInitWeak(this, &other); }
 
   //! Creates a new rendering context for rendering to the image `target`.
   BL_INLINE explicit BLContext(BLImageCore& target) noexcept { blContextInitAs(this, &target, nullptr); }
@@ -627,8 +664,8 @@ public:
 
   //! Destroys the rendering context.
   //!
-  //! Waits for all operations, detaches the target from the rendering context
-  //! and then destroys it. Does nothing if the context is not initialized.
+  //! Waits for all operations, detaches the target from the rendering context and then destroys it. Does nothing if
+  //! the context is not initialized.
   BL_INLINE ~BLContext() noexcept { blContextDestroy(this); }
 
   //! \}
@@ -638,23 +675,25 @@ public:
 
   //! Returns true if the rendering context is initialized (has target attached).
   //!
-  //! Provided for users that want to use bool idiom in C++ to check for the
-  //! status of the object.
+  //! Provided for users that want to use bool idiom in C++ to check for the status of the object.
   //!
   //! ```
   //! if (ctx) {
   //!   // Rendering context is initialized.
   //! }
   //! ```
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+  BL_INLINE explicit operator bool() const noexcept { return isValid(); }
 
   BL_INLINE BLContext& operator=(BLContext&& other) noexcept { blContextAssignMove(this, &other); return *this; }
   BL_INLINE BLContext& operator=(const BLContext& other) noexcept { blContextAssignWeak(this, &other); return *this; }
 
   //! Returns whether this and `other` point to the same rendering context.
-  BL_NODISCARD BL_INLINE bool operator==(const BLContext& other) const noexcept { return  equals(other); }
+  BL_NODISCARD
+  BL_INLINE bool operator==(const BLContext& other) const noexcept { return  equals(other); }
+
   //! Returns whether this and `other` are different rendering contexts.
-  BL_NODISCARD BL_INLINE bool operator!=(const BLContext& other) const noexcept { return !equals(other); }
+  BL_NODISCARD
+  BL_INLINE bool operator!=(const BLContext& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -663,28 +702,25 @@ public:
 
   //! Returns the target size in abstract units (pixels in case of `BLImage`).
   BL_NODISCARD
-  BL_INLINE BLSize targetSize() const noexcept { return impl->state->targetSize; }
+  BL_INLINE BLSize targetSize() const noexcept { return BL_CONTEXT_IMPL()->state->targetSize; }
 
   //! Returns the target width in abstract units (pixels in case of `BLImage`).
   BL_NODISCARD
-  BL_INLINE double targetWidth() const noexcept { return impl->state->targetSize.w; }
+  BL_INLINE double targetWidth() const noexcept { return BL_CONTEXT_IMPL()->state->targetSize.w; }
 
   //! Returns the target height in abstract units (pixels in case of `BLImage`).
   BL_NODISCARD
-  BL_INLINE double targetHeight() const noexcept { return impl->state->targetSize.h; }
+  BL_INLINE double targetHeight() const noexcept { return BL_CONTEXT_IMPL()->state->targetSize.h; }
 
   //! Returns the target image or null if there is no target image.
   //!
-  //! \note The rendering context doesn't own the image, but it increases its
-  //! writer count, which means that the image will not be destroyed even when
-  //! user destroys it during the rendering (in such case it will be destroyed
-  //! after the rendering ends when the writer count goes to zero). This means
-  //! that the rendering context must hold the image and not the pointer to
-  //! the `BLImage` passed to either the constructor or `begin()` function. So
-  //! the returned pointer is not the same as the pointer passed to `begin()`,
-  //! but it points to the same impl.
+  //! \note The rendering context doesn't own the image, but it increases its writer count, which means that the image
+  //! will not be destroyed even when user destroys it during the rendering (in such case it will be destroyed after
+  //! the rendering ends when the writer count goes to zero). This means that the rendering context must hold the image
+  //! and not the pointer to the `BLImage` passed to either the constructor or `begin()` function. So the returned
+  //! pointer is not the same as the pointer passed to `begin()`, but it points to the same impl.
   BL_NODISCARD
-  BL_INLINE BLImage* targetImage() const noexcept { return blDownCast(impl->state->targetImage); }
+  BL_INLINE BLImage* targetImage() const noexcept { return blDownCast(BL_CONTEXT_IMPL()->state->targetImage); }
 
   //! \}
 
@@ -693,20 +729,20 @@ public:
 
   //! Returns the type of this context, see `BLContextType`.
   BL_NODISCARD
-  BL_INLINE uint32_t contextType() const noexcept { return impl->contextType; }
+  BL_INLINE BLContextType contextType() const noexcept { return (BLContextType)BL_CONTEXT_IMPL()->contextType; }
 
-  //! Tests whether the context is a built-in null instance.
+  //! Tests whether the context is a valid rendering context that has attached target to it.
   BL_NODISCARD
-  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
+  BL_INLINE bool isValid() const noexcept { return contextType() != BL_CONTEXT_TYPE_NONE; }
 
   //! Returns whether this and `other` point to the same rendering context.
   BL_NODISCARD
-  BL_INLINE bool equals(const BLContext& other) const noexcept { return this->impl == other.impl; }
+  BL_INLINE bool equals(const BLContext& other) const noexcept { return this->_d.impl == other._d.impl; }
 
   //! Resets this rendering context to the default constructed one.
   //!
-  //! Similar behavior to the destructor, but the context will still be valid
-  //! after `reset()` and would behave like a default constructed context.
+  //! Similar behavior to the destructor, but the context will still be valid after `reset()` and would behave
+  //! like a default constructed context.
   BL_INLINE BLResult reset() noexcept { return blContextReset(this); }
 
   BL_INLINE BLResult assign(BLContext&& other) noexcept { return blContextAssignMove(this, &other); }
@@ -714,60 +750,49 @@ public:
 
   //! Begins rendering to the given `image`.
   //!
-  //! If this operation succeeds then the rendering context will have exclusive
-  //! access to the image data. This means that no other renderer can use it
-  //! during rendering.
+  //! If this operation succeeds then the rendering context will have exclusive access to the image data. This
+  //! means that no other renderer can use it during rendering.
   BL_INLINE BLResult begin(BLImageCore& image) noexcept { return blContextBegin(this, &image, nullptr); }
   //! \overload
   BL_INLINE BLResult begin(BLImageCore& image, const BLContextCreateInfo& createInfo) noexcept { return blContextBegin(this, &image, &createInfo); }
   //! \overload
   BL_INLINE BLResult begin(BLImageCore& image, const BLContextCreateInfo* createInfo) noexcept { return blContextBegin(this, &image, createInfo); }
 
-  //! Waits for completion of all render commands and detaches the rendering
-  //! context from the rendering target. After `end()` completes the rendering
-  //! context implementation would be released and replaced by a built-in null
-  //! instance (no context).
+  //! Waits for completion of all render commands and detaches the rendering context from the rendering target.
+  //! After `end()` completes the rendering context implementation would be released and replaced by a built-in
+  //! null instance (no context).
   BL_INLINE BLResult end() noexcept { return blContextEnd(this); }
 
   //! Flushes the context, see `BLContextFlushFlags`.
-  BL_INLINE BLResult flush(uint32_t flags) noexcept { return impl->virt->flush(impl, flags); }
+  BL_INLINE BLResult flush(BLContextFlushFlags flags) noexcept { return BL_CONTEXT_IMPL()->virt->flush(BL_CONTEXT_IMPL(), flags); }
 
   //! \}
 
-  //! \name Context Properties
+  //! \name Properties
   //! \{
 
-  BL_INLINE BLResult queryProperty(uint32_t propertyId, void* valueOut) const noexcept {
-    return impl->virt->queryProperty(impl, propertyId, valueOut);
-  }
-
-  //! \cond INTERNAL
-  template<typename T>
-  BL_NODISCARD
-  BL_INLINE T _queryPropertyT(uint32_t propertyId) const noexcept {
-    T result {};
-    queryProperty(propertyId, &result);
-    return result;
-  }
-  //! \endcond
+  BL_DEFINE_OBJECT_PROPERTY_API
 
   //! Queries the number of threads that the rendering context uses.
   //!
-  //! If the returned value is zero it means that the rendering is synchronous,
-  //! otherwise it describes the number of threads used for asynchronous rendering
-  //! which include the user thread. For example if the returned value is `2` it
-  //! means that the rendering context uses the user thread and one more worker.
+  //! If the returned value is zero it means that the rendering is synchronous, otherwise it describes the number of
+  //! threads used for asynchronous rendering which include the user thread. For example if the returned value is `2`
+  //! it means that the rendering context uses the user thread and one more worker.
   BL_NODISCARD
-  BL_INLINE uint32_t queryThreadCount() const noexcept {
-    return _queryPropertyT<uint32_t>(BL_CONTEXT_PROPERTY_THREAD_COUNT);
+  BL_INLINE uint32_t threadCount() const noexcept {
+    uint32_t value;
+    blObjectGetPropertyUInt32(this, "threadCount", 11, &value);
+    return value;
   }
 
   //! Queries accumulated errors as flags, see \ref BLContextErrorFlags.
   //!
   //! Errors may accumulate during the lifetime of the rendering context.
   BL_NODISCARD
-  BL_INLINE uint32_t queryAccumulatedErrorFlags() const noexcept {
-    return _queryPropertyT<uint32_t>(BL_CONTEXT_PROPERTY_ACCUMULATED_ERROR_FLAGS);
+  BL_INLINE BLContextErrorFlags accumulatedErrorFlags() const noexcept {
+    uint32_t value;
+    blObjectGetPropertyUInt32(this, "accumulatedErrorFlags", 21, &value);
+    return BLContextErrorFlags(value);
   }
 
   //! \}
@@ -777,23 +802,21 @@ public:
 
   //! Returns the number of saved states in the context (0 means no saved states).
   BL_NODISCARD
-  BL_INLINE size_t savedStateCount() const noexcept { return impl->state->savedStateCount; }
+  BL_INLINE size_t savedStateCount() const noexcept { return BL_CONTEXT_IMPL()->state->savedStateCount; }
 
   //! Saves the current rendering context state.
   //!
-  //! Blend2D uses optimizations that make `save()` a cheap operation. Only core
-  //! values are actually saved in `save()`, others will only be saved if they
-  //! are modified. This means that consecutive calls to `save()` and `restore()`
-  //! do almost nothing.
-  BL_INLINE BLResult save() noexcept { return impl->virt->save(impl, nullptr); }
+  //! Blend2D uses optimizations that make `save()` a cheap operation. Only core values are actually saved in `save()`,
+  //! others will only be saved if they are modified. This means that consecutive calls to `save()` and `restore()` do
+  //! almost nothing.
+  BL_INLINE BLResult save() noexcept { return BL_CONTEXT_IMPL()->virt->save(BL_CONTEXT_IMPL(), nullptr); }
 
   //! Saves the current rendering context state and creates a restoration `cookie`.
   //!
-  //! If you use a `cookie` to save a state you have to use the same cookie to
-  //! restore it otherwise the `restore()` would fail. Please note that cookies
-  //! are not a means of security, they are provided for making it easier to
+  //! If you use a `cookie` to save a state you have to use the same cookie to restore it otherwise the `restore()`
+  //! would fail. Please note that cookies are not a means of security, they are provided for making it easier to
   //! guarantee that a code that you may not control won't break your context.
-  BL_INLINE BLResult save(BLContextCookie& cookie) noexcept { return impl->virt->save(impl, &cookie); }
+  BL_INLINE BLResult save(BLContextCookie& cookie) noexcept { return BL_CONTEXT_IMPL()->virt->save(BL_CONTEXT_IMPL(), &cookie); }
 
   //! Restores the top-most saved context-state.
   //!
@@ -801,22 +824,20 @@ public:
   //!
   //!   * `BL_SUCCESS` - State was restored successfully.
   //!   * `BL_ERROR_NO_STATES_TO_RESTORE` - There are no saved states to restore.
-  //!   * `BL_ERROR_NO_MATCHING_COOKIE` - Previous state was saved with cookie,
-  //!     which was not provided. You would need the correct cookie to restore
-  //!     such state.
-  BL_INLINE BLResult restore() noexcept { return impl->virt->restore(impl, nullptr); }
+  //!   * `BL_ERROR_NO_MATCHING_COOKIE` - Previous state was saved with cookie, which was not provided. You would need
+  //!     the correct cookie to restore such state.
+  BL_INLINE BLResult restore() noexcept { return BL_CONTEXT_IMPL()->virt->restore(BL_CONTEXT_IMPL(), nullptr); }
 
   //! Restores to the point that matches the given `cookie`.
   //!
-  //! More than one state can be restored in case that the `cookie` points to
-  //! some previous state in the list.
+  //! More than one state can be restored in case that the `cookie` points to some previous state in the list.
   //!
   //! Possible return conditions:
   //!
   //!   * `BL_SUCCESS` - Matching state was restored successfully.
   //!   * `BL_ERROR_NO_STATES_TO_RESTORE` - There are no saved states to restore.
   //!   * `BL_ERROR_NO_MATCHING_COOKIE` - The cookie did't match any saved state.
-  BL_INLINE BLResult restore(const BLContextCookie& cookie) noexcept { return impl->virt->restore(impl, &cookie); }
+  BL_INLINE BLResult restore(const BLContextCookie& cookie) noexcept { return BL_CONTEXT_IMPL()->virt->restore(BL_CONTEXT_IMPL(), &cookie); }
 
   //! \}
 
@@ -825,40 +846,38 @@ public:
 
   //! Returns meta-matrix.
   //!
-  //! Meta matrix is a core transformation matrix that is normally not changed
-  //! by transformations applied to the context. Instead it acts as a secondary
-  //! matrix used to create the final transformation matrix from meta and user
-  //! matrices.
+  //! Meta matrix is a core transformation matrix that is normally not changed by transformations applied to the
+  //! context. Instead it acts as a secondary matrix used to create the final transformation matrix from meta and
+  //! user matrices.
   //!
-  //! Meta matrix can be used to scale the whole context for HI-DPI rendering
-  //! or to change the orientation of the image being rendered, however, the
-  //! number of use-cases is unlimited.
+  //! Meta matrix can be used to scale the whole context for HI-DPI rendering or to change the orientation of the
+  //! image being rendered, however, the number of use-cases is unlimited.
   //!
-  //! To change the meta-matrix you must first change user-matrix and then call
-  //! `userToMeta()`, which would update meta-matrix and clear user-matrix.
+  //! To change the meta-matrix you must first change user-matrix and then call `userToMeta()`, which would update
+  //! meta-matrix and clear user-matrix.
   //!
   //! See `userMatrix()` and `userToMeta()`.
   BL_NODISCARD
-  BL_INLINE const BLMatrix2D& metaMatrix() const noexcept { return impl->state->metaMatrix; }
+  BL_INLINE const BLMatrix2D& metaMatrix() const noexcept { return BL_CONTEXT_IMPL()->state->metaMatrix; }
 
   //! Returns user-matrix.
   //!
-  //! User matrix contains all transformations that happened to the rendering
-  //! context unless the context was restored or `userToMeta()` was called.
+  //! User matrix contains all transformations that happened to the rendering context unless the context was restored
+  //! or `userToMeta()` was called.
   BL_NODISCARD
-  BL_INLINE const BLMatrix2D& userMatrix() const noexcept { return impl->state->userMatrix; }
-
-  //! Applies a matrix operation to the current transformation matrix (internal).
-  BL_INLINE BLResult _applyMatrixOp(uint32_t opType, const void* opData) noexcept {
-    return impl->virt->matrixOp(impl, opType, opData);
-  }
+  BL_INLINE const BLMatrix2D& userMatrix() const noexcept { return BL_CONTEXT_IMPL()->state->userMatrix; }
 
   //! \cond INTERNAL
   //! Applies a matrix operation to the current transformation matrix (internal).
+  BL_INLINE BLResult _applyMatrixOp(BLMatrix2DOp opType, const void* opData) noexcept {
+    return BL_CONTEXT_IMPL()->virt->matrixOp(BL_CONTEXT_IMPL(), opType, opData);
+  }
+
+  //! Applies a matrix operation to the current transformation matrix (internal).
   template<typename... Args>
-  BL_INLINE BLResult _applyMatrixOpV(uint32_t opType, Args&&... args) noexcept {
+  BL_INLINE BLResult _applyMatrixOpV(BLMatrix2DOp opType, Args&&... args) noexcept {
     double opData[] = { double(args)... };
-    return impl->virt->matrixOp(impl, opType, opData);
+    return BL_CONTEXT_IMPL()->virt->matrixOp(BL_CONTEXT_IMPL(), opType, opData);
   }
   //! \endcond
 
@@ -897,18 +916,17 @@ public:
   BL_INLINE BLResult postRotate(double angle, const BLPointI& p) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_POST_ROTATE_PT, angle, p.x, p.y); }
   BL_INLINE BLResult postTransform(const BLMatrix2D& m) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_POST_TRANSFORM, &m); }
 
-  //! Store the result of combining the current `MetaMatrix` and `UserMatrix`
-  //! to `MetaMatrix` and reset `UserMatrix` to identity as shown below:
+  //! Store the result of combining the current `MetaMatrix` and `UserMatrix` to `MetaMatrix` and reset `UserMatrix`
+  //! to identity as shown below:
   //!
   //! ```
   //! MetaMatrix = MetaMatrix x UserMatrix
   //! UserMatrix = Identity
   //! ```
   //!
-  //! Please note that this operation is irreversible. The only way to restore
-  //! both matrices to the state before the call to `userToMeta()` is to use
-  //! `save()` and `restore()` functions.
-  BL_INLINE BLResult userToMeta() noexcept { return impl->virt->userToMeta(impl); }
+  //! Please note that this operation is irreversible. The only way to restore both matrices to the state before the
+  //! call to `userToMeta()` is to use `save()` and `restore()` functions.
+  BL_INLINE BLResult userToMeta() noexcept { return BL_CONTEXT_IMPL()->virt->userToMeta(BL_CONTEXT_IMPL()); }
 
   //! \}
 
@@ -917,16 +935,34 @@ public:
 
   //! Returns rendering hints.
   BL_NODISCARD
-  BL_INLINE const BLContextHints& hints() const noexcept { return impl->state->hints; }
+  BL_INLINE const BLContextHints& hints() const noexcept { return BL_CONTEXT_IMPL()->state->hints; }
 
   //! Sets the given rendering hint `hintType` to the `value`.
-  BL_INLINE BLResult setHint(uint32_t hintType, uint32_t value) noexcept { return impl->virt->setHint(impl, hintType, value); }
-  //! Sets all rendering hints of this context to the given `hints`.
-  BL_INLINE BLResult setHints(const BLContextHints& hints) noexcept { return impl->virt->setHints(impl, &hints); }
+  BL_INLINE BLResult setHint(BLContextHint hintType, uint32_t value) noexcept { return BL_CONTEXT_IMPL()->virt->setHint(BL_CONTEXT_IMPL(), hintType, value); }
 
-  BL_INLINE BLResult setRenderingQuality(uint32_t value) noexcept { return setHint(BL_CONTEXT_HINT_RENDERING_QUALITY, value); }
-  BL_INLINE BLResult setGradientQuality(uint32_t value) noexcept { return setHint(BL_CONTEXT_HINT_GRADIENT_QUALITY, value); }
-  BL_INLINE BLResult setPatternQuality(uint32_t value) noexcept { return setHint(BL_CONTEXT_HINT_PATTERN_QUALITY, value); }
+  //! Sets all rendering hints of this context to the given `hints`.
+  BL_INLINE BLResult setHints(const BLContextHints& hints) noexcept { return BL_CONTEXT_IMPL()->virt->setHints(BL_CONTEXT_IMPL(), &hints); }
+
+  //! Returns the rendering quality hint.
+  BL_NODISCARD
+  BL_INLINE BLRenderingQuality renderingQuality() const noexcept { return BLRenderingQuality(hints().renderingQuality); }
+
+  //! Sets rendering quality hint to `value`.
+  BL_INLINE BLResult setRenderingQuality(BLRenderingQuality value) noexcept { return setHint(BL_CONTEXT_HINT_RENDERING_QUALITY, uint32_t(value)); }
+
+  //! Returns the gradient quality hint.
+  BL_NODISCARD
+  BL_INLINE BLGradientQuality gradientQuality() const noexcept { return BLGradientQuality(hints().gradientQuality); }
+
+  //! Sets gradient quality hint to `value`.
+  BL_INLINE BLResult setGradientQuality(BLGradientQuality value) noexcept { return setHint(BL_CONTEXT_HINT_GRADIENT_QUALITY, uint32_t(value)); }
+
+  //! Returns the pattern quality hint.
+  BL_NODISCARD
+  BL_INLINE BLPatternQuality patternQuality() const noexcept { return BLPatternQuality(hints().patternQuality); }
+
+  //! Sets pattern quality hint to `value`.
+  BL_INLINE BLResult setPatternQuality(BLPatternQuality value) noexcept { return setHint(BL_CONTEXT_HINT_PATTERN_QUALITY, uint32_t(value)); }
 
   //! \}
 
@@ -935,21 +971,24 @@ public:
 
   //! Returns approximation options.
   BL_NODISCARD
-  BL_INLINE const BLApproximationOptions& approximationOptions() const noexcept { return impl->state->approximationOptions; }
+  BL_INLINE const BLApproximationOptions& approximationOptions() const noexcept { return BL_CONTEXT_IMPL()->state->approximationOptions; }
 
-  //! Returns flatten mode (how curves are flattened), see `BLFlattenMmode`.
+  //! Sets approximation options to `options`.
+  BL_INLINE BLResult setApproximationOptions(const BLApproximationOptions& options) noexcept { return BL_CONTEXT_IMPL()->virt->setApproximationOptions(BL_CONTEXT_IMPL(), &options); }
+
+  //! Returns flatten mode (how curves are flattened).
   BL_NODISCARD
-  BL_INLINE uint32_t flattenMode() const noexcept { return impl->state->approximationOptions.flattenMode; }
+  BL_INLINE BLFlattenMode flattenMode() const noexcept { return BLFlattenMode(BL_CONTEXT_IMPL()->state->approximationOptions.flattenMode); }
 
-  //! Sets flatten `mode` (how curves are flattened), see `BLFlattenMmode`.
-  BL_INLINE BLResult setFlattenMode(uint32_t mode) noexcept { return impl->virt->setFlattenMode(impl, mode); }
+  //! Sets flatten `mode` (how curves are flattened).
+  BL_INLINE BLResult setFlattenMode(BLFlattenMode mode) noexcept { return BL_CONTEXT_IMPL()->virt->setFlattenMode(BL_CONTEXT_IMPL(), mode); }
 
   //! Returns tolerance used for curve flattening.
   BL_NODISCARD
-  BL_INLINE double flattenTolerance() const noexcept { return impl->state->approximationOptions.flattenTolerance; }
+  BL_INLINE double flattenTolerance() const noexcept { return BL_CONTEXT_IMPL()->state->approximationOptions.flattenTolerance; }
 
   //! Sets tolerance used for curve flattening.
-  BL_INLINE BLResult setFlattenTolerance(double tolerance) noexcept { return impl->virt->setFlattenTolerance(impl, tolerance); }
+  BL_INLINE BLResult setFlattenTolerance(double tolerance) noexcept { return BL_CONTEXT_IMPL()->virt->setFlattenTolerance(BL_CONTEXT_IMPL(), tolerance); }
 
   //! \}
 
@@ -958,17 +997,17 @@ public:
 
   //! Returns composition operator.
   BL_NODISCARD
-  BL_INLINE uint32_t compOp() const noexcept { return impl->state->compOp; }
+  BL_INLINE BLCompOp compOp() const noexcept { return (BLCompOp)BL_CONTEXT_IMPL()->state->compOp; }
 
   //! Sets composition operator to `compOp`, see `BLCompOp`.
-  BL_INLINE BLResult setCompOp(uint32_t compOp) noexcept { return impl->virt->setCompOp(impl, compOp); }
+  BL_INLINE BLResult setCompOp(BLCompOp compOp) noexcept { return BL_CONTEXT_IMPL()->virt->setCompOp(BL_CONTEXT_IMPL(), compOp); }
 
   //! Returns global alpha value.
   BL_NODISCARD
-  BL_INLINE double globalAlpha() const noexcept { return impl->state->globalAlpha; }
+  BL_INLINE double globalAlpha() const noexcept { return BL_CONTEXT_IMPL()->state->globalAlpha; }
 
   //! Sets global alpha value.
-  BL_INLINE BLResult setGlobalAlpha(double alpha) noexcept { return impl->virt->setGlobalAlpha(impl, alpha); }
+  BL_INLINE BLResult setGlobalAlpha(double alpha) noexcept { return BL_CONTEXT_IMPL()->virt->setGlobalAlpha(BL_CONTEXT_IMPL(), alpha); }
 
   //! \}
 
@@ -976,75 +1015,73 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE uint32_t styleType(uint32_t opType) const noexcept {
-    return opType <= BL_CONTEXT_OP_TYPE_COUNT ? uint32_t(impl->state->styleType[opType]) : uint32_t(0);
+  BL_INLINE BLObjectType styleType(BLContextOpType opType) const noexcept {
+    return uint32_t(opType) <= BL_CONTEXT_OP_TYPE_MAX_VALUE ? BLObjectType(BL_CONTEXT_IMPL()->state->styleType[opType]) : BL_OBJECT_TYPE_NULL;
   }
 
-  BL_INLINE BLResult getStyle(uint32_t opType, BLStyleCore& styleOut) const noexcept {
-    if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
+  BL_INLINE BLResult getStyle(BLContextOpType opType, BLVarCore& varOut) const noexcept {
+    if (BL_UNLIKELY(uint32_t(opType) > BL_CONTEXT_OP_TYPE_MAX_VALUE))
       return blTraceError(BL_ERROR_INVALID_VALUE);
-    return impl->virt->getStyle[opType](impl, &styleOut);
+    return BL_CONTEXT_IMPL()->virt->getStyle[opType](BL_CONTEXT_IMPL(), &varOut);
   }
 
-  BL_INLINE BLResult setStyle(uint32_t opType, const BLStyleCore& style) noexcept {
-    if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
+  BL_INLINE BLResult setStyle(BLContextOpType opType, const BLRgba& rgba) noexcept {
+    if (BL_UNLIKELY(uint32_t(opType) > BL_CONTEXT_OP_TYPE_MAX_VALUE))
       return blTraceError(BL_ERROR_INVALID_VALUE);
-    return impl->virt->setStyle[opType](impl, &style);
+    return BL_CONTEXT_IMPL()->virt->setStyleRgba[opType](BL_CONTEXT_IMPL(), &rgba);
   }
 
-  BL_INLINE BLResult setStyle(uint32_t opType, const BLRgba& rgba) noexcept {
-    if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
+  BL_INLINE BLResult setStyle(BLContextOpType opType, const BLRgba32& rgba32) noexcept {
+    if (BL_UNLIKELY(uint32_t(opType) > BL_CONTEXT_OP_TYPE_MAX_VALUE))
       return blTraceError(BL_ERROR_INVALID_VALUE);
-    return impl->virt->setStyleRgba[opType](impl, &rgba);
+    return BL_CONTEXT_IMPL()->virt->setStyleRgba32[opType](BL_CONTEXT_IMPL(), rgba32.value);
   }
 
-  BL_INLINE BLResult setStyle(uint32_t opType, const BLRgba32& rgba32) noexcept {
-    if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
+  BL_INLINE BLResult setStyle(BLContextOpType opType, const BLRgba64& rgba64) noexcept {
+    if (BL_UNLIKELY(uint32_t(opType) > BL_CONTEXT_OP_TYPE_MAX_VALUE))
       return blTraceError(BL_ERROR_INVALID_VALUE);
-    return impl->virt->setStyleRgba32[opType](impl, rgba32.value);
+    return BL_CONTEXT_IMPL()->virt->setStyleRgba64[opType](BL_CONTEXT_IMPL(), rgba64.value);
   }
 
-  BL_INLINE BLResult setStyle(uint32_t opType, const BLRgba64& rgba64) noexcept {
-    if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
+  BL_INLINE BLResult setStyle(BLContextOpType opType, const BLVarCore& var) noexcept {
+    if (BL_UNLIKELY(uint32_t(opType) > BL_CONTEXT_OP_TYPE_MAX_VALUE))
       return blTraceError(BL_ERROR_INVALID_VALUE);
-    return impl->virt->setStyleRgba64[opType](impl, rgba64.value);
+    return BL_CONTEXT_IMPL()->virt->setStyle[opType](BL_CONTEXT_IMPL(), &var);
   }
 
-  BL_INLINE BLResult setStyle(uint32_t opType, const BLPatternCore& pattern) noexcept {
-    if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
+  BL_INLINE BLResult setStyle(BLContextOpType opType, const BLImageCore& image) noexcept {
+    if (BL_UNLIKELY(uint32_t(opType) > BL_CONTEXT_OP_TYPE_MAX_VALUE))
       return blTraceError(BL_ERROR_INVALID_VALUE);
-    return impl->virt->setStyleObject[opType](impl, &pattern);
+    return BL_CONTEXT_IMPL()->virt->setStyle[opType](BL_CONTEXT_IMPL(), &image);
   }
 
-  BL_INLINE BLResult setStyle(uint32_t opType, const BLGradientCore& gradient) noexcept {
-    if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
+  BL_INLINE BLResult setStyle(BLContextOpType opType, const BLPatternCore& pattern) noexcept {
+    if (BL_UNLIKELY(uint32_t(opType) > BL_CONTEXT_OP_TYPE_MAX_VALUE))
       return blTraceError(BL_ERROR_INVALID_VALUE);
-    return impl->virt->setStyleObject[opType](impl, &gradient);
+    return BL_CONTEXT_IMPL()->virt->setStyle[opType](BL_CONTEXT_IMPL(), &pattern);
   }
 
-  BL_INLINE BLResult setStyle(uint32_t opType, const BLImageCore& image) noexcept {
-    if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
+  BL_INLINE BLResult setStyle(BLContextOpType opType, const BLGradientCore& gradient) noexcept {
+    if (BL_UNLIKELY(uint32_t(opType) > BL_CONTEXT_OP_TYPE_MAX_VALUE))
       return blTraceError(BL_ERROR_INVALID_VALUE);
-    return impl->virt->setStyleObject[opType](impl, &image);
+    return BL_CONTEXT_IMPL()->virt->setStyle[opType](BL_CONTEXT_IMPL(), &gradient);
   }
 
   //! Returns fill or alpha value dependeing on the rendering operation `opType`.
   //!
-  //! The function behaves like `fillAlpha()` or `strokeAlpha()` depending on
-  //! `opType` value, see `BLContextOpType`.
+  //! The function behaves like `fillAlpha()` or `strokeAlpha()` depending on `opType` value, see `BLContextOpType`.
   BL_NODISCARD
-  BL_INLINE double styleAlpha(uint32_t opType) const noexcept {
-    return opType < BL_CONTEXT_OP_TYPE_COUNT ? impl->state->styleAlpha[opType] : 0.0;
+  BL_INLINE double styleAlpha(BLContextOpType opType) const noexcept {
+    return opType <= BL_CONTEXT_OP_TYPE_MAX_VALUE ? BL_CONTEXT_IMPL()->state->styleAlpha[opType] : 0.0;
   }
 
   //! Set fill or stroke `alpha` value depending on the rendering operation `opType`.
   //!
-  //! The function behaves like `setFillAlpha()` or `setStrokeAlpha()` depending
-  //! on `opType` value, see `BLContextOpType`.
-  BL_INLINE BLResult setStyleAlpha(uint32_t opType, double alpha) noexcept {
-    if (BL_UNLIKELY(opType >= BL_CONTEXT_OP_TYPE_COUNT))
+  //! The function behaves like `setFillAlpha()` or `setStrokeAlpha()` depending on `opType` value, see `BLContextOpType`.
+  BL_INLINE BLResult setStyleAlpha(BLContextOpType opType, double alpha) noexcept {
+    if (BL_UNLIKELY(uint32_t(opType) > BL_CONTEXT_OP_TYPE_MAX_VALUE))
       return blTraceError(BL_ERROR_INVALID_VALUE);
-    return impl->virt->setStyleAlpha[opType](impl, alpha);
+    return BL_CONTEXT_IMPL()->virt->setStyleAlpha[opType](BL_CONTEXT_IMPL(), alpha);
   }
 
   //! \}
@@ -1053,30 +1090,31 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE uint32_t fillStyleType() const noexcept { return impl->state->styleType[kOpFill]; }
+  BL_INLINE uint32_t fillStyleType() const noexcept { return BL_CONTEXT_IMPL()->state->styleType[kOpFill]; }
 
-  BL_INLINE BLResult getFillStyle(BLStyleCore& out) const noexcept { return impl->virt->getStyle[kOpFill](impl, &out); }
+  BL_INLINE BLResult getFillStyle(BLVarCore& out) const noexcept { return BL_CONTEXT_IMPL()->virt->getStyle[kOpFill](BL_CONTEXT_IMPL(), &out); }
 
-  BL_INLINE BLResult setFillStyle(const BLStyleCore& style) noexcept { return impl->virt->setStyle[kOpFill](impl, &style); }
-  BL_INLINE BLResult setFillStyle(const BLRgba& rgba) noexcept { return impl->virt->setStyleRgba[kOpFill](impl, &rgba); }
-  BL_INLINE BLResult setFillStyle(const BLRgba32& rgba32) noexcept { return impl->virt->setStyleRgba32[kOpFill](impl, rgba32.value); }
-  BL_INLINE BLResult setFillStyle(const BLRgba64& rgba64) noexcept { return impl->virt->setStyleRgba64[kOpFill](impl, rgba64.value); }
-  BL_INLINE BLResult setFillStyle(const BLPatternCore& pattern) noexcept { return impl->virt->setStyleObject[kOpFill](impl, &pattern); }
-  BL_INLINE BLResult setFillStyle(const BLGradientCore& gradient) noexcept { return impl->virt->setStyleObject[kOpFill](impl, &gradient); }
+  BL_INLINE BLResult setFillStyle(const BLRgba& rgba) noexcept { return BL_CONTEXT_IMPL()->virt->setStyleRgba[kOpFill](BL_CONTEXT_IMPL(), &rgba); }
+  BL_INLINE BLResult setFillStyle(const BLRgba32& rgba32) noexcept { return BL_CONTEXT_IMPL()->virt->setStyleRgba32[kOpFill](BL_CONTEXT_IMPL(), rgba32.value); }
+  BL_INLINE BLResult setFillStyle(const BLRgba64& rgba64) noexcept { return BL_CONTEXT_IMPL()->virt->setStyleRgba64[kOpFill](BL_CONTEXT_IMPL(), rgba64.value); }
+  BL_INLINE BLResult setFillStyle(const BLVarCore& var) noexcept { return BL_CONTEXT_IMPL()->virt->setStyle[kOpFill](BL_CONTEXT_IMPL(), &var); }
+  BL_INLINE BLResult setFillStyle(const BLImageCore& image) noexcept { return BL_CONTEXT_IMPL()->virt->setStyle[kOpFill](BL_CONTEXT_IMPL(), &image); }
+  BL_INLINE BLResult setFillStyle(const BLPatternCore& pattern) noexcept { return BL_CONTEXT_IMPL()->virt->setStyle[kOpFill](BL_CONTEXT_IMPL(), &pattern); }
+  BL_INLINE BLResult setFillStyle(const BLGradientCore& gradient) noexcept { return BL_CONTEXT_IMPL()->virt->setStyle[kOpFill](BL_CONTEXT_IMPL(), &gradient); }
 
   //! Returns fill alpha value.
   BL_NODISCARD
-  BL_INLINE double fillAlpha() const noexcept { return impl->state->styleAlpha[kOpFill]; }
+  BL_INLINE double fillAlpha() const noexcept { return BL_CONTEXT_IMPL()->state->styleAlpha[kOpFill]; }
 
   //! Sets fill `alpha` value.
-  BL_INLINE BLResult setFillAlpha(double alpha) noexcept { return impl->virt->setStyleAlpha[kOpFill](impl, alpha); }
+  BL_INLINE BLResult setFillAlpha(double alpha) noexcept { return BL_CONTEXT_IMPL()->virt->setStyleAlpha[kOpFill](BL_CONTEXT_IMPL(), alpha); }
 
   //! Returns fill-rule, see `BLFillRule`.
   BL_NODISCARD
-  BL_INLINE uint32_t fillRule() const noexcept { return impl->state->fillRule; }
+  BL_INLINE BLFillRule fillRule() const noexcept { return (BLFillRule)BL_CONTEXT_IMPL()->state->fillRule; }
 
   //! Sets fill-rule, see `BLFillRule`.
-  BL_INLINE BLResult setFillRule(uint32_t fillRule) noexcept { return impl->virt->setFillRule(impl, fillRule); }
+  BL_INLINE BLResult setFillRule(BLFillRule fillRule) noexcept { return BL_CONTEXT_IMPL()->virt->setFillRule(BL_CONTEXT_IMPL(), fillRule); }
 
   //! \}
 
@@ -1084,97 +1122,97 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE uint32_t strokeStyleType() const noexcept { return impl->state->styleType[kOpStroke]; }
+  BL_INLINE uint32_t strokeStyleType() const noexcept { return BL_CONTEXT_IMPL()->state->styleType[kOpStroke]; }
 
-  BL_INLINE BLResult getStrokeStyle(BLStyleCore& out) const noexcept { return impl->virt->getStyle[kOpStroke](impl, &out); }
+  BL_INLINE BLResult getStrokeStyle(BLVarCore& out) const noexcept { return BL_CONTEXT_IMPL()->virt->getStyle[kOpStroke](BL_CONTEXT_IMPL(), &out); }
 
-  BL_INLINE BLResult setStrokeStyle(const BLStyleCore& style) noexcept { return impl->virt->setStyle[kOpStroke](impl, &style); }
-  BL_INLINE BLResult setStrokeStyle(const BLRgba& rgba) noexcept { return impl->virt->setStyleRgba[kOpStroke](impl, &rgba); }
-  BL_INLINE BLResult setStrokeStyle(const BLRgba32& rgba32) noexcept { return impl->virt->setStyleRgba32[kOpStroke](impl, rgba32.value); }
-  BL_INLINE BLResult setStrokeStyle(const BLRgba64& rgba64) noexcept { return impl->virt->setStyleRgba64[kOpStroke](impl, rgba64.value); }
-  BL_INLINE BLResult setStrokeStyle(const BLPatternCore& pattern) noexcept { return impl->virt->setStyleObject[kOpStroke](impl, &pattern); }
-  BL_INLINE BLResult setStrokeStyle(const BLGradientCore& gradient) noexcept { return impl->virt->setStyleObject[kOpStroke](impl, &gradient); }
+  BL_INLINE BLResult setStrokeStyle(const BLRgba& rgba) noexcept { return BL_CONTEXT_IMPL()->virt->setStyleRgba[kOpStroke](BL_CONTEXT_IMPL(), &rgba); }
+  BL_INLINE BLResult setStrokeStyle(const BLRgba32& rgba32) noexcept { return BL_CONTEXT_IMPL()->virt->setStyleRgba32[kOpStroke](BL_CONTEXT_IMPL(), rgba32.value); }
+  BL_INLINE BLResult setStrokeStyle(const BLRgba64& rgba64) noexcept { return BL_CONTEXT_IMPL()->virt->setStyleRgba64[kOpStroke](BL_CONTEXT_IMPL(), rgba64.value); }
+  BL_INLINE BLResult setStrokeStyle(const BLVarCore& var) noexcept { return BL_CONTEXT_IMPL()->virt->setStyle[kOpStroke](BL_CONTEXT_IMPL(), &var); }
+  BL_INLINE BLResult setStrokeStyle(const BLImageCore& image) noexcept { return BL_CONTEXT_IMPL()->virt->setStyle[kOpStroke](BL_CONTEXT_IMPL(), &image); }
+  BL_INLINE BLResult setStrokeStyle(const BLPatternCore& pattern) noexcept { return BL_CONTEXT_IMPL()->virt->setStyle[kOpStroke](BL_CONTEXT_IMPL(), &pattern); }
+  BL_INLINE BLResult setStrokeStyle(const BLGradientCore& gradient) noexcept { return BL_CONTEXT_IMPL()->virt->setStyle[kOpStroke](BL_CONTEXT_IMPL(), &gradient); }
 
   //! Returns stroke width.
   BL_NODISCARD
-  BL_INLINE double strokeWidth() const noexcept { return impl->state->strokeOptions.width; }
+  BL_INLINE double strokeWidth() const noexcept { return BL_CONTEXT_IMPL()->state->strokeOptions.width; }
 
   //! Returns stroke miter-limit.
   BL_NODISCARD
-  BL_INLINE double strokeMiterLimit() const noexcept { return impl->state->strokeOptions.miterLimit; }
+  BL_INLINE double strokeMiterLimit() const noexcept { return BL_CONTEXT_IMPL()->state->strokeOptions.miterLimit; }
 
   //! Returns stroke join, see `BLStrokeJoin`.
   BL_NODISCARD
-  BL_INLINE uint32_t strokeJoin() const noexcept { return impl->state->strokeOptions.join; }
+  BL_INLINE BLStrokeJoin strokeJoin() const noexcept { return (BLStrokeJoin)BL_CONTEXT_IMPL()->state->strokeOptions.join; }
 
   //! Returns stroke start-cap, see `BLStrokeCap`.
   BL_NODISCARD
-  BL_INLINE uint32_t strokeStartCap() const noexcept { return impl->state->strokeOptions.startCap; }
+  BL_INLINE BLStrokeCap strokeStartCap() const noexcept { return (BLStrokeCap)BL_CONTEXT_IMPL()->state->strokeOptions.startCap; }
 
   //! Returns stroke end-cap, see `BLStrokeCap`.
   BL_NODISCARD
-  BL_INLINE uint32_t strokeEndCap() const noexcept { return impl->state->strokeOptions.endCap; }
+  BL_INLINE BLStrokeCap strokeEndCap() const noexcept { return (BLStrokeCap)BL_CONTEXT_IMPL()->state->strokeOptions.endCap; }
 
   //! Returns stroke dash-offset.
   BL_NODISCARD
-  BL_INLINE double strokeDashOffset() const noexcept { return impl->state->strokeOptions.dashOffset; }
+  BL_INLINE double strokeDashOffset() const noexcept { return BL_CONTEXT_IMPL()->state->strokeOptions.dashOffset; }
 
   //! Returns stroke dash-array.
   BL_NODISCARD
-  BL_INLINE const BLArray<double>& strokeDashArray() const noexcept { return impl->state->strokeOptions.dashArray; }
+  BL_INLINE const BLArray<double>& strokeDashArray() const noexcept { return BL_CONTEXT_IMPL()->state->strokeOptions.dashArray; }
 
   //! Returns stroke transform order, see `BLStrokeTransformOrder`.
   BL_NODISCARD
-  BL_INLINE uint32_t strokeTransformOrder() const noexcept { return impl->state->strokeOptions.transformOrder; }
+  BL_INLINE BLStrokeTransformOrder strokeTransformOrder() const noexcept { return (BLStrokeTransformOrder)BL_CONTEXT_IMPL()->state->strokeOptions.transformOrder; }
 
   //! Returns stroke options as a reference to `BLStrokeOptions`.
   BL_NODISCARD
-  BL_INLINE const BLStrokeOptions& strokeOptions() const noexcept { return impl->state->strokeOptions; }
+  BL_INLINE const BLStrokeOptions& strokeOptions() const noexcept { return BL_CONTEXT_IMPL()->state->strokeOptions; }
 
   //! Sets stroke width to `width`.
-  BL_INLINE BLResult setStrokeWidth(double width) noexcept { return impl->virt->setStrokeWidth(impl, width); }
+  BL_INLINE BLResult setStrokeWidth(double width) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeWidth(BL_CONTEXT_IMPL(), width); }
   //! Sets miter limit to `miterLimit`.
-  BL_INLINE BLResult setStrokeMiterLimit(double miterLimit) noexcept { return impl->virt->setStrokeMiterLimit(impl, miterLimit); }
+  BL_INLINE BLResult setStrokeMiterLimit(double miterLimit) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeMiterLimit(BL_CONTEXT_IMPL(), miterLimit); }
   //! Sets stroke join to `strokeJoin`, see `BLStrokeJoin`.
-  BL_INLINE BLResult setStrokeJoin(uint32_t strokeJoin) noexcept { return impl->virt->setStrokeJoin(impl, strokeJoin); }
+  BL_INLINE BLResult setStrokeJoin(BLStrokeJoin strokeJoin) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeJoin(BL_CONTEXT_IMPL(), strokeJoin); }
   //! Sets stroke cap of the specified `type` to `strokeCap`, see `BLStrokeCap`.
-  BL_INLINE BLResult setStrokeCap(uint32_t type, uint32_t strokeCap) noexcept { return impl->virt->setStrokeCap(impl, type, strokeCap); }
+  BL_INLINE BLResult setStrokeCap(BLStrokeCapPosition position, BLStrokeCap strokeCap) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeCap(BL_CONTEXT_IMPL(), position, strokeCap); }
   //! Sets stroke start cap to `strokeCap`, see `BLStrokeCap`.
-  BL_INLINE BLResult setStrokeStartCap(uint32_t strokeCap) noexcept { return setStrokeCap(BL_STROKE_CAP_POSITION_START, strokeCap); }
+  BL_INLINE BLResult setStrokeStartCap(BLStrokeCap strokeCap) noexcept { return setStrokeCap(BL_STROKE_CAP_POSITION_START, strokeCap); }
   //! Sets stroke end cap to `strokeCap`, see `BLStrokeCap`.
-  BL_INLINE BLResult setStrokeEndCap(uint32_t strokeCap) noexcept { return setStrokeCap(BL_STROKE_CAP_POSITION_END, strokeCap); }
+  BL_INLINE BLResult setStrokeEndCap(BLStrokeCap strokeCap) noexcept { return setStrokeCap(BL_STROKE_CAP_POSITION_END, strokeCap); }
   //! Sets all stroke caps to `strokeCap`, see `BLStrokeCap`.
-  BL_INLINE BLResult setStrokeCaps(uint32_t strokeCap) noexcept { return impl->virt->setStrokeCaps(impl, strokeCap); }
+  BL_INLINE BLResult setStrokeCaps(BLStrokeCap strokeCap) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeCaps(BL_CONTEXT_IMPL(), strokeCap); }
   //! Sets stroke dash-offset to `dashOffset`.
-  BL_INLINE BLResult setStrokeDashOffset(double dashOffset) noexcept { return impl->virt->setStrokeDashOffset(impl, dashOffset); }
+  BL_INLINE BLResult setStrokeDashOffset(double dashOffset) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeDashOffset(BL_CONTEXT_IMPL(), dashOffset); }
   //! Sets stroke dash-array to `dashArray`.
-  BL_INLINE BLResult setStrokeDashArray(const BLArray<double>& dashArray) noexcept { return impl->virt->setStrokeDashArray(impl, &dashArray); }
+  BL_INLINE BLResult setStrokeDashArray(const BLArray<double>& dashArray) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeDashArray(BL_CONTEXT_IMPL(), &dashArray); }
   //! Sets stroke transformation order to `transformOrder`, see `BLStrokeTransformOrder`.
-  BL_INLINE BLResult setStrokeTransformOrder(uint32_t transformOrder) noexcept { return impl->virt->setStrokeTransformOrder(impl, transformOrder); }
+  BL_INLINE BLResult setStrokeTransformOrder(BLStrokeTransformOrder transformOrder) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeTransformOrder(BL_CONTEXT_IMPL(), transformOrder); }
   //! Sets all stroke `options`.
-  BL_INLINE BLResult setStrokeOptions(const BLStrokeOptions& options) noexcept { return impl->virt->setStrokeOptions(impl, &options); }
+  BL_INLINE BLResult setStrokeOptions(const BLStrokeOptions& options) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeOptions(BL_CONTEXT_IMPL(), &options); }
 
   //! Returns stroke alpha value.
   BL_NODISCARD
-  BL_INLINE double strokeAlpha() const noexcept { return impl->state->styleAlpha[kOpStroke]; }
+  BL_INLINE double strokeAlpha() const noexcept { return BL_CONTEXT_IMPL()->state->styleAlpha[kOpStroke]; }
 
   //! Sets stroke alpha value to `alpha`.
-  BL_INLINE BLResult setStrokeAlpha(double alpha) noexcept { return impl->virt->setStyleAlpha[kOpStroke](impl, alpha); }
+  BL_INLINE BLResult setStrokeAlpha(double alpha) noexcept { return BL_CONTEXT_IMPL()->virt->setStyleAlpha[kOpStroke](BL_CONTEXT_IMPL(), alpha); }
 
   //! \}
 
   //! \name Clip Operations
   //! \{
 
-  //! Restores clipping to the last saved state or to the context default
-  //! clipping if there is no saved state.
+  //! Restores clipping to the last saved state or to the context default clipping if there is no saved state.
   //!
-  //! If there are no saved states then it resets clipping completely to the
-  //! initial state that was used when the rendering context was created.
-  BL_INLINE BLResult restoreClipping() noexcept { return impl->virt->restoreClipping(impl); }
+  //! If there are no saved states then it resets clipping completely to the initial state that was used when
+  //! the rendering context was created.
+  BL_INLINE BLResult restoreClipping() noexcept { return BL_CONTEXT_IMPL()->virt->restoreClipping(BL_CONTEXT_IMPL()); }
 
-  BL_INLINE BLResult clipToRect(const BLRectI& rect) noexcept { return impl->virt->clipToRectI(impl, &rect); }
-  BL_INLINE BLResult clipToRect(const BLRect& rect) noexcept { return impl->virt->clipToRectD(impl, &rect); }
+  BL_INLINE BLResult clipToRect(const BLRectI& rect) noexcept { return BL_CONTEXT_IMPL()->virt->clipToRectI(BL_CONTEXT_IMPL(), &rect); }
+  BL_INLINE BLResult clipToRect(const BLRect& rect) noexcept { return BL_CONTEXT_IMPL()->virt->clipToRectD(BL_CONTEXT_IMPL(), &rect); }
   BL_INLINE BLResult clipToRect(double x, double y, double w, double h) noexcept { return clipToRect(BLRect(x, y, w, h)); }
 
   //! \}
@@ -1183,12 +1221,12 @@ public:
   //! \{
 
   //! Clear everything.
-  BL_INLINE BLResult clearAll() noexcept { return impl->virt->clearAll(impl); }
+  BL_INLINE BLResult clearAll() noexcept { return BL_CONTEXT_IMPL()->virt->clearAll(BL_CONTEXT_IMPL()); }
 
   //! Clears a rectangle `rect`.
-  BL_INLINE BLResult clearRect(const BLRectI& rect) noexcept { return impl->virt->clearRectI(impl, &rect); }
+  BL_INLINE BLResult clearRect(const BLRectI& rect) noexcept { return BL_CONTEXT_IMPL()->virt->clearRectI(BL_CONTEXT_IMPL(), &rect); }
   //! Clears a rectangle `rect`.
-  BL_INLINE BLResult clearRect(const BLRect& rect) noexcept { return impl->virt->clearRectD(impl, &rect); }
+  BL_INLINE BLResult clearRect(const BLRect& rect) noexcept { return BL_CONTEXT_IMPL()->virt->clearRectD(BL_CONTEXT_IMPL(), &rect); }
   //! \overload
   BL_INLINE BLResult clearRect(double x, double y, double w, double h) noexcept { return clearRect(BLRect(x, y, w, h)); }
 
@@ -1198,10 +1236,10 @@ public:
   //! \{
 
   //! Fills the passed geometry specified by `geometryType` and `geometryData` [Internal].
-  BL_INLINE BLResult fillGeometry(uint32_t geometryType, const void* geometryData) noexcept { return impl->virt->fillGeometry(impl, geometryType, geometryData); }
+  BL_INLINE BLResult fillGeometry(BLGeometryType geometryType, const void* geometryData) noexcept { return BL_CONTEXT_IMPL()->virt->fillGeometry(BL_CONTEXT_IMPL(), geometryType, geometryData); }
 
   //! Fills everything.
-  BL_INLINE BLResult fillAll() noexcept { return impl->virt->fillAll(impl); }
+  BL_INLINE BLResult fillAll() noexcept { return BL_CONTEXT_IMPL()->virt->fillAll(BL_CONTEXT_IMPL()); }
 
   //! Fills a box.
   BL_INLINE BLResult fillBox(const BLBox& box) noexcept { return fillGeometry(BL_GEOMETRY_TYPE_BOXD, &box); }
@@ -1211,9 +1249,9 @@ public:
   BL_INLINE BLResult fillBox(double x0, double y0, double x1, double y1) noexcept { return fillBox(BLBox(x0, y0, x1, y1)); }
 
   //! Fills a rectangle `rect`.
-  BL_INLINE BLResult fillRect(const BLRectI& rect) noexcept { return impl->virt->fillRectI(impl, &rect); }
+  BL_INLINE BLResult fillRect(const BLRectI& rect) noexcept { return BL_CONTEXT_IMPL()->virt->fillRectI(BL_CONTEXT_IMPL(), &rect); }
   //! Fills a rectangle `rect`.
-  BL_INLINE BLResult fillRect(const BLRect& rect) noexcept { return impl->virt->fillRectD(impl, &rect); }
+  BL_INLINE BLResult fillRect(const BLRect& rect) noexcept { return BL_CONTEXT_IMPL()->virt->fillRectD(BL_CONTEXT_IMPL(), &rect); }
   //! \overload
   BL_INLINE BLResult fillRect(double x, double y, double w, double h) noexcept { return fillRect(BLRect(x, y, w, h)); }
 
@@ -1287,50 +1325,67 @@ public:
   //! \overload
   BL_INLINE BLResult fillRectArray(const BLRectI* data, size_t n) noexcept { return fillRectArray(BLArrayView<BLRectI>{data, n}); }
 
-  //! Fills the given `region`.
-  BL_INLINE BLResult fillRegion(const BLRegionCore& region) noexcept { return fillGeometry(BL_GEOMETRY_TYPE_REGION, &region); }
-
   //! Fills the given `path`.
   BL_INLINE BLResult fillPath(const BLPathCore& path) noexcept { return fillGeometry(BL_GEOMETRY_TYPE_PATH, &path); }
 
   //! Fills the passed UTF-8 text by using the given `font`.
   BL_INLINE BLResult fillUtf8Text(const BLPointI& dst, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
-    return impl->virt->fillTextI(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF8);
+    return BL_CONTEXT_IMPL()->virt->fillTextI(BL_CONTEXT_IMPL(), &dst, &font, text, size, BL_TEXT_ENCODING_UTF8);
   }
 
   //! Fills the passed UTF-8 text by using the given `font`.
   BL_INLINE BLResult fillUtf8Text(const BLPoint& dst, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
-    return impl->virt->fillTextD(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF8);
+    return BL_CONTEXT_IMPL()->virt->fillTextD(BL_CONTEXT_IMPL(), &dst, &font, text, size, BL_TEXT_ENCODING_UTF8);
   }
 
   //! Fills the passed UTF-16 text by using the given `font`.
   BL_INLINE BLResult fillUtf16Text(const BLPointI& dst, const BLFontCore& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
-    return impl->virt->fillTextI(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF16);
+    return BL_CONTEXT_IMPL()->virt->fillTextI(BL_CONTEXT_IMPL(), &dst, &font, text, size, BL_TEXT_ENCODING_UTF16);
   }
 
   //! Fills the passed UTF-16 text by using the given `font`.
   BL_INLINE BLResult fillUtf16Text(const BLPoint& dst, const BLFontCore& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
-    return impl->virt->fillTextD(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF16);
+    return BL_CONTEXT_IMPL()->virt->fillTextD(BL_CONTEXT_IMPL(), &dst, &font, text, size, BL_TEXT_ENCODING_UTF16);
   }
 
   //! Fills the passed UTF-32 text by using the given `font`.
   BL_INLINE BLResult fillUtf32Text(const BLPointI& dst, const BLFontCore& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
-    return impl->virt->fillTextI(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF32);
+    return BL_CONTEXT_IMPL()->virt->fillTextI(BL_CONTEXT_IMPL(), &dst, &font, text, size, BL_TEXT_ENCODING_UTF32);
   }
 
   //! Fills the passed UTF-32 text by using the given `font`.
   BL_INLINE BLResult fillUtf32Text(const BLPoint& dst, const BLFontCore& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
-    return impl->virt->fillTextD(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF32);
+    return BL_CONTEXT_IMPL()->virt->fillTextD(BL_CONTEXT_IMPL(), &dst, &font, text, size, BL_TEXT_ENCODING_UTF32);
   }
 
   //! Fills the passed `glyphRun` by using the given `font`.
   BL_INLINE BLResult fillGlyphRun(const BLPointI& dst, const BLFontCore& font, const BLGlyphRun& glyphRun) noexcept {
-    return impl->virt->fillGlyphRunI(impl, &dst, &font, &glyphRun);
+    return BL_CONTEXT_IMPL()->virt->fillGlyphRunI(BL_CONTEXT_IMPL(), &dst, &font, &glyphRun);
   }
 
   //! Fills the passed `glyphRun` by using the given `font`.
   BL_INLINE BLResult fillGlyphRun(const BLPoint& dst, const BLFontCore& font, const BLGlyphRun& glyphRun) noexcept {
-    return impl->virt->fillGlyphRunD(impl, &dst, &font, &glyphRun);
+    return BL_CONTEXT_IMPL()->virt->fillGlyphRunD(BL_CONTEXT_IMPL(), &dst, &font, &glyphRun);
+  }
+
+  //! Fills a source `mask` image at coordinates specified by `dst` (int coordinates).
+  BL_INLINE BLResult fillMask(const BLPointI& dst, const BLImage& mask) noexcept {
+    return BL_CONTEXT_IMPL()->virt->fillMaskI(BL_CONTEXT_IMPL(), &dst, &mask, nullptr);
+  }
+
+  //! Fills a source `mask` image specified by `maskArea` at coordinates specified by `dst` (int coordinates).
+  BL_INLINE BLResult fillMask(const BLPointI& dst, const BLImage& mask, const BLRectI& maskArea) noexcept {
+    return BL_CONTEXT_IMPL()->virt->fillMaskI(BL_CONTEXT_IMPL(), &dst, &mask, &maskArea);
+  }
+
+  //! Fills a source `mask` image at coordinates specified by `dst`.
+  BL_INLINE BLResult fillMask(const BLPoint& dst, const BLImage& mask) noexcept {
+    return BL_CONTEXT_IMPL()->virt->fillMaskD(BL_CONTEXT_IMPL(), &dst, &mask, nullptr);
+  }
+
+  //! Fills a source `mask` image specified by `maskArea` at coordinates specified by `dst`.
+  BL_INLINE BLResult fillMask(const BLPoint& dst, const BLImage& mask, const BLRectI& maskArea) noexcept {
+    return BL_CONTEXT_IMPL()->virt->fillMaskD(BL_CONTEXT_IMPL(), &dst, &mask, &maskArea);
   }
 
   //! \}
@@ -1339,7 +1394,7 @@ public:
   //! \{
 
   //! Strokes the passed geometry specified by `geometryType` and `geometryData` [Internal].
-  BL_INLINE BLResult strokeGeometry(uint32_t geometryType, const void* geometryData) noexcept { return impl->virt->strokeGeometry(impl, geometryType, geometryData); }
+  BL_INLINE BLResult strokeGeometry(BLGeometryType geometryType, const void* geometryData) noexcept { return BL_CONTEXT_IMPL()->virt->strokeGeometry(BL_CONTEXT_IMPL(), geometryType, geometryData); }
 
   //! Strokes a box.
   BL_INLINE BLResult strokeBox(const BLBox& box) noexcept { return strokeGeometry(BL_GEOMETRY_TYPE_BOXD, &box); }
@@ -1349,9 +1404,9 @@ public:
   BL_INLINE BLResult strokeBox(double x0, double y0, double x1, double y1) noexcept { return strokeBox(BLBox(x0, y0, x1, y1)); }
 
   //! Strokes a rectangle.
-  BL_INLINE BLResult strokeRect(const BLRect& rect) noexcept { return impl->virt->strokeRectD(impl, &rect); }
+  BL_INLINE BLResult strokeRect(const BLRect& rect) noexcept { return BL_CONTEXT_IMPL()->virt->strokeRectD(BL_CONTEXT_IMPL(), &rect); }
   //! \overload
-  BL_INLINE BLResult strokeRect(const BLRectI& rect) noexcept { return impl->virt->strokeRectI(impl, &rect); }
+  BL_INLINE BLResult strokeRect(const BLRectI& rect) noexcept { return BL_CONTEXT_IMPL()->virt->strokeRectI(BL_CONTEXT_IMPL(), &rect); }
   //! \overload
   BL_INLINE BLResult strokeRect(double x, double y, double w, double h) noexcept { return strokeRect(BLRect(x, y, w, h)); }
 
@@ -1454,42 +1509,42 @@ public:
 
   //! Strokes the passed UTF-8 text by using the given `font`.
   BL_INLINE BLResult strokeUtf8Text(const BLPointI& dst, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
-    return impl->virt->strokeTextI(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF8);
+    return BL_CONTEXT_IMPL()->virt->strokeTextI(BL_CONTEXT_IMPL(), &dst, &font, text, size, BL_TEXT_ENCODING_UTF8);
   }
 
   //! Strokes the passed UTF-8 text by using the given `font`.
   BL_INLINE BLResult strokeUtf8Text(const BLPoint& dst, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
-    return impl->virt->strokeTextD(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF8);
+    return BL_CONTEXT_IMPL()->virt->strokeTextD(BL_CONTEXT_IMPL(), &dst, &font, text, size, BL_TEXT_ENCODING_UTF8);
   }
 
   //! Strokes the passed UTF-16 text by using the given `font`.
   BL_INLINE BLResult strokeUtf16Text(const BLPointI& dst, const BLFontCore& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
-    return impl->virt->strokeTextI(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF16);
+    return BL_CONTEXT_IMPL()->virt->strokeTextI(BL_CONTEXT_IMPL(), &dst, &font, text, size, BL_TEXT_ENCODING_UTF16);
   }
 
   //! Strokes the passed UTF-16 text by using the given `font`.
   BL_INLINE BLResult strokeUtf16Text(const BLPoint& dst, const BLFontCore& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
-    return impl->virt->strokeTextD(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF16);
+    return BL_CONTEXT_IMPL()->virt->strokeTextD(BL_CONTEXT_IMPL(), &dst, &font, text, size, BL_TEXT_ENCODING_UTF16);
   }
 
   //! Strokes the passed UTF-32 text by using the given `font`.
   BL_INLINE BLResult strokeUtf32Text(const BLPointI& dst, const BLFontCore& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
-    return impl->virt->strokeTextI(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF32);
+    return BL_CONTEXT_IMPL()->virt->strokeTextI(BL_CONTEXT_IMPL(), &dst, &font, text, size, BL_TEXT_ENCODING_UTF32);
   }
 
   //! Strokes the passed UTF-32 text by using the given `font`.
   BL_INLINE BLResult strokeUtf32Text(const BLPoint& dst, const BLFontCore& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
-    return impl->virt->strokeTextD(impl, &dst, &font, text, size, BL_TEXT_ENCODING_UTF32);
+    return BL_CONTEXT_IMPL()->virt->strokeTextD(BL_CONTEXT_IMPL(), &dst, &font, text, size, BL_TEXT_ENCODING_UTF32);
   }
 
   //! Strokes the passed `glyphRun` by using the given `font`.
   BL_INLINE BLResult strokeGlyphRun(const BLPointI& dst, const BLFontCore& font, const BLGlyphRun& glyphRun) noexcept {
-    return impl->virt->strokeGlyphRunI(impl, &dst, &font, &glyphRun);
+    return BL_CONTEXT_IMPL()->virt->strokeGlyphRunI(BL_CONTEXT_IMPL(), &dst, &font, &glyphRun);
   }
 
   //! Strokes the passed `glyphRun` by using the given `font`.
   BL_INLINE BLResult strokeGlyphRun(const BLPoint& dst, const BLFontCore& font, const BLGlyphRun& glyphRun) noexcept {
-    return impl->virt->strokeGlyphRunD(impl, &dst, &font, &glyphRun);
+    return BL_CONTEXT_IMPL()->virt->strokeGlyphRunD(BL_CONTEXT_IMPL(), &dst, &font, &glyphRun);
   }
 
   //! \}
@@ -1497,54 +1552,53 @@ public:
   //! \name Image Blitting
   //! \{
 
-  //! Blits source image `src` at coordinates specified by `dst`..
+  //! Blits source image `src` at coordinates specified by `dst`.
   BL_INLINE BLResult blitImage(const BLPoint& dst, const BLImageCore& src) noexcept {
-    return impl->virt->blitImageD(impl, &dst, &src, nullptr);
+    return BL_CONTEXT_IMPL()->virt->blitImageD(BL_CONTEXT_IMPL(), &dst, &src, nullptr);
   }
 
   //! Blits an area of source image `src` specified by `srcArea` at coordinates specified by `dst`.
   BL_INLINE BLResult blitImage(const BLPoint& dst, const BLImageCore& src, const BLRectI& srcArea) noexcept {
-    return impl->virt->blitImageD(impl, &dst, &src, &srcArea);
+    return BL_CONTEXT_IMPL()->virt->blitImageD(BL_CONTEXT_IMPL(), &dst, &src, &srcArea);
   }
 
-  //! Blits source image `src` at coordinates specified by `dst`. (int coordinates).
+  //! Blits source image `src` at coordinates specified by `dst` (int coordinates).
   BL_INLINE BLResult blitImage(const BLPointI& dst, const BLImageCore& src) noexcept {
-    return impl->virt->blitImageI(impl, &dst, &src, nullptr);
+    return BL_CONTEXT_IMPL()->virt->blitImageI(BL_CONTEXT_IMPL(), &dst, &src, nullptr);
   }
 
-  //! Blits an area in source image `src` specified by `srcArea` at coordinates specified by `dst`. (int coordinates).
+  //! Blits an area in source image `src` specified by `srcArea` at coordinates specified by `dst` (int coordinates).
   BL_INLINE BLResult blitImage(const BLPointI& dst, const BLImageCore& src, const BLRectI& srcArea) noexcept {
-    return impl->virt->blitImageI(impl, &dst, &src, &srcArea);
+    return BL_CONTEXT_IMPL()->virt->blitImageI(BL_CONTEXT_IMPL(), &dst, &src, &srcArea);
   }
 
   //! Blits a source image `src` scaled to fit into `dst` rectangle.
   BL_INLINE BLResult blitImage(const BLRect& dst, const BLImageCore& src) noexcept {
-    return impl->virt->blitScaledImageD(impl, &dst, &src, nullptr);
+    return BL_CONTEXT_IMPL()->virt->blitScaledImageD(BL_CONTEXT_IMPL(), &dst, &src, nullptr);
   }
 
   //! Blits an area of source image `src` specified by `srcArea` scaled to fit into `dst` rectangle.
   BL_INLINE BLResult blitImage(const BLRect& dst, const BLImageCore& src, const BLRectI& srcArea) noexcept {
-    return impl->virt->blitScaledImageD(impl, &dst, &src, &srcArea);
+    return BL_CONTEXT_IMPL()->virt->blitScaledImageD(BL_CONTEXT_IMPL(), &dst, &src, &srcArea);
   }
 
   //! Blits a source image `src` scaled to fit into `dst` rectangle (int coordinates).
   BL_INLINE BLResult blitImage(const BLRectI& dst, const BLImageCore& src) noexcept {
-    return impl->virt->blitScaledImageI(impl, &dst, &src, nullptr);
+    return BL_CONTEXT_IMPL()->virt->blitScaledImageI(BL_CONTEXT_IMPL(), &dst, &src, nullptr);
   }
 
   //! Blits an area of source image `src` specified by `srcArea` scaled to fit into `dst` rectangle (int coordinates).
   BL_INLINE BLResult blitImage(const BLRectI& dst, const BLImageCore& src, const BLRectI& srcArea) noexcept {
-    return impl->virt->blitScaledImageI(impl, &dst, &src, &srcArea);
+    return BL_CONTEXT_IMPL()->virt->blitScaledImageI(BL_CONTEXT_IMPL(), &dst, &src, &srcArea);
   }
 
   //! \}
 
-  BL_NODISCARD
-  static BL_INLINE const BLContext& none() noexcept {
-    return reinterpret_cast<const BLContext*>(blNone)[kImplType];
-  }
+  #undef BL_CONTEXT_IMPL
 };
+
 #endif
+//! \}
 
 //! \}
 

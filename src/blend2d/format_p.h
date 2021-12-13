@@ -1,51 +1,29 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_FORMAT_P_H_INCLUDED
 #define BLEND2D_FORMAT_P_H_INCLUDED
 
-#include "./format.h"
-#include "./support_p.h"
-#include "./tables_p.h"
+#include "format.h"
+#include "tables_p.h"
+#include "support/intops_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
 //! \{
-
-// ============================================================================
-// [Constants]
-// ============================================================================
 
 //! Pixel formats used internally and never exposed to users.
 enum BLFormatInternal : uint32_t {
   //! Internal pixel format that is the same as XRGB32, but the unused component
   //! is guaranteed to always be 0xFF so the format can be treated as PRGB32 by
   //! compositors.
-  BL_FORMAT_FRGB32 = BL_FORMAT_COUNT + 0,
-  BL_FORMAT_ZERO32 = BL_FORMAT_COUNT + 1,
+  BL_FORMAT_FRGB32 = BL_FORMAT_MAX_VALUE + 1u,
+  BL_FORMAT_ZERO32 = BL_FORMAT_MAX_VALUE + 2u,
 
   //! Count of internal pixel formats.
-  BL_FORMAT_INTERNAL_COUNT = BL_FORMAT_COUNT + 2
+  BL_FORMAT_INTERNAL_COUNT = BL_FORMAT_MAX_VALUE + 3u
 };
 
 //! Pixel format flags used internally.
@@ -75,10 +53,6 @@ static_assert(int(BL_FORMAT_INTERNAL_COUNT) <= int(BL_FORMAT_RESERVED_COUNT),
 static_assert(BL_FORMAT_COMPONENT_FLAGS == 0x7u,
               "Component flags of BLFormat must be at LSB");
 
-// ============================================================================
-// [BLFormat - Flags]
-// ============================================================================
-
 static constexpr uint32_t blFormatFlagsStatic(uint32_t format) noexcept {
   return format == BL_FORMAT_PRGB32 ? BL_FORMAT_FLAG_RGBA           |
                                       BL_FORMAT_FLAG_PREMULTIPLIED  |
@@ -97,10 +71,6 @@ static constexpr uint32_t blFormatFlagsStatic(uint32_t format) noexcept {
                                       BL_FORMAT_FLAG_UNDEFINED_BITS |
                                       BL_FORMAT_FLAG_ZERO_ALPHA     : 0;
 }
-
-// ============================================================================
-// [BLFormat - Utilities]
-// ============================================================================
 
 static BL_INLINE bool blFormatInfoHasSameAlphaLayout(const BLFormatInfo& a, const BLFormatInfo& b) noexcept {
   return (a.sizes[3] == b.sizes[3]) & (a.shifts[3] == b.shifts[3]) ;
@@ -135,9 +105,9 @@ static void blFormatInfoAssignAbsoluteMasks(BLFormatInfo& info, const T* masks, 
     if (!m)
       continue;
 
-    uint32_t shift = blBitCtz(m);
+    uint32_t shift = BLIntOps::ctz(m);
     m >>= shift;
-    uint32_t size = m >= 0xFFFFFFFF ? 32 : blBitCtz(~uint32_t(m));
+    uint32_t size = m >= 0xFFFFFFFF ? 32 : BLIntOps::ctz(~uint32_t(m));
 
     info.sizes[i] = uint8_t(size);
     info.shifts[i] = uint8_t(shift);

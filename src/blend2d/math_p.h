@@ -1,37 +1,22 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_MATH_P_H_INCLUDED
 #define BLEND2D_MATH_P_H_INCLUDED
 
-#include "./api-internal_p.h"
-#include "./simd_p.h"
-#include "./support_p.h"
-#include "./tables_p.h"
+#include "api-internal_p.h"
+#include "geometry.h"
+#include "simd_p.h"
+#include "tables_p.h"
 
-// ============================================================================
-// [Global Constants]
-// ============================================================================
+//! \cond INTERNAL
+//! \addtogroup blend2d_internal
+//! \{
+
+//! \name Constants
+//! \{
 
 static constexpr double BL_M_PI            = 3.14159265358979323846;  //!< pi.
 static constexpr double BL_M_1p5_PI        = 4.71238898038468985769;  //!< pi * 1.5.
@@ -48,9 +33,8 @@ static constexpr double BL_M_BEFORE_1      = 0.999999999999999889;    //!< Safe 
 
 static constexpr double BL_M_ANGLE_EPSILON = 1e-8;
 
-//! Constant that is used to approximate elliptic arcs with cubic curves.
-//! Since it's an approximation there are various approaches that can be
-//! used to calculate the best value. The most used KAPPA is:
+//! Constant that is used to approximate elliptic arcs with cubic curves. Since it's an approximation there are
+//! various approaches that can be used to calculate the best value. The most used KAPPA is:
 //!
 //!   k = (4/3) * (sqrt(2) - 1) ~= 0.55228474983
 //!
@@ -58,16 +42,35 @@ static constexpr double BL_M_ANGLE_EPSILON = 1e-8;
 //!
 //!   http://spencermortensen.com/articles/bezier-circle/
 //!
-//! the maximum error can be further reduced by 28% if we change the
-//! approximation constraint to have the maximum radial distance from the
-//! circle to the curve as small as possible. The an alternative constant
+//! the maximum error can be further reduced by 28% if we change the approximation constraint to have the maximum
+//! radial distance from the circle to the curve as small as possible. The an alternative constant
 //!
 //!   k = 1/2 +- sqrt(12 - 20*c - 3*c^2)/(4 - 6*c) ~= 0.551915024494.
 //!
-//! can be used to reduce the maximum error to 0.00019608. We don't use the
-//! alternative, because we need to caculate the KAPPA for arcs that are not
-//! 90deg, in that case the KAPPA must be calculated for such angles.
+//! can be used to reduce the maximum error to 0.00019608. We don't use the alternative, because we need to caculate the
+//! KAPPA for arcs that are not 90deg, in that case the KAPPA must be calculated for such angles.
 static constexpr double BL_M_KAPPA = 0.55228474983;
+
+//! \}
+
+//! \name Floating Point Constants
+//! \{
+
+//! Returns infinity of `T` type.
+//!
+//! \note `T` should be floating point.
+template<typename T>
+BL_NODISCARD
+static BL_INLINE constexpr T blInf() noexcept { return std::numeric_limits<T>::infinity(); }
+
+//! Returns a quiet NaN of `T` type.
+//!
+//! \note `T` should be floating point.
+template<typename T>
+BL_NODISCARD
+static BL_INLINE constexpr T blNaN() noexcept { return std::numeric_limits<T>::quiet_NaN(); }
+
+//! \}
 
 // ============================================================================
 // [Helper Functions]
@@ -87,29 +90,37 @@ template<typename T> constexpr T blEpsilon() noexcept = delete;
 template<> constexpr float blEpsilon<float>() noexcept { return 1e-8f; }
 template<> constexpr double blEpsilon<double>() noexcept { return 1e-14; }
 
+static BL_INLINE bool blIsZero(const BLPoint& p) noexcept { return (p.x == 0) & (p.y == 0); }
+
 static BL_INLINE bool blIsNaN(float x) noexcept { return std::isnan(x); }
 static BL_INLINE bool blIsNaN(double x) noexcept { return std::isnan(x); }
-
-static BL_INLINE bool blIsInf(float x) noexcept { return std::isinf(x); }
-static BL_INLINE bool blIsInf(double x) noexcept { return std::isinf(x); }
-
-static BL_INLINE bool blIsFinite(float x) noexcept { return std::isfinite(x); }
-static BL_INLINE bool blIsFinite(double x) noexcept { return std::isfinite(x); }
 
 template<typename T, typename... Args>
 static BL_INLINE bool blIsNaN(const T& first, Args&&... args) noexcept {
   return blIsNaN(first) | blIsNaN(std::forward<Args>(args)...);
 }
 
+static BL_INLINE bool blIsNaN(const BLPoint& p) noexcept { return blIsNaN(p.x, p.y); }
+
+static BL_INLINE bool blIsInf(float x) noexcept { return std::isinf(x); }
+static BL_INLINE bool blIsInf(double x) noexcept { return std::isinf(x); }
+
 template<typename T, typename... Args>
 static BL_INLINE bool blIsInf(const T& first, Args&&... args) noexcept {
   return blIsInf(first) | blIsInf(std::forward<Args>(args)...);
 }
 
+static BL_INLINE bool blIsFinite(float x) noexcept { return std::isfinite(x); }
+static BL_INLINE bool blIsFinite(double x) noexcept { return std::isfinite(x); }
+
 template<typename T, typename... Args>
 static BL_INLINE bool blIsFinite(const T& first, Args&&... args) noexcept {
   return blIsFinite(first) & blIsFinite(std::forward<Args>(args)...);
 }
+
+static BL_INLINE bool blIsFinite(const BLPoint& p) noexcept { return blIsFinite(p.x, p.y); }
+static BL_INLINE bool blIsFinite(const BLBox& b) noexcept { return blIsFinite(b.x0, b.y0, b.x1, b.y1); }
+static BL_INLINE bool blIsFinite(const BLRect& r) noexcept { return blIsFinite(r.x, r.y, r.w, r.h); }
 
 // ============================================================================
 // [Miscellaneous]
@@ -117,6 +128,7 @@ static BL_INLINE bool blIsFinite(const T& first, Args&&... args) noexcept {
 
 static BL_INLINE float blCopySign(float x, float y) noexcept { return std::copysign(x, y); }
 static BL_INLINE double blCopySign(double x, double y) noexcept { return std::copysign(x, y); }
+static BL_INLINE BLPoint blCopySign(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(blCopySign(a.x, b.x), blCopySign(a.y, b.y)); }
 
 // ============================================================================
 // [Rounding]
@@ -185,9 +197,9 @@ static BL_INLINE float blNearby(float x) noexcept {
   using namespace SIMD;
 
   Vec128F src = v_f128_from_f32(x);
-  Vec128F magic = v_const_as<Vec128F>(blCommonTable.f128_round_magic);
+  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f128_round_magic);
 
-  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(blCommonTable.f128_round_max));
+  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(&blCommonTable.f128_round_max));
   Vec128F rounded = s_sub_f32(s_add_f32(src, magic), magic);
 
   return v_get_f32(v_blend_mask(rounded, src, mask));
@@ -198,15 +210,15 @@ static BL_INLINE float blTrunc(float x) noexcept {
 
   Vec128F src = v_f128_from_f32(x);
 
-  Vec128F msk_abs = v_const_as<Vec128F>(blCommonTable.f128_abs);
+  Vec128F msk_abs = v_const_as<Vec128F>(&blCommonTable.f128_abs);
   Vec128F src_abs = v_and(src, msk_abs);
 
   Vec128F sign = v_nand(msk_abs, src);
-  Vec128F magic = v_const_as<Vec128F>(blCommonTable.f128_round_magic);
+  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f128_round_magic);
 
-  Vec128F mask = v_or(s_cmp_ge_f32(src_abs, v_const_as<Vec128F>(blCommonTable.f128_round_max)), sign);
+  Vec128F mask = v_or(s_cmp_ge_f32(src_abs, v_const_as<Vec128F>(&blCommonTable.f128_round_max)), sign);
   Vec128F rounded = s_sub_f32(s_add_f32(src_abs, magic), magic);
-  Vec128F maybeone = v_and(s_cmp_lt_f32(src_abs, rounded), v_const_as<Vec128F>(blCommonTable.f128_1));
+  Vec128F maybeone = v_and(s_cmp_lt_f32(src_abs, rounded), v_const_as<Vec128F>(&blCommonTable.f128_1));
 
   return v_get_f32(v_blend_mask(s_sub_f32(rounded, maybeone), src, mask));
 }
@@ -215,11 +227,11 @@ static BL_INLINE float blFloor(float x) noexcept {
   using namespace SIMD;
 
   Vec128F src = v_f128_from_f32(x);
-  Vec128F magic = v_const_as<Vec128F>(blCommonTable.f128_round_magic);
+  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f128_round_magic);
 
-  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(blCommonTable.f128_round_max));
+  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(&blCommonTable.f128_round_max));
   Vec128F rounded = s_sub_f32(s_add_f32(src, magic), magic);
-  Vec128F maybeone = v_and(s_cmp_lt_f32(src, rounded), v_const_as<Vec128F>(blCommonTable.f128_1));
+  Vec128F maybeone = v_and(s_cmp_lt_f32(src, rounded), v_const_as<Vec128F>(&blCommonTable.f128_1));
 
   return v_get_f32(v_blend_mask(s_sub_f32(rounded, maybeone), src, mask));
 }
@@ -228,11 +240,11 @@ static BL_INLINE float blCeil(float x) noexcept {
   using namespace SIMD;
 
   Vec128F src = SIMD::v_f128_from_f32(x);
-  Vec128F magic = v_const_as<Vec128F>(blCommonTable.f128_round_magic);
+  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f128_round_magic);
 
-  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(blCommonTable.f128_round_max));
+  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(&blCommonTable.f128_round_max));
   Vec128F rounded = s_sub_f32(s_add_f32(src, magic), magic);
-  Vec128F maybeone = v_and(s_cmp_gt_f32(src, rounded), v_const_as<Vec128F>(blCommonTable.f128_1));
+  Vec128F maybeone = v_and(s_cmp_gt_f32(src, rounded), v_const_as<Vec128F>(&blCommonTable.f128_1));
 
   return v_get_f32(v_blend_mask(s_add_f32(rounded, maybeone), src, mask));
 }
@@ -241,9 +253,9 @@ static BL_INLINE double blNearby(double x) noexcept {
   using namespace SIMD;
 
   Vec128D src = v_d128_from_f64(x);
-  Vec128D magic = v_const_as<Vec128D>(blCommonTable.d128_round_magic);
+  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.d128_round_magic);
 
-  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(blCommonTable.d128_round_max));
+  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(&blCommonTable.d128_round_max));
   Vec128D rounded = s_sub_f64(s_add_f64(src, magic), magic);
 
   return v_get_f64(v_blend_mask(rounded, src, mask));
@@ -259,11 +271,11 @@ static BL_INLINE double blTrunc(double x) noexcept {
   Vec128D src_abs = v_and(src, msk_abs);
 
   Vec128D sign = v_nand(msk_abs, src);
-  Vec128D magic = v_const_as<Vec128D>(blCommonTable.d128_round_magic);
+  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.d128_round_magic);
 
-  Vec128D mask = v_or(s_cmp_ge_f64(src_abs, v_const_as<Vec128D>(blCommonTable.d128_round_max)), sign);
+  Vec128D mask = v_or(s_cmp_ge_f64(src_abs, v_const_as<Vec128D>(&blCommonTable.d128_round_max)), sign);
   Vec128D rounded = s_sub_f64(s_add_f64(src_abs, magic), magic);
-  Vec128D maybeone = v_and(s_cmp_lt_f64(src_abs, rounded), v_const_as<Vec128D>(blCommonTable.d128_1));
+  Vec128D maybeone = v_and(s_cmp_lt_f64(src_abs, rounded), v_const_as<Vec128D>(&blCommonTable.d128_1));
 
   return v_get_f64(v_blend_mask(s_sub_f64(rounded, maybeone), src, mask));
 }
@@ -272,11 +284,11 @@ static BL_INLINE double blFloor(double x) noexcept {
   using namespace SIMD;
 
   Vec128D src = v_d128_from_f64(x);
-  Vec128D magic = v_const_as<Vec128D>(blCommonTable.d128_round_magic);
+  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.d128_round_magic);
 
-  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(blCommonTable.d128_round_max));
+  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(&blCommonTable.d128_round_max));
   Vec128D rounded = s_sub_f64(s_add_f64(src, magic), magic);
-  Vec128D maybeone = v_and(s_cmp_lt_f64(src, rounded), v_const_as<Vec128D>(blCommonTable.d128_1));
+  Vec128D maybeone = v_and(s_cmp_lt_f64(src, rounded), v_const_as<Vec128D>(&blCommonTable.d128_1));
 
   return v_get_f64(v_blend_mask(s_sub_f64(rounded, maybeone), src, mask));
 }
@@ -285,11 +297,11 @@ static BL_INLINE double blCeil(double x) noexcept {
   using namespace SIMD;
 
   Vec128D src = v_d128_from_f64(x);
-  Vec128D magic = v_const_as<Vec128D>(blCommonTable.d128_round_magic);
+  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.d128_round_magic);
 
-  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(blCommonTable.d128_round_max));
+  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(&blCommonTable.d128_round_max));
   Vec128D rounded = s_sub_f64(s_add_f64(src, magic), magic);
-  Vec128D maybeone = v_and(s_cmp_gt_f64(src, rounded), v_const_as<Vec128D>(blCommonTable.d128_1));
+  Vec128D maybeone = v_and(s_cmp_gt_f64(src, rounded), v_const_as<Vec128D>(&blCommonTable.d128_1));
 
   return v_get_f64(v_blend_mask(s_add_f64(rounded, maybeone), src, mask));
 }
@@ -358,6 +370,13 @@ static BL_INLINE int blNearbyToInt(double x) noexcept {
 
 static BL_INLINE int blTruncToInt(float x) noexcept { return int(x); }
 static BL_INLINE int blTruncToInt(double x) noexcept { return int(x); }
+
+static BL_INLINE BLBoxI blTruncToInt(const BLBox& box) noexcept {
+  return BLBoxI(blTruncToInt(box.x0),
+                blTruncToInt(box.y0),
+                blTruncToInt(box.x1),
+                blTruncToInt(box.y1));
+}
 
 #if defined(BL_TARGET_OPT_SSE4_1)
 static BL_INLINE int blFloorToInt(float x) noexcept { return _mm_cvttss_si32(bl_roundf_sse4_1<_MM_FROUND_TO_NEG_INF>(x)); }
@@ -467,6 +486,8 @@ static BL_INLINE float blSqrt(float x) noexcept { return sqrtf(x); }
 static BL_INLINE double blSqrt(double x) noexcept { return sqrt(x); }
 
 BL_PRAGMA_FAST_MATH_POP
+
+static BL_INLINE BLPoint blSqrt(const BLPoint& p) noexcept { return BLPoint(blSqrt(p.x), blSqrt(p.y)); }
 
 static BL_INLINE float blCbrt(float x) noexcept { return cbrtf(x); }
 static BL_INLINE double blCbrt(double x) noexcept { return cbrt(x); }
@@ -607,6 +628,17 @@ static BL_INLINE size_t blSimplifiedQuadRoots(double dst[2], double a, double b,
   return 2;
 }
 
+static BL_INLINE size_t blSimplifiedQuadRoots(BLPoint dst[2], const BLPoint& a, const BLPoint& b, const BLPoint& c) noexcept {
+  BLPoint d = blMax(b * b - 4.0 * a * c, 0.0);
+  BLPoint s = blSqrt(d);
+  BLPoint q = -0.5 * (b + blCopySign(s, b));
+
+  dst[0] = q / a;
+  dst[1] = c / q;
+
+  return 2;
+}
+
 //! Solve a cubic polynomial and store the result in `dst`.
 //!
 //! Returns the number of roots found within [tMin, tMax] - `0` to `3`.
@@ -641,5 +673,8 @@ static constexpr bool isNearZeroPositive(T x, T eps = blEpsilon<T>()) noexcept {
 
 template<typename T>
 static constexpr bool isNearOne(T x, T eps = blEpsilon<T>()) noexcept { return isNear(x, T(1), eps); }
+
+//! \}
+//! \endcond
 
 #endif // BLEND2D_MATH_P_H_INCLUDED

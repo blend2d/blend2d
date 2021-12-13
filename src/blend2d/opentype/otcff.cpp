@@ -1,43 +1,29 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
 #include "../font_p.h"
 #include "../geometry_p.h"
 #include "../matrix_p.h"
 #include "../path_p.h"
-#include "../support_p.h"
 #include "../tables_p.h"
 #include "../trace_p.h"
 #include "../opentype/otcff_p.h"
 #include "../opentype/otface_p.h"
+#include "../support/memops_p.h"
+#include "../support/intops_p.h"
+#include "../support/ptrops_p.h"
+#include "../support/scopedbuffer_p.h"
+#include "../support/traits_p.h"
+
 
 namespace BLOpenType {
 namespace CFFImpl {
 
-// ============================================================================
-// [BLOpenType::CFFImpl - Tracing]
-// ============================================================================
+// OpenType::CFFImpl - Tracing
+// ===========================
 
 #if defined(BL_TRACE_OT_ALL) && !defined(BL_TRACE_OT_CFF)
   #define BL_TRACE_OT_CFF
@@ -49,16 +35,14 @@ namespace CFFImpl {
   #define Trace BLDummyTrace
 #endif
 
-// ============================================================================
-// [BLOpenType::CFFImpl - Utilities]
-// ============================================================================
+// OpenType::CFFImpl - Utilities
+// =============================
 
 // Specified by "CFF - Local/Global Subrs INDEXes"
 static BL_INLINE uint16_t calcSubRBias(uint32_t subrCount) noexcept {
-  // NOTE: For CharStrings v1 this would return 0, but since OpenType fonts use
-  // exclusively CharStrings v2 we always calculate the bias. The calculated
-  // bias is added to each call to global or local subroutine before its index
-  // is used to get its offset.
+  // NOTE: For CharStrings v1 this would return 0, but since OpenType fonts use exclusively CharStrings v2 we always
+  // calculate the bias. The calculated bias is added to each call to global or local subroutine before its index is
+  // used to get its offset.
   if (subrCount < 1240u)
     return 107u;
   else if (subrCount < 33900u)
@@ -102,12 +86,11 @@ static BL_INLINE void readOffsetArray(const T* p, size_t offsetSize, uint32_t* o
   }
 }
 
-// Read a CFF floating point value as specified by the CFF specification. The
-// format is binary, but it's just a simplified text representation in the end.
+// Read a CFF floating point value as specified by the CFF specification. The format is binary, but it's just
+// a simplified text representation in the end.
 //
-// Each byte is divided into 2 nibbles (4 bits), which are accessed separately.
-// Each nibble contains either a decimal value (0..9), decimal point, or other
-// instructions which meaning is described by `NibbleAbove9` enum.
+// Each byte is divided into 2 nibbles (4 bits), which are accessed separately. Each nibble contains either a
+// decimal value (0..9), decimal point, or other instructions which meaning is described by `NibbleAbove9` enum.
 static BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size_t& valueSizeInBytes) noexcept {
   // Maximum digits that we would attempt to read, excluding leading zeros.
   enum : uint32_t { kSafeDigits = 15 };
@@ -147,11 +130,11 @@ static BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOu
       if (digits < kSafeDigits) {
         value = value * 10.0 + double(int(nib));
         digits += uint32_t(value != 0.0);
-        if (blBitTest(flags, kDecimalPoint))
+        if (BLIntOps::bitTest(flags, kDecimalPoint))
           scale--;
       }
       else {
-        if (!blBitTest(flags, kDecimalPoint))
+        if (!BLIntOps::bitTest(flags, kDecimalPoint))
           scale++;
       }
       flags |= msk;
@@ -213,15 +196,14 @@ static BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOu
     value = scale > 0 ? value * s : value / s;
   }
 
-  valueOut = blBitTest(flags, kMinusSign) ? -value : value;
+  valueOut = BLIntOps::bitTest(flags, kMinusSign) ? -value : value;
   valueSizeInBytes = (size_t)(p - pStart);
 
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLOpenType::CFFImpl - Index]
-// ============================================================================
+// OpenType::CFFImpl - Index
+// =========================
 
 struct Index {
   uint32_t count;
@@ -239,9 +221,8 @@ struct Index {
   }
 };
 
-// ============================================================================
-// [BLOpenType::CFFImpl - DictEntry]
-// ============================================================================
+// OpenType::CFFImpl - DictEntry
+// =============================
 
 struct DictEntry {
   enum : uint32_t { kValueCapacity = 48 };
@@ -256,9 +237,8 @@ struct DictEntry {
   }
 };
 
-// ============================================================================
-// [BLOpenType::CFFImpl - DictIterator]
-// ============================================================================
+// OpenType::CFFImpl - DictIterator
+// ================================
 
 class DictIterator {
 public:
@@ -285,9 +265,8 @@ public:
   BLResult next(DictEntry& entry) noexcept;
 };
 
-// ============================================================================
-// [BLOpenType::CFFImpl - ReadIndex]
-// ============================================================================
+// OpenType::CFFImpl - ReadIndex
+// =============================
 
 static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion, Index* indexOut) noexcept {
   uint32_t count = 0;
@@ -297,14 +276,14 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
     if (BL_UNLIKELY(dataSize < 2))
       return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-    count = blMemReadU16uBE(data);
+    count = BLMemOps::readU16uBE(data);
     headerSize = 2;
   }
   else {
     if (BL_UNLIKELY(dataSize < 4))
       return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-    count = blMemReadU32uBE(data);
+    count = BLMemOps::readU32uBE(data);
     headerSize = 4;
   }
 
@@ -319,34 +298,32 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
   if (BL_UNLIKELY(dataSize < headerSize))
     return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-  uint32_t offsetSize = blMemReadU8(blOffsetPtr<const uint8_t>(data, headerSize - 1));
+  uint32_t offsetSize = BLMemOps::readU8(BLPtrOps::offset<const uint8_t>(data, headerSize - 1));
   uint32_t offsetArraySize = (count + 1) * offsetSize;
   uint32_t indexSizeIncludingOffsets = headerSize + offsetArraySize;
 
   if (BL_UNLIKELY(offsetSize < 1 || offsetSize > 4 || indexSizeIncludingOffsets > dataSize))
     return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-  const uint8_t* offsetArray = blOffsetPtr<const uint8_t>(data, headerSize);
+  const uint8_t* offsetArray = BLPtrOps::offset<const uint8_t>(data, headerSize);
   uint32_t offset = readOffset(offsetArray, offsetSize);
 
   // The first offset should be 1.
   if (BL_UNLIKELY(offset != 1))
     return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-  // Validate that the offsets are increasing and don't cross each other.
-  // The specification says that size of each object stored in the table
-  // can be determined by checking its offset and the next one, so valid
-  // data should conform to these checks.
+  // Validate that the offsets are increasing and don't cross each other. The specification says that size of each
+  // object stored in the table can be determined by checking its offset and the next one, so valid data should
+  // conform to these checks.
   //
-  // Please notice the use of `kOffsetAdjustment`. Since all offsets are
-  // relative to "RELATIVE TO THE BYTE THAT PRECEDES THE OBJECT DATA" we
-  // must account that.
-  uint32_t maxOffset = uint32_t(blMin<size_t>(blMaxValue<uint32_t>(), dataSize - indexSizeIncludingOffsets + CFFTable::kOffsetAdjustment));
+  // Please note the use of `kOffsetAdjustment`. Since all offsets are relative to "RELATIVE TO THE BYTE THAT
+  // PRECEDES THE OBJECT DATA" we must account that.
+  uint32_t maxOffset = uint32_t(blMin<size_t>(BLTraits::maxValue<uint32_t>(), dataSize - indexSizeIncludingOffsets + CFFTable::kOffsetAdjustment));
 
   switch (offsetSize) {
     case 1: {
       for (uint32_t i = 1; i <= count; i++) {
-        uint32_t next = blMemReadU8(offsetArray + i);
+        uint32_t next = BLMemOps::readU8(offsetArray + i);
         if (BL_UNLIKELY(next < offset || next > maxOffset))
           return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
@@ -356,7 +333,7 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
 
     case 2:
       for (uint32_t i = 1; i <= count; i++) {
-        uint32_t next = blMemReadU16uBE(offsetArray + i * 2u);
+        uint32_t next = BLMemOps::readU16uBE(offsetArray + i * 2u);
         if (BL_UNLIKELY(next < offset || next > maxOffset))
           return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
@@ -365,7 +342,7 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
 
     case 3:
       for (uint32_t i = 1; i <= count; i++) {
-        uint32_t next = blMemReadU24uBE(offsetArray + i * 3u);
+        uint32_t next = BLMemOps::readU24uBE(offsetArray + i * 3u);
         if (BL_UNLIKELY(next < offset || next > maxOffset))
           return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
@@ -374,7 +351,7 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
 
     case 4:
       for (uint32_t i = 1; i <= count; i++) {
-        uint32_t next = blMemReadU32uBE(offsetArray + i * 4u);
+        uint32_t next = BLMemOps::readU32uBE(offsetArray + i * 4u);
         if (BL_UNLIKELY(next < offset || next > maxOffset))
           return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
@@ -397,9 +374,8 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLOpenType::CFFImpl - DictIterator]
-// ============================================================================
+// OpenType::CFFImpl - DictIterator
+// ================================
 
 BLResult DictIterator::next(DictEntry& entry) noexcept {
   BL_ASSERT(hasNext());
@@ -448,13 +424,13 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
           _dataPtr += 2;
           if (BL_UNLIKELY(_dataPtr > _dataEnd))
             return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
-          vInt = blMemReadI16uBE(_dataPtr - 2);
+          vInt = BLMemOps::readI16uBE(_dataPtr - 2);
         }
         else if (b0 == 29) {
           _dataPtr += 4;
           if (BL_UNLIKELY(_dataPtr > _dataEnd))
             return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
-          vInt = blMemReadI32uBE(_dataPtr - 4);
+          vInt = BLMemOps::readI32uBE(_dataPtr - 4);
         }
         else {
           // Byte values 22..27, 31, and 255 are reserved.
@@ -481,19 +457,16 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLOpenType::CFFImpl - Constants]
-// ============================================================================
+// OpenType::CFFImpl - Constants
+// =============================
 
-// ADOBE uses a limit of 20 million instructions in their AVALON rasterizer, but
-// it's not clear that it's because of font complexity or their PostScript support.
+// ADOBE uses a limit of 20 million instructions in their AVALON rasterizer, but it's not clear that it's because of
+// font complexity or their PostScript support.
 //
-// It seems that this limit is too optimistic to be reached by any OpenType font.
-// We use a different metric, a program size, which is referenced by `bytesProcessed`
-// counter in the decoder. This counter doesn't have to be advanced every time we
-// process an opcode, instead, we advance it every time we enter a subroutine (or
-// CharString program itself). if we reach `kCFFProgramLimit` the interpreter is
-// terminated immediately.
+// It seems that this limit is too optimistic to be reached by any OpenType font. We use a different metric, a program
+// size, which is referenced by `bytesProcessed` counter in the decoder. This counter doesn't have to be advanced every
+// time we process an opcode, instead, we advance it every time we enter a subroutine (or CharString program itself).
+// If we reach `kCFFProgramLimit` the interpreter is terminated immediately.
 static constexpr uint32_t kCFFProgramLimit = 1000000;
 static constexpr uint32_t kCFFCallStackSize = 16;
 static constexpr uint32_t kCFFStorageSize = 32;
@@ -503,8 +476,7 @@ static constexpr uint32_t kCFFValueStackSizeV1 = 48;
 // TODO: Required by CFF2.
 // static constexpr uint32_t kCFFValueStackSizeV2 = 513;
 
-// We use `double` precision in our implementation, so this constant is used
-// to convert a fixed-point (as specified by CFF and CFF2)
+// We use `double` precision in our implementation, so this constant is used to convert a fixed-point.
 static constexpr double kCFFDoubleFromF16x16 = (1.0 / 65536.0);
 
 enum CSFlags : uint32_t {
@@ -522,16 +494,14 @@ enum CSOpCode : uint32_t {
   // CFF Version 1
   // -------------
   //
-  // The first stack-clearing operator, which must be one of 'MoveTo', 'Stem',
-  // 'Hint', or 'EndChar', takes an additional argument - the width, which may
-  // be expressed as zero or one numeric argument.
+  // The first stack-clearing operator, which must be one of 'MoveTo', 'Stem', 'Hint', or 'EndChar', takes an
+  // additional argument - the width, which may be expressed as zero or one numeric argument.
   //
   // CFF Version 2
   // -------------
   //
-  // The concept of "width" specified in the program was removed. Arithmetic and
-  // Conditional operators were also removed and control flow operators like
-  // 'Return' and 'EndChar' were made implicit and were removed as well.
+  // The concept of "width" specified in the program was removed. Arithmetic and Conditional operators were also
+  // removed and control flow operators like 'Return' and 'EndChar' were made implicit and were removed as well.
 
   // Core Operators / Escapes:
   kCSOpEscape     = 0x000C,
@@ -604,24 +574,20 @@ enum CSOpCode : uint32_t {
   kCSOpGet        = 0x0C15  // CFFv1:    I get (12 21) out
 };
 
-// ============================================================================
-// [BLOpenType::CFFImpl - ExecutionFeaturesInfo]
-// ============================================================================
+// OpenType::CFFImpl - ExecutionFeaturesInfo
+// =========================================
 
 //! Describes features that can be used during execution and their requirements.
 //!
-//! There are two versions of `ExecutionFeaturesInfo` selected at runtime based on
-//! the font - either CFF or CFF2. CFF provides some operators that are hardly
-//! used in fonts. CFF2 removed such operators and introduced new ones that are
-//! used to support "OpenType Font Variations" feature.
+//! There are two versions of `ExecutionFeaturesInfo` selected at runtime based on the font - either CFF or CFF2.
+//! CFF provides some operators that are hardly used in fonts. CFF2 removed such operators and introduced new ones
+//! that are used to support "OpenType Font Variations" feature.
 //!
-//! Both CFF and CFF2 specifications state that unsupported operators should be
-//! skipped and value stack cleared. This is implemented by assigning `kUnknown`
-//! to all operators that are unsupported. The value is much higher than a
-//! possible value stack size so when it's used it would always force the engine
-//! to decide between an unsupported operator or operator that was called with
-//! less operands than it needs (in that case the execution is terminated
-//! immediately).
+//! Both CFF and CFF2 specifications state that unsupported operators should be skipped and value stack cleared.
+//! This is implemented by assigning `kUnknown` to all operators that are unsupported. The value is much higher
+//! than a possible value stack size so when it's used it would always force the engine to decide between an
+//! unsupported operator or operator that was called with less operands than it needs (in that case the execution
+//! is terminated immediately).
 struct ExecutionFeaturesInfo {
   static constexpr const uint32_t kBaseOpCount = 32;
   static constexpr const uint32_t kEscapedOpCount = 48;
@@ -701,25 +667,23 @@ struct ExecutionFeaturesInfoOpStackSizeGen {
 static constexpr const ExecutionFeaturesInfo executionFeaturesInfo[2] = {
   // CFFv1 [Index #0]
   {
-    blLookupTable<uint16_t, ExecutionFeaturesInfo::kBaseOpCount   , ExecutionFeaturesInfoOpStackSizeGen<0x0000, 1>>(),
-    blLookupTable<uint16_t, ExecutionFeaturesInfo::kEscapedOpCount, ExecutionFeaturesInfoOpStackSizeGen<0x0C00, 1>>()
+    blMakeLookupTable<uint16_t, ExecutionFeaturesInfo::kBaseOpCount   , ExecutionFeaturesInfoOpStackSizeGen<0x0000, 1>>(),
+    blMakeLookupTable<uint16_t, ExecutionFeaturesInfo::kEscapedOpCount, ExecutionFeaturesInfoOpStackSizeGen<0x0C00, 1>>()
   },
 
   // CFFv2 [Index #1]
   {
-    blLookupTable<uint16_t, ExecutionFeaturesInfo::kBaseOpCount   , ExecutionFeaturesInfoOpStackSizeGen<0x0000, 2>>(),
-    blLookupTable<uint16_t, ExecutionFeaturesInfo::kEscapedOpCount, ExecutionFeaturesInfoOpStackSizeGen<0x0C00, 2>>()
+    blMakeLookupTable<uint16_t, ExecutionFeaturesInfo::kBaseOpCount   , ExecutionFeaturesInfoOpStackSizeGen<0x0000, 2>>(),
+    blMakeLookupTable<uint16_t, ExecutionFeaturesInfo::kEscapedOpCount, ExecutionFeaturesInfoOpStackSizeGen<0x0C00, 2>>()
   }
 };
 
-// ============================================================================
-// [BLOpenType::CFFImpl - ExecutionState]
-// ============================================================================
+// OpenType::CFFImpl - ExecutionState
+// ==================================
 
-//! Execution state is used in a call-stack array to remember from where a
-//! subroutine was called. When a subroutine reaches the end of a "Return"
-//! opcode it would pop the state from call-stack and return the execution
-//! after the "CallLSubR" or "CallGSubR" instruction.
+//! Execution state is used in a call-stack array to remember from where a subroutine was called. When a subroutine
+//! reaches the end of a "Return" opcode it would pop the state from call-stack and return the execution after the
+//! "CallLSubR" or "CallGSubR" instruction.
 struct ExecutionState {
   BL_INLINE void reset(const uint8_t* ptr, const uint8_t* end) noexcept {
     _ptr = ptr;
@@ -730,9 +694,8 @@ struct ExecutionState {
   const uint8_t* _end;
 };
 
-// ============================================================================
-// [BLOpenType::CFFImpl - Matrix2x2]
-// ============================================================================
+// OpenType::CFFImpl - Matrix2x2
+// =============================
 
 struct Matrix2x2 {
   BL_INLINE double xByA(double x, double y) const noexcept { return x * m00 + y * m10; }
@@ -748,12 +711,11 @@ struct Matrix2x2 {
   double m10, m11;
 };
 
-// ============================================================================
-// [BLOpenType::CFFImpl - Trace]
-// ============================================================================
+// OpenType::CFFImpl - Trace
+// =========================
 
 #ifdef BL_TRACE_OT_CFF
-static void traceCharStringOp(const BLOTFaceImpl* faceI, Trace& trace, uint32_t op, const double* values, size_t count) noexcept {
+static void traceCharStringOp(const OTFaceImpl* faceI, Trace& trace, uint32_t op, const double* values, size_t count) noexcept {
   char buf[64];
   const char* opName = "";
 
@@ -845,9 +807,8 @@ static void traceCharStringOp(const BLOTFaceImpl* faceI, Trace& trace, uint32_t 
 }
 #endif
 
-// ============================================================================
-// [BLOpenType::CFFImpl - Interpreter]
-// ============================================================================
+// OpenType::CFFImpl - Interpreter
+// ===============================
 
 static BL_INLINE bool findGlyphInRange3(uint32_t glyphId, const uint8_t* ranges, size_t nRanges, uint32_t& fd) noexcept {
   constexpr size_t kRangeSize = 3;
@@ -855,7 +816,7 @@ static BL_INLINE bool findGlyphInRange3(uint32_t glyphId, const uint8_t* ranges,
     const uint8_t* half = ranges + (i >> 1) * kRangeSize;
 
     // Read either the next Range3[] record or sentinel.
-    uint32_t gEnd = blMemReadU16uBE(half + kRangeSize);
+    uint32_t gEnd = BLMemOps::readU16uBE(half + kRangeSize);
 
     if (glyphId >= gEnd) {
       ranges = half + kRangeSize;
@@ -863,7 +824,7 @@ static BL_INLINE bool findGlyphInRange3(uint32_t glyphId, const uint8_t* ranges,
       continue;
     }
 
-    uint32_t gStart = blMemReadU16uBE(half);
+    uint32_t gStart = BLMemOps::readU16uBE(half);
     if (glyphId < gStart)
       continue;
 
@@ -880,10 +841,10 @@ static BLResult getGlyphOutlinesT(
   uint32_t glyphId,
   const BLMatrix2D* matrix,
   Consumer& consumer,
-  BLMemBuffer* tmpBuffer) noexcept {
+  BLScopedBuffer* tmpBuffer) noexcept {
 
   blUnused(tmpBuffer);
-  const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
+  const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
 
   // Will only do something if tracing is enabled.
   Trace trace;
@@ -918,26 +879,24 @@ static BLResult getGlyphOutlinesT(
   const CFFData& cffInfo = faceI->cff;
   const uint8_t* cffData = faceI->cff.table.data;
 
-  // Execution features describe either CFFv1 or CFFv2 environment. It contains
-  // minimum operand count for each opcode (or operator) and some other data.
+  // Execution features describe either CFFv1 or CFFv2 environment. It contains minimum operand count for each
+  // opcode (or operator) and some other data.
   const ExecutionFeaturesInfo* executionFeatures = &executionFeaturesInfo[0];
 
-  // This is used to perform a function (subroutine) call. Initially we set it
-  // to the charstring referenced by the `glyphId`. Later, when we process a
-  // a function call opcode it would be changed to either GSubR or LSubR index.
+  // This is used to perform a function (subroutine) call. Initially we set it to the charstring referenced by the
+  // `glyphId`. Later, when we process a function call opcode it would be changed to either GSubR or LSubR index.
   const CFFData::IndexData* subrIndex = &cffInfo.index[CFFData::kIndexCharString];
   uint32_t subrId = glyphId;
 
-  // We really want to report a correct error when we face an invalid glyphId,
-  // this is the only difference between handling a function call and handling
-  // the initial CharString program.
+  // We really want to report a correct error when we face an invalid glyphId, this is the only difference between
+  // handling a function call and handling the initial CharString program.
   if (BL_UNLIKELY(glyphId >= subrIndex->entryCount)) {
     trace.fail("Invalid Glyph ID\n");
     return blTraceError(BL_ERROR_INVALID_GLYPH);
   }
 
-  // LSubR index that will be used by CallLSubR operator. CID fonts provide
-  // multiple indexes that can be used based on `glyphId`.
+  // LSubR index that will be used by CallLSubR operator. CID fonts provide multiple indexes that can be used based
+  // on `glyphId`.
   const CFFData::IndexData* localSubrIndex = &cffInfo.index[CFFData::kIndexLSubR];
   if (cffInfo.fdSelectOffset) {
     // We are not interested in format byte, we already know the format.
@@ -965,7 +924,7 @@ static BLResult getGlyphOutlinesT(
       //   } ranges[nRanges];
       //   UInt16 sentinel;
       if (fdDataSize >= 2) {
-        uint32_t nRanges = blMemReadU16uBE(fdData);
+        uint32_t nRanges = BLMemOps::readU16uBE(fdData);
         if (fdDataSize >= 2u + nRanges * 3u + 2u)
           findGlyphInRange3(glyphId, fdData + 2u, nRanges, fd);
       }
@@ -975,13 +934,11 @@ static BLResult getGlyphOutlinesT(
       localSubrIndex = &faceI->cffFDSubrIndexes[fd];
   }
 
-  // Compiler can better optimize the transform if it knows that it won't be
-  // changed outside of this function.
+  // Compiler can better optimize the transform if it knows that it won't be changed outside of this function.
   Matrix2x2 m { matrix->m00, matrix->m01, matrix->m10, matrix->m11 };
 
-  // --------------------------------------------------------------------------
-  // [Program | SubR - Init]
-  // --------------------------------------------------------------------------
+  // Program | SubR - Init
+  // ---------------------
 
   BL_PROPAGATE(consumer.begin(64));
 
@@ -1017,9 +974,8 @@ OnSubRCall:
     bytesProcessed += programSize;
   }
 
-  // --------------------------------------------------------------------------
-  // [Program | SubR - Execute]
-  // --------------------------------------------------------------------------
+  // Program | SubR - Execute
+  // ------------------------
 
   for (;;) {
     // Current opcode read from `ip`.
@@ -1043,9 +999,8 @@ OnSubRCall:
         goto InvalidData;
       }
       else {
-        // --------------------------------------------------------------------
-        // [Push Number (Small)]
-        // --------------------------------------------------------------------
+        // Push Number (Small)
+        // -------------------
 
         if (ip < ipEnd) {
           if (b0 <= 246) {
@@ -1089,7 +1044,7 @@ OnSubRCall:
             if (BL_UNLIKELY(ip > ipEnd))
               goto InvalidData;
 
-            int v = blMemReadI32uBE(ip - 4);
+            int v = BLMemOps::readI32uBE(ip - 4);
             vBuf[vIdx - 1] = double(v) * kCFFDoubleFromF16x16;
           }
           continue;
@@ -1125,23 +1080,21 @@ OnOperator:
       }
 
       switch (b0) {
-        // --------------------------------------------------------------------
-        // [Push Number (2's Complement Int16)]
-        // --------------------------------------------------------------------
+        // Push Number (2's Complement Int16)
+        // ----------------------------------
 
         case kCSOpPushI16: {
           ip += 2;
           if (BL_UNLIKELY(ip > ipEnd || ++vIdx > kCFFValueStackSizeV1))
             goto InvalidData;
 
-          int v = blMemReadI16uBE(ip - 2);
+          int v = BLMemOps::readI16uBE(ip - 2);
           vBuf[vIdx - 1] = double(v);
           continue;
         }
 
-        // --------------------------------------------------------------------
-        // [MoveTo]
-        // --------------------------------------------------------------------
+        // MoveTo
+        // ------
 
         // |- dx1 dy1 rmoveto (21) |-
         case kCSOpRMoveTo: {
@@ -1194,9 +1147,8 @@ OnOperator:
           continue;
         }
 
-        // --------------------------------------------------------------------
-        // [LineTo]
-        // --------------------------------------------------------------------
+        // LineTo
+        // ------
 
         // |- {dxa dya}+ rlineto (5) |-
         case kCSOpRLineTo: {
@@ -1255,9 +1207,8 @@ OnVLineTo:
           continue;
         }
 
-        // --------------------------------------------------------------------
-        // [CurveTo]
-        // --------------------------------------------------------------------
+        // CurveTo
+        // -------
 
         // |- {dxa dya dxb dyb dxc dyc}+ rrcurveto (8) |-
         case kCSOpRRCurveTo: {
@@ -1441,9 +1392,8 @@ OnVHCurveTo:
           continue;
         }
 
-        // --------------------------------------------------------------------
-        // [Hints]
-        // --------------------------------------------------------------------
+        // Hints
+        // -----
 
         // |- y dy {dya dyb}* hstem   (1)  |-
         // |- x dx {dxa dxb}* vstem   (3)  |-
@@ -1478,9 +1428,8 @@ OnVHCurveTo:
           continue;
         }
 
-        // --------------------------------------------------------------------
-        // [Variation Data Operators]
-        // --------------------------------------------------------------------
+        // Variation Data Operators
+        // ------------------------
 
         // |- ivs vsindex (15) |-
         case kCSOpVSIndex: {
@@ -1496,9 +1445,8 @@ OnVHCurveTo:
           continue;
         }
 
-        // --------------------------------------------------------------------
-        // [Control Flow]
-        // --------------------------------------------------------------------
+        // Control Flow
+        // ------------
 
         // lsubr# calllsubr (10) -
         case kCSOpCallLSubR: {
@@ -1550,9 +1498,8 @@ OnReturn:
           goto EndCharString;
         }
 
-        // --------------------------------------------------------------------
-        // [Escaped Operators]
-        // --------------------------------------------------------------------
+        // Escaped Operators
+        // -----------------
 
         case kCSOpEscape: {
           if (BL_UNLIKELY(ip >= ipEnd))
@@ -1864,7 +1811,7 @@ OnReturn:
               // to the right and not in both directions. This is easy as the
               // shift is always bound to [0, count) regardless of the direction.
               if (int(shift) < 0)
-                shift = blNegate(blNegate(shift) % count) + count;
+                shift = BLIntOps::negate(BLIntOps::negate(shift) % count) + count;
               else
                 shift %= count;
 
@@ -1872,7 +1819,7 @@ OnReturn:
                 continue;
 
               double last = 0;
-              uint32_t curIdx = blNegate(uint32_t(1));
+              uint32_t curIdx = BLIntOps::negate(uint32_t(1));
               uint32_t baseIdx = curIdx;
 
               for (uint32_t i = 0; i < count; i++) {
@@ -1896,7 +1843,7 @@ OnReturn:
               unsigned int sIdx = unsigned(int(vBuf[vIdx - 1]));
               if (sIdx < kCFFStorageSize) {
                 sBuf[sIdx] = vBuf[vIdx - 2];
-                sMsk |= blBitAt<uint32_t>(sIdx);
+                sMsk |= BLIntOps::lsbBitAt<uint32_t>(sIdx);
               }
 
               vIdx -= 2;
@@ -1910,7 +1857,7 @@ OnReturn:
               // When `sIdx == kCFFStorageSize` it points to `0.0` (the only value guaranteed to be set).
               // Otherwise we check the bit in `sMsk` and won't allow to get an uninitialized value that
               // was not stored at `sIdx` before (for security reasons).
-              if (sIdx >= kCFFStorageSize || !blBitTest(sMsk, sIdx))
+              if (sIdx >= kCFFStorageSize || !BLIntOps::bitTest(sMsk, sIdx))
                 sIdx = kCFFStorageSize;
 
               vBuf[vIdx - 1] = sBuf[sIdx];
@@ -1952,9 +1899,8 @@ InvalidData:
   return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 }
 
-// ============================================================================
-// [BLOpenType::CFFImpl - GetGlyphBounds]
-// ============================================================================
+// OpenType::CFFImpl - GetGlyphBounds
+// ==================================
 
 namespace {
 
@@ -1968,7 +1914,7 @@ public:
 
   BL_INLINE BLResult begin(size_t n) noexcept {
     blUnused(n);
-    bounds.reset(blMaxValue<double>(), blMaxValue<double>(), blMinValue<double>(), blMinValue<double>());
+    bounds.reset(BLTraits::maxValue<double>(), BLTraits::maxValue<double>(), BLTraits::minValue<double>(), BLTraits::minValue<double>());
     cx = 0;
     cy = 0;
     return BL_SUCCESS;
@@ -1982,20 +1928,20 @@ public:
   }
 
   BL_INLINE void moveTo(double x0, double y0) noexcept {
-    blBound(bounds, BLPoint(x0, y0));
+    BLGeometry::bound(bounds, BLPoint(x0, y0));
     cx = x0;
     cy = y0;
   }
 
   BL_INLINE void lineTo(double x1, double y1) noexcept {
-    blBound(bounds, BLPoint(x1, y1));
+    BLGeometry::bound(bounds, BLPoint(x1, y1));
     cx = x1;
     cy = y1;
   }
 
   // Not used by CFF, provided for completness.
   BL_INLINE void quadTo(double x1, double y1, double x2, double y2) noexcept {
-    blBound(bounds, BLPoint(x2, y2));
+    BLGeometry::bound(bounds, BLPoint(x2, y2));
     if (!bounds.contains(x1, y1))
       mergeQuadExtrema(x1, y1, x2, y2);
     cx = x2;
@@ -2003,8 +1949,8 @@ public:
   }
 
   BL_INLINE void cubicTo(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
-    blBound(bounds, BLPoint(x3, y3));
-    if (!blSubsumes(bounds, BLBox(blMin(x1, x2), blMin(y1, y2), blMax(x1, x2), blMax(y1, y2))))
+    BLGeometry::bound(bounds, BLPoint(x3, y3));
+    if (!BLGeometry::subsumes(bounds, BLBox(blMin(x1, x2), blMin(y1, y2), blMax(x1, x2), blMax(y1, y2))))
       mergeCubicExtrema(x1, y1, x2, y2, x3, y3);
     cx = x3;
     cy = y3;
@@ -2012,26 +1958,23 @@ public:
 
   BL_INLINE void close() noexcept {}
 
-  // We calculate extremas here as the code may expand a bit and inlining everything
-  // doesn't bring any benefits in such case, because most control points in fonts
-  // are within the bounding box defined by start/end points anyway.
+  // We calculate extremas here as the code may expand a bit and inlining everything doesn't bring any benefits in
+  // such case, because most control points in fonts are within the bounding box defined by start/end points anyway.
   //
   // Making these two functions no-inline saves around 8kB.
   BL_NOINLINE void mergeQuadExtrema(double x1, double y1, double x2, double y2) noexcept {
     BLPoint quad[3] { { cx, cy }, { x1, y1 }, { x2, y2 } };
-    BLPoint extrema;
-
-    blGetQuadExtremaPoint(quad, extrema);
-    blBound(bounds, extrema);
+    BLPoint extrema = BLGeometry::quadExtremaPoint(quad);
+    BLGeometry::bound(bounds, extrema);
   }
 
   BL_NOINLINE void mergeCubicExtrema(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
     BLPoint cubic[4] { { cx, cy }, { x1, y1 }, { x2, y2 }, { x3, y3 } };
     BLPoint extremas[2];
 
-    blGetCubicExtremaPoints(cubic, extremas);
-    blBound(bounds, extremas[0]);
-    blBound(bounds, extremas[1]);
+    BLGeometry::getCubicExtremaPoints(cubic, extremas);
+    BLGeometry::bound(bounds, extremas[0]);
+    BLGeometry::bound(bounds, extremas[1]);
   }
 };
 
@@ -2047,14 +1990,14 @@ static BLResult BL_CDECL getGlyphBounds(
   BLResult result = BL_SUCCESS;
   BLMatrix2D m;
 
-  BLMemBufferTmp<1024> tmpBuffer;
+  BLScopedBufferTmp<1024> tmpBuffer;
   GlyphBoundsConsumer consumer;
 
   m.reset();
 
   for (size_t i = 0; i < count; i++) {
     uint32_t glyphId = glyphData[0];
-    glyphData = blOffsetPtr(glyphData, glyphAdvance);
+    glyphData = BLPtrOps::offset(glyphData, glyphAdvance);
 
     BLResult localResult = getGlyphOutlinesT<GlyphBoundsConsumer>(faceI_, glyphId, &m, consumer, &tmpBuffer);
     if (localResult) {
@@ -2074,9 +2017,8 @@ static BLResult BL_CDECL getGlyphBounds(
   return result;
 }
 
-// ============================================================================
-// [BLOpenType::CFFImpl - GetGlyphOutlines]
-// ============================================================================
+// OpenType::CFFImpl - GetGlyphOutlines
+// ====================================
 
 namespace {
 
@@ -2134,7 +2076,7 @@ static BLResult BL_CDECL getGlyphOutlines(
   const BLMatrix2D* matrix,
   BLPath* out,
   size_t* contourCountOut,
-  BLMemBuffer* tmpBuffer) noexcept {
+  BLScopedBuffer* tmpBuffer) noexcept {
 
   GlyphOutlineConsumer consumer(out);
   BLResult result = getGlyphOutlinesT<GlyphOutlineConsumer>(faceI_, glyphId, matrix, consumer, tmpBuffer);
@@ -2143,9 +2085,8 @@ static BLResult BL_CDECL getGlyphOutlines(
   return result;
 }
 
-// ============================================================================
-// [BLOpenType::CIDInfo]
-// ============================================================================
+// OpenType::CIDInfo - Struct
+// ==========================
 
 struct CIDInfo {
   enum Flags : uint32_t {
@@ -2162,15 +2103,14 @@ struct CIDInfo {
   uint8_t fdSelectFormat;
 };
 
-// ============================================================================
-// [BLOpenType::CFFImpl - Init]
-// ============================================================================
+// OpenType::CFFImpl - Init
+// ========================
 
 static BL_INLINE bool isSupportedFDSelectFormat(uint32_t format) noexcept {
   return format == 0 || format == 3;
 }
 
-BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) noexcept {
+BLResult init(OTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) noexcept {
   BLFontTableT<CFFTable> cff { fontTable };
 
   DictIterator dictIter;
@@ -2197,17 +2137,15 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
   CIDInfo cid {};
   BLArray<CFFData::IndexData> fdSubrIndexes;
 
-  // --------------------------------------------------------------------------
-  // [CFF Header]
-  // --------------------------------------------------------------------------
+  // CFF Header
+  // ----------
 
   if (BL_UNLIKELY(!blFontTableFitsT<CFFTable>(fontTable)))
     return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-  // The specification says that the implementation should refuse MAJOR version,
-  // which it doesn't understand. We understand version 1 & 2 (there seems to be
-  // no other version) so refuse anything else. It also says that change in MINOR
-  // version should never cause an incompatibility, so we ignore it completely.
+  // The specification says that the implementation should refuse MAJOR version, which it doesn't understand.
+  // We understand version 1 & 2 (there seems to be no other version) so refuse anything else. It also says
+  // that change in MINOR version should never cause an incompatibility, so we ignore it completely.
   if (BL_UNLIKELY(cffVersion + 1 != cff->header.majorVersion()))
     return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
@@ -2229,9 +2167,8 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
     topDictSize = cff->headerV2()->topDictLength();
   }
 
-  // --------------------------------------------------------------------------
-  // [CFF NameIndex]
-  // --------------------------------------------------------------------------
+  // CFF NameIndex
+  // -------------
 
   // NameIndex is only used by CFF, CFF2 doesn't use it.
   if (cffVersion == CFFData::kVersion1) {
@@ -2248,9 +2185,8 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
     topDictOffset = headerSize;
   }
 
-  // --------------------------------------------------------------------------
-  // [CFF TopDictIndex]
-  // --------------------------------------------------------------------------
+  // CFF TopDictIndex
+  // ----------------
 
   if (cffVersion == CFFData::kVersion1) {
     // CFF doesn't have the size specified in the header, so we have to compute it.
@@ -2321,9 +2257,8 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
     }
   }
 
-  // --------------------------------------------------------------------------
-  // [CFF StringIndex]
-  // --------------------------------------------------------------------------
+  // CFF StringIndex
+  // ---------------
 
   // StringIndex is only used by CFF, CFF2 doesn't use it.
   if (cffVersion == CFFData::kVersion1) {
@@ -2335,16 +2270,14 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
     gsubrOffset = topDictOffset + topDictIndex.totalSize;
   }
 
-  // --------------------------------------------------------------------------
-  // [CFF GSubRIndex]
-  // --------------------------------------------------------------------------
+  // CFF GSubRIndex
+  // --------------
 
   BL_PROPAGATE(readIndex(cff.data + gsubrOffset, cff.size - gsubrOffset, cffVersion, &gsubrIndex));
   beginDataOffset = gsubrOffset + gsubrIndex.totalSize;
 
-  // --------------------------------------------------------------------------
-  // [CFF PrivateDict]
-  // --------------------------------------------------------------------------
+  // CFF PrivateDict
+  // ---------------
 
   if (privateOffset) {
     if (BL_UNLIKELY(privateOffset < beginDataOffset ||
@@ -2367,9 +2300,8 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
     }
   }
 
-  // --------------------------------------------------------------------------
-  // [CFF LSubRIndex]
-  // --------------------------------------------------------------------------
+  // CFF LSubRIndex
+  // --------------
 
   if (lsubrOffset) {
     // `lsubrOffset` is relative to `privateOffset`.
@@ -2380,18 +2312,16 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
     BL_PROPAGATE(readIndex(cff.data + lsubrOffset, cff.size - lsubrOffset, cffVersion, &lsubrIndex));
   }
 
-  // --------------------------------------------------------------------------
-  // [CFF CharStrings]
-  // --------------------------------------------------------------------------
+  // CFF CharStrings
+  // ---------------
 
   if (BL_UNLIKELY(charStringOffset < beginDataOffset || charStringOffset >= cff.size))
     return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   BL_PROPAGATE(readIndex(cff.data + charStringOffset, cff.size - charStringOffset, cffVersion, &charStringIndex));
 
-  // --------------------------------------------------------------------------
-  // [CFF/CID]
-  // --------------------------------------------------------------------------
+  // CFF/CID
+  // -------
 
   if ((cid.flags & CIDInfo::kFlagsAll) == CIDInfo::kFlagsAll) {
     uint32_t fdArrayOffset = cid.fdArrayOffset;
@@ -2487,9 +2417,8 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
     }
   }
 
-  // --------------------------------------------------------------------------
-  // [Done]
-  // --------------------------------------------------------------------------
+  // Done
+  // ----
 
   faceI->cff.table = fontTable;
 
@@ -2523,9 +2452,8 @@ BLResult init(BLOTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) n
   return BL_SUCCESS;
 };
 
-// ============================================================================
-// [BLOpenType::CFFImpl - Unit Tests]
-// ============================================================================
+// OpenType::CFFImpl - Tests
+// =========================
 
 #ifdef BL_TEST
 static void testReadFloat() noexcept {
@@ -2579,18 +2507,18 @@ static void testReadFloat() noexcept {
       valueSizeInBytes);
 
     if (entry.pass) {
-      EXPECT(result == BL_SUCCESS,
-             "Entry %zu should have passed {Error=%08X}", i, unsigned(result));
-
       double a = valueOut;
       double b = entry.value;
 
-      EXPECT(blAbs(a - b) <= kTolerance,
-             "Entry %zu returned value '%g' which doesn't match the expected value '%g'", i, a, b);
+      EXPECT_SUCCESS(result)
+        .message("Entry %zu should have passed {Error=%08X}", i, unsigned(result));
+
+      EXPECT_LE(blAbs(a - b), kTolerance)
+        .message("Entry %zu returned value '%g' which doesn't match the expected value '%g'", i, a, b);
     }
     else {
-      EXPECT(result != BL_SUCCESS,
-             "Entry %zu should have failed", i);
+      EXPECT_NE(result, BL_SUCCESS)
+        .message("Entry %zu should have failed", i);
     }
   }
 }
@@ -2624,24 +2552,25 @@ static void testDictIterator() noexcept {
   DictIterator iter(dump, BL_ARRAY_SIZE(dump));
 
   while (iter.hasNext()) {
-    EXPECT(index < BL_ARRAY_SIZE(testEntries),
-           "DictIterator found more entries than the data contains");
+    EXPECT_LT(index, BL_ARRAY_SIZE(testEntries))
+      .message("DictIterator found more entries than the data contains");
 
     DictEntry entry;
-    EXPECT(iter.next(entry) == BL_SUCCESS,
-           "DictIterator failed to read entry #%u", index);
+    EXPECT_EQ(iter.next(entry), BL_SUCCESS)
+      .message("DictIterator failed to read entry #%u", index);
 
-    EXPECT(entry.count == testEntries[index].count,
-           "DictIterator failed to read entry #%u properly {entry.count == 0}", index);
+    EXPECT_EQ(entry.count, testEntries[index].count)
+      .message("DictIterator failed to read entry #%u properly {entry.count == 0}", index);
+
     for (uint32_t j = 0; j < entry.count; j++) {
-      EXPECT(entry.values[j] == testEntries[index].values[j],
-             "DictIterator failed to read entry #%u properly {entry.values[%u] (%f) != %f)", index, j, entry.values[j], testEntries[index].values[j]);
+      EXPECT_EQ(entry.values[j], testEntries[index].values[j])
+        .message("DictIterator failed to read entry #%u properly {entry.values[%u] (%f) != %f)", index, j, entry.values[j], testEntries[index].values[j]);
     }
     index++;
   }
 
-  EXPECT(index == BL_ARRAY_SIZE(testEntries),
-         "DictIterator must iterate over all entries, only %u of %u iterated", index, unsigned(BL_ARRAY_SIZE(testEntries)));
+  EXPECT_EQ(index, BL_ARRAY_SIZE(testEntries))
+    .message("DictIterator must iterate over all entries, only %u of %u iterated", index, unsigned(BL_ARRAY_SIZE(testEntries)));
 }
 
 UNIT(opentype_cff) {

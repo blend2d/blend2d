@@ -1,35 +1,18 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
-#include "../bitops_p.h"
 #include "../font_p.h"
 #include "../glyphbuffer_p.h"
-#include "../support_p.h"
 #include "../tables_p.h"
 #include "../trace_p.h"
 #include "../opentype/otface_p.h"
 #include "../opentype/otlayout_p.h"
+#include "../support/bitops_p.h"
+#include "../support/memops_p.h"
+#include "../support/ptrops_p.h"
 
 // TODO: This is not complete so we had to disable some warnings here...
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
@@ -37,9 +20,8 @@ BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
 namespace BLOpenType {
 namespace LayoutImpl {
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - Tracing]
-// ============================================================================
+// OpenType::LayoutImpl - Tracing
+// ==============================
 
 #if defined(BL_TRACE_OT_ALL) || defined(BL_TRACE_OT_LAYOUT)
   #define Trace BLDebugTrace
@@ -47,9 +29,8 @@ namespace LayoutImpl {
   #define Trace BLDummyTrace
 #endif
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - Debugging]
-// ============================================================================
+// OpenType::LayoutImpl - Debugging
+// ================================
 
 #if 0
 static void dumpGPosValue(const Int16* p, uint32_t index, uint32_t valueFormat) noexcept {
@@ -65,13 +46,12 @@ static void dumpGPosValue(const Int16* p, uint32_t index, uint32_t valueFormat) 
 }
 #endif
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - Validator]
-// ============================================================================
+// OpenType::LayoutImpl - Validator
+// ================================
 
 class Validator {
 public:
-  BLOTFaceImpl* faceI;
+  OTFaceImpl* faceI;
 
   union {
     BLFontTable tables[3];
@@ -85,16 +65,15 @@ public:
   BLArray<BLTag> scriptTags;
   BLArray<BLTag> featureTags;
 
-  BL_INLINE Validator(BLOTFaceImpl* faceI) noexcept
+  BL_INLINE Validator(OTFaceImpl* faceI) noexcept
     : faceI(faceI),
       tables {},
       scriptTags(),
       featureTags() {}
 };
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - LookupInfo]
-// ============================================================================
+// OpenType::LayoutImpl - LookupInfo
+// =================================
 
 static const LookupInfo gLookupInfo[2] = {
   // GSUB:
@@ -176,9 +155,8 @@ static const LookupInfo gLookupInfo[2] = {
   }
 };
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - ValueRecord]
-// ============================================================================
+// OpenType::LayoutImpl - ValueRecord
+// ==================================
 
 // struct ValueRecords {
 //   ?[Int16 xPlacement]
@@ -191,12 +169,11 @@ static const LookupInfo gLookupInfo[2] = {
 //   ?[UInt16 yAdvanceDeviceOffset]
 // }
 static BL_INLINE uint32_t sizeOfValueRecordByFormat(uint32_t valueFormat) noexcept {
-  return uint32_t(blBitCountOfByteTable[valueFormat & 0xFFu]) * 2u;
+  return uint32_t(blBitCountByteTable[valueFormat & 0xFFu]) * 2u;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - Offsets]
-// ============================================================================
+// OpenType::LayoutImpl - Offsets
+// ==============================
 
 static bool checkRawOffsetArray(Validator* self, Trace trace, BLFontTable data, const char* tableName) noexcept {
   blUnused(self);
@@ -242,9 +219,8 @@ static bool checkTagRef16Array(Validator* self, Trace trace, BLFontTable data, c
   return true;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - ClassDefTable]
-// ============================================================================
+// OpenType::LayoutImpl - ClassDefTable
+// ====================================
 
 static bool checkClassDefTable(Validator* self, Trace trace, BLFontTable data, const char* tableName) noexcept {
   trace.info("%s\n", tableName);
@@ -326,9 +302,8 @@ static bool checkClassDefTable(Validator* self, Trace trace, BLFontTable data, c
   }
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - CoverageTable]
-// ============================================================================
+// OpenType::LayoutImpl - CoverageTable
+// ====================================
 
 static bool checkCoverageTable(Validator* self, Trace trace, BLFontTable data, uint32_t& countCoverageEntries) noexcept {
   countCoverageEntries = 0;
@@ -420,12 +395,11 @@ static bool checkLookupWithCoverage(Validator* self, Trace trace, BLFontTable da
   return checkCoverageTable(self, trace, blFontSubTable(data, coverageOffset), countCoverageEntries);
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GDEF - Init]
-// ============================================================================
+// OpenType::LayoutImpl - GDEF - Init
+// ==================================
 
 static bool checkGDefTable(Validator* self, Trace trace) noexcept {
-  BLOTFaceImpl* faceI = self->faceI;
+  OTFaceImpl* faceI = self->faceI;
   BLFontTableT<GDefTable> gdef = self->gdef;
 
   trace.info("OpenType::Init 'GDEF' [Size=%zu]\n", gdef.size);
@@ -456,10 +430,9 @@ static bool checkGDefTable(Validator* self, Trace trace) noexcept {
   // TODO: Unfinished.
   blUnused(attachListOffset, ligCaretListOffset, markGlyphSetsDefOffset, itemVarStoreOffset);
 
-  // Some fonts have incorrect value of `GlyphClassDefOffset` set to 10. This
-  // collides with the header which is 12 bytes. It's probably a result of some
-  // broken tool used to write such fonts in the past. We simply fix this issue
-  // by changing the `headerSize` to 10.
+  // Some fonts have incorrect value of `GlyphClassDefOffset` set to 10. This collides with the header which is
+  // 12 bytes. It's probably a result of some broken tool used to write such fonts in the past. We simply fix
+  // this issue by changing the `headerSize` to 10.
   if (glyphClassDefOffset == 10 && version == 0x00010000u) {
     trace.warn("Fixing header size from 12 to 10 because of GlyphClassDefOffset\n");
     headerSize = 10;
@@ -475,7 +448,7 @@ static bool checkGDefTable(Validator* self, Trace trace) noexcept {
       faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_GDEF_DATA;
     }
     else {
-      faceI->otFlags |= BL_OT_FACE_FLAG_GLYPH_CLASS_DEF;
+      faceI->otFlags |= OTFaceFlags::kGlyphClassDef;
     }
   }
 
@@ -488,16 +461,15 @@ static bool checkGDefTable(Validator* self, Trace trace) noexcept {
       faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_GDEF_DATA;
     }
     else {
-      faceI->otFlags |= BL_OT_FACE_FLAG_MARK_ATTACH_CLASS_DEF;
+      faceI->otFlags |= OTFaceFlags::kMarkAttachClassDef;
     }
   }
 
   return true;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GSUB - Lookup Type #1]
-// ============================================================================
+// OpenType::LayoutImpl - GSUB - Lookup Type #1
+// ============================================
 
 // Single Substitution
 // -------------------
@@ -525,7 +497,7 @@ static BL_INLINE bool checkGSubLookupType1Format2(Validator* self, Trace trace, 
 }
 
 template<uint32_t CoverageFormat>
-static BL_INLINE BLResult applyGSubLookupType1Format1(const BLOTFaceImpl* faceI, GSubContext& ctx, BLFontTableT<GSubTable::SingleSubst1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
+static BL_INLINE BLResult applyGSubLookupType1Format1(const OTFaceImpl* faceI, GSubContext& ctx, BLFontTableT<GSubTable::SingleSubst1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
   size_t itemCount = ctx.in.end - ctx.in.index;
 
   uint32_t minGlyphId = covIt.minGlyphId<CoverageFormat>();
@@ -579,7 +551,7 @@ static BL_INLINE BLResult applyGSubLookupType1Format1(const BLOTFaceImpl* faceI,
 }
 
 template<uint32_t CoverageFormat>
-static BL_INLINE BLResult applyGSubLookupType1Format2(const BLOTFaceImpl* faceI, GSubContext& ctx, BLFontTableT<GSubTable::SingleSubst2> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
+static BL_INLINE BLResult applyGSubLookupType1Format2(const OTFaceImpl* faceI, GSubContext& ctx, BLFontTableT<GSubTable::SingleSubst2> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
   size_t itemCount = ctx.in.end - ctx.in.index;
 
   uint32_t minGlyphId = covIt.minGlyphId<CoverageFormat>();
@@ -636,15 +608,14 @@ static BL_INLINE BLResult applyGSubLookupType1Format2(const BLOTFaceImpl* faceI,
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GSUB - Lookup Type #2]
-// ============================================================================
+// OpenType::LayoutImpl - GSUB - Lookup Type #2
+// ============================================
 
 // Multiple Substitution
 // ---------------------
 //
-// Replace a single glyph with more than one glyph. The replacement sequence
-// cannot be empty, it's explicitly forbidden by the specification.
+// Replace a single glyph with more than one glyph. The replacement sequence cannot be empty, it's explicitly
+// forbidden by the specification.
 
 static BL_INLINE bool checkGSubLookupType2Format1(Validator* self, Trace trace, BLFontTable table) noexcept {
   uint32_t countCoverageEntries;
@@ -668,7 +639,7 @@ static BL_INLINE bool checkGSubLookupType2Format1(Validator* self, Trace trace, 
     if (BL_UNLIKELY(seqOffset < headerSize || seqOffset > endOffset))
       return trace.fail("Sequence #%u [%u] is out of range [%zu:%zu]\n", i, seqOffset, headerSize, endOffset);
 
-    const Array16<UInt16>* sequence = blOffsetPtr<const Array16<UInt16>>(table.data, seqOffset);
+    const Array16<UInt16>* sequence = BLPtrOps::offset<const Array16<UInt16>>(table.data, seqOffset);
     uint32_t seqLength = sequence->count();
 
     // Specification forbids an empty Sequence.
@@ -684,7 +655,7 @@ static BL_INLINE bool checkGSubLookupType2Format1(Validator* self, Trace trace, 
 }
 
 template<uint32_t CoverageFormat>
-static BL_INLINE BLResult applyGSubLookupType2Format1(const BLOTFaceImpl* faceI, GSubContext& ctx, BLFontTableT<GSubTable::MultipleSubst1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
+static BL_INLINE BLResult applyGSubLookupType2Format1(const OTFaceImpl* faceI, GSubContext& ctx, BLFontTableT<GSubTable::MultipleSubst1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
   size_t itemCount = ctx.in.end - ctx.in.index;
 
   uint32_t minGlyphId = covIt.minGlyphId<CoverageFormat>();
@@ -707,15 +678,15 @@ static BL_INLINE BLResult applyGSubLookupType2Format1(const BLOTFaceImpl* faceI,
   uint32_t seqOffset;
   uint32_t seqLength;
 
-  // Detects the first substitution to be done. If there is no substitution to
-  // be done then we won't force the context to allocate the output buffer.
+  // Detects the first substitution to be done. If there is no substitution to be done then we won't force
+  // the context to allocate the output buffer.
   while (inPtr != inEnd) {
     glyphId = inPtr[0];
     if (glyphId >= minGlyphId && glyphId <= maxGlyphId) {
       if (covIt.find<CoverageFormat>(glyphId, coverageIndex) || coverageIndex >= substSeqCount) {
         seqOffset = table->sequenceOffsets.array()[coverageIndex].value();
         if (BL_LIKELY(seqOffset <= maxSeqOffset)) {
-          seqLength = blMemReadU16uBE(table.data + seqOffset);
+          seqLength = BLMemOps::readU16uBE(table.data + seqOffset);
           if (BL_LIKELY(seqLength && seqOffset + seqLength * 2u <= maxSeqOffset)) {
             // This makes sure we have the output buffer allocated.
             BL_PROPAGATE(ctx.prepareOut(itemCount + seqLength));
@@ -738,7 +709,7 @@ static BL_INLINE BLResult applyGSubLookupType2Format1(const BLOTFaceImpl* faceI,
       if (covIt.find<CoverageFormat>(glyphId, coverageIndex) || coverageIndex >= substSeqCount) {
         seqOffset = table->sequenceOffsets.array()[coverageIndex].value();
         if (BL_LIKELY(seqOffset <= maxSeqOffset)) {
-          seqLength = blMemReadU16uBE(table.data + seqOffset);
+          seqLength = BLMemOps::readU16uBE(table.data + seqOffset);
           if (BL_LIKELY(seqLength && seqOffset + seqLength * 2u <= maxSeqOffset)) {
 HaveMatch:
             size_t unmatchedSize = (size_t)(inPtr - ctx.in.glyphData) - unmatchedStart;
@@ -780,16 +751,14 @@ HaveMatch:
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GSUB - Lookup Type #3]
-// ============================================================================
+// OpenType::LayoutImpl - GSUB - Lookup Type #3
+// ============================================
 
 // Alternate Substitution
 // ----------------------
 //
-// Replace a single glyph by an alternative glyph. The 'cmap' table contains
-// the default mapping, which is then changed by alternate substitution based
-// on features selected by the user.
+// Replace a single glyph by an alternative glyph. The 'cmap' table contains the default mapping, which is then changed
+// by alternate substitution based on features selected by the user.
 
 static BL_INLINE bool checkGSubLookupType3Format1(Validator* self, Trace trace, BLFontTable table) noexcept {
   uint32_t countCoverageEntries;
@@ -813,7 +782,7 @@ static BL_INLINE bool checkGSubLookupType3Format1(Validator* self, Trace trace, 
     if (BL_UNLIKELY(alternateSetOffset < headerSize || alternateSetOffset > endOffset))
       return trace.fail("AlternateSet #%u [%u] is out of range [%zu:%zu]\n", i, alternateSetOffset, headerSize, endOffset);
 
-    const Array16<UInt16>* alternateSet = blOffsetPtr<const Array16<UInt16>>(table.data, alternateSetOffset);
+    const Array16<UInt16>* alternateSet = BLPtrOps::offset<const Array16<UInt16>>(table.data, alternateSetOffset);
     uint32_t alternateSetLength = alternateSet->count();
 
     // Specification forbids an empty AlternateSet.
@@ -829,7 +798,7 @@ static BL_INLINE bool checkGSubLookupType3Format1(Validator* self, Trace trace, 
 }
 
 template<uint32_t CoverageFormat>
-static BL_INLINE BLResult applyGSubLookupType3Format1(const BLOTFaceImpl* faceI, GSubContext& ctx, BLFontTableT<GSubTable::AlternateSubst1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
+static BL_INLINE BLResult applyGSubLookupType3Format1(const OTFaceImpl* faceI, GSubContext& ctx, BLFontTableT<GSubTable::AlternateSubst1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
   size_t itemCount = ctx.in.end - ctx.in.index;
 
   uint32_t minGlyphId = covIt.minGlyphId<CoverageFormat>();
@@ -910,9 +879,8 @@ static BL_INLINE BLResult applyGSubLookupType3Format1(const BLOTFaceImpl* faceI,
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GSUB - Lookup Type #4]
-// ============================================================================
+// OpenType::LayoutImpl - GSUB - Lookup Type #4
+// ============================================
 
 // Ligature Substitution
 // ---------------------
@@ -941,7 +909,7 @@ static BL_INLINE bool checkGSubLookupType4Format1(Validator* self, Trace trace, 
     if (BL_UNLIKELY(ligatureSetOffset < headerSize || ligatureSetOffset > ligatureSetOffsetEnd))
       return trace.fail("LigatureSet #%u [%u] is out of range [%zu:%zu]\n", i, ligatureSetOffset, headerSize, ligatureSetOffsetEnd);
 
-    const Array16<UInt16>* ligatureSet = blOffsetPtr<const Array16<UInt16>>(table.data, ligatureSetOffset);
+    const Array16<UInt16>* ligatureSet = BLPtrOps::offset<const Array16<UInt16>>(table.data, ligatureSetOffset);
     uint32_t ligatureCount = ligatureSet->count();
 
     // Specification forbids an empty LigatureSet.
@@ -959,7 +927,7 @@ static BL_INLINE bool checkGSubLookupType4Format1(Validator* self, Trace trace, 
       if (BL_UNLIKELY(ligatureOffset < ligatureSetEnd || ligatureOffset > ligatureSetOffsetEnd))
         return trace.fail("LigatureSet #%u: Ligature #%u [%u] is out of range [%zu:%zu]\n", i, ligatureIndex, ligatureOffset, headerSize, table.size);
 
-      const GSubTable::Ligature* ligature = blOffsetPtr<const GSubTable::Ligature>(table.data, ligatureOffset);
+      const GSubTable::Ligature* ligature = BLPtrOps::offset<const GSubTable::Ligature>(table.data, ligatureOffset);
       uint32_t componentCount = ligature->glyphs.count();
       if (BL_UNLIKELY(!componentCount))
         return trace.fail("LigatureSet #%u: Ligature #%u is empty\n", i, ligatureIndex);
@@ -990,14 +958,13 @@ static BL_INLINE bool matchLigature(
     if (BL_UNLIKELY(ligOffset > maxLigOffset))
       break;
 
-    const GSubTable::Ligature* lig = blOffsetPtr<const GSubTable::Ligature>(ligOffsets.data, ligOffset);
+    const GSubTable::Ligature* lig = BLPtrOps::offset<const GSubTable::Ligature>(ligOffsets.data, ligOffset);
     ligGlyphCount = uint32_t(lig->glyphs.count()) - 1u;
     if (ligGlyphCount > maxGlyphCountMinusOne)
       continue;
 
-    // This is safe - a single Ligature is 4 bytes + GlyphId[ligGlyphCount - 1].
-    // MaxLigOffset is 4 bytes less than the end to include the header, so we
-    // only have to include `ligGlyphCount * 2u` to verify we won't read beyond.
+    // This is safe - a single Ligature is 4 bytes + GlyphId[ligGlyphCount - 1]. MaxLigOffset is 4 bytes less than
+    // the end to include the header, so we only have to include `ligGlyphCount * 2u` to verify we won't read beyond.
     if (BL_UNLIKELY(ligOffset + ligGlyphCount * 2u > maxLigOffset))
       continue;
 
@@ -1021,7 +988,7 @@ static BL_INLINE bool matchLigature(
 }
 
 template<uint32_t CoverageFormat>
-static BL_INLINE BLResult applyGSubLookupType4Format1(const BLOTFaceImpl* faceI, GSubContext& ctx, BLFontTableT<GSubTable::LigatureSubst1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
+static BL_INLINE BLResult applyGSubLookupType4Format1(const OTFaceImpl* faceI, GSubContext& ctx, BLFontTableT<GSubTable::LigatureSubst1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
   size_t itemCount = ctx.in.end - ctx.in.index;
 
   uint32_t minGlyphId = covIt.minGlyphId<CoverageFormat>();
@@ -1113,9 +1080,8 @@ OutPlace:
   }
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GSUB - Lookup Type #5]
-// ============================================================================
+// OpenType::LayoutImpl - GSUB - Lookup Type #5
+// ============================================
 
 // Contextual Substitution
 // -----------------------
@@ -1146,7 +1112,7 @@ static BL_INLINE bool checkGSubLookupType5Format1_2(Validator* self, Trace trace
     if (BL_UNLIKELY(subRuleSetOffset < headerSize || subRuleSetOffset > subRuleSetOffsetEnd))
       return trace.fail("SubRuleSet #%u [%u] is out of range [%zu:%zu]\n", i, subRuleSetOffset, headerSize, subRuleSetOffsetEnd);
 
-    const SubRuleSet* subRuleSet = blOffsetPtr<const Array16<UInt16>>(table.data, subRuleSetOffset);
+    const SubRuleSet* subRuleSet = BLPtrOps::offset<const Array16<UInt16>>(table.data, subRuleSetOffset);
     uint32_t subRuleCount = subRuleSet->count();
 
     // Specification forbids an empty SubRuleSet.
@@ -1164,7 +1130,7 @@ static BL_INLINE bool checkGSubLookupType5Format1_2(Validator* self, Trace trace
       if (BL_UNLIKELY(subRuleOffset < subRuleSetEnd || subRuleOffset > subRuleSetOffsetEnd))
         return trace.fail("SubRuleSet #%u: SubRule #%u [%u] is out of range [%zu:%zu]\n", i, subRuleIndex, subRuleOffset, headerSize, table.size);
 
-      const SubRule* subRule = blOffsetPtr<const SubRule>(table.data, subRuleOffset);
+      const SubRule* subRule = BLPtrOps::offset<const SubRule>(table.data, subRuleOffset);
       uint32_t glyphCount = subRule->glyphCount();
       uint32_t substCount = subRule->substCount();
 
@@ -1225,16 +1191,14 @@ static BL_INLINE bool matchSubRule(
     if (BL_UNLIKELY(subRuleOffset > maxLigOffset))
       break;
 
-    const GSubTable::SubRule* subRule = blOffsetPtr<const GSubTable::SubRule>(subRuleOffsets.data, subRuleOffset);
+    const GSubTable::SubRule* subRule = BLPtrOps::offset<const GSubTable::SubRule>(subRuleOffsets.data, subRuleOffset);
     uint32_t glyphCount = uint32_t(subRule->glyphCount()) - 1u;
     if (glyphCount > maxGlyphCountMinusOne)
       continue;
 
-    // This is safe - a single SubRule is 4 bytes that is followed by
-    // `GlyphId[glyphCount - 1]` and then by `SubstLookupRecord[substCount]`.
-    // Since we don't know whether we have a match or not we will only check
-    // bounds required by matching postponing `substCount` until we have
-    // an actual match.
+    // This is safe - a single SubRule is 4 bytes that is followed by `GlyphId[glyphCount - 1]` and then by
+    // `SubstLookupRecord[substCount]`. Since we don't know whether we have a match or not we will only check
+    // bounds required by matching postponing `substCount` until we have an actual match.
     if (BL_UNLIKELY(subRuleOffset + glyphCount * 2u > maxLigOffset))
       continue;
 
@@ -1263,7 +1227,7 @@ static BL_INLINE bool matchSubRule(
 }
 
 template<uint32_t CoverageFormat>
-static BL_INLINE BLResult applyGSubLookupType5Format1(const BLOTFaceImpl* faceI, GSubContext& ctx, BLFontTableT<GSubTable::ContextSubst1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
+static BL_INLINE BLResult applyGSubLookupType5Format1(const OTFaceImpl* faceI, GSubContext& ctx, BLFontTableT<GSubTable::ContextSubst1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
   size_t itemCount = ctx.in.end - ctx.in.index;
   return ctx.advance(itemCount);
 
@@ -1305,9 +1269,8 @@ static BL_INLINE BLResult applyGSubLookupType5Format1(const BLOTFaceImpl* faceI,
   */
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GSUB - Lookup Type #6]
-// ============================================================================
+// OpenType::LayoutImpl - GSUB - Lookup Type #6
+// ============================================
 
 // Chained Contextual Substitution
 // -------------------------------
@@ -1327,9 +1290,8 @@ static BL_INLINE bool checkGSubLookupType6Format3(Validator* self, Trace trace, 
   return true;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GSUB - Lookup Type #8]
-// ============================================================================
+// OpenType::LayoutImpl - GSUB - Lookup Type #8
+// ============================================
 
 // Reverse Chained Substitution
 // ----------------------------
@@ -1341,9 +1303,8 @@ static BL_INLINE bool checkGSubLookupType8Format1(Validator* self, Trace trace, 
   return true;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GSUB - Lookup Common]
-// ============================================================================
+// OpenType::LayoutImpl - GSUB - Lookup Common
+// ===========================================
 
 static bool checkGSubLookup(Validator* self, Trace trace, BLFontTable table, uint32_t lookupId) noexcept {
   switch (lookupId) {
@@ -1366,7 +1327,7 @@ static bool checkGSubLookup(Validator* self, Trace trace, BLFontTable table, uin
   }
 }
 
-static BLResult applyGSubLookup(const BLOTFaceImpl* faceI, GSubContext& ctx, BLFontTable table, uint32_t lookupId, uint32_t lookupFlags) noexcept {
+static BLResult applyGSubLookup(const OTFaceImpl* faceI, GSubContext& ctx, BLFontTable table, uint32_t lookupId, uint32_t lookupFlags) noexcept {
   #define GSUB_APPLY_COMMON(FN, TABLE) \
     CoverageIterator covIt; \
     switch (covIt.init(blFontSubTableChecked(table, table.dataAs<TABLE>()->coverageOffset()))) { \
@@ -1416,9 +1377,8 @@ static BLResult applyGSubLookup(const BLOTFaceImpl* faceI, GSubContext& ctx, BLF
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GPOS - Utilities]
-// ============================================================================
+// OpenType::LayoutImpl - GPOS - Utilities
+// =======================================
 
 template<typename T>
 static BL_INLINE const uint8_t* binarySearchGlyphIdInVarStruct(const uint8_t* array, size_t itemSize, size_t arraySize, uint32_t glyphId, size_t offset = 0) noexcept {
@@ -1451,9 +1411,8 @@ static BL_INLINE const Int16* applyGPosValue(const Int16* p, uint32_t valueForma
   return p;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GPOS - Lookup Type #1]
-// ============================================================================
+// OpenType::LayoutImpl - GPOS - Lookup Type #1
+// ============================================
 
 // Single Adjustment
 // -----------------
@@ -1474,7 +1433,7 @@ static BL_INLINE bool checkGPosLookupType1Format1(Validator* self, Trace trace, 
 }
 
 template<uint32_t CoverageFormat>
-static BL_INLINE BLResult applyGPosLookupType1Format1(const BLOTFaceImpl* faceI, GPosContext& ctx, BLFontTableT<GPosTable::SingleAdjustment1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
+static BL_INLINE BLResult applyGPosLookupType1Format1(const OTFaceImpl* faceI, GPosContext& ctx, BLFontTableT<GPosTable::SingleAdjustment1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
   size_t index = ctx.index;
   size_t end = ctx.end;
 
@@ -1523,7 +1482,7 @@ static BL_INLINE bool checkGPosLookupType1Format2(Validator* self, Trace trace, 
 }
 
 template<uint32_t CoverageFormat>
-static BL_INLINE BLResult applyGPosLookupType1Format2(const BLOTFaceImpl* faceI, GPosContext& ctx, BLFontTableT<GPosTable::SingleAdjustment2> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
+static BL_INLINE BLResult applyGPosLookupType1Format2(const OTFaceImpl* faceI, GPosContext& ctx, BLFontTableT<GPosTable::SingleAdjustment2> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
   size_t index = ctx.index;
   size_t end = ctx.end;
 
@@ -1556,9 +1515,8 @@ static BL_INLINE BLResult applyGPosLookupType1Format2(const BLOTFaceImpl* faceI,
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GPOS - Lookup Type #2]
-// ============================================================================
+// OpenType::LayoutImpl - GPOS - Lookup Type #2
+// ============================================
 
 // Pair Adjustment
 // ---------------
@@ -1585,7 +1543,7 @@ static BL_INLINE bool checkGPosLookupType2Format1(Validator* self, Trace trace, 
     if (BL_UNLIKELY(pairSetOffset < headerSize || pairSetOffset > offsetRangeEnd))
       return trace.fail("Pair %u: Offset [%zu] is out of range [%zu:%zu]\n", i, pairSetOffset, headerSize, offsetRangeEnd);
 
-    uint32_t valueCount = blMemReadU16uBE(table.data + pairSetOffset);
+    uint32_t valueCount = BLMemOps::readU16uBE(table.data + pairSetOffset);
     uint32_t pairSetSize = valueCount * valueRecordSize;
 
     if (pairSetSize > table.size - pairSetOffset)
@@ -1596,7 +1554,7 @@ static BL_INLINE bool checkGPosLookupType2Format1(Validator* self, Trace trace, 
 }
 
 template<uint32_t CoverageFormat>
-static BL_INLINE BLResult applyGPosLookupType2Format1(const BLOTFaceImpl* faceI, GPosContext& ctx, BLFontTableT<GPosTable::PairAdjustment1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
+static BL_INLINE BLResult applyGPosLookupType2Format1(const OTFaceImpl* faceI, GPosContext& ctx, BLFontTableT<GPosTable::PairAdjustment1> table, uint32_t lookupFlags, CoverageIterator& covIt) noexcept {
   size_t index = ctx.index;
   size_t end = ctx.end;
 
@@ -1666,8 +1624,8 @@ static BL_INLINE bool checkGPosLookupType2Format2(Validator* self, Trace trace, 
   uint32_t valueRecordSize = sizeOfValueRecordByFormat(valueFormat1) + sizeOfValueRecordByFormat(valueFormat2);
 
   BLOverflowFlag of = 0;
-  size_t headerSize = blAddOverflow(uint32_t(sizeof(GPosTable::PairAdjustment2)),
-                                    blMulOverflow(valueRecordCount, valueRecordSize, &of), &of);
+  size_t headerSize = BLIntOps::addOverflow(uint32_t(sizeof(GPosTable::PairAdjustment2)),
+                                    BLIntOps::mulOverflow(valueRecordCount, valueRecordSize, &of), &of);
 
   if (BL_UNLIKELY(of))
     return trace.fail("Overflow detected when calculating header size [Class1Count=%u Class2Count=%u]\n", class1Count, class2Count);
@@ -1679,7 +1637,7 @@ static BL_INLINE bool checkGPosLookupType2Format2(Validator* self, Trace trace, 
 }
 
 template<uint32_t CoverageFormat, uint32_t ClassDef1Format, uint32_t ClassDef2Format>
-static BL_INLINE BLResult applyGPosLookupType2Format2(const BLOTFaceImpl* faceI, GPosContext& ctx, BLFontTableT<GPosTable::PairAdjustment2> table, uint32_t lookupFlags, CoverageIterator& covIt, ClassDefIterator& cd1It, ClassDefIterator& cd2It) noexcept {
+static BL_INLINE BLResult applyGPosLookupType2Format2(const OTFaceImpl* faceI, GPosContext& ctx, BLFontTableT<GPosTable::PairAdjustment2> table, uint32_t lookupFlags, CoverageIterator& covIt, ClassDefIterator& cd1It, ClassDefIterator& cd2It) noexcept {
   size_t index = ctx.index;
   size_t end = ctx.end;
 
@@ -1699,8 +1657,8 @@ static BL_INLINE BLResult applyGPosLookupType2Format2(const BLOTFaceImpl* faceI,
   uint32_t valueRecordCount = class1Count * class2Count;
 
   BLOverflowFlag of = 0;
-  size_t requiredDataSize = blAddOverflow(uint32_t(sizeof(GPosTable::PairAdjustment2)),
-                                          blMulOverflow(valueRecordCount, valueRecordSize, &of), &of);
+  size_t requiredDataSize = BLIntOps::addOverflow(uint32_t(sizeof(GPosTable::PairAdjustment2)),
+                                          BLIntOps::mulOverflow(valueRecordCount, valueRecordSize, &of), &of);
 
   if (BL_UNLIKELY(table.size < requiredDataSize || of))
     return BL_SUCCESS;
@@ -1724,7 +1682,7 @@ static BL_INLINE BLResult applyGPosLookupType2Format2(const BLOTFaceImpl* faceI,
         if (cd1It.find<ClassDef1Format>(leftGlyphId, c1) && cd2It.find<ClassDef2Format>(rightGlyphId, c2)) {
           uint32_t cIndex = c1 * class2Count + c2;
           if (cIndex < valueRecordCount) {
-            const Int16* p = blOffsetPtr<const Int16>(valueBasePtr, cIndex * valueRecordSize);
+            const Int16* p = BLPtrOps::offset<const Int16>(valueBasePtr, cIndex * valueRecordSize);
             if (valueFormat1) p = applyGPosValue(p, valueFormat1, &placementData[index + 0]);
             if (valueFormat2) p = applyGPosValue(p, valueFormat2, &placementData[index + 1]);
           }
@@ -1736,9 +1694,8 @@ static BL_INLINE BLResult applyGPosLookupType2Format2(const BLOTFaceImpl* faceI,
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GPOS - Lookup Type #3]
-// ============================================================================
+// OpenType::LayoutImpl - GPOS - Lookup Type #3
+// ============================================
 
 // Cursive Attachment
 // ------------------
@@ -1758,9 +1715,8 @@ static BL_INLINE bool checkGPosLookupType3Format1(Validator* self, Trace trace, 
   return true;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GPOS - Lookup Type #4]
-// ============================================================================
+// OpenType::LayoutImpl - GPOS - Lookup Type #4
+// ============================================
 
 // MarkToBase Attachment
 // ---------------------
@@ -1770,9 +1726,8 @@ static BL_INLINE bool checkGPosLookupType4Format1(Validator* self, Trace trace, 
   return true;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GPOS - Lookup Type #5]
-// ============================================================================
+// OpenType::LayoutImpl - GPOS - Lookup Type #5
+// ============================================
 
 // MarkToLigature Attachment
 // -------------------------
@@ -1782,9 +1737,8 @@ static BL_INLINE bool checkGPosLookupType5Format1(Validator* self, Trace trace, 
   return true;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GPOS - Lookup Type #6]
-// ============================================================================
+// OpenType::LayoutImpl - GPOS - Lookup Type #6
+// ============================================
 
 // MarkToMark Attachment
 // ---------------------
@@ -1794,9 +1748,8 @@ static BL_INLINE bool checkGPosLookupType6Format1(Validator* self, Trace trace, 
   return true;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GPOS - Lookup Type #7]
-// ============================================================================
+// OpenType::LayoutImpl - GPOS - Lookup Type #7
+// ============================================
 
 // Contextual Positioning
 // ----------------------
@@ -1816,9 +1769,8 @@ static BL_INLINE bool checkGPosLookupType7Format3(Validator* self, Trace trace, 
   return true;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GPOS - Lookup Type #8]
-// ============================================================================
+// OpenType::LayoutImpl - GPOS - Lookup Type #8
+// ============================================
 
 // Chained Contextual Positioning
 // ------------------------------
@@ -1838,9 +1790,8 @@ static BL_INLINE bool checkGPosLookupType8Format3(Validator* self, Trace trace, 
   return true;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GPOS - Lookup Common]
-// ============================================================================
+// OpenType::LayoutImpl - GPOS - Lookup Common
+// ===========================================
 
 static BL_INLINE bool checkGPosLookup(Validator* self, Trace trace, BLFontTable table, uint32_t lookupId) noexcept {
   switch (lookupId) {
@@ -1866,9 +1817,9 @@ static BL_INLINE bool checkGPosLookup(Validator* self, Trace trace, BLFontTable 
 }
 
 // TODO: [OPENTYPE GPOS]
-static BLResult applyGPosLookup(const BLOTFaceImpl* faceI, GPosContext& ctx, BLFontTable table, uint32_t lookupId, uint32_t lookupFlags) noexcept {
-  // Artificial format that we use here, instead of using 1-2 we use 0-1 as it's easier to write
-  // a switch in case that multiple tables with different format options can be used by a lookup.
+static BLResult applyGPosLookup(const OTFaceImpl* faceI, GPosContext& ctx, BLFontTable table, uint32_t lookupId, uint32_t lookupFlags) noexcept {
+  // Artificial format that we use here, instead of using 1-2 we use 0-1 as it's easier to write a switch in case
+  // that multiple tables with different format options can be used by a lookup.
   enum Format : uint32_t {
     kFmt1 = 0,
     kFmt2 = 1
@@ -1929,9 +1880,8 @@ static BLResult applyGPosLookup(const BLOTFaceImpl* faceI, GPosContext& ctx, BLF
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - GPOS / GSUB - Init]
-// ============================================================================
+// OpenType::LayoutImpl - GPOS & GSUB - Init
+// =========================================
 
 static const char* lookupTypeAsString(uint32_t kind, uint32_t lookupType) noexcept {
   if (kind == LookupInfo::kKindGPos) {
@@ -2152,7 +2102,7 @@ static bool checkScriptTable(Validator* self, Trace trace, uint32_t kind, BLFont
 }
 
 static bool checkGPosGSubTable(Validator* self, Trace trace, uint32_t kind) noexcept {
-  BLOTFaceImpl* faceI = self->faceI;
+  OTFaceImpl* faceI = self->faceI;
 
   BLFontTableT<GAnyTable> table;
   const char* tableTypeAsString;
@@ -2166,7 +2116,7 @@ static bool checkGPosGSubTable(Validator* self, Trace trace, uint32_t kind) noex
     tableTypeAsString = "GSUB";
   }
 
-  trace.info("OpenType::Init '%s' [Size=%zu]\n", tableTypeAsString, table.size);
+  trace.info("BLOpenType::Init '%s' [Size=%zu]\n", tableTypeAsString, table.size);
   trace.indent();
 
   if (BL_UNLIKELY(!blFontTableFitsT<GAnyTable>(table)))
@@ -2184,9 +2134,8 @@ static bool checkGPosGSubTable(Validator* self, Trace trace, uint32_t kind) noex
   if (BL_UNLIKELY(table.size < headerSize))
     return trace.fail("Table is too small [Size=%zu Required=%zu]\n", table.size, headerSize);
 
-  // --------------------------------------------------------------------------
-  // [Validate Offsets]
-  // --------------------------------------------------------------------------
+  // Validate Offsets
+  // ----------------
 
   uint32_t scriptListOffset  = table->v1_0()->scriptListOffset();
   uint32_t featureListOffset = table->v1_0()->featureListOffset();
@@ -2220,9 +2169,8 @@ static bool checkGPosGSubTable(Validator* self, Trace trace, uint32_t kind) noex
       return false;
   }
 
-  // --------------------------------------------------------------------------
-  // [Validate Tables]
-  // --------------------------------------------------------------------------
+  // Validate Tables
+  // ---------------
 
   if (lookupListOffset) {
     BLFontTableT<Array16<Offset16>> lookupListOffsets { blFontSubTable(table, lookupListOffset) };
@@ -2287,26 +2235,25 @@ static bool checkGPosGSubTable(Validator* self, Trace trace, uint32_t kind) noex
   return true;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - Apply]
-// ============================================================================
+// OpenType::LayoutImpl - Apply
+// ============================
 
-static BL_INLINE BLResult applyLookup(const BLOTFaceImpl* faceI, GSubContext& ctx, BLFontTable table, uint32_t lookupId, uint32_t lookupFlags) noexcept {
+static BL_INLINE BLResult applyLookup(const OTFaceImpl* faceI, GSubContext& ctx, BLFontTable table, uint32_t lookupId, uint32_t lookupFlags) noexcept {
   return applyGSubLookup(faceI, ctx, table, lookupId, lookupFlags);
 }
 
-static BL_INLINE BLResult applyLookup(const BLOTFaceImpl* faceI, GPosContext& ctx, BLFontTable table, uint32_t lookupId, uint32_t lookupFlags) noexcept {
+static BL_INLINE BLResult applyLookup(const OTFaceImpl* faceI, GPosContext& ctx, BLFontTable table, uint32_t lookupId, uint32_t lookupFlags) noexcept {
   return applyGPosLookup(faceI, ctx, table, lookupId, lookupFlags);
 }
 
 template<uint32_t Kind, typename Context>
-static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffer* gb, size_t index, BLBitWord lookups) noexcept {
+static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffer* gb, const BLBitSetCore* lookups) noexcept {
   constexpr bool kIsGSub = (Kind == LookupInfo::kKindGSub);
 
   constexpr uint32_t kLookupCount     = kIsGSub ? uint32_t(GSubTable::kLookupCount    ) : uint32_t(GPosTable::kLookupCount    );
   constexpr uint32_t kLookupExtension = kIsGSub ? uint32_t(GSubTable::kLookupExtension) : uint32_t(GPosTable::kLookupExtension);
 
-  const BLOTFaceImpl* faceI = static_cast<const BLOTFaceImpl*>(faceI_);
+  const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
   BLFontTable table = faceI->layout.tables[Kind];
   size_t lookupListOffset = faceI->layout.kinds[Kind].lookupListOffset;
 
@@ -2315,68 +2262,71 @@ static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffe
   size_t lookupListTableCount = faceI->layout.kinds[Kind].lookupCount;
 
   Context ctx;
-  ctx.init(blInternalCast(gb->impl));
+  ctx.init(blGlyphBufferGetImpl(gb));
 
-  BLBitWordIterator<BLBitWord> it(lookups);
-  while (it.hasNext()) {
-    size_t lookupTableIndex = it.next() + index;
-    if (BL_UNLIKELY(lookupTableIndex >= lookupListTableCount))
-      return blTraceError(BL_ERROR_INVALID_VALUE);
+  BLBitSetWordIterator wordIterator(*lookups);
+  while (uint32_t word = wordIterator.nextWord()) {
+    BLBitSetOps::BitIterator it(word);
+    while (it.hasNext()) {
+      size_t lookupTableIndex = it.next() + wordIterator.bitIndex();
+      if (BL_UNLIKELY(lookupTableIndex >= lookupListTableCount))
+        return blTraceError(BL_ERROR_INVALID_VALUE);
 
-    size_t lookupTableOffset = lookupListTable->array()[lookupTableIndex].value();
-    if (BL_UNLIKELY(lookupTableOffset > lookupListEndMinus6))
-      continue;
-
-    BLFontTableT<GAnyTable::LookupTable> lookupTable { blFontSubTable(lookupListTable, lookupTableOffset) };
-    uint32_t lookupType = lookupTable->lookupType();
-    uint32_t lookupFlags = lookupTable->lookupFlags();
-
-    if (BL_UNLIKELY(lookupType - 1u >= kLookupCount))
-      continue;
-
-    uint32_t lookupEntryCount = lookupTable->lookupOffsets.count();
-    const Offset16* lookupEntryOffsets = lookupTable->lookupOffsets.array();
-
-    const LookupInfo::TypeEntry& lookupTypeInfo = gLookupInfo[Kind].typeEntries[lookupType];
-    size_t lookupTableMinSize = lookupType == kLookupExtension ? 8u : 6u;
-    size_t lookupTableEnd = lookupTable.size - lookupTableMinSize;
-
-    // If this doesn't pass it means that the index is out of range.
-    if (BL_UNLIKELY(lookupTable.size < lookupTableMinSize + lookupEntryCount * 2u))
-      continue;
-
-    for (uint32_t j = 0; j < lookupEntryCount; j++) {
-      uint32_t lookupOffset = lookupEntryOffsets[j].value();
-      if (BL_UNLIKELY(lookupOffset > lookupTableEnd))
+      size_t lookupTableOffset = lookupListTable->array()[lookupTableIndex].value();
+      if (BL_UNLIKELY(lookupTableOffset > lookupListEndMinus6))
         continue;
 
-      BLFontTableT<GAnyTable::LookupHeader> lookupHeader { blFontSubTable(lookupTable, lookupOffset) };
-      uint32_t lookupFormat = lookupHeader->format();
+      BLFontTableT<GAnyTable::LookupTable> lookupTable { blFontSubTable(lookupListTable, lookupTableOffset) };
+      uint32_t lookupType = lookupTable->lookupType();
+      uint32_t lookupFlags = lookupTable->lookupFlags();
 
-      if (BL_UNLIKELY(lookupFormat - 1u >= lookupTypeInfo.formatCount))
+      if (BL_UNLIKELY(lookupType - 1u >= kLookupCount))
         continue;
 
-      uint32_t lookupId = lookupTypeInfo.lookupIdIndex + lookupFormat - 1u;
-      if (lookupType == kLookupExtension) {
-        BLFontTableT<GAnyTable::ExtensionLookup> extensionTable { blFontSubTable(lookupTable, lookupOffset) };
+      uint32_t lookupEntryCount = lookupTable->lookupOffsets.count();
+      const Offset16* lookupEntryOffsets = lookupTable->lookupOffsets.array();
 
-        uint32_t extensionLookupType = extensionTable->lookupType();
-        uint32_t extensionOffset = extensionTable->offset();
+      const LookupInfo::TypeEntry& lookupTypeInfo = gLookupInfo[Kind].typeEntries[lookupType];
+      size_t lookupTableMinSize = lookupType == kLookupExtension ? 8u : 6u;
+      size_t lookupTableEnd = lookupTable.size - lookupTableMinSize;
 
-        if (BL_UNLIKELY(extensionLookupType - 1u >= kLookupCount || extensionOffset > extensionTable.size - 6u))
+      // If this doesn't pass it means that the index is out of range.
+      if (BL_UNLIKELY(lookupTable.size < lookupTableMinSize + lookupEntryCount * 2u))
+        continue;
+
+      for (uint32_t j = 0; j < lookupEntryCount; j++) {
+        uint32_t lookupOffset = lookupEntryOffsets[j].value();
+        if (BL_UNLIKELY(lookupOffset > lookupTableEnd))
           continue;
 
-        lookupHeader = blFontSubTable(extensionTable, extensionOffset);
-        lookupFormat = lookupHeader->format();
-        const LookupInfo::TypeEntry& extensionLookupTypeInfo = gLookupInfo[Kind].typeEntries[extensionLookupType];
+        BLFontTableT<GAnyTable::LookupHeader> lookupHeader { blFontSubTable(lookupTable, lookupOffset) };
+        uint32_t lookupFormat = lookupHeader->format();
 
-        if (BL_UNLIKELY(lookupFormat - 1u >= extensionLookupTypeInfo.formatCount))
+        if (BL_UNLIKELY(lookupFormat - 1u >= lookupTypeInfo.formatCount))
           continue;
 
-        lookupId = extensionLookupTypeInfo.lookupIdIndex + lookupFormat - 1u;
+        uint32_t lookupId = lookupTypeInfo.lookupIdIndex + lookupFormat - 1u;
+        if (lookupType == kLookupExtension) {
+          BLFontTableT<GAnyTable::ExtensionLookup> extensionTable { blFontSubTable(lookupTable, lookupOffset) };
+
+          uint32_t extensionLookupType = extensionTable->lookupType();
+          uint32_t extensionOffset = extensionTable->offset();
+
+          if (BL_UNLIKELY(extensionLookupType - 1u >= kLookupCount || extensionOffset > extensionTable.size - 6u))
+            continue;
+
+          lookupHeader = blFontSubTable(extensionTable, extensionOffset);
+          lookupFormat = lookupHeader->format();
+          const LookupInfo::TypeEntry& extensionLookupTypeInfo = gLookupInfo[Kind].typeEntries[extensionLookupType];
+
+          if (BL_UNLIKELY(lookupFormat - 1u >= extensionLookupTypeInfo.formatCount))
+            continue;
+
+          lookupId = extensionLookupTypeInfo.lookupIdIndex + lookupFormat - 1u;
+        }
+
+        BL_PROPAGATE(applyLookup(faceI, ctx, lookupHeader, lookupId, lookupFlags));
       }
-
-      BL_PROPAGATE(applyLookup(faceI, ctx, lookupHeader, lookupId, lookupFlags));
     }
   }
 
@@ -2385,11 +2335,10 @@ static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffe
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLOpenType::LayoutImpl - Init]
-// ============================================================================
+// OpenType::LayoutImpl - Init
+// ===========================
 
-BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
+BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
   Trace trace;
   Validator validator(faceI);
 

@@ -1,42 +1,22 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
-#include "../bitops_p.h"
 #include "../tables_p.h"
-#include "../support_p.h"
 #include "../unicode_p.h"
 #include "../trace_p.h"
 #include "../opentype/otface_p.h"
 #include "../opentype/otname_p.h"
 #include "../opentype/otplatform_p.h"
+#include "../support/intops_p.h"
 
 namespace BLOpenType {
 namespace NameImpl {
 
-// ============================================================================
-// [BLOpenType::NameImpl - Tracing]
-// ============================================================================
+// OpenType::NameImpl - Tracing
+// ============================
 
 #if defined(BL_TRACE_OT_ALL) || defined(BL_TRACE_OT_NAME)
   #define Trace BLDebugTrace
@@ -44,23 +24,21 @@ namespace NameImpl {
   #define Trace BLDummyTrace
 #endif
 
-// ============================================================================
-// [BLOpenType::NameImpl - Utilities]
-// ============================================================================
+// OpenType::NameImpl - Utilities
+// ==============================
 
-static uint32_t encodingFromPlatformId(uint32_t platformId) noexcept {
+static BLTextEncoding encodingFromPlatformId(uint32_t platformId) noexcept {
   // Both Unicode and Windows platform use 'UTF16-BE' encoding.
   bool isUnicode = platformId == Platform::kPlatformUnicode ||
                    platformId == Platform::kPlatformWindows ;
   return isUnicode ? BL_TEXT_ENCODING_UTF16 : BL_TEXT_ENCODING_LATIN1;
 }
 
-static BLResult convertNameStringToUtf8(BLString& dst, BLArrayView<uint8_t> src, uint32_t encoding) noexcept {
+static BLResult convertNameStringToUtf8(BLString& dst, BLArrayView<uint8_t> src, BLTextEncoding encoding) noexcept {
   // Name table should only have 16-bit lengths, so verify it's correct.
   BL_ASSERT(src.size < 65536);
 
-  // We may overapproximate a bit, but it doesn't really matter as the length
-  // is limited anyway.
+  // We may overapproximate a bit, but it doesn't really matter as the length is limited anyway.
   size_t dstSize = src.size * 2u;
   char* dstStart;
   BL_PROPAGATE(dst.modifyOp(BL_MODIFY_OP_ASSIGN_GROW, dstSize, &dstStart));
@@ -94,9 +72,8 @@ static BLResult convertNameStringToUtf8(BLString& dst, BLArrayView<uint8_t> src,
     }
   }
 
-  // Remove null terminators at the end of the string. This can happen as some
-  // fonts use them as padding. Also, some broken fonts encode data as UTF32-BE,
-  // which would produce a lot of null terminators when decoded as UTF16-BE.
+  // Remove null terminators at the end of the string. This can happen as some fonts use them as padding. Also, some
+  // broken fonts encode data as UTF32-BE, which would produce a lot of null terminators when decoded as UTF16-BE.
   char* dstPtr = dstWriter._ptr;
   while (dstPtr != dstStart && dstPtr[-1] == '\0') {
     dstPtr--;
@@ -110,16 +87,15 @@ static BLResult convertNameStringToUtf8(BLString& dst, BLArrayView<uint8_t> src,
   return BL_SUCCESS;
 }
 
-static void normalizeFamilyAndSubfamily(BLOTFaceImpl* faceI, Trace trace) noexcept {
+static void normalizeFamilyAndSubfamily(OTFaceImpl* faceI, Trace trace) noexcept {
   BLString& familyName = faceI->familyName;
   BLString& subfamilyName = faceI->subfamilyName;
 
-  // Some fonts duplicate font subfamily-name in family-name, we try to match
-  // such cases and truncate the sub-family in such case.
+  // Some fonts duplicate font subfamily-name in family-name, we try to match such cases and truncate the sub-family
+  // in such case.
   if (familyName.size() >= subfamilyName.size() && !subfamilyName.empty()) {
-    // Base size is a size of family name after the whole subfamily was removed
-    // from it (if matched). It's basically the minimum length we would end up
-    // when subfamily-name matches the end of family-name fully.
+    // Base size is a size of family name after the whole subfamily was removed from it (if matched). It's basically
+    // the minimum length we would end up when subfamily-name matches the end of family-name fully.
     size_t baseSize = familyName.size() - subfamilyName.size();
     if (memcmp(familyName.data() + baseSize, subfamilyName.data(), subfamilyName.size()) == 0) {
       trace.warn("Subfamily '%s' is redundant, removing...\n", subfamilyName.data());
@@ -129,11 +105,10 @@ static void normalizeFamilyAndSubfamily(BLOTFaceImpl* faceI, Trace trace) noexce
   }
 }
 
-// ============================================================================
-// [BLOpenType::NameImpl - Init]
-// ============================================================================
+// OpenType::NameImpl - Init
+// =========================
 
-BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
+BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
   typedef NameTable::NameRecord NameRecord;
 
   BLFontTableT<NameTable> name;
@@ -144,7 +119,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
     return blTraceError(BL_ERROR_INVALID_DATA);
 
   Trace trace;
-  trace.info("BLOTFaceImpl::InitName [Size=%zu]\n", name.size);
+  trace.info("BLOpenType::OTFaceImpl::InitName [Size=%zu]\n", name.size);
   trace.indent();
 
   if (BL_UNLIKELY(name.size < NameTable::kMinSize)) {
@@ -166,32 +141,30 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
   if (BL_UNLIKELY(format > 1))
     return blTraceError(BL_ERROR_INVALID_DATA);
 
-  // There must be some names otherwise this table is invalid. Also make sure
-  // that the number of records doesn't overflow the size of 'name' itself.
+  // There must be some names otherwise this table is invalid. Also make sure that the number of records doesn't
+  // overflow the size of 'name' itself.
   if (BL_UNLIKELY(recordCount == 0) || !blFontTableFitsN(name, 6 + recordCount * sizeof(NameRecord)))
     return blTraceError(BL_ERROR_INVALID_DATA);
 
   // Mask of name IDs which we are interested in.
   //
-  // NOTE: We are not interested in WWS family and subfamily names as those may
-  // include subfamilies, which we expect to be separate. We would only use WWS
-  // names if there is no other choice.
-  constexpr uint32_t kImportantNameIdMask = blBitsAt<uint32_t>(
-    BL_FONT_STRING_FAMILY_NAME,
-    BL_FONT_STRING_SUBFAMILY_NAME,
-    BL_FONT_STRING_FULL_NAME,
-    BL_FONT_STRING_POST_SCRIPT_NAME,
-    BL_FONT_STRING_TYPOGRAPHIC_FAMILY_NAME,
-    BL_FONT_STRING_TYPOGRAPHIC_SUBFAMILY_NAME,
-    BL_FONT_STRING_WWS_FAMILY_NAME,
-    BL_FONT_STRING_WWS_SUBFAMILY_NAME);
+  // NOTE: We are not interested in WWS family and subfamily names as those may include subfamilies, which we expect
+  // to be separate. We would only use WWS names if there is no other choice.
+  constexpr uint32_t kImportantNameIdMask = BLIntOps::lsbBitsAt<uint32_t>(
+    BL_FONT_STRING_ID_FAMILY_NAME,
+    BL_FONT_STRING_ID_SUBFAMILY_NAME,
+    BL_FONT_STRING_ID_FULL_NAME,
+    BL_FONT_STRING_ID_POST_SCRIPT_NAME,
+    BL_FONT_STRING_ID_TYPOGRAPHIC_FAMILY_NAME,
+    BL_FONT_STRING_ID_TYPOGRAPHIC_SUBFAMILY_NAME,
+    BL_FONT_STRING_ID_WWS_FAMILY_NAME,
+    BL_FONT_STRING_ID_WWS_SUBFAMILY_NAME);
 
-  // Scoring is used to select the best records as the same NameId can be
-  // repeated multiple times having a different `platformId`, `specificId`,
-  // and `languageId`.
-  uint16_t nameIdScore[BL_FONT_STRING_COMMON_COUNT] = { 0 }; // Score of each interesting NameId.
-  uint32_t nameIdIndex[BL_FONT_STRING_COMMON_COUNT];         // Record index of matched NameId.
-  uint32_t nameIdMask = 0;                                   // Mask of all matched NameIds.
+  // Scoring is used to select the best records as the same NameId can be repeated multiple times having a different
+  // `platformId`, `specificId`, and `languageId`.
+  uint16_t nameIdScore[BL_FONT_STRING_ID_COMMON_MAX_VALUE + 1] = { 0 }; // Score of each interesting NameId.
+  uint32_t nameIdIndex[BL_FONT_STRING_ID_COMMON_MAX_VALUE + 1];         // Record index of matched NameId.
+  uint32_t nameIdMask = 0;                                           // Mask of all matched NameIds.
 
   BLString tmpString;
 
@@ -203,7 +176,7 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
     // Don't bother with a NameId we are not interested in.
     uint32_t nameId = nameRecord.nameId();
-    if (nameId >= BL_FONT_STRING_COMMON_COUNT || !(kImportantNameIdMask & (1 << nameId)))
+    if (nameId > BL_FONT_STRING_ID_COMMON_MAX_VALUE || !(kImportantNameIdMask & (1 << nameId)))
       continue;
 
     uint32_t stringOffset = nameRecord.offset();
@@ -252,9 +225,8 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
         else
           continue;
 
-        // We use the term "locale" instead of "language" when it comes to
-        // Windows platform. Locale specifies both primary language and
-        // sub-language, which is usually related to a geographic location.
+        // We use the term "locale" instead of "language" when it comes to Windows platform. Locale specifies both
+        // primary language and sub-language, which is usually related to a geographic location.
         uint32_t localeId = languageId;
         uint32_t primaryLangId = localeId & 0xFFu;
 
@@ -273,15 +245,14 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
     if (score) {
       // Make sure this string is decodable before using this entry.
-      uint32_t encoding = encodingFromPlatformId(platformId);
+      BLTextEncoding encoding = encodingFromPlatformId(platformId);
 
       const uint8_t* src = name.data + stringRegionOffset + stringOffset;
       BLResult result = convertNameStringToUtf8(tmpString, BLArrayView<uint8_t> { src, stringLength }, encoding);
 
       if (result != BL_SUCCESS) {
-        // Data contains either null terminator(s) or the data is corrupted. There are
-        // some fonts that store some names in UTF32-BE encoding, we refuse these names
-        // as it's not anywhere in the specification and thus broken.
+        // Data contains either null terminator(s) or the data is corrupted. There are some fonts that store some names
+        // in UTF32-BE encoding, we refuse these names as it's not anywhere in the specification and thus broken.
         if (trace.enabled()) {
           trace.warn("Failed to decode '%s' <- [", tmpString.data());
           for (size_t j = 0; j < stringLength; j++)
@@ -293,10 +264,9 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
         faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_NAME_DATA;
       }
       else {
-        // If this is a subfamily (NameId=2) on a MAC platform and it's empty
-        // we prefer it, because many fonts have this field correctly empty on
-        // MAC platform and filled incorrectly on Windows platform.
-        if (platformId == Platform::kPlatformMac && nameId == BL_FONT_STRING_SUBFAMILY_NAME && tmpString.empty())
+        // If this is a subfamily (NameId=2) on a MAC platform and it's empty we prefer it, because many fonts have
+        // this field correctly empty on MAC platform and filled incorrectly on Windows platform.
+        if (platformId == Platform::kPlatformMac && nameId == BL_FONT_STRING_ID_SUBFAMILY_NAME && tmpString.empty())
           score = 0xFFFFu;
       }
 
@@ -314,22 +284,22 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
       if (score > nameIdScore[nameId]) {
         nameIdScore[nameId] = uint16_t(score);
         nameIdIndex[nameId] = i;
-        nameIdMask |= blBitAt<uint32_t>(nameId);
+        nameIdMask |= BLIntOps::lsbBitAt<uint32_t>(nameId);
       }
     }
   }
 
   // Prefer TypographicFamilyName over FamilyName and WWSFamilyName.
-  if (blBitTest(nameIdMask, BL_FONT_STRING_TYPOGRAPHIC_FAMILY_NAME)) {
-    nameIdMask &= ~blBitsAt<uint32_t>(BL_FONT_STRING_FAMILY_NAME, BL_FONT_STRING_WWS_FAMILY_NAME);
+  if (BLIntOps::bitTest(nameIdMask, BL_FONT_STRING_ID_TYPOGRAPHIC_FAMILY_NAME)) {
+    nameIdMask &= ~BLIntOps::lsbBitsAt<uint32_t>(BL_FONT_STRING_ID_FAMILY_NAME, BL_FONT_STRING_ID_WWS_FAMILY_NAME);
   }
 
   // Prefer TypographicSubfamilyName over SubfamilyName and WWSSubfamilyName.
-  if (blBitTest(nameIdMask, BL_FONT_STRING_TYPOGRAPHIC_SUBFAMILY_NAME)) {
-    nameIdMask &= ~blBitsAt<uint32_t>(BL_FONT_STRING_SUBFAMILY_NAME, BL_FONT_STRING_WWS_SUBFAMILY_NAME);
+  if (BLIntOps::bitTest(nameIdMask, BL_FONT_STRING_ID_TYPOGRAPHIC_SUBFAMILY_NAME)) {
+    nameIdMask &= ~BLIntOps::lsbBitsAt<uint32_t>(BL_FONT_STRING_ID_SUBFAMILY_NAME, BL_FONT_STRING_ID_WWS_SUBFAMILY_NAME);
   }
 
-  if (blBitMatch(nameIdMask, blBitsAt<uint32_t>(BL_FONT_STRING_TYPOGRAPHIC_FAMILY_NAME, BL_FONT_STRING_TYPOGRAPHIC_SUBFAMILY_NAME))) {
+  if (BLIntOps::bitMatch(nameIdMask, BLIntOps::lsbBitsAt<uint32_t>(BL_FONT_STRING_ID_TYPOGRAPHIC_FAMILY_NAME, BL_FONT_STRING_ID_TYPOGRAPHIC_SUBFAMILY_NAME))) {
     trace.info("Has Typographic FamilyName and SubfamilyName\n");
     faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_TYPOGRAPHIC_NAMES;
   }
@@ -353,30 +323,30 @@ BLResult init(BLOTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
     BLString* dst = nullptr;
     switch (nameId) {
-      case BL_FONT_STRING_FULL_NAME:
+      case BL_FONT_STRING_ID_FULL_NAME:
         dst = &faceI->fullName;
         break;
 
-      case BL_FONT_STRING_FAMILY_NAME:
-      case BL_FONT_STRING_WWS_FAMILY_NAME:
-      case BL_FONT_STRING_TYPOGRAPHIC_FAMILY_NAME:
+      case BL_FONT_STRING_ID_FAMILY_NAME:
+      case BL_FONT_STRING_ID_WWS_FAMILY_NAME:
+      case BL_FONT_STRING_ID_TYPOGRAPHIC_FAMILY_NAME:
         dst = &faceI->familyName;
         break;
 
-      case BL_FONT_STRING_SUBFAMILY_NAME:
-      case BL_FONT_STRING_WWS_SUBFAMILY_NAME:
-      case BL_FONT_STRING_TYPOGRAPHIC_SUBFAMILY_NAME:
+      case BL_FONT_STRING_ID_SUBFAMILY_NAME:
+      case BL_FONT_STRING_ID_WWS_SUBFAMILY_NAME:
+      case BL_FONT_STRING_ID_TYPOGRAPHIC_SUBFAMILY_NAME:
         dst = &faceI->subfamilyName;
         break;
 
-      case BL_FONT_STRING_POST_SCRIPT_NAME:
+      case BL_FONT_STRING_ID_POST_SCRIPT_NAME:
         dst = &faceI->postScriptName;
         break;
     }
 
     if (dst) {
       const uint8_t* src = name.data + stringRegionOffset + stringOffset;
-      uint32_t encoding = encodingFromPlatformId(platformId);
+      BLTextEncoding encoding = encodingFromPlatformId(platformId);
       BL_PROPAGATE(convertNameStringToUtf8(*dst, BLArrayView<uint8_t> { src, stringLength }, encoding));
     }
   }

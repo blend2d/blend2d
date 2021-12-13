@@ -1,29 +1,12 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
-#include "./support_p.h"
-#include "./unicode_p.h"
+#include "api-build_p.h"
+#include "unicode_p.h"
+#include "support/intops_p.h"
+#include "support/memops_p.h"
 
 // ============================================================================
 // [Unicode Data]
@@ -65,7 +48,7 @@ static BL_INLINE BLResult validateLatin1String(const char* data, size_t size, BL
     extra += size_t(uint8_t(data[i])) >> 7;
 
   BLOverflowFlag of = 0;
-  size_t utf8Size = blAddOverflow(size, extra, &of);
+  size_t utf8Size = BLIntOps::addOverflow(size, extra, &of);
 
   if (BL_UNLIKELY(of))
     return blTraceError(BL_ERROR_DATA_TOO_LARGE);
@@ -84,7 +67,7 @@ static BL_INLINE BLResult validateUnicodeString(const void* data, size_t size, B
   return result;
 }
 
-BLResult blValidateUnicode(const void* data, size_t sizeInBytes, uint32_t encoding, BLUnicodeValidationState& state) noexcept {
+BLResult blValidateUnicode(const void* data, size_t sizeInBytes, BLTextEncoding encoding, BLUnicodeValidationState& state) noexcept {
   BLResult result;
   state.reset();
 
@@ -97,7 +80,7 @@ BLResult blValidateUnicode(const void* data, size_t sizeInBytes, uint32_t encodi
 
     case BL_TEXT_ENCODING_UTF16:
       // This will make sure we won't compile specialized code for architectures that don't penalize unaligned reads.
-      if (BL_UNALIGNED_IO_16 || !blIsAligned(data, 2))
+      if (BLMemOps::kUnalignedMem16 || !BLIntOps::isAligned(data, 2))
         result = validateUnicodeString<BLUtf16Reader, BL_UNICODE_IO_STRICT | BL_UNICODE_IO_UNALIGNED>(data, sizeInBytes, state);
       else
         result = validateUnicodeString<BLUtf16Reader, BL_UNICODE_IO_STRICT>(data, sizeInBytes, state);
@@ -108,7 +91,7 @@ BLResult blValidateUnicode(const void* data, size_t sizeInBytes, uint32_t encodi
 
     case BL_TEXT_ENCODING_UTF32:
       // This will make sure we won't compile specialized code for architectures that don't penalize unaligned reads.
-      if (BL_UNALIGNED_IO_32 || !blIsAligned(data, 4))
+      if (BLMemOps::kUnalignedMem32 || !BLIntOps::isAligned(data, 4))
         result = validateUnicodeString<BLUtf32Reader, BL_UNICODE_IO_STRICT | BL_UNICODE_IO_UNALIGNED>(data, sizeInBytes, state);
       else
         result = validateUnicodeString<BLUtf32Reader, BL_UNICODE_IO_STRICT>(data, sizeInBytes, state);
@@ -139,7 +122,7 @@ static BL_INLINE BLResult blConvertUnicodeImpl(void* dst, size_t dstSizeInBytes,
   typedef typename Writer::CharType DstChar;
 
   Writer writer(static_cast<DstChar*>(dst), dstSizeInBytes / sizeof(DstChar));
-  Iterator iter(src, blAlignDown(srcSizeInBytes, Iterator::kCharSize));
+  Iterator iter(src, BLIntOps::alignDown(srcSizeInBytes, Iterator::kCharSize));
 
   BLResult result = BL_SUCCESS;
   while (iter.hasNext()) {
@@ -161,7 +144,7 @@ static BL_INLINE BLResult blConvertUnicodeImpl(void* dst, size_t dstSizeInBytes,
   state.dstIndex = offsetOfPtr(dst, writer._ptr);
   state.srcIndex = offsetOfPtr(src, iter._ptr);
 
-  if (Iterator::kCharSize > 1 && result == BL_SUCCESS && !blIsAligned(state.srcIndex, Iterator::kCharSize))
+  if (Iterator::kCharSize > 1 && result == BL_SUCCESS && !BLIntOps::isAligned(state.srcIndex, Iterator::kCharSize))
     return blTraceError(BL_ERROR_DATA_TRUNCATED);
   else
     return result;
@@ -172,7 +155,7 @@ BLResult blConvertUnicode(
   const void* src, size_t srcSizeInBytes, uint32_t srcEncoding,
   BLUnicodeConversionState& state) noexcept {
 
-  constexpr bool BL_UNALIGNED_IO_Any = BL_UNALIGNED_IO_16 && BL_UNALIGNED_IO_32;
+  constexpr bool BL_UNALIGNED_IO_Any = BLMemOps::kUnalignedMem16 && BLMemOps::kUnalignedMem32;
 
   BLResult result = BL_SUCCESS;
   state.reset();
@@ -263,7 +246,7 @@ BLResult blConvertUnicode(
     // ------------------------------------------------------------------------
 
     case (BL_TEXT_ENCODING_UTF8 << 2) | BL_TEXT_ENCODING_UTF16:
-      if (BL_UNALIGNED_IO_16 || !blIsAligned(src, 2))
+      if (BLMemOps::kUnalignedMem16 || !BLIntOps::isAligned(src, 2))
         result = blConvertUnicodeImpl<BLUtf8Writer, BLUtf16Reader, BL_UNICODE_IO_STRICT | BL_UNICODE_IO_UNALIGNED>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
       else
         result = blConvertUnicodeImpl<BLUtf8Writer, BLUtf16Reader, BL_UNICODE_IO_STRICT>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
@@ -274,7 +257,7 @@ BLResult blConvertUnicode(
     // ------------------------------------------------------------------------
 
     case (BL_TEXT_ENCODING_UTF8 << 2) | BL_TEXT_ENCODING_UTF32: {
-      if (BL_UNALIGNED_IO_32 || !blIsAligned(src, 4))
+      if (BLMemOps::kUnalignedMem32 || !BLIntOps::isAligned(src, 4))
         result = blConvertUnicodeImpl<BLUtf8Writer, BLUtf32Reader, BL_UNICODE_IO_STRICT | BL_UNICODE_IO_UNALIGNED>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
       else
         result = blConvertUnicodeImpl<BLUtf8Writer, BLUtf32Reader, BL_UNICODE_IO_STRICT>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
@@ -288,13 +271,13 @@ BLResult blConvertUnicode(
     case (BL_TEXT_ENCODING_UTF16 << 2) | BL_TEXT_ENCODING_LATIN1: {
       size_t count = blMin(dstSizeInBytes / 2, srcSizeInBytes);
 
-      if (BL_UNALIGNED_IO_16 || blIsAligned(dst, 2)) {
+      if (BLMemOps::kUnalignedMem16 || BLIntOps::isAligned(dst, 2)) {
         for (size_t i = 0; i < count; i++)
-          blMemWriteU16aLE(static_cast<uint8_t*>(dst) + i * 2u, static_cast<const uint8_t*>(src)[i]);
+          BLMemOps::writeU16aLE(static_cast<uint8_t*>(dst) + i * 2u, static_cast<const uint8_t*>(src)[i]);
       }
       else {
         for (size_t i = 0; i < count; i++)
-          blMemWriteU16uLE(static_cast<uint8_t*>(dst) + i * 2u, static_cast<const uint8_t*>(src)[i]);
+          BLMemOps::writeU16uLE(static_cast<uint8_t*>(dst) + i * 2u, static_cast<const uint8_t*>(src)[i]);
       }
 
       if (count < srcSizeInBytes)
@@ -310,7 +293,7 @@ BLResult blConvertUnicode(
     // ------------------------------------------------------------------------
 
     case (BL_TEXT_ENCODING_UTF16 << 2) | BL_TEXT_ENCODING_UTF8: {
-      if (BL_UNALIGNED_IO_16 || !blIsAligned(dst, 2))
+      if (BLMemOps::kUnalignedMem16 || !BLIntOps::isAligned(dst, 2))
         result = blConvertUnicodeImpl<BLUtf16Writer<BL_BYTE_ORDER_NATIVE, 1>, BLUtf8Reader, BL_UNICODE_IO_STRICT>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
       else
         result = blConvertUnicodeImpl<BLUtf16Writer<BL_BYTE_ORDER_NATIVE, 2>, BLUtf8Reader, BL_UNICODE_IO_STRICT>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
@@ -322,7 +305,7 @@ BLResult blConvertUnicode(
     // ------------------------------------------------------------------------
 
     case (BL_TEXT_ENCODING_UTF16 << 2) | BL_TEXT_ENCODING_UTF16: {
-      size_t copySize = blAlignDown(blMin(dstSizeInBytes, srcSizeInBytes), 2);
+      size_t copySize = BLIntOps::alignDown(blMin(dstSizeInBytes, srcSizeInBytes), 2);
       BLUnicodeValidationState validationState;
 
       result = blValidateUnicode(src, copySize, BL_TEXT_ENCODING_UTF16, validationState);
@@ -336,7 +319,7 @@ BLResult blConvertUnicode(
 
       // Report `BL_ERROR_DATA_TRUNCATED` is everything went right, but the
       // source size was not aligned to 2 bytes.
-      if (result == BL_SUCCESS && !blIsAligned(srcSizeInBytes, 2))
+      if (result == BL_SUCCESS && !BLIntOps::isAligned(srcSizeInBytes, 2))
         result = blTraceError(BL_ERROR_DATA_TRUNCATED);
 
       state.dstIndex = validatedSize;
@@ -349,7 +332,7 @@ BLResult blConvertUnicode(
     // ------------------------------------------------------------------------
 
     case (BL_TEXT_ENCODING_UTF16 << 2) | BL_TEXT_ENCODING_UTF32: {
-      if (BL_UNALIGNED_IO_Any || !blIsAligned(dst, 2) || !blIsAligned(src, 4))
+      if (BL_UNALIGNED_IO_Any || !BLIntOps::isAligned(dst, 2) || !BLIntOps::isAligned(src, 4))
         result = blConvertUnicodeImpl<BLUtf16Writer<BL_BYTE_ORDER_NATIVE, 1>, BLUtf32Reader, BL_UNICODE_IO_STRICT | BL_UNICODE_IO_UNALIGNED>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
       else
         result = blConvertUnicodeImpl<BLUtf16Writer<BL_BYTE_ORDER_NATIVE, 2>, BLUtf32Reader, BL_UNICODE_IO_STRICT>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
@@ -363,13 +346,13 @@ BLResult blConvertUnicode(
     case (BL_TEXT_ENCODING_UTF32 << 2) | BL_TEXT_ENCODING_LATIN1: {
       size_t count = blMin(dstSizeInBytes / 4, srcSizeInBytes);
 
-      if (BL_UNALIGNED_IO_32 || blIsAligned(dst, 4)) {
+      if (BLMemOps::kUnalignedMem32 || BLIntOps::isAligned(dst, 4)) {
         for (size_t i = 0; i < count; i++)
-          blMemWriteU32a(static_cast<uint8_t*>(dst) + i * 4u, static_cast<const uint8_t*>(src)[i]);
+          BLMemOps::writeU32a(static_cast<uint8_t*>(dst) + i * 4u, static_cast<const uint8_t*>(src)[i]);
       }
       else {
         for (size_t i = 0; i < count; i++)
-          blMemWriteU32u(static_cast<uint8_t*>(dst) + i * 4u, static_cast<const uint8_t*>(src)[i]);
+          BLMemOps::writeU32u(static_cast<uint8_t*>(dst) + i * 4u, static_cast<const uint8_t*>(src)[i]);
       }
 
       if (count < srcSizeInBytes)
@@ -385,7 +368,7 @@ BLResult blConvertUnicode(
     // ------------------------------------------------------------------------
 
     case (BL_TEXT_ENCODING_UTF32 << 2) | BL_TEXT_ENCODING_UTF8: {
-      if (BL_UNALIGNED_IO_32 || !blIsAligned(dst, 4))
+      if (BLMemOps::kUnalignedMem32 || !BLIntOps::isAligned(dst, 4))
         result = blConvertUnicodeImpl<BLUtf32Writer<BL_BYTE_ORDER_NATIVE, 1>, BLUtf8Reader, BL_UNICODE_IO_STRICT>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
       else
         result = blConvertUnicodeImpl<BLUtf32Writer<BL_BYTE_ORDER_NATIVE, 4>, BLUtf8Reader, BL_UNICODE_IO_STRICT>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
@@ -397,7 +380,7 @@ BLResult blConvertUnicode(
     // ------------------------------------------------------------------------
 
     case (BL_TEXT_ENCODING_UTF32 << 2) | BL_TEXT_ENCODING_UTF16: {
-      if (BL_UNALIGNED_IO_Any || !blIsAligned(dst, 4) || !blIsAligned(src, 2))
+      if (BL_UNALIGNED_IO_Any || !BLIntOps::isAligned(dst, 4) || !BLIntOps::isAligned(src, 2))
         result = blConvertUnicodeImpl<BLUtf32Writer<BL_BYTE_ORDER_NATIVE, 1>, BLUtf16Reader, BL_UNICODE_IO_STRICT | BL_UNICODE_IO_UNALIGNED>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
       else
         result = blConvertUnicodeImpl<BLUtf32Writer<BL_BYTE_ORDER_NATIVE, 4>, BLUtf16Reader, BL_UNICODE_IO_STRICT>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
@@ -409,7 +392,7 @@ BLResult blConvertUnicode(
     // ------------------------------------------------------------------------
 
     case (BL_TEXT_ENCODING_UTF32 << 2) | BL_TEXT_ENCODING_UTF32: {
-      if (BL_UNALIGNED_IO_32 || !blIsAligned(dst, 4) || !blIsAligned(src, 4))
+      if (BLMemOps::kUnalignedMem32 || !BLIntOps::isAligned(dst, 4) || !BLIntOps::isAligned(src, 4))
         result = blConvertUnicodeImpl<BLUtf32Writer<BL_BYTE_ORDER_NATIVE, 1>, BLUtf32Reader, BL_UNICODE_IO_STRICT>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
       else
         result = blConvertUnicodeImpl<BLUtf32Writer<BL_BYTE_ORDER_NATIVE, 4>, BLUtf32Reader, BL_UNICODE_IO_STRICT | BL_UNICODE_IO_UNALIGNED>(dst, dstSizeInBytes, src, srcSizeInBytes, state);
@@ -576,7 +559,7 @@ UNIT(unicode) {
       printf("    ErrorCode: Actual(%u) %s Expected(%u)\n", result, (result == entry.result) ? "==" : "!=", entry.result);
     }
 
-    EXPECT(!failed);
+    EXPECT_TRUE(!failed);
   }
 }
 
@@ -591,34 +574,34 @@ UNIT(unicode_io) {
     BLUtf8Reader it(data, BL_ARRAY_SIZE(data));
     uint32_t uc;
 
-    EXPECT(it.hasNext());
-    EXPECT(it.next<BL_UNICODE_IO_CALC_INDEX>(uc) == BL_SUCCESS);
-    EXPECT(uc == 0x0020AC);
+    EXPECT_TRUE(it.hasNext());
+    EXPECT_SUCCESS(it.next<BL_UNICODE_IO_CALC_INDEX>(uc));
+    EXPECT_EQ(uc, 0x0020ACu);
 
-    EXPECT(it.hasNext());
-    EXPECT(it.next<BL_UNICODE_IO_CALC_INDEX>(uc) == BL_SUCCESS);
-    EXPECT(uc == 0x010348);
+    EXPECT_TRUE(it.hasNext());
+    EXPECT_SUCCESS(it.next<BL_UNICODE_IO_CALC_INDEX>(uc));
+    EXPECT_EQ(uc, 0x010348u);
 
-    EXPECT(!it.hasNext());
+    EXPECT_FALSE(it.hasNext());
 
     // Verify that sizes were calculated correctly.
-    EXPECT(it.byteIndex(data) == 7);
-    EXPECT(it.utf8Index(data) == 7);
-    EXPECT(it.utf16Index(data) == 3); // 3 code-points (1 BMP and 1 SMP).
-    EXPECT(it.utf32Index(data) == 2); // 2 code-points.
+    EXPECT_EQ(it.byteIndex(data), 7u);
+    EXPECT_EQ(it.utf8Index(data), 7u);
+    EXPECT_EQ(it.utf16Index(data), 3u); // 3 code-points (1 BMP and 1 SMP).
+    EXPECT_EQ(it.utf32Index(data), 2u); // 2 code-points.
 
     const uint8_t invalidData[] = { 0xE2, 0x82 };
     it.reset(invalidData, BL_ARRAY_SIZE(invalidData));
 
-    EXPECT(it.hasNext());
-    EXPECT(it.next(uc) == BL_ERROR_DATA_TRUNCATED);
+    EXPECT_TRUE(it.hasNext());
+    EXPECT_EQ(it.next(uc), BL_ERROR_DATA_TRUNCATED);
 
     // After error the iterator should not move.
-    EXPECT(it.hasNext());
-    EXPECT(it.byteIndex(invalidData) == 0);
-    EXPECT(it.utf8Index(invalidData) == 0);
-    EXPECT(it.utf16Index(invalidData) == 0);
-    EXPECT(it.utf32Index(invalidData) == 0);
+    EXPECT_TRUE(it.hasNext());
+    EXPECT_EQ(it.byteIndex(invalidData), 0u);
+    EXPECT_EQ(it.utf8Index(invalidData), 0u);
+    EXPECT_EQ(it.utf16Index(invalidData), 0u);
+    EXPECT_EQ(it.utf32Index(invalidData), 0u);
   }
 
   INFO("BLUtf16Reader");
@@ -631,38 +614,38 @@ UNIT(unicode_io) {
     BLUtf16Reader it(data, BL_ARRAY_SIZE(data) * sizeof(uint16_t));
     uint32_t uc;
 
-    EXPECT(it.hasNext());
-    EXPECT(it.next<BL_UNICODE_IO_CALC_INDEX>(uc) == BL_SUCCESS);
-    EXPECT(uc == 0x0020AC);
+    EXPECT_TRUE(it.hasNext());
+    EXPECT_SUCCESS(it.next<BL_UNICODE_IO_CALC_INDEX>(uc));
+    EXPECT_EQ(uc, 0x0020ACu);
 
-    EXPECT(it.hasNext());
-    EXPECT(it.next<BL_UNICODE_IO_CALC_INDEX>(uc) == BL_SUCCESS);
-    EXPECT(uc == 0x010348);
+    EXPECT_TRUE(it.hasNext());
+    EXPECT_SUCCESS(it.next<BL_UNICODE_IO_CALC_INDEX>(uc));
+    EXPECT_EQ(uc, 0x010348u);
 
-    EXPECT(!it.hasNext());
+    EXPECT_FALSE(it.hasNext());
 
     // Verify that sizes were calculated correctly.
-    EXPECT(it.byteIndex(data) == 6);
-    EXPECT(it.utf8Index(data) == 7);
-    EXPECT(it.utf16Index(data) == 3); // 3 code-points (1 BMP and 1 SMP).
-    EXPECT(it.utf32Index(data) == 2); // 2 code-points.
+    EXPECT_EQ(it.byteIndex(data), 6u);
+    EXPECT_EQ(it.utf8Index(data), 7u);
+    EXPECT_EQ(it.utf16Index(data), 3u); // 3 code-points (1 BMP and 1 SMP).
+    EXPECT_EQ(it.utf32Index(data), 2u); // 2 code-points.
 
     const uint16_t invalidData[] = { 0xD800 };
     it.reset(invalidData, BL_ARRAY_SIZE(invalidData) * sizeof(uint16_t));
 
-    EXPECT(it.hasNext());
-    EXPECT(it.next<BL_UNICODE_IO_CALC_INDEX | BL_UNICODE_IO_STRICT>(uc) == BL_ERROR_DATA_TRUNCATED);
+    EXPECT_TRUE(it.hasNext());
+    EXPECT_EQ(it.next<BL_UNICODE_IO_CALC_INDEX | BL_UNICODE_IO_STRICT>(uc), BL_ERROR_DATA_TRUNCATED);
 
     // After an error the iterator should not move.
-    EXPECT(it.hasNext());
-    EXPECT(it.byteIndex(invalidData) == 0);
-    EXPECT(it.utf8Index(invalidData) == 0);
-    EXPECT(it.utf16Index(invalidData) == 0);
-    EXPECT(it.utf32Index(invalidData) == 0);
+    EXPECT_TRUE(it.hasNext());
+    EXPECT_EQ(it.byteIndex(invalidData), 0u);
+    EXPECT_EQ(it.utf8Index(invalidData), 0u);
+    EXPECT_EQ(it.utf16Index(invalidData), 0u);
+    EXPECT_EQ(it.utf32Index(invalidData), 0u);
 
     // However, this should pass in non-strict mode.
-    EXPECT(it.next(uc) == BL_SUCCESS);
-    EXPECT(!it.hasNext());
+    EXPECT_SUCCESS(it.next(uc));
+    EXPECT_FALSE(it.hasNext());
   }
 
   INFO("BLUtf32Reader");
@@ -675,38 +658,38 @@ UNIT(unicode_io) {
     BLUtf32Reader it(data, BL_ARRAY_SIZE(data) * sizeof(uint32_t));
     uint32_t uc;
 
-    EXPECT(it.hasNext());
-    EXPECT(it.next<BL_UNICODE_IO_CALC_INDEX>(uc) == BL_SUCCESS);
-    EXPECT(uc == 0x0020AC);
+    EXPECT_TRUE(it.hasNext());
+    EXPECT_SUCCESS(it.next<BL_UNICODE_IO_CALC_INDEX>(uc));
+    EXPECT_EQ(uc, 0x0020ACu);
 
-    EXPECT(it.hasNext());
-    EXPECT(it.next<BL_UNICODE_IO_CALC_INDEX>(uc) == BL_SUCCESS);
-    EXPECT(uc == 0x010348);
+    EXPECT_TRUE(it.hasNext());
+    EXPECT_SUCCESS(it.next<BL_UNICODE_IO_CALC_INDEX>(uc));
+    EXPECT_EQ(uc, 0x010348u);
 
-    EXPECT(!it.hasNext());
+    EXPECT_FALSE(it.hasNext());
 
     // Verify that sizes were calculated correctly.
-    EXPECT(it.byteIndex(data) == 8);
-    EXPECT(it.utf8Index(data) == 7);
-    EXPECT(it.utf16Index(data) == 3); // 3 code-points (1 BMP and 1 SMP).
-    EXPECT(it.utf32Index(data) == 2); // 2 code-points.
+    EXPECT_EQ(it.byteIndex(data), 8u);
+    EXPECT_EQ(it.utf8Index(data), 7u);
+    EXPECT_EQ(it.utf16Index(data), 3u); // 3 code-points (1 BMP and 1 SMP).
+    EXPECT_EQ(it.utf32Index(data), 2u); // 2 code-points.
 
     const uint32_t invalidData[] = { 0xD800 };
     it.reset(invalidData, BL_ARRAY_SIZE(invalidData) * sizeof(uint32_t));
 
-    EXPECT(it.hasNext());
-    EXPECT(it.next<BL_UNICODE_IO_CALC_INDEX | BL_UNICODE_IO_STRICT>(uc) == BL_ERROR_INVALID_STRING);
+    EXPECT_TRUE(it.hasNext());
+    EXPECT_EQ(it.next<BL_UNICODE_IO_CALC_INDEX | BL_UNICODE_IO_STRICT>(uc), BL_ERROR_INVALID_STRING);
 
     // After an error the iterator should not move.
-    EXPECT(it.hasNext());
-    EXPECT(it.byteIndex(invalidData) == 0);
-    EXPECT(it.utf8Index(invalidData) == 0);
-    EXPECT(it.utf16Index(invalidData) == 0);
-    EXPECT(it.utf32Index(invalidData) == 0);
+    EXPECT_TRUE(it.hasNext());
+    EXPECT_EQ(it.byteIndex(invalidData), 0u);
+    EXPECT_EQ(it.utf8Index(invalidData), 0u);
+    EXPECT_EQ(it.utf16Index(invalidData), 0u);
+    EXPECT_EQ(it.utf32Index(invalidData), 0u);
 
     // However, this should pass in non-strict mode.
-    EXPECT(it.next(uc) == BL_SUCCESS);
-    EXPECT(!it.hasNext());
+    EXPECT_SUCCESS(it.next(uc));
+    EXPECT_FALSE(it.hasNext());
   }
 
   INFO("BLUtf8Writer");
@@ -714,34 +697,34 @@ UNIT(unicode_io) {
     char dst[7];
     BLUtf8Writer writer(dst, BL_ARRAY_SIZE(dst));
 
-    EXPECT(writer.write(0x20ACu) == BL_SUCCESS);
-    EXPECT(uint8_t(dst[0]) == 0xE2);
-    EXPECT(uint8_t(dst[1]) == 0x82);
-    EXPECT(uint8_t(dst[2]) == 0xAC);
+    EXPECT_SUCCESS(writer.write(0x20ACu));
+    EXPECT_EQ(uint8_t(dst[0]), 0xE2u);
+    EXPECT_EQ(uint8_t(dst[1]), 0x82u);
+    EXPECT_EQ(uint8_t(dst[2]), 0xACu);
 
-    EXPECT(writer.write(0x010348u) == BL_SUCCESS);
-    EXPECT(uint8_t(dst[3]) == 0xF0);
-    EXPECT(uint8_t(dst[4]) == 0x90);
-    EXPECT(uint8_t(dst[5]) == 0x8D);
-    EXPECT(uint8_t(dst[6]) == 0x88);
-    EXPECT(writer.atEnd());
+    EXPECT_SUCCESS(writer.write(0x010348u));
+    EXPECT_EQ(uint8_t(dst[3]), 0xF0u);
+    EXPECT_EQ(uint8_t(dst[4]), 0x90u);
+    EXPECT_EQ(uint8_t(dst[5]), 0x8Du);
+    EXPECT_EQ(uint8_t(dst[6]), 0x88u);
+    EXPECT_TRUE(writer.atEnd());
 
     writer.reset(dst, 1);
-    EXPECT(writer.write(0x20ACu) == BL_ERROR_NO_SPACE_LEFT);
-    EXPECT(writer.write(0x0080u) == BL_ERROR_NO_SPACE_LEFT);
-    EXPECT(writer.write(0x00C1u) == BL_ERROR_NO_SPACE_LEFT);
+    EXPECT_EQ(writer.write(0x20ACu), BL_ERROR_NO_SPACE_LEFT);
+    EXPECT_EQ(writer.write(0x0080u), BL_ERROR_NO_SPACE_LEFT);
+    EXPECT_EQ(writer.write(0x00C1u), BL_ERROR_NO_SPACE_LEFT);
 
     // We have only one byte left so this must pass...
-    EXPECT(writer.write('a') == BL_SUCCESS);
-    EXPECT(writer.atEnd());
+    EXPECT_SUCCESS(writer.write('a'));
+    EXPECT_TRUE(writer.atEnd());
 
     writer.reset(dst, 2);
-    EXPECT(writer.write(0x20ACu) == BL_ERROR_NO_SPACE_LEFT);
-    EXPECT(writer.write(0x00C1u) == BL_SUCCESS);
-    EXPECT(uint8_t(dst[0]) == 0xC3u);
-    EXPECT(uint8_t(dst[1]) == 0x81u);
-    EXPECT(writer.atEnd());
-    EXPECT(writer.write('a') == BL_ERROR_NO_SPACE_LEFT);
+    EXPECT_EQ(writer.write(0x20ACu), BL_ERROR_NO_SPACE_LEFT);
+    EXPECT_SUCCESS(writer.write(0x00C1u));
+    EXPECT_EQ(uint8_t(dst[0]), 0xC3u);
+    EXPECT_EQ(uint8_t(dst[1]), 0x81u);
+    EXPECT_TRUE(writer.atEnd());
+    EXPECT_EQ(writer.write('a'), BL_ERROR_NO_SPACE_LEFT);
   }
 
   INFO("BLUtf16Writer");
@@ -749,14 +732,14 @@ UNIT(unicode_io) {
     uint16_t dst[3];
     BLUtf16Writer<> writer(dst, BL_ARRAY_SIZE(dst));
 
-    EXPECT(writer.write(0x010348u) == BL_SUCCESS);
-    EXPECT(dst[0] == 0xD800u);
-    EXPECT(dst[1] == 0xDF48u);
+    EXPECT_SUCCESS(writer.write(0x010348u));
+    EXPECT_EQ(dst[0], 0xD800u);
+    EXPECT_EQ(dst[1], 0xDF48u);
 
-    EXPECT(writer.write(0x010348u) == BL_ERROR_NO_SPACE_LEFT);
-    EXPECT(writer.write(0x20ACu) == BL_SUCCESS);
-    EXPECT(dst[2] == 0x20ACu);
-    EXPECT(writer.atEnd());
+    EXPECT_EQ(writer.write(0x010348u), BL_ERROR_NO_SPACE_LEFT);
+    EXPECT_SUCCESS(writer.write(0x20ACu));
+    EXPECT_EQ(dst[2], 0x20ACu);
+    EXPECT_TRUE(writer.atEnd());
   }
 }
 #endif

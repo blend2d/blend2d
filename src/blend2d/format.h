@@ -1,37 +1,18 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_FORMAT_H_INCLUDED
 #define BLEND2D_FORMAT_H_INCLUDED
 
-#include "./api.h"
+#include "api.h"
 
 //! \addtogroup blend2d_api_imaging
 //! \{
 
-// ============================================================================
-// [Constants]
-// ============================================================================
+//! \name Pixel Format - Constants
+//! \{
 
 //! Pixel format.
 //!
@@ -57,14 +38,18 @@ BL_DEFINE_ENUM(BLFormat) {
   //! 8-bit alpha-only pixel format.
   BL_FORMAT_A8 = 3,
 
-  //! Count of pixel formats.
-  BL_FORMAT_COUNT = 4,
+  // Maximum value of `BLFormat`.
+  BL_FORMAT_MAX_VALUE = 3,
   //! Count of pixel formats (reserved for future use).
   BL_FORMAT_RESERVED_COUNT = 16
+
+  BL_FORCE_ENUM_UINT32(BL_FORMAT)
 };
 
 //! Pixel format flags.
 BL_DEFINE_ENUM(BLFormatFlags) {
+  //! No flags.
+  BL_FORMAT_NO_FLAGS = 0u,
   //! Pixel format provides RGB components.
   BL_FORMAT_FLAG_RGB = 0x00000001u,
   //! Pixel format provides only alpha component.
@@ -82,46 +67,56 @@ BL_DEFINE_ENUM(BLFormatFlags) {
   //! Pixel format doesn't use native byte-order (I/O only).
   BL_FORMAT_FLAG_BYTE_SWAP = 0x00000200u,
 
-  // The following flags are only informative. They are part of `blFormatInfo[]`,
-  // but doesn't have to be passed to `BLPixelConverter` as they can be easily
-  // calculated.
+  // The following flags are only informative. They are part of `blFormatInfo[]`, but doesn't have to be passed to
+  // `BLPixelConverter` as they can be easily calculated.
 
   //! Pixel components are byte aligned (all 8bpp).
   BL_FORMAT_FLAG_BYTE_ALIGNED = 0x00010000u,
 
   //! Pixel has some undefined bits that represent no information.
   //!
-  //! For example a 32-bit XRGB pixel has 8 undefined bits that are usually set
-  //! to all ones so the format can be interpreted as premultiplied RGB as well.
-  //! There are other formats like 16_0555 where the bit has no information and
-  //! is usually set to zero. Blend2D doesn't rely on the content of such bits.
+  //! For example a 32-bit XRGB pixel has 8 undefined bits that are usually set to all ones so the format can be
+  //! interpreted as premultiplied RGB as well. There are other formats like 16_0555 where the bit has no information
+  //! and is usually set to zero. Blend2D doesn't rely on the content of such bits.
   BL_FORMAT_FLAG_UNDEFINED_BITS = 0x00020000u,
 
-  //! Convenience flag that contains either zero or `BL_FORMAT_FLAG_BYTE_SWAP`
-  //! depending on host byte order. Little endian hosts have this flag set to
-  //! zero and big endian hosts to `BL_FORMAT_FLAG_BYTE_SWAP`.
+  //! Convenience flag that contains either zero or `BL_FORMAT_FLAG_BYTE_SWAP` depending on host byte order. Little
+  //! endian hosts have this flag set to zero and big endian hosts to `BL_FORMAT_FLAG_BYTE_SWAP`.
   //!
-  //! \note This is not a real flag that you can test, it's only provided for
-  //! convenience to define little endian pixel formats.
-  BL_FORMAT_FLAG_LE = (BL_BYTE_ORDER == 1234) ? (uint32_t)0
-                                              : (uint32_t)BL_FORMAT_FLAG_BYTE_SWAP,
+  //! \note This is not a real flag that you can test, it's only provided for convenience to define little endian
+  //! pixel formats.
+  BL_FORMAT_FLAG_LE = (BL_BYTE_ORDER == 1234) ? (uint32_t)0 : (uint32_t)BL_FORMAT_FLAG_BYTE_SWAP,
 
-  //! Convenience flag that contains either zero or `BL_FORMAT_FLAG_BYTE_SWAP`
-  //! depending on host byte order. Big endian hosts have this flag set to
-  //! zero and little endian hosts to `BL_FORMAT_FLAG_BYTE_SWAP`.
+  //! Convenience flag that contains either zero or `BL_FORMAT_FLAG_BYTE_SWAP` depending on host byte order. Big
+  //! endian hosts have this flag set to zero and little endian hosts to `BL_FORMAT_FLAG_BYTE_SWAP`.
   //!
-  //! \note This is not a real flag that you can test, it's only provided for
-  //! convenience to define big endian pixel formats.
-  BL_FORMAT_FLAG_BE = (BL_BYTE_ORDER == 4321) ? (uint32_t)0
-                                              : (uint32_t)BL_FORMAT_FLAG_BYTE_SWAP
+  //! \note This is not a real flag that you can test, it's only provided for convenience to define big endian
+  //! pixel formats.
+  BL_FORMAT_FLAG_BE = (BL_BYTE_ORDER == 4321) ? (uint32_t)0 : (uint32_t)BL_FORMAT_FLAG_BYTE_SWAP
+
+  BL_FORCE_ENUM_UINT32(BL_FORMAT_FLAG)
 };
 
-// ============================================================================
-// [BLFormatInfo]
-// ============================================================================
+//! \}
 
-//! Provides a detailed information about a pixel format. Use `blFormatInfo`
-//! array to get an information of Blend2D native pixel formats.
+//! \name Pixel Format - C API
+//! \{
+
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blFormatInfoQuery(BLFormatInfo* self, BLFormat format) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFormatInfoSanitize(BLFormatInfo* self) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+
+//! \}
+
+
+//! \name Pixel Format - Structs
+//! \{
+
+//! Provides a detailed information about a pixel format. Use `blFormatInfo` array to get an information of Blend2D
+//! native pixel formats.
 struct BLFormatInfo {
   uint32_t depth;
   uint32_t flags;
@@ -147,9 +142,7 @@ struct BLFormatInfo {
     BLRgba32* palette;
   };
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_NODISCARD BL_INLINE bool operator==(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) == 0; }
   BL_NODISCARD BL_INLINE bool operator!=(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) != 0; }
 
@@ -178,36 +171,35 @@ struct BLFormatInfo {
 
   //! Query Blend2D `format` and copy it to this format info, see `BLFormat`.
   //!
-  //! Copies data from `blFormatInfo()` to this `BLFormatInfo` struct and returns
-  //! `BL_SUCCESS` if the `format` was valid, otherwise the `BLFormatInfo` is
-  //! reset and `BL_ERROR_INVALID_VALUE` is returned.
+  //! Copies data from `blFormatInfo()` to this `BLFormatInfo` struct and returns `BL_SUCCESS` if the `format` was
+  //! valid, otherwise the `BLFormatInfo` is reset and `BL_ERROR_INVALID_VALUE` is returned.
   //!
-  //! \note The `BL_FORMAT_NONE` is considered invalid format, thus if it's
-  //! passed to `query()` the return value would be `BL_ERROR_INVALID_VALUE`.
-  BL_INLINE BLResult query(uint32_t format) noexcept { return blFormatInfoQuery(this, format); }
+  //! \note The `BL_FORMAT_NONE` is considered invalid format, thus if it's passed to `query()` the return value
+  //! would be `BL_ERROR_INVALID_VALUE`.
+  BL_INLINE BLResult query(BLFormat format) noexcept { return blFormatInfoQuery(this, format); }
 
   //! Sanitize this `BLFormatInfo`.
   //!
-  //! Sanitizer verifies whether the format is valid and updates the format
-  //! information about flags to values that Blend2D expects. For example
-  //! format flags are properly examined and simplified if possible, byte-swap
-  //! is implicitly performed for formats where a single component matches one
-  //! byte, etc...
+  //! Sanitizer verifies whether the format is valid and updates the format information about flags to values that
+  //! Blend2D expects. For example format flags are properly examined and simplified if possible, byte-swap is
+  //! implicitly performed for formats where a single component matches one byte, etc...
   BL_INLINE BLResult sanitize() noexcept { return blFormatInfoSanitize(this); }
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//! \}
+
+//! \name Pixel Format - Globals
+//! \{
+
+BL_BEGIN_C_DECLS
 
 //! Pixel format information of Blend2D native pixel formats, see `BLFormat`.
 extern BL_API const BLFormatInfo blFormatInfo[BL_FORMAT_RESERVED_COUNT];
 
-#ifdef __cplusplus
-} // {Extern:C}
-#endif
+BL_END_C_DECLS
+
+//! \}
 
 //! \}
 

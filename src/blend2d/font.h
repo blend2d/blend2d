@@ -1,68 +1,119 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_FONT_H_INCLUDED
 #define BLEND2D_FONT_H_INCLUDED
 
-#include "./array.h"
-#include "./fontdefs.h"
-#include "./geometry.h"
-#include "./glyphbuffer.h"
-#include "./path.h"
-#include "./string.h"
-#include "./variant.h"
+#include "array.h"
+#include "bitset.h"
+#include "filesystem.h"
+#include "fontdefs.h"
+#include "geometry.h"
+#include "glyphbuffer.h"
+#include "object.h"
+#include "path.h"
+#include "string.h"
 
 //! \addtogroup blend2d_api_text
 //! \{
 
-// ============================================================================
-// [BLFontData - Core]
-// ============================================================================
+//! \name BLFont - C API
+//! \{
 
-//! Font data [C Interface - Virtual Function Table].
-struct BLFontDataVirt {
-  BLResult (BL_CDECL* destroy)(BLFontDataImpl* impl) BL_NOEXCEPT;
+//! Font data [C API].
+struct BLFontDataCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+};
+
+//! Font face [C API].
+struct BLFontFaceCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+};
+
+//! Font [C API].
+struct BLFontCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+};
+
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blFontInit(BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontInitMove(BLFontCore* self, BLFontCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontInitWeak(BLFontCore* self, const BLFontCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDestroy(BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontReset(BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontAssignMove(BLFontCore* self, BLFontCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontAssignWeak(BLFontCore* self, const BLFontCore* other) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontEquals(const BLFontCore* a, const BLFontCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontCreateFromFace(BLFontCore* self, const BLFontFaceCore* face, float size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontShape(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, BLGlyphMappingState* stateOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, uint32_t positioningFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontApplyKerning(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontApplyGSub(const BLFontCore* self, BLGlyphBufferCore* gb, const BLBitSetCore* lookups) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontApplyGPos(const BLFontCore* self, BLGlyphBufferCore* gb, const BLBitSetCore* lookups) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetMatrix(const BLFontCore* self, BLFontMatrix* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetMetrics(const BLFontCore* self, BLFontMetrics* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetDesignMetrics(const BLFontCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLTextMetrics* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetGlyphBounds(const BLFontCore* self, const uint32_t* glyphData, intptr_t glyphAdvance, BLBoxI* out, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetGlyphAdvances(const BLFontCore* self, const uint32_t* glyphData, intptr_t glyphAdvance, BLGlyphPlacement* out, size_t count) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetGlyphOutlines(const BLFontCore* self, uint32_t glyphId, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* glyphRun, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* closure) BL_NOEXCEPT_C;
+
+BL_API BLResult BL_CDECL blFontDataInit(BLFontDataCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataInitMove(BLFontDataCore* self, BLFontDataCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataInitWeak(BLFontDataCore* self, const BLFontDataCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataDestroy(BLFontDataCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataReset(BLFontDataCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataAssignMove(BLFontDataCore* self, BLFontDataCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataAssignWeak(BLFontDataCore* self, const BLFontDataCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataCreateFromFile(BLFontDataCore* self, const char* fileName, BLFileReadFlags readFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataCreateFromDataArray(BLFontDataCore* self, const BLArrayCore* dataArray) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataCreateFromData(BLFontDataCore* self, const void* data, size_t dataSize, BLDestroyExternalDataFunc destroyFunc, void* userData) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontDataEquals(const BLFontDataCore* a, const BLFontDataCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontDataListTags(const BLFontDataCore* self, uint32_t faceIndex, BLArrayCore* dst) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blFontDataQueryTables(const BLFontDataCore* self, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t count) BL_NOEXCEPT_C;
+
+BL_API BLResult BL_CDECL blFontFaceInit(BLFontFaceCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceInitMove(BLFontFaceCore* self, BLFontFaceCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceInitWeak(BLFontFaceCore* self, const BLFontFaceCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceDestroy(BLFontFaceCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceReset(BLFontFaceCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceAssignMove(BLFontFaceCore* self, BLFontFaceCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceAssignWeak(BLFontFaceCore* self, const BLFontFaceCore* other) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontFaceEquals(const BLFontFaceCore* a, const BLFontFaceCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName, BLFileReadFlags readFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceCreateFromData(BLFontFaceCore* self, const BLFontDataCore* fontData, uint32_t faceIndex) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self, BLFontUnicodeCoverage* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetCharacterCoverage(const BLFontFaceCore* self, BLBitSetCore* out) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+
+//! \}
+
+//! \cond INTERNAL
+//! \name BLFont - Internals
+//! \{
+
+//! Font data [Virtual Function Table].
+struct BLFontDataVirt BL_CLASS_INHERITS(BLObjectVirt) {
+  BL_DEFINE_VIRT_BASE
   BLResult (BL_CDECL* listTags)(const BLFontDataImpl* impl, uint32_t faceIndex, BLArrayCore* out) BL_NOEXCEPT;
   size_t (BL_CDECL* queryTables)(const BLFontDataImpl* impl, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t n) BL_NOEXCEPT;
 };
 
-//! Font data [C Interface - Impl].
-struct BLFontDataImpl {
+//! Font data [Impl].
+struct BLFontDataImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Virtual function table.
   const BLFontDataVirt* virt;
 
-  //! Reference count.
-  volatile size_t refCount;
-  //! Impl type.
-  uint8_t implType;
-  //! Impl traits.
-  uint8_t implTraits;
-  //! Memory pool data.
-  uint16_t memPoolData;
   //! Type of the face that would be created with this font-data.
   uint8_t faceType;
-  //! Reserved for future use, must be zero.
-  uint8_t reserved[3];
 
   //! Number of font-faces stored in this font-data instance.
   uint32_t faceCount;
@@ -70,30 +121,27 @@ struct BLFontDataImpl {
   uint32_t flags;
 };
 
-//! Font data [C Interface - Core].
-struct BLFontDataCore {
-  BLFontDataImpl* impl;
-};
+//! \}
+//! \endcond
 
-// ============================================================================
-// [BLFontData - C++]
-// ============================================================================
+//! \name BLFont - C++ API
+//! \{
 
 #ifdef __cplusplus
+
 //! Font data [C++ API].
 class BLFontData : public BLFontDataCore {
 public:
   //! \cond INTERNAL
-  static constexpr const uint32_t kImplType = BL_IMPL_TYPE_FONT_DATA;
+  BL_INLINE BLFontDataImpl* _impl() const noexcept { return static_cast<BLFontDataImpl*>(_d.impl); }
   //! \endcond
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLFontData() noexcept { this->impl = none().impl; }
-  BL_INLINE BLFontData(BLFontData&& other) noexcept { blVariantInitMove(this, &other); }
-  BL_INLINE BLFontData(const BLFontData& other) noexcept { blVariantInitWeak(this, &other); }
-  BL_INLINE explicit BLFontData(BLFontDataImpl* impl) noexcept { this->impl = impl; }
+  BL_INLINE BLFontData() noexcept { blFontDataInit(this); }
+  BL_INLINE BLFontData(BLFontData&& other) noexcept { blFontDataInitMove(this, &other); }
+  BL_INLINE BLFontData(const BLFontData& other) noexcept { blFontDataInitWeak(this, &other); }
   BL_INLINE ~BLFontData() noexcept { blFontDataDestroy(this); }
 
   //! \}
@@ -101,7 +149,7 @@ public:
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+  BL_INLINE explicit operator bool() const noexcept { return isValid(); }
 
   BL_INLINE BLFontData& operator=(BLFontData&& other) noexcept { blFontDataAssignMove(this, &other); return *this; }
   BL_INLINE BLFontData& operator=(const BLFontData& other) noexcept { blFontDataAssignWeak(this, &other); return *this; }
@@ -115,15 +163,15 @@ public:
   //! \{
 
   BL_INLINE BLResult reset() noexcept { return blFontDataReset(this); }
-  BL_INLINE void swap(BLFontData& other) noexcept { std::swap(this->impl, other.impl); }
+  BL_INLINE void swap(BLFontData& other) noexcept { _d.swap(other._d); }
 
   BL_INLINE BLResult assign(BLFontData&& other) noexcept { return blFontDataAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLFontData& other) noexcept { return blFontDataAssignWeak(this, &other); }
 
   //! Tests whether the font-data is a built-in null instance.
-  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Tests whether the font-data is empty (which the same as `isNone()` in this case).
-  BL_INLINE bool empty() const noexcept { return isNone(); }
+  BL_INLINE bool isValid() const noexcept { return _impl()->faceCount != 0; }
+  //! Tests whether the font-data is empty, which the same as `!isValid()`.
+  BL_INLINE bool empty() const noexcept { return !isValid(); }
 
   BL_INLINE bool equals(const BLFontData& other) const noexcept { return blFontDataEquals(this, &other); }
 
@@ -134,61 +182,35 @@ public:
 
   //! Creates a `BLFontData` from a file specified by the given `fileName`.
   //!
-  //! \remarks The `readFlags` argument allows to specify flags that will be passed
-  //! to `BLFileSystem::readFile()` to read the content of the file. It's possible to
-  //! use memory mapping to get its content, which is the recommended way for reading
-  //! system fonts. The best combination is to use `BL_FILE_READ_MMAP_ENABLED` flag
-  //! combined with `BL_FILE_READ_MMAP_AVOID_SMALL`. This combination means to try to
-  //! use memory mapping only when the size of the font is greater than a minimum value
-  //! (determined by Blend2D), and would fallback to a regular open/read in case the
-  //! memory mapping is not possible or failed for some other reason. Please note that
-  //! not all files can be memory mapped so `BL_FILE_READ_MMAP_NO_FALLBACK` flag is not
-  //! recommended.
-  BL_INLINE BLResult createFromFile(const char* fileName, uint32_t readFlags = 0) noexcept {
+  //! \remarks The `readFlags` argument allows to specify flags that will be passed to `BLFileSystem::readFile()` to
+  //! read the content of the file. It's possible to use memory mapping to get its content, which is the recommended
+  //! way for reading system fonts. The best combination is to use `BL_FILE_READ_MMAP_ENABLED` flag combined with
+  //! `BL_FILE_READ_MMAP_AVOID_SMALL`. This combination means to try to use memory mapping only when the size of the
+  //! font is greater than a minimum value (determined by Blend2D), and would fallback to a regular open/read in case
+  //! the memory mapping is not possible or failed for some other reason. Please note that not all files can be memory
+  //! mapped so `BL_FILE_READ_MMAP_NO_FALLBACK` flag is not recommended.
+  BL_INLINE BLResult createFromFile(const char* fileName, BLFileReadFlags readFlags = BL_FILE_READ_NO_FLAGS) noexcept {
     return blFontDataCreateFromFile(this, fileName, readFlags);
   }
 
   //! Creates a `BLFontData` from the given `data` stored in `BLArray<uint8_t>`
   //!
-  //! The given `data` would be weak copied on success so the given array can be
-  //! safely destroyed after the function returns.
+  //! The given `data` would be weak copied on success so the given array can be safely destroyed after the function
+  //! returns.
   //!
-  //! \remarks The weak copy of the passed `data` is internal and there is no API
-  //! to access it after the function returns. The reason for making it internal
-  //! is that multiple implementations of `BLFontData` may exist and some can only
-  //! store data at table level, so Blend2D doesn't expose the detail about how the
-  //! data is stored.
+  //! \remarks The weak copy of the passed `data` is internal and there is no API to access it after the function
+  //! returns. The reason for making it internal is that multiple implementations of `BLFontData` may exist and some
+  //! can only store data at table level, so Blend2D doesn't expose the detail about how the data is stored.
   BL_INLINE BLResult createFromData(const BLArray<uint8_t>& data) noexcept {
     return blFontDataCreateFromDataArray(this, &data);
   }
 
   //! Creates ` BLFontData` from the given `data` of the given `size`.
   //!
-  //! \note Optionally a `destroyFunc` can be used as a notifier that will be
-  //! called when the data is no longer needed and `destroyData` acts as a user
-  //! data passed to `destroyFunc()`.
-  BL_INLINE BLResult createFromData(const void* data, size_t dataSize, BLDestroyImplFunc destroyFunc = nullptr, void* destroyData = nullptr) noexcept {
-    return blFontDataCreateFromData(this, data, dataSize, destroyFunc, destroyData);
-  }
-
-  //! \}
-
-  //! \name Query Functionality
-  //! \{
-
-  BL_INLINE BLResult listTags(uint32_t faceIndex, BLArray<BLTag>& dst) const noexcept {
-    // The same as blFontDataListTags() [C-API].
-    return impl->virt->listTags(impl, faceIndex, &dst);
-  }
-
-  BL_INLINE size_t queryTable(uint32_t faceIndex, BLFontTable* dst, BLTag tag) const noexcept {
-    // The same as blFontDataQueryTables() [C-API].
-    return impl->virt->queryTables(impl, faceIndex, dst, &tag, 1);
-  }
-
-  BL_INLINE size_t queryTables(uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t count) const noexcept {
-    // The same as blFontDataQueryTables() [C-API].
-    return impl->virt->queryTables(impl, faceIndex, dst, tags, count);
+  //! \note Optionally a `destroyFunc` can be used as a notifier that will be called when the data is no longer needed
+  //! and `destroyData` acts as a user data passed to `destroyFunc()`.
+  BL_INLINE BLResult createFromData(const void* data, size_t dataSize, BLDestroyExternalDataFunc destroyFunc = nullptr, void* userData = nullptr) noexcept {
+    return blFontDataCreateFromData(this, data, dataSize, destroyFunc, userData);
   }
 
   //! \}
@@ -198,62 +220,66 @@ public:
 
   //! Type of font-face that this data describes.
   //!
-  //! It doesn't matter if the content is a single font or a collection. In
-  //! any case the `faceType()` would always return the type of the font-face
-  //! that will be created by `BLFontFace::createFromData()`.
-  BL_INLINE uint32_t faceType() const noexcept { return impl->faceType; }
+  //! It doesn't matter if the content is a single font or a collection. In any case the `faceType()` would always
+  //! return the type of the font-face that will be created by `BLFontFace::createFromData()`.
+  BL_INLINE uint32_t faceType() const noexcept { return _impl()->faceType; }
 
   //! Returns the number of faces of this font-data.
   //!
-  //! If the data is not initialized the result would be always zero. If the
-  //! data is initialized to a single font it would be 1, and if the data is
-  //! initialized to a font collection then the return would correspond to
-  //! the number of font-faces within that collection.
+  //! If the data is not initialized the result would be always zero. If the data is initialized to a single font it
+  //! would be 1, and if the data is initialized to a font collection then the return would correspond to the number
+  //! of font-faces within that collection.
   //!
-  //! \note You should not use `faceCount()` to check whether the font is a
-  //! collection as it's possible to have a font-collection with just a single
-  //! font. Using `isCollection()` is more reliable and would always return the
+  //! \note You should not use `faceCount()` to check whether the font is a collection as it's possible to have a
+  //! font-collection with just a single font. Using `isCollection()` is more reliable and would always return the
   //! right value.
-  BL_INLINE uint32_t faceCount() const noexcept { return impl->faceCount; }
+  BL_INLINE uint32_t faceCount() const noexcept { return _impl()->faceCount; }
 
   //! Returns font-data flags, see `BLFontDataFlags`.
-  BL_INLINE uint32_t flags() const noexcept {
-    return impl->flags;
-  }
+  BL_INLINE uint32_t flags() const noexcept { return _impl()->flags; }
 
   //! Tests whether this font-data is a font-collection.
-  BL_INLINE bool isCollection() const noexcept {
-    return (impl->flags & BL_FONT_DATA_FLAG_COLLECTION) != 0;
-  }
+  BL_INLINE bool isCollection() const noexcept { return (_impl()->flags & BL_FONT_DATA_FLAG_COLLECTION) != 0; }
 
   //! \}
 
-  static BL_INLINE const BLFontData& none() noexcept { return reinterpret_cast<const BLFontData*>(blNone)[kImplType]; }
+  //! \name Query Functionality
+  //! \{
+
+  BL_INLINE BLResult listTags(uint32_t faceIndex, BLArray<BLTag>& dst) const noexcept {
+    // The same as blFontDataListTags() [C API].
+    return _impl()->virt->listTags(_impl(), faceIndex, &dst);
+  }
+
+  BL_INLINE size_t queryTable(uint32_t faceIndex, BLFontTable* dst, BLTag tag) const noexcept {
+    // The same as blFontDataQueryTables() [C API].
+    return _impl()->virt->queryTables(_impl(), faceIndex, dst, &tag, 1);
+  }
+
+  BL_INLINE size_t queryTables(uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t count) const noexcept {
+    // The same as blFontDataQueryTables() [C API].
+    return _impl()->virt->queryTables(_impl(), faceIndex, dst, tags, count);
+  }
+
+  //! \}
 };
+
 #endif
+//! \}
 
-// ============================================================================
-// [BLFontFace - Core]
-// ============================================================================
+//! \cond INTERNAL
+//! \name BLFont - Internals
+//! \{
 
-//! Font face [C Interface - Virtual Function Table].
-struct BLFontFaceVirt {
-  BLResult (BL_CDECL* destroy)(BLFontFaceImpl* impl) BL_NOEXCEPT;
+//! Font face [Virtual Function Table].
+struct BLFontFaceVirt BL_CLASS_INHERITS(BLObjectVirt) {
+  BL_DEFINE_VIRT_BASE
 };
 
-//! Font face [C Interface - Impl].
-struct BLFontFaceImpl {
+//! Font face [Impl].
+struct BLFontFaceImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Virtual function table.
   const BLFontFaceVirt* virt;
-
-  //! Reference count.
-  volatile size_t refCount;
-  //! Impl type.
-  uint8_t implType;
-  //! Impl traits.
-  uint8_t implTraits;
-  //! Memory pool data.
-  uint16_t memPoolData;
 
   //! Font-face default weight (1..1000) [0 if font-face is not initialized].
   uint16_t weight;
@@ -288,30 +314,26 @@ struct BLFontFaceImpl {
   BL_HAS_TYPED_MEMBERS(BLFontFaceImpl)
 };
 
-//! Font face [C Interface - Core].
-struct BLFontFaceCore {
-  BLFontFaceImpl* impl;
-};
+//! \}
+//! \endcond
 
-// ============================================================================
-// [BLFontFace - C++]
-// ============================================================================
+//! \name BLFont - C++ API
+//! \{
 
 #ifdef __cplusplus
 //! Font face [C++ API].
 class BLFontFace : public BLFontFaceCore {
 public:
   //! \cond INTERNAL
-  static constexpr const uint32_t kImplType = BL_IMPL_TYPE_FONT_FACE;
+  BL_INLINE BLFontFaceImpl* _impl() const noexcept { return static_cast<BLFontFaceImpl*>(_d.impl); }
   //! \endcond
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLFontFace() noexcept { this->impl = none().impl; }
-  BL_INLINE BLFontFace(BLFontFace&& other) noexcept { blVariantInitMove(this, &other); }
-  BL_INLINE BLFontFace(const BLFontFace& other) noexcept { blVariantInitWeak(this, &other); }
-  BL_INLINE explicit BLFontFace(BLFontFaceImpl* impl) noexcept { this->impl = impl; }
+  BL_INLINE BLFontFace() noexcept { blFontFaceInit(this); }
+  BL_INLINE BLFontFace(BLFontFace&& other) noexcept { blFontFaceInitMove(this, &other); }
+  BL_INLINE BLFontFace(const BLFontFace& other) noexcept { blFontFaceInitWeak(this, &other); }
   BL_INLINE ~BLFontFace() noexcept { blFontFaceDestroy(this); }
 
   //! \}
@@ -319,7 +341,7 @@ public:
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+  BL_INLINE explicit operator bool() const noexcept { return isValid(); }
 
   BL_INLINE BLFontFace& operator=(BLFontFace&& other) noexcept { blFontFaceAssignMove(this, &other); return *this; }
   BL_INLINE BLFontFace& operator=(const BLFontFace& other) noexcept { blFontFaceAssignWeak(this, &other); return *this; }
@@ -333,15 +355,15 @@ public:
   //! \{
 
   BL_INLINE BLResult reset() noexcept { return blFontFaceReset(this); }
-  BL_INLINE void swap(BLFontFace& other) noexcept { std::swap(this->impl, other.impl); }
+  BL_INLINE void swap(BLFontFace& other) noexcept { _d.swap(other._d); }
 
   BL_INLINE BLResult assign(BLFontFace&& other) noexcept { return blFontFaceAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLFontFace& other) noexcept { return blFontFaceAssignWeak(this, &other); }
 
-  //! Tests whether the font-face is a built-in null instance.
-  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Tests whether the font-face is empty (which the same as `isNone()` in this case).
-  BL_INLINE bool empty() const noexcept { return isNone(); }
+  //! Tests whether the font-face is valid.
+  BL_INLINE bool isValid() const noexcept { return _impl()->faceInfo.faceType != BL_FONT_FACE_TYPE_NONE; }
+  //! Tests whether the font-face is empty, which the same as `!isValid()`.
+  BL_INLINE bool empty() const noexcept { return !isValid(); }
 
   BL_INLINE bool equals(const BLFontFace& other) const noexcept { return blFontFaceEquals(this, &other); }
 
@@ -352,25 +374,21 @@ public:
 
   //! Creates a new `BLFontFace` from a file specified by `fileName`.
   //!
-  //! This is a utility function that first creates a `BLFontData` and then
-  //! calls `createFromData(fontData, 0)`. See `BLFontData::createFromFile()`
-  //! for more details, especially the use of `readFlags` is important for
-  //! system fonts.
+  //! This is a utility function that first creates a `BLFontData` and then calls `createFromData(fontData, 0)`. See
+  //! `BLFontData::createFromFile()` for more details, especially the use of `readFlags` is important for system fonts.
   //!
-  //! \note This function offers a simplified creation of `BLFontFace` directly
-  //! from a file, but doesn't provide as much flexibility as `createFromData()`
-  //! as it allows to specify a `faceIndex`, which can be used to load multiple
-  //! font-faces from a TrueType/OpenType collection. The use of `createFromData()`
-  //! is recommended for any serious font handling.
-  BL_INLINE BLResult createFromFile(const char* fileName, uint32_t readFlags = 0) noexcept {
+  //! \note This function offers a simplified creation of `BLFontFace` directly from a file, but doesn't provide as
+  //! much flexibility as `createFromData()` as it allows to specify a `faceIndex`, which can be used to load multiple
+  //! font-faces from a TrueType/OpenType collection. The use of `createFromData()` is recommended for any serious font
+  //! handling.
+  BL_INLINE BLResult createFromFile(const char* fileName, BLFileReadFlags readFlags = BL_FILE_READ_NO_FLAGS) noexcept {
     return blFontFaceCreateFromFile(this, fileName, readFlags);
   }
 
   //! Creates a new `BLFontFace` from `BLFontData` at the given `faceIndex`.
   //!
-  //! On success the existing `BLFontFace` is completely replaced by a new one,
-  //! on failure a `BLResult` is returned and the existing `BLFontFace` is kept
-  //! as is. In other words, it either succeeds and replaces the `BLFontFaceImpl`
+  //! On success the existing `BLFontFace` is completely replaced by a new one, on failure a `BLResult` is returned
+  //! and the existing `BLFontFace` is kept as is. In other words, it either succeeds and replaces the `BLFontFaceImpl`
   //! or returns an error without touching the existing one.
   BL_INLINE BLResult createFromData(const BLFontDataCore& fontData, uint32_t faceIndex) noexcept {
     return blFontFaceCreateFromData(this, &fontData, faceIndex);
@@ -382,34 +400,33 @@ public:
   //! \{
 
   //! Returns font weight (returns default weight in case this is a variable font).
-  BL_INLINE uint32_t weight() const noexcept { return impl->weight; }
+  BL_INLINE uint32_t weight() const noexcept { return _impl()->weight; }
   //! Returns font stretch (returns default weight in case this is a variable font).
-  BL_INLINE uint32_t stretch() const noexcept { return impl->stretch; }
+  BL_INLINE uint32_t stretch() const noexcept { return _impl()->stretch; }
   //! Returns font style.
-  BL_INLINE uint32_t style() const noexcept { return impl->style; }
+  BL_INLINE uint32_t style() const noexcept { return _impl()->style; }
 
   //! Returns font-face information as `BLFontFaceInfo`.
-  BL_INLINE const BLFontFaceInfo& faceInfo() const noexcept { return impl->faceInfo; }
+  BL_INLINE const BLFontFaceInfo& faceInfo() const noexcept { return _impl()->faceInfo; }
 
   //! Returns the font-face type, see `BLFontFaceType`.
-  BL_INLINE uint32_t faceType() const noexcept { return impl->faceInfo.faceType; }
+  BL_INLINE uint32_t faceType() const noexcept { return _impl()->faceInfo.faceType; }
   //! Returns the font-face type, see `BLFontOutlineType`.
-  BL_INLINE uint32_t outlineType() const noexcept { return impl->faceInfo.outlineType; }
+  BL_INLINE uint32_t outlineType() const noexcept { return _impl()->faceInfo.outlineType; }
   //! Returns the number of glyphs of this font-face.
-  BL_INLINE uint32_t glyphCount() const noexcept { return impl->faceInfo.glyphCount; }
+  BL_INLINE uint32_t glyphCount() const noexcept { return _impl()->faceInfo.glyphCount; }
 
   //! Returns a zero-based index of this font-face.
   //!
-  //! \note Face index does only make sense if this face is part of a TrueType
-  //! or OpenType font collection. In that case the returned value would be
-  //! the index of this face in that collection. If the face is not part of a
+  //! \note Face index does only make sense if this face is part of a TrueType or OpenType font collection. In that
+  //! case the returned value would be the index of this face in that collection. If the face is not part of a
   //! collection then the returned value would always be zero.
-  BL_INLINE uint32_t faceIndex() const noexcept { return impl->faceInfo.faceIndex; }
+  BL_INLINE uint32_t faceIndex() const noexcept { return _impl()->faceInfo.faceIndex; }
   //! Returns font-face flags, see `BLFontFaceFlags`.
-  BL_INLINE uint32_t faceFlags() const noexcept { return impl->faceInfo.faceFlags; }
+  BL_INLINE uint32_t faceFlags() const noexcept { return _impl()->faceInfo.faceFlags; }
 
   //! Tests whether the font-face has a given `flag` set.
-  BL_INLINE bool hasFaceFlag(uint32_t flag) const noexcept { return (impl->faceInfo.faceFlags & flag) != 0; }
+  BL_INLINE bool hasFaceFlag(uint32_t flag) const noexcept { return (_impl()->faceInfo.faceFlags & flag) != 0; }
 
   //! Tests whether the font-face uses typographic family and subfamily names.
   BL_INLINE bool hasTypographicNames() const noexcept { return hasFaceFlag(BL_FONT_FACE_FLAG_TYPOGRAPHIC_NAMES); }
@@ -446,84 +463,61 @@ public:
   BL_INLINE bool isLastResortFont() const noexcept { return hasFaceFlag(BL_FONT_FACE_FLAG_LAST_RESORT_FONT); }
 
   //! Returns font-face diagnostics flags, see `BLFontFaceDiagFlags`.
-  BL_INLINE uint32_t diagFlags() const noexcept { return impl->faceInfo.diagFlags; }
+  BL_INLINE uint32_t diagFlags() const noexcept { return _impl()->faceInfo.diagFlags; }
 
   //! Returns a unique identifier describing this `BLFontFace`.
-  BL_INLINE BLUniqueId uniqueId() const noexcept { return impl->uniqueId; }
+  BL_INLINE BLUniqueId uniqueId() const noexcept { return _impl()->uniqueId; }
 
   //! Returns `BLFontData` associated with this font-face.
-  BL_INLINE const BLFontData& data() const noexcept { return impl->data; }
+  BL_INLINE const BLFontData& data() const noexcept { return _impl()->data; }
 
-  //! Returns the font full name as UTF-8 null-terminated string.
-  BL_INLINE const char* fullName() const noexcept { return impl->fullName.data(); }
-  //! Returns the size of the string returned by `fullName()`.
-  BL_INLINE size_t fullNameSize() const noexcept { return impl->fullName.size(); }
-  //! Returns the font full name as a UTF-8 string view.
-  BL_INLINE const BLStringView& fullNameView() const noexcept { return impl->fullName.view(); }
-
-  //! Returns the family name as UTF-8 null-terminated string.
-  BL_INLINE const char* familyName() const noexcept { return impl->familyName.data(); }
-  //! Returns the size of the string returned by `familyName()`.
-  BL_INLINE size_t familyNameSize() const noexcept { return impl->familyName.size(); }
-  //! Returns the family-name as a UTF-8 string view.
-  BL_INLINE const BLStringView& familyNameView() const noexcept { return impl->familyName.view(); }
-
-  //! Returns the font subfamily name as UTF-8 null-terminated string.
-  BL_INLINE const char* subfamilyName() const noexcept { return impl->subfamilyName.data(); }
-  //! Returns the size of the string returned by `subfamilyName()`.
-  BL_INLINE size_t subfamilyNameSize() const noexcept { return impl->subfamilyName.size(); }
-  //! Returns the font subfamily-name as a UTF-8 string view.
-  BL_INLINE const BLStringView& subfamilyNameView() const noexcept { return impl->subfamilyName.view(); }
-
-  //! Returns the font PostScript name as UTF-8 null-terminated string.
-  BL_INLINE const char* postScriptName() const noexcept { return impl->postScriptName.data(); }
-  //! Returns the size of the string returned by `postScriptName()`.
-  BL_INLINE size_t postScriptNameSize() const noexcept { return impl->postScriptName.size(); }
-  //! Returns the font PostScript name as a UTF-8 string view.
-  BL_INLINE const BLStringView& postScriptNameView() const noexcept { return impl->postScriptName.view(); }
+  //! Returns a full of the font.
+  BL_INLINE const BLString& fullName() const noexcept { return _impl()->fullName; }
+  //! Returns a family name of the font.
+  BL_INLINE const BLString& familyName() const noexcept { return _impl()->familyName; }
+  //! Returns a subfamily name of the font.
+  BL_INLINE const BLString& subfamilyName() const noexcept { return _impl()->subfamilyName; }
+  //! Returns a PostScript name of the font.
+  BL_INLINE const BLString& postScriptName() const noexcept { return _impl()->postScriptName; }
 
   // TODO:
   // Returns feature-set of this `BLFontFace`.
-  // BL_INLINE const BLFontFeatureSet& featureSet() const noexcept { return impl->featureSet; }
+  // BL_INLINE const BLFontFeatureSet& featureSet() const noexcept { return _impl()->featureSet; }
 
   //! Returns design metrics of this `BLFontFace`.
-  BL_INLINE const BLFontDesignMetrics& designMetrics() const noexcept { return impl->designMetrics; }
+  BL_INLINE const BLFontDesignMetrics& designMetrics() const noexcept { return _impl()->designMetrics; }
   //! Returns units per em, which are part of font's design metrics.
-  BL_INLINE int unitsPerEm() const noexcept { return impl->designMetrics.unitsPerEm; }
+  BL_INLINE int unitsPerEm() const noexcept { return _impl()->designMetrics.unitsPerEm; }
 
   //! Returns PANOSE classification of this `BLFontFace`.
-  BL_INLINE const BLFontPanose& panose() const noexcept { return impl->panose; }
+  BL_INLINE const BLFontPanose& panose() const noexcept { return _impl()->panose; }
 
   //! Returns unicode coverage of this `BLFontFace`.
   //!
   //! \note The returned unicode-coverage is not calculated by Blend2D so in
   //! general the value doesn't have to be correct. Use `getCharacterCoverage()`
   //! to get a coverage calculated by Blend2D at character granularity.
-  BL_INLINE const BLFontUnicodeCoverage& unicodeCoverage() const noexcept { return impl->unicodeCoverage; }
+  BL_INLINE const BLFontUnicodeCoverage& unicodeCoverage() const noexcept { return _impl()->unicodeCoverage; }
+
+  //! Calculates the character coverage of this `BLFontFace`.
+  //!
+  //! Each unicode character is represented by a single bit in the given BitSet.
+  BL_INLINE BLResult getCharacterCoverage(BLBitSetCore* out) const noexcept { return blFontFaceGetCharacterCoverage(this, out); }
 
   //! \}
-
-  static BL_INLINE const BLFontFace& none() noexcept { return reinterpret_cast<const BLFontFace*>(blNone)[kImplType]; }
 };
+
 #endif
+//! \}
 
-// ============================================================================
-// [BLFont - Core]
-// ============================================================================
+//! \cond INTERNAL
+//! \name BLFont - Internals
+//! \{
 
-//! Font [C Interface - Impl].
-struct BLFontImpl {
+//! Font [Impl].
+struct BLFontImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Font-face used by this font.
   BL_TYPED_MEMBER(BLFontFaceCore, BLFontFace, face);
-
-  //! Reference count.
-  volatile size_t refCount;
-  //! Impl type.
-  uint8_t implType;
-  //! Impl traits.
-  uint8_t implTraits;
-  //! Memory pool data.
-  uint16_t memPoolData;
 
   //! Font width (1..1000) [0 if the font is not initialized].
   uint16_t weight;
@@ -544,30 +538,27 @@ struct BLFontImpl {
   BL_HAS_TYPED_MEMBERS(BLFontImpl)
 };
 
-//! Font [C Interface - Core].
-struct BLFontCore {
-  BLFontImpl* impl;
-};
+//! \}
+//! \endcond
 
-// ============================================================================
-// [BLFont - C++]
-// ============================================================================
+//! \name BLFont - C++ API
+//! \{
 
 #ifdef __cplusplus
+
 //! Font [C++ API].
 class BLFont : public BLFontCore {
 public:
   //! \cond INTERNAL
-  static constexpr const uint32_t kImplType = BL_IMPL_TYPE_FONT;
+  BL_INLINE BLFontImpl* _impl() const noexcept { return static_cast<BLFontImpl*>(_d.impl); }
   //! \endcond
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLFont() noexcept { this->impl = none().impl; }
-  BL_INLINE BLFont(BLFont&& other) noexcept { blVariantInitMove(this, &other); }
-  BL_INLINE BLFont(const BLFont& other) noexcept { blVariantInitWeak(this, &other); }
-  BL_INLINE explicit BLFont(BLFontImpl* impl) noexcept { this->impl = impl; }
+  BL_INLINE BLFont() noexcept { blFontInit(this); }
+  BL_INLINE BLFont(BLFont&& other) noexcept { blFontInitMove(this, &other); }
+  BL_INLINE BLFont(const BLFont& other) noexcept { blFontInitWeak(this, &other); }
   BL_INLINE ~BLFont() noexcept { blFontDestroy(this); }
 
   //! \}
@@ -575,7 +566,7 @@ public:
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE explicit operator bool() const noexcept { return !isNone(); }
+  BL_INLINE explicit operator bool() const noexcept { return isValid(); }
 
   BL_INLINE BLFont& operator=(BLFont&& other) noexcept { blFontAssignMove(this, &other); return *this; }
   BL_INLINE BLFont& operator=(const BLFont& other) noexcept { blFontAssignWeak(this, &other); return *this; }
@@ -589,15 +580,15 @@ public:
   //! \{
 
   BL_INLINE BLResult reset() noexcept { return blFontReset(this); }
-  BL_INLINE void swap(BLFont& other) noexcept { std::swap(this->impl, other.impl); }
+  BL_INLINE void swap(BLFont& other) noexcept { _d.swap(other._d); }
 
   BL_INLINE BLResult assign(BLFont&& other) noexcept { return blFontAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLFont& other) noexcept { return blFontAssignWeak(this, &other); }
 
-  //! Tests whether the font is a built-in null instance.
-  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-  //! Tests whether the font is empty (which the same as `isNone()` in this case).
-  BL_INLINE bool empty() const noexcept { return isNone(); }
+  //! Tests whether the font is a valid instance.
+  BL_INLINE bool isValid() const noexcept { return _impl()->face.isValid(); }
+  //! Tests whether the font is empty, which the same as `!isValid()`.
+  BL_INLINE bool empty() const noexcept { return !isValid(); }
 
   BL_INLINE bool equals(const BLFontCore& other) const noexcept { return blFontEquals(this, &other); }
 
@@ -616,42 +607,42 @@ public:
   //! \{
 
   //! Returns the type of the font's associated font-face, see `BLFontFaceType`.
-  BL_INLINE uint32_t faceType() const noexcept { return impl->face.faceType(); }
+  BL_INLINE uint32_t faceType() const noexcept { return _impl()->face.faceType(); }
   //! Returns the flags of the font, see `BLFontFaceFlags`.
-  BL_INLINE uint32_t faceFlags() const noexcept { return impl->face.faceFlags(); }
+  BL_INLINE uint32_t faceFlags() const noexcept { return _impl()->face.faceFlags(); }
   //! Returns the size of the font (as float).
-  BL_INLINE float size() const noexcept { return impl->metrics.size; }
+  BL_INLINE float size() const noexcept { return _impl()->metrics.size; }
   //! Returns the "units per em" (UPEM) of the font's associated font-face.
   BL_INLINE int unitsPerEm() const noexcept { return face().unitsPerEm(); }
 
   //! Returns the font's associated font-face.
   //!
   //! Returns the same font-face, which was passed to `createFromFace()`.
-  BL_INLINE const BLFontFace& face() const noexcept { return impl->face; }
+  BL_INLINE const BLFontFace& face() const noexcept { return _impl()->face; }
 
   //! Returns the features associated with the font.
-  BL_INLINE const BLArray<BLFontFeature>& features() const noexcept { return impl->features; }
+  BL_INLINE const BLArray<BLFontFeature>& features() const noexcept { return _impl()->features; }
   //! Returns the variations associated with the font.
-  BL_INLINE const BLArray<BLFontVariation>& variations() const noexcept { return impl->variations; }
+  BL_INLINE const BLArray<BLFontVariation>& variations() const noexcept { return _impl()->variations; }
 
   //! Returns the weight of the font.
-  BL_INLINE uint32_t weight() const noexcept { return impl->weight; }
+  BL_INLINE uint32_t weight() const noexcept { return _impl()->weight; }
   //! Returns the stretch of the font.
-  BL_INLINE uint32_t stretch() const noexcept { return impl->stretch; }
+  BL_INLINE uint32_t stretch() const noexcept { return _impl()->stretch; }
   //! Returns the style of the font.
-  BL_INLINE uint32_t style() const noexcept { return impl->style; }
+  BL_INLINE uint32_t style() const noexcept { return _impl()->style; }
 
   //! Returns a 2x2 matrix of the font.
   //!
   //! The returned `BLFontMatrix` is used to scale fonts from design units
   //! into user units. The matrix usually has a negative `m11` member as
   //! fonts use a different coordinate system than Blend2D.
-  BL_INLINE const BLFontMatrix& matrix() const noexcept { return impl->matrix; }
+  BL_INLINE const BLFontMatrix& matrix() const noexcept { return _impl()->matrix; }
 
   //! Returns the scaled metrics of the font.
   //!
   //! The returned metrics is a scale of design metrics that match the font size and its options.
-  BL_INLINE const BLFontMetrics& metrics() const noexcept { return impl->metrics; }
+  BL_INLINE const BLFontMetrics& metrics() const noexcept { return _impl()->metrics; }
 
   //! Returns the design metrics of the font.
   //!
@@ -683,12 +674,12 @@ public:
     return blFontApplyKerning(this, &gb);
   }
 
-  BL_INLINE BLResult applyGSub(BLGlyphBufferCore& gb, size_t index, BLBitWord lookups) const noexcept {
-    return blFontApplyGSub(this, &gb, index, lookups);
+  BL_INLINE BLResult applyGSub(BLGlyphBufferCore& gb, const BLBitSetCore& lookups) const noexcept {
+    return blFontApplyGSub(this, &gb, &lookups);
   }
 
-  BL_INLINE BLResult applyGPos(BLGlyphBufferCore& gb, size_t index, BLBitWord lookups) const noexcept {
-    return blFontApplyGPos(this, &gb, index, lookups);
+  BL_INLINE BLResult applyGPos(BLGlyphBufferCore& gb, const BLBitSetCore& lookups) const noexcept {
+    return blFontApplyGPos(this, &gb, &lookups);
   }
 
   BL_INLINE BLResult getTextMetrics(BLGlyphBufferCore& gb, BLTextMetrics& out) const noexcept {
@@ -720,10 +711,10 @@ public:
   }
 
   //! \}
-
-  static BL_INLINE const BLFont& none() noexcept { return reinterpret_cast<const BLFont*>(blNone)[kImplType]; }
 };
+
 #endif
+//! \}
 
 //! \}
 

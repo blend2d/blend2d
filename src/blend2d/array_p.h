@@ -1,102 +1,113 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_ARRAY_P_H_INCLUDED
 #define BLEND2D_ARRAY_P_H_INCLUDED
 
-#include "./api-internal_p.h"
-#include "./array.h"
-#include "./support_p.h"
+#include "api-internal_p.h"
+#include "array.h"
+#include "object_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
 //! \{
 
-// ============================================================================
-// [BLArray - Internal]
-// ============================================================================
+namespace BLArrayPrivate {
 
-BL_HIDDEN BLResult blArrayImplDelete(BLArrayImpl* impl) noexcept;
+//! \name Array - Internals - Memory Management
+//! \{
 
-static BL_INLINE BLResult blArrayImplRelease(BLArrayImpl* impl) noexcept {
-  if (blImplDecRefAndTest(impl))
-    return blArrayImplDelete(impl);
+BL_HIDDEN BLResult freeImpl(BLArrayImpl* impl, BLObjectInfo info) noexcept;
+
+static BL_INLINE BLArrayImpl* getImpl(const BLArrayCore* self) noexcept {
+  return static_cast<BLArrayImpl*>(self->_d.impl);
+}
+
+static BL_INLINE bool isMutable(const BLArrayCore* self) noexcept {
+  const size_t* refCountPtr = blObjectDummyRefCount;
+  if (!self->_d.sso())
+    refCountPtr = blObjectImplGetRefCountPtr(self->_d.impl);
+  return *refCountPtr == 1;
+}
+
+static BL_INLINE BLResult releaseInstance(BLArrayCore* self) noexcept {
+  BLArrayImpl* impl = getImpl(self);
+  BLObjectInfo info = self->_d.info;
+
+  if (info.refCountedFlag() && blObjectImplDecRefAndTest(impl, info))
+    return freeImpl(impl, info);
+
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLArray - Utilities]
-// ============================================================================
+static BL_INLINE BLResult replaceInstance(BLArrayCore* self, const BLArrayCore* other) noexcept {
+  BLArrayImpl* impl = getImpl(self);
+  BLObjectInfo info = self->_d.info;
 
-namespace {
+  self->_d = other->_d;
 
-BL_NODISCARD
-constexpr size_t blContainerSizeOf(size_t baseSize, size_t itemSize, size_t n) noexcept {
-  return baseSize + n * itemSize;
+  if (info.refCountedFlag() && blObjectImplDecRefAndTest(impl, info))
+    return freeImpl(impl, info);
+
+  return BL_SUCCESS;
 }
 
-BL_NODISCARD
-constexpr size_t blContainerCapacityOf(size_t baseSize, size_t itemSize, size_t implSize) noexcept {
-  return (implSize - baseSize) / itemSize;
-}
+//! \}
 
-//! Calculates the maximum theoretical capacity of items a container can hold.
-//! This is really a theoretical capacity that will never be reached in practice
-//! is it would mean that all addressable memory will be used by the data and
-//! mapped into a single continuous region, which is impossible.
-BL_NODISCARD
-constexpr size_t blContainerMaximumCapacity(size_t baseSize, size_t itemSize) noexcept {
-  return blContainerCapacityOf(baseSize, itemSize, SIZE_MAX);
-}
+//! \name Array - Internals - Accessors
+//! \{
 
-BL_NODISCARD
-BL_INLINE size_t blContainerFittingCapacity(size_t baseSize, size_t itemSize, size_t n) noexcept {
-  size_t nInBytes  = blAlignUp(baseSize + n * itemSize, 32);
-  size_t capacity = (nInBytes - baseSize) / itemSize;
+struct UnpackedData {
+  uint8_t* data;
+  size_t size;
+  size_t capacity;
+};
 
-  BL_ASSERT(capacity >= n);
-  return capacity;
-}
-
-BL_NODISCARD
-BL_INLINE size_t blContainerGrowingCapacity(size_t baseSize, size_t itemSize, size_t n, size_t minSizeInBytes) noexcept {
-  size_t nInBytes  = baseSize + n * itemSize;
-  size_t optInBytes;
-
-  if (nInBytes < BL_ALLOC_GROW_LIMIT) {
-    optInBytes = blMax<size_t>(minSizeInBytes, blAlignUpPowerOf2(nInBytes + (nInBytes >> 1)));
+static BL_INLINE UnpackedData unpack(const BLArrayCore* self) noexcept {
+  if (self->_d.sso()) {
+    return UnpackedData { const_cast<uint8_t*>(self->_d.u8_data), self->_d.aField(), self->_d.bField() };
   }
   else {
-    optInBytes = blMax<size_t>(nInBytes, blAlignUp(nInBytes, BL_ALLOC_GROW_LIMIT));
+    BLArrayImpl* impl = getImpl(self);
+    return UnpackedData { impl->dataAs<uint8_t>(), impl->size, impl->capacity };
   }
-
-  size_t capacity = (optInBytes - baseSize) / itemSize;
-  BL_ASSERT(capacity >= n);
-
-  return capacity;
 }
 
-} // {anonymous}
+template<typename T = void>
+static BL_INLINE T* getData(const BLArrayCore* self) noexcept {
+  if (self->_d.sso())
+    return (T*)(self->_d.char_data);
+  else
+    return getImpl(self)->dataAs<T>();
+}
+
+static BL_INLINE size_t getSize(const BLArrayCore* self) noexcept {
+  if (self->_d.sso())
+    return size_t(self->_d.aField());
+  else
+    return getImpl(self)->size;
+}
+
+static BL_INLINE size_t getCapacity(const BLArrayCore* self) noexcept {
+  if (self->_d.sso())
+    return size_t(self->_d.bField());
+  else
+    return getImpl(self)->capacity;
+}
+
+static BL_INLINE void setSize(BLArrayCore* self, size_t newSize) noexcept {
+  BL_ASSERT(newSize <= getCapacity(self));
+  if (self->_d.sso())
+    self->_d.info.setAField(uint32_t(newSize));
+  else
+    getImpl(self)->size = newSize;
+}
+
+//! \}
+
+} // {BLArrayPrivate}
 
 //! \}
 //! \endcond

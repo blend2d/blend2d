@@ -1,40 +1,22 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
+#include "api-build_p.h"
 #ifdef BL_TARGET_OPT_AVX
 
-#include "./geometry.h"
-#include "./matrix_p.h"
-#include "./runtime_p.h"
-#include "./simd_p.h"
-#include "./support_p.h"
+#include "geometry.h"
+#include "matrix_p.h"
+#include "runtime_p.h"
+#include "simd_p.h"
 
-// ============================================================================
-// [BLMatrix2D - MapPointDArray [AVX]]
-// ============================================================================
+namespace BLTransformPrivate {
 
-static BLResult BL_CDECL blMatrix2DMapPointDArrayIdentity_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+// BLTransform - MapPointDArray (AVX)
+// ==================================
+
+static BLResult BL_CDECL mapPointDArrayIdentity_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   blUnused(self);
@@ -67,7 +49,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayIdentity_AVX(const BLMatrix2D* 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blMatrix2DMapPointDArrayTranslate_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL mapPointDArrayTranslate_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   size_t i = size;
@@ -98,7 +80,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayTranslate_AVX(const BLMatrix2D*
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blMatrix2DMapPointDArrayScale_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL mapPointDArrayScale_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   size_t i = size;
@@ -130,7 +112,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayScale_AVX(const BLMatrix2D* sel
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blMatrix2DMapPointDArraySwap_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL mapPointDArraySwap_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   size_t i = size;
@@ -162,7 +144,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArraySwap_AVX(const BLMatrix2D* self
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+static BLResult BL_CDECL mapPointDArrayAffine_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
 
   size_t i = size;
@@ -203,20 +185,21 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine_AVX(const BLMatrix2D* se
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLMatrix2D - Runtime Init [AVX]]
-// ============================================================================
+// BLTransform - Runtime Registration (AVX)
+// ========================================
 
-void blMatrix2DOnInit_AVX(BLRuntimeContext* rt) noexcept {
+void blTransformRtInit_AVX(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
   BLMapPointDArrayFunc* funcs = blMatrix2DMapPointDArrayFuncs;
 
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_IDENTITY ], blMatrix2DMapPointDArrayIdentity_AVX);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_TRANSLATE], blMatrix2DMapPointDArrayTranslate_AVX);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SCALE    ], blMatrix2DMapPointDArrayScale_AVX);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SWAP     ], blMatrix2DMapPointDArraySwap_AVX);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_AFFINE   ], blMatrix2DMapPointDArrayAffine_AVX);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_INVALID  ], blMatrix2DMapPointDArrayAffine_AVX);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_IDENTITY ], mapPointDArrayIdentity_AVX);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_TRANSLATE], mapPointDArrayTranslate_AVX);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SCALE    ], mapPointDArrayScale_AVX);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SWAP     ], mapPointDArraySwap_AVX);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_AFFINE   ], mapPointDArrayAffine_AVX);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_INVALID  ], mapPointDArrayAffine_AVX);
 }
 
 #endif
+
+} // {BLTransformPrivate}

@@ -1,54 +1,26 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_CODEC_JPEGHUFFMAN_P_H_INCLUDED
 #define BLEND2D_CODEC_JPEGHUFFMAN_P_H_INCLUDED
 
 #include "../api-internal_p.h"
-#include "../support_p.h"
+#include "../support/intops_p.h"
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_internal_codecs
+//! \addtogroup blend2d_codec_impl
 //! \{
 
-// ============================================================================
-// [BLJpegCodec - Constants]
-// ============================================================================
-
-//! Acceleration constants for huffman decoding. Accel bits should be either
-//! 8 or 9. More bits consume more memory, but allow easier decoding of a code
-//! that fits within the number of bits. Libjpeg uses 8 bits with a comment that
-//! 8 bits is sufficient for decoding approximately 95% of codes so we use the
-//! same.
+//! Acceleration constants for huffman decoding. Accel bits should be either 8 or 9. More bits consume more memory,
+//! but allow easier decoding of a code that fits within the number of bits. Libjpeg uses 8 bits with a comment that
+//! 8 bits is sufficient for decoding approximately 95% of codes so we use the same.
 enum BLJpegHuffmanAccelConstants : uint32_t {
   BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS = 8,
   BL_JPEG_DECODER_HUFFMAN_ACCEL_SIZE = 1 << BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS,
   BL_JPEG_DECODER_HUFFMAN_ACCEL_MASK = BL_JPEG_DECODER_HUFFMAN_ACCEL_SIZE - 1
 };
-
-// ============================================================================
-// [BLJpegDecoder - HuffmanTable]
-// ============================================================================
 
 //! JPEG Huffman decompression table.
 struct BLJpegDecoderHuffmanTable {
@@ -73,15 +45,10 @@ struct BLJpegDecoderHuffmanDCTable : public BLJpegDecoderHuffmanTable {
   // No additional fields.
 };
 
-// ============================================================================
-// [BLJpegDecoder - BitStream]
-// ============================================================================
-
 //! JPEG decoder's bit-stream.
 //!
-//! Holds the current decoder position in a bit-stream, but it's not used to
-//! fetch bits from it. Use `BLJpegDecoderBitReader` to actually read from the
-//! bit-stream.
+//! Holds the current decoder position in a bit-stream, but it's not used to fetch bits from it. Use
+//! `BLJpegDecoderBitReader` to actually read from the bit-stream.
 struct BLJpegDecoderBitStream {
   //! Data pointer (points to the byte to be processed).
   const uint8_t* ptr;
@@ -105,10 +72,6 @@ struct BLJpegDecoderBitStream {
     this->eobRun = 0;
   }
 };
-
-// ============================================================================
-// [BLJpegDecoder - BitReader]
-// ============================================================================
 
 //! JPEG decoder's bit-reader.
 //!
@@ -163,11 +126,11 @@ struct BLJpegDecoderBitReader {
   template<typename T = BLBitWord>
   BL_INLINE T peek(size_t n) const noexcept {
     typedef typename std::make_unsigned<T>::type U;
-    return T(U(bitData >> (blBitSizeOf<BLBitWord>() - n)));
+    return T(U(bitData >> (BLIntOps::bitSizeOf<BLBitWord>() - n)));
   }
 
   BL_INLINE void refill() noexcept {
-    while (bitCount <= blBitSizeOf<BLBitWord>() - 8 && ptr != end) {
+    while (bitCount <= BLIntOps::bitSizeOf<BLBitWord>() - 8 && ptr != end) {
       uint32_t tmpByte = *ptr++;
 
       // The [0xFF] byte has to be escaped by [0xFF, 0x00], so read two bytes.
@@ -183,13 +146,13 @@ struct BLJpegDecoderBitReader {
         }
       }
 
-      bitData += BLBitWord(tmpByte) << ((blBitSizeOf<BLBitWord>() - 8) - bitCount);
+      bitData += BLBitWord(tmpByte) << ((BLIntOps::bitSizeOf<BLBitWord>() - 8) - bitCount);
       bitCount += 8;
     }
   }
 
   BL_INLINE void refillIf32Bit() noexcept {
-    if (blBitSizeOf<BLBitWord>() <= 32)
+    if (BLIntOps::bitSizeOf<BLBitWord>() <= 32)
       return refill();
   }
 
@@ -207,7 +170,7 @@ struct BLJpegDecoderBitReader {
   BL_INLINE int32_t readSigned(size_t n) noexcept {
     BL_ASSERT(bitCount >= n);
 
-    int32_t tmpMask = blBitShl(int32_t(-1), n) + 1;
+    int32_t tmpMask = BLIntOps::shl(int32_t(-1), n) + 1;
     int32_t tmpSign = -peek<int32_t>(1);
 
     int32_t result = peek<int32_t>(n) + (tmpMask & ~tmpSign);
@@ -236,11 +199,10 @@ struct BLJpegDecoderBitReader {
         return blTraceError(BL_ERROR_DECOMPRESSION_FAILED);
     }
     else {
-      // SLOW: Naive test is to shift the `bitData` down so `s` bits are valid,
-      // then test against `maxCode`. To speed this up, we've preshifted maxCode
-      // left so that it has `16-s` 0s at the end; in other words, regardless of
-      // the number of bits, it wants to be compared against something shifted to
-      // have 16; that way we don't need to shift inside the loop.
+      // SLOW: Naive test is to shift the `bitData` down so `s` bits are valid, then test against `maxCode`. To speed
+      // this up, we've preshifted maxCode left so that it has `16-s` 0s at the end; in other words, regardless of the
+      // number of bits, it wants to be compared against something shifted to have 16; that way we don't need to shift
+      // inside the loop.
       code = peek<uint32_t>(16);
       codeSize = BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS + 1;
 
@@ -261,10 +223,6 @@ struct BLJpegDecoderBitReader {
     return BL_SUCCESS;
   }
 };
-
-// ============================================================================
-// [BLJpegDecoder - BuildHuffman]
-// ============================================================================
 
 BL_HIDDEN BLResult blJpegDecoderBuildHuffmanAC(BLJpegDecoderHuffmanACTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept;
 BL_HIDDEN BLResult blJpegDecoderBuildHuffmanDC(BLJpegDecoderHuffmanDCTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept;

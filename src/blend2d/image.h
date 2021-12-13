@@ -1,45 +1,31 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_IMAGE_H_INCLUDED
 #define BLEND2D_IMAGE_H_INCLUDED
 
-#include "./array.h"
-#include "./format.h"
-#include "./geometry.h"
-#include "./variant.h"
+#include "array.h"
+#include "format.h"
+#include "geometry.h"
+#include "imagecodec.h"
+#include "object.h"
 
 //! \addtogroup blend2d_api_imaging
 //! \{
 
-// ============================================================================
-// [BLImage - Constants]
-// ============================================================================
+//! \name BLImage - Constants
+//! \{
 
 //! Flags used by `BLImageInfo`.
 BL_DEFINE_ENUM(BLImageInfoFlags) {
+  //! No flags.
+  BL_IMAGE_INFO_FLAG_NO_FLAGS = 0u,
   //! Progressive mode.
   BL_IMAGE_INFO_FLAG_PROGRESSIVE = 0x00000001u
+
+  BL_FORCE_ENUM_UINT32(BL_IMAGE_INFO_FLAG)
 };
 
 //! Filter type used by `BLImage::scale()`.
@@ -75,20 +61,24 @@ BL_DEFINE_ENUM(BLImageScaleFilter) {
   //! Filter using a user-function, must be passed through `BLImageScaleOptions`.
   BL_IMAGE_SCALE_FILTER_USER = 14,
 
-  //! Count of image-scale filters.
-  BL_IMAGE_SCALE_FILTER_COUNT = 15
+  //! Maximum value of `BLImageScaleFilter`.
+  BL_IMAGE_SCALE_FILTER_MAX_VALUE = 14
+
+  BL_FORCE_ENUM_UINT32(BL_IMAGE_SCALE_FILTER)
 };
 
-// ============================================================================
-// [BLImage - Typedefs]
-// ============================================================================
+//! \}
+
+//! \name BLImage - Types
+//! \{
 
 //! A user function that can be used by `BLImage::scale()`.
 typedef BLResult (BL_CDECL* BLImageScaleUserFunc)(double* dst, const double* tArray, size_t n, const void* data) BL_NOEXCEPT;
 
-// ============================================================================
-// [BLImage - Data]
-// ============================================================================
+//! \}
+
+//! \name BLImage - Structs
+//! \{
 
 //! Data that describes a raster image. Used by `BLImage`.
 struct BLImageData {
@@ -98,18 +88,10 @@ struct BLImageData {
   uint32_t format;
   uint32_t flags;
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLImage - Info]
-// ============================================================================
 
 //! Image information provided by image codecs.
 struct BLImageInfo {
@@ -132,18 +114,10 @@ struct BLImageInfo {
   //! Image compression (as understood by codec).
   char compression[16];
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
-
-// ============================================================================
-// [BLImage - ScaleOptions]
-// ============================================================================
 
 //! Options that can used to customize image scaling.
 struct BLImageScaleOptions {
@@ -158,9 +132,7 @@ struct BLImageScaleOptions {
     } mitchell;
   };
 
-  // --------------------------------------------------------------------------
-  #ifdef __cplusplus
-
+#ifdef __cplusplus
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 
   BL_INLINE void resetToDefaults() noexcept {
@@ -171,71 +143,90 @@ struct BLImageScaleOptions {
     mitchell.c = 1.0 / 3.0;
     data[2] = 0.0;
   }
-
-  #endif
-  // --------------------------------------------------------------------------
+#endif
 };
 
-// ============================================================================
-// [BLImage - Core]
-// ============================================================================
+//! \}
 
-//! Image [C Interface - Impl].
+//! \name BLImage - C API
+//! \{
+
+//! \cond INTERNAL
+//! 2D raster image [Impl].
 struct BLImageImpl {
   //! Pixel data.
   void* pixelData;
-
-  //! Reference count.
-  volatile size_t refCount;
-  //! Impl type.
-  uint8_t implType;
-  //! Impl traits.
-  uint8_t implTraits;
-  //! Memory pool data.
-  uint16_t memPoolData;
-
+  //! Image stride.
+  intptr_t stride;
+  //! Image size.
+  BLSizeI size;
   //! Image format.
   uint8_t format;
   //! Image flags.
   uint8_t flags;
   //! Image depth (in bits).
   uint16_t depth;
-  //! Image size.
-  BLSizeI size;
-  //! Image stride.
-  intptr_t stride;
+  //! Reserved for future use, must be zero.
+  uint8_t reserved[4];
+};
+//! \endcond
+
+//! 2D raster image [C API].
+struct BLImageCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
 };
 
-//! Image [C Interface - Core].
-struct BLImageCore {
-  BLImageImpl* impl;
-};
+BL_BEGIN_C_DECLS
 
-// ============================================================================
-// [BLImage - C++]
-// ============================================================================
+BL_API BLResult BL_CDECL blImageInit(BLImageCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageInitMove(BLImageCore* self, BLImageCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageInitWeak(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageInitAs(BLImageCore* self, int w, int h, BLFormat format) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageInitAsFromData(BLImageCore* self, int w, int h, BLFormat format, void* pixelData, intptr_t stride, BLDestroyExternalDataFunc destroyFunc, void* userData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDestroy(BLImageCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageReset(BLImageCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageAssignMove(BLImageCore* self, BLImageCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageAssignWeak(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageAssignDeep(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCreate(BLImageCore* self, int w, int h, BLFormat format) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCreateFromData(BLImageCore* self, int w, int h, BLFormat format, void* pixelData, intptr_t stride, BLDestroyExternalDataFunc destroyFunc, void* userData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageGetData(const BLImageCore* self, BLImageData* dataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageMakeMutable(BLImageCore* self, BLImageData* dataOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageConvert(BLImageCore* self, BLFormat format) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blImageEquals(const BLImageCore* a, const BLImageCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageScale(BLImageCore* dst, const BLImageCore* src, const BLSizeI* size, uint32_t filter, const BLImageScaleOptions* options) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageReadFromFile(BLImageCore* self, const char* fileName, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageReadFromData(BLImageCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageWriteToFile(const BLImageCore* self, const char* fileName, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageWriteToData(const BLImageCore* self, BLArrayCore* dst, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+
+//! \}
+
+//! \name BLImage - C++ API
+//! \{
 
 #ifdef __cplusplus
 //! 2D raster image [C++ API].
 class BLImage : public BLImageCore {
 public:
   //! \cond INTERNAL
-  static constexpr const uint32_t kImplType = BL_IMPL_TYPE_IMAGE;
+  BL_INLINE BLImageImpl* _impl() const noexcept { return static_cast<BLImageImpl*>(_d.impl); }
   //! \endcond
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLImage() noexcept { this->impl = none().impl; }
-  BL_INLINE BLImage(BLImage&& other) noexcept { blVariantInitMove(this, &other); }
-  BL_INLINE BLImage(const BLImage& other) noexcept { blVariantInitWeak(this, &other); }
-  BL_INLINE explicit BLImage(BLImageImpl* impl) noexcept { this->impl = impl; }
-  BL_INLINE BLImage(int w, int h, uint32_t format) noexcept { blImageInitAs(this, w, h, format); }
+  BL_INLINE BLImage() noexcept { blImageInit(this); }
+  BL_INLINE BLImage(BLImage&& other) noexcept { blImageInitMove(this, &other); }
+  BL_INLINE BLImage(const BLImage& other) noexcept { blImageInitWeak(this, &other); }
+  BL_INLINE BLImage(int w, int h, BLFormat format) noexcept { blImageInitAs(this, w, h, format); }
   BL_INLINE ~BLImage() { blImageDestroy(this); }
 
   //! \}
 
-  //! \name Operator Overloads
+  //! \name Overloaded Operators
   //! \{
 
   BL_INLINE explicit operator bool() const noexcept { return !empty(); }
@@ -252,7 +243,8 @@ public:
   //! \{
 
   BL_INLINE BLResult reset() noexcept { return blImageReset(this); }
-  BL_INLINE void swap(BLImage& other) noexcept { std::swap(this->impl, other.impl); }
+
+  BL_INLINE void swap(BLImage& other) noexcept { _d.swap(other._d); }
 
   BL_INLINE BLResult assign(BLImage&& other) noexcept { return blImageAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLImage& other) noexcept { return blImageAssignWeak(this, &other); }
@@ -260,13 +252,9 @@ public:
   //! Create a deep copy of the `other` image.
   BL_INLINE BLResult assignDeep(const BLImage& other) noexcept { return blImageAssignDeep(this, &other); }
 
-  //! Tests whether the image is a built-in null instance.
-  BL_NODISCARD
-  BL_INLINE bool isNone() const noexcept { return (impl->implTraits & BL_IMPL_TRAIT_NULL) != 0; }
-
   //! Tests whether the image is empty (has no size).
   BL_NODISCARD
-  BL_INLINE bool empty() const noexcept { return impl->format == BL_FORMAT_NONE; }
+  BL_INLINE bool empty() const noexcept { return format() == BL_FORMAT_NONE; }
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLImage& other) const noexcept { return blImageEquals(this, &other); }
@@ -278,43 +266,48 @@ public:
 
   //! Create a new image of a specified width `w`, height `h`, and `format`.
   //!
-  //! \note It's important to always test whether the function succeeded as
-  //! allocating pixel-data can fail. If invalid arguments (invalid size or
-  //! format) were passed to the function a `BL_ERROR_INVALID_VALUE` result
-  //! will be returned and no data will be allocated. It's also important
-  //! to notice that `BLImage::create()` would not change anything if the
-  //! function fails (the previous image content would be kept as is).
-  BL_INLINE BLResult create(int w, int h, uint32_t format) noexcept {
+  //! \note It's important to always test whether the function succeeded as allocating pixel-data can fail. If invalid
+  //! arguments (invalid size or format) were passed to the function a `BL_ERROR_INVALID_VALUE` result will be returned
+  //! and no data will be allocated. It's also important to notice that `BLImage::create()` would not change anything
+  //! if the function fails (the previous image content would be kept as is).
+  BL_INLINE BLResult create(int w, int h, BLFormat format) noexcept {
     return blImageCreate(this, w, h, format);
   }
 
   //! Create a new image from external data.
   BL_INLINE BLResult createFromData(
-    int w, int h, uint32_t format,
+    int w, int h, BLFormat format,
     void* pixelData, intptr_t stride,
-    BLDestroyImplFunc destroyFunc = nullptr,
-    void* destroyData = nullptr) noexcept { return blImageCreateFromData(this, w, h, format, pixelData, stride, destroyFunc, destroyData); }
+    BLDestroyExternalDataFunc destroyFunc = nullptr,
+    void* userData = nullptr) noexcept {
+
+    return blImageCreateFromData(this, w, h, format, pixelData, stride, destroyFunc, userData);
+  }
 
   //! \}
 
-  //! \name Image Data
+  //! \name Accessors
   //! \{
 
   //! Returns image width.
   BL_NODISCARD
-  BL_INLINE int width() const noexcept { return impl->size.w; }
+  BL_INLINE int width() const noexcept { return _impl()->size.w; }
 
   //! Returns image height.
   BL_NODISCARD
-  BL_INLINE int height() const noexcept { return impl->size.h; }
+  BL_INLINE int height() const noexcept { return _impl()->size.h; }
 
   //! Returns image size.
   BL_NODISCARD
-  BL_INLINE const BLSizeI& size() const noexcept { return impl->size; }
+  BL_INLINE BLSizeI size() const noexcept { return _impl()->size; }
 
   //! Returns image format, see `BLFormat`.
   BL_NODISCARD
-  BL_INLINE uint32_t format() const noexcept { return impl->format; }
+  BL_INLINE BLFormat format() const noexcept { return BLFormat(_impl()->format); }
+
+  //! Returns image depth, in bits.
+  BL_NODISCARD
+  BL_INLINE uint32_t depth() const noexcept { return _impl()->depth; }
 
   BL_INLINE BLResult getData(BLImageData* dataOut) const noexcept { return blImageGetData(this, dataOut); }
   BL_INLINE BLResult makeMutable() noexcept { BLImageData unused; return blImageMakeMutable(this, &unused); }
@@ -325,7 +318,7 @@ public:
   //! \name Image Utilities
   //! \{
 
-  BL_INLINE BLResult convert(uint32_t format) noexcept {
+  BL_INLINE BLResult convert(BLFormat format) noexcept {
     return blImageConvert(this, format);
   }
 
@@ -380,14 +373,13 @@ public:
 
   //! \}
 
-  BL_NODISCARD
-  static BL_INLINE const BLImage& none() noexcept { return reinterpret_cast<const BLImage*>(blNone)[kImplType]; }
-
   static BL_INLINE BLResult scale(BLImage& dst, const BLImage& src, const BLSizeI& size, uint32_t filter, const BLImageScaleOptions* options = nullptr) noexcept {
     return blImageScale(&dst, &src, &size, filter, options);
   }
 };
+
 #endif
+//! \}
 
 //! \}
 

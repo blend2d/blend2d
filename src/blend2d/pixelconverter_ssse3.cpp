@@ -1,38 +1,19 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
-#include "./api-build_p.h"
+#include "api-build_p.h"
 #ifdef BL_BUILD_OPT_SSSE3
 
-#include "./pixelconverter_p.h"
-#include "./simd_p.h"
-#include "./support_p.h"
+#include "pixelconverter_p.h"
+#include "simd_p.h"
+#include "support/memops_p.h"
 
 using namespace SIMD;
 
-// ============================================================================
-// [BLPixelConverter - Copy|Shufb (SSSE3)]
-// ============================================================================
+// PixelConverter - Copy|Shufb (SSSE3)
+// ===================================
 
 BLResult bl_convert_copy_shufb_8888_ssse3(
   const BLPixelConverterCore* self,
@@ -53,7 +34,8 @@ BLResult bl_convert_copy_shufb_8888_ssse3(
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 16) {
+    BL_NOUNROLL
+    while (i >= 16) {
       Vec128I p0, p1, p2, p3;
       p0 = v_loadu_i128(srcData +  0);
       p1 = v_loadu_i128(srcData + 16);
@@ -75,7 +57,8 @@ BLResult bl_convert_copy_shufb_8888_ssse3(
       i -= 16;
     }
 
-    while_nounroll (i >= 4) {
+    BL_NOUNROLL
+    while (i >= 4) {
       Vec128I p0 = v_loadu_i128(srcData);
       v_storeu_i128(dstData, v_or(v_shuffle_i8(p0, predicate), fillMask));
 
@@ -84,7 +67,8 @@ BLResult bl_convert_copy_shufb_8888_ssse3(
       i -= 4;
     }
 
-    while_nounroll (i) {
+    BL_NOUNROLL
+    while (i) {
       Vec128I p0 = v_load_i32(srcData);
       v_store_i32(dstData, v_or(v_shuffle_i8(p0, predicate), fillMask));
 
@@ -101,9 +85,8 @@ BLResult bl_convert_copy_shufb_8888_ssse3(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - RGB32 <- RGB24 (SSSE3)]
-// ============================================================================
+// PixelConverter - RGB32 <- RGB24 (SSSE3)
+// =======================================
 
 BLResult bl_convert_rgb32_from_rgb24_shufb_ssse3(
   const BLPixelConverterCore* self,
@@ -124,14 +107,15 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_ssse3(
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 16) {
+    BL_NOUNROLL
+    while (i >= 16) {
       Vec128I p0, p1, p2, p3;
       p0 = v_loadu_i128(srcData +  0);                 // [x5|z4 y4 x4|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
       p1 = v_loadu_i128(srcData + 16);                 // [yA|xA|z9 y9|x9 z8 y8 x8|z7 y7 x7 z6|y6 x6 z5 y5]
       p3 = v_loadu_i128(srcData + 32);                 // [zF yF xF zE|yE xE zD yD|xD zC yC xC|zB yB xB zA]
 
-      p2 = v_alignr_i8<8>(p3, p1);                      // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
-      p1 = v_alignr_i8<12>(p1, p0);                     // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
+      p2 = v_alignr_i8<8>(p3, p1);                     // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
+      p1 = v_alignr_i8<12>(p1, p0);                    // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
       p3 = v_srlb_i128<4>(p3);                         // [-- -- -- --|zF yF xF zE|yE xE zD yD|xD zC yC xC]
 
       p0 = v_or(v_shuffle_i8(p0, predicate), fillMask);
@@ -153,8 +137,8 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_ssse3(
       Vec128I p0, p1;
 
       p0 = v_loadu_i128  (srcData +  0);               // [x5|z4 y4 x4|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
-      p1 = v_load_i64(srcData + 16);               // [-- -- -- --|-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5]
-      p1 = v_alignr_i8<12>(p1, p0);                     // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
+      p1 = v_load_i64(srcData + 16);                   // [-- -- -- --|-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5]
+      p1 = v_alignr_i8<12>(p1, p0);                    // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
 
       p0 = v_or(v_shuffle_i8(p0, predicate), fillMask);
       p1 = v_or(v_shuffle_i8(p1, predicate), fillMask);
@@ -170,9 +154,9 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_ssse3(
     if (i >= 4) {
       Vec128I p0, p1;
 
-      p0 = v_load_i64(srcData +  0);               // [-- -- -- --|-- -- -- --|y2 x2 z1 y1|x1 z0 y0 x0]
-      p1 = v_load_i32(srcData +  8);               // [-- -- -- --|-- -- -- --|-- -- -- --|z3 y3 x3 z2]
-      p0 = v_interleave_lo_i64(p0, p1);                      // [-- -- -- --|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
+      p0 = v_load_i64(srcData +  0);                   // [-- -- -- --|-- -- -- --|y2 x2 z1 y1|x1 z0 y0 x0]
+      p1 = v_load_i32(srcData +  8);                   // [-- -- -- --|-- -- -- --|-- -- -- --|z3 y3 x3 z2]
+      p0 = v_interleave_lo_i64(p0, p1);                // [-- -- -- --|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
 
       v_storeu_i128(dstData, v_or(v_shuffle_i8(p0, predicate), fillMask));
 
@@ -181,9 +165,10 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_ssse3(
       i -= 4;
     }
 
-    while_nounroll (i) {
-      uint32_t yx = blMemReadU16u(srcData + 0);
-      uint32_t z  = blMemReadU8(srcData + 2);
+    BL_NOUNROLL
+    while (i) {
+      uint32_t yx = BLMemOps::readU16u(srcData + 0);
+      uint32_t z  = BLMemOps::readU8(srcData + 2);
 
       Vec128I p0 = v_i128_from_u32((z << 16) | yx);
       v_store_i32(dstData, v_or(v_shuffle_i8(p0, predicate), fillMask));
@@ -201,9 +186,8 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_ssse3(
   return BL_SUCCESS;
 }
 
-// ============================================================================
-// [BLPixelConverter - Premultiply (SSSE3)]
-// ============================================================================
+// BLPixelConverter - Premultiply (SSSE3)
+// ======================================
 
 template<uint32_t A_Shift>
 static BL_INLINE BLResult bl_convert_premultiply_8888_shufb_template_ssse3(
@@ -231,7 +215,8 @@ static BL_INLINE BLResult bl_convert_premultiply_8888_shufb_template_ssse3(
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
 
-    while_nounroll (i >= 4) {
+    BL_NOUNROLL
+    while (i >= 4) {
       Vec128I p0, p1;
 
       p0 = v_loadu_i128(srcData);
@@ -254,7 +239,8 @@ static BL_INLINE BLResult bl_convert_premultiply_8888_shufb_template_ssse3(
       i -= 4;
     }
 
-    while_nounroll (i) {
+    BL_NOUNROLL
+    while (i) {
       Vec128I p0;
 
       p0 = v_load_i32(srcData);

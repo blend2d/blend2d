@@ -1,25 +1,7 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 // ----------------------------------------------------------------------------
 // IMPORTANT: DO NOT USE THIS HEADER IN PRODUCTION, ONLY FOR BUG REPORTING!
@@ -38,26 +20,23 @@
 #define BLEND2D_DEBUG_H_INCLUDED
 
 #include <stdio.h>
-#include "./blend2d.h"
+#include "blend2d.h"
 
 //! \cond INTERNAL
 
-// ============================================================================
-// [Forward Declarations]
-// ============================================================================
+// Forward Declarations
+// ====================
 
-static void blDebugVariant_(const void* obj, const char* name, int indent);
+static void blDebugObject_(const void* obj, const char* name, int indent);
 
-// ============================================================================
-// [BLDebug - Begin]
-// ============================================================================
+// BLDebug - Begin
+// ===============
 
-#define BL_DEBUG_OUT(MSG)       blRuntimeMessageFmt("%*s%s", indent * 2, "", MSG);
-#define BL_DEBUG_FMT(FMT, ...)  blRuntimeMessageFmt("%*s" FMT, indent * 2, "", __VA_ARGS__);
+#define BL_DEBUG_OUT(MSG) blRuntimeMessageFmt("%*s%s", indent * 2, "", MSG);
+#define BL_DEBUG_FMT(FMT, ...) blRuntimeMessageFmt("%*s" FMT, indent * 2, "", __VA_ARGS__);
 
-// ============================================================================
-// [BLDebug - Utilities]
-// ============================================================================
+// BLDebug - Utilities
+// ===================
 
 static const char* blDebugGetEnumAsString(uint32_t value, const char* enumData) {
   uint32_t i = 0;
@@ -79,9 +58,8 @@ static const char* blDebugGetEnumAsString(uint32_t value, const char* enumData) 
   return p;
 }
 
-// ============================================================================
-// [BLDebug - Runtime]
-// ============================================================================
+// BLDebug - Runtime
+// =================
 
 static void blDebugRuntimeCpuFeatures(char* buf, size_t bufSize, uint32_t arch, uint32_t features) {
   if (!arch) {
@@ -167,23 +145,23 @@ static void blDebugRuntimeSystemInfo(void) {
   blRuntimeQueryInfo(BL_RUNTIME_INFO_TYPE_SYSTEM, &info);
   cpuFeatures[0] = '\0';
 
-  #if defined(__linux__)
+#if defined(__linux__)
   os = "Linux";
-  #elif defined(__APPLE__)
+#elif defined(__APPLE__)
   os = "Apple";
-  #elif defined(__DragonFly__)
+#elif defined(__DragonFly__)
   os = "DragonFlyBSD";
-  #elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__)
   os = "FreeBSD";
-  #elif defined(__NetBSD__)
+#elif defined(__NetBSD__)
   os = "NetBSD";
-  #elif defined(__OpenBSD__)
+#elif defined(__OpenBSD__)
   os = "OpenBSD";
-  #elif defined(__HAIKU__)
+#elif defined(__HAIKU__)
   os = "Haiku";
-  #elif defined(_WIN32)
+#elif defined(_WIN32)
   os = "Windows";
-  #endif
+#endif
 
   blDebugRuntimeCpuFeatures(cpuFeatures, 128, info.cpuArch, info.cpuFeatures);
 
@@ -204,9 +182,8 @@ static void blDebugRuntimeSystemInfo(void) {
     info.allocationGranularity);
 }
 
-// ============================================================================
-// [BLDebug - Matrix]
-// ============================================================================
+// BLDebug - Matrix
+// ================
 
 static void blDebugMatrix2D_(const BLMatrix2D* obj, const char* name, int indent) {
   const char* matrixTypeEnum = "IDENTITY\0TRANSLATE\0SCALE\0SWAP\0AFFINE\0INVALID\0";
@@ -218,9 +195,8 @@ static void blDebugMatrix2D_(const BLMatrix2D* obj, const char* name, int indent
   BL_DEBUG_OUT("}\n");
 }
 
-// ============================================================================
-// [BLDebug - StrokeOptions]
-// ============================================================================
+// BLDebug - StrokeOptions
+// =======================
 
 static void blDebugStrokeOptions_(const BLStrokeOptionsCore* obj, const char* name, int indent) {
   const char* strokeCapPositionEnum = "StartCap\0EndCap\0";
@@ -233,26 +209,25 @@ static void blDebugStrokeOptions_(const BLStrokeOptionsCore* obj, const char* na
   BL_DEBUG_FMT("%s: {\n", name);
   indent++;
 
-  for (i = 0; i < BL_STROKE_CAP_POSITION_COUNT; i++)
+  for (i = 0; i <= BL_STROKE_CAP_POSITION_MAX_VALUE; i++)
     BL_DEBUG_FMT("%s: %s\n", blDebugGetEnumAsString(i, strokeCapPositionEnum), blDebugGetEnumAsString(obj->caps[i], strokeCapEnum));
   BL_DEBUG_FMT("Join: %s\n", blDebugGetEnumAsString(obj->join, strokeJoinEnum));
   BL_DEBUG_FMT("TransformOrder: %s\n", blDebugGetEnumAsString(obj->transformOrder, strokeTransformOrderEnum));
   BL_DEBUG_FMT("Width: %g\n", obj->width);
   BL_DEBUG_FMT("MiterLimit: %g\n", obj->miterLimit);
   BL_DEBUG_FMT("DashOffset: %g\n", obj->dashOffset);
-  blDebugVariant_(&obj->dashArray, "DashArray", indent);
+  blDebugObject_(&obj->dashArray, "DashArray", indent);
 
   indent--;
   BL_DEBUG_OUT("}\n");
 }
 static void blDebugStrokeOptions(const BLStrokeOptionsCore* obj) { return blDebugStrokeOptions_(obj, "BLStrokeOptions", 0); }
 
-// ============================================================================
-// [BLDebug - Array]
-// ============================================================================
+// BLDebug - Array
+// ===============
 
 static void blDebugArray_(const BLArrayCore* obj, const char* name, int indent) {
-  uint32_t implType = blVariantGetImplType(obj);
+  BLObjectType objectType = blVarGetType(obj);
   const void* voidData = blArrayGetData(obj);
 
   size_t i;
@@ -266,85 +241,86 @@ static void blDebugArray_(const BLArrayCore* obj, const char* name, int indent) 
   BL_DEBUG_FMT("%s: {\n", name);
   indent++;
 
-  switch (implType) {
-    case BL_IMPL_TYPE_ARRAY_VAR: {
+  switch (objectType) {
+    case BL_OBJECT_TYPE_ARRAY_OBJECT: {
       char prefix[64];
-      const BLVariant** data = (const BLVariant**)voidData;
+      const BLObjectCore** data = (const BLObjectCore**)voidData;
       for (i = 0; i < size; i++) {
         snprintf(prefix, 64, "[%zu]", i);
-        blDebugVariant_(data[i], prefix, indent);
+        blDebugObject_(data[i], prefix, indent);
       }
       break;
     }
-    case BL_IMPL_TYPE_ARRAY_I8: {
+    case BL_OBJECT_TYPE_ARRAY_INT8: {
       const int8_t* data = (const int8_t*)voidData;
       for (i = 0; i < size; i++)
         BL_DEBUG_FMT("[%zu] %d", i, data[i]);
       break;
     }
-    case BL_IMPL_TYPE_ARRAY_U8: {
+    case BL_OBJECT_TYPE_ARRAY_UINT8: {
       const uint8_t* data = (const uint8_t*)voidData;
       for (i = 0; i < size; i++)
         BL_DEBUG_FMT("[%zu] %u", i, data[i]);
       break;
     }
-    case BL_IMPL_TYPE_ARRAY_I16: {
+    case BL_OBJECT_TYPE_ARRAY_INT16: {
       const int16_t* data = (const int16_t*)voidData;
       for (i = 0; i < size; i++)
         BL_DEBUG_FMT("[%zu] %d", i, data[i]);
       break;
     }
-    case BL_IMPL_TYPE_ARRAY_U16: {
+    case BL_OBJECT_TYPE_ARRAY_UINT16: {
       const uint16_t* data = (const uint16_t*)voidData;
       for (i = 0; i < size; i++)
         BL_DEBUG_FMT("[%zu] %u", i, data[i]);
       break;
     }
-    case BL_IMPL_TYPE_ARRAY_I32: {
+    case BL_OBJECT_TYPE_ARRAY_INT32: {
       const int32_t* data = (const int32_t*)voidData;
       for (i = 0; i < size; i++)
         BL_DEBUG_FMT("[%zu] %d", i, data[i]);
       break;
     }
-    case BL_IMPL_TYPE_ARRAY_U32: {
+    case BL_OBJECT_TYPE_ARRAY_UINT32: {
       const uint32_t* data = (const uint32_t*)voidData;
       for (i = 0; i < size; i++)
         BL_DEBUG_FMT("[%zu] %u", i, data[i]);
       break;
     }
-    case BL_IMPL_TYPE_ARRAY_I64: {
+    case BL_OBJECT_TYPE_ARRAY_INT64: {
       const int64_t* data = (const int64_t*)voidData;
       for (i = 0; i < size; i++)
         BL_DEBUG_FMT("[%zu] %lld", i, (long long)data[i]);
       break;
     }
-    case BL_IMPL_TYPE_ARRAY_U64: {
+    case BL_OBJECT_TYPE_ARRAY_UINT64: {
       const uint64_t* data = (const uint64_t*)voidData;
       for (i = 0; i < size; i++)
         BL_DEBUG_FMT("[%zu] %llu", i, (unsigned long long)data[i]);
       break;
     }
-    case BL_IMPL_TYPE_ARRAY_F32: {
+    case BL_OBJECT_TYPE_ARRAY_FLOAT32: {
       const float* data = (const float*)voidData;
       for (i = 0; i < size; i++)
         BL_DEBUG_FMT("[%zu] %g", i, data[i]);
       break;
     }
-    case BL_IMPL_TYPE_ARRAY_F64: {
+    case BL_OBJECT_TYPE_ARRAY_FLOAT64: {
       const double* data = (const double*)voidData;
       for (i = 0; i < size; i++)
         BL_DEBUG_FMT("[%zu] %g", i, data[i]);
       break;
     }
+    default:
+      break;
   }
 
   indent--;
   BL_DEBUG_OUT("}\n");
 }
 
-// ============================================================================
-// [BLDebug - Image]
-// ============================================================================
+// BLDebug - Image
+// ===============
 
 static void blDebugImage_(const BLImageCore* obj, const char* name, int indent) {
   const char* formatEnum = "NONE\0PRGB32\0XRGB32\0A8\0";
@@ -358,9 +334,8 @@ static void blDebugImage_(const BLImageCore* obj, const char* name, int indent) 
   BL_DEBUG_OUT("}\n");
 }
 
-// ============================================================================
-// [BLDebug - Path]
-// ============================================================================
+// BLDebug - Path
+// ==============
 
 static void blDebugPath_(const BLPathCore* obj, const char* name, int indent) {
   size_t i = 0;
@@ -408,34 +383,14 @@ static void blDebugPath_(const BLPathCore* obj, const char* name, int indent) {
   BL_DEBUG_OUT("}\n");
 }
 
-// ============================================================================
-// [BLDebug - Region]
-// ============================================================================
-
-static void blDebugRegion_(const BLRegionCore* obj, const char* name, int indent) {
-  size_t size = blRegionGetSize(obj);
-  const BLBoxI* data = blRegionGetData(obj);
-
-  BL_DEBUG_FMT("%s: {\n", name);
-  indent++;
-
-  for (size_t i = 0; i < size; i++) {
-    BL_DEBUG_FMT("[%zu] { x0: %d, y0: %d, x1: %d, y1: %d }\n", i, data[i].x0, data[i].y0, data[i].x1, data[i].y1);
-  }
-
-  indent--;
-  BL_DEBUG_OUT("}\n");
-}
-
-// ============================================================================
-// [BLDebug - Context]
-// ============================================================================
+// BLDebug - Context
+// =================
 
 static void blDebugContext_(const BLContextCore* obj, const char* name, int indent) {
   const char* contextTypeEnum = "NONE\0DUMMY\0PROXY\0RASTER\0";
   const char* fillRuleEnum = "NON_ZERO\0EVEN_ODD\0";
 
-  const BLContextState* state = obj->impl->state;
+  const BLContextState* state = static_cast<BLContextImpl*>(obj->_d.impl)->state;
 
   BL_DEBUG_FMT("%s: {\n", name);
   indent++;
@@ -457,64 +412,58 @@ static void blDebugContext_(const BLContextCore* obj, const char* name, int inde
   BL_DEBUG_OUT("}\n");
 }
 
-// ============================================================================
-// [BLDebug - Variant]
-// ============================================================================
+// BLDebug - Object
+// ================
 
-static void blDebugVariant_(const void* obj, const char* name, int indent) {
-  uint32_t implType = blVariantGetImplType(obj);
-  switch (implType) {
-    case BL_IMPL_TYPE_ARRAY_VAR:
-    case BL_IMPL_TYPE_ARRAY_I8:
-    case BL_IMPL_TYPE_ARRAY_U8:
-    case BL_IMPL_TYPE_ARRAY_I16:
-    case BL_IMPL_TYPE_ARRAY_U16:
-    case BL_IMPL_TYPE_ARRAY_I32:
-    case BL_IMPL_TYPE_ARRAY_U32:
-    case BL_IMPL_TYPE_ARRAY_I64:
-    case BL_IMPL_TYPE_ARRAY_U64:
-    case BL_IMPL_TYPE_ARRAY_F32:
-    case BL_IMPL_TYPE_ARRAY_F64:
-    case BL_IMPL_TYPE_ARRAY_STRUCT_1:
-    case BL_IMPL_TYPE_ARRAY_STRUCT_2:
-    case BL_IMPL_TYPE_ARRAY_STRUCT_3:
-    case BL_IMPL_TYPE_ARRAY_STRUCT_4:
-    case BL_IMPL_TYPE_ARRAY_STRUCT_6:
-    case BL_IMPL_TYPE_ARRAY_STRUCT_8:
-    case BL_IMPL_TYPE_ARRAY_STRUCT_10:
-    case BL_IMPL_TYPE_ARRAY_STRUCT_12:
-    case BL_IMPL_TYPE_ARRAY_STRUCT_16:
-    case BL_IMPL_TYPE_ARRAY_STRUCT_20:
-    case BL_IMPL_TYPE_ARRAY_STRUCT_24:
-    case BL_IMPL_TYPE_ARRAY_STRUCT_32:
+static void blDebugObject_(const void* obj, const char* name, int indent) {
+  BLObjectType type = blVarGetType(obj);
+  switch (type) {
+    case BL_OBJECT_TYPE_ARRAY_OBJECT:
+    case BL_OBJECT_TYPE_ARRAY_INT8:
+    case BL_OBJECT_TYPE_ARRAY_UINT8:
+    case BL_OBJECT_TYPE_ARRAY_INT16:
+    case BL_OBJECT_TYPE_ARRAY_UINT16:
+    case BL_OBJECT_TYPE_ARRAY_INT32:
+    case BL_OBJECT_TYPE_ARRAY_UINT32:
+    case BL_OBJECT_TYPE_ARRAY_INT64:
+    case BL_OBJECT_TYPE_ARRAY_UINT64:
+    case BL_OBJECT_TYPE_ARRAY_FLOAT32:
+    case BL_OBJECT_TYPE_ARRAY_FLOAT64:
+    case BL_OBJECT_TYPE_ARRAY_STRUCT_1:
+    case BL_OBJECT_TYPE_ARRAY_STRUCT_2:
+    case BL_OBJECT_TYPE_ARRAY_STRUCT_3:
+    case BL_OBJECT_TYPE_ARRAY_STRUCT_4:
+    case BL_OBJECT_TYPE_ARRAY_STRUCT_6:
+    case BL_OBJECT_TYPE_ARRAY_STRUCT_8:
+    case BL_OBJECT_TYPE_ARRAY_STRUCT_10:
+    case BL_OBJECT_TYPE_ARRAY_STRUCT_12:
+    case BL_OBJECT_TYPE_ARRAY_STRUCT_16:
+    case BL_OBJECT_TYPE_ARRAY_STRUCT_20:
+    case BL_OBJECT_TYPE_ARRAY_STRUCT_24:
+    case BL_OBJECT_TYPE_ARRAY_STRUCT_32:
       blDebugArray_((const BLArrayCore*)obj, name, indent);
       break;
 
-    case BL_IMPL_TYPE_IMAGE:
+    case BL_OBJECT_TYPE_IMAGE:
       blDebugImage_((const BLImageCore*)obj, name, indent);
       break;
 
-    case BL_IMPL_TYPE_PATH:
+    case BL_OBJECT_TYPE_PATH:
       blDebugPath_((const BLPathCore*)obj, name, indent);
       break;
 
-    case BL_IMPL_TYPE_REGION:
-      blDebugRegion_((const BLRegionCore*)obj, name, indent);
-      break;
-
-    case BL_IMPL_TYPE_CONTEXT:
+    case BL_OBJECT_TYPE_CONTEXT:
       blDebugContext_((const BLContextCore*)obj, name, indent);
       break;
 
     default:
-      BL_DEBUG_FMT("BLVariant { ImplType: %u }\n", implType);
+      BL_DEBUG_FMT("BLObject { Type: %u }\n", uint32_t(type));
       break;
   }
 }
 
-// ============================================================================
-// [BLDebug - API]
-// ============================================================================
+// BLDebug - Public API
+// ====================
 
 //! Dumps both `BLRuntimeBuildInfo` and `BLRuntimeSystemInfo`.
 //!
@@ -543,27 +492,21 @@ static void blDebugPath(const BLPathCore* obj) {
   return blDebugPath_(obj, "BLPath", 0);
 }
 
-//! Dumps BLRegionCore or BLRegion.
-static void blDebugRegion(const BLRegionCore* obj) {
-  return blDebugRegion_(obj, "BLRegion", 0);
-}
-
 //! Dumps BLContextCore or BLContext.
 static void blDebugContext(const BLContextCore* obj) {
   return blDebugContext_(obj, "BLContext", 0);
 }
 
-//! Dumps BLVariantCore or BLVariant.
+//! Dumps BLObjectCore or BLObject.
 //!
-//! You can use this function with any object that implements `BLVariant`
+//! You can use this function with any object that implements `BLObject`
 //! interface.
-static void blDebugVariant(const void* obj) {
-  return blDebugVariant_(obj, "BLVariant", 0);
+static void blDebugObject(const void* obj) {
+  return blDebugObject_(obj, "BLObject", 0);
 }
 
-// ============================================================================
-// [BLDebug - End]
-// ============================================================================
+// BLDebug - End
+// =============
 
 #undef BL_DEBUG_FMT
 #undef BL_DEBUG_OUT

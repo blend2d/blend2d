@@ -1,40 +1,17 @@
-// Blend2D - 2D Vector Graphics Powered by a JIT Compiler
+// This file is part of Blend2D project <https://blend2d.com>
 //
-//  * Official Blend2D Home Page: https://blend2d.com
-//  * Official Github Repository: https://github.com/blend2d/blend2d
-//
-// Copyright (c) 2017-2020 The Blend2D Authors
-//
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this software must not be misrepresented; you must not
-//    claim that you wrote the original software. If you use this software
-//    in a product, an acknowledgment in the product documentation would be
-//    appreciated but is not required.
-// 2. Altered source versions must be plainly marked as such, and must not be
-//    misrepresented as being the original software.
-// 3. This notice may not be removed or altered from any source distribution.
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
 
 #ifndef BLEND2D_PIXELCONVERTER_P_H_INCLUDED
 #define BLEND2D_PIXELCONVERTER_P_H_INCLUDED
 
-#include "./api-internal_p.h"
-#include "./pixelconverter.h"
-#include "./support_p.h"
+#include "api-internal_p.h"
+#include "pixelconverter.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
 //! \{
-
-// ============================================================================
-// [BLPixelConverter - InternalFlags]
-// ============================================================================
 
 //! Internal flags used by `BLPixelConverterData::internalFlags`.
 enum BLPixelConverterInternalFlags : uint8_t {
@@ -50,33 +27,23 @@ enum BLPixelConverterInternalFlags : uint8_t {
   //! Set when the pixel converter is a multi-step converter.
   BL_PIXEL_CONVERTER_INTERNAL_FLAG_MULTI_STEP = 0x40u,
 
-  //! The pixel converter contains data in `dataPtr` that is dynamic and must
-  //! be freed. To allow reference-counting it also contains a pointer to
-  //! `refCount`, which was allocated together with `dataPtr`. Since `refCount`
-  //! is part of `dataPtr` it's freed with it.
+  //! The pixel converter contains data in `dataPtr` that is dynamic and must be freed. To allow reference-counting
+  //! it also contains a pointer to `refCount`, which was allocated together with `dataPtr`. Since `refCount` is part
+  //! of `dataPtr` it's freed with it.
   BL_PIXEL_CONVERTER_INTERNAL_FLAG_DYNAMIC_DATA = 0x80u
 };
-
-// ============================================================================
-// [BLPixelConverter - Internals]
-// ============================================================================
 
 BL_HIDDEN extern const BLPixelConverterOptions blPixelConverterDefaultOptions;
 
 //! Internal initialized that accepts already sanitized `di` and `si` info.
 BL_HIDDEN BLResult blPixelConverterInitInternal(
   BLPixelConverterCore* self,
-  const BLFormatInfo& di, const BLFormatInfo& si, uint32_t createFlags) noexcept;
+  const BLFormatInfo& di, const BLFormatInfo& si, BLPixelConverterCreateFlags createFlags) noexcept;
 
-// ============================================================================
-// [BLPixelConverter - Multi-Step]
-// ============================================================================
-
-// Number of bytes used by the intermediate buffer. This number is adjustable,
-// but it's not a good idea to increase it so much as when it gets close to a
-// page size the C++ compiler would have to generate stack probes so the stack
+// Number of bytes used by the intermediate buffer. This number is adjustable, but it's not a good idea to increase
+// it so much as when it gets close to a page size the C++ compiler would have to generate stack probes so the stack
 // doesn't run out. We don't want such probes in the conversion function.
-enum : uint32_t { BL_PIXEL_CONVERTER_MULTISTEP_BUFFER_SIZE = 2048 + 1024 };
+static constexpr uint32_t BL_PIXEL_CONVERTER_MULTISTEP_BUFFER_SIZE = 2048 + 1024;
 
 // TODO: Implement multi-step converter.
 struct BLPixelConverterMultiStepContext {
@@ -84,10 +51,6 @@ struct BLPixelConverterMultiStepContext {
   BLPixelConverterCore first;
   BLPixelConverterCore second;
 };
-
-// ============================================================================
-// [BLPixelConverter - Data]
-// ============================================================================
 
 //! Internal data mapped to `BLPixelConverter::data`.
 struct BLPixelConverterData {
@@ -228,8 +191,7 @@ struct BLPixelConverterData {
   };
 };
 
-static_assert(sizeof(BLPixelConverterData) <= sizeof(BLPixelConverterCore),
-              "BLPixelConverterData cannot be longer than BLPixelConverterCore::data");
+BL_STATIC_ASSERT(sizeof(BLPixelConverterData) <= sizeof(BLPixelConverterCore));
 
 static BL_INLINE BLPixelConverterData* blPixelConverterGetData(BLPixelConverterCore* self) noexcept {
   return reinterpret_cast<BLPixelConverterData*>(self->data);
@@ -239,10 +201,6 @@ static BL_INLINE const BLPixelConverterData* blPixelConverterGetData(const BLPix
   return reinterpret_cast<const BLPixelConverterData*>(self->data);
 }
 
-// ============================================================================
-// [BLPixelConverter - Conversion Utilities]
-// ============================================================================
-
 static BL_INLINE uint8_t* blPixelConverterFillGap(uint8_t* data, size_t size) noexcept {
   uint8_t* end = data + size;
   while (data != end)
@@ -250,13 +208,8 @@ static BL_INLINE uint8_t* blPixelConverterFillGap(uint8_t* data, size_t size) no
   return data;
 }
 
-// ============================================================================
-// [BLPixelConverter - Conversion Functions]
-// ============================================================================
-
-// All functions that can be used as a fallback by optimized converters must be
-// defined here, in addition to all optimized functions that are dispatched in
-// `blpixelconverter.cpp`.
+// All functions that can be used as a fallback by optimized converters must be defined here, in addition to all
+// optimized functions that are dispatched in `blpixelconverter.cpp`.
 
 #define BL_DECLARE_CONVERTER_BASE(NAME)                                       \
   BL_HIDDEN BLResult BL_CDECL NAME(                                           \
