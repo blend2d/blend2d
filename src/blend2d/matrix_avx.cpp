@@ -200,6 +200,6 @@ void blTransformRtInit_AVX(BLRuntimeContext* rt) noexcept {
   blAssignFunc(&funcs[BL_MATRIX2D_TYPE_INVALID  ], mapPointDArrayAffine_AVX);
 }
 
-#endif
-
 } // {BLTransformPrivate}
+
+#endif
