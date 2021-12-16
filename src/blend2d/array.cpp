@@ -1317,7 +1317,7 @@ void blArrayRtInit(BLRuntimeContext* rt) noexcept {
   for (uint32_t objectType = BL_OBJECT_TYPE_ARRAY_FIRST; objectType <= BL_OBJECT_TYPE_ARRAY_LAST; objectType++) {
     blObjectDefaults[objectType]._d.initStatic(
       BLObjectType(objectType),
-      BLObjectInfo::packFields(0, BLArrayPrivate::itemSizeTable[objectType]));
+      BLObjectInfo::packFields(0, BLArrayPrivate::ssoCapacityTable[objectType]));
   }
 }
 
@@ -1326,7 +1326,7 @@ void blArrayRtInit(BLRuntimeContext* rt) noexcept {
 
 #if defined(BL_TEST)
 UNIT(array) {
-  INFO("Base functionality");
+  INFO("Basic functionality - BLArray<int>");
   {
     BLArray<int> a;
     EXPECT_EQ(a.size(), 0u);
@@ -1399,6 +1399,37 @@ UNIT(array) {
     EXPECT_SUCCESS(a.insert(1, 2));
     EXPECT_EQ(a[0], 1);
     EXPECT_EQ(a[1], 2);
+  }
+
+  INFO("Basic functionality - BLArray<uint64_t>");
+  {
+    BLArray<uint64_t> a;
+
+    EXPECT_EQ(a.size(), 0u);
+    EXPECT_GT(a.capacity(), 0u);
+    EXPECT_TRUE(a._d.sso());
+
+    for (size_t i = 0; i < 1000; i++)
+      EXPECT_SUCCESS(a.append(i));
+
+    // NOTE: AppendItem must work, but it's never called by C++ API (C++ API would call blArrayAppendU64 instead).
+    for (uint64_t i = 0; i < 1000; i++)
+      EXPECT_SUCCESS(blArrayAppendItem(&a, &i));
+
+    EXPECT_EQ(a.size(), 2000u);
+    for (size_t i = 0; i < 2000; i++)
+      EXPECT_EQ(a[i], i % 1000u);
+  }
+
+  INFO("Basic functionality - C API");
+  {
+    BLArrayCore a;
+    BLArray<uint64_t> b;
+
+    EXPECT_SUCCESS(blArrayInit(&a, BL_OBJECT_TYPE_ARRAY_UINT64));
+    EXPECT_EQ(blArrayGetSize(&a), b.size());
+    EXPECT_EQ(blArrayGetCapacity(&a), b.capacity());
+    EXPECT_SUCCESS(blArrayDestroy(&a));
   }
 
   INFO("External array");
