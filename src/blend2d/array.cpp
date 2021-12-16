@@ -931,8 +931,8 @@ BL_API_IMPL BLResult blArrayAppendData(BLArrayCore* self, const void* items, siz
 
   size_t sizeAfter = BLIntOps::uaddSaturate(u.size, n);
 
-  if (BL_UNLIKELY((u.size | immutableMsk) >= u.capacity)) {
-    if (BL_UNLIKELY(u.size >= maximumCapacityTable[arrayType]))
+  if (BL_UNLIKELY((sizeAfter | immutableMsk) > u.capacity)) {
+    if (BL_UNLIKELY(sizeAfter > maximumCapacityTable[arrayType]))
       return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
     BLArrayCore newO;
@@ -1429,6 +1429,19 @@ UNIT(array) {
     EXPECT_SUCCESS(blArrayInit(&a, BL_OBJECT_TYPE_ARRAY_UINT64));
     EXPECT_EQ(blArrayGetSize(&a), b.size());
     EXPECT_EQ(blArrayGetCapacity(&a), b.capacity());
+
+    const uint64_t items[] = { 1, 2, 3, 4, 5 };
+    EXPECT_SUCCESS(blArrayAppendData(&a, &items, BL_ARRAY_SIZE(items)));
+    EXPECT_EQ(blArrayGetSize(&a), 5u);
+
+    for (size_t i = 0; i < BL_ARRAY_SIZE(items); i++)
+      EXPECT_EQ(static_cast<const uint64_t*>(blArrayGetData(&a))[i], items[i]);
+
+    EXPECT_SUCCESS(blArrayInsertData(&a, 1, &items, BL_ARRAY_SIZE(items)));
+    const uint64_t itemsAfterInsertion[] = { 1, 1, 2, 3, 4, 5, 2, 3, 4, 5 };
+    for (size_t i = 0; i < BL_ARRAY_SIZE(itemsAfterInsertion); i++)
+      EXPECT_EQ(static_cast<const uint64_t*>(blArrayGetData(&a))[i], itemsAfterInsertion[i]);
+
     EXPECT_SUCCESS(blArrayDestroy(&a));
   }
 
