@@ -2112,7 +2112,7 @@ BL_API_IMPL bool blBitSetEquals(const BLBitSetCore* a, const BLBitSetCore* b) no
   return testOp(aSegmentData, aSegmentCount, bSegmentData, bSegmentCount, EqualsTestOp{});
 }
 
-int blBitSetCompare(const BLBitSetCore* a, const BLBitSetCore* b) noexcept {
+BL_API_IMPL int blBitSetCompare(const BLBitSetCore* a, const BLBitSetCore* b) noexcept {
   BL_ASSERT(a->_d.isBitSet());
   BL_ASSERT(b->_d.isBitSet());
 
