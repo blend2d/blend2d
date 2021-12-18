@@ -30,6 +30,9 @@ static constexpr double kStrokeCollinearityEpsilon = 1e-10;
 static constexpr double kStrokeCuspTThreshold = 1e-10;
 static constexpr double kStrokeDegenerateFlatness = 1e-6;
 
+// Epsilon used to split quadratic bezier curves during offsetting.
+static constexpr double kOffsetQuadEpsilonT = 1e-5;
+
 // Minimum vertices that would be required for any join + additional line.
 //
 // Calculated from:
@@ -787,7 +790,7 @@ SmoothPolyTo:
     return BL_SUCCESS;
   }
 
-  // Calculates round join to `pb` (dull angle), only used by offseting cusps.
+  // Calculates round join to `pb` (dull angle), only used by offsetting cusps.
   BL_INLINE BLResult dullRoundJoin(BLPathAppender& out, uint32_t side, const BLPoint& n1, const BLPoint& w1) noexcept {
     blUnused(n1);
 
@@ -833,7 +836,7 @@ SmoothPolyTo:
         BL_PROPAGATE(_bOut.ensure(_bPath, 2));
 
         double t = BLGeometry::quadParameterAtAngle(iter.part, m);
-        if (!(t >= blEpsilon<double>()) || !(t <= 1.0 - blEpsilon<double>()))
+        if (!(t > kOffsetQuadEpsilonT && t < 1.0 - kOffsetQuadEpsilonT))
           t = 1.0;
 
         BLPoint part[3];
