@@ -388,5 +388,6 @@ BL_INLINE Vec128I v_div255_u16(const Vec128I& x) noexcept {
 } // {SIMD}
 
 //! \}
+//! \endcond
 
 #endif // BLEND2D_SIMD_NEON_P_H_INCLUDED

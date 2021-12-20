@@ -15,7 +15,6 @@
 //! \{
 
 //! \name BLPattern - C API
-//!
 //! \{
 
 //! Pattern [Impl].
@@ -74,7 +73,6 @@ BL_END_C_DECLS
 //! \}
 
 //! \name BLPattern - C++ API
-//!
 //! \{
 #ifdef __cplusplus
 

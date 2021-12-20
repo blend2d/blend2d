@@ -19,6 +19,7 @@ typedef unsigned char BLOverflowFlag;
 
 //! \}
 
+//! Utility functions and classes simplifying integer operations.
 namespace BLIntOps {
 
 using BLInternal::StdInt;
@@ -648,7 +649,6 @@ static BL_INLINE constexpr X alignDown(const X& x, const Y& alignment) noexcept 
 //! \name Arithmetic Operations
 //! \{
 
-//! \cond NEVER
 template<typename T>
 BL_INLINE T addOverflowFallback(T x, T y, BLOverflowFlag* of) noexcept {
   typedef typename std::make_unsigned<T>::type U;
@@ -706,12 +706,12 @@ template<typename T> BL_INLINE T mulOverflowImpl(const T& x, const T& y, BLOverf
 
 #if defined(__GNUC__) && !defined(BL_BUILD_NO_INTRINSICS)
 #if defined(__clang__) || __GNUC__ >= 5
-#define BL_ARITH_OVERFLOW_SPECIALIZE(FUNC, T, RESULT_T, BUILTIN)            \
-  template<>                                                                \
+#define BL_ARITH_OVERFLOW_SPECIALIZE(FUNC, T, RESULT_T, BUILTIN)              \
+  template<>                                                                  \
   BL_INLINE T FUNC(const T& x, const T& y, BLOverflowFlag* of) noexcept {     \
-    RESULT_T result;                                                        \
+    RESULT_T result;                                                          \
     *of = BLOverflowFlag(*of | (BUILTIN((RESULT_T)x, (RESULT_T)y, &result))); \
-    return T(result);                                                       \
+    return T(result);                                                         \
   }
 BL_ARITH_OVERFLOW_SPECIALIZE(addOverflowImpl, int32_t , int               , __builtin_sadd_overflow  )
 BL_ARITH_OVERFLOW_SPECIALIZE(addOverflowImpl, uint32_t, unsigned int      , __builtin_uadd_overflow  )
@@ -738,12 +738,12 @@ BL_ARITH_OVERFLOW_SPECIALIZE(mulOverflowImpl, uint64_t, unsigned long long, __bu
 
 // There is a bug in MSVC that makes these specializations unusable, maybe in the future...
 #if defined(_MSC_VER) && 0
-#define BL_ARITH_OVERFLOW_SPECIALIZE(FUNC, T, ALT_T, BUILTIN)               \
-  template<>                                                                \
+#define BL_ARITH_OVERFLOW_SPECIALIZE(FUNC, T, ALT_T, BUILTIN)                 \
+  template<>                                                                  \
   BL_INLINE T FUNC(T x, T y, BLOverflowFlag* of) noexcept {                   \
-    ALT_T result;                                                           \
+    ALT_T result;                                                             \
     *of = BLOverflowFlag(*of | (BUILTIN(0, (ALT_T)x, (ALT_T)y, &result)));    \
-    return T(result);                                                       \
+    return T(result);                                                         \
   }
 BL_ARITH_OVERFLOW_SPECIALIZE(addOverflowImpl, uint32_t, unsigned int      , _addcarry_u32 )
 BL_ARITH_OVERFLOW_SPECIALIZE(subOverflowImpl, uint32_t, unsigned int      , _subborrow_u32)
@@ -753,7 +753,6 @@ BL_ARITH_OVERFLOW_SPECIALIZE(subOverflowImpl, uint64_t, unsigned __int64  , _sub
 #endif
 #undef BL_ARITH_OVERFLOW_SPECIALIZE
 #endif
-//! \endcond
 
 template<typename T>
 static BL_INLINE T addOverflow(const T& x, const T& y, BLOverflowFlag* of) noexcept { return T(addOverflowImpl(asStdInt(x), asStdInt(y), of)); }

@@ -178,6 +178,15 @@
   #define BL_UNALIGNED_TYPE(TYPE, ALIGNMENT) TYPE
 #endif
 
+//! \def BL_MAY_ALIAS
+//!
+//! Expands to `__attribute__((__may_alias__))` if supported.
+#if defined(__GNUC__)
+  #define BL_MAY_ALIAS __attribute__((__may_alias__))
+#else
+  #define BL_MAY_ALIAS
+#endif
+
 //! \def BL_NOUNROLL
 //!
 //! Compiler-specific macro that annotates a do/for/while loop to not get unrolled.

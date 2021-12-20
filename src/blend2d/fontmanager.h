@@ -183,4 +183,6 @@ public:
 #endif
 //! \}
 
+//! \}
+
 #endif // BLEND2D_FONTMANAGER_H_INCLUDED

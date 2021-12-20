@@ -8,7 +8,7 @@
 
 // This header can only be included by either <blend2d.h> or by internal Blend2D headers. Prevent users including
 // <blend2d/...> headers by accident and prevent not including "blend2d/api-build_p.h" during the Blend2D compilation.
-#if !defined(BLEND2D_H_INCLUDED) && !defined(BLEND2D_API_BUILD_P_H_INCLUDED)
+#if !defined(BLEND2D_H_INCLUDED) && !defined(BLEND2D_API_BUILD_P_H_INCLUDED) && !defined(__INTELLISENSE__)
   #pragma message("Include either <blend2d.h> or <blend2d-impl.h> to use Blend2D library")
 #endif
 
@@ -203,6 +203,9 @@
 
 //! \endcond
 
+// Blend2D Version
+// ===============
+
 //! \addtogroup blend2d_api_macros
 //! \{
 
@@ -216,8 +219,12 @@
 #define BL_VERSION BL_MAKE_VERSION(0, 0, 17)
 
 //! \}
-
 //! \}
+
+// Build Type
+// ==========
+
+//! \cond INTERNAL
 
 // These definitions can be used to enable static library build. Embed is used when Blend2D's source code is embedded
 // directly in another project, implies static build as well.
@@ -240,6 +247,8 @@
     #define BL_BUILD_RELEASE
   #endif
 #endif
+
+//! \endcond
 
 // Public Macros
 // =============
@@ -464,6 +473,9 @@
 //! have type information (it's a C++ feature). So this macro adds an additional enum value that would force the
 //! C compiler to make the type unsigned and at 32-bit.
 
+//! \}
+//! \endcond
+
 #ifdef __cplusplus
   #define BL_DEFINE_ENUM(NAME) enum NAME : uint32_t
   #define BL_FORCE_ENUM_UINT32(ENUM_VALUE_PREFIX)
@@ -471,9 +483,6 @@
   #define BL_DEFINE_ENUM(NAME) typedef enum NAME NAME; enum NAME
   #define BL_FORCE_ENUM_UINT32(ENUM_VALUE_PREFIX) ,ENUM_VALUE_PREFIX##_FORCE_UINT = 0xFFFFFFFFu
 #endif
-
-//! \}
-//! \endcond
 
 #if defined(_DOXYGEN)
   // Only for doxygen to make these members nicer.
@@ -500,6 +509,19 @@
   #define BL_TYPED_MEMBER(CORE_TYPE, CPP_TYPE, NAME) CORE_TYPE NAME
 #endif
 
+//! \cond INTERNAL
+//! \name Internals
+//! \{
+
+//! \def BL_BEGIN_C_DECLS
+//! Begins C declarations scope when compiling with a C++ compiler.
+
+//! \def BL_END_C_DECLS
+//! Ends C declarations scope when compiling with a C++ compiler.
+
+//! \}
+//! \endcond
+
 #ifdef __cplusplus
   #define BL_BEGIN_C_DECLS extern "C" {
   #define BL_END_C_DECLS } /* {ExternC} */
@@ -508,10 +530,8 @@
   #define BL_END_C_DECLS
 #endif
 
-//! \}
-
 //! \cond INTERNAL
-//! \name Internals
+//! \name Compiler Diagnostics
 //! \{
 
 // Diagnostic warnings can be turned on/off by using pragmas, however, this is a compiler specific stuff we have to
@@ -748,8 +768,6 @@ class BLFontData;
 class BLFontFace;
 class BLFontManager;
 class BLVar;
-
-using BLBitSetBuilder = BLBitSetBuilderT<512>;
 #endif
 
 // Public Types

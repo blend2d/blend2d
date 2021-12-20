@@ -8,16 +8,16 @@
 
 #include "api.h"
 
-//! \addtogroup blend2d_api_object
-//! \{
-
-//! \name BLObject - Object Type System & Layout
+//! \defgroup blend2d_api_object Object Model
+//! \brief Object Model & Memory Layout
 //!
-//! Blend2D object type system is a foundation of Blend2D objects. It was designed only for Blend2D and it's not
-//! supposed to be used as a foundation of other libraries. The object type system provides runtime reflection,
-//! small size optimization, and good performance.
+//! Blend2D object model is a foundation of all Blend2D objects. It was designed only for Blend2D and it's not
+//! supposed to be used as a foundation of other libraries. The object model provides runtime reflection, small
+//! size optimization (SSO), and good performance. In general, it focuses on optimizing memory footprint by
+//! taking advantage of SSO storage, however, this makes the implementation more complex compared to a traditional
+//! non-SSO model.
 //!
-//! Blend2D Object consist of 16 bytes that have the following layout:
+//! Blend2D object model used by \ref BLObjectCore consists of 16 bytes that have the following layout:
 //!
 //! ```
 //! union BLObjectDetail {
@@ -41,24 +41,25 @@
 //!
 //! Which allows to have either static or dynamic instances:
 //!
-//!   1. Static instance stores payload in object layout, Impl is not a valid pointer and cannot be accessed.
-//!   2. Dynamic instance has a valid Impl pointer having a content, which depends on \ref BLObjectType.
+//!   - Static instance stores payload in object layout, Impl is not a valid pointer and cannot be accessed.
+//!   - Dynamic instance has a valid Impl pointer having a content, which depends on \ref BLObjectType.
 //!
 //! The layout was designed to provide the following properties:
 //!
-//!   1. Reflection - any Blend2D object can be casted to a generic \ref BLObjectCore or \ref BLVar and reflected
-//!      at runtime.
-//!   2. Small string, container, and value optimization saves memory allocations (\ref BLString, \ref BLArray,
-//!      \ref BLBitSet).
-//!   3. No atomic reference counting operations for small containers and default constructed objects without data.
-//!   4. It's possible to store a floating point RGBA color (BLRgba) as f32_view, which uses all 16 bytes. The last
-//!      value of the color, which is alpha, cannot have a sign bit set (cannot be negative, cannot be NaN with sign).
+//!   - Reflection - any Blend2D object can be casted to a generic \ref BLObjectCore or \ref BLVar and reflected
+//!     at runtime.
+//!   - Small string, container, and value optimization saves memory allocations (\ref BLString, \ref BLArray,
+//!     \ref BLBitSet).
+//!   - No atomic reference counting operations for small containers and default constructed objects without data.
+//!   - It's possible to store a floating point RGBA color (BLRgba) as f32_data, which uses all 16 bytes. The last
+//!     value of the color, which describes alpha channel, cannot have a sign bit set (cannot be negative and cannot
+//!     be NaN with sign).
 //!
 //! 32-bit Floating Point is represented the following way (32 bits):
 //!
 //! ```
 //!   [--------+--------+--------+--------]
-//!   [31....24|23....16|15.....8|7......0]
+//!   [31....24|23....16|15.....8|7......0] (32-bit integer layout)
 //!   [--------+--------+--------+--------]
 //!   [Seeeeeee|eQ......|........|........] (32-bit floating point)
 //!   [--------+--------+--------+--------]
@@ -76,13 +77,13 @@
 //! chosen, because we don't allow alpha values to be negative. When the sign bit is set it means that it's a type
 //! inherited from \ref BLObjectCore. When the sign bit is not set the whole payload represents 128-bit \ref BLRgba
 //! color, where alpha is not a negative number. It's designed in a way that 31 bits out of 32 can be used as payload
-//! that represents object type, object info flags, and additional object-dependent payload.
+//! that represents object type, object info flags, and additional type-dependent payload.
 //!
 //! Object info value looks like this (also compared with floating point):
 //!
 //! ```
 //!   [--------+--------+--------+--------]
-//!   [31....24|23....16|15.....8|7......0]
+//!   [31....24|23....16|15.....8|7......0] (32-bit integer layout)
 //!   [--------+--------+--------+--------]
 //!   [Seeeeeee|eQ......|........|........] (32-bit floating point) (\ref BLRgba case, 'S' bit (sign bit) set to zero).
 //!   [MDTVtttt|ttaaaabb|bbccccpp|pppppXIR] (object info fields view) (\ref BLObjectCore case, 'M' bit set to one).
@@ -122,11 +123,12 @@
 //! Common meaning of payload fields:
 //!
 //!   - 'a' - If the object is a container (BLArray, BLString) 'a' field always represents its size in SSO mode.
-//!           If the object is a BitSet, 'a' field is combined with other fields to store a start word index.
+//!           If the object is a \ref BLBitSet, 'a' field is combined with other fields to store a start word index
+//!           or to mark a BitSet, which contains an SSO range instead of dense words.
 //!   - 'b' - If the object is a container (BLArray) 'b' field always represents its capacity in SSO mode except
-//!           BLString, which doesn't store capacity in 'b' field and uses it as an additional SSO content byte
+//!           \ref BLString, which doesn't store capacity in 'b' field and uses it as an additional SSO content byte
 //!           on little endian targets (SSO capacity is then either 13 on little endian targets or 11 on big endian
-//!           ones). This is possible as BL_OBJECT_TYPE_STRING must be identifier that has 2 low bits zero, which
+//!           ones). This is possible as \ref BL_OBJECT_TYPE_STRING must be identifier that has 2 low bits zero, which
 //!           then makes it possible to use 'ttIRaaaa' as null terminator when the string length is 14 characters.
 //!   - 'c' - Used freely.
 //!   - 'p' - Used freely.
@@ -165,9 +167,9 @@
 //! | BLFontManager       | 0 | 1 | 0 | x | 1 | x |
 //! +---------------------+---+---+---+---+---+---+
 //! ```
-//!
+
+//! \addtogroup blend2d_api_object
 //! \{
-//! \}
 
 //! \name BLObject - Constants
 //! \{
@@ -196,26 +198,39 @@ BL_DEFINE_ENUM(BLObjectInfoShift) {
 };
 //! \endcond
 
-//! \cond INTERNAL
 //! Defines a mask of each field of the object info.
+//!
+//! \note This is part of the official documentation, however, users should not use these enumerations in any context.
 BL_DEFINE_ENUM(BLObjectInfoBits) {
+  //! Flag describing a reference counted object, which means it has a valid reference count that must be increased/decreased.
   BL_OBJECT_INFO_REF_COUNTED_FLAG  = 0x01u << BL_OBJECT_INFO_REF_COUNTED_SHIFT, // [........|........|........|.......R]
+  //! Flag describing an immutable object, which holds immutable data (immutable data is always external).
   BL_OBJECT_INFO_IMMUTABLE_FLAG    = 0x01u << BL_OBJECT_INFO_IMMUTABLE_SHIFT,   // [........|........|........|......I.]
+  //! Flag describing 'X' payload value (it's a payload that has a single bit).
   BL_OBJECT_INFO_X_FLAG            = 0x01u << BL_OBJECT_INFO_X_SHIFT,           // [........|........|........|.....X..]
+  //! Mask describing 'P' payload (7 bits).
   BL_OBJECT_INFO_P_MASK            = 0x7Fu << BL_OBJECT_INFO_B_SHIFT,           // [........|........|......pp|ppppp...]
+  //! Mask describing 'C' payload (4 bits).
   BL_OBJECT_INFO_C_MASK            = 0x0Fu << BL_OBJECT_INFO_C_SHIFT,           // [........|........|..cccc..|........]
+  //! Mask describing 'B' payload (4 bits).
   BL_OBJECT_INFO_B_MASK            = 0x0Fu << BL_OBJECT_INFO_B_SHIFT,           // [........|......bb|bb......|........]
+  //! Mask describing 'A' payload (4 bits).
   BL_OBJECT_INFO_A_MASK            = 0x0Fu << BL_OBJECT_INFO_A_SHIFT,           // [........|..aaaa..|........|........]
+  //! Mask describing object type (8 bits), see \ref BLObjectType.
   BL_OBJECT_INFO_TYPE_MASK         = 0xFFu << BL_OBJECT_INFO_TYPE_SHIFT,        // [..TVtttt|tt......|........|........]
+  //! Flag describing a virtual object.
   BL_OBJECT_INFO_VIRTUAL_FLAG      = 0x01u << BL_OBJECT_INFO_VIRTUAL_SHIFT,     // [...V....|........|........|........]
+  //! Flag describing the first most significant bit of \ref BLObjectType.
   BL_OBJECT_INFO_T_MSB_FLAG        = 0x01u << BL_OBJECT_INFO_T_MSB_SHIFT,       // [..T.....|........|........|........]
+  //! Flag describing a dynamic object - if this flag is not set, it means the object is in SSO mode.
   BL_OBJECT_INFO_DYNAMIC_FLAG      = 0x01u << BL_OBJECT_INFO_DYNAMIC_SHIFT,     // [.D......|........|........|........]
+  //! Flag describing a valid object compatible with \ref BLObjectCore interface (otherwise it's most likely \ref BLRgba).
   BL_OBJECT_INFO_MARKER_FLAG       = 0x01u << BL_OBJECT_INFO_MARKER_SHIFT,      // [M.......|........|........|........]
+  //! Reference count initializer (combines \ref BL_OBJECT_INFO_REF_COUNTED_FLAG and \ref BL_OBJECT_INFO_IMMUTABLE_FLAG).
   BL_OBJECT_INFO_RC_INIT_MASK      = 0x03u << BL_OBJECT_INFO_RC_INIT_SHIFT      // [........|........|........|......**]
 
   BL_FORCE_ENUM_UINT32(BL_OBJECT_INFO_BITS)
 };
-//! \endcond
 
 //! Object type identifier.
 BL_DEFINE_ENUM(BLObjectType) {
@@ -324,7 +339,7 @@ BL_DEFINE_ENUM(BLObjectType) {
   //! Maximum object type identifier that can be used as a style.
   BL_OBJECT_TYPE_MAX_STYLE_VALUE = 3,
 
-  //! Count of type identifiers including all reserved ones.
+  //! Maximum possible value of an object type, including identifiers reserved for the future.
   BL_OBJECT_TYPE_MAX_VALUE = 128
 
   BL_FORCE_ENUM_UINT32(BL_OBJECT_TYPE)
@@ -447,7 +462,7 @@ struct BLObjectInfo {
 
   //! Tests whether the object info represents a valid BLObject signature.
   //!
-  //! A valid signature describes a \ref BLObject and not an alternative representation used by \ref BLRgba data.
+  //! A valid signature describes a \ref BLObjectCore and not an alternative representation used by \ref BLRgba data.
   BL_INLINE bool hasObjectSignature() const noexcept { return hasObjectSignatureAndFlags(0u); }
 
   //! Tests whether BLObjectInfo describes a valid BLObject of the given `type`.
@@ -477,10 +492,10 @@ struct BLObjectInfo {
   //! \note reference counted object means that it has a valid Impl (implies \ref BL_OBJECT_INFO_DYNAMIC_FLAG flag).
   BL_INLINE bool isRefCountedObject() const noexcept { return hasObjectSignatureAndFlags(BL_OBJECT_INFO_DYNAMIC_FLAG | BL_OBJECT_INFO_REF_COUNTED_FLAG); }
 
-  //! Returns a RAW \ref ObjectType read from object info bits without checking for a valid signature.
+  //! Returns a RAW \ref BLObjectType read from object info bits without checking for a valid signature.
   //!
-  //! This function should only be used in case that the caller knows that the object info is of a valid \ref BLObject
-  //! and knows how to handle \ref BLBitSet.
+  //! This function should only be used in case that the caller knows that the object info is of a valid \ref
+  //! BLObjectCore and knows how to handle \ref BLBitSet.
   BL_INLINE BLObjectType rawType() const noexcept { return BLObjectType(getField<BL_OBJECT_INFO_TYPE_SHIFT, BL_OBJECT_INFO_TYPE_MASK>()); }
 
   //! Returns a corrected \ref BLObjectType read from object info bits.
@@ -878,7 +893,7 @@ struct BLObjectCore {
 //! \name BLObject - Macros
 //! \{
 
-//! \def BL_CLASS_INHERITS(Base)
+//! \def BL_CLASS_INHERITS(BASE)
 //!
 //! Defines an inheritance of a core struct compatible with \ref BLObjectCore.
 //!
@@ -893,8 +908,11 @@ struct BLObjectCore {
 //!
 //! Defines a detail (in a body) of a struct defined by \ref BL_CLASS_INHERITS.
 
+//! \}
+//! \endcond
+
 #ifdef __cplusplus
-  #define BL_CLASS_INHERITS(Base) : public Base
+  #define BL_CLASS_INHERITS(BASE) : public BASE
   #define BL_DEFINE_OBJECT_DETAIL
   #define BL_DEFINE_VIRT_BASE
   #define BL_DEFINE_OBJECT_PROPERTY_API                                                            \
@@ -918,14 +936,11 @@ struct BLObjectCore {
       return blObjectSetProperty(this, name.data, name.size, &value);                              \
     }
 #else
-  #define BL_CLASS_INHERITS(Base)
+  #define BL_CLASS_INHERITS(BASE)
   #define BL_DEFINE_OBJECT_DETAIL BLObjectDetail _d;
   #define BL_DEFINE_VIRT_BASE BLObjectVirtBase base;
   #define BL_DEFINE_OBJECT_PROPERTY_API
 #endif
-
-//! \}
-//! \endcond
 
 //! \}
 

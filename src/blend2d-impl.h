@@ -17,7 +17,7 @@
 #define BLEND2D_IMPL_H_INCLUDED
 
 #ifndef __cplusplus
-  #error "<blend2d-impl.h> header can only be included in C++ mode"
+  #error "blend2d-impl.h header can only be included in C++ mode"
 #endif
 
 #include "blend2d.h"

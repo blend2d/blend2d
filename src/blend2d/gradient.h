@@ -213,6 +213,8 @@ struct BLConicalGradientValues {
 #endif
 };
 
+//! \}
+
 //! \name BLGradient - C API
 //!
 //! \{

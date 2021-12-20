@@ -34,26 +34,26 @@ template<typename T, size_t Alignment>
 struct UnalignedInt {};
 
 template<> struct UnalignedInt<int8_t, 1> { typedef int8_t T; };
-template<> struct UnalignedInt<int16_t, 1> { typedef BL_UNALIGNED_TYPE(int16_t, 1) T; };
-template<> struct UnalignedInt<int16_t, 2> { typedef int16_t T; };
-template<> struct UnalignedInt<int32_t, 1> { typedef BL_UNALIGNED_TYPE(int32_t, 1) T; };
-template<> struct UnalignedInt<int32_t, 2> { typedef BL_UNALIGNED_TYPE(int32_t, 2) T; };
-template<> struct UnalignedInt<int32_t, 4> { typedef int32_t T; };
-template<> struct UnalignedInt<int64_t, 1> { typedef BL_UNALIGNED_TYPE(int64_t, 1) T; };
-template<> struct UnalignedInt<int64_t, 2> { typedef BL_UNALIGNED_TYPE(int64_t, 2) T; };
-template<> struct UnalignedInt<int64_t, 4> { typedef BL_UNALIGNED_TYPE(int64_t, 4) T; };
-template<> struct UnalignedInt<int64_t, 8> { typedef int64_t T; };
+template<> struct UnalignedInt<int16_t, 1> { typedef BL_MAY_ALIAS BL_UNALIGNED_TYPE(int16_t, 1) T; };
+template<> struct UnalignedInt<int16_t, 2> { typedef BL_MAY_ALIAS int16_t T; };
+template<> struct UnalignedInt<int32_t, 1> { typedef BL_MAY_ALIAS BL_UNALIGNED_TYPE(int32_t, 1) T; };
+template<> struct UnalignedInt<int32_t, 2> { typedef BL_MAY_ALIAS BL_UNALIGNED_TYPE(int32_t, 2) T; };
+template<> struct UnalignedInt<int32_t, 4> { typedef BL_MAY_ALIAS int32_t T; };
+template<> struct UnalignedInt<int64_t, 1> { typedef BL_MAY_ALIAS BL_UNALIGNED_TYPE(int64_t, 1) T; };
+template<> struct UnalignedInt<int64_t, 2> { typedef BL_MAY_ALIAS BL_UNALIGNED_TYPE(int64_t, 2) T; };
+template<> struct UnalignedInt<int64_t, 4> { typedef BL_MAY_ALIAS BL_UNALIGNED_TYPE(int64_t, 4) T; };
+template<> struct UnalignedInt<int64_t, 8> { typedef BL_MAY_ALIAS int64_t T; };
 
 template<> struct UnalignedInt<uint8_t, 1> { typedef uint8_t T; };
-template<> struct UnalignedInt<uint16_t, 1> { typedef BL_UNALIGNED_TYPE(uint16_t, 1) T; };
-template<> struct UnalignedInt<uint16_t, 2> { typedef uint16_t T; };
-template<> struct UnalignedInt<uint32_t, 1> { typedef BL_UNALIGNED_TYPE(uint32_t, 1) T; };
-template<> struct UnalignedInt<uint32_t, 2> { typedef BL_UNALIGNED_TYPE(uint32_t, 2) T; };
-template<> struct UnalignedInt<uint32_t, 4> { typedef uint32_t T; };
-template<> struct UnalignedInt<uint64_t, 1> { typedef BL_UNALIGNED_TYPE(uint64_t, 1) T; };
-template<> struct UnalignedInt<uint64_t, 2> { typedef BL_UNALIGNED_TYPE(uint64_t, 2) T; };
-template<> struct UnalignedInt<uint64_t, 4> { typedef BL_UNALIGNED_TYPE(uint64_t, 4) T; };
-template<> struct UnalignedInt<uint64_t, 8> { typedef uint64_t T; };
+template<> struct UnalignedInt<uint16_t, 1> { typedef BL_MAY_ALIAS BL_UNALIGNED_TYPE(uint16_t, 1) T; };
+template<> struct UnalignedInt<uint16_t, 2> { typedef BL_MAY_ALIAS uint16_t T; };
+template<> struct UnalignedInt<uint32_t, 1> { typedef BL_MAY_ALIAS BL_UNALIGNED_TYPE(uint32_t, 1) T; };
+template<> struct UnalignedInt<uint32_t, 2> { typedef BL_MAY_ALIAS BL_UNALIGNED_TYPE(uint32_t, 2) T; };
+template<> struct UnalignedInt<uint32_t, 4> { typedef BL_MAY_ALIAS uint32_t T; };
+template<> struct UnalignedInt<uint64_t, 1> { typedef BL_MAY_ALIAS BL_UNALIGNED_TYPE(uint64_t, 1) T; };
+template<> struct UnalignedInt<uint64_t, 2> { typedef BL_MAY_ALIAS BL_UNALIGNED_TYPE(uint64_t, 2) T; };
+template<> struct UnalignedInt<uint64_t, 4> { typedef BL_MAY_ALIAS BL_UNALIGNED_TYPE(uint64_t, 4) T; };
+template<> struct UnalignedInt<uint64_t, 8> { typedef BL_MAY_ALIAS uint64_t T; };
 
 //! \}
 

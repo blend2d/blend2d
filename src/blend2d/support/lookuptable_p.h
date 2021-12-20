@@ -24,7 +24,6 @@ struct BLLookupTable {
   BL_INLINE constexpr const T& operator[](size_t i) const noexcept { return data[i]; }
 };
 
-//! \cond NEVER
 // NOTE: We only need `index_sequence` and `make_index_sequence` to generate our lookup tables. These
 // were introduced by C++14 so if we want to support C++11 we have to implement these on our own.
 namespace Internal {
@@ -64,7 +63,6 @@ static BL_INLINE constexpr BLLookupTable<T, N> blMakeLookupTableImpl(Internal::i
 }
 
 }
-//! \endcond
 
 //! Creates a lookup table of `BLLookupTable<T[N]>` by using the generator `Gen`.
 template<typename T, size_t N, class Gen>

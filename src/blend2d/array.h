@@ -32,8 +32,6 @@ struct BLArrayImpl BL_CLASS_INHERITS(BLObjectImpl) {
   size_t capacity;
 
 #ifdef __cplusplus
-  //! \cond INTERNAL
-
   //! Returns the pointer to the `data` casted to `T*`.
   template<typename T>
   BL_NODISCARD
@@ -43,8 +41,6 @@ struct BLArrayImpl BL_CLASS_INHERITS(BLObjectImpl) {
   template<typename T>
   BL_NODISCARD
   BL_INLINE const T* dataAs() const noexcept { return (const T*)data; }
-
-  //! \endcond
 #endif
 };
 //! \endcond
@@ -541,9 +537,9 @@ public:
   //! \param data External data buffer to use (cannot be NULL).
   //! \param size Size of the data buffer in items.
   //! \param capacity Capacity of the buffer, cannot be zero or smaller than `size`.
-  //! \param dataAccessFlags Flags that describe whether the data is read-only or read-write, see `BLDataAccessFlags`.
+  //! \param accessFlags Flags that describe whether the data is read-only or read-write, see `BLDataAccessFlags`.
   //! \param destroyFunc A function that would be called when the array is destroyed (can be null if you don't need it).
-  //! \param destroyData Data passed to `destroyFunc`.
+  //! \param userData User data passed to `destroyFunc`.
   BL_INLINE BLResult assignExternalData(
     T* data,
     size_t size,
@@ -557,7 +553,7 @@ public:
 
   //! Appends a variadic number of items items passed in `args...` to the array.
   //!
-  //! \node The data in `args` cannot point to the same data that the array holds as the function that prepares the
+  //! \note The data in `args` cannot point to the same data that the array holds as the function that prepares the
   //! append operation has no way to know about the source (it only makes space for new data). It's an undefined
   //! behavior in such case.
   template<typename... Args>
@@ -584,7 +580,7 @@ public:
 
   //! Prepends a variadic number of items items passed in `args...` to the array.
   //!
-  //! \node The data in `args` cannot point to the same data that the array holds as the function that prepares the
+  //! \note The data in `args` cannot point to the same data that the array holds as the function that prepares the
   //! prepend operation has no way to know about the source (it only makes space for new data). It's an undefined
   //! behavior in such case.
   template<typename... Args>
@@ -611,7 +607,7 @@ public:
 
   //! Inserts a variadic number of items items passed in `args...` at the given `index`.
   //!
-  //! \node The data in `args` cannot point to the same data that the array holds as the function that prepares the
+  //! \note The data in `args` cannot point to the same data that the array holds as the function that prepares the
   //! insert operation has no way to know about the source (it only makes space for new data). It's an undefined
   //! behavior in such case.
   template<typename... Args>

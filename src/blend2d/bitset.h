@@ -560,6 +560,9 @@ public:
   //! \}
 };
 
+//! BitSet builder [C++ API] that is configured to have a temporary storage of 512 bits.
+using BLBitSetBuilder = BLBitSetBuilderT<512>;
+
 //! BitSet word iterator [C++ API].
 //!
 //! Low-level iterator that sees a BitSet as an array of bit words. It only iterates non-zero words and

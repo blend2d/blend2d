@@ -207,8 +207,8 @@ public:
 
   //! Creates ` BLFontData` from the given `data` of the given `size`.
   //!
-  //! \note Optionally a `destroyFunc` can be used as a notifier that will be called when the data is no longer needed
-  //! and `destroyData` acts as a user data passed to `destroyFunc()`.
+  //! \note Optionally a `destroyFunc` can be used as a notifier that will be called when the data is no longer needed.
+  //! Destroy func will be called with `userData`.
   BL_INLINE BLResult createFromData(const void* data, size_t dataSize, BLDestroyExternalDataFunc destroyFunc = nullptr, void* userData = nullptr) noexcept {
     return blFontDataCreateFromData(this, data, dataSize, destroyFunc, userData);
   }
@@ -410,9 +410,9 @@ public:
   BL_INLINE const BLFontFaceInfo& faceInfo() const noexcept { return _impl()->faceInfo; }
 
   //! Returns the font-face type, see `BLFontFaceType`.
-  BL_INLINE uint32_t faceType() const noexcept { return _impl()->faceInfo.faceType; }
+  BL_INLINE BLFontFaceType faceType() const noexcept { return (BLFontFaceType)_impl()->faceInfo.faceType; }
   //! Returns the font-face type, see `BLFontOutlineType`.
-  BL_INLINE uint32_t outlineType() const noexcept { return _impl()->faceInfo.outlineType; }
+  BL_INLINE BLFontOutlineType outlineType() const noexcept { return (BLFontOutlineType)_impl()->faceInfo.outlineType; }
   //! Returns the number of glyphs of this font-face.
   BL_INLINE uint32_t glyphCount() const noexcept { return _impl()->faceInfo.glyphCount; }
 
@@ -423,10 +423,10 @@ public:
   //! collection then the returned value would always be zero.
   BL_INLINE uint32_t faceIndex() const noexcept { return _impl()->faceInfo.faceIndex; }
   //! Returns font-face flags, see `BLFontFaceFlags`.
-  BL_INLINE uint32_t faceFlags() const noexcept { return _impl()->faceInfo.faceFlags; }
+  BL_INLINE BLFontFaceFlags faceFlags() const noexcept { return (BLFontFaceFlags)_impl()->faceInfo.faceFlags; }
 
   //! Tests whether the font-face has a given `flag` set.
-  BL_INLINE bool hasFaceFlag(uint32_t flag) const noexcept { return (_impl()->faceInfo.faceFlags & flag) != 0; }
+  BL_INLINE bool hasFaceFlag(BLFontFaceFlags flag) const noexcept { return (_impl()->faceInfo.faceFlags & flag) != 0; }
 
   //! Tests whether the font-face uses typographic family and subfamily names.
   BL_INLINE bool hasTypographicNames() const noexcept { return hasFaceFlag(BL_FONT_FACE_FLAG_TYPOGRAPHIC_NAMES); }
@@ -463,7 +463,7 @@ public:
   BL_INLINE bool isLastResortFont() const noexcept { return hasFaceFlag(BL_FONT_FACE_FLAG_LAST_RESORT_FONT); }
 
   //! Returns font-face diagnostics flags, see `BLFontFaceDiagFlags`.
-  BL_INLINE uint32_t diagFlags() const noexcept { return _impl()->faceInfo.diagFlags; }
+  BL_INLINE BLFontFaceDiagFlags diagFlags() const noexcept { return (BLFontFaceDiagFlags)_impl()->faceInfo.diagFlags; }
 
   //! Returns a unique identifier describing this `BLFontFace`.
   BL_INLINE BLUniqueId uniqueId() const noexcept { return _impl()->uniqueId; }
@@ -479,10 +479,6 @@ public:
   BL_INLINE const BLString& subfamilyName() const noexcept { return _impl()->subfamilyName; }
   //! Returns a PostScript name of the font.
   BL_INLINE const BLString& postScriptName() const noexcept { return _impl()->postScriptName; }
-
-  // TODO:
-  // Returns feature-set of this `BLFontFace`.
-  // BL_INLINE const BLFontFeatureSet& featureSet() const noexcept { return _impl()->featureSet; }
 
   //! Returns design metrics of this `BLFontFace`.
   BL_INLINE const BLFontDesignMetrics& designMetrics() const noexcept { return _impl()->designMetrics; }
