@@ -335,7 +335,7 @@ static BLGradientPrivateImpl* allocImpl(
 
   BL_ASSERT(type <= BL_GRADIENT_TYPE_MAX_VALUE);
   BL_ASSERT(mType <= BL_MATRIX2D_TYPE_MAX_VALUE);
-  BL_ASSERT(extendMode <= BL_EXTEND_MODE_SIMPLE_MAX);
+  BL_ASSERT(extendMode <= BL_EXTEND_MODE_SIMPLE_MAX_VALUE);
 
   BLGradientPrivateImpl* impl = blObjectDetailAllocImplT<BLGradientPrivateImpl>(self,
     BLObjectInfo::packType(BL_OBJECT_TYPE_GRADIENT),
@@ -471,7 +471,7 @@ BL_API_IMPL BLResult blGradientAssignWeak(BLGradientCore* self, const BLGradient
 BL_API_IMPL BLResult blGradientCreate(BLGradientCore* self, BLGradientType type, const void* values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) noexcept {
   BL_ASSERT(self->_d.isGradient());
 
-  if (BL_UNLIKELY((uint32_t(type) > BL_GRADIENT_TYPE_MAX_VALUE) | (uint32_t(extendMode) > BL_EXTEND_MODE_SIMPLE_MAX)))
+  if (BL_UNLIKELY((uint32_t(type) > BL_GRADIENT_TYPE_MAX_VALUE) | (uint32_t(extendMode) > BL_EXTEND_MODE_SIMPLE_MAX_VALUE)))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   if (!values)
@@ -617,7 +617,7 @@ BL_API_IMPL BLExtendMode blGradientGetExtendMode(BLGradientCore* self) noexcept 
 BL_API_IMPL BLResult blGradientSetExtendMode(BLGradientCore* self, BLExtendMode extendMode) noexcept {
   BL_ASSERT(self->_d.isGradient());
 
-  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_SIMPLE_MAX))
+  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_SIMPLE_MAX_VALUE))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   BL_PROPAGATE(makeMutable(self, true));

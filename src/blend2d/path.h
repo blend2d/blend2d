@@ -334,7 +334,7 @@ BL_API BLResult BL_CDECL blPathGetBoundingBox(const BLPathCore* self, BLBox* box
 BL_API BLResult BL_CDECL blPathGetFigureRange(const BLPathCore* self, size_t index, BLRange* rangeOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathGetLastVertex(const BLPathCore* self, BLPoint* vtxOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathGetClosestVertex(const BLPathCore* self, const BLPoint* p, double maxDistance, size_t* indexOut, double* distanceOut) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blPathHitTest(const BLPathCore* self, const BLPoint* p, uint32_t fillRule) BL_NOEXCEPT_C;
+BL_API BLHitTest BL_CDECL blPathHitTest(const BLPathCore* self, const BLPoint* p, BLFillRule fillRule) BL_NOEXCEPT_C;
 
 BL_API BLResult BL_CDECL blStrokeOptionsInit(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStrokeOptionsInitMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
@@ -1136,7 +1136,7 @@ public:
 
   //! Hit tests the given point `p` by respecting the given `fillRule`.
   BL_NODISCARD
-  BL_INLINE uint32_t hitTest(const BLPoint& p, uint32_t fillRule) const noexcept {
+  BL_INLINE BLHitTest hitTest(const BLPoint& p, BLFillRule fillRule) const noexcept {
     return blPathHitTest(this, &p, fillRule);
   }
 

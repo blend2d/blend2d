@@ -1058,9 +1058,12 @@ BL_DEFINE_ENUM(BLExtendMode) {
   BL_EXTEND_MODE_REFLECT_X_REPEAT_Y = 8,
 
   //! Count of simple extend modes (that use the same value for X and Y).
-  BL_EXTEND_MODE_SIMPLE_MAX = 2,
+  BL_EXTEND_MODE_SIMPLE_MAX_VALUE = 2,
   //! Count of complex extend modes (that can use independent values for X and Y).
-  BL_EXTEND_MODE_COMPLEX_MAX = 8
+  BL_EXTEND_MODE_COMPLEX_MAX_VALUE = 8,
+
+  //! Maximum value of `BLExtendMode`.
+  BL_EXTEND_MODE_MAX_VALUE = 8,
 
   BL_FORCE_ENUM_UINT32(BL_EXTEND_MODE)
 };

@@ -17,7 +17,7 @@ namespace BLPipeline {
 // ===================================
 
 static BL_INLINE uint32_t blExtendXFromExtendMode(uint32_t extendMode) noexcept {
-  BL_ASSERT(extendMode <= BL_EXTEND_MODE_COMPLEX_MAX);
+  BL_ASSERT(extendMode <= BL_EXTEND_MODE_COMPLEX_MAX_VALUE);
 
   constexpr uint32_t kTable = (BL_EXTEND_MODE_PAD     <<  0) | // [pad-x     pad-y    ]
                               (BL_EXTEND_MODE_REPEAT  <<  2) | // [repeat-x  repeat-y ]
@@ -32,7 +32,7 @@ static BL_INLINE uint32_t blExtendXFromExtendMode(uint32_t extendMode) noexcept 
 }
 
 static BL_INLINE uint32_t blExtendYFromExtendMode(uint32_t extendMode) noexcept {
-  BL_ASSERT(extendMode <= BL_EXTEND_MODE_COMPLEX_MAX);
+  BL_ASSERT(extendMode <= BL_EXTEND_MODE_COMPLEX_MAX_VALUE);
 
   constexpr uint32_t kTable = (BL_EXTEND_MODE_PAD     <<  0) | // [pad-x     pad-y    ]
                               (BL_EXTEND_MODE_REPEAT  <<  2) | // [repeat-x  repeat-y ]
@@ -448,7 +448,7 @@ static BL_INLINE FetchType blPipeFetchDataInitRadialGradient(FetchData* fetchDat
   uint32_t lutSize = d.lut.size;
 
   BL_ASSERT(lutSize != 0);
-  BL_ASSERT(extendMode <= BL_EXTEND_MODE_SIMPLE_MAX);
+  BL_ASSERT(extendMode <= BL_EXTEND_MODE_SIMPLE_MAX_VALUE);
 
   BLPoint fOrig = f;
   f -= c;

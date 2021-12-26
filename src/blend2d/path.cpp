@@ -2298,7 +2298,7 @@ BL_API_IMPL BLResult blPathGetClosestVertex(const BLPathCore* self, const BLPoin
 // BLPath - API - Hit Test
 // =======================
 
-BL_API_IMPL uint32_t blPathHitTest(const BLPathCore* self, const BLPoint* p_, uint32_t fillRule) noexcept {
+BL_API_IMPL BLHitTest blPathHitTest(const BLPathCore* self, const BLPoint* p_, BLFillRule fillRule) noexcept {
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -2600,7 +2600,8 @@ OnLine:
 
   if (fillRule == BL_FILL_RULE_EVEN_ODD)
     windingNumber &= 1;
-  return windingNumber != 0;
+
+  return BLHitTest(windingNumber != 0);
 }
 
 } // {BLPathPrivate}

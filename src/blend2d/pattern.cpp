@@ -136,7 +136,7 @@ BL_API_IMPL BLResult blPatternInitAs(BLPatternCore* self, const BLImageCore* ima
   else if (BL_UNLIKELY(!isAreaValid(*area, blDownCast(image)->size())))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX))
+  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   BLMatrix2DType matrixType = BL_MATRIX2D_TYPE_IDENTITY;
@@ -214,7 +214,7 @@ BL_API_IMPL BLResult blPatternCreate(BLPatternCore* self, const BLImageCore* ima
   else if (BL_UNLIKELY(!isAreaValid(*area, blDownCast(image)->size())))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX))
+  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   BLMatrix2DType matrixType = BL_MATRIX2D_TYPE_IDENTITY;
@@ -316,7 +316,7 @@ BL_API_IMPL BLExtendMode blPatternGetExtendMode(const BLPatternCore* self) noexc
 BL_API_IMPL BLResult blPatternSetExtendMode(BLPatternCore* self, BLExtendMode extendMode) noexcept {
   BL_ASSERT(self->_d.isPattern());
 
-  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX))
+  if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   setExtendMode(self->_d.info, extendMode);

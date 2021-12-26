@@ -1090,7 +1090,7 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE uint32_t fillStyleType() const noexcept { return BL_CONTEXT_IMPL()->state->styleType[kOpFill]; }
+  BL_INLINE BLObjectType fillStyleType() const noexcept { return (BLObjectType)BL_CONTEXT_IMPL()->state->styleType[kOpFill]; }
 
   BL_INLINE BLResult getFillStyle(BLVarCore& out) const noexcept { return BL_CONTEXT_IMPL()->virt->getStyle[kOpFill](BL_CONTEXT_IMPL(), &out); }
 
@@ -1122,7 +1122,7 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE uint32_t strokeStyleType() const noexcept { return BL_CONTEXT_IMPL()->state->styleType[kOpStroke]; }
+  BL_INLINE BLObjectType strokeStyleType() const noexcept { return (BLObjectType)BL_CONTEXT_IMPL()->state->styleType[kOpStroke]; }
 
   BL_INLINE BLResult getStrokeStyle(BLVarCore& out) const noexcept { return BL_CONTEXT_IMPL()->virt->getStyle[kOpStroke](BL_CONTEXT_IMPL(), &out); }
 
