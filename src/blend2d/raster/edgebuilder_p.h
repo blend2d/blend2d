@@ -1556,62 +1556,13 @@ RestartClipLoop:
         continue;
       }
 
-      BLPoint Pa, Pb, Pc;
       spline[0] = p0;
 
-      double tArray[kMaxTCount];
-      size_t tCount = 0;
-
-      {
-        BLPoint extremaTs = (p0 - p1) / (p0 - p1 * 2.0 + p2);
-        BLGeometry::getQuadCoefficients(spline, Pa, Pb, Pc);
-
-        double extremaT0 = blMin(extremaTs.x, extremaTs.y);
-        double extremaT1 = blMax(extremaTs.x, extremaTs.y);
-
-        tArray[0] = extremaT0;
-        tCount = size_t((extremaT0 > 0.0) & (extremaT0 < 1.0));
-
-        tArray[tCount] = extremaT1;
-        tCount += size_t((extremaT1 > blMax(extremaT0, 0.0)) & (extremaT1 < 1.0));
-      }
-
       BLPoint* splinePtr = spline;
-      BLPoint* splineEnd = spline + 2;
+      BLPoint* splineEnd = BLGeometry::splitQuadToSpline<BLGeometry::SplitQuadOptions::kExtremas>(spline, splinePtr);
 
-      // Split the curve into a spline, if necessary.
-      if (tCount) {
-        BLPoint last = p2;
-
-        tArray[tCount++] = 1.0;
-        BL_ASSERT(tCount <= kMaxTCount);
-
-        size_t tIndex = 0;
-        double tCut = 0.0;
-        splineEnd = splinePtr;
-
-        do {
-          double tVal = tArray[tIndex];
-          BL_ASSERT(tVal >  0.0);
-          BL_ASSERT(tVal <= 1.0);
-
-          double dt = (tVal - tCut) * 0.5;
-
-          // Derivative: 2a*t + b.
-          BLPoint cp = (Pa * (tVal * 2.0) + Pb) * dt;
-          BLPoint tp = (Pa * tVal + Pb) * tVal + Pc;
-
-          // The last point must be exact.
-          if (++tIndex == tCount)
-            tp = last;
-
-          splineEnd[1].reset(tp - cp);
-          splineEnd[2].reset(tp);
-          splineEnd += 2;
-
-          tCut = tVal;
-        } while (tIndex != tCount);
-      }
+      if (splineEnd == splinePtr)
+        splineEnd = splinePtr + 2;
 
       Appender appender(*this);
       FlattenMonoQuad monoCurve(state.flattenData, _flattenToleranceSq);
@@ -1746,81 +1697,13 @@ RestartClipLoop:
         continue;
       }
 
-      BLPoint Pa, Pb, Pc, Pd;
       spline[0] = p0;
 
-      double tArray[kMaxTCount];
-      size_t tCount = 0;
-
-      {
-        BLGeometry::getCubicCoefficients(spline, Pa, Pb, Pc, Pd);
-
-        double q0 = BLGeometry::cross(Pb, Pa);
-        double q1 = BLGeometry::cross(Pc, Pa);
-        double q2 = BLGeometry::cross(Pc, Pb);
-
-        // Find cusp.
-        double tCusp = (q1 / q0) * -0.5;
-        tArray[0] = tCusp;
-        tCount = (tCusp > 0.0) & (tCusp < 1.0);
-
-        // Find inflections.
-        tCount += blQuadRoots(tArray + tCount, q0 * 6.0, q1 * 6.0, q2 * 2.0, BL_M_AFTER_0, BL_M_BEFORE_1);
-
-        // Find extremas.
-        BLPoint Da, Db, Dc;
-        BLGeometry::getCubicDerivativeCoefficients(spline, Da, Db, Dc);
-
-        tCount += blQuadRoots(tArray + tCount, Da.x, Db.x, Dc.x, BL_M_AFTER_0, BL_M_BEFORE_1);
-        tCount += blQuadRoots(tArray + tCount, Da.y, Db.y, Dc.y, BL_M_AFTER_0, BL_M_BEFORE_1);
-      }
-
       BLPoint* splinePtr = spline;
-      BLPoint* splineEnd = spline + 3;
+      BLPoint* splineEnd = BLGeometry::splitCubicToSpline<BLGeometry::SplitCubicOptions::kExtremasInflectionsCusp>(spline, splinePtr);
 
-      // Split the curve into a spline, if necessary.
-      if (tCount) {
-        BLPoint last = p3;
-
-        BLAlgorithm::insertionSort(tArray, tCount);
-        tArray[tCount++] = 1.0;
-        BL_ASSERT(tCount <= kMaxTCount);
-
-        size_t tIndex = 0;
-        double tCut = 0.0;
-        splineEnd = splinePtr;
-
-        do {
-          double tVal = tArray[tIndex++];
-          BL_ASSERT(tVal >  0.0);
-          BL_ASSERT(tVal <= 1.0);
-
-          // Ignore all Ts which are the same as the previous one (border case).
-          if (tVal == tCut)
-            continue;
-
-          constexpr double k1Div3 = 1.0 / 3.0;
-          double dt = (tVal - tCut) * k1Div3;
-
-          BLPoint tp = ((Pa * tVal + Pb) * tVal + Pc) * tVal + Pd;
-
-          // The last point must be exact.
-          if (tIndex == tCount)
-            tp = last;
-
-          // Derivative: 3At^2 + 2Bt + c
-          //             (3At + 2B)t + c
-          BLPoint cp1 { ((Pa * (tCut * 3.0) + Pb * 2.0) * tCut + Pc) * dt };
-          BLPoint cp2 { ((Pa * (tVal * 3.0) + Pb * 2.0) * tVal + Pc) * dt };
-
-          splineEnd[1].reset(splineEnd[0] + cp1);
-          splineEnd[2].reset(tp - cp2);
-          splineEnd[3].reset(tp);
-          splineEnd += 3;
-
-          tCut = tVal;
-        } while (tIndex != tCount);
-      }
+      if (splineEnd == splinePtr)
+        splineEnd += 3;
 
       Appender appender(*this);
       FlattenMonoCubic monoCurve(state.flattenData, _flattenToleranceSq);

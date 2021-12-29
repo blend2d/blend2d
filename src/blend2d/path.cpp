@@ -2310,16 +2310,17 @@ BL_API_IMPL BLHitTest blPathHitTest(const BLPathCore* self, const BLPoint* p_, B
   const uint8_t* cmdData = selfI->commandData;
   const BLPoint* vtxData = selfI->vertexData;
 
-  BLPoint start {};
   bool hasMoveTo = false;
-
+  BLPoint start {};
   BLPoint pt(*p_);
 
   double x0, y0;
   double x1, y1;
 
   intptr_t windingNumber = 0;
-  BLPoint ptBuffer[8];
+
+  // 10 points - maximum for cubic spline having 3 cubics (1 + 3 + 3 + 3).
+  BLPoint splineData[10];
 
   do {
     switch (cmdData[0]) {
@@ -2379,12 +2380,10 @@ OnLine:
       }
 
       case BL_PATH_CMD_QUAD: {
-        BL_ASSERT(hasMoveTo);
-        BL_ASSERT(i >= 2);
+        if (BL_UNLIKELY(!hasMoveTo || i < 2))
+          return BL_HIT_TEST_INVALID;
 
         const BLPoint* p = vtxData - 1;
-        if (BL_UNLIKELY(!hasMoveTo))
-          return BL_HIT_TEST_INVALID;
 
         double minY = blMin(p[0].y, p[1].y, p[2].y);
         double maxY = blMax(p[0].y, p[1].y, p[2].y);
@@ -2394,9 +2393,7 @@ OnLine:
         i -= 2;
 
         if (pt.y >= minY && pt.y <= maxY) {
-          bool degenerate = isNear(p[0].y, p[1].y) && isNear(p[1].y, p[2].y);
-
-          if (degenerate) {
+          if (isNear(p[0].y, p[1].y) & isNear(p[1].y, p[2].y)) {
             x0 = p[0].x;
             y0 = p[0].y;
             x1 = p[2].x;
@@ -2404,54 +2401,36 @@ OnLine:
             goto OnLine;
           }
 
-          // Subdivide curve to curve-spline separated at Y-extrama.
-          BLPoint* left = (BLPoint*)ptBuffer;
-          BLPoint* rght = (BLPoint*)ptBuffer + 3;
+          // Subdivide to a quad spline at Y-extrema.
+          const BLPoint* splinePtr = p;
+          const BLPoint* splineEnd = BLGeometry::splitQuadToSpline<BLGeometry::SplitQuadOptions::kYExtrema>(p, splineData);
 
-          double tArray[2];
-          tArray[0] = (p[0].y - p[1].y) / (p[0].y - 2.0 * p[1].y + p[2].y);
+          if (splineEnd == splineData)
+            splineEnd = vtxData - 1;
+          else
+            splinePtr = splineData;
 
-          size_t tLength = tArray[0] > 0.0 && tArray[0] < 1.0;
-          tArray[tLength++] = 1.0;
-
-          rght[0] = p[0];
-          rght[1] = p[1];
-          rght[2] = p[2];
-
-          double tCut = 0.0;
-          for (size_t tIndex = 0; tIndex < tLength; tIndex++) {
-            double tVal = tArray[tIndex];
-            if (tVal == tCut) continue;
-
-            if (tVal == 1.0) {
-              left[0] = rght[0];
-              left[1] = rght[1];
-              left[2] = rght[2];
-            }
-            else {
-              BLGeometry::splitQuad(rght, left, rght, tCut == 0.0 ? tVal : (tVal - tCut) / (1.0 - tCut));
-            }
-
-            minY = blMin(left[0].y, left[2].y);
-            maxY = blMax(left[0].y, left[2].y);
+          do {
+            minY = blMin(splinePtr[0].y, splinePtr[2].y);
+            maxY = blMax(splinePtr[0].y, splinePtr[2].y);
 
             if (pt.y >= minY && pt.y < maxY) {
               int dir = 0;
-              if (left[0].y < left[2].y)
+              if (splinePtr[0].y < splinePtr[2].y)
                 dir = 1;
-              else if (left[0].y > left[2].y)
+              else if (splinePtr[0].y > splinePtr[2].y)
                 dir = -1;
 
-              // It should be only possible to have none or one solution.
+              // It should be only possible to have zero or one solution.
               double ti[2];
               double ix;
 
               BLPoint a, b, c;
-              BLGeometry::getQuadCoefficients(left, a, b, c);
+              BLGeometry::getQuadCoefficients(splinePtr, a, b, c);
 
-              // { At^2 + Bt + C } -> { t(At + B) + C }
+              // { At^2 + Bt + C } -> { (At + B)t + C }
               if (blQuadRoots(ti, a.y, b.y, c.y - pt.y, BL_M_AFTER_0, BL_M_BEFORE_1) >= 1)
-                ix = ti[0] * (a.x * ti[0] + b.x) + c.x;
+                ix = (a.x * ti[0] + b.x) * ti[0] + c.x;
               else if (pt.y - minY < maxY - pt.y)
                 ix = p[0].x;
               else
@@ -2460,20 +2439,16 @@ OnLine:
               if (pt.x >= ix)
                 windingNumber += dir;
             }
-
-            tCut = tVal;
-          }
+          } while ((splinePtr += 2) != splineEnd);
         }
         break;
       }
 
       case BL_PATH_CMD_CUBIC: {
-        BL_ASSERT(hasMoveTo);
-        BL_ASSERT(i >= 3);
+        if (BL_UNLIKELY(!hasMoveTo || i < 3))
+          return BL_HIT_TEST_INVALID;
 
         const BLPoint* p = vtxData - 1;
-        if (BL_UNLIKELY(!hasMoveTo))
-          return BL_HIT_TEST_INVALID;
 
         double minY = blMin(p[0].y, p[1].y, p[2].y, p[3].y);
         double maxY = blMax(p[0].y, p[1].y, p[2].y, p[3].y);
@@ -2483,11 +2458,7 @@ OnLine:
         i -= 3;
 
         if (pt.y >= minY && pt.y <= maxY) {
-          bool degenerate = isNear(p[0].y, p[1].y) &&
-                            isNear(p[1].y, p[2].y) &&
-                            isNear(p[2].y, p[3].y) ;
-
-          if (degenerate) {
+          if (isNear(p[0].y, p[1].y) & isNear(p[1].y, p[2].y) & isNear(p[2].y, p[3].y)) {
             x0 = p[0].x;
             y0 = p[0].y;
             x1 = p[3].x;
@@ -2495,71 +2466,45 @@ OnLine:
             goto OnLine;
           }
 
-          // Subdivide curve to curve-spline separated at Y-extrama.
-          BLPoint* left = (BLPoint*)ptBuffer;
-          BLPoint* rght = (BLPoint*)ptBuffer + 4;
+          // Subdivide to a cubic spline at Y-extremas.
+          const BLPoint* splinePtr = p;
+          const BLPoint* splineEnd = BLGeometry::splitCubicToSpline<BLGeometry::SplitCubicOptions::kYExtremas>(p, splineData);
 
-          double tArray[3];
-          size_t tLength = blQuadRoots(
-            tArray,
-            3.0 * (-p[0].y + 3.0 * (p[1].y - p[2].y) + p[3].y),
-            6.0 * ( p[0].y - 2.0 * (p[1].y + p[2].y)         ),
-            3.0 * (-p[0].y +       (p[1].y         )         ),
-            BL_M_AFTER_0,
-            BL_M_BEFORE_1);
-          tArray[tLength++] = 1.0;
+          if (splineEnd == splineData)
+            splineEnd = vtxData - 1;
+          else
+            splinePtr = splineData;
 
-          rght[0] = p[0];
-          rght[1] = p[1];
-          rght[2] = p[2];
-          rght[3] = p[3];
-
-          double tCut = 0.0;
-          for (size_t tIndex = 0; tIndex < tLength; tIndex++) {
-            double tVal = tArray[tIndex];
-            if (tVal == tCut) continue;
-
-            if (tVal == 1.0) {
-              left[0] = rght[0];
-              left[1] = rght[1];
-              left[2] = rght[2];
-              left[3] = rght[3];
-            }
-            else {
-              BLGeometry::splitCubic(rght, rght, left, tCut == 0.0 ? tVal : (tVal - tCut) / (1.0 - tCut));
-            }
-
-            minY = blMin(left[0].y, left[3].y);
-            maxY = blMax(left[0].y, left[3].y);
+          do {
+            minY = blMin(splinePtr[0].y, splinePtr[3].y);
+            maxY = blMax(splinePtr[0].y, splinePtr[3].y);
 
             if (pt.y >= minY && pt.y < maxY) {
               int dir = 0;
-              if (left[0].y < left[3].y)
+              if (splinePtr[0].y < splinePtr[3].y)
                 dir = 1;
-              else if (left[0].y > left[3].y)
+              else if (splinePtr[0].y > splinePtr[3].y)
                 dir = -1;
 
-              // It should be only possible to have zero/one solution.
+              // It should be only possible to have zero or one solution.
               double ti[3];
               double ix;
 
               BLPoint a, b, c, d;
-              BLGeometry::getCubicCoefficients(left, a, b, c, d);
+              BLGeometry::getCubicCoefficients(splinePtr, a, b, c, d);
 
               // { At^3 + Bt^2 + Ct + D } -> { ((At + B)t + C)t + D }
               if (blCubicRoots(ti, a.y, b.y, c.y, d.y - pt.y, BL_M_AFTER_0, BL_M_BEFORE_1) >= 1)
                 ix = ((a.x * ti[0] + b.x) * ti[0] + c.x) * ti[0] + d.x;
               else if (pt.y - minY < maxY - pt.y)
-                ix = p[0].x;
+                ix = splinePtr[0].x;
               else
-                ix = p[3].x;
+                ix = splinePtr[3].x;
 
               if (pt.x >= ix)
                 windingNumber += dir;
             }
-
-            tCut = tVal;
-          }
+          } while ((splinePtr += 3) != splineEnd);
         }
         break;
       }
@@ -2601,7 +2546,7 @@ OnLine:
   if (fillRule == BL_FILL_RULE_EVEN_ODD)
     windingNumber &= 1;
 
-  return BLHitTest(windingNumber != 0);
+  return windingNumber != 0 ? BL_HIT_TEST_IN : BL_HIT_TEST_OUT;
 }
 
 } // {BLPathPrivate}

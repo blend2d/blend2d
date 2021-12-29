@@ -18,8 +18,9 @@
 // at <http://en.wikipedia.org/wiki/Cubic_function> for other equations.
 size_t blCubicRoots(double* dst, const double* poly, double tMin, double tMax) noexcept {
   constexpr double k1Div3 = 1.0 / 3.0;
+  constexpr double k1Div6 = 1.0 / 6.0;
   constexpr double k1Div9 = 1.0 / 9.0;
-  constexpr double k2Div27 = 2.0 / 27.0;
+  constexpr double k1Div27 = 1.0 / 27.0;
 
   size_t nRoots = 0;
   double norm = poly[0];
@@ -38,7 +39,7 @@ size_t blCubicRoots(double* dst, const double* poly, double tMin, double tMax) n
   // Substitute x = y - A/3 to eliminate quadric term `x^3 + px + q = 0`.
   double sa = a * a;
   double p = -k1Div9  * sa + k1Div3 * b;
-  double q = (k2Div27 * sa - k1Div3 * b) * 0.5 * a + c;
+  double q = (k1Div27 * sa - k1Div6 * b) * a + 0.5 * c;
 
   // Use Cardano's formula.
   double p3 = p * p * p;
@@ -337,6 +338,18 @@ UNIT(math, -9) {
     EXPECT_EQ(count, 2u);
     EXPECT_EQ(roots[0], -1.0);
     EXPECT_EQ(roots[1],  3.0);
+  }
+
+  INFO("blCubicRoots");
+  {
+    size_t count;
+    double roots[2];
+
+    // 64x^3 - 64 == 1
+    count = blCubicRoots(roots, 64, 0.0, 0.0, -64, BLTraits::minValue<double>(), BLTraits::maxValue<double>());
+
+    EXPECT_EQ(count, 1u);
+    EXPECT_EQ(roots[0], 1.0);
   }
 }
 #endif

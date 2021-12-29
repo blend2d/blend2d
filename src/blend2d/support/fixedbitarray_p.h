@@ -12,6 +12,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+//! A fixed bit-array that cannot grow.
 template<typename T, size_t N>
 class BLFixedBitArray {
 public:
@@ -19,6 +20,8 @@ public:
     kSizeOfTInBits = BLIntOps::bitSizeOf<T>(),
     kFixedArraySize = (N + kSizeOfTInBits - 1) / kSizeOfTInBits
   };
+
+  T data[kFixedArraySize];
 
   BL_INLINE bool bitAt(size_t index) const noexcept {
     BL_ASSERT(index < N);
@@ -52,8 +55,6 @@ public:
     for (size_t i = 0; i < kFixedArraySize; i++)
       data[i] = BLIntOps::allOnes<T>();
   }
-
-  T data[kFixedArraySize];
 };
 
 //! \}
