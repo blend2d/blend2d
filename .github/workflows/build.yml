@@ -96,18 +96,24 @@ jobs:
     runs-on: "${{matrix.os}}"
 
     steps:
-      - name: "Checkout"
+      - name: "Checkout Blend2D"
         uses: actions/checkout@v2
         with:
           path: "source"
 
-      - name: "Checkout asmjit"
-        run: git clone https://github.com/asmjit/asmjit.git source/3rdparty/asmjit --depth=1
+      - name: "Checkout AsmJit"
+        uses: actions/checkout@v2
+        with:
+          repository: asmjit/asmjit
+          path: "source/3rdparty/asmjit"
 
-      - name: "Checkout build-actions"
-        run: git clone https://github.com/build-actions/build-actions.git build-actions --depth=1
+      - name: "Checkout Build Actions"
+        uses: actions/checkout@v2
+        with:
+          repository: build-actions/build-actions
+          path: "build-actions"
 
-      - name: "Python"
+      - name: "Setup Python"
         uses: actions/setup-python@v2
         with:
           python-version: "3.x"
