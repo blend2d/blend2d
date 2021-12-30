@@ -64,10 +64,13 @@ static BL_INLINE uint32_t unpremultiplyAsFloatOp(uint32_t c, uint32_t a) noexcep
 }
 
 UNIT(tables, -10) {
+#if BL_TARGET_ARCH_X86
   // Make sure that the 256-bit constants are properly aligned.
-  INFO("Testing 'blCommonTable' alignment");
+  INFO("Testing 'blCommonTable' alignment (X86 specific)");
   EXPECT_TRUE(BLIntOps::isAligned(&blCommonTable, 32));
+
   EXPECT_TRUE(BLIntOps::isAligned(&blCommonTable.i256_007F007F007F007F, 32));
+#endif
 
   INFO("Testing 'blCommonTable.unpremultiplyRcp' correctness");
   {
@@ -82,7 +85,7 @@ UNIT(tables, -10) {
   }
 
   #if BL_TARGET_ARCH_X86
-  INFO("Testing 'blCommonTable.unpremultiplyPmaddwd[Rcp|Rnd]' correctness");
+  INFO("Testing 'blCommonTable.unpremultiplyPmaddwd[Rcp|Rnd]' correctness (X86 specific)");
   {
     for (uint32_t a = 0; a < 256; a++) {
       for (uint32_t c = 0; c <= a; c++) {

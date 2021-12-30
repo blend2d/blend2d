@@ -10,6 +10,14 @@
 
 #include <arm_neon.h>
 
+#if defined(__clang__)
+  #define BL_HAVE_BUILTIN_SHUFFLEVECTOR 1
+#elif defined(__GNUC__) && (__GNUC__ >= 12)
+  #define BL_HAVE_BUILTIN_SHUFFLEVECTOR 1
+#else
+  #define BL_HAVE_BUILTIN_SHUFFLEVECTOR 0
+#endif
+
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
 //! \{
@@ -305,83 +313,93 @@ static Vec128I v_dup_lane_i32(const Vec128I& x) noexcept {
 #endif
 }
 
-// TODO:
-template<uint8_t A, uint8_t B, uint8_t C, uint8_t D>
-BL_INLINE Vec128I v_swizzle_lo_i16(const Vec128I& x) noexcept { return x; }
-
-// TODO:
-template<uint8_t A, uint8_t B, uint8_t C, uint8_t D>
-BL_INLINE Vec128I v_swizzle_hi_i16(const Vec128I& x) noexcept { return x; }
-
-// TODO:
-template<uint8_t A, uint8_t B, uint8_t C, uint8_t D>
-BL_INLINE Vec128I v_swizzle_i16(const Vec128I& x) noexcept { return x; }
-
-// TODO:
-template<uint8_t A, uint8_t B, uint8_t C, uint8_t D>
-BL_INLINE Vec128I v_swizzle_i32(const Vec128I& x) noexcept {
-	switch (mm_shuffle_predicate_u8(A, B, C, D)) {
-		case mm_shuffle_predicate_u8(0, 0, 0, 0): {
-		  return v_dup_lane_i32<0>(x);
-		}
-
-		case mm_shuffle_predicate_u8(0, 1, 0, 1): {
-    	uint32x2_t t = vrev64_u32(vget_low_u32(x.u32));
-    	return Vec128I(vcombine_u32(t, t));
-		}
-
-		case mm_shuffle_predicate_u8(1, 0, 1, 0): {
-    	uint32x2_t t = vget_low_u32(x.u32);
-    	return Vec128I(vcombine_u32(t, t));
-		}
-
-		case mm_shuffle_predicate_u8(1, 0, 3, 2): {
-		  return v_swap_i64(x);
-		}
-
-		case mm_shuffle_predicate_u8(1, 1, 1, 1): {
-		  return v_dup_lane_i32<1>(x);
-		}
-
-		case mm_shuffle_predicate_u8(2, 2, 2, 2): {
-		  return v_dup_lane_i32<2>(x);
-		}
-
-		case mm_shuffle_predicate_u8(2, 3, 2, 3): {
-    	uint32x2_t t = vrev64_u32(vget_high_u32(x.u32));
-    	return Vec128I(vcombine_u32(t, t));
-		}
-
-		case mm_shuffle_predicate_u8(3, 2, 1, 0): {
-		  return x;
-		}
-
-		case mm_shuffle_predicate_u8(3, 2, 3, 2): {
-    	uint32x2_t t = vget_high_u32(x.u32);
-    	return Vec128I(vcombine_u32(t, t));
-		}
-
-		case mm_shuffle_predicate_u8(3, 3, 3, 3): {
-		  return v_dup_lane_i32<3>(x);
-		}
-
-		default: {
-#if defined(__clang__)
-      return Vec128I(__builtin_shufflevector(x.u32, x.u32, A, B, C, D))
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec128I v_swizzle_lo_i16(const Vec128I& x) noexcept {
+#if BL_HAVE_BUILTIN_SHUFFLEVECTOR
+  return __builtin_shufflevector(x.u16, x.u16, A, B, C, D, 4, 5, 6, 7);
 #else
-    	uint32x4_t out;
-    	out[0] = vgetq_lane_u32(x.u32, D);
-    	out[1] = vgetq_lane_u32(x.u32, C);
-    	out[2] = vgetq_lane_u32(x.u32, B);
-    	out[3] = vgetq_lane_u32(x.u32, A);
-    	return Vec128I(out);
+  return Vec128I(uint16x8_t{x.u16[A], x.u16[B], x.u16[C], x.u16[D], x.u16[4], x.u16[5], x.u16[6], x.u16[7]});
 #endif
-		}
-	}
+}
+
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec128I v_swizzle_hi_i16(const Vec128I& x) noexcept {
+#if BL_HAVE_BUILTIN_SHUFFLEVECTOR
+  return __builtin_shufflevector(x.u16, x.u16, 0, 1, 2, 3, 4 + A, 4 + B, 4 + C, 4 + D);
+#else
+  return Vec128I(uint16x8_t{x.u16[0], x.u16[1], x.u16[2], x.u16[3], x.u16[4 + A], x.u16[4 + B], x.u16[4 + C], x.u16[4 + D]});
+#endif
+}
+
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec128I v_swizzle_i16(const Vec128I& x) noexcept {
+#if BL_HAVE_BUILTIN_SHUFFLEVECTOR
+  return __builtin_shufflevector(x.u16, x.u16, A, B, C, D, 4 + A, 4 + B, 4 + C, 4 + D);
+#else
+  return Vec128I(uint16x8_t{x.u16[A], x.u16[B], x.u16[C], x.u16[D], x.u16[4 + A], x.u16[4 + B], x.u16[4 + C], x.u16[4 + D]});
+#endif
+}
+
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec128I v_swizzle_i32(const Vec128I& x) noexcept {
+#if BL_HAVE_BUILTIN_SHUFFLEVECTOR
+  return Vec128I(__builtin_shufflevector(x.u32, x.u32, A, B, C, D));
+#else
+  switch (mm_shuffle_predicate_u8(D, C, B, A)) {
+    case mm_shuffle_predicate_u8(0, 0, 0, 0): {
+      return v_dup_lane_i32<0>(x);
+    }
+
+    case mm_shuffle_predicate_u8(0, 1, 0, 1): {
+      uint32x2_t t = vrev64_u32(vget_low_u32(x.u32));
+      return Vec128I(vcombine_u32(t, t));
+    }
+
+    case mm_shuffle_predicate_u8(1, 0, 1, 0): {
+      uint32x2_t t = vget_low_u32(x.u32);
+      return Vec128I(vcombine_u32(t, t));
+    }
+
+    case mm_shuffle_predicate_u8(1, 0, 3, 2): {
+      return v_swap_i64(x);
+    }
+
+    case mm_shuffle_predicate_u8(1, 1, 1, 1): {
+      return v_dup_lane_i32<1>(x);
+    }
+
+    case mm_shuffle_predicate_u8(2, 2, 2, 2): {
+      return v_dup_lane_i32<2>(x);
+    }
+
+    case mm_shuffle_predicate_u8(2, 3, 2, 3): {
+      uint32x2_t t = vrev64_u32(vget_high_u32(x.u32));
+      return Vec128I(vcombine_u32(t, t));
+    }
+
+    case mm_shuffle_predicate_u8(3, 2, 1, 0): {
+      return x;
+    }
+
+    case mm_shuffle_predicate_u8(3, 2, 3, 2): {
+      uint32x2_t t = vget_high_u32(x.u32);
+      return Vec128I(vcombine_u32(t, t));
+    }
+
+    case mm_shuffle_predicate_u8(3, 3, 3, 3): {
+      return v_dup_lane_i32<3>(x);
+    }
+
+    default: {
+      return Vec128I(uint32x4_t{x.u32[A], x.u32[B], x.u32[C], x.u32[D]});
+    }
+  }
+#endif
 }
 
 BL_INLINE Vec128I v_div255_u16(const Vec128I& x) noexcept {
-  return v_srl_i16<8>(Vec128I(vsraq_n_u16(x.u16, x.u16, 8)));
+  Vec128I y = v_add_i16(x, v_const_as<Vec128I>(&blCommonTable.i128_0080008000800080));
+  return v_srl_i16<8>(Vec128I(vsraq_n_u16(y.u16, y.u16, 8)));
 }
 
 } // {anonymous}

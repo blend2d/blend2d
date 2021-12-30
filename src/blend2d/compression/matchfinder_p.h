@@ -151,10 +151,10 @@ typedef int16_t mf_pos_t;
 
     size_t n = size / 64u;
     int16x8_t v = (int16x8_t) {
-      (uint16_t)-MATCHFINDER_WINDOW_SIZE, (uint16_t)-MATCHFINDER_WINDOW_SIZE,
-      (uint16_t)-MATCHFINDER_WINDOW_SIZE, (uint16_t)-MATCHFINDER_WINDOW_SIZE,
-      (uint16_t)-MATCHFINDER_WINDOW_SIZE, (uint16_t)-MATCHFINDER_WINDOW_SIZE,
-      (uint16_t)-MATCHFINDER_WINDOW_SIZE, (uint16_t)-MATCHFINDER_WINDOW_SIZE,
+      MATCHFINDER_WINDOW_SIZE_NEG, MATCHFINDER_WINDOW_SIZE_NEG,
+      MATCHFINDER_WINDOW_SIZE_NEG, MATCHFINDER_WINDOW_SIZE_NEG,
+      MATCHFINDER_WINDOW_SIZE_NEG, MATCHFINDER_WINDOW_SIZE_NEG,
+      MATCHFINDER_WINDOW_SIZE_NEG, MATCHFINDER_WINDOW_SIZE_NEG,
     };
     int16x8_t* p = (int16x8_t *)data;
 
@@ -190,9 +190,7 @@ static BL_INLINE void matchfinder_init(mf_pos_t *data, size_t num_entries)
 #if defined(BL_TARGET_OPT_AVX2)
   if (matchfinder_init_avx2(data, num_entries * sizeof(data[0])))
     return;
-#endif
-
-#if defined(BL_TARGET_OPT_SSE2)
+#elif defined(BL_TARGET_OPT_SSE2)
   if (matchfinder_init_sse2(data, num_entries * sizeof(data[0])))
     return;
 #endif

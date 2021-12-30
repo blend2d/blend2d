@@ -486,12 +486,12 @@ void blTransformRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
   BLMapPointDArrayFunc* funcs = blMatrix2DMapPointDArrayFuncs;
 
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_IDENTITY ], blMatrix2DMapPointDArrayIdentity);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_TRANSLATE], blMatrix2DMapPointDArrayTranslate);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SCALE    ], blMatrix2DMapPointDArrayScale);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SWAP     ], blMatrix2DMapPointDArraySwap);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_AFFINE   ], blMatrix2DMapPointDArrayAffine);
-  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_INVALID  ], blMatrix2DMapPointDArrayAffine);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_IDENTITY ], BLTransformPrivate::blMatrix2DMapPointDArrayIdentity);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_TRANSLATE], BLTransformPrivate::blMatrix2DMapPointDArrayTranslate);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SCALE    ], BLTransformPrivate::blMatrix2DMapPointDArrayScale);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_SWAP     ], BLTransformPrivate::blMatrix2DMapPointDArraySwap);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_AFFINE   ], BLTransformPrivate::blMatrix2DMapPointDArrayAffine);
+  blAssignFunc(&funcs[BL_MATRIX2D_TYPE_INVALID  ], BLTransformPrivate::blMatrix2DMapPointDArrayAffine);
 #endif
 
 #ifdef BL_BUILD_OPT_SSE2

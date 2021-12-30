@@ -115,27 +115,22 @@ static BL_INLINE uint32_t cvt_prgb32_8888_from_argb32_8888(uint32_t val32, uint3
 
   p0 = v_unpack_lo_u8_u16(p0);
   a0 = v_swizzle_lo_i16<1, 0, 0, 0>(a0);
-  p0 = v_div255_u16(v_mul_i16(p0, a0));
+  p0 = v_div255_u16(v_mul_u16(p0, a0));
   p0 = v_packz_u16_u8(p0);
   return v_get_u32(p0);
 #else
-  uint32_t rb = val32;
-  uint32_t ag = val32;
+  val32 |= 0xFF000000u;
 
-  ag |= 0xFF000000u;
-  ag >>= 8;
+  uint32_t rb = (val32     ) & 0x00FF00FFu;
+  uint32_t ag = (val32 >> 8) & 0x00FF00FFu;
 
-  rb = (rb & 0x00FF00FFu) * _a;
-  ag = (ag & 0x00FF00FFu) * _a;
-
-  rb += 0x00800080u;
-  ag += 0x00800080u;
+  rb = (rb * _a) + 0x00800080u;
+  ag = (ag * _a) + 0x00800080u;
 
   rb = (rb + ((rb >> 8) & 0x00FF00FFu)) & 0xFF00FF00u;
   ag = (ag + ((ag >> 8) & 0x00FF00FFu)) & 0xFF00FF00u;
 
-  rb >>= 8;
-  return ag | rb;
+  return ag | (rb >> 8);
 #endif
 }
 
@@ -147,7 +142,7 @@ static BL_INLINE uint32_t cvt_prgb32_8888_from_argb32_8888(uint32_t val32) noexc
   Vec128I a0 = v_swizzle_lo_i16<3, 3, 3, 3>(p0);
 
   p0 = v_or(p0, v_const_as<Vec128I>(&blCommonTable.i128_00FF000000000000));
-  p0 = v_div255_u16(v_mul_i16(p0, a0));
+  p0 = v_div255_u16(v_mul_u16(p0, a0));
   p0 = v_packz_u16_u8(p0);
   return v_get_u32(p0);
 #else

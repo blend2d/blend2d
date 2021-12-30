@@ -19,10 +19,6 @@
   #include "simd_neon_p.h"
 #endif
 
-#if BL_TARGET_ARCH_ARM
-  #include <arm_neon.h>
-#endif
-
 #ifndef BL_TARGET_SIMD_I
   #define BL_TARGET_SIMD_I 0
 #endif

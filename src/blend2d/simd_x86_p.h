@@ -392,42 +392,42 @@ BL_INLINE Vec128I v_shuffle_i8(const Vec128I& x, const Vec128I& y) noexcept { re
 #endif
 
 #if defined(BL_TARGET_OPT_SSE2)
-template<int A, int B, int C, int D>
-BL_INLINE Vec128F v_shuffle_f32(const Vec128F& x, const Vec128F& y) noexcept { return _mm_shuffle_ps(x, y, _MM_SHUFFLE(A, B, C, D)); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec128F v_shuffle_f32(const Vec128F& x, const Vec128F& y) noexcept { return _mm_shuffle_ps(x, y, _MM_SHUFFLE(D, C, B, A)); }
 
-template<int A, int B>
-BL_INLINE Vec128D v_shuffle_f64(const Vec128D& x, const Vec128D& y) noexcept { return _mm_shuffle_pd(x, y, (A << 1) | B); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec128D v_shuffle_f64(const Vec128D& x, const Vec128D& y) noexcept { return _mm_shuffle_pd(x, y, (B << 1) | A); }
 
-template<uint8_t A, uint8_t B, uint8_t C, uint8_t D>
-BL_INLINE Vec128I v_swizzle_lo_i16(const Vec128I& x) noexcept { return _mm_shufflelo_epi16(x, _MM_SHUFFLE(A, B, C, D)); }
-template<uint8_t A, uint8_t B, uint8_t C, uint8_t D>
-BL_INLINE Vec128I v_swizzle_hi_i16(const Vec128I& x) noexcept { return _mm_shufflehi_epi16(x, _MM_SHUFFLE(A, B, C, D)); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec128I v_swizzle_lo_i16(const Vec128I& x) noexcept { return _mm_shufflelo_epi16(x, _MM_SHUFFLE(D, C, B, A)); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec128I v_swizzle_hi_i16(const Vec128I& x) noexcept { return _mm_shufflehi_epi16(x, _MM_SHUFFLE(D, C, B, A)); }
 
-template<uint8_t A, uint8_t B, uint8_t C, uint8_t D>
-BL_INLINE Vec128I v_swizzle_i16(const Vec128I& x) noexcept { return v_swizzle_hi_i16<A, B, C, D>(v_swizzle_lo_i16<A, B, C, D>(x)); }
-template<uint8_t A, uint8_t B, uint8_t C, uint8_t D>
-BL_INLINE Vec128I v_swizzle_i32(const Vec128I& x) noexcept { return _mm_shuffle_epi32(x, _MM_SHUFFLE(A, B, C, D)); }
-template<int A, int B>
-BL_INLINE Vec128I v_swizzle_i64(const Vec128I& x) noexcept { return v_swizzle_i32<A*2 + 1, A*2, B*2 + 1, B*2>(x); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec128I v_swizzle_i16(const Vec128I& x) noexcept { return v_swizzle_hi_i16<D, C, B, A>(v_swizzle_lo_i16<D, C, B, A>(x)); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec128I v_swizzle_i32(const Vec128I& x) noexcept { return _mm_shuffle_epi32(x, _MM_SHUFFLE(D, C, B, A)); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec128I v_swizzle_i64(const Vec128I& x) noexcept { return v_swizzle_i32<B*2 + 1, B*2, A*2 + 1, A*2>(x); }
 
 #if defined(BL_TARGET_OPT_SSE2) && !defined(BL_TARGET_OPT_AVX)
-template<int A, int B, int C, int D>
-BL_INLINE Vec128F v_swizzle_f32(const Vec128F& x) noexcept { return v_cast<Vec128F>(v_swizzle_i32<A, B, C, D>(v_cast<Vec128I>(x))); }
-template<int A, int B>
-BL_INLINE Vec128F v_swizzle_2xf32(const Vec128F& x) noexcept { return v_cast<Vec128F>(v_swizzle_i64<A, B>(v_cast<Vec128I>(x))); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec128F v_swizzle_f32(const Vec128F& x) noexcept { return v_cast<Vec128F>(v_swizzle_i32<D, C, B, A>(v_cast<Vec128I>(x))); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec128F v_swizzle_2xf32(const Vec128F& x) noexcept { return v_cast<Vec128F>(v_swizzle_i64<B, A>(v_cast<Vec128I>(x))); }
 #else
-template<int A, int B, int C, int D>
-BL_INLINE Vec128F v_swizzle_f32(const Vec128F& x) noexcept { return v_shuffle_f32<A, B, C, D>(x, x); }
-template<int A, int B>
-BL_INLINE Vec128F v_swizzle_2xf32(const Vec128F& x) noexcept { return v_swizzle_f32<A*2 + 1, A*2, B*2 + 1, B*2>(x); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec128F v_swizzle_f32(const Vec128F& x) noexcept { return v_shuffle_f32<D, C, B, A>(x, x); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec128F v_swizzle_2xf32(const Vec128F& x) noexcept { return v_swizzle_f32<B*2 + 1, B*2, A*2 + 1, A*2>(x); }
 #endif
 
 #if defined(BL_TARGET_OPT_AVX)
-template<int A, int B>
-BL_INLINE Vec128D v_swizzle_f64(const Vec128D& x) noexcept { return v_shuffle_f64<A, B>(x, x); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec128D v_swizzle_f64(const Vec128D& x) noexcept { return v_shuffle_f64<B, A>(x, x); }
 #else
-template<int A, int B>
-BL_INLINE Vec128D v_swizzle_f64(const Vec128D& x) noexcept { return v_cast<Vec128D>(v_swizzle_i64<A, B>(v_cast<Vec128I>(x))); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec128D v_swizzle_f64(const Vec128D& x) noexcept { return v_cast<Vec128D>(v_swizzle_i64<B, A>(v_cast<Vec128I>(x))); }
 #endif
 
 BL_INLINE Vec128I v_swap_i32(const Vec128I& x) noexcept { return v_swizzle_i32<2, 3, 0, 1>(x); }
@@ -1010,51 +1010,51 @@ BL_INLINE Vec256I v_shuffle_i8(const Vec256I& x, const Vec256I& y) noexcept { re
 #endif
 
 #if defined(BL_TARGET_OPT_AVX)
-template<int A, int B, int C, int D>
-BL_INLINE Vec256F v_shuffle_32(const Vec256F& x, const Vec256F& y) noexcept { return _mm256_shuffle_ps(x, y, _MM_SHUFFLE(A, B, C, D)); }
-template<int A, int B>
-BL_INLINE Vec256D v_shuffle_64(const Vec256D& x, const Vec256D& y) noexcept { return _mm256_shuffle_pd(x, y, (A << 3) | (B << 2) | (A << 1) | B); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec256F v_shuffle_32(const Vec256F& x, const Vec256F& y) noexcept { return _mm256_shuffle_ps(x, y, _MM_SHUFFLE(D, C, B, A)); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec256D v_shuffle_64(const Vec256D& x, const Vec256D& y) noexcept { return _mm256_shuffle_pd(x, y, (B << 3) | (A << 2) | (B << 1) | A); }
 #endif
 
 #if defined(BL_TARGET_OPT_AVX2)
-template<uint8_t A, uint8_t B, uint8_t C, uint8_t D>
-BL_INLINE Vec256I v_swizzle_lo_i16(const Vec256I& x) noexcept { return _mm256_shufflelo_epi16(x, _MM_SHUFFLE(A, B, C, D)); }
-template<uint8_t A, uint8_t B, uint8_t C, uint8_t D>
-BL_INLINE Vec256I v_swizzle_hi_i16(const Vec256I& x) noexcept { return _mm256_shufflehi_epi16(x, _MM_SHUFFLE(A, B, C, D)); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec256I v_swizzle_lo_i16(const Vec256I& x) noexcept { return _mm256_shufflelo_epi16(x, _MM_SHUFFLE(D, C, B, A)); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec256I v_swizzle_hi_i16(const Vec256I& x) noexcept { return _mm256_shufflehi_epi16(x, _MM_SHUFFLE(D, C, B, A)); }
 
-template<uint8_t A, uint8_t B, uint8_t C, uint8_t D>
-BL_INLINE Vec256I v_swizzle_i16(const Vec256I& x) noexcept { return v_swizzle_hi_i16<A, B, C, D>(v_swizzle_lo_i16<A, B, C, D>(x)); }
-template<uint8_t A, uint8_t B, uint8_t C, uint8_t D>
-BL_INLINE Vec256I v_swizzle_i32(const Vec256I& x) noexcept { return _mm256_shuffle_epi32(x, _MM_SHUFFLE(A, B, C, D)); }
-template<int A, int B>
-BL_INLINE Vec256I v_swizzle_i64(const Vec256I& x) noexcept { return v_swizzle_i32<A*2 + 1, A*2, B*2 + 1, B*2>(x); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec256I v_swizzle_i16(const Vec256I& x) noexcept { return v_swizzle_hi_i16<D, C, B, A>(v_swizzle_lo_i16<D, C, B, A>(x)); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec256I v_swizzle_i32(const Vec256I& x) noexcept { return _mm256_shuffle_epi32(x, _MM_SHUFFLE(D, C, B, A)); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec256I v_swizzle_i64(const Vec256I& x) noexcept { return v_swizzle_i32<B*2 + 1, B*2, A*2 + 1, A*2>(x); }
 #endif
 
 #if defined(BL_TARGET_OPT_AVX)
-template<int A, int B, int C, int D>
-BL_INLINE Vec256F v_swizzle_f32(const Vec256F& x) noexcept { return v_shuffle_32<A, B, C, D>(x, x); }
-template<int A, int B>
-BL_INLINE Vec256F v_swizzle_2xf32(const Vec256F& x) noexcept { return v_shuffle_32<A*2 + 1, A*2, B*2 + 1, B*2>(x, x); }
-template<int A, int B>
-BL_INLINE Vec256D v_swizzle_f64(const Vec256D& x) noexcept { return v_shuffle_64<A, B>(x, x); }
+template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
+BL_INLINE Vec256F v_swizzle_f32(const Vec256F& x) noexcept { return v_shuffle_32<D, C, B, A>(x, x); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec256F v_swizzle_2xf32(const Vec256F& x) noexcept { return v_shuffle_32<B*2 + 1, B*2, A*2 + 1, A*2>(x, x); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec256D v_swizzle_f64(const Vec256D& x) noexcept { return v_shuffle_64<B, A>(x, x); }
 #endif
 
 #if defined(BL_TARGET_OPT_AVX2)
-template<int A, int B>
-BL_INLINE Vec256I v_permute_i128(const Vec256I& x, const Vec256I& y) noexcept { return _mm256_permute2x128_si256(x, y, ((A & 0xF) << 4) + (B & 0xF)); }
-template<int A, int B>
-BL_INLINE Vec256I v_permute_i128(const Vec256I& x) noexcept { return v_permute_i128<A, B>(x, x); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec256I v_permute_i128(const Vec256I& x, const Vec256I& y) noexcept { return _mm256_permute2x128_si256(x, y, ((B & 0xF) << 4) + (A & 0xF)); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec256I v_permute_i128(const Vec256I& x) noexcept { return v_permute_i128<B, A>(x, x); }
 #endif
 
 #if defined(BL_TARGET_OPT_AVX)
-template<int A, int B>
-BL_INLINE Vec256F v_permute_f128(const Vec256F& x, const Vec256F& y) noexcept { return _mm256_permute2f128_ps(x, y, ((A & 0xF) << 4) + (B & 0xF)); }
-template<int A, int B>
-BL_INLINE Vec256F v_permute_f128(const Vec256F& x) noexcept { return v_permute_f128<A, B>(x, x); }
-template<int A, int B>
-BL_INLINE Vec256D v_permute_d128(const Vec256D& x, const Vec256D& y) noexcept { return _mm256_permute2f128_pd(x, y, ((A & 0xF) << 4) + (B & 0xF)); }
-template<int A, int B>
-BL_INLINE Vec256D v_permute_d128(const Vec256D& x) noexcept { return v_permute_d128<A, B>(x, x); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec256F v_permute_f128(const Vec256F& x, const Vec256F& y) noexcept { return _mm256_permute2f128_ps(x, y, ((B & 0xF) << 4) + (A & 0xF)); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec256F v_permute_f128(const Vec256F& x) noexcept { return v_permute_f128<B, A>(x, x); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec256D v_permute_d128(const Vec256D& x, const Vec256D& y) noexcept { return _mm256_permute2f128_pd(x, y, ((B & 0xF) << 4) + (A & 0xF)); }
+template<uint8_t B, uint8_t A>
+BL_INLINE Vec256D v_permute_d128(const Vec256D& x) noexcept { return v_permute_d128<B, A>(x, x); }
 #endif
 
 #if defined(BL_TARGET_OPT_AVX2)

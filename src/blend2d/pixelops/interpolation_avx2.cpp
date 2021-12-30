@@ -87,7 +87,7 @@ void BL_CDECL interpolate_prgb32_avx2(uint32_t* dPtr, uint32_t dSize, const BLGr
       uint32_t n = i + 1;
 
       if (n >= 8) {
-        Vec256I cx = v_add_i32(v_dupl_i128(c0), v_permute_i128<0, -1>(v_cast<Vec256I>(v_sll_i32<2>(dx))));
+        Vec256I cx = v_add_i32(v_dupl_i128(c0), v_permute_i128<0, 0x8>(v_cast<Vec256I>(v_sll_i32<2>(dx))));
         Vec256I dx5 = v_add_i32(v_sll_i32<2>(dx), dx);
 
         BL_NOUNROLL
