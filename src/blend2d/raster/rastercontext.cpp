@@ -2221,7 +2221,7 @@ static BL_INLINE BLResult fillUnsafeGeometry(
   uint32_t fillRule,
   BLGeometryType geometryType, const void* geometryData) noexcept {
 
-  size_t geometrySize = sizeof(void*);
+  size_t geometrySize = sizeof(BLPathCore);
   if (BLGeometry::isSimpleGeometryType(geometryType))
     geometrySize = BLGeometry::blGeometryTypeSizeTable[geometryType];
   else
@@ -2244,7 +2244,7 @@ static BL_INLINE BLResult strokeUnsafeGeometry(
 
   serializer.initFillAnalyticAsync(BL_FILL_RULE_NON_ZERO, nullptr);
 
-  size_t geometrySize = sizeof(void*);
+  size_t geometrySize = sizeof(BLPathCore);
   if (BLGeometry::isSimpleGeometryType(geometryType)) {
     geometrySize = BLGeometry::blGeometryTypeSizeTable[geometryType];
   }

@@ -171,7 +171,7 @@ public:
   BL_INLINE bool isOpen() const noexcept { return (_flags & kFlagIsOpen) != 0; }
   BL_INLINE bool isClosed() const noexcept { return (_flags & kFlagIsClosed) != 0; }
 
-  BL_INLINE BLResult stroke(StrokeSinkFunc sink, void* closure) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult stroke(StrokeSinkFunc sink, void* closure) noexcept {
     size_t estimatedSize = _iter.remainingForward() * 2u;
     BL_PROPAGATE(_aPath->reserve(_aPath->size() + estimatedSize));
 
@@ -451,7 +451,7 @@ SmoothPolyTo:
   // offset. This must be handled before calling `openLineTo()`.
   //
   // NOTE: Path cannot be open when calling this function.
-  BL_INLINE BLResult openLineTo(const BLPoint& p1, const BLPoint& n1) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult openLineTo(const BLPoint& p1, const BLPoint& n1) noexcept {
     BL_ASSERT(!isOpen());
     BLPoint w = n1 * _d;
 
@@ -470,7 +470,7 @@ SmoothPolyTo:
   }
 
   // Joins line-to segment described by `p1` point and `n1` normal.
-  BL_INLINE BLResult joinLineTo(const BLPoint& p1, const BLPoint& n1) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult joinLineTo(const BLPoint& p1, const BLPoint& n1) noexcept {
     BLPoint w1 = n1 * _d;
     BLPoint a1 = p1 + w1;
     BLPoint b1 = p1 - w1;
@@ -513,7 +513,7 @@ SmoothPolyTo:
   // by the given unit normal `n0`.
   //
   // NOTE: Path cannot be open when calling this function.
-  BL_INLINE BLResult openCurve(const BLPoint& n0) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult openCurve(const BLPoint& n0) noexcept {
     BL_ASSERT(!isOpen());
     BLPoint w = n0 * _d;
 
@@ -528,7 +528,7 @@ SmoothPolyTo:
   }
 
   // Joins curve-to segment.
-  BL_INLINE BLResult joinCurve(const BLPoint& n1) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult joinCurve(const BLPoint& n1) noexcept {
     BLPoint w1 = n1 * _d;
 
     if (_n0 == n1) {
@@ -558,7 +558,7 @@ SmoothPolyTo:
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult joinCusp(const BLPoint& n1) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult joinCusp(const BLPoint& n1) noexcept {
     BLPoint w1 = n1 * _d;
 
     double dir = BLGeometry::cross(_n0, n1);
@@ -577,7 +577,7 @@ SmoothPolyTo:
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult smoothPolyTo(const BLPoint* poly, size_t count) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult smoothPolyTo(const BLPoint* poly, size_t count) noexcept {
     BL_ASSERT(count >= 2);
 
     BLPoint p1 = poly[0];
@@ -617,7 +617,7 @@ SmoothPolyTo:
   }
 
   // Joins end point that is only applied to closed figures.
-  BL_INLINE BLResult joinEndPoint(const BLPoint& n1) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult joinEndPoint(const BLPoint& n1) noexcept {
     BLPoint w1 = n1 * _d;
 
     if (_n0 == n1) {
@@ -677,12 +677,12 @@ SmoothPolyTo:
     return BL_SUCCESS;
   }
 
-  BL_INLINE void innerJoinCurveTo(BLPathAppender& out, const BLPoint& p1) noexcept {
+  BL_INLINE_IF_NOT_DEBUG void innerJoinCurveTo(BLPathAppender& out, const BLPoint& p1) noexcept {
     out.lineTo(_p0);
     out.lineTo(p1);
   }
 
-  BL_INLINE void innerJoinLineTo(BLPathAppender& out, const BLPoint& lineP0, const BLPoint& lineP1, const BLPoint& innerPt) noexcept {
+  BL_INLINE_IF_NOT_DEBUG void innerJoinLineTo(BLPathAppender& out, const BLPoint& lineP0, const BLPoint& lineP1, const BLPoint& innerPt) noexcept {
     if (out.cmd[-2] <= BL_PATH_CMD_ON && testInnerJoinIntersecion(out.vtx[-2], out.vtx[-1], lineP0, lineP1, innerPt)) {
       out.vtx[-1] = innerPt;
     }
@@ -692,7 +692,7 @@ SmoothPolyTo:
     }
   }
 
-  BL_INLINE void innerJoinEndPoint(BLPathAppender& out, BLPoint& lineP0, const BLPoint& lineP1, const BLPoint& innerPt) noexcept {
+  BL_INLINE_IF_NOT_DEBUG void innerJoinEndPoint(BLPathAppender& out, BLPoint& lineP0, const BLPoint& lineP1, const BLPoint& innerPt) noexcept {
     if (out.cmd[-2] <= BL_PATH_CMD_ON && testInnerJoinIntersecion(out.vtx[-2], out.vtx[-1], lineP0, lineP1, innerPt)) {
       lineP0 = innerPt;
       out.back(1);
@@ -704,7 +704,7 @@ SmoothPolyTo:
   }
 
   // Calculates outer join to `pb`.
-  BL_INLINE BLResult outerJoin(BLPathAppender& out, uint32_t side, const BLPoint& n1, const BLPoint& w1, const BLPoint& k, size_t& miterFlag) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult outerJoin(BLPathAppender& out, uint32_t side, const BLPoint& n1, const BLPoint& w1, const BLPoint& k, size_t& miterFlag) noexcept {
     BLPoint pb = _p0 + w1;
 
     if (BLGeometry::lengthSq(k) <= _miterLimitSq) {
@@ -791,7 +791,7 @@ SmoothPolyTo:
   }
 
   // Calculates round join to `pb` (dull angle), only used by offsetting cusps.
-  BL_INLINE BLResult dullRoundJoin(BLPathAppender& out, uint32_t side, const BLPoint& n1, const BLPoint& w1) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult dullRoundJoin(BLPathAppender& out, uint32_t side, const BLPoint& n1, const BLPoint& w1) noexcept {
     blUnused(n1);
 
     BLPoint pa = out.vtx[-1];
@@ -822,7 +822,7 @@ SmoothPolyTo:
     return BL_SUCCESS;
   }
 
-  BL_INLINE BLResult offsetQuad(const BLPoint bez[3]) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult offsetQuad(const BLPoint bez[3]) noexcept {
     double ts[3];
     size_t tn = BLGeometry::getQuadOffsetCuspTs(bez, _d, ts);
     ts[tn++] = 1.0;
@@ -851,7 +851,7 @@ SmoothPolyTo:
     return BL_SUCCESS;
   }
 
-  BL_INLINE void offsetQuadSimple(const BLPoint& p0, const BLPoint& p1, const BLPoint& p2) noexcept {
+  BL_INLINE_IF_NOT_DEBUG void offsetQuadSimple(const BLPoint& p0, const BLPoint& p1, const BLPoint& p2) noexcept {
     if (p0 == p2)
       return;
 
@@ -872,13 +872,13 @@ SmoothPolyTo:
     _bOut.quadTo(p1 - k1, p2 - k2);
   }
 
-  BL_INLINE BLResult offsetCubic(const BLPoint bez[4]) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult offsetCubic(const BLPoint bez[4]) noexcept {
     return BLGeometry::approximateCubicWithQuads(bez, _approx.simplifyTolerance, [&](BLPoint quad[3]) noexcept -> BLResult {
       return offsetQuad(quad);
     });
   }
 
-  BL_INLINE BLResult addCap(BLPathAppender& out, BLPoint pivot, BLPoint p1, uint32_t capType) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult addCap(BLPathAppender& out, BLPoint pivot, BLPoint p1, uint32_t capType) noexcept {
     BLPoint p0 = out.vtx[-1];
     BLPoint q = BLGeometry::normal(p1 - p0) * 0.5;
 
