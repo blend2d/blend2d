@@ -231,9 +231,7 @@ static BL_INLINE void matchfinder_rebase(mf_pos_t *data, size_t num_entries) noe
 #if defined(BL_TARGET_OPT_AVX2)
   if (matchfinder_rebase_avx2(data, num_entries * sizeof(data[0])))
     return;
-#endif
-
-#if defined(BL_TARGET_OPT_SSE2)
+#elif defined(BL_TARGET_OPT_SSE2)
   if (matchfinder_rebase_sse2(data, num_entries * sizeof(data[0])))
     return;
 #endif
