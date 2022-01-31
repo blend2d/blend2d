@@ -380,8 +380,9 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
 BLResult DictIterator::next(DictEntry& entry) noexcept {
   BL_ASSERT(hasNext());
 
-  uint32_t op = 0;
   uint32_t i = 0;
+  uint32_t op = 0;
+  uint64_t fpMask = 0;
 
   for (;;) {
     uint32_t b0 = *_dataPtr++;
@@ -404,7 +405,7 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
         size_t size;
         BL_PROPAGATE(readFloat(_dataPtr, _dataEnd, v, size));
 
-        entry.fpMask |= uint64_t(1) << i;
+        fpMask |= uint64_t(1) << i;
         _dataPtr += size;
       }
       else {
@@ -453,6 +454,7 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
 
   entry.op = op;
   entry.count = i;
+  entry.fpMask = fpMask;
 
   return BL_SUCCESS;
 }

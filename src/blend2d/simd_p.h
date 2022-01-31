@@ -31,6 +31,49 @@
   #define BL_TARGET_SIMD_D 0
 #endif
 
+namespace SIMD {
+
+template<typename W, size_t N>
+struct VecArray {
+  typedef typename W::Type Type;
+  Type data[N];
+
+  BL_INLINE Type& operator[](size_t index) noexcept { return data[index]; }
+  BL_INLINE const Type& operator[](size_t index) const noexcept { return data[index]; }
+};
+
+#if BL_TARGET_SIMD_I >= 128
+struct VecWrap128I { typedef Vec128I Type; };
+typedef VecArray<VecWrap128I, 2> Vec128Ix2;
+#endif
+
+#if BL_TARGET_SIMD_I >= 256
+struct VecWrap256I { typedef Vec256I Type; };
+typedef VecArray<VecWrap256I, 2> Vec256Ix2;
+#endif
+
+#if BL_TARGET_SIMD_F >= 128
+struct VecWrap128F { typedef Vec128F Type; };
+typedef VecArray<VecWrap128F, 2> Vec128Fx2;
+#endif
+
+#if BL_TARGET_SIMD_F >= 256
+struct VecWrap256F { typedef Vec256F Type; };
+typedef VecArray<VecWrap256F, 2> Vec256Fx2;
+#endif
+
+#if BL_TARGET_SIMD_D >= 128
+struct VecWrap128D { typedef Vec128D Type; };
+typedef VecArray<VecWrap128D, 2> Vec128Dx2;
+#endif
+
+#if BL_TARGET_SIMD_D >= 256
+struct VecWrap256D { typedef Vec256D Type; };
+typedef VecArray<VecWrap256D, 2> Vec256Dx2;
+#endif
+
+} // {SIMD}
+
 // SIMD - Loop Construction
 // ========================
 

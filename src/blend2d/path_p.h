@@ -140,8 +140,11 @@ struct BLPathIterator {
 //! ```
 class BLPathAppender {
 public:
-  uint8_t* cmd;
-  uint8_t* end;
+  // Internal struct that represents a single command and prevents compile thinking that it may alias.
+  struct Cmd { uint8_t value; };
+
+  Cmd* cmd;
+  Cmd* end;
   BLPoint* vtx;
 
   BL_INLINE BLPathAppender() noexcept
@@ -152,7 +155,14 @@ public:
   BL_INLINE size_t remainingSize() const noexcept { return (size_t)(end - cmd); }
 
   BL_INLINE size_t currentIndex(const BLPath& dst) const noexcept {
-    return (size_t)(cmd - BLPathPrivate::getImpl(&dst)->commandData);
+    return (size_t)(cmd - reinterpret_cast<Cmd*>(BLPathPrivate::getImpl(&dst)->commandData));
+  }
+
+  BL_INLINE void _advance(size_t n) noexcept {
+    BL_ASSERT(remainingSize() >= n);
+
+    cmd += n;
+    vtx += n;
   }
 
   BL_INLINE BLResult begin(BLPathCore* dst, BLModifyOp op, size_t n) noexcept {
@@ -162,8 +172,8 @@ public:
 
     BLPathImpl* dstI = BLPathPrivate::getImpl(dst);
     vtx = vtxPtrLocal;
-    cmd = cmdPtrLocal;
-    end = dstI->commandData + dstI->capacity;
+    cmd = reinterpret_cast<Cmd*>(cmdPtrLocal);
+    end = reinterpret_cast<Cmd*>(dstI->commandData + dstI->capacity);
 
     BL_ASSERT(remainingSize() >= n);
     return BL_SUCCESS;
@@ -178,7 +188,7 @@ public:
 
     BLPathImpl* dstI = BLPathPrivate::getImpl(dst);
 
-    dstI->size = (size_t)(cmd - dstI->commandData);
+    dstI->size = (size_t)(reinterpret_cast<uint8_t*>(cmd) - dstI->commandData);
     BL_ASSERT(dstI->size <= dstI->capacity);
 
     uint8_t* cmdPtrLocal;
@@ -187,8 +197,8 @@ public:
 
     dstI = BLPathPrivate::getImpl(dst);
     vtx = vtxPtrLocal;
-    cmd = cmdPtrLocal;
-    end = dstI->commandData + dstI->capacity;
+    cmd = reinterpret_cast<Cmd*>(cmdPtrLocal);
+    end = reinterpret_cast<Cmd*>(dstI->commandData + dstI->capacity);
 
     BL_ASSERT(remainingSize() >= n);
     return BL_SUCCESS;
@@ -201,7 +211,7 @@ public:
 
   BL_INLINE void sync(BLPathCore* dst) noexcept {
     BLPathImpl* dstI = BLPathPrivate::getImpl(dst);
-    size_t newSize = (size_t)(cmd - dstI->commandData);
+    size_t newSize = (size_t)(reinterpret_cast<uint8_t*>(cmd) - dstI->commandData);
 
     BL_ASSERT(!empty());
     BL_ASSERT(newSize <= dstI->capacity);
@@ -220,10 +230,10 @@ public:
   BL_INLINE void moveTo(double x0, double y0) noexcept {
     BL_ASSERT(remainingSize() >= 1);
 
-    cmd[0] = BL_PATH_CMD_MOVE;
-    cmd++;
-
+    cmd[0].value = BL_PATH_CMD_MOVE;
     vtx[0].reset(x0, y0);
+
+    cmd++;
     vtx++;
   }
 
@@ -233,10 +243,10 @@ public:
   BL_INLINE void lineTo(double x1, double y1) noexcept {
     BL_ASSERT(remainingSize() >= 1);
 
-    cmd[0] = BL_PATH_CMD_ON;
-    cmd++;
-
+    cmd[0].value = BL_PATH_CMD_ON;
     vtx[0].reset(x1, y1);
+
+    cmd++;
     vtx++;
   }
 
@@ -247,12 +257,12 @@ public:
   BL_INLINE void quadTo(double x1, double y1, double x2, double y2) noexcept {
     BL_ASSERT(remainingSize() >= 2);
 
-    cmd[0] = BL_PATH_CMD_QUAD;
-    cmd[1] = BL_PATH_CMD_ON;
-    cmd += 2;
-
+    cmd[0].value = BL_PATH_CMD_QUAD;
+    cmd[1].value = BL_PATH_CMD_ON;
     vtx[0].reset(x1, y1);
     vtx[1].reset(x2, y2);
+
+    cmd += 2;
     vtx += 2;
   }
 
@@ -263,29 +273,30 @@ public:
   BL_INLINE void cubicTo(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
     BL_ASSERT(remainingSize() >= 3);
 
-    cmd[0] = BL_PATH_CMD_CUBIC;
-    cmd[1] = BL_PATH_CMD_CUBIC;
-    cmd[2] = BL_PATH_CMD_ON;
-    cmd += 3;
-
+    cmd[0].value = BL_PATH_CMD_CUBIC;
+    cmd[1].value = BL_PATH_CMD_CUBIC;
+    cmd[2].value = BL_PATH_CMD_ON;
     vtx[0].reset(x1, y1);
     vtx[1].reset(x2, y2);
     vtx[2].reset(x3, y3);
+
+    cmd += 3;
     vtx += 3;
   }
 
   BL_INLINE void arcQuadrantTo(const BLPoint& p1, const BLPoint& p2) noexcept {
     BL_ASSERT(remainingSize() >= 3);
 
-    cmd[0] = BL_PATH_CMD_CUBIC;
-    cmd[1] = BL_PATH_CMD_CUBIC;
-    cmd[2] = BL_PATH_CMD_ON;
-    cmd += 3;
+    cmd[0].value = BL_PATH_CMD_CUBIC;
+    cmd[1].value = BL_PATH_CMD_CUBIC;
+    cmd[2].value = BL_PATH_CMD_ON;
 
     BLPoint p0 = vtx[-1];
     vtx[0] = p0 + (p1 - p0) * BL_M_KAPPA;
     vtx[1] = p2 + (p1 - p2) * BL_M_KAPPA;
     vtx[2] = p2;
+
+    cmd += 3;
     vtx += 3;
   }
 
@@ -293,56 +304,57 @@ public:
     BL_ASSERT(remainingSize() >= 3);
     double k = 4.0 * w / (3.0 * (1.0 + w));
 
-    cmd[0] = BL_PATH_CMD_CUBIC;
-    cmd[1] = BL_PATH_CMD_CUBIC;
-    cmd[2] = BL_PATH_CMD_ON;
-    cmd += 3;
+    cmd[0].value = BL_PATH_CMD_CUBIC;
+    cmd[1].value = BL_PATH_CMD_CUBIC;
+    cmd[2].value = BL_PATH_CMD_ON;
 
     BLPoint p0 = vtx[-1];
     vtx[0] = p0 + (p1 - p0) * k;
     vtx[1] = p2 + (p1 - p2) * k;
     vtx[2] = p2;
+
+    cmd += 3;
     vtx += 3;
   }
 
   BL_INLINE void addVertex(uint8_t cmd_, const BLPoint& p) noexcept {
     BL_ASSERT(remainingSize() >= 1);
 
-    cmd[0] = cmd_;
-    cmd++;
-
+    cmd[0].value = cmd_;
     vtx[0] = p;
+
+    cmd++;
     vtx++;
   }
 
   BL_INLINE void addVertex(uint8_t cmd_, double x, double y) noexcept {
     BL_ASSERT(remainingSize() >= 1);
 
-    cmd[0] = cmd_;
-    cmd++;
-
+    cmd[0].value = cmd_;
     vtx[0].reset(x, y);
+
+    cmd++;
     vtx++;
   }
 
   BL_INLINE void close() noexcept {
     BL_ASSERT(remainingSize() >= 1);
 
-    cmd[0] = BL_PATH_CMD_CLOSE;
-    cmd++;
-
+    cmd[0].value = BL_PATH_CMD_CLOSE;
     vtx[0].reset(blNaN<double>(), blNaN<double>());
+
+    cmd++;
     vtx++;
   }
 
   BL_INLINE void addBox(double x0, double y0, double x1, double y1, BLGeometryDirection dir) noexcept {
     BL_ASSERT(remainingSize() >= 5);
 
-    cmd[0] = BL_PATH_CMD_MOVE;
-    cmd[1] = BL_PATH_CMD_ON;
-    cmd[2] = BL_PATH_CMD_ON;
-    cmd[3] = BL_PATH_CMD_ON;
-    cmd[4] = BL_PATH_CMD_CLOSE;
+    cmd[0].value = BL_PATH_CMD_MOVE;
+    cmd[1].value = BL_PATH_CMD_ON;
+    cmd[2].value = BL_PATH_CMD_ON;
+    cmd[3].value = BL_PATH_CMD_ON;
+    cmd[4].value = BL_PATH_CMD_CLOSE;
 
     vtx[0].reset(x0, y0);
     vtx[1].reset(x1, y0);

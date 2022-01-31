@@ -136,7 +136,7 @@ static BL_INLINE constexpr BLObjectImplSize implSizeFromCapacity(size_t capacity
 }
 
 static BL_INLINE BLObjectImplSize expandImplSize(BLObjectImplSize implSize) noexcept {
-  constexpr size_t kMinimumImplSize = 512;
+  constexpr size_t kMinimumImplSize = 1024;
   constexpr size_t kMinimumImplMask = kMinimumImplSize - 16;
 
   return blObjectExpandImplSize(BLObjectImplSize(implSize.value() | kMinimumImplMask));
@@ -541,7 +541,7 @@ static void arcToCubicSpline(BLPathAppender& dst, BLPoint c, BLPoint r, double s
   BLPoint p0 = m.mapPoint(v1);
   dst.addVertex(initialCmd, p0);
 
-  if (maybeRedundantLineTo && dst.cmd[-1] <= BL_PATH_CMD_ON) {
+  if (maybeRedundantLineTo && dst.cmd[-1].value <= BL_PATH_CMD_ON) {
     BL_ASSERT(initialCmd == BL_PATH_CMD_ON);
     double diff = blMax(blAbs(p0.x - dst.vtx[-2].x), blAbs(p0.y - dst.vtx[-2].y));
 
@@ -1156,7 +1156,7 @@ static BLResult joinFigure(BLPathAppender& dst, BLPathIterator src) noexcept {
   if (src.atEnd())
     return BL_SUCCESS;
 
-  bool isClosed = dst.cmd[-1] == BL_PATH_CMD_CLOSE;
+  bool isClosed = dst.cmd[-1].value == BL_PATH_CMD_CLOSE;
   uint8_t initialCmd = uint8_t(isClosed ? BL_PATH_CMD_MOVE : BL_PATH_CMD_ON);
 
   // Initial vertex (either MOVE or ON). If the initial vertex matches the
@@ -1178,7 +1178,7 @@ static BLResult joinReversedFigure(BLPathAppender& dst, BLPathIterator src) noex
   src.reverse();
   src--;
 
-  bool isClosed = dst.cmd[-1] == BL_PATH_CMD_CLOSE;
+  bool isClosed = dst.cmd[-1].value == BL_PATH_CMD_CLOSE;
   uint8_t initialCmd = uint8_t(isClosed ? BL_PATH_CMD_MOVE : BL_PATH_CMD_ON);
   uint8_t cmd = src.cmd[1];
 
@@ -1216,7 +1216,7 @@ static BLResult joinReversedFigure(BLPathAppender& dst, BLPathIterator src) noex
       src--;
     } while (!src.atEnd());
     // Fix the last vertex to not be MOVE.
-    dst.cmd[-1] = BL_PATH_CMD_ON;
+    dst.cmd[-1].value = BL_PATH_CMD_ON;
   }
 
   // Emit CLOSE if the figure is closed.
@@ -1584,7 +1584,7 @@ AddBoxD:
           appender.lineTo(*src--);
       }
 
-      appender.cmd[-intptr_t(n)] = BL_PATH_CMD_MOVE;
+      appender.cmd[-intptr_t(n)].value = BL_PATH_CMD_MOVE;
       break;
     }
 
@@ -1602,7 +1602,7 @@ AddBoxD:
           appender.lineTo(*src--);
       }
 
-      appender.cmd[-intptr_t(n)] = BL_PATH_CMD_MOVE;
+      appender.cmd[-intptr_t(n)].value = BL_PATH_CMD_MOVE;
       break;
     }
 
@@ -1621,7 +1621,7 @@ AddBoxD:
       }
 
       appender.close();
-      appender.cmd[-intptr_t(n)] = BL_PATH_CMD_MOVE;
+      appender.cmd[-intptr_t(n)].value = BL_PATH_CMD_MOVE;
       break;
     }
 
@@ -1640,7 +1640,7 @@ AddBoxD:
       }
 
       appender.close();
-      appender.cmd[-intptr_t(n)] = BL_PATH_CMD_MOVE;
+      appender.cmd[-intptr_t(n)].value = BL_PATH_CMD_MOVE;
       break;
     }
 

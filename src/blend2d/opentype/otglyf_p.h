@@ -11,6 +11,7 @@
 #include "../path_p.h"
 #include "../opentype/otdefs_p.h"
 #include "../support/ptrops_p.h"
+#include "../support/scopedbuffer_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_opentype_impl
@@ -55,7 +56,7 @@ struct GlyfTable {
       kXIsSameOrXByteIsPositive = 0x10u,
       kYIsSameOrYByteIsPositive = 0x20u,
 
-      // We internally only keep flags within this mask.
+      // We internally only use flags within this mask.
       kImportantFlagsMask       = 0x3Fu
     };
 
@@ -123,8 +124,46 @@ struct GlyfData {
   BLFontTable locaTable;
 };
 
+namespace {
+
+// Used by getGlyphOutline() implementation.
+struct CompoundEntry {
+  enum : uint32_t { kMaxLevel = 16 };
+
+  const uint8_t* gPtr;
+  size_t remainingSize;
+  uint32_t compoundFlags;
+  BLMatrix2D matrix;
+};
+
+} // {anonymous}
+
 namespace GlyfImpl {
+
+BL_HIDDEN extern const BLLookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1)> vertexSizeTable;
+
+#ifdef BL_BUILD_OPT_AVX2
+BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_AVX2(
+  const BLFontFaceImpl* faceI_,
+  uint32_t glyphId,
+  const BLMatrix2D* matrix,
+  BLPath* out,
+  size_t* contourCountOut,
+  BLScopedBuffer* tmpBuffer) noexcept;
+#endif
+
+#ifdef BL_BUILD_OPT_SSE4_2
+BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_SSE4_2(
+  const BLFontFaceImpl* faceI_,
+  uint32_t glyphId,
+  const BLMatrix2D* matrix,
+  BLPath* out,
+  size_t* contourCountOut,
+  BLScopedBuffer* tmpBuffer) noexcept;
+#endif
+
 BLResult init(OTFaceImpl* faceI, BLFontTable glyfTable, BLFontTable locaTable) noexcept;
+
 } // {GlyfImpl}
 
 } // {BLOpenType}
