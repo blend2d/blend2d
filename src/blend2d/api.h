@@ -535,7 +535,7 @@
 //! \{
 
 // Diagnostic warnings can be turned on/off by using pragmas, however, this is a compiler specific stuff we have to
-// maintain for each compiler. Ideally we should have a clean code that would compile without any warnings with all
+// maintain for each compiler. Ideally we should have a clean code that would compiler without any warnings with all
 // of them enabled by default, but since there is a lot of nitpicks we just disable some locally when needed (like
 // unused parameter in null-impl functions, etc).
 #if defined(__INTEL_COMPILER)
