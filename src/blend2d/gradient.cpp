@@ -403,15 +403,21 @@ static BL_INLINE BLResult makeMutable(BLGradientCore* self, bool copyCache) noex
   return BL_SUCCESS;
 }
 
+} // {BLGradientPrivate}
+
 // BLGradient - API - Init & Destroy
 // =================================
 
 BL_API_IMPL BLResult blGradientInit(BLGradientCore* self) noexcept {
+  using namespace BLGradientPrivate;
+
   self->_d = blObjectDefaults[BL_OBJECT_TYPE_GRADIENT]._d;
   return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult blGradientInitMove(BLGradientCore* self, BLGradientCore* other) noexcept {
+  using namespace BLGradientPrivate;
+
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isGradient());
 
@@ -422,6 +428,8 @@ BL_API_IMPL BLResult blGradientInitMove(BLGradientCore* self, BLGradientCore* ot
 }
 
 BL_API_IMPL BLResult blGradientInitWeak(BLGradientCore* self, const BLGradientCore* other) noexcept {
+  using namespace BLGradientPrivate;
+
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isGradient());
 
@@ -429,20 +437,24 @@ BL_API_IMPL BLResult blGradientInitWeak(BLGradientCore* self, const BLGradientCo
 }
 
 BL_API_IMPL BLResult blGradientInitAs(BLGradientCore* self, BLGradientType type, const void* values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) noexcept {
+  using namespace BLGradientPrivate;
+
   self->_d = blObjectDefaults[BL_OBJECT_TYPE_GRADIENT]._d;
   return blGradientCreate(self, type, values, extendMode, stops, n, m);
 }
 
 BL_API_IMPL BLResult blGradientDestroy(BLGradientCore* self) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
-  return BLGradientPrivate::releaseInstance(self);
+  return releaseInstance(self);
 }
 
 // BLGradient - API - Reset
 // ========================
 
 BL_API_IMPL BLResult blGradientReset(BLGradientCore* self) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   return replaceInstance(self, static_cast<BLGradientCore*>(&blObjectDefaults[BL_OBJECT_TYPE_GRADIENT]));
@@ -452,6 +464,8 @@ BL_API_IMPL BLResult blGradientReset(BLGradientCore* self) noexcept {
 // =========================
 
 BL_API_IMPL BLResult blGradientAssignMove(BLGradientCore* self, BLGradientCore* other) noexcept {
+  using namespace BLGradientPrivate;
+
   BL_ASSERT(self->_d.isGradient());
   BL_ASSERT(other->_d.isGradient());
 
@@ -461,6 +475,8 @@ BL_API_IMPL BLResult blGradientAssignMove(BLGradientCore* self, BLGradientCore* 
 }
 
 BL_API_IMPL BLResult blGradientAssignWeak(BLGradientCore* self, const BLGradientCore* other) noexcept {
+  using namespace BLGradientPrivate;
+
   BL_ASSERT(self->_d.isGradient());
   BL_ASSERT(other->_d.isGradient());
 
@@ -469,6 +485,7 @@ BL_API_IMPL BLResult blGradientAssignWeak(BLGradientCore* self, const BLGradient
 }
 
 BL_API_IMPL BLResult blGradientCreate(BLGradientCore* self, BLGradientType type, const void* values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (BL_UNLIKELY((uint32_t(type) > BL_GRADIENT_TYPE_MAX_VALUE) | (uint32_t(extendMode) > BL_EXTEND_MODE_SIMPLE_MAX_VALUE)))
@@ -525,6 +542,7 @@ BL_API_IMPL BLResult blGradientCreate(BLGradientCore* self, BLGradientType type,
 // ==========================
 
 BL_API_IMPL BLResult blGradientShrink(BLGradientCore* self) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   BLGradientPrivateImpl* selfI = getImpl(self);
@@ -553,6 +571,7 @@ BL_API_IMPL BLResult blGradientShrink(BLGradientCore* self) noexcept {
 }
 
 BL_API_IMPL BLResult blGradientReserve(BLGradientCore* self, size_t n) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   BLGradientPrivateImpl* selfI = getImpl(self);
@@ -587,6 +606,7 @@ BL_API_IMPL BLResult blGradientReserve(BLGradientCore* self, size_t n) noexcept 
 // ============================
 
 BL_API_IMPL BLGradientType blGradientGetType(const BLGradientCore* self) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   const BLGradientPrivateImpl* selfI = getImpl(self);
@@ -594,6 +614,7 @@ BL_API_IMPL BLGradientType blGradientGetType(const BLGradientCore* self) noexcep
 }
 
 BL_API_IMPL BLResult blGradientSetType(BLGradientCore* self, BLGradientType type) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (BL_UNLIKELY(uint32_t(type) > BL_GRADIENT_TYPE_MAX_VALUE))
@@ -607,7 +628,8 @@ BL_API_IMPL BLResult blGradientSetType(BLGradientCore* self, BLGradientType type
   return BL_SUCCESS;
 }
 
-BL_API_IMPL BLExtendMode blGradientGetExtendMode(BLGradientCore* self) noexcept {
+BL_API_IMPL BLExtendMode blGradientGetExtendMode(const BLGradientCore* self) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   const BLGradientPrivateImpl* selfI = getImpl(self);
@@ -615,6 +637,7 @@ BL_API_IMPL BLExtendMode blGradientGetExtendMode(BLGradientCore* self) noexcept 
 }
 
 BL_API_IMPL BLResult blGradientSetExtendMode(BLGradientCore* self, BLExtendMode extendMode) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_SIMPLE_MAX_VALUE))
@@ -629,6 +652,7 @@ BL_API_IMPL BLResult blGradientSetExtendMode(BLGradientCore* self, BLExtendMode 
 }
 
 BL_API_IMPL double blGradientGetValue(const BLGradientCore* self, size_t index) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (BL_UNLIKELY(index > BL_GRADIENT_VALUE_MAX_VALUE))
@@ -639,6 +663,7 @@ BL_API_IMPL double blGradientGetValue(const BLGradientCore* self, size_t index) 
 }
 
 BL_API_IMPL BLResult blGradientSetValue(BLGradientCore* self, size_t index, double value) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (BL_UNLIKELY(index > BL_GRADIENT_VALUE_MAX_VALUE))
@@ -653,6 +678,7 @@ BL_API_IMPL BLResult blGradientSetValue(BLGradientCore* self, size_t index, doub
 }
 
 BL_API_IMPL BLResult blGradientSetValues(BLGradientCore* self, size_t index, const double* values, size_t valueCount) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (BL_UNLIKELY(index > BL_GRADIENT_VALUE_MAX_VALUE || valueCount > BL_GRADIENT_VALUE_MAX_VALUE + 1 - index))
@@ -676,24 +702,28 @@ BL_API_IMPL BLResult blGradientSetValues(BLGradientCore* self, size_t index, con
 // ========================
 
 BL_API_IMPL size_t blGradientGetSize(const BLGradientCore* self) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   return getSize(self);
 }
 
 BL_API_IMPL size_t blGradientGetCapacity(const BLGradientCore* self) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   return getCapacity(self);
 }
 
 BL_API_IMPL const BLGradientStop* blGradientGetStops(const BLGradientCore* self) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   return getStops(self);
 }
 
 BL_API_IMPL BLResult blGradientResetStops(BLGradientCore* self) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (!getSize(self))
@@ -722,6 +752,7 @@ BL_API_IMPL BLResult blGradientResetStops(BLGradientCore* self) noexcept {
 }
 
 BL_API_IMPL BLResult blGradientAssignStops(BLGradientCore* self, const BLGradientStop* stops, size_t n) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (n == 0)
@@ -760,12 +791,14 @@ BL_API_IMPL BLResult blGradientAssignStops(BLGradientCore* self, const BLGradien
 }
 
 BL_API_IMPL BLResult blGradientAddStopRgba32(BLGradientCore* self, double offset, uint32_t rgba32) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   return blGradientAddStopRgba64(self, offset, BLRgbaPrivate::rgba64FromRgba32(rgba32));
 }
 
 BL_API_IMPL BLResult blGradientAddStopRgba64(BLGradientCore* self, double offset, uint64_t rgba64) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (BL_UNLIKELY(!(offset >= 0.0 && offset <= 1.0)))
@@ -826,12 +859,14 @@ BL_API_IMPL BLResult blGradientAddStopRgba64(BLGradientCore* self, double offset
 }
 
 BL_API_IMPL BLResult blGradientRemoveStop(BLGradientCore* self, size_t index) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   return blGradientRemoveStopsByIndex(self, index, index + 1);
 }
 
 BL_API_IMPL BLResult blGradientRemoveStopByOffset(BLGradientCore* self, double offset, uint32_t all) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (BL_UNLIKELY(!(offset >= 0.0 && offset <= 1.0)))
@@ -862,6 +897,7 @@ BL_API_IMPL BLResult blGradientRemoveStopByOffset(BLGradientCore* self, double o
 }
 
 BL_API_IMPL BLResult blGradientRemoveStopsByIndex(BLGradientCore* self, size_t rStart, size_t rEnd) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   size_t size = getSize(self);
@@ -907,6 +943,7 @@ BL_API_IMPL BLResult blGradientRemoveStopsByIndex(BLGradientCore* self, size_t r
 }
 
 BL_API_IMPL BLResult blGradientRemoveStopsByOffset(BLGradientCore* self, double offsetMin, double offsetMax) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (BL_UNLIKELY(offsetMax < offsetMin))
@@ -931,12 +968,14 @@ BL_API_IMPL BLResult blGradientRemoveStopsByOffset(BLGradientCore* self, double 
 }
 
 BL_API_IMPL BLResult blGradientReplaceStopRgba32(BLGradientCore* self, size_t index, double offset, uint32_t rgba32) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   return blGradientReplaceStopRgba64(self, index, offset, BLRgbaPrivate::rgba64FromRgba32(rgba32));
 }
 
 BL_API_IMPL BLResult blGradientReplaceStopRgba64(BLGradientCore* self, size_t index, double offset, uint64_t rgba64) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (BL_UNLIKELY(index >= getSize(self)))
@@ -958,6 +997,7 @@ BL_API_IMPL BLResult blGradientReplaceStopRgba64(BLGradientCore* self, size_t in
 }
 
 BL_API_IMPL size_t blGradientIndexOfStop(const BLGradientCore* self, double offset) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   const BLGradientPrivateImpl* selfI = getImpl(self);
@@ -981,6 +1021,7 @@ BL_API_IMPL size_t blGradientIndexOfStop(const BLGradientCore* self, double offs
 // =========================
 
 BL_API_IMPL BLResult blGradientApplyMatrixOp(BLGradientCore* self, BLMatrix2DOp opType, const void* opData) noexcept {
+  using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
   if (BL_UNLIKELY(uint32_t(opType) > BL_MATRIX2D_OP_MAX_VALUE))
@@ -1003,6 +1044,8 @@ BL_API_IMPL BLResult blGradientApplyMatrixOp(BLGradientCore* self, BLMatrix2DOp 
 // =========================
 
 BL_API_IMPL bool blGradientEquals(const BLGradientCore* a, const BLGradientCore* b) noexcept {
+  using namespace BLGradientPrivate;
+
   BL_ASSERT(a->_d.isGradient());
   BL_ASSERT(b->_d.isGradient());
 
@@ -1020,8 +1063,6 @@ BL_API_IMPL bool blGradientEquals(const BLGradientCore* a, const BLGradientCore*
             (size             == bI->size        ) ;
   return eq && memcmp(aI->stops, bI->stops, size * sizeof(BLGradientStop)) == 0;
 }
-
-} // {BLGradientPrivate}
 
 // BLGradient - Runtime Registration
 // =================================

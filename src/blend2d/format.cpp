@@ -85,7 +85,7 @@ static BL_INLINE bool blFormatInfoIsDepthValid(uint32_t depth) noexcept {
   }
 }
 
-BLResult blFormatInfoSanitize(BLFormatInfo* self) noexcept {
+BL_API_IMPL BLResult blFormatInfoSanitize(BLFormatInfo* self) noexcept {
   BLFormatInfo& f = *self;
 
   // Filter out all flags that will be computed.

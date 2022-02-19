@@ -274,7 +274,7 @@ BL_API BLResult BL_CDECL blGradientShrink(BLGradientCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientReserve(BLGradientCore* self, size_t n) BL_NOEXCEPT_C;
 BL_API BLGradientType BL_CDECL blGradientGetType(const BLGradientCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API BLResult BL_CDECL blGradientSetType(BLGradientCore* self, BLGradientType type) BL_NOEXCEPT_C;
-BL_API BLExtendMode BL_CDECL blGradientGetExtendMode(BLGradientCore* self) BL_NOEXCEPT_C BL_PURE;
+BL_API BLExtendMode BL_CDECL blGradientGetExtendMode(const BLGradientCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API BLResult BL_CDECL blGradientSetExtendMode(BLGradientCore* self, BLExtendMode extendMode) BL_NOEXCEPT_C;
 BL_API double BL_CDECL blGradientGetValue(const BLGradientCore* self, size_t index) BL_NOEXCEPT_C BL_PURE;
 BL_API BLResult BL_CDECL blGradientSetValue(BLGradientCore* self, size_t index, double value) BL_NOEXCEPT_C;

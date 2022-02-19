@@ -16,8 +16,151 @@ namespace BLContextPrivate {
 
 static BLWrap<BLContextState> nullState;
 static BLObjectEthernalVirtualImpl<BLContextImpl, BLContextVirt> defaultContext;
-
 static const BLContextCreateInfo noCreateInfo {};
+
+// BLContext - Null Context
+// ========================
+
+namespace NullContext {
+
+// NullContext implementation does nothing. These functions consistently return `BL_ERROR_INVALID_STATE` to inform the
+// caller that the context is not usable. We don't want to mark every unused parameter by `blUnused()` in this case.
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
+
+static BLResult BL_CDECL implDestroy(BLObjectImpl* impl, uint32_t info) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implFlush(BLContextImpl* impl, BLContextFlushFlags flags) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+static BLResult BL_CDECL implNoArgs(BLContextImpl* impl) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetCompOp(BLContextImpl* impl, BLCompOp) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetFillRule(BLContextImpl* impl, BLFillRule) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetUInt32(BLContextImpl* impl, uint32_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetUInt64(BLContextImpl* impl, uint64_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetDouble(BLContextImpl* impl, double) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+static BLResult BL_CDECL implSave(BLContextImpl* impl, BLContextCookie*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implRestore(BLContextImpl* impl, const BLContextCookie*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+static BLResult BL_CDECL implGetStyle(const BLContextImpl* impl, BLVarCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetStyle(BLContextImpl* impl, const BLUnknown*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetRgba(BLContextImpl* impl, const BLRgba*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+static BLResult BL_CDECL implSetHint(BLContextImpl* impl, BLContextHint, uint32_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetHints(BLContextImpl* impl, const BLContextHints*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetFlattenMode(BLContextImpl* impl, BLFlattenMode) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetApproximationOptions(BLContextImpl* impl, const BLApproximationOptions*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetStrokeTransformOrder(BLContextImpl* impl, BLStrokeTransformOrder) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetStrokeDashArray(BLContextImpl* impl, const BLArrayCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetStrokeCap(BLContextImpl* impl, BLStrokeCapPosition, BLStrokeCap) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetStrokeCaps(BLContextImpl* impl, BLStrokeCap) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetStrokeJoin(BLContextImpl* impl, BLStrokeJoin) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implSetStrokeOptions(BLContextImpl* impl, const BLStrokeOptionsCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+static BLResult BL_CDECL implMatrixOp(BLContextImpl* impl, BLMatrix2DOp, const void*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+static BLResult BL_CDECL implDoRectI(BLContextImpl* impl, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implDoRectD(BLContextImpl* impl, const BLRect*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implDoPathD(BLContextImpl* impl, const BLPathCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implDoGeometry(BLContextImpl* impl, BLGeometryType, const void*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implDoTextI(BLContextImpl* impl, const BLPointI*, const BLFontCore*, const void*, size_t, BLTextEncoding) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implDoTextD(BLContextImpl* impl, const BLPoint*, const BLFontCore*, const void*, size_t, BLTextEncoding) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implDoGlyphRunI(BLContextImpl* impl, const BLPointI*, const BLFontCore*, const BLGlyphRun*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implDoGlyphRunD(BLContextImpl* impl, const BLPoint*, const BLFontCore*, const BLGlyphRun*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+static BLResult BL_CDECL implDoImageI(BLContextImpl* impl, const BLPointI*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implDoImageD(BLContextImpl* impl, const BLPoint*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implBlitScaledImageI(BLContextImpl* impl, const BLRectI*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+static BLResult BL_CDECL implBlitScaledImageD(BLContextImpl* impl, const BLRect*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
+
+BL_DIAGNOSTIC_POP
+
+} // {NullContext}
+
+static void initNullContextVirt(BLContextVirt* virt) noexcept {
+  constexpr uint32_t F = BL_CONTEXT_OP_TYPE_FILL;
+  constexpr uint32_t S = BL_CONTEXT_OP_TYPE_STROKE;
+
+  virt->base.destroy            = NullContext::implDestroy;
+  virt->base.getProperty        = blObjectImplGetProperty;
+  virt->base.setProperty        = blObjectImplSetProperty;
+  virt->flush                   = NullContext::implFlush;
+
+  virt->save                    = NullContext::implSave;
+  virt->restore                 = NullContext::implRestore;
+
+  virt->userToMeta              = NullContext::implNoArgs;
+  virt->matrixOp                = NullContext::implMatrixOp;
+
+  virt->setHint                 = NullContext::implSetHint;
+  virt->setHints                = NullContext::implSetHints;
+
+  virt->setFlattenMode          = NullContext::implSetFlattenMode;
+  virt->setFlattenTolerance     = NullContext::implSetDouble;
+  virt->setApproximationOptions = NullContext::implSetApproximationOptions;
+
+  virt->setCompOp               = NullContext::implSetCompOp;
+  virt->setGlobalAlpha          = NullContext::implSetDouble;
+
+  virt->setStyleAlpha[F]        = NullContext::implSetDouble;
+  virt->setStyleAlpha[S]        = NullContext::implSetDouble;
+  virt->getStyle[F]             = NullContext::implGetStyle;
+  virt->getStyle[S]             = NullContext::implGetStyle;
+  virt->setStyle[F]             = NullContext::implSetStyle;
+  virt->setStyle[S]             = NullContext::implSetStyle;
+  virt->setStyleRgba[F]         = NullContext::implSetRgba;
+  virt->setStyleRgba[S]         = NullContext::implSetRgba;
+  virt->setStyleRgba32[F]       = NullContext::implSetUInt32;
+  virt->setStyleRgba32[S]       = NullContext::implSetUInt32;
+  virt->setStyleRgba64[F]       = NullContext::implSetUInt64;
+  virt->setStyleRgba64[S]       = NullContext::implSetUInt64;
+
+  virt->setFillRule             = NullContext::implSetFillRule;
+
+  virt->setStrokeWidth          = NullContext::implSetDouble;
+  virt->setStrokeMiterLimit     = NullContext::implSetDouble;
+  virt->setStrokeCap            = NullContext::implSetStrokeCap;
+  virt->setStrokeCaps           = NullContext::implSetStrokeCaps;
+  virt->setStrokeJoin           = NullContext::implSetStrokeJoin;
+  virt->setStrokeTransformOrder = NullContext::implSetStrokeTransformOrder;
+  virt->setStrokeDashOffset     = NullContext::implSetDouble;
+  virt->setStrokeDashArray      = NullContext::implSetStrokeDashArray;
+  virt->setStrokeOptions        = NullContext::implSetStrokeOptions;
+
+  virt->clipToRectI             = NullContext::implDoRectI;
+  virt->clipToRectD             = NullContext::implDoRectD;
+  virt->restoreClipping         = NullContext::implNoArgs;
+
+  virt->clearAll                = NullContext::implNoArgs;
+  virt->clearRectI              = NullContext::implDoRectI;
+  virt->clearRectD              = NullContext::implDoRectD;
+
+  virt->fillAll                 = NullContext::implNoArgs;
+  virt->fillRectI               = NullContext::implDoRectI;
+  virt->fillRectD               = NullContext::implDoRectD;
+  virt->fillPathD               = NullContext::implDoPathD;
+  virt->fillGeometry            = NullContext::implDoGeometry;
+  virt->fillTextI               = NullContext::implDoTextI;
+  virt->fillTextD               = NullContext::implDoTextD;
+  virt->fillGlyphRunI           = NullContext::implDoGlyphRunI;
+  virt->fillGlyphRunD           = NullContext::implDoGlyphRunD;
+  virt->fillMaskI               = NullContext::implDoImageI;
+  virt->fillMaskD               = NullContext::implDoImageD;
+
+  virt->strokeRectI             = NullContext::implDoRectI;
+  virt->strokeRectD             = NullContext::implDoRectD;
+  virt->strokePathD             = NullContext::implDoPathD;
+  virt->strokeGeometry          = NullContext::implDoGeometry;
+  virt->strokeTextI             = NullContext::implDoTextI;
+  virt->strokeTextD             = NullContext::implDoTextD;
+  virt->strokeGlyphRunI         = NullContext::implDoGlyphRunI;
+  virt->strokeGlyphRunD         = NullContext::implDoGlyphRunD;
+
+  virt->blitImageI              = NullContext::implDoImageI;
+  virt->blitImageD              = NullContext::implDoImageD;
+  virt->blitScaledImageI        = NullContext::implBlitScaledImageI;
+  virt->blitScaledImageD        = NullContext::implBlitScaledImageD;
+}
+
+} // {BLContextPrivate}
 
 // BLContext - API - Init & Destroy
 // ================================
@@ -117,7 +260,7 @@ BL_API_IMPL BLResult blContextBegin(BLContextCore* self, BLImageCore* image, con
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   if (!cci)
-    cci = &noCreateInfo;
+    cci = &BLContextPrivate::noCreateInfo;
 
   BLContextCore newO;
   BL_PROPAGATE(blRasterContextInitImpl(&newO, image, cci));
@@ -193,11 +336,29 @@ BL_API_IMPL BLResult blContextMatrixOp(BLContextCore* self, BLMatrix2DOp opType,
 // BLContext - API - Rendering Hints
 // =================================
 
+BL_API_IMPL uint32_t blContextGetHint(const BLContextCore* self, BLContextHint hintType) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  if (BL_UNLIKELY(uint32_t(hintType) > uint32_t(BL_CONTEXT_HINT_MAX_VALUE)))
+    return 0;
+
+  return impl->state->hints.hints[hintType];
+}
+
 BL_API_IMPL BLResult blContextSetHint(BLContextCore* self, BLContextHint hintType, uint32_t value) noexcept {
   BL_ASSERT(self->_d.isContext());
   BLContextImpl* impl = self->_impl();
 
   return impl->virt->setHint(impl, hintType, value);
+}
+
+BL_API_IMPL BLResult blContextGetHints(const BLContextCore* self, BLContextHints* hintsOut) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  *hintsOut = impl->state->hints;
+  return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult blContextSetHints(BLContextCore* self, const BLContextHints* hints) noexcept {
@@ -248,6 +409,13 @@ BL_API_IMPL BLResult blContextSetCompOp(BLContextCore* self, BLCompOp compOp) no
   return impl->virt->setCompOp(impl, compOp);
 }
 
+BL_API_IMPL double blContextGetGlobalAlpha(const BLContextCore* self) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  return impl->state->globalAlpha;
+}
+
 BL_API_IMPL BLResult blContextSetGlobalAlpha(BLContextCore* self, double alpha) noexcept {
   BL_ASSERT(self->_d.isContext());
   BLContextImpl* impl = self->_impl();
@@ -257,6 +425,13 @@ BL_API_IMPL BLResult blContextSetGlobalAlpha(BLContextCore* self, double alpha) 
 
 // BLContext - API - Fill Options
 // ==============================
+
+BL_API_IMPL double blContextGetFillAlpha(const BLContextCore* self) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  return impl->state->styleAlpha[BL_CONTEXT_OP_TYPE_FILL];
+}
 
 BL_API_IMPL BLResult blContextSetFillAlpha(BLContextCore* self, double alpha) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -300,6 +475,13 @@ BL_API_IMPL BLResult blContextSetFillStyleRgba64(BLContextCore* self, uint64_t r
   return impl->virt->setStyleRgba64[BL_CONTEXT_OP_TYPE_FILL](impl, rgba64);
 }
 
+BL_API_IMPL BLFillRule blContextGetFillRule(const BLContextCore* self) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  return (BLFillRule)impl->state->fillRule;
+}
+
 BL_API_IMPL BLResult blContextSetFillRule(BLContextCore* self, BLFillRule fillRule) noexcept {
   BL_ASSERT(self->_d.isContext());
   BLContextImpl* impl = self->_impl();
@@ -309,6 +491,13 @@ BL_API_IMPL BLResult blContextSetFillRule(BLContextCore* self, BLFillRule fillRu
 
 // BLContext - API - Stroke Options
 // ================================
+
+BL_API_IMPL double blContextGetStrokeAlpha(const BLContextCore* self) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  return impl->state->styleAlpha[BL_CONTEXT_OP_TYPE_STROKE];
+}
 
 BL_API_IMPL BLResult blContextSetStrokeAlpha(BLContextCore* self, double alpha) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -352,6 +541,13 @@ BL_API_IMPL BLResult blContextSetStrokeStyleRgba64(BLContextCore* self, uint64_t
   return impl->virt->setStyleRgba64[BL_CONTEXT_OP_TYPE_STROKE](impl, rgba64);
 }
 
+BL_API_IMPL double blContextGetStrokeWidth(const BLContextCore* self) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  return impl->state->strokeOptions.width;
+}
+
 BL_API_IMPL BLResult blContextSetStrokeWidth(BLContextCore* self, double width) noexcept {
   BL_ASSERT(self->_d.isContext());
   BLContextImpl* impl = self->_impl();
@@ -359,11 +555,28 @@ BL_API_IMPL BLResult blContextSetStrokeWidth(BLContextCore* self, double width) 
   return impl->virt->setStrokeWidth(impl, width);
 }
 
+BL_API_IMPL double blContextGetStrokeMiterLimit(const BLContextCore* self) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  return impl->state->strokeOptions.miterLimit;
+}
+
 BL_API_IMPL BLResult blContextSetStrokeMiterLimit(BLContextCore* self, double miterLimit) noexcept {
   BL_ASSERT(self->_d.isContext());
   BLContextImpl* impl = self->_impl();
 
   return impl->virt->setStrokeMiterLimit(impl, miterLimit);
+}
+
+BL_API_IMPL BLStrokeCap blContextGetStrokeCap(const BLContextCore* self, BLStrokeCapPosition position) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  if (BL_UNLIKELY(uint32_t(position) > uint32_t(BL_STROKE_CAP_POSITION_MAX_VALUE)))
+    return (BLStrokeCap)0;
+
+  return (BLStrokeCap)impl->state->strokeOptions.caps[position];
 }
 
 BL_API_IMPL BLResult blContextSetStrokeCap(BLContextCore* self, BLStrokeCapPosition position, BLStrokeCap strokeCap) noexcept {
@@ -380,11 +593,39 @@ BL_API_IMPL BLResult blContextSetStrokeCaps(BLContextCore* self, BLStrokeCap str
   return impl->virt->setStrokeCaps(impl, strokeCap);
 }
 
+BL_API_IMPL BLStrokeJoin blContextGetStrokeJoin(const BLContextCore* self) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  return (BLStrokeJoin)impl->state->strokeOptions.join;
+}
+
 BL_API_IMPL BLResult blContextSetStrokeJoin(BLContextCore* self, BLStrokeJoin strokeJoin) noexcept {
   BL_ASSERT(self->_d.isContext());
   BLContextImpl* impl = self->_impl();
 
   return impl->virt->setStrokeJoin(impl, strokeJoin);
+}
+
+BL_API_IMPL BLStrokeTransformOrder blContextGetStrokeTransformOrder(const BLContextCore* self) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  return (BLStrokeTransformOrder)impl->state->strokeOptions.transformOrder;
+}
+
+BL_API_IMPL BLResult blContextSetStrokeTransformOrder(BLContextCore* self, BLStrokeTransformOrder transformOrder) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  return impl->virt->setStrokeTransformOrder(impl, transformOrder);
+}
+
+BL_API_IMPL double blContextGetStrokeDashOffset(const BLContextCore* self) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  return impl->state->strokeOptions.dashOffset;
 }
 
 BL_API_IMPL BLResult blContextSetStrokeDashOffset(BLContextCore* self, double dashOffset) noexcept {
@@ -394,18 +635,18 @@ BL_API_IMPL BLResult blContextSetStrokeDashOffset(BLContextCore* self, double da
   return impl->virt->setStrokeDashOffset(impl, dashOffset);
 }
 
+BL_API_IMPL BLResult blContextGetStrokeDashArray(const BLContextCore* self, BLArrayCore* dashArrayOut) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  return blArrayAssignWeak(dashArrayOut, &impl->state->strokeOptions.dashArray);
+}
+
 BL_API_IMPL BLResult blContextSetStrokeDashArray(BLContextCore* self, const BLArrayCore* dashArray) noexcept {
   BL_ASSERT(self->_d.isContext());
   BLContextImpl* impl = self->_impl();
 
   return impl->virt->setStrokeDashArray(impl, dashArray);
-}
-
-BL_API_IMPL BLResult blContextSetStrokeTransformOrder(BLContextCore* self, BLStrokeTransformOrder transformOrder) noexcept {
-  BL_ASSERT(self->_d.isContext());
-  BLContextImpl* impl = self->_impl();
-
-  return impl->virt->setStrokeTransformOrder(impl, transformOrder);
 }
 
 BL_API_IMPL BLResult blContextGetStrokeOptions(const BLContextCore* self, BLStrokeOptionsCore* options) noexcept {
@@ -639,150 +880,6 @@ BL_API_IMPL BLResult blContextBlitScaledImageD(BLContextCore* self, const BLRect
 
   return impl->virt->blitScaledImageD(impl, rect, img, imgArea);
 }
-
-// BLContext - Null Impl
-// =====================
-
-namespace NullContext {
-
-// NullContext implementation does nothing. These functions consistently return `BL_ERROR_INVALID_STATE` to inform the
-// caller that the context is not usable. We don't want to mark every unused parameter by `blUnused()` in this case.
-BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
-
-static BLResult BL_CDECL implDestroy(BLObjectImpl* impl, uint32_t info) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implFlush(BLContextImpl* impl, BLContextFlushFlags flags) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-
-static BLResult BL_CDECL implNoArgs(BLContextImpl* impl) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetCompOp(BLContextImpl* impl, BLCompOp) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetFillRule(BLContextImpl* impl, BLFillRule) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetUInt32(BLContextImpl* impl, uint32_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetUInt64(BLContextImpl* impl, uint64_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetDouble(BLContextImpl* impl, double) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-
-static BLResult BL_CDECL implSave(BLContextImpl* impl, BLContextCookie*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implRestore(BLContextImpl* impl, const BLContextCookie*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-
-static BLResult BL_CDECL implGetStyle(const BLContextImpl* impl, BLVarCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetStyle(BLContextImpl* impl, const BLUnknown*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetRgba(BLContextImpl* impl, const BLRgba*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-
-static BLResult BL_CDECL implSetHint(BLContextImpl* impl, BLContextHint, uint32_t) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetHints(BLContextImpl* impl, const BLContextHints*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetFlattenMode(BLContextImpl* impl, BLFlattenMode) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetApproximationOptions(BLContextImpl* impl, const BLApproximationOptions*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetStrokeTransformOrder(BLContextImpl* impl, BLStrokeTransformOrder) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetStrokeDashArray(BLContextImpl* impl, const BLArrayCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetStrokeCap(BLContextImpl* impl, BLStrokeCapPosition, BLStrokeCap) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetStrokeCaps(BLContextImpl* impl, BLStrokeCap) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetStrokeJoin(BLContextImpl* impl, BLStrokeJoin) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implSetStrokeOptions(BLContextImpl* impl, const BLStrokeOptionsCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-
-static BLResult BL_CDECL implMatrixOp(BLContextImpl* impl, BLMatrix2DOp, const void*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-
-static BLResult BL_CDECL implDoRectI(BLContextImpl* impl, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implDoRectD(BLContextImpl* impl, const BLRect*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implDoPathD(BLContextImpl* impl, const BLPathCore*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implDoGeometry(BLContextImpl* impl, BLGeometryType, const void*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implDoTextI(BLContextImpl* impl, const BLPointI*, const BLFontCore*, const void*, size_t, BLTextEncoding) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implDoTextD(BLContextImpl* impl, const BLPoint*, const BLFontCore*, const void*, size_t, BLTextEncoding) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implDoGlyphRunI(BLContextImpl* impl, const BLPointI*, const BLFontCore*, const BLGlyphRun*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implDoGlyphRunD(BLContextImpl* impl, const BLPoint*, const BLFontCore*, const BLGlyphRun*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-
-static BLResult BL_CDECL implDoImageI(BLContextImpl* impl, const BLPointI*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implDoImageD(BLContextImpl* impl, const BLPoint*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implBlitScaledImageI(BLContextImpl* impl, const BLRectI*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-static BLResult BL_CDECL implBlitScaledImageD(BLContextImpl* impl, const BLRect*, const BLImageCore*, const BLRectI*) noexcept { return blTraceError(BL_ERROR_INVALID_STATE); }
-
-BL_DIAGNOSTIC_POP
-
-} // {NullContext}
-
-static void initNullContextVirt(BLContextVirt* virt) noexcept {
-  constexpr uint32_t F = BL_CONTEXT_OP_TYPE_FILL;
-  constexpr uint32_t S = BL_CONTEXT_OP_TYPE_STROKE;
-
-  virt->base.destroy            = NullContext::implDestroy;
-  virt->base.getProperty        = blObjectImplGetProperty;
-  virt->base.setProperty        = blObjectImplSetProperty;
-  virt->flush                   = NullContext::implFlush;
-
-  virt->save                    = NullContext::implSave;
-  virt->restore                 = NullContext::implRestore;
-
-  virt->userToMeta              = NullContext::implNoArgs;
-  virt->matrixOp                = NullContext::implMatrixOp;
-
-  virt->setHint                 = NullContext::implSetHint;
-  virt->setHints                = NullContext::implSetHints;
-
-  virt->setFlattenMode          = NullContext::implSetFlattenMode;
-  virt->setFlattenTolerance     = NullContext::implSetDouble;
-  virt->setApproximationOptions = NullContext::implSetApproximationOptions;
-
-  virt->setCompOp               = NullContext::implSetCompOp;
-  virt->setGlobalAlpha          = NullContext::implSetDouble;
-
-  virt->setStyleAlpha[F]        = NullContext::implSetDouble;
-  virt->setStyleAlpha[S]        = NullContext::implSetDouble;
-  virt->getStyle[F]             = NullContext::implGetStyle;
-  virt->getStyle[S]             = NullContext::implGetStyle;
-  virt->setStyle[F]             = NullContext::implSetStyle;
-  virt->setStyle[S]             = NullContext::implSetStyle;
-  virt->setStyleRgba[F]         = NullContext::implSetRgba;
-  virt->setStyleRgba[S]         = NullContext::implSetRgba;
-  virt->setStyleRgba32[F]       = NullContext::implSetUInt32;
-  virt->setStyleRgba32[S]       = NullContext::implSetUInt32;
-  virt->setStyleRgba64[F]       = NullContext::implSetUInt64;
-  virt->setStyleRgba64[S]       = NullContext::implSetUInt64;
-
-  virt->setFillRule             = NullContext::implSetFillRule;
-
-  virt->setStrokeWidth          = NullContext::implSetDouble;
-  virt->setStrokeMiterLimit     = NullContext::implSetDouble;
-  virt->setStrokeCap            = NullContext::implSetStrokeCap;
-  virt->setStrokeCaps           = NullContext::implSetStrokeCaps;
-  virt->setStrokeJoin           = NullContext::implSetStrokeJoin;
-  virt->setStrokeTransformOrder = NullContext::implSetStrokeTransformOrder;
-  virt->setStrokeDashOffset     = NullContext::implSetDouble;
-  virt->setStrokeDashArray      = NullContext::implSetStrokeDashArray;
-  virt->setStrokeOptions        = NullContext::implSetStrokeOptions;
-
-  virt->clipToRectI             = NullContext::implDoRectI;
-  virt->clipToRectD             = NullContext::implDoRectD;
-  virt->restoreClipping         = NullContext::implNoArgs;
-
-  virt->clearAll                = NullContext::implNoArgs;
-  virt->clearRectI              = NullContext::implDoRectI;
-  virt->clearRectD              = NullContext::implDoRectD;
-
-  virt->fillAll                 = NullContext::implNoArgs;
-  virt->fillRectI               = NullContext::implDoRectI;
-  virt->fillRectD               = NullContext::implDoRectD;
-  virt->fillPathD               = NullContext::implDoPathD;
-  virt->fillGeometry            = NullContext::implDoGeometry;
-  virt->fillTextI               = NullContext::implDoTextI;
-  virt->fillTextD               = NullContext::implDoTextD;
-  virt->fillGlyphRunI           = NullContext::implDoGlyphRunI;
-  virt->fillGlyphRunD           = NullContext::implDoGlyphRunD;
-  virt->fillMaskI               = NullContext::implDoImageI;
-  virt->fillMaskD               = NullContext::implDoImageD;
-
-  virt->strokeRectI             = NullContext::implDoRectI;
-  virt->strokeRectD             = NullContext::implDoRectD;
-  virt->strokePathD             = NullContext::implDoPathD;
-  virt->strokeGeometry          = NullContext::implDoGeometry;
-  virt->strokeTextI             = NullContext::implDoTextI;
-  virt->strokeTextD             = NullContext::implDoTextD;
-  virt->strokeGlyphRunI         = NullContext::implDoGlyphRunI;
-  virt->strokeGlyphRunD         = NullContext::implDoGlyphRunD;
-
-  virt->blitImageI              = NullContext::implDoImageI;
-  virt->blitImageD              = NullContext::implDoImageD;
-  virt->blitScaledImageI        = NullContext::implBlitScaledImageI;
-  virt->blitScaledImageD        = NullContext::implBlitScaledImageD;
-}
-
-} // {BLContextPrivate}
 
 // BLContext - Runtime Registration
 // ================================

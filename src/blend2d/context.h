@@ -527,58 +527,98 @@ BL_API BLResult BL_CDECL blContextInitMove(BLContextCore* self, BLContextCore* o
 BL_API BLResult BL_CDECL blContextInitWeak(BLContextCore* self, const BLContextCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextInitAs(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* cci) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextDestroy(BLContextCore* self) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextReset(BLContextCore* self) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextAssignMove(BLContextCore* self, BLContextCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextAssignWeak(BLContextCore* self, const BLContextCore* other) BL_NOEXCEPT_C;
+
 BL_API BLContextType BL_CDECL blContextGetType(const BLContextCore* self) BL_NOEXCEPT_C BL_PURE;
 BL_API BLResult BL_CDECL blContextGetTargetSize(const BLContextCore* self, BLSize* targetSizeOut) BL_NOEXCEPT_C;
 BL_API BLImageCore* BL_CDECL blContextGetTargetImage(const BLContextCore* self) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextBegin(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* cci) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextEnd(BLContextCore* self) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextFlush(BLContextCore* self, BLContextFlushFlags flags) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextSave(BLContextCore* self, BLContextCookie* cookie) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextRestore(BLContextCore* self, const BLContextCookie* cookie) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextGetMetaMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextGetUserMatrix(const BLContextCore* self, BLMatrix2D* m) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextUserToMeta(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextMatrixOp(BLContextCore* self, BLMatrix2DOp opType, const void* opData) BL_NOEXCEPT_C;
+
+BL_API uint32_t BL_CDECL blContextGetHint(const BLContextCore* self, BLContextHint hintType) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetHint(BLContextCore* self, BLContextHint hintType, uint32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetHints(const BLContextCore* self, BLContextHints* hintsOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetHints(BLContextCore* self, const BLContextHints* hints) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextSetFlattenMode(BLContextCore* self, BLFlattenMode mode) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetFlattenTolerance(BLContextCore* self, double tolerance) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetApproximationOptions(BLContextCore* self, const BLApproximationOptions* options) BL_NOEXCEPT_C;
+
 BL_API BLCompOp BL_CDECL blContextGetCompOp(const BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetCompOp(BLContextCore* self, BLCompOp compOp) BL_NOEXCEPT_C;
+
+BL_API double BL_CDECL blContextGetGlobalAlpha(const BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetGlobalAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
+
+BL_API double BL_CDECL blContextGetFillAlpha(const BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetFillAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextGetFillStyle(const BLContextCore* self, BLVarCore* varOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetFillStyle(BLContextCore* self, const BLUnknown* var) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetFillStyleRgba(BLContextCore* self, const BLRgba* rgba) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetFillStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetFillStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
+
+BL_API BLFillRule BL_CDECL blContextGetFillRule(const BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetFillRule(BLContextCore* self, BLFillRule fillRule) BL_NOEXCEPT_C;
+
+BL_API double BL_CDECL blContextGetStrokeAlpha(const BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeAlpha(BLContextCore* self, double alpha) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextGetStrokeStyle(const BLContextCore* self, BLVarCore* varOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeStyle(BLContextCore* self, const BLUnknown* var) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba(BLContextCore* self, const BLRgba* rgba) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba32(BLContextCore* self, uint32_t rgba32) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeStyleRgba64(BLContextCore* self, uint64_t rgba64) BL_NOEXCEPT_C;
+
+BL_API double BL_CDECL blContextGetStrokeWidth(const BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeWidth(BLContextCore* self, double width) BL_NOEXCEPT_C;
+
+BL_API double BL_CDECL blContextGetStrokeMiterLimit(const BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeMiterLimit(BLContextCore* self, double miterLimit) BL_NOEXCEPT_C;
+
+BL_API BLStrokeCap BL_CDECL blContextGetStrokeCap(const BLContextCore* self, BLStrokeCapPosition position) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeCap(BLContextCore* self, BLStrokeCapPosition position, BLStrokeCap strokeCap) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeCaps(BLContextCore* self, BLStrokeCap strokeCap) BL_NOEXCEPT_C;
+
+BL_API BLStrokeJoin BL_CDECL blContextGetStrokeJoin(const BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeJoin(BLContextCore* self, BLStrokeJoin strokeJoin) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeDashOffset(BLContextCore* self, double dashOffset) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blContextSetStrokeDashArray(BLContextCore* self, const BLArrayCore* dashArray) BL_NOEXCEPT_C;
+
+BL_API BLStrokeTransformOrder BL_CDECL blContextGetStrokeTransformOrder(const BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeTransformOrder(BLContextCore* self, BLStrokeTransformOrder transformOrder) BL_NOEXCEPT_C;
+
+BL_API double BL_CDECL blContextGetStrokeDashOffset(const BLContextCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeDashOffset(BLContextCore* self, double dashOffset) BL_NOEXCEPT_C;
+
+BL_API BLResult BL_CDECL blContextGetStrokeDashArray(const BLContextCore* self, BLArrayCore* dashArrayOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextSetStrokeDashArray(BLContextCore* self, const BLArrayCore* dashArray) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextGetStrokeOptions(const BLContextCore* self, BLStrokeOptionsCore* options) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextSetStrokeOptions(BLContextCore* self, const BLStrokeOptionsCore* options) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextClipToRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextClipToRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextRestoreClipping(BLContextCore* self) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextClearAll(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextClearRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextClearRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextFillAll(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextFillRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextFillRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
@@ -590,6 +630,7 @@ BL_API BLResult BL_CDECL blContextFillGlyphRunI(BLContextCore* self, const BLPoi
 BL_API BLResult BL_CDECL blContextFillGlyphRunD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextFillMaskI(BLContextCore* self, const BLPointI* pt, const BLImageCore* mask, const BLRectI* maskArea) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextFillMaskD(BLContextCore* self, const BLPoint* pt, const BLImageCore* mask, const BLRectI* maskArea) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextStrokeRectI(BLContextCore* self, const BLRectI* rect) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextStrokeRectD(BLContextCore* self, const BLRect* rect) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextStrokePathD(BLContextCore* self, const BLPathCore* path) BL_NOEXCEPT_C;
@@ -598,6 +639,7 @@ BL_API BLResult BL_CDECL blContextStrokeTextI(BLContextCore* self, const BLPoint
 BL_API BLResult BL_CDECL blContextStrokeTextD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextStrokeGlyphRunI(BLContextCore* self, const BLPointI* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextStrokeGlyphRunD(BLContextCore* self, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blContextBlitImageI(BLContextCore* self, const BLPointI* pt, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextBlitImageD(BLContextCore* self, const BLPoint* pt, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextBlitScaledImageI(BLContextCore* self, const BLRectI* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
@@ -689,7 +731,7 @@ public:
 
   //! Returns whether this and `other` point to the same rendering context.
   BL_NODISCARD
-  BL_INLINE bool operator==(const BLContext& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator==(const BLContext& other) const noexcept { return equals(other); }
 
   //! Returns whether this and `other` are different rendering contexts.
   BL_NODISCARD
@@ -1154,6 +1196,10 @@ public:
   BL_NODISCARD
   BL_INLINE BLStrokeCap strokeEndCap() const noexcept { return (BLStrokeCap)BL_CONTEXT_IMPL()->state->strokeOptions.endCap; }
 
+  //! Returns stroke transform order, see `BLStrokeTransformOrder`.
+  BL_NODISCARD
+  BL_INLINE BLStrokeTransformOrder strokeTransformOrder() const noexcept { return (BLStrokeTransformOrder)BL_CONTEXT_IMPL()->state->strokeOptions.transformOrder; }
+
   //! Returns stroke dash-offset.
   BL_NODISCARD
   BL_INLINE double strokeDashOffset() const noexcept { return BL_CONTEXT_IMPL()->state->strokeOptions.dashOffset; }
@@ -1161,10 +1207,6 @@ public:
   //! Returns stroke dash-array.
   BL_NODISCARD
   BL_INLINE const BLArray<double>& strokeDashArray() const noexcept { return BL_CONTEXT_IMPL()->state->strokeOptions.dashArray; }
-
-  //! Returns stroke transform order, see `BLStrokeTransformOrder`.
-  BL_NODISCARD
-  BL_INLINE BLStrokeTransformOrder strokeTransformOrder() const noexcept { return (BLStrokeTransformOrder)BL_CONTEXT_IMPL()->state->strokeOptions.transformOrder; }
 
   //! Returns stroke options as a reference to `BLStrokeOptions`.
   BL_NODISCARD
@@ -1184,12 +1226,12 @@ public:
   BL_INLINE BLResult setStrokeEndCap(BLStrokeCap strokeCap) noexcept { return setStrokeCap(BL_STROKE_CAP_POSITION_END, strokeCap); }
   //! Sets all stroke caps to `strokeCap`, see `BLStrokeCap`.
   BL_INLINE BLResult setStrokeCaps(BLStrokeCap strokeCap) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeCaps(BL_CONTEXT_IMPL(), strokeCap); }
+  //! Sets stroke transformation order to `transformOrder`, see `BLStrokeTransformOrder`.
+  BL_INLINE BLResult setStrokeTransformOrder(BLStrokeTransformOrder transformOrder) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeTransformOrder(BL_CONTEXT_IMPL(), transformOrder); }
   //! Sets stroke dash-offset to `dashOffset`.
   BL_INLINE BLResult setStrokeDashOffset(double dashOffset) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeDashOffset(BL_CONTEXT_IMPL(), dashOffset); }
   //! Sets stroke dash-array to `dashArray`.
   BL_INLINE BLResult setStrokeDashArray(const BLArray<double>& dashArray) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeDashArray(BL_CONTEXT_IMPL(), &dashArray); }
-  //! Sets stroke transformation order to `transformOrder`, see `BLStrokeTransformOrder`.
-  BL_INLINE BLResult setStrokeTransformOrder(BLStrokeTransformOrder transformOrder) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeTransformOrder(BL_CONTEXT_IMPL(), transformOrder); }
   //! Sets all stroke `options`.
   BL_INLINE BLResult setStrokeOptions(const BLStrokeOptions& options) noexcept { return BL_CONTEXT_IMPL()->virt->setStrokeOptions(BL_CONTEXT_IMPL(), &options); }
 

@@ -13,10 +13,82 @@ BLMapPointDArrayFunc blMatrix2DMapPointDArrayFuncs[BL_MATRIX2D_TYPE_MAX_VALUE + 
 
 namespace BLTransformPrivate {
 
-// BLTransform - Global Variables
-// ==============================
+// BLTransform - Private - Globals
+// ===============================
 
 const BLMatrix2D identityTransform { 1.0, 0.0, 0.0, 1.0, 0.0, 0.0 };
+
+// BLTransform - Private - MapPointDArray
+// ======================================
+
+BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS)
+
+static BLResult BL_CDECL blMatrix2DMapPointDArrayIdentity(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+  blUnused(self);
+  if (dst == src)
+    return BL_SUCCESS;
+
+  for (size_t i = 0; i < size; i++)
+    dst[i] = src[i];
+
+  return BL_SUCCESS;
+}
+
+static BLResult BL_CDECL blMatrix2DMapPointDArrayTranslate(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+  double m20 = self->m20;
+  double m21 = self->m21;
+
+  for (size_t i = 0; i < size; i++)
+    dst[i].reset(src[i].x + m20,
+                 src[i].y + m21);
+
+  return BL_SUCCESS;
+}
+
+static BLResult BL_CDECL blMatrix2DMapPointDArrayScale(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+  double m00 = self->m00;
+  double m11 = self->m11;
+  double m20 = self->m20;
+  double m21 = self->m21;
+
+  for (size_t i = 0; i < size; i++)
+    dst[i].reset(src[i].x * m00 + m20,
+                 src[i].y * m11 + m21);
+
+  return BL_SUCCESS;
+}
+
+static BLResult BL_CDECL blMatrix2DMapPointDArraySwap(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+  double m10 = self->m10;
+  double m01 = self->m01;
+  double m20 = self->m20;
+  double m21 = self->m21;
+
+  for (size_t i = 0; i < size; i++)
+    dst[i].reset(src[i].y * m10 + m20,
+                 src[i].x * m01 + m21);
+
+  return BL_SUCCESS;
+}
+
+static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
+  double m00 = self->m00;
+  double m01 = self->m01;
+  double m10 = self->m10;
+  double m11 = self->m11;
+  double m20 = self->m20;
+  double m21 = self->m21;
+
+  for (size_t i = 0; i < size; i++)
+    dst[i].reset(src[i].x * m00 + src[i].y * m10 + m20,
+                 src[i].x * m01 + src[i].y * m11 + m21);
+
+  return BL_SUCCESS;
+}
+
+BL_DIAGNOSTIC_POP
+
+} // {BLTransformPrivate}
 
 // BLTransform - API - Reset
 // =========================
@@ -393,78 +465,6 @@ BL_API_IMPL BLResult blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoint* d
 
   return blMatrix2DMapPointDArrayFuncs[matrixType](self, dst, src, count);
 }
-
-// BLTransform - MapPointDArray
-// ============================
-
-BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS)
-
-static BLResult BL_CDECL blMatrix2DMapPointDArrayIdentity(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
-  blUnused(self);
-  if (dst == src)
-    return BL_SUCCESS;
-
-  for (size_t i = 0; i < size; i++)
-    dst[i] = src[i];
-
-  return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blMatrix2DMapPointDArrayTranslate(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
-  double m20 = self->m20;
-  double m21 = self->m21;
-
-  for (size_t i = 0; i < size; i++)
-    dst[i].reset(src[i].x + m20,
-                 src[i].y + m21);
-
-  return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blMatrix2DMapPointDArrayScale(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
-  double m00 = self->m00;
-  double m11 = self->m11;
-  double m20 = self->m20;
-  double m21 = self->m21;
-
-  for (size_t i = 0; i < size; i++)
-    dst[i].reset(src[i].x * m00 + m20,
-                 src[i].y * m11 + m21);
-
-  return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blMatrix2DMapPointDArraySwap(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
-  double m10 = self->m10;
-  double m01 = self->m01;
-  double m20 = self->m20;
-  double m21 = self->m21;
-
-  for (size_t i = 0; i < size; i++)
-    dst[i].reset(src[i].y * m10 + m20,
-                 src[i].x * m01 + m21);
-
-  return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
-  double m00 = self->m00;
-  double m01 = self->m01;
-  double m10 = self->m10;
-  double m11 = self->m11;
-  double m20 = self->m20;
-  double m21 = self->m21;
-
-  for (size_t i = 0; i < size; i++)
-    dst[i].reset(src[i].x * m00 + src[i].y * m10 + m20,
-                 src[i].x * m01 + src[i].y * m11 + m21);
-
-  return BL_SUCCESS;
-}
-
-BL_DIAGNOSTIC_POP
-
-} // {BLTransformPrivate}
 
 // BLTransform - Runtime Registration
 // ==================================

@@ -19,86 +19,15 @@
 
 const BLApproximationOptions blDefaultApproximationOptions = BLPathPrivate::makeDefaultApproximationOptions();
 
-namespace BLPathPrivate {
-
 // BLPath - Globals
 // ================
+
+namespace BLPathPrivate {
 
 static BLObjectEthernalImpl<BLPathPrivateImpl> defaultPath;
 
 static BLResult appendTransformedPathWithType(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* m, uint32_t mType) noexcept;
 static BLResult transformWithType(BLPathCore* self, const BLRange* range, const BLMatrix2D* m, uint32_t mType) noexcept;
-
-// BLStrokeOptions - API - Init & Destroy
-// ======================================
-
-BL_API_IMPL BLResult blStrokeOptionsInit(BLStrokeOptionsCore* self) noexcept {
-  self->hints = 0;
-  self->width = 1.0;
-  self->miterLimit = 4.0;
-  self->dashOffset = 0;
-  blCallCtor(self->dashArray);
-
-  return BL_SUCCESS;
-}
-
-BL_API_IMPL BLResult blStrokeOptionsInitMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) noexcept {
-  BL_ASSERT(self != other);
-
-  self->hints = other->hints;
-  self->width = other->width;
-  self->miterLimit = other->miterLimit;
-  self->dashOffset = other->dashOffset;
-  return blObjectPrivateInitMoveTagged(&self->dashArray, &other->dashArray);
-}
-
-BL_API_IMPL BLResult blStrokeOptionsInitWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) noexcept {
-  self->hints = other->hints;
-  self->width = other->width;
-  self->miterLimit = other->miterLimit;
-  self->dashOffset = other->dashOffset;
-  return blObjectPrivateInitWeakTagged(&self->dashArray, &other->dashArray);
-}
-
-BL_API_IMPL BLResult blStrokeOptionsDestroy(BLStrokeOptionsCore* self) noexcept {
-  return BLArrayPrivate::releaseInstance(&self->dashArray);
-}
-
-// BLStrokeOptions - API - Reset
-// =============================
-
-BL_API_IMPL BLResult blStrokeOptionsReset(BLStrokeOptionsCore* self) noexcept {
-  self->hints = 0;
-  self->width = 1.0;
-  self->miterLimit = 4.0;
-  self->dashOffset = 0;
-  self->dashArray.reset();
-
-  return BL_SUCCESS;
-}
-
-// BLStrokeOptions - API - Assign
-// ==============================
-
-BL_API_IMPL BLResult blStrokeOptionsAssignMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) noexcept {
-  self->width = other->width;
-  self->miterLimit = other->miterLimit;
-  self->dashOffset = other->dashOffset;
-  self->dashArray = std::move(other->dashArray);
-  self->hints = other->hints;
-
-  return BL_SUCCESS;
-}
-
-BL_API_IMPL BLResult blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) noexcept {
-  self->width = other->width;
-  self->miterLimit = other->miterLimit;
-  self->dashOffset = other->dashOffset;
-  self->dashArray = other->dashArray;
-  self->hints = other->hints;
-
-  return BL_SUCCESS;
-}
 
 // BLPath - Utilities
 // ==================
@@ -291,15 +220,92 @@ static BL_INLINE BLResult makeMutable(BLPathCore* self) noexcept {
   return BL_SUCCESS;
 }
 
+} // {BLPathPrivate}
+
+// BLStrokeOptions - API - Init & Destroy
+// ======================================
+
+BL_API_IMPL BLResult blStrokeOptionsInit(BLStrokeOptionsCore* self) noexcept {
+  self->hints = 0;
+  self->width = 1.0;
+  self->miterLimit = 4.0;
+  self->dashOffset = 0;
+  blCallCtor(self->dashArray);
+
+  return BL_SUCCESS;
+}
+
+BL_API_IMPL BLResult blStrokeOptionsInitMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) noexcept {
+  BL_ASSERT(self != other);
+
+  self->hints = other->hints;
+  self->width = other->width;
+  self->miterLimit = other->miterLimit;
+  self->dashOffset = other->dashOffset;
+  return blObjectPrivateInitMoveTagged(&self->dashArray, &other->dashArray);
+}
+
+BL_API_IMPL BLResult blStrokeOptionsInitWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) noexcept {
+  self->hints = other->hints;
+  self->width = other->width;
+  self->miterLimit = other->miterLimit;
+  self->dashOffset = other->dashOffset;
+  return blObjectPrivateInitWeakTagged(&self->dashArray, &other->dashArray);
+}
+
+BL_API_IMPL BLResult blStrokeOptionsDestroy(BLStrokeOptionsCore* self) noexcept {
+  return BLArrayPrivate::releaseInstance(&self->dashArray);
+}
+
+// BLStrokeOptions - API - Reset
+// =============================
+
+BL_API_IMPL BLResult blStrokeOptionsReset(BLStrokeOptionsCore* self) noexcept {
+  self->hints = 0;
+  self->width = 1.0;
+  self->miterLimit = 4.0;
+  self->dashOffset = 0;
+  self->dashArray.reset();
+
+  return BL_SUCCESS;
+}
+
+// BLStrokeOptions - API - Assign
+// ==============================
+
+BL_API_IMPL BLResult blStrokeOptionsAssignMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) noexcept {
+  self->width = other->width;
+  self->miterLimit = other->miterLimit;
+  self->dashOffset = other->dashOffset;
+  self->dashArray = std::move(other->dashArray);
+  self->hints = other->hints;
+
+  return BL_SUCCESS;
+}
+
+BL_API_IMPL BLResult blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) noexcept {
+  self->width = other->width;
+  self->miterLimit = other->miterLimit;
+  self->dashOffset = other->dashOffset;
+  self->dashArray = other->dashArray;
+  self->hints = other->hints;
+
+  return BL_SUCCESS;
+}
+
 // BLPath - API - Init & Destroy
 // =============================
 
 BL_API_IMPL BLResult blPathInit(BLPathCore* self) noexcept {
+  using namespace BLPathPrivate;
+
   self->_d = blObjectDefaults[BL_OBJECT_TYPE_PATH]._d;
   return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult blPathInitMove(BLPathCore* self, BLPathCore* other) noexcept {
+  using namespace BLPathPrivate;
+
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isPath());
 
@@ -310,6 +316,8 @@ BL_API_IMPL BLResult blPathInitMove(BLPathCore* self, BLPathCore* other) noexcep
 }
 
 BL_API_IMPL BLResult blPathInitWeak(BLPathCore* self, const BLPathCore* other) noexcept {
+  using namespace BLPathPrivate;
+
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isPath());
 
@@ -317,8 +325,9 @@ BL_API_IMPL BLResult blPathInitWeak(BLPathCore* self, const BLPathCore* other) n
 }
 
 BL_API_IMPL BLResult blPathDestroy(BLPathCore* self) noexcept {
-  BL_ASSERT(self->_d.isPath());
+  using namespace BLPathPrivate;
 
+  BL_ASSERT(self->_d.isPath());
   return releaseInstance(self);
 }
 
@@ -326,8 +335,9 @@ BL_API_IMPL BLResult blPathDestroy(BLPathCore* self) noexcept {
 // ====================
 
 BL_API_IMPL BLResult blPathReset(BLPathCore* self) noexcept {
-  BL_ASSERT(self->_d.isPath());
+  using namespace BLPathPrivate;
 
+  BL_ASSERT(self->_d.isPath());
   return replaceInstance(self, static_cast<BLPathCore*>(&blObjectDefaults[BL_OBJECT_TYPE_PATH]));
 }
 
@@ -335,27 +345,34 @@ BL_API_IMPL BLResult blPathReset(BLPathCore* self) noexcept {
 // ========================
 
 BL_API_IMPL size_t blPathGetSize(const BLPathCore* self) BL_NOEXCEPT_C {
-  BL_ASSERT(self->_d.isPath());
+  using namespace BLPathPrivate;
 
+  BL_ASSERT(self->_d.isPath());
   BLPathPrivateImpl* selfI = getImpl(self);
+
   return selfI->size;
 }
 
 BL_API_IMPL size_t blPathGetCapacity(const BLPathCore* self) BL_NOEXCEPT_C {
-  BL_ASSERT(self->_d.isPath());
+  using namespace BLPathPrivate;
 
+  BL_ASSERT(self->_d.isPath());
   BLPathPrivateImpl* selfI = getImpl(self);
+
   return selfI->capacity;
 }
 
 BL_API_IMPL const uint8_t* blPathGetCommandData(const BLPathCore* self) BL_NOEXCEPT_C {
-  BL_ASSERT(self->_d.isPath());
+  using namespace BLPathPrivate;
 
+  BL_ASSERT(self->_d.isPath());
   BLPathPrivateImpl* selfI = getImpl(self);
+
   return selfI->commandData;
 }
 
 BL_API_IMPL const BLPoint* blPathGetVertexData(const BLPathCore* self) BL_NOEXCEPT_C {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -363,6 +380,7 @@ BL_API_IMPL const BLPoint* blPathGetVertexData(const BLPathCore* self) BL_NOEXCE
 }
 
 BL_API_IMPL BLResult blPathClear(BLPathCore* self) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -375,6 +393,7 @@ BL_API_IMPL BLResult blPathClear(BLPathCore* self) noexcept {
 }
 
 BL_API_IMPL BLResult blPathShrink(BLPathCore* self) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -396,6 +415,7 @@ BL_API_IMPL BLResult blPathShrink(BLPathCore* self) noexcept {
 }
 
 BL_API_IMPL BLResult blPathReserve(BLPathCore* self, size_t n) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -408,6 +428,7 @@ BL_API_IMPL BLResult blPathReserve(BLPathCore* self, size_t n) noexcept {
 }
 
 BL_API_IMPL BLResult blPathModifyOp(BLPathCore* self, BLModifyOp op, size_t n, uint8_t** cmdDataOut, BLPoint** vtxDataOut) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -455,6 +476,8 @@ BL_API_IMPL BLResult blPathModifyOp(BLPathCore* self, BLModifyOp op, size_t n, u
 // =====================
 
 BL_API_IMPL BLResult blPathAssignMove(BLPathCore* self, BLPathCore* other) noexcept {
+  using namespace BLPathPrivate;
+
   BL_ASSERT(self->_d.isPath());
   BL_ASSERT(other->_d.isPath());
 
@@ -464,6 +487,8 @@ BL_API_IMPL BLResult blPathAssignMove(BLPathCore* self, BLPathCore* other) noexc
 }
 
 BL_API_IMPL BLResult blPathAssignWeak(BLPathCore* self, const BLPathCore* other) noexcept {
+  using namespace BLPathPrivate;
+
   BL_ASSERT(self->_d.isPath());
   BL_ASSERT(other->_d.isPath());
 
@@ -472,6 +497,11 @@ BL_API_IMPL BLResult blPathAssignWeak(BLPathCore* self, const BLPathCore* other)
 }
 
 BL_API_IMPL BLResult blPathAssignDeep(BLPathCore* self, const BLPathCore* other) noexcept {
+  using namespace BLPathPrivate;
+
+  BL_ASSERT(self->_d.isPath());
+  BL_ASSERT(other->_d.isPath());
+
   BLPathPrivateImpl* selfI = getImpl(self);
   BLPathPrivateImpl* otherI = getImpl(other);
 
@@ -500,6 +530,8 @@ BL_API_IMPL BLResult blPathAssignDeep(BLPathCore* self, const BLPathCore* other)
 
 // BLPath - Arcs Helpers
 // =====================
+
+namespace BLPathPrivate {
 
 static const double arc90DegStepsTable[] = {
   BL_M_PI_DIV_2,
@@ -742,7 +774,132 @@ static BL_INLINE BLResult appendBoxInternal(BLPathCore* self, double x0, double 
   return BL_SUCCESS;
 }
 
+// If the function succeeds then the number of vertices written to destination
+// equals `n`. If the function fails you should not rely on the output data.
+//
+// The algorithm reverses the path, but not the implicit line assumed in case
+// of CLOSE command. This means that for example a sequence like:
+//
+//   [0,0] [0,1] [1,0] [1,1] [CLOSE]
+//
+// Would be reversed to:
+//
+//   [1,1] [1,0] [0,1] [0,0] [CLOSE]
+//
+// Which is what other libraries do as well.
+static BLResult copyContentReversed(BLPathAppender& dst, BLPathIterator src, BLPathReverseMode reverseMode) noexcept {
+  for (;;) {
+    BLPathIterator next {};
+    if (reverseMode != BL_PATH_REVERSE_MODE_COMPLETE) {
+      // This mode is more complicated as we have to scan the path forward
+      // and find the end of each figure so we can then go again backward.
+      const uint8_t* p = src.cmd;
+      if (p == src.end)
+        return BL_SUCCESS;
+
+      uint8_t cmd = p[0];
+      if (cmd != BL_PATH_CMD_MOVE)
+        return blTraceError(BL_ERROR_INVALID_GEOMETRY);
+
+      while (++p != src.end) {
+        // Terminate on MOVE command, but don't consume it.
+        if (p[0] == BL_PATH_CMD_MOVE)
+          break;
+
+        // Terminate on CLOSE command and consume it as it's part of the figure.
+        if (p[0] == BL_PATH_CMD_CLOSE) {
+          p++;
+          break;
+        }
+      }
+
+      size_t figureSize = (size_t)(p - src.cmd);
+
+      next.reset(src.cmd + figureSize, src.vtx + figureSize, src.remainingForward() - figureSize);
+      src.end = src.cmd + figureSize;
+    }
+
+    src.reverse();
+    while (!src.atEnd()) {
+      uint8_t cmd = src.cmd[0];
+      src--;
+
+      // Initial MOVE means the whole figure consists of just a single MOVE.
+      if (cmd == BL_PATH_CMD_MOVE) {
+        dst.addVertex(cmd, src.vtx[1]);
+        continue;
+      }
+
+      // Only relevant to non-ON commands
+      bool hasClose = (cmd == BL_PATH_CMD_CLOSE);
+      if (cmd != BL_PATH_CMD_ON) {
+        // A figure cannot end with anything else than MOVE|ON|CLOSE.
+        if (!hasClose)
+          return blTraceError(BL_ERROR_INVALID_GEOMETRY);
+
+        // Make sure the next command is ON, continue otherwise.
+        if (src.atEnd() || src.cmd[0] != BL_PATH_CMD_ON) {
+          dst.addVertex(BL_PATH_CMD_CLOSE, src.vtx[1]);
+          continue;
+        }
+        src--;
+      }
+
+      // Each figure starts with MOVE.
+      dst.moveTo(src.vtx[1]);
+
+      // Iterate the figure.
+      while (!src.atEnd()) {
+        cmd = src.cmd[0];
+        if (cmd == BL_PATH_CMD_MOVE) {
+          dst.addVertex(BL_PATH_CMD_ON, src.vtx[0]);
+          src--;
+          break;
+        }
+
+        if (cmd == BL_PATH_CMD_CLOSE)
+          break;
+
+        dst.addVertex(src.cmd[0], src.vtx[0]);
+        src--;
+      }
+
+      // Emit CLOSE if the figure is closed.
+      if (hasClose)
+        dst.close();
+    }
+
+    if (reverseMode == BL_PATH_REVERSE_MODE_COMPLETE)
+      return BL_SUCCESS;
+    src = next;
+  }
+}
+
+static BLResult appendTransformedPathWithType(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* m, uint32_t mType) noexcept {
+  BL_ASSERT(self->_d.isPath());
+  BL_ASSERT(other->_d.isPath());
+
+  BLPathPrivateImpl* otherI = getImpl(other);
+  size_t start, n;
+
+  if (!checkRange(otherI, range, &start, &n))
+    return BL_SUCCESS;
+
+  uint8_t* cmdData;
+  BLPoint* vtxData;
+
+  // Maybe `self` and `other` were the same, so get the `other` impl again.
+  BL_PROPAGATE(prepareAdd(self, n, &cmdData, &vtxData));
+  otherI = getImpl(other);
+
+  memcpy(cmdData, otherI->commandData + start, n);
+  return blMatrix2DMapPointDArrayFuncs[mType](m, vtxData, otherI->vertexData + start, n);
+}
+
+} // {BLPathPrivate}
+
 BL_API_IMPL BLResult blPathSetVertexAt(BLPathCore* self, size_t index, uint32_t cmd, double x, double y) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -767,6 +924,7 @@ BL_API_IMPL BLResult blPathSetVertexAt(BLPathCore* self, size_t index, uint32_t 
 }
 
 BL_API_IMPL BLResult blPathMoveTo(BLPathCore* self, double x0, double y0) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   uint8_t* cmdData;
@@ -780,6 +938,7 @@ BL_API_IMPL BLResult blPathMoveTo(BLPathCore* self, double x0, double y0) noexce
 }
 
 BL_API_IMPL BLResult blPathLineTo(BLPathCore* self, double x1, double y1) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   uint8_t* cmdData;
@@ -793,6 +952,7 @@ BL_API_IMPL BLResult blPathLineTo(BLPathCore* self, double x1, double y1) noexce
 }
 
 BL_API_IMPL BLResult blPathPolyTo(BLPathCore* self, const BLPoint* poly, size_t count) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   uint8_t* cmdData;
@@ -808,6 +968,7 @@ BL_API_IMPL BLResult blPathPolyTo(BLPathCore* self, const BLPoint* poly, size_t 
 }
 
 BL_API_IMPL BLResult blPathQuadTo(BLPathCore* self, double x1, double y1, double x2, double y2) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   uint8_t* cmdData;
@@ -824,6 +985,7 @@ BL_API_IMPL BLResult blPathQuadTo(BLPathCore* self, double x1, double y1, double
 }
 
 BL_API_IMPL BLResult blPathCubicTo(BLPathCore* self, double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   uint8_t* cmdData;
@@ -842,6 +1004,7 @@ BL_API_IMPL BLResult blPathCubicTo(BLPathCore* self, double x1, double y1, doubl
 }
 
 BL_API_IMPL BLResult blPathSmoothQuadTo(BLPathCore* self, double x2, double y2) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -872,6 +1035,7 @@ BL_API_IMPL BLResult blPathSmoothQuadTo(BLPathCore* self, double x2, double y2) 
 }
 
 BL_API_IMPL BLResult blPathSmoothCubicTo(BLPathCore* self, double x2, double y2, double x3, double y3) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -904,6 +1068,7 @@ BL_API_IMPL BLResult blPathSmoothCubicTo(BLPathCore* self, double x2, double y2,
 }
 
 BL_API_IMPL BLResult blPathArcTo(BLPathCore* self, double x, double y, double rx, double ry, double start, double sweep, bool forceMoveTo) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathAppender dst;
@@ -928,6 +1093,7 @@ BL_API_IMPL BLResult blPathArcTo(BLPathCore* self, double x, double y, double rx
 }
 
 BL_API_IMPL BLResult blPathArcQuadrantTo(BLPathCore* self, double x1, double y1, double x2, double y2) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -956,6 +1122,7 @@ BL_API_IMPL BLResult blPathArcQuadrantTo(BLPathCore* self, double x1, double y1,
 }
 
 BL_API_IMPL BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry, double xAxisRotation, bool largeArcFlag, bool sweepFlag, double x1, double y1) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -1110,6 +1277,9 @@ BL_API_IMPL BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry,
 }
 
 BL_API_IMPL BLResult blPathClose(BLPathCore* self) noexcept {
+  using namespace BLPathPrivate;
+  BL_ASSERT(self->_d.isPath());
+
   uint8_t* cmdData;
   BLPoint* vtxData;
   BL_PROPAGATE(prepareAdd(self, 1, &cmdData, &vtxData));
@@ -1121,18 +1291,21 @@ BL_API_IMPL BLResult blPathClose(BLPathCore* self) noexcept {
 }
 
 BL_API_IMPL BLResult blPathAddBoxI(BLPathCore* self, const BLBoxI* box, BLGeometryDirection dir) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   return appendBoxInternal(self, double(box->x0), double(box->y0), double(box->x1), double(box->y1), dir);
 }
 
 BL_API_IMPL BLResult blPathAddBoxD(BLPathCore* self, const BLBox* box, BLGeometryDirection dir) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   return appendBoxInternal(self, box->x0, box->y0, box->x1, box->y1, dir);
 }
 
 BL_API_IMPL BLResult blPathAddRectI(BLPathCore* self, const BLRectI* rect, BLGeometryDirection dir) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   double x0 = double(rect->x);
@@ -1143,6 +1316,7 @@ BL_API_IMPL BLResult blPathAddRectI(BLPathCore* self, const BLRectI* rect, BLGeo
 }
 
 BL_API_IMPL BLResult blPathAddRectD(BLPathCore* self, const BLRect* rect, BLGeometryDirection dir) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   double x0 = rect->x;
@@ -1152,181 +1326,8 @@ BL_API_IMPL BLResult blPathAddRectD(BLPathCore* self, const BLRect* rect, BLGeom
   return appendBoxInternal(self, x0, y0, x1, y1, dir);
 }
 
-static BLResult joinFigure(BLPathAppender& dst, BLPathIterator src) noexcept {
-  if (src.atEnd())
-    return BL_SUCCESS;
-
-  bool isClosed = dst.cmd[-1].value == BL_PATH_CMD_CLOSE;
-  uint8_t initialCmd = uint8_t(isClosed ? BL_PATH_CMD_MOVE : BL_PATH_CMD_ON);
-
-  // Initial vertex (either MOVE or ON). If the initial vertex matches the
-  // the last vertex in `dst` we won't emit it as it would be unnecessary.
-  if (dst.vtx[-1] != src.vtx[0] || initialCmd == BL_PATH_CMD_MOVE)
-    dst.addVertex(initialCmd, src.vtx[0]);
-
-  // Iterate the figure.
-  while (!(++src).atEnd())
-    dst.addVertex(src.cmd[0], src.vtx[0]);
-
-  return BL_SUCCESS;
-}
-
-static BLResult joinReversedFigure(BLPathAppender& dst, BLPathIterator src) noexcept {
-  if (src.atEnd())
-    return BL_SUCCESS;
-
-  src.reverse();
-  src--;
-
-  bool isClosed = dst.cmd[-1].value == BL_PATH_CMD_CLOSE;
-  uint8_t initialCmd = uint8_t(isClosed ? BL_PATH_CMD_MOVE : BL_PATH_CMD_ON);
-  uint8_t cmd = src.cmd[1];
-
-  // Initial MOVE means the whole figure consists of just a single MOVE.
-  if (cmd == BL_PATH_CMD_MOVE) {
-    dst.addVertex(initialCmd, src.vtx[1]);
-    return BL_SUCCESS;
-  }
-
-  // Get whether the figure is closed.
-  BL_ASSERT(cmd == BL_PATH_CMD_CLOSE || cmd == BL_PATH_CMD_ON);
-  bool hasClose = (cmd == BL_PATH_CMD_CLOSE);
-
-  if (hasClose) {
-    // Make sure the next command is ON.
-    if (src.atEnd()) {
-      dst.close();
-      return BL_SUCCESS;
-    }
-
-    // We just encountered CLOSE followed by ON (reversed).
-    BL_ASSERT(src.cmd[0] == BL_PATH_CMD_ON);
-    src--;
-  }
-
-  // Initial vertex (either MOVE or ON). If the initial vertex matches the
-  // the last vertex in `dst` we won't emit it as it would be unnecessary.
-  if (dst.vtx[-1] != src.vtx[1] || initialCmd == BL_PATH_CMD_MOVE)
-    dst.addVertex(initialCmd, src.vtx[1]);
-
-  // Iterate the figure.
-  if (!src.atEnd()) {
-    do {
-      dst.addVertex(src.cmd[0], src.vtx[0]);
-      src--;
-    } while (!src.atEnd());
-    // Fix the last vertex to not be MOVE.
-    dst.cmd[-1].value = BL_PATH_CMD_ON;
-  }
-
-  // Emit CLOSE if the figure is closed.
-  if (hasClose)
-    dst.close();
-  return BL_SUCCESS;
-}
-
-// If the function succeeds then the number of vertices written to destination
-// equals `n`. If the function fails you should not rely on the output data.
-//
-// The algorithm reverses the path, but not the implicit line assumed in case
-// of CLOSE command. This means that for example a sequence like:
-//
-//   [0,0] [0,1] [1,0] [1,1] [CLOSE]
-//
-// Would be reversed to:
-//
-//   [1,1] [1,0] [0,1] [0,0] [CLOSE]
-//
-// Which is what other libraries do as well.
-static BLResult copyContentReversed(BLPathAppender& dst, BLPathIterator src, BLPathReverseMode reverseMode) noexcept {
-  for (;;) {
-    BLPathIterator next {};
-    if (reverseMode != BL_PATH_REVERSE_MODE_COMPLETE) {
-      // This mode is more complicated as we have to scan the path forward
-      // and find the end of each figure so we can then go again backward.
-      const uint8_t* p = src.cmd;
-      if (p == src.end)
-        return BL_SUCCESS;
-
-      uint8_t cmd = p[0];
-      if (cmd != BL_PATH_CMD_MOVE)
-        return blTraceError(BL_ERROR_INVALID_GEOMETRY);
-
-      while (++p != src.end) {
-        // Terminate on MOVE command, but don't consume it.
-        if (p[0] == BL_PATH_CMD_MOVE)
-          break;
-
-        // Terminate on CLOSE command and consume it as it's part of the figure.
-        if (p[0] == BL_PATH_CMD_CLOSE) {
-          p++;
-          break;
-        }
-      }
-
-      size_t figureSize = (size_t)(p - src.cmd);
-
-      next.reset(src.cmd + figureSize, src.vtx + figureSize, src.remainingForward() - figureSize);
-      src.end = src.cmd + figureSize;
-    }
-
-    src.reverse();
-    while (!src.atEnd()) {
-      uint8_t cmd = src.cmd[0];
-      src--;
-
-      // Initial MOVE means the whole figure consists of just a single MOVE.
-      if (cmd == BL_PATH_CMD_MOVE) {
-        dst.addVertex(cmd, src.vtx[1]);
-        continue;
-      }
-
-      // Only relevant to non-ON commands
-      bool hasClose = (cmd == BL_PATH_CMD_CLOSE);
-      if (cmd != BL_PATH_CMD_ON) {
-        // A figure cannot end with anything else than MOVE|ON|CLOSE.
-        if (!hasClose)
-          return blTraceError(BL_ERROR_INVALID_GEOMETRY);
-
-        // Make sure the next command is ON, continue otherwise.
-        if (src.atEnd() || src.cmd[0] != BL_PATH_CMD_ON) {
-          dst.addVertex(BL_PATH_CMD_CLOSE, src.vtx[1]);
-          continue;
-        }
-        src--;
-      }
-
-      // Each figure starts with MOVE.
-      dst.moveTo(src.vtx[1]);
-
-      // Iterate the figure.
-      while (!src.atEnd()) {
-        cmd = src.cmd[0];
-        if (cmd == BL_PATH_CMD_MOVE) {
-          dst.addVertex(BL_PATH_CMD_ON, src.vtx[0]);
-          src--;
-          break;
-        }
-
-        if (cmd == BL_PATH_CMD_CLOSE)
-          break;
-
-        dst.addVertex(src.cmd[0], src.vtx[0]);
-        src--;
-      }
-
-      // Emit CLOSE if the figure is closed.
-      if (hasClose)
-        dst.close();
-    }
-
-    if (reverseMode == BL_PATH_REVERSE_MODE_COMPLETE)
-      return BL_SUCCESS;
-    src = next;
-  }
-}
-
 BL_API_IMPL BLResult blPathAddGeometry(BLPathCore* self, BLGeometryType geometryType, const void* geometryData, const BLMatrix2D* m, BLGeometryDirection dir) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   if (BL_UNLIKELY(uint32_t(geometryType) > BL_GEOMETRY_TYPE_MAX_VALUE))
@@ -1781,6 +1782,8 @@ AddBoxD:
 }
 
 BL_API_IMPL BLResult blPathAddPath(BLPathCore* self, const BLPathCore* other, const BLRange* range) noexcept {
+  using namespace BLPathPrivate;
+
   BL_ASSERT(self->_d.isPath());
   BL_ASSERT(other->_d.isPath());
 
@@ -1802,6 +1805,8 @@ BL_API_IMPL BLResult blPathAddPath(BLPathCore* self, const BLPathCore* other, co
 }
 
 BL_API_IMPL BLResult blPathAddTranslatedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLPoint* p) noexcept {
+  using namespace BLPathPrivate;
+
   BL_ASSERT(self->_d.isPath());
   BL_ASSERT(other->_d.isPath());
 
@@ -1810,6 +1815,8 @@ BL_API_IMPL BLResult blPathAddTranslatedPath(BLPathCore* self, const BLPathCore*
 }
 
 BL_API_IMPL BLResult blPathAddTransformedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* m) noexcept {
+  using namespace BLPathPrivate;
+
   BL_ASSERT(self->_d.isPath());
   BL_ASSERT(other->_d.isPath());
 
@@ -1833,28 +1840,9 @@ BL_API_IMPL BLResult blPathAddTransformedPath(BLPathCore* self, const BLPathCore
   return blMatrix2DMapPointDArrayFuncs[mType](m, vtxData, otherI->vertexData + start, n);
 }
 
-static BLResult appendTransformedPathWithType(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* m, uint32_t mType) noexcept {
-  BL_ASSERT(self->_d.isPath());
-  BL_ASSERT(other->_d.isPath());
-
-  BLPathPrivateImpl* otherI = getImpl(other);
-  size_t start, n;
-
-  if (!checkRange(otherI, range, &start, &n))
-    return BL_SUCCESS;
-
-  uint8_t* cmdData;
-  BLPoint* vtxData;
-
-  // Maybe `self` and `other` were the same, so get the `other` impl again.
-  BL_PROPAGATE(prepareAdd(self, n, &cmdData, &vtxData));
-  otherI = getImpl(other);
-
-  memcpy(cmdData, otherI->commandData + start, n);
-  return blMatrix2DMapPointDArrayFuncs[mType](m, vtxData, otherI->vertexData + start, n);
-}
-
 BL_API_IMPL BLResult blPathAddReversedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, BLPathReverseMode reverseMode) noexcept {
+  using namespace BLPathPrivate;
+
   BL_ASSERT(self->_d.isPath());
   BL_ASSERT(other->_d.isPath());
 
@@ -1887,6 +1875,81 @@ BL_API_IMPL BLResult blPathAddReversedPath(BLPathCore* self, const BLPathCore* o
 // BLPath - API - Stroke
 // =====================
 
+namespace BLPathPrivate {
+
+static BLResult joinFigure(BLPathAppender& dst, BLPathIterator src) noexcept {
+  if (src.atEnd())
+    return BL_SUCCESS;
+
+  bool isClosed = dst.cmd[-1].value == BL_PATH_CMD_CLOSE;
+  uint8_t initialCmd = uint8_t(isClosed ? BL_PATH_CMD_MOVE : BL_PATH_CMD_ON);
+
+  // Initial vertex (either MOVE or ON). If the initial vertex matches the
+  // the last vertex in `dst` we won't emit it as it would be unnecessary.
+  if (dst.vtx[-1] != src.vtx[0] || initialCmd == BL_PATH_CMD_MOVE)
+    dst.addVertex(initialCmd, src.vtx[0]);
+
+  // Iterate the figure.
+  while (!(++src).atEnd())
+    dst.addVertex(src.cmd[0], src.vtx[0]);
+
+  return BL_SUCCESS;
+}
+
+static BLResult joinReversedFigure(BLPathAppender& dst, BLPathIterator src) noexcept {
+  if (src.atEnd())
+    return BL_SUCCESS;
+
+  src.reverse();
+  src--;
+
+  bool isClosed = dst.cmd[-1].value == BL_PATH_CMD_CLOSE;
+  uint8_t initialCmd = uint8_t(isClosed ? BL_PATH_CMD_MOVE : BL_PATH_CMD_ON);
+  uint8_t cmd = src.cmd[1];
+
+  // Initial MOVE means the whole figure consists of just a single MOVE.
+  if (cmd == BL_PATH_CMD_MOVE) {
+    dst.addVertex(initialCmd, src.vtx[1]);
+    return BL_SUCCESS;
+  }
+
+  // Get whether the figure is closed.
+  BL_ASSERT(cmd == BL_PATH_CMD_CLOSE || cmd == BL_PATH_CMD_ON);
+  bool hasClose = (cmd == BL_PATH_CMD_CLOSE);
+
+  if (hasClose) {
+    // Make sure the next command is ON.
+    if (src.atEnd()) {
+      dst.close();
+      return BL_SUCCESS;
+    }
+
+    // We just encountered CLOSE followed by ON (reversed).
+    BL_ASSERT(src.cmd[0] == BL_PATH_CMD_ON);
+    src--;
+  }
+
+  // Initial vertex (either MOVE or ON). If the initial vertex matches the
+  // the last vertex in `dst` we won't emit it as it would be unnecessary.
+  if (dst.vtx[-1] != src.vtx[1] || initialCmd == BL_PATH_CMD_MOVE)
+    dst.addVertex(initialCmd, src.vtx[1]);
+
+  // Iterate the figure.
+  if (!src.atEnd()) {
+    do {
+      dst.addVertex(src.cmd[0], src.vtx[0]);
+      src--;
+    } while (!src.atEnd());
+    // Fix the last vertex to not be MOVE.
+    dst.cmd[-1].value = BL_PATH_CMD_ON;
+  }
+
+  // Emit CLOSE if the figure is closed.
+  if (hasClose)
+    dst.close();
+  return BL_SUCCESS;
+}
+
 static BLResult appendStrokedPathSink(BLPath* a, BLPath* b, BLPath* c, void* closure) noexcept {
   BL_ASSERT(a->_d.isPath());
   BL_ASSERT(b->_d.isPath());
@@ -1904,7 +1967,11 @@ static BLResult appendStrokedPathSink(BLPath* a, BLPath* b, BLPath* c, void* clo
   return result;
 }
 
+} // {BLPathPrivate}
+
 BL_API_IMPL BLResult blPathAddStrokedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLStrokeOptionsCore* options, const BLApproximationOptions* approx) noexcept {
+  using namespace BLPathPrivate;
+
   BL_ASSERT(self->_d.isPath());
   BL_ASSERT(other->_d.isPath());
 
@@ -1937,6 +2004,7 @@ BL_API_IMPL BLResult blPathAddStrokedPath(BLPathCore* self, const BLPathCore* ot
 // ================================
 
 BL_API_IMPL BLResult blPathRemoveRange(BLPathCore* self, const BLRange* range) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -1978,7 +2046,28 @@ BL_API_IMPL BLResult blPathRemoveRange(BLPathCore* self, const BLRange* range) n
 // BLPath - API - Path Transformations
 // ===================================
 
+namespace BLPathPrivate {
+
+static BLResult transformWithType(BLPathCore* self, const BLRange* range, const BLMatrix2D* m, uint32_t mType) noexcept {
+  BL_ASSERT(self->_d.isPath());
+
+  BLPathPrivateImpl* selfI = getImpl(self);
+  size_t start, n;
+
+  if (!checkRange(selfI, range, &start, &n))
+    return BL_SUCCESS;
+
+  BL_PROPAGATE(makeMutable(self));
+  selfI = getImpl(self);
+
+  BLPoint* vtxData = selfI->vertexData + start;
+  return blMatrix2DMapPointDArrayFuncs[mType](m, vtxData, vtxData, n);
+}
+
+} // {BLPathPrivate}
+
 BL_API_IMPL BLResult blPathTranslate(BLPathCore* self, const BLRange* range, const BLPoint* p) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLMatrix2D m = BLMatrix2D::makeTranslation(*p);
@@ -1986,6 +2075,7 @@ BL_API_IMPL BLResult blPathTranslate(BLPathCore* self, const BLRange* range, con
 }
 
 BL_API_IMPL BLResult blPathTransform(BLPathCore* self, const BLRange* range, const BLMatrix2D* m) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -2005,6 +2095,7 @@ BL_API_IMPL BLResult blPathTransform(BLPathCore* self, const BLRange* range, con
 }
 
 BL_API_IMPL BLResult blPathFitTo(BLPathCore* self, const BLRange* range, const BLRect* rect, uint32_t fitFlags) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -2041,26 +2132,15 @@ BL_API_IMPL BLResult blPathFitTo(BLPathCore* self, const BLRange* range, const B
   return transformWithType(self, range, &m, BL_MATRIX2D_TYPE_SCALE);
 }
 
-static BLResult transformWithType(BLPathCore* self, const BLRange* range, const BLMatrix2D* m, uint32_t mType) noexcept {
-  BL_ASSERT(self->_d.isPath());
-
-  BLPathPrivateImpl* selfI = getImpl(self);
-  size_t start, n;
-
-  if (!checkRange(selfI, range, &start, &n))
-    return BL_SUCCESS;
-
-  BL_PROPAGATE(makeMutable(self));
-  selfI = getImpl(self);
-
-  BLPoint* vtxData = selfI->vertexData + start;
-  return blMatrix2DMapPointDArrayFuncs[mType](m, vtxData, vtxData, n);
-}
-
 // BLPath - API Equals
 // ===================
 
 BL_API_IMPL bool blPathEquals(const BLPathCore* a, const BLPathCore* b) noexcept {
+  using namespace BLPathPrivate;
+
+  BL_ASSERT(a->_d.isPath());
+  BL_ASSERT(b->_d.isPath());
+
   const BLPathPrivateImpl* aI = getImpl(a);
   const BLPathPrivateImpl* bI = getImpl(b);
 
@@ -2077,6 +2157,8 @@ BL_API_IMPL bool blPathEquals(const BLPathCore* a, const BLPathCore* b) noexcept
 
 // BLPath - API Path Info
 // ======================
+
+namespace BLPathPrivate {
 
 static BL_NOINLINE BLResult updateInfo(BLPathPrivateImpl* selfI) noexcept {
   // Special-case. The path info is valid, but the path is invalid. We handle it here to simplify `ensureInfo()`
@@ -2118,7 +2200,10 @@ static BL_INLINE BLResult ensureInfo(BLPathPrivateImpl* selfI) noexcept {
   return BL_SUCCESS;
 }
 
+} // {BLPathPrivate}
+
 BL_API_IMPL BLResult blPathGetInfoFlags(const BLPathCore* self, uint32_t* flagsOut) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -2132,6 +2217,7 @@ BL_API_IMPL BLResult blPathGetInfoFlags(const BLPathCore* self, uint32_t* flagsO
 // =======================================
 
 BL_API_IMPL BLResult blPathGetControlBox(const BLPathCore* self, BLBox* boxOut) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -2142,6 +2228,7 @@ BL_API_IMPL BLResult blPathGetControlBox(const BLPathCore* self, BLBox* boxOut) 
 }
 
 BL_API_IMPL BLResult blPathGetBoundingBox(const BLPathCore* self, BLBox* boxOut) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -2155,6 +2242,7 @@ BL_API_IMPL BLResult blPathGetBoundingBox(const BLPathCore* self, BLBox* boxOut)
 // ============================
 
 BL_API_IMPL BLResult blPathGetFigureRange(const BLPathCore* self, size_t index, BLRange* rangeOut) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   const BLPathPrivateImpl* selfI = getImpl(self);
@@ -2200,6 +2288,7 @@ BL_API_IMPL BLResult blPathGetFigureRange(const BLPathCore* self, size_t index, 
 // =============================
 
 BL_API_IMPL BLResult blPathGetLastVertex(const BLPathCore* self, BLPoint* vtxOut) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -2234,6 +2323,7 @@ BL_API_IMPL BLResult blPathGetLastVertex(const BLPathCore* self, BLPoint* vtxOut
 }
 
 BL_API_IMPL BLResult blPathGetClosestVertex(const BLPathCore* self, const BLPoint* p, double maxDistance, size_t* indexOut, double* distanceOut) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -2299,6 +2389,7 @@ BL_API_IMPL BLResult blPathGetClosestVertex(const BLPathCore* self, const BLPoin
 // =======================
 
 BL_API_IMPL BLHitTest blPathHitTest(const BLPathCore* self, const BLPoint* p_, BLFillRule fillRule) noexcept {
+  using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -2548,8 +2639,6 @@ OnLine:
 
   return windingNumber != 0 ? BL_HIT_TEST_IN : BL_HIT_TEST_OUT;
 }
-
-} // {BLPathPrivate}
 
 // BLPath - Runtime Registration
 // =============================

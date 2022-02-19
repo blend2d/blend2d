@@ -1271,14 +1271,20 @@ static BLResult spliceInternal(BLBitSetCore* self, BLBitSetSegment* segmentData,
   }
 }
 
+} // {BLBitSetPrivate}
+
 // BLBitSet - API - Init & Destroy
 // ===============================
 
 BL_API_IMPL BLResult blBitSetInit(BLBitSetCore* self) noexcept {
+  using namespace BLBitSetPrivate;
+
   return initSSOEmpty(self);
 }
 
 BL_API_IMPL BLResult blBitSetInitMove(BLBitSetCore* self, BLBitSetCore* other) noexcept {
+  using namespace BLBitSetPrivate;
+
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isBitSet());
 
@@ -1287,6 +1293,8 @@ BL_API_IMPL BLResult blBitSetInitMove(BLBitSetCore* self, BLBitSetCore* other) n
 }
 
 BL_API_IMPL BLResult blBitSetInitWeak(BLBitSetCore* self, const BLBitSetCore* other) noexcept {
+  using namespace BLBitSetPrivate;
+
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isBitSet());
 
@@ -1294,12 +1302,15 @@ BL_API_IMPL BLResult blBitSetInitWeak(BLBitSetCore* self, const BLBitSetCore* ot
 }
 
 BL_API_IMPL BLResult blBitSetInitRange(BLBitSetCore* self, uint32_t startBit, uint32_t endBit) noexcept {
+  using namespace BLBitSetPrivate;
+
   uint32_t mask = uint32_t(-int32_t(startBit < endBit));
   initSSORange(self, startBit & mask, endBit & mask);
   return mask ? BL_SUCCESS : blTraceError(BL_ERROR_INVALID_VALUE);
 }
 
 BL_API_IMPL BLResult blBitSetDestroy(BLBitSetCore* self) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   return releaseInstance(self);
@@ -1309,6 +1320,7 @@ BL_API_IMPL BLResult blBitSetDestroy(BLBitSetCore* self) noexcept {
 // ======================
 
 BL_API_IMPL BLResult blBitSetReset(BLBitSetCore* self) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   releaseInstance(self);
@@ -1319,6 +1331,8 @@ BL_API_IMPL BLResult blBitSetReset(BLBitSetCore* self) noexcept {
 // ==============================
 
 BL_API_IMPL BLResult blBitSetAssignMove(BLBitSetCore* self, BLBitSetCore* other) noexcept {
+  using namespace BLBitSetPrivate;
+
   BL_ASSERT(self->_d.isBitSet());
   BL_ASSERT(other->_d.isBitSet());
 
@@ -1328,6 +1342,8 @@ BL_API_IMPL BLResult blBitSetAssignMove(BLBitSetCore* self, BLBitSetCore* other)
 }
 
 BL_API_IMPL BLResult blBitSetAssignWeak(BLBitSetCore* self, const BLBitSetCore* other) noexcept {
+  using namespace BLBitSetPrivate;
+
   BL_ASSERT(self->_d.isBitSet());
   BL_ASSERT(other->_d.isBitSet());
 
@@ -1336,6 +1352,8 @@ BL_API_IMPL BLResult blBitSetAssignWeak(BLBitSetCore* self, const BLBitSetCore* 
 }
 
 BL_API_IMPL BLResult blBitSetAssignDeep(BLBitSetCore* self, const BLBitSetCore* other) noexcept {
+  using namespace BLBitSetPrivate;
+
   BL_ASSERT(self->_d.isBitSet());
   BL_ASSERT(other->_d.isBitSet());
 
@@ -1369,6 +1387,7 @@ BL_API_IMPL BLResult blBitSetAssignDeep(BLBitSetCore* self, const BLBitSetCore* 
 // =============================
 
 BL_API_IMPL BLResult blBitSetAssignRange(BLBitSetCore* self, uint32_t startBit, uint32_t endBit) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (BL_UNLIKELY(startBit >= endBit)) {
@@ -1400,6 +1419,8 @@ BL_API_IMPL BLResult blBitSetAssignRange(BLBitSetCore* self, uint32_t startBit, 
 // =============================
 
 static BL_INLINE BLResult normalizeWordDataParams(uint32_t& startWord, const uint32_t*& wordData, uint32_t& wordCount) noexcept {
+  using namespace BLBitSetPrivate;
+
   if (BL_UNLIKELY(startWord > kLastWord))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
@@ -1428,6 +1449,7 @@ static BL_INLINE BLResult normalizeWordDataParams(uint32_t& startWord, const uin
 }
 
 BL_API_IMPL BLResult blBitSetAssignWords(BLBitSetCore* self, uint32_t startWord, const uint32_t* wordData, uint32_t wordCount) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   BL_PROPAGATE(normalizeWordDataParams(startWord, wordData, wordCount));
@@ -1569,6 +1591,7 @@ BL_API_IMPL BLResult blBitSetAssignWords(BLBitSetCore* self, uint32_t startWord,
 // ==========================
 
 BL_API_IMPL bool blBitSetIsEmpty(const BLBitSetCore* self) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (self->_d.sso())
@@ -1590,6 +1613,7 @@ BL_API_IMPL bool blBitSetIsEmpty(const BLBitSetCore* self) noexcept {
 }
 
 BL_API_IMPL BLResult blBitSetGetData(const BLBitSetCore* self, BLBitSetData* out) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (self->_d.sso()) {
@@ -1606,6 +1630,7 @@ BL_API_IMPL BLResult blBitSetGetData(const BLBitSetCore* self, BLBitSetData* out
 }
 
 BL_API_IMPL uint32_t blBitSetGetSegmentCount(const BLBitSetCore* self) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (self->_d.sso()) {
@@ -1628,6 +1653,7 @@ BL_API_IMPL uint32_t blBitSetGetSegmentCount(const BLBitSetCore* self) noexcept 
 }
 
 BL_API_IMPL uint32_t blBitSetGetSegmentCapacity(const BLBitSetCore* self) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (self->_d.sso())
@@ -1640,6 +1666,7 @@ BL_API_IMPL uint32_t blBitSetGetSegmentCapacity(const BLBitSetCore* self) noexce
 // ====================================
 
 BL_API_IMPL bool blBitSetHasBit(const BLBitSetCore* self, uint32_t bitIndex) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   uint32_t wordIndex = wordIndexOf(bitIndex);
@@ -1673,6 +1700,7 @@ BL_API_IMPL bool blBitSetHasBit(const BLBitSetCore* self, uint32_t bitIndex) noe
 }
 
 BL_API_IMPL bool blBitSetHasBitsInRange(const BLBitSetCore* self, uint32_t startBit, uint32_t endBit) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (startBit >= endBit)
@@ -1774,6 +1802,8 @@ BL_API_IMPL bool blBitSetHasBitsInRange(const BLBitSetCore* self, uint32_t start
 // ==============================
 
 BL_API_IMPL bool blBitSetSubsumes(const BLBitSetCore* a, const BLBitSetCore* b) noexcept {
+  using namespace BLBitSetPrivate;
+
   BL_ASSERT(a->_d.isBitSet());
   BL_ASSERT(b->_d.isBitSet());
 
@@ -1811,6 +1841,8 @@ BL_API_IMPL bool blBitSetSubsumes(const BLBitSetCore* a, const BLBitSetCore* b) 
 // ================================
 
 BL_API_IMPL bool blBitSetIntersects(const BLBitSetCore* a, const BLBitSetCore* b) noexcept {
+  using namespace BLBitSetPrivate;
+
   BL_ASSERT(a->_d.isBitSet());
   BL_ASSERT(b->_d.isBitSet());
 
@@ -1885,6 +1917,7 @@ BL_API_IMPL bool blBitSetIntersects(const BLBitSetCore* a, const BLBitSetCore* b
 // ============================
 
 BL_API_IMPL bool blBitSetGetRange(const BLBitSetCore* self, uint32_t* startOut, uint32_t* endOut) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (self->_d.sso()) {
@@ -1954,6 +1987,8 @@ BL_API_IMPL bool blBitSetGetRange(const BLBitSetCore* self, uint32_t* startOut, 
 // BLBitSet - API - Cardinality Query
 // ==================================
 
+namespace BLBitSetPrivate {
+
 class SegmentCardinalityAggregator {
 public:
   uint32_t _denseCardinalityInBits = 0;
@@ -1976,7 +2011,10 @@ public:
   }
 };
 
+} // {BLBitSetPrivate}
+
 BL_API_IMPL uint32_t blBitSetGetCardinality(const BLBitSetCore* self) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (self->_d.sso()) {
@@ -2001,6 +2039,7 @@ BL_API_IMPL uint32_t blBitSetGetCardinality(const BLBitSetCore* self) noexcept {
 }
 
 BL_API_IMPL uint32_t blBitSetGetCardinalityInRange(const BLBitSetCore* self, uint32_t startBit, uint32_t endBit) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (startBit >= endBit)
@@ -2055,6 +2094,8 @@ BL_API_IMPL uint32_t blBitSetGetCardinalityInRange(const BLBitSetCore* self, uin
 // ======================================
 
 BL_API_IMPL bool blBitSetEquals(const BLBitSetCore* a, const BLBitSetCore* b) noexcept {
+  using namespace BLBitSetPrivate;
+
   BL_ASSERT(a->_d.isBitSet());
   BL_ASSERT(b->_d.isBitSet());
 
@@ -2113,6 +2154,8 @@ BL_API_IMPL bool blBitSetEquals(const BLBitSetCore* a, const BLBitSetCore* b) no
 }
 
 BL_API_IMPL int blBitSetCompare(const BLBitSetCore* a, const BLBitSetCore* b) noexcept {
+  using namespace BLBitSetPrivate;
+
   BL_ASSERT(a->_d.isBitSet());
   BL_ASSERT(b->_d.isBitSet());
 
@@ -2150,6 +2193,7 @@ BL_API_IMPL int blBitSetCompare(const BLBitSetCore* a, const BLBitSetCore* b) no
 // ==========================================
 
 BL_API_IMPL BLResult blBitSetClear(BLBitSetCore* self) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (!self->_d.sso()) {
@@ -2167,6 +2211,8 @@ BL_API_IMPL BLResult blBitSetClear(BLBitSetCore* self) noexcept {
 
 // BLBitSet - API - Data Manipulation - Shrink & Optimize
 // ======================================================
+
+namespace BLBitSetPrivate {
 
 // Calculates the number of segments required to make a BitSet optimized. Optimized BitSet uses
 // ranges where applicable and doesn't have any zero segments (Dense segments with all bits zero).
@@ -2360,13 +2406,19 @@ static BLResult optimizeInternal(BLBitSetCore* self, bool shrink) noexcept {
   }
 }
 
+} // {BLBitSetPrivate}
+
 BL_API_IMPL BLResult blBitSetShrink(BLBitSetCore* self) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
+
   return optimizeInternal(self, true);
 }
 
 BL_API_IMPL BLResult blBitSetOptimize(BLBitSetCore* self) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
+
   return optimizeInternal(self, false);
 }
 
@@ -2374,6 +2426,7 @@ BL_API_IMPL BLResult blBitSetOptimize(BLBitSetCore* self) noexcept {
 // =========================================
 
 BL_API_IMPL BLResult blBitSetChop(BLBitSetCore* self, uint32_t startBit, uint32_t endBit) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (BL_UNLIKELY(startBit >= endBit)) {
@@ -2452,6 +2505,7 @@ BL_API_IMPL BLResult blBitSetChop(BLBitSetCore* self, uint32_t startBit, uint32_
 // ============================================
 
 BL_API_IMPL BLResult blBitSetAddBit(BLBitSetCore* self, uint32_t bitIndex) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (BL_UNLIKELY(bitIndex == kInvalidIndex))
@@ -2635,6 +2689,7 @@ BL_API_IMPL BLResult blBitSetAddBit(BLBitSetCore* self, uint32_t bitIndex) noexc
 // ==============================================
 
 BL_API_IMPL BLResult blBitSetAddRange(BLBitSetCore* self, uint32_t rangeStartBit, uint32_t rangeEndBit) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (BL_UNLIKELY(rangeStartBit >= rangeEndBit)) {
@@ -2868,6 +2923,8 @@ InitRange:
 // BLBitSet - API - Data Manipulation - Add Words
 // ==============================================
 
+namespace BLBitSetPrivate {
+
 // Inserts temporary segments into segmentData.
 //
 // SegmentData must have at least `segmentCount + insertedCount` capacity - because the merged segments are inserted
@@ -2895,7 +2952,10 @@ static BL_INLINE void mergeInsertedSegments(BLBitSetSegment* segmentData, uint32
   BL_ASSERT(p == segmentEnd);
 }
 
+} // {BLBitSetPrivate}
+
 BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, const uint32_t* wordData, uint32_t wordCount) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   BL_PROPAGATE(normalizeWordDataParams(startWord, wordData, wordCount));
@@ -3171,6 +3231,7 @@ BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, co
 // ==============================================
 
 BL_API_IMPL BLResult blBitSetClearBit(BLBitSetCore* self, uint32_t bitIndex) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (BL_UNLIKELY(bitIndex == kInvalidIndex))
@@ -3324,6 +3385,7 @@ BL_API_IMPL BLResult blBitSetClearBit(BLBitSetCore* self, uint32_t bitIndex) noe
 // ================================================
 
 BL_API_IMPL BLResult blBitSetClearRange(BLBitSetCore* self, uint32_t rangeStartBit, uint32_t rangeEndBit) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (BL_UNLIKELY(rangeStartBit >= rangeEndBit)) {
@@ -3587,6 +3649,7 @@ BL_API_IMPL BLResult blBitSetCombine(BLBitSetCore* dst, const BLBitSetCore* a, c
 // ==================================
 
 BL_API_IMPL BLResult blBitSetBuilderCommit(BLBitSetCore* self, BLBitSetBuilderCore* builder, uint32_t newAreaIndex) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   uint32_t areaShift = builder->_areaShift;
@@ -3604,6 +3667,7 @@ BL_API_IMPL BLResult blBitSetBuilderCommit(BLBitSetCore* self, BLBitSetBuilderCo
 }
 
 BL_API_IMPL BLResult blBitSetBuilderAddRange(BLBitSetCore* self, BLBitSetBuilderCore* builder, uint32_t startBit, uint32_t endBit) noexcept {
+  using namespace BLBitSetPrivate;
   BL_ASSERT(self->_d.isBitSet());
 
   if (startBit >= endBit)
@@ -3625,8 +3689,6 @@ BL_API_IMPL BLResult blBitSetBuilderAddRange(BLBitSetCore* self, BLBitSetBuilder
 
   return BL_SUCCESS;
 }
-
-} // {BLBitSetPrivate}
 
 // BLBitSet - Runtime Registration
 // ===============================

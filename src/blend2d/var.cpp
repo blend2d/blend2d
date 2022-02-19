@@ -19,8 +19,6 @@
 #include "string_p.h"
 #include "var_p.h"
 
-namespace BLVarPrivate {
-
 // BLVar - API - Init & Destroy
 // ============================
 
@@ -72,15 +70,15 @@ BL_API_IMPL BLResult blVarInitDouble(BLUnknown* self, double value) noexcept {
 }
 
 BL_API_IMPL BLResult blVarInitRgba(BLUnknown* self, const BLRgba* rgba) noexcept {
-  return initRgba(blAsObject(self), rgba);
+  return BLVarPrivate::initRgba(blAsObject(self), rgba);
 }
 
 BL_API_IMPL BLResult blVarInitRgba32(BLUnknown* self, uint32_t rgba32) noexcept {
-  return initRgba32(blAsObject(self), BLRgba32(rgba32));
+  return BLVarPrivate::initRgba32(blAsObject(self), BLRgba32(rgba32));
 }
 
 BL_API_IMPL BLResult blVarInitRgba64(BLUnknown* self, uint64_t rgba64) noexcept {
-  return initRgba64(blAsObject(self), BLRgba64(rgba64));
+  return BLVarPrivate::initRgba64(blAsObject(self), BLRgba64(rgba64));
 }
 
 BL_API_IMPL BLResult blVarInitMove(BLUnknown* self, BLUnknown* other) noexcept {
@@ -155,19 +153,19 @@ BL_API_IMPL BLResult blVarAssignDouble(BLUnknown* self, double value) noexcept {
 
 BL_API_IMPL BLResult blVarAssignRgba(BLUnknown* self, const BLRgba* rgba) noexcept {
   BLObjectCore tmp = *blAsObject(self);
-  initRgba(blAsObject(self), rgba);
+  BLVarPrivate::initRgba(blAsObject(self), rgba);
   return blObjectPrivateReleaseUnknown(&tmp);
 }
 
 BL_API_IMPL BLResult blVarAssignRgba32(BLUnknown* self, uint32_t rgba32) noexcept {
   BLObjectCore tmp = *blAsObject(self);
-  initRgba32(blAsObject(self), BLRgba32(rgba32));
+  BLVarPrivate::initRgba32(blAsObject(self), BLRgba32(rgba32));
   return blObjectPrivateReleaseUnknown(&tmp);
 }
 
 BL_API_IMPL BLResult blVarAssignRgba64(BLUnknown* self, uint64_t rgba64) noexcept {
   BLObjectCore tmp = *blAsObject(self);
-  initRgba64(blAsObject(self), BLRgba64(rgba64));
+  BLVarPrivate::initRgba64(blAsObject(self), BLRgba64(rgba64));
   return blObjectPrivateReleaseUnknown(&tmp);
 }
 
@@ -951,5 +949,3 @@ UNIT(var) {
   }
 }
 #endif
-
-} // {BLVarPrivate}
