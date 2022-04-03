@@ -970,29 +970,6 @@ BL_INLINE void v_storeu_256d_mask64(void* p, const Vec256D& x, const Vec256D& ma
 // SIMD - Vec256 - Insert & Extract
 // ================================
 
-#if defined(BL_TARGET_OPT_AVX2)
-template<uint32_t I>
-BL_INLINE Vec256I v_insert_u8(const Vec256I& x, uint32_t y) noexcept { return _mm256_insert_epi8(x, int8_t(y), I); }
-template<uint32_t I>
-BL_INLINE Vec256I v_insert_u16(const Vec256I& x, uint32_t y) noexcept { return _mm256_insert_epi16(x, int16_t(y), I); }
-template<uint32_t I>
-BL_INLINE Vec256I v_insert_u32(const Vec256I& x, uint32_t y) noexcept { return _mm256_insert_epi32(x, y, I); }
-
-template<uint32_t I>
-BL_INLINE Vec256I v_insertm_u8(const Vec256I& x, const void* p) noexcept { return _mm256_insert_epi8(x, BLMemOps::readU8(p), I); }
-template<uint32_t I>
-BL_INLINE Vec256I v_insertm_u16(const Vec256I& x, const void* p) noexcept { return _mm256_insert_epi16(x, BLMemOps::readU16u(p), I); }
-template<uint32_t I>
-BL_INLINE Vec256I v_insertm_u32(const Vec256I& x, const void* p) noexcept { return _mm256_insert_epi32(x, BLMemOps::readU32u(p), I); }
-
-template<uint32_t I>
-BL_INLINE uint32_t v_extract_u8(const Vec256I& x) noexcept { return uint32_t(_mm256_extract_epi8(x, I)); }
-template<uint32_t I>
-BL_INLINE uint32_t v_extract_u16(const Vec256I& x) noexcept { return uint32_t(_mm256_extract_epi16(x, I)); }
-template<uint32_t I>
-BL_INLINE uint32_t v_extract_u32(const Vec256I& x) noexcept { return uint32_t(_mm256_extract_epi32(x, I)); }
-#endif
-
 // SIMD - Vec256 - Conversion
 // ==========================
 
@@ -1126,6 +1103,7 @@ BL_INLINE Vec256I v_interleave_lo_i8(const Vec256I& x, const Vec256I& y) noexcep
 BL_INLINE Vec256I v_interleave_lo_i16(const Vec256I& x, const Vec256I& y) noexcept { return _mm256_unpacklo_epi16(x, y); }
 BL_INLINE Vec256I v_interleave_lo_i32(const Vec256I& x, const Vec256I& y) noexcept { return _mm256_unpacklo_epi32(x, y); }
 BL_INLINE Vec256I v_interleave_lo_i64(const Vec256I& x, const Vec256I& y) noexcept { return _mm256_unpacklo_epi64(x, y); }
+BL_INLINE Vec256I v_interleave_lo_i128(const Vec128I& x, const Vec128I& y) noexcept { return v_permute_i128<2, 0>(v_cast<Vec256I>(x), v_cast<Vec256I>(y)); }
 BL_INLINE Vec256I v_interleave_lo_i128(const Vec256I& x, const Vec256I& y) noexcept { return v_permute_i128<2, 0>(x, y); }
 
 BL_INLINE Vec256I v_interleave_hi_i8(const Vec256I& x, const Vec256I& y) noexcept { return _mm256_unpackhi_epi8(x, y); }

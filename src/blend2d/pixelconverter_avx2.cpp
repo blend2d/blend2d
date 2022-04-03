@@ -540,20 +540,19 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_pmulld_template_avx2(
     BL_NOUNROLL
     while (i >= 8) {
       Vec256I pix = v_loadu_i256(srcData);
+      Vec128I rcpLo = v_load_i32(rcpTable + srcData[0 * 4 + AI]);
+      Vec128I rcpHi = v_load_i32(rcpTable + srcData[4 * 4 + AI]);
 
-      Vec256I rcp0 = v_load_i256_32(rcpTable + srcData[0 * 4 + AI]);
-      Vec256I rcp4 = v_load_i256_32(rcpTable + srcData[4 * 4 + AI]);
+      rcpLo = v_insertm_u32<1>(rcpLo, rcpTable + srcData[1 * 4 + AI]);
+      rcpHi = v_insertm_u32<1>(rcpHi, rcpTable + srcData[5 * 4 + AI]);
 
-      rcp0 = v_insertm_u32<1>(rcp0, rcpTable + srcData[1 * 4 + AI]);
-      rcp4 = v_insertm_u32<1>(rcp4, rcpTable + srcData[5 * 4 + AI]);
+      rcpLo = v_insertm_u32<2>(rcpLo, rcpTable + srcData[2 * 4 + AI]);
+      rcpHi = v_insertm_u32<2>(rcpHi, rcpTable + srcData[6 * 4 + AI]);
 
-      rcp0 = v_insertm_u32<2>(rcp0, rcpTable + srcData[2 * 4 + AI]);
-      rcp4 = v_insertm_u32<2>(rcp4, rcpTable + srcData[6 * 4 + AI]);
+      rcpLo = v_insertm_u32<3>(rcpLo, rcpTable + srcData[3 * 4 + AI]);
+      rcpHi = v_insertm_u32<3>(rcpHi, rcpTable + srcData[7 * 4 + AI]);
 
-      rcp0 = v_insertm_u32<3>(rcp0, rcpTable + srcData[3 * 4 + AI]);
-      rcp4 = v_insertm_u32<3>(rcp4, rcpTable + srcData[7 * 4 + AI]);
-
-      rcp0 = v_interleave_lo_i128(rcp0, rcp4);
+      Vec256I rcp = v_interleave_lo_i128(rcpLo, rcpHi);
 
       Vec256I pr = v_srl_i32<RI * 8>(pix);
       Vec256I pg = v_srl_i32<GI * 8>(pix);
@@ -563,9 +562,9 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_pmulld_template_avx2(
       if (GI != 3) pg = v_and(pg, componentMask);
       if (BI != 3) pb = v_and(pb, componentMask);
 
-      pr = v_mul_u32(pr, rcp0);
-      pg = v_mul_u32(pg, rcp0);
-      pb = v_mul_u32(pb, rcp0);
+      pr = v_mul_u32(pr, rcp);
+      pg = v_mul_u32(pg, rcp);
+      pb = v_mul_u32(pb, rcp);
 
       pix = v_and(pix, alphaMask);
       pr = v_sll_i32<RI * 8>(v_srl_i32<16>(v_add_i32(pr, rnd)));
@@ -586,31 +585,31 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_pmulld_template_avx2(
       Vec256I pix = v_loadu_i256_mask32(srcData, loadStoreMask);
       Vec256I pixHi = v_permute_i128<1, 1>(pix);
 
-      size_t idx0 = v_extract_u8<0 * 4 + AI>(pix);
-      size_t idx4 = v_extract_u8<0 * 4 + AI>(pixHi);
+      size_t idx0 = v_extract_u8<0 * 4 + AI>(v_cast<Vec128I>(pix));
+      size_t idx4 = v_extract_u8<0 * 4 + AI>(v_cast<Vec128I>(pixHi));
 
-      Vec256I rcp0 = v_load_i256_32(rcpTable + idx0);
-      Vec256I rcp4 = v_load_i256_32(rcpTable + idx4);
+      Vec128I rcpLo = v_load_i32(rcpTable + idx0);
+      Vec128I rcpHi = v_load_i32(rcpTable + idx4);
 
-      size_t idx1 = v_extract_u8<1 * 4 + AI>(pix);
-      size_t idx5 = v_extract_u8<1 * 4 + AI>(pixHi);
+      size_t idx1 = v_extract_u8<1 * 4 + AI>(v_cast<Vec128I>(pix));
+      size_t idx5 = v_extract_u8<1 * 4 + AI>(v_cast<Vec128I>(pixHi));
 
-      rcp0 = v_insertm_u32<1>(rcp0, rcpTable + idx1);
-      rcp4 = v_insertm_u32<1>(rcp4, rcpTable + idx5);
+      rcpLo = v_insertm_u32<1>(rcpLo, rcpTable + idx1);
+      rcpHi = v_insertm_u32<1>(rcpHi, rcpTable + idx5);
 
-      size_t idx2 = v_extract_u8<2 * 4 + AI>(pix);
-      size_t idx6 = v_extract_u8<2 * 4 + AI>(pixHi);
+      size_t idx2 = v_extract_u8<2 * 4 + AI>(v_cast<Vec128I>(pix));
+      size_t idx6 = v_extract_u8<2 * 4 + AI>(v_cast<Vec128I>(pixHi));
 
-      rcp0 = v_insertm_u32<2>(rcp0, rcpTable + idx2);
-      rcp4 = v_insertm_u32<2>(rcp4, rcpTable + idx6);
+      rcpLo = v_insertm_u32<2>(rcpLo, rcpTable + idx2);
+      rcpHi = v_insertm_u32<2>(rcpHi, rcpTable + idx6);
 
-      size_t idx3 = v_extract_u8<3 * 4 + AI>(pix);
-      size_t idx7 = v_extract_u8<3 * 4 + AI>(pixHi);
+      size_t idx3 = v_extract_u8<3 * 4 + AI>(v_cast<Vec128I>(pix));
+      size_t idx7 = v_extract_u8<3 * 4 + AI>(v_cast<Vec128I>(pixHi));
 
-      rcp0 = v_insertm_u32<3>(rcp0, rcpTable + idx3);
-      rcp4 = v_insertm_u32<3>(rcp4, rcpTable + idx7);
+      rcpLo = v_insertm_u32<3>(rcpLo, rcpTable + idx3);
+      rcpHi = v_insertm_u32<3>(rcpHi, rcpTable + idx7);
 
-      rcp0 = v_interleave_lo_i128(rcp0, rcp4);
+      Vec256I rcp = v_interleave_lo_i128(rcpLo, rcpHi);
 
       Vec256I pr = v_srl_i32<RI * 8>(pix);
       Vec256I pg = v_srl_i32<GI * 8>(pix);
@@ -620,9 +619,9 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_pmulld_template_avx2(
       if (GI != 3) pg = v_and(pg, componentMask);
       if (BI != 3) pb = v_and(pb, componentMask);
 
-      pr = v_mul_u32(pr, rcp0);
-      pg = v_mul_u32(pg, rcp0);
-      pb = v_mul_u32(pb, rcp0);
+      pr = v_mul_u32(pr, rcp);
+      pg = v_mul_u32(pg, rcp);
+      pb = v_mul_u32(pb, rcp);
 
       pix = v_and(pix, alphaMask);
       pr = v_sll_i32<RI * 8>(v_srl_i32<16>(v_add_i32(pr, rnd)));

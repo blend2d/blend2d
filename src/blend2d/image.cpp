@@ -632,12 +632,12 @@ UNIT(image) {
     EXPECT_SUCCESS(img0.create(kSize, kSize, BL_FORMAT_PRGB32));
     EXPECT_SUCCESS(img1.create(kSize, kSize, BL_FORMAT_PRGB32));
 
-    EXPECT_EQ(img0.width(), 256u);
-    EXPECT_EQ(img0.height(), 256u);
+    EXPECT_EQ(img0.width(), 256);
+    EXPECT_EQ(img0.height(), 256);
     EXPECT_EQ(img0.format(), BL_FORMAT_PRGB32);
 
-    EXPECT_EQ(img1.width(), 256u);
-    EXPECT_EQ(img1.height(), 256u);
+    EXPECT_EQ(img1.width(), 256);
+    EXPECT_EQ(img1.height(), 256);
     EXPECT_EQ(img1.format(), BL_FORMAT_PRGB32);
 
     BLImageData imgData0;
