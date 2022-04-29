@@ -136,7 +136,7 @@ static const char* blImageCodecKeepOnlyExtensionInMatch(const char* match, size_
 static BLResult blImageCodecFindByNameInternal(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
   for (const BLImageCodec& codec : codecs->dcast<BLArray<BLImageCodec>>().view())
     if (codec.name() == BLStringView{name, size})
-      return blImageCodecAssignWeak(self, &codec);
+      return BLImageCodecPrivate::blImageCodecAssignWeak(self, &codec);
 
   return blTraceError(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
 }
@@ -144,7 +144,7 @@ static BLResult blImageCodecFindByNameInternal(BLImageCodecCore* self, const cha
 static BLResult blImageCodecFindByExtensionInternal(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) noexcept {
   for (const BLImageCodec& codec : codecs->dcast<BLArray<BLImageCodec>>().view())
     if (blImageCodecMatchExtension(codec.extensions().data(), name, size))
-      return blImageCodecAssignWeak(self, &codec);
+      return BLImageCodecPrivate::blImageCodecAssignWeak(self, &codec);
 
   return blTraceError(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
 }
@@ -162,7 +162,7 @@ static BLResult blImageCodecFindByDataInternal(BLImageCodecCore* self, const voi
   }
 
   if (candidate)
-    return blImageCodecAssignWeak(self, candidate);
+    return BLImageCodecPrivate::blImageCodecAssignWeak(self, candidate);
 
   return blTraceError(BL_ERROR_IMAGE_NO_MATCHING_CODEC);
 }
@@ -232,7 +232,7 @@ BL_API_IMPL BLResult blImageCodecArrayInitBuiltInCodecs(BLArrayCore* self) noexc
 
 BL_API_IMPL BLResult blImageCodecArrayAssignBuiltInCodecs(BLArrayCore* self) noexcept {
   blArrayDestroy(self);
-  return blImageCodecArrayInitBuiltInCodecs(self);
+  return BLImageCodecPrivate::blImageCodecArrayInitBuiltInCodecs(self);
 }
 
 BL_API_IMPL BLResult blImageCodecAddToBuiltIn(const BLImageCodecCore* codec) noexcept {
