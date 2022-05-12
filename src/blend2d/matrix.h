@@ -374,7 +374,7 @@ struct BLMatrix2D {
 
   //! Calculates the matrix determinant.
   BL_NODISCARD
-  BL_INLINE double determinant() noexcept { return this->m00 * this->m11 - this->m01 * this->m10; }
+  BL_INLINE double determinant() const noexcept { return this->m00 * this->m11 - this->m01 * this->m10; }
 
   //! \}
 
