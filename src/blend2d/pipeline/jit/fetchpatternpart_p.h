@@ -189,9 +189,9 @@ public:
 
   FetchAffinePatternPart(PipeCompiler* pc, FetchType fetchType, uint32_t format) noexcept;
 
-  BL_INLINE bool isAffineNn() const noexcept { return isFetchType(FetchType::kPatternAffineNNAny) | isFetchType(FetchType::kPatternAffineNNOpt); }
-  BL_INLINE bool isAffineBi() const noexcept { return isFetchType(FetchType::kPatternAffineBIAny) | isFetchType(FetchType::kPatternAffineBIOpt); }
-  BL_INLINE bool isOptimized() const noexcept { return isFetchType(FetchType::kPatternAffineNNOpt) | isFetchType(FetchType::kPatternAffineBIOpt); }
+  BL_INLINE bool isAffineNn() const noexcept { return isFetchType(FetchType::kPatternAffineNNAny) || isFetchType(FetchType::kPatternAffineNNOpt); }
+  BL_INLINE bool isAffineBi() const noexcept { return isFetchType(FetchType::kPatternAffineBIAny) || isFetchType(FetchType::kPatternAffineBIOpt); }
+  BL_INLINE bool isOptimized() const noexcept { return isFetchType(FetchType::kPatternAffineNNOpt) || isFetchType(FetchType::kPatternAffineBIOpt); }
 
   void _initPart(x86::Gp& x, x86::Gp& y) noexcept override;
   void _finiPart() noexcept override;

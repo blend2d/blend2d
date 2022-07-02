@@ -152,8 +152,8 @@ struct BLPointI {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLPointI& other) const noexcept {
-    return blEquals(this->x, other.x) &
-           blEquals(this->y, other.y) ;
+    return bool(unsigned(blEquals(this->x, other.x)) &
+                unsigned(blEquals(this->y, other.y)));
   }
 #endif
 };
@@ -185,8 +185,8 @@ struct BLSizeI {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLSizeI& other) const noexcept {
-    return blEquals(this->w, other.w) &
-           blEquals(this->h, other.h) ;
+    return bool(unsigned(blEquals(this->w, other.w)) &
+                unsigned(blEquals(this->h, other.h)));
   }
 #endif
 };
@@ -224,10 +224,10 @@ struct BLBoxI {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLBoxI& other) const noexcept {
-    return blEquals(this->x0, other.x0) &
-           blEquals(this->y0, other.y0) &
-           blEquals(this->x1, other.x1) &
-           blEquals(this->y1, other.y1) ;
+    return bool(unsigned(blEquals(this->x0, other.x0)) &
+                unsigned(blEquals(this->y0, other.y0)) &
+                unsigned(blEquals(this->x1, other.x1)) &
+                unsigned(blEquals(this->y1, other.y1)));
   }
 
   BL_NODISCARD
@@ -276,10 +276,10 @@ struct BLRectI {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLRectI& other) const noexcept {
-    return blEquals(this->x, other.x) &
-           blEquals(this->y, other.y) &
-           blEquals(this->w, other.w) &
-           blEquals(this->h, other.h) ;
+    return bool(unsigned(blEquals(this->x, other.x)) &
+                unsigned(blEquals(this->y, other.y)) &
+                unsigned(blEquals(this->w, other.w)) &
+                unsigned(blEquals(this->h, other.h)));
   }
 #endif
 };
@@ -315,8 +315,8 @@ struct BLPoint {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLPoint& other) const noexcept {
-    return blEquals(this->x, other.x) &
-           blEquals(this->y, other.y) ;
+    return bool(unsigned(blEquals(this->x, other.x)) &
+                unsigned(blEquals(this->y, other.y)));
   }
 #endif
 };
@@ -352,8 +352,8 @@ struct BLSize {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLSize& other) const noexcept {
-    return blEquals(this->w, other.w) &
-           blEquals(this->h, other.h) ;
+    return bool(unsigned(blEquals(this->w, other.w)) &
+                unsigned(blEquals(this->h, other.h)));
   }
 #endif
 };
@@ -397,10 +397,10 @@ struct BLBox {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLBox& other) const noexcept {
-    return blEquals(this->x0, other.x0) &
-           blEquals(this->y0, other.y0) &
-           blEquals(this->x1, other.x1) &
-           blEquals(this->y1, other.y1) ;
+    return bool(unsigned(blEquals(this->x0, other.x0)) &
+                unsigned(blEquals(this->y0, other.y0)) &
+                unsigned(blEquals(this->x1, other.x1)) &
+                unsigned(blEquals(this->y1, other.y1)));
   }
 
   BL_NODISCARD
@@ -452,10 +452,10 @@ struct BLRect {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLRect& other) const noexcept {
-    return blEquals(this->x, other.x) &
-           blEquals(this->y, other.y) &
-           blEquals(this->w, other.w) &
-           blEquals(this->h, other.h) ;
+    return bool(unsigned(blEquals(this->x, other.x)) &
+                unsigned(blEquals(this->y, other.y)) &
+                unsigned(blEquals(this->w, other.w)) &
+                unsigned(blEquals(this->h, other.h)));
   }
 #endif
 };

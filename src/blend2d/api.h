@@ -1519,8 +1519,7 @@ struct BLRange {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLRange& other) const noexcept {
-    return blEquals(start, other.start) &
-           blEquals(end  , other.end  ) ;
+    return bool(unsigned(blEquals(start, other.start)) & unsigned(blEquals(end, other.end)));
   }
 
   //! \}

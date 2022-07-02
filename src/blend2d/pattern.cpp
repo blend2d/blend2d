@@ -401,8 +401,8 @@ BL_API_IMPL bool blPatternEquals(const BLPatternCore* a, const BLPatternCore* b)
   BL_ASSERT(a->_d.isPattern());
   BL_ASSERT(b->_d.isPattern());
 
-  bool eq = (getExtendMode(a) == getExtendMode(b)) &
-            (getMatrixType(a) == getMatrixType(b)) ;
+  unsigned eq = unsigned(getExtendMode(a) == getExtendMode(b)) &
+                unsigned(getMatrixType(a) == getMatrixType(b)) ;
 
   if (!eq)
     return false;
@@ -413,7 +413,7 @@ BL_API_IMPL bool blPatternEquals(const BLPatternCore* a, const BLPatternCore* b)
   if (aI == bI)
     return true;
 
-  if (!((aI->matrix == bI->matrix) & (aI->area == bI->area)))
+  if (!(unsigned(aI->matrix == bI->matrix) & unsigned(aI->area == bI->area)))
     return false;
 
   return aI->image == bI->image;

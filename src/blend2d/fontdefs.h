@@ -937,10 +937,10 @@ struct BLFontUnicodeCoverage {
   }
 
   BL_INLINE bool equals(const BLFontUnicodeCoverage& other) const noexcept {
-    return blEquals(this->data[0], other.data[0]) &
-           blEquals(this->data[1], other.data[1]) &
-           blEquals(this->data[2], other.data[2]) &
-           blEquals(this->data[3], other.data[3]) ;
+    return bool(unsigned(blEquals(this->data[0], other.data[0])) &
+                unsigned(blEquals(this->data[1], other.data[1])) &
+                unsigned(blEquals(this->data[2], other.data[2])) &
+                unsigned(blEquals(this->data[3], other.data[3])));
   }
 
   BL_INLINE bool operator==(const BLFontUnicodeCoverage& other) const noexcept { return  equals(other); }

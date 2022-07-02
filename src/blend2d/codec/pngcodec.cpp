@@ -624,7 +624,7 @@ static void blPngDeinterlaceBits(
     }
 
     // Don't change to `||`, both have to be executed!
-    if ((--y == 0) | (++n == 4)) {
+    if (uint32_t(--y == 0) | uint32_t(++n == 4)) {
       pc.convertRect(dstLine, dstStride * 2, tmpLine, tmpStride, w, n);
       dstLine += dstStride * 8;
 
@@ -729,7 +729,7 @@ static void blPngDeinterlaceBytes(
     }
 
     // Don't change to `||`, both have to be executed!
-    if ((--y == 0) | (++n == 4)) {
+    if (uint32_t(--y == 0) | uint32_t(++n == 4)) {
       pc.convertRect(dstLine, dstStride * 2, tmpLine, tmpStride, w, n);
       dstLine += dstStride * 8;
 

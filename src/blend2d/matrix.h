@@ -355,12 +355,12 @@ struct BLMatrix2D {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLMatrix2D& other) const noexcept {
-    return blEquals(this->m00, other.m00) &
-           blEquals(this->m01, other.m01) &
-           blEquals(this->m10, other.m10) &
-           blEquals(this->m11, other.m11) &
-           blEquals(this->m20, other.m20) &
-           blEquals(this->m21, other.m21) ;
+    return bool(unsigned(blEquals(this->m00, other.m00)) &
+                unsigned(blEquals(this->m01, other.m01)) &
+                unsigned(blEquals(this->m10, other.m10)) &
+                unsigned(blEquals(this->m11, other.m11)) &
+                unsigned(blEquals(this->m20, other.m20)) &
+                unsigned(blEquals(this->m21, other.m21)));
   }
 
   //! \}

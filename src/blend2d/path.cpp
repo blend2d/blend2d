@@ -1144,7 +1144,7 @@ BL_API_IMPL BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry,
   if (p0 == p1)
     return BL_SUCCESS;
 
-  if ((!(rx > blEpsilon<double>())) | (!(ry > blEpsilon<double>())))
+  if (unsigned(!(rx > blEpsilon<double>())) | unsigned(!(ry > blEpsilon<double>())))
     return blPathLineTo(self, p1.x, p1.y);
 
   // Calculate sin/cos for reuse.
@@ -2484,7 +2484,7 @@ OnLine:
         i -= 2;
 
         if (pt.y >= minY && pt.y <= maxY) {
-          if (isNear(p[0].y, p[1].y) & isNear(p[1].y, p[2].y)) {
+          if (unsigned(isNear(p[0].y, p[1].y)) & unsigned(isNear(p[1].y, p[2].y))) {
             x0 = p[0].x;
             y0 = p[0].y;
             x1 = p[2].x;
@@ -2549,7 +2549,7 @@ OnLine:
         i -= 3;
 
         if (pt.y >= minY && pt.y <= maxY) {
-          if (isNear(p[0].y, p[1].y) & isNear(p[1].y, p[2].y) & isNear(p[2].y, p[3].y)) {
+          if (unsigned(isNear(p[0].y, p[1].y)) & unsigned(isNear(p[1].y, p[2].y)) & unsigned(isNear(p[2].y, p[3].y))) {
             x0 = p[0].x;
             y0 = p[0].y;
             x1 = p[3].x;

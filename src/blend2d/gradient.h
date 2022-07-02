@@ -112,8 +112,8 @@ struct BLGradientStop {
   }
 
   BL_INLINE bool equals(const BLGradientStop& other) const noexcept {
-    return blEquals(this->offset, other.offset) &
-           blEquals(this->rgba  , other.rgba  ) ;
+    return bool(unsigned(blEquals(this->offset, other.offset)) &
+                unsigned(blEquals(this->rgba  , other.rgba  )));
   }
 
   //! \}

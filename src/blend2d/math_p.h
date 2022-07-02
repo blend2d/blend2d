@@ -97,7 +97,7 @@ static BL_INLINE bool blIsNaN(double x) noexcept { return std::isnan(x); }
 
 template<typename T, typename... Args>
 static BL_INLINE bool blIsNaN(const T& first, Args&&... args) noexcept {
-  return blIsNaN(first) | blIsNaN(std::forward<Args>(args)...);
+  return bool(unsigned(blIsNaN(first)) | unsigned(blIsNaN(std::forward<Args>(args)...)));
 }
 
 static BL_INLINE bool blIsNaN(const BLPoint& p) noexcept { return blIsNaN(p.x, p.y); }
@@ -107,7 +107,7 @@ static BL_INLINE bool blIsInf(double x) noexcept { return std::isinf(x); }
 
 template<typename T, typename... Args>
 static BL_INLINE bool blIsInf(const T& first, Args&&... args) noexcept {
-  return blIsInf(first) | blIsInf(std::forward<Args>(args)...);
+  return bool(unsigned(blIsInf(first)) | unsigned(blIsInf(std::forward<Args>(args)...)));
 }
 
 static BL_INLINE bool blIsFinite(float x) noexcept { return std::isfinite(x); }
@@ -115,7 +115,7 @@ static BL_INLINE bool blIsFinite(double x) noexcept { return std::isfinite(x); }
 
 template<typename T, typename... Args>
 static BL_INLINE bool blIsFinite(const T& first, Args&&... args) noexcept {
-  return blIsFinite(first) & blIsFinite(std::forward<Args>(args)...);
+  return bool(unsigned(blIsFinite(first)) & unsigned(blIsFinite(std::forward<Args>(args)...)));
 }
 
 static BL_INLINE bool blIsFinite(const BLPoint& p) noexcept { return blIsFinite(p.x, p.y); }

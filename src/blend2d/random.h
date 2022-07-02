@@ -69,8 +69,8 @@ struct BLRandom {
   //! \note It would return true only when its internal state matches `other`'s internal state.
   BL_NODISCARD
   BL_INLINE bool equals(const BLRandom& other) const noexcept {
-    return blEquals(this->data[0], other.data[0]) &
-           blEquals(this->data[1], other.data[1]);
+    return bool(unsigned(blEquals(this->data[0], other.data[0])) &
+                unsigned(blEquals(this->data[1], other.data[1])));
   }
 
   //! \}

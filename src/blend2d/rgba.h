@@ -297,18 +297,18 @@ struct BLRgba {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLRgba& other) const noexcept {
-    return blEquals(this->r, other.r) &
-           blEquals(this->g, other.g) &
-           blEquals(this->b, other.b) &
-           blEquals(this->a, other.a) ;
+    return bool(unsigned(blEquals(this->r, other.r)) &
+                unsigned(blEquals(this->g, other.g)) &
+                unsigned(blEquals(this->b, other.b)) &
+                unsigned(blEquals(this->a, other.a)));
   }
 
   BL_NODISCARD
   BL_INLINE bool equals(float r, float g, float b, float a = 1.0f) const noexcept {
-    return blEquals(this->r, r) &
-           blEquals(this->g, g) &
-           blEquals(this->b, b) &
-           blEquals(this->a, a) ;
+    return bool(unsigned(blEquals(this->r, r)) &
+                unsigned(blEquals(this->g, g)) &
+                unsigned(blEquals(this->b, b)) &
+                unsigned(blEquals(this->a, a)));
   }
 
   //! \}
