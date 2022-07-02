@@ -189,17 +189,28 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" ST
   endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   list(APPEND BLEND2D_PRIVATE_CFLAGS -Wall -Wextra)
-  list(APPEND BLEND2D_PRIVATE_CFLAGS -fno-exceptions -fno-rtti -fno-math-errno -fno-trapping-math -fno-finite-math-only)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS -fno-exceptions -fno-rtti -fno-math-errno)
   list(APPEND BLEND2D_PRIVATE_CFLAGS_REL -O2)
 
-  blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS
-    -fno-threadsafe-statics      # We don't use this C++11 feature.
-    -fno-semantic-interposition) # Do not allow semantic interposition (Clang uses this by default).
 
-  blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_REL
-    -ftree-vectorize             # We want this optimization if not enabled by default.
-    -fmerge-all-constants        # Not enabled by default, but we are fine with it.
-    -fno-enforce-eh-specs)       # Blend2D code should never throw, so we don't need this.
+  if (NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+    # Disable these flags in case somebody uses -ffast-math globally.
+    list(APPEND BLEND2D_PRIVATE_CFLAGS -fno-trapping-math -fno-finite-math-only)
+    # Blend2D code should never throw, so we don't need strict exception handling enforcement.
+    blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_REL -fno-enforce-eh-specs)
+  endif()
+
+  # W don't rely on threadsafe statics and we don't want to depend on a compiler runtime.
+  blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS -fno-threadsafe-statics)
+
+  # Semantic interposition brings no benefits to our code, used by Clang by default.
+  blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS -fno-semantic-interposition)
+
+  # We are fine with merging all matching constants into a single slot although it's against the rules.
+  blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_REL -fmerge-all-constants)
+
+  # We want this optimization if not enabled by default to autovectorize some of the C++ code.
+  blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_REL -ftree-vectorize)
 
   # GCC 4.X support requires -fabi-version=0 (or 6+). Please note that this
   # is internal and only required by `blsimd_p.h` as SIMD registers are used
