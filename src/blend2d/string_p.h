@@ -92,7 +92,7 @@ static BL_INLINE size_t getSize(const BLStringCore* self) noexcept {
 }
 
 static BL_INLINE size_t getCapacity(const BLStringCore* self) noexcept {
-  return self->_d.sso() ? size_t(BLString::kSSOCapacity) : getImpl(self)->size;
+  return self->_d.sso() ? size_t(BLString::kSSOCapacity) : getImpl(self)->capacity;
 }
 
 //! \}

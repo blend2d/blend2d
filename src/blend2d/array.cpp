@@ -305,7 +305,7 @@ static BL_NOINLINE BLResult reallocToDynamic(BLArrayCore* self, BLObjectType arr
     tmpI->size = 0;
   }
   else {
-    initContentByType(dst, getData(&newO), size * itemSize, arrayType);
+    initContentByType(dst, getData(self), size * itemSize, arrayType);
   }
 
   return replaceInstance(self, &newO);

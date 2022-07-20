@@ -299,7 +299,7 @@ static BLResult BL_CDECL getGlyphOutlines(
             // NOTE: We know that the maximum number of contours of a single glyph is 32767, thus we can store both the
             // number of X and Y vertices in a single unsigned 32-bit integer, as each vertex has 2 bytes maximum, which
             // would be 65534.
-            uint32_t xyCoordinatesSize = 0;
+            size_t xyCoordinatesSize = 0;
 
             // We parse flags one-by-one and calculate the size required by vertices by using our FLAG tables so we don't
             // have to do bounds checking during vertex decoding.

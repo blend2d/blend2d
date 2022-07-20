@@ -855,13 +855,13 @@ UNIT(var) {
 
   INFO("Verifying BLRgba value functionality");
   {
-    EXPECT_EQ(BLVar(BLRgba(0.1, 0.2, 0.3, 0.5)).type(), BL_OBJECT_TYPE_RGBA);
-    EXPECT_EQ(BLVar(BLRgba(0.1, 0.2, 0.3, 0.5)), BLVar(BLRgba(0.1, 0.2, 0.3, 0.5)));
-    EXPECT_TRUE(BLVar(BLRgba(0.1, 0.2, 0.3, 0.5)).isRgba());
-    EXPECT_TRUE(BLVar(BLRgba(0.1, 0.2, 0.3, 0.5)).isStyle());
+    EXPECT_EQ(BLVar(BLRgba(0.1f, 0.2f, 0.3f, 0.5f)).type(), BL_OBJECT_TYPE_RGBA);
+    EXPECT_EQ(BLVar(BLRgba(0.1f, 0.2f, 0.3f, 0.5f)), BLVar(BLRgba(0.1f, 0.2f, 0.3f, 0.5f)));
+    EXPECT_TRUE(BLVar(BLRgba(0.1f, 0.2f, 0.3f, 0.5f)).isRgba());
+    EXPECT_TRUE(BLVar(BLRgba(0.1f, 0.2f, 0.3f, 0.5f)).isStyle());
 
     // Wrapped BLRgba is an exception - it doesn't form a valid BLObject signature.
-    EXPECT_FALSE(BLVar(BLRgba(0.1, 0.2, 0.3, 0.5))._d.hasObjectSignature());
+    EXPECT_FALSE(BLVar(BLRgba(0.1f, 0.2f, 0.3f, 0.5f))._d.hasObjectSignature());
   }
 
   INFO("Checking BLGradient value functionality");
