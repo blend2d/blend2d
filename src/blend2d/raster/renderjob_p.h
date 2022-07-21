@@ -141,7 +141,7 @@ struct RenderJob_TextOp : public RenderJob_BaseOp {
   BLFontCore _font;
 
   union {
-    BLArrayView<void> _textData;
+    BLArrayView<uint8_t> _textData;
     BLGlyphRun _glyphRun;
     BLGlyphBufferCore _glyphBuffer;
   };
@@ -170,7 +170,7 @@ struct RenderJob_TextOp : public RenderJob_BaseOp {
 
   BL_INLINE void initTextData(const void* text, size_t size, BLTextEncoding encoding) noexcept {
     _payloadType = uint8_t(encoding);
-    _textData.reset(text, size);
+    _textData.reset(static_cast<const uint8_t*>(text), size);
   }
 
   BL_INLINE void initGlyphRun(void* glyphData, void* placementData, size_t size, uint32_t placementType, uint32_t flags) noexcept {

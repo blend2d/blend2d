@@ -82,11 +82,6 @@ struct OTFaceImpl : public BLInternalFontFaceImpl {
   //! Array of LSubR indexes used by CID fonts (CFF/CFF2).
   BLArray<CFFData::IndexData> cffFDSubrIndexes;
 
-  //! Script tags.
-  BLArray<BLTag> scriptTags;
-  //! Feature tags.
-  BLArray<BLTag> featureTags;
-
   BL_INLINE uint32_t locaOffsetSize() const noexcept {
     return uint32_t(otFlags & (OTFaceFlags::kLocaOffset16 | OTFaceFlags::kLocaOffset32));
   }
@@ -95,8 +90,6 @@ struct OTFaceImpl : public BLInternalFontFaceImpl {
 BL_HIDDEN BLResult createOpenTypeFace(BLFontFaceCore* self, const BLFontData* fontData, uint32_t faceIndex) noexcept;
 
 } // {BLOpenType}
-
-BL_HIDDEN void blOpenTypeRtInit(BLRuntimeContext* rt) noexcept;
 
 //! \}
 //! \endcond

@@ -16,6 +16,10 @@
       "optional": true
     },
     {
+      "cmd": ["bl_test_c_api"],
+      "optional": true
+    },
+    {
       "cmd": ["bl_test_fuzzer", "--count=2000"],
       "optional": true
     },

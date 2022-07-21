@@ -7,7 +7,9 @@
 #include "array_p.h"
 #include "bitset_p.h"
 #include "font_p.h"
+#include "fontfeaturesettings_p.h"
 #include "fontmanager_p.h"
+#include "fontvariationsettings_p.h"
 #include "gradient_p.h"
 #include "image_p.h"
 #include "object_p.h"
@@ -161,6 +163,12 @@ BLResult blObjectDetailDestroyUnknownImpl(void* impl, BLObjectInfo info) noexcep
 
     case BL_OBJECT_TYPE_FONT:
       return blFontImplFree(static_cast<BLInternalFontImpl*>(impl), info);
+
+    case BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS:
+      return BLFontFeatureSettingsPrivate::freeImpl(static_cast<BLFontFeatureSettingsImpl*>(impl), info);
+
+    case BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS:
+      return BLFontVariationSettingsPrivate::freeImpl(static_cast<BLFontVariationSettingsImpl*>(impl), info);
 
     case BL_OBJECT_TYPE_ARRAY_OBJECT:
     case BL_OBJECT_TYPE_ARRAY_INT8:

@@ -83,14 +83,20 @@
 //!
 //! ```
 //!   [--------+--------+--------+--------]
-//!   [31....24|23....16|15.....8|7......0] (32-bit integer layout)
+//!   [31....24|23....16|15.....8|7......0] Info Layout:
 //!   [--------+--------+--------+--------]
-//!   [Seeeeeee|eQ......|........|........] (32-bit floating point) (\ref BLRgba case, 'S' bit (sign bit) set to zero).
-//!   [MDTVtttt|ttaaaabb|bbccccpp|pppppXIR] (object info fields view) (\ref BLObjectCore case, 'M' bit set to one).
+//!   [Seeeeeee|eQ......|........|........] - (32-bit floating point) (\ref BLRgba case, 'S' bit (sign bit) set to zero).
+//!   [MDTVtttt|ttaaaabb|bbccccpp|pppppXIR] - (object info fields view) (\ref BLObjectCore case, 'M' bit set to one).
 //!   [--------+--------+--------+--------]
-//!   [1D00tttt|ttaaaabb|bbccccpp|pppppXIR] (BLArray  SSO layout - 'a' is an array size, 'bbbb' is capacity)
-//!   [1D001000|00aaaabb|bbccccpp|pppppXIR] (BLString SSO layout - 'a' is a string size ^ SSO Capacity, the rest can be used as characters)
-//!   [1D10tttt|ttaaaabb|bbccccpp|pppppXIR] (BLBitSet SSO layout - 'ttt|ttaaaabb|bbccccpp|pppppXIR' is a word start or SSO range sentinel)
+//!
+//!   [--------+--------+--------+--------]
+//!   [31....24|23....16|15.....8|7......0] SSO Layout:
+//!   [--------+--------+--------+--------]
+//!   [1D00tttt|ttaaaabb|bbccccpp|pppppXIR] - BLArray - 'aaaa' is size, 'bbbb' is capacity)
+//!   [1D00tttt|00aaaabb|bbccccpp|pppppXIR] - BLString - 'a' is size ^ kSSOCapacity, the rest can be used as characters)
+//!   [1D10tttt|ttaaaabb|bbccccpp|pppppXIR] - BLBitSet - 'ttt|ttaaaabb|bbccccpp|pppppXIR' is word start or SSO range sentinel)
+//!   [1D00tttt|ttaaaabb|bbccccpp|pppppXIR] - BLFontFeatureSettings - 'aaaa' is size, 'ccpppppppXIR' is used to store feature values [0-1]
+//!   [1D00tttt|ttaaaabb|bbccccpp|pppppXIR] - BLFontVariationSettings - 'aaaa' is size, 'bbbbccccpppppppXIR' is used to store variation ids
 //!   [--------+--------+--------+--------]
 //! ```
 //!
@@ -238,9 +244,9 @@ BL_DEFINE_ENUM(BLObjectType) {
   BL_OBJECT_TYPE_RGBA = 0,
   //! Object is `Null` (can be used as style).
   BL_OBJECT_TYPE_NULL = 1,
-  //! Object is `BLPattern` (style compatible).
+  //! Object is `BLPattern` (can be used as style).
   BL_OBJECT_TYPE_PATTERN = 2,
-  //! Object is `BLGradient` (style compatible).
+  //! Object is `BLGradient` (can be used as style).
   BL_OBJECT_TYPE_GRADIENT = 3,
 
   //! Object is `BLImage`.
@@ -250,10 +256,10 @@ BL_DEFINE_ENUM(BLObjectType) {
 
   //! Object is `BLFont`.
   BL_OBJECT_TYPE_FONT = 16,
-  //! Object is `BLFontFeatureOptions`.
-  BL_OBJECT_TYPE_FONT_FEATURE_OPTIONS = 17,
-  //! Object is `BLFontVariationOptions`.
-  BL_OBJECT_TYPE_FONT_VARIATION_OPTIONS = 18,
+  //! Object is `BLFontFeatureSettings`.
+  BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS = 17,
+  //! Object is `BLFontVariationSettings`.
+  BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS = 18,
 
   //! Object represents a boolean value.
   BL_OBJECT_TYPE_BOOL = 28,
@@ -519,8 +525,12 @@ struct BLObjectInfo {
   BL_INLINE bool isFontData() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_DATA); }
   //! Tests whether the object info represents `BLFontFace`.
   BL_INLINE bool isFontFace() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_FACE); }
+  //! Tests whether the object info represents `BLFontFeatureSettings`.
+  BL_INLINE bool isFontFeatureSettings() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS); }
   //! Tests whether the object info represents `BLFontManager`.
   BL_INLINE bool isFontManager() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_MANAGER); }
+  //! Tests whether the object info represents `BLFontVariationSettings`.
+  BL_INLINE bool isFontVariationSettings() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS); }
   //! Tests whether the object info represents `BLGradient`.
   BL_INLINE bool isGradient() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_GRADIENT); }
   //! Tests whether the object info represents `BLImage`.
@@ -753,8 +763,12 @@ union BLObjectDetail {
   BL_INLINE bool isFontData() const noexcept { return info.isFontData(); }
   //! Tests whether this BLObjectDetail represents `BLFontFace`.
   BL_INLINE bool isFontFace() const noexcept { return info.isFontFace(); }
+  //! Tests whether this BLObjectDetail represents `BLFontFeatureSettings`.
+  BL_INLINE bool isFontFeatureSettings() const noexcept { return info.isFontFeatureSettings(); }
   //! Tests whether this BLObjectDetail represents `BLFontManager`.
   BL_INLINE bool isFontManager() const noexcept { return info.isFontManager(); }
+  //! Tests whether this BLObjectDetail represents `BLFontVariationSettings`.
+  BL_INLINE bool isFontVariationSettings() const noexcept { return info.isFontVariationSettings(); }
   //! Tests whether this BLObjectDetail represents `BLGradient`.
   BL_INLINE bool isGradient() const noexcept { return info.isGradient(); }
   //! Tests whether this BLObjectDetail represents `BLImage`.

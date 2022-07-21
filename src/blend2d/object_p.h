@@ -471,13 +471,17 @@ static BL_INLINE size_t blObjectGrowImplSizeToPowerOf2(size_t x) noexcept {
   return size_t(1u) << (BLIntOps::bitSizeOf<size_t>() - BLIntOps::clz(x + 1u));
 }
 
+static BL_INLINE BLObjectImplSize blObjectAlignImplSize(BLObjectImplSize implSize) noexcept {
+  return BLObjectImplSize(BLIntOps::alignUp(implSize.value(), 64u));
+}
+
 static BL_INLINE BLObjectImplSize blObjectExpandImplSize(BLObjectImplSize implSize) noexcept {
   size_t n = implSize.value();
 
-  if (implSize >= BL_ALLOC_GROW_LIMIT)
-    n = (n & ~(BL_ALLOC_GROW_LIMIT - 1)) + BL_ALLOC_GROW_LIMIT;
+  if (n >= BL_ALLOC_GROW_LIMIT)
+    n = n + (n >> 2) + (n >> 3); // Makes the capacity 37.5% greater.
   else
-    n = blObjectGrowImplSizeToPowerOf2(implSize.value());
+    n = blObjectGrowImplSizeToPowerOf2(n); // Doubles the capacity.
 
   // If an overflow happened during any of the computation above `blMax()` would cancel it and make it fitting.
   return BLObjectImplSize(blMax(n, implSize.value()));

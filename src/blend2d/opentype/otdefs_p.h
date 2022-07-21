@@ -7,7 +7,8 @@
 #define BLEND2D_OPENTYPE_OTDEFS_P_H_INCLUDED
 
 #include "../api-internal_p.h"
-#include "../font_p.h"
+#include "../fontdata_p.h"
+#include "../fontface_p.h"
 #include "../support/memops_p.h"
 #include "../support/ptrops_p.h"
 
@@ -19,6 +20,8 @@
 //! Low-level OpenType functionality, not exposed to users directly.
 
 namespace BLOpenType {
+
+struct OTFaceImpl;
 
 //! A range that specifies offset and size of a data table or some part of it.
 struct DataRange {

@@ -25,6 +25,7 @@
 //! \cond INTERNAL
 //! Array container [Impl].
 struct BLArrayImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Pointer to array data.
   void* data;
   //! Array size [in items].
   size_t size;

@@ -1098,7 +1098,7 @@ UNIT(string) {
       s.append(c);
       if (capacity != s.capacity()) {
         size_t implSize = BLStringPrivate::implSizeFromCapacity(s.capacity()).value();
-        INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, s.capacity(), implSize);
+        INFO("  Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, s.capacity(), implSize);
         capacity = s.capacity();
       }
     }

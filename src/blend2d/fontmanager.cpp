@@ -6,6 +6,7 @@
 #include "api-build_p.h"
 #include "filesystem.h"
 #include "font_p.h"
+#include "fontface_p.h"
 #include "fontmanager_p.h"
 #include "object_p.h"
 #include "runtime_p.h"

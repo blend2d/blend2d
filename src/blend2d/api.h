@@ -477,9 +477,11 @@
 //! \endcond
 
 #ifdef __cplusplus
+  #define BL_DEFINE_CONST static constexpr
   #define BL_DEFINE_ENUM(NAME) enum NAME : uint32_t
   #define BL_FORCE_ENUM_UINT32(ENUM_VALUE_PREFIX)
 #else
+  #define BL_DEFINE_CONST static const
   #define BL_DEFINE_ENUM(NAME) typedef enum NAME NAME; enum NAME
   #define BL_FORCE_ENUM_UINT32(ENUM_VALUE_PREFIX) ,ENUM_VALUE_PREFIX##_FORCE_UINT = 0xFFFFFFFFu
 #endif
@@ -714,13 +716,19 @@ BL_FORWARD_DECLARE_STRUCT(BLGlyphRun);
 BL_FORWARD_DECLARE_STRUCT(BLFontUnicodeCoverage);
 BL_FORWARD_DECLARE_STRUCT(BLFontFaceInfo);
 BL_FORWARD_DECLARE_STRUCT(BLFontQueryProperties);
-BL_FORWARD_DECLARE_STRUCT(BLFontFeature);
+BL_FORWARD_DECLARE_STRUCT(BLFontFeatureItem);
+BL_FORWARD_DECLARE_STRUCT(BLFontFeatureSettingsCore);
+BL_FORWARD_DECLARE_STRUCT(BLFontFeatureSettingsImpl);
+BL_FORWARD_DECLARE_STRUCT(BLFontFeatureSettingsView);
 BL_FORWARD_DECLARE_STRUCT(BLFontDesignMetrics);
 BL_FORWARD_DECLARE_STRUCT(BLFontMatrix);
 BL_FORWARD_DECLARE_STRUCT(BLFontMetrics);
 BL_FORWARD_DECLARE_STRUCT(BLFontPanose);
 BL_FORWARD_DECLARE_STRUCT(BLFontTable);
-BL_FORWARD_DECLARE_STRUCT(BLFontVariation);
+BL_FORWARD_DECLARE_STRUCT(BLFontVariationItem);
+BL_FORWARD_DECLARE_STRUCT(BLFontVariationSettingsCore);
+BL_FORWARD_DECLARE_STRUCT(BLFontVariationSettingsImpl);
+BL_FORWARD_DECLARE_STRUCT(BLFontVariationSettingsView);
 BL_FORWARD_DECLARE_STRUCT(BLTextMetrics);
 
 BL_FORWARD_DECLARE_STRUCT(BLFontCore);
@@ -1298,6 +1306,10 @@ BL_INLINE void* operator new(std::size_t, const BLInternal::PlacementNew& p) {
 BL_NODISCARD
 static inline BLResult blTraceError(BLResult result) BL_NOEXCEPT_C { return result; }
 
+BL_BEGIN_C_DECLS
+BL_API BL_NORETURN void BL_CDECL blRuntimeAssertionFailure(const char* file, int line, const char* msg) BL_NOEXCEPT_C;
+BL_END_C_DECLS
+
 //! \}
 //! \}
 
@@ -1547,8 +1559,16 @@ struct BLArrayView {
     size = sizeIn;
   }
 
+  BL_INLINE const T& operator[](size_t index) noexcept {
+    BL_ASSERT(index < size);
+    return data[index];
+  }
+
   BL_INLINE const T* begin() const noexcept { return data; }
   BL_INLINE const T* end() const noexcept { return data + size; }
+
+  BL_INLINE const T* cbegin() const noexcept { return data; }
+  BL_INLINE const T* cend() const noexcept { return data + size; }
 };
 
 // In C++ mode these are just typedefs of `BLArrayView<Type>`.
@@ -1557,7 +1577,7 @@ struct BLArrayView {
 typedef BLArrayView<char> BLStringView;
 
 //! View of untyped data.
-typedef BLArrayView<void> BLDataView;
+typedef BLArrayView<uint8_t> BLDataView;
 
 #else
 
@@ -1577,10 +1597,6 @@ typedef BLArrayView BLDataView;
 #endif
 
 //! \}
-
-BL_BEGIN_C_DECLS
-BL_API BL_NORETURN void BL_CDECL blRuntimeAssertionFailure(const char* file, int line, const char* msg) BL_NOEXCEPT_C;
-BL_END_C_DECLS
 
 //! \}
 

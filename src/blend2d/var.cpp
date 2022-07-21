@@ -8,7 +8,8 @@
 #include "array_p.h"
 #include "bitset_p.h"
 #include "font_p.h"
-#include "fontmanager_p.h"
+#include "fontfeaturesettings_p.h"
+#include "fontvariationsettings_p.h"
 #include "gradient_p.h"
 #include "image_p.h"
 #include "object_p.h"
@@ -623,6 +624,12 @@ BL_API_IMPL bool blVarEquals(const BLUnknown* a, const BLUnknown* b) noexcept {
 
     case BL_OBJECT_TYPE_FONT:
       return blFontEquals(static_cast<const BLFontCore*>(a), static_cast<const BLFontCore*>(b));
+
+    case BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS:
+      return blFontFeatureSettingsEquals(static_cast<const BLFontFeatureSettingsCore*>(a), static_cast<const BLFontFeatureSettingsCore*>(b));
+
+    case BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS:
+      return blFontVariationSettingsEquals(static_cast<const BLFontVariationSettingsCore*>(a), static_cast<const BLFontVariationSettingsCore*>(b));
 
     case BL_OBJECT_TYPE_BIT_SET:
       return blBitSetEquals(static_cast<const BLBitSetCore*>(a), static_cast<const BLBitSetCore*>(b));

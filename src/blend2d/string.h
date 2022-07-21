@@ -101,7 +101,7 @@ public:
         ? BLObjectDetail::kStaticDataSize + 2u
         : BLObjectDetail::kStaticDataSize - 1u,
 
-    //! String signature of an empty SSO string (with size XORed with `kSSOCapacity`).
+    //! Signature of an empty SSO string (with size XORed with `kSSOCapacity`).
     //!
     //! This mask can be used to get quickly SSO string size.
     kSSOEmptySignature = (BL_OBJECT_INFO_MARKER_FLAG) |

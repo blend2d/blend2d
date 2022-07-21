@@ -1342,14 +1342,14 @@ BL_API_IMPL BLResult blPathAddGeometry(BLPathCore* self, BLGeometryType geometry
 
       case BL_GEOMETRY_TYPE_POLYLINED:
       case BL_GEOMETRY_TYPE_POLYLINEI:
-        n = static_cast<const BLArrayView<void>*>(geometryData)->size;
+        n = static_cast<const BLArrayView<uint8_t>*>(geometryData)->size;
         if (!n)
           return BL_SUCCESS;
         break;
 
       case BL_GEOMETRY_TYPE_POLYGOND:
       case BL_GEOMETRY_TYPE_POLYGONI:
-        n = static_cast<const BLArrayView<void>*>(geometryData)->size;
+        n = static_cast<const BLArrayView<uint8_t>*>(geometryData)->size;
         if (!n)
           return BL_SUCCESS;
         n++;
@@ -1359,7 +1359,7 @@ BL_API_IMPL BLResult blPathAddGeometry(BLPathCore* self, BLGeometryType geometry
       case BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXI:
       case BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTD:
       case BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTI: {
-        n = static_cast<const BLArrayView<void>*>(geometryData)->size;
+        n = static_cast<const BLArrayView<uint8_t>*>(geometryData)->size;
         if (!n)
           return BL_SUCCESS;
 
@@ -2672,7 +2672,7 @@ UNIT(path) {
 
       if (capacity != p.capacity()) {
         size_t implSize = BLPathPrivate::implSizeFromCapacity(p.capacity()).value();
-        INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, p.capacity(), implSize);
+        INFO("  Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, p.capacity(), implSize);
 
         capacity = p.capacity();
       }

@@ -406,7 +406,7 @@ enum : uint32_t {
   //! Host memory allocator alignment (can be lower than reality, but cannot be higher).
   BL_ALLOC_ALIGNMENT = 8,
 
-  //! Limits a doubling of a container size after the limit size [in bytes] has reached 8MB. The container will
+  //! Limits doubling of a container size after the limit size [in bytes] has reached 8MB. The container will
   //! use a more conservative approach after the threshold has been reached.
   BL_ALLOC_GROW_LIMIT = 1 << 23,
 

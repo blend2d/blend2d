@@ -13,7 +13,7 @@ endif()
 # Don't create a project if it was already created by another CMakeLists.txt.
 # This allows one library to embed another library without a project collision.
 if (NOT CMAKE_PROJECT_NAME OR "${CMAKE_PROJECT_NAME}" STREQUAL "blend2d")
-  project(blend2d CXX)
+  project(blend2d C CXX)
 endif()
 
 include(CheckCXXCompilerFlag)
@@ -164,7 +164,7 @@ endfunction()
 # Blend2D - Compiler Support
 # ==========================
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
+if ("x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xMSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
   list(APPEND BLEND2D_PRIVATE_CFLAGS
     -MP                      # [+] Multi-Process Compilation.
     -GR-                     # [-] Runtime type information.
@@ -241,7 +241,7 @@ if (BLEND2D_SANITIZE)
     set(BLEND2D_SANITIZE_LFLAGS ${BLEND2D_SANITIZE_CFLAGS})
 
     # Don't omit frame pointer if sanitizers are enabled.
-    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
+    if ("x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xMSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
       list(APPEND BLEND2D_SANITIZE_CFLAGS -Oy-)
     else()
       list(APPEND BLEND2D_SANITIZE_CFLAGS -fno-omit-frame-pointer -g)
@@ -300,7 +300,7 @@ endif()
 
 # TODO: Detect ARM when the support is added.
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
+if ("x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xMSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
   # AVX/AVX2 doesn't need custom defs as MSVC|Intel does define __AVX[2]__
   # similary to other compilers. In addition, we only detect the support
   # for AVX/AVX2 as if these are available all previous instruction sets
@@ -462,10 +462,24 @@ set(BLEND2D_SRC_LIST
   blend2d/font.cpp
   blend2d/font.h
   blend2d/font_p.h
+  blend2d/fontdata.cpp
+  blend2d/fontdata.h
+  blend2d/fontdata_p.h
   blend2d/fontdefs.h
+  blend2d/fontface.cpp
+  blend2d/fontface.h
+  blend2d/fontface_p.h
+  blend2d/fontfeaturesettings.cpp
+  blend2d/fontfeaturesettings.h
+  blend2d/fontfeaturesettings_p.h
   blend2d/fontmanager.cpp
   blend2d/fontmanager.h
   blend2d/fontmanager_p.h
+  blend2d/fonttags.cpp
+  blend2d/fonttags_p.h
+  blend2d/fontvariationsettings.cpp
+  blend2d/fontvariationsettings.h
+  blend2d/fontvariationsettings_p.h
   blend2d/format.cpp
   blend2d/format.h
   blend2d/format_p.h
@@ -828,6 +842,16 @@ if (NOT BLEND2D_EMBED)
                        SOURCES test/bl_test_verify_mt.cpp
                        LIBRARIES blend2d::blend2d
                        CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
+
+    blend2d_add_target(bl_test_c_api TEST
+                       SOURCES test/bl_test_c_api.c
+                       LIBRARIES blend2d::blend2d
+                       CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
+
+    # Sanitizers require C++ linker (C++ sanitizer needs both C++ standard library and C++ sanitizer library support).
+    if (BLEND2D_SANITIZE_CFLAGS)
+      set_target_properties(bl_test_c_api PROPERTIES LINKER_LANGUAGE CXX)
+    endif()
   endif()
 endif()
 

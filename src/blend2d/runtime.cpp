@@ -237,6 +237,11 @@ BL_API_IMPL BLResult blRuntimeInit() noexcept {
   blImageScaleRtInit(rt);
   blPatternRtInit(rt);
   blGradientRtInit(rt);
+  blFontFeatureSettingsRtInit(rt);
+  blFontVariationSettingsRtInit(rt);
+  blFontDataRtInit(rt);
+  blFontFaceRtInit(rt);
+  blOpenTypeRtInit(rt);
   blFontRtInit(rt);
   blFontManagerRtInit(rt);
 

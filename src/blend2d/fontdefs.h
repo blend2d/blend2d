@@ -879,34 +879,57 @@ struct BLFontTable {
 #endif
 };
 
-//! Associates a value with a generic font feature where `tag` describes the feature (as provided by the font) and
-//! `value` describes its value. Some features only allow boolean values 0 and 1 and some also allow higher values
-//! up to 65535.
+//! Associates a font feature tag with a value. Tag describes the feature (as provided by the font) and `value`
+//! describes its value. Some features only allow boolean values 0 and 1 and some also allow higher values up to 65535.
 //!
 //! Registered OpenType features:
 //!   - https://docs.microsoft.com/en-us/typography/opentype/spec/featuretags
 //!   - https://helpx.adobe.com/typekit/using/open-type-syntax.html
-struct BLFontFeature {
+struct BLFontFeatureItem {
+  //! \name Members
+  //! \{
+
   //! Feature tag (32-bit).
   BLTag tag;
-  //! Feature value (should not be greater than 65535).
+  //! Feature value.
+  //!
+  //! \note values greater than 65535 are invalid.
   uint32_t value;
 
+  //! \}
+
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  //! \name Common Functionality
+  //! \{
+
+  BL_INLINE void reset() noexcept { *this = BLFontFeatureItem{}; }
+
+  //! \}
 #endif
 };
 
-//! Associates a value with a font variation feature where `tag` describes variation axis and `value` defines its
-//! value.
-struct BLFontVariation {
+
+//! Associates a font variation tag with a value.
+struct BLFontVariationItem {
+  //! \name Members
+  //! \{
+
   //! Variation tag (32-bit).
   BLTag tag;
   //! Variation value.
+  //!
+  //! \note values outside of [0, 1] range are invalid.
   float value;
 
+  //! \}
+
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  //! \name Common Functionality
+  //! \{
+
+  BL_INLINE void reset() noexcept { *this = BLFontVariationItem{}; }
+
+  //! \}
 #endif
 };
 

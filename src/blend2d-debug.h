@@ -390,7 +390,7 @@ static void blDebugContext_(const BLContextCore* obj, const char* name, int inde
   const char* contextTypeEnum = "NONE\0DUMMY\0PROXY\0RASTER\0";
   const char* fillRuleEnum = "NON_ZERO\0EVEN_ODD\0";
 
-  const BLContextState* state = static_cast<BLContextImpl*>(obj->_d.impl)->state;
+  const BLContextState* state = ((BLContextImpl*)obj->_d.impl)->state;
 
   BL_DEBUG_FMT("%s: {\n", name);
   indent++;
@@ -457,7 +457,7 @@ static void blDebugObject_(const void* obj, const char* name, int indent) {
       break;
 
     default:
-      BL_DEBUG_FMT("BLObject { Type: %u }\n", uint32_t(type));
+      BL_DEBUG_FMT("BLObject { Type: %u }\n", (uint32_t)type);
       break;
   }
 }
