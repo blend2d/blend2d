@@ -1017,7 +1017,7 @@ OnSubRCall:
             if (b0 < 32)
               goto OnOperator;
 
-            if (BL_UNLIKELY(++vIdx >= kCFFValueStackSizeV1))
+            if (BL_UNLIKELY(++vIdx > kCFFValueStackSizeV1))
               goto InvalidData;
 
             if (b0 <= 246) {
