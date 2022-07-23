@@ -9,6 +9,8 @@
 #include "../api-internal_p.h"
 #include "../image_p.h"
 #include "../imagecodec.h"
+#include "../imagedecoder.h"
+#include "../imageencoder.h"
 #include "../pixelconverter.h"
 #include "../runtime_p.h"
 #include "../codec/jpeghuffman_p.h"

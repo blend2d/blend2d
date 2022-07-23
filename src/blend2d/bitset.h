@@ -29,10 +29,9 @@ BL_DEFINE_ENUM(BLBitSetConstants) {
 
 //! \}
 
-//! \name BLBitSet - C API
+//! \name BLBitSet - Structs
 //! \{
 
-//! \cond INTERNAL
 //! BitSet segment.
 //!
 //! Segment provides either a dense set of bits starting at `start` or a range of bits all set to one. The start of
@@ -80,27 +79,7 @@ struct BLBitSetSegment {
 #endif
 };
 
-//! BitSet container [Impl].
-struct BLBitSetImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Count of used segments in `segmentData`.
-  uint32_t segmentCount;
-  //! Count of allocated segments in `segmentData`.
-  uint32_t segmentCapacity;
-
-#ifdef __cplusplus
-  BL_INLINE BLBitSetSegment* segmentData() const noexcept { return (BLBitSetSegment*)(this + 1); }
-  BL_INLINE BLBitSetSegment* segmentDataEnd() const noexcept { return segmentData() + segmentCount; }
-#endif
-};
-//! \endcond
-
-//! BitSet container [C API].
-struct BLBitSetCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLBitSet)
-};
-
-//! BitSet data view [C API].
+//! BitSet data view.
 struct BLBitSetData {
   const BLBitSetSegment* segmentData;
   uint32_t segmentCount;
@@ -118,27 +97,10 @@ struct BLBitSetData {
 #endif
 };
 
-//! BitSet builder [C API].
-struct BLBitSetBuilderCore {
-  //! Shift to get `_areaIndex` from bit index, equals to `log2(kBitCount)`.
-  uint32_t _areaShift;
-  //! Area index - index from 0...N where each index represents `kBitCount` bits.
-  uint32_t _areaIndex;
+//! \}
 
-  /*
-  //! Area word data.
-  uint32_t areaWords[1 << (areaShift - 5)];
-  */
-
-#ifdef __cplusplus
-  enum : uint32_t {
-    kInvalidAreaIndex = 0xFFFFFFFFu
-  };
-
-  BL_INLINE uint32_t* areaWords() noexcept { return reinterpret_cast<uint32_t*>(this + 1); }
-  BL_INLINE const uint32_t* areaWords() const noexcept { return reinterpret_cast<const uint32_t*>(this + 1); }
-#endif
-};
+//! \name BLBitSet - C API
+//! \{
 
 BL_BEGIN_C_DECLS
 
@@ -186,7 +148,55 @@ BL_API BLResult BL_CDECL blBitSetBuilderAddRange(BLBitSetCore* self, BLBitSetBui
 
 BL_END_C_DECLS
 
+//! BitSet container [C API].
+struct BLBitSetCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLBitSet)
+};
+
+//! BitSet builder [C API].
+struct BLBitSetBuilderCore {
+  //! Shift to get `_areaIndex` from bit index, equals to `log2(kBitCount)`.
+  uint32_t _areaShift;
+  //! Area index - index from 0...N where each index represents `kBitCount` bits.
+  uint32_t _areaIndex;
+
+  /*
+  //! Area word data.
+  uint32_t areaWords[1 << (areaShift - 5)];
+  */
+
+#ifdef __cplusplus
+  enum : uint32_t {
+    kInvalidAreaIndex = 0xFFFFFFFFu
+  };
+
+  BL_INLINE uint32_t* areaWords() noexcept { return reinterpret_cast<uint32_t*>(this + 1); }
+  BL_INLINE const uint32_t* areaWords() const noexcept { return reinterpret_cast<const uint32_t*>(this + 1); }
+#endif
+};
+
 //! \}
+
+//! \cond INTERNAL
+//! \name BLBitSet - Internals
+//! \{
+
+//! BitSet container [Impl].
+struct BLBitSetImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Count of used segments in `segmentData`.
+  uint32_t segmentCount;
+  //! Count of allocated segments in `segmentData`.
+  uint32_t segmentCapacity;
+
+#ifdef __cplusplus
+  BL_INLINE BLBitSetSegment* segmentData() const noexcept { return (BLBitSetSegment*)(this + 1); }
+  BL_INLINE BLBitSetSegment* segmentDataEnd() const noexcept { return segmentData() + segmentCount; }
+#endif
+};
+
+//! \}
+//! \endcond
 
 //! \name BLBitSet - C++ API
 //! \{
@@ -211,7 +221,7 @@ BL_END_C_DECLS
 class BLBitSet : public BLBitSetCore {
 public:
   //! \cond INTERNAL
-  //! \name Constants
+  //! \name Internals
   //! \{
 
   enum : uint32_t {
@@ -223,6 +233,8 @@ public:
     kSSORangeIndex = 0xFFFFFFFFu >> 5
   };
 
+  BL_INLINE BLBitSetImpl* _impl() const noexcept { return static_cast<BLBitSetImpl*>(_d.impl); }
+
   //! \}
   //! \endcond
 
@@ -230,19 +242,15 @@ public:
   //! \{
 
   BL_INLINE BLBitSet() noexcept {
-    // Inlined call to `blBitSetInit()`.
     _d.initStatic(BL_OBJECT_TYPE_BIT_SET, BLObjectInfo{kSSORangeIndex});
   }
 
   BL_INLINE BLBitSet(BLBitSet&& other) noexcept {
-    // Inlined call to `blBitSetInitMove()`.
     _d = other._d;
     other._d.initStatic(BL_OBJECT_TYPE_BIT_SET, BLObjectInfo{kSSORangeIndex});
   }
 
-  BL_INLINE BLBitSet(const BLBitSet& other) noexcept {
-    blBitSetInitWeak(this, &other);
-  }
+  BL_INLINE BLBitSet(const BLBitSet& other) noexcept { blBitSetInitWeak(this, &other); }
 
   BL_INLINE BLBitSet(uint32_t startBit, uint32_t endBit) noexcept {
     // Inlined call to `blBitSetInitRange()`.
@@ -312,7 +320,7 @@ public:
   //! Returns the number of segments this BitSet has allocated.
   //!
   //! \note If the BitSet is in SSO mode the returned value is always zero.
-  BL_INLINE uint32_t segmentCapacity() const noexcept { return _d.sso() ? 0 : static_cast<BLBitSetImpl*>(_d.impl)->segmentCapacity; }
+  BL_INLINE uint32_t segmentCapacity() const noexcept { return _d.sso() ? 0 : _impl()->segmentCapacity; }
 
   //! Returns the range of the BitSet as `[startOut, endOut)`.
   //!

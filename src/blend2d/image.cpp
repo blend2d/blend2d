@@ -9,6 +9,8 @@
 #include "format.h"
 #include "image_p.h"
 #include "imagecodec.h"
+#include "imagedecoder.h"
+#include "imageencoder.h"
 #include "imagescale_p.h"
 #include "pixelconverter_p.h"
 #include "runtime_p.h"

@@ -1542,9 +1542,9 @@ void blJpegCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noex
     BL_IMAGE_CODEC_FEATURE_READ  |
     BL_IMAGE_CODEC_FEATURE_WRITE |
     BL_IMAGE_CODEC_FEATURE_LOSSY ;
-  blJpegCodec.impl->name.assign("JPEG");
-  blJpegCodec.impl->vendor.assign("Blend2D");
-  blJpegCodec.impl->mimeType.assign("image/jpeg");
+  blJpegCodec.impl->name.dcast().assign("JPEG");
+  blJpegCodec.impl->vendor.dcast().assign("Blend2D");
+  blJpegCodec.impl->mimeType.dcast().assign("image/jpeg");
   BLStringPrivate::initStatic(&blJpegCodec.impl->extensions, jpegExtensions);
   blJpegCodecObject._d.initDynamic(BL_OBJECT_TYPE_IMAGE_CODEC, BLObjectInfo{BL_OBJECT_INFO_IMMUTABLE_FLAG}, &blJpegCodec.impl);
 

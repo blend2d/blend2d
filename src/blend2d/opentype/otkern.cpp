@@ -701,7 +701,7 @@ BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
     faceI->kern.table = kern;
     faceI->kern.collection[BL_ORIENTATION_HORIZONTAL].groups.shrink();
     faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_HORIZONTAL_KERNING;
-    faceI->featureTags.append(BL_MAKE_TAG('k', 'e', 'r', 'n'));
+    faceI->featureTags.dcast<BLArray<BLTag>>().append(BL_MAKE_TAG('k', 'e', 'r', 'n'));
     faceI->funcs.applyKern = applyKern;
   }
 

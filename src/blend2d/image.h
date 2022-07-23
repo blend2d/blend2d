@@ -151,32 +151,6 @@ struct BLImageScaleOptions {
 //! \name BLImage - C API
 //! \{
 
-//! \cond INTERNAL
-//! 2D raster image [Impl].
-struct BLImageImpl {
-  //! Pixel data.
-  void* pixelData;
-  //! Image stride.
-  intptr_t stride;
-  //! Image size.
-  BLSizeI size;
-  //! Image format.
-  uint8_t format;
-  //! Image flags.
-  uint8_t flags;
-  //! Image depth (in bits).
-  uint16_t depth;
-  //! Reserved for future use, must be zero.
-  uint8_t reserved[4];
-};
-//! \endcond
-
-//! 2D raster image [C API].
-struct BLImageCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLImage)
-};
-
 BL_BEGIN_C_DECLS
 
 BL_API BLResult BL_CDECL blImageInit(BLImageCore* self) BL_NOEXCEPT_C;
@@ -203,7 +177,38 @@ BL_API BLResult BL_CDECL blImageWriteToData(const BLImageCore* self, BLArrayCore
 
 BL_END_C_DECLS
 
+//! 2D raster image [C API].
+struct BLImageCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLImage)
+};
+
 //! \}
+
+//! \cond INTERNAL
+//! \name BLImage - Internals
+//! \{
+
+//! 2D raster image [Impl].
+struct BLImageImpl {
+  //! Pixel data.
+  void* pixelData;
+  //! Image stride.
+  intptr_t stride;
+  //! Image size.
+  BLSizeI size;
+  //! Image format.
+  uint8_t format;
+  //! Image flags.
+  uint8_t flags;
+  //! Image depth (in bits).
+  uint16_t depth;
+  //! Reserved for future use, must be zero.
+  uint8_t reserved[4];
+};
+
+//! \}
+//! \endcond
 
 //! \name BLImage - C++ API
 //! \{
@@ -213,7 +218,12 @@ BL_END_C_DECLS
 class BLImage : public BLImageCore {
 public:
   //! \cond INTERNAL
+  //! \name Internals
+  //! \{
+
   BL_INLINE BLImageImpl* _impl() const noexcept { return static_cast<BLImageImpl*>(_d.impl); }
+
+  //! \}
   //! \endcond
 
   //! \name Construction & Destruction

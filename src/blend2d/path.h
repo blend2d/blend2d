@@ -13,7 +13,7 @@
 //! \addtogroup blend2d_api_geometry
 //! \{
 
-//! \name BLPath and BLStroke Constants
+//! \name BLPath - Constants
 //! \{
 
 //! Path command.
@@ -168,7 +168,7 @@ BL_DEFINE_ENUM(BLOffsetMode) {
 
 //! \}
 
-//! \name BLPath and related C/C++ Structs
+//! \name BLPath - Structs
 //! \{
 
 //! Options used to describe how geometry is approximated.
@@ -226,62 +226,21 @@ struct BLPathView {
 
 //! \}
 
-//! 2D vector path [Impl].
-struct BLPathImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Union of either raw path-data or their `view`.
-  union {
-    struct {
-      //! Command data
-      uint8_t* commandData;
-      //! Vertex data.
-      BLPoint* vertexData;
-      //! Vertex/command count.
-      size_t size;
-    };
-    //! Path data as view.
-    BLPathView view;
-  };
-
-  //! Path vertex/command capacity.
-  size_t capacity;
-
-  //! Path flags related to caching.
-  volatile uint32_t flags;
-};
-
-//! \name BLPath - C API
+//! \name BLPath - Globals
+//!
+//! 2D path functionality is provided by \ref BLPathCore in C API and wrapped by \ref BLPath in C++ API.
 //!
 //! \{
+BL_BEGIN_C_DECLS
 
-//! 2D vector path [C API].
-struct BLPathCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLPath)
-};
+//! Default approximation options used by Blend2D.
+extern BL_API const BLApproximationOptions blDefaultApproximationOptions;
 
-//! Stroke options [C API].
-struct BLStrokeOptionsCore {
-  union {
-    struct {
-      uint8_t startCap;
-      uint8_t endCap;
-      uint8_t join;
-      uint8_t transformOrder;
-      uint8_t reserved[4];
-    };
-    uint8_t caps[BL_STROKE_CAP_POSITION_MAX_VALUE + 1];
-    uint64_t hints;
-  };
+BL_END_C_DECLS
+//! \}
 
-  double width;
-  double miterLimit;
-  double dashOffset;
-  BL_TYPED_MEMBER(BLArrayCore, BLArray<double>, dashArray);
-
-  BL_HAS_TYPED_MEMBERS(BLStrokeOptionsCore)
-
-  BL_DEFINE_OBJECT_DCAST(BLStrokeOptions)
-};
+//! \name BLPath - C API
+//! \{
 
 //! Optional callback that can be used to consume a path data.
 typedef BLResult (BL_CDECL* BLPathSinkFunc)(BLPathCore* path, const void* info, void* closure) BL_NOEXCEPT;
@@ -348,20 +307,68 @@ BL_API BLResult BL_CDECL blStrokeOptionsAssignMove(BLStrokeOptionsCore* self, BL
 BL_API BLResult BL_CDECL blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
+
+//! 2D vector path [C API].
+struct BLPathCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLPath)
+};
+
+//! Stroke options [C API].
+struct BLStrokeOptionsCore {
+  union {
+    struct {
+      uint8_t startCap;
+      uint8_t endCap;
+      uint8_t join;
+      uint8_t transformOrder;
+      uint8_t reserved[4];
+    };
+    uint8_t caps[BL_STROKE_CAP_POSITION_MAX_VALUE + 1];
+    uint64_t hints;
+  };
+
+  double width;
+  double miterLimit;
+  double dashOffset;
+  BL_TYPED_MEMBER(BLArrayCore, BLArray<double>, dashArray);
+
+  BL_HAS_TYPED_MEMBERS(BLStrokeOptionsCore)
+
+  BL_DEFINE_OBJECT_DCAST(BLStrokeOptions)
+};
+
 //! \}
 
-//! \name BLPath and Related Globals
-//!
-//! 2D path functionality is provided by \ref BLPathCore in C API and wrapped by \ref BLPath in C++ API.
-//!
+//! \cond INTERNAL
+//! \name BLPath - Internals
 //! \{
-BL_BEGIN_C_DECLS
 
-//! Default approximation options used by Blend2D.
-extern BL_API const BLApproximationOptions blDefaultApproximationOptions;
+//! 2D vector path [Impl].
+struct BLPathImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Union of either raw path-data or their `view`.
+  union {
+    struct {
+      //! Command data
+      uint8_t* commandData;
+      //! Vertex data.
+      BLPoint* vertexData;
+      //! Vertex/command count.
+      size_t size;
+    };
+    //! Path data as view.
+    BLPathView view;
+  };
 
-BL_END_C_DECLS
+  //! Path vertex/command capacity.
+  size_t capacity;
+
+  //! Path flags related to caching.
+  volatile uint32_t flags;
+};
+
 //! \}
+//! \endcond
 
 //! \name BLPath - C++ API
 //! \{

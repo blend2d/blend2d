@@ -19,9 +19,9 @@
 //! \name Font Manager - Internals - Memory Management
 //! \{
 
-class BLInternalFontManagerImpl : public BLFontManagerImpl {
+class BLFontManagerPrivateImpl : public BLFontManagerImpl {
 public:
-  BL_NONCOPYABLE(BLInternalFontManagerImpl)
+  BL_NONCOPYABLE(BLFontManagerPrivateImpl)
 
   class FamiliesMapNode : public BLArenaHashMapNode {
   public:
@@ -69,17 +69,17 @@ public:
   BLArenaHashMap<SubstitutionMapNode> substitutionMap;
   size_t faceCount = 0;
 
-  BL_INLINE BLInternalFontManagerImpl(const BLFontManagerVirt* virt_) noexcept
+  BL_INLINE BLFontManagerPrivateImpl(const BLFontManagerVirt* virt_) noexcept
     : mutex(),
       allocator(8192 - BLArenaAllocator::kBlockOverhead),
       familiesMap(&allocator),
       substitutionMap(&allocator) { virt = virt_; }
 
-  BL_INLINE ~BLInternalFontManagerImpl() noexcept {}
+  BL_INLINE ~BLFontManagerPrivateImpl() noexcept {}
 };
 
-static BL_INLINE BLInternalFontManagerImpl* blFontManagerGetImpl(const BLFontManagerCore* self) noexcept {
-  return static_cast<BLInternalFontManagerImpl*>(self->_d.impl);
+static BL_INLINE BLFontManagerPrivateImpl* blFontManagerGetImpl(const BLFontManagerCore* self) noexcept {
+  return static_cast<BLFontManagerPrivateImpl*>(self->_d.impl);
 }
 
 //! \}

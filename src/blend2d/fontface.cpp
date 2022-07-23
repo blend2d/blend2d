@@ -24,8 +24,8 @@
 // BLFontFace - Globals
 // ====================
 
-BLInternalFontFaceFuncs blNullFontFaceFuncs;
-static BLObjectEthernalVirtualImpl<BLInternalFontFaceImpl, BLFontFaceVirt> blFontFaceDefaultImpl;
+BLFontFacePrivateFuncs blNullFontFaceFuncs;
+static BLObjectEthernalVirtualImpl<BLFontFacePrivateImpl, BLFontFaceVirt> blFontFaceDefaultImpl;
 
 // BLFontFace - Default Impl
 // =========================
@@ -243,7 +243,7 @@ BLResult blFontFaceGetCharacterCoverage(const BLFontFaceCore* self, BLBitSetCore
   // Don't calculate the `characterCoverage` again if it was already calculated. We don't need atomics here as it
   // is set only once, atomics will be used only if it hasn't been calculated yet or if there is a race (already
   // calculated by another thread, but nullptr at this exact moment here).
-  BLInternalFontFaceImpl* selfI = blFontFaceGetImpl(self);
+  BLFontFacePrivateImpl* selfI = blFontFaceGetImpl(self);
   if (!blObjectAtomicContentTest(&selfI->characterCoverage)) {
     if (selfI->faceInfo.faceType != BL_FONT_FACE_TYPE_OPENTYPE)
       return blTraceError(BL_ERROR_NOT_IMPLEMENTED);

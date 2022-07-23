@@ -46,23 +46,23 @@ static BL_INLINE void blFontMatrixMultiply(BLMatrix2D* dst, const BLMatrix2D* a,
 //! \name BLFont - Internal Memory Management
 //! \{
 
-struct BLInternalFontImpl : public BLFontImpl {};
+struct BLFontPrivateImpl : public BLFontImpl {};
 
-static BL_INLINE BLInternalFontImpl* blFontGetImpl(const BLFontCore* self) noexcept {
-  return static_cast<BLInternalFontImpl*>(self->_d.impl);
+static BL_INLINE BLFontPrivateImpl* blFontGetImpl(const BLFontCore* self) noexcept {
+  return static_cast<BLFontPrivateImpl*>(self->_d.impl);
 }
 
-BL_HIDDEN BLResult blFontImplFree(BLInternalFontImpl* impl, BLObjectInfo info) noexcept;
+BL_HIDDEN BLResult blFontImplFree(BLFontPrivateImpl* impl, BLObjectInfo info) noexcept;
 
 static BL_INLINE bool blFontPrivateIsMutable(const BLFontCore* self) noexcept {
   const size_t* refCountPtr = blObjectImplGetRefCountPtr(self->_d.impl);
   return *refCountPtr == 1;
 }
 
-static BL_INLINE void blFontImplCtor(BLInternalFontImpl* impl) noexcept {
+static BL_INLINE void blFontImplCtor(BLFontPrivateImpl* impl) noexcept {
   impl->face._d = blObjectDefaults[BL_OBJECT_TYPE_FONT_FACE]._d;
-  blCallCtor(impl->featureSettings);
-  blCallCtor(impl->variationSettings);
+  blCallCtor(impl->featureSettings.dcast());
+  blCallCtor(impl->variationSettings.dcast());
 }
 
 //! \}

@@ -216,43 +216,7 @@ struct BLConicalGradientValues {
 //! \}
 
 //! \name BLGradient - C API
-//!
 //! \{
-
-//! \cond INTERNAL
-//! Gradient [Impl].
-struct BLGradientImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Gradient stop data.
-  BLGradientStop* stops;
-  //! Gradient stop count.
-  size_t size;
-  //! Stop capacity.
-  size_t capacity;
-
-  //! Gradient type, see `BLGradientType`.
-  uint8_t gradientType;
-  //! Gradient extend mode, see `BLExtendMode`.
-  uint8_t extendMode;
-  //! Type of the transformation matrix.
-  uint8_t matrixType;
-  //! Reserved, must be zero.
-  uint8_t reserved[1];
-
-  //! Gradient transformation matrix.
-  BLMatrix2D matrix;
-
-  union {
-    //! Gradient values (coordinates, radius, angle).
-    double values[BL_GRADIENT_VALUE_MAX_VALUE + 1];
-    //! Linear parameters.
-    BLLinearGradientValues linear;
-    //! Radial parameters.
-    BLRadialGradientValues radial;
-    //! Conical parameters.
-    BLConicalGradientValues conical;
-  };
-};
-//! \endcond
 
 //! Gradient [C API].
 struct BLGradientCore BL_CLASS_INHERITS(BLObjectCore) {
@@ -301,8 +265,47 @@ BL_END_C_DECLS
 
 //! \}
 
+//! \cond INTERNAL
+//! \name BLGradient - Internals
+//! \{
+
+//! Gradient [Impl].
+struct BLGradientImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Gradient stop data.
+  BLGradientStop* stops;
+  //! Gradient stop count.
+  size_t size;
+  //! Stop capacity.
+  size_t capacity;
+
+  //! Gradient type, see `BLGradientType`.
+  uint8_t gradientType;
+  //! Gradient extend mode, see `BLExtendMode`.
+  uint8_t extendMode;
+  //! Type of the transformation matrix.
+  uint8_t matrixType;
+  //! Reserved, must be zero.
+  uint8_t reserved[1];
+
+  //! Gradient transformation matrix.
+  BLMatrix2D matrix;
+
+  union {
+    //! Gradient values (coordinates, radius, angle).
+    double values[BL_GRADIENT_VALUE_MAX_VALUE + 1];
+    //! Linear parameters.
+    BLLinearGradientValues linear;
+    //! Radial parameters.
+    BLRadialGradientValues radial;
+    //! Conical parameters.
+    BLConicalGradientValues conical;
+  };
+};
+
+//! \}
+//! \endcond
+
 //! \name BLGradient - C++ API
-//!
 //! \{
 #ifdef __cplusplus
 

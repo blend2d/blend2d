@@ -61,6 +61,8 @@
 #include "blend2d/gradient.h"
 #include "blend2d/image.h"
 #include "blend2d/imagecodec.h"
+#include "blend2d/imagedecoder.h"
+#include "blend2d/imageencoder.h"
 #include "blend2d/matrix.h"
 #include "blend2d/object.h"
 #include "blend2d/path.h"

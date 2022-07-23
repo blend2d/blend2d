@@ -162,7 +162,7 @@ BLResult blObjectDetailDestroyUnknownImpl(void* impl, BLObjectInfo info) noexcep
       return BLImagePrivate::freeImpl(static_cast<BLImagePrivateImpl*>(impl), info);
 
     case BL_OBJECT_TYPE_FONT:
-      return blFontImplFree(static_cast<BLInternalFontImpl*>(impl), info);
+      return blFontImplFree(static_cast<BLFontPrivateImpl*>(impl), info);
 
     case BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS:
       return BLFontFeatureSettingsPrivate::freeImpl(static_cast<BLFontFeatureSettingsImpl*>(impl), info);

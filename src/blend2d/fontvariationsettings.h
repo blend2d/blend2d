@@ -42,12 +42,6 @@ struct BLFontVariationSettingsView {
 //! \name BLFontVariationSettings - C API
 //! \{
 
-//! Font variation settings [C API].
-struct BLFontVariationSettingsCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLFontVariationSettings)
-};
-
 BL_BEGIN_C_DECLS
 
 BL_API BLResult BL_CDECL blFontVariationSettingsInit(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
@@ -66,10 +60,15 @@ BL_API bool BL_CDECL blFontVariationSettingsHasKey(const BLFontVariationSettings
 BL_API float BL_CDECL blFontVariationSettingsGetKey(const BLFontVariationSettingsCore* self, BLTag key) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontVariationSettingsSetKey(BLFontVariationSettingsCore* self, BLTag key, float value) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontVariationSettingsRemoveKey(BLFontVariationSettingsCore* self, BLTag key) BL_NOEXCEPT_C;
-
 BL_API bool BL_CDECL blFontVariationSettingsEquals(const BLFontVariationSettingsCore* a, const BLFontVariationSettingsCore* b) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
+
+//! Font variation settings [C API].
+struct BLFontVariationSettingsCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontVariationSettings)
+};
 
 //! \}
 
@@ -100,19 +99,31 @@ struct BLFontVariationSettingsImpl BL_CLASS_INHERITS(BLObjectImpl) {
 class BLFontVariationSettings : public BLFontVariationSettingsCore {
 public:
   //! \cond INTERNAL
+  //! \name Internals
+  //! \{
+
   enum : uint32_t {
-    //! Capacity of an SSO variation settings.
+    //! SSO capacity of \ref BLFontVariationSettings container.
     kSSOCapacity = 3
   };
 
   BL_INLINE BLFontVariationSettingsImpl* _impl() const noexcept { return static_cast<BLFontVariationSettingsImpl*>(_d.impl); }
+
+  //! \}
   //! \endcond
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLFontVariationSettings() noexcept { blFontVariationSettingsInit(this); }
-  BL_INLINE BLFontVariationSettings(BLFontVariationSettings&& other) noexcept { blFontVariationSettingsInitMove(this, &other); }
+  BL_INLINE BLFontVariationSettings() noexcept {
+    _d.initStatic(BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS);
+  }
+
+  BL_INLINE BLFontVariationSettings(BLFontVariationSettings&& other) noexcept {
+    _d = other._d;
+    other._d.initStatic(BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS);
+  }
+
   BL_INLINE BLFontVariationSettings(const BLFontVariationSettings& other) noexcept { blFontVariationSettingsInitWeak(this, &other); }
   BL_INLINE ~BLFontVariationSettings() noexcept { blFontVariationSettingsDestroy(this); }
 

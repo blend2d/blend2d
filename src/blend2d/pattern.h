@@ -17,30 +17,6 @@
 //! \name BLPattern - C API
 //! \{
 
-//! Pattern [Impl].
-//!
-//! The following properties are stored in BLObjectInfo:
-//!
-//!   - Pattern extend mode is stored in BLObjectInfo's 'b' field.
-//!   - Pattern matrix type is stored in BLObjectInfo's 'c' field.
-struct BLPatternImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Image used by the pattern.
-  BL_TYPED_MEMBER(BLImageCore, BLImage, image);
-
-  //! Image area to use.
-  BLRectI area;
-  //! Pattern transformation matrix.
-  BLMatrix2D matrix;
-
-  BL_HAS_TYPED_MEMBERS(BLPatternImpl)
-};
-
-//! Pattern [C API].
-struct BLPatternCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLPattern)
-};
-
 BL_BEGIN_C_DECLS
 
 BL_API BLResult BL_CDECL blPatternInit(BLPatternCore* self) BL_NOEXCEPT_C;
@@ -71,7 +47,36 @@ BL_API bool BL_CDECL blPatternEquals(const BLPatternCore* a, const BLPatternCore
 
 BL_END_C_DECLS
 
+//! Pattern [C API].
+struct BLPatternCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLPattern)
+};
+
 //! \}
+
+//! \cond INTERNAL
+//! \name BLPattern - Internals
+//! \{
+
+//! Pattern [Impl].
+//!
+//! The following properties are stored in BLObjectInfo:
+//!
+//!   - Pattern extend mode is stored in BLObjectInfo's 'b' field.
+//!   - Pattern matrix type is stored in BLObjectInfo's 'c' field.
+struct BLPatternImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Image used by the pattern.
+  BLImageCore image;
+
+  //! Image area to use.
+  BLRectI area;
+  //! Pattern transformation matrix.
+  BLMatrix2D matrix;
+};
+
+//! \}
+//! \endcond
 
 //! \name BLPattern - C++ API
 //! \{

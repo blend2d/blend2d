@@ -460,7 +460,7 @@ static BLResult BL_CDECL blRasterContextImplSetStyle(BLContextImpl* baseImpl, co
       ctxI->internalState.styleType[kOpType] = uint8_t(BL_OBJECT_TYPE_PATTERN);
       style->cmdFlags |= BL_RASTER_COMMAND_FLAG_FETCH_DATA;
       style->styleType = uint8_t(BL_OBJECT_TYPE_PATTERN);
-      style->styleFormat = uint8_t(patternI->image.format());
+      style->styleFormat = uint8_t(patternI->image.dcast().format());
       style->quality = ctxI->hints().patternQuality;
       style->source.fetchData = fetchData;
       break;
@@ -3536,7 +3536,7 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
   ctxI->internalState.globalAlpha = 1.0;
   ctxI->internalState.styleAlpha[0] = 1.0;
   ctxI->internalState.styleAlpha[1] = 1.0;
-  blCallCtor(ctxI->internalState.strokeOptions);
+  blCallCtor(ctxI->internalState.strokeOptions.dcast());
   ctxI->internalState.metaMatrix.reset();
   ctxI->internalState.userMatrix.reset();
   ctxI->internalState.savedStateCount = 0;

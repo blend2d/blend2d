@@ -848,10 +848,10 @@ void blBmpCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexc
     BL_IMAGE_CODEC_FEATURE_READ     |
     BL_IMAGE_CODEC_FEATURE_WRITE    |
     BL_IMAGE_CODEC_FEATURE_LOSSLESS ;
-  blBmpCodec.impl->name.assign("BMP");
-  blBmpCodec.impl->vendor.assign("Blend2D");
-  blBmpCodec.impl->mimeType.assign("image/x-bmp");
-  blBmpCodec.impl->extensions.assign("bmp|ras");
+  blBmpCodec.impl->name.dcast().assign("BMP");
+  blBmpCodec.impl->vendor.dcast().assign("Blend2D");
+  blBmpCodec.impl->mimeType.dcast().assign("image/x-bmp");
+  blBmpCodec.impl->extensions.dcast().assign("bmp|ras");
 
   blBmpCodecObject._d.initDynamic(
     BL_OBJECT_TYPE_IMAGE_CODEC,

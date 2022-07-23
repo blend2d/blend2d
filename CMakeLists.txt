@@ -497,6 +497,10 @@ set(BLEND2D_SRC_LIST
   blend2d/image_p.h
   blend2d/imagecodec.cpp
   blend2d/imagecodec.h
+  blend2d/imagedecoder.cpp
+  blend2d/imagedecoder.h
+  blend2d/imageencoder.cpp
+  blend2d/imageencoder.h
   blend2d/imagescale.cpp
   blend2d/imagescale_p.h
   blend2d/math.cpp

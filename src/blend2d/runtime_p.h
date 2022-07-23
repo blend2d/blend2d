@@ -191,6 +191,8 @@ BL_HIDDEN void blTransformRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blPath2DRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blImageRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blImageCodecRtInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blImageDecoderRtInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blImageEncoderRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blImageScaleRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blPatternRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blGradientRtInit(BLRuntimeContext* rt) noexcept;
@@ -210,6 +212,8 @@ BL_HIDDEN void blStaticPipelineRtInit(BLRuntimeContext* rt) noexcept;
 #if !defined(BL_BUILD_NO_JIT)
 BL_HIDDEN void blDynamicPipelineRtInit(BLRuntimeContext* rt) noexcept;
 #endif
+
+BL_HIDDEN void blRegisterBuiltInCodecs(BLRuntimeContext* rt) noexcept;
 
 //! \}
 //! \endcond

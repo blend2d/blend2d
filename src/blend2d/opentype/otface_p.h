@@ -53,7 +53,7 @@ BL_DEFINE_ENUM_FLAGS(OTFaceFlags)
 //! This class provides extra data required by TrueType / OpenType implementation. It's currently the only
 //! implementation of \ref BLFontFaceImpl available in Blend2D and there will probably not be any other
 //! implementation as OpenType provides enough features required to render text in general.
-struct OTFaceImpl : public BLInternalFontFaceImpl {
+struct OTFaceImpl : public BLFontFacePrivateImpl {
   //! OpenType flags, see OTFlags.
   OTFaceFlags otFlags;
 

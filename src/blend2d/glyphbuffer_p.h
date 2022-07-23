@@ -29,18 +29,18 @@ enum BLGlyphBufferEnums : uint32_t {
   BL_GLYPH_BUFFER_AGGRESIVE_GROWTH = BL_ALLOC_GROW_LIMIT / BL_GLYPH_BUFFER_ANY_ITEM_SIZE,
 };
 
-struct BLInternalGlyphBufferImpl : public BLGlyphBufferImpl {
+struct BLGlyphBufferPrivateImpl : public BLGlyphBufferImpl {
   uint8_t* buffer[2];
   size_t capacity[2];
 
   // Default-constructed data should not be initialized.
-  BL_INLINE constexpr BLInternalGlyphBufferImpl() noexcept
+  BL_INLINE constexpr BLGlyphBufferPrivateImpl() noexcept
     : BLGlyphBufferImpl {},
       buffer { nullptr, nullptr },
       capacity { 0, 0 } {}
 
-  static BLInternalGlyphBufferImpl* create() noexcept {
-    BLInternalGlyphBufferImpl* d = (BLInternalGlyphBufferImpl*)malloc(sizeof(BLInternalGlyphBufferImpl));
+  static BLGlyphBufferPrivateImpl* create() noexcept {
+    BLGlyphBufferPrivateImpl* d = (BLGlyphBufferPrivateImpl*)malloc(sizeof(BLGlyphBufferPrivateImpl));
     if (BL_UNLIKELY(!d))
       return nullptr;
 
@@ -102,8 +102,8 @@ struct BLInternalGlyphBufferImpl : public BLGlyphBufferImpl {
   }
 };
 
-static BL_INLINE BLInternalGlyphBufferImpl* blGlyphBufferGetImpl(const BLGlyphBufferCore* self) noexcept {
-  return static_cast<BLInternalGlyphBufferImpl*>(self->impl);
+static BL_INLINE BLGlyphBufferPrivateImpl* blGlyphBufferGetImpl(const BLGlyphBufferCore* self) noexcept {
+  return static_cast<BLGlyphBufferPrivateImpl*>(self->impl);
 }
 
 static BL_INLINE void blCopyGlyphData(uint32_t* glyphDst, BLGlyphInfo* infoDst, const uint32_t* glyphSrc, const BLGlyphInfo* infoSrc, size_t n) noexcept {

@@ -18,12 +18,6 @@
 //! \name BLFontData - C API
 //! \{
 
-//! Font data [C API].
-struct BLFontDataCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLFontData)
-};
-
 BL_BEGIN_C_DECLS
 
 BL_API BLResult BL_CDECL blFontDataInit(BLFontDataCore* self) BL_NOEXCEPT_C;
@@ -41,6 +35,12 @@ BL_API BLResult BL_CDECL blFontDataListTags(const BLFontDataCore* self, uint32_t
 BL_API size_t BL_CDECL blFontDataQueryTables(const BLFontDataCore* self, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t count) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
+
+//! Font data [C API].
+struct BLFontDataCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontData)
+};
 
 //! \}
 
@@ -82,7 +82,12 @@ struct BLFontDataImpl BL_CLASS_INHERITS(BLObjectImpl) {
 class BLFontData : public BLFontDataCore {
 public:
   //! \cond INTERNAL
+  //! \name Internals
+  //! \{
+
   BL_INLINE BLFontDataImpl* _impl() const noexcept { return static_cast<BLFontDataImpl*>(_d.impl); }
+
+  //! \}
   //! \endcond
 
   //! \name Construction & Destruction

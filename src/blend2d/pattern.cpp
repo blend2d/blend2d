@@ -37,7 +37,7 @@ static BL_INLINE BLResult blPatternImplAlloc(
   setExtendMode(self->_d.info, extendMode);
   setMatrixType(self->_d.info, matrixType);
 
-  blCallCtor(impl->image, image->dcast());
+  blCallCtor(impl->image.dcast(), image->dcast());
   impl->matrix = *matrix;
   impl->area = *area;
 
@@ -416,7 +416,7 @@ BL_API_IMPL bool blPatternEquals(const BLPatternCore* a, const BLPatternCore* b)
   if (!(unsigned(aI->matrix == bI->matrix) & unsigned(aI->area == bI->area)))
     return false;
 
-  return aI->image == bI->image;
+  return aI->image.dcast() == bI->image.dcast();
 }
 
 // BLPattern - Runtime Registration
@@ -425,7 +425,7 @@ BL_API_IMPL bool blPatternEquals(const BLPatternCore* a, const BLPatternCore* b)
 void blPatternRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
-  blCallCtor(BLPatternPrivate::defaultImpl.impl->image);
+  blCallCtor(BLPatternPrivate::defaultImpl.impl->image.dcast());
   BLPatternPrivate::defaultImpl.impl->matrix.reset();
 
   blObjectDefaults[BL_OBJECT_TYPE_PATTERN]._d.initDynamic(

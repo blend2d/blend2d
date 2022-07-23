@@ -50,12 +50,6 @@ struct BLFontFeatureSettingsView {
 //! \name BLFontFeatureSettings - C API
 //! \{
 
-//! Font feature settings [C API].
-struct BLFontFeatureSettingsCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLFontFeatureSettings)
-};
-
 BL_BEGIN_C_DECLS
 
 BL_API BLResult BL_CDECL blFontFeatureSettingsInit(BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
@@ -74,15 +68,20 @@ BL_API bool BL_CDECL blFontFeatureSettingsHasKey(const BLFontFeatureSettingsCore
 BL_API uint32_t BL_CDECL blFontFeatureSettingsGetKey(const BLFontFeatureSettingsCore* self, BLTag key) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontFeatureSettingsSetKey(BLFontFeatureSettingsCore* self, BLTag key, uint32_t value) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontFeatureSettingsRemoveKey(BLFontFeatureSettingsCore* self, BLTag key) BL_NOEXCEPT_C;
-
 BL_API bool BL_CDECL blFontFeatureSettingsEquals(const BLFontFeatureSettingsCore* a, const BLFontFeatureSettingsCore* b) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
 
+//! Font feature settings [C API].
+struct BLFontFeatureSettingsCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontFeatureSettings)
+};
+
 //! \}
 
 //! \cond INTERNAL
-//! \name BLFontFeatureSettings - Impl
+//! \name BLFontFeatureSettings - Internals
 //! \{
 
 //! Font feature settings [Impl].
@@ -109,19 +108,31 @@ struct BLFontFeatureSettingsImpl BL_CLASS_INHERITS(BLObjectImpl) {
 class BLFontFeatureSettings : public BLFontFeatureSettingsCore {
 public:
   //! \cond INTERNAL
+  //! \name Internals
+  //! \{
+
   enum : uint32_t {
-    //! Capacity of an SSO feature settings.
-    kSSOCapacity = 12
+    //! SSO capacity of \ref BLFontFeatureSettings container.
+    kSSOCapacity = 12u
   };
 
   BL_INLINE BLFontFeatureSettingsImpl* _impl() const noexcept { return static_cast<BLFontFeatureSettingsImpl*>(_d.impl); }
+
+  //! \}
   //! \endcond
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLFontFeatureSettings() noexcept { blFontFeatureSettingsInit(this); }
-  BL_INLINE BLFontFeatureSettings(BLFontFeatureSettings&& other) noexcept { blFontFeatureSettingsInitMove(this, &other); }
+  BL_INLINE BLFontFeatureSettings() noexcept {
+    _d.initStatic(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
+  }
+
+  BL_INLINE BLFontFeatureSettings(BLFontFeatureSettings&& other) noexcept {
+    _d = other._d;
+    other._d.initStatic(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
+  }
+
   BL_INLINE BLFontFeatureSettings(const BLFontFeatureSettings& other) noexcept { blFontFeatureSettingsInitWeak(this, &other); }
   BL_INLINE ~BLFontFeatureSettings() noexcept { blFontFeatureSettingsDestroy(this); }
 

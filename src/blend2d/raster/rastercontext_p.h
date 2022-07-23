@@ -387,7 +387,7 @@ public:
   BL_INLINE const BLContextHints& hints() const noexcept { return internalState.hints; }
   BL_INLINE const BLApproximationOptions& approximationOptions() const noexcept { return internalState.approximationOptions; }
 
-  BL_INLINE const BLStrokeOptions& strokeOptions() const noexcept { return internalState.strokeOptions; }
+  BL_INLINE const BLStrokeOptions& strokeOptions() const noexcept { return internalState.strokeOptions.dcast(); }
 
   BL_INLINE uint32_t globalAlphaI() const noexcept { return internalState.globalAlphaI; }
   BL_INLINE double globalAlphaD() const noexcept { return internalState.globalAlpha; }

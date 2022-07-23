@@ -12,36 +12,7 @@
 //! \{
 
 //! \name BLString - C API
-//!
 //! \{
-
-//! \cond INTERNAL
-//! Byte string [Impl].
-struct BLStringImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! String size [in bytes].
-  size_t size;
-  //! String data capacity [in bytes].
-  size_t capacity;
-
-#ifdef __cplusplus
-  BL_INLINE BLStringImpl() noexcept = default;
-
-  BL_INLINE constexpr BLStringImpl(size_t sizeIn, size_t capacityIn) noexcept
-    : size(sizeIn),
-      capacity(capacityIn) {}
-
-  //! String data [null terminated] follows BLStringImpl data.
-  BL_NODISCARD
-  BL_INLINE char* data() noexcept { return reinterpret_cast<char*>(this) + sizeof(BLStringImpl); }
-#endif
-};
-//! \endcond
-
-//! Byte string [C API].
-struct BLStringCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLString)
-};
 
 BL_BEGIN_C_DECLS
 
@@ -82,7 +53,40 @@ BL_API int BL_CDECL blStringCompareData(const BLStringCore* self, const char* st
 
 BL_END_C_DECLS
 
+//! Byte string [C API].
+struct BLStringCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLString)
+};
+
 //! \}
+
+//! \cond INTERNAL
+//! \name BLString - Internal
+//! \{
+
+//! Byte string [Impl].
+struct BLStringImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! String size [in bytes].
+  size_t size;
+  //! String data capacity [in bytes].
+  size_t capacity;
+
+#ifdef __cplusplus
+  BL_INLINE BLStringImpl() noexcept = default;
+
+  BL_INLINE constexpr BLStringImpl(size_t sizeIn, size_t capacityIn) noexcept
+    : size(sizeIn),
+      capacity(capacityIn) {}
+
+  //! String data [null terminated] follows BLStringImpl data.
+  BL_NODISCARD
+  BL_INLINE char* data() noexcept { return reinterpret_cast<char*>(this) + sizeof(BLStringImpl); }
+#endif
+};
+
+//! \}
+//! \endcond
 
 //! \name BLString - C++ API
 //! \{
@@ -95,6 +99,9 @@ BL_END_C_DECLS
 class BLString : public BLStringCore {
 public:
   //! \cond INTERNAL
+  //! \name Internals
+  //! \{
+
   enum : uint32_t {
     //! Capacity of an SSO string - depends actually on architecture endianness.
     kSSOCapacity =
@@ -112,6 +119,8 @@ public:
   };
 
   BL_INLINE BLStringImpl* _impl() const noexcept { return static_cast<BLStringImpl*>(_d.impl); }
+
+  //! \}
   //! \endcond
 
   //! \name Construction & Destruction

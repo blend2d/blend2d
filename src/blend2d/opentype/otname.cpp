@@ -88,8 +88,8 @@ static BLResult convertNameStringToUtf8(BLString& dst, BLArrayView<uint8_t> src,
 }
 
 static void normalizeFamilyAndSubfamily(OTFaceImpl* faceI, Trace trace) noexcept {
-  BLString& familyName = faceI->familyName;
-  BLString& subfamilyName = faceI->subfamilyName;
+  BLString& familyName = faceI->familyName.dcast();
+  BLString& subfamilyName = faceI->subfamilyName.dcast();
 
   // Some fonts duplicate font subfamily-name in family-name, we try to match such cases and truncate the sub-family
   // in such case.
@@ -321,7 +321,7 @@ BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
     if (BL_UNLIKELY(stringOffset >= stringRegionSize || stringRegionSize - stringOffset < stringLength))
       return blTraceError(BL_ERROR_INVALID_DATA);
 
-    BLString* dst = nullptr;
+    BLStringCore* dst = nullptr;
     switch (nameId) {
       case BL_FONT_STRING_ID_FULL_NAME:
         dst = &faceI->fullName;
@@ -347,15 +347,15 @@ BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
     if (dst) {
       const uint8_t* src = name.data + stringRegionOffset + stringOffset;
       BLTextEncoding encoding = encodingFromPlatformId(platformId);
-      BL_PROPAGATE(convertNameStringToUtf8(*dst, BLArrayView<uint8_t> { src, stringLength }, encoding));
+      BL_PROPAGATE(convertNameStringToUtf8(dst->dcast(), BLArrayView<uint8_t> { src, stringLength }, encoding));
     }
   }
 
   normalizeFamilyAndSubfamily(faceI, trace);
   trace.info("Family=%s [SubFamily=%s] {PostScriptName=%s}\n",
-             faceI->familyName.data(),
-             faceI->subfamilyName.data(),
-             faceI->postScriptName.data());
+             faceI->familyName.dcast().data(),
+             faceI->subfamilyName.dcast().data(),
+             faceI->postScriptName.dcast().data());
   return BL_SUCCESS;
 }
 

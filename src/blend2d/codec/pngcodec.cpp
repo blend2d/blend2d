@@ -1652,10 +1652,10 @@ void blPngCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexc
     BL_IMAGE_CODEC_FEATURE_READ     |
     BL_IMAGE_CODEC_FEATURE_WRITE    |
     BL_IMAGE_CODEC_FEATURE_LOSSLESS ;
-  blPngCodec.impl->name.assign("PNG");
-  blPngCodec.impl->vendor.assign("Blend2D");
-  blPngCodec.impl->mimeType.assign("image/png");
-  blPngCodec.impl->extensions.assign("png");
+  blPngCodec.impl->name.dcast().assign("PNG");
+  blPngCodec.impl->vendor.dcast().assign("Blend2D");
+  blPngCodec.impl->mimeType.dcast().assign("image/png");
+  blPngCodec.impl->extensions.dcast().assign("png");
 
   blPngCodecObject._d.initDynamic(BL_OBJECT_TYPE_IMAGE_CODEC, BLObjectInfo{BL_OBJECT_INFO_IMMUTABLE_FLAG}, &blPngCodec.impl);
 

@@ -17,7 +17,7 @@
 // BLFontData - Globals
 // ====================
 
-static BLObjectEthernalVirtualImpl<BLInternalFontDataImpl, BLFontDataVirt> blFontDataDefaultImpl;
+static BLObjectEthernalVirtualImpl<BLFontDataPrivateImpl, BLFontDataVirt> blFontDataDefaultImpl;
 
 // BLFontData - Default Impl
 // =========================
@@ -44,7 +44,7 @@ static size_t BL_CDECL blNullFontDataImplQueryTables(const BLFontDataImpl* impl,
 
 static BLFontDataVirt blMemFontDataVirt;
 
-struct BLMemFontDataImpl : public BLInternalFontDataImpl {
+struct BLMemFontDataImpl : public BLFontDataPrivateImpl {
   //! Pointer to the start of font data.
   void* data;
   //! Size of `data` [in bytes].
@@ -360,14 +360,14 @@ BLResult blFontDataCreateFromData(BLFontDataCore* self, const void* data, size_t
 BLResult blFontDataListTags(const BLFontDataCore* self, uint32_t faceIndex, BLArrayCore* dst) noexcept {
   BL_ASSERT(self->_d.isFontData());
 
-  BLInternalFontDataImpl* selfI = blFontDataGetImpl(self);
+  BLFontDataPrivateImpl* selfI = blFontDataGetImpl(self);
   return selfI->virt->listTags(selfI, faceIndex, dst);
 }
 
 size_t blFontDataQueryTables(const BLFontDataCore* self, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t count) noexcept {
   BL_ASSERT(self->_d.isFontData());
 
-  BLInternalFontDataImpl* selfI = blFontDataGetImpl(self);
+  BLFontDataPrivateImpl* selfI = blFontDataGetImpl(self);
   return selfI->virt->queryTables(selfI, faceIndex, dst, tags, count);
 }
 

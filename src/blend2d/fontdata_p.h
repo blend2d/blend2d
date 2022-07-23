@@ -67,16 +67,16 @@ static BL_INLINE BLFontTableT<T> blFontSubTableCheckedT(const BLFontTable& table
 //! \name BLFontData - Impl
 //! \{
 
-struct BLInternalFontDataImpl : public BLFontDataImpl {
+struct BLFontDataPrivateImpl : public BLFontDataImpl {
   volatile size_t backRefCount;
   BLArray<BLFontFaceImpl*> faceCache;
 };
 
-static BL_INLINE BLInternalFontDataImpl* blFontDataGetImpl(const BLFontDataCore* self) noexcept {
-  return static_cast<BLInternalFontDataImpl*>(self->_d.impl);
+static BL_INLINE BLFontDataPrivateImpl* blFontDataGetImpl(const BLFontDataCore* self) noexcept {
+  return static_cast<BLFontDataPrivateImpl*>(self->_d.impl);
 }
 
-static BL_INLINE void blFontDataImplCtor(BLInternalFontDataImpl* impl, BLFontDataVirt* virt) noexcept {
+static BL_INLINE void blFontDataImplCtor(BLFontDataPrivateImpl* impl, BLFontDataVirt* virt) noexcept {
   impl->virt = virt;
   impl->faceCount = 0;
   impl->faceType = BL_FONT_FACE_TYPE_NONE;

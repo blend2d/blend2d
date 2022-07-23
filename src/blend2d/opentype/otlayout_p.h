@@ -34,10 +34,10 @@ struct GSubContext {
     size_t end;
   };
 
-  BLInternalGlyphBufferImpl* gbd;
+  BLGlyphBufferPrivateImpl* gbd;
   WorkBuffer in, out;
 
-  BL_INLINE void init(BLInternalGlyphBufferImpl* gbd_) noexcept {
+  BL_INLINE void init(BLGlyphBufferPrivateImpl* gbd_) noexcept {
     gbd = gbd_;
 
     in.glyphData = gbd->content;
@@ -130,14 +130,14 @@ struct GSubContext {
 };
 
 struct GPosContext {
-  BLInternalGlyphBufferImpl* gbd;
+  BLGlyphBufferPrivateImpl* gbd;
   uint32_t* glyphData;
   BLGlyphInfo* infoData;
   BLGlyphPlacement* placementData;
   size_t index;
   size_t end;
 
-  BL_INLINE void init(BLInternalGlyphBufferImpl* gbd_) noexcept {
+  BL_INLINE void init(BLGlyphBufferPrivateImpl* gbd_) noexcept {
     gbd = gbd_;
     glyphData = gbd->content;
     infoData = gbd->infoData;

@@ -234,6 +234,8 @@ BL_API_IMPL BLResult blRuntimeInit() noexcept {
   blPath2DRtInit(rt);
   blImageRtInit(rt);
   blImageCodecRtInit(rt);
+  blImageDecoderRtInit(rt);
+  blImageEncoderRtInit(rt);
   blImageScaleRtInit(rt);
   blPatternRtInit(rt);
   blGradientRtInit(rt);
@@ -254,6 +256,7 @@ BL_API_IMPL BLResult blRuntimeInit() noexcept {
 #endif
 
   blContextRtInit(rt);
+  blRegisterBuiltInCodecs(rt);
 
   return BL_SUCCESS;
 }

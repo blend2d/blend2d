@@ -26,12 +26,6 @@
 //! \name BLFont - C API
 //! \{
 
-//! Font [C API].
-struct BLFontCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLFont)
-};
-
 BL_BEGIN_C_DECLS
 
 BL_API BLResult BL_CDECL blFontInit(BLFontCore* self) BL_NOEXCEPT_C;
@@ -65,6 +59,12 @@ BL_API BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, const
 
 BL_END_C_DECLS
 
+//! Font [C API].
+struct BLFontCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFont)
+};
+
 //! \}
 
 //! \cond INTERNAL
@@ -74,7 +74,7 @@ BL_END_C_DECLS
 //! Font [Impl].
 struct BLFontImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Font-face used by this font.
-  BL_TYPED_MEMBER(BLFontFaceCore, BLFontFace, face);
+  BLFontFaceCore face;
 
   //! Font width (1..1000) [0 if the font is not initialized].
   uint16_t weight;
@@ -90,11 +90,9 @@ struct BLFontImpl BL_CLASS_INHERITS(BLObjectImpl) {
   BLFontMatrix matrix;
 
   //! Assigned font features (key/value pairs).
-  BL_TYPED_MEMBER(BLFontFeatureSettingsCore, BLFontFeatureSettings, featureSettings);
+  BLFontFeatureSettingsCore featureSettings;
   //! Assigned font variations (key/value pairs).
-  BL_TYPED_MEMBER(BLFontVariationSettingsCore, BLFontVariationSettings, variationSettings);
-
-  BL_HAS_TYPED_MEMBERS(BLFontImpl)
+  BLFontVariationSettingsCore variationSettings;
 };
 
 //! \}
@@ -109,7 +107,12 @@ struct BLFontImpl BL_CLASS_INHERITS(BLObjectImpl) {
 class BLFont : public BLFontCore {
 public:
   //! \cond INTERNAL
+  //! \name Internals
+  //! \{
+
   BL_INLINE BLFontImpl* _impl() const noexcept { return static_cast<BLFontImpl*>(_d.impl); }
+
+  //! \}
   //! \endcond
 
   //! \name Construction & Destruction
@@ -145,7 +148,7 @@ public:
   BL_INLINE BLResult assign(const BLFont& other) noexcept { return blFontAssignWeak(this, &other); }
 
   //! Tests whether the font is a valid instance.
-  BL_INLINE bool isValid() const noexcept { return _impl()->face.isValid(); }
+  BL_INLINE bool isValid() const noexcept { return _impl()->face.dcast().isValid(); }
   //! Tests whether the font is empty, which the same as `!isValid()`.
   BL_INLINE bool empty() const noexcept { return !isValid(); }
 
@@ -166,9 +169,9 @@ public:
   //! \{
 
   //! Returns the type of the font's associated font-face, see `BLFontFaceType`.
-  BL_INLINE uint32_t faceType() const noexcept { return _impl()->face.faceType(); }
+  BL_INLINE uint32_t faceType() const noexcept { return face().faceType(); }
   //! Returns the flags of the font, see `BLFontFaceFlags`.
-  BL_INLINE uint32_t faceFlags() const noexcept { return _impl()->face.faceFlags(); }
+  BL_INLINE uint32_t faceFlags() const noexcept { return face().faceFlags(); }
 
   //! Returns the size of the font (as float).
   BL_INLINE float size() const noexcept { return _impl()->metrics.size; }
@@ -178,7 +181,7 @@ public:
   //! Returns the font's associated font-face.
   //!
   //! Returns the same font-face, which was passed to `createFromFace()`.
-  BL_INLINE const BLFontFace& face() const noexcept { return _impl()->face; }
+  BL_INLINE const BLFontFace& face() const noexcept { return _impl()->face.dcast(); }
 
   //! Returns the weight of the font.
   BL_INLINE uint32_t weight() const noexcept { return _impl()->weight; }
@@ -207,9 +210,9 @@ public:
   BL_INLINE const BLFontDesignMetrics& designMetrics() const noexcept { return face().designMetrics(); }
 
   //! Returns font feature settings.
-  BL_INLINE const BLFontFeatureSettings& featureSettings() const noexcept { return _impl()->featureSettings; }
+  BL_INLINE const BLFontFeatureSettings& featureSettings() const noexcept { return _impl()->featureSettings.dcast(); }
   //! Returns font variation settings.
-  BL_INLINE const BLFontVariationSettings& variations() const noexcept { return _impl()->variationSettings; }
+  BL_INLINE const BLFontVariationSettings& variations() const noexcept { return _impl()->variationSettings.dcast(); }
 
   //! Sets font feature settings to `featureSettings`.
   BL_INLINE BLResult setFeatureSettings(const BLFontFeatureSettingsCore& featureSettings) noexcept { return blFontSetFeatureSettings(this, &featureSettings); }

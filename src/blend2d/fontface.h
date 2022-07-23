@@ -23,12 +23,6 @@
 //! \name BLFontFace - C API
 //! \{
 
-//! Font face [C API].
-struct BLFontFaceCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLFontFace)
-};
-
 BL_BEGIN_C_DECLS
 
 BL_API BLResult BL_CDECL blFontFaceInit(BLFontFaceCore* self) BL_NOEXCEPT_C;
@@ -49,6 +43,12 @@ BL_API BLResult BL_CDECL blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self
 BL_API BLResult BL_CDECL blFontFaceGetCharacterCoverage(const BLFontFaceCore* self, BLBitSetCore* out) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
+
+//! Font face [C API].
+struct BLFontFaceCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontFace)
+};
 
 //! \}
 
@@ -79,20 +79,20 @@ struct BLFontFaceImpl BL_CLASS_INHERITS(BLObjectImpl) {
   BLUniqueId uniqueId;
 
   //! Font data.
-  BL_TYPED_MEMBER(BLFontDataCore, BLFontData, data);
+  BLFontDataCore data;
   //! Full name.
-  BL_TYPED_MEMBER(BLStringCore, BLString, fullName);
+  BLStringCore fullName;
   //! Family name.
-  BL_TYPED_MEMBER(BLStringCore, BLString, familyName);
+  BLStringCore familyName;
   //! Subfamily name.
-  BL_TYPED_MEMBER(BLStringCore, BLString, subfamilyName);
+  BLStringCore subfamilyName;
   //! PostScript name.
-  BL_TYPED_MEMBER(BLStringCore, BLString, postScriptName);
+  BLStringCore postScriptName;
 
   //! Script tags list (OpenType).
-  BL_TYPED_MEMBER(BLArrayCore, BLArray<BLTag>, scriptTags);
+  BLArrayCore scriptTags;
   //! Feature tags list (OpenType).
-  BL_TYPED_MEMBER(BLArrayCore, BLArray<BLTag>, featureTags);
+  BLArrayCore featureTags;
 
   //! Font-face metrics in design units.
   BLFontDesignMetrics designMetrics;
@@ -100,8 +100,6 @@ struct BLFontFaceImpl BL_CLASS_INHERITS(BLObjectImpl) {
   BLFontUnicodeCoverage unicodeCoverage;
   //! Font-face panose classification.
   BLFontPanose panose;
-
-  BL_HAS_TYPED_MEMBERS(BLFontFaceImpl)
 };
 
 //! \}
@@ -115,7 +113,12 @@ struct BLFontFaceImpl BL_CLASS_INHERITS(BLObjectImpl) {
 class BLFontFace : public BLFontFaceCore {
 public:
   //! \cond INTERNAL
+  //! \name Internals
+  //! \{
+
   BL_INLINE BLFontFaceImpl* _impl() const noexcept { return static_cast<BLFontFaceImpl*>(_d.impl); }
+
+  //! \}
   //! \endcond
 
   //! \name Construction & Destruction
@@ -259,21 +262,21 @@ public:
   BL_INLINE BLUniqueId uniqueId() const noexcept { return _impl()->uniqueId; }
 
   //! Returns `BLFontData` associated with this font-face.
-  BL_INLINE const BLFontData& data() const noexcept { return _impl()->data; }
+  BL_INLINE const BLFontData& data() const noexcept { return _impl()->data.dcast(); }
 
   //! Returns a full of the font.
-  BL_INLINE const BLString& fullName() const noexcept { return _impl()->fullName; }
+  BL_INLINE const BLString& fullName() const noexcept { return _impl()->fullName.dcast(); }
   //! Returns a family name of the font.
-  BL_INLINE const BLString& familyName() const noexcept { return _impl()->familyName; }
+  BL_INLINE const BLString& familyName() const noexcept { return _impl()->familyName.dcast(); }
   //! Returns a subfamily name of the font.
-  BL_INLINE const BLString& subfamilyName() const noexcept { return _impl()->subfamilyName; }
+  BL_INLINE const BLString& subfamilyName() const noexcept { return _impl()->subfamilyName.dcast(); }
   //! Returns a PostScript name of the font.
-  BL_INLINE const BLString& postScriptName() const noexcept { return _impl()->postScriptName; }
+  BL_INLINE const BLString& postScriptName() const noexcept { return _impl()->postScriptName.dcast(); }
 
   //! Returns script tags provided by this `BLFontFace` (OpenType).
   //!
   //! Each script tag is represented by 4 characters encoded in `BLTag`.
-  BL_INLINE const BLArray<BLTag>& scriptTags() const noexcept { return _impl()->scriptTags; }
+  BL_INLINE const BLArray<BLTag>& scriptTags() const noexcept { return _impl()->scriptTags.dcast<BLArray<BLTag>>(); }
 
   //! Returns feature tags provided by this `BLFontFace` (OpenType).
   //!
@@ -281,7 +284,7 @@ public:
   //!
   //! Feature registry:
   //!   - Microsoft <https://docs.microsoft.com/en-us/typography/opentype/spec/featurelist>
-  BL_INLINE const BLArray<BLTag>& featureTags() const noexcept { return _impl()->featureTags; }
+  BL_INLINE const BLArray<BLTag>& featureTags() const noexcept { return _impl()->featureTags.dcast<BLArray<BLTag>>(); }
 
   //! Returns design metrics of this `BLFontFace`.
   BL_INLINE const BLFontDesignMetrics& designMetrics() const noexcept { return _impl()->designMetrics; }

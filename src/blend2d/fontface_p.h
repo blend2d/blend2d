@@ -24,7 +24,7 @@ namespace BLOpenType { struct OTFaceImpl; }
 //! \name BLFontFace - Internal Memory Management
 //! \{
 
-struct BLInternalFontFaceFuncs {
+struct BLFontFacePrivateFuncs {
   BLResult (BL_CDECL* mapTextToGlyphs)(
     const BLFontFaceImpl* impl,
     uint32_t* content,
@@ -76,42 +76,42 @@ struct BLInternalFontFaceFuncs {
     size_t count) BL_NOEXCEPT;
 };
 
-BL_HIDDEN extern BLInternalFontFaceFuncs blNullFontFaceFuncs;
+BL_HIDDEN extern BLFontFacePrivateFuncs blNullFontFaceFuncs;
 
-struct BLInternalFontFaceImpl : public BLFontFaceImpl {
+struct BLFontFacePrivateImpl : public BLFontFaceImpl {
   BLBitSetCore characterCoverage;
-  BLInternalFontFaceFuncs funcs;
+  BLFontFacePrivateFuncs funcs;
 };
 
-template<typename T = BLInternalFontFaceImpl>
+template<typename T = BLFontFacePrivateImpl>
 static BL_INLINE T* blFontFaceGetImpl(const BLFontFaceCore* self) noexcept {
-  return static_cast<T*>(static_cast<BLInternalFontFaceImpl*>(self->_d.impl));
+  return static_cast<T*>(static_cast<BLFontFacePrivateImpl*>(self->_d.impl));
 }
 
-static BL_INLINE void blFontFaceImplCtor(BLInternalFontFaceImpl* impl, BLFontFaceVirt* virt, BLInternalFontFaceFuncs& funcs) noexcept {
+static BL_INLINE void blFontFaceImplCtor(BLFontFacePrivateImpl* impl, BLFontFaceVirt* virt, BLFontFacePrivateFuncs& funcs) noexcept {
   impl->virt = virt;
-  blCallCtor(impl->data);
-  blCallCtor(impl->fullName);
-  blCallCtor(impl->familyName);
-  blCallCtor(impl->subfamilyName);
-  blCallCtor(impl->postScriptName);
-  blCallCtor(impl->scriptTags);
-  blCallCtor(impl->featureTags);
+  blCallCtor(impl->data.dcast());
+  blCallCtor(impl->fullName.dcast());
+  blCallCtor(impl->familyName.dcast());
+  blCallCtor(impl->subfamilyName.dcast());
+  blCallCtor(impl->postScriptName.dcast());
+  blCallCtor(impl->scriptTags.dcast<BLArray<BLTag>>());
+  blCallCtor(impl->featureTags.dcast<BLArray<BLTag>>());
   blObjectAtomicContentInit(&impl->characterCoverage);
   impl->funcs = funcs;
 }
 
-static BL_INLINE void blFontFaceImplDtor(BLInternalFontFaceImpl* impl) noexcept {
+static BL_INLINE void blFontFaceImplDtor(BLFontFacePrivateImpl* impl) noexcept {
   if (blObjectAtomicContentTest(&impl->characterCoverage))
-    blCallDtor(impl->characterCoverage);
+    blCallDtor(impl->characterCoverage.dcast());
 
-  blCallDtor(impl->featureTags);
-  blCallDtor(impl->scriptTags);
-  blCallDtor(impl->postScriptName);
-  blCallDtor(impl->subfamilyName);
-  blCallDtor(impl->familyName);
-  blCallDtor(impl->fullName);
-  blCallDtor(impl->data);
+  blCallDtor(impl->featureTags.dcast<BLArray<BLTag>>());
+  blCallDtor(impl->scriptTags.dcast<BLArray<BLTag>>());
+  blCallDtor(impl->postScriptName.dcast());
+  blCallDtor(impl->subfamilyName.dcast());
+  blCallDtor(impl->familyName.dcast());
+  blCallDtor(impl->fullName.dcast());
+  blCallDtor(impl->data.dcast());
 }
 
 //! \}
