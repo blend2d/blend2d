@@ -472,7 +472,7 @@ BLResult blFontFeatureSettingsSetKey(BLFontFeatureSettingsCore* self, BLTag key,
 
     // Turn the SSO settings to dynamic settings, because some (or multiple) cases below are true:
     //   a) The `key` doesn't have a corresponding feature id, thus it cannot be used in SSO mode.
-    //   b) The `value` is not in [0, 1] range.
+    //   b) The `value` is not either 0 or 1.
     //   c) There is no room in SSO storage to insert another key/value pair.
     BLObjectImplSize implSize = blObjectAlignImplSize(implSizeFromCapacity(blMax<size_t>(size + 1, 4u)));
     BLFontFeatureSettingsCore tmp;

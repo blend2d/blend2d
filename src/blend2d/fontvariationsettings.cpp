@@ -466,7 +466,7 @@ BLResult blFontVariationSettingsSetKey(BLFontVariationSettingsCore* self, BLTag 
 
           // Update the key and object info - updates the size (increments one), adds a new key, and shifts all ids after `index`.
           uint32_t ssoBits = self->_d.info.bits + kSSOSizeIncrement;
-          uint32_t bitIndex = index * kSSOTagBitSize;
+          uint32_t bitIndex = uint32_t(index * kSSOTagBitSize);
           uint32_t keysAfterIndexMask = ((1u << (nKeysAfterIndex * kSSOTagBitSize)) - 1u) << bitIndex;
           self->_d.info.bits = (ssoBits & ~keysAfterIndexMask) | ((ssoBits & keysAfterIndexMask) << kSSOTagBitSize) | (id << bitIndex);
           return BL_SUCCESS;
@@ -480,8 +480,7 @@ BLResult blFontVariationSettingsSetKey(BLFontVariationSettingsCore* self, BLTag 
 
     // Turn the SSO settings to dynamic settings, because some (or multiple) cases below are true:
     //   a) The `key` doesn't have a corresponding variation id, thus it cannot be used in SSO mode.
-    //   b) The `value` is not in [0, 1] range.
-    //   c) There is no room in SSO storage to insert another key/value pair.
+    //   b) There is no room in SSO storage to insert another key/value pair.
     BLObjectImplSize implSize = blObjectAlignImplSize(implSizeFromCapacity(blMax<size_t>(size + 1, 4u)));
     BLFontVariationSettingsCore tmp;
 
@@ -578,7 +577,7 @@ BLResult blFontVariationSettingsRemoveKey(BLFontVariationSettingsCore* self, BLT
 
     // Shift the bit data representing keys (ids) so they are in correct places  after the removal operation.
     uint32_t ssoBits = self->_d.info.bits;
-    uint32_t bitIndex = index * kSSOTagBitSize;
+    uint32_t bitIndex = uint32_t(index * kSSOTagBitSize);
     uint32_t keysToShift = uint32_t(size - index - 1);
     uint32_t remainingKeysAfterIndexMask = ((1u << (keysToShift * kSSOTagBitSize)) - 1u) << (bitIndex + kSSOTagBitSize);
 
@@ -839,7 +838,7 @@ UNIT(fontvariationsettings, -999) {
         uint32_t(' ') + (i / (kCharRange)) % kCharRange,
         uint32_t(' ') + (i % kCharRange));
 
-      ffs.setKey(key, i & 0xFFFFu);
+      ffs.setKey(key, float(i & 0xFFFFu));
       if (capacity != ffs.capacity()) {
         size_t implSize = BLFontVariationSettingsPrivate::implSizeFromCapacity(ffs.capacity()).value();
         INFO("  Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, ffs.capacity(), implSize);
