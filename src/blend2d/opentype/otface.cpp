@@ -102,7 +102,7 @@ BLResult createOpenTypeFace(BLFontFaceCore* self, const BLFontData* fontData, ui
 
   faceI->faceInfo.faceType = uint8_t(BL_FONT_FACE_TYPE_OPENTYPE);
   faceI->faceInfo.faceIndex = faceIndex;
-  faceI->data = *fontData;
+  faceI->data.dcast() = *fontData;
   faceI->cmapFormat = uint8_t(0xFF);
 
   blCallCtor(faceI->kern);

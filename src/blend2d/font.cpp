@@ -59,7 +59,7 @@ static BL_INLINE BLFontPrivateImpl* blFontPrivateAllocImpl(BLFontCore* self, con
   if (BL_UNLIKELY(!impl))
     return impl;
 
-  blCallCtor(impl->face.dcast());
+  blCallCtor(impl->face.dcast(), face->dcast());
   blCallCtor(impl->featureSettings.dcast());
   blCallCtor(impl->variationSettings.dcast());
   impl->weight = 0;
