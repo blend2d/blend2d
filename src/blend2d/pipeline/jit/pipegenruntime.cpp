@@ -26,8 +26,8 @@ BLWrap<PipeDynamicRuntime> PipeDynamicRuntime::_global;
 // ========================================
 
 FunctionCache::FunctionCache() noexcept
-  : _zone(4096 - BLArenaAllocator::kBlockOverhead),
-    _funcMap() {}
+  : _allocator(4096 - BLArenaAllocator::kBlockOverhead),
+    _funcMap(&_allocator) {}
 FunctionCache::~FunctionCache() noexcept {}
 
 BLResult FunctionCache::put(uint32_t signature, void* func) noexcept {
@@ -35,7 +35,7 @@ BLResult FunctionCache::put(uint32_t signature, void* func) noexcept {
   if (node)
     return blTraceError(BL_ERROR_ALREADY_EXISTS);
 
-  node = _zone.newT<FuncNode>(signature, func);
+  node = _allocator.newT<FuncNode>(signature, func);
   if (BL_UNLIKELY(!node))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 

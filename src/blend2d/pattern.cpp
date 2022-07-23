@@ -37,7 +37,7 @@ static BL_INLINE BLResult blPatternImplAlloc(
   setExtendMode(self->_d.info, extendMode);
   setMatrixType(self->_d.info, matrixType);
 
-  blCallCtor(impl->image, *blDownCast(image));
+  blCallCtor(impl->image, image->dcast());
   impl->matrix = *matrix;
   impl->area = *area;
 
@@ -142,7 +142,7 @@ BL_API_IMPL BLResult blPatternInitAs(BLPatternCore* self, const BLImageCore* ima
 
   if (!area)
     area = &blPatternNoArea;
-  else if (BL_UNLIKELY(!isAreaValid(*area, blDownCast(image)->size())))
+  else if (BL_UNLIKELY(!isAreaValid(*area, image->dcast().size())))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
@@ -229,7 +229,7 @@ BL_API_IMPL BLResult blPatternCreate(BLPatternCore* self, const BLImageCore* ima
 
   if (!area)
     area = &blPatternNoArea;
-  else if (BL_UNLIKELY(!isAreaValid(*area, blDownCast(image)->size())))
+  else if (BL_UNLIKELY(!isAreaValid(*area, image->dcast().size())))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
@@ -279,7 +279,7 @@ BL_API_IMPL BLResult blPatternSetImage(BLPatternCore* self, const BLImageCore* i
 
   if (!area)
     area = &blPatternNoArea;
-  else if (!isAreaValid(*area, blDownCast(image)->size()))
+  else if (!isAreaValid(*area, image->dcast().size()))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   BL_PROPAGATE(blPatternMakeMutable(self));

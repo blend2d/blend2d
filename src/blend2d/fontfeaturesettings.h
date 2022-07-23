@@ -53,6 +53,7 @@ struct BLFontFeatureSettingsView {
 //! Font feature settings [C API].
 struct BLFontFeatureSettingsCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontFeatureSettings)
 };
 
 BL_BEGIN_C_DECLS

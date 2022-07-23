@@ -21,6 +21,7 @@
 //! Font data [C API].
 struct BLFontDataCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontData)
 };
 
 BL_BEGIN_C_DECLS

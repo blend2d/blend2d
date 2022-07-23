@@ -25,11 +25,6 @@ class BLArenaHashMapNode {
 public:
   BL_NONCOPYABLE(BLArenaHashMapNode)
 
-  BL_INLINE BLArenaHashMapNode(uint32_t hashCode = 0, uint32_t customData = 0) noexcept
-    : _hashNext(nullptr),
-      _hashCode(hashCode),
-      _customData(customData) {}
-
   //! Next node in the chain, null if it terminates the chain.
   BLArenaHashMapNode* _hashNext;
   //! Precalculated hash-code of key.
@@ -40,6 +35,11 @@ public:
     uint16_t _customDataU16[2];
     uint8_t _customDataU8[4];
   };
+
+  BL_INLINE BLArenaHashMapNode(uint32_t hashCode = 0, uint32_t customData = 0) noexcept
+    : _hashNext(nullptr),
+      _hashCode(hashCode),
+      _customData(customData) {}
 };
 
 //! Base class used by `BLArenaHashMap<>` template to share the common functionality.
@@ -58,6 +58,7 @@ public:
     kNullRcpShift = BL_TARGET_ARCH_BITS >= 64 ? 32 : 0
   };
 
+  BLArenaAllocator* _allocator;
   //! Buckets data.
   BLArenaHashMapNode** _data;
   //! Count of records inserted into the hash table.
@@ -80,8 +81,9 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLArenaHashMapBase() noexcept
-    : _data(_embedded),
+  BL_INLINE BLArenaHashMapBase(BLArenaAllocator* allocator) noexcept
+    : _allocator(allocator),
+      _data(_embedded),
       _size(0),
       _bucketCount(kNullCount),
       _bucketGrow(kNullGrow),
@@ -91,7 +93,8 @@ public:
       _embedded {} {}
 
   BL_INLINE BLArenaHashMapBase(BLArenaHashMapBase&& other) noexcept
-    : _data(other._data),
+    : _allocator(other._allocator),
+      _data(other._data),
       _size(other._size),
       _bucketCount(other._bucketCount),
       _bucketGrow(other._bucketGrow),
@@ -112,12 +115,12 @@ public:
 
   BL_INLINE ~BLArenaHashMapBase() noexcept {
     if (_data != _embedded)
-      free(_data);
+      _allocator->release(_data, _bucketCount * sizeof(BLArenaHashMapNode*));
   }
 
   BL_INLINE void reset() noexcept {
     if (_data != _embedded)
-      free(_data);
+      _allocator->release(_data, _bucketCount * sizeof(BLArenaHashMapNode*));
 
     _data = _embedded;
     _size = 0;
@@ -143,6 +146,7 @@ public:
   //! \{
 
   BL_INLINE void _swap(BLArenaHashMapBase& other) noexcept {
+    std::swap(_allocator, other._allocator);
     std::swap(_data, other._data);
     std::swap(_size, other._size);
     std::swap(_bucketCount, other._bucketCount);
@@ -192,8 +196,8 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLArenaHashMap() noexcept
-    : BLArenaHashMapBase() {}
+  BL_INLINE BLArenaHashMap(BLArenaAllocator* allocator) noexcept
+    : BLArenaHashMapBase(allocator) {}
 
   BL_INLINE BLArenaHashMap(BLArenaHashMap&& other) noexcept
     : BLArenaHashMap(other) {}
@@ -212,7 +216,7 @@ public:
     BLArenaHashMapBase::_swap(other);
   }
 
-  void _destroy() noexcept {
+  BL_NOINLINE void _destroy() noexcept {
     for (size_t i = 0; i < _bucketCount; i++) {
       NodeT* node = static_cast<NodeT*>(_data[i]);
       if (node) {

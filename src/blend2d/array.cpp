@@ -1407,7 +1407,7 @@ UNIT(array) {
     EXPECT_FALSE(a.equals(b));
 
     // [10, 3]
-    EXPECT_SUCCESS(a.remove(BLRange(1, 4)));
+    EXPECT_SUCCESS(a.remove(BLRange{1, 4}));
     EXPECT_EQ(a.size(), 2u);
     EXPECT_EQ(a[0], 10);
     EXPECT_EQ(a[1], 3);

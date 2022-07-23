@@ -45,6 +45,7 @@ struct BLFontVariationSettingsView {
 //! Font variation settings [C API].
 struct BLFontVariationSettingsCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontVariationSettings)
 };
 
 BL_BEGIN_C_DECLS

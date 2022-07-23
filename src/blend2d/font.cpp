@@ -59,7 +59,7 @@ static BL_INLINE BLInternalFontImpl* blFontPrivateAllocImpl(BLFontCore* self, co
   if (BL_UNLIKELY(!impl))
     return impl;
 
-  blCallCtor(impl->face, *blDownCast(face));
+  blCallCtor(impl->face, face->dcast());
   blCallCtor(impl->featureSettings);
   blCallCtor(impl->variationSettings);
   impl->weight = 0;
@@ -207,7 +207,7 @@ BLResult blFontCreateFromFace(BLFontCore* self, const BLFontFaceCore* face, floa
   BL_ASSERT(self->_d.isFont());
   BL_ASSERT(face->_d.isFontFace());
 
-  if (!blDownCast(face)->isValid())
+  if (!face->dcast().isValid())
     return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 
   if (blFontPrivateIsMutable(self)) {
@@ -221,7 +221,7 @@ BLResult blFontCreateFromFace(BLFontCore* self, const BLFontFaceCore* face, floa
     selfI->style = 0;
     blFontCalcProperties(selfI, faceI, size);
 
-    return blObjectPrivateAssignWeakVirtual(&selfI->face, blDownCast(face));
+    return blObjectPrivateAssignWeakVirtual(&selfI->face, static_cast<const BLFontFace*>(face));
   }
   else {
     BLFontCore newO;
@@ -587,7 +587,7 @@ BLResult blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* gly
         finalMatrix.m21 = px * offsetMatrix.m01 + py * offsetMatrix.m11 + oy;
 
         sinkInfo.glyphIndex = it.index;
-        BL_PROPAGATE(getGlyphOutlinesFunc(faceI, it.glyphId(), &finalMatrix, blDownCast(out), &sinkInfo.contourCount, &tmpBuffer));
+        BL_PROPAGATE(getGlyphOutlinesFunc(faceI, it.glyphId(), &finalMatrix, static_cast<BLPath*>(out), &sinkInfo.contourCount, &tmpBuffer));
         BL_PROPAGATE(sink(out, &sinkInfo, closure));
         it.advance();
 
@@ -604,7 +604,7 @@ BLResult blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* gly
         finalMatrix.m21 = placement.x * offsetMatrix.m01 + placement.y * offsetMatrix.m11 + offsetMatrix.m21;
 
         sinkInfo.glyphIndex = it.index;
-        BL_PROPAGATE(getGlyphOutlinesFunc(faceI, it.glyphId(), &finalMatrix, blDownCast(out), &sinkInfo.contourCount, &tmpBuffer));
+        BL_PROPAGATE(getGlyphOutlinesFunc(faceI, it.glyphId(), &finalMatrix, static_cast<BLPath*>(out), &sinkInfo.contourCount, &tmpBuffer));
         BL_PROPAGATE(sink(out, &sinkInfo, closure));
         it.advance();
       }
@@ -613,7 +613,7 @@ BLResult blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* gly
   else {
     while (!it.atEnd()) {
       sinkInfo.glyphIndex = it.index;
-      BL_PROPAGATE(getGlyphOutlinesFunc(faceI, it.glyphId(), &finalMatrix, blDownCast(out), &sinkInfo.contourCount, &tmpBuffer));
+      BL_PROPAGATE(getGlyphOutlinesFunc(faceI, it.glyphId(), &finalMatrix, static_cast<BLPath*>(out), &sinkInfo.contourCount, &tmpBuffer));
       BL_PROPAGATE(sink(out, &sinkInfo, closure));
       it.advance();
     }

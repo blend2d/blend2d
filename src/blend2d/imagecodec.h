@@ -107,6 +107,7 @@ struct BLImageCodecImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //! Image codec [C API].
 struct BLImageCodecCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLImageCodec)
 
 #ifdef __cplusplus
   //! \name Impl Utilities
@@ -265,11 +266,11 @@ public:
     return blImageCodecFindByName(this, name, SIZE_MAX, &codecs);
   }
 
-  BL_INLINE BLResult findByName(const BLStringView& name) noexcept {
+  BL_INLINE BLResult findByName(BLStringView name) noexcept {
     return blImageCodecFindByName(this, name.data, name.size, nullptr);
   }
 
-  BL_INLINE BLResult findByName(const BLStringView& name, const BLArray<BLImageCodec>& codecs) noexcept {
+  BL_INLINE BLResult findByName(BLStringView name, const BLArray<BLImageCodec>& codecs) noexcept {
     return blImageCodecFindByName(this, name.data, name.size, &codecs);
   }
 
@@ -281,11 +282,11 @@ public:
     return blImageCodecFindByExtension(this, name, SIZE_MAX, &codecs);
   }
 
-  BL_INLINE BLResult findByExtension(const BLStringView& name) noexcept {
+  BL_INLINE BLResult findByExtension(BLStringView name) noexcept {
     return blImageCodecFindByExtension(this, name.data, name.size, nullptr);
   }
 
-  BL_INLINE BLResult findByExtension(const BLStringView& name, const BLArray<BLImageCodec>& codecs) noexcept {
+  BL_INLINE BLResult findByExtension(BLStringView name, const BLArray<BLImageCodec>& codecs) noexcept {
     return blImageCodecFindByExtension(this, name.data, name.size, &codecs);
   }
 
@@ -418,6 +419,7 @@ struct BLImageDecoderImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //! Image decoder [C API]
 struct BLImageDecoderCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLImageDecoder)
 
 #ifdef __cplusplus
   //! \name Impl Utilities
@@ -589,6 +591,7 @@ struct BLImageEncoderImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //! Image encoder [C API].
 struct BLImageEncoderCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLImageEncoder)
 
 #ifdef __cplusplus
   //! \name Impl Utilities

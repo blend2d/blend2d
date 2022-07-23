@@ -257,6 +257,7 @@ struct BLGradientImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //! Gradient [C API].
 struct BLGradientCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLGradient)
 };
 
 BL_BEGIN_C_DECLS

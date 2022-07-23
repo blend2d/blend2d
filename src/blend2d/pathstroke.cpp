@@ -936,12 +936,12 @@ BLResult strokePath(
   const BLPathView& input,
   const BLStrokeOptions& options,
   const BLApproximationOptions& approx,
-  BLPath* a,
-  BLPath* b,
-  BLPath* c,
+  BLPath& a,
+  BLPath& b,
+  BLPath& c,
   StrokeSinkFunc sink, void* closure) noexcept {
 
-  return PathStroker(input, options, approx, a, b, c).stroke(sink, closure);
+  return PathStroker(input, options, approx, &a, &b, &c).stroke(sink, closure);
 }
 
 } // {BLPathPrivate}

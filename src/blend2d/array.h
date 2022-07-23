@@ -324,11 +324,11 @@ public:
 
   //! Returns true if this and `other` arrays are equal.
   BL_NODISCARD
-  BL_INLINE bool operator==(const BLArray& other) noexcept { return equals(other); }
+  BL_INLINE bool operator==(const BLArray& other) const noexcept { return equals(other); }
 
   //! Returns true if this and `other` arrays are not equal.
   BL_NODISCARD
-  BL_INLINE bool operator!=(const BLArray& other) noexcept { return !equals(other); }
+  BL_INLINE bool operator!=(const BLArray& other) const noexcept { return !equals(other); }
 
   //! Returns a read-only reference to the array item at the given `index`.
   //!

@@ -164,7 +164,7 @@ size_t blFontManagerGetFamilyCount(const BLFontManagerCore* self) noexcept {
 static BL_INLINE BLResult blFontManagerMakeMutable(BLFontManagerCore* self) noexcept {
   BL_ASSERT(self->_d.isFontManager());
 
-  if (!blDownCast(self)->isValid())
+  if (!self->dcast().isValid())
     return blFontManagerCreate(self);
 
   return BL_SUCCESS;
@@ -225,7 +225,7 @@ bool blFontManagerHasFace(const BLFontManagerCore* self, const BLFontFaceCore* f
 }
 
 BLResult blFontManagerAddFace(BLFontManagerCore* self, const BLFontFaceCore* face) noexcept {
-  if (!blDownCast(face)->isValid())
+  if (!face->dcast().isValid())
     return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 
   BL_PROPAGATE(blFontManagerMakeMutable(self));
@@ -236,13 +236,13 @@ BLResult blFontManagerAddFace(BLFontManagerCore* self, const BLFontFaceCore* fac
   uint32_t nameHash = BLHashOps::hashStringCI(faceI->familyName.view());
 
   BLLockGuard<BLSharedMutex> guard(selfI->mutex);
-  BLArenaAllocator::StatePtr zoneState = selfI->zone.saveState();
+  BLArenaAllocator::StatePtr allocatorState = selfI->allocator.saveState();
 
   BLInternalFontManagerImpl::FamiliesMapNode* familiesNode =
     selfI->familiesMap.get(BLInternalFontManagerImpl::FamilyMatcher{faceI->familyName.view(), nameHash});
 
   if (!familiesNode) {
-    familiesNode = selfI->zone.newT<BLInternalFontManagerImpl::FamiliesMapNode>(nameHash, faceI->familyName);
+    familiesNode = selfI->allocator.newT<BLInternalFontManagerImpl::FamiliesMapNode>(nameHash, faceI->familyName);
     if (!familiesNode)
       return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
@@ -252,18 +252,18 @@ BLResult blFontManagerAddFace(BLFontManagerCore* self, const BLFontFaceCore* fac
     BLResult result = familiesNode->faces.reserve(1u);
     if (BL_UNLIKELY(result != BL_SUCCESS)) {
       blCallDtor(*familiesNode);
-      selfI->zone.restoreState(zoneState);
+      selfI->allocator.restoreState(allocatorState);
       return result;
     }
 
-    familiesNode->faces.append(*blDownCast(face));
+    familiesNode->faces.append(face->dcast());
     selfI->familiesMap.insert(familiesNode);
   }
   else {
     size_t index = blFontManagerIndexForInsertion(familiesNode->faces.data(), familiesNode->faces.size(), faceI);
     if (index == SIZE_MAX)
       return BL_SUCCESS;
-    BL_PROPAGATE(familiesNode->faces.insert(index, *blDownCast(face)));
+    BL_PROPAGATE(familiesNode->faces.insert(index, face->dcast()));
   }
 
   selfI->faceCount++;
@@ -471,11 +471,11 @@ BLResult blFontManagerQueryFace(
     }
 
     if (bestMatch.hasFace())
-      return blDownCast(out)->assign(*bestMatch.face);
+      return out->dcast().assign(*bestMatch.face);
   }
 
   // This is not considered to be an error, thus don't use blTraceError().
-  blDownCast(out)->reset();
+  out->dcast().reset();
   return BL_ERROR_FONT_NO_MATCH;
 }
 

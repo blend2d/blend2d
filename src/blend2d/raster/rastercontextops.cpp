@@ -54,8 +54,8 @@ BLResult blRasterContextFillGlyphRunSinkFunc(BLPathCore* path, const void* info,
   EdgeBuilderSink* sink = static_cast<EdgeBuilderSink*>(closure_);
   EdgeBuilder<int>* edgeBuilder = sink->edgeBuilder;
 
-  BL_PROPAGATE(edgeBuilder->addPath(blDownCast(path)->view(), true, BLTransformPrivate::identityTransform, BL_MATRIX2D_TYPE_IDENTITY));
-  return blDownCast(path)->clear();
+  BL_PROPAGATE(edgeBuilder->addPath(path->dcast().view(), true, BLTransformPrivate::identityTransform, BL_MATRIX2D_TYPE_IDENTITY));
+  return path->dcast().clear();
 }
 
 BLResult blRasterContextStrokeGeometrySinkFunc(BLPath* a, BLPath* b, BLPath* c, void* closure_) noexcept {
@@ -81,10 +81,10 @@ BLResult blRasterContextStrokeGlyphRunSinkFunc(BLPathCore* path, const void* inf
 
   a->clear();
   BLResult localResult = BLPathPrivate::strokePath(
-    blDownCast(path)->view(),
+    path->dcast().view(),
     *sink->strokeOptions,
     *sink->approximationOptions,
-    a, b, c,
+    *a, *b, *c,
     blRasterContextStrokeGeometrySinkFunc, sink);
 
   // We must clear the input path, because glyph outlines are appended to it and we just just consumed its content.

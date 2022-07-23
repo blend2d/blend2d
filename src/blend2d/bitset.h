@@ -97,6 +97,7 @@ struct BLBitSetImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //! BitSet container [C API].
 struct BLBitSetCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLBitSet)
 };
 
 //! BitSet data view [C API].

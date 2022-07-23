@@ -507,6 +507,7 @@ struct BLContextImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //! Rendering context [C API].
 struct BLContextCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLContext)
 
 #ifdef __cplusplus
   //! \name Impl Utilities
@@ -762,7 +763,7 @@ public:
   //! and not the pointer to the `BLImage` passed to either the constructor or `begin()` function. So the returned
   //! pointer is not the same as the pointer passed to `begin()`, but it points to the same impl.
   BL_NODISCARD
-  BL_INLINE BLImage* targetImage() const noexcept { return blDownCast(BL_CONTEXT_IMPL()->state->targetImage); }
+  BL_INLINE BLImage* targetImage() const noexcept { return static_cast<BLImage*>(BL_CONTEXT_IMPL()->state->targetImage); }
 
   //! \}
 

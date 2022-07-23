@@ -174,6 +174,7 @@ struct BLImageImpl {
 //! 2D raster image [C API].
 struct BLImageCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLImage)
 };
 
 BL_BEGIN_C_DECLS

@@ -142,7 +142,7 @@ static BL_INLINE BLResult blInternalGlyphBufferData_setUnicodeText(BLInternalGly
   }
 
   d->size = (size_t)(textData - d->content);
-  d->flags = BL_GLYPH_RUN_FLAG_UCS4_CONTENT;
+  d->flags = 0;
 
   if (d->size)
     d->flags |= BL_GLYPH_RUN_FLAG_UCS4_CONTENT;

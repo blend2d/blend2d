@@ -62,6 +62,13 @@ public:
     return _mem;
   }
 
+  BL_NOINLINE void* allocZeroed(size_t size) noexcept {
+    void* p = alloc(size);
+    if (p)
+      memset(p, 0, size);
+    return p;
+  }
+
   BL_INLINE void _reset() noexcept {
     if (_mem != _buf)
       free(_mem);

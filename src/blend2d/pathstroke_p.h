@@ -28,9 +28,9 @@ BL_HIDDEN BLResult strokePath(
   const BLPathView& input,
   const BLStrokeOptions& options,
   const BLApproximationOptions& approx,
-  BLPath* aPath,
-  BLPath* bPath,
-  BLPath* cPath,
+  BLPath& aPath,
+  BLPath& bPath,
+  BLPath& cPath,
   StrokeSinkFunc sink, void* closure) noexcept;
 
 } // {BLPathPrivate}

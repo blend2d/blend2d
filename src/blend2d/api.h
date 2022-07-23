@@ -774,7 +774,9 @@ class BLGlyphRunIterator;
 class BLFont;
 class BLFontData;
 class BLFontFace;
+class BLFontFeatureSettings;
 class BLFontManager;
+class BLFontVariationSettings;
 class BLVar;
 #endif
 
@@ -1166,35 +1168,6 @@ struct ConstCTZ {
   };
 };
 
-//! Implementation of `blDownCast()`, which can be used to downcast a Blend2D core struct / object into its C++
-//! counterpart. The cast is always safe.
-template<typename T>
-struct DownCast { typedef T Type; };
-
-#define BL_DCAST_IMPL(T) template<> struct DownCast<T##Core> { typedef T Type; }
-
-BL_DCAST_IMPL(BLBitSet);
-BL_DCAST_IMPL(BLContext);
-BL_DCAST_IMPL(BLFile);
-BL_DCAST_IMPL(BLFont);
-BL_DCAST_IMPL(BLFontData);
-BL_DCAST_IMPL(BLFontFace);
-BL_DCAST_IMPL(BLFontManager);
-BL_DCAST_IMPL(BLGlyphBuffer);
-BL_DCAST_IMPL(BLGradient);
-BL_DCAST_IMPL(BLImage);
-BL_DCAST_IMPL(BLImageCodec);
-BL_DCAST_IMPL(BLImageDecoder);
-BL_DCAST_IMPL(BLImageEncoder);
-BL_DCAST_IMPL(BLPath);
-BL_DCAST_IMPL(BLPattern);
-BL_DCAST_IMPL(BLPixelConverter);
-BL_DCAST_IMPL(BLString);
-BL_DCAST_IMPL(BLStrokeOptions);
-BL_DCAST_IMPL(BLVar);
-
-#undef BL_DCAST_IMPL
-
 // These are required to properly use the C API from C++ BLArray<T>. Category provides a rough overview of `BLArray<T>`
 // type category (like int, float) and the other APIs provide some basic traits that the implementation needs.
 enum TypeCategory : uint32_t {
@@ -1259,7 +1232,9 @@ BL_DEFINE_OBJECT_TRAITS(BLContext)
 BL_DEFINE_OBJECT_TRAITS(BLFont)
 BL_DEFINE_OBJECT_TRAITS(BLFontData)
 BL_DEFINE_OBJECT_TRAITS(BLFontFace)
+BL_DEFINE_OBJECT_TRAITS(BLFontFeatureSettings)
 BL_DEFINE_OBJECT_TRAITS(BLFontManager)
+BL_DEFINE_OBJECT_TRAITS(BLFontVariationSettings)
 BL_DEFINE_OBJECT_TRAITS(BLGradient)
 BL_DEFINE_OBJECT_TRAITS(BLImage)
 BL_DEFINE_OBJECT_TRAITS(BLImageCodec)
@@ -1429,47 +1404,6 @@ BL_INLINE bool blEquals(const double& a, const double& b) noexcept {
 //! \}
 #endif
 
-#ifdef __cplusplus
-//! \addtogroup blend2d_api_globals
-//! \{
-
-//! \name Downcasting from C API type to C++ type
-//! \{
-
-//! Downcasts a core type like `BLContextCore` into a C++ type like `BLContext`. Intended to be used by C++ users
-//! that work with C API as well (by either providing it directly or using some other code that uses Blend2D C API).
-template<typename T>
-BL_NODISCARD
-static BL_INLINE constexpr typename BLInternal::DownCast<T>::Type& blDownCast(T& ref) noexcept {
-  return static_cast<typename BLInternal::DownCast<T>::Type&>(ref);
-}
-
-//! \overload
-template<typename T>
-BL_NODISCARD
-static BL_INLINE constexpr const typename BLInternal::DownCast<T>::Type& blDownCast(const T& ref) noexcept {
-  return static_cast<const typename BLInternal::DownCast<T>::Type&>(ref);
-}
-
-//! \overload
-template<typename T>
-BL_NODISCARD
-static BL_INLINE constexpr typename BLInternal::DownCast<T>::Type* blDownCast(T* ptr) noexcept {
-  return static_cast<typename BLInternal::DownCast<T>::Type*>(ptr);
-}
-
-//! \overload
-template<typename T>
-BL_NODISCARD
-static BL_INLINE constexpr const typename BLInternal::DownCast<T>::Type* blDownCast(const T* ptr) noexcept {
-  return static_cast<const typename BLInternal::DownCast<T>::Type*>(ptr);
-}
-
-//! \}
-
-//! \}
-#endif
-
 //! \addtogroup blend2d_api_globals
 //! \{
 
@@ -1484,25 +1418,13 @@ struct BLRange {
   //! \name Construction & Destruction
   //! \{
 
-  //! Create an uninitialized range.
-  BL_INLINE BLRange() noexcept = default;
-  //! Create a copy of `other` range.
-  BL_INLINE constexpr BLRange(const BLRange& other) noexcept = default;
-
-  //! Create a range from `rstart` to `rEnd`.
-  BL_INLINE constexpr explicit BLRange(size_t rStart, size_t rEnd) noexcept
-    : start(rStart),
-      end(rEnd) {}
-
   BL_NODISCARD
-  static BL_INLINE constexpr BLRange everything() noexcept { return BLRange(0, SIZE_MAX); }
+  static BL_INLINE constexpr BLRange everything() noexcept { return BLRange{0, SIZE_MAX}; }
 
   //! \}
 
   //! \name Overloaded Operators
   //! \{
-
-  BL_INLINE BLRange& operator=(const BLRange& other) noexcept = default;
 
   BL_NODISCARD
   BL_INLINE bool operator==(const BLRange& other) const noexcept { return equals(other); }
@@ -1531,7 +1453,8 @@ struct BLRange {
 
   BL_NODISCARD
   BL_INLINE bool equals(const BLRange& other) const noexcept {
-    return bool(unsigned(blEquals(start, other.start)) & unsigned(blEquals(end, other.end)));
+    return bool(unsigned(blEquals(start, other.start)) &
+                unsigned(blEquals(end, other.end)));
   }
 
   //! \}

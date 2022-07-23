@@ -1023,7 +1023,7 @@ UNIT(string) {
     verifyString(s);
     EXPECT_TRUE(s.equals("ababcxyzcxyz"));
 
-    EXPECT_SUCCESS(s.remove(BLRange(1, 11)));
+    EXPECT_SUCCESS(s.remove(BLRange{1, 11}));
     verifyString(s);
     EXPECT_TRUE(s.equals("az"));
 
@@ -1035,7 +1035,7 @@ UNIT(string) {
     verifyString(s);
     EXPECT_TRUE(s.equals("axxxazz"));
 
-    EXPECT_SUCCESS(s.remove(BLRange(4, 6)));
+    EXPECT_SUCCESS(s.remove(BLRange{4, 6}));
     verifyString(s);
     EXPECT_TRUE(s.equals("axxxz"));
 
@@ -1046,7 +1046,7 @@ UNIT(string) {
 
     x = s;
     verifyString(x);
-    EXPECT_SUCCESS(s.remove(BLRange(1, 11)));
+    EXPECT_SUCCESS(s.remove(BLRange{1, 11}));
     verifyString(s);
     EXPECT_TRUE(s.equals("axz"));
 

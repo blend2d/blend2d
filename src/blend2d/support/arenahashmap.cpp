@@ -171,7 +171,7 @@ void BLArenaHashMapBase::_rehash(uint32_t primeIndex) noexcept {
   BL_ASSERT(primeIndex < BL_ARRAY_SIZE(blPrimeNumberTable));
 
   uint32_t newCount = blPrimeNumberTable[primeIndex].prime;
-  BLArenaHashMapNode** newData = reinterpret_cast<BLArenaHashMapNode**>(calloc(newCount, sizeof(BLArenaHashMapNode*)));
+  BLArenaHashMapNode** newData = _allocator->allocZeroedT<BLArenaHashMapNode*>(newCount * sizeof(BLArenaHashMapNode*));
 
   // We can still store nodes into the table, but it will degrade.
   if (BL_UNLIKELY(newData == nullptr))
@@ -180,9 +180,8 @@ void BLArenaHashMapBase::_rehash(uint32_t primeIndex) noexcept {
   BLArenaHashMapNode** oldData = _data;
   uint32_t oldCount = _bucketCount;
 
-  // 92.8% is the occupancy that we would reallocate. The multiplication should
-  // not overflow as we don't store such a large prime that would require 64-bit
-  // intermediate result.
+  // 92.8% is the occupancy that causes rehashing. The multiplication should not overflow
+  // as we don't store such a large prime that would require 64-bit intermediate result.
   _data = newData;
   _bucketCount = newCount;
   _bucketGrow = (newCount * 13) / 14;
@@ -204,7 +203,7 @@ void BLArenaHashMapBase::_rehash(uint32_t primeIndex) noexcept {
 
   memset(_embedded, 0, sizeof(_embedded));
   if (oldData != _embedded)
-    free(oldData);
+    _allocator->release(reinterpret_cast<void*>(oldData), oldCount * sizeof(BLArenaHashMapNode*));
 }
 
 void BLArenaHashMapBase::_insert(BLArenaHashMapNode* node) noexcept {
@@ -266,13 +265,13 @@ struct MyKeyMatcher {
 UNIT(arena_hashmap, -5) {
   uint32_t kCount = BrokenAPI::hasArg("--quick") ? 1000 : 10000;
 
-  BLArenaAllocator zone(4096);
-  BLArenaHashMap<MyHashMapNode> hashTable;
+  BLArenaAllocator allocator(4096);
+  BLArenaHashMap<MyHashMapNode> hashTable(&allocator);
   uint32_t key;
 
   INFO("Inserting %u elements to HashTable", unsigned(kCount));
   for (key = 0; key < kCount; key++) {
-    hashTable.insert(zone.newT<MyHashMapNode>(key));
+    hashTable.insert(allocator.newT<MyHashMapNode>(key));
   }
 
   INFO("Removing %u elements from HashTable and validating each operation", unsigned(kCount));

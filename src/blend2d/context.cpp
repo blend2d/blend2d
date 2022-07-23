@@ -256,7 +256,7 @@ BL_API_IMPL BLImageCore* blContextGetTargetImage(const BLContextCore* self) noex
 
 BL_API_IMPL BLResult blContextBegin(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* cci) noexcept {
   // Reject empty images.
-  if (blDownCast(image)->empty())
+  if (image->dcast().empty())
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   if (!cci)

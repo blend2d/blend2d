@@ -37,7 +37,7 @@ static BL_INLINE uint32_t hashString(const char* data, size_t size) noexcept {
   return hashCode;
 }
 
-static BL_INLINE uint32_t hashString(const BLStringView& view) noexcept {
+static BL_INLINE uint32_t hashString(BLStringView view) noexcept {
   return hashString(view.data, view.size);
 }
 
@@ -51,7 +51,7 @@ static BL_INLINE uint32_t hashStringCI(const char* data, size_t size) noexcept {
   return hashCode;
 }
 
-static BL_INLINE uint32_t hashStringCI(const BLStringView& view) noexcept {
+static BL_INLINE uint32_t hashStringCI(BLStringView view) noexcept {
   return hashStringCI(view.data, view.size);
 }
 

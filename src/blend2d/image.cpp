@@ -483,7 +483,8 @@ BL_API_IMPL BLResult blImageScale(BLImageCore* dst, const BLImageCore* src, cons
     // Only horizontal or vertical scale.
 
     // Move to `tmp` so it's not destroyed by `dst->create()`.
-    if (dst == src) tmp = *blDownCast(src);
+    if (dst == src)
+      tmp = src->dcast();
 
     BL_PROPAGATE(blImageCreate(dst, scaleCtx.dstWidth(), scaleCtx.dstHeight(), format));
     BL_PROPAGATE(blImageMakeMutable(dst, &buf));
@@ -531,7 +532,7 @@ BL_API_IMPL BLResult blImageReadFromFile(BLImageCore* self, const char* fileName
 
   BLImageDecoder decoder;
   BL_PROPAGATE(codec.createDecoder(&decoder));
-  return decoder.readFrame(*blDownCast(self), buffer);
+  return decoder.readFrame(*self, buffer);
 }
 
 // BLImage - API - Read Data
@@ -550,7 +551,7 @@ BL_API_IMPL BLResult blImageReadFromData(BLImageCore* self, const void* data, si
 
   BLImageDecoder decoder;
   BL_PROPAGATE(codec.createDecoder(&decoder));
-  return decoder.readFrame(*blDownCast(self), data, size);
+  return decoder.readFrame(*self, data, size);
 }
 
 // BLImage - API - Write File
@@ -596,12 +597,12 @@ BL_API_IMPL BLResult blImageWriteToData(const BLImageCore* self, BLArrayCore* ds
   BL_ASSERT(self->_d.isImage());
   BL_ASSERT(codec->_d.isImageCodec());
 
-  if (BL_UNLIKELY(!(blDownCast(codec)->features() & BL_IMAGE_CODEC_FEATURE_WRITE)))
+  if (BL_UNLIKELY(!(codec->dcast().features() & BL_IMAGE_CODEC_FEATURE_WRITE)))
     return blTraceError(BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED);
 
   BLImageEncoder encoder;
-  BL_PROPAGATE(blDownCast(codec)->createEncoder(&encoder));
-  return encoder.writeFrame(dst->dcast<BLArray<uint8_t>>(), *blDownCast(self));
+  BL_PROPAGATE(codec->dcast().createEncoder(&encoder));
+  return encoder.writeFrame(dst->dcast<BLArray<uint8_t>>(), self->dcast());
 }
 
 // BLImage - Runtime Registration

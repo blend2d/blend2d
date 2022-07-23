@@ -251,10 +251,10 @@ BL_API_IMPL BLResult blImageCodecAddToBuiltIn(const BLImageCodecCore* codec) noe
   BL_ASSERT(codec->_d.isImageCodec());
 
   return imageCodecsArrayMutex->protect([&] {
-    size_t i = imageCodecsArray->indexOf(*blDownCast(codec));
+    size_t i = imageCodecsArray->indexOf(codec->dcast());
     if (i != SIZE_MAX)
       return blTraceError(BL_ERROR_ALREADY_EXISTS);
-    return imageCodecsArray->append(*blDownCast(blDownCast(codec)));
+    return imageCodecsArray->append(codec->dcast());
   });
 }
 
@@ -263,7 +263,7 @@ BL_API_IMPL BLResult blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* codec
   BL_ASSERT(codec->_d.isImageCodec());
 
   return imageCodecsArrayMutex->protect([&] {
-    size_t i = imageCodecsArray->indexOf(*blDownCast(codec));
+    size_t i = imageCodecsArray->indexOf(codec->dcast());
     if (i == SIZE_MAX)
       return blTraceError(BL_ERROR_NO_ENTRY);
     return imageCodecsArray->remove(i);

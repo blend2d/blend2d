@@ -112,8 +112,8 @@ static void blRasterJobProcAsync_FillText(WorkData* workData, RenderJob_TextOp* 
   BLResult result = BL_SUCCESS;
   uint32_t dataType = job->textDataType();
 
-  const BLPoint* pt = &job->_pt;
-  const BLFont* font = blDownCast(&job->_font);
+  const BLPoint& pt = job->_pt;
+  const BLFont& font = job->_font.dcast();
 
   const BLGlyphRun* glyphRun = nullptr;
 
@@ -125,10 +125,10 @@ static void blRasterJobProcAsync_FillText(WorkData* workData, RenderJob_TextOp* 
       glyphBuffer->setText(job->textData(), job->textSize(), (BLTextEncoding)dataType);
     }
     else {
-      glyphBuffer = blDownCast(&job->_glyphBuffer);
+      glyphBuffer = &job->_glyphBuffer.dcast();
     }
 
-    result = font->shape(*glyphBuffer);
+    result = font.shape(*glyphBuffer);
     glyphRun = &glyphBuffer->glyphRun();
   }
   else {
@@ -138,7 +138,7 @@ static void blRasterJobProcAsync_FillText(WorkData* workData, RenderJob_TextOp* 
   if (result == BL_SUCCESS) {
     RenderJobStateAccessor accessor(job);
     blRasterJobPrepareEdgeBuilder(workData, accessor.fillState());
-    result = blRasterContextUtilFillGlyphRun(workData, accessor, pt, font, glyphRun);
+    result = blRasterContextUtilFillGlyphRun(workData, accessor, &pt, &font, glyphRun);
   }
 
   if (result == BL_SUCCESS) {
@@ -179,8 +179,8 @@ static void blRasterJobProcAsync_StrokeText(WorkData* workData, RenderJob_TextOp
   BLResult result = BL_SUCCESS;
   uint32_t dataType = job->textDataType();
 
-  const BLPoint* pt = &job->_pt;
-  const BLFont* font = blDownCast(&job->_font);
+  const BLPoint& pt = job->_pt;
+  const BLFont& font = job->_font.dcast();
 
   const BLGlyphRun* glyphRun = nullptr;
 
@@ -192,10 +192,10 @@ static void blRasterJobProcAsync_StrokeText(WorkData* workData, RenderJob_TextOp
       glyphBuffer->setText(job->textData(), job->textSize(), (BLTextEncoding)dataType);
     }
     else {
-      glyphBuffer = blDownCast(&job->_glyphBuffer);
+      glyphBuffer = &job->_glyphBuffer.dcast();
     }
 
-    result = font->shape(*glyphBuffer);
+    result = font.shape(*glyphBuffer);
     glyphRun = &glyphBuffer->glyphRun();
   }
   else {
@@ -205,7 +205,7 @@ static void blRasterJobProcAsync_StrokeText(WorkData* workData, RenderJob_TextOp
   if (result == BL_SUCCESS) {
     RenderJobStateAccessor accessor(job);
     blRasterJobPrepareEdgeBuilder(workData, accessor.fillState());
-    result = blRasterContextUtilStrokeGlyphRun(workData, accessor, pt, font, glyphRun);
+    result = blRasterContextUtilStrokeGlyphRun(workData, accessor, &pt, &font, glyphRun);
   }
 
   if (result == BL_SUCCESS) {

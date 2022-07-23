@@ -31,6 +31,7 @@ struct BLFontManagerImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //! Font manager [C API].
 struct BLFontManagerCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontManager)
 };
 
 BL_BEGIN_C_DECLS
@@ -147,7 +148,7 @@ public:
   }
 
   //! \overload
-  BL_INLINE BLResult queryFace(const BLStringView& name, BLFontFaceCore& out) const noexcept {
+  BL_INLINE BLResult queryFace(BLStringView name, BLFontFaceCore& out) const noexcept {
     return blFontManagerQueryFace(this, name.data, name.size, nullptr, &out);
   }
 
@@ -163,7 +164,7 @@ public:
   }
 
   //! \overload
-  BL_INLINE BLResult queryFace(const BLStringView& name, const BLFontQueryProperties& properties, BLFontFaceCore& out) const noexcept {
+  BL_INLINE BLResult queryFace(BLStringView name, const BLFontQueryProperties& properties, BLFontFaceCore& out) const noexcept {
     return blFontManagerQueryFace(this, name.data, name.size, &properties, &out);
   }
 
@@ -173,7 +174,7 @@ public:
   }
 
   //! \overload
-  BL_INLINE BLResult queryFacesByFamilyName(const BLStringView& name, BLArray<BLFontFace>& out) const noexcept {
+  BL_INLINE BLResult queryFacesByFamilyName(BLStringView name, BLArray<BLFontFace>& out) const noexcept {
     return blFontManagerQueryFacesByFamilyName(this, name.data, name.size, &out);
   }
 

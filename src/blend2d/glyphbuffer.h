@@ -48,6 +48,8 @@ struct BLGlyphBufferImpl {
 //! Glyph buffer [C API].
 struct BLGlyphBufferCore {
   BLGlyphBufferImpl* impl;
+
+  BL_DEFINE_OBJECT_DCAST(BLGlyphBuffer)
 };
 
 BL_BEGIN_C_DECLS

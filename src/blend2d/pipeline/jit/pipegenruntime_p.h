@@ -49,7 +49,7 @@ public:
     BL_INLINE bool matches(const FuncNode* node) const noexcept { return node->signature() == _signature; }
   };
 
-  BLArenaAllocator _zone;
+  BLArenaAllocator _allocator;
   BLArenaHashMap<FuncNode> _funcMap;
 
   FunctionCache() noexcept;

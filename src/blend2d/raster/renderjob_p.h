@@ -155,9 +155,9 @@ struct RenderJob_TextOp : public RenderJob_BaseOp {
   }
 
   BL_INLINE void destroy() noexcept {
-    blDownCast(_font).~BLFont();
+    _font.dcast().~BLFont();
     if (_payloadType == kTextDataGlyphBuffer)
-      blDownCast(_glyphBuffer).~BLGlyphBuffer();
+      _glyphBuffer.dcast().~BLGlyphBuffer();
   }
 
   BL_INLINE void initFont(const BLFontCore& font) noexcept {
@@ -195,7 +195,7 @@ struct RenderJob_TextOp : public RenderJob_BaseOp {
   BL_INLINE const void* textData() const noexcept { return _textData.data; }
   BL_INLINE size_t textSize() const noexcept { return _textData.size; }
 
-  BL_INLINE const BLGlyphBuffer& glyphBuffer() const noexcept { return blDownCast(_glyphBuffer); }
+  BL_INLINE const BLGlyphBuffer& glyphBuffer() const noexcept { return _glyphBuffer.dcast(); }
 };
 
 } // {BLRasterEngine}

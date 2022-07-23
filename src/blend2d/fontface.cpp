@@ -198,14 +198,14 @@ BLResult blFontFaceCreateFromData(BLFontFaceCore* self, const BLFontDataCore* fo
   BL_ASSERT(self->_d.isFontFace());
   BL_ASSERT(fontData->_d.isFontData());
 
-  if (BL_UNLIKELY(!blDownCast(fontData)->isValid()))
+  if (BL_UNLIKELY(!fontData->dcast().isValid()))
     return blTraceError(BL_ERROR_NOT_INITIALIZED);
 
-  if (faceIndex >= blDownCast(fontData)->faceCount())
+  if (faceIndex >= fontData->dcast().faceCount())
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   BLFontFaceCore newO;
-  BL_PROPAGATE(BLOpenType::createOpenTypeFace(&newO, blDownCast(fontData), faceIndex));
+  BL_PROPAGATE(BLOpenType::createOpenTypeFace(&newO, static_cast<const BLFontData*>(fontData), faceIndex));
 
   // TODO: Move to OTFace?
   blFontFaceGetImpl<BLOpenType::OTFaceImpl>(&newO)->uniqueId = BLUniqueIdGenerator::generateId(BLUniqueIdGenerator::Domain::kAny);
@@ -219,21 +219,21 @@ BLResult blFontFaceCreateFromData(BLFontFaceCore* self, const BLFontDataCore* fo
 BLResult blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) noexcept {
   BL_ASSERT(self->_d.isFontFace());
 
-  *out = blDownCast(self)->faceInfo();
+  *out = self->dcast().faceInfo();
   return BL_SUCCESS;
 }
 
 BLResult blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) noexcept {
   BL_ASSERT(self->_d.isFontFace());
 
-  *out = blDownCast(self)->designMetrics();
+  *out = self->dcast().designMetrics();
   return BL_SUCCESS;
 }
 
 BLResult blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self, BLFontUnicodeCoverage* out) noexcept {
   BL_ASSERT(self->_d.isFontFace());
 
-  *out = blDownCast(self)->unicodeCoverage();
+  *out = self->dcast().unicodeCoverage();
   return BL_SUCCESS;
 }
 
@@ -249,7 +249,7 @@ BLResult blFontFaceGetCharacterCoverage(const BLFontFaceCore* self, BLBitSetCore
       return blTraceError(BL_ERROR_NOT_IMPLEMENTED);
 
     BLBitSetCore tmpBitSet;
-    BL_PROPAGATE(BLOpenType::CMapImpl::populateCharacterCoverage(static_cast<BLOpenType::OTFaceImpl*>(selfI), blDownCast(&tmpBitSet)));
+    BL_PROPAGATE(BLOpenType::CMapImpl::populateCharacterCoverage(static_cast<BLOpenType::OTFaceImpl*>(selfI), &tmpBitSet.dcast()));
 
     blBitSetShrink(&tmpBitSet);
     if (!blObjectAtomicContentMove(&selfI->characterCoverage, &tmpBitSet))

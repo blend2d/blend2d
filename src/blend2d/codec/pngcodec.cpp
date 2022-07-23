@@ -1674,5 +1674,5 @@ void blPngCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexc
   blPngEncoderVirt.restart = blPngEncoderImplRestart;
   blPngEncoderVirt.writeFrame = blPngEncoderImplWriteFrame;
 
-  codecs->append(blDownCast(blPngCodecObject));
+  codecs->append(blPngCodecObject.dcast());
 }

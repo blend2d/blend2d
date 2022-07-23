@@ -38,6 +38,7 @@ struct BLPatternImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //! Pattern [C API].
 struct BLPatternCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLPattern)
 };
 
 BL_BEGIN_C_DECLS

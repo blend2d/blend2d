@@ -26,6 +26,7 @@
 //! Font face [C API].
 struct BLFontFaceCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontFace)
 };
 
 BL_BEGIN_C_DECLS

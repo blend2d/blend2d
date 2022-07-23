@@ -2570,7 +2570,7 @@ static BL_INLINE BLResult fillTextInternal(
   BLGlyphBuffer& gb = ctxI->syncWorkData.glyphBuffer;
 
   BL_PROPAGATE(gb.setText(text, size, encoding));
-  BL_PROPAGATE(blDownCast(font)->shape(gb));
+  BL_PROPAGATE(font->dcast().shape(gb));
 
   if (gb.empty())
     return BL_SUCCESS;
@@ -2721,7 +2721,7 @@ template<uint32_t RenderingMode>
 static BLResult BL_CDECL blRasterContextImplFillGlyphRunD(BLContextImpl* baseImpl, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
 
-  if (!blDownCast(font)->isValid())
+  if (!font->dcast().isValid())
     return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 
   if (glyphRun->empty())
@@ -2749,7 +2749,7 @@ template<uint32_t RenderingMode>
 static BLResult BL_CDECL blRasterContextImplFillTextD(BLContextImpl* baseImpl, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
 
-  if (BL_UNLIKELY(!blDownCast(font)->isValid()))
+  if (BL_UNLIKELY(!font->dcast().isValid()))
     return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 
   if (BL_UNLIKELY(uint32_t(encoding) > BL_TEXT_ENCODING_MAX_VALUE))
@@ -3008,7 +3008,7 @@ template<uint32_t RenderingMode>
 static BLResult BL_CDECL blRasterContextImplStrokeGlyphRunD(BLContextImpl* baseImpl, const BLPoint* pt, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
 
-  if (!blDownCast(font)->isValid())
+  if (!font->dcast().isValid())
     return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 
   if (glyphRun->empty())
@@ -3040,7 +3040,7 @@ static BL_INLINE BLResult blRasterContextImplStrokeTextInternal(
   BLGlyphBuffer& gb = ctxI->syncWorkData.glyphBuffer;
 
   BL_PROPAGATE(gb.setText(text, size, encoding));
-  BL_PROPAGATE(blDownCast(font)->shape(gb));
+  BL_PROPAGATE(font->dcast().shape(gb));
 
   if (gb.empty())
     return BL_SUCCESS;
@@ -3059,7 +3059,7 @@ static BL_INLINE BLResult blRasterContextImplStrokeTextInternal(
 template<uint32_t RenderingMode>
 static BLResult BL_CDECL blRasterContextImplStrokeTextD(BLContextImpl* baseImpl, const BLPoint* pt, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  if (!blDownCast(font)->isValid())
+  if (!font->dcast().isValid())
     return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 
   RenderCommandSerializerCore<RenderingMode> serializer;

@@ -127,7 +127,7 @@ static BL_INLINE BLResult blRasterContextUtilStrokeUnsafePath(
     path->view(),
     accessor.strokeOptions(),
     accessor.approximationOptions(),
-    a, b, c,
+    *a, *b, *c,
     blRasterContextStrokeGeometrySinkFunc, &sink);
 
   // EdgeBuilder::done() can only fail on out of memory condition.

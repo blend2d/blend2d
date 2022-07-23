@@ -1992,11 +1992,11 @@ BL_API_IMPL BLResult blPathAddStrokedPath(BLPathCore* self, const BLPathCore* ot
     // Border case, we don't want anything to happen to the `other` path during
     // processing. And since stroking may need to reallocate the output path it
     // would be unsafe.
-    BLPath tmp(blDownCast(*other));
-    return strokePath(input, blDownCast(*options), *approx, blDownCast(self), &bPath, &cPath, appendStrokedPathSink, nullptr);
+    BLPath tmp(other->dcast());
+    return strokePath(input, options->dcast(), *approx, self->dcast(), bPath, cPath, appendStrokedPathSink, nullptr);
   }
   else {
-    return strokePath(input, blDownCast(*options), *approx, blDownCast(self), &bPath, &cPath, appendStrokedPathSink, nullptr);
+    return strokePath(input, options->dcast(), *approx, self->dcast(), bPath, cPath, appendStrokedPathSink, nullptr);
   }
 }
 

@@ -64,16 +64,16 @@ public:
   };
 
   BLSharedMutex mutex;
-  BLArenaAllocator zone;
+  BLArenaAllocator allocator;
   BLArenaHashMap<FamiliesMapNode> familiesMap;
   BLArenaHashMap<SubstitutionMapNode> substitutionMap;
   size_t faceCount = 0;
 
   BL_INLINE BLInternalFontManagerImpl(const BLFontManagerVirt* virt_) noexcept
     : mutex(),
-      zone(8192 - BLArenaAllocator::kBlockOverhead),
-      familiesMap(),
-      substitutionMap() { virt = virt_; }
+      allocator(8192 - BLArenaAllocator::kBlockOverhead),
+      familiesMap(&allocator),
+      substitutionMap(&allocator) { virt = virt_; }
 
   BL_INLINE ~BLInternalFontManagerImpl() noexcept {}
 };

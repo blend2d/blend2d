@@ -1559,5 +1559,5 @@ void blJpegCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noex
   // Initialize JPEG encoder virtual functions.
   // TODO: [JPEG] Encoder
 
-  codecs->append(blDownCast(blJpegCodecObject));
+  codecs->append(blJpegCodecObject.dcast());
 }

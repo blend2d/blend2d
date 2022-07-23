@@ -256,6 +256,7 @@ struct BLPathImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //! 2D vector path [C API].
 struct BLPathCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLPath)
 };
 
 //! Stroke options [C API].
@@ -278,6 +279,8 @@ struct BLStrokeOptionsCore {
   BL_TYPED_MEMBER(BLArrayCore, BLArray<double>, dashArray);
 
   BL_HAS_TYPED_MEMBERS(BLStrokeOptionsCore)
+
+  BL_DEFINE_OBJECT_DCAST(BLStrokeOptions)
 };
 
 //! Optional callback that can be used to consume a path data.

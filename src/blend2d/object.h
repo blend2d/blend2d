@@ -928,6 +928,17 @@ struct BLObjectCore {
 #ifdef __cplusplus
   #define BL_CLASS_INHERITS(BASE) : public BASE
   #define BL_DEFINE_OBJECT_DETAIL
+  #define BL_DEFINE_OBJECT_DCAST(DERIVED_TYPE)                                                     \
+    /*! \cond INTERNAL */                                                                          \
+    template<typename T = DERIVED_TYPE>                                                            \
+    BL_NODISCARD                                                                                   \
+    BL_INLINE T& dcast() noexcept { return static_cast<T&>(*this); }                               \
+                                                                                                   \
+    template<typename T = DERIVED_TYPE>                                                            \
+    BL_NODISCARD                                                                                   \
+    BL_INLINE const T& dcast() const noexcept { return static_cast<const T&>(*this); }             \
+    /*! \endcond */
+
   #define BL_DEFINE_VIRT_BASE
   #define BL_DEFINE_OBJECT_PROPERTY_API                                                            \
     /** Gets a property of the given `name` and assigns it to an initialized `valueOut`. */        \
@@ -936,7 +947,7 @@ struct BLObjectCore {
     }                                                                                              \
                                                                                                    \
     /** \overload */                                                                               \
-    BL_INLINE BLResult getProperty(const BLStringView& name, BLVarCore& valueOut) const noexcept { \
+    BL_INLINE BLResult getProperty(BLStringView name, BLVarCore& valueOut) const noexcept {        \
       return blObjectGetProperty(this, name.data, name.size, &valueOut);                           \
     }                                                                                              \
                                                                                                    \
@@ -946,12 +957,13 @@ struct BLObjectCore {
     }                                                                                              \
                                                                                                    \
     /** \overload */                                                                               \
-    BL_INLINE BLResult setProperty(const BLStringView& name, const BLObjectCore& value) noexcept { \
+    BL_INLINE BLResult setProperty(BLStringView name, const BLObjectCore& value) noexcept {        \
       return blObjectSetProperty(this, name.data, name.size, &value);                              \
     }
 #else
   #define BL_CLASS_INHERITS(BASE)
   #define BL_DEFINE_OBJECT_DETAIL BLObjectDetail _d;
+  #define BL_DEFINE_OBJECT_DCAST(TO)
   #define BL_DEFINE_VIRT_BASE BLObjectVirtBase base;
   #define BL_DEFINE_OBJECT_PROPERTY_API
 #endif
