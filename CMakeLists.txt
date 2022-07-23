@@ -43,7 +43,7 @@ if (NOT DEFINED BLEND2D_NO_NATVIS)
 endif()
 
 set(BLEND2D_DIR      "${BLEND2D_DIR}"      CACHE PATH "Location of 'blend2d'")
-set(BLEND2D_TEST     "${BLEND2D_TEST}"     CACHE BOOL "Build 'blend2d' test applications")
+set(BLEND2D_TEST     "${BLEND2D_TEST}"     CACHE BOOL "Build 'blend2d' tests and samples")
 set(BLEND2D_EMBED    "${BLEND2D_EMBED}"    CACHE BOOL "Embed 'blend2d' library (no targets)")
 set(BLEND2D_STATIC   "${BLEND2D_STATIC}"   CACHE BOOL "Build 'blend2d' statically")
 set(BLEND2D_SANITIZE "${BLEND2D_SANITIZE}" CACHE STRING "List of sanitizers to use")
@@ -134,6 +134,7 @@ function(blend2d_add_target target target_type)
 
   if ("${target_type}" MATCHES "^(EXECUTABLE|TEST)$")
     add_executable(${target} ${X_SOURCES})
+    set_target_properties(${sample} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$(TargetDir).")
   else()
     add_library(${target} ${target_type} ${X_SOURCES})
     set_target_properties(${target} PROPERTIES DEFINE_SYMBOL "")
@@ -151,7 +152,7 @@ function(blend2d_add_target target target_type)
   else()
     target_compile_features(${target} PUBLIC cxx_std_11)
   endif()
-  set_property(TARGET ${target} PROPERTY CXX_EXTENSIONS NO)
+  set_property(TARGET ${target} PROPERTY CXX_EXTENSIONS ON)
   set_property(TARGET ${target} PROPERTY CXX_VISIBILITY_PRESET hidden)
   target_compile_options(${target} PRIVATE ${X_CFLAGS} ${BLEND2D_SANITIZE_CFLAGS} $<IF:$<CONFIG:Debug>,${X_CFLAGS_DBG},${X_CFLAGS_REL}>)
 
@@ -822,6 +823,9 @@ if (NOT BLEND2D_EMBED)
   if (BLEND2D_TEST)
     enable_testing()
 
+    # Blend2D Tests
+    # -------------
+
     # Special target that always uses embedded Blend2D.
     blend2d_add_target(bl_test_unit TEST
                        SOURCES    ${BLEND2D_ALL_SRC_FILES}
@@ -847,15 +851,69 @@ if (NOT BLEND2D_EMBED)
                        LIBRARIES blend2d::blend2d
                        CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
 
-    blend2d_add_target(bl_test_c_api TEST
-                       SOURCES test/bl_test_c_api.c
-                       LIBRARIES blend2d::blend2d
-                       CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
+    # Blend2D C & C++ Samples
+    # -----------------------
 
-    # Sanitizers require C++ linker (C++ sanitizer needs both C++ standard library and C++ sanitizer library support).
-    if (BLEND2D_SANITIZE_CFLAGS)
-      set_target_properties(bl_test_c_api PROPERTIES LINKER_LANGUAGE CXX)
-    endif()
+    set(BLEND2D_SAMPLES_CXX
+      "bl_sample_1"
+      "bl_sample_2"
+      "bl_sample_3"
+      "bl_sample_4"
+      "bl_sample_5"
+      "bl_sample_6"
+      "bl_sample_7"
+      "bl_sample_8"
+    )
+
+    set(BLEND2D_SAMPLES_CAPI
+      "bl_sample_capi"
+    )
+
+    set(BLEND2D_SAMPLES_RESOURCES
+      "ABeeZee-Regular.ttf"
+      "Leaves.jpeg"
+    )
+
+    foreach(sample ${BLEND2D_SAMPLES_CXX})
+      blend2d_add_target(${sample} EXECUTABLE
+                         SOURCES test/${sample}.cpp
+                         LIBRARIES blend2d::blend2d
+                         CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
+    endforeach()
+
+    # NOTE: It's possible these samples would link to C++ standard library as well.
+    # Since this is just examples we won't do anything here that could break some
+    # setups.
+    foreach(sample ${BLEND2D_SAMPLES_CAPI})
+      blend2d_add_target(${sample} EXECUTABLE
+                         SOURCES test/${sample}.c
+                         LIBRARIES blend2d::blend2d
+                         CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
+
+      # Sanitizers require C++ linker (C++ sanitizer needs both C++ standard library and C++ sanitizer library support).
+      if (BLEND2D_SANITIZE_CFLAGS)
+        set_target_properties(${sample} PROPERTIES LINKER_LANGUAGE CXX)
+      endif()
+
+    endforeach()
+
+    # TODO: Not sure this is the best way of copying resources.
+    foreach(resource ${BLEND2D_SAMPLES_RESOURCES})
+      if (NOT CMAKE_BUILD_TYPE)
+        add_custom_command(TARGET blend2d POST_BUILD
+          COMMAND "${CMAKE_COMMAND}" -E copy
+            "${CMAKE_CURRENT_SOURCE_DIR}/test/resources/${resource}"
+            "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/${resource}"
+          COMMENT "Resources")
+      else()
+        add_custom_command(TARGET blend2d POST_BUILD
+          COMMAND "${CMAKE_COMMAND}" -E copy
+            "${CMAKE_CURRENT_SOURCE_DIR}/test/resources/${resource}"
+            "${CMAKE_CURRENT_BINARY_DIR}/${resource}"
+          COMMENT "Resources")
+      endif()
+    endforeach()
+
   endif()
 endif()
 

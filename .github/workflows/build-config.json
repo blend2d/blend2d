@@ -11,21 +11,18 @@
   ],
 
   "tests": [
-    {
-      "cmd": ["bl_test_unit", "--quick"],
-      "optional": true
-    },
-    {
-      "cmd": ["bl_test_c_api"],
-      "optional": true
-    },
-    {
-      "cmd": ["bl_test_fuzzer", "--count=2000"],
-      "optional": true
-    },
-    {
-      "cmd": ["bl_test_verify_mt", "--count=2000"],
-      "optional": true
-    }
+    { "cmd": ["bl_test_unit", "--quick"], "optional": true },
+    { "cmd": ["bl_test_c_api"], "optional": true },
+    { "cmd": ["bl_test_fuzzer", "--count=2000"], "optional": true },
+    { "cmd": ["bl_test_verify_mt", "--count=2000"], "optional": true },
+    { "cmd": ["bl_sample_1"], "optional": true },
+    { "cmd": ["bl_sample_2"], "optional": true },
+    { "cmd": ["bl_sample_3"], "optional": true },
+    { "cmd": ["bl_sample_4"], "optional": true },
+    { "cmd": ["bl_sample_5"], "optional": true },
+    { "cmd": ["bl_sample_6"], "optional": true },
+    { "cmd": ["bl_sample_7"], "optional": true },
+    { "cmd": ["bl_sample_8"], "optional": true },
+    { "cmd": ["bl_sample_capi"], "optional": true }
   ]
 }
