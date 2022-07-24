@@ -165,7 +165,7 @@ endfunction()
 # Blend2D - Compiler Support
 # ==========================
 
-if ("x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xMSVC" OR "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
+if ("x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xMSVC" OR "x${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC")
   list(APPEND BLEND2D_PRIVATE_CFLAGS
     -MP                      # [+] Multi-Process Compilation.
     -GR-                     # [-] Runtime type information.
