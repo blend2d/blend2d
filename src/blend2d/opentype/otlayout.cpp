@@ -2382,8 +2382,9 @@ BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
     faceI->layout.tables[1] = validator.tables[1];
   }
 
-  faceI->scriptTags = validator.scriptTags;
-  faceI->featureTags = validator.featureTags;
+  faceI->scriptTags.dcast<BLArray<BLTag>>().assign(std::move(validator.scriptTags));
+  faceI->featureTags.dcast<BLArray<BLTag>>().assign(std::move(validator.featureTags));
+
   return BL_SUCCESS;
 }
 

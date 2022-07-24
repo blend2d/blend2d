@@ -293,8 +293,6 @@ static void BL_CDECL blImageCodecRtShutdown(BLRuntimeContext* rt) noexcept {
 void blImageCodecRtInit(BLRuntimeContext* rt) noexcept {
   using namespace BLImageCodecPrivate;
 
-  blUnused(rt);
-
   imageCodecsArrayMutex.init();
   imageCodecsArray.init();
 
@@ -311,6 +309,8 @@ void blImageCodecRtInit(BLRuntimeContext* rt) noexcept {
     BL_OBJECT_TYPE_IMAGE_CODEC,
     BLObjectInfo{BL_OBJECT_INFO_IMMUTABLE_FLAG},
     &defaultCodec.impl);
+
+  rt->shutdownHandlers.add(blImageCodecRtShutdown);
 }
 
 void blRegisterBuiltInCodecs(BLRuntimeContext* rt) noexcept {
