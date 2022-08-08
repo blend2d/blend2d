@@ -89,7 +89,7 @@ public:
 template<size_t N>
 class BLScopedBufferTmp : public BLScopedBuffer {
 public:
-  BL_NONCOPYABLE(BLScopedBufferTmp<N>)
+  BL_NONCOPYABLE(BLScopedBufferTmp)
 
   uint8_t _storage[N];
 
