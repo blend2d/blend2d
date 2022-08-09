@@ -450,7 +450,7 @@ public:
 template<size_t N>
 class BLArenaAllocatorTmp : public BLArenaAllocator {
 public:
-  BL_NONCOPYABLE(BLArenaAllocatorTmp<N>)
+  BL_NONCOPYABLE(BLArenaAllocatorTmp)
 
   BL_INLINE explicit BLArenaAllocatorTmp(size_t blockSize, size_t blockAlignment = 1) noexcept
     : BLArenaAllocator(blockSize, blockAlignment, _storage.data, N) {}

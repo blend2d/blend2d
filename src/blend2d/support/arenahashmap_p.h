@@ -189,7 +189,7 @@ public:
 template<typename NodeT>
 class BLArenaHashMap : public BLArenaHashMapBase {
 public:
-  BL_NONCOPYABLE(BLArenaHashMap<NodeT>)
+  BL_NONCOPYABLE(BLArenaHashMap)
 
   typedef NodeT Node;
 
