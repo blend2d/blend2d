@@ -17,7 +17,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! \name Types
+//! \name BLBitSet - Types
 //! \{
 
 typedef BLParametrizedBitOps<BLBitOrder::kMSB, uint32_t> BLBitSetOps;
@@ -26,7 +26,7 @@ typedef BLParametrizedBitOps<BLBitOrder::kMSB, uint32_t> BLBitSetOps;
 
 namespace BLBitSetPrivate {
 
-//! \name Constants
+//! \name BLBitSet - Constants
 //! \{
 
 static constexpr uint32_t kInvalidIndex = BL_BIT_SET_INVALID_INDEX;
@@ -34,7 +34,7 @@ static constexpr uint32_t kSegmentWordCount = BL_BIT_SET_SEGMENT_WORD_COUNT;
 
 //! \}
 
-//! \name Utility Functions
+//! \name BLBitSet - Utility Functions
 //! \{
 
 //! SSO BitSet is empty when all 3 words are zero.
@@ -48,7 +48,7 @@ static BL_INLINE uint32_t getSSOWordIndex(const BLBitSetCore* self) noexcept { r
 
 //! \}
 
-//! \name Memory Management
+//! \name BLBitSet - Memory Management
 //! \{
 
 static BL_INLINE BLBitSetImpl* getImpl(const BLBitSetCore* self) noexcept {

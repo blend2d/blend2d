@@ -1021,9 +1021,10 @@ static BL_NOINLINE uint32_t initSegmentsFromDenseData(BLBitSetSegment* dst, uint
   for (uint32_t segmentId = firstSegmentId; segmentId <= lastSegmentId; segmentId++) {
     uint32_t segmentStartWord = segmentId * kSegmentWordCount;
     uint32_t i = wordIndex % kSegmentWordCount;
-    uint32_t n = blMin<uint32_t>(kSegmentWordCount - i, count - i);
+    uint32_t n = blMin<uint32_t>(kSegmentWordCount - i, count);
 
     initDenseSegment(*dst, segmentStartWord);
+    count -= n;
     wordIndex += n;
 
     n += i;
@@ -3202,7 +3203,7 @@ BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, co
   // Tail segment requires special handling if it doesn't end on a segment boundary.
   //
   // NOTE: We don't have to analyze the data as we already know it's not a full segment and that it's not empty.
-  if (wordIndexEnd != wordIndexAlignedEnd) {
+  if (wordIndex < wordIndexEnd) {
     if (segmentIndex != segmentCount && hasSegmentWordIndex(segmentData[segmentIndex], wordIndex)) {
       // Combine with an existing segment, if data and segment overlaps.
       BLBitSetSegment& current = segmentData[segmentIndex];

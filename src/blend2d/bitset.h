@@ -270,7 +270,7 @@ public:
   //! \name Overloaded Operators
   //! \{
 
-  //! Tests whether the BitSet has any content.
+  //! Tests whether the BitSet has a content.
   //!
   //! \note This is essentially the opposite of `empty()`.
   BL_INLINE explicit operator bool() const noexcept { return !empty(); }
