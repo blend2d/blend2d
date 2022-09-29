@@ -579,9 +579,6 @@ BLResult DeflateDecoder::_decode() noexcept {
             break;
           code -= 257;
 
-          if (BLIntOps::bitSizeOf<BLBitWord>() <= 32)
-            BL_DEFLATE_FILL_BITS();
-
           uint32_t s = sizeExtraTable[code];
           uint32_t size = 0;
           if (s) {
@@ -589,6 +586,9 @@ BLResult DeflateDecoder::_decode() noexcept {
             BL_DEFLATE_READ_BITS(size, s);
           }
           size += sizeBaseTable[code];
+
+          if (BLIntOps::bitSizeOf<BLBitWord>() <= 32)
+            BL_DEFLATE_FILL_BITS();
 
           BL_DEFLATE_READ_CODE(code, &_zDist);
           s = distExtraTable[code];
