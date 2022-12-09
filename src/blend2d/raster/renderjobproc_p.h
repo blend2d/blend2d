@@ -100,7 +100,7 @@ static void blRasterJobProcAsync_FillGeometry(WorkData* workData, RenderJob_Geom
     RenderCommand* commandData = job->command();
 
     if (!edgeStorage->empty()) {
-      commandData->setEdgesAsync(edgeStorage);
+      commandData->setAnalyticEdgesAsync(edgeStorage);
       edgeStorage->resetBoundingBox();
     }
   }
@@ -146,7 +146,7 @@ static void blRasterJobProcAsync_FillText(WorkData* workData, RenderJob_TextOp* 
     RenderCommand* commandData = job->command();
 
     if (!edgeStorage->empty()) {
-      commandData->setEdgesAsync(edgeStorage);
+      commandData->setAnalyticEdgesAsync(edgeStorage);
       edgeStorage->resetBoundingBox();
     }
   }
@@ -167,7 +167,7 @@ static void blRasterJobProcAsync_StrokeGeometry(WorkData* workData, RenderJob_Ge
     RenderCommand* commandData = job->command();
 
     if (!edgeStorage->empty()) {
-      commandData->setEdgesAsync(edgeStorage);
+      commandData->setAnalyticEdgesAsync(edgeStorage);
       edgeStorage->resetBoundingBox();
     }
   }
@@ -213,7 +213,7 @@ static void blRasterJobProcAsync_StrokeText(WorkData* workData, RenderJob_TextOp
     RenderCommand* commandData = job->command();
 
     if (!edgeStorage->empty()) {
-      commandData->setEdgesAsync(edgeStorage);
+      commandData->setAnalyticEdgesAsync(edgeStorage);
       edgeStorage->resetBoundingBox();
     }
   }

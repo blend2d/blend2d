@@ -87,6 +87,8 @@ public:
 
   BL_INLINE void startOver() noexcept {
     workZone.clear();
+    workState = BLArenaAllocator::StatePtr{};
+    edgeStorage.clear();
   }
 
   BL_INLINE void saveState() noexcept {

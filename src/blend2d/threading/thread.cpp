@@ -334,16 +334,18 @@ static void BL_CDECL blFutexWorkerThreadEntryPoint(BLThread* self) noexcept {
 // ===========================
 
 static BLInternalWorkerThread* blThreadNew(BLThreadFunc exitFunc, void* exitData) noexcept {
-  uint32_t alignment = 64;
-  size_t implSize = BL_FUTEX_ENABLED ? sizeof(BLFutexWorkerThread)
-                                     : sizeof(BLPortableWorkerThread);
+  uint32_t alignment = BL_CACHE_LINE_SIZE;
+  uint32_t futexEnabled = BL_FUTEX_ENABLED;
+
+  size_t implSize = futexEnabled ? sizeof(BLFutexWorkerThread)
+                                 : sizeof(BLPortableWorkerThread);
 
   void* allocatedPtr = malloc(implSize + alignment);
   if (BL_UNLIKELY(!allocatedPtr))
     return nullptr;
 
   void* alignedPtr = BLIntOps::alignUp(allocatedPtr, alignment);
-  if (BL_FUTEX_ENABLED)
+  if (futexEnabled)
     return new(BLInternal::PlacementNew{alignedPtr}) BLFutexWorkerThread(exitFunc, exitData, allocatedPtr);
   else
     return new(BLInternal::PlacementNew{alignedPtr}) BLPortableWorkerThread(exitFunc, exitData, allocatedPtr);

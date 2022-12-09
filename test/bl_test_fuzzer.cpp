@@ -24,14 +24,15 @@ static int help() {
   printf("\n");
 
   printf("Fuzzer Options:\n");
-  printf("  --width           - Image width                     [default=513]\n");
-  printf("  --height          - Image height                    [default=513]\n");
-  printf("  --count           - Count of render commands        [default=1000000]\n");
-  printf("  --thread-count    - Number of threads of MT context [default=0]\n");
-  printf("  --command         - Specify which command to run    [default=all]\n");
-  printf("  --seed            - Random number generator seed    [default=1]\n");
-  printf("  --store           - Write resulting images to files [default=false]\n");
-  printf("  --verbose         - Debug each render command       [default=false]\n");
+  printf("  --width           - Image width                       [default=513]\n");
+  printf("  --height          - Image height                      [default=513]\n");
+  printf("  --count           - Count of render commands          [default=1000000]\n");
+  printf("  --thread-count    - Number of threads of MT context   [default=0]\n");
+  printf("  --command         - Specify which command to run      [default=all]\n");
+  printf("  --seed            - Random number generator seed      [default=1]\n");
+  printf("  --store           - Write resulting images to files   [default=false]\n");
+  printf("  --verbose         - Debug each render command         [default=false]\n");
+  printf("  --flush-sync      - Do occasional syncs between calls [default=false]\n");
   printf("\n");
 
   printf("Fuzzer Commands:\n");
@@ -68,6 +69,7 @@ int main(int argc, char* argv[]) {
   // Command line parameters.
   bool verbose = cmdLine.hasArg("--verbose");
   bool storeImages = cmdLine.hasArg("--store");
+  bool flushSync = cmdLine.hasArg("--flush-sync");
   uint32_t threadCount = cmdLine.valueAsUInt("--thread-count", 0);
   uint32_t seed = cmdLine.valueAsUInt("--seed", 1);
   uint32_t width = cmdLine.valueAsUInt("--width", 513);
@@ -81,6 +83,7 @@ int main(int argc, char* argv[]) {
   ContextFuzzer fuzzer("", verbose ? Logger::Verbosity::Debug : Logger::Verbosity::Info);
   fuzzer.seed(seed);
   fuzzer.setStoreImages(storeImages);
+  fuzzer.setFlushSync(flushSync);
 
   if (fuzzer.init(int(width), int(height), BL_FORMAT_PRGB32, threadCount) != BL_SUCCESS) {
     printf("Failed to initialize the rendering context\n");

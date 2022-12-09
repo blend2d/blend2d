@@ -78,8 +78,8 @@ public:
 
   BL_INLINE ~RenderBatch() noexcept {}
 
-  BL_INLINE size_t nextJobIndex() noexcept { return blAtomicFetchAdd(&_jobIndex); }
-  BL_INLINE size_t nextBandIndex() noexcept { return blAtomicFetchAdd(&_bandIndex); }
+  BL_INLINE size_t nextJobIndex() noexcept { return blAtomicFetchAdd(&_jobIndex, 1, std::memory_order_seq_cst); }
+  BL_INLINE size_t nextBandIndex() noexcept { return blAtomicFetchAdd(&_bandIndex, 1, std::memory_order_seq_cst); }
 
   BL_INLINE const BLArenaList<RenderJobQueue>& jobList() const noexcept { return _jobList; }
   BL_INLINE const BLArenaList<RenderFetchQueue>& fetchList() const noexcept { return _fetchList; }

@@ -186,16 +186,20 @@ public:
 class ContextFuzzer {
 public:
   RandomDataGenerator _rnd;
+  BLRandom _rndSync;
   const char* _prefix;
   Logger _logger;
   BLImage _img;
   BLContext _ctx;
   bool _storeImages;
+  bool _flushSync;
 
   ContextFuzzer(const char* prefix, Logger::Verbosity verbosity)
-    : _prefix(prefix),
+    : _rndSync(0u),
+      _prefix(prefix),
       _logger(verbosity),
-      _storeImages(false) {}
+      _storeImages(false),
+      _flushSync(false) {}
 
   BLResult init(int w, int h, BLFormat format, uint32_t threadCount) {
     BLContextCreateInfo createInfo {};
@@ -215,6 +219,7 @@ public:
 
   void seed(uint32_t seed) { _rnd.seed(seed); }
   void setStoreImages(bool value) { _storeImages = value; }
+  void setFlushSync(bool value) { _flushSync = value; }
 
   const BLImage& image() const { return _img; }
 
@@ -225,6 +230,7 @@ public:
 
   void started(const char* fuzzName) {
     _logger.info("%sFuzzing: %s\n", _prefix, fuzzName);
+    _rndSync.reset(0xA29CF911A3B729AFu);
   }
 
   void finished(const char* fuzzName) {
@@ -238,72 +244,97 @@ public:
     }
   }
 
+  inline void recordIteration(size_t n) noexcept {
+    if (_flushSync && _rndSync.nextUInt32() > 0xF0000000u)
+      _ctx.flush(BL_CONTEXT_FLUSH_SYNC);
+  }
+
   void clear() { _ctx.clearAll(); }
 
   void fuzzFillRectI(size_t n) {
     const char* fuzzName = "FillRectI";
-
     started(fuzzName);
+
     for (size_t i = 0; i < n; i++) {
       BLRectI rect = _rnd.nextRectI();
+
       _logger.debug("%sFillRectI(%d, %d, %d, %d)\n", _prefix, rect.x, rect.y, rect.w, rect.h);
       _ctx.setFillStyle(_rnd.nextRgb32());
       _ctx.fillRect(rect);
+
+      recordIteration(i);
     }
+
     finished(fuzzName);
   }
 
   void fuzzFillRectD(size_t n) {
     const char* fuzzName = "FillRectD";
-
     started(fuzzName);
+
     for (size_t i = 0; i < n; i++) {
       BLRect rect = _rnd.nextRectD();
+
       _logger.debug("%sFillRectD(%g, %g, %g, %g)\n", _prefix, rect.x, rect.y, rect.w, rect.h);
       _ctx.setFillStyle(_rnd.nextRgb32());
       _ctx.fillRect(rect);
+
+      recordIteration(i);
     }
+
     finished(fuzzName);
   }
 
   void fuzzFillTriangle(size_t n) {
     const char* fuzzName = "FillTriangle";
-
     started(fuzzName);
+
     for (size_t i = 0; i < n; i++) {
       BLTriangle t = _rnd.nextTriangle();
+
       _logger.debug("%sFillTriangle(%g, %g, %g, %g, %g, %g)\n", _prefix, t.x0, t.y0, t.x1, t.y1, t.x2, t.y2);
       _ctx.setFillStyle(_rnd.nextRgb32());
       _ctx.fillTriangle(t);
+
+      recordIteration(i);
     }
+
     finished(fuzzName);
   }
 
   void fuzzFillPathQuads(size_t n) {
     const char* fuzzName = "FillPathQuads";
-
     started(fuzzName);
+
     for (size_t i = 0; i < n; i++) {
       BLPath path;
+
       path.moveTo(_rnd.nextPointD());
       path.quadTo(_rnd.nextPointD(), _rnd.nextPointD());
       _ctx.setFillStyle(_rnd.nextRgb32());
       _ctx.fillPath(path);
+
+      recordIteration(i);
     }
+
     finished(fuzzName);
   }
 
   void fuzzFillPathCubics(size_t n) {
     const char* fuzzName = "FillPathCubics";
-
     started(fuzzName);
+
     for (size_t i = 0; i < n; i++) {
       BLPath path;
+
       path.moveTo(_rnd.nextPointD());
       path.cubicTo(_rnd.nextPointD(), _rnd.nextPointD(), _rnd.nextPointD());
       _ctx.setFillStyle(_rnd.nextRgb32());
       _ctx.fillPath(path);
+
+      recordIteration(i);
     }
+
     finished(fuzzName);
   }
 };

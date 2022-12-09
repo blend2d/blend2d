@@ -90,6 +90,7 @@ static void processBand(CommandProcAsync::ProcData& procData, bool isInitialBand
     while (it.hasNext()) {
       uint32_t bitIndex = it.next();
       const RenderCommand& command = commandQueueData[bitIndex];
+
       if (CommandProcAsync::processCommand(procData, command, isInitialBand)) {
         bitWord &= ~BitOps::indexAsMask(bitIndex);
       }

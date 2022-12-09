@@ -733,17 +733,20 @@ static BL_NOINLINE BLResult flushRenderBatch(BLRasterContextImpl* ctxI) noexcept
     RenderBatch* batch = mgr.currentBatch();
     uint32_t threadCount = mgr.threadCount();
 
-    synchronization.beforeStart(threadCount);
+    synchronization.beforeStart(threadCount, batch->jobCount() > 0);
     batch->_synchronization = &synchronization;
 
     for (uint32_t i = 0; i < threadCount; i++) {
-      BLThread* thread = mgr._workerThreads[i];
       WorkData* workData = mgr._workDataStorage[i];
-
       workData->batch = batch;
       workData->initContextData(ctxI->dstData);
+    }
 
-      thread->run(WorkerProc::workerThreadEntry, workData);
+    // Just to make sure that all the changes are visible to the threads.
+    blAtomicThreadFence();
+
+    for (uint32_t i = 0; i < threadCount; i++) {
+      mgr._workerThreads[i]->run(WorkerProc::workerThreadEntry, mgr._workDataStorage[i]);
     }
 
     // User thread acts as a worker too.
@@ -770,6 +773,8 @@ static BL_NOINLINE BLResult flushRenderBatch(BLRasterContextImpl* ctxI) noexcept
 
     ctxI->syncWorkData.startOver();
     ctxI->contextFlags &= ~BL_RASTER_CONTEXT_SHARED_ALL_FLAGS;
+    ctxI->sharedFillState = nullptr;
+    ctxI->sharedStrokeState = nullptr;
   }
 
   return BL_SUCCESS;

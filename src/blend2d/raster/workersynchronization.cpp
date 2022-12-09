@@ -10,80 +10,77 @@
 namespace BLRasterEngine {
 
 WorkerSynchronization::WorkerSynchronization() noexcept
-  : _jobsRunningCount(0),
-    _threadsRunningCount(0),
-    _waitingForCompletion(false) {
+  : _header{},
+    _status{} {
 
-  if (BL_FUTEX_ENABLED)
-    blCallCtor(_futexData);
-  else
+  _header.useFutex = BL_FUTEX_ENABLED;
+  if (!useFutex())
     blCallCtor(_portableData);
 }
 
 WorkerSynchronization::~WorkerSynchronization() noexcept {
-  if (BL_FUTEX_ENABLED)
-    blCallDtor(_futexData);
-  else
+  if (!useFutex())
     blCallDtor(_portableData);
 }
 
 void WorkerSynchronization::waitForJobsToFinish() noexcept {
-  if (BL_FUTEX_ENABLED) {
-    if (blAtomicFetchSub(&_jobsRunningCount, 1) == 1) {
-      blAtomicStore(&_futexData.jobsFinished, 1, std::memory_order_release);
-      BLFutex::wakeAll(&_futexData.jobsFinished);
+  if (useFutex()) {
+    if (blAtomicFetchSub(&_status.jobsRunningCount, 1, std::memory_order_seq_cst) == 1) {
+      blAtomicFetchAdd(&_status.futexJobsFinished, 1, std::memory_order_seq_cst);
+      BLFutex::wakeAll(&_status.futexJobsFinished);
     }
     else {
       do {
-        BLFutex::wait(&_futexData.jobsFinished, 0);
-      } while (blAtomicFetch(&_futexData.jobsFinished, std::memory_order_acquire) != 1);
+        BLFutex::wait(&_status.futexJobsFinished, 0);
+      } while (blAtomicFetch(&_status.futexJobsFinished, std::memory_order_relaxed) != 1);
     }
   }
   else {
     BLLockGuard<BLMutex> guard(_portableData.mutex);
-    if (--_jobsRunningCount == 0) {
+    if (--_status.jobsRunningCount == 0) {
       guard.release();
       _portableData.jobsCondition.broadcast();
     }
     else {
-      while (_jobsRunningCount)
+      while (_status.jobsRunningCount)
         _portableData.jobsCondition.wait(_portableData.mutex);
     }
   }
 }
 
 void WorkerSynchronization::threadDone() noexcept {
-  if (blAtomicFetchSub(&_threadsRunningCount) != 1)
+  uint32_t remainingPlusOne = blAtomicFetchSub(&_status.threadsRunningCount, 1, std::memory_order_seq_cst);
+
+  if (remainingPlusOne != 1)
     return;
 
-  if (BL_FUTEX_ENABLED) {
-    blAtomicStore(&_futexData.bandsFinished, 1, std::memory_order_release);
-    BLFutex::wakeOne(&_futexData.bandsFinished);
+  if (useFutex()) {
+    blAtomicFetchAdd(&_status.futexBandsFinished, 1, std::memory_order_seq_cst);
+    BLFutex::wakeOne(&_status.futexBandsFinished);
   }
   else {
-    if (_portableData.mutex.protect([&]() { return _waitingForCompletion; }))
+    if (_portableData.mutex.protect([&]() { return _status.waitingForCompletion; }))
       _portableData.doneCondition.signal();
   }
 }
 
 void WorkerSynchronization::waitForThreadsToFinish() noexcept {
-  if (BL_FUTEX_ENABLED) {
+  if (useFutex()) {
     for (;;) {
-      uint32_t finished = blAtomicFetch(&_futexData.bandsFinished, std::memory_order_acquire);
+      uint32_t finished = blAtomicFetch(&_status.futexBandsFinished, std::memory_order_acquire);
       if (finished)
         break;
-      BLFutex::wait(&_futexData.bandsFinished, 0);
+      BLFutex::wait(&_status.futexBandsFinished, 0);
     }
-
-    blAtomicStore(&_futexData.bandsFinished, 0, std::memory_order_relaxed);
+    blAtomicStore(&_status.futexBandsFinished, 0, std::memory_order_relaxed);
   }
   else {
     BLLockGuard<BLMutex> guard(_portableData.mutex);
-    if (blAtomicFetch(&_threadsRunningCount) > 0) {
-      _waitingForCompletion = true;
-      while (blAtomicFetch(&_threadsRunningCount) > 0)
+    if (blAtomicFetch(&_status.threadsRunningCount) > 0) {
+      _status.waitingForCompletion = true;
+      while (blAtomicFetch(&_status.threadsRunningCount) > 0)
         _portableData.doneCondition.wait(_portableData.mutex);
-      _waitingForCompletion = false;
+      _status.waitingForCompletion = false;
     }
   }
 }

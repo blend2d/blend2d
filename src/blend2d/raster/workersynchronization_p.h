@@ -20,20 +20,24 @@ class alignas(BL_CACHE_LINE_SIZE) WorkerSynchronization {
 public:
   BL_NONCOPYABLE(WorkerSynchronization)
 
-  volatile uint32_t _jobsRunningCount;
-  volatile uint32_t _threadsRunningCount;
-  volatile uint32_t _waitingForCompletion;
-
-  struct FutexData {
-    uint32_t jobsFinished;
-    uint32_t bandsFinished;
-
-    BL_INLINE FutexData() noexcept
-      : jobsFinished(0),
-        bandsFinished(0) {}
+  struct alignas(BL_CACHE_LINE_SIZE) Header {
+    bool useFutex;
   };
 
-  struct PortableData {
+  struct alignas(BL_CACHE_LINE_SIZE) Status {
+    // These are used by both portable and futex implementation.
+    uint32_t jobsRunningCount;
+    uint32_t threadsRunningCount;
+    uint32_t waitingForCompletion;
+
+    uint8_t padding[64 - 12];
+
+    // These are only used by futex implementation.
+    uint32_t futexJobsFinished;
+    uint32_t futexBandsFinished;
+  };
+
+  struct alignas(BL_CACHE_LINE_SIZE) PortableData {
     BL_INLINE PortableData() noexcept {}
     BL_INLINE ~PortableData() noexcept {}
 
@@ -42,17 +46,19 @@ public:
     BLConditionVariable doneCondition;
   };
 
-  union {
-    FutexData _futexData;
-    PortableData _portableData;
-  };
+  Header _header;
+  Status _status;
+  PortableData _portableData;
 
   WorkerSynchronization() noexcept;
   ~WorkerSynchronization() noexcept;
 
-  BL_INLINE void beforeStart(uint32_t threadCount) noexcept {
-    blAtomicStore(&_jobsRunningCount, threadCount + 1);
-    blAtomicStore(&_threadsRunningCount, threadCount);
+  BL_INLINE bool useFutex() const noexcept { return _header.useFutex; }
+
+  BL_INLINE void beforeStart(uint32_t threadCount, bool hasJobs) noexcept {
+    blAtomicStore(&_status.jobsRunningCount, hasJobs ? uint32_t(threadCount + 1) : uint32_t(0), std::memory_order_relaxed);
+    blAtomicStore(&_status.threadsRunningCount, threadCount, std::memory_order_relaxed);
+    blAtomicStore(&_status.futexJobsFinished, 0u, std::memory_order_relaxed);
   }
 
   void waitForJobsToFinish() noexcept;

@@ -232,7 +232,7 @@ struct RenderCommand {
   }
 
   //! Sets edges of FillAnalytic or FillMaskAnalytic command.
-  BL_INLINE void setEdgesAsync(EdgeStorage<int>* edgeStorage) noexcept {
+  BL_INLINE void setAnalyticEdgesAsync(EdgeStorage<int>* edgeStorage) noexcept {
     _payload.analyticAsync.edges = edgeStorage->flattenEdgeLinks();
     _payload.analyticAsync.fixedY0 = edgeStorage->boundingBox().y0;
   }

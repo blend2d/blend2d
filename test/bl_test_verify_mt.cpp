@@ -23,6 +23,7 @@ public:
 
   bool verbose;
   bool storeImages;
+  bool flushSync;
   uint32_t threadCount;
   uint32_t seed;
   uint32_t width;
@@ -62,14 +63,15 @@ public:
     printf("\n");
 
     printf("Fuzzer Options:\n");
-    printf("  --width           - Image width                     [default=513]\n");
-    printf("  --height          - Image height                    [default=513]\n");
-    printf("  --count           - Count of render commands        [default=1000000]\n");
-    printf("  --thread-count    - Number of threads of MT context [default=2]\n");
-    printf("  --command         - Specify which command to run    [default=all]\n");
-    printf("  --seed            - Random number generator seed    [default=1]\n");
-    printf("  --store           - Write resulting images to files [default=false]\n");
-    printf("  --verbose         - Debug each render command       [default=false]\n");
+    printf("  --width           - Image width                       [default=513]\n");
+    printf("  --height          - Image height                      [default=513]\n");
+    printf("  --count           - Count of render commands          [default=1000000]\n");
+    printf("  --thread-count    - Number of threads of MT context   [default=2]\n");
+    printf("  --command         - Specify which command to run      [default=all]\n");
+    printf("  --seed            - Random number generator seed      [default=1]\n");
+    printf("  --store           - Write resulting images to files   [default=false]\n");
+    printf("  --flush-sync      - Do occasional syncs between calls [default=false]\n");
+    printf("  --verbose         - Debug each render command         [default=false]\n");
     printf("\n");
 
     printf("Fuzzer Commands:\n");
@@ -180,6 +182,7 @@ public:
 
     verbose = cmdLine.hasArg("--verbose");
     storeImages = cmdLine.hasArg("--store");
+    flushSync = cmdLine.hasArg("--flush-sync");
     threadCount = cmdLine.valueAsUInt("--thread-count", 2);
     seed = cmdLine.valueAsUInt("--seed", seed);
     width = cmdLine.valueAsUInt("--width", width);
@@ -191,6 +194,9 @@ public:
 
     ContextFuzzer aFuzzer("[ST] ", verbose ? Logger::Verbosity::Debug : Logger::Verbosity::Info);
     ContextFuzzer bFuzzer("[MT] ", Logger::Verbosity::Info);
+
+    aFuzzer.setFlushSync(flushSync);
+    bFuzzer.setFlushSync(flushSync);
 
     if (aFuzzer.init(int(width), int(height), BL_FORMAT_PRGB32, 0          ) != BL_SUCCESS ||
         bFuzzer.init(int(width), int(height), BL_FORMAT_PRGB32, threadCount) != BL_SUCCESS) {
