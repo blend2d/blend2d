@@ -84,18 +84,19 @@ public:
   template<typename... Args>
   inline void print(const char* fmt, Args&&... args) {
     printf(fmt, args...);
+    fflush(stdout);
   }
 
   template<typename... Args>
   inline void debug(const char* fmt, Args&&... args) {
     if (_verbosity <= Verbosity::Debug)
-      printf(fmt, args...);
+      print(fmt, args...);
   }
 
   template<typename... Args>
   inline void info(const char* fmt, Args&&... args) {
     if (_verbosity <= Verbosity::Info)
-      printf(fmt, args...);
+      print(fmt, args...);
   }
 };
 

@@ -55,6 +55,8 @@ public:
       buildInfo.patchVersion,
       buildInfo.buildType == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
       buildInfo.compilerInfo);
+
+    fflush(stdout);
   }
 
   int help() {
@@ -81,6 +83,7 @@ public:
     printf("  FillPathQuads  - Fill path having quadratic curves\n");
     printf("  FillPathCubics - Fill path having cubic curves\n");
 
+    fflush(stdout);
     return 0;
   }
 

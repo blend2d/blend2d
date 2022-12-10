@@ -42,6 +42,7 @@ static int help() {
   printf("  FillQuads      - Fill path having quadratic curves\n");
   printf("  FillCubics     - Fill path having cubic curves\n");
 
+  fflush(stdout);
   return 0;
 }
 
@@ -62,6 +63,7 @@ int main(int argc, char* argv[]) {
     buildInfo.patchVersion,
     buildInfo.buildType == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
     buildInfo.compilerInfo);
+  fflush(stdout);
 
   if (cmdLine.hasArg("--help"))
     return help();
