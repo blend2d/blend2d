@@ -70,11 +70,19 @@ jobs:
           - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-12", arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-12", arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-12", arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-13", arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-13", arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-13", arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-13", arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-14", arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-14", arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-14", arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-14", arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
 
-          - { title: "macos-11.0"    , os: "macos-11.0"    , cc: "gcc-10"  , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "macos-11.0"    , os: "macos-11.0"    , cc: "gcc-10"  , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "macos-11.0"    , os: "macos-11.0"    , cc: "clang"   , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "macos-11.0"    , os: "macos-11.0"    , cc: "clang"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "macos-11.0"     , os: "macos-11.0"    , cc: "gcc-10"  , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "macos-11.0"     , os: "macos-11.0"    , cc: "gcc-10"  , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "macos-11.0"     , os: "macos-11.0"    , cc: "clang"   , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "macos-11.0"     , os: "macos-11.0"    , cc: "clang"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
 
           - { title: "windows"        , os: "windows-2019"  , cc: "vs2019"  , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
           - { title: "windows"        , os: "windows-2019"  , cc: "vs2019"  , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
@@ -91,24 +99,24 @@ jobs:
 
     steps:
       - name: "Checkout Blend2D"
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: "source"
 
       - name: "Checkout AsmJit"
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: asmjit/asmjit
           path: "source/3rdparty/asmjit"
 
       - name: "Checkout Build Actions"
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: build-actions/build-actions
           path: "build-actions"
 
       - name: "Setup Python"
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: "3.x"
 
