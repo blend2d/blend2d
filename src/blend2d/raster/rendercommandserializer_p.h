@@ -250,8 +250,10 @@ struct RenderCommandSerializerBlit<BL_RASTER_RENDERING_MODE_ASYNC> : public Rend
   }
 
   BL_INLINE void rollbackFetchData(BLRasterContextImpl* ctxI) noexcept {
-    ctxI->workerMgr()._allocator.restoreState(
-      reinterpret_cast<BLArenaAllocator::StatePtr>(_command->_source.fetchData));
+    if (_command->_source.fetchData) {
+      ctxI->workerMgr()._allocator.restoreState(
+        reinterpret_cast<BLArenaAllocator::StatePtr>(_command->_source.fetchData));
+    }
   }
 
   BL_INLINE RenderFetchData* fetchData() { return _command->_source.fetchData; }
