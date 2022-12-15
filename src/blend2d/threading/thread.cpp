@@ -347,7 +347,7 @@ static void BL_CDECL blFutexWorkerThreadEntryPoint(BLThread* self) noexcept {
     if (flags & (BL_WORKER_THREAD_FLAG_ENQUEUED_WORK | BL_WORKER_THREAD_FLAG_QUITTING))
       continue;
 
-    BLFutex::wait(&thread->_statusData.flags, flags);
+    BLFutex::wait(&thread->_statusData.flags, flags | BL_WORKER_THREAD_FLAG_SLEEPING);
   }
 }
 
