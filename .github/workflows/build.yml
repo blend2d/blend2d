@@ -21,55 +21,49 @@ jobs:
           - { title: "diag-valgrind"  , os: "ubuntu-latest" , cc: "clang"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON", diagnostics: "valgrind" }
           - { title: "diag-scan-build", os: "ubuntu-latest" , cc: "clang"   , arch: "x64", build_type: "Debug"  , diagnostics: "scan-build" }
 
+          - { title: "no-futex"       , os: "ubuntu-latest" , cc: "clang"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON,BLEND2D_NO_FUTEX=1" }
           - { title: "no-intrinsics"  , os: "ubuntu-latest" , cc: "clang"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON,BLEND2D_NO_INTRINSICS=1" }
           - { title: "no-tls"         , os: "ubuntu-latest" , cc: "clang"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON,BLEND2D_NO_TLS=1" }
 
-          - { title: "linux"          , os: "ubuntu-latest" , cc: "gcc"     , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-latest" , cc: "gcc"     , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-latest" , cc: "gcc"     , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-latest" , cc: "gcc"     , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-18.04"  , cc: "gcc-4.8" , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-18.04"  , cc: "gcc-4.8" , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-18.04"  , cc: "gcc-4.8" , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-18.04"  , cc: "gcc-4.8" , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-18.04"  , cc: "gcc-5"   , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-18.04"  , cc: "gcc-5"   , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-18.04"  , cc: "gcc-6"   , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-18.04"  , cc: "gcc-6"   , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "force-avx"      , os: "ubuntu-latest" , cc: "clang"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON,CMAKE_CXX_FLAGS=-mavx" }
+          - { title: "force-avx2"     , os: "ubuntu-latest" , cc: "clang"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON,CMAKE_CXX_FLAGS=-mavx2" }
+
           - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-7"   , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-7"   , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-7"   , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-7"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-8"   , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-8"   , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-8"   , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-9"   , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-9"   , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-10"  , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-10"  , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-10"  , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-10"  , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-11"  , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-11"  , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-11"  , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-11"  , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-latest" , cc: "clang"   , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-latest" , cc: "clang"   , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-latest" , cc: "clang"   , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-latest" , cc: "clang"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-9" , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-9" , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-9" , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-9" , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "gcc-8"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-9"   , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-9"   , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-9"   , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-9"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-10"  , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-10"  , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-10"  , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-10"  , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-11"  , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-11"  , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-11"  , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-11"  , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-12"  , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-12"  , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-12"  , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "gcc-12"  , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-10", arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-10", arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-10", arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-10", arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-11", arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-11", arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-11", arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-11", arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-12", arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-12", arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-12", arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "linux"          , os: "ubuntu-20.04"  , cc: "clang-12", arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-11", arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-11", arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-11", arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-11", arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-12", arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-12", arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-12", arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-12", arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-13", arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-13", arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-13", arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
@@ -79,16 +73,15 @@ jobs:
           - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-14", arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
           - { title: "linux"          , os: "ubuntu-22.04"  , cc: "clang-14", arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
 
-          - { title: "macos-11.0"     , os: "macos-11.0"    , cc: "gcc-10"  , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "macos-11.0"     , os: "macos-11.0"    , cc: "gcc-10"  , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { title: "macos-11.0"     , os: "macos-11.0"    , cc: "clang"   , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
-          - { title: "macos-11.0"     , os: "macos-11.0"    , cc: "clang"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "macos"          , os: "macos-11.0"    , cc: "gcc-10"  , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "macos"          , os: "macos-11.0"    , cc: "gcc-10"  , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { title: "macos"          , os: "macos-11.0"    , cc: "clang"   , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
+          - { title: "macos"          , os: "macos-11.0"    , cc: "clang"   , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
 
           - { title: "windows"        , os: "windows-2019"  , cc: "vs2019"  , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
           - { title: "windows"        , os: "windows-2019"  , cc: "vs2019"  , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
           - { title: "windows"        , os: "windows-2019"  , cc: "vs2019"  , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
           - { title: "windows"        , os: "windows-2019"  , cc: "vs2019"  , arch: "x64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-
           - { title: "windows"        , os: "windows-2022"  , cc: "vs2022"  , arch: "x86", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
           - { title: "windows"        , os: "windows-2022"  , cc: "vs2022"  , arch: "x86", build_type: "Release", defs: "BLEND2D_TEST=ON" }
           - { title: "windows"        , os: "windows-2022"  , cc: "vs2022"  , arch: "x64", build_type: "Debug"  , defs: "BLEND2D_TEST=ON" }
