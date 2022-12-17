@@ -56,9 +56,9 @@ public:
   BL_INLINE bool useFutex() const noexcept { return _header.useFutex; }
 
   BL_INLINE void beforeStart(uint32_t threadCount, bool hasJobs) noexcept {
-    blAtomicStore(&_status.jobsRunningCount, hasJobs ? uint32_t(threadCount + 1) : uint32_t(0), std::memory_order_relaxed);
-    blAtomicStore(&_status.threadsRunningCount, threadCount, std::memory_order_relaxed);
-    blAtomicStore(&_status.futexJobsFinished, 0u, std::memory_order_relaxed);
+    blAtomicStoreRelaxed(&_status.jobsRunningCount, hasJobs ? uint32_t(threadCount + 1) : uint32_t(0));
+    blAtomicStoreRelaxed(&_status.threadsRunningCount, threadCount);
+    blAtomicStoreRelaxed(&_status.futexJobsFinished, 0u);
   }
 
   void waitForJobsToFinish() noexcept;

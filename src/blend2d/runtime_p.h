@@ -90,7 +90,7 @@ struct BLRuntimeContext {
   //!
   //! When this counter is incremented from 0 to 1 the library is initialized, when it's decremented to zero it
   //! will free all resources and it will no longer be safe to use.
-  volatile size_t refCount;
+  size_t refCount;
 
   //! System information.
   BLRuntimeSystemInfo systemInfo;

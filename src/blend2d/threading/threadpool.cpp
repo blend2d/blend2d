@@ -31,14 +31,14 @@ public:
   enum : uint32_t { kMaxThreadCount = 64 };
   typedef BLFixedBitArray<BLBitWord, kMaxThreadCount> BitArray;
 
-  volatile size_t refCount;
-  volatile uint32_t stackSize;
-  volatile uint32_t maxThreadCount;
-  volatile uint32_t createdThreadCount;
-  volatile uint32_t pooledThreadCount;
-  volatile uint32_t acquiredThreadCount;
-  volatile uint32_t destroyWaitTimeInMS;
-  volatile uint32_t waitingOnDestroy;
+  size_t refCount;
+  uint32_t stackSize;
+  uint32_t maxThreadCount;
+  uint32_t createdThreadCount;
+  uint32_t pooledThreadCount;
+  uint32_t acquiredThreadCount;
+  uint32_t destroyWaitTimeInMS;
+  uint32_t waitingOnDestroy;
 
   BLMutex mutex;
   BLConditionVariable destroyCondition;
@@ -63,7 +63,7 @@ public:
       threads {} { init(); }
 
   ~BLInternalThreadPool() noexcept {
-    if (blAtomicFetch(&createdThreadCount) != 0)
+    if (blAtomicFetchStrong(&createdThreadCount) != 0)
       performExitCleanup();
 
     destroy();
@@ -80,7 +80,7 @@ public:
       cleanup(BL_THREAD_QUIT_ON_EXIT);
 
       BLLockGuard<BLMutex> guard(mutex);
-      if (blAtomicFetch(&createdThreadCount) != 0) {
+      if (blAtomicFetchStrong(&createdThreadCount) != 0) {
         waitingOnDestroy = 1;
         if (destroyCondition.waitFor(mutex, waitTime) == BL_SUCCESS)
           break;
@@ -110,13 +110,13 @@ static void blThreadPoolDestroy(BLInternalThreadPool* self) noexcept {
 static BLThreadPool* BL_CDECL blThreadPoolAddRef(BLThreadPool* self_) noexcept {
   BLInternalThreadPool* self = static_cast<BLInternalThreadPool*>(self_);
   if (self->refCount != 0)
-    blAtomicFetchAdd(&self->refCount);
+    blAtomicFetchAddStrong(&self->refCount);
   return self;
 }
 
 static BLResult BL_CDECL blThreadPoolRelease(BLThreadPool* self_) noexcept {
   BLInternalThreadPool* self = static_cast<BLInternalThreadPool*>(self_);
-  if (self->refCount != 0 && blAtomicFetchSub(&self->refCount) == 1)
+  if (self->refCount != 0 && blAtomicFetchSubStrong(&self->refCount) == 1)
     blThreadPoolDestroy(self);
   return BL_SUCCESS;
 }
@@ -160,7 +160,7 @@ static void blThreadPoolThreadExitFunc(BLThread* thread, void* data) noexcept {
   BLInternalThreadPool* threadPool = static_cast<BLInternalThreadPool*>(data);
   thread->destroy();
 
-  if (blAtomicFetchSub(&threadPool->createdThreadCount) == 1) {
+  if (blAtomicFetchSubStrong(&threadPool->createdThreadCount) == 1) {
     if (threadPool->mutex.protect([&]() { return threadPool->waitingOnDestroy; }))
       threadPool->destroyCondition.signal();
   }
@@ -258,7 +258,7 @@ static uint32_t blThreadPoolAcquireThreadsInternal(BLInternalThreadPool* self, B
       if (reason != BL_SUCCESS) {
         if (flags & BL_THREAD_POOL_ACQUIRE_FLAG_ALL_OR_NOTHING) {
           self->acquiredThreadCount += nAcquired;
-          blAtomicFetchAdd(&self->createdThreadCount, nAcquired);
+          blAtomicFetchAddStrong(&self->createdThreadCount, nAcquired);
 
           blThreadPoolReleaseThreadsInternal(self, threads, nAcquired);
           *reasonOut = reason;
@@ -272,7 +272,7 @@ static uint32_t blThreadPoolAcquireThreadsInternal(BLInternalThreadPool* self, B
       nAcquired++;
     }
 
-    blAtomicFetchAdd(&self->createdThreadCount, nAcquired);
+    blAtomicFetchAddStrong(&self->createdThreadCount, nAcquired);
   }
 
   uint32_t bwIndex = 0;
@@ -371,8 +371,8 @@ void blThreadPoolRtInit(BLRuntimeContext* rt) noexcept {
 #if defined(BL_TEST)
 struct ThreadTestData {
   uint32_t iter;
-  volatile uint32_t counter;
-  volatile uint32_t waiting;
+  uint32_t counter;
+  uint32_t waiting;
   BLMutex mutex;
   BLConditionVariable condition;
 
@@ -386,7 +386,7 @@ static void BL_CDECL test_thread_entry(BLThread* thread, void* data_) noexcept {
   ThreadTestData* data = static_cast<ThreadTestData*>(data_);
   INFO("[#%u] Thread %p running\n", data->iter, thread);
 
-  if (blAtomicFetchSub(&data->counter) == 1) {
+  if (blAtomicFetchSubStrong(&data->counter) == 1) {
     if (data->mutex.protect([&]() { return data->waiting; })) {
       INFO("[#%u] Thread %p signaling to main thread\n", data->iter, thread);
       data->condition.signal();
@@ -423,7 +423,7 @@ UNIT(thread_pool) {
     EXPECT_EQ(n, kThreadCount);
     EXPECT_EQ(tp->createdThreadCount, kThreadCount);
 
-    blAtomicStore(&data.counter, n);
+    blAtomicStoreRelaxed(&data.counter, n);
     INFO("[#%u] Running %u threads", i, n);
     for (BLThread* thread : threads) {
       BLResult result = thread->run(test_thread_entry, &data);
@@ -434,7 +434,7 @@ UNIT(thread_pool) {
     {
       BLLockGuard<BLMutex> guard(data.mutex);
       data.waiting = true;
-      while (blAtomicFetch(&data.counter) != 0)
+      while (blAtomicFetchStrong(&data.counter) != 0)
         data.condition.wait(data.mutex);
     }
 

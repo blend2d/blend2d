@@ -25,14 +25,14 @@ WorkerSynchronization::~WorkerSynchronization() noexcept {
 
 void WorkerSynchronization::waitForJobsToFinish() noexcept {
   if (useFutex()) {
-    if (blAtomicFetchSub(&_status.jobsRunningCount, 1, std::memory_order_seq_cst) == 1) {
-      blAtomicFetchAdd(&_status.futexJobsFinished, 1, std::memory_order_seq_cst);
+    if (blAtomicFetchSubStrong(&_status.jobsRunningCount) == 1) {
+      blAtomicFetchAddStrong(&_status.futexJobsFinished);
       BLFutex::wakeAll(&_status.futexJobsFinished);
     }
     else {
       do {
-        BLFutex::wait(&_status.futexJobsFinished, 0);
-      } while (blAtomicFetch(&_status.futexJobsFinished, std::memory_order_relaxed) != 1);
+        BLFutex::wait(&_status.futexJobsFinished, 0u);
+      } while (blAtomicFetchRelaxed(&_status.futexJobsFinished) != 1);
     }
   }
   else {
@@ -49,13 +49,13 @@ void WorkerSynchronization::waitForJobsToFinish() noexcept {
 }
 
 void WorkerSynchronization::threadDone() noexcept {
-  uint32_t remainingPlusOne = blAtomicFetchSub(&_status.threadsRunningCount, 1, std::memory_order_seq_cst);
+  uint32_t remainingPlusOne = blAtomicFetchSubStrong(&_status.threadsRunningCount);
 
   if (remainingPlusOne != 1)
     return;
 
   if (useFutex()) {
-    blAtomicFetchAdd(&_status.futexBandsFinished, 1, std::memory_order_seq_cst);
+    blAtomicFetchAddStrong(&_status.futexBandsFinished);
     BLFutex::wakeOne(&_status.futexBandsFinished);
   }
   else {
@@ -67,18 +67,18 @@ void WorkerSynchronization::threadDone() noexcept {
 void WorkerSynchronization::waitForThreadsToFinish() noexcept {
   if (useFutex()) {
     for (;;) {
-      uint32_t finished = blAtomicFetch(&_status.futexBandsFinished, std::memory_order_acquire);
+      uint32_t finished = blAtomicFetchStrong(&_status.futexBandsFinished);
       if (finished)
         break;
       BLFutex::wait(&_status.futexBandsFinished, 0);
     }
-    blAtomicStore(&_status.futexBandsFinished, 0, std::memory_order_relaxed);
+    blAtomicStoreRelaxed(&_status.futexBandsFinished, 0u);
   }
   else {
     BLLockGuard<BLMutex> guard(_portableData.mutex);
-    if (blAtomicFetch(&_status.threadsRunningCount) > 0) {
+    if (blAtomicFetchRelaxed(&_status.threadsRunningCount) > 0) {
       _status.waitingForCompletion = true;
-      while (blAtomicFetch(&_status.threadsRunningCount) > 0)
+      while (blAtomicFetchRelaxed(&_status.threadsRunningCount) > 0)
         _portableData.doneCondition.wait(_portableData.mutex);
       _status.waitingForCompletion = false;
     }

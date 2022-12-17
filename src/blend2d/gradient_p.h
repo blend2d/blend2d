@@ -23,7 +23,7 @@ struct BLGradientLUT {
   //! \{
 
   //! Reference count.
-  volatile size_t refCount;
+  size_t refCount;
   //! Table size - must be a power of 2!
   size_t size;
 
@@ -65,12 +65,12 @@ struct BLGradientLUT {
   //! \{
 
   BL_INLINE BLGradientLUT* incRef() noexcept {
-    blAtomicFetchAdd(&refCount);
+    blAtomicFetchAddRelaxed(&refCount);
     return this;
   }
 
   BL_INLINE bool decRefAndTest() noexcept {
-    return blAtomicFetchSub(&refCount) == 1;
+    return blAtomicFetchSubStrong(&refCount) == 1;
   }
 
   BL_INLINE void release() noexcept {
@@ -119,9 +119,9 @@ struct BLGradientInfo {
 //! Private implementation that extends \ref BLGradientImpl.
 struct BLGradientPrivateImpl : public BLGradientImpl {
   //! Gradient LUT cache (32-bit).
-  BLGradientLUT* volatile lut32;
+  BLGradientLUT* lut32;
   //! Information regarding gradient stops.
-  volatile BLGradientInfo info32;
+  BLGradientInfo info32;
 };
 
 //! \}

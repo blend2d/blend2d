@@ -315,15 +315,15 @@ static BL_INLINE size_t blObjectImplGetRefCount(const void* impl) noexcept {
 
 //! Initializes a reference count of a freshly allocated `impl` to its initial `value`.
 static BL_INLINE void blObjectImplInitRefCount(void* impl, size_t value = 1u) noexcept {
-  *static_cast<volatile size_t*>(BLPtrOps::deoffset(impl, sizeof(size_t))) = value;
+  *static_cast<size_t*>(BLPtrOps::deoffset(impl, sizeof(size_t))) = value;
 }
 
 static BL_INLINE void blObjectImplAddRef(void* impl, size_t value = 1u) noexcept {
-  blAtomicFetchAdd(blObjectImplGetRefCountPtr(impl), value);
+  blAtomicFetchAddRelaxed(blObjectImplGetRefCountPtr(impl), value);
 }
 
 static BL_INLINE bool blObjectImplDecRefAndTest(void* impl, BLObjectInfo info) noexcept {
-  size_t rcPrev = blAtomicFetchSub(blObjectImplGetRefCountPtr(impl), 1u);
+  size_t rcPrev = blAtomicFetchSubStrong(blObjectImplGetRefCountPtr(impl));
   size_t rcInit = blObjectImplGetRefCountBaseFromObjectInfo(info);
 
   return rcPrev == rcInit;
@@ -334,7 +334,7 @@ static BL_INLINE bool blObjectImplDecRefAndTestIfRefCounted(void* impl, BLObject
   if (!info.isRefCountedObject())
     return false;
 
-  size_t rcPrev = blAtomicFetchSub(blObjectImplGetRefCountPtr(impl), 1u);
+  size_t rcPrev = blAtomicFetchSubStrong(blObjectImplGetRefCountPtr(impl));
   size_t rcInit = (info.bits & BL_OBJECT_INFO_RC_INIT_MASK) >> BL_OBJECT_INFO_RC_INIT_SHIFT;
 
   return rcPrev == rcInit;
@@ -511,7 +511,7 @@ static BL_INLINE void blObjectAtomicContentInit(BLObjectCore* self) noexcept {
 //! in progress `false` is returned as well. When the first called `blObjectAtomicAssignMove()` finishes, `true` is
 //! returned.
 static BL_INLINE bool blObjectAtomicContentTest(const BLObjectCore* self) noexcept {
-  return blAtomicFetch(&self->_d.info.bits) > 1u;
+  return blAtomicFetchStrong(&self->_d.info.bits) > 1u;
 }
 
 //! Moves `other` to `self` atomically.
@@ -557,7 +557,7 @@ static BL_NOINLINE bool blObjectAtomicContentMove(BLObjectCore* self, BLObjectCo
       if (--spinCount == 0)
         return false;
 
-      selfInfo = blAtomicFetch(&self->_d.info.bits);
+      selfInfo = blAtomicFetchStrong(&self->_d.info.bits);
     }
   }
 }

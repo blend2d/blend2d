@@ -315,7 +315,6 @@ static BLResult blFontDataCreateFromDataInternal(BLFontDataCore* self, const voi
   newI->faceType = uint8_t(BL_FONT_FACE_TYPE_OPENTYPE);
   newI->faceCount = faceCount;
   newI->flags = dataFlags;
-  newI->backRefCount = 0;
 
   blCallCtor(newI->faceCache, std::move(faceCache));
   blCallCtor(newI->dataArray);

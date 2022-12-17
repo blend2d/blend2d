@@ -27,18 +27,18 @@ public:
   struct alignas(BL_CACHE_LINE_SIZE) {
     //! Job index, incremented by each worker when trying to get the next job.
     //! Can go out of range in case there is no more jobs to process.
-    volatile size_t _jobIndex;
+    size_t _jobIndex;
 
     //! Accumulated errors, initially zero for each batch. Since all workers
     //! would only OR their errors (if happened) at the end we can share the
     //! cache line with `_jobIndex`.
-    volatile uint32_t _accumulatedErrorFlags;
+    uint32_t _accumulatedErrorFlags;
   };
 
   struct alignas(BL_CACHE_LINE_SIZE) {
     //! Band index, incremented by workers to get a band index to process.
     //! Can go out of range in case there is no more bands to process.
-    volatile size_t _bandIndex;
+    size_t _bandIndex;
   };
 
   //! Pointer to the synchronization data.
@@ -78,8 +78,8 @@ public:
 
   BL_INLINE ~RenderBatch() noexcept {}
 
-  BL_INLINE size_t nextJobIndex() noexcept { return blAtomicFetchAdd(&_jobIndex, 1, std::memory_order_seq_cst); }
-  BL_INLINE size_t nextBandIndex() noexcept { return blAtomicFetchAdd(&_bandIndex, 1, std::memory_order_seq_cst); }
+  BL_INLINE size_t nextJobIndex() noexcept { return blAtomicFetchAddStrong(&_jobIndex); }
+  BL_INLINE size_t nextBandIndex() noexcept { return blAtomicFetchAddStrong(&_bandIndex); }
 
   BL_INLINE const BLArenaList<RenderJobQueue>& jobList() const noexcept { return _jobList; }
   BL_INLINE const BLArenaList<RenderFetchQueue>& fetchList() const noexcept { return _fetchList; }
@@ -94,7 +94,7 @@ public:
   BL_INLINE uint32_t stateSlotCount() const noexcept { return _stateSlotCount; }
 
   BL_INLINE void accumulateErrorFlags(uint32_t errorFlags) noexcept {
-    blAtomicFetchOr(&_accumulatedErrorFlags, errorFlags, std::memory_order_relaxed);
+    blAtomicFetchOrRelaxed(&_accumulatedErrorFlags, errorFlags);
   }
 };
 

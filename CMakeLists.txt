@@ -174,7 +174,6 @@ if ("x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xMSVC" OR "x${CMAKE_CXX_COMPILER_FRONT
     -Zc:inline               # [+] Remove unreferenced COMDAT.
     -Zc:strictStrings        # [+] Strict const qualification of string literals.
     -Zc:threadSafeInit-      # [-] Thread-safe statics.
-    -volatile:iso            # [+] Volatile loads and stores have standard semantics.
     -W4)                     # [+] Warning level 4.
 
   list(APPEND BLEND2D_PRIVATE_CFLAGS_DBG

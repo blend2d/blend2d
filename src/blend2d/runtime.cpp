@@ -211,7 +211,7 @@ static BL_INLINE void blRuntimeInitOptimizationInfo(BLRuntimeContext* rt) noexce
 
 BL_API_IMPL BLResult blRuntimeInit() noexcept {
   BLRuntimeContext* rt = &blRuntimeContext;
-  if (blAtomicFetchAdd(&rt->refCount) != 0)
+  if (blAtomicFetchAddStrong(&rt->refCount) != 0)
     return BL_SUCCESS;
 
   // Initializes system information - we need this first so we can properly initialize everything that relies
@@ -263,7 +263,7 @@ BL_API_IMPL BLResult blRuntimeInit() noexcept {
 
 BL_API_IMPL BLResult blRuntimeShutdown() noexcept {
   BLRuntimeContext* rt = &blRuntimeContext;
-  if (blAtomicFetchSub(&rt->refCount) != 1)
+  if (blAtomicFetchSubStrong(&rt->refCount) != 1)
     return BL_SUCCESS;
 
   rt->shutdownHandlers.callInReverseOrder(rt);

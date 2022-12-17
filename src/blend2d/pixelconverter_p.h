@@ -47,7 +47,7 @@ static constexpr uint32_t BL_PIXEL_CONVERTER_MULTISTEP_BUFFER_SIZE = 2048 + 1024
 
 // TODO: Implement multi-step converter.
 struct BLPixelConverterMultiStepContext {
-  volatile size_t refCount;
+  size_t refCount;
   BLPixelConverterCore first;
   BLPixelConverterCore second;
 };

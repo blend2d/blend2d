@@ -364,7 +364,7 @@ struct BLPathImpl BL_CLASS_INHERITS(BLObjectImpl) {
   size_t capacity;
 
   //! Path flags related to caching.
-  volatile uint32_t flags;
+  uint32_t flags;
 };
 
 //! \}

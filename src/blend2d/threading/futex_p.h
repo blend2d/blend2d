@@ -24,11 +24,11 @@
 
 namespace BLFutex {
 
-static BL_INLINE int call(volatile uint32_t* addr, int op, int x) noexcept { return syscall(SYS_futex, (void*)addr, op, x, nullptr, nullptr, 0); }
+static BL_INLINE int call(uint32_t* addr, int op, int x) noexcept { return syscall(SYS_futex, (void*)addr, op, x, nullptr, nullptr, 0); }
 
-static BL_INLINE int wait(volatile uint32_t* addr, uint32_t value) noexcept { return call(addr, FUTEX_WAIT_PRIVATE, int(value)); }
-static BL_INLINE int wakeOne(volatile uint32_t* addr) noexcept { return call(addr, FUTEX_WAKE_PRIVATE, 1); }
-static BL_INLINE int wakeAll(volatile uint32_t* addr) noexcept { return call(addr, FUTEX_WAKE_PRIVATE, std::numeric_limits<int>::max()); }
+static BL_INLINE int wait(uint32_t* addr, uint32_t value) noexcept { return call(addr, FUTEX_WAIT_PRIVATE, int(value)); }
+static BL_INLINE int wakeOne(uint32_t* addr) noexcept { return call(addr, FUTEX_WAKE_PRIVATE, 1); }
+static BL_INLINE int wakeAll(uint32_t* addr) noexcept { return call(addr, FUTEX_WAKE_PRIVATE, std::numeric_limits<int>::max()); }
 
 } // {BLFutex}
 
@@ -38,11 +38,11 @@ static BL_INLINE int wakeAll(volatile uint32_t* addr) noexcept { return call(add
 
 namespace BLFutex {
 
-static BL_INLINE int call(volatile uint32_t* addr, int op, int x) noexcept { return futex((void*)addr, op, x, nullptr, nullptr); }
+static BL_INLINE int call(uint32_t* addr, int op, int x) noexcept { return futex((void*)addr, op, x, nullptr, nullptr); }
 
-static BL_INLINE int wait(volatile uint32_t* addr, uint32_t value) noexcept { return call(addr, FUTEX_WAIT, int(value)); }
-static BL_INLINE int wakeOne(volatile uint32_t* addr) noexcept { return call(addr, FUTEX_WAKE, 1); }
-static BL_INLINE int wakeAll(volatile uint32_t* addr) noexcept { return call(addr, FUTEX_WAKE, std::numeric_limits<int>::max()); }
+static BL_INLINE int wait(uint32_t* addr, uint32_t value) noexcept { return call(addr, FUTEX_WAIT, int(value)); }
+static BL_INLINE int wakeOne(uint32_t* addr) noexcept { return call(addr, FUTEX_WAKE, 1); }
+static BL_INLINE int wakeAll(uint32_t* addr) noexcept { return call(addr, FUTEX_WAKE, std::numeric_limits<int>::max()); }
 
 } // {BLFutex}
 
@@ -62,9 +62,9 @@ struct FutexWinAPI {
 
 BL_HIDDEN extern FutexWinAPI futexWinAPI;
 
-static BL_INLINE int wait(volatile uint32_t* addr, uint32_t x) noexcept { futexWinAPI.WaitOnAddress((void*)addr, &x, sizeof(x), INFINITE); return 0; }
-static BL_INLINE int wakeOne(volatile uint32_t* addr) noexcept { futexWinAPI.WakeByAddressSingle((void*)addr); return 0; }
-static BL_INLINE int wakeAll(volatile uint32_t* addr) noexcept { futexWinAPI.WakeByAddressAll((void*)addr); return 0; }
+static BL_INLINE int wait(uint32_t* addr, uint32_t x) noexcept { futexWinAPI.WaitOnAddress((void*)addr, &x, sizeof(x), INFINITE); return 0; }
+static BL_INLINE int wakeOne(uint32_t* addr) noexcept { futexWinAPI.WakeByAddressSingle((void*)addr); return 0; }
+static BL_INLINE int wakeAll(uint32_t* addr) noexcept { futexWinAPI.WakeByAddressAll((void*)addr); return 0; }
 
 } // {BLFutex}
 
@@ -81,9 +81,9 @@ static BL_INLINE int wakeAll(volatile uint32_t* addr) noexcept { futexWinAPI.Wak
 
 namespace BLFutex {
 
-static BL_INLINE int wait(volatile uint32_t*, uint32_t) noexcept { return -1; }
-static BL_INLINE int wakeOne(volatile uint32_t*) noexcept { return -1; }
-static BL_INLINE int wakeAll(volatile uint32_t*) noexcept { return -1; }
+static BL_INLINE int wait(uint32_t*, uint32_t) noexcept { return -1; }
+static BL_INLINE int wakeOne(uint32_t*) noexcept { return -1; }
+static BL_INLINE int wakeAll(uint32_t*) noexcept { return -1; }
 
 } // {BLFutex}
 #endif

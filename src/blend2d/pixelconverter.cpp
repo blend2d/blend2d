@@ -98,7 +98,7 @@ static BL_INLINE void blPixelConverterAddRef(BLPixelConverterCore* self) noexcep
   if (!(d->internalFlags & BL_PIXEL_CONVERTER_INTERNAL_FLAG_DYNAMIC_DATA))
     return;
 
-  blAtomicFetchAdd(d->refCount);
+  blAtomicFetchAddRelaxed(d->refCount);
 }
 
 static void blPixelConverterRelease(BLPixelConverterCore* self) noexcept {
@@ -109,7 +109,7 @@ static void blPixelConverterRelease(BLPixelConverterCore* self) noexcept {
     return;
 
   void* dataPtr = d->dataPtr;
-  if (blAtomicFetchSub(d->refCount) == 1) {
+  if (blAtomicFetchSubStrong(d->refCount) == 1) {
     if (flags & BL_PIXEL_CONVERTER_INTERNAL_FLAG_MULTI_STEP) {
       BLPixelConverterMultiStepContext* ctx = static_cast<BLPixelConverterMultiStepContext*>(dataPtr);
       blPixelConverterReset(&ctx->first);

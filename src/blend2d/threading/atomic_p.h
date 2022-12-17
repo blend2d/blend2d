@@ -15,57 +15,67 @@
 //! \name Threading - Atomic Operations
 //! \{
 
-static BL_INLINE void blAtomicThreadFence(std::memory_order order = std::memory_order_release) noexcept {
+static BL_INLINE void blAtomicThreadFence(std::memory_order order = std::memory_order_seq_cst) noexcept {
   std::atomic_thread_fence(order);
 }
 
 template<typename T>
-static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetch(
-  const T* p,
-  std::memory_order order = std::memory_order_relaxed) noexcept {
-
+static BL_INLINE T blAtomicFetchRelaxed(const T* p) noexcept {
   typedef typename BLInternal::StdInt<sizeof(T), 0>::Type RawT;
-  return (typename std::remove_volatile<T>::type)((const std::atomic<RawT>*)p)->load(order);
+  return T(((const std::atomic<RawT>*)p)->load(std::memory_order_relaxed));
 }
 
 template<typename T>
-static BL_INLINE void blAtomicStore(
-  T* p,
-  typename std::remove_volatile<T>::type value,
-  std::memory_order order = std::memory_order_release) noexcept {
-
+static BL_INLINE T blAtomicFetchStrong(const T* p) noexcept {
   typedef typename BLInternal::StdInt<sizeof(T), 0>::Type RawT;
-  return ((std::atomic<RawT>*)p)->store((RawT)value, order);
+  return T(((const std::atomic<RawT>*)p)->load(std::memory_order_acquire));
+}
+
+template<typename T, typename V>
+static BL_INLINE void blAtomicStoreRelaxed(T* p, V value) noexcept {
+  typedef typename BLInternal::StdInt<sizeof(T), 0>::Type RawT;
+  return ((std::atomic<RawT>*)p)->store(RawT(T(value)), std::memory_order_relaxed);
+}
+
+template<typename T, typename V>
+static BL_INLINE void blAtomicStoreStrong(T* p, V value) noexcept {
+  typedef typename BLInternal::StdInt<sizeof(T), 0>::Type RawT;
+  return ((std::atomic<RawT>*)p)->store(RawT(T(value)), std::memory_order_release);
 }
 
 template<typename T>
-static BL_INLINE bool blAtomicCompareExchange(
-  T* ptr,
-  typename std::remove_volatile<T>::type* expected,
-  typename std::remove_volatile<T>::type desired) noexcept {
-
-  typedef typename std::remove_volatile<T>::type ValueType;
-  return std::atomic_compare_exchange_strong(((std::atomic<ValueType>*)ptr), expected, desired);
+static BL_INLINE T blAtomicFetchOrRelaxed(T* x, T value) noexcept {
+  return ((std::atomic<T>*)x)->fetch_or(value, std::memory_order_relaxed);
 }
 
 template<typename T>
-static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetchOr(
-  T* x,
-  typename std::remove_volatile<T>::type value,
-  std::memory_order order = std::memory_order_seq_cst) noexcept {
-
-  typedef typename std::remove_volatile<T>::type RawT;
-  return ((std::atomic<RawT>*)x)->fetch_or(value, order);
+static BL_INLINE T blAtomicFetchOrStrong(T* x, T value) noexcept {
+  return ((std::atomic<T>*)x)->fetch_or(value, std::memory_order_acq_rel);
 }
 
 template<typename T>
-static BL_INLINE typename std::remove_volatile<T>::type blAtomicFetchAnd(
-  T* x,
-  typename std::remove_volatile<T>::type value,
-  std::memory_order order = std::memory_order_seq_cst) noexcept {
+static BL_INLINE T blAtomicFetchOrSeqCst(T* x, T value) noexcept {
+  return ((std::atomic<T>*)x)->fetch_or(value, std::memory_order_seq_cst);
+}
 
-  typedef typename std::remove_volatile<T>::type RawT;
-  return ((std::atomic<RawT>*)x)->fetch_and(value, order);
+template<typename T>
+static BL_INLINE T blAtomicFetchAndRelaxed(T* x, T value) noexcept {
+  return ((std::atomic<T>*)x)->fetch_and(value, std::memory_order_relaxed);
+}
+
+template<typename T>
+static BL_INLINE T blAtomicFetchAndStrong(T* x, T value) noexcept {
+  return ((std::atomic<T>*)x)->fetch_and(value, std::memory_order_acq_rel);
+}
+
+template<typename T>
+static BL_INLINE T blAtomicFetchAndSeqCst(T* x, T value) noexcept {
+  return ((std::atomic<T>*)x)->fetch_and(value, std::memory_order_seq_cst);
+}
+
+template<typename T>
+static BL_INLINE bool blAtomicCompareExchange(T* ptr, T* expected, T desired) noexcept {
+  return std::atomic_compare_exchange_strong(((std::atomic<T>*)ptr), expected, desired);
 }
 
 //! \}

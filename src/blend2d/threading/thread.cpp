@@ -35,14 +35,10 @@ enum BLWorkerThreadFlags : uint32_t {
   BL_WORKER_THREAD_FLAG_SLEEPING = 0x00000001u,
   //! Thread is quitting (may still have work, but won't accept more work).
   BL_WORKER_THREAD_FLAG_QUITTING = 0x00000002u,
-
   //! A work item is currently being enqueued.
-  //!
-  //! When a new
-  BL_WORKER_THREAD_FLAG_ENQUEING_WORK = 0x00000010u,
-
+  BL_WORKER_THREAD_FLAG_ENQUEING_WORK = 0x00000004u,
   //! A work item has been enqueued.
-  BL_WORKER_THREAD_FLAG_ENQUEUED_WORK = 0x00000020u
+  BL_WORKER_THREAD_FLAG_ENQUEUED_WORK = 0x00000008u
 };
 
 class alignas(BL_CACHE_LINE_SIZE) BLInternalWorkerThread : public BLThread {
@@ -102,7 +98,7 @@ public:
 
 static uint32_t BL_CDECL blInternalWorkerThreadStatus(const BLThread* self) noexcept {
   const BLInternalWorkerThread* thread = static_cast<const BLInternalWorkerThread*>(self);
-  uint32_t flags = blAtomicFetch(&thread->_statusData.flags, std::memory_order_relaxed);
+  uint32_t flags = blAtomicFetchRelaxed(&thread->_statusData.flags);
 
   if (flags & BL_WORKER_THREAD_FLAG_QUITTING)
     return BL_THREAD_STATUS_QUITTING;
@@ -188,9 +184,7 @@ static BLResult BL_CDECL blPortableWorkerThreadQuit(BLThread* self, uint32_t qui
 static void BL_CDECL blPortableWorkerThreadEntryPoint(BLThread* self) noexcept {
   BLPortableWorkerThread* thread = static_cast<BLPortableWorkerThread*>(self);
 
-  constexpr uint32_t kHasWorkOrQuittingFlags =
-    BL_WORKER_THREAD_FLAG_QUITTING |
-    BL_WORKER_THREAD_FLAG_ENQUEUED_WORK;
+  constexpr uint32_t kHasWorkOrQuittingFlags = BL_WORKER_THREAD_FLAG_QUITTING | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK;
 
   for (;;) {
     BLLockGuard<BLMutex> guard(thread->_mutex);
@@ -266,17 +260,17 @@ static BLResult BL_CDECL blFutexWorkerThreadRun(BLThread* self, BLThreadFunc wor
   // return `BL_ERROR_BUSY`. It does no harm when both `ENQUEING` and `ENQUEUED` flags are set as when the work is
   // picked both flags would be cleared.
 
-  uint32_t prevFlags = blAtomicFetchOr(&thread->_statusData.flags, uint32_t(BL_WORKER_THREAD_FLAG_ENQUEING_WORK), std::memory_order_seq_cst);
+  uint32_t prevFlags = blAtomicFetchOrStrong(&thread->_statusData.flags, uint32_t(BL_WORKER_THREAD_FLAG_ENQUEING_WORK));
   uint32_t kBusyFlags = BL_WORKER_THREAD_FLAG_ENQUEING_WORK | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK | BL_WORKER_THREAD_FLAG_QUITTING;
 
   if (prevFlags & kBusyFlags)
     return BL_ERROR_BUSY;
 
-  blAtomicStore(&thread->_workItem.func, workFunc, std::memory_order_relaxed);
-  blAtomicStore(&thread->_workItem.data, data, std::memory_order_relaxed);
+  blAtomicStoreRelaxed(&thread->_workItem.func, workFunc);
+  blAtomicStoreRelaxed(&thread->_workItem.data, data);
 
   // Finally, this would make the work item available for pick up.
-  prevFlags = blAtomicFetchOr(&thread->_statusData.flags, BL_WORKER_THREAD_FLAG_ENQUEUED_WORK, std::memory_order_seq_cst);
+  prevFlags = blAtomicFetchOrSeqCst(&thread->_statusData.flags, uint32_t(BL_WORKER_THREAD_FLAG_ENQUEUED_WORK));
 
   // Wake up the thread if it is waiting.
   if (prevFlags & BL_WORKER_THREAD_FLAG_SLEEPING)
@@ -295,7 +289,7 @@ static BLResult BL_CDECL blFutexWorkerThreadQuit(BLThread* self, uint32_t quitFl
     return BL_SUCCESS;
   }
 
-  uint32_t prevFlags = blAtomicFetchOr(&thread->_statusData.flags, BL_WORKER_THREAD_FLAG_QUITTING, std::memory_order_seq_cst);
+  uint32_t prevFlags = blAtomicFetchOrStrong(&thread->_statusData.flags, uint32_t(BL_WORKER_THREAD_FLAG_QUITTING));
 
   // If already quitting it makes no sense to even wake it up as it already knows.
   if (prevFlags & BL_WORKER_THREAD_FLAG_QUITTING)
@@ -315,14 +309,14 @@ static void BL_CDECL blFutexWorkerThreadEntryPoint(BLThread* self) noexcept {
   uint32_t kSpinLimit = 32;
 
   for (;;) {
-    uint32_t flags = blAtomicFetchAnd(&thread->_statusData.flags, ~BL_WORKER_THREAD_FLAG_SLEEPING, std::memory_order_seq_cst);
+    uint32_t flags = blAtomicFetchAndSeqCst(&thread->_statusData.flags, uint32_t(~BL_WORKER_THREAD_FLAG_SLEEPING));
 
     if (flags & BL_WORKER_THREAD_FLAG_ENQUEUED_WORK) {
-      BLThreadFunc workFunc = blAtomicFetch(&thread->_workItem.func, std::memory_order_relaxed);
-      void* workData = blAtomicFetch(&thread->_workItem.data, std::memory_order_relaxed);
+      BLThreadFunc workFunc = blAtomicFetchRelaxed(&thread->_workItem.func);
+      void* workData = blAtomicFetchRelaxed(&thread->_workItem.data);
 
-      const uint32_t kFlagsToClear = BL_WORKER_THREAD_FLAG_ENQUEING_WORK | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK;
-      blAtomicFetchAnd(&thread->_statusData.flags, ~kFlagsToClear, std::memory_order_seq_cst);
+      constexpr uint32_t kEnqueingOrEnqueued = BL_WORKER_THREAD_FLAG_ENQUEING_WORK | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK;
+      blAtomicFetchAndSeqCst(&thread->_statusData.flags, ~kEnqueingOrEnqueued);
 
       spinCount = 0;
       workFunc(thread, workData);
@@ -341,7 +335,7 @@ static void BL_CDECL blFutexWorkerThreadEntryPoint(BLThread* self) noexcept {
 
     // Let's wait for more work or a quit signal.
     spinCount = 0;
-    flags = blAtomicFetchOr(&thread->_statusData.flags, BL_WORKER_THREAD_FLAG_SLEEPING, std::memory_order_seq_cst);
+    flags = blAtomicFetchOrStrong(&thread->_statusData.flags, uint32_t(BL_WORKER_THREAD_FLAG_SLEEPING));
 
     // Last attempt to avoid waiting...
     if (flags & (BL_WORKER_THREAD_FLAG_ENQUEUED_WORK | BL_WORKER_THREAD_FLAG_QUITTING))

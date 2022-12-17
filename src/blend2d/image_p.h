@@ -21,9 +21,9 @@
 struct BLImagePrivateImpl : public BLImageImpl {
   //! Count of writers that write to this image.
   //!
-  //! Writers don't increase the reference count of the image to keep it mutable. However, we must keep a counter
-  //! that would tell the BLImage destructor that it's not the time if `writerCount > 0`.
-  volatile size_t writerCount;
+  //! Writers don't increase the reference count of the image to keep it mutable. However, we must keep
+  //! a counter that would tell the BLImage destructor that it's not the time if `writerCount > 0`.
+  size_t writerCount;
 };
 
 //! \}
