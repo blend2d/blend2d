@@ -1025,8 +1025,10 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
         if ((decoderI->statusFlags & BL_PNG_DECODER_STATUS_SEEN_PLTE) == 0 || chunkSize == 0 || chunkSize > palSize)
           return blTraceError(BL_ERROR_PNG_INVALID_TRNS);
 
-        for (i = 0; i < chunkSize; i++, p++)
+        for (i = 0; i < chunkSize; i++)
           pal[i].setA(p[i]);
+
+        p += chunkSize;
       }
 
       decoderI->statusFlags |= BL_PNG_DECODER_STATUS_SEEN_tRNS;

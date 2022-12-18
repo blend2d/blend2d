@@ -1534,7 +1534,7 @@ static BLResult blPixelConverterInitIndexed(BLPixelConverterCore* self, const BL
   uint32_t internalFlags = BL_PIXEL_CONVERTER_INTERNAL_FLAG_INITIALIZED;
 
   if (paletteSizeInBytes > sizeof(d.embedded.table8)) {
-    if (dontCopyPalette && (palCvt.internalFlags & BL_PIXEL_CONVERTER_INTERNAL_FLAG_RAW_COPY || alterablePalette)) {
+    if (dontCopyPalette && ((palCvt.internalFlags & BL_PIXEL_CONVERTER_INTERNAL_FLAG_RAW_COPY) || alterablePalette)) {
       palette = si.palette;
       d.dynamic.table = palette;
     }
@@ -1552,7 +1552,7 @@ static BLResult blPixelConverterInitIndexed(BLPixelConverterCore* self, const BL
     palette = d.embedded.table8;
   }
 
-  palCvt.convertFunc(&palCvt, static_cast<uint8_t*>(palette), 0, reinterpret_cast<const uint8_t*>(si.palette), 0, paletteSize, 0, nullptr);
+  palCvt.convertFunc(&palCvt, static_cast<uint8_t*>(palette), 0, reinterpret_cast<const uint8_t*>(si.palette), 0, paletteSize, 1, nullptr);
   blPixelConverterReset(&palCvt);
 
   BLPixelConverterFunc func = nullptr;
