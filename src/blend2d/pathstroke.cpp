@@ -13,7 +13,7 @@
 
 namespace BLPathPrivate {
 
-// PAth - Stroke - Constants
+// BLPath - Stroke - Constants
 // ===========================
 
 // Default minimum miter-join length that always bypasses any other join-type. The reason behind this is to
@@ -65,6 +65,17 @@ static const auto capVertexCountTable =
 // BLPath - Stroke - Utilities
 // ===========================
 
+enum class Side : size_t {
+  kA = 0,
+  kB = 1
+};
+
+static BL_INLINE Side oppositeSide(Side side) noexcept { return Side(size_t(1) - size_t(side)); }
+
+static BL_INLINE Side sideFromNormals(const BLPoint& n0, const BLPoint& n1) noexcept {
+  return Side(size_t(BLGeometry::cross(n0, n1) >= 0));
+}
+
 static BL_INLINE uint32_t sanityStrokeCap(uint32_t cap) noexcept {
   return cap <= BL_STROKE_CAP_MAX_VALUE ? cap : BL_STROKE_CAP_BUTT;
 }
@@ -92,6 +103,18 @@ static BL_INLINE bool testInnerJoinIntersecion(const BLPoint& a0, const BLPoint&
          (join.x <= max.x) & (join.y <= max.y) ;
 }
 
+static BL_INLINE void dullAngleArcTo(BLPathAppender& appender, const BLPoint& p0, const BLPoint& pa, const BLPoint& pb, const BLPoint& intersection) noexcept {
+  BLPoint pm = (pa + pb) * 0.5;
+
+  double w = blSqrt(BLGeometry::length(p0 - pm) / BLGeometry::length(p0 - intersection));
+  double a = 4 * w / (3.0 * (1.0 + w));
+
+  BLPoint c0 = pa + a * (intersection - pa);
+  BLPoint c1 = pb + a * (intersection - pb);
+
+  appender.cubicTo(c0, c1, pb);
+};
+
 // BLPath - Stroke - Implementation
 // ================================
 
@@ -102,11 +125,6 @@ public:
     kFlagIsClosed = 0x02
   };
 
-  enum Side : uint32_t {
-    kSideA = 0,
-    kSideB = 1
-  };
-
   // Stroke input.
   BLPathIterator _iter;
 
@@ -114,41 +132,44 @@ public:
   const BLStrokeOptions& _options;
   const BLApproximationOptions& _approx;
 
-  double _d;            // Distance (StrokeWidth / 2).
-  double _d2;           // Distance multiplied by 2.
-  double _miterLimit;   // Miter limit possibly clamped to a safe range.
-  double _miterLimitSq; // Miter limit squared.
-  uint32_t _joinType;   // Simplified join type.
+  struct SideData {
+    BLPath* path;            // Output path (outer/inner, per side).
+    size_t figureOffset;     // Start of the figure offset in output path (only A path).
+    BLPathAppender appender; // Output path appende (outer/inner, per side).
+    double d;                // Distance (StrokeWidth / 2).
+    double d2;               // Distance multiplied by 2.
+  };
+
+  double _miterLimit;        // Miter limit possibly clamped to a safe range.
+  double _miterLimitSq;      // Miter limit squared.
+  uint32_t _joinType;        // Simplified join type.
+  SideData _sideData[2];     // A and B data (outer/inner side).
 
   // Stroke output.
-  BLPath* _aPath;       // Output path A (contains offsetted figure and possible end cap).
-  BLPath* _bPath;       // Output path B (contains offsetted figure that has to be reversed).
-  BLPath* _cPath;       // Output path C (contains possible start cap).
-
-  BLPathAppender _aOut;   // Appender of `_aPath`.
-  BLPathAppender _bOut;   // Appender of `_bPath`.
-  size_t _aInitialSize; // Initial size of `_aPath`.
+  BLPath* _cPath;            // Output C path.
 
   // Global state.
-  BLPoint _p0;          // Current point.
-  BLPoint _n0;          // Unit normal of `_p0`.
-  BLPoint _pInitial;    // Initial point (MoveTo).
-  BLPoint _nInitial;    // Unit normal of `_pInitial`.
-  uint32_t _flags;      // Work flags.
+  BLPoint _p0;               // Current point.
+  BLPoint _n0;               // Unit normal of `_p0`.
+  BLPoint _pInitial;         // Initial point (MoveTo).
+  BLPoint _nInitial;         // Unit normal of `_pInitial`.
+  uint32_t _flags;           // Work flags.
 
   BL_INLINE PathStroker(const BLPathView& input, const BLStrokeOptions& options, const BLApproximationOptions& approx, BLPath* a, BLPath* b, BLPath* c) noexcept
     : _iter(input),
       _options(options),
       _approx(approx),
-      _d(options.width * 0.5),
-      _d2(options.width),
       _joinType(options.join),
-      _aPath(a),
-      _bPath(b),
-      _cPath(c),
-      _aOut(),
-      _bOut(),
-      _aInitialSize(0) {
+      _cPath(c) {
+
+    _sideData[0].path = a;
+    _sideData[0].figureOffset = 0;
+    _sideData[0].d = options.width * 0.5;
+    _sideData[0].d2 = options.width;
+    _sideData[1].path = b;
+    _sideData[1].figureOffset = 0;
+    _sideData[1].d = -_sideData[0].d;
+    _sideData[1].d2 = -_sideData[0].d2;
 
     // Initialize miter calculation options. What we do here is to change `_joinType` to a value that would be easier
     // for us to use during joining. We always honor `_miterLimitSq` even when the `_joinType` is not miter to prevent
@@ -159,7 +180,7 @@ public:
       _joinType = miterJoinToSimpleJoin(_joinType);
 
       // Final miter limit is `0.5 * width * miterLimit`.
-      _miterLimit = _d * options.miterLimit;
+      _miterLimit = d() * options.miterLimit;
       _miterLimitSq = blSquare(_miterLimit);
     }
     else {
@@ -171,9 +192,41 @@ public:
   BL_INLINE bool isOpen() const noexcept { return (_flags & kFlagIsOpen) != 0; }
   BL_INLINE bool isClosed() const noexcept { return (_flags & kFlagIsClosed) != 0; }
 
+  BL_INLINE SideData& sideData(Side side) noexcept { return _sideData[size_t(side)]; }
+
+  BL_INLINE double d() const noexcept { return _sideData[0].d; }
+  BL_INLINE double d(Side side) const noexcept { return _sideData[size_t(side)].d; }
+
+  BL_INLINE double d2() const noexcept { return _sideData[0].d2; }
+  BL_INLINE double d2(Side side) const noexcept { return _sideData[size_t(side)].d2; }
+
+  BL_INLINE BLPath* aPath() const noexcept { return _sideData[size_t(Side::kA)].path; }
+  BL_INLINE BLPath* bPath() const noexcept { return _sideData[size_t(Side::kB)].path; }
+  BL_INLINE BLPath* cPath() const noexcept { return _cPath; }
+
+  BL_INLINE BLPath* outerPath(Side side) const noexcept { return _sideData[size_t(side)].path; }
+  BL_INLINE BLPath* innerPath(Side side) const noexcept { return _sideData[size_t(oppositeSide(side))].path; }
+
+  BL_INLINE BLPathAppender& aOut() noexcept { return _sideData[size_t(Side::kA)].appender; }
+  BL_INLINE BLPathAppender& bOut() noexcept { return _sideData[size_t(Side::kB)].appender; }
+
+  BL_INLINE BLPathAppender& outerAppender(Side side) noexcept { return _sideData[size_t(side)].appender; }
+  BL_INLINE BLPathAppender& innerAppender(Side side) noexcept { return _sideData[size_t(oppositeSide(side))].appender; }
+
+  BL_INLINE BLResult ensureAppendersCapacity(size_t aRequired, size_t bRequired) noexcept {
+    uint32_t ok = uint32_t(aOut().remainingSize() >= aRequired) &
+                  uint32_t(bOut().remainingSize() >= bRequired) ;
+
+    if (BL_LIKELY(ok))
+      return BL_SUCCESS;
+
+    return aOut().ensure(aPath(), aRequired) |
+           bOut().ensure(bPath(), bRequired) ;
+  }
+
   BL_INLINE_IF_NOT_DEBUG BLResult stroke(StrokeSinkFunc sink, void* closure) noexcept {
     size_t estimatedSize = _iter.remainingForward() * 2u;
-    BL_PROPAGATE(_aPath->reserve(_aPath->size() + estimatedSize));
+    BL_PROPAGATE(aPath()->reserve(aPath()->size() + estimatedSize));
 
     while (!_iter.atEnd()) {
       // Start of the figure.
@@ -185,9 +238,9 @@ public:
         continue;
       }
 
-      _aInitialSize = _aPath->size();
-      BL_PROPAGATE(_aOut.begin(_aPath, BL_MODIFY_OP_APPEND_GROW, _iter.remainingForward()));
-      BL_PROPAGATE(_bOut.begin(_bPath, BL_MODIFY_OP_ASSIGN_GROW, 48));
+      sideData(Side::kA).figureOffset = sideData(Side::kA).path->size();
+      BL_PROPAGATE(aOut().begin(aPath(), BL_MODIFY_OP_APPEND_GROW, _iter.remainingForward()));
+      BL_PROPAGATE(bOut().begin(bPath(), BL_MODIFY_OP_ASSIGN_GROW, 48));
 
       BLPoint polyPts[4];
       size_t polySize;
@@ -199,8 +252,7 @@ public:
       // Content of the figure.
       _iter++;
       while (!_iter.atEnd()) {
-        BL_PROPAGATE(_aOut.ensure(_aPath, kStrokeMaxJoinVertices));
-        BL_PROPAGATE(_bOut.ensure(_bPath, kStrokeMaxJoinVertices));
+        BL_PROPAGATE(ensureAppendersCapacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices));
 
         uint8_t cmd = _iter.cmd[0]; // Next command.
         BLPoint p1 = _iter.vtx[0];  // Next line-to or control point.
@@ -216,10 +268,32 @@ LineTo:
             continue;
 
           n1 = BLGeometry::normal(BLGeometry::unitVector(v1));
-          if (!isOpen())
+          if (!isOpen()) {
             BL_PROPAGATE(openLineTo(p1, n1));
-          else
+            continue;
+          }
+
+          for (;;) {
             BL_PROPAGATE(joinLineTo(p1, n1));
+
+            if (_iter.atEnd())
+              break;
+
+            BL_PROPAGATE(ensureAppendersCapacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices));
+
+            cmd = _iter.cmd[0];
+            p1 = _iter.vtx[0];
+
+            if (cmd != BL_PATH_CMD_ON)
+              break;
+
+            _iter++;
+            v1 = p1 - _p0;
+            if (BLGeometry::lengthSq(v1) < kStrokeLengthEpsilonSq)
+              break;
+
+            n1 = BLGeometry::normal(BLGeometry::unitVector(v1));
+          }
           continue;
 
           // This is again to minimize inline expansion of `smoothPolyTo()`.
@@ -364,11 +438,10 @@ SmoothPolyTo:
             if (cusp <= 0)
               break;
 
+            BL_PROPAGATE(ensureAppendersCapacity(kStrokeMaxJoinVertices, kStrokeMaxJoinVertices));
+
             // Second part of the cubic after the cusp. We assign `-1` to `cusp` so we can call `joinCusp()` later.
             // This is a special join that we need in this case.
-            BL_PROPAGATE(_aOut.ensure(_aPath, kStrokeMaxJoinVertices));
-            BL_PROPAGATE(_bOut.ensure(_bPath, kStrokeMaxJoinVertices));
-
             cusp = -1;
             p[0] = p[3];
             p[1] = p[4];
@@ -397,8 +470,8 @@ SmoothPolyTo:
       // Don't emit anything if the figure has no points (and thus no direction).
       _iter += size_t(isClosed());
       if (!isOpen()) {
-        _aOut.done(_aPath);
-        _bOut.done(_bPath);
+        aOut().done(aPath());
+        bOut().done(bPath());
         continue;
       }
 
@@ -407,13 +480,12 @@ SmoothPolyTo:
         // A and B have a content, path C will be empty and should be thus ignored by the sink.
 
         // Allocate space for the end join and close command.
-        BL_PROPAGATE(_aOut.ensure(_aPath, kStrokeMaxJoinVertices + 1));
-        BL_PROPAGATE(_bOut.ensure(_bPath, kStrokeMaxJoinVertices + 1));
+        BL_PROPAGATE(ensureAppendersCapacity(kStrokeMaxJoinVertices + 1, kStrokeMaxJoinVertices + 1));
 
         BL_PROPAGATE(joinEndPoint(_nInitial));
-        _aOut.close();
-        _bOut.close();
-        _cPath->clear();
+        aOut().close();
+        bOut().close();
+        cPath()->clear();
       }
       else {
         // The figure is open => the end result is a single figure with caps. The paths contain the following:
@@ -423,21 +495,21 @@ SmoothPolyTo:
         uint32_t startCap = sanityStrokeCap(_options.startCap);
         uint32_t endCap = sanityStrokeCap(_options.endCap);
 
-        BL_PROPAGATE(_aOut.ensure(_aPath, capVertexCountTable[endCap]));
-        BL_PROPAGATE(addCap(_aOut, _p0, _bOut.vtx[-1], endCap));
+        BL_PROPAGATE(aOut().ensure(aPath(), capVertexCountTable[endCap]));
+        BL_PROPAGATE(addCap(aOut(), _p0, bOut().vtx[-1], endCap));
 
         BLPathAppender cOut;
-        BL_PROPAGATE(cOut.begin(_cPath, BL_MODIFY_OP_ASSIGN_GROW, capVertexCountTable[startCap] + 1));
-        cOut.moveTo(_bPath->vertexData()[0]);
-        BL_PROPAGATE(addCap(cOut, _pInitial, _aPath->vertexData()[_aInitialSize], startCap));
-        cOut.done(_cPath);
+        BL_PROPAGATE(cOut.begin(cPath(), BL_MODIFY_OP_ASSIGN_GROW, capVertexCountTable[startCap] + 1));
+        cOut.moveTo(bPath()->vertexData()[0]);
+        BL_PROPAGATE(addCap(cOut, _pInitial, aPath()->vertexData()[sideData(Side::kA).figureOffset], startCap));
+        cOut.done(cPath());
       }
 
-      _aOut.done(_aPath);
-      _bOut.done(_bPath);
+      aOut().done(aPath());
+      bOut().done(bPath());
 
       // Call the path to the provided sink with resulting paths.
-      BL_PROPAGATE(sink(_aPath, _bPath, _cPath, closure));
+      BL_PROPAGATE(sink(aPath(), bPath(), cPath(), closure));
     }
 
     return BL_SUCCESS;
@@ -453,17 +525,17 @@ SmoothPolyTo:
   // NOTE: Path cannot be open when calling this function.
   BL_INLINE_IF_NOT_DEBUG BLResult openLineTo(const BLPoint& p1, const BLPoint& n1) noexcept {
     BL_ASSERT(!isOpen());
-    BLPoint w = n1 * _d;
+    BLPoint w = n1 * d();
 
-    _aOut.moveTo(_p0 + w);
-    _bOut.moveTo(_p0 - w);
+    aOut().moveTo(_p0 + w);
+    bOut().moveTo(_p0 - w);
 
     _p0 = p1;
     _n0 = n1;
     _nInitial = n1;
 
-    _aOut.lineTo(_p0 + w);
-    _bOut.lineTo(_p0 - w);
+    aOut().lineTo(_p0 + w);
+    bOut().lineTo(_p0 - w);
 
     _flags |= kFlagIsOpen;
     return BL_SUCCESS;
@@ -471,38 +543,44 @@ SmoothPolyTo:
 
   // Joins line-to segment described by `p1` point and `n1` normal.
   BL_INLINE_IF_NOT_DEBUG BLResult joinLineTo(const BLPoint& p1, const BLPoint& n1) noexcept {
-    BLPoint w1 = n1 * _d;
-    BLPoint a1 = p1 + w1;
-    BLPoint b1 = p1 - w1;
-
     if (_n0 == n1) {
       // Collinear case - patch the previous point(s) if they connect lines.
-      _aOut.back(_aOut.cmd[-2].value <= BL_PATH_CMD_ON);
-      _bOut.back(_bOut.cmd[-2].value <= BL_PATH_CMD_ON);
+      aOut().back(aOut().cmd[-2].value <= BL_PATH_CMD_ON);
+      bOut().back(bOut().cmd[-2].value <= BL_PATH_CMD_ON);
+
+      BLPoint w1 = n1 * d();
+      aOut().lineTo(p1 + w1);
+      bOut().lineTo(p1 - w1);
     }
     else {
+      Side side = sideFromNormals(_n0, n1);
       BLPoint m = _n0 + n1;
-      BLPoint k = (_d2 * m) / BLGeometry::lengthSq(m);
+      BLPoint k = m * d2(side) / BLGeometry::lengthSq(m);
+      BLPoint w1 = n1 * d(side);
 
-      double dir = BLGeometry::cross(_n0, n1);
       size_t miterFlag = 0;
 
-      if (dir < 0) {
-        // A is outer, B is inner.
-        outerJoin(_aOut, kSideA, n1, w1, k, miterFlag);
-        _aOut.back(miterFlag);
-        innerJoinLineTo(_bOut, _p0 - w1, b1, _p0 - k);
+      if (side == Side::kA) {
+        BLPathAppender& outer = aOut();
+        outerJoin(outer, n1, w1, k, d(side), d2(side), miterFlag);
+        outer.back(miterFlag);
+        outer.lineTo(p1 + w1);
+
+        BLPathAppender& inner = bOut();
+        innerJoinLineTo(inner, _p0 - w1, p1 - w1, _p0 - k);
+        inner.lineTo(p1 - w1);
       }
       else {
-        // B is outer, A is inner.
-        outerJoin(_bOut, kSideB, n1, -w1, -k, miterFlag);
-        _bOut.back(miterFlag);
-        innerJoinLineTo(_aOut, _p0 + w1, a1, _p0 + k);
+        BLPathAppender& outer = bOut();
+        outerJoin(outer, n1, w1, k, d(side), d2(side), miterFlag);
+        outer.back(miterFlag);
+        outer.lineTo(p1 + w1);
+
+        BLPathAppender& inner = aOut();
+        innerJoinLineTo(inner, _p0 - w1, p1 - w1, _p0 - k);
+        inner.lineTo(p1 - w1);
       }
     }
-
-    _aOut.lineTo(a1);
-    _bOut.lineTo(b1);
 
     _p0 = p1;
     _n0 = n1;
@@ -515,10 +593,10 @@ SmoothPolyTo:
   // NOTE: Path cannot be open when calling this function.
   BL_INLINE_IF_NOT_DEBUG BLResult openCurve(const BLPoint& n0) noexcept {
     BL_ASSERT(!isOpen());
-    BLPoint w = n0 * _d;
+    BLPoint w = n0 * d();
 
-    _aOut.moveTo(_p0 + w);
-    _bOut.moveTo(_p0 - w);
+    aOut().moveTo(_p0 + w);
+    bOut().moveTo(_p0 - w);
 
     _n0 = n0;
     _nInitial = n0;
@@ -529,51 +607,48 @@ SmoothPolyTo:
 
   // Joins curve-to segment.
   BL_INLINE_IF_NOT_DEBUG BLResult joinCurve(const BLPoint& n1) noexcept {
-    BLPoint w1 = n1 * _d;
+    // Collinear case - do nothing.
+    if (_n0 == n1)
+      return BL_SUCCESS;
 
-    if (_n0 == n1) {
-      // Collinear case - do nothing.
-    }
-    else {
-      BLPoint m = _n0 + n1;
-      BLPoint k = (_d2 * m) / BLGeometry::lengthSq(m);
+    Side side = sideFromNormals(_n0, n1);
+    BLPoint m = _n0 + n1;
+    BLPoint k = m * d2(side) / BLGeometry::lengthSq(m);
+    BLPoint w1 = n1 * d(side);
+    size_t dummyMiterFlag;
 
-      double dir = BLGeometry::cross(_n0, n1);
-      size_t miterFlag;
+    outerJoin(outerAppender(side), n1, w1, k, d(side), d2(side), dummyMiterFlag);
+    innerJoinCurveTo(innerAppender(side), _p0 - w1);
 
-      if (dir < 0) {
-        // A is outer, B is inner.
-        outerJoin(_aOut, kSideA, n1, w1, k, miterFlag);
-        innerJoinCurveTo(_bOut, _p0 - w1);
-      }
-      else {
-        // B is outer, A is inner.
-        outerJoin(_bOut, kSideB, n1, -w1, -k, miterFlag);
-        innerJoinCurveTo(_aOut, _p0 + w1);
-      }
-
-      _n0 = n1;
-    }
-
+    _n0 = n1;
     return BL_SUCCESS;
   }
 
   BL_INLINE_IF_NOT_DEBUG BLResult joinCusp(const BLPoint& n1) noexcept {
-    BLPoint w1 = n1 * _d;
+    Side side = sideFromNormals(_n0, n1);
+    BLPoint w1 = n1 * d(side);
 
-    double dir = BLGeometry::cross(_n0, n1);
-    if (dir < 0) {
-      // A is outer, B is inner.
-      dullRoundJoin(_aOut, kSideA, n1, w1);
-      _bOut.lineTo(_p0 - w1);
-    }
-    else {
-      // B is outer, A is inner.
-      dullRoundJoin(_bOut, kSideB, n1, -w1);
-      _aOut.lineTo(_p0 + w1);
-    }
+    dullRoundJoin(outerAppender(side), d(side), d2(side), w1);
+    innerAppender(side).lineTo(_p0 - w1);
 
     _n0 = n1;
+    return BL_SUCCESS;
+  }
+
+  BL_INLINE_IF_NOT_DEBUG BLResult joinCuspAndLineTo(const BLPoint& n1, const BLPoint& p1) noexcept {
+    Side side = sideFromNormals(_n0, n1);
+    BLPoint w1 = n1 * d(side);
+
+    BLPathAppender& outer = outerAppender(side);
+    dullRoundJoin(outer, d(side), d2(side), w1);
+    outer.lineTo(p1 + w1);
+
+    BLPathAppender& inner = innerAppender(side);
+    inner.lineTo(_p0 - w1);
+    inner.lineTo(p1 - w1);
+
+    _n0 = n1;
+    _p0 = p1;
     return BL_SUCCESS;
   }
 
@@ -593,24 +668,17 @@ SmoothPolyTo:
 
     // We have already ensured vertices for `openLineTo()` and `joinLineTo()`,
     // however, we need more vertices for consecutive joins and line segments.
-    BL_PROPAGATE(_aOut.ensure(_aPath, (count - 1) * kStrokeMaxJoinVertices));
-    BL_PROPAGATE(_bOut.ensure(_bPath, (count - 1) * kStrokeMaxJoinVertices));
+    size_t requiredCapacity = (count - 1) * kStrokeMaxJoinVertices;
+    BL_PROPAGATE(ensureAppendersCapacity(requiredCapacity, requiredCapacity));
 
     for (size_t i = 1; i < count; i++) {
       p1 = poly[i];
       v1 = p1 - _p0;
       if (BLGeometry::lengthSq(v1) < kStrokeLengthEpsilonSq)
         continue;
+
       n1 = BLGeometry::normal(BLGeometry::unitVector(v1));
-
-      BL_PROPAGATE(joinCusp(n1));
-      BLPoint w1 = n1 * _d;
-
-      _aOut.lineTo(p1 + w1);
-      _bOut.lineTo(p1 - w1);
-
-      _p0 = p1;
-      _n0 = n1;
+      BL_PROPAGATE(joinCuspAndLineTo(n1, p1));
     }
 
     return BL_SUCCESS;
@@ -618,60 +686,41 @@ SmoothPolyTo:
 
   // Joins end point that is only applied to closed figures.
   BL_INLINE_IF_NOT_DEBUG BLResult joinEndPoint(const BLPoint& n1) noexcept {
-    BLPoint w1 = n1 * _d;
-
     if (_n0 == n1) {
       // Collinear case - patch the previous point(s) if they connect lines.
-      _aOut.back(_aOut.cmd[-2].value <= BL_PATH_CMD_ON);
-      _bOut.back(_bOut.cmd[-2].value <= BL_PATH_CMD_ON);
+      aOut().back(aOut().cmd[-2].value <= BL_PATH_CMD_ON);
+      bOut().back(bOut().cmd[-2].value <= BL_PATH_CMD_ON);
       return BL_SUCCESS;
     }
 
+    Side side = sideFromNormals(_n0, n1);
     BLPoint m = _n0 + n1;
-    BLPoint k = (_d2 * m) / BLGeometry::lengthSq(m);
+    BLPoint w1 = n1 * d(side);
+    BLPoint k = m * d2(side) / BLGeometry::lengthSq(m);
 
-    BLPoint* aStartVtx = getImpl(_aPath)->vertexData + _aInitialSize;
-    uint8_t* aStartCmd = getImpl(_aPath)->commandData + _aInitialSize;
-
-    BLPoint* bStartVtx = getImpl(_bPath)->vertexData;
-    uint8_t* bStartCmd = getImpl(_bPath)->commandData;
-
-    double dir = BLGeometry::cross(_n0, n1);
     size_t miterFlag = 0;
 
-    if (dir < 0) {
-      // A is outer, B is inner.
-      outerJoin(_aOut, kSideA, n1, w1, k, miterFlag);
+    BLPathPrivateImpl* outerImpl = getImpl(outerPath(side));
+    size_t outerStart = sideData(side).figureOffset;
 
-      // Shift the start point to be at the miter intersection and remove the
-      // Line from the intersection to the start of A path if miter was applied.
-      if (miterFlag) {
-        if (aStartCmd[1] == BL_PATH_CMD_ON) {
-          _aOut.back();
-          aStartVtx[0] = _aOut.vtx[-1];
-          _aOut.back(_aOut.cmd[-2].value <= BL_PATH_CMD_ON);
-        }
+    BLPathAppender& outer = outerAppender(side);
+    outerJoin(outer, n1, w1, k, d(side), d2(side), miterFlag);
+
+    // Shift the start point to be at the miter intersection and remove the
+    // Line from the intersection to the start of the path if miter was applied.
+    if (miterFlag) {
+      if (outerImpl->commandData[outerStart + 1] == BL_PATH_CMD_ON) {
+        outer.back();
+        outerImpl->vertexData[outerStart] = outer.vtx[-1];
+        outer.back(outer.cmd[-2].value <= BL_PATH_CMD_ON);
       }
-
-      if (bStartCmd[1] <= BL_PATH_CMD_ON)
-        innerJoinEndPoint(_bOut, bStartVtx[0], bStartVtx[1], _p0 - k);
     }
-    else {
-      // B is outer, A is inner.
-      outerJoin(_bOut, kSideB, n1, -w1, -k, miterFlag);
 
-      // Shift the start point to be at the miter intersection and remove the
-      // Line from the intersection to the start of B path if miter was applied.
-      if (miterFlag) {
-        if (bStartCmd[1] == BL_PATH_CMD_ON) {
-          _bOut.back();
-          bStartVtx[0] = _bOut.vtx[-1];
-          _bOut.back(_bOut.cmd[-2].value <= BL_PATH_CMD_ON);
-        }
-      }
+    BLPathPrivateImpl* innerImpl = getImpl(innerPath(side));
+    size_t innerStart = sideData(side).figureOffset;
 
-      if (aStartCmd[1] == BL_PATH_CMD_ON)
-        innerJoinEndPoint(_aOut, aStartVtx[0], aStartVtx[1], _p0 + k);
+    if (innerImpl->commandData[innerStart + 1] <= BL_PATH_CMD_ON) {
+      innerJoinEndPoint(innerAppender(side), innerImpl->vertexData[innerStart], innerImpl->vertexData[innerStart + 1], _p0 - k);
     }
 
     return BL_SUCCESS;
@@ -704,14 +753,14 @@ SmoothPolyTo:
   }
 
   // Calculates outer join to `pb`.
-  BL_INLINE_IF_NOT_DEBUG BLResult outerJoin(BLPathAppender& out, uint32_t side, const BLPoint& n1, const BLPoint& w1, const BLPoint& k, size_t& miterFlag) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult outerJoin(BLPathAppender& appender, const BLPoint& n1, const BLPoint& w1, const BLPoint& k, double d, double d2, size_t& miterFlag) noexcept {
     BLPoint pb = _p0 + w1;
 
     if (BLGeometry::lengthSq(k) <= _miterLimitSq) {
       // Miter condition is met.
-      out.back(out.cmd[-2].value <= BL_PATH_CMD_ON);
-      out.lineTo(_p0 + k);
-      out.lineTo(pb);
+      appender.back(appender.cmd[-2].value <= BL_PATH_CMD_ON);
+      appender.lineTo(_p0 + k);
+      appender.lineTo(pb);
 
       miterFlag = 1;
       return BL_SUCCESS;
@@ -726,48 +775,30 @@ SmoothPolyTo:
       else
         b2 = _miterLimit;
 
-      out.back(out.cmd[-2].value <= BL_PATH_CMD_ON);
-      if (side == kSideA) {
-        out.lineTo(_p0 + _d * _n0 - b2 * BLGeometry::normal(_n0));
-        out.lineTo(_p0 + _d *  n1 + b2 * BLGeometry::normal(n1));
-      }
-      else {
-        out.lineTo(_p0 - _d * _n0 - b2 * BLGeometry::normal(_n0));
-        out.lineTo(_p0 - _d *  n1 + b2 * BLGeometry::normal(n1));
-      }
+      appender.back(appender.cmd[-2].value <= BL_PATH_CMD_ON);
+      appender.lineTo(_p0 + d * _n0 - b2 * BLGeometry::normal(_n0));
+      appender.lineTo(_p0 + d *  n1 + b2 * BLGeometry::normal(n1));
 
       miterFlag = 1;
-      out.lineTo(pb);
+      appender.lineTo(pb);
       return BL_SUCCESS;
     }
 
     if (_joinType == BL_STROKE_JOIN_ROUND) {
-      BLPoint pa = out.vtx[-1];
+      BLPoint pa = appender.vtx[-1];
       if (BLGeometry::dot(_p0 - pa, _p0 - pb) < 0.0) {
         // Dull angle.
         BLPoint n2 = BLGeometry::normal(BLGeometry::unitVector(pb - pa));
         BLPoint m = _n0 + n2;
-        BLPoint k0 = _d2 * m / BLGeometry::lengthSq(m);
-        BLPoint q = _d * n2;
+        BLPoint k0 = d2 * m / BLGeometry::lengthSq(m);
+        BLPoint q = d * n2;
 
-        BLPoint pc1 = side == kSideA ? _p0 + k0 : _p0 - k0;
-        BLPoint pp1 = side == kSideA ? _p0 + q : _p0 - q;
+        BLPoint pc1 = _p0 + k0;
+        BLPoint pp1 = _p0 + q;
         BLPoint pc2 = blLerp(pc1, pp1, 2.0);
 
-        auto arcTo = [&](const BLPoint& p0, const BLPoint& pa, const BLPoint& pb, const BLPoint& intersection) noexcept {
-          BLPoint pm = (pa + pb) * 0.5;
-
-          double w = blSqrt(BLGeometry::length(p0 - pm) / BLGeometry::length(p0 - intersection));
-          double a = 4 * w / (3.0 * (1.0 + w));
-
-          BLPoint c0 = pa + a * (intersection - pa);
-          BLPoint c1 = pb + a * (intersection - pb);
-
-          out.cubicTo(c0, c1, pb);
-        };
-
-        arcTo(_p0, pa, pp1, pc1);
-        arcTo(_p0, pp1, pb, pc2);
+        dullAngleArcTo(appender, _p0, pa, pp1, pc1);
+        dullAngleArcTo(appender, _p0, pp1, pb, pc2);
       }
       else {
         // Acute angle.
@@ -780,51 +811,41 @@ SmoothPolyTo:
         BLPoint c0 = pa + a * (pi - pa);
         BLPoint c1 = pb + a * (pi - pb);
 
-        out.cubicTo(c0, c1, pb);
+        appender.cubicTo(c0, c1, pb);
       }
       return BL_SUCCESS;
     }
 
     // Bevel or unknown `_joinType`.
-    out.lineTo(pb);
+    appender.lineTo(pb);
     return BL_SUCCESS;
   }
 
   // Calculates round join to `pb` (dull angle), only used by offsetting cusps.
-  BL_INLINE_IF_NOT_DEBUG BLResult dullRoundJoin(BLPathAppender& out, uint32_t side, const BLPoint& n1, const BLPoint& w1) noexcept {
-    blUnused(n1);
-
+  BL_INLINE_IF_NOT_DEBUG BLResult dullRoundJoin(BLPathAppender& out, double d, double d2, const BLPoint& w1) noexcept {
     BLPoint pa = out.vtx[-1];
     BLPoint pb = _p0 + w1;
     BLPoint n2 = BLGeometry::normal(BLGeometry::unitVector(pb - pa));
-    BLPoint m = _n0 + n2;
-    BLPoint k = _d2 * m / BLGeometry::lengthSq(m);
-    BLPoint q = _d * n2;
 
-    BLPoint pc1 = side == kSideA ? _p0 + k : _p0 - k;
-    BLPoint pp1 = side == kSideA ? _p0 + q : _p0 - q;
+    if (!blIsFinite(n2.x))
+      return BL_SUCCESS;
+
+    BLPoint m = _n0 + n2;
+    BLPoint k = m * d2 / BLGeometry::lengthSq(m);
+    BLPoint q = n2 * d;
+
+    BLPoint pc1 = _p0 + k;
+    BLPoint pp1 = _p0 + q;
     BLPoint pc2 = blLerp(pc1, pp1, 2.0);
 
-    auto arcTo = [&](const BLPoint& p0, const BLPoint& pa, const BLPoint& pb, const BLPoint& intersection) noexcept {
-      BLPoint pm = (pa + pb) * 0.5;
-
-      double w = blSqrt(BLGeometry::length(p0 - pm) / BLGeometry::length(p0 - intersection));
-      double a = 4.0 * w / (3.0 * (1.0 + w));
-
-      BLPoint c0 = pa + a * (intersection - pa);
-      BLPoint c1 = pb + a * (intersection - pb);
-
-      out.cubicTo(c0, c1, pb);
-    };
-
-    arcTo(_p0, pa, pp1, pc1);
-    arcTo(_p0, pp1, pb, pc2);
+    dullAngleArcTo(out, _p0, pa, pp1, pc1);
+    dullAngleArcTo(out, _p0, pp1, pb, pc2);
     return BL_SUCCESS;
   }
 
   BL_INLINE_IF_NOT_DEBUG BLResult offsetQuad(const BLPoint bez[3]) noexcept {
     double ts[3];
-    size_t tn = BLGeometry::getQuadOffsetCuspTs(bez, _d, ts);
+    size_t tn = BLGeometry::getQuadOffsetCuspTs(bez, d(), ts);
     ts[tn++] = 1.0;
 
     BLGeometry::QuadCurveTsIter iter(bez, ts, tn);
@@ -832,8 +853,7 @@ SmoothPolyTo:
 
     do {
       for (;;) {
-        BL_PROPAGATE(_aOut.ensure(_aPath, 2));
-        BL_PROPAGATE(_bOut.ensure(_bPath, 2));
+        BL_PROPAGATE(ensureAppendersCapacity(2, 2));
 
         double t = BLGeometry::quadParameterAtAngle(iter.part, m);
         if (!(t > kOffsetQuadEpsilonT && t < 1.0 - kOffsetQuadEpsilonT))
@@ -865,17 +885,27 @@ SmoothPolyTo:
     _n0 = m2;
 
     BLPoint m = m0 + m2;
-    BLPoint k1 = _d2 * m / BLGeometry::lengthSq(m);
-    BLPoint k2 = _d * m2;
+    BLPoint k1 = m * d2() / BLGeometry::lengthSq(m);
+    BLPoint k2 = m2 * d();
 
-    _aOut.quadTo(p1 + k1, p2 + k2);
-    _bOut.quadTo(p1 - k1, p2 - k2);
+    aOut().quadTo(p1 + k1, p2 + k2);
+    bOut().quadTo(p1 - k1, p2 - k2);
   }
 
+  struct CubicApproximateSink {
+    PathStroker& _stroker;
+
+    BL_INLINE CubicApproximateSink(PathStroker& stroker) noexcept
+      : _stroker(stroker) {}
+
+    BL_INLINE BLResult operator()(BLPoint quad[3]) const noexcept {
+      return _stroker.offsetQuad(quad);
+    }
+  };
+
   BL_INLINE_IF_NOT_DEBUG BLResult offsetCubic(const BLPoint bez[4]) noexcept {
-    return BLGeometry::approximateCubicWithQuads(bez, _approx.simplifyTolerance, [&](BLPoint quad[3]) noexcept -> BLResult {
-      return offsetQuad(quad);
-    });
+    CubicApproximateSink sink(*this);
+    return BLGeometry::approximateCubicWithQuads(bez, _approx.simplifyTolerance, sink);
   }
 
   BL_INLINE_IF_NOT_DEBUG BLResult addCap(BLPathAppender& out, BLPoint pivot, BLPoint p1, uint32_t capType) noexcept {
