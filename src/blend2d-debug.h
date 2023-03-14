@@ -221,7 +221,7 @@ static void blDebugStrokeOptions_(const BLStrokeOptionsCore* obj, const char* na
   indent--;
   BL_DEBUG_OUT("}\n");
 }
-static void blDebugStrokeOptions(const BLStrokeOptionsCore* obj) { return blDebugStrokeOptions_(obj, "BLStrokeOptions", 0); }
+static void blDebugStrokeOptions(const BLStrokeOptionsCore* obj) { blDebugStrokeOptions_(obj, "BLStrokeOptions", 0); }
 
 // BLDebug - Array
 // ===============
@@ -489,12 +489,12 @@ static void blDebugImage(const BLImageCore* obj) {
 
 //! Dumps BLPathCore or BLPath.
 static void blDebugPath(const BLPathCore* obj) {
-  return blDebugPath_(obj, "BLPath", 0);
+  blDebugPath_(obj, "BLPath", 0);
 }
 
 //! Dumps BLContextCore or BLContext.
 static void blDebugContext(const BLContextCore* obj) {
-  return blDebugContext_(obj, "BLContext", 0);
+  blDebugContext_(obj, "BLContext", 0);
 }
 
 //! Dumps BLObjectCore or BLObject.
@@ -502,7 +502,7 @@ static void blDebugContext(const BLContextCore* obj) {
 //! You can use this function with any object that implements `BLObject`
 //! interface.
 static void blDebugObject(const void* obj) {
-  return blDebugObject_(obj, "BLObject", 0);
+  blDebugObject_(obj, "BLObject", 0);
 }
 
 // BLDebug - End

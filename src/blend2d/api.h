@@ -216,7 +216,7 @@
 #define BL_MAKE_VERSION(MAJOR, MINOR, PATCH) (((MAJOR) << 16) | ((MINOR) << 8) | (PATCH))
 
 //! Blend2D library version.
-#define BL_VERSION BL_MAKE_VERSION(0, 0, 18)
+#define BL_VERSION BL_MAKE_VERSION(0, 8, 0)
 
 //! \}
 //! \}
