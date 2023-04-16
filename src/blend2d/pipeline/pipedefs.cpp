@@ -377,14 +377,12 @@ static BL_INLINE FetchType blPipeFetchDataInitLinearGradient(FetchData* fetchDat
 
   d.linear.dy.i64 = blFloorToInt64(dy);
   d.linear.dt.i64 = blFloorToInt64(dt);
-  d.linear.dt2.u64 = d.linear.dt.u64 << 1;
   d.linear.pt[0].i64 = blFloorToInt64(offset);
   d.linear.pt[1].u64 = d.linear.pt[0].u64 + d.linear.dt.u64;
 
   uint32_t rorSize = isReflect ? lutSize * 2u : lutSize;
-  d.linear.rep.u32Hi = isPad ? uint32_t(0xFFFFFFFFu) : uint32_t(rorSize - 1u);
-  d.linear.rep.u32Lo = 0xFFFFFFFFu;
-  d.linear.msk.u     = isPad ? (lutSize - 1u) * 0x00010001u : (lutSize * 2u - 1u) * 0x00010001u;
+  d.linear.rep.u = uint32_t(rorSize - 1u);
+  d.linear.msk.u = isPad ? (lutSize - 1u) * 0x00010001u : (lutSize * 2u - 1u) * 0x00010001u;
 
   return isPad ? FetchType::kGradientLinearPad : FetchType::kGradientLinearRoR;
 }

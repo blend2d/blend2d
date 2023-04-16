@@ -15,13 +15,13 @@ namespace JIT {
 // BLPipeline::JIT::FetchPart - Construction & Destruction
 // =======================================================
 
-FetchPart::FetchPart(PipeCompiler* pc, FetchType fetchType, uint32_t format) noexcept
+FetchPart::FetchPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept
   : PipePart(pc, PipePartType::kFetch),
     _fetchType(fetchType),
-    _format(uint8_t(format)),
-    _bpp(uint8_t(blFormatInfo[format].depth / 8u)),
-    _hasRGB((blFormatInfo[format].flags & BL_FORMAT_FLAG_RGB) != 0),
-    _hasAlpha((blFormatInfo[format].flags & BL_FORMAT_FLAG_ALPHA) != 0) {}
+    _format(format),
+    _bpp(uint8_t(blFormatInfo[size_t(format)].depth / 8u)),
+    _hasRGB((blFormatInfo[size_t(format)].flags & BL_FORMAT_FLAG_RGB) != 0),
+    _hasAlpha((blFormatInfo[size_t(format)].flags & BL_FORMAT_FLAG_ALPHA) != 0) {}
 
 // BLPipeline::JIT::FetchPart - Init & Fini
 // ========================================
@@ -35,8 +35,8 @@ void FetchPart::init(x86::Gp& x, x86::Gp& y, PixelType pixelType, uint32_t pixel
   // Initialize alpha fetch information. The fetch would be A8 if either the
   // requested pixel is alpha-only or the source pixel format is alpha-only
   // (or both).
-  _alphaFetch = _pixelType == PixelType::kAlpha || _format == BL_FORMAT_A8;
-  _alphaOffset = blFormatInfo[_format].aShift / 8;
+  _alphaFetch = _pixelType == PixelType::kA8 || _format == BLInternalFormat::kA8;
+  _alphaOffset = blFormatInfo[size_t(_format)].aShift / 8;
 
   _initPart(x, y);
   _initGlobalHook(cc->cursor());
@@ -65,12 +65,12 @@ void FetchPart::advanceY() noexcept {
   // Nothing by default.
 }
 
-void FetchPart::startAtX(x86::Gp& x) noexcept {
+void FetchPart::startAtX(const x86::Gp& x) noexcept {
   // Nothing by default.
   blUnused(x);
 }
 
-void FetchPart::advanceX(x86::Gp& x, x86::Gp& diff) noexcept {
+void FetchPart::advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept {
   // Nothing by default.
   blUnused(x, diff);
 }
@@ -98,43 +98,53 @@ void FetchPart::postfetchN() noexcept {
   // Nothing by default.
 }
 
-void FetchPart::fetch8(Pixel& p, PixelFlags flags) noexcept {
+void FetchPart::_fetch2x4(Pixel& p, PixelFlags flags) noexcept {
   // Fallback to `fetch4()` by default.
-  p.setCount(8);
+  p.setCount(PixelCount(8));
 
-  Pixel x(p.type());
-  Pixel y(p.type());
+  Pixel x("x", p.type());
+  Pixel y("y", p.type());
 
-  fetch4(x, flags);
-  fetch4(y, flags);
+  fetch(x, PixelCount(4), flags, pc->emptyPredicate());
+  fetch(y, PixelCount(4), flags, pc->emptyPredicate());
 
   // Each invocation of fetch should provide a stable output.
   BL_ASSERT(x.isImmutable() == y.isImmutable());
 
-  if (p.isRGBA()) {
-    if (blTestFlag(flags, PixelFlags::kPC)) {
-      p.pc.init(x.pc[0], y.pc[0]);
-      pc->rename(p.pc, "pc");
+  if (p.isRGBA32()) {
+    if (!x.pc.empty()) {
+      BL_ASSERT(!y.pc.empty());
+      if (pc->simdWidth() >= SimdWidth::k256) {
+        pc->newYmmArray(p.pc, 1, p.name(), "pc");
+        cc->vinserti128(p.pc[0], x.pc[0].ymm(), y.pc[0], 1);
+      }
+      else {
+        p.pc.init(x.pc[0], y.pc[0]);
+        pc->rename(p.pc, "pc");
+      }
     }
 
-    if (blTestFlag(flags, PixelFlags::kUC)) {
+    if (!x.uc.empty()) {
+      BL_ASSERT(!y.uc.empty());
       p.uc.init(x.uc[0], x.uc[1], y.uc[0], y.uc[1]);
       pc->rename(p.uc, "uc");
     }
 
-    if (blTestFlag(flags, PixelFlags::kUA)) {
+    if (!x.ua.empty()) {
+      BL_ASSERT(!y.ua.empty());
       p.ua.init(x.ua[0], x.ua[1], y.ua[0], y.ua[1]);
       pc->rename(p.uc, "ua");
     }
 
-    if (blTestFlag(flags, PixelFlags::kUIA)) {
-      p.uia.init(x.uia[0], x.uia[1], y.uia[0], y.uia[1]);
-      pc->rename(p.uc, "uia");
+    if (!x.ui.empty()) {
+      BL_ASSERT(!y.ui.empty());
+      p.ui.init(x.ui[0], x.ui[1], y.ui[0], y.ui[1]);
+      pc->rename(p.uc, "ui");
     }
 
     p.setImmutable(x.isImmutable());
   }
-  else if (p.isAlpha()) {
+  else if (p.isA8()) {
     if (blTestFlag(flags, PixelFlags::kPA)) {
       p.pa.init(x.pa[0]);
       pc->rename(p.pa, "pa");
@@ -147,10 +157,10 @@ void FetchPart::fetch8(Pixel& p, PixelFlags flags) noexcept {
       pc->v_interleave_lo_i64(x.ua[0], x.ua[0], y.ua[0]);
     }
 
-    if (blTestFlag(flags, PixelFlags::kUIA)) {
-      p.uia.init(x.uia[0]);
-      pc->rename(p.uia, "uia");
-      pc->v_interleave_lo_i64(x.uia[0], x.uia[0], y.uia[0]);
+    if (blTestFlag(flags, PixelFlags::kUI)) {
+      p.ui.init(x.ui[0]);
+      pc->rename(p.ui, "ui");
+      pc->v_interleave_lo_i64(x.ui[0], x.ui[0], y.ui[0]);
     }
 
     p.setImmutable(x.isImmutable());

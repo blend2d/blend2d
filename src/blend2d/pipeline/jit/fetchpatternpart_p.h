@@ -44,7 +44,7 @@ public:
   //! Extend in X direction, used only by `FetchSimplePatternPart`.
   ExtendMode _extendX {};
 
-  FetchPatternPart(PipeCompiler* pc, FetchType fetchType, uint32_t format) noexcept;
+  FetchPatternPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
 
   //! Tests whether the fetch-type is simple pattern {axis-aligned or axis-unaligned}.
   BL_INLINE bool isSimple() const noexcept { return isFetchType(FetchType::kPatternSimpleFirst, FetchType::kPatternSimpleLast); }
@@ -105,7 +105,7 @@ public:
 
   BLWrap<SimpleRegs> f;
 
-  FetchSimplePatternPart(PipeCompiler* pc, FetchType fetchType, uint32_t format) noexcept;
+  FetchSimplePatternPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
 
   //! Tests whether the fetch-type is axis-aligned blit (no extend modes, no overflows)
   BL_INLINE bool isAlignedBlit() const noexcept { return isFetchType(FetchType::kPatternAlignedBlit); }
@@ -132,24 +132,19 @@ public:
   void _finiPart() noexcept override;
 
   void advanceY() noexcept override;
-  void startAtX(x86::Gp& x) noexcept override;
-  void advanceX(x86::Gp& x, x86::Gp& diff) noexcept override;
+  void startAtX(const x86::Gp& x) noexcept override;
+  void advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept override;
 
   void advanceXByOne() noexcept;
   void repeatOrReflectX() noexcept;
   void prefetchAccX() noexcept;
 
-  // NOTE: We don't do prefetch here. Since the prefetch we need is the same
-  // for `prefetch1()` and `prefetchN()` we always prefetch by `prefetchAccX()`
-  // during `startAtX()` and `advanceX()`.
-  void fetch1(Pixel& p, PixelFlags flags) noexcept override;
-
   void enterN() noexcept override;
   void leaveN() noexcept override;
   void prefetchN() noexcept override;
   void postfetchN() noexcept override;
-  void fetch4(Pixel& p, PixelFlags flags) noexcept override;
-  void fetch8(Pixel& p, PixelFlags flags) noexcept override;
+
+  void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 };
 
 //! Affine pattern fetch part.
@@ -185,33 +180,6 @@ public:
     x86::Xmm vAddrMul;
   };
 
-  BLWrap<AffineRegs> f;
-
-  FetchAffinePatternPart(PipeCompiler* pc, FetchType fetchType, uint32_t format) noexcept;
-
-  BL_INLINE bool isAffineNn() const noexcept { return isFetchType(FetchType::kPatternAffineNNAny) || isFetchType(FetchType::kPatternAffineNNOpt); }
-  BL_INLINE bool isAffineBi() const noexcept { return isFetchType(FetchType::kPatternAffineBIAny) || isFetchType(FetchType::kPatternAffineBIOpt); }
-  BL_INLINE bool isOptimized() const noexcept { return isFetchType(FetchType::kPatternAffineNNOpt) || isFetchType(FetchType::kPatternAffineBIOpt); }
-
-  void _initPart(x86::Gp& x, x86::Gp& y) noexcept override;
-  void _finiPart() noexcept override;
-
-  void advanceY() noexcept override;
-  void startAtX(x86::Gp& x) noexcept override;
-  void advanceX(x86::Gp& x, x86::Gp& diff) noexcept override;
-
-  void advancePxPy(x86::Xmm& px_py, const x86::Gp& i) noexcept;
-  void normalizePxPy(x86::Xmm& px_py) noexcept;
-
-  void prefetch1() noexcept override;
-  void fetch1(Pixel& p, PixelFlags flags) noexcept override;
-
-  void enterN() noexcept override;
-  void leaveN() noexcept override;
-  void prefetchN() noexcept override;
-  void postfetchN() noexcept override;
-  void fetch4(Pixel& p, PixelFlags flags) noexcept override;
-
   enum ClampStep : uint32_t {
     kClampStepA_NN,
     kClampStepA_BI,
@@ -223,7 +191,32 @@ public:
     kClampStepC_BI
   };
 
-  void clampVIdx32(x86::Xmm& dst, const x86::Xmm& src, uint32_t step) noexcept;
+  BLWrap<AffineRegs> f;
+
+  FetchAffinePatternPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
+
+  BL_INLINE bool isAffineNn() const noexcept { return isFetchType(FetchType::kPatternAffineNNAny) || isFetchType(FetchType::kPatternAffineNNOpt); }
+  BL_INLINE bool isAffineBi() const noexcept { return isFetchType(FetchType::kPatternAffineBIAny) || isFetchType(FetchType::kPatternAffineBIOpt); }
+  BL_INLINE bool isOptimized() const noexcept { return isFetchType(FetchType::kPatternAffineNNOpt) || isFetchType(FetchType::kPatternAffineBIOpt); }
+
+  void _initPart(x86::Gp& x, x86::Gp& y) noexcept override;
+  void _finiPart() noexcept override;
+
+  void advanceY() noexcept override;
+  void startAtX(const x86::Gp& x) noexcept override;
+  void advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept override;
+
+  void advancePxPy(x86::Xmm& px_py, const x86::Gp& i) noexcept;
+  void normalizePxPy(x86::Xmm& px_py) noexcept;
+  void clampVIdx32(x86::Xmm& dst, const x86::Xmm& src, ClampStep step) noexcept;
+
+  void prefetch1() noexcept override;
+  void enterN() noexcept override;
+  void leaveN() noexcept override;
+  void prefetchN() noexcept override;
+  void postfetchN() noexcept override;
+
+  void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 };
 
 } // {JIT}

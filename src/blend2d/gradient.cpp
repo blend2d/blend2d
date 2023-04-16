@@ -280,7 +280,7 @@ BLGradientInfo ensureInfo32(BLGradientPrivateImpl* impl) noexcept {
       }
 
       info.solid = uint8_t(flags & FLAG_TRANSITION ? 0 : 1);
-      info.format = uint8_t(flags & FLAG_ALPHA_NOT_ONE) ? uint8_t(BL_FORMAT_PRGB32) : uint8_t(BL_FORMAT_FRGB32);
+      info.format = uint8_t(flags & FLAG_ALPHA_NOT_ONE ? BLInternalFormat::kPRGB32 : BLInternalFormat::kFRGB32);
       info.lutSize = uint16_t(lutSize);
 
       // Update the info. It doesn't have to be atomic.

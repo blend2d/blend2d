@@ -103,36 +103,19 @@ void IndexExtractor::extract(const x86::Gp& dst, uint32_t index) noexcept {
 // BLPipeline::JIT::FetchContext
 // =============================
 
-void FetchContext::_init(uint32_t n) noexcept {
+void FetchContext::_init(PixelCount n) noexcept {
   BL_ASSERT(n == 4 || n == 8);
 
   _pixel->setCount(n);
   _fetchDone = false;
 
-  // The strategy for fetching alpha pixels is a bit different than fetching RGBA pixels. In general we prefer
-  // to fetch into a GP accumulator and then convert it to XMM|YMM at the end.
-  _a8FetchMode = _fetchFormat == BL_FORMAT_A8 || _pixel->isAlpha();
+  // The strategy for fetching alpha pixels is a bit different compared to fetching RGBA pixels.
+  // In general we prefer to fetch into a GP accumulator and then convert it to XMM|YMM at the end.
+  _a8FetchMode = _fetchFormat == BLInternalFormat::kA8 || _pixel->isA8();
 
   x86::Compiler* cc = _pc->cc;
   switch (_pixel->type()) {
-    case PixelType::kRGBA:
-      if (!_pc->hasSSE4_1() && !_a8FetchMode) {
-        // We need some temporaries if the CPU doesn't support `SSE4.1`.
-        pTmp0 = cc->newXmm("@pTmp0");
-        pTmp1 = cc->newXmm("@pTmp1");
-      }
-
-      if (blTestFlag(_fetchFlags, PixelFlags::kPC)) {
-        _pc->newXmmArray(_pixel->pc, (n + 3) / 4, "pc");
-        aTmp = _pixel->pc[0].as<x86::Xmm>();
-      }
-      else {
-        _pc->newXmmArray(_pixel->uc, (n + 1) / 2, "uc");
-        aTmp = _pixel->uc[0].as<x86::Xmm>();
-      }
-      break;
-
-    case PixelType::kAlpha:
+    case PixelType::kA8: {
       if (blTestFlag(_fetchFlags, PixelFlags::kPA)) {
         _pc->newXmmArray(_pixel->pa, 1, "pa");
         aTmp = _pixel->pa[0].as<x86::Xmm>();
@@ -142,6 +125,28 @@ void FetchContext::_init(uint32_t n) noexcept {
         aTmp = _pixel->ua[0].as<x86::Xmm>();
       }
       break;
+    }
+
+    case PixelType::kRGBA32: {
+      if (!_pc->hasSSE4_1() && !_a8FetchMode) {
+        // We need some temporaries if the CPU doesn't support `SSE4.1`.
+        pTmp0 = cc->newXmm("@pTmp0");
+        pTmp1 = cc->newXmm("@pTmp1");
+      }
+
+      if (blTestFlag(_fetchFlags, PixelFlags::kPC) || _pc->use256BitSimd()) {
+        _pc->newXmmArray(_pixel->pc, (n.value() + 3) / 4, "pc");
+        aTmp = _pixel->pc[0].as<x86::Xmm>();
+      }
+      else {
+        _pc->newXmmArray(_pixel->uc, (n.value() + 1) / 2, "uc");
+        aTmp = _pixel->uc[0].as<x86::Xmm>();
+      }
+      break;
+    }
+
+    default:
+      BL_NOT_REACHED();
   }
 
   if (_a8FetchMode) {
@@ -161,18 +166,18 @@ void FetchContext::_init(uint32_t n) noexcept {
 }
 
 void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
-  BL_ASSERT(_fetchIndex < _pixel->count());
+  BL_ASSERT(_fetchIndex < _pixel->count().value());
   x86::Compiler* cc = _pc->cc;
 
   if (_a8FetchMode) {
     x86::Mem m(src);
     m.setSize(1);
 
-    if (_fetchFormat == BL_FORMAT_PRGB32)
+    if (_fetchFormat == BLInternalFormat::kPRGB32)
       m.addOffset(3);
 
     bool clearAcc = _fetchIndex == 0 || (_fetchIndex == 4 && aAcc.size() == 4);
-    bool finalize = _fetchIndex == _pixel->count() - 1;
+    bool finalize = _fetchIndex == _pixel->count().value() - 1;
 
     if (clearAcc)
       cc->movzx(aAcc.r32(), m);
@@ -200,120 +205,142 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
       }
 
       if (_a8FetchShift == 8 && !blTestFlag(_fetchFlags, PixelFlags::kPA | PixelFlags::kPC))
-        _pc->vmovu8u16(aTmp, aTmp);
+        _pc->v_mov_u8_u16(aTmp, aTmp);
     }
     else if (_fetchIndex == 3 && aAcc.size() == 4) {
       // Not the last pixel, but we have to convert to XMM as we have no more
-      // space in the GP accumulator. This should only happen in 32-bit mode.
+      // space in the GP accumulator. This only happens in 32-bit mode.
       _pc->s_mov_i32(aTmp, aAcc);
     }
   }
-  else if (_pixel->isRGBA()) {
-    bool isPC = blTestFlag(_fetchFlags, PixelFlags::kPC);
-    VecArray& uc = _pixel->uc;
-
-    x86::Vec p0 = isPC ? _pixel->pc[0] : uc[0];
-    x86::Vec p1;
-
-    if (_pixel->count() > 4)
-      p1 = isPC ? _pixel->pc[1] : uc[2];
-
-    if (!_pc->hasSSE4_1()) {
+  else if (_pixel->isRGBA32()) {
+    if (_pc->use256BitSimd()) {
+      x86::Vec& pix = _pixel->pc[_fetchIndex / 4u];
       switch (_fetchIndex) {
         case 0:
-          _pc->v_load_i32(p0, src);
-          break;
-
+        case 4: _pc->v_load_i32(pix, src); break;
         case 1:
-          _pc->v_load_i32(pTmp0, src);
-          break;
-
+        case 5: _pc->v_insert_u32_(pix, pix, src, 1); break;
         case 2:
-          _pc->v_interleave_lo_i32(p0, p0, pTmp0);
-          if (isPC)
-            _pc->v_load_i32(pTmp0, src);
-          else
-            _pc->v_load_i32(uc[1], src);
-          break;
-
+        case 6: _pc->v_insert_u32_(pix, pix, src, 2); break;
         case 3:
-          _pc->v_load_i32(pTmp1, src);
-          break;
+        case 7: _pc->v_insert_u32_(pix, pix, src, 3); break;
 
-        case 4:
-          if (isPC) {
-            _pc->v_interleave_lo_i32(pTmp0, pTmp0, pTmp1);
-            _pc->v_interleave_lo_i64(p0, p0, pTmp0);
-          }
-          else {
-            _pc->v_interleave_lo_i32(uc[1], uc[1], pTmp1);
-          }
+        default:
+          BL_NOT_REACHED();
+      }
 
-          _pc->v_load_i32(p1, src);
-          break;
-
-        case 5:
-          _pc->v_load_i32(pTmp0, src);
-          break;
-
-        case 6:
-          _pc->v_interleave_lo_i32(p1, p1, pTmp0);
-          if (isPC)
-            _pc->v_load_i32(pTmp0, src);
-          else
-            _pc->v_load_i32(uc[3], src);
-          break;
-
-        case 7:
-          _pc->v_load_i32(pTmp1, src);
-          break;
+      if (_fetchIndex == 7) {
+        packedFetchDone();
       }
     }
     else {
-      switch (_fetchIndex) {
-        case 0:
-          _pc->v_load_i32(p0, src);
-          break;
+      bool isPC = blTestFlag(_fetchFlags, PixelFlags::kPC);
+      VecArray& uc = _pixel->uc;
 
-        case 1:
-          _pc->v_insert_u32_(p0, p0, src, 1);
-          break;
+      x86::Vec p0 = isPC ? _pixel->pc[0] : uc[0];
+      x86::Vec p1;
 
-        case 2:
-          if (isPC)
-            _pc->v_insert_u32_(p0, p0, src, 2);
-          else
-            _pc->v_load_i32(uc[1], src);
-          break;
+      if (_pixel->count() > 4)
+        p1 = isPC ? _pixel->pc[1] : uc[2];
 
-        case 3:
-          if (isPC)
-            _pc->v_insert_u32_(p0, p0, src, 3);
-          else
-            _pc->v_insert_u32_(uc[1], uc[1], src, 1);
-          break;
+      if (_pc->hasSSE4_1()) {
+        switch (_fetchIndex) {
+          case 0:
+            _pc->v_load_i32(p0, src);
+            break;
 
-        case 4:
-          _pc->v_load_i32(p1, src);
-          break;
+          case 1:
+            _pc->v_insert_u32_(p0, p0, src, 1);
+            break;
 
-        case 5:
-          _pc->v_insert_u32_(p1, p1, src, 1);
-          break;
+          case 2:
+            if (isPC)
+              _pc->v_insert_u32_(p0, p0, src, 2);
+            else
+              _pc->v_load_i32(uc[1], src);
+            break;
 
-        case 6:
-          if (isPC)
-            _pc->v_insert_u32_(p1, p1, src, 2);
-          else
-            _pc->v_load_i32(uc[3], src);
-          break;
+          case 3:
+            if (isPC)
+              _pc->v_insert_u32_(p0, p0, src, 3);
+            else
+              _pc->v_insert_u32_(uc[1], uc[1], src, 1);
+            break;
 
-        case 7:
-          if (isPC)
-            _pc->v_insert_u32_(p1, p1, src, 3);
-          else
-            _pc->v_insert_u32_(uc[3], uc[3], src, 1);
-          break;
+          case 4:
+            _pc->v_load_i32(p1, src);
+            break;
+
+          case 5:
+            _pc->v_insert_u32_(p1, p1, src, 1);
+            break;
+
+          case 6:
+            if (isPC)
+              _pc->v_insert_u32_(p1, p1, src, 2);
+            else
+              _pc->v_load_i32(uc[3], src);
+            break;
+
+          case 7:
+            if (isPC)
+              _pc->v_insert_u32_(p1, p1, src, 3);
+            else
+              _pc->v_insert_u32_(uc[3], uc[3], src, 1);
+            break;
+        }
+      }
+      else {
+        switch (_fetchIndex) {
+          case 0:
+            _pc->v_load_i32(p0, src);
+            break;
+
+          case 1:
+            _pc->v_load_i32(pTmp0, src);
+            break;
+
+          case 2:
+            _pc->v_interleave_lo_i32(p0, p0, pTmp0);
+            if (isPC)
+              _pc->v_load_i32(pTmp0, src);
+            else
+              _pc->v_load_i32(uc[1], src);
+            break;
+
+          case 3:
+            _pc->v_load_i32(pTmp1, src);
+            break;
+
+          case 4:
+            if (isPC) {
+              _pc->v_interleave_lo_i32(pTmp0, pTmp0, pTmp1);
+              _pc->v_interleave_lo_i64(p0, p0, pTmp0);
+            }
+            else {
+              _pc->v_interleave_lo_i32(uc[1], uc[1], pTmp1);
+            }
+
+            _pc->v_load_i32(p1, src);
+            break;
+
+          case 5:
+            _pc->v_load_i32(pTmp0, src);
+            break;
+
+          case 6:
+            _pc->v_interleave_lo_i32(p1, p1, pTmp0);
+            if (isPC)
+              _pc->v_load_i32(pTmp0, src);
+            else
+              _pc->v_load_i32(uc[3], src);
+            break;
+
+          case 7:
+            _pc->v_load_i32(pTmp1, src);
+            break;
+        }
       }
     }
   }
@@ -335,8 +362,8 @@ void FetchContext::_fetchAll(const x86::Mem& src, uint32_t srcShift, IndexExtrac
   src0.setIndex(idx0, srcShift);
   src1.setIndex(idx1, srcShift);
 
-  switch (_pixel->count()) {
-    case 2:
+  switch (_pixel->count().value()) {
+    case 2: {
       extractor.extract(idx0, indexes[0]);
       extractor.extract(idx1, indexes[1]);
 
@@ -346,8 +373,9 @@ void FetchContext::_fetchAll(const x86::Mem& src, uint32_t srcShift, IndexExtrac
       cb(1, cbData);
       fetchPixel(src1);
       break;
+    }
 
-    case 4:
+    case 4: {
       extractor.extract(idx0, indexes[0]);
       extractor.extract(idx1, indexes[1]);
 
@@ -365,9 +393,11 @@ void FetchContext::_fetchAll(const x86::Mem& src, uint32_t srcShift, IndexExtrac
       cb(3, cbData);
       fetchPixel(src1);
       break;
+    }
 
-    case 8:
-      if (_pc->hasSSE4_1() && blTestFlag(_fetchFlags, PixelFlags::kPC) && blFormatInfo[_fetchFormat].depth == 32) {
+    case 8: {
+      bool isPC = _pc->use256BitSimd() || (_pc->hasSSE4_1() && blTestFlag(_fetchFlags, PixelFlags::kPC));
+      if (isPC && blFormatInfo[size_t(_fetchFormat)].depth == 32) {
         x86::Vec& pc0 = _pixel->pc[0];
         x86::Vec& pc1 = _pixel->pc[1];
 
@@ -405,7 +435,7 @@ void FetchContext::_fetchAll(const x86::Mem& src, uint32_t srcShift, IndexExtrac
         _pc->v_insert_u32_(pc1, pc1, src1, 3);
 
         _fetchIndex = 8;
-        _fetchDone = true;
+        packedFetchDone();
       }
       else {
         extractor.extract(idx0, indexes[0]);
@@ -442,14 +472,34 @@ void FetchContext::_fetchAll(const x86::Mem& src, uint32_t srcShift, IndexExtrac
         fetchPixel(src1);
       }
       break;
+    }
 
     default:
       BL_NOT_REACHED();
   }
 }
 
+void FetchContext::packedFetchDone() noexcept {
+  if (blTestFlag(_fetchFlags, PixelFlags::kPC)) {
+    VecArray pc;
+    _pc->newYmmArray(pc, 1, _pixel->name(), "pc");
+    _pc->cc->vinserti128(pc[0], _pixel->pc[0].ymm(), _pixel->pc[1], 1);
+    _pixel->pc = pc;
+  }
+  else {
+    VecArray uc;
+    _pc->newYmmArray(uc, 2, _pixel->name(), "uc");
+    _pc->v_mov_u8_u16_(uc, _pixel->pc);
+
+    _pixel->pc.reset();
+    _pixel->uc = uc;
+  }
+
+  _fetchDone = true;
+}
+
 void FetchContext::end() noexcept {
-  uint32_t n = _pixel->count();
+  uint32_t n = _pixel->count().value();
 
   BL_ASSERT(n != 0);
   BL_ASSERT(n == _fetchIndex);
@@ -458,7 +508,7 @@ void FetchContext::end() noexcept {
     return;
 
   if (_a8FetchMode) {
-    if (_pixel->isRGBA()) {
+    if (_pixel->isRGBA32()) {
       if (blTestFlag(_fetchFlags, PixelFlags::kPC)) {
         switch (n) {
           case 4: {
@@ -539,7 +589,7 @@ void FetchContext::end() noexcept {
       // Nothing...
     }
     else {
-      _pc->vmovu8u16(_pixel->uc, _pixel->uc);
+      _pc->v_mov_u8_u16(_pixel->uc, _pixel->uc);
     }
   }
 

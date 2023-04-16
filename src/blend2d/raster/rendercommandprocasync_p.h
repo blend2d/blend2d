@@ -164,8 +164,9 @@ static BL_INLINE bool fillBoxU(ProcData& procData, const RenderCommand& command)
 
   if (y0 < y1) {
     BLPipeline::FillData fillData;
+    BLPipeline::BoxUToMaskData boxUToMaskData;
 
-    if (fillData.initBoxU8bpc24x8(command.alpha(), command.boxI().x0, y0, command.boxI().x1, y1)) {
+    if (fillData.initBoxU8bpc24x8(command.alpha(), command.boxI().x0, y0, command.boxI().x1, y1, boxUToMaskData)) {
       BLPipeline::FillFunc fillFunc = command.pipeDispatchData()->fillFunc;
       BLPipeline::FetchFunc fetchFunc = command.pipeDispatchData()->fetchFunc;
       const void* fetchData = command.getPipeFetchData();
@@ -197,9 +198,9 @@ static BL_NOINLINE bool fillMaskRawA(ProcData& procData, const RenderCommand& co
     const uint8_t* maskData = static_cast<const uint8_t*>(maskI->pixelData) + maskY * maskI->stride + maskX * (maskI->depth / 8u);
 
     BLPipeline::MaskCommand maskCommands[2];
-    BLPipeline::MaskCommandType vMaskCmd = command.alpha() >= 255 ? BLPipeline::MaskCommandType::kA8 : BLPipeline::MaskCommandType::kA8WithoutGA;
+    BLPipeline::MaskCommandType vMaskCmd = command.alpha() >= 255 ? BLPipeline::MaskCommandType::kVMaskA8WithoutGA : BLPipeline::MaskCommandType::kVMaskA8WithGA;
 
-    maskCommands[0].initVariableMask(vMaskCmd, uint32_t(boxI.x0), uint32_t(boxI.x1), maskData, maskI->stride);
+    maskCommands[0].initVMask(vMaskCmd, uint32_t(boxI.x0), uint32_t(boxI.x1), maskData, maskI->stride);
     maskCommands[1].initRepeat();
 
     BLPipeline::FillData fillData;

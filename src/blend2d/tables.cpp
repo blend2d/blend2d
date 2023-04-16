@@ -68,8 +68,6 @@ UNIT(tables, -10) {
   // Make sure that the 256-bit constants are properly aligned.
   INFO("Testing 'blCommonTable' alignment (X86 specific)");
   EXPECT_TRUE(BLIntOps::isAligned(&blCommonTable, 32));
-
-  EXPECT_TRUE(BLIntOps::isAligned(&blCommonTable.i256_007F007F007F007F, 32));
 #endif
 
   INFO("Testing 'blCommonTable.unpremultiplyRcp' correctness");

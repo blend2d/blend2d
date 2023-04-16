@@ -10,28 +10,20 @@
 // BLFormatInfo - Globals
 // ======================
 
-const BLFormatInfo blFormatInfo[BL_FORMAT_RESERVED_COUNT] = {
+const BLFormatInfo blFormatInfo[] = {
   #define U 0 // Used only to distinguish between zero and unused.
-  { 0 , blFormatFlagsStatic(0 ), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <Public:NONE>
-  { 32, blFormatFlagsStatic(1 ), {{ { 8, 8, 8, 8 }, { 16, 8 , 0 , 24 } }} }, // <Public:PRGB32>
-  { 32, blFormatFlagsStatic(2 ), {{ { 8, 8, 8, U }, { 16, 8 , 0 , U  } }} }, // <Public:XRGB32>
-  { 8 , blFormatFlagsStatic(3 ), {{ { U, U, U, 8 }, { U , U , U , 0  } }} }, // <Public:A8>
-  { 32, blFormatFlagsStatic(4 ), {{ { 8, 8, 8, U }, { 16, 8 , 0 , U  } }} }, // <Internal:FRGB32>
-  { 32, blFormatFlagsStatic(5 ), {{ { 8, 8, 8, 8 }, { 16, 8 , 0 , 24 } }} }, // <Internal:ZERO32>
-  { 0 , blFormatFlagsStatic(6 ), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <Reserved>
-  { 0 , blFormatFlagsStatic(7 ), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <Reserved>
-  { 0 , blFormatFlagsStatic(8 ), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <Reserved>
-  { 0 , blFormatFlagsStatic(9 ), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <Reserved>
-  { 0 , blFormatFlagsStatic(10), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <Reserved>
-  { 0 , blFormatFlagsStatic(11), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <Reserved>
-  { 0 , blFormatFlagsStatic(12), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <Reserved>
-  { 0 , blFormatFlagsStatic(13), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <Reserved>
-  { 0 , blFormatFlagsStatic(14), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <Reserved>
-  { 0 , blFormatFlagsStatic(15), {{ { U, U, U, U }, { U , U , U , U  } }} }  // <Reserved>
+  // Public Formats:
+  { 0 , blFormatFlagsStatic(BLInternalFormat(0)), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <kNONE>
+  { 32, blFormatFlagsStatic(BLInternalFormat(1)), {{ { 8, 8, 8, 8 }, { 16, 8 , 0 , 24 } }} }, // <kPRGB32>
+  { 32, blFormatFlagsStatic(BLInternalFormat(2)), {{ { 8, 8, 8, U }, { 16, 8 , 0 , U  } }} }, // <kXRGB32>
+  { 8 , blFormatFlagsStatic(BLInternalFormat(3)), {{ { U, U, U, 8 }, { U , U , U , 0  } }} }, // <kA8>
+  // Internal Formats:
+  { 32, blFormatFlagsStatic(BLInternalFormat(4)), {{ { 8, 8, 8, U }, { 16, 8 , 0 , U  } }} }, // <kFRGB32>
+  { 32, blFormatFlagsStatic(BLInternalFormat(5)), {{ { 8, 8, 8, 8 }, { 16, 8 , 0 , 24 } }} }, // <kZERO32>
   #undef U
 };
 
-static_assert(BL_FORMAT_INTERNAL_COUNT == 6,
+static_assert(uint32_t(BLInternalFormat::kMaxValue) == 5,
               "New formats must be added to 'blFormatInfo' table");
 
 // BLFormatInfo - Tables

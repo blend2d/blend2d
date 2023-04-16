@@ -126,7 +126,7 @@ PipeDynamicRuntime::PipeDynamicRuntime(PipeRuntimeFlags runtimeFlags) noexcept
   : _jitRuntime(),
     _functionCache(),
     _pipelineCount(0),
-    _cpuFeatures(asmjit::CpuInfo::host().features()),
+    _cpuFeatures(),
     _maxPixels(0),
     _loggerEnabled(false),
     _emitStackFrames(false) {
@@ -143,15 +143,71 @@ PipeDynamicRuntime::PipeDynamicRuntime(PipeRuntimeFlags runtimeFlags) noexcept
   _funcs.test = blPipeGenRuntimeTest;
   _funcs.get = blPipeGenRuntimeGet;
 
-#ifndef ASMJIT_NO_LOGGING
-  const asmjit::FormatFlags kFormatFlags =
-    asmjit::FormatFlags::kRegCasts    |
-    asmjit::FormatFlags::kMachineCode ;
-  _logger.setFile(stderr);
-  _logger.addFlags(kFormatFlags);
-#endif
+  _initCpuInfo(asmjit::CpuInfo::host());
 }
+
 PipeDynamicRuntime::~PipeDynamicRuntime() noexcept {}
+
+void PipeDynamicRuntime::_initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept {
+  _cpuFeatures = cpuInfo.features();
+  _optFlags = PipeOptFlags::kNone;
+
+  const CpuFeatures::X86& f = _cpuFeatures.x86();
+
+  // Vendor Independent CPU Features
+  // -------------------------------
+
+  if (f.hasAVX2()) {
+    _optFlags |= PipeOptFlags::kMaskOps32Bit |
+                 PipeOptFlags::kMaskOps64Bit ;
+  }
+
+  if (f.hasAVX512_BW()) {
+    _optFlags |= PipeOptFlags::kMaskOps8Bit  |
+                 PipeOptFlags::kMaskOps16Bit |
+                 PipeOptFlags::kMaskOps32Bit |
+                 PipeOptFlags::kMaskOps64Bit ;
+  }
+
+  // Select optimization flags based on CPU vendor and microarchitecture.
+
+  // AMD Specific CPU Features
+  // -------------------------
+
+  if (strcmp(cpuInfo.vendor(), "AMD") == 0) {
+    // AMD provides a low-latency VPMULLD instruction.
+    if (_cpuFeatures.x86().hasAVX2()) {
+      _optFlags |= PipeOptFlags::kFastVpmulld;
+    }
+
+    // AMD provides a low-latency VPMULLQ instruction.
+    if (_cpuFeatures.x86().hasAVX512_DQ()) {
+      _optFlags |= PipeOptFlags::kFastVpmullq;
+    }
+
+    // Zen 3 and onwards has fast gathers, scalar loads and shuffles are faster on Zen 2 and older CPUs.
+    if (cpuInfo.familyId() >= 0x19u) {
+      _optFlags |= PipeOptFlags::kFastGather;
+    }
+
+    // Zen 4 and onwards has fast mask operations (starts with AVX-512).
+    if (_cpuFeatures.x86().hasAVX512_F()) {
+      _optFlags |= PipeOptFlags::kFastStoreWithMask;
+    }
+  }
+
+  // Intel Specific CPU Features
+  // ---------------------------
+
+  if (strcmp(cpuInfo.vendor(), "INTEL") == 0) {
+    _optFlags |= PipeOptFlags::kFastGather;
+
+    // TODO: It seems that masked stores are very expensive on consumer CPUs supporting AVX2 and AVX-512.
+    // _optFlags |= PipeOptFlags::kFastStoreWithMask;
+  }
+
+  // Other vendors should follow here, if any...
+}
 
 void PipeDynamicRuntime::_restrictFeatures(uint32_t mask) noexcept {
 #if BL_TARGET_ARCH_X86
@@ -172,12 +228,121 @@ void PipeDynamicRuntime::_restrictFeatures(uint32_t mask) noexcept {
         }
       }
     }
+
+    _optFlags &= ~(PipeOptFlags::kMaskOps8Bit       |
+                   PipeOptFlags::kMaskOps16Bit      |
+                   PipeOptFlags::kMaskOps32Bit      |
+                   PipeOptFlags::kMaskOps64Bit      |
+                   PipeOptFlags::kFastStoreWithMask |
+                   PipeOptFlags::kFastGather        );
+
   }
 #endif
 }
 
+#ifndef ASMJIT_NO_LOGGING
+static const char* stringifyFormat(BLInternalFormat value) noexcept {
+  switch (value) {
+    case BLInternalFormat::kNone  : return "None";
+    case BLInternalFormat::kPRGB32: return "PRGB32";
+    case BLInternalFormat::kXRGB32: return "XRGB32";
+    case BLInternalFormat::kA8    : return "A8";
+    case BLInternalFormat::kFRGB32: return "FRGB32";
+    case BLInternalFormat::kZERO32: return "ZERO32";
+
+    default:
+      return "<Unknown>";
+  }
+}
+
+static const char* stringifyCompOp(uint32_t value) noexcept {
+  switch (value) {
+    case BL_COMP_OP_SRC_OVER    : return "SrcOver";
+    case BL_COMP_OP_SRC_COPY    : return "SrcCopy";
+    case BL_COMP_OP_SRC_IN      : return "SrcIn";
+    case BL_COMP_OP_SRC_OUT     : return "SrcOut";
+    case BL_COMP_OP_SRC_ATOP    : return "SrcAtop";
+    case BL_COMP_OP_DST_OVER    : return "DstOver";
+    case BL_COMP_OP_DST_COPY    : return "DstCopy";
+    case BL_COMP_OP_DST_IN      : return "DstIn";
+    case BL_COMP_OP_DST_OUT     : return "DstOut";
+    case BL_COMP_OP_DST_ATOP    : return "DstAtop";
+    case BL_COMP_OP_XOR         : return "Xor";
+    case BL_COMP_OP_CLEAR       : return "Clear";
+    case BL_COMP_OP_PLUS        : return "Plus";
+    case BL_COMP_OP_MINUS       : return "Minus";
+    case BL_COMP_OP_MODULATE    : return "Modulate";
+    case BL_COMP_OP_MULTIPLY    : return "Multiply";
+    case BL_COMP_OP_SCREEN      : return "Screen";
+    case BL_COMP_OP_OVERLAY     : return "Overlay";
+    case BL_COMP_OP_DARKEN      : return "Darken";
+    case BL_COMP_OP_LIGHTEN     : return "Lighten";
+    case BL_COMP_OP_COLOR_DODGE : return "ColorDodge";
+    case BL_COMP_OP_COLOR_BURN  : return "ColorBurn";
+    case BL_COMP_OP_LINEAR_BURN : return "LinearBurn";
+    case BL_COMP_OP_LINEAR_LIGHT: return "LinearLight";
+    case BL_COMP_OP_PIN_LIGHT   : return "PinLight";
+    case BL_COMP_OP_HARD_LIGHT  : return "HardLight";
+    case BL_COMP_OP_SOFT_LIGHT  : return "SoftLight";
+    case BL_COMP_OP_DIFFERENCE  : return "Difference";
+    case BL_COMP_OP_EXCLUSION   : return "Exclusion";
+
+    case BL_COMP_OP_INTERNAL_ALPHA_INV:
+      return "AlphaInv";
+
+    default:
+      return "<Unknown>";
+  }
+}
+
+static const char* stringifyFillType(FillType value) noexcept {
+  switch (value) {
+    case FillType::kNone    : return "None";
+    case FillType::kBoxA    : return "BoxA";
+    case FillType::kBoxU    : return "BoxU";
+    case FillType::kMask    : return "Mask";
+    case FillType::kAnalytic: return "Analytic";
+
+    default:
+      return "<Unknown>";
+  }
+}
+
+static const char* stringifyFetchType(FetchType value) noexcept {
+  switch (value) {
+    case FetchType::kSolid                : return "Solid";
+    case FetchType::kPatternAlignedBlit   : return "PatternAlignedBlit";
+    case FetchType::kPatternAlignedPad    : return "PatternAlignedPad";
+    case FetchType::kPatternAlignedRepeat : return "PatternAlignedRepeat";
+    case FetchType::kPatternAlignedRoR    : return "PatternAlignedRoR";
+    case FetchType::kPatternFxPad         : return "PatternFxPad";
+    case FetchType::kPatternFxRoR         : return "PatternFxRoR";
+    case FetchType::kPatternFyPad         : return "PatternFyPad";
+    case FetchType::kPatternFyRoR         : return "PatternFyRoR";
+    case FetchType::kPatternFxFyPad       : return "PatternFxFyPad";
+    case FetchType::kPatternFxFyRoR       : return "PatternFxFyRoR";
+    case FetchType::kPatternAffineNNAny   : return "PatternAffineNNAny";
+    case FetchType::kPatternAffineNNOpt   : return "PatternAffineNNOpt";
+    case FetchType::kPatternAffineBIAny   : return "PatternAffineBIAny";
+    case FetchType::kPatternAffineBIOpt   : return "PatternAffineBIOpt";
+    case FetchType::kGradientLinearPad    : return "GradientLinearPad";
+    case FetchType::kGradientLinearRoR    : return "GradientLinearRoR";
+    case FetchType::kGradientRadialPad    : return "GradientRadialPad";
+    case FetchType::kGradientRadialRepeat : return "GradientRadialRepeat";
+    case FetchType::kGradientRadialReflect: return "GradientRadialReflect";
+    case FetchType::kGradientConical      : return "GradientConical";
+    case FetchType::kPixelPtr             : return "PixelPtr";
+    case FetchType::kFailure              : return "<Failure>";
+
+    default:
+      return "<Unknown>";
+  }
+}
+#endif
+
 FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
   Signature sig(signature);
+
   BL_ASSERT(sig.compOp() != BL_COMP_OP_CLEAR);    // Always simplified to SRC_COPY.
   BL_ASSERT(sig.compOp() != BL_COMP_OP_DST_COPY); // Should never pass through the rendering context.
 
@@ -188,7 +353,15 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
   code.setErrorHandler(&eh);
 
 #ifndef ASMJIT_NO_LOGGING
+  asmjit::StringLogger _logger;
+
   if (_loggerEnabled) {
+    const asmjit::FormatFlags kFormatFlags =
+      asmjit::FormatFlags::kRegCasts    |
+      asmjit::FormatFlags::kMachineCode |
+      asmjit::FormatFlags::kExplainImms ;
+
+    _logger.addFlags(kFormatFlags);
     code.setLogger(&_logger);
   }
 #endif
@@ -198,26 +371,28 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
     asmjit::EncodingOptions::kOptimizeForSize |
     asmjit::EncodingOptions::kOptimizedAlign);
 
+#ifdef BL_BUILD_DEBUG
+  cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateIntermediate);
+#endif
+
 #ifndef ASMJIT_NO_LOGGING
   if (_loggerEnabled) {
-    cc.addDiagnosticOptions(
-      asmjit::DiagnosticOptions::kRAAnnotate |
-      asmjit::DiagnosticOptions::kRADebugAll);
-    cc.commentf("Signature 0x%08X DstFmt=%d SrcFmt=%d CompOp=%d FillType=%d FetchType=%d",
+    cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kRAAnnotate);
+    cc.commentf("Signature 0x%08X DstFmt=%s SrcFmt=%s CompOp=%s FillType=%s FetchType=%s",
       sig.value,
-      sig.dstFormat(),
-      sig.srcFormat(),
-      sig.compOp(),
-      sig.fillType(),
-      sig.fetchType());
+      stringifyFormat(sig.dstFormat()),
+      stringifyFormat(sig.srcFormat()),
+      stringifyCompOp(BLCompOp(sig.compOp())),
+      stringifyFillType(sig.fillType()),
+      stringifyFetchType(sig.fetchType()));
   }
 #endif
 
   // Construct the pipeline and compile it.
   {
-    PipeCompiler pc(&cc, _cpuFeatures);
+    PipeCompiler pc(&cc, _cpuFeatures, _optFlags);
 
-    // TODO: Limit MaxPixels.
+    // TODO: [JIT] Limit MaxPixels.
     FetchPart* dstPart = pc.newFetchPart(FetchType::kPixelPtr, sig.dstFormat());
     FetchPart* srcPart = pc.newFetchPart(sig.fetchType(), sig.srcFormat());
 
@@ -241,8 +416,10 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
     return nullptr;
 
 #ifndef ASMJIT_NO_LOGGING
-  if (_loggerEnabled)
-    _logger.logf("[Pipeline size: %u bytes]\n\n", uint32_t(code.codeSize()));
+  if (_loggerEnabled) {
+    blRuntimeMessageOut(_logger.data());
+    blRuntimeMessageFmt("[Pipeline size: %u bytes]\n\n", uint32_t(code.codeSize()));
+  }
 #endif
 
   FillFunc func = nullptr;

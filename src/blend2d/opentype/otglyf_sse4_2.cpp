@@ -443,9 +443,9 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
           size_t offCurveSplineCount = 0;
 
           {
-            Vec128I v0x3030 = blCommonTable.i128_3030303030303030.as<Vec128I>();
-            Vec128I v0x0F0F = blCommonTable.i128_0F0F0F0F0F0F0F0F.as<Vec128I>();
-            Vec128I v0x8080 = blCommonTable.i128_8080808080808080.as<Vec128I>();
+            Vec128I v0x3030 = blCommonTable.i_3030303030303030.as<Vec128I>();
+            Vec128I v0x0F0F = blCommonTable.i_0F0F0F0F0F0F0F0F.as<Vec128I>();
+            Vec128I v0x8080 = blCommonTable.i_8080808080808080.as<Vec128I>();
             Vec128I vSizesPerXYPredicate = v_loada_i128(sizesPerXYPredicate);
             Vec128I vConvertFlagsPredicate = v_loada_i128(convertFlagsPredicate);
 

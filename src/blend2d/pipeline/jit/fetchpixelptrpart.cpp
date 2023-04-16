@@ -15,28 +15,22 @@ namespace JIT {
 // BLPipeline::JIT::FetchPixelPtrPart - Construction & Destruction
 // ===============================================================
 
-FetchPixelPtrPart::FetchPixelPtrPart(PipeCompiler* pc, FetchType fetchType, uint32_t format) noexcept
+FetchPixelPtrPart::FetchPixelPtrPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept
   : FetchPart(pc, fetchType, format) {
 
-  /*
-  _maxSimdWidthSupported = SimdWidth::k256;
-  */
+  _partFlags |= PipePartFlags::kAdvanceXIsSimple;
+  _maxSimdWidthSupported = SimdWidth::k512;
   _maxPixels = kUnlimitedMaxPixels;
+
+  if (pc->hasMaskedAccessOf(bpp()))
+    _partFlags |= PipePartFlags::kMaskedAccess;
 }
 
 // BLPipeline::JIT::FetchPixelPtrPart - Fetch
 // ==========================================
 
-void FetchPixelPtrPart::fetch1(Pixel& p, PixelFlags flags) noexcept {
-  pc->xFetchPixel_1x(p, flags, format(), x86::ptr(_ptr), _ptrAlignment);
-}
-
-void FetchPixelPtrPart::fetch4(Pixel& p, PixelFlags flags) noexcept {
-  pc->xFetchPixel_4x(p, flags, format(), x86::ptr(_ptr), _ptrAlignment);
-}
-
-void FetchPixelPtrPart::fetch8(Pixel& p, PixelFlags flags) noexcept {
-  pc->xFetchPixel_8x(p, flags, format(), x86::ptr(_ptr), _ptrAlignment);
+void FetchPixelPtrPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
+  pc->x_fetch_pixel(p, n, flags, format(), x86::ptr(_ptr), _alignment, predicate);
 }
 
 } // {JIT}

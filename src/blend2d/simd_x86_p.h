@@ -609,18 +609,18 @@ BL_INLINE Vec128I v_packz_u32_u16(const Vec128I& x) noexcept { return v_packs_i3
 BL_INLINE Vec128I v_packz_u32_u16(const Vec128I& x, const Vec128I& y) noexcept { return v_packs_i32_u16(x, y); }
 #else
 BL_INLINE Vec128I v_packz_u32_u16(const Vec128I& x) noexcept {
-  return v_shuffle_i8(x, v_const_as<Vec128I>(&blCommonTable.i128_pshufb_u32_to_u16_lo));
+  return v_shuffle_i8(x, v_const_as<Vec128I>(&blCommonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210));
 }
 
 BL_INLINE Vec128I v_packz_u32_u16(const Vec128I& x, const Vec128I& y) noexcept {
-  Vec128I xLo = v_shuffle_i8(x, v_const_as<Vec128I>(&blCommonTable.i128_pshufb_u32_to_u16_lo));
-  Vec128I yLo = v_shuffle_i8(y, v_const_as<Vec128I>(&blCommonTable.i128_pshufb_u32_to_u16_lo));
+  Vec128I xLo = v_shuffle_i8(x, v_const_as<Vec128I>(&blCommonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210));
+  Vec128I yLo = v_shuffle_i8(y, v_const_as<Vec128I>(&blCommonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210));
   return _mm_unpacklo_epi64(xLo, yLo);
 }
 #endif
 
 #if defined(BL_TARGET_OPT_SSSE3)
-BL_INLINE Vec128I v_packz_u32_u8(const Vec128I& x) noexcept { return v_shuffle_i8(x, v_const_as<Vec128I>(&blCommonTable.i128_pshufb_u32_to_u8_lo)); }
+BL_INLINE Vec128I v_packz_u32_u8(const Vec128I& x) noexcept { return v_shuffle_i8(x, v_const_as<Vec128I>(&blCommonTable.pshufb_xxx3xxx2xxx1xxx0_to_3210321032103210)); }
 #else
 BL_INLINE Vec128I v_packz_u32_u8(const Vec128I& x) noexcept { return v_packs_i16_u8(v_packs_i32_i16(x)); }
 #endif
@@ -729,8 +729,8 @@ BL_INLINE Vec128I v_abs_i32(const Vec128I& x) noexcept { Vec128I y = v_sra_i32<3
 #endif
 
 BL_INLINE Vec128I v_div255_u16(const Vec128I& x) noexcept {
-  Vec128I y = v_add_i16(x, v_const_as<Vec128I>(&blCommonTable.i128_0080008000800080));
-  return v_mulh_u16(y, v_const_as<Vec128I>(&blCommonTable.i128_0101010101010101));
+  Vec128I y = v_add_i16(x, v_const_as<Vec128I>(&blCommonTable.i_0080008000800080));
+  return v_mulh_u16(y, v_const_as<Vec128I>(&blCommonTable.i_0101010101010101));
 }
 #endif
 
@@ -1315,8 +1315,8 @@ BL_INLINE Vec256I v_cmp_gt_i16(const Vec256I& x, const Vec256I& y) noexcept { re
 BL_INLINE Vec256I v_cmp_gt_i32(const Vec256I& x, const Vec256I& y) noexcept { return _mm256_cmpgt_epi32(x, y); }
 
 BL_INLINE Vec256I v_div255_u16(const Vec256I& x) noexcept {
-  Vec256I y = v_add_i16(x, v_const_as<Vec256I>(&blCommonTable.i256_0080008000800080));
-  return v_mulh_u16(y, v_const_as<Vec256I>(&blCommonTable.i256_0101010101010101));
+  Vec256I y = v_add_i16(x, v_const_as<Vec256I>(&blCommonTable.i_0080008000800080));
+  return v_mulh_u16(y, v_const_as<Vec256I>(&blCommonTable.i_0101010101010101));
 }
 #endif
 

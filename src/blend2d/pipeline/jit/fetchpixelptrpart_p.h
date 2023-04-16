@@ -21,9 +21,9 @@ public:
   //! Pixel pointer.
   x86::Gp _ptr;
   //! Pixel pointer alignment (updated by FillPart|CompOpPart).
-  uint8_t _ptrAlignment = 0;
+  Alignment _alignment {};
 
-  FetchPixelPtrPart(PipeCompiler* pc, FetchType fetchType, uint32_t format) noexcept;
+  FetchPixelPtrPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
 
   //! Initializes the pixel pointer to `p`.
   BL_INLINE void initPtr(const x86::Gp& p) noexcept { _ptr = p; }
@@ -31,13 +31,11 @@ public:
   BL_INLINE x86::Gp& ptr() noexcept { return _ptr; }
 
   //! Returns the pixel-pointer alignment.
-  BL_INLINE uint32_t ptrAlignment() const noexcept { return _ptrAlignment; }
+  BL_INLINE Alignment alignment() const noexcept { return _alignment; }
   //! Sets the pixel-pointer alignment.
-  BL_INLINE void setPtrAlignment(uint32_t alignment) noexcept { _ptrAlignment = uint8_t(alignment); }
+  BL_INLINE void setAlignment(Alignment alignment) noexcept { _alignment = alignment; }
 
-  void fetch1(Pixel& p, PixelFlags flags) noexcept override;
-  void fetch4(Pixel& p, PixelFlags flags) noexcept override;
-  void fetch8(Pixel& p, PixelFlags flags) noexcept override;
+  void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 };
 
 } // {JIT}

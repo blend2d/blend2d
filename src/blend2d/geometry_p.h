@@ -281,7 +281,7 @@ enum class SplitQuadOptions : uint32_t {
 
   kExtremas = kXExtrema | kYExtrema
 };
-BL_DEFINE_ENUM_FLAGS(SplitQuadOptions);
+BL_DEFINE_ENUM_FLAGS(SplitQuadOptions)
 
 
 template<SplitQuadOptions Options>
@@ -656,7 +656,7 @@ enum class SplitCubicOptions : uint32_t {
   kExtremas = kXExtremas | kYExtremas,
   kExtremasInflectionsCusp = kExtremas | kInflections | kCusp
 };
-BL_DEFINE_ENUM_FLAGS(SplitCubicOptions);
+BL_DEFINE_ENUM_FLAGS(SplitCubicOptions)
 
 template<SplitCubicOptions Options>
 static BL_INLINE BLPoint* splitCubicToSpline(const BLPoint p[4], BLPoint* out) noexcept {

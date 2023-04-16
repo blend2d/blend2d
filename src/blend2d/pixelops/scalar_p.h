@@ -141,7 +141,7 @@ static BL_INLINE uint32_t cvt_prgb32_8888_from_argb32_8888(uint32_t val32) noexc
   Vec128I p0 = v_unpack_lo_u8_u16(v_i128_from_u32(val32));
   Vec128I a0 = v_swizzle_lo_i16<3, 3, 3, 3>(p0);
 
-  p0 = v_or(p0, v_const_as<Vec128I>(&blCommonTable.i128_00FF000000000000));
+  p0 = v_or(p0, v_const_as<Vec128I>(&blCommonTable.i_00FF000000000000));
   p0 = v_div255_u16(v_mul_u16(p0, a0));
   p0 = v_packz_u16_u8(p0);
   return v_get_u32(p0);

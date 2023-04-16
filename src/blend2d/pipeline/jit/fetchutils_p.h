@@ -6,6 +6,7 @@
 #ifndef BLEND2D_PIPELINE_JIT_FETCHUTILS_P_H_INCLUDED
 #define BLEND2D_PIPELINE_JIT_FETCHUTILS_P_H_INCLUDED
 
+#include "../../format.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
 
 //! \cond INTERNAL
@@ -14,6 +15,17 @@
 
 namespace BLPipeline {
 namespace JIT {
+
+// Interleave callback is used to interleae a sequence of code into pixel fetching sequence. There are two scenarios in
+// general:
+//
+//   - Fetching is performed by scalar loads and shuffles to form the destination pixel. In this case individual fetches
+//     can be interleaved with another code to hide the latency of reading from memory and shuffling.
+//   - Fetching is performed by hardware (vpgatherxx). In this case the interleave code is inserted after gather to hide
+//     its latency (i.e. to not immediately depend on gathered content).
+typedef void (*InterleaveCallback)(uint32_t step, void* data) BL_NOEXCEPT;
+
+static void dummyInterleaveCallback(uint32_t step, void* data) noexcept { blUnused(step, data); }
 
 //! Index extractor makes it easy to extract indexes from SIMD registers. We have learned the hard way that the best
 //! way of extracting indexes is to use stack instead of dedicated instructions like PEXTRW/PEXTRD. The problem of such
@@ -57,14 +69,12 @@ class FetchContext {
 public:
   BL_NONCOPYABLE(FetchContext)
 
-  typedef void (*InterleaveCallback)(uint32_t step, void* data) BL_NOEXCEPT;
-
   PipeCompiler* _pc;
   Pixel* _pixel;
 
-  uint32_t _fetchFormat;
   PixelFlags _fetchFlags;
   uint32_t _fetchIndex;
+  BLInternalFormat _fetchFormat;
   uint8_t _fetchDone;
   uint8_t _a8FetchMode;
   uint8_t _a8FetchShift;
@@ -74,23 +84,24 @@ public:
   x86::Xmm pTmp0;
   x86::Xmm pTmp1;
 
-  inline FetchContext(PipeCompiler* pc, Pixel* pixel, uint32_t n, uint32_t format, PixelFlags fetchFlags) noexcept
+  inline FetchContext(PipeCompiler* pc, Pixel* pixel, PixelCount n, BLInternalFormat format, PixelFlags fetchFlags) noexcept
     : _pc(pc),
       _pixel(pixel),
-      _fetchFormat(format),
       _fetchFlags(fetchFlags),
       _fetchIndex(0),
+      _fetchFormat(format),
       _fetchDone(0),
       _a8FetchMode(0),
       _a8FetchShift(0) { _init(n); }
 
-  void _init(uint32_t n) noexcept;
+  void _init(PixelCount n) noexcept;
   void fetchPixel(const x86::Mem& src) noexcept;
   void _fetchAll(const x86::Mem& src, uint32_t srcShift, IndexExtractor& extractor, const uint8_t* indexes, InterleaveCallback cb, void* cbData) noexcept;
+  void packedFetchDone() noexcept;
 
   // Fetches all pixels and allows to interleave the fetch sequence with a lambda function `interleaveFunc`.
   template<class InterleaveFunc>
-  void fetchAll(const x86::Mem& src, uint32_t srcShift, IndexExtractor& extractor, const uint8_t* indexes, const InterleaveFunc& interleaveFunc) noexcept {
+  void fetchAll(const x86::Mem& src, uint32_t srcShift, IndexExtractor& extractor, const uint8_t* indexes, InterleaveFunc&& interleaveFunc) noexcept {
     _fetchAll(src, srcShift, extractor, indexes, [](uint32_t step, void* data) noexcept {
       (*static_cast<const InterleaveFunc*>(data))(step);
     }, (void*)&interleaveFunc);
@@ -99,7 +110,118 @@ public:
   void end() noexcept;
 };
 
+enum class IndexLayout {
+  kRegular,
+  kHigh16Bits
+};
+
 namespace FetchUtils {
+
+static void x_convert_gathered_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, const VecArray& gPix) noexcept {
+  if (p.isA8()) {
+    x86::Compiler* cc = pc->cc;
+
+    pc->v_srl_i32(gPix, gPix, 24);
+
+    if (blTestFlag(flags, PixelFlags::kPA)) {
+      SimdWidth paSimdWidth = pc->simdWidthOf(DataWidth::k8, n);
+      uint32_t paRegCount = pc->regCountOf(DataWidth::k8, n);
+
+      pc->newVecArray(p.pa, paRegCount, paSimdWidth, p.name(), "pa");
+      BL_ASSERT(p.pa.size() == 1);
+
+      if (pc->hasAVX512()) {
+        cc->vpmovdb(p.pa[0], gPix[0]);
+      }
+      else {
+        pc->x_packs_i16_u8(p.pa[0].cloneAs(gPix[0]), gPix[0], gPix[0]);
+        pc->x_packs_i16_u8(p.pa[0], p.pa[0], p.pa[0]);
+      }
+    }
+    else {
+      SimdWidth uaSimdWidth = pc->simdWidthOf(DataWidth::k16, n);
+      uint32_t uaRegCount = pc->regCountOf(DataWidth::k16, n);
+
+      pc->newVecArray(p.ua, uaRegCount, uaSimdWidth, p.name(), "ua");
+      BL_ASSERT(p.ua.size() == 1);
+
+      if (pc->hasAVX512())
+        cc->vpmovdw(p.ua[0], gPix[0]);
+      else
+        pc->x_packs_i16_u8(p.ua[0].cloneAs(gPix[0]), gPix[0], gPix[0]);
+    }
+  }
+  else {
+    p.pc = gPix;
+    pc->rename(p.pc, p.name(), "pc");
+  }
+}
+
+static void x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, BLInternalFormat format, PixelFlags flags, const x86::Mem& src, const x86::Vec& idx, uint32_t shift, IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept {
+  x86::Compiler* cc = pc->cc;
+  x86::Mem mem(src);
+
+  if (blFormatInfo[size_t(format)].depth == 32 && pc->hasOptFlag(PipeOptFlags::kFastGather)) {
+    mem.setIndex(idx);
+    mem.setShift(shift);
+
+    VecArray pixels;
+    if (n <= 4u) {
+      pc->newXmmArray(pixels, 1, p.name(), "pc");
+    }
+    else {
+      pc->newYmmArray(pixels, 1, p.name(), "pc");
+    }
+
+    if (indexLayout == IndexLayout::kHigh16Bits)
+      pc->v_srl_i32(idx, idx, 16);
+
+    pc->v_zero_i(pixels[0]);
+    if (pc->hasAVX512()) {
+      x86::KReg pred = cc->newKw("pred");
+      cc->kxnorw(pred, pred, pred);
+      cc->k(pred).vpgatherdd(pixels[0], mem);
+    }
+    else {
+      x86::Vec pred = cc->newSimilarReg(pixels[0], "pred");
+      pc->v_ones_i(pred);
+      cc->vpgatherdd(pixels[0], mem, pred);
+    }
+
+    for (uint32_t i = 0; i < p.count().value(); i++)
+      cb(i, cbData);
+
+    x_convert_gathered_pixels(pc, p, n, flags, pixels);
+  }
+  else {
+    uint32_t indexType = 0;
+    const uint8_t* iExtSequence = nullptr;
+
+    if (indexLayout == IndexLayout::kRegular) {
+      static const uint8_t indexes[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+      indexType = IndexExtractor::kTypeUInt32;
+      iExtSequence = indexes;
+    }
+    else {
+      static const uint8_t indexes[] = { 1, 3, 5, 7, 9, 11, 13, 15 };
+      indexType = IndexExtractor::kTypeUInt16;
+      iExtSequence = indexes;
+    }
+
+    IndexExtractor iExt(pc);
+    iExt.begin(indexType, idx);
+
+    FetchContext fCtx(pc, &p, n, format, flags);
+    fCtx._fetchAll(src, shift, iExt, iExtSequence, cb, cbData);
+  }
+}
+
+template<class InterleaveFunc>
+static void x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, BLInternalFormat format, PixelFlags flags, const x86::Mem& src, const x86::Vec& idx, uint32_t shift, IndexLayout indexLayout, InterleaveFunc&& interleaveFunc) noexcept {
+  x_gather_pixels(pc, p, n, format, flags, src, idx, shift, indexLayout, [](uint32_t step, void* data) noexcept {
+    (*static_cast<const InterleaveFunc*>(data))(step);
+  }, (void*)&interleaveFunc);
+}
 
 //! Fetch 4 pixels indexed in XMM reg (32-bit unsigned offsets).
 template<typename FetchFuncT>
@@ -197,7 +319,7 @@ BL_NOINLINE void xFilterBilinearA8_1x(
   x86::Vec& out,
   const Pixels& pixels,
   const Stride& stride,
-  uint32_t format,
+  BLInternalFormat format,
   uint32_t indexShift,
   const x86::Vec& indexes,
   const x86::Vec& weights) noexcept {
@@ -217,8 +339,16 @@ BL_NOINLINE void xFilterBilinearA8_1x(
 
   int32_t alphaOffset = 0;
   switch (format) {
-    case BL_FORMAT_PRGB32: alphaOffset = 3; break;
-    case BL_FORMAT_XRGB32: alphaOffset = 3; break;
+    case BLInternalFormat::kPRGB32:
+      alphaOffset = 3;
+      break;
+
+    case BLInternalFormat::kXRGB32:
+      alphaOffset = 3;
+      break;
+
+    default:
+      break;
   }
 
   x86::Mem row0m = x86::byte_ptr(pixSrcRow0, pixSrcOff, indexShift, alphaOffset);
@@ -243,7 +373,7 @@ BL_NOINLINE void xFilterBilinearA8_1x(
   pc->s_mov_i32(out, pixAcc);
   pc->v_swizzle_i32(wTmp, weights, x86::shuffleImm(3, 3, 2, 2));
 
-  pc->vmovu8u16(out, out);
+  pc->v_mov_u8_u16(out, out);
   pc->v_madd_i16_i32(out, out, wTmp);
   pc->v_swizzle_lo_i16(wTmp, weights, x86::shuffleImm(1, 1, 0, 0));
   pc->v_mulh_u16(out, out, wTmp);
@@ -303,10 +433,10 @@ BL_NOINLINE void xFilterBilinearARGB32_1x(
   }
 
   pc->v_swizzle_i32(pixTmp0, weights, x86::shuffleImm(3, 3, 3, 3));
-  pc->vmovu8u16(pixTop, pixTop);
+  pc->v_mov_u8_u16(pixTop, pixTop);
 
   pc->v_swizzle_i32(pixTmp1, weights, x86::shuffleImm(2, 2, 2, 2));
-  pc->vmovu8u16(pixBot, pixBot);
+  pc->v_mov_u8_u16(pixBot, pixBot);
 
   pc->v_mul_u16(pixTop, pixTop, pixTmp0);
   pc->v_mul_u16(pixBot, pixBot, pixTmp1);

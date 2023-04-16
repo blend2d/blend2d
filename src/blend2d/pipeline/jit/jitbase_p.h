@@ -7,6 +7,7 @@
 #define BLEND2D_PIPELINE_JIT_JITBASE_P_H_INCLUDED
 
 #include "../../api-internal_p.h"
+#include "../../support/intops_p.h"
 
 // External dependencies of BLPipeline.
 #if BL_TARGET_ARCH_X86
@@ -25,6 +26,7 @@ namespace JIT {
 
 namespace x86 { using namespace ::asmjit::x86; }
 
+using asmjit::AlignMode;
 using asmjit::CpuFeatures;
 using asmjit::InstId;
 using asmjit::RegMask;
@@ -36,6 +38,87 @@ using asmjit::Label;
 using asmjit::Operand;
 using asmjit::Operand_;
 using asmjit::OperandSignature;
+using asmjit::JumpAnnotation;
+
+// Strong Enums
+// ------------
+
+BL_DEFINE_STRONG_TYPE(PixelCount, uint32_t)
+BL_DEFINE_STRONG_TYPE(Alignment, uint32_t)
+
+// SIMD Width & Utilities
+// ----------------------
+
+//! SIMD register width.
+enum class SimdWidth : uint8_t {
+  //! 128-bit SIMD (baseline, SSE/AVX, NEON, ASIMD, etc...).
+  k128 = 0,
+  //! 256-bit SIMD (AVX2+).
+  k256 = 1,
+  //! 512-bit SIMD (AVX512_DQ & AVX512_BW & AVX512_VL).
+  k512 = 2
+};
+
+//! SIMD data width.
+enum class DataWidth : uint8_t {
+  k8 = 0,
+  k16 = 1,
+  k32 = 2,
+  k64 = 3
+};
+
+//! Broadcast width.
+enum class Bcst : uint8_t {
+  k8 = 0,
+  k16 = 1,
+  k32 = 2,
+  k64 = 3,
+  kNA = 0xFFu
+};
+
+namespace SimdWidthUtils {
+
+static BL_INLINE OperandSignature signatureOf(SimdWidth simdWidth) noexcept {
+  static const OperandSignature table[] = {
+    OperandSignature{asmjit::x86::Xmm::kSignature},
+    OperandSignature{asmjit::x86::Ymm::kSignature},
+    OperandSignature{asmjit::x86::Zmm::kSignature}
+  };
+
+  return table[size_t(simdWidth)];
+}
+
+static BL_INLINE asmjit::TypeId typeIdOf(SimdWidth simdWidth) noexcept {
+  static const asmjit::TypeId table[] = {
+    asmjit::TypeId::kInt32x4,
+    asmjit::TypeId::kInt32x8,
+    asmjit::TypeId::kInt32x16
+  };
+
+  return table[size_t(simdWidth)];
+}
+
+static BL_INLINE SimdWidth simdWidthOf(SimdWidth simdWidth, DataWidth dataWidth, uint32_t n) noexcept {
+  return SimdWidth(blMin<uint32_t>((n << uint32_t(dataWidth)) >> 5, uint32_t(simdWidth)));
+}
+
+static BL_INLINE uint32_t regCountOf(SimdWidth simdWidth, DataWidth dataWidth, uint32_t n) noexcept {
+  uint32_t shift = uint32_t(simdWidth) + 4;
+  uint32_t totalWidth = n << uint32_t(dataWidth);
+  return (totalWidth + ((1 << shift) - 1)) >> shift;
+}
+
+static BL_INLINE uint32_t regCountOf(SimdWidth simdWidth, DataWidth dataWidth, PixelCount n) noexcept {
+  return regCountOf(simdWidth, dataWidth, n.value());
+}
+
+static BL_INLINE x86::Vec cloneVecAs(const x86::Vec& src, SimdWidth simdWidth) noexcept {
+  x86::Vec result(src);
+  result.setSignature(signatureOf(simdWidth));
+  return result;
+}
+
+} // {SimdWidthUtils}
 
 // AsmJit Helpers
 // ==============
@@ -47,6 +130,9 @@ using asmjit::OperandSignature;
 class OpArray {
 public:
   enum : uint32_t { kMaxSize = 4 };
+
+  uint32_t _size;
+  Operand_ v[kMaxSize];
 
   BL_INLINE OpArray() noexcept { reset(); }
   BL_INLINE explicit OpArray(const Operand_& op0) noexcept { init(op0); }
@@ -126,6 +212,21 @@ public:
   //! Returns the number of vector elements.
   BL_INLINE uint32_t size() const noexcept { return _size; }
 
+  BL_INLINE bool equals(const OpArray& other) const noexcept {
+    size_t count = size();
+    if (count != other.size())
+      return false;
+
+    for (uint32_t i = 0; i < count; i++)
+      if (v[i] != other.v[i])
+        return false;
+
+    return true;
+  }
+
+  BL_INLINE bool operator==(const OpArray& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const OpArray& other) const noexcept { return !equals(other); }
+
   BL_INLINE Operand_& operator[](size_t index) noexcept {
     BL_ASSERT(index < _size);
     return v[index];
@@ -145,9 +246,6 @@ public:
   //! (from == 1) elements. It's like calling `even()` and `odd()`, but
   //! can be used within a loop that performs the same operation for both.
   BL_INLINE OpArray even_odd(uint32_t from) const noexcept { return OpArray(*this, _size > 1 ? from : 0, 2, _size); }
-
-  uint32_t _size;
-  Operand_ v[kMaxSize];
 };
 
 template<typename T>
@@ -200,6 +298,30 @@ public:
   BL_INLINE OpArrayT<T> even() const noexcept { return OpArrayT<T>(*this, 0, 2, _size); }
   BL_INLINE OpArrayT<T> odd() const noexcept { return OpArrayT<T>(*this, _size > 1, 2, _size); }
   BL_INLINE OpArrayT<T> even_odd(uint32_t from) const noexcept { return OpArrayT<T>(*this, _size > 1 ? from : 0, 2, _size); }
+
+  BL_INLINE OpArrayT<T> cloneAs(asmjit::OperandSignature signature) const noexcept {
+    OpArrayT<T> out;
+    out._size = _size;
+    for (uint32_t i = 0; i < _size; i++)
+      out.v[i] = asmjit::BaseReg(signature, v[i].id());
+    return out;
+  }
+
+  BL_INLINE OpArrayT<T> cloneAs(SimdWidth simdWidth) const noexcept { return cloneAs(SimdWidthUtils::signatureOf(simdWidth)); }
+  BL_INLINE OpArrayT<T> cloneAs(const asmjit::BaseReg& reg) const noexcept { return cloneAs(reg.signature()); }
+  BL_INLINE OpArrayT<T> xmm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Xmm::kSignature}); }
+  BL_INLINE OpArrayT<T> ymm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Ymm::kSignature}); }
+  BL_INLINE OpArrayT<T> zmm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Zmm::kSignature}); }
+
+  // Iterator compatibility.
+  BL_INLINE T* begin() noexcept { return reinterpret_cast<T*>(v); }
+  BL_INLINE T* end() noexcept { return reinterpret_cast<T*>(v) + _size; }
+
+  BL_INLINE const T* begin() const noexcept { return reinterpret_cast<const T*>(v); }
+  BL_INLINE const T* end() const noexcept { return reinterpret_cast<const T*>(v) + _size; }
+
+  BL_INLINE const T* cbegin() const noexcept { return reinterpret_cast<const T*>(v); }
+  BL_INLINE const T* cend() const noexcept { return reinterpret_cast<const T*>(v) + _size; }
 };
 
 typedef OpArrayT<x86::Vec> VecArray;
@@ -218,7 +340,36 @@ static BL_INLINE void resetVarStruct(T* data, size_t size = sizeof(T)) noexcept 
   resetVarArray(reinterpret_cast<asmjit::BaseReg*>(data), size / sizeof(asmjit::BaseReg));
 }
 
+static BL_INLINE const Operand_& firstOp(const Operand_& operand) noexcept { return operand; }
+static BL_INLINE const Operand_& firstOp(const OpArray& opArray) noexcept { return opArray[0]; }
+
+static BL_INLINE uint32_t countOp(const Operand_&) noexcept { return 1u; }
+static BL_INLINE uint32_t countOp(const OpArray& opArray) noexcept { return opArray.size(); }
+
+template<typename T> static BL_INLINE bool isXmm(const T& op) noexcept { return x86::Reg::isXmm(firstOp(op)); }
+template<typename T> static BL_INLINE bool isYmm(const T& op) noexcept { return x86::Reg::isYmm(firstOp(op)); }
+template<typename T> static BL_INLINE bool isZmm(const T& op) noexcept { return x86::Reg::isZmm(firstOp(op)); }
+
 } // {JitUtils}
+
+// Permutations
+// ------------
+
+enum class Perm2x128 : uint32_t {
+  kALo = 0,
+  kAHi = 1,
+  kBLo = 2,
+  kBHi = 3,
+  kZero = 8
+};
+
+static BL_INLINE uint8_t perm2x128Imm(Perm2x128 hi, Perm2x128 lo) noexcept {
+  return uint8_t((uint32_t(hi) << 4) | (uint32_t(lo)));
+}
+
+// Injecting
+// ---------
+
 
 //! Provides scope-based code injection.
 //!
@@ -241,64 +392,6 @@ public:
   BL_INLINE ~ScopedInjector() noexcept {
     *hook = cc->setCursor(prev);
   }
-};
-
-// SIMD Constants
-// --------------
-
-//! SIMD data width.
-enum class SimdWidth : uint8_t {
-  //! 128-bit SIMD (baseline, SSE/AVX, NEON, ASIMD, etc...).
-  k128 = 0,
-  //! 256-bit SIMD (AVX2+).
-  k256 = 1,
-  //! 512-bit SIMD (AVX512_DQ & AVX512_BW).
-  k512 = 2
-};
-
-//! SIMD data arrangement.
-//!
-//! This is designed to avoid expensive permutations between LO/HI parts of YMM registers in AVX2 case.
-//! AVX512_F offers new instructions, which make data packing and unpacking easier.
-enum class SimdArrangement : uint8_t {
-  //! Any data arrangement - data is either repeated, not unpacked, or SIMD width is not big enough to affect
-  //! packing.
-  kAny = 0,
-
-  //! Data is arranged / unpacked into pairs of continuous data, which looks like:
-  //!
-  //! ```
-  //! Packed:
-  //!   YMM0 == [31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16|15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00]
-  //!
-  //! Unpacked:
-  //!   YMM0 == [__ 15 __ 14 __ 13 __ 12 __ 11 __ 10 __ 09 __ 08|__ 07 __ 06 __ 05 __ 04 __ 03 __ 02 __ 01 __ 00]
-  //!   YMM1 == [__ 31 __ 30 __ 29 __ 28 __ 27 __ 26 __ 25 __ 24|__ 23 __ 22 __ 21 __ 20 __ 19 __ 18 __ 17 __ 16]
-  //!
-  //! Vpackuswb YMM0, YMM0, YMM1:
-  //!   YMM0 == [31 30 29 28 27 26 25 24 15 14 13 12 11 10 09 08|23 22 21 20 19 18 17 16 07 06 05 04 03 02 01 00]
-  //! ```
-  //!
-  //!
-  kContinuous = 1,
-
-  //! Data is arranged / unpacked into low & high pairs, which looks like:
-  //!
-  //! ```
-  //! Packed (bytes):
-  //!   YMM0 == [31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16|15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00]
-  //!
-  //! Unpacked (words):
-  //!   YMM0 == [__ 23 __ 22 __ 21 __ 20 __ 19 __ 18 __ 17 __ 16|__ 07 __ 06 __ 05 __ 04 __ 03 __ 02 __ 01 __ 00]
-  //!   YMM1 == [__ 31 __ 30 __ 29 __ 28 __ 27 __ 26 __ 25 __ 24|__ 15 __ 14 __ 13 __ 12 __ 11 __ 10 __ 09 __ 08]
-  //!
-  //! Vpackuswb YMM0, YMM0, YMM1:
-  //!   YMM0 == [31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16|15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00]
-  //! ```
-  //!
-  //! This representation is easy to pack / unpack, but in general it's required that the packed register has a
-  //! full width.
-  kLowHigh = 2
 };
 
 } // {JIT}

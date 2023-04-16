@@ -91,11 +91,11 @@ public:
 
   void compile() noexcept override;
 
-  //! Adds covers held by `val` to the accumulator `acc`.
-  void accumulateCells(const x86::Vec& acc, const x86::Vec& val) noexcept;
+  void accumulateCoverages(const x86::Vec& cov) noexcept;
+  void normalizeCoverages(const x86::Vec& cov) noexcept;
 
   //! Calculates masks for 4 pixels - this works for both NonZero and EvenOdd fill rules.
-  void calcMasksFromCells(const x86::Vec& dst, const x86::Vec& src, const x86::Vec& fillRuleMask, const x86::Vec& globalAlpha, bool unpack) noexcept;
+  void calcMasksFromCells(const x86::Vec& dst, const x86::Vec& cov, const x86::Vec& fillRuleMask, const x86::Vec& globalAlpha) noexcept;
 
   //! Emits the following:
   //!
@@ -103,7 +103,7 @@ public:
   //! dstPtr -= x * dstBpp;
   //! cellPtr -= x * 4;
   //! ```
-  void disadvanceDstPtrAndCellPtr(const x86::Gp& dstPtr, const x86::Gp& cellPtr, const x86::Gp& x, int dstBpp) noexcept;
+  void disadvanceDstPtrAndCellPtr(const x86::Gp& dstPtr, const x86::Gp& cellPtr, const x86::Gp& x, uint32_t dstBpp) noexcept;
 };
 
 } // {JIT}

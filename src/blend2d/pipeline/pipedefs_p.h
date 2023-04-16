@@ -6,6 +6,8 @@
 #ifndef BLEND2D_PIPELINE_PIPEDEFS_P_H_INCLUDED
 #define BLEND2D_PIPELINE_PIPEDEFS_P_H_INCLUDED
 
+#define BL_USE_MASKS
+
 #include "../api-internal_p.h"
 #include "../format_p.h"
 #include "../gradient_p.h"
@@ -96,16 +98,16 @@ enum class ExtendMode : uint8_t {
 //!
 //! CMask must have the value 0.
 enum class MaskCommandType : uint32_t {
-  //! Constant mask, already multiplied with global alpha.
-  kCMask = 0,
+  //! End or repeat (whether it repeats actually depends on repeat count, which is 1 for end).
+  kEndOrRepeat = 0,
+  //! Constant mask.
+  kCMask = 1,
   //! Variable mask, already multiplied with global alpha.
-  kA8 = 1,
+  kVMaskA8WithGA = 2,
   //! Variable mask, which was not multiplied with global alpha.
-  kA8WithoutGA = 2,
+  kVMaskA8WithoutGA = 3,
 
-  kFinishBitMask = 0x4,
-  kEnd = kFinishBitMask | 0,
-  kRepeat = kFinishBitMask | 1
+  _kMaxValue = 3
 };
 
 //! Fill rule mask used during composition of mask produced by analytic-rasterizer.
@@ -160,7 +162,7 @@ enum class FetchType : uint8_t {
 
   //!< Linear gradient (pad) [Base].
   kGradientLinearPad,
-  //!< Linear gradient (ror) [Base].
+  //!< Linear gradient (repeat or reflect) [Base].
   kGradientLinearRoR,
 
   //!< Radial gradient (pad) [Base].
@@ -279,55 +281,89 @@ struct MaskCommand {
     kTypeMask = 0x7
   };
 
+  //! \name Members
+  //! \{
+
   //! Start of the span, inclusive.
-  uint32_t _x0AndType;
-  //! End of the span, exclusive.
-  uint32_t _x1;
+  uint32_t _x0;
+  //! End of the span combined with command type, exclusive.
+  //!
+  //! \note Most people would add type into _x0 member, however, it's not good for most microarchitectures
+  //! as today's CPUs are speculative and not knowing X0 would cause a lot of frontend cycle stalls due to
+  //! not knowing the index on load.
+  uint32_t _x1AndType;
 
   union {
-    uintptr_t value;
+    uintptr_t data;
     const void* ptr;
-  } _data;
+  } _value;
 
-  //! Mask command type and increment.
+  //! Added to `_value.data` each time this command is processed by the filler.
   uintptr_t _maskAdvance;
+
+  //! \}
 
   //! \name Accessors
   //! \{
 
-  BL_INLINE MaskCommandType type() const noexcept { return MaskCommandType(_x0AndType & kTypeMask); }
-  BL_INLINE uint32_t x0() const noexcept { return _x0AndType >> kTypeBits; }
-  BL_INLINE uint32_t x1() const noexcept { return _x1; }
+  BL_INLINE MaskCommandType type() const noexcept { return MaskCommandType(_x1AndType & kTypeMask); }
+  BL_INLINE uint32_t x0() const noexcept { return _x0; }
+  BL_INLINE uint32_t x1() const noexcept { return _x1AndType >> kTypeBits; }
 
   BL_INLINE bool isConstMask() const noexcept { return type() == MaskCommandType::kCMask; }
 
-  BL_INLINE uint32_t maskValue() const noexcept { return uint32_t(_data.value); }
-  BL_INLINE const void* maskData() const noexcept { return _data.ptr; }
+  BL_INLINE uint32_t maskValue() const noexcept { return uint32_t(_value.data); }
+  BL_INLINE const void* maskData() const noexcept { return _value.ptr; }
 
   BL_INLINE intptr_t maskAdvance() const noexcept { return _maskAdvance; }
 
   BL_INLINE void initTypeAndSpan(MaskCommandType type, uint32_t x0, uint32_t x1) noexcept {
-    BL_ASSERT(((x0 << kTypeBits) >> kTypeBits) == x0);
-    _x0AndType = uint32_t(type) | (x0 << kTypeBits);
-    _x1 = x1;
+    BL_ASSERT(((x1 << kTypeBits) >> kTypeBits) == x1);
+    _x0 = x0;
+    _x1AndType = uint32_t(type) | (x1 << kTypeBits);
   }
 
-  BL_INLINE void initConstMask(MaskCommandType type, uint32_t x0, uint32_t x1, uint32_t maskValue) noexcept {
+  BL_INLINE void initCMask(MaskCommandType cmdType, uint32_t x0, uint32_t x1, uint32_t maskValue) noexcept {
+    initTypeAndSpan(cmdType, x0, x1);
+    _value.data = maskValue;
+    _maskAdvance = 0;
+  }
+
+  BL_INLINE void initVMask(MaskCommandType type, uint32_t x0, uint32_t x1, const void* maskData, intptr_t maskAdvance = 0) noexcept {
     initTypeAndSpan(type, x0, x1);
-    _data.value = maskValue;
+    _value.ptr = maskData;
+    _maskAdvance = uintptr_t(maskAdvance);
   }
 
-  BL_INLINE void initVariableMask(MaskCommandType type, uint32_t x0, uint32_t x1, const void* maskData, intptr_t maskAdvance = 0) noexcept {
-    initTypeAndSpan(type, x0, x1);
-    _data.ptr = maskData;
-    _maskAdvance = maskAdvance;
+  BL_INLINE void initCMaskA8(uint32_t x0, uint32_t x1, uint32_t maskValue) noexcept {
+    initCMask(MaskCommandType::kCMask, x0, x1, maskValue);
   }
 
-  BL_INLINE void initEnd() noexcept { initTypeAndSpan(MaskCommandType::kEnd, 0, 0); }
-  BL_INLINE void initRepeat() noexcept { initTypeAndSpan(MaskCommandType::kRepeat, 0, 0); }
+  BL_INLINE void initVMaskA8WithGA(uint32_t x0, uint32_t x1, const void* maskData, intptr_t maskAdvance = 0) noexcept {
+    initVMask(MaskCommandType::kVMaskA8WithGA, x0, x1, maskData, maskAdvance);
+  }
 
+  BL_INLINE void initVMaskA8WithoutGA(uint32_t x0, uint32_t x1, const void* maskData, intptr_t maskAdvance = 0) noexcept {
+    initVMask(MaskCommandType::kVMaskA8WithoutGA, x0, x1, maskData, maskAdvance);
+  }
+
+  BL_INLINE void initEnd() noexcept {
+    initTypeAndSpan(MaskCommandType::kEndOrRepeat, 1, 0);
+  }
+
+  BL_INLINE void initRepeat(uint32_t nRepeat = 0xFFFFFFFFu) noexcept {
+    initTypeAndSpan(MaskCommandType::kEndOrRepeat, nRepeat, 0);
+  }
 
   //! \}
+};
+
+//! Contains data that is required to decompose a BoxU fill into mask commands.
+struct BoxUToMaskData {
+  // At most 4 commands per scanline, at most 3 distinct scanlines.
+  MaskCommand maskCmd[4u * 3u];
+  // At most 16 bytes per scanline, at most 3 distinct scanlines.
+  uint8_t maskData[16 * 3u];
 };
 
 struct ContextData {
@@ -335,6 +371,21 @@ struct ContextData {
 
   BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 };
+
+static BL_INLINE void writeBoxUMaskTo16ByteBuffer(uint8_t* dst, uint32_t m) noexcept {
+#if BL_TARGET_ARCH_BITS >= 64
+  uint64_t repeated = uint64_t(m) * 0x0101010101010101u;
+  uint64_t mask = BL_BYTE_ORDER == 1234 ? 0xFFFFFFFF00000000u : 0x00000000FFFFFFFFu;
+  BLMemOps::writeU64a(dst +  8, repeated);
+  BLMemOps::writeU64a(dst +  0, repeated & mask);
+#else
+  uint32_t repeated = m * 0x01010101u;
+  BLMemOps::writeU32a(dst +  0, 0u);
+  BLMemOps::writeU32a(dst +  4, repeated);
+  BLMemOps::writeU32a(dst +  8, repeated);
+  BLMemOps::writeU32a(dst + 12, repeated);
+#endif
+}
 
 struct FillData {
   struct Common {
@@ -430,14 +481,179 @@ struct FillData {
   }
 
   template<typename T>
-  BL_INLINE bool initBoxU8bpcT(uint32_t alpha, T x0, T y0, T x1, T y1) noexcept {
-    return initBoxU8bpc24x8(alpha, blTruncToInt(x0 * T(256)),
-                                   blTruncToInt(y0 * T(256)),
-                                   blTruncToInt(x1 * T(256)),
-                                   blTruncToInt(y1 * T(256)));
+  BL_INLINE bool initBoxU8bpcT(uint32_t alpha, T x0, T y0, T x1, T y1, BoxUToMaskData& maskData) noexcept {
+    return initBoxU8bpc24x8(alpha,
+      blTruncToInt(x0 * T(256)),
+      blTruncToInt(y0 * T(256)),
+      blTruncToInt(x1 * T(256)),
+      blTruncToInt(y1 * T(256)),
+      maskData);
   }
 
-  bool initBoxU8bpc24x8(uint32_t alpha, int x0, int y0, int x1, int y1) noexcept {
+#ifdef BL_USE_MASKS
+  bool initBoxU8bpc24x8(uint32_t alpha, int x0, int y0, int x1, int y1, BoxUToMaskData& maskData) noexcept {
+    // The rendering engine should never pass out-of-range alpha.
+    BL_ASSERT(alpha <= 255);
+
+    // The rendering engine should never pass invalid box to the pipeline.
+    BL_ASSERT(x0 < x1);
+    BL_ASSERT(y0 < y1);
+
+    uint32_t ax0 = uint32_t(x0) >> 8;
+    uint32_t ay0 = uint32_t(y0) >> 8;
+    uint32_t ax1 = uint32_t(x1 + 0xFF) >> 8;
+    uint32_t ay1 = uint32_t(y1 + 0xFF) >> 8;
+
+    uint32_t fx0 = uint32_t(x0) & 0xFFu;
+    uint32_t fy0 = uint32_t(y0) & 0xFFu;
+    uint32_t fx1 = (uint32_t(x1 - 1) & 0xFFu) + 1u;
+    uint32_t fy1 = (uint32_t(y1 - 1) & 0xFFu) + 1u;
+
+    uint32_t w = ax1 - ax0;
+    uint32_t h = ay1 - ay0;
+
+    fy0 = (h == 1 ? fy1 : 256u) - fy0;
+
+    uint32_t fy0_a = fy0 * alpha;
+    uint32_t fy1_a = fy1 * alpha;
+
+    MaskCommand* maskCmd = maskData.maskCmd;
+    uint8_t* maskPtr = maskData.maskData;
+
+    mask.alpha.u = 0xFF;
+    mask.box.reset(int(ax0), int(ay0), int(ax0 + w), int(ay0 + h));
+    mask.maskCommandData = maskCmd;
+
+    // Special cases first - smaller the rectangle, greater the overhead per pixel if we do unnecessary work.
+    if (w == 1) {
+      // If the rectangle has 1 pixel width, we have to sum fx0 and fx1 to calculate the mask value. This is
+      // not needed for a regular case in which the width is greater than 1 - in that case there are always
+      // two bordering pixels, which masks are calculated separately.
+      fx0 = fx1 - fx0;
+
+      uint32_t m0 = (fx0 * fy0_a) >> 16u;
+      maskCmd[0].initCMaskA8(ax0, ax1, m0);
+      maskCmd[1].initEnd();
+
+      if (h == 1)
+        return m0 != 0;
+
+      maskCmd += m0 ? 2u : 0u;
+      mask.box.y0 += int(m0 == 0);
+
+      uint32_t m1 = (fx0 * alpha) >> 8u;
+      maskCmd[0].initCMaskA8(ax0, ax1, m1);
+      maskCmd[1].initRepeat(h - 2);
+      maskCmd += h > 2 ? 2u : 0u;
+
+      uint32_t m2 = (fx0 * fy1_a) >> 16u;
+      maskCmd[0].initCMaskA8(ax0, ax1, m2);
+      maskCmd[1].initEnd();
+
+      mask.box.y1 -= int(m2 == 0);
+      return mask.box.y0 < mask.box.y1 && m1 != 0;
+    }
+    else {
+      uint32_t m0x1 = fy0_a >> 8u;
+      uint32_t m1x1 = alpha;
+      uint32_t m2x1 = fy1_a >> 8u;
+
+      fx0 = 256 - fx0;
+
+      if ((fx0 & fx1) == 256) {
+        // If the rectangle doesn't have a fractional X0/X1 then each scanline would only need a single CMask
+        // command instead of either VMask or [VMask, CMask, VMask] sequence.
+        maskCmd[0].initCMaskA8(ax0, ax1, m0x1);
+        maskCmd[1].initEnd();
+        maskCmd += m0x1 ? 2u : 0u;
+        mask.box.y0 += int(m0x1 == 0);
+
+        maskCmd[0].initCMaskA8(ax0, ax1, m1x1);
+        maskCmd[1].initRepeat(h - 2);
+        maskCmd += h > 2 ? 2u : 0u;
+
+        maskCmd[0].initCMaskA8(ax0, ax1, m2x1);
+        maskCmd[1].initEnd();
+        mask.box.y1 -= int(m2x1 == 0);
+
+        return mask.box.y0 < mask.box.y1;
+      }
+
+      uint32_t m0x0 = (fx0 * fy0_a) >> 16u;
+      uint32_t m0x2 = (fx1 * fy0_a) >> 16u;
+      writeBoxUMaskTo16ByteBuffer(maskPtr, m0x1);
+      maskPtr[4] = uint8_t(m0x0);
+
+      uint32_t m1x0 = (fx0 * alpha) >> 8u;
+      uint32_t m1x2 = (fx1 * alpha) >> 8u;
+      writeBoxUMaskTo16ByteBuffer(maskPtr + 16, m1x1);
+      maskPtr[20] = uint8_t(m1x0);
+
+      uint32_t m2x0 = (fx0 * fy1_a) >> 16u;
+      uint32_t m2x2 = (fx1 * fy1_a) >> 16u;
+      writeBoxUMaskTo16ByteBuffer(maskPtr + 32, m2x1);
+      maskPtr[36] = uint8_t(m2x0);
+
+      maskPtr += 4;
+      uint32_t wAlign = BLIntOps::alignUpDiff(w, 4);
+
+      if (wAlign > ax0)
+        wAlign = 0;
+
+      ax0 -= wAlign;
+      w += wAlign;
+      maskPtr -= wAlign;
+
+      if (w <= 12) {
+        maskPtr[0u  + w - 1u] = uint8_t(m0x2);
+        maskPtr[16u + w - 1u] = uint8_t(m1x2);
+        maskPtr[32u + w - 1u] = uint8_t(m2x2);
+
+        maskCmd[0].initVMaskA8WithGA(ax0, ax1, maskPtr, 0);
+        maskCmd[1].initEnd();
+        maskCmd += m0x1 ? 2u : 0u;
+        mask.box.y0 += int(m0x1 == 0);
+
+        maskCmd[0].initVMaskA8WithGA(ax0, ax1, maskPtr + 16, 0);
+        maskCmd[1].initRepeat(h - 2);
+        maskCmd += h > 2 ? 2u : 0u;
+
+        maskCmd[0].initVMaskA8WithGA(ax0, ax1, maskPtr + 32, 0);
+        maskCmd[1].initEnd();
+        mask.box.y1 -= int(m2x1 == 0);
+
+        return mask.box.y0 < mask.box.y1;
+      }
+      else {
+        maskPtr[0u  + 7u] = uint8_t(m0x2);
+        maskPtr[16u + 7u] = uint8_t(m1x2);
+        maskPtr[32u + 7u] = uint8_t(m2x2);
+
+        maskCmd[0].initVMaskA8WithGA(ax0, ax0 + 4u, maskPtr, 0);
+        maskCmd[1].initCMaskA8(ax0 + 4u, ax1 - 4u, m0x1);
+        maskCmd[2].initVMaskA8WithGA(ax1 - 4u, ax1, maskPtr + 4, 0);
+        maskCmd[3].initEnd();
+        maskCmd += m0x1 ? 4u : 0u;
+        mask.box.y0 += int(m0x1 == 0);
+
+        maskCmd[0].initVMaskA8WithGA(ax0, ax0 + 4u, maskPtr + 16, 0);
+        maskCmd[1].initCMaskA8(ax0 + 4u, ax1 - 4u, m1x1);
+        maskCmd[2].initVMaskA8WithGA(ax1 - 4u, ax1, maskPtr + 20, 0);
+        maskCmd[3].initRepeat(h - 2);
+        maskCmd += h > 2 ? 4u : 0u;
+
+        maskCmd[0].initVMaskA8WithGA(ax0, ax0 + 4u, maskPtr + 32, 0);
+        maskCmd[1].initCMaskA8(ax0 + 4u, ax1 - 4u, m2x1);
+        maskCmd[2].initVMaskA8WithGA(ax1 - 4u, ax1, maskPtr + 36, 0);
+        maskCmd[3].initEnd();
+        mask.box.y1 -= int(m2x1 == 0);
+
+        return mask.box.y0 < mask.box.y1;
+      }
+    }
+  }
+#else
+  bool initBoxU8bpc24x8(uint32_t alpha, int x0, int y0, int x1, int y1, BoxUToMaskData&) noexcept {
     // The rendering engine should never pass out-of-range alpha.
     BL_ASSERT(alpha <= 255);
 
@@ -533,7 +749,7 @@ struct FillData {
 
     return true;
   }
-
+#endif
   BL_INLINE void initMaskA(uint32_t alpha, int x0, int y0, int x1, int y1, MaskCommand* maskCommandData) noexcept {
     mask.alpha.u = alpha;
     mask.box.reset(x0, y0, x1, y1);
@@ -657,10 +873,8 @@ struct alignas(16) FetchData {
       PipeValue64 dy;
       //! One X step.
       PipeValue64 dt;
-      //! Two X steps.
-      PipeValue64 dt2;
       //! Reflect/Repeat mask (repeated/reflected size - 1).
-      PipeValue64 rep;
+      PipeValue32 rep;
       //! Size mask (gradient size - 1).
       PipeValue32 msk;
     };
@@ -827,9 +1041,9 @@ struct Signature {
   BL_INLINE void setValue(const Signature& other) noexcept { this->value = other.value; }
 
   //! Extracts destination pixel format from the signature.
-  BL_INLINE uint32_t dstFormat() const noexcept { return _get(kMaskDstFormat); }
+  BL_INLINE BLInternalFormat dstFormat() const noexcept { return BLInternalFormat(_get(kMaskDstFormat)); }
   //! Extracts source pixel format from the signature.
-  BL_INLINE uint32_t srcFormat() const noexcept { return _get(kMaskSrcFormat); }
+  BL_INLINE BLInternalFormat srcFormat() const noexcept { return BLInternalFormat(_get(kMaskSrcFormat)); }
   //! Extracts composition operator from the signature.
   BL_INLINE uint32_t compOp() const noexcept { return _get(kMaskCompOp); }
   //! Extracts sweep type from the signature.
@@ -840,15 +1054,15 @@ struct Signature {
   BL_INLINE bool isSolid() const noexcept { return fetchType() == FetchType::kSolid; }
 
   //! Add destination pixel format.
-  BL_INLINE void setDstFormat(uint32_t v) noexcept { _set(kMaskDstFormat, v); }
+  BL_INLINE void setDstFormat(BLInternalFormat v) noexcept { _set(kMaskDstFormat, uint32_t(v)); }
   //! Add source pixel format.
-  BL_INLINE void setSrcFormat(uint32_t v) noexcept { _set(kMaskSrcFormat, v); }
+  BL_INLINE void setSrcFormat(BLInternalFormat v) noexcept { _set(kMaskSrcFormat, uint32_t(v)); }
   //! Add clip mode.
   BL_INLINE void setCompOp(uint32_t v) noexcept { _set(kMaskCompOp, v); }
   //! Add sweep type.
-  BL_INLINE void setFillType(uint32_t v) noexcept { _set(kMaskFillType, v); }
+  BL_INLINE void setFillType(FillType v) noexcept { _set(kMaskFillType, uint32_t(v)); }
   //! Add fetch type.
-  BL_INLINE void setFetchType(uint32_t v) noexcept { _set(kMaskFetchType, v); }
+  BL_INLINE void setFetchType(FetchType v) noexcept { _set(kMaskFetchType, uint32_t(v)); }
 
   // The following methods are used to build the signature. They use '|' operator
   // which doesn't clear the previous value, each function is expected to be called
@@ -860,9 +1074,9 @@ struct Signature {
   BL_INLINE void add(const Signature& other) noexcept { this->value |= other.value; }
 
   //! Add destination pixel format.
-  BL_INLINE void addDstFormat(uint32_t v) noexcept { _add(kMaskDstFormat, v); }
+  BL_INLINE void addDstFormat(BLInternalFormat v) noexcept { _add(kMaskDstFormat, uint32_t(v)); }
   //! Add source pixel format.
-  BL_INLINE void addSrcFormat(uint32_t v) noexcept { _add(kMaskSrcFormat, v); }
+  BL_INLINE void addSrcFormat(BLInternalFormat v) noexcept { _add(kMaskSrcFormat, uint32_t(v)); }
   //! Add clip mode.
   BL_INLINE void addCompOp(uint32_t v) noexcept { _add(kMaskCompOp, v); }
   //! Add sweep type.

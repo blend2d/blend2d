@@ -101,9 +101,9 @@ struct PipeProvider {
 struct alignas(16) PipeLookupCache {
   // Number of cached pipelines, must be multiply of 4.
 #if BL_TARGET_ARCH_X86
-  static const uint32_t N = 16; // SSE2 friendly option.
+  enum : uint32_t { N = 16 }; // SSE2 friendly option.
 #else
-  static const uint32_t N = 8;
+  enum : uint32_t { N = 8 };
 #endif
 
   struct IndexMatch {
@@ -140,7 +140,7 @@ struct alignas(16) PipeLookupCache {
 
     Vec128I vSign = v_fill_i128_u32(signature);
 
-    switch (N) {
+    switch (uint32_t(N)) {
       case 4: {
         Vec128I vec0 = v_cmp_eq_i32(v_loada_i128(_signatures + 0), vSign);
         return BitMatch { uint32_t(_mm_movemask_ps(v_cast<Vec128F>(vec0))) };
@@ -170,7 +170,7 @@ struct alignas(16) PipeLookupCache {
   typedef IndexMatch MatchType;
   BL_INLINE MatchType match(uint32_t signature) const noexcept {
     size_t i;
-    for (i = 0; i < N; i++)
+    for (i = 0; i < size_t(N); i++)
       if (_signatures[i] == signature)
         break;
     return IndexMatch { i };

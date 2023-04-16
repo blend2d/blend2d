@@ -132,7 +132,7 @@ static BL_INLINE void onAfterOffsetParameterChanged(BLRasterContextImpl* ctxI) n
 }
 
 static BL_INLINE void onAfterCompOpChanged(BLRasterContextImpl* ctxI) noexcept {
-  ctxI->compOpSimplifyInfo = blCompOpSimplifyInfoArrayOf(ctxI->compOp(), ctxI->format());
+  ctxI->compOpSimplifyInfo = blCompOpSimplifyInfoArrayOf(ctxI->compOp(), BLInternalFormat(ctxI->format()));
 }
 
 // BLRasterEngine - ContextImpl - Style State Internals
@@ -653,7 +653,7 @@ static BL_INLINE bool ensureFetchData(BLRasterContextImpl* ctxI, RenderCommandSe
 
 template<uint32_t RenderingMode>
 static BL_INLINE uint32_t prepareClear(BLRasterContextImpl* ctxI, RenderCommandSerializerCore<RenderingMode>& serializer, uint32_t nopFlags) noexcept {
-  BLCompOpSimplifyInfo simplifyInfo = blCompOpSimplifyInfo(BL_COMP_OP_CLEAR, ctxI->format(), BL_FORMAT_PRGB32);
+  BLCompOpSimplifyInfo simplifyInfo = blCompOpSimplifyInfo(BL_COMP_OP_CLEAR, BLInternalFormat(ctxI->format()), BLInternalFormat::kPRGB32);
   uint32_t contextFlags = ctxI->contextFlags;
 
   nopFlags &= contextFlags;
@@ -3515,9 +3515,9 @@ static BLResult blRasterContextImplAttach(BLRasterContextImpl* ctxI, BLImageCore
   ctxI->fpMaxSafeCoordD = blFloor(double(BLTraits::maxValue<int32_t>() - 1 - blMax(size.w, size.h)) * ctxI->fpScaleD());
 
   // Initialize members that are related to alpha blending and composition.
-  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_ARGB] = uint8_t(BL_FORMAT_PRGB32);
-  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB] = uint8_t(BL_FORMAT_FRGB32);
-  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_ZERO] = uint8_t(BL_FORMAT_ZERO32);
+  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_ARGB] = uint8_t(BLInternalFormat::kPRGB32);
+  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB] = uint8_t(BLInternalFormat::kFRGB32);
+  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_ZERO] = uint8_t(BLInternalFormat::kZERO32);
   ctxI->solidFetchDataTable = targetComponentType == RenderTargetInfo::kPixelComponentUInt16
     ? reinterpret_cast<const BLPipeline::FetchData::Solid*>(blRasterContextSolidDataRgba64)
     : reinterpret_cast<const BLPipeline::FetchData::Solid*>(blRasterContextSolidDataRgba32);

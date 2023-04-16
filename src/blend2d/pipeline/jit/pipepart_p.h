@@ -27,9 +27,22 @@ enum class PipePartType : uint8_t {
 
 //! Pipeline part flags.
 enum class PipePartFlags : uint32_t {
+  //! No flags.
   kNone = 0,
   //! Part was already prepared.
-  kPrepareDone = 0x00000001u
+  kPrepareDone = 0x00000001u,
+  //! Part supports masked access (fetching / storing pixels predicated by a mask).
+  kMaskedAccess = 0x00000002u,
+  //! Pipe fetch part needs `x` argument in order to advance horizontally.
+
+  //! Advancing in X direction is simple and can be called even with zero `x`.
+  kAdvanceXIsSimple = 0x0001000u,
+  //! Advancing in X direction needs the final X coordinate for calculations.
+  kAdvanceXNeedsX = 0x00020000u,
+  //! Advancing in X direction needs `delta` argument for calculations.
+  kAdvanceXNeedsDiff = 0x00040000u,
+
+  kFetchFlags = kAdvanceXIsSimple | kAdvanceXNeedsX | kAdvanceXNeedsDiff
 };
 BL_DEFINE_ENUM_FLAGS(PipePartFlags)
 
@@ -82,8 +95,12 @@ public:
   BL_INLINE bool isPartInitialized() const noexcept { return _globalHook != nullptr; }
   //! Returns the type of the part.
   BL_INLINE PipePartType partType() const noexcept { return _partType; }
-  //! returns PipePart flags.
+  //! Returns PipePart flags.
   BL_INLINE PipePartFlags partFlags() const noexcept { return _partFlags; }
+  //! Tests whether this part has the given `flag` set.
+  BL_INLINE bool hasPartFlag(PipePartFlags flag) const noexcept { return blTestFlag(_partFlags, flag); }
+
+  BL_INLINE bool hasMaskedAccess() const noexcept { return blTestFlag(_partFlags, PipePartFlags::kMaskedAccess); }
 
   //! Returns the maximum supported SIMD width.
   BL_INLINE SimdWidth maxSimdWidthSupported() const noexcept { return _maxSimdWidthSupported; }

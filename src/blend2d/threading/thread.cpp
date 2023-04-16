@@ -84,8 +84,8 @@ public:
   }
 
   // Windows specific - it could happen that after returning from main() all threads are terminated even before
-  // calling static destructors or DllMain(). This means that the thread could be already terminated and we executed
-  // the regular code-path we would get stuck forever during the cleanup.
+  // calling static destructors or DllMain(). This means that the thread could be already terminated and if we
+  // have executed the regular code-path we would get stuck forever during the cleanup.
   BL_INLINE bool wasThreadTerminated() const noexcept {
 #if _WIN32
     DWORD result = WaitForSingleObject((HANDLE)_handle, 0);

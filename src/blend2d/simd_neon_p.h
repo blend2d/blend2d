@@ -398,7 +398,7 @@ BL_INLINE Vec128I v_swizzle_i32(const Vec128I& x) noexcept {
 }
 
 BL_INLINE Vec128I v_div255_u16(const Vec128I& x) noexcept {
-  Vec128I y = v_add_i16(x, v_const_as<Vec128I>(&blCommonTable.i128_0080008000800080));
+  Vec128I y = v_add_i16(x, v_const_as<Vec128I>(&blCommonTable.i_0080008000800080));
   return v_srl_i16<8>(Vec128I(vsraq_n_u16(y.u16, y.u16, 8)));
 }
 

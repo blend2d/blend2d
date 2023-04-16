@@ -18,16 +18,18 @@ namespace JIT {
 // BLPipeline::JIT::FetchSolidPart - Construction & Destruction
 // ============================================================
 
-FetchSolidPart::FetchSolidPart(PipeCompiler* pc, uint32_t format) noexcept
-  : FetchPart(pc, FetchType::kSolid, format) {
+FetchSolidPart::FetchSolidPart(PipeCompiler* pc, BLInternalFormat format) noexcept
+  : FetchPart(pc, FetchType::kSolid, format),
+    _pixel("solid") {
+
+  // Advancing has no cost.
+  _partFlags |= PipePartFlags::kAdvanceXIsSimple;
+  // Solid fetcher doesn't access memory, so masked access is always available.
+  _partFlags |= PipePartFlags::kMaskedAccess;
 
   _maxPixels = kUnlimitedMaxPixels;
-  /*
-  _maxSimdWidthSupported = SimdWidth::k256;
-  */
-
-  _pixel.reset();
-  _pixel.setCount(1);
+  _maxSimdWidthSupported = SimdWidth::k512;
+  _pixel.setCount(PixelCount(1));
 }
 
 // BLPipeline::JIT::FetchSolidPart - Prepare
@@ -59,162 +61,142 @@ void FetchSolidPart::initSolidFlags(PixelFlags flags) noexcept {
   Pixel& s = _pixel;
 
   switch (s.type()) {
-    case PixelType::kRGBA:
-      if (blTestFlag(flags, PixelFlags::kPC | PixelFlags::kUC | PixelFlags::kUA | PixelFlags::kUIA) && s.pc.empty()) {
-        s.pc.init(pc->newVec("pixel.pc"));
-        pc->v_broadcast_u32(s.pc[0], x86::ptr_32(pc->_fetchData));
-      }
-      break;
-
-    case PixelType::kAlpha:
-      if (blTestFlag(flags, PixelFlags::kSA | PixelFlags::kPA | PixelFlags::kUA | PixelFlags::kUIA) && !s.sa.isValid()) {
-        s.sa = cc->newUInt32("pixel.sa");
-        pc->load8(s.sa, x86::ptr_8(pc->_fetchData, 3));
+    case PixelType::kA8: {
+      if (blTestFlag(flags, PixelFlags::kSA | PixelFlags::kPA | PixelFlags::kUA | PixelFlags::kUI) && !s.sa.isValid()) {
+        s.sa = cc->newUInt32("solid.sa");
+        pc->i_load_u8(s.sa, x86::ptr_8(pc->_fetchData, 3));
       }
 
-      if (blTestFlag(flags, PixelFlags::kPA | PixelFlags::kUA | PixelFlags::kUIA) && s.ua.empty()) {
-        s.ua.init(pc->newVec("pixel.ua"));
+      if (blTestFlag(flags, PixelFlags::kPA | PixelFlags::kUA | PixelFlags::kUI) && s.ua.empty()) {
+        s.ua.init(pc->newVec("solid.ua"));
         pc->v_broadcast_u16(s.ua[0], s.sa);
       }
       break;
+    }
+
+    case PixelType::kRGBA32: {
+      if (blTestFlag(flags, PixelFlags::kPC | PixelFlags::kUC | PixelFlags::kUA | PixelFlags::kUI) && s.pc.empty()) {
+        s.pc.init(pc->newVec("solid.pc"));
+        pc->v_broadcast_u32(s.pc[0], x86::ptr_32(pc->_fetchData));
+      }
+      break;
+    }
+
+    default:
+      BL_NOT_REACHED();
   }
 
-  pc->xSatisfySolid(s, flags);
+  pc->x_satisfy_solid(s, flags);
 }
 
 // BLPipeline::JIT::FetchSolidPart - Fetch
 // =======================================
 
-void FetchSolidPart::fetch1(Pixel& p, PixelFlags flags) noexcept {
+void FetchSolidPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
   BL_ASSERT(_pixel.type() == p.type());
+  blUnused(predicate);
 
-  p.setCount(1);
-  if (p.isRGBA()) {
-    if (blTestFlag(flags, PixelFlags::kAny)) {
-      initSolidFlags(flags & PixelFlags::kAny);
-      Pixel& s = _pixel;
+  p.setCount(n);
+  Pixel& s = _pixel;
+
+  switch (p.type()) {
+    case PixelType::kA8: {
+      if (n == 1) {
+        if (blTestFlag(flags, PixelFlags::kSA)) {
+          initSolidFlags(PixelFlags::kSA);
+
+          if (blTestFlag(flags, PixelFlags::kImmutable)) {
+            if (blTestFlag(flags, PixelFlags::kSA)) {
+              p.sa = s.sa;
+            }
+          }
+          else {
+            if (blTestFlag(flags, PixelFlags::kSA)) {
+              p.sa = cc->newUInt32("%ssa", p.name());
+              cc->mov(p.sa, s.sa);
+            }
+          }
+        }
+      }
+      else {
+        initSolidFlags(flags & (PixelFlags::kPA | PixelFlags::kUA | PixelFlags::kUI));
+
+        SimdWidth paSimdWidth = pc->simdWidthOf(DataWidth::k8, n);
+        SimdWidth uaSimdWidth = pc->simdWidthOf(DataWidth::k16, n);
+
+        uint32_t paCount = pc->regCountOf(DataWidth::k8, n);
+        uint32_t uaCount = pc->regCountOf(DataWidth::k16, n);
+
+        if (blTestFlag(flags, PixelFlags::kImmutable)) {
+          if (blTestFlag(flags, PixelFlags::kPA)) { p.pa = s.pa.cloneAs(paSimdWidth); }
+          if (blTestFlag(flags, PixelFlags::kUA)) { p.ua = s.ua.cloneAs(uaSimdWidth); }
+          if (blTestFlag(flags, PixelFlags::kUI)) { p.ui = s.ui.cloneAs(uaSimdWidth); }
+        }
+        else {
+          if (blTestFlag(flags, PixelFlags::kPA)) {
+            pc->newVecArray(p.pa, paCount, paSimdWidth, p.name(), "pa");
+            pc->v_mov(p.pa, s.pa[0].cloneAs(p.pa[0]));
+          }
+
+          if (blTestFlag(flags, PixelFlags::kUA)) {
+            pc->newVecArray(p.ua, uaCount, uaSimdWidth, p.name(), "ua");
+            pc->v_mov(p.ua, s.ua[0].cloneAs(p.ua[0]));
+          }
+
+          if (blTestFlag(flags, PixelFlags::kUI)) {
+            pc->newVecArray(p.ui, uaCount, uaSimdWidth, p.name(), "ui");
+            pc->v_mov(p.ui, s.ui[0].cloneAs(p.ui[0]));
+          }
+        }
+      }
+      break;
+    }
+
+    case PixelType::kRGBA32: {
+      initSolidFlags(flags & (PixelFlags::kPC | PixelFlags::kUC | PixelFlags::kUA | PixelFlags::kUI));
+
+      SimdWidth pcWidth = pc->simdWidthOf(DataWidth::k32, n);
+      SimdWidth ucWidth = pc->simdWidthOf(DataWidth::k64, n);
+
+      uint32_t pcCount = pc->regCountOf(DataWidth::k32, n);
+      uint32_t ucCount = pc->regCountOf(DataWidth::k64, n);
 
       if (blTestFlag(flags, PixelFlags::kImmutable)) {
-        if (blTestFlag(flags, PixelFlags::kPC )) { p.pc.init(s.pc); }
-        if (blTestFlag(flags, PixelFlags::kUC )) { p.uc.init(s.uc); }
-        if (blTestFlag(flags, PixelFlags::kUA )) { p.ua.init(s.ua); }
-        if (blTestFlag(flags, PixelFlags::kUIA)) { p.uia.init(s.uia); }
+        if (blTestFlag(flags, PixelFlags::kPC)) { p.pc = s.pc.cloneAs(pcWidth); }
+        if (blTestFlag(flags, PixelFlags::kUC)) { p.uc = s.uc.cloneAs(ucWidth); }
+        if (blTestFlag(flags, PixelFlags::kUA)) { p.ua = s.ua.cloneAs(ucWidth); }
+        if (blTestFlag(flags, PixelFlags::kUI)) { p.ui = s.ui.cloneAs(ucWidth); }
       }
       else {
         if (blTestFlag(flags, PixelFlags::kPC)) {
-          p.pc.init(pc->newVec("p.pc0"));
-          pc->v_mov(p.pc[0], s.pc[0]);
+          pc->newVecArray(p.pc, pcCount, pcWidth, p.name(), "pc");
+          pc->v_mov(p.pc, s.pc[0].cloneAs(p.pc[0]));
         }
 
         if (blTestFlag(flags, PixelFlags::kUC)) {
-          p.uc.init(pc->newVec("p.uc0"));
-          pc->v_mov(p.uc[0], s.uc[0]);
+          pc->newVecArray(p.uc, ucCount, ucWidth, p.name(), "uc");
+          pc->v_mov(p.uc, s.uc[0].cloneAs(p.uc[0]));
         }
 
         if (blTestFlag(flags, PixelFlags::kUA)) {
-          p.ua.init(pc->newVec("p.ua0"));
-          pc->v_mov(p.ua[0], s.ua[0]);
+          pc->newVecArray(p.ua, ucCount, ucWidth, p.name(), "ua");
+          pc->v_mov(p.ua, s.ua[0].cloneAs(p.ua[0]));
         }
 
-        if (blTestFlag(flags, PixelFlags::kUIA)) {
-          p.uia.init(pc->newVec("p.uia0"));
-          pc->v_mov(p.uia[0], s.uia[0]);
+        if (blTestFlag(flags, PixelFlags::kUI)) {
+          pc->newVecArray(p.ui, ucCount, ucWidth, p.name(), "ui");
+          pc->v_mov(p.ui, s.ui[0].cloneAs(p.ui[0]));
         }
       }
-    }
-  }
-  else if (p.isAlpha()) {
-    if (blTestFlag(flags, PixelFlags::kSA)) {
-      initSolidFlags(PixelFlags::kSA);
-      Pixel& s = _pixel;
 
-      if (blTestFlag(flags, PixelFlags::kImmutable)) {
-        if (blTestFlag(flags, PixelFlags::kSA)) {
-          p.sa = s.sa;
-        }
-      }
-      else {
-        if (blTestFlag(flags, PixelFlags::kSA)) {
-          p.sa = cc->newUInt32("p.sa");
-          cc->mov(p.sa, s.sa);
-        }
-      }
+      break;
     }
+
+    default:
+      BL_NOT_REACHED();
   }
 
-  pc->xSatisfyPixel(p, flags);
-}
-
-void FetchSolidPart::fetch4(Pixel& p, PixelFlags flags) noexcept {
-  BL_ASSERT(_pixel.type() == p.type());
-
-  p.setCount(4);
-  if (p.isRGBA()) {
-    initSolidFlags(flags & (PixelFlags::kPC | PixelFlags::kUC | PixelFlags::kUA | PixelFlags::kUIA));
-    Pixel& s = _pixel;
-
-    uint32_t pCount = 1;
-    uint32_t uCount = 2;
-
-    if (blTestFlag(flags, PixelFlags::kImmutable)) {
-      if (blTestFlag(flags, PixelFlags::kPC)) { p.pc.init(s.pc); }
-      if (blTestFlag(flags, PixelFlags::kUC)) { p.uc.init(s.uc); }
-      if (blTestFlag(flags, PixelFlags::kUA)) { p.ua.init(s.ua); }
-      if (blTestFlag(flags, PixelFlags::kUIA)) { p.uia.init(s.uia); }
-    }
-    else {
-      if (blTestFlag(flags, PixelFlags::kPC)) {
-        pc->newVecArray(p.pc, pCount, "p.pc");
-        pc->v_mov(p.pc, s.pc[0]);
-      }
-
-      if (blTestFlag(flags, PixelFlags::kUC)) {
-        pc->newVecArray(p.uc, uCount, "p.uc");
-        pc->v_mov(p.uc, s.uc[0]);
-      }
-
-      if (blTestFlag(flags, PixelFlags::kUA)) {
-        pc->newVecArray(p.ua, uCount, "p.ua");
-        pc->v_mov(p.ua, s.ua[0]);
-      }
-
-      if (blTestFlag(flags, PixelFlags::kUIA)) {
-        pc->newVecArray(p.uia, uCount, "p.uia");
-        pc->v_mov(p.uia, s.uia[0]);
-      }
-    }
-  }
-  else if (p.isAlpha()) {
-    initSolidFlags(flags & (PixelFlags::kPA | PixelFlags::kUA | PixelFlags::kUIA));
-    Pixel& s = _pixel;
-
-    uint32_t pCount = 1;
-    uint32_t uCount = 1;
-
-    if (blTestFlag(flags, PixelFlags::kImmutable)) {
-      if (blTestFlag(flags, PixelFlags::kPA)) { p.pa.init(s.pa); }
-      if (blTestFlag(flags, PixelFlags::kUA)) { p.ua.init(s.ua); }
-      if (blTestFlag(flags, PixelFlags::kUIA)) { p.uia.init(s.uia); }
-    }
-    else {
-      if (blTestFlag(flags, PixelFlags::kPA)) {
-        pc->newVecArray(p.pa, pCount, "p.pa");
-        pc->v_mov(p.pa[0], s.pa[0]);
-      }
-
-      if (blTestFlag(flags, PixelFlags::kUA)) {
-        pc->newVecArray(p.ua, uCount, "p.ua");
-        pc->v_mov(p.ua, s.ua[0]);
-      }
-
-      if (blTestFlag(flags, PixelFlags::kUIA)) {
-        pc->newVecArray(p.uia, uCount, "p.uia");
-        pc->v_mov(p.uia, s.uia[0]);
-      }
-    }
-  }
-
-  pc->xSatisfyPixel(p, flags);
+  pc->x_satisfy_pixel(p, flags);
 }
 
 } // {JIT}

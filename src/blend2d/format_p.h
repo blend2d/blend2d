@@ -14,16 +14,29 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! Pixel formats used internally and never exposed to users.
-enum BLFormatInternal : uint32_t {
-  //! Internal pixel format that is the same as XRGB32, but the unused component
-  //! is guaranteed to always be 0xFF so the format can be treated as PRGB32 by
-  //! compositors.
-  BL_FORMAT_FRGB32 = BL_FORMAT_MAX_VALUE + 1u,
-  BL_FORMAT_ZERO32 = BL_FORMAT_MAX_VALUE + 2u,
+//! Pixel format used internally and never exposed to users.
+//!
+//! \note This just extends `BLFormat` enumeration with formats that we recognize and use internally.
+enum class BLInternalFormat : uint32_t {
+  //! None or invalid pixel format.
+  kNone = BL_FORMAT_NONE,
+  //! 32-bit premultiplied ARGB pixel format (8-bit components).
+  kPRGB32 = BL_FORMAT_PRGB32,
+  //! 32-bit (X)RGB pixel format (8-bit components, alpha ignored).
+  kXRGB32 = BL_FORMAT_XRGB32,
+  //! 8-bit alpha-only pixel format.
+  kA8 = BL_FORMAT_A8,
 
-  //! Count of internal pixel formats.
-  BL_FORMAT_INTERNAL_COUNT = BL_FORMAT_MAX_VALUE + 3u
+  //! 32-bit (X)RGB pixel format, where X is always 0xFF, thus the pixel is compatible with `kXRGB32` and `kPRGB32`.
+  kFRGB32 = BL_FORMAT_MAX_VALUE + 1u,
+  //! 32-bit (X)RGB pixel format where the pixel is always zero.
+  kZERO32 = BL_FORMAT_MAX_VALUE + 2u,
+
+  // Maximum value of `BLInternalFormat`.
+  kMaxValue = kZERO32,
+
+  // Maximum value of `BLInternalFormat` that is a power of 2 minus 1, to make indexing of some tables easy.
+  kMaxReserved = 15
 };
 
 //! Pixel format flags used internally.
@@ -47,29 +60,26 @@ enum BLFormatFlagsInternal : uint32_t {
     BL_FORMAT_FLAG_ALPHA
 };
 
-static_assert(int(BL_FORMAT_INTERNAL_COUNT) <= int(BL_FORMAT_RESERVED_COUNT),
-              "Internal format count cannot overflow reserved format count");
-
 static_assert(BL_FORMAT_COMPONENT_FLAGS == 0x7u,
               "Component flags of BLFormat must be at LSB");
 
-static constexpr uint32_t blFormatFlagsStatic(uint32_t format) noexcept {
-  return format == BL_FORMAT_PRGB32 ? BL_FORMAT_FLAG_RGBA           |
-                                      BL_FORMAT_FLAG_PREMULTIPLIED  |
-                                      BL_FORMAT_FLAG_BYTE_ALIGNED   :
-         format == BL_FORMAT_XRGB32 ? BL_FORMAT_FLAG_RGB            |
-                                      BL_FORMAT_FLAG_BYTE_ALIGNED   |
-                                      BL_FORMAT_FLAG_UNDEFINED_BITS :
-         format == BL_FORMAT_A8     ? BL_FORMAT_FLAG_ALPHA          |
-                                      BL_FORMAT_FLAG_BYTE_ALIGNED   :
-         format == BL_FORMAT_FRGB32 ? BL_FORMAT_FLAG_RGB            |
-                                      BL_FORMAT_FLAG_BYTE_ALIGNED   |
-                                      BL_FORMAT_FLAG_UNDEFINED_BITS |
-                                      BL_FORMAT_FLAG_FULL_ALPHA     :
-         format == BL_FORMAT_ZERO32 ? BL_FORMAT_FLAG_RGBA           |
-                                      BL_FORMAT_FLAG_BYTE_ALIGNED   |
-                                      BL_FORMAT_FLAG_UNDEFINED_BITS |
-                                      BL_FORMAT_FLAG_ZERO_ALPHA     : 0;
+static constexpr uint32_t blFormatFlagsStatic(BLInternalFormat format) noexcept {
+  return format == BLInternalFormat::kPRGB32 ? BL_FORMAT_FLAG_RGBA           |
+                                               BL_FORMAT_FLAG_PREMULTIPLIED  |
+                                               BL_FORMAT_FLAG_BYTE_ALIGNED   :
+         format == BLInternalFormat::kXRGB32 ? BL_FORMAT_FLAG_RGB            |
+                                               BL_FORMAT_FLAG_BYTE_ALIGNED   |
+                                               BL_FORMAT_FLAG_UNDEFINED_BITS :
+         format == BLInternalFormat::kA8     ? BL_FORMAT_FLAG_ALPHA          |
+                                               BL_FORMAT_FLAG_BYTE_ALIGNED   :
+         format == BLInternalFormat::kFRGB32 ? BL_FORMAT_FLAG_RGB            |
+                                               BL_FORMAT_FLAG_BYTE_ALIGNED   |
+                                               BL_FORMAT_FLAG_UNDEFINED_BITS |
+                                               BL_FORMAT_FLAG_FULL_ALPHA     :
+         format == BLInternalFormat::kZERO32 ? BL_FORMAT_FLAG_RGBA           |
+                                               BL_FORMAT_FLAG_BYTE_ALIGNED   |
+                                               BL_FORMAT_FLAG_UNDEFINED_BITS |
+                                               BL_FORMAT_FLAG_ZERO_ALPHA     : 0;
 }
 
 static BL_INLINE bool blFormatInfoHasSameAlphaLayout(const BLFormatInfo& a, const BLFormatInfo& b) noexcept {

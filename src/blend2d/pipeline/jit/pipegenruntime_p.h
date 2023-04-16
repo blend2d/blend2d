@@ -77,6 +77,8 @@ public:
 
   //! CPU features to use (either detected or restricted by the user).
   asmjit::CpuFeatures _cpuFeatures;
+  //! Optimization flags.
+  PipeOptFlags _optFlags;
   //! Maximum pixels at a time, 0 if no limit (debug).
   uint32_t _maxPixels;
 
@@ -86,12 +88,10 @@ public:
   //! one GP register, which is always useful.
   bool _emitStackFrames;
 
-  #ifndef ASMJIT_NO_LOGGING
-  asmjit::FileLogger _logger;
-  #endif
-
   explicit PipeDynamicRuntime(PipeRuntimeFlags runtimeFlags = PipeRuntimeFlags::kNone) noexcept;
   ~PipeDynamicRuntime() noexcept;
+
+  void _initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept;
 
   //! Restricts CPU features not provided in the given mask. This function is only used by isolated runtimes
   //! to setup the runtime. It should never be used after the runtime is in use.

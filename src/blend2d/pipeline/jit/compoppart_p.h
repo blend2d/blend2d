@@ -34,7 +34,7 @@ public:
   //! Maximum pixels the compositor can handle at a time.
   uint8_t _maxPixels = 0;
   //! Pixel granularity.
-  uint8_t _pixelGranularity = 0;
+  PixelCount _pixelGranularity {};
   //! Minimum alignment required to process `_maxPixels`.
   Alignment _minAlignment {1};
 
@@ -62,6 +62,39 @@ public:
 
   //! Returns the composition operator id, see `BLCompOp`.
   BL_INLINE uint32_t compOp() const noexcept { return _compOp; }
+
+  BL_INLINE bool isSrcCopy() const noexcept { return _compOp == BL_COMP_OP_SRC_COPY; }
+  BL_INLINE bool isSrcOver() const noexcept { return _compOp == BL_COMP_OP_SRC_OVER; }
+  BL_INLINE bool isSrcIn() const noexcept { return _compOp == BL_COMP_OP_SRC_IN; }
+  BL_INLINE bool isSrcOut() const noexcept { return _compOp == BL_COMP_OP_SRC_OUT; }
+  BL_INLINE bool isSrcAtop() const noexcept { return _compOp == BL_COMP_OP_SRC_ATOP; }
+
+  BL_INLINE bool isDstCopy() const noexcept { return _compOp == BL_COMP_OP_DST_COPY; }
+  BL_INLINE bool isDstOver() const noexcept { return _compOp == BL_COMP_OP_DST_OVER; }
+  BL_INLINE bool isDstIn() const noexcept { return _compOp == BL_COMP_OP_DST_IN; }
+  BL_INLINE bool isDstOut() const noexcept { return _compOp == BL_COMP_OP_DST_OUT; }
+  BL_INLINE bool isDstAtop() const noexcept { return _compOp == BL_COMP_OP_DST_ATOP; }
+
+  BL_INLINE bool isXor() const noexcept { return _compOp == BL_COMP_OP_XOR; }
+  BL_INLINE bool isPlus() const noexcept { return _compOp == BL_COMP_OP_PLUS; }
+  BL_INLINE bool isMinus() const noexcept { return _compOp == BL_COMP_OP_MINUS; }
+  BL_INLINE bool isModulate() const noexcept { return _compOp == BL_COMP_OP_MODULATE; }
+  BL_INLINE bool isMultiply() const noexcept { return _compOp == BL_COMP_OP_MULTIPLY; }
+  BL_INLINE bool isScreen() const noexcept { return _compOp == BL_COMP_OP_SCREEN; }
+  BL_INLINE bool isOverlay() const noexcept { return _compOp == BL_COMP_OP_OVERLAY; }
+  BL_INLINE bool isDarken() const noexcept { return _compOp == BL_COMP_OP_DARKEN; }
+  BL_INLINE bool isLighten() const noexcept { return _compOp == BL_COMP_OP_LIGHTEN; }
+  BL_INLINE bool isColorDodge() const noexcept { return _compOp == BL_COMP_OP_COLOR_DODGE; }
+  BL_INLINE bool isColorBurn() const noexcept { return _compOp == BL_COMP_OP_COLOR_BURN; }
+  BL_INLINE bool isLinearBurn() const noexcept { return _compOp == BL_COMP_OP_LINEAR_BURN; }
+  BL_INLINE bool isLinearLight() const noexcept { return _compOp == BL_COMP_OP_LINEAR_LIGHT; }
+  BL_INLINE bool isPinLight() const noexcept { return _compOp == BL_COMP_OP_PIN_LIGHT; }
+  BL_INLINE bool isHardLight() const noexcept { return _compOp == BL_COMP_OP_HARD_LIGHT; }
+  BL_INLINE bool isSoftLight() const noexcept { return _compOp == BL_COMP_OP_SOFT_LIGHT; }
+  BL_INLINE bool isDifference() const noexcept { return _compOp == BL_COMP_OP_DIFFERENCE; }
+  BL_INLINE bool isExclusion() const noexcept { return _compOp == BL_COMP_OP_EXCLUSION; }
+
+
   //! Returns the composition operator flags, see `BLCompOpFlags`.
   BL_INLINE BLCompOpFlags compOpFlags() const noexcept { return blCompOpInfo[_compOp].flags(); }
 
@@ -71,8 +104,8 @@ public:
   BL_INLINE bool hasSa() const noexcept { return _hasSa != 0; }
 
   BL_INLINE PixelType pixelType() const noexcept { return _pixelType; }
-  BL_INLINE bool isAlphaType() const noexcept { return _pixelType == PixelType::kAlpha; }
-  BL_INLINE bool isRGBAType() const noexcept { return _pixelType == PixelType::kRGBA; }
+  BL_INLINE bool isA8Pixel() const noexcept { return _pixelType == PixelType::kA8; }
+  BL_INLINE bool isRGBA32Pixel() const noexcept { return _pixelType == PixelType::kRGBA32; }
 
   //! Returns the current loop mode.
   BL_INLINE CMaskLoopType cMaskLoopType() const noexcept { return _cMaskLoopType; }
@@ -97,7 +130,7 @@ public:
   }
 
   //! Returns pixel granularity passed to `init()`, otherwise the result should be zero.
-  BL_INLINE uint32_t pixelGranularity() const noexcept { return _pixelGranularity; }
+  BL_INLINE PixelCount pixelGranularity() const noexcept { return _pixelGranularity; }
   //! Returns the minimum destination alignment required to the maximum number of pixels `_maxPixels`.
   BL_INLINE Alignment minAlignment() const noexcept { return _minAlignment; }
 
@@ -117,8 +150,8 @@ public:
   //! an inlined version of `memcpy()` or `memset()`.
   bool shouldJustCopyOpaqueFill() const noexcept;
 
-  void startAtX(x86::Gp& x) noexcept;
-  void advanceX(x86::Gp& x, x86::Gp& diff) noexcept;
+  void startAtX(const x86::Gp& x) noexcept;
+  void advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept;
   void advanceY() noexcept;
 
   // These are just wrappers that call these on both source & destination parts.
@@ -128,12 +161,10 @@ public:
   void prefetchN() noexcept;
   void postfetchN() noexcept;
 
-  void dstFetch(Pixel& p, PixelFlags flags, uint32_t n) noexcept;
-  void srcFetch(Pixel& p, PixelFlags flags, uint32_t n) noexcept;
+  void dstFetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
+  void srcFetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
 
-  BL_INLINE bool isInPartialMode() const noexcept {
-    return _isInPartialMode != 0;
-  }
+  BL_INLINE bool isInPartialMode() const noexcept { return _isInPartialMode != 0; }
 
   void enterPartialMode(PixelFlags partialFlags = PixelFlags::kNone) noexcept;
   void exitPartialMode() noexcept;
@@ -151,11 +182,19 @@ public:
   void cMaskGenericLoopVec(x86::Gp& i) noexcept;
 
   void cMaskGranularLoop(x86::Gp& i) noexcept;
-  void cMaskGranularLoopXmm(x86::Gp& i) noexcept;
+  void cMaskGranularLoopVec(x86::Gp& i) noexcept;
 
   void cMaskMemcpyOrMemsetLoop(x86::Gp& i) noexcept;
-  void cMaskCompositeAndStore(const x86::Mem& dPtr, uint32_t n, Alignment alignment = Alignment(1)) noexcept;
-  void cMaskCompositeAndStore(const x86::Mem& dPtr, uint32_t n, Alignment alignment, const PixelPtrLoadStoreMask& ptrMask) noexcept;
+
+  void cMaskProcStoreAdvance(const x86::Gp& dPtr, PixelCount n, Alignment alignment = Alignment(1)) noexcept;
+  void cMaskProcStoreAdvance(const x86::Gp& dPtr, PixelCount n, Alignment alignment, PixelPredicate& predicate) noexcept;
+
+  void vMaskGenericLoop(x86::Gp& i, const x86::Gp& dPtr, const x86::Gp& mPtr, GlobalAlpha& ga, const Label& done) noexcept;
+  void vMaskGenericStep(const x86::Gp& dPtr, PixelCount n, const x86::Gp& mPtr, const x86::Reg& ga) noexcept;
+
+  void vMaskProcStoreAdvance(const x86::Gp& dPtr, PixelCount n, VecArray& vm, bool vmImmutable, Alignment alignment = Alignment(1)) noexcept;
+  void vMaskProcStoreAdvance(const x86::Gp& dPtr, PixelCount n, VecArray& vm, bool vmImmutable, Alignment alignment, PixelPredicate& predicate) noexcept;
+
   void vMaskProc(Pixel& out, PixelFlags flags, x86::Gp& msk, bool mImmutable) noexcept;
 
   void cMaskInitA8(const x86::Gp& sm_, const x86::Vec& vm_) noexcept;
@@ -164,14 +203,14 @@ public:
   void cMaskProcA8Gp(Pixel& out, PixelFlags flags) noexcept;
   void vMaskProcA8Gp(Pixel& out, PixelFlags flags, x86::Gp& msk, bool mImmutable) noexcept;
 
-  void cMaskProcA8Xmm(Pixel& out, uint32_t n, PixelFlags flags) noexcept;
-  void vMaskProcA8Xmm(Pixel& out, uint32_t n, PixelFlags flags, VecArray& vm, bool mImmutable) noexcept;
+  void cMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
+  void vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, VecArray& vm, bool mImmutable, PixelPredicate& predicate) noexcept;
 
   void cMaskInitRGBA32(const x86::Vec& vm) noexcept;
   void cMaskFiniRGBA32() noexcept;
 
-  void cMaskProcRGBA32Xmm(Pixel& out, uint32_t n, PixelFlags flags) noexcept;
-  void vMaskProcRGBA32Xmm(Pixel& out, uint32_t n, PixelFlags flags, VecArray& vm, bool mImmutable) noexcept;
+  void cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
+  void vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, VecArray& vm, bool mImmutable, PixelPredicate& predicate) noexcept;
   void vMaskProcRGBA32InvertMask(VecArray& vn, VecArray& vm) noexcept;
   void vMaskProcRGBA32InvertDone(VecArray& vn, bool mImmutable) noexcept;
 };

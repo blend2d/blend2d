@@ -25,7 +25,7 @@ public:
 
   ExtendMode _extendMode {};
 
-  FetchGradientPart(PipeCompiler* pc, FetchType fetchType, uint32_t format) noexcept;
+  FetchGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
 
   //! Returns the gradient extend mode.
   BL_INLINE ExtendMode extendMode() const noexcept { return _extendMode; }
@@ -37,20 +37,21 @@ public:
 class FetchLinearGradientPart : public FetchGradientPart {
 public:
   struct LinearRegs : public CommonRegs {
-    x86::Xmm pt;
-    x86::Xmm dt;
-    x86::Xmm dt2;
-    x86::Xmm py;
-    x86::Xmm dy;
-    x86::Xmm rep;
-    x86::Xmm msk;
-    x86::Xmm vIdx;
+    x86::Gp dtGp;
+    x86::Vec pt;
+    x86::Vec dt;
+    x86::Vec dtN;
+    x86::Vec py;
+    x86::Vec dy;
+    x86::Vec rep;
+    x86::Vec msk;
+    x86::Vec vIdx;
   };
 
   BLWrap<LinearRegs> f;
   bool _isRoR;
 
-  FetchLinearGradientPart(PipeCompiler* pc, FetchType fetchType, uint32_t format) noexcept;
+  FetchLinearGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
 
   BL_INLINE bool isPad() const noexcept { return !_isRoR; }
   BL_INLINE bool isRoR() const noexcept { return  _isRoR; }
@@ -61,19 +62,17 @@ public:
   void _finiPart() noexcept override;
 
   void advanceY() noexcept override;
-  void startAtX(x86::Gp& x) noexcept override;
-  void advanceX(x86::Gp& x, x86::Gp& diff) noexcept override;
+  void startAtX(const x86::Gp& x) noexcept override;
+  void advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept override;
+  void calcAdvanceX(const x86::Vec& dst, const x86::Gp& diff) const noexcept;
 
   void prefetch1() noexcept override;
-  void fetch1(Pixel& p, PixelFlags flags) noexcept override;
-
   void enterN() noexcept override;
   void leaveN() noexcept override;
   void prefetchN() noexcept override;
   void postfetchN() noexcept override;
 
-  void fetch4(Pixel& p, PixelFlags flags) noexcept override;
-  void fetch8(Pixel& p, PixelFlags flags) noexcept override;
+  void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 };
 
 //! Radial gradient fetch part.
@@ -83,34 +82,34 @@ public:
   // `dd`  - determinant delta.
   // `ddd` - determinant-delta delta.
   struct RadialRegs : public CommonRegs {
-    x86::Xmm xx_xy;
-    x86::Xmm yx_yy;
+    x86::Vec xx_xy;
+    x86::Vec yx_yy;
 
-    x86::Xmm ax_ay;
-    x86::Xmm fx_fy;
-    x86::Xmm da_ba;
+    x86::Vec ax_ay;
+    x86::Vec fx_fy;
+    x86::Vec da_ba;
 
-    x86::Xmm d_b;
-    x86::Xmm dd_bd;
-    x86::Xmm ddx_ddy;
+    x86::Vec d_b;
+    x86::Vec dd_bd;
+    x86::Vec ddx_ddy;
 
-    x86::Xmm px_py;
-    x86::Xmm scale;
-    x86::Xmm ddd;
-    x86::Xmm value;
+    x86::Vec px_py;
+    x86::Vec scale;
+    x86::Vec ddd;
+    x86::Vec value;
 
     x86::Gp maxi;
-    x86::Xmm vmaxi; // Maximum table index, basically `precision - 1` (mask).
-    x86::Xmm vmaxf; // Like `vmaxi`, but converted to `float`.
+    x86::Vec vmaxi; // Maximum table index, basically `precision - 1` (mask).
+    x86::Vec vmaxf; // Like `vmaxi`, but converted to `float`.
 
     // 4+ pixels.
-    x86::Xmm d_b_prev;
-    x86::Xmm dd_bd_prev;
+    x86::Vec d_b_prev;
+    x86::Vec dd_bd_prev;
   };
 
   BLWrap<RadialRegs> f;
 
-  FetchRadialGradientPart(PipeCompiler* pc, FetchType fetchType, uint32_t format) noexcept;
+  FetchRadialGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
 
   void preparePart() noexcept override;
 
@@ -118,17 +117,16 @@ public:
   void _finiPart() noexcept override;
 
   void advanceY() noexcept override;
-  void startAtX(x86::Gp& x) noexcept override;
-  void advanceX(x86::Gp& x, x86::Gp& diff) noexcept override;
+  void startAtX(const x86::Gp& x) noexcept override;
+  void advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept override;
 
   void prefetch1() noexcept override;
-  void fetch1(Pixel& p, PixelFlags flags) noexcept override;
-
   void prefetchN() noexcept override;
   void postfetchN() noexcept override;
-  void fetch4(Pixel& p, PixelFlags flags) noexcept override;
 
-  void precalc(x86::Xmm& px_py) noexcept;
+  void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
+
+  void precalc(const x86::Vec& px_py) noexcept;
 };
 
 //! Conical gradient fetch part.
@@ -157,7 +155,7 @@ public:
 
   BLWrap<ConicalRegs> f;
 
-  FetchConicalGradientPart(PipeCompiler* pc, FetchType fetchType, uint32_t format) noexcept;
+  FetchConicalGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
 
   void preparePart() noexcept override;
 
@@ -165,12 +163,12 @@ public:
   void _finiPart() noexcept override;
 
   void advanceY() noexcept override;
-  void startAtX(x86::Gp& x) noexcept override;
-  void advanceX(x86::Gp& x, x86::Gp& diff) noexcept override;
+  void startAtX(const x86::Gp& x) noexcept override;
+  void advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept override;
 
-  void fetch1(Pixel& p, PixelFlags flags) noexcept override;
   void prefetchN() noexcept override;
-  void fetch4(Pixel& p, PixelFlags flags) noexcept override;
+
+  void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 };
 
 } // {JIT}

@@ -121,7 +121,11 @@ struct RenderCommandSerializerCore : public RenderCommandSerializerStorage<Rende
 
   BL_INLINE void initFillBoxU(const BLBoxI& boxU) noexcept {
     command().initFillBoxU(boxU);
+#ifdef BL_USE_MASKS
+    pipeSignature().addFillType(BLPipeline::FillType::kMask);
+#else
     pipeSignature().addFillType(BLPipeline::FillType::kBoxU);
+#endif
   }
 
   BL_INLINE void initFillMaskRaw(const BLBoxI& boxA, const BLImageCore* maskImage, const BLPointI& maskOffset) noexcept {

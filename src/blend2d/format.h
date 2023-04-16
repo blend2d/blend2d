@@ -39,9 +39,7 @@ BL_DEFINE_ENUM(BLFormat) {
   BL_FORMAT_A8 = 3,
 
   // Maximum value of `BLFormat`.
-  BL_FORMAT_MAX_VALUE = 3,
-  //! Count of pixel formats (reserved for future use).
-  BL_FORMAT_RESERVED_COUNT = 16
+  BL_FORMAT_MAX_VALUE = 3
 
   BL_FORCE_ENUM_UINT32(BL_FORMAT)
 };
@@ -195,7 +193,7 @@ struct BLFormatInfo {
 BL_BEGIN_C_DECLS
 
 //! Pixel format information of Blend2D native pixel formats, see `BLFormat`.
-extern BL_API const BLFormatInfo blFormatInfo[BL_FORMAT_RESERVED_COUNT];
+extern BL_API const BLFormatInfo blFormatInfo[];
 
 BL_END_C_DECLS
 

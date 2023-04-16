@@ -44,7 +44,9 @@ static BL_INLINE BLResult fillBoxA(WorkData& workData, const RenderCommand& comm
 
 static BL_INLINE BLResult fillBoxU(WorkData& workData, const RenderCommand& command) noexcept {
   BLPipeline::FillData fillData;
-  if (!fillData.initBoxU8bpc24x8(command.alpha(), command.boxI().x0, command.boxI().y0, command.boxI().x1, command.boxI().y1))
+  BLPipeline::BoxUToMaskData boxUToMaskData;
+
+  if (!fillData.initBoxU8bpc24x8(command.alpha(), command.boxI().x0, command.boxI().y0, command.boxI().x1, command.boxI().y1, boxUToMaskData))
     return BL_SUCCESS;
 
   const void* fetchData = command.getPipeFetchData();
@@ -71,9 +73,9 @@ static BL_NOINLINE BLResult fillMaskRaw(WorkData& workData, const RenderCommand&
   const BLBoxI& boxI = payload.boxI;
 
   BLPipeline::MaskCommand maskCommands[2];
-  BLPipeline::MaskCommandType vMaskCmd = command.alpha() >= 255 ? BLPipeline::MaskCommandType::kA8 : BLPipeline::MaskCommandType::kA8WithoutGA;
+  BLPipeline::MaskCommandType vMaskCmd = command.alpha() >= 255 ? BLPipeline::MaskCommandType::kVMaskA8WithGA : BLPipeline::MaskCommandType::kVMaskA8WithoutGA;
 
-  maskCommands[0].initVariableMask(vMaskCmd, uint32_t(boxI.x0), uint32_t(boxI.x1), maskData, maskI->stride);
+  maskCommands[0].initVMask(vMaskCmd, uint32_t(boxI.x0), uint32_t(boxI.x1), maskData, maskI->stride);
   maskCommands[1].initRepeat();
 
   BLPipeline::FillData fillData;

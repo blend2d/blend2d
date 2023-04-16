@@ -67,7 +67,7 @@ public:
     _py = gradient->linear.pt[0].u64;
     _dt = gradient->linear.dt.u64;
     _dy = gradient->linear.dy.u64;
-    _rep = gradient->linear.rep.u64 & 0x0000FFFFFFFFFFFFu;
+    _rep = (uint64_t(gradient->linear.rep.u) << 32) | 0xFFFFFFFFu;
     _msk = gradient->linear.msk.u & 0x0000FFFFu;
   }
 

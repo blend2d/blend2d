@@ -113,6 +113,7 @@ static BL_INLINE bool blIsInf(const T& first, Args&&... args) noexcept {
 static BL_INLINE bool blIsFinite(float x) noexcept { return std::isfinite(x); }
 static BL_INLINE bool blIsFinite(double x) noexcept { return std::isfinite(x); }
 
+
 template<typename T, typename... Args>
 static BL_INLINE bool blIsFinite(const T& first, Args&&... args) noexcept {
   return bool(unsigned(blIsFinite(first)) & unsigned(blIsFinite(std::forward<Args>(args)...)));
@@ -197,9 +198,9 @@ static BL_INLINE float blNearby(float x) noexcept {
   using namespace SIMD;
 
   Vec128F src = v_f128_from_f32(x);
-  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f128_round_magic);
+  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f32_round_magic);
 
-  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(&blCommonTable.f128_round_max));
+  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(&blCommonTable.f32_round_max));
   Vec128F rounded = s_sub_f32(s_add_f32(src, magic), magic);
 
   return v_get_f32(v_blend_mask(rounded, src, mask));
@@ -210,15 +211,15 @@ static BL_INLINE float blTrunc(float x) noexcept {
 
   Vec128F src = v_f128_from_f32(x);
 
-  Vec128F msk_abs = v_const_as<Vec128F>(&blCommonTable.f128_abs);
+  Vec128F msk_abs = v_const_as<Vec128F>(&blCommonTable.f32_abs);
   Vec128F src_abs = v_and(src, msk_abs);
 
   Vec128F sign = v_nand(msk_abs, src);
-  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f128_round_magic);
+  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f32_round_magic);
 
-  Vec128F mask = v_or(s_cmp_ge_f32(src_abs, v_const_as<Vec128F>(&blCommonTable.f128_round_max)), sign);
+  Vec128F mask = v_or(s_cmp_ge_f32(src_abs, v_const_as<Vec128F>(&blCommonTable.f32_round_max)), sign);
   Vec128F rounded = s_sub_f32(s_add_f32(src_abs, magic), magic);
-  Vec128F maybeone = v_and(s_cmp_lt_f32(src_abs, rounded), v_const_as<Vec128F>(&blCommonTable.f128_1));
+  Vec128F maybeone = v_and(s_cmp_lt_f32(src_abs, rounded), v_const_as<Vec128F>(&blCommonTable.f32_1));
 
   return v_get_f32(v_blend_mask(s_sub_f32(rounded, maybeone), src, mask));
 }
@@ -227,11 +228,11 @@ static BL_INLINE float blFloor(float x) noexcept {
   using namespace SIMD;
 
   Vec128F src = v_f128_from_f32(x);
-  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f128_round_magic);
+  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f32_round_magic);
 
-  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(&blCommonTable.f128_round_max));
+  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(&blCommonTable.f32_round_max));
   Vec128F rounded = s_sub_f32(s_add_f32(src, magic), magic);
-  Vec128F maybeone = v_and(s_cmp_lt_f32(src, rounded), v_const_as<Vec128F>(&blCommonTable.f128_1));
+  Vec128F maybeone = v_and(s_cmp_lt_f32(src, rounded), v_const_as<Vec128F>(&blCommonTable.f32_1));
 
   return v_get_f32(v_blend_mask(s_sub_f32(rounded, maybeone), src, mask));
 }
@@ -240,11 +241,11 @@ static BL_INLINE float blCeil(float x) noexcept {
   using namespace SIMD;
 
   Vec128F src = SIMD::v_f128_from_f32(x);
-  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f128_round_magic);
+  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f32_round_magic);
 
-  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(&blCommonTable.f128_round_max));
+  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(&blCommonTable.f32_round_max));
   Vec128F rounded = s_sub_f32(s_add_f32(src, magic), magic);
-  Vec128F maybeone = v_and(s_cmp_gt_f32(src, rounded), v_const_as<Vec128F>(&blCommonTable.f128_1));
+  Vec128F maybeone = v_and(s_cmp_gt_f32(src, rounded), v_const_as<Vec128F>(&blCommonTable.f32_1));
 
   return v_get_f32(v_blend_mask(s_add_f32(rounded, maybeone), src, mask));
 }
@@ -253,9 +254,9 @@ static BL_INLINE double blNearby(double x) noexcept {
   using namespace SIMD;
 
   Vec128D src = v_d128_from_f64(x);
-  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.d128_round_magic);
+  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.f64_round_magic);
 
-  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(&blCommonTable.d128_round_max));
+  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(&blCommonTable.f64_round_max));
   Vec128D rounded = s_sub_f64(s_add_f64(src, magic), magic);
 
   return v_get_f64(v_blend_mask(rounded, src, mask));
@@ -271,11 +272,11 @@ static BL_INLINE double blTrunc(double x) noexcept {
   Vec128D src_abs = v_and(src, msk_abs);
 
   Vec128D sign = v_nand(msk_abs, src);
-  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.d128_round_magic);
+  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.f64_round_magic);
 
-  Vec128D mask = v_or(s_cmp_ge_f64(src_abs, v_const_as<Vec128D>(&blCommonTable.d128_round_max)), sign);
+  Vec128D mask = v_or(s_cmp_ge_f64(src_abs, v_const_as<Vec128D>(&blCommonTable.f64_round_max)), sign);
   Vec128D rounded = s_sub_f64(s_add_f64(src_abs, magic), magic);
-  Vec128D maybeone = v_and(s_cmp_lt_f64(src_abs, rounded), v_const_as<Vec128D>(&blCommonTable.d128_1));
+  Vec128D maybeone = v_and(s_cmp_lt_f64(src_abs, rounded), v_const_as<Vec128D>(&blCommonTable.f64_1));
 
   return v_get_f64(v_blend_mask(s_sub_f64(rounded, maybeone), src, mask));
 }
@@ -284,11 +285,11 @@ static BL_INLINE double blFloor(double x) noexcept {
   using namespace SIMD;
 
   Vec128D src = v_d128_from_f64(x);
-  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.d128_round_magic);
+  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.f64_round_magic);
 
-  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(&blCommonTable.d128_round_max));
+  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(&blCommonTable.f64_round_max));
   Vec128D rounded = s_sub_f64(s_add_f64(src, magic), magic);
-  Vec128D maybeone = v_and(s_cmp_lt_f64(src, rounded), v_const_as<Vec128D>(&blCommonTable.d128_1));
+  Vec128D maybeone = v_and(s_cmp_lt_f64(src, rounded), v_const_as<Vec128D>(&blCommonTable.f64_1));
 
   return v_get_f64(v_blend_mask(s_sub_f64(rounded, maybeone), src, mask));
 }
@@ -297,11 +298,11 @@ static BL_INLINE double blCeil(double x) noexcept {
   using namespace SIMD;
 
   Vec128D src = v_d128_from_f64(x);
-  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.d128_round_magic);
+  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.f64_round_magic);
 
-  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(&blCommonTable.d128_round_max));
+  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(&blCommonTable.f64_round_max));
   Vec128D rounded = s_sub_f64(s_add_f64(src, magic), magic);
-  Vec128D maybeone = v_and(s_cmp_gt_f64(src, rounded), v_const_as<Vec128D>(&blCommonTable.d128_1));
+  Vec128D maybeone = v_and(s_cmp_gt_f64(src, rounded), v_const_as<Vec128D>(&blCommonTable.f64_1));
 
   return v_get_f64(v_blend_mask(s_add_f64(rounded, maybeone), src, mask));
 }

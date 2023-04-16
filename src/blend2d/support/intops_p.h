@@ -627,7 +627,7 @@ template<typename X, typename Y>
 BL_NODISCARD
 static BL_INLINE constexpr X alignUpDiff(const X& x, const Y& alignment) noexcept {
   typedef typename StdInt<sizeof(X), 1>::Type U;
-  return alignUp(U(x), alignment) - U(x);
+  return (X)((U(0) - U(x)) & (alignment - 1));
 }
 
 template<typename T>

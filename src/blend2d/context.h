@@ -347,6 +347,7 @@ struct BLContextCookie {
     return bool(unsigned(blEquals(this->data[0], other.data[0])) &
                 unsigned(blEquals(this->data[1], other.data[1])));
   }
+
   #endif
 };
 

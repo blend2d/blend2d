@@ -120,39 +120,38 @@ struct BLCompOpSimplifyInfo {
   BL_INLINE constexpr BLCompOpSolidId solidId() const noexcept { return (BLCompOpSolidId)(data >> kSolidIdShift); }
 
   //! Returns `BLCompOpSimplifyInfo` from decomposed arguments.
-  static BL_INLINE constexpr BLCompOpSimplifyInfo make(uint32_t compOp, uint32_t d, uint32_t s, BLCompOpSolidId solidId) noexcept {
+  static BL_INLINE constexpr BLCompOpSimplifyInfo make(uint32_t compOp, BLInternalFormat d, BLInternalFormat s, BLCompOpSolidId solidId) noexcept {
     return BLCompOpSimplifyInfo {
       uint16_t((compOp << kCompOpShift) |
-               (d << kDstFmtShift) |
-               (s << kSrcFmtShift) |
+               (uint32_t(d) << kDstFmtShift) |
+               (uint32_t(s) << kSrcFmtShift) |
                (uint32_t(solidId) << kSolidIdShift))
     };
   }
 
-  //! Returns `BLCompOpSimplifyInfo` sentinel containing the correct value of DST_COPY (NOP) operator. All other
+  //! Returns `BLCompOpSimplifyInfo` sentinel containing the only correct value of DST_COPY (NOP) operator. All other
   //! variations of DST_COPY are invalid.
   static BL_INLINE constexpr BLCompOpSimplifyInfo dstCopy() noexcept {
-    return make(BL_COMP_OP_DST_COPY, 0, 0, BLCompOpSolidId::kTransparent);
+    return make(BL_COMP_OP_DST_COPY, BLInternalFormat::kNone, BLInternalFormat::kNone, BLCompOpSolidId::kTransparent);
   }
 };
 
 // Initially we have used a single table, however, some older compilers would reach template instantiation depth limit
 // (as the table is not small), so the implementation was changed to this instead to make sure this won't happen.
 enum : uint32_t {
-  BL_COMP_OP_SIMPLIFY_RECORD_SIZE
-    = uint32_t(BL_COMP_OP_INTERNAL_COUNT) * uint32_t(BL_FORMAT_RESERVED_COUNT)
+  BL_COMP_OP_SIMPLIFY_RECORD_SIZE = uint32_t(BL_COMP_OP_INTERNAL_COUNT) * (uint32_t(BLInternalFormat::kMaxReserved) + 1)
 };
 typedef BLLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE> BLCompOpSimplifyInfoRecordSet;
 
 struct BLCompOpSimplifyInfoTable { BLCompOpSimplifyInfoRecordSet data[BL_FORMAT_MAX_VALUE + 1u]; };
 BL_HIDDEN extern const BLCompOpSimplifyInfoTable blCompOpSimplifyInfoTable;
 
-static BL_INLINE const BLCompOpSimplifyInfo* blCompOpSimplifyInfoArrayOf(uint32_t compOp, uint32_t dstFormat) noexcept {
-  return &blCompOpSimplifyInfoTable.data[dstFormat][uint32_t(compOp) * BL_FORMAT_RESERVED_COUNT];
+static BL_INLINE const BLCompOpSimplifyInfo* blCompOpSimplifyInfoArrayOf(uint32_t compOp, BLInternalFormat dstFormat) noexcept {
+  return &blCompOpSimplifyInfoTable.data[size_t(dstFormat)][size_t(compOp) * (size_t(BLInternalFormat::kMaxReserved) + 1)];
 }
 
-static BL_INLINE const BLCompOpSimplifyInfo& blCompOpSimplifyInfo(uint32_t compOp, uint32_t dstFormat, uint32_t srcFormat) noexcept {
-  return blCompOpSimplifyInfoArrayOf(compOp, dstFormat)[srcFormat];
+static BL_INLINE const BLCompOpSimplifyInfo& blCompOpSimplifyInfo(uint32_t compOp, BLInternalFormat dstFormat, BLInternalFormat srcFormat) noexcept {
+  return blCompOpSimplifyInfoArrayOf(compOp, dstFormat)[size_t(srcFormat)];
 }
 
 //! \}

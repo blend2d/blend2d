@@ -187,6 +187,9 @@
 
 // Build optimizations control compile-time optimizations to be used by Blend2D and C++ compiler. These optimizations
 // are not related to the code-generator optimizations (JIT) that are always auto-detected at runtime.
+#if defined(BL_BUILD_OPT_AVX512) && !defined(BL_BUILD_OPT_AVX2)
+  #define BL_BUILD_OPT_AVX2
+#endif
 #if defined(BL_BUILD_OPT_AVX2) && !defined(BL_BUILD_OPT_AVX)
   #define BL_BUILD_OPT_AVX
 #endif
@@ -206,7 +209,14 @@
   #define BL_BUILD_OPT_SSE2
 #endif
 
-#if defined(__AVX2__)
+#if defined(__AVX512F__)  && \
+    defined(__AVX512BW__) && \
+    defined(__AVX512DQ__) && \
+    defined(__AVX512CD__) && \
+    defined(__AVX512VL__)
+  #define BL_TARGET_OPT_AVX512
+#endif
+#if defined(BL_TARGET_OPT_AVX512) || defined(__AVX2__)
   #define BL_TARGET_OPT_AVX2
 #endif
 #if defined(BL_TARGET_OPT_AVX2) || defined(__AVX__)
