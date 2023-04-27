@@ -151,7 +151,7 @@
   #define BL_TARGET_ARCH_X86 0
 #endif
 
-#if defined(__ARM64__) || defined(__aarch64__)
+#if defined(_M_ARM64) || defined(__ARM64__) || defined(__aarch64__)
   #define BL_TARGET_ARCH_ARM 64
 #elif defined(_M_ARM) || defined(_M_ARMT) || defined(__arm__) || defined(__thumb__) || defined(__thumb2__)
   #define BL_TARGET_ARCH_ARM 32
