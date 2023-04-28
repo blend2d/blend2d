@@ -125,7 +125,7 @@ typedef int16_t mf_pos_t;
       return false;
 
     size_t n = size / 64u;
-    int16x8_t v = (int16x8_t) {
+    int16x8_t v = int16x8_t {
       MATCHFINDER_WINDOW_SIZE_NEG, MATCHFINDER_WINDOW_SIZE_NEG, MATCHFINDER_WINDOW_SIZE_NEG,
       MATCHFINDER_WINDOW_SIZE_NEG, MATCHFINDER_WINDOW_SIZE_NEG, MATCHFINDER_WINDOW_SIZE_NEG,
       MATCHFINDER_WINDOW_SIZE_NEG, MATCHFINDER_WINDOW_SIZE_NEG,
@@ -150,7 +150,7 @@ typedef int16_t mf_pos_t;
       return false;
 
     size_t n = size / 64u;
-    int16x8_t v = (int16x8_t) {
+    int16x8_t v = int16x8_t {
       MATCHFINDER_WINDOW_SIZE_NEG, MATCHFINDER_WINDOW_SIZE_NEG,
       MATCHFINDER_WINDOW_SIZE_NEG, MATCHFINDER_WINDOW_SIZE_NEG,
       MATCHFINDER_WINDOW_SIZE_NEG, MATCHFINDER_WINDOW_SIZE_NEG,

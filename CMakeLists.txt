@@ -167,22 +167,23 @@ endfunction()
 
 if ("x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xMSVC" OR "x${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}" STREQUAL "xMSVC")
   list(APPEND BLEND2D_PRIVATE_CFLAGS
-    -MP                      # [+] Multi-Process Compilation.
-    -GR-                     # [-] Runtime type information.
-    -GF                      # [+] Eliminate duplicate strings.
-    -Zc:__cplusplus          # [+] Conforming __cplusplus definition.
-    -Zc:inline               # [+] Remove unreferenced COMDAT.
-    -Zc:strictStrings        # [+] Strict const qualification of string literals.
-    -Zc:threadSafeInit-      # [-] Thread-safe statics.
-    -W4)                     # [+] Warning level 4.
+    -MP                           # [+] Multi-Process Compilation.
+    -GR-                          # [-] Runtime type information.
+    -GF                           # [+] Eliminate duplicate strings.
+    -Zc:__cplusplus               # [+] Conforming __cplusplus definition.
+    -Zc:inline                    # [+] Remove unreferenced COMDAT.
+    -Zc:strictStrings             # [+] Strict const qualification of string literals.
+    -Zc:threadSafeInit-           # [-] Thread-safe statics.
+    -Zc:arm64-aliased-neon-types- # [-] ARM64 aliased neon types
+    -W4)                          # [+] Warning level 4.
 
   list(APPEND BLEND2D_PRIVATE_CFLAGS_DBG
-    -GS)                     # [+] Buffer security-check.
+    -GS)                          # [+] Buffer security-check.
 
   list(APPEND BLEND2D_PRIVATE_CFLAGS_REL
-    -GS-                     # [-] Buffer security-check.
-    -O2                      # [+] Favor speed over size.
-    -Oi)                     # [+] Generate Intrinsic Functions.
+    -GS-                          # [-] Buffer security-check.
+    -O2                           # [+] Favor speed over size.
+    -Oi)                          # [+] Generate Intrinsic Functions.
 
   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     list(APPEND BLEND2D_PRIVATE_CFLAGS -clang:-fno-rtti -clang:-fno-math-errno -clang:-fno-trapping-math)
