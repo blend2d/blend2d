@@ -174,8 +174,10 @@ if ("x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xMSVC" OR "x${CMAKE_CXX_COMPILER_FRONT
     -Zc:inline                    # [+] Remove unreferenced COMDAT.
     -Zc:strictStrings             # [+] Strict const qualification of string literals.
     -Zc:threadSafeInit-           # [-] Thread-safe statics.
-    -Zc:arm64-aliased-neon-types- # [-] ARM64 aliased neon types
     -W4)                          # [+] Warning level 4.
+
+    # [-] ARM64 aliased neon types
+    blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS -Zc:arm64-aliased-neon-types-)
 
   list(APPEND BLEND2D_PRIVATE_CFLAGS_DBG
     -GS)                          # [+] Buffer security-check.
