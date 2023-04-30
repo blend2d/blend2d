@@ -167,10 +167,8 @@ enum class FetchType : uint8_t {
 
   //!< Radial gradient (pad) [Base].
   kGradientRadialPad,
-  //!< Radial gradient (repeat) [Base].
-  kGradientRadialRepeat,
-  //!< Radial gradient (reflect) [Base].
-  kGradientRadialReflect,
+  //!< Radial gradient (repeat or reflect) [Base].
+  kGradientRadialRoR,
 
   //!< Conical gradient (any) [Base].
   kGradientConical,
@@ -215,7 +213,7 @@ enum class FetchType : uint8_t {
   kGradientLinearLast = kGradientLinearRoR,
 
   kGradientRadialFirst = kGradientRadialPad,
-  kGradientRadialLast = kGradientRadialReflect,
+  kGradientRadialLast = kGradientRadialRoR,
 
   kGradientConicalFirst = kGradientConical,
   kGradientConicalLast = kGradientConical
@@ -873,10 +871,11 @@ struct alignas(16) FetchData {
       PipeValue64 dy;
       //! One X step.
       PipeValue64 dt;
-      //! Reflect/Repeat mask (repeated/reflected size - 1).
-      PipeValue32 rep;
-      //! Size mask (gradient size - 1).
-      PipeValue32 msk;
+
+      //! Maximum index value taking into account pad, repeat, and reflection - `(repeated_or_reflected_size - 1)`.
+      uint32_t maxi;
+      //! Repeat/Reflect mask to apply to index (either `reflected_size - 1` or `zero`).
+      uint32_t rori;
     };
 
     //! Radial gradient data.
@@ -895,21 +894,25 @@ struct alignas(16) FetchData {
       double ddx, ddy;
       double ddd, scale;
 
-      int maxi;
+      //! Maximum index value taking into account pad, repeat, and reflection - `(repeated_or_reflected_size - 1)`.
+      uint32_t maxi;
+      //! Repeat/Reflect mask to apply to index (either `reflected_size - 1` or `zero`).
+      uint32_t rori;
     };
 
     //! Conical gradient data.
     struct alignas(16) Conical {
+      //! Atan2 approximation constants.
+      const BLCommonTable::Conical* consts;
       //! Gradient X/Y increments (horizontal).
       double xx, xy;
       //! Gradient X/Y increments (vertical).
       double yx, yy;
       //! Gradient X/Y offsets of the pixel at [0, 0].
       double ox, oy;
-      //! Atan2 approximation constants.
-      const BLCommonTable::Conical* consts;
 
-      int maxi;
+      //! Maximum index value - `lut.size - 1`.
+      uint32_t maxi;
     };
 
     //! Precomputed lookup table.

@@ -39,13 +39,13 @@ struct FillBoxA_Base {
     dstStride -= intptr_t(size_t(w) * CompOp::kDstBPP);
     uint32_t msk = fillData->alpha.u;
 
-    CompOp compOp(fetchData_);
-    compOp.initRectY(x0, y0, w);
+    CompOp compOp;
+    compOp.rectInitFetch(fetchData_, x0, y0, w);
 
     BL_ASSUME(h > 0);
     if (CompOp::kOptimizeOpaque && msk == 255) {
       while (h) {
-        compOp.beginRectX(x0);
+        compOp.rectStartX(x0);
         dstPtr = compOp.compositeCSpanOpaque(dstPtr, w);
         dstPtr += dstStride;
         compOp.advanceY();
@@ -54,7 +54,7 @@ struct FillBoxA_Base {
     }
     else {
       while (h) {
-        compOp.beginRectX(x0);
+        compOp.rectStartX(x0);
         dstPtr = compOp.compositeCSpanMasked(dstPtr, w, msk);
         dstPtr += dstStride;
         compOp.advanceY();
@@ -85,8 +85,8 @@ struct FillBoxU_Base {
     uint32_t innerWidth = fillData->innerWidth;
     const uint32_t* pMasks = fillData->masks;
 
-    CompOp compOp(fetchData_);
-    compOp.initRectY(x0, y0, w);
+    CompOp compOp;
+    compOp.rectInitFetch(fetchData_, x0, y0, w);
 
     uint32_t y = 1;
     for (;;) {
@@ -94,7 +94,7 @@ struct FillBoxU_Base {
       uint32_t masks = pMasks[0];
 
       BL_ASSUME(x > 0);
-      compOp.beginRectX(x0);
+      compOp.rectStartX(x0);
 
       for (;;) {
         do {
@@ -131,6 +131,11 @@ struct FillBoxU_Base {
 };
 
 template<typename CompOp>
+struct FillMask_Base {
+  // TODO [Portable Pipeline]
+};
+
+template<typename CompOp>
 struct FillAnalytic_Base {
   enum : uint32_t {
     kDstBPP = CompOp::kDstBPP,
@@ -157,8 +162,8 @@ struct FillAnalytic_Base {
     uint32_t globalAlpha = fillData->alpha.u << 7;
     uint32_t fillRuleMask = fillData->fillRuleMask;
 
-    CompOp compOp(fetchData_);
-    compOp.initSpanY(y);
+    CompOp compOp;
+    compOp.spanInitY(fetchData_, y);
 
     y = uint32_t(fillData->box.y1) - y;
 
@@ -192,7 +197,7 @@ L_BitScan_Init:
     // of the raster there is still one cell that is non-zero. This makes sure it's cleared.
     dstPtr += x0 * kDstBPP;
     cellPtr += x0;
-    compOp.beginSpanX(uint32_t(x0));
+    compOp.spanStartX(uint32_t(x0));
 
     // Rare case - line rasterized at the end of the raster boundary. In 99% cases this is a clipped line that was
     // rasterized as vertical-only line at the end of the render box. This is a completely valid case that produces
@@ -298,7 +303,7 @@ VLoop_CalcMsk:
 
     if (!msk) {
       dstPtr += i * kDstBPP;
-      compOp.advanceSpanX(uint32_t(x0), uint32_t(i));
+      compOp.spanAdvanceX(uint32_t(x0), uint32_t(i));
     }
     else {
       dstPtr = compOp.compositeCSpan(dstPtr, i, msk);
@@ -321,7 +326,7 @@ L_Scanline_Done0:
 L_Scanline_Done1:
     dstPtr -= x0 * kDstBPP;
     cellPtr -= x0;
-    compOp.endSpanX(uint32_t(x0));
+    compOp.spanEndX(uint32_t(x0));
 
     if (--y == 0)
       return;

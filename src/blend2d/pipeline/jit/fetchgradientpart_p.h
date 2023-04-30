@@ -43,8 +43,8 @@ public:
     x86::Vec dtN;
     x86::Vec py;
     x86::Vec dy;
-    x86::Vec rep;
-    x86::Vec msk;
+    x86::Vec maxi;
+    x86::Vec rori;
     x86::Vec vIdx;
   };
 
@@ -98,8 +98,9 @@ public:
     x86::Vec ddd;
     x86::Vec value;
 
-    x86::Gp maxi;
-    x86::Vec vmaxi; // Maximum table index, basically `precision - 1` (mask).
+    // x86::Gp maxi;
+    x86::Vec vmaxi;
+    x86::Vec vrori;
     x86::Vec vmaxf; // Like `vmaxi`, but converted to `float`.
 
     // 4+ pixels.
@@ -108,8 +109,12 @@ public:
   };
 
   BLWrap<RadialRegs> f;
+  bool _isRoR;
 
   FetchRadialGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
+
+  BL_INLINE bool isPad() const noexcept { return !_isRoR; }
+  BL_INLINE bool isRoR() const noexcept { return  _isRoR; }
 
   void preparePart() noexcept override;
 

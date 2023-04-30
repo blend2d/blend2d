@@ -63,8 +63,8 @@ void FetchLinearGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   f->dtN = pc->newVec("f.dtN");                       // Reg/Mem.
   f->py = pc->newVec("f.py");                         // Reg/Mem.
   f->dy = pc->newVec("f.dy");                         // Reg/Mem.
-  f->rep = pc->newVec("f.rep");                       // Reg/Mem [RoR only].
-  f->msk = pc->newVec("f.msk");                       // Reg/Mem.
+  f->maxi = pc->newVec("f.maxi");                     // Reg/Mem.
+  f->rori = pc->newVec("f.rori");                     // Reg/Mem [RoR only].
   f->vIdx = pc->newVec("f.vIdx");                     // Reg/Tmp.
 
   // In 64-bit mode it's easier to use imul for 64-bit multiplication instead of SIMD, because
@@ -85,11 +85,11 @@ void FetchLinearGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   pc->v_broadcast_u64(f->dt, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.dt.u64)));
 
   if (isPad()) {
-    pc->v_broadcast_u32(f->msk, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.msk.u)));
+    pc->v_broadcast_u16(f->maxi, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.maxi)));
   }
   else {
-    pc->v_broadcast_u32(f->rep, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.rep.u)));
-    pc->v_broadcast_u32(f->msk, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.msk.u)));
+    pc->v_broadcast_u32(f->maxi, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.maxi)));
+    pc->v_broadcast_u16(f->rori, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.rori)));
   }
 
   pc->v_loadu_i128(f->pt, x86::ptr(pc->_fetchData, REL_GRADIENT(linear.pt)));
@@ -108,7 +108,7 @@ void FetchLinearGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   // and use `packssdw` instead. However, if we do this, we have to adjust everything else accordingly.
   if (isPad() && !pc->hasSSE4_1()) {
     pc->v_sub_i32(f->py, f->py, pc->simdConst(&c.i_0000800000008000, Bcst::k32, f->py));
-    pc->v_sub_i16(f->msk, f->msk, pc->simdConst(&c.i_8000800080008000, Bcst::kNA, f->msk));
+    pc->v_sub_i16(f->maxi, f->maxi, pc->simdConst(&c.i_8000800080008000, Bcst::kNA, f->maxi));
   }
 
   if (cc->is64Bit())
@@ -180,15 +180,15 @@ void FetchLinearGradientPart::prefetchN() noexcept {
       pc->v_mov(vIdx, f->pt);
       pc->v_add_i64(f->pt, f->pt, f->dtN);
       pc->v_packs_i32_u16_(vIdx, vIdx, f->pt);
-      pc->v_min_u16(vIdx, vIdx, f->msk);
+      pc->v_min_u16(vIdx, vIdx, f->maxi);
     }
     else {
       x86::Vec vTmp = cc->newSimilarReg(f->vIdx, "f.vTmp");
-      pc->v_and_i32(vIdx, f->pt, f->rep);
+      pc->v_and_i32(vIdx, f->pt, f->maxi);
       pc->v_add_i64(f->pt, f->pt, f->dtN);
-      pc->v_and_i32(vTmp, f->pt, f->rep);
+      pc->v_and_i32(vTmp, f->pt, f->maxi);
       pc->v_packs_i32_u16_(vIdx, vIdx, vTmp);
-      pc->v_xor_i32(vTmp, vIdx, f->msk);
+      pc->v_xor_i32(vTmp, vIdx, f->rori);
       pc->v_min_u16(vIdx, vIdx, vTmp);
     }
 
@@ -222,17 +222,17 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
 
       if (isPad() && pc->hasSSE4_1()) {
         pc->v_packs_i32_u16_(vIdx, f->pt.xmm(), f->pt.xmm());
-        pc->v_min_u16(vIdx, vIdx, f->msk.xmm());
+        pc->v_min_u16(vIdx, vIdx, f->maxi.xmm());
       }
       else if (isPad()) {
         pc->v_packs_i32_i16(vIdx, f->pt.xmm(), f->pt.xmm());
-        pc->v_min_i16(vIdx, vIdx, f->msk.xmm());
+        pc->v_min_i16(vIdx, vIdx, f->maxi.xmm());
         pc->v_add_i16(vIdx, vIdx, pc->simdConst(&c.i_8000800080008000, Bcst::kNA, vIdx));
       }
       else {
         x86::Xmm vTmp = cc->newXmm("f.vTmp");
-        pc->v_and_i32(vIdx, f->pt.xmm(), f->rep.xmm());
-        pc->v_xor_i32(vTmp, vIdx, f->msk.xmm());
+        pc->v_and_i32(vIdx, f->pt.xmm(), f->maxi.xmm());
+        pc->v_xor_i32(vTmp, vIdx, f->rori.xmm());
         pc->v_min_i16(vIdx, vIdx, vTmp);
       }
 
@@ -254,17 +254,17 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
               case 0: pc->v_mov(vIdx, f->pt); break;
               case 1: pc->v_add_i64(f->pt, f->pt, f->dtN); break;
               case 2: pc->v_packs_i32_u16_(vIdx, vIdx, f->pt); break;
-              case 3: pc->v_min_u16(vIdx, vIdx, f->msk);
+              case 3: pc->v_min_u16(vIdx, vIdx, f->maxi);
                       pc->v_perm_i64(vIdx, vIdx, x86::shuffleImm(3, 1, 2, 0)); break;
             }
           }
           else {
             switch (step) {
-              case 0: pc->v_and_i32(vIdx, f->pt, f->rep);
+              case 0: pc->v_and_i32(vIdx, f->pt, f->maxi);
                       pc->v_add_i64(f->pt, f->pt, f->dtN); break;
-              case 1: pc->v_and_i32(vTmp, f->pt, f->rep);
+              case 1: pc->v_and_i32(vTmp, f->pt, f->maxi);
                       pc->v_packs_i32_u16_(vIdx, vIdx, vTmp); break;
-              case 2: pc->v_xor_i32(vTmp, vIdx, f->msk);
+              case 2: pc->v_xor_i32(vTmp, vIdx, f->rori);
                       pc->v_min_u16(vIdx, vIdx, vTmp); break;
               case 3: pc->v_perm_i64(vIdx, vIdx, x86::shuffleImm(3, 1, 2, 0)); break;
             }
@@ -280,17 +280,17 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
 
         if (isPad() && pc->hasSSE4_1()) {
           pc->v_packs_i32_u16_(vIdx, vIdx, vIdx);
-          pc->v_min_u16(vIdx, vIdx, f->msk);
+          pc->v_min_u16(vIdx, vIdx, f->maxi);
         }
         else if (isPad()) {
           pc->v_packs_i32_i16(vIdx, vIdx, vIdx);
-          pc->v_min_i16(vIdx, vIdx, f->msk);
+          pc->v_min_i16(vIdx, vIdx, f->maxi);
           pc->v_add_i16(vIdx, vIdx, pc->simdConst(&c.i_8000800080008000, Bcst::kNA, vIdx));
         }
         else {
           x86::Xmm vTmp = cc->newXmm("f.vTmp");
-          pc->v_and_i32(vIdx, vIdx, f->rep);
-          pc->v_xor_i32(vTmp, vIdx, f->msk);
+          pc->v_and_i32(vIdx, vIdx, f->maxi);
+          pc->v_xor_i32(vTmp, vIdx, f->rori);
           pc->v_min_i16(vTmp, vTmp, vIdx);
         }
 
@@ -325,18 +325,18 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
               case 0: pc->v_add_i64(vIdx, f->pt, f->dtN); break;
               case 1: pc->v_add_i64(f->pt, vIdx, f->dtN); break;
               case 2: pc->v_packs_i32_u16_(vIdx, vIdx, f->pt); break;
-              case 3: pc->v_min_u16(vIdx, vIdx, f->msk); break;
+              case 3: pc->v_min_u16(vIdx, vIdx, f->maxi); break;
               case 4: pc->v_perm_i64(vIdx, vIdx, x86::shuffleImm(3, 1, 2, 0)); break;
             }
           }
           else {
             switch (step) {
               case 0: pc->v_add_i64(f->pt, f->pt, f->dtN); break;
-              case 1: pc->v_and_i32(vIdx, f->pt, f->rep); break;
+              case 1: pc->v_and_i32(vIdx, f->pt, f->maxi); break;
               case 2: pc->v_add_i64(f->pt, f->pt, f->dtN); break;
-              case 3: pc->v_and_i32(vTmp, f->pt, f->rep); break;
+              case 3: pc->v_and_i32(vTmp, f->pt, f->maxi); break;
               case 4: pc->v_packs_i32_u16_(vIdx, vIdx, vTmp); break;
-              case 5: pc->v_xor_i32(vTmp, vIdx, f->msk); break;
+              case 5: pc->v_xor_i32(vTmp, vIdx, f->rori); break;
               case 6: pc->v_min_u16(vIdx, vIdx, vTmp); break;
               case 7: pc->v_perm_i64(vIdx, vIdx, x86::shuffleImm(3, 1, 2, 0)); break;
             }
@@ -356,18 +356,18 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
 
         if (isPad() && pc->hasSSE4_1()) {
           pc->v_packs_i32_u16_(vTmp, vTmp, vIdx);
-          pc->v_min_u16(vTmp, vTmp, f->msk);
+          pc->v_min_u16(vTmp, vTmp, f->maxi);
         }
         else if (isPad()) {
           pc->v_packs_i32_i16(vTmp, vTmp, vIdx);
-          pc->v_min_i16(vTmp, vTmp, f->msk);
+          pc->v_min_i16(vTmp, vTmp, f->maxi);
           pc->v_add_i16(vTmp, vTmp, pc->simdConst(&c.i_8000800080008000, Bcst::kNA, vTmp));
         }
         else {
-          pc->v_and_i32(vIdx, vIdx, f->rep);
-          pc->v_and_i32(vTmp, vTmp, f->rep);
+          pc->v_and_i32(vIdx, vIdx, f->maxi);
+          pc->v_and_i32(vTmp, vTmp, f->maxi);
           pc->v_packs_i32_i16(vTmp, vTmp, vIdx);
-          pc->v_xor_i32(vIdx, vTmp, f->msk);
+          pc->v_xor_i32(vIdx, vTmp, f->rori);
           pc->v_min_i16(vTmp, vTmp, vIdx);
         }
 
@@ -399,7 +399,8 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
 // =====================================================================
 
 FetchRadialGradientPart::FetchRadialGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept
-  : FetchGradientPart(pc, fetchType, format) {
+  : FetchGradientPart(pc, fetchType, format),
+    _isRoR(fetchType == FetchType::kGradientRadialRoR) {
 
   _partFlags |= PipePartFlags::kAdvanceXNeedsX;
   _isComplexFetch = true;
@@ -438,8 +439,8 @@ void FetchRadialGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   f->ddd = cc->newXmmPd("f.ddd");                     // Mem.
   f->value = cc->newXmmPs("f.value");                 // Reg/Tmp.
 
-  f->maxi = cc->newUInt32("f.maxi");                  // Mem.
   f->vmaxi = cc->newXmm("f.vmaxi");                   // Mem.
+  f->vrori = cc->newXmm("f.vrori");                   // Mem.
   f->vmaxf = cc->newXmmPd("f.vmaxf");                 // Mem.
 
   f->d_b_prev = cc->newXmmPd("f.d_b_prev");           // Mem.
@@ -476,11 +477,16 @@ void FetchRadialGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   pc->v_mul_f64(f->px_py, f->px_py, f->yx_yy);
   pc->v_add_f64(f->px_py, f->px_py, off);
 
-  pc->v_load_i32(f->vmaxi, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.maxi)));
-  pc->v_expand_lo_i32(f->vmaxi, f->vmaxi);
-  pc->s_mov_i32(f->maxi, f->vmaxi);
+  if (isPad()) {
+    pc->v_broadcast_u16(f->vmaxi, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.maxi)));
+    pc->v_broadcast_u16(f->vrori, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.rori)));
+  }
+  else {
+    pc->v_broadcast_u32(f->vmaxi, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.maxi)));
+    pc->v_broadcast_u32(f->vrori, x86::ptr(pc->_fetchData, REL_GRADIENT(radial.rori)));
+  }
 
-  if (extendMode() == ExtendMode::kPad) {
+  if (isPad()) {
     pc->v_cvt_i32_f32(f->vmaxf, f->vmaxi);
   }
 
@@ -617,30 +623,29 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       pc->s_mul_f32(x0, x0, f->scale);
       pc->v_and_f32(f->value, f->value, pc->simdConst(&c.f32_abs_lo, Bcst::kNA, f->value));
 
-      if (extendMode() == ExtendMode::kPad) {
-        pc->s_max_f32(x0, x0, pc->simdConst(&c.i_0000000000000000, Bcst::k32, x0));
-        pc->s_min_f32(x0, x0, f->vmaxf);
-      }
+      pc->v_cvtt_f32_i32(x0, x0);
 
       pc->s_add_f64(f->dd_bd, f->dd_bd, f->ddd);
-      pc->s_cvtt_f32_int(gIdx, x0);
       pc->s_sqrt_f32(f->value, f->value, f->value);
 
-      if (extendMode() == ExtendMode::kRepeat) {
-        cc->and_(gIdx, f->maxi);
+      x86::Xmm vIdx = cc->newXmm("vIdx");
+      if (isPad() && pc->hasSSE4_1()) {
+        pc->v_packs_i32_u16_(vIdx, x0, x0);
+        pc->v_min_u16(vIdx, vIdx, f->vmaxi.xmm());
+      }
+      else if (isPad()) {
+        pc->v_packs_i32_i16(vIdx, x0, x0);
+        pc->v_min_i16(vIdx, vIdx, f->vmaxi.xmm());
+        pc->v_add_i16(vIdx, vIdx, pc->simdConst(&c.i_8000800080008000, Bcst::kNA, vIdx));
+      }
+      else {
+        x86::Xmm vTmp = cc->newXmm("f.vTmp");
+        pc->v_and_i32(vIdx, x0, f->vmaxi.xmm());
+        pc->v_xor_i32(vTmp, vIdx, f->vrori.xmm());
+        pc->v_min_i16(vIdx, vIdx, vTmp);
       }
 
-      if (extendMode() == ExtendMode::kReflect) {
-        x86::Gp t = cc->newGpd("f.t");
-
-        cc->mov(t, f->maxi);
-        cc->and_(gIdx, t);
-        cc->sub(t, gIdx);
-
-        // Select the lesser, which would be at [0...tableSize).
-        cc->cmp(gIdx, t);
-        cc->cmovge(gIdx, t);
-      }
+      pc->v_extract_u16(gIdx, vIdx, 0u);
 
       fetchGradientPixel1(p, flags, x86::ptr(f->table, gIdx, 2));
       pc->x_satisfy_pixel(p, flags);
@@ -662,7 +667,10 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       IndexExtractor iExt(pc);
 
       uint32_t srcShift = 2;
-      const uint8_t srcIndexes[4] = { 0, 2, 4, 6 };
+
+      static const uint8_t srcIndexesPad[4] = { 0, 1, 2, 3 };
+      static const uint8_t srcIndexesRoR[4] = { 0, 2, 4, 6 };
+      const uint8_t* srcIndexes = isPad() ? srcIndexesPad : srcIndexesRoR;
 
       pc->v_mul_f32(value, value, f->scale);
       pc->v_cvt_f64_f32(x0, d_b);
@@ -670,14 +678,8 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       pc->vmovaps(f->d_b_prev, d_b);     // Save `d_b_prev`.
       pc->vmovaps(f->dd_bd_prev, dd_bd); // Save `dd_bd_prev`.
 
-      if (extendMode() == ExtendMode::kPad)
-        pc->v_max_f32(value, value, pc->simdConst(&c.i_0000000000000000, Bcst::k32, value));
-
       pc->v_add_f64(d_b, d_b, dd_bd);
       pc->s_add_f64(dd_bd, dd_bd, ddd);
-
-      if (extendMode() == ExtendMode::kPad)
-        pc->v_min_f32(value, value, f->vmaxf);
 
       pc->v_cvt_f64_f32(x1, d_b);
       pc->v_add_f64(d_b, d_b, dd_bd);
@@ -685,21 +687,25 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       pc->v_cvt_f32_i32(x3, value);
       pc->s_add_f64(dd_bd, dd_bd, ddd);
 
-      if (extendMode() == ExtendMode::kRepeat) {
-        pc->v_and_i32(x3, x3, f->vmaxi);
+      x86::Xmm vIdx = cc->newXmm("vIdx");
+      if (isPad() && pc->hasSSE4_1()) {
+        pc->v_packs_i32_u16_(vIdx, x3, x3);
+        pc->v_min_u16(vIdx, vIdx, f->vmaxi.xmm());
       }
-
-      if (extendMode() == ExtendMode::kReflect) {
-        x86::Xmm t = cc->newXmm("t");
-        pc->vmovaps(t, f->vmaxi);
-
-        pc->v_and_i32(x3, x3, t);
-        pc->v_sub_i32(t, t, x3);
-        pc->v_min_i16(x3, x3, t);
+      else if (isPad()) {
+        pc->v_packs_i32_i16(vIdx, x3, x3);
+        pc->v_min_i16(vIdx, vIdx, f->vmaxi.xmm());
+        pc->v_add_i16(vIdx, vIdx, pc->simdConst(&c.i_8000800080008000, Bcst::kNA, vIdx));
+      }
+      else {
+        x86::Xmm vTmp = cc->newXmm("f.vTmp");
+        pc->v_and_i32(vIdx, x3, f->vmaxi.xmm());
+        pc->v_xor_i32(vTmp, vIdx, f->vrori.xmm());
+        pc->v_min_i16(vIdx, vIdx, vTmp);
       }
 
       pc->v_shuffle_f32(x0, x0, x1, x86::shuffleImm(1, 0, 1, 0));
-      iExt.begin(IndexExtractor::kTypeUInt16, x3);
+      iExt.begin(IndexExtractor::kTypeUInt16, vIdx);
 
       pc->v_cvt_f64_f32(x1, d_b);
       pc->v_add_f64(d_b, d_b, dd_bd);

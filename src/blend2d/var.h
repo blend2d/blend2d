@@ -226,7 +226,7 @@ public:
   //! \name Static Constructors
   //! \{
 
-  BL_INLINE static BLVar null() noexcept { return BLVar(); }
+  static BL_INLINE BLVar null() noexcept { return BLVar(); }
 
   //! \}
 

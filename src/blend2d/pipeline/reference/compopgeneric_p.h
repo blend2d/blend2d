@@ -100,31 +100,28 @@ struct CompOp_Base_PRGB32 : public CompOp_Base<OpT, PixelT, kDstBPP> {
 
   FetchOp fetchOp;
 
-  BL_INLINE CompOp_Base_PRGB32(const void* fetchData) noexcept
-    : fetchOp(fetchData) {}
-
-  BL_INLINE void initRectY(uint32_t x, uint32_t y, uint32_t width) noexcept {
-    fetchOp.initRectY(x, y, width);
+  BL_INLINE void rectInitFetch(const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
+    fetchOp.rectInitFetch(fetchData, xPos, yPos, rectWidth);
   }
 
-  BL_INLINE void beginRectX(uint32_t x) noexcept {
-    fetchOp.beginRectX(x);
+  BL_INLINE void rectStartX(uint32_t xPos) noexcept {
+    fetchOp.rectStartX(xPos);
   }
 
-  BL_INLINE void initSpanY(uint32_t y) noexcept {
-    fetchOp.initSpanY(y);
+  BL_INLINE void spanInitY(const void* fetchData, uint32_t yPos) noexcept {
+    fetchOp.spanInitY(fetchData, yPos);
   }
 
-  BL_INLINE void beginSpanX(uint32_t x) noexcept {
-    fetchOp.beginSpanX(x);
+  BL_INLINE void spanStartX(uint32_t xPos) noexcept {
+    fetchOp.spanStartX(xPos);
   }
 
-  BL_INLINE void advanceSpanX(uint32_t x, uint32_t diff) noexcept {
-    fetchOp.advanceSpanX(x, diff);
+  BL_INLINE void spanAdvanceX(uint32_t xPos, uint32_t xDiff) noexcept {
+    fetchOp.spanAdvanceX(xPos, xDiff);
   }
 
-  BL_INLINE void endSpanX(uint32_t x) noexcept {
-    fetchOp.endSpanX(x);
+  BL_INLINE void spanEndX(uint32_t xPos) noexcept {
+    fetchOp.spanEndX(xPos);
   }
 
   BL_INLINE void advanceY() noexcept {
@@ -175,9 +172,29 @@ typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8
 typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchSolid<Pixel::P32_A8R8G8B8>, 4> CompOp_SrcOver_PRGB32_Solid;
 typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchSolid<Pixel::P32_A8R8G8B8>, 4> CompOp_Plus_PRGB32_Solid;
 
-typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchLinearGradient<Pixel::P32_A8R8G8B8, false>, 4> CompOp_SrcCopy_PRGB32_Linear;
-typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchLinearGradient<Pixel::P32_A8R8G8B8, false>, 4> CompOp_SrcOver_PRGB32_Linear;
-typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchLinearGradient<Pixel::P32_A8R8G8B8, false>, 4> CompOp_Plus_PRGB32_Linear;
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchLinearGradient<Pixel::P32_A8R8G8B8, true>, 4> CompOp_SrcCopy_PRGB32_LinearPad;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchLinearGradient<Pixel::P32_A8R8G8B8, true>, 4> CompOp_SrcOver_PRGB32_LinearPad;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchLinearGradient<Pixel::P32_A8R8G8B8, true>, 4> CompOp_Plus_PRGB32_LinearPad;
+
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchLinearGradient<Pixel::P32_A8R8G8B8, false>, 4> CompOp_SrcCopy_PRGB32_LinearRoR;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchLinearGradient<Pixel::P32_A8R8G8B8, false>, 4> CompOp_SrcOver_PRGB32_LinearRoR;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchLinearGradient<Pixel::P32_A8R8G8B8, false>, 4> CompOp_Plus_PRGB32_LinearRoR;
+
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchRadialGradient<Pixel::P32_A8R8G8B8, true>, 4> CompOp_SrcCopy_PRGB32_RadialPad;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchRadialGradient<Pixel::P32_A8R8G8B8, true>, 4> CompOp_SrcOver_PRGB32_RadialPad;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchRadialGradient<Pixel::P32_A8R8G8B8, true>, 4> CompOp_Plus_PRGB32_RadialPad;
+
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchRadialGradient<Pixel::P32_A8R8G8B8, false>, 4> CompOp_SrcCopy_PRGB32_RadialRoR;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchRadialGradient<Pixel::P32_A8R8G8B8, false>, 4> CompOp_SrcOver_PRGB32_RadialRoR;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchRadialGradient<Pixel::P32_A8R8G8B8, false>, 4> CompOp_Plus_PRGB32_RadialRoR;
+
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchConicalGradient<Pixel::P32_A8R8G8B8>, 4> CompOp_SrcCopy_PRGB32_Conical;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchConicalGradient<Pixel::P32_A8R8G8B8>, 4> CompOp_SrcOver_PRGB32_Conical;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchConicalGradient<Pixel::P32_A8R8G8B8>, 4> CompOp_Plus_PRGB32_Conical;
+
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedBlit<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_BlitAA_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedBlit<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcOver_PRGB32_BlitAA_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedBlit<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_Plus_PRGB32_BlitAA_PRGB32;
 
 } // {Reference}
 } // {BLPipeline}

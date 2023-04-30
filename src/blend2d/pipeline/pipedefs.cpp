@@ -343,6 +343,9 @@ FetchType FetchData::initPatternAffine(uint32_t extendMode, uint32_t filter, uin
 static BL_INLINE FetchType blPipeFetchDataInitLinearGradient(FetchData* fetchData, const BLLinearGradientValues& values, uint32_t extendMode, const BLMatrix2D& m) noexcept {
   FetchData::Gradient& d = fetchData->gradient;
 
+  BL_ASSERT(extendMode <= BL_EXTEND_MODE_SIMPLE_MAX_VALUE);
+  BL_ASSERT(d.lut.size > 0u);
+
   // Inverted transformation matrix.
   BLMatrix2D mInv;
   if (BLMatrix2D::invert(mInv, m) != BL_SUCCESS)
@@ -352,10 +355,8 @@ static BL_INLINE FetchType blPipeFetchDataInitLinearGradient(FetchData* fetchDat
   BLPoint p1(values.x1, values.y1);
 
   uint32_t lutSize = d.lut.size;
-  BL_ASSERT(lutSize > 0);
-
-  bool isPad     = extendMode == BL_EXTEND_MODE_PAD;
-  bool isReflect = extendMode == BL_EXTEND_MODE_REFLECT;
+  uint32_t maxi = extendMode == BL_EXTEND_MODE_REFLECT ? lutSize * 2u - 1u : lutSize - 1u;
+  uint32_t rori = extendMode == BL_EXTEND_MODE_REFLECT ? maxi : 0u;
 
   // Distance between [x0, y0] and [x1, y1], before transform.
   double ax = p1.x - p0.x;
@@ -380,11 +381,10 @@ static BL_INLINE FetchType blPipeFetchDataInitLinearGradient(FetchData* fetchDat
   d.linear.pt[0].i64 = blFloorToInt64(offset);
   d.linear.pt[1].u64 = d.linear.pt[0].u64 + d.linear.dt.u64;
 
-  uint32_t rorSize = isReflect ? lutSize * 2u : lutSize;
-  d.linear.rep.u = uint32_t(rorSize - 1u);
-  d.linear.msk.u = isPad ? (lutSize - 1u) * 0x00010001u : (lutSize * 2u - 1u) * 0x00010001u;
+  d.linear.maxi = maxi;
+  d.linear.rori = rori;
 
-  return isPad ? FetchType::kGradientLinearPad : FetchType::kGradientLinearRoR;
+  return extendMode == BL_EXTEND_MODE_PAD ? FetchType::kGradientLinearPad : FetchType::kGradientLinearRoR;
 }
 
 // The radial gradient uses the following equation:
@@ -434,6 +434,9 @@ static BL_INLINE FetchType blPipeFetchDataInitLinearGradient(FetchData* fetchDat
 static BL_INLINE FetchType blPipeFetchDataInitRadialGradient(FetchData* fetchData, const BLRadialGradientValues& values, uint32_t extendMode, const BLMatrix2D& m) noexcept {
   FetchData::Gradient& d = fetchData->gradient;
 
+  BL_ASSERT(extendMode <= BL_EXTEND_MODE_SIMPLE_MAX_VALUE);
+  BL_ASSERT(d.lut.size > 0u);
+
   // Inverted transformation matrix.
   BLMatrix2D mInv;
   if (BLMatrix2D::invert(mInv, m) != BL_SUCCESS)
@@ -441,12 +444,11 @@ static BL_INLINE FetchType blPipeFetchDataInitRadialGradient(FetchData* fetchDat
 
   BLPoint c(values.x0, values.y0);
   BLPoint f(values.x1, values.y1);
-
   double r = values.r0;
-  uint32_t lutSize = d.lut.size;
 
-  BL_ASSERT(lutSize != 0);
-  BL_ASSERT(extendMode <= BL_EXTEND_MODE_SIMPLE_MAX_VALUE);
+  uint32_t lutSize = d.lut.size;
+  uint32_t maxi = extendMode == BL_EXTEND_MODE_REFLECT ? lutSize * 2u - 1u : lutSize - 1u;
+  uint32_t rori = extendMode == BL_EXTEND_MODE_REFLECT ? maxi : 0u;
 
   BLPoint fOrig = f;
   f -= c;
@@ -502,9 +504,10 @@ static BL_INLINE FetchType blPipeFetchDataInitRadialGradient(FetchData* fetchDat
 
   d.radial.ddd = 2.0 * d.radial.dd;
   d.radial.scale = scale;
-  d.radial.maxi = (extendMode == BL_EXTEND_MODE_REFLECT) ? int(lutSize * 2 - 1) : int(lutSize - 1);
+  d.radial.maxi = maxi;
+  d.radial.rori = rori;
 
-  return FetchType(uint32_t(FetchType::kGradientRadialPad) + extendMode);
+  return extendMode == BL_EXTEND_MODE_PAD ? FetchType::kGradientRadialPad : FetchType::kGradientRadialRoR;
 }
 
 static BL_INLINE FetchType blPipeFetchDataInitConicalGradient(FetchData* fetchData, const BLConicalGradientValues& values, uint32_t extendMode, const BLMatrix2D& m) noexcept {

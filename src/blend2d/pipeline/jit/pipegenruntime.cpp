@@ -328,8 +328,7 @@ static const char* stringifyFetchType(FetchType value) noexcept {
     case FetchType::kGradientLinearPad    : return "GradientLinearPad";
     case FetchType::kGradientLinearRoR    : return "GradientLinearRoR";
     case FetchType::kGradientRadialPad    : return "GradientRadialPad";
-    case FetchType::kGradientRadialRepeat : return "GradientRadialRepeat";
-    case FetchType::kGradientRadialReflect: return "GradientRadialReflect";
+    case FetchType::kGradientRadialRoR    : return "GradientRadialRoR";
     case FetchType::kGradientConical      : return "GradientConical";
     case FetchType::kPixelPtr             : return "PixelPtr";
     case FetchType::kFailure              : return "<Failure>";
