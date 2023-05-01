@@ -16,6 +16,7 @@
 #include "../runtime_p.h"
 #include "../tables_p.h"
 #include "../simd_p.h"
+#include "../support/memops_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
