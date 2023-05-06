@@ -233,7 +233,7 @@ public:
     kSSORangeIndex = 0xFFFFFFFFu >> 5
   };
 
-  BL_INLINE BLBitSetImpl* _impl() const noexcept { return static_cast<BLBitSetImpl*>(_d.impl); }
+  BL_INLINE_NODEBUG BLBitSetImpl* _impl() const noexcept { return static_cast<BLBitSetImpl*>(_d.impl); }
 
   //! \}
   //! \endcond

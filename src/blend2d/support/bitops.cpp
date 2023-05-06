@@ -103,7 +103,7 @@ static void testBitVectorFlipIterator() {
   EXPECT_TRUE(!msbIt.hasNext());
 }
 
-UNIT(support_bitops, -10) {
+UNIT(support_bitops, BL_TEST_GROUP_SUPPORT_UTILITIES) {
   testBitArrayOps();
   testBitIterator();
   testBitVectorIterator();

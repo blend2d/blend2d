@@ -19,7 +19,7 @@
 
 namespace BLContextPrivate {
 
-//! \name Context - Private - Constants
+//! \name BLContext - Private - Constants
 //! \{
 
 static constexpr const double kMinimumTolerance = 0.01;
@@ -27,7 +27,7 @@ static constexpr const double kMaximumTolerance = 0.50;
 
 //! \}
 
-//! \name Context - Private - State Construction & Destruction
+//! \name BLContext - Private - State Construction & Destruction
 //! \{
 
 static BL_INLINE void initState(BLContextState* self) noexcept {

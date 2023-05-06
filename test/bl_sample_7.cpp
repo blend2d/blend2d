@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
 
   // We must handle a possible error returned by the loader.
   if (err) {
-    printf("Failed to load a font-face (err=%u)\n", err);
+    printf("Failed to load a font face (err=%u)\n", err);
     return 1;
   }
 

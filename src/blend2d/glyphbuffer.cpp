@@ -62,10 +62,10 @@ BLResult BLGlyphBufferPrivateImpl::ensureBuffer(size_t bufferId, size_t copySize
   if (copySize) {
     memcpy(newData,
            oldData,
-           copySize * sizeof(uint32_t));
+           copySize * sizeof(BLGlyphId));
 
-    memcpy(newData + newCapacity * sizeof(uint32_t),
-           oldData + oldCapacity * sizeof(uint32_t),
+    memcpy(newData + newCapacity * sizeof(BLGlyphId),
+           oldData + oldCapacity * sizeof(BLGlyphId),
            copySize * sizeof(BLGlyphInfo));
   }
 
@@ -81,7 +81,7 @@ BLResult BLGlyphBufferPrivateImpl::ensureBuffer(size_t bufferId, size_t copySize
 
 template<typename T>
 static BL_INLINE BLGlyphInfo blGlyphInfoFromCluster(const T& cluster) noexcept {
-  return BLGlyphInfo { uint32_t(cluster), { 0, 0 } };
+  return BLGlyphInfo { uint32_t(cluster), 0 };
 }
 
 template<typename T>
@@ -301,4 +301,30 @@ BL_API_IMPL BLResult blGlyphBufferSetGlyphsFromStruct(BLGlyphBufferCore* self, c
     return blInternalGlyphBufferData_setGlyphIds(d, static_cast<const uint16_t*>(glyphData), size, glyphIdAdvance);
   else
     return blInternalGlyphBufferData_setGlyphIds(d, static_cast<const uint32_t*>(glyphData), size, glyphIdAdvance);
+}
+
+BL_API_IMPL BLResult blGlyphBufferSetDebugSink(BLGlyphBufferCore* self, BLDebugMessageSinkFunc sink, void* userData) noexcept {
+  if (!sink)
+    return blGlyphBufferResetDebugSink(self);
+
+  BLGlyphBufferPrivateImpl* d;
+  BL_PROPAGATE(blGlyphBufferEnsureData(self, &d));
+
+  d->debugSink = sink;
+  d->debugSinkUserData = userData;
+
+  return BL_SUCCESS;
+}
+
+BL_API_IMPL BLResult blGlyphBufferResetDebugSink(BLGlyphBufferCore* self) noexcept {
+  if (!blGlyphBufferGetImpl(self)->debugSink)
+    return BL_SUCCESS;
+
+  BLGlyphBufferPrivateImpl* d;
+  BL_PROPAGATE(blGlyphBufferEnsureData(self, &d));
+
+  d->debugSink = nullptr;
+  d->debugSinkUserData = nullptr;
+
+  return BL_SUCCESS;
 }

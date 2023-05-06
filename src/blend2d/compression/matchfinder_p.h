@@ -15,6 +15,8 @@
 #include "../simd_p.h"
 #include "../support/memops_p.h"
 
+//! \cond INTERNAL
+
 namespace BLCompression {
 namespace Deflate {
 
@@ -977,3 +979,5 @@ static BL_INLINE const uint8_t* hc_matchfinder_skip_positions(
 
 } // {Deflate}
 } // {BLCompression}
+
+//! \endcond

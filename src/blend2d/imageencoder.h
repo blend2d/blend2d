@@ -116,7 +116,7 @@ public:
 
   //! Returns Impl of the image codec (only provided for use cases that implement BLImageCodec).
   template<typename T = BLImageEncoderImpl>
-  BL_INLINE T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
+  BL_INLINE_NODEBUG T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
 
   //! \}
   //! \endcond
@@ -124,41 +124,41 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLImageEncoder() noexcept { blImageEncoderInit(this); }
-  BL_INLINE BLImageEncoder(BLImageEncoder&& other) noexcept { blImageEncoderInitMove(this, &other); }
-  BL_INLINE BLImageEncoder(const BLImageEncoder& other) noexcept { blImageEncoderInitWeak(this, &other); }
-  BL_INLINE ~BLImageEncoder() { blImageEncoderDestroy(this); }
+  BL_INLINE_NODEBUG BLImageEncoder() noexcept { blImageEncoderInit(this); }
+  BL_INLINE_NODEBUG BLImageEncoder(BLImageEncoder&& other) noexcept { blImageEncoderInitMove(this, &other); }
+  BL_INLINE_NODEBUG BLImageEncoder(const BLImageEncoder& other) noexcept { blImageEncoderInitWeak(this, &other); }
+  BL_INLINE_NODEBUG ~BLImageEncoder() { blImageEncoderDestroy(this); }
 
   //! \}
 
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE explicit operator bool() const noexcept { return isValid(); }
+  BL_INLINE_NODEBUG explicit operator bool() const noexcept { return isValid(); }
 
-  BL_INLINE BLImageEncoder& operator=(BLImageEncoder&& other) noexcept { blImageEncoderAssignMove(this, &other); return *this; }
-  BL_INLINE BLImageEncoder& operator=(const BLImageEncoder& other) noexcept { blImageEncoderAssignWeak(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLImageEncoder& operator=(BLImageEncoder&& other) noexcept { blImageEncoderAssignMove(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLImageEncoder& operator=(const BLImageEncoder& other) noexcept { blImageEncoderAssignWeak(this, &other); return *this; }
 
-  BL_NODISCARD BL_INLINE bool operator==(const BLImageEncoder& other) const noexcept { return  equals(other); }
-  BL_NODISCARD BL_INLINE bool operator!=(const BLImageEncoder& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLImageEncoder& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLImageEncoder& other) const noexcept { return !equals(other); }
 
   //! \}
 
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE BLResult reset() noexcept { return blImageEncoderReset(this); }
-  BL_INLINE void swap(BLImageEncoderCore& other) noexcept { _d.swap(other._d); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept { return blImageEncoderReset(this); }
+  BL_INLINE_NODEBUG void swap(BLImageEncoderCore& other) noexcept { _d.swap(other._d); }
 
-  BL_INLINE BLResult assign(BLImageEncoderCore&& other) noexcept { return blImageEncoderAssignMove(this, &other); }
-  BL_INLINE BLResult assign(const BLImageEncoderCore& other) noexcept { return blImageEncoderAssignWeak(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(BLImageEncoderCore&& other) noexcept { return blImageEncoderAssignMove(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(const BLImageEncoderCore& other) noexcept { return blImageEncoderAssignWeak(this, &other); }
 
   //! Tests whether the image encoder is a built-in null instance.
   BL_NODISCARD
-  BL_INLINE bool isValid() const noexcept { return _impl()->lastResult != BL_ERROR_NOT_INITIALIZED; }
+  BL_INLINE_NODEBUG bool isValid() const noexcept { return _impl()->lastResult != BL_ERROR_NOT_INITIALIZED; }
 
   BL_NODISCARD
-  BL_INLINE bool equals(const BLImageEncoderCore& other) const noexcept { return _d.impl == other._d.impl; }
+  BL_INLINE_NODEBUG bool equals(const BLImageEncoderCore& other) const noexcept { return _d.impl == other._d.impl; }
 
   //! \}
 
@@ -166,19 +166,19 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE BLImageCodec& codec() const noexcept { return _impl()->codec.dcast(); }
+  BL_INLINE_NODEBUG BLImageCodec& codec() const noexcept { return _impl()->codec.dcast(); }
 
   //! Returns the last encoding result.
   BL_NODISCARD
-  BL_INLINE BLResult lastResult() const noexcept { return _impl()->lastResult; }
+  BL_INLINE_NODEBUG BLResult lastResult() const noexcept { return _impl()->lastResult; }
 
   //! Returns the current frame index (yet to be written).
   BL_NODISCARD
-  BL_INLINE uint64_t frameIndex() const noexcept { return _impl()->frameIndex; }
+  BL_INLINE_NODEBUG uint64_t frameIndex() const noexcept { return _impl()->frameIndex; }
 
   //! Returns the position in destination buffer.
   BL_NODISCARD
-  BL_INLINE size_t bufferIndex() const noexcept { return _impl()->bufferIndex; }
+  BL_INLINE_NODEBUG size_t bufferIndex() const noexcept { return _impl()->bufferIndex; }
 
   //! \}
 
@@ -192,10 +192,10 @@ public:
   //! \name Encoder Functionality
   //! \{
 
-  BL_INLINE BLResult restart() noexcept { return blImageEncoderRestart(this); }
+  BL_INLINE_NODEBUG BLResult restart() noexcept { return blImageEncoderRestart(this); }
 
   //! Encodes the given `image` and writes the encoded data to the destination buffer `dst`.
-  BL_INLINE BLResult writeFrame(BLArray<uint8_t>& dst, const BLImageCore& image) noexcept { return blImageEncoderWriteFrame(this, &dst, &image); }
+  BL_INLINE_NODEBUG BLResult writeFrame(BLArray<uint8_t>& dst, const BLImageCore& image) noexcept { return blImageEncoderWriteFrame(this, &dst, &image); }
 
   //! \}
 };

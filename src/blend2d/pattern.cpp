@@ -194,7 +194,7 @@ BL_API_IMPL BLResult blPatternAssignWeak(BLPatternCore* self, const BLPatternCor
   BL_ASSERT(self->_d.isPattern());
   BL_ASSERT(other->_d.isPattern());
 
-  blObjectPrivateAddRefTagged(other);
+  blObjectPrivateAddRefIfRCTagSet(other);
   return blPatternPrivateReplace(self, other);
 }
 
@@ -430,6 +430,6 @@ void blPatternRtInit(BLRuntimeContext* rt) noexcept {
 
   blObjectDefaults[BL_OBJECT_TYPE_PATTERN]._d.initDynamic(
     BL_OBJECT_TYPE_PATTERN,
-    BLObjectInfo::packFields(0u, BL_EXTEND_MODE_REPEAT),
+    BLObjectInfo::packAbcpFields(0u, BL_EXTEND_MODE_REPEAT),
     &BLPatternPrivate::defaultImpl.impl);
 }

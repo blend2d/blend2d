@@ -95,9 +95,7 @@
 
 //! \cond NEVER
 
-#if defined(__INTEL_COMPILER)
-  // Not regularly tested.
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER)
   #pragma warning(disable: 4102) // Unreferenced label.
   #pragma warning(disable: 4127) // Conditional expression is constant.
   #pragma warning(disable: 4201) // Nameless struct/union.
@@ -209,11 +207,7 @@
   #define BL_BUILD_OPT_SSE2
 #endif
 
-#if defined(__AVX512F__)  && \
-    defined(__AVX512BW__) && \
-    defined(__AVX512DQ__) && \
-    defined(__AVX512CD__) && \
-    defined(__AVX512VL__)
+#if defined(__AVX512F__)  && defined(__AVX512BW__) && defined(__AVX512DQ__) && defined(__AVX512CD__) && defined(__AVX512VL__)
   #define BL_TARGET_OPT_AVX512
 #endif
 #if defined(BL_TARGET_OPT_AVX512) || defined(__AVX2__)
@@ -252,32 +246,62 @@
   #endif
 #endif
 
+//! \}
+//! \endcond
+
 // Build - Configuration Autodetection
 // ===================================
+
+//! \cond NEVER
 
 // Don't build with JIT support at all if the host architecture is not supported by JIT yet.
 #if !defined(BL_BUILD_NO_JIT) && BL_TARGET_ARCH_X86 == 0
   #define BL_BUILD_NO_JIT
 #endif
 
+//! \endcond
+
 // Build - Tests
 // =============
 
 //! \cond NEVER
-
 // Make sure '#ifdef'ed unit tests are not disabled by IDE.
 #if !defined(BL_TEST) && defined(__INTELLISENSE__)
   #define BL_TEST
 #endif
+//! \endcond
 
 // Include a unit testing package if this is a `blend2d_test_unit` build.
 #if defined(BL_TEST)
-  #include "../../test/broken.h"
 
-  #define EXPECT_SUCCESS(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_SUCCESS(" #__VA_ARGS__ ")", (__VA_ARGS__) == BL_SUCCESS)
-#endif
+#include "../../test/broken.h"
 
+//! \cond INTERNAL
+#define EXPECT_SUCCESS(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_SUCCESS(" #__VA_ARGS__ ")", (__VA_ARGS__) == BL_SUCCESS)
+
+enum BLTestGroup : int {
+  BL_TEST_GROUP_SUPPORT_UTILITIES = 0,
+  BL_TEST_GROUP_SUPPORT_CONTAINERS = 1,
+  BL_TEST_GROUP_THREADING = 2,
+  BL_TEST_GROUP_COMPRESSION_UTILITIES = 3,
+  BL_TEST_GROUP_CORE_UTILITIES = 4,
+  BL_TEST_GROUP_CORE_OBJECT = 5,
+  BL_TEST_GROUP_CORE_CONTAINERS = 6,
+  BL_TEST_GROUP_GEOMETRY_UTILITIES = 7,
+  BL_TEST_GROUP_GEOMETRY_CONTAINERS = 8,
+  BL_TEST_GROUP_IMAGE_CONTAINERS = 9,
+  BL_TEST_GROUP_IMAGE_UTILITIES = 10,
+  BL_TEST_GROUP_IMAGE_CODECS = 11,
+  BL_TEST_GROUP_TEXT_OPENTYPE = 12,
+  BL_TEST_GROUP_TEXT_CONTAINERS = 13,
+  BL_TEST_GROUP_RENDERING_PIXEL_OPS = 14,
+  BL_TEST_GROUP_RENDERING_UTILITIES = 15,
+  BL_TEST_GROUP_RENDERING_STYLES = 16,
+  BL_TEST_GROUP_RENDERING_CONTEXT = 17
+};
 //! \endcond
+
+#endif
 
 // Build - Export
 // ==============

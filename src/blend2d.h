@@ -58,6 +58,7 @@
 #include "blend2d/format.h"
 #include "blend2d/geometry.h"
 #include "blend2d/glyphbuffer.h"
+#include "blend2d/glyphrun.h"
 #include "blend2d/gradient.h"
 #include "blend2d/image.h"
 #include "blend2d/imagecodec.h"

@@ -227,6 +227,7 @@ BL_API_IMPL BLResult blRuntimeInit() noexcept {
   blThreadPoolRtInit(rt);
   blZeroAllocatorRtInit(rt);
   blPixelOpsRtInit(rt);
+  blBitArrayRtInit(rt);
   blBitSetRtInit(rt);
   blArrayRtInit(rt);
   blStringRtInit(rt);

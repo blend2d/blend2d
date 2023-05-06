@@ -7,7 +7,7 @@
 #include "../support/ptrops_p.h"
 
 #ifdef BL_TEST
-UNIT(support_ptrops, -10) {
+UNIT(support_ptrops, BL_TEST_GROUP_SUPPORT_UTILITIES) {
   INFO("BLPtrOps - Offset / Deoffset");
   {
     uint32_t array[16] = { 0 };

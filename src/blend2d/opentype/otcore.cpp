@@ -12,8 +12,8 @@
 namespace BLOpenType {
 namespace CoreImpl {
 
-// OpenType::CoreImpl - Trace
-// ==========================
+// BLOpenType::CoreImpl - Trace
+// ============================
 
 #if defined(BL_TRACE_OT_ALL) || defined(BL_TRACE_OT_CORE)
 #define Trace BLDebugTrace
@@ -21,8 +21,8 @@ namespace CoreImpl {
 #define Trace BLDummyTrace
 #endif
 
-// OpenType::CoreImpl - Utilities
-// ==============================
+// BLOpenType::CoreImpl - Utilities
+// ================================
 
 static BL_INLINE const char* stringFromBool(bool value) noexcept {
   static const char str[] = "False\0\0\0True";
@@ -33,18 +33,17 @@ static BL_INLINE const char* sizeCheckMessage(size_t size) noexcept {
   return size ? "Table is truncated" : "Table not found";
 }
 
-// OpenType::CoreImpl - Init
-// =========================
+// BLOpenType::CoreImpl - Init
+// ===========================
 
-static BLResult initHead(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
-  BLFontTableT<HeadTable> head;
-  fontData->queryTable(faceI->faceInfo.faceIndex, &head, BL_MAKE_TAG('h', 'e', 'a', 'd'));
+static BLResult initHead(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
+  Table<HeadTable> head = tables.head;
 
   Trace trace;
   trace.info("BLOpenType::OTFaceImpl::InitHead [Size=%zu]\n", head.size);
   trace.indent();
 
-  if (!blFontTableFitsT<HeadTable>(head)) {
+  if (!head.fits()) {
     trace.fail("%s\n", sizeCheckMessage(head.size));
     return blTraceError(head.size ? BL_ERROR_INVALID_DATA : BL_ERROR_FONT_MISSING_IMPORTANT_TABLE);
   }
@@ -106,15 +105,14 @@ static BLResult initHead(OTFaceImpl* faceI, const BLFontData* fontData) noexcept
   return BL_SUCCESS;
 }
 
-static BLResult initMaxP(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
-  BLFontTableT<MaxPTable> maxp;
-  fontData->queryTable(faceI->faceInfo.faceIndex, &maxp, BL_MAKE_TAG('m', 'a', 'x', 'p'));
+static BLResult initMaxP(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
+  Table<MaxPTable> maxp = tables.maxp;
 
   Trace trace;
   trace.info("BLOpenType::OTFaceImpl::InitMaxP [Size=%zu]\n", maxp.size);
   trace.indent();
 
-  if (!blFontTableFitsT<MaxPTable>(maxp)) {
+  if (!maxp.fits()) {
     trace.fail("%s\n", sizeCheckMessage(maxp.size));
     return blTraceError(maxp.size ? BL_ERROR_INVALID_DATA : BL_ERROR_FONT_MISSING_IMPORTANT_TABLE);
   }
@@ -134,15 +132,14 @@ static BLResult initMaxP(OTFaceImpl* faceI, const BLFontData* fontData) noexcept
   return BL_SUCCESS;
 }
 
-static BLResult initOS_2(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
-  BLFontTableT<OS2Table> os2;
-  fontData->queryTable(faceI->faceInfo.faceIndex, &os2, BL_MAKE_TAG('O', 'S', '/', '2'));
+static BLResult initOS_2(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
+  Table<OS2Table> os2 = tables.os_2;
 
   Trace trace;
   trace.info("BLOpenType::OTFaceImpl::InitOS/2 [Size=%zu]\n", os2.size);
   trace.indent();
 
-  if (!blFontTableFitsT<OS2Table>(os2)) {
+  if (!os2.fits()) {
     if (os2.size)
       trace.fail("%s\n", sizeCheckMessage(os2.size));
   }
@@ -188,7 +185,7 @@ static BLResult initOS_2(OTFaceImpl* faceI, const BLFontData* fontData) noexcept
 
     // Read additional fields provided by newer versions.
     uint32_t version = os2->v0a()->version();
-    if (blFontTableFitsT<OS2Table::V0B>(os2)) {
+    if (os2.fits(OS2Table::V0B::kBaseSize)) {
       uint32_t selectionFlags = os2->v0a()->selectionFlags();
 
       if (selectionFlags & OS2Table::kSelectionItalic)
@@ -213,7 +210,7 @@ static BLResult initOS_2(OTFaceImpl* faceI, const BLFontData* fontData) noexcept
       trace.info("Descent: %d\n", faceI->designMetrics.descent);
       trace.info("LineGap: %d\n", faceI->designMetrics.lineGap);
 
-      if (blFontTableFitsT<OS2Table::V2>(os2) && version >= 2) {
+      if (os2.fits(OS2Table::V2::kBaseSize) && version >= 2) {
         faceI->designMetrics.xHeight = os2->v2()->xHeight();
         faceI->designMetrics.capHeight = os2->v2()->capHeight();
 
@@ -226,15 +223,14 @@ static BLResult initOS_2(OTFaceImpl* faceI, const BLFontData* fontData) noexcept
   return BL_SUCCESS;
 }
 
-static BLResult initPost(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
-  BLFontTableT<PostTable> post;
-  fontData->queryTable(faceI->faceInfo.faceIndex, &post, BL_MAKE_TAG('p', 'o', 's', 't'));
+static BLResult initPost(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
+  Table<PostTable> post = tables.post;
 
   Trace trace;
   trace.info("BLOpenType::OTFaceImpl::InitPost [Size=%zu]\n", post.size);
   trace.indent();
 
-  if (!blFontTableFitsT<PostTable>(post)) {
+  if (!post.fits()) {
     if (post.size)
       trace.fail("%s\n", sizeCheckMessage(post.size));
   }
@@ -252,11 +248,11 @@ static BLResult initPost(OTFaceImpl* faceI, const BLFontData* fontData) noexcept
   return BL_SUCCESS;
 }
 
-BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
-  BL_PROPAGATE(initHead(faceI, fontData));
-  BL_PROPAGATE(initMaxP(faceI, fontData));
-  BL_PROPAGATE(initOS_2(faceI, fontData));
-  BL_PROPAGATE(initPost(faceI, fontData));
+BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
+  BL_PROPAGATE(initHead(faceI, tables));
+  BL_PROPAGATE(initMaxP(faceI, tables));
+  BL_PROPAGATE(initOS_2(faceI, tables));
+  BL_PROPAGATE(initPost(faceI, tables));
 
   return BL_SUCCESS;
 }

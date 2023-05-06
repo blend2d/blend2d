@@ -68,7 +68,7 @@ static BLResult BL_CDECL blNullFontFaceGetGlyphAdvances(
 
 static BLResult BL_CDECL blNullFontFaceGetGlyphOutlines(
   const BLFontFaceImpl* impl,
-  uint32_t glyphId,
+  BLGlyphId glyphId,
   const BLMatrix2D* userMatrix,
   BLPath* out,
   size_t* contourCountOut,
@@ -90,7 +90,8 @@ static BLResult BL_CDECL blNullFontFaceApplyKern(
 static BLResult BL_CDECL blNullFontFaceApplyGSub(
   const BLFontFaceImpl* impl,
   BLGlyphBuffer* gb,
-  const BLBitSetCore* lookups) noexcept {
+  const uint32_t* bitWords,
+  size_t bitWordCount) noexcept {
 
   return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 }
@@ -98,7 +99,8 @@ static BLResult BL_CDECL blNullFontFaceApplyGSub(
 static BLResult BL_CDECL blNullFontFaceApplyGPos(
   const BLFontFaceImpl* impl,
   BLGlyphBuffer* gb,
-  const BLBitSetCore* lookups) noexcept {
+  const uint32_t* bitWords,
+  size_t bitWordCount) noexcept {
 
   return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
 }
@@ -259,18 +261,49 @@ BLResult blFontFaceGetCharacterCoverage(const BLFontFaceCore* self, BLBitSetCore
   return blBitSetAssignWeak(out, &selfI->characterCoverage);
 }
 
-BLResult blFontFaceGetScriptTags(const BLFontFaceCore* self, BLArrayCore* out) noexcept {
+bool blFontFaceHasScriptTag(const BLFontFaceCore* self, BLTag scriptTag) noexcept {
   BL_ASSERT(self->_d.isFontFace());
 
-  const BLFontFaceImpl* selfI = blFontFaceGetImpl(self);
-  return blArrayAssignWeak(out, &selfI->scriptTags);
+  const BLFontFacePrivateImpl* selfI = blFontFaceGetImpl(self);
+  return selfI->scriptTagSet.hasTag(scriptTag);
+}
+
+bool blFontFaceHasFeatureTag(const BLFontFaceCore* self, BLTag featureTag) noexcept {
+  BL_ASSERT(self->_d.isFontFace());
+
+  const BLFontFacePrivateImpl* selfI = blFontFaceGetImpl(self);
+  return selfI->featureTagSet.hasTag(featureTag);
+}
+
+bool blFontFaceHasVariationTag(const BLFontFaceCore* self, BLTag variationTag) noexcept {
+  BL_ASSERT(self->_d.isFontFace());
+
+  const BLFontFacePrivateImpl* selfI = blFontFaceGetImpl(self);
+  return selfI->variationTagSet.hasTag(variationTag);
+}
+
+BLResult blFontFaceGetScriptTags(const BLFontFaceCore* self, BLArrayCore* out) noexcept {
+  BL_ASSERT(self->_d.isFontFace());
+  BL_ASSERT(out->_d.isArray());
+
+  const BLFontFacePrivateImpl* selfI = blFontFaceGetImpl(self);
+  return selfI->scriptTagSet.flattenTo(out->dcast<BLArray<BLTag>>());
 }
 
 BLResult blFontFaceGetFeatureTags(const BLFontFaceCore* self, BLArrayCore* out) noexcept {
   BL_ASSERT(self->_d.isFontFace());
+  BL_ASSERT(out->_d.isArray());
 
-  const BLFontFaceImpl* selfI = blFontFaceGetImpl(self);
-  return blArrayAssignWeak(out, &selfI->featureTags);
+  const BLFontFacePrivateImpl* selfI = blFontFaceGetImpl(self);
+  return selfI->featureTagSet.flattenTo(out->dcast<BLArray<BLTag>>());
+}
+
+BLResult blFontFaceGetVariationTags(const BLFontFaceCore* self, BLArrayCore* out) noexcept {
+  BL_ASSERT(self->_d.isFontFace());
+  BL_ASSERT(out->_d.isArray());
+
+  const BLFontFacePrivateImpl* selfI = blFontFaceGetImpl(self);
+  return selfI->variationTagSet.flattenTo(out->dcast<BLArray<BLTag>>());
 }
 
 // BLFontFace - Runtime Registration

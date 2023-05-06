@@ -153,17 +153,6 @@
   #define BL_NOINLINE
 #endif
 
-//! \def BL_INLINE_NODEBUG
-//!
-//! The same as `BL_INLINE` combined with `__attribute__((artificial))`.
-#if defined(__clang__)
-  #define BL_INLINE_NODEBUG inline __attribute__((__always_inline__, __nodebug__))
-#elif defined(__GNUC__)
-  #define BL_INLINE_NODEBUG inline __attribute__((__always_inline__, __artificial__))
-#else
-  #define BL_INLINE_NODEBUG BL_INLINE
-#endif
-
 //! \def BL_STDCALL
 //!
 //! Calling convention used by Windows.

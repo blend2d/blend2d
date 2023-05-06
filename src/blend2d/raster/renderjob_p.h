@@ -178,7 +178,7 @@ struct RenderJob_TextOp : public RenderJob_BaseOp {
     _glyphRun.glyphData = glyphData;
     _glyphRun.placementData = placementData;
     _glyphRun.size = size;
-    _glyphRun.glyphSize = uint8_t(4);
+    _glyphRun.reserved = uint8_t(0);
     _glyphRun.placementType = uint8_t(placementType);
     _glyphRun.glyphAdvance = uint8_t(4);
     _glyphRun.placementAdvance = uint8_t(16);

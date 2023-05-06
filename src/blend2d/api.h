@@ -325,6 +325,22 @@
   #define BL_INLINE inline
 #endif
 
+//! \def BL_INLINE_NODEBUG
+//!
+//! The same as `BL_INLINE` possibly combined with `__attribute__((artificial))` or `__attribute__((nodebug))` if
+//! the compiler supports any of them.
+//!
+//! The purpose of this macro is to tell the compiler that the function should not need debugging, thus the debug
+//! information can be omitted completely. Blend2D uses tris decorator to decorate C++ inline functions that either
+//! call C API or that are trivial to improve debugging experience of some tiny abstractions.
+#if defined(__clang__)
+  #define BL_INLINE_NODEBUG inline __attribute__((__always_inline__, __nodebug__))
+#elif defined(__GNUC__)
+  #define BL_INLINE_NODEBUG inline __attribute__((__always_inline__, __artificial__))
+#else
+  #define BL_INLINE_NODEBUG BL_INLINE
+#endif
+
 //! \def BL_NORETURN
 //!
 //! Function attribute used by functions that never return (that terminate the process). This attribute is used only
@@ -452,8 +468,7 @@
 //! \{
 
 //! Creates a 32-bit tag (uint32_t) from the given `A`, `B`, `C`, and `D` values.
-#define BL_MAKE_TAG(A, B, C, D) \
-  ((BLTag)(((BLTag)(A) << 24) | ((BLTag)(B) << 16) | ((BLTag)(C) << 8) | ((BLTag)(D))))
+#define BL_MAKE_TAG(A, B, C, D) ((BLTag)(((BLTag)(A) << 24) | ((BLTag)(B) << 16) | ((BLTag)(C) << 8) | ((BLTag)(D))))
 
 //! \}
 
@@ -540,9 +555,7 @@
 // maintain for each compiler. Ideally we should have a clean code that would compiler without any warnings with all
 // of them enabled by default, but since there is a lot of nitpicks we just disable some locally when needed (like
 // unused parameter in null-impl functions, etc).
-#if defined(__INTEL_COMPILER)
-  // Not regularly tested.
-#elif defined(__clang__)
+#if defined(__clang__)
   #define BL_DIAGNOSTIC_PUSH(...)              _Pragma("clang diagnostic push") __VA_ARGS__
   #define BL_DIAGNOSTIC_POP                    _Pragma("clang diagnostic pop")
   #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF    _Pragma("clang diagnostic ignored \"-Winvalid-offsetof\"")
@@ -584,6 +597,8 @@
 
 //! \}
 //! \endcond
+
+//! \}
 
 // Forward Declarations
 // ====================
@@ -649,6 +664,9 @@ BL_FORWARD_DECLARE_UNION(BLObjectDetail);
 
 BL_FORWARD_DECLARE_STRUCT(BLArrayCore);
 BL_FORWARD_DECLARE_STRUCT(BLArrayImpl);
+
+BL_FORWARD_DECLARE_STRUCT(BLBitArrayCore);
+BL_FORWARD_DECLARE_STRUCT(BLBitArrayImpl);
 
 BL_FORWARD_DECLARE_STRUCT(BLBitSetCore);
 BL_FORWARD_DECLARE_STRUCT(BLBitSetData);
@@ -756,6 +774,7 @@ BL_FORWARD_DECLARE_STRUCT(BLVarCore);
 #ifdef __cplusplus
 class BLFile;
 template<typename T> class BLArray;
+class BLBitArray;
 class BLBitSet;
 template<uint32_t> class BLBitSetBuilderT;
 class BLString;
@@ -830,6 +849,11 @@ typedef uint64_t BLUniqueId;
 //! BLUnknown is `void` - it's used in places that accept pointer to `BLVarCore` or any `BLObjectCore` compatible
 //! object.
 typedef void BLUnknown;
+
+//! \ingroup blend2d_api_globals
+//!
+//! A sink that can be used to debug various parts of Blend2D.
+typedef void (BL_CDECL* BLDebugMessageSinkFunc)(const char* message, size_t size, void* userData) BL_NOEXCEPT;
 
 // Public Constants
 // ================
@@ -929,12 +953,13 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_JPEG_UNSUPPORTED_SOF,         //!< Unsupported SOF marker (JPEG).
 
   BL_ERROR_FONT_NOT_INITIALIZED,         //!< Font doesn't have any data as it's not initialized.
-  BL_ERROR_FONT_NO_MATCH,                //!< Font or font-face was not matched (BLFontManager).
+  BL_ERROR_FONT_NO_MATCH,                //!< Font or font face was not matched (BLFontManager).
   BL_ERROR_FONT_NO_CHARACTER_MAPPING,    //!< Font has no character to glyph mapping data.
   BL_ERROR_FONT_MISSING_IMPORTANT_TABLE, //!< Font has missing an important table.
   BL_ERROR_FONT_FEATURE_NOT_AVAILABLE,   //!< Font feature is not available.
   BL_ERROR_FONT_CFF_INVALID_DATA,        //!< Font has an invalid CFF data.
   BL_ERROR_FONT_PROGRAM_TERMINATED,      //!< Font program terminated because the execution reached the limit.
+  BL_ERROR_GLYPH_SUBSTITUTION_TOO_LARGE, //!< Glyph substitution requires too much space and was terminated.
 
   BL_ERROR_INVALID_GLYPH                 //!< Invalid glyph identifier.
 
@@ -1227,6 +1252,7 @@ struct TypeTraits<BLArray<T>> {
     };                                 \
   };
 
+BL_DEFINE_OBJECT_TRAITS(BLBitArray)
 BL_DEFINE_OBJECT_TRAITS(BLBitSet)
 BL_DEFINE_OBJECT_TRAITS(BLContext)
 BL_DEFINE_OBJECT_TRAITS(BLFont)
@@ -1253,7 +1279,7 @@ struct PlacementNew { void* ptr; };
 } // {BLInternal}
 
 //! Implementation of a placement new so we don't have to depend on `<new>`.
-BL_INLINE void* operator new(std::size_t, const BLInternal::PlacementNew& p) {
+BL_INLINE_NODEBUG void* operator new(std::size_t, const BLInternal::PlacementNew& p) {
 #if defined(_MSC_VER) && !defined(__clang__)
   BL_ASSUME(p.ptr != nullptr); // Otherwise MSVC would emit a nullptr check.
 #endif
@@ -1342,7 +1368,7 @@ static BL_INLINE void blCallDtor(T& instance) noexcept {
 //! compilation would fail. Bit casting is used by `blEquals` to implement bit equality for floating point types.
 template<typename Out, typename In>
 BL_NODISCARD
-static BL_INLINE Out blBitCast(const In& x) noexcept {
+static BL_INLINE_NODEBUG Out blBitCast(const In& x) noexcept {
   static_assert(sizeof(Out) == sizeof(In),
                 "The size of 'In' and 'Out' types must match");
   union { In in; Out out; } u = { x };
@@ -1352,50 +1378,50 @@ static BL_INLINE Out blBitCast(const In& x) noexcept {
 //! Returns an absolute value of `a`.
 template<typename T>
 BL_NODISCARD
-BL_INLINE constexpr T blAbs(const T& a) noexcept { return T(a < 0 ? -a : a); }
+BL_INLINE_NODEBUG constexpr T blAbs(const T& a) noexcept { return T(a < 0 ? -a : a); }
 
 //! Returns a minimum value of `a` and `b`.
 template<typename T>
 BL_NODISCARD
-BL_INLINE constexpr T blMin(const T& a, const T& b) noexcept { return T(b < a ? b : a); }
+BL_INLINE_NODEBUG constexpr T blMin(const T& a, const T& b) noexcept { return T(b < a ? b : a); }
 
 //! Returns a maximum value of `a` and `b`.
 template<typename T>
 BL_NODISCARD
-BL_INLINE constexpr T blMax(const T& a, const T& b) noexcept { return T(a < b ? b : a); }
+BL_INLINE_NODEBUG constexpr T blMax(const T& a, const T& b) noexcept { return T(a < b ? b : a); }
 
 //! Clamps `a` to a range defined as `[b, c]`.
 template<typename T>
 BL_NODISCARD
-BL_INLINE constexpr T blClamp(const T& a, const T& b, const T& c) noexcept { return blMin(c, blMax(b, a)); }
+BL_INLINE_NODEBUG constexpr T blClamp(const T& a, const T& b, const T& c) noexcept { return blMin(c, blMax(b, a)); }
 
 //! Returns a minimum value of all arguments passed.
 template<typename T, typename... Args>
 BL_NODISCARD
-BL_INLINE constexpr T blMin(const T& a, const T& b, Args&&... args) noexcept { return blMin(blMin(a, b), std::forward<Args>(args)...); }
+BL_INLINE_NODEBUG constexpr T blMin(const T& a, const T& b, Args&&... args) noexcept { return blMin(blMin(a, b), std::forward<Args>(args)...); }
 
 //! Returns a maximum value of all arguments passed.
 template<typename T, typename... Args>
 BL_NODISCARD
-BL_INLINE constexpr T blMax(const T& a, const T& b, Args&&... args) noexcept { return blMax(blMax(a, b), std::forward<Args>(args)...); }
+BL_INLINE_NODEBUG constexpr T blMax(const T& a, const T& b, Args&&... args) noexcept { return blMax(blMax(a, b), std::forward<Args>(args)...); }
 
 //! Returns `true` if `a` and `b` equals at binary level.
 //!
 //! For example `blEquals(NaN, NaN) == true`.
 template<typename T>
 BL_NODISCARD
-BL_INLINE bool blEquals(const T& a, const T& b) noexcept { return a == b; }
+BL_INLINE_NODEBUG bool blEquals(const T& a, const T& b) noexcept { return a == b; }
 
-//! \cond
+//! \cond NEVER
 template<>
 BL_NODISCARD
-BL_INLINE bool blEquals(const float& a, const float& b) noexcept {
+BL_INLINE_NODEBUG bool blEquals(const float& a, const float& b) noexcept {
   return blBitCast<uint32_t>(a) == blBitCast<uint32_t>(b);
 }
 
 template<>
 BL_NODISCARD
-BL_INLINE bool blEquals(const double& a, const double& b) noexcept {
+BL_INLINE_NODEBUG bool blEquals(const double& a, const double& b) noexcept {
   return blBitCast<uint64_t>(a) == blBitCast<uint64_t>(b);
 }
 //! \endcond
@@ -1419,7 +1445,7 @@ struct BLRange {
   //! \{
 
   BL_NODISCARD
-  static BL_INLINE constexpr BLRange everything() noexcept { return BLRange{0, SIZE_MAX}; }
+  static BL_INLINE_NODEBUG constexpr BLRange everything() noexcept { return BLRange{0, SIZE_MAX}; }
 
   //! \}
 
@@ -1427,10 +1453,10 @@ struct BLRange {
   //! \{
 
   BL_NODISCARD
-  BL_INLINE bool operator==(const BLRange& other) const noexcept { return equals(other); }
+  BL_INLINE_NODEBUG bool operator==(const BLRange& other) const noexcept { return equals(other); }
 
   BL_NODISCARD
-  BL_INLINE bool operator!=(const BLRange& other) const noexcept { return !equals(other); }
+  BL_INLINE_NODEBUG bool operator!=(const BLRange& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -1438,13 +1464,10 @@ struct BLRange {
   //! \{
 
   //! Reset the range to [0, 0).
-  BL_INLINE void reset() noexcept { reset(0, 0); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLRange{}; }
 
   //! Reset the range to [start, end).
-  BL_INLINE void reset(size_t rStart, size_t rEnd) noexcept {
-    start = rStart;
-    end = rEnd;
-  }
+  BL_INLINE_NODEBUG void reset(size_t rStart, size_t rEnd) noexcept { *this = BLRange{rStart, rEnd}; }
 
   //! \}
 
@@ -1452,7 +1475,7 @@ struct BLRange {
   //! \{
 
   BL_NODISCARD
-  BL_INLINE bool equals(const BLRange& other) const noexcept {
+  BL_INLINE_NODEBUG bool equals(const BLRange& other) const noexcept {
     return bool(unsigned(blEquals(start, other.start)) &
                 unsigned(blEquals(end, other.end)));
   }
@@ -1472,12 +1495,9 @@ struct BLArrayView {
   const T* data;
   size_t size;
 
-  BL_INLINE void reset() noexcept {
-    data = nullptr;
-    size = 0;
-  }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLArrayView{}; }
 
-  BL_INLINE void reset(const T* dataIn, size_t sizeIn) noexcept {
+  BL_INLINE_NODEBUG void reset(const T* dataIn, size_t sizeIn) noexcept {
     data = dataIn;
     size = sizeIn;
   }
@@ -1487,11 +1507,11 @@ struct BLArrayView {
     return data[index];
   }
 
-  BL_INLINE const T* begin() const noexcept { return data; }
-  BL_INLINE const T* end() const noexcept { return data + size; }
+  BL_INLINE_NODEBUG const T* begin() const noexcept { return data; }
+  BL_INLINE_NODEBUG const T* end() const noexcept { return data + size; }
 
-  BL_INLINE const T* cbegin() const noexcept { return data; }
-  BL_INLINE const T* cend() const noexcept { return data + size; }
+  BL_INLINE_NODEBUG const T* cbegin() const noexcept { return data; }
+  BL_INLINE_NODEBUG const T* cend() const noexcept { return data + size; }
 };
 
 // In C++ mode these are just typedefs of `BLArrayView<Type>`.
@@ -1518,8 +1538,6 @@ typedef BLArrayView BLDataView;
 #undef BL_DEFINE_ARRAY_VIEW
 
 #endif
-
-//! \}
 
 //! \}
 

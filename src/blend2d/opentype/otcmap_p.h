@@ -29,7 +29,7 @@ namespace BLOpenType {
 //!   - `count` - Count of something, specifies a range of [first, first + count).
 struct CMapTable {
   // Header and one encoding record (just to read the header).
-  enum : uint32_t { kMinSize = 4 + 8 };
+  enum : uint32_t { kBaseSize = 4 + 8 };
 
   struct Encoding {
     UInt16 platformId;
@@ -44,7 +44,7 @@ struct CMapTable {
   };
 
   struct Format0 {
-    enum : uint32_t { kMinSize = 262 };
+    enum : uint32_t { kBaseSize = 262 };
 
     UInt16 format;
     UInt16 length;
@@ -53,7 +53,7 @@ struct CMapTable {
   };
 
   struct Format2 {
-    enum : uint32_t { kMinSize = 518 };
+    enum : uint32_t { kBaseSize = 518 };
 
     struct SubHeader {
       UInt16 firstCode;
@@ -76,7 +76,7 @@ struct CMapTable {
   };
 
   struct Format4 {
-    enum : uint32_t { kMinSize = 24 };
+    enum : uint32_t { kBaseSize = 24 };
 
     UInt16 format;
     UInt16 length;
@@ -102,7 +102,7 @@ struct CMapTable {
   };
 
   struct Format6 {
-    enum : uint32_t { kMinSize = 12 };
+    enum : uint32_t { kBaseSize = 12 };
 
     UInt16 format;
     UInt16 length;
@@ -118,7 +118,7 @@ struct CMapTable {
 
   //! This format is dead and it's not supported by Blend2D [only defined for reference].
   struct Format8 {
-    enum : uint32_t { kMinSize = 16 + 8192 };
+    enum : uint32_t { kBaseSize = 16 + 8192 };
 
     UInt16 format;
     UInt16 reserved;
@@ -129,7 +129,7 @@ struct CMapTable {
   };
 
   struct Format10 {
-    enum : uint32_t { kMinSize = 20 };
+    enum : uint32_t { kBaseSize = 20 };
 
     UInt16 format;
     UInt16 reserved;
@@ -140,7 +140,7 @@ struct CMapTable {
   };
 
   struct Format12_13 {
-    enum : uint32_t { kMinSize = 16 };
+    enum : uint32_t { kBaseSize = 16 };
 
     UInt16 format;
     UInt16 reserved;
@@ -150,7 +150,7 @@ struct CMapTable {
   };
 
   struct Format14 {
-    enum : uint32_t { kMinSize = 10 };
+    enum : uint32_t { kBaseSize = 10 };
 
     struct VarSelector {
       UInt24 varSelector;
@@ -197,7 +197,7 @@ struct CMapEncoding {
 //! Character to glyph mapping data for making it easier to use `CMapTable`.
 struct CMapData {
   //! CMap table.
-  BLFontTable cmapTable;
+  RawTable cmapTable;
   //! CMap encoding [selected].
   CMapEncoding encoding;
 
@@ -208,15 +208,15 @@ namespace CMapImpl {
 
 //! Validates a CMapTable::Encoding subtable of any format at `subTableOffset`. On success a valid `CMapEncoding`
 //! is written to `encodingOut`, otherwise an error is returned and `encodingOut` is kept unchanged.
-BL_HIDDEN BLResult validateSubTable(BLFontTable cmapTable, uint32_t subTableOffset, uint32_t& formatOut, CMapEncoding& encodingOut) noexcept;
+BL_HIDDEN BLResult validateSubTable(RawTable cmapTable, uint32_t subTableOffset, uint32_t& formatOut, CMapEncoding& encodingOut) noexcept;
 
-//! Populates character coverage of the given font-face into `out` bit-set.
+//! Populates character coverage of the given font face into `out` bit-set.
 BL_HIDDEN BLResult populateCharacterCoverage(const OTFaceImpl* faceI, BLBitSet* out) noexcept;
 
-//! Tries to find the best encoding in the provided 'cmap' and store this information into the given `faceI`
-//! instance. The function will return `BL_SUCCESS` even if there is no encoding to be used, however, in such
-//! case the character to glyph mapping feature will not be available to the users of this font-face.
-BL_HIDDEN BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept;
+//! Tries to find the best encoding in the provided 'cmap' and store this information into the given `faceI` instance.
+//! The function will return `BL_SUCCESS` even if there is no encoding to be used, however, in such case the character
+//! to glyph mapping feature will not be available to the users of this font face.
+BL_HIDDEN BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 
 } // {CMapImpl}
 

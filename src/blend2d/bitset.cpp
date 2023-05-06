@@ -1348,7 +1348,7 @@ BL_API_IMPL BLResult blBitSetAssignWeak(BLBitSetCore* self, const BLBitSetCore* 
   BL_ASSERT(self->_d.isBitSet());
   BL_ASSERT(other->_d.isBitSet());
 
-  blObjectPrivateAddRefTagged(other);
+  blObjectPrivateAddRefIfRCObject(other);
   return replaceInstance(self, other);
 }
 
@@ -3748,7 +3748,7 @@ static void testBits(const BLBitSet& bitSet, uint32_t wordIndex, const uint32_t*
   }
 }
 
-UNIT(bitset) {
+UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
   uint32_t kNumBits = 1000000u;
   uint32_t kSSOLastWord = BLBitSetPrivate::kSSOLastWord;
 

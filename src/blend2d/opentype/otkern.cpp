@@ -15,8 +15,8 @@
 namespace BLOpenType {
 namespace KernImpl {
 
-// OpenType::KernImpl - Tracing
-// ============================
+// BLOpenType::KernImpl - Tracing
+// ==============================
 
 #if defined(BL_TRACE_OT_ALL) || defined(BL_TRACE_OT_KERN)
   #define Trace BLDebugTrace
@@ -24,8 +24,8 @@ namespace KernImpl {
   #define Trace BLDummyTrace
 #endif
 
-// OpenType::KernImpl - Lookup Tables
-// ==================================
+// BLOpenType::KernImpl - Lookup Tables
+// ====================================
 
 static const uint8_t minKernSubTableSize[4] = {
   uint8_t(sizeof(KernTable::Format0)),
@@ -34,8 +34,8 @@ static const uint8_t minKernSubTableSize[4] = {
   uint8_t(sizeof(KernTable::Format3))
 };
 
-// OpenType::KernImpl - Match
-// ==========================
+// BLOpenType::KernImpl - Match
+// ============================
 
 struct KernMatch {
   uint32_t combined;
@@ -44,8 +44,8 @@ struct KernMatch {
 static BL_INLINE bool operator==(const KernTable::Pair& a, const KernMatch& b) noexcept { return a.combined() == b.combined; }
 static BL_INLINE bool operator<=(const KernTable::Pair& a, const KernMatch& b) noexcept { return a.combined() <= b.combined; }
 
-// OpenType::KernImpl - Utilities
-// ==============================
+// BLOpenType::KernImpl - Utilities
+// ================================
 
 // Used to define a range of unsorted kerning pairs.
 struct UnsortedRange {
@@ -171,8 +171,8 @@ static BL_INLINE size_t findKernPair(const KernTable::Pair* pairs, size_t count,
   return BLAlgorithm::binarySearch(pairs, count, KernMatch(pair));
 }
 
-// OpenType::KernImpl - Apply
-// ==========================
+// BLOpenType::KernImpl - Apply
+// ============================
 
 static constexpr int32_t kKernMaskOverride = 0x0;
 static constexpr int32_t kKernMaskMinimum = 0x1;
@@ -377,23 +377,23 @@ static BLResult BL_CDECL applyKern(const BLFontFaceImpl* faceI_, uint32_t* glyph
   return BL_SUCCESS;
 }
 
-// OpenType::KernImpl - Init
-// =========================
+// BLOpenType::KernImpl - Init
+// ===========================
 
-BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
+BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   typedef KernTable::WinGroupHeader WinGroupHeader;
   typedef KernTable::MacGroupHeader MacGroupHeader;
 
-  BLFontTableT<KernTable> kern;
-  if (!fontData->queryTable(faceI->faceInfo.faceIndex, &kern, BL_MAKE_TAG('k', 'e', 'r', 'n')))
+  Table<KernTable> kern = tables.kern;
+  if (!kern)
     return BL_SUCCESS;
 
   Trace trace;
-  trace.info("BLOpenType::Init 'kern' [Size=%zu]\n", kern.size);
+  trace.info("BLOpenType::OTFaceImpl::Init 'kern' [Size=%zu]\n", kern.size);
   trace.indent();
 
-  if (BL_UNLIKELY(!blFontTableFitsT<KernTable>(kern))) {
-    trace.warn("Table is too small\n");
+  if (BL_UNLIKELY(!kern.fits())) {
+    trace.warn("Table is truncated\n");
     faceI->faceInfo.diagFlags |= BL_FONT_FACE_DIAG_WRONG_KERN_DATA;
     return BL_SUCCESS;
   }
@@ -701,7 +701,7 @@ BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
     faceI->kern.table = kern;
     faceI->kern.collection[BL_ORIENTATION_HORIZONTAL].groups.shrink();
     faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_HORIZONTAL_KERNING;
-    faceI->featureTags.dcast<BLArray<BLTag>>().append(BL_MAKE_TAG('k', 'e', 'r', 'n'));
+    faceI->featureTagSet._addKnownTagId(uint32_t(BLFontTagData::FeatureId::kKERN));
     faceI->funcs.applyKern = applyKern;
   }
 

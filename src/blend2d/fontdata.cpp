@@ -7,7 +7,7 @@
 #include "array_p.h"
 #include "filesystem.h"
 #include "fontdata_p.h"
-#include "fonttags_p.h"
+#include "fonttagdata_p.h"
 #include "object_p.h"
 #include "runtime_p.h"
 #include "opentype/otcore_p.h"
@@ -27,12 +27,12 @@ static BLResult BL_CDECL blNullFontDataImplDestroy(BLObjectImpl* impl, uint32_t 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blNullFontDataImplListTags(const BLFontDataImpl* impl, uint32_t faceIndex, BLArrayCore* out) noexcept {
+static BLResult BL_CDECL blNullFontDataImplGetTableTags(const BLFontDataImpl* impl, uint32_t faceIndex, BLArrayCore* out) noexcept {
   blUnused(impl, faceIndex);
   return blArrayClear(out);
 }
 
-static size_t BL_CDECL blNullFontDataImplQueryTables(const BLFontDataImpl* impl, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t n) noexcept {
+static size_t BL_CDECL blNullFontDataImplGetTables(const BLFontDataImpl* impl, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t n) noexcept {
   blUnused(impl, faceIndex, tags);
   for (size_t i = 0; i < n; i++)
     dst[i].reset();
@@ -49,7 +49,7 @@ struct BLMemFontDataImpl : public BLFontDataPrivateImpl {
   void* data;
   //! Size of `data` [in bytes].
   uint32_t dataSize;
-  //! Offset to an array that contains offsets for each font-face.
+  //! Offset to an array that contains offsets for each font face.
   uint32_t offsetArrayIndex;
 
   //! If the `data` is not external it's held by this array.
@@ -72,7 +72,7 @@ static BLResult BL_CDECL blMemFontDataImplDestroy(BLObjectImpl* impl, uint32_t i
   return blMemFontDataImplRealDestroy(static_cast<BLMemFontDataImpl*>(impl), info);
 }
 
-static BLResult BL_CDECL blMemFontDataImplListTags(const BLFontDataImpl* impl_, uint32_t faceIndex, BLArrayCore* out) noexcept {
+static BLResult BL_CDECL blMemFontDataImplGetTableTags(const BLFontDataImpl* impl_, uint32_t faceIndex, BLArrayCore* out) noexcept {
   using namespace BLOpenType;
 
   const BLMemFontDataImpl* impl = static_cast<const BLMemFontDataImpl*>(impl_);
@@ -90,7 +90,7 @@ static BLResult BL_CDECL blMemFontDataImplListTags(const BLFontDataImpl* impl_, 
 
   if (BL_LIKELY(headerOffset <= dataSize - sizeof(SFNTHeader))) {
     const SFNTHeader* sfnt = BLPtrOps::offset<SFNTHeader>(fontData, headerOffset);
-    if (BLFontTagsPrivate::isOpenTypeVersionTag(sfnt->versionTag())) {
+    if (BLFontTagData::isOpenTypeVersionTag(sfnt->versionTag())) {
       // We can safely multiply `tableCount` as SFNTHeader::numTables is `UInt16`.
       uint32_t tableCount = sfnt->numTables();
       uint32_t minDataSize = uint32_t(sizeof(SFNTHeader)) + tableCount * uint32_t(sizeof(SFNTHeader::TableRecord));
@@ -111,12 +111,14 @@ static BLResult BL_CDECL blMemFontDataImplListTags(const BLFontDataImpl* impl_, 
   return blTraceError(BL_ERROR_INVALID_DATA);
 }
 
-static size_t BL_CDECL blMemFontDataImplQueryTables(const BLFontDataImpl* impl_, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t n) noexcept {
+static size_t BL_CDECL blMemFontDataImplGetTables(const BLFontDataImpl* impl_, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t n) noexcept {
   using namespace BLOpenType;
 
   const BLMemFontDataImpl* impl = static_cast<const BLMemFontDataImpl*>(impl_);
   const void* fontData = impl->data;
   size_t dataSize = impl->dataSize;
+
+  memset(dst, 0, n * sizeof(BLFontTable));
 
   if (BL_LIKELY(faceIndex < impl->faceCount)) {
     uint32_t headerOffset = 0;
@@ -125,20 +127,69 @@ static size_t BL_CDECL blMemFontDataImplQueryTables(const BLFontDataImpl* impl_,
 
     if (BL_LIKELY(headerOffset <= dataSize - sizeof(SFNTHeader))) {
       const SFNTHeader* sfnt = BLPtrOps::offset<SFNTHeader>(fontData, headerOffset);
-      if (BLFontTagsPrivate::isOpenTypeVersionTag(sfnt->versionTag())) {
+      if (BLFontTagData::isOpenTypeVersionTag(sfnt->versionTag())) {
         uint32_t tableCount = sfnt->numTables();
 
         // We can safely multiply `tableCount` as SFNTHeader::numTables is `UInt16`.
         uint32_t minDataSize = uint32_t(sizeof(SFNTHeader)) + tableCount * uint32_t(sizeof(SFNTHeader::TableRecord));
         if (BL_LIKELY(dataSize - headerOffset >= minDataSize)) {
+          // Iterate over all tables and try to find all tables as specified by `tags`.
           const SFNTHeader::TableRecord* tables = sfnt->tableRecords();
           size_t matchCount = 0;
 
-          // Iterate over all tables and try to find all tables as specified by `tags`.
+          // If all tags are known (convertible to tableId) we can just build a small index and then try
+          // to match all tags by doing a linear scan. If there is one or more unknown tags, we would go
+          // with linear scan.
+          //
+          // In general, we do this, because Blend2D's OpenType engine requests all tables in one go, and
+          // then inspects them on load - this means that this table lookup is in general optimized and
+          // only does a single iteration of 'sfnt' tables.
+          if (n >= 3u && n < 255u) {
+            constexpr uint32_t kTableIdCountAligned = BLIntOps::alignUp(BLFontTagData::kTableIdCount, 16);
+
+            uint8_t tableIdToIndex[kTableIdCountAligned];
+            memset(tableIdToIndex, 0xFF, kTableIdCountAligned);
+
+            size_t i = 0;
+            while (i < n) {
+              uint32_t tableId = BLFontTagData::tableTagToId(tags[i]);
+              if (tableId == BLFontTagData::kInvalidId)
+                break;
+              tableIdToIndex[tableId] = uint8_t(i);
+              i++;
+            }
+
+            if (i == n) {
+              // All requested tags known, table id to dst index lookup built successfully.
+              for (uint32_t tableIndex = 0; tableIndex < tableCount; tableIndex++) {
+                const SFNTHeader::TableRecord& table = tables[tableIndex];
+
+                BLTag tableTag = table.tag();
+                uint32_t tableId = BLFontTagData::tableTagToId(tableTag);
+
+                // Since we know that all requested tags have their unique IDs, we can refuse any tag that doesn't.
+                if (tableId == BLFontTagData::kInvalidId)
+                  continue;
+
+                i = tableIdToIndex[tableId];
+                if (i != 0xFF) {
+                  uint32_t tableOffset = table.offset();
+                  uint32_t tableSize = table.length();
+
+                  if (tableOffset < dataSize && tableSize && tableSize <= dataSize - tableOffset) {
+                    dst[i].reset(BLPtrOps::offset<uint8_t>(fontData, tableOffset), tableSize);
+                    matchCount++;
+                  }
+                }
+              }
+            }
+
+            return matchCount;
+          }
+
+          // Linear search.
           for (size_t tagIndex = 0; tagIndex < n; tagIndex++) {
             uint32_t tag = BLIntOps::byteSwap32BE(tags[tagIndex]);
-            dst[tagIndex].reset();
-
             for (uint32_t tableIndex = 0; tableIndex < tableCount; tableIndex++) {
               const SFNTHeader::TableRecord& table = tables[tableIndex];
 
@@ -147,8 +198,8 @@ static size_t BL_CDECL blMemFontDataImplQueryTables(const BLFontDataImpl* impl_,
                 uint32_t tableSize = table.length();
 
                 if (tableOffset < dataSize && tableSize && tableSize <= dataSize - tableOffset) {
-                  matchCount++;
                   dst[tagIndex].reset(BLPtrOps::offset<uint8_t>(fontData, tableOffset), tableSize);
+                  matchCount++;
                 }
 
                 break;
@@ -162,7 +213,6 @@ static size_t BL_CDECL blMemFontDataImplQueryTables(const BLFontDataImpl* impl_,
     }
   }
 
-  memset(dst, 0, n * sizeof(BLFontTable));
   return 0;
 }
 
@@ -253,8 +303,8 @@ BLResult blFontDataCreateFromFile(BLFontDataCore* self, const char* fileName, BL
 static BLResult blFontDataCreateFromDataInternal(BLFontDataCore* self, const void* data, size_t dataSize, BLDestroyExternalDataFunc destroyFunc, void* userData, const BLArray<uint8_t>* array) noexcept {
   using namespace BLOpenType;
 
-  constexpr uint32_t kMinSize = blMin<uint32_t>(SFNTHeader::kMinSize, TTCFHeader::kMinSize);
-  if (BL_UNLIKELY(dataSize < kMinSize))
+  constexpr uint32_t kBaseSize = blMin<uint32_t>(SFNTHeader::kBaseSize, TTCFHeader::kBaseSize);
+  if (BL_UNLIKELY(dataSize < kBaseSize))
     return blTraceError(BL_ERROR_INVALID_DATA);
 
   if (BL_UNLIKELY(sizeof(size_t) > 4 && dataSize > 0xFFFFFFFFu))
@@ -267,8 +317,8 @@ static BLResult blFontDataCreateFromDataInternal(BLFontDataCore* self, const voi
   uint32_t offsetArrayIndex = 0;
   const UInt32* offsetArray = nullptr;
 
-  if (BLFontTagsPrivate::isOpenTypeCollectionTag(headerTag)) {
-    if (BL_UNLIKELY(dataSize < TTCFHeader::kMinSize))
+  if (BLFontTagData::isOpenTypeCollectionTag(headerTag)) {
+    if (BL_UNLIKELY(dataSize < TTCFHeader::kBaseSize))
       return blTraceError(BL_ERROR_INVALID_DATA);
 
     const TTCFHeader* header = BLPtrOps::offset<const TTCFHeader>(data, 0);
@@ -287,7 +337,7 @@ static BLResult blFontDataCreateFromDataInternal(BLFontDataCore* self, const voi
     dataFlags |= BL_FONT_DATA_FLAG_COLLECTION;
   }
   else {
-    if (!BLFontTagsPrivate::isOpenTypeVersionTag(headerTag))
+    if (!BLFontTagData::isOpenTypeVersionTag(headerTag))
       return blTraceError(BL_ERROR_INVALID_SIGNATURE);
   }
 
@@ -353,21 +403,42 @@ BLResult blFontDataCreateFromData(BLFontDataCore* self, const void* data, size_t
   return blFontDataCreateFromDataInternal(self, data, dataSize, destroyFunc, userData, nullptr);
 };
 
-// BLFontData - API - Query
-// ========================
+// BLFontData - API - Accessors
+// ============================
 
-BLResult blFontDataListTags(const BLFontDataCore* self, uint32_t faceIndex, BLArrayCore* dst) noexcept {
+uint32_t blFontDataGetFaceCount(const BLFontDataCore* self) noexcept {
   BL_ASSERT(self->_d.isFontData());
 
-  BLFontDataPrivateImpl* selfI = blFontDataGetImpl(self);
-  return selfI->virt->listTags(selfI, faceIndex, dst);
+  const BLFontDataPrivateImpl* selfI = blFontDataGetImpl(self);
+  return selfI->faceCount;
 }
 
-size_t blFontDataQueryTables(const BLFontDataCore* self, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t count) noexcept {
+BLFontFaceType blFontDataGetFaceType(const BLFontDataCore* self) noexcept {
   BL_ASSERT(self->_d.isFontData());
 
-  BLFontDataPrivateImpl* selfI = blFontDataGetImpl(self);
-  return selfI->virt->queryTables(selfI, faceIndex, dst, tags, count);
+  const BLFontDataPrivateImpl* selfI = blFontDataGetImpl(self);
+  return BLFontFaceType(selfI->faceType);
+}
+
+BLFontDataFlags blFontDataGetFlags(const BLFontDataCore* self) noexcept {
+  BL_ASSERT(self->_d.isFontData());
+
+  const BLFontDataPrivateImpl* selfI = blFontDataGetImpl(self);
+  return BLFontDataFlags(selfI->flags);
+}
+
+BLResult blFontDataGetTableTags(const BLFontDataCore* self, uint32_t faceIndex, BLArrayCore* dst) noexcept {
+  BL_ASSERT(self->_d.isFontData());
+
+  const BLFontDataPrivateImpl* selfI = blFontDataGetImpl(self);
+  return selfI->virt->getTableTags(selfI, faceIndex, dst);
+}
+
+size_t blFontDataGetTables(const BLFontDataCore* self, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t count) noexcept {
+  BL_ASSERT(self->_d.isFontData());
+
+  const BLFontDataPrivateImpl* selfI = blFontDataGetImpl(self);
+  return selfI->virt->getTables(selfI, faceIndex, dst, tags, count);
 }
 
 // BLFontData - Runtime Registration
@@ -379,15 +450,15 @@ void blFontDataRtInit(BLRuntimeContext* rt) noexcept {
   blFontDataDefaultImpl.virt.base.destroy = blNullFontDataImplDestroy;
   blFontDataDefaultImpl.virt.base.getProperty = blObjectImplGetProperty;
   blFontDataDefaultImpl.virt.base.setProperty = blObjectImplSetProperty;
-  blFontDataDefaultImpl.virt.listTags = blNullFontDataImplListTags;
-  blFontDataDefaultImpl.virt.queryTables = blNullFontDataImplQueryTables;
+  blFontDataDefaultImpl.virt.getTableTags = blNullFontDataImplGetTableTags;
+  blFontDataDefaultImpl.virt.getTables = blNullFontDataImplGetTables;
   blFontDataImplCtor(&blFontDataDefaultImpl.impl, &blFontDataDefaultImpl.virt);
 
   blMemFontDataVirt.base.destroy = blMemFontDataImplDestroy;
   blMemFontDataVirt.base.getProperty = blObjectImplGetProperty;
   blMemFontDataVirt.base.setProperty = blObjectImplSetProperty;
-  blMemFontDataVirt.listTags = blMemFontDataImplListTags;
-  blMemFontDataVirt.queryTables = blMemFontDataImplQueryTables;
+  blMemFontDataVirt.getTableTags = blMemFontDataImplGetTableTags;
+  blMemFontDataVirt.getTables = blMemFontDataImplGetTables;
 
   blObjectDefaults[BL_OBJECT_TYPE_FONT_DATA]._d.initDynamic(
     BL_OBJECT_TYPE_FONT_DATA,

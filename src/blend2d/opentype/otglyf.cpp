@@ -19,8 +19,8 @@
 namespace BLOpenType {
 namespace GlyfImpl {
 
-// OpenType::GlyfImpl - FlagToSizeTable
-// =====================================
+// BLOpenType::GlyfImpl - FlagToSizeTable
+// =======================================
 
 // This table provides information about the number of bytes vertex data consumes per each flag. It's used to
 // calculate the size of X and Y arrays of all contours a simple glyph is composed of to speed up decoding.
@@ -35,8 +35,8 @@ static constexpr const auto vertexSizeTable_ = blMakeLookupTable<uint32_t, ((Gly
 
 const BLLookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1)> vertexSizeTable = vertexSizeTable_;
 
-// OpenType::GlyfImpl - GetGlyphBounds
-// ===================================
+// BLOpenType::GlyfImpl - GetGlyphBounds
+// =====================================
 
 static const uint8_t blBlankGlyphData[sizeof(GlyfTable::GlyphData)] = { 0 };
 
@@ -50,14 +50,14 @@ static BLResult BL_CDECL getGlyphBounds(
   BLResult result = BL_SUCCESS;
 
   const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
-  BLFontTable glyfTable = faceI->glyf.glyfTable;
-  BLFontTable locaTable = faceI->glyf.locaTable;
+  RawTable glyfTable = faceI->glyf.glyfTable;
+  RawTable locaTable = faceI->glyf.locaTable;
   uint32_t locaOffsetSize = faceI->locaOffsetSize();
 
   const uint8_t* blankGlyphData = blBlankGlyphData;
 
   for (size_t i = 0; i < count; i++) {
-    uint32_t glyphId = glyphData[0] & 0xFFFFu;
+    BLGlyphId glyphId = glyphData[0] & 0xFFFFu;
     glyphData = BLPtrOps::offset(glyphData, glyphAdvance);
 
     size_t offset;
@@ -112,8 +112,8 @@ InvalidData:
   return result;
 }
 
-// OpenType::GlyfImpl - GetGlyphOutlines
-// =====================================
+// BLOpenType::GlyfImpl - GetGlyphOutlines
+// =======================================
 
 namespace {
 
@@ -175,7 +175,7 @@ public:
 
 static BLResult BL_CDECL getGlyphOutlines(
   const BLFontFaceImpl* faceI_,
-  uint32_t glyphId,
+  BLGlyphId glyphId,
   const BLMatrix2D* matrix,
   BLPath* out,
   size_t* contourCountOut,
@@ -189,8 +189,8 @@ static BLResult BL_CDECL getGlyphOutlines(
   if (BL_UNLIKELY(glyphId >= faceI->faceInfo.glyphCount))
     return blTraceError(BL_ERROR_INVALID_GLYPH);
 
-  BLFontTable glyfTable = faceI->glyf.glyfTable;
-  BLFontTable locaTable = faceI->glyf.locaTable;
+  RawTable glyfTable = faceI->glyf.glyfTable;
+  RawTable locaTable = faceI->glyf.locaTable;
   uint32_t locaOffsetSize = faceI->locaOffsetSize();
 
   const uint8_t* gPtr = nullptr;
@@ -613,12 +613,13 @@ InvalidData:
   return blTraceError(BL_ERROR_INVALID_DATA);
 }
 
-// OpenType::GlyfImpl - Init
-// =========================
+// BLOpenType::GlyfImpl - Init
+// ===========================
 
-BLResult init(OTFaceImpl* faceI, BLFontTable glyfTable, BLFontTable locaTable) noexcept {
-  faceI->glyf.glyfTable = glyfTable;
-  faceI->glyf.locaTable = locaTable;
+BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
+  faceI->faceInfo.outlineType = BL_FONT_OUTLINE_TYPE_TRUETYPE;
+  faceI->glyf.glyfTable = tables.glyf;
+  faceI->glyf.locaTable = tables.loca;
   faceI->funcs.getGlyphBounds = getGlyphBounds;
 
   // Don't reference any function that won't be used when certain optimizations are enabled across the whole binary.

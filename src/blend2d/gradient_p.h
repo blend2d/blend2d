@@ -14,7 +14,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! \name Gradient - Private Structs
+//! \name BLGradient - Private Structs
 //! \{
 
 //! Lookup table that contains interpolated pixels of the gradient in either PRGB32 or PRGB64 format.
@@ -113,7 +113,7 @@ struct BLGradientInfo {
 
 //! \}
 
-//! \name Gradient - Private Impl
+//! \name BLGradient - Private Impl
 //! \{
 
 //! Private implementation that extends \ref BLGradientImpl.
@@ -126,7 +126,7 @@ struct BLGradientPrivateImpl : public BLGradientImpl {
 
 //! \}
 
-//! \name Gradient - Private API
+//! \name BLGradient - Private API
 //! \{
 
 namespace BLGradientPrivate {

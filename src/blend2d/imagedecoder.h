@@ -97,7 +97,7 @@ struct BLImageDecoderCore BL_CLASS_INHERITS(BLObjectCore) {
 
   //! Returns Impl of the image decoder (only provided for use cases that implement BLImageDecoder).
   template<typename T = BLImageDecoderImpl>
-  BL_INLINE T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
+  BL_INLINE_NODEBUG T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
 
   //! \}
 #endif
@@ -118,7 +118,7 @@ public:
 
   //! Returns Impl of the image codec (only provided for use cases that implement BLImageCodec).
   template<typename T = BLImageDecoderImpl>
-  BL_INLINE T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
+  BL_INLINE_NODEBUG T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
 
   //! \}
   //! \endcond
@@ -126,41 +126,41 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLImageDecoder() noexcept { blImageDecoderInit(this); }
-  BL_INLINE BLImageDecoder(BLImageDecoder&& other) noexcept { blImageDecoderInitMove(this, &other); }
-  BL_INLINE BLImageDecoder(const BLImageDecoder& other) noexcept { blImageDecoderInitWeak(this, &other); }
-  BL_INLINE ~BLImageDecoder() { blImageDecoderDestroy(this); }
+  BL_INLINE_NODEBUG BLImageDecoder() noexcept { blImageDecoderInit(this); }
+  BL_INLINE_NODEBUG BLImageDecoder(BLImageDecoder&& other) noexcept { blImageDecoderInitMove(this, &other); }
+  BL_INLINE_NODEBUG BLImageDecoder(const BLImageDecoder& other) noexcept { blImageDecoderInitWeak(this, &other); }
+  BL_INLINE_NODEBUG ~BLImageDecoder() { blImageDecoderDestroy(this); }
 
   //! \}
 
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE explicit operator bool() const noexcept { return isValid(); }
+  BL_INLINE_NODEBUG explicit operator bool() const noexcept { return isValid(); }
 
-  BL_INLINE BLImageDecoder& operator=(BLImageDecoder&& other) noexcept { blImageDecoderAssignMove(this, &other); return *this; }
-  BL_INLINE BLImageDecoder& operator=(const BLImageDecoder& other) noexcept { blImageDecoderAssignWeak(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLImageDecoder& operator=(BLImageDecoder&& other) noexcept { blImageDecoderAssignMove(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLImageDecoder& operator=(const BLImageDecoder& other) noexcept { blImageDecoderAssignWeak(this, &other); return *this; }
 
-  BL_NODISCARD BL_INLINE bool operator==(const BLImageDecoder& other) const noexcept { return  equals(other); }
-  BL_NODISCARD BL_INLINE bool operator!=(const BLImageDecoder& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLImageDecoder& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLImageDecoder& other) const noexcept { return !equals(other); }
 
   //! \}
 
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE BLResult reset() noexcept { return blImageDecoderReset(this); }
-  BL_INLINE void swap(BLImageDecoderCore& other) noexcept { _d.swap(other._d); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept { return blImageDecoderReset(this); }
+  BL_INLINE_NODEBUG void swap(BLImageDecoderCore& other) noexcept { _d.swap(other._d); }
 
-  BL_INLINE BLResult assign(BLImageDecoderCore&& other) noexcept { return blImageDecoderAssignMove(this, &other); }
-  BL_INLINE BLResult assign(const BLImageDecoderCore& other) noexcept { return blImageDecoderAssignWeak(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(BLImageDecoderCore&& other) noexcept { return blImageDecoderAssignMove(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(const BLImageDecoderCore& other) noexcept { return blImageDecoderAssignWeak(this, &other); }
 
   //! Tests whether the image decoder is a built-in null instance.
   BL_NODISCARD
-  BL_INLINE bool isValid() const noexcept { return _impl()->lastResult != BL_ERROR_NOT_INITIALIZED; }
+  BL_INLINE_NODEBUG bool isValid() const noexcept { return _impl()->lastResult != BL_ERROR_NOT_INITIALIZED; }
 
   BL_NODISCARD
-  BL_INLINE bool equals(const BLImageDecoderCore& other) const noexcept { return _d.impl == other._d.impl; }
+  BL_INLINE_NODEBUG bool equals(const BLImageDecoderCore& other) const noexcept { return _d.impl == other._d.impl; }
 
   //! \}
 
@@ -168,19 +168,19 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE BLImageCodec& codec() const noexcept { return _impl()->codec.dcast(); }
+  BL_INLINE_NODEBUG BLImageCodec& codec() const noexcept { return _impl()->codec.dcast(); }
 
   //! Returns the last decoding result.
   BL_NODISCARD
-  BL_INLINE BLResult lastResult() const noexcept { return _impl()->lastResult; }
+  BL_INLINE_NODEBUG BLResult lastResult() const noexcept { return _impl()->lastResult; }
 
   //! Returns the current frame index (to be decoded).
   BL_NODISCARD
-  BL_INLINE uint64_t frameIndex() const noexcept { return _impl()->frameIndex; }
+  BL_INLINE_NODEBUG uint64_t frameIndex() const noexcept { return _impl()->frameIndex; }
 
   //! Returns the position in source buffer.
   BL_NODISCARD
-  BL_INLINE size_t bufferIndex() const noexcept { return _impl()->bufferIndex; }
+  BL_INLINE_NODEBUG size_t bufferIndex() const noexcept { return _impl()->bufferIndex; }
 
   //! \}
 
@@ -194,15 +194,15 @@ public:
   //! \name Decoder Functionality
   //! \{
 
-  BL_INLINE BLResult restart() noexcept { return blImageDecoderRestart(this); }
+  BL_INLINE_NODEBUG BLResult restart() noexcept { return blImageDecoderRestart(this); }
 
-  BL_INLINE BLResult readInfo(BLImageInfo& dst, const BLArray<uint8_t>& buffer) noexcept { return blImageDecoderReadInfo(this, &dst, buffer.data(), buffer.size()); }
-  BL_INLINE BLResult readInfo(BLImageInfo& dst, const BLArrayView<uint8_t>& view) noexcept { return blImageDecoderReadInfo(this, &dst, view.data, view.size); }
-  BL_INLINE BLResult readInfo(BLImageInfo& dst, const void* data, size_t size) noexcept { return blImageDecoderReadInfo(this, &dst, static_cast<const uint8_t*>(data), size); }
+  BL_INLINE_NODEBUG BLResult readInfo(BLImageInfo& dst, const BLArray<uint8_t>& buffer) noexcept { return blImageDecoderReadInfo(this, &dst, buffer.data(), buffer.size()); }
+  BL_INLINE_NODEBUG BLResult readInfo(BLImageInfo& dst, const BLArrayView<uint8_t>& view) noexcept { return blImageDecoderReadInfo(this, &dst, view.data, view.size); }
+  BL_INLINE_NODEBUG BLResult readInfo(BLImageInfo& dst, const void* data, size_t size) noexcept { return blImageDecoderReadInfo(this, &dst, static_cast<const uint8_t*>(data), size); }
 
-  BL_INLINE BLResult readFrame(BLImageCore& dst, const BLArray<uint8_t>& buffer) noexcept { return blImageDecoderReadFrame(this, &dst, buffer.data(), buffer.size()); }
-  BL_INLINE BLResult readFrame(BLImageCore& dst, const BLArrayView<uint8_t>& view) noexcept { return blImageDecoderReadFrame(this, &dst, view.data, view.size); }
-  BL_INLINE BLResult readFrame(BLImageCore& dst, const void* data, size_t size) noexcept { return blImageDecoderReadFrame(this, &dst, static_cast<const uint8_t*>(data), size); }
+  BL_INLINE_NODEBUG BLResult readFrame(BLImageCore& dst, const BLArray<uint8_t>& buffer) noexcept { return blImageDecoderReadFrame(this, &dst, buffer.data(), buffer.size()); }
+  BL_INLINE_NODEBUG BLResult readFrame(BLImageCore& dst, const BLArrayView<uint8_t>& view) noexcept { return blImageDecoderReadFrame(this, &dst, view.data, view.size); }
+  BL_INLINE_NODEBUG BLResult readFrame(BLImageCore& dst, const void* data, size_t size) noexcept { return blImageDecoderReadFrame(this, &dst, static_cast<const uint8_t*>(data), size); }
 
   //! \}
 };

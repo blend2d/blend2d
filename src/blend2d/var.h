@@ -94,15 +94,15 @@ struct VarOps;
 
 template<typename T>
 struct VarOps<T, kTypeCategoryBool> {
-  static BL_INLINE void init(BLVarCore* self, const T& value) noexcept {
+  static BL_INLINE_NODEBUG void init(BLVarCore* self, const T& value) noexcept {
     self->_d.initBool(value);
   }
 
-  static BL_INLINE BLResult assign(BLVarCore* self, const T& value) noexcept {
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const T& value) noexcept {
     return blVarAssignBool(self, value);
   }
 
-  static BL_INLINE bool equals(const BLVarCore* self, const T& value) noexcept {
+  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const T& value) noexcept {
     return blVarEqualsBool(self, value);
   }
 };
@@ -137,28 +137,28 @@ struct VarOps<T, kTypeCategoryInt> {
 
 template<typename T>
 struct VarOps<T, kTypeCategoryFloat> {
-  static BL_INLINE void init(BLVarCore* self, const T& value) noexcept {
+  static BL_INLINE_NODEBUG void init(BLVarCore* self, const T& value) noexcept {
     self->_d.initDouble(double(value));
   }
 
-  static BL_INLINE BLResult assign(BLVarCore* self, const T& value) noexcept {
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const T& value) noexcept {
     return blVarAssignDouble(self, double(value));
   }
 
-  static BL_INLINE bool equals(const BLVarCore* self, const T& value) noexcept {
+  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const T& value) noexcept {
     return blVarEqualsDouble(self, double(value));
   }
 };
 
 template<typename T>
 struct VarOps<T, kTypeCategoryObject> {
-  static BL_INLINE void init(BLVarCore* self, T&& value) noexcept { blVarInitMove(self, &value); }
-  static BL_INLINE void init(BLVarCore* self, const T& value) noexcept { blVarInitWeak(self, &value); }
+  static BL_INLINE_NODEBUG void init(BLVarCore* self, T&& value) noexcept { blVarInitMove(self, &value); }
+  static BL_INLINE_NODEBUG void init(BLVarCore* self, const T& value) noexcept { blVarInitWeak(self, &value); }
 
-  static BL_INLINE BLResult assign(BLVarCore* self, T&& value) noexcept { return blVarAssignMove(self, &value); }
-  static BL_INLINE BLResult assign(BLVarCore* self, const T& value) noexcept { return blVarAssignWeak(self, &value); }
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, T&& value) noexcept { return blVarAssignMove(self, &value); }
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const T& value) noexcept { return blVarAssignWeak(self, &value); }
 
-  static BL_INLINE bool equals(const BLVarCore* self, const T& value) noexcept { return blVarEquals(self, &value); }
+  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const T& value) noexcept { return blVarEquals(self, &value); }
 };
 
 template<>
@@ -173,25 +173,25 @@ struct VarOps<BLRgba, kTypeCategoryStruct> {
     self->_d.initU32x4(r, g, b, a);
   }
 
-  static BL_INLINE BLResult assign(BLVarCore* self, const BLRgba& value) noexcept {
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const BLRgba& value) noexcept {
     return blVarAssignRgba(self, &value);
   }
 
-  static BL_INLINE bool equals(const BLVarCore* self, const BLRgba& value) noexcept {
+  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const BLRgba& value) noexcept {
     return blVarStrictEquals(self, &value);
   }
 };
 
 template<typename T>
 struct VarCastImpl {
-  static BL_INLINE T* cast(BLVarCore* self) noexcept { return static_cast<T*>(static_cast<BLObjectCore*>(self)); }
-  static BL_INLINE const T* cast(const BLVarCore* self) noexcept { return static_cast<const T*>(static_cast<const BLObjectCore*>(self)); }
+  static BL_INLINE_NODEBUG T* cast(BLVarCore* self) noexcept { return static_cast<T*>(static_cast<BLObjectCore*>(self)); }
+  static BL_INLINE_NODEBUG const T* cast(const BLVarCore* self) noexcept { return static_cast<const T*>(static_cast<const BLObjectCore*>(self)); }
 };
 
 template<>
 struct VarCastImpl<BLRgba> {
-  static BL_INLINE BLRgba* cast(BLVarCore* self) noexcept { return reinterpret_cast<BLRgba*>(self); }
-  static BL_INLINE const BLRgba* cast(const BLVarCore* self) noexcept { return reinterpret_cast<const BLRgba*>(self); }
+  static BL_INLINE_NODEBUG BLRgba* cast(BLVarCore* self) noexcept { return reinterpret_cast<BLRgba*>(self); }
+  static BL_INLINE_NODEBUG const BLRgba* cast(const BLVarCore* self) noexcept { return reinterpret_cast<const BLRgba*>(self); }
 };
 
 } // {anonymous}
@@ -204,29 +204,29 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLVar() noexcept { _d.initStatic(BL_OBJECT_TYPE_NULL); }
+  BL_INLINE_NODEBUG BLVar() noexcept { _d.initStatic(BL_OBJECT_TYPE_NULL); }
 
-  BL_INLINE BLVar(BLVar&& other) noexcept {
+  BL_INLINE_NODEBUG BLVar(BLVar&& other) noexcept {
     _d = other._d;
     other._d.initStatic(BL_OBJECT_TYPE_NULL);
   }
 
-  BL_INLINE BLVar(const BLVar& other) noexcept { blVarInitWeak(this, &other); }
+  BL_INLINE_NODEBUG BLVar(const BLVar& other) noexcept { blVarInitWeak(this, &other); }
 
   template<typename T>
-  BL_INLINE explicit BLVar(T&& value) noexcept {
+  BL_INLINE_NODEBUG explicit BLVar(T&& value) noexcept {
     typedef typename std::decay<T>::type DecayT;
     BLInternal::VarOps<DecayT, BLInternal::TypeTraits<DecayT>::kCategory>::init(this, std::forward<T>(value));
   }
 
-  BL_INLINE ~BLVar() noexcept { blVarDestroy(this); }
+  BL_INLINE_NODEBUG ~BLVar() noexcept { blVarDestroy(this); }
 
   //! \}
 
   //! \name Static Constructors
   //! \{
 
-  static BL_INLINE BLVar null() noexcept { return BLVar(); }
+  static BL_INLINE_NODEBUG BLVar null() noexcept { return BLVar(); }
 
   //! \}
 
@@ -234,21 +234,21 @@ public:
   //! \{
 
   template<typename T>
-  BL_INLINE BLVar& operator=(T&& value) noexcept { assign(std::forward<T>(value)); return *this; }
+  BL_INLINE_NODEBUG BLVar& operator=(T&& value) noexcept { assign(std::forward<T>(value)); return *this; }
 
   template<typename T>
-  BL_INLINE bool operator==(const T& other) const noexcept { return equals(other); }
+  BL_INLINE_NODEBUG bool operator==(const T& other) const noexcept { return equals(other); }
 
   template<typename T>
-  BL_INLINE bool operator!=(const T& other) const noexcept { return !equals(other); }
+  BL_INLINE_NODEBUG bool operator!=(const T& other) const noexcept { return !equals(other); }
 
   //! \}
 
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE BLResult reset() noexcept { return blVarReset(this); }
-  BL_INLINE void swap(BLVarCore& other) noexcept { _d.swap(other._d); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept { return blVarReset(this); }
+  BL_INLINE_NODEBUG void swap(BLVarCore& other) noexcept { _d.swap(other._d); }
 
   //! \}
 
@@ -257,114 +257,118 @@ public:
 
   //! Returns the type of the underlying object.
   BL_NODISCARD
-  BL_INLINE BLObjectType type() const noexcept { return _d.getType(); }
+  BL_INLINE_NODEBUG BLObjectType type() const noexcept { return _d.getType(); }
 
   //! Tests whether this `BLVar` instance represents a `BLArray<T>` storing any supported type.
   BL_NODISCARD
-  BL_INLINE bool isArray() const noexcept { return _d.isArray(); }
+  BL_INLINE_NODEBUG bool isArray() const noexcept { return _d.isArray(); }
+
+  //! Tests whether this `BLVar` instance represents `BLBitArray`.
+  BL_NODISCARD
+  BL_INLINE_NODEBUG bool isBitArray() const noexcept { return _d.isBitArray(); }
 
   //! Tests whether this `BLVar` instance represents `BLBitSet`.
   BL_NODISCARD
-  BL_INLINE bool isBitSet() const noexcept { return _d.isBitSet(); }
+  BL_INLINE_NODEBUG bool isBitSet() const noexcept { return _d.isBitSet(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `bool` value.
   BL_NODISCARD
-  BL_INLINE bool isBool() const noexcept { return _d.isBool(); }
+  BL_INLINE_NODEBUG bool isBool() const noexcept { return _d.isBool(); }
 
   //! Tests whether this `BLVar` instance represents `BLContext`.
   BL_NODISCARD
-  BL_INLINE bool isContext() const noexcept { return _d.isContext(); }
+  BL_INLINE_NODEBUG bool isContext() const noexcept { return _d.isContext(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `double` value.
   BL_NODISCARD
-  BL_INLINE bool isDouble() const noexcept { return _d.isDouble(); }
+  BL_INLINE_NODEBUG bool isDouble() const noexcept { return _d.isDouble(); }
 
   //! Tests whether this `BLVar` instance represents `BLFont`.
   BL_NODISCARD
-  BL_INLINE bool isFont() const noexcept { return _d.isFont(); }
+  BL_INLINE_NODEBUG bool isFont() const noexcept { return _d.isFont(); }
 
   //! Tests whether this `BLVar` instance represents `BLFontData`.
   BL_NODISCARD
-  BL_INLINE bool isFontData() const noexcept { return _d.isFontData(); }
+  BL_INLINE_NODEBUG bool isFontData() const noexcept { return _d.isFontData(); }
 
   //! Tests whether this `BLVar` instance represents `BLFontFace`.
   BL_NODISCARD
-  BL_INLINE bool isFontFace() const noexcept { return _d.isFontFace(); }
+  BL_INLINE_NODEBUG bool isFontFace() const noexcept { return _d.isFontFace(); }
 
   //! Tests whether this `BLVar` instance represents `BLFontManager`.
   BL_NODISCARD
-  BL_INLINE bool isFontManager() const noexcept { return _d.isFontManager(); }
+  BL_INLINE_NODEBUG bool isFontManager() const noexcept { return _d.isFontManager(); }
 
   //! Tests whether this `BLVar` instance represents `BLGradient`.
   BL_NODISCARD
-  BL_INLINE bool isGradient() const noexcept { return _d.isGradient(); }
+  BL_INLINE_NODEBUG bool isGradient() const noexcept { return _d.isGradient(); }
 
   //! Tests whether this `BLVar` instance represents `BLImage`.
   BL_NODISCARD
-  BL_INLINE bool isImage() const noexcept { return _d.isImage(); }
+  BL_INLINE_NODEBUG bool isImage() const noexcept { return _d.isImage(); }
 
   //! Tests whether this `BLVar` instance represents `BLImageCodec`.
   BL_NODISCARD
-  BL_INLINE bool isImageCodec() const noexcept { return _d.isImageCodec(); }
+  BL_INLINE_NODEBUG bool isImageCodec() const noexcept { return _d.isImageCodec(); }
 
   //! Tests whether this `BLVar` instance represents `BLImageDecoder`.
   BL_NODISCARD
-  BL_INLINE bool isImageDecoder() const noexcept { return _d.isImageDecoder(); }
+  BL_INLINE_NODEBUG bool isImageDecoder() const noexcept { return _d.isImageDecoder(); }
 
   //! Tests whether this `BLVar` instance represents `BLImageEncoder`.
   BL_NODISCARD
-  BL_INLINE bool isImageEncoder() const noexcept { return _d.isImageEncoder(); }
+  BL_INLINE_NODEBUG bool isImageEncoder() const noexcept { return _d.isImageEncoder(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `int64_t` value.
   BL_NODISCARD
-  BL_INLINE bool isInt64() const noexcept { return _d.isInt64(); }
+  BL_INLINE_NODEBUG bool isInt64() const noexcept { return _d.isInt64(); }
 
   //! Tests whether this `BLVar` instance represents a null value.
   BL_NODISCARD
-  BL_INLINE bool isNull() const noexcept { return _d.isNull(); }
+  BL_INLINE_NODEBUG bool isNull() const noexcept { return _d.isNull(); }
 
   //! Tests whether this `BLVar` instance represents `BLPath`.
   BL_NODISCARD
-  BL_INLINE bool isPath() const noexcept { return _d.isPath(); }
+  BL_INLINE_NODEBUG bool isPath() const noexcept { return _d.isPath(); }
 
   //! Tests whether this `BLVar` instance represents `BLPattern.`
   BL_NODISCARD
-  BL_INLINE bool isPattern() const noexcept { return _d.isPattern(); }
+  BL_INLINE_NODEBUG bool isPattern() const noexcept { return _d.isPattern(); }
 
   //! Tests whether this `BLVar` instance represents `BLString`.
   BL_NODISCARD
-  BL_INLINE bool isString() const noexcept { return _d.isString(); }
+  BL_INLINE_NODEBUG bool isString() const noexcept { return _d.isString(); }
 
   //! Tests whether this `BLVar` instance represents boxed `BLRgba`.
   BL_NODISCARD
-  BL_INLINE bool isRgba() const noexcept { return _d.isRgba(); }
+  BL_INLINE_NODEBUG bool isRgba() const noexcept { return _d.isRgba(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `uint64_t` value.
   BL_NODISCARD
-  BL_INLINE bool isUInt64() const noexcept { return _d.isUInt64(); }
+  BL_INLINE_NODEBUG bool isUInt64() const noexcept { return _d.isUInt64(); }
 
   //! Tests whether this `BLVar` instance is a style that can be used with the rendering context.
   BL_NODISCARD
-  BL_INLINE bool isStyle() const noexcept { return _d.isStyle(); }
+  BL_INLINE_NODEBUG bool isStyle() const noexcept { return _d.isStyle(); }
 
   //! Converts this value to `bool` and stores the result in `out`.
-  BL_INLINE BLResult toBool(bool* out) const noexcept { return blVarToBool(this, out); }
+  BL_INLINE_NODEBUG BLResult toBool(bool* out) const noexcept { return blVarToBool(this, out); }
   //! Converts this value to `int32_t` and stores the result in `out`.
-  BL_INLINE BLResult toInt32(int32_t* out) const noexcept { return blVarToInt32(this, out); }
+  BL_INLINE_NODEBUG BLResult toInt32(int32_t* out) const noexcept { return blVarToInt32(this, out); }
   //! Converts this value to `int64_t` and stores the result in `out`.
-  BL_INLINE BLResult toInt64(int64_t* out) const noexcept { return blVarToInt64(this, out); }
+  BL_INLINE_NODEBUG BLResult toInt64(int64_t* out) const noexcept { return blVarToInt64(this, out); }
   //! Converts this value to `uint32_t` and stores the result in `out`.
-  BL_INLINE BLResult toUInt32(uint32_t* out) const noexcept { return blVarToUInt32(this, out); }
+  BL_INLINE_NODEBUG BLResult toUInt32(uint32_t* out) const noexcept { return blVarToUInt32(this, out); }
   //! Converts this value to `uint64_t` and stores the result in `out`.
-  BL_INLINE BLResult toUInt64(uint64_t* out) const noexcept { return blVarToUInt64(this, out); }
+  BL_INLINE_NODEBUG BLResult toUInt64(uint64_t* out) const noexcept { return blVarToUInt64(this, out); }
   //! Converts this value to `double` precision floating point and stores the result in `out`.
-  BL_INLINE BLResult toDouble(double* out) const noexcept { return blVarToDouble(this, out); }
+  BL_INLINE_NODEBUG BLResult toDouble(double* out) const noexcept { return blVarToDouble(this, out); }
   //! Converts this value to `BLRgba` and stores the result in `out`.
-  BL_INLINE BLResult toRgba(BLRgba* out) const noexcept { return blVarToRgba(this, out); }
+  BL_INLINE_NODEBUG BLResult toRgba(BLRgba* out) const noexcept { return blVarToRgba(this, out); }
   //! Converts this value to `BLRgba32` and stores the result in `out`.
-  BL_INLINE BLResult toRgba32(BLRgba32* out) const noexcept { return blVarToRgba32(this, &out->value); }
+  BL_INLINE_NODEBUG BLResult toRgba32(BLRgba32* out) const noexcept { return blVarToRgba32(this, &out->value); }
   //! Converts this value to `BLRgba64` and stores the result in `out`.
-  BL_INLINE BLResult toRgba64(BLRgba64* out) const noexcept { return blVarToRgba64(this, &out->value); }
+  BL_INLINE_NODEBUG BLResult toRgba64(BLRgba64* out) const noexcept { return blVarToRgba64(this, &out->value); }
 
   //! \}
 
@@ -380,11 +384,11 @@ public:
 
   //! Casts this \ref BLVar instance to `T&`.
   template<typename T>
-  BL_INLINE T& as() noexcept { return *BLInternal::VarCastImpl<T>::cast(this); }
+  BL_INLINE_NODEBUG T& as() noexcept { return *BLInternal::VarCastImpl<T>::cast(this); }
 
   //! Casts this \ref BLVar instance to `const T&`.
   template<typename T>
-  BL_INLINE const T& as() const noexcept { return *BLInternal::VarCastImpl<T>::cast(this); }
+  BL_INLINE_NODEBUG const T& as() const noexcept { return *BLInternal::VarCastImpl<T>::cast(this); }
 
   //! \}
 
@@ -392,7 +396,7 @@ public:
   //! \{
 
   template<typename T>
-  BL_INLINE BLResult assign(T&& value) noexcept {
+  BL_INLINE_NODEBUG BLResult assign(T&& value) noexcept {
     typedef typename std::decay<T>::type DecayT;
     return BLInternal::VarOps<DecayT, BLInternal::TypeTraits<DecayT>::kCategory>::assign(this, std::forward<T>(value));
   }
@@ -404,13 +408,13 @@ public:
 
   template<typename T>
   BL_NODISCARD
-  BL_INLINE bool equals(const T& value) const noexcept {
+  BL_INLINE_NODEBUG bool equals(const T& value) const noexcept {
     typedef typename std::decay<T>::type DecayT;
     return BLInternal::VarOps<DecayT, BLInternal::TypeTraits<DecayT>::kCategory>::equals(this, value);
   }
 
   BL_NODISCARD
-  BL_INLINE bool strictEquals(const BLVarCore& other) const noexcept { return blVarStrictEquals(this, &other); }
+  BL_INLINE_NODEBUG bool strictEquals(const BLVarCore& other) const noexcept { return blVarStrictEquals(this, &other); }
 
   //! \}
 };

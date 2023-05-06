@@ -246,9 +246,8 @@ BLResult blFontManagerAddFace(BLFontManagerCore* self, const BLFontFaceCore* fac
     if (!familiesNode)
       return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-    // Reserve for only one item at the beginning. This helps to decrease
-    // memory footprint when loading a lot of font-faces that don't share
-    // family names.
+    // Reserve for only one item at the beginning. This helps to decrease memory footprint when loading a lot of font
+    // faces that don't share family names.
     BLResult result = familiesNode->faces.reserve(1u);
     if (BL_UNLIKELY(result != BL_SUCCESS)) {
       blCallDtor(*familiesNode);

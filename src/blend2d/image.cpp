@@ -231,7 +231,7 @@ BL_API_IMPL BLResult blImageAssignWeak(BLImageCore* self, const BLImageCore* oth
   BL_ASSERT(self->_d.isImage());
   BL_ASSERT(other->_d.isImage());
 
-  blObjectPrivateAddRefTagged(other);
+  blObjectPrivateAddRefIfRCTagSet(other);
   return replaceInstance(self, other);
 }
 
@@ -624,7 +624,7 @@ void blImageRtInit(BLRuntimeContext* rt) noexcept {
 // ===============
 
 #if defined(BL_TEST)
-UNIT(image) {
+UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
   INFO("Image data");
   {
     constexpr uint32_t kSize = 256;

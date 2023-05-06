@@ -59,7 +59,7 @@ public:
   uint32_t _key;
 };
 
-UNIT(arena_tree, -5) {
+UNIT(arena_tree, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   constexpr uint32_t kCount = 2000;
 
   BLArenaAllocator zone(4096);

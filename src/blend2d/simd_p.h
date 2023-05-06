@@ -31,6 +31,10 @@
   #define BL_TARGET_SIMD_D 0
 #endif
 
+//! \cond INTERNAL
+//! \addtogroup blend2d_internal
+//! \{
+
 namespace SIMD {
 
 template<typename W, size_t N>
@@ -73,6 +77,9 @@ typedef VecArray<VecWrap256D, 2> Vec256Dx2;
 #endif
 
 } // {SIMD}
+
+//! \}
+//! \endcond
 
 // SIMD - Loop Construction
 // ========================

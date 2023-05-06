@@ -14,7 +14,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! \name Path - Private Structs
+//! \name BLPath - Private Structs
 //! \{
 
 //! Private implementation that extends \ref BLPathImpl.
@@ -25,7 +25,7 @@ struct BLPathPrivateImpl : public BLPathImpl {
 
 //! \}
 
-//! \name Path - Private API
+//! \name BLPath - Private API
 //! \{
 
 namespace BLPathPrivate {
@@ -51,7 +51,7 @@ BL_HIDDEN BLResult freeImpl(BLPathPrivateImpl* impl, BLObjectInfo info) noexcept
 
 //! \}
 
-//! \name Path - Private Iterator
+//! \name BLPath - Private Iterator
 //! \{
 
 //! Path iterator that can iterate over RAW data.
@@ -101,7 +101,7 @@ struct BLPathIterator {
 
 //! \}
 
-//! \name Path - Private Appender
+//! \name BLPath - Private Appender
 //! \{
 
 //! Low-level interface that can be used to append vertices & commands to an existing path fast. The interface is

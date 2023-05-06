@@ -262,7 +262,7 @@ struct MyKeyMatcher {
   uint32_t _key;
 };
 
-UNIT(arena_hashmap, -5) {
+UNIT(arena_hashmap, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   uint32_t kCount = BrokenAPI::hasArg("--quick") ? 1000 : 10000;
 
   BLArenaAllocator allocator(4096);

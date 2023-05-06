@@ -7,7 +7,7 @@
 #include "../support/memops_p.h"
 
 #ifdef BL_TEST
-UNIT(support_memops, -10) {
+UNIT(support_memops, BL_TEST_GROUP_SUPPORT_UTILITIES) {
   INFO("BLMemOps - Read & Write");
   {
     uint8_t arr[32] = { 0 };

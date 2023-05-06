@@ -13,7 +13,7 @@
 #ifdef BL_TEST
 class MyListNode : public BLArenaListNode<MyListNode> {};
 
-UNIT(arena_list, -5) {
+UNIT(arena_list, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   BLArenaAllocator zone(4096);
   BLArenaList<MyListNode> list;
 

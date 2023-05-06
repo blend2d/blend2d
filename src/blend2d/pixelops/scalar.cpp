@@ -112,7 +112,7 @@ static void test_cvt_prgb32_8888_from_argb32_8888() noexcept {
   }
 }
 
-UNIT(pixelops_scalar, -9) {
+UNIT(pixelops_scalar, BL_TEST_GROUP_RENDERING_PIXEL_OPS) {
   test_udiv255();
   test_cvt_xrgb32_0888_from_xrgb16_0555();
   test_cvt_xrgb32_0888_from_xrgb16_0565();

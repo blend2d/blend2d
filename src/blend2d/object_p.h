@@ -18,7 +18,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! \name Object - Internals - Constants
+//! \name BLObject - Internals - Constants
 //! \{
 
 //! Default object impl alignment, should be the same as cache line size, althought we won't go above 64.
@@ -43,7 +43,7 @@ static constexpr size_t BL_OBJECT_IMPL_MAX_SIZE =
 
 //! \}
 
-//! \name Object - Internals - Strong Types
+//! \name BLObject - Internals - Strong Types
 //! \{
 
 //! Strongly typed object impl size to not confuse it with regular size / capacity of containers.
@@ -51,7 +51,7 @@ BL_DEFINE_STRONG_TYPE(BLObjectImplSize, size_t)
 
 //! \}
 
-//! \name Object - Internals - Structs
+//! \name BLObject - Internals - Structs
 //! \{
 
 // TODO [Object]: Unused. It was planned to return this instead of the Impl itself from Impl allocators.
@@ -87,7 +87,7 @@ struct alignas(16) BLObjectEthernalVirtualImpl {
 
 //! \}
 
-//! \name Object - Internals - Globals
+//! \name BLObject - Internals - Globals
 //! \{
 
 //! A table that contains reference count that is used for IsMutable checks of Impls without a reference count.
@@ -98,7 +98,7 @@ BL_HIDDEN extern BLObjectCore blObjectDefaults[BL_OBJECT_TYPE_MAX_VALUE + 1];
 
 //! \}
 
-//! \name Object - Internals - Property Handling
+//! \name BLObject - Internals - Property Handling
 //! \{
 
 BL_HIDDEN BLResult BL_CDECL blObjectImplGetProperty(const BLObjectImpl* impl, const char* name, size_t nameSize, BLVarCore* valueOut) BL_NOEXCEPT_C;
@@ -111,7 +111,7 @@ static BL_INLINE bool blMatchProperty(const char* key, size_t keySize, const cha
 
 //! \}
 
-//! \name Object - Internals - Cast From Unknown
+//! \name BLObject - Internals - Cast From Unknown
 //! \{
 
 //! Casts the given unknown pointer to `BLObjectCore*`.
@@ -121,7 +121,7 @@ static BL_INLINE const BLObjectCore* blAsObject(const BLUnknown* unknown) { retu
 
 //! \}
 
-//! \name Object - Internals - Type Checks
+//! \name BLObject - Internals - Type Checks
 //! \{
 
 static BL_INLINE bool blObjectTypeIsNumber(BLObjectType type) noexcept {
@@ -132,7 +132,7 @@ static BL_INLINE bool blObjectTypeIsNumber(BLObjectType type) noexcept {
 
 //! \}
 
-//! \name Object - Internals - Basic checks
+//! \name BLObject - Internals - Basic checks
 //! \{
 
 //! Returns a base value of a reference count of Impl. The returned value describes a reference count of Impl that
@@ -150,7 +150,7 @@ static BL_INLINE constexpr size_t blObjectImplGetRefCountBaseFromObjectInfo(BLOb
 
 //! \}
 
-//! \name Object - Internals - Allocation Adjustment
+//! \name BLObject - Internals - Allocation Adjustment
 //!
 //! Allocation adjustment is used to adjust and deadjust 'impl' so it's properly aligned.
 //!
@@ -175,7 +175,7 @@ static BL_INLINE void* blObjectImplDeadjustImplPtr(void* impl, BLObjectInfo info
 
 //! \}
 
-//! \name Object - Internals - External Data
+//! \name BLObject - Internals - External Data
 //! \{
 
 struct BLObjectExternalInfoAndData {
@@ -256,7 +256,7 @@ static BL_INLINE void blObjectDetailCallExternalDestroyFunc(void* impl, BLObject
 
 //! \}
 
-//! \name Object - Internals - Alloc / Free Impl
+//! \name BLObject - Internals - Alloc / Free Impl
 //! \{
 
 template<typename T>
@@ -291,7 +291,7 @@ static BL_INLINE BLResult blObjectImplFreeVirtual(void* impl, BLObjectInfo info)
 
 //! \}
 
-//! \name Object - Internals - Reference Counting Utilities
+//! \name BLObject - Internals - Reference Counting Utilities
 //! \{
 
 //! Returns a pointer to the reference count of the given `impl`.
@@ -342,7 +342,7 @@ static BL_INLINE bool blObjectImplDecRefAndTestIfRefCounted(void* impl, BLObject
 
 //! \}
 
-//! \name Object - Internals - Reference Counting and Object Lifetime
+//! \name BLObject - Internals - Reference Counting and Object Lifetime
 //! \{
 
 BL_HIDDEN void BL_CDECL blObjectDestroyExternalDataDummy(void* impl, void* externalData, void* userData) noexcept;
@@ -350,14 +350,14 @@ BL_HIDDEN void BL_CDECL blObjectDestroyExternalDataDummy(void* impl, void* exter
 BL_HIDDEN BLResult blObjectDetailDestroyUnknownImpl(void* impl, BLObjectInfo info) noexcept;
 
 template<typename T>
-static BL_INLINE BLResult blObjectPrivateAddRefTagged(const T* self) noexcept {
+static BL_INLINE BLResult blObjectPrivateAddRefIfRCTagSet(const T* self) noexcept {
   if (self->_d.info.refCountedFlag())
     blObjectImplAddRef(self->_d.impl);
   return BL_SUCCESS;
 }
 
 template<typename T>
-static BL_INLINE BLResult blObjectPrivateAddRefUnknown(const T* self) noexcept {
+static BL_INLINE BLResult blObjectPrivateAddRefIfRCObject(const T* self) noexcept {
   if (self->_d.isRefCountedObject())
     blObjectImplAddRef(self->_d.impl);
   return BL_SUCCESS;
@@ -420,18 +420,18 @@ static BL_INLINE BLResult blObjectPrivateInitMoveUnknown(T* dst, T* src) noexcep
 template<typename T>
 static BL_INLINE BLResult blObjectPrivateInitWeakTagged(T* dst, const T* src) noexcept {
   dst->_d = src->_d;
-  return blObjectPrivateAddRefTagged(dst);
+  return blObjectPrivateAddRefIfRCTagSet(dst);
 }
 
 template<typename T>
 static BL_INLINE BLResult blObjectPrivateInitWeakUnknown(T* dst, const T* src) noexcept {
   dst->_d = src->_d;
-  return blObjectPrivateAddRefUnknown(dst);
+  return blObjectPrivateAddRefIfRCObject(dst);
 }
 
 template<typename T>
 static BL_INLINE BLResult blObjectPrivateAssignWeakUnknown(T* dst, const T* src) noexcept {
-  blObjectPrivateAddRefUnknown(src);
+  blObjectPrivateAddRefIfRCObject(src);
   blObjectPrivateReleaseUnknown(dst);
 
   dst->_d = src->_d;
@@ -440,7 +440,7 @@ static BL_INLINE BLResult blObjectPrivateAssignWeakUnknown(T* dst, const T* src)
 
 template<typename T>
 static BL_INLINE BLResult blObjectPrivateAssignWeakVirtual(T* dst, const T* src) noexcept {
-  blObjectPrivateAddRefTagged(src);
+  blObjectPrivateAddRefIfRCTagSet(src);
   blObjectPrivateReleaseVirtual(dst);
 
   dst->_d = src->_d;
@@ -449,7 +449,7 @@ static BL_INLINE BLResult blObjectPrivateAssignWeakVirtual(T* dst, const T* src)
 
 //! \}
 
-//! \name Object - Internals - Binary / Strict Equality
+//! \name BLObject - Internals - Binary / Strict Equality
 //! \{
 
 //! Tests whether the given objects are binary equivalent.
@@ -464,7 +464,7 @@ static BL_INLINE bool blObjectPrivateBinaryEquals(const BLObjectCore* a, const B
 
 //! \}
 
-//! \name Object - Internals - Expanding Utilities (Containers)
+//! \name BLObject - Internals - Expanding Utilities (Containers)
 //! \{
 
 static BL_INLINE size_t blObjectGrowImplSizeToPowerOf2(size_t x) noexcept {
@@ -496,7 +496,7 @@ static BLObjectImplSize blObjectExpandImplSizeWithModifyOp(BLObjectImplSize impl
 
 //! \}
 
-//! \name Object - Internals - Atomic Content Utilities
+//! \name BLObject - Internals - Atomic Content Utilities
 //! \{
 
 //! Initializes an object to a representation suitable for using `blObjectAtomicAssignMove()` on it.

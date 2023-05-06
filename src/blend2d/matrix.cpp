@@ -509,7 +509,7 @@ void blTransformRtInit(BLRuntimeContext* rt) noexcept {
 // ===================
 
 #ifdef BL_TEST
-UNIT(matrix) {
+UNIT(matrix, BL_TEST_GROUP_GEOMETRY_UTILITIES) {
   INFO("Testing matrix types");
   {
     BLMatrix2D m;

@@ -8,7 +8,6 @@
 
 #include "api-internal_p.h"
 #include "fontvariationsettings.h"
-#include "fonttags_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal

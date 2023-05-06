@@ -8,6 +8,7 @@
 
 #include "font.h"
 #include "geometry.h"
+#include "glyphrun.h"
 #include "image.h"
 #include "matrix.h"
 #include "object.h"
@@ -670,7 +671,7 @@ public:
     kOpStroke = BL_CONTEXT_OP_TYPE_STROKE
   };
 
-  BL_INLINE BLContextImpl* _impl() const noexcept { return static_cast<BLContextImpl*>(_d.impl); }
+  BL_INLINE_NODEBUG BLContextImpl* _impl() const noexcept { return static_cast<BLContextImpl*>(_d.impl); }
   //! \endcond
 
   //! \name Construction & Destruction
@@ -749,15 +750,15 @@ public:
 
   //! Returns the target size in abstract units (pixels in case of `BLImage`).
   BL_NODISCARD
-  BL_INLINE BLSize targetSize() const noexcept { return BL_CONTEXT_IMPL()->state->targetSize; }
+  BL_INLINE_NODEBUG BLSize targetSize() const noexcept { return BL_CONTEXT_IMPL()->state->targetSize; }
 
   //! Returns the target width in abstract units (pixels in case of `BLImage`).
   BL_NODISCARD
-  BL_INLINE double targetWidth() const noexcept { return BL_CONTEXT_IMPL()->state->targetSize.w; }
+  BL_INLINE_NODEBUG double targetWidth() const noexcept { return BL_CONTEXT_IMPL()->state->targetSize.w; }
 
   //! Returns the target height in abstract units (pixels in case of `BLImage`).
   BL_NODISCARD
-  BL_INLINE double targetHeight() const noexcept { return BL_CONTEXT_IMPL()->state->targetSize.h; }
+  BL_INLINE_NODEBUG double targetHeight() const noexcept { return BL_CONTEXT_IMPL()->state->targetSize.h; }
 
   //! Returns the target image or null if there is no target image.
   //!
@@ -767,7 +768,7 @@ public:
   //! and not the pointer to the `BLImage` passed to either the constructor or `begin()` function. So the returned
   //! pointer is not the same as the pointer passed to `begin()`, but it points to the same impl.
   BL_NODISCARD
-  BL_INLINE BLImage* targetImage() const noexcept { return static_cast<BLImage*>(BL_CONTEXT_IMPL()->state->targetImage); }
+  BL_INLINE_NODEBUG BLImage* targetImage() const noexcept { return static_cast<BLImage*>(BL_CONTEXT_IMPL()->state->targetImage); }
 
   //! \}
 
@@ -776,11 +777,11 @@ public:
 
   //! Returns the type of this context, see `BLContextType`.
   BL_NODISCARD
-  BL_INLINE BLContextType contextType() const noexcept { return (BLContextType)BL_CONTEXT_IMPL()->contextType; }
+  BL_INLINE_NODEBUG BLContextType contextType() const noexcept { return (BLContextType)BL_CONTEXT_IMPL()->contextType; }
 
   //! Tests whether the context is a valid rendering context that has attached target to it.
   BL_NODISCARD
-  BL_INLINE bool isValid() const noexcept { return contextType() != BL_CONTEXT_TYPE_NONE; }
+  BL_INLINE_NODEBUG bool isValid() const noexcept { return contextType() != BL_CONTEXT_TYPE_NONE; }
 
   //! Returns whether this and `other` point to the same rendering context.
   BL_NODISCARD
@@ -905,14 +906,14 @@ public:
   //!
   //! See `userMatrix()` and `userToMeta()`.
   BL_NODISCARD
-  BL_INLINE const BLMatrix2D& metaMatrix() const noexcept { return BL_CONTEXT_IMPL()->state->metaMatrix; }
+  BL_INLINE_NODEBUG const BLMatrix2D& metaMatrix() const noexcept { return BL_CONTEXT_IMPL()->state->metaMatrix; }
 
   //! Returns user-matrix.
   //!
   //! User matrix contains all transformations that happened to the rendering context unless the context was restored
   //! or `userToMeta()` was called.
   BL_NODISCARD
-  BL_INLINE const BLMatrix2D& userMatrix() const noexcept { return BL_CONTEXT_IMPL()->state->userMatrix; }
+  BL_INLINE_NODEBUG const BLMatrix2D& userMatrix() const noexcept { return BL_CONTEXT_IMPL()->state->userMatrix; }
 
   //! \cond INTERNAL
   //! Applies a matrix operation to the current transformation matrix (internal).
@@ -982,7 +983,7 @@ public:
 
   //! Returns rendering hints.
   BL_NODISCARD
-  BL_INLINE const BLContextHints& hints() const noexcept { return BL_CONTEXT_IMPL()->state->hints; }
+  BL_INLINE_NODEBUG const BLContextHints& hints() const noexcept { return BL_CONTEXT_IMPL()->state->hints; }
 
   //! Sets the given rendering hint `hintType` to the `value`.
   BL_INLINE BLResult setHint(BLContextHint hintType, uint32_t value) noexcept { return BL_CONTEXT_IMPL()->virt->setHint(BL_CONTEXT_IMPL(), hintType, value); }
@@ -992,21 +993,21 @@ public:
 
   //! Returns the rendering quality hint.
   BL_NODISCARD
-  BL_INLINE BLRenderingQuality renderingQuality() const noexcept { return BLRenderingQuality(hints().renderingQuality); }
+  BL_INLINE_NODEBUG BLRenderingQuality renderingQuality() const noexcept { return BLRenderingQuality(hints().renderingQuality); }
 
   //! Sets rendering quality hint to `value`.
   BL_INLINE BLResult setRenderingQuality(BLRenderingQuality value) noexcept { return setHint(BL_CONTEXT_HINT_RENDERING_QUALITY, uint32_t(value)); }
 
   //! Returns the gradient quality hint.
   BL_NODISCARD
-  BL_INLINE BLGradientQuality gradientQuality() const noexcept { return BLGradientQuality(hints().gradientQuality); }
+  BL_INLINE_NODEBUG BLGradientQuality gradientQuality() const noexcept { return BLGradientQuality(hints().gradientQuality); }
 
   //! Sets gradient quality hint to `value`.
   BL_INLINE BLResult setGradientQuality(BLGradientQuality value) noexcept { return setHint(BL_CONTEXT_HINT_GRADIENT_QUALITY, uint32_t(value)); }
 
   //! Returns the pattern quality hint.
   BL_NODISCARD
-  BL_INLINE BLPatternQuality patternQuality() const noexcept { return BLPatternQuality(hints().patternQuality); }
+  BL_INLINE_NODEBUG BLPatternQuality patternQuality() const noexcept { return BLPatternQuality(hints().patternQuality); }
 
   //! Sets pattern quality hint to `value`.
   BL_INLINE BLResult setPatternQuality(BLPatternQuality value) noexcept { return setHint(BL_CONTEXT_HINT_PATTERN_QUALITY, uint32_t(value)); }
@@ -1018,21 +1019,21 @@ public:
 
   //! Returns approximation options.
   BL_NODISCARD
-  BL_INLINE const BLApproximationOptions& approximationOptions() const noexcept { return BL_CONTEXT_IMPL()->state->approximationOptions; }
+  BL_INLINE_NODEBUG const BLApproximationOptions& approximationOptions() const noexcept { return BL_CONTEXT_IMPL()->state->approximationOptions; }
 
   //! Sets approximation options to `options`.
   BL_INLINE BLResult setApproximationOptions(const BLApproximationOptions& options) noexcept { return BL_CONTEXT_IMPL()->virt->setApproximationOptions(BL_CONTEXT_IMPL(), &options); }
 
   //! Returns flatten mode (how curves are flattened).
   BL_NODISCARD
-  BL_INLINE BLFlattenMode flattenMode() const noexcept { return BLFlattenMode(BL_CONTEXT_IMPL()->state->approximationOptions.flattenMode); }
+  BL_INLINE_NODEBUG BLFlattenMode flattenMode() const noexcept { return BLFlattenMode(BL_CONTEXT_IMPL()->state->approximationOptions.flattenMode); }
 
   //! Sets flatten `mode` (how curves are flattened).
   BL_INLINE BLResult setFlattenMode(BLFlattenMode mode) noexcept { return BL_CONTEXT_IMPL()->virt->setFlattenMode(BL_CONTEXT_IMPL(), mode); }
 
   //! Returns tolerance used for curve flattening.
   BL_NODISCARD
-  BL_INLINE double flattenTolerance() const noexcept { return BL_CONTEXT_IMPL()->state->approximationOptions.flattenTolerance; }
+  BL_INLINE_NODEBUG double flattenTolerance() const noexcept { return BL_CONTEXT_IMPL()->state->approximationOptions.flattenTolerance; }
 
   //! Sets tolerance used for curve flattening.
   BL_INLINE BLResult setFlattenTolerance(double tolerance) noexcept { return BL_CONTEXT_IMPL()->virt->setFlattenTolerance(BL_CONTEXT_IMPL(), tolerance); }
@@ -1044,14 +1045,14 @@ public:
 
   //! Returns composition operator.
   BL_NODISCARD
-  BL_INLINE BLCompOp compOp() const noexcept { return (BLCompOp)BL_CONTEXT_IMPL()->state->compOp; }
+  BL_INLINE_NODEBUG BLCompOp compOp() const noexcept { return (BLCompOp)BL_CONTEXT_IMPL()->state->compOp; }
 
   //! Sets composition operator to `compOp`, see `BLCompOp`.
   BL_INLINE BLResult setCompOp(BLCompOp compOp) noexcept { return BL_CONTEXT_IMPL()->virt->setCompOp(BL_CONTEXT_IMPL(), compOp); }
 
   //! Returns global alpha value.
   BL_NODISCARD
-  BL_INLINE double globalAlpha() const noexcept { return BL_CONTEXT_IMPL()->state->globalAlpha; }
+  BL_INLINE_NODEBUG double globalAlpha() const noexcept { return BL_CONTEXT_IMPL()->state->globalAlpha; }
 
   //! Sets global alpha value.
   BL_INLINE BLResult setGlobalAlpha(double alpha) noexcept { return BL_CONTEXT_IMPL()->virt->setGlobalAlpha(BL_CONTEXT_IMPL(), alpha); }
@@ -1062,7 +1063,7 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE BLObjectType styleType(BLContextOpType opType) const noexcept {
+  BL_INLINE_NODEBUG BLObjectType styleType(BLContextOpType opType) const noexcept {
     return uint32_t(opType) <= BL_CONTEXT_OP_TYPE_MAX_VALUE ? BLObjectType(BL_CONTEXT_IMPL()->state->styleType[opType]) : BL_OBJECT_TYPE_NULL;
   }
 
@@ -1118,7 +1119,7 @@ public:
   //!
   //! The function behaves like `fillAlpha()` or `strokeAlpha()` depending on `opType` value, see `BLContextOpType`.
   BL_NODISCARD
-  BL_INLINE double styleAlpha(BLContextOpType opType) const noexcept {
+  BL_INLINE_NODEBUG double styleAlpha(BLContextOpType opType) const noexcept {
     return opType <= BL_CONTEXT_OP_TYPE_MAX_VALUE ? BL_CONTEXT_IMPL()->state->styleAlpha[opType] : 0.0;
   }
 
@@ -1137,7 +1138,7 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE BLObjectType fillStyleType() const noexcept { return (BLObjectType)BL_CONTEXT_IMPL()->state->styleType[kOpFill]; }
+  BL_INLINE_NODEBUG BLObjectType fillStyleType() const noexcept { return (BLObjectType)BL_CONTEXT_IMPL()->state->styleType[kOpFill]; }
 
   BL_INLINE BLResult getFillStyle(BLVarCore& out) const noexcept { return BL_CONTEXT_IMPL()->virt->getStyle[kOpFill](BL_CONTEXT_IMPL(), &out); }
 
@@ -1151,14 +1152,14 @@ public:
 
   //! Returns fill alpha value.
   BL_NODISCARD
-  BL_INLINE double fillAlpha() const noexcept { return BL_CONTEXT_IMPL()->state->styleAlpha[kOpFill]; }
+  BL_INLINE_NODEBUG double fillAlpha() const noexcept { return BL_CONTEXT_IMPL()->state->styleAlpha[kOpFill]; }
 
   //! Sets fill `alpha` value.
   BL_INLINE BLResult setFillAlpha(double alpha) noexcept { return BL_CONTEXT_IMPL()->virt->setStyleAlpha[kOpFill](BL_CONTEXT_IMPL(), alpha); }
 
   //! Returns fill-rule, see `BLFillRule`.
   BL_NODISCARD
-  BL_INLINE BLFillRule fillRule() const noexcept { return (BLFillRule)BL_CONTEXT_IMPL()->state->fillRule; }
+  BL_INLINE_NODEBUG BLFillRule fillRule() const noexcept { return (BLFillRule)BL_CONTEXT_IMPL()->state->fillRule; }
 
   //! Sets fill-rule, see `BLFillRule`.
   BL_INLINE BLResult setFillRule(BLFillRule fillRule) noexcept { return BL_CONTEXT_IMPL()->virt->setFillRule(BL_CONTEXT_IMPL(), fillRule); }
@@ -1169,7 +1170,7 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE BLObjectType strokeStyleType() const noexcept { return (BLObjectType)BL_CONTEXT_IMPL()->state->styleType[kOpStroke]; }
+  BL_INLINE_NODEBUG BLObjectType strokeStyleType() const noexcept { return (BLObjectType)BL_CONTEXT_IMPL()->state->styleType[kOpStroke]; }
 
   BL_INLINE BLResult getStrokeStyle(BLVarCore& out) const noexcept { return BL_CONTEXT_IMPL()->virt->getStyle[kOpStroke](BL_CONTEXT_IMPL(), &out); }
 
@@ -1183,27 +1184,27 @@ public:
 
   //! Returns stroke width.
   BL_NODISCARD
-  BL_INLINE double strokeWidth() const noexcept { return BL_CONTEXT_IMPL()->state->strokeOptions.width; }
+  BL_INLINE_NODEBUG double strokeWidth() const noexcept { return BL_CONTEXT_IMPL()->state->strokeOptions.width; }
 
   //! Returns stroke miter-limit.
   BL_NODISCARD
-  BL_INLINE double strokeMiterLimit() const noexcept { return BL_CONTEXT_IMPL()->state->strokeOptions.miterLimit; }
+  BL_INLINE_NODEBUG double strokeMiterLimit() const noexcept { return BL_CONTEXT_IMPL()->state->strokeOptions.miterLimit; }
 
   //! Returns stroke join, see `BLStrokeJoin`.
   BL_NODISCARD
-  BL_INLINE BLStrokeJoin strokeJoin() const noexcept { return (BLStrokeJoin)BL_CONTEXT_IMPL()->state->strokeOptions.join; }
+  BL_INLINE_NODEBUG BLStrokeJoin strokeJoin() const noexcept { return (BLStrokeJoin)BL_CONTEXT_IMPL()->state->strokeOptions.join; }
 
   //! Returns stroke start-cap, see `BLStrokeCap`.
   BL_NODISCARD
-  BL_INLINE BLStrokeCap strokeStartCap() const noexcept { return (BLStrokeCap)BL_CONTEXT_IMPL()->state->strokeOptions.startCap; }
+  BL_INLINE_NODEBUG BLStrokeCap strokeStartCap() const noexcept { return (BLStrokeCap)BL_CONTEXT_IMPL()->state->strokeOptions.startCap; }
 
   //! Returns stroke end-cap, see `BLStrokeCap`.
   BL_NODISCARD
-  BL_INLINE BLStrokeCap strokeEndCap() const noexcept { return (BLStrokeCap)BL_CONTEXT_IMPL()->state->strokeOptions.endCap; }
+  BL_INLINE_NODEBUG BLStrokeCap strokeEndCap() const noexcept { return (BLStrokeCap)BL_CONTEXT_IMPL()->state->strokeOptions.endCap; }
 
   //! Returns stroke transform order, see `BLStrokeTransformOrder`.
   BL_NODISCARD
-  BL_INLINE BLStrokeTransformOrder strokeTransformOrder() const noexcept { return (BLStrokeTransformOrder)BL_CONTEXT_IMPL()->state->strokeOptions.transformOrder; }
+  BL_INLINE_NODEBUG BLStrokeTransformOrder strokeTransformOrder() const noexcept { return (BLStrokeTransformOrder)BL_CONTEXT_IMPL()->state->strokeOptions.transformOrder; }
 
   //! Returns stroke dash-offset.
   BL_NODISCARD
@@ -1242,7 +1243,7 @@ public:
 
   //! Returns stroke alpha value.
   BL_NODISCARD
-  BL_INLINE double strokeAlpha() const noexcept { return BL_CONTEXT_IMPL()->state->styleAlpha[kOpStroke]; }
+  BL_INLINE_NODEBUG double strokeAlpha() const noexcept { return BL_CONTEXT_IMPL()->state->styleAlpha[kOpStroke]; }
 
   //! Sets stroke alpha value to `alpha`.
   BL_INLINE BLResult setStrokeAlpha(double alpha) noexcept { return BL_CONTEXT_IMPL()->virt->setStyleAlpha[kOpStroke](BL_CONTEXT_IMPL(), alpha); }

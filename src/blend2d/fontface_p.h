@@ -10,6 +10,7 @@
 #include "array_p.h"
 #include "bitset_p.h"
 #include "font.h"
+#include "fonttagset_p.h"
 #include "matrix_p.h"
 #include "object_p.h"
 #include "support/scopedbuffer_p.h"
@@ -47,7 +48,7 @@ struct BLFontFacePrivateFuncs {
 
   BLResult (BL_CDECL* getGlyphOutlines)(
     const BLFontFaceImpl* impl,
-    uint32_t glyphId,
+    BLGlyphId glyphId,
     const BLMatrix2D* userMatrix,
     BLPath* out,
     size_t* contourCountOut,
@@ -62,12 +63,14 @@ struct BLFontFacePrivateFuncs {
   BLResult (BL_CDECL* applyGSub)(
     const BLFontFaceImpl* impl,
     BLGlyphBuffer* gb,
-    const BLBitSetCore* lookups) BL_NOEXCEPT;
+    const uint32_t* bitWords,
+    size_t bitWordCount) BL_NOEXCEPT;
 
   BLResult (BL_CDECL* applyGPos)(
     const BLFontFaceImpl* impl,
     BLGlyphBuffer* gb,
-    const BLBitSetCore* lookups) BL_NOEXCEPT;
+    const uint32_t* bitWords,
+    size_t bitWordCount) BL_NOEXCEPT;
 
   BLResult (BL_CDECL* positionGlyphs)(
     const BLFontFaceImpl* impl,
@@ -79,8 +82,12 @@ struct BLFontFacePrivateFuncs {
 BL_HIDDEN extern BLFontFacePrivateFuncs blNullFontFaceFuncs;
 
 struct BLFontFacePrivateImpl : public BLFontFaceImpl {
-  BLBitSetCore characterCoverage;
   BLFontFacePrivateFuncs funcs;
+  BLBitSetCore characterCoverage;
+
+  BLFontTagData::ScriptTagSet scriptTagSet;
+  BLFontTagData::FeatureTagSet featureTagSet;
+  BLFontTagData::VariationTagSet variationTagSet;
 };
 
 template<typename T = BLFontFacePrivateImpl>
@@ -95,8 +102,9 @@ static BL_INLINE void blFontFaceImplCtor(BLFontFacePrivateImpl* impl, BLFontFace
   blCallCtor(impl->familyName.dcast());
   blCallCtor(impl->subfamilyName.dcast());
   blCallCtor(impl->postScriptName.dcast());
-  blCallCtor(impl->scriptTags.dcast<BLArray<BLTag>>());
-  blCallCtor(impl->featureTags.dcast<BLArray<BLTag>>());
+  blCallCtor(impl->scriptTagSet);
+  blCallCtor(impl->featureTagSet);
+  blCallCtor(impl->variationTagSet);
   blObjectAtomicContentInit(&impl->characterCoverage);
   impl->funcs = funcs;
 }
@@ -105,8 +113,9 @@ static BL_INLINE void blFontFaceImplDtor(BLFontFacePrivateImpl* impl) noexcept {
   if (blObjectAtomicContentTest(&impl->characterCoverage))
     blCallDtor(impl->characterCoverage.dcast());
 
-  blCallDtor(impl->featureTags.dcast<BLArray<BLTag>>());
-  blCallDtor(impl->scriptTags.dcast<BLArray<BLTag>>());
+  blCallDtor(impl->variationTagSet);
+  blCallDtor(impl->featureTagSet);
+  blCallDtor(impl->scriptTagSet);
   blCallDtor(impl->postScriptName.dcast());
   blCallDtor(impl->subfamilyName.dcast());
   blCallDtor(impl->familyName.dcast());

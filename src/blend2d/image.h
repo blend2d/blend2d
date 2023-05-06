@@ -221,7 +221,7 @@ public:
   //! \name Internals
   //! \{
 
-  BL_INLINE BLImageImpl* _impl() const noexcept { return static_cast<BLImageImpl*>(_d.impl); }
+  BL_INLINE_NODEBUG BLImageImpl* _impl() const noexcept { return static_cast<BLImageImpl*>(_d.impl); }
 
   //! \}
   //! \endcond
@@ -229,46 +229,46 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLImage() noexcept { blImageInit(this); }
-  BL_INLINE BLImage(BLImage&& other) noexcept { blImageInitMove(this, &other); }
-  BL_INLINE BLImage(const BLImage& other) noexcept { blImageInitWeak(this, &other); }
-  BL_INLINE BLImage(int w, int h, BLFormat format) noexcept { blImageInitAs(this, w, h, format); }
-  BL_INLINE ~BLImage() { blImageDestroy(this); }
+  BL_INLINE_NODEBUG BLImage() noexcept { blImageInit(this); }
+  BL_INLINE_NODEBUG BLImage(BLImage&& other) noexcept { blImageInitMove(this, &other); }
+  BL_INLINE_NODEBUG BLImage(const BLImage& other) noexcept { blImageInitWeak(this, &other); }
+  BL_INLINE_NODEBUG BLImage(int w, int h, BLFormat format) noexcept { blImageInitAs(this, w, h, format); }
+  BL_INLINE_NODEBUG ~BLImage() { blImageDestroy(this); }
 
   //! \}
 
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE explicit operator bool() const noexcept { return !empty(); }
+  BL_INLINE_NODEBUG explicit operator bool() const noexcept { return !empty(); }
 
-  BL_INLINE BLImage& operator=(BLImage&& other) noexcept { blImageAssignMove(this, &other); return *this; }
-  BL_INLINE BLImage& operator=(const BLImage& other) noexcept { blImageAssignWeak(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLImage& operator=(BLImage&& other) noexcept { blImageAssignMove(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLImage& operator=(const BLImage& other) noexcept { blImageAssignWeak(this, &other); return *this; }
 
-  BL_NODISCARD BL_INLINE bool operator==(const BLImage& other) const noexcept { return  equals(other); }
-  BL_NODISCARD BL_INLINE bool operator!=(const BLImage& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLImage& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLImage& other) const noexcept { return !equals(other); }
 
   //! \}
 
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE BLResult reset() noexcept { return blImageReset(this); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept { return blImageReset(this); }
 
-  BL_INLINE void swap(BLImage& other) noexcept { _d.swap(other._d); }
+  BL_INLINE_NODEBUG void swap(BLImage& other) noexcept { _d.swap(other._d); }
 
-  BL_INLINE BLResult assign(BLImage&& other) noexcept { return blImageAssignMove(this, &other); }
-  BL_INLINE BLResult assign(const BLImage& other) noexcept { return blImageAssignWeak(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(BLImage&& other) noexcept { return blImageAssignMove(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(const BLImage& other) noexcept { return blImageAssignWeak(this, &other); }
 
   //! Create a deep copy of the `other` image.
-  BL_INLINE BLResult assignDeep(const BLImage& other) noexcept { return blImageAssignDeep(this, &other); }
+  BL_INLINE_NODEBUG BLResult assignDeep(const BLImage& other) noexcept { return blImageAssignDeep(this, &other); }
 
   //! Tests whether the image is empty (has no size).
   BL_NODISCARD
-  BL_INLINE bool empty() const noexcept { return format() == BL_FORMAT_NONE; }
+  BL_INLINE_NODEBUG bool empty() const noexcept { return format() == BL_FORMAT_NONE; }
 
   BL_NODISCARD
-  BL_INLINE bool equals(const BLImage& other) const noexcept { return blImageEquals(this, &other); }
+  BL_INLINE_NODEBUG bool equals(const BLImage& other) const noexcept { return blImageEquals(this, &other); }
 
   //! \}
 
@@ -281,12 +281,12 @@ public:
   //! arguments (invalid size or format) were passed to the function a `BL_ERROR_INVALID_VALUE` result will be returned
   //! and no data will be allocated. It's also important to notice that `BLImage::create()` would not change anything
   //! if the function fails (the previous image content would be kept as is).
-  BL_INLINE BLResult create(int w, int h, BLFormat format) noexcept {
+  BL_INLINE_NODEBUG BLResult create(int w, int h, BLFormat format) noexcept {
     return blImageCreate(this, w, h, format);
   }
 
   //! Create a new image from external data.
-  BL_INLINE BLResult createFromData(
+  BL_INLINE_NODEBUG BLResult createFromData(
     int w, int h, BLFormat format,
     void* pixelData, intptr_t stride,
     BLDestroyExternalDataFunc destroyFunc = nullptr,
@@ -302,34 +302,41 @@ public:
 
   //! Returns image width.
   BL_NODISCARD
-  BL_INLINE int width() const noexcept { return _impl()->size.w; }
+  BL_INLINE_NODEBUG int width() const noexcept { return _impl()->size.w; }
 
   //! Returns image height.
   BL_NODISCARD
-  BL_INLINE int height() const noexcept { return _impl()->size.h; }
+  BL_INLINE_NODEBUG int height() const noexcept { return _impl()->size.h; }
 
   //! Returns image size.
   BL_NODISCARD
-  BL_INLINE BLSizeI size() const noexcept { return _impl()->size; }
+  BL_INLINE_NODEBUG BLSizeI size() const noexcept { return _impl()->size; }
 
   //! Returns image format, see `BLFormat`.
   BL_NODISCARD
-  BL_INLINE BLFormat format() const noexcept { return BLFormat(_impl()->format); }
+  BL_INLINE_NODEBUG BLFormat format() const noexcept { return BLFormat(_impl()->format); }
 
   //! Returns image depth, in bits.
   BL_NODISCARD
-  BL_INLINE uint32_t depth() const noexcept { return _impl()->depth; }
+  BL_INLINE_NODEBUG uint32_t depth() const noexcept { return _impl()->depth; }
 
-  BL_INLINE BLResult getData(BLImageData* dataOut) const noexcept { return blImageGetData(this, dataOut); }
-  BL_INLINE BLResult makeMutable() noexcept { BLImageData unused; return blImageMakeMutable(this, &unused); }
-  BL_INLINE BLResult makeMutable(BLImageData* dataOut) noexcept { return blImageMakeMutable(this, dataOut); }
+  //! Returns immutable in `dataOut`, which contains pixel pointer, stride, and other image properties like size and
+  //! pixel format.
+  //!
+  //! \note Although the data is filled in \ref BLImageData, which holds a non-const `pixelData` pointer, the data is
+  //! immutable. If you intend to modify the data, use \ref makeMutable() function instead, which would copy the image
+  //! data if it's shared with another BLImage instance.
+  BL_INLINE_NODEBUG BLResult getData(BLImageData* dataOut) const noexcept { return blImageGetData(this, dataOut); }
+
+  //! Makes the image data mutable and returns them in `dataOut`.
+  BL_INLINE_NODEBUG BLResult makeMutable(BLImageData* dataOut) noexcept { return blImageMakeMutable(this, dataOut); }
 
   //! \}
 
   //! \name Image Utilities
   //! \{
 
-  BL_INLINE BLResult convert(BLFormat format) noexcept {
+  BL_INLINE_NODEBUG BLResult convert(BLFormat format) noexcept {
     return blImageConvert(this, format);
   }
 
@@ -338,53 +345,53 @@ public:
   //! \name Image IO
   //! \{
 
-  BL_INLINE BLResult readFromFile(const char* fileName) noexcept {
+  BL_INLINE_NODEBUG BLResult readFromFile(const char* fileName) noexcept {
     return blImageReadFromFile(this, fileName, nullptr);
   }
 
-  BL_INLINE BLResult readFromFile(const char* fileName, const BLArray<BLImageCodec>& codecs) noexcept {
+  BL_INLINE_NODEBUG BLResult readFromFile(const char* fileName, const BLArray<BLImageCodec>& codecs) noexcept {
     return blImageReadFromFile(this, fileName, &codecs);
   }
 
-  BL_INLINE BLResult readFromData(const void* data, size_t size) noexcept {
+  BL_INLINE_NODEBUG BLResult readFromData(const void* data, size_t size) noexcept {
     return blImageReadFromData(this, data, size, nullptr);
   }
 
-  BL_INLINE BLResult readFromData(const void* data, size_t size, const BLArray<BLImageCodec>& codecs) noexcept {
+  BL_INLINE_NODEBUG BLResult readFromData(const void* data, size_t size, const BLArray<BLImageCodec>& codecs) noexcept {
     return blImageReadFromData(this, data, size, &codecs);
   }
 
-  BL_INLINE BLResult readFromData(const BLArray<uint8_t>& array) noexcept {
+  BL_INLINE_NODEBUG BLResult readFromData(const BLArray<uint8_t>& array) noexcept {
     return blImageReadFromData(this, array.data(), array.size(), nullptr);
   }
 
-  BL_INLINE BLResult readFromData(const BLArray<uint8_t>& array, const BLArray<BLImageCodec>& codecs) noexcept {
+  BL_INLINE_NODEBUG BLResult readFromData(const BLArray<uint8_t>& array, const BLArray<BLImageCodec>& codecs) noexcept {
     return blImageReadFromData(this, array.data(), array.size(), &codecs);
   }
 
-  BL_INLINE BLResult readFromData(const BLArrayView<uint8_t>& view) noexcept {
+  BL_INLINE_NODEBUG BLResult readFromData(const BLArrayView<uint8_t>& view) noexcept {
     return blImageReadFromData(this, view.data, view.size, nullptr);
   }
 
-  BL_INLINE BLResult readFromData(const BLArrayView<uint8_t>& view, const BLArray<BLImageCodec>& codecs) noexcept {
+  BL_INLINE_NODEBUG BLResult readFromData(const BLArrayView<uint8_t>& view, const BLArray<BLImageCodec>& codecs) noexcept {
     return blImageReadFromData(this, view.data, view.size, &codecs);
   }
 
-  BL_INLINE BLResult writeToFile(const char* fileName) noexcept {
+  BL_INLINE_NODEBUG BLResult writeToFile(const char* fileName) noexcept {
     return blImageWriteToFile(this, fileName, nullptr);
   }
 
-  BL_INLINE BLResult writeToFile(const char* fileName, const BLImageCodec& codec) noexcept {
+  BL_INLINE_NODEBUG BLResult writeToFile(const char* fileName, const BLImageCodec& codec) noexcept {
     return blImageWriteToFile(this, fileName, reinterpret_cast<const BLImageCodecCore*>(&codec));
   }
 
-  BL_INLINE BLResult writeToData(BLArray<uint8_t>& dst, const BLImageCodec& codec) noexcept {
+  BL_INLINE_NODEBUG BLResult writeToData(BLArray<uint8_t>& dst, const BLImageCodec& codec) noexcept {
     return blImageWriteToData(this, &dst, reinterpret_cast<const BLImageCodecCore*>(&codec));
   }
 
   //! \}
 
-  static BL_INLINE BLResult scale(BLImage& dst, const BLImage& src, const BLSizeI& size, uint32_t filter, const BLImageScaleOptions* options = nullptr) noexcept {
+  static BL_INLINE_NODEBUG BLResult scale(BLImage& dst, const BLImage& src, const BLSizeI& size, uint32_t filter, const BLImageScaleOptions* options = nullptr) noexcept {
     return blImageScale(&dst, &src, &size, filter, options);
   }
 };

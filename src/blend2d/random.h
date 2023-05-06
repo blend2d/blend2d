@@ -41,18 +41,21 @@ struct BLRandom {
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLRandom() noexcept = default;
-  BL_INLINE BLRandom(const BLRandom&) noexcept = default;
+  BL_INLINE_NODEBUG BLRandom() noexcept = default;
+  BL_INLINE_NODEBUG BLRandom(const BLRandom&) noexcept = default;
 
-  BL_INLINE explicit BLRandom(uint64_t seed) noexcept { reset(seed); }
+  BL_INLINE_NODEBUG explicit BLRandom(uint64_t seed) noexcept { reset(seed); }
 
   //! \}
 
   //! \name Overloaded Operators
   //! \{
 
-  BL_NODISCARD BL_INLINE bool operator==(const BLRandom& other) const noexcept { return  equals(other); }
-  BL_NODISCARD BL_INLINE bool operator!=(const BLRandom& other) const noexcept { return !equals(other); }
+  BL_NODISCARD
+  BL_INLINE_NODEBUG bool operator==(const BLRandom& other) const noexcept { return  equals(other); }
+
+  BL_NODISCARD
+  BL_INLINE_NODEBUG bool operator!=(const BLRandom& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -62,13 +65,13 @@ struct BLRandom {
   //! Resets the random number generator to the given `seed`.
   //!
   //! Always returns `BL_SUCCESS`.
-  BL_INLINE BLResult reset(uint64_t seed = 0) noexcept { return blRandomReset(this, seed); }
+  BL_INLINE_NODEBUG BLResult reset(uint64_t seed = 0) noexcept { return blRandomReset(this, seed); }
 
   //! Tests whether the random number generator is equivalent to `other`.
   //!
   //! \note It would return true only when its internal state matches `other`'s internal state.
   BL_NODISCARD
-  BL_INLINE bool equals(const BLRandom& other) const noexcept {
+  BL_INLINE_NODEBUG bool equals(const BLRandom& other) const noexcept {
     return bool(unsigned(blEquals(this->data[0], other.data[0])) &
                 unsigned(blEquals(this->data[1], other.data[1])));
   }
@@ -80,15 +83,15 @@ struct BLRandom {
 
   //! Returns the next pseudo-random `uint64_t` value and advances PRNG state.
   BL_NODISCARD
-  BL_INLINE uint64_t nextUInt64() noexcept { return blRandomNextUInt64(this); }
+  BL_INLINE_NODEBUG uint64_t nextUInt64() noexcept { return blRandomNextUInt64(this); }
 
   //! Returns the next pseudo-random `uint32_t` value and advances PRNG state.
   BL_NODISCARD
-  BL_INLINE uint32_t nextUInt32() noexcept { return blRandomNextUInt32(this); }
+  BL_INLINE_NODEBUG uint32_t nextUInt32() noexcept { return blRandomNextUInt32(this); }
 
   //! Returns the next pseudo-random `double` precision floating point in [0..1) range and advances PRNG state.
   BL_NODISCARD
-  BL_INLINE double nextDouble() noexcept { return blRandomNextDouble(this); }
+  BL_INLINE_NODEBUG double nextDouble() noexcept { return blRandomNextDouble(this); }
 
   //! \}
 #endif

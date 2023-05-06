@@ -44,7 +44,7 @@ namespace BLOpenType {
 //! NOTE 2: Many enums inside this structure are just for reference purposes. They would be useful if we want
 //! to implement support for RAW PostScript fonts (CFF) that are not part of OpenType.
 struct CFFTable {
-  enum : uint32_t { kMinSize = 4 };
+  enum : uint32_t { kBaseSize = 4 };
   enum : uint32_t { kOffsetAdjustment = 1 };
 
   enum CharsetId : uint32_t {
@@ -131,7 +131,7 @@ struct CFFTable {
   struct IndexV1 {
     //! \note An empty Index is represented by a `count` field with a 0 value and no additional fields, thus,
     //! the total size of bytes required by a zero index is 2.
-    enum : uint32_t { kMinSize = 2 };
+    enum : uint32_t { kBaseSize = 2 };
 
     UInt16 count;
     UInt8 offsetSize;
@@ -147,7 +147,7 @@ struct CFFTable {
   struct IndexV2 {
     //! \note An empty Index is represented by a `count` field with a 0 value and no additional fields, thus,
     //! the total size of bytes required by a zero index is 4.
-    enum : uint32_t { kMinSize = 4 };
+    enum : uint32_t { kBaseSize = 4 };
 
     UInt32 count;
     UInt8 offsetSize;
@@ -209,7 +209,7 @@ struct CFFData {
   };
 
   //! Content of 'CFF ' or 'CFF2' table.
-  BLFontTableT<CFFTable> table;
+  Table<CFFTable> table;
   //! GSubR, LSubR, and CharString indexes.
   IndexData index[kIndexCount];
   //! Associates an FD (font dict) with a glyph by specifying an FD index for that glyph.
@@ -220,7 +220,7 @@ struct CFFData {
 };
 
 namespace CFFImpl {
-BL_HIDDEN BLResult init(OTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) noexcept;
+BL_HIDDEN BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noexcept;
 } // {CFFImpl}
 
 } // {BLOpenType}

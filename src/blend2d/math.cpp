@@ -102,7 +102,7 @@ size_t blCubicRoots(double* dst, const double* poly, double tMin, double tMax) n
 // ==============
 
 #ifdef BL_TEST
-UNIT(math, -9) {
+UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
   INFO("blFloor()");
   {
     EXPECT_EQ(blFloor(-1.5f),-2.0f);

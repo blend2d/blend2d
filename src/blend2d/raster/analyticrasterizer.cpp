@@ -30,7 +30,7 @@ static bool checkRasterizerState(const AnalyticState& a, const AnalyticState& b)
          a._savedFy1 == b._savedFy1;
 }
 
-UNIT(analytic_rasterizer, 1) {
+UNIT(analytic_rasterizer, BL_TEST_GROUP_RENDERING_UTILITIES) {
   int w = 1000;
   int h = 1000;
 

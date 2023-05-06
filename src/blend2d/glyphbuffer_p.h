@@ -33,11 +33,16 @@ struct BLGlyphBufferPrivateImpl : public BLGlyphBufferImpl {
   uint8_t* buffer[2];
   size_t capacity[2];
 
+  BLDebugMessageSinkFunc debugSink;
+  void* debugSinkUserData;
+
   // Default-constructed data should not be initialized.
   BL_INLINE constexpr BLGlyphBufferPrivateImpl() noexcept
     : BLGlyphBufferImpl {},
       buffer { nullptr, nullptr },
-      capacity { 0, 0 } {}
+      capacity { 0, 0 },
+      debugSink(nullptr),
+      debugSinkUserData(nullptr) {}
 
   static BLGlyphBufferPrivateImpl* create() noexcept {
     BLGlyphBufferPrivateImpl* d = (BLGlyphBufferPrivateImpl*)malloc(sizeof(BLGlyphBufferPrivateImpl));
@@ -47,7 +52,7 @@ struct BLGlyphBufferPrivateImpl : public BLGlyphBufferImpl {
     d->content = nullptr;
     d->placementData = nullptr;
     d->size = 0;
-    d->glyphRun.glyphSize = uint8_t(sizeof(uint32_t));
+    d->glyphRun.reserved = uint8_t(0);
     d->glyphRun.placementType = BL_GLYPH_PLACEMENT_TYPE_NONE;
     d->glyphRun.glyphAdvance = int8_t(sizeof(uint32_t));
     d->glyphRun.placementAdvance = int8_t(sizeof(BLGlyphPlacement));
@@ -58,6 +63,8 @@ struct BLGlyphBufferPrivateImpl : public BLGlyphBufferImpl {
     d->buffer[1] = nullptr;
     d->capacity[0] = 0;
     d->capacity[1] = 0;
+    d->debugSink = nullptr;
+    d->debugSinkUserData = nullptr;
 
     return d;
   }

@@ -389,7 +389,7 @@ static BLResult BL_CDECL blRasterContextImplSetStyle(BLContextImpl* baseImpl, co
       contextFlags &= ~(styleFlags | (BL_RASTER_CONTEXT_NO_BASE_STYLE << kOpType));
       styleFlags = BL_RASTER_CONTEXT_BASE_FETCH_DATA;
 
-      blObjectPrivateAddRefTagged(gradient);
+      blObjectPrivateAddRefIfRCTagSet(gradient);
       fetchData->initGradientSource(gradient);
       fetchData->_extendMode = gradientI->extendMode;
 
@@ -443,7 +443,7 @@ static BLResult BL_CDECL blRasterContextImplSetStyle(BLContextImpl* baseImpl, co
       if (!BLPatternPrivate::isAreaValidAndNonZero(area, imgI->size))
         area.reset(0, 0, imgI->size.w, imgI->size.h);
 
-      blObjectPrivateAddRefTagged(image);
+      blObjectPrivateAddRefIfRCTagSet(image);
       fetchData->initPatternSource(image, area);
       fetchData->_extendMode = uint8_t(BLPatternPrivate::getExtendMode(pattern));
 
@@ -497,7 +497,7 @@ static BL_INLINE void onBeforeStrokeChange(BLRasterContextImpl* ctxI) noexcept {
   if (ctxI->contextFlags & BL_RASTER_CONTEXT_STATE_STROKE_OPTIONS) {
     SavedState* state = ctxI->savedState;
     memcpy(&state->strokeOptions, &ctxI->strokeOptions(), sizeof(BLStrokeOptionsCore));
-    blObjectPrivateAddRefTagged(&state->strokeOptions.dashArray);
+    blObjectPrivateAddRefIfRCTagSet(&state->strokeOptions.dashArray);
   }
 }
 
@@ -1910,7 +1910,7 @@ static BL_INLINE BLResult enqueueCommand(BLRasterContextImpl* ctxI, RenderComman
       if (blTestFlag(Flags, RenderCommandSerializerFlags::kBlit)) {
         mgr._fetchDataAppender.append(fetchData);
         fetchData->_destroyFunc = destroyAsyncBlitData;
-        blObjectPrivateAddRefTagged(&fetchData->_style);
+        blObjectPrivateAddRefIfRCTagSet(&fetchData->_style);
       }
       else {
         mgr._fetchDataAppender.append(fetchData->addRef());

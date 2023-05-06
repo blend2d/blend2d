@@ -86,7 +86,7 @@ BL_DEFINE_ENUM_FLAGS(BLCompOpFlags)
 struct BLCompOpInfo {
   uint16_t _flags;
 
-  BL_INLINE BLCompOpFlags flags() const noexcept { return (BLCompOpFlags)_flags; }
+  BL_INLINE_NODEBUG BLCompOpFlags flags() const noexcept { return (BLCompOpFlags)_flags; }
 };
 
 //! Provides flags for each composition operator.
@@ -155,6 +155,7 @@ static BL_INLINE const BLCompOpSimplifyInfo& blCompOpSimplifyInfo(uint32_t compO
 }
 
 //! \}
+
 //! \endcond
 
 #endif // BLEND2D_COMPOP_P_H_INCLUDED

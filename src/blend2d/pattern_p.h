@@ -14,7 +14,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! \name Pattern - Private Structs
+//! \name BLPattern - Private Structs
 //! \{
 
 //! Private implementation that extends \ref BLPatternImpl.
@@ -24,7 +24,7 @@ struct BLPatternPrivateImpl : public BLPatternImpl {
 
 //! \}
 
-//! \name Pattern - Private API
+//! \name BLPattern - Private API
 //! \{
 
 namespace BLPatternPrivate {

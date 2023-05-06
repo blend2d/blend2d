@@ -159,7 +159,7 @@ uint32_t adler32(const uint8_t* data, size_t size) noexcept {
 // ==============================
 
 #ifdef BL_TEST
-UNIT(compression_crc32) {
+UNIT(compression_crc32, BL_TEST_GROUP_COMPRESSION_UTILITIES) {
   EXPECT_EQ(crc32(reinterpret_cast<const uint8_t*>("a"), 1), 0xE8B7BE43u);
   EXPECT_EQ(crc32(reinterpret_cast<const uint8_t*>("ab"), 2), 0x9E83486Du);
   EXPECT_EQ(crc32(reinterpret_cast<const uint8_t*>("abc"), 3), 0x352441C2u);

@@ -232,7 +232,7 @@ BL_API_IMPL BLResult blImageCodecArrayInitBuiltInCodecs(BLArrayCore* self) noexc
 
   *self = imageCodecsArrayMutex->protectShared([&] {
     BLArrayCore tmp = imageCodecsArray();
-    blObjectPrivateAddRefTagged(&tmp);
+    blObjectPrivateAddRefIfRCTagSet(&tmp);
     return tmp;
   });
   return BL_SUCCESS;
@@ -326,7 +326,7 @@ void blRegisterBuiltInCodecs(BLRuntimeContext* rt) noexcept {
 // ====================
 
 #ifdef BL_TEST
-UNIT(image_codecs) {
+UNIT(image_codecs, BL_TEST_GROUP_IMAGE_CODECS) {
   INFO("Testing BLImageCodec::findByName() and BLImageCodec::findByData()");
   {
     static const uint8_t bmpSignature[2] = { 'B', 'M' };

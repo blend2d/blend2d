@@ -6,6 +6,7 @@
 
 #include "api-build_p.h"
 #include "array_p.h"
+#include "bitarray_p.h"
 #include "bitset_p.h"
 #include "font_p.h"
 #include "fontfeaturesettings_p.h"
@@ -634,6 +635,9 @@ BL_API_IMPL bool blVarEquals(const BLUnknown* a, const BLUnknown* b) noexcept {
     case BL_OBJECT_TYPE_BIT_SET:
       return blBitSetEquals(static_cast<const BLBitSetCore*>(a), static_cast<const BLBitSetCore*>(b));
 
+    case BL_OBJECT_TYPE_BIT_ARRAY:
+      return blBitArrayEquals(static_cast<const BLBitArrayCore*>(a), static_cast<const BLBitArrayCore*>(b));
+
     case BL_OBJECT_TYPE_BOOL:
     case BL_OBJECT_TYPE_INT64:
     case BL_OBJECT_TYPE_UINT64:
@@ -779,7 +783,7 @@ BL_API_IMPL bool blVarStrictEquals(const BLUnknown* a, const BLUnknown* b) noexc
 // =============
 
 #ifdef BL_TEST
-UNIT(var) {
+UNIT(var, BL_TEST_GROUP_CORE_OBJECT) {
   INFO("Verifying null value functionality");
   {
     EXPECT_EQ(BLVar().type(), BL_OBJECT_TYPE_NULL);

@@ -16,12 +16,36 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
+//! Assertion of a validated data.
+//!
+//! This type of assert is used in every place that works with a validated table.
+#define BL_ASSERT_VALIDATED(...) BL_ASSERT(__VA_ARGS__)
+
 //! \namespace BLOpenType
 //! Low-level OpenType functionality, not exposed to users directly.
 
 namespace BLOpenType {
 
 struct OTFaceImpl;
+union OTFaceTables;
+
+//! Provides minimum and maximum glyph id - used by the API.
+struct GlyphRange {
+  uint32_t glyphMin;
+  uint32_t glyphMax;
+
+  BL_INLINE bool contains(BLGlyphId glyphId) const noexcept { return bool(unsigned(glyphId >= glyphMin) & unsigned(glyphId <= glyphMax)); }
+};
+
+struct OffsetRange {
+  uint32_t start;
+  uint32_t end;
+
+  template<typename T>
+  BL_INLINE bool contains(const T& offset) const noexcept {
+    return bool(unsigned(offset >= start) & unsigned(offset < end));
+  }
+};
 
 //! A range that specifies offset and size of a data table or some part of it.
 struct DataRange {
@@ -34,6 +58,188 @@ struct DataRange {
     this->size = size_;
   }
 };
+
+template<typename T>
+struct Table;
+
+//! A read only data that represents a font table or its sub-table.
+//!
+//! \note This is functionally similar compared to \ref BLFontTable. The difference is that we prefer to have table
+//! size as `uint32_t` integer instead of `size_t` as various offsets and slices in OpenType are 32-bit integers.
+//! Having one value as `size_t` and the rest as `uint32_t` leads to a casting nightmare.
+struct RawTable {
+  //! \name Members
+  //! \{
+
+  //! Pointer to the beginning of the data interpreted as `uint8_t*`.
+  const uint8_t* data;
+  //! Size of `data` in bytes.
+  uint32_t size;
+
+  //! \}
+
+  //! \name Construction & Destruction
+  //! \{
+
+  BL_INLINE RawTable() noexcept = default;
+  BL_INLINE RawTable(const RawTable& other) noexcept = default;
+
+  BL_INLINE RawTable(const BLFontTable& other) noexcept
+    : data(other.data),
+      size(uint32_t(other.size)) {}
+
+  BL_INLINE RawTable(const uint8_t* data, uint32_t size) noexcept
+    : data(data),
+      size(size) {}
+
+  //! \}
+
+  //! \name Overloaded Operators
+  //! \{
+
+  //! Tests whether the table has a content.
+  //!
+  //! \note This is essentially the opposite of `empty()`.
+  BL_INLINE explicit operator bool() const noexcept { return size != 0; }
+
+  BL_INLINE RawTable& operator=(const RawTable& other) noexcept = default;
+
+  //! \}
+
+  //! \name Common Functionality
+  //! \{
+
+  //! Tests whether the table is empty (has no content).
+  BL_INLINE bool empty() const noexcept { return !size; }
+
+  BL_INLINE void reset() noexcept {
+    data = nullptr;
+    size = 0;
+  }
+
+  BL_INLINE void reset(const uint8_t* data_, uint32_t size_) noexcept {
+    data = data_;
+    size = size_;
+  }
+
+  template<typename SizeT>
+  BL_INLINE bool fits(const SizeT& nBytes) const noexcept { return nBytes <= size; }
+
+  //! \}
+
+  //! \name Accessors
+  //! \{
+
+  template<typename T>
+  BL_INLINE const T* dataAs(size_t offset = 0u) const noexcept {
+    BL_ASSERT(offset <= size);
+    return reinterpret_cast<const T*>(data + offset);
+  }
+
+  BL_INLINE uint32_t readU8(size_t offset) const noexcept {
+    BL_ASSERT(offset < size);
+    return data[offset];
+  }
+
+  BL_INLINE uint32_t readU16(size_t offset) const noexcept {
+    BL_ASSERT(offset + 2 <= size);
+    return BLMemOps::readU16aBE(data + offset);
+  }
+
+  BL_INLINE RawTable subTable(uint32_t offset) const noexcept {
+    offset = blMin(offset, size);
+    return RawTable(data + offset, size - offset);
+  }
+
+  template<typename T>
+  BL_INLINE Table<T> subTable(uint32_t offset) const noexcept {
+    offset = blMin(offset, size);
+    return Table<T>(data + offset, size - offset);
+  }
+
+  BL_INLINE RawTable subTableUnchecked(uint32_t offset) const noexcept {
+    BL_ASSERT(offset <= size);
+    return RawTable(data + offset, size - offset);
+  }
+
+  template<typename T>
+  BL_INLINE Table<T> subTableUnchecked(uint32_t offset) const noexcept {
+    BL_ASSERT(offset <= size);
+    return Table<T>(data + offset, size - offset);
+  }
+
+  //! \}
+};
+
+//! A convenience class that maps `RawTable` to a typed table.
+template<typename T>
+struct Table : public RawTable {
+  //! \name Construction & Destruction
+  //! \{
+
+  BL_INLINE Table() noexcept = default;
+  BL_INLINE Table(const Table& other) noexcept = default;
+
+  BL_INLINE Table(const RawTable& other) noexcept
+    : RawTable(other.data, other.size) {}
+
+  BL_INLINE Table(const BLFontTable& other) noexcept
+    : RawTable(other) {}
+
+  BL_INLINE Table(const uint8_t* data, uint32_t size) noexcept
+    : RawTable(data, size) {}
+
+  //! \}
+
+  //! \name Overloaded Operators
+  //! \{
+
+  BL_INLINE Table& operator=(const Table& other) noexcept = default;
+  BL_INLINE const T* operator->() const noexcept { return dataAs<T>(); }
+
+  //! \}
+
+  //! \name Helpers
+  //! \{
+
+  using RawTable::fits;
+
+  BL_INLINE bool fits() const noexcept { return size >= T::kBaseSize; }
+
+  //! \}
+};
+
+template<typename SizeT>
+static BL_INLINE bool blFontTableFitsN(const RawTable& table, const SizeT& requiredSize, const SizeT& offset = 0) noexcept {
+  return (table.size - offset) >= requiredSize;
+}
+
+template<typename T, typename SizeT = uint32_t>
+static BL_INLINE bool blFontTableFitsT(const RawTable& table, const SizeT& offset = 0) noexcept {
+  return blFontTableFitsN(table, SizeT(T::kBaseSize), offset);
+}
+
+/*
+static BL_INLINE RawTable blFontSubTable(const RawTable& table, uint32_t offset) noexcept {
+  BL_ASSERT(offset <= table.size);
+  return RawTable(table.data + offset, table.size - offset);
+}
+
+static BL_INLINE RawTable blFontSubTableChecked(const RawTable& table, uint32_t offset) noexcept {
+  return RawTable(table.data, blMin(table.size, offset));
+}
+
+template<typename T>
+static BL_INLINE Table<T> blFontSubTableT(const RawTable& table, uint32_t offset) noexcept {
+  BL_ASSERT(offset <= table.size);
+  return Table<T>(table.data + offset, table.size - offset);
+}
+
+template<typename T>
+static BL_INLINE Table<T> blFontSubTableCheckedT(const RawTable& table, uint32_t offset) noexcept {
+  return blFontSubTableT<T>(table, blMin(table.size, offset));
+}
+*/
 
 template<size_t Size>
 struct DataAccess {};
@@ -139,7 +345,7 @@ typedef Int64 DateTime;
 
 template<typename T>
 struct Array16 {
-  enum : uint32_t { kMinSize = 2 };
+  enum : uint32_t { kBaseSize = 2 };
 
   UInt16 count;
   BL_INLINE const T* array() const noexcept { return BLPtrOps::offset<const T>(this, 2); }
@@ -147,7 +353,7 @@ struct Array16 {
 
 template<typename T>
 struct Array32 {
-  enum : uint32_t { kMinSize = 4 };
+  enum : uint32_t { kBaseSize = 4 };
 
   UInt32 count;
   BL_INLINE const T* array() const noexcept { return BLPtrOps::offset<const T>(this, 4); }

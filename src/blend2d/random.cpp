@@ -34,7 +34,7 @@ BL_API_IMPL uint64_t blRandomNextUInt64(BLRandom* self) noexcept {
 // ================
 
 #ifdef BL_TEST
-UNIT(random) {
+UNIT(random, BL_TEST_GROUP_CORE_UTILITIES) {
   // Number of iterations for tests that use loop.
   enum { kCount = 1000000 };
 

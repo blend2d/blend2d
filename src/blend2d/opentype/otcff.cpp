@@ -22,8 +22,8 @@
 namespace BLOpenType {
 namespace CFFImpl {
 
-// OpenType::CFFImpl - Tracing
-// ===========================
+// BLOpenType::CFFImpl - Tracing
+// =============================
 
 #if defined(BL_TRACE_OT_ALL) && !defined(BL_TRACE_OT_CFF)
   #define BL_TRACE_OT_CFF
@@ -35,8 +35,8 @@ namespace CFFImpl {
   #define Trace BLDummyTrace
 #endif
 
-// OpenType::CFFImpl - Utilities
-// =============================
+// BLOpenType::CFFImpl - Utilities
+// ===============================
 
 // Specified by "CFF - Local/Global Subrs INDEXes"
 static BL_INLINE uint16_t calcSubRBias(uint32_t subrCount) noexcept {
@@ -202,8 +202,8 @@ static BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOu
   return BL_SUCCESS;
 }
 
-// OpenType::CFFImpl - Index
-// =========================
+// BLOpenType::CFFImpl - Index
+// ===========================
 
 struct Index {
   uint32_t count;
@@ -221,8 +221,8 @@ struct Index {
   }
 };
 
-// OpenType::CFFImpl - DictEntry
-// =============================
+// BLOpenType::CFFImpl - DictEntry
+// ===============================
 
 struct DictEntry {
   enum : uint32_t { kValueCapacity = 48 };
@@ -237,8 +237,8 @@ struct DictEntry {
   }
 };
 
-// OpenType::CFFImpl - DictIterator
-// ================================
+// BLOpenType::CFFImpl - DictIterator
+// ==================================
 
 class DictIterator {
 public:
@@ -265,8 +265,8 @@ public:
   BLResult next(DictEntry& entry) noexcept;
 };
 
-// OpenType::CFFImpl - ReadIndex
-// =============================
+// BLOpenType::CFFImpl - ReadIndex
+// ===============================
 
 static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion, Index* indexOut) noexcept {
   uint32_t count = 0;
@@ -374,8 +374,8 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
   return BL_SUCCESS;
 }
 
-// OpenType::CFFImpl - DictIterator
-// ================================
+// BLOpenType::CFFImpl - DictIterator
+// ==================================
 
 BLResult DictIterator::next(DictEntry& entry) noexcept {
   BL_ASSERT(hasNext());
@@ -459,8 +459,8 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
   return BL_SUCCESS;
 }
 
-// OpenType::CFFImpl - Constants
-// =============================
+// BLOpenType::CFFImpl - Constants
+// ===============================
 
 // ADOBE uses a limit of 20 million instructions in their AVALON rasterizer, but it's not clear that it's because of
 // font complexity or their PostScript support.
@@ -576,8 +576,8 @@ enum CSOpCode : uint32_t {
   kCSOpGet        = 0x0C15  // CFFv1:    I get (12 21) out
 };
 
-// OpenType::CFFImpl - ExecutionFeaturesInfo
-// =========================================
+// BLOpenType::CFFImpl - ExecutionFeaturesInfo
+// ===========================================
 
 //! Describes features that can be used during execution and their requirements.
 //!
@@ -680,8 +680,8 @@ static constexpr const ExecutionFeaturesInfo executionFeaturesInfo[2] = {
   }
 };
 
-// OpenType::CFFImpl - ExecutionState
-// ==================================
+// BLOpenType::CFFImpl - ExecutionState
+// ====================================
 
 //! Execution state is used in a call-stack array to remember from where a subroutine was called. When a subroutine
 //! reaches the end of a "Return" opcode it would pop the state from call-stack and return the execution after the
@@ -696,8 +696,8 @@ struct ExecutionState {
   const uint8_t* _end;
 };
 
-// OpenType::CFFImpl - Matrix2x2
-// =============================
+// BLOpenType::CFFImpl - Matrix2x2
+// ===============================
 
 struct Matrix2x2 {
   BL_INLINE double xByA(double x, double y) const noexcept { return x * m00 + y * m10; }
@@ -713,8 +713,8 @@ struct Matrix2x2 {
   double m10, m11;
 };
 
-// OpenType::CFFImpl - Trace
-// =========================
+// BLOpenType::CFFImpl - Trace
+// ===========================
 
 #ifdef BL_TRACE_OT_CFF
 static void traceCharStringOp(const OTFaceImpl* faceI, Trace& trace, uint32_t op, const double* values, size_t count) noexcept {
@@ -809,10 +809,10 @@ static void traceCharStringOp(const OTFaceImpl* faceI, Trace& trace, uint32_t op
 }
 #endif
 
-// OpenType::CFFImpl - Interpreter
-// ===============================
+// BLOpenType::CFFImpl - Interpreter
+// =================================
 
-static BL_INLINE bool findGlyphInRange3(uint32_t glyphId, const uint8_t* ranges, size_t nRanges, uint32_t& fd) noexcept {
+static BL_INLINE bool findGlyphInRange3(BLGlyphId glyphId, const uint8_t* ranges, size_t nRanges, uint32_t& fd) noexcept {
   constexpr size_t kRangeSize = 3;
   for (size_t i = nRanges; i != 0; i >>= 1) {
     const uint8_t* half = ranges + (i >> 1) * kRangeSize;
@@ -840,7 +840,7 @@ static BL_INLINE bool findGlyphInRange3(uint32_t glyphId, const uint8_t* ranges,
 template<typename Consumer>
 static BLResult getGlyphOutlinesT(
   const BLFontFaceImpl* faceI_,
-  uint32_t glyphId,
+  BLGlyphId glyphId,
   const BLMatrix2D* matrix,
   Consumer& consumer,
   BLScopedBuffer* tmpBuffer) noexcept {
@@ -1901,8 +1901,8 @@ InvalidData:
   return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 }
 
-// OpenType::CFFImpl - GetGlyphBounds
-// ==================================
+// BLOpenType::CFFImpl - GetGlyphBounds
+// ====================================
 
 namespace {
 
@@ -1998,7 +1998,7 @@ static BLResult BL_CDECL getGlyphBounds(
   m.reset();
 
   for (size_t i = 0; i < count; i++) {
-    uint32_t glyphId = glyphData[0];
+    BLGlyphId glyphId = glyphData[0];
     glyphData = BLPtrOps::offset(glyphData, glyphAdvance);
 
     BLResult localResult = getGlyphOutlinesT<GlyphBoundsConsumer>(faceI_, glyphId, &m, consumer, &tmpBuffer);
@@ -2019,8 +2019,8 @@ static BLResult BL_CDECL getGlyphBounds(
   return result;
 }
 
-// OpenType::CFFImpl - GetGlyphOutlines
-// ====================================
+// BLOpenType::CFFImpl - GetGlyphOutlines
+// ======================================
 
 namespace {
 
@@ -2074,7 +2074,7 @@ public:
 
 static BLResult BL_CDECL getGlyphOutlines(
   const BLFontFaceImpl* faceI_,
-  uint32_t glyphId,
+  BLGlyphId glyphId,
   const BLMatrix2D* matrix,
   BLPath* out,
   size_t* contourCountOut,
@@ -2087,8 +2087,8 @@ static BLResult BL_CDECL getGlyphOutlines(
   return result;
 }
 
-// OpenType::CIDInfo - Struct
-// ==========================
+// BLOpenType::CIDInfo - Struct
+// ============================
 
 struct CIDInfo {
   enum Flags : uint32_t {
@@ -2105,16 +2105,14 @@ struct CIDInfo {
   uint8_t fdSelectFormat;
 };
 
-// OpenType::CFFImpl - Init
-// ========================
+// BLOpenType::CFFImpl - Init
+// ==========================
 
 static BL_INLINE bool isSupportedFDSelectFormat(uint32_t format) noexcept {
   return format == 0 || format == 3;
 }
 
-BLResult init(OTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) noexcept {
-  BLFontTableT<CFFTable> cff { fontTable };
-
+BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noexcept {
   DictIterator dictIter;
   DictEntry dictEntry;
 
@@ -2139,10 +2137,13 @@ BLResult init(OTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) noe
   CIDInfo cid {};
   BLArray<CFFData::IndexData> fdSubrIndexes;
 
+  faceI->faceInfo.outlineType = uint8_t(BL_FONT_OUTLINE_TYPE_CFF + cffVersion);
+
   // CFF Header
   // ----------
 
-  if (BL_UNLIKELY(!blFontTableFitsT<CFFTable>(fontTable)))
+  Table<CFFTable> cff { cffVersion == CFFData::kVersion1 ? tables.cff : tables.cff2 };
+  if (BL_UNLIKELY(!cff.fits()))
     return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   // The specification says that the implementation should refuse MAJOR version, which it doesn't understand.
@@ -2359,7 +2360,7 @@ BLResult init(OTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) noe
         offsets[1] -= CFFTable::kOffsetAdjustment;
 
         // dictData[1] would be a private dictionary, if present...
-        BLFontTable dictData[2];
+        RawTable dictData[2];
         dictData[0].reset(fdArrayIndex.payload + offsets[0], offsets[1] - offsets[0]);
         dictData[1].reset();
 
@@ -2422,7 +2423,7 @@ BLResult init(OTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) noe
   // Done
   // ----
 
-  faceI->cff.table = fontTable;
+  faceI->cff.table = cff;
 
   faceI->cff.index[CFFData::kIndexGSubR].reset(
     DataRange { gsubrOffset, gsubrIndex.totalSize },
@@ -2454,8 +2455,8 @@ BLResult init(OTFaceImpl* faceI, BLFontTable fontTable, uint32_t cffVersion) noe
   return BL_SUCCESS;
 };
 
-// OpenType::CFFImpl - Tests
-// =========================
+// BLOpenType::CFFImpl - Tests
+// ===========================
 
 #ifdef BL_TEST
 static void testReadFloat() noexcept {
@@ -2575,7 +2576,7 @@ static void testDictIterator() noexcept {
     .message("DictIterator must iterate over all entries, only %u of %u iterated", index, unsigned(BL_ARRAY_SIZE(testEntries)));
 }
 
-UNIT(opentype_cff) {
+UNIT(opentype_cff, BL_TEST_GROUP_TEXT_OPENTYPE) {
   INFO("BLOpenType::CFFImpl::readFloat()");
   testReadFloat();
 

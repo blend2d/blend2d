@@ -15,7 +15,7 @@ static void checkArrays(const T* a, const T* b, size_t size) noexcept {
   }
 }
 
-UNIT(support_algorithm, -9) {
+UNIT(support_algorithm, BL_TEST_GROUP_SUPPORT_UTILITIES) {
   INFO("BLAlgorithm::lowerBound()");
   {
     static const int arr[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12 };

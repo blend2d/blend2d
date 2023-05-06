@@ -404,7 +404,7 @@ static void testPopCount() {
   }
 }
 
-UNIT(support_intops, -10) {
+UNIT(support_intops, BL_TEST_GROUP_SUPPORT_UTILITIES) {
   testAlignment();
   testArithmetic();
   testBitUtils();

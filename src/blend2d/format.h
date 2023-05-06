@@ -11,7 +11,7 @@
 //! \addtogroup blend2d_api_imaging
 //! \{
 
-//! \name Pixel Format - Constants
+//! \name BLFormat - Constants
 //! \{
 
 //! Pixel format.
@@ -97,7 +97,7 @@ BL_DEFINE_ENUM(BLFormatFlags) {
 
 //! \}
 
-//! \name Pixel Format - C API
+//! \name BLFormat - C API
 //! \{
 
 BL_BEGIN_C_DECLS
@@ -110,7 +110,7 @@ BL_END_C_DECLS
 //! \}
 
 
-//! \name Pixel Format - Structs
+//! \name BLFormat - Structs
 //! \{
 
 //! Provides a detailed information about a pixel format. Use `blFormatInfo` array to get an information of Blend2D
@@ -141,10 +141,10 @@ struct BLFormatInfo {
   };
 
 #ifdef __cplusplus
-  BL_NODISCARD BL_INLINE bool operator==(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) == 0; }
-  BL_NODISCARD BL_INLINE bool operator!=(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) != 0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) == 0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) != 0; }
 
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { memset(this, 0, sizeof(*this)); }
 
   BL_INLINE void init(uint32_t depth_, uint32_t flags_, const uint8_t sizes_[4], const uint8_t shifts_[4]) noexcept {
     depth = depth_;
@@ -174,20 +174,20 @@ struct BLFormatInfo {
   //!
   //! \note The `BL_FORMAT_NONE` is considered invalid format, thus if it's passed to `query()` the return value
   //! would be `BL_ERROR_INVALID_VALUE`.
-  BL_INLINE BLResult query(BLFormat format) noexcept { return blFormatInfoQuery(this, format); }
+  BL_INLINE_NODEBUG BLResult query(BLFormat format) noexcept { return blFormatInfoQuery(this, format); }
 
   //! Sanitize this `BLFormatInfo`.
   //!
   //! Sanitizer verifies whether the format is valid and updates the format information about flags to values that
   //! Blend2D expects. For example format flags are properly examined and simplified if possible, byte-swap is
   //! implicitly performed for formats where a single component matches one byte, etc...
-  BL_INLINE BLResult sanitize() noexcept { return blFormatInfoSanitize(this); }
+  BL_INLINE_NODEBUG BLResult sanitize() noexcept { return blFormatInfoSanitize(this); }
 #endif
 };
 
 //! \}
 
-//! \name Pixel Format - Globals
+//! \name BLFormat - Globals
 //! \{
 
 BL_BEGIN_C_DECLS

@@ -492,7 +492,7 @@ BL_API_IMPL BLResult blPathAssignWeak(BLPathCore* self, const BLPathCore* other)
   BL_ASSERT(self->_d.isPath());
   BL_ASSERT(other->_d.isPath());
 
-  blObjectPrivateAddRefTagged(other);
+  blObjectPrivateAddRefIfRCTagSet(other);
   return replaceInstance(self, other);
 }
 
@@ -1950,12 +1950,12 @@ static BLResult joinReversedFigure(BLPathAppender& dst, BLPathIterator src) noex
   return BL_SUCCESS;
 }
 
-static BLResult appendStrokedPathSink(BLPath* a, BLPath* b, BLPath* c, void* closure) noexcept {
+static BLResult appendStrokedPathSink(BLPath* a, BLPath* b, BLPath* c, void* userData) noexcept {
   BL_ASSERT(a->_d.isPath());
   BL_ASSERT(b->_d.isPath());
   BL_ASSERT(c->_d.isPath());
 
-  blUnused(closure);
+  blUnused(userData);
 
   BLPathAppender dst;
   BL_PROPAGATE(dst.begin(a, BL_MODIFY_OP_APPEND_GROW, b->size() + c->size()));
@@ -2657,7 +2657,7 @@ void blPath2DRtInit(BLRuntimeContext* rt) noexcept {
 // ==============
 
 #if defined(BL_TEST)
-UNIT(path) {
+UNIT(path, BL_TEST_GROUP_GEOMETRY_CONTAINERS) {
   INFO("Dynamic memory allocation strategy");
   {
     BLPath p;

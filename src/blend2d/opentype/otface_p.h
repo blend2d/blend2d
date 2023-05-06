@@ -6,6 +6,7 @@
 #ifndef BLEND2D_OPENTYPE_OTFACE_P_H_INCLUDED
 #define BLEND2D_OPENTYPE_OTFACE_P_H_INCLUDED
 
+#include "../fonttagdataids_p.h"
 #include "../opentype/otcff_p.h"
 #include "../opentype/otcmap_p.h"
 #include "../opentype/otdefs_p.h"
@@ -22,11 +23,17 @@
 namespace BLOpenType {
 
 enum class OTFaceFlags : uint32_t {
-  // Flags related to 'loca' table.
-  kLocaOffset16        = 0x00000002u, //!< Glyph offsets in 'loca' table use 16-bit offsets [must be 0x2].
-  kLocaOffset32        = 0x00000004u, //!< Glyph offsets in 'loca' table use 32-bit offsets [must be 0x4].
+  // Flags related to 'loca' table
+  // -----------------------------
 
-  // Flags related to 'GDEF' table.
+  //! Glyph offsets in 'loca' table use 16-bit offsets [must be 0x2].
+  kLocaOffset16        = 0x00000002u,
+  //! Glyph offsets in 'loca' table use 32-bit offsets [must be 0x4].
+  kLocaOffset32        = 0x00000004u,
+
+  // Flags related to 'GDEF' table
+  // -----------------------------
+
   kGlyphClassDef       = 0x00000100u,
   kAttachList          = 0x00000200u,
   kLitCaretList        = 0x00000400u,
@@ -34,13 +41,17 @@ enum class OTFaceFlags : uint32_t {
   kMarkGlyphSetsDef    = 0x00001000u,
   kItemVarStore        = 0x00002000u,
 
-  // Flags related to 'GSUB' table.
+  // Flags related to 'GSUB' table
+  // -----------------------------
+
   kGSubScriptList      = 0x00010000u,
   kGSubFeatureList     = 0x00020000u,
   kGSubLookupList      = 0x00040000u,
   kGSubFVar            = 0x00080000u,
 
-  // Flags related to 'GPOS' table.
+  // Flags related to 'GPOS' table
+  // -----------------------------
+
   kGPosScriptList      = 0x00100000u,
   kGPosFeatureList     = 0x00200000u,
   kGPosLookupList      = 0x00400000u,
@@ -84,6 +95,71 @@ struct OTFaceImpl : public BLFontFacePrivateImpl {
 
   BL_INLINE uint32_t locaOffsetSize() const noexcept {
     return uint32_t(otFlags & (OTFaceFlags::kLocaOffset16 | OTFaceFlags::kLocaOffset32));
+  }
+};
+
+//! OpenType tables that are used during the initialization of \ref OTFaceImpl.
+union OTFaceTables {
+  enum : uint32_t { kTableCount = 19 };
+
+  BLFontTable tables[kTableCount];
+
+  struct {
+    BLFontTable head;
+    BLFontTable maxp;
+    BLFontTable os_2;
+    BLFontTable post;
+    BLFontTable name;
+    BLFontTable cmap;
+
+    BLFontTable hhea;
+    BLFontTable hmtx;
+    BLFontTable vhea;
+    BLFontTable vmtx;
+
+    BLFontTable kern;
+
+    BLFontTable base;
+    BLFontTable gdef;
+    BLFontTable gpos;
+    BLFontTable gsub;
+
+    BLFontTable glyf;
+    BLFontTable loca;
+
+    BLFontTable cff;
+    BLFontTable cff2;
+  };
+
+  BL_INLINE void init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
+    static const BLTag tags[kTableCount] = {
+      BL_MAKE_TAG('h', 'e', 'a', 'd'),
+      BL_MAKE_TAG('m', 'a', 'x', 'p'),
+      BL_MAKE_TAG('O', 'S', '/', '2'),
+      BL_MAKE_TAG('p', 'o', 's', 't'),
+      BL_MAKE_TAG('n', 'a', 'm', 'e'),
+      BL_MAKE_TAG('c', 'm', 'a', 'p'),
+
+      BL_MAKE_TAG('h', 'h', 'e', 'a'),
+      BL_MAKE_TAG('h', 'm', 't', 'x'),
+      BL_MAKE_TAG('v', 'h', 'e', 'a'),
+      BL_MAKE_TAG('v', 'm', 't', 'x'),
+
+      BL_MAKE_TAG('k', 'e', 'r', 'n'),
+
+      BL_MAKE_TAG('B', 'A', 'S', 'E'),
+      BL_MAKE_TAG('G', 'D', 'E', 'F'),
+      BL_MAKE_TAG('G', 'P', 'O', 'S'),
+      BL_MAKE_TAG('G', 'S', 'U', 'B'),
+
+      BL_MAKE_TAG('g', 'l', 'y', 'f'),
+      BL_MAKE_TAG('l', 'o', 'c', 'a'),
+
+      BL_MAKE_TAG('C', 'F', 'F', ' '),
+      BL_MAKE_TAG('C', 'F', 'F', '2')
+    };
+
+    fontData->getTables(faceI->faceInfo.faceIndex, tables, tags, kTableCount);
   }
 };
 

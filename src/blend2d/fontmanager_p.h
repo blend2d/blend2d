@@ -16,7 +16,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! \name Font Manager - Internals - Memory Management
+//! \name BLFontManager - Internals - Memory Management
 //! \{
 
 class BLFontManagerPrivateImpl : public BLFontManagerImpl {

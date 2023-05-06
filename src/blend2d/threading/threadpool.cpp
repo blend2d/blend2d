@@ -394,7 +394,7 @@ static void BL_CDECL test_thread_entry(BLThread* thread, void* data_) noexcept {
   }
 }
 
-UNIT(thread_pool) {
+UNIT(thread_pool, BL_TEST_GROUP_THREADING) {
   BLInternalThreadPool* tp = static_cast<BLInternalThreadPool*>(blThreadPoolGlobal());
   ThreadTestData data;
 

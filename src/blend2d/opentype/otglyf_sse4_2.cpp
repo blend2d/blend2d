@@ -25,8 +25,8 @@
 namespace BLOpenType {
 namespace GlyfImpl {
 
-// OpenType::GlyfImpl - GetGlyphOutlines (SSE4.2 | AVX2)
-// =====================================================
+// BLOpenType::GlyfImpl - GetGlyphOutlines (SSE4.2 | AVX2)
+// =======================================================
 
 //! Flags that are used by the vectorized outline decoder implementation.
 //!
@@ -298,7 +298,7 @@ static BL_INLINE void appendVertex2x(BLPathAppender& appender, uint8_t cmd0, con
 
 BLResult BL_CDECL getGlyphOutlines_SIMD(
   const BLFontFaceImpl* faceI_,
-  uint32_t glyphId,
+  BLGlyphId glyphId,
   const BLMatrix2D* matrix,
   BLPath* out,
   size_t* contourCountOut,
@@ -314,8 +314,8 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
   if (BL_UNLIKELY(glyphId >= faceI->faceInfo.glyphCount))
     return blTraceError(BL_ERROR_INVALID_GLYPH);
 
-  BLFontTable glyfTable = faceI->glyf.glyfTable;
-  BLFontTable locaTable = faceI->glyf.locaTable;
+  RawTable glyfTable = faceI->glyf.glyfTable;
+  RawTable locaTable = faceI->glyf.locaTable;
   uint32_t locaOffsetSize = faceI->locaOffsetSize();
 
   const uint8_t* gPtr = nullptr;

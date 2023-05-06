@@ -48,18 +48,18 @@ BLResult blRasterContextBuildPathEdges(WorkData* workData, const BLPathView& pat
 // RasterEngine - Sinks & Sink Utilities
 // =====================================
 
-BLResult blRasterContextFillGlyphRunSinkFunc(BLPathCore* path, const void* info, void* closure_) noexcept {
+BLResult blRasterContextFillGlyphRunSinkFunc(BLPathCore* path, const void* info, void* userData) noexcept {
   blUnused(info);
 
-  EdgeBuilderSink* sink = static_cast<EdgeBuilderSink*>(closure_);
+  EdgeBuilderSink* sink = static_cast<EdgeBuilderSink*>(userData);
   EdgeBuilder<int>* edgeBuilder = sink->edgeBuilder;
 
   BL_PROPAGATE(edgeBuilder->addPath(path->dcast().view(), true, BLTransformPrivate::identityTransform, BL_MATRIX2D_TYPE_IDENTITY));
   return path->dcast().clear();
 }
 
-BLResult blRasterContextStrokeGeometrySinkFunc(BLPath* a, BLPath* b, BLPath* c, void* closure_) noexcept {
-  StrokeSink* self = static_cast<StrokeSink*>(closure_);
+BLResult blRasterContextStrokeGeometrySinkFunc(BLPath* a, BLPath* b, BLPath* c, void* userData) noexcept {
+  StrokeSink* self = static_cast<StrokeSink*>(userData);
   EdgeBuilder<int>* edgeBuilder = self->edgeBuilder;
 
   BL_PROPAGATE(edgeBuilder->addPath(a->view(), false, *self->matrix, self->matrixType));
@@ -71,20 +71,20 @@ BLResult blRasterContextStrokeGeometrySinkFunc(BLPath* a, BLPath* b, BLPath* c, 
   return a->clear();
 }
 
-BLResult blRasterContextStrokeGlyphRunSinkFunc(BLPathCore* path, const void* info, void* closure_) noexcept {
+BLResult blRasterContextStrokeGlyphRunSinkFunc(BLPathCore* path, const void* info, void* userData) noexcept {
   blUnused(info);
 
-  StrokeGlyphRunSink* sink = static_cast<StrokeGlyphRunSink*>(closure_);
-  BLPath* a = &sink->paths[0];
-  BLPath* b = &sink->paths[1];
-  BLPath* c = &sink->paths[2];
+  StrokeGlyphRunSink* sink = static_cast<StrokeGlyphRunSink*>(userData);
+  BLPath& a = sink->paths[0];
+  BLPath& b = sink->paths[1];
+  BLPath& c = sink->paths[2];
 
-  a->clear();
+  a.clear();
   BLResult localResult = BLPathPrivate::strokePath(
     path->dcast().view(),
     *sink->strokeOptions,
     *sink->approximationOptions,
-    *a, *b, *c,
+    a, b, c,
     blRasterContextStrokeGeometrySinkFunc, sink);
 
   // We must clear the input path, because glyph outlines are appended to it and we just just consumed its content.

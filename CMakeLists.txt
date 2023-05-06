@@ -412,6 +412,7 @@ if (NOT BLEND2D_NO_JIT)
     set(ASMJIT_EMBED TRUE CACHE BOOL "")
   endif()
 
+  set(ASMJIT_NO_FOREIGN TRUE)
   include("${ASMJIT_DIR}/CMakeLists.txt")
   list(APPEND BLEND2D_DEPS ${ASMJIT_LIBS})
   list(APPEND BLEND2D_PRIVATE_CFLAGS ${ASMJIT_CFLAGS})
@@ -451,6 +452,9 @@ set(BLEND2D_SRC_LIST
   blend2d/array.cpp
   blend2d/array.h
   blend2d/array_p.h
+  blend2d/bitarray.cpp
+  blend2d/bitarray.h
+  blend2d/bitarray_p.h
   blend2d/bitset.cpp
   blend2d/bitset.h
   blend2d/bitset_p.h
@@ -478,8 +482,14 @@ set(BLEND2D_SRC_LIST
   blend2d/fontmanager.cpp
   blend2d/fontmanager.h
   blend2d/fontmanager_p.h
-  blend2d/fonttags.cpp
-  blend2d/fonttags_p.h
+  blend2d/fonttagdata.cpp
+  blend2d/fonttagdata_p.h
+  blend2d/fonttagdataids.cpp
+  blend2d/fonttagdataids_p.h
+  blend2d/fonttagdatainfo.cpp
+  blend2d/fonttagdatainfo_p.h
+  blend2d/fonttagset.cpp
+  blend2d/fonttagset_p.h
   blend2d/fontvariationsettings.cpp
   blend2d/fontvariationsettings.h
   blend2d/fontvariationsettings_p.h
@@ -492,6 +502,7 @@ set(BLEND2D_SRC_LIST
   blend2d/glyphbuffer.cpp
   blend2d/glyphbuffer.h
   blend2d/glyphbuffer_p.h
+  blend2d/glyphrun.h
   blend2d/gradient.cpp
   blend2d/gradient.h
   blend2d/gradient_p.h
@@ -596,6 +607,8 @@ set(BLEND2D_SRC_LIST
   blend2d/opentype/otkern_p.h
   blend2d/opentype/otlayout.cpp
   blend2d/opentype/otlayout_p.h
+  blend2d/opentype/otlayoutcontext_p.h
+  blend2d/opentype/otlayouttables_p.h
   blend2d/opentype/otmetrics.cpp
   blend2d/opentype/otmetrics_p.h
   blend2d/opentype/otname.cpp
@@ -852,6 +865,18 @@ if (NOT BLEND2D_EMBED)
                        SOURCES test/bl_test_verify_mt.cpp
                        LIBRARIES blend2d::blend2d
                        CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
+
+    # Blend2D Generator
+    # -----------------
+
+    blend2d_add_target(bl_generator TEST
+                       SOURCES test/bl_generator.cpp
+                               test/bl_generator.h
+                       CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
+
+    if (NOT WIN32)
+      target_link_libraries(bl_generator "pthread")
+    endif()
 
     # Blend2D C & C++ Samples
     # -----------------------

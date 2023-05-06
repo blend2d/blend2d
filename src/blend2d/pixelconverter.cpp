@@ -2760,7 +2760,7 @@ static void testGenericConversions() noexcept {
   BLPixelConverterGenericTest<Test_BRGA_8888>::test();
 }
 
-UNIT(pixel_converter, -7) {
+UNIT(pixel_converter, BL_TEST_GROUP_IMAGE_UTILITIES) {
   testRgb32A8Conversions();
   testRgb32Rgb24Conversions();
   testPremultiplyConversions();

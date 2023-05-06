@@ -1,0 +1,100 @@
+// This file is part of Blend2D project <https://blend2d.com>
+//
+// See blend2d.h or LICENSE.md for license and copyright information
+// SPDX-License-Identifier: Zlib
+
+#ifndef BLEND2D_BITARRAY_P_H
+#define BLEND2D_BITARRAY_P_H
+
+#include "api-internal_p.h"
+#include "bitarray.h"
+#include "object_p.h"
+#include "support/algorithm_p.h"
+#include "support/bitops_p.h"
+#include "support/intops_p.h"
+#include "support/memops_p.h"
+
+//! \cond INTERNAL
+//! \addtogroup blend2d_internal
+//! \{
+
+//! \name BLBitArray - Types
+//! \{
+
+typedef BLParametrizedBitOps<BLBitOrder::kMSB, uint32_t> BLBitArrayOps;
+
+//! \}
+
+namespace BLBitArrayPrivate {
+
+//! \name BLBitArray - Utility Functions
+//! \{
+
+//! \}
+
+//! \name BLBitArray - Memory Management
+//! \{
+
+static BL_INLINE_NODEBUG BLBitArrayImpl* getImpl(const BLBitArrayCore* self) noexcept {
+  return static_cast<BLBitArrayImpl*>(self->_d.impl);
+}
+
+static BL_INLINE_NODEBUG BLResult freeImpl(BLBitArrayImpl* impl, BLObjectInfo info) noexcept {
+  return blObjectImplFreeInline(impl, info);
+}
+
+//! \}
+
+//! \name BLBitArray - Internals - Accessors
+//! \{
+
+struct BitData {
+  uint32_t* data;
+  size_t size;
+};
+
+static BL_INLINE_NODEBUG size_t getSSOSize(const BLBitArrayCore* self) noexcept { return self->_d.pField(); }
+static BL_INLINE_NODEBUG uint32_t* getSSOData(BLBitArrayCore* self) noexcept { return self->_d.u32_data; }
+static BL_INLINE_NODEBUG const uint32_t* getSSOData(const BLBitArrayCore* self) noexcept { return self->_d.u32_data; }
+
+static BL_INLINE BitData unpack(const BLBitArrayCore* self) noexcept {
+  if (self->_d.sso()) {
+    return BitData{const_cast<uint32_t*>(self->_d.u32_data), self->_d.pField()};
+  }
+  else {
+    BLBitArrayImpl* impl = getImpl(self);
+    return BitData{impl->data(), impl->size};
+  }
+}
+
+static BL_INLINE_NODEBUG uint32_t* getData(BLBitArrayCore* self) noexcept {
+  return self->_d.sso() ? self->_d.u32_data : getImpl(self)->data();
+}
+
+static BL_INLINE_NODEBUG const uint32_t* getData(const BLBitArrayCore* self) noexcept {
+  return self->_d.sso() ? self->_d.u32_data : getImpl(self)->data();
+}
+
+static BL_INLINE_NODEBUG size_t getSize(const BLBitArrayCore* self) noexcept {
+  return self->_d.sso() ? self->_d.pField() : getImpl(self)->size;
+}
+
+static BL_INLINE_NODEBUG size_t getCapacity(const BLBitArrayCore* self) noexcept {
+  return self->_d.sso() ? size_t(BLBitArray::kSSOWordCount * 32u) : getImpl(self)->capacity;
+}
+
+static BL_INLINE void setSize(BLBitArrayCore* self, size_t newSize) noexcept {
+  BL_ASSERT(newSize <= getCapacity(self));
+  if (self->_d.sso())
+    self->_d.info.setPField(uint32_t(newSize));
+  else
+    getImpl(self)->size = uint32_t(newSize);
+}
+
+//! \}
+} // {BLBitArrayPrivate}
+
+//! \}
+//! \endcond
+
+#endif // BLEND2D_BITARRAY_P_H

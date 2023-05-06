@@ -37,13 +37,61 @@ namespace {
 //! \name Bit Operators
 //! \{
 
-struct Assign    { template<typename T> static BL_INLINE T op(const T& a, const T& b) noexcept { blUnused(a); return  b; } };
-struct AssignNot { template<typename T> static BL_INLINE T op(const T& a, const T& b) noexcept { blUnused(a); return ~b; } };
-struct And       { template<typename T> static BL_INLINE T op(const T& a, const T& b) noexcept { return  a &  b; } };
-struct AndNot    { template<typename T> static BL_INLINE T op(const T& a, const T& b) noexcept { return  a & ~b; } };
-struct NotAnd    { template<typename T> static BL_INLINE T op(const T& a, const T& b) noexcept { return ~a &  b; } };
-struct Or        { template<typename T> static BL_INLINE T op(const T& a, const T& b) noexcept { return  a |  b; } };
-struct Xor       { template<typename T> static BL_INLINE T op(const T& a, const T& b) noexcept { return  a ^  b; } };
+struct Assign {
+  template<typename T>
+  static BL_INLINE_NODEBUG T op(const T&, const T& b) noexcept { return b; }
+
+  template<typename T>
+  static BL_INLINE_NODEBUG T opMasked(const T& a, const T& b, T mask) noexcept { return (a & ~mask) | (b & mask); }
+};
+
+struct AssignNot {
+  template<typename T>
+  static BL_INLINE_NODEBUG T op(const T&, const T& b) noexcept { return ~b; }
+
+  template<typename T>
+  static BL_INLINE_NODEBUG T opMasked(const T& a, const T& b, T mask) noexcept { return (a & ~mask) | (~b & mask); }
+};
+
+struct And {
+  template<typename T>
+  static BL_INLINE_NODEBUG T op(const T& a, const T& b) noexcept { return a & b; }
+
+  template<typename T>
+  static BL_INLINE_NODEBUG T opMasked(const T& a, const T& b, T mask) noexcept { return a & (b | ~mask); }
+};
+
+struct AndNot {
+  template<typename T>
+  static BL_INLINE_NODEBUG T op(const T& a, const T& b) noexcept { return a & ~b; }
+
+  template<typename T>
+  static BL_INLINE_NODEBUG T opMasked(const T& a, const T& b, T mask) noexcept { return a & ~(b & mask); }
+};
+
+struct NotAnd {
+  template<typename T>
+  static BL_INLINE_NODEBUG T op(const T& a, const T& b) noexcept { return ~a & b; }
+
+  template<typename T>
+  static BL_INLINE_NODEBUG T opMasked(const T& a, const T& b, T mask) noexcept { return (a ^ mask) & (b | ~mask); }
+};
+
+struct Or {
+  template<typename T>
+  static BL_INLINE_NODEBUG T op(const T& a, const T& b) noexcept { return a | b; }
+
+  template<typename T>
+  static BL_INLINE_NODEBUG T opMasked(const T& a, const T& b, T mask) noexcept { return a | (b & mask); }
+};
+
+struct Xor {
+  template<typename T>
+  static BL_INLINE_NODEBUG T op(const T& a, const T& b) noexcept { return a ^ b; }
+
+  template<typename T>
+  static BL_INLINE_NODEBUG T opMasked(const T& a, const T& b, T mask) noexcept { return a ^ (b & mask); }
+};
 
 //! \}
 
@@ -76,57 +124,63 @@ struct BLParametrizedBitOps {
     kIsLSB = (BO == BLBitOrder::kLSB),
     kIsMSB = (BO == BLBitOrder::kMSB),
 
-    kNumBits = BLIntOps::bitSizeOf<T>()
+    kNumBits = BLIntOps::bitSizeOf<T>(),
+    kBitMask = kNumBits - 1
   };
 
-  static BL_INLINE constexpr T zero() noexcept { return T(0); }
-  static BL_INLINE constexpr T ones() noexcept { return BLIntOps::allOnes<T>(); }
+  static BL_INLINE_NODEBUG constexpr T zero() noexcept { return T(0); }
+  static BL_INLINE_NODEBUG constexpr T ones() noexcept { return BLIntOps::allOnes<T>(); }
 
   template<typename Index>
-  static BL_INLINE constexpr bool hasBit(const T& x, const Index& index) noexcept {
-    return kIsLSB ? bool((x >> index) & 0x1) : bool((x >> (index ^ Index(kNumBits - 1))) & 0x1);
+  static BL_INLINE_NODEBUG constexpr bool hasBit(const T& x, const Index& index) noexcept {
+    return kIsLSB ? bool((x >> index) & 0x1) : bool((x >> (index ^ Index(kBitMask))) & 0x1);
   }
 
   template<typename Count>
-  static BL_INLINE constexpr T shiftToStart(const T& x, const Count& y) noexcept {
+  static BL_INLINE_NODEBUG constexpr T shiftToStart(const T& x, const Count& y) noexcept {
     return kIsLSB ? BLIntOps::shr(x, y) : BLIntOps::shl(x, y);
   }
 
   template<typename Count>
-  static BL_INLINE constexpr T shiftToEnd(const T& x, const Count& y) noexcept {
+  static BL_INLINE_NODEBUG constexpr T shiftToEnd(const T& x, const Count& y) noexcept {
     return kIsLSB ? BLIntOps::shl(x, y) : BLIntOps::shr(x, y);
   }
 
   template<typename Count>
-  static BL_INLINE constexpr T nonZeroStartMask(const Count& count = 1) noexcept {
+  static BL_INLINE_NODEBUG constexpr T nonZeroStartMask(const Count& count = 1) noexcept {
     return kIsLSB ? BLIntOps::nonZeroLsbMask<T>(count) : BLIntOps::nonZeroMsbMask<T>(count);
   }
 
   template<typename Index, typename Count>
-  static BL_INLINE constexpr T nonZeroStartMask(const Count& count, const Index& index) noexcept {
+  static BL_INLINE_NODEBUG constexpr T nonZeroStartMask(const Count& count, const Index& index) noexcept {
     return shiftToEnd(nonZeroStartMask(count), index);
   }
 
   template<typename N>
-  static BL_INLINE constexpr T nonZeroEndMask(const N& n = 1) noexcept {
+  static BL_INLINE_NODEBUG constexpr T nonZeroEndMask(const N& n = 1) noexcept {
     return kIsLSB ? BLIntOps::nonZeroMsbMask<T>(n) : BLIntOps::nonZeroLsbMask<T>(n);
   }
 
   template<typename Index, typename Count>
-  static BL_INLINE constexpr T nonZeroEndMask(const Count& count, const Index& index) noexcept {
+  static BL_INLINE_NODEBUG constexpr T nonZeroEndMask(const Count& count, const Index& index) noexcept {
     return shiftToStart(nonZeroEndMask(count), index);
   }
 
   template<typename Index>
-  static BL_INLINE constexpr T indexAsMask(const Index& index) noexcept {
+  static BL_INLINE_NODEBUG constexpr T indexAsMask(const Index& index) noexcept {
     return kIsLSB ? BLIntOps::shl(T(1), index) : BLIntOps::shr(BLIntOps::nonZeroMsbMask<T>(), index);
   }
 
-  static BL_INLINE uint32_t countZerosFromStart(const T& x) noexcept {
+  template<typename Index>
+  static BL_INLINE_NODEBUG constexpr T indexAsMask(const Index& index, bool value) noexcept {
+    return kIsLSB ? BLIntOps::shl(T(value), index) : BLIntOps::shr(T(value) << kBitMask, index);
+  }
+
+  static BL_INLINE_NODEBUG uint32_t countZerosFromStart(const T& x) noexcept {
     return kIsLSB ? BLIntOps::ctz(x) : BLIntOps::clz(x);
   }
 
-  static BL_INLINE uint32_t countZerosFromEnd(const T& x) noexcept {
+  static BL_INLINE_NODEBUG uint32_t countZerosFromEnd(const T& x) noexcept {
     return kIsLSB ? BLIntOps::clz(x) : BLIntOps::ctz(x);
   }
 
@@ -149,6 +203,13 @@ struct BLParametrizedBitOps {
     size_t bitIndex = index % kNumBits;
 
     buf[vecIndex] |= indexAsMask(bitIndex);
+  }
+
+  static BL_INLINE void bitArrayOrBit(T* buf, size_t index, bool value) noexcept {
+    size_t vecIndex = index / kNumBits;
+    size_t bitIndex = index % kNumBits;
+
+    buf[vecIndex] |= indexAsMask(bitIndex, value);
   }
 
   static BL_INLINE void bitArrayClearBit(T* buf, size_t index) noexcept {
@@ -234,7 +295,7 @@ struct BLParametrizedBitOps {
     while (i) {
       T bits = data[--i];
       if (bits) {
-        *indexOut = IndexType((kNumBits - 1 - countZerosFromEnd(bits)) + i * kNumBits);
+        *indexOut = IndexType((kBitMask - countZerosFromEnd(bits)) + i * kNumBits);
         return true;
       }
     }

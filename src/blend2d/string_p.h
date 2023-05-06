@@ -100,18 +100,23 @@ static BL_INLINE size_t getCapacity(const BLStringCore* self) noexcept {
 //! \name String - Private - Static String
 //! \{
 
+struct StaticStringImpl {
+  size_t size;
+  size_t capacity;
+};
+
 template<size_t kSize>
 struct StaticStringData {
   size_t refCount;
-  BLStringImpl impl;
+  StaticStringImpl impl;
   char data[kSize + 1];
 };
 
-#define BL_DEFINE_STATIC_STRING(name, content)                                   \
-  static constexpr ::BLStringPrivate::StaticStringData<sizeof(content)> name = { \
-    0,                                                                           \
-    BLStringImpl(sizeof(content), sizeof(content)),                              \
-    content                                                                      \
+#define BL_DEFINE_STATIC_STRING(name, content)                                              \
+  static const constexpr ::BLStringPrivate::StaticStringData<sizeof(content) - 1u> name = { \
+    0,                                                                                      \
+    {sizeof(content) - 1u, sizeof(content) - 1u},                                           \
+    content                                                                                 \
   };
 
 template<size_t kSize>

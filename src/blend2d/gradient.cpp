@@ -480,7 +480,7 @@ BL_API_IMPL BLResult blGradientAssignWeak(BLGradientCore* self, const BLGradient
   BL_ASSERT(self->_d.isGradient());
   BL_ASSERT(other->_d.isGradient());
 
-  blObjectPrivateAddRefTagged(other);
+  blObjectPrivateAddRefIfRCTagSet(other);
   return replaceInstance(self, other);
 }
 
@@ -1081,7 +1081,7 @@ void blGradientRtInit(BLRuntimeContext* rt) noexcept {
 // ==================
 
 #if defined(BL_TEST)
-UNIT(gradient) {
+UNIT(gradient, BL_TEST_GROUP_RENDERING_STYLES) {
   INFO("Dynamic memory allocation strategy");
   {
     BLGradient g;

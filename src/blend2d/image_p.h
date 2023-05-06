@@ -14,7 +14,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! \name Image - Private Structs
+//! \name BLImage - Private Structs
 //! \{
 
 //! Private implementation that extends \ref BLImageImpl.
@@ -28,7 +28,7 @@ struct BLImagePrivateImpl : public BLImageImpl {
 
 //! \}
 
-//! \name Image - Private API
+//! \name BLImage - Private API
 //! \{
 
 namespace BLImagePrivate {

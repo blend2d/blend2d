@@ -16,7 +16,7 @@
 
 namespace BLArrayPrivate {
 
-//! \name Array - Internals - Memory Management
+//! \name BLArray - Internals - Memory Management
 //! \{
 
 BL_HIDDEN BLResult freeImpl(BLArrayImpl* impl, BLObjectInfo info) noexcept;
@@ -56,7 +56,7 @@ static BL_INLINE BLResult replaceInstance(BLArrayCore* self, const BLArrayCore* 
 
 //! \}
 
-//! \name Array - Internals - Accessors
+//! \name BLArray - Internals - Accessors
 //! \{
 
 struct UnpackedData {

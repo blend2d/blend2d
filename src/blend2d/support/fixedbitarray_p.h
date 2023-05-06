@@ -23,6 +23,8 @@ public:
 
   T data[kFixedArraySize];
 
+  BL_INLINE size_t bitWordSize() const noexcept { return kFixedArraySize; }
+
   BL_INLINE bool bitAt(size_t index) const noexcept {
     BL_ASSERT(index < N);
     return bool((data[index / kSizeOfTInBits] >> (index % kSizeOfTInBits)) & 0x1);

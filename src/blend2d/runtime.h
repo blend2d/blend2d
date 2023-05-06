@@ -140,7 +140,7 @@ struct BLRuntimeBuildInfo {
   char compilerInfo[32];
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE void reset() noexcept { *this = BLRuntimeBuildInfo{}; }
 #endif
 };
 
@@ -164,7 +164,7 @@ struct BLRuntimeSystemInfo {
   uint32_t reserved[5];
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE void reset() noexcept { *this = BLRuntimeSystemInfo{}; }
 #endif
 };
 
@@ -195,7 +195,7 @@ struct BLRuntimeResourceInfo {
   size_t reserved[7];
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE void reset() noexcept { *this = BLRuntimeResourceInfo{}; }
 #endif
 };
 
@@ -246,38 +246,38 @@ BL_END_C_DECLS
 class BLRuntimeInitializer {
 public:
   // Disable copy and assignment - only used to statically initialize Blend2D.
-  BL_INLINE BLRuntimeInitializer(const BLRuntimeInitializer&) = delete;
-  BL_INLINE BLRuntimeInitializer& operator=(const BLRuntimeInitializer&) = delete;
+  BL_INLINE_NODEBUG BLRuntimeInitializer(const BLRuntimeInitializer&) = delete;
+  BL_INLINE_NODEBUG BLRuntimeInitializer& operator=(const BLRuntimeInitializer&) = delete;
 
-  BL_INLINE BLRuntimeInitializer() noexcept { blRuntimeInit(); }
-  BL_INLINE ~BLRuntimeInitializer() noexcept { blRuntimeShutdown(); }
+  BL_INLINE_NODEBUG BLRuntimeInitializer() noexcept { blRuntimeInit(); }
+  BL_INLINE_NODEBUG ~BLRuntimeInitializer() noexcept { blRuntimeShutdown(); }
 };
 
 //! Interface to access Blend2D runtime (wraps C API).
 namespace BLRuntime {
 
-static BL_INLINE BLResult cleanup(BLRuntimeCleanupFlags cleanupFlags) noexcept {
+static BL_INLINE_NODEBUG BLResult cleanup(BLRuntimeCleanupFlags cleanupFlags) noexcept {
   return blRuntimeCleanup(cleanupFlags);
 }
 
-static BL_INLINE BLResult queryBuildInfo(BLRuntimeBuildInfo* out) noexcept {
+static BL_INLINE_NODEBUG BLResult queryBuildInfo(BLRuntimeBuildInfo* out) noexcept {
   return blRuntimeQueryInfo(BL_RUNTIME_INFO_TYPE_BUILD, out);
 }
 
-static BL_INLINE BLResult querySystemInfo(BLRuntimeSystemInfo* out) noexcept {
+static BL_INLINE_NODEBUG BLResult querySystemInfo(BLRuntimeSystemInfo* out) noexcept {
   return blRuntimeQueryInfo(BL_RUNTIME_INFO_TYPE_SYSTEM, out);
 }
 
-static BL_INLINE BLResult queryResourceInfo(BLRuntimeResourceInfo* out) noexcept {
+static BL_INLINE_NODEBUG BLResult queryResourceInfo(BLRuntimeResourceInfo* out) noexcept {
   return blRuntimeQueryInfo(BL_RUNTIME_INFO_TYPE_RESOURCE, out);
 }
 
-static BL_INLINE BLResult message(const char* msg) noexcept {
+static BL_INLINE_NODEBUG BLResult message(const char* msg) noexcept {
   return blRuntimeMessageOut(msg);
 }
 
 template<typename... Args>
-static BL_INLINE BLResult message(const char* fmt, Args&&... args) noexcept {
+static BL_INLINE_NODEBUG BLResult message(const char* fmt, Args&&... args) noexcept {
   return blRuntimeMessageFmt(fmt, std::forward<Args>(args)...);
 }
 

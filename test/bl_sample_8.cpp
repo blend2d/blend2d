@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
   BLFontFace face;
   BLResult err = face.createFromFile("ABeeZee-Regular.ttf");
   if (err) {
-    printf("Failed to load a font-face (err=%u)\n", err);
+    printf("Failed to load a font face (err=%u)\n", err);
     return 1;
   }
 

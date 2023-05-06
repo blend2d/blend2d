@@ -20,7 +20,7 @@
 
 static constexpr uint32_t BL_FONT_GET_GLYPH_OUTLINE_BUFFER_SIZE = 2048;
 
-//! \name Font - Uncategoried Internals
+//! \name BLFont - Uncategoried Internals
 //! \{
 
 static BL_INLINE void blFontMatrixMultiply(BLMatrix2D* dst, const BLFontMatrix* a, const BLMatrix2D* b) noexcept {

@@ -21,7 +21,7 @@ namespace BLOpenType {
 //!   - https://docs.microsoft.com/en-us/typography/opentype/spec/name
 //!   - https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6name.html
 struct NameTable {
-  enum : uint32_t { kMinSize = 6 };
+  enum : uint32_t { kBaseSize = 6 };
 
   struct NameRecord {
     UInt16 platformId;
@@ -63,7 +63,7 @@ struct NameTable {
 };
 
 namespace NameImpl {
-BL_HIDDEN BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept;
+BL_HIDDEN BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 } // {NameImpl}
 
 } // {BLOpenType}

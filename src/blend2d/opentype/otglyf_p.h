@@ -26,7 +26,7 @@ namespace BLOpenType {
 //!   - https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6loca.html
 struct LocaTable {
   // Minimum size would be 2 records (4 bytes) if the font has only 1 glyph and uses 16-bit LOCA.
-  enum : uint32_t { kMinSize = 4 };
+  enum : uint32_t { kBaseSize = 4 };
 
   /*
   union {
@@ -45,7 +45,7 @@ struct LocaTable {
 //!   - https://docs.microsoft.com/en-us/typography/opentype/spec/glyf
 //!   - https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6glyf.html
 struct GlyfTable {
-  enum : uint32_t { kMinSize = 10 };
+  enum : uint32_t { kBaseSize = 10 };
 
   struct Simple {
     enum Flags : uint8_t {
@@ -119,9 +119,9 @@ struct GlyfTable {
 
 struct GlyfData {
   //! Content of 'glyf' table.
-  BLFontTable glyfTable;
+  RawTable glyfTable;
   //! Content of 'loca' table.
-  BLFontTable locaTable;
+  RawTable locaTable;
 };
 
 namespace {
@@ -145,7 +145,7 @@ BL_HIDDEN extern const BLLookupTable<uint32_t, ((GlyfTable::Simple::kImportantFl
 #ifdef BL_BUILD_OPT_AVX2
 BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_AVX2(
   const BLFontFaceImpl* faceI_,
-  uint32_t glyphId,
+  BLGlyphId glyphId,
   const BLMatrix2D* matrix,
   BLPath* out,
   size_t* contourCountOut,
@@ -155,14 +155,14 @@ BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_AVX2(
 #ifdef BL_BUILD_OPT_SSE4_2
 BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_SSE4_2(
   const BLFontFaceImpl* faceI_,
-  uint32_t glyphId,
+  BLGlyphId glyphId,
   const BLMatrix2D* matrix,
   BLPath* out,
   size_t* contourCountOut,
   BLScopedBuffer* tmpBuffer) noexcept;
 #endif
 
-BLResult init(OTFaceImpl* faceI, BLFontTable glyfTable, BLFontTable locaTable) noexcept;
+BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 
 } // {GlyfImpl}
 

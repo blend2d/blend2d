@@ -416,7 +416,7 @@ BLResult blConvertUnicode(
 // ============================================================================
 
 #ifdef BL_TEST
-UNIT(unicode) {
+UNIT(unicode, BL_TEST_GROUP_CORE_UTILITIES) {
   struct TestEntry {
     char dst[28];
     char src[28];
@@ -563,7 +563,7 @@ UNIT(unicode) {
   }
 }
 
-UNIT(unicode_io) {
+UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
   INFO("BLUtf8Reader");
   {
     const uint8_t data[] = {

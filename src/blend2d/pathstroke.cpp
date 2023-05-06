@@ -224,7 +224,7 @@ public:
            bOut().ensure(bPath(), bRequired) ;
   }
 
-  BL_INLINE_IF_NOT_DEBUG BLResult stroke(StrokeSinkFunc sink, void* closure) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult stroke(StrokeSinkFunc sink, void* userData) noexcept {
     size_t estimatedSize = _iter.remainingForward() * 2u;
     BL_PROPAGATE(aPath()->reserve(aPath()->size() + estimatedSize));
 
@@ -509,7 +509,7 @@ SmoothPolyTo:
       bOut().done(bPath());
 
       // Call the path to the provided sink with resulting paths.
-      BL_PROPAGATE(sink(aPath(), bPath(), cPath(), closure));
+      BL_PROPAGATE(sink(aPath(), bPath(), cPath(), userData));
     }
 
     return BL_SUCCESS;
@@ -969,9 +969,9 @@ BLResult strokePath(
   BLPath& a,
   BLPath& b,
   BLPath& c,
-  StrokeSinkFunc sink, void* closure) noexcept {
+  StrokeSinkFunc sink, void* userData) noexcept {
 
-  return PathStroker(input, options, approx, &a, &b, &c).stroke(sink, closure);
+  return PathStroker(input, options, approx, &a, &b, &c).stroke(sink, userData);
 }
 
 } // {BLPathPrivate}

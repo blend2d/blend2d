@@ -545,7 +545,7 @@ BL_API_IMPL BLResult blArrayShrink(BLArrayCore* self) noexcept {
       return BL_SUCCESS;
 
     BLArrayCore newO;
-    newO._d.initStatic(arrayType, BLObjectInfo::packFields(uint32_t(u.size), ssoCapacity));
+    newO._d.initStatic(arrayType, BLObjectInfo::packAbcpFields(uint32_t(u.size), ssoCapacity));
     memcpy(newO._d.u8_data, u.data, u.size * itemSize);
     return replaceInstance(self, &newO);
   }
@@ -762,7 +762,7 @@ BL_API_IMPL BLResult blArrayModifyOp(BLArrayCore* self, BLModifyOp op, size_t n,
     // The new content fits in static storage, which implies that the current content must be dynamic.
     BL_ASSERT(!self->_d.sso());
 
-    newO._d.initStatic(arrayType, BLObjectInfo::packFields(uint32_t(sizeAfter), uint32_t(ssoCapacity)));
+    newO._d.initStatic(arrayType, BLObjectInfo::packAbcpFields(uint32_t(sizeAfter), uint32_t(ssoCapacity)));
     BLMemOps::copyForwardInlineT(newO._d.u8_data, u.data, index * itemSize);
 
     *dataOut = self->_d.u8_data + index * itemSize;
@@ -870,7 +870,7 @@ BL_API_IMPL BLResult blArrayAssignWeak(BLArrayCore* self, const BLArrayCore* oth
   BL_ASSERT(other->_d.isArray());
   BL_ASSERT(self->_d.rawType() == other->_d.rawType());
 
-  blObjectPrivateAddRefTagged(other);
+  blObjectPrivateAddRefIfRCTagSet(other);
   return replaceInstance(self, other);
 }
 
@@ -1355,7 +1355,7 @@ void blArrayRtInit(BLRuntimeContext* rt) noexcept {
   for (uint32_t objectType = BL_OBJECT_TYPE_ARRAY_FIRST; objectType <= BL_OBJECT_TYPE_ARRAY_LAST; objectType++) {
     blObjectDefaults[objectType]._d.initStatic(
       BLObjectType(objectType),
-      BLObjectInfo::packFields(0, BLArrayPrivate::ssoCapacityTable[objectType]));
+      BLObjectInfo::packAbcpFields(0, BLArrayPrivate::ssoCapacityTable[objectType]));
   }
 }
 
@@ -1363,7 +1363,7 @@ void blArrayRtInit(BLRuntimeContext* rt) noexcept {
 // ===============
 
 #if defined(BL_TEST)
-UNIT(array) {
+UNIT(array, BL_TEST_GROUP_CORE_CONTAINERS) {
   INFO("Basic functionality - BLArray<int>");
   {
     BLArray<int> a;
@@ -1437,6 +1437,45 @@ UNIT(array) {
     EXPECT_SUCCESS(a.insert(1, 2));
     EXPECT_EQ(a[0], 1);
     EXPECT_EQ(a[1], 2);
+  }
+
+  INFO("Basic functionality - BLArray<uint8_t>");
+  {
+    auto accumulate = [](const BLArray<uint8_t>& array) noexcept -> uint32_t {
+      uint32_t acc = 0;
+      for (auto v : array.view())
+        acc += v;
+      return acc;
+    };
+
+    BLArray<uint8_t> a;
+    EXPECT_TRUE(a.empty());
+
+    for (size_t i = 0; i < 256; i++) {
+      EXPECT_SUCCESS(a.append(uint8_t(i & 0xFF)));
+      EXPECT_EQ(a.size(), i + 1);
+    }
+    EXPECT_EQ(accumulate(a), uint32_t(255 * 128));
+
+    BLArray<uint8_t> b;
+    for (uint32_t i = 0; i < 256; i++) {
+      b.appendData(a.view());
+    }
+    EXPECT_EQ(accumulate(b), uint32_t(255 * 128 * 256));
+
+    a.reset();
+    EXPECT_TRUE(a.empty());
+    EXPECT_TRUE(a._d.sso());
+
+    for (size_t i = 0; i < 256; i += 2) {
+      a.append(uint8_t(i & 0xFFu), uint8_t((i + 1) & 0xFFu));
+    }
+    EXPECT_EQ(accumulate(a), uint32_t(255 * 128));
+
+    for (size_t i = 0; i < 256 * 255; i += 2) {
+      a.append(uint8_t(i & 0xFFu), uint8_t((i + 1) & 0xFFu));
+    }
+    EXPECT_EQ(accumulate(b), uint32_t(255 * 128 * 256));
   }
 
   INFO("Basic functionality - BLArray<uint64_t>");

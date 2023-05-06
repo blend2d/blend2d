@@ -13,7 +13,7 @@ BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
 //! \addtogroup blend2d_api_text
 //! \{
 
-//! \name Font Related Constants
+//! \name BLFont Related Constants
 //! \{
 
 //! Orientation.
@@ -29,148 +29,17 @@ BL_DEFINE_ENUM(BLOrientation) {
   BL_FORCE_ENUM_UINT32(BL_ORIENTATION)
 };
 
-//! Placement of glyphs stored in a \ref BLGlyphRun.
-BL_DEFINE_ENUM(BLGlyphPlacementType) {
-  //! No placement (custom handling by \ref BLPathSinkFunc).
-  BL_GLYPH_PLACEMENT_TYPE_NONE = 0,
-  //! Each glyph has a BLGlyphPlacement (advance + offset).
-  BL_GLYPH_PLACEMENT_TYPE_ADVANCE_OFFSET = 1,
-  //! Each glyph has a BLPoint offset in design-space units.
-  BL_GLYPH_PLACEMENT_TYPE_DESIGN_UNITS = 2,
-  //! Each glyph has a BLPoint offset in user-space units.
-  BL_GLYPH_PLACEMENT_TYPE_USER_UNITS = 3,
-  //! Each glyph has a BLPoint offset in absolute units.
-  BL_GLYPH_PLACEMENT_TYPE_ABSOLUTE_UNITS = 4,
-
-  //! Maximum value of `BLGlyphPlacementType`.
-  BL_GLYPH_PLACEMENT_TYPE_MAX_VALUE = 4
-
-  BL_FORCE_ENUM_UINT32(BL_GLYPH_PLACEMENT_TYPE)
-};
-
-//! Flags used by \ref BLGlyphRun.
-BL_DEFINE_ENUM(BLGlyphRunFlags) {
-  //! No flags.
-  BL_GLYPH_RUN_NO_FLAGS = 0u,
-  //! Glyph-run contains UCS-4 string and not glyphs (glyph-buffer only).
-  BL_GLYPH_RUN_FLAG_UCS4_CONTENT = 0x10000000u,
-  //! Glyph-run was created from text that was not a valid unicode.
-  BL_GLYPH_RUN_FLAG_INVALID_TEXT = 0x20000000u,
-  //! Not the whole text was mapped to glyphs (contains undefined glyphs).
-  BL_GLYPH_RUN_FLAG_UNDEFINED_GLYPHS = 0x40000000u,
-  //! Encountered invalid font-data during text / glyph processing.
-  BL_GLYPH_RUN_FLAG_INVALID_FONT_DATA = 0x80000000u
-
-  BL_FORCE_ENUM_UINT32(BL_GLYPH_RUN_FLAG)
-};
-
-//! Flags used by \ref BLFontData (or \ref BLFontDataCore).
-BL_DEFINE_ENUM(BLFontDataFlags) {
-  //! No flags.
-  BL_FONT_DATA_NO_FLAGS = 0u,
-  //!< Font data references a font-collection.
-  BL_FONT_DATA_FLAG_COLLECTION = 0x00000001u
-
-  BL_FORCE_ENUM_UINT32(BL_FONT_DATA_FLAG)
-};
-
-//! Type of a font or font-face, see \ref BLFontFace (or \ref BLFontFaceCore).
+//! Type of a font or font face, see \ref BLFontFace (or \ref BLFontFaceCore).
 BL_DEFINE_ENUM(BLFontFaceType) {
   //! None or unknown font type.
   BL_FONT_FACE_TYPE_NONE = 0,
-  //! TrueType/OpenType font type.
+  //! TrueType/OpenType font type (.ttf/.otf files and font collections).
   BL_FONT_FACE_TYPE_OPENTYPE = 1,
 
   //! Maximum value of `BLFontFaceType`.
   BL_FONT_FACE_TYPE_MAX_VALUE = 1
 
   BL_FORCE_ENUM_UINT32(BL_FONT_FACE_TYPE)
-};
-
-//! Flags used by \ref BLFontFace (or \ref BLFontFaceCore)
-BL_DEFINE_ENUM(BLFontFaceFlags) {
-  //! No flags.
-  BL_FONT_FACE_NO_FLAGS = 0u,
-  //! Font uses typographic family and subfamily names.
-  BL_FONT_FACE_FLAG_TYPOGRAPHIC_NAMES = 0x00000001u,
-  //! Font uses typographic metrics.
-  BL_FONT_FACE_FLAG_TYPOGRAPHIC_METRICS = 0x00000002u,
-  //! Character to glyph mapping is available.
-  BL_FONT_FACE_FLAG_CHAR_TO_GLYPH_MAPPING = 0x00000004u,
-  //! Horizontal glyph metrics (advances, side bearings) is available.
-  BL_FONT_FACE_FLAG_HORIZONTAL_METIRCS = 0x00000010u,
-  //! Vertical glyph metrics (advances, side bearings) is available.
-  BL_FONT_FACE_FLAG_VERTICAL_METRICS = 0x00000020u,
-  //! Legacy horizontal kerning feature ('kern' table with horizontal kerning data).
-  BL_FONT_FACE_FLAG_HORIZONTAL_KERNING = 0x00000040u,
-  //! Legacy vertical kerning feature ('kern' table with vertical kerning data).
-  BL_FONT_FACE_FLAG_VERTICAL_KERNING = 0x00000080u,
-  //! OpenType features (GDEF, GPOS, GSUB) are available.
-  BL_FONT_FACE_FLAG_OPENTYPE_FEATURES = 0x00000100u,
-  //! Panose classification is available.
-  BL_FONT_FACE_FLAG_PANOSE_DATA = 0x00000200u,
-  //! Unicode coverage information is available.
-  BL_FONT_FACE_FLAG_UNICODE_COVERAGE = 0x00000400u,
-  //! Baseline for font at `y` equals 0.
-  BL_FONT_FACE_FLAG_BASELINE_Y_EQUALS_0 = 0x00001000u,
-  //! Left sidebearing point at `x == 0` (TT only).
-  BL_FONT_FACE_FLAG_LSB_POINT_X_EQUALS_0 = 0x00002000u,
-  //! Unicode variation sequences feature is available.
-  BL_FONT_FACE_FLAG_VARIATION_SEQUENCES = 0x10000000u,
-  //! OpenType Font Variations feature is available.
-  BL_FONT_FACE_FLAG_OPENTYPE_VARIATIONS = 0x20000000u,
-  //! This is a symbol font.
-  BL_FONT_FACE_FLAG_SYMBOL_FONT = 0x40000000u,
-  //! This is a last resort font.
-  BL_FONT_FACE_FLAG_LAST_RESORT_FONT = 0x80000000u
-
-  BL_FORCE_ENUM_UINT32(BL_FONT_FACE_FLAG)
-};
-
-//! Diagnostic flags offered by \ref BLFontFace (or \ref BLFontFaceCore).
-BL_DEFINE_ENUM(BLFontFaceDiagFlags) {
-  //! No flags.
-  BL_FONT_FACE_DIAG_NO_FLAGS = 0u,
-  //! Wrong data in 'name' table.
-  BL_FONT_FACE_DIAG_WRONG_NAME_DATA = 0x00000001u,
-  //! Fixed data read from 'name' table and possibly fixed font family/subfamily name.
-  BL_FONT_FACE_DIAG_FIXED_NAME_DATA = 0x00000002u,
-
-  //! Wrong data in 'kern' table [kerning disabled].
-  BL_FONT_FACE_DIAG_WRONG_KERN_DATA = 0x00000004u,
-  //! Fixed data read from 'kern' table so it can be used.
-  BL_FONT_FACE_DIAG_FIXED_KERN_DATA = 0x00000008u,
-
-  //! Wrong data in 'cmap' table.
-  BL_FONT_FACE_DIAG_WRONG_CMAP_DATA = 0x00000010u,
-  //! Wrong format in 'cmap' (sub)table.
-  BL_FONT_FACE_DIAG_WRONG_CMAP_FORMAT = 0x00000020u,
-
-  //! Wrong data in 'GDEF' table.
-  BL_FONT_FACE_DIAG_WRONG_GDEF_DATA = 0x00000100u,
-  //! Wrong data in 'GPOS' table.
-  BL_FONT_FACE_DIAG_WRONG_GPOS_DATA = 0x00000400u,
-  //! Wrong data in 'GSUB' table.
-  BL_FONT_FACE_DIAG_WRONG_GSUB_DATA = 0x00001000u
-
-  BL_FORCE_ENUM_UINT32(BL_FONT_FACE_DIAG)
-};
-
-//! Format of an outline stored in a font.
-BL_DEFINE_ENUM(BLFontOutlineType) {
-  //! None.
-  BL_FONT_OUTLINE_TYPE_NONE = 0,
-  //! Truetype outlines.
-  BL_FONT_OUTLINE_TYPE_TRUETYPE = 1,
-  //! OpenType (CFF) outlines.
-  BL_FONT_OUTLINE_TYPE_CFF = 2,
-  //! OpenType (CFF2) outlines (font variations support).
-  BL_FONT_OUTLINE_TYPE_CFF2 = 3,
-
-  //! Maximum value of `BLFontOutlineType`.
-  BL_FONT_OUTLINE_TYPE_MAX_VALUE = 3
-
-  BL_FORCE_ENUM_UINT32(BL_FONT_OUTLINE_TYPE)
 };
 
 //! Font stretch.
@@ -506,7 +375,15 @@ BL_DEFINE_ENUM(BLTextDirection) {
 
 //! \}
 
-//! \name Font Related Structs
+//! \name BLFont Related Types
+//! \{
+
+//! Glyph id - a 32-bit unsigned integer.
+typedef uint32_t BLGlyphId;
+
+//! \}
+
+//! \name BLFont Related Structs
 //! \{
 
 //! Contains additional information associated with a glyph used by `BLGlyphBuffer`.
@@ -515,7 +392,7 @@ struct BLGlyphInfo {
   //! \{
 
   uint32_t cluster;
-  uint32_t reserved[2];
+  uint32_t reserved;
 
   //! \}
 
@@ -523,7 +400,7 @@ struct BLGlyphInfo {
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLGlyphInfo{}; }
 
   //! \}
 #endif
@@ -545,7 +422,7 @@ struct BLGlyphPlacement {
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLGlyphPlacement{}; }
 
   //! \}
 #endif
@@ -569,7 +446,7 @@ struct BLGlyphMappingState {
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLGlyphMappingState{}; }
 
   //! \}
 #endif
@@ -581,358 +458,6 @@ struct BLGlyphOutlineSinkInfo {
   size_t contourCount;
 };
 
-//! BLGlyphRun describes a set of consecutive glyphs and their placements.
-//!
-//! BLGlyphRun should only be used to pass glyph IDs and their placements to the rendering context. The purpose of
-//! BLGlyphRun is to allow rendering glyphs, which could be shaped by various shaping engines (Blend2D, Harfbuzz, etc).
-//!
-//! BLGlyphRun allows to render glyphs that are either stored in uint16_t[] or uint32_t[] array or part of a bigger
-//! structure (for example `hb_glyph_info_t` used by HarfBuzz). Glyph placements at the moment use Blend2D's
-//! `BLGlyphPlacement` or `BLPoint`, but it's possible to extend the data type in the future.
-//!
-//! See `BLGlyphRunPlacement` for placement modes provided by Blend2D.
-struct BLGlyphRun {
-  //! \name Members
-  //! \{
-
-  //! Glyph id data (abstract, incremented by `glyphAdvance`).
-  void* glyphData;
-  //! Glyph placement data (abstract, incremented by `placementAdvance`).
-  void* placementData;
-  //! Size of the glyph-run in glyph units.
-  size_t size;
-  //! Size of a `glyphId` - must be either 2 (uint16_t) or 4 (uint32_t) bytes.
-  //!
-  //! \note Blend2D always uses 32-bit glyph-ids, thus the glyph-run returned by `BLGlyphBuffer` has always set
-  //! `glyphSize` to 4. The possibility to render glyphs of size 2 is strictly for compatibility with text shapers
-  //! that use 16-bit glyphs, which is sufficient for TrueType and OpenType fonts.
-  uint8_t glyphSize;
-  //! Type of placement, see `BLGlyphPlacementType`.
-  uint8_t placementType;
-  //! Advance of `glyphData` array.
-  int8_t glyphAdvance;
-  //! Advance of `placementData` array.
-  int8_t placementAdvance;
-  //! Glyph-run flags.
-  uint32_t flags;
-
-  //! \}
-
-#ifdef __cplusplus
-  //! \name Common Functionality
-  //! \{
-
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
-
-  //! \}
-
-  //! \name Accessors
-  //! \{
-
-  BL_INLINE bool empty() const noexcept { return size == 0; }
-
-  template<typename T>
-  BL_INLINE T* glyphDataAs() const noexcept { return static_cast<T*>(glyphData); }
-
-  template<typename T>
-  BL_INLINE T* placementDataAs() const noexcept { return static_cast<T*>(placementData); }
-
-  BL_INLINE void setGlyphData(const uint16_t* glyphData) noexcept { setGlyphData(glyphData, intptr_t(sizeof(uint16_t))); }
-  BL_INLINE void setGlyphData(const uint32_t* glyphData) noexcept { setGlyphData(glyphData, intptr_t(sizeof(uint32_t))); }
-
-  BL_INLINE void setGlyphData(const void* data, intptr_t advance) noexcept {
-    this->glyphData = const_cast<void*>(data);
-    this->glyphAdvance = int8_t(advance);
-  }
-
-  BL_INLINE void resetGlyphIdData() noexcept {
-    this->glyphData = nullptr;
-    this->glyphAdvance = 0;
-  }
-
-  template<typename T>
-  BL_INLINE void setPlacementData(const T* data) noexcept {
-    setPlacementData(data, sizeof(T));
-  }
-
-  BL_INLINE void setPlacementData(const void* data, intptr_t advance) noexcept {
-    this->placementData = const_cast<void*>(data);
-    this->placementAdvance = int8_t(advance);
-  }
-
-  BL_INLINE void resetPlacementData() noexcept {
-    this->placementData = nullptr;
-    this->placementAdvance = 0;
-  }
-
-  //! \}
-#endif
-};
-
-#ifdef __cplusplus
-//! A helper to iterate over a `BLGlyphRun`.
-//!
-//! Takes into consideration glyph-id advance and glyph-offset advance.
-//!
-//! Example:
-//!
-//! ```
-//! void inspectGlyphRun(const BLGlyphRun& glyphRun) noexcept {
-//!   BLGlyphRunIterator it(glyphRun);
-//!   if (it.hasOffsets()) {
-//!     while (!it.atEnd()) {
-//!       uint32_t glyphId = it.glyphId();
-//!       BLPoint offset = it.placement();
-//!
-//!       // Do something with `glyphId` and `offset`.
-//!
-//!       it.advance();
-//!     }
-//!   }
-//!   else {
-//!     while (!it.atEnd()) {
-//!       uint32_t glyphId = it.glyphId();
-//!
-//!       // Do something with `glyphId`.
-//!
-//!       it.advance();
-//!     }
-//!   }
-//! }
-//! ```
-class BLGlyphRunIterator {
-public:
-  //! \name Members
-  //! \{
-
-  size_t index;
-  size_t size;
-  void* glyphData;
-  void* placementData;
-  intptr_t glyphAdvance;
-  intptr_t placementAdvance;
-
-  //! \}
-
-  //! \name Construction & Destruction
-  //! \{
-
-  BL_INLINE BLGlyphRunIterator() noexcept { reset(); }
-  BL_INLINE explicit BLGlyphRunIterator(const BLGlyphRun& glyphRun) noexcept { reset(glyphRun); }
-
-  //! \}
-
-  //! \name Common Functionality
-  //! \{
-
-  BL_INLINE void reset() noexcept {
-    index = 0;
-    size = 0;
-    glyphData = nullptr;
-    placementData = nullptr;
-    glyphAdvance = 0;
-    placementAdvance = 0;
-  }
-
-  BL_INLINE void reset(const BLGlyphRun& glyphRun) noexcept {
-    index = 0;
-    size = glyphRun.size;
-    glyphData = glyphRun.glyphData;
-    placementData = glyphRun.placementData;
-    glyphAdvance = glyphRun.glyphAdvance;
-    placementAdvance = glyphRun.placementAdvance;
-
-    if (BL_BYTE_ORDER_NATIVE == BL_BYTE_ORDER_BE)
-      glyphData = static_cast<uint8_t*>(glyphData) + (blMax<size_t>(glyphRun.glyphSize, 2) - 2);
-  }
-
-  //! \}
-
-  //! \name Accessors
-  //! \{
-
-  BL_INLINE bool empty() const noexcept { return size == 0; }
-  BL_INLINE bool atEnd() const noexcept { return index == size; }
-  BL_INLINE bool hasPlacement() const noexcept { return placementData != nullptr; }
-
-  BL_INLINE uint32_t glyphId() const noexcept { return *static_cast<const uint16_t*>(glyphData); }
-
-  template<typename T>
-  BL_INLINE const T& placement() const noexcept { return *static_cast<const T*>(placementData); }
-
-  //! \}
-
-  //! \name Iterator Interface
-  //! \{
-
-  BL_INLINE void advance() noexcept {
-    BL_ASSERT(!atEnd());
-
-    index++;
-    glyphData = static_cast<uint8_t*>(glyphData) + glyphAdvance;
-    placementData = static_cast<uint8_t*>(placementData) + placementAdvance;
-  }
-
-  //! \}
-};
-#endif
-
-//! Information of `BLFontFace`.
-struct BLFontFaceInfo {
-  //! \name Members
-  //! \{
-
-  //! Font-face type, see `BLFontFaceType`.
-  uint8_t faceType;
-  //! Type of outlines used by the font-face, see `BLFontOutlineType`.
-  uint8_t outlineType;
-  //! Number of glyphs provided by this font-face.
-  uint16_t glyphCount;
-
-  //! Revision (read from 'head' table, represented as 16.16 fixed point).
-  uint32_t revision;
-
-  //! Face-face index in a TTF/OTF collection or zero if not part of a collection.
-  uint32_t faceIndex;
-  //! Font-face flags, see `BLFontFaceFlags`
-  uint32_t faceFlags;
-
-  //! Font-face diagnostic flags, see`BLFontFaceDiagFlags`.
-  uint32_t diagFlags;
-
-  //! Reserved for future use, set to zero.
-  uint32_t reserved[3];
-
-  //! \}
-
-#ifdef __cplusplus
-  //! \name Common Functionality
-  //! \{
-
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
-
-  //! \}
-#endif
-};
-
-//! Properties that can be used to query \ref BLFont and \ref BLFontFace.
-//!
-//! \sa BLFontManager.
-struct BLFontQueryProperties {
-  //! \name Members
-  //! \{
-
-  //! Font style.
-  uint32_t style;
-  //! Font weight.
-  uint32_t weight;
-  //! Font stretch.
-  uint32_t stretch;
-
-  //! \}
-
-#ifdef __cplusplus
-  //! \name Common Functionality
-  //! \{
-
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
-
-  //! \}
-#endif
-};
-
-//! A read only data that represents a font table or its sub-table.
-struct BLFontTable {
-  //! \name Members
-  //! \{
-
-  //! Pointer to the beginning of the data interpreted as `uint8_t*`.
-  const uint8_t* data;
-  //! Size of `data` in bytes.
-  size_t size;
-
-  //! \}
-
-#ifdef __cplusplus
-  //! \name Common Functionality
-  //! \{
-
-  BL_INLINE void reset() noexcept {
-    data = nullptr;
-    size = 0;
-  }
-
-  BL_INLINE void reset(const uint8_t* data_, size_t size_) noexcept {
-    data = data_;
-    size = size_;
-  }
-
-  //! \}
-
-  //! \name Accessors
-  //! \{
-
-  template<typename T>
-  BL_INLINE const T* dataAs() const noexcept { return reinterpret_cast<const T*>(data); }
-
-  //! \}
-#endif
-};
-
-//! Associates a font feature tag with a value. Tag describes the feature (as provided by the font) and `value`
-//! describes its value. Some features only allow boolean values 0 and 1 and some also allow higher values up to 65535.
-//!
-//! Registered OpenType features:
-//!   - https://docs.microsoft.com/en-us/typography/opentype/spec/featuretags
-//!   - https://helpx.adobe.com/typekit/using/open-type-syntax.html
-struct BLFontFeatureItem {
-  //! \name Members
-  //! \{
-
-  //! Feature tag (32-bit).
-  BLTag tag;
-  //! Feature value.
-  //!
-  //! \note values greater than 65535 are invalid.
-  uint32_t value;
-
-  //! \}
-
-#ifdef __cplusplus
-  //! \name Common Functionality
-  //! \{
-
-  BL_INLINE void reset() noexcept { *this = BLFontFeatureItem{}; }
-
-  //! \}
-#endif
-};
-
-
-//! Associates a font variation tag with a value.
-struct BLFontVariationItem {
-  //! \name Members
-  //! \{
-
-  //! Variation tag (32-bit).
-  BLTag tag;
-  //! Variation value.
-  //!
-  //! \note values outside of [0, 1] range are invalid.
-  float value;
-
-  //! \}
-
-#ifdef __cplusplus
-  //! \name Common Functionality
-  //! \{
-
-  BL_INLINE void reset() noexcept { *this = BLFontVariationItem{}; }
-
-  //! \}
-#endif
-};
-
 //! Font unicode coverage.
 //!
 //! Unicode coverage describes which unicode characters are provided by a font. Blend2D accesses this information by
@@ -941,33 +466,33 @@ struct BLFontUnicodeCoverage {
   uint32_t data[4];
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLFontUnicodeCoverage{}; }
 
-  BL_INLINE bool empty() const noexcept {
+  BL_INLINE_NODEBUG bool empty() const noexcept {
     return (this->data[0] | this->data[1] | this->data[2] | this->data[3]) == 0;
   }
 
-  BL_INLINE bool hasBit(uint32_t index) const noexcept {
+  BL_INLINE_NODEBUG bool hasBit(uint32_t index) const noexcept {
     return ((this->data[index / 32] >> (index % 32)) & 0x1) != 0;
   }
 
-  BL_INLINE void setBit(uint32_t index) noexcept {
+  BL_INLINE_NODEBUG void setBit(uint32_t index) noexcept {
     this->data[index / 32] |= uint32_t(1) << (index % 32);
   }
 
-  BL_INLINE void clearBit(uint32_t index) noexcept {
+  BL_INLINE_NODEBUG void clearBit(uint32_t index) noexcept {
     this->data[index / 32] &= ~(uint32_t(1) << (index % 32));
   }
 
-  BL_INLINE bool equals(const BLFontUnicodeCoverage& other) const noexcept {
+  BL_INLINE_NODEBUG bool equals(const BLFontUnicodeCoverage& other) const noexcept {
     return bool(unsigned(blEquals(this->data[0], other.data[0])) &
                 unsigned(blEquals(this->data[1], other.data[1])) &
                 unsigned(blEquals(this->data[2], other.data[2])) &
                 unsigned(blEquals(this->data[3], other.data[3])));
   }
 
-  BL_INLINE bool operator==(const BLFontUnicodeCoverage& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const BLFontUnicodeCoverage& other) const noexcept { return !equals(other); }
+  BL_INLINE_NODEBUG bool operator==(const BLFontUnicodeCoverage& other) const noexcept { return  equals(other); }
+  BL_INLINE_NODEBUG bool operator!=(const BLFontUnicodeCoverage& other) const noexcept { return !equals(other); }
 #endif
 };
 
@@ -1031,9 +556,9 @@ struct BLFontPanose {
   };
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLFontPanose{}; }
 
-  BL_INLINE bool empty() const noexcept {
+  BL_INLINE_NODEBUG bool empty() const noexcept {
     return (this->data[0] | this->data[1] | this->data[2] | this->data[3] | this->data[4] |
             this->data[5] | this->data[6] | this->data[7] | this->data[8] | this->data[9] ) == 0;
   }
@@ -1054,22 +579,22 @@ struct BLFontMatrix {
   };
 
 #ifdef __cplusplus
-  BL_INLINE BLFontMatrix() noexcept = default;
-  BL_INLINE BLFontMatrix(const BLFontMatrix& other) noexcept = default;
+  BL_INLINE_NODEBUG BLFontMatrix() noexcept = default;
+  BL_INLINE_NODEBUG BLFontMatrix(const BLFontMatrix& other) noexcept = default;
 
-  BL_INLINE BLFontMatrix(double m00, double m01, double m10, double m11) noexcept
+  BL_INLINE_NODEBUG BLFontMatrix(double m00, double m01, double m10, double m11) noexcept
     : m00(m00), m01(m01), m10(m10), m11(m11) {}
 
-  BL_INLINE BLFontMatrix& operator=(const BLFontMatrix& other) noexcept = default;
+  BL_INLINE_NODEBUG BLFontMatrix& operator=(const BLFontMatrix& other) noexcept = default;
 
-  BL_INLINE void reset() noexcept {
+  BL_INLINE_NODEBUG void reset() noexcept {
     this->m00 = 1.0;
     this->m01 = 0.0;
     this->m10 = 0.0;
     this->m11 = 1.0;
   }
 
-  BL_INLINE void reset(double m00, double m01, double m10, double m11) noexcept {
+  BL_INLINE_NODEBUG void reset(double m00, double m01, double m10, double m11) noexcept {
     this->m00 = m00;
     this->m01 = m01;
     this->m10 = m10;
@@ -1127,7 +652,7 @@ struct BLFontMetrics {
   float strikethroughThickness;
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLFontMetrics{}; }
 #endif
 };
 
@@ -1203,7 +728,7 @@ struct BLFontDesignMetrics {
   int strikethroughThickness;
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLFontDesignMetrics{}; }
 #endif
 };
 
@@ -1215,7 +740,7 @@ struct BLTextMetrics {
   BLBox boundingBox;
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLTextMetrics{}; }
 #endif
 };
 

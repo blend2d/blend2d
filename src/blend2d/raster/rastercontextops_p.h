@@ -61,9 +61,9 @@ struct StrokeGlyphRunSink : public StrokeSink {
   const BLApproximationOptions* approximationOptions;
 };
 
-BL_HIDDEN BLResult BL_CDECL blRasterContextFillGlyphRunSinkFunc(BLPathCore* path, const void* info, void* closure_) noexcept;
-BL_HIDDEN BLResult BL_CDECL blRasterContextStrokeGeometrySinkFunc(BLPath* a, BLPath* b, BLPath* c, void* closure_) noexcept;
-BL_HIDDEN BLResult BL_CDECL blRasterContextStrokeGlyphRunSinkFunc(BLPathCore* path, const void* info, void* closure_) noexcept;
+BL_HIDDEN BLResult BL_CDECL blRasterContextFillGlyphRunSinkFunc(BLPathCore* path, const void* info, void* userData) noexcept;
+BL_HIDDEN BLResult BL_CDECL blRasterContextStrokeGeometrySinkFunc(BLPath* a, BLPath* b, BLPath* c, void* userData) noexcept;
+BL_HIDDEN BLResult BL_CDECL blRasterContextStrokeGlyphRunSinkFunc(BLPathCore* path, const void* info, void* userData) noexcept;
 
 template<typename StateAccessor>
 static BL_INLINE BLResult blRasterContextUtilFillGlyphRun(

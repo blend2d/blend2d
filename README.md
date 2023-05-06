@@ -19,8 +19,3 @@ Bindings
 --------
 
   * [Download Page](https://blend2d.com/download.html#Bindings) provides a list of Blend2D bindings
-
-Beta Version
-------------
-
-Blend2D is currently in a beta testing mode, which means that you can download and use the library, but a certain functionality may be limited or not working as expected. Use at your own risk!

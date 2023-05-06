@@ -580,15 +580,10 @@
     <DisplayString>BLGlyphRun {{ size={size, d} }}</DisplayString>
     <Expand HideRawView="true">
       <!-- glyphData is either uint16_t or uint32_t - show just void* when not initialized -->
-      <Item Name="[glyphData]" Condition="glyphSize != 2 &amp;&amp; glyphSize != 4">glyphData</Item>
-      <Synthetic Name="[glyphData]" Condition="glyphSize == 2 || glyphSize == 4">
+      <Synthetic Name="[glyphData]">
         <DisplayString>{glyphData}</DisplayString>
         <Expand>
-          <IndexListItems Condition="glyphSize == 2">
-            <Size>size</Size>
-            <ValueNode>*((uint16_t*)( (char*)glyphData + ($i * glyphAdvance) ))</ValueNode>
-          </IndexListItems>
-          <IndexListItems Condition="glyphSize == 4">
+          <IndexListItems>
             <Size>size</Size>
             <ValueNode>*((uint32_t*)( (char*)glyphData + ($i * glyphAdvance) ))</ValueNode>
           </IndexListItems>
@@ -609,7 +604,6 @@
         </Expand>
       </Synthetic>
       <Item Name="[size]" ExcludeView="simple">size, d</Item>
-      <Item Name="[glyphSize]" ExcludeView="simple">glyphSize, d</Item>
       <Item Name="[glyphAdvance]" ExcludeView="simple">glyphAdvance, d</Item>
       <Item Name="[placementType]" ExcludeView="simple">placementType, d</Item>
       <Item Name="[placementAdvance]" ExcludeView="simple">placementAdvance, d</Item>

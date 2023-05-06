@@ -15,8 +15,8 @@
 namespace BLOpenType {
 namespace NameImpl {
 
-// OpenType::NameImpl - Tracing
-// ============================
+// BLOpenType::NameImpl - Tracing
+// ==============================
 
 #if defined(BL_TRACE_OT_ALL) || defined(BL_TRACE_OT_NAME)
   #define Trace BLDebugTrace
@@ -24,8 +24,8 @@ namespace NameImpl {
   #define Trace BLDummyTrace
 #endif
 
-// OpenType::NameImpl - Utilities
-// ==============================
+// BLOpenType::NameImpl - Utilities
+// ================================
 
 static BLTextEncoding encodingFromPlatformId(uint32_t platformId) noexcept {
   // Both Unicode and Windows platform use 'UTF16-BE' encoding.
@@ -105,25 +105,25 @@ static void normalizeFamilyAndSubfamily(OTFaceImpl* faceI, Trace trace) noexcept
   }
 }
 
-// OpenType::NameImpl - Init
-// =========================
+// BLOpenType::NameImpl - Init
+// ===========================
 
-BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
+BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   typedef NameTable::NameRecord NameRecord;
 
-  BLFontTableT<NameTable> name;
-  if (fontData->queryTable(faceI->faceInfo.faceIndex, &name, BL_MAKE_TAG('n', 'a', 'm', 'e')) == 0)
+  Table<NameTable> name(tables.name);
+  if (!name)
     return blTraceError(BL_ERROR_FONT_MISSING_IMPORTANT_TABLE);
 
-  if (!blFontTableFitsT<NameTable>(name))
+  if (!name.fits())
     return blTraceError(BL_ERROR_INVALID_DATA);
 
   Trace trace;
-  trace.info("BLOpenType::OTFaceImpl::InitName [Size=%zu]\n", name.size);
+  trace.info("BLOpenType::OTFaceImpl::InitName [Size=%u]\n", name.size);
   trace.indent();
 
-  if (BL_UNLIKELY(name.size < NameTable::kMinSize)) {
-    trace.warn("Table is too small\n");
+  if (BL_UNLIKELY(name.size < NameTable::kBaseSize)) {
+    trace.warn("Table is truncated\n");
     return blTraceError(BL_ERROR_INVALID_DATA);
   }
 
@@ -143,7 +143,7 @@ BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
 
   // There must be some names otherwise this table is invalid. Also make sure that the number of records doesn't
   // overflow the size of 'name' itself.
-  if (BL_UNLIKELY(recordCount == 0) || !blFontTableFitsN(name, 6 + recordCount * sizeof(NameRecord)))
+  if (BL_UNLIKELY(!recordCount || !name.fits(6u + recordCount * uint32_t(sizeof(NameRecord)))))
     return blTraceError(BL_ERROR_INVALID_DATA);
 
   // Mask of name IDs which we are interested in.

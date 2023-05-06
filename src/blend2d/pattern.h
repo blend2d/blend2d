@@ -86,7 +86,7 @@ struct BLPatternImpl BL_CLASS_INHERITS(BLObjectImpl) {
 class BLPattern : public BLPatternCore {
 public:
   //! \cond INTERNAL
-  BL_INLINE BLPatternImpl* _impl() const noexcept { return static_cast<BLPatternImpl*>(_d.impl); }
+  BL_INLINE_NODEBUG BLPatternImpl* _impl() const noexcept { return static_cast<BLPatternImpl*>(_d.impl); }
   //! \endcond
 
   //! \name Construction & Destruction
@@ -188,7 +188,7 @@ public:
   BL_INLINE BLResult resetArea() noexcept { return setArea(BLRectI(0, 0, 0, 0)); }
 
   BL_NODISCARD
-  BL_INLINE BLExtendMode extendMode() const noexcept { return (BLExtendMode)_d.bField(); }
+  BL_INLINE_NODEBUG BLExtendMode extendMode() const noexcept { return (BLExtendMode)_d.bField(); }
 
   BL_INLINE BLResult setExtendMode(BLExtendMode extendMode) noexcept {
     if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_COMPLEX_MAX_VALUE))
@@ -209,7 +209,7 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE bool hasMatrix() const noexcept { return _d.cField() != BL_MATRIX2D_TYPE_IDENTITY; }
+  BL_INLINE_NODEBUG bool hasMatrix() const noexcept { return _d.cField() != BL_MATRIX2D_TYPE_IDENTITY; }
 
   BL_NODISCARD
   BL_INLINE BLMatrix2DType matrixType() const noexcept { return (BLMatrix2DType)_d.cField(); }

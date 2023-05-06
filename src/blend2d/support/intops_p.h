@@ -31,7 +31,7 @@ namespace {
 
 template<typename T>
 BL_NODISCARD
-static BL_INLINE constexpr bool isUnsigned() noexcept { return std::is_unsigned<T>::value; }
+static BL_INLINE_NODEBUG constexpr bool isUnsigned() noexcept { return std::is_unsigned<T>::value; }
 
 //! \}
 
@@ -45,14 +45,14 @@ static BL_INLINE constexpr bool isUnsigned() noexcept { return std::is_unsigned<
 //! just cast to a type as defined by <stdint.h> and specialize for it.
 template<typename T>
 BL_NODISCARD
-static BL_INLINE constexpr typename StdInt<sizeof(T), isUnsigned<T>()>::Type asStdInt(T x) noexcept {
+static BL_INLINE_NODEBUG constexpr typename StdInt<sizeof(T), isUnsigned<T>()>::Type asStdInt(T x) noexcept {
   return (typename StdInt<sizeof(T), isUnsigned<T>()>::Type)x;
 }
 
 //! Cast an integer `x` to a fixed-width unsigned type as defined by <stdint.h>
 template<typename T>
 BL_NODISCARD
-static BL_INLINE constexpr typename StdInt<sizeof(T), 1>::Type asStdUInt(T x) noexcept {
+static BL_INLINE_NODEBUG constexpr typename StdInt<sizeof(T), 1>::Type asStdUInt(T x) noexcept {
   return (typename StdInt<sizeof(T), 1>::Type)x;
 }
 
@@ -61,7 +61,7 @@ static BL_INLINE constexpr typename StdInt<sizeof(T), 1>::Type asStdUInt(T x) no
 //! Used to keep a signedness of `T`, but to promote it to at least 32-bit type.
 template<typename T>
 BL_NODISCARD
-static BL_INLINE constexpr typename StdInt<blMax<size_t>(sizeof(T), 4), isUnsigned<T>()>::Type asInt32AtLeast(T x) noexcept {
+static BL_INLINE_NODEBUG constexpr typename StdInt<blMax<size_t>(sizeof(T), 4), isUnsigned<T>()>::Type asInt32AtLeast(T x) noexcept {
   typedef typename StdInt<blMax<size_t>(sizeof(T), 4), isUnsigned<T>()>::Type Result;
   return Result(x);
 }
@@ -69,7 +69,7 @@ static BL_INLINE constexpr typename StdInt<blMax<size_t>(sizeof(T), 4), isUnsign
 //! Cast an integer `x` to either `uint32_t` or `uint64_t`.
 template<typename T>
 BL_NODISCARD
-static BL_INLINE constexpr typename StdInt<blMax<size_t>(sizeof(T), 4), 1>::Type asUInt32AtLeast(T x) noexcept {
+static BL_INLINE_NODEBUG constexpr typename StdInt<blMax<size_t>(sizeof(T), 4), 1>::Type asUInt32AtLeast(T x) noexcept {
   typedef typename StdInt<blMax<size_t>(sizeof(T), 4), 1>::Type Result;
   typedef typename std::make_unsigned<T>::type U;
   return Result(U(x));
@@ -156,14 +156,14 @@ template<typename T> BL_NODISCARD static BL_INLINE T byteSwap64BE(T x) noexcept 
 //! Returns `0 - x` in a safe way (no undefined behavior), works for both signed and unsigned numbers.
 template<typename T>
 BL_NODISCARD
-static constexpr T negate(const T& x) noexcept {
+static BL_INLINE_NODEBUG constexpr T negate(const T& x) noexcept {
   typedef typename std::make_unsigned<T>::type U;
   return T(U(0) - U(x));
 }
 
 // Look for "Carry-save adder" for more details.
 template<typename T>
-static BL_INLINE void csa(T& hi, T& lo, T a, T b, T c) noexcept {
+static BL_INLINE_NODEBUG void csa(T& hi, T& lo, T a, T b, T c) noexcept {
   T u = a ^ b;
   hi = (a & b) | (u & c);
   lo = u ^ c;
@@ -176,22 +176,22 @@ static BL_INLINE void csa(T& hi, T& lo, T a, T b, T c) noexcept {
 
 template<typename T>
 BL_NODISCARD
-BL_INLINE constexpr uint32_t bitSizeOf() noexcept { return uint32_t(sizeof(T) * 8u); }
+BL_INLINE_NODEBUG constexpr uint32_t bitSizeOf() noexcept { return uint32_t(sizeof(T) * 8u); }
 
 template<typename T>
 BL_NODISCARD
-BL_INLINE constexpr T allOnes() noexcept { return T(~T(0)); }
+BL_INLINE_NODEBUG constexpr T allOnes() noexcept { return T(~T(0)); }
 
 template<typename T>
 BL_NODISCARD
-BL_INLINE constexpr size_t wordCountFromBitCount(size_t nBits) noexcept {
+BL_INLINE_NODEBUG constexpr size_t wordCountFromBitCount(size_t nBits) noexcept {
   return (nBits + bitSizeOf<T>() - 1) / bitSizeOf<T>();
 }
 
 //! Returns `x << y` (shift left logical) by explicitly casting `x` to an unsigned type and back.
 template<typename X, typename Y>
 BL_NODISCARD
-BL_INLINE constexpr X shl(const X& x, const Y& y) noexcept {
+BL_INLINE_NODEBUG constexpr X shl(const X& x, const Y& y) noexcept {
   typedef typename std::make_unsigned<X>::type U;
   return X(U(x) << y);
 }
@@ -199,7 +199,7 @@ BL_INLINE constexpr X shl(const X& x, const Y& y) noexcept {
 //! Returns `x >> y` (shift right logical) by explicitly casting `x` to an unsigned type and back.
 template<typename X, typename Y>
 BL_NODISCARD
-BL_INLINE constexpr X shr(const X& x, const Y& y) noexcept {
+BL_INLINE_NODEBUG constexpr X shr(const X& x, const Y& y) noexcept {
   typedef typename std::make_unsigned<X>::type U;
   return X(U(x) >> y);
 }
@@ -207,103 +207,103 @@ BL_INLINE constexpr X shr(const X& x, const Y& y) noexcept {
 //! Returns `x >> y` (shift right arithmetic) by explicitly casting `x` to a signed type and back.
 template<typename X, typename Y>
 BL_NODISCARD
-BL_INLINE constexpr X sar(const X& x, const Y& y) noexcept {
+BL_INLINE_NODEBUG constexpr X sar(const X& x, const Y& y) noexcept {
   typedef typename std::make_signed<X>::type S;
   return X(S(x) >> y);
 }
 
 template<typename T>
 BL_NODISCARD
-BL_INLINE T rolImpl(const T& x, unsigned n) noexcept {
+BL_INLINE_NODEBUG T rolImpl(const T& x, unsigned n) noexcept {
   return shl(x, n % unsigned(sizeof(T) * 8u)) | shr(x, (0u - n) % unsigned(sizeof(T) * 8u)) ;
 }
 
 template<typename T>
 BL_NODISCARD
-BL_INLINE T rorImpl(const T& x, unsigned n) noexcept {
+BL_INLINE_NODEBUG T rorImpl(const T& x, unsigned n) noexcept {
   return shr(x, n % unsigned(sizeof(T) * 8u)) | shl(x, (0u - n) % unsigned(sizeof(T) * 8u)) ;
 }
 
 // MSVC is unable to emit `rol|ror` instruction when `n` is not a constant so we have to help it a bit.
 // This  prevents us from using `constexpr`.
 #if defined(_MSC_VER)
-template<> BL_NODISCARD BL_INLINE uint8_t rolImpl(const uint8_t& x, unsigned n) noexcept { return uint8_t(_rotl8(x, uint8_t(n))); }
-template<> BL_NODISCARD BL_INLINE uint8_t rorImpl(const uint8_t& x, unsigned n) noexcept { return uint8_t(_rotr8(x, uint8_t(n))); }
-template<> BL_NODISCARD BL_INLINE uint16_t rolImpl(const uint16_t& x, unsigned n) noexcept { return uint16_t(_rotl16(x, uint8_t(n))); }
-template<> BL_NODISCARD BL_INLINE uint16_t rorImpl(const uint16_t& x, unsigned n) noexcept { return uint16_t(_rotr16(x, uint8_t(n))); }
-template<> BL_NODISCARD BL_INLINE uint32_t rolImpl(const uint32_t& x, unsigned n) noexcept { return uint32_t(_rotl(x, int(n))); }
-template<> BL_NODISCARD BL_INLINE uint32_t rorImpl(const uint32_t& x, unsigned n) noexcept { return uint32_t(_rotr(x, int(n))); }
-template<> BL_NODISCARD BL_INLINE uint64_t rolImpl(const uint64_t& x, unsigned n) noexcept { return uint64_t(_rotl64(x, int(n))); }
-template<> BL_NODISCARD BL_INLINE uint64_t rorImpl(const uint64_t& x, unsigned n) noexcept { return uint64_t(_rotr64(x, int(n))); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint8_t rolImpl(const uint8_t& x, unsigned n) noexcept { return uint8_t(_rotl8(x, uint8_t(n))); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint8_t rorImpl(const uint8_t& x, unsigned n) noexcept { return uint8_t(_rotr8(x, uint8_t(n))); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint16_t rolImpl(const uint16_t& x, unsigned n) noexcept { return uint16_t(_rotl16(x, uint8_t(n))); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint16_t rorImpl(const uint16_t& x, unsigned n) noexcept { return uint16_t(_rotr16(x, uint8_t(n))); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint32_t rolImpl(const uint32_t& x, unsigned n) noexcept { return uint32_t(_rotl(x, int(n))); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint32_t rorImpl(const uint32_t& x, unsigned n) noexcept { return uint32_t(_rotr(x, int(n))); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint64_t rolImpl(const uint64_t& x, unsigned n) noexcept { return uint64_t(_rotl64(x, int(n))); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint64_t rorImpl(const uint64_t& x, unsigned n) noexcept { return uint64_t(_rotr64(x, int(n))); }
 #endif
 
 template<typename X, typename Y>
 BL_NODISCARD
-BL_INLINE X rol(const X& x, const Y& n) noexcept { return X(rolImpl(asUInt32AtLeast(x), unsigned(n))); }
+BL_INLINE_NODEBUG X rol(const X& x, const Y& n) noexcept { return X(rolImpl(asUInt32AtLeast(x), unsigned(n))); }
 
 template<typename X, typename Y>
 BL_NODISCARD
-BL_INLINE X ror(const X& x, const Y& n) noexcept { return X(rorImpl(asUInt32AtLeast(x), unsigned(n))); }
+BL_INLINE_NODEBUG X ror(const X& x, const Y& n) noexcept { return X(rorImpl(asUInt32AtLeast(x), unsigned(n))); }
 
 //! Returns `x | (x >> y)` - helper used by some bit manipulation helpers.
 template<typename X, typename Y>
 BL_NODISCARD
-BL_INLINE constexpr X shrOr(const X& x, const Y& y) noexcept { return X(x | shr(x, y)); }
+BL_INLINE_NODEBUG constexpr X shrOr(const X& x, const Y& y) noexcept { return X(x | shr(x, y)); }
 
 template<typename X, typename Y, typename... Args>
 BL_NODISCARD
-BL_INLINE constexpr X shrOr(const X& x, const Y& y, Args... args) noexcept { return shrOr(shrOr(x, y), args...); }
+BL_INLINE_NODEBUG constexpr X shrOr(const X& x, const Y& y, Args... args) noexcept { return shrOr(shrOr(x, y), args...); }
 
 //! Fills all trailing bits right from the first most significant bit set.
 template<typename T>
 BL_NODISCARD
-BL_INLINE constexpr T fillTrailingBits(const T& x) noexcept {
+BL_INLINE_NODEBUG constexpr T fillTrailingBits(const T& x) noexcept {
   typedef typename StdInt<sizeof(T), 1>::Type U;
   return T(fillTrailingBits(U(x)));
 }
 
-template<> BL_NODISCARD BL_INLINE constexpr uint8_t  fillTrailingBits(const uint8_t& x) noexcept { return shrOr(x, 1, 2, 4); }
-template<> BL_NODISCARD BL_INLINE constexpr uint16_t fillTrailingBits(const uint16_t& x) noexcept { return shrOr(x, 1, 2, 4, 8); }
-template<> BL_NODISCARD BL_INLINE constexpr uint32_t fillTrailingBits(const uint32_t& x) noexcept { return shrOr(x, 1, 2, 4, 8, 16); }
-template<> BL_NODISCARD BL_INLINE constexpr uint64_t fillTrailingBits(const uint64_t& x) noexcept { return shrOr(x, 1, 2, 4, 8, 16, 32); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG constexpr uint8_t  fillTrailingBits(const uint8_t& x) noexcept { return shrOr(x, 1, 2, 4); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG constexpr uint16_t fillTrailingBits(const uint16_t& x) noexcept { return shrOr(x, 1, 2, 4, 8); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG constexpr uint32_t fillTrailingBits(const uint32_t& x) noexcept { return shrOr(x, 1, 2, 4, 8, 16); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG constexpr uint64_t fillTrailingBits(const uint64_t& x) noexcept { return shrOr(x, 1, 2, 4, 8, 16, 32); }
 
 template<typename T, typename N = uint32_t>
 BL_NODISCARD
-static BL_INLINE constexpr T nonZeroLsbMask(const N& n = 1) noexcept {
+static BL_INLINE_NODEBUG constexpr T nonZeroLsbMask(const N& n = 1) noexcept {
   return shr(allOnes<T>(), N(bitSizeOf<T>()) - n);
 }
 
 template<typename T, typename N = uint32_t>
 BL_NODISCARD
-static BL_INLINE constexpr T nonZeroMsbMask(const N& n = 1) noexcept {
+static BL_INLINE_NODEBUG constexpr T nonZeroMsbMask(const N& n = 1) noexcept {
   return sar(shl(T(1), bitSizeOf<T>() - 1u), n - 1u);
 }
 
 //! Returns a bit-mask that has `x` bit set.
 template<typename T, typename Arg>
 BL_NODISCARD
-BL_INLINE constexpr T lsbBitAt(Arg x) noexcept { return T(T(1u) << x); }
+BL_INLINE_NODEBUG constexpr T lsbBitAt(Arg x) noexcept { return T(T(1u) << x); }
 
 //! Returns a bit-mask that has `x` bit set (multiple bits version).
 template<typename T, typename Arg>
 BL_NODISCARD
-BL_INLINE constexpr T lsbBitsAt(Arg x) noexcept { return T(T(1u) << x); }
+BL_INLINE_NODEBUG constexpr T lsbBitsAt(Arg x) noexcept { return T(T(1u) << x); }
 
 template<typename T, typename Arg, typename... Args>
 BL_NODISCARD
-BL_INLINE constexpr T lsbBitsAt(Arg x, Args... args) noexcept { return T(lsbBitsAt<T>(x) | lsbBitsAt<T>(args...)); }
+BL_INLINE_NODEBUG constexpr T lsbBitsAt(Arg x, Args... args) noexcept { return T(lsbBitsAt<T>(x) | lsbBitsAt<T>(args...)); }
 
 //! Returns a bit-mask where all bits are set if the given value `x` is 1, or
 //! zero otherwise. Please note that `x` must be either 0 or 1, all other
 //! values will produce invalid output.
 template<typename T, typename B>
 BL_NODISCARD
-BL_INLINE constexpr T bitMaskFromBool(const B& x) noexcept { return negate(T(x)); }
+BL_INLINE_NODEBUG constexpr T bitMaskFromBool(const B& x) noexcept { return negate(T(x)); }
 
 //! Tests whether `x` has `n`th bit set.
 template<typename T, typename I>
 BL_NODISCARD
-BL_INLINE constexpr bool bitTest(const T& x, const I& i) noexcept {
+BL_INLINE_NODEBUG constexpr bool bitTest(const T& x, const I& i) noexcept {
   typedef typename std::make_unsigned<T>::type U;
   return (U(x) & (U(1) << i)) != 0;
 }
@@ -311,11 +311,11 @@ BL_INLINE constexpr bool bitTest(const T& x, const I& i) noexcept {
 //! Tests whether bits specified by `y` are all set in `x`.
 template<typename X, typename Y>
 BL_NODISCARD
-BL_INLINE constexpr bool bitMatch(const X& x, const Y& y) noexcept { return (x & y) == y; }
+BL_INLINE_NODEBUG constexpr bool bitMatch(const X& x, const Y& y) noexcept { return (x & y) == y; }
 
 template<typename T>
 BL_NODISCARD
-BL_INLINE constexpr bool isBitMaskConsecutive(const T& x) noexcept {
+BL_INLINE_NODEBUG constexpr bool isBitMaskConsecutive(const T& x) noexcept {
   typedef typename std::make_unsigned<T>::type U;
   return x != 0 && (U(x) ^ (U(x) + (U(x) & (~U(x) + 1u)))) >= U(x);
 }
@@ -347,22 +347,22 @@ struct BitScanResult { T x; uint32_t n; };
 template<typename T, uint32_t N>
 struct BitScanImpl {
   BL_NODISCARD
-  static BL_INLINE constexpr BitScanResult<T> advanceLeft(const BitScanResult<T>& data, uint32_t n) noexcept {
+  static BL_INLINE_NODEBUG constexpr BitScanResult<T> advanceLeft(const BitScanResult<T>& data, uint32_t n) noexcept {
     return BitScanResult<T> { data.x << n, data.n + n };
   }
 
   BL_NODISCARD
-  static BL_INLINE constexpr BitScanResult<T> advanceRight(const BitScanResult<T>& data, uint32_t n) noexcept {
+  static BL_INLINE_NODEBUG constexpr BitScanResult<T> advanceRight(const BitScanResult<T>& data, uint32_t n) noexcept {
     return BitScanResult<T> { data.x >> n, data.n + n };
   }
 
   BL_NODISCARD
-  static BL_INLINE constexpr BitScanResult<T> clz(const BitScanResult<T>& data) noexcept {
+  static BL_INLINE_NODEBUG constexpr BitScanResult<T> clz(const BitScanResult<T>& data) noexcept {
     return BitScanImpl<T, N / 2>::clz(advanceLeft(data, data.x & (allOnes<T>() << (bitSizeOf<T>() - N)) ? uint32_t(0) : N));
   }
 
   BL_NODISCARD
-  static BL_INLINE constexpr BitScanResult<T> ctz(const BitScanResult<T>& data) noexcept {
+  static BL_INLINE_NODEBUG constexpr BitScanResult<T> ctz(const BitScanResult<T>& data) noexcept {
     return BitScanImpl<T, N / 2>::ctz(advanceRight(data, data.x & (allOnes<T>() >> (bitSizeOf<T>() - N)) ? uint32_t(0) : N));
   }
 };
@@ -370,46 +370,46 @@ struct BitScanImpl {
 template<typename T>
 struct BitScanImpl<T, 0> {
   BL_NODISCARD
-  static BL_INLINE constexpr BitScanResult<T> clz(const BitScanResult<T>& ctx) noexcept {
+  static BL_INLINE_NODEBUG constexpr BitScanResult<T> clz(const BitScanResult<T>& ctx) noexcept {
     return BitScanResult<T> { 0, ctx.n - uint32_t(ctx.x >> (bitSizeOf<T>() - 1)) };
   }
 
   BL_NODISCARD
-  static BL_INLINE constexpr BitScanResult<T> ctz(const BitScanResult<T>& ctx) noexcept {
+  static BL_INLINE_NODEBUG constexpr BitScanResult<T> ctz(const BitScanResult<T>& ctx) noexcept {
     return BitScanResult<T> { 0, ctx.n - uint32_t(ctx.x & 0x1) };
   }
 };
 
 template<typename T>
 BL_NODISCARD
-static BL_INLINE constexpr uint32_t clzFallback(const T& x) noexcept {
+static BL_INLINE_NODEBUG constexpr uint32_t clzFallback(const T& x) noexcept {
   return BitScanImpl<T, bitSizeOf<T>() / 2u>::clz(BitScanResult<T>{x, 1}).n;
 }
 
 template<typename T>
 BL_NODISCARD
-static BL_INLINE constexpr uint32_t ctzFallback(const T& x) noexcept {
+static BL_INLINE_NODEBUG constexpr uint32_t ctzFallback(const T& x) noexcept {
   return BitScanImpl<T, bitSizeOf<T>() / 2u>::ctz(BitScanResult<T>{x, 1}).n;
 }
 
-template<typename T> BL_NODISCARD BL_INLINE constexpr uint32_t clzStatic(const T& x) noexcept { return clzFallback(asUInt32AtLeast(x)); }
-template<typename T> BL_NODISCARD BL_INLINE constexpr uint32_t ctzStatic(const T& x) noexcept { return ctzFallback(asUInt32AtLeast(x)); }
+template<typename T> BL_NODISCARD BL_INLINE_NODEBUG constexpr uint32_t clzStatic(const T& x) noexcept { return clzFallback(asUInt32AtLeast(x)); }
+template<typename T> BL_NODISCARD BL_INLINE_NODEBUG constexpr uint32_t ctzStatic(const T& x) noexcept { return ctzFallback(asUInt32AtLeast(x)); }
 
-template<typename T> BL_NODISCARD BL_INLINE uint32_t clzImpl(const T& x) noexcept { return clzStatic(x); }
-template<typename T> BL_NODISCARD BL_INLINE uint32_t ctzImpl(const T& x) noexcept { return ctzStatic(x); }
+template<typename T> BL_NODISCARD BL_INLINE_NODEBUG uint32_t clzImpl(const T& x) noexcept { return clzStatic(x); }
+template<typename T> BL_NODISCARD BL_INLINE_NODEBUG uint32_t ctzImpl(const T& x) noexcept { return ctzStatic(x); }
 
 #if !defined(BL_BUILD_NO_INTRINSICS)
 # if defined(__GNUC__)
-template<> BL_NODISCARD BL_INLINE uint32_t clzImpl(const uint32_t& x) noexcept { return uint32_t(__builtin_clz(x)); }
-template<> BL_NODISCARD BL_INLINE uint32_t clzImpl(const uint64_t& x) noexcept { return uint32_t(__builtin_clzll(x)); }
-template<> BL_NODISCARD BL_INLINE uint32_t ctzImpl(const uint32_t& x) noexcept { return uint32_t(__builtin_ctz(x)); }
-template<> BL_NODISCARD BL_INLINE uint32_t ctzImpl(const uint64_t& x) noexcept { return uint32_t(__builtin_ctzll(x)); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint32_t clzImpl(const uint32_t& x) noexcept { return uint32_t(__builtin_clz(x)); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint32_t clzImpl(const uint64_t& x) noexcept { return uint32_t(__builtin_clzll(x)); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint32_t ctzImpl(const uint32_t& x) noexcept { return uint32_t(__builtin_ctz(x)); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint32_t ctzImpl(const uint64_t& x) noexcept { return uint32_t(__builtin_ctzll(x)); }
 # elif defined(_MSC_VER)
-template<> BL_NODISCARD BL_INLINE uint32_t clzImpl(const uint32_t& x) noexcept { unsigned long i; _BitScanReverse(&i, x); return uint32_t(i ^ 31); }
-template<> BL_NODISCARD BL_INLINE uint32_t ctzImpl(const uint32_t& x) noexcept { unsigned long i; _BitScanForward(&i, x); return uint32_t(i); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint32_t clzImpl(const uint32_t& x) noexcept { unsigned long i; _BitScanReverse(&i, x); return uint32_t(i ^ 31); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint32_t ctzImpl(const uint32_t& x) noexcept { unsigned long i; _BitScanForward(&i, x); return uint32_t(i); }
 #  if BL_TARGET_ARCH_X86 == 64 || BL_TARGET_ARCH_ARM == 64
-template<> BL_NODISCARD BL_INLINE uint32_t clzImpl(const uint64_t& x) noexcept { unsigned long i; _BitScanReverse64(&i, x); return uint32_t(i ^ 63); }
-template<> BL_NODISCARD BL_INLINE uint32_t ctzImpl(const uint64_t& x) noexcept { unsigned long i; _BitScanForward64(&i, x); return uint32_t(i); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint32_t clzImpl(const uint64_t& x) noexcept { unsigned long i; _BitScanReverse64(&i, x); return uint32_t(i ^ 63); }
+template<> BL_NODISCARD BL_INLINE_NODEBUG uint32_t ctzImpl(const uint64_t& x) noexcept { unsigned long i; _BitScanForward64(&i, x); return uint32_t(i); }
 #  endif
 # endif
 #endif
@@ -419,18 +419,18 @@ template<> BL_NODISCARD BL_INLINE uint32_t ctzImpl(const uint64_t& x) noexcept {
 //! \note If the input is zero the result is undefined.
 template<typename T>
 BL_NODISCARD
-static BL_INLINE uint32_t clz(T x) noexcept { return clzImpl(asUInt32AtLeast(x)); }
+static BL_INLINE_NODEBUG uint32_t clz(T x) noexcept { return clzImpl(asUInt32AtLeast(x)); }
 
 //! Counts trailing zeros in `x`.
 //!
 //! \note If the input is zero the result is undefined.
 template<typename T>
 BL_NODISCARD
-static BL_INLINE uint32_t ctz(T x) noexcept { return ctzImpl(asUInt32AtLeast(x)); }
+static BL_INLINE_NODEBUG uint32_t ctz(T x) noexcept { return ctzImpl(asUInt32AtLeast(x)); }
 
 template<typename T>
 BL_NODISCARD
-static BL_INLINE constexpr uint32_t bitShiftOf(const T& x) noexcept { return ctzStatic(x); }
+static BL_INLINE_NODEBUG constexpr uint32_t bitShiftOf(const T& x) noexcept { return ctzStatic(x); }
 
 //! \}
 
@@ -469,7 +469,7 @@ static BL_INLINE uint32_t popCountStatic(const T& x) noexcept {
 }
 
 BL_NODISCARD
-static BL_INLINE uint32_t popCountImpl(uint32_t x) noexcept {
+static BL_INLINE_NODEBUG uint32_t popCountImpl(uint32_t x) noexcept {
 #if defined(__GNUC__)
   return uint32_t(__builtin_popcount(x));
 #elif defined(_MSC_VER) && defined(BL_TARGET_OPT_POPCNT)
@@ -480,7 +480,7 @@ static BL_INLINE uint32_t popCountImpl(uint32_t x) noexcept {
 }
 
 BL_NODISCARD
-static BL_INLINE uint32_t popCountImpl(uint64_t x) noexcept {
+static BL_INLINE_NODEBUG uint32_t popCountImpl(uint64_t x) noexcept {
 #if defined(__GNUC__)
   return uint32_t(__builtin_popcountll(x));
 #elif defined(_MSC_VER) && defined(BL_TARGET_OPT_POPCNT) && BL_TARGET_ARCH_BITS >= 64
@@ -495,7 +495,7 @@ static BL_INLINE uint32_t popCountImpl(uint64_t x) noexcept {
 //! Calculates count of bits in `x`.
 template<typename T>
 BL_NODISCARD
-static BL_INLINE uint32_t popCount(T x) noexcept { return popCountImpl(asUInt32AtLeast(x)); }
+static BL_INLINE_NODEBUG uint32_t popCount(T x) noexcept { return popCountImpl(asUInt32AtLeast(x)); }
 
 // Simple PopCount context designed to take advantage of HW PopCount support.
 template<typename T>
@@ -503,15 +503,15 @@ class PopCounterSimple {
 public:
   uint32_t _counter = 0;
 
-  BL_INLINE void reset() noexcept {
+  BL_INLINE_NODEBUG void reset() noexcept {
     _counter = 0;
   }
 
-  BL_INLINE uint32_t get() const noexcept {
+  BL_INLINE_NODEBUG uint32_t get() const noexcept {
     return _counter;
   }
 
-  BL_INLINE void addPopulation(uint32_t v) noexcept {
+  BL_INLINE_NODEBUG void addPopulation(uint32_t v) noexcept {
     _counter += v;
   }
 
@@ -602,7 +602,7 @@ using PopCounter = PopCounterHarleySeal<T>;
 
 template<typename X, typename Y>
 BL_NODISCARD
-static BL_INLINE constexpr bool isAligned(const X& x, const Y& alignment) noexcept {
+static BL_INLINE_NODEBUG constexpr bool isAligned(const X& x, const Y& alignment) noexcept {
   typedef typename StdInt<sizeof(X), 1>::Type U;
   return ((U)x % (U)alignment) == 0;
 }
@@ -610,14 +610,14 @@ static BL_INLINE constexpr bool isAligned(const X& x, const Y& alignment) noexce
 //! Tests whether the `x` is a power of two (only one bit is set).
 template<typename T>
 BL_NODISCARD
-static BL_INLINE constexpr bool isPowerOf2(const T& x) noexcept {
+static BL_INLINE_NODEBUG constexpr bool isPowerOf2(const T& x) noexcept {
   typedef typename std::make_unsigned<T>::type U;
   return x && !(U(x) & (U(x) - U(1)));
 }
 
 template<typename X, typename Y>
 BL_NODISCARD
-static BL_INLINE constexpr X alignUp(const X& x, const Y& alignment) noexcept {
+static BL_INLINE_NODEBUG constexpr X alignUp(const X& x, const Y& alignment) noexcept {
   typedef typename StdInt<sizeof(X), 1>::Type U;
   return (X)( ((U)x + ((U)(alignment) - 1u)) & ~((U)(alignment) - 1u) );
 }
@@ -625,21 +625,21 @@ static BL_INLINE constexpr X alignUp(const X& x, const Y& alignment) noexcept {
 //! Returns zero or a positive difference between `x` and `x` aligned to `alignment`.
 template<typename X, typename Y>
 BL_NODISCARD
-static BL_INLINE constexpr X alignUpDiff(const X& x, const Y& alignment) noexcept {
+static BL_INLINE_NODEBUG constexpr X alignUpDiff(const X& x, const Y& alignment) noexcept {
   typedef typename StdInt<sizeof(X), 1>::Type U;
   return (X)((U(0) - U(x)) & (alignment - 1));
 }
 
 template<typename T>
 BL_NODISCARD
-static BL_INLINE constexpr T alignUpPowerOf2(const T& x) noexcept {
+static BL_INLINE_NODEBUG constexpr T alignUpPowerOf2(const T& x) noexcept {
   typedef typename StdInt<sizeof(T), 1>::Type U;
   return (T)(fillTrailingBits(U(x) - 1u) + 1u);
 }
 
 template<typename X, typename Y>
 BL_NODISCARD
-static BL_INLINE constexpr X alignDown(const X& x, const Y& alignment) noexcept {
+static BL_INLINE_NODEBUG constexpr X alignDown(const X& x, const Y& alignment) noexcept {
   typedef typename StdInt<sizeof(X), 1>::Type U;
   return (X)( (U)x & ~((U)(alignment) - 1u) );
 }
@@ -706,12 +706,12 @@ template<typename T> BL_INLINE T mulOverflowImpl(const T& x, const T& y, BLOverf
 
 #if defined(__GNUC__) && !defined(BL_BUILD_NO_INTRINSICS)
 #if defined(__clang__) || __GNUC__ >= 5
-#define BL_ARITH_OVERFLOW_SPECIALIZE(FUNC, T, RESULT_T, BUILTIN)              \
-  template<>                                                                  \
-  BL_INLINE T FUNC(const T& x, const T& y, BLOverflowFlag* of) noexcept {     \
-    RESULT_T result;                                                          \
-    *of = BLOverflowFlag(*of | (BUILTIN((RESULT_T)x, (RESULT_T)y, &result))); \
-    return T(result);                                                         \
+#define BL_ARITH_OVERFLOW_SPECIALIZE(FUNC, T, RESULT_T, BUILTIN)                  \
+  template<>                                                                      \
+  BL_INLINE_NODEBUG T FUNC(const T& x, const T& y, BLOverflowFlag* of) noexcept { \
+    RESULT_T result;                                                              \
+    *of = BLOverflowFlag(*of | (BUILTIN((RESULT_T)x, (RESULT_T)y, &result)));     \
+    return T(result);                                                             \
   }
 BL_ARITH_OVERFLOW_SPECIALIZE(addOverflowImpl, int32_t , int               , __builtin_sadd_overflow  )
 BL_ARITH_OVERFLOW_SPECIALIZE(addOverflowImpl, uint32_t, unsigned int      , __builtin_uadd_overflow  )
@@ -740,7 +740,7 @@ BL_ARITH_OVERFLOW_SPECIALIZE(mulOverflowImpl, uint64_t, unsigned long long, __bu
 #if defined(_MSC_VER) && 0
 #define BL_ARITH_OVERFLOW_SPECIALIZE(FUNC, T, ALT_T, BUILTIN)                 \
   template<>                                                                  \
-  BL_INLINE T FUNC(T x, T y, BLOverflowFlag* of) noexcept {                   \
+  BL_INLINE_NODEBUG T FUNC(T x, T y, BLOverflowFlag* of) noexcept {           \
     ALT_T result;                                                             \
     *of = BLOverflowFlag(*of | (BUILTIN(0, (ALT_T)x, (ALT_T)y, &result)));    \
     return T(result);                                                         \
@@ -794,7 +794,7 @@ static BL_INLINE T umulSaturate(const T& x, const T& y) noexcept {
 
 template<typename SrcT, typename DstT>
 BL_NODISCARD
-static BL_INLINE constexpr DstT clampToImpl(const SrcT& x, const DstT& y) noexcept {
+static BL_INLINE_NODEBUG constexpr DstT clampToImpl(const SrcT& x, const DstT& y) noexcept {
   typedef typename std::make_unsigned<SrcT>::type U;
   return U(x) <= U(y) ? DstT(x)
                       : isUnsigned<SrcT>() ? DstT(y) : DstT(SrcT(y) & SrcT(sar(negate(x), sizeof(SrcT) * 8 - 1)));
@@ -803,14 +803,14 @@ static BL_INLINE constexpr DstT clampToImpl(const SrcT& x, const DstT& y) noexce
 //! Clamp a value `x` to a byte (unsigned 8-bit type).
 template<typename T>
 BL_NODISCARD
-static BL_INLINE constexpr uint8_t clampToByte(const T& x) noexcept {
+static BL_INLINE_NODEBUG constexpr uint8_t clampToByte(const T& x) noexcept {
   return clampToImpl<T, uint8_t>(x, uint8_t(0xFFu));
 }
 
 //! Clamp a value `x` to a word (unsigned 16-bit type).
 template<typename T>
 BL_NODISCARD
-static BL_INLINE constexpr uint16_t clampToWord(const T& x) noexcept {
+static BL_INLINE_NODEBUG constexpr uint16_t clampToWord(const T& x) noexcept {
   return clampToImpl<T, uint16_t>(x, uint16_t(0xFFFFu));
 }
 

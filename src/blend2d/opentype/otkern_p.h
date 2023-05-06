@@ -22,7 +22,7 @@ namespace BLOpenType {
 //!   - https://docs.microsoft.com/en-us/typography/opentype/spec/kern
 //!   - https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6kern.html
 struct KernTable {
-  enum : uint32_t { kMinSize = 4 };
+  enum : uint32_t { kBaseSize = 4 };
 
   struct WinTableHeader {
     UInt16 version;
@@ -220,7 +220,7 @@ public:
     kHeaderMac       = 1
   };
 
-  BLFontTable table;
+  RawTable table;
   uint8_t headerType;
   uint8_t headerSize;
   uint8_t reserved[6];
@@ -230,7 +230,7 @@ public:
 };
 
 namespace KernImpl {
-BLResult init(OTFaceImpl* faceI, const BLFontData* fontData) noexcept;
+BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 } // {KernImpl}
 
 } // {BLOpenType}

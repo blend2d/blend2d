@@ -184,6 +184,7 @@ BL_HIDDEN void blThreadRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blThreadPoolRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blZeroAllocatorRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blPixelOpsRtInit(BLRuntimeContext* rt) noexcept;
+BL_HIDDEN void blBitArrayRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blBitSetRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blArrayRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blStringRtInit(BLRuntimeContext* rt) noexcept;

@@ -73,15 +73,9 @@ struct BLStringImpl BL_CLASS_INHERITS(BLObjectImpl) {
   size_t capacity;
 
 #ifdef __cplusplus
-  BL_INLINE BLStringImpl() noexcept = default;
-
-  BL_INLINE constexpr BLStringImpl(size_t sizeIn, size_t capacityIn) noexcept
-    : size(sizeIn),
-      capacity(capacityIn) {}
-
   //! String data [null terminated] follows BLStringImpl data.
   BL_NODISCARD
-  BL_INLINE char* data() noexcept { return reinterpret_cast<char*>(this) + sizeof(BLStringImpl); }
+  BL_INLINE_NODEBUG char* data() noexcept { return reinterpret_cast<char*>(this) + sizeof(BLStringImpl); }
 #endif
 };
 
@@ -118,7 +112,7 @@ public:
 
   };
 
-  BL_INLINE BLStringImpl* _impl() const noexcept { return static_cast<BLStringImpl*>(_d.impl); }
+  BL_INLINE_NODEBUG BLStringImpl* _impl() const noexcept { return static_cast<BLStringImpl*>(_d.impl); }
 
   //! \}
   //! \endcond
@@ -127,79 +121,79 @@ public:
   //! \{
 
   //! Creates an empty string.
-  BL_INLINE BLString() noexcept {
-    _d.initStatic(BL_OBJECT_TYPE_STRING, BLObjectInfo::packFields(kSSOCapacity));
+  BL_INLINE_NODEBUG BLString() noexcept {
+    _d.initStatic(BL_OBJECT_TYPE_STRING, BLObjectInfo::packAbcpFields(kSSOCapacity));
   }
 
   //! Move constructor.
   //!
   //! \note The `other` string is always reset by a move construction, so it becomes an empty string.
-  BL_INLINE BLString(BLString&& other) noexcept {
+  BL_INLINE_NODEBUG BLString(BLString&& other) noexcept {
     _d = other._d;
-    other._d.initStatic(BL_OBJECT_TYPE_STRING, BLObjectInfo::packFields(kSSOCapacity));
+    other._d.initStatic(BL_OBJECT_TYPE_STRING, BLObjectInfo::packAbcpFields(kSSOCapacity));
   }
 
   //! Copy constructor, performs weak copy of the data held by the `other` string.
-  BL_INLINE BLString(const BLString& other) noexcept { blStringInitWeak(this, &other); }
+  BL_INLINE_NODEBUG BLString(const BLString& other) noexcept { blStringInitWeak(this, &other); }
 
   //! Constructor that creates a string from the given string `view`.
   //!
   //! \note See other constructors for more details.
-  BL_INLINE explicit BLString(BLStringView view) noexcept { blStringInitWithData(this, view.data, view.size); }
+  BL_INLINE_NODEBUG explicit BLString(BLStringView view) noexcept { blStringInitWithData(this, view.data, view.size); }
 
   //! Constructor that creates a string from the given data specified by `str` and `size`. If `size` is `SIZE_MAX`
   //! the string is assumed to be null terminated.
   //!
   //! This is a convenience function that doesn't provide error handling. If size exceeds small string capacity
   //! and dynamic allocation failed then a default empty string would be constructed.
-  BL_INLINE explicit BLString(const char* str, size_t size = SIZE_MAX) noexcept { blStringInitWithData(this, str, size); }
+  BL_INLINE_NODEBUG explicit BLString(const char* str, size_t size = SIZE_MAX) noexcept { blStringInitWithData(this, str, size); }
 
   //! Destroys the string.
-  BL_INLINE ~BLString() noexcept { blStringDestroy(this); }
+  BL_INLINE_NODEBUG ~BLString() noexcept { blStringDestroy(this); }
 
   //! \}
 
   //! \name Overloaded Operators
   //! \{
 
-  //! Tests whether the string has any content.
+  //! Tests whether the string has a content.
   //!
   //! \note This is essentially the opposite of `empty()`.
-  BL_INLINE explicit operator bool() const noexcept { return !empty(); }
+  BL_INLINE_NODEBUG explicit operator bool() const noexcept { return !empty(); }
 
   //! Move assignment.
   //!
   //! \note The `other` string is reset by move construction, so it becomes an empty string.
-  BL_INLINE BLString& operator=(BLString&& other) noexcept { blStringAssignMove(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLString& operator=(BLString&& other) noexcept { blStringAssignMove(this, &other); return *this; }
   //! Copy assignment, performs weak copy of the data held by the `other` string.
-  BL_INLINE BLString& operator=(const BLString& other) noexcept { blStringAssignWeak(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLString& operator=(const BLString& other) noexcept { blStringAssignWeak(this, &other); return *this; }
 
-  BL_NODISCARD BL_INLINE bool operator==(const BLString& other) const noexcept { return  equals(other); }
-  BL_NODISCARD BL_INLINE bool operator!=(const BLString& other) const noexcept { return !equals(other); }
-  BL_NODISCARD BL_INLINE bool operator< (const BLString& other) const noexcept { return compare(other) <  0; }
-  BL_NODISCARD BL_INLINE bool operator<=(const BLString& other) const noexcept { return compare(other) <= 0; }
-  BL_NODISCARD BL_INLINE bool operator> (const BLString& other) const noexcept { return compare(other) >  0; }
-  BL_NODISCARD BL_INLINE bool operator>=(const BLString& other) const noexcept { return compare(other) >= 0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLString& other) const noexcept { return  equals(other); }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLString& other) const noexcept { return !equals(other); }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator< (const BLString& other) const noexcept { return compare(other) <  0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator<=(const BLString& other) const noexcept { return compare(other) <= 0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator> (const BLString& other) const noexcept { return compare(other) >  0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator>=(const BLString& other) const noexcept { return compare(other) >= 0; }
 
-  BL_NODISCARD BL_INLINE bool operator==(const BLStringView& view) const noexcept { return  equals(view); }
-  BL_NODISCARD BL_INLINE bool operator!=(const BLStringView& view) const noexcept { return !equals(view); }
-  BL_NODISCARD BL_INLINE bool operator< (const BLStringView& view) const noexcept { return compare(view) <  0; }
-  BL_NODISCARD BL_INLINE bool operator<=(const BLStringView& view) const noexcept { return compare(view) <= 0; }
-  BL_NODISCARD BL_INLINE bool operator> (const BLStringView& view) const noexcept { return compare(view) >  0; }
-  BL_NODISCARD BL_INLINE bool operator>=(const BLStringView& view) const noexcept { return compare(view) >= 0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLStringView& view) const noexcept { return  equals(view); }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLStringView& view) const noexcept { return !equals(view); }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator< (const BLStringView& view) const noexcept { return compare(view) <  0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator<=(const BLStringView& view) const noexcept { return compare(view) <= 0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator> (const BLStringView& view) const noexcept { return compare(view) >  0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator>=(const BLStringView& view) const noexcept { return compare(view) >= 0; }
 
-  BL_NODISCARD BL_INLINE bool operator==(const char* str) const noexcept { return  equals(str); }
-  BL_NODISCARD BL_INLINE bool operator!=(const char* str) const noexcept { return !equals(str); }
-  BL_NODISCARD BL_INLINE bool operator< (const char* str) const noexcept { return compare(str) <  0; }
-  BL_NODISCARD BL_INLINE bool operator<=(const char* str) const noexcept { return compare(str) <= 0; }
-  BL_NODISCARD BL_INLINE bool operator> (const char* str) const noexcept { return compare(str) >  0; }
-  BL_NODISCARD BL_INLINE bool operator>=(const char* str) const noexcept { return compare(str) >= 0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const char* str) const noexcept { return  equals(str); }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const char* str) const noexcept { return !equals(str); }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator< (const char* str) const noexcept { return compare(str) <  0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator<=(const char* str) const noexcept { return compare(str) <= 0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator> (const char* str) const noexcept { return compare(str) >  0; }
+  BL_NODISCARD BL_INLINE_NODEBUG bool operator>=(const char* str) const noexcept { return compare(str) >= 0; }
 
   //! Returns a character at the given `index`.
   //!
   //! \note This is the same as calling `at(index)`.
   BL_NODISCARD
-  BL_INLINE const char& operator[](size_t index) const noexcept { return at(index); }
+  BL_INLINE_NODEBUG const char& operator[](size_t index) const noexcept { return at(index); }
 
   //! \}
 
@@ -209,10 +203,10 @@ public:
   //! Clears the content of the string and releases its data.
   //!
   //! After reset the string content matches a default constructed string.
-  BL_INLINE BLResult reset() noexcept { return blStringReset(this); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept { return blStringReset(this); }
 
   //! Swaps the content of this string with the `other` string.
-  BL_INLINE void swap(BLString& other) noexcept { _d.swap(other._d); }
+  BL_INLINE_NODEBUG void swap(BLString& other) noexcept { _d.swap(other._d); }
 
   //! \}
 
@@ -223,7 +217,7 @@ public:
   //!
   //! Returns `true` if the string's length is zero.
   BL_NODISCARD
-  BL_INLINE bool empty() const noexcept { return size() == 0; }
+  BL_INLINE_NODEBUG bool empty() const noexcept { return size() == 0; }
 
   //! Returns a character at the given `index`.
   //!
@@ -236,31 +230,31 @@ public:
 
   //! Returns the size of the string [in bytes].
   BL_NODISCARD
-  BL_INLINE size_t size() const noexcept {
+  BL_INLINE_NODEBUG size_t size() const noexcept {
     return _d.sso() ? size_t((_d.info.bits ^ kSSOEmptySignature) >> BL_OBJECT_INFO_A_SHIFT) : _impl()->size;
   }
 
   //! Returns the capacity of the string [in bytes].
   BL_NODISCARD
-  BL_INLINE size_t capacity() const noexcept { return _d.sso() ? size_t(kSSOCapacity) : _impl()->capacity; }
+  BL_INLINE_NODEBUG size_t capacity() const noexcept { return _d.sso() ? size_t(kSSOCapacity) : _impl()->capacity; }
 
   //! Returns a pointer to the data of the string.
   BL_NODISCARD
-  BL_INLINE const char* data() const noexcept { return _d.sso() ? _d.char_data : _impl()->data(); }
+  BL_INLINE_NODEBUG const char* data() const noexcept { return _d.sso() ? _d.char_data : _impl()->data(); }
 
   //! Returns a pointer to the beginning of string data (iterator compatibility).
   BL_NODISCARD
-  BL_INLINE const char* begin() const noexcept { return data(); }
+  BL_INLINE_NODEBUG const char* begin() const noexcept { return data(); }
 
   //! Returns a pointer to the end of string data (iterator compatibility).
   //!
   //! The returned pointer points to the string null terminator.
   BL_NODISCARD
-  BL_INLINE const char* end() const noexcept { return data() + size(); }
+  BL_INLINE_NODEBUG const char* end() const noexcept { return data() + size(); }
 
   //! Returns the content of the string as `BLStringView`.
   BL_NODISCARD
-  BL_INLINE BLStringView view() const noexcept { return BLStringView { data(), size() }; }
+  BL_INLINE_NODEBUG BLStringView view() const noexcept { return BLStringView { data(), size() }; }
 
   //! \}
 
@@ -268,13 +262,13 @@ public:
   //! \{
 
   //! Clears the content of the string without releasing its dynamically allocated data, if possible.
-  BL_INLINE BLResult clear() noexcept { return blStringClear(this); }
+  BL_INLINE_NODEBUG BLResult clear() noexcept { return blStringClear(this); }
   //! Shrinks the capacity of the string to match the actual content.
-  BL_INLINE BLResult shrink() noexcept { return blStringShrink(this); }
+  BL_INLINE_NODEBUG BLResult shrink() noexcept { return blStringShrink(this); }
   //! Reserves at least `n` bytes in the string for further manipulation (most probably appending).
-  BL_INLINE BLResult reserve(size_t n) noexcept { return blStringReserve(this, n); }
+  BL_INLINE_NODEBUG BLResult reserve(size_t n) noexcept { return blStringReserve(this, n); }
   //! Resizes the string to `n` and fills the additional data by `fill` pattern.
-  BL_INLINE BLResult resize(size_t n, char fill = '\0') noexcept { return blStringResize(this, n, fill); }
+  BL_INLINE_NODEBUG BLResult resize(size_t n, char fill = '\0') noexcept { return blStringResize(this, n, fill); }
 
   //! Makes the string mutable.
   //!
@@ -285,90 +279,90 @@ public:
   //!
   //! If you want to make the string mutable for the purpose of appending or making other modifications please consider
   //! using `modifyOp()` and `insertOp()` instead.
-  BL_INLINE BLResult makeMutable(char** dataOut) noexcept { return blStringMakeMutable(this, dataOut); }
-  BL_INLINE BLResult modifyOp(BLModifyOp op, size_t n, char** dataOut) noexcept { return blStringModifyOp(this, op, n, dataOut); }
-  BL_INLINE BLResult insertOp(size_t index, size_t n, char** dataOut) noexcept { return blStringInsertOp(this, index, n, dataOut); }
+  BL_INLINE_NODEBUG BLResult makeMutable(char** dataOut) noexcept { return blStringMakeMutable(this, dataOut); }
+  BL_INLINE_NODEBUG BLResult modifyOp(BLModifyOp op, size_t n, char** dataOut) noexcept { return blStringModifyOp(this, op, n, dataOut); }
+  BL_INLINE_NODEBUG BLResult insertOp(size_t index, size_t n, char** dataOut) noexcept { return blStringInsertOp(this, index, n, dataOut); }
 
   //! Replaces the content of the string by `c` character or multiple characters if `n` is greater than one.
-  BL_INLINE BLResult assign(char c, size_t n = 1) noexcept { return blStringApplyOpChar(this, BL_MODIFY_OP_ASSIGN_FIT, c, n); }
+  BL_INLINE_NODEBUG BLResult assign(char c, size_t n = 1) noexcept { return blStringApplyOpChar(this, BL_MODIFY_OP_ASSIGN_FIT, c, n); }
 
   //! Move assignment, the same as `operator=()`, but returns a `BLResult` instead of `this`.
-  BL_INLINE BLResult assign(BLString&& other) noexcept { return blStringAssignMove(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(BLString&& other) noexcept { return blStringAssignMove(this, &other); }
 
   //! Copy assignment, the same as `operator=()`, but returns a `BLResult` instead of `this`.
-  BL_INLINE BLResult assign(const BLString& other) noexcept { return blStringAssignWeak(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(const BLString& other) noexcept { return blStringAssignWeak(this, &other); }
 
   //! Replaces the string by the content described by the given string `view`.
-  BL_INLINE BLResult assign(BLStringView view) noexcept { return blStringAssignData(this, view.data, view.size); }
+  BL_INLINE_NODEBUG BLResult assign(BLStringView view) noexcept { return blStringAssignData(this, view.data, view.size); }
 
   //! Replaces the string by `str` data of the given length `n`.
   //!
   //! \note The implementation assumes null terminated string if `n` equals to `SIZE_MAX`.
-  BL_INLINE BLResult assign(const char* str, size_t n = SIZE_MAX) noexcept { return blStringAssignData(this, str, n); }
+  BL_INLINE_NODEBUG BLResult assign(const char* str, size_t n = SIZE_MAX) noexcept { return blStringAssignData(this, str, n); }
 
   //! Copy assignment, but creates a deep copy of the `other` string instead of weak copy.
-  BL_INLINE BLResult assignDeep(const BLString& other) noexcept { return blStringAssignDeep(this, &other); }
+  BL_INLINE_NODEBUG BLResult assignDeep(const BLString& other) noexcept { return blStringAssignDeep(this, &other); }
 
   //! Replaces the content of the string by a result of calling `snprintf(fmt, args...)`.
   template<typename... Args>
-  BL_INLINE BLResult assignFormat(const char* fmt, Args&&... args) noexcept { return blStringApplyOpFormat(this, BL_MODIFY_OP_ASSIGN_FIT, fmt, std::forward<Args>(args)...); }
+  BL_INLINE_NODEBUG BLResult assignFormat(const char* fmt, Args&&... args) noexcept { return blStringApplyOpFormat(this, BL_MODIFY_OP_ASSIGN_FIT, fmt, std::forward<Args>(args)...); }
 
   //! Replaces the content of the string by a result of calling `vsnprintf(fmt, ap)`.
-  BL_INLINE BLResult assignFormatV(const char* fmt, va_list ap) noexcept { return blStringApplyOpFormatV(this, BL_MODIFY_OP_ASSIGN_FIT, fmt, ap); }
+  BL_INLINE_NODEBUG BLResult assignFormatV(const char* fmt, va_list ap) noexcept { return blStringApplyOpFormatV(this, BL_MODIFY_OP_ASSIGN_FIT, fmt, ap); }
 
   //! Truncates the string length to `n`.
   //!
   //! It does nothing if the the string length is less than `n`.
-  BL_INLINE BLResult truncate(size_t n) noexcept { return n < size() ? blStringResize(this, n, '\0') : BLResult(BL_SUCCESS); }
+  BL_INLINE_NODEBUG BLResult truncate(size_t n) noexcept { return n < size() ? blStringResize(this, n, '\0') : BLResult(BL_SUCCESS); }
 
-  BL_INLINE BLResult append(char c, size_t n = 1) noexcept { return blStringApplyOpChar(this, BL_MODIFY_OP_APPEND_GROW, c, n); }
-  BL_INLINE BLResult append(const BLString& other) noexcept { return blStringApplyOpString(this, BL_MODIFY_OP_APPEND_GROW, &other); }
-  BL_INLINE BLResult append(BLStringView view) noexcept { return blStringApplyOpData(this, BL_MODIFY_OP_APPEND_GROW, view.data, view.size); }
-  BL_INLINE BLResult append(const char* str, size_t n = SIZE_MAX) noexcept { return blStringApplyOpData(this, BL_MODIFY_OP_APPEND_GROW, str, n); }
+  BL_INLINE_NODEBUG BLResult append(char c, size_t n = 1) noexcept { return blStringApplyOpChar(this, BL_MODIFY_OP_APPEND_GROW, c, n); }
+  BL_INLINE_NODEBUG BLResult append(const BLString& other) noexcept { return blStringApplyOpString(this, BL_MODIFY_OP_APPEND_GROW, &other); }
+  BL_INLINE_NODEBUG BLResult append(BLStringView view) noexcept { return blStringApplyOpData(this, BL_MODIFY_OP_APPEND_GROW, view.data, view.size); }
+  BL_INLINE_NODEBUG BLResult append(const char* str, size_t n = SIZE_MAX) noexcept { return blStringApplyOpData(this, BL_MODIFY_OP_APPEND_GROW, str, n); }
 
   template<typename... Args>
-  BL_INLINE BLResult appendFormat(const char* fmt, Args&&... args) noexcept { return blStringApplyOpFormat(this, BL_MODIFY_OP_APPEND_GROW, fmt, std::forward<Args>(args)...); }
-  BL_INLINE BLResult appendFormatV(const char* fmt, va_list ap) noexcept { return blStringApplyOpFormatV(this, BL_MODIFY_OP_APPEND_GROW, fmt, ap); }
+  BL_INLINE_NODEBUG BLResult appendFormat(const char* fmt, Args&&... args) noexcept { return blStringApplyOpFormat(this, BL_MODIFY_OP_APPEND_GROW, fmt, std::forward<Args>(args)...); }
+  BL_INLINE_NODEBUG BLResult appendFormatV(const char* fmt, va_list ap) noexcept { return blStringApplyOpFormatV(this, BL_MODIFY_OP_APPEND_GROW, fmt, ap); }
 
-  BL_INLINE BLResult prepend(char c, size_t n = 1) noexcept { return blStringInsertChar(this, 0, c, n); }
-  BL_INLINE BLResult prepend(const BLString& other) noexcept { return blStringInsertString(this, 0, &other); }
-  BL_INLINE BLResult prepend(BLStringView view) noexcept { return blStringInsertData(this, 0, view.data, view.size); }
-  BL_INLINE BLResult prepend(const char* str, size_t n = SIZE_MAX) noexcept { return blStringInsertData(this, 0, str, n); }
+  BL_INLINE_NODEBUG BLResult prepend(char c, size_t n = 1) noexcept { return blStringInsertChar(this, 0, c, n); }
+  BL_INLINE_NODEBUG BLResult prepend(const BLString& other) noexcept { return blStringInsertString(this, 0, &other); }
+  BL_INLINE_NODEBUG BLResult prepend(BLStringView view) noexcept { return blStringInsertData(this, 0, view.data, view.size); }
+  BL_INLINE_NODEBUG BLResult prepend(const char* str, size_t n = SIZE_MAX) noexcept { return blStringInsertData(this, 0, str, n); }
 
-  BL_INLINE BLResult insert(size_t index, char c, size_t n = 1) noexcept { return blStringInsertChar(this, index, c, n); }
-  BL_INLINE BLResult insert(size_t index, const BLString& other) noexcept { return blStringInsertString(this, index, &other); }
-  BL_INLINE BLResult insert(size_t index, BLStringView view) noexcept { return blStringInsertData(this, index, view.data, view.size); }
-  BL_INLINE BLResult insert(size_t index, const char* str, size_t n = SIZE_MAX) noexcept { return blStringInsertData(this, index, str, n); }
+  BL_INLINE_NODEBUG BLResult insert(size_t index, char c, size_t n = 1) noexcept { return blStringInsertChar(this, index, c, n); }
+  BL_INLINE_NODEBUG BLResult insert(size_t index, const BLString& other) noexcept { return blStringInsertString(this, index, &other); }
+  BL_INLINE_NODEBUG BLResult insert(size_t index, BLStringView view) noexcept { return blStringInsertData(this, index, view.data, view.size); }
+  BL_INLINE_NODEBUG BLResult insert(size_t index, const char* str, size_t n = SIZE_MAX) noexcept { return blStringInsertData(this, index, str, n); }
 
-  BL_INLINE BLResult remove(size_t index) noexcept { return blStringRemoveIndex(this, index); }
-  BL_INLINE BLResult remove(const BLRange& range) noexcept { return blStringRemoveRange(this, range.start, range.end); }
+  BL_INLINE_NODEBUG BLResult remove(size_t index) noexcept { return blStringRemoveIndex(this, index); }
+  BL_INLINE_NODEBUG BLResult remove(const BLRange& range) noexcept { return blStringRemoveRange(this, range.start, range.end); }
 
   //! \name Equality & Comparison
   //! \{
 
   //! Returns whether this string and `other` are equal (i.e. their contents match).
   BL_NODISCARD
-  BL_INLINE bool equals(const BLString& other) const noexcept { return blStringEquals(this, &other); }
+  BL_INLINE_NODEBUG bool equals(const BLString& other) const noexcept { return blStringEquals(this, &other); }
 
   //! Returns whether this string and other string `view` are equal.
   BL_NODISCARD
-  BL_INLINE bool equals(BLStringView view) const noexcept { return blStringEqualsData(this, view.data, view.size); }
+  BL_INLINE_NODEBUG bool equals(BLStringView view) const noexcept { return blStringEqualsData(this, view.data, view.size); }
 
   //! Returns whether this string and the given string data `str` of length `n` are equal.
   BL_NODISCARD
-  BL_INLINE bool equals(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringEqualsData(this, str, n); }
+  BL_INLINE_NODEBUG bool equals(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringEqualsData(this, str, n); }
 
   //! Compares this string with `other` and returns either `-1`, `0`, or `1`.
   BL_NODISCARD
-  BL_INLINE int compare(const BLString& other) const noexcept { return blStringCompare(this, &other); }
+  BL_INLINE_NODEBUG int compare(const BLString& other) const noexcept { return blStringCompare(this, &other); }
 
   //! Compares this string with other string `view` and returns either `-1`, `0`, or `1`.
   BL_NODISCARD
-  BL_INLINE int compare(BLStringView view) const noexcept { return blStringCompareData(this, view.data, view.size); }
+  BL_INLINE_NODEBUG int compare(BLStringView view) const noexcept { return blStringCompareData(this, view.data, view.size); }
 
   //! Compares this string with other string data and returns either `-1`, `0`, or `1`.
   BL_NODISCARD
-  BL_INLINE int compare(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringCompareData(this, str, n); }
+  BL_INLINE_NODEBUG int compare(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringCompareData(this, str, n); }
 
   //! \}
 

@@ -1014,7 +1014,7 @@ static void test_context_state(BLContext& ctx) {
   }
 }
 
-UNIT(context, 1) {
+UNIT(context, BL_TEST_GROUP_RENDERING_CONTEXT) {
   BLImage img(256, 256, BL_FORMAT_PRGB32);
   BLContext ctx(img);
 

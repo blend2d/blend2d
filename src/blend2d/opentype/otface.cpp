@@ -37,44 +37,40 @@ static BLFontFaceVirt blOTFaceVirt;
 // ========================================
 
 static BLResult initOpenTypeFace(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
-  uint32_t faceIndex = faceI->faceInfo.faceIndex;
+  OTFaceTables tables;
+  tables.init(faceI, fontData);
 
-  BL_PROPAGATE(CoreImpl::init(faceI, fontData));
-  BL_PROPAGATE(NameImpl::init(faceI, fontData));
-  BL_PROPAGATE(CMapImpl::init(faceI, fontData));
+  BL_PROPAGATE(CoreImpl::init(faceI, tables));
+  BL_PROPAGATE(NameImpl::init(faceI, tables));
+  BL_PROPAGATE(CMapImpl::init(faceI, tables));
 
-  // Glyph outlines require either 'CFF2', 'CFF ', or 'glyf/loca' tables. Based
-  // on these tables we can initialize `outlineType` and select either CFF or
-  // GLYF implementation.
-  BLFontTable tables[2];
-  static const uint32_t cffxTags[2] = { BL_MAKE_TAG('C', 'F', 'F', ' '), BL_MAKE_TAG('C', 'F', 'F', '2') };
-  static const uint32_t glyfTags[2] = { BL_MAKE_TAG('g', 'l', 'y', 'f'), BL_MAKE_TAG('l', 'o', 'c', 'a') };
-
-  if (fontData->queryTables(faceIndex, tables, cffxTags, 2) != 0) {
+  // Glyph outlines require either 'CFF2', 'CFF ', or 'glyf/loca' tables. Based on these
+  // tables we can initialize `outlineType` and select either CFF or GLYF implementation.
+  if (tables.cff || tables.cff2) {
     BL_STATIC_ASSERT(CFFData::kVersion1 == 0);
     BL_STATIC_ASSERT(CFFData::kVersion2 == 1);
 
-    uint32_t version = !tables[1].size ? CFFData::kVersion1
-                                       : CFFData::kVersion2;
-
-    faceI->faceInfo.outlineType = uint8_t(BL_FONT_OUTLINE_TYPE_CFF + version);
-    BL_PROPAGATE(CFFImpl::init(faceI, tables[version], version));
+    uint32_t cffVersion = tables.cff2 ? CFFData::kVersion2 : CFFData::kVersion1;
+    BL_PROPAGATE(CFFImpl::init(faceI, tables, cffVersion));
   }
-  else if (fontData->queryTables(faceIndex, tables, glyfTags, 2) == 2) {
-    faceI->faceInfo.outlineType = BL_FONT_OUTLINE_TYPE_TRUETYPE;
-    BL_PROPAGATE(GlyfImpl::init(faceI, tables[0], tables[1]));
+  else if (tables.glyf && tables.loca) {
+    BL_PROPAGATE(GlyfImpl::init(faceI, tables));
   }
   else {
     // The font has no outlines that we can use.
     return blTraceError(BL_ERROR_FONT_MISSING_IMPORTANT_TABLE);
   }
 
-  BL_PROPAGATE(MetricsImpl::init(faceI, fontData));
-  BL_PROPAGATE(LayoutImpl::init(faceI, fontData));
+  BL_PROPAGATE(MetricsImpl::init(faceI, tables));
+  BL_PROPAGATE(LayoutImpl::init(faceI, tables));
 
   // Only setup legacy kerning if we don't have GlyphPositioning 'GPOS' table.
   if (!blTestFlag(faceI->otFlags, OTFaceFlags::kGPosLookupList))
-    BL_PROPAGATE(KernImpl::init(faceI, fontData));
+    BL_PROPAGATE(KernImpl::init(faceI, tables));
+
+  BL_PROPAGATE(faceI->scriptTagSet.finalize());
+  BL_PROPAGATE(faceI->featureTagSet.finalize());
+  BL_PROPAGATE(faceI->variationTagSet.finalize());
 
   return BL_SUCCESS;
 }
@@ -110,6 +106,7 @@ BLResult createOpenTypeFace(BLFontFaceCore* self, const BLFontData* fontData, ui
   blCallCtor(faceI->cffFDSubrIndexes);
 
   BLResult result = initOpenTypeFace(faceI, fontData);
+
   if (BL_UNLIKELY(result != BL_SUCCESS)) {
     destroyOpenTypeFace(faceI, self->_d.info.bits);
     return result;

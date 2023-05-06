@@ -655,7 +655,7 @@ static void blZeroAllocatorTestUsage() noexcept {
   INFO("  Overhead : %9llu [Bytes]" , (unsigned long long)(info.zmOverhead));
 }
 
-UNIT(zero_allocator, -6) {
+UNIT(zero_allocator, BL_TEST_GROUP_CORE_UTILITIES) {
   ZeroAllocatorWrapper wrapper;
   BLRandom prng(0);
 

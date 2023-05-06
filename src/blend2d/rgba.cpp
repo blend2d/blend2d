@@ -10,7 +10,7 @@
 // ==============
 
 #ifdef BL_TEST
-UNIT(rgba, -7) {
+UNIT(rgba, BL_TEST_GROUP_RENDERING_STYLES) {
   BLRgba32 c32(0x01, 0x02, 0x03, 0xFF);
   BLRgba64 c64(0x100, 0x200, 0x300, 0xFFFF);
 

@@ -13,7 +13,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! A fixed array that cannot grow.
+//! A fixed array that cannot grow beyond `N`.
 template<typename T, size_t N>
 class BLFixedArray {
 public:

@@ -19,7 +19,7 @@ namespace BLStringPrivate {
 
 static_assert(((BL_OBJECT_TYPE_STRING << BL_OBJECT_INFO_TYPE_SHIFT) & 0xFFFFu) == 0,
               "BL_OBJECT_TYPE_STRING must be a value that would not use any bits in the two lowest bytes in the "
-              "object info, which can be used by BLString - 13th byte for content, 14th byte as NULL terminator");
+              "object info, which can be used by BLString on little endian targets to store 13th and 14th byte.");
 
 // BLString - Private - Commons
 // ============================
@@ -64,7 +64,7 @@ static BL_INLINE void clearSSOData(BLStringCore* self) noexcept {
 // ======================================
 
 static BL_INLINE char* initSSO(BLStringCore* self, size_t size = 0u) noexcept {
-  self->_d.initStatic(BL_OBJECT_TYPE_STRING, BLObjectInfo::packFields(uint32_t(size) ^ BLString::kSSOCapacity));
+  self->_d.initStatic(BL_OBJECT_TYPE_STRING, BLObjectInfo::packAbcpFields(uint32_t(size) ^ BLString::kSSOCapacity));
   return self->_d.char_data;
 }
 
@@ -580,7 +580,7 @@ BL_API_IMPL BLResult blStringAssignWeak(BLStringCore* self, const BLStringCore* 
   BL_ASSERT(self->_d.isString());
   BL_ASSERT(other->_d.isString());
 
-  blObjectPrivateAddRefTagged(other);
+  blObjectPrivateAddRefIfRCObject(other);
   return replaceInstance(self, other);
 }
 
@@ -825,13 +825,13 @@ BL_API_IMPL bool blStringEquals(const BLStringCore* a, const BLStringCore* b) no
   BL_ASSERT(a->_d.isString());
   BL_ASSERT(b->_d.isString());
 
-  UnpackedData aU = unpackData(a);
-  UnpackedData bU = unpackData(b);
+  UnpackedData au = unpackData(a);
+  UnpackedData bu = unpackData(b);
 
-  if (aU.size != bU.size)
+  if (au.size != bu.size)
     return false;
 
-  return memcmp(aU.data, bU.data, aU.size) == 0;
+  return memcmp(au.data, bu.data, au.size) == 0;
 }
 
 BL_API_IMPL bool blStringEqualsData(const BLStringCore* self, const char* str, size_t n) noexcept {
@@ -863,16 +863,16 @@ BL_API_IMPL int blStringCompare(const BLStringCore* a, const BLStringCore* b) no
   BL_ASSERT(a->_d.isString());
   BL_ASSERT(b->_d.isString());
 
-  UnpackedData aU = unpackData(a);
-  UnpackedData bU = unpackData(b);
+  UnpackedData au = unpackData(a);
+  UnpackedData bu = unpackData(b);
 
-  size_t minSize = blMin(aU.size, bU.size);
-  int c = memcmp(aU.data, bU.data, minSize);
+  size_t minSize = blMin(au.size, bu.size);
+  int c = memcmp(au.data, bu.data, minSize);
 
   if (c)
     return c;
 
-  return aU.size < bU.size ? -1 : int(aU.size > bU.size);
+  return au.size < bu.size ? -1 : int(au.size > bu.size);
 }
 
 BL_API_IMPL int blStringCompareData(const BLStringCore* self, const char* str, size_t n) noexcept {
@@ -946,7 +946,7 @@ static void verifyString(const BLString& s) noexcept {
         .message("BLString's SSO data is invalid - found non-null character at [%zu], after string size %zu", i, size);
 }
 
-UNIT(string) {
+UNIT(string, BL_TEST_GROUP_CORE_CONTAINERS) {
   INFO("SSO representation");
   {
     BLString s;
