@@ -816,6 +816,19 @@ static BL_INLINE_NODEBUG constexpr uint16_t clampToWord(const T& x) noexcept {
 
 //! \}
 
+//! \name Positive Modulo
+//! \{
+
+//! Returns a positive modulo - similar to `x % y`, but for example `-4 % 3` would return `2` instead of `-1`.
+template<typename T>
+BL_NODISCARD
+static BL_INLINE_NODEBUG T pmod(const T& x, const T& y) noexcept {
+  T result = x % y;
+  return isUnsigned<T>() ? result : result + (y + (result >> (bitSizeOf<T>() - 1)));
+}
+
+//! \}
+
 } // {anonymous}
 } // {BLIntOps}
 

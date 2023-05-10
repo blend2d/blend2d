@@ -131,6 +131,9 @@ void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
     cc->mov(f->stride, x86::ptr(pc->_fetchData, REL_PATTERN(src.stride)));
     cc->mov(f->strideOrig, f->stride);
 
+    if (isPatternFx())
+      cc->inc(f->y);
+
     cc->mov(f->h , x86::ptr(pc->_fetchData, REL_PATTERN(src.size.h)));
     cc->mov(f->ry, x86::ptr(pc->_fetchData, REL_PATTERN(simple.ry)));
 
@@ -261,6 +264,9 @@ void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
       cc->mov(f->w      , x86::ptr(pc->_fetchData, REL_PATTERN(src.size.w)));
       cc->mov(f->xOrigin, x86::ptr(pc->_fetchData, REL_PATTERN(simple.tx)));
 
+      if (isPatternFy())
+        cc->inc(f->xOrigin);
+
       if (isRectFill())
         cc->add(f->xOrigin, x);
 
@@ -301,6 +307,9 @@ void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
       cc->mov(f->w            , x86::ptr(pc->_fetchData, REL_PATTERN(src.size.w)));
       cc->mov(f->xOrigin.r32(), x86::ptr(pc->_fetchData, REL_PATTERN(simple.tx)));
+
+      if (isPatternFy())
+        cc->inc(f->xOrigin.r32());
 
       if (isRectFill()) {
         cc->add(f->xOrigin.r32(), x);
@@ -377,6 +386,9 @@ void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
       }
 
       cc->mov(f->xOrigin, x86::ptr(pc->_fetchData, REL_PATTERN(simple.tx)));
+
+      if (isPatternFy())
+        cc->inc(f->xOrigin);
 
       if (isRectFill()) {
         x86::Gp norm = cc->newInt32("@norm");
@@ -2025,7 +2037,6 @@ void FetchAffinePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   pc->v_loadu_i128(f->tw_th, x86::ptr(pc->_fetchData, REL_PATTERN(affine.tw)));
 
   pc->v_loadu_i128(f->ox_oy, x86::ptr(pc->_fetchData, REL_PATTERN(affine.ox)));
-  pc->v_loadu_i128(f->rx_ry, x86::ptr(pc->_fetchData, REL_PATTERN(affine.rx)));
   pc->v_loadu_i128(f->xx2_xy2, x86::ptr(pc->_fetchData, REL_PATTERN(affine.xx2)));
 
   // Pad: [MaxY | MaxX | MinY | MinX]

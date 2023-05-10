@@ -245,6 +245,10 @@ struct U32_8888 {
     return ((*this + ((*this >> 8) & Repeat{0xFFu})) >> 8) & Repeat{0xFFu};
   }
 
+  BL_INLINE Unpacked div256() const noexcept {
+    return (*this >> 8) & Repeat{0xFFu};
+  }
+
   BL_INLINE Unpacked addus8(const Unpacked& x) const noexcept {
     Unpacked val = (*this + x);
     Unpacked msk = ((val >> 8) & Repeat{0x1u}) * Repeat{0xFF};
@@ -359,6 +363,10 @@ struct U32_8888 {
 
   BL_INLINE Unpacked div255() const noexcept {
     return ((*this + ((*this >> 8) & Repeat{0xFFu})) >> 8) & Repeat{0xFFu};
+  }
+
+  BL_INLINE Unpacked div256() const noexcept {
+    return (*this >> 8) & Repeat{0xFFu};
   }
 
   BL_INLINE Unpacked addus8(const Unpacked& x) const noexcept {

@@ -65,7 +65,7 @@ static BL_INLINE BLResult initDynamic(BLBitArrayCore* self, BLObjectImplSize imp
   if(BL_UNLIKELY(!impl))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-  impl->capacity = bitCountFromWordCount(wordCapacityFromImplSize(implSize));
+  impl->capacity = uint32_t(bitCountFromWordCount(wordCapacityFromImplSize(implSize)));
   impl->size = uint32_t(size);
   return BL_SUCCESS;
 }
@@ -172,7 +172,7 @@ static BL_NOINLINE BLResult makeMutableForAppendOp(BLBitArrayCore* self, size_t 
       size_t lastWord = wordIndexOf(newSize - 1u);
 
       BLMemOps::fillInlineT(d.data + fromWord, uint32_t(0), lastWord - fromWord + 1);
-      impl->size = newSize;
+      impl->size = uint32_t(newSize);
 
       *out = BitData{d.data, newSize};
       return BL_SUCCESS;
@@ -393,7 +393,7 @@ BL_API_IMPL uint32_t BL_CDECL blBitArrayGetWordCount(const BLBitArrayCore* self)
   using namespace BLBitArrayPrivate;
   BL_ASSERT(self->_d.isBitArray());
 
-  return wordCountFromBitCount(uint32_t(getSize(self)));
+  return uint32_t(wordCountFromBitCount(getSize(self)));
 }
 
 BL_API_IMPL uint32_t blBitArrayGetCapacity(const BLBitArrayCore* self) noexcept {

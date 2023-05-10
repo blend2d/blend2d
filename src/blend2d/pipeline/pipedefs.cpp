@@ -111,10 +111,10 @@ FetchType FetchData::initPatternFxFy(uint32_t extendMode, uint32_t filter, uint3
   uint32_t wx = uint32_t(tx64 & 0xFF);
   uint32_t wy = uint32_t(ty64 & 0xFF);
 
-  int tx = -int(((tx64)) >> 8);
-  int ty = -int(((ty64)) >> 8);
+  int tx = -int(tx64 >> 8);
+  int ty = -int(ty64 >> 8);
 
-  // If one or both `wx` or `why` are non-zero it means that the translation is fractional. In that case we must
+  // If one or both `wx` or `wy` are non-zero it means that the translation is fractional. In that case we must
   // calculate weights of [x0 y0], [x1 y0], [x0 y1], and [x1 y1] pixels.
   bool isFractional = (wx | wy) != 0;
   if (isFractional) {
@@ -129,21 +129,18 @@ FetchType FetchData::initPatternFxFy(uint32_t extendMode, uint32_t filter, uint3
       d.simple.wc = ((256 - wy) * (      wx)      ) >> 8; // [x0 y1]
       d.simple.wd = ((256 - wy) * (256 - wx) + 255) >> 8; // [x1 y1]
 
-      // The FxFy fetcher must work even when one or both `wx` or `wy` are zero, so we always decrement `tx` and `ty`
-      // based on the fetch type.
-      if (wy == 0) {
-        tx--;
+      // The FxFy fetcher must work even when one or both `wx` or `wy` are zero, so we always decrement `tx` and `ty`.
+      // In addition, Fx or Fy fetcher can be replaced by FxFy if there is no Fx or Fy implementation (typically this
+      // could happen if we are running portable pipeline without any optimizations).
+      tx--;
+      ty--;
+
+      if (wy == 0)
         fetchBase = FetchType::kPatternFxPad;
-      }
-      else if (wx == 0) {
-        ty--;
+      else if (wx == 0)
         fetchBase = FetchType::kPatternFyPad;
-      }
-      else {
-        tx--;
-        ty--;
+      else
         fetchBase = FetchType::kPatternFxFyPad;
-      }
     }
   }
 

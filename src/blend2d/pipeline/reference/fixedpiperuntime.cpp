@@ -44,49 +44,117 @@ static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signat
       switch (s.compOp()) {
         case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Solid>(s.fillType()); break;
         case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Solid>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Solid   >(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Solid>(s.fillType()); break;
       }
       break;
+
+    case FetchType::kPatternAlignedBlit:
+      switch (s.compOp()) {
+        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedBlit_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedBlit_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedBlit_PRGB32>(s.fillType()); break;
+      }
+      break;
+
+    case FetchType::kPatternAlignedPad:
+      switch (s.compOp()) {
+        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedPad_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedPad_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedPad_PRGB32>(s.fillType()); break;
+      }
+      break;
+
+    case FetchType::kPatternAlignedRepeat:
+      switch (s.compOp()) {
+        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedRepeat_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedRepeat_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedRepeat_PRGB32>(s.fillType()); break;
+      }
+      break;
+
+    case FetchType::kPatternAlignedRoR:
+      switch (s.compOp()) {
+        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedRoR_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedRoR_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedRoR_PRGB32>(s.fillType()); break;
+      }
+      break;
+
+    case FetchType::kPatternFxPad:
+    case FetchType::kPatternFyPad:
+    case FetchType::kPatternFxFyPad:
+      switch (s.compOp()) {
+        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternFxFyPad_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternFxFyPad_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternFxFyPad_PRGB32>(s.fillType()); break;
+      }
+      break;
+
+    case FetchType::kPatternFxRoR:
+    case FetchType::kPatternFyRoR:
+    case FetchType::kPatternFxFyRoR:
+      switch (s.compOp()) {
+        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternFxFyRoR_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternFxFyRoR_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternFxFyRoR_PRGB32>(s.fillType()); break;
+      }
+      break;
+
+    case FetchType::kPatternAffineNNAny:
+    case FetchType::kPatternAffineNNOpt:
+      switch (s.compOp()) {
+        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAffineNNAny_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAffineNNAny_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAffineNNAny_PRGB32>(s.fillType()); break;
+      }
+      break;
+
+    case FetchType::kPatternAffineBIAny:
+    case FetchType::kPatternAffineBIOpt:
+      switch (s.compOp()) {
+        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAffineBIAny_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAffineBIAny_PRGB32>(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAffineBIAny_PRGB32>(s.fillType()); break;
+      }
+      break;
+
     case FetchType::kGradientLinearPad:
       switch (s.compOp()) {
         case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearPad>(s.fillType()); break;
         case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearPad>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearPad   >(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearPad>(s.fillType()); break;
       }
       break;
+
     case FetchType::kGradientLinearRoR:
       switch (s.compOp()) {
         case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearRoR>(s.fillType()); break;
         case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearRoR>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearRoR   >(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearRoR>(s.fillType()); break;
       }
       break;
+
     case FetchType::kGradientRadialPad:
       switch (s.compOp()) {
         case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialPad>(s.fillType()); break;
         case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialPad>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialPad   >(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialPad>(s.fillType()); break;
       }
       break;
+
     case FetchType::kGradientRadialRoR:
       switch (s.compOp()) {
         case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialRoR>(s.fillType()); break;
         case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialRoR>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialRoR   >(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialRoR>(s.fillType()); break;
       }
       break;
+
     case FetchType::kGradientConical:
       switch (s.compOp()) {
         case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Conical>(s.fillType()); break;
         case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Conical>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Conical   >(s.fillType()); break;
-      }
-      break;
-    case FetchType::kPatternAlignedBlit:
-      switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_BlitAA_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_BlitAA_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_BlitAA_PRGB32   >(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Conical>(s.fillType()); break;
       }
       break;
   }
