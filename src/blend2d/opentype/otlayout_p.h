@@ -216,7 +216,7 @@ public:
   //! \}
 
   //! \name Lookup Status Bits
-  //! \
+  //! \{
 
   //! Allocates 4 lookup bit arrays for both GSUB/GPOS lookups each having analyzed/valid bit per lookup.
   BL_INLINE BLResult allocateLookupStatusBits() noexcept {

@@ -1122,7 +1122,7 @@ public:
   //! Returns the last vertex of the path and stores it to `vtxOut`. If the very last command of the path is
   //! `BL_PATH_CMD_CLOSE` then the path will be iterated in reverse order to match the initial vertex of the last
   //! figure.
-  BL_INLINE_NODEBUG BLResult getLastVertex(BLPoint* vtxOut) noexcept {
+  BL_INLINE_NODEBUG BLResult getLastVertex(BLPoint* vtxOut) const noexcept {
     return blPathGetLastVertex(this, vtxOut);
   }
 
