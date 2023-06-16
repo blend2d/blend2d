@@ -250,10 +250,10 @@ BLResult blFontFaceGetCharacterCoverage(const BLFontFaceCore* self, BLBitSetCore
     if (selfI->faceInfo.faceType != BL_FONT_FACE_TYPE_OPENTYPE)
       return blTraceError(BL_ERROR_NOT_IMPLEMENTED);
 
-    BLBitSetCore tmpBitSet;
+    BLBitSet tmpBitSet;
     BL_PROPAGATE(BLOpenType::CMapImpl::populateCharacterCoverage(static_cast<BLOpenType::OTFaceImpl*>(selfI), &tmpBitSet.dcast()));
 
-    blBitSetShrink(&tmpBitSet);
+    tmpBitSet.shrink();
     if (!blObjectAtomicContentMove(&selfI->characterCoverage, &tmpBitSet))
       return blBitSetAssignMove(out, &tmpBitSet);
   }

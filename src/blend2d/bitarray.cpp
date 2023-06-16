@@ -53,8 +53,8 @@ static BL_INLINE void setSSOSize(BLBitArrayCore* self, size_t newSize) noexcept 
   self->_d.info.setPField(uint32_t(newSize));
 }
 
-// BLBitArray - Private - Memory Mamangement
-// =========================================
+// BLBitArray - Private - Memory Management
+// ========================================
 
 static BL_INLINE BLResult initDynamic(BLBitArrayCore* self, BLObjectImplSize implSize, size_t size = 0u) noexcept {
   BL_ASSERT(size <= UINT32_MAX);

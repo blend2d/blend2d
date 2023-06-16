@@ -645,7 +645,7 @@ public:
   //! \name Iterator Interface
   //! \{
 
-  //! Returns the next (or the first, if called the first time) word non-zero word of the BitSet or zero if the
+  //! Returns the next (or the first, if called the first time) non-zero word of the BitSet or zero if the
   //! iteration ended.
   //!
   //! Use `wordIndex()` to get the index (in word units) of the word returned.

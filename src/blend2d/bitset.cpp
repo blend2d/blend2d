@@ -41,8 +41,8 @@ static constexpr uint32_t kMaxImplSize = uint32_t(sizeof(BLBitSetImpl) + kMaxSeg
 //! Number of temporary segments locally allocated in BitSet processing functions.
 static constexpr uint32_t kTmpSegmentDataSize = 128;
 
-// BLBitSet - Memory Mamangement
-// =============================
+// BLBitSet - Memory Management
+// ============================
 
 static BL_INLINE BLResult releaseInstance(BLBitSetCore* self) noexcept {
   BLBitSetImpl* impl = getImpl(self);
@@ -1136,7 +1136,7 @@ static WordDataAnalysis analyzeWordDataForCombining(uint32_t startWord, const ui
   // Process data that form a leading segment (only required if the data doesn't start on a segment boundary).
   uint32_t leadingAlignmentOffset = wordIndex - alignWordDownToSegment(wordIndex);
   if (leadingAlignmentOffset) {
-    insertCount += uint32_t(segmentData != segmentEnd && !hasSegmentWordIndex(*segmentData, wordIndex));
+    insertCount += uint32_t(!(segmentData != segmentEnd && hasSegmentWordIndex(*segmentData, wordIndex)));
 
     uint32_t leadingAlignmentWordsUsed = kSegmentWordCount - leadingAlignmentOffset;
     if (leadingAlignmentWordsUsed >= wordCount)
@@ -1189,8 +1189,9 @@ static WordDataAnalysis analyzeWordDataForCombining(uint32_t startWord, const ui
   }
 
   // Process data that form a trailing segment (only required if the data doesn't end on a segment boundary).
-  if (trailingWordCount)
-    insertCount += uint32_t(segmentData != segmentEnd && !hasSegmentWordIndex(*segmentData, wordIndex));
+  if (trailingWordCount) {
+    insertCount += uint32_t(!(segmentData != segmentEnd && hasSegmentWordIndex(*segmentData, wordIndex)));
+  }
 
   return WordDataAnalysis { insertCount, zeroCount };
 }
@@ -3704,6 +3705,8 @@ void blBitSetRtInit(BLRuntimeContext* rt) noexcept {
 
 #if defined(BL_TEST)
 
+#include "random.h"
+
 static void dumpBitSet(const BLBitSetCore* self) noexcept {
   if (self->_d.sso()) {
     if (self->_d.isBitSetRange()) {
@@ -4316,7 +4319,7 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
     }
   }
 
-  INFO("Checking dynamic BitSet addWords()");
+  INFO("Checking dynamic BitSet addWords() - small BitSet");
   {
     BLBitSet set;
 
@@ -4347,6 +4350,64 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
       testBits(set, 7, check2, BL_ARRAY_SIZE(check2));
       testBits(set, 32, range, BL_ARRAY_SIZE(range));
     }
+  }
+
+  INFO("Checking dynamic BitSet addWords() - large BitSet");
+  {
+    BLBitSet set;
+    BLRandom rnd(0x1234);
+
+    constexpr uint32_t kIterationCount = 1000;
+    constexpr uint32_t kWordCount = 33;
+
+    for (uint32_t i = 0; i < kIterationCount; i++) {
+      uint32_t wordIndex = rnd.nextUInt32() & 0xFFFFu;
+      uint32_t wordData[kWordCount];
+
+      // Random pattern... But we also want 0 and all bits set.
+      uint32_t pattern = rnd.nextUInt32();
+      if (pattern < 0x20000000u)
+        pattern = 0u;
+      else if (pattern > 0xF0000000)
+        pattern = 0xFFFFFFFF;
+
+      for (uint32_t j = 0; j < kWordCount; j++) {
+        wordData[j] = pattern;
+      }
+
+      set.addWords(wordIndex, wordData, kWordCount);
+    }
+  }
+
+  INFO("Checking dynamic BitSet addWords() - consecutive");
+  {
+    BLBitSet set;
+    BLRandom rnd(0x1234);
+
+    constexpr uint32_t kIterationCount = 1000;
+    constexpr uint32_t kWordCount = 33;
+
+    uint32_t cardinality = 0;
+
+    for (uint32_t i = 0; i < kIterationCount; i++) {
+      uint32_t wordData[kWordCount];
+
+      // Random pattern... But we also want 0 and all bits set.
+      uint32_t pattern = rnd.nextUInt32();
+      if (pattern < 0x20000000u)
+        pattern = 0u;
+      else if (pattern > 0xF0000000)
+        pattern = 0xFFFFFFFF;
+
+      for (uint32_t j = 0; j < kWordCount; j++) {
+        wordData[j] = pattern;
+      }
+
+      set.addWords(i * kWordCount, wordData, kWordCount);
+      cardinality += BLIntOps::popCount(pattern) * kWordCount;
+    }
+
+    EXPECT_EQ(set.cardinality(), cardinality);
   }
 
   INFO("Checking dynamic BitSet chop()");

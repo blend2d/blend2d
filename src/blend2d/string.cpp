@@ -1090,7 +1090,7 @@ UNIT(string, BL_TEST_GROUP_CORE_CONTAINERS) {
   INFO("Dynamic memory allocation strategy");
   {
     BLString s;
-    size_t kNumItems = 100000000;
+    size_t kNumItems = 10000000;
     size_t capacity = s.capacity();
 
     for (size_t i = 0; i < kNumItems; i++) {

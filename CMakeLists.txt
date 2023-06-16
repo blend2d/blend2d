@@ -469,6 +469,7 @@ set(BLEND2D_SRC_LIST
   blend2d/font.cpp
   blend2d/font.h
   blend2d/font_p.h
+  blend2d/font_test.cpp
   blend2d/fontdata.cpp
   blend2d/fontdata.h
   blend2d/fontdata_p.h

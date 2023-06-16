@@ -5,4 +5,4 @@ are as small as possible as these files are distributed together with Blend2D so
 Origin of the files and licenses:
 
   - `ABeeZee-Regular.ttf` - part of [Google Fonts](https://github.com/google/fonts) (OFL license)
-  - `texture.ttf` - downloaded from [publicdomainpictures.net](https://www.publicdomainpictures.net/en/view-image.php?image=9670&picture=colorful-autumn-leaves) (public domain)
+  - `Leaves.jpeg` - downloaded from [publicdomainpictures.net](https://www.publicdomainpictures.net/en/view-image.php?image=9670&picture=colorful-autumn-leaves) (public domain)

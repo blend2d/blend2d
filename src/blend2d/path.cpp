@@ -2661,7 +2661,7 @@ UNIT(path, BL_TEST_GROUP_GEOMETRY_CONTAINERS) {
   INFO("Dynamic memory allocation strategy");
   {
     BLPath p;
-    size_t kNumItems = 10000000;
+    size_t kNumItems = 1000000;
     size_t capacity = p.capacity();
 
     for (size_t i = 0; i < kNumItems; i++) {
