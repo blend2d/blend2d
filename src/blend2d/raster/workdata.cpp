@@ -9,8 +9,8 @@
 
 namespace BLRasterEngine {
 
-// RasterEngine::WorkData - Construction & Destruction
-// ===================================================
+// BLRasterEngine::WorkData - Construction & Destruction
+// =====================================================
 
 WorkData::WorkData(BLRasterContextImpl* ctxI, uint32_t workerId) noexcept
   : ctxI(ctxI),
@@ -32,8 +32,8 @@ WorkData::~WorkData() noexcept {
     blZeroAllocatorRelease(edgeStorage.bandEdges(), edgeStorage.bandCapacity() * kEdgeListSize);
 }
 
-// RasterEngine::WorkData - Initialization
-// =======================================
+// BLRasterEngine::WorkData - Initialization
+// =========================================
 
 BLResult WorkData::initBandData(uint32_t bandHeight, uint32_t bandCount) noexcept {
   // Can only happen if the storage was already allocated.
@@ -62,8 +62,8 @@ BLResult WorkData::initBandData(uint32_t bandHeight, uint32_t bandCount) noexcep
   return BL_SUCCESS;
 }
 
-// RasterEngine::WorkData - Error Accumulation
-// ===========================================
+// BLRasterEngine::WorkData - Error Accumulation
+// =============================================
 
 BLResult WorkData::accumulateError(BLResult error) noexcept {
   switch (error) {

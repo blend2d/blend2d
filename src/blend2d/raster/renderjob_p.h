@@ -9,6 +9,7 @@
 #include "../geometry_p.h"
 #include "../pipeline/pipedefs_p.h"
 #include "../raster/edgebuilder_p.h"
+#include "../raster/renderbatch_p.h"
 #include "../raster/rendercommand_p.h"
 #include "../raster/rasterdefs_p.h"
 #include "../raster/statedata_p.h"
@@ -21,21 +22,27 @@
 
 namespace BLRasterEngine {
 
+enum class RenderJobType : uint8_t {
+  kNone = 0,
+
+  kFillGeometry = 1,
+  kFillText = 2,
+
+  kStrokeGeometry = 3,
+  kStrokeText = 4,
+
+  kMaxValue = 4
+};
+
+enum class RenderJobFlags : uint8_t {
+  kNoFlags = 0u,
+
+  kComputePendingFetchData = 0x01u
+};
+BL_DEFINE_ENUM_FLAGS(RenderJobFlags)
+
 //! Render job.
 struct RenderJob {
-  //! Job type.
-  enum Type : uint8_t {
-    kTypeNone = 0,
-
-    kTypeFillGeometry = 1,
-    kTypeFillText = 2,
-
-    kTypeStrokeGeometry = 3,
-    kTypeStrokeText = 4,
-
-    kTypeCount = 5
-  };
-
   //! Type of the text data stored in `RenderJob_TextOp`.
   enum TextDataType : uint8_t {
     kTextDataRawUTF8 = BL_TEXT_ENCODING_UTF8,
@@ -50,94 +57,111 @@ struct RenderJob {
   //! \name Job Data
   //! \{
 
-  uint8_t _jobType;
+  RenderJobType _jobType;
+  RenderJobFlags _jobFlags;
   uint8_t _payloadType;
-  uint8_t _metaMatrixFixedType;
-  uint8_t _finalMatrixFixedType;
-  uint8_t _reserved[4];
-  RenderCommand* _command;
+  uint8_t _metaTransformFixedType;
+  uint8_t _finalTransformFixedType;
+  uint8_t _reserved;
+  uint16_t _commandIndex;
+  BLPoint _originFixed;
+  RenderCommandQueue* _commandQueue;
 
   //! \}
 
   //! \name Initialization
   //! \{
 
-  BL_INLINE void _initInternal(uint32_t jobType, RenderCommand* command) noexcept {
-    BL_ASSERT(jobType < kTypeCount);
-    _jobType = uint8_t(jobType);
+  BL_INLINE void _initInternal(RenderJobType jobType, RenderCommandQueue* commandQueue, size_t commandIndex) noexcept {
+    _jobType = jobType;
+    _jobFlags = RenderJobFlags::kNoFlags;
     _payloadType = 0;
-    _metaMatrixFixedType = 0;
-    _finalMatrixFixedType = 0;
-    _command = command;
+    _metaTransformFixedType = 0;
+    _finalTransformFixedType = 0;
+    _commandIndex = uint16_t(commandIndex);
+    _commandQueue = commandQueue;
   }
+
+  BL_INLINE_NODEBUG void setOriginFixed(const BLPoint& pt) noexcept { _originFixed = pt; }
 
   //! \}
 
   //! \name Accessors
   //! \{
 
-  BL_INLINE uint32_t jobType() const noexcept { return _jobType; }
-  BL_INLINE RenderCommand* command() const noexcept { return _command; }
+  BL_INLINE_NODEBUG RenderJobType jobType() const noexcept { return _jobType; }
+
+  BL_INLINE_NODEBUG RenderJobFlags jobFlags() const noexcept { return _jobFlags; }
+  BL_INLINE_NODEBUG bool hasJobFlag(RenderJobFlags flag) const noexcept { return blTestFlag(_jobFlags, flag); }
+  BL_INLINE_NODEBUG void addJobFlags(RenderJobFlags flags) noexcept { _jobFlags |= flags; }
+
+  BL_INLINE_NODEBUG RenderCommand& command() const noexcept { return _commandQueue->at(_commandIndex); }
+  BL_INLINE_NODEBUG const BLPoint& originFixed() const noexcept { return _originFixed;}
 
   //! \}
 };
 
-//! Base class for fill and stroke operations responsible for holding shared
-//! states.
+//! Base class for fill and stroke operations responsible for holding shared states.
 struct RenderJob_BaseOp : public RenderJob {
   const SharedFillState* _sharedFillState;
   const SharedBaseStrokeState* _sharedStrokeState;
 
-  BL_INLINE void initStates(const SharedFillState* sharedFillState,
-                            const SharedBaseStrokeState* sharedStrokeState = nullptr) noexcept {
+  BL_INLINE void initStates(const SharedFillState* sharedFillState, const SharedBaseStrokeState* sharedStrokeState = nullptr) noexcept {
     _sharedFillState = sharedFillState;
     _sharedStrokeState = sharedStrokeState;
   }
 
-  BL_INLINE const SharedFillState* fillState() const noexcept { return _sharedFillState; }
-  BL_INLINE const SharedBaseStrokeState* strokeState() const noexcept { return _sharedStrokeState; }
+  BL_INLINE_NODEBUG const SharedFillState* fillState() const noexcept { return _sharedFillState; }
+  BL_INLINE_NODEBUG const SharedBaseStrokeState* strokeState() const noexcept { return _sharedStrokeState; }
 
-  BL_INLINE uint32_t metaMatrixFixedType() const noexcept { return _metaMatrixFixedType; }
-  BL_INLINE uint32_t finalMatrixFixedType() const noexcept { return _finalMatrixFixedType; }
+  BL_INLINE_NODEBUG BLTransformType metaTransformFixedType() const noexcept { return BLTransformType(_metaTransformFixedType); }
+  BL_INLINE_NODEBUG BLTransformType finalTransformFixedType() const noexcept { return BLTransformType(_finalTransformFixedType); }
 
-  BL_INLINE void setMetaMatrixFixedType(uint32_t type) noexcept { _metaMatrixFixedType = uint8_t(type); }
-  BL_INLINE void setFinalMatrixFixedType(uint32_t type) noexcept { _finalMatrixFixedType = uint8_t(type); }
+  BL_INLINE_NODEBUG void setMetaTransformFixedType(BLTransformType type) noexcept { _metaTransformFixedType = uint8_t(type); }
+  BL_INLINE_NODEBUG void setFinalTransformFixedType(BLTransformType type) noexcept { _finalTransformFixedType = uint8_t(type); }
 };
 
 struct RenderJob_GeometryOp : public RenderJob_BaseOp {
-  BL_INLINE void initFillJob(RenderCommand* commandData) noexcept {
-    _initInternal(kTypeFillGeometry, commandData);
+  BL_INLINE void initFillJob(RenderCommandQueue* commandQueue, size_t commandIndex) noexcept {
+    _initInternal(RenderJobType::kFillGeometry, commandQueue, commandIndex);
   }
 
-  BL_INLINE void initStrokeJob(RenderCommand* commandData) noexcept {
-    _initInternal(kTypeStrokeGeometry, commandData);
+  BL_INLINE void initStrokeJob(RenderCommandQueue* commandQueue, size_t commandIndex) noexcept {
+    _initInternal(RenderJobType::kStrokeGeometry, commandQueue, commandIndex);
   }
 
-  BL_INLINE BLGeometryType geometryType() const noexcept { return (BLGeometryType)_payloadType; }
+  BL_INLINE_NODEBUG BLGeometryType geometryType() const noexcept { return (BLGeometryType)_payloadType; }
+
+  BL_INLINE void setGeometryWithPath(const BLPathCore* path) noexcept {
+    _payloadType = uint8_t(BL_GEOMETRY_TYPE_PATH);
+    blObjectPrivateInitWeakTagged(geometryData<BLPathCore>(), path);
+  }
+
+  BL_INLINE void setGeometryWithShape(BLGeometryType geometryType, const void* srcDataPtr, size_t srcDataSize) noexcept {
+    _payloadType = uint8_t(geometryType);
+    memcpy(geometryData<void>(), srcDataPtr, srcDataSize);
+  }
 
   BL_INLINE void setGeometry(BLGeometryType geometryType, const void* srcDataPtr, size_t srcDataSize) noexcept {
-    _payloadType = uint8_t(geometryType);
-
     switch (geometryType) {
       case BL_GEOMETRY_TYPE_PATH:
-        blObjectPrivateInitWeakTagged(geometryData<BLPathCore>(), static_cast<const BLPathCore*>(srcDataPtr));
+        setGeometryWithPath(static_cast<const BLPathCore*>(srcDataPtr));
         break;
 
       default:
-        memcpy(geometryData<void>(), srcDataPtr, srcDataSize);
+        setGeometryWithShape(geometryType, srcDataPtr, srcDataSize);
         break;
     }
   }
 
   template<typename T>
-  BL_INLINE T* geometryData() noexcept { return reinterpret_cast<T*>(this + 1); }
+  BL_INLINE_NODEBUG T* geometryData() noexcept { return reinterpret_cast<T*>(this + 1); }
 
   template<typename T>
-  BL_INLINE const T* geometryData() const noexcept { return reinterpret_cast<const T*>(this + 1); }
+  BL_INLINE_NODEBUG const T* geometryData() const noexcept { return reinterpret_cast<const T*>(this + 1); }
 };
 
 struct RenderJob_TextOp : public RenderJob_BaseOp {
-  BLPoint _pt;
   BLFontCore _font;
 
   union {
@@ -146,12 +170,12 @@ struct RenderJob_TextOp : public RenderJob_BaseOp {
     BLGlyphBufferCore _glyphBuffer;
   };
 
-  BL_INLINE void initFillJob(RenderCommand* commandData) noexcept {
-    _initInternal(kTypeFillText, commandData);
+  BL_INLINE void initFillJob(RenderCommandQueue* commandQueue, size_t commandIndex) noexcept {
+    _initInternal(RenderJobType::kFillText, commandQueue, commandIndex);
   }
 
-  BL_INLINE void initStrokeJob(RenderCommand* commandData) noexcept {
-    _initInternal(kTypeStrokeText, commandData);
+  BL_INLINE void initStrokeJob(RenderCommandQueue* commandQueue, size_t commandIndex) noexcept {
+    _initInternal(RenderJobType::kStrokeText, commandQueue, commandIndex);
   }
 
   BL_INLINE void destroy() noexcept {
@@ -162,10 +186,6 @@ struct RenderJob_TextOp : public RenderJob_BaseOp {
 
   BL_INLINE void initFont(const BLFontCore& font) noexcept {
     blObjectPrivateInitWeakTagged(&_font, &font);
-  }
-
-  BL_INLINE void initCoordinates(const BLPoint& pt) noexcept {
-    _pt = pt;
   }
 
   BL_INLINE void initTextData(const void* text, size_t size, BLTextEncoding encoding) noexcept {
@@ -190,12 +210,10 @@ struct RenderJob_TextOp : public RenderJob_BaseOp {
     _glyphBuffer.impl = gbI;
   }
 
-  BL_INLINE uint32_t textDataType() const noexcept { return _payloadType; }
-
-  BL_INLINE const void* textData() const noexcept { return _textData.data; }
-  BL_INLINE size_t textSize() const noexcept { return _textData.size; }
-
-  BL_INLINE const BLGlyphBuffer& glyphBuffer() const noexcept { return _glyphBuffer.dcast(); }
+  BL_INLINE_NODEBUG uint32_t textDataType() const noexcept { return _payloadType; }
+  BL_INLINE_NODEBUG const void* textData() const noexcept { return _textData.data; }
+  BL_INLINE_NODEBUG size_t textSize() const noexcept { return _textData.size; }
+  BL_INLINE_NODEBUG const BLGlyphBuffer& glyphBuffer() const noexcept { return _glyphBuffer.dcast(); }
 };
 
 } // {BLRasterEngine}

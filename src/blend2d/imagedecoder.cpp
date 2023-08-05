@@ -13,7 +13,7 @@
 
 namespace BLImageDecoderPrivate {
 
-static BLObjectEthernalVirtualImpl<BLImageDecoderImpl, BLImageDecoderVirt> defaultDecoder;
+static BLObjectEternalVirtualImpl<BLImageDecoderImpl, BLImageDecoderVirt> defaultDecoder;
 
 } // {BLImageDecoderPrivate}
 
@@ -43,7 +43,7 @@ BL_API_IMPL BLResult blImageDecoderInitWeak(BLImageDecoderCore* self, const BLIm
 }
 
 BL_API_IMPL BLResult blImageDecoderDestroy(BLImageDecoderCore* self) noexcept {
-  return blObjectPrivateReleaseVirtual(self);
+  return BLObjectPrivate::releaseVirtualInstance(self);
 }
 
 // BLImageDecoder - API - Reset
@@ -52,7 +52,7 @@ BL_API_IMPL BLResult blImageDecoderDestroy(BLImageDecoderCore* self) noexcept {
 BL_API_IMPL BLResult blImageDecoderReset(BLImageDecoderCore* self) noexcept {
   BL_ASSERT(self->_d.isImageDecoder());
 
-  return blObjectPrivateReplaceVirtual(self, static_cast<BLImageDecoderCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_DECODER]));
+  return BLObjectPrivate::replaceVirtualInstance(self, static_cast<BLImageDecoderCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_DECODER]));
 }
 
 // BLImageDecoder - API - Assign
@@ -64,14 +64,14 @@ BL_API_IMPL BLResult blImageDecoderAssignMove(BLImageDecoderCore* self, BLImageD
 
   BLImageDecoderCore tmp = *other;
   other->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE_DECODER]._d;
-  return blObjectPrivateReplaceVirtual(self, &tmp);
+  return BLObjectPrivate::replaceVirtualInstance(self, &tmp);
 }
 
 BL_API_IMPL BLResult blImageDecoderAssignWeak(BLImageDecoderCore* self, const BLImageDecoderCore* other) noexcept {
   BL_ASSERT(self->_d.isImageDecoder());
   BL_ASSERT(other->_d.isImageDecoder());
 
-  return blObjectPrivateAssignWeakVirtual(self, other);
+  return BLObjectPrivate::assignVirtualInstance(self, other);
 }
 
 // BLImageDecoder - API - Interface
@@ -101,8 +101,8 @@ BL_API_IMPL BLResult blImageDecoderReadFrame(BLImageDecoderCore* self, BLImageCo
 // BLImageDecoder - Virtual Functions (Null)
 // =========================================
 
-static BLResult BL_CDECL blImageDecoderImplDestroy(BLObjectImpl* impl, uint32_t info) noexcept {
-  blUnused(impl, info);
+static BLResult BL_CDECL blImageDecoderImplDestroy(BLObjectImpl* impl) noexcept {
+  blUnused(impl);
   return BL_SUCCESS;
 }
 
@@ -141,8 +141,5 @@ void blImageDecoderRtInit(BLRuntimeContext* rt) noexcept {
     static_cast<BLImageCodecCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]));
   defaultDecoder.impl->lastResult = BL_ERROR_NOT_INITIALIZED;
 
-  blObjectDefaults[BL_OBJECT_TYPE_IMAGE_DECODER]._d.initDynamic(
-    BL_OBJECT_TYPE_IMAGE_DECODER,
-    BLObjectInfo{BL_OBJECT_INFO_IMMUTABLE_FLAG},
-    &defaultDecoder.impl);
+  blObjectDefaults[BL_OBJECT_TYPE_IMAGE_DECODER]._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_DECODER), &defaultDecoder.impl);
 }

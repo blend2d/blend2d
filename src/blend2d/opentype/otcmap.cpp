@@ -5,12 +5,12 @@
 
 #include "../api-build_p.h"
 #include "../font_p.h"
-#include "../unicode_p.h"
 #include "../opentype/otcmap_p.h"
 #include "../opentype/otface_p.h"
 #include "../opentype/otplatform_p.h"
 #include "../support/memops_p.h"
 #include "../support/ptrops_p.h"
+#include "../unicode/unicode_p.h"
 
 namespace BLOpenType {
 namespace CMapImpl {

@@ -27,20 +27,48 @@ typedef BLParametrizedBitOps<BLBitOrder::kMSB, uint32_t> BLBitArrayOps;
 
 namespace BLBitArrayPrivate {
 
-//! \name BLBitArray - Utility Functions
+using BLObjectPrivate::RCMode;
+
+//! \name BLBitArray - Internals - Common Functionality (Impl)
 //! \{
+
+static BL_INLINE bool isImplMutable(BLBitArrayImpl* impl) noexcept {
+  return BLObjectPrivate::isImplMutable(impl);
+}
+
+static BL_INLINE_NODEBUG BLResult freeImpl(BLBitArrayImpl* impl) noexcept {
+  return BLObjectPrivate::freeImpl(impl);
+}
+
+template<RCMode kRCMode>
+static BL_INLINE BLResult releaseImpl(BLBitArrayImpl* impl) noexcept {
+  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+}
 
 //! \}
 
-//! \name BLBitArray - Memory Management
+//! \name BLBitArray - Internals - Common Functionality (Instance)
 //! \{
 
 static BL_INLINE_NODEBUG BLBitArrayImpl* getImpl(const BLBitArrayCore* self) noexcept {
   return static_cast<BLBitArrayImpl*>(self->_d.impl);
 }
 
-static BL_INLINE_NODEBUG BLResult freeImpl(BLBitArrayImpl* impl, BLObjectInfo info) noexcept {
-  return blObjectImplFreeInline(impl, info);
+static BL_INLINE BLResult retainInstance(const BLBitArrayCore* self, size_t n = 1) noexcept {
+  return BLObjectPrivate::retainInstance(self, n);
+}
+
+static BL_INLINE BLResult releaseInstance(BLBitArrayCore* self) noexcept {
+  return self->_d.isRefCountedObject() ? releaseImpl<RCMode::kForce>(getImpl(self)) : BLResult(BL_SUCCESS);
+}
+
+static BL_INLINE BLResult replaceInstance(BLBitArrayCore* self, const BLBitArrayCore* other) noexcept {
+  // NOTE: UBSAN doesn't like casting the impl in case the BitArray is in SSO mode, so wait with the cast.
+  void* impl = static_cast<void*>(self->_d.impl);
+  BLObjectInfo info = self->_d.info;
+
+  self->_d = other->_d;
+  return info.isRefCountedObject() ? releaseImpl<RCMode::kForce>(static_cast<BLBitArrayImpl*>(impl)) : BLResult(BL_SUCCESS);
 }
 
 //! \}

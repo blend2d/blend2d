@@ -8,8 +8,6 @@
 
 #include "api.h"
 
-BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
-
 //! \addtogroup blend2d_api_styling
 //! \{
 
@@ -222,11 +220,11 @@ struct BLRgba {
 
   BL_INLINE_NODEBUG constexpr BLRgba(const BLRgba&) noexcept = default;
 
-  BL_INLINE_NODEBUG constexpr BLRgba(float r, float g, float b, float a = 1.0f) noexcept
-    : r(r),
-      g(g),
-      b(b),
-      a(a) {}
+  BL_INLINE_NODEBUG constexpr BLRgba(float rValue, float gValue, float bValue, float aValue = 1.0f) noexcept
+    : r(rValue),
+      g(gValue),
+      b(bValue),
+      a(aValue) {}
 
   BL_INLINE_NODEBUG constexpr BLRgba(const BLRgba32& rgba32) noexcept
     : r(float(int32_t(rgba32.r())) * (1.0f / 255.0f)),
@@ -278,11 +276,11 @@ struct BLRgba {
     reset(other.r, other.g, other.b, other.a);
   }
 
-  BL_INLINE_NODEBUG void reset(float r, float g, float b, float a = 1.0f) noexcept {
-    this->r = r;
-    this->g = g;
-    this->b = b;
-    this->a = a;
+  BL_INLINE_NODEBUG void reset(float rValue, float gValue, float bValue, float aValue = 1.0f) noexcept {
+    this->r = rValue;
+    this->g = gValue;
+    this->b = bValue;
+    this->a = aValue;
   }
 
   BL_NODISCARD
@@ -304,11 +302,11 @@ struct BLRgba {
   }
 
   BL_NODISCARD
-  BL_INLINE_NODEBUG bool equals(float r, float g, float b, float a = 1.0f) const noexcept {
-    return bool(unsigned(blEquals(this->r, r)) &
-                unsigned(blEquals(this->g, g)) &
-                unsigned(blEquals(this->b, b)) &
-                unsigned(blEquals(this->a, a)));
+  BL_INLINE_NODEBUG bool equals(float rValue, float gValue, float bValue, float aValue = 1.0f) const noexcept {
+    return bool(unsigned(blEquals(this->r, rValue)) &
+                unsigned(blEquals(this->g, gValue)) &
+                unsigned(blEquals(this->b, bValue)) &
+                unsigned(blEquals(this->a, aValue)));
   }
 
   //! \}
@@ -391,7 +389,5 @@ static_assert(sizeof(BLRgba64) == 8, "'BLRgba64' struct must be exactly 8 bytes 
 #endif
 
 //! \}
-
-BL_DIAGNOSTIC_POP
 
 #endif // BLEND2D_RGBA_H_INCLUDED

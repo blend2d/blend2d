@@ -46,15 +46,9 @@ public:
 template <typename NodeT>
 class BLArenaList {
 public:
-  union {
-    NodeT* _nodes[2];
-    struct {
-      NodeT* _nodeFirst;
-      NodeT* _nodeLast;
-    };
-  };
-
   BL_NONCOPYABLE(BLArenaList)
+
+  NodeT* _nodes[2];
 
   //! \name Construction & Destruction
   //! \{

@@ -12,8 +12,8 @@
 #include "path_p.h"
 #include "pathstroke_p.h"
 #include "runtime_p.h"
-#include "tables_p.h"
 #include "support/intops_p.h"
+#include "support/lookuptable_p.h"
 #include "support/ptrops_p.h"
 #include "support/traits_p.h"
 
@@ -24,10 +24,10 @@ const BLApproximationOptions blDefaultApproximationOptions = BLPathPrivate::make
 
 namespace BLPathPrivate {
 
-static BLObjectEthernalImpl<BLPathPrivateImpl> defaultPath;
+static BLObjectEternalImpl<BLPathPrivateImpl> defaultPath;
 
-static BLResult appendTransformedPathWithType(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* m, uint32_t mType) noexcept;
-static BLResult transformWithType(BLPathCore* self, const BLRange* range, const BLMatrix2D* m, uint32_t mType) noexcept;
+static BLResult appendTransformedPathWithType(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* transform, uint32_t transformType) noexcept;
+static BLResult transformWithType(BLPathCore* self, const BLRange* range, const BLMatrix2D* transform, uint32_t transformType) noexcept;
 
 // BLPath - Utilities
 // ==================
@@ -56,14 +56,6 @@ static BL_INLINE void copyContent(uint8_t* cmdDst, BLPoint* vtxDst, const uint8_
 // BLPath - Internals
 // ==================
 
-static BL_INLINE constexpr size_t capacityFromImplSize(BLObjectImplSize implSize) noexcept {
-  return (implSize.value() - sizeof(BLPathPrivateImpl)) / (sizeof(BLPoint) + 1);
-}
-
-static BL_INLINE constexpr BLObjectImplSize implSizeFromCapacity(size_t capacity) noexcept {
-  return BLObjectImplSize(sizeof(BLPathPrivateImpl) + capacity * (sizeof(BLPoint) + 1));
-}
-
 static BL_INLINE BLObjectImplSize expandImplSize(BLObjectImplSize implSize) noexcept {
   constexpr size_t kMinimumImplSize = 1024;
   constexpr size_t kMinimumImplMask = kMinimumImplSize - 16;
@@ -86,19 +78,13 @@ static BL_INLINE void setSize(BLPathCore* self, size_t size) noexcept {
   getImpl(self)->size = size;
 }
 
-static BL_INLINE bool isMutable(const BLPathCore* self) noexcept {
-  const size_t* refCountPtr = blObjectImplGetRefCountPtr(self->_d.impl);
-  return *refCountPtr == 1;
-}
-
-static BL_INLINE BLPathPrivateImpl* initDynamic(BLPathCore* self, size_t size, BLObjectImplSize implSize) noexcept {
-  BLPathPrivateImpl* impl = blObjectDetailAllocImplT<BLPathPrivateImpl>(self,
-    BLObjectInfo::packType(BL_OBJECT_TYPE_PATH), implSize, &implSize);
-
-  if(BL_UNLIKELY(!impl))
-    return nullptr;
-
+static BL_INLINE BLResult allocImpl(BLPathCore* self, size_t size, BLObjectImplSize implSize) noexcept {
   size_t capacity = capacityFromImplSize(implSize);
+
+  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_PATH);
+  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLPathPrivateImpl>(self, info, implSize));
+
+  BLPathPrivateImpl* impl = getImpl(self);
   BLPoint* vertexData = BLPtrOps::offset<BLPoint>(impl, sizeof(BLPathPrivateImpl));
   uint8_t* commandData = BLPtrOps::offset<uint8_t>(vertexData, capacity * sizeof(BLPoint));
 
@@ -107,33 +93,6 @@ static BL_INLINE BLPathPrivateImpl* initDynamic(BLPathCore* self, size_t size, B
   impl->size = size;
   impl->capacity = capacity;
   impl->flags = BL_PATH_FLAG_DIRTY;
-
-  return impl;
-}
-
-BLResult freeImpl(BLPathPrivateImpl* impl, BLObjectInfo info) noexcept {
-  return blObjectImplFreeInline(impl, info);
-}
-
-static BL_INLINE BLResult releaseInstance(BLPathCore* self) noexcept {
-  BLPathPrivateImpl* impl = getImpl(self);
-  BLObjectInfo info = self->_d.info;
-
-  if (info.refCountedFlag() && blObjectImplDecRefAndTest(impl, info))
-    return freeImpl(impl, info);
-
-  return BL_SUCCESS;
-}
-
-static BL_INLINE BLResult replaceInstance(BLPathCore* self, const BLPathCore* other) noexcept {
-  BLPathPrivateImpl* impl = getImpl(self);
-  BLObjectInfo info = self->_d.info;
-
-  self->_d = other->_d;
-
-  if (info.refCountedFlag() && blObjectImplDecRefAndTest(impl, info))
-    return freeImpl(impl, info);
-
   return BL_SUCCESS;
 }
 
@@ -144,11 +103,9 @@ static BL_NOINLINE BLResult reallocPath(BLPathCore* self, BLObjectImplSize implS
   size_t pathSize = oldI->size;
 
   BLPathCore newO;
-  BLPathPrivateImpl* newI = initDynamic(&newO, pathSize, implSize);
+  BL_PROPAGATE(allocImpl(&newO, pathSize, implSize));
 
-  if (BL_UNLIKELY(!newI))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+  BLPathPrivateImpl* newI = getImpl(&newO);
   copyContent(newI->commandData, newI->vertexData, oldI->commandData, oldI->vertexData, pathSize);
   return replaceInstance(self, &newO);
 }
@@ -160,12 +117,11 @@ static BL_NOINLINE BLResult reallocPathToAdd(BLPathCore* self, size_t newSize, u
   BLObjectImplSize implSize = expandImplSize(implSizeFromCapacity(newSize));
 
   BLPathCore newO;
-  BLPathPrivateImpl* newI = initDynamic(&newO, newSize, implSize);
-
-  if (BL_UNLIKELY(!newI))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+  BL_PROPAGATE(allocImpl(&newO, newSize, implSize));
 
   BLPathPrivateImpl* oldI = getImpl(self);
+  BLPathPrivateImpl* newI = getImpl(&newO);
+
   size_t oldSize = oldI->size;
   copyContent(newI->commandData, newI->vertexData, oldI->commandData, oldI->vertexData, oldSize);
 
@@ -192,7 +148,7 @@ static BL_INLINE BLResult prepareAdd(BLPathCore* self, size_t n, uint8_t** cmdOu
 
   size_t size = selfI->size;
   size_t sizeAfter = size + n;
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
 
   if ((sizeAfter | immutableMsk) > selfI->capacity)
     return reallocPathToAdd(self, sizeAfter, cmdOut, vtxOut);
@@ -211,7 +167,7 @@ static BL_INLINE BLResult prepareAdd(BLPathCore* self, size_t n, uint8_t** cmdOu
 static BL_INLINE BLResult makeMutable(BLPathCore* self) noexcept {
   BLPathPrivateImpl* selfI = getImpl(self);
 
-  if (!isMutable(self)) {
+  if (!isImplMutable(selfI)) {
     BL_PROPAGATE(reallocPath(self, implSizeFromCapacity(selfI->size)));
     selfI = getImpl(self);
   }
@@ -250,7 +206,8 @@ BL_API_IMPL BLResult blStrokeOptionsInitWeak(BLStrokeOptionsCore* self, const BL
   self->width = other->width;
   self->miterLimit = other->miterLimit;
   self->dashOffset = other->dashOffset;
-  return blObjectPrivateInitWeakTagged(&self->dashArray, &other->dashArray);
+  self->dashArray._d = other->dashArray._d;
+  return BLArrayPrivate::retainInstance(&self->dashArray);
 }
 
 BL_API_IMPL BLResult blStrokeOptionsDestroy(BLStrokeOptionsCore* self) noexcept {
@@ -384,7 +341,7 @@ BL_API_IMPL BLResult blPathClear(BLPathCore* self) noexcept {
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
-  if (!isMutable(self))
+  if (!isImplMutable(selfI))
     return replaceInstance(self, static_cast<BLPathCore*>(&blObjectDefaults[BL_OBJECT_TYPE_PATH]));
 
   selfI->size = 0;
@@ -419,7 +376,7 @@ BL_API_IMPL BLResult blPathReserve(BLPathCore* self, size_t n) noexcept {
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
 
   if ((n | immutableMsk) > selfI->capacity)
     return reallocPath(self, implSizeFromCapacity(blMax(n, selfI->size)));
@@ -433,27 +390,24 @@ BL_API_IMPL BLResult blPathModifyOp(BLPathCore* self, BLModifyOp op, size_t n, u
 
   BLPathPrivateImpl* selfI = getImpl(self);
   size_t index = blModifyOpIsAppend(op) ? selfI->size : size_t(0);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
 
   size_t remaining = selfI->capacity - index;
   size_t sizeAfter = index + n;
 
   if ((n | immutableMsk) > remaining) {
+    *cmdDataOut = nullptr;
+    *vtxDataOut = nullptr;
+
     BLPathCore newO;
-
     BLObjectImplSize implSize = expandImplSizeWithModifyOp(implSizeFromCapacity(sizeAfter), op);
-    BLPathPrivateImpl* newI = initDynamic(&newO, sizeAfter, implSize);
+    BL_PROPAGATE(allocImpl(&newO, sizeAfter, implSize));
 
-    if (BL_UNLIKELY(!newI)) {
-      *cmdDataOut = nullptr;
-      *vtxDataOut = nullptr;
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-    }
-
+    BLPathPrivateImpl* newI = getImpl(&newO);
     *cmdDataOut = newI->commandData + index;
     *vtxDataOut = newI->vertexData + index;
-    copyContent(newI->commandData, newI->vertexData, selfI->commandData, selfI->vertexData, index);
 
+    copyContent(newI->commandData, newI->vertexData, selfI->commandData, selfI->vertexData, index);
     return replaceInstance(self, &newO);
   }
 
@@ -492,7 +446,7 @@ BL_API_IMPL BLResult blPathAssignWeak(BLPathCore* self, const BLPathCore* other)
   BL_ASSERT(self->_d.isPath());
   BL_ASSERT(other->_d.isPath());
 
-  blObjectPrivateAddRefIfRCTagSet(other);
+  retainInstance(other);
   return replaceInstance(self, other);
 }
 
@@ -509,14 +463,12 @@ BL_API_IMPL BLResult blPathAssignDeep(BLPathCore* self, const BLPathCore* other)
   if (!size)
     return blPathClear(self);
 
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
   if ((size | immutableMsk) > selfI->capacity) {
     BLPathCore newO;
-    BLPathPrivateImpl* newI = initDynamic(&newO, size, implSizeFromCapacity(size));
+    BL_PROPAGATE(allocImpl(&newO, size, implSizeFromCapacity(size)));
 
-    if (BL_UNLIKELY(!newI))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+    BLPathPrivateImpl* newI = getImpl(&newO);
     copyContent(newI->commandData, newI->vertexData, otherI->commandData, otherI->vertexData, size);
     return replaceInstance(self, &newO);
   }
@@ -544,12 +496,12 @@ static void arcToCubicSpline(BLPathAppender& dst, BLPoint c, BLPoint r, double s
   double startSin = blSin(startAngle);
   double startCos = blCos(startAngle);
 
-  BLMatrix2D m = BLMatrix2D::makeSinCos(startSin, startCos);
-  m.postScale(r);
-  m.postTranslate(c);
+  BLMatrix2D transform = BLMatrix2D::makeSinCos(startSin, startCos);
+  transform.postScale(r);
+  transform.postTranslate(c);
 
   if (sweepAngle < 0) {
-    m.scale(1.0, -1.0);
+    transform.scale(1.0, -1.0);
     sweepAngle = -sweepAngle;
   }
 
@@ -570,7 +522,7 @@ static void arcToCubicSpline(BLPathAppender& dst, BLPoint c, BLPoint r, double s
     v2 = BLPoint(sweepCos, sweepSin);
   }
 
-  BLPoint p0 = m.mapPoint(v1);
+  BLPoint p0 = transform.mapPoint(v1);
   dst.addVertex(initialCmd, p0);
 
   if (maybeRedundantLineTo && dst.cmd[-1].value <= BL_PATH_CMD_ON) {
@@ -584,8 +536,8 @@ static void arcToCubicSpline(BLPathAppender& dst, BLPoint c, BLPoint r, double s
   size_t i = 0;
   while (sweepAngle > arc90DegStepsTable[i]) {
     v1 = BLGeometry::normal(v1);
-    BLPoint p1 = m.mapPoint(vc);
-    BLPoint p2 = m.mapPoint(v1);
+    BLPoint p1 = transform.mapPoint(vc);
+    BLPoint p2 = transform.mapPoint(v1);
     dst.cubicTo(p0 + (p1 - p0) * BL_M_KAPPA, p2 + (p1 - p2) * BL_M_KAPPA, p2);
 
     // Full circle.
@@ -603,7 +555,7 @@ static void arcToCubicSpline(BLPathAppender& dst, BLPoint c, BLPoint r, double s
   // This is actually half of the remaining cos. It is required that v1 dot v2 > -1 holds
   // but we can safely assume it does (only critical for angles close to 180 degrees).
   double w = blSqrt(0.5 * BLGeometry::dot(v1, v2) + 0.5);
-  dst.conicTo(m.mapPoint(vc), m.mapPoint(v2), w);
+  dst.conicTo(transform.mapPoint(vc), transform.mapPoint(v2), w);
 }
 
 // BLPath - Info Updater
@@ -690,10 +642,10 @@ public:
           BLPoint ctrlMax = blMax(vtxData[-3], vtxData[-2]);
 
           if (!(ctrlMin.x >= boundingBox.x0 && ctrlMin.y >= boundingBox.y0 && ctrlMax.x <= boundingBox.x1 && ctrlMax.y <= boundingBox.y1)) {
-            BLPoint extremas[2];
-            BLGeometry::getCubicExtremaPoints(vtxData - 4, extremas);
-            BLGeometry::bound(boundingBox, extremas[0]);
-            BLGeometry::bound(boundingBox, extremas[1]);
+            BLPoint extrema[2];
+            BLGeometry::getCubicExtremaPoints(vtxData - 4, extrema);
+            BLGeometry::bound(boundingBox, extrema[0]);
+            BLGeometry::bound(boundingBox, extrema[1]);
             BLGeometry::bound(controlBox, vtxData[-3]);
             BLGeometry::bound(controlBox, vtxData[-2]);
           }
@@ -875,7 +827,7 @@ static BLResult copyContentReversed(BLPathAppender& dst, BLPathIterator src, BLP
   }
 }
 
-static BLResult appendTransformedPathWithType(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* m, uint32_t mType) noexcept {
+static BLResult appendTransformedPathWithType(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* transform, uint32_t transformType) noexcept {
   BL_ASSERT(self->_d.isPath());
   BL_ASSERT(other->_d.isPath());
 
@@ -893,7 +845,7 @@ static BLResult appendTransformedPathWithType(BLPathCore* self, const BLPathCore
   otherI = getImpl(other);
 
   memcpy(cmdData, otherI->commandData + start, n);
-  return blMatrix2DMapPointDArrayFuncs[mType](m, vtxData, otherI->vertexData + start, n);
+  return BLTransformPrivate::mapPointDArrayFuncs[transformType](transform, vtxData, otherI->vertexData + start, n);
 }
 
 } // {BLPathPrivate}
@@ -1152,10 +1104,10 @@ BL_API_IMPL BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry,
   double cos = blCos(xAxisRotation);
 
   // Inverse rotation to align the ellipse.
-  BLMatrix2D m = BLMatrix2D::makeSinCos(-sin, cos);
+  BLMatrix2D transform = BLMatrix2D::makeSinCos(-sin, cos);
 
   // Vector from center (transformed midpoint).
-  BLPoint v = m.mapPoint((p0 - p1) * 0.5);
+  BLPoint v = transform.mapPoint((p0 - p1) * 0.5);
 
   // If scale > 1 the ellipse will need to be rescaled.
   double scale = blSquare(v.x) / blSquare(rx) +
@@ -1167,11 +1119,11 @@ BL_API_IMPL BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry,
   }
 
   // Prepend scale.
-  m.postScale(1.0 / rx, 1.0 / ry);
+  transform.postScale(1.0 / rx, 1.0 / ry);
 
   // Calculate unit coordinates.
-  BLPoint pp0 = m.mapPoint(p0);
-  BLPoint pp1 = m.mapPoint(p1);
+  BLPoint pp0 = transform.mapPoint(p0);
+  BLPoint pp1 = transform.mapPoint(p1);
 
   // New vector from center (unit midpoint).
   v = (pp1 - pp0) * 0.5;
@@ -1193,10 +1145,10 @@ BL_API_IMPL BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry,
   BLPoint v2 = pp1 - pc;
 
   // Set up the final transformation matrix.
-  m.resetToSinCos(v1.y, v1.x);
-  m.postTranslate(pc);
-  m.postScale(rx, ry);
-  BLTransformPrivate::multiply(m, m, BLMatrix2D::makeSinCos(sin, cos));
+  transform.resetToSinCos(v1.y, v1.x);
+  transform.postTranslate(pc);
+  transform.postScale(rx, ry);
+  BLTransformPrivate::multiply(transform, transform, BLMatrix2D::makeSinCos(sin, cos));
 
   // We have sin = v1.Cross(v2) / (v1.Length * v2.Length)
   // with length of 'v1' and 'v2' both 1 (unit vectors).
@@ -1226,7 +1178,7 @@ BL_API_IMPL BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry,
     }
 
     // Flip Y.
-    m.scale(1.0, -1.0);
+    transform.scale(1.0, -1.0);
 
     v2.reset(cos, -sin);
     sweepAngle = blAbs(sweepAngle);
@@ -1251,8 +1203,8 @@ BL_API_IMPL BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry,
     v1 = BLGeometry::normal(v1);
 
     // Transformed points of the arc segment.
-    pp0 = m.mapPoint(v);
-    pp1 = m.mapPoint(v1);
+    pp0 = transform.mapPoint(v);
+    pp1 = transform.mapPoint(v1);
     appender.arcQuadrantTo(pp0, pp1);
 
     v = BLGeometry::normal(v);
@@ -1264,7 +1216,7 @@ BL_API_IMPL BLResult blPathEllipticArcTo(BLPathCore* self, double rx, double ry,
   v = 2.0 * v / BLGeometry::dot(v, v);
 
   // Final arc segment.
-  pp0 = m.mapPoint(v);
+  pp0 = transform.mapPoint(v);
   pp1 = p1;
 
   // This is actually half of the remaining cos. It is required that v1 dot v2 > -1 holds
@@ -1810,11 +1762,11 @@ BL_API_IMPL BLResult blPathAddTranslatedPath(BLPathCore* self, const BLPathCore*
   BL_ASSERT(self->_d.isPath());
   BL_ASSERT(other->_d.isPath());
 
-  BLMatrix2D m = BLMatrix2D::makeTranslation(*p);
-  return appendTransformedPathWithType(self, other, range, &m, BL_MATRIX2D_TYPE_TRANSLATE);
+  BLMatrix2D transform = BLMatrix2D::makeTranslation(*p);
+  return appendTransformedPathWithType(self, other, range, &transform, BL_TRANSFORM_TYPE_TRANSLATE);
 }
 
-BL_API_IMPL BLResult blPathAddTransformedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* m) noexcept {
+BL_API_IMPL BLResult blPathAddTransformedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, const BLMatrix2D* transform) noexcept {
   using namespace BLPathPrivate;
 
   BL_ASSERT(self->_d.isPath());
@@ -1833,11 +1785,11 @@ BL_API_IMPL BLResult blPathAddTransformedPath(BLPathCore* self, const BLPathCore
   BL_PROPAGATE(prepareAdd(self, n, &cmdData, &vtxData));
   otherI = getImpl(other);
 
-  // Only check the matrix type if we reach the limit as the check costs some cycles.
-  uint32_t mType = (n >= BL_MATRIX_TYPE_MINIMUM_SIZE) ? m->type() : BL_MATRIX2D_TYPE_AFFINE;
+  // Only check the transform type if we reach the limit as the check costs some cycles.
+  BLTransformType transformType = (n >= BL_MATRIX_TYPE_MINIMUM_SIZE) ? transform->type() : BL_TRANSFORM_TYPE_AFFINE;
 
   memcpy(cmdData, otherI->commandData + start, n);
-  return blMatrix2DMapPointDArrayFuncs[mType](m, vtxData, otherI->vertexData + start, n);
+  return BLTransformPrivate::mapPointDArrayFuncs[transformType](transform, vtxData, otherI->vertexData + start, n);
 }
 
 BL_API_IMPL BLResult blPathAddReversedPath(BLPathCore* self, const BLPathCore* other, const BLRange* range, BLPathReverseMode reverseMode) noexcept {
@@ -2023,13 +1975,11 @@ BL_API_IMPL BLResult blPathRemoveRange(BLPathCore* self, const BLRange* range) n
   uint8_t* cmdData = selfI->commandData;
 
   size_t sizeAfter = size - n;
-  if (!isMutable(self)) {
+  if (!isImplMutable(selfI)) {
     BLPathCore newO;
-    BLPathPrivateImpl* newI = initDynamic(&newO, sizeAfter, implSizeFromCapacity(sizeAfter));
+    BL_PROPAGATE(allocImpl(&newO, sizeAfter, implSizeFromCapacity(sizeAfter)));
 
-    if (BL_UNLIKELY(!newI))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+    BLPathPrivateImpl* newI = getImpl(&newO);
     copyContent(newI->commandData, newI->vertexData, cmdData, vtxData, start);
     copyContent(newI->commandData + start, newI->vertexData + start, cmdData + end, vtxData + end, size - end);
 
@@ -2048,7 +1998,7 @@ BL_API_IMPL BLResult blPathRemoveRange(BLPathCore* self, const BLRange* range) n
 
 namespace BLPathPrivate {
 
-static BLResult transformWithType(BLPathCore* self, const BLRange* range, const BLMatrix2D* m, uint32_t mType) noexcept {
+static BLResult transformWithType(BLPathCore* self, const BLRange* range, const BLMatrix2D* transform, uint32_t transformType) noexcept {
   BL_ASSERT(self->_d.isPath());
 
   BLPathPrivateImpl* selfI = getImpl(self);
@@ -2061,7 +2011,7 @@ static BLResult transformWithType(BLPathCore* self, const BLRange* range, const 
   selfI = getImpl(self);
 
   BLPoint* vtxData = selfI->vertexData + start;
-  return blMatrix2DMapPointDArrayFuncs[mType](m, vtxData, vtxData, n);
+  return BLTransformPrivate::mapPointDArrayFuncs[transformType](transform, vtxData, vtxData, n);
 }
 
 } // {BLPathPrivate}
@@ -2070,8 +2020,8 @@ BL_API_IMPL BLResult blPathTranslate(BLPathCore* self, const BLRange* range, con
   using namespace BLPathPrivate;
   BL_ASSERT(self->_d.isPath());
 
-  BLMatrix2D m = BLMatrix2D::makeTranslation(*p);
-  return transformWithType(self, range, &m, BL_MATRIX2D_TYPE_TRANSLATE);
+  BLMatrix2D transform = BLMatrix2D::makeTranslation(*p);
+  return transformWithType(self, range, &transform, BL_TRANSFORM_TYPE_TRANSLATE);
 }
 
 BL_API_IMPL BLResult blPathTransform(BLPathCore* self, const BLRange* range, const BLMatrix2D* m) noexcept {
@@ -2087,11 +2037,11 @@ BL_API_IMPL BLResult blPathTransform(BLPathCore* self, const BLRange* range, con
   BL_PROPAGATE(makeMutable(self));
   selfI = getImpl(self);
 
-  // Only check the matrix type if we reach the limit as the check costs some cycles.
-  uint32_t mType = (n >= BL_MATRIX_TYPE_MINIMUM_SIZE) ? m->type() : BL_MATRIX2D_TYPE_AFFINE;
+  // Only check the transform type if we reach the limit as the check costs some cycles.
+  BLTransformType transformType = (n >= BL_MATRIX_TYPE_MINIMUM_SIZE) ? m->type() : BL_TRANSFORM_TYPE_AFFINE;
 
   BLPoint* vtxData = selfI->vertexData + start;
-  return blMatrix2DMapPointDArrayFuncs[mType](m, vtxData, vtxData, n);
+  return BLTransformPrivate::mapPointDArrayFuncs[transformType](m, vtxData, vtxData, n);
 }
 
 BL_API_IMPL BLResult blPathFitTo(BLPathCore* self, const BLRange* range, const BLRect* rect, uint32_t fitFlags) noexcept {
@@ -2128,8 +2078,8 @@ BL_API_IMPL BLResult blPathFitTo(BLPathCore* self, const BLRange* range, const B
   tx -= bx * sx;
   ty -= by * sy;
 
-  BLMatrix2D m(sx, 0.0, 0.0, sy, tx, ty);
-  return transformWithType(self, range, &m, BL_MATRIX2D_TYPE_SCALE);
+  BLMatrix2D transform(sx, 0.0, 0.0, sy, tx, ty);
+  return transformWithType(self, range, &transform, BL_TRANSFORM_TYPE_SCALE);
 }
 
 // BLPath - API Equals
@@ -2557,7 +2507,7 @@ OnLine:
             goto OnLine;
           }
 
-          // Subdivide to a cubic spline at Y-extremas.
+          // Subdivide to a cubic spline at Y-extrema.
           const BLPoint* splinePtr = p;
           const BLPoint* splineEnd = BLGeometry::splitCubicToSpline<BLGeometry::SplitCubicOptions::kYExtremas>(p, splineData);
 
@@ -2648,35 +2598,5 @@ void blPath2DRtInit(BLRuntimeContext* rt) noexcept {
 
   BLPathPrivate::defaultPath.impl->flags = BL_PATH_FLAG_EMPTY;
   blObjectDefaults[BL_OBJECT_TYPE_PATH]._d.initDynamic(
-    BL_OBJECT_TYPE_PATH,
-    BLObjectInfo{BL_OBJECT_INFO_IMMUTABLE_FLAG},
-    &BLPathPrivate::defaultPath.impl);
+    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_PATH), &BLPathPrivate::defaultPath.impl);
 }
-
-// BLPath - Tests
-// ==============
-
-#if defined(BL_TEST)
-UNIT(path, BL_TEST_GROUP_GEOMETRY_CONTAINERS) {
-  INFO("Dynamic memory allocation strategy");
-  {
-    BLPath p;
-    size_t kNumItems = 1000000;
-    size_t capacity = p.capacity();
-
-    for (size_t i = 0; i < kNumItems; i++) {
-      if (i == 0)
-        p.moveTo(0, 0);
-      else
-        p.moveTo(double(i), double(i));
-
-      if (capacity != p.capacity()) {
-        size_t implSize = BLPathPrivate::implSizeFromCapacity(p.capacity()).value();
-        INFO("  Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, p.capacity(), implSize);
-
-        capacity = p.capacity();
-      }
-    }
-  }
-}
-#endif

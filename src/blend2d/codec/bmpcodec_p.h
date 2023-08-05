@@ -79,7 +79,7 @@ struct BLBmpFileHeader {
   //! Offset to image data (54, 124, ...).
   uint32_t imageOffset;
 
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE void reset() noexcept { *this = BLBmpFileHeader{}; }
 
   BL_INLINE void byteSwap() {
     fileSize          = BLIntOps::byteSwap32(fileSize);

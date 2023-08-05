@@ -8,8 +8,8 @@
 #include "object_p.h"
 #include "runtime_p.h"
 #include "string_p.h"
-#include "tables_p.h"
 #include "var_p.h"
+#include "support/lookuptable_p.h"
 #include "support/memops_p.h"
 #include "support/ptrops_p.h"
 
@@ -74,8 +74,8 @@ template<size_t N>
 struct UInt32xN { uint32_t data[N]; };
 
 static BL_INLINE constexpr bool isArrayTypeValid(BLObjectType arrayType) noexcept {
-  return arrayType >= BL_OBJECT_TYPE_ARRAY_FIRST &&
-         arrayType <= BL_OBJECT_TYPE_ARRAY_LAST;
+  return arrayType >= BL_OBJECT_TYPE_MIN_ARRAY &&
+         arrayType <= BL_OBJECT_TYPE_MAX_ARRAY;
 }
 
 static BL_INLINE constexpr bool isArrayTypeObjectBased(BLObjectType arrayType) noexcept {
@@ -152,7 +152,7 @@ static BL_NOINLINE void releaseContentObjects(void* data, size_t nBytes) noexcep
   BL_ASSUME((nBytes % sizeof(BLObjectCore)) == 0);
 
   for (size_t i = 0; i < nBytes; i += sizeof(BLObjectCore))
-    blObjectPrivateReleaseUnknown(BLPtrOps::offset<BLObjectCore>(data, i));
+    BLObjectPrivate::releaseUnknownInstance(BLPtrOps::offset<BLObjectCore>(data, i));
 }
 
 static BL_INLINE void releaseContentByType(void* data, size_t nBytes, BLObjectType arrayType) noexcept {
@@ -172,9 +172,7 @@ static BL_INLINE void fillContentObjects(void* dst, size_t n, const void* src, s
 
   size_t i, j;
   for (j = 0; j < tupleSize; j++) {
-    const BLObjectCore& obj = srcObj[j];
-    if (obj._d.isRefCountedObject())
-      blObjectImplAddRef(obj._d.impl, n);
+    BLObjectPrivate::retainInstance(&srcObj[j], n);
   }
 
   for (i = 0; i < n; i++) {
@@ -228,27 +226,26 @@ static BL_INLINE bool equalsContent(const void* a, const void* b, size_t nBytes,
 // BLArray - Private - Alloc & Free Impl
 // =====================================
 
-static BL_INLINE uint8_t* initStatic(BLArrayCore* self, BLObjectType arrayType, size_t size = 0u) noexcept {
+static BL_INLINE BLResult initStatic(BLArrayCore* self, BLObjectType arrayType, size_t size = 0u) noexcept {
   self->_d = blObjectDefaults[arrayType]._d;
   // We know the size is default Impl is always zero, so make this faster than `BLObjectInfo::setAField()`.
   self->_d.info.bits |= uint32_t(size) << BL_OBJECT_INFO_A_SHIFT;
-  return self->_d.u8_data;
+
+  return BL_SUCCESS;
 }
 
-static BL_INLINE uint8_t* initDynamic(BLArrayCore* self, BLObjectType arrayType, size_t size, BLObjectImplSize implSize) noexcept {
-  BLArrayImpl* impl = blObjectDetailAllocImplT<BLArrayImpl>(self, BLObjectInfo::packType(arrayType), implSize, &implSize);
+static BL_INLINE BLResult initDynamic(BLArrayCore* self, BLObjectType arrayType, size_t size, BLObjectImplSize implSize) noexcept {
+  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(arrayType);
+  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLArrayImpl>(self, info, implSize));
 
-  if(BL_UNLIKELY(!impl))
-    return nullptr;
-
+  BLArrayImpl* impl = getImpl(self);
   uint8_t* data = BLPtrOps::offset<uint8_t>(impl, sizeof(BLArrayImpl));
   size_t itemSize = itemSizeTable[arrayType];
 
   impl->capacity = capacityFromImplSize(implSize, itemSize);
   impl->size = size;
   impl->data = data;
-
-  return data;
+  return BL_SUCCESS;
 }
 
 static BL_INLINE BLResult initExternal(
@@ -257,34 +254,30 @@ static BL_INLINE BLResult initExternal(
   BLDestroyExternalDataFunc destroyFunc, void* userData) noexcept {
 
   BLObjectImplSize implSize(sizeof(BLArrayImpl));
-  BLObjectInfo info = BLObjectInfo::packType(arrayType);
+  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(arrayType);
 
-  if (!(accessFlags & BL_DATA_ACCESS_WRITE))
-    info |= BL_OBJECT_INFO_IMMUTABLE_FLAG;
+  bool immutable = !(accessFlags & BL_DATA_ACCESS_WRITE);
+  BL_PROPAGATE(BLObjectPrivate::allocImplExternalT<BLArrayImpl>(self, info, implSize, immutable, destroyFunc, userData));
 
-  BLObjectExternalInfo* externalInfo;
-  void* externalOptData;
-
-  BLArrayImpl* impl = blObjectDetailAllocImplExternalT<BLArrayImpl>(self, info, implSize, &externalInfo, &externalOptData);
-  if (BL_UNLIKELY(!impl))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
-  externalInfo->destroyFunc = destroyFunc ? destroyFunc : blObjectDestroyExternalDataDummy;
-  externalInfo->userData = userData;
-
+  BLArrayImpl* impl = getImpl(self);
   impl->data = externalData;
   impl->size = size;
   impl->capacity = capacity;
-
   return BL_SUCCESS;
 }
 
-static BL_NOINLINE uint8_t* initArray(BLArrayCore* self, BLObjectType arrayType, size_t size, size_t capacity) noexcept {
+static BL_NOINLINE BLResult initArray(BLArrayCore* self, BLObjectType arrayType, size_t size, size_t capacity, uint8_t** out) noexcept {
   size_t ssoCapacity = ssoCapacityTable[arrayType];
-  if (capacity <= ssoCapacity)
-    return initStatic(self, arrayType, size);
-  else
-    return initDynamic(self, arrayType, size, implSizeFromCapacity(capacity, itemSizeFromArrayType(arrayType)));
+  if (capacity <= ssoCapacity) {
+    initStatic(self, arrayType, size);
+    *out = self->_d.u8_data;
+    return BL_SUCCESS;
+  }
+  else {
+    BL_PROPAGATE(initDynamic(self, arrayType, size, implSizeFromCapacity(capacity, itemSizeFromArrayType(arrayType))));
+    *out = getImpl(self)->dataAs<uint8_t>();
+    return BL_SUCCESS;
+  }
 }
 
 static BL_NOINLINE BLResult reallocToDynamic(BLArrayCore* self, BLObjectType arrayType, BLObjectImplSize implSize) noexcept {
@@ -294,12 +287,10 @@ static BL_NOINLINE BLResult reallocToDynamic(BLArrayCore* self, BLObjectType arr
   size_t itemSize = itemSizeFromArrayType(arrayType);
 
   BLArrayCore newO;
-  uint8_t* dst = initDynamic(&newO, arrayType, size, implSize);
+  BL_PROPAGATE(initDynamic(&newO, arrayType, size, implSize));
 
-  if (BL_UNLIKELY(!dst))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
-  if (self->_d.refCountedFlag() && blObjectImplGetRefCount(self->_d.impl) == 1) {
+  uint8_t* dst = getImpl(&newO)->dataAs<uint8_t>();
+  if (isInstanceDynamicAndMutable(self)) {
     BLArrayImpl* tmpI = getImpl(self);
     memcpy(dst, tmpI->data, size * itemSize);
     tmpI->size = 0;
@@ -311,11 +302,10 @@ static BL_NOINLINE BLResult reallocToDynamic(BLArrayCore* self, BLObjectType arr
   return replaceInstance(self, &newO);
 }
 
-BLResult freeImpl(BLArrayImpl* impl, BLObjectInfo info) noexcept {
-  if (info.xFlag())
-    blObjectDetailCallExternalDestroyFunc(impl, info, BLObjectImplSize(sizeof(BLArrayImpl)), impl->data);
-
-  return blObjectImplFreeInline(impl, info);
+BLResult freeImpl(BLArrayImpl* impl) noexcept {
+  if (BLObjectPrivate::isImplExternal(impl))
+    BLObjectPrivate::callExternalDestroyFunc(impl, impl->data);
+  return BLObjectPrivate::freeImpl(impl);
 }
 
 // BLArray - Private - Typed Operations
@@ -345,7 +335,7 @@ static BL_INLINE BLResult appendTypeT(BLArrayCore* self, T value) noexcept {
 
     size_t size = selfI->size;
     size_t capacity = selfI->capacity;
-    size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+    size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
 
     // Not enough capacity or not mutable - bail to the generic implementation.
     if ((size | immutableMsk) >= capacity)
@@ -384,7 +374,7 @@ static BL_INLINE BLResult replaceTypeT(BLArrayCore* self, size_t index, T value)
       return blTraceError(BL_ERROR_INVALID_VALUE);
 
     // Not mutable - don't inline as this is an expensive case anyway.
-    if (!isMutable(self))
+    if (!isImplMutable(selfI))
       return blArrayReplaceItem(self, index, &value);
 
     T* data = selfI->dataAs<T>();
@@ -429,9 +419,7 @@ BL_API_IMPL BLResult blArrayInitMove(BLArrayCore* self, BLArrayCore* other) noex
   BL_ASSERT(other->_d.isArray());
 
   self->_d = other->_d;
-  initStatic(other, other->_d.rawType());
-
-  return BL_SUCCESS;
+  return initStatic(other, other->_d.rawType());
 }
 
 BL_API_IMPL BLResult blArrayInitWeak(BLArrayCore* self, const BLArrayCore* other) noexcept {
@@ -440,7 +428,8 @@ BL_API_IMPL BLResult blArrayInitWeak(BLArrayCore* self, const BLArrayCore* other
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isArray());
 
-  return blObjectPrivateInitWeakTagged(self, other);
+  self->_d = other->_d;
+  return retainInstance(self);
 }
 
 BL_API_IMPL BLResult blArrayDestroy(BLArrayCore* self) noexcept {
@@ -511,10 +500,9 @@ BL_API_IMPL BLResult blArrayClear(BLArrayCore* self) noexcept {
     BLArrayImpl* selfI = getImpl(self);
     BLObjectType arrayType = self->_d.rawType();
 
-    if (!isMutable(self)) {
+    if (!isImplMutable(selfI)) {
       releaseInstance(self);
-      initStatic(self, arrayType);
-      return BL_SUCCESS;
+      return initStatic(self, arrayType);
     }
 
     size_t size = selfI->size;
@@ -545,13 +533,14 @@ BL_API_IMPL BLResult blArrayShrink(BLArrayCore* self) noexcept {
       return BL_SUCCESS;
 
     BLArrayCore newO;
-    newO._d.initStatic(arrayType, BLObjectInfo::packAbcpFields(uint32_t(u.size), ssoCapacity));
+    newO._d.initStatic(BLObjectInfo::fromTypeWithMarker(arrayType) |
+                       BLObjectInfo::fromAbcp(uint32_t(u.size), ssoCapacity));
     memcpy(newO._d.u8_data, u.data, u.size * itemSize);
     return replaceInstance(self, &newO);
   }
 
   // 2. Don't touch arrays that hold external data.
-  if (self->_d.xFlag())
+  if (BLObjectPrivate::isImplExternal(self->_d.impl))
     return BL_SUCCESS;
 
   // 2. Only reallocate if we can save at least a single cache line.
@@ -573,17 +562,15 @@ BL_API_IMPL BLResult blArrayResize(BLArrayCore* self, size_t n, const void* fill
   size_t itemSize = itemSizeFromArrayType(arrayType);
 
   // If `n` is smaller than the current `size` then this is a truncation. We only have
-  // to  cover the BLObjectCore[] case, which means to destroy all variants beyond `n`.
+  // to cover the BLObjectCore[] case, which means to destroy all variants beyond `n`.
   if (n <= u.size) {
-    if (!isMutable(self)) {
+    if (!isInstanceMutable(self)) {
       if (n == u.size)
         return BL_SUCCESS;
 
       BLArrayCore newO;
-      uint8_t* dst = initArray(&newO, arrayType, n, n);
-
-      if (BL_UNLIKELY(!dst))
-        return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+      uint8_t* dst;
+      BL_PROPAGATE(initArray(&newO, arrayType, n, n, &dst));
 
       initContentByType(dst, u.data, n * itemSize, arrayType);
       return replaceInstance(self, &newO);
@@ -616,7 +603,7 @@ BL_API_IMPL BLResult blArrayReserve(BLArrayCore* self, size_t n) noexcept {
   BL_ASSERT(self->_d.isArray());
 
   UnpackedData u = unpack(self);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
 
   if ((n | immutableMsk) <= u.capacity)
     return BL_SUCCESS;
@@ -631,7 +618,9 @@ BL_API_IMPL BLResult blArrayReserve(BLArrayCore* self, size_t n) noexcept {
 
   if (n <= ssoCapacity) {
     BLArrayCore newO;
-    uint8_t* dst = initStatic(&newO, arrayType, u.size);
+    initStatic(&newO, arrayType, u.size);
+
+    uint8_t* dst = newO._d.u8_data;
     BLMemOps::copyForwardInlineT(dst, getImpl(self)->dataAs<uint8_t>(), u.size * itemSize);
     return replaceInstance(self, &newO);
   }
@@ -650,7 +639,7 @@ BL_API_IMPL BLResult blArrayMakeMutable(BLArrayCore* self, void** dataOut) noexc
   }
 
   BLArrayImpl* selfI = getImpl(self);
-  if (isMutable(self)) {
+  if (isImplMutable(selfI)) {
     *dataOut = selfI->data;
     return BL_SUCCESS;
   }
@@ -660,11 +649,9 @@ BL_API_IMPL BLResult blArrayMakeMutable(BLArrayCore* self, void** dataOut) noexc
   size_t itemSize = itemSizeFromArrayType(arrayType);
 
   BLArrayCore tmp = *self;
-  uint8_t* dst = initArray(self, arrayType, size, size);
+  uint8_t* dst;
 
-  if (BL_UNLIKELY(!dst))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+  BL_PROPAGATE(initArray(self, arrayType, size, size, &dst));
   initContentByType(dst, selfI->data, size * itemSize, arrayType);
   releaseInstance(&tmp);
 
@@ -719,7 +706,7 @@ BL_API_IMPL BLResult blArrayModifyOp(BLArrayCore* self, BLModifyOp op, size_t n,
   }
   else {
     BLArrayImpl* selfI = getImpl(self);
-    size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+    size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
 
     u.data = selfI->dataAs<uint8_t>();
     u.size = selfI->size;
@@ -762,7 +749,8 @@ BL_API_IMPL BLResult blArrayModifyOp(BLArrayCore* self, BLModifyOp op, size_t n,
     // The new content fits in static storage, which implies that the current content must be dynamic.
     BL_ASSERT(!self->_d.sso());
 
-    newO._d.initStatic(arrayType, BLObjectInfo::packAbcpFields(uint32_t(sizeAfter), uint32_t(ssoCapacity)));
+    newO._d.initStatic(BLObjectInfo::fromTypeWithMarker(arrayType) |
+                       BLObjectInfo::fromAbcp(uint32_t(sizeAfter), uint32_t(ssoCapacity)));
     BLMemOps::copyForwardInlineT(newO._d.u8_data, u.data, index * itemSize);
 
     *dataOut = self->_d.u8_data + index * itemSize;
@@ -770,12 +758,10 @@ BL_API_IMPL BLResult blArrayModifyOp(BLArrayCore* self, BLModifyOp op, size_t n,
   }
   else {
     BLObjectImplSize implSize = expandImplSizeWithModifyOp(implSizeFromCapacity(sizeAfter, itemSize), op);
-    uint8_t* dst = initDynamic(&newO, arrayType, sizeAfter, implSize);
+    BL_PROPAGATE(initDynamic(&newO, arrayType, sizeAfter, implSize));
 
-    if (BL_UNLIKELY(!dst))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
-    if (self->_d.refCountedFlag() && blObjectImplGetRefCount(self->_d.impl) == 1) {
+    uint8_t* dst = getImpl(&newO)->dataAs<uint8_t>();
+    if (self->_d.isDynamicObject() && BLObjectPrivate::isImplMutable(self->_d.impl)) {
       // Use memcpy() instead of weak copying if the original data is gonna be destroyed.
       memcpy(dst, u.data, index * itemSize);
       // We have to patch the source Impl as releaseInstance() as we have moved the content.
@@ -799,7 +785,7 @@ BL_API_IMPL BLResult blArrayInsertOp(BLArrayCore* self, size_t index, size_t n, 
   size_t itemSize = itemSizeFromArrayType(arrayType);
 
   size_t sizeAfter = BLIntOps::uaddSaturate(u.size, n);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
 
   if ((sizeAfter | immutableMsk) > u.capacity) {
     if (BL_UNLIKELY(sizeAfter > maximumCapacityTable[arrayType]))
@@ -812,15 +798,15 @@ BL_API_IMPL BLResult blArrayInsertOp(BLArrayCore* self, size_t index, size_t n, 
 
     size_t ssoCapacity = ssoCapacityTable[arrayType];
     if (sizeAfter <= ssoCapacity) {
-      dst = initStatic(self, arrayType, sizeAfter);
+      initStatic(self, arrayType, sizeAfter);
+      dst = self->_d.u8_data;
     }
     else {
       BLObjectImplSize implSize = expandImplSize(implSizeFromCapacity(sizeAfter, itemSize));
-      dst = initDynamic(self, arrayType, sizeAfter, implSize);
-      if (BL_UNLIKELY(!dst)) {
-        *dataOut = nullptr;
-        return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-      }
+      *dataOut = nullptr;
+
+      BL_PROPAGATE(initDynamic(self, arrayType, sizeAfter, implSize));
+      dst = getImpl(self)->dataAs<uint8_t>();
     }
 
     if (!immutableMsk) {
@@ -870,7 +856,7 @@ BL_API_IMPL BLResult blArrayAssignWeak(BLArrayCore* self, const BLArrayCore* oth
   BL_ASSERT(other->_d.isArray());
   BL_ASSERT(self->_d.rawType() == other->_d.rawType());
 
-  blObjectPrivateAddRefIfRCTagSet(other);
+  retainInstance(other);
   return replaceInstance(self, other);
 }
 
@@ -891,7 +877,7 @@ BL_API_IMPL BLResult blArrayAssignData(BLArrayCore* self, const void* items, siz
   UnpackedData u = unpack(self);
   BLObjectType arrayType = self->_d.rawType();
   size_t itemSize = itemSizeFromArrayType(arrayType);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
 
   if ((n | immutableMsk) > u.capacity) {
     if (BL_UNLIKELY(n > maximumCapacityTable[arrayType]))
@@ -899,11 +885,9 @@ BL_API_IMPL BLResult blArrayAssignData(BLArrayCore* self, const void* items, siz
 
     BLObjectImplSize implSize = implSizeFromCapacity(u.size, itemSize);
     BLArrayCore newO;
+    BL_PROPAGATE(initDynamic(&newO, arrayType, n, implSize));
 
-    uint8_t* dst = initDynamic(&newO, arrayType, n, implSize);
-    if (BL_UNLIKELY(!dst))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+    uint8_t* dst = getImpl(&newO)->dataAs<uint8_t>();
     initContentByType(dst, items, n * itemSize, arrayType);
     return replaceInstance(self, &newO);
   }
@@ -965,7 +949,7 @@ BL_API_IMPL BLResult blArrayAppendItem(BLArrayCore* self, const void* item) noex
   UnpackedData u = unpack(self);
   BLObjectType arrayType = self->_d.rawType();
   size_t itemSize = itemSizeFromArrayType(arrayType);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
 
   if (BL_UNLIKELY((u.size | immutableMsk) >= u.capacity)) {
     if (BL_UNLIKELY(u.size >= maximumCapacityTable[arrayType]))
@@ -973,12 +957,10 @@ BL_API_IMPL BLResult blArrayAppendItem(BLArrayCore* self, const void* item) noex
 
     BLArrayCore newO;
     BLObjectImplSize implSize = expandImplSize(implSizeFromCapacity(u.size + 1u, itemSize));
-
-    uint8_t* dst = initDynamic(&newO, arrayType, u.size + 1, implSize);
-    if (BL_UNLIKELY(!dst))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    BL_PROPAGATE(initDynamic(&newO, arrayType, u.size + 1, implSize));
 
     // Copy the existing data to a new place / move if the data will be destroyed.
+    uint8_t* dst = getImpl(&newO)->dataAs<uint8_t>();
     if (!immutableMsk) {
       setSize(self, 0);
       memcpy(dst, u.data, u.size * itemSize);
@@ -1005,7 +987,7 @@ BL_API_IMPL BLResult blArrayAppendData(BLArrayCore* self, const void* items, siz
   UnpackedData u = unpack(self);
   BLObjectType arrayType = self->_d.rawType();
   size_t itemSize = itemSizeFromArrayType(arrayType);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
 
   size_t sizeAfter = BLIntOps::uaddSaturate(u.size, n);
 
@@ -1015,12 +997,10 @@ BL_API_IMPL BLResult blArrayAppendData(BLArrayCore* self, const void* items, siz
 
     BLArrayCore newO;
     BLObjectImplSize implSize = expandImplSize(implSizeFromCapacity(sizeAfter, itemSize));
-
-    uint8_t* dst = initDynamic(&newO, arrayType, sizeAfter, implSize);
-    if (BL_UNLIKELY(!dst))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    BL_PROPAGATE(initDynamic(&newO, arrayType, sizeAfter, implSize));
 
     // Copy the existing data to a new place / move if the data will be destroyed.
+    uint8_t* dst = getImpl(&newO)->dataAs<uint8_t>();
     if (!immutableMsk) {
       setSize(self, 0);
       memcpy(dst, u.data, u.size * itemSize);
@@ -1058,7 +1038,7 @@ BL_API_IMPL BLResult blArrayInsertData(BLArrayCore* self, size_t index, const vo
   UnpackedData u = unpack(self);
   BLObjectType arrayType = self->_d.rawType();
   size_t itemSize = itemSizeFromArrayType(arrayType);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
 
   size_t endIndex = index + n;
   size_t sizeAfter = BLIntOps::uaddSaturate(u.size, n);
@@ -1069,11 +1049,9 @@ BL_API_IMPL BLResult blArrayInsertData(BLArrayCore* self, size_t index, const vo
 
     BLObjectImplSize implSize = expandImplSize(implSizeFromCapacity(sizeAfter, itemSize));
     BLArrayCore newO;
+    BL_PROPAGATE(initDynamic(&newO, arrayType, sizeAfter, implSize));
 
-    uint8_t* dst = initDynamic(&newO, arrayType, sizeAfter, implSize);
-    if (BL_UNLIKELY(!dst))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+    uint8_t* dst = getImpl(&newO)->dataAs<uint8_t>();
     if (!immutableMsk) {
       setSize(self, 0);
       memcpy(dst, u.data, index * itemSize);
@@ -1166,15 +1144,13 @@ BL_API_IMPL BLResult blArrayReplaceItem(BLArrayCore* self, size_t index, const v
   BLObjectType arrayType = self->_d.rawType();
   size_t itemSize = itemSizeFromArrayType(arrayType);
 
-  if (!isMutable(self)) {
+  if (!isInstanceMutable(self)) {
     BLArrayCore newO;
     BLObjectImplSize implSize = implSizeFromCapacity(u.size, itemSize);
+    BL_PROPAGATE(initDynamic(&newO, arrayType, u.size, implSize));
 
-    uint8_t* dst = initDynamic(&newO, arrayType, u.size, implSize);
+    uint8_t* dst = getImpl(&newO)->dataAs<uint8_t>();
     const uint8_t* src = u.data;
-
-    if (BL_UNLIKELY(!dst))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
     initContentByType(dst, src, index * itemSize, arrayType);
     dst += index * itemSize;
@@ -1211,7 +1187,7 @@ BL_API_IMPL BLResult blArrayReplaceData(BLArrayCore* self, size_t rStart, size_t
   size_t tailSize = u.size - end;
   size_t sizeAfter = u.size - rangeSize + n;
 
-  if (isMutable(self)) {
+  if (isInstanceMutable(self)) {
     // 0           |<-Start   End->|          | <- Size
     // ^***********^***************^**********^
     // | Unchanged |  Replacement  | TailSize |
@@ -1239,14 +1215,12 @@ BL_API_IMPL BLResult blArrayReplaceData(BLArrayCore* self, size_t rStart, size_t
 
   // Array is either immmutable or its data overlaps with `items`.
   BLArrayCore newO;
+  uint8_t* dst;
+  BL_PROPAGATE(initArray(&newO, arrayType, sizeAfter, sizeAfter, &dst));
 
-  uint8_t* dst = initArray(&newO, arrayType, sizeAfter, sizeAfter);
   const uint8_t* src = u.data;
-
-  if (BL_UNLIKELY(!dst))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
   initContentByType(dst, src, index * itemSize, arrayType);
+
   dst += index * itemSize;
   src += (index + rangeSize) * itemSize;
 
@@ -1293,12 +1267,12 @@ BL_API_IMPL BLResult blArrayRemoveRange(BLArrayCore* self, size_t rStart, size_t
     self->_d.info.setAField(uint32_t(sizeAfter));
     return BL_SUCCESS;
   }
-  else if (!isMutable(self)) {
-    BLArrayCore newO;
-    uint8_t* dst = initArray(&newO, arrayType, sizeAfter, sizeAfter);
 
-    if (BL_UNLIKELY(!dst))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+  BLArrayImpl* selfI = getImpl(self);
+  if (!isImplMutable(selfI)) {
+    BLArrayCore newO;
+    uint8_t* dst;
+    BL_PROPAGATE(initArray(&newO, arrayType, sizeAfter, sizeAfter, &dst));
 
     initContentByType(dst, u.data, index * itemSize, arrayType);
     initContentByType(dst + index * itemSize, u.data + end * itemSize, (u.size - end) * itemSize, arrayType);
@@ -1311,7 +1285,7 @@ BL_API_IMPL BLResult blArrayRemoveRange(BLArrayCore* self, size_t rStart, size_t
     releaseContentByType(data, n * itemSize, arrayType);
     memmove(data, data + n * itemSize, (u.size - end) * itemSize);
 
-    setSize(self, sizeAfter);
+    selfI->size = sizeAfter;
     return BL_SUCCESS;
   }
 }
@@ -1325,7 +1299,7 @@ BL_API_IMPL bool blArrayEquals(const BLArrayCore* a, const BLArrayCore* b) noexc
   BL_ASSERT(a->_d.isArray());
   BL_ASSERT(b->_d.isArray());
 
-  if (blObjectPrivateBinaryEquals(a, b))
+  if (a->_d == b->_d)
     return true;
 
   // NOTE: This should never happen. Mixing array types is not supported.
@@ -1352,228 +1326,9 @@ BL_API_IMPL bool blArrayEquals(const BLArrayCore* a, const BLArrayCore* b) noexc
 void blArrayRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
-  for (uint32_t objectType = BL_OBJECT_TYPE_ARRAY_FIRST; objectType <= BL_OBJECT_TYPE_ARRAY_LAST; objectType++) {
+  for (uint32_t objectType = BL_OBJECT_TYPE_MIN_ARRAY; objectType <= BL_OBJECT_TYPE_MAX_ARRAY; objectType++) {
     blObjectDefaults[objectType]._d.initStatic(
-      BLObjectType(objectType),
-      BLObjectInfo::packAbcpFields(0, BLArrayPrivate::ssoCapacityTable[objectType]));
+      BLObjectInfo::fromTypeWithMarker(BLObjectType(objectType)) |
+      BLObjectInfo::fromAbcp(0, BLArrayPrivate::ssoCapacityTable[objectType]));
   }
 }
-
-// BLArray - Tests
-// ===============
-
-#if defined(BL_TEST)
-UNIT(array, BL_TEST_GROUP_CORE_CONTAINERS) {
-  INFO("Basic functionality - BLArray<int>");
-  {
-    BLArray<int> a;
-    EXPECT_EQ(a.size(), 0u);
-    EXPECT_GT(a.capacity(), 0u);
-    EXPECT_TRUE(a._d.sso());
-
-    // [42]
-    EXPECT_SUCCESS(a.append(42));
-    EXPECT_EQ(a.size(), 1u);
-    EXPECT_EQ(a[0], 42);
-    EXPECT_TRUE(a._d.sso());
-
-    // [42, 1, 2, 3]
-    EXPECT_SUCCESS(a.append(1, 2, 3));
-    EXPECT_EQ(a.size(), 4u);
-    EXPECT_GE(a.capacity(), 4u);
-    EXPECT_EQ(a[0], 42);
-    EXPECT_EQ(a[1], 1);
-    EXPECT_EQ(a[2], 2);
-    EXPECT_EQ(a[3], 3);
-    EXPECT_FALSE(a._d.sso());
-
-    // [10, 42, 1, 2, 3]
-    EXPECT_SUCCESS(a.prepend(10));
-    EXPECT_EQ(a.size(), 5u);
-    EXPECT_EQ(a[0], 10);
-    EXPECT_EQ(a[1], 42);
-    EXPECT_EQ(a[2], 1);
-    EXPECT_EQ(a[3], 2);
-    EXPECT_EQ(a[4], 3);
-    EXPECT_EQ(a.indexOf(4), SIZE_MAX);
-    EXPECT_EQ(a.indexOf(3), 4u);
-    EXPECT_EQ(a.lastIndexOf(4), SIZE_MAX);
-    EXPECT_EQ(a.lastIndexOf(10), 0u);
-
-    BLArray<int> b;
-    EXPECT_SUCCESS(b.append(10, 42, 1, 2, 3));
-    EXPECT_TRUE(a.equals(b));
-    EXPECT_SUCCESS(b.append(99));
-    EXPECT_FALSE(a.equals(b));
-
-    // [10, 3]
-    EXPECT_SUCCESS(a.remove(BLRange{1, 4}));
-    EXPECT_EQ(a.size(), 2u);
-    EXPECT_EQ(a[0], 10);
-    EXPECT_EQ(a[1], 3);
-
-    // [10, 33, 3]
-    EXPECT_SUCCESS(a.insert(1, 33));
-    EXPECT_EQ(a.size(), 3u);
-    EXPECT_EQ(a[0], 10);
-    EXPECT_EQ(a[1], 33);
-    EXPECT_EQ(a[2], 3);
-
-    // [10, 33, 3, 999, 1010, 2293]
-    EXPECT_SUCCESS(a.insert(2, 999, 1010, 2293));
-    EXPECT_EQ(a.size(), 6u);
-    EXPECT_EQ(a[0], 10);
-    EXPECT_EQ(a[1], 33);
-    EXPECT_EQ(a[2], 999);
-    EXPECT_EQ(a[3], 1010);
-    EXPECT_EQ(a[4], 2293);
-    EXPECT_EQ(a[5], 3);
-
-    EXPECT_SUCCESS(a.insert(6, 1));
-    EXPECT_EQ(a[6], 1);
-
-    EXPECT_SUCCESS(a.clear());
-    EXPECT_SUCCESS(a.insert(0, 1));
-    EXPECT_SUCCESS(a.insert(1, 2));
-    EXPECT_EQ(a[0], 1);
-    EXPECT_EQ(a[1], 2);
-  }
-
-  INFO("Basic functionality - BLArray<uint8_t>");
-  {
-    auto accumulate = [](const BLArray<uint8_t>& array) noexcept -> uint32_t {
-      uint32_t acc = 0;
-      for (auto v : array.view())
-        acc += v;
-      return acc;
-    };
-
-    BLArray<uint8_t> a;
-    EXPECT_TRUE(a.empty());
-
-    for (size_t i = 0; i < 256; i++) {
-      EXPECT_SUCCESS(a.append(uint8_t(i & 0xFF)));
-      EXPECT_EQ(a.size(), i + 1);
-    }
-    EXPECT_EQ(accumulate(a), uint32_t(255 * 128));
-
-    BLArray<uint8_t> b;
-    for (uint32_t i = 0; i < 256; i++) {
-      b.appendData(a.view());
-    }
-    EXPECT_EQ(accumulate(b), uint32_t(255 * 128 * 256));
-
-    a.reset();
-    EXPECT_TRUE(a.empty());
-    EXPECT_TRUE(a._d.sso());
-
-    for (size_t i = 0; i < 256; i += 2) {
-      a.append(uint8_t(i & 0xFFu), uint8_t((i + 1) & 0xFFu));
-    }
-    EXPECT_EQ(accumulate(a), uint32_t(255 * 128));
-
-    for (size_t i = 0; i < 256 * 255; i += 2) {
-      a.append(uint8_t(i & 0xFFu), uint8_t((i + 1) & 0xFFu));
-    }
-    EXPECT_EQ(accumulate(b), uint32_t(255 * 128 * 256));
-  }
-
-  INFO("Basic functionality - BLArray<uint64_t>");
-  {
-    BLArray<uint64_t> a;
-
-    EXPECT_EQ(a.size(), 0u);
-    EXPECT_GT(a.capacity(), 0u);
-    EXPECT_TRUE(a._d.sso());
-
-    for (size_t i = 0; i < 1000; i++)
-      EXPECT_SUCCESS(a.append(i));
-
-    // NOTE: AppendItem must work, but it's never called by C++ API (C++ API would call blArrayAppendU64 instead).
-    for (uint64_t i = 0; i < 1000; i++)
-      EXPECT_SUCCESS(blArrayAppendItem(&a, &i));
-
-    EXPECT_EQ(a.size(), 2000u);
-    for (size_t i = 0; i < 2000; i++)
-      EXPECT_EQ(a[i], i % 1000u);
-  }
-
-  INFO("Basic functionality - C API");
-  {
-    BLArrayCore a;
-    BLArray<uint64_t> b;
-
-    EXPECT_SUCCESS(blArrayInit(&a, BL_OBJECT_TYPE_ARRAY_UINT64));
-    EXPECT_EQ(blArrayGetSize(&a), b.size());
-    EXPECT_EQ(blArrayGetCapacity(&a), b.capacity());
-
-    const uint64_t items[] = { 1, 2, 3, 4, 5 };
-    EXPECT_SUCCESS(blArrayAppendData(&a, &items, BL_ARRAY_SIZE(items)));
-    EXPECT_EQ(blArrayGetSize(&a), 5u);
-
-    for (size_t i = 0; i < BL_ARRAY_SIZE(items); i++)
-      EXPECT_EQ(static_cast<const uint64_t*>(blArrayGetData(&a))[i], items[i]);
-
-    EXPECT_SUCCESS(blArrayInsertData(&a, 1, &items, BL_ARRAY_SIZE(items)));
-    const uint64_t itemsAfterInsertion[] = { 1, 1, 2, 3, 4, 5, 2, 3, 4, 5 };
-    for (size_t i = 0; i < BL_ARRAY_SIZE(itemsAfterInsertion); i++)
-      EXPECT_EQ(static_cast<const uint64_t*>(blArrayGetData(&a))[i], itemsAfterInsertion[i]);
-
-    EXPECT_SUCCESS(blArrayDestroy(&a));
-  }
-
-  INFO("External array");
-  {
-    BLArray<int> a;
-    int externalData[4] = { 0 };
-
-    EXPECT_SUCCESS(a.assignExternalData(externalData, 0, 4, BL_DATA_ACCESS_RW));
-    EXPECT_EQ(a.data(), externalData);
-
-    EXPECT_SUCCESS(a.append(42));
-    EXPECT_EQ(externalData[0], 42);
-
-    EXPECT_SUCCESS(a.append(1, 2, 3));
-    EXPECT_EQ(externalData[3], 3);
-
-    // Appending more items the external array can hold must reallocate it.
-    EXPECT_SUCCESS(a.append(4));
-    EXPECT_NE(a.data(), externalData);
-    EXPECT_EQ(a[0], 42);
-    EXPECT_EQ(a[1], 1);
-    EXPECT_EQ(a[2], 2);
-    EXPECT_EQ(a[3], 3);
-    EXPECT_EQ(a[4], 4);
-  }
-
-  INFO("String array");
-  {
-    BLArray<BLString> a;
-    EXPECT_EQ(a.size(), 0u);
-
-    a.append(BLString("Hello"));
-    EXPECT_EQ(a.size(), 1u);
-    EXPECT_TRUE(a[0].equals("Hello"));
-
-    a.insert(0, BLString("Blend2D"));
-    EXPECT_EQ(a.size(), 2u);
-    EXPECT_TRUE(a[0].equals("Blend2D"));
-    EXPECT_TRUE(a[1].equals("Hello"));
-
-    a.insert(2, BLString("World!"));
-    EXPECT_EQ(a.size(), 3u);
-    EXPECT_TRUE(a[0].equals("Blend2D"));
-    EXPECT_TRUE(a[1].equals("Hello"));
-    EXPECT_TRUE(a[2].equals("World!"));
-
-    a.insertData(1, a.view());
-    EXPECT_EQ(a.size(), 6u);
-    EXPECT_TRUE(a[0].equals("Blend2D"));
-    EXPECT_TRUE(a[1].equals("Blend2D"));
-    EXPECT_TRUE(a[2].equals("Hello"));
-    EXPECT_TRUE(a[3].equals("World!"));
-    EXPECT_TRUE(a[4].equals("Hello"));
-    EXPECT_TRUE(a[5].equals("World!"));
-  }
-}
-#endif

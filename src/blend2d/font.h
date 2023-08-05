@@ -49,15 +49,15 @@ BL_API BLResult BL_CDECL blFontSetFeatureSettings(BLFontCore* self, const BLFont
 BL_API BLResult BL_CDECL blFontResetFeatureSettings(BLFontCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontShape(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, BLGlyphMappingState* stateOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, uint32_t positioningFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontApplyKerning(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontApplyGSub(const BLFontCore* self, BLGlyphBufferCore* gb, const BLBitArrayCore* lookups) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontApplyGPos(const BLFontCore* self, BLGlyphBufferCore* gb, const BLBitArrayCore* lookups) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontGetTextMetrics(const BLFontCore* self, BLGlyphBufferCore* gb, BLTextMetrics* out) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontGetGlyphBounds(const BLFontCore* self, const uint32_t* glyphData, intptr_t glyphAdvance, BLBoxI* out, size_t count) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontGetGlyphAdvances(const BLFontCore* self, const uint32_t* glyphData, intptr_t glyphAdvance, BLGlyphPlacement* out, size_t count) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetGlyphOutlines(const BLFontCore* self, BLGlyphId glyphId, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* userData) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* glyphRun, const BLMatrix2D* userMatrix, BLPathCore* out, BLPathSinkFunc sink, void* userData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetGlyphOutlines(const BLFontCore* self, BLGlyphId glyphId, const BLMatrix2D* userTransform, BLPathCore* out, BLPathSinkFunc sink, void* userData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, const BLGlyphRun* glyphRun, const BLMatrix2D* userTransform, BLPathCore* out, BLPathSinkFunc sink, void* userData) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
 
@@ -106,7 +106,7 @@ struct BLFontImpl BL_CLASS_INHERITS(BLObjectImpl) {
 #ifdef __cplusplus
 
 //! Font [C++ API].
-class BLFont : public BLFontCore {
+class BLFont final : public BLFontCore {
 public:
   //! \cond INTERNAL
   //! \name Internals
@@ -123,7 +123,11 @@ public:
   BL_INLINE_NODEBUG BLFont() noexcept { blFontInit(this); }
   BL_INLINE_NODEBUG BLFont(BLFont&& other) noexcept { blFontInitMove(this, &other); }
   BL_INLINE_NODEBUG BLFont(const BLFont& other) noexcept { blFontInitWeak(this, &other); }
-  BL_INLINE_NODEBUG ~BLFont() noexcept { blFontDestroy(this); }
+
+  BL_INLINE_NODEBUG ~BLFont() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blFontDestroy(this);
+  }
 
   //! \}
 
@@ -254,8 +258,8 @@ public:
     return blFontMapTextToGlyphs(this, &gb, &stateOut);
   }
 
-  BL_INLINE_NODEBUG BLResult positionGlyphs(BLGlyphBufferCore& gb, uint32_t positioningFlags = 0xFFFFFFFFu) const noexcept {
-    return blFontPositionGlyphs(this, &gb, positioningFlags);
+  BL_INLINE_NODEBUG BLResult positionGlyphs(BLGlyphBufferCore& gb) const noexcept {
+    return blFontPositionGlyphs(this, &gb);
   }
 
   BL_INLINE_NODEBUG BLResult applyKerning(BLGlyphBufferCore& gb) const noexcept {
@@ -286,16 +290,16 @@ public:
     return blFontGetGlyphOutlines(this, glyphId, nullptr, &out, sink, userData);
   }
 
-  BL_INLINE_NODEBUG BLResult getGlyphOutlines(BLGlyphId glyphId, const BLMatrix2D& userMatrix, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
-    return blFontGetGlyphOutlines(this, glyphId, &userMatrix, &out, sink, userData);
+  BL_INLINE_NODEBUG BLResult getGlyphOutlines(BLGlyphId glyphId, const BLMatrix2D& userTransform, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
+    return blFontGetGlyphOutlines(this, glyphId, &userTransform, &out, sink, userData);
   }
 
   BL_INLINE_NODEBUG BLResult getGlyphRunOutlines(const BLGlyphRun& glyphRun, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
     return blFontGetGlyphRunOutlines(this, &glyphRun, nullptr, &out, sink, userData);
   }
 
-  BL_INLINE_NODEBUG BLResult getGlyphRunOutlines(const BLGlyphRun& glyphRun, const BLMatrix2D& userMatrix, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
-    return blFontGetGlyphRunOutlines(this, &glyphRun, &userMatrix, &out, sink, userData);
+  BL_INLINE_NODEBUG BLResult getGlyphRunOutlines(const BLGlyphRun& glyphRun, const BLMatrix2D& userTransform, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
+    return blFontGetGlyphRunOutlines(this, &glyphRun, &userTransform, &out, sink, userData);
   }
 
   //! \}

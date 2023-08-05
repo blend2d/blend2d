@@ -20,6 +20,7 @@ Funcs funcs;
 namespace Interpolation {
 
 BL_HIDDEN void BL_CDECL interpolate_prgb32(uint32_t* dPtr, uint32_t dSize, const BLGradientStop* sPtr, size_t sSize) noexcept;
+BL_HIDDEN void BL_CDECL interpolate_prgb64(uint64_t* dPtr, uint32_t dSize, const BLGradientStop* sPtr, size_t sSize) noexcept;
 
 #ifdef BL_BUILD_OPT_SSE2
 BL_HIDDEN void BL_CDECL interpolate_prgb32_sse2(uint32_t* dPtr, uint32_t dSize, const BLGradientStop* sPtr, size_t sSize) noexcept;
@@ -44,6 +45,7 @@ void blPixelOpsRtInit(BLRuntimeContext* rt) noexcept {
 
   // Initialize gradient ops.
   funcs.interpolate_prgb32 = BLPixelOps::Interpolation::interpolate_prgb32;
+  funcs.interpolate_prgb64 = BLPixelOps::Interpolation::interpolate_prgb64;
 
 #ifdef BL_BUILD_OPT_SSE2
   if (blRuntimeHasSSE2(rt)) {

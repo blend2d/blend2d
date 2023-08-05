@@ -65,8 +65,8 @@ BL_DEFINE_ENUM(BLFormatFlags) {
   //! Pixel format doesn't use native byte-order (I/O only).
   BL_FORMAT_FLAG_BYTE_SWAP = 0x00000200u,
 
-  // The following flags are only informative. They are part of `blFormatInfo[]`, but doesn't have to be passed to
-  // `BLPixelConverter` as they can be easily calculated.
+  // The following flags are only informative. They are part of `blFormatInfo[]`, but don't have to be passed to
+  // `BLPixelConverter` as they will always be calculated automatically.
 
   //! Pixel components are byte aligned (all 8bpp).
   BL_FORMAT_FLAG_BYTE_ALIGNED = 0x00010000u,
@@ -144,7 +144,7 @@ struct BLFormatInfo {
   BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) == 0; }
   BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) != 0; }
 
-  BL_INLINE_NODEBUG void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLFormatInfo{}; }
 
   BL_INLINE void init(uint32_t depth_, uint32_t flags_, const uint8_t sizes_[4], const uint8_t shifts_[4]) noexcept {
     depth = depth_;

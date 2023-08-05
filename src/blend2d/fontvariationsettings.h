@@ -133,7 +133,7 @@ struct BLFontVariationSettingsCore BL_CLASS_INHERITS(BLObjectCore) {
 struct BLFontVariationSettingsImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Pointer to variation items.
   BLFontVariationItem* data;
-  //! Numbef of variation items in `data`.
+  //! Number of variation items in `data`.
   size_t size;
   //! Capacity of `data`.
   size_t capacity;
@@ -147,7 +147,7 @@ struct BLFontVariationSettingsImpl BL_CLASS_INHERITS(BLObjectImpl) {
 #ifdef __cplusplus
 
 //! Font variation settings [C++ API].
-class BLFontVariationSettings : public BLFontVariationSettingsCore {
+class BLFontVariationSettings final : public BLFontVariationSettingsCore {
 public:
   //! \cond INTERNAL
   //! \name Internals
@@ -155,7 +155,10 @@ public:
 
   enum : uint32_t {
     //! SSO capacity of \ref BLFontVariationSettings container.
-    kSSOCapacity = 3
+    kSSOCapacity = 3,
+
+    //! Signature of SSO representation of an empty font variation settings.
+    kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS)
   };
 
   BL_INLINE_NODEBUG BLFontVariationSettingsImpl* _impl() const noexcept { return static_cast<BLFontVariationSettingsImpl*>(_d.impl); }
@@ -167,16 +170,22 @@ public:
   //! \{
 
   BL_INLINE_NODEBUG BLFontVariationSettings() noexcept {
-    _d.initStatic(BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS);
+    _d.initStatic(BLObjectInfo{kSSOEmptySignature});
   }
 
   BL_INLINE_NODEBUG BLFontVariationSettings(BLFontVariationSettings&& other) noexcept {
     _d = other._d;
-    other._d.initStatic(BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS);
+    other._d.initStatic(BLObjectInfo{kSSOEmptySignature});
   }
 
-  BL_INLINE_NODEBUG BLFontVariationSettings(const BLFontVariationSettings& other) noexcept { blFontVariationSettingsInitWeak(this, &other); }
-  BL_INLINE_NODEBUG ~BLFontVariationSettings() noexcept { blFontVariationSettingsDestroy(this); }
+  BL_INLINE_NODEBUG BLFontVariationSettings(const BLFontVariationSettings& other) noexcept {
+    blFontVariationSettingsInitWeak(this, &other);
+  }
+
+  BL_INLINE_NODEBUG ~BLFontVariationSettings() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blFontVariationSettingsDestroy(this);
+  }
 
   //! \}
 

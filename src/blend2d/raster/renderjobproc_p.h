@@ -19,15 +19,21 @@
 //! \{
 
 namespace BLRasterEngine {
+namespace JobProc {
 
-class RenderJobStateAccessor {
+// BLRasterEngine - Job Processor - State Accessor
+// ===============================================
+
+namespace {
+
+class JobStateAccessor {
 public:
   const RenderJob_BaseOp* job;
 
-  explicit BL_INLINE RenderJobStateAccessor(const RenderJob_BaseOp* job) noexcept
+  BL_INLINE_NODEBUG explicit JobStateAccessor(const RenderJob_BaseOp* job) noexcept
     : job(job) {}
 
-  BL_INLINE const SharedFillState* fillState() const noexcept {
+  BL_INLINE_NODEBUG const SharedFillState* fillState() const noexcept {
     return job->fillState();
   }
 
@@ -42,26 +48,44 @@ public:
   }
 
   // Fill states.
-  BL_INLINE uint32_t finalMatrixFixedType() const noexcept { return job->finalMatrixFixedType(); }
-  BL_INLINE const BLMatrix2D& finalMatrixFixed() const noexcept { return fillState()->finalMatrixFixed; }
-  BL_INLINE const BLBox& finalClipBoxFixedD() const noexcept { return fillState()->finalClipBoxFixedD; }
+  BL_INLINE_NODEBUG BLTransformType finalTransformFixedType() const noexcept { return job->finalTransformFixedType(); }
+
+  BL_INLINE BLMatrix2D finalTransformFixed(const BLPoint& originFixed) const noexcept {
+    const Matrix2x2& t = fillState()->finalTransformFixed;
+    return BLMatrix2D(t.m[0], t.m[1], t.m[2], t.m[3], originFixed.x, originFixed.y);
+  }
+
+  BL_INLINE_NODEBUG const BLBox& finalClipBoxFixedD() const noexcept { return fillState()->finalClipBoxFixedD; }
 
   // Stroke states.
-  BL_INLINE const BLApproximationOptions& approximationOptions() const noexcept { return baseStrokeState()->approximationOptions; }
-  BL_INLINE const BLStrokeOptions& strokeOptions() const noexcept { return baseStrokeState()->strokeOptions; }
+  BL_INLINE_NODEBUG const BLApproximationOptions& approximationOptions() const noexcept { return baseStrokeState()->approximationOptions; }
+  BL_INLINE_NODEBUG const BLStrokeOptions& strokeOptions() const noexcept { return baseStrokeState()->strokeOptions; }
 
-  BL_INLINE uint32_t metaMatrixFixedType() const noexcept { return job->metaMatrixFixedType(); }
-  BL_INLINE const BLMatrix2D& metaMatrixFixed() const noexcept { return extStrokeState()->metaMatrixFixed; }
-  BL_INLINE const BLMatrix2D& userMatrix() const noexcept { return extStrokeState()->userMatrix; }
+  BL_INLINE_NODEBUG BLTransformType metaTransformFixedType() const noexcept { return job->metaTransformFixedType(); }
+
+  BL_INLINE BLMatrix2D metaTransformFixed(const BLPoint& originFixed) const noexcept {
+    const Matrix2x2& t = extStrokeState()->metaTransformFixed;
+    return BLMatrix2D(t.m[0], t.m[1], t.m[2], t.m[3], originFixed.x, originFixed.y);
+  }
+
+  BL_INLINE BLMatrix2D userTransform() const noexcept {
+    const Matrix2x2& t = extStrokeState()->userTransform;
+    return BLMatrix2D(t.m[0], t.m[1], t.m[2], t.m[3], 0.0, 0.0);
+  }
 };
 
-static BL_INLINE void blRasterJobPrepareEdgeBuilder(WorkData* workData, const SharedFillState* fillState) noexcept {
+} // {anonymous}
+
+// BLRasterEngine - Job Processor - Utilities
+// ==========================================
+
+static BL_INLINE void prepareEdgeBuilder(WorkData* workData, const SharedFillState* fillState) noexcept {
   workData->saveState();
   workData->edgeBuilder.setClipBox(fillState->finalClipBoxFixedD);
   workData->edgeBuilder.setFlattenToleranceSq(blSquare(fillState->toleranceFixedD));
 }
 
-static BL_INLINE BLPath* blRasterJobGetGeometryAsPath(WorkData* workData, RenderJob_GeometryOp* job) noexcept {
+static BL_INLINE BLPath* getGeometryAsPath(WorkData* workData, RenderJob_GeometryOp* job) noexcept {
   BLPath* path = nullptr;
   BLGeometryType geometryType = job->geometryType();
 
@@ -80,41 +104,46 @@ static BL_INLINE BLPath* blRasterJobGetGeometryAsPath(WorkData* workData, Render
   return path;
 }
 
-static BL_INLINE void blRasterJobFinalizeGeometryData(WorkData* workData, RenderJob_GeometryOp* job) noexcept {
+static BL_INLINE void finalizeGeometryData(WorkData* workData, RenderJob_GeometryOp* job) noexcept {
   blUnused(workData);
   if (job->geometryType() == BL_GEOMETRY_TYPE_PATH)
     job->geometryData<BLPath>()->~BLPath();
 }
 
-static void blRasterJobProcAsync_FillGeometry(WorkData* workData, RenderJob_GeometryOp* job) noexcept {
-  BLPath* path = blRasterJobGetGeometryAsPath(workData, job);
+// BLRasterEngine - Job Processor - Fill Geometry Job
+// ==================================================
+
+static void processFillGeometryJob(WorkData* workData, RenderJob_GeometryOp* job) noexcept {
+  BLPath* path = getGeometryAsPath(workData, job);
   if (BL_UNLIKELY(!path))
     return;
 
-  RenderJobStateAccessor accessor(job);
-  blRasterJobPrepareEdgeBuilder(workData, accessor.fillState());
-  BLResult result = blRasterContextBuildPathEdges(workData, path->view(), accessor.finalMatrixFixed(), accessor.finalMatrixFixedType());
+  JobStateAccessor accessor(job);
+  prepareEdgeBuilder(workData, accessor.fillState());
+  BLResult result = addFilledPathEdges(workData, path->view(), accessor.finalTransformFixed(job->originFixed()), accessor.finalTransformFixedType());
 
   if (result == BL_SUCCESS) {
     EdgeStorage<int>* edgeStorage = &workData->edgeStorage;
-    RenderCommand* commandData = job->command();
+    RenderCommand& command = job->command();
 
     if (!edgeStorage->empty()) {
-      commandData->setAnalyticEdgesAsync(edgeStorage);
+      command.setAnalyticEdges(edgeStorage);
       edgeStorage->resetBoundingBox();
     }
   }
 
-  blRasterJobFinalizeGeometryData(workData, job);
+  finalizeGeometryData(workData, job);
 }
 
-static void blRasterJobProcAsync_FillText(WorkData* workData, RenderJob_TextOp* job) noexcept {
+// BLRasterEngine - Job Processor - Fill Text Job
+// ==============================================
+
+static void processFillTextJob(WorkData* workData, RenderJob_TextOp* job) noexcept {
   BLResult result = BL_SUCCESS;
   uint32_t dataType = job->textDataType();
 
-  const BLPoint& pt = job->_pt;
   const BLFont& font = job->_font.dcast();
-
+  const BLPoint& originFixed = job->originFixed();
   const BLGlyphRun* glyphRun = nullptr;
 
   if (dataType != RenderJob::kTextDataGlyphRun) {
@@ -136,17 +165,17 @@ static void blRasterJobProcAsync_FillText(WorkData* workData, RenderJob_TextOp* 
   }
 
   if (result == BL_SUCCESS) {
-    RenderJobStateAccessor accessor(job);
-    blRasterJobPrepareEdgeBuilder(workData, accessor.fillState());
-    result = blRasterContextUtilFillGlyphRun(workData, accessor, &pt, &font, glyphRun);
+    JobStateAccessor accessor(job);
+    prepareEdgeBuilder(workData, accessor.fillState());
+    result = addFilledGlyphRunEdges(workData, accessor, originFixed, &font, glyphRun);
   }
 
   if (result == BL_SUCCESS) {
     EdgeStorage<int>* edgeStorage = &workData->edgeStorage;
-    RenderCommand* commandData = job->command();
+    RenderCommand& command = job->command();
 
     if (!edgeStorage->empty()) {
-      commandData->setAnalyticEdgesAsync(edgeStorage);
+      command.setAnalyticEdges(edgeStorage);
       edgeStorage->resetBoundingBox();
     }
   }
@@ -154,34 +183,39 @@ static void blRasterJobProcAsync_FillText(WorkData* workData, RenderJob_TextOp* 
   job->destroy();
 }
 
-static void blRasterJobProcAsync_StrokeGeometry(WorkData* workData, RenderJob_GeometryOp* job) noexcept {
-  BLPath* path = blRasterJobGetGeometryAsPath(workData, job);
+// BLRasterEngine - Job Processor - Stroke Geometry Job
+// ====================================================
+
+static void processStrokeGeometryJob(WorkData* workData, RenderJob_GeometryOp* job) noexcept {
+  BLPath* path = getGeometryAsPath(workData, job);
   if (BL_UNLIKELY(!path))
     return;
 
-  RenderJobStateAccessor accessor(job);
-  blRasterJobPrepareEdgeBuilder(workData, accessor.fillState());
+  JobStateAccessor accessor(job);
+  prepareEdgeBuilder(workData, accessor.fillState());
 
-  if (blRasterContextUtilStrokeUnsafePath(workData, accessor, path) == BL_SUCCESS) {
+  if (addStrokedPathEdges(workData, accessor, job->originFixed(), path) == BL_SUCCESS) {
     EdgeStorage<int>* edgeStorage = &workData->edgeStorage;
-    RenderCommand* commandData = job->command();
+    RenderCommand& command = job->command();
 
     if (!edgeStorage->empty()) {
-      commandData->setAnalyticEdgesAsync(edgeStorage);
+      command.setAnalyticEdges(edgeStorage);
       edgeStorage->resetBoundingBox();
     }
   }
 
-  blRasterJobFinalizeGeometryData(workData, job);
+  finalizeGeometryData(workData, job);
 }
 
-static void blRasterJobProcAsync_StrokeText(WorkData* workData, RenderJob_TextOp* job) noexcept {
+// BLRasterEngine - Job Processor - Stroke Text Job
+// ================================================
+
+static void processStrokeTextJob(WorkData* workData, RenderJob_TextOp* job) noexcept {
   BLResult result = BL_SUCCESS;
   uint32_t dataType = job->textDataType();
 
-  const BLPoint& pt = job->_pt;
   const BLFont& font = job->_font.dcast();
-
+  const BLPoint& originFixed = job->originFixed();
   const BLGlyphRun* glyphRun = nullptr;
 
   if (dataType != RenderJob::kTextDataGlyphRun) {
@@ -203,17 +237,17 @@ static void blRasterJobProcAsync_StrokeText(WorkData* workData, RenderJob_TextOp
   }
 
   if (result == BL_SUCCESS) {
-    RenderJobStateAccessor accessor(job);
-    blRasterJobPrepareEdgeBuilder(workData, accessor.fillState());
-    result = blRasterContextUtilStrokeGlyphRun(workData, accessor, &pt, &font, glyphRun);
+    JobStateAccessor accessor(job);
+    prepareEdgeBuilder(workData, accessor.fillState());
+    result = addStrokedGlyphRunEdges(workData, accessor, originFixed, &font, glyphRun);
   }
 
   if (result == BL_SUCCESS) {
     EdgeStorage<int>* edgeStorage = &workData->edgeStorage;
-    RenderCommand* commandData = job->command();
+    RenderCommand& command = job->command();
 
     if (!edgeStorage->empty()) {
-      commandData->setAnalyticEdgesAsync(edgeStorage);
+      command.setAnalyticEdges(edgeStorage);
       edgeStorage->resetBoundingBox();
     }
   }
@@ -221,22 +255,30 @@ static void blRasterJobProcAsync_StrokeText(WorkData* workData, RenderJob_TextOp
   job->destroy();
 }
 
-static BL_NOINLINE void blRasterJobProcAsync(WorkData* workData, RenderJob* job) noexcept {
+// BLRasterEngine - Job Processor - Dispatch
+// =========================================
+
+static void processJob(WorkData* workData, RenderJob* job) noexcept {
+  if (job->hasJobFlag(RenderJobFlags::kComputePendingFetchData)) {
+    RenderCommand& command = job->command();
+    computePendingFetchData(command._source.fetchData);
+  }
+
   switch (job->jobType()) {
-    case RenderJob::kTypeFillGeometry:
-      blRasterJobProcAsync_FillGeometry(workData, static_cast<RenderJob_GeometryOp*>(job));
+    case RenderJobType::kFillGeometry:
+      processFillGeometryJob(workData, static_cast<RenderJob_GeometryOp*>(job));
       break;
 
-    case RenderJob::kTypeFillText:
-      blRasterJobProcAsync_FillText(workData, static_cast<RenderJob_TextOp*>(job));
+    case RenderJobType::kFillText:
+      processFillTextJob(workData, static_cast<RenderJob_TextOp*>(job));
       break;
 
-    case RenderJob::kTypeStrokeGeometry:
-      blRasterJobProcAsync_StrokeGeometry(workData, static_cast<RenderJob_GeometryOp*>(job));
+    case RenderJobType::kStrokeGeometry:
+      processStrokeGeometryJob(workData, static_cast<RenderJob_GeometryOp*>(job));
       break;
 
-    case RenderJob::kTypeStrokeText:
-      blRasterJobProcAsync_StrokeText(workData, static_cast<RenderJob_TextOp*>(job));
+    case RenderJobType::kStrokeText:
+      processStrokeTextJob(workData, static_cast<RenderJob_TextOp*>(job));
       break;
 
     default:
@@ -244,6 +286,7 @@ static BL_NOINLINE void blRasterJobProcAsync(WorkData* workData, RenderJob* job)
   }
 }
 
+} // {JobProc}
 } // {BLRasterEngine}
 
 //! \}

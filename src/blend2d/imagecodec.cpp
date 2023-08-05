@@ -21,7 +21,7 @@ namespace BLImageCodecPrivate {
 // BLImageCodec - Globals
 // ======================
 
-static BLObjectEthernalVirtualImpl<BLImageCodecImpl, BLImageCodecVirt> defaultCodec;
+static BLObjectEternalVirtualImpl<BLImageCodecImpl, BLImageCodecVirt> defaultCodec;
 static BLWrap<BLArray<BLImageCodec>> imageCodecsArray;
 static BLWrap<BLSharedMutex> imageCodecsArrayMutex;
 
@@ -58,7 +58,7 @@ BL_API_IMPL BLResult blImageCodecInitByName(BLImageCodecCore* self, const char* 
 }
 
 BL_API_IMPL BLResult blImageCodecDestroy(BLImageCodecCore* self) noexcept {
-  return blObjectPrivateReleaseVirtual(self);
+  return BLObjectPrivate::releaseVirtualInstance(self);
 }
 
 // BLImageCodec - API - Reset
@@ -67,7 +67,7 @@ BL_API_IMPL BLResult blImageCodecDestroy(BLImageCodecCore* self) noexcept {
 BL_API_IMPL BLResult blImageCodecReset(BLImageCodecCore* self) noexcept {
   BL_ASSERT(self->_d.isImageCodec());
 
-  return blObjectPrivateReplaceVirtual(self, static_cast<BLImageCodecCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]));
+  return BLObjectPrivate::replaceVirtualInstance(self, static_cast<BLImageCodecCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]));
 }
 
 // BLImageCodec - API - Assign
@@ -79,14 +79,14 @@ BL_API_IMPL BLResult blImageCodecAssignMove(BLImageCodecCore* self, BLImageCodec
 
   BLImageCodecCore tmp = *other;
   other->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d;
-  return blObjectPrivateReplaceVirtual(self, &tmp);
+  return BLObjectPrivate::replaceVirtualInstance(self, &tmp);
 }
 
 BL_API_IMPL BLResult blImageCodecAssignWeak(BLImageCodecCore* self, const BLImageCodecCore* other) noexcept {
   BL_ASSERT(self->_d.isImageCodec());
   BL_ASSERT(other->_d.isImageCodec());
 
-  return blObjectPrivateAssignWeakVirtual(self, other);
+  return BLObjectPrivate::assignVirtualInstance(self, other);
 }
 
 // BLImageCodec - API - Inspect Data
@@ -232,7 +232,7 @@ BL_API_IMPL BLResult blImageCodecArrayInitBuiltInCodecs(BLArrayCore* self) noexc
 
   *self = imageCodecsArrayMutex->protectShared([&] {
     BLArrayCore tmp = imageCodecsArray();
-    blObjectPrivateAddRefIfRCTagSet(&tmp);
+    BLObjectPrivate::retainInstance(&tmp);
     return tmp;
   });
   return BL_SUCCESS;
@@ -272,7 +272,7 @@ BL_API_IMPL BLResult blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* codec
 
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
 
-static BLResult BL_CDECL blImageCodecImplDestroy(BLObjectImpl* impl, uint32_t info) noexcept { return BL_SUCCESS; }
+static BLResult BL_CDECL blImageCodecImplDestroy(BLObjectImpl* impl) noexcept { return BL_SUCCESS; }
 static uint32_t BL_CDECL blImageCodecImplInspectData(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept { return 0; }
 static BLResult BL_CDECL blImageCodecImplCreateDecoder(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept { return BL_ERROR_IMAGE_DECODER_NOT_PROVIDED; }
 static BLResult BL_CDECL blImageCodecImplCreateEncoder(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept { return BL_ERROR_IMAGE_ENCODER_NOT_PROVIDED; }
@@ -306,9 +306,7 @@ void blImageCodecRtInit(BLRuntimeContext* rt) noexcept {
   defaultCodec.impl->ctor(&defaultCodec.virt);
 
   blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d.initDynamic(
-    BL_OBJECT_TYPE_IMAGE_CODEC,
-    BLObjectInfo{BL_OBJECT_INFO_IMMUTABLE_FLAG},
-    &defaultCodec.impl);
+    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_CODEC), &defaultCodec.impl);
 
   rt->shutdownHandlers.add(blImageCodecRtShutdown);
 }
@@ -321,56 +319,3 @@ void blRegisterBuiltInCodecs(BLRuntimeContext* rt) noexcept {
   blJpegCodecOnInit(rt, codecs);
   blPngCodecOnInit(rt, codecs);
 }
-
-// BLImageCodec - Tests
-// ====================
-
-#ifdef BL_TEST
-UNIT(image_codecs, BL_TEST_GROUP_IMAGE_CODECS) {
-  INFO("Testing BLImageCodec::findByName() and BLImageCodec::findByData()");
-  {
-    static const uint8_t bmpSignature[2] = { 'B', 'M' };
-    static const uint8_t pngSignature[8] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
-    static const uint8_t jpgSignature[3] = { 0xFF, 0xD8, 0xFF };
-
-    BLImageCodec codec;
-    BLImageCodec bmp;
-    BLImageCodec png;
-    BLImageCodec jpg;
-
-    EXPECT_SUCCESS(bmp.findByName("BMP"));
-    EXPECT_SUCCESS(png.findByName("PNG"));
-    EXPECT_SUCCESS(jpg.findByName("JPEG"));
-
-    EXPECT_SUCCESS(codec.findByExtension("bmp"));
-    EXPECT_EQ(codec, bmp);
-
-    EXPECT_SUCCESS(codec.findByExtension(".bmp"));
-    EXPECT_EQ(codec, bmp);
-
-    EXPECT_SUCCESS(codec.findByExtension("SomeFile.BMp"));
-    EXPECT_EQ(codec, bmp);
-
-    EXPECT_SUCCESS(codec.findByExtension("png"));
-    EXPECT_EQ(codec, png);
-
-    EXPECT_SUCCESS(codec.findByExtension(".png"));
-    EXPECT_EQ(codec, png);
-
-    EXPECT_SUCCESS(codec.findByExtension(".jpg"));
-    EXPECT_EQ(codec, jpg);
-
-    EXPECT_SUCCESS(codec.findByExtension(".jpeg"));
-    EXPECT_EQ(codec, jpg);
-
-    EXPECT_SUCCESS(codec.findByData(bmpSignature, BL_ARRAY_SIZE(bmpSignature)));
-    EXPECT_EQ(codec, bmp);
-
-    EXPECT_SUCCESS(codec.findByData(pngSignature, BL_ARRAY_SIZE(pngSignature)));
-    EXPECT_EQ(codec, png);
-
-    EXPECT_SUCCESS(codec.findByData(jpgSignature, BL_ARRAY_SIZE(jpgSignature)));
-    EXPECT_EQ(codec, jpg);
-  }
-}
-#endif

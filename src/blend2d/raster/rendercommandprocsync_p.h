@@ -8,7 +8,6 @@
 
 #include "../context_p.h"
 #include "../geometry_p.h"
-#include "../zeroallocator_p.h"
 #include "../pipeline/pipedefs_p.h"
 #include "../raster/analyticrasterizer_p.h"
 #include "../raster/edgebuilder_p.h"
@@ -17,6 +16,7 @@
 #include "../raster/workdata_p.h"
 #include "../support/arenaallocator_p.h"
 #include "../support/intops_p.h"
+#include "../support/zeroallocator_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_raster_engine_impl
@@ -25,34 +25,12 @@
 namespace BLRasterEngine {
 namespace CommandProcSync {
 
-static BL_INLINE BLResult fillBoxA(WorkData& workData, const RenderCommand& command) noexcept {
-  const void* fillData = command.getPipeFillDataOfBoxA();
-  const void* fetchData = command.getPipeFetchData();
-
-  BLPipeline::FillFunc fillFunc = command.pipeDispatchData()->fillFunc;
-  BLPipeline::FetchFunc fetchFunc = command.pipeDispatchData()->fetchFunc;
-
-  if (fetchFunc == nullptr) {
-    fillFunc(&workData.ctxData, fillData, fetchData);
-  }
-  else {
-    // TODO:
-  }
-
-  return BL_SUCCESS;
-}
-
-static BL_INLINE BLResult fillBoxU(WorkData& workData, const RenderCommand& command) noexcept {
+static BL_INLINE BLResult fillBoxA(WorkData& workData, const BLPipeline::DispatchData& dispatchData, uint32_t alpha, const BLBoxI& boxA, const void* fetchData) noexcept {
   BLPipeline::FillData fillData;
-  BLPipeline::BoxUToMaskData boxUToMaskData;
+  fillData.initBoxA8bpc(alpha, boxA.x0, boxA.y0, boxA.x1, boxA.y1);
 
-  if (!fillData.initBoxU8bpc24x8(command.alpha(), command.boxI().x0, command.boxI().y0, command.boxI().x1, command.boxI().y1, boxUToMaskData))
-    return BL_SUCCESS;
-
-  const void* fetchData = command.getPipeFetchData();
-
-  BLPipeline::FillFunc fillFunc = command.pipeDispatchData()->fillFunc;
-  BLPipeline::FetchFunc fetchFunc = command.pipeDispatchData()->fetchFunc;
+  BLPipeline::FillFunc fillFunc = dispatchData.fillFunc;
+  BLPipeline::FetchFunc fetchFunc = dispatchData.fetchFunc;
 
   if (fetchFunc == nullptr) {
     fillFunc(&workData.ctxData, &fillData, fetchData);
@@ -64,44 +42,56 @@ static BL_INLINE BLResult fillBoxU(WorkData& workData, const RenderCommand& comm
   return BL_SUCCESS;
 }
 
-static BL_NOINLINE BLResult fillMaskRaw(WorkData& workData, const RenderCommand& command) noexcept {
-  const RenderCommand::FillMaskRaw& payload = command._payload.maskRaw;
-  const BLImageImpl* maskI = payload.maskImageI;
+static BL_INLINE BLResult fillBoxU(WorkData& workData, const BLPipeline::DispatchData& dispatchData, uint32_t alpha, const BLBoxI& boxU, const void* fetchData) noexcept {
+  BLPipeline::FillData fillData;
+  BLPipeline::BoxUToMaskData boxUToMaskData;
+
+  if (!fillData.initBoxU8bpc24x8(alpha, boxU.x0, boxU.y0, boxU.x1, boxU.y1, boxUToMaskData))
+    return BL_SUCCESS;
+
+  BLPipeline::FillFunc fillFunc = dispatchData.fillFunc;
+  BLPipeline::FetchFunc fetchFunc = dispatchData.fetchFunc;
+
+  if (fetchFunc == nullptr) {
+    fillFunc(&workData.ctxData, &fillData, fetchData);
+  }
+  else {
+    // TODO:
+  }
+
+  return BL_SUCCESS;
+}
+
+static BL_INLINE BLResult fillBoxMaskedA(WorkData& workData, const BLPipeline::DispatchData& dispatchData, uint32_t alpha, const RenderCommand::FillBoxMaskA& payload, const void* fetchData) noexcept {
+  const BLImageImpl* maskI = payload.maskImageI.ptr;
   const BLPointI& maskOffset = payload.maskOffsetI;
   const uint8_t* maskData = static_cast<const uint8_t*>(maskI->pixelData) + maskI->stride * maskOffset.y + maskOffset.x * (maskI->depth / 8u);
 
   const BLBoxI& boxI = payload.boxI;
 
   BLPipeline::MaskCommand maskCommands[2];
-  BLPipeline::MaskCommandType vMaskCmd = command.alpha() >= 255 ? BLPipeline::MaskCommandType::kVMaskA8WithGA : BLPipeline::MaskCommandType::kVMaskA8WithoutGA;
+  BLPipeline::MaskCommandType vMaskCmd = alpha >= 255 ? BLPipeline::MaskCommandType::kVMaskA8WithGA : BLPipeline::MaskCommandType::kVMaskA8WithoutGA;
 
   maskCommands[0].initVMask(vMaskCmd, uint32_t(boxI.x0), uint32_t(boxI.x1), maskData, maskI->stride);
   maskCommands[1].initRepeat();
 
   BLPipeline::FillData fillData;
-  fillData.initMaskA(command.alpha(), boxI.x0, boxI.y0, boxI.x1, boxI.y1, maskCommands);
+  fillData.initMaskA(alpha, boxI.x0, boxI.y0, boxI.x1, boxI.y1, maskCommands);
 
-  BLPipeline::FillFunc fillFunc = command.pipeDispatchData()->fillFunc;
-  const void* fetchData = command.getPipeFetchData();
-
+  BLPipeline::FillFunc fillFunc = dispatchData.fillFunc;
   fillFunc(&workData.ctxData, &fillData, fetchData);
+
   return BL_SUCCESS;
 }
 
-static BL_NOINLINE BLResult fillAnalytic(WorkData& workData, const RenderCommand& command) noexcept {
+static BL_NOINLINE BLResult fillAnalytic(WorkData& workData, const BLPipeline::DispatchData& dispatchData, uint32_t alpha, const EdgeStorage<int>* edgeStorage, BLFillRule fillRule, const void* fetchData) noexcept {
   // Rasterizer options to use - do not change unless you are improving the existing rasterizers.
-  constexpr uint32_t kRasterizerOptions =
-    AnalyticRasterizer::kOptionBandOffset     |
-    AnalyticRasterizer::kOptionRecordMinXMaxX ;
+  constexpr uint32_t kRasterizerOptions = AnalyticRasterizer::kOptionBandOffset | AnalyticRasterizer::kOptionRecordMinXMaxX;
 
   // Can only be called if there is something to fill.
-  const EdgeStorage<int>* edgeStorage = command.analyticEdgesSync();
   BL_ASSERT(edgeStorage != nullptr);
-
-  // NOTE: This doesn't happen often, but it's possible. If, for any reason, the data in bands is all horizontal
-  // lines or no data at all it would trigger this check.
-  if (BL_UNLIKELY(edgeStorage->boundingBox().y0 >= edgeStorage->boundingBox().y1))
-    return BL_SUCCESS;
+  // Should have been verified by the caller.
+  BL_ASSERT(edgeStorage->boundingBox().y0 < edgeStorage->boundingBox().y1);
 
   uint32_t bandHeight = edgeStorage->bandHeight();
   uint32_t bandHeightMask = bandHeight - 1;
@@ -138,11 +128,11 @@ static BL_NOINLINE BLResult fillAnalytic(WorkData& workData, const RenderCommand
 
   uint32_t dstWidth = uint32_t(workData.dstSize().w);
 
-  BLPipeline::FillFunc fillFunc = command.pipeDispatchData()->fillFunc;
+  BLPipeline::FillFunc fillFunc = dispatchData.fillFunc;
   BLPipeline::FillData fillData;
 
-  fillData.initAnalytic(command.alpha(),
-                        command.analyticFillRule(),
+  fillData.initAnalytic(alpha,
+                        uint32_t(fillRule),
                         cellStorage.bitPtrTop, cellStorage.bitStride,
                         cellStorage.cellPtrTop, cellStorage.cellStride);
 
@@ -153,8 +143,6 @@ static BL_NOINLINE BLResult fillAnalytic(WorkData& workData, const RenderCommand
   ras._bandOffset = yStart;
 
   BLArenaAllocator* workZone = &workData.workZone;
-  const void* fetchData = command.getPipeFetchData();
-
   do {
     EdgeVector<int>* edges = bandEdges[bandId].first();
     bandEdges[bandId].reset();

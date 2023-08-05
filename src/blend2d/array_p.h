@@ -16,42 +16,58 @@
 
 namespace BLArrayPrivate {
 
-//! \name BLArray - Internals - Memory Management
+using BLObjectPrivate::RCMode;
+
+//! \name BLArray - Internals - Common Functionality (Impl)
 //! \{
 
-BL_HIDDEN BLResult freeImpl(BLArrayImpl* impl, BLObjectInfo info) noexcept;
+static BL_INLINE bool isImplMutable(const BLArrayImpl* impl) noexcept {
+  return BLObjectPrivate::isImplMutable(impl);
+}
+
+BL_HIDDEN BLResult freeImpl(BLArrayImpl* impl) noexcept;
+
+template<RCMode kRCMode>
+static BL_INLINE BLResult releaseImpl(BLArrayImpl* impl) noexcept {
+  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+}
+
+//! \}
+
+//! \name BLArray - Internals - Common Functionality (Instance)
+//! \{
 
 static BL_INLINE BLArrayImpl* getImpl(const BLArrayCore* self) noexcept {
   return static_cast<BLArrayImpl*>(self->_d.impl);
 }
 
-static BL_INLINE bool isMutable(const BLArrayCore* self) noexcept {
-  const size_t* refCountPtr = blObjectDummyRefCount;
-  if (!self->_d.sso())
-    refCountPtr = blObjectImplGetRefCountPtr(self->_d.impl);
-  return *refCountPtr == 1;
+static BL_INLINE bool isInstanceMutable(const BLArrayCore* self) noexcept {
+  return BLObjectPrivate::isInstanceMutable(self);
+}
+
+static BL_INLINE bool isInstanceDynamicAndMutable(const BLArrayCore* self) noexcept {
+  return BLObjectPrivate::isInstanceDynamicAndMutable(self);
+}
+
+static BL_INLINE bool isDynamicInstanceMutable(const BLArrayCore* self) noexcept {
+  return BLObjectPrivate::isDynamicInstanceMutable(self);
+}
+
+static BL_INLINE BLResult retainInstance(const BLArrayCore* self, size_t n = 1) noexcept {
+  return BLObjectPrivate::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLArrayCore* self) noexcept {
-  BLArrayImpl* impl = getImpl(self);
-  BLObjectInfo info = self->_d.info;
-
-  if (info.refCountedFlag() && blObjectImplDecRefAndTest(impl, info))
-    return freeImpl(impl, info);
-
-  return BL_SUCCESS;
+  return self->_d.isRefCountedObject() ? releaseImpl<RCMode::kForce>(getImpl(self)) : BLResult(BL_SUCCESS);
 }
 
 static BL_INLINE BLResult replaceInstance(BLArrayCore* self, const BLArrayCore* other) noexcept {
-  BLArrayImpl* impl = getImpl(self);
+  // NOTE: UBSAN doesn't like casting the impl in case the Array is in SSO mode, so wait with the cast.
+  void* impl = static_cast<void*>(self->_d.impl);
   BLObjectInfo info = self->_d.info;
 
   self->_d = other->_d;
-
-  if (info.refCountedFlag() && blObjectImplDecRefAndTest(impl, info))
-    return freeImpl(impl, info);
-
-  return BL_SUCCESS;
+  return info.isRefCountedObject() ? releaseImpl<RCMode::kForce>(static_cast<BLArrayImpl*>(impl)) : BLResult(BL_SUCCESS);
 }
 
 //! \}

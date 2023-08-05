@@ -145,6 +145,17 @@ void FetchContext::_init(PixelCount n) noexcept {
       break;
     }
 
+    case PixelType::kRGBA64: {
+      if (_pc->use256BitSimd() && n.value() > 2u) {
+        _pc->newYmmArray(_pixel->uc, (n.value() + 3) / 4, "uc");
+        pTmp0 = cc->newXmm("@pTmp0");
+      }
+      else {
+        _pc->newXmmArray(_pixel->uc, (n.value() + 1) / 2, "uc");
+      }
+      break;
+    }
+
     default:
       BL_NOT_REACHED();
   }
@@ -197,7 +208,7 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
         else {
           x86::Xmm aHi = cc->newXmm("@aHi");
           _pc->s_mov_i32(aHi, aAcc);
-          _pc->v_interleave_lo_i32(aTmp, aTmp, aHi);
+          _pc->v_interleave_lo_u32(aTmp, aTmp, aHi);
         }
       }
       else {
@@ -246,103 +257,102 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
 
       if (_pc->hasSSE4_1()) {
         switch (_fetchIndex) {
-          case 0:
-            _pc->v_load_i32(p0, src);
-            break;
+          case 0: _pc->v_load_i32(p0, src);
+                  break;
+          case 1: _pc->v_insert_u32_(p0, p0, src, 1);
+                  break;
+          case 2: if (isPC)
+                    _pc->v_insert_u32_(p0, p0, src, 2);
+                  else
+                    _pc->v_load_i32(uc[1], src);
+                  break;
+          case 3: if (isPC)
+                    _pc->v_insert_u32_(p0, p0, src, 3);
+                  else
+                    _pc->v_insert_u32_(uc[1], uc[1], src, 1);
+                  break;
 
-          case 1:
-            _pc->v_insert_u32_(p0, p0, src, 1);
-            break;
-
-          case 2:
-            if (isPC)
-              _pc->v_insert_u32_(p0, p0, src, 2);
-            else
-              _pc->v_load_i32(uc[1], src);
-            break;
-
-          case 3:
-            if (isPC)
-              _pc->v_insert_u32_(p0, p0, src, 3);
-            else
-              _pc->v_insert_u32_(uc[1], uc[1], src, 1);
-            break;
-
-          case 4:
-            _pc->v_load_i32(p1, src);
-            break;
-
-          case 5:
-            _pc->v_insert_u32_(p1, p1, src, 1);
-            break;
-
-          case 6:
-            if (isPC)
-              _pc->v_insert_u32_(p1, p1, src, 2);
-            else
-              _pc->v_load_i32(uc[3], src);
-            break;
-
-          case 7:
-            if (isPC)
-              _pc->v_insert_u32_(p1, p1, src, 3);
-            else
-              _pc->v_insert_u32_(uc[3], uc[3], src, 1);
-            break;
+          case 4: _pc->v_load_i32(p1, src);
+                  break;
+          case 5: _pc->v_insert_u32_(p1, p1, src, 1);
+                  break;
+          case 6: if (isPC)
+                    _pc->v_insert_u32_(p1, p1, src, 2);
+                  else
+                    _pc->v_load_i32(uc[3], src);
+                  break;
+          case 7: if (isPC)
+                    _pc->v_insert_u32_(p1, p1, src, 3);
+                  else
+                    _pc->v_insert_u32_(uc[3], uc[3], src, 1);
+                  break;
         }
       }
       else {
         switch (_fetchIndex) {
-          case 0:
-            _pc->v_load_i32(p0, src);
-            break;
+          case 0: _pc->v_load_i32(p0, src);
+                  break;
+          case 1: _pc->v_load_i32(pTmp0, src);
+                  break;
+          case 2: _pc->v_interleave_lo_u32(p0, p0, pTmp0);
+                  if (isPC)
+                    _pc->v_load_i32(pTmp0, src);
+                  else
+                    _pc->v_load_i32(uc[1], src);
+                  break;
+          case 3: _pc->v_load_i32(pTmp1, src);
+                  break;
 
-          case 1:
-            _pc->v_load_i32(pTmp0, src);
-            break;
-
-          case 2:
-            _pc->v_interleave_lo_i32(p0, p0, pTmp0);
-            if (isPC)
-              _pc->v_load_i32(pTmp0, src);
-            else
-              _pc->v_load_i32(uc[1], src);
-            break;
-
-          case 3:
-            _pc->v_load_i32(pTmp1, src);
-            break;
-
-          case 4:
-            if (isPC) {
-              _pc->v_interleave_lo_i32(pTmp0, pTmp0, pTmp1);
-              _pc->v_interleave_lo_i64(p0, p0, pTmp0);
-            }
-            else {
-              _pc->v_interleave_lo_i32(uc[1], uc[1], pTmp1);
-            }
-
-            _pc->v_load_i32(p1, src);
-            break;
-
-          case 5:
-            _pc->v_load_i32(pTmp0, src);
-            break;
-
-          case 6:
-            _pc->v_interleave_lo_i32(p1, p1, pTmp0);
-            if (isPC)
-              _pc->v_load_i32(pTmp0, src);
-            else
-              _pc->v_load_i32(uc[3], src);
-            break;
-
-          case 7:
-            _pc->v_load_i32(pTmp1, src);
-            break;
+          case 4: if (isPC) {
+                    _pc->v_interleave_lo_u32(pTmp0, pTmp0, pTmp1);
+                    _pc->v_interleave_lo_u64(p0, p0, pTmp0);
+                  }
+                  else {
+                    _pc->v_interleave_lo_u32(uc[1], uc[1], pTmp1);
+                  }
+                  _pc->v_load_i32(p1, src);
+                  break;
+          case 5: _pc->v_load_i32(pTmp0, src);
+                  break;
+          case 6: _pc->v_interleave_lo_u32(p1, p1, pTmp0);
+                  if (isPC)
+                    _pc->v_load_i32(pTmp0, src);
+                  else
+                    _pc->v_load_i32(uc[3], src);
+                  break;
+          case 7: _pc->v_load_i32(pTmp1, src);
+                  break;
         }
       }
     }
+  }
+  else if (_pixel->isRGBA64()) {
+    if (_pc->use256BitSimd()) {
+      x86::Vec pix;
+      if ((_fetchIndex & 0x3u) < 2u)
+        pix = _pixel->uc[_fetchIndex / 4u].xmm();
+      else
+        pix = pTmp0;
+
+      if ((_fetchIndex & 0x1u) == 0u)
+        _pc->v_load_i64(pix.xmm(), src);
+      else
+        _pc->v_loadh_2xf32(pix.xmm(), pix, src);
+
+      if ((_fetchIndex & 0x3u) == 0x3u) {
+        x86::Vec pYmm = _pixel->uc[_fetchIndex / 4u].ymm();
+        _pc->cc->vinserti128(pYmm, pYmm, pTmp0.xmm(), 1);
+      }
+    }
+    else {
+      x86::Vec pix = _pixel->uc[_fetchIndex / 2u];
+      if ((_fetchIndex & 0x1u) == 0u)
+        _pc->v_load_i64(pix, src);
+      else
+        _pc->v_loadh_2xf32(pix, pix, src);
+    }
+
+    _fetchDone = _fetchIndex + 1 == _pixel->count().value();
   }
 
   _fetchIndex++;
@@ -514,8 +524,8 @@ void FetchContext::end() noexcept {
           case 4: {
             x86::Vec& a0 = _pixel->pc[0];
 
-            _pc->v_interleave_lo_i8(a0, a0, a0);
-            _pc->v_interleave_lo_i16(a0, a0, a0);
+            _pc->v_interleave_lo_u8(a0, a0, a0);
+            _pc->v_interleave_lo_u16(a0, a0, a0);
             break;
           }
 
@@ -523,10 +533,10 @@ void FetchContext::end() noexcept {
             x86::Vec& a0 = _pixel->pc[0];
             x86::Vec& a1 = _pixel->pc[1];
 
-            _pc->v_interleave_hi_i8(a1, a0, a0);
-            _pc->v_interleave_lo_i8(a0, a0, a0);
-            _pc->v_interleave_hi_i16(a1, a1, a1);
-            _pc->v_interleave_lo_i16(a0, a0, a0);
+            _pc->v_interleave_hi_u8(a1, a0, a0);
+            _pc->v_interleave_lo_u8(a0, a0, a0);
+            _pc->v_interleave_hi_u16(a1, a1, a1);
+            _pc->v_interleave_lo_u16(a0, a0, a0);
             break;
           }
 
@@ -540,10 +550,10 @@ void FetchContext::end() noexcept {
             x86::Vec& a0 = _pixel->uc[0];
             x86::Vec& a1 = _pixel->uc[1];
 
-            _pc->v_interleave_lo_i16(a0, a0, a0);
+            _pc->v_interleave_lo_u16(a0, a0, a0);
 
-            _pc->v_swizzle_i32(a1, a0, x86::shuffleImm(3, 3, 2, 2));
-            _pc->v_swizzle_i32(a0, a0, x86::shuffleImm(1, 1, 0, 0));
+            _pc->v_swizzle_u32(a1, a0, x86::shuffleImm(3, 3, 2, 2));
+            _pc->v_swizzle_u32(a0, a0, x86::shuffleImm(1, 1, 0, 0));
             break;
           }
 
@@ -553,13 +563,13 @@ void FetchContext::end() noexcept {
             x86::Vec& a2 = _pixel->uc[2];
             x86::Vec& a3 = _pixel->uc[3];
 
-            _pc->v_interleave_hi_i16(a2, a0, a0);
-            _pc->v_interleave_lo_i16(a0, a0, a0);
+            _pc->v_interleave_hi_u16(a2, a0, a0);
+            _pc->v_interleave_lo_u16(a0, a0, a0);
 
-            _pc->v_swizzle_i32(a3, a2, x86::shuffleImm(3, 3, 2, 2));
-            _pc->v_swizzle_i32(a1, a0, x86::shuffleImm(3, 3, 2, 2));
-            _pc->v_swizzle_i32(a2, a2, x86::shuffleImm(1, 1, 0, 0));
-            _pc->v_swizzle_i32(a0, a0, x86::shuffleImm(1, 1, 0, 0));
+            _pc->v_swizzle_u32(a3, a2, x86::shuffleImm(3, 3, 2, 2));
+            _pc->v_swizzle_u32(a1, a0, x86::shuffleImm(3, 3, 2, 2));
+            _pc->v_swizzle_u32(a2, a2, x86::shuffleImm(1, 1, 0, 0));
+            _pc->v_swizzle_u32(a0, a0, x86::shuffleImm(1, 1, 0, 0));
             break;
           }
 
@@ -576,12 +586,12 @@ void FetchContext::end() noexcept {
     if (!_pc->hasSSE4_1()) {
       if (blTestFlag(_fetchFlags, PixelFlags::kPC)) {
         const x86::Vec& pcLast = _pixel->pc[_pixel->pc.size() - 1];
-        _pc->v_interleave_lo_i32(pTmp0, pTmp0, pTmp1);
-        _pc->v_interleave_lo_i64(pcLast, pcLast, pTmp0);
+        _pc->v_interleave_lo_u32(pTmp0, pTmp0, pTmp1);
+        _pc->v_interleave_lo_u64(pcLast, pcLast, pTmp0);
       }
       else {
         const x86::Vec& ucLast = _pixel->uc[_pixel->uc.size() - 1];
-        _pc->v_interleave_lo_i32(ucLast, ucLast, pTmp1);
+        _pc->v_interleave_lo_u32(ucLast, ucLast, pTmp1);
       }
     }
 
@@ -594,6 +604,237 @@ void FetchContext::end() noexcept {
   }
 
   _fetchDone = true;
+}
+
+void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, BLInternalFormat format, PixelFlags flags, const x86::Mem& src, const x86::Vec& idx, uint32_t shift, IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept {
+  x86::Compiler* cc = pc->cc;
+
+  x86::Mem mem(src);
+  uint32_t count = p.count().value();
+
+  if (pc->hasOptFlag(PipeOptFlags::kFastGather)) {
+    // NOTE: Gathers are provided by AVX2 and later, thus if we are here it means at least AVX2 is available.
+    if (blFormatInfo[size_t(format)].depth == 32) {
+      VecArray pixels;
+
+      if (n <= 4u)
+        pc->newXmmArray(pixels, 1, p.name(), "pc");
+      else if (n <= 8u)
+        pc->newYmmArray(pixels, 1, p.name(), "pc");
+      else
+        pc->newZmmArray(pixels, 1, p.name(), "pc");
+
+      x86::Vec gatherIndex = idx.cloneAs(pixels[0]);
+
+      switch (indexLayout) {
+        case IndexLayout::kUInt16:
+          gatherIndex = cc->newSimilarReg(pixels[0], "gatherIndex");
+          cc->vpmovzxwd(gatherIndex, idx.xmm());
+          break;
+
+        case IndexLayout::kUInt32:
+        case IndexLayout::kUInt32Lo16:
+          // UInt32Lo16 expects that the high part is zero, so we can treat it as 32-bit index.
+          break;
+
+        case IndexLayout::kUInt32Hi16:
+          gatherIndex = cc->newSimilarReg(pixels[0], "gatherIndex");
+          pc->v_srl_i32(gatherIndex, idx.cloneAs(gatherIndex), 16);
+          break;
+
+        default:
+          BL_NOT_REACHED();
+      }
+
+      mem.setIndex(gatherIndex);
+      mem.setShift(shift);
+
+      pc->v_zero_i(pixels[0]);
+      if (pc->hasAVX512()) {
+        x86::KReg pred = cc->newKw("pred");
+        cc->kxnorw(pred, pred, pred);
+        cc->k(pred).vpgatherdd(pixels[0], mem);
+      }
+      else {
+        x86::Vec pred = cc->newSimilarReg(pixels[0], "pred");
+        pc->v_ones_i(pred);
+        cc->vpgatherdd(pixels[0], mem, pred);
+      }
+
+      for (uint32_t i = 0; i < count; i++)
+        cb(i, cbData);
+
+      x_convert_gathered_pixels(pc, p, n, flags, pixels);
+      return;
+    }
+
+    if (blFormatInfo[size_t(format)].depth == 64) {
+      VecArray pixels;
+
+      if (n <= 4u) {
+        pc->newYmmArray(pixels, 1, p.name(), "pc");
+      }
+      else {
+        if (pc->use512BitSimd()) {
+          pc->newZmmArray(pixels, n.value() / 8, p.name(), "pc");
+        }
+        else {
+          pc->newYmmArray(pixels, 2, p.name(), "pc");
+        }
+      }
+
+      x86::Vec gatherIndex = idx.cloneAs(pixels[0]);
+
+      switch (indexLayout) {
+        case IndexLayout::kUInt16:
+          gatherIndex = cc->newSimilarReg(pixels[0], "gatherIndex");
+          cc->vpmovzxwd(gatherIndex, idx.xmm());
+          break;
+
+        case IndexLayout::kUInt32:
+        case IndexLayout::kUInt32Lo16:
+          // UInt32Lo16 expects that the high part is zero, so we can treat it as 32-bit index.
+          break;
+
+        case IndexLayout::kUInt32Hi16:
+          gatherIndex = cc->newSimilarReg(pixels[0], "gatherIndex");
+          pc->v_srl_i32(gatherIndex, idx.cloneAs(gatherIndex), 16);
+          break;
+
+        default:
+          BL_NOT_REACHED();
+      }
+
+      if (pc->use512BitSimd() && n.value() == 16)
+        mem.setIndex(gatherIndex.ymm());
+      else
+        mem.setIndex(gatherIndex.xmm());
+      mem.setShift(shift);
+
+      for (uint32_t i = 0; i < pixels.size(); i++) {
+        if (i == 1) {
+          if (pc->use512BitSimd() && n.value() == 16) {
+            x86::Vec gi2 = cc->newSimilarReg(gatherIndex, "gatherIndex2");
+            cc->vextracti32x8(gi2.ymm(), gatherIndex.zmm(), 1);
+            mem.setIndex(gi2.ymm());
+          }
+          else {
+            x86::Vec gi2 = cc->newSimilarReg(gatherIndex, "gatherIndex2");
+            cc->vextracti128(gi2.xmm(), gatherIndex.ymm(), 1);
+            mem.setIndex(gi2.xmm());
+          }
+        }
+
+        pc->v_zero_i(pixels[i]);
+        if (pc->hasAVX512()) {
+          x86::KReg pred = cc->newKw("pred");
+          cc->kxnorw(pred, pred, pred);
+          cc->k(pred).vpgatherdq(pixels[i], mem);
+        }
+        else {
+          x86::Vec pred = cc->newSimilarReg(pixels[i], "pred");
+          pc->v_ones_i(pred);
+          cc->vpgatherdq(pixels[i], mem, pred);
+        }
+
+        for (uint32_t step = 0; step < 4; step++)
+          cb(i * 4 + step, cbData);
+      }
+
+      x_convert_gathered_pixels(pc, p, n, flags, pixels);
+      return;
+    }
+  }
+
+  uint32_t indexType = 0;
+  const uint8_t* indexSequence = nullptr;
+
+  static const uint8_t oddIndexes[] = { 1, 3, 5, 7, 9, 11, 13, 15 };
+  static const uint8_t evenIndexes[] = { 0, 2, 4, 6, 8, 10, 12, 14 };
+  static const uint8_t consecutiveIndexes[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+
+  switch (indexLayout) {
+    case IndexLayout::kUInt16:
+      indexType = IndexExtractor::kTypeUInt16;
+      indexSequence = consecutiveIndexes;
+      break;
+
+    case IndexLayout::kUInt32:
+      indexType = IndexExtractor::kTypeUInt32;
+      indexSequence = consecutiveIndexes;
+      break;
+
+    case IndexLayout::kUInt32Lo16:
+      indexType = IndexExtractor::kTypeUInt16;
+      indexSequence = evenIndexes;
+      break;
+
+    case IndexLayout::kUInt32Hi16:
+      indexType = IndexExtractor::kTypeUInt16;
+      indexSequence = oddIndexes;
+      break;
+
+    default:
+      BL_NOT_REACHED();
+  }
+
+  IndexExtractor indexExtractor(pc);
+  indexExtractor.begin(indexType, idx);
+
+  FetchContext fCtx(pc, &p, n, format, flags);
+  fCtx._fetchAll(src, shift, indexExtractor, indexSequence, cb, cbData);
+  fCtx.end();
+}
+
+void FetchUtils::x_convert_gathered_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, const VecArray& gPix) noexcept {
+  x86::Compiler* cc = pc->cc;
+
+  if (p.isA8()) {
+    pc->v_srl_i32(gPix, gPix, 24);
+
+    if (blTestFlag(flags, PixelFlags::kPA)) {
+      SimdWidth paSimdWidth = pc->simdWidthOf(DataWidth::k8, n);
+      uint32_t paRegCount = pc->regCountOf(DataWidth::k8, n);
+
+      pc->newVecArray(p.pa, paRegCount, paSimdWidth, p.name(), "pa");
+      BL_ASSERT(p.pa.size() == 1);
+
+      if (pc->hasAVX512()) {
+        cc->vpmovdb(p.pa[0], gPix[0]);
+      }
+      else {
+        pc->x_packs_i16_u8(p.pa[0].cloneAs(gPix[0]), gPix[0], gPix[0]);
+        pc->x_packs_i16_u8(p.pa[0], p.pa[0], p.pa[0]);
+      }
+    }
+    else {
+      SimdWidth uaSimdWidth = pc->simdWidthOf(DataWidth::k16, n);
+      uint32_t uaRegCount = pc->regCountOf(DataWidth::k16, n);
+
+      pc->newVecArray(p.ua, uaRegCount, uaSimdWidth, p.name(), "ua");
+      BL_ASSERT(p.ua.size() == 1);
+
+      if (pc->hasAVX512())
+        cc->vpmovdw(p.ua[0], gPix[0]);
+      else
+        pc->x_packs_i16_u8(p.ua[0].cloneAs(gPix[0]), gPix[0], gPix[0]);
+    }
+  }
+  else if (p.isRGBA32()) {
+    p.pc = gPix;
+    pc->rename(p.pc, p.name(), "pc");
+  }
+  else {
+    if (!pc->use256BitSimd() && gPix[0].isYmm()) {
+      x86::Vec uc1 = pc->newXmm(p.name(), "uc1");
+      p.uc.init(gPix[0].xmm(), uc1);
+      cc->vextracti128(uc1, gPix[0], 1);
+    }
+    else {
+      p.uc = gPix;
+      pc->rename(p.uc, p.name(), "uc");
+    }
+  }
 }
 
 } // {JIT}

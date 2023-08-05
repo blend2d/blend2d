@@ -6,43 +6,45 @@ int main(int argc, char* argv[]) {
   BLImage img(480, 480, BL_FORMAT_PRGB32);
   BLContext ctx(img);
 
-  ctx.setCompOp(BL_COMP_OP_SRC_COPY);
-  ctx.fillAll();
-  ctx.setFillStyle(BLRgba32(0xFFFFFFFF));
+  const char fontName[] = "ABeeZee-Regular.ttf";
+  const char* str =
+    "Hello Blend2D!\n"
+    "I'm a simple multiline text example\n"
+    "that uses GlyphBuffer and GlyphRun!";
+  BLRgba32 color(0xFFFFFFFFu);
 
   BLFontFace face;
-  BLResult err = face.createFromFile("ABeeZee-Regular.ttf");
-  if (err) {
-    printf("Failed to load a font face (err=%u)\n", err);
+  BLResult result = face.createFromFile(fontName);
+  if (result != BL_SUCCESS) {
+    printf("Failed to load a face (err=%u)\n", result);
     return 1;
   }
 
   BLFont font;
   font.createFromFace(face, 20.0f);
 
-  BLFontMetrics fm = font.metrics();
-  BLTextMetrics tm;
   BLGlyphBuffer gb;
+  BLTextMetrics tm;
+  BLFontMetrics fm = font.metrics();
+  double y = 190 + fm.ascent;
 
-  BLPoint p(20, 190 + fm.ascent);
-  const char* text = "Hello Blend2D!\n"
-                     "I'm a simple multiline text example\n"
-                     "that uses BLGlyphBuffer and fillGlyphRun!";
-  for (;;) {
-    const char* end = strchr(text, '\n');
-    gb.setUtf8Text(text, end ? (size_t)(end - text) : SIZE_MAX);
+  ctx.clearAll();
+  do {
+    const char* nl = strchr(str, '\n');
+    gb.setUtf8Text(str,
+                   nl ? (size_t)(nl - str) : SIZE_MAX);
     font.shape(gb);
     font.getTextMetrics(gb, tm);
 
-    p.x = (480.0 - (tm.boundingBox.x1 - tm.boundingBox.x0)) / 2.0;
-    ctx.fillGlyphRun(p, font, gb.glyphRun());
-    p.y += fm.ascent + fm.descent + fm.lineGap;
+    double x = (tm.boundingBox.x1 - tm.boundingBox.x0);
+    ctx.fillGlyphRun(BLPoint((480.0 - x) / 2, y),
+                     font, gb.glyphRun(), color);
 
-    if (!end) break;
-    text = end + 1;
-  }
+    y += fm.ascent + fm.descent + fm.lineGap;
+    str = nl ? nl + 1 : nullptr;
+  } while (str);
   ctx.end();
-  img.writeToFile("bl_sample_8.png");
 
+  img.writeToFile("bl_sample_8.png");
   return 0;
 }

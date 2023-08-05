@@ -23,7 +23,7 @@
 // =========================
 
 static BLImageCodecCore blJpegCodecObject;
-static BLObjectEthernalVirtualImpl<BLJpegCodecImpl, BLImageCodecVirt> blJpegCodec;
+static BLObjectEternalVirtualImpl<BLJpegCodecImpl, BLImageCodecVirt> blJpegCodec;
 static BLImageDecoderVirt blJpegDecoderVirt;
 /*
 static BLImageEncoderVirt blJpegEncoderVirt;
@@ -1443,30 +1443,29 @@ static BLResult BL_CDECL blJpegDecoderImplReadFrame(BLImageDecoderImpl* impl, BL
 }
 
 static BLResult BL_CDECL blJpegDecoderImplCreate(BLImageDecoderCore* self) noexcept {
-  BLJpegDecoderImpl* decoderI = blObjectDetailAllocImplT<BLJpegDecoderImpl>(self, BLObjectInfo::packType(BL_OBJECT_TYPE_IMAGE_DECODER));
+  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_DECODER);
+  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLJpegDecoderImpl>(self, info));
 
-  if (BL_UNLIKELY(!decoderI))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+  BLJpegDecoderImpl* decoderI = static_cast<BLJpegDecoderImpl*>(self->_d.impl);
   decoderI->ctor(&blJpegDecoderVirt, &blJpegCodecObject);
   blCallCtor(decoderI->allocator);
   return blJpegDecoderImplRestart(decoderI);
 }
 
-static BLResult BL_CDECL blJpegDecoderImplDestroy(BLObjectImpl* impl, uint32_t info) noexcept {
+static BLResult BL_CDECL blJpegDecoderImplDestroy(BLObjectImpl* impl) noexcept {
   BLJpegDecoderImpl* decoderI = static_cast<BLJpegDecoderImpl*>(impl);
 
   decoderI->allocator.reset();
   decoderI->dtor();
-  return blObjectDetailFreeImpl(decoderI, info);
+  return blObjectFreeImpl(decoderI);
 }
 
 // BLJpegCodecImpl - Interface
 // ===========================
 
-static BLResult BL_CDECL blJpegCodecImplDestroy(BLObjectImpl* impl, uint32_t info) noexcept {
+static BLResult BL_CDECL blJpegCodecImplDestroy(BLObjectImpl* impl) noexcept {
   // Built-in codecs are never destroyed.
-  blUnused(impl, info);
+  blUnused(impl);
   return BL_SUCCESS;
 }
 
@@ -1546,7 +1545,8 @@ void blJpegCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noex
   blJpegCodec.impl->vendor.dcast().assign("Blend2D");
   blJpegCodec.impl->mimeType.dcast().assign("image/jpeg");
   BLStringPrivate::initStatic(&blJpegCodec.impl->extensions, jpegExtensions);
-  blJpegCodecObject._d.initDynamic(BL_OBJECT_TYPE_IMAGE_CODEC, BLObjectInfo{BL_OBJECT_INFO_IMMUTABLE_FLAG}, &blJpegCodec.impl);
+
+  blJpegCodecObject._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_CODEC), &blJpegCodec.impl);
 
   // Initialize JPEG decoder virtual functions.
   blJpegDecoderVirt.base.destroy = blJpegDecoderImplDestroy;

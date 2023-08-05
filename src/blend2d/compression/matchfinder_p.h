@@ -12,7 +12,7 @@
 // You should have received a copy of the CC0 Public Domain Dedication along
 // with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-#include "../simd_p.h"
+#include "../simd/simd_p.h"
 #include "../support/memops_p.h"
 
 //! \cond INTERNAL
@@ -29,141 +29,6 @@ typedef int16_t mf_pos_t;
 #define MATCHFINDER_WINDOW_SIZE (1U << MATCHFINDER_WINDOW_ORDER)
 #define MATCHFINDER_WINDOW_SIZE_NEG ((mf_pos_t)(0 - int(MATCHFINDER_WINDOW_SIZE)))
 
-#if defined(BL_TARGET_OPT_AVX2)
-  static BL_INLINE bool matchfinder_init_avx2(mf_pos_t *data, size_t size) noexcept {
-    using namespace SIMD;
-
-    if (size % 128)
-      return false;
-
-    size_t n = size / 128u;
-    __m256i v = _mm256_set1_epi16(MATCHFINDER_WINDOW_SIZE_NEG);
-    __m256i* p = (__m256i *)data;
-
-    do {
-      p[0] = v;
-      p[1] = v;
-      p[2] = v;
-      p[3] = v;
-      p += 4;
-    } while (--n);
-
-    return true;
-  }
-
-  static BL_INLINE bool matchfinder_rebase_avx2(mf_pos_t *data, size_t size) noexcept {
-    using namespace SIMD;
-
-    if ((size % sizeof(__m256i) * 4 != 0))
-      return false;
-
-    size_t n = size / 128u;
-    __m256i v = v_fill_i256_i16((int16_t)-MATCHFINDER_WINDOW_SIZE);
-    __m256i* p = (__m256i *)data;
-
-    do {
-      p[0] = v_adds_i16(p[0], v);
-      p[1] = v_adds_i16(p[1], v);
-      p[2] = v_adds_i16(p[2], v);
-      p[3] = v_adds_i16(p[3], v);
-      p += 4;
-    } while (--n);
-
-    return true;
-  }
-
-#elif defined(BL_TARGET_OPT_SSE2)
-
-  static BL_INLINE bool matchfinder_init_sse2(mf_pos_t* data, size_t size) {
-    using namespace SIMD;
-
-    if (size % 64)
-      return false;
-
-    size_t n = size / 64u;
-    Vec128I v = v_fill_i128_i16(MATCHFINDER_WINDOW_SIZE_NEG);
-    Vec128I* p = reinterpret_cast<Vec128I*>(data);
-
-    do {
-      p[0] = v;
-      p[1] = v;
-      p[2] = v;
-      p[3] = v;
-      p += 4;
-    } while (--n);
-
-    return true;
-  }
-
-  static BL_INLINE bool matchfinder_rebase_sse2(mf_pos_t* data, size_t size) {
-    using namespace SIMD;
-
-    if (size % 64 != 0)
-      return false;
-
-    size_t n = size / 64u;
-    Vec128I v = _mm_set1_epi16(MATCHFINDER_WINDOW_SIZE_NEG);
-    Vec128I* p = reinterpret_cast<Vec128I*>(data);
-
-    do {
-      p[0] = v_adds_i16(p[0], v);
-      p[1] = v_adds_i16(p[1], v);
-      p[2] = v_adds_i16(p[2], v);
-      p[3] = v_adds_i16(p[3], v);
-      p += 4;
-    } while (--n);
-
-    return true;
-  }
-
-#endif
-
-#if defined(BL_TARGET_OPT_NEON)
-
-  static BL_INLINE bool matchfinder_init_neon(mf_pos_t *data, size_t size) noexcept {
-    BL_STATIC_ASSERT(sizeof(mf_pos_t) == 2);
-
-    if (size % 64 != 0)
-      return false;
-
-    size_t n = size / 64u;
-    int16x8_t v = vdupq_n_s16(int16_t(MATCHFINDER_WINDOW_SIZE_NEG));
-    int16x8_t* p = (int16x8_t *)data;
-
-    do {
-      p[0] = v;
-      p[1] = v;
-      p[2] = v;
-      p[3] = v;
-      p += 4;
-    } while (--n);
-
-    return true;
-  }
-
-  static BL_INLINE bool matchfinder_rebase_neon(mf_pos_t *data, size_t size) noexcept {
-    BL_STATIC_ASSERT(sizeof(mf_pos_t) == 2);
-
-    if (size % 64 != 0)
-      return false;
-
-    size_t n = size / 64u;
-    int16x8_t v = vdupq_n_s16(int16_t(MATCHFINDER_WINDOW_SIZE_NEG));
-    int16x8_t* p = (int16x8_t *)data;
-
-    do {
-      p[0] = vqaddq_s16(p[0], v);
-      p[1] = vqaddq_s16(p[1], v);
-      p[2] = vqaddq_s16(p[2], v);
-      p[3] = vqaddq_s16(p[3], v);
-      p += 4;
-    } while (--n);
-
-    return true;
-  }
-
-#endif
-
 static BL_INLINE BLBitWord load_word_unaligned(const void* p) noexcept {
   if (sizeof(BLBitWord) == 4)
     return BLBitWord(BLMemOps::readU32u(p));
@@ -178,23 +43,38 @@ static BL_INLINE BLBitWord load_word_unaligned(const void* p) noexcept {
  */
 static BL_INLINE void matchfinder_init(mf_pos_t *data, size_t num_entries)
 {
-  size_t i;
+  size_t i = num_entries;
 
-#if defined(BL_TARGET_OPT_AVX2)
-  if (matchfinder_init_avx2(data, num_entries * sizeof(data[0])))
-    return;
-#elif defined(BL_TARGET_OPT_SSE2)
-  if (matchfinder_init_sse2(data, num_entries * sizeof(data[0])))
-    return;
+#if BL_TARGET_SIMD_I >= 256
+  using namespace SIMD;
+
+  Vec16xI16 ws = make256_i16(MATCHFINDER_WINDOW_SIZE_NEG);
+  while (i >= 64u) {
+    storea(data +  0, ws);
+    storea(data + 16, ws);
+    storea(data + 32, ws);
+    storea(data + 48, ws);
+    data += 64u;
+    i -= 64u;
+  }
+#elif BL_TARGET_SIMD_I == 128
+  using namespace SIMD;
+
+  Vec8xI16 ws = make128_i16(MATCHFINDER_WINDOW_SIZE_NEG);
+  while (i >= 32u) {
+    storea(data +  0, ws);
+    storea(data +  8, ws);
+    storea(data + 16, ws);
+    storea(data + 24, ws);
+    data += 32u;
+    i -= 32u;
+  }
 #endif
 
-#if defined(BL_TARGET_OPT_NEON)
-  if (matchfinder_init_neon(data, num_entries * sizeof(data[0])))
-    return;
-#endif
-
-  for (i = 0; i < num_entries; i++)
-    data[i] = MATCHFINDER_WINDOW_SIZE_NEG;
+  while (i) {
+    *data++ = MATCHFINDER_WINDOW_SIZE_NEG;
+    i--;
+  }
 }
 
 /*
@@ -219,41 +99,64 @@ static BL_INLINE void matchfinder_init(mf_pos_t *data, size_t num_entries)
  * the links need to be rebased in the same way.
  */
 static BL_INLINE void matchfinder_rebase(mf_pos_t *data, size_t num_entries) noexcept {
-  size_t i;
+  size_t i = num_entries;
 
-#if defined(BL_TARGET_OPT_AVX2)
-  if (matchfinder_rebase_avx2(data, num_entries * sizeof(data[0])))
-    return;
-#elif defined(BL_TARGET_OPT_SSE2)
-  if (matchfinder_rebase_sse2(data, num_entries * sizeof(data[0])))
-    return;
-#endif
+#if BL_TARGET_SIMD_I >= 256
+  using namespace SIMD;
 
-#if defined(BL_TARGET_OPT_NEON)
-  if (matchfinder_rebase_neon(data, num_entries * sizeof(data[0])))
-    return;
+  Vec16xI16 ws = make256_i16(MATCHFINDER_WINDOW_SIZE_NEG);
+  while (i >= 64) {
+    Vec16xI16 v0 = adds_i16(loada<Vec16xI16>(data +  0), ws);
+    Vec16xI16 v1 = adds_i16(loada<Vec16xI16>(data + 16), ws);
+    Vec16xI16 v2 = adds_i16(loada<Vec16xI16>(data + 32), ws);
+    Vec16xI16 v3 = adds_i16(loada<Vec16xI16>(data + 48), ws);
+
+    storea(data +  0, v0);
+    storea(data + 16, v1);
+    storea(data + 32, v2);
+    storea(data + 48, v3);
+
+    data += 64;
+    i -= 64;
+  }
+#elif BL_TARGET_SIMD_I >= 128
+  using namespace SIMD;
+
+  Vec8xI16 ws = make128_i16(MATCHFINDER_WINDOW_SIZE_NEG);
+  while (i >= 32) {
+    Vec8xI16 v0 = adds_i16(loada<Vec8xI16>(data +  0), ws);
+    Vec8xI16 v1 = adds_i16(loada<Vec8xI16>(data +  8), ws);
+    Vec8xI16 v2 = adds_i16(loada<Vec8xI16>(data + 16), ws);
+    Vec8xI16 v3 = adds_i16(loada<Vec8xI16>(data + 24), ws);
+
+    storea(data +  0, v0);
+    storea(data +  8, v1);
+    storea(data + 16, v2);
+    storea(data + 24, v3);
+
+    data += 32;
+    i -= 32;
+  }
 #endif
 
   if (MATCHFINDER_WINDOW_SIZE == 32768) {
-    /* Branchless version for 32768 byte windows.  If the value was
-     * already negative, clear all bits except the sign bit; this
-     * changes the value to -32768.  Otherwise, set the sign bit;
-     * this is equivalent to subtracting 32768.  */
-    for (i = 0; i < num_entries; i++) {
-      uint16_t v = data[i];
-      uint16_t sign_bit = v & 0x8000;
-      v &= sign_bit - ((sign_bit >> 15) ^ 1);
-      v |= 0x8000;
-      data[i] = v;
+    // Branchless version for 32768 byte windows. If the value was already negative, clear all
+    // bits except the sign bit; this changes the value to -32768. Otherwise, set the sign bit;
+    // this is equivalent to subtracting 32768.
+    while (i) {
+      uint16_t v = uint16_t(*data);
+      *data++ = int16_t((v & ~(int16_t(v) >> 15)) | 0x8000u);
+      i--;
     }
-    return;
   }
-
-  for (i = 0; i < num_entries; i++) {
-    if (data[i] >= 0)
-      data[i] -= MATCHFINDER_WINDOW_SIZE_NEG;
-    else
-      data[i] = MATCHFINDER_WINDOW_SIZE_NEG;
+  else {
+    while (i) {
+      if (*data >= 0)
+        *data++ -= MATCHFINDER_WINDOW_SIZE_NEG;
+      else
+        *data++ = MATCHFINDER_WINDOW_SIZE_NEG;
+      i--;
+    }
   }
 }
 

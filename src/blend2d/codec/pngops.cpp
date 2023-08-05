@@ -107,11 +107,14 @@ BLResult BL_CDECL blPngInverseFilter(uint8_t* p, uint32_t bpp, uint32_t bpl, uin
 // ============================================================================
 
 void blPngOpsOnInit(BLRuntimeContext* rt) noexcept {
+  // Maybe unused if there are no optimizations.
+  blUnused(rt);
+
   blPngOps.inverseFilter = blPngInverseFilter;
 
-  #ifdef BL_BUILD_OPT_SSE2
+#ifdef BL_BUILD_OPT_SSE2
   if (blRuntimeHasSSE2(rt)) {
     blPngOps.inverseFilter = blPngInverseFilter_SSE2;
   }
-  #endif
+#endif
 }

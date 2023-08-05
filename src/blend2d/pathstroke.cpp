@@ -4,12 +4,12 @@
 // SPDX-License-Identifier: Zlib
 
 #include "api-build_p.h"
-#include "tables_p.h"
 #include "geometry_p.h"
 #include "math_p.h"
 #include "matrix_p.h"
 #include "path_p.h"
 #include "pathstroke_p.h"
+#include "support/lookuptable_p.h"
 
 namespace BLPathPrivate {
 

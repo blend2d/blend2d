@@ -98,7 +98,7 @@ struct BLFontManagerImpl BL_CLASS_INHERITS(BLObjectImpl) {
 #ifdef __cplusplus
 
 //! Font manager [C++ API].
-class BLFontManager : public BLFontManagerCore {
+class BLFontManager final : public BLFontManagerCore {
 public:
   //! \cond INTERNAL
   BL_INLINE_NODEBUG BLFontManagerImpl* _impl() const noexcept { return static_cast<BLFontManagerImpl*>(_d.impl); }
@@ -136,7 +136,7 @@ public:
 
   //! Tests whether the font-manager is a valid FontManager and not a built-in default instance.
   BL_NODISCARD
-  BL_INLINE_NODEBUG bool isValid() const noexcept { return _d.refCountedFlag(); }
+  BL_INLINE_NODEBUG bool isValid() const noexcept { return _d.aField() == 0; }
 
   BL_NODISCARD
   BL_INLINE_NODEBUG bool equals(const BLFontManager& other) const noexcept { return blFontManagerEquals(this, &other); }

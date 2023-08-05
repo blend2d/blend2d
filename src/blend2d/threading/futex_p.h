@@ -77,7 +77,7 @@ static BL_INLINE int wakeAll(uint32_t* addr) noexcept { futexWinAPI.WakeByAddres
 #ifndef BL_BUILD_NO_FUTEX
 #define BL_FUTEX_ENABLED (blRuntimeContext.featuresInfo.futexEnabled)
 #else
-#define BL_FUTEX_ENABLED (0)
+#define BL_FUTEX_ENABLED 0
 
 namespace BLFutex {
 

@@ -106,7 +106,7 @@ BL_DEFINE_ENUM(BLStrokeCapPosition) {
   BL_FORCE_ENUM_UINT32(BL_STROKE_CAP_POSITION)
 };
 
-//! A presentation attribute defining the shape to be used at the end of open subpaths.
+//! A presentation attribute defining the shape to be used at the end of open sub-paths.
 BL_DEFINE_ENUM(BLStrokeCap) {
   //! Butt cap [default].
   BL_STROKE_CAP_BUTT = 0,
@@ -197,7 +197,7 @@ struct BLApproximationOptions {
 
   //! Tolerance used to flatten curves.
   double flattenTolerance;
-  //! Tolerance used to approximatecubic curves qith quadratic curves.
+  //! Tolerance used to approximate cubic curves with quadratic curves.
   double simplifyTolerance;
   //! Curve offsetting parameter, exact meaning depends on `offsetMode`.
   double offsetParameter;
@@ -327,9 +327,27 @@ struct BLStrokeOptionsCore {
   double width;
   double miterLimit;
   double dashOffset;
-  BL_TYPED_MEMBER(BLArrayCore, BLArray<double>, dashArray);
 
-  BL_HAS_TYPED_MEMBERS(BLStrokeOptionsCore)
+#ifdef __cplusplus
+  BLArray<double> dashArray;
+#else
+  union { BLArrayCore dashArray; };
+#endif
+
+#ifdef __cplusplus
+  BL_INLINE_NODEBUG BLStrokeOptionsCore() noexcept {}
+  BL_INLINE_NODEBUG BLStrokeOptionsCore(const BLStrokeOptionsCore& other) noexcept { _copyFrom(other); }
+  BL_INLINE_NODEBUG ~BLStrokeOptionsCore() noexcept {}
+  BL_INLINE_NODEBUG BLStrokeOptionsCore& operator=(const BLStrokeOptionsCore& other) noexcept { _copyFrom(other); return *this; }
+
+  BL_INLINE void _copyFrom(const BLStrokeOptionsCore& other) noexcept {
+    hints = other.hints;
+    width = other.width;
+    miterLimit = other.miterLimit;
+    dashOffset = other.dashOffset;
+    dashArray._d = other.dashArray._d;
+  }
+#endif
 
   BL_DEFINE_OBJECT_DCAST(BLStrokeOptions)
 };
@@ -377,7 +395,7 @@ BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_EXTRA_WARNINGS)
 //! Stroke options [C++ API].
 //!
 //! You should use this as a structure and use members of `BLStrokeOptionsCore` directly.
-class BLStrokeOptions : public BLStrokeOptionsCore {
+class BLStrokeOptions final : public BLStrokeOptionsCore {
 public:
   BL_INLINE BLStrokeOptions() noexcept { blStrokeOptionsInit(this); }
   BL_INLINE BLStrokeOptions(BLStrokeOptions&& other) noexcept { blStrokeOptionsInitMove(this, &other); }
@@ -401,7 +419,7 @@ public:
 BL_DIAGNOSTIC_POP
 
 //! 2D vector path [C++ API].
-class BLPath : public BLPathCore {
+class BLPath final : public BLPathCore {
 public:
   //! \cond INTERNAL
   BL_INLINE_NODEBUG BLPathImpl* _impl() const noexcept { return static_cast<BLPathImpl*>(_d.impl); }
@@ -742,8 +760,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addCircle(const BLCircle& circle, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_CIRCLE, &circle, &m, dir);
+  BL_INLINE_NODEBUG BLResult addCircle(const BLCircle& circle, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_CIRCLE, &circle, &transform, dir);
   }
 
   //! Adds a closed ellipse to the path.
@@ -752,8 +770,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addEllipse(const BLEllipse& ellipse, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_ELLIPSE, &ellipse, &m, dir);
+  BL_INLINE_NODEBUG BLResult addEllipse(const BLEllipse& ellipse, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_ELLIPSE, &ellipse, &transform, dir);
   }
 
   //! Adds a closed rounded ractangle to the path.
@@ -762,8 +780,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addRoundRect(const BLRoundRect& rr, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_ROUND_RECT, &rr, &m, dir);
+  BL_INLINE_NODEBUG BLResult addRoundRect(const BLRoundRect& rr, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_ROUND_RECT, &rr, &transform, dir);
   }
 
   //! Adds an unclosed arc to the path.
@@ -772,8 +790,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addArc(const BLArc& arc, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_ARC, &arc, &m, dir);
+  BL_INLINE_NODEBUG BLResult addArc(const BLArc& arc, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_ARC, &arc, &transform, dir);
   }
 
   //! Adds a closed chord to the path.
@@ -782,8 +800,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addChord(const BLArc& chord, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_CHORD, &chord, &m, dir);
+  BL_INLINE_NODEBUG BLResult addChord(const BLArc& chord, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_CHORD, &chord, &transform, dir);
   }
 
   //! Adds a closed pie to the path.
@@ -792,8 +810,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addPie(const BLArc& pie, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_PIE, &pie, &m, dir);
+  BL_INLINE_NODEBUG BLResult addPie(const BLArc& pie, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_PIE, &pie, &transform, dir);
   }
 
   //! Adds an unclosed line to the path.
@@ -802,8 +820,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addLine(const BLLine& line, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_LINE, &line, &m, dir);
+  BL_INLINE_NODEBUG BLResult addLine(const BLLine& line, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_LINE, &line, &transform, dir);
   }
 
   //! Adds a closed triangle.
@@ -812,8 +830,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addTriangle(const BLTriangle& triangle, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_TRIANGLE, &triangle, &m, dir);
+  BL_INLINE_NODEBUG BLResult addTriangle(const BLTriangle& triangle, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_TRIANGLE, &triangle, &transform, dir);
   }
 
   //! Adds a polyline.
@@ -822,8 +840,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addPolyline(const BLArrayView<BLPointI>& poly, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_POLYLINEI, &poly, &m, dir);
+  BL_INLINE_NODEBUG BLResult addPolyline(const BLArrayView<BLPointI>& poly, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_POLYLINEI, &poly, &transform, dir);
   }
 
   //! \overload
@@ -832,8 +850,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addPolyline(const BLPointI* poly, size_t n, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addPolyline(BLArrayView<BLPointI>{poly, n}, m, dir);
+  BL_INLINE_NODEBUG BLResult addPolyline(const BLPointI* poly, size_t n, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addPolyline(BLArrayView<BLPointI>{poly, n}, transform, dir);
   }
 
   //! Adds a polyline.
@@ -842,8 +860,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addPolyline(const BLArrayView<BLPoint>& poly, const BLMatrix2D& m, BLGeometryDirection dir) {
-    return addGeometry(BL_GEOMETRY_TYPE_POLYLINED, &poly, &m, dir);
+  BL_INLINE_NODEBUG BLResult addPolyline(const BLArrayView<BLPoint>& poly, const BLMatrix2D& transform, BLGeometryDirection dir) {
+    return addGeometry(BL_GEOMETRY_TYPE_POLYLINED, &poly, &transform, dir);
   }
 
   //! \overload
@@ -852,8 +870,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addPolyline(const BLPoint* poly, size_t n, const BLMatrix2D& m, BLGeometryDirection dir) {
-    return addPolyline(BLArrayView<BLPoint>{poly, n}, m, dir);
+  BL_INLINE_NODEBUG BLResult addPolyline(const BLPoint* poly, size_t n, const BLMatrix2D& transform, BLGeometryDirection dir) {
+    return addPolyline(BLArrayView<BLPoint>{poly, n}, transform, dir);
   }
 
   //! Adds a polygon.
@@ -862,8 +880,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addPolygon(const BLArrayView<BLPointI>& poly, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_POLYGONI, &poly, &m, dir);
+  BL_INLINE_NODEBUG BLResult addPolygon(const BLArrayView<BLPointI>& poly, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_POLYGONI, &poly, &transform, dir);
   }
 
   //! \overload
@@ -872,8 +890,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addPolygon(const BLPointI* poly, size_t n, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addPolygon(BLArrayView<BLPointI>{poly, n}, m, dir);
+  BL_INLINE_NODEBUG BLResult addPolygon(const BLPointI* poly, size_t n, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addPolygon(BLArrayView<BLPointI>{poly, n}, transform, dir);
   }
 
   //! Adds a polygon.
@@ -882,8 +900,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addPolygon(const BLArrayView<BLPoint>& poly, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_POLYGOND, &poly, &m, dir);
+  BL_INLINE_NODEBUG BLResult addPolygon(const BLArrayView<BLPoint>& poly, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_POLYGOND, &poly, &transform, dir);
   }
 
   //! \overload
@@ -892,8 +910,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addPolygon(const BLPoint* poly, size_t n, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addPolygon(BLArrayView<BLPoint>{poly, n}, m, dir);
+  BL_INLINE_NODEBUG BLResult addPolygon(const BLPoint* poly, size_t n, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addPolygon(BLArrayView<BLPoint>{poly, n}, transform, dir);
   }
 
   //! Adds an array of closed boxes.
@@ -902,8 +920,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addBoxArray(const BLArrayView<BLBoxI>& array, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXI, &array, &m, dir);
+  BL_INLINE_NODEBUG BLResult addBoxArray(const BLArrayView<BLBoxI>& array, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXI, &array, &transform, dir);
   }
 
   //! \overload
@@ -912,8 +930,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addBoxArray(const BLBoxI* data, size_t n, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addBoxArray(BLArrayView<BLBoxI>{data, n}, m, dir);
+  BL_INLINE_NODEBUG BLResult addBoxArray(const BLBoxI* data, size_t n, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addBoxArray(BLArrayView<BLBoxI>{data, n}, transform, dir);
   }
 
   //! Adds an array of closed boxes.
@@ -922,8 +940,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addBoxArray(const BLArrayView<BLBox>& array, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXD, &array, &m, dir);
+  BL_INLINE_NODEBUG BLResult addBoxArray(const BLArrayView<BLBox>& array, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXD, &array, &transform, dir);
   }
 
   //! \overload
@@ -932,8 +950,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addBoxArray(const BLBox* data, size_t n, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addBoxArray(BLArrayView<BLBox>{data, n}, m, dir);
+  BL_INLINE_NODEBUG BLResult addBoxArray(const BLBox* data, size_t n, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addBoxArray(BLArrayView<BLBox>{data, n}, transform, dir);
   }
 
   //! Adds an array of closed rectangles.
@@ -942,8 +960,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addRectArray(const BLArrayView<BLRectI>& array, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTI, &array, &m, dir);
+  BL_INLINE_NODEBUG BLResult addRectArray(const BLArrayView<BLRectI>& array, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTI, &array, &transform, dir);
   }
 
   //! \overload
@@ -952,8 +970,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addRectArray(const BLRectI* data, size_t n, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addRectArray(BLArrayView<BLRectI>{data, n}, m, dir);
+  BL_INLINE_NODEBUG BLResult addRectArray(const BLRectI* data, size_t n, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addRectArray(BLArrayView<BLRectI>{data, n}, transform, dir);
   }
 
   //! Adds an array of closed rectangles.
@@ -962,8 +980,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addRectArray(const BLArrayView<BLRect>& array, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addGeometry(BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTD, &array, &m, dir);
+  BL_INLINE_NODEBUG BLResult addRectArray(const BLArrayView<BLRect>& array, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addGeometry(BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTD, &array, &transform, dir);
   }
 
   //! \overload
@@ -972,8 +990,8 @@ public:
   }
 
   //! \overload
-  BL_INLINE_NODEBUG BLResult addRectArray(const BLRect* data, size_t n, const BLMatrix2D& m, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
-    return addRectArray(BLArrayView<BLRect>{data, n}, m, dir);
+  BL_INLINE_NODEBUG BLResult addRectArray(const BLRect* data, size_t n, const BLMatrix2D& transform, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
+    return addRectArray(BLArrayView<BLRect>{data, n}, transform, dir);
   }
 
   //! \}
@@ -1002,13 +1020,13 @@ public:
   }
 
   //! Adds other `path` transformed by `m` to this path.
-  BL_INLINE_NODEBUG BLResult addPath(const BLPath& path, const BLMatrix2D& m) noexcept {
-    return blPathAddTransformedPath(this, &path, nullptr, &m);
+  BL_INLINE_NODEBUG BLResult addPath(const BLPath& path, const BLMatrix2D& transform) noexcept {
+    return blPathAddTransformedPath(this, &path, nullptr, &transform);
   }
 
   //! Adds other `path` transformed by `m` and sliced by the given `range` to this path.
-  BL_INLINE_NODEBUG BLResult addPath(const BLPath& path, const BLRange& range, const BLMatrix2D& m) noexcept {
-    return blPathAddTransformedPath(this, &path, &range, &m);
+  BL_INLINE_NODEBUG BLResult addPath(const BLPath& path, const BLRange& range, const BLMatrix2D& transform) noexcept {
+    return blPathAddTransformedPath(this, &path, &range, &transform);
   }
 
   //! Adds other `path`, but reversed.
@@ -1069,7 +1087,7 @@ public:
     return blPathFitTo(this, nullptr, &rect, fitFlags);
   }
 
-  //! Fits a parh of the path specified by the given `range` into the given `rect` by taking into account fit flags
+  //! Fits a path of the path specified by the given `range` into the given `rect` by taking into account fit flags
   //! passed by `fitFlags`.
   BL_INLINE_NODEBUG BLResult fitTo(const BLRange& range, const BLRect& rect, uint32_t fitFlags) noexcept {
     return blPathFitTo(this, &range, &rect, fitFlags);
@@ -1105,10 +1123,10 @@ public:
     return blPathGetControlBox(this, boxOut);
   }
 
-  //! Stores a bounding box of all on-path vertices and curve extremas to `boxOut`.
+  //! Stores a bounding box of all on-path vertices and curve extrema to `boxOut`.
   //!
   //! The bounding box stored to `boxOut` could be smaller than a bounding box obtained by `getControlBox()` as it's
-  //! calculated by merging only start/end points and curves at their extremas (not control points). The resulting
+  //! calculated by merging only start/end points and curves at their extrema (not control points). The resulting
   //! bounding box represents a visual bounds of the path.
   BL_INLINE_NODEBUG BLResult getBoundingBox(BLBox* boxOut) const noexcept {
     return blPathGetBoundingBox(this, boxOut);

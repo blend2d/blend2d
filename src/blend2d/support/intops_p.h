@@ -207,7 +207,7 @@ BL_INLINE_NODEBUG constexpr X shr(const X& x, const Y& y) noexcept {
 //! Returns `x >> y` (shift right arithmetic) by explicitly casting `x` to a signed type and back.
 template<typename X, typename Y>
 BL_NODISCARD
-BL_INLINE_NODEBUG constexpr X sar(const X& x, const Y& y) noexcept {
+BL_INLINE_NODEBUG X sar(const X& x, const Y& y) noexcept {
   typedef typename std::make_signed<X>::type S;
   return X(S(x) >> y);
 }

@@ -11,8 +11,6 @@
 #include "object.h"
 #include "rgba.h"
 
-BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
-
 //! \addtogroup blend2d_api_styling
 //! \{
 
@@ -25,8 +23,8 @@ BL_DEFINE_ENUM(BLGradientType) {
   BL_GRADIENT_TYPE_LINEAR = 0,
   //! Radial gradient type.
   BL_GRADIENT_TYPE_RADIAL = 1,
-  //! Conical gradient type.
-  BL_GRADIENT_TYPE_CONICAL = 2,
+  //! Conic gradient type.
+  BL_GRADIENT_TYPE_CONIC = 2,
 
   //! Maximum value of `BLGradientType`.
   BL_GRADIENT_TYPE_MAX_VALUE = 2
@@ -36,9 +34,9 @@ BL_DEFINE_ENUM(BLGradientType) {
 
 //! Gradient data index.
 BL_DEFINE_ENUM(BLGradientValue) {
-  //! x0 - start 'x' for Linear/Radial and center 'x' for Conical.
+  //! x0 - start 'x' for Linear/Radial and 'x' center for Conic.
   BL_GRADIENT_VALUE_COMMON_X0 = 0,
-  //! y0 - start 'y' for Linear/Radial and center 'y' for Conical.
+  //! y0 - start 'y' for Linear/Radial and 'y' center for Conic.
   BL_GRADIENT_VALUE_COMMON_Y0 = 1,
   //! x1 - end 'x' for Linear/Radial.
   BL_GRADIENT_VALUE_COMMON_X1 = 2,
@@ -46,13 +44,30 @@ BL_DEFINE_ENUM(BLGradientValue) {
   BL_GRADIENT_VALUE_COMMON_Y1 = 3,
   //! Radial gradient r0 radius.
   BL_GRADIENT_VALUE_RADIAL_R0 = 4,
-  //! Conical gradient angle.
-  BL_GRADIENT_VALUE_CONICAL_ANGLE = 2,
+  //! Conic gradient angle.
+  BL_GRADIENT_VALUE_CONIC_ANGLE = 2,
 
   //! Maximum value of `BLGradientValue`.
   BL_GRADIENT_VALUE_MAX_VALUE = 5
 
   BL_FORCE_ENUM_UINT32(BL_GRADIENT_VALUE)
+};
+
+//! Gradient rendering quality.
+BL_DEFINE_ENUM(BLGradientQuality) {
+  //! Nearest neighbor.
+  BL_GRADIENT_QUALITY_NEAREST = 0,
+
+  //! Use smoothing, if available (currently never available).
+  BL_GRADIENT_QUALITY_SMOOTH = 1,
+
+  //! The renderer will use an implementation-specific dithering algorithm to prevent banding.
+  BL_GRADIENT_QUALITY_DITHER = 2,
+
+  //! Maximum value of `BLGradientQuality`.
+  BL_GRADIENT_QUALITY_MAX_VALUE = 2
+
+  BL_FORCE_ENUM_UINT32(BL_GRADIENT_QUALITY)
 };
 
 //! \}
@@ -73,13 +88,13 @@ struct BLGradientStop {
   BL_INLINE_NODEBUG BLGradientStop() noexcept = default;
   BL_INLINE_NODEBUG BLGradientStop(const BLGradientStop& other) noexcept = default;
 
-  BL_INLINE_NODEBUG BLGradientStop(double offset, const BLRgba32& rgba32) noexcept
-    : offset(offset),
-      rgba(rgba32) {}
+  BL_INLINE_NODEBUG BLGradientStop(double offsetValue, const BLRgba32& rgba32Value) noexcept
+    : offset(offsetValue),
+      rgba(rgba32Value) {}
 
-  BL_INLINE_NODEBUG BLGradientStop(double offset, const BLRgba64& rgba64) noexcept
-    : offset(offset),
-      rgba(rgba64) {}
+  BL_INLINE_NODEBUG BLGradientStop(double offsetValue, const BLRgba64& rgba64Value) noexcept
+    : offset(offsetValue),
+      rgba(rgba64Value) {}
 
   //! \}
 
@@ -97,23 +112,23 @@ struct BLGradientStop {
   //! \{
 
   BL_INLINE_NODEBUG void reset() noexcept {
-    this->offset = 0.0;
-    this->rgba.reset();
+    offset = 0.0;
+    rgba.reset();
   }
 
-  BL_INLINE_NODEBUG void reset(double offset, const BLRgba32& rgba32) noexcept {
-    this->offset = offset;
-    this->rgba.reset(rgba32);
+  BL_INLINE_NODEBUG void reset(double offsetValue, const BLRgba32& rgba32Value) noexcept {
+    offset = offsetValue;
+    rgba.reset(rgba32Value);
   }
 
-  BL_INLINE_NODEBUG void reset(double offset, const BLRgba64& rgba64) noexcept {
-    this->offset = offset;
-    this->rgba.reset(rgba64);
+  BL_INLINE_NODEBUG void reset(double offsetValue, const BLRgba64& rgba64Value) noexcept {
+    offset = offsetValue;
+    rgba.reset(rgba64Value);
   }
 
   BL_INLINE_NODEBUG bool equals(const BLGradientStop& other) const noexcept {
-    return bool(unsigned(blEquals(this->offset, other.offset)) &
-                unsigned(blEquals(this->rgba  , other.rgba  )));
+    return bool(unsigned(blEquals(offset, other.offset)) &
+                unsigned(blEquals(rgba  , other.rgba  )));
   }
 
   //! \}
@@ -133,19 +148,20 @@ struct BLLinearGradientValues {
 
   BL_INLINE_NODEBUG BLLinearGradientValues() noexcept = default;
   BL_INLINE_NODEBUG BLLinearGradientValues(const BLLinearGradientValues& other) noexcept = default;
+  BL_INLINE_NODEBUG BLLinearGradientValues& operator=(const BLLinearGradientValues& other) noexcept = default;
 
-  BL_INLINE_NODEBUG BLLinearGradientValues(double x0, double y0, double x1, double y1) noexcept
-    : x0(x0),
-      y0(y0),
-      x1(x1),
-      y1(y1) {}
+  BL_INLINE_NODEBUG BLLinearGradientValues(double x0Value, double y0Value, double x1Value, double y1Value) noexcept
+    : x0(x0Value),
+      y0(y0Value),
+      x1(x1Value),
+      y1(y1Value) {}
 
   //! \}
 
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE_NODEBUG void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLLinearGradientValues{}; }
 
   //! \}
 #endif
@@ -165,27 +181,28 @@ struct BLRadialGradientValues {
 
   BL_INLINE_NODEBUG BLRadialGradientValues() noexcept = default;
   BL_INLINE_NODEBUG BLRadialGradientValues(const BLRadialGradientValues& other) noexcept = default;
+  BL_INLINE_NODEBUG BLRadialGradientValues& operator=(const BLRadialGradientValues& other) noexcept = default;
 
-  BL_INLINE_NODEBUG BLRadialGradientValues(double x0, double y0, double x1, double y1, double r0) noexcept
-    : x0(x0),
-      y0(y0),
-      x1(x1),
-      y1(y1),
-      r0(r0) {}
+  BL_INLINE_NODEBUG BLRadialGradientValues(double x0Value, double y0Value, double x1Value, double y1Value, double r0Value) noexcept
+    : x0(x0Value),
+      y0(y0Value),
+      x1(x1Value),
+      y1(y1Value),
+      r0(r0Value) {}
 
   //! \}
 
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE_NODEBUG void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLRadialGradientValues{}; }
 
   //! \}
 #endif
 };
 
-//! Conical gradient values packed into a structure.
-struct BLConicalGradientValues {
+//! Conic gradient values packed into a structure.
+struct BLConicGradientValues {
   double x0;
   double y0;
   double angle;
@@ -194,20 +211,21 @@ struct BLConicalGradientValues {
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE_NODEBUG BLConicalGradientValues() noexcept = default;
-  BL_INLINE_NODEBUG BLConicalGradientValues(const BLConicalGradientValues& other) noexcept = default;
+  BL_INLINE_NODEBUG BLConicGradientValues() noexcept = default;
+  BL_INLINE_NODEBUG BLConicGradientValues(const BLConicGradientValues& other) noexcept = default;
+  BL_INLINE_NODEBUG BLConicGradientValues& operator=(const BLConicGradientValues& other) noexcept = default;
 
-  BL_INLINE_NODEBUG BLConicalGradientValues(double x0, double y0, double angle) noexcept
-    : x0(x0),
-      y0(y0),
-      angle(angle) {}
+  BL_INLINE_NODEBUG BLConicGradientValues(double x0Value, double y0Value, double angleValue) noexcept
+    : x0(x0Value),
+      y0(y0Value),
+      angle(angleValue) {}
 
   //! \}
 
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE_NODEBUG void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLConicGradientValues{}; }
 
   //! \}
 #endif
@@ -229,12 +247,12 @@ BL_BEGIN_C_DECLS
 BL_API BLResult BL_CDECL blGradientInit(BLGradientCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientInitMove(BLGradientCore* self, BLGradientCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientInitWeak(BLGradientCore* self, const BLGradientCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientInitAs(BLGradientCore* self, BLGradientType type, const void* values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientInitAs(BLGradientCore* self, BLGradientType type, const void* values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* transform) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientDestroy(BLGradientCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientReset(BLGradientCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientAssignMove(BLGradientCore* self, BLGradientCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientAssignWeak(BLGradientCore* self, const BLGradientCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blGradientCreate(BLGradientCore* self, BLGradientType type, const void* values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientCreate(BLGradientCore* self, BLGradientType type, const void* values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* transform) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientShrink(BLGradientCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientReserve(BLGradientCore* self, size_t n) BL_NOEXCEPT_C;
 BL_API BLGradientType BL_CDECL blGradientGetType(const BLGradientCore* self) BL_NOEXCEPT_C BL_PURE;
@@ -258,7 +276,9 @@ BL_API BLResult BL_CDECL blGradientRemoveStopsByOffset(BLGradientCore* self, dou
 BL_API BLResult BL_CDECL blGradientReplaceStopRgba32(BLGradientCore* self, size_t index, double offset, uint32_t rgba32) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blGradientReplaceStopRgba64(BLGradientCore* self, size_t index, double offset, uint64_t rgba64) BL_NOEXCEPT_C;
 BL_API size_t BL_CDECL blGradientIndexOfStop(const BLGradientCore* self, double offset) BL_NOEXCEPT_C BL_PURE;
-BL_API BLResult BL_CDECL blGradientApplyMatrixOp(BLGradientCore* self, BLMatrix2DOp opType, const void* opData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientGetTransform(const BLGradientCore* self, BLMatrix2D* transformOut) BL_NOEXCEPT_C;
+BL_API BLTransformType BL_CDECL blGradientGetTransformType(const BLGradientCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blGradientApplyTransformOp(BLGradientCore* self, BLTransformOp opType, const void* opData) BL_NOEXCEPT_C;
 BL_API bool BL_CDECL blGradientEquals(const BLGradientCore* a, const BLGradientCore* b) BL_NOEXCEPT_C BL_PURE;
 
 BL_END_C_DECLS
@@ -278,17 +298,8 @@ struct BLGradientImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Stop capacity.
   size_t capacity;
 
-  //! Gradient type, see `BLGradientType`.
-  uint8_t gradientType;
-  //! Gradient extend mode, see `BLExtendMode`.
-  uint8_t extendMode;
-  //! Type of the transformation matrix.
-  uint8_t matrixType;
-  //! Reserved, must be zero.
-  uint8_t reserved[1];
-
   //! Gradient transformation matrix.
-  BLMatrix2D matrix;
+  BLMatrix2D transform;
 
   union {
     //! Gradient values (coordinates, radius, angle).
@@ -297,8 +308,8 @@ struct BLGradientImpl BL_CLASS_INHERITS(BLObjectImpl) {
     BLLinearGradientValues linear;
     //! Radial parameters.
     BLRadialGradientValues radial;
-    //! Conical parameters.
-    BLConicalGradientValues conical;
+    //! Conic parameters.
+    BLConicGradientValues conic;
   };
 };
 
@@ -310,7 +321,7 @@ struct BLGradientImpl BL_CLASS_INHERITS(BLObjectImpl) {
 #ifdef __cplusplus
 
 //! Gradient [C++ API].
-class BLGradient : public BLGradientCore {
+class BLGradient final : public BLGradientCore {
 public:
   //! \cond INTERNAL
   BL_INLINE_NODEBUG BLGradientImpl* _impl() const noexcept { return static_cast<BLGradientImpl*>(_d.impl); }
@@ -335,8 +346,8 @@ public:
     blGradientInitAs(this, BL_GRADIENT_TYPE_RADIAL, &values, extendMode, nullptr, 0, nullptr);
   }
 
-  BL_INLINE explicit BLGradient(const BLConicalGradientValues& values, BLExtendMode extendMode = BL_EXTEND_MODE_PAD) noexcept {
-    blGradientInitAs(this, BL_GRADIENT_TYPE_CONICAL, &values, extendMode, nullptr, 0, nullptr);
+  BL_INLINE explicit BLGradient(const BLConicGradientValues& values, BLExtendMode extendMode = BL_EXTEND_MODE_PAD) noexcept {
+    blGradientInitAs(this, BL_GRADIENT_TYPE_CONIC, &values, extendMode, nullptr, 0, nullptr);
   }
 
   BL_INLINE BLGradient(const BLLinearGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n) noexcept {
@@ -347,20 +358,20 @@ public:
     blGradientInitAs(this, BL_GRADIENT_TYPE_RADIAL, &values, extendMode, stops, n, nullptr);
   }
 
-  BL_INLINE BLGradient(const BLConicalGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n) noexcept {
-    blGradientInitAs(this, BL_GRADIENT_TYPE_CONICAL, &values, extendMode, stops, n, nullptr);
+  BL_INLINE BLGradient(const BLConicGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n) noexcept {
+    blGradientInitAs(this, BL_GRADIENT_TYPE_CONIC, &values, extendMode, stops, n, nullptr);
   }
 
-  BL_INLINE BLGradient(const BLLinearGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D& m) noexcept {
-    blGradientInitAs(this, BL_GRADIENT_TYPE_LINEAR, &values, extendMode, stops, n, &m);
+  BL_INLINE BLGradient(const BLLinearGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D& transform) noexcept {
+    blGradientInitAs(this, BL_GRADIENT_TYPE_LINEAR, &values, extendMode, stops, n, &transform);
   }
 
-  BL_INLINE BLGradient(const BLRadialGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D& m) noexcept {
-    blGradientInitAs(this, BL_GRADIENT_TYPE_RADIAL, &values, extendMode, stops, n, &m);
+  BL_INLINE BLGradient(const BLRadialGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D& transform) noexcept {
+    blGradientInitAs(this, BL_GRADIENT_TYPE_RADIAL, &values, extendMode, stops, n, &transform);
   }
 
-  BL_INLINE BLGradient(const BLConicalGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D& m) noexcept {
-    blGradientInitAs(this, BL_GRADIENT_TYPE_CONICAL, &values, extendMode, stops, n, &m);
+  BL_INLINE BLGradient(const BLConicGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D& transform) noexcept {
+    blGradientInitAs(this, BL_GRADIENT_TYPE_CONIC, &values, extendMode, stops, n, &transform);
   }
 
   BL_INLINE ~BLGradient() noexcept { blGradientDestroy(this); }
@@ -397,8 +408,8 @@ public:
     return blGradientCreate(this, BL_GRADIENT_TYPE_RADIAL, &values, extendMode, nullptr, 0, nullptr);
   }
 
-  BL_INLINE BLResult create(const BLConicalGradientValues& values, BLExtendMode extendMode = BL_EXTEND_MODE_PAD) noexcept {
-    return blGradientCreate(this, BL_GRADIENT_TYPE_CONICAL, &values, extendMode, nullptr, 0, nullptr);
+  BL_INLINE BLResult create(const BLConicGradientValues& values, BLExtendMode extendMode = BL_EXTEND_MODE_PAD) noexcept {
+    return blGradientCreate(this, BL_GRADIENT_TYPE_CONIC, &values, extendMode, nullptr, 0, nullptr);
   }
 
   BL_INLINE BLResult create(const BLLinearGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n) noexcept {
@@ -409,20 +420,20 @@ public:
     return blGradientCreate(this, BL_GRADIENT_TYPE_RADIAL, &values, extendMode, stops, n, nullptr);
   }
 
-  BL_INLINE BLResult create(const BLConicalGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n) noexcept {
-    return blGradientCreate(this, BL_GRADIENT_TYPE_CONICAL, &values, extendMode, stops, n, nullptr);
+  BL_INLINE BLResult create(const BLConicGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n) noexcept {
+    return blGradientCreate(this, BL_GRADIENT_TYPE_CONIC, &values, extendMode, stops, n, nullptr);
   }
 
-  BL_INLINE BLResult create(const BLLinearGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D& m) noexcept {
-    return blGradientCreate(this, BL_GRADIENT_TYPE_LINEAR, &values, extendMode, stops, n, &m);
+  BL_INLINE BLResult create(const BLLinearGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D& transform) noexcept {
+    return blGradientCreate(this, BL_GRADIENT_TYPE_LINEAR, &values, extendMode, stops, n, &transform);
   }
 
-  BL_INLINE BLResult create(const BLRadialGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D& m) noexcept {
-    return blGradientCreate(this, BL_GRADIENT_TYPE_RADIAL, &values, extendMode, stops, n, &m);
+  BL_INLINE BLResult create(const BLRadialGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D& transform) noexcept {
+    return blGradientCreate(this, BL_GRADIENT_TYPE_RADIAL, &values, extendMode, stops, n, &transform);
   }
 
-  BL_INLINE BLResult create(const BLConicalGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D& m) noexcept {
-    return blGradientCreate(this, BL_GRADIENT_TYPE_CONICAL, &values, extendMode, stops, n, &m);
+  BL_INLINE BLResult create(const BLConicGradientValues& values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D& transform) noexcept {
+    return blGradientCreate(this, BL_GRADIENT_TYPE_CONIC, &values, extendMode, stops, n, &transform);
   }
 
   //! \}
@@ -432,14 +443,14 @@ public:
 
   //! Returns the type of the gradient.
   BL_NODISCARD
-  BL_INLINE_NODEBUG BLGradientType type() const noexcept { return (BLGradientType)_impl()->gradientType; }
+  BL_INLINE_NODEBUG BLGradientType type() const noexcept { return BLGradientType(_d.info.aField()); }
 
   //! Sets the type of the gradient.
   BL_INLINE BLResult setType(BLGradientType type) noexcept { return blGradientSetType(this, type); }
 
   //! Returns the gradient extend mode, see `BLExtendMode`.
   BL_NODISCARD
-  BL_INLINE_NODEBUG BLExtendMode extendMode() const noexcept { return (BLExtendMode)_impl()->extendMode; }
+  BL_INLINE_NODEBUG BLExtendMode extendMode() const noexcept { return BLExtendMode(_d.info.bField()); }
 
   //! Set the gradient extend mode, see `BLExtendMode`.
   BL_INLINE BLResult setExtendMode(BLExtendMode extendMode) noexcept { return blGradientSetExtendMode(this, extendMode); }
@@ -459,14 +470,14 @@ public:
   BL_INLINE_NODEBUG const BLRadialGradientValues& radial() const noexcept { return _impl()->radial; }
 
   BL_NODISCARD
-  BL_INLINE_NODEBUG const BLConicalGradientValues& conical() const noexcept { return _impl()->conical; }
+  BL_INLINE_NODEBUG const BLConicGradientValues& conic() const noexcept { return _impl()->conic; }
 
   BL_INLINE BLResult setValue(size_t index, double value) noexcept { return blGradientSetValue(this, index, value); }
   BL_INLINE BLResult setValues(size_t index, const double* values, size_t n) noexcept { return blGradientSetValues(this, index, values, n); }
 
   BL_INLINE BLResult setValues(const BLLinearGradientValues& values) noexcept { return setValues(0, (const double*)&values, sizeof(BLLinearGradientValues) / sizeof(double)); }
   BL_INLINE BLResult setValues(const BLRadialGradientValues& values) noexcept { return setValues(0, (const double*)&values, sizeof(BLRadialGradientValues) / sizeof(double)); }
-  BL_INLINE BLResult setValues(const BLConicalGradientValues& values) noexcept { return setValues(0, (const double*)&values, sizeof(BLConicalGradientValues) / sizeof(double)); }
+  BL_INLINE BLResult setValues(const BLConicGradientValues& values) noexcept { return setValues(0, (const double*)&values, sizeof(BLConicGradientValues) / sizeof(double)); }
 
   BL_NODISCARD
   BL_INLINE_NODEBUG double x0() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_COMMON_X0]; }
@@ -484,14 +495,14 @@ public:
   BL_INLINE_NODEBUG double r0() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_RADIAL_R0]; }
 
   BL_NODISCARD
-  BL_INLINE_NODEBUG double angle() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_CONICAL_ANGLE]; }
+  BL_INLINE_NODEBUG double angle() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_CONIC_ANGLE]; }
 
   BL_INLINE BLResult setX0(double value) noexcept { return setValue(BL_GRADIENT_VALUE_COMMON_X0, value); }
   BL_INLINE BLResult setY0(double value) noexcept { return setValue(BL_GRADIENT_VALUE_COMMON_Y0, value); }
   BL_INLINE BLResult setX1(double value) noexcept { return setValue(BL_GRADIENT_VALUE_COMMON_X1, value); }
   BL_INLINE BLResult setY1(double value) noexcept { return setValue(BL_GRADIENT_VALUE_COMMON_Y1, value); }
   BL_INLINE BLResult setR0(double value) noexcept { return setValue(BL_GRADIENT_VALUE_RADIAL_R0, value); }
-  BL_INLINE BLResult setAngle(double value) noexcept { return setValue(BL_GRADIENT_VALUE_CONICAL_ANGLE, value); }
+  BL_INLINE BLResult setAngle(double value) noexcept { return setValue(BL_GRADIENT_VALUE_CONIC_ANGLE, value); }
 
   //! \}
 
@@ -564,60 +575,60 @@ public:
   //! \{
 
   BL_NODISCARD
-  BL_INLINE_NODEBUG bool hasMatrix() const noexcept { return _impl()->matrixType != BL_MATRIX2D_TYPE_IDENTITY; }
+  BL_INLINE_NODEBUG const BLMatrix2D& transform() const noexcept { return _impl()->transform; }
 
   BL_NODISCARD
-  BL_INLINE_NODEBUG BLMatrix2DType matrixType() const noexcept { return (BLMatrix2DType)_impl()->matrixType; }
+  BL_INLINE_NODEBUG BLTransformType transformType() const noexcept { return BLTransformType(_d.info.cField()); }
 
   BL_NODISCARD
-  BL_INLINE_NODEBUG const BLMatrix2D& matrix() const noexcept { return _impl()->matrix; }
+  BL_INLINE_NODEBUG bool hasTransform() const noexcept { return transformType() != BL_TRANSFORM_TYPE_IDENTITY; }
 
   //! Applies a matrix operation to the current transformation matrix (internal).
-  BL_INLINE_NODEBUG BLResult _applyMatrixOp(BLMatrix2DOp opType, const void* opData) noexcept {
-    return blGradientApplyMatrixOp(this, opType, opData);
+  BL_INLINE_NODEBUG BLResult _applyTransformOp(BLTransformOp opType, const void* opData) noexcept {
+    return blGradientApplyTransformOp(this, opType, opData);
   }
 
   //! \cond INTERNAL
   //! Applies a matrix operation to the current transformation matrix (internal).
   template<typename... Args>
-  BL_INLINE BLResult _applyMatrixOpV(BLMatrix2DOp opType, Args&&... args) noexcept {
+  BL_INLINE BLResult _applyTransformOpV(BLTransformOp opType, Args&&... args) noexcept {
     double opData[] = { double(args)... };
-    return blGradientApplyMatrixOp(this, opType, opData);
+    return blGradientApplyTransformOp(this, opType, opData);
   }
   //! \endcond
 
-  BL_INLINE_NODEBUG BLResult setMatrix(const BLMatrix2D& m) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_ASSIGN, &m); }
-  BL_INLINE_NODEBUG BLResult resetMatrix() noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_RESET, nullptr); }
+  BL_INLINE_NODEBUG BLResult setTransform(const BLMatrix2D& transform) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_ASSIGN, &transform); }
+  BL_INLINE_NODEBUG BLResult resetTransform() noexcept { return _applyTransformOp(BL_TRANSFORM_OP_RESET, nullptr); }
 
-  BL_INLINE_NODEBUG BLResult translate(double x, double y) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_TRANSLATE, x, y); }
-  BL_INLINE_NODEBUG BLResult translate(const BLPointI& p) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_TRANSLATE, p.x, p.y); }
-  BL_INLINE_NODEBUG BLResult translate(const BLPoint& p) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_TRANSLATE, &p); }
-  BL_INLINE_NODEBUG BLResult scale(double xy) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_SCALE, xy, xy); }
-  BL_INLINE_NODEBUG BLResult scale(double x, double y) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_SCALE, x, y); }
-  BL_INLINE_NODEBUG BLResult scale(const BLPointI& p) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_SCALE, p.x, p.y); }
-  BL_INLINE_NODEBUG BLResult scale(const BLPoint& p) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_SCALE, &p); }
-  BL_INLINE_NODEBUG BLResult skew(double x, double y) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_SKEW, x, y); }
-  BL_INLINE_NODEBUG BLResult skew(const BLPoint& p) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_SKEW, &p); }
-  BL_INLINE_NODEBUG BLResult rotate(double angle) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_ROTATE, &angle); }
-  BL_INLINE_NODEBUG BLResult rotate(double angle, double x, double y) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_ROTATE_PT, angle, x, y); }
-  BL_INLINE_NODEBUG BLResult rotate(double angle, const BLPoint& p) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_ROTATE_PT, angle, p.x, p.y); }
-  BL_INLINE_NODEBUG BLResult rotate(double angle, const BLPointI& p) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_ROTATE_PT, angle, p.x, p.y); }
-  BL_INLINE_NODEBUG BLResult transform(const BLMatrix2D& m) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_TRANSFORM, &m); }
+  BL_INLINE_NODEBUG BLResult translate(double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_TRANSLATE, x, y); }
+  BL_INLINE_NODEBUG BLResult translate(const BLPointI& p) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_TRANSLATE, p.x, p.y); }
+  BL_INLINE_NODEBUG BLResult translate(const BLPoint& p) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_TRANSLATE, &p); }
+  BL_INLINE_NODEBUG BLResult scale(double xy) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_SCALE, xy, xy); }
+  BL_INLINE_NODEBUG BLResult scale(double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_SCALE, x, y); }
+  BL_INLINE_NODEBUG BLResult scale(const BLPointI& p) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_SCALE, p.x, p.y); }
+  BL_INLINE_NODEBUG BLResult scale(const BLPoint& p) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_SCALE, &p); }
+  BL_INLINE_NODEBUG BLResult skew(double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_SKEW, x, y); }
+  BL_INLINE_NODEBUG BLResult skew(const BLPoint& p) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_SKEW, &p); }
+  BL_INLINE_NODEBUG BLResult rotate(double angle) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_ROTATE, &angle); }
+  BL_INLINE_NODEBUG BLResult rotate(double angle, double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_ROTATE_PT, angle, x, y); }
+  BL_INLINE_NODEBUG BLResult rotate(double angle, const BLPoint& origin) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_ROTATE_PT, angle, origin.x, origin.y); }
+  BL_INLINE_NODEBUG BLResult rotate(double angle, const BLPointI& origin) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_ROTATE_PT, angle, origin.x, origin.y); }
+  BL_INLINE_NODEBUG BLResult applyTransform(const BLMatrix2D& transform) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_TRANSFORM, &transform); }
 
-  BL_INLINE_NODEBUG BLResult postTranslate(double x, double y) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_POST_TRANSLATE, x, y); }
-  BL_INLINE_NODEBUG BLResult postTranslate(const BLPointI& p) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_POST_TRANSLATE, p.x, p.y); }
-  BL_INLINE_NODEBUG BLResult postTranslate(const BLPoint& p) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_POST_TRANSLATE, &p); }
-  BL_INLINE_NODEBUG BLResult postScale(double xy) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_POST_SCALE, xy, xy); }
-  BL_INLINE_NODEBUG BLResult postScale(double x, double y) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_POST_SCALE, x, y); }
-  BL_INLINE_NODEBUG BLResult postScale(const BLPointI& p) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_POST_SCALE, p.x, p.y); }
-  BL_INLINE_NODEBUG BLResult postScale(const BLPoint& p) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_POST_SCALE, &p); }
-  BL_INLINE_NODEBUG BLResult postSkew(double x, double y) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_POST_SKEW, x, y); }
-  BL_INLINE_NODEBUG BLResult postSkew(const BLPoint& p) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_POST_SKEW, &p); }
-  BL_INLINE_NODEBUG BLResult postRotate(double angle) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_POST_ROTATE, &angle); }
-  BL_INLINE_NODEBUG BLResult postRotate(double angle, double x, double y) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_POST_ROTATE_PT, angle, x, y); }
-  BL_INLINE_NODEBUG BLResult postRotate(double angle, const BLPoint& p) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_POST_ROTATE_PT, angle, p.x, p.y); }
-  BL_INLINE_NODEBUG BLResult postRotate(double angle, const BLPointI& p) noexcept { return _applyMatrixOpV(BL_MATRIX2D_OP_POST_ROTATE_PT, angle, p.x, p.y); }
-  BL_INLINE_NODEBUG BLResult postTransform(const BLMatrix2D& m) noexcept { return _applyMatrixOp(BL_MATRIX2D_OP_POST_TRANSFORM, &m); }
+  BL_INLINE_NODEBUG BLResult postTranslate(double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_TRANSLATE, x, y); }
+  BL_INLINE_NODEBUG BLResult postTranslate(const BLPointI& p) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_TRANSLATE, p.x, p.y); }
+  BL_INLINE_NODEBUG BLResult postTranslate(const BLPoint& p) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_POST_TRANSLATE, &p); }
+  BL_INLINE_NODEBUG BLResult postScale(double xy) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_SCALE, xy, xy); }
+  BL_INLINE_NODEBUG BLResult postScale(double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_SCALE, x, y); }
+  BL_INLINE_NODEBUG BLResult postScale(const BLPointI& p) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_SCALE, p.x, p.y); }
+  BL_INLINE_NODEBUG BLResult postScale(const BLPoint& p) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_POST_SCALE, &p); }
+  BL_INLINE_NODEBUG BLResult postSkew(double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_SKEW, x, y); }
+  BL_INLINE_NODEBUG BLResult postSkew(const BLPoint& p) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_POST_SKEW, &p); }
+  BL_INLINE_NODEBUG BLResult postRotate(double angle) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_POST_ROTATE, &angle); }
+  BL_INLINE_NODEBUG BLResult postRotate(double angle, double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_ROTATE_PT, angle, x, y); }
+  BL_INLINE_NODEBUG BLResult postRotate(double angle, const BLPoint& origin) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_ROTATE_PT, angle, origin.x, origin.y); }
+  BL_INLINE_NODEBUG BLResult postRotate(double angle, const BLPointI& origin) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_ROTATE_PT, angle, origin.x, origin.y); }
+  BL_INLINE_NODEBUG BLResult postTransform(const BLMatrix2D& transform) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_POST_TRANSFORM, &transform); }
 
   //! \}
 };
@@ -626,7 +637,5 @@ public:
 //! \}
 
 //! \}
-
-BL_DIAGNOSTIC_POP
 
 #endif // BLEND2D_GRADIENT_H_INCLUDED

@@ -19,24 +19,6 @@ namespace JIT {
 //! Base class for all pattern fetch parts.
 class FetchPatternPart : public FetchPart {
 public:
-  //! Common registers (used by all fetch types).
-  struct CommonRegs {
-    //! Pattern width (32-bit).
-    x86::Gp w;
-    //! Pattern height (32-bit).
-    x86::Gp h;
-    //! Pattern pixels (pointer to the first scanline).
-    x86::Gp srctop;
-    //! Pattern stride.
-    x86::Gp stride;
-    //! Pattern stride (original value, used by PatternSimple only).
-    x86::Gp strideOrig;
-    //! Pointer to the previous scanline and/or pixel (fractional).
-    x86::Gp srcp0;
-    //! Pointer to the current scanline and/or pixel (aligned).
-    x86::Gp srcp1;
-  };
-
   //! How many bits to shift the `x` index to get the address to the pixel. If this value is 0xFF it means that
   //! shifting is not possible or that the pixel was already pre-shifted.
   uint8_t _idxShift = 0xFFu;
@@ -59,11 +41,26 @@ public:
 class FetchSimplePatternPart : public FetchPatternPart {
 public:
   //! Aligned and fractional blits.
-  struct SimpleRegs : public CommonRegs {
+  struct SimpleRegs {
+    //! Pointer to the previous scanline and/or pixel (fractional).
+    x86::Gp srcp0;
+    //! Pointer to the current scanline and/or pixel (aligned).
+    x86::Gp srcp1;
+    //! Pattern stride, used only by aligned blits.
+    x86::Gp stride;
+
+    //! Vertical extend data.
+    x86::Mem vExtendData;
+
     //! X position.
     x86::Gp x;
     //! Y position (counter, decreases to zero).
     x86::Gp y;
+
+    //! Pattern width (32-bit).
+    x86::Gp w;
+    //! Pattern height (32-bit).
+    x86::Gp h;
 
     //! X repeat/reflect.
     x86::Gp rx;
@@ -131,6 +128,8 @@ public:
   void _initPart(x86::Gp& x, x86::Gp& y) noexcept override;
   void _finiPart() noexcept override;
 
+  void swapStrideStopData(VecArray& v) noexcept;
+
   void advanceY() noexcept override;
   void startAtX(const x86::Gp& x) noexcept override;
   void advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept override;
@@ -150,7 +149,12 @@ public:
 //! Affine pattern fetch part.
 class FetchAffinePatternPart : public FetchPatternPart {
 public:
-  struct AffineRegs : public CommonRegs {
+  struct AffineRegs {
+    //! Pattern pixels (pointer to the first scanline).
+    x86::Gp srctop;
+    //! Pattern stride.
+    x86::Gp stride;
+
     //! Horizontal X/Y increments.
     x86::Xmm xx_xy;
     //! Vertical X/Y increments.

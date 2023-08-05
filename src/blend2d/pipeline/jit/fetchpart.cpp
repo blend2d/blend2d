@@ -148,19 +148,19 @@ void FetchPart::_fetch2x4(Pixel& p, PixelFlags flags) noexcept {
     if (blTestFlag(flags, PixelFlags::kPA)) {
       p.pa.init(x.pa[0]);
       pc->rename(p.pa, "pa");
-      pc->v_interleave_lo_i32(x.pa[0], x.pa[0], y.pa[0]);
+      pc->v_interleave_lo_u32(x.pa[0], x.pa[0], y.pa[0]);
     }
 
     if (blTestFlag(flags, PixelFlags::kUA)) {
       p.ua.init(x.ua[0]);
       pc->rename(p.ua, "ua");
-      pc->v_interleave_lo_i64(x.ua[0], x.ua[0], y.ua[0]);
+      pc->v_interleave_lo_u64(x.ua[0], x.ua[0], y.ua[0]);
     }
 
     if (blTestFlag(flags, PixelFlags::kUI)) {
       p.ui.init(x.ui[0]);
       pc->rename(p.ui, "ui");
-      pc->v_interleave_lo_i64(x.ui[0], x.ui[0], y.ui[0]);
+      pc->v_interleave_lo_u64(x.ui[0], x.ui[0], y.ui[0]);
     }
 
     p.setImmutable(x.isImmutable());

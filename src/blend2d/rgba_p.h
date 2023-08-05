@@ -11,7 +11,7 @@
 #include "rgba.h"
 
 #if defined(BL_BUILD_OPT_SSE2)
-  #include "simd_p.h"
+  #include "simd/simd_p.h"
 #endif
 
 //! \cond INTERNAL
@@ -29,7 +29,7 @@ static BL_INLINE bool isRgba32FullyOpaque(uint32_t rgba32) noexcept {
 }
 
 static BL_INLINE bool isRgba64FullyOpaque(uint64_t rgba64) noexcept {
-  return (rgba64 & 0xFFFF000000000000u) != 0;
+  return (rgba64 & 0xFFFF000000000000u) == 0xFFFF000000000000u;
 }
 
 static BL_INLINE uint32_t packRgba32(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
@@ -56,8 +56,8 @@ static BL_INLINE uint64_t packRgba64(uint32_t r, uint32_t g, uint32_t b, uint32_
 static BL_INLINE uint64_t rgba64FromRgba32(uint32_t src) noexcept {
 #if defined(BL_BUILD_OPT_SSE2)
   using namespace SIMD;
-  Vec128I src128 = v_i128_from_u32(src);
-  return v_get_u64(v_interleave_lo_i8(src128, src128));
+  Vec16xU8 src128 = cast_from_u32<Vec16xU8>(src);
+  return cast_to_u64(interleave_lo_u8(src128, src128));
 #else
   return BLRgba64(BLRgba32(src)).value;
 #endif
@@ -66,7 +66,7 @@ static BL_INLINE uint64_t rgba64FromRgba32(uint32_t src) noexcept {
 static BL_INLINE uint32_t rgba32FromRgba64(uint64_t src) noexcept {
 #if defined(BL_BUILD_OPT_SSE2)
   using namespace SIMD;
-  return v_get_u32(v_packs_i16_u8(v_srl_i16<8>(v_i128_from_u64(src))));
+  return cast_to_u32(packs_128_i16_u8(srli_u16<8>(cast_from_u64<Vec8xU16>(src))));
 #else
   return BLRgba32(BLRgba64(src)).value;
 #endif

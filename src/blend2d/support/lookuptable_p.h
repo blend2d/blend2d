@@ -76,21 +76,21 @@ struct BitTableGeneratorAdapter {
   }
 
   static constexpr BLBitWord gen32(size_t index) noexcept {
-    return (gen8(index +  0u) <<  0u) |
-           (gen8(index +  8u) <<  8u) |
-           (gen8(index + 16u) << 16u) |
-           (gen8(index + 24u) << 24u) ;
+    return (uint32_t(gen8(index +  0u)) <<  0u) |
+           (uint32_t(gen8(index +  8u)) <<  8u) |
+           (uint32_t(gen8(index + 16u)) << 16u) |
+           (uint32_t(gen8(index + 24u)) << 24u) ;
   }
 
   static constexpr BLBitWord gen64(size_t index) noexcept {
-    return (gen8(index +  0u) <<  0u) |
-           (gen8(index +  8u) <<  8u) |
-           (gen8(index + 16u) << 16u) |
-           (gen8(index + 24u) << 24u) |
-           (gen8(index + 32u) << 32u) |
-           (gen8(index + 40u) << 40u) |
-           (gen8(index + 48u) << 48u) |
-           (gen8(index + 56u) << 56u) ;
+    return (uint64_t(gen8(index +  0u)) <<  0u) |
+           (uint64_t(gen8(index +  8u)) <<  8u) |
+           (uint64_t(gen8(index + 16u)) << 16u) |
+           (uint64_t(gen8(index + 24u)) << 24u) |
+           (uint64_t(gen8(index + 32u)) << 32u) |
+           (uint64_t(gen8(index + 40u)) << 40u) |
+           (uint64_t(gen8(index + 48u)) << 48u) |
+           (uint64_t(gen8(index + 56u)) << 56u) ;
   }
 
   static constexpr BLBitWord value(size_t index) noexcept {

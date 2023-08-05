@@ -69,7 +69,7 @@
 
   <Type Name="BLArrayCore">
     <Intrinsic Name="get_raw_type" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_TYPE_MASK) &gt;&gt; BL_OBJECT_INFO_TYPE_SHIFT)"/>
-    <Intrinsic Name="sso" Expression="(_d.info.bits &amp; BL_OBJECT_INFO_DYNAMIC_FLAG) == 0"/>
+    <Intrinsic Name="sso" Expression="(_d.info.bits &amp; BL_OBJECT_INFO_D_FLAG) == 0"/>
     <Intrinsic Name="sso_a_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_A_MASK) &gt;&gt; BL_OBJECT_INFO_A_SHIFT)"/>
     <Intrinsic Name="sso_b_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_B_MASK) &gt;&gt; BL_OBJECT_INFO_B_SHIFT)"/>
     <Intrinsic Name="sso_size" Expression="size_t(sso_a_field())"/>
@@ -116,7 +116,7 @@
 
   <Type Name="BLArray&lt;*&gt;">
     <Intrinsic Name="get_raw_type" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_TYPE_MASK) &gt;&gt; BL_OBJECT_INFO_TYPE_SHIFT)"/>
-    <Intrinsic Name="sso" Expression="(_d.info.bits &amp; BL_OBJECT_INFO_DYNAMIC_FLAG) == 0"/>
+    <Intrinsic Name="sso" Expression="(_d.info.bits &amp; BL_OBJECT_INFO_D_FLAG) == 0"/>
     <Intrinsic Name="sso_a_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_A_MASK) &gt;&gt; BL_OBJECT_INFO_A_SHIFT)"/>
     <Intrinsic Name="sso_b_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_B_MASK) &gt;&gt; BL_OBJECT_INFO_B_SHIFT)"/>
     <Intrinsic Name="sso_size" Expression="size_t(sso_a_field())"/>
@@ -155,7 +155,7 @@
   <Type Name="BLStringCore">
     <AlternativeType Name="BLString" />
 
-    <Intrinsic Name="sso" Expression="(_d.info.bits &amp; BL_OBJECT_INFO_DYNAMIC_FLAG) == 0"/>
+    <Intrinsic Name="sso" Expression="(_d.info.bits &amp; BL_OBJECT_INFO_D_FLAG) == 0"/>
     <Intrinsic Name="sso_a_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_A_MASK) &gt;&gt; BL_OBJECT_INFO_A_SHIFT)"/>
     <Intrinsic Name="sso_size" Expression="size_t(BLString::kSSOCapacity) ^ sso_a_field()"/>
     <Intrinsic Name="sso_capacity" Expression="size_t(BLString::kSSOCapacity)"/>
@@ -392,6 +392,10 @@
   <Type Name="BLGradientCore">
     <AlternativeType Name="BLGradient" />
 
+    <Intrinsic Name="sso_a_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_A_MASK) &gt;&gt; BL_OBJECT_INFO_A_SHIFT)"/>
+    <Intrinsic Name="sso_b_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_B_MASK) &gt;&gt; BL_OBJECT_INFO_B_SHIFT)"/>
+    <Intrinsic Name="sso_c_field" Expression="((_d.info.bits &amp; BL_OBJECT_INFO_C_MASK) &gt;&gt; BL_OBJECT_INFO_C_SHIFT)"/>
+
     <Intrinsic Name="get_impl" Expression="((BLGradientImpl*)(_d.impl))"/>
 
     <DisplayString>BLGradient {{ size={get_impl()-&gt;size, d} capacity={get_impl()-&gt;capacity, d} }}</DisplayString>
@@ -399,14 +403,14 @@
     <Expand HideRawView="true">
       <Item Name="[detail]" ExcludeView="simple">_d</Item>
       <Item Name="[impl]" ExcludeView="simple">get_impl()</Item>
-      <Item Name="[gradientType]" ExcludeView="simple">(BLGradientType)(get_impl()-&gt;gradientType), d</Item>
-      <Item Name="[extendMode]" ExcludeView="simple">(BLExtendMode)(get_impl()-&gt;extendMode), d</Item>
-      <Item Name="[matrixType]" ExcludeView="simple">(BLMatrix2DType)(get_impl()-&gt;matrixType), d</Item>
-      <Item Name="[matrix]" ExcludeView="simple">get_impl()-&gt;matrix</Item>
+      <Item Name="[gradientType]" ExcludeView="simple">(BLGradientType)sso_a_field()</Item>
+      <Item Name="[extendMode]" ExcludeView="simple">(BLExtendMode)sso_b_field()</Item>
+      <Item Name="[transformType]" ExcludeView="simple">(BLTransformType)sso_c_field()</Item>
+      <Item Name="[transform]" ExcludeView="simple">get_impl()-&gt;transform</Item>
       <Item Name="[values]" ExcludeView="simple">get_impl()-&gt;values</Item>
       <Item Name="[linear]" ExcludeView="simple" Condition="get_impl()-&gt;gradientType == BL_GRADIENT_TYPE_LINEAR">get_impl()-&gt;linear</Item>
       <Item Name="[radial]" ExcludeView="simple" Condition="get_impl()-&gt;gradientType == BL_GRADIENT_TYPE_RADIAL">get_impl()-&gt;radial</Item>
-      <Item Name="[conical]" ExcludeView="simple" Condition="get_impl()-&gt;gradientType == BL_GRADIENT_TYPE_CONICAL">get_impl()-&gt;conical</Item>
+      <Item Name="[conic]" ExcludeView="simple" Condition="get_impl()-&gt;gradientType == BL_GRADIENT_TYPE_CONIC">get_impl()-&gt;conic</Item>
       <Item Name="[size]" ExcludeView="simple">get_impl()-&gt;size, d</Item>
       <Item Name="[capacity]" ExcludeView="simple">get_impl()-&gt;capacity, d</Item>
       <Synthetic Name="[stops]">
@@ -438,10 +442,10 @@
       <Item Name="[detail]" ExcludeView="simple">_d</Item>
       <Item Name="[impl]" ExcludeView="simple">get_impl()</Item>
       <Item Name="[extendMode]" ExcludeView="simple">(BLExtendMode)sso_b_field()</Item>
-      <Item Name="[matrixType]" ExcludeView="simple">(BLMatrix2DType)sso_c_field()</Item>
+      <Item Name="[transformType]" ExcludeView="simple">(BLTransformType)sso_c_field()</Item>
       <Item Name="[image]" ExcludeView="simple">get_impl()-&gt;image</Item>
       <Item Name="[area]" ExcludeView="simple">get_impl()-&gt;area</Item>
-      <Item Name="[matrix]" ExcludeView="simple">get_impl()-&gt;matrix</Item>
+      <Item Name="[transform]" ExcludeView="simple">get_impl()-&gt;transform</Item>
     </Expand>
   </Type>
 
@@ -638,8 +642,8 @@
       <Item Name="[strokeOptions]">strokeOptions</Item>
       <Item Name="[approximationOptions]">approximationOptions</Item>
 
-      <Item Name="[metaMatrix]">metaMatrix</Item>
-      <Item Name="[userMatrix]">userMatrix</Item>
+      <Item Name="[metaTransform]">metaTransform</Item>
+      <Item Name="[userTransform]">userTransform</Item>
 
       <Item Name="[savedStateCount]">savedStateCount, d</Item>
     </Expand>
@@ -671,6 +675,8 @@
     <Intrinsic Name="get_type" Expression="(_d.info.bits &amp; 0x80000000) != 0 ? (((_d.info.bits &amp; BL_OBJECT_INFO_TYPE_MASK) &gt;&gt; BL_OBJECT_INFO_TYPE_SHIFT) &lt;= 128 ? ((_d.info.bits &amp; BL_OBJECT_INFO_TYPE_MASK) &gt;&gt; BL_OBJECT_INFO_TYPE_SHIFT) : 128) : 0"/>
 
     <DisplayString Condition="get_type() == __BL_OBJECT_TYPE_RGBA()">{(BLRgba*)this}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_RGBA32">{_d.u32_data[0]}</DisplayString>
+    <DisplayString Condition="get_type() == BL_OBJECT_TYPE_RGBA64">{_d.u64_data[1]}</DisplayString>
     <DisplayString Condition="get_type() == BL_OBJECT_TYPE_NULL">Null</DisplayString>
     <DisplayString Condition="get_type() == BL_OBJECT_TYPE_PATTERN">{(BLPatternCore*)this}</DisplayString>
     <DisplayString Condition="get_type() == BL_OBJECT_TYPE_GRADIENT">{(BLGradientCore*)this}</DisplayString>
@@ -694,6 +700,8 @@
 
     <Expand HideRawView="true">
       <ExpandedItem Condition="get_type() == __BL_OBJECT_TYPE_RGBA()">(BLRgba*)this</ExpandedItem>
+      <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_RGBA32">{_d.u32_data[0]}</DisplayString>
+      <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_RGBA64">{_d.u64_data[1]}</DisplayString>
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_PATTERN">(BLPatternCore*)this</ExpandedItem>
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_GRADIENT">(BLGradientCore*)this</ExpandedItem>
       <ExpandedItem Condition="get_type() == BL_OBJECT_TYPE_IMAGE">(BLImageCore*)this</ExpandedItem>

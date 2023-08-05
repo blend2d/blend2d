@@ -262,7 +262,7 @@ template<> BL_INLINE_NODEBUG BLResult replaceItem(BLArrayCore* self, size_t inde
 
 //! Array container (template) [C++ API].
 template<typename T>
-class BLArray : public BLArrayCore {
+class BLArray final : public BLArrayCore {
 public:
   //! \cond INTERNAL
   //! \name Internals
@@ -274,7 +274,12 @@ public:
   //! Implementation type of this BLArray<T> matching `T` traits.
   enum : uint32_t {
     kArrayType = Traits::kArrayType,
-    kSSOCapacity = BLObjectDetail::kStaticDataSize / uint32_t(sizeof(T))
+
+    //! Capacity of an SSO array - depends on the size of `T`.
+    kSSOCapacity = BLObjectDetail::kStaticDataSize / uint32_t(sizeof(T)),
+
+    //! Signature of SSO representation of an empty array.
+    kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BLObjectType(kArrayType)) | BLObjectInfo::packAbcp(0u, kSSOCapacity)
   };
 
   static_assert(uint32_t(kArrayType) != BL_OBJECT_TYPE_NULL,
@@ -290,7 +295,7 @@ public:
 
   //! Creates a default constructed array.
   BL_INLINE_NODEBUG BLArray() noexcept {
-    _d.initStatic((BLObjectType)kArrayType, BLObjectInfo::packAbcpFields(0u, kSSOCapacity));
+    _d.initStatic(BLObjectInfo{kSSOEmptySignature});
   }
 
   //! Move constructor.
@@ -298,14 +303,19 @@ public:
   //! \note The `other` array is always reset by a move construction, so it becomes an empty array.
   BL_INLINE_NODEBUG BLArray(BLArray&& other) noexcept {
     _d = other._d;
-    other._d.initStatic((BLObjectType)kArrayType, BLObjectInfo::packAbcpFields(0u, kSSOCapacity));
+    other._d.initStatic(BLObjectInfo{kSSOEmptySignature});
   }
 
   //! Copy constructor, performs weak copy of the data held by the `other` array.
-  BL_INLINE_NODEBUG BLArray(const BLArray& other) noexcept { blArrayInitWeak(this, &other); }
+  BL_INLINE_NODEBUG BLArray(const BLArray& other) noexcept {
+    blArrayInitWeak(this, &other);
+  }
 
   //! Destroys the array.
-  BL_INLINE_NODEBUG ~BLArray() noexcept { blArrayDestroy(this); }
+  BL_INLINE_NODEBUG ~BLArray() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blArrayDestroy(this);
+  }
 
   //! \}
 
@@ -345,7 +355,14 @@ public:
   //! \{
 
   //! Resets the array into a default constructed state by clearing its content and releasing its memory.
-  BL_INLINE_NODEBUG BLResult reset() noexcept { return blArrayReset(this); }
+  //!
+  //! \note This function always returns `BL_SUCCESS`.
+  BL_INLINE_NODEBUG BLResult reset() noexcept {
+    BLResult result = blArrayReset(this);
+    BL_ASSUME(result == BL_SUCCESS);
+    BL_ASSUME(_d.info.bits == kSSOEmptySignature);
+    return result;
+  }
 
   //! Swaps the content of this array with the `other` array.
   BL_INLINE_NODEBUG void swap(BLArray<T>& other) noexcept { _d.swap(other._d); }
@@ -389,7 +406,7 @@ public:
   //! Returns a read-only reference to the array item at the given `index`.
   //!
   //! \note The index must be valid, which means it has to be less than the array length. Accessing items out of range
-  //! is undefined behavior that would be catched by assertions in debug builds.
+  //! is undefined behavior that would be caught by assertions in debug builds.
   BL_NODISCARD
   BL_INLINE const T& at(size_t index) const noexcept {
     BL_ASSERT(index < size());
@@ -398,7 +415,7 @@ public:
 
   //! Returns a read-only reference to the first item.
   //!
-  //! \note The array must have at least one item othewise calling `first()` would point to the end of the array,
+  //! \note The array must have at least one item otherwise calling `first()` would point to the end of the array,
   //! which is not initialized, and such reference would be invalid. Debug builds would catch this condition with
   //! an assertion.
   BL_NODISCARD
@@ -406,7 +423,7 @@ public:
 
   //! Returns a read-only reference to the last item.
   //!
-  //! \note The array must have at least one item othewise calling `last()`  would point to the end of the array,
+  //! \note The array must have at least one item otherwise calling `last()`  would point to the end of the array,
   //! which is not initialized, and such reference would be invalid. Debug builds would catch this condition with
   //! an assertion.
   BL_NODISCARD
@@ -471,7 +488,7 @@ public:
 
   //! Modify operation is similar to `makeMutable`, however, the `op` argument specifies the desired array operation,
   //! see \ref BLModifyOp. The pointer returned in `dataOut` points to the first item to be either assigned or
-  //! appended and it points to an unititialized memory.
+  //! appended and it points to an uninitialized memory.
   //!
   //! Please note that assignments mean to wipe out the whole array content and to set the length of the array to `n`.
   //! The caller is responsible for initializing the data returned in `dataOut`.
@@ -671,7 +688,7 @@ public:
   //! \name Equality & Comparison
   //! \{
 
-  //! Returnsn whether the content of this array and `other` matches.
+  //! Returns whether the content of this array and `other` matches.
   BL_NODISCARD
   BL_INLINE_NODEBUG bool equals(const BLArray<T>& other) const noexcept {
     return blArrayEquals(this, &other);

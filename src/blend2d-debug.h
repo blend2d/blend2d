@@ -78,14 +78,15 @@ static void blDebugRuntimeCpuFeatures(char* buf, size_t bufSize, uint32_t arch, 
 
   switch (arch) {
     case BL_RUNTIME_CPU_ARCH_X86:
-      snprintf(buf, bufSize, "%s%s%s%s%s%s%s",
+      snprintf(buf, bufSize, "%s%s%s%s%s%s%s%s",
         (features & BL_RUNTIME_CPU_FEATURE_X86_SSE2  ) ? "SSE2 "   : "",
         (features & BL_RUNTIME_CPU_FEATURE_X86_SSE3  ) ? "SSE3 "   : "",
         (features & BL_RUNTIME_CPU_FEATURE_X86_SSSE3 ) ? "SSSE3 "  : "",
         (features & BL_RUNTIME_CPU_FEATURE_X86_SSE4_1) ? "SSE4.1 " : "",
         (features & BL_RUNTIME_CPU_FEATURE_X86_SSE4_2) ? "SSE4.2 " : "",
         (features & BL_RUNTIME_CPU_FEATURE_X86_AVX   ) ? "AVX "    : "",
-        (features & BL_RUNTIME_CPU_FEATURE_X86_AVX2  ) ? "AVX2 "   : "");
+        (features & BL_RUNTIME_CPU_FEATURE_X86_AVX2  ) ? "AVX2 "   : "",
+        (features & BL_RUNTIME_CPU_FEATURE_X86_AVX512) ? "AVX512 " : "");
       break;
 
     default:
@@ -397,15 +398,15 @@ static void blDebugContext_(const BLContextCore* obj, const char* name, int inde
 
   BL_DEBUG_FMT("Type: %s\n", blDebugGetEnumAsString(blContextGetType(obj), contextTypeEnum));
   BL_DEBUG_FMT("GlobalAlpha: %f\n", state->globalAlpha);
-  BL_DEBUG_FMT("SavedStateCount: %zu\n", state->savedStateCount);
+  BL_DEBUG_FMT("SavedStateCount: %u\n", state->savedStateCount);
 
-  blDebugMatrix2D_(&state->metaMatrix, "MetaMatrix", indent);
-  blDebugMatrix2D_(&state->userMatrix, "UserMatrix", indent);
+  blDebugMatrix2D_(&state->metaTransform, "MetaTransform", indent);
+  blDebugMatrix2D_(&state->userTransform, "UserTransform", indent);
 
-  BL_DEBUG_FMT("FillAlpha: %f\n", state->styleAlpha[BL_CONTEXT_OP_TYPE_FILL]);
+  BL_DEBUG_FMT("FillAlpha: %f\n", state->styleAlpha[BL_CONTEXT_STYLE_SLOT_FILL]);
   BL_DEBUG_FMT("FillRule: %s\n", blDebugGetEnumAsString(state->fillRule, fillRuleEnum));
 
-  BL_DEBUG_FMT("StrokeAlpha: %f\n", state->styleAlpha[BL_CONTEXT_OP_TYPE_STROKE]);
+  BL_DEBUG_FMT("StrokeAlpha: %f\n", state->styleAlpha[BL_CONTEXT_STYLE_SLOT_STROKE]);
   blDebugStrokeOptions_(&state->strokeOptions, "StrokeOptions", indent);
 
   indent--;

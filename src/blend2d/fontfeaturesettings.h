@@ -149,7 +149,7 @@ struct BLFontFeatureSettingsCore BL_CLASS_INHERITS(BLObjectCore) {
 struct BLFontFeatureSettingsImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Pointer to feature items.
   BLFontFeatureItem* data;
-  //! Numbef of feature items in `data`.
+  //! Number of feature items in `data`.
   size_t size;
   //! Capacity of `data`.
   size_t capacity;
@@ -164,7 +164,7 @@ struct BLFontFeatureSettingsImpl BL_CLASS_INHERITS(BLObjectImpl) {
 #ifdef __cplusplus
 
 //! Font feature settings [C++ API].
-class BLFontFeatureSettings : public BLFontFeatureSettingsCore {
+class BLFontFeatureSettings final : public BLFontFeatureSettingsCore {
 public:
   //! \cond INTERNAL
   //! \name Internals
@@ -172,7 +172,10 @@ public:
 
   enum : uint32_t {
     //! SSO capacity of \ref BLFontFeatureSettings container.
-    kSSOCapacity = 36u
+    kSSOCapacity = 36u,
+
+    //! Signature of an empty font feature settings.
+    kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS)
   };
 
   BL_INLINE_NODEBUG BLFontFeatureSettingsImpl* _impl() const noexcept { return static_cast<BLFontFeatureSettingsImpl*>(_d.impl); }
@@ -184,18 +187,24 @@ public:
   //! \{
 
   BL_INLINE_NODEBUG BLFontFeatureSettings() noexcept {
-    _d.initStatic(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
+    _d.initStatic(BLObjectInfo{kSSOEmptySignature});
     _d.u32_data[2] = 0xFFFFFFFFu;
   }
 
   BL_INLINE_NODEBUG BLFontFeatureSettings(BLFontFeatureSettings&& other) noexcept {
     _d = other._d;
-    other._d.initStatic(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
+    other._d.initStatic(BLObjectInfo{kSSOEmptySignature});
     other._d.u32_data[2] = 0xFFFFFFFFu;
   }
 
-  BL_INLINE_NODEBUG BLFontFeatureSettings(const BLFontFeatureSettings& other) noexcept { blFontFeatureSettingsInitWeak(this, &other); }
-  BL_INLINE_NODEBUG ~BLFontFeatureSettings() noexcept { blFontFeatureSettingsDestroy(this); }
+  BL_INLINE_NODEBUG BLFontFeatureSettings(const BLFontFeatureSettings& other) noexcept {
+    blFontFeatureSettingsInitWeak(this, &other);
+  }
+
+  BL_INLINE_NODEBUG ~BLFontFeatureSettings() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blFontFeatureSettingsDestroy(this);
+  }
 
   //! \}
 
@@ -229,7 +238,7 @@ public:
   BL_INLINE_NODEBUG bool empty() const noexcept { return size() == 0; }
 
   //! Returns the number of feature tag/value pairs stored in the container.
-  BL_INLINE_NODEBUG size_t size() const noexcept { return _d.sso() ? size_t(_d.info.yField()) : _impl()->size; }
+  BL_INLINE_NODEBUG size_t size() const noexcept { return _d.sso() ? size_t(_d.info.aField()) : _impl()->size; }
 
   //! Returns the container capacity
   //!

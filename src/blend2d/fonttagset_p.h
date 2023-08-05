@@ -78,7 +78,7 @@ public:
 
     size_t dstDataIndex = 0;
     size_t unknownTagIndex = 0;
-    BLParametrizedBitOps<BLBitOrder::kLSB, BLBitWord>::BitVectorIterator it(knownTags.data, knownTags.bitWordSize());
+    BLParametrizedBitOps<BLBitOrder::kLSB, BLBitWord>::BitVectorIterator it(knownTags.data, knownTags.sizeInWords());
 
     while (it.hasNext()) {
       uint32_t tagId = it.next();
@@ -108,7 +108,7 @@ public:
   }
 
   BL_INLINE BLResult flattenTo(BLArray<BLTag>& dst) const noexcept {
-    return flattenTagSetTo(dst, scriptIdToTagTable, knownTags.data, knownTags.bitWordSize(), knownTagCount, unknownTags.data(), unknownTags.size());
+    return flattenTagSetTo(dst, scriptIdToTagTable, knownTags.data, knownTags.sizeInWords(), knownTagCount, unknownTags.data(), unknownTags.size());
   }
 };
 
@@ -123,7 +123,7 @@ public:
   }
 
   BL_INLINE BLResult flattenTo(BLArray<BLTag>& dst) const noexcept {
-    return flattenTagSetTo(dst, languageIdToTagTable, knownTags.data, knownTags.bitWordSize(), knownTagCount, unknownTags.data(), unknownTags.size());
+    return flattenTagSetTo(dst, languageIdToTagTable, knownTags.data, knownTags.sizeInWords(), knownTagCount, unknownTags.data(), unknownTags.size());
   }
 };
 
@@ -138,7 +138,7 @@ public:
   }
 
   BL_INLINE BLResult flattenTo(BLArray<BLTag>& dst) const noexcept {
-    return flattenTagSetTo(dst, featureIdToTagTable, knownTags.data, knownTags.bitWordSize(), knownTagCount, unknownTags.data(), unknownTags.size());
+    return flattenTagSetTo(dst, featureIdToTagTable, knownTags.data, knownTags.sizeInWords(), knownTagCount, unknownTags.data(), unknownTags.size());
   }
 };
 
@@ -153,7 +153,7 @@ public:
   }
 
   BL_INLINE BLResult flattenTo(BLArray<BLTag>& dst) const noexcept {
-    return flattenTagSetTo(dst, baselineIdToTagTable, knownTags.data, knownTags.bitWordSize(), knownTagCount, unknownTags.data(), unknownTags.size());
+    return flattenTagSetTo(dst, baselineIdToTagTable, knownTags.data, knownTags.sizeInWords(), knownTagCount, unknownTags.data(), unknownTags.size());
   }
 };
 
@@ -168,7 +168,7 @@ public:
   }
 
   BL_INLINE BLResult flattenTo(BLArray<BLTag>& dst) const noexcept {
-    return flattenTagSetTo(dst, variationIdToTagTable, knownTags.data, knownTags.bitWordSize(), knownTagCount, unknownTags.data(), unknownTags.size());
+    return flattenTagSetTo(dst, variationIdToTagTable, knownTags.data, knownTags.sizeInWords(), knownTagCount, unknownTags.data(), unknownTags.size());
   }
 };
 

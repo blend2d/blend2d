@@ -8,10 +8,10 @@
 #include "../geometry_p.h"
 #include "../matrix_p.h"
 #include "../path_p.h"
-#include "../tables_p.h"
 #include "../opentype/otface_p.h"
 #include "../opentype/otglyf_p.h"
 #include "../support/intops_p.h"
+#include "../support/lookuptable_p.h"
 #include "../support/memops_p.h"
 #include "../support/ptrops_p.h"
 #include "../support/scopedbuffer_p.h"
@@ -128,14 +128,14 @@ public:
   double _m10;
   double _m11;
 
-  BL_INLINE GlyfVertexDecoder(const uint8_t* xCoordPtr, const uint8_t* yCoordPtr, const uint8_t* endPtr, const BLMatrix2D& m) noexcept
+  BL_INLINE GlyfVertexDecoder(const uint8_t* xCoordPtr, const uint8_t* yCoordPtr, const uint8_t* endPtr, const BLMatrix2D& transform) noexcept
     : _xCoordPtr(xCoordPtr),
       _yCoordPtr(yCoordPtr),
       _endPtr(endPtr),
-      _m00(m.m00),
-      _m01(m.m01),
-      _m10(m.m10),
-      _m11(m.m11) {}
+      _m00(transform.m00),
+      _m01(transform.m01),
+      _m10(transform.m10),
+      _m11(transform.m11) {}
 
   BL_INLINE BLPoint decodeNext(uint32_t flags) noexcept {
     int x16 = 0;
@@ -176,7 +176,7 @@ public:
 static BLResult BL_CDECL getGlyphOutlines(
   const BLFontFaceImpl* faceI_,
   BLGlyphId glyphId,
-  const BLMatrix2D* matrix,
+  const BLMatrix2D* transform,
   BLPath* out,
   size_t* contourCountOut,
   BLScopedBuffer* tmpBuffer) noexcept {
@@ -202,7 +202,7 @@ static BLResult BL_CDECL getGlyphOutlines(
   compoundData[0].gPtr = nullptr;
   compoundData[0].remainingSize = 0;
   compoundData[0].compoundFlags = Compound::kArgsAreXYValues;
-  compoundData[0].matrix = *matrix;
+  compoundData[0].transform = *transform;
 
   BLPathAppender appender;
   size_t contourCountTotal = 0;
@@ -373,10 +373,10 @@ static BLResult BL_CDECL getGlyphOutlines(
 
           // Since we know exactly how many bytes both vertex arrays consume we can decode both X and Y coordinates at
           // the same time. This gives us also the opportunity to start appending to BLPath immediately.
-          GlyfVertexDecoder vertexDecoder(gPtr, gPtr + xCoordinatesSize, gEnd, compoundData[compoundLevel].matrix);
+          GlyfVertexDecoder vertexDecoder(gPtr, gPtr + xCoordinatesSize, gEnd, compoundData[compoundLevel].transform);
 
           // Vertices are stored relative to each other, this is the current point.
-          BLPoint currentPt(compoundData[compoundLevel].matrix.m20, compoundData[compoundLevel].matrix.m21);
+          BLPoint currentPt(compoundData[compoundLevel].transform.m20, compoundData[compoundLevel].transform.m21);
 
           // Current vertex index in TT sense, advanced until `ttVertexCount`, which must be end index of the last contour.
           size_t i = 0;
@@ -536,7 +536,7 @@ ContinueCompound:
 
           constexpr double kScaleF2x14 = 1.0 / 16384.0;
 
-          BLMatrix2D& cm = compoundData[compoundLevel].matrix;
+          BLMatrix2D& cm = compoundData[compoundLevel].transform;
           cm.reset(1.0, 0.0, 0.0, 1.0, double(arg1), double(arg2));
 
           if (flags & Compound::kAnyCompoundScale) {
@@ -585,7 +585,7 @@ ContinueCompound:
             // However, if both or neither are set then the behavior is the same as `kUnscaledComponentOffset`.
             if ((flags & (Compound::kArgsAreXYValues | Compound::kAnyCompoundOffset    )) ==
                          (Compound::kArgsAreXYValues | Compound::kScaledComponentOffset)) {
-              // This is what FreeType does and what's not 100% according to the specificaion. However, according to
+              // This is what FreeType does and what's not 100% according to the specification. However, according to
               // FreeType this would produce much better offsets so we will match FreeType instead of following the
               // specification.
               cm.m20 *= BLGeometry::length(BLPoint(cm.m00, cm.m01));
@@ -596,7 +596,7 @@ ContinueCompound:
           compoundData[compoundLevel].gPtr = gPtr;
           compoundData[compoundLevel].remainingSize = remainingSize;
           compoundData[compoundLevel].compoundFlags = flags;
-          BLTransformPrivate::multiply(cm, cm, compoundData[compoundLevel - 1].matrix);
+          BLTransformPrivate::multiply(cm, cm, compoundData[compoundLevel - 1].transform);
           continue;
         }
       }

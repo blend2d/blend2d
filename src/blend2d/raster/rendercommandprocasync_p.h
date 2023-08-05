@@ -35,6 +35,9 @@ class ProcData {
 public:
   typedef BLPrivateBitWordOps BitOps;
 
+  //! \name Members
+  //! \{
+
   WorkData* _workData;
   RenderBatch* _batch;
 
@@ -52,6 +55,11 @@ public:
 
   AnalyticActiveEdge<int>* _pooledEdges;
 
+  //! \}
+
+  //! \name Construction & Destruction
+  //! \{
+
   BL_INLINE ProcData(WorkData* workData) noexcept
     : _workData(workData),
       _batch(workData->batch),
@@ -65,6 +73,8 @@ public:
       _pendingCommandBitSetSize(0),
       _pendingCommandBitSetMask(0),
       _pooledEdges(nullptr) {}
+
+  //! \}
 
   //! \name Initialization
   //! \{
@@ -183,8 +193,8 @@ static BL_INLINE bool fillBoxU(ProcData& procData, const RenderCommand& command)
   return command.boxI().y1 <= int(procData.bandFixedY1());
 }
 
-static BL_NOINLINE bool fillMaskRawA(ProcData& procData, const RenderCommand& command) noexcept {
-  const RenderCommand::FillMaskRaw& payload = command._payload.maskRaw;
+static bool fillBoxMaskA(ProcData& procData, const RenderCommand& command) noexcept {
+  const RenderCommand::FillBoxMaskA& payload = command._payload.boxMaskA;
   const BLBoxI& boxI = payload.boxI;
 
   int y0 = blMax(boxI.y0, int(procData.bandY0()));
@@ -194,7 +204,7 @@ static BL_NOINLINE bool fillMaskRawA(ProcData& procData, const RenderCommand& co
     uint32_t maskX = payload.maskOffsetI.x;
     uint32_t maskY = payload.maskOffsetI.y + (y0 - boxI.y0);
 
-    const BLImageImpl* maskI = payload.maskImageI;
+    const BLImageImpl* maskI = payload.maskImageI.ptr;
     const uint8_t* maskData = static_cast<const uint8_t*>(maskI->pixelData) + maskY * maskI->stride + maskX * (maskI->depth / 8u);
 
     BLPipeline::MaskCommand maskCommands[2];
@@ -228,7 +238,7 @@ static bool fillAnalytic(ProcData& procData, const RenderCommand& command, bool 
     AnalyticRasterizer::kOptionRecordMinXMaxX ;
 
   WorkData& workData = *procData.workData();
-  SlotData::Analytic& procState = procData.stateDataAt(command._payload.analyticAsync.stateSlotIndex).analytic;
+  SlotData::Analytic& procState = procData.stateDataAt(command._payload.analytic.stateSlotIndex).analytic;
 
   uint32_t bandFixedY0 = procData.bandFixedY0();
   uint32_t bandFixedY1 = procData.bandFixedY1();
@@ -237,7 +247,7 @@ static bool fillAnalytic(ProcData& procData, const RenderCommand& command, bool 
   AnalyticActiveEdge<int>* active;
 
   if (isInitialBand) {
-    edges = command.analyticEdgesAsync();
+    edges = command.analyticEdges();
     active = nullptr;
 
     // Everything clipped out, or all lines horizontal, etc...
@@ -245,7 +255,7 @@ static bool fillAnalytic(ProcData& procData, const RenderCommand& command, bool 
       return true;
 
     // Don't do anything if we haven't advanced enough.
-    if (command._payload.analyticAsync.fixedY0 >= int(bandFixedY1)) {
+    if (command._payload.analytic.fixedY0 >= int(bandFixedY1)) {
       procState.edges = edges;
       procState.active = active;
       return false;
@@ -253,7 +263,7 @@ static bool fillAnalytic(ProcData& procData, const RenderCommand& command, bool 
   }
   else {
     // Don't do anything if we haven't advanced enough.
-    if (command._payload.analyticAsync.fixedY0 >= int(bandFixedY1))
+    if (command._payload.analytic.fixedY0 >= int(bandFixedY1))
       return false;
 
     edges = procState.edges;
@@ -446,19 +456,19 @@ SaveState:
   return !edges && !active;
 }
 
-static BL_NOINLINE bool processCommand(ProcData& procData, const RenderCommand& command, bool isInitialBand) noexcept {
+static bool processCommand(ProcData& procData, const RenderCommand& command, bool isInitialBand) noexcept {
   switch (command.type()) {
-    case RenderCommand::kTypeFillBoxA:
+    case RenderCommandType::kFillBoxA:
       return fillBoxA(procData, command);
 
-    case RenderCommand::kTypeFillBoxU:
+    case RenderCommandType::kFillBoxU:
       return fillBoxU(procData, command);
 
-    case RenderCommand::kTypeFillMaskRaw:
-      return fillMaskRawA(procData, command);
-
-    case RenderCommand::kTypeFillAnalytic:
+    case RenderCommandType::kFillAnalytic:
       return fillAnalytic(procData, command, isInitialBand);
+
+    case RenderCommandType::kFillBoxMaskA:
+      return fillBoxMaskA(procData, command);
 
     default:
       return true;

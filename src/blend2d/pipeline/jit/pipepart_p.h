@@ -57,10 +57,13 @@ public:
   BL_NONCOPYABLE(PipePart)
   BL_OVERRIDE_NEW_DELETE(PipePart)
 
-  //! Reference to `PipeCompiler`.
+  //! Pointer to `PipeCompiler`.
   PipeCompiler* pc = nullptr;
-  //! Reference to `asmjit::x86::Compiler`.
+  //! Pointer to `asmjit::x86::Compiler`.
   x86::Compiler* cc = nullptr;
+
+  //! Reference to a common constant pool.
+  const BLCommonTable& ct;
 
   //! Part type.
   PipePartType _partType {};

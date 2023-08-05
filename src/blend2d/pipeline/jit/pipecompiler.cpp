@@ -33,9 +33,10 @@ static constexpr OperandSignature signatureOfXmmYmmZmm[] = {
 
 PipeCompiler::PipeCompiler(x86::Compiler* cc, const CpuFeatures& features, PipeOptFlags optFlags) noexcept
   : cc(cc),
+    ct(blCommonTable),
     _features(features),
     _optFlags(optFlags),
-    _commonTableOff(128) {}
+    _commonTableOff(512 + 128) {}
 
 PipeCompiler::~PipeCompiler() noexcept {}
 
@@ -93,9 +94,6 @@ FillPart* PipeCompiler::newFillPart(FillType fillType, FetchPart* dstPart, CompO
   if (fillType == FillType::kBoxA)
     return newPartT<FillBoxAPart>(dstPart->as<FetchPixelPtrPart>(), compOpPart);
 
-  if (fillType == FillType::kBoxU)
-    return newPartT<FillBoxUPart>(dstPart->as<FetchPixelPtrPart>(), compOpPart);
-
   if (fillType == FillType::kMask)
     return newPartT<FillMaskPart>(dstPart->as<FetchPixelPtrPart>(), compOpPart);
 
@@ -115,8 +113,8 @@ FetchPart* PipeCompiler::newFetchPart(FetchType fetchType, BLInternalFormat form
   if (fetchType >= FetchType::kGradientRadialFirst && fetchType <= FetchType::kGradientRadialLast)
     return newPartT<FetchRadialGradientPart>(fetchType, format);
 
-  if (fetchType >= FetchType::kGradientConicalFirst && fetchType <= FetchType::kGradientConicalLast)
-    return newPartT<FetchConicalGradientPart>(fetchType, format);
+  if (fetchType >= FetchType::kGradientConicFirst && fetchType <= FetchType::kGradientConicLast)
+    return newPartT<FetchConicGradientPart>(fetchType, format);
 
   if (fetchType >= FetchType::kPatternSimpleFirst && fetchType <= FetchType::kPatternSimpleLast)
     return newPartT<FetchSimplePatternPart>(fetchType, format);
@@ -253,7 +251,7 @@ Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, SimdWidth constWi
       return simdMemConst(c, bcstWidth, constWidth);
   }
 
-  return x86::Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _newVecConst(c).id());
+  return x86::Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _newVecConst(c, bcstWidth == Bcst::kNA_Unique).id());
 }
 
 Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, const x86::Vec& similarTo) noexcept {
@@ -275,7 +273,7 @@ x86::Vec PipeCompiler::simdVecConst(const void* c, SimdWidth constWidth) noexcep
     if (_vecConsts[i].ptr == c)
       return x86::Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _vecConsts[i].vRegId);
 
-  return x86::Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _newVecConst(c).id());
+  return x86::Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _newVecConst(c, false).id());
 }
 
 x86::Vec PipeCompiler::simdVecConst(const void* c, const x86::Vec& similarTo) noexcept {
@@ -301,10 +299,7 @@ x86::Mem PipeCompiler::simdMemConst(const void* c, Bcst bcstWidth, SimdWidth con
     case Bcst::k16: bcst = x86::Mem::Broadcast::k1To32; break;
     case Bcst::k32: bcst = x86::Mem::Broadcast::k1To16; break;
     case Bcst::k64: bcst = x86::Mem::Broadcast::k1To8; break;
-    case Bcst::kNA: bcst = x86::Mem::Broadcast::kNone; break;
-
-    default:
-      BL_NOT_REACHED();
+    default: bcst = x86::Mem::Broadcast::kNone; break;
   }
 
   m.setBroadcast(bcst);
@@ -344,20 +339,31 @@ x86::Mem PipeCompiler::_getMemConst(const void* c) noexcept {
   }
 }
 
-x86::Vec PipeCompiler::_newVecConst(const void* c) noexcept {
-  uint64_t u0 = static_cast<const uint64_t*>(c)[0];
-  uint64_t u1 = static_cast<const uint64_t*>(c)[1];
-
+x86::Vec PipeCompiler::_newVecConst(const void* c, bool isUniqueConst) noexcept {
   x86::Vec vReg;
+  const char* specialConstName = nullptr;
 
-  if (u0 != u1)
-    vReg = newVec(simdWidth(), "c_0x%016llX%016llX", (unsigned long long)u1, (unsigned long long)u0);
-  else if ((u0 >> 32) != (u0 & 0xFFFFFFFFu))
-    vReg = newVec(simdWidth(), "c_0x%016llX", (unsigned long long)u0);
-  else if (((u0 >> 16) & 0xFFFFu) != (u0 & 0xFFFFu))
-    vReg = newVec(simdWidth(), "c_0x%08X", (unsigned)(u0 & 0xFFFFFFFFu));
-  else
-    vReg = newVec(simdWidth(), "c_0x%04X", (unsigned)(u0 & 0xFFFFu));
+  if (c == blCommonTable.pshufb_dither_rgba64_lo.data)
+    specialConstName = "pshufb_dither_rgba64_lo";
+  else if (c == blCommonTable.pshufb_dither_rgba64_hi.data)
+    specialConstName = "pshufb_dither_rgba64_hi";
+
+  if (specialConstName) {
+    vReg = newVec(simdWidth(), specialConstName);
+  }
+  else {
+    uint64_t u0 = static_cast<const uint64_t*>(c)[0];
+    uint64_t u1 = static_cast<const uint64_t*>(c)[1];
+
+    if (u0 != u1)
+      vReg = newVec(simdWidth(), "c_0x%016llX%016llX", (unsigned long long)u1, (unsigned long long)u0);
+    else if ((u0 >> 32) != (u0 & 0xFFFFFFFFu))
+      vReg = newVec(simdWidth(), "c_0x%016llX", (unsigned long long)u0);
+    else if (((u0 >> 16) & 0xFFFFu) != (u0 & 0xFFFFu))
+      vReg = newVec(simdWidth(), "c_0x%08X", (unsigned)(u0 & 0xFFFFFFFFu));
+    else
+      vReg = newVec(simdWidth(), "c_0x%04X", (unsigned)(u0 & 0xFFFFu));
+  }
 
   VecConst vConst;
   vConst.ptr = c;
@@ -373,10 +379,12 @@ x86::Vec PipeCompiler::_newVecConst(const void* c) noexcept {
     x86::Mem m = _getMemConst(c);
 
     ScopedInjector inject(cc, &_funcInit);
-    if (hasAVX512() && !vReg.isXmm())
+    if (hasAVX512() && !vReg.isXmm() && !isUniqueConst)
       cc->vbroadcasti32x4(vReg, m);
-    else if (hasAVX2() && vReg.isYmm())
+    else if (hasAVX2() && vReg.isYmm() && !isUniqueConst)
       cc->vbroadcasti128(vReg, m);
+    else if (hasAVX512())
+      cc->vmovdqa32(vReg, m); // EVEX prefix has a compressed displacement, which is smaller.
     else
       v_loada_ivec(vReg, m);
   }
@@ -497,8 +505,6 @@ void PipeCompiler::v_emit_xmov(const OpArray& dst, const OpArray& src, uint32_t 
 }
 
 void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const Operand_& src_) noexcept {
-  const BLCommonTable& c = blCommonTable;
-
   Operand dst(dst_);
   Operand src(src_);
 
@@ -527,7 +533,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
         }
 
         v_emit_xmov(dst, src, 8);
-        v_interleave_lo_i8(dst, dst, simdConst(&c.i_0000000000000000, Bcst::kNA, SimdWidth::k128));
+        v_interleave_lo_u8(dst, dst, simdConst(&ct.i_0000000000000000, Bcst::kNA, SimdWidth::k128));
         return;
       }
 
@@ -539,8 +545,8 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
         }
 
         v_emit_xmov(dst, src, 4);
-        v_interleave_lo_i8(dst, dst, simdConst(&c.i_0000000000000000, Bcst::kNA, SimdWidth::k128));
-        v_interleave_lo_i16(dst, dst, simdConst(&c.i_0000000000000000, Bcst::kNA, SimdWidth::k128));
+        v_interleave_lo_u8(dst, dst, simdConst(&ct.i_0000000000000000, Bcst::kNA, SimdWidth::k128));
+        v_interleave_lo_u16(dst, dst, simdConst(&ct.i_0000000000000000, Bcst::kNA, SimdWidth::k128));
         return;
       }
 
@@ -552,7 +558,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
         }
 
         v_emit_xmov(dst, src, 8);
-        v_interleave_lo_i16(dst, dst, simdConst(&c.i_0000000000000000, Bcst::kNA, SimdWidth::k128));
+        v_interleave_lo_u16(dst, dst, simdConst(&ct.i_0000000000000000, Bcst::kNA, SimdWidth::k128));
         return;
       }
 
@@ -622,7 +628,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
       }
 
       case kIntrin2Vinv255u16: {
-        Operand u16_255 = simdConst(&c.i_00FF00FF00FF00FF, Bcst::k32, dst.as<x86::Vec>());
+        Operand u16_255 = simdConst(&ct.i_00FF00FF00FF00FF, Bcst::k32, dst.as<x86::Vec>());
 
         if (hasAVX() || isSameReg(dst, src)) {
           v_xor_i32(dst, src, u16_255);
@@ -635,7 +641,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
       }
 
       case kIntrin2Vinv256u16: {
-        Operand u16_0100 = simdConst(&c.i_0100010001000100, Bcst::kNA, dst.as<x86::Vec>());
+        Operand u16_0100 = simdConst(&ct.i_0100010001000100, Bcst::kNA, dst.as<x86::Vec>());
 
         if (!isSameReg(dst, src)) {
           v_mov(dst, u16_0100);
@@ -646,14 +652,14 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
           v_abs_i16(dst, dst);
         }
         else {
-          v_xor_i32(dst, dst, simdConst(&c.i_FFFFFFFFFFFFFFFF, Bcst::kNA, dst.as<x86::Vec>()));
+          v_xor_i32(dst, dst, simdConst(&ct.i_FFFFFFFFFFFFFFFF, Bcst::kNA, dst.as<x86::Vec>()));
           v_add_i16(dst, dst, u16_0100);
         }
         return;
       }
 
       case kIntrin2Vinv255u32: {
-        Operand u32_255 = simdConst(&c.i_000000FF000000FF, Bcst::kNA, dst.as<x86::Vec>());
+        Operand u32_255 = simdConst(&ct.i_000000FF000000FF, Bcst::kNA, dst.as<x86::Vec>());
 
         if (hasAVX() || isSameReg(dst, src)) {
           v_xor_i32(dst, src, u32_255);
@@ -705,7 +711,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
               x86::Gp tmp = cc->newUInt32("tmp");
               cc->imul(tmp, src.as<x86::Gp>().r32(), 0x01010101u);
               s_mov_i32(dst.as<x86::Vec>(), tmp);
-              v_swizzle_i32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
+              v_swizzle_u32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
               return;
             }
 
@@ -725,12 +731,12 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
               cc->emit(x86::Inst::kIdVpbroadcastb, dst, x);
           }
           else if (hasSSSE3()) {
-            v_shuffle_i8(dst, x, simdConst(&c.i_0000000000000000, Bcst::kNA, dst.as<x86::Vec>()));
+            v_shuffle_i8(dst, x, simdConst(&ct.i_0000000000000000, Bcst::kNA, dst.as<x86::Vec>()));
           }
           else {
-            v_interleave_lo_i8(dst, x, x);
-            v_swizzle_lo_i16(dst, dst, x86::shuffleImm(0, 0, 0, 0));
-            v_swizzle_i32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
+            v_interleave_lo_u8(dst, x, x);
+            v_swizzle_lo_u16(dst, dst, x86::shuffleImm(0, 0, 0, 0));
+            v_swizzle_u32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
           }
         }
         else {
@@ -746,7 +752,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
             cc->movzx(tmp, m);
             cc->imul(tmp, tmp, 0x01010101u);
             s_mov_i32(dst.as<x86::Vec>(), tmp);
-            v_swizzle_i32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
+            v_swizzle_u32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
           }
         }
 
@@ -776,8 +782,8 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
               cc->emit(x86::Inst::kIdVpbroadcastw, dst, x);
           }
           else {
-            v_swizzle_lo_i16(dst, x, x86::shuffleImm(0, 0, 0, 0));
-            v_swizzle_i32(dst, dst, x86::shuffleImm(1, 0, 1, 0));
+            v_swizzle_lo_u16(dst, x, x86::shuffleImm(0, 0, 0, 0));
+            v_swizzle_u32(dst, dst, x86::shuffleImm(1, 0, 1, 0));
           }
         }
         else {
@@ -799,8 +805,8 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
               v_insert_u16(dst, dst, m, 0);
             }
 
-            v_swizzle_lo_i16(dst, dst, x86::shuffleImm(0, 0, 0, 0));
-            v_swizzle_i32(dst, dst, x86::shuffleImm(1, 0, 1, 0));
+            v_swizzle_lo_u16(dst, dst, x86::shuffleImm(0, 0, 0, 0));
+            v_swizzle_u32(dst, dst, x86::shuffleImm(1, 0, 1, 0));
           }
         }
 
@@ -824,7 +830,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
           if (hasAVX2())
             cc->emit(x86::Inst::kIdVpbroadcastd, dst, x);
           else
-            v_swizzle_i32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
+            v_swizzle_u32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
         }
         else {
           // VReg <- BroadcastD(Mem).
@@ -836,7 +842,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
           }
           else {
             v_load_i32(dst.as<x86::Vec>(), m);
-            v_swizzle_i32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
+            v_swizzle_u32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
           }
         }
 
@@ -860,7 +866,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
           if (hasAVX2())
             cc->emit(x86::Inst::kIdVpbroadcastq, dst, x);
           else
-            v_swizzle_i32(dst, dst, x86::shuffleImm(1, 0, 1, 0));
+            v_swizzle_u32(dst, dst, x86::shuffleImm(1, 0, 1, 0));
         }
         else {
           // VReg <- BroadcastQ(Mem).
@@ -872,7 +878,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
           }
           else {
             v_load_i64(dst.as<x86::Vec>(), m);
-            v_swizzle_i32(dst, dst, x86::shuffleImm(1, 0, 1, 0));
+            v_swizzle_u32(dst, dst, x86::shuffleImm(1, 0, 1, 0));
           }
         }
 
@@ -892,20 +898,30 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
             v_mov(dst, src);
         }
         else if (!hasAVX512()) {
-          if (src.isMem())
-            cc->vbroadcasti128(dst.as<x86::Vec>(), src.as<x86::Mem>());
-          else
-            cc->vperm2i128(dst.as<x86::Vec>(), src.as<x86::Vec>(), src.as<x86::Vec>(), 0u);
+          if (src.isMem()) {
+            cc->vbroadcastf128(dst.as<x86::Vec>(), src.as<x86::Mem>());
+          }
+          else {
+            x86::Vec srcAsXmm = src.as<x86::Vec>().xmm();
+            cc->vinsertf128(dst.as<x86::Vec>(), srcAsXmm.ymm(), srcAsXmm, 1u);
+          }
         }
         else {
           static const asmjit::InstId bcstTable[] = { x86::Inst::kIdVbroadcasti32x4, x86::Inst::kIdVbroadcasti64x2, x86::Inst::kIdVbroadcastf32x4, x86::Inst::kIdVbroadcastf64x2 };
           static const asmjit::InstId shufTable[] = { x86::Inst::kIdVshufi32x4, x86::Inst::kIdVshufi64x2, x86::Inst::kIdVshuff32x4, x86::Inst::kIdVshuff64x2 };
+          static const asmjit::InstId insrTable[] = { x86::Inst::kIdVinserti32x4, x86::Inst::kIdVinserti64x2, x86::Inst::kIdVinsertf32x4, x86::Inst::kIdVinsertf64x2 };
 
           uint32_t tableIndex = PackedInst::intrinId(packedId) - kIntrin2VBroadcastI32x4;
-          if (src.isMem())
+          if (src.isMem()) {
             cc->emit(bcstTable[tableIndex], dst, src);
-          else
-            cc->emit(shufTable[tableIndex], dst, src, src, 0u);
+          }
+          else if (dst.as<x86::Vec>().isYmm()) {
+            cc->emit(insrTable[tableIndex], dst, src.as<x86::Vec>().cloneAs(dst.as<x86::Vec>()), src.as<x86::Vec>().xmm(), 1u);
+          }
+          else {
+            Operand srcAsDst = src.as<x86::Vec>().cloneAs(dst.as<x86::Vec>());
+            cc->emit(shufTable[tableIndex], dst, srcAsDst, srcAsDst, 0u);
+          }
         }
 
         return;
@@ -954,14 +970,14 @@ void PipeCompiler::v_emit_vvi_vi(uint32_t packedId, const Operand_& dst_, const 
         if (isSameReg(dst_, src_) || hasAVX())
           v_shuffle_f32(dst_, src_, src_, imm);
         else
-          v_swizzle_i32(dst_, src_, imm);
+          v_swizzle_u32(dst_, src_, imm);
         return;
 
       case kIntrin2iVswizpd:
         if (isSameReg(dst_, src_) || hasAVX())
           v_shuffle_f64(dst_, src_, src_, imm);
         else
-          v_swizzle_i32(dst_, src_, shuf32ToShuf64(imm));
+          v_swizzle_u32(dst_, src_, shuf32ToShuf64(imm));
         return;
 
       default:
@@ -1117,7 +1133,7 @@ void PipeCompiler::v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const 
         //   dst'.u64[0] = src_.u64[1];
         //   dst'.u64[1] = src_.u64[0];
         if (isSameReg(src1_, src2_)) {
-          v_swap_i64(dst_, src1_);
+          v_swap_u64(dst_, src1_);
           return;
         }
 
@@ -1126,11 +1142,11 @@ void PipeCompiler::v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const 
         //   dst'.u64[1] = dst_.u64[0];
         if (isSameReg(dst_, src2_) && !hasAVX()) {
           if (hasSSSE3()) {
-            v_alignr_u8_(dst_, dst_, src1_, 8);
+            v_alignr_u128_(dst_, dst_, src1_, 8);
           }
           else {
             v_shuffle_f64(dst_, dst_, src1_, x86::shuffleImm(1, 0));
-            v_swap_i64(dst_, dst_);
+            v_swap_u64(dst_, dst_);
           }
           return;
         }
@@ -1210,7 +1226,7 @@ void PipeCompiler::v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const 
         if (isSameReg(dst, src1)) {
           x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
 
-          v_swizzle_i32(tmp, dst, x86::shuffleImm(2, 3, 0, 1));
+          v_swizzle_u32(tmp, dst, x86::shuffleImm(2, 3, 0, 1));
           v_mulx_ll_u32_(dst, dst, src2);
           v_mulx_ll_u32_(tmp, tmp, src2);
           v_sll_i64(tmp, tmp, 32);
@@ -1219,14 +1235,14 @@ void PipeCompiler::v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const 
         else if (isSameReg(dst, src2)) {
           x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
 
-          v_swizzle_i32(tmp, src1, x86::shuffleImm(2, 3, 0, 1));
+          v_swizzle_u32(tmp, src1, x86::shuffleImm(2, 3, 0, 1));
           v_mulx_ll_u32_(tmp, tmp, dst);
           v_mulx_ll_u32_(dst, dst, src1);
           v_sll_i64(tmp, tmp, 32);
           v_add_i64(dst, dst, tmp);
         }
         else {
-          v_swizzle_i32(dst, src1, x86::shuffleImm(2, 3, 0, 1));
+          v_swizzle_u32(dst, src1, x86::shuffleImm(2, 3, 0, 1));
           v_mulx_ll_u32_(dst, dst, src2);
           v_mulx_ll_u32_(src1, src1, src2);
           v_sll_i64(dst, dst, 32);
@@ -1272,8 +1288,8 @@ void PipeCompiler::v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const 
   // Single instruction.
   if (hasAVX()) {
     InstId instId = PackedInst::avxId(packedId);
-    if (x86::InstDB::infoById(instId).isEvexKRegOnly()) {
-      if (x86::Reg::isZmm(dst)) {
+    if (x86::Reg::isZmm(dst)) {
+      if (x86::InstDB::infoById(instId).isEvexKRegOnly()) {
         x86::KReg k = cc->newKq("kTmp");
         cc->emit(instId, k, src1, src2);
 
@@ -1314,6 +1330,17 @@ void PipeCompiler::v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const 
         }
 
         return;
+      }
+      else {
+        switch (instId) {
+          case x86::Inst::kIdVmovdqa: instId = x86::Inst::kIdVmovdqa32; break;
+          case x86::Inst::kIdVmovdqu: instId = x86::Inst::kIdVmovdqu32; break;
+          case x86::Inst::kIdVpand  : instId = x86::Inst::kIdVpandd   ; break;
+          case x86::Inst::kIdVpandn : instId = x86::Inst::kIdVpandnd  ; break;
+          case x86::Inst::kIdVpor   : instId = x86::Inst::kIdVpord    ; break;
+          case x86::Inst::kIdVpxor  : instId = x86::Inst::kIdVpxord   ; break;
+          default: break;
+        }
       }
     }
 
@@ -1691,7 +1718,6 @@ void PipeCompiler::x_ensure_predicate_32(PixelPredicate& predicate, uint32_t max
 // ========================================
 
 void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType pixelType, const x86::Gp& mPtr, const x86::Vec& globalAlpha) noexcept {
-  const BLCommonTable& c = blCommonTable;
   x86::Mem m = x86::ptr(mPtr);
 
   switch (pixelType) {
@@ -1758,7 +1784,7 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
           else {
             v_load_i8(vm[0], m);
             i_add(mPtr, mPtr, n.value());
-            v_swizzle_lo_i16(vm[0], vm[0], x86::shuffleImm(0, 0, 0, 0));
+            v_swizzle_lo_u16(vm[0], vm[0], x86::shuffleImm(0, 0, 0, 0));
           }
 
           if (globalAlpha.isValid()) {
@@ -1774,12 +1800,12 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
           if (hasAVX2()) {
             v_mov_u8_u64_(vm[0], m);
             i_add(mPtr, mPtr, n.value());
-            v_shuffle_i8(vm[0], vm[0], simdConst(&c.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, vm[0]));
+            v_shuffle_i8(vm[0], vm[0], simdConst(&ct.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, vm[0]));
           }
           else {
             v_load_i8(vm[0], m);
             i_add(mPtr, mPtr, n.value());
-            v_swizzle_lo_i16(vm[0], vm[0], x86::shuffleImm(0, 0, 0, 0));
+            v_swizzle_lo_u16(vm[0], vm[0], x86::shuffleImm(0, 0, 0, 0));
           }
 
           if (globalAlpha.isValid()) {
@@ -1793,7 +1819,7 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
           if (simdWidth >= SimdWidth::k256) {
             v_mov_u8_u64_(vm[0], m);
             i_add(mPtr, mPtr, n.value());
-            v_shuffle_i8(vm[0], vm[0], simdConst(&c.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, vm[0]));
+            v_shuffle_i8(vm[0], vm[0], simdConst(&ct.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, vm[0]));
 
             if (globalAlpha.isValid()) {
               v_mul_i16(vm[0], vm[0], globalAlpha.cloneAs(vm[0]));
@@ -1811,9 +1837,9 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
             }
 
             if (simdWidth == SimdWidth::k128) {
-              v_interleave_lo_i16(vm[0], vm[0], vm[0]);                 // vm[0] = [M3 M3 M2 M2 M1 M1 M0 M0]
-              v_swizzle_i32(vm[1], vm[0], x86::shuffleImm(3, 3, 2, 2)); // vm[1] = [M3 M3 M3 M3 M2 M2 M2 M2]
-              v_swizzle_i32(vm[0], vm[0], x86::shuffleImm(1, 1, 0, 0)); // vm[0] = [M1 M1 M1 M1 M0 M0 M0 M0]
+              v_interleave_lo_u16(vm[0], vm[0], vm[0]);                 // vm[0] = [M3 M3 M2 M2 M1 M1 M0 M0]
+              v_swizzle_u32(vm[1], vm[0], x86::shuffleImm(3, 3, 2, 2)); // vm[1] = [M3 M3 M3 M3 M2 M2 M2 M2]
+              v_swizzle_u32(vm[0], vm[0], x86::shuffleImm(1, 1, 0, 0)); // vm[0] = [M1 M1 M1 M1 M0 M0 M0 M0]
             }
           }
           break;
@@ -1832,16 +1858,16 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
               if (hasOptFlag(PipeOptFlags::kFastVpmulld)) {
                 v_mul_i32_(vm, vm, globalAlpha.cloneAs(vm[0]));
                 v_div255_u16(vm);
-                v_swizzle_i32(vm, vm, x86::shuffleImm(2, 2, 0, 0));
+                v_swizzle_u32(vm, vm, x86::shuffleImm(2, 2, 0, 0));
               }
               else {
                 v_mul_i16(vm, vm, globalAlpha.cloneAs(vm[0]));
                 v_div255_u16(vm);
-                v_shuffle_i8(vm, vm, simdConst(&c.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, vm[0]));
+                v_shuffle_i8(vm, vm, simdConst(&ct.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, vm[0]));
               }
             }
             else {
-              v_shuffle_i8(vm, vm, simdConst(&c.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, vm[0]));
+              v_shuffle_i8(vm, vm, simdConst(&ct.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, vm[0]));
             }
           }
           else {
@@ -1857,12 +1883,12 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
 
             i_add(mPtr, mPtr, n.value());
 
-            v_interleave_hi_i16(vm[2], vm[0], vm[0]);                 // vm[2] = [M7 M7 M6 M6 M5 M5 M4 M4]
-            v_interleave_lo_i16(vm[0], vm[0], vm[0]);                 // vm[0] = [M3 M3 M2 M2 M1 M1 M0 M0]
-            v_swizzle_i32(vm[3], vm[2], x86::shuffleImm(3, 3, 2, 2)); // vm[3] = [M7 M7 M7 M7 M6 M6 M6 M6]
-            v_swizzle_i32(vm[1], vm[0], x86::shuffleImm(3, 3, 2, 2)); // vm[1] = [M3 M3 M3 M3 M2 M2 M2 M2]
-            v_swizzle_i32(vm[0], vm[0], x86::shuffleImm(1, 1, 0, 0)); // vm[0] = [M1 M1 M1 M1 M0 M0 M0 M0]
-            v_swizzle_i32(vm[2], vm[2], x86::shuffleImm(1, 1, 0, 0)); // vm[2] = [M5 M5 M5 M5 M4 M4 M4 M4]
+            v_interleave_hi_u16(vm[2], vm[0], vm[0]);                 // vm[2] = [M7 M7 M6 M6 M5 M5 M4 M4]
+            v_interleave_lo_u16(vm[0], vm[0], vm[0]);                 // vm[0] = [M3 M3 M2 M2 M1 M1 M0 M0]
+            v_swizzle_u32(vm[3], vm[2], x86::shuffleImm(3, 3, 2, 2)); // vm[3] = [M7 M7 M7 M7 M6 M6 M6 M6]
+            v_swizzle_u32(vm[1], vm[0], x86::shuffleImm(3, 3, 2, 2)); // vm[1] = [M3 M3 M3 M3 M2 M2 M2 M2]
+            v_swizzle_u32(vm[0], vm[0], x86::shuffleImm(1, 1, 0, 0)); // vm[0] = [M1 M1 M1 M1 M0 M0 M0 M0]
+            v_swizzle_u32(vm[2], vm[2], x86::shuffleImm(1, 1, 0, 0)); // vm[2] = [M5 M5 M5 M5 M4 M4 M4 M4]
           }
           break;
         }
@@ -2044,7 +2070,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, B
                       out = dst.xmm();
                     else
                       pc->newXmmArray(out, outRegCount, "tmp");
-                    pc->v_interleave_lo_i32(out, src.even(), src.odd());
+                    pc->v_interleave_lo_u32(out, src.even(), src.odd());
                     break;
 
                   case 8:
@@ -2052,7 +2078,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, B
                       out = dst.xmm();
                     else
                       pc->newXmmArray(out, outRegCount, "tmp");
-                    pc->v_interleave_lo_i64(out, src.even(), src.odd());
+                    pc->v_interleave_lo_u64(out, src.even(), src.odd());
                     break;
 
                   case 16:
@@ -2307,9 +2333,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, B
 void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flags, BLInternalFormat format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept  {
   BL_ASSERT(p.isRGBA32());
 
-  const BLCommonTable& c = blCommonTable;
   x86::Mem src(src_);
-
   p.setCount(n);
 
   switch (format) {
@@ -2469,13 +2493,13 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
             if (hasSSE4_1()) {
               v_zero_i(p.uc[0]);
               v_insert_u8_(p.uc[0], p.uc[0], src, 0);
-              v_swizzle_lo_i16(p.uc[0], p.uc[0], x86::shuffleImm(0, 0, 0, 0));
+              v_swizzle_lo_u16(p.uc[0], p.uc[0], x86::shuffleImm(0, 0, 0, 0));
             }
             else {
               x86::Gp tmp = cc->newUInt32("tmp");
               i_load_u8(tmp, src);
               s_mov_i32(p.uc[0], tmp);
-              v_swizzle_lo_i16(p.uc[0], p.uc[0], x86::shuffleImm(0, 0, 0, 0));
+              v_swizzle_lo_u16(p.uc[0], p.uc[0], x86::shuffleImm(0, 0, 0, 0));
             }
           }
 
@@ -2489,18 +2513,18 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
 
             if (hasAVX2()) {
               cc->vpbroadcastw(p.pc[0].xmm(), src);
-              v_shuffle_i8(p.pc[0], p.pc[0], simdConst(&c.pshufb_xxxxxxxxxxxx3210_to_3333222211110000, Bcst::kNA, p.pc[0]));
+              v_shuffle_i8(p.pc[0], p.pc[0], simdConst(&ct.pshufb_xxxxxxxxxxxx3210_to_3333222211110000, Bcst::kNA, p.pc[0]));
             }
             else if (hasSSE4_1()) {
               v_mov_u8_u64_(p.pc[0], src);
-              v_shuffle_i8(p.pc[0], p.pc[0], simdConst(&c.pshufb_xxxxxxx1xxxxxxx0_to_zzzzzzzz11110000, Bcst::kNA, p.pc[0]));
+              v_shuffle_i8(p.pc[0], p.pc[0], simdConst(&ct.pshufb_xxxxxxx1xxxxxxx0_to_zzzzzzzz11110000, Bcst::kNA, p.pc[0]));
             }
             else {
               x86::Gp tmp = cc->newUInt32("tmp");
               i_load_u16(tmp, src);
               s_mov_i32(p.pc[0], tmp);
-              v_interleave_lo_i8(p.pc[0], p.pc[0], p.pc[0]);
-              v_interleave_lo_i16(p.pc[0], p.pc[0], p.pc[0]);
+              v_interleave_lo_u8(p.pc[0], p.pc[0], p.pc[0]);
+              v_interleave_lo_u16(p.pc[0], p.pc[0], p.pc[0]);
             }
           }
           else {
@@ -2517,11 +2541,11 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
 
             v_load_i32(p.pc[0], src);
             if (hasSSSE3()) {
-              v_shuffle_i8(p.pc[0], p.pc[0], simdConst(&c.pshufb_xxxxxxxxxxxx3210_to_3333222211110000, Bcst::kNA, p.pc[0]));
+              v_shuffle_i8(p.pc[0], p.pc[0], simdConst(&ct.pshufb_xxxxxxxxxxxx3210_to_3333222211110000, Bcst::kNA, p.pc[0]));
             }
             else {
-              v_interleave_lo_i8(p.pc[0], p.pc[0], p.pc[0]);
-              v_interleave_lo_i16(p.pc[0], p.pc[0], p.pc[0]);
+              v_interleave_lo_u8(p.pc[0], p.pc[0], p.pc[0]);
+              v_interleave_lo_u16(p.pc[0], p.pc[0], p.pc[0]);
             }
           }
           else if (use256BitSimd()) {
@@ -2529,17 +2553,17 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
 
             src.setSize(4);
             v_mov_u8_u64_(p.uc, src);
-            v_shuffle_i8(p.pc[0], p.pc[0], simdConst(&c.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, p.pc[0]));
+            v_shuffle_i8(p.pc[0], p.pc[0], simdConst(&ct.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, p.pc[0]));
           }
           else {
             newXmmArray(p.uc, 2, p.name(), "uc");
 
             v_load_i32(p.uc[0], src);
-            v_interleave_lo_i8(p.uc[0], p.uc[0], p.uc[0]);
+            v_interleave_lo_u8(p.uc[0], p.uc[0], p.uc[0]);
             v_mov_u8_u16(p.uc[0], p.uc[0]);
 
-            v_swizzle_i32(p.uc[1], p.uc[0], x86::shuffleImm(3, 3, 2, 2));
-            v_swizzle_i32(p.uc[0], p.uc[0], x86::shuffleImm(1, 1, 0, 0));
+            v_swizzle_u32(p.uc[1], p.uc[0], x86::shuffleImm(3, 3, 2, 2));
+            v_swizzle_u32(p.uc[0], p.uc[0], x86::shuffleImm(1, 1, 0, 0));
           }
 
           break;
@@ -2560,7 +2584,7 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
                 src.addOffsetLo32(8);
               }
 
-              v_shuffle_i8(p.pc, p.pc, simdConst(&c.pshufb_xxx3xxx2xxx1xxx0_to_3333222211110000, Bcst::kNA, p.pc));
+              v_shuffle_i8(p.pc, p.pc, simdConst(&ct.pshufb_xxx3xxx2xxx1xxx0_to_3333222211110000, Bcst::kNA, p.pc));
             }
             else {
               uint32_t ucCount = regCountOf(DataWidth::k64, n);
@@ -2574,7 +2598,7 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
                 src.addOffsetLo32(4);
               }
 
-              v_shuffle_i8(p.uc, p.uc, simdConst(&c.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, p.uc));
+              v_shuffle_i8(p.uc, p.uc, simdConst(&ct.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, p.uc));
             }
           }
           else {
@@ -2592,11 +2616,11 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
               }
 
               if (hasSSSE3()) {
-                v_shuffle_i8(p.uc, p.uc, simdConst(&c.pshufb_xxx3xxx2xxx1xxx0_to_3333222211110000, Bcst::kNA, p.uc));
+                v_shuffle_i8(p.uc, p.uc, simdConst(&ct.pshufb_xxx3xxx2xxx1xxx0_to_3333222211110000, Bcst::kNA, p.uc));
               }
               else {
-                v_interleave_lo_i8(p.pc, p.pc, p.pc);
-                v_interleave_lo_i16(p.pc, p.pc, p.pc);
+                v_interleave_lo_u8(p.pc, p.pc, p.pc);
+                v_interleave_lo_u16(p.pc, p.pc, p.pc);
               }
             }
             else {
@@ -2609,16 +2633,16 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
               src.addOffsetLo32(4);
               v_load_i32(p.uc[2], src);
 
-              v_interleave_lo_i8(p.uc[0], p.uc[0], p.uc[0]);
-              v_interleave_lo_i8(p.uc[2], p.uc[2], p.uc[2]);
+              v_interleave_lo_u8(p.uc[0], p.uc[0], p.uc[0]);
+              v_interleave_lo_u8(p.uc[2], p.uc[2], p.uc[2]);
 
               v_mov_u8_u16(p.uc[0], p.uc[0]);
               v_mov_u8_u16(p.uc[2], p.uc[2]);
 
-              v_swizzle_i32(p.uc[1], p.uc[0], x86::shuffleImm(3, 3, 2, 2));
-              v_swizzle_i32(p.uc[3], p.uc[2], x86::shuffleImm(3, 3, 2, 2));
-              v_swizzle_i32(p.uc[0], p.uc[0], x86::shuffleImm(1, 1, 0, 0));
-              v_swizzle_i32(p.uc[2], p.uc[2], x86::shuffleImm(1, 1, 0, 0));
+              v_swizzle_u32(p.uc[1], p.uc[0], x86::shuffleImm(3, 3, 2, 2));
+              v_swizzle_u32(p.uc[3], p.uc[2], x86::shuffleImm(3, 3, 2, 2));
+              v_swizzle_u32(p.uc[0], p.uc[0], x86::shuffleImm(1, 1, 0, 0));
+              v_swizzle_u32(p.uc[2], p.uc[2], x86::shuffleImm(1, 1, 0, 0));
             }
           }
 
@@ -2694,8 +2718,6 @@ void PipeCompiler::_x_satisfy_pixel_rgba32(Pixel& p, PixelFlags flags) noexcept 
   BL_ASSERT(p.type() == PixelType::kRGBA32);
   BL_ASSERT(p.count() != 0);
 
-  const BLCommonTable& c = blCommonTable;
-
   // Quick reject if all flags were satisfied already or no flags were given.
   if ((!blTestFlag(flags, PixelFlags::kPC) || !p.pc.empty()) &&
       (!blTestFlag(flags, PixelFlags::kUC) || !p.uc.empty()) &&
@@ -2711,10 +2733,10 @@ void PipeCompiler::_x_satisfy_pixel_rgba32(Pixel& p, PixelFlags flags) noexcept 
     newVecArray(p.ua, p.uc.size(), p.uc[0], p.name(), "ua");
 
     if (hasAVX()) {
-      v_shuffle_i8(p.ua, p.uc, simdConst(&c.pshufb_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
+      v_shuffle_i8(p.ua, p.uc, simdConst(&ct.pshufb_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
     }
     else {
-      vExpandAlpha16(p.ua, p.uc, true);
+      v_expand_alpha_16(p.ua, p.uc, true);
     }
   }
 
@@ -2746,20 +2768,20 @@ void PipeCompiler::_x_satisfy_pixel_rgba32(Pixel& p, PixelFlags flags) noexcept 
     if (!p.uc.empty()) {
       newVecArray(p.ua, uaCount, p.uc[0], p.name(), "ua");
       if (hasAVX()) {
-        v_shuffle_i8(p.ua, p.uc, simdConst(&c.pshufb_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
+        v_shuffle_i8(p.ua, p.uc, simdConst(&ct.pshufb_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
       }
       else {
-        vExpandAlpha16(p.ua, p.uc, p.count() > 1);
+        v_expand_alpha_16(p.ua, p.uc, p.count() > 1);
       }
     }
     else {
       if (p.count() <= 2) {
         newXmmArray(p.ua, uaCount, p.name(), "ua");
         if (hasAVX() || p.count() == 2u) {
-          v_shuffle_i8(p.ua[0], p.pc[0], simdConst(&c.pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, p.ua[0]));
+          v_shuffle_i8(p.ua[0], p.pc[0], simdConst(&ct.pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, p.ua[0]));
         }
         else {
-          v_swizzle_lo_i16(p.ua[0], p.pc[0], x86::shuffleImm(1, 1, 1, 1));
+          v_swizzle_lo_u16(p.ua[0], p.pc[0], x86::shuffleImm(1, 1, 1, 1));
           v_srl_i16(p.ua[0], p.ua[0], 8);
         }
       }
@@ -2777,7 +2799,7 @@ void PipeCompiler::_x_satisfy_pixel_rgba32(Pixel& p, PixelFlags flags) noexcept 
             v_mov_u8_u16_(p.ua.odd(), p.ua.odd().ymm());
           }
 
-          v_shuffle_i8(p.ua, p.ua, simdConst(&c.pshufb_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
+          v_shuffle_i8(p.ua, p.ua, simdConst(&ct.pshufb_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
         }
         else if (ucWidth == SimdWidth::k256) {
           if (uaCount == 1) {
@@ -2789,7 +2811,7 @@ void PipeCompiler::_x_satisfy_pixel_rgba32(Pixel& p, PixelFlags flags) noexcept 
             v_mov_u8_u16_(p.ua.odd(), p.ua.odd().xmm());
           }
 
-          v_shuffle_i8(p.ua, p.ua, simdConst(&c.pshufb_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
+          v_shuffle_i8(p.ua, p.ua, simdConst(&ct.pshufb_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, p.ua));
         }
         else {
           for (uint32_t i = 0; i < p.pc.size(); i++)
@@ -2867,12 +2889,12 @@ void PipeCompiler::_x_satisfy_solid_rgba32(Pixel& p, PixelFlags flags) noexcept 
     newVecArray(p.ua, 1, p.name(), "ua");
 
     if (!p.uc.empty()) {
-      v_swizzle_lo_i16(p.ua[0], p.uc[0], x86::shuffleImm(3, 3, 3, 3));
-      v_swizzle_i32(p.ua[0], p.ua[0], x86::shuffleImm(1, 0, 1, 0));
+      v_swizzle_lo_u16(p.ua[0], p.uc[0], x86::shuffleImm(3, 3, 3, 3));
+      v_swizzle_u32(p.ua[0], p.ua[0], x86::shuffleImm(1, 0, 1, 0));
     }
     else {
-      v_swizzle_lo_i16(p.ua[0], p.pc[0], x86::shuffleImm(1, 1, 1, 1));
-      v_swizzle_i32(p.ua[0], p.ua[0], x86::shuffleImm(1, 0, 1, 0));
+      v_swizzle_lo_u16(p.ua[0], p.pc[0], x86::shuffleImm(1, 1, 1, 1));
+      v_swizzle_u32(p.ua[0], p.ua[0], x86::shuffleImm(1, 0, 1, 0));
       v_srl_i16(p.ua[0], p.ua[0], 8);
     }
   }
@@ -2884,12 +2906,12 @@ void PipeCompiler::_x_satisfy_solid_rgba32(Pixel& p, PixelFlags flags) noexcept 
       v_mov(p.ui[0], p.ua[0]);
     }
     else if (!p.uc.empty()) {
-      v_swizzle_lo_i16(p.ui[0], p.uc[0], x86::shuffleImm(3, 3, 3, 3));
-      v_swizzle_i32(p.ui[0], p.ui[0], x86::shuffleImm(1, 0, 1, 0));
+      v_swizzle_lo_u16(p.ui[0], p.uc[0], x86::shuffleImm(3, 3, 3, 3));
+      v_swizzle_u32(p.ui[0], p.ui[0], x86::shuffleImm(1, 0, 1, 0));
     }
     else {
-      v_swizzle_lo_i16(p.ui[0], p.pc[0], x86::shuffleImm(1, 1, 1, 1));
-      v_swizzle_i32(p.ui[0], p.ui[0], x86::shuffleImm(1, 0, 1, 0));
+      v_swizzle_lo_u16(p.ui[0], p.pc[0], x86::shuffleImm(1, 1, 1, 1));
+      v_swizzle_u32(p.ui[0], p.ui[0], x86::shuffleImm(1, 0, 1, 0));
       v_srl_i16(p.ui[0], p.ui[0], 8);
     }
 
@@ -3068,15 +3090,15 @@ void PipeCompiler::x_assign_unpacked_alpha_values(Pixel& p, PixelFlags flags, x8
   if (p.isRGBA32()) {
     switch (p.count().value()) {
       case 1: {
-        v_swizzle_lo_i16(v0, v0, x86::shuffleImm(0, 0, 0, 0));
+        v_swizzle_lo_u16(v0, v0, x86::shuffleImm(0, 0, 0, 0));
 
         p.uc.init(v0);
         break;
       }
 
       case 2: {
-        v_interleave_lo_i16(v0, v0, v0);
-        v_swizzle_i32(v0, v0, x86::shuffleImm(1, 1, 0, 0));
+        v_interleave_lo_u16(v0, v0, v0);
+        v_swizzle_u32(v0, v0, x86::shuffleImm(1, 1, 0, 0));
 
         p.uc.init(v0);
         break;
@@ -3085,9 +3107,9 @@ void PipeCompiler::x_assign_unpacked_alpha_values(Pixel& p, PixelFlags flags, x8
       case 4: {
         x86::Xmm v1 = cc->newXmm();
 
-        v_interleave_lo_i16(v0, v0, v0);
-        v_swizzle_i32(v1, v0, x86::shuffleImm(3, 3, 2, 2));
-        v_swizzle_i32(v0, v0, x86::shuffleImm(1, 1, 0, 0));
+        v_interleave_lo_u16(v0, v0, v0);
+        v_swizzle_u32(v1, v0, x86::shuffleImm(3, 3, 2, 2));
+        v_swizzle_u32(v0, v0, x86::shuffleImm(1, 1, 0, 0));
 
         p.uc.init(v0, v1);
         break;
@@ -3098,13 +3120,13 @@ void PipeCompiler::x_assign_unpacked_alpha_values(Pixel& p, PixelFlags flags, x8
         x86::Xmm v2 = cc->newXmm();
         x86::Xmm v3 = cc->newXmm();
 
-        v_interleave_hi_i16(v2, v0, v0);
-        v_interleave_lo_i16(v0, v0, v0);
+        v_interleave_hi_u16(v2, v0, v0);
+        v_interleave_lo_u16(v0, v0, v0);
 
-        v_swizzle_i32(v1, v0, x86::shuffleImm(3, 3, 2, 2));
-        v_swizzle_i32(v0, v0, x86::shuffleImm(1, 1, 0, 0));
-        v_swizzle_i32(v3, v2, x86::shuffleImm(3, 3, 2, 2));
-        v_swizzle_i32(v2, v2, x86::shuffleImm(1, 1, 0, 0));
+        v_swizzle_u32(v1, v0, x86::shuffleImm(3, 3, 2, 2));
+        v_swizzle_u32(v0, v0, x86::shuffleImm(1, 1, 0, 0));
+        v_swizzle_u32(v3, v2, x86::shuffleImm(3, 3, 2, 2));
+        v_swizzle_u32(v2, v2, x86::shuffleImm(1, 1, 0, 0));
 
         p.uc.init(v0, v1, v2, v3);
         break;
@@ -3244,7 +3266,7 @@ void PipeCompiler::x_store_pixel_advance(const x86::Gp& dPtr, Pixel& p, PixelCou
 
             i_jmp_if_bit_zero(count, 1, L_StoreSkip2);
             v_store_i64(dMem, pc0.xmm());
-            v_srlb_i128(pc0.xmm(), pc0.xmm(), 8);
+            v_srlb_u128(pc0.xmm(), pc0.xmm(), 8);
             i_add(dPtr, dPtr, 2u * 4u);
             bind(L_StoreSkip2);
           }

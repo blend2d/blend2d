@@ -21,17 +21,17 @@ namespace BLFontFeatureSettingsPrivate {
 // =====================================
 
 static BL_INLINE BLResult initSSO(BLFontFeatureSettingsCore* self, size_t size = 0) noexcept {
-  self->_d.initStatic(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS, BLObjectInfo::packYzcpFields(uint32_t(size)));
+  self->_d.initStatic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS) | BLObjectInfo::fromAbcp(uint32_t(size)));
   self->_d.u32_data[2] = kSSOInvalidFatFeaturePattern;
   return BL_SUCCESS;
 }
 
 static BL_INLINE size_t getSSOSize(const BLFontFeatureSettingsCore* self) noexcept {
-  return self->_d.info.yField();
+  return self->_d.info.aField();
 }
 
 static BL_INLINE void setSSOSize(BLFontFeatureSettingsCore* self, size_t size) noexcept {
-  self->_d.info.setYField(uint32_t(size));
+  self->_d.info.setAField(uint32_t(size));
 }
 
 static BL_INLINE void addSSOBitTag(BLFontFeatureSettingsCore* self, uint32_t index, uint32_t value) noexcept {
@@ -42,7 +42,7 @@ static BL_INLINE void addSSOBitTag(BLFontFeatureSettingsCore* self, uint32_t ind
 
   self->_d.u32_data[0] |= bit;
   self->_d.u32_data[1] |= value << index;
-  self->_d.info.bits += 1u << BL_OBJECT_INFO_Y_SHIFT;
+  self->_d.info.bits += 1u << BL_OBJECT_INFO_A_SHIFT;
 }
 
 static BL_INLINE void updateSSOBitValue(BLFontFeatureSettingsCore* self, uint32_t index, uint32_t value) noexcept {
@@ -56,12 +56,12 @@ static BL_INLINE void updateSSOBitValue(BLFontFeatureSettingsCore* self, uint32_
 static BL_INLINE void removeSSOBitTag(BLFontFeatureSettingsCore* self, uint32_t index) noexcept {
   uint32_t bit = 1u << index;
 
-  BL_ASSERT(self->_d.info.yField() > 0u);
+  BL_ASSERT(self->_d.info.aField() > 0u);
   BL_ASSERT((self->_d.u32_data[0] & bit) != 0u);
 
   self->_d.u32_data[0] &= ~bit;
   self->_d.u32_data[1] &= ~bit;
-  self->_d.info.bits -= 1u << BL_OBJECT_INFO_Y_SHIFT;
+  self->_d.info.bits -= 1u << BL_OBJECT_INFO_A_SHIFT;
 }
 
 static BL_INLINE void addSSOFatTag(BLFontFeatureSettingsCore* self, uint32_t index, uint32_t featureId, uint32_t value) noexcept {
@@ -84,7 +84,7 @@ static BL_INLINE void addSSOFatTag(BLFontFeatureSettingsCore* self, uint32_t ind
   vals = (vals & valsLsbMask) | ((vals & ~valsLsbMask) << kSSOFatFeatureValueBitCount) | (value << valOffset);
 
   self->_d.u32_data[2] = tags;
-  self->_d.info.bits = ((self->_d.info.bits & ~kValueDataMask) + (1u << BL_OBJECT_INFO_Y_SHIFT)) | (vals & kValueDataMask);
+  self->_d.info.bits = ((self->_d.info.bits & ~kValueDataMask) + (1u << BL_OBJECT_INFO_A_SHIFT)) | (vals & kValueDataMask);
 }
 
 static BL_INLINE void updateSSOFatValue(BLFontFeatureSettingsCore* self, uint32_t index, uint32_t value) noexcept {
@@ -98,7 +98,7 @@ static BL_INLINE void updateSSOFatValue(BLFontFeatureSettingsCore* self, uint32_
 }
 
 static BL_INLINE void removeSSOFatTag(BLFontFeatureSettingsCore* self, uint32_t index) noexcept {
-  BL_ASSERT(self->_d.info.yField() > 0u);
+  BL_ASSERT(self->_d.info.aField() > 0u);
   BL_ASSERT(index < kSSOFatFeatureCount);
 
   constexpr uint32_t kValueDataMask = (1u << (kSSOFatFeatureCount * kSSOFatFeatureValueBitCount)) - 1u;
@@ -116,7 +116,7 @@ static BL_INLINE void removeSSOFatTag(BLFontFeatureSettingsCore* self, uint32_t 
   vals = (vals & valsLsbMask) | ((vals >> kSSOFatFeatureValueBitCount) & ~tagsLsbMask);
 
   self->_d.u32_data[2] = tags;
-  self->_d.info.bits = ((self->_d.info.bits & ~kValueDataMask) - (1u << BL_OBJECT_INFO_Y_SHIFT)) | (vals & kValueDataMask);
+  self->_d.info.bits = ((self->_d.info.bits & ~kValueDataMask) - (1u << BL_OBJECT_INFO_A_SHIFT)) | (vals & kValueDataMask);
 }
 
 static BL_INLINE bool canInsertSSOFatTag(const BLFontFeatureSettingsCore* self) noexcept {
@@ -127,7 +127,7 @@ static BL_INLINE bool canInsertSSOFatTag(const BLFontFeatureSettingsCore* self) 
 static bool convertItemsToSSO(BLFontFeatureSettingsCore* self, const BLFontFeatureItem* items, size_t size) noexcept {
   BL_ASSERT(size <= BLFontFeatureSettings::kSSOCapacity);
 
-  uint32_t infoBits = (BLObjectInfo::packType(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS) | BLObjectInfo::packYzcpFields(uint32_t(size))).bits | BL_OBJECT_INFO_MARKER_FLAG;
+  uint32_t infoBits = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS) | BLObjectInfo::packAbcp(uint32_t(size));
 
   uint32_t bitTagIds = 0;
   uint32_t bitValues = 0;
@@ -218,14 +218,6 @@ static void convertSSOToItems(const BLFontFeatureSettingsCore* self, BLFontFeatu
 // BLFontFeatureSettings - Impl Utilities
 // ======================================
 
-static BL_INLINE constexpr BLObjectImplSize implSizeFromCapacity(size_t capacity) noexcept {
-  return BLObjectImplSize(sizeof(BLFontFeatureSettingsImpl) + capacity * sizeof(BLFontFeatureItem));
-}
-
-static BL_INLINE constexpr size_t capacityFromImplSize(BLObjectImplSize implSize) noexcept {
-  return (implSize.value() - sizeof(BLFontFeatureSettingsImpl)) / sizeof(BLFontFeatureItem);
-}
-
 static BL_INLINE constexpr size_t getMaximumSize() noexcept {
   return BLFontTagData::kUniqueTagCount;
 }
@@ -234,90 +226,52 @@ static BL_INLINE BLObjectImplSize expandImplSize(BLObjectImplSize implSize) noex
   return blObjectExpandImplSize(implSize);
 }
 
-static BL_INLINE bool isMutable(const BLFontFeatureSettingsCore* self) noexcept {
-  const size_t* refCountPtr = blObjectDummyRefCount;
-  if (!self->_d.sso())
-    refCountPtr = blObjectImplGetRefCountPtr(self->_d.impl);
-  return *refCountPtr == 1;
-}
-
 static BL_INLINE BLResult initDynamic(BLFontFeatureSettingsCore* self, BLObjectImplSize implSize, size_t size = 0u) noexcept {
-  BLFontFeatureSettingsImpl* impl = blObjectDetailAllocImplT<BLFontFeatureSettingsImpl>(self,
-    BLObjectInfo::packType(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS), implSize, &implSize);
+  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
+  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLFontFeatureSettingsImpl>(self, info, implSize));
 
-  if(BL_UNLIKELY(!impl))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+  BLFontFeatureSettingsImpl* impl = getImpl(self);
   BLFontFeatureItem* items = BLPtrOps::offset<BLFontFeatureItem>(impl, sizeof(BLFontFeatureSettingsImpl));
+
   impl->data = items;
   impl->size = size;
   impl->capacity = capacityFromImplSize(implSize);
-  BL_ASSERT(size <= impl->capacity);
 
+  BL_ASSERT(size <= impl->capacity);
   return BL_SUCCESS;
 }
 
 static BL_NOINLINE BLResult initDynamicFromSSO(BLFontFeatureSettingsCore* self, BLObjectImplSize implSize, const BLFontFeatureSettingsCore* ssoMap) noexcept {
   size_t size = getSSOSize(ssoMap);
+  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
+  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLFontFeatureSettingsImpl>(self, info, implSize));
 
-  BLFontFeatureSettingsImpl* impl = blObjectDetailAllocImplT<BLFontFeatureSettingsImpl>(self,
-    BLObjectInfo::packType(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS), implSize, &implSize);
-
-  if(BL_UNLIKELY(!impl))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+  BLFontFeatureSettingsImpl* impl = getImpl(self);
   BLFontFeatureItem* items = BLPtrOps::offset<BLFontFeatureItem>(impl, sizeof(BLFontFeatureSettingsImpl));
+
   impl->data = items;
   impl->size = size;
   impl->capacity = capacityFromImplSize(implSize);
-  BL_ASSERT(size <= impl->capacity);
 
+  BL_ASSERT(size <= impl->capacity);
   convertSSOToItems(ssoMap, items);
+
   return BL_SUCCESS;
 }
 
 static BL_NOINLINE BLResult initDynamicFromData(BLFontFeatureSettingsCore* self, BLObjectImplSize implSize, const BLFontFeatureItem* src, size_t size) noexcept {
-  BLFontFeatureSettingsImpl* impl = blObjectDetailAllocImplT<BLFontFeatureSettingsImpl>(self,
-    BLObjectInfo::packType(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS), implSize, &implSize);
+  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
+  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLFontFeatureSettingsImpl>(self, info, implSize));
 
-  if(BL_UNLIKELY(!impl))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+  BLFontFeatureSettingsImpl* impl = getImpl(self);
   BLFontFeatureItem* items = BLPtrOps::offset<BLFontFeatureItem>(impl, sizeof(BLFontFeatureSettingsImpl));
+
   impl->data = items;
   impl->size = size;
   impl->capacity = capacityFromImplSize(implSize);
+
   BL_ASSERT(size <= impl->capacity);
-
   memcpy(items, src, size * sizeof(BLFontFeatureItem));
-  return BL_SUCCESS;
-}
-
-BLResult freeImpl(BLFontFeatureSettingsImpl* impl, BLObjectInfo info) noexcept {
-  return blObjectImplFreeInline(impl, info);
-}
-
-// BLFontFeatureSettings - Instance Utilities
-// ==========================================
-
-static BL_INLINE BLResult releaseInstance(BLFontFeatureSettingsCore* self) noexcept {
-  BLFontFeatureSettingsImpl* impl = getImpl(self);
-  BLObjectInfo info = self->_d.info;
-
-  if (info.isRefCountedObject() && blObjectImplDecRefAndTest(impl, info))
-    return freeImpl(impl, info);
-
-  return BL_SUCCESS;
-}
-
-static BL_INLINE BLResult replaceInstance(BLFontFeatureSettingsCore* self, const BLFontFeatureSettingsCore* other) noexcept {
-  BLFontFeatureSettingsImpl* impl = getImpl(self);
-  BLObjectInfo info = self->_d.info;
-
-  self->_d = other->_d;
-
-  if (info.isRefCountedObject() && blObjectImplDecRefAndTest(impl, info))
-    return freeImpl(impl, info);
 
   return BL_SUCCESS;
 }
@@ -343,10 +297,13 @@ BLResult blFontFeatureSettingsInitMove(BLFontFeatureSettingsCore* self, BLFontFe
 }
 
 BLResult blFontFeatureSettingsInitWeak(BLFontFeatureSettingsCore* self, const BLFontFeatureSettingsCore* other) noexcept {
+  using namespace BLFontFeatureSettingsPrivate;
+
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isFontFeatureSettings());
 
-  return blObjectPrivateInitWeakTagged(self, other);
+  self->_d = other->_d;
+  return retainInstance(self);
 }
 
 BLResult blFontFeatureSettingsDestroy(BLFontFeatureSettingsCore* self) noexcept {
@@ -374,8 +331,8 @@ BLResult blFontFeatureSettingsClear(BLFontFeatureSettingsCore* self) noexcept {
   if (self->_d.sso())
     return initSSO(self);
 
-  if (isMutable(self)) {
-    BLFontFeatureSettingsImpl* selfI = getImpl(self);
+  BLFontFeatureSettingsImpl* selfI = getImpl(self);
+  if (isImplMutable(selfI)) {
     selfI->size = 0;
     return BL_SUCCESS;
   }
@@ -433,7 +390,7 @@ BLResult blFontFeatureSettingsAssignWeak(BLFontFeatureSettingsCore* self, const 
   BL_ASSERT(self->_d.isFontFeatureSettings());
   BL_ASSERT(other->_d.isFontFeatureSettings());
 
-  blObjectPrivateAddRefIfRCObject(other);
+  BLObjectPrivate::retainInstance(other);
   return replaceInstance(self, other);
 }
 
@@ -598,7 +555,7 @@ BLResult blFontFeatureSettingsSetValue(BLFontFeatureSettingsCore* self, BLTag fe
     if (BL_UNLIKELY(!BLFontTagData::isValidTag(featureTag)))
       return blTraceError(BL_ERROR_INVALID_VALUE);
 
-    canModify = isMutable(self);
+    canModify = isImplMutable(getImpl(self));
   }
 
   // Dynamic Mode
@@ -694,7 +651,7 @@ BLResult blFontFeatureSettingsRemoveValue(BLFontFeatureSettingsCore* self, BLTag
   if (index >= size || items[index].tag != featureTag)
     return BL_SUCCESS;
 
-  if (isMutable(self)) {
+  if (isImplMutable(selfI)) {
     selfI->size = size - 1;
     BLMemOps::copyForwardInlineT(items + index, items + index + 1, size - index - 1);
     return BL_SUCCESS;
@@ -720,7 +677,7 @@ bool blFontFeatureSettingsEquals(const BLFontFeatureSettingsCore* a, const BLFon
   BL_ASSERT(a->_d.isFontFeatureSettings());
   BL_ASSERT(b->_d.isFontFeatureSettings());
 
-  if (blObjectPrivateBinaryEquals(a, b))
+  if (a->_d == b->_d)
     return true;
 
   if (a->_d.sso() == b->_d.sso()) {
@@ -758,7 +715,7 @@ bool blFontFeatureSettingsEquals(const BLFontFeatureSettingsCore* a, const BLFon
     if (!convertItemsToSSO(&bSSO, bItems, size))
       return false;
 
-    return blObjectPrivateBinaryEquals(a, &bSSO);
+    return a->_d == bSSO._d;
   }
 }
 
@@ -773,382 +730,3 @@ void blFontFeatureSettingsRtInit(BLRuntimeContext* rt) noexcept {
   // Initialize BLFontFeatureSettings.
   initSSO(static_cast<BLFontFeatureSettingsCore*>(&blObjectDefaults[BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS]));
 }
-
-// BLFontFeatureSettings - Tests
-// =============================
-
-#if defined(BL_TEST)
-static void verifyFontFeatureSettings(const BLFontFeatureSettings& ffs) noexcept {
-  BLFontFeatureSettingsView view;
-  ffs.getView(&view);
-
-  if (view.size == 0)
-    return;
-
-  uint32_t prevTag = view.data[0].tag;
-  for (size_t i = 1; i < view.size; i++) {
-    EXPECT_LT(prevTag, view.data[i].tag)
-      .message("BLFontFeatureSettings is corrupted - previous tag 0x%08X is not less than current tag 0x%08X at [%zu]", prevTag, view.data[i].tag, i);
-    prevTag = view.data[i].tag;
-  }
-}
-
-/*
-static void printFontFeatureSettings(const BLFontFeatureSettings& ffs) noexcept {
-  BLFontFeatureSettingsView view;
-  ffs.getView(&view);
-
-  printf("FeatureSettings [size=%zu]:\n", view.size);
-
-  if (view.size == 0)
-    return;
-
-  for (size_t i = 0; i < view.size; i++) {
-    printf("  %c%c%c%c=%u\n", (view.data[i].tag >> 24) & 0xFF, (view.data[i].tag >> 16) & 0xFF, (view.data[i].tag >> 8) & 0xFF, view.data[i].tag & 0xFF, unsigned(view.data[i].value));
-  }
-}
-*/
-
-UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
-  // These are not sorted on purpose to test whether BLFontFeatureSettings would sort them during insertion.
-  static const uint32_t fatTags[] = {
-    BL_MAKE_TAG('r', 'a', 'n', 'd'),
-    BL_MAKE_TAG('a', 'a', 'l', 't'),
-    BL_MAKE_TAG('s', 's', '0', '9'),
-    BL_MAKE_TAG('s', 's', '0', '4')
-  };
-
-  INFO("SSO initial state");
-  {
-    BLFontFeatureSettings ffs;
-
-    EXPECT_TRUE(ffs._d.sso());
-    EXPECT_TRUE(ffs.empty());
-    EXPECT_EQ(ffs.size(), 0u);
-    EXPECT_EQ(ffs.capacity(), BLFontFeatureSettings::kSSOCapacity);
-
-    // SSO mode should present all available features as invalid (unassigned).
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
-      EXPECT_EQ(ffs.getValue(featureTag), BL_FONT_FEATURE_INVALID_VALUE);
-    }
-
-    // Trying to get an unknown tag should fail.
-    EXPECT_EQ(ffs.getValue(BL_MAKE_TAG('-', '-', '-', '-')), BL_FONT_FEATURE_INVALID_VALUE);
-    EXPECT_EQ(ffs.getValue(BL_MAKE_TAG('a', 'a', 'a', 'a')), BL_FONT_FEATURE_INVALID_VALUE);
-    EXPECT_EQ(ffs.getValue(BL_MAKE_TAG('z', 'z', 'z', 'z')), BL_FONT_FEATURE_INVALID_VALUE);
-  }
-
-  INFO("SSO bit tag/value storage");
-  {
-    BLFontFeatureSettings ffs;
-
-    // SSO storage must allow to store ALL font features that have bit mapping.
-    uint32_t numTags = 0;
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        numTags++;
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
-
-        EXPECT_SUCCESS(ffs.setValue(featureTag, 1u));
-        EXPECT_EQ(ffs.getValue(featureTag), 1u);
-        EXPECT_EQ(ffs.size(), numTags);
-        EXPECT_TRUE(ffs._d.sso());
-
-        verifyFontFeatureSettings(ffs);
-      }
-    }
-
-    // Set all features to zero (disabled, but still present in the mapping).
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
-
-        EXPECT_SUCCESS(ffs.setValue(featureTag, 0u));
-        EXPECT_EQ(ffs.getValue(featureTag), 0u);
-        EXPECT_EQ(ffs.size(), numTags);
-        EXPECT_TRUE(ffs._d.sso());
-        verifyFontFeatureSettings(ffs);
-      }
-    }
-
-    // Remove all features.
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        numTags--;
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
-
-        EXPECT_SUCCESS(ffs.removeValue(featureTag));
-        EXPECT_EQ(ffs.getValue(featureTag), BL_FONT_FEATURE_INVALID_VALUE);
-        EXPECT_EQ(ffs.size(), numTags);
-        EXPECT_TRUE(ffs._d.sso());
-
-        verifyFontFeatureSettings(ffs);
-      }
-    }
-
-    EXPECT_TRUE(ffs.empty());
-    EXPECT_EQ(ffs, BLFontFeatureSettings());
-  }
-
-  INFO("SSO bit tag/value storage limitations");
-  {
-    BLFontFeatureSettings ffs;
-
-    // Trying to set any other value than 0-1 with bit tags fails.
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
-        EXPECT_EQ(ffs.setValue(featureTag, 2u), BL_ERROR_INVALID_VALUE);
-      }
-    }
-
-    EXPECT_TRUE(ffs.empty());
-  }
-
-  INFO("SSO bit tag/value storage + fat tag/value storage");
-  {
-    BLFontFeatureSettings ffs;
-    uint32_t numTags = 0;
-
-    // Add fat tag/value data.
-    for (uint32_t i = 0; i < BL_ARRAY_SIZE(fatTags); i++) {
-      numTags++;
-
-      EXPECT_SUCCESS(ffs.setValue(fatTags[i], 15u));
-      EXPECT_EQ(ffs.getValue(fatTags[i]), 15u);
-      EXPECT_EQ(ffs.size(), numTags);
-      EXPECT_TRUE(ffs._d.sso());
-
-      verifyFontFeatureSettings(ffs);
-
-      // Verify that changing a fat tag's value is working properly (it's bit twiddling).
-      EXPECT_SUCCESS(ffs.setValue(fatTags[i], 1u));
-      EXPECT_EQ(ffs.getValue(fatTags[i]), 1u);
-      EXPECT_EQ(ffs.size(), numTags);
-      EXPECT_TRUE(ffs._d.sso());
-
-      verifyFontFeatureSettings(ffs);
-    }
-
-    // Add bit tag/value data.
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        numTags++;
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
-
-        EXPECT_SUCCESS(ffs.setValue(featureTag, 1u));
-        EXPECT_EQ(ffs.getValue(featureTag), 1u);
-        EXPECT_EQ(ffs.size(), numTags);
-        EXPECT_TRUE(ffs._d.sso());
-
-        verifyFontFeatureSettings(ffs);
-      }
-    }
-
-    // Remove fat tag/value data.
-    for (uint32_t i = 0; i < BL_ARRAY_SIZE(fatTags); i++) {
-      numTags--;
-
-      EXPECT_SUCCESS(ffs.removeValue(fatTags[i]));
-      EXPECT_EQ(ffs.size(), numTags);
-      EXPECT_TRUE(ffs._d.sso());
-
-      verifyFontFeatureSettings(ffs);
-    }
-
-    // Remove bit tag/value data.
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        numTags--;
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
-
-        EXPECT_SUCCESS(ffs.removeValue(featureTag));
-        EXPECT_EQ(ffs.size(), numTags);
-        EXPECT_TRUE(ffs._d.sso());
-
-        verifyFontFeatureSettings(ffs);
-      }
-    }
-
-    EXPECT_TRUE(ffs.empty());
-    EXPECT_EQ(ffs, BLFontFeatureSettings());
-  }
-
-  INFO("SSO tag/value equality");
-  {
-    BLFontFeatureSettings ffsA;
-    BLFontFeatureSettings ffsB;
-
-    // Assign bit tag/value data.
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
-      uint32_t featureId = i;
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
-        EXPECT_SUCCESS(ffsA.setValue(featureTag, 1u));
-        verifyFontFeatureSettings(ffsA);
-      }
-    }
-
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
-      uint32_t featureId = BLFontTagData::kFeatureIdCount - 1 - i;
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
-        EXPECT_SUCCESS(ffsB.setValue(featureTag, 1u));
-        verifyFontFeatureSettings(ffsB);
-      }
-    }
-
-    EXPECT_EQ(ffsA, ffsB);
-
-    // Assign fat tag/value data.
-    for (uint32_t i = 0; i < BL_ARRAY_SIZE(fatTags); i++) {
-      EXPECT_SUCCESS(ffsA.setValue(fatTags[i], i));
-      verifyFontFeatureSettings(ffsA);
-    }
-
-    for (uint32_t iRev = 0; iRev < BL_ARRAY_SIZE(fatTags); iRev++) {
-      uint32_t i = BL_ARRAY_SIZE(fatTags) - 1 - iRev;
-      EXPECT_SUCCESS(ffsB.setValue(fatTags[i], i));
-      verifyFontFeatureSettings(ffsB);
-    }
-
-    EXPECT_EQ(ffsA, ffsB);
-
-    // Remove fat tag/value data.
-    for (uint32_t i = 0; i < BL_ARRAY_SIZE(fatTags); i++) {
-      EXPECT_SUCCESS(ffsA.removeValue(fatTags[i]));
-      verifyFontFeatureSettings(ffsA);
-    }
-
-    for (uint32_t iRev = 0; iRev < BL_ARRAY_SIZE(fatTags); iRev++) {
-      uint32_t i = BL_ARRAY_SIZE(fatTags) - 1 - iRev;
-      EXPECT_SUCCESS(ffsB.removeValue(fatTags[i]));
-      verifyFontFeatureSettings(ffsB);
-    }
-
-    EXPECT_EQ(ffsA, ffsB);
-  }
-
-  INFO("Dynamic representation");
-  {
-    BLFontFeatureSettings ffs;
-
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
-      uint32_t featureId = BLFontTagData::kFeatureIdCount - 1 - i;
-      BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
-      EXPECT_SUCCESS(ffs.setValue(featureTag, 1u));
-      EXPECT_EQ(ffs.getValue(featureTag), 1u);
-      EXPECT_EQ(ffs.size(), i + 1u);
-      verifyFontFeatureSettings(ffs);
-    }
-
-    EXPECT_FALSE(ffs._d.sso());
-
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
-      uint32_t featureId = BLFontTagData::kFeatureIdCount - 1 - i;
-      BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
-
-      if (!BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        EXPECT_SUCCESS(ffs.setValue(featureTag, 65535u));
-        EXPECT_EQ(ffs.getValue(featureTag), 65535u);
-      }
-      else {
-        EXPECT_SUCCESS(ffs.setValue(featureTag, 0u));
-        EXPECT_EQ(ffs.getValue(featureTag), 0u);
-      }
-
-      verifyFontFeatureSettings(ffs);
-    }
-
-    EXPECT_FALSE(ffs._d.sso());
-
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
-      uint32_t featureId = i;
-      BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
-
-      EXPECT_SUCCESS(ffs.removeValue(featureTag));
-      EXPECT_EQ(ffs.getValue(featureTag), BL_FONT_FEATURE_INVALID_VALUE);
-
-      verifyFontFeatureSettings(ffs);
-    }
-
-    EXPECT_TRUE(ffs.empty());
-    EXPECT_EQ(ffs.size(), 0u);
-    EXPECT_FALSE(ffs._d.sso());
-
-  }
-
-  INFO("Dynamic tag/value equality");
-  {
-    BLFontFeatureSettings ffs1;
-    BLFontFeatureSettings ffs2;
-
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
-      EXPECT_SUCCESS(ffs1.setValue(BLFontTagData::featureIdToTagTable[i], 1u));
-      EXPECT_SUCCESS(ffs2.setValue(BLFontTagData::featureIdToTagTable[BLFontTagData::kFeatureIdCount - 1u - i], 1u));
-
-      verifyFontFeatureSettings(ffs1);
-      verifyFontFeatureSettings(ffs2);
-    }
-
-    EXPECT_EQ(ffs1, ffs2);
-  }
-
-  INFO("Dynamic tag/value vs SSO tag/value equality");
-  {
-    BLFontFeatureSettings ffs1;
-    BLFontFeatureSettings ffs2;
-
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
-      if (BLFontTagData::featureInfoTable[i].hasBitId()) {
-        EXPECT_SUCCESS(ffs1.setValue(BLFontTagData::featureIdToTagTable[i], 1u));
-        EXPECT_SUCCESS(ffs2.setValue(BLFontTagData::featureIdToTagTable[i], 1u));
-
-        verifyFontFeatureSettings(ffs1);
-        verifyFontFeatureSettings(ffs2);
-      }
-    }
-
-    EXPECT_EQ(ffs1, ffs2);
-
-    // Make ffs1 go out of SSO mode.
-    EXPECT_SUCCESS(ffs1.setValue(BL_MAKE_TAG('a', 'a', 'a', 'a'), 1000));
-    EXPECT_SUCCESS(ffs1.removeValue(BL_MAKE_TAG('a', 'a', 'a', 'a')));
-    EXPECT_EQ(ffs1, ffs2);
-    EXPECT_EQ(ffs2, ffs1);
-
-    // Make ffs2 go out of SSO mode.
-    EXPECT_SUCCESS(ffs2.setValue(BL_MAKE_TAG('a', 'a', 'a', 'a'), 1000));
-    EXPECT_SUCCESS(ffs2.removeValue(BL_MAKE_TAG('a', 'a', 'a', 'a')));
-    EXPECT_EQ(ffs1, ffs2);
-    EXPECT_EQ(ffs2, ffs1);
-  }
-
-  INFO("Dynamic memory allocation strategy");
-  {
-    BLFontFeatureSettings ffs;
-    size_t capacity = ffs.capacity();
-
-    constexpr uint32_t kCharRange = BLFontTagData::kCharRangeInTag;
-    constexpr uint32_t kNumItems = BLFontTagData::kUniqueTagCount / 100;
-
-    for (uint32_t i = 0; i < kNumItems; i++) {
-      BLTag tag = BL_MAKE_TAG(
-        uint32_t(' ') + (i / (kCharRange * kCharRange * kCharRange)),
-        uint32_t(' ') + (i / (kCharRange * kCharRange)) % kCharRange,
-        uint32_t(' ') + (i / (kCharRange)) % kCharRange,
-        uint32_t(' ') + (i % kCharRange));
-
-      ffs.setValue(tag, i & 0xFFFFu);
-      if (capacity != ffs.capacity()) {
-        size_t implSize = BLFontFeatureSettingsPrivate::implSizeFromCapacity(ffs.capacity()).value();
-        INFO("  Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, ffs.capacity(), implSize);
-        capacity = ffs.capacity();
-      }
-    }
-
-    verifyFontFeatureSettings(ffs);
-  }
-}
-#endif

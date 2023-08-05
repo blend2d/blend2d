@@ -8,8 +8,8 @@
 
 #include "api-internal_p.h"
 #include "geometry.h"
-#include "simd_p.h"
-#include "tables_p.h"
+#include "simd/simd_p.h"
+#include "tables/tables_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -142,35 +142,34 @@ namespace {
 
 template<int ControlFlags>
 BL_INLINE __m128 bl_roundf_sse4_1(float x) noexcept {
-  __m128 y = SIMD::v_f128_from_f32(x);
+  __m128 y = SIMD::cast_from_f32(x).v;
   return _mm_round_ss(y, y, ControlFlags | _MM_FROUND_NO_EXC);
 }
 
 template<int ControlFlags>
 BL_INLINE __m128d bl_roundd_sse4_1(double x) noexcept {
-  __m128d y = SIMD::v_d128_from_f64(x);
+  __m128d y = SIMD::cast_from_f64(x).v;
   return _mm_round_sd(y, y, ControlFlags | _MM_FROUND_NO_EXC);
 }
 
 } // {anonymous}
 
-static BL_INLINE float  blNearby(float  x) noexcept { return SIMD::v_get_f32(bl_roundf_sse4_1<_MM_FROUND_CUR_DIRECTION>(x)); }
-static BL_INLINE double blNearby(double x) noexcept { return SIMD::v_get_f64(bl_roundd_sse4_1<_MM_FROUND_CUR_DIRECTION>(x)); }
-static BL_INLINE float  blTrunc (float  x) noexcept { return SIMD::v_get_f32(bl_roundf_sse4_1<_MM_FROUND_TO_ZERO      >(x)); }
-static BL_INLINE double blTrunc (double x) noexcept { return SIMD::v_get_f64(bl_roundd_sse4_1<_MM_FROUND_TO_ZERO      >(x)); }
-static BL_INLINE float  blFloor (float  x) noexcept { return SIMD::v_get_f32(bl_roundf_sse4_1<_MM_FROUND_TO_NEG_INF   >(x)); }
-static BL_INLINE double blFloor (double x) noexcept { return SIMD::v_get_f64(bl_roundd_sse4_1<_MM_FROUND_TO_NEG_INF   >(x)); }
-static BL_INLINE float  blCeil  (float  x) noexcept { return SIMD::v_get_f32(bl_roundf_sse4_1<_MM_FROUND_TO_POS_INF   >(x)); }
-static BL_INLINE double blCeil  (double x) noexcept { return SIMD::v_get_f64(bl_roundd_sse4_1<_MM_FROUND_TO_POS_INF   >(x)); }
+static BL_INLINE float  blNearby(float  x) noexcept { return _mm_cvtss_f32(bl_roundf_sse4_1<_MM_FROUND_CUR_DIRECTION>(x)); }
+static BL_INLINE double blNearby(double x) noexcept { return _mm_cvtsd_f64(bl_roundd_sse4_1<_MM_FROUND_CUR_DIRECTION>(x)); }
+static BL_INLINE float  blTrunc (float  x) noexcept { return _mm_cvtss_f32(bl_roundf_sse4_1<_MM_FROUND_TO_ZERO      >(x)); }
+static BL_INLINE double blTrunc (double x) noexcept { return _mm_cvtsd_f64(bl_roundd_sse4_1<_MM_FROUND_TO_ZERO      >(x)); }
+static BL_INLINE float  blFloor (float  x) noexcept { return _mm_cvtss_f32(bl_roundf_sse4_1<_MM_FROUND_TO_NEG_INF   >(x)); }
+static BL_INLINE double blFloor (double x) noexcept { return _mm_cvtsd_f64(bl_roundd_sse4_1<_MM_FROUND_TO_NEG_INF   >(x)); }
+static BL_INLINE float  blCeil  (float  x) noexcept { return _mm_cvtss_f32(bl_roundf_sse4_1<_MM_FROUND_TO_POS_INF   >(x)); }
+static BL_INLINE double blCeil  (double x) noexcept { return _mm_cvtsd_f64(bl_roundd_sse4_1<_MM_FROUND_TO_POS_INF   >(x)); }
 
 #elif defined(BL_TARGET_OPT_SSE2)
 
-// Rounding is very expensive on pre-SSE4.1 X86 hardware as it requires to alter
-// rounding bits of FPU/SSE states. The only method which is cheap is `rint()`,
-// which uses the current FPU/SSE rounding mode to round a floating point. The
-// code below can be used to implement `roundeven()`, which can be then used to
-// implement any other rounding operation. Blend2D implementation then assumes
-// that `blNearby` is round to even as it's the default mode CPU is setup to.
+// Rounding is very expensive on pre-SSE4.1 X86 hardware as it requires to alter rounding bits of FPU/SSE states.
+// The only method which is cheap is `rint()`, which uses the current FPU/SSE rounding mode to round a floating
+// point. The code below can be used to implement `roundeven()`, which can be then used to implement any other
+// rounding operation. Blend2D implementation then assumes that `blNearby` is round to even as it's the default
+// mode CPU is setup to.
 //
 // Single Precision
 // ----------------
@@ -197,114 +196,111 @@ static BL_INLINE double blCeil  (double x) noexcept { return SIMD::v_get_f64(bl_
 static BL_INLINE float blNearby(float x) noexcept {
   using namespace SIMD;
 
-  Vec128F src = v_f128_from_f32(x);
-  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f32_round_magic);
+  Vec4xF32 src = cast_from_f32(x);
+  Vec4xF32 magic = blCommonTable.f32_round_magic.as<Vec4xF32>();
 
-  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(&blCommonTable.f32_round_max));
-  Vec128F rounded = s_sub_f32(s_add_f32(src, magic), magic);
+  Vec4xF32 mask = cmp_ge_1xf32(src, blCommonTable.f32_round_max.as<Vec4xF32>());
+  Vec4xF32 rounded = sub_1xf32(add_1xf32(src, magic), magic);
 
-  return v_get_f32(v_blend_mask(rounded, src, mask));
+  return cast_to_f32(blendv_bits(rounded, src, mask));
 }
 
 static BL_INLINE float blTrunc(float x) noexcept {
   using namespace SIMD;
 
-  Vec128F src = v_f128_from_f32(x);
+  Vec4xF32 src = cast_from_f32(x);
+  Vec4xF32 msk_abs = blCommonTable.f32_abs.as<Vec4xF32>();
+  Vec4xF32 src_abs = src & msk_abs;
 
-  Vec128F msk_abs = v_const_as<Vec128F>(&blCommonTable.f32_abs);
-  Vec128F src_abs = v_and(src, msk_abs);
+  Vec4xF32 sign = andnot(msk_abs, src);
+  Vec4xF32 magic = blCommonTable.f32_round_magic.as<Vec4xF32>();
 
-  Vec128F sign = v_nand(msk_abs, src);
-  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f32_round_magic);
+  Vec4xF32 mask = cmp_ge_1xf32(src_abs, blCommonTable.f32_round_max.as<Vec4xF32>()) | sign;
+  Vec4xF32 rounded = sub_1xf32(add_1xf32(src_abs, magic), magic);
+  Vec4xF32 maybeone = cmp_lt_1xf32(src_abs, rounded) & blCommonTable.f32_1.as<Vec4xF32>();
 
-  Vec128F mask = v_or(s_cmp_ge_f32(src_abs, v_const_as<Vec128F>(&blCommonTable.f32_round_max)), sign);
-  Vec128F rounded = s_sub_f32(s_add_f32(src_abs, magic), magic);
-  Vec128F maybeone = v_and(s_cmp_lt_f32(src_abs, rounded), v_const_as<Vec128F>(&blCommonTable.f32_1));
-
-  return v_get_f32(v_blend_mask(s_sub_f32(rounded, maybeone), src, mask));
+  return cast_to_f32(blendv_bits(sub_1xf32(rounded, maybeone), src, mask));
 }
 
 static BL_INLINE float blFloor(float x) noexcept {
   using namespace SIMD;
 
-  Vec128F src = v_f128_from_f32(x);
-  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f32_round_magic);
+  Vec4xF32 src = cast_from_f32(x);
+  Vec4xF32 magic =  blCommonTable.f32_round_magic.as<Vec4xF32>();
 
-  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(&blCommonTable.f32_round_max));
-  Vec128F rounded = s_sub_f32(s_add_f32(src, magic), magic);
-  Vec128F maybeone = v_and(s_cmp_lt_f32(src, rounded), v_const_as<Vec128F>(&blCommonTable.f32_1));
+  Vec4xF32 mask = cmp_ge_1xf32(src, blCommonTable.f32_round_max.as<Vec4xF32>());
+  Vec4xF32 rounded = sub_1xf32(add_1xf32(src, magic), magic);
+  Vec4xF32 maybeone = cmp_lt_1xf32(src, rounded) & blCommonTable.f32_1.as<Vec4xF32>();
 
-  return v_get_f32(v_blend_mask(s_sub_f32(rounded, maybeone), src, mask));
+  return cast_to_f32(blendv_bits(sub_1xf32(rounded, maybeone), src, mask));
 }
 
 static BL_INLINE float blCeil(float x) noexcept {
   using namespace SIMD;
 
-  Vec128F src = SIMD::v_f128_from_f32(x);
-  Vec128F magic = v_const_as<Vec128F>(&blCommonTable.f32_round_magic);
+  Vec4xF32 src = SIMD::cast_from_f32(x);
+  Vec4xF32 magic =  blCommonTable.f32_round_magic.as<Vec4xF32>();
 
-  Vec128F mask = s_cmp_ge_f32(src, v_const_as<Vec128F>(&blCommonTable.f32_round_max));
-  Vec128F rounded = s_sub_f32(s_add_f32(src, magic), magic);
-  Vec128F maybeone = v_and(s_cmp_gt_f32(src, rounded), v_const_as<Vec128F>(&blCommonTable.f32_1));
+  Vec4xF32 mask = cmp_ge_1xf32(src, blCommonTable.f32_round_max.as<Vec4xF32>());
+  Vec4xF32 rounded = sub_1xf32(add_1xf32(src, magic), magic);
+  Vec4xF32 maybeone = cmp_gt_1xf32(src, rounded) & blCommonTable.f32_1.as<Vec4xF32>();
 
-  return v_get_f32(v_blend_mask(s_add_f32(rounded, maybeone), src, mask));
+  return cast_to_f32(blendv_bits(add_1xf32(rounded, maybeone), src, mask));
 }
 
 static BL_INLINE double blNearby(double x) noexcept {
   using namespace SIMD;
 
-  Vec128D src = v_d128_from_f64(x);
-  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.f64_round_magic);
+  Vec2xF64 src = cast_from_f64(x);
+  Vec2xF64 magic = blCommonTable.f64_round_magic.as<Vec2xF64>();
 
-  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(&blCommonTable.f64_round_max));
-  Vec128D rounded = s_sub_f64(s_add_f64(src, magic), magic);
+  Vec2xF64 mask = cmp_ge_1xf64(src, blCommonTable.f64_round_max.as<Vec2xF64>());
+  Vec2xF64 rounded = sub_1xf64(add_1xf64(src, magic), magic);
 
-  return v_get_f64(v_blend_mask(rounded, src, mask));
+  return cast_to_f64(blendv_bits(rounded, src, mask));
 }
 
 static BL_INLINE double blTrunc(double x) noexcept {
   using namespace SIMD;
 
-  static const uint64_t kSepMask[1] = { 0x7FFFFFFFFFFFFFFFu };
+  Vec2xF64 src = cast_from_f64(x);
+  Vec2xF64 msk_abs = blCommonTable.f64_abs.as<Vec2xF64>();
+  Vec2xF64 src_abs = src & msk_abs;
 
-  Vec128D src = v_d128_from_f64(x);
-  Vec128D msk_abs = _mm_load_sd(reinterpret_cast<const double*>(kSepMask));
-  Vec128D src_abs = v_and(src, msk_abs);
+  Vec2xF64 sign = andnot(msk_abs, src);
+  Vec2xF64 magic = blCommonTable.f64_round_magic.as<Vec2xF64>();
 
-  Vec128D sign = v_nand(msk_abs, src);
-  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.f64_round_magic);
+  Vec2xF64 mask = cmp_ge_1xf64(src_abs, blCommonTable.f64_round_max.as<Vec2xF64>()) | sign;
+  Vec2xF64 rounded = sub_1xf64(add_1xf64(src_abs, magic), magic);
+  Vec2xF64 maybeone = cmp_lt_1xf64(src_abs, rounded) & blCommonTable.f64_1.as<Vec2xF64>();
 
-  Vec128D mask = v_or(s_cmp_ge_f64(src_abs, v_const_as<Vec128D>(&blCommonTable.f64_round_max)), sign);
-  Vec128D rounded = s_sub_f64(s_add_f64(src_abs, magic), magic);
-  Vec128D maybeone = v_and(s_cmp_lt_f64(src_abs, rounded), v_const_as<Vec128D>(&blCommonTable.f64_1));
-
-  return v_get_f64(v_blend_mask(s_sub_f64(rounded, maybeone), src, mask));
+  return cast_to_f64(blendv_bits(sub_1xf64(rounded, maybeone), src, mask));
 }
 
 static BL_INLINE double blFloor(double x) noexcept {
   using namespace SIMD;
 
-  Vec128D src = v_d128_from_f64(x);
-  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.f64_round_magic);
+  Vec2xF64 src = cast_from_f64(x);
+  Vec2xF64 magic = blCommonTable.f64_round_magic.as<Vec2xF64>();
 
-  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(&blCommonTable.f64_round_max));
-  Vec128D rounded = s_sub_f64(s_add_f64(src, magic), magic);
-  Vec128D maybeone = v_and(s_cmp_lt_f64(src, rounded), v_const_as<Vec128D>(&blCommonTable.f64_1));
+  Vec2xF64 mask = cmp_ge_1xf64(src, blCommonTable.f64_round_max.as<Vec2xF64>());
+  Vec2xF64 rounded = sub_1xf64(add_1xf64(src, magic), magic);
+  Vec2xF64 maybeone = cmp_lt_1xf64(src, rounded) & blCommonTable.f64_1.as<Vec2xF64>();
 
-  return v_get_f64(v_blend_mask(s_sub_f64(rounded, maybeone), src, mask));
+  return cast_to_f64(blendv_bits(sub_1xf64(rounded, maybeone), src, mask));
 }
 
 static BL_INLINE double blCeil(double x) noexcept {
   using namespace SIMD;
 
-  Vec128D src = v_d128_from_f64(x);
-  Vec128D magic = v_const_as<Vec128D>(&blCommonTable.f64_round_magic);
+  Vec2xF64 src = cast_from_f64(x);
+  Vec2xF64 magic = blCommonTable.f64_round_magic.as<Vec2xF64>();
 
-  Vec128D mask = s_cmp_ge_f64(src, v_const_as<Vec128D>(&blCommonTable.f64_round_max));
-  Vec128D rounded = s_sub_f64(s_add_f64(src, magic), magic);
-  Vec128D maybeone = v_and(s_cmp_gt_f64(src, rounded), v_const_as<Vec128D>(&blCommonTable.f64_1));
+  Vec2xF64 mask = cmp_ge_1xf64(src, blCommonTable.f64_round_max.as<Vec2xF64>());
+  Vec2xF64 rounded = sub_1xf64(add_1xf64(src, magic), magic);
+  Vec2xF64 maybeone = cmp_gt_1xf64(src, rounded) & blCommonTable.f64_1.as<Vec2xF64>();
 
-  return v_get_f64(v_blend_mask(s_add_f64(rounded, maybeone), src, mask));
+  return cast_to_f64(blendv_bits(add_1xf64(rounded, maybeone), src, mask));
 }
 
 #else
@@ -333,18 +329,7 @@ static BL_INLINE double blRound(double x) noexcept { double y = blFloor(x); retu
 
 static BL_INLINE int blNearbyToInt(float x) noexcept {
 #if defined(BL_TARGET_OPT_SSE)
-  return _mm_cvtss_si32(SIMD::v_f128_from_f32(x));
-#elif BL_TARGET_ARCH_X86 == 32 && defined(__GNUC__)
-  int y;
-  __asm__ __volatile__("flds %1\n" "fistpl %0\n" : "=m" (y) : "m" (x));
-  return y;
-#elif BL_TARGET_ARCH_X86 == 32 && defined(_MSC_VER)
-  int y;
-  __asm {
-    fld   dword ptr [x]
-    fistp dword ptr [y]
-  }
-  return y;
+  return SIMD::cvt_f32_to_scalar_i32(SIMD::cast_from_f32(x));
 #else
   return int(lrintf(x));
 #endif
@@ -352,18 +337,7 @@ static BL_INLINE int blNearbyToInt(float x) noexcept {
 
 static BL_INLINE int blNearbyToInt(double x) noexcept {
 #if defined(BL_TARGET_OPT_SSE2)
-  return _mm_cvtsd_si32(SIMD::v_d128_from_f64(x));
-#elif BL_TARGET_ARCH_X86 == 32 && defined(__GNUC__)
-  int y;
-  __asm__ __volatile__("fldl %1\n" "fistpl %0\n" : "=m" (y) : "m" (x));
-  return y;
-#elif BL_TARGET_ARCH_X86 == 32 && defined(_MSC_VER)
-  int y;
-  __asm {
-    fld   qword ptr [x]
-    fistp dword ptr [y]
-  }
-  return y;
+  return SIMD::cvt_f64_to_scalar_i32(SIMD::cast_from_f64(x));
 #else
   return int(lrint(x));
 #endif
@@ -398,7 +372,7 @@ static BL_INLINE int blRoundToInt(double x) noexcept { int y = blNearbyToInt(x);
 
 static BL_INLINE int64_t blNearbyToInt64(float x) noexcept {
 #if BL_TARGET_ARCH_X86 == 64
-  return _mm_cvtss_si64(SIMD::v_f128_from_f32(x));
+  return SIMD::cvt_f32_to_scalar_i64(SIMD::cast_from_f32(x));
 #elif BL_TARGET_ARCH_X86 == 32 && defined(__GNUC__)
   int64_t y;
   __asm__ __volatile__("flds %1\n" "fistpq %0\n" : "=m" (y) : "m" (x));
@@ -417,7 +391,7 @@ static BL_INLINE int64_t blNearbyToInt64(float x) noexcept {
 
 static BL_INLINE int64_t blNearbyToInt64(double x) noexcept {
 #if BL_TARGET_ARCH_X86 == 64
-  return _mm_cvtsd_si64(_mm_set_sd(x));
+  return SIMD::cvt_f64_to_scalar_i64(SIMD::cast_from_f64(x));
 #elif BL_TARGET_ARCH_X86 == 32 && defined(__GNUC__)
   int64_t y;
   __asm__ __volatile__("fldl %1\n" "fistpq %0\n" : "=m" (y) : "m" (x));
@@ -648,7 +622,7 @@ BL_HIDDEN size_t blCubicRoots(double* dst, const double* poly, double tMin, doub
 //! \overload
 static BL_INLINE size_t blCubicRoots(double dst[3], double a, double b, double c, double d, double tMin, double tMax) noexcept {
   double poly[4] = { a, b, c, d };
-  return ::blCubicRoots(dst, poly, tMin, tMax);
+  return blCubicRoots(dst, poly, tMin, tMax);
 }
 
 // ============================================================================

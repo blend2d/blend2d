@@ -1,24 +1,25 @@
 #include <blend2d.h>
 
 int main(int argc, char* argv[]) {
+  // Use constructor or `create()` function to
+  // allocate a new image data of the required
+  // format.
   BLImage img(480, 480, BL_FORMAT_PRGB32);
 
   // Attach a rendering context into `img`.
   BLContext ctx(img);
 
-  // Clear the image.
-  ctx.setCompOp(BL_COMP_OP_SRC_COPY);
-  ctx.fillAll();
+  // Clearing the image would make it transparent.
+  ctx.clearAll();
 
-  // Fill some path.
+  // Create a path having cubic curves.
   BLPath path;
   path.moveTo(26, 31);
   path.cubicTo(642, 132, 587, -136, 25, 464);
   path.cubicTo(882, 404, 144, 267, 27, 31);
 
-  ctx.setCompOp(BL_COMP_OP_SRC_OVER);
-  ctx.setFillStyle(BLRgba32(0xFFFFFFFF));
-  ctx.fillPath(path);
+  // Fill a path with opaque white - 0xAARRGGBB.
+  ctx.fillPath(path, BLRgba32(0xFFFFFFFF));
 
   // Detach the rendering context from `img`.
   ctx.end();

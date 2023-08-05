@@ -8,8 +8,6 @@
 
 #include "geometry.h"
 
-BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_SHADOW)
-
 //! \addtogroup blend2d_api_text
 //! \{
 
@@ -469,26 +467,26 @@ struct BLFontUnicodeCoverage {
   BL_INLINE_NODEBUG void reset() noexcept { *this = BLFontUnicodeCoverage{}; }
 
   BL_INLINE_NODEBUG bool empty() const noexcept {
-    return (this->data[0] | this->data[1] | this->data[2] | this->data[3]) == 0;
+    return (data[0] | data[1] | data[2] | data[3]) == 0;
   }
 
   BL_INLINE_NODEBUG bool hasBit(uint32_t index) const noexcept {
-    return ((this->data[index / 32] >> (index % 32)) & 0x1) != 0;
+    return ((data[index / 32] >> (index % 32)) & 0x1) != 0;
   }
 
   BL_INLINE_NODEBUG void setBit(uint32_t index) noexcept {
-    this->data[index / 32] |= uint32_t(1) << (index % 32);
+    data[index / 32] |= uint32_t(1) << (index % 32);
   }
 
   BL_INLINE_NODEBUG void clearBit(uint32_t index) noexcept {
-    this->data[index / 32] &= ~(uint32_t(1) << (index % 32));
+    data[index / 32] &= ~(uint32_t(1) << (index % 32));
   }
 
   BL_INLINE_NODEBUG bool equals(const BLFontUnicodeCoverage& other) const noexcept {
-    return bool(unsigned(blEquals(this->data[0], other.data[0])) &
-                unsigned(blEquals(this->data[1], other.data[1])) &
-                unsigned(blEquals(this->data[2], other.data[2])) &
-                unsigned(blEquals(this->data[3], other.data[3])));
+    return bool(unsigned(blEquals(data[0], other.data[0])) &
+                unsigned(blEquals(data[1], other.data[1])) &
+                unsigned(blEquals(data[2], other.data[2])) &
+                unsigned(blEquals(data[3], other.data[3])));
   }
 
   BL_INLINE_NODEBUG bool operator==(const BLFontUnicodeCoverage& other) const noexcept { return  equals(other); }
@@ -559,8 +557,8 @@ struct BLFontPanose {
   BL_INLINE_NODEBUG void reset() noexcept { *this = BLFontPanose{}; }
 
   BL_INLINE_NODEBUG bool empty() const noexcept {
-    return (this->data[0] | this->data[1] | this->data[2] | this->data[3] | this->data[4] |
-            this->data[5] | this->data[6] | this->data[7] | this->data[8] | this->data[9] ) == 0;
+    return (data[0] | data[1] | data[2] | data[3] | data[4] |
+            data[5] | data[6] | data[7] | data[8] | data[9] ) == 0;
   }
 #endif
 };
@@ -588,17 +586,17 @@ struct BLFontMatrix {
   BL_INLINE_NODEBUG BLFontMatrix& operator=(const BLFontMatrix& other) noexcept = default;
 
   BL_INLINE_NODEBUG void reset() noexcept {
-    this->m00 = 1.0;
-    this->m01 = 0.0;
-    this->m10 = 0.0;
-    this->m11 = 1.0;
+    m00 = 1.0;
+    m01 = 0.0;
+    m10 = 0.0;
+    m11 = 1.0;
   }
 
-  BL_INLINE_NODEBUG void reset(double m00, double m01, double m10, double m11) noexcept {
-    this->m00 = m00;
-    this->m01 = m01;
-    this->m10 = m10;
-    this->m11 = m11;
+  BL_INLINE_NODEBUG void reset(double m00Value, double m01Value, double m10Value, double m11Value) noexcept {
+    m00 = m00Value;
+    m01 = m01Value;
+    m10 = m10Value;
+    m11 = m11Value;
   }
 #endif
 };
@@ -747,7 +745,5 @@ struct BLTextMetrics {
 //! \}
 
 //! \}
-
-BL_DIAGNOSTIC_POP
 
 #endif // BLEND2D_FONTDEFS_H_INCLUDED

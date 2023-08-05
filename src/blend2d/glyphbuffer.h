@@ -90,7 +90,7 @@ BL_END_C_DECLS
 //! processing. Primary buffer always holds actual text/glyph array, and secondary buffer is either used as a scratch
 //! buffer during glyph substitution or to hold glyph positions after the processing is complete and glyph positions
 //! were calculated.
-class BLGlyphBuffer : public BLGlyphBufferCore {
+class BLGlyphBuffer final : public BLGlyphBufferCore {
 public:
   //! \name Constructors & Destructors
   //! \{

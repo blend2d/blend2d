@@ -169,25 +169,25 @@ void PipeDynamicRuntime::_initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept {
                  PipeOptFlags::kMaskOps64Bit ;
   }
 
-  // Select optimization flags based on CPU vendor and microarchitecture.
+  // Select optimization flags based on CPU vendor and micro-architecture.
 
   // AMD Specific CPU Features
   // -------------------------
 
   if (strcmp(cpuInfo.vendor(), "AMD") == 0) {
-    // AMD provides a low-latency VPMULLD instruction.
+    // Zen provides a low-latency VPMULLD instruction.
     if (_cpuFeatures.x86().hasAVX2()) {
       _optFlags |= PipeOptFlags::kFastVpmulld;
-    }
-
-    // AMD provides a low-latency VPMULLQ instruction.
-    if (_cpuFeatures.x86().hasAVX512_DQ()) {
-      _optFlags |= PipeOptFlags::kFastVpmullq;
     }
 
     // Zen 3 and onwards has fast gathers, scalar loads and shuffles are faster on Zen 2 and older CPUs.
     if (cpuInfo.familyId() >= 0x19u) {
       _optFlags |= PipeOptFlags::kFastGather;
+    }
+
+    // Zen 4 provides a low-latency VPMULLQ instruction.
+    if (_cpuFeatures.x86().hasAVX512_DQ()) {
+      _optFlags |= PipeOptFlags::kFastVpmullq;
     }
 
     // Zen 4 and onwards has fast mask operations (starts with AVX-512).
@@ -200,7 +200,9 @@ void PipeDynamicRuntime::_initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept {
   // ---------------------------
 
   if (strcmp(cpuInfo.vendor(), "INTEL") == 0) {
-    _optFlags |= PipeOptFlags::kFastGather;
+    if (_cpuFeatures.x86().hasAVX2()) {
+      _optFlags |= PipeOptFlags::kFastGather;
+    }
 
     // TODO: It seems that masked stores are very expensive on consumer CPUs supporting AVX2 and AVX-512.
     // _optFlags |= PipeOptFlags::kFastStoreWithMask;
@@ -211,18 +213,25 @@ void PipeDynamicRuntime::_initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept {
 
 void PipeDynamicRuntime::_restrictFeatures(uint32_t mask) noexcept {
 #if BL_TARGET_ARCH_X86
-  if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX2)) {
-    _cpuFeatures.remove(asmjit::CpuFeatures::X86::kAVX2);
-    if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX)) {
-      _cpuFeatures.remove(asmjit::CpuFeatures::X86::kAVX);
-      if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSE4_2)) {
-        _cpuFeatures.remove(asmjit::CpuFeatures::X86::kSSE4_2);
-        if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSE4_1)) {
-          _cpuFeatures.remove(asmjit::CpuFeatures::X86::kSSE4_1);
-          if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSSE3)) {
-            _cpuFeatures.remove(asmjit::CpuFeatures::X86::kSSSE3);
-            if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSE3)) {
-              _cpuFeatures.remove(asmjit::CpuFeatures::X86::kSSE3);
+  if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX512)) {
+    _cpuFeatures.remove(asmjit::CpuFeatures::X86::kAVX512_F,
+                        asmjit::CpuFeatures::X86::kAVX512_BW,
+                        asmjit::CpuFeatures::X86::kAVX512_DQ,
+                        asmjit::CpuFeatures::X86::kAVX512_VL);
+
+    if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX2)) {
+      _cpuFeatures.remove(asmjit::CpuFeatures::X86::kAVX2);
+      if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX)) {
+        _cpuFeatures.remove(asmjit::CpuFeatures::X86::kAVX);
+        if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSE4_2)) {
+          _cpuFeatures.remove(asmjit::CpuFeatures::X86::kSSE4_2);
+          if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSE4_1)) {
+            _cpuFeatures.remove(asmjit::CpuFeatures::X86::kSSE4_1);
+            if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSSE3)) {
+              _cpuFeatures.remove(asmjit::CpuFeatures::X86::kSSSE3);
+              if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSE3)) {
+                _cpuFeatures.remove(asmjit::CpuFeatures::X86::kSSE3);
+              }
             }
           }
         }
@@ -235,7 +244,6 @@ void PipeDynamicRuntime::_restrictFeatures(uint32_t mask) noexcept {
                    PipeOptFlags::kMaskOps64Bit      |
                    PipeOptFlags::kFastStoreWithMask |
                    PipeOptFlags::kFastGather        );
-
   }
 #endif
 }
@@ -299,7 +307,6 @@ static const char* stringifyFillType(FillType value) noexcept {
   switch (value) {
     case FillType::kNone    : return "None";
     case FillType::kBoxA    : return "BoxA";
-    case FillType::kBoxU    : return "BoxU";
     case FillType::kMask    : return "Mask";
     case FillType::kAnalytic: return "Analytic";
 
@@ -310,28 +317,32 @@ static const char* stringifyFillType(FillType value) noexcept {
 
 static const char* stringifyFetchType(FetchType value) noexcept {
   switch (value) {
-    case FetchType::kSolid                : return "Solid";
-    case FetchType::kPatternAlignedBlit   : return "PatternAlignedBlit";
-    case FetchType::kPatternAlignedPad    : return "PatternAlignedPad";
-    case FetchType::kPatternAlignedRepeat : return "PatternAlignedRepeat";
-    case FetchType::kPatternAlignedRoR    : return "PatternAlignedRoR";
-    case FetchType::kPatternFxPad         : return "PatternFxPad";
-    case FetchType::kPatternFxRoR         : return "PatternFxRoR";
-    case FetchType::kPatternFyPad         : return "PatternFyPad";
-    case FetchType::kPatternFyRoR         : return "PatternFyRoR";
-    case FetchType::kPatternFxFyPad       : return "PatternFxFyPad";
-    case FetchType::kPatternFxFyRoR       : return "PatternFxFyRoR";
-    case FetchType::kPatternAffineNNAny   : return "PatternAffineNNAny";
-    case FetchType::kPatternAffineNNOpt   : return "PatternAffineNNOpt";
-    case FetchType::kPatternAffineBIAny   : return "PatternAffineBIAny";
-    case FetchType::kPatternAffineBIOpt   : return "PatternAffineBIOpt";
-    case FetchType::kGradientLinearPad    : return "GradientLinearPad";
-    case FetchType::kGradientLinearRoR    : return "GradientLinearRoR";
-    case FetchType::kGradientRadialPad    : return "GradientRadialPad";
-    case FetchType::kGradientRadialRoR    : return "GradientRadialRoR";
-    case FetchType::kGradientConical      : return "GradientConical";
-    case FetchType::kPixelPtr             : return "PixelPtr";
-    case FetchType::kFailure              : return "<Failure>";
+    case FetchType::kSolid                  : return "Solid";
+    case FetchType::kPatternAlignedBlit     : return "PatternAlignedBlit";
+    case FetchType::kPatternAlignedPad      : return "PatternAlignedPad";
+    case FetchType::kPatternAlignedRepeat   : return "PatternAlignedRepeat";
+    case FetchType::kPatternAlignedRoR      : return "PatternAlignedRoR";
+    case FetchType::kPatternFxPad           : return "PatternFxPad";
+    case FetchType::kPatternFxRoR           : return "PatternFxRoR";
+    case FetchType::kPatternFyPad           : return "PatternFyPad";
+    case FetchType::kPatternFyRoR           : return "PatternFyRoR";
+    case FetchType::kPatternFxFyPad         : return "PatternFxFyPad";
+    case FetchType::kPatternFxFyRoR         : return "PatternFxFyRoR";
+    case FetchType::kPatternAffineNNAny     : return "PatternAffineNNAny";
+    case FetchType::kPatternAffineNNOpt     : return "PatternAffineNNOpt";
+    case FetchType::kPatternAffineBIAny     : return "PatternAffineBIAny";
+    case FetchType::kPatternAffineBIOpt     : return "PatternAffineBIOpt";
+    case FetchType::kGradientLinearNNPad    : return "GradientLinearNNPad";
+    case FetchType::kGradientLinearNNRoR    : return "GradientLinearNNRoR";
+    case FetchType::kGradientLinearDitherPad: return "GradientLinearDitherPad";
+    case FetchType::kGradientLinearDitherRoR: return "GradientLinearDitherRoR";
+    case FetchType::kGradientRadialNNPad    : return "GradientRadialNNPad";
+    case FetchType::kGradientRadialNNRoR    : return "GradientRadialNNRoR";
+    case FetchType::kGradientRadialDitherPad: return "GradientRadialDitherPad";
+    case FetchType::kGradientRadialDitherRoR: return "GradientRadialDitherRoR";
+    case FetchType::kGradientConicNN        : return "GradientConic";
+    case FetchType::kPixelPtr               : return "PixelPtr";
+    case FetchType::kFailure                : return "<Failure>";
 
     default:
       return "<Unknown>";
@@ -340,10 +351,21 @@ static const char* stringifyFetchType(FetchType value) noexcept {
 #endif
 
 FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
-  Signature sig(signature);
+  Signature sig{signature};
 
-  BL_ASSERT(sig.compOp() != BL_COMP_OP_CLEAR);    // Always simplified to SRC_COPY.
-  BL_ASSERT(sig.compOp() != BL_COMP_OP_DST_COPY); // Should never pass through the rendering context.
+  // CLEAR is Always simplified to SRC_COPY.
+  // DST_COPY is NOP, which should never be propagated to the compiler
+  if (sig.compOp() == BL_COMP_OP_CLEAR || sig.compOp() == BL_COMP_OP_DST_COPY || sig.compOp() >= BL_COMP_OP_INTERNAL_COUNT)
+    return nullptr;
+
+  if (sig.fillType() == BLPipeline::FillType::kNone)
+    return nullptr;
+
+  if (sig.dstFormat() == BLInternalFormat::kNone)
+    return nullptr;
+
+  if (sig.srcFormat() == BLInternalFormat::kNone)
+    return nullptr;
 
   CompilerErrorHandler eh;
   asmjit::CodeHolder code;

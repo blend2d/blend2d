@@ -73,7 +73,8 @@ enum class Bcst : uint8_t {
   k16 = 1,
   k32 = 2,
   k64 = 3,
-  kNA = 0xFFu
+  kNA = 0xFE,
+  kNA_Unique = 0xFF
 };
 
 namespace SimdWidthUtils {
@@ -96,6 +97,10 @@ static BL_INLINE asmjit::TypeId typeIdOf(SimdWidth simdWidth) noexcept {
   };
 
   return table[size_t(simdWidth)];
+}
+
+static BL_INLINE SimdWidth simdWidthOf(const x86::Vec& reg) noexcept {
+  return SimdWidth(uint32_t(reg.type()) - uint32_t(RegType::kX86_Xmm));
 }
 
 static BL_INLINE SimdWidth simdWidthOf(SimdWidth simdWidth, DataWidth dataWidth, uint32_t n) noexcept {
@@ -134,21 +139,21 @@ public:
   uint32_t _size;
   Operand_ v[kMaxSize];
 
-  BL_INLINE OpArray() noexcept { reset(); }
-  BL_INLINE explicit OpArray(const Operand_& op0) noexcept { init(op0); }
-  BL_INLINE OpArray(const Operand_& op0, const Operand_& op1) noexcept { init(op0, op1); }
-  BL_INLINE OpArray(const Operand_& op0, const Operand_& op1, const Operand_& op2) noexcept { init(op0, op1, op2); }
-  BL_INLINE OpArray(const Operand_& op0, const Operand_& op1, const Operand_& op2, const Operand_& op3) noexcept { init(op0, op1, op2, op3); }
-  BL_INLINE OpArray(const OpArray& other) noexcept { init(other); }
+  BL_INLINE_NODEBUG OpArray() noexcept { reset(); }
+  BL_INLINE_NODEBUG explicit OpArray(const Operand_& op0) noexcept { init(op0); }
+  BL_INLINE_NODEBUG OpArray(const Operand_& op0, const Operand_& op1) noexcept { init(op0, op1); }
+  BL_INLINE_NODEBUG OpArray(const Operand_& op0, const Operand_& op1, const Operand_& op2) noexcept { init(op0, op1, op2); }
+  BL_INLINE_NODEBUG OpArray(const Operand_& op0, const Operand_& op1, const Operand_& op2, const Operand_& op3) noexcept { init(op0, op1, op2, op3); }
+  BL_INLINE_NODEBUG OpArray(const OpArray& other) noexcept { init(other); }
 
-  BL_INLINE OpArray& operator=(const OpArray& other) noexcept {
+  BL_INLINE_NODEBUG OpArray& operator=(const OpArray& other) noexcept {
     init(other);
     return *this;
   }
 
 protected:
   // Used internally to implement `low()`, `high()`, `even()`, and `odd()`.
-  BL_INLINE OpArray(const OpArray& other, uint32_t from, uint32_t inc, uint32_t limit) noexcept {
+  BL_INLINE_NODEBUG OpArray(const OpArray& other, uint32_t from, uint32_t inc, uint32_t limit) noexcept {
     uint32_t di = 0;
     for (uint32_t si = from; si < limit; si += inc)
       v[di++] = other[si];
@@ -156,7 +161,7 @@ protected:
   }
 
 public:
-  BL_INLINE void init(const Operand_& op0) noexcept {
+  BL_INLINE_NODEBUG void init(const Operand_& op0) noexcept {
     _size = 1;
     v[0] = op0;
     v[1].reset();
@@ -164,7 +169,7 @@ public:
     v[3].reset();
   }
 
-  BL_INLINE void init(const Operand_& op0, const Operand_& op1) noexcept {
+  BL_INLINE_NODEBUG void init(const Operand_& op0, const Operand_& op1) noexcept {
     _size = 2;
     v[0] = op0;
     v[1] = op1;
@@ -172,7 +177,7 @@ public:
     v[3].reset();
   }
 
-  BL_INLINE void init(const Operand_& op0, const Operand_& op1, const Operand_& op2) noexcept {
+  BL_INLINE_NODEBUG void init(const Operand_& op0, const Operand_& op1, const Operand_& op2) noexcept {
     _size = 3;
     v[0] = op0;
     v[1] = op1;
@@ -180,7 +185,7 @@ public:
     v[3].reset();
   }
 
-  BL_INLINE void init(const Operand_& op0, const Operand_& op1, const Operand_& op2, const Operand_& op3) noexcept {
+  BL_INLINE_NODEBUG void init(const Operand_& op0, const Operand_& op1, const Operand_& op2, const Operand_& op3) noexcept {
     _size = 4;
     v[0] = op0;
     v[1] = op1;
@@ -188,29 +193,29 @@ public:
     v[3] = op3;
   }
 
-  BL_INLINE void init(const OpArray& other) noexcept {
+  BL_INLINE_NODEBUG void init(const OpArray& other) noexcept {
     _size = other._size;
     if (_size)
       memcpy(v, other.v, _size * sizeof(Operand_));
   }
 
   //! Resets `OpArray` to a default construction state.
-  BL_INLINE void reset() noexcept {
+  BL_INLINE_NODEBUG void reset() noexcept {
     _size = 0;
     for (uint32_t i = 0; i < kMaxSize; i++)
       v[i].reset();
   }
 
   //! Tests whether the vector is empty (has no elements).
-  BL_INLINE bool empty() const noexcept { return _size == 0; }
+  BL_INLINE_NODEBUG bool empty() const noexcept { return _size == 0; }
   //! Tests whether the vector has only one element, which makes it scalar.
-  BL_INLINE bool isScalar() const noexcept { return _size == 1; }
+  BL_INLINE_NODEBUG bool isScalar() const noexcept { return _size == 1; }
   //! Tests whether the vector has more than 1 element, which means that
   //! calling `high()` and `odd()` won't return an empty vector.
-  BL_INLINE bool isVector() const noexcept { return _size > 1; }
+  BL_INLINE_NODEBUG bool isVector() const noexcept { return _size > 1; }
 
   //! Returns the number of vector elements.
-  BL_INLINE uint32_t size() const noexcept { return _size; }
+  BL_INLINE_NODEBUG uint32_t size() const noexcept { return _size; }
 
   BL_INLINE bool equals(const OpArray& other) const noexcept {
     size_t count = size();
@@ -224,8 +229,8 @@ public:
     return true;
   }
 
-  BL_INLINE bool operator==(const OpArray& other) const noexcept { return  equals(other); }
-  BL_INLINE bool operator!=(const OpArray& other) const noexcept { return !equals(other); }
+  BL_INLINE_NODEBUG bool operator==(const OpArray& other) const noexcept { return  equals(other); }
+  BL_INLINE_NODEBUG bool operator!=(const OpArray& other) const noexcept { return !equals(other); }
 
   BL_INLINE Operand_& operator[](size_t index) noexcept {
     BL_ASSERT(index < _size);
@@ -237,41 +242,41 @@ public:
     return v[index];
   }
 
-  BL_INLINE OpArray lo() const noexcept { return OpArray(*this, 0, 1, (_size + 1) / 2); }
-  BL_INLINE OpArray hi() const noexcept { return OpArray(*this, _size > 1 ? (_size + 1) / 2 : 0, 1, _size); }
-  BL_INLINE OpArray even() const noexcept { return OpArray(*this, 0, 2, _size); }
-  BL_INLINE OpArray odd() const noexcept { return OpArray(*this, _size > 1, 2, _size); }
+  BL_INLINE_NODEBUG OpArray lo() const noexcept { return OpArray(*this, 0, 1, (_size + 1) / 2); }
+  BL_INLINE_NODEBUG OpArray hi() const noexcept { return OpArray(*this, _size > 1 ? (_size + 1) / 2 : 0, 1, _size); }
+  BL_INLINE_NODEBUG OpArray even() const noexcept { return OpArray(*this, 0, 2, _size); }
+  BL_INLINE_NODEBUG OpArray odd() const noexcept { return OpArray(*this, _size > 1, 2, _size); }
 
   //! Returns a new vector consisting of either even (from == 0) or odd
   //! (from == 1) elements. It's like calling `even()` and `odd()`, but
   //! can be used within a loop that performs the same operation for both.
-  BL_INLINE OpArray even_odd(uint32_t from) const noexcept { return OpArray(*this, _size > 1 ? from : 0, 2, _size); }
+  BL_INLINE_NODEBUG OpArray even_odd(uint32_t from) const noexcept { return OpArray(*this, _size > 1 ? from : 0, 2, _size); }
 };
 
 template<typename T>
 class OpArrayT : public OpArray {
 public:
-  BL_INLINE OpArrayT() noexcept : OpArray() {}
-  BL_INLINE explicit OpArrayT(const T& op0) noexcept : OpArray(op0) {}
-  BL_INLINE OpArrayT(const T& op0, const T& op1) noexcept : OpArray(op0, op1) {}
-  BL_INLINE OpArrayT(const T& op0, const T& op1, const T& op2) noexcept : OpArray(op0, op1, op2) {}
-  BL_INLINE OpArrayT(const T& op0, const T& op1, const T& op2, const T& op3) noexcept : OpArray(op0, op1, op2, op3) {}
-  BL_INLINE OpArrayT(const OpArrayT<T>& other) noexcept : OpArray(other) {}
+  BL_INLINE_NODEBUG OpArrayT() noexcept : OpArray() {}
+  BL_INLINE_NODEBUG explicit OpArrayT(const T& op0) noexcept : OpArray(op0) {}
+  BL_INLINE_NODEBUG OpArrayT(const T& op0, const T& op1) noexcept : OpArray(op0, op1) {}
+  BL_INLINE_NODEBUG OpArrayT(const T& op0, const T& op1, const T& op2) noexcept : OpArray(op0, op1, op2) {}
+  BL_INLINE_NODEBUG OpArrayT(const T& op0, const T& op1, const T& op2, const T& op3) noexcept : OpArray(op0, op1, op2, op3) {}
+  BL_INLINE_NODEBUG OpArrayT(const OpArrayT<T>& other) noexcept : OpArray(other) {}
 
-  BL_INLINE OpArrayT& operator=(const OpArrayT<T>& other) noexcept {
+  BL_INLINE_NODEBUG OpArrayT& operator=(const OpArrayT<T>& other) noexcept {
     init(other);
     return *this;
   }
 
 protected:
-  BL_INLINE OpArrayT(const OpArrayT<T>& other, uint32_t n, uint32_t from, uint32_t inc) noexcept : OpArray(other, n, from, inc) {}
+  BL_INLINE_NODEBUG OpArrayT(const OpArrayT<T>& other, uint32_t n, uint32_t from, uint32_t inc) noexcept : OpArray(other, n, from, inc) {}
 
 public:
-  BL_INLINE void init(const T& op0) noexcept { OpArray::init(op0); }
-  BL_INLINE void init(const T& op0, const T& op1) noexcept { OpArray::init(op0, op1); }
-  BL_INLINE void init(const T& op0, const T& op1, const T& op2) noexcept { OpArray::init(op0, op1, op2); }
-  BL_INLINE void init(const T& op0, const T& op1, const T& op2, const T& op3) noexcept { OpArray::init(op0, op1, op2, op3); }
-  BL_INLINE void init(const OpArrayT<T>& other) noexcept { OpArray::init(other); }
+  BL_INLINE_NODEBUG void init(const T& op0) noexcept { OpArray::init(op0); }
+  BL_INLINE_NODEBUG void init(const T& op0, const T& op1) noexcept { OpArray::init(op0, op1); }
+  BL_INLINE_NODEBUG void init(const T& op0, const T& op1, const T& op2) noexcept { OpArray::init(op0, op1, op2); }
+  BL_INLINE_NODEBUG void init(const T& op0, const T& op1, const T& op2, const T& op3) noexcept { OpArray::init(op0, op1, op2, op3); }
+  BL_INLINE_NODEBUG void init(const OpArrayT<T>& other) noexcept { OpArray::init(other); }
 
   BL_INLINE T& operator[](size_t index) noexcept {
     BL_ASSERT(index < _size);
@@ -293,35 +298,34 @@ public:
     return static_cast<const T&>(v[index]);
   }
 
-  BL_INLINE OpArrayT<T> lo() const noexcept { return OpArrayT<T>(*this, 0, 1, (_size + 1) / 2); }
-  BL_INLINE OpArrayT<T> hi() const noexcept { return OpArrayT<T>(*this, _size > 1 ? (_size + 1) / 2 : 0, 1, _size); }
-  BL_INLINE OpArrayT<T> even() const noexcept { return OpArrayT<T>(*this, 0, 2, _size); }
-  BL_INLINE OpArrayT<T> odd() const noexcept { return OpArrayT<T>(*this, _size > 1, 2, _size); }
-  BL_INLINE OpArrayT<T> even_odd(uint32_t from) const noexcept { return OpArrayT<T>(*this, _size > 1 ? from : 0, 2, _size); }
+  BL_INLINE_NODEBUG OpArrayT<T> lo() const noexcept { return OpArrayT<T>(*this, 0, 1, (_size + 1) / 2); }
+  BL_INLINE_NODEBUG OpArrayT<T> hi() const noexcept { return OpArrayT<T>(*this, _size > 1 ? (_size + 1) / 2 : 0, 1, _size); }
+  BL_INLINE_NODEBUG OpArrayT<T> even() const noexcept { return OpArrayT<T>(*this, 0, 2, _size); }
+  BL_INLINE_NODEBUG OpArrayT<T> odd() const noexcept { return OpArrayT<T>(*this, _size > 1, 2, _size); }
+  BL_INLINE_NODEBUG OpArrayT<T> even_odd(uint32_t from) const noexcept { return OpArrayT<T>(*this, _size > 1 ? from : 0, 2, _size); }
 
   BL_INLINE OpArrayT<T> cloneAs(asmjit::OperandSignature signature) const noexcept {
-    OpArrayT<T> out;
-    out._size = _size;
-    for (uint32_t i = 0; i < _size; i++)
-      out.v[i] = asmjit::BaseReg(signature, v[i].id());
+    OpArrayT<T> out(*this);
+    for (uint32_t i = 0; i < out.size(); i++)
+      out.v[i].setSignature(signature);
     return out;
   }
 
-  BL_INLINE OpArrayT<T> cloneAs(SimdWidth simdWidth) const noexcept { return cloneAs(SimdWidthUtils::signatureOf(simdWidth)); }
-  BL_INLINE OpArrayT<T> cloneAs(const asmjit::BaseReg& reg) const noexcept { return cloneAs(reg.signature()); }
-  BL_INLINE OpArrayT<T> xmm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Xmm::kSignature}); }
-  BL_INLINE OpArrayT<T> ymm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Ymm::kSignature}); }
-  BL_INLINE OpArrayT<T> zmm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Zmm::kSignature}); }
+  BL_INLINE_NODEBUG OpArrayT<T> cloneAs(SimdWidth simdWidth) const noexcept { return cloneAs(SimdWidthUtils::signatureOf(simdWidth)); }
+  BL_INLINE_NODEBUG OpArrayT<T> cloneAs(const asmjit::BaseReg& reg) const noexcept { return cloneAs(reg.signature()); }
+  BL_INLINE_NODEBUG OpArrayT<T> xmm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Xmm::kSignature}); }
+  BL_INLINE_NODEBUG OpArrayT<T> ymm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Ymm::kSignature}); }
+  BL_INLINE_NODEBUG OpArrayT<T> zmm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Zmm::kSignature}); }
 
   // Iterator compatibility.
-  BL_INLINE T* begin() noexcept { return reinterpret_cast<T*>(v); }
-  BL_INLINE T* end() noexcept { return reinterpret_cast<T*>(v) + _size; }
+  BL_INLINE_NODEBUG T* begin() noexcept { return reinterpret_cast<T*>(v); }
+  BL_INLINE_NODEBUG T* end() noexcept { return reinterpret_cast<T*>(v) + _size; }
 
-  BL_INLINE const T* begin() const noexcept { return reinterpret_cast<const T*>(v); }
-  BL_INLINE const T* end() const noexcept { return reinterpret_cast<const T*>(v) + _size; }
+  BL_INLINE_NODEBUG const T* begin() const noexcept { return reinterpret_cast<const T*>(v); }
+  BL_INLINE_NODEBUG const T* end() const noexcept { return reinterpret_cast<const T*>(v) + _size; }
 
-  BL_INLINE const T* cbegin() const noexcept { return reinterpret_cast<const T*>(v); }
-  BL_INLINE const T* cend() const noexcept { return reinterpret_cast<const T*>(v) + _size; }
+  BL_INLINE_NODEBUG const T* cbegin() const noexcept { return reinterpret_cast<const T*>(v); }
+  BL_INLINE_NODEBUG const T* cend() const noexcept { return reinterpret_cast<const T*>(v) + _size; }
 };
 
 typedef OpArrayT<x86::Vec> VecArray;
@@ -340,11 +344,11 @@ static BL_INLINE void resetVarStruct(T* data, size_t size = sizeof(T)) noexcept 
   resetVarArray(reinterpret_cast<asmjit::BaseReg*>(data), size / sizeof(asmjit::BaseReg));
 }
 
-static BL_INLINE const Operand_& firstOp(const Operand_& operand) noexcept { return operand; }
-static BL_INLINE const Operand_& firstOp(const OpArray& opArray) noexcept { return opArray[0]; }
+static BL_INLINE_NODEBUG const Operand_& firstOp(const Operand_& operand) noexcept { return operand; }
+static BL_INLINE_NODEBUG const Operand_& firstOp(const OpArray& opArray) noexcept { return opArray[0]; }
 
-static BL_INLINE uint32_t countOp(const Operand_&) noexcept { return 1u; }
-static BL_INLINE uint32_t countOp(const OpArray& opArray) noexcept { return opArray.size(); }
+static BL_INLINE_NODEBUG uint32_t countOp(const Operand_&) noexcept { return 1u; }
+static BL_INLINE_NODEBUG uint32_t countOp(const OpArray& opArray) noexcept { return opArray.size(); }
 
 template<typename T> static BL_INLINE bool isXmm(const T& op) noexcept { return x86::Reg::isXmm(firstOp(op)); }
 template<typename T> static BL_INLINE bool isYmm(const T& op) noexcept { return x86::Reg::isYmm(firstOp(op)); }

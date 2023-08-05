@@ -11,8 +11,8 @@
 namespace BLPixelOps {
 namespace Interpolation {
 
-// BLPixelOps - Interpolate32
-// ==========================
+// BLPixelOps - Interpolate PRGB32
+// ===============================
 
 void BL_CDECL interpolate_prgb32(uint32_t* dPtr, uint32_t dSize, const BLGradientStop* sPtr, size_t sSize) noexcept {
   BL_ASSERT(dPtr != nullptr);
@@ -130,6 +130,138 @@ SolidLoop:
 
             cp += _a + _g;
 
+            dSpanPtr[0] = cp;
+            dSpanPtr++;
+          } while (--i);
+        }
+      }
+
+      c0 = c1;
+    }
+  } while (++sIndex < sSize);
+
+  // The last stop doesn't have to end at 1.0, in such case the remaining space is filled by the last color stop
+  // (premultiplied). We jump to the main loop instead of filling the buffer here.
+  i = uint32_t((size_t)((dPtr + dSize + 1) - dSpanPtr));
+  if (i != 0)
+    goto SolidInit;
+
+  // The first pixel has to be always set to the first stop's color. The main loop always honors the last color
+  // value of the stop colliding with the previous offset index - for example if multiple stops have the same offset
+  // [0.0] the first pixel will be the last stop's color. This is easier to fix here as we don't need extra conditions
+  // in the main loop.
+  dPtr[0] = cpFirst;
+}
+
+// BLPixelOps - Interpolate PRGB64
+// ===============================
+
+void BL_CDECL interpolate_prgb64(uint64_t* dPtr, uint32_t dSize, const BLGradientStop* sPtr, size_t sSize) noexcept {
+  BL_ASSERT(dPtr != nullptr);
+  BL_ASSERT(dSize > 0);
+
+  BL_ASSERT(sPtr != nullptr);
+  BL_ASSERT(sSize > 0);
+
+  uint64_t* dSpanPtr = dPtr;
+  uint32_t i = dSize;
+
+  uint64_t c0 = sPtr[0].rgba.value;
+  uint64_t c1 = c0;
+
+  uint32_t p0 = 0;
+  uint32_t p1;
+
+  size_t sIndex = 0;
+  double fWidth = double(int32_t(--dSize) << 8);
+
+  uint64_t cp = Scalar::cvt_prgb64_8888_from_argb64_8888(c0);
+  uint64_t cpFirst = cp;
+
+  if (sSize == 1)
+    goto SolidLoop;
+
+  do {
+    c1 = sPtr[sIndex].rgba.value;
+    p1 = uint32_t(blRoundToInt(sPtr[sIndex].offset * fWidth));
+
+    dSpanPtr = dPtr + (p0 >> 8);
+    i = ((p1 >> 8) - (p0 >> 8));
+
+    if (i == 0)
+      c0 = c1;
+
+    p0 = p1;
+    i++;
+
+SolidInit:
+    cp = Scalar::cvt_prgb64_8888_from_argb64_8888(c0);
+    if (c0 == c1) {
+SolidLoop:
+      do {
+        dSpanPtr[0] = cp;
+        dSpanPtr++;
+      } while (--i);
+    }
+    else {
+      dSpanPtr[0] = cp;
+      dSpanPtr++;
+
+      if (--i) {
+        const uint32_t kShift = 15;
+        const uint32_t kMask = 0xFFFFu << kShift;
+
+        uint32_t rPos = uint32_t((c0 >> (32 - kShift)) & kMask);
+        uint32_t gPos = uint32_t((c0 >> (16 - kShift)) & kMask);
+        uint32_t bPos = uint32_t((c0 << (0  + kShift)) & kMask);
+
+        uint32_t rInc = uint32_t((c1 >> (32 - kShift)) & kMask);
+        uint32_t gInc = uint32_t((c1 >> (16 - kShift)) & kMask);
+        uint32_t bInc = uint32_t((c1 << (0  + kShift)) & kMask);
+
+        rInc = uint32_t(int32_t(rInc - rPos) / int32_t(i));
+        gInc = uint32_t(int32_t(gInc - gPos) / int32_t(i));
+        bInc = uint32_t(int32_t(bInc - bPos) / int32_t(i));
+
+        rPos += 1u << (kShift - 1);
+        gPos += 1u << (kShift - 1);
+        bPos += 1u << (kShift - 1);
+
+        if (BLRgbaPrivate::isRgba64FullyOpaque(c0 & c1)) {
+          // Both fully opaque, no need to premultiply.
+          do {
+            rPos += rInc;
+            gPos += gInc;
+            bPos += bInc;
+
+            cp = (uint64_t(rPos & kMask) << (32 - kShift)) |
+                 (uint64_t(gPos & kMask) << (16 - kShift)) |
+                 (uint64_t(bPos & kMask) >> (0  + kShift)) | 0xFFFF000000000000u;
+
+            dSpanPtr[0] = cp;
+            dSpanPtr++;
+          } while (--i);
+        }
+        else {
+          // One or both having alpha, have to be premultiplied.
+          uint32_t aPos = uint32_t((c0 >> (48 - kShift)) & kMask);
+          uint32_t aInc = uint32_t((c1 >> (48 - kShift)) & kMask);
+
+          aInc = uint32_t(int32_t(aInc - aPos) / int32_t(i));
+          aPos += 1u << (kShift - 1);
+
+          do {
+            aPos += aInc;
+            rPos += rInc;
+            gPos += gInc;
+            bPos += bInc;
+
+            uint32_t ca = aPos >> kShift;
+            uint32_t cr = BLPixelOps::Scalar::udiv65535((rPos >> kShift) * ca);
+            uint32_t cg = BLPixelOps::Scalar::udiv65535((gPos >> kShift) * ca);
+            uint32_t cb = BLPixelOps::Scalar::udiv65535((bPos >> kShift) * ca);
+
+            cp = BLRgbaPrivate::packRgba64(cr, cg, cb, ca);
             dSpanPtr[0] = cp;
             dSpanPtr++;
           } while (--i);

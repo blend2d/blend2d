@@ -8,6 +8,7 @@
 
 #include "api-internal_p.h"
 #include "math_p.h"
+#include "object_p.h"
 #include "path.h"
 
 //! \cond INTERNAL
@@ -25,10 +26,66 @@ struct BLPathPrivateImpl : public BLPathImpl {
 
 //! \}
 
-//! \name BLPath - Private API
+namespace BLPathPrivate {
+
+using BLObjectPrivate::RCMode;
+
+//! \name BLPath - Internals - Common Functionality (Container)
 //! \{
 
-namespace BLPathPrivate {
+static BL_INLINE constexpr size_t capacityFromImplSize(BLObjectImplSize implSize) noexcept {
+  return (implSize.value() - sizeof(BLPathPrivateImpl)) / (sizeof(BLPoint) + 1);
+}
+
+static BL_INLINE constexpr BLObjectImplSize implSizeFromCapacity(size_t capacity) noexcept {
+  return BLObjectImplSize(sizeof(BLPathPrivateImpl) + capacity * (sizeof(BLPoint) + 1));
+}
+
+//! \}
+
+//! \name BLPath - Internals - Common Functionality (Impl)
+//! \{
+
+static BL_INLINE bool isImplMutable(BLPathImpl* impl) noexcept {
+  return BLObjectPrivate::isImplMutable(impl);
+}
+
+static BL_INLINE BLResult freeImpl(BLPathPrivateImpl* impl) noexcept {
+  return BLObjectPrivate::freeImpl(impl);
+}
+
+template<RCMode kRCMode>
+static BL_INLINE BLResult releaseImpl(BLPathPrivateImpl* impl) noexcept {
+  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+}
+
+//! \}
+
+//! \name BLPath - Internals - Common Functionality (Instance)
+//! \{
+
+static BL_INLINE BLPathPrivateImpl* getImpl(const BLPathCore* self) noexcept {
+  return static_cast<BLPathPrivateImpl*>(self->_d.impl);
+}
+
+static BL_INLINE BLResult retainInstance(const BLPathCore* self, size_t n = 1) noexcept {
+  return BLObjectPrivate::retainInstance(self, n);
+}
+
+static BL_INLINE BLResult releaseInstance(BLPathCore* self) noexcept {
+  return releaseImpl<RCMode::kMaybe>(getImpl(self));
+}
+
+static BL_INLINE BLResult replaceInstance(BLPathCore* self, const BLPathCore* other) noexcept {
+  BLPathPrivateImpl* impl = getImpl(self);
+  self->_d = other->_d;
+  return releaseImpl<RCMode::kMaybe>(impl);
+}
+
+//! \}
+
+//! \name BLPath - Internals - Other
+//! \{
 
 static BL_INLINE constexpr BLApproximationOptions makeDefaultApproximationOptions() noexcept {
   return BLApproximationOptions {
@@ -41,15 +98,9 @@ static BL_INLINE constexpr BLApproximationOptions makeDefaultApproximationOption
   };
 }
 
-static BL_INLINE BLPathPrivateImpl* getImpl(const BLPathCore* self) noexcept {
-  return static_cast<BLPathPrivateImpl*>(self->_d.impl);
-}
-
-BL_HIDDEN BLResult freeImpl(BLPathPrivateImpl* impl, BLObjectInfo info) noexcept;
+//! \}
 
 } // {BLPathPrivate}
-
-//! \}
 
 //! \name BLPath - Private Iterator
 //! \{

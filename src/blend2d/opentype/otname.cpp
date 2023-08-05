@@ -4,13 +4,13 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
-#include "../tables_p.h"
-#include "../unicode_p.h"
 #include "../trace_p.h"
 #include "../opentype/otface_p.h"
 #include "../opentype/otname_p.h"
 #include "../opentype/otplatform_p.h"
 #include "../support/intops_p.h"
+#include "../support/lookuptable_p.h"
+#include "../unicode/unicode_p.h"
 
 namespace BLOpenType {
 namespace NameImpl {

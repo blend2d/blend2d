@@ -22,26 +22,68 @@ namespace BLRasterEngine {
 
 struct RenderFetchData;
 
+//! Source data that belongs to a \ref RenderCommand, but stored separately.
+union RenderCommandSource {
+  //! Solid data.
+  BLPipeline::FetchData::Solid solid;
+  //! Fetch data.
+  RenderFetchData* fetchData;
+
+  //! Reset all data to zero.
+  BL_INLINE_NODEBUG void reset() noexcept { solid.prgb64 = 0; }
+  //! Copy all data from \ref other to this command source.
+  BL_INLINE_NODEBUG void reset(const RenderCommandSource& other) noexcept { *this = other; }
+};
+
+enum class RenderCommandType : uint8_t {
+  kNone = 0,
+  kFillBoxA = 1,
+  kFillBoxU = 2,
+  kFillAnalytic = 3,
+  kFillBoxMaskA = 4
+};
+
+//! Raster command flags.
+enum class RenderCommandFlags : uint8_t {
+  //! No flags specified.
+  kNoFlags = 0x00u,
+
+  //! The command holds `_source.fetchData` (the operation is non-solid, fetch-data is valid and used).
+  kHasStyleFetchData = 0x10u,
+
+  //! The command retains `_source.fetchData`, which must be released during batch finalization.
+  kRetainsStyleFetchData = 0x20u,
+
+  //! The command retains `_payload.maskRaw.maskImageI`, which must be released during batch finalization.
+  //!
+  //! \note This flag cannot be set together with \ref kRetainsMaskImageData, one or the other.
+  kRetainsMaskFetchData = 0x40u,
+
+  //! The command retains `_payload.maskFetchData`, which must be released during batch finalization
+  //!
+  //! \note This flag cannot be set together with \ref kRetainsMaskFetchData, one or the other.
+  kRetainsMaskImageData = 0x80u
+};
+
+BL_DEFINE_ENUM_FLAGS(RenderCommandFlags)
+
+//! 64-bit pointer to unify the layout of the render command.
+//!
+//! The reason is that a command has a fixed size calculated to be good for 8-byte pointers (64-bit machines).
+template<typename T>
+struct Ptr64 {
+  T* ptr;
+#if BL_TARGET_ARCH_BITS < 64
+  uint32_t padding;
+#endif
+};
+
 //! Render command.
 //!
 //! Render command provides information required to render the lowest-level operation.
 struct RenderCommand {
   //! \name Constants
   //! \{
-
-  //! Render command type.
-  enum Type : uint8_t {
-    kTypeNone = 0,
-
-    kTypeFillBoxA = 1,
-    kTypeFillBoxU = 2,
-    kTypeFillAnalytic = 3,
-
-    kTypeFillMaskRaw = 4,
-    kTypeFillMaskBoxA = 5,
-    kTypeFillMaskBoxU = 6,
-    kTypeFillMaskAnalytic = 7
-  };
 
   //! Maximum size of the payload embedded in the \ref RenderCommand itself.
   enum PayloadDataSize : uint32_t { kPayloadDataSize = 32 };
@@ -53,44 +95,27 @@ struct RenderCommand {
 
   //! FillBoxA, FillBoxU, FillMaskBoxA, FillMaskBoxU payload.
   struct FillBox {
-    RenderFetchData* maskFetchData;
-    uint8_t reserved[kPayloadDataSize - sizeof(BLBoxI) - sizeof(RenderFetchData*)];
+    Ptr64<RenderFetchData> maskFetchData;
+    uint8_t reserved[8];
     BLBoxI boxI;
   };
 
-  //! FillMaskRaw payload - special case for aligned fills with aligned mask.
+  //! FillBoxWithMaskA payload - special case for aligned fills with aligned mask.
   //!
   //! This payload was designed to save space in command buffer as it avoids RenderFetchData.
-  struct FillMaskRaw {
-    BLImageImpl* maskImageI;
+  struct FillBoxMaskA {
+    Ptr64<BLImageImpl> maskImageI;
     BLPointI maskOffsetI;
     BLBoxI boxI;
   };
 
-  //! FillAnalytic and FillMaskAnalytic payload, used by the synchronous rendering context implementation.
-  struct FillAnalyticAny {
-    RenderFetchData* maskFetchData;
-    void* edgeData;
-    uint32_t fillRule;
-  };
-
-  //! FillAnalytic and FillMaskAnalytic payload, used by the synchronous rendering context implementation.
-  struct FillAnalyticSync {
+  //! FillAnalytic and FillMaskAnalytic payload, used by the asynchronous rendering context implementation.
+  struct FillAnalytic {
     //! Fetch data used by mask `kTypeFillMaskAnalytic` command types.
-    RenderFetchData* maskFetchData;
-    //! Edge storage is used directly by the synchronous rendering context.
-    EdgeStorage<int>* edgeStorage;
-    //! Fill rule.
-    uint32_t fillRule;
-  };
-
-  //! FillAnalytic and FillMaskAnalytic paylod, used by the asynchronous rendering context implementation.
-  struct FillAnalyticAsync {
-    //! Fetch data used by mask `kTypeFillMaskAnalytic` command types.
-    RenderFetchData* maskFetchData;
+    Ptr64<RenderFetchData> maskFetchData;
     //! Points to the start of the first edge. Edges that start in next bands are linked next after edges of the previous
     //! band, which makes it possible to only store the start of the list.
-    const EdgeVector<int>* edges;
+    Ptr64<const EdgeVector<int>> edges;
     //! Fill rule.
     uint32_t fillRule;
     //! Topmost Y coordinate used to skip quickly the whole band if the worker is not there yet.
@@ -105,16 +130,12 @@ struct RenderCommand {
     //! Payload used by FillBoxA, FillBoxU, FillMaskA, FillMaskU.
     FillBox box;
     //! Payload used by FillBoxAMaskA.
-    FillMaskRaw maskRaw;
-    //! Payload used by FillAnalytic in both synchronous and asynchronous case.
-    FillAnalyticAny analyticAny;
-    //! Payload used by FillAnalytic in case of synchronous rendering.
-    FillAnalyticSync analyticSync;
+    FillBoxMaskA boxMaskA;
     //! Payload used by FillAnalytic in case of asynchronous rendering.
-    FillAnalyticAsync analyticAsync;
+    FillAnalytic analytic;
 
     //! Mask fetch-data, which is provided by the most commands.
-    RenderFetchData* maskFetchData;
+    Ptr64<RenderFetchData> maskFetchData;
 
     //! Payload buffer (holds RAW data).
     uint8_t buffer[kPayloadDataSize];
@@ -122,9 +143,8 @@ struct RenderCommand {
 
   BL_STATIC_ASSERT(sizeof(Payload) == kPayloadDataSize);
   BL_STATIC_ASSERT(sizeof(FillBox) == kPayloadDataSize);
-  BL_STATIC_ASSERT(sizeof(FillMaskRaw) <= kPayloadDataSize);
-  BL_STATIC_ASSERT(sizeof(FillAnalyticSync) <= kPayloadDataSize);
-  BL_STATIC_ASSERT(sizeof(FillAnalyticAsync) <= kPayloadDataSize);
+  BL_STATIC_ASSERT(sizeof(FillBoxMaskA) <= kPayloadDataSize);
+  BL_STATIC_ASSERT(sizeof(FillAnalytic) <= kPayloadDataSize);
 
   //! \}
 
@@ -136,18 +156,21 @@ struct RenderCommand {
 
   //! Global alpha value.
   uint32_t _alpha;
-  //! Command type, see \ref Type.
-  uint8_t _type;
-  //! Command flags, see `RenderCommandFlags`.
-  uint8_t _flags;
+  //! Command type, see \ref RenderCommandType.
+  RenderCommandType _type;
+  //! Command flags, see \ref RenderCommandFlags.
+  RenderCommandFlags _flags;
   //! Reserved.
   uint16_t _reserved;
 
-  //! Source data - either solid data or pointer to `fetchData`.
-  StyleSource _source;
+  RenderCommandSource _source;
 
-  //! Dispatch data.
-  BLPipeline::DispatchData _dispatchData;
+  union {
+    //! Dispatch data.
+    BLPipeline::DispatchData _dispatchData;
+    //! Signature, used during command construction, replaced by `_dispatchData` when constructed.
+    BLPipeline::Signature _signature;
+  };
 
   //! \}
 
@@ -156,103 +179,56 @@ struct RenderCommand {
 
   BL_INLINE void initCommand(uint32_t alpha) noexcept {
     _alpha = alpha;
-    _type = 0;
-    _flags = 0;
+    _type = RenderCommandType::kNone;
+    _flags = RenderCommandFlags::kNoFlags;
     _reserved = 0;
   }
 
   BL_INLINE void initFillBoxA(const BLBoxI& boxA) noexcept {
     _payload.box.boxI = boxA;
-    _type = kTypeFillBoxA;
+    _type = RenderCommandType::kFillBoxA;
   }
 
   BL_INLINE void initFillBoxU(const BLBoxI& boxU) noexcept {
     _payload.box.boxI = boxU;
-    _type = kTypeFillBoxU;
+    _type = RenderCommandType::kFillBoxU;
   }
 
-  //! Initializes FillAnalytic command (synchronous).
-  BL_INLINE void initFillAnalyticSync(uint32_t fillRule, EdgeStorage<int>* edgeStorage) noexcept {
-    BL_ASSERT(fillRule <= BL_FILL_RULE_MAX_VALUE);
-
-    _payload.analyticSync.edgeStorage = edgeStorage;
-    _payload.analyticSync.fillRule = fillRule;
-    _type = kTypeFillAnalytic;
-  }
-
-  //! Initializes FillAnalytic command (asynchronous).
+  //! Initializes FillAnalytic command.
   //!
   //! \note `edges` may be null in case that this command requires a job to build the edges. In this case both `edges`
   //! and `fixedY0` members will be changed when such job completes.
-  BL_INLINE void initFillAnalyticAsync(uint32_t fillRule, EdgeVector<int>* edges) noexcept {
+  BL_INLINE void initFillAnalytic(EdgeVector<int>* edges, int fixedY0, BLFillRule fillRule) noexcept {
     BL_ASSERT(fillRule <= BL_FILL_RULE_MAX_VALUE);
 
-    _payload.analyticAsync.edges = edges;
-    _payload.analyticAsync.fixedY0 = 0;
-    _payload.analyticAsync.fillRule = fillRule;
-    _type = kTypeFillAnalytic;
+    _payload.analytic.edges.ptr = edges;
+    _payload.analytic.fixedY0 = fixedY0;
+    _payload.analytic.fillRule = uint32_t(fillRule);
+    _type = RenderCommandType::kFillAnalytic;
   }
 
-  BL_INLINE void initFillMaskRaw(const BLBoxI& boxA, const BLImageCore* maskImage, const BLPointI& maskOffsetI) noexcept {
-    _payload.maskRaw.maskImageI = BLImagePrivate::getImpl(maskImage);
-    _payload.maskRaw.maskOffsetI = maskOffsetI;
-    _payload.maskRaw.boxI = boxA;
-    _type = kTypeFillMaskRaw;
-  }
-
-  BL_INLINE void initFillMaskBoxA(const BLBoxI& boxA, RenderFetchData* maskFetchData) noexcept {
-    _payload.box.maskFetchData = maskFetchData;
-    _payload.box.boxI = boxA;
-    _type = kTypeFillMaskBoxA;
-  }
-
-  BL_INLINE void initFillMaskBoxU(const BLBoxI& boxU, RenderFetchData* maskFetchData) noexcept {
-    _payload.box.maskFetchData = maskFetchData;
-    _payload.box.boxI = boxU;
-    _type = kTypeFillMaskBoxU;
-  }
-
-  BL_INLINE void initFillMaskAnalyticSync(uint32_t fillRule, EdgeStorage<int>* edgeStorage, RenderFetchData* maskFetchData) noexcept {
-    BL_ASSERT(fillRule <= BL_FILL_RULE_MAX_VALUE);
-
-    _payload.analyticSync.maskFetchData = maskFetchData;
-    _payload.analyticSync.edgeStorage = edgeStorage;
-    _payload.analyticSync.fillRule = fillRule;
-    _type = kTypeFillAnalytic;
-  }
-
-  BL_INLINE void initFillMaskAnalyticAsync(uint32_t fillRule, EdgeVector<int>* edges, RenderFetchData* maskFetchData) noexcept {
-    BL_ASSERT(fillRule <= BL_FILL_RULE_MAX_VALUE);
-
-    _payload.analyticAsync.maskFetchData = maskFetchData;
-    _payload.analyticAsync.edges = edges;
-    _payload.analyticAsync.fixedY0 = 0;
-    _payload.analyticAsync.fillRule = fillRule;
-    _type = kTypeFillAnalytic;
+  BL_INLINE void initFillBoxMaskA(const BLBoxI& boxA, const BLImageCore* maskImage, const BLPointI& maskOffsetI) noexcept {
+    _payload.boxMaskA.maskImageI.ptr = BLImagePrivate::getImpl(maskImage);
+    _payload.boxMaskA.maskOffsetI = maskOffsetI;
+    _payload.boxMaskA.boxI = boxA;
+    _type = RenderCommandType::kFillBoxMaskA;
   }
 
   //! Sets edges of FillAnalytic or FillMaskAnalytic command.
-  BL_INLINE void setAnalyticEdgesAsync(EdgeStorage<int>* edgeStorage) noexcept {
-    _payload.analyticAsync.edges = edgeStorage->flattenEdgeLinks();
-    _payload.analyticAsync.fixedY0 = edgeStorage->boundingBox().y0;
+  BL_INLINE void setAnalyticEdges(EdgeStorage<int>* edgeStorage) noexcept {
+    _payload.analytic.edges.ptr = edgeStorage->flattenEdgeLinks();
+    _payload.analytic.fixedY0 = edgeStorage->boundingBox().y0;
   }
+
+  BL_INLINE void markFetchData() noexcept { addFlags(RenderCommandFlags::kHasStyleFetchData); }
 
   //! \}
 
   //! \name Command Source and Mask Initialization
   //! \{
 
-  BL_INLINE void initFetchSolid(const BLPipeline::FetchData::Solid& solidData) noexcept {
-    _source.solid = solidData;
-  }
-
-  BL_INLINE void initFetchData(RenderFetchData* fetchData) noexcept {
-    _source.fetchData = fetchData;
-    _flags |= BL_RASTER_COMMAND_FLAG_FETCH_DATA;
-  }
-
   BL_INLINE void initMaskFetchData(RenderFetchData* maskFetchData) noexcept {
-    _payload.maskFetchData = maskFetchData;
+    _payload.maskFetchData.ptr = maskFetchData;
   }
 
   //! \}
@@ -260,56 +236,53 @@ struct RenderCommand {
   //! \name Accessors
   //! \{
 
-  BL_INLINE uint32_t type() const noexcept { return _type; }
+  BL_INLINE_NODEBUG RenderCommandType type() const noexcept { return RenderCommandType(_type); }
 
-  BL_INLINE bool isFillBoxA() const noexcept { return _type == kTypeFillBoxA; }
-  BL_INLINE bool isFillBoxU() const noexcept { return _type == kTypeFillBoxU; }
-  BL_INLINE bool isFillAnalytic() const noexcept { return _type == kTypeFillAnalytic; }
+  BL_INLINE_NODEBUG bool isFillBoxA() const noexcept { return _type == RenderCommandType::kFillBoxA; }
+  BL_INLINE_NODEBUG bool isFillBoxU() const noexcept { return _type == RenderCommandType::kFillBoxU; }
+  BL_INLINE_NODEBUG bool isFillAnalytic() const noexcept { return _type == RenderCommandType::kFillAnalytic; }
+  BL_INLINE_NODEBUG bool isFillBoxMaskA() const noexcept { return _type == RenderCommandType::kFillBoxMaskA; }
 
-  BL_INLINE bool isFillMaskRaw() const noexcept { return _type == kTypeFillMaskRaw; }
-  BL_INLINE bool isFillMaskBoxA() const noexcept { return _type == kTypeFillMaskBoxA; }
-  BL_INLINE bool isFillMaskBoxU() const noexcept { return _type == kTypeFillMaskBoxU; }
-  BL_INLINE bool isFillMaskAnalytic() const noexcept { return _type == kTypeFillMaskAnalytic; }
+  BL_INLINE_NODEBUG RenderCommandFlags flags() const noexcept { return RenderCommandFlags(_flags); }
+  BL_INLINE_NODEBUG bool hasFlag(RenderCommandFlags flag) const noexcept { return uint32_t(_flags & flag) != 0; }
+  BL_INLINE_NODEBUG void addFlags(RenderCommandFlags flags) noexcept { _flags |= flags; }
 
-  BL_INLINE uint32_t flags() const noexcept { return _flags; }
-  BL_INLINE bool hasFlag(uint32_t flag) const noexcept { return (_flags & flag) != 0; }
-  BL_INLINE bool hasFetchData() const noexcept { return hasFlag(BL_RASTER_COMMAND_FLAG_FETCH_DATA); }
+  BL_INLINE_NODEBUG bool hasStyleFetchData() const noexcept { return hasFlag(RenderCommandFlags::kHasStyleFetchData); }
+  BL_INLINE_NODEBUG bool retainsStyleFetchData() const noexcept { return hasFlag(RenderCommandFlags::kRetainsStyleFetchData); }
+  BL_INLINE_NODEBUG bool retainsMask() const noexcept { return hasFlag(RenderCommandFlags::kRetainsMaskImageData | RenderCommandFlags::kRetainsMaskFetchData); }
+  BL_INLINE_NODEBUG bool retainsMaskImageData() const noexcept { return hasFlag(RenderCommandFlags::kRetainsMaskImageData); }
+  BL_INLINE_NODEBUG bool retainsMaskFetchData() const noexcept { return hasFlag(RenderCommandFlags::kRetainsMaskFetchData); }
 
-  BL_INLINE uint32_t alpha() const noexcept { return _alpha; }
-  BL_INLINE const BLBoxI& boxI() const noexcept { return _payload.box.boxI; }
+  BL_INLINE_NODEBUG uint32_t alpha() const noexcept { return _alpha; }
+  BL_INLINE_NODEBUG const BLBoxI& boxI() const noexcept { return _payload.box.boxI; }
 
   BL_INLINE uint32_t analyticFillRule() const noexcept {
-    BL_ASSERT(isFillAnalytic() || isFillMaskAnalytic());
-    return _payload.analyticAny.fillRule;
+    BL_ASSERT(isFillAnalytic());
+    return _payload.analytic.fillRule;
   }
 
-  BL_INLINE const EdgeStorage<int>* analyticEdgesSync() const noexcept {
-    BL_ASSERT(isFillAnalytic() || isFillMaskAnalytic());
-    return _payload.analyticSync.edgeStorage;
-  }
-
-  BL_INLINE const EdgeVector<int>* analyticEdgesAsync() const noexcept {
-    BL_ASSERT(isFillAnalytic() || isFillMaskAnalytic());
-    return _payload.analyticAsync.edges;
+  BL_INLINE const EdgeVector<int>* analyticEdges() const noexcept {
+    BL_ASSERT(isFillAnalytic());
+    return _payload.analytic.edges.ptr;
   }
 
   //! Returns a pointer to `BLPipeline::FillData` that is only valid when the command type is `kTypeFillBoxA`. It casts
   //! `_rect` member to the requested data type as it's  compatible. This trick cannot be used for any other command types.
   BL_INLINE const void* getPipeFillDataOfBoxA() const noexcept {
-    BL_ASSERT(_type == kTypeFillBoxA);
+    BL_ASSERT(isFillBoxA());
     return &_payload.box.boxI;
   }
 
   //! Returns `_solidData` or `_fetchData` casted properly to `BLPipeline::FetchData` type.
   BL_INLINE const void* getPipeFetchData() const noexcept {
     const void* data = &_source.solid;
-    if (hasFetchData())
-      data = &_source.fetchData->_data;
+    if (hasStyleFetchData())
+      data = &_source.fetchData->pipelineData;
     return data;
   }
 
-  BL_INLINE BLPipeline::DispatchData* pipeDispatchData() noexcept { return &_dispatchData; }
-  BL_INLINE const BLPipeline::DispatchData* pipeDispatchData() const noexcept { return &_dispatchData; }
+  BL_INLINE_NODEBUG BLPipeline::DispatchData* pipeDispatchData() noexcept { return &_dispatchData; }
+  BL_INLINE_NODEBUG const BLPipeline::DispatchData* pipeDispatchData() const noexcept { return &_dispatchData; }
 
   //! \}
 };

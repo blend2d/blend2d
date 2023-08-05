@@ -7,6 +7,7 @@
 #define BLEND2D_PIPELINE_JIT_FETCHGRADIENTPART_P_H_INCLUDED
 
 #include "../../pipeline/jit/fetchpart_p.h"
+#include "../../pipeline/jit/fetchutils_p.h"
 #include "../../support/wrap_p.h"
 
 //! \cond INTERNAL
@@ -16,27 +17,69 @@
 namespace BLPipeline {
 namespace JIT {
 
+class GradientDitheringContext {
+public:
+  PipeCompiler* pc {};
+  bool _isRectFill {};
+  x86::Gp _dmPosition;
+  x86::Gp _dmOriginX;
+  x86::Vec _dmValues;
+
+  BL_INLINE explicit GradientDitheringContext(PipeCompiler* pc) noexcept
+    : pc(pc) {}
+
+  BL_INLINE_NODEBUG bool isRectFill() const noexcept { return _isRectFill; }
+
+  void initY(const x86::Gp& x, const x86::Gp& y) noexcept;
+  void advanceY() noexcept;
+
+  void startAtX(const x86::Gp& x) noexcept;
+  void advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept;
+  void advanceXAfterFetch(uint32_t n) noexcept;
+
+  void ditherUnpackedPixels(Pixel& p) noexcept;
+};
+
 //! Base class for all gradient fetch parts.
 class FetchGradientPart : public FetchPart {
 public:
-  struct CommonRegs {
-    x86::Gp table;
-  };
-
   ExtendMode _extendMode {};
+  bool _ditheringEnabled {};
+
+  x86::Gp _tablePtr;
+  GradientDitheringContext _ditheringContext;
 
   FetchGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
 
   //! Returns the gradient extend mode.
-  BL_INLINE ExtendMode extendMode() const noexcept { return _extendMode; }
+  BL_INLINE_NODEBUG ExtendMode extendMode() const noexcept { return _extendMode; }
 
-  void fetchGradientPixel1(Pixel& dst, PixelFlags flags, const x86::Mem& src) noexcept;
+  //! Returns true if the gradient extend mode is Pad.
+  BL_INLINE_NODEBUG bool isPad() const noexcept { return _extendMode == ExtendMode::kPad; }
+  //! Returns true if the gradient extend mode is RoR.
+  BL_INLINE_NODEBUG bool isRoR() const noexcept { return _extendMode == ExtendMode::kRoR; }
+
+  BL_INLINE_NODEBUG bool ditheringEnabled() const noexcept { return _ditheringEnabled; }
+  BL_INLINE_NODEBUG void setDitheringEnabled(bool value) noexcept { _ditheringEnabled = value; }
+
+  BL_INLINE_NODEBUG int tablePtrShift() const noexcept { return _ditheringEnabled ? 3 : 2; }
+
+  void fetchSinglePixel(Pixel& dst, PixelFlags flags, const x86::Gp& idx) noexcept;
+
+  void fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags flags, const x86::Vec& idx, IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept;
+
+  template<class InterleaveFunc>
+  void fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags flags, const x86::Vec& idx, IndexLayout indexLayout, InterleaveFunc&& interleaveFunc) noexcept {
+    fetchMultiplePixels(dst, n, flags, idx, indexLayout, [](uint32_t step, void* data) noexcept {
+      (*static_cast<const InterleaveFunc*>(data))(step);
+    }, (void*)&interleaveFunc);
+  }
 };
 
 //! Linear gradient fetch part.
 class FetchLinearGradientPart : public FetchGradientPart {
 public:
-  struct LinearRegs : public CommonRegs {
+  struct LinearRegs {
     x86::Gp dtGp;
     x86::Vec pt;
     x86::Vec dt;
@@ -49,12 +92,8 @@ public:
   };
 
   BLWrap<LinearRegs> f;
-  bool _isRoR;
 
   FetchLinearGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
-
-  BL_INLINE bool isPad() const noexcept { return !_isRoR; }
-  BL_INLINE bool isRoR() const noexcept { return  _isRoR; }
 
   void preparePart() noexcept override;
 
@@ -81,7 +120,7 @@ public:
   // `d`   - determinant.
   // `dd`  - determinant delta.
   // `ddd` - determinant-delta delta.
-  struct RadialRegs : public CommonRegs {
+  struct RadialRegs {
     x86::Vec xx_xy;
     x86::Vec yx_yy;
 
@@ -98,7 +137,6 @@ public:
     x86::Vec ddd;
     x86::Vec value;
 
-    // x86::Gp maxi;
     x86::Vec vmaxi;
     x86::Vec vrori;
     x86::Vec vmaxf; // Like `vmaxi`, but converted to `float`.
@@ -109,12 +147,8 @@ public:
   };
 
   BLWrap<RadialRegs> f;
-  bool _isRoR;
 
   FetchRadialGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
-
-  BL_INLINE bool isPad() const noexcept { return !_isRoR; }
-  BL_INLINE bool isRoR() const noexcept { return  _isRoR; }
 
   void preparePart() noexcept override;
 
@@ -134,33 +168,33 @@ public:
   void precalc(const x86::Vec& px_py) noexcept;
 };
 
-//! Conical gradient fetch part.
-class FetchConicalGradientPart : public FetchGradientPart {
+//! Conic gradient fetch part.
+class FetchConicGradientPart : public FetchGradientPart {
 public:
-  struct ConicalRegs : public CommonRegs {
-    x86::Xmm xx_xy;
-    x86::Xmm yx_yy;
-
-    x86::Xmm hx_hy;
-    x86::Xmm px_py;
-
+  struct ConicRegs {
     x86::Gp consts;
 
-    x86::Gp maxi;
-    x86::Xmm vmaxi; // Maximum table index, basically `precision - 1` (mask).
+    x86::Xmm px;
+    x86::Xmm xx;
+    x86::Xmm hx_hy;
+    x86::Xmm yx_yy;
+    x86::Vec ay;
+    x86::Vec by;
+    x86::Vec angleOffset;
+    x86::Vec maxi; // Maximum table index, basically `precision - 1` (mask).
+
+    // Temporary values precalculated for the next fetch loop.
+    x86::Vec t0, t1, t2;
+    x86::KReg t1Pred;
 
     // 4+ pixels.
-    x86::Xmm xx4_xy4;
-    x86::Xmm xx_0123;
-    x86::Xmm xy_0123;
-
-    // Temporary.
-    x86::Xmm x0, x1, x2, x3, x4, x5;
+    x86::Vec xx_inc;
+    x86::Vec xx_off;
   };
 
-  BLWrap<ConicalRegs> f;
+  BLWrap<ConicRegs> f;
 
-  FetchConicalGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
+  FetchConicGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
 
   void preparePart() noexcept override;
 
@@ -170,6 +204,8 @@ public:
   void advanceY() noexcept override;
   void startAtX(const x86::Gp& x) noexcept override;
   void advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept override;
+
+  void recalcX() noexcept;
 
   void prefetchN() noexcept override;
 

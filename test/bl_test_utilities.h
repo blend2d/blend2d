@@ -73,7 +73,7 @@ public:
   inline Logger(Verbosity verbosity)
     : _verbosity(verbosity) {}
 
-  inline Verbosity verbossity() const { return _verbosity; }
+  inline Verbosity verbosity() const { return _verbosity; }
 
   inline Verbosity setVerbosity(Verbosity value) {
     Verbosity prev = _verbosity;
@@ -82,21 +82,21 @@ public:
   }
 
   template<typename... Args>
-  inline void print(const char* fmt, Args&&... args) {
-    printf(fmt, args...);
+  inline void print(Args&&... args) {
+    printf(std::forward<Args>(args)...);
     fflush(stdout);
   }
 
   template<typename... Args>
-  inline void debug(const char* fmt, Args&&... args) {
+  inline void debug(Args&&... args) {
     if (_verbosity <= Verbosity::Debug)
-      print(fmt, args...);
+      printf(std::forward<Args>(args)...);
   }
 
   template<typename... Args>
-  inline void info(const char* fmt, Args&&... args) {
+  inline void info(Args&&... args) {
     if (_verbosity <= Verbosity::Info)
-      print(fmt, args...);
+      printf(std::forward<Args>(args)...);
   }
 };
 

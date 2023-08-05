@@ -7,7 +7,6 @@
 #define BLEND2D_SUPPORT_ARENAHASHMAP_P_H_INCLUDED
 
 #include "../api-internal_p.h"
-#include "../unicode_p.h"
 #include "../support/arenaallocator_p.h"
 
 //! \cond INTERNAL

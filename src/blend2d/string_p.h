@@ -10,7 +10,7 @@
 #include "array_p.h"
 #include "object_p.h"
 #include "string.h"
-#include "unicode_p.h"
+#include "unicode/unicode_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -18,44 +18,66 @@
 
 namespace BLStringPrivate {
 
-//! \name String - Private - Memory Management
+using BLObjectPrivate::RCMode;
+
+//! \name BLString - Internals - Common Functionality (Container)
+//! \{
+
+static BL_INLINE constexpr BLObjectImplSize implSizeFromCapacity(size_t capacity) noexcept {
+  return BLObjectImplSize(sizeof(BLStringImpl) + 1 + capacity);
+}
+
+static BL_INLINE constexpr size_t capacityFromImplSize(BLObjectImplSize implSize) noexcept {
+  return implSize.value() - sizeof(BLStringImpl) - 1;
+}
+
+//! \}
+
+//! \name BLString - Internals - Common Functionality (Impl)
+//! \{
+
+static BL_INLINE bool isImplMutable(BLStringImpl* impl) noexcept {
+  return BLObjectPrivate::isImplMutable(impl);
+}
+
+
+static BL_INLINE BLResult freeImpl(BLStringImpl* impl) noexcept {
+  return BLObjectPrivate::freeImpl(impl);
+}
+
+template<RCMode kRCMode>
+static BL_INLINE BLResult releaseImpl(BLStringImpl* impl) noexcept {
+  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+}
+
+//! \}
+
+//! \name BLString - Internals - Common Functionality (Instance)
 //! \{
 
 static BL_INLINE BLStringImpl* getImpl(const BLStringCore* self) noexcept {
   return static_cast<BLStringImpl*>(self->_d.impl);
 }
 
-static BL_INLINE BLResult freeImpl(BLStringImpl* impl, BLObjectInfo info) noexcept {
-  return blObjectImplFreeInline(impl, info);
+static BL_INLINE bool isInstanceMutable(const BLStringCore* self) noexcept {
+  return BLObjectPrivate::isInstanceMutable(self);
 }
 
-static BL_INLINE bool isMutable(const BLStringCore* self) noexcept {
-  const size_t* refCountPtr = blObjectDummyRefCount;
-  if (!self->_d.sso())
-    refCountPtr = blObjectImplGetRefCountPtr(self->_d.impl);
-  return *refCountPtr == 1;
+static BL_INLINE BLResult retainInstance(const BLStringCore* self, size_t n = 1) noexcept {
+  return BLObjectPrivate::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLStringCore* self) noexcept {
-  BLStringImpl* impl = getImpl(self);
-  BLObjectInfo info = self->_d.info;
-
-  if (blObjectImplDecRefAndTestIfRefCounted(impl, info))
-    return freeImpl(impl, info);
-
-  return BL_SUCCESS;
+  return self->_d.isRefCountedObject() ? releaseImpl<RCMode::kForce>(getImpl(self)) : BLResult(BL_SUCCESS);
 }
 
 static BL_INLINE BLResult replaceInstance(BLStringCore* self, const BLStringCore* other) noexcept {
-  BLStringImpl* impl = getImpl(self);
+  // NOTE: UBSAN doesn't like casting the impl in case the String is in SSO mode, so wait with the cast.
+  void* impl = static_cast<void*>(self->_d.impl);
   BLObjectInfo info = self->_d.info;
 
   self->_d = other->_d;
-
-  if (blObjectImplDecRefAndTestIfRefCounted(impl, info))
-    return freeImpl(impl, info);
-
-  return BL_SUCCESS;
+  return info.isRefCountedObject() ? releaseImpl<RCMode::kForce>(static_cast<BLStringImpl*>(impl)) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -100,28 +122,28 @@ static BL_INLINE size_t getCapacity(const BLStringCore* self) noexcept {
 //! \name String - Private - Static String
 //! \{
 
-struct StaticStringImpl {
+struct BL_MAY_ALIAS StaticStringImpl {
   size_t size;
   size_t capacity;
 };
 
 template<size_t kSize>
 struct StaticStringData {
-  size_t refCount;
+  BLObjectEternalHeader header;
   StaticStringImpl impl;
   char data[kSize + 1];
 };
 
 #define BL_DEFINE_STATIC_STRING(name, content)                                              \
   static const constexpr ::BLStringPrivate::StaticStringData<sizeof(content) - 1u> name = { \
-    0,                                                                                      \
+    {},                                                                                     \
     {sizeof(content) - 1u, sizeof(content) - 1u},                                           \
     content                                                                                 \
   };
 
 template<size_t kSize>
 static BL_INLINE void initStatic(BLStringCore* self, const StaticStringData<kSize>& data) noexcept {
-  self->_d.initDynamic(BL_OBJECT_TYPE_STRING, BLObjectInfo{0}, (void*)&data.impl);
+  self->_d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_STRING), (BLObjectImpl*)&data.impl);
 }
 
 //! \}

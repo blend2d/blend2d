@@ -141,7 +141,7 @@ struct BLFontFaceInfo {
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE_NODEBUG void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLFontFaceInfo{}; }
 
   //! \}
 #endif
@@ -238,7 +238,7 @@ struct BLFontFaceImpl BL_CLASS_INHERITS(BLObjectImpl) {
 
 #ifdef __cplusplus
 //! Font face [C++ API].
-class BLFontFace : public BLFontFaceCore {
+class BLFontFace final : public BLFontFaceCore {
 public:
   //! \cond INTERNAL
   //! \name Internals
@@ -255,7 +255,11 @@ public:
   BL_INLINE_NODEBUG BLFontFace() noexcept { blFontFaceInit(this); }
   BL_INLINE_NODEBUG BLFontFace(BLFontFace&& other) noexcept { blFontFaceInitMove(this, &other); }
   BL_INLINE_NODEBUG BLFontFace(const BLFontFace& other) noexcept { blFontFaceInitWeak(this, &other); }
-  BL_INLINE_NODEBUG ~BLFontFace() noexcept { blFontFaceDestroy(this); }
+
+  BL_INLINE_NODEBUG ~BLFontFace() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blFontFaceDestroy(this);
+  }
 
   //! \}
 

@@ -108,7 +108,7 @@ struct BLImageEncoderCore BL_CLASS_INHERITS(BLObjectCore) {
 #ifdef __cplusplus
 
 //! Image encoder [C++ API].
-class BLImageEncoder : public BLImageEncoderCore {
+class BLImageEncoder final : public BLImageEncoderCore {
 public:
   //! \cond INTERNAL
   //! \name Internals
@@ -127,7 +127,11 @@ public:
   BL_INLINE_NODEBUG BLImageEncoder() noexcept { blImageEncoderInit(this); }
   BL_INLINE_NODEBUG BLImageEncoder(BLImageEncoder&& other) noexcept { blImageEncoderInitMove(this, &other); }
   BL_INLINE_NODEBUG BLImageEncoder(const BLImageEncoder& other) noexcept { blImageEncoderInitWeak(this, &other); }
-  BL_INLINE_NODEBUG ~BLImageEncoder() { blImageEncoderDestroy(this); }
+
+  BL_INLINE_NODEBUG ~BLImageEncoder() {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blImageEncoderDestroy(this);
+  }
 
   //! \}
 

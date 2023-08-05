@@ -400,6 +400,18 @@
   #define BL_PURE
 #endif
 
+//! \def BL_ALIGN_TYPE(TYPE, ALIGNMENT)
+//!
+//! Defines a type with a particular alignment, avoiding the use of alignas() as some compilers
+//! have a buggy implementation and restrict alignas() more than a compiler specific attribute.
+#if defined(__GNUC__)
+  #define BL_ALIGN_TYPE(TYPE, ALIGNMENT) __attribute__((__aligned__(ALIGNMENT))) TYPE
+#elif defined(_MSC_VER)
+  #define BL_ALIGN_TYPE(TYPE, ALIGNMENT) __declspec(align(ALIGNMENT)) TYPE
+#else
+  #define BL_ALIGN_TYPE(TYPE, ALIGNMENT) TYPE
+#endif
+
 //! \}
 
 //! \name Assumptions
@@ -411,6 +423,8 @@
 //! places and should be considered internal as you shouldn't need it when using Blend2D library.
 #if defined(__clang__)
   #define BL_ASSUME(...) __builtin_assume(__VA_ARGS__)
+#elif defined(__GNUC__) && __GNUC__ >= 13
+  #define BL_ASSUME(...) __attribute__((__assume__(__VA_ARGS__)))
 #elif defined(__GNUC__)
   #define BL_ASSUME(...) do { if (!(__VA_ARGS__)) __builtin_unreachable(); } while (0)
 #elif defined(_MSC_VER)
@@ -501,31 +515,6 @@
   #define BL_FORCE_ENUM_UINT32(ENUM_VALUE_PREFIX) ,ENUM_VALUE_PREFIX##_FORCE_UINT = 0xFFFFFFFFu
 #endif
 
-#if defined(_DOXYGEN)
-  // Only for doxygen to make these members nicer.
-  #define BL_HAS_TYPED_MEMBERS(...)
-  #define BL_TYPED_MEMBER(CORE_TYPE, CPP_TYPE, NAME) CPP_TYPE NAME;
-#elif defined(__cplusplus)
-  // However, we have to provide default constructors, destructor, and
-  // copy-assignment to pay for such union {}.
-  #define BL_HAS_TYPED_MEMBERS(...)                                           \
-    BL_INLINE __VA_ARGS__() noexcept {}                                       \
-    BL_INLINE __VA_ARGS__(const __VA_ARGS__& other) noexcept {                \
-      memcpy(this, &other, sizeof(__VA_ARGS__));                              \
-    }                                                                         \
-    BL_INLINE ~__VA_ARGS__() noexcept {}                                      \
-                                                                              \
-    BL_INLINE __VA_ARGS__& operator=(const __VA_ARGS__& other) noexcept {     \
-      memcpy(this, &other, sizeof(__VA_ARGS__));                              \
-      return *this;                                                           \
-    }
-  // Union prevents C++ compiler from constructing / destructing its members.
-  #define BL_TYPED_MEMBER(CORE_TYPE, CPP_TYPE, NAME) union { CPP_TYPE NAME; }
-#else
-  #define BL_HAS_TYPED_MEMBERS(...)
-  #define BL_TYPED_MEMBER(CORE_TYPE, CPP_TYPE, NAME) CORE_TYPE NAME
-#endif
-
 //! \cond INTERNAL
 //! \name Internals
 //! \{
@@ -558,27 +547,18 @@
 #if defined(__clang__)
   #define BL_DIAGNOSTIC_PUSH(...)              _Pragma("clang diagnostic push") __VA_ARGS__
   #define BL_DIAGNOSTIC_POP                    _Pragma("clang diagnostic pop")
-  #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF    _Pragma("clang diagnostic ignored \"-Winvalid-offsetof\"")
-  #define BL_DIAGNOSTIC_NO_SHADOW              _Pragma("clang diagnostic ignored \"-Wshadow\"")
-  #define BL_DIAGNOSTIC_NO_STRICT_ALIASING     _Pragma("clang diagnostic ignored \"-Wstrict-aliasing\"")
   #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS    _Pragma("clang diagnostic ignored \"-Wunused-function\"")
   #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")
   #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS      _Pragma("clang diagnostic ignored \"-Wextra\"")
 #elif defined(__GNUC__)
   #define BL_DIAGNOSTIC_PUSH(...)              _Pragma("GCC diagnostic push") __VA_ARGS__
   #define BL_DIAGNOSTIC_POP                    _Pragma("GCC diagnostic pop")
-  #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF    _Pragma("GCC diagnostic ignored \"-Winvalid-offsetof\"")
-  #define BL_DIAGNOSTIC_NO_SHADOW              _Pragma("GCC diagnostic ignored \"-Wshadow\"")
-  #define BL_DIAGNOSTIC_NO_STRICT_ALIASING     _Pragma("GCC diagnostic ignored \"-Wstrict-aliasing\"")
   #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS    _Pragma("GCC diagnostic ignored \"-Wunused-function\"")
   #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
   #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS      _Pragma("GCC diagnostic ignored \"-Wextra\"")
 #elif defined(_MSC_VER)
   #define BL_DIAGNOSTIC_PUSH(...)              __pragma(warning(push)) __VA_ARGS__
   #define BL_DIAGNOSTIC_POP                    __pragma(warning(pop))
-  #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF
-  #define BL_DIAGNOSTIC_NO_SHADOW              __pragma(warning(disable: 4458))
-  #define BL_DIAGNOSTIC_NO_STRICT_ALIASING
   #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS    __pragma(warning(disable: 4505))
   #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   __pragma(warning(disable: 4100))
   #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS
@@ -587,9 +567,6 @@
 #if !defined(BL_DIAGNOSTIC_PUSH)
   #define BL_DIAGNOSTIC_PUSH(...)
   #define BL_DIAGNOSTIC_POP
-  #define BL_DIAGNOSTIC_NO_INVALID_OFFSETOF
-  #define BL_DIAGNOSTIC_NO_SHADOW
-  #define BL_DIAGNOSTIC_NO_STRICT_ALIASING
   #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS
   #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS
   #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS
@@ -659,7 +636,6 @@ BL_FORWARD_DECLARE_STRUCT(BLObjectImpl);
 BL_FORWARD_DECLARE_STRUCT(BLObjectVirt);
 BL_FORWARD_DECLARE_STRUCT(BLObjectVirtBase);
 BL_FORWARD_DECLARE_STRUCT(BLObjectInfo);
-BL_FORWARD_DECLARE_STRUCT(BLObjectExternalInfo);
 BL_FORWARD_DECLARE_UNION(BLObjectDetail);
 
 BL_FORWARD_DECLARE_STRUCT(BLArrayCore);
@@ -709,7 +685,7 @@ BL_FORWARD_DECLARE_STRUCT(BLGradientStop);
 
 BL_FORWARD_DECLARE_STRUCT(BLLinearGradientValues);
 BL_FORWARD_DECLARE_STRUCT(BLRadialGradientValues);
-BL_FORWARD_DECLARE_STRUCT(BLConicalGradientValues);
+BL_FORWARD_DECLARE_STRUCT(BLConicGradientValues);
 
 BL_FORWARD_DECLARE_STRUCT(BLPatternCore);
 BL_FORWARD_DECLARE_STRUCT(BLPatternImpl);
@@ -932,6 +908,7 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_INVALID_CREATE_FLAGS,         //!< Invalid create flags (BLContext).
   BL_ERROR_NO_MATCHING_COOKIE,           //!< No matching cookie (BLContext).
   BL_ERROR_NO_STATES_TO_RESTORE,         //!< No states to restore (BLContext).
+  BL_ERROR_TOO_MANY_SAVED_STATES,        //!< Cannot save state as the number of saved states reached the limit (BLContext).
 
   BL_ERROR_IMAGE_TOO_LARGE,              //!< The size of the image is too large.
   BL_ERROR_IMAGE_NO_MATCHING_CODEC,      //!< Image codec for a required format doesn't exist.
@@ -1137,6 +1114,9 @@ BL_DEFINE_ENUM(BLTextEncoding) {
 //! \ingroup blend2d_internal
 //!
 //! Internal namespace that should never be used by Blend2D users.
+//!
+//! This namespace provides functionality that is internally used by the public C++ API in public headers.
+//! There should never be functionality that is not used by public headers, that should always be hidden.
 namespace BLInternal {
 
 //! StdInt provides an integer defined by <stdint.h> by size and signedness.
@@ -1193,16 +1173,49 @@ struct ConstCTZ {
   };
 };
 
-// These are required to properly use the C API from C++ BLArray<T>. Category provides a rough overview of `BLArray<T>`
-// type category (like int, float) and the other APIs provide some basic traits that the implementation needs.
+//! Type category.
+//!
+//! Provides type categorization for compile-time type reflection that can be used by templates.
 enum TypeCategory : uint32_t {
+  //! Type is unknown.
   kTypeCategoryUnknown = 0,
-  kTypeCategoryBool    = 1,
-  kTypeCategoryInt     = 2,
-  kTypeCategoryFloat   = 3,
-  kTypeCategoryPtr     = 4,
-  kTypeCategoryStruct  = 5,
-  kTypeCategoryObject  = 6
+  //! Type is a boolean (`bool`).
+  kTypeCategoryBool = 1,
+  //! Type is integral.
+  kTypeCategoryInt = 2,
+  //! Type is a floating point.
+  kTypeCategoryFloat = 3,
+  //! Type is a pointer.
+  kTypeCategoryPtr = 4,
+  //! Type is a structure.
+  kTypeCategoryStruct = 5,
+  //! Type is BLObject compatible.
+  kTypeCategoryObject = 6
+};
+
+//! Type flags.
+//!
+//! Provides details about a categorized type.
+enum TypeFlags : uint32_t {
+  //! Type has no flags.
+  kTypeNoFlags = 0x0000u,
+  //! Type is primitive (either bool, integer, or floating point).
+  kTypeFlagPrimitive = 0x0001u,
+  //! Type is `BLArrayCore` or `BLArray<T>`.
+  kTypeFlagArray = 0x0002u,
+  //! Type is `BLVarCore` or `BLVar`
+  kTypeFlagVar = 0x0004u,
+  //! Type is `BLxxxCore` - C API type.
+  kTypeFlagCore = 0x0008u,
+
+  //! Type is `BLRgba`.
+  kTypeFlagRgba = 0x0010u,
+  //! Type is `BLRgba32`.
+  kTypeFlagRgba32 = 0x0020u,
+  //! Type is `BLRgba64`.
+  kTypeFlagRgba64 = 0x0040u,
+  //! Type is `BLGradient[Core]` or `BLPattern[Core]`.
+  kTypeFlagStyle = 0x0080u
 };
 
 template<typename T>
@@ -1210,14 +1223,18 @@ struct TypeTraits {
   enum : uint32_t {
     kCategory = std::is_pointer<T>::value ? kTypeCategoryPtr :
                 std::is_integral<T>::value ? kTypeCategoryInt :
-                std::is_floating_point<T>::value ? kTypeCategoryFloat : kTypeCategoryStruct
+                std::is_floating_point<T>::value ? kTypeCategoryFloat : kTypeCategoryStruct,
+    kFlags    = std::is_pointer<T>::value ? kTypeFlagPrimitive :
+                std::is_integral<T>::value ? kTypeFlagPrimitive :
+                std::is_floating_point<T>::value ? kTypeFlagPrimitive : kTypeNoFlags
   };
 };
 
 template<>
 struct TypeTraits<bool> {
   enum : uint32_t {
-    kCategory = kTypeCategoryBool
+    kCategory = kTypeCategoryBool,
+    kFlags = kTypeFlagPrimitive
   };
 };
 
@@ -1225,51 +1242,55 @@ struct TypeTraits<bool> {
 template<>
 struct TypeTraits<BLArrayCore> {
   enum : uint32_t {
-    kCategory = kTypeCategoryObject
+    kCategory = kTypeCategoryObject,
+    kFlags = kTypeFlagArray | kTypeFlagCore
   };
 };
 
 template<typename T>
 struct TypeTraits<BLArray<T>> {
   enum : uint32_t {
-    kCategory = kTypeCategoryObject
+    kCategory = kTypeCategoryObject,
+    kFlags = kTypeFlagArray
   };
 };
 
 // Other types compatible with BLObjectCore.
-#define BL_DEFINE_OBJECT_TRAITS(T)     \
-  template<>                           \
-  struct TypeTraits<T##Core> {         \
-    enum : uint32_t {                  \
-      kCategory = kTypeCategoryObject  \
-    };                                 \
-  };                                   \
-                                       \
-  template<>                           \
-  struct TypeTraits<T> {               \
-    enum : uint32_t {                  \
-      kCategory = kTypeCategoryObject  \
-    };                                 \
+#define BL_DEFINE_OBJECT_TRAITS(T, Flags) \
+  template<>                              \
+  struct TypeTraits<T##Core> {            \
+    enum : uint32_t {                     \
+      kCategory = kTypeCategoryObject,    \
+      kFlags = Flags | kTypeFlagCore      \
+    };                                    \
+  };                                      \
+                                          \
+  template<>                              \
+  struct TypeTraits<T> {                  \
+    enum : uint32_t {                     \
+      kCategory = kTypeCategoryObject,    \
+      kFlags = Flags                      \
+    };                                    \
   };
 
-BL_DEFINE_OBJECT_TRAITS(BLBitArray)
-BL_DEFINE_OBJECT_TRAITS(BLBitSet)
-BL_DEFINE_OBJECT_TRAITS(BLContext)
-BL_DEFINE_OBJECT_TRAITS(BLFont)
-BL_DEFINE_OBJECT_TRAITS(BLFontData)
-BL_DEFINE_OBJECT_TRAITS(BLFontFace)
-BL_DEFINE_OBJECT_TRAITS(BLFontFeatureSettings)
-BL_DEFINE_OBJECT_TRAITS(BLFontManager)
-BL_DEFINE_OBJECT_TRAITS(BLFontVariationSettings)
-BL_DEFINE_OBJECT_TRAITS(BLGradient)
-BL_DEFINE_OBJECT_TRAITS(BLImage)
-BL_DEFINE_OBJECT_TRAITS(BLImageCodec)
-BL_DEFINE_OBJECT_TRAITS(BLImageDecoder)
-BL_DEFINE_OBJECT_TRAITS(BLImageEncoder)
-BL_DEFINE_OBJECT_TRAITS(BLPath)
-BL_DEFINE_OBJECT_TRAITS(BLPattern)
-BL_DEFINE_OBJECT_TRAITS(BLString)
-BL_DEFINE_OBJECT_TRAITS(BLVar)
+BL_DEFINE_OBJECT_TRAITS(BLBitArray             , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLBitSet               , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLContext              , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLFont                 , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLFontData             , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLFontFace             , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLFontFeatureSettings  , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLFontManager          , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLFontVariationSettings, kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLGradient             , kTypeFlagStyle)
+BL_DEFINE_OBJECT_TRAITS(BLImage                , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLImageCodec           , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLImageDecoder         , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLImageEncoder         , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLPath                 , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLPattern              , kTypeFlagStyle)
+BL_DEFINE_OBJECT_TRAITS(BLString               , kTypeNoFlags)
+BL_DEFINE_OBJECT_TRAITS(BLVar                  , kTypeFlagVar)
 
 #undef BL_DEFINE_OBJECT_TRAITS
 

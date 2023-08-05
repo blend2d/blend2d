@@ -89,7 +89,7 @@ public:
 
   static BL_HIDDEN const ZeroBlock _zeroBlock;
 
-  //! \name Construction / Destruction
+  //! \name Construction & Destruction
   //! \{
 
   //! Create a new `BLArenaAllocator`.

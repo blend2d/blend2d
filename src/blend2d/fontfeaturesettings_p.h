@@ -9,6 +9,7 @@
 #include "api-internal_p.h"
 #include "fontfeaturesettings.h"
 #include "fonttagdata_p.h"
+#include "object_p.h"
 #include "support/algorithm_p.h"
 #include "support/bitops_p.h"
 
@@ -17,6 +18,67 @@
 //! \{
 
 namespace BLFontFeatureSettingsPrivate {
+
+using BLObjectPrivate::RCMode;
+
+//! \name BLFontFeatureSettings - Internals - Common Functionality (Container)
+//! \{
+
+static BL_INLINE constexpr BLObjectImplSize implSizeFromCapacity(size_t capacity) noexcept {
+  return BLObjectImplSize(sizeof(BLFontFeatureSettingsImpl) + capacity * sizeof(BLFontFeatureItem));
+}
+
+static BL_INLINE constexpr size_t capacityFromImplSize(BLObjectImplSize implSize) noexcept {
+  return (implSize.value() - sizeof(BLFontFeatureSettingsImpl)) / sizeof(BLFontFeatureItem);
+}
+
+//! \}
+
+//! \name BLFontFeatureSettings - Internals - Common Functionality (Impl)
+//! \{
+
+static BL_INLINE bool isImplMutable(BLFontFeatureSettingsImpl* impl) noexcept {
+  return BLObjectPrivate::isImplMutable(impl);
+}
+
+static BL_INLINE BLResult freeImpl(BLFontFeatureSettingsImpl* impl) noexcept {
+  return BLObjectPrivate::freeImpl(impl);
+}
+
+template<RCMode kRCMode>
+static BL_INLINE BLResult releaseImpl(BLFontFeatureSettingsImpl* impl) noexcept {
+  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+}
+
+//! \}
+
+//! \name BLFontFeatureSettings - Internals - Common Functionality (Instance)
+//! \{
+
+static BL_INLINE BLFontFeatureSettingsImpl* getImpl(const BLFontFeatureSettingsCore* self) noexcept {
+  return static_cast<BLFontFeatureSettingsImpl*>(self->_d.impl);
+}
+
+static BL_INLINE BLResult retainInstance(const BLFontFeatureSettingsCore* self, size_t n = 1) noexcept {
+  return BLObjectPrivate::retainInstance(self, n);
+}
+
+static BL_INLINE BLResult releaseInstance(BLFontFeatureSettingsCore* self) noexcept {
+  return self->_d.info.isRefCountedObject() ? releaseImpl<RCMode::kForce>(getImpl(self)) : BLResult(BL_SUCCESS);
+}
+
+static BL_INLINE BLResult replaceInstance(BLFontFeatureSettingsCore* self, const BLFontFeatureSettingsCore* other) noexcept {
+  BLFontFeatureSettingsImpl* impl = getImpl(self);
+  BLObjectInfo info = self->_d.info;
+
+  self->_d = other->_d;
+  return info.isRefCountedObject() ? releaseImpl<RCMode::kForce>(impl) : BLResult(BL_SUCCESS);
+}
+
+//! \}
+
+//! \name BLFontFeatureSettings - Internals - SSO Fat Representation
+//! \{
 
 using BLFontTagData::FeatureInfo;
 using FatBitOps = BLParametrizedBitOps<BLBitOrder::kLSB, uint32_t>;
@@ -31,10 +93,6 @@ static constexpr uint32_t kSSOFatFeatureValueBitMask = (1u << kSSOFatFeatureValu
 static constexpr uint32_t kSSOInvalidFatFeatureId = 0xFFu;
 // 32-bit pattern that is used to initialize SSO storage.
 static constexpr uint32_t kSSOInvalidFatFeaturePattern = 0xFFFFFFFFu;
-
-static BL_INLINE BLFontFeatureSettingsImpl* getImpl(const BLFontFeatureSettingsCore* self) noexcept {
-  return static_cast<BLFontFeatureSettingsImpl*>(self->_d.impl);
-}
 
 static BL_INLINE bool hasSSOBitTag(const BLFontFeatureSettingsCore* self, uint32_t index) noexcept {
   return (self->_d.u32_data[0] >> index) & 0x1u;
@@ -113,8 +171,6 @@ static BL_INLINE bool isFeatureEnabledForPlan(const BLFontFeatureSettingsCore* s
 
   return getTagValue<kSSO>(self, featureTag, featureInfo.enabledByDefault) > 0u;
 }
-
-BLResult freeImpl(BLFontFeatureSettingsImpl* impl, BLObjectInfo info) noexcept;
 
 } // {BLFontFeatureSettingsPrivate}
 

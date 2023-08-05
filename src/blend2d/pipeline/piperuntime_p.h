@@ -7,8 +7,8 @@
 #define BLEND2D_PIPELINE_PIPERUNTIME_P_H_INCLUDED
 
 #include "../api-internal_p.h"
-#include "../simd_p.h"
 #include "../pipeline/pipedefs_p.h"
+#include "../simd/simd_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -54,11 +54,11 @@ struct PipeRuntime {
     BLResult (BL_CDECL* get)(PipeRuntime* self, uint32_t signature, DispatchData* out, PipeLookupCache* cache) BL_NOEXCEPT;
   } _funcs;
 
-  BL_INLINE PipeRuntimeType runtimeType() const noexcept { return _runtimeType; }
-  BL_INLINE PipeRuntimeFlags runtimeFlags() const noexcept { return _runtimeFlags; }
-  BL_INLINE uint32_t runtimeSize() const noexcept { return _runtimeSize; }
+  BL_INLINE_NODEBUG PipeRuntimeType runtimeType() const noexcept { return _runtimeType; }
+  BL_INLINE_NODEBUG PipeRuntimeFlags runtimeFlags() const noexcept { return _runtimeFlags; }
+  BL_INLINE_NODEBUG uint32_t runtimeSize() const noexcept { return _runtimeSize; }
 
-  BL_INLINE void destroy() noexcept { _destroy(this); }
+  BL_INLINE_NODEBUG void destroy() noexcept { _destroy(this); }
 };
 
 //! Pipeline provider.
@@ -66,32 +66,32 @@ struct PipeProvider {
   PipeRuntime* _runtime;
   PipeRuntime::Funcs _funcs;
 
-  BL_INLINE PipeProvider() noexcept
+  BL_INLINE_NODEBUG PipeProvider() noexcept
     : _runtime(nullptr),
       _funcs {} {}
 
-  BL_INLINE bool isInitialized() const noexcept {
+  BL_INLINE_NODEBUG bool isInitialized() const noexcept {
     return _runtime != nullptr;
   }
 
-  BL_INLINE void init(PipeRuntime* runtime) noexcept {
+  BL_INLINE_NODEBUG void init(PipeRuntime* runtime) noexcept {
     _runtime = runtime;
     _funcs = runtime->_funcs;
   }
 
-  BL_INLINE void reset() noexcept {
+  BL_INLINE_NODEBUG void reset() noexcept {
     memset(this, 0, sizeof(*this));
   }
 
-  BL_INLINE PipeRuntime* runtime() const noexcept {
+  BL_INLINE_NODEBUG PipeRuntime* runtime() const noexcept {
     return _runtime;
   }
 
-  BL_INLINE BLResult test(uint32_t signature, DispatchData* out, PipeLookupCache* cache) const noexcept {
+  BL_INLINE_NODEBUG BLResult test(uint32_t signature, DispatchData* out, PipeLookupCache* cache) const noexcept {
     return _funcs.test(_runtime, signature, out, cache);
   }
 
-  BL_INLINE BLResult get(uint32_t signature, DispatchData* out, PipeLookupCache* cache) const noexcept {
+  BL_INLINE_NODEBUG BLResult get(uint32_t signature, DispatchData* out, PipeLookupCache* cache) const noexcept {
     return _funcs.get(_runtime, signature, out, cache);
   }
 };
@@ -109,15 +109,15 @@ struct alignas(16) PipeLookupCache {
   struct IndexMatch {
     size_t _index;
 
-    BL_INLINE bool isValid() const noexcept { return _index < N; }
-    BL_INLINE size_t index() const noexcept { return _index; }
+    BL_INLINE_NODEBUG bool isValid() const noexcept { return _index < N; }
+    BL_INLINE_NODEBUG size_t index() const noexcept { return _index; }
   };
 
   struct BitMatch {
     uint32_t _bits;
 
-    BL_INLINE bool isValid() const noexcept { return _bits != 0; }
-    BL_INLINE size_t index() const noexcept { return BLIntOps::ctz(_bits); }
+    BL_INLINE_NODEBUG bool isValid() const noexcept { return _bits != 0; }
+    BL_INLINE_NODEBUG size_t index() const noexcept { return BLIntOps::ctz(_bits); }
   };
 
   //! Array of signatures for the lookup, uninitialized signatures are zero.
@@ -127,60 +127,13 @@ struct alignas(16) PipeLookupCache {
   //! Array of functions matching signatures stored in `_signatures` array.
   DispatchData _dispatchData[N];
 
-  BL_INLINE void reset() {
+  BL_INLINE_NODEBUG void reset() {
     memset(_signatures, 0, sizeof(_signatures));
     _currentIndex = 0;
   }
 
-#if defined(BL_TARGET_OPT_SSE2)
-  typedef BitMatch MatchType;
-  BL_INLINE MatchType match(uint32_t signature) const noexcept {
-    BL_STATIC_ASSERT(N == 4 || N == 8 || N == 16);
-    using namespace SIMD;
-
-    Vec128I vSign = v_fill_i128_u32(signature);
-
-    switch (uint32_t(N)) {
-      case 4: {
-        Vec128I vec0 = v_cmp_eq_i32(v_loada_i128(_signatures + 0), vSign);
-        return BitMatch { uint32_t(_mm_movemask_ps(v_cast<Vec128F>(vec0))) };
-      }
-
-      case 8: {
-        Vec128I vec0 = v_cmp_eq_i32(v_loada_i128(_signatures + 0), vSign);
-        Vec128I vec1 = v_cmp_eq_i32(v_loada_i128(_signatures + 4), vSign);
-        Vec128I vecm = v_packs_i16_i8(v_packs_i32_i16(vec0, vec1));
-        return BitMatch { uint32_t(_mm_movemask_epi8(vecm)) };
-      }
-
-      case 16: {
-        Vec128I vec0 = v_cmp_eq_i32(v_loada_i128(_signatures + 0), vSign);
-        Vec128I vec1 = v_cmp_eq_i32(v_loada_i128(_signatures + 4), vSign);
-        Vec128I vec2 = v_cmp_eq_i32(v_loada_i128(_signatures + 8), vSign);
-        Vec128I vec3 = v_cmp_eq_i32(v_loada_i128(_signatures + 12), vSign);
-        Vec128I vecm = v_packs_i16_i8(v_packs_i32_i16(vec0, vec1), v_packs_i32_i16(vec2, vec3));
-        return BitMatch { uint32_t(_mm_movemask_epi8(vecm)) };
-      }
-
-      default:
-        return BitMatch { 0 };
-    }
-  }
-#else
-  typedef IndexMatch MatchType;
-  BL_INLINE MatchType match(uint32_t signature) const noexcept {
-    size_t i;
-    for (i = 0; i < size_t(N); i++)
-      if (_signatures[i] == signature)
-        break;
-    return IndexMatch { i };
-  }
-#endif
-
-  template<typename MatchT>
-  BL_INLINE const DispatchData& matchToData(const MatchT& match) const noexcept {
-    BL_ASSERT(match.isValid());
-    return _dispatchData[match.index()];
+  BL_INLINE const DispatchData& dispatchData(size_t index) const noexcept {
+    return _dispatchData[index];
   }
 
   BL_INLINE void store(uint32_t signature, const DispatchData* dispatchData) noexcept {
@@ -191,6 +144,30 @@ struct alignas(16) PipeLookupCache {
   }
 };
 
+namespace {
+
+#if defined(BL_SIMD_FEATURE_ARRAY_LOOKUP)
+static BL_INLINE SIMD::ArrayLookupResult<PipeLookupCache::N> cacheLookup(const PipeLookupCache& cache, uint32_t signature) noexcept {
+  return SIMD::array_lookup_u32_aligned16<PipeLookupCache::N>(cache._signatures, signature);
+}
+#else
+struct IndexMatch {
+  size_t _index;
+
+  BL_INLINE_NODEBUG bool matched() const noexcept { return _index < PipeLookupCache::N; }
+  BL_INLINE_NODEBUG size_t index() const noexcept { return _index; }
+};
+
+static BL_INLINE IndexMatch cacheLookup(const PipeLookupCache& cache, uint32_t signature) noexcept {
+  size_t i;
+  for (i = 0; i < size_t(PipeLookupCache::N); i++)
+    if (cache._signatures[i] == signature)
+      break;
+  return IndexMatch{i};
+}
+#endif
+
+} // {anonymous}
 } // {BLPipeline}
 
 //! \}

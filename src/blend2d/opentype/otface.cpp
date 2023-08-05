@@ -75,7 +75,7 @@ static BLResult initOpenTypeFace(OTFaceImpl* faceI, const BLFontData* fontData) 
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL destroyOpenTypeFace(BLObjectImpl* impl, uint32_t info) noexcept {
+static BLResult BL_CDECL destroyOpenTypeFace(BLObjectImpl* impl) noexcept {
   OTFaceImpl* faceI = static_cast<OTFaceImpl*>(impl);
 
   blCallDtor(faceI->kern);
@@ -83,16 +83,16 @@ static BLResult BL_CDECL destroyOpenTypeFace(BLObjectImpl* impl, uint32_t info) 
   blCallDtor(faceI->cffFDSubrIndexes);
   blFontFaceImplDtor(faceI);
 
-  return blObjectDetailFreeImpl(faceI, info);
+  return blObjectFreeImpl(faceI);
 }
 
 BLResult createOpenTypeFace(BLFontFaceCore* self, const BLFontData* fontData, uint32_t faceIndex) noexcept {
-  OTFaceImpl* faceI = blObjectDetailAllocImplT<OTFaceImpl>(self, BLObjectInfo::packType(BL_OBJECT_TYPE_FONT_FACE));
-  if (BL_UNLIKELY(!faceI))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT_FACE);
+  BL_PROPAGATE(BLObjectPrivate::allocImplT<OTFaceImpl>(self, info));
 
   // Zero everything so we don't have to initialize features not provided by the font.
-  memset(faceI, 0, sizeof(OTFaceImpl));
+  OTFaceImpl* faceI = static_cast<OTFaceImpl*>(self->_d.impl);
+  memset(static_cast<void*>(faceI), 0, sizeof(OTFaceImpl));
 
   blFontFaceImplCtor(faceI, &blOTFaceVirt, blNullFontFaceFuncs);
 
@@ -108,7 +108,7 @@ BLResult createOpenTypeFace(BLFontFaceCore* self, const BLFontData* fontData, ui
   BLResult result = initOpenTypeFace(faceI, fontData);
 
   if (BL_UNLIKELY(result != BL_SUCCESS)) {
-    destroyOpenTypeFace(faceI, self->_d.info.bits);
+    destroyOpenTypeFace(faceI);
     return result;
   }
 

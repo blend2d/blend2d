@@ -89,8 +89,9 @@ struct BLStringImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //! Byte string [C++ API].
 //!
 //! Blend2D always uses UTF-8 encoding in public APIs so all strings are assumed UTF-8 by default. However, `BLString`
-//! can hold arbitrary byte sequence and act as a raw byte-string when this functionality is required.
-class BLString : public BLStringCore {
+//! doesn't guarantee any assumptions about the encoding of the data it holds. It can hold arbitrary byte sequence and
+//! acts as a raw byte-string when this functionality is required.
+class BLString final : public BLStringCore {
 public:
   //! \cond INTERNAL
   //! \name Internals
@@ -103,13 +104,10 @@ public:
         ? BLObjectDetail::kStaticDataSize + 2u
         : BLObjectDetail::kStaticDataSize - 1u,
 
-    //! Signature of an empty SSO string (with size XORed with `kSSOCapacity`).
+    //! Signature of SSO representation of an empty string (with size XORed with `kSSOCapacity`).
     //!
     //! This mask can be used to get quickly SSO string size.
-    kSSOEmptySignature = (BL_OBJECT_INFO_MARKER_FLAG) |
-                         (BL_OBJECT_TYPE_STRING << BL_OBJECT_INFO_TYPE_SHIFT) |
-                         (kSSOCapacity << BL_OBJECT_INFO_A_SHIFT)
-
+    kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_STRING) | BLObjectInfo::packAbcp(kSSOCapacity)
   };
 
   BL_INLINE_NODEBUG BLStringImpl* _impl() const noexcept { return static_cast<BLStringImpl*>(_d.impl); }
@@ -122,7 +120,7 @@ public:
 
   //! Creates an empty string.
   BL_INLINE_NODEBUG BLString() noexcept {
-    _d.initStatic(BL_OBJECT_TYPE_STRING, BLObjectInfo::packAbcpFields(kSSOCapacity));
+    _d.initStatic(BLObjectInfo{kSSOEmptySignature});
   }
 
   //! Move constructor.
@@ -130,7 +128,7 @@ public:
   //! \note The `other` string is always reset by a move construction, so it becomes an empty string.
   BL_INLINE_NODEBUG BLString(BLString&& other) noexcept {
     _d = other._d;
-    other._d.initStatic(BL_OBJECT_TYPE_STRING, BLObjectInfo::packAbcpFields(kSSOCapacity));
+    other._d.initStatic(BLObjectInfo{kSSOEmptySignature});
   }
 
   //! Copy constructor, performs weak copy of the data held by the `other` string.
@@ -149,7 +147,10 @@ public:
   BL_INLINE_NODEBUG explicit BLString(const char* str, size_t size = SIZE_MAX) noexcept { blStringInitWithData(this, str, size); }
 
   //! Destroys the string.
-  BL_INLINE_NODEBUG ~BLString() noexcept { blStringDestroy(this); }
+  BL_INLINE_NODEBUG ~BLString() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blStringDestroy(this);
+  }
 
   //! \}
 

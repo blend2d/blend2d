@@ -22,6 +22,7 @@ struct alignas(BL_CACHE_LINE_SIZE) GlobalState {
     return index.fetch_add(uint64_t(n));
   }
 };
+
 #else
 
 // UniqueIdGenerator - 32-Bit Atomics Implementation
@@ -57,6 +58,7 @@ struct alignas(BL_CACHE_LINE_SIZE) GlobalState {
     }
   }
 };
+
 #endif
 
 // UniqueIdGenerator - Globals

@@ -119,7 +119,7 @@ BL_END_C_DECLS
 //!
 //! \note A default-initialized converter has a valid conversion function that would return \ref BL_ERROR_NOT_INITIALIZED
 //! if invoked. Use `isInitialized()` member function to test whether the pixel converter was properly initialized.
-class BLPixelConverter : public BLPixelConverterCore {
+class BLPixelConverter final : public BLPixelConverterCore {
 public:
   //! Creates a new default-initialized pixel converter.
   BL_INLINE BLPixelConverter() noexcept {

@@ -5,7 +5,7 @@
 
 #include "api-build_p.h"
 #include "format_p.h"
-#include "tables_p.h"
+#include "support/lookuptable_p.h"
 
 // BLFormatInfo - Globals
 // ======================
@@ -13,24 +13,30 @@
 const BLFormatInfo blFormatInfo[] = {
   #define U 0 // Used only to distinguish between zero and unused.
   // Public Formats:
-  { 0 , blFormatFlagsStatic(BLInternalFormat(0)), {{ { U, U, U, U }, { U , U , U , U  } }} }, // <kNONE>
-  { 32, blFormatFlagsStatic(BLInternalFormat(1)), {{ { 8, 8, 8, 8 }, { 16, 8 , 0 , 24 } }} }, // <kPRGB32>
-  { 32, blFormatFlagsStatic(BLInternalFormat(2)), {{ { 8, 8, 8, U }, { 16, 8 , 0 , U  } }} }, // <kXRGB32>
-  { 8 , blFormatFlagsStatic(BLInternalFormat(3)), {{ { U, U, U, 8 }, { U , U , U , 0  } }} }, // <kA8>
+  { 0 , blFormatFlagsStatic(BLInternalFormat(0)), {{ { U , U , U , U  }, { U , U , U , U  } }} }, // <kNONE>
+  { 32, blFormatFlagsStatic(BLInternalFormat(1)), {{ { 8 , 8 , 8 , 8  }, { 16, 8 , 0 , 24 } }} }, // <kPRGB32>
+  { 32, blFormatFlagsStatic(BLInternalFormat(2)), {{ { 8 , 8 , 8 , U  }, { 16, 8 , 0 , U  } }} }, // <kXRGB32>
+  { 8 , blFormatFlagsStatic(BLInternalFormat(3)), {{ { U , U , U , 8  }, { U , U , U , 0  } }} }, // <kA8>
+
   // Internal Formats:
-  { 32, blFormatFlagsStatic(BLInternalFormat(4)), {{ { 8, 8, 8, U }, { 16, 8 , 0 , U  } }} }, // <kFRGB32>
-  { 32, blFormatFlagsStatic(BLInternalFormat(5)), {{ { 8, 8, 8, 8 }, { 16, 8 , 0 , 24 } }} }, // <kZERO32>
+  { 32, blFormatFlagsStatic(BLInternalFormat(4)), {{ { 8 , 8 , 8 , 8  }, { 16, 8 , 0 , 24 } }} }, // <kFRGB32>
+  { 32, blFormatFlagsStatic(BLInternalFormat(5)), {{ { 8 , 8 , 8 , 8  }, { 16, 8 , 0 , 24 } }} }, // <kZERO32>
+
+  // Internal Formats (currently only used only in few places, not supported in generic API).
+  { 64, blFormatFlagsStatic(BLInternalFormat(6)), {{ { 16, 16, 16, 16 }, { 32, 16, 0 , 48 } }} }, // <kPRGB64>
+  { 64, blFormatFlagsStatic(BLInternalFormat(7)), {{ { 16, 16, 16, 16 }, { 32, 16, 0 , 48 } }} }, // <kFRGB64>
+  { 64, blFormatFlagsStatic(BLInternalFormat(8)), {{ { 16, 16, 16, 16 }, { 32, 16, 0 , 48 } }} }  // <kZERO64>
   #undef U
 };
 
-static_assert(uint32_t(BLInternalFormat::kMaxValue) == 5,
+static_assert(uint32_t(BLInternalFormat::kMaxValue) == 8,
               "New formats must be added to 'blFormatInfo' table");
 
 // BLFormatInfo - Tables
 // =====================
 
 // Indexes of components based on format flags that describe components. Each bit in the mask describes RGBA components
-// (in order). Thus 0x1 descrines red component, 0x2 green 0x4 blue, and 0x8 alpha. Components can be combined so 0x7
+// (in order). Thus 0x1 describes red component, 0x2 green 0x4 blue, and 0x8 alpha. Components can be combined so 0x7
 // describes RGB and 0xF RGBA.
 struct BLPixelConverterComponentIndexesGen {
   static constexpr uint8_t value(size_t i) noexcept {

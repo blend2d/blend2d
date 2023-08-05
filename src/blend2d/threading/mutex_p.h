@@ -28,13 +28,13 @@ public:
   MutexType* _mutex;
 
   //! Creates an instance of `BLLockGuard` and locks the given `mutex`.
-  explicit BL_INLINE BLLockGuard(MutexType& mutex) noexcept : _mutex(&mutex) {
+  BL_INLINE explicit BLLockGuard(MutexType& mutex) noexcept : _mutex(&mutex) {
     BL_ASSUME(_mutex != nullptr);
     _mutex->lock();
   }
 
   //! Creates an instance of `BLLockGuard` and locks the given `mutex`.
-  explicit BL_INLINE BLLockGuard(MutexType* mutex) noexcept : _mutex(mutex) {
+  BL_INLINE explicit BLLockGuard(MutexType* mutex) noexcept : _mutex(mutex) {
     BL_ASSUME(_mutex != nullptr);
     _mutex->lock();
   }
@@ -60,13 +60,13 @@ public:
   MutexType* _mutex;
 
   //! Creates an instance of `BLSharedLockGuard` and locks the given `mutex`.
-  explicit BL_INLINE BLSharedLockGuard(MutexType& mutex) noexcept : _mutex(&mutex) {
+  BL_INLINE explicit BLSharedLockGuard(MutexType& mutex) noexcept : _mutex(&mutex) {
     BL_ASSUME(_mutex != nullptr);
     _mutex->lockShared();
   }
 
   //! Creates an instance of `BLSharedLockGuard` and locks the given `mutex`.
-  explicit BL_INLINE BLSharedLockGuard(MutexType* mutex) noexcept : _mutex(mutex) {
+  BL_INLINE explicit BLSharedLockGuard(MutexType* mutex) noexcept : _mutex(mutex) {
     BL_ASSUME(_mutex != nullptr);
     _mutex->lockShared();
   }

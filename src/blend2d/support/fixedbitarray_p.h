@@ -23,7 +23,7 @@ public:
 
   T data[kFixedArraySize];
 
-  BL_INLINE size_t bitWordSize() const noexcept { return kFixedArraySize; }
+  BL_INLINE constexpr size_t sizeInWords() const noexcept { return kFixedArraySize; }
 
   BL_INLINE bool bitAt(size_t index) const noexcept {
     BL_ASSERT(index < N);
@@ -35,12 +35,17 @@ public:
     data[index / kSizeOfTInBits] |= T(1) << (index % kSizeOfTInBits);
   }
 
-  BL_INLINE void setAt(size_t index, bool value) noexcept {
+  BL_INLINE void setAt(size_t index, T value) noexcept {
     BL_ASSERT(index < N);
 
     T clrMask = T(1    ) << (index % kSizeOfTInBits);
     T setMask = T(value) << (index % kSizeOfTInBits);
     data[index / kSizeOfTInBits] = (data[index / kSizeOfTInBits] & ~clrMask) | setMask;
+  }
+
+  BL_INLINE void fillAt(size_t index, T value) noexcept {
+    BL_ASSERT(index < N);
+    data[index / kSizeOfTInBits] |= T(value) << (index % kSizeOfTInBits);
   }
 
   BL_INLINE void clearAt(size_t index) noexcept {

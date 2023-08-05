@@ -7,8 +7,8 @@
 #define BLEND2D_FORMAT_P_H_INCLUDED
 
 #include "format.h"
-#include "tables_p.h"
 #include "support/intops_p.h"
+#include "support/lookuptable_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -32,8 +32,12 @@ enum class BLInternalFormat : uint32_t {
   //! 32-bit (X)RGB pixel format where the pixel is always zero.
   kZERO32 = BL_FORMAT_MAX_VALUE + 2u,
 
+  kPRGB64 = BL_FORMAT_MAX_VALUE + 3u,
+  kFRGB64 = BL_FORMAT_MAX_VALUE + 4u,
+  kZERO64 = BL_FORMAT_MAX_VALUE + 5u,
+
   // Maximum value of `BLInternalFormat`.
-  kMaxValue = kZERO32,
+  kMaxValue = kZERO64,
 
   // Maximum value of `BLInternalFormat` that is a power of 2 minus 1, to make indexing of some tables easy.
   kMaxReserved = 15
@@ -41,8 +45,8 @@ enum class BLInternalFormat : uint32_t {
 
 //! Pixel format flags used internally.
 enum BLFormatFlagsInternal : uint32_t {
-  BL_FORMAT_FLAG_FULL_ALPHA     = 0x10000000u,
-  BL_FORMAT_FLAG_ZERO_ALPHA     = 0x20000000u,
+  BL_FORMAT_FLAG_FULL_ALPHA = 0x10000000u,
+  BL_FORMAT_FLAG_ZERO_ALPHA = 0x20000000u,
 
   BL_FORMAT_ALL_FLAGS =
     BL_FORMAT_FLAG_RGB           |
@@ -74,9 +78,16 @@ static constexpr uint32_t blFormatFlagsStatic(BLInternalFormat format) noexcept 
                                                BL_FORMAT_FLAG_BYTE_ALIGNED   :
          format == BLInternalFormat::kFRGB32 ? BL_FORMAT_FLAG_RGB            |
                                                BL_FORMAT_FLAG_BYTE_ALIGNED   |
-                                               BL_FORMAT_FLAG_UNDEFINED_BITS |
                                                BL_FORMAT_FLAG_FULL_ALPHA     :
          format == BLInternalFormat::kZERO32 ? BL_FORMAT_FLAG_RGBA           |
+                                               BL_FORMAT_FLAG_BYTE_ALIGNED   |
+                                               BL_FORMAT_FLAG_ZERO_ALPHA     :
+         format == BLInternalFormat::kPRGB64 ? BL_FORMAT_FLAG_RGBA           |
+                                               BL_FORMAT_FLAG_BYTE_ALIGNED   :
+         format == BLInternalFormat::kFRGB64 ? BL_FORMAT_FLAG_RGB            |
+                                               BL_FORMAT_FLAG_BYTE_ALIGNED   |
+                                               BL_FORMAT_FLAG_FULL_ALPHA     :
+         format == BLInternalFormat::kZERO64 ? BL_FORMAT_FLAG_RGBA           |
                                                BL_FORMAT_FLAG_BYTE_ALIGNED   |
                                                BL_FORMAT_FLAG_UNDEFINED_BITS |
                                                BL_FORMAT_FLAG_ZERO_ALPHA     : 0;

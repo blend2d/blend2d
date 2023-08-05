@@ -4,78 +4,34 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
-#include "../gradient_p.h"
-#include "../image_p.h"
-#include "../raster/rastercontext_p.h"
 #include "../raster/renderfetchdata_p.h"
 
 namespace BLRasterEngine {
 
-// RenderFetchData - Pattern
-// =========================
+// BLRasterEngine - Fetch Data Utilities
+// =====================================
 
-static BL_INLINE bool blRasterFetchDataSetupPattern(RenderFetchData* fetchData, const StyleData* style) noexcept {
-  BLImageImpl* imgI = BLImagePrivate::getImpl(&fetchData->image());
-  const BLMatrix2D& m = style->adjustedMatrix;
+BLResult computePendingFetchData(RenderFetchData* fetchData) noexcept {
+  // At the moment only gradients have support for pending fetch data calculation.
+  BL_ASSERT(fetchData->signature.isGradient());
 
-  // Zero area means to cover the whole image.
-  BLRectI area = style->imageArea;
-  if (!BLGeometry::isValid(area))
-    area.reset(0, 0, imgI->size.w, imgI->size.h);
+  BLGradientPrivateImpl* gradientI = BLGradientPrivate::getImpl(&fetchData->styleAs<BLGradientCore>());
+  uint32_t lutSize = fetchData->pipelineData.gradient.lut.size;
+  BLGradientQuality quality = BLGradientQuality(fetchData->extra.custom[0]);
 
-  if (!fetchData->setupPatternAffine(fetchData->_extendMode, style->quality, m))
-    return false;
-
-  fetchData->_isSetup = true;
-  return true;
-}
-
-void BL_CDECL blRasterFetchDataDestroyPattern(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept {
-  BLImagePrivate::releaseInstance(static_cast<BLImageCore*>(&fetchData->_style));
-  ctxI->freeFetchData(fetchData);
-}
-
-// RenderFetchData - Gradient
-// ==========================
-
-static BL_INLINE bool blRasterFetchDataSetupGradient(RenderFetchData* fetchData, const StyleData* style) noexcept {
-  BLGradientPrivateImpl* gradientI = BLGradientPrivate::getImpl(&fetchData->gradient());
-  BLGradientLUT* lut = BLGradientPrivate::ensureLut32(gradientI);
+  BLGradientLUT* lut;
+  if (quality < BL_GRADIENT_QUALITY_DITHER)
+    lut = BLGradientPrivate::ensureLut32(gradientI, lutSize);
+  else
+    lut = BLGradientPrivate::ensureLut64(gradientI, lutSize);
 
   if (BL_UNLIKELY(!lut))
-    return false;
+    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-  const BLMatrix2D& m = style->adjustedMatrix;
-  BLPipeline::FetchType fetchType = fetchData->_data.initGradient(gradientI->gradientType, gradientI->values, gradientI->extendMode, lut, m);
+  fetchData->signature.clearPendingBit();
+  fetchData->pipelineData.gradient.lut.data = lut->data();
 
-  if (fetchType == BLPipeline::FetchType::kFailure)
-    return false;
-
-  fetchData->_isSetup = true;
-  fetchData->_fetchType = fetchType;
-  fetchData->_fetchFormat = uint8_t(style->styleFormat);
-  return true;
-}
-
-void BL_CDECL blRasterFetchDataDestroyGradient(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept {
-  BLGradientPrivate::releaseInstance(static_cast<BLGradientCore*>(&fetchData->_style));
-  ctxI->freeFetchData(fetchData);
-}
-
-// RenderFetchData - Setup
-// =======================
-
-bool blRasterFetchDataSetup(RenderFetchData* fetchData, const StyleData* style) noexcept {
-  switch (fetchData->_style._d.rawType()) {
-    case BL_OBJECT_TYPE_GRADIENT:
-      return blRasterFetchDataSetupGradient(fetchData, style);
-
-    case BL_OBJECT_TYPE_IMAGE:
-      return blRasterFetchDataSetupPattern(fetchData, style);
-
-    default:
-      return false;
-  }
+  return BL_SUCCESS;
 }
 
 } // {BLRasterEngine}

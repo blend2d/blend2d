@@ -9,7 +9,6 @@
 #include "../fonttagdata_p.h"
 #include "../fontfeaturesettings_p.h"
 #include "../glyphbuffer_p.h"
-#include "../tables_p.h"
 #include "../trace_p.h"
 #include "../opentype/otface_p.h"
 #include "../opentype/otlayout_p.h"
@@ -18,6 +17,7 @@
 #include "../support/algorithm_p.h"
 #include "../support/bitops_p.h"
 #include "../support/fixedbitarray_p.h"
+#include "../support/lookuptable_p.h"
 #include "../support/memops_p.h"
 #include "../support/ptrops_p.h"
 
@@ -3678,6 +3678,7 @@ static BL_INLINE void populateGSubGPosLookupBits(
 
 static BLResult calculateGSubGPosPlan(const OTFaceImpl* faceI, const BLFontFeatureSettings& settings, LookupKind lookupKind, BLBitArrayCore* plan) noexcept {
   BLTag scriptTag = BL_MAKE_TAG('D', 'F', 'L', 'T');
+  BLTag altScriptTag = BL_MAKE_TAG('l', 'a', 't', 'n');
 
   const LayoutData::GSubGPos& d = faceI->layout.kinds[size_t(lookupKind)];
   Table<GSubGPosTable> table = faceI->layout.tables[size_t(lookupKind)];
@@ -3688,6 +3689,9 @@ static BLResult calculateGSubGPosPlan(const OTFaceImpl* faceI, const BLFontFeatu
   Table<Array16<TagRef16>> scriptListOffsets(table.subTableUnchecked(d.scriptListOffset));
   Table<Array16<TagRef16>> featureListOffsets(table.subTableUnchecked(d.featureListOffset));
   Table<GSubGPosTable::ScriptTable> scriptTable(findScriptInScriptList(scriptListOffsets, scriptTag));
+
+  if (scriptTable.empty())
+    scriptTable = findScriptInScriptList(scriptListOffsets, altScriptTag);
 
   if (BL_UNLIKELY(!blFontTableFitsT<GSubGPosTable::ScriptTable>(scriptTable)))
     return BL_SUCCESS;

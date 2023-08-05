@@ -11,9 +11,9 @@
 #include "../../format_p.h"
 #include "../../image_p.h"
 #include "../../rgba_p.h"
-#include "../../tables_p.h"
 #include "../../pipeline/pipedefs_p.h"
 #include "../../pipeline/jit/jitbase_p.h"
+#include "../../tables/tables_p.h"
 
 // External dependencies of BLPipeline.
 #if BL_TARGET_ARCH_X86
@@ -43,7 +43,6 @@ class FetchPatternPart;
 
 class FillPart;
 class FillBoxAPart;
-class FillBoxUPart;
 class FillAnalyticPart;
 
 class GlobalAlpha;
@@ -97,7 +96,8 @@ enum class CMaskLoopType : uint8_t {
 enum class PixelType : uint8_t {
   kNone = 0,
   kA8 = 1,
-  kRGBA32 = 2
+  kRGBA32 = 2,
+  kRGBA64 = 3
 };
 
 enum class PixelFlags : uint32_t {
@@ -191,8 +191,9 @@ public:
   BL_INLINE PixelType type() const noexcept { return _type; }
   BL_INLINE void setType(PixelType type) noexcept { _type = type; }
 
-  BL_INLINE bool isRGBA32() const noexcept { return _type == PixelType::kRGBA32; }
   BL_INLINE bool isA8() const noexcept { return _type == PixelType::kA8; }
+  BL_INLINE bool isRGBA32() const noexcept { return _type == PixelType::kRGBA32; }
+  BL_INLINE bool isRGBA64() const noexcept { return _type == PixelType::kRGBA64; }
 
   BL_INLINE const char* name() const noexcept { return _name; }
 

@@ -7,7 +7,7 @@
 #define BLEND2D_SUPPORT_STRINGOPS_P_H_INCLUDED
 
 #include "../api-internal_p.h"
-#include "../unicode_p.h"
+#include "../unicode/unicode_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_support

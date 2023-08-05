@@ -89,7 +89,7 @@ struct BLImageData {
   uint32_t flags;
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE void reset() noexcept { *this = BLImageData{}; }
 #endif
 };
 
@@ -115,7 +115,7 @@ struct BLImageInfo {
   char compression[16];
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE void reset() noexcept { *this = BLImageInfo{}; }
 #endif
 };
 
@@ -133,7 +133,7 @@ struct BLImageScaleOptions {
   };
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE void reset() noexcept { *this = BLImageScaleOptions{}; }
 
   BL_INLINE void resetToDefaults() noexcept {
     userFunc = nullptr;
@@ -157,14 +157,14 @@ BL_API BLResult BL_CDECL blImageInit(BLImageCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageInitMove(BLImageCore* self, BLImageCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageInitWeak(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageInitAs(BLImageCore* self, int w, int h, BLFormat format) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageInitAsFromData(BLImageCore* self, int w, int h, BLFormat format, void* pixelData, intptr_t stride, BLDestroyExternalDataFunc destroyFunc, void* userData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageInitAsFromData(BLImageCore* self, int w, int h, BLFormat format, void* pixelData, intptr_t stride, BLDataAccessFlags accessFlags, BLDestroyExternalDataFunc destroyFunc, void* userData) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageDestroy(BLImageCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageReset(BLImageCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageAssignMove(BLImageCore* self, BLImageCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageAssignWeak(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageAssignDeep(BLImageCore* self, const BLImageCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageCreate(BLImageCore* self, int w, int h, BLFormat format) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCreateFromData(BLImageCore* self, int w, int h, BLFormat format, void* pixelData, intptr_t stride, BLDestroyExternalDataFunc destroyFunc, void* userData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCreateFromData(BLImageCore* self, int w, int h, BLFormat format, void* pixelData, intptr_t stride, BLDataAccessFlags accessFlags, BLDestroyExternalDataFunc destroyFunc, void* userData) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageGetData(const BLImageCore* self, BLImageData* dataOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageMakeMutable(BLImageCore* self, BLImageData* dataOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageConvert(BLImageCore* self, BLFormat format) BL_NOEXCEPT_C;
@@ -190,7 +190,7 @@ struct BLImageCore BL_CLASS_INHERITS(BLObjectCore) {
 //! \{
 
 //! 2D raster image [Impl].
-struct BLImageImpl {
+struct BLImageImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Pixel data.
   void* pixelData;
   //! Image stride.
@@ -215,7 +215,7 @@ struct BLImageImpl {
 
 #ifdef __cplusplus
 //! 2D raster image [C++ API].
-class BLImage : public BLImageCore {
+class BLImage final : public BLImageCore {
 public:
   //! \cond INTERNAL
   //! \name Internals
@@ -233,7 +233,11 @@ public:
   BL_INLINE_NODEBUG BLImage(BLImage&& other) noexcept { blImageInitMove(this, &other); }
   BL_INLINE_NODEBUG BLImage(const BLImage& other) noexcept { blImageInitWeak(this, &other); }
   BL_INLINE_NODEBUG BLImage(int w, int h, BLFormat format) noexcept { blImageInitAs(this, w, h, format); }
-  BL_INLINE_NODEBUG ~BLImage() { blImageDestroy(this); }
+
+  BL_INLINE_NODEBUG ~BLImage() {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blImageDestroy(this);
+  }
 
   //! \}
 
@@ -287,12 +291,11 @@ public:
 
   //! Create a new image from external data.
   BL_INLINE_NODEBUG BLResult createFromData(
-    int w, int h, BLFormat format,
-    void* pixelData, intptr_t stride,
-    BLDestroyExternalDataFunc destroyFunc = nullptr,
-    void* userData = nullptr) noexcept {
-
-    return blImageCreateFromData(this, w, h, format, pixelData, stride, destroyFunc, userData);
+      int w, int h, BLFormat format,
+      void* pixelData, intptr_t stride,
+      BLDataAccessFlags accessFlags = BL_DATA_ACCESS_RW,
+      BLDestroyExternalDataFunc destroyFunc = nullptr, void* userData = nullptr) noexcept {
+    return blImageCreateFromData(this, w, h, format, pixelData, stride, accessFlags, destroyFunc, userData);
   }
 
   //! \}

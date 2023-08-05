@@ -9,9 +9,9 @@
 #include "api-internal_p.h"
 #include "context.h"
 #include "format_p.h"
-#include "tables_p.h"
 #include "pipeline/pipedefs_p.h"
 #include "support/bitops_p.h"
+#include "support/lookuptable_p.h"
 
 //! \cond INTERNAL
 
@@ -38,7 +38,12 @@ enum class BLCompOpSolidId : uint32_t {
   //! Source pixels are always treated as opaque black (R|G|B=0 A=1).
   kOpaqueBlack = 2,
   //! Source pixels are always treated as opaque white (R|G|B=1 A=1).
-  kOpaqueWhite = 3
+  kOpaqueWhite = 3,
+
+  //! Source pixels are always treated as transparent zero (all 0) and this composition operator is also a NOP.
+  kAlwaysNop = 4,
+
+  kMaxValue = 4
 };
 
 //! Composition operator flags that can be retrieved through BLCompOpInfo[] table.
@@ -101,28 +106,28 @@ BL_HIDDEN extern const BLLookupTable<BLCompOpInfo, BL_COMP_OP_INTERNAL_COUNT> bl
 //! instead of "CLEAR" operator the rendering engine basically eliminated a possible compilation of "CLEAR" operator
 //! that would perform exactly the same as "SRC-COPY".
 struct BLCompOpSimplifyInfo {
-  //! Alternative composition operator, destination format, source format, and solid-id information packed into 16 bits.
-  uint16_t data;
+  //! Alternative composition operator, destination format, source format, and solid-id information packed into 32 bits.
+  uint32_t data;
 
   // Data shift specify where the value is stored in `data`.
   enum DataShift : uint32_t {
     kCompOpShift = BLIntOps::bitShiftOf(BLPipeline::Signature::kMaskCompOp),
     kDstFmtShift = BLIntOps::bitShiftOf(BLPipeline::Signature::kMaskDstFormat),
     kSrcFmtShift = BLIntOps::bitShiftOf(BLPipeline::Signature::kMaskSrcFormat),
-    kSolidIdShift = 14
+    kSolidIdShift = 16
   };
 
   //! Returns all bits that form the signature (CompOp, DstFormat SrcFormat).
-  BL_INLINE constexpr uint32_t signatureBits() const noexcept { return data & 0x3FFFu; }
+  BL_INLINE_NODEBUG constexpr uint32_t signatureBits() const noexcept { return data & 0xFFFFu; }
   //! Returns `Signature` configured to have the same bits set as `signatureBits()`.
-  BL_INLINE constexpr BLPipeline::Signature signature() const noexcept { return BLPipeline::Signature(signatureBits()); }
+  BL_INLINE_NODEBUG constexpr BLPipeline::Signature signature() const noexcept { return BLPipeline::Signature{signatureBits()}; }
   //! Returns solid-id information regarding this simplification.
-  BL_INLINE constexpr BLCompOpSolidId solidId() const noexcept { return (BLCompOpSolidId)(data >> kSolidIdShift); }
+  BL_INLINE_NODEBUG constexpr BLCompOpSolidId solidId() const noexcept { return (BLCompOpSolidId)(data >> kSolidIdShift); }
 
   //! Returns `BLCompOpSimplifyInfo` from decomposed arguments.
-  static BL_INLINE constexpr BLCompOpSimplifyInfo make(uint32_t compOp, BLInternalFormat d, BLInternalFormat s, BLCompOpSolidId solidId) noexcept {
+  static BL_INLINE_NODEBUG constexpr BLCompOpSimplifyInfo make(uint32_t compOp, BLInternalFormat d, BLInternalFormat s, BLCompOpSolidId solidId) noexcept {
     return BLCompOpSimplifyInfo {
-      uint16_t((compOp << kCompOpShift) |
+      uint32_t((compOp << kCompOpShift) |
                (uint32_t(d) << kDstFmtShift) |
                (uint32_t(s) << kSrcFmtShift) |
                (uint32_t(solidId) << kSolidIdShift))
@@ -131,8 +136,8 @@ struct BLCompOpSimplifyInfo {
 
   //! Returns `BLCompOpSimplifyInfo` sentinel containing the only correct value of DST_COPY (NOP) operator. All other
   //! variations of DST_COPY are invalid.
-  static BL_INLINE constexpr BLCompOpSimplifyInfo dstCopy() noexcept {
-    return make(BL_COMP_OP_DST_COPY, BLInternalFormat::kNone, BLInternalFormat::kNone, BLCompOpSolidId::kTransparent);
+  static BL_INLINE_NODEBUG constexpr BLCompOpSimplifyInfo dstCopy() noexcept {
+    return make(BL_COMP_OP_DST_COPY, BLInternalFormat::kNone, BLInternalFormat::kNone, BLCompOpSolidId::kAlwaysNop);
   }
 };
 

@@ -29,6 +29,8 @@ public:
   //! AsmJit compiler.
   x86::Compiler* cc = nullptr;
 
+  const BLCommonTable& ct;
+
   //! Target CPU features.
   CpuFeatures _features {};
   //! Optimization flags.
@@ -255,6 +257,8 @@ public:
   inline bool hasAVX() const noexcept { return _features.x86().hasAVX(); }
   //! Tests whether AVX2 extensions are available.
   inline bool hasAVX2() const noexcept { return _features.x86().hasAVX2(); }
+  //! Tests whether FMA extensions are available.
+  inline bool hasFMA() const noexcept { return _features.x86().hasFMA(); }
   //! Tests whether a baseline AVX-512 extensions are available.
   //!
   //! \note Baseline for us is slightly more than AVX512-F, however, there are no CPUs that would implement
@@ -317,9 +321,6 @@ public:
   void _initSimdWidth(PipePart* root) noexcept;
   void initPipeline(PipePart* root) noexcept;
 
-  //! Generate a function of the given `signature`.
-  void compileFunc(uint32_t signature) noexcept;
-
   //! \}
 
   //! \name Miscellaneous Helpers
@@ -357,7 +358,7 @@ public:
   x86::Mem simdMemConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept;
 
   x86::Mem _getMemConst(const void* c) noexcept;
-  x86::Vec _newVecConst(const void* c) noexcept;
+  x86::Vec _newVecConst(const void* c, bool isUniqueConst) noexcept;
 
   //! \}
 
@@ -452,6 +453,14 @@ public:
 
   BL_INLINE void newYmmArray(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
     newRegArray(dst, n, asmjit::TypeId::kInt32x8, prefix, name);
+  }
+
+  BL_INLINE void newZmmArray(OpArray& dst, uint32_t n, const char* name) noexcept {
+    newRegArray(dst, n, asmjit::TypeId::kInt32x16, name);
+  }
+
+  BL_INLINE void newZmmArray(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
+    newRegArray(dst, n, asmjit::TypeId::kInt32x16, prefix, name);
   }
 
   // TODO: This should be removed - this can lead to bugs.
@@ -1245,28 +1254,28 @@ public:
   V_EMIT_VVI_VI(v_srl_i64          , PACK_AVX_SSE(Vpsrlq     , Psrlq     , Z))       // AVX2 | SSE2
   V_EMIT_VVI_VI(v_sra_i16          , PACK_AVX_SSE(Vpsraw     , Psraw     , Z))       // AVX2 | SSE2
   V_EMIT_VVI_VI(v_sra_i32          , PACK_AVX_SSE(Vpsrad     , Psrad     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(v_sllb_i128        , PACK_AVX_SSE(Vpslldq    , Pslldq    , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(v_srlb_i128        , PACK_AVX_SSE(Vpsrldq    , Psrldq    , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VI(v_sllb_u128        , PACK_AVX_SSE(Vpslldq    , Pslldq    , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VI(v_srlb_u128        , PACK_AVX_SSE(Vpsrldq    , Psrldq    , Z))       // AVX2 | SSE2
 
   V_EMIT_VVV_VV(v_shuffle_i8       , PACK_AVX_SSE(Vpshufb    , Pshufb    , Z))       // AVX2 | SSSE3
   V_EMIT_VVVI_VVI(v_shuffle_f32    , PACK_AVX_SSE(Vshufps    , Shufps    , Z))       // AVX  | SSE
   V_EMIT_VVVI_VVI(v_shuffle_f64    , PACK_AVX_SSE(Vshufpd    , Shufpd    , Z))       // AVX  | SSE2
 
-  V_EMIT_VVI_VVI(v_swizzle_lo_i16  , PACK_AVX_SSE(Vpshuflw   , Pshuflw   , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VVI(v_swizzle_hi_i16  , PACK_AVX_SSE(Vpshufhw   , Pshufhw   , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VVI(v_swizzle_i32     , PACK_AVX_SSE(Vpshufd    , Pshufd    , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VVI(v_swizzle_lo_u16  , PACK_AVX_SSE(Vpshuflw   , Pshuflw   , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VVI(v_swizzle_hi_u16  , PACK_AVX_SSE(Vpshufhw   , Pshufhw   , Z))       // AVX2 | SSE2
+  V_EMIT_VVI_VVI(v_swizzle_u32     , PACK_AVX_SSE(Vpshufd    , Pshufd    , Z))       // AVX2 | SSE2
 
-  V_EMIT_VVVI_VVI(v_shuffle_i32    , PACK_AVX_SSE(Vshufps    , Shufps    , Z))       // AVX  | SSE
-  V_EMIT_VVVI_VVI(v_shuffle_i64    , PACK_AVX_SSE(Vshufpd    , Shufpd    , Z))       // AVX  | SSE2
+  V_EMIT_VVVI_VVI(v_shuffle_u32    , PACK_AVX_SSE(Vshufps    , Shufps    , Z))       // AVX  | SSE
+  V_EMIT_VVVI_VVI(v_shuffle_u64    , PACK_AVX_SSE(Vshufpd    , Shufpd    , Z))       // AVX  | SSE2
 
-  V_EMIT_VVV_VV(v_interleave_lo_i8 , PACK_AVX_SSE(Vpunpcklbw , Punpcklbw , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_hi_i8 , PACK_AVX_SSE(Vpunpckhbw , Punpckhbw , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_lo_i16, PACK_AVX_SSE(Vpunpcklwd , Punpcklwd , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_hi_i16, PACK_AVX_SSE(Vpunpckhwd , Punpckhwd , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_lo_i32, PACK_AVX_SSE(Vpunpckldq , Punpckldq , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_hi_i32, PACK_AVX_SSE(Vpunpckhdq , Punpckhdq , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_lo_i64, PACK_AVX_SSE(Vpunpcklqdq, Punpcklqdq, Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_hi_i64, PACK_AVX_SSE(Vpunpckhqdq, Punpckhqdq, Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_lo_u8 , PACK_AVX_SSE(Vpunpcklbw , Punpcklbw , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_hi_u8 , PACK_AVX_SSE(Vpunpckhbw , Punpckhbw , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_lo_u16, PACK_AVX_SSE(Vpunpcklwd , Punpcklwd , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_hi_u16, PACK_AVX_SSE(Vpunpckhwd , Punpckhwd , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_lo_u32, PACK_AVX_SSE(Vpunpckldq , Punpckldq , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_hi_u32, PACK_AVX_SSE(Vpunpckhdq , Punpckhdq , Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_lo_u64, PACK_AVX_SSE(Vpunpcklqdq, Punpcklqdq, Z))       // AVX2 | SSE2
+  V_EMIT_VVV_VV(v_interleave_hi_u64, PACK_AVX_SSE(Vpunpckhqdq, Punpckhqdq, Z))       // AVX2 | SSE2
   V_EMIT_VVV_VV(v_interleave_lo_f32, PACK_AVX_SSE(Vunpcklps  , Unpcklps  , Z))       // AVX  | SSE
   V_EMIT_VVV_VV(v_interleave_lo_f64, PACK_AVX_SSE(Vunpcklpd  , Unpcklpd  , Z))       // AVX  | SSE2
   V_EMIT_VVV_VV(v_interleave_hi_f32, PACK_AVX_SSE(Vunpckhps  , Unpckhps  , Z))       // AVX  | SSE
@@ -1363,7 +1372,7 @@ public:
   V_EMIT_VVV_VV(v_madds_u8_i8_     , PACK_AVX_SSE(Vpmaddubsw , Pmaddubsw , Z))       // AVX2 | SSSE3     [dst.i16[0..X] = SAT(src1.u8[0] * src2.i8[0] + src1.u8[1] * src2.i8[1]))
   V_EMIT_VVV_VV(v_madd_i16_i32     , PACK_AVX_SSE(Vpmaddwd   , Pmaddwd   , Z))       // AVX2 | SSE2      [dst.i32[0..X] = (src1.i16[0] * src2.i16[0] + src1.i16[1] * src2.i16[1]))
   V_EMIT_VVVI_VVI(v_mpsad_u8_      , PACK_AVX_SSE(Vmpsadbw   , Mpsadbw   , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVVI_VVI(v_alignr_u8_     , PACK_AVX_SSE(Vpalignr   , Palignr   , Z))       // AVX2 | SSSE3
+  V_EMIT_VVVI_VVI(v_alignr_u128_     , PACK_AVX_SSE(Vpalignr   , Palignr   , Z))       // AVX2 | SSSE3
   V_EMIT_VV_VV(v_hmin_pos_u16_     , PACK_AVX_SSE(Vphminposuw, Phminposuw, Z))       // AVX2 | SSE4_1
 
   // Floating Point - Core.
@@ -1493,6 +1502,41 @@ public:
 
   V_EMIT_VVVI(v_insert_i256        , PACK_AVX_SSE(Vinserti32x8 , None    , Z))       // AVX2
   V_EMIT_VVVI(v_insert_i128        , PACK_AVX_SSE(Vinserti128  , None    , Y))       // AVX512
+
+  // FMA
+
+  // 132 = Dst = Dst * Src2 + Src1
+  // 213 = Dst = Dst * Src1 + Src2
+  // 231 = Dst = Dst + Src1 * Src1
+
+  V_EMIT_VVV_VV(s_fmadd_132_f32_   , PACK_AVX_SSE(Vfmadd132ss  , None    , X))       // FMA
+  V_EMIT_VVV_VV(s_fmadd_213_f32_   , PACK_AVX_SSE(Vfmadd213ss  , None    , X))       // FMA
+  V_EMIT_VVV_VV(s_fmadd_231_f32_   , PACK_AVX_SSE(Vfmadd231ss  , None    , X))       // FMA
+  V_EMIT_VVV_VV(s_fmsub_132_f32_   , PACK_AVX_SSE(Vfmsub132ss  , None    , X))       // FMA
+  V_EMIT_VVV_VV(s_fmsub_213_f32_   , PACK_AVX_SSE(Vfmsub213ss  , None    , X))       // FMA
+  V_EMIT_VVV_VV(s_fmsub_231_f32_   , PACK_AVX_SSE(Vfmsub231ss  , None    , X))       // FMA
+
+  V_EMIT_VVV_VV(v_fmadd_132_f32_   , PACK_AVX_SSE(Vfmadd132ps  , None    , Z))       // FMA
+  V_EMIT_VVV_VV(v_fmadd_213_f32_   , PACK_AVX_SSE(Vfmadd213ps  , None    , Z))       // FMA
+  V_EMIT_VVV_VV(v_fmadd_231_f32_   , PACK_AVX_SSE(Vfmadd231ps  , None    , Z))       // FMA
+  V_EMIT_VVV_VV(v_fmsub_132_f32_   , PACK_AVX_SSE(Vfmsub132ps  , None    , Z))       // FMA
+  V_EMIT_VVV_VV(v_fmsub_213_f32_   , PACK_AVX_SSE(Vfmsub213ps  , None    , Z))       // FMA
+  V_EMIT_VVV_VV(v_fmsub_231_f32_   , PACK_AVX_SSE(Vfmsub231ps  , None    , Z))       // FMA
+
+  V_EMIT_VVV_VV(s_fnmadd_132_f32_  , PACK_AVX_SSE(Vfnmadd132ss , None    , X))       // FMA
+  V_EMIT_VVV_VV(s_fnmadd_213_f32_  , PACK_AVX_SSE(Vfnmadd213ss , None    , X))       // FMA
+  V_EMIT_VVV_VV(s_fnmadd_231_f32_  , PACK_AVX_SSE(Vfnmadd231ss , None    , X))       // FMA
+  V_EMIT_VVV_VV(s_fnmsub_132_f32_  , PACK_AVX_SSE(Vfnmsub132ss , None    , X))       // FMA
+  V_EMIT_VVV_VV(s_fnmsub_213_f32_  , PACK_AVX_SSE(Vfnmsub213ss , None    , X))       // FMA
+  V_EMIT_VVV_VV(s_fnmsub_231_f32_  , PACK_AVX_SSE(Vfnmsub231ss , None    , X))       // FMA
+
+  V_EMIT_VVV_VV(v_fnmadd_132_f32_  , PACK_AVX_SSE(Vfnmadd132ps , None    , Z))       // FMA
+  V_EMIT_VVV_VV(v_fnmadd_213_f32_  , PACK_AVX_SSE(Vfnmadd213ps , None    , Z))       // FMA
+  V_EMIT_VVV_VV(v_fnmadd_231_f32_  , PACK_AVX_SSE(Vfnmadd231ps , None    , Z))       // FMA
+  V_EMIT_VVV_VV(v_fnmsub_132_f32_  , PACK_AVX_SSE(Vfnmsub132ps , None    , Z))       // FMA
+  V_EMIT_VVV_VV(v_fnmsub_213_f32_  , PACK_AVX_SSE(Vfnmsub213ps , None    , Z))       // FMA
+  V_EMIT_VVV_VV(v_fnmsub_231_f32_  , PACK_AVX_SSE(Vfnmsub231ps , None    , Z))       // FMA
+
 
   // Initialization.
 
@@ -1771,19 +1815,19 @@ public:
     static const uint32_t kMovTable256[2] = { PACK_AVX_SSE(Vmovdqu, Movups, Z), PACK_AVX_SSE(Vmovdqa, Movaps, Z) };
 
     if (dst.isZmm())
-      v_emit_vv_vv(kMovTable512[size_t(alignment >= src.size())], dst, src);
+      v_emit_vv_vv(kMovTable512[size_t(alignment >= dst.size())], dst, src);
     else
-      v_emit_vv_vv(kMovTable256[size_t(alignment >= src.size())], dst, src);
+      v_emit_vv_vv(kMovTable256[size_t(alignment >= dst.size())], dst, src);
   }
 
   inline void v_load_fvec(const x86::Vec& dst, const x86::Mem& src, Alignment alignment) noexcept {
     static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovups, Movups, Z), PACK_AVX_SSE(Vmovaps, Movaps, Z) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= src.size())], dst, src);
+    v_emit_vv_vv(kMovTable[size_t(alignment >= dst.size())], dst, src);
   }
 
   inline void v_load_dvec(const x86::Vec& dst, const x86::Mem& src, Alignment alignment) noexcept {
     static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovupd, Movupd, Z), PACK_AVX_SSE(Vmovapd, Movapd, Z) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= src.size())], dst, src);
+    v_emit_vv_vv(kMovTable[size_t(alignment >= dst.size())], dst, src);
   }
 
   BL_NOINLINE void v_storea_ivec(const x86::Mem& dst, const x86::Vec& src) noexcept {
@@ -1824,6 +1868,22 @@ public:
   inline void v_store_dvec(const x86::Mem& dst, const x86::Vec& src, Alignment alignment) noexcept {
     static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovupd, Movupd, Z), PACK_AVX_SSE(Vmovapd, Movapd, Z) };
     v_emit_vv_vv(kMovTable[size_t(alignment >= src.size())], dst, src);
+  }
+
+  inline void v_load_ivec_array(VecArray& dst, const x86::Mem& src, Alignment alignment) noexcept {
+    x86::Mem m = src;
+    for (size_t i = 0; i < dst.size(); i++) {
+      v_load_ivec(dst[0], m, alignment);
+      m.addOffsetLo32(dst[i].size());
+    }
+  }
+
+  inline void v_store_ivec_array(const x86::Mem& dst, const VecArray& src, Alignment alignment) noexcept {
+    x86::Mem m = dst;
+    for (size_t i = 0; i < src.size(); i++) {
+      v_store_ivec(m, src[0], alignment);
+      m.addOffsetLo32(src[i].size());
+    }
   }
 
   //! \}
@@ -1946,22 +2006,22 @@ public:
   inline void v_abs_i64(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi64), dst, src); }
 
   template<typename DstT, typename SrcT>
-  inline void v_swap_i32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_i32(dst, src, x86::shuffleImm(2, 3, 0, 1)); }
+  inline void v_swap_u32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32(dst, src, x86::shuffleImm(2, 3, 0, 1)); }
 
   template<typename DstT, typename SrcT>
-  inline void v_swap_i64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_i32(dst, src, x86::shuffleImm(1, 0, 3, 2)); }
+  inline void v_swap_u64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32(dst, src, x86::shuffleImm(1, 0, 3, 2)); }
 
   template<typename DstT, typename SrcT>
-  inline void v_dupl_i32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_i32(dst, src, x86::shuffleImm(2, 2, 0, 0)); }
+  inline void v_dupl_i32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32(dst, src, x86::shuffleImm(2, 2, 0, 0)); }
 
   template<typename DstT, typename SrcT>
-  inline void v_duph_i32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_i32(dst, src, x86::shuffleImm(3, 3, 1, 1)); }
+  inline void v_duph_i32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32(dst, src, x86::shuffleImm(3, 3, 1, 1)); }
 
   template<typename DstT, typename SrcT>
-  inline void v_dupl_i64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_i32(dst, src, x86::shuffleImm(1, 0, 1, 0)); }
+  inline void v_dupl_i64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32(dst, src, x86::shuffleImm(1, 0, 1, 0)); }
 
   template<typename DstT, typename SrcT>
-  inline void v_duph_i64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_i32(dst, src, x86::shuffleImm(3, 2, 3, 2)); }
+  inline void v_duph_i64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32(dst, src, x86::shuffleImm(3, 2, 3, 2)); }
 
   // Dst = (CondBit == 0) ? Src1 : Src2;
   template<typename DstT, typename Src1T, typename Src2T, typename CondT>
@@ -1994,7 +2054,7 @@ public:
 
   template<typename DstT, typename SrcT>
   inline void v_expand_lo_i32(const DstT& dst, const SrcT& src) noexcept {
-    v_swizzle_i32(dst, src, x86::shuffleImm(0, 0, 0, 0));
+    v_swizzle_u32(dst, src, x86::shuffleImm(0, 0, 0, 0));
   }
 
   // dst.u64[0] = src1.u64[1];
@@ -2076,9 +2136,9 @@ public:
   inline void v_broadcast_u64(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastU64), dst, src); }
 
   template<typename DstT, typename SrcT>
-  inline void v_broadcast_i32x4(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastI32x4), dst, src); }
+  inline void v_broadcast_u32x4(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastI32x4), dst, src); }
   template<typename DstT, typename SrcT>
-  inline void v_broadcast_i64x2(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastI64x2), dst, src); }
+  inline void v_broadcast_u64x2(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastI64x2), dst, src); }
   template<typename DstT, typename SrcT>
   inline void v_broadcast_f32x4(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastF32x4), dst, src); }
   template<typename DstT, typename SrcT>
@@ -2111,6 +2171,99 @@ public:
       v_and_f64(d, d, simdMemConst(&blCommonTable.f64_m1, Bcst::k64, d));
       v_add_f64(d, d, t);
       v_mul_f64(d, d, b);
+    }
+  }
+
+  //! \}
+
+  //! \name Emit - FMA
+  //! \{
+
+  template<typename DstT, typename SrcA, typename SrcB>
+  inline void s_mul_13_add_2(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
+    if (hasFMA()) {
+      s_fmadd_132_f32_(d1, a2, b3);
+    }
+    else {
+      s_mul_f32(d1, d1, b3);
+      s_add_f32(d1, d1, a2);
+    }
+  }
+
+  template<typename DstT, typename SrcA, typename SrcB>
+  inline void v_mul_13_add_2(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
+    if (hasFMA()) {
+      v_fmadd_132_f32_(d1, a2, b3);
+    }
+    else {
+      v_mul_f32(d1, d1, b3);
+      v_add_f32(d1, d1, a2);
+    }
+  }
+
+  template<typename DstT, typename SrcA, typename SrcB>
+  inline void s_mul_12_add_3(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
+    if (hasFMA()) {
+      s_fmadd_213_f32_(d1, a2, b3);
+    }
+    else {
+      s_mul_f32(d1, d1, a2);
+      s_add_f32(d1, d1, b3);
+    }
+  }
+
+  template<typename DstT, typename SrcA, typename SrcB>
+  inline void v_mul_12_add_3(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
+    if (hasFMA()) {
+      v_fmadd_213_f32_(d1, a2, b3);
+    }
+    else {
+      v_mul_f32(d1, d1, a2);
+      v_add_f32(d1, d1, b3);
+    }
+  }
+
+  template<typename DstT, typename SrcA, typename SrcB>
+  inline void s_mul_13_sub_2(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
+    if (hasFMA()) {
+      s_fmsub_132_f32_(d1, a2, b3);
+    }
+    else {
+      s_mul_f32(d1, d1, b3);
+      s_sub_f32(d1, d1, a2);
+    }
+  }
+
+  template<typename DstT, typename SrcA, typename SrcB>
+  inline void v_mul_13_sub_2(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
+    if (hasFMA()) {
+      v_fmsub_132_f32_(d1, a2, b3);
+    }
+    else {
+      v_mul_f32(d1, d1, b3);
+      v_sub_f32(d1, d1, a2);
+    }
+  }
+
+  template<typename DstT, typename SrcA, typename SrcB>
+  inline void s_mul_12_sub_3(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
+    if (hasFMA()) {
+      s_fmsub_213_f32_(d1, a2, b3);
+    }
+    else {
+      s_mul_f32(d1, d1, a2);
+      s_sub_f32(d1, d1, b3);
+    }
+  }
+
+  template<typename DstT, typename SrcA, typename SrcB>
+  inline void v_mul_12_sub_3(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
+    if (hasFMA()) {
+      v_fmsub_213_f32_(d1, a2, b3);
+    }
+    else {
+      v_mul_f32(d1, d1, a2);
+      v_sub_f32(d1, d1, b3);
     }
   }
 
@@ -2254,44 +2407,53 @@ public:
 
     if (hasSSE4_1()) {
       if (d0.id() == s.id()) {
-        v_swizzle_i32(d1, d0, x86::shuffleImm(1, 0, 3, 2));
+        v_swizzle_u32(d1, d0, x86::shuffleImm(1, 0, 3, 2));
         v_mov_u8_u16_(d0, d0);
         v_mov_u8_u16_(d1, d1);
       }
       else {
         v_mov_u8_u16(d0, s);
-        v_swizzle_i32(d1, s, x86::shuffleImm(1, 0, 3, 2));
+        v_swizzle_u32(d1, s, x86::shuffleImm(1, 0, 3, 2));
         v_mov_u8_u16(d1, d1);
       }
     }
     else {
       x86::Vec zero = simdVecConst(&blCommonTable.i_0000000000000000, s);
       if (d1.id() != s.id()) {
-        v_interleave_hi_i8(d1, s, zero);
-        v_interleave_lo_i8(d0, s, zero);
+        v_interleave_hi_u8(d1, s, zero);
+        v_interleave_lo_u8(d0, s, zero);
       }
       else {
-        v_interleave_lo_i8(d0, s, zero);
-        v_interleave_hi_i8(d1, s, zero);
+        v_interleave_lo_u8(d0, s, zero);
+        v_interleave_hi_u8(d1, s, zero);
       }
     }
   }
 
   template<typename Dst, typename Src>
-  inline void vExpandAlphaLo16(const Dst& d, const Src& s) noexcept { v_swizzle_lo_i16(d, s, x86::shuffleImm(3, 3, 3, 3)); }
+  inline void vExpandAlphaLo16(const Dst& d, const Src& s) noexcept { v_swizzle_lo_u16(d, s, x86::shuffleImm(3, 3, 3, 3)); }
 
   template<typename Dst, typename Src>
-  inline void vExpandAlphaHi16(const Dst& d, const Src& s) noexcept { v_swizzle_hi_i16(d, s, x86::shuffleImm(3, 3, 3, 3)); }
+  inline void vExpandAlphaHi16(const Dst& d, const Src& s) noexcept { v_swizzle_hi_u16(d, s, x86::shuffleImm(3, 3, 3, 3)); }
 
   template<typename Dst, typename Src>
-  inline void vExpandAlpha16(const Dst& d, const Src& s, uint32_t useHiPart = 1) noexcept {
-    vExpandAlphaLo16(d, s);
-    if (useHiPart)
-      vExpandAlphaHi16(d, d);
+  inline void v_expand_alpha_16(const Dst& d, const Src& s, uint32_t useHiPart = 1) noexcept {
+    if (useHiPart) {
+      if (hasSSSE3() && d == s) {
+        v_shuffle_i8(d, d, simdConst(&blCommonTable.pshufb_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, d));
+      }
+      else {
+        vExpandAlphaHi16(d, s);
+        vExpandAlphaLo16(d, d);
+      }
+    }
+    else {
+      vExpandAlphaLo16(d, s);
+    }
   }
 
   template<typename Dst, typename Src>
-  inline void vExpandAlphaPS(const Dst& d, const Src& s) noexcept { v_swizzle_i32(d, s, x86::shuffleImm(3, 3, 3, 3)); }
+  inline void vExpandAlphaPS(const Dst& d, const Src& s) noexcept { v_swizzle_u32(d, s, x86::shuffleImm(3, 3, 3, 3)); }
 
   template<typename DstT, typename SrcT>
   inline void vFillAlpha255B(const DstT& dst, const SrcT& src) noexcept { v_or_i32(dst, src, simdConst(&blCommonTable.i_FF000000FF000000, Bcst::k32, dst)); }
@@ -2320,8 +2482,8 @@ public:
     x86::Xmm t0 = cc->newXmm("t0");
     x86::Xmm t1 = cc->newXmm("t1");
 
-    v_swizzle_i32(t1, b, x86::shuffleImm(3, 3, 2, 0));
-    v_swizzle_i32(d , a, x86::shuffleImm(2, 0, 3, 1));
+    v_swizzle_u32(t1, b, x86::shuffleImm(3, 3, 2, 0));
+    v_swizzle_u32(d , a, x86::shuffleImm(2, 0, 3, 1));
 
     v_cvt_i32_f64(t1, t1);
     v_cvt_i32_f64(t0, d);
@@ -2329,7 +2491,7 @@ public:
     v_cvtt_f64_i32(t0, t0);
 
     v_sub_i32(d, d, t0);
-    v_swizzle_i32(d, d, x86::shuffleImm(1, 3, 0, 2));
+    v_swizzle_u32(d, d, x86::shuffleImm(1, 3, 0, 2));
   }
 
   // Performs 32-bit unsigned modulo of 32-bit `a` (hi DWORD) with 64-bit `b` (DOUBLE).
@@ -2337,17 +2499,17 @@ public:
   BL_NOINLINE void xModI64HIxDouble(const x86::Xmm& d, const VecOrMem_A& a, const VecOrMem_B& b) noexcept {
     x86::Xmm t0 = cc->newXmm("t0");
 
-    v_swizzle_i32(d, a, x86::shuffleImm(2, 0, 3, 1));
+    v_swizzle_u32(d, a, x86::shuffleImm(2, 0, 3, 1));
     v_cvt_i32_f64(t0, d);
     v_mod_pd(t0, t0, b);
     v_cvtt_f64_i32(t0, t0);
 
     v_sub_i32(d, d, t0);
-    v_swizzle_i32(d, d, x86::shuffleImm(1, 3, 0, 2));
+    v_swizzle_u32(d, d, x86::shuffleImm(1, 3, 0, 2));
   }
 
   BL_NOINLINE void xExtractUnpackedAFromPackedARGB32_1(const x86::Vec& d, const x86::Vec& s) noexcept {
-    v_swizzle_lo_i16(d, s, x86::shuffleImm(1, 1, 1, 1));
+    v_swizzle_lo_u16(d, s, x86::shuffleImm(1, 1, 1, 1));
     v_srl_i16(d, d, 8);
   }
 
@@ -2356,8 +2518,8 @@ public:
       v_shuffle_i8(d, s, simdConst(&blCommonTable.pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d));
     }
     else {
-      v_swizzle_lo_i16(d, s, x86::shuffleImm(3, 3, 1, 1));
-      v_swizzle_i32(d, d, x86::shuffleImm(1, 1, 0, 0));
+      v_swizzle_lo_u16(d, s, x86::shuffleImm(3, 3, 1, 1));
+      v_swizzle_u32(d, d, x86::shuffleImm(1, 1, 0, 0));
       v_srl_i16(d, d, 8);
     }
   }
@@ -2365,35 +2527,33 @@ public:
   BL_NOINLINE void xExtractUnpackedAFromPackedARGB32_4(const x86::Vec& d0, const x86::Vec& d1, const x86::Vec& s) noexcept {
     BL_ASSERT(d0.id() != d1.id());
 
-    const BLCommonTable& c = blCommonTable;
-
     if (hasSSSE3()) {
       if (d0.id() == s.id()) {
-        v_shuffle_i8(d1, s, simdConst(&c.pshufb_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d1));
-        v_shuffle_i8(d0, s, simdConst(&c.pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d0));
+        v_shuffle_i8(d1, s, simdConst(&ct.pshufb_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d1));
+        v_shuffle_i8(d0, s, simdConst(&ct.pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d0));
       }
       else {
-        v_shuffle_i8(d0, s, simdConst(&c.pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d0));
-        v_shuffle_i8(d1, s, simdConst(&c.pshufb_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d1));
+        v_shuffle_i8(d0, s, simdConst(&ct.pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d0));
+        v_shuffle_i8(d1, s, simdConst(&ct.pshufb_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d1));
       }
     }
     else {
       if (d1.id() != s.id()) {
-        v_swizzle_hi_i16(d1, s, x86::shuffleImm(3, 3, 1, 1));
-        v_swizzle_lo_i16(d0, s, x86::shuffleImm(3, 3, 1, 1));
+        v_swizzle_hi_u16(d1, s, x86::shuffleImm(3, 3, 1, 1));
+        v_swizzle_lo_u16(d0, s, x86::shuffleImm(3, 3, 1, 1));
 
-        v_swizzle_i32(d1, d1, x86::shuffleImm(3, 3, 2, 2));
-        v_swizzle_i32(d0, d0, x86::shuffleImm(1, 1, 0, 0));
+        v_swizzle_u32(d1, d1, x86::shuffleImm(3, 3, 2, 2));
+        v_swizzle_u32(d0, d0, x86::shuffleImm(1, 1, 0, 0));
 
         v_srl_i16(d1, d1, 8);
         v_srl_i16(d0, d0, 8);
       }
       else {
-        v_swizzle_lo_i16(d0, s, x86::shuffleImm(3, 3, 1, 1));
-        v_swizzle_hi_i16(d1, s, x86::shuffleImm(3, 3, 1, 1));
+        v_swizzle_lo_u16(d0, s, x86::shuffleImm(3, 3, 1, 1));
+        v_swizzle_hi_u16(d1, s, x86::shuffleImm(3, 3, 1, 1));
 
-        v_swizzle_i32(d0, d0, x86::shuffleImm(1, 1, 0, 0));
-        v_swizzle_i32(d1, d1, x86::shuffleImm(3, 3, 2, 2));
+        v_swizzle_u32(d0, d0, x86::shuffleImm(1, 1, 0, 0));
+        v_swizzle_u32(d1, d1, x86::shuffleImm(3, 3, 2, 2));
 
         v_srl_i16(d0, d0, 8);
         v_srl_i16(d1, d1, 8);

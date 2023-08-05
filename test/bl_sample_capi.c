@@ -4,41 +4,64 @@ int main(int argc, char* argv[]) {
   BLResult r;
   BLImageCore img;
   BLContextCore ctx;
-  BLGradientCore gradient;
 
-  r = blImageInitAs(&img, 256, 256, BL_FORMAT_PRGB32);
+  r = blImageInitAs(&img, 480, 480, BL_FORMAT_PRGB32);
   if (r != BL_SUCCESS)
     return 1;
 
   r = blContextInitAs(&ctx, &img, NULL);
-  if (r != BL_SUCCESS)
+  if (r != BL_SUCCESS) {
+    // Image has been already created, so destroy it.
+    blImageDestroy(&img);
     return 1;
+  }
 
-  BLLinearGradientValues values = { 0, 0, 256, 256 };
-  r = blGradientInitAs(&gradient,
-    BL_GRADIENT_TYPE_LINEAR, &values,
+  blContextClearAll(&ctx);
+
+  // First shape filled with a radial gradient.
+  // By default, SRC_OVER composition is used.
+  BLGradientCore radial;
+  BLRadialGradientValues radialValues = {
+    180, 180, 180, 180, 180
+  };
+
+  blGradientInitAs(&radial,
+    BL_GRADIENT_TYPE_RADIAL, &radialValues,
     BL_EXTEND_MODE_PAD, NULL, 0, NULL);
-  if (r != BL_SUCCESS)
-    return 1;
+  blGradientAddStopRgba32(&radial, 0.0, 0xFFFFFFFFu);
+  blGradientAddStopRgba32(&radial, 1.0, 0xFFFF6F3Fu);
 
-  blGradientAddStopRgba32(&gradient, 0.0, 0xFFFFFFFFu);
-  blGradientAddStopRgba32(&gradient, 0.5, 0xFFFFAF00u);
-  blGradientAddStopRgba32(&gradient, 1.0, 0xFFFF0000u);
+  BLCircle circle = {180, 180, 160};
+  blContextFillGeometryExt(&ctx,
+    BL_GEOMETRY_TYPE_CIRCLE, &circle, &radial);
 
-  blContextSetFillStyle(&ctx, &gradient);
-  blContextFillAll(&ctx);
-  blGradientDestroy(&gradient);
+  // Unused styles must be destroyed.
+  blGradientDestroy(&radial);
 
-  BLCircle circle;
-  circle.cx = 128;
-  circle.cy = 128;
-  circle.r = 64;
+  // Second shape filled with a linear gradient.
+  BLGradientCore linear;
+  BLLinearGradientValues linearValues = {
+    195, 195, 470, 470
+  };
 
-  blContextSetCompOp(&ctx, BL_COMP_OP_EXCLUSION);
-  blContextSetFillStyleRgba32(&ctx, 0xFF00FFFFu);
-  blContextFillGeometry(&ctx, BL_GEOMETRY_TYPE_CIRCLE, &circle);
+  blGradientInitAs(&linear,
+    BL_GRADIENT_TYPE_LINEAR, &linearValues,
+    BL_EXTEND_MODE_PAD, NULL, 0, NULL);
+  blGradientAddStopRgba32(&linear, 0.0, 0xFFFFFFFFu);
+  blGradientAddStopRgba32(&linear, 1.0, 0xFF3F9FFFu);
 
-  blContextEnd(&ctx);
+  // Use 'blContextSetCompOp()' to change a composition operator.
+  blContextSetCompOp(&ctx, BL_COMP_OP_DIFFERENCE);
+
+  BLRoundRect roundRect = { 195, 195, 270, 270, 25, 25 };
+  blContextFillGeometryExt(&ctx,
+    BL_GEOMETRY_TYPE_ROUND_RECT, &roundRect, &linear);
+
+  // Unused styles must be destroyed.
+  blGradientDestroy(&linear);
+
+  // Finalize the rendering and destroy the rendering context.
+  blContextDestroy(&ctx);
 
   // An example of querying a codec from Blend2D internal codecs.
   BLImageCodecCore codec;

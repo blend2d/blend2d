@@ -78,9 +78,13 @@ public:
   BL_INLINE ~BLFontManagerPrivateImpl() noexcept {}
 };
 
-static BL_INLINE BLFontManagerPrivateImpl* blFontManagerGetImpl(const BLFontManagerCore* self) noexcept {
+namespace BLFontManagerPrivate {
+
+static BL_INLINE BLFontManagerPrivateImpl* getImpl(const BLFontManagerCore* self) noexcept {
   return static_cast<BLFontManagerPrivateImpl*>(self->_d.impl);
 }
+
+} // {BLFontManagerPrivate}
 
 //! \}
 

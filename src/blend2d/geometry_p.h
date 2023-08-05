@@ -288,14 +288,14 @@ template<SplitQuadOptions Options>
 static BL_INLINE BLPoint* splitQuadToSpline(const BLPoint p[3], BLPoint* out) noexcept {
   static_assert(uint32_t(Options) != 0, "Split options cannot be empty");
 
-  // 2 extremas and 1 terminating `1.0` value.
+  // 2 extrema and 1 terminating `1.0` value.
   constexpr uint32_t kMaxTCount = 3;
   BLFixedArray<double, kMaxTCount> ts;
 
   BLPoint Pa, Pb, Pc;
   getQuadCoefficients(p, Pa, Pb, Pc);
 
-  // Find extremas.
+  // Find extrema.
   if ((Options & SplitQuadOptions::kExtremas) == SplitQuadOptions::kExtremas) {
     BLPoint extremaTs = (p[0] - p[1]) / (p[0] - p[1] * 2.0 + p[2]);
     double extremaT0 = blMin(extremaTs.x, extremaTs.y);
@@ -662,7 +662,7 @@ template<SplitCubicOptions Options>
 static BL_INLINE BLPoint* splitCubicToSpline(const BLPoint p[4], BLPoint* out) noexcept {
   static_assert(uint32_t(Options) != 0, "Split options cannot be empty");
 
-  // 4 extremas, 2 inflections, 1 cusp, and 1 terminating `1.0` value.
+  // 4 extrema, 2 inflections, 1 cusp, and 1 terminating `1.0` value.
   constexpr uint32_t kMaxTCount = 4 + 2 + 1 + 1;
   BLFixedArray<double, kMaxTCount> ts;
 
@@ -686,7 +686,7 @@ static BL_INLINE BLPoint* splitCubicToSpline(const BLPoint p[4], BLPoint* out) n
       ts._incrementSize(blQuadRoots(ts.end(), q0 * 6.0, q1 * 6.0, q2 * 2.0, BL_M_AFTER_0, BL_M_BEFORE_1));
   }
 
-  // Find extremas.
+  // Find extrema.
   if (blTestFlag(Options, SplitCubicOptions::kXExtremas | SplitCubicOptions::kYExtremas)) {
     BLPoint Da, Db, Dc;
     getCubicDerivativeCoefficients(p, Da, Db, Dc);

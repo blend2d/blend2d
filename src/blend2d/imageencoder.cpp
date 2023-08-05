@@ -13,7 +13,7 @@
 
 namespace BLImageEncoderPrivate {
 
-static BLObjectEthernalVirtualImpl<BLImageEncoderImpl, BLImageEncoderVirt> defaultEncoder;
+static BLObjectEternalVirtualImpl<BLImageEncoderImpl, BLImageEncoderVirt> defaultEncoder;
 
 } // {BLImageEncoderPrivate}
 
@@ -45,7 +45,7 @@ BL_API_IMPL BLResult blImageEncoderInitWeak(BLImageEncoderCore* self, const BLIm
 BL_API_IMPL BLResult blImageEncoderDestroy(BLImageEncoderCore* self) noexcept {
   BL_ASSERT(self->_d.isImageEncoder());
 
-  return blObjectPrivateReleaseVirtual(self);
+  return BLObjectPrivate::releaseVirtualInstance(self);
 }
 
 // BLImageEncoder - API - Reset
@@ -54,7 +54,7 @@ BL_API_IMPL BLResult blImageEncoderDestroy(BLImageEncoderCore* self) noexcept {
 BL_API_IMPL BLResult blImageEncoderReset(BLImageEncoderCore* self) noexcept {
   BL_ASSERT(self->_d.isImageEncoder());
 
-  return blObjectPrivateReplaceVirtual(self, static_cast<BLImageEncoderCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_ENCODER]));
+  return BLObjectPrivate::replaceVirtualInstance(self, static_cast<BLImageEncoderCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_ENCODER]));
 }
 
 // BLImageEncoder - API - Assign
@@ -66,14 +66,14 @@ BL_API_IMPL BLResult blImageEncoderAssignMove(BLImageEncoderCore* self, BLImageE
 
   BLImageEncoderCore tmp = *other;
   other->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE_ENCODER]._d;
-  return blObjectPrivateReplaceVirtual(self, &tmp);
+  return BLObjectPrivate::replaceVirtualInstance(self, &tmp);
 }
 
 BL_API_IMPL BLResult blImageEncoderAssignWeak(BLImageEncoderCore* self, const BLImageEncoderCore* other) noexcept {
   BL_ASSERT(self->_d.isImageEncoder());
   BL_ASSERT(other->_d.isImageEncoder());
 
-  return blObjectPrivateAssignWeakVirtual(self, other);
+  return BLObjectPrivate::assignVirtualInstance(self, other);
 }
 
 // BLImageEncoder - API - Interface
@@ -96,8 +96,8 @@ BL_API_IMPL BLResult blImageEncoderWriteFrame(BLImageEncoderCore* self, BLArrayC
 // BLImageEncoder - Virtual Functions (Null)
 // =========================================
 
-static BLResult BL_CDECL blImageEncoderImplDestroy(BLObjectImpl* impl, uint32_t info) noexcept {
-  blUnused(impl, info);
+static BLResult BL_CDECL blImageEncoderImplDestroy(BLObjectImpl* impl) noexcept {
+  blUnused(impl);
   return BL_SUCCESS;
 }
 
@@ -131,7 +131,5 @@ void blImageEncoderRtInit(BLRuntimeContext* rt) noexcept {
   defaultEncoder.impl->lastResult = BL_ERROR_NOT_INITIALIZED;
 
   blObjectDefaults[BL_OBJECT_TYPE_IMAGE_ENCODER]._d.initDynamic(
-    BL_OBJECT_TYPE_IMAGE_ENCODER,
-    BLObjectInfo{BL_OBJECT_INFO_IMMUTABLE_FLAG},
-    &defaultEncoder.impl);
+    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_ENCODER), &defaultEncoder.impl);
 }

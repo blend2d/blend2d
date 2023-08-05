@@ -14,7 +14,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! \name BLImage - Private Structs
+//! \name BLImage - Internals - Structs
 //! \{
 
 //! Private implementation that extends \ref BLImageImpl.
@@ -28,43 +28,48 @@ struct BLImagePrivateImpl : public BLImageImpl {
 
 //! \}
 
-//! \name BLImage - Private API
-//! \{
-
 namespace BLImagePrivate {
 
-BL_HIDDEN BLResult freeImpl(BLImagePrivateImpl* impl, BLObjectInfo info) noexcept;
+using BLObjectPrivate::RCMode;
 
-static BL_INLINE BLImagePrivateImpl* getImpl(const BLImageCore* self) noexcept {
+//! \name BLImage - Internals - Common Functionality (Impl)
+//! \{
+
+static BL_INLINE bool isImplMutable(const BLImageImpl* impl) noexcept {
+  return BLObjectPrivate::isImplMutable(impl);
+}
+
+BL_HIDDEN BLResult freeImpl(BLImagePrivateImpl* impl) noexcept;
+
+template<RCMode kRCMode>
+static BL_INLINE BLResult releaseImpl(BLImageImpl* impl) noexcept {
+  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(static_cast<BLImagePrivateImpl*>(impl)) : BLResult(BL_SUCCESS);
+}
+
+//! \}
+
+//! \name BLImage - Internals - Common Functionality (Instance)
+//! \{
+
+static BL_INLINE_NODEBUG BLImagePrivateImpl* getImpl(const BLImageCore* self) noexcept {
   return static_cast<BLImagePrivateImpl*>(self->_d.impl);
 }
 
-static BL_INLINE bool isMutable(const BLImageCore* self) noexcept {
-  const size_t* refCountPtr = blObjectImplGetRefCountPtr(self->_d.impl);
-  return *refCountPtr == 1;
+static BL_INLINE BLResult retainInstance(const BLImageCore* self, size_t n = 1) noexcept {
+  return BLObjectPrivate::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLImageCore* self) noexcept {
-  BLImagePrivateImpl* impl = getImpl(self);
-  BLObjectInfo info = self->_d.info;
-
-  if (info.refCountedFlag() && blObjectImplDecRefAndTest(impl, info))
-    return freeImpl(impl, info);
-
-  return BL_SUCCESS;
+  return releaseImpl<RCMode::kMaybe>(getImpl(self));
 }
 
 static BL_INLINE BLResult replaceInstance(BLImageCore* self, const BLImageCore* other) noexcept {
   BLImagePrivateImpl* impl = getImpl(self);
-  BLObjectInfo info = self->_d.info;
-
   self->_d = other->_d;
-
-  if (info.refCountedFlag() && blObjectImplDecRefAndTest(impl, info))
-    return freeImpl(impl, info);
-
-  return BL_SUCCESS;
+  return releaseImpl<RCMode::kMaybe>(impl);
 }
+
+//! \}
 
 } // {BLImagePrivate}
 

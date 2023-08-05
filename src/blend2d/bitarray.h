@@ -100,7 +100,7 @@ struct BLBitArrayImpl BL_CLASS_INHERITS(BLObjectImpl) {
 #ifdef __cplusplus
 
 //! BitArray container [C++ API].
-class BLBitArray : public BLBitArrayCore {
+class BLBitArray final : public BLBitArrayCore {
 public:
   //! \cond INTERNAL
   //! \name Internals
@@ -108,7 +108,10 @@ public:
 
   enum : uint32_t {
     //! Number of words that can be used by SSO representation.
-    kSSOWordCount = 3
+    kSSOWordCount = 3,
+
+    //! Signature of SSO representation of an empty BitArray.
+    kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_BIT_ARRAY)
   };
 
   BL_INLINE_NODEBUG BLBitArrayImpl* _impl() const noexcept { return static_cast<BLBitArrayImpl*>(_d.impl); }
@@ -120,18 +123,21 @@ public:
   //! \{
 
   BL_INLINE_NODEBUG BLBitArray() noexcept {
-    _d.initStatic(BL_OBJECT_TYPE_BIT_ARRAY);
+    _d.initStatic(BLObjectInfo{kSSOEmptySignature});
   }
 
   BL_INLINE_NODEBUG BLBitArray(BLBitArray&& other) noexcept {
     _d = other._d;
-    other._d.initStatic(BL_OBJECT_TYPE_BIT_ARRAY);
+    other._d.initStatic(BLObjectInfo{kSSOEmptySignature});
   }
 
   BL_INLINE_NODEBUG BLBitArray(const BLBitArray& other) noexcept { blBitArrayInitWeak(this, &other); }
 
   //! Destroys the BitArray.
-  BL_INLINE_NODEBUG ~BLBitArray() noexcept { blBitArrayDestroy(this); }
+  BL_INLINE_NODEBUG ~BLBitArray() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blBitArrayDestroy(this);
+  }
 
   //! \}
 

@@ -70,8 +70,8 @@ public:
   BL_INLINE bool isLinearGradient() const noexcept { return isFetchType(FetchType::kGradientLinearFirst, FetchType::kGradientLinearLast); }
   //! Tests whether the fetch-type is radial gradient.
   BL_INLINE bool isRadialGradient() const noexcept { return isFetchType(FetchType::kGradientRadialFirst, FetchType::kGradientRadialLast); }
-  //! Tests whether the fetch-type is conical gradient.
-  BL_INLINE bool isConicalGradient() const noexcept { return isFetchType(FetchType::kGradientConicalFirst, FetchType::kGradientConicalLast); }
+  //! Tests whether the fetch-type is conic gradient.
+  BL_INLINE bool isConicGradient() const noexcept { return isFetchType(FetchType::kGradientConicFirst, FetchType::kGradientConicLast); }
 
   //! Tests whether the fetch-type is pattern.
   BL_INLINE bool isPattern() const noexcept { return isFetchType(FetchType::kPatternAnyFirst, FetchType::kPatternAnyLast); }

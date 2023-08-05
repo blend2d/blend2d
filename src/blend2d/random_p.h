@@ -7,7 +7,7 @@
 #define BLEND2D_RANDOM_P_H_INCLUDED
 
 #include "random.h"
-#include "simd_p.h"
+#include "simd/simd_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -65,35 +65,34 @@ static BL_INLINE uint32_t nextUInt32(BLRandom* self) noexcept {
   return uint32_t(nextUInt64(self) >> 32);
 }
 
-#ifdef BL_TARGET_OPT_SSE2
+#if defined(BL_TARGET_OPT_SSE2)
 
 //! High-performance SIMD implementation. Better utilizes CPU in 32-bit mode and it's a better candidate for
 //! `blRandomNextDouble()` in general on X86 as it returns a SIMD register, which is easier to convert to `double`
 //! than GP.
-static BL_INLINE __m128i nextUInt64AsI128(BLRandom* self) noexcept {
+static BL_INLINE SIMD::Vec2xU64 nextUInt64AsI128(BLRandom* self) noexcept {
   using namespace SIMD;
 
-  Vec128I x = v_load_i64(&self->data[0]);
-  Vec128I y = v_load_i64(&self->data[1]);
+  Vec2xU64 x = loada_64<Vec2xU64>(&self->data[0]);
+  Vec2xU64 y = loada_64<Vec2xU64>(&self->data[1]);
 
-  x = v_xor(x, v_sll_i64<kStep1Shift>(x));
-  y = v_xor(y, v_srl_i64<kStep3Shift>(y));
-  x = v_xor(x, v_srl_i64<kStep2Shift>(x));
-  x = v_xor(x, y);
-  v_store_i64(&self->data[0], y);
-  v_store_i64(&self->data[1], x);
+  x = x ^ (x << Shift<kStep1Shift>{});
+  y = y ^ (y >> Shift<kStep3Shift>{});
+  x = x ^ (x >> Shift<kStep2Shift>{});
+  x = x ^ y;
 
-  return v_add_i64(x, y);
+  storea_64(&self->data[0], y);
+  storea_64(&self->data[1], x);
+
+  return x + y;
 }
 
 static BL_INLINE double nextDouble(BLRandom* self) noexcept {
   using namespace SIMD;
 
-  Vec128I kExpMsk128 = _mm_set_epi32(0x3FF00000, 0, 0x3FF00000, 0);
-  Vec128I x = nextUInt64AsI128(self);
-  Vec128I y = v_srl_i64<kMantissaShift>(x);
-  Vec128I z = v_or(y, kExpMsk128);
-  return v_get_f64(v_cast<Vec128D>(z)) - 1.0;
+  Vec2xU64 kExpMsk = make128_u64(0x3FF0000000000000u);
+  Vec2xU64 u = (nextUInt64AsI128(self) >> Shift<kMantissaShift>{}) | kExpMsk;
+  return cast_to_f64(u) - 1.0;
 }
 
 #else

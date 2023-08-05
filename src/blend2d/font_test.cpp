@@ -3,12 +3,11 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include "api-build_p.h"
+#include "api-build_test_p.h"
+#if defined(BL_TEST)
 
 // BLFont - Tests
 // ==============
-
-#ifdef BL_TEST
 
 #include "bitset.h"
 #include "font.h"
@@ -18,6 +17,8 @@
 #include "path.h"
 
 #include "../test/resources/abeezee_regular_ttf.h"
+
+namespace BLFontTests {
 
 UNIT(font, BL_TEST_GROUP_TEXT_COMBINED) {
   BLFontData fontData;
@@ -38,4 +39,6 @@ UNIT(font, BL_TEST_GROUP_TEXT_COMBINED) {
   }
 }
 
-#endif
+} // {BLFontTests}
+
+#endif // BL_TEST

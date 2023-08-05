@@ -1226,7 +1226,7 @@ HorzLeftToRightInside:
 
   //! Fill bits between `first` and `last` (inclusive) in a bit-vector starting at `bitPtr`.
   template<uint32_t OPTIONS, typename X>
-  BL_INLINE void bitFill(BLBitWord* bitPtr, X first, X last) const noexcept {
+  BL_INLINE BL_FLATTEN void bitFill(BLBitWord* bitPtr, X first, X last) const noexcept {
     typedef typename std::make_unsigned<X>::type U;
 
     BL_ASSERT(first <= last);
@@ -1246,6 +1246,8 @@ HorzLeftToRightInside:
       if (idxCur != idxEnd) {
         bitPtr[idxCur] |= mask;
         mask = BitOps::ones();
+
+        BL_NOUNROLL
         while (++idxCur != idxEnd)
           bitPtr[idxCur] = mask;
       }

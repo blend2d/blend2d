@@ -242,7 +242,7 @@ struct U32_8888 {
   }
 
   BL_INLINE Unpacked div255() const noexcept {
-    return ((*this + ((*this >> 8) & Repeat{0xFFu})) >> 8) & Repeat{0xFFu};
+    return ((*this + ((*this >> 8) & Repeat{0xFFu}) + Repeat{0x80u}) >> 8) & Repeat{0xFFu};
   }
 
   BL_INLINE Unpacked div256() const noexcept {

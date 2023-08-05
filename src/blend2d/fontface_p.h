@@ -49,7 +49,7 @@ struct BLFontFacePrivateFuncs {
   BLResult (BL_CDECL* getGlyphOutlines)(
     const BLFontFaceImpl* impl,
     BLGlyphId glyphId,
-    const BLMatrix2D* userMatrix,
+    const BLMatrix2D* userTransform,
     BLPath* out,
     size_t* contourCountOut,
     BLScopedBuffer* tmpBuffer) BL_NOEXCEPT;
@@ -90,10 +90,14 @@ struct BLFontFacePrivateImpl : public BLFontFaceImpl {
   BLFontTagData::VariationTagSet variationTagSet;
 };
 
+namespace BLFontFacePrivate {
+
 template<typename T = BLFontFacePrivateImpl>
-static BL_INLINE T* blFontFaceGetImpl(const BLFontFaceCore* self) noexcept {
+static BL_INLINE T* getImpl(const BLFontFaceCore* self) noexcept {
   return static_cast<T*>(static_cast<BLFontFacePrivateImpl*>(self->_d.impl));
 }
+
+} // {BLFontFacePrivate}
 
 static BL_INLINE void blFontFaceImplCtor(BLFontFacePrivateImpl* impl, BLFontFaceVirt* virt, BLFontFacePrivateFuncs& funcs) noexcept {
   impl->virt = virt;

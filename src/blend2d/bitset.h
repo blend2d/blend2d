@@ -47,26 +47,26 @@ struct BLBitSetSegment {
   uint32_t _data[BL_BIT_SET_SEGMENT_WORD_COUNT];
 
 #ifdef __cplusplus
-  BL_INLINE bool allOnes() const noexcept { return (_startWord & BL_BIT_SET_RANGE_MASK) != 0; }
-  BL_INLINE void clearData() noexcept { memset(_data, 0, sizeof(_data)); }
-  BL_INLINE void fillData() noexcept { memset(_data, 0xFF, sizeof(_data)); }
+  BL_INLINE_NODEBUG bool allOnes() const noexcept { return (_startWord & BL_BIT_SET_RANGE_MASK) != 0; }
+  BL_INLINE_NODEBUG void clearData() noexcept { memset(_data, 0, sizeof(_data)); }
+  BL_INLINE_NODEBUG void fillData() noexcept { memset(_data, 0xFF, sizeof(_data)); }
 
-  BL_INLINE uint32_t* data() noexcept { return _data; }
-  BL_INLINE const uint32_t* data() const noexcept { return _data; }
-  BL_INLINE uint32_t wordAt(size_t index) const noexcept { return _data[index]; }
+  BL_INLINE_NODEBUG uint32_t* data() noexcept { return _data; }
+  BL_INLINE_NODEBUG const uint32_t* data() const noexcept { return _data; }
+  BL_INLINE_NODEBUG uint32_t wordAt(size_t index) const noexcept { return _data[index]; }
 
-  BL_INLINE uint32_t _rangeStartWord() const noexcept { return _startWord & ~BL_BIT_SET_RANGE_MASK; }
-  BL_INLINE uint32_t _rangeEndWord() const noexcept { return _data[0]; }
+  BL_INLINE_NODEBUG uint32_t _rangeStartWord() const noexcept { return _startWord & ~BL_BIT_SET_RANGE_MASK; }
+  BL_INLINE_NODEBUG uint32_t _rangeEndWord() const noexcept { return _data[0]; }
 
-  BL_INLINE uint32_t _denseStartWord() const noexcept { return _startWord; }
-  BL_INLINE uint32_t _denseEndWord() const noexcept { return _startWord + BL_BIT_SET_SEGMENT_WORD_COUNT; }
+  BL_INLINE_NODEBUG uint32_t _denseStartWord() const noexcept { return _startWord; }
+  BL_INLINE_NODEBUG uint32_t _denseEndWord() const noexcept { return _startWord + BL_BIT_SET_SEGMENT_WORD_COUNT; }
 
-  BL_INLINE void _setRangeStartWord(uint32_t index) noexcept { _startWord = index; }
-  BL_INLINE void _setRangeEndWord(uint32_t index) noexcept { _data[0] = index; }
+  BL_INLINE_NODEBUG void _setRangeStartWord(uint32_t index) noexcept { _startWord = index; }
+  BL_INLINE_NODEBUG void _setRangeEndWord(uint32_t index) noexcept { _data[0] = index; }
 
-  BL_INLINE uint32_t startWord() const noexcept { return _startWord & ~BL_BIT_SET_RANGE_MASK; }
-  BL_INLINE uint32_t startSegmentId() const noexcept { return startWord() / BL_BIT_SET_SEGMENT_WORD_COUNT; }
-  BL_INLINE uint32_t startBit() const noexcept { return _startWord * 32u; }
+  BL_INLINE_NODEBUG uint32_t startWord() const noexcept { return _startWord & ~BL_BIT_SET_RANGE_MASK; }
+  BL_INLINE_NODEBUG uint32_t startSegmentId() const noexcept { return startWord() / BL_BIT_SET_SEGMENT_WORD_COUNT; }
+  BL_INLINE_NODEBUG uint32_t startBit() const noexcept { return _startWord * 32u; }
 
   BL_INLINE uint32_t endWord() const noexcept {
     uint32_t rangeEnd = _rangeEndWord();
@@ -74,8 +74,8 @@ struct BLBitSetSegment {
     return allOnes() ? rangeEnd : denseEnd;
   }
 
-  BL_INLINE uint32_t endSegmentId() const noexcept { return endWord() / BL_BIT_SET_SEGMENT_WORD_COUNT; }
-  BL_INLINE uint32_t lastBit() const noexcept { return endWord() * 32u - 1u; }
+  BL_INLINE_NODEBUG uint32_t endSegmentId() const noexcept { return endWord() / BL_BIT_SET_SEGMENT_WORD_COUNT; }
+  BL_INLINE_NODEBUG uint32_t lastBit() const noexcept { return endWord() * 32u - 1u; }
 #endif
 };
 
@@ -86,7 +86,7 @@ struct BLBitSetData {
   BLBitSetSegment ssoSegments[3];
 
 #ifdef __cplusplus
-  BL_INLINE bool empty() const noexcept {
+  BL_INLINE_NODEBUG bool empty() const noexcept {
     return segmentCount == 0;
   }
 
@@ -171,8 +171,8 @@ struct BLBitSetBuilderCore {
     kInvalidAreaIndex = 0xFFFFFFFFu
   };
 
-  BL_INLINE uint32_t* areaWords() noexcept { return reinterpret_cast<uint32_t*>(this + 1); }
-  BL_INLINE const uint32_t* areaWords() const noexcept { return reinterpret_cast<const uint32_t*>(this + 1); }
+  BL_INLINE_NODEBUG uint32_t* areaWords() noexcept { return reinterpret_cast<uint32_t*>(this + 1); }
+  BL_INLINE_NODEBUG const uint32_t* areaWords() const noexcept { return reinterpret_cast<const uint32_t*>(this + 1); }
 #endif
 };
 
@@ -190,8 +190,8 @@ struct BLBitSetImpl BL_CLASS_INHERITS(BLObjectImpl) {
   uint32_t segmentCapacity;
 
 #ifdef __cplusplus
-  BL_INLINE BLBitSetSegment* segmentData() const noexcept { return (BLBitSetSegment*)(this + 1); }
-  BL_INLINE BLBitSetSegment* segmentDataEnd() const noexcept { return segmentData() + segmentCount; }
+  BL_INLINE_NODEBUG BLBitSetSegment* segmentData() const noexcept { return (BLBitSetSegment*)(this + 1); }
+  BL_INLINE_NODEBUG BLBitSetSegment* segmentDataEnd() const noexcept { return segmentData() + segmentCount; }
 #endif
 };
 
@@ -206,34 +206,34 @@ struct BLBitSetImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //!
 //! BitSet container implements sparse BitSet that consists of segments, where each segment represents either dense
 //! range of bits or a range of bits that are all set to one. In addition, the BitSet provides also a SSO mode, in
-//! which it's possible to store 96 dense bits (3 consecutive BitWords) in the whole addresable range or a range of
-//! ones. SSO mode optimizes use cases, in which very small BitSets are used (typically in OpenType pipeline).
+//! which it's possible to store up to 64 dense bits (2 consecutive BitWords) in the whole addressable range or a
+//! range of ones. SSO mode optimizes use cases, in which very small BitSets are needed.
 //!
 //! The BitSet itself has been optimized for Blend2D use cases, which are the following:
 //!
 //!   1. Representing character coverage of fonts and unicode text. This use-case requires sparseness and ranges as
-//!      some fonts, especially those designed for Chinese/Japan languages, provide thousands of glyphs that have
-//!      pretty high code points - using a simple BitVector would be pretty wasteful in this case.
-//!
-//!   2. Storing OpenType processing instructions, where each bit represents one operation in the OpenType pipeline.
-//!      SSO BitSet will be most likely enough to describe this as most fonts have less than 96 GPOS/GSUB instructions.
-//!
-class BLBitSet : public BLBitSetCore {
+//!      some fonts, especially those designed for CJK use, provide thousands of glyphs that have pretty high code
+//!      points - using BLBitArray would be very wasteful in this particular case.
+class BLBitSet final : public BLBitSetCore {
 public:
   //! \cond INTERNAL
   //! \name Internals
   //! \{
 
   enum : uint32_t {
-    //! Number of words that can be used by SSO dense representation.
-    kSSOWordCount = 3,
-    //! Mask in BLObjectInfo that represents a word index of a dense SSO BitSet (27 bits).
-    kSSOIndexMask = 0xFFFFFFFFu / 32u,
-    //! Word index that describes a SSO range instead of SSE dense data, only used by BitSet in SSO mode.
-    kSSORangeIndex = 0xFFFFFFFFu >> 5
+    //! Number of words that can be used by SSO dense representation (2 words => 64 bits).
+    kSSOWordCount = 2,
+    kSSODenseSignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_BIT_SET),
+    kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_BIT_SET) | BL_OBJECT_INFO_R_FLAG
   };
 
   BL_INLINE_NODEBUG BLBitSetImpl* _impl() const noexcept { return static_cast<BLBitSetImpl*>(_d.impl); }
+
+  BL_INLINE_NODEBUG void _initRangeInternal(uint32_t startBit = 0u, uint32_t endBit = 0u) noexcept {
+    _d.initStatic(BLObjectInfo{kSSOEmptySignature});
+    _d.u32_data[0] = startBit;
+    _d.u32_data[1] = endBit;
+  }
 
   //! \}
   //! \endcond
@@ -241,29 +241,25 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLBitSet() noexcept {
-    _d.initStatic(BL_OBJECT_TYPE_BIT_SET, BLObjectInfo{kSSORangeIndex});
-  }
+  BL_INLINE BLBitSet() noexcept { _initRangeInternal(); }
 
   BL_INLINE BLBitSet(BLBitSet&& other) noexcept {
     _d = other._d;
-    other._d.initStatic(BL_OBJECT_TYPE_BIT_SET, BLObjectInfo{kSSORangeIndex});
+    other._initRangeInternal();
   }
 
   BL_INLINE BLBitSet(const BLBitSet& other) noexcept { blBitSetInitWeak(this, &other); }
 
   BL_INLINE BLBitSet(uint32_t startBit, uint32_t endBit) noexcept {
-    // Inlined call to `blBitSetInitRange()`.
-    _d.initStatic(BL_OBJECT_TYPE_BIT_SET, BLObjectInfo{kSSORangeIndex});
-
-    // Stores an empty range [0, 0) if start/end bits are invalid.
     uint32_t mask = uint32_t(-int32_t(startBit < endBit));
-    _d.u32_data[0] = startBit & mask;
-    _d.u32_data[1] = endBit & mask;
+    _initRangeInternal(startBit & mask, endBit & mask);
   }
 
   //! Destroys the BitSet.
-  BL_INLINE ~BLBitSet() noexcept { blBitSetDestroy(this); }
+  BL_INLINE ~BLBitSet() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blBitSetDestroy(this);
+  }
 
   //! \}
 
@@ -447,7 +443,7 @@ public:
 //!
 //! \note The destructor doesn't do anything. If there are still bits to be committed, they will be lost.
 template<uint32_t BitCount>
-class BLBitSetBuilderT : public BLBitSetBuilderCore {
+class BLBitSetBuilderT final : public BLBitSetBuilderCore {
 public:
   static_assert(BitCount >= 128, "BitCount must be at least 128");
   static_assert((BitCount & (BitCount - 1)) == 0, "BitCount must be a power of 2");
@@ -547,7 +543,7 @@ public:
   //! If the range is relatively small and fits into a single builder area, it will be added to that area.
   //! On the other hand, if the range is large, the area will be kept and the builder would call \ref
   //! BLBitSet::addRange() instead. If the are of the range is different compared to the current active area,
-  //! the data in the current acive area will be committed.
+  //! the data in the current active area will be committed.
   BL_INLINE BLResult addRange(uint32_t startBit, uint32_t endBit) noexcept {
     return blBitSetBuilderAddRange(_bitSet, this, startBit, endBit);
   }
@@ -588,7 +584,7 @@ using BLBitSetBuilder = BLBitSetBuilderT<512>;
 //!   printf("{WordIndex: %u, WordData: %08X }\n", it.wordIndex(), bits);
 //! }
 //! ```
-class BLBitSetWordIterator {
+class BLBitSetWordIterator final {
 public:
   //! \name Members
   //! \{

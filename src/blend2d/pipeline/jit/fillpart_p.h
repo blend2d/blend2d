@@ -70,13 +70,6 @@ public:
   void compile() noexcept override;
 };
 
-class FillBoxUPart final : public FillPart {
-public:
-  FillBoxUPart(PipeCompiler* pc, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept;
-
-  void compile() noexcept override;
-};
-
 class FillMaskPart final : public FillPart {
 public:
   FillMaskPart(PipeCompiler* pc, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept;

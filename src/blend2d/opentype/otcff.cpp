@@ -8,16 +8,15 @@
 #include "../geometry_p.h"
 #include "../matrix_p.h"
 #include "../path_p.h"
-#include "../tables_p.h"
 #include "../trace_p.h"
 #include "../opentype/otcff_p.h"
 #include "../opentype/otface_p.h"
 #include "../support/memops_p.h"
 #include "../support/intops_p.h"
+#include "../support/lookuptable_p.h"
 #include "../support/ptrops_p.h"
 #include "../support/scopedbuffer_p.h"
 #include "../support/traits_p.h"
-
 
 namespace BLOpenType {
 namespace CFFImpl {
@@ -86,12 +85,7 @@ static BL_INLINE void readOffsetArray(const T* p, size_t offsetSize, uint32_t* o
   }
 }
 
-// Read a CFF floating point value as specified by the CFF specification. The format is binary, but it's just
-// a simplified text representation in the end.
-//
-// Each byte is divided into 2 nibbles (4 bits), which are accessed separately. Each nibble contains either a
-// decimal value (0..9), decimal point, or other instructions which meaning is described by `NibbleAbove9` enum.
-static BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size_t& valueSizeInBytes) noexcept {
+BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size_t& valueSizeInBytes) noexcept {
   // Maximum digits that we would attempt to read, excluding leading zeros.
   enum : uint32_t { kSafeDigits = 15 };
 
@@ -219,50 +213,6 @@ struct Index {
     BL_ASSERT(index <= count);
     return readOffset(offsets + index * offsetSize, offsetSize) - CFFTable::kOffsetAdjustment;
   }
-};
-
-// BLOpenType::CFFImpl - DictEntry
-// ===============================
-
-struct DictEntry {
-  enum : uint32_t { kValueCapacity = 48 };
-
-  uint32_t op;
-  uint32_t count;
-  uint64_t fpMask;
-  double values[kValueCapacity];
-
-  BL_INLINE bool isFpValue(uint32_t index) const noexcept {
-    return (fpMask & (uint64_t(1) << index)) != 0;
-  }
-};
-
-// BLOpenType::CFFImpl - DictIterator
-// ==================================
-
-class DictIterator {
-public:
-  const uint8_t* _dataPtr;
-  const uint8_t* _dataEnd;
-
-  BL_INLINE DictIterator() noexcept
-    : _dataPtr(nullptr),
-      _dataEnd(nullptr) {}
-
-  BL_INLINE DictIterator(const uint8_t* data, size_t size) noexcept
-    : _dataPtr(data),
-      _dataEnd(data + size) {}
-
-  BL_INLINE void reset(const uint8_t* data, size_t size) noexcept {
-    _dataPtr = data;
-    _dataEnd = data + size;
-  }
-
-  BL_INLINE bool hasNext() const noexcept {
-    return _dataPtr != _dataEnd;
-  }
-
-  BLResult next(DictEntry& entry) noexcept;
 };
 
 // BLOpenType::CFFImpl - ReadIndex
@@ -841,7 +791,7 @@ template<typename Consumer>
 static BLResult getGlyphOutlinesT(
   const BLFontFaceImpl* faceI_,
   BLGlyphId glyphId,
-  const BLMatrix2D* matrix,
+  const BLMatrix2D* transform,
   Consumer& consumer,
   BLScopedBuffer* tmpBuffer) noexcept {
 
@@ -875,8 +825,8 @@ static BLResult getGlyphOutlinesT(
   uint32_t executionFlags = 0;                // Execution status flags.
   uint32_t vMinOperands = 0;                  // Minimum operands the current opcode requires (updated per opcode).
 
-  double px = matrix->m20;                    // Current X coordinate.
-  double py = matrix->m21;                    // Current Y coordinate.
+  double px = transform->m20;                 // Current X coordinate.
+  double py = transform->m21;                 // Current Y coordinate.
 
   const CFFData& cffInfo = faceI->cff;
   const uint8_t* cffData = faceI->cff.table.data;
@@ -937,7 +887,7 @@ static BLResult getGlyphOutlinesT(
   }
 
   // Compiler can better optimize the transform if it knows that it won't be changed outside of this function.
-  Matrix2x2 m { matrix->m00, matrix->m01, matrix->m10, matrix->m11 };
+  Matrix2x2 m { transform->m00, transform->m01, transform->m10, transform->m11 };
 
   // Program | SubR - Init
   // ---------------------
@@ -1960,7 +1910,7 @@ public:
 
   BL_INLINE void close() noexcept {}
 
-  // We calculate extremas here as the code may expand a bit and inlining everything doesn't bring any benefits in
+  // We calculate extrema here as the code may expand a bit and inlining everything doesn't bring any benefits in
   // such case, because most control points in fonts are within the bounding box defined by start/end points anyway.
   //
   // Making these two functions no-inline saves around 8kB.
@@ -1972,11 +1922,11 @@ public:
 
   BL_NOINLINE void mergeCubicExtrema(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
     BLPoint cubic[4] { { cx, cy }, { x1, y1 }, { x2, y2 }, { x3, y3 } };
-    BLPoint extremas[2];
+    BLPoint extrema[2];
 
-    BLGeometry::getCubicExtremaPoints(cubic, extremas);
-    BLGeometry::bound(bounds, extremas[0]);
-    BLGeometry::bound(bounds, extremas[1]);
+    BLGeometry::getCubicExtremaPoints(cubic, extrema);
+    BLGeometry::bound(bounds, extrema[0]);
+    BLGeometry::bound(bounds, extrema[1]);
   }
 };
 
@@ -1990,18 +1940,16 @@ static BLResult BL_CDECL getGlyphBounds(
   size_t count) noexcept {
 
   BLResult result = BL_SUCCESS;
-  BLMatrix2D m;
+  BLMatrix2D transform = BLMatrix2D::makeIdentity();
 
   BLScopedBufferTmp<1024> tmpBuffer;
   GlyphBoundsConsumer consumer;
-
-  m.reset();
 
   for (size_t i = 0; i < count; i++) {
     BLGlyphId glyphId = glyphData[0];
     glyphData = BLPtrOps::offset(glyphData, glyphAdvance);
 
-    BLResult localResult = getGlyphOutlinesT<GlyphBoundsConsumer>(faceI_, glyphId, &m, consumer, &tmpBuffer);
+    BLResult localResult = getGlyphOutlinesT<GlyphBoundsConsumer>(faceI_, glyphId, &transform, consumer, &tmpBuffer);
     if (localResult) {
       boxes[i].reset();
       result = localResult;
@@ -2075,13 +2023,13 @@ public:
 static BLResult BL_CDECL getGlyphOutlines(
   const BLFontFaceImpl* faceI_,
   BLGlyphId glyphId,
-  const BLMatrix2D* matrix,
+  const BLMatrix2D* transform,
   BLPath* out,
   size_t* contourCountOut,
   BLScopedBuffer* tmpBuffer) noexcept {
 
   GlyphOutlineConsumer consumer(out);
-  BLResult result = getGlyphOutlinesT<GlyphOutlineConsumer>(faceI_, glyphId, matrix, consumer, tmpBuffer);
+  BLResult result = getGlyphOutlinesT<GlyphOutlineConsumer>(faceI_, glyphId, transform, consumer, tmpBuffer);
 
   *contourCountOut = consumer.contourCount;
   return result;
@@ -2454,136 +2402,6 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
   faceI->funcs.getGlyphOutlines = getGlyphOutlines;
   return BL_SUCCESS;
 };
-
-// BLOpenType::CFFImpl - Tests
-// ===========================
-
-#ifdef BL_TEST
-static void testReadFloat() noexcept {
-  struct TestEntry {
-    char data[16];
-    uint32_t size;
-    uint32_t pass;
-    double value;
-  };
-
-  const double kTolerance = 1e-9;
-
-  static const TestEntry entries[] = {
-    #define PASS_ENTRY(DATA, VAL) { DATA, sizeof(DATA) - 1, 1, VAL }
-    #define FAIL_ENTRY(DATA)      { DATA, sizeof(DATA) - 1, 0, 0.0 }
-
-    PASS_ENTRY("\xE2\xA2\x5F"            ,-2.25       ),
-    PASS_ENTRY("\x0A\x14\x05\x41\xC3\xFF", 0.140541e-3),
-    PASS_ENTRY("\x0F"                    , 0          ),
-    PASS_ENTRY("\x00\x0F"                , 0          ),
-    PASS_ENTRY("\x00\x0A\x1F"            , 0.1        ),
-    PASS_ENTRY("\x1F"                    , 1          ),
-    PASS_ENTRY("\x10\x00\x0F"            , 10000      ),
-    PASS_ENTRY("\x12\x34\x5F"            , 12345      ),
-    PASS_ENTRY("\x12\x34\x5A\xFF"        , 12345      ),
-    PASS_ENTRY("\x12\x34\x5A\x00\xFF"    , 12345      ),
-    PASS_ENTRY("\x12\x34\x5A\x67\x89\xFF", 12345.6789 ),
-    PASS_ENTRY("\xA1\x23\x45\x67\x89\xFF", .123456789 ),
-
-    FAIL_ENTRY(""),
-    FAIL_ENTRY("\xA2"),
-    FAIL_ENTRY("\x0A\x14"),
-    FAIL_ENTRY("\x0A\x14\x05"),
-    FAIL_ENTRY("\x0A\x14\x05\x51"),
-    FAIL_ENTRY("\x00\x0A\x1A\xFF"),
-    FAIL_ENTRY("\x0A\x14\x05\x51\xC3")
-
-    #undef PASS_ENTRY
-    #undef FAIL_ENTRY
-  };
-
-  for (size_t i = 0; i < BL_ARRAY_SIZE(entries); i++) {
-    const TestEntry& entry = entries[i];
-    double valueOut = 0.0;
-    size_t valueSizeInBytes = 0;
-
-    BLResult result = readFloat(
-      reinterpret_cast<const uint8_t*>(entry.data),
-      reinterpret_cast<const uint8_t*>(entry.data) + entry.size,
-      valueOut,
-      valueSizeInBytes);
-
-    if (entry.pass) {
-      double a = valueOut;
-      double b = entry.value;
-
-      EXPECT_SUCCESS(result)
-        .message("Entry %zu should have passed {Error=%08X}", i, unsigned(result));
-
-      EXPECT_LE(blAbs(a - b), kTolerance)
-        .message("Entry %zu returned value '%g' which doesn't match the expected value '%g'", i, a, b);
-    }
-    else {
-      EXPECT_NE(result, BL_SUCCESS)
-        .message("Entry %zu should have failed", i);
-    }
-  }
-}
-
-static void testDictIterator() noexcept {
-  // This example dump was taken from "The Compact Font Format Specification" Appendix D.
-  static const uint8_t dump[] = {
-    0xF8, 0x1B, 0x00, 0xF8, 0x1C, 0x02, 0xF8, 0x1D, 0x03, 0xF8,
-    0x19, 0x04, 0x1C, 0x6F, 0x00, 0x0D, 0xFB, 0x3C, 0xFB, 0x6E,
-    0xFA, 0x7C, 0xFA, 0x16, 0x05, 0xE9, 0x11, 0xB8, 0xF1, 0x12
-  };
-
-  struct TestEntry {
-    uint32_t op;
-    uint32_t count;
-    double values[4];
-  };
-
-  static const TestEntry testEntries[] = {
-    { CFFTable::kDictOpTopVersion    , 1, { 391                   } },
-    { CFFTable::kDictOpTopFullName   , 1, { 392                   } },
-    { CFFTable::kDictOpTopFamilyName , 1, { 393                   } },
-    { CFFTable::kDictOpTopWeight     , 1, { 389                   } },
-    { CFFTable::kDictOpTopUniqueId   , 1, { 28416                 } },
-    { CFFTable::kDictOpTopFontBBox   , 4, { -168, -218, 1000, 898 } },
-    { CFFTable::kDictOpTopCharStrings, 1, { 94                    } },
-    { CFFTable::kDictOpTopPrivate    , 2, { 45, 102               } }
-  };
-
-  uint32_t index = 0;
-  DictIterator iter(dump, BL_ARRAY_SIZE(dump));
-
-  while (iter.hasNext()) {
-    EXPECT_LT(index, BL_ARRAY_SIZE(testEntries))
-      .message("DictIterator found more entries than the data contains");
-
-    DictEntry entry;
-    EXPECT_EQ(iter.next(entry), BL_SUCCESS)
-      .message("DictIterator failed to read entry #%u", index);
-
-    EXPECT_EQ(entry.count, testEntries[index].count)
-      .message("DictIterator failed to read entry #%u properly {entry.count == 0}", index);
-
-    for (uint32_t j = 0; j < entry.count; j++) {
-      EXPECT_EQ(entry.values[j], testEntries[index].values[j])
-        .message("DictIterator failed to read entry #%u properly {entry.values[%u] (%f) != %f)", index, j, entry.values[j], testEntries[index].values[j]);
-    }
-    index++;
-  }
-
-  EXPECT_EQ(index, BL_ARRAY_SIZE(testEntries))
-    .message("DictIterator must iterate over all entries, only %u of %u iterated", index, unsigned(BL_ARRAY_SIZE(testEntries)));
-}
-
-UNIT(opentype_cff, BL_TEST_GROUP_TEXT_OPENTYPE) {
-  INFO("BLOpenType::CFFImpl::readFloat()");
-  testReadFloat();
-
-  INFO("BLOpenType::CFFImpl::DictIterator");
-  testDictIterator();
-}
-#endif
 
 } // {CFFImpl}
 } // {BLOpenType}

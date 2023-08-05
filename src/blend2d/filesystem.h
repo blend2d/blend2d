@@ -182,7 +182,7 @@ BL_END_C_DECLS
 //!
 //! A thin wrapper around a native OS file support. The file handle is always `intptr_t` and it refers to either
 //! a file descriptor on POSIX targets and file handle on Windows targets.
-class BLFile : public BLFileCore {
+class BLFile final : public BLFileCore {
 public:
   // Prevent copy-constructor and copy-assignment.
   BL_INLINE_NODEBUG BLFile(const BLFile& other) noexcept = delete;

@@ -20,19 +20,19 @@ namespace {
 
 template<typename T, typename Offset>
 BL_NODISCARD
-static BL_INLINE T* offset(T* ptr, Offset offset) noexcept { return (T*)((uintptr_t)(ptr) + (uintptr_t)(intptr_t)offset); }
+static BL_INLINE_NODEBUG T* offset(T* ptr, Offset offset) noexcept { return (T*)((uintptr_t)(ptr) + (uintptr_t)(intptr_t)offset); }
 
 template<typename T, typename P, typename Offset>
 BL_NODISCARD
-static BL_INLINE T* offset(P* ptr, Offset offset) noexcept { return (T*)((uintptr_t)(ptr) + (uintptr_t)(intptr_t)offset); }
+static BL_INLINE_NODEBUG T* offset(P* ptr, Offset offset) noexcept { return (T*)((uintptr_t)(ptr) + (uintptr_t)(intptr_t)offset); }
 
 template<typename T, typename Offset>
 BL_NODISCARD
-static BL_INLINE T* deoffset(T* ptr, Offset offset) noexcept { return (T*)((uintptr_t)(ptr) - (uintptr_t)(intptr_t)offset); }
+static BL_INLINE_NODEBUG T* deoffset(T* ptr, Offset offset) noexcept { return (T*)((uintptr_t)(ptr) - (uintptr_t)(intptr_t)offset); }
 
 template<typename T, typename P, typename Offset>
 BL_NODISCARD
-static BL_INLINE T* deoffset(P* ptr, Offset offset) noexcept { return (T*)((uintptr_t)(ptr) - (uintptr_t)(intptr_t)offset); }
+static BL_INLINE_NODEBUG T* deoffset(P* ptr, Offset offset) noexcept { return (T*)((uintptr_t)(ptr) - (uintptr_t)(intptr_t)offset); }
 
 //! \}
 

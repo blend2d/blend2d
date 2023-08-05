@@ -157,15 +157,22 @@ struct FetchPatternVertAAExtendCtxAny {
   intptr_t _yStop0;
   intptr_t _yStop1;
 
+  uintptr_t _yRewindOffset;
+  intptr_t _pixelPtrRewindOffset;
+
   intptr_t _y;
 
   BL_INLINE void init(const FetchData::Pattern* pattern, uint32_t yPos) noexcept {
     _pixelPtr = static_cast<const uint8_t*>(pattern->src.pixelData);
+
     _stride0 = pattern->src.stride;
     _stride1 = _stride0;
 
     _yStop0 = intptr_t(pattern->src.size.h);
     _yStop1 = _yStop0;
+
+    _yRewindOffset = pattern->simple.vExtendData.yRewindOffset;
+    _pixelPtrRewindOffset = pattern->simple.vExtendData.pixelPtrRewindOffset;
 
     _y = intptr_t(yPos) + intptr_t(pattern->simple.ty);
 
@@ -179,7 +186,7 @@ struct FetchPatternVertAAExtendCtxAny {
 
       if (_y != clampedY) {
         // The current Y is padded at the moment so we have to setup stride0 and yStop0. If we are
-        // padded before the first scanline, then we may hit yStop0 at some point and then go unpaded
+        // padded before the first scanline, then we may hit yStop0 at some point and then go non-padded
         // for a while, otherwise, if we are padded past the last scanline we would stay there forever.
         _stride0 = 0;
         _yStop0 = 0;
@@ -195,7 +202,7 @@ struct FetchPatternVertAAExtendCtxAny {
       // Vertical Extend - Repeat or Reflect
       // -----------------------------------
 
-      _y = BLIntOps::pmod(uintptr_t(_y), uintptr_t(ry));
+      _y = BLIntOps::pmod(uint32_t(_y), uint32_t(ry));
 
       // If reflecting, we need few additional checks to reflect vertically. We are either reflecting now
       // (the first check) or we would be reflecting after the initial repeat (the second condition).
@@ -214,16 +221,11 @@ struct FetchPatternVertAAExtendCtxAny {
 
   BL_INLINE void advance1() noexcept {
     if (++_y == _yStop0) {
-      const uint8_t* repeatedPtr = _pixelPtr - (_yStop0 - 1) * _stride0;
-
       std::swap(_yStop0, _yStop1);
       std::swap(_stride0, _stride1);
 
-      if ((_stride0 & _stride1) != 0)
-        _y = 0;
-
-      if (_stride0 == _stride1)
-        _pixelPtr = repeatedPtr;
+      _y -= _yRewindOffset;
+      _pixelPtr -= _pixelPtrRewindOffset;
     }
     else {
       _pixelPtr += _stride0;
@@ -1052,32 +1054,34 @@ struct FetchRadialGradientPad : public FetchRadialGradient<PixelT, true> {};
 template<typename PixelT>
 struct FetchRadialGradientRoR : public FetchRadialGradient<PixelT, false> {};
 
-// Fetch - Gradient - Conical
-// ==========================
+// Fetch - Gradient - Conic
+// ========================
 
 template<typename PixelT>
-struct FetchConicalGradient : public FetchGradientBase {
+struct FetchConicGradient : public FetchGradientBase {
   typedef PixelT PixelType;
 
-  Vec2D xx_xy;
+  double xx;
   Vec2D yx_yy;
 
   Vec2D hx_hy;
   Vec2D px_py;
 
-  const BLCommonTable::Conical* consts;
+  const BLCommonTable::Conic* consts;
+  float angleOffset;
   int maxi;
 
   BL_INLINE void _initFetch(const void* fetchData) noexcept {
     const FetchData::Gradient* gradient = static_cast<const FetchData::Gradient*>(fetchData);
     _table = gradient->lut.data;
 
-    const FetchData::Gradient::Conical& conical = gradient->conical;
-    xx_xy = Vec2D{conical.xx, conical.xy};
-    yx_yy = Vec2D{conical.yx, conical.yy};
-    hx_hy = Vec2D{conical.ox, conical.oy};
-    consts = conical.consts;
-    maxi = conical.maxi;
+    const FetchData::Gradient::Conic& conic = gradient->conic;
+    xx = conic.xx;
+    yx_yy = Vec2D{conic.yx, conic.yy};
+    hx_hy = Vec2D{conic.ox, conic.oy};
+    consts = conic.consts;
+    angleOffset = conic.offset;
+    maxi = conic.maxi;
   }
 
   BL_INLINE void rectInitFetch(const void* fetchData, uint32_t x, uint32_t y, uint32_t width) noexcept {
@@ -1085,7 +1089,7 @@ struct FetchConicalGradient : public FetchGradientBase {
 
     _initFetch(fetchData);
     Vec2D pt = Vec2D{double(int32_t(x)), double(int32_t(y))};
-    hx_hy = hx_hy + pt.y * yx_yy + pt.x * xx_xy;
+    hx_hy += pt.y * yx_yy + Vec2D{pt.x * xx, 0.0};
   }
 
   BL_INLINE void rectStartX(uint32_t xPos) noexcept {
@@ -1099,12 +1103,13 @@ struct FetchConicalGradient : public FetchGradientBase {
   }
 
   BL_INLINE void spanStartX(uint32_t xPos) noexcept {
-    px_py = hx_hy + double(int32_t(xPos)) * xx_xy;
+    px_py = hx_hy;
+    px_py.x += double(int32_t(xPos)) * xx;
   }
 
   BL_INLINE void spanAdvanceX(uint32_t xPos, uint32_t xDiff) noexcept {
     blUnused(xDiff);
-    px_py = hx_hy + double(int32_t(xPos)) * xx_xy;
+    px_py.x += double(int32_t(xPos)) * xx;
   }
 
   BL_INLINE void spanEndX(uint32_t xPos) noexcept {
@@ -1119,9 +1124,9 @@ struct FetchConicalGradient : public FetchGradientBase {
     Vec2F pt = Vec2F{float(px_py.x), float(px_py.y)};
     Vec2F x1 = v_abs(pt);
 
-    px_py += xx_xy;
+    px_py.x += xx;
 
-    float x2 = blMax(x1.x, x1.y, 1e-20f);
+    float x2 = blMax(x1.x, x1.y);
     float x3 = blMin(x1.x, x1.y);
 
     float s = bitAnd(blBitCast<float>(BLIntOps::bitMaskFromBool<uint32_t>(x1.x == x3)), consts->n_div_4[0]);
@@ -1136,7 +1141,7 @@ struct FetchConicalGradient : public FetchGradientBase {
 
     x2 = blAbs(x2 * x3 - s);
     x2 = blAbs(x2 - pt.x);
-    x2 = blAbs(x2 - pt.y);
+    x2 = blAbs(x2 - pt.y) + angleOffset;
 
     uint32_t idx = uint32_t(int(x2)) & uint32_t(maxi);
     return PixelIO<PixelType, BLInternalFormat::kPRGB32>::fetch(static_cast<const uint32_t*>(_table) + idx);

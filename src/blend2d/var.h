@@ -71,6 +71,9 @@ BL_API bool BL_CDECL blVarEqualsBool(const BLUnknown* self, bool value) BL_NOEXC
 BL_API bool BL_CDECL blVarEqualsInt64(const BLUnknown* self, int64_t value) BL_NOEXCEPT_C BL_PURE;
 BL_API bool BL_CDECL blVarEqualsUInt64(const BLUnknown* self, uint64_t value) BL_NOEXCEPT_C BL_PURE;
 BL_API bool BL_CDECL blVarEqualsDouble(const BLUnknown* self, double value) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL blVarEqualsRgba(const BLUnknown* self, const BLRgba* rgba) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL blVarEqualsRgba32(const BLUnknown* self, uint32_t rgba32) BL_NOEXCEPT_C BL_PURE;
+BL_API bool BL_CDECL blVarEqualsRgba64(const BLUnknown* self, uint64_t rgba64) BL_NOEXCEPT_C BL_PURE;
 
 BL_API bool BL_CDECL blVarStrictEquals(const BLUnknown* a, const BLUnknown* b) BL_NOEXCEPT_C BL_PURE;
 
@@ -168,18 +171,26 @@ struct VarOps<BLRgba, kTypeCategoryStruct> {
     uint32_t r = blBitCast<uint32_t>(value.r);
     uint32_t g = blBitCast<uint32_t>(value.g);
     uint32_t b = blBitCast<uint32_t>(value.b);
-    uint32_t a = blBitCast<uint32_t>(blMax(0.0f, value.a)) & 0x7FFFFFFFu;
-
+    uint32_t a = blMax<uint32_t>(blBitCast<uint32_t>(value.a), 0);
     self->_d.initU32x4(r, g, b, a);
   }
 
-  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const BLRgba& value) noexcept {
-    return blVarAssignRgba(self, &value);
-  }
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const BLRgba& value) noexcept { return blVarAssignRgba(self, &value); }
+  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const BLRgba& value) noexcept { return blVarStrictEquals(self, &value); }
+};
 
-  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const BLRgba& value) noexcept {
-    return blVarStrictEquals(self, &value);
-  }
+template<>
+struct VarOps<BLRgba32, kTypeCategoryStruct> {
+  static BL_INLINE void init(BLVarCore* self, const BLRgba32& rgba32) noexcept { self->_d.initRgba32(rgba32.value); }
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const BLRgba32 rgba32) noexcept { return blVarAssignRgba32(self, rgba32.value); }
+  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const BLRgba32& rgba32) noexcept { return blVarEqualsRgba32(self, rgba32.value); }
+};
+
+template<>
+struct VarOps<BLRgba64, kTypeCategoryStruct> {
+  static BL_INLINE void init(BLVarCore* self, const BLRgba64& rgba64) noexcept { self->_d.initRgba64(rgba64.value); }
+  static BL_INLINE_NODEBUG BLResult assign(BLVarCore* self, const BLRgba64 rgba64) noexcept { return blVarAssignRgba64(self, rgba64.value); }
+  static BL_INLINE_NODEBUG bool equals(const BLVarCore* self, const BLRgba64& rgba64) noexcept { return blVarEqualsRgba64(self, rgba64.value); }
 };
 
 template<typename T>
@@ -190,8 +201,20 @@ struct VarCastImpl {
 
 template<>
 struct VarCastImpl<BLRgba> {
-  static BL_INLINE_NODEBUG BLRgba* cast(BLVarCore* self) noexcept { return reinterpret_cast<BLRgba*>(self); }
-  static BL_INLINE_NODEBUG const BLRgba* cast(const BLVarCore* self) noexcept { return reinterpret_cast<const BLRgba*>(self); }
+  static BL_INLINE_NODEBUG BLRgba* cast(BLVarCore* self) noexcept { return &self->_d.rgba; }
+  static BL_INLINE_NODEBUG const BLRgba* cast(const BLVarCore* self) noexcept { return &self->_d.rgba; }
+};
+
+template<>
+struct VarCastImpl<BLRgba32> {
+  static BL_INLINE_NODEBUG BLRgba32* cast(BLVarCore* self) noexcept { return &self->_d.rgba32; }
+  static BL_INLINE_NODEBUG const BLRgba32* cast(const BLVarCore* self) noexcept { return &self->_d.rgba32; }
+};
+
+template<>
+struct VarCastImpl<BLRgba64> {
+  static BL_INLINE_NODEBUG BLRgba64* cast(BLVarCore* self) noexcept { return &self->_d.rgba64; }
+  static BL_INLINE_NODEBUG const BLRgba64* cast(const BLVarCore* self) noexcept { return &self->_d.rgba64; }
 };
 
 } // {anonymous}
@@ -199,16 +222,29 @@ struct VarCastImpl<BLRgba> {
 //! \endcond
 
 //! Value [C++ API].
-class BLVar : public BLVarCore {
+class BLVar final : public BLVarCore {
 public:
+  //! \cond INTERNAL
+  //! \name Internals
+  //! \{
+
+  enum : uint32_t {
+    kNullSignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_NULL)
+  };
+
+  //! \}
+  //! \endcond
+
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE_NODEBUG BLVar() noexcept { _d.initStatic(BL_OBJECT_TYPE_NULL); }
+  BL_INLINE_NODEBUG BLVar() noexcept {
+    _d.initStatic(BLObjectInfo{kNullSignature});
+  }
 
   BL_INLINE_NODEBUG BLVar(BLVar&& other) noexcept {
     _d = other._d;
-    other._d.initStatic(BL_OBJECT_TYPE_NULL);
+    other._d.initStatic(BLObjectInfo{kNullSignature});
   }
 
   BL_INLINE_NODEBUG BLVar(const BLVar& other) noexcept { blVarInitWeak(this, &other); }
@@ -219,7 +255,10 @@ public:
     BLInternal::VarOps<DecayT, BLInternal::TypeTraits<DecayT>::kCategory>::init(this, std::forward<T>(value));
   }
 
-  BL_INLINE_NODEBUG ~BLVar() noexcept { blVarDestroy(this); }
+  BL_INLINE_NODEBUG ~BLVar() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blVarDestroy(this);
+  }
 
   //! \}
 
@@ -342,6 +381,14 @@ public:
   //! Tests whether this `BLVar` instance represents boxed `BLRgba`.
   BL_NODISCARD
   BL_INLINE_NODEBUG bool isRgba() const noexcept { return _d.isRgba(); }
+
+  //! Tests whether this `BLVar` instance represents boxed `BLRgba32`.
+  BL_NODISCARD
+  BL_INLINE_NODEBUG bool isRgba32() const noexcept { return _d.isRgba32(); }
+
+  //! Tests whether this `BLVar` instance represents boxed `BLRgba64`.
+  BL_NODISCARD
+  BL_INLINE_NODEBUG bool isRgba64() const noexcept { return _d.isRgba64(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `uint64_t` value.
   BL_NODISCARD

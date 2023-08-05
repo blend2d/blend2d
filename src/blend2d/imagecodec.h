@@ -142,7 +142,7 @@ struct BLImageCodecImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //!
 //! Provides a unified interface for inspecting image data and creating image
 //! decoders & encoders.
-class BLImageCodec : public BLImageCodecCore {
+class BLImageCodec final : public BLImageCodecCore {
 public:
   //! \cond INTERNAL
   //! \name Internals
@@ -161,7 +161,11 @@ public:
   BL_INLINE_NODEBUG BLImageCodec() noexcept { blImageCodecInit(this); }
   BL_INLINE_NODEBUG BLImageCodec(BLImageCodec&& other) noexcept { blImageCodecInitMove(this, &other); }
   BL_INLINE_NODEBUG BLImageCodec(const BLImageCodec& other) noexcept { blImageCodecInitWeak(this, &other); }
-  BL_INLINE_NODEBUG ~BLImageCodec() { blImageCodecDestroy(this); }
+
+  BL_INLINE_NODEBUG ~BLImageCodec() {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blImageCodecDestroy(this);
+  }
 
   //! \}
 

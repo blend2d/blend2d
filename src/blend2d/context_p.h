@@ -36,19 +36,19 @@ static BL_INLINE void initState(BLContextState* self) noexcept {
   self->hints.reset();
   self->compOp = uint8_t(BL_COMP_OP_SRC_OVER);
   self->fillRule = uint8_t(BL_FILL_RULE_NON_ZERO);
-  self->styleType[BL_CONTEXT_OP_TYPE_FILL] = uint8_t(BL_OBJECT_TYPE_NULL);
-  self->styleType[BL_CONTEXT_OP_TYPE_STROKE] = uint8_t(BL_OBJECT_TYPE_NULL);
-  memset(self->reserved, 0, sizeof(self->reserved));
+  self->styleType[BL_CONTEXT_STYLE_SLOT_FILL] = uint8_t(BL_OBJECT_TYPE_NULL);
+  self->styleType[BL_CONTEXT_STYLE_SLOT_STROKE] = uint8_t(BL_OBJECT_TYPE_NULL);
+  self->savedStateCount = 0u;
 
-  self->approximationOptions = BLPathPrivate::makeDefaultApproximationOptions();
   self->globalAlpha = 1.0;
-  self->styleAlpha[BL_CONTEXT_OP_TYPE_FILL] = 1.0;
-  self->styleAlpha[BL_CONTEXT_OP_TYPE_STROKE] = 1.0;
+  self->styleAlpha[BL_CONTEXT_STYLE_SLOT_FILL] = 1.0;
+  self->styleAlpha[BL_CONTEXT_STYLE_SLOT_STROKE] = 1.0;
 
   blStrokeOptionsInit(&self->strokeOptions);
-  self->metaMatrix.reset();
-  self->userMatrix.reset();
-  self->savedStateCount = 0;
+  self->approximationOptions = BLPathPrivate::makeDefaultApproximationOptions();
+
+  self->metaTransform.reset();
+  self->userTransform.reset();
 }
 
 static BL_INLINE void destroyState(BLContextState* self) noexcept {

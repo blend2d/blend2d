@@ -7,9 +7,9 @@
 #include "array_p.h"
 #include "filesystem_p.h"
 #include "runtime_p.h"
-#include "unicode_p.h"
 #include "support/ptrops_p.h"
 #include "threading/atomic_p.h"
+#include "unicode/unicode_p.h"
 
 #ifndef _WIN32
   #include <errno.h>
@@ -710,9 +710,10 @@ BLResult BLFileMapping::unmap() noexcept {
 // =================================
 
 static void BL_CDECL destroyMemoryMappedFile(void* impl, void* externalData, void* userData) noexcept {
-  blUnused(impl, externalData);
-  BLFileMapping* fileMapping = static_cast<BLFileMapping*>(userData);
-  blCallDtor(*fileMapping);
+  blUnused(externalData, userData);
+
+  BLFileMapping* implFileMapping = BLPtrOps::offset<BLFileMapping>(impl, sizeof(BLArrayImpl));
+  blCallDtor(*implFileMapping);
 }
 
 static BLResult createMemoryMappedFile(BLArray<uint8_t>* dst, BLFile& file, size_t size) noexcept {
@@ -722,25 +723,19 @@ static BLResult createMemoryMappedFile(BLArray<uint8_t>* dst, BLFile& file, size
   BLFileMapping fileMapping;
   BL_PROPAGATE(fileMapping.map(file, size));
 
-  BLObjectImplSize implSize(sizeof(BLArrayImpl));
-  BLObjectInfo info = BLObjectInfo::packType(BL_OBJECT_TYPE_ARRAY_UINT8) | BL_OBJECT_INFO_IMMUTABLE_FLAG;
-
-  BLObjectExternalInfo* externalInfo;
-  void* externalOptData;
+  BLObjectImplSize implSize(sizeof(BLArrayImpl) + sizeof(BLFileMapping));
+  uint32_t info = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_ARRAY_UINT8);
 
   BLArrayCore newO;
-  BLArrayImpl* impl = blObjectDetailAllocImplExternalT<BLArrayImpl>(&newO, info, implSize, &externalInfo, &externalOptData);
+  BL_PROPAGATE(BLObjectPrivate::allocImplExternalT<BLArrayImpl>(&newO, BLObjectInfo{info}, implSize, true, destroyMemoryMappedFile, nullptr));
 
-  if (BL_UNLIKELY(!impl))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+  BLArrayImpl* impl = BLArrayPrivate::getImpl(&newO);
   impl->data = fileMapping.data<void>();
   impl->size = size;
   impl->capacity = size;
 
-  externalInfo->destroyFunc = destroyMemoryMappedFile;
-  externalInfo->userData = externalOptData;
-  blCallCtor(*static_cast<BLFileMapping*>(externalOptData), std::move(fileMapping));
+  BLFileMapping* implFileMapping = BLPtrOps::offset<BLFileMapping>(impl, sizeof(BLArrayImpl));
+  blCallCtor(*implFileMapping, std::move(fileMapping));
 
   return BLArrayPrivate::replaceInstance(dst, &newO);
 }

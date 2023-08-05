@@ -9,10 +9,10 @@
 #include "../geometry_p.h"
 #include "../image.h"
 #include "../path.h"
-#include "../zeroallocator_p.h"
 #include "../raster/edgebuilder_p.h"
 #include "../raster/rasterdefs_p.h"
 #include "../support/arenaallocator_p.h"
+#include "../support/zeroallocator_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_raster_engine_impl
@@ -72,18 +72,22 @@ public:
 
   // NOTE: `initContextData()` is called after `initBandData()` in `blRasterContextImplAttach()`.
 
-  BL_INLINE void initContextData(const BLImageData& dstData) noexcept { ctxData.dst = dstData; }
+  BL_INLINE_NODEBUG void initContextData(const BLImageData& dstData, const BLPointI& ditherOrigin) noexcept {
+    ctxData.dst = dstData;
+    ctxData.ditherOrigin = ditherOrigin;
+  }
+
   BLResult initBandData(uint32_t bandHeight, uint32_t bandCount) noexcept;
 
-  BL_INLINE bool isSync() const noexcept { return _workerId == kSyncWorkerId; }
+  BL_INLINE_NODEBUG bool isSync() const noexcept { return _workerId == kSyncWorkerId; }
 
-  BL_INLINE const BLSizeI& dstSize() const noexcept { return ctxData.dst.size; }
-  BL_INLINE uint32_t workerId() const noexcept { return _workerId; }
-  BL_INLINE uint32_t bandHeight() const noexcept { return _bandHeight; }
-  BL_INLINE uint32_t bandCount() const noexcept { return edgeStorage.bandCount(); }
+  BL_INLINE_NODEBUG const BLSizeI& dstSize() const noexcept { return ctxData.dst.size; }
+  BL_INLINE_NODEBUG uint32_t workerId() const noexcept { return _workerId; }
+  BL_INLINE_NODEBUG uint32_t bandHeight() const noexcept { return _bandHeight; }
+  BL_INLINE_NODEBUG uint32_t bandCount() const noexcept { return edgeStorage.bandCount(); }
 
-  BL_INLINE uint32_t accumulatedErrorFlags() const noexcept { return _accumulatedErrorFlags; }
-  BL_INLINE void cleanAccumulatedErrorFlags() noexcept { _accumulatedErrorFlags = 0; }
+  BL_INLINE_NODEBUG uint32_t accumulatedErrorFlags() const noexcept { return _accumulatedErrorFlags; }
+  BL_INLINE_NODEBUG void cleanAccumulatedErrorFlags() noexcept { _accumulatedErrorFlags = 0; }
 
   BL_INLINE void startOver() noexcept {
     workZone.clear();
@@ -93,6 +97,10 @@ public:
 
   BL_INLINE void saveState() noexcept {
     workState = workZone.saveState();
+  }
+
+  BL_INLINE void restoreState() noexcept {
+    workZone.restoreState(workState);
   }
 
   BL_INLINE void revertEdgeBuilder() noexcept {

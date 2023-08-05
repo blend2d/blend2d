@@ -9,15 +9,11 @@
 #include "image.h"
 #include "pixelconverter_p.h"
 #include "runtime_p.h"
-#include "tables_p.h"
 #include "pixelops/scalar_p.h"
 #include "support/intops_p.h"
 #include "support/memops_p.h"
 #include "support/ptrops_p.h"
-
-#ifdef BL_TEST
-  #include "random.h"
-#endif
+#include "tables/tables_p.h"
 
 // PixelConverter - Globals
 // ========================
@@ -688,8 +684,8 @@ static BLResult BL_CDECL bl_convert_any_from_indexed1(
         PixelAccess::storeU(dstData + 3 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b1, 31))); b1 <<= 2;
         PixelAccess::storeU(dstData + 4 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b0, 31))); b0 <<= 2;
         PixelAccess::storeU(dstData + 5 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b1, 31))); b1 <<= 2;
-        PixelAccess::storeU(dstData + 6 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b0, 31))); b0 <<= 2;
-        PixelAccess::storeU(dstData + 7 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b1, 31))); b1 <<= 2;
+        PixelAccess::storeU(dstData + 6 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b0, 31)));
+        PixelAccess::storeU(dstData + 7 * kPixelSize, c0 ^ (cm & BLIntOps::sar(b1, 31)));
 
         dstData += 8 * kPixelSize;
         i -= 8;
@@ -1631,19 +1627,19 @@ static BLResult blPixelConverterInitCopyOr8888(BLPixelConverterCore* self, const
       d.fillMask = blPixelConverterCalcFillMask32(di);
   }
 
-  #ifdef BL_BUILD_OPT_AVX2
+#ifdef BL_BUILD_OPT_AVX2
   if (blRuntimeHasAVX2(&blRuntimeContext)) {
     d.convertFunc = bl_convert_copy_or_8888_avx2;
     return BL_SUCCESS;
   }
-  #endif
+#endif
 
-  #ifdef BL_BUILD_OPT_SSE2
+#ifdef BL_BUILD_OPT_SSE2
   if (blRuntimeHasSSE2(&blRuntimeContext)) {
     d.convertFunc = bl_convert_copy_or_8888_sse2;
     return BL_SUCCESS;
   }
-  #endif
+#endif
 
   d.convertFunc = bl_convert_copy_or_8888;
   return BL_SUCCESS;
@@ -1659,19 +1655,19 @@ static BLResult blPixelConverterInitPremultiply8888(BLPixelConverterCore* self, 
   d.alphaShift = uint8_t(aShift);
   d.fillMask = fillMask;
 
-  #ifdef BL_BUILD_OPT_AVX2
+#ifdef BL_BUILD_OPT_AVX2
   if (blRuntimeHasAVX2(&blRuntimeContext)) {
     if (aShift == 0) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_trailing_alpha_avx2);
     if (aShift == 24) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_leading_alpha_avx2);
   }
-  #endif
+#endif
 
-  #ifdef BL_BUILD_OPT_SSE2
+#ifdef BL_BUILD_OPT_SSE2
   if (blRuntimeHasSSE2(&blRuntimeContext)) {
     if (aShift == 0) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_trailing_alpha_sse2);
     if (aShift == 24) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_leading_alpha_sse2);
   }
-  #endif
+#endif
 
   return blPixelConverterInitFuncC(self, bl_convert_premultiply_8888);
 }
@@ -1684,7 +1680,7 @@ static BLResult blPixelConverterInitUnpremultiply8888(BLPixelConverterCore* self
   uint32_t aShift = di.shifts[3];
   d.alphaShift = uint8_t(aShift);
 
-  #ifdef BL_BUILD_OPT_AVX2
+#ifdef BL_BUILD_OPT_AVX2
   if (blRuntimeHasAVX2(&blRuntimeContext)) {
     if (blRuntimeContext.optimizationInfo.hasFastPmulld()) {
       if (aShift == 0) return blPixelConverterInitFuncOpt(self, bl_convert_unpremultiply_8888_trailing_alpha_pmulld_avx2);
@@ -1695,14 +1691,14 @@ static BLResult blPixelConverterInitUnpremultiply8888(BLPixelConverterCore* self
       if (aShift == 24) return blPixelConverterInitFuncOpt(self, bl_convert_unpremultiply_8888_leading_alpha_float_avx2);
     }
   }
-  #endif
+#endif
 
-  #ifdef BL_BUILD_OPT_SSE2
+#ifdef BL_BUILD_OPT_SSE2
   if (blRuntimeHasSSE2(&blRuntimeContext)) {
     if (aShift == 0) return blPixelConverterInitFuncOpt(self, bl_convert_unpremultiply_8888_trailing_alpha_sse2);
     if (aShift == 24) return blPixelConverterInitFuncOpt(self, bl_convert_unpremultiply_8888_leading_alpha_sse2);
   }
-  #endif
+#endif
 
   if (aShift == 0) return blPixelConverterInitFuncC(self, bl_convert_unpremultiply_8888<0>);
   if (aShift == 24) return blPixelConverterInitFuncC(self, bl_convert_unpremultiply_8888<24>);
@@ -1732,19 +1728,19 @@ static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLF
                           BL_PIXEL_CONVERTER_INTERNAL_FLAG_RAW_COPY ;
         d.bytesPerPixel = uint8_t(di.depth / 8u);
 
-        #ifdef BL_BUILD_OPT_AVX2
+#ifdef BL_BUILD_OPT_AVX2
         if (blRuntimeHasAVX2(&blRuntimeContext)) {
           d.convertFunc = bl_convert_copy_avx2;
           return BL_SUCCESS;
         }
-        #endif
+#endif
 
-        #ifdef BL_BUILD_OPT_SSE2
+#ifdef BL_BUILD_OPT_SSE2
         if (blRuntimeHasSSE2(&blRuntimeContext)) {
           d.convertFunc = bl_convert_copy_sse2;
           return BL_SUCCESS;
         }
-        #endif
+#endif
 
         d.convertFunc = bl_convert_copy;
         return BL_SUCCESS;
@@ -1778,9 +1774,9 @@ static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLF
     }
   }
   else {
-    #ifdef BL_BUILD_OPT_SSSE3
+#ifdef BL_BUILD_OPT_SSSE3
     if (depth == 32 && BLIntOps::bitMatch(commonFlags, BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_BYTE_ALIGNED)) {
-      // Handle the following conversions (Shufb|Or):
+      // Handle the following conversions (PSHUFB|OR):
       //   XRGB32 <- XRGB32 - Shuffle with or-mask
       //   ARGB32 <- XRGB32 - Shuffle with or-mask (opaque alpha)
       //   PRGB32 <- XRGB32 - Shuffle with or-mask (opaque alpha)
@@ -1800,10 +1796,10 @@ static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLF
         else if (!(si.flags & kA))
           d.fillMask = 0xFFu << di.shifts[3];
 
-        #ifdef BL_BUILD_OPT_AVX2
+#ifdef BL_BUILD_OPT_AVX2
         if (blRuntimeHasAVX2(&blRuntimeContext))
           return blPixelConverterInitFuncOpt(self, bl_convert_copy_shufb_8888_avx2);
-        #endif
+#endif
 
         return blPixelConverterInitFuncOpt(self, bl_convert_copy_shufb_8888_ssse3);
       }
@@ -1817,18 +1813,18 @@ static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLF
         BLPixelConverterData::ShufbData& d = blPixelConverterGetData(self)->shufbData;
         blPixelConverterCalcPshufbPredicate32From32(d.shufbPredicate, di, si);
 
-        #ifdef BL_BUILD_OPT_AVX2
+#ifdef BL_BUILD_OPT_AVX2
         if (blRuntimeHasAVX2(&blRuntimeContext)) {
           if (aShift == 0) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_trailing_alpha_shufb_avx2);
           if (aShift == 24) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_leading_alpha_shufb_avx2);
         }
-        #endif
+#endif
 
         if (aShift == 0) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_trailing_alpha_shufb_ssse3);
         if (aShift == 24) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_leading_alpha_shufb_ssse3);
       }
     }
-    #endif
+#endif
   }
 
   return BL_RESULT_NOTHING;
@@ -1877,10 +1873,10 @@ static BLResult blPixelConverterInit8888From8(BLPixelConverterCore* self, const 
     d.fillMask = ~rgbMask;
   }
 
-  #ifdef BL_BUILD_OPT_SSE2
+#ifdef BL_BUILD_OPT_SSE2
   if (blRuntimeHasSSE2(&blRuntimeContext))
     return blPixelConverterInitFuncOpt(self, bl_convert_8888_from_x8_sse2);
-  #endif
+#endif
 
   return blPixelConverterInitFuncC(self, bl_convert_8888_from_x8);
 }
@@ -1893,8 +1889,11 @@ static BLResult blPixelConverterInit8888From888(BLPixelConverterCore* self, cons
 
   uint32_t commonFlags = di.flags & si.flags;
 
+  // Maybe unused if there are no optimizations.
+  blUnused(commonFlags);
+
   // This is only possible with SSSE3 and AVX2 enabled converters.
-  #ifdef BL_BUILD_OPT_SSSE3
+#ifdef BL_BUILD_OPT_SSSE3
   if (blRuntimeHasSSSE3(&blRuntimeContext)) {
     // We expect both formats to provide RGB components and to be BYTE aligned.
     if (!(commonFlags & BL_FORMAT_FLAG_RGB))
@@ -1904,14 +1903,14 @@ static BLResult blPixelConverterInit8888From888(BLPixelConverterCore* self, cons
     d.fillMask = ~blPixelConverterCalcRgbMask32(di);
     blPixelConverterCalcPshufbPredicate32From24(d.shufbPredicate, di, si);
 
-    #ifdef BL_BUILD_OPT_AVX2
+#ifdef BL_BUILD_OPT_AVX2
     if (blRuntimeHasAVX2(&blRuntimeContext))
       return blPixelConverterInitFuncOpt(self, bl_convert_rgb32_from_rgb24_shufb_avx2);
-    #endif
+#endif
 
     return blPixelConverterInitFuncOpt(self, bl_convert_rgb32_from_rgb24_shufb_ssse3);
   }
-  #endif
+#endif
 
   return BL_RESULT_NOTHING;
 }
@@ -2297,473 +2296,3 @@ BLResult blPixelConverterInitInternal(BLPixelConverterCore* self, const BLFormat
   // Probably extreme case that is not implemented.
   return blTraceError(BL_ERROR_NOT_IMPLEMENTED);
 }
-
-// PixelConverter - Tests
-// ======================
-
-#ifdef BL_TEST
-
-// XRGB32 <-> A8 Conversion Tests
-// ------------------------------
-
-static void testRgb32A8Conversions() noexcept {
-  INFO("Testing ?RGB32 <-> A8 conversions");
-
-  // Pixel formats.
-  BLFormatInfo a8Format = blFormatInfo[BL_FORMAT_A8];
-  BLFormatInfo xrgb32Format = blFormatInfo[BL_FORMAT_XRGB32];
-  BLFormatInfo argb32Format = blFormatInfo[BL_FORMAT_PRGB32];
-  BLFormatInfo prgb32Format = blFormatInfo[BL_FORMAT_PRGB32];
-
-  argb32Format.flags &= ~BL_FORMAT_FLAG_PREMULTIPLIED;
-
-  // Pixel buffers.
-  uint8_t srcX8[256];
-  uint8_t dstX8[256];
-  uint32_t rgb32[256];
-
-  uint32_t i;
-  uint32_t n;
-
-  // Prepare.
-  for (i = 0; i < 256; i++)
-    srcX8[i] = uint8_t(i);
-
-  BLPixelConverter cvtXrgb32FromA8;
-  BLPixelConverter cvtArgb32FromA8;
-  BLPixelConverter cvtPrgb32FromA8;
-  BLPixelConverter cvtA8FromPrgb32;
-
-  EXPECT_SUCCESS(cvtXrgb32FromA8.create(xrgb32Format, a8Format));
-  EXPECT_SUCCESS(cvtArgb32FromA8.create(argb32Format, a8Format));
-  EXPECT_SUCCESS(cvtPrgb32FromA8.create(prgb32Format, a8Format));
-  EXPECT_SUCCESS(cvtA8FromPrgb32.create(a8Format, prgb32Format));
-
-  // This would test the conversion and also whether the SIMD implementation
-  // is okay. We test for 1..256 pixels and verify all pixels from 0..255.
-  for (n = 1; n < 256; n++) {
-    memset(rgb32, 0, sizeof(rgb32));
-    EXPECT_SUCCESS(cvtXrgb32FromA8.convertSpan(rgb32, srcX8, n));
-
-    for (i = 0; i < 256; i++) {
-      if (i < n) {
-        uint32_t p0 = rgb32[i];
-        uint32_t p1 = (uint32_t(srcX8[i]) * 0x01010101u) | 0xFF000000u;
-        EXPECT_EQ(p0, p1).message("[%u] XRGB32<-A8 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
-      }
-      else {
-        EXPECT_EQ(rgb32[i], 0u).message("[%u] Detected buffer overrun after XRGB32<-A8 conversion", i);
-      }
-    }
-
-    memset(rgb32, 0, sizeof(rgb32));
-    EXPECT_SUCCESS(cvtArgb32FromA8.convertSpan(rgb32, srcX8, n));
-
-    for (i = 0; i < 256; i++) {
-      if (i < n) {
-        uint32_t p0 = rgb32[i];
-        uint32_t p1 = (uint32_t(srcX8[i]) * 0x01010101u) | 0x00FFFFFFu;
-        EXPECT_EQ(p0, p1).message("[%u] ARGB32<-A8 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
-      }
-      else {
-        EXPECT_EQ(rgb32[i], 0u).message("[%u] Detected buffer overrun after ARGB32<-A8 conversion", i);
-      }
-    }
-
-    memset(rgb32, 0, sizeof(rgb32));
-    EXPECT_SUCCESS(cvtPrgb32FromA8.convertSpan(rgb32, srcX8, n));
-
-    for (i = 0; i < 256; i++) {
-      if (i < n) {
-        uint32_t p0 = rgb32[i];
-        uint32_t p1 = uint32_t(srcX8[i]) * 0x01010101u;
-        EXPECT_EQ(p0, p1).message("[%u] PRGB32<-A8 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
-      }
-      else {
-        EXPECT_EQ(rgb32[i], 0u).message("[%u] Detected buffer overrun after PRGB32<-A8 conversion", i);
-      }
-    }
-  }
-
-  for (n = 1; n < 256; n++) {
-    memset(dstX8, 0, sizeof(dstX8));
-    EXPECT_SUCCESS(cvtA8FromPrgb32.convertSpan(dstX8, rgb32, n));
-
-    for (i = 0; i < 256; i++) {
-      if (i < n) {
-        uint32_t p0 = srcX8[i];
-        uint32_t p1 = dstX8[i];
-        EXPECT_EQ(p0, p1).message("[%u] A8<-PRGB32 conversion error OUT[%02X] != EXP[%02X]", i, p0, p1);
-      }
-      else {
-        EXPECT_EQ(dstX8[i], 0u).message("[%u] Detected buffer overrun after A8<-PRGB32 conversion", i);
-      }
-    }
-  }
-}
-
-// XRGB32 <-> RGB24 Conversion Tests
-// ---------------------------------
-
-static void testRgb32Rgb24Conversions() noexcept {
-  INFO("Testing ?RGB32 <-> RGB24 conversions");
-
-  // Pixel formats.
-  BLFormatInfo rgb32Format = blFormatInfo[BL_FORMAT_XRGB32];
-  BLFormatInfo rgb24Format { 24, BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_BE, {{ { 8, 8, 8, 0 }, { 16, 8, 0, 0 } }} };
-  BLFormatInfo bgr24Format { 24, BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_LE, {{ { 8, 8, 8, 0 }, { 16, 8, 0, 0 } }} };
-
-  const uint8_t allZeros[4] {};
-
-  // Pixel buffers.
-  uint8_t srcRgb24[256 * 3];
-  uint8_t dstRgb24[256 * 3];
-  uint32_t rgb32[256];
-
-  // Prepare.
-  uint32_t i;
-  uint32_t n;
-
-  for (i = 0; i < 256 * 3; i += 3) {
-    srcRgb24[i    ] = uint8_t((i + 0) & 0xFF);
-    srcRgb24[i + 1] = uint8_t((i + 1) & 0xFF);
-    srcRgb24[i + 2] = uint8_t((i + 2) & 0xFF);
-  }
-
-  BLPixelConverter cvtRgb32FromRgb24;
-  BLPixelConverter cvtRgb32FromBgr24;
-  BLPixelConverter cvtBgr24FromRgb32;
-  BLPixelConverter cvtRgb24FromRgb32;
-
-  EXPECT_SUCCESS(cvtRgb32FromRgb24.create(rgb32Format, rgb24Format));
-  EXPECT_SUCCESS(cvtRgb32FromBgr24.create(rgb32Format, bgr24Format));
-
-  EXPECT_SUCCESS(cvtRgb24FromRgb32.create(rgb24Format, rgb32Format));
-  EXPECT_SUCCESS(cvtBgr24FromRgb32.create(bgr24Format, rgb32Format));
-
-  // This would test the conversion and also whether the SIMD implementation
-  // is okay. We test for 1..256 pixels and verify all pixels from 0..255.
-  for (n = 1; n < 256; n++) {
-    memset(rgb32, 0, sizeof(rgb32));
-    EXPECT_SUCCESS(cvtRgb32FromRgb24.convertSpan(rgb32, srcRgb24, n));
-
-    for (i = 0; i < 256; i++) {
-      if (i < n) {
-        uint32_t p0 = rgb32[i];
-        uint32_t p1 = BLRgbaPrivate::packRgba32(srcRgb24[i * 3 + 0], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 2]);
-        EXPECT_EQ(p0, p1)
-          .message("[%u] RGB32<-RGB24 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
-      }
-      else {
-        EXPECT_EQ(rgb32[i], 0u)
-          .message("[%u] Detected buffer overrun after RGB32<-RGB24 conversion", i);
-      }
-    }
-  }
-
-  for (n = 1; n < 256; n++) {
-    memset(dstRgb24, 0, sizeof(dstRgb24));
-    EXPECT_SUCCESS(cvtRgb24FromRgb32.convertSpan(dstRgb24, rgb32, n));
-
-    for (i = 0; i < 256; i++) {
-      if (i < n) {
-        EXPECT_EQ(memcmp(dstRgb24 + i * 3, srcRgb24 + i * 3, 3), 0)
-          .message("[%u] RGB24<-RGB32 conversion error OUT[%02X|%02X|%02X] != EXP[%02X|%02X|%02X]", i,
-                   dstRgb24[i * 3 + 0], dstRgb24[i * 3 + 1], dstRgb24[i * 3 + 2],
-                   srcRgb24[i * 3 + 0], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 2]);
-      }
-      else {
-        EXPECT_EQ(memcmp(dstRgb24 + i * 3, allZeros, 3), 0)
-          .message("[%u] Detected buffer overrun after RGB24<-RGB32 conversion", i);
-      }
-    }
-  }
-
-  for (n = 1; n < 256; n++) {
-    memset(rgb32, 0, sizeof(rgb32));
-    EXPECT_SUCCESS(cvtRgb32FromBgr24.convertSpan(rgb32, srcRgb24, n));
-
-    for (i = 0; i < 256; i++) {
-      if (i < n) {
-        uint32_t p0 = rgb32[i];
-        uint32_t p1 = BLRgbaPrivate::packRgba32(srcRgb24[i * 3 + 2], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 0]);
-        EXPECT_EQ(p0, p1)
-          .message("[%u] RGB32<-BGR24 conversion error OUT[%08X] != EXP[%08X]", i, p0, p1);
-      }
-      else {
-        EXPECT_EQ(rgb32[i], 0u)
-          .message("[%u] Detected buffer overrun after RGB32<-BGR24 conversion", i);
-      }
-    }
-  }
-
-  for (n = 1; n < 256; n++) {
-    memset(dstRgb24, 0, sizeof(dstRgb24));
-    EXPECT_SUCCESS(cvtBgr24FromRgb32.convertSpan(dstRgb24, rgb32, n));
-
-    for (i = 0; i < 256; i++) {
-      if (i < n) {
-        EXPECT_EQ(memcmp(dstRgb24 + i * 3, srcRgb24 + i * 3, 3), 0)
-          .message("[%u] BGR24<-RGB32 conversion error OUT[%02X|%02X|%02X] != EXP[%02X|%02X|%02X]", i,
-                    dstRgb24[i * 3 + 0], dstRgb24[i * 3 + 1], dstRgb24[i * 3 + 2],
-                    srcRgb24[i * 3 + 0], srcRgb24[i * 3 + 1], srcRgb24[i * 3 + 2]);
-      }
-      else {
-        EXPECT_EQ(memcmp(dstRgb24 + i * 3, allZeros, 3), 0)
-          .message("[%u] Detected buffer overrun after BGR24<-RGB32 conversion", i);
-      }
-    }
-  }
-}
-
-// Premultiply / Unpremultiply Conversion Tests
-// --------------------------------------------
-
-static void testPremultiplyConversions() noexcept {
-  INFO("Testing premultiply & unpremultiply conversions");
-
-  uint32_t i;
-  uint32_t n;
-  uint32_t f;
-
-  constexpr uint32_t N = 1024;
-
-  uint32_t src[N];
-  uint32_t dst[N];
-  uint32_t unp[N];
-
-  uint64_t defaultSeed = 0x1234;
-
-  BLFormatInfo unpremultipliedFmt[4];
-  BLFormatInfo premultipliedFmt[4];
-
-  // Shifts in host byte-order.
-  static const uint8_t formatShifts[4][4] = {
-    { 16,  8,  0, 24 }, // 0x[AA|RR|GG|BB]
-    {  0,  8, 16, 24 }, // 0x[AA|BB|GG|RR]
-    { 24, 16,  8,  0 }, // 0x[RR|GG|BB|AA]
-    {  8, 16, 24,  0 }  // 0x[BB|GG|RR|AA]
-  };
-
-  static const char* formatNames[4] = {
-    "ARGB32",
-    "ABGR32",
-    "RGBA32",
-    "BGRA32"
-  };
-
-  // Initialize both formats.
-  for (f = 0; f < 4; f++) {
-    const uint8_t* s = formatShifts[f];
-
-    unpremultipliedFmt[f].depth = 32;
-    unpremultipliedFmt[f].flags = BL_FORMAT_FLAG_RGBA;
-    unpremultipliedFmt[f].setSizes(8, 8, 8, 8);
-    unpremultipliedFmt[f].setShifts(s[0], s[1], s[2], s[3]);
-
-    premultipliedFmt[f] = unpremultipliedFmt[f];
-    premultipliedFmt[f].flags |= BL_FORMAT_FLAG_PREMULTIPLIED;
-  }
-
-  BLRandom r(defaultSeed);
-  for (i = 0; i < N; i++) {
-    src[i] = r.nextUInt32();
-  }
-
-  for (f = 0; f < 4; f++) {
-    INFO("  32-bit %s format", formatNames[f]);
-
-    bool leadingAlpha = formatShifts[f][3] == 24;
-    BLPixelConverter cvt1;
-    BLPixelConverter cvt2;
-
-    EXPECT_SUCCESS(cvt1.create(premultipliedFmt[f], unpremultipliedFmt[f]));
-    EXPECT_SUCCESS(cvt2.create(unpremultipliedFmt[f], premultipliedFmt[f]));
-
-    for (n = 1; n < N; n++) {
-      memset(dst, 0, sizeof(dst));
-      memset(unp, 0, sizeof(unp));
-
-      EXPECT_SUCCESS(cvt1.convertSpan(dst, src, n));
-      EXPECT_SUCCESS(cvt2.convertSpan(unp, dst, n));
-
-      for (i = 0; i < n; i++) {
-        if (i < n) {
-          uint32_t sp = src[i]; // Source pixel.
-          uint32_t dp = dst[i]; // Premultiply(sp).
-          uint32_t up = unp[i]; // Unpremultiply(dp).
-
-          uint32_t s0 = (sp >> 24) & 0xFFu;
-          uint32_t s1 = (sp >> 16) & 0xFFu;
-          uint32_t s2 = (sp >>  8) & 0xFFu;
-          uint32_t s3 = (sp >>  0) & 0xFFu;
-
-          uint32_t a = leadingAlpha ? s0 : s3;
-          if (leadingAlpha)
-            s0 = 0xFF;
-          else
-            s3 = 0xFF;
-
-          uint32_t e0 = BLPixelOps::Scalar::udiv255(s0 * a);
-          uint32_t e1 = BLPixelOps::Scalar::udiv255(s1 * a);
-          uint32_t e2 = BLPixelOps::Scalar::udiv255(s2 * a);
-          uint32_t e3 = BLPixelOps::Scalar::udiv255(s3 * a);
-          uint32_t ep = (e0 << 24) | (e1 << 16) | (e2 << 8) | e3;
-
-          EXPECT_EQ(dp, ep)
-            .message("[%u] OUT[0x%08X] != EXP[0x%08X] <- Premultiply(SRC[0x%08X])", i, dp, ep, sp);
-
-          if (leadingAlpha)
-            BLPixelOps::Scalar::unpremultiply_rgb_8bit(e1, e2, e3, e0);
-          else
-            BLPixelOps::Scalar::unpremultiply_rgb_8bit(e0, e1, e2, e3);
-
-          ep = (e0 << 24) | (e1 << 16) | (e2 << 8) | e3;
-          EXPECT_EQ(up, ep)
-            .message("[%u] OUT[0x%08X] != EXP[0x%08X] <- Unpremultiply(DST[0x%08X])", i, up, ep, dp);
-        }
-        else {
-          uint32_t dp = dst[i];
-          EXPECT_EQ(dp, 0u)
-            .message("[%u] Detected buffer overrun", i);
-        }
-      }
-    }
-  }
-}
-
-// Generic Conversion Tests
-// ------------------------
-
-template<typename T>
-struct BLPixelConverterGenericTest {
-  static void fillMasks(BLFormatInfo& fi) noexcept {
-    fi.shifts[0] = uint8_t(T::kR ? BLIntOps::ctz(T::kR) : uint32_t(0));
-    fi.shifts[1] = uint8_t(T::kG ? BLIntOps::ctz(T::kG) : uint32_t(0));
-    fi.shifts[2] = uint8_t(T::kB ? BLIntOps::ctz(T::kB) : uint32_t(0));
-    fi.shifts[3] = uint8_t(T::kA ? BLIntOps::ctz(T::kA) : uint32_t(0));
-    fi.sizes[0] = uint8_t(T::kR ? BLIntOps::ctz(~(T::kR >> fi.shifts[0])) : uint32_t(0));
-    fi.sizes[1] = uint8_t(T::kG ? BLIntOps::ctz(~(T::kG >> fi.shifts[1])) : uint32_t(0));
-    fi.sizes[2] = uint8_t(T::kB ? BLIntOps::ctz(~(T::kB >> fi.shifts[2])) : uint32_t(0));
-    fi.sizes[3] = uint8_t(T::kA ? BLIntOps::ctz(~(T::kA >> fi.shifts[3])) : uint32_t(0));
-  }
-
-  static void testPrgb32() noexcept {
-    INFO("  %d-bit %s format", T::kDepth, T::formatString());
-
-    BLPixelConverter from;
-    BLPixelConverter back;
-
-    BLFormatInfo fi {};
-    fillMasks(fi);
-    fi.depth = T::kDepth;
-    fi.flags = fi.sizes[3] ? BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_PREMULTIPLIED : BL_FORMAT_FLAG_RGB;
-
-    EXPECT_SUCCESS(from.create(fi, blFormatInfo[BL_FORMAT_PRGB32]))
-      .message("%s: Failed to create from [%dbpp 0x%08X 0x%08X 0x%08X 0x%08X]", T::formatString(), T::kDepth, T::kR, T::kG, T::kB, T::kA);
-
-    EXPECT_SUCCESS(back.create(blFormatInfo[BL_FORMAT_PRGB32], fi))
-      .message("%s: Failed to create to [%dbpp 0x%08X 0x%08X 0x%08X 0x%08X]", T::formatString(), T::kDepth, T::kR, T::kG, T::kB, T::kA);
-
-    enum : uint32_t { kCount = 8 };
-
-    static const uint32_t src[kCount] = {
-      0xFF000000, 0xFF0000FF, 0xFF00FF00, 0xFF00FFFF,
-      0xFFFF0000, 0xFFFF00FF, 0xFFFFFF00, 0xFFFFFFFF
-    };
-
-    uint32_t dst[kCount];
-    uint8_t buf[kCount * 16];
-
-    // The test is rather basic now, we basically convert from PRGB to external
-    // pixel format, then back, and then compare if the output is matching input.
-    // In the future we should also check the intermediate result.
-    from.convertSpan(buf, src, kCount);
-    back.convertSpan(dst, buf, kCount);
-
-    for (uint32_t i = 0; i < kCount; i++) {
-      uint32_t mid = 0;
-      switch (uint32_t(T::kDepth)) {
-        case 8 : mid = BLMemOps::readU8(buf + i); break;
-        case 16: mid = BLMemOps::readU16u(buf + i * 2u); break;
-        case 24: mid = BLMemOps::readU24u(buf + i * 3u); break;
-        case 32: mid = BLMemOps::readU32u(buf + i * 4u); break;
-      }
-
-      EXPECT_EQ(dst[i], src[i])
-        .message("%s: [%u] Dst(%08X) <- 0x%08X <- Src(0x%08X) [%dbpp %08X|%08X|%08X|%08X]",
-                 T::formatString(), i, dst[i], mid, src[i], T::kDepth, T::kA, T::kR, T::kG, T::kB);
-    }
-  }
-
-  static void test() noexcept {
-    testPrgb32();
-  }
-};
-
-#define BL_PIXEL_TEST(FORMAT, DEPTH, R_MASK, G_MASK, B_MASK, A_MASK)      \
-  struct Test_##FORMAT {                                                  \
-    static inline const char* formatString() noexcept { return #FORMAT; } \
-                                                                          \
-    enum : uint32_t {                                                     \
-      kDepth = DEPTH,                                                     \
-      kR = R_MASK,                                                        \
-      kG = G_MASK,                                                        \
-      kB = B_MASK,                                                        \
-      kA = A_MASK                                                         \
-    };                                                                    \
-  }
-
-BL_PIXEL_TEST(XRGB_0555, 16, 0x00007C00u, 0x000003E0u, 0x0000001Fu, 0x00000000u);
-BL_PIXEL_TEST(XBGR_0555, 16, 0x0000001Fu, 0x000003E0u, 0x00007C00u, 0x00000000u);
-BL_PIXEL_TEST(XRGB_0565, 16, 0x0000F800u, 0x000007E0u, 0x0000001Fu, 0x00000000u);
-BL_PIXEL_TEST(XBGR_0565, 16, 0x0000001Fu, 0x000007E0u, 0x0000F800u, 0x00000000u);
-BL_PIXEL_TEST(ARGB_4444, 16, 0x00000F00u, 0x000000F0u, 0x0000000Fu, 0x0000F000u);
-BL_PIXEL_TEST(ABGR_4444, 16, 0x0000000Fu, 0x000000F0u, 0x00000F00u, 0x0000F000u);
-BL_PIXEL_TEST(RGBA_4444, 16, 0x0000F000u, 0x00000F00u, 0x000000F0u, 0x0000000Fu);
-BL_PIXEL_TEST(BGRA_4444, 16, 0x000000F0u, 0x00000F00u, 0x0000F000u, 0x0000000Fu);
-BL_PIXEL_TEST(XRGB_0888, 24, 0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0x00000000u);
-BL_PIXEL_TEST(XBGR_0888, 24, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0x00000000u);
-BL_PIXEL_TEST(XRGB_8888, 32, 0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0x00000000u);
-BL_PIXEL_TEST(XBGR_8888, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0x00000000u);
-BL_PIXEL_TEST(RGBX_8888, 32, 0xFF000000u, 0x00FF0000u, 0x0000FF00u, 0x00000000u);
-BL_PIXEL_TEST(BGRX_8888, 32, 0x0000FF00u, 0x00FF0000u, 0xFF000000u, 0x00000000u);
-BL_PIXEL_TEST(ARGB_8888, 32, 0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0xFF000000u);
-BL_PIXEL_TEST(ABGR_8888, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0xFF000000u);
-BL_PIXEL_TEST(RGBA_8888, 32, 0xFF000000u, 0x00FF0000u, 0x0000FF00u, 0x000000FFu);
-BL_PIXEL_TEST(BGRA_8888, 32, 0x0000FF00u, 0x00FF0000u, 0xFF000000u, 0x000000FFu);
-BL_PIXEL_TEST(BRGA_8888, 32, 0x00FF0000u, 0x0000FF00u, 0xFF000000u, 0x000000FFu);
-
-#undef BL_PIXEL_TEST
-
-static void testGenericConversions() noexcept {
-  INFO("Testing generic conversions");
-
-  BLPixelConverterGenericTest<Test_XRGB_0555>::test();
-  BLPixelConverterGenericTest<Test_XBGR_0555>::test();
-  BLPixelConverterGenericTest<Test_XRGB_0565>::test();
-  BLPixelConverterGenericTest<Test_XBGR_0565>::test();
-  BLPixelConverterGenericTest<Test_ARGB_4444>::test();
-  BLPixelConverterGenericTest<Test_ABGR_4444>::test();
-  BLPixelConverterGenericTest<Test_RGBA_4444>::test();
-  BLPixelConverterGenericTest<Test_BGRA_4444>::test();
-  BLPixelConverterGenericTest<Test_XRGB_0888>::test();
-  BLPixelConverterGenericTest<Test_XBGR_0888>::test();
-  BLPixelConverterGenericTest<Test_XRGB_8888>::test();
-  BLPixelConverterGenericTest<Test_XBGR_8888>::test();
-  BLPixelConverterGenericTest<Test_RGBX_8888>::test();
-  BLPixelConverterGenericTest<Test_BGRX_8888>::test();
-  BLPixelConverterGenericTest<Test_ARGB_8888>::test();
-  BLPixelConverterGenericTest<Test_ABGR_8888>::test();
-  BLPixelConverterGenericTest<Test_RGBA_8888>::test();
-  BLPixelConverterGenericTest<Test_BGRA_8888>::test();
-  BLPixelConverterGenericTest<Test_BRGA_8888>::test();
-}
-
-UNIT(pixel_converter, BL_TEST_GROUP_IMAGE_UTILITIES) {
-  testRgb32A8Conversions();
-  testRgb32Rgb24Conversions();
-  testPremultiplyConversions();
-  testGenericConversions();
-}
-#endif

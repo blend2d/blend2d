@@ -44,7 +44,7 @@ static BL_INLINE_NODEBUG BLObjectImplSize expandImplSize(BLObjectImplSize implSi
 // =========================================
 
 static BL_INLINE BLResult initSSO(BLBitArrayCore* self, size_t size = 0) noexcept {
-  self->_d.initStatic(BL_OBJECT_TYPE_BIT_ARRAY, BLObjectInfo::packAbcpFields(0, 0, 0, uint32_t(size)));
+  self->_d.initStatic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_BIT_ARRAY) | BLObjectInfo::fromAbcp(0, 0, 0, uint32_t(size)));
   return BL_SUCCESS;
 }
 
@@ -59,41 +59,13 @@ static BL_INLINE void setSSOSize(BLBitArrayCore* self, size_t newSize) noexcept 
 static BL_INLINE BLResult initDynamic(BLBitArrayCore* self, BLObjectImplSize implSize, size_t size = 0u) noexcept {
   BL_ASSERT(size <= UINT32_MAX);
 
-  BLBitArrayImpl* impl = blObjectDetailAllocImplT<BLBitArrayImpl>(self,
-    BLObjectInfo::packType(BL_OBJECT_TYPE_BIT_ARRAY), implSize, &implSize);
+  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_BIT_ARRAY);
+  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLBitArrayImpl>(self, info, implSize));
 
-  if(BL_UNLIKELY(!impl))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+  BLBitArrayImpl* impl = getImpl(self);
   impl->capacity = uint32_t(bitCountFromWordCount(wordCapacityFromImplSize(implSize)));
   impl->size = uint32_t(size);
   return BL_SUCCESS;
-}
-
-static BL_INLINE BLResult releaseInstance(BLBitArrayCore* self) noexcept {
-  BLBitArrayImpl* impl = getImpl(self);
-  BLObjectInfo info = self->_d.info;
-
-  if (blObjectImplDecRefAndTestIfRefCounted(impl, info))
-    return freeImpl(impl, info);
-
-  return BL_SUCCESS;
-}
-
-static BL_INLINE BLResult replaceInstance(BLBitArrayCore* self, const BLBitArrayCore* other) noexcept {
-  BLBitArrayImpl* impl = getImpl(self);
-  BLObjectInfo info = self->_d.info;
-
-  self->_d = other->_d;
-  if (blObjectImplDecRefAndTestIfRefCounted(impl, info))
-    return freeImpl(impl, info);
-
-  return BL_SUCCESS;
-}
-
-static BL_INLINE bool hasMutableImpl(const BLBitArrayCore* self) noexcept {
-  BL_ASSERT(!self->_d.sso());
-  return *blObjectImplGetRefCountPtr(self->_d.impl) == 1;
 }
 
 // BLBitArray - Private - Modify Op
@@ -110,14 +82,14 @@ static BL_NOINLINE BLResult makeMutableForModifyOp(BLBitArrayCore* self, size_t 
     return BL_SUCCESS;
   }
   else {
-    BLBitArrayImpl* impl = getImpl(self);
-    size_t size = impl->size;
+    BLBitArrayImpl* selfI = getImpl(self);
+    size_t size = selfI->size;
 
     if (from >= size)
       return blTraceError(BL_ERROR_INVALID_VALUE);
 
-    if (hasMutableImpl(self)) {
-      *out = BitData{impl->data(), size};
+    if (isImplMutable(selfI)) {
+      *out = BitData{selfI->data(), size};
       return BL_SUCCESS;
     }
 
@@ -130,7 +102,6 @@ static BL_NOINLINE BLResult makeMutableForModifyOp(BLBitArrayCore* self, size_t 
     }
 
     BL_PROPAGATE(initDynamic(&newO, implSizeFromWordCapacity(wordCountFromBitCount(size)), size));
-
     *out = BitData{getImpl(&newO)->data(), size};
     return replaceInstance(self, &newO);
   }
@@ -158,13 +129,13 @@ static BL_NOINLINE BLResult makeMutableForAppendOp(BLBitArrayCore* self, size_t 
       return blTraceError(BL_ERROR_OUT_OF_MEMORY);
   }
   else {
-    BLBitArrayImpl* impl = getImpl(self);
+    BLBitArrayImpl* selfI = getImpl(self);
 
-    d = BitData{impl->data(), impl->size};
+    d = BitData{selfI->data(), selfI->size};
     *bitIndex = d.size;
 
-    size_t remainingCapacity = size_t(impl->capacity) - d.size;
-    size_t mutableMsk = BLIntOps::bitMaskFromBool<size_t>(hasMutableImpl(self));
+    size_t remainingCapacity = size_t(selfI->capacity) - d.size;
+    size_t mutableMsk = BLIntOps::bitMaskFromBool<size_t>(isImplMutable(selfI));
 
     if (appendBitCount <= (remainingCapacity & mutableMsk)) {
       size_t newSize = d.size + appendBitCount;
@@ -172,7 +143,7 @@ static BL_NOINLINE BLResult makeMutableForAppendOp(BLBitArrayCore* self, size_t 
       size_t lastWord = wordIndexOf(newSize - 1u);
 
       BLMemOps::fillInlineT(d.data + fromWord, uint32_t(0), lastWord - fromWord + 1);
-      impl->size = uint32_t(newSize);
+      selfI->size = uint32_t(newSize);
 
       *out = BitData{d.data, newSize};
       return BL_SUCCESS;
@@ -291,7 +262,8 @@ BL_API_IMPL BLResult blBitArrayInitWeak(BLBitArrayCore* self, const BLBitArrayCo
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isBitArray());
 
-  return blObjectPrivateInitWeakTagged(self, other);
+  self->_d = other->_d;
+  return retainInstance(self);
 }
 
 BL_API_IMPL BLResult blBitArrayDestroy(BLBitArrayCore* self) noexcept {
@@ -332,7 +304,7 @@ BL_API_IMPL BLResult blBitArrayAssignWeak(BLBitArrayCore* self, const BLBitArray
   BL_ASSERT(self->_d.isBitArray());
   BL_ASSERT(other->_d.isBitArray());
 
-  blObjectPrivateAddRefIfRCTagSet(other);
+  retainInstance(other);
   return replaceInstance(self, other);
 }
 
@@ -349,10 +321,10 @@ BL_API_IMPL BLResult blBitArrayAssignWords(BLBitArrayCore* self, const uint32_t*
     }
   }
   else {
-    BLBitArrayImpl* impl = getImpl(self);
+    BLBitArrayImpl* selfI = getImpl(self);
 
-    size_t capacityInWords = wordCountFromBitCount(impl->capacity);
-    size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!hasMutableImpl(self));
+    size_t capacityInWords = wordCountFromBitCount(selfI->capacity);
+    size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
 
     if ((wordCount | immutableMsk) > capacityInWords) {
       BLBitArrayCore newO;
@@ -445,8 +417,8 @@ BL_API_IMPL uint32_t blBitArrayGetCardinalityInRange(const BLBitArrayCore* self,
     counter.addItem(d.data[startWord] & mask);
   }
   else {
-    uint32_t startMask = BLBitArrayOps::nonZeroEndMask(BLBitArrayOps::kNumBits - (start & BLBitArrayOps::kBitMask));
-    uint32_t endMask = BLBitArrayOps::nonZeroStartMask(end & BLBitArrayOps::kBitMask);
+    uint32_t startMask = BLBitArrayOps::nonZeroEndMask(BLBitArrayOps::kNumBits - uint32_t(start & BLBitArrayOps::kBitMask));
+    uint32_t endMask = BLBitArrayOps::nonZeroStartMask((uint32_t(end - 1u) & BLBitArrayOps::kBitMask) + 1u);
 
     counter.addItem(d.data[startWord] & startMask);
     counter.addArray(d.data + startWord + 1, lastWord - startWord - 1);
@@ -624,9 +596,9 @@ BL_API_IMPL BLResult blBitArrayClear(BLBitArrayCore* self) noexcept {
   if (self->_d.sso())
     return initSSO(self);
 
-  if (hasMutableImpl(self)) {
-    BLBitArrayImpl* impl = getImpl(self);
-    impl->size = 0;
+  BLBitArrayImpl* selfI = getImpl(self);
+  if (isImplMutable(selfI)) {
+    selfI->size = 0;
     return BL_SUCCESS;
   }
   else {
@@ -664,11 +636,11 @@ BL_API_IMPL BLResult blBitArrayResize(BLBitArrayCore* self, uint32_t nBits) noex
     }
   }
   else {
-    BLBitArrayImpl* impl = getImpl(self);
-    size_t immutableMask = BLIntOps::bitMaskFromBool<size_t>(!hasMutableImpl(self));
+    BLBitArrayImpl* selfI = getImpl(self);
+    size_t immutableMask = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
 
-    d = BitData{impl->data(), impl->size};
-    if ((nBits | immutableMask) <= impl->capacity) {
+    d = BitData{selfI->data(), selfI->size};
+    if ((nBits | immutableMask) <= selfI->capacity) {
       if (nBits < d.size) {
         size_t i = wordIndexOf(nBits);
         if (nBits & BLBitArrayOps::kBitMask)
@@ -680,7 +652,7 @@ BL_API_IMPL BLResult blBitArrayResize(BLBitArrayCore* self, uint32_t nBits) noex
         BLMemOps::fillInlineT(d.data + from, uint32_t(0), end - from);
       }
 
-      impl->size = uint32_t(nBits);
+      selfI->size = uint32_t(nBits);
       return BL_SUCCESS;
     }
   }
@@ -725,13 +697,13 @@ BL_API_IMPL BLResult blBitArrayReserve(BLBitArrayCore* self, uint32_t nBits) noe
     d = BitData{getSSOData(self), getSSOSize(self)};
   }
   else {
-    BLBitArrayImpl* impl = getImpl(self);
-    size_t immutableMask = BLIntOps::bitMaskFromBool<size_t>(!hasMutableImpl(self));
+    BLBitArrayImpl* selfI = getImpl(self);
+    size_t immutableMask = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
 
-    if ((nBits | immutableMask) <= impl->capacity)
+    if ((nBits | immutableMask) <= selfI->capacity)
       return BL_SUCCESS;
 
-    d = BitData{impl->data(), impl->size};
+    d = BitData{selfI->data(), selfI->size};
   }
 
   BLObjectImplSize implSize = implSizeFromWordCapacity(wordCountFromBitCount(nBits));
@@ -887,12 +859,12 @@ BL_API_IMPL BLResult blBitArrayReplaceOp(BLBitArrayCore* self, uint32_t nBits, u
       }
     }
     else {
-      BLBitArrayImpl* impl = getImpl(self);
-      size_t immutableMask = BLIntOps::bitMaskFromBool<size_t>(!hasMutableImpl(self));
+      BLBitArrayImpl* selfI = getImpl(self);
+      size_t immutableMask = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
 
-      if ((nBits | immutableMask) <= impl->capacity) {
-        dst = impl->data();
-        impl->size = uint32_t(nBits);
+      if ((nBits | immutableMask) <= selfI->capacity) {
+        dst = selfI->data();
+        selfI->size = uint32_t(nBits);
 
         // Using the passed instance's Impl, it's mutable and it has enough capacity.
         break;
@@ -990,152 +962,3 @@ void blBitArrayRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
   BLBitArrayPrivate::initSSO(static_cast<BLBitArrayCore*>(&blObjectDefaults[BL_OBJECT_TYPE_BIT_ARRAY]));
 }
-
-// BLBitArray - Tests
-// ==================
-
-#if defined(BL_TEST)
-UNIT(bitarray, BL_TEST_GROUP_CORE_CONTAINERS) {
-  constexpr uint32_t kSSOBitCapacity = BLBitArray::kSSOWordCount * 32u;
-  BLBitArray empty;
-
-  INFO("[SSO] Basic functionality");
-  {
-    BLBitArray ba;
-
-    EXPECT_TRUE(ba._d.sso());
-    EXPECT_TRUE(ba.empty());
-    EXPECT_EQ(ba.size(), 0u);
-    EXPECT_EQ(ba.capacity(), kSSOBitCapacity);
-    EXPECT_TRUE(ba.equals(empty));
-
-    for (uint32_t i = 0; i < kSSOBitCapacity; i++) {
-      EXPECT_SUCCESS(ba.appendBit(true));
-      EXPECT_EQ(ba.size(), i + 1u);
-      EXPECT_TRUE(ba._d.sso());
-      EXPECT_TRUE(ba.equals(ba));
-      EXPECT_FALSE(ba.equals(empty));
-
-      EXPECT_EQ(ba.cardinality(), i + 1u);
-      EXPECT_EQ(ba.cardinalityInRange(0, i + 1u), i + 1u);
-    }
-
-    ba.clear();
-    EXPECT_TRUE(ba._d.sso());
-    EXPECT_TRUE(ba.empty());
-    EXPECT_EQ(ba.size(), 0u);
-    EXPECT_EQ(ba.capacity(), kSSOBitCapacity);
-    EXPECT_TRUE(ba.equals(empty));
-
-    for (uint32_t i = 0; i < kSSOBitCapacity; i++) {
-      EXPECT_SUCCESS(ba.appendBit(i & 1 ? true : false));
-      EXPECT_EQ(ba.size(), i + 1u);
-      EXPECT_TRUE(ba._d.sso());
-      EXPECT_TRUE(ba.equals(ba));
-      EXPECT_FALSE(ba.equals(empty));
-    }
-
-    EXPECT_EQ(ba.cardinality(), kSSOBitCapacity / 2u);
-    EXPECT_EQ(ba.cardinalityInRange(0, kSSOBitCapacity), kSSOBitCapacity / 2u);
-
-    for (uint32_t i = 0; i < kSSOBitCapacity; i++) {
-      EXPECT_SUCCESS(ba.setBit(i));
-    }
-
-    EXPECT_EQ(ba.cardinality(), kSSOBitCapacity);
-    EXPECT_EQ(ba.cardinalityInRange(0, kSSOBitCapacity), kSSOBitCapacity);
-
-    for (uint32_t i = 0; i < kSSOBitCapacity; i++) {
-      EXPECT_SUCCESS(ba.clearBit(i));
-    }
-
-    EXPECT_EQ(ba.cardinality(), 0u);
-    EXPECT_EQ(ba.cardinalityInRange(0, kSSOBitCapacity), 0u);
-  }
-
-  INFO("[SSO] Using word quantities");
-  {
-    BLBitArray ba;
-    EXPECT_TRUE(ba._d.sso());
-
-    uint32_t words[3] = { 0x80000000, 0x40000000, 0x20000000 };
-    EXPECT_SUCCESS(ba.appendWords(words, 3));
-
-    EXPECT_TRUE(ba._d.sso());
-    EXPECT_EQ(ba.size(), 96u);
-    EXPECT_TRUE(ba.hasBit(0));
-    EXPECT_TRUE(ba.hasBit(33));
-    EXPECT_TRUE(ba.hasBit(66));
-    EXPECT_FALSE(ba.hasBit(1));
-    EXPECT_FALSE(ba.hasBit(32));
-    EXPECT_FALSE(ba.hasBit(34));
-    EXPECT_FALSE(ba.hasBit(65));
-    EXPECT_FALSE(ba.hasBit(67));
-
-    ba.clear();
-    EXPECT_TRUE(ba._d.sso());
-
-    // Appends words to a BitArray that has 1 butm thus the words need to be shifted.
-    ba.appendBit(false);
-    EXPECT_SUCCESS(ba.appendWords(words, 2));
-
-    EXPECT_TRUE(ba.hasBit(1));
-    EXPECT_TRUE(ba.hasBit(34));
-    EXPECT_FALSE(ba.hasBit(0));
-    EXPECT_FALSE(ba.hasBit(2));
-    EXPECT_FALSE(ba.hasBit(33));
-    EXPECT_FALSE(ba.hasBit(35));
-    EXPECT_FALSE(ba.hasBit(66));
-    EXPECT_FALSE(ba.hasBit(68));
-
-    EXPECT_SUCCESS(ba.clear());
-  }
-
-  INFO("[Dynamic] Basic functionality");
-  {
-    constexpr uint32_t kCount = uint32_t(100000 & -64);
-    BLBitArray ba;
-
-    for (uint32_t i = 0; i < kCount; i++) {
-      EXPECT_SUCCESS(ba.appendBit(true));
-      EXPECT_EQ(ba.size(), i + 1u);
-      EXPECT_TRUE(ba.equals(ba));
-    }
-
-    EXPECT_EQ(ba.cardinality(), kCount);
-    EXPECT_EQ(ba.cardinalityInRange(0, kCount), kCount);
-
-    for (uint32_t i = 0; i < kCount; i += 2) {
-      EXPECT_SUCCESS(ba.clearBit(i));
-      EXPECT_EQ(ba.size(), kCount);
-    }
-
-    EXPECT_EQ(ba.cardinality(), kCount / 2u);
-    EXPECT_EQ(ba.cardinalityInRange(0, kCount), kCount / 2u);
-
-    for (uint32_t i = 0; i < kCount; i += 2) {
-      EXPECT_SUCCESS(ba.replaceBit(i, true));
-      EXPECT_EQ(ba.size(), kCount);
-    }
-
-    EXPECT_EQ(ba.cardinality(), kCount);
-    EXPECT_EQ(ba.cardinalityInRange(0, kCount), kCount);
-
-    uint32_t pattern = 0;
-    for (uint32_t i = 0; i < kCount; i += 32) {
-      EXPECT_SUCCESS(ba.replaceWord(i, pattern));
-      pattern ^= 0xFFFFFFFFu;
-    }
-
-    EXPECT_EQ(ba.cardinality(), kCount / 2u);
-    EXPECT_EQ(ba.cardinalityInRange(0, kCount), kCount / 2u);
-
-    for (uint32_t i = 0; i < kCount; i += 32) {
-      EXPECT_SUCCESS(ba.clearWord(i, 0x33333333));
-    }
-
-    EXPECT_EQ(ba.cardinality(), kCount / 4u);
-    EXPECT_EQ(ba.cardinalityInRange(0, kCount), kCount / 4u);
-  }
-}
-#endif

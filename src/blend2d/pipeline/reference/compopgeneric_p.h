@@ -37,7 +37,7 @@ struct CompOp_SrcCopy_Op {
   }
 
   static BL_INLINE PixelType op_prgb32_prgb32(PixelType d, PixelType s, uint32_t m) noexcept {
-    return (d.unpack() * Repeat{255 - m} + s.unpack() * Repeat{m}).div255().pack();
+    return (d.unpack() * Repeat{m ^ 0xFFu} + s.unpack() * Repeat{m}).div255().pack();
   }
 };
 
@@ -166,6 +166,25 @@ struct CompOp_Base_PRGB32 : public CompOp_Base<OpT, PixelT, kDstBPP> {
     else
       return compositeCSpanMasked(dstPtr, w, m);
   }
+
+  BL_INLINE uint8_t* compositeVSpanWithGA(uint8_t* BL_RESTRICT dstPtr, const uint8_t* BL_RESTRICT maskPtr, size_t w) noexcept {
+    size_t i = w;
+    do {
+      dstPtr = compositePixelMasked(dstPtr, maskPtr[0]);
+      maskPtr++;
+    } while (--i);
+    return dstPtr;
+  }
+
+  BL_INLINE uint8_t* compositeVSpanWithoutGA(uint8_t* BL_RESTRICT dstPtr, const uint8_t* BL_RESTRICT maskPtr, uint32_t globalAlpha, size_t w) noexcept {
+    size_t i = w;
+    do {
+      uint32_t msk = BLPixelOps::Scalar::udiv255(uint32_t(maskPtr[0]) * globalAlpha);
+      maskPtr++;
+      dstPtr = compositePixelMasked(dstPtr, msk);
+    } while (--i);
+    return dstPtr;
+  }
 };
 
 typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchSolid<Pixel::P32_A8R8G8B8>, 4> CompOp_SrcCopy_PRGB32_Solid;
@@ -188,9 +207,9 @@ typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8
 typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchRadialGradient<Pixel::P32_A8R8G8B8, false>, 4> CompOp_SrcOver_PRGB32_RadialRoR;
 typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchRadialGradient<Pixel::P32_A8R8G8B8, false>, 4> CompOp_Plus_PRGB32_RadialRoR;
 
-typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchConicalGradient<Pixel::P32_A8R8G8B8>, 4> CompOp_SrcCopy_PRGB32_Conical;
-typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchConicalGradient<Pixel::P32_A8R8G8B8>, 4> CompOp_SrcOver_PRGB32_Conical;
-typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchConicalGradient<Pixel::P32_A8R8G8B8>, 4> CompOp_Plus_PRGB32_Conical;
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchConicGradient<Pixel::P32_A8R8G8B8>, 4> CompOp_SrcCopy_PRGB32_Conic;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchConicGradient<Pixel::P32_A8R8G8B8>, 4> CompOp_SrcOver_PRGB32_Conic;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchConicGradient<Pixel::P32_A8R8G8B8>, 4> CompOp_Plus_PRGB32_Conic;
 
 typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedBlit<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAlignedBlit_PRGB32;
 typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedBlit<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAlignedBlit_PRGB32;

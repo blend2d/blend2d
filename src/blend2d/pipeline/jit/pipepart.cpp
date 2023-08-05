@@ -8,6 +8,7 @@
 
 #include "../../pipeline/jit/pipecompiler_p.h"
 #include "../../pipeline/jit/pipepart_p.h"
+#include "../../tables/tables_p.h"
 
 namespace BLPipeline {
 namespace JIT {
@@ -15,6 +16,7 @@ namespace JIT {
 PipePart::PipePart(PipeCompiler* pc, PipePartType partType) noexcept
   : pc(pc),
     cc(pc->cc),
+    ct(blCommonTable),
     _partType(partType) {}
 
 void PipePart::preparePart() noexcept {}

@@ -11,8 +11,8 @@
 
 namespace BLRasterEngine {
 
-// RasterEngine::WorkerManager - Init
-// ==================================
+// BLRasterEngine::WorkerManager - Init
+// ====================================
 
 BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInfo* createInfo) noexcept {
   uint32_t initFlags = createInfo->flags;
@@ -29,7 +29,7 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInf
   if (threadCount > BL_RUNTIME_MAX_THREAD_COUNT)
     threadCount = BL_RUNTIME_MAX_THREAD_COUNT;
 
-  // We count the user thread as a worker thread as well. In this case this one doens't need a separate workData
+  // We count the user thread as a worker thread as well. In this case this one doesn't need a separate workData
   // as it can use the 'syncWorkData' owned by the rendering context.
   uint32_t workerCount = threadCount - 1;
 
@@ -40,7 +40,6 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInf
   // Forces the zone-allocator to preallocate the first block of memory, if not allocated yet.
   size_t batchContextSize = sizeof(RenderBatch) +
                             RenderJobQueue::sizeOf() +
-                            RenderFetchQueue::sizeOf() +
                             RenderCommandQueue::sizeOf();
   BL_PROPAGATE(_allocator.ensure(batchContextSize));
 
@@ -125,8 +124,8 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInf
   return BL_SUCCESS;
 }
 
-// RasterEngine::WorkerManager - Reset
-// ===================================
+// BLRasterEngine::WorkerManager - Reset
+// =====================================
 
 void WorkerManager::reset() noexcept {
   if (!isActive())

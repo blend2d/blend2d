@@ -9,10 +9,10 @@
 #include "glyphbuffer_p.h"
 #include "runtime_p.h"
 #include "string_p.h"
-#include "unicode_p.h"
 #include "support/intops_p.h"
 #include "support/ptrops_p.h"
 #include "support/stringops_p.h"
+#include "unicode/unicode_p.h"
 
 // BLGlyphBuffer - Internals
 // =========================

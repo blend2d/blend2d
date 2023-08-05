@@ -133,7 +133,7 @@ struct CompoundEntry {
   const uint8_t* gPtr;
   size_t remainingSize;
   uint32_t compoundFlags;
-  BLMatrix2D matrix;
+  BLMatrix2D transform;
 };
 
 } // {anonymous}
@@ -146,7 +146,7 @@ BL_HIDDEN extern const BLLookupTable<uint32_t, ((GlyfTable::Simple::kImportantFl
 BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_AVX2(
   const BLFontFaceImpl* faceI_,
   BLGlyphId glyphId,
-  const BLMatrix2D* matrix,
+  const BLMatrix2D* transform,
   BLPath* out,
   size_t* contourCountOut,
   BLScopedBuffer* tmpBuffer) noexcept;
@@ -156,7 +156,7 @@ BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_AVX2(
 BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_SSE4_2(
   const BLFontFaceImpl* faceI_,
   BLGlyphId glyphId,
-  const BLMatrix2D* matrix,
+  const BLMatrix2D* transform,
   BLPath* out,
   size_t* contourCountOut,
   BLScopedBuffer* tmpBuffer) noexcept;

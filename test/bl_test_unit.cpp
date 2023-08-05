@@ -3,7 +3,7 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include <blend2d/api-build_p.h>
+#include <blend2d/api-build_test_p.h>
 #include <blend2d/runtime.h>
 
 int main(int argc, const char* argv[]) {

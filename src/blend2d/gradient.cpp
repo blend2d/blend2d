@@ -8,12 +8,13 @@
 #include "math_p.h"
 #include "format_p.h"
 #include "gradient_p.h"
+#include "object_p.h"
 #include "rgba_p.h"
 #include "runtime_p.h"
-#include "tables_p.h"
 #include "pixelops/funcs_p.h"
 #include "support/algorithm_p.h"
 #include "support/intops_p.h"
+#include "support/lookuptable_p.h"
 #include "support/ptrops_p.h"
 #include "threading/atomic_p.h"
 
@@ -22,7 +23,7 @@ namespace BLGradientPrivate {
 // BLGradient - Globals
 // ====================
 
-static BLObjectEthernalImpl<BLGradientPrivateImpl> defaultImpl;
+static BLObjectEternalImpl<BLGradientPrivateImpl> defaultImpl;
 
 static constexpr const double noValues[BL_GRADIENT_VALUE_MAX_VALUE + 1] = { 0.0 };
 static constexpr const BLMatrix2D noMatrix(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
@@ -34,7 +35,7 @@ struct BLGradientValueCountTableGen {
   static constexpr uint8_t value(size_t i) noexcept {
     return i == BL_GRADIENT_TYPE_LINEAR  ? uint8_t(sizeof(BLLinearGradientValues ) / sizeof(double)) :
            i == BL_GRADIENT_TYPE_RADIAL  ? uint8_t(sizeof(BLRadialGradientValues ) / sizeof(double)) :
-           i == BL_GRADIENT_TYPE_CONICAL ? uint8_t(sizeof(BLConicalGradientValues) / sizeof(double)) : uint8_t(0);
+           i == BL_GRADIENT_TYPE_CONIC ? uint8_t(sizeof(BLConicGradientValues) / sizeof(double)) : uint8_t(0);
   }
 };
 
@@ -44,27 +45,14 @@ static constexpr const auto valueCountTable =
 // BLGradient - Internals & Utilities
 // ==================================
 
-static BL_INLINE constexpr BLObjectImplSize implSizeFromCapacity(size_t n) noexcept {
-  return BLObjectImplSize(sizeof(BLGradientPrivateImpl) + n * sizeof(BLGradientStop));
-}
-
-static BL_INLINE constexpr size_t capacityFromImplSize(BLObjectImplSize implSize) noexcept {
-  return (implSize.value() - sizeof(BLGradientPrivateImpl)) / sizeof(BLGradientStop);
-}
-
-static BL_INLINE bool isMutable(const BLGradientCore* self) noexcept {
-  const size_t* refCountPtr = blObjectImplGetRefCountPtr(self->_d.impl);
-  return *refCountPtr == 1;
-}
-
-static BL_INLINE size_t getSize(const BLGradientCore* self) noexcept { return getImpl(self)->size; }
-static BL_INLINE size_t getCapacity(const BLGradientCore* self) noexcept { return getImpl(self)->capacity; }
-static BL_INLINE BLGradientStop* getStops(const BLGradientCore* self) noexcept { return getImpl(self)->stops; }
+static BL_INLINE_NODEBUG size_t getSize(const BLGradientCore* self) noexcept { return getImpl(self)->size; }
+static BL_INLINE_NODEBUG size_t getCapacity(const BLGradientCore* self) noexcept { return getImpl(self)->capacity; }
+static BL_INLINE_NODEBUG BLGradientStop* getStops(const BLGradientCore* self) noexcept { return getImpl(self)->stops; }
 
 static constexpr size_t BL_GRADIENT_IMPL_INITIAL_SIZE = BLIntOps::alignUp(implSizeFromCapacity(2).value(), BL_OBJECT_IMPL_ALIGNMENT);
 
-// BLGradient - Analysis
-// =====================
+// BLGradient - Internals - Analysis
+// =================================
 
 static BL_INLINE uint32_t analyzeStopArray(const BLGradientStop* stops, size_t n) noexcept {
   uint32_t result = BL_DATA_ANALYSIS_CONFORMING;
@@ -87,8 +75,8 @@ static BL_INLINE uint32_t analyzeStopArray(const BLGradientStop* stops, size_t n
   return result;
 }
 
-// BLGradient - Stop Matcher
-// =========================
+// BLGradient - Internals - Stop Matcher
+// =====================================
 
 struct GradientStopMatcher {
   double offset;
@@ -97,8 +85,8 @@ struct GradientStopMatcher {
 static BL_INLINE bool operator==(const BLGradientStop& a, const GradientStopMatcher& b) noexcept { return a.offset == b.offset; }
 static BL_INLINE bool operator<=(const BLGradientStop& a, const GradientStopMatcher& b) noexcept { return a.offset <= b.offset; }
 
-// BLGradient - AltStop
-// ====================
+// BLGradient - Internals - AltStop
+// ================================
 
 // Alternative representation of `BLGradientStop` that is used to sort unknown stop array that is either unsorted or
 // may contain more than 2 stops that have the same offset. The `index` member is actually an index to the original
@@ -113,8 +101,8 @@ struct GradientStopAlt {
 
 BL_STATIC_ASSERT(sizeof(GradientStopAlt) == sizeof(BLGradientStop));
 
-// BLGradient - Utilities
-// ======================
+// BLGradient - Internals - Utilities
+// ==================================
 
 static BL_INLINE void initValues(double* dst, const double* src, size_t n) noexcept {
   size_t i;
@@ -187,7 +175,7 @@ static BL_NOINLINE size_t copyUnsafeStops(BLGradientStop* dst, const BLGradientS
 }
 
 static BL_INLINE BLGradientLUT* copyMaybeNullLUT(BLGradientLUT* lut) noexcept {
-  return lut ? lut->incRef() : nullptr;
+  return lut ? lut->retain() : nullptr;
 }
 
 // Cache invalidation means to remove the cached lut tables from `impl`. Since modification always means to either
@@ -195,16 +183,24 @@ static BL_INLINE BLGradientLUT* copyMaybeNullLUT(BLGradientLUT* lut) noexcept {
 // atomic operations here.
 static BL_INLINE BLResult invalidateLUTCache(BLGradientPrivateImpl* impl) noexcept {
   BLGradientLUT* lut32 = impl->lut32;
-  if (lut32) {
+  BLGradientLUT* lut64 = impl->lut64;
+
+  if (uintptr_t(lut32) | uintptr_t(lut64)) {
+    if (lut32)
+      lut32->release();
+
+    if (lut64)
+      lut64->release();
+
     impl->lut32 = nullptr;
-    lut32->release();
+    impl->lut64 = nullptr;
   }
 
   impl->info32.packed = 0;
   return BL_SUCCESS;
 }
 
-BLGradientInfo ensureInfo32(BLGradientPrivateImpl* impl) noexcept {
+BLGradientInfo ensureInfo(BLGradientPrivateImpl* impl) noexcept {
   BLGradientInfo info;
 
   info.packed = impl->info32.packed;
@@ -281,33 +277,28 @@ BLGradientInfo ensureInfo32(BLGradientPrivateImpl* impl) noexcept {
 
       info.solid = uint8_t(flags & FLAG_TRANSITION ? 0 : 1);
       info.format = uint8_t(flags & FLAG_ALPHA_NOT_ONE ? BLInternalFormat::kPRGB32 : BLInternalFormat::kFRGB32);
-      info.lutSize = uint16_t(lutSize);
+      info._lutSize = uint16_t(lutSize);
 
       // Update the info. It doesn't have to be atomic.
       impl->info32.packed = info.packed;
     }
   }
 
-
   return info;
 }
 
-BLGradientLUT* ensureLut32(BLGradientPrivateImpl* impl) noexcept {
+BLGradientLUT* ensureLut32(BLGradientPrivateImpl* impl, uint32_t lutSize) noexcept {
   BLGradientLUT* lut = impl->lut32;
-  if (lut)
+  if (lut) {
+    BL_ASSERT(lut->size == lutSize);
     return lut;
-
-  BLGradientInfo info = ensureInfo32(impl);
-  const BLGradientStop* stops = impl->stops;
-  uint32_t lutSize = info.lutSize;
-
-  if (!lutSize)
-    return nullptr;
+  }
 
   lut = BLGradientLUT::alloc(lutSize, 4);
   if (BL_UNLIKELY(!lut))
     return nullptr;
 
+  const BLGradientStop* stops = impl->stops;
   BLPixelOps::funcs.interpolate_prgb32(lut->data<uint32_t>(), lutSize, stops, impl->size);
 
   // We must drop this LUT if another thread created it meanwhile.
@@ -321,71 +312,72 @@ BLGradientLUT* ensureLut32(BLGradientPrivateImpl* impl) noexcept {
   return lut;
 }
 
-// BLGradient - Alloc & Free Impl
-// ==============================
+BLGradientLUT* ensureLut64(BLGradientPrivateImpl* impl, uint32_t lutSize) noexcept {
+  BLGradientLUT* lut = impl->lut64;
+  if (lut) {
+    BL_ASSERT(lut->size == lutSize);
+    return lut;
+  }
 
-static BLGradientPrivateImpl* allocImpl(
-  BLGradientCore* self,
-  BLObjectImplSize implSize,
-  BLGradientType type,
-  const void* values,
-  BLExtendMode extendMode,
-  BLMatrix2DType mType,
-  const BLMatrix2D* m) noexcept {
-
-  BL_ASSERT(type <= BL_GRADIENT_TYPE_MAX_VALUE);
-  BL_ASSERT(mType <= BL_MATRIX2D_TYPE_MAX_VALUE);
-  BL_ASSERT(extendMode <= BL_EXTEND_MODE_SIMPLE_MAX_VALUE);
-
-  BLGradientPrivateImpl* impl = blObjectDetailAllocImplT<BLGradientPrivateImpl>(self,
-    BLObjectInfo::packType(BL_OBJECT_TYPE_GRADIENT),
-    implSize,
-    &implSize);
-
-  if (BL_UNLIKELY(!impl))
+  lut = BLGradientLUT::alloc(lutSize, 8);
+  if (BL_UNLIKELY(!lut))
     return nullptr;
 
+  const BLGradientStop* stops = impl->stops;
+  BLPixelOps::funcs.interpolate_prgb64(lut->data<uint64_t>(), lutSize, stops, impl->size);
+
+  // We must drop this LUT if another thread created it meanwhile.
+  BLGradientLUT* expected = nullptr;
+  if (!blAtomicCompareExchange(&impl->lut64, &expected, lut)) {
+    BL_ASSERT(expected != nullptr);
+    BLGradientLUT::destroy(lut);
+    lut = expected;
+  }
+
+  return lut;
+}
+
+// BLGradient - Internals - Alloc & Free Impl
+// ==========================================
+
+static BLResult allocImpl(BLGradientCore* self, BLObjectImplSize implSize, const void* values, size_t valueCount, const BLMatrix2D* transform) noexcept {
+  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_GRADIENT);
+  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLGradientPrivateImpl>(self, info, implSize));
+
+  BLGradientPrivateImpl* impl = getImpl(self);
   impl->stops = BLPtrOps::offset<BLGradientStop>(impl, sizeof(BLGradientPrivateImpl));
   impl->size = 0;
   impl->capacity = capacityFromImplSize(implSize);
-  impl->gradientType = uint8_t(type);
-  impl->extendMode = uint8_t(extendMode);
-  impl->matrixType = uint8_t(mType);
-  impl->reserved[0] = 0;
-  impl->matrix = *m;
-  initValues(impl->values, static_cast<const double*>(values), valueCountTable[type]);
+  impl->transform = *transform;
+  initValues(impl->values, static_cast<const double*>(values), valueCount);
   impl->lut32 = nullptr;
+  impl->lut64 = nullptr;
   impl->info32.packed = 0;
-
-  return impl;
+  return BL_SUCCESS;
 }
 
-BLResult freeImpl(BLGradientPrivateImpl* impl, BLObjectInfo info) noexcept {
+BLResult freeImpl(BLGradientPrivateImpl* impl) noexcept {
   invalidateLUTCache(impl);
-  return blObjectImplFreeInline(impl, info);
+  return BLObjectPrivate::freeImpl(impl);
 }
 
-// BLGradient - Deep Copy & Mutation
-// =================================
+// BLGradient - Internals - Deep Copy & Mutation
+// =============================================
 
 static BL_NOINLINE BLResult deepCopy(BLGradientCore* self, const BLGradientCore* other, bool copyCache) noexcept {
+  uint32_t fields = other->_d.fields();
   const BLGradientPrivateImpl* otherI = getImpl(other);
 
   BLGradientCore newO;
-  BLGradientPrivateImpl* newI = allocImpl(&newO,
-    implSizeFromCapacity(otherI->capacity),
-    (BLGradientType)otherI->gradientType,
-    otherI->values,
-    (BLExtendMode)otherI->extendMode,
-    (BLMatrix2DType)otherI->matrixType, &otherI->matrix);
+  BL_PROPAGATE(allocImpl(&newO, implSizeFromCapacity(otherI->capacity), otherI->values, valueCountTable[getGradientType(other)], &otherI->transform));
 
-  if (BL_UNLIKELY(!newI))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+  newO._d.info.setFields(fields);
+  BLGradientPrivateImpl* newI = getImpl(&newO);
   newI->size = copyStops(newI->stops, otherI->stops, otherI->size);
 
   if (copyCache) {
     newI->lut32 = copyMaybeNullLUT(otherI->lut32);
+    newI->lut64 = copyMaybeNullLUT(otherI->lut64);
     newI->info32.packed = otherI->info32.packed;
   }
 
@@ -394,7 +386,7 @@ static BL_NOINLINE BLResult deepCopy(BLGradientCore* self, const BLGradientCore*
 
 static BL_INLINE BLResult makeMutable(BLGradientCore* self, bool copyCache) noexcept {
   // NOTE: `copyCache` should be a constant so its handling should have zero cost.
-  if (!isMutable(self))
+  if (!isImplMutable(getImpl(self)))
     return deepCopy(self, self, copyCache);
 
   if (!copyCache)
@@ -433,14 +425,15 @@ BL_API_IMPL BLResult blGradientInitWeak(BLGradientCore* self, const BLGradientCo
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isGradient());
 
-  return blObjectPrivateInitWeakTagged(self, other);
+  self->_d = other->_d;
+  return retainInstance(self);
 }
 
-BL_API_IMPL BLResult blGradientInitAs(BLGradientCore* self, BLGradientType type, const void* values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) noexcept {
+BL_API_IMPL BLResult blGradientInitAs(BLGradientCore* self, BLGradientType type, const void* values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* transform) noexcept {
   using namespace BLGradientPrivate;
 
   self->_d = blObjectDefaults[BL_OBJECT_TYPE_GRADIENT]._d;
-  return blGradientCreate(self, type, values, extendMode, stops, n, m);
+  return blGradientCreate(self, type, values, extendMode, stops, n, transform);
 }
 
 BL_API_IMPL BLResult blGradientDestroy(BLGradientCore* self) noexcept {
@@ -480,11 +473,11 @@ BL_API_IMPL BLResult blGradientAssignWeak(BLGradientCore* self, const BLGradient
   BL_ASSERT(self->_d.isGradient());
   BL_ASSERT(other->_d.isGradient());
 
-  blObjectPrivateAddRefIfRCTagSet(other);
+  retainInstance(other);
   return replaceInstance(self, other);
 }
 
-BL_API_IMPL BLResult blGradientCreate(BLGradientCore* self, BLGradientType type, const void* values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* m) noexcept {
+BL_API_IMPL BLResult blGradientCreate(BLGradientCore* self, BLGradientType type, const void* values, BLExtendMode extendMode, const BLGradientStop* stops, size_t n, const BLMatrix2D* transform) noexcept {
   using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
@@ -494,11 +487,11 @@ BL_API_IMPL BLResult blGradientCreate(BLGradientCore* self, BLGradientType type,
   if (!values)
     values = noValues;
 
-  BLMatrix2DType mType = BL_MATRIX2D_TYPE_IDENTITY;
-  if (!m)
-    m = &noMatrix;
+  BLTransformType transformType = BL_TRANSFORM_TYPE_IDENTITY;
+  if (!transform)
+    transform = &noMatrix;
   else
-    mType = m->type();
+    transformType = transform->type();
 
   uint32_t analysis = BL_DATA_ANALYSIS_CONFORMING;
   if (n) {
@@ -510,29 +503,25 @@ BL_API_IMPL BLResult blGradientCreate(BLGradientCore* self, BLGradientType type,
       return blTraceError(BL_ERROR_INVALID_VALUE);
   }
 
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
-  if ((n | immutableMsk) > getCapacity(self)) {
+  BLGradientPrivateImpl* selfI = getImpl(self);
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
+
+  if ((n | immutableMsk) > selfI->capacity) {
     BLObjectImplSize implSize = blMax(implSizeFromCapacity(n), BLObjectImplSize(BL_GRADIENT_IMPL_INITIAL_SIZE));
 
     BLGradientCore newO;
-    BLGradientPrivateImpl* newI = allocImpl(&newO, implSize, type, values, extendMode, mType, m);
+    BL_PROPAGATE(allocImpl(&newO, implSize, values, valueCountTable[type], transform));
 
-    if (BL_UNLIKELY(!newI))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+    BLGradientPrivateImpl* newI = getImpl(&newO);
+    newO._d.info.bits |= packAbcp(type, extendMode, transformType);
     newI->size = copyUnsafeStops(newI->stops, stops, n, analysis);
     return replaceInstance(self, &newO);
   }
   else {
-    BLGradientPrivateImpl* selfI = getImpl(self);
-
-    selfI->gradientType = uint8_t(type);
-    selfI->extendMode = uint8_t(extendMode);
-    selfI->matrixType = uint8_t(mType);
-    selfI->matrix.reset(*m);
-
+    self->_d.info.setFields(packAbcp(type, extendMode, transformType));
     initValues(selfI->values, static_cast<const double*>(values), valueCountTable[type]);
     selfI->size = copyUnsafeStops(selfI->stops, stops, n, analysis);
+    selfI->transform.reset(*transform);
 
     return invalidateLUTCache(selfI);
   }
@@ -553,19 +542,13 @@ BL_API_IMPL BLResult blGradientShrink(BLGradientCore* self) noexcept {
     return BL_SUCCESS;
 
   BLGradientCore newO;
-  BLGradientPrivateImpl* newI = allocImpl(&newO,
-    fittingSize,
-    (BLGradientType)selfI->gradientType,
-    selfI->values,
-    (BLExtendMode)selfI->extendMode,
-    (BLMatrix2DType)selfI->matrixType,
-    &selfI->matrix);
+  BL_PROPAGATE(allocImpl(&newO, fittingSize, selfI->values, BL_GRADIENT_VALUE_MAX_VALUE + 1u, &selfI->transform));
 
-  if (BL_UNLIKELY(!newI))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+  BLGradientPrivateImpl* newI = getImpl(&newO);
+  newO._d.info.setFields(self->_d.fields());
   newI->size = copyStops(newI->stops, selfI->stops, selfI->size);
   newI->lut32 = copyMaybeNullLUT(selfI->lut32);
+  newI->lut64 = copyMaybeNullLUT(selfI->lut64);
 
   return replaceInstance(self, &newO);
 }
@@ -575,31 +558,23 @@ BL_API_IMPL BLResult blGradientReserve(BLGradientCore* self, size_t n) noexcept 
   BL_ASSERT(self->_d.isGradient());
 
   BLGradientPrivateImpl* selfI = getImpl(self);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
 
-  if ((n | immutableMsk) > selfI->capacity) {
-    BLGradientCore newO;
-
-    BLObjectImplSize implSize = blMax(implSizeFromCapacity(n), BLObjectImplSize(BL_GRADIENT_IMPL_INITIAL_SIZE));
-    BLGradientPrivateImpl* newI = allocImpl(&newO,
-      implSize,
-      (BLGradientType)selfI->gradientType,
-      selfI->values,
-      (BLExtendMode)selfI->extendMode,
-      (BLMatrix2DType)selfI->matrixType,
-      &selfI->matrix);
-
-    if (BL_UNLIKELY(!newI))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
-    newI->size = copyStops(newI->stops, selfI->stops, selfI->size);
-    newI->lut32 = copyMaybeNullLUT(selfI->lut32);
-
-    return replaceInstance(self, &newO);
-  }
-  else {
+  if ((n | immutableMsk) <= selfI->capacity)
     return BL_SUCCESS;
-  }
+
+  BLGradientCore newO;
+
+  BLObjectImplSize implSize = blMax(implSizeFromCapacity(n), BLObjectImplSize(BL_GRADIENT_IMPL_INITIAL_SIZE));
+  BL_PROPAGATE(allocImpl(&newO, implSize, selfI->values, BL_GRADIENT_VALUE_MAX_VALUE + 1u, &selfI->transform));
+
+  BLGradientPrivateImpl* newI = getImpl(&newO);
+  newO._d.info.setFields(self->_d.fields());
+  newI->size = copyStops(newI->stops, selfI->stops, selfI->size);
+  newI->lut32 = copyMaybeNullLUT(selfI->lut32);
+  newI->lut64 = copyMaybeNullLUT(selfI->lut64);
+
+  return replaceInstance(self, &newO);
 }
 
 // BLGradient - API - Accessors
@@ -609,8 +584,7 @@ BL_API_IMPL BLGradientType blGradientGetType(const BLGradientCore* self) noexcep
   using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
-  const BLGradientPrivateImpl* selfI = getImpl(self);
-  return (BLGradientType)selfI->gradientType;
+  return getGradientType(self);
 }
 
 BL_API_IMPL BLResult blGradientSetType(BLGradientCore* self, BLGradientType type) noexcept {
@@ -620,11 +594,7 @@ BL_API_IMPL BLResult blGradientSetType(BLGradientCore* self, BLGradientType type
   if (BL_UNLIKELY(uint32_t(type) > BL_GRADIENT_TYPE_MAX_VALUE))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  BL_PROPAGATE(makeMutable(self, true));
-
-  BLGradientPrivateImpl* selfI = getImpl(self);
-  selfI->gradientType = uint8_t(type);
-
+  setGradientType(self, type);
   return BL_SUCCESS;
 }
 
@@ -632,8 +602,7 @@ BL_API_IMPL BLExtendMode blGradientGetExtendMode(const BLGradientCore* self) noe
   using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
-  const BLGradientPrivateImpl* selfI = getImpl(self);
-  return (BLExtendMode)selfI->extendMode;
+  return getExtendMode(self);
 }
 
 BL_API_IMPL BLResult blGradientSetExtendMode(BLGradientCore* self, BLExtendMode extendMode) noexcept {
@@ -643,11 +612,7 @@ BL_API_IMPL BLResult blGradientSetExtendMode(BLGradientCore* self, BLExtendMode 
   if (BL_UNLIKELY(extendMode > BL_EXTEND_MODE_SIMPLE_MAX_VALUE))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  BL_PROPAGATE(makeMutable(self, true));
-
-  BLGradientPrivateImpl* selfI = getImpl(self);
-  selfI->extendMode = uint8_t(extendMode);
-
+  setExtendMode(self, extendMode);
   return BL_SUCCESS;
 }
 
@@ -730,19 +695,13 @@ BL_API_IMPL BLResult blGradientResetStops(BLGradientCore* self) noexcept {
     return BL_SUCCESS;
 
   BLGradientPrivateImpl* selfI = getImpl(self);
-  if (!isMutable(self)) {
+  if (!isImplMutable(selfI)) {
     BLGradientCore newO;
 
-    BLGradientPrivateImpl* newI = allocImpl(&newO,
-      BLObjectImplSize(BL_GRADIENT_IMPL_INITIAL_SIZE),
-      (BLGradientType)selfI->gradientType,
-      selfI->values,
-      (BLExtendMode)selfI->extendMode,
-      (BLMatrix2DType)selfI->matrixType, &selfI->matrix);
+    BLObjectImplSize implSize = BLObjectImplSize(BL_GRADIENT_IMPL_INITIAL_SIZE);
+    BL_PROPAGATE(allocImpl(&newO, implSize, selfI->values, BL_GRADIENT_VALUE_MAX_VALUE + 1u, &selfI->transform));
 
-    if (BL_UNLIKELY(!newI))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+    newO._d.info.setFields(self->_d.fields());
     return replaceInstance(self, &newO);
   }
   else {
@@ -759,7 +718,7 @@ BL_API_IMPL BLResult blGradientAssignStops(BLGradientCore* self, const BLGradien
     return blGradientResetStops(self);
 
   BLGradientPrivateImpl* selfI = getImpl(self);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
   uint32_t analysis = analyzeStopArray(stops, n);
 
   if (BL_UNLIKELY(analysis >= BL_DATA_ANALYSIS_INVALID_VALUE))
@@ -769,18 +728,10 @@ BL_API_IMPL BLResult blGradientAssignStops(BLGradientCore* self, const BLGradien
     BLGradientCore newO;
 
     BLObjectImplSize implSize = blMax(implSizeFromCapacity(n), BLObjectImplSize(BL_GRADIENT_IMPL_INITIAL_SIZE));
-    BLGradientPrivateImpl* newI = allocImpl(
-      &newO,
-      implSize,
-      (BLGradientType)selfI->gradientType,
-      selfI->values,
-      (BLExtendMode)selfI->extendMode,
-      (BLMatrix2DType)selfI->matrixType,
-      &selfI->matrix);
+    BL_PROPAGATE(allocImpl(&newO, implSize, selfI->values, BL_GRADIENT_VALUE_MAX_VALUE + 1u, &selfI->transform));
 
-    if (BL_UNLIKELY(!newI))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+    BLGradientPrivateImpl* newI = getImpl(&newO);
+    newO._d.info.setFields(self->_d.fields());
     newI->size = copyUnsafeStops(newI->stops, stops, n, analysis);
     return replaceInstance(self, &newO);
   }
@@ -824,21 +775,16 @@ BL_API_IMPL BLResult blGradientAddStopRgba64(BLGradientCore* self, double offset
 
   // If we are here it means that we are going to insert a stop at `i`. All other cases were handled at this point
   // so focus on generic insert, which could be just a special case of append operation, but we don't really care.
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isMutable(self));
+  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isImplMutable(selfI));
 
   if ((n | immutableMsk) >= selfI->capacity) {
     BLGradientCore newO;
 
     BLObjectImplSize implSize = blObjectExpandImplSize(implSizeFromCapacity(n + 1));
-    BLGradientPrivateImpl* newI = allocImpl(&newO,
-      implSize,
-      (BLGradientType)selfI->gradientType,
-      selfI->values,
-      (BLExtendMode)selfI->extendMode,
-      (BLMatrix2DType)selfI->matrixType, &selfI->matrix);
+    BL_PROPAGATE(allocImpl(&newO, implSize, selfI->values, BL_GRADIENT_VALUE_MAX_VALUE + 1u, &selfI->transform));
 
-    if (BL_UNLIKELY(!newI))
-      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    BLGradientPrivateImpl* newI = getImpl(&newO);
+    newO._d.info.setFields(self->_d.fields());
 
     BLGradientStop* newStops = newI->stops;
     copyStops(newStops, stops, i);
@@ -918,21 +864,16 @@ BL_API_IMPL BLResult blGradientRemoveStopsByIndex(BLGradientCore* self, size_t r
   size_t shiftedCount = size - end;
   size_t afterCount = size - removedCount;
 
-  if (!isMutable(self)) {
+  if (!isImplMutable(selfI)) {
     BLGradientCore newO;
+    BL_PROPAGATE(allocImpl(&newO, implSizeFromCapacity(afterCount), selfI->values, BL_GRADIENT_VALUE_MAX_VALUE + 1u, &selfI->transform));
 
-    BLGradientPrivateImpl* newI = allocImpl(&newO,
-      implSizeFromCapacity(afterCount),
-      (BLGradientType)selfI->gradientType,
-      selfI->values,
-      (BLExtendMode)selfI->extendMode,
-      (BLMatrix2DType)selfI->matrixType,
-      &selfI->matrix);
+    BLGradientPrivateImpl* newI = getImpl(&newO);
+    newO._d.info.setFields(self->_d.fields());
 
     BLGradientStop* newStops = newI->stops;
     copyStops(newStops, stops, index);
     copyStops(newStops + index, stops + end, shiftedCount);
-
     return replaceInstance(self, &newO);
   }
   else {
@@ -1017,25 +958,40 @@ BL_API_IMPL size_t blGradientIndexOfStop(const BLGradientCore* self, double offs
   return i;
 }
 
-// BLGradient - API - Matrix
-// =========================
+// BLGradient - API - Transform
+// ============================
 
-BL_API_IMPL BLResult blGradientApplyMatrixOp(BLGradientCore* self, BLMatrix2DOp opType, const void* opData) noexcept {
+BL_API_IMPL BLResult blGradientGetTransform(const BLGradientCore* self, BLMatrix2D* transformOut) noexcept {
   using namespace BLGradientPrivate;
   BL_ASSERT(self->_d.isGradient());
 
-  if (BL_UNLIKELY(uint32_t(opType) > BL_MATRIX2D_OP_MAX_VALUE))
+  *transformOut = getImpl(self)->transform;
+  return BL_SUCCESS;
+}
+
+BL_API_IMPL BLTransformType blGradientGetTransformType(const BLGradientCore* self) noexcept {
+  using namespace BLGradientPrivate;
+  BL_ASSERT(self->_d.isGradient());
+
+  return getTransformType(self);
+}
+
+BL_API_IMPL BLResult blGradientApplyTransformOp(BLGradientCore* self, BLTransformOp opType, const void* opData) noexcept {
+  using namespace BLGradientPrivate;
+  BL_ASSERT(self->_d.isGradient());
+
+  if (BL_UNLIKELY(uint32_t(opType) > BL_TRANSFORM_OP_MAX_VALUE))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   BLGradientPrivateImpl* selfI = getImpl(self);
-  if (opType == 0 && selfI->matrixType == BL_MATRIX2D_TYPE_IDENTITY)
+  if (opType == 0 && getTransformType(self) == BL_TRANSFORM_TYPE_IDENTITY)
     return BL_SUCCESS;
 
   BL_PROPAGATE(makeMutable(self, true));
   selfI = getImpl(self);
 
-  blMatrix2DApplyOp(&selfI->matrix, opType, opData);
-  selfI->matrixType = uint8_t(selfI->matrix.type());
+  blMatrix2DApplyOp(&selfI->transform, opType, opData);
+  setTransformType(self, selfI->transform.type());
 
   return BL_SUCCESS;
 }
@@ -1052,15 +1008,14 @@ BL_API_IMPL bool blGradientEquals(const BLGradientCore* a, const BLGradientCore*
   const BLGradientPrivateImpl* aI = getImpl(a);
   const BLGradientPrivateImpl* bI = getImpl(b);
 
+  if (a->_d.info != b->_d.info)
+    return false;
+
   if (aI == bI)
     return true;
 
   size_t size = aI->size;
-  bool eq = (aI->gradientType == bI->gradientType) &
-            (aI->extendMode   == bI->extendMode  ) &
-            (aI->matrixType   == bI->matrixType  ) &
-            (aI->matrix       == bI->matrix      ) &
-            (size             == bI->size        ) ;
+  unsigned eq = unsigned(aI->transform == bI->transform) & unsigned(size == bI->size);
   return eq && memcmp(aI->stops, bI->stops, size * sizeof(BLGradientStop)) == 0;
 }
 
@@ -1070,125 +1025,7 @@ BL_API_IMPL bool blGradientEquals(const BLGradientCore* a, const BLGradientCore*
 void blGradientRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
-  BLGradientPrivate::defaultImpl.impl->matrix.reset();
+  BLGradientPrivate::defaultImpl.impl->transform.reset();
   blObjectDefaults[BL_OBJECT_TYPE_GRADIENT]._d.initDynamic(
-    BL_OBJECT_TYPE_GRADIENT,
-    BLObjectInfo{BL_OBJECT_INFO_IMMUTABLE_FLAG},
-    &BLGradientPrivate::defaultImpl.impl);
+    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_GRADIENT), &BLGradientPrivate::defaultImpl.impl);
 }
-
-// BLGradient - Tests
-// ==================
-
-#if defined(BL_TEST)
-UNIT(gradient, BL_TEST_GROUP_RENDERING_STYLES) {
-  INFO("Dynamic memory allocation strategy");
-  {
-    BLGradient g;
-    size_t kNumItems = 10000000;
-    size_t capacity = g.capacity();
-
-    for (size_t i = 0; i < kNumItems; i++) {
-      g.addStop(double(i) / double(kNumItems), BLRgba32(0xFFFFFFFF));
-
-      if (capacity != g.capacity()) {
-        size_t implSize = BLGradientPrivate::implSizeFromCapacity(g.capacity()).value();
-        INFO("  Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, g.capacity(), implSize);
-
-        capacity = g.capacity();
-      }
-    }
-  }
-
-  INFO("Gradient - Linear values");
-  {
-    BLGradient g(BLLinearGradientValues(0.0, 0.5, 1.0, 1.5));
-
-    EXPECT_EQ(g.type(), BL_GRADIENT_TYPE_LINEAR);
-    EXPECT_EQ(g.x0(), 0.0);
-    EXPECT_EQ(g.y0(), 0.5);
-    EXPECT_EQ(g.x1(), 1.0);
-    EXPECT_EQ(g.y1(), 1.5);
-
-    g.setX0(0.15);
-    g.setY0(0.85);
-    g.setX1(0.75);
-    g.setY1(0.25);
-
-    EXPECT_EQ(g.x0(), 0.15);
-    EXPECT_EQ(g.y0(), 0.85);
-    EXPECT_EQ(g.x1(), 0.75);
-    EXPECT_EQ(g.y1(), 0.25);
-  }
-
-  INFO("Gradient - Radial values");
-  {
-    BLGradient g(BLRadialGradientValues(1.0, 1.5, 0.0, 0.5, 500.0));
-
-    EXPECT_EQ(g.type(), BL_GRADIENT_TYPE_RADIAL);
-    EXPECT_EQ(g.x0(), 1.0);
-    EXPECT_EQ(g.y0(), 1.5);
-    EXPECT_EQ(g.x1(), 0.0);
-    EXPECT_EQ(g.y1(), 0.5);
-    EXPECT_EQ(g.r0(), 500.0);
-
-    g.setR0(150.0);
-    EXPECT_EQ(g.r0(), 150.0);
-  }
-
-  INFO("Gradient - Conical values");
-  {
-    BLGradient g(BLConicalGradientValues(1.0, 1.5, 0.1));
-
-    EXPECT_EQ(g.type(), BL_GRADIENT_TYPE_CONICAL);
-    EXPECT_EQ(g.x0(), 1.0);
-    EXPECT_EQ(g.y0(), 1.5);
-    EXPECT_EQ(g.angle(), 0.1);
-  }
-
-  INFO("Gradient - Stops");
-  {
-    BLGradient g;
-
-    g.addStop(0.0, BLRgba32(0x00000000u));
-    EXPECT_EQ(g.size(), 1u);
-    EXPECT_EQ(g.stopAt(0).rgba.value, 0x0000000000000000u);
-
-    g.addStop(1.0, BLRgba32(0xFF000000u));
-    EXPECT_EQ(g.size(), 2u);
-    EXPECT_EQ(g.stopAt(1).rgba.value, 0xFFFF000000000000u);
-
-    g.addStop(0.5, BLRgba32(0xFFFF0000u));
-    EXPECT_EQ(g.size(), 3u);
-    EXPECT_EQ(g.stopAt(1).rgba.value, 0xFFFFFFFF00000000u);
-
-    g.addStop(0.5, BLRgba32(0xFFFFFF00u));
-    EXPECT_EQ(g.size(), 4u);
-    EXPECT_EQ(g.stopAt(2).rgba.value, 0xFFFFFFFFFFFF0000u);
-
-    g.removeStopByOffset(0.5, true);
-    EXPECT_EQ(g.size(), 2u);
-    EXPECT_EQ(g.stopAt(0).rgba.value, 0x0000000000000000u);
-    EXPECT_EQ(g.stopAt(1).rgba.value, 0xFFFF000000000000u);
-
-    g.addStop(0.5, BLRgba32(0x80000000u));
-    EXPECT_EQ(g.size(), 3u);
-    EXPECT_EQ(g.stopAt(1).rgba.value, 0x8080000000000000u);
-
-    // Check whether copy-on-write works as expected.
-    BLGradient copy(g);
-    EXPECT_EQ(copy.size(), 3u);
-
-    g.addStop(0.5, BLRgba32(0xCC000000u));
-    EXPECT_EQ(copy.size(), 3u);
-    EXPECT_EQ(g.size(), 4u);
-    EXPECT_EQ(g.stopAt(0).rgba.value, 0x0000000000000000u);
-    EXPECT_EQ(g.stopAt(1).rgba.value, 0x8080000000000000u);
-    EXPECT_EQ(g.stopAt(2).rgba.value, 0xCCCC000000000000u);
-    EXPECT_EQ(g.stopAt(3).rgba.value, 0xFFFF000000000000u);
-
-    g.resetStops();
-    EXPECT_EQ(g.size(), 0u);
-  }
-}
-#endif

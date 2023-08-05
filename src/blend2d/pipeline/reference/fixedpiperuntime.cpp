@@ -25,7 +25,7 @@ template<typename CompOp>
 static BL_INLINE FillFunc getFillFunc(FillType fillType) noexcept {
   switch (fillType) {
     case FillType::kBoxA: return Reference::FillBoxA_Base<CompOp>::fillFunc;
-    case FillType::kBoxU: return Reference::FillBoxU_Base<CompOp>::fillFunc;
+    case FillType::kMask: return Reference::FillMask_Base<CompOp>::fillFunc;
     case FillType::kAnalytic: return Reference::FillAnalytic_Base<CompOp>::fillFunc;
     default:
       return nullptr;
@@ -35,7 +35,7 @@ static BL_INLINE FillFunc getFillFunc(FillType fillType) noexcept {
 static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signature, DispatchData* dispatchData, PipeLookupCache* cache) noexcept {
   blUnused(self_);
 
-  Signature s(signature);
+  Signature s{signature};
   FillFunc fillFunc = nullptr;
   FetchFunc fetchFunc = nullptr;
 
@@ -118,7 +118,7 @@ static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signat
       }
       break;
 
-    case FetchType::kGradientLinearPad:
+    case FetchType::kGradientLinearNNPad:
       switch (s.compOp()) {
         case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearPad>(s.fillType()); break;
         case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearPad>(s.fillType()); break;
@@ -126,7 +126,7 @@ static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signat
       }
       break;
 
-    case FetchType::kGradientLinearRoR:
+    case FetchType::kGradientLinearNNRoR:
       switch (s.compOp()) {
         case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearRoR>(s.fillType()); break;
         case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearRoR>(s.fillType()); break;
@@ -134,7 +134,7 @@ static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signat
       }
       break;
 
-    case FetchType::kGradientRadialPad:
+    case FetchType::kGradientRadialNNPad:
       switch (s.compOp()) {
         case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialPad>(s.fillType()); break;
         case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialPad>(s.fillType()); break;
@@ -142,7 +142,7 @@ static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signat
       }
       break;
 
-    case FetchType::kGradientRadialRoR:
+    case FetchType::kGradientRadialNNRoR:
       switch (s.compOp()) {
         case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialRoR>(s.fillType()); break;
         case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialRoR>(s.fillType()); break;
@@ -150,11 +150,11 @@ static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signat
       }
       break;
 
-    case FetchType::kGradientConical:
+    case FetchType::kGradientConicNN:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Conical>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Conical>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Conical>(s.fillType()); break;
+        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Conic>(s.fillType()); break;
+        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Conic>(s.fillType()); break;
+        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Conic>(s.fillType()); break;
       }
       break;
   }

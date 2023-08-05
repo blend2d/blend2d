@@ -19,7 +19,7 @@
 // ========================
 
 static BLImageCodecCore blBmpCodecObject;
-static BLObjectEthernalVirtualImpl<BLBmpCodecImpl, BLImageCodecVirt> blBmpCodec;
+static BLObjectEternalVirtualImpl<BLBmpCodecImpl, BLImageCodecVirt> blBmpCodec;
 static BLImageDecoderVirt blBmpDecoderVirt;
 static BLImageEncoderVirt blBmpEncoderVirt;
 
@@ -595,20 +595,19 @@ static BLResult BL_CDECL blBmpDecoderImplReadFrame(BLImageDecoderImpl* impl, BLI
 }
 
 static BLResult BL_CDECL blBmpDecoderImplCreate(BLImageDecoderCore* self) noexcept {
-  BLBmpDecoderImpl* decoderI = blObjectDetailAllocImplT<BLBmpDecoderImpl>(self, BLObjectInfo::packType(BL_OBJECT_TYPE_IMAGE_DECODER));
+  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_DECODER);
+  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLBmpDecoderImpl>(self, info));
 
-  if (BL_UNLIKELY(!decoderI))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+  BLBmpDecoderImpl* decoderI = static_cast<BLBmpDecoderImpl*>(self->_d.impl);
   decoderI->ctor(&blBmpDecoderVirt, &blBmpCodecObject);
   return blBmpDecoderImplRestart(decoderI);
 }
 
-static BLResult BL_CDECL blBmpDecoderImplDestroy(BLObjectImpl* impl, uint32_t info) noexcept {
+static BLResult BL_CDECL blBmpDecoderImplDestroy(BLObjectImpl* impl) noexcept {
   BLBmpDecoderImpl* decoderI = static_cast<BLBmpDecoderImpl*>(impl);
 
   decoderI->dtor();
-  return blObjectDetailFreeImpl(decoderI, info);
+  return blObjectFreeImpl(decoderI);
 }
 
 // BLBmpEncoderImpl - Interface
@@ -769,28 +768,27 @@ static BLResult BL_CDECL blBmpEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
 }
 
 static BLResult BL_CDECL blBmpEncoderImplCreate(BLImageEncoderCore* self) noexcept {
-  BLBmpEncoderImpl* encoderI = blObjectDetailAllocImplT<BLBmpEncoderImpl>(self, BLObjectInfo::packType(BL_OBJECT_TYPE_IMAGE_ENCODER));
+  BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_ENCODER);
+  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLBmpEncoderImpl>(self, info));
 
-  if (BL_UNLIKELY(!encoderI))
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-
+  BLBmpEncoderImpl* encoderI = static_cast<BLBmpEncoderImpl*>(self->_d.impl);
   encoderI->ctor(&blBmpEncoderVirt, &blBmpCodecObject);
   return blBmpEncoderImplRestart(encoderI);
 }
 
-static BLResult BL_CDECL blBmpEncoderImplDestroy(BLObjectImpl* impl, uint32_t info) noexcept {
+static BLResult BL_CDECL blBmpEncoderImplDestroy(BLObjectImpl* impl) noexcept {
   BLBmpEncoderImpl* encoderI = static_cast<BLBmpEncoderImpl*>(impl);
 
   encoderI->dtor();
-  return blObjectDetailFreeImpl(encoderI, info);
+  return blObjectFreeImpl(encoderI);
 }
 
 // BLBmpCodecImpl - Interface
 // ==========================
 
-static BLResult BL_CDECL blBmpCodecImplDestroy(BLObjectImpl* impl, uint32_t info) noexcept {
+static BLResult BL_CDECL blBmpCodecImplDestroy(BLObjectImpl* impl) noexcept {
   // Built-in codecs are never destroyed.
-  blUnused(impl, info);
+  blUnused(impl);
   return BL_SUCCESS;
 };
 
@@ -853,10 +851,7 @@ void blBmpCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexc
   blBmpCodec.impl->mimeType.dcast().assign("image/x-bmp");
   blBmpCodec.impl->extensions.dcast().assign("bmp|ras");
 
-  blBmpCodecObject._d.initDynamic(
-    BL_OBJECT_TYPE_IMAGE_CODEC,
-    BLObjectInfo{BL_OBJECT_INFO_IMMUTABLE_FLAG},
-    &blBmpCodec.impl);
+  blBmpCodecObject._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_CODEC), &blBmpCodec.impl);
 
   // Initialize BMP decoder virtual functions.
   blBmpDecoderVirt.base.destroy = blBmpDecoderImplDestroy;

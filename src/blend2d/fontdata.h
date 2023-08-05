@@ -145,7 +145,7 @@ struct BLFontDataImpl BL_CLASS_INHERITS(BLObjectImpl) {
 #ifdef __cplusplus
 
 //! Font data [C++ API].
-class BLFontData : public BLFontDataCore {
+class BLFontData final : public BLFontDataCore {
 public:
   //! \cond INTERNAL
   //! \name Internals
@@ -162,7 +162,11 @@ public:
   BL_INLINE_NODEBUG BLFontData() noexcept { blFontDataInit(this); }
   BL_INLINE_NODEBUG BLFontData(BLFontData&& other) noexcept { blFontDataInitMove(this, &other); }
   BL_INLINE_NODEBUG BLFontData(const BLFontData& other) noexcept { blFontDataInitWeak(this, &other); }
-  BL_INLINE_NODEBUG ~BLFontData() noexcept { blFontDataDestroy(this); }
+
+  BL_INLINE_NODEBUG ~BLFontData() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+      blFontDataDestroy(this);
+  }
 
   //! \}
 

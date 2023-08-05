@@ -27,11 +27,11 @@ struct FillBoxA_Base {
     intptr_t dstStride = ctxData->dst.stride;
     uint8_t* dstPtr = static_cast<uint8_t*>(ctxData->dst.pixelData);
 
-    uint32_t x0 = uint32_t(fillData->box.x0);
     uint32_t y0 = uint32_t(fillData->box.y0);
-
-    dstPtr += size_t(x0) * CompOp::kDstBPP;
     dstPtr += intptr_t(y0) * dstStride;
+
+    uint32_t x0 = uint32_t(fillData->box.x0);
+    dstPtr += size_t(x0) * CompOp::kDstBPP;
 
     uint32_t w = uint32_t(fillData->box.x1) - uint32_t(fillData->box.x0);
     uint32_t h = uint32_t(fillData->box.y1) - uint32_t(fillData->box.y0);
@@ -65,74 +65,100 @@ struct FillBoxA_Base {
 };
 
 template<typename CompOp>
-struct FillBoxU_Base {
+struct FillMask_Base {
   static void BL_CDECL fillFunc(ContextData* ctxData, const void* fillData_, const void* fetchData_) noexcept {
-    const FillData::BoxU* fillData = static_cast<const FillData::BoxU*>(fillData_);
+    const FillData::Mask* fillData = static_cast<const FillData::Mask*>(fillData_);
 
-    intptr_t dstStride = ctxData->dst.stride;
     uint8_t* dstPtr = static_cast<uint8_t*>(ctxData->dst.pixelData);
+    intptr_t dstStride = ctxData->dst.stride;
 
-    uint32_t x0 = uint32_t(fillData->box.x0);
     uint32_t y0 = uint32_t(fillData->box.y0);
-
-    dstPtr += size_t(x0) * CompOp::kDstBPP;
     dstPtr += intptr_t(y0) * dstStride;
 
-    uint32_t w = uint32_t(fillData->box.x1) - uint32_t(fillData->box.x0);
-    dstStride -= intptr_t(size_t(w) * CompOp::kDstBPP);
-
-    uint32_t startWidth = fillData->startWidth;
-    uint32_t innerWidth = fillData->innerWidth;
-    const uint32_t* pMasks = fillData->masks;
-
     CompOp compOp;
-    compOp.rectInitFetch(fetchData_, x0, y0, w);
+    compOp.spanInitY(fetchData_, y0);
 
-    uint32_t y = 1;
+    uint32_t alpha = fillData->alpha.u;
+    BLPipeline::MaskCommand* cmdPtr = fillData->maskCommandData;
+
+    uint32_t h = uint32_t(fillData->box.y1) - y0;
+
     for (;;) {
-      uint32_t x = startWidth;
-      uint32_t masks = pMasks[0];
+      uint32_t x1AndType = cmdPtr->_x1AndType;
+      uint32_t x = cmdPtr->x0();
 
-      BL_ASSUME(x > 0);
-      compOp.rectStartX(x0);
+      BLPipeline::MaskCommand* cmdBegin = cmdPtr;
 
-      for (;;) {
-        do {
-          dstPtr = compOp.compositePixelMasked(dstPtr, masks & 0xFF);
-          masks >>= 8;
-        } while (--x);
+      // This is not really common to not be true, however, it's possible to skip entire scanlines
+      // with kEndOrRepeat command, which is zero.
+      if (BL_LIKELY((x1AndType & MaskCommand::kTypeMask) != 0u)) {
+        compOp.spanStartX(x);
+        dstPtr += size_t(x) * CompOp::kDstBPP;
 
-        if (!masks)
-          break;
+        uint32_t i = x1AndType >> BLPipeline::MaskCommand::kTypeBits;
+        BLPipeline::MaskCommandType cmdType = BLPipeline::MaskCommandType(x1AndType & BLPipeline::MaskCommand::kTypeMask);
 
-        uint32_t cMask = masks & 0xFF;
-        dstPtr = compOp.compositeCSpan(dstPtr, innerWidth, cMask);
+        i -= x;
+        x += i;
 
-        masks >>= 8;
-        x = 1;
+        uintptr_t maskValue = cmdPtr->_value.data;
+        cmdPtr++;
+
+        for (;;) {
+          if (cmdType == BLPipeline::MaskCommandType::kCMask) {
+            BL_ASSUME(maskValue <= 255);
+            dstPtr = compOp.compositeCSpan(dstPtr, i, uint32_t(maskValue));
+          }
+          else {
+            // Increments the advance in the mask command in case it would be repeated.
+            cmdPtr[-1]._value.data = maskValue + uintptr_t(cmdPtr[-1].maskAdvance());
+            if (cmdType == BLPipeline::MaskCommandType::kVMaskA8WithoutGA) {
+              dstPtr = compOp.compositeVSpanWithoutGA(dstPtr, reinterpret_cast<const uint8_t*>(maskValue), alpha, i);
+            }
+            else {
+              dstPtr = compOp.compositeVSpanWithGA(dstPtr, reinterpret_cast<const uint8_t*>(maskValue), i);
+            }
+          }
+
+          x1AndType = cmdPtr->_x1AndType;
+
+          // Terminates this command span.
+          if ((x1AndType & MaskCommand::kTypeMask) == 0u)
+            break;
+
+          uint32_t x0 = cmdPtr->x0();
+          if (x != x0) {
+            compOp.spanAdvanceX(x0, x0 - x);
+            x = x0;
+          }
+
+          i = (x1AndType >> BLPipeline::MaskCommand::kTypeBits) - x;
+          x += i;
+          cmdType = BLPipeline::MaskCommandType(x1AndType & BLPipeline::MaskCommand::kTypeMask);
+
+          maskValue = cmdPtr->_value.data;
+          cmdPtr++;
+        }
+
+        compOp.spanEndX(x);
+        dstPtr -= size_t(x) * CompOp::kDstBPP;
       }
 
-      dstPtr += dstStride;
-      compOp.advanceY();
-
-      // FillBoxU can use up to 3 different scanline masks, everytime `y`
-      // decreases to zero we advance pMasks and verify whether it was the
-      // last one.
-      if (--y != 0)
-        continue;
-
-      // We have reached the number of scanlines required, terminate...
-      if (!*++pMasks)
+      uint32_t repeatCount = cmdPtr->repeatCount();
+      if (--h == 0)
         break;
 
-      y = pMasks[3];
+      cmdPtr++;
+      dstPtr += dstStride;
+
+      compOp.advanceY();
+      repeatCount--;
+      cmdPtr[-1].updateRepeatCount(repeatCount);
+
+      if (repeatCount != 0)
+        cmdPtr = cmdBegin;
     }
   }
-};
-
-template<typename CompOp>
-struct FillMask_Base {
-  // TODO [Portable Pipeline]
 };
 
 template<typename CompOp>

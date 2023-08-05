@@ -15,12 +15,12 @@
 #include "../geometry_p.h"
 #include "../matrix_p.h"
 #include "../path_p.h"
-#include "../tables_p.h"
 #include "../opentype/otface_p.h"
 #include "../opentype/otglyf_p.h"
 #include "../support/intops_p.h"
 #include "../support/memops_p.h"
 #include "../support/scopedbuffer_p.h"
+#include "../tables/tables_p.h"
 
 namespace BLOpenType {
 namespace GlyfImpl {
@@ -33,7 +33,7 @@ namespace GlyfImpl {
 //! Most of the flags are the same as flags used in TT outlines, however, the following modifications were made in
 //! order to make the implementation faster:
 //!
-//!   1. XByte|YByte|XSame|YSame flags were moved to [3:0] bits so they can be used as a predicate with [V]PSHUFB
+//!   1. XByte|YByte|XSame|YSame flags were moved to [3:0] bits so they can be used as a predicate with VPSHUFB
 //!      instruction. These 4 bits are the only important bits to decode X/Y vertices.
 //!   2. XSameOrPositive and YSameOrPositive flags were negated. After negation when all [3:0] bits are zero, the
 //!      vertex is zero as well. This is required when processing multiple flags at once at the end. Extra flags
@@ -44,7 +44,7 @@ namespace GlyfImpl {
 //!   4. Additional OffSpline flag is a combination of OffCurve flag with previous OffCurve flag. If both were set
 //!      then this flag would have OffSpline set as well. This is important for counting how many off-curve splines
 //!      are in the data, and later in the last loop to check whether we are in off curve spline or not.
-//!   5. Repeat flag is last so we can use [V]PMOVMSKB instruction to quickly check for repeated flags.
+//!   5. Repeat flag is last so we can use VPMOVMSKB instruction to quickly check for repeated flags.
 enum VecFlags : uint8_t {
   kVecFlagXByte = 0x01,
   kVecFlagYByte = 0x02,
@@ -223,33 +223,33 @@ alignas(16) static const uint8_t decodeOpYTable[16] = {
 // To an internal representation used by SIMD code:
 //
 //   [Repeat|!OnCurve|OnCurve|0|!YSame|!XSame|YByte|XByte]
-static BL_INLINE Vec128I convertFlags(const Vec128I& vf, const Vec128I& vConvertFlagsPredicate, const Vec128I& v0x3030) noexcept {
-  Vec128I a = _mm_shuffle_epi8(vConvertFlagsPredicate, vf);
-  Vec128I b = v_srl_i16<2>(v_and(vf, v0x3030));
-  return v_xor(a, b);
+static BL_INLINE Vec16xU8 convertFlags(const Vec16xU8& vf, const Vec16xU8& vConvertFlagsPredicate, const Vec16xU8& v0x3030) noexcept {
+  Vec16xU8 a = swizzlev_u8(vConvertFlagsPredicate, vf);
+  Vec16xU8 b = srli_u16<2>((vf & v0x3030));
+  return a ^ b;
 }
 
-static BL_INLINE Vec128Ix2 aggregateVertexSizes(const Vec128I& vf, const Vec128I& vSizesPerXYPredicate, const Vec128I& v0x0F0F) noexcept {
-  Vec128I yxSizes = _mm_shuffle_epi8(vSizesPerXYPredicate, vf); // [H   G   F   E   D   C   B   A]
+static BL_INLINE VecPair<Vec16xU8> aggregateVertexSizes(const Vec16xU8& vf, const Vec16xU8& vSizesPerXYPredicate, const Vec16xU8& v0x0F0F) noexcept {
+  Vec16xU8 yxSizes = swizzlev_u8(vSizesPerXYPredicate, vf); // [H   G   F   E   D   C   B   A]
 
-  yxSizes = v_add_i8(yxSizes, v_sll_i64<8>(yxSizes));     // [H:G G:F F:E E:D D:C C:B B:A A]
-  yxSizes = v_add_i8(yxSizes, v_sll_i64<16>(yxSizes));    // [H:E G:D F:C E:B D:A C:A B:A A]
+  yxSizes = yxSizes + slli_i64<8>(yxSizes);                 // [H:G G:F F:E E:D D:C C:B B:A A]
+  yxSizes = yxSizes + slli_i64<16>(yxSizes);                // [H:E G:D F:C E:B D:A C:A B:A A]
 
-  Vec128I ySizes = v_and(v_srl_i64<4>(yxSizes), v0x0F0F); // Y sizes separated from YX sizes.
-  Vec128I xSizes = v_and(yxSizes, v0x0F0F);               // X sizes separated from YX sizes.
+  Vec16xU8 ySizes = srli_u64<4>(yxSizes) & v0x0F0F;         // Y sizes separated from YX sizes.
+  Vec16xU8 xSizes = yxSizes & v0x0F0F;                      // X sizes separated from YX sizes.
 
-  ySizes = v_add_i8(ySizes, v_sll_i64<32>(ySizes));       // [H:A G:A F:A E:A D:A C:A B:A A]
-  xSizes = v_add_i8(xSizes, v_sll_i64<32>(xSizes));       // [H:A G:A F:A E:A D:A C:A B:A A]
+  ySizes = ySizes + slli_i64<32>(ySizes);                   // [H:A G:A F:A E:A D:A C:A B:A A]
+  xSizes = xSizes + slli_i64<32>(xSizes);                   // [H:A G:A F:A E:A D:A C:A B:A A]
 
-  return Vec128Ix2 { xSizes, ySizes };
+  return VecPair<Vec16xU8>{xSizes, ySizes};
 }
 
-static BL_INLINE Vec128I sumsFromAggregatedSizesOf8Bytes(const Vec128Ix2& sizes) noexcept {
-  return v_srl_i64<56>(v_shuffle_i32<1, 3, 1, 3>(sizes[0], sizes[1]));
+static BL_INLINE Vec4xU32 sumsFromAggregatedSizesOf8Bytes(const VecPair<Vec16xU8>& sizes) noexcept {
+  return vec_u32(srli_u64<56>(shuffle_u32<1, 3, 1, 3>(sizes[0], sizes[1])));
 }
 
-static BL_INLINE Vec128I sumsFromAggregatedSizesOf16Bytes(const Vec128Ix2& sizes) noexcept {
-  return v_srl_i32<24>(v_shuffle_i32<1, 3, 1, 3>(sizes[0], sizes[1]));
+static BL_INLINE Vec4xU32 sumsFromAggregatedSizesOf16Bytes(const VecPair<Vec16xU8>& sizes) noexcept {
+  return vec_u32(srli_u32<24>(shuffle_u32<1, 3, 1, 3>(sizes[0], sizes[1])));
 }
 
 struct DecodedVertex {
@@ -257,36 +257,30 @@ struct DecodedVertex {
   int16_t y;
 };
 
-static BL_INLINE Vec128D transformDecodedVertex(const DecodedVertex* decodedVertex, const Vec128D& m00_m11, const Vec128D& m10_m01) noexcept {
-  Vec128I xy_i16 = v_load_i32(decodedVertex);
+static BL_INLINE Vec2xF64 transformDecodedVertex(const DecodedVertex* decodedVertex, const Vec2xF64& m00_m11, const Vec2xF64& m10_m01) noexcept {
+  Vec4xI32 xy_i32 = vec_i32(unpack_lo64_i16_i32(loada_32<Vec8xI16>(decodedVertex)));
 
-#ifdef BL_TARGET_OPT_SSE4_1
-  Vec128I xy_i32 = _mm_cvtepi16_epi32(xy_i16);
-#else
-  Vec128I xy_i32 = v_sra_i32<16>(v_interleave_lo_i16(xy_i16, xy_i16));
-#endif
+  Vec2xF64 xy_f64 = cvt_2xi32_f64(xy_i32);
+  Vec2xF64 yx_f64 = swap_f64(xy_f64);
 
-  Vec128D xy_f64 = v_cvt_2xi32_f64(xy_i32);
-  Vec128D yx_f64 = v_swap_f64(xy_f64);
-
-  return v_add_f64(v_mul_f64(xy_f64, m00_m11), v_mul_f64(yx_f64, m10_m01));
+  return xy_f64 * m00_m11 + yx_f64 * m10_m01;
 }
 
-static BL_INLINE void storeVertex(BLPathAppender& appender, uint8_t cmd, const Vec128D& vtx) noexcept {
+static BL_INLINE void storeVertex(BLPathAppender& appender, uint8_t cmd, const Vec2xF64& vtx) noexcept {
   appender.cmd[0].value = cmd;
-  v_storeu_d128(appender.vtx, vtx);
+  storeu(appender.vtx, vtx);
 }
 
-static BL_INLINE void appendVertex(BLPathAppender& appender, uint8_t cmd, const Vec128D& vtx) noexcept {
+static BL_INLINE void appendVertex(BLPathAppender& appender, uint8_t cmd, const Vec2xF64& vtx) noexcept {
   storeVertex(appender, cmd, vtx);
   appender._advance(1);
 }
 
-static BL_INLINE void appendVertex2x(BLPathAppender& appender, uint8_t cmd0, const Vec128D& vtx0, uint8_t cmd1, const Vec128D& vtx1) noexcept {
+static BL_INLINE void appendVertex2x(BLPathAppender& appender, uint8_t cmd0, const Vec2xF64& vtx0, uint8_t cmd1, const Vec2xF64& vtx1) noexcept {
   appender.cmd[0].value = cmd0;
   appender.cmd[1].value = cmd1;
-  v_storeu_d128(appender.vtx + 0, vtx0);
-  v_storeu_d128(appender.vtx + 1, vtx1);
+  storeu(appender.vtx + 0, vtx0);
+  storeu(appender.vtx + 1, vtx1);
   appender._advance(2);
 }
 
@@ -299,7 +293,7 @@ static BL_INLINE void appendVertex2x(BLPathAppender& appender, uint8_t cmd0, con
 BLResult BL_CDECL getGlyphOutlines_SIMD(
   const BLFontFaceImpl* faceI_,
   BLGlyphId glyphId,
-  const BLMatrix2D* matrix,
+  const BLMatrix2D* transform,
   BLPath* out,
   size_t* contourCountOut,
   BLScopedBuffer* tmpBuffer) noexcept {
@@ -327,7 +321,7 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
   compoundData[0].gPtr = nullptr;
   compoundData[0].remainingSize = 0;
   compoundData[0].compoundFlags = Compound::kArgsAreXYValues;
-  compoundData[0].matrix = *matrix;
+  compoundData[0].transform = *transform;
 
   BLPathAppender appender;
   size_t contourCountTotal = 0;
@@ -410,7 +404,7 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
           // We need 3 temporary buffers:
           //
           //  - fDataPtr - Converted flags data. These flags represent the same flags as used by TrueType, however,
-          //               the bits representing each value are different so they can be used in [V]PSHUFB.
+          //               the bits representing each value are different so they can be used in VPSHUFB.
           //  - xPredPtr - Buffer that is used to calculate predicates for X coordinates.
           //  - yPredPtr - Buffer that is used to calculate predicates for X coordinates.
           //
@@ -443,14 +437,14 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
           size_t offCurveSplineCount = 0;
 
           {
-            Vec128I v0x3030 = blCommonTable.i_3030303030303030.as<Vec128I>();
-            Vec128I v0x0F0F = blCommonTable.i_0F0F0F0F0F0F0F0F.as<Vec128I>();
-            Vec128I v0x8080 = blCommonTable.i_8080808080808080.as<Vec128I>();
-            Vec128I vSizesPerXYPredicate = v_loada_i128(sizesPerXYPredicate);
-            Vec128I vConvertFlagsPredicate = v_loada_i128(convertFlagsPredicate);
+            Vec16xU8 v0x3030 = blCommonTable.i_3030303030303030.as<Vec16xU8>();
+            Vec16xU8 v0x0F0F = blCommonTable.i_0F0F0F0F0F0F0F0F.as<Vec16xU8>();
+            Vec16xU8 v0x8080 = blCommonTable.i_8080808080808080.as<Vec16xU8>();
+            Vec16xU8 vSizesPerXYPredicate = loada<Vec16xU8>(sizesPerXYPredicate);
+            Vec16xU8 vConvertFlagsPredicate = loada<Vec16xU8>(convertFlagsPredicate);
 
-            Vec128I vSumXY = v_zero_i128();
-            Vec128I vPrevFlags = v_zero_i128();
+            Vec4xU32 vSumXY = make_zero<Vec4xU32>();
+            Vec16xU8 vPrevFlags = make_zero<Vec16xU8>();
 
             size_t i = 0;
 
@@ -470,26 +464,26 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
               {
                 size_t n = blMin<size_t>(ttVertexCount - i, 16);
 
-                Vec128I vp = v_loadu_i128(overflowFlagsPredicate + 16 - n);
-                Vec128I vf = _mm_shuffle_epi8(convertFlags(v_loadu_i128(gPtr - 16 + n), vConvertFlagsPredicate, v0x3030), vp);
+                Vec16xU8 vp = loadu<Vec16xU8>(overflowFlagsPredicate + 16 - n);
+                Vec16xU8 vf = swizzlev_u8(convertFlags(loadu<Vec16xU8>(gPtr - 16 + n), vConvertFlagsPredicate, v0x3030), vp);
 
-                uint32_t repeatMask = _mm_movemask_epi8(vf);
-                Vec128I quadSplines = v_and(v_add_i8(vf, v_alignr_i8<15>(vf, vPrevFlags)), v0x8080);
-                Vec128Ix2 vertexSizes = aggregateVertexSizes(vf, vSizesPerXYPredicate, v0x0F0F);
+                uint32_t repeatMask = extract_sign_bits_i8(vf);
+                Vec16xU8 quadSplines = (alignr_u128<15>(vf, vPrevFlags) + vf) & v0x8080;
+                VecPair<Vec16xU8> vertexSizes = aggregateVertexSizes(vf, vSizesPerXYPredicate, v0x0F0F);
 
                 // Lucky if there are no repeats in 16 flags.
                 if (repeatMask == 0) {
-                  offCurveSplineCount += unsigned(_mm_popcnt_u32(unsigned(_mm_movemask_epi8(quadSplines))));
+                  offCurveSplineCount += unsigned(_mm_popcnt_u32(extract_sign_bits_i8(quadSplines)));
                   vPrevFlags = vf;
-                  vf = v_or(vf, v_srl_i16<3>(quadSplines));
+                  vf |= srli_u16<3>(quadSplines);
 
-                  v_storeu_i128(fDataPtr + i, vf);
-                  v_storeu_i128(xPredPtr + i, vertexSizes[0]);
-                  v_storeu_i128(yPredPtr + i, vertexSizes[1]);
+                  storeu(fDataPtr + i, vf);
+                  storeu(xPredPtr + i, vertexSizes[0]);
+                  storeu(yPredPtr + i, vertexSizes[1]);
 
                   i += n;
                   gPtr += n;
-                  vSumXY = v_add_i32(vSumXY, sumsFromAggregatedSizesOf16Bytes(vertexSizes));
+                  vSumXY += sumsFromAggregatedSizesOf16Bytes(vertexSizes);
                   continue;
                 }
 
@@ -498,17 +492,17 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
                   // NOTE: Must be greater than 8 as all flags that overflow the flag count are non repeating.
                   BL_ASSERT(n >= 8);
 
-                  offCurveSplineCount += unsigned(_mm_popcnt_u32(unsigned(_mm_movemask_epi8(quadSplines)) & 0xFFu));
-                  vPrevFlags = v_sllb_i128<8>(vf);
-                  vf = v_or(vf, v_srl_i16<3>(quadSplines));
+                  offCurveSplineCount += unsigned(_mm_popcnt_u32(extract_sign_bits_i8(quadSplines)) & 0xFFu);
+                  vPrevFlags = sllb_u128<8>(vf);
+                  vf |= srli_u16<3>(quadSplines);
 
-                  v_store_i64(fDataPtr + i, vf);
-                  v_store_i64(xPredPtr + i, vertexSizes[0]);
-                  v_store_i64(yPredPtr + i, vertexSizes[1]);
+                  storeu_64(fDataPtr + i, vf);
+                  storeu_64(xPredPtr + i, vertexSizes[0]);
+                  storeu_64(yPredPtr + i, vertexSizes[1]);
 
                   i += 8;
                   gPtr += 8;
-                  vSumXY = v_add_i32(vSumXY, sumsFromAggregatedSizesOf8Bytes(vertexSizes));
+                  vSumXY += sumsFromAggregatedSizesOf8Bytes(vertexSizes);
                 }
               }
 
@@ -547,36 +541,36 @@ SlowFlagsDecode:
                 // We want to process 16 flags at a time in the next loop, however, we cannot have garbage in fDataPtr[]
                 // as each byte contributes to vertex sizes we calculate out of flags. So explicitly zero the next 16
                 // bytes to make sure there is no garbage.
-                v_storeu_i128(fDataPtr + i, v_zero_i128());
+                storeu(fDataPtr + i, make_zero<Vec16xU8>());
 
                 // Calculate vertex sizes and off-curve spline bits of all expanded flags.
                 do {
-                  Vec128I vf = v_loadu_i128(fDataPtr + slowIndex);
-                  Vec128I quadSplines = v_and(v_add_i8(vf, v_alignr_i8<15>(vf, vPrevFlags)), v0x8080);
-                  offCurveSplineCount += unsigned(_mm_popcnt_u32(unsigned(_mm_movemask_epi8(quadSplines))));
+                  Vec16xU8 vf = loadu<Vec16xU8>(fDataPtr + slowIndex);
+                  Vec16xU8 quadSplines = (alignr_u128<15>(vf, vPrevFlags) + vf) & v0x8080;
+                  offCurveSplineCount += unsigned(_mm_popcnt_u32(extract_sign_bits_i8(quadSplines)));
 
                   vPrevFlags = vf;
-                  vf = v_or(vf, v_srl_i16<3>(quadSplines));
+                  vf |= srli_u16<3>(quadSplines);
 
-                  Vec128Ix2 vertexSizes = aggregateVertexSizes(vf, vSizesPerXYPredicate, v0x0F0F);
-                  v_storeu_i128(fDataPtr + slowIndex, vf);
-                  v_storeu_i128(xPredPtr + slowIndex, vertexSizes[0]);
-                  v_storeu_i128(yPredPtr + slowIndex, vertexSizes[1]);
+                  VecPair<Vec16xU8> vertexSizes = aggregateVertexSizes(vf, vSizesPerXYPredicate, v0x0F0F);
+                  storeu(fDataPtr + slowIndex, vf);
+                  storeu(xPredPtr + slowIndex, vertexSizes[0]);
+                  storeu(yPredPtr + slowIndex, vertexSizes[1]);
 
                   slowIndex += 16;
-                  vSumXY = v_add_i32(vSumXY, sumsFromAggregatedSizesOf16Bytes(vertexSizes));
+                  vSumXY += sumsFromAggregatedSizesOf16Bytes(vertexSizes);
                 } while (slowIndex < i);
 
                 // Processed more flags than necessary? Correct vPrevFlags to make off-curve calculations correct.
                 if (slowIndex > i)
-                  vPrevFlags = v_sllb_i128<8>(vPrevFlags);
+                  vPrevFlags = sllb_u128<8>(vPrevFlags);
               }
             } while (i < ttVertexCount);
 
             // Finally, calculate the size of xCoordinates[] and yCoordinates[] arrays.
-            vSumXY = v_add_i32(vSumXY, v_srl_i64<32>(vSumXY));
-            xCoordinatesSize = v_extract_u16<0>(vSumXY);
-            yCoordinatesSize = v_extract_u16<4>(vSumXY);
+            vSumXY += srli_u64<32>(vSumXY);
+            xCoordinatesSize = extract_u16<0>(vSumXY);
+            yCoordinatesSize = extract_u16<4>(vSumXY);
           }
 
           remainingSize = BLIntOps::subOverflow((size_t)(gEnd - gPtr), xCoordinatesSize + yCoordinatesSize, &of);
@@ -618,11 +612,11 @@ SlowFlagsDecode:
             const uint8_t* yPtr = gPtr + xCoordinatesSize;
 
             // LO+HI predicate is added to interleaved predicates.
-            Vec128I vLoHiPredInc = v_fill_i128_u16(uint16_t(0x0041u));
+            Vec16xU8 vLoHiPredInc = make128_u16<Vec16xU8>(uint16_t(0x0041u));
 
-            // These are predicates we need to combine with xPred and yPred to get the final predicate for [V]PSHUFD.
-            Vec128I vDecodeOpXImm = v_loada_i128(decodeOpXTable);
-            Vec128I vDecodeOpYImm = v_loada_i128(decodeOpYTable);
+            // These are predicates we need to combine with xPred and yPred to get the final predicate for VPSHUFB.
+            Vec16xU8 vDecodeOpXImm = loada<Vec16xU8>(decodeOpXTable);
+            Vec16xU8 vDecodeOpYImm = loada<Vec16xU8>(decodeOpYTable);
 
             // NOTE: It's super unlikely that there won't be 16 bytes available after the end of x/y coordinates. Basically
             // only last glyph could be affected. However, we still need to check whether the bytes are there as we cannot just
@@ -630,84 +624,84 @@ SlowFlagsDecode:
             if (BL_LIKELY(remainingSizeAfterGlyphData >= 16)) {
               // Common case - uses at most 16-byte reads ahead, processes 16 vertices at a time.
 #ifdef BL_TARGET_OPT_AVX2
-              Vec256I vLoHiPredInc256 = v_splat256_i128(vLoHiPredInc);
+              Vec32xU8 vLoHiPredInc256 = broadcast_i128<Vec32xU8>(vLoHiPredInc);
               size_t i = 0;
 
               // Process 32 vertices at a time.
               if (ttVertexCount > 16) {
-                Vec256I vDecodeOpXImm256 = v_splat256_i128(vDecodeOpXImm);
-                Vec256I vDecodeOpYImm256 = v_splat256_i128(vDecodeOpYImm);
+                Vec32xU8 vDecodeOpXImm256 = broadcast_i128<Vec32xU8>(vDecodeOpXImm);
+                Vec32xU8 vDecodeOpYImm256 = broadcast_i128<Vec32xU8>(vDecodeOpYImm);
 
                 do {
-                  Vec128I xVerticesInitial0 = v_loadu_i128(gPtr);
-                  Vec128I yVerticesInitial0 = v_loadu_i128(yPtr);
+                  Vec16xU8 xVerticesInitial0 = loadu<Vec16xU8>(gPtr);
+                  Vec16xU8 yVerticesInitial0 = loadu<Vec16xU8>(yPtr);
 
                   gPtr += xPredPtr[i + 7];
                   yPtr += yPredPtr[i + 7];
 
-                  Vec256I fData = v_loada_i256(fDataPtr + i);
-                  Vec256I xPred = v_sll_i64<8>(v_loada_i256(xPredPtr + i));
-                  Vec256I yPred = v_sll_i64<8>(v_loada_i256(yPredPtr + i));
+                  Vec32xU8 fData = loada<Vec32xU8>(fDataPtr + i);
+                  Vec32xU8 xPred = slli_i64<8>(loada<Vec32xU8>(xPredPtr + i));
+                  Vec32xU8 yPred = slli_i64<8>(loada<Vec32xU8>(yPredPtr + i));
 
-                  xPred = v_add_i8(xPred, _mm256_shuffle_epi8(vDecodeOpXImm256, fData));
-                  yPred = v_add_i8(yPred, _mm256_shuffle_epi8(vDecodeOpYImm256, fData));
+                  xPred += swizzlev_u8(vDecodeOpXImm256, fData);
+                  yPred += swizzlev_u8(vDecodeOpYImm256, fData);
 
-                  Vec128I xVerticesInitial1 = v_loadu_i128(gPtr);
-                  Vec128I yVerticesInitial1 = v_loadu_i128(yPtr);
+                  Vec16xU8 xVerticesInitial1 = loadu<Vec16xU8>(gPtr);
+                  Vec16xU8 yVerticesInitial1 = loadu<Vec16xU8>(yPtr);
 
                   gPtr += xPredPtr[i + 15];
                   yPtr += yPredPtr[i + 15];
 
-                  Vec256I xPred0 = v_interleave_lo_i8(xPred, xPred);
-                  Vec256I xPred1 = v_interleave_hi_i8(xPred, xPred);
-                  Vec256I yPred0 = v_interleave_lo_i8(yPred, yPred);
-                  Vec256I yPred1 = v_interleave_hi_i8(yPred, yPred);
+                  Vec32xU8 xPred0 = interleave_lo_u8(xPred, xPred);
+                  Vec32xU8 xPred1 = interleave_hi_u8(xPred, xPred);
+                  Vec32xU8 yPred0 = interleave_lo_u8(yPred, yPred);
+                  Vec32xU8 yPred1 = interleave_hi_u8(yPred, yPred);
 
-                  Vec256I xVertices0 = v_fill_i256_i128(v_loadu_i128(gPtr), xVerticesInitial0);
-                  Vec256I yVertices0 = v_fill_i256_i128(v_loadu_i128(yPtr), yVerticesInitial0);
+                  Vec16xI16 xVertices0 = make256_128<Vec16xI16>(loadu<Vec16xU8>(gPtr), xVerticesInitial0);
+                  Vec16xI16 yVertices0 = make256_128<Vec16xI16>(loadu<Vec16xU8>(yPtr), yVerticesInitial0);
 
                   gPtr += xPredPtr[i + 23];
                   yPtr += yPredPtr[i + 23];
 
-                  xPred0 = v_add_i8(xPred0, vLoHiPredInc256);
-                  xPred1 = v_add_i8(xPred1, vLoHiPredInc256);
-                  yPred0 = v_add_i8(yPred0, vLoHiPredInc256);
-                  yPred1 = v_add_i8(yPred1, vLoHiPredInc256);
+                  xPred0 += vLoHiPredInc256;
+                  xPred1 += vLoHiPredInc256;
+                  yPred0 += vLoHiPredInc256;
+                  yPred1 += vLoHiPredInc256;
 
-                  Vec256I xVertices1 = v_fill_i256_i128(v_loadu_i128(gPtr), xVerticesInitial1);
-                  Vec256I yVertices1 = v_fill_i256_i128(v_loadu_i128(yPtr), yVerticesInitial1);
+                  Vec16xI16 xVertices1 = make256_128<Vec16xI16>(loadu<Vec16xU8>(gPtr), xVerticesInitial1);
+                  Vec16xI16 yVertices1 = make256_128<Vec16xI16>(loadu<Vec16xU8>(yPtr), yVerticesInitial1);
 
                   gPtr += xPredPtr[i + 31];
                   yPtr += yPredPtr[i + 31];
 
-                  xVertices0 = _mm256_shuffle_epi8(xVertices0, xPred0);
-                  yVertices0 = _mm256_shuffle_epi8(yVertices0, yPred0);
-                  xVertices1 = _mm256_shuffle_epi8(xVertices1, xPred1);
-                  yVertices1 = _mm256_shuffle_epi8(yVertices1, yPred1);
+                  xVertices0 = swizzlev_u8(xVertices0, xPred0);
+                  yVertices0 = swizzlev_u8(yVertices0, yPred0);
+                  xVertices1 = swizzlev_u8(xVertices1, xPred1);
+                  yVertices1 = swizzlev_u8(yVertices1, yPred1);
 
-                  xPred0 = v_sra_i16<15>(v_sll_i16<2>(xPred0));
-                  yPred0 = v_sra_i16<15>(v_sll_i16<2>(yPred0));
-                  xPred1 = v_sra_i16<15>(v_sll_i16<2>(xPred1));
-                  yPred1 = v_sra_i16<15>(v_sll_i16<2>(yPred1));
+                  xPred0 = srai_i16<15>(slli_i16<2>(xPred0));
+                  yPred0 = srai_i16<15>(slli_i16<2>(yPred0));
+                  xPred1 = srai_i16<15>(slli_i16<2>(xPred1));
+                  yPred1 = srai_i16<15>(slli_i16<2>(yPred1));
 
-                  xVertices0 = v_sub_i16(v_xor(xVertices0, xPred0), xPred0);
-                  yVertices0 = v_sub_i16(v_xor(yVertices0, yPred0), yPred0);
-                  xVertices1 = v_sub_i16(v_xor(xVertices1, xPred1), xPred1);
-                  yVertices1 = v_sub_i16(v_xor(yVertices1, yPred1), yPred1);
+                  xVertices0 = (xVertices0 ^ vec_i16(xPred0)) - vec_i16(xPred0);
+                  yVertices0 = (yVertices0 ^ vec_i16(yPred0)) - vec_i16(yPred0);
+                  xVertices1 = (xVertices1 ^ vec_i16(xPred1)) - vec_i16(xPred1);
+                  yVertices1 = (yVertices1 ^ vec_i16(yPred1)) - vec_i16(yPred1);
 
-                  Vec256I xyInterleavedLo0 = v_interleave_lo_i16(xVertices0, yVertices0);
-                  Vec256I xyInterleavedHi0 = v_interleave_hi_i16(xVertices0, yVertices0);
-                  Vec256I xyInterleavedLo1 = v_interleave_lo_i16(xVertices1, yVertices1);
-                  Vec256I xyInterleavedHi1 = v_interleave_hi_i16(xVertices1, yVertices1);
+                  Vec16xI16 xyInterleavedLo0 = interleave_lo_u16(xVertices0, yVertices0);
+                  Vec16xI16 xyInterleavedHi0 = interleave_hi_u16(xVertices0, yVertices0);
+                  Vec16xI16 xyInterleavedLo1 = interleave_lo_u16(xVertices1, yVertices1);
+                  Vec16xI16 xyInterleavedHi1 = interleave_hi_u16(xVertices1, yVertices1);
 
-                  v_storea_i128(decodedVertexArray + i +  0, xyInterleavedLo0);
-                  v_storea_i128(decodedVertexArray + i +  4, xyInterleavedHi0);
-                  v_storea_i128(decodedVertexArray + i +  8, xyInterleavedLo1);
-                  v_storea_i128(decodedVertexArray + i + 12, xyInterleavedHi1);
-                  v_storea_i128(decodedVertexArray + i + 16, _mm256_extracti128_si256(xyInterleavedLo0, 1));
-                  v_storea_i128(decodedVertexArray + i + 20, _mm256_extracti128_si256(xyInterleavedHi0, 1));
-                  v_storea_i128(decodedVertexArray + i + 24, _mm256_extracti128_si256(xyInterleavedLo1, 1));
-                  v_storea_i128(decodedVertexArray + i + 28, _mm256_extracti128_si256(xyInterleavedHi1, 1));
+                  storea_128(decodedVertexArray + i +  0, xyInterleavedLo0);
+                  storea_128(decodedVertexArray + i +  4, xyInterleavedHi0);
+                  storea_128(decodedVertexArray + i +  8, xyInterleavedLo1);
+                  storea_128(decodedVertexArray + i + 12, xyInterleavedHi1);
+                  storea_128(decodedVertexArray + i + 16, extract_i128<1>(xyInterleavedLo0));
+                  storea_128(decodedVertexArray + i + 20, extract_i128<1>(xyInterleavedHi0));
+                  storea_128(decodedVertexArray + i + 24, extract_i128<1>(xyInterleavedLo1));
+                  storea_128(decodedVertexArray + i + 28, extract_i128<1>(xyInterleavedHi1));
 
                   i += 32;
                 } while (i < ttVertexCount - 16);
@@ -715,101 +709,101 @@ SlowFlagsDecode:
 
               // Process remaining 16 vertices.
               if (i < ttVertexCount) {
-                Vec128I fData = v_loada_i128(fDataPtr + i);
-                Vec128I xPred = v_sll_i64<8>(v_loada_i128(xPredPtr + i));
-                Vec128I yPred = v_sll_i64<8>(v_loada_i128(yPredPtr + i));
+                Vec16xU8 fData = loada<Vec16xU8>(fDataPtr + i);
+                Vec16xU8 xPred = slli_i64<8>(loada<Vec16xU8>(xPredPtr + i));
+                Vec16xU8 yPred = slli_i64<8>(loada<Vec16xU8>(yPredPtr + i));
 
-                xPred = v_add_i8(xPred, _mm_shuffle_epi8(vDecodeOpXImm, fData));
-                yPred = v_add_i8(yPred, _mm_shuffle_epi8(vDecodeOpYImm, fData));
+                xPred += swizzlev_u8(vDecodeOpXImm, fData);
+                yPred += swizzlev_u8(vDecodeOpYImm, fData);
 
-                Vec256I xPred256 = v_permute_i64<1, 1, 0, 0>(v_cast<Vec256I>(xPred));
-                Vec256I yPred256 = v_permute_i64<1, 1, 0, 0>(v_cast<Vec256I>(yPred));
+                Vec32xU8 xPred256 = permute_i64<1, 1, 0, 0>(vec_cast<Vec32xU8>(xPred));
+                Vec32xU8 yPred256 = permute_i64<1, 1, 0, 0>(vec_cast<Vec32xU8>(yPred));
 
-                xPred256 = v_interleave_lo_i8(xPred256, xPred256);
-                yPred256 = v_interleave_lo_i8(yPred256, yPred256);
+                xPred256 = interleave_lo_u8(xPred256, xPred256);
+                yPred256 = interleave_lo_u8(yPred256, yPred256);
 
-                Vec128I xVerticesInitial = v_loadu_i128(gPtr);
-                Vec128I yVerticesInitial = v_loadu_i128(yPtr);
+                Vec16xU8 xVerticesInitial = loadu<Vec16xU8>(gPtr);
+                Vec16xU8 yVerticesInitial = loadu<Vec16xU8>(yPtr);
 
                 gPtr += xPredPtr[i + 7];
                 yPtr += yPredPtr[i + 7];
 
-                xPred256 = v_add_i8(xPred256, vLoHiPredInc256);
-                yPred256 = v_add_i8(yPred256, vLoHiPredInc256);
+                xPred256 += vLoHiPredInc256;
+                yPred256 += vLoHiPredInc256;
 
-                Vec256I xVertices = v_fill_i256_i128(v_loadu_i128(gPtr), xVerticesInitial);
-                Vec256I yVertices = v_fill_i256_i128(v_loadu_i128(yPtr), yVerticesInitial);
+                Vec16xI16 xVertices = make256_128<Vec16xI16>(loadu<Vec16xU8>(gPtr), xVerticesInitial);
+                Vec16xI16 yVertices = make256_128<Vec16xI16>(loadu<Vec16xU8>(yPtr), yVerticesInitial);
 
                 gPtr += xPredPtr[i + 15];
                 yPtr += yPredPtr[i + 15];
 
-                xVertices = _mm256_shuffle_epi8(xVertices, xPred256);
-                yVertices = _mm256_shuffle_epi8(yVertices, yPred256);
+                xVertices = swizzlev_u8(xVertices, xPred256);
+                yVertices = swizzlev_u8(yVertices, yPred256);
 
-                xPred256 = v_sra_i16<15>(v_sll_i16<2>(xPred256));
-                yPred256 = v_sra_i16<15>(v_sll_i16<2>(yPred256));
+                xPred256 = srai_i16<15>(slli_i16<2>(xPred256));
+                yPred256 = srai_i16<15>(slli_i16<2>(yPred256));
 
-                xVertices = v_sub_i16(v_xor(xVertices, xPred256), xPred256);
-                yVertices = v_sub_i16(v_xor(yVertices, yPred256), yPred256);
+                xVertices = (xVertices ^ vec_i16(xPred256)) - vec_i16(xPred256);
+                yVertices = (yVertices ^ vec_i16(yPred256)) - vec_i16(yPred256);
 
-                Vec256I xyInterleavedLo = v_interleave_lo_i16(xVertices, yVertices);
-                Vec256I xyInterleavedHi = v_interleave_hi_i16(xVertices, yVertices);
+                Vec16xI16 xyInterleavedLo = interleave_lo_u16(xVertices, yVertices);
+                Vec16xI16 xyInterleavedHi = interleave_hi_u16(xVertices, yVertices);
 
-                v_storea_i128(decodedVertexArray + i +  0, xyInterleavedLo);
-                v_storea_i128(decodedVertexArray + i +  4, xyInterleavedHi);
-                v_storea_i128(decodedVertexArray + i +  8, _mm256_extracti128_si256(xyInterleavedLo, 1));
-                v_storea_i128(decodedVertexArray + i + 12, _mm256_extracti128_si256(xyInterleavedHi, 1));
+                storea_128(decodedVertexArray + i +  0, xyInterleavedLo);
+                storea_128(decodedVertexArray + i +  4, xyInterleavedHi);
+                storea_128(decodedVertexArray + i +  8, extract_i128<1>(xyInterleavedLo));
+                storea_128(decodedVertexArray + i + 12, extract_i128<1>(xyInterleavedHi));
               }
 #else
               for (size_t i = 0; i < ttVertexCount; i += 16) {
-                Vec128I fData = v_loada_i128(fDataPtr + i);
-                Vec128I xPred = v_sll_i64<8>(v_loada_i128(xPredPtr + i));
-                Vec128I yPred = v_sll_i64<8>(v_loada_i128(yPredPtr + i));
+                Vec16xU8 fData = loada<Vec16xU8>(fDataPtr + i);
+                Vec16xU8 xPred = slli_i64<8>(loada<Vec16xU8>(xPredPtr + i));
+                Vec16xU8 yPred = slli_i64<8>(loada<Vec16xU8>(yPredPtr + i));
 
-                xPred = v_add_i8(xPred, _mm_shuffle_epi8(vDecodeOpXImm, fData));
-                yPred = v_add_i8(yPred, _mm_shuffle_epi8(vDecodeOpYImm, fData));
+                xPred += swizzlev_u8(vDecodeOpXImm, fData);
+                yPred += swizzlev_u8(vDecodeOpYImm, fData);
 
-                Vec128I xPred0 = v_interleave_lo_i8(xPred, xPred);
-                Vec128I xPred1 = v_interleave_hi_i8(xPred, xPred);
-                Vec128I yPred0 = v_interleave_lo_i8(yPred, yPred);
-                Vec128I yPred1 = v_interleave_hi_i8(yPred, yPred);
+                Vec16xU8 xPred0 = interleave_lo_u8(xPred, xPred);
+                Vec16xU8 xPred1 = interleave_hi_u8(xPred, xPred);
+                Vec16xU8 yPred0 = interleave_lo_u8(yPred, yPred);
+                Vec16xU8 yPred1 = interleave_hi_u8(yPred, yPred);
 
-                xPred0 = v_add_i8(xPred0, vLoHiPredInc);
-                xPred1 = v_add_i8(xPred1, vLoHiPredInc);
-                yPred0 = v_add_i8(yPred0, vLoHiPredInc);
-                yPred1 = v_add_i8(yPred1, vLoHiPredInc);
+                xPred0 += vLoHiPredInc;
+                xPred1 += vLoHiPredInc;
+                yPred0 += vLoHiPredInc;
+                yPred1 += vLoHiPredInc;
 
                 // Process low 8 vertices.
-                Vec128I xVertices0 = _mm_shuffle_epi8(v_loadu_i128(gPtr), xPred0);
-                Vec128I yVertices0 = _mm_shuffle_epi8(v_loadu_i128(yPtr), yPred0);
+                Vec8xI16 xVertices0 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(gPtr), xPred0));
+                Vec8xI16 yVertices0 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(yPtr), yPred0));
 
                 gPtr += xPredPtr[i + 7];
                 yPtr += yPredPtr[i + 7];
 
-                xPred0 = v_sra_i16<15>(v_sll_i16<2>(xPred0));
-                yPred0 = v_sra_i16<15>(v_sll_i16<2>(yPred0));
+                xPred0 = srai_i16<15>(slli_i16<2>(xPred0));
+                yPred0 = srai_i16<15>(slli_i16<2>(yPred0));
 
-                xVertices0 = v_sub_i16(v_xor(xVertices0, xPred0), xPred0);
-                yVertices0 = v_sub_i16(v_xor(yVertices0, yPred0), yPred0);
+                xVertices0 = (xVertices0 ^ vec_i16(xPred0)) - vec_i16(xPred0);
+                yVertices0 = (yVertices0 ^ vec_i16(yPred0)) - vec_i16(yPred0);
 
-                v_storea_i128(decodedVertexArray + i + 0, v_interleave_lo_i16(xVertices0, yVertices0));
-                v_storea_i128(decodedVertexArray + i + 4, v_interleave_hi_i16(xVertices0, yVertices0));
+                storea(decodedVertexArray + i + 0, interleave_lo_u16(xVertices0, yVertices0));
+                storea(decodedVertexArray + i + 4, interleave_hi_u16(xVertices0, yVertices0));
 
                 // Process high 8 vertices.
-                Vec128I xVertices1 = _mm_shuffle_epi8(v_loadu_i128(gPtr), xPred1);
-                Vec128I yVertices1 = _mm_shuffle_epi8(v_loadu_i128(yPtr), yPred1);
+                Vec8xI16 xVertices1 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(gPtr), xPred1));
+                Vec8xI16 yVertices1 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(yPtr), yPred1));
 
                 gPtr += xPredPtr[i + 15];
                 yPtr += yPredPtr[i + 15];
 
-                xPred1 = v_sra_i16<15>(v_sll_i16<2>(xPred1));
-                yPred1 = v_sra_i16<15>(v_sll_i16<2>(yPred1));
+                xPred1 = srai_i16<15>(slli_i16<2>(xPred1));
+                yPred1 = srai_i16<15>(slli_i16<2>(yPred1));
 
-                xVertices1 = v_sub_i16(v_xor(xVertices1, xPred1), xPred1);
-                yVertices1 = v_sub_i16(v_xor(yVertices1, yPred1), yPred1);
+                xVertices1 = (xVertices1 ^ vec_i16(xPred1)) - vec_i16(xPred1);
+                yVertices1 = (yVertices1 ^ vec_i16(yPred1)) - vec_i16(yPred1);
 
-                v_storea_i128(decodedVertexArray + i +  8, v_interleave_lo_i16(xVertices1, yVertices1));
-                v_storea_i128(decodedVertexArray + i + 12, v_interleave_hi_i16(xVertices1, yVertices1));
+                storea(decodedVertexArray + i +  8, interleave_lo_u16(xVertices1, yVertices1));
+                storea(decodedVertexArray + i + 12, interleave_hi_u16(xVertices1, yVertices1));
               }
 #endif
             }
@@ -820,9 +814,9 @@ SlowFlagsDecode:
               //   - InstructionLength  [ 2 bytes]
               //   - At least two flags [ 2 bytes] (one flag glyphs are refused as is not enough for a contour)
               for (size_t i = 0; i < ttVertexCount; i += 8) {
-                Vec128I fData = v_load_i64(fDataPtr + i);
-                Vec128I xPred = v_sll_i64<8>(v_load_i64(xPredPtr + i));
-                Vec128I yPred = v_sll_i64<8>(v_load_i64(yPredPtr + i));
+                Vec16xU8 fData = loadu_64<Vec16xU8>(fDataPtr + i);
+                Vec16xU8 xPred = slli_i64<8>(loadu_64<Vec16xU8>(xPredPtr + i));
+                Vec16xU8 yPred = slli_i64<8>(loadu_64<Vec16xU8>(yPredPtr + i));
 
                 size_t xBytesUsed = xPredPtr[i + 7];
                 size_t yBytesUsed = yPredPtr[i + 7];
@@ -830,29 +824,29 @@ SlowFlagsDecode:
                 gPtr += xBytesUsed;
                 yPtr += yBytesUsed;
 
-                xPred = v_add_i8(xPred, _mm_shuffle_epi8(vDecodeOpXImm, fData));
-                yPred = v_add_i8(yPred, _mm_shuffle_epi8(vDecodeOpYImm, fData));
+                xPred += swizzlev_u8(vDecodeOpXImm, fData);
+                yPred += swizzlev_u8(vDecodeOpYImm, fData);
 
-                xPred = v_add_i8(xPred, v_splat128_i32(v_i128_from_i32((16u - uint32_t(xBytesUsed)) * 0x01010101u)));
-                yPred = v_add_i8(yPred, v_splat128_i32(v_i128_from_i32((16u - uint32_t(yBytesUsed)) * 0x01010101u)));
+                xPred += make128_u8<Vec16xU8>(uint8_t(16u - uint32_t(xBytesUsed)));
+                yPred += make128_u8<Vec16xU8>(uint8_t(16u - uint32_t(yBytesUsed)));
 
-                xPred = v_interleave_lo_i8(xPred, xPred);
-                yPred = v_interleave_lo_i8(yPred, yPred);
+                xPred = interleave_lo_u8(xPred, xPred);
+                yPred = interleave_lo_u8(yPred, yPred);
 
-                xPred = v_add_i8(xPred, vLoHiPredInc);
-                yPred = v_add_i8(yPred, vLoHiPredInc);
+                xPred += vLoHiPredInc;
+                yPred += vLoHiPredInc;
 
-                Vec128I xVertices0 = _mm_shuffle_epi8(v_loadu_i128(gPtr - 16), xPred);
-                Vec128I yVertices0 = _mm_shuffle_epi8(v_loadu_i128(yPtr - 16), yPred);
+                Vec8xI16 xVertices0 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(gPtr - 16), xPred));
+                Vec8xI16 yVertices0 = vec_i16(swizzlev_u8(loadu<Vec16xU8>(yPtr - 16), yPred));
 
-                xPred = v_sra_i16<15>(v_sll_i16<2>(xPred));
-                yPred = v_sra_i16<15>(v_sll_i16<2>(yPred));
+                xPred = srai_i16<15>(slli_i16<2>(xPred));
+                yPred = srai_i16<15>(slli_i16<2>(yPred));
 
-                xVertices0 = v_sub_i16(v_xor(xVertices0, xPred), xPred);
-                yVertices0 = v_sub_i16(v_xor(yVertices0, yPred), yPred);
+                xVertices0 = (xVertices0 ^ vec_i16(xPred)) - vec_i16(xPred);
+                yVertices0 = (yVertices0 ^ vec_i16(yPred)) - vec_i16(yPred);
 
-                v_storea_i128(decodedVertexArray + i + 0, v_interleave_lo_i16(xVertices0, yVertices0));
-                v_storea_i128(decodedVertexArray + i + 4, v_interleave_hi_i16(xVertices0, yVertices0));
+                storea(decodedVertexArray + i + 0, interleave_lo_u16(xVertices0, yVertices0));
+                storea(decodedVertexArray + i + 4, interleave_hi_u16(xVertices0, yVertices0));
               }
             }
           }
@@ -860,14 +854,14 @@ SlowFlagsDecode:
           // Affine transform applied to each vertex.
           //
           // NOTE: Compilers are not able to vectorize the computations efficiently, so we do it instead.
-          Vec128D m00_m11 = v_fill_d128(compoundData[compoundLevel].matrix.m11, compoundData[compoundLevel].matrix.m00);
-          Vec128D m10_m01 = v_fill_d128(compoundData[compoundLevel].matrix.m01, compoundData[compoundLevel].matrix.m10);
+          Vec2xF64 m00_m11 = make128_f64(compoundData[compoundLevel].transform.m11, compoundData[compoundLevel].transform.m00);
+          Vec2xF64 m10_m01 = make128_f64(compoundData[compoundLevel].transform.m01, compoundData[compoundLevel].transform.m10);
 
           // Vertices are stored relative to each other, this is the current point.
-          Vec128D currentPt = v_fill_d128(compoundData[compoundLevel].matrix.m21, compoundData[compoundLevel].matrix.m20);
+          Vec2xF64 currentPt = make128_f64(compoundData[compoundLevel].transform.m21, compoundData[compoundLevel].transform.m20);
 
           // SIMD constants.
-          Vec128D half = v_fill_d128(0.5);
+          Vec2xF64 half = make128_f64(0.5);
 
           // Current vertex index in TT sense, advanced until `ttVertexCount`, which must be end index of the last contour.
           size_t i = 0;
@@ -880,13 +874,13 @@ SlowFlagsDecode:
             // We do the first vertex here as we want to emit 'MoveTo' and we want to remember it for a possible off-curve
             // start. Currently this means there is some code duplicated for move-to and for other commands, unfortunately.
             uint32_t f = fDataPtr[i];
-            currentPt = v_add_f64(currentPt, transformDecodedVertex(decodedVertexArray + i, m00_m11, m10_m01));
+            currentPt += transformDecodedVertex(decodedVertexArray + i, m00_m11, m10_m01);
 
             if (++i >= iEnd)
               continue;
 
             // Initial 'MoveTo' coordinates.
-            Vec128D initialPt = currentPt;
+            Vec2xF64 initialPt = currentPt;
 
             // We need to be able to handle a case in which the contour data starts off-curve.
             size_t startsOnCurve = size_t((f >> kVecFlagOnCurveShift) & 0x1u);
@@ -915,15 +909,14 @@ SlowFlagsDecode:
             while (i < iEndMinus3) {
               f = BLMemOps::readU32u(fDataPtr + i);
 
-              Vec128D d0 = transformDecodedVertex(decodedVertexArray + i + 0, m00_m11, m10_m01);
-              Vec128D d1 = transformDecodedVertex(decodedVertexArray + i + 1, m00_m11, m10_m01);
-              Vec128D d2 = transformDecodedVertex(decodedVertexArray + i + 2, m00_m11, m10_m01);
-              Vec128D d3 = transformDecodedVertex(decodedVertexArray + i + 3, m00_m11, m10_m01);
-
-              Vec128D onPt;
+              Vec2xF64 d0 = transformDecodedVertex(decodedVertexArray + i + 0, m00_m11, m10_m01);
+              Vec2xF64 d1 = transformDecodedVertex(decodedVertexArray + i + 1, m00_m11, m10_m01);
+              Vec2xF64 d2 = transformDecodedVertex(decodedVertexArray + i + 2, m00_m11, m10_m01);
+              Vec2xF64 d3 = transformDecodedVertex(decodedVertexArray + i + 3, m00_m11, m10_m01);
+              Vec2xF64 onPt;
 
               i += 4;
-              currentPt = v_add_f64(currentPt, d0);
+              currentPt += d0;
 
               uint32_t pathCmds = (f >> kPathCmdFromFlagsShift0) & 0x03030303u;
               BLMemOps::writeU32u(appender.cmd, pathCmds);
@@ -931,39 +924,39 @@ SlowFlagsDecode:
               if (f & kVecFlagOffSpline0)
                 goto EmitSpline0Advance;
 
-              v_storeu_d128(appender.vtx + 0, currentPt);
-              currentPt = v_add_f64(currentPt, d1);
+              storeu(appender.vtx + 0, currentPt);
+              currentPt += d1;
               if (f & kVecFlagOffSpline1)
                 goto EmitSpline1Advance;
 
-              v_storeu_d128(appender.vtx + 1, currentPt);
-              currentPt = v_add_f64(currentPt, d2);
+              storeu(appender.vtx + 1, currentPt);
+              currentPt += d2;
               if (f & kVecFlagOffSpline2)
                 goto EmitSpline2Advance;
 
-              v_storeu_d128(appender.vtx + 2, currentPt);
-              currentPt = v_add_f64(currentPt, d3);
+              storeu(appender.vtx + 2, currentPt);
+              currentPt += d3;
               if (f & kVecFlagOffSpline3)
                 goto EmitSpline3Advance;
 
-              v_storeu_d128(appender.vtx + 3, currentPt);
+              storeu(appender.vtx + 3, currentPt);
               appender._advance(4);
               continue;
 
 EmitSpline0Advance:
-              onPt = v_sub_f64(currentPt, v_mul_f64(d0, half));
+              onPt = currentPt - d0 * half;
               appendVertex2x(appender, BL_PATH_CMD_ON, onPt, BL_PATH_CMD_QUAD, currentPt);
-              currentPt = v_add_f64(currentPt, d1);
+              currentPt += d1;
               if (f & kVecFlagOffSpline1)
                 goto EmitSpline1Continue;
 
               appendVertex(appender, uint8_t((f >> kPathCmdFromFlagsShift1) & 0x3u), currentPt);
-              currentPt = v_add_f64(currentPt, d2);
+              currentPt += d2;
               if (f & kVecFlagOffSpline2)
                 goto EmitSpline2Continue;
 
               appendVertex(appender, uint8_t((f >> kPathCmdFromFlagsShift2) & 0x3u), currentPt);
-              currentPt = v_add_f64(currentPt, d3);
+              currentPt += d3;
               if (f & kVecFlagOffSpline3)
                 goto EmitSpline3Continue;
 
@@ -974,15 +967,15 @@ EmitSpline1Advance:
               appender._advance(1);
 
 EmitSpline1Continue:
-              onPt = v_sub_f64(currentPt, v_mul_f64(d1, half));
+              onPt = currentPt - d1 * half;
               appendVertex2x(appender, BL_PATH_CMD_ON, onPt, BL_PATH_CMD_QUAD, currentPt);
-              currentPt = v_add_f64(currentPt, d2);
+              currentPt += d2;
 
               if (f & kVecFlagOffSpline2)
                 goto EmitSpline2Continue;
 
               appendVertex(appender, uint8_t((f >> kPathCmdFromFlagsShift2) & 0x3u), currentPt);
-              currentPt = v_add_f64(currentPt, d3);
+              currentPt += d3;
 
               if (f & kVecFlagOffSpline3)
                 goto EmitSpline3Continue;
@@ -994,9 +987,9 @@ EmitSpline2Advance:
               appender._advance(2);
 
 EmitSpline2Continue:
-              onPt = v_sub_f64(currentPt, v_mul_f64(d2, half));
+              onPt = currentPt - d2 * half;
               appendVertex2x(appender, BL_PATH_CMD_ON, onPt, BL_PATH_CMD_QUAD, currentPt);
-              currentPt = v_add_f64(currentPt, d3);
+              currentPt += d3;
 
               if (f & kVecFlagOffSpline3)
                 goto EmitSpline3Continue;
@@ -1008,21 +1001,21 @@ EmitSpline3Advance:
               appender._advance(3);
 
 EmitSpline3Continue:
-              onPt = v_sub_f64(currentPt, v_mul_f64(d3, half));
+              onPt = currentPt - d3 * half;
               appendVertex2x(appender, BL_PATH_CMD_ON, onPt, BL_PATH_CMD_QUAD, currentPt);
             }
 
             while (i < iEnd) {
               f = fDataPtr[i];
-              Vec128D delta = transformDecodedVertex(decodedVertexArray + i, m00_m11, m10_m01);
-              currentPt = v_add_f64(currentPt, delta);
+              Vec2xF64 delta = transformDecodedVertex(decodedVertexArray + i, m00_m11, m10_m01);
+              currentPt += delta;
               i++;
 
               if ((f & kVecFlagOffSpline) == 0) {
                 appendVertex(appender, uint8_t(f >> 5), currentPt);
               }
               else {
-                Vec128D onPt = v_sub_f64(currentPt, v_mul_f64(delta, half));
+                Vec2xF64 onPt = currentPt - delta * half;
                 appendVertex2x(appender, BL_PATH_CMD_ON, onPt, BL_PATH_CMD_QUAD, currentPt);
               }
             }
@@ -1030,14 +1023,14 @@ EmitSpline3Continue:
             f = fDataPtr[i - 1];
             if (!startsOnCurve) {
               BLPathImpl* outI = BLPathPrivate::getImpl(out);
-              Vec128D finalPt = v_loadu_d128(outI->vertexData + initialVertexIndex);
+              Vec2xF64 finalPt = loadu<Vec2xF64>(outI->vertexData + initialVertexIndex);
 
               outI->commandData[initialVertexIndex] = BL_PATH_CMD_MOVE;
 
               if (f & kVecFlagOffCurve) {
-                Vec128D onPt = v_mul_f64(v_add_f64(currentPt, initialPt), half);
+                Vec2xF64 onPt = (currentPt + initialPt) * half;
                 appendVertex(appender, BL_PATH_CMD_ON, onPt);
-                finalPt = v_mul_f64(v_add_f64(initialPt, finalPt), half);
+                finalPt = (initialPt + finalPt) * half;
               }
 
               appendVertex2x(appender, BL_PATH_CMD_QUAD, initialPt, BL_PATH_CMD_ON, finalPt);
@@ -1137,7 +1130,7 @@ ContinueCompound:
 
           constexpr double kScaleF2x14 = 1.0 / 16384.0;
 
-          BLMatrix2D& cm = compoundData[compoundLevel].matrix;
+          BLMatrix2D& cm = compoundData[compoundLevel].transform;
           cm.reset(1.0, 0.0, 0.0, 1.0, double(arg1), double(arg2));
 
           if (flags & Compound::kAnyCompoundScale) {
@@ -1186,7 +1179,7 @@ ContinueCompound:
             // However, if both or neither are set then the behavior is the same as `kUnscaledComponentOffset`.
             if ((flags & (Compound::kArgsAreXYValues | Compound::kAnyCompoundOffset    )) ==
                          (Compound::kArgsAreXYValues | Compound::kScaledComponentOffset)) {
-              // This is what FreeType does and what's not 100% according to the specificaion. However, according to
+              // This is what FreeType does and what's not 100% according to the specification. However, according to
               // FreeType this would produce much better offsets so we will match FreeType instead of following the
               // specification.
               cm.m20 *= BLGeometry::length(BLPoint(cm.m00, cm.m01));
@@ -1197,7 +1190,7 @@ ContinueCompound:
           compoundData[compoundLevel].gPtr = gPtr;
           compoundData[compoundLevel].remainingSize = remainingSize;
           compoundData[compoundLevel].compoundFlags = flags;
-          BLTransformPrivate::multiply(cm, cm, compoundData[compoundLevel - 1].matrix);
+          BLTransformPrivate::multiply(cm, cm, compoundData[compoundLevel - 1].transform);
           continue;
         }
       }

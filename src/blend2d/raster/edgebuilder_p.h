@@ -65,31 +65,31 @@ public:
 
 class EdgeTransformScale {
 public:
-  double sx, sy;
-  double tx, ty;
+  double _sx, _sy;
+  double _tx, _ty;
 
-  BL_INLINE EdgeTransformScale(const BLMatrix2D& matrix) noexcept
-    : sx(matrix.m00),
-      sy(matrix.m11),
-      tx(matrix.m20),
-      ty(matrix.m21) {}
+  BL_INLINE EdgeTransformScale(const BLMatrix2D& transform) noexcept
+    : _sx(transform.m00),
+      _sy(transform.m11),
+      _tx(transform.m20),
+      _ty(transform.m21) {}
   BL_INLINE EdgeTransformScale(const EdgeTransformScale& other) noexcept = default;
 
   BL_INLINE void apply(BLPoint& dst, const BLPoint& src) noexcept {
-    dst.reset(src.x * sx + tx, src.y * sy + ty);
+    dst.reset(src.x * _sx + _tx, src.y * _sy + _ty);
   }
 };
 
 class EdgeTransformAffine {
 public:
-  BLMatrix2D matrix;
+  BLMatrix2D _transform;
 
-  BL_INLINE EdgeTransformAffine(const BLMatrix2D& matrix) noexcept
-    : matrix(matrix) {}
+  BL_INLINE EdgeTransformAffine(const BLMatrix2D& transform) noexcept
+    : _transform(transform) {}
   BL_INLINE EdgeTransformAffine(const EdgeTransformAffine& other) noexcept = default;
 
   BL_INLINE void apply(BLPoint& dst, const BLPoint& src) noexcept {
-    dst = matrix.mapPoint(src);
+    dst = _transform.mapPoint(src);
   }
 };
 
@@ -814,16 +814,16 @@ public:
 
   //! A convenience function that calls `begin()`, `addPoly()`, and `done()`.
   template<class PointType>
-  BL_INLINE BLResult initFromPoly(const PointType* pts, size_t size, const BLMatrix2D& m, uint32_t mType) noexcept {
+  BL_INLINE BLResult initFromPoly(const PointType* pts, size_t size, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
     begin();
-    BL_PROPAGATE(addPoly(pts, size, m, mType));
+    BL_PROPAGATE(addPoly(pts, size, transform, transformType));
     return done();
   }
 
   //! A convenience function that calls `begin()`, `addPath()`, and `done()`.
-  BL_INLINE BLResult initFromPath(const BLPathView& view, bool closed, const BLMatrix2D& m, uint32_t mType) noexcept {
+  BL_INLINE BLResult initFromPath(const BLPathView& view, bool closed, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
     begin();
-    BL_PROPAGATE(addPath(view, closed, m, mType));
+    BL_PROPAGATE(addPath(view, closed, transform, transformType));
     return done();
   }
 
@@ -833,56 +833,56 @@ public:
   //! \{
 
   template<class PointType>
-  BL_INLINE BLResult addPoly(const PointType* pts, size_t size, const BLMatrix2D& m, uint32_t mType) noexcept {
-    if (mType <= BL_MATRIX2D_TYPE_SCALE)
-      return _addPolyScale(pts, size, m);
+  BL_INLINE BLResult addPoly(const PointType* pts, size_t size, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
+    if (transformType <= BL_TRANSFORM_TYPE_SCALE)
+      return _addPolyScale(pts, size, transform);
     else
-      return _addPolyAffine(pts, size, m);
+      return _addPolyAffine(pts, size, transform);
   }
 
   template<class PointType>
-  BL_NOINLINE BLResult _addPolyScale(const PointType* pts, size_t size, const BLMatrix2D& m) noexcept {
-    EdgeSourcePolyScale<PointType> source(EdgeTransformScale(m), pts, size);
+  BL_NOINLINE BLResult _addPolyScale(const PointType* pts, size_t size, const BLMatrix2D& transform) noexcept {
+    EdgeSourcePolyScale<PointType> source(EdgeTransformScale(transform), pts, size);
     return addFromSource(source, true);
   }
 
   template<class PointType>
-  BL_NOINLINE BLResult _addPolyAffine(const PointType* pts, size_t size, const BLMatrix2D& m) noexcept {
-    EdgeSourcePolyAffine<PointType> source(EdgeTransformAffine(m), pts, size);
+  BL_NOINLINE BLResult _addPolyAffine(const PointType* pts, size_t size, const BLMatrix2D& transform) noexcept {
+    EdgeSourcePolyAffine<PointType> source(EdgeTransformAffine(transform), pts, size);
     return addFromSource(source, true);
   }
 
-  BL_INLINE BLResult addPath(const BLPathView& view, bool closed, const BLMatrix2D& m, uint32_t mType) noexcept {
-    if (mType <= BL_MATRIX2D_TYPE_SCALE)
-      return _addPathScale(view, closed, m);
+  BL_INLINE BLResult addPath(const BLPathView& view, bool closed, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
+    if (transformType <= BL_TRANSFORM_TYPE_SCALE)
+      return _addPathScale(view, closed, transform);
     else
-      return _addPathAffine(view, closed, m);
+      return _addPathAffine(view, closed, transform);
   }
 
-  BL_NOINLINE BLResult _addPathScale(BLPathView view, bool closed, const BLMatrix2D& m) noexcept {
-    EdgeSourcePathScale source(EdgeTransformScale(m), view);
+  BL_NOINLINE BLResult _addPathScale(BLPathView view, bool closed, const BLMatrix2D& transform) noexcept {
+    EdgeSourcePathScale source(EdgeTransformScale(transform), view);
     return addFromSource(source, closed);
   }
 
-  BL_NOINLINE BLResult _addPathAffine(BLPathView view, bool closed, const BLMatrix2D& m) noexcept {
-    EdgeSourcePathAffine source(EdgeTransformAffine(m), view);
+  BL_NOINLINE BLResult _addPathAffine(BLPathView view, bool closed, const BLMatrix2D& transform) noexcept {
+    EdgeSourcePathAffine source(EdgeTransformAffine(transform), view);
     return addFromSource(source, closed);
   }
 
-  BL_INLINE BLResult addReversePathFromStrokeSink(const BLPathView& view, const BLMatrix2D& m, uint32_t mType) noexcept {
-    if (mType <= BL_MATRIX2D_TYPE_SCALE)
-      return _addReversePathFromStrokeSinkScale(view, m);
+  BL_INLINE BLResult addReversePathFromStrokeSink(const BLPathView& view, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
+    if (transformType <= BL_TRANSFORM_TYPE_SCALE)
+      return _addReversePathFromStrokeSinkScale(view, transform);
     else
-      return _addReversePathFromStrokeSinkAffine(view, m);
+      return _addReversePathFromStrokeSinkAffine(view, transform);
   }
 
-  BL_NOINLINE BLResult _addReversePathFromStrokeSinkScale(BLPathView view, const BLMatrix2D& m) noexcept {
-    EdgeSourceReversePathFromStrokeSinkScale source(EdgeTransformScale(m), view);
+  BL_NOINLINE BLResult _addReversePathFromStrokeSinkScale(BLPathView view, const BLMatrix2D& transform) noexcept {
+    EdgeSourceReversePathFromStrokeSinkScale source(EdgeTransformScale(transform), view);
     return addFromSource(source, source.mustClose());
   }
 
-  BL_NOINLINE BLResult _addReversePathFromStrokeSinkAffine(BLPathView view, const BLMatrix2D& m) noexcept {
-    EdgeSourceReversePathFromStrokeSinkAffine source(EdgeTransformAffine(m), view);
+  BL_NOINLINE BLResult _addReversePathFromStrokeSinkAffine(BLPathView view, const BLMatrix2D& transform) noexcept {
+    EdgeSourceReversePathFromStrokeSinkAffine source(EdgeTransformAffine(transform), view);
     return addFromSource(source, source.mustClose());
   }
 
@@ -1472,7 +1472,7 @@ RestartClipLoop:
 
   template<class Source>
   BL_INLINE_IF_NOT_DEBUG BLResult quadTo(Source& source, State& state) noexcept {
-    // 2 extremas and 1 terminating `1.0` value.
+    // 2 extrema and 1 terminating `1.0` value.
     constexpr uint32_t kMaxTCount = 2 + 1;
 
     BLPoint spline[kMaxTCount * 2 + 1];
@@ -1611,7 +1611,7 @@ RestartClipLoop:
 
   template<class Source>
   BL_INLINE_IF_NOT_DEBUG BLResult cubicTo(Source& source, State& state) noexcept {
-    // 4 extremas, 2 inflections, 1 cusp, and 1 terminating `1.0` value.
+    // 4 extrema, 2 inflections, 1 cusp, and 1 terminating `1.0` value.
     constexpr uint32_t kMaxTCount = 4 + 2 + 1 + 1;
 
     BLPoint spline[kMaxTCount * 3 + 1];
