@@ -1420,7 +1420,7 @@ static BL_NOINLINE BLResult flushRenderBatch(BLRasterContextImpl* ctxI) noexcept
     for (uint32_t i = 0; i < threadCount; i++) {
       WorkData* workData = mgr._workDataStorage[i];
       workData->batch = batch;
-      workData->initContextData(ctxI->dstData, ctxI->syncWorkData.ctxData.ditherOrigin);
+      workData->initContextData(ctxI->dstData, ctxI->syncWorkData.ctxData.pixelOrigin);
     }
 
     // Just to make sure that all the changes are visible to the threads.
@@ -4277,7 +4277,7 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
   ctxI->pipeLookupCache.reset();
 
   // Initialize the sync work data.
-  ctxI->syncWorkData.initContextData(ctxI->dstData, options->ditherOrigin);
+  ctxI->syncWorkData.initContextData(ctxI->dstData, options->pixelOrigin);
 
   // Initialize destination image information available in a public rendering context state.
   ctxI->internalState.targetSize.reset(size.w, size.h);

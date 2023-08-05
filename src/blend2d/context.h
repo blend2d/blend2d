@@ -352,13 +352,12 @@ struct BLContextCreateInfo {
   //! to 4096 states. This option allows to even increase or decrease the limit, depending on the use case.
   uint32_t savedStateLimit;
 
-  //! Dither origin used to shift a dithering matrix.
+  //! Pixel origin.
   //!
-  //! Normally, this point could be just [0, 0] to not shift the matrix. However, if the rendering context is used to
-  //! render into a sub-image or is configured to only render in a part of an image, which doesn't start at [0, 0],
-  //! then the dither origin can be used to shift the dithering matrix in a way so it matches the matrix that would
-  //! be used when rendering to the parent image.
-  BLPointI ditherOrigin;
+  //! Pixel origin is an offset in pixel units that can be used as an origin for fetchers and effects that use a pixel
+  //! X/Y coordinate in the calculation. One example of using pixel origin is dithering, where it's used to shift the
+  //! dithering matrix.
+  BLPointI pixelOrigin;
 
   //! Reserved for future use, must be zero.
   uint32_t reserved[1];

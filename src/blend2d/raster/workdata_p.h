@@ -72,9 +72,9 @@ public:
 
   // NOTE: `initContextData()` is called after `initBandData()` in `blRasterContextImplAttach()`.
 
-  BL_INLINE_NODEBUG void initContextData(const BLImageData& dstData, const BLPointI& ditherOrigin) noexcept {
+  BL_INLINE_NODEBUG void initContextData(const BLImageData& dstData, const BLPointI& pixelOrigin) noexcept {
     ctxData.dst = dstData;
-    ctxData.ditherOrigin = ditherOrigin;
+    ctxData.pixelOrigin = pixelOrigin;
   }
 
   BLResult initBandData(uint32_t bandHeight, uint32_t bandCount) noexcept;

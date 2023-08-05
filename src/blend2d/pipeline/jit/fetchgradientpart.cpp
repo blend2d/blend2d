@@ -30,8 +30,8 @@ void GradientDitheringContext::initY(const x86::Gp& x, const x86::Gp& y) noexcep
 
   _isRectFill = x.isValid();
 
-  cc->mov(_dmPosition, x86::ptr(pc->_ctxData, BL_OFFSET_OF(BLPipeline::ContextData, ditherOrigin.y)));
-  cc->mov(_dmOriginX, x86::ptr(pc->_ctxData, BL_OFFSET_OF(BLPipeline::ContextData, ditherOrigin.x)));
+  cc->mov(_dmPosition, x86::ptr(pc->_ctxData, BL_OFFSET_OF(BLPipeline::ContextData, pixelOrigin.y)));
+  cc->mov(_dmOriginX, x86::ptr(pc->_ctxData, BL_OFFSET_OF(BLPipeline::ContextData, pixelOrigin.x)));
 
   cc->add(_dmPosition, y.r32());
   if (isRectFill())

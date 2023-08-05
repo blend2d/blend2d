@@ -514,7 +514,7 @@ struct BoxUToMaskData {
 
 struct ContextData {
   BLImageData dst;
-  BLPointI ditherOrigin;
+  BLPointI pixelOrigin;
 
   BL_INLINE void reset() noexcept { *this = ContextData{}; }
 };
