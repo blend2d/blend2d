@@ -15,6 +15,10 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+//! A generic function that can be used to transform an array of points that use `double` precision coordinates. This
+//! function will be 99.99% of time used with `BLMatrix2D` so the `ctx` would point to a `const BLMatrix2D*` instance.
+typedef BLResult (BL_CDECL* BLMapPointDArrayFunc)(const void* ctx, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT;
+
 namespace BLTransformPrivate {
 
 //! Array of functions for transforming points indexed by `BLMatrixType`. Each function is optimized for the respective
