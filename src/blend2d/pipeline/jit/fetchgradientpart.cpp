@@ -91,25 +91,8 @@ void GradientDitheringContext::advanceX(const x86::Gp& x, const x86::Gp& diff) n
 }
 
 void GradientDitheringContext::advanceXAfterFetch(uint32_t n) noexcept {
-  switch (n) {
-    case 1:
-      // TODO: Deoptimize for SSE2.
-      pc->v_alignr_u128_(_dmValues, _dmValues, _dmValues, 1);
-      break;
-    case 2:
-      // TODO: Deoptimize for SSE2.
-      pc->v_alignr_u128_(_dmValues, _dmValues, _dmValues, 2);
-      break;
-    case 4:
-      pc->v_shuffle_u32(_dmValues, _dmValues, _dmValues, x86::shuffleImm(0, 3, 2, 1));
-      break;
-    case 8:
-      pc->v_shuffle_u32(_dmValues, _dmValues, _dmValues, x86::shuffleImm(1, 0, 3, 2));
-      break;
-    default:
-      // 16+ don't need any advance (the matrix stays as is).
-      break;
-  }
+  // The compiler would optimize this to a cheap shuffle whenever possible.
+  pc->v_alignr_u128(_dmValues, _dmValues, _dmValues, n & 15);
 }
 
 void GradientDitheringContext::ditherUnpackedPixels(Pixel& p) noexcept {
@@ -120,10 +103,16 @@ void GradientDitheringContext::ditherUnpackedPixels(Pixel& p) noexcept {
   x86::Vec ditherPredicate = cc->newSimilarReg(p.uc[0], "ditherPredicate");
   x86::Vec ditherThreshold = cc->newSimilarReg(p.uc[0], "ditherThreshold");
 
-  // TODO: Deoptimize for SSE2.
   switch (p.count().value()) {
     case 1: {
-      pc->v_shuffle_i8(ditherPredicate, _dmValues.cloneAs(ditherPredicate), shufflePredicate);
+      if (pc->hasSSSE3()) {
+        pc->v_shuffle_i8(ditherPredicate, _dmValues.cloneAs(ditherPredicate), shufflePredicate);
+      }
+      else {
+        pc->v_interleave_lo_u8(ditherPredicate, _dmValues, pc->simdConst(&blCommonTable.i_0000000000000000, Bcst::kNA, ditherPredicate));
+        pc->v_swizzle_lo_u16(ditherPredicate, ditherPredicate, x86::shuffleImm(0, 0, 0, 0));
+      }
+
       pc->v_swizzle_lo_u16(ditherThreshold, p.uc[0], x86::shuffleImm(3, 3, 3, 3));
       pc->v_adds_u16(p.uc[0], p.uc[0], ditherPredicate);
       pc->v_min_u16(p.uc[0], p.uc[0], ditherThreshold);
@@ -137,10 +126,10 @@ void GradientDitheringContext::ditherUnpackedPixels(Pixel& p) noexcept {
     case 16: {
       if (!p.uc[0].isXmm()) {
         for (uint32_t i = 0; i < p.uc.size(); i++) {
+          // At least AVX2: VPSHUFB is available...
+          pc->v_shuffle_i8(ditherPredicate, _dmValues.cloneAs(ditherPredicate), shufflePredicate);
           pc->v_expand_alpha_16(ditherThreshold, p.uc[i]);
-          pc->v_shuffle_i8(ditherPredicate, _dmValues.cloneAs(ditherPredicate), shufflePredicate);
           pc->v_adds_u16(p.uc[i], p.uc[i], ditherPredicate);
-          pc->v_shuffle_i8(ditherPredicate, _dmValues.cloneAs(ditherPredicate), shufflePredicate);
           pc->v_min_u16(p.uc[i], p.uc[i], ditherThreshold);
 
           if (p.uc[0].isYmm())
@@ -152,10 +141,16 @@ void GradientDitheringContext::ditherUnpackedPixels(Pixel& p) noexcept {
       }
       else {
         for (uint32_t i = 0; i < p.uc.size(); i++) {
-          if (i == 0)
-            pc->v_shuffle_i8(ditherPredicate, _dmValues.cloneAs(ditherPredicate), shufflePredicate);
-          else
-            pc->v_shuffle_i8(ditherPredicate, ditherPredicate, shufflePredicate);
+          x86::Vec dm = (i == 0) ? _dmValues.cloneAs(ditherPredicate) : ditherPredicate;
+
+          if (pc->hasSSSE3()) {
+            pc->v_shuffle_i8(ditherPredicate, dm, shufflePredicate);
+          }
+          else {
+            pc->v_interleave_lo_u8(ditherPredicate, dm, pc->simdConst(&blCommonTable.i_0000000000000000, Bcst::kNA, ditherPredicate));
+            pc->v_interleave_lo_u16(ditherPredicate, ditherPredicate, ditherPredicate);
+            pc->v_swizzle_u32(ditherPredicate, ditherPredicate, x86::shuffleImm(1, 1, 0, 0));
+          }
 
           pc->v_expand_alpha_16(ditherThreshold, p.uc[i]);
           pc->v_adds_u16(p.uc[i], p.uc[i], ditherPredicate);
@@ -246,7 +241,7 @@ FetchLinearGradientPart::FetchLinearGradientPart(PipeCompiler* pc, FetchType fet
 // ==================================================
 
 void FetchLinearGradientPart::preparePart() noexcept {
-  _maxPixels = 8;
+  _maxPixels = uint8_t(pc->hasSSSE3() ? 8 : 4);
 }
 
 // BLPipeline::JIT::FetchLinearGradientPart - Init & Fini
@@ -837,7 +832,7 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       else if (isPad()) {
         pc->v_packs_i32_i16(vIdx, x0, x0);
         pc->v_min_i16(vIdx, vIdx, f->vmaxi.xmm());
-        pc->v_add_i16(vIdx, vIdx, pc->simdConst(&ct.i_8000800080008000, Bcst::kNA, vIdx));
+        pc->v_max_i16(vIdx, vIdx, pc->simdConst(&ct.i_0000000000000000, Bcst::kNA, vIdx));
       }
       else {
         x86::Xmm vTmp = cc->newXmm("f.vTmp");
@@ -888,7 +883,7 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       else if (isPad()) {
         pc->v_packs_i32_i16(vIdx, x3, x3);
         pc->v_min_i16(vIdx, vIdx, f->vmaxi.xmm());
-        pc->v_add_i16(vIdx, vIdx, pc->simdConst(&ct.i_8000800080008000, Bcst::kNA, vIdx));
+        pc->v_max_i16(vIdx, vIdx, pc->simdConst(&ct.i_0000000000000000, Bcst::kNA, vIdx));
       }
       else {
         indexLayout = IndexLayout::kUInt32Lo16;

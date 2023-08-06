@@ -17,6 +17,16 @@ UNIT(support_ptrops, BL_TEST_GROUP_SUPPORT_UTILITIES) {
 
     EXPECT_EQ(BLPtrOps::offset(array, 4), array + 1);
     EXPECT_EQ(BLPtrOps::deoffset(array + 1, 4), array);
+
+    EXPECT_TRUE(BLPtrOps::bothAligned((void*)(uintptr_t)0x0, (void*)(uintptr_t)0x4, 4));
+    EXPECT_FALSE(BLPtrOps::bothAligned((void*)(uintptr_t)0x1, (void*)(uintptr_t)0x4, 4));
+    EXPECT_FALSE(BLPtrOps::bothAligned((void*)(uintptr_t)0x1, (void*)(uintptr_t)0x5, 4));
+    EXPECT_TRUE(BLPtrOps::bothAligned((void*)(uintptr_t)0x10, (void*)(uintptr_t)0x20, 16));
+    EXPECT_FALSE(BLPtrOps::bothAligned((void*)(uintptr_t)0x1, (void*)(uintptr_t)0x5, 16));
+
+    EXPECT_TRUE(BLPtrOps::haveEqualAlignment((void*)(uintptr_t)0x1, (void*)(uintptr_t)0x5, 4));
+    EXPECT_TRUE(BLPtrOps::haveEqualAlignment((void*)(uintptr_t)0x1, (void*)(uintptr_t)0x11, 16));
+    EXPECT_FALSE(BLPtrOps::haveEqualAlignment((void*)(uintptr_t)0x1, (void*)(uintptr_t)0x12, 16));
   }
 }
 

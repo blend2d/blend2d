@@ -192,6 +192,8 @@ public:
     kIntrin3Vmulu64x32,
     kIntrin3Vhaddpd,
 
+    kIntrin3iVpalignr,
+
     kIntrin4Vpblendvb,
     kIntrin4VpblendvbDestructive
   };
@@ -1372,7 +1374,8 @@ public:
   V_EMIT_VVV_VV(v_madds_u8_i8_     , PACK_AVX_SSE(Vpmaddubsw , Pmaddubsw , Z))       // AVX2 | SSSE3     [dst.i16[0..X] = SAT(src1.u8[0] * src2.i8[0] + src1.u8[1] * src2.i8[1]))
   V_EMIT_VVV_VV(v_madd_i16_i32     , PACK_AVX_SSE(Vpmaddwd   , Pmaddwd   , Z))       // AVX2 | SSE2      [dst.i32[0..X] = (src1.i16[0] * src2.i16[0] + src1.i16[1] * src2.i16[1]))
   V_EMIT_VVVI_VVI(v_mpsad_u8_      , PACK_AVX_SSE(Vmpsadbw   , Mpsadbw   , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVVI_VVI(v_alignr_u128_     , PACK_AVX_SSE(Vpalignr   , Palignr   , Z))       // AVX2 | SSSE3
+  V_EMIT_VVVI_VVI(v_alignr_u128    , PackedInst::packIntrin(kIntrin3iVpalignr))      // AVX2 | SSSE3
+  V_EMIT_VVVI_VVI(v_alignr_u128_   , PACK_AVX_SSE(Vpalignr   , Palignr   , Z))       // AVX2 | SSSE3
   V_EMIT_VV_VV(v_hmin_pos_u16_     , PACK_AVX_SSE(Vphminposuw, Phminposuw, Z))       // AVX2 | SSE4_1
 
   // Floating Point - Core.

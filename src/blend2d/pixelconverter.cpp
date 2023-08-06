@@ -258,7 +258,7 @@ BLResult bl_convert_copy(
   for (uint32_t y = h; y != 0; y--) {
     size_t i = byteWidth;
 
-    if (!BLMemOps::kUnalignedMem32 && (uintptr_t)dstData == (uintptr_t)srcData) {
+    if (!BLMemOps::kUnalignedMem32 && BLPtrOps::haveEqualAlignment(dstData, srcData, 4)) {
       while (i && ((uintptr_t)dstData) & 0x03) {
         *dstData++ = *srcData++;
         i--;
@@ -344,7 +344,7 @@ BLResult bl_convert_copy_or_8888(
 
   for (uint32_t y = h; y != 0; y--) {
     uint32_t i = w;
-    if (!BLMemOps::kUnalignedMem32 && (uintptr_t)dstData == (uintptr_t)srcData) {
+    if (!BLMemOps::kUnalignedMem32 && BLPtrOps::bothAligned(dstData, srcData, 4)) {
       while (i >= 4) {
         uint32_t p0 = BLMemOps::readU32a(srcData +  0);
         uint32_t p1 = BLMemOps::readU32a(srcData +  4);
@@ -422,7 +422,7 @@ static BLResult BL_CDECL bl_convert_premultiply_8888(
   const uint32_t fillMask = d.fillMask;
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!BLMemOps::kUnalignedMem32 && BLIntOps::isAligned((uintptr_t)dstData | (uintptr_t)srcData, 4)) {
+    if (!BLMemOps::kUnalignedMem32 && BLPtrOps::bothAligned(dstData, srcData, 4)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = BLMemOps::readU32a(srcData);
         uint32_t a = (pix >> alphaShift) & 0xFFu;
@@ -489,7 +489,7 @@ static BLResult BL_CDECL bl_convert_unpremultiply_8888(
   const uint32_t B_Shift = (A_Shift + 24u) % 32u;
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!BLMemOps::kUnalignedMem32 && BLIntOps::isAligned((uintptr_t)dstData | (uintptr_t)srcData, 4)) {
+    if (!BLMemOps::kUnalignedMem32 && BLPtrOps::bothAligned(dstData, srcData, 4)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = BLMemOps::readU32a(srcData);
         uint32_t r = (pix >> R_Shift) & 0xFFu;
@@ -922,7 +922,7 @@ static BLResult BL_CDECL bl_convert_xrgb32_from_xrgb_any(
   uint32_t fillMask = d.fillMask;
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && BLIntOps::isAligned(srcData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, 4) && BLIntOps::isAligned(srcData, PixelAccess::kSize)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = PixelAccess::fetchA(srcData);
         uint32_t r = (((pix >> rShift) & rMask) * rScale) & 0x00FF0000u;
@@ -942,7 +942,7 @@ static BLResult BL_CDECL bl_convert_xrgb32_from_xrgb_any(
         uint32_t g = (((pix >> gShift) & gMask) * gScale) & 0x0000FF00u;
         uint32_t b = (((pix >> bShift) & bMask) * bScale) >> 8;
 
-        BLMemOps::writeU32a(dstData, r | g | b | fillMask);
+        BLMemOps::writeU32u(dstData, r | g | b | fillMask);
 
         dstData += 4;
         srcData += PixelAccess::kSize;
@@ -987,7 +987,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_argb_any(
   uint32_t aScale = d.scale[3];
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && BLIntOps::isAligned(srcData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, 4) && BLIntOps::isAligned(srcData, PixelAccess::kSize)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = PixelAccess::fetchA(srcData);
         uint32_t _a = ((((pix >> aShift) & aMask) * aScale) >> 24);
@@ -1031,7 +1031,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_argb_any(
         ag = (ag + ((ag >> 8) & 0x00FF00FFu)) & 0xFF00FF00u;
 
         rb >>= 8;
-        BLMemOps::writeU32a(dstData, ag | rb);
+        BLMemOps::writeU32u(dstData, ag | rb);
 
         dstData += 4;
         srcData += PixelAccess::kSize;
@@ -1076,7 +1076,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_prgb_any(
   uint32_t aScale = d.scale[3];
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && BLIntOps::isAligned(srcData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, 4) && BLIntOps::isAligned(srcData, PixelAccess::kSize)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = PixelAccess::fetchA(srcData);
         uint32_t r = ((pix >> rShift) & rMask) * rScale;
@@ -1104,7 +1104,7 @@ static BLResult BL_CDECL bl_convert_prgb32_from_prgb_any(
         uint32_t ag = (a + (g     )) & 0xFF00FF00u;
         uint32_t rb = (r + (b >> 8)) & 0x00FF00FFu;
 
-        BLMemOps::writeU32a(dstData, ag | rb);
+        BLMemOps::writeU32u(dstData, ag | rb);
 
         dstData += 4;
         srcData += PixelAccess::kSize;
@@ -1149,7 +1149,7 @@ static BLResult BL_CDECL bl_convert_argb32_from_prgb_any(
   uint32_t aScale = d.scale[3];
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && BLIntOps::isAligned(srcData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, 4) && BLIntOps::isAligned(srcData, PixelAccess::kSize)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = PixelAccess::fetchA(srcData);
         uint32_t r = (((pix >> rShift) & rMask) * rScale) >> 16;
@@ -1173,7 +1173,7 @@ static BLResult BL_CDECL bl_convert_argb32_from_prgb_any(
         uint32_t a = (((pix >> aShift) & aMask) * aScale) >> 24;
 
         BLPixelOps::Scalar::unpremultiply_rgb_8bit(r, g, b, a);
-        BLMemOps::writeU32a(dstData, (a << 24) | (r << 16) | (g << 8) | b);
+        BLMemOps::writeU32u(dstData, (a << 24) | (r << 16) | (g << 8) | b);
 
         dstData += 4;
         srcData += PixelAccess::kSize;
@@ -1216,7 +1216,7 @@ static BLResult BL_CDECL bl_convert_xrgb_any_from_xrgb32(
   uint32_t fillMask = d.fillMask;
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, PixelAccess::kSize) && BLIntOps::isAligned(srcData, 4)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = BLMemOps::readU32a(srcData);
 
@@ -1282,7 +1282,7 @@ static BLResult BL_CDECL bl_convert_argb_any_from_prgb32(
   const uint32_t* unpremultiplyRcp = blCommonTable.unpremultiplyRcp;
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, PixelAccess::kSize) && BLIntOps::isAligned(srcData, 4)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = BLMemOps::readU32a(srcData);
 
@@ -1356,7 +1356,7 @@ static BLResult BL_CDECL bl_convert_prgb_any_from_prgb32(
   uint32_t aShift = d.shifts[3];
 
   for (uint32_t y = h; y != 0; y--) {
-    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, PixelAccess::kSize)) {
+    if (!AlwaysUnaligned && BLIntOps::isAligned(dstData, PixelAccess::kSize) && BLIntOps::isAligned(srcData, 4)) {
       for (uint32_t i = w; i != 0; i--) {
         uint32_t pix = BLMemOps::readU32a(srcData);
 
@@ -1775,53 +1775,55 @@ static BLResult blPixelConverterInitSimple(BLPixelConverterCore* self, const BLF
   }
   else {
 #ifdef BL_BUILD_OPT_SSSE3
-    if (depth == 32 && BLIntOps::bitMatch(commonFlags, BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_BYTE_ALIGNED)) {
-      // Handle the following conversions (PSHUFB|OR):
-      //   XRGB32 <- XRGB32 - Shuffle with or-mask
-      //   ARGB32 <- XRGB32 - Shuffle with or-mask (opaque alpha)
-      //   PRGB32 <- XRGB32 - Shuffle with or-mask (opaque alpha)
-      //   ARGB32 <- ARGB32 - Shuffle
-      //   XRGB32 <- PRGB32 - Shuffle with or-mask (no unpremultiply)
-      //   PRGB32 <- PRGB32 - Shuffle
-      bool sameAlpha = (di.flags & (kA | kP)) == (si.flags & (kA | kP));
-      bool dstAlpha = (di.flags & kA) != 0;
-      bool srcAlpha = (si.flags & kA) != 0;
+    if (blRuntimeHasSSSE3(&blRuntimeContext)) {
+      if (depth == 32 && BLIntOps::bitMatch(commonFlags, BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_BYTE_ALIGNED)) {
+        // Handle the following conversions (PSHUFB|OR):
+        //   XRGB32 <- XRGB32 - Shuffle with or-mask
+        //   ARGB32 <- XRGB32 - Shuffle with or-mask (opaque alpha)
+        //   PRGB32 <- XRGB32 - Shuffle with or-mask (opaque alpha)
+        //   ARGB32 <- ARGB32 - Shuffle
+        //   XRGB32 <- PRGB32 - Shuffle with or-mask (no unpremultiply)
+        //   PRGB32 <- PRGB32 - Shuffle
+        bool sameAlpha = (di.flags & (kA | kP)) == (si.flags & (kA | kP));
+        bool dstAlpha = (di.flags & kA) != 0;
+        bool srcAlpha = (si.flags & kA) != 0;
 
-      if (sameAlpha || !srcAlpha || (!dstAlpha && BLIntOps::bitMatch(si.flags, kP))) {
-        BLPixelConverterData::ShufbData& d = blPixelConverterGetData(self)->shufbData;
-        blPixelConverterCalcPshufbPredicate32From32(d.shufbPredicate, di, si);
+        if (sameAlpha || !srcAlpha || (!dstAlpha && BLIntOps::bitMatch(si.flags, kP))) {
+          BLPixelConverterData::ShufbData& d = blPixelConverterGetData(self)->shufbData;
+          blPixelConverterCalcPshufbPredicate32From32(d.shufbPredicate, di, si);
 
-        if (!(di.flags & kA))
-          d.fillMask = blPixelConverterCalcFillMask32(di);
-        else if (!(si.flags & kA))
-          d.fillMask = 0xFFu << di.shifts[3];
+          if (!(di.flags & kA))
+            d.fillMask = blPixelConverterCalcFillMask32(di);
+          else if (!(si.flags & kA))
+            d.fillMask = 0xFFu << di.shifts[3];
 
 #ifdef BL_BUILD_OPT_AVX2
-        if (blRuntimeHasAVX2(&blRuntimeContext))
-          return blPixelConverterInitFuncOpt(self, bl_convert_copy_shufb_8888_avx2);
+          if (blRuntimeHasAVX2(&blRuntimeContext))
+            return blPixelConverterInitFuncOpt(self, bl_convert_copy_shufb_8888_avx2);
 #endif
 
-        return blPixelConverterInitFuncOpt(self, bl_convert_copy_shufb_8888_ssse3);
-      }
-
-      // Handle the following conversions (Premultiply|Shufb)
-      //   PRGB32 <- ARGB32 - Shuffle with premultiply
-      //   XRGB32 <- ARGB32 - Shuffle with premultiply
-      if (((di.flags & kP) || !(di.flags & kA)) && (si.flags & (kA | kP)) == kA) {
-        uint32_t aShift = di.shifts[3];
-
-        BLPixelConverterData::ShufbData& d = blPixelConverterGetData(self)->shufbData;
-        blPixelConverterCalcPshufbPredicate32From32(d.shufbPredicate, di, si);
-
-#ifdef BL_BUILD_OPT_AVX2
-        if (blRuntimeHasAVX2(&blRuntimeContext)) {
-          if (aShift == 0) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_trailing_alpha_shufb_avx2);
-          if (aShift == 24) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_leading_alpha_shufb_avx2);
+          return blPixelConverterInitFuncOpt(self, bl_convert_copy_shufb_8888_ssse3);
         }
+
+        // Handle the following conversions (Premultiply|Shufb)
+        //   PRGB32 <- ARGB32 - Shuffle with premultiply
+        //   XRGB32 <- ARGB32 - Shuffle with premultiply
+        if (((di.flags & kP) || !(di.flags & kA)) && (si.flags & (kA | kP)) == kA) {
+          uint32_t aShift = di.shifts[3];
+
+          BLPixelConverterData::ShufbData& d = blPixelConverterGetData(self)->shufbData;
+          blPixelConverterCalcPshufbPredicate32From32(d.shufbPredicate, di, si);
+
+#ifdef BL_BUILD_OPT_AVX2
+          if (blRuntimeHasAVX2(&blRuntimeContext)) {
+            if (aShift == 0) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_trailing_alpha_shufb_avx2);
+            if (aShift == 24) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_leading_alpha_shufb_avx2);
+          }
 #endif
 
-        if (aShift == 0) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_trailing_alpha_shufb_ssse3);
-        if (aShift == 24) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_leading_alpha_shufb_ssse3);
+          if (aShift == 0) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_trailing_alpha_shufb_ssse3);
+          if (aShift == 24) return blPixelConverterInitFuncOpt(self, bl_convert_premultiply_8888_leading_alpha_shufb_ssse3);
+        }
       }
     }
 #endif

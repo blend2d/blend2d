@@ -179,7 +179,7 @@ static BL_INLINE void blRuntimeInitSystemInfo(BLRuntimeContext* rt) noexcept {
 #endif
 
   // NOTE: It seems that on some archs 16kB stack-size is the bare minimum even when sysconf() or PTHREAD_STACK_MIN
-  // report a smaller value. Even if we don't need it we slighly increase the bare minimum to 128kB to make it safer
+  // report a smaller value. Even if we don't need it we slightly increase the bare minimum to 128kB to make it safer
   // especially on archs that have a big register file. In addition, some compilers like GCC/clang will use stack
   // slot for every variable in code, which means that heavily inlined code may need relatively large stack when
   // compiled in debug mode.

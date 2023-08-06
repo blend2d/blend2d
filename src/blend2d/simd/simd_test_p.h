@@ -9,6 +9,7 @@
 #include "../api-build_test_p.h"
 #include "../api-internal_p.h"
 #include "../random_p.h"
+#include "../string_p.h"
 #include "../simd/simd_p.h"
 
 namespace SIMDTests {
@@ -118,23 +119,15 @@ struct ConstraintRangeU32 : public ConstraintBase<uint32_t, ConstraintRangeU32<k
 // SIMD - Tests - Generic Operations
 // =================================
 
-static BL_INLINE_NODEBUG int8_t cast_int(int8_t x) noexcept { return x; }
-static BL_INLINE_NODEBUG int16_t cast_int(int16_t x) noexcept { return x; }
-static BL_INLINE_NODEBUG int32_t cast_int(int32_t x) noexcept { return x; }
-static BL_INLINE_NODEBUG int64_t cast_int(int64_t x) noexcept { return x; }
-static BL_INLINE_NODEBUG int8_t cast_int(uint8_t x) noexcept { return int8_t(x); }
-static BL_INLINE_NODEBUG int16_t cast_int(uint16_t x) noexcept { return int16_t(x); }
-static BL_INLINE_NODEBUG int32_t cast_int(uint32_t x) noexcept { return int32_t(x); }
-static BL_INLINE_NODEBUG int64_t cast_int(uint64_t x) noexcept { return int64_t(x); }
+template<typename T>
+static BL_INLINE_NODEBUG typename std::make_unsigned<T>::type cast_uint(const T& x) noexcept {
+  return (typename std::make_unsigned<T>::type)x;
+}
 
-static BL_INLINE_NODEBUG uint8_t cast_uint(int8_t x) noexcept { return uint8_t(x); }
-static BL_INLINE_NODEBUG uint16_t cast_uint(int16_t x) noexcept { return uint16_t(x); }
-static BL_INLINE_NODEBUG uint32_t cast_uint(int32_t x) noexcept { return uint32_t(x); }
-static BL_INLINE_NODEBUG uint64_t cast_uint(int64_t x) noexcept { return uint64_t(x); }
-static BL_INLINE_NODEBUG uint8_t cast_uint(uint8_t x) noexcept { return x; }
-static BL_INLINE_NODEBUG uint16_t cast_uint(uint16_t x) noexcept { return x; }
-static BL_INLINE_NODEBUG uint32_t cast_uint(uint32_t x) noexcept { return x; }
-static BL_INLINE_NODEBUG uint64_t cast_uint(uint64_t x) noexcept { return x; }
+template<typename T>
+static BL_INLINE_NODEBUG typename std::make_signed<T>::type cast_int(const T& x) noexcept {
+  return (typename std::make_signed<T>::type)x;
+}
 
 template<typename T, typename Derived> struct op_base_1 {
   template<uint32_t kW>
@@ -233,7 +226,7 @@ template<typename T> struct iop_subs : public op_base_2<T, iop_subs<T>> {
 };
 
 template<typename T> struct iop_mul : public op_base_2<T, iop_mul<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return T(cast_uint(a) * cast_uint(b)); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return T((uint64_t(a) * uint64_t(b)) & ~T(0)); }
 };
 
 template<typename T> struct iop_min : public op_base_2<T, iop_min<T>> {
@@ -245,7 +238,7 @@ template<typename T> struct iop_max : public op_base_2<T, iop_max<T>> {
 };
 
 template<typename T, uint32_t kN> struct iop_slli : public op_base_1<T, iop_slli<T, kN>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a) noexcept { return T(a << kN); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a) noexcept { return T(cast_uint(a) << kN); }
 };
 
 template<typename T, uint32_t kN> struct iop_srli : public op_base_1<T, iop_srli<T, kN>> {
@@ -592,14 +585,93 @@ template<> struct TypeNameToString<float   > { static BL_INLINE_NODEBUG const ch
 template<> struct TypeNameToString<double  > { static BL_INLINE_NODEBUG const char* get() noexcept { return "float64"; } };
 
 template<typename T>
+static BL_NOINLINE BLString format_items(const T* items, uint32_t count) noexcept {
+  BLString s;
+  s.append('{');
+  for (uint32_t i = 0; i < count; i++)
+    s.appendFormat("%s%llu", i == 0 ? "" : ", ", (unsigned long long)items[i] & BLIntOps::allOnes<typename std::make_unsigned<T>::type>());
+  s.append('}');
+  return s;
+}
+
+template<typename T>
+static bool compare_ivec(const T* observed, const T* expected, uint32_t count) noexcept {
+  for (uint32_t i = 0; i < count; i++)
+    if (BL_UNLIKELY(observed[i] != expected[i]))
+      return false;
+  return true;
+}
+
+template<typename T>
 static void verify_ivec(const T* observed, const T* expected, uint32_t count) noexcept {
-  for (uint32_t i = 0; i < count; i++) {
-    EXPECT_EQ(observed[i], expected[i])
-      .message("Lane [%u] observed.%s(%llu) != expected.%s(%llu)",
-      i,
-      TypeNameToString<T>::get(), (unsigned long long)observed[i],
-      TypeNameToString<T>::get(), (unsigned long long)expected[i]);
+  if (!compare_ivec(observed, expected, count)) {
+    BLString observed_str = format_items(observed, count);
+    BLString expected_str = format_items(expected, count);
+
+    EXPECT_EQ(observed_str, expected_str)
+      .message("Operation failed\n"
+              "      Observed: %s\n"
+              "      Expected: %s",
+              observed_str.data(),
+              expected_str.data());
   }
+}
+
+template<typename T>
+static BL_NOINLINE void test_iop1_failed(const T* input1, const T* observed, const T* expected, uint32_t count) noexcept {
+  BLString input1_str = format_items(input1, count);
+  BLString observed_str = format_items(observed, count);
+  BLString expected_str = format_items(expected, count);
+
+  EXPECT_EQ(observed_str, expected_str)
+    .message("Operation failed\n"
+             "      Input #1: %s\n"
+             "      Observed: %s\n"
+             "      Expected: %s",
+             input1_str.data(),
+             observed_str.data(),
+             expected_str.data());
+}
+
+template<typename T>
+static BL_NOINLINE void test_iop2_failed(const T* input1, const T* input2, const T* observed, const T* expected, uint32_t count) noexcept {
+  BLString input1_str = format_items(input1, count);
+  BLString input2_str = format_items(input2, count);
+  BLString observed_str = format_items(observed, count);
+  BLString expected_str = format_items(expected, count);
+
+  EXPECT_EQ(observed_str, expected_str)
+    .message("Operation failed\n"
+             "      Input #1: %s\n"
+             "      Input #2: %s\n"
+             "      Observed: %s\n"
+             "      Expected: %s",
+             input1_str.data(),
+             input2_str.data(),
+             observed_str.data(),
+             expected_str.data());
+}
+
+template<typename T>
+static BL_NOINLINE void test_iop3_failed(const T* input1, const T* input2, const T* input3, const T* observed, const T* expected, uint32_t count) noexcept {
+  BLString input1_str = format_items(input1, count);
+  BLString input2_str = format_items(input2, count);
+  BLString input3_str = format_items(input3, count);
+  BLString observed_str = format_items(observed, count);
+  BLString expected_str = format_items(expected, count);
+
+  EXPECT_EQ(observed_str, expected_str)
+    .message("Operation failed\n"
+             "      Input #1: %s\n"
+             "      Input #2: %s\n"
+             "      Input #3: %s\n"
+             "      Observed: %s\n"
+             "      Expected: %s",
+             input1_str.data(),
+             input2_str.data(),
+             input3_str.data(),
+             observed_str.data(),
+             expected_str.data());
 }
 
 // SIMD - Tests - Utilities
@@ -644,7 +716,8 @@ static void test_iop1_constraint(VecOp&& vecOp) noexcept {
     SIMD::storeu(observed.data_u8, vr);
     expected = GenericOp::apply(a);
 
-    verify_ivec(observed.items, expected.items, kItemCount);
+    if (!compare_ivec(observed.items, expected.items, kItemCount))
+      test_iop1_failed(a.items, observed.items, expected.items, kItemCount);
   }
 }
 
@@ -677,7 +750,8 @@ static void test_iop2_constraint(VecOp&& vecOp) noexcept {
     SIMD::storeu(observed.data_u8, vr);
     expected = GenericOp::apply(a, b);
 
-    verify_ivec(observed.items, expected.items, kItemCount);
+    if (!compare_ivec(observed.items, expected.items, kItemCount))
+      test_iop2_failed(a.items, b.items, observed.items, expected.items, kItemCount);
   }
 }
 
@@ -714,7 +788,8 @@ static void test_iop3_constraint(VecOp&& vecOp) noexcept {
     SIMD::storeu(observed.data_u8, vr);
     expected = GenericOp::apply(a, b, c);
 
-    verify_ivec(observed.items, expected.items, kItemCount);
+    if (!compare_ivec(observed.items, expected.items, kItemCount))
+      test_iop3_failed(a.items, b.items, c.items, observed.items, expected.items, kItemCount);
   }
 }
 

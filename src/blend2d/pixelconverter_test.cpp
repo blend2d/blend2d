@@ -429,7 +429,6 @@ struct BLPixelConverterGenericTest {
       kA = A_MASK                                                         \
     };                                                                    \
   }
-
 BL_PIXEL_TEST(XRGB_0555, 16, 0x00007C00u, 0x000003E0u, 0x0000001Fu, 0x00000000u);
 BL_PIXEL_TEST(XBGR_0555, 16, 0x0000001Fu, 0x000003E0u, 0x00007C00u, 0x00000000u);
 BL_PIXEL_TEST(XRGB_0565, 16, 0x0000F800u, 0x000007E0u, 0x0000001Fu, 0x00000000u);
@@ -449,12 +448,10 @@ BL_PIXEL_TEST(ABGR_8888, 32, 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0xFF000000u)
 BL_PIXEL_TEST(RGBA_8888, 32, 0xFF000000u, 0x00FF0000u, 0x0000FF00u, 0x000000FFu);
 BL_PIXEL_TEST(BGRA_8888, 32, 0x0000FF00u, 0x00FF0000u, 0xFF000000u, 0x000000FFu);
 BL_PIXEL_TEST(BRGA_8888, 32, 0x00FF0000u, 0x0000FF00u, 0xFF000000u, 0x000000FFu);
-
 #undef BL_PIXEL_TEST
 
 static void testGenericConversions() noexcept {
   INFO("Testing generic conversions");
-
   BLPixelConverterGenericTest<Test_XRGB_0555>::test();
   BLPixelConverterGenericTest<Test_XBGR_0555>::test();
   BLPixelConverterGenericTest<Test_XRGB_0565>::test();

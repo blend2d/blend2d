@@ -480,6 +480,9 @@ BL_HIDDEN void blTransformRtInit_AVX(BLRuntimeContext* rt) noexcept;
 } // {BLTransformPrivate}
 
 void blTransformRtInit(BLRuntimeContext* rt) noexcept {
+  // Maybe unused.
+  blUnused(rt);
+
 #if !defined(BL_TARGET_OPT_SSE2)
   blUnused(rt);
   BLMapPointDArrayFunc* funcs = BLTransformPrivate::mapPointDArrayFuncs;

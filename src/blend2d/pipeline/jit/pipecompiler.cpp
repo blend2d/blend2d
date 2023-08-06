@@ -1396,6 +1396,49 @@ void PipeCompiler::v_emit_vvvi_vvi(uint32_t packedId, const Operand_& dst_, cons
     fixVecSignature(src2, signature);
   }
 
+  if (PackedInst::isIntrin(packedId)) {
+    switch (PackedInst::intrinId(packedId)) {
+      case kIntrin3iVpalignr: {
+        if (imm == 0)
+          return v_mov(dst, src2);
+
+        if (isSameReg(src1, src2)) {
+          if (imm == 4 || imm == 8 || imm == 12) {
+            uint32_t pred = imm ==  4 ? x86::shuffleImm(0, 3, 2, 1) :
+                            imm ==  8 ? x86::shuffleImm(1, 0, 3, 2) :
+                            imm == 12 ? x86::shuffleImm(2, 1, 0, 3) : 0;
+            return v_swizzle_u32(dst, src1, pred);
+          }
+        }
+
+        if (hasSSSE3()) {
+          packedId = PackedInst::packAvxSse(x86::Inst::kIdVpalignr, x86::Inst::kIdPalignr);
+          break;
+        }
+
+        uint32_t src1Shift = (16u - imm) % 16u;
+        uint32_t src2Shift = imm;
+
+        x86::Vec tmp = cc->newXmm("@tmp");
+
+        if (isSameReg(dst, src1)) {
+          v_srlb_u128(tmp, src2, src2Shift);
+          v_sllb_u128(dst, src1, src1Shift);
+          v_or_i32(dst, dst, tmp);
+        }
+        else {
+          v_sllb_u128(tmp, src1, src1Shift);
+          v_srlb_u128(dst, src2, src2Shift);
+        }
+        v_or_i32(dst, dst, tmp);
+        return;
+      }
+
+      default:
+        BL_NOT_REACHED();
+    }
+  }
+
   if (hasAVX()) {
     InstId instId = PackedInst::avxId(packedId);
     cc->emit(instId, dst, src1, src2, imm);

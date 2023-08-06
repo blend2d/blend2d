@@ -34,6 +34,16 @@ template<typename T, typename P, typename Offset>
 BL_NODISCARD
 static BL_INLINE_NODEBUG T* deoffset(P* ptr, Offset offset) noexcept { return (T*)((uintptr_t)(ptr) - (uintptr_t)(intptr_t)offset); }
 
+template<typename T, typename U>
+static BL_INLINE_NODEBUG bool bothAligned(const T* ptr1, const U* ptr2, size_t alignment) noexcept {
+  return (((uintptr_t)(ptr1) | (uintptr_t)(ptr2)) % uintptr_t(alignment)) == 0;
+}
+
+template<typename T, typename U>
+static BL_INLINE_NODEBUG bool haveEqualAlignment(const T* ptr1, const U* ptr2, size_t alignment) noexcept {
+  return (((uintptr_t)(ptr1) ^ (uintptr_t)(ptr2)) % uintptr_t(alignment)) == 0;
+}
+
 //! \}
 
 } // {anonymous}
