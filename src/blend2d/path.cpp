@@ -641,9 +641,30 @@ public:
           break;
         }
 
+        case BL_PATH_CMD_CONIC: {
+          cmdData += 3;
+          vtxData += 3;
+
+          if (cmdData > cmdEnd || !hasPrevVertex)
+            return blTraceError(BL_ERROR_INVALID_GEOMETRY);
+
+          flags |= BL_PATH_FLAG_CONICS;
+          hasPrevVertex = true;
+          BLGeometry::bound(boundingBox, vtxData[-1]);
+
+          // Calculate tight bounding-box only when control points are outside the current one.
+          const BLPoint& ctrl = vtxData[-3];
+
+          if (!(ctrl.x >= boundingBox.x0 && ctrl.y >= boundingBox.y0 && ctrl.x <= boundingBox.x1 && ctrl.y <= boundingBox.y1)) {
+            // TODO [Conic]: Conic bounding box.
+          }
+          break;
+        }
+
         case BL_PATH_CMD_CUBIC: {
           cmdData += 3;
           vtxData += 3;
+
           if (cmdData > cmdEnd || !hasPrevVertex)
             return blTraceError(BL_ERROR_INVALID_GEOMETRY);
 
@@ -946,6 +967,25 @@ BL_API_IMPL BLResult blPathQuadTo(BLPathCore* self, double x1, double y1, double
 
   cmdData[0] = BL_PATH_CMD_QUAD;
   cmdData[1] = BL_PATH_CMD_ON;
+
+  return BL_SUCCESS;
+}
+
+BL_API_IMPL BLResult blPathConicTo(BLPathCore* self, double x1, double y1, double x2, double y2, double w) noexcept {
+  using namespace BLPathPrivate;
+  BL_ASSERT(self->_d.isPath());
+
+  uint8_t* cmdData;
+  BLPoint* vtxData;
+  BL_PROPAGATE(prepareAdd(self, 3, &cmdData, &vtxData));
+
+  vtxData[0].reset(x1, y1);
+  vtxData[1].reset(w, blNaN<double>());
+  vtxData[2].reset(x2, y2);
+
+  cmdData[0] = BL_PATH_CMD_CONIC;
+  cmdData[1] = BL_PATH_CMD_WEIGHT;
+  cmdData[2] = BL_PATH_CMD_ON;
 
   return BL_SUCCESS;
 }
