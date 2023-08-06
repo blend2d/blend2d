@@ -1663,7 +1663,7 @@ OnReturn:
               continue;
             }
 
-            // // in1 in2 sub (12 11) out {in1 - in2}
+            // in1 in2 sub (12 11) out {in1 - in2}
             case kCSOpSub & 0xFFu: {
               BL_ASSERT(vMinOperands >= 2);
               double result = vBuf[vIdx - 2] - vBuf[vIdx - 1];

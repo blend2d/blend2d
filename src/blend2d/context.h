@@ -2113,7 +2113,7 @@ public:
     BL_CONTEXT_CALL_RETURN(fillAll, impl);
   }
 
-  //! \overload
+  //! Fills everything with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillAll(const StyleT& style) noexcept {
     return _fillAll(style);
@@ -2123,27 +2123,30 @@ public:
   BL_INLINE_NODEBUG BLResult fillBox(const BLBox& box) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_BOXD, &box);
   }
-  //! \overload.
+
+  //! Fills a box (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillBox(const BLBox& box, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_BOXD, &box, style);
   }
 
-  //! \overload
+  //! Fills a box (integer coordinates).
   BL_INLINE_NODEBUG BLResult fillBox(const BLBoxI& box) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_BOXI, &box);
   }
-  //! \overload
+
+  //! Fills a box (integer coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillBox(const BLBoxI& box, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_BOXI, &box, style);
   }
 
-  //! \overload
+  //! Fills a box (floating point coordinates).
   BL_INLINE_NODEBUG BLResult fillBox(double x0, double y0, double x1, double y1) noexcept {
     return fillBox(BLBox(x0, y0, x1, y1));
   }
-  //! \overload
+
+  //! Fills a box (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillBox(double x0, double y0, double x1, double y1, const StyleT& style) noexcept {
     return fillBox(BLBox(x0, y0, x1, y1), style);
@@ -2153,27 +2156,30 @@ public:
   BL_INLINE_NODEBUG BLResult fillRect(const BLRectI& rect) noexcept {
     BL_CONTEXT_CALL_RETURN(fillRectI, impl, &rect);
   }
-  //! \overload
+
+  //! Fills a rectangle `rect` (integer coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRect(const BLRectI& rect, const StyleT& style) noexcept {
     return _fillRectI(rect, style);
   }
 
-  //! \overload
+  //! Fills a rectangle `rect` (floating point coordinates).
   BL_INLINE_NODEBUG BLResult fillRect(const BLRect& rect) noexcept {
     BL_CONTEXT_CALL_RETURN(fillRectD, impl, &rect);
   }
-  //! \overload
+
+  //! Fills a rectangle `rect` (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRect(const BLRect& rect, const StyleT& style) noexcept {
     return _fillRectD(rect, style);
   }
 
-  //! \overload
+  //! Fills a rectangle `[x, y, w, h]` (floating point coordinates).
   BL_INLINE_NODEBUG BLResult fillRect(double x, double y, double w, double h) noexcept {
     return fillRect(BLRect(x, y, w, h));
   }
-  //! \overload
+
+  //! Fills a rectangle `[x, y, w, h]` (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRect(double x, double y, double w, double h, const StyleT& style) noexcept {
     return _fillRectD(BLRect(x, y, w, h), style);
@@ -2223,37 +2229,40 @@ public:
   BL_INLINE_NODEBUG BLResult fillRoundRect(const BLRoundRect& rr) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ROUND_RECT, &rr);
   }
-  //! \overload
+
+  //! Fills a rounded rectangle (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRoundRect(const BLRoundRect& rr, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ROUND_RECT, &rr, style);
   }
-  //! \overload
 
+  //! Fills a rounded rectangle passed as `rect` with radius `r`.
   BL_INLINE_NODEBUG BLResult fillRoundRect(const BLRect& rect, double r) noexcept {
     return fillRoundRect(BLRoundRect(rect.x, rect.y, rect.w, rect.h, r));
   }
-  //! \overload
 
+  //! Fills a rounded rectangle passed as `rect` with radius `[rx, ry]`.
   BL_INLINE_NODEBUG BLResult fillRoundRect(const BLRect& rect, double rx, double ry) noexcept {
     return fillRoundRect(BLRoundRect(rect.x, rect.y, rect.w, rect.h, rx, ry));
   }
-  //! \overload
+
+  //! Fills a rounded rectangle passed as `rect` with radius `[rx, ry]` with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRoundRect(const BLRect& rect, double rx, double ry, const StyleT& style) noexcept {
     return fillRoundRect(BLRoundRect(rect.x, rect.y, rect.w, rect.h, rx, ry), style);
   }
-  //! \overload
 
+  //! Fills a rounded rectangle passed as `[x, y, w, h]` with radius `r`.
   BL_INLINE_NODEBUG BLResult fillRoundRect(double x, double y, double w, double h, double r) noexcept {
     return fillRoundRect(BLRoundRect(x, y, w, h, r));
   }
 
-  //! \overload
+  //! Fills a rounded rectangle passed as `[x, y, w, h]` with radius `[rx, ry]`.
   BL_INLINE_NODEBUG BLResult fillRoundRect(double x, double y, double w, double h, double rx, double ry) noexcept {
     return fillRoundRect(BLRoundRect(x, y, w, h, rx, ry));
   }
-  //! \overload
+
+  //! Fills a rounded rectangle passed as `[x, y, w, h]` with radius `[rx, ry]` with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRoundRect(double x, double y, double w, double h, double rx, double ry, const StyleT& style) noexcept {
     return fillRoundRect(BLRoundRect(x, y, w, h, rx, ry), style);
@@ -2263,7 +2272,8 @@ public:
   BL_INLINE_NODEBUG BLResult fillChord(const BLArc& chord) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_CHORD, &chord);
   }
-  //! \overload
+
+  //! Fills a chord (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillChord(const BLArc& chord, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_CHORD, &chord, style);
@@ -2288,7 +2298,8 @@ public:
   BL_INLINE_NODEBUG BLResult fillPie(const BLArc& pie) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_PIE, &pie);
   }
-  //! \overload
+
+  //! Fills a pie (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillPie(const BLArc& pie, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_PIE, &pie, style);
@@ -2313,17 +2324,19 @@ public:
   BL_INLINE_NODEBUG BLResult fillTriangle(const BLTriangle& triangle) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_TRIANGLE, &triangle);
   }
-  //! \overload
+
+  //! Fills a triangle (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillTriangle(const BLTriangle& triangle, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_TRIANGLE, &triangle, style);
   }
 
-  //! \overload
+  //! Fills a triangle passed as `[x0, y0]`, `[x1, y1]`, `[x2, y2]`.
   BL_INLINE_NODEBUG BLResult fillTriangle(double x0, double y0, double x1, double y1, double x2, double y2) noexcept {
     return fillTriangle(BLTriangle(x0, y0, x1, y1, x2, y2));
   }
-  //! \overload
+
+  //! Fills a triangle passed as `[x0, y0]`, `[x1, y1]`, `[x2, y2]` with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillTriangle(double x0, double y0, double x1, double y1, double x2, double y2, const StyleT& style) noexcept {
     return fillTriangle(BLTriangle(x0, y0, x1, y1, x2, y2), style);
@@ -2453,17 +2466,19 @@ public:
   BL_INLINE_NODEBUG BLResult fillPath(const BLPathCore& path) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_PATH, &path);
   }
-  //! \overload
+
+  //! Fills the given `path` with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillPath(const BLPathCore& path, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_PATH, &path, style);
   }
 
-  //! Fills the given `path` starting at `origin`.
+  //! Fills the given `path` translated by `origin`.
   BL_INLINE_NODEBUG BLResult fillPath(const BLPoint& origin, const BLPathCore& path) noexcept {
     BL_CONTEXT_CALL_RETURN(fillPathD, impl, &origin, &path);
   }
-  //! \overload
+
+  //! Fills the given `path` translated by `origin` with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillPath(const BLPoint& origin, const BLPathCore& path, const StyleT& style) noexcept {
     return _fillPathD(origin, path, style);
@@ -2471,12 +2486,14 @@ public:
 
   //! Fills the passed geometry specified by geometry `type` and `data`.
   //!
-  //! \note This function provides a low-level API that can be used in cases that geometry `type` and `data` parameters
-  //! are passed to a function and you just want to render it without further inspection. It's a good way of creating wrappers.
+  //! \note This function provides a low-level interface that can be used in cases that geometry `type` and `data`
+  //! parameters are passed to a wrapper function that just passes them to the rendering context. It's a good way
+  //! of creating wrappers.
   BL_INLINE_NODEBUG BLResult fillGeometry(BLGeometryType type, const void* data) noexcept {
     return _fillGeometryOp(type, data);
   }
-  //! \overload
+
+  //! Fills the passed geometry specified by geometry `type` and `data` with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillGeometry(BLGeometryType type, const void* data, const StyleT& style) noexcept {
     return _fillGeometryOp(type, data, style);
@@ -2779,17 +2796,19 @@ public:
   BL_INLINE_NODEBUG BLResult strokeBox(const BLBox& box) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_BOXD, &box);
   }
-  //! \overload
+
+  //! Strokes a box (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeBox(const BLBox& box, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_BOXD, &box, style);
   }
 
-  //! Strokes a box (ingeger coordinates).
+  //! Strokes a box (integer coordinates).
   BL_INLINE_NODEBUG BLResult strokeBox(const BLBoxI& box) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_BOXI, &box);
   }
-  //! \overload
+
+  //! Strokes a box (integer coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeBox(const BLBoxI& box, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_BOXI, &box, style);
@@ -2799,7 +2818,8 @@ public:
   BL_INLINE_NODEBUG BLResult strokeBox(double x0, double y0, double x1, double y1) noexcept {
     return strokeBox(BLBox(x0, y0, x1, y1));
   }
-  //! \overload
+
+  //! Strokes a box (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeBox(double x0, double y0, double x1, double y1, const StyleT& style) noexcept {
     return strokeBox(BLBox(x0, y0, x1, y1), style);
@@ -2809,7 +2829,8 @@ public:
   BL_INLINE_NODEBUG BLResult strokeRect(const BLRect& rect) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_RECTD, &rect);
   }
-  //! \overload
+
+  //! Strokes a rectangle (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRect(const BLRect& rect, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_RECTD, &rect, style);
@@ -2819,7 +2840,8 @@ public:
   BL_INLINE_NODEBUG BLResult strokeRect(const BLRectI& rect) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_RECTI, &rect);
   }
-  //! \overload
+
+  //! Strokes a rectangle (integer coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRect(const BLRectI& rect, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_RECTI, &rect, style);
@@ -2829,7 +2851,8 @@ public:
   BL_INLINE_NODEBUG BLResult strokeRect(double x, double y, double w, double h) noexcept {
     return strokeRect(BLRect(x, y, w, h));
   }
-  //! \overload
+
+  //! Strokes a rectangle (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRect(double x, double y, double w, double h, const StyleT& style) noexcept {
     return strokeRect(BLRect(x, y, w, h), style);
@@ -2839,7 +2862,8 @@ public:
   BL_INLINE_NODEBUG BLResult strokeLine(const BLLine& line) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_LINE, &line);
   }
-  //! \overload
+
+  //! Strokes a line specified as `line` (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeLine(const BLLine& line, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_LINE, &line, style);
@@ -2849,7 +2873,8 @@ public:
   BL_INLINE_NODEBUG BLResult strokeLine(const BLPoint& p0, const BLPoint& p1) noexcept {
     return strokeLine(BLLine(p0.x, p0.y, p1.x, p1.y));
   }
-  //! \overload
+
+  //! Strokes a line starting at `p0` and ending at `p1` (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeLine(const BLPoint& p0, const BLPoint& p1, const StyleT& style) noexcept {
     return strokeLine(BLLine(p0.x, p0.y, p1.x, p1.y), style);
@@ -2859,7 +2884,8 @@ public:
   BL_INLINE_NODEBUG BLResult strokeLine(double x0, double y0, double x1, double y1) noexcept {
     return strokeLine(BLLine(x0, y0, x1, y1));
   }
-  //! \overload
+
+  //! Strokes a line starting at `[x0, y0]` and ending at `[x1, y1]` (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeLine(double x0, double y0, double x1, double y1, const StyleT& style) noexcept {
     return strokeLine(BLLine(x0, y0, x1, y1), style);
@@ -2869,17 +2895,19 @@ public:
   BL_INLINE_NODEBUG BLResult strokeCircle(const BLCircle& circle) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_CIRCLE, &circle);
   }
-  //! \overload
+
+  //! Strokes a circle (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeCircle(const BLCircle& circle, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_CIRCLE, &circle, style);
   }
 
-  //! \overload
+  //! Strokes a circle (floating point coordinates).
   BL_INLINE_NODEBUG BLResult strokeCircle(double cx, double cy, double r) noexcept {
     return strokeCircle(BLCircle(cx, cy, r));
   }
-  //! \overload
+
+  //! Strokes a circle (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeCircle(double cx, double cy, double r, const StyleT& style) noexcept {
     return strokeCircle(BLCircle(cx, cy, r), style);
@@ -2889,17 +2917,19 @@ public:
   BL_INLINE_NODEBUG BLResult strokeEllipse(const BLEllipse& ellipse) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ELLIPSE, &ellipse);
   }
-  //! \overload
+
+  //! Strokes an ellipse (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeEllipse(const BLEllipse& ellipse, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ELLIPSE, &ellipse, style);
   }
 
-  //! \overload
+  //! Strokes an ellipse (floating point coordinates).
   BL_INLINE_NODEBUG BLResult strokeEllipse(double cx, double cy, double rx, double ry) noexcept {
     return strokeEllipse(BLEllipse(cx, cy, rx, ry));
   }
-  //! \overload
+
+  //! Strokes an ellipse (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeEllipse(double cx, double cy, double rx, double ry, const StyleT& style) noexcept {
     return strokeEllipse(BLEllipse(cx, cy, rx, ry), style);
@@ -2909,37 +2939,40 @@ public:
   BL_INLINE_NODEBUG BLResult strokeRoundRect(const BLRoundRect& rr) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ROUND_RECT, &rr);
   }
-  //! \overload
+
+  //! Strokes a rounded rectangle (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRoundRect(const BLRoundRect& rr, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ROUND_RECT, &rr, style);
   }
 
-  //! \overload
+  //! Strokes a rounded rectangle passed as `rect` with radius `r`.
   BL_INLINE_NODEBUG BLResult strokeRoundRect(const BLRect& rect, double r) noexcept {
     return strokeRoundRect(BLRoundRect(rect.x, rect.y, rect.w, rect.h, r));
   }
 
-  //! \overload
+  //! Strokes a rounded rectangle passed as `rect` with radius `[rx, ry]`.
   BL_INLINE_NODEBUG BLResult strokeRoundRect(const BLRect& rect, double rx, double ry) noexcept {
     return strokeRoundRect(BLRoundRect(rect.x, rect.y, rect.w, rect.h, rx, ry));
   }
-  //! \overload
+
+  //! Strokes a rounded rectangle passed as `rect` with radius `[rx, ry]` with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRoundRect(const BLRect& rect, double rx, double ry, const StyleT& style) noexcept {
     return strokeRoundRect(BLRoundRect(rect.x, rect.y, rect.w, rect.h, rx, ry), style);
   }
 
-  //! \overload
+  //! Strokes a rounded rectangle passed as `[x, y, w, h]` with radius `r`.
   BL_INLINE_NODEBUG BLResult strokeRoundRect(double x, double y, double w, double h, double r) noexcept {
     return strokeRoundRect(BLRoundRect(x, y, w, h, r));
   }
 
-  //! \overload
+  //! Strokes a rounded rectangle passed as `[x, y, w, h]` with radius `[rx, ry]`.
   BL_INLINE_NODEBUG BLResult strokeRoundRect(double x, double y, double w, double h, double rx, double ry) noexcept {
     return strokeRoundRect(BLRoundRect(x, y, w, h, rx, ry));
   }
-  //! \overload
+
+  //! Strokes a rounded rectangle passed as `[x, y, w, h]` with radius `[rx, ry]` with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRoundRect(double x, double y, double w, double h, double rx, double ry, const StyleT& style) noexcept {
     return strokeRoundRect(BLRoundRect(x, y, w, h, rx, ry), style);
@@ -2949,7 +2982,8 @@ public:
   BL_INLINE_NODEBUG BLResult strokeArc(const BLArc& arc) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARC, &arc);
   }
-  //! \overload
+
+  //! Strokes an arc (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeArc(const BLArc& arc, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARC, &arc, style);
@@ -2974,7 +3008,8 @@ public:
   BL_INLINE_NODEBUG BLResult strokeChord(const BLArc& chord) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_CHORD, &chord);
   }
-  //! \overload
+
+  //! Strokes a chord (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeChord(const BLArc& chord, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_CHORD, &chord, style);
@@ -2999,7 +3034,8 @@ public:
   BL_INLINE_NODEBUG BLResult strokePie(const BLArc& pie) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_PIE, &pie);
   }
-  //! \overload
+
+  //! Strokes a pie (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePie(const BLArc& pie, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_PIE, &pie, style);
@@ -3024,17 +3060,19 @@ public:
   BL_INLINE_NODEBUG BLResult strokeTriangle(const BLTriangle& triangle) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_TRIANGLE, &triangle);
   }
-  //! \overload
+
+  //! Strokes a triangle (floating point coordinates) with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeTriangle(const BLTriangle& triangle, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_TRIANGLE, &triangle, style);
   }
 
-  //! \overload
+  //! Strokes a triangle passed as `[x0, y0]`, `[x1, y1]`, `[x2, y2]`.
   BL_INLINE_NODEBUG BLResult strokeTriangle(double x0, double y0, double x1, double y1, double x2, double y2) noexcept {
     return strokeTriangle(BLTriangle(x0, y0, x1, y1, x2, y2));
   }
-  //! \overload
+
+  //! Strokes a triangle passed as `[x0, y0]`, `[x1, y1]`, `[x2, y2]` with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeTriangle(double x0, double y0, double x1, double y1, double x2, double y2, const StyleT& style) noexcept {
     return strokeTriangle(BLTriangle(x0, y0, x1, y1, x2, y2), style);
@@ -3204,17 +3242,19 @@ public:
   BL_INLINE_NODEBUG BLResult strokePath(const BLPathCore& path) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_PATH, &path);
   }
-  //! \overload
+
+  //! Strokes the given `path` with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePath(const BLPathCore& path, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_PATH, &path, style);
   }
 
-  //! Strokes the given `path` starting at `origin`.
+  //! Strokes the given `path` translated by `origin`.
   BL_INLINE_NODEBUG BLResult strokePath(const BLPoint& origin, const BLPathCore& path) noexcept {
     BL_CONTEXT_CALL_RETURN(strokePathD, impl, &origin, &path);
   }
-  //! \overload
+
+  //! Strokes the given `path` translated by `origin` with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePath(const BLPoint& origin, const BLPathCore& path, const StyleT& style) noexcept {
     return _strokePathD(origin, path, style);
@@ -3227,7 +3267,7 @@ public:
   BL_INLINE_NODEBUG BLResult strokeGeometry(BLGeometryType type, const void* data) noexcept {
     return _strokeGeometryOp(type, data);
   }
-  //! \overload
+  //! Strokes the passed geometry specified by geometry `type` and `data` with an explicit style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeGeometry(BLGeometryType type, const void* data, const StyleT& style) noexcept {
     return _strokeGeometryOp(type, data, style);

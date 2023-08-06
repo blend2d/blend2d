@@ -55,6 +55,8 @@ namespace SIMD {
 // SIMD - Vector Registers
 // =======================
 
+//! \cond NEVER
+
 template<> struct Vec<8, int8_t>;
 template<> struct Vec<8, uint8_t>;
 template<> struct Vec<8, int16_t>;
@@ -128,6 +130,8 @@ BL_DECLARE_SIMD_TYPE(Vec2xF64, 16, float64x2_t, double);
 
 #undef BL_DECLARE_SIMD_TYPE
 
+//! \endcond
+
 // Everything must be in anonymous namespace to avoid ODR violation.
 namespace {
 
@@ -138,6 +142,8 @@ namespace Internal {
 
 template<size_t kW>
 struct SimdInfo;
+
+//! \cond NEVER
 
 template<>
 struct SimdInfo<8> {
@@ -170,6 +176,8 @@ struct SimdInfo<16> {
   typedef float64x2_t RegF64;
 #endif // BL_SIMD_AARCH64
 };
+
+//! \endcond
 
 } // {Internal}
 

@@ -12,6 +12,8 @@
 #include "../string_p.h"
 #include "../simd/simd_p.h"
 
+//! \cond NEVER
+
 namespace SIMDTests {
 namespace {
 
@@ -1618,5 +1620,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
 
 } // {anonymous}
 } // {SIMDTests}
+
+//! \endcond
 
 #endif // BLEND2D_SIMD_SIMD_TEST_P_H_INCLUDED
