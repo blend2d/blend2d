@@ -136,15 +136,11 @@ static void processCommands(WorkData* workData) noexcept {
   bool isInitialBand = true;
   uint32_t workerCount = batch->workerCount();
   uint32_t bandCount = batch->bandCount();
+
+  // We can process several consecutive bands at once when there is enough of bands for all the threads.
+  //
+  // TODO: At the moment this feature is not used as it regressed bl_bench using 4+ threads.
   uint32_t consecutiveBandCount = 1;
-
-  // If there is enough bands, then process several consecutive bands at once. This should help to avoid
-  // sharing cache lines between two consecutive bands that are not aligned to a cache line boundary.
-  if (bandCount >= workerCount * 2)
-    consecutiveBandCount = 2;
-
-  if (bandCount >= workerCount * 4)
-    consecutiveBandCount = 4;
 
   uint32_t bandId = workData->workerId() * consecutiveBandCount;
   uint32_t consecutiveIndex = 0;

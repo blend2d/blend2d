@@ -110,14 +110,14 @@ BL_DEFINE_ENUM(BLFillRule) {
 
 //! Hit-test result.
 BL_DEFINE_ENUM(BLHitTest) {
-  //!< Fully in.
+  //! Fully in.
   BL_HIT_TEST_IN = 0,
-  //!< Partially in/out.
+  //! Partially in/out.
   BL_HIT_TEST_PART = 1,
-  //!< Fully out.
+  //! Fully out.
   BL_HIT_TEST_OUT = 2,
 
-  //!< Hit test failed (invalid argument, NaNs, etc).
+  //! Hit test failed (invalid argument, NaNs, etc).
   BL_HIT_TEST_INVALID = 0xFFFFFFFFu
 
   BL_FORCE_ENUM_UINT32(BL_HIT_TEST)

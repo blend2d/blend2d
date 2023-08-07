@@ -45,7 +45,7 @@ static BL_INLINE bool checkSizeAndFormat(int w, int h, BLFormat format) noexcept
            unsigned(format - 1) >= BL_FORMAT_MAX_VALUE);
 }
 
-static BL_INLINE BLResultT<intptr_t> checkCreateImageParams(int w, int h, BLFormat format) noexcept {
+static BL_INLINE BLResultT<intptr_t> calcStrideFromCreateParams(int w, int h, BLFormat format) noexcept {
   if (BL_UNLIKELY(!checkSizeAndFormat(w, h, format))) {
     BLResult result =
       w <= 0 || h <= 0 || unsigned(format - 1) >= BL_FORMAT_MAX_VALUE
@@ -56,6 +56,12 @@ static BL_INLINE BLResultT<intptr_t> checkCreateImageParams(int w, int h, BLForm
   else {
     uint32_t bytesPerLine = strideForWidth(w, blFormatInfo[format].depth);
     uint64_t bytesPerImage = uint64_t(bytesPerLine) * unsigned(h);
+
+    // NOTE: Align the stride to 16 bytes if bytesPerLine is not too small. The reason is that when multi-threaded
+    // rendering is used and bytesPerLine not aligned, some bands could share a cache line, which would potentially
+    // affect the performance in a very negative way.
+    if (bytesPerLine > 256u)
+      bytesPerLine = BLIntOps::alignUp(bytesPerLine, 16);
 
     BLResult result = bytesPerImage <= kMaxAddressableOffset ? BL_SUCCESS : BL_ERROR_IMAGE_TOO_LARGE;
     return BLResultT<intptr_t>{result, intptr_t(bytesPerLine)};
@@ -86,7 +92,7 @@ static void copyImageData(uint8_t* dstData, intptr_t dstStride, const uint8_t* s
   size_t bytesPerLine = (size_t(unsigned(w)) * blFormatInfo[format].depth + 7u) / 8u;
 
   if (intptr_t(bytesPerLine) == dstStride && intptr_t(bytesPerLine) == srcStride) {
-    // Special case that happens offen - stride equals bytes-per-line (no gaps).
+    // Special case that happens often - stride equals bytes-per-line (no gaps).
     memcpy(dstData, srcData, bytesPerLine * unsigned(h));
     return;
   }
@@ -302,7 +308,7 @@ BL_API_IMPL BLResult blImageCreate(BLImageCore* self, int w, int h, BLFormat for
 
   BL_ASSERT(self->_d.isImage());
 
-  BLResultT<intptr_t> result = checkCreateImageParams(w, h, format);
+  BLResultT<intptr_t> result = calcStrideFromCreateParams(w, h, format);
   if (BL_UNLIKELY(result.code != BL_SUCCESS)) {
     if ((w | h) == 0 && format == BL_FORMAT_NONE)
       return blImageReset(self);
