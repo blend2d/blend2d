@@ -174,9 +174,9 @@ BL_INLINE bool blRuntimeHasAVX512(BLRuntimeContext* rt) noexcept { return (rt->s
 #endif
 
 #if defined(BL_TARGET_OPT_ASIMD)
-constexpr bool blRuntimeHasNEON(BLRuntimeContext* rt) noexcept { return true; }
+constexpr bool blRuntimeHasASIMD(BLRuntimeContext* rt) noexcept { return true; }
 #else
-constexpr bool blRuntimeHasNEON(BLRuntimeContext* rt) noexcept { return false; }
+constexpr bool blRuntimeHasASIMD(BLRuntimeContext* rt) noexcept { return false; }
 #endif
 
 } // {anonymous}

@@ -43,6 +43,9 @@
 
 #if defined(BL_SIMD_AARCH64)
   #define BL_SIMD_FEATURE_ARRAY_LOOKUP
+#else
+  #define BL_SIMD_IMPRECISE_FP_DIV
+  #define BL_SIMD_IMPRECISE_FP_SQRT
 #endif
 
 #define BL_SIMD_FEATURE_BLEND_IMM
@@ -82,7 +85,7 @@ template<> struct Vec<16, double>;
 #define BL_DECLARE_SIMD_TYPE(typeName, width, simdType, elementType)          \
 template<>                                                                    \
 struct Vec<width, elementType> {                                              \
-  static constexpr size_t kW = width;                                       \
+  static constexpr size_t kW = width;                                         \
   static constexpr uint32_t kHalfVectorWidth = width > 8 ? width / 2u : 8;    \
                                                                               \
   static constexpr uint32_t kElementWidth = uint32_t(sizeof(elementType));    \
@@ -518,7 +521,7 @@ BL_INLINE_NODEBUG uint32x4_t simd_make128_u32(uint32_t x1, uint32_t x0) noexcept
 BL_INLINE_NODEBUG uint32x4_t simd_make128_u32(uint32_t x3, uint32_t x2, uint32_t x1, uint32_t x0) noexcept {
   uint64x1_t v1 = vcreate_u64(scalar_u64_from_2x_u32(x3, x2));
   uint64x1_t v0 = vcreate_u64(scalar_u64_from_2x_u32(x1, x0));
-  return vcombine_u64(v0, v1);
+  return simd_u32(vcombine_u64(v0, v1));
 }
 
 BL_INLINE_NODEBUG uint16x8_t simd_make128_u16(uint16_t x0) noexcept {
@@ -537,7 +540,7 @@ BL_INLINE_NODEBUG uint16x8_t simd_make128_u16(uint16_t x7, uint16_t x6, uint16_t
                                               uint16_t x3, uint16_t x2, uint16_t x1, uint16_t x0) noexcept {
   uint64x1_t v1 = vcreate_u64(scalar_u64_from_4x_u16(x7, x6, x5, x4));
   uint64x1_t v0 = vcreate_u64(scalar_u64_from_4x_u16(x3, x2, x1, x0));
-  return vcombine_u64(v0, v1);
+  return simd_u16(vcombine_u64(v0, v1));
 }
 
 BL_INLINE_NODEBUG uint8x16_t simd_make128_u8(uint8_t x0) noexcept {
@@ -563,7 +566,7 @@ BL_INLINE_NODEBUG uint8x16_t simd_make128_u8(uint8_t x15, uint8_t x14, uint8_t x
                                              uint8_t x03, uint8_t x02, uint8_t x01, uint8_t x00) noexcept {
   uint64_t hi = scalar_u64_from_8x_u8(x15, x14, x13, x12, x11, x10, x09, x08);
   uint64_t lo = scalar_u64_from_8x_u8(x07, x06, x05, x04, x03, x02, x01, x00);
-  return vcombine_u64(vcreate_u64(lo), vcreate_u64(hi));
+  return simd_u8(vcombine_u64(vcreate_u64(lo), vcreate_u64(hi)));
 }
 
 BL_INLINE_NODEBUG float32x4_t simd_make128_f32(float x0) noexcept {
@@ -622,18 +625,22 @@ BL_INLINE_NODEBUG float32x4_t simd_from_f32(float val) noexcept {
   return vld1q_f32(arr);
 }
 
+#if defined(BL_SIMD_AARCH64)
 BL_INLINE_NODEBUG float64x2_t simd_from_f64(double val) noexcept {
   alignas(16) double arr[2]{val, 0};
   return vld1q_f64(arr);
 }
+#endif // BL_SIMD_AARCH64
 
 BL_INLINE_NODEBUG float simd_cast_to_f32(const float32x4_t& src) noexcept {
   return vgetq_lane_f32(src, 0);
 }
 
+#if defined(BL_SIMD_AARCH64)
 BL_INLINE_NODEBUG double simd_cast_to_f64(const float64x2_t& src) noexcept {
   return vgetq_lane_f64(src, 0);
 }
+#endif // BL_SIMD_AARCH64
 
 } // {Internal}
 
@@ -650,7 +657,23 @@ BL_INLINE_NODEBUG int32x4_t simd_cvt_f32_i32(const float32x4_t& a) noexcept {
 #elif defined(__ARM_FEATURE_FRINT)
   return vcvtq_s32_f32(vrnd32xq_f32(a));
 #else
-  #error "[blend2d] 'simd_cvt_f32_i32' not implemented"
+  // How to round without a rounding instruction:
+  //   rounded = a >= kMaxN ? a : a + kMagic - kMagic;
+  //
+  // Can be rewritten as:
+  //   pred = (a >= kMaxN) & kMagic;
+  //   rounded = a + pred - pred;
+  constexpr float kMaxN = 8388608;   // pow(2, 23)
+  constexpr float kMagic = 12582912; // pow(2, 23) + pow(2, 22);
+
+  float32x4_t vMaxN = simd_make128_f32(kMaxN);
+  float32x4_t vMagic = simd_make128_f32(kMagic);
+
+  uint32x4_t msk = vcgeq_f32(a, vMaxN);
+  float32x4_t pred = simd_f32(vandq_u32(msk, simd_u32(vMagic)));
+
+  float32x4_t rounded = vsubq_f32(vaddq_f32(a, pred), pred);
+  return vcvtq_s32_f32(rounded);
 #endif
 }
 
@@ -670,11 +693,6 @@ BL_INLINE_NODEBUG int32_t simd_cvtt_f32_to_scalar_i32(const float32x4_t& src) no
 #if defined(BL_SIMD_AARCH64)
 BL_INLINE_NODEBUG float64x2_t simd_cvt_f64_from_scalar_i32(int32_t val) noexcept { return simd_from_f64(double(val)); }
 #endif // BL_SIMD_AARCH64
-
-/*
-BL_INLINE_NODEBUG int32_t simd_cvt_f32_to_scalar_i32(const float32x4_t& src) noexcept { return _mm_cvtss_si32(src); }
-BL_INLINE_NODEBUG int32_t simd_cvtt_f64_to_scalar_i32(const __m128d& src) noexcept { return _mm_cvttsd_si32(src); }
-*/
 
 } // {Internal}
 
@@ -942,14 +960,15 @@ BL_INLINE_NODEBUG float32x4_t simd_dup_hi_f32(const float32x4_t& a) noexcept { r
 BL_INLINE_NODEBUG float32x4_t simd_dup_lo_2xf32(const float32x4_t& a) noexcept { return simd_swizzle_f32<1, 0, 1, 0>(a); }
 BL_INLINE_NODEBUG float32x4_t simd_dup_hi_2xf32(const float32x4_t& a) noexcept { return simd_swizzle_f32<3, 2, 3, 2>(a); }
 
-BL_INLINE_NODEBUG float64x2_t simd_dup_lo_f64(const float64x2_t& a) noexcept { return simd_swizzle_f64<0, 0>(a); }
-BL_INLINE_NODEBUG float64x2_t simd_dup_hi_f64(const float64x2_t& a) noexcept { return simd_swizzle_f64<1, 1>(a); }
-
 BL_INLINE_NODEBUG uint32x4_t simd_swap_u32(const uint32x4_t& a) noexcept { return simd_swizzle_u32<2, 3, 0, 1>(a); }
 BL_INLINE_NODEBUG uint64x2_t simd_swap_u64(const uint64x2_t& a) noexcept { return simd_swizzle_u64<0, 1>(a); }
-
 BL_INLINE_NODEBUG float32x4_t simd_swap_f32(const float32x4_t& a) noexcept { return simd_swizzle_f32<2, 3, 0, 1>(a); }
+
+#if defined(BL_SIMD_AARCH64)
+BL_INLINE_NODEBUG float64x2_t simd_dup_lo_f64(const float64x2_t& a) noexcept { return simd_swizzle_f64<0, 0>(a); }
+BL_INLINE_NODEBUG float64x2_t simd_dup_hi_f64(const float64x2_t& a) noexcept { return simd_swizzle_f64<1, 1>(a); }
 BL_INLINE_NODEBUG float64x2_t simd_swap_f64(const float64x2_t& a) noexcept { return simd_swizzle_f64<0, 1>(a); }
+#endif // BL_SIMD_AARCH64
 
 BL_INLINE_NODEBUG uint8x16_t simd_interleave_lo_u8(const uint8x16_t& a, const uint8x16_t& b) noexcept {
 #if defined(BL_SIMD_AARCH64)
@@ -1023,7 +1042,7 @@ BL_INLINE_NODEBUG uint64x2_t simd_interleave_lo_u64(const uint64x2_t& a, const u
 #else
   uint64x1_t al = vget_low_u64(a);
   uint64x1_t bl = vget_low_u64(b);
-  return combine_u64(al, bl);
+  return vcombine_u64(al, bl);
 #endif
 }
 
@@ -1033,7 +1052,7 @@ BL_INLINE_NODEBUG uint64x2_t simd_interleave_hi_u64(const uint64x2_t& a, const u
 #else
   uint64x1_t ah = vget_high_u64(a);
   uint64x1_t bh = vget_high_u64(b);
-  return combine_u64(ah, bh);
+  return vcombine_u64(ah, bh);
 #endif
 }
 
@@ -1044,7 +1063,7 @@ BL_INLINE_NODEBUG float32x4_t simd_interleave_lo_f32(const float32x4_t& a, const
   float32x2_t al = vget_low_f32(a);
   float32x2_t bl = vget_low_f32(b);
   float32x2x2_t ab = vzip_f32(al, bl);
-  return vcombine_u32(ab.val[0], ab.val[1]);
+  return vcombine_f32(ab.val[0], ab.val[1]);
 #endif
 }
 
@@ -1055,7 +1074,7 @@ BL_INLINE_NODEBUG float32x4_t simd_interleave_hi_f32(const float32x4_t& a, const
   float32x2_t ah = vget_high_f32(a);
   float32x2_t bh = vget_high_f32(b);
   float32x2x2_t ab = vzip_f32(ah, bh);
-  return vcombine_u32(ab.val[0], ab.val[1]);
+  return vcombine_f32(ab.val[0], ab.val[1]);
 #endif
 }
 
@@ -1310,9 +1329,20 @@ BL_INLINE_NODEBUG float32x4_t simd_sqrt_f32(const float32x4_t& a) noexcept {
 BL_INLINE_NODEBUG float32x4_t simd_add_f32(const float32x4_t& a, const float32x4_t& b) noexcept { return vaddq_f32(a, b); }
 BL_INLINE_NODEBUG float32x4_t simd_sub_f32(const float32x4_t& a, const float32x4_t& b) noexcept { return vsubq_f32(a, b); }
 BL_INLINE_NODEBUG float32x4_t simd_mul_f32(const float32x4_t& a, const float32x4_t& b) noexcept { return vmulq_f32(a, b); }
-BL_INLINE_NODEBUG float32x4_t simd_div_f32(const float32x4_t& a, const float32x4_t& b) noexcept { return vdivq_f32(a, b); }
 BL_INLINE_NODEBUG float32x4_t simd_min_f32(const float32x4_t& a, const float32x4_t& b) noexcept { return vminq_f32(a, b); }
 BL_INLINE_NODEBUG float32x4_t simd_max_f32(const float32x4_t& a, const float32x4_t& b) noexcept { return vmaxq_f32(a, b); }
+
+#if defined(BL_SIMD_AARCH64)
+BL_INLINE_NODEBUG float32x4_t simd_div_f32(const float32x4_t& a, const float32x4_t& b) noexcept { return vdivq_f32(a, b); }
+#else
+BL_INLINE_NODEBUG float32x4_t simd_div_f32(const float32x4_t& a, const float32x4_t& b) noexcept {
+  float32x4_t rcp = vrecpeq_f32(b);
+  rcp = vmulq_f32(rcp, vrecpsq_f32(rcp, b));
+  rcp = vmulq_f32(rcp, vrecpsq_f32(rcp, b));
+  rcp = vmulq_f32(rcp, vrecpsq_f32(rcp, b));
+  return vmulq_f32(a, rcp);
+}
+#endif
 
 BL_INLINE_NODEBUG float32x4_t simd_cmp_eq_f32(const float32x4_t& a, const float32x4_t& b) noexcept { return simd_f32(vceqq_f32(a, b)); }
 BL_INLINE_NODEBUG float32x4_t simd_cmp_ne_f32(const float32x4_t& a, const float32x4_t& b) noexcept { return simd_f32(vmvnq_u32(vceqq_f32(a, b))); }
@@ -1390,7 +1420,7 @@ BL_INLINE_NODEBUG int32x4_t simd_cmp_eq_i32(const int32x4_t& a, const int32x4_t&
 
 BL_INLINE_NODEBUG uint8x16_t simd_cmp_eq_u8(const uint8x16_t& a, const uint8x16_t& b) noexcept { return simd_u8(vceqq_u8(a, b)); }
 BL_INLINE_NODEBUG uint16x8_t simd_cmp_eq_u16(const uint16x8_t& a, const uint16x8_t& b) noexcept { return simd_u16(vceqq_u16(a, b)); }
-BL_INLINE_NODEBUG uint32x4_t simd_cmp_eq_u32(const uint32x4_t& a, const int32x4_t& b) noexcept { return simd_u32(vceqq_u32(a, b)); }
+BL_INLINE_NODEBUG uint32x4_t simd_cmp_eq_u32(const uint32x4_t& a, const uint32x4_t& b) noexcept { return simd_u32(vceqq_u32(a, b)); }
 
 BL_INLINE_NODEBUG int8x16_t simd_cmp_ne_i8(const int8x16_t& a, const int8x16_t& b) noexcept { return simd_i8(vmvnq_u8(vceqq_s8(a, b))); }
 BL_INLINE_NODEBUG int16x8_t simd_cmp_ne_i16(const int16x8_t& a, const int16x8_t& b) noexcept { return simd_i16(vmvnq_u16(vceqq_s16(a, b))); }
@@ -1398,7 +1428,7 @@ BL_INLINE_NODEBUG int32x4_t simd_cmp_ne_i32(const int32x4_t& a, const int32x4_t&
 
 BL_INLINE_NODEBUG uint8x16_t simd_cmp_ne_u8(const uint8x16_t& a, const uint8x16_t& b) noexcept { return simd_u8(vmvnq_u8(vceqq_u8(a, b))); }
 BL_INLINE_NODEBUG uint16x8_t simd_cmp_ne_u16(const uint16x8_t& a, const uint16x8_t& b) noexcept { return simd_u16(vmvnq_u16(vceqq_u16(a, b))); }
-BL_INLINE_NODEBUG uint32x4_t simd_cmp_ne_u32(const uint32x4_t& a, const int32x4_t& b) noexcept { return simd_u32(vmvnq_u32(vceqq_u32(a, b))); }
+BL_INLINE_NODEBUG uint32x4_t simd_cmp_ne_u32(const uint32x4_t& a, const uint32x4_t& b) noexcept { return simd_u32(vmvnq_u32(vceqq_u32(a, b))); }
 
 BL_INLINE_NODEBUG int8x16_t simd_cmp_gt_i8(const int8x16_t& a, const int8x16_t& b) noexcept { return simd_i8(vcgtq_s8(a, b)); }
 BL_INLINE_NODEBUG int16x8_t simd_cmp_gt_i16(const int16x8_t& a, const int16x8_t& b) noexcept { return simd_i16(vcgtq_s16(a, b)); }
@@ -1452,11 +1482,11 @@ BL_INLINE_NODEBUG int64x2_t simd_cmp_le_i64(const int64x2_t& a, const int64x2_t&
 BL_INLINE_NODEBUG uint64x2_t simd_cmp_le_u64(const uint64x2_t& a, const uint64x2_t& b) noexcept { return simd_i64(vcleq_u64(a, b)); }
 #else
 BL_INLINE_NODEBUG uint64x2_t simd_test_nz_u64(const uint64x2_t& a) noexcept {
-  return vshrq_n_s64(simd_i64(vqshlq_n_u64(a), 63), 63);
+  return simd_u64(vshrq_n_s64(simd_i64(vqshlq_n_u64(a, 63)), 63));
 }
 
 BL_INLINE_NODEBUG uint64x2_t simd_test_z_u64(const uint64x2_t& a) noexcept {
-  return simd_not(simd_test_nz_u64(a));
+  return simd_u64(simd_not(simd_u8(simd_test_nz_u64(a))));
 }
 
 BL_INLINE_NODEBUG int64x2_t simd_cmp_eq_i64(const int64x2_t& a, const int64x2_t& b) noexcept {
@@ -1536,7 +1566,7 @@ BL_INLINE_NODEBUG int64x2_t simd_abs_i64(const int64x2_t& a) noexcept {
   return vabsq_s64(a);
 #else
   int64x2_t msk = vshrq_n_s64(a, 63);
-  return vsubq_i64(veorq_s64(a, msk), msk);
+  return vsubq_s64(veorq_s64(a, msk), msk);
 #endif
 }
 
@@ -1634,36 +1664,36 @@ template<> BL_INLINE_NODEBUG uint8x16_t simd_loada<16>(const void* src) noexcept
 template<> BL_INLINE_NODEBUG uint8x16_t simd_loadu<16>(const void* src) noexcept { return simd_u8(vld1q_u8(static_cast<const uint8_t*>(src))); }
 
 BL_INLINE_NODEBUG void simd_store_8(void* dst, uint8x8_t src) noexcept { vst1_lane_u8(static_cast<uint8_t*>(dst), src, 0); }
-BL_INLINE_NODEBUG void simd_store_8(void* dst, uint16x8_t src) noexcept { vst1q_lane_u8(static_cast<uint8_t*>(dst), src, 0); }
+BL_INLINE_NODEBUG void simd_store_8(void* dst, uint8x16_t src) noexcept { vst1q_lane_u8(static_cast<uint8_t*>(dst), src, 0); }
 
 BL_INLINE_NODEBUG void simd_storea_16(void* dst, uint8x8_t src) noexcept { vst1_lane_u16(static_cast<uint16_t*>(dst), simd_u16(src), 0); }
-BL_INLINE_NODEBUG void simd_storea_16(void* dst, uint16x8_t src) noexcept { vst1q_lane_u16(static_cast<uint16_t*>(dst), simd_u16(src), 0); }
+BL_INLINE_NODEBUG void simd_storea_16(void* dst, uint8x16_t src) noexcept { vst1q_lane_u16(static_cast<uint16_t*>(dst), simd_u16(src), 0); }
 
-BL_INLINE_NODEBUG void simd_storeu_16(void* dst, uint8x8_t src) noexcept { BLMemOps::writeU16u(dst, vget_lane_u16(src, 0)); }
-BL_INLINE_NODEBUG void simd_storeu_16(void* dst, uint16x8_t src) noexcept { BLMemOps::writeU16u(dst, vgetq_lane_u16(src, 0)); }
+BL_INLINE_NODEBUG void simd_storeu_16(void* dst, uint8x8_t src) noexcept { BLMemOps::writeU16u(dst, vget_lane_u16(simd_u16(src), 0)); }
+BL_INLINE_NODEBUG void simd_storeu_16(void* dst, uint8x16_t src) noexcept { BLMemOps::writeU16u(dst, vgetq_lane_u16(simd_u16(src), 0)); }
 
 BL_INLINE_NODEBUG void simd_storea_32(void* dst, uint8x8_t src) noexcept { vst1_lane_u32(static_cast<uint32_t*>(dst), simd_u32(src), 0); }
-BL_INLINE_NODEBUG void simd_storea_32(void* dst, uint16x8_t src) noexcept { vst1q_lane_u32(static_cast<uint32_t*>(dst), simd_u32(src), 0); }
+BL_INLINE_NODEBUG void simd_storea_32(void* dst, uint8x16_t src) noexcept { vst1q_lane_u32(static_cast<uint32_t*>(dst), simd_u32(src), 0); }
 
-BL_INLINE_NODEBUG void simd_storeu_32(void* dst, uint8x8_t src) noexcept { BLMemOps::writeU32u(dst, vget_lane_u32(src, 0)); }
-BL_INLINE_NODEBUG void simd_storeu_32(void* dst, uint16x8_t src) noexcept { BLMemOps::writeU32u(dst, vgetq_lane_u32(src, 0)); }
+BL_INLINE_NODEBUG void simd_storeu_32(void* dst, uint8x8_t src) noexcept { BLMemOps::writeU32u(dst, vget_lane_u32(simd_u32(src), 0)); }
+BL_INLINE_NODEBUG void simd_storeu_32(void* dst, uint8x16_t src) noexcept { BLMemOps::writeU32u(dst, vgetq_lane_u32(simd_u32(src), 0)); }
 
 BL_INLINE_NODEBUG void simd_storea_64(void* dst, uint8x8_t src) noexcept { vst1_u64(static_cast<uint64_t*>(dst), simd_u64(src)); }
-BL_INLINE_NODEBUG void simd_storea_64(void* dst, uint16x8_t src) noexcept { vst1q_lane_u64(static_cast<uint64_t*>(dst), simd_u64(src), 0); }
+BL_INLINE_NODEBUG void simd_storea_64(void* dst, uint8x16_t src) noexcept { vst1q_lane_u64(static_cast<uint64_t*>(dst), simd_u64(src), 0); }
 
 BL_INLINE_NODEBUG void simd_storeu_64(void* dst, uint8x8_t src) noexcept { vst1_u8(static_cast<uint8_t*>(dst), src); }
-BL_INLINE_NODEBUG void simd_storeu_64(void* dst, uint16x8_t src) noexcept { vst1_u8(static_cast<uint8_t*>(dst), vget_low_u8(src)); }
+BL_INLINE_NODEBUG void simd_storeu_64(void* dst, uint8x16_t src) noexcept { vst1_u8(static_cast<uint8_t*>(dst), vget_low_u8(src)); }
 
-BL_INLINE_NODEBUG void simd_storeh_64(void* dst, uint16x8_t src) noexcept { vst1_u8(static_cast<uint8_t*>(dst), vget_high_u8(src)); }
+BL_INLINE_NODEBUG void simd_storeh_64(void* dst, uint8x16_t src) noexcept { vst1_u8(static_cast<uint8_t*>(dst), vget_high_u8(src)); }
 
-BL_INLINE_NODEBUG void simd_storea_128(void* dst, uint16x8_t src) noexcept { vst1q_u64(static_cast<uint64_t*>(dst), simd_u64(src)); }
-BL_INLINE_NODEBUG void simd_storeu_128(void* dst, uint16x8_t src) noexcept { vst1q_u8(static_cast<uint8_t*>(dst), src); }
+BL_INLINE_NODEBUG void simd_storea_128(void* dst, uint8x16_t src) noexcept { vst1q_u64(static_cast<uint64_t*>(dst), simd_u64(src)); }
+BL_INLINE_NODEBUG void simd_storeu_128(void* dst, uint8x16_t src) noexcept { vst1q_u8(static_cast<uint8_t*>(dst), src); }
 
 BL_INLINE_NODEBUG void simd_storea(void* dst, uint8x8_t src) noexcept { simd_storea_64(dst, src); }
 BL_INLINE_NODEBUG void simd_storeu(void* dst, uint8x8_t src) noexcept { simd_storeu_64(dst, src); }
 
-BL_INLINE_NODEBUG void simd_storea(void* dst, uint16x8_t src) noexcept { simd_storea_128(dst, src); }
-BL_INLINE_NODEBUG void simd_storeu(void* dst, uint16x8_t src) noexcept { simd_storeu_128(dst, src); }
+BL_INLINE_NODEBUG void simd_storea(void* dst, uint8x16_t src) noexcept { simd_storea_128(dst, src); }
+BL_INLINE_NODEBUG void simd_storeu(void* dst, uint8x16_t src) noexcept { simd_storeu_128(dst, src); }
 
 } // {Internal}
 
@@ -1910,7 +1940,10 @@ template<typename V> BL_INLINE_NODEBUG Vec<V::kW, int32_t> cvtt_f32_i32(const V&
 // =========================================
 
 BL_INLINE_NODEBUG Vec4xF32 cvt_f32_from_scalar_i32(int32_t val) noexcept { return Vec4xF32{I::simd_cvt_f32_from_scalar_i32(val)}; }
+
+#if defined(BL_SIMD_AARCH64)
 BL_INLINE_NODEBUG Vec2xF64 cvt_f64_from_scalar_i32(int32_t val) noexcept { return Vec2xF64{I::simd_cvt_f64_from_scalar_i32(val)}; }
+#endif // BL_SIMD_AARCH64
 
 template<typename V> BL_INLINE_NODEBUG int32_t cvt_f32_to_scalar_i32(const V& src) noexcept { return I::simd_cvt_f32_to_scalar_i32(simd_f32(src.v)); }
 template<typename V> BL_INLINE_NODEBUG int32_t cvtt_f32_to_scalar_i32(const V& src) noexcept { return I::simd_cvtt_f32_to_scalar_i32(simd_f32(src.v)); }
@@ -2108,10 +2141,10 @@ template<typename V> BL_INLINE_NODEBUG V movw_u32_u64(const V& a) noexcept { ret
 
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> not_(const Vec<W, T>& a) noexcept { return vec_wt<W, T>(I::simd_not(simd_u8(a.v))); }
 
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> and_(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_and(a.v, b.v)); }
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> andnot(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_andnot(a.v, b.v)); }
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> or_(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_or(a.v, b.v)); }
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> xor_(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_xor(a.v, b.v)); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> and_(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_and(simd_u8(a.v), simd_u8(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> andnot(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_andnot(simd_u8(a.v), simd_u8(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> or_(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_or(simd_u8(a.v), simd_u8(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> xor_(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_xor(simd_u8(a.v), simd_u8(b.v))); }
 
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> and_(const Vec<W, T>& a, const Vec<W, T>& b, const Vec<W, T>& c) noexcept { return and_(and_(a, b), c); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> or_(const Vec<W, T>& a, const Vec<W, T>& b, const Vec<W, T>& c) noexcept { return or_(or_(a, b), c); }
@@ -2307,10 +2340,10 @@ template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_i8(const Vec<W
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_i16(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_i16(simd_i16(a.v), simd_i16(b.v))); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_i32(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_i32(simd_i32(a.v), simd_i32(b.v))); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_i64(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_i64(simd_i64(a.v), simd_i64(b.v))); }
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_u8(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_i8(simd_u8(a.v), simd_u8(b.v))); }
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_u16(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_i16(simd_u16(a.v), simd_u16(b.v))); }
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_u32(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_i32(simd_u32(a.v), simd_u32(b.v))); }
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_u64(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_i64(simd_u64(a.v), simd_u64(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_u8(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_u8(simd_u8(a.v), simd_u8(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_u16(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_u16(simd_u16(a.v), simd_u16(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_u32(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_u32(simd_u32(a.v), simd_u32(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_u64(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_u64(simd_u64(a.v), simd_u64(b.v))); }
 
 template<size_t W> BL_INLINE_NODEBUG Vec<W, int8_t> cmp_eq(const Vec<W, int8_t>& a, const Vec<W, int8_t>& b) noexcept { return cmp_eq_i8(a, b); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, int16_t> cmp_eq(const Vec<W, int16_t>& a, const Vec<W, int16_t>& b) noexcept { return cmp_eq_i16(a, b); }
@@ -2325,10 +2358,10 @@ template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_ne_i8(const Vec<W
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_ne_i16(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_ne_i16(simd_i16(a.v), simd_i16(b.v))); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_ne_i32(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_ne_i32(simd_i32(a.v), simd_i32(b.v))); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_ne_i64(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_ne_i64(simd_i64(a.v), simd_i64(b.v))); }
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_ne_u8(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_ne_i8(simd_u8(a.v), simd_u8(b.v))); }
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_ne_u16(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_ne_i16(simd_u16(a.v), simd_u16(b.v))); }
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_ne_u32(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_ne_i32(simd_u32(a.v), simd_u32(b.v))); }
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_ne_u64(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_ne_i64(simd_u64(a.v), simd_u64(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_ne_u8(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_ne_u8(simd_u8(a.v), simd_u8(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_ne_u16(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_ne_u16(simd_u16(a.v), simd_u16(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_ne_u32(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_ne_u32(simd_u32(a.v), simd_u32(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_ne_u64(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_ne_u64(simd_u64(a.v), simd_u64(b.v))); }
 
 template<size_t W> BL_INLINE_NODEBUG Vec<W, int8_t> cmp_ne(const Vec<W, int8_t>& a, const Vec<W, int8_t>& b) noexcept { return cmp_ne_i8(a, b); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, int16_t> cmp_ne(const Vec<W, int16_t>& a, const Vec<W, int16_t>& b) noexcept { return cmp_ne_i16(a, b); }

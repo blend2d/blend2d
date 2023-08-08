@@ -47,8 +47,8 @@ static constexpr double BL_M_ANGLE_EPSILON = 1e-8;
 //!
 //!   k = 1/2 +- sqrt(12 - 20*c - 3*c^2)/(4 - 6*c) ~= 0.551915024494.
 //!
-//! can be used to reduce the maximum error to 0.00019608. We don't use the alternative, because we need to caculate the
-//! KAPPA for arcs that are not 90deg, in that case the KAPPA must be calculated for such angles.
+//! can be used to reduce the maximum error to 0.00019608. We don't use the alternative, because we need to calculate
+//! the KAPPA for arcs that are not 90deg, in that case the KAPPA must be calculated for such angles.
 static constexpr double BL_M_KAPPA = 0.55228474983;
 
 //! \}
@@ -197,12 +197,11 @@ static BL_INLINE float blNearby(float x) noexcept {
   using namespace SIMD;
 
   Vec4xF32 src = cast_from_f32(x);
-  Vec4xF32 magic = blCommonTable.f32_round_magic.as<Vec4xF32>();
-
-  Vec4xF32 mask = cmp_ge_1xf32(src, blCommonTable.f32_round_max.as<Vec4xF32>());
+  Vec4xF32 mask = cmp_lt_1xf32(src, blCommonTable.f32_round_max.as<Vec4xF32>());
+  Vec4xF32 magic = mask & blCommonTable.f32_round_magic.as<Vec4xF32>();
   Vec4xF32 rounded = sub_1xf32(add_1xf32(src, magic), magic);
 
-  return cast_to_f32(blendv_bits(rounded, src, mask));
+  return cast_to_f32(rounded);
 }
 
 static BL_INLINE float blTrunc(float x) noexcept {
@@ -252,12 +251,11 @@ static BL_INLINE double blNearby(double x) noexcept {
   using namespace SIMD;
 
   Vec2xF64 src = cast_from_f64(x);
-  Vec2xF64 magic = blCommonTable.f64_round_magic.as<Vec2xF64>();
-
-  Vec2xF64 mask = cmp_ge_1xf64(src, blCommonTable.f64_round_max.as<Vec2xF64>());
+  Vec2xF64 mask = cmp_lt_1xf64(src, blCommonTable.f64_round_max.as<Vec2xF64>());
+  Vec2xF64 magic = mask & blCommonTable.f64_round_magic.as<Vec2xF64>();
   Vec2xF64 rounded = sub_1xf64(add_1xf64(src, magic), magic);
 
-  return cast_to_f64(blendv_bits(rounded, src, mask));
+  return cast_to_f64(rounded);
 }
 
 static BL_INLINE double blTrunc(double x) noexcept {

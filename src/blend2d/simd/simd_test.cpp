@@ -25,7 +25,7 @@ BL_HIDDEN void simd_test_arm_asimd() noexcept;
 
 static void simd_test_arm(BLRuntimeContext& rt) noexcept {
 #if defined(BL_BUILD_OPT_ASIMD)
-  if (blRuntimeHasNEON(&rt))
+  if (blRuntimeHasASIMD(&rt))
     simd_test_arm_asimd();
 #endif // BL_BUILD_OPT_ASIMD
 
