@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Zlib
 // Official GitHub Repository: https://github.com/blend2d/blend2d
 //
-// Copyright (c) 2008-2021 The Blend2D Authors
+// Copyright (c) 2017-2023 The Blend2D Authors
 //
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
