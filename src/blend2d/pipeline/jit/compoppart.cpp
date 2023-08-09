@@ -3091,8 +3091,14 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_mul_u16(dv, dv, s_ux);
       pc->v_div255_u16(dv);
 
-      VecArray dh = dv.even();
-      pc->x_packs_i16_u8(dh, dh, dv.odd());
+      VecArray dh;
+      if (pc->hasAVX()) {
+        pc->_x_pack_pixel(dh, dv, n.value() * 4, "", "d");
+      }
+      else {
+        dh = dv.even();
+        pc->x_packs_i16_u8(dh, dh, dv.odd());
+      }
 
       dh = dh.cloneAs(d.pc[0]);
       pc->v_add_i32(dh, dh, d.pc);
@@ -3699,8 +3705,14 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_mul_u16(dv, dv, sv);
       pc->v_div255_u16(dv);
 
-      VecArray dh = dv.even();
-      pc->x_packs_i16_u8(dh, dh, dv.odd());
+      VecArray dh;
+      if (pc->hasAVX()) {
+        pc->_x_pack_pixel(dh, dv, n.value() * 4, "", "d");
+      }
+      else {
+        dh = dv.even();
+        pc->x_packs_i16_u8(dh, dh, dv.odd());
+      }
 
       dh = dh.cloneAs(d.pc[0]);
       pc->v_add_i32(dh, dh, d.pc);
@@ -3722,8 +3734,14 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_mul_u16(dv, dv, sv);
       pc->v_div255_u16(dv);
 
-      VecArray dh = dv.even();
-      pc->x_packs_i16_u8(dh, dh, dv.odd());
+      VecArray dh;
+      if (pc->hasAVX()) {
+        pc->_x_pack_pixel(dh, dv, n.value() * 4, "", "d");
+      }
+      else {
+        dh = dv.even();
+        pc->x_packs_i16_u8(dh, dh, dv.odd());
+      }
 
       dh = dh.cloneAs(d.pc[0]);
       pc->v_add_i32(dh, dh, d.pc);
@@ -3962,8 +3980,15 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       pc->v_mul_u16(sv, sv, vm);
       pc->v_div255_u16(sv);
 
-      VecArray sh = sv.even();
-      pc->x_packs_i16_u8(sh, sh, sv.odd());
+      VecArray sh;
+      if (pc->hasAVX()) {
+        pc->_x_pack_pixel(sh, sv, n.value() * 4, "", "s");
+      }
+      else {
+        sh = sv.even();
+        pc->x_packs_i16_u8(sh, sh, sv.odd());
+      }
+
       pc->v_adds_u8(dh, dh, sh.cloneAs(dh[0]));
 
       out.pc.init(dh);

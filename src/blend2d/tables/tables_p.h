@@ -113,6 +113,7 @@ struct BL_ALIGN_TYPE(BLCommonTable, 64) {
   //!
   //! These constants are only used by 128-bit SIMD code paths and are limited to 256 bytes as if the displacement
   //! is greater than -128+127 range it's encoded with 4-byte displacement anyway in X86/X64 assembly.
+  //!
   //! \{
 
   BLVecConst128<uint64_t> i128_0000000000000000 {{ REPEAT_2X(0x0000000000000000u) }};
@@ -125,6 +126,8 @@ struct BL_ALIGN_TYPE(BLCommonTable, 64) {
   //! \name 128-bit and 256-bit Constants
   //!
   //! These constants are shared between 128-bit and 256-bit code paths.
+  //!
+  //! \{
 
   BLVecConstNative<uint64_t> i_0000000000000000 {{ REPEAT_64B(0x0000000000000000u) }};
   BLVecConstNative<uint64_t> i_3030303030303030 {{ REPEAT_64B(0x3030303030303030u) }};

@@ -380,15 +380,15 @@ public:
     return blImageReadFromData(this, view.data, view.size, &codecs);
   }
 
-  BL_INLINE_NODEBUG BLResult writeToFile(const char* fileName) noexcept {
+  BL_INLINE_NODEBUG BLResult writeToFile(const char* fileName) const noexcept {
     return blImageWriteToFile(this, fileName, nullptr);
   }
 
-  BL_INLINE_NODEBUG BLResult writeToFile(const char* fileName, const BLImageCodec& codec) noexcept {
+  BL_INLINE_NODEBUG BLResult writeToFile(const char* fileName, const BLImageCodec& codec) const noexcept {
     return blImageWriteToFile(this, fileName, reinterpret_cast<const BLImageCodecCore*>(&codec));
   }
 
-  BL_INLINE_NODEBUG BLResult writeToData(BLArray<uint8_t>& dst, const BLImageCodec& codec) noexcept {
+  BL_INLINE_NODEBUG BLResult writeToData(BLArray<uint8_t>& dst, const BLImageCodec& codec) const noexcept {
     return blImageWriteToData(this, &dst, reinterpret_cast<const BLImageCodecCore*>(&codec));
   }
 

@@ -74,8 +74,6 @@ static BL_INLINE BLResult replaceInstance(BLImageCore* self, const BLImageCore* 
 } // {BLImagePrivate}
 
 //! \}
-
-//! \}
 //! \endcond
 
 #endif // BLEND2D_IMAGE_P_H_INCLUDED

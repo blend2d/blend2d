@@ -35,6 +35,7 @@ union RenderCommandSource {
   BL_INLINE_NODEBUG void reset(const RenderCommandSource& other) noexcept { *this = other; }
 };
 
+//! Render command type.
 enum class RenderCommandType : uint8_t {
   kNone = 0,
   kFillBoxA = 1,

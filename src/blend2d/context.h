@@ -922,7 +922,7 @@ static BL_INLINE_NODEBUG const BLGradient& forwardStyle(const BLGradient& gradie
 //! \{
 
 //! Rendering context [C++ API].
-class BLContext final : public BLContextCore {
+class BLContext /* final */ : public BLContextCore {
 public:
   //! \cond INTERNAL
 

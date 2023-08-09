@@ -419,7 +419,7 @@ public:
 BL_DIAGNOSTIC_POP
 
 //! 2D vector path [C++ API].
-class BLPath final : public BLPathCore {
+class BLPath /* final */ : public BLPathCore {
 public:
   //! \cond INTERNAL
   BL_INLINE_NODEBUG BLPathImpl* _impl() const noexcept { return static_cast<BLPathImpl*>(_d.impl); }

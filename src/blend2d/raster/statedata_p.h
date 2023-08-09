@@ -37,7 +37,7 @@ public:
 
     struct {
       uint8_t fixedTransformTypes[2];
-      //! Transform types indexed by \ref BL_CONTEXT_STYLE_TRANSFORM_MODE (used by Style API).
+      //! Transform types indexed by \ref BLContextStyleTransformMode (used by Style API).
       uint8_t transformTypes[uint32_t(BL_CONTEXT_STYLE_TRANSFORM_MODE_MAX_VALUE) + 1u];
     };
   };

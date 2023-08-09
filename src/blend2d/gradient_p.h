@@ -141,9 +141,6 @@ struct BLGradientPrivateImpl : public BLGradientImpl {
 
 //! \}
 
-//! \name BLGradient - Private API
-//! \{
-
 namespace BLGradientPrivate {
 
 using BLObjectPrivate::RCMode;
