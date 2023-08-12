@@ -148,7 +148,7 @@ struct alignas(16) RenderFetchData : public RenderFetchDataHeader {
 
     const uint8_t* srcPixelData = static_cast<const uint8_t*>(imageI->pixelData);
     intptr_t srcStride = imageI->stride;
-    uint32_t srcBytesPerPixel = blFormatInfo[imageI->format].depth / 8u;
+    uint32_t srcBytesPerPixel = imageI->depth / 8u;
     BLPipeline::FetchUtils::initImageSource(pipelineData.pattern, srcPixelData + uint32_t(area.y) * srcStride + uint32_t(area.x) * srcBytesPerPixel, imageI->stride, area.w, area.h);
   }
 
@@ -158,13 +158,13 @@ struct alignas(16) RenderFetchData : public RenderFetchDataHeader {
     return true;
   }
 
-  BL_INLINE bool setupPatternFxFy(BLExtendMode extendMode, BLPatternQuality quality, int64_t txFixed, int64_t tyFixed) noexcept {
-    signature = BLPipeline::FetchUtils::initPatternFxFy(pipelineData.pattern, extendMode, quality, image().depth() / 8, txFixed, tyFixed);
+  BL_INLINE bool setupPatternFxFy(BLExtendMode extendMode, BLPatternQuality quality, uint32_t bytesPerPixel, int64_t txFixed, int64_t tyFixed) noexcept {
+    signature = BLPipeline::FetchUtils::initPatternFxFy(pipelineData.pattern, extendMode, quality, bytesPerPixel, txFixed, tyFixed);
     return true;
   }
 
-  BL_INLINE bool setupPatternAffine(BLExtendMode extendMode, BLPatternQuality quality, const BLMatrix2D& transform) noexcept {
-    signature = BLPipeline::FetchUtils::initPatternAffine(pipelineData.pattern, extendMode, quality, image().depth() / 8, transform);
+  BL_INLINE bool setupPatternAffine(BLExtendMode extendMode, BLPatternQuality quality, uint32_t bytesPerPixel, const BLMatrix2D& transform) noexcept {
+    signature = BLPipeline::FetchUtils::initPatternAffine(pipelineData.pattern, extendMode, quality, bytesPerPixel, transform);
     return !signature.hasPendingFlag();
   }
 

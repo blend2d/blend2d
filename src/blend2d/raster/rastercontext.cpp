@@ -3929,6 +3929,8 @@ static BLResult BL_CDECL blitImageDImpl(BLContextImpl* baseImpl, const BLPoint* 
   BLBox finalBox;
 
   if (BL_LIKELY(resolved.unmodified())) {
+    uint32_t imgBytesPerPixel = imgI->depth / 8u;
+
     if BL_CONSTEXPR (kRM == RenderingMode::kAsync)
       fetchData->initStyleObjectAndDestroyFunc(img, destroyFetchDataImage);
 
@@ -3974,7 +3976,7 @@ static BLResult BL_CDECL blitImageDImpl(BLContextImpl* baseImpl, const BLPoint* 
       }
       else {
         fetchData->initImageSource(imgI, srcRect);
-        fetchData->setupPatternFxFy(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctxI->hints().patternQuality), startFx, startFy);
+        fetchData->setupPatternFxFy(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctxI->hints().patternQuality), imgBytesPerPixel, startFx, startFy);
       }
 
       prepareNonSolidFetch(ctxI, di, ds, fetchData.ptr());
@@ -3985,7 +3987,7 @@ static BLResult BL_CDECL blitImageDImpl(BLContextImpl* baseImpl, const BLPoint* 
     ft.translate(dst.x, dst.y);
 
     fetchData->initImageSource(imgI, srcRect);
-    if (!fetchData->setupPatternAffine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctxI->hints().patternQuality), ft))
+    if (!fetchData->setupPatternAffine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctxI->hints().patternQuality), imgBytesPerPixel, ft))
       return BL_SUCCESS;
 
     prepareNonSolidFetch(ctxI, di, ds, fetchData.ptr());
@@ -4063,8 +4065,10 @@ static BLResult BL_CDECL blitScaledImageDImpl(BLContextImpl* baseImpl, const BLR
     BLMatrix2D ft(rect->w / double(srcRect.w), 0.0, 0.0, rect->h / double(srcRect.h), rect->x, rect->y);
     BLTransformPrivate::multiply(ft, ft, ctxI->finalTransform());
 
+    uint32_t imgBytesPerPixel = imgI->depth / 8u;
     fetchData->initImageSource(imgI, srcRect);
-    if (!fetchData->setupPatternAffine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctxI->hints().patternQuality), ft))
+
+    if (!fetchData->setupPatternAffine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctxI->hints().patternQuality), imgBytesPerPixel, ft))
       return BL_SUCCESS;
 
     prepareNonSolidFetch(ctxI, di, ds, fetchData.ptr());
@@ -4101,8 +4105,9 @@ static BLResult BL_CDECL blitScaledImageIImpl(BLContextImpl* baseImpl, const BLR
     BLMatrix2D transform(double(rect->w) / double(srcRect.w), 0.0, 0.0, double(rect->h) / double(srcRect.h), double(rect->x), double(rect->y));
     BLTransformPrivate::multiply(transform, transform, ctxI->finalTransform());
 
+    uint32_t imgBytesPerPixel = imgI->depth / 8u;
     fetchData->initImageSource(imgI, srcRect);
-    if (!fetchData->setupPatternAffine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctxI->hints().patternQuality), transform))
+    if (!fetchData->setupPatternAffine(BL_RASTER_CONTEXT_PREFERRED_BLIT_EXTEND, BLPatternQuality(ctxI->hints().patternQuality), imgBytesPerPixel, transform))
       return BL_SUCCESS;
 
     prepareNonSolidFetch(ctxI, di, ds, fetchData.ptr());
