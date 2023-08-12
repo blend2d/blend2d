@@ -106,18 +106,20 @@ struct FetchSolid {
     _src = PixelType::fromValue(static_cast<const FetchData::Solid*>(fetchData)->prgb32);
   }
 
-  BL_INLINE void rectInitFetch(const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
+  BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
+    blUnused(ctxData, xPos, yPos, rectWidth);
+
     _initFetch(fetchData);
-    blUnused(xPos, yPos, rectWidth);
   }
 
   BL_INLINE void rectStartX(uint32_t xPos) noexcept {
     blUnused(xPos);
   }
 
-  BL_INLINE void spanInitY(const void* fetchData, uint32_t yPos) noexcept {
+  BL_INLINE void spanInitY(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
+    blUnused(ctxData, yPos);
+
     _initFetch(fetchData);
-    blUnused(yPos);
   }
 
   BL_INLINE void spanStartX(uint32_t xPos) noexcept {
@@ -459,8 +461,8 @@ struct FetchPatternAffineCtx {
     v = Vec2U64{(uint64_t(x) << 32) | (v.x & 0xFFFFFFFF), (uint64_t(y) << 32) | (v.y & 0xFFFFFFFF)};
   }
 
-  BL_INLINE void rectInitY(const FetchData::Pattern* pattern, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
-    blUnused(rectWidth);
+  BL_INLINE void rectInitY(ContextData* ctxData, const FetchData::Pattern* pattern, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
+    blUnused(ctxData, rectWidth);
 
     _initPattern(pattern);
     tx_ty += yx_yy * uint64_t(yPos) + xx_xy * uint64_t(xPos);
@@ -473,7 +475,9 @@ struct FetchPatternAffineCtx {
     normalizePxPy(px_py);
   }
 
-  BL_INLINE void spanInitY(const FetchData::Pattern* pattern, uint32_t yPos) noexcept {
+  BL_INLINE void spanInitY(ContextData* ctxData, const FetchData::Pattern* pattern, uint32_t yPos) noexcept {
+    blUnused(ctxData);
+
     _initPattern(pattern);
     tx_ty += yx_yy * uint64_t(yPos);
   }
@@ -551,9 +555,10 @@ struct FetchPatternAlignedBlit : public FetchNonSolid {
     stride = pattern->src.stride;
   }
 
-  BL_INLINE void rectInitFetch(const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
-    const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
+  BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
+    blUnused(ctxData);
 
+    const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
     _initFetch(pattern);
 
     uint32_t tx = uint32_t(pattern->simple.tx);
@@ -567,14 +572,14 @@ struct FetchPatternAlignedBlit : public FetchNonSolid {
     blUnused(xPos);
   }
 
-  BL_INLINE void spanInitY(const void* fetchData, uint32_t yPos) noexcept {
-    const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
+  BL_INLINE void spanInitY(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
+    blUnused(ctxData);
 
+    const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
     _initFetch(pattern);
 
     uint32_t tx = uint32_t(pattern->simple.tx);
     uint32_t ty = uint32_t(pattern->simple.ty);
-
     pixelPtr += intptr_t(uintptr_t(yPos - ty)) * stride - uintptr_t(tx) * kSrcBPP;
   }
 
@@ -584,6 +589,7 @@ struct FetchPatternAlignedBlit : public FetchNonSolid {
 
   BL_INLINE void spanAdvanceX(uint32_t xPos, uint32_t xDiff) noexcept {
     blUnused(xPos);
+
     pixelPtr += uintptr_t(xDiff) * kSrcBPP;
   }
 
@@ -609,9 +615,10 @@ struct FetchPatternAlignedAny : public FetchNonSolid {
   FetchPatternVertAAExtendCtxAny _ctxY;
   CtxX _ctxX;
 
-  BL_INLINE void rectInitFetch(const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
-    const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
+  BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
+    blUnused(ctxData);
 
+    const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
     _ctxY.init(pattern, yPos);
     _ctxX.rectInit(pattern, xPos, rectWidth);
   }
@@ -620,9 +627,10 @@ struct FetchPatternAlignedAny : public FetchNonSolid {
     _ctxX.rectStart(xPos);
   }
 
-  BL_INLINE void spanInitY(const void* fetchData, uint32_t yPos) noexcept {
-    const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
+  BL_INLINE void spanInitY(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
+    blUnused(ctxData);
 
+    const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
     _ctxY.init(pattern, yPos);
     _ctxX.spanInit(pattern);
   }
@@ -698,9 +706,10 @@ struct FetchPatternFxFyAny : public FetchNonSolid {
     _wd = pattern->simple.wd;
   }
 
-  BL_INLINE void rectInitFetch(const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
-    const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
+  BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
+    blUnused(ctxData);
 
+    const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
     _ctxY.init(pattern, yPos);
     _ctxX.rectInit(pattern, xPos, rectWidth);
     _initFxFy(pattern);
@@ -711,9 +720,10 @@ struct FetchPatternFxFyAny : public FetchNonSolid {
     _initPrevX();
   }
 
-  BL_INLINE void spanInitY(const void* fetchData, uint32_t yPos) noexcept {
-    const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
+  BL_INLINE void spanInitY(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
+    blUnused(ctxData);
 
+    const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
     _ctxY.init(pattern, yPos);
     _ctxX.spanInit(pattern);
     _initFxFy(pattern);
@@ -773,22 +783,20 @@ struct FetchPatternAffineNNBase : public FetchNonSolid {
     _stride = pattern->src.stride;
   }
 
-  BL_INLINE void rectInitFetch(const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
+  BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
     const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
-
     _initAffine(pattern);
-    _ctx.rectInitY(pattern, xPos, yPos, rectWidth);
+    _ctx.rectInitY(ctxData, pattern, xPos, yPos, rectWidth);
   }
 
   BL_INLINE void rectStartX(uint32_t xPos) noexcept {
     _ctx.rectStartX(xPos);
   }
 
-  BL_INLINE void spanInitY(const void* fetchData, uint32_t yPos) noexcept {
+  BL_INLINE void spanInitY(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
     const FetchData::Pattern* pattern = static_cast<const FetchData::Pattern*>(fetchData);
-
     _initAffine(pattern);
-    _ctx.spanInitY(pattern, yPos);
+    _ctx.spanInitY(ctxData, pattern, yPos);
   }
 
   BL_INLINE void spanStartX(uint32_t xPos) noexcept {
@@ -865,16 +873,71 @@ struct FetchPatternAffineBIAny : public FetchPatternAffineNNBase<DstPixelT, kFor
 // Fetch - Gradient - Base
 // =======================
 
-struct FetchGradientBase : public FetchNonSolid {
+template<typename PixelType, BLGradientQuality kQuality>
+struct FetchGradientBase;
+
+template<typename PixelType>
+struct FetchGradientBase<PixelType, BL_GRADIENT_QUALITY_NEAREST> : public FetchNonSolid {
   const void* _table;
+
+  BL_INLINE void _initGradientBase(ContextData* ctxData, const FetchData::Gradient* gradient, uint32_t yPos) noexcept {
+    blUnused(ctxData, yPos);
+
+    _table = gradient->lut.data;
+  }
+
+  BL_INLINE void _initGradientX(uint32_t xPos) noexcept { blUnused(xPos); }
+  BL_INLINE void _advanceGradientY() noexcept {}
+
+  BL_INLINE PixelType fetchPixel(uint32_t idx) const noexcept {
+    return PixelIO<PixelType, BLInternalFormat::kPRGB32>::fetch(static_cast<const uint32_t*>(_table) + idx);
+  }
+};
+
+template<typename PixelType>
+struct FetchGradientBase<PixelType, BL_GRADIENT_QUALITY_DITHER> : public FetchNonSolid {
+  const void* _table;
+  uint32_t _dmOffsetY;
+  uint32_t _dmOffsetX;
+
+  static constexpr uint32_t kAdvanceYMask = (16u * 16u * 2u) - 1u;
+
+  BL_INLINE void _initGradientBase(ContextData* ctxData, const FetchData::Gradient* gradient, uint32_t yPos) noexcept {
+    blUnused(ctxData);
+
+    _table = gradient->lut.data;
+    _dmOffsetY = ((uint32_t(ctxData->pixelOrigin.y) + yPos) & 15u) * (16u * 2u) + (ctxData->pixelOrigin.x & 15u);
+  }
+
+  BL_INLINE void _initGradientX(uint32_t xPos) noexcept {
+    _dmOffsetX = (xPos & 15u);
+  }
+
+  BL_INLINE void _advanceGradientY() noexcept {
+    _dmOffsetY = (_dmOffsetY + 16u * 2u) & kAdvanceYMask;
+  }
+
+  BL_INLINE PixelType fetchPixel(uint32_t idx) noexcept {
+    BLRgba64 v{static_cast<const uint64_t*>(_table)[idx]};
+    uint32_t dd = blCommonTable.bayerMatrix16x16[_dmOffsetY + _dmOffsetX];
+
+    uint32_t a = v.a() >> 8;
+    uint32_t r = blMin<uint32_t>((v.r() + dd) >> 8, a);
+    uint32_t g = blMin<uint32_t>((v.g() + dd) >> 8, a);
+    uint32_t b = blMin<uint32_t>((v.b() + dd) >> 8, a);
+
+    _dmOffsetX = (_dmOffsetX + 1u) & 15u;
+    return PixelIO<PixelType, BLInternalFormat::kPRGB32>::make(r, g, b, a);
+  }
 };
 
 // Fetch - Gradient - Linear
 // =========================
 
-template<typename PixelT, bool kIsPad>
-struct FetchLinearGradient : public FetchGradientBase {
-  typedef PixelT PixelType;
+template<typename PixelType, BLGradientQuality kQuality, bool kIsPad>
+struct FetchLinearGradient : public FetchGradientBase<PixelType, kQuality> {
+  using Base = FetchGradientBase<PixelType, kQuality>;
+  using Base::fetchPixel;
 
   uint64_t _pt;
   uint64_t _dt;
@@ -883,11 +946,11 @@ struct FetchLinearGradient : public FetchGradientBase {
   uint32_t _maxi;
   uint32_t _rori;
 
-  BL_INLINE void _initFetch(const void* fetchData) noexcept {
+  BL_INLINE void _initFetch(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
     const FetchData::Gradient* gradient = static_cast<const FetchData::Gradient*>(fetchData);
-    _table = gradient->lut.data;
-
     const FetchData::Gradient::Linear& linear = gradient->linear;
+
+    Base::_initGradientBase(ctxData, gradient, yPos);
     _pt = 0;
     _py = linear.pt[0].u64;
     _dt = linear.dt.u64;
@@ -896,29 +959,30 @@ struct FetchLinearGradient : public FetchGradientBase {
     _rori = linear.rori;
   }
 
-  BL_INLINE void rectInitFetch(const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
+  BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
     blUnused(rectWidth);
 
-    _initFetch(fetchData);
+    _initFetch(ctxData, fetchData, yPos);
     _py += yPos * _dy + xPos * _dt;
   }
 
   BL_INLINE void rectStartX(uint32_t xPos) noexcept {
-    blUnused(xPos);
+    Base::_initGradientX(xPos);
     _pt = _py;
   }
 
-  BL_INLINE void spanInitY(const void* fetchData, uint32_t yPos) noexcept {
-    _initFetch(fetchData);
+  BL_INLINE void spanInitY(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
+    _initFetch(ctxData, fetchData, yPos);
     _py += yPos * _dy;
   }
 
   BL_INLINE void spanStartX(uint32_t xPos) noexcept {
+    Base::_initGradientX(xPos);
     _pt = _py + xPos * _dt;
   }
 
   BL_INLINE void spanAdvanceX(uint32_t xPos, uint32_t xDiff) noexcept {
-    blUnused(xPos);
+    Base::_initGradientX(xPos);
     _pt += xDiff * _dt;
   }
 
@@ -928,6 +992,7 @@ struct FetchLinearGradient : public FetchGradientBase {
 
   BL_INLINE void advanceY() noexcept {
     _py += _dy;
+    Base::_advanceGradientY();
   }
 
   BL_INLINE PixelType fetch() noexcept {
@@ -939,16 +1004,17 @@ struct FetchLinearGradient : public FetchGradientBase {
       idx = blMin<uint32_t>(idx & _maxi, (idx & _maxi) ^ _rori);
 
     _pt += _dt;
-    return PixelIO<PixelType, BLInternalFormat::kPRGB32>::fetch(static_cast<const uint32_t*>(_table) + idx);
+    return fetchPixel(idx);
   }
 };
 
 // Fetch - Gradient - Radial
 // =========================
 
-template<typename PixelT, bool kIsPad>
-struct FetchRadialGradient : public FetchGradientBase {
-  typedef PixelT PixelType;
+template<typename PixelType, BLGradientQuality kQuality, bool kIsPad>
+struct FetchRadialGradient : public FetchGradientBase<PixelType, kQuality> {
+  using Base = FetchGradientBase<PixelType, kQuality>;
+  using Base::fetchPixel;
 
   Vec2D xx_xy;
   Vec2D yx_yy;
@@ -967,11 +1033,11 @@ struct FetchRadialGradient : public FetchGradientBase {
   uint32_t _maxi;
   uint32_t _rori;
 
-  BL_INLINE void _initFetch(const void* fetchData) noexcept {
+  BL_INLINE void _initFetch(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
     const FetchData::Gradient* gradient = static_cast<const FetchData::Gradient*>(fetchData);
-    _table = gradient->lut.data;
-
     const FetchData::Gradient::Radial& radial = gradient->radial;
+
+    Base::_initGradientBase(ctxData, gradient, yPos);
     xx_xy = Vec2D{radial.xx, radial.xy};
     yx_yy = Vec2D{radial.yx, radial.yy};
     px_py = Vec2D{radial.ox, radial.oy};
@@ -985,30 +1051,33 @@ struct FetchRadialGradient : public FetchGradientBase {
     _rori = radial.rori;
   }
 
-  BL_INLINE void rectInitFetch(const void* fetchData, uint32_t x, uint32_t y, uint32_t width) noexcept {
+  BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t x, uint32_t y, uint32_t width) noexcept {
     blUnused(width);
 
-    _initFetch(fetchData);
+    _initFetch(ctxData, fetchData, y);
     Vec2D pt = Vec2D{double(int32_t(x)), double(int32_t(y))};
     px_py += pt.y * yx_yy + pt.x * xx_xy;
   }
 
   BL_INLINE void rectStartX(uint32_t xPos) noexcept {
-    blUnused(xPos);
+    Base::_initGradientX(xPos);
     precalc(px_py);
   }
 
-  BL_INLINE void spanInitY(const void* fetchData, uint32_t yPos) noexcept {
-    _initFetch(fetchData);
+  BL_INLINE void spanInitY(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
+    _initFetch(ctxData, fetchData, yPos);
     px_py += double(int32_t(yPos)) * yx_yy;
   }
 
   BL_INLINE void spanStartX(uint32_t x) noexcept {
+    Base::_initGradientX(x);
     precalc(px_py + xx_xy * double(int(x)));
   }
 
   BL_INLINE void spanAdvanceX(uint32_t xPos, uint32_t xDiff) noexcept {
     blUnused(xDiff);
+
+    Base::_initGradientX(xPos);
     precalc(px_py + xx_xy * double(int(xPos)));
   }
 
@@ -1018,6 +1087,7 @@ struct FetchRadialGradient : public FetchGradientBase {
 
   BL_INLINE void advanceY() noexcept {
     px_py += yx_yy;
+    Base::_advanceGradientY();
   }
 
   BL_INLINE void precalc(const Vec2D& tx_ty) noexcept {
@@ -1044,26 +1114,26 @@ struct FetchRadialGradient : public FetchGradientBase {
       idx = blMin<uint32_t>(idx & _maxi, (idx & _maxi) ^ _rori);
 
     dd_bd.x += ddd;
-    return PixelIO<PixelType, BLInternalFormat::kPRGB32>::fetch(static_cast<const uint32_t*>(_table) + idx);
+    return fetchPixel(idx);
   }
 };
 
-template<typename PixelT>
-struct FetchRadialGradientPad : public FetchRadialGradient<PixelT, true> {};
+template<typename PixelType, BLGradientQuality kQuality>
+struct FetchRadialGradientPad : public FetchRadialGradient<PixelType, kQuality, true> {};
 
-template<typename PixelT>
-struct FetchRadialGradientRoR : public FetchRadialGradient<PixelT, false> {};
+template<typename PixelType, BLGradientQuality kQuality>
+struct FetchRadialGradientRoR : public FetchRadialGradient<PixelType, kQuality, false> {};
 
 // Fetch - Gradient - Conic
 // ========================
 
-template<typename PixelT>
-struct FetchConicGradient : public FetchGradientBase {
-  typedef PixelT PixelType;
+template<typename PixelType, BLGradientQuality kQuality>
+struct FetchConicGradient : public FetchGradientBase<PixelType, kQuality> {
+  using Base = FetchGradientBase<PixelType, kQuality>;
+  using Base::fetchPixel;
 
   double xx;
   Vec2D yx_yy;
-
   Vec2D hx_hy;
   Vec2D px_py;
 
@@ -1071,11 +1141,11 @@ struct FetchConicGradient : public FetchGradientBase {
   float angleOffset;
   int maxi;
 
-  BL_INLINE void _initFetch(const void* fetchData) noexcept {
+  BL_INLINE void _initFetch(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
     const FetchData::Gradient* gradient = static_cast<const FetchData::Gradient*>(fetchData);
-    _table = gradient->lut.data;
-
     const FetchData::Gradient::Conic& conic = gradient->conic;
+
+    Base::_initGradientBase(ctxData, gradient, yPos);
     xx = conic.xx;
     yx_yy = Vec2D{conic.yx, conic.yy};
     hx_hy = Vec2D{conic.ox, conic.oy};
@@ -1084,31 +1154,36 @@ struct FetchConicGradient : public FetchGradientBase {
     maxi = conic.maxi;
   }
 
-  BL_INLINE void rectInitFetch(const void* fetchData, uint32_t x, uint32_t y, uint32_t width) noexcept {
+  BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t x, uint32_t y, uint32_t width) noexcept {
     blUnused(width);
 
-    _initFetch(fetchData);
+    _initFetch(ctxData, fetchData, y);
+    Base::_initGradientX(x);
+
     Vec2D pt = Vec2D{double(int32_t(x)), double(int32_t(y))};
     hx_hy += pt.y * yx_yy + Vec2D{pt.x * xx, 0.0};
   }
 
   BL_INLINE void rectStartX(uint32_t xPos) noexcept {
-    blUnused(xPos);
+    Base::_initGradientX(xPos);
     px_py = hx_hy;
   }
 
-  BL_INLINE void spanInitY(const void* fetchData, uint32_t yPos) noexcept {
-    _initFetch(fetchData);
+  BL_INLINE void spanInitY(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
+    _initFetch(ctxData, fetchData, yPos);
     hx_hy += double(int32_t(yPos)) * yx_yy;
   }
 
   BL_INLINE void spanStartX(uint32_t xPos) noexcept {
+    Base::_initGradientX(xPos);
     px_py = hx_hy;
     px_py.x += double(int32_t(xPos)) * xx;
   }
 
   BL_INLINE void spanAdvanceX(uint32_t xPos, uint32_t xDiff) noexcept {
     blUnused(xDiff);
+
+    Base::_initGradientX(xPos);
     px_py.x += double(int32_t(xPos)) * xx;
   }
 
@@ -1118,6 +1193,7 @@ struct FetchConicGradient : public FetchGradientBase {
 
   BL_INLINE void advanceY() noexcept {
     hx_hy += yx_yy;
+    Base::_advanceGradientY();
   }
 
   BL_INLINE PixelType fetch() noexcept {
@@ -1144,7 +1220,7 @@ struct FetchConicGradient : public FetchGradientBase {
     x2 = blAbs(x2 - pt.y) + angleOffset;
 
     uint32_t idx = uint32_t(int(x2)) & uint32_t(maxi);
-    return PixelIO<PixelType, BLInternalFormat::kPRGB32>::fetch(static_cast<const uint32_t*>(_table) + idx);
+    return fetchPixel(idx);
   }
 };
 

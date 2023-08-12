@@ -470,6 +470,7 @@ BL_API BLResult BL_CDECL blContextRestore(BLContextCore* self, const BLContextCo
 
 BL_API BLResult BL_CDECL blContextGetMetaTransform(const BLContextCore* self, BLMatrix2D* transformOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextGetUserTransform(const BLContextCore* self, BLMatrix2D* transformOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blContextGetFinalTransform(const BLContextCore* self, BLMatrix2D* transformOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextUserToMeta(BLContextCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blContextApplyTransformOp(BLContextCore* self, BLTransformOp opType, const void* opData) BL_NOEXCEPT_C;
 
@@ -731,6 +732,8 @@ struct BLContextState {
   BLMatrix2D metaTransform;
   //! Current user transformation matrix.
   BLMatrix2D userTransform;
+  //! Current final transformation matrix, which combines all transformation matrices.
+  BLMatrix2D finalTransform;
 };
 
 //! Rendering context [Virtual Function Table].
@@ -1251,7 +1254,7 @@ public:
   //! \name Transformations
   //! \{
 
-  //! Returns meta-matrix.
+  //! Returns meta transformation matrix.
   //!
   //! Meta matrix is a core transformation matrix that is normally not changed by transformations applied to the
   //! context. Instead it acts as a secondary matrix used to create the final transformation matrix from meta and
@@ -1267,12 +1270,19 @@ public:
   BL_NODISCARD
   BL_INLINE_NODEBUG const BLMatrix2D& metaTransform() const noexcept { return BL_CONTEXT_IMPL()->state->metaTransform; }
 
-  //! Returns user-matrix.
+  //! Returns user transformation matrix.
   //!
   //! User matrix contains all transformations that happened to the rendering context unless the context was restored
   //! or `userToMeta()` was called.
   BL_NODISCARD
   BL_INLINE_NODEBUG const BLMatrix2D& userTransform() const noexcept { return BL_CONTEXT_IMPL()->state->userTransform; }
+
+  //! Returns final transformation matrix.
+  //!
+  //! Final transformation matrix is a combination of meta and user transformation matrices. It's the final
+  //! transformation that the rendering context applies to all input coordinates.
+  BL_NODISCARD
+  BL_INLINE_NODEBUG const BLMatrix2D& finalTransform() const noexcept { return BL_CONTEXT_IMPL()->state->finalTransform; }
 
   //! Sets user transformation matrix to `m`.
   BL_INLINE_NODEBUG BLResult setTransform(const BLMatrix2D& transform) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_ASSIGN, &transform); }

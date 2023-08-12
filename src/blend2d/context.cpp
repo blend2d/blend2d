@@ -378,6 +378,14 @@ BL_API_IMPL BLResult blContextGetUserTransform(const BLContextCore* self, BLMatr
   return BL_SUCCESS;
 }
 
+BL_API_IMPL BLResult blContextGetFinalTransform(const BLContextCore* self, BLMatrix2D* transformOut) noexcept {
+  BL_ASSERT(self->_d.isContext());
+  BLContextImpl* impl = self->_impl();
+
+  *transformOut = impl->state->finalTransform;
+  return BL_SUCCESS;
+}
+
 BL_API_IMPL BLResult blContextUserToMeta(BLContextCore* self) noexcept {
   BL_ASSERT(self->_d.isContext());
   BLContextImpl* impl = self->_impl();

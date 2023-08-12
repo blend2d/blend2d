@@ -40,7 +40,7 @@ struct FillBoxA_Base {
     uint32_t msk = fillData->alpha.u;
 
     CompOp compOp;
-    compOp.rectInitFetch(fetchData_, x0, y0, w);
+    compOp.rectInitFetch(ctxData, fetchData_, x0, y0, w);
 
     BL_ASSUME(h > 0);
     if (CompOp::kOptimizeOpaque && msk == 255) {
@@ -76,7 +76,7 @@ struct FillMask_Base {
     dstPtr += intptr_t(y0) * dstStride;
 
     CompOp compOp;
-    compOp.spanInitY(fetchData_, y0);
+    compOp.spanInitY(ctxData, fetchData_, y0);
 
     uint32_t alpha = fillData->alpha.u;
     BLPipeline::MaskCommand* cmdPtr = fillData->maskCommandData;
@@ -189,7 +189,7 @@ struct FillAnalytic_Base {
     uint32_t fillRuleMask = fillData->fillRuleMask;
 
     CompOp compOp;
-    compOp.spanInitY(fetchData_, y);
+    compOp.spanInitY(ctxData, fetchData_, y);
 
     y = uint32_t(fillData->box.y1) - y;
 

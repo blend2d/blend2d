@@ -438,6 +438,10 @@ template<>
 struct PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32> {
   typedef Pixel::P32_A8R8G8B8 PixelType;
 
+  static BL_INLINE PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
+    return PixelType::fromValue((a << 24) | (r << 16) | (g << 8) | b);
+  }
+
   static BL_INLINE PixelType fetch(const void* src) noexcept { return PixelType{*static_cast<const uint32_t*>(src)}; }
   static BL_INLINE void store(void* dst, const PixelType& src) noexcept { *static_cast<uint32_t*>(dst) = src.p; }
 };
@@ -446,6 +450,11 @@ template<>
 struct PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kXRGB32> {
   typedef Pixel::P32_A8R8G8B8 PixelType;
 
+  static BL_INLINE PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
+    blUnused(a);
+    return PixelType::fromValue((0xFFu << 24) | (r << 16) | (g << 8) | b);
+  }
+
   static BL_INLINE PixelType fetch(const void* src) noexcept { return PixelType{*static_cast<const uint32_t*>(src) | uint32_t(0xFF000000u)}; }
   static BL_INLINE void store(void* dst, const PixelType& src) noexcept { *static_cast<uint32_t*>(dst) = src.p; }
 };
@@ -453,6 +462,11 @@ struct PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kXRGB32> {
 template<>
 struct PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kA8> {
   typedef Pixel::P32_A8R8G8B8 PixelType;
+
+  static BL_INLINE PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
+    blUnused(r, g, b);
+    return PixelType::fromValue(a * 0x01010101u);
+  }
 
   static BL_INLINE PixelType fetch(const void* src) noexcept { return PixelType{uint32_t(*static_cast<const uint8_t*>(src)) * uint32_t(0x01010101u)}; }
   static BL_INLINE void store(void* dst, const PixelType& src) noexcept { *static_cast<uint8_t*>(dst) = uint8_t(src.a()); }

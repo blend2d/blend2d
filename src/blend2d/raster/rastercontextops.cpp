@@ -58,17 +58,19 @@ BLResult fillGlyphRunSink(BLPathCore* path, const void* info, void* userData) no
   return path->dcast().clear();
 }
 
-BLResult strokeGeometrySink(BLPath* a, BLPath* b, BLPath* c, void* userData) noexcept {
+BLResult strokeGeometrySink(BLPathCore* a, BLPathCore* b, BLPathCore* c, size_t figureStart, size_t figureEnd, void* userData) noexcept {
+  blUnused(figureStart, figureEnd);
+
   StrokeSink* self = static_cast<StrokeSink*>(userData);
   EdgeBuilder<int>* edgeBuilder = self->edgeBuilder;
 
-  BL_PROPAGATE(edgeBuilder->addPath(a->view(), false, *self->transform, self->transformType));
-  BL_PROPAGATE(edgeBuilder->addReversePathFromStrokeSink(b->view(), *self->transform, self->transformType));
+  BL_PROPAGATE(edgeBuilder->addPath(a->dcast().view(), false, *self->transform, self->transformType));
+  BL_PROPAGATE(edgeBuilder->addReversePathFromStrokeSink(b->dcast().view(), *self->transform, self->transformType));
 
-  if (!c->empty())
-    BL_PROPAGATE(edgeBuilder->addPath(c->view(), false, *self->transform, self->transformType));
+  if (!c->dcast().empty())
+    BL_PROPAGATE(edgeBuilder->addPath(c->dcast().view(), false, *self->transform, self->transformType));
 
-  return a->clear();
+  return a->dcast().clear();
 }
 
 BLResult strokeGlyphRunSink(BLPathCore* path, const void* info, void* userData) noexcept {

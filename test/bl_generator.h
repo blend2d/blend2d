@@ -9,7 +9,6 @@
 #include <mutex>
 #include <random>
 #include <string>
-#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -560,7 +559,7 @@ public:
     occupied1.resize(bucketCount1);
 
     {
-      for (size_t i = 0; i < _size; i++) {
+      for (uint32_t i = 0; i < _size; i++) {
         uint32_t index = (_values[i] * _hf.params[0].multiplier) >> _hf.params[0].shift;
         if (occupied1.hasBit(index)) {
           remainingPairs.push_back(std::pair<uint32_t, uint32_t>(_values[i], i));

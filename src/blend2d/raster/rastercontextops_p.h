@@ -62,7 +62,7 @@ struct StrokeGlyphRunSink : public StrokeSink {
 };
 
 BL_HIDDEN BLResult BL_CDECL fillGlyphRunSink(BLPathCore* path, const void* info, void* userData) noexcept;
-BL_HIDDEN BLResult BL_CDECL strokeGeometrySink(BLPath* a, BLPath* b, BLPath* c, void* userData) noexcept;
+BL_HIDDEN BLResult BL_CDECL strokeGeometrySink(BLPathCore* a, BLPathCore* b, BLPathCore* c, size_t figureStart, size_t figureEnd, void* userData) noexcept;
 BL_HIDDEN BLResult BL_CDECL strokeGlyphRunSink(BLPathCore* path, const void* info, void* userData) noexcept;
 
 template<typename StateAccessor>

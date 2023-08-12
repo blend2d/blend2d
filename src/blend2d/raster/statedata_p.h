@@ -56,8 +56,6 @@ public:
   //! Integral offset to add to input coordinates in case integral transform is ok.
   BLPointI translationI;
 
-  //! Result of `(metaTransform * userTransform)`.
-  alignas(16) BLMatrix2D finalTransform;
   //! Meta matrix scaled by `fpScale`.
   alignas(16) BLMatrix2D metaTransformFixed;
   //! Result of `(metaTransform * userTransform) * fpScale`.

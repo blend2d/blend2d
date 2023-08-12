@@ -709,6 +709,16 @@ static BL_INLINE void onBeforeStrokeChange(BLRasterContextImpl* ctxI) noexcept {
   }
 }
 
+static BL_INLINE void onBeforeStrokeChangeAndDestroyDashArray(BLRasterContextImpl* ctxI) noexcept {
+  if (blTestFlag(ctxI->contextFlags, ContextFlags::kWeakStateStrokeOptions)) {
+    SavedState* state = ctxI->savedState;
+    state->strokeOptions._copyFrom(ctxI->strokeOptions());
+  }
+  else {
+    BLArrayPrivate::releaseInstance(&ctxI->internalState.strokeOptions.dashArray);
+  }
+}
+
 // BLRasterEngine - ContextImpl - Internals - Transform State
 // ==========================================================
 
@@ -1704,9 +1714,9 @@ static BLResult BL_CDECL restoreImpl(BLContextImpl* baseImpl, const BLContextCoo
     }
 
     if (!blTestFlag(currentFlags, ContextFlags::kWeakStateStrokeOptions)) {
-      // NOTE: This code is unsafe, but since we know that `BLStrokeOptions` is movable it's just fine. We destroy
-      // `BLStrokeOptions` first and then move it into that destroyed instance params from the state itself.
-      blArrayReset(&ctxI->internalState.strokeOptions.dashArray);
+      // NOTE: This code is unsafe, but since we know that `BLStrokeOptions` is movable it's just fine. We
+      // destroy `BLStrokeOptions` first and then move it into that destroyed instance from the saved state.
+      BLArrayPrivate::releaseInstance(&ctxI->internalState.strokeOptions.dashArray);
       ctxI->internalState.strokeOptions._copyFrom(savedState->strokeOptions);
       contextFlagsToKeep &= ~(ContextFlags::kSharedStateStrokeBase | ContextFlags::kSharedStateStrokeExt);
     }
@@ -2117,11 +2127,11 @@ static BLResult BL_CDECL setStrokeDashArrayImpl(BLContextImpl* baseImpl, const B
   if (BL_UNLIKELY(dashArray->_d.rawType() != BL_OBJECT_TYPE_ARRAY_FLOAT64))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  onBeforeStrokeChange(ctxI);
+  onBeforeStrokeChangeAndDestroyDashArray(ctxI);
   ctxI->contextFlags &= ~(ContextFlags::kNoStrokeOptions | ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
 
-  ctxI->internalState.strokeOptions.dashArray = dashArray->dcast<BLArray<double>>();
-  return BL_SUCCESS;
+  ctxI->internalState.strokeOptions.dashArray._d = dashArray->_d;
+  return BLArrayPrivate::retainInstance(&ctxI->internalState.strokeOptions.dashArray);
 }
 
 static BLResult BL_CDECL setStrokeTransformOrderImpl(BLContextImpl* baseImpl, BLStrokeTransformOrder transformOrder) noexcept {
@@ -4331,10 +4341,11 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
   ctxI->internalState.userTransform.reset();
 
   // Initialize private state.
+  ctxI->internalState.finalTransformFixedType = BL_TRANSFORM_TYPE_SCALE;
+  ctxI->internalState.metaTransformFixedType = BL_TRANSFORM_TYPE_SCALE;
   ctxI->internalState.metaTransformType = BL_TRANSFORM_TYPE_TRANSLATE;
   ctxI->internalState.finalTransformType = BL_TRANSFORM_TYPE_TRANSLATE;
-  ctxI->internalState.metaTransformFixedType = BL_TRANSFORM_TYPE_SCALE;
-  ctxI->internalState.finalTransformFixedType = BL_TRANSFORM_TYPE_SCALE;
+  ctxI->internalState.identityTransformType = BL_TRANSFORM_TYPE_IDENTITY;
   ctxI->internalState.globalAlphaI = uint32_t(ctxI->renderTargetInfo.fullAlphaI);
 
   ctxI->internalState.finalTransform.reset();

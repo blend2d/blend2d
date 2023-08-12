@@ -216,7 +216,7 @@
 #define BL_MAKE_VERSION(MAJOR, MINOR, PATCH) (((MAJOR) << 16) | ((MINOR) << 8) | (PATCH))
 
 //! Blend2D library version.
-#define BL_VERSION BL_MAKE_VERSION(0, 10, 1)
+#define BL_VERSION BL_MAKE_VERSION(0, 10, 2)
 
 //! \}
 //! \}
@@ -1306,6 +1306,8 @@ BL_INLINE_NODEBUG void* operator new(std::size_t, const BLInternal::PlacementNew
 #endif
   return p.ptr;
 }
+
+BL_INLINE_NODEBUG void operator delete(void*, const BLInternal::PlacementNew&) noexcept {}
 
 //! \endcond
 #endif

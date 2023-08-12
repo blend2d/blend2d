@@ -16,14 +16,6 @@
 
 namespace BLPathPrivate {
 
-//! This is a sink that is used by path offsetting. This sink consumes both `a` and `b` offsets of the path. The sink
-//! will be called for each figure and is responsible for joining these paths. If the paths are not closed then the
-//! sink must insert start cap, then join `b`, and then insert end cap.
-//!
-//! The sink must also clean up the paths as this is not done by the offseter. The reason is that in case the `a` path
-//! is the output path you can just keep it and insert `b` path into it (clearing only `b` path after each call).
-typedef BLResult (BL_CDECL* StrokeSinkFunc)(BLPath* a, BLPath* b, BLPath* c, void* userData) BL_NOEXCEPT;
-
 BL_HIDDEN BLResult strokePath(
   const BLPathView& input,
   const BLStrokeOptions& options,
@@ -31,7 +23,7 @@ BL_HIDDEN BLResult strokePath(
   BLPath& aPath,
   BLPath& bPath,
   BLPath& cPath,
-  StrokeSinkFunc sink, void* userData) noexcept;
+  BLPathStrokeSinkFunc sink, void* userData) noexcept;
 
 } // {BLPathPrivate}
 

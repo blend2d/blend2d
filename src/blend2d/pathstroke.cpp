@@ -135,7 +135,7 @@ public:
   struct SideData {
     BLPath* path;            // Output path (outer/inner, per side).
     size_t figureOffset;     // Start of the figure offset in output path (only A path).
-    BLPathAppender appender; // Output path appende (outer/inner, per side).
+    BLPathAppender appender; // Output path appended (outer/inner, per side).
     double d;                // Distance (StrokeWidth / 2).
     double d2;               // Distance multiplied by 2.
   };
@@ -224,12 +224,15 @@ public:
            bOut().ensure(bPath(), bRequired) ;
   }
 
-  BL_INLINE_IF_NOT_DEBUG BLResult stroke(StrokeSinkFunc sink, void* userData) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult stroke(BLPathStrokeSinkFunc sink, void* userData) noexcept {
+    size_t figureStartIdx = 0;
     size_t estimatedSize = _iter.remainingForward() * 2u;
+
     BL_PROPAGATE(aPath()->reserve(aPath()->size() + estimatedSize));
 
     while (!_iter.atEnd()) {
       // Start of the figure.
+      const uint8_t* figureStartCmd = _iter.cmd;
       if (BL_UNLIKELY(_iter.cmd[0] != BL_PATH_CMD_MOVE)) {
         if (_iter.cmd[0] != BL_PATH_CMD_CLOSE)
           return blTraceError(BL_ERROR_INVALID_GEOMETRY);
@@ -237,6 +240,9 @@ public:
         _iter++;
         continue;
       }
+
+      figureStartIdx += (size_t)(_iter.cmd - figureStartCmd);
+      figureStartCmd = _iter.cmd;
 
       sideData(Side::kA).figureOffset = sideData(Side::kA).path->size();
       BL_PROPAGATE(aOut().begin(aPath(), BL_MODIFY_OP_APPEND_GROW, _iter.remainingForward()));
@@ -509,7 +515,10 @@ SmoothPolyTo:
       bOut().done(bPath());
 
       // Call the path to the provided sink with resulting paths.
-      BL_PROPAGATE(sink(aPath(), bPath(), cPath(), userData));
+      size_t figureEndIdx = figureStartIdx + (size_t)(_iter.cmd - figureStartCmd);
+      BL_PROPAGATE(sink(aPath(), bPath(), cPath(), figureStartIdx, figureEndIdx,  userData));
+
+      figureStartIdx = figureEndIdx;
     }
 
     return BL_SUCCESS;
@@ -969,7 +978,7 @@ BLResult strokePath(
   BLPath& a,
   BLPath& b,
   BLPath& c,
-  StrokeSinkFunc sink, void* userData) noexcept {
+  BLPathStrokeSinkFunc sink, void* userData) noexcept {
 
   return PathStroker(input, options, approx, &a, &b, &c).stroke(sink, userData);
 }

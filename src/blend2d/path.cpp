@@ -32,7 +32,7 @@ static BLResult transformWithType(BLPathCore* self, const BLRange* range, const 
 // BLPath - Utilities
 // ==================
 
-static BL_INLINE bool checkRange(BLPathPrivateImpl* pathI, const BLRange* range, size_t* startOut, size_t* nOut) noexcept {
+static BL_INLINE bool checkRange(const BLPathPrivateImpl* pathI, const BLRange* range, size_t* startOut, size_t* nOut) noexcept {
   size_t start = 0;
   size_t end = pathI->size;
 
@@ -231,23 +231,37 @@ BL_API_IMPL BLResult blStrokeOptionsReset(BLStrokeOptionsCore* self) noexcept {
 // ==============================
 
 BL_API_IMPL BLResult blStrokeOptionsAssignMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) noexcept {
+  self->hints = other->hints;
   self->width = other->width;
   self->miterLimit = other->miterLimit;
   self->dashOffset = other->dashOffset;
   self->dashArray = std::move(other->dashArray);
-  self->hints = other->hints;
 
   return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) noexcept {
+  self->hints = other->hints;
   self->width = other->width;
   self->miterLimit = other->miterLimit;
   self->dashOffset = other->dashOffset;
   self->dashArray = other->dashArray;
-  self->hints = other->hints;
 
   return BL_SUCCESS;
+}
+
+// BLStrokeOptions - API - Equality & Comparison
+// =============================================
+
+BL_API_IMPL bool blStrokeOptionsEquals(const BLStrokeOptionsCore* a, const BLStrokeOptionsCore* b) noexcept {
+  if (unsigned(a->hints == b->hints) &
+      unsigned(a->width == b->width) &
+      unsigned(a->miterLimit == b->miterLimit) &
+      unsigned(a->dashOffset == b->dashOffset)) {
+    return a->dashArray.equals(b->dashArray);
+  }
+
+  return false;
 }
 
 // BLPath - API - Init & Destroy
@@ -1902,18 +1916,18 @@ static BLResult joinReversedFigure(BLPathAppender& dst, BLPathIterator src) noex
   return BL_SUCCESS;
 }
 
-static BLResult appendStrokedPathSink(BLPath* a, BLPath* b, BLPath* c, void* userData) noexcept {
+static BLResult appendStrokedPathSink(BLPathCore* a, BLPathCore* b, BLPathCore* c, size_t figureStart, size_t figureEnd, void* userData) noexcept {
   BL_ASSERT(a->_d.isPath());
   BL_ASSERT(b->_d.isPath());
   BL_ASSERT(c->_d.isPath());
 
-  blUnused(userData);
+  blUnused(figureStart, figureEnd, userData);
 
   BLPathAppender dst;
-  BL_PROPAGATE(dst.begin(a, BL_MODIFY_OP_APPEND_GROW, b->size() + c->size()));
+  BL_PROPAGATE(dst.begin(a, BL_MODIFY_OP_APPEND_GROW, b->dcast().size() + c->dcast().size()));
 
-  BLResult result = joinReversedFigure(dst, BLPathIterator(b->view()));
-  result |= joinFigure(dst, BLPathIterator(c->view()));
+  BLResult result = joinReversedFigure(dst, BLPathIterator(b->dcast().view()));
+  result |= joinFigure(dst, BLPathIterator(c->dcast().view()));
 
   dst.done(a);
   return result;
@@ -1927,7 +1941,7 @@ BL_API_IMPL BLResult blPathAddStrokedPath(BLPathCore* self, const BLPathCore* ot
   BL_ASSERT(self->_d.isPath());
   BL_ASSERT(other->_d.isPath());
 
-  BLPathPrivateImpl* otherI = getImpl(other);
+  const BLPathPrivateImpl* otherI = getImpl(other);
   size_t start, n;
 
   if (!checkRange(otherI, range, &start, &n))
@@ -1949,6 +1963,41 @@ BL_API_IMPL BLResult blPathAddStrokedPath(BLPathCore* self, const BLPathCore* ot
   }
   else {
     return strokePath(input, options->dcast(), *approx, self->dcast(), bPath, cPath, appendStrokedPathSink, nullptr);
+  }
+}
+
+BL_API_IMPL BLResult BL_CDECL blPathStrokeToSink(
+    const BLPathCore* self,
+    const BLRange* range,
+    const BLStrokeOptionsCore* strokeOptions,
+    const BLApproximationOptions* approximationOptions,
+    BLPathCore *a,
+    BLPathCore *b,
+    BLPathCore *c,
+    BLPathStrokeSinkFunc sink, void* userData) noexcept {
+  using namespace BLPathPrivate;
+
+  BL_ASSERT(self->_d.isPath());
+  BL_ASSERT(a->_d.isPath());
+  BL_ASSERT(b->_d.isPath());
+  BL_ASSERT(c->_d.isPath());
+
+  const BLPathPrivateImpl* selfI = getImpl(self);
+  size_t start, n;
+  if (!checkRange(selfI, range, &start, &n))
+    return BL_SUCCESS;
+
+  if (!approximationOptions)
+    approximationOptions = &blDefaultApproximationOptions;
+
+  BLPathView input { selfI->commandData + start, selfI->vertexData + start, n };
+
+  if (a == self || b == self || c == self) {
+    BLPath tmp(self->dcast());
+    return strokePath(input, strokeOptions->dcast(), *approximationOptions, a->dcast(), b->dcast(), c->dcast(), sink, userData);
+  }
+  else {
+    return strokePath(input, strokeOptions->dcast(), *approximationOptions, a->dcast(), b->dcast(), c->dcast(), sink, userData);
   }
 }
 

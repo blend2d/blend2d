@@ -241,6 +241,14 @@ BL_END_C_DECLS
 //! Optional callback that can be used to consume a path data.
 typedef BLResult (BL_CDECL* BLPathSinkFunc)(BLPathCore* path, const void* info, void* userData) BL_NOEXCEPT;
 
+//! This is a sink that is used by path offsetting. This sink consumes both `a` and `b` offsets of the path. The sink
+//! will be called for each figure and is responsible for joining these paths. If the paths are not closed then the
+//! sink must insert start cap, then join `b`, and then insert end cap.
+//!
+//! The sink must also clean up the paths as this is not done by the offsetter. The reason is that in case the `a` path
+//! is the output path you can just keep it and insert `b` path into it (clearing only `b` path after each call).
+typedef BLResult (BL_CDECL* BLPathStrokeSinkFunc)(BLPathCore* a, BLPathCore* b, BLPathCore* c, size_t inputStart, size_t inputEnd, void* userData) BL_NOEXCEPT;
+
 BL_BEGIN_C_DECLS
 
 BL_API BLResult BL_CDECL blPathInit(BLPathCore* self) BL_NOEXCEPT_C;
@@ -299,8 +307,19 @@ BL_API BLResult BL_CDECL blStrokeOptionsInitMove(BLStrokeOptionsCore* self, BLSt
 BL_API BLResult BL_CDECL blStrokeOptionsInitWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStrokeOptionsDestroy(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStrokeOptionsReset(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blStrokeOptionsEquals(const BLStrokeOptionsCore* a, const BLStrokeOptionsCore* b) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStrokeOptionsAssignMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
+
+BL_API BLResult BL_CDECL blPathStrokeToSink(
+  const BLPathCore* self,
+  const BLRange* range,
+  const BLStrokeOptionsCore* strokeOptions,
+  const BLApproximationOptions* approximationOptions,
+  BLPathCore *a,
+  BLPathCore *b,
+  BLPathCore *c,
+  BLPathStrokeSinkFunc sink, void* userData) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
 
@@ -329,9 +348,9 @@ struct BLStrokeOptionsCore {
   double dashOffset;
 
 #ifdef __cplusplus
-  BLArray<double> dashArray;
+  union { BLArray<double> dashArray; };
 #else
-  union { BLArrayCore dashArray; };
+  BLArrayCore dashArray;
 #endif
 
 #ifdef __cplusplus
@@ -405,7 +424,11 @@ public:
   BL_INLINE BLStrokeOptions& operator=(BLStrokeOptions&& other) noexcept { blStrokeOptionsAssignMove(this, &other); return *this; }
   BL_INLINE BLStrokeOptions& operator=(const BLStrokeOptions& other) noexcept { blStrokeOptionsAssignWeak(this, &other); return *this; }
 
+  BL_INLINE bool operator==(const BLStrokeOptions& other) const noexcept { return  equals(other); }
+  BL_INLINE bool operator!=(const BLStrokeOptions& other) const noexcept { return !equals(other); }
+
   BL_INLINE BLResult reset() noexcept { return blStrokeOptionsReset(this); }
+  BL_INLINE bool equals(const BLStrokeOptions& other) const noexcept { return blStrokeOptionsEquals(this, &other); }
 
   BL_INLINE BLResult assign(BLStrokeOptions&& other) noexcept { return blStrokeOptionsAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLStrokeOptions& other) noexcept { return blStrokeOptionsAssignWeak(this, &other); }
@@ -1040,12 +1063,12 @@ public:
   }
 
   //! Adds a stroke of `path` to this path.
-  BL_INLINE_NODEBUG BLResult addStrokedPath(const BLPath& path, const BLRange& range, const BLStrokeOptionsCore& strokeOptions, const BLApproximationOptions& approximationOptions) noexcept {
-    return blPathAddStrokedPath(this, &path, &range, &strokeOptions, &approximationOptions);
-  }
-  //! \overload
   BL_INLINE_NODEBUG BLResult addStrokedPath(const BLPath& path, const BLStrokeOptionsCore& strokeOptions, const BLApproximationOptions& approximationOptions) noexcept {
     return blPathAddStrokedPath(this, &path, nullptr, &strokeOptions, &approximationOptions);
+  }
+  //! \overload
+  BL_INLINE_NODEBUG BLResult addStrokedPath(const BLPath& path, const BLRange& range, const BLStrokeOptionsCore& strokeOptions, const BLApproximationOptions& approximationOptions) noexcept {
+    return blPathAddStrokedPath(this, &path, &range, &strokeOptions, &approximationOptions);
   }
 
   //! \}

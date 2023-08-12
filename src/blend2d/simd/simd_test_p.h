@@ -699,7 +699,7 @@ static void fill_val(T* arr, T v, uint32_t count, uint32_t repeat = 1) noexcept 
 // ==============================================
 
 template<typename V, typename GenericOp, typename Constraint, typename VecOp>
-static void test_iop1_constraint(VecOp&& vecOp) noexcept {
+static BL_NOINLINE void test_iop1_constraint(VecOp&& vecOp) noexcept {
   typedef typename V::ElementType T;
   constexpr uint32_t kItemCount = uint32_t(V::kW / sizeof(T));
 
@@ -729,7 +729,7 @@ static void test_iop1(VecOp&& vecOp) noexcept {
 }
 
 template<typename V, typename GenericOp, typename Constraint, typename VecOp>
-static void test_iop2_constraint(VecOp&& vecOp) noexcept {
+static BL_NOINLINE void test_iop2_constraint(VecOp&& vecOp) noexcept {
   typedef typename V::ElementType T;
   constexpr uint32_t kItemCount = uint32_t(V::kW / sizeof(T));
 
@@ -763,7 +763,7 @@ static void test_iop2(VecOp&& vecOp) noexcept {
 }
 
 template<typename V, typename GenericOp, typename Constraint, typename VecOp>
-static void test_iop3_constraint(VecOp&& vecOp) noexcept {
+static BL_NOINLINE void test_iop3_constraint(VecOp&& vecOp) noexcept {
   typedef typename V::ElementType T;
   constexpr uint32_t kItemCount = uint32_t(V::kW / sizeof(T));
 

@@ -284,6 +284,83 @@ static void test_context_state(BLContext& ctx) {
     EXPECT_EQ(vb.as<BLPattern>(), pattern);
   }
 
+  INFO("Testing state management of fill options");
+  {
+    BLFillRule initialFillRule = ctx.fillRule();
+
+    EXPECT_SUCCESS(ctx.save());
+
+    EXPECT_SUCCESS(ctx.setFillRule(BL_FILL_RULE_EVEN_ODD));
+    EXPECT_EQ(ctx.fillRule(), BL_FILL_RULE_EVEN_ODD);
+
+    EXPECT_SUCCESS(ctx.setFillRule(BL_FILL_RULE_NON_ZERO));
+    EXPECT_EQ(ctx.fillRule(), BL_FILL_RULE_NON_ZERO);
+
+    EXPECT_SUCCESS(ctx.setFillRule(
+      initialFillRule == BL_FILL_RULE_NON_ZERO
+        ? BL_FILL_RULE_EVEN_ODD
+        : BL_FILL_RULE_NON_ZERO));
+    EXPECT_SUCCESS(ctx.restore());
+
+    EXPECT_EQ(ctx.fillRule(), initialFillRule);
+  }
+
+  INFO("Testing state management of stroke options");
+  {
+    BLArray<double> dashes;
+    dashes.append(1.0, 2.0, 3.0, 4.0);
+
+    EXPECT_SUCCESS(ctx.save());
+
+    EXPECT_SUCCESS(ctx.setStrokeWidth(2.0));
+    EXPECT_EQ(ctx.strokeWidth(), 2.0);
+
+    EXPECT_SUCCESS(ctx.setStrokeMiterLimit(10.0));
+    EXPECT_EQ(ctx.strokeMiterLimit(), 10.0);
+
+    EXPECT_SUCCESS(ctx.setStrokeJoin(BL_STROKE_JOIN_ROUND));
+    EXPECT_EQ(ctx.strokeJoin(), BL_STROKE_JOIN_ROUND);
+
+    EXPECT_SUCCESS(ctx.setStrokeStartCap(BL_STROKE_CAP_ROUND_REV));
+    EXPECT_EQ(ctx.strokeStartCap(), BL_STROKE_CAP_ROUND_REV);
+
+    EXPECT_SUCCESS(ctx.setStrokeEndCap(BL_STROKE_CAP_TRIANGLE_REV));
+    EXPECT_EQ(ctx.strokeEndCap(), BL_STROKE_CAP_TRIANGLE_REV);
+
+    EXPECT_SUCCESS(ctx.setStrokeDashArray(dashes));
+    EXPECT_EQ(ctx.strokeDashArray(), dashes);
+
+    EXPECT_SUCCESS(ctx.setStrokeDashOffset(5.0));
+    EXPECT_EQ(ctx.strokeDashOffset(), 5.0);
+
+    BLStrokeOptions opt = ctx.strokeOptions();
+    EXPECT_EQ(opt, ctx.strokeOptions());
+    EXPECT_EQ(opt.width, 2.0);
+    EXPECT_EQ(opt.miterLimit, 10.0);
+    EXPECT_EQ(BLStrokeJoin(opt.join), BL_STROKE_JOIN_ROUND);
+    EXPECT_EQ(BLStrokeCap(opt.caps[BL_STROKE_CAP_POSITION_START]), BL_STROKE_CAP_ROUND_REV);
+    EXPECT_EQ(BLStrokeCap(opt.caps[BL_STROKE_CAP_POSITION_END]), BL_STROKE_CAP_TRIANGLE_REV);
+    EXPECT_EQ(opt.dashArray, dashes);
+    EXPECT_EQ(opt.dashOffset, 5.0);
+
+    EXPECT_SUCCESS(ctx.restore());
+
+    EXPECT_SUCCESS(ctx.save());
+    EXPECT_SUCCESS(ctx.setStrokeOptions(opt));
+    EXPECT_EQ(ctx.strokeWidth(), 2.0);
+    EXPECT_EQ(ctx.strokeMiterLimit(), 10.0);
+    EXPECT_EQ(ctx.strokeJoin(), BL_STROKE_JOIN_ROUND);
+    EXPECT_EQ(ctx.strokeStartCap(), BL_STROKE_CAP_ROUND_REV);
+    EXPECT_EQ(ctx.strokeEndCap(), BL_STROKE_CAP_TRIANGLE_REV);
+    EXPECT_EQ(ctx.strokeDashArray(), dashes);
+    EXPECT_EQ(ctx.strokeDashOffset(), 5.0);
+
+    BLStrokeOptions opt2 = ctx.strokeOptions();
+    EXPECT_EQ(opt, opt2);
+
+    EXPECT_SUCCESS(ctx.restore());
+  }
+
   INFO("Testing state management of transformations");
   {
     BLMatrix2D transform = BLMatrix2D::makeScaling(2.0);
