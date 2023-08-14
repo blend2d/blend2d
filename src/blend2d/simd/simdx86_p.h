@@ -1487,7 +1487,7 @@ template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
 BL_INLINE_NODEBUG __m256 simd_swizzle_f32(const __m256& a) noexcept { return _mm256_shuffle_ps(a, a, _MM_SHUFFLE(D, C, B, A)); }
 
 template<uint8_t B, uint8_t A>
-BL_INLINE_NODEBUG __m256d simd_swizzle_f64(const __m256d& a) noexcept { return _mm256_shuffle_pd(a, a, (B << 1) | A); }
+BL_INLINE_NODEBUG __m256d simd_swizzle_f64(const __m256d& a) noexcept { return _mm256_shuffle_pd(a, a, (B << 3) | (A << 2) | (B << 1) | A); }
 
 #if defined(BL_TARGET_OPT_AVX2)
 template<> BL_INLINE_NODEBUG __m256i simd_broadcast_u8<32>(const __m128i& a) noexcept { return _mm256_broadcastb_epi8(a); }
@@ -1547,10 +1547,10 @@ template<uint8_t D, uint8_t C, uint8_t B, uint8_t A>
 BL_INLINE_NODEBUG __m256i simd_shuffle_u32(const __m256i& lo, const __m256i& hi) noexcept { return simd_cast<__m256i>(_mm256_shuffle_ps(simd_cast<__m256>(lo), simd_cast<__m256>(hi), _MM_SHUFFLE(D, C, B, A))); }
 
 template<uint8_t B, uint8_t A>
-BL_INLINE_NODEBUG __m256d simd_shuffle_f64(const __m256d& lo, const __m256d& hi) noexcept { return _mm256_shuffle_pd(lo, hi, (B << 1) | A); }
+BL_INLINE_NODEBUG __m256d simd_shuffle_f64(const __m256d& lo, const __m256d& hi) noexcept { return _mm256_shuffle_pd(lo, hi, (B << 3) | (A << 2) | (B << 1) | A); }
 
 template<uint8_t B, uint8_t A>
-BL_INLINE_NODEBUG __m256i simd_shuffle_u64(const __m256i& lo, const __m256i& hi) noexcept { return simd_cast<__m256i>(_mm256_shuffle_pd(simd_cast<__m256d>(lo), simd_cast<__m256d>(hi), (B << 1) | A)); }
+BL_INLINE_NODEBUG __m256i simd_shuffle_u64(const __m256i& lo, const __m256i& hi) noexcept { return simd_cast<__m256i>(simd_shuffle_f64<B, A>(simd_cast<__m256d>(lo), simd_cast<__m256d>(hi))); }
 
 BL_INLINE_NODEBUG __m256i simd_broadcast256_u8(const __m128i& a) noexcept { return _mm256_broadcastb_epi8(a); }
 BL_INLINE_NODEBUG __m256i simd_broadcast256_u16(const __m128i& a) noexcept { return _mm256_broadcastw_epi16(a); }
