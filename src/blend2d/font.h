@@ -39,6 +39,7 @@ BL_API BLResult BL_CDECL blFontAssignWeak(BLFontCore* self, const BLFontCore* ot
 BL_API bool BL_CDECL blFontEquals(const BLFontCore* a, const BLFontCore* b) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontCreateFromFace(BLFontCore* self, const BLFontFaceCore* face, float size) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontCreateFromFaceWithSettings(BLFontCore* self, const BLFontFaceCore* face, float size, const BLFontFeatureSettingsCore* featureSettings, const BLFontVariationSettingsCore* variationSettings) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetFace(const BLFontCore* self, BLFontFaceCore* out) BL_NOEXCEPT_C;
 BL_API float BL_CDECL blFontGetSize(const BLFontCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontSetSize(BLFontCore* self, float size) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontGetMetrics(const BLFontCore* self, BLFontMetrics* out) BL_NOEXCEPT_C;
@@ -47,6 +48,9 @@ BL_API BLResult BL_CDECL blFontGetDesignMetrics(const BLFontCore* self, BLFontDe
 BL_API BLResult BL_CDECL blFontGetFeatureSettings(const BLFontCore* self, BLFontFeatureSettingsCore* out) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontSetFeatureSettings(BLFontCore* self, const BLFontFeatureSettingsCore* featureSettings) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontResetFeatureSettings(BLFontCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontGetVariationSettings(const BLFontCore* self, BLFontVariationSettingsCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontSetVariationSettings(BLFontCore* self, const BLFontVariationSettingsCore* variationSettings) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontResetVariationSettings(BLFontCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontShape(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontMapTextToGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb, BLGlyphMappingState* stateOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferCore* gb) BL_NOEXCEPT_C;
@@ -233,13 +237,17 @@ public:
 
   //! Returns font feature settings.
   BL_INLINE_NODEBUG const BLFontFeatureSettings& featureSettings() const noexcept { return _impl()->featureSettings.dcast(); }
-  //! Returns font variation settings.
-  BL_INLINE_NODEBUG const BLFontVariationSettings& variations() const noexcept { return _impl()->variationSettings.dcast(); }
-
   //! Sets font feature settings to `featureSettings`.
   BL_INLINE_NODEBUG BLResult setFeatureSettings(const BLFontFeatureSettingsCore& featureSettings) noexcept { return blFontSetFeatureSettings(this, &featureSettings); }
   //! Resets font feature settings.
   BL_INLINE_NODEBUG BLResult resetFeatureSettings() noexcept { return blFontResetFeatureSettings(this); }
+
+  //! Returns font variation settings.
+  BL_INLINE_NODEBUG const BLFontVariationSettings& variationSettings() const noexcept { return _impl()->variationSettings.dcast(); }
+  //! Sets font variation settings to `variationSettings`.
+  BL_INLINE_NODEBUG BLResult setVariationSettings(const BLFontVariationSettingsCore& variationSettings) noexcept { return blFontSetVariationSettings(this, &variationSettings); }
+  //! Resets font variation settings.
+  BL_INLINE_NODEBUG BLResult resetVariationSettings() noexcept { return blFontResetVariationSettings(this); }
 
   //! \}
 

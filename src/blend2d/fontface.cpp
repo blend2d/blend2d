@@ -220,6 +220,46 @@ BLResult blFontFaceCreateFromData(BLFontFaceCore* self, const BLFontDataCore* fo
 // BLFontFace - Accessors
 // ======================
 
+BLResult blFontFaceGetFullName(const BLFontFaceCore* self, BLStringCore* out) noexcept {
+  using namespace BLFontFacePrivate;
+
+  BL_ASSERT(self->_d.isFontFace());
+  BL_ASSERT(out->_d.isString());
+
+  BLFontFacePrivateImpl* selfI = getImpl(self);
+  return blStringAssignWeak(out, &selfI->fullName);
+}
+
+BLResult blFontFaceGetFamilyName(const BLFontFaceCore* self, BLStringCore* out) noexcept {
+  using namespace BLFontFacePrivate;
+
+  BL_ASSERT(self->_d.isFontFace());
+  BL_ASSERT(out->_d.isString());
+
+  BLFontFacePrivateImpl* selfI = getImpl(self);
+  return blStringAssignWeak(out, &selfI->familyName);
+}
+
+BLResult blFontFaceGetSubfamilyName(const BLFontFaceCore* self, BLStringCore* out) noexcept {
+  using namespace BLFontFacePrivate;
+
+  BL_ASSERT(self->_d.isFontFace());
+  BL_ASSERT(out->_d.isString());
+
+  BLFontFacePrivateImpl* selfI = getImpl(self);
+  return blStringAssignWeak(out, &selfI->subfamilyName);
+}
+
+BLResult blFontFaceGetPostScriptName(const BLFontFaceCore* self, BLStringCore* out) noexcept {
+  using namespace BLFontFacePrivate;
+
+  BL_ASSERT(self->_d.isFontFace());
+  BL_ASSERT(out->_d.isString());
+
+  BLFontFacePrivateImpl* selfI = getImpl(self);
+  return blStringAssignWeak(out, &selfI->postScriptName);
+}
+
 BLResult blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) noexcept {
   BL_ASSERT(self->_d.isFontFace());
 

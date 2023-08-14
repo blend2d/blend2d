@@ -164,6 +164,10 @@ BL_API BLResult BL_CDECL blFontFaceAssignWeak(BLFontFaceCore* self, const BLFont
 BL_API bool BL_CDECL blFontFaceEquals(const BLFontFaceCore* a, const BLFontFaceCore* b) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName, BLFileReadFlags readFlags) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontFaceCreateFromData(BLFontFaceCore* self, const BLFontDataCore* fontData, uint32_t faceIndex) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetFullName(const BLFontFaceCore* self, BLStringCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetFamilyName(const BLFontFaceCore* self, BLStringCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetSubfamilyName(const BLFontFaceCore* self, BLStringCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetPostScriptName(const BLFontFaceCore* self, BLStringCore* out) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self, BLFontUnicodeCoverage* out) BL_NOEXCEPT_C;

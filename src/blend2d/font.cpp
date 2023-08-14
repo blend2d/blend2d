@@ -271,6 +271,16 @@ BLResult blFontCreateFromFaceWithSettings(BLFontCore* self, const BLFontFaceCore
 // BLFont - Accessors
 // ==================
 
+BLResult blFontGetFace(const BLFontCore* self, BLFontFaceCore* out) noexcept {
+  using namespace BLFontPrivate;
+
+  BL_ASSERT(self->_d.isFont());
+  BL_ASSERT(out->_d.isFontFace());
+
+  BLFontPrivateImpl* selfI = getImpl(self);
+  return blFontFaceAssignWeak(out, &selfI->face);
+}
+
 float blFontGetSize(const BLFontCore* self) noexcept {
   using namespace BLFontPrivate;
   BL_ASSERT(self->_d.isFont());
@@ -357,6 +367,43 @@ BLResult blFontResetFeatureSettings(BLFontCore* self) noexcept {
   BL_PROPAGATE(makeMutable(self));
   BLFontPrivateImpl* selfI = getImpl(self);
   return blFontFeatureSettingsReset(&selfI->featureSettings);
+}
+
+BLResult blFontGetVariationSettings(const BLFontCore* self, BLFontVariationSettingsCore* out) noexcept {
+  using namespace BLFontPrivate;
+
+  BL_ASSERT(self->_d.isFont());
+  BL_ASSERT(out->_d.isFontVariationSettings());
+
+  BLFontPrivateImpl* selfI = getImpl(self);
+  return blFontVariationSettingsAssignWeak(out, &selfI->variationSettings);
+}
+
+BLResult blFontSetVariationSettings(BLFontCore* self, const BLFontVariationSettingsCore* variationSettings) noexcept {
+  using namespace BLFontPrivate;
+
+  BL_ASSERT(self->_d.isFont());
+  BL_ASSERT(variationSettings->_d.isFontVariationSettings());
+
+  if (getImpl(self)->face.dcast().empty())
+    return blTraceError(BL_ERROR_FONT_NOT_INITIALIZED);
+
+  BL_PROPAGATE(makeMutable(self));
+  BLFontPrivateImpl* selfI = getImpl(self);
+  return blFontVariationSettingsAssignWeak(&selfI->variationSettings, variationSettings);
+}
+
+BLResult blFontResetVariationSettings(BLFontCore* self) noexcept {
+  using namespace BLFontPrivate;
+  BL_ASSERT(self->_d.isFont());
+
+  // Don't make the font mutable if there are no variation settings set.
+  if (getImpl(self)->variationSettings.dcast().empty())
+    return BL_SUCCESS;
+
+  BL_PROPAGATE(makeMutable(self));
+  BLFontPrivateImpl* selfI = getImpl(self);
+  return blFontVariationSettingsReset(&selfI->variationSettings);
 }
 
 // BLFont - Shaping

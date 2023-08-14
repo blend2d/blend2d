@@ -138,7 +138,12 @@ static void blDebugRuntimeBuildInfo(void) {
 
 //! Dumps `BLRuntimeSystemInfo` queried through `blRuntimeQueryInfo()`.
 static void blDebugRuntimeSystemInfo(void) {
-  const char* cpuArchEnum = "NONE\0X86\0ARM\0MIPS\0";
+  static const char cpuArchEnum[] =
+    "NONE\0"
+    "X86\0"
+    "ARM\0"
+    "MIPS\0";
+
   const char* os = "Unknown";
   char cpuFeatures[128];
 
@@ -187,7 +192,13 @@ static void blDebugRuntimeSystemInfo(void) {
 // ================
 
 static void blDebugMatrix2D_(const BLMatrix2D* obj, const char* name, int indent) {
-  const char* matrixTypeEnum = "IDENTITY\0TRANSLATE\0SCALE\0SWAP\0AFFINE\0INVALID\0";
+  static const char matrixTypeEnum[] =
+    "IDENTITY\0"
+    "TRANSLATE\0"
+    "SCALE\0"
+    "SWAP\0"
+    "AFFINE\0"
+    "INVALID\0";
 
   BL_DEBUG_FMT("%s: [%s] {\n", name, blDebugGetEnumAsString(blMatrix2DGetType(obj), matrixTypeEnum));
   BL_DEBUG_FMT("  [% 3.14f |% 3.14f]\n", obj->m00, obj->m01);
@@ -200,10 +211,27 @@ static void blDebugMatrix2D_(const BLMatrix2D* obj, const char* name, int indent
 // =======================
 
 static void blDebugStrokeOptions_(const BLStrokeOptionsCore* obj, const char* name, int indent) {
-  const char* strokeCapPositionEnum = "StartCap\0EndCap\0";
-  const char* strokeCapEnum = "BUTT\0SQUARE\0ROUND\0ROUND_REV\0TRIANGLE\0TRIANGLE_REV\0";
-  const char* strokeJoinEnum = "MITER_CLIP\0MITER_BEVEL\0MITER_ROUND\0BEVEL\0ROUND\0";
-  const char* strokeTransformOrderEnum = "AFTER\0BEFORE\0";
+  static const char strokeCapPositionEnum[] =
+    "StartCap\0"
+    "EndCap\0";
+
+  static const char strokeCapEnum[] =
+    "BUTT\0"
+    "SQUARE\0"
+    "ROUND\0"
+    "ROUND_REV\0"
+    "TRIANGLE\0"
+    "TRIANGLE_REV\0";
+
+  static const char strokeJoinEnum[] =
+    "MITER_CLIP\0"
+    "MITER_BEVEL\0"
+    "MITER_ROUND\0"
+    "BEVEL\0ROUND\0";
+
+  static const char strokeTransformOrderEnum[] =
+    "AFTER\0"
+    "BEFORE\0";
 
   uint32_t i;
 
@@ -324,7 +352,11 @@ static void blDebugArray_(const BLArrayCore* obj, const char* name, int indent) 
 // ===============
 
 static void blDebugImage_(const BLImageCore* obj, const char* name, int indent) {
-  const char* formatEnum = "NONE\0PRGB32\0XRGB32\0A8\0";
+  static const char formatEnum[] =
+    "NONE\0"
+    "PRGB32\0"
+    "XRGB32\0"
+    "A8\0";
 
   BLImageData data;
   blImageGetData(obj, &data);
@@ -332,6 +364,130 @@ static void blDebugImage_(const BLImageCore* obj, const char* name, int indent) 
   BL_DEBUG_FMT("%s: {\n", name);
   BL_DEBUG_FMT("  Size: %ux%u\n", data.size.w, data.size.h);
   BL_DEBUG_FMT("  Format: %s\n", blDebugGetEnumAsString(data.format, formatEnum));
+  BL_DEBUG_OUT("}\n");
+}
+
+// BLDebug - Pattern
+// =================
+
+static void blDebugPattern_(const BLPatternCore* obj, const char* name, int indent) {
+  static const char extendModeEnum[] =
+    "PAD\0"
+    "REPEAT\0"
+    "REFLECT\0"
+    "PAD_X_REPEAT_Y\0"
+    "PAD_X_REFLECT_Y\0"
+    "REPEAT_X_PAD_Y\0"
+    "REPEAT_X_REFLECT_Y\0"
+    "REFLECT_X_PAD_Y\0"
+    "REFLECT_X_REPEAT_Y\0";
+
+  BLImageCore image;
+  BLMatrix2D transform;
+
+  BLExtendMode extendMode = blPatternGetExtendMode(obj);
+
+  blImageInit(&image);
+  blPatternGetImage(obj, &image);
+  blPatternGetTransform(obj, &transform);
+
+  BL_DEBUG_FMT("%s: {\n", name);
+  {
+    indent++;
+    blDebugImage_(&image, "Image", indent);
+    BL_DEBUG_FMT("ExtendMode: %s\n", blDebugGetEnumAsString(extendMode, extendModeEnum));
+    blDebugMatrix2D_(&transform, "Transform", indent);
+    indent--;
+  }
+  BL_DEBUG_OUT("}\n");
+
+  blImageDestroy(&image);
+}
+
+// BLDebug - Gradient
+// ==================
+
+static void blDebugGradient_(const BLGradientCore* obj, const char* name, int indent) {
+  static const char gradientTypeEnum[] =
+    "LINEAR\0"
+    "RADIAL\0"
+    "CONIC\0";
+
+  static const char extendModeEnum[] =
+    "PAD\0"
+    "REPEAT\0"
+    "REFLECT\0";
+
+  size_t i;
+  size_t valueCount = 0;
+  BLMatrix2D transform;
+
+  BLGradientType gradientType = blGradientGetType(obj);
+  BLExtendMode extendMode = blGradientGetExtendMode(obj);
+  size_t stopCount = blGradientGetSize(obj);
+  const BLGradientStop* stopData = blGradientGetStops(obj);
+
+  blGradientGetTransform(obj, &transform);
+
+  switch (gradientType) {
+    case BL_GRADIENT_TYPE_LINEAR: valueCount = 4; break;
+    case BL_GRADIENT_TYPE_RADIAL: valueCount = 5; break;
+    case BL_GRADIENT_TYPE_CONIC : valueCount = 3; break;
+    default: break;
+  }
+
+  double vals[6];
+  for (i = 0; i < valueCount; i++)
+    vals[i] = blGradientGetValue(obj, i);
+
+  BL_DEBUG_FMT("%s: {\n", name);
+  {
+    indent++;
+    BL_DEBUG_FMT("Type: %s\n", blDebugGetEnumAsString(gradientType, gradientTypeEnum));
+    BL_DEBUG_FMT("ExtendMode: %s\n", blDebugGetEnumAsString(extendMode, extendModeEnum));
+
+    switch (gradientType) {
+      case BL_GRADIENT_TYPE_LINEAR:
+        BL_DEBUG_FMT("Values: Start=[%f, %f], End=[%f, %f]\n",
+          vals[0], vals[1],
+          vals[2], vals[3]);
+        break;
+
+      case BL_GRADIENT_TYPE_RADIAL:
+        BL_DEBUG_FMT("Values: Center=[%f, %f], Focal=[%f, %f] R=%f\n",
+          vals[0], vals[1],
+          vals[2], vals[3],
+          vals[4]);
+        break;
+
+      case BL_GRADIENT_TYPE_CONIC:
+        BL_DEBUG_FMT("Values: Center=[%f, %f], Angle=%f\n",
+          vals[0], vals[1],
+          vals[2]);
+        break;
+
+      default:
+        break;
+    }
+
+    BL_DEBUG_OUT("Stops: {\n");
+    indent++;
+    for (i = 0; i < stopCount; i++) {
+      uint64_t rgba64 = stopData[i].rgba.value;
+      BL_DEBUG_FMT("[%zu] Offset=%f BLRgba64(R=%d, G=%d, B=%d, A=%d)\n",
+        i,
+        stopData[i].offset,
+        (rgba64 >> 32) & 0xFFFF,
+        (rgba64 >> 16) & 0xFFFF,
+        (rgba64 >>  0) & 0xFFFF,
+        (rgba64 >> 48) & 0xFFFF);
+    }
+    indent--;
+    BL_DEBUG_OUT("}\n");
+
+    blDebugMatrix2D_(&transform, "Transform", indent);
+    indent--;
+  }
   BL_DEBUG_OUT("}\n");
 }
 
@@ -384,33 +540,157 @@ static void blDebugPath_(const BLPathCore* obj, const char* name, int indent) {
   BL_DEBUG_OUT("}\n");
 }
 
+// BLDebug - FontFeatureSettings
+// =============================
+
+static void blDebugFontFeatureSettings_(const BLFontFeatureSettingsCore* obj, const char* name, int indent) {
+  size_t i;
+  BLFontFeatureSettingsView view;
+
+  blFontFeatureSettingsGetView(obj, &view);
+
+  if (view.size == 0) {
+    BL_DEBUG_FMT("%s: {}\n", name);
+  }
+  else {
+    BL_DEBUG_FMT("%s: {\n", name);
+    indent++;
+
+    for (i = 0; i < view.size; i++) {
+      BLTag tag = view.data[i].tag;
+      uint32_t value = view.data[i].value;
+      BL_DEBUG_FMT("'%c%c%c%c': %u\n",
+        (tag << 24) & 0xFF,
+        (tag << 16) & 0xFF,
+        (tag <<  8) & 0xFF,
+        (tag <<  0) & 0xFF,
+        (unsigned)value);
+    }
+
+    indent--;
+    BL_DEBUG_OUT("}\n");
+  }
+}
+
+// BLDebug - FontVariationSettings
+// ==============================
+
+static void blDebugFontVariationSettings_(const BLFontVariationSettingsCore* obj, const char* name, int indent) {
+  size_t i;
+  BLFontVariationSettingsView view;
+
+  blFontVariationSettingsGetView(obj, &view);
+
+  if (view.size == 0) {
+    BL_DEBUG_FMT("%s: {}\n", name);
+  }
+  else {
+    BL_DEBUG_FMT("%s: {\n", name);
+    indent++;
+
+    for (i = 0; i < view.size; i++) {
+      BLTag tag = view.data[i].tag;
+      float value = view.data[i].value;
+      BL_DEBUG_FMT("'%c%c%c%c': %f\n",
+        (tag << 24) & 0xFF,
+        (tag << 16) & 0xFF,
+        (tag <<  8) & 0xFF,
+        (tag <<  0) & 0xFF,
+        value);
+    }
+
+    indent--;
+    BL_DEBUG_OUT("}\n");
+  }
+}
+
+// BLDebug - Font
+// ==============
+
+static void blDebugFont_(const BLFontCore* obj, const char* name, int indent) {
+  float size = blFontGetSize(obj);
+
+  BLStringCore str;
+  BLFontFaceCore face;
+  BLFontFeatureSettingsCore features;
+  BLFontVariationSettingsCore variations;
+
+  blStringInit(&str);
+  blFontFaceInit(&face);
+  blFontFeatureSettingsInit(&features);
+  blFontVariationSettingsInit(&variations);
+
+  blFontGetFace(obj, &face);
+  blFontGetFeatureSettings(obj, &features);
+  blFontGetVariationSettings(obj, &variations);
+
+  BL_DEBUG_FMT("%s: {\n", name);
+  {
+    indent++;
+    blFontFaceGetFamilyName(&face, &str);
+    BL_DEBUG_FMT("Face: %s\n", blStringGetData(&str));
+    BL_DEBUG_FMT("Size: %f\n", size);
+    blDebugFontFeatureSettings_(&features, "FeatureSettings", indent);
+    blDebugFontVariationSettings_(&variations, "VariationSettings", indent);
+    indent--;
+  }
+  BL_DEBUG_OUT("}\n");
+
+  blFontVariationSettingsDestroy(&variations);
+  blFontFeatureSettingsDestroy(&features);
+  blFontFaceDestroy(&face);
+  blStringDestroy(&str);
+}
+
 // BLDebug - Context
 // =================
 
 static void blDebugContext_(const BLContextCore* obj, const char* name, int indent) {
-  const char* contextTypeEnum = "NONE\0DUMMY\0PROXY\0RASTER\0";
-  const char* fillRuleEnum = "NON_ZERO\0EVEN_ODD\0";
+  static const char contextTypeEnum[] =
+    "NONE\0"
+    "DUMMY\0"
+    "PROXY\0"
+    "RASTER\0";
+
+  static const char fillRuleEnum[] =
+    "NON_ZERO\0"
+    "EVEN_ODD\0";
 
   const BLContextState* state = ((BLContextImpl*)obj->_d.impl)->state;
 
+  BLVarCore fillStyle;
+  BLVarCore strokeStyle;
+
+  blVarInitNull(&fillStyle);
+  blVarInitNull(&strokeStyle);
+
+  blContextGetTransformedFillStyle(obj, &fillStyle);
+  blContextGetTransformedStrokeStyle(obj, &strokeStyle);
+
   BL_DEBUG_FMT("%s: {\n", name);
-  indent++;
+  {
+    indent++;
+    BL_DEBUG_FMT("Type: %s\n", blDebugGetEnumAsString(blContextGetType(obj), contextTypeEnum));
+    BL_DEBUG_FMT("GlobalAlpha: %f\n", state->globalAlpha);
+    BL_DEBUG_FMT("SavedStateCount: %u\n", state->savedStateCount);
 
-  BL_DEBUG_FMT("Type: %s\n", blDebugGetEnumAsString(blContextGetType(obj), contextTypeEnum));
-  BL_DEBUG_FMT("GlobalAlpha: %f\n", state->globalAlpha);
-  BL_DEBUG_FMT("SavedStateCount: %u\n", state->savedStateCount);
+    blDebugMatrix2D_(&state->metaTransform, "MetaTransform", indent);
+    blDebugMatrix2D_(&state->userTransform, "UserTransform", indent);
+    blDebugMatrix2D_(&state->finalTransform, "FinalTransform", indent);
 
-  blDebugMatrix2D_(&state->metaTransform, "MetaTransform", indent);
-  blDebugMatrix2D_(&state->userTransform, "UserTransform", indent);
+    blDebugObject_(&fillStyle, "FillStyle", indent);
+    BL_DEBUG_FMT("FillAlpha: %f\n", state->styleAlpha[BL_CONTEXT_STYLE_SLOT_FILL]);
+    BL_DEBUG_FMT("FillRule: %s\n", blDebugGetEnumAsString(state->fillRule, fillRuleEnum));
 
-  BL_DEBUG_FMT("FillAlpha: %f\n", state->styleAlpha[BL_CONTEXT_STYLE_SLOT_FILL]);
-  BL_DEBUG_FMT("FillRule: %s\n", blDebugGetEnumAsString(state->fillRule, fillRuleEnum));
-
-  BL_DEBUG_FMT("StrokeAlpha: %f\n", state->styleAlpha[BL_CONTEXT_STYLE_SLOT_STROKE]);
-  blDebugStrokeOptions_(&state->strokeOptions, "StrokeOptions", indent);
-
-  indent--;
+    blDebugObject_(&fillStyle, "StrokeStyle", indent);
+    BL_DEBUG_FMT("StrokeAlpha: %f\n", state->styleAlpha[BL_CONTEXT_STYLE_SLOT_STROKE]);
+    blDebugStrokeOptions_(&state->strokeOptions, "StrokeOptions", indent);
+    indent--;
+  }
   BL_DEBUG_OUT("}\n");
+
+  blVarDestroy(&strokeStyle);
+  blVarDestroy(&fillStyle);
 }
 
 // BLDebug - Object
@@ -419,6 +699,110 @@ static void blDebugContext_(const BLContextCore* obj, const char* name, int inde
 static void blDebugObject_(const void* obj, const char* name, int indent) {
   BLObjectType type = blVarGetType(obj);
   switch (type) {
+    case BL_OBJECT_TYPE_RGBA: {
+      BLRgba rgba;
+      blVarToRgba(obj, &rgba);
+      BL_DEBUG_FMT("%s: Rgba(R=%f, G=%f, B=%f, A=%f)\n",
+        name,
+        rgba.r,
+        rgba.g,
+        rgba.b,
+        rgba.a);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_RGBA32: {
+      uint32_t rgba32;
+      blVarToRgba32(obj, &rgba32);
+      BL_DEBUG_FMT("%s: BLRgba32(R=%d, G=%d, B=%d, A=%d)\n",
+        name,
+        (rgba32 >> 16) & 0xFF,
+        (rgba32 >>  8) & 0xFF,
+        (rgba32 >>  0) & 0xFF,
+        (rgba32 >> 24) & 0xFF);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_RGBA64: {
+      uint64_t rgba64;
+      blVarToRgba64(obj, &rgba64);
+      BL_DEBUG_FMT("%s: BLRgba64(R=%d, G=%d, B=%d, A=%d)\n",
+        name,
+        (rgba64 >> 32) & 0xFFFF,
+        (rgba64 >> 16) & 0xFFFF,
+        (rgba64 >>  0) & 0xFFFF,
+        (rgba64 >> 48) & 0xFFFF);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_NULL: {
+      BL_DEBUG_FMT("%s: Null\n", name);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_PATTERN: {
+      blDebugPattern_((const BLPatternCore*)obj, name, indent);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_GRADIENT: {
+      blDebugGradient_((const BLGradientCore*)obj, name, indent);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_IMAGE: {
+      blDebugImage_((const BLImageCore*)obj, name, indent);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_PATH: {
+      blDebugPath_((const BLPathCore*)obj, name, indent);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_FONT: {
+      blDebugFont_((BLFontCore*)obj, name, indent);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS: {
+      blDebugFontFeatureSettings_((BLFontFeatureSettingsCore*)obj, name, indent);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS: {
+      blDebugFontVariationSettings_((BLFontVariationSettingsCore*)obj, name, indent);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_BOOL: {
+      bool val;
+      blVarToBool(obj, &val);
+      BL_DEBUG_FMT("%s: Bool(%s)\n", name, val ? "true" : "false");
+      break;
+    }
+
+    case BL_OBJECT_TYPE_INT64: {
+      int64_t val;
+      blVarToInt64(obj, &val);
+      BL_DEBUG_FMT("%s: Int64(%lld)\n", name, (long long)val);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_UINT64: {
+      uint64_t val;
+      blVarToUInt64(obj, &val);
+      BL_DEBUG_FMT("%s: UInt64(%llu)\n", name, (unsigned long long)val);
+      break;
+    }
+
+    case BL_OBJECT_TYPE_DOUBLE: {
+      double val;
+      blVarToDouble(obj, &val);
+      BL_DEBUG_FMT("%s: Double(%f)\n", name, val);
+      break;
+    }
+
     case BL_OBJECT_TYPE_ARRAY_OBJECT:
     case BL_OBJECT_TYPE_ARRAY_INT8:
     case BL_OBJECT_TYPE_ARRAY_UINT8:
@@ -445,14 +829,6 @@ static void blDebugObject_(const void* obj, const char* name, int indent) {
       blDebugArray_((const BLArrayCore*)obj, name, indent);
       break;
 
-    case BL_OBJECT_TYPE_IMAGE:
-      blDebugImage_((const BLImageCore*)obj, name, indent);
-      break;
-
-    case BL_OBJECT_TYPE_PATH:
-      blDebugPath_((const BLPathCore*)obj, name, indent);
-      break;
-
     case BL_OBJECT_TYPE_CONTEXT:
       blDebugContext_((const BLContextCore*)obj, name, indent);
       break;
@@ -474,23 +850,9 @@ static void blDebugRuntime(void) {
   blDebugRuntimeSystemInfo();
 }
 
-static void blDebugMatrix2D(const BLMatrix2D* obj) {
-  blDebugMatrix2D_(obj, "BLMatrix", 0);
-}
-
 //! Dumps BLArrayCore or BLArray<T>.
 static void blDebugArray(const BLArrayCore* obj) {
   blDebugArray_(obj, "BLArray", 0);
-}
-
-//! Dumps BLImageCore or BLImage.
-static void blDebugImage(const BLImageCore* obj) {
-  blDebugImage_(obj, "BLImage", 0);
-}
-
-//! Dumps BLPathCore or BLPath.
-static void blDebugPath(const BLPathCore* obj) {
-  blDebugPath_(obj, "BLPath", 0);
 }
 
 //! Dumps BLContextCore or BLContext.
@@ -498,12 +860,50 @@ static void blDebugContext(const BLContextCore* obj) {
   blDebugContext_(obj, "BLContext", 0);
 }
 
+//! Dumps BLFontCore or BLFont.
+static void blDebugFont(const BLFontCore* obj) {
+  blDebugFont_(obj, "BLFont", 0);
+}
+
+//! Dumps BLFontFeatureSettingsCore or BLFontFeatureSettings.
+static void blDebugFontFeatureSettings(const BLFontFeatureSettingsCore* obj) {
+  blDebugFontFeatureSettings_(obj, "BLFontFeatureSettings", 0);
+}
+
+//! Dumps BLFontVariationSettingsCore or BLFontVariationSettings.
+static void blDebugFontVariationSettings(const BLFontVariationSettingsCore* obj) {
+  blDebugFontVariationSettings_(obj, "BLFontVariationSettings", 0);
+}
+
+//! Dumps BLGradientCore or BLGradient.
+static void blDebugGradient(const BLGradientCore* obj) {
+  blDebugGradient_(obj, "BLGradient", 0);
+}
+
+//! Dumps BLImageCore or BLImage.
+static void blDebugImage(const BLImageCore* obj) {
+  blDebugImage_(obj, "BLImage", 0);
+}
+
+static void blDebugMatrix2D(const BLMatrix2D* obj) {
+  blDebugMatrix2D_(obj, "BLMatrix", 0);
+}
+
 //! Dumps BLObjectCore or BLObject.
 //!
-//! You can use this function with any object that implements `BLObject`
-//! interface.
+//! You can use this function with any object that implements `BLObject` interface.
 static void blDebugObject(const void* obj) {
   blDebugObject_(obj, "BLObject", 0);
+}
+
+//! Dumps BLPathCore or BLPath.
+static void blDebugPath(const BLPathCore* obj) {
+  blDebugPath_(obj, "BLPath", 0);
+}
+
+//! Dumps BLPatternCore or BLPattern.
+static void blDebugPattern(const BLPatternCore* obj) {
+  blDebugPattern_(obj, "BLPattern", 0);
 }
 
 // BLDebug - End
