@@ -135,6 +135,7 @@ public:
   BL_INLINE bool isLineTo() const noexcept { return _srcPtr != _srcEnd; }
   BL_INLINE constexpr bool isQuadTo() const noexcept { return false; }
   BL_INLINE constexpr bool isCubicTo() const noexcept { return false; }
+  BL_INLINE constexpr bool isConicTo() const noexcept { return false; }
 
   BL_INLINE void nextLineTo(BLPoint& pt1) noexcept {
     _transform.apply(pt1, BLPoint(_srcPtr[0].x, _srcPtr[0].y));
@@ -154,6 +155,9 @@ public:
 
   BL_INLINE void nextCubicTo(BLPoint&, BLPoint&, BLPoint&) noexcept {}
   BL_INLINE bool maybeNextCubicTo(BLPoint&, BLPoint&, BLPoint&) noexcept { return false; }
+
+  BL_INLINE void nextConicTo(BLPoint&, BLPoint&) noexcept {}
+  BL_INLINE bool maybeNextConicTo(BLPoint&, BLPoint&) noexcept { return false; }
 };
 
 template<class Transform = EdgeTransformNone>
@@ -212,6 +216,7 @@ public:
   BL_INLINE bool isLineTo() const noexcept { return _cmdPtr != _cmdEnd && _cmdPtr[0] == BL_PATH_CMD_ON; }
   BL_INLINE bool isQuadTo() const noexcept { return _cmdPtr <= _cmdEndMinus2 && _cmdPtr[0] == BL_PATH_CMD_QUAD; }
   BL_INLINE bool isCubicTo() const noexcept { return _cmdPtr < _cmdEndMinus2 && _cmdPtr[0] == BL_PATH_CMD_CUBIC; }
+  BL_INLINE bool isConicTo() const noexcept { return _cmdPtr < _cmdEndMinus2 && _cmdPtr[0] == BL_PATH_CMD_CONIC; }
 
   BL_INLINE void nextLineTo(BLPoint& pt1) noexcept {
     _transform.apply(pt1, _vtxPtr[0]);
@@ -255,6 +260,21 @@ public:
       return false;
 
     nextCubicTo(pt1, pt2, pt3);
+    return true;
+  }
+
+  BL_INLINE void nextConicTo(BLPoint& pt1, BLPoint& pt2) noexcept {
+    _transform.apply(pt1, _vtxPtr[0]);
+    _transform.apply(pt2, _vtxPtr[2]);
+    _cmdPtr += 2;
+    _vtxPtr += 2;
+  }
+
+  BL_INLINE bool maybeNextConicTo(BLPoint& pt1, BLPoint& pt2) noexcept {
+    if (!isConicTo())
+      return false;
+
+    nextConicTo(pt1, pt2);
     return true;
   }
 };
@@ -321,6 +341,7 @@ public:
   BL_INLINE bool isLineTo() const noexcept { return _cmdPtr != _cmdStart && _cmdPtr[-1] <= BL_PATH_CMD_ON; }
   BL_INLINE bool isQuadTo() const noexcept { return _cmdPtr != _cmdStart && _cmdPtr[-1] == BL_PATH_CMD_QUAD; }
   BL_INLINE bool isCubicTo() const noexcept { return _cmdPtr != _cmdStart && _cmdPtr[-1] == BL_PATH_CMD_CUBIC; }
+  BL_INLINE bool isConicTo() const noexcept { return _cmdPtr != _cmdStart && _cmdPtr[-1] == BL_PATH_CMD_CONIC; }
 
   BL_INLINE void nextLineTo(BLPoint& pt1) noexcept {
     _cmdPtr--;
@@ -364,6 +385,21 @@ public:
       return false;
 
     nextCubicTo(pt1, pt2, pt3);
+    return true;
+  }
+
+  BL_INLINE void nextConicTo(BLPoint& pt1, BLPoint& pt2) noexcept {
+    _cmdPtr -= 2;
+    _vtxPtr -= 2;
+    _transform.apply(pt1, _vtxPtr[2]);
+    _transform.apply(pt2, _vtxPtr[0]);
+  }
+
+  BL_INLINE bool maybeNextConicTo(BLPoint& pt1, BLPoint& pt2) noexcept {
+    if (!isConicTo())
+      return false;
+
+    nextConicTo(pt1, pt2);
     return true;
   }
 };
@@ -624,6 +660,112 @@ public:
     _p3 = _stackPtr[3];
   }
 };
+
+//! Helper to flatten a monotonic quad curve.
+class FlattenMonoConic {
+public:
+  FlattenMonoData& _flattenData;
+  double _toleranceSq;
+  BLPoint* _stackPtr;
+  BLPoint _p0, _p1, _p2;
+
+  struct SplitStep {
+    BL_INLINE bool isFinite() const noexcept { return blIsFinite(value); }
+    BL_INLINE const BLPoint& midPoint() const noexcept { return p012; }
+
+    double value;
+    double limit;
+
+    BLPoint p01;
+    BLPoint p12;
+    BLPoint p012;
+  };
+
+  BL_INLINE explicit FlattenMonoConic(FlattenMonoData& flattenData, double toleranceSq) noexcept
+    : _flattenData(flattenData),
+      _toleranceSq(toleranceSq) {}
+
+  BL_INLINE void begin(const BLPoint* src, uint32_t signBit) noexcept {
+    _stackPtr = _flattenData._stack;
+
+    if (signBit == 0) {
+      _p0 = src[0];
+      _p1 = src[1];
+      _p2 = src[2];
+    }
+    else {
+      _p0 = src[2];
+      _p1 = src[1];
+      _p2 = src[0];
+    }
+  }
+
+  BL_INLINE const BLPoint& first() const noexcept { return _p0; }
+  BL_INLINE const BLPoint& last() const noexcept { return _p2; }
+
+  BL_INLINE bool canPop() const noexcept { return _stackPtr != _flattenData._stack; }
+  BL_INLINE bool canPush() const noexcept { return _stackPtr != _flattenData._stack + FlattenMonoData::kStackSizeQuad; }
+
+  BL_INLINE bool isLeftToRight() const noexcept { return first().x < last().x; }
+
+  // Caused by floating point inaccuracy, we must bound the control
+  // point as we really need monotonic curve that would never outbound
+  // the boundary defined by its start/end points.
+  BL_INLINE void boundLeftToRight() noexcept {
+    _p1.x = blClamp(_p1.x, _p0.x, _p2.x);
+    _p1.y = blClamp(_p1.y, _p0.y, _p2.y);
+  }
+
+  BL_INLINE void boundRightToLeft() noexcept {
+    _p1.x = blClamp(_p1.x, _p2.x, _p0.x);
+    _p1.y = blClamp(_p1.y, _p0.y, _p2.y);
+  }
+
+  BL_INLINE bool isFlat(SplitStep& step) const noexcept {
+    BLPoint v1 = _p1 - _p0;
+    BLPoint v2 = _p2 - _p0;
+
+    double d = BLGeometry::cross(v2, v1);
+    double lenSq = BLGeometry::lengthSq(v2);
+
+    step.value = d * d;
+    step.limit = _toleranceSq * lenSq;
+
+    return step.value <= step.limit;
+  }
+
+  BL_INLINE void split(SplitStep& step) const noexcept {
+    step.p01 = (_p0 + _p1) * 0.5;
+    step.p12 = (_p1 + _p2) * 0.5;
+    step.p012 = (step.p01 + step.p12) * 0.5;
+  }
+
+  BL_INLINE void push(const SplitStep& step) noexcept {
+    // Must be checked before calling `push()`.
+    BL_ASSERT(canPush());
+
+    _stackPtr[0].reset(step.p012);
+    _stackPtr[1].reset(step.p12);
+    _stackPtr[2].reset(_p2);
+    _stackPtr += 3;
+
+    _p1 = step.p01;
+    _p2 = step.p012;
+  }
+
+  BL_INLINE void discardAndAdvance(const SplitStep& step) noexcept {
+    _p0 = step.p012;
+    _p1 = step.p12;
+  }
+
+  BL_INLINE void pop() noexcept {
+    _stackPtr -= 3;
+    _p0 = _stackPtr[0];
+    _p1 = _stackPtr[1];
+    _p2 = _stackPtr[2];
+  }
+};
+
 
 //! \}
 
@@ -908,6 +1050,9 @@ LineTo:
         }
         else if (source.isCubicTo()) {
           BL_PROPAGATE(cubicTo(source, state));
+        }
+        else if (source.isConicTo()) {
+          BL_PROPAGATE(conicTo(source, state));
         }
         else {
           b = start;
@@ -1734,6 +1879,144 @@ RestartClipLoop:
       }
 
       if (!source.maybeNextCubicTo(p1, p2, p3))
+        return BL_SUCCESS;
+    }
+  }
+
+  //! \}
+
+  //! \name Low-Level API - Conic To
+  //! \{
+
+  // Terminology:
+  //
+  //   'p0' - Conic start point.
+  //   'p1' - Conic control point.
+  //   'p2' - Conic end point.
+
+  template<class Source>
+  BL_INLINE_IF_NOT_DEBUG BLResult conicTo(Source& source, State& state) noexcept {
+    // 2 extremas and 1 terminating `1.0` value.
+    constexpr uint32_t kMaxTCount = 2 + 1;
+
+    BLPoint spline[kMaxTCount * 2 + 1];
+    BLPoint& p0 = state.a;
+    BLPoint& p1 = spline[1];
+    BLPoint& p2 = spline[2];
+
+    uint32_t& p0Flags = state.aFlags;
+    source.nextConicTo(p1, p2);
+
+    for (;;) {
+      uint32_t p1Flags = blClipCalcXYFlags(p1, _clipBoxD);
+      uint32_t p2Flags = blClipCalcXYFlags(p2, _clipBoxD);
+      uint32_t commonFlags = p0Flags & p1Flags & p2Flags;
+
+      // Fast reject.
+      if (commonFlags) {
+        uint32_t end = 0;
+
+        if (commonFlags & kClipFlagY0) {
+          // CLIPPED OUT: Above top (fast).
+          for (;;) {
+            p0 = p2;
+            end = !source.isConicTo();
+            if (end) break;
+
+            source.nextConicTo(p1, p2);
+            if (!((p1.y <= _clipBoxD.y0) & (p2.y <= _clipBoxD.y0)))
+              break;
+          }
+        }
+        else if (commonFlags & kClipFlagY1) {
+          // CLIPPED OUT: Below bottom (fast).
+          for (;;) {
+            p0 = p2;
+            end = !source.isConicTo();
+            if (end) break;
+
+            source.nextConicTo(p1, p2);
+            if (!((p1.y >= _clipBoxD.y1) & (p2.y >= _clipBoxD.y1)))
+              break;
+          }
+        }
+        else {
+          // CLIPPED OUT: Before left or after right (border-line required).
+          double y0 = blClamp(p0.y, _clipBoxD.y0, _clipBoxD.y1);
+
+          if (commonFlags & kClipFlagX0) {
+            for (;;) {
+              p0 = p2;
+              end = !source.isConicTo();
+              if (end) break;
+
+              source.nextConicTo(p1, p2);
+              if (!((p1.x <= _clipBoxD.x0) & (p2.x <= _clipBoxD.x0)))
+                break;
+            }
+
+            double y1 = blClamp(p0.y, _clipBoxD.y0, _clipBoxD.y1);
+            BL_PROPAGATE(accumulateLeftBorder(y0, y1));
+          }
+          else {
+            for (;;) {
+              p0 = p2;
+              end = !source.isConicTo();
+              if (end) break;
+
+              source.nextConicTo(p1, p2);
+              if (!((p1.x >= _clipBoxD.x1) & (p2.x >= _clipBoxD.x1)))
+                break;
+            }
+
+            double y1 = blClamp(p0.y, _clipBoxD.y0, _clipBoxD.y1);
+            BL_PROPAGATE(accumulateRightBorder(y0, y1));
+          }
+        }
+
+        p0Flags = blClipCalcXYFlags(p0, _clipBoxD);
+        if (end)
+          return BL_SUCCESS;
+        continue;
+      }
+
+      spline[0] = p0;
+
+      BLPoint* splinePtr = spline;
+      BLPoint* splineEnd = BLGeometry::splitConicToSpline<BLGeometry::SplitQuadOptions::kExtremas>(spline, splinePtr);
+
+      if (splineEnd == splinePtr)
+        splineEnd = splinePtr + 2;
+
+      Appender appender(*this);
+      FlattenMonoConic monoCurve(state.flattenData, _flattenToleranceSq);
+
+      uint32_t anyFlags = p0Flags | p1Flags | p2Flags;
+      if (anyFlags) {
+        // One or more quad may need clipping.
+        do {
+          uint32_t signBit = splinePtr[0].y > splinePtr[2].y;
+          BL_PROPAGATE(
+            flattenUnsafeMonoCurve<FlattenMonoConic>(monoCurve, appender, splinePtr, signBit)
+          );
+        } while ((splinePtr += 2) != splineEnd);
+
+        p0 = splineEnd[0];
+        p0Flags = p2Flags;
+      }
+      else {
+        // No clipping - optimized fast-path.
+        do {
+          uint32_t signBit = splinePtr[0].y > splinePtr[2].y;
+          BL_PROPAGATE(
+            flattenSafeMonoCurve<FlattenMonoConic>(monoCurve, appender, splinePtr, signBit)
+          );
+        } while ((splinePtr += 2) != splineEnd);
+
+        p0 = splineEnd[0];
+      }
+
+      if (!source.maybeNextConicTo(p1, p2))
         return BL_SUCCESS;
     }
   }

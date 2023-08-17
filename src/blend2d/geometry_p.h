@@ -810,6 +810,144 @@ static BL_INLINE BLResult approximateCubicWithQuads(const BLPoint p[4], double s
 
 //! \}
 
+//! \name Conic Bézier Curve Operations
+//!
+//! Conic Bézier Curve Math
+//! -----------------------
+//!
+//! \{
+
+template<SplitQuadOptions Options>
+static BL_INLINE BLPoint* splitConicToSpline(const BLPoint p[3], BLPoint* out) noexcept {
+  static_assert(uint32_t(Options) != 0, "Split options cannot be empty");
+
+  // 2 extremas and 1 terminating `1.0` value.
+  constexpr uint32_t kMaxTCount = 3;
+  BLFixedArray<double, kMaxTCount> ts;
+
+  BLPoint Pa, Pb, Pc;
+  getQuadCoefficients(p, Pa, Pb, Pc);
+
+  // Find extremas.
+  if ((Options & SplitQuadOptions::kExtremas) == SplitQuadOptions::kExtremas) {
+    BLPoint extremaTs = (p[0] - p[1]) / (p[0] - p[1] * 2.0 + p[2]);
+    double extremaT0 = blMin(extremaTs.x, extremaTs.y);
+    double extremaT1 = blMax(extremaTs.x, extremaTs.y);
+
+    ts.appendIf(extremaT0, (extremaT0 > 0.0) & (extremaT0 < 1.0));
+    ts.appendIf(extremaT1, (extremaT1 > blMax(extremaT0, 0.0)) & (extremaT1 < 1.0));
+  }
+  else if (blTestFlag(Options, SplitQuadOptions::kXExtrema)) {
+    double extremaTx = (p[0].x - p[1].x) / (p[0].x - p[1].x * 2.0 + p[2].x);
+    ts.appendIf(extremaTx, (extremaTx > 0.0) & (extremaTx < 1.0));
+  }
+  else if (blTestFlag(Options, SplitQuadOptions::kYExtrema)) {
+    double extremaTy = (p[0].y - p[1].y) / (p[0].y - p[1].y * 2.0 + p[2].y);
+    ts.appendIf(extremaTy, (extremaTy > 0.0) & (extremaTy < 1.0));
+  }
+
+  // Split the curve into a spline, if necessary.
+  if (!ts.empty()) {
+    // The last T we want is at 1.0.
+    ts.append(1.0);
+
+    out[0] = p[0];
+    BLPoint last = p[2];
+
+    size_t i = 0;
+    double tCut = 0.0;
+
+    do {
+      double tVal = ts[i];
+      BL_ASSERT(tVal >  0.0);
+      BL_ASSERT(tVal <= 1.0);
+
+      double dt = (tVal - tCut) * 0.5;
+
+      // Derivative: 2a*t + b.
+      BLPoint cp = (Pa * (tVal * 2.0) + Pb) * dt;
+      BLPoint tp = (Pa * tVal + Pb) * tVal + Pc;
+
+      // The last point must be exact.
+      if (++i == ts.size())
+        tp = last;
+
+      out[1].reset(tp - cp);
+      out[2].reset(tp);
+      out += 2;
+
+      tCut = tVal;
+    } while (i != ts.size());
+  }
+
+  return out;
+}
+
+
+static BL_INLINE void getConicDerivativeCoefficients(const BLPoint p[4], BLPoint& a, BLPoint& b, BLPoint& c) noexcept {
+  BLPoint p0 = p[0];
+  BLPoint p1 = p[1];
+  double w = p[2].x;
+  BLPoint p2 = p[3];
+
+  // Note: These coefficients are missing magnitude (of the denominator)
+  BLPoint v1 = p1 - p0;
+  BLPoint v2 = p2 - p0;
+
+  a = 2 * (w - 1) * v2;
+  b = -4 * w * v1 + 2 * v2;
+  c = 2 * w * v1;
+}
+
+static BL_INLINE void getProjectivePoints(const BLPoint p[4], BLPoint out[6]) noexcept {
+  BLPoint p0 = p[0];
+  BLPoint p1 = p[1];
+  double w = p[2].x;
+  BLPoint p2 = p[3];
+
+  out[0] = BLPoint(p0.x, 1);
+  out[1] = BLPoint(w * p1.x,  w);
+  out[2] = BLPoint(p2.x,  1);
+
+  out[3] = BLPoint(p0.y, 1);
+  out[4] = BLPoint(w * p1.y, w);
+  out[5] = BLPoint(p2.y, 1);
+}
+
+static BL_INLINE BLPoint evalConicPrecise(const BLPoint p[4], const BLPoint& t) noexcept {
+  BLPoint pp[6];
+  getProjectivePoints(p, pp);
+
+  BLPoint ppx01(blLerp(pp[0], pp[1], t.x));
+  BLPoint ppy01(blLerp(pp[3], pp[4], t.y));
+
+  BLPoint ppx12(blLerp(pp[1], pp[2], t.x));
+  BLPoint ppy12(blLerp(pp[4], pp[5], t.y));
+
+  BLPoint ppx012(blLerp(ppx01, ppx12, t.x));
+  BLPoint ppy012(blLerp(ppy01, ppy12, t.y));
+
+  return BLPoint(ppx012.x / ppx012.y, ppy012.x / ppy012.y);
+}
+
+
+static BL_INLINE void getConicExtremaPoints(const BLPoint p[4], BLPoint out[2]) noexcept {
+  BLPoint a, b, c;
+  getConicDerivativeCoefficients(p, a, b, c);
+
+  BLPoint t[2];
+  blSimplifiedQuadRoots(t, a, b, c);
+
+  t[0] = blClamp(t[0], 0.0, 1.0);
+  t[1] = blClamp(t[1], 0.0, 1.0);
+
+  out[0] = evalConicPrecise(p, t[0]);
+  out[1] = evalConicPrecise(p, t[1]);
+}
+
+
+//! \}
+
 } // {BLGeometry}
 
 //! \}

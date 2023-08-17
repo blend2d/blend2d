@@ -656,7 +656,11 @@ public:
           const BLPoint& ctrl = vtxData[-3];
 
           if (!(ctrl.x >= boundingBox.x0 && ctrl.y >= boundingBox.y0 && ctrl.x <= boundingBox.x1 && ctrl.y <= boundingBox.y1)) {
-            // TODO [Conic]: Conic bounding box.
+            BLPoint extrema[2];
+            BLGeometry::getConicExtremaPoints(vtxData - 4, extrema);
+            BLGeometry::bound(boundingBox, extrema[0]);
+            BLGeometry::bound(boundingBox, extrema[1]);
+            BLGeometry::bound(controlBox, vtxData[-2]);
           }
           break;
         }
