@@ -109,26 +109,26 @@ SolidLoop:
           aPos += 1u << (kShift - 1);
 
           do {
-            uint32_t _a, _g;
-
             aPos += aInc;
             rPos += rInc;
             gPos += gInc;
             bPos += bInc;
 
+            // `cp` contains red/blue components combined.
+            uint32_t ca, cg;
             cp = ((bPos & kMask) >> 23) +
                  ((rPos & kMask) >>  7);
-            _a = ((aPos & kMask) >> 23);
-            _g = ((gPos & kMask) >> 15);
+            ca = ((aPos & kMask) >> 23);
+            cg = ((gPos & kMask) >> 23);
 
-            cp *= _a;
-            _g *= _a;
-            _a <<= 24;
+            cp = (cp * ca) + 0x00800080u;
+            cg = (cg * ca) + 0x00000080u;
+            ca <<= 24;
 
-            cp += 0x00800080u;
-            _g += 0x00008000u;
+            cp = ((cp + ((cp & 0xFF00FF00u) >> 8)) & 0xFF00FF00u) >> 8;
+            cg = ((cg + ((cg & 0xFF00FF00u) >> 8)) & 0xFF00FF00u);
 
-            cp += _a + _g;
+            cp += cg + ca;
 
             dSpanPtr[0] = cp;
             dSpanPtr++;
