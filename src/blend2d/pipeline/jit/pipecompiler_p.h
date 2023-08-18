@@ -1876,7 +1876,7 @@ public:
   inline void v_load_ivec_array(VecArray& dst, const x86::Mem& src, Alignment alignment) noexcept {
     x86::Mem m = src;
     for (size_t i = 0; i < dst.size(); i++) {
-      v_load_ivec(dst[0], m, alignment);
+      v_load_ivec(dst[i], m, alignment);
       m.addOffsetLo32(dst[i].size());
     }
   }
@@ -1884,7 +1884,7 @@ public:
   inline void v_store_ivec_array(const x86::Mem& dst, const VecArray& src, Alignment alignment) noexcept {
     x86::Mem m = dst;
     for (size_t i = 0; i < src.size(); i++) {
-      v_store_ivec(m, src[0], alignment);
+      v_store_ivec(m, src[i], alignment);
       m.addOffsetLo32(src[i].size());
     }
   }

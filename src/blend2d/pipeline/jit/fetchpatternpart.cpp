@@ -167,12 +167,13 @@ void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
         pc->v_store_i64(f->vExtendData.cloneAdjusted(kRewindDataOffset), vRewindDataVec);
       }
       else {
+        constexpr int kRewindDataOffset = 32;
+
         if (pc->hasAVX2())
           pc->newVecArray(vStrideStopVec, 1, SimdWidth::k256, "f.vStrideStopVec");
         else
           pc->newVecArray(vStrideStopVec, 2, SimdWidth::k128, "f.vStrideStopVec");
 
-        constexpr int kRewindDataOffset = 32;
         pc->v_loadu_i128(vRewindDataVec, x86::ptr(pc->_fetchData, REL_PATTERN(simple.vExtendData) + kRewindDataOffset));
         pc->v_storea_i128(f->vExtendData.cloneAdjusted(kRewindDataOffset), vRewindDataVec);
       }
