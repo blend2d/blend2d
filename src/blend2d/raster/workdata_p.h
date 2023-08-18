@@ -86,8 +86,14 @@ public:
   BL_INLINE_NODEBUG uint32_t bandHeight() const noexcept { return _bandHeight; }
   BL_INLINE_NODEBUG uint32_t bandCount() const noexcept { return edgeStorage.bandCount(); }
 
-  BL_INLINE_NODEBUG uint32_t accumulatedErrorFlags() const noexcept { return _accumulatedErrorFlags; }
+  BL_INLINE_NODEBUG void accumulateErrorFlag(BLContextErrorFlags flag) noexcept { _accumulatedErrorFlags |= uint32_t(flag); }
+
+  BL_INLINE_NODEBUG BLContextErrorFlags accumulatedErrorFlags() const noexcept { return BLContextErrorFlags(_accumulatedErrorFlags); }
   BL_INLINE_NODEBUG void cleanAccumulatedErrorFlags() noexcept { _accumulatedErrorFlags = 0; }
+
+  BL_INLINE void avoidCacheLineSharing() noexcept {
+    workZone.align(BL_CACHE_LINE_SIZE);
+  }
 
   BL_INLINE void startOver() noexcept {
     workZone.clear();

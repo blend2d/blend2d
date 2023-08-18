@@ -62,6 +62,8 @@ static constexpr const uint32_t BL_RASTER_CONTEXT_MAXIMUM_EMBEDDED_TEXT_SIZE = 2
 
 static constexpr const uint32_t BL_RASTER_CONTEXT_DEFAULT_SAVED_STATE_LIMIT = 4096;
 
+static constexpr const uint32_t BL_RASTER_CONTEXT_DEFAULT_COMMAND_QUEUE_LIMIT = 10240;
+
 //! Raster rendering context implementation (software accelerated).
 class BLRasterContextImpl : public BLContextImpl {
 public:

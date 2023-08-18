@@ -229,6 +229,8 @@ public:
   //! Initializes the worker manager with the specified number of threads.
   BLResult init(BLRasterContextImpl* ctxI, const BLContextCreateInfo* createInfo) noexcept;
 
+  BLResult initWorkMemory(size_t zeroedMemorySize) noexcept;
+
   BL_INLINE void initFirstBatch() noexcept {
     RenderBatch* batch = _allocator.newT<RenderBatch>();
 
@@ -296,6 +298,10 @@ public:
     if (BL_UNLIKELY(!p))
       return nullptr;
     return new(BLInternal::PlacementNew{p}) RenderCommandQueue();
+  }
+
+  BL_INLINE void beforeGrowCommandQueue() noexcept {
+    _commandQueueCount += kRenderQueueCapacity;
   }
 
   BL_INLINE BLResult _growCommandQueue() noexcept {
@@ -398,6 +404,8 @@ public:
 
   BL_INLINE_NODEBUG RenderBatch* currentBatch() const noexcept { return _currentBatch; }
   BL_INLINE_NODEBUG uint32_t currentBatchId() const noexcept { return _batchId; }
+
+  BL_INLINE_NODEBUG bool isBatchFull() const noexcept { return _commandQueueCount >= _commandQueueLimit; }
 
   BL_INLINE void finalizeBatch() noexcept {
     RenderJobQueue* lastJobQueue = _currentBatch->_jobList.last();

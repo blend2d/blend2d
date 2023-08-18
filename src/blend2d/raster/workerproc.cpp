@@ -57,6 +57,7 @@ static BL_NOINLINE void processJobs(WorkData* workData) noexcept {
     JobProc::processJob(workData, job);
   }
 
+  workData->avoidCacheLineSharing();
   batch->_synchronization->waitForJobsToFinish();
 }
 
@@ -189,6 +190,12 @@ void processWorkData(WorkData* workData) noexcept {
   // is basically only guaranteed when we enter the proc again (or by the rendering context once it finishes).
   if (!workData->isSync())
     workData->startOver();
+
+  // Fix the alignment of the arena allocator in case it's currently not aligned - this prevents possible sharing of
+  // a cache line that was used for something that could be used by all worker threads with a possible allocation
+  // that is only intended to be used by the worker - for a memory region that the worker can write to frequently
+  // (like active edges during rasterization).
+  workData->avoidCacheLineSharing();
 
   // Pass 1 - Process jobs.
   //

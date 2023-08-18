@@ -292,9 +292,7 @@ static bool fillAnalytic(ProcData& procData, const RenderCommand& command, bool 
   size_t bitsSize = requiredHeight * bitStride;
 
   size_t cellsStart = BLIntOps::alignUp(bitsStart + bitsSize, cellAlignment);
-  size_t cellsSize = requiredHeight * cellStride;
-
-  BL_PROPAGATE(workData.zeroBuffer.ensure(cellsStart + cellsSize));
+  BL_ASSERT(workData.zeroBuffer.size >= cellsStart + requiredHeight * cellStride);
 
   AnalyticCellStorage cellStorage;
   cellStorage.init(
@@ -377,8 +375,11 @@ SaveState:
   if (edges) {
     if (!pooled) {
       pooled = static_cast<AnalyticActiveEdge<int>*>(workZone->alloc(sizeof(AnalyticActiveEdge<int>)));
-      if (BL_UNLIKELY(!pooled))
-        return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+      if (BL_UNLIKELY(!pooled)) {
+        // Failed to allocate memory for the current edge.
+        procData.workData()->accumulateErrorFlag(BL_CONTEXT_ERROR_FLAG_OUT_OF_MEMORY);
+        return true;
+      }
       pooled->next = nullptr;
     }
 

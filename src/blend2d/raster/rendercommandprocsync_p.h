@@ -110,9 +110,7 @@ static BL_NOINLINE BLResult fillAnalytic(WorkData& workData, const BLPipeline::D
   size_t bitsSize = requiredHeight * bitStride;
 
   size_t cellsStart = BLIntOps::alignUp(bitsStart + bitsSize, cellAlignment);
-  size_t cellsSize = requiredHeight * cellStride;
-
-  BL_PROPAGATE(workData.zeroBuffer.ensure(cellsStart + cellsSize));
+  BL_ASSERT(workData.zeroBuffer.size >= cellsStart + requiredHeight * cellStride);
 
   AnalyticCellStorage cellStorage;
   cellStorage.init(

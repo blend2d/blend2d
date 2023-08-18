@@ -17,7 +17,7 @@ namespace BLRasterEngine {
 BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInfo* createInfo) noexcept {
   uint32_t initFlags = createInfo->flags;
   uint32_t threadCount = createInfo->threadCount;
-  uint32_t commandQueueLimit = createInfo->commandQueueLimit;
+  uint32_t commandQueueLimit = BLIntOps::alignUp(createInfo->commandQueueLimit, kRenderQueueCapacity);
 
   BL_ASSERT(!isActive());
   BL_ASSERT(threadCount > 0);
@@ -28,6 +28,10 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInf
   // We must enforce some hard limit here...
   if (threadCount > BL_RUNTIME_MAX_THREAD_COUNT)
     threadCount = BL_RUNTIME_MAX_THREAD_COUNT;
+
+  // If the command queue limit is not specified, use the default.
+  if (commandQueueLimit == 0)
+    commandQueueLimit = BL_RASTER_CONTEXT_DEFAULT_COMMAND_QUEUE_LIMIT;
 
   // We count the user thread as a worker thread as well. In this case this one doesn't need a separate workData
   // as it can use the 'syncWorkData' owned by the rendering context.
@@ -121,6 +125,14 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInf
   _commandQueueLimit = commandQueueLimit;
 
   initFirstBatch();
+  return BL_SUCCESS;
+}
+
+BLResult WorkerManager::initWorkMemory(size_t zeroedMemorySize) noexcept {
+  uint32_t n = threadCount();
+  for (uint32_t i = 0; i < n; i++) {
+    BL_PROPAGATE(_workDataStorage[i]->zeroBuffer.ensure(zeroedMemorySize));
+  }
   return BL_SUCCESS;
 }
 

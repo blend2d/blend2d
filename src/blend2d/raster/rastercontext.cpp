@@ -996,6 +996,87 @@ Use64Bit:
   }
 }
 
+// BLRasterEngine - ContextImpl - Internals - Async - Render Batch
+// ===============================================================
+
+static BL_INLINE void releaseBatchFetchData(BLRasterContextImpl* ctxI, RenderCommandQueue* queue) noexcept {
+  while (queue) {
+    RenderCommand* commandData = queue->_data;
+    for (size_t i = 0; i < queue->_fetchDataMarks.sizeInWords(); i++) {
+      BLBitWord bits = queue->_fetchDataMarks.data[i];
+      BLParametrizedBitOps<BLBitOrder::kLSB, BLBitWord>::BitIterator it(bits);
+
+      while (it.hasNext()) {
+        size_t bitIndex = it.next();
+        RenderCommand& command = commandData[bitIndex];
+
+        if (command.retainsStyleFetchData())
+          command._source.fetchData->release(ctxI);
+
+        if (command.retainsMaskImageData())
+          BLImagePrivate::releaseImpl<BLObjectPrivate::RCMode::kMaybe>(command._payload.boxMaskA.maskImageI.ptr);
+      }
+      commandData += BLIntOps::bitSizeOf<BLBitWord>();
+    }
+    queue = queue->next();
+  }
+}
+
+static BL_NOINLINE BLResult flushRenderBatch(BLRasterContextImpl* ctxI) noexcept {
+  WorkerManager& mgr = ctxI->workerMgr();
+  if (mgr.hasPendingCommands()) {
+    mgr.finalizeBatch();
+
+    WorkerSynchronization& synchronization = mgr._synchronization;
+    RenderBatch* batch = mgr.currentBatch();
+    uint32_t threadCount = mgr.threadCount();
+
+    synchronization.beforeStart(threadCount, batch->jobCount() > 0);
+    batch->_synchronization = &synchronization;
+
+    for (uint32_t i = 0; i < threadCount; i++) {
+      WorkData* workData = mgr._workDataStorage[i];
+      workData->batch = batch;
+      workData->initContextData(ctxI->dstData, ctxI->syncWorkData.ctxData.pixelOrigin);
+    }
+
+    // Just to make sure that all the changes are visible to the threads.
+    blAtomicThreadFence();
+
+    for (uint32_t i = 0; i < threadCount; i++) {
+      mgr._workerThreads[i]->run(WorkerProc::workerThreadEntry, mgr._workDataStorage[i]);
+    }
+
+    // User thread acts as a worker too.
+    {
+      WorkData* workData = &ctxI->syncWorkData;
+      SyncWorkState workState;
+
+      workState.save(*workData);
+      workData->batch = batch;
+      WorkerProc::processWorkData(workData);
+      workState.restore(*workData);
+    }
+
+    if (threadCount) {
+      mgr._synchronization.waitForThreadsToFinish();
+      ctxI->syncWorkData._accumulatedErrorFlags |= blAtomicFetchRelaxed(&batch->_accumulatedErrorFlags);
+    }
+
+    releaseBatchFetchData(ctxI, batch->_commandList.first());
+
+    mgr._allocator.clear();
+    mgr.initFirstBatch();
+
+    ctxI->syncWorkData.startOver();
+    ctxI->contextFlags &= ~ContextFlags::kSharedStateAllFlags;
+    ctxI->sharedFillState = nullptr;
+    ctxI->sharedStrokeState = nullptr;
+  }
+
+  return BL_SUCCESS;
+}
+
 // BLRasterEngine - ContextImpl - Internals - Render Call - Data Allocation
 // ========================================================================
 
@@ -1099,17 +1180,29 @@ static BL_NOINLINE BLResult handleQueuesFullOrPoolsExhausted(BLRasterContextImpl
 
   WorkerManager& mgr = ctxI->workerMgr();
 
-  if (mgr.isCommandQueueFull())
+  if (mgr.isCommandQueueFull()) {
+    mgr.beforeGrowCommandQueue();
+    if (mgr.isBatchFull()) {
+      BL_PROPAGATE(flushRenderBatch(ctxI));
+      // NOTE: After a successful flush the queues and pools should already be allocated.
+      ctxI->contextFlags &= ~ContextFlags::kMTFullOrExhausted;
+      return BL_SUCCESS;
+    }
+
     BL_PROPAGATE(mgr._growCommandQueue());
+  }
 
-  if (mgr.isJobQueueFull())
+  if (mgr.isJobQueueFull()) {
     BL_PROPAGATE(mgr._growJobQueue());
+  }
 
-  if (mgr.isFetchDataPoolExhausted())
+  if (mgr.isFetchDataPoolExhausted()) {
     BL_PROPAGATE(mgr._preallocateFetchDataPool());
+  }
 
-  if (mgr.isSharedDataPoolExhausted())
+  if (mgr.isSharedDataPoolExhausted()) {
     BL_PROPAGATE(mgr._preallocateSharedDataPool());
+  }
 
   ctxI->contextFlags &= ~ContextFlags::kMTFullOrExhausted;
   return BL_SUCCESS;
@@ -1387,87 +1480,6 @@ BL_INLINE_NODEBUG BLResult finalizeExplicitOp<kAsync>(BLRasterContextImpl* ctxI,
     advanceFetchPtr(ctxI);
   }
   return result;
-}
-
-// BLRasterEngine - ContextImpl - Internals - Async
-// ================================================
-
-static BL_INLINE void releaseBatchFetchData(BLRasterContextImpl* ctxI, RenderCommandQueue* queue) noexcept {
-  while (queue) {
-    RenderCommand* commandData = queue->_data;
-    for (size_t i = 0; i < queue->_fetchDataMarks.sizeInWords(); i++) {
-      BLBitWord bits = queue->_fetchDataMarks.data[i];
-      BLParametrizedBitOps<BLBitOrder::kLSB, BLBitWord>::BitIterator it(bits);
-
-      while (it.hasNext()) {
-        size_t bitIndex = it.next();
-        RenderCommand& command = commandData[bitIndex];
-
-        if (command.retainsStyleFetchData())
-          command._source.fetchData->release(ctxI);
-
-        if (command.retainsMaskImageData())
-          BLImagePrivate::releaseImpl<BLObjectPrivate::RCMode::kMaybe>(command._payload.boxMaskA.maskImageI.ptr);
-      }
-      commandData += BLIntOps::bitSizeOf<BLBitWord>();
-    }
-    queue = queue->next();
-  }
-}
-
-static BL_NOINLINE BLResult flushRenderBatch(BLRasterContextImpl* ctxI) noexcept {
-  WorkerManager& mgr = ctxI->workerMgr();
-  if (mgr.hasPendingCommands()) {
-    mgr.finalizeBatch();
-
-    WorkerSynchronization& synchronization = mgr._synchronization;
-    RenderBatch* batch = mgr.currentBatch();
-    uint32_t threadCount = mgr.threadCount();
-
-    synchronization.beforeStart(threadCount, batch->jobCount() > 0);
-    batch->_synchronization = &synchronization;
-
-    for (uint32_t i = 0; i < threadCount; i++) {
-      WorkData* workData = mgr._workDataStorage[i];
-      workData->batch = batch;
-      workData->initContextData(ctxI->dstData, ctxI->syncWorkData.ctxData.pixelOrigin);
-    }
-
-    // Just to make sure that all the changes are visible to the threads.
-    blAtomicThreadFence();
-
-    for (uint32_t i = 0; i < threadCount; i++) {
-      mgr._workerThreads[i]->run(WorkerProc::workerThreadEntry, mgr._workDataStorage[i]);
-    }
-
-    // User thread acts as a worker too.
-    {
-      WorkData* workData = &ctxI->syncWorkData;
-      SyncWorkState workState;
-
-      workState.save(*workData);
-      workData->batch = batch;
-      WorkerProc::processWorkData(workData);
-      workState.restore(*workData);
-    }
-
-    if (threadCount) {
-      mgr._synchronization.waitForThreadsToFinish();
-      ctxI->syncWorkData._accumulatedErrorFlags |= blAtomicFetchRelaxed(&batch->_accumulatedErrorFlags);
-    }
-
-    releaseBatchFetchData(ctxI, batch->_commandList.first());
-
-    mgr._allocator.clear();
-    mgr.initFirstBatch();
-
-    ctxI->syncWorkData.startOver();
-    ctxI->contextFlags &= ~ContextFlags::kSharedStateAllFlags;
-    ctxI->sharedFillState = nullptr;
-    ctxI->sharedStrokeState = nullptr;
-  }
-
-  return BL_SUCCESS;
 }
 
 // BLRasterEngine - ContextImpl - Frontend - Flush
@@ -4122,7 +4134,7 @@ static BLResult BL_CDECL blitScaledImageIImpl(BLContextImpl* baseImpl, const BLR
 // BLRasterEngine - ContextImpl - Attach & Detach
 // ==============================================
 
-static uint32_t calculateBandHeight(uint32_t format, const BLSizeI& size, const BLContextCreateInfo* options) noexcept {
+static BL_INLINE uint32_t calculateBandHeight(uint32_t format, const BLSizeI& size, const BLContextCreateInfo* options) noexcept {
   // TODO: [Rendering Context] We should use the format and calculate how many bytes are used by raster storage per band.
   blUnused(format);
 
@@ -4163,6 +4175,16 @@ static uint32_t calculateBandHeight(uint32_t format, const BLSizeI& size, const 
   return bandHeight;
 }
 
+static BL_INLINE size_t calculateZeroedMemorySize(uint32_t width, uint32_t height) noexcept {
+  size_t alignedWidth = BLIntOps::alignUp(size_t(width + 1u + BL_PIPE_PIXELS_PER_ONE_BIT), 16);
+
+  size_t bitStride = BLIntOps::wordCountFromBitCount<BLBitWord>(alignedWidth / BL_PIPE_PIXELS_PER_ONE_BIT) * sizeof(BLBitWord);
+  size_t cellStride = alignedWidth * sizeof(uint32_t);
+
+  size_t minimumSize = bitStride * size_t(height) + cellStride * size_t(height);
+  return BLIntOps::alignUp(minimumSize + sizeof(BLBitWord) * 16, BL_CACHE_LINE_SIZE);
+}
+
 static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLContextCreateInfo* options) noexcept {
   BL_ASSERT(image != nullptr);
   BL_ASSERT(options != nullptr);
@@ -4175,6 +4197,8 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
 
   uint32_t bandHeight = calculateBandHeight(format, size, options);
   uint32_t bandCount = (uint32_t(size.h) + bandHeight - 1) >> BLIntOps::ctz(bandHeight);
+
+  size_t zeroedMemorySize = calculateZeroedMemorySize(uint32_t(size.w), bandHeight);
 
   // Initialization.
   BLResult result = BL_SUCCESS;
@@ -4247,7 +4271,18 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
       break;
     }
 
-    // Step 4: Make the destination image mutable.
+    // Step 4: Allocate zeroed memory for the user thread and all worker threads.
+    result = ctxI->syncWorkData.zeroBuffer.ensure(zeroedMemorySize);
+    if (result != BL_SUCCESS)
+      break;
+
+    if (!ctxI->isSync()) {
+      result = ctxI->workerMgr->initWorkMemory(zeroedMemorySize);
+      if (result != BL_SUCCESS)
+        break;
+    }
+
+    // Step 5: Make the destination image mutable.
     result = blImageMakeMutable(image, &ctxI->dstData);
     if (result != BL_SUCCESS)
       break;
@@ -4255,9 +4290,8 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
 
   // Handle a possible initialization failure.
   if (result != BL_SUCCESS) {
-    // Switch back to a synchronous rendering mode if asynchronous rendering
-    // was already setup. We have already acquired worker threads that must
-    // be released now.
+    // Switch back to a synchronous rendering mode if asynchronous rendering was already setup.
+    // We have already acquired worker threads that must be released now.
     if (ctxI->renderingMode == uint8_t(RenderingMode::kAsync)) {
       ctxI->workerMgr->reset();
       ctxI->renderingMode = uint8_t(RenderingMode::kSync);
@@ -4271,8 +4305,6 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
     }
 
     baseZone.restoreState(zoneState);
-    // TODO: [Rendering Context]
-    // ctxI->jobZone.clear();
     return result;
   }
 
