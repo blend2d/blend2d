@@ -2638,7 +2638,7 @@ BL_INLINE BLResult fillClippedBoxA<kSync>(BLRasterContextImpl* ctxI, DispatchInf
   di.addFillType(BLPipeline::FillType::kBoxA);
   BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, &dispatchData));
 
-  return CommandProcSync::fillBoxA(ctxI->syncWorkData, dispatchData, di.alpha, boxA, &static_cast<RenderFetchData*>(ds.fetchData)->pipelineData);
+  return CommandProcSync::fillBoxA(ctxI->syncWorkData, dispatchData, di.alpha, boxA, ds.fetchData->getPipelineData());
 }
 
 template<>
@@ -2662,7 +2662,7 @@ BL_INLINE BLResult fillClippedBoxU<kSync>(BLRasterContextImpl* ctxI, DispatchInf
   di.addFillType(BLPipeline::FillType::kMask);
   BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, &dispatchData));
 
-  return CommandProcSync::fillBoxU(ctxI->syncWorkData, dispatchData, di.alpha, boxU, &static_cast<RenderFetchData*>(ds.fetchData)->pipelineData);
+  return CommandProcSync::fillBoxU(ctxI->syncWorkData, dispatchData, di.alpha, boxU, ds.fetchData->getPipelineData());
 }
 
 template<>
@@ -2740,7 +2740,7 @@ BL_NOINLINE BLResult fillClippedEdges<kSync>(BLRasterContextImpl* ctxI, Dispatch
     return result;
   }
 
-  return CommandProcSync::fillAnalytic(workData, dispatchData, di.alpha, &edgeStorage, fillRule, &static_cast<RenderFetchData*>(ds.fetchData)->pipelineData);
+  return CommandProcSync::fillAnalytic(workData, dispatchData, di.alpha, &edgeStorage, fillRule, ds.fetchData->getPipelineData());
 }
 
 template<>
@@ -3140,7 +3140,7 @@ BL_NOINLINE BLResult fillClippedBoxMaskedA<kSync>(
   payload.maskImageI.ptr = BLImagePrivate::getImpl(mask);
   payload.maskOffsetI = maskOffsetI;
   payload.boxI = boxA;
-  return CommandProcSync::fillBoxMaskedA(ctxI->syncWorkData, dispatchData, di.alpha, payload, &static_cast<RenderFetchData*>(ds.fetchData)->pipelineData);
+  return CommandProcSync::fillBoxMaskedA(ctxI->syncWorkData, dispatchData, di.alpha, payload, ds.fetchData->getPipelineData());
 }
 
 template<>

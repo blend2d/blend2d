@@ -77,6 +77,10 @@ struct RenderFetchDataHeader {
 
   BL_INLINE_NODEBUG void retain(uint32_t n = 1) noexcept { refCount += n; }
 
+  BL_INLINE_NODEBUG const void* getPipelineData() const noexcept {
+    return reinterpret_cast<const uint8_t*>(this) + sizeof(RenderFetchDataHeader);
+  }
+
   //! \}
 };
 
