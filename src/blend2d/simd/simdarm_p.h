@@ -829,7 +829,7 @@ BL_INLINE_NODEBUG uint32x4_t simd_swizzle_u32(const uint32x4_t& a) noexcept {
   constexpr uint8_t k2222 = simd_shuffle_predicate_4x2b(2, 2, 2, 2);
   constexpr uint8_t k2323 = simd_shuffle_predicate_4x2b(2, 3, 2, 3);
   constexpr uint8_t k3210 = simd_shuffle_predicate_4x2b(3, 2, 1, 0);
-  constexpr uint8_t k3210 = simd_shuffle_predicate_4x2b(3, 2, 3, 2);
+  constexpr uint8_t k3232 = simd_shuffle_predicate_4x2b(3, 2, 3, 2);
   constexpr uint8_t k3333 = simd_shuffle_predicate_4x2b(3, 3, 3, 3);
 
   if BL_CONSTEXPR (kPredicate == k0000) {
@@ -844,7 +844,7 @@ BL_INLINE_NODEBUG uint32x4_t simd_swizzle_u32(const uint32x4_t& a) noexcept {
     return vcombine_u32(t, t);
   }
   else if BL_CONSTEXPR (kPredicate == k1023) {
-    return v_swap_u64(a);
+    return vrev64q_u32(a);
   }
   else if BL_CONSTEXPR (kPredicate == k1111) {
     return simd_dup_lane_u32<1>(a);
@@ -878,10 +878,11 @@ BL_INLINE_NODEBUG uint64x2_t simd_swizzle_u64(const uint64x2_t& a) noexcept {
   return __builtin_shufflevector(a, a, A, B);
 #else
   constexpr uint8_t kPredicate = simd_shuffle_predicate_2x1b(B, A);
-  constexpr uint8_t k00 = simd_shuffle_predicate_4x2b(0, 0);
-  constexpr uint8_t k01 = simd_shuffle_predicate_4x2b(0, 1);
-  constexpr uint8_t k10 = simd_shuffle_predicate_4x2b(1, 0);
-  constexpr uint8_t k11 = simd_shuffle_predicate_4x2b(1, 1);
+  constexpr uint8_t k00 = simd_shuffle_predicate_2x1b(0, 0);
+  constexpr uint8_t k01 = simd_shuffle_predicate_2x1b(0, 1);
+  constexpr uint8_t k10 = simd_shuffle_predicate_2x1b(1, 0);
+  // (not used in code)
+  // constexpr uint8_t k11 = simd_shuffle_predicate_2x1b(1, 1);
 
   if BL_CONSTEXPR (kPredicate == k00) {
     return simd_dup_lane_u64<0>(a);
@@ -1479,7 +1480,7 @@ BL_INLINE_NODEBUG int64x2_t simd_cmp_lt_i64(const int64x2_t& a, const int64x2_t&
 BL_INLINE_NODEBUG uint64x2_t simd_cmp_lt_u64(const uint64x2_t& a, const uint64x2_t& b) noexcept { return simd_u64(vcltq_u64(a, b)); }
 
 BL_INLINE_NODEBUG int64x2_t simd_cmp_le_i64(const int64x2_t& a, const int64x2_t& b) noexcept { return simd_i64(vcleq_s64(a, b)); }
-BL_INLINE_NODEBUG uint64x2_t simd_cmp_le_u64(const uint64x2_t& a, const uint64x2_t& b) noexcept { return simd_i64(vcleq_u64(a, b)); }
+BL_INLINE_NODEBUG uint64x2_t simd_cmp_le_u64(const uint64x2_t& a, const uint64x2_t& b) noexcept { return simd_u64(vcleq_u64(a, b)); }
 #else
 BL_INLINE_NODEBUG uint64x2_t simd_test_nz_u64(const uint64x2_t& a) noexcept {
   return simd_u64(vshrq_n_s64(simd_i64(vqshlq_n_u64(a, 63)), 63));
