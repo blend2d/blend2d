@@ -98,6 +98,12 @@ void FetchPart::postfetchN() noexcept {
   // Nothing by default.
 }
 
+// [[pure virtual]]
+void FetchPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
+  blUnused(p, n, flags, predicate);
+  BL_NOT_REACHED();
+}
+
 void FetchPart::_fetch2x4(Pixel& p, PixelFlags flags) noexcept {
   // Fallback to `fetch4()` by default.
   p.setCount(PixelCount(8));

@@ -130,11 +130,11 @@ public:
   //! Called before `fetch()` with `n == 1`.
   virtual void prefetch1() noexcept;
 
-  //! Called as a prolog before fetching multiple fixels at once. This must be called before any loop that would call
+  //! Called as a prolog before fetching multiple pixels at once. This must be called before any loop that would call
   //! `fetch()` with `n` greater than 1 unless the fetcher is in a vector mode because of `pixelGranularity`.
   virtual void enterN() noexcept;
 
-  //! Called as an epilog after fetching multiple fixels at once. This must be called after a loop that uses `fetch()`
+  //! Called as an epilog after fetching multiple pixels at once. This must be called after a loop that uses `fetch()`
   //! with `n` greater than 1 unless the fetcher is in a vector mode because of `pixelGranularity`.
   virtual void leaveN() noexcept;
 

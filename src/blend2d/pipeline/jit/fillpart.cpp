@@ -30,6 +30,9 @@ FillPart::FillPart(PipeCompiler* pc, FillType fillType, FetchPixelPtrPart* dstPa
   _childCount = 2;
 }
 
+// [[pure virtual]]
+void FillPart::compile() noexcept { BL_NOT_REACHED(); }
+
 // BLPipeline::JIT::FillBoxAPart - Construction & Destruction
 // ==========================================================
 
