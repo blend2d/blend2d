@@ -11,6 +11,7 @@
 #include <blend2d.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iostream>
 
 class CmdLine {
 public:
@@ -83,7 +84,7 @@ public:
 
   template<typename... Args>
   inline void print(Args&&... args) {
-    printf(std::forward<Args>(args)...);
+    (std::cout << ... << args) << std::endl;
     fflush(stdout);
   }
 
