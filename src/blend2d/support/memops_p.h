@@ -13,7 +13,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLMemOps {
+namespace bl {
+namespace MemOps {
 namespace {
 
 //! \name Unaligned Constants
@@ -76,7 +77,7 @@ static BL_INLINE uint32_t readU16(const void* p) noexcept {
   else {
     uint32_t hi = readU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 1 : 0));
     uint32_t lo = readU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 0 : 1));
-    return BLIntOps::shl(hi, 8) | lo;
+    return IntOps::shl(hi, 8) | lo;
   }
 }
 
@@ -90,7 +91,7 @@ static BL_INLINE int32_t readI16(const void* p) noexcept {
   else {
     int32_t hi = int32_t(readI8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 1 : 0)));
     int32_t lo = int32_t(readU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 0 : 1)));
-    return BLIntOps::shl(hi, 8) | lo;
+    return IntOps::shl(hi, 8) | lo;
   }
 }
 
@@ -100,7 +101,7 @@ static BL_INLINE uint32_t readU24u(const void* p) noexcept {
   uint32_t b0 = readU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 2 : 0));
   uint32_t b1 = readU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 1 : 1));
   uint32_t b2 = readU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 0 : 2));
-  return BLIntOps::shl(b0, 16) | BLIntOps::shl(b1, 8) | b2;
+  return IntOps::shl(b0, 16) | IntOps::shl(b1, 8) | b2;
 }
 
 template<uint32_t ByteOrder, size_t Alignment>
@@ -109,12 +110,12 @@ static BL_INLINE uint32_t readU32(const void* p) noexcept {
   if (kUnalignedMem32 || Alignment >= 4) {
     typedef typename UnalignedInt<uint32_t, Alignment>::T U32AlignedToN;
     uint32_t x = static_cast<const U32AlignedToN*>(p)[0];
-    return ByteOrder == BL_BYTE_ORDER_NATIVE ? x : BLIntOps::byteSwap32(x);
+    return ByteOrder == BL_BYTE_ORDER_NATIVE ? x : IntOps::byteSwap32(x);
   }
   else {
     uint32_t hi = readU16<ByteOrder, Alignment >= 2 ? size_t(2) : Alignment>(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 2 : 0));
     uint32_t lo = readU16<ByteOrder, Alignment >= 2 ? size_t(2) : Alignment>(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 0 : 2));
-    return BLIntOps::shl(hi, 16) | lo;
+    return IntOps::shl(hi, 16) | lo;
   }
 }
 
@@ -128,7 +129,7 @@ static BL_INLINE uint64_t readU64(const void* p) noexcept {
   else {
     uint32_t hi = readU32<ByteOrder, Alignment >= 4 ? size_t(4) : Alignment>(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 4 : 0));
     uint32_t lo = readU32<ByteOrder, Alignment >= 4 ? size_t(4) : Alignment>(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 0 : 4));
-    return BLIntOps::shl(uint64_t(hi), 32) | lo;
+    return IntOps::shl(uint64_t(hi), 32) | lo;
   }
 }
 
@@ -219,7 +220,7 @@ template<uint32_t ByteOrder, size_t Alignment>
 static BL_INLINE void writeU32(void* p, uint32_t x) noexcept {
   if (kUnalignedMem32 || Alignment >= 4) {
     typedef typename UnalignedInt<uint32_t, Alignment>::T U32AlignedToN;
-    static_cast<U32AlignedToN*>(p)[0] = (ByteOrder == BL_BYTE_ORDER_NATIVE) ? x : BLIntOps::byteSwap32(x);
+    static_cast<U32AlignedToN*>(p)[0] = (ByteOrder == BL_BYTE_ORDER_NATIVE) ? x : IntOps::byteSwap32(x);
   }
   else {
     writeU16<ByteOrder, Alignment >= 2 ? size_t(2) : Alignment>(static_cast<uint8_t*>(p) + 0, x >> (ByteOrder == BL_BYTE_ORDER_LE ?  0 : 16));
@@ -406,7 +407,8 @@ static BL_INLINE bool testSmallT(const T* p, size_t count, const T& value) noexc
 //! \}
 
 } // {anonymous}
-} // {BLMemOps}
+} // {MemOps}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -13,7 +13,8 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 //! Pipeline compiler.
@@ -29,7 +30,7 @@ public:
   //! AsmJit compiler.
   x86::Compiler* cc = nullptr;
 
-  const BLCommonTable& ct;
+  const CommonTable& ct;
 
   //! Target CPU features.
   CpuFeatures _features {};
@@ -66,9 +67,9 @@ public:
   //! Temporary stack used to transfer SIMD regs to GP/MM.
   x86::Mem _tmpStack;
 
-  //! Offset to the first constant to the `blCommonTable` global.
+  //! Offset to the first constant to the `commonTable` global.
   int32_t _commonTableOff = 0;
-  //! Pointer to the `blCommonTable` constant pool (only used in 64-bit mode).
+  //! Pointer to the `commonTable` constant pool (only used in 64-bit mode).
   x86::Gp _commonTablePtr;
 
   x86::KReg _kReg[kMaxKRegConstCount];
@@ -312,8 +313,8 @@ public:
   }
 
   FillPart* newFillPart(FillType fillType, FetchPart* dstPart, CompOpPart* compOpPart) noexcept;
-  FetchPart* newFetchPart(FetchType fetchType, BLInternalFormat format) noexcept;
-  CompOpPart* newCompOpPart(uint32_t compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept;
+  FetchPart* newFetchPart(FetchType fetchType, FormatExt format) noexcept;
+  CompOpPart* newCompOpPart(CompOpExt compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept;
 
   //! \}
 
@@ -2092,20 +2093,20 @@ public:
 
   template<typename DstT, typename SrcT>
   BL_NOINLINE void v_mul257_hi_u16(const DstT& dst, const SrcT& src) {
-    v_mulh_u16(dst, src, simdConst(&blCommonTable.i_0101010101010101, Bcst::kNA, dst));
+    v_mulh_u16(dst, src, simdConst(&commonTable.i_0101010101010101, Bcst::kNA, dst));
   }
 
   // TODO: [PIPEGEN] Consolidate this to only one implementation.
   template<typename DstSrcT>
   BL_NOINLINE void v_div255_u16(const DstSrcT& x) {
-    v_add_i16(x, x, simdConst(&blCommonTable.i_0080008000800080, Bcst::kNA, x));
+    v_add_i16(x, x, simdConst(&commonTable.i_0080008000800080, Bcst::kNA, x));
     v_mul257_hi_u16(x, x);
   }
 
   template<typename DstSrcT>
   BL_NOINLINE void v_div255_u16_2x(const DstSrcT& v0, const DstSrcT& v1) noexcept {
-    Operand i_0080008000800080 = simdConst(&blCommonTable.i_0080008000800080, Bcst::kNA, v0);
-    Operand i_0101010101010101 = simdConst(&blCommonTable.i_0101010101010101, Bcst::kNA, v0);
+    Operand i_0080008000800080 = simdConst(&commonTable.i_0080008000800080, Bcst::kNA, v0);
+    Operand i_0101010101010101 = simdConst(&commonTable.i_0101010101010101, Bcst::kNA, v0);
 
     v_add_i16(v0, v0, i_0080008000800080);
     v_add_i16(v1, v1, i_0080008000800080);
@@ -2171,7 +2172,7 @@ public:
       v_cvtt_f64_i32(t, d);
       v_cvt_i32_f64(t, t);
       v_cmp_f64(d, d, t, x86::VCmpImm::kLT_OS);
-      v_and_f64(d, d, simdMemConst(&blCommonTable.f64_m1, Bcst::k64, d));
+      v_and_f64(d, d, simdMemConst(&commonTable.f64_m1, Bcst::k64, d));
       v_add_f64(d, d, t);
       v_mul_f64(d, d, b);
     }
@@ -2297,7 +2298,7 @@ public:
   }
 
   void x_inline_pixel_fill_loop(x86::Gp& dst, x86::Vec& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity) noexcept;
-  void x_inline_pixel_copy_loop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity, BLInternalFormat format) noexcept;
+  void x_inline_pixel_copy_loop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity, FormatExt format) noexcept;
 
   void _x_inline_memcpy_sequence_xmm(
     const x86::Mem& dPtr, bool dstAligned,
@@ -2349,11 +2350,11 @@ public:
   void x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType pixelType, const x86::Gp& mPtr, const x86::Vec& globalAlpha) noexcept;
 
   //! Fetches `n` pixels to vector register(s) in `p` from memory location `src_`.
-  void x_fetch_pixel(Pixel& p, PixelCount n, PixelFlags flags, BLInternalFormat format, const x86::Mem& src_, Alignment alignment) noexcept;
-  void x_fetch_pixel(Pixel& p, PixelCount n, PixelFlags flags, BLInternalFormat format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept;
+  void x_fetch_pixel(Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const x86::Mem& src_, Alignment alignment) noexcept;
+  void x_fetch_pixel(Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept;
 
-  void _x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, BLInternalFormat format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept;
-  void _x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flags, BLInternalFormat format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept;
+  void _x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept;
+  void _x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept;
 
   //! Makes sure that the given pixel `p` has all the requrements as specified by `flags`.
   void x_satisfy_pixel(Pixel& p, PixelFlags flags) noexcept;
@@ -2370,7 +2371,7 @@ public:
   void _x_pack_pixel(VecArray& px, VecArray& ux, uint32_t n, const char* prefix, const char* pxName) noexcept;
   void _x_unpack_pixel(VecArray& ux, VecArray& px, uint32_t n, const char* prefix, const char* uxName) noexcept;
 
-  void x_fetch_unpacked_a8_2x(const x86::Xmm& dst, BLInternalFormat format, const x86::Mem& src1, const x86::Mem& src0) noexcept;
+  void x_fetch_unpacked_a8_2x(const x86::Xmm& dst, FormatExt format, const x86::Mem& src1, const x86::Mem& src0) noexcept;
 
   void x_assign_unpacked_alpha_values(Pixel& p, PixelFlags flags, x86::Xmm& vec) noexcept;
 
@@ -2421,7 +2422,7 @@ public:
       }
     }
     else {
-      x86::Vec zero = simdVecConst(&blCommonTable.i_0000000000000000, s);
+      x86::Vec zero = simdVecConst(&commonTable.i_0000000000000000, s);
       if (d1.id() != s.id()) {
         v_interleave_hi_u8(d1, s, zero);
         v_interleave_lo_u8(d0, s, zero);
@@ -2443,7 +2444,7 @@ public:
   inline void v_expand_alpha_16(const Dst& d, const Src& s, uint32_t useHiPart = 1) noexcept {
     if (useHiPart) {
       if (hasSSSE3() && d == s) {
-        v_shuffle_i8(d, d, simdConst(&blCommonTable.pshufb_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, d));
+        v_shuffle_i8(d, d, simdConst(&commonTable.pshufb_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, d));
       }
       else {
         vExpandAlphaHi16(d, s);
@@ -2459,25 +2460,25 @@ public:
   inline void vExpandAlphaPS(const Dst& d, const Src& s) noexcept { v_swizzle_u32(d, s, x86::shuffleImm(3, 3, 3, 3)); }
 
   template<typename DstT, typename SrcT>
-  inline void vFillAlpha255B(const DstT& dst, const SrcT& src) noexcept { v_or_i32(dst, src, simdConst(&blCommonTable.i_FF000000FF000000, Bcst::k32, dst)); }
+  inline void vFillAlpha255B(const DstT& dst, const SrcT& src) noexcept { v_or_i32(dst, src, simdConst(&commonTable.i_FF000000FF000000, Bcst::k32, dst)); }
   template<typename DstT, typename SrcT>
-  inline void vFillAlpha255W(const DstT& dst, const SrcT& src) noexcept { v_or_i64(dst, src, simdConst(&blCommonTable.i_00FF000000000000, Bcst::k64, dst)); }
+  inline void vFillAlpha255W(const DstT& dst, const SrcT& src) noexcept { v_or_i64(dst, src, simdConst(&commonTable.i_00FF000000000000, Bcst::k64, dst)); }
 
   template<typename DstT, typename SrcT>
-  BL_NOINLINE void vZeroAlphaB(const DstT& dst, const SrcT& src) noexcept { v_and_i32(dst, src, simdMemConst(&blCommonTable.i_00FFFFFF00FFFFFF, Bcst::k32, dst)); }
+  BL_NOINLINE void vZeroAlphaB(const DstT& dst, const SrcT& src) noexcept { v_and_i32(dst, src, simdMemConst(&commonTable.i_00FFFFFF00FFFFFF, Bcst::k32, dst)); }
 
   template<typename DstT, typename SrcT>
-  BL_NOINLINE void vZeroAlphaW(const DstT& dst, const SrcT& src) noexcept { v_and_i64(dst, src, simdMemConst(&blCommonTable.i_0000FFFFFFFFFFFF, Bcst::k64, dst)); }
+  BL_NOINLINE void vZeroAlphaW(const DstT& dst, const SrcT& src) noexcept { v_and_i64(dst, src, simdMemConst(&commonTable.i_0000FFFFFFFFFFFF, Bcst::k64, dst)); }
 
   template<typename DstT, typename SrcT>
-  inline void vNegAlpha8B(const DstT& dst, const SrcT& src) noexcept { v_xor_i32(dst, src, simdConst(&blCommonTable.i_FF000000FF000000, Bcst::k32, dst)); }
+  inline void vNegAlpha8B(const DstT& dst, const SrcT& src) noexcept { v_xor_i32(dst, src, simdConst(&commonTable.i_FF000000FF000000, Bcst::k32, dst)); }
   template<typename DstT, typename SrcT>
-  inline void vNegAlpha8W(const DstT& dst, const SrcT& src) noexcept { v_xor_i64(dst, src, simdConst(&blCommonTable.i_00FF000000000000, Bcst::k64, dst)); }
+  inline void vNegAlpha8W(const DstT& dst, const SrcT& src) noexcept { v_xor_i64(dst, src, simdConst(&commonTable.i_00FF000000000000, Bcst::k64, dst)); }
 
   template<typename DstT, typename SrcT>
-  inline void vNegRgb8B(const DstT& dst, const SrcT& src) noexcept { v_xor_i32(dst, src, simdConst(&blCommonTable.i_00FFFFFF00FFFFFF, Bcst::k32, dst)); }
+  inline void vNegRgb8B(const DstT& dst, const SrcT& src) noexcept { v_xor_i32(dst, src, simdConst(&commonTable.i_00FFFFFF00FFFFFF, Bcst::k32, dst)); }
   template<typename DstT, typename SrcT>
-  inline void vNegRgb8W(const DstT& dst, const SrcT& src) noexcept { v_xor_i64(dst, src, simdConst(&blCommonTable.i_000000FF00FF00FF, Bcst::k64, dst)); }
+  inline void vNegRgb8W(const DstT& dst, const SrcT& src) noexcept { v_xor_i64(dst, src, simdConst(&commonTable.i_000000FF00FF00FF, Bcst::k64, dst)); }
 
   // Performs 32-bit unsigned modulo of 32-bit `a` (hi DWORD) with 32-bit `b` (lo DWORD).
   template<typename VecOrMem_A, typename VecOrMem_B>
@@ -2518,7 +2519,7 @@ public:
 
   BL_NOINLINE void xExtractUnpackedAFromPackedARGB32_2(const x86::Vec& d, const x86::Vec& s) noexcept {
     if (hasSSSE3()) {
-      v_shuffle_i8(d, s, simdConst(&blCommonTable.pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d));
+      v_shuffle_i8(d, s, simdConst(&commonTable.pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d));
     }
     else {
       v_swizzle_lo_u16(d, s, x86::shuffleImm(3, 3, 1, 1));
@@ -2569,7 +2570,7 @@ public:
       v_packs_i32_u16_(d0, s0, s0);
     }
     else if (hasSSSE3()) {
-      v_shuffle_i8(d0, s0, simdConst(&blCommonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210, Bcst::kNA, d0));
+      v_shuffle_i8(d0, s0, simdConst(&commonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210, Bcst::kNA, d0));
     }
     else {
       // Sign extend and then use `packssdw()`.
@@ -2652,7 +2653,8 @@ public:
 };
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

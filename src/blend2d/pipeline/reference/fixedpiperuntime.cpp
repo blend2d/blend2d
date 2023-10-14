@@ -11,12 +11,13 @@
 #include "../../pipeline/reference/fixedpiperuntime_p.h"
 #include "../../support/wrap_p.h"
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 
 // FixedPipelineRuntime - Globals
 // ==============================
 
-BLWrap<PipeStaticRuntime> PipeStaticRuntime::_global;
+Wrap<PipeStaticRuntime> PipeStaticRuntime::_global;
 
 // FixedPipelineRuntime - Get
 // ==========================
@@ -42,41 +43,41 @@ static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signat
   switch (s.fetchType()) {
     case FetchType::kSolid:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Solid>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Solid>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Solid>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Solid>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Solid>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Solid>(s.fillType()); break;
       }
       break;
 
     case FetchType::kPatternAlignedBlit:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedBlit_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedBlit_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedBlit_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedBlit_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedBlit_PRGB32>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedBlit_PRGB32>(s.fillType()); break;
       }
       break;
 
     case FetchType::kPatternAlignedPad:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedPad_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedPad_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedPad_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedPad_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedPad_PRGB32>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedPad_PRGB32>(s.fillType()); break;
       }
       break;
 
     case FetchType::kPatternAlignedRepeat:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedRepeat_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedRepeat_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedRepeat_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedRepeat_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedRepeat_PRGB32>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedRepeat_PRGB32>(s.fillType()); break;
       }
       break;
 
     case FetchType::kPatternAlignedRoR:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedRoR_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedRoR_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedRoR_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedRoR_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedRoR_PRGB32>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedRoR_PRGB32>(s.fillType()); break;
       }
       break;
 
@@ -84,9 +85,9 @@ static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signat
     case FetchType::kPatternFyPad:
     case FetchType::kPatternFxFyPad:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternFxFyPad_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternFxFyPad_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternFxFyPad_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternFxFyPad_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternFxFyPad_PRGB32>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternFxFyPad_PRGB32>(s.fillType()); break;
       }
       break;
 
@@ -94,107 +95,107 @@ static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signat
     case FetchType::kPatternFyRoR:
     case FetchType::kPatternFxFyRoR:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternFxFyRoR_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternFxFyRoR_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternFxFyRoR_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternFxFyRoR_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternFxFyRoR_PRGB32>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternFxFyRoR_PRGB32>(s.fillType()); break;
       }
       break;
 
     case FetchType::kPatternAffineNNAny:
     case FetchType::kPatternAffineNNOpt:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAffineNNAny_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAffineNNAny_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAffineNNAny_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAffineNNAny_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAffineNNAny_PRGB32>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAffineNNAny_PRGB32>(s.fillType()); break;
       }
       break;
 
     case FetchType::kPatternAffineBIAny:
     case FetchType::kPatternAffineBIOpt:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAffineBIAny_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAffineBIAny_PRGB32>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAffineBIAny_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAffineBIAny_PRGB32>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAffineBIAny_PRGB32>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAffineBIAny_PRGB32>(s.fillType()); break;
       }
       break;
 
     case FetchType::kGradientLinearNNPad:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearPad_NN>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearPad_NN>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearPad_NN>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearPad_NN>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearPad_NN>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearPad_NN>(s.fillType()); break;
       }
       break;
 
     case FetchType::kGradientLinearNNRoR:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearRoR_NN>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearRoR_NN>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearRoR_NN>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearRoR_NN>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearRoR_NN>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearRoR_NN>(s.fillType()); break;
       }
       break;
 
     case FetchType::kGradientLinearDitherPad:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearPad_Dither>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearPad_Dither>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearPad_Dither>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearPad_Dither>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearPad_Dither>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearPad_Dither>(s.fillType()); break;
       }
       break;
 
     case FetchType::kGradientLinearDitherRoR:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearRoR_Dither>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearRoR_Dither>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearRoR_Dither>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearRoR_Dither>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearRoR_Dither>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearRoR_Dither>(s.fillType()); break;
       }
       break;
 
     case FetchType::kGradientRadialNNPad:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialPad_NN>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialPad_NN>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialPad_NN>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialPad_NN>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialPad_NN>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialPad_NN>(s.fillType()); break;
       }
       break;
 
     case FetchType::kGradientRadialNNRoR:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialRoR_NN>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialRoR_NN>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialRoR_NN>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialRoR_NN>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialRoR_NN>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialRoR_NN>(s.fillType()); break;
       }
       break;
 
     case FetchType::kGradientRadialDitherPad:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialPad_Dither>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialPad_Dither>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialPad_Dither>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialPad_Dither>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialPad_Dither>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialPad_Dither>(s.fillType()); break;
       }
       break;
 
     case FetchType::kGradientRadialDitherRoR:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialRoR_Dither>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialRoR_Dither>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialRoR_Dither>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialRoR_Dither>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialRoR_Dither>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialRoR_Dither>(s.fillType()); break;
       }
       break;
 
     case FetchType::kGradientConicNN:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Conic_NN>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Conic_NN>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Conic_NN>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Conic_NN>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Conic_NN>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Conic_NN>(s.fillType()); break;
       }
       break;
 
     case FetchType::kGradientConicDither:
       switch (s.compOp()) {
-        case BL_COMP_OP_SRC_COPY: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Conic_Dither>(s.fillType()); break;
-        case BL_COMP_OP_SRC_OVER: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Conic_Dither>(s.fillType()); break;
-        case BL_COMP_OP_PLUS    : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Conic_Dither>(s.fillType()); break;
+        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Conic_Dither>(s.fillType()); break;
+        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Conic_Dither>(s.fillType()); break;
+        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Conic_Dither>(s.fillType()); break;
       }
       break;
   }
@@ -225,7 +226,8 @@ PipeStaticRuntime::PipeStaticRuntime() noexcept {
 }
 PipeStaticRuntime::~PipeStaticRuntime() noexcept {}
 
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 // FixedPipelineRuntime - Runtime Registration
 // ===========================================
@@ -233,7 +235,7 @@ PipeStaticRuntime::~PipeStaticRuntime() noexcept {}
 void blStaticPipelineRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
-  BLPipeline::PipeStaticRuntime::_global.init();
+  bl::Pipeline::PipeStaticRuntime::_global.init();
 }
 
 #endif

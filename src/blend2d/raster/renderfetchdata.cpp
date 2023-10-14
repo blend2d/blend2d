@@ -6,24 +6,25 @@
 #include "../api-build_p.h"
 #include "../raster/renderfetchdata_p.h"
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
-// BLRasterEngine - Fetch Data Utilities
-// =====================================
+// bl::RasterEngine - Fetch Data Utilities
+// =======================================
 
 BLResult computePendingFetchData(RenderFetchData* fetchData) noexcept {
   // At the moment only gradients have support for pending fetch data calculation.
   BL_ASSERT(fetchData->signature.isGradient());
 
-  BLGradientPrivateImpl* gradientI = BLGradientPrivate::getImpl(&fetchData->styleAs<BLGradientCore>());
+  BLGradientPrivateImpl* gradientI = GradientInternal::getImpl(&fetchData->styleAs<BLGradientCore>());
   uint32_t lutSize = fetchData->pipelineData.gradient.lut.size;
   BLGradientQuality quality = BLGradientQuality(fetchData->extra.custom[0]);
 
   BLGradientLUT* lut;
   if (quality < BL_GRADIENT_QUALITY_DITHER)
-    lut = BLGradientPrivate::ensureLut32(gradientI, lutSize);
+    lut = GradientInternal::ensureLut32(gradientI, lutSize);
   else
-    lut = BLGradientPrivate::ensureLut64(gradientI, lutSize);
+    lut = GradientInternal::ensureLut64(gradientI, lutSize);
 
   if (BL_UNLIKELY(!lut))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
@@ -34,4 +35,5 @@ BLResult computePendingFetchData(RenderFetchData* fetchData) noexcept {
   return BL_SUCCESS;
 }
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}

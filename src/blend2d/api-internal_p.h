@@ -27,7 +27,7 @@
 // ===========
 
 // We are just fine with <math.h>, however, there are some useful overloads in C++'s <cmath> that are nicer to use
-// than those in <math.h>. Mostly low-level functionality like blIsFinite() relies on <cmath> instead of <math.h>.
+// than those in <math.h>. Mostly low-level functionality like Math::isFinite() relies on <cmath> instead of <math.h>.
 #include <cmath>
 #include <limits>
 #include <type_traits>
@@ -635,6 +635,11 @@ static BL_INLINE_NODEBUG bool blDataAccessFlagsIsValid(uint32_t dataAccessFlags)
 }
 
 static BL_INLINE_NODEBUG void blPrefetchW(const void* p) { (void)p; }
+
+// BLInternal API Accessible Via 'bl' Namespace
+// ============================================
+
+namespace bl { using namespace BLInternal; }
 
 //! \}
 //! \endcond

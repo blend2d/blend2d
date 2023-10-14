@@ -5,13 +5,14 @@
 
 #include "../api-build_p.h"
 #include "../context.h"
-#include "../math_p.h"
 #include "../matrix_p.h"
 #include "../pipeline/pipedefs_p.h"
 #include "../support/intops_p.h"
+#include "../support/math_p.h"
 #include "../support/traits_p.h"
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace FetchUtils {
 
 // Pipeline - FetchData - Extend Modes
@@ -107,7 +108,7 @@ static BL_INLINE Signature initPatternTxTy(FetchData::Pattern& fetchData, FetchT
   fetchData.simple.ty = ty;
   fetchData.simple.rx = rx;
   fetchData.simple.ry = ry;
-  fetchData.simple.ix = blModuloTable[ixIndex];
+  fetchData.simple.ix = moduloTable[ixIndex];
 
   return Signature::fromFetchType(FetchType(uint32_t(fetchBase) + extendX));
 }
@@ -170,9 +171,9 @@ Signature initPatternAffine(FetchData::Pattern& fetchData, BLExtendMode extendMo
   double yx = inv.m10;
   double yy = inv.m11;
 
-  if (isNearOne(xx) && isNearZero(xy) && isNearZero(yx) && isNearOne(yy)) {
-    int64_t tx64 = blFloorToInt64(-inv.m20 * 256.0);
-    int64_t ty64 = blFloorToInt64(-inv.m21 * 256.0);
+  if (Math::isNearOne(xx) && Math::isNearZero(xy) && Math::isNearZero(yx) && Math::isNearOne(yy)) {
+    int64_t tx64 = Math::floorToInt64(-inv.m20 * 256.0);
+    int64_t ty64 = Math::floorToInt64(-inv.m21 * 256.0);
     return initPatternFxFy(fetchData, extendMode, quality, bytesPerPixel, tx64, ty64);
   }
 
@@ -187,7 +188,7 @@ Signature initPatternAffine(FetchData::Pattern& fetchData, BLExtendMode extendMo
 
   uint32_t opt = blMax(tw, th) < 32767 &&
                  fetchData.src.stride >= 0 &&
-                 fetchData.src.stride <= intptr_t(BLTraits::maxValue<int16_t>());
+                 fetchData.src.stride <= intptr_t(Traits::maxValue<int16_t>());
 
   // TODO: [PIPEGEN] Not implemented for bilinear yet.
   if (quality == BL_PATTERN_QUALITY_BILINEAR)
@@ -210,8 +211,8 @@ Signature initPatternAffine(FetchData::Pattern& fetchData, BLExtendMode extendMo
   double fpScale = 4294967296.0;
 
   // Overflow check of X/Y. When this check passes we decrement rx/ry from the overflown values.
-  int ox = BLTraits::maxValue<int32_t>();
-  int oy = BLTraits::maxValue<int32_t>();
+  int ox = Traits::maxValue<int32_t>();
+  int oy = Traits::maxValue<int32_t>();
 
   // Normalization of X/Y. These values are added to the current `px` and `py` when they overflow the repeat|reflect
   // bounds.
@@ -228,7 +229,7 @@ Signature initPatternAffine(FetchData::Pattern& fetchData, BLExtendMode extendMo
   fetchData.affine.corY = int32_t(th - 1);
 
   if (extendX != BL_EXTEND_MODE_PAD) {
-    fetchData.affine.minX = BLTraits::minValue<int32_t>();
+    fetchData.affine.minX = Traits::minValue<int32_t>();
     if (extendX == BL_EXTEND_MODE_REPEAT)
       fetchData.affine.corX = 0;
 
@@ -251,7 +252,7 @@ Signature initPatternAffine(FetchData::Pattern& fetchData, BLExtendMode extendMo
   }
 
   if (extendY != BL_EXTEND_MODE_PAD) {
-    fetchData.affine.minY = BLTraits::minValue<int32_t>();
+    fetchData.affine.minY = Traits::minValue<int32_t>();
     if (extendY == BL_EXTEND_MODE_REPEAT)
       fetchData.affine.corY = 0;
 
@@ -305,20 +306,20 @@ Signature initPatternAffine(FetchData::Pattern& fetchData, BLExtendMode extendMo
     if (xy >= th_d) xy = fmod(xy, th_d);
   }
 
-  fetchData.affine.xx.i64 = blFloorToInt64(xx * fpScale);
-  fetchData.affine.xy.i64 = blFloorToInt64(xy * fpScale);
-  fetchData.affine.yx.i64 = blFloorToInt64(yx * fpScale);
-  fetchData.affine.yy.i64 = blFloorToInt64(yy * fpScale);
+  fetchData.affine.xx.i64 = Math::floorToInt64(xx * fpScale);
+  fetchData.affine.xy.i64 = Math::floorToInt64(xy * fpScale);
+  fetchData.affine.yx.i64 = Math::floorToInt64(yx * fpScale);
+  fetchData.affine.yy.i64 = Math::floorToInt64(yy * fpScale);
 
-  fetchData.affine.tx.i64 = blFloorToInt64(tx * fpScale);
-  fetchData.affine.ty.i64 = blFloorToInt64(ty * fpScale);
-  fetchData.affine.rx.i64 = BLIntOps::shl(int64_t(rx), 32);
-  fetchData.affine.ry.i64 = BLIntOps::shl(int64_t(ry), 32);
+  fetchData.affine.tx.i64 = Math::floorToInt64(tx * fpScale);
+  fetchData.affine.ty.i64 = Math::floorToInt64(ty * fpScale);
+  fetchData.affine.rx.i64 = IntOps::shl(int64_t(rx), 32);
+  fetchData.affine.ry.i64 = IntOps::shl(int64_t(ry), 32);
 
   fetchData.affine.ox.i32Hi = ox;
-  fetchData.affine.ox.i32Lo = BLTraits::maxValue<int32_t>();
+  fetchData.affine.ox.i32Lo = Traits::maxValue<int32_t>();
   fetchData.affine.oy.i32Hi = oy;
-  fetchData.affine.oy.i32Lo = BLTraits::maxValue<int32_t>();
+  fetchData.affine.oy.i32Lo = Traits::maxValue<int32_t>();
 
   fetchData.affine.tw = tw_d;
   fetchData.affine.th = th_d;
@@ -378,9 +379,9 @@ static BL_INLINE Signature initLinearGradient(FetchData::Gradient& fetchData, co
   dy *= scale;
   offset *= scale;
 
-  fetchData.linear.dy.i64 = blFloorToInt64(dy);
-  fetchData.linear.dt.i64 = blFloorToInt64(dt);
-  fetchData.linear.pt[0].i64 = blFloorToInt64(offset);
+  fetchData.linear.dy.i64 = Math::floorToInt64(dy);
+  fetchData.linear.dt.i64 = Math::floorToInt64(dt);
+  fetchData.linear.pt[0].i64 = Math::floorToInt64(offset);
   fetchData.linear.pt[1].u64 = fetchData.linear.pt[0].u64 + fetchData.linear.dt.u64;
 
   fetchData.linear.maxi = maxi;
@@ -466,9 +467,9 @@ static BL_INLINE Signature initRadialGradient(FetchData::Gradient& fetchData, co
 
   // If the focal point is near the border we move it slightly to prevent division by zero. This idea comes from
   // AntiGrain library.
-  if (isNearZero(dd)) {
-    if (!isNearZero(f.x)) f.x += (f.x < 0.0) ? 0.5 : -0.5;
-    if (!isNearZero(f.y)) f.y += (f.y < 0.0) ? 0.5 : -0.5;
+  if (Math::isNearZero(dd)) {
+    if (!Math::isNearZero(f.x)) f.x += (f.x < 0.0) ? 0.5 : -0.5;
+    if (!Math::isNearZero(f.y)) f.y += (f.y < 0.0) ? 0.5 : -0.5;
 
     fxfx = f.x * f.x;
     fyfy = f.y * f.y;
@@ -528,8 +529,8 @@ static BL_INLINE Signature initConicGradient(FetchData::Gradient& fetchData, con
   double angle = values.angle;
 
   uint32_t lutSize = fetchData.lut.size;
-  uint32_t tableId = BLIntOps::ctz(lutSize) - 8;
-  BL_ASSERT(tableId < BLCommonTable::kTableCount);
+  uint32_t tableId = IntOps::ctz(lutSize) - 8;
+  BL_ASSERT(tableId < CommonTable::kTableCount);
 
   // Invert the origin and move it to the center of the pixel.
   c = BLPoint(0.5, 0.5) - transform.mapPoint(c);
@@ -538,7 +539,7 @@ static BL_INLINE Signature initConicGradient(FetchData::Gradient& fetchData, con
   double matrixAngle = atan2(v.y, v.x);
   BLMatrix2D updatedTransform(transform);
   updatedTransform.rotate(-matrixAngle, c);
-  fetchData.conic.offset = float(((angle + matrixAngle) / -(2.0 * BL_M_PI)) * lutSize) + lutSize;
+  fetchData.conic.offset = float(((angle + matrixAngle) / -(2.0 * Math::kPI)) * lutSize) + lutSize;
 
   BLMatrix2D inv;
   if (BLMatrix2D::invert(inv, updatedTransform) != BL_SUCCESS)
@@ -549,7 +550,7 @@ static BL_INLINE Signature initConicGradient(FetchData::Gradient& fetchData, con
   fetchData.conic.yy = inv.m11;
   fetchData.conic.ox = c.x * inv.m00 + c.y * inv.m10;
   fetchData.conic.oy = c.x * inv.m01 + c.y * inv.m11;
-  fetchData.conic.consts = &blCommonTable.xmm_f_con[tableId];
+  fetchData.conic.consts = &commonTable.xmm_f_con[tableId];
   fetchData.conic.maxi = int(lutSize - 1);
 
   FetchType fetchType =
@@ -589,4 +590,5 @@ Signature initGradient(
 }
 
 } // {FetchUtils}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}

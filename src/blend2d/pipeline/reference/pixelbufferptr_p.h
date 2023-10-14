@@ -13,7 +13,8 @@
 //! \addtogroup blend2d_pipeline_reference
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace Reference {
 
 template<uint32_t BytesPerPixel>
@@ -52,19 +53,20 @@ public:
   }
 
   template<typename T>
-  BL_INLINE void advanceX(const T& x) noexcept { _ptr += size_t(BLIntOps::asStdUInt(x)) * kBytesPerPixel; }
+  BL_INLINE void advanceX(const T& x) noexcept { _ptr += size_t(IntOps::asStdUInt(x)) * kBytesPerPixel; }
   template<typename T>
-  BL_INLINE void advanceY(const T& y) noexcept { _ptr += intptr_t(size_t(BLIntOps::asStdUInt(y))) * _stride; }
+  BL_INLINE void advanceY(const T& y) noexcept { _ptr += intptr_t(size_t(IntOps::asStdUInt(y))) * _stride; }
 
   template<typename T>
-  BL_INLINE void deadvanceX(const T& x) noexcept { _ptr -= size_t(BLIntOps::asStdUInt(x)) * kBytesPerPixel; }
+  BL_INLINE void deadvanceX(const T& x) noexcept { _ptr -= size_t(IntOps::asStdUInt(x)) * kBytesPerPixel; }
 
   BL_INLINE void advanceX() noexcept { advanceX(1); }
   BL_INLINE void advanceY() noexcept { advanceY(1); }
 };
 
 } // {Reference}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

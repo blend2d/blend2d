@@ -8,13 +8,14 @@
 
 #include "fonttagdata_p.h"
 #include "fontvariationsettings_p.h"
-#include "math_p.h"
 #include "object_p.h"
+#include "support/math_p.h"
 
-// BLFontVariationSettings - Tests
-// ===============================
+// bl::FontVariationSettings - Tests
+// =================================
 
-namespace BLFontVariationSettingsTests {
+namespace bl {
+namespace Tests {
 
 static void verifyFontVariationSettings(const BLFontVariationSettings& ffs) noexcept {
   BLFontVariationSettingsView view;
@@ -34,8 +35,8 @@ UNIT(fontvariationsettings_allocation_strategy, BL_TEST_GROUP_TEXT_CONTAINERS) {
   BLFontVariationSettings ffs;
   size_t capacity = ffs.capacity();
 
-  constexpr uint32_t kCharRange = BLFontTagData::kCharRangeInTag;
-  constexpr uint32_t kNumItems = BLFontTagData::kUniqueTagCount / 100;
+  constexpr uint32_t kCharRange = FontTagData::kCharRangeInTag;
+  constexpr uint32_t kNumItems = FontTagData::kUniqueTagCount / 100;
 
   for (uint32_t i = 0; i < kNumItems; i++) {
     BLTag tag = BL_MAKE_TAG(
@@ -46,7 +47,7 @@ UNIT(fontvariationsettings_allocation_strategy, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     ffs.setValue(tag, float(i & 0xFFFFu));
     if (capacity != ffs.capacity()) {
-      size_t implSize = BLFontVariationSettingsPrivate::implSizeFromCapacity(ffs.capacity()).value();
+      size_t implSize = FontVariationSettingsInternal::implSizeFromCapacity(ffs.capacity()).value();
       INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, ffs.capacity(), implSize);
       capacity = ffs.capacity();
     }
@@ -81,7 +82,7 @@ UNIT(fontvariationsettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     EXPECT_EQ(ffs.capacity(), BLFontVariationSettings::kSSOCapacity);
 
     // Getting an unknown tag should return invalid value.
-    EXPECT_TRUE(blIsNaN(ffs.getValue(BL_MAKE_TAG('-', '-', '-', '-'))));
+    EXPECT_TRUE(Math::isNaN(ffs.getValue(BL_MAKE_TAG('-', '-', '-', '-'))));
 
     for (uint32_t i = 0; i < BL_ARRAY_SIZE(ssoTags); i++) {
       EXPECT_SUCCESS(ffs.setValue(ssoTags[i], 1u));
@@ -101,7 +102,7 @@ UNIT(fontvariationsettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     for (uint32_t i = 0; i < BL_ARRAY_SIZE(ssoTags); i++) {
       EXPECT_SUCCESS(ffs.removeValue(ssoTags[i]));
-      EXPECT_TRUE(blIsNaN(ffs.getValue(ssoTags[i])));
+      EXPECT_TRUE(Math::isNaN(ffs.getValue(ssoTags[i])));
       EXPECT_EQ(ffs.size(), BL_ARRAY_SIZE(ssoTags) - i - 1);
       EXPECT_TRUE(ffs._d.sso());
       verifyFontVariationSettings(ffs);
@@ -113,8 +114,8 @@ UNIT(fontvariationsettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     // First veriation ids use R/I bits, which is used for reference counted dynamic objects.
     // What we want to test here is that this bit is not checked when destroying SSO instances.
     BLFontVariationSettings settings;
-    settings.setValue(BLFontTagData::variationIdToTagTable[0], 0.5f);
-    settings.setValue(BLFontTagData::variationIdToTagTable[1], 0.5f);
+    settings.setValue(FontTagData::variationIdToTagTable[0], 0.5f);
+    settings.setValue(FontTagData::variationIdToTagTable[1], 0.5f);
   }
 
   INFO("Dynamic representation");
@@ -127,7 +128,7 @@ UNIT(fontvariationsettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     EXPECT_EQ(ffs.capacity(), BLFontVariationSettings::kSSOCapacity);
 
     // Getting an unknown tag should return invalid value.
-    EXPECT_TRUE(blIsNaN(ffs.getValue(BL_MAKE_TAG('-', '-', '-', '-'))));
+    EXPECT_TRUE(Math::isNaN(ffs.getValue(BL_MAKE_TAG('-', '-', '-', '-'))));
 
     for (uint32_t i = 0; i < BL_ARRAY_SIZE(dynamicTags); i++) {
       EXPECT_SUCCESS(ffs.setValue(dynamicTags[i], 1u));
@@ -149,7 +150,7 @@ UNIT(fontvariationsettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     for (uint32_t i = 0; i < BL_ARRAY_SIZE(dynamicTags); i++) {
       EXPECT_SUCCESS(ffs.removeValue(dynamicTags[i]));
-      EXPECT_TRUE(blIsNaN(ffs.getValue(dynamicTags[i])));
+      EXPECT_TRUE(Math::isNaN(ffs.getValue(dynamicTags[i])));
       EXPECT_EQ(ffs.size(), BL_ARRAY_SIZE(dynamicTags) - i - 1);
       verifyFontVariationSettings(ffs);
     }
@@ -181,6 +182,7 @@ UNIT(fontvariationsettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
   }
 }
 
-} // {BLFontVariationSettingsTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

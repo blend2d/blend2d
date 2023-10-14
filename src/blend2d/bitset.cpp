@@ -14,21 +14,22 @@
 #include "support/memops_p.h"
 #include "support/scopedbuffer_p.h"
 
-namespace BLBitSetPrivate {
+namespace bl {
+namespace BitSetInternal {
 
-// BLBitSet - Constants
-// ====================
+// bl::BitSet - Constants
+// ======================
 
 static constexpr uint32_t kInitialImplSize = 128;
 
 //! Number of temporary segments locally allocated in BitSet processing functions.
 static constexpr uint32_t kTmpSegmentDataSize = 128;
 
-// BLBitSet - Bit/Word Utilities
-// =============================
+// bl::BitSet - Bit/Word Utilities
+// ===============================
 
-static BL_INLINE_NODEBUG uint32_t bitIndexOf(uint32_t wordIndex) noexcept { return wordIndex * BLBitSetOps::kNumBits; }
-static BL_INLINE_NODEBUG uint32_t wordIndexOf(uint32_t bitIndex) noexcept { return bitIndex / BLBitSetOps::kNumBits; }
+static BL_INLINE_NODEBUG uint32_t bitIndexOf(uint32_t wordIndex) noexcept { return wordIndex * BitSetOps::kNumBits; }
+static BL_INLINE_NODEBUG uint32_t wordIndexOf(uint32_t bitIndex) noexcept { return bitIndex / BitSetOps::kNumBits; }
 
 static BL_INLINE_NODEBUG uint32_t alignBitDownToSegment(uint32_t bitIndex) noexcept { return bitIndex & ~uint32_t(kSegmentBitMask); }
 static BL_INLINE_NODEBUG uint32_t alignWordDownToSegment(uint32_t wordIndex) noexcept { return wordIndex & ~uint32_t(kSegmentWordCount - 1u); }
@@ -37,8 +38,8 @@ static BL_INLINE_NODEBUG uint32_t alignWordUpToSegment(uint32_t wordIndex) noexc
 static BL_INLINE_NODEBUG bool isBitAlignedToSegment(uint32_t bitIndex) noexcept { return (bitIndex & kSegmentBitMask) == 0u; }
 static BL_INLINE_NODEBUG bool isWordAlignedToSegment(uint32_t wordIndex) noexcept { return (wordIndex & (kSegmentWordCount - 1u)) == 0u; }
 
-// BLBitSet - PopCount
-// ===================
+// bl::BitSet - PopCount
+// =====================
 
 static BL_NOINLINE uint32_t bitCount(const uint32_t* data, size_t n) noexcept {
   uint32_t count = 0;
@@ -46,13 +47,13 @@ static BL_NOINLINE uint32_t bitCount(const uint32_t* data, size_t n) noexcept {
   BL_NOUNROLL
   for (size_t i = 0; i < n; i++)
     if (data[i])
-      count += BLIntOps::popCount(data[i]);
+      count += IntOps::popCount(data[i]);
 
   return count;
 }
 
-// BLBitSet - Segment Inserters
-// ============================
+// bl::BitSet - Segment Inserters
+// ==============================
 
 //! A helper struct that is used in places where a limited number of segments may be inserted.
 template<size_t N>
@@ -137,8 +138,8 @@ struct DynamicSegmentInserter {
   }
 };
 
-// BLBitSet - Data Analysis
-// ========================
+// bl::BitSet - Data Analysis
+// ==========================
 
 class QuickDataAnalysis {
 public:
@@ -195,29 +196,29 @@ static PreciseDataAnalysis preciseDataAnalysis(uint32_t startWord, const uint32_
   while (data[--n] == 0)
     continue;
 
-  uint32_t startZeros = BLBitSetOps::countZerosFromStart(data[i]);
-  uint32_t endZeros = BLBitSetOps::countZerosFromEnd(data[n]);
+  uint32_t startZeros = BitSetOps::countZerosFromStart(data[i]);
+  uint32_t endZeros = BitSetOps::countZerosFromEnd(data[n]);
 
   uint32_t rangeStart = bitIndexOf(startWord + i) + startZeros;
-  uint32_t rangeEnd = bitIndexOf(startWord + n) + BLBitSetOps::kNumBits - endZeros;
+  uint32_t rangeEnd = bitIndexOf(startWord + n) + BitSetOps::kNumBits - endZeros;
 
   // Single word case.
   if (i == n) {
-    uint32_t mask = BLBitSetOps::shiftToEnd(BLBitSetOps::nonZeroStartMask(BLBitSetOps::kNumBits - (startZeros + endZeros)), startZeros);
+    uint32_t mask = BitSetOps::shiftToEnd(BitSetOps::nonZeroStartMask(BitSetOps::kNumBits - (startZeros + endZeros)), startZeros);
     return PreciseDataAnalysis{(PreciseDataAnalysis::Type)(data[i] == mask), rangeStart, rangeEnd};
   }
 
   PreciseDataAnalysis::Type type = PreciseDataAnalysis::Type::kRange;
 
   // Multiple word cases - checks both start & end words and verifies that all words in between have only ones.
-  if (data[i] != BLBitSetOps::nonZeroEndMask(BLBitSetOps::kNumBits - startZeros) ||
-      data[n] != BLBitSetOps::nonZeroStartMask(BLBitSetOps::kNumBits - endZeros)) {
+  if (data[i] != BitSetOps::nonZeroEndMask(BitSetOps::kNumBits - startZeros) ||
+      data[n] != BitSetOps::nonZeroStartMask(BitSetOps::kNumBits - endZeros)) {
     type = PreciseDataAnalysis::Type::kDense;
   }
   else {
     BL_NOUNROLL
     while (++i != n) {
-      if (data[i] != BLBitSetOps::ones()) {
+      if (data[i] != BitSetOps::ones()) {
         type = PreciseDataAnalysis::Type::kDense;
         break;
       }
@@ -227,8 +228,8 @@ static PreciseDataAnalysis preciseDataAnalysis(uint32_t startWord, const uint32_
   return PreciseDataAnalysis{type, rangeStart, rangeEnd};
 }
 
-// BLBitSet - SSO Range - Init
-// ===========================
+// bl::BitSet - SSO Range - Init
+// =============================
 
 static BL_INLINE BLResult initSSOEmpty(BLBitSetCore* self) noexcept {
   self->_d.initStatic(BLObjectInfo{BLBitSet::kSSOEmptySignature});
@@ -240,8 +241,8 @@ static BL_INLINE BLResult initSSORange(BLBitSetCore* self, uint32_t startBit, ui
   return setSSORange(self, startBit, endBit);
 }
 
-// BLBitSet - SSO Dense - Commons
-// ==============================
+// bl::BitSet - SSO Dense - Commons
+// ================================
 
 static BL_INLINE uint32_t getSSOWordCountFromData(const uint32_t* data, uint32_t n) noexcept {
   while (n && data[n - 1] == 0)
@@ -249,8 +250,8 @@ static BL_INLINE uint32_t getSSOWordCountFromData(const uint32_t* data, uint32_t
   return n;
 }
 
-// BLBitSet - SSO Dense - Init
-// ===========================
+// bl::BitSet - SSO Dense - Init
+// =============================
 
 static BL_INLINE BLResult initSSODense(BLBitSetCore* self, uint32_t wordIndex) noexcept {
   BL_ASSERT(wordIndex <= kSSOLastWord);
@@ -262,12 +263,12 @@ static BL_INLINE BLResult initSSODense(BLBitSetCore* self, uint32_t wordIndex) n
 static BL_INLINE BLResult initSSODenseWithData(BLBitSetCore* self, uint32_t wordIndex, const uint32_t* data, uint32_t n) noexcept {
   BL_ASSERT(n > 0 && n <= kSSOWordCount);
   initSSODense(self, wordIndex);
-  BLMemOps::copyForwardInlineT(self->_d.u32_data, data, n);
+  MemOps::copyForwardInlineT(self->_d.u32_data, data, n);
   return BL_SUCCESS;
 }
 
-// BLBitSet - SSO Dense - Chop
-// ===========================
+// bl::BitSet - SSO Dense - Chop
+// =============================
 
 static SSODenseInfo chopSSODenseData(const BLBitSetCore* self, uint32_t dst[kSSOWordCount], uint32_t startBit, uint32_t endBit) noexcept {
   SSODenseInfo info = getSSODenseInfo(self);
@@ -280,15 +281,15 @@ static SSODenseInfo chopSSODenseData(const BLBitSetCore* self, uint32_t dst[kSSO
     return info;
   }
 
-  BLMemOps::fillSmallT(dst, uint32_t(0u), kSSOWordCount);
-  BLBitSetOps::bitArrayFill(dst, firstBit - info.startBit(), lastBit - firstBit + 1);
-  BLMemOps::combineSmall<BitOperator::And>(dst, self->_d.u32_data, kSSOWordCount);
+  MemOps::fillSmallT(dst, uint32_t(0u), kSSOWordCount);
+  BitSetOps::bitArrayFill(dst, firstBit - info.startBit(), lastBit - firstBit + 1);
+  MemOps::combineSmall<BitOperator::And>(dst, self->_d.u32_data, kSSOWordCount);
 
   return info;
 }
 
-// BLBitSet - Dynamic - Capacity
-// =============================
+// bl::BitSet - Dynamic - Capacity
+// ===============================
 
 static BL_INLINE_NODEBUG constexpr uint32_t capacityFromImplSize(BLObjectImplSize implSize) noexcept {
   return uint32_t((implSize.value() - sizeof(BLBitSetImpl)) / sizeof(BLBitSetSegment));
@@ -306,12 +307,12 @@ static BL_INLINE_NODEBUG BLObjectImplSize expandImplSize(BLObjectImplSize implSi
   return alignImplSizeToMinimum(blObjectExpandImplSize(implSize));
 }
 
-// BLBitSet - Dynamic - Init
-// =========================
+// bl::BitSet - Dynamic - Init
+// ===========================
 
 static BL_INLINE BLResult initDynamic(BLBitSetCore* self, BLObjectImplSize implSize) noexcept {
   BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_BIT_SET);
-  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLBitSetImpl>(self, info, implSize));
+  BL_PROPAGATE(ObjectInternal::allocImplT<BLBitSetImpl>(self, info, implSize));
 
   BLBitSetImpl* impl = getImpl(self);
   impl->segmentCapacity = capacityFromImplSize(implSize);
@@ -321,7 +322,7 @@ static BL_INLINE BLResult initDynamic(BLBitSetCore* self, BLObjectImplSize implS
 
 static BL_NOINLINE BLResult initDynamicWithData(BLBitSetCore* self, BLObjectImplSize implSize, const BLBitSetSegment* segmentData, uint32_t segmentCount) noexcept {
   BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_BIT_SET);
-  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLBitSetImpl>(self, info, implSize));
+  BL_PROPAGATE(ObjectInternal::allocImplT<BLBitSetImpl>(self, info, implSize));
 
   BLBitSetImpl* impl = getImpl(self);
   impl->segmentCapacity = capacityFromImplSize(implSize);
@@ -330,8 +331,8 @@ static BL_NOINLINE BLResult initDynamicWithData(BLBitSetCore* self, BLObjectImpl
   return BL_SUCCESS;
 }
 
-// BLBitSet - Dynamic - Cached Cardinality
-// =======================================
+// bl::BitSet - Dynamic - Cached Cardinality
+// =========================================
 
 //! Returns cached cardinality.
 //!
@@ -351,14 +352,14 @@ static BL_INLINE void updateCachedCardinality(const BLBitSetCore* self, uint32_t
   const_cast<BLBitSetCore*>(self)->_d.u32_data[2] = cardinality;
 }
 
-// BLBitSet - Dynamic - Segment Utilities
-// ======================================
+// bl::BitSet - Dynamic - Segment Utilities
+// ========================================
 
 struct SegmentWordIndex {
   uint32_t index;
 };
 
-// Helper for lowerBound()/upperBound().
+// Helper for bl::lowerBound() and bl::upperBound().
 static BL_INLINE bool operator<(const BLBitSetSegment& a, const SegmentWordIndex& b) noexcept {
   return a.endWord() <= b.index;
 }
@@ -378,7 +379,7 @@ static BL_INLINE void initDenseSegment(BLBitSetSegment& segment, uint32_t startW
 
 static BL_INLINE void initDenseSegmentWithData(BLBitSetSegment& segment, uint32_t startWord, const uint32_t* wordData) noexcept {
   segment._startWord = startWord;
-  BLMemOps::copyForwardInlineT(segment.data(), wordData, kSegmentWordCount);
+  MemOps::copyForwardInlineT(segment.data(), wordData, kSegmentWordCount);
 }
 
 static BL_INLINE void initDenseSegmentWithRange(BLBitSetSegment& segment, uint32_t startBit, uint32_t rangeSize) noexcept {
@@ -386,7 +387,7 @@ static BL_INLINE void initDenseSegmentWithRange(BLBitSetSegment& segment, uint32
   segment._startWord = startWord;
   segment.clearData();
 
-  BLBitSetOps::bitArrayFill(segment.data(), startBit & kSegmentBitMask, rangeSize);
+  BitSetOps::bitArrayFill(segment.data(), startBit & kSegmentBitMask, rangeSize);
 }
 
 static BL_INLINE void initDenseSegmentWithOnes(BLBitSetSegment& segment, uint32_t startWord) noexcept {
@@ -396,18 +397,18 @@ static BL_INLINE void initDenseSegmentWithOnes(BLBitSetSegment& segment, uint32_
 
 static BL_INLINE void initRangeSegment(BLBitSetSegment& segment, uint32_t startWord, uint32_t endWord) noexcept {
   uint32_t nWords = endWord - startWord;
-  uint32_t filler = BLIntOps::bitMaskFromBool<uint32_t>(nWords < kSegmentWordCount * 2);
+  uint32_t filler = IntOps::bitMaskFromBool<uint32_t>(nWords < kSegmentWordCount * 2);
 
   segment._startWord = startWord | (~filler & BL_BIT_SET_RANGE_MASK);
   segment._data[0] = filler | endWord;
-  BLMemOps::fillInlineT(segment._data + 1, filler, kSegmentWordCount - 1);
+  MemOps::fillInlineT(segment._data + 1, filler, kSegmentWordCount - 1);
 }
 
 static BL_INLINE bool isSegmentDataZero(const uint32_t* wordData) noexcept {
 #if BL_TARGET_ARCH_BITS >= 64
-  uint64_t u = BLMemOps::readU64<BL_BYTE_ORDER_NATIVE, 4>(wordData);
+  uint64_t u = MemOps::readU64<BL_BYTE_ORDER_NATIVE, 4>(wordData);
   for (uint32_t i = 1; i < kSegmentWordCount / 2; i++)
-    u |= BLMemOps::readU64<BL_BYTE_ORDER_NATIVE, 4>(reinterpret_cast<const uint64_t*>(wordData) + i);
+    u |= MemOps::readU64<BL_BYTE_ORDER_NATIVE, 4>(reinterpret_cast<const uint64_t*>(wordData) + i);
   return u == 0u;
 #else
   uint32_t u = wordData[0];
@@ -419,9 +420,9 @@ static BL_INLINE bool isSegmentDataZero(const uint32_t* wordData) noexcept {
 
 static BL_INLINE bool isSegmentDataFilled(const uint32_t* wordData) noexcept {
 #if BL_TARGET_ARCH_BITS >= 64
-  uint64_t u = BLMemOps::readU64<BL_BYTE_ORDER_NATIVE, 4>(wordData);
+  uint64_t u = MemOps::readU64<BL_BYTE_ORDER_NATIVE, 4>(wordData);
   for (uint32_t i = 1; i < kSegmentWordCount / 2; i++)
-    u &= BLMemOps::readU64<BL_BYTE_ORDER_NATIVE, 4>(reinterpret_cast<const uint64_t*>(wordData) + i);
+    u &= MemOps::readU64<BL_BYTE_ORDER_NATIVE, 4>(reinterpret_cast<const uint64_t*>(wordData) + i);
   return ~u == 0u;
 #else
   uint32_t u = wordData[0];
@@ -436,28 +437,28 @@ static BL_INLINE bool isSegmentDataFilled(const uint32_t* wordData) noexcept {
 
 static BL_INLINE void addSegmentBit(BLBitSetSegment& segment, uint32_t bitIndex) noexcept {
   BL_ASSERT(hasSegmentBitIndex(segment, bitIndex));
-  BLBitSetOps::bitArraySetBit(segment.data(), bitIndex & kSegmentBitMask);
+  BitSetOps::bitArraySetBit(segment.data(), bitIndex & kSegmentBitMask);
 }
 
 static BL_INLINE void addSegmentRange(BLBitSetSegment& segment, uint32_t startBit, uint32_t count) noexcept {
   BL_ASSERT(count > 0);
   BL_ASSERT(hasSegmentBitIndex(segment, startBit));
   BL_ASSERT(hasSegmentBitIndex(segment, startBit + count - 1));
-  BLBitSetOps::bitArrayFill(segment.data(), startBit & kSegmentBitMask, count);
+  BitSetOps::bitArrayFill(segment.data(), startBit & kSegmentBitMask, count);
 }
 
 static BL_INLINE void clearSegmentBit(BLBitSetSegment& segment, uint32_t bitIndex) noexcept {
   BL_ASSERT(hasSegmentBitIndex(segment, bitIndex));
-  BLBitSetOps::bitArrayClearBit(segment.data(), bitIndex & kSegmentBitMask);
+  BitSetOps::bitArrayClearBit(segment.data(), bitIndex & kSegmentBitMask);
 }
 
 static BL_INLINE bool testSegmentBit(const BLBitSetSegment& segment, uint32_t bitIndex) noexcept {
   BL_ASSERT(hasSegmentBitIndex(segment, bitIndex));
-  return BLBitSetOps::bitArrayTestBit(segment.data(), bitIndex & kSegmentBitMask);
+  return BitSetOps::bitArrayTestBit(segment.data(), bitIndex & kSegmentBitMask);
 }
 
-// BLBitSet - Dynamic - SegmentIterator
-// ====================================
+// bl::BitSet - Dynamic - SegmentIterator
+// ======================================
 
 class SegmentIterator {
 public:
@@ -532,8 +533,8 @@ public:
   }
 };
 
-// BLBitSet - Dynamic - Chop Segments
-// ==================================
+// bl::BitSet - Dynamic - Chop Segments
+// ====================================
 
 struct ChoppedSegments {
   // Indexes of start and end segments in the middle.
@@ -582,7 +583,7 @@ static void chopSegments(const BLBitSetSegment* segmentData, uint32_t segmentCou
   out->reset();
 
   for (uint32_t i = 0; i < 2; i++) {
-    middleIndex += uint32_t(BLAlgorithm::lowerBound(segmentData + middleIndex, segmentCount - middleIndex, SegmentWordIndex{wordIndexOf(findBitIndex)}));
+    middleIndex += uint32_t(bl::lowerBound(segmentData + middleIndex, segmentCount - middleIndex, SegmentWordIndex{wordIndexOf(findBitIndex)}));
     if (middleIndex >= segmentCount) {
       out->_middleIndex[i] = middleIndex;
       break;
@@ -626,7 +627,7 @@ static void chopSegments(const BLBitSetSegment* segmentData, uint32_t segmentCou
             else
               initDenseSegmentWithOnes(middleSegment, wordIndex);
 
-            bitIndex += middleWordCount * BLBitSetOps::kNumBits;
+            bitIndex += middleWordCount * BitSetOps::kNumBits;
             if (bitIndex >= endBit)
               break;
           }
@@ -648,7 +649,7 @@ static void chopSegments(const BLBitSetSegment* segmentData, uint32_t segmentCou
         BLBitSetSegment& extraSegment = out->_extraData[extraIndex++];
         initDenseSegmentWithRange(extraSegment, bitIndex, rangeSize);
 
-        BLBitSetOps::bitArrayCombineWords<BitOperator::And>(extraSegment.data(), segment.data(), kSegmentWordCount);
+        BitSetOps::bitArrayCombineWords<BitOperator::And>(extraSegment.data(), segment.data(), kSegmentWordCount);
         bitIndex += rangeSize;
       }
     }
@@ -668,8 +669,8 @@ static void chopSegments(const BLBitSetSegment* segmentData, uint32_t segmentCou
     out->_middleIndex[1] = out->_middleIndex[0];
 }
 
-// BLBitSet - Dynamic - Test Operations
-// ====================================
+// bl::BitSet - Dynamic - Test Operations
+// ======================================
 
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
 
@@ -697,7 +698,7 @@ struct CompareTestOp : public BaseTestOp<int> {
   BL_INLINE int makeResult() const noexcept { return 0; }
 
   template<typename T>
-  BL_INLINE int makeResult(const T& a, const T& b) const noexcept { return BLBitSetOps::compare(a, b); }
+  BL_INLINE int makeResult(const T& a, const T& b) const noexcept { return BitSetOps::compare(a, b); }
 
   template<typename T>
   BL_INLINE bool shouldTerminate(const T& a, const T& b) const noexcept { return a != b; }
@@ -734,7 +735,7 @@ BL_DIAGNOSTIC_POP
 template<typename Op>
 static BL_INLINE typename Op::ResultType testOp(BLBitSetSegment* aSegmentData, uint32_t aSegmentCount, BLBitSetSegment* bSegmentData, uint32_t bSegmentCount, const Op& op) noexcept {
   constexpr uint32_t k0 = 0;
-  constexpr uint32_t k1 = BLIntOps::allOnes<uint32_t>();
+  constexpr uint32_t k1 = IntOps::allOnes<uint32_t>();
 
   SegmentIterator aIter(aSegmentData, aSegmentCount);
   SegmentIterator bIter(bSegmentData, bSegmentCount);
@@ -836,8 +837,8 @@ static BL_INLINE typename Op::ResultType testOp(BLBitSetSegment* aSegmentData, u
   }
 };
 
-// BLBitSet - Dynamic - Segments From Range
-// ========================================
+// bl::BitSet - Dynamic - Segments From Range
+// ==========================================
 
 static BL_INLINE uint32_t segmentCountFromRange(uint32_t startBit, uint32_t endBit) noexcept {
   uint32_t lastBit = endBit - 1;
@@ -922,8 +923,8 @@ static BL_INLINE uint32_t makeSegmentsFromSSOBitSet(BLBitSetSegment* dst, const 
   }
 }
 
-// BLBitSet - Dynamic - WordData to Segments
-// =========================================
+// bl::BitSet - Dynamic - WordData to Segments
+// ===========================================
 
 struct WordDataAnalysis {
   uint32_t segmentCount;
@@ -990,7 +991,7 @@ static WordDataAnalysis analyzeWordDataForAssignment(uint32_t startWord, const u
 // BitSet. The real addition can produce less segments in certain scenarios, but never more segments...
 //
 // NOTE: The given segmentData must be adjusted to startWord - the caller must find which segment will
-// be the first overlapping segment (or the next overlapping segment) by using `BLAlgorithm::lowerBound()`.
+// be the first overlapping segment (or the next overlapping segment) by using `bl::lowerBound()`.
 static WordDataAnalysis analyzeWordDataForCombining(uint32_t startWord, const uint32_t* wordData, uint32_t wordCount, const BLBitSetSegment* segmentData, uint32_t segmentCount) noexcept {
   // Should only be called when there are actually words to assign.
   BL_ASSERT(wordCount > 0);
@@ -1080,21 +1081,21 @@ static bool getRangeFromAnalyzedWordData(uint32_t startWord, const uint32_t* wor
   uint32_t firstWordBits = wordData[0];
   uint32_t lastWordBits = wordData[wordCount - 1];
 
-  uint32_t startZeros = BLBitSetOps::countZerosFromStart(firstWordBits);
-  uint32_t endZeros = BLBitSetOps::countZerosFromEnd(lastWordBits);
+  uint32_t startZeros = BitSetOps::countZerosFromStart(firstWordBits);
+  uint32_t endZeros = BitSetOps::countZerosFromEnd(lastWordBits);
 
   rangeOut->start = bitIndexOf(startWord + 0) + startZeros;
-  rangeOut->end = bitIndexOf(startWord + wordCount - 1) + BLBitSetOps::kNumBits - endZeros;
+  rangeOut->end = bitIndexOf(startWord + wordCount - 1) + BitSetOps::kNumBits - endZeros;
 
   // Single word case.
   if (wordCount == 1) {
-    uint32_t mask = BLBitSetOps::shiftToEnd(BLBitSetOps::nonZeroStartMask(BLBitSetOps::kNumBits - (startZeros + endZeros)), startZeros);
+    uint32_t mask = BitSetOps::shiftToEnd(BitSetOps::nonZeroStartMask(BitSetOps::kNumBits - (startZeros + endZeros)), startZeros);
     return wordData[0] == mask;
   }
 
   // Multiple word cases - first check whether the first and last words describe a consecutive mask.
-  if (firstWordBits != BLBitSetOps::nonZeroEndMask(BLBitSetOps::kNumBits - startZeros) ||
-      lastWordBits != BLBitSetOps::nonZeroStartMask(BLBitSetOps::kNumBits - endZeros)) {
+  if (firstWordBits != BitSetOps::nonZeroEndMask(BitSetOps::kNumBits - startZeros) ||
+      lastWordBits != BitSetOps::nonZeroStartMask(BitSetOps::kNumBits - endZeros)) {
     return false;
   }
 
@@ -1107,12 +1108,12 @@ static bool getRangeFromAnalyzedWordData(uint32_t startWord, const uint32_t* wor
   uint32_t firstWordsToCheck = blMin<uint32_t>(wordCount - 2, kSegmentWordCount * 2 - 1);
   uint32_t lastWordsToCheck = blMin<uint32_t>(wordCount - 2, kSegmentWordCount - 1);
 
-  return BLMemOps::testSmallT(wordData + 1, firstWordsToCheck, BLBitSetOps::ones()) &&
-         BLMemOps::testSmallT(wordData + wordCount - 1 - lastWordsToCheck, lastWordsToCheck, BLBitSetOps::ones());
+  return MemOps::testSmallT(wordData + 1, firstWordsToCheck, BitSetOps::ones()) &&
+         MemOps::testSmallT(wordData + wordCount - 1 - lastWordsToCheck, lastWordsToCheck, BitSetOps::ones());
 }
 
-// BLBitSet - Dynamic - Splice Operation
-// =====================================
+// bl::BitSet - Dynamic - Splice Operation
+// =======================================
 
 // Replaces a segment at the given `index` by segments defined by `insertData` and `insertCount` (internal).
 static BLResult spliceInternal(BLBitSetCore* self, BLBitSetSegment* segmentData, uint32_t segmentCount, uint32_t index, uint32_t deleteCount, const BLBitSetSegment* insertData, uint32_t insertCount, bool canModify) noexcept {
@@ -1127,7 +1128,7 @@ static BLResult spliceInternal(BLBitSetCore* self, BLBitSetSegment* segmentData,
       if (deleteCount != insertCount)
         memmove(segmentData + index + insertCount, segmentData + index + deleteCount, (segmentCount - index - deleteCount) * sizeof(BLBitSetSegment));
 
-      BLMemOps::copyForwardInlineT(segmentData + index, insertData, insertCount);
+      MemOps::copyForwardInlineT(segmentData + index, insertData, insertCount);
       return resetCachedCardinality(self);
     }
   }
@@ -1139,26 +1140,27 @@ static BLResult spliceInternal(BLBitSetCore* self, BLBitSetSegment* segmentData,
   BLBitSetImpl* selfI = getImpl(self);
   selfI->segmentCount = segmentCount + additionalSegmentCount;
 
-  BLMemOps::copyForwardInlineT(selfI->segmentData(), segmentData, index);
-  BLMemOps::copyForwardInlineT(selfI->segmentData() + index, insertData, insertCount);
-  BLMemOps::copyForwardInlineT(selfI->segmentData() + index + insertCount, segmentData + index + deleteCount, segmentCount - index - deleteCount);
+  MemOps::copyForwardInlineT(selfI->segmentData(), segmentData, index);
+  MemOps::copyForwardInlineT(selfI->segmentData() + index, insertData, insertCount);
+  MemOps::copyForwardInlineT(selfI->segmentData() + index + insertCount, segmentData + index + deleteCount, segmentCount - index - deleteCount);
 
   return releaseInstance(&tmp);
 }
 
-} // {BLBitSetPrivate}
+} // {BitSetInternal}
+} // {bl}
 
-// BLBitSet - API - Init & Destroy
-// ===============================
+// bl::BitSet - API - Init & Destroy
+// =================================
 
 BL_API_IMPL BLResult blBitSetInit(BLBitSetCore* self) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
 
   return initSSOEmpty(self);
 }
 
 BL_API_IMPL BLResult blBitSetInitMove(BLBitSetCore* self, BLBitSetCore* other) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
 
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isBitSet());
@@ -1168,7 +1170,7 @@ BL_API_IMPL BLResult blBitSetInitMove(BLBitSetCore* self, BLBitSetCore* other) n
 }
 
 BL_API_IMPL BLResult blBitSetInitWeak(BLBitSetCore* self, const BLBitSetCore* other) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
 
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isBitSet());
@@ -1178,7 +1180,7 @@ BL_API_IMPL BLResult blBitSetInitWeak(BLBitSetCore* self, const BLBitSetCore* ot
 }
 
 BL_API_IMPL BLResult blBitSetInitRange(BLBitSetCore* self, uint32_t startBit, uint32_t endBit) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
 
   uint32_t mask = uint32_t(-int32_t(startBit < endBit));
   initSSORange(self, startBit & mask, endBit & mask);
@@ -1186,28 +1188,28 @@ BL_API_IMPL BLResult blBitSetInitRange(BLBitSetCore* self, uint32_t startBit, ui
 }
 
 BL_API_IMPL BLResult blBitSetDestroy(BLBitSetCore* self) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   return releaseInstance(self);
 }
 
-// BLBitSet - API - Reset
-// ======================
+// bl::BitSet - API - Reset
+// ========================
 
 BL_API_IMPL BLResult blBitSetReset(BLBitSetCore* self) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   releaseInstance(self);
   return initSSOEmpty(self);
 }
 
-// BLBitSet - API - Assign BitSet
-// ==============================
+// bl::BitSet - API - Assign BitSet
+// ================================
 
 BL_API_IMPL BLResult blBitSetAssignMove(BLBitSetCore* self, BLBitSetCore* other) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
 
   BL_ASSERT(self->_d.isBitSet());
   BL_ASSERT(other->_d.isBitSet());
@@ -1218,7 +1220,7 @@ BL_API_IMPL BLResult blBitSetAssignMove(BLBitSetCore* self, BLBitSetCore* other)
 }
 
 BL_API_IMPL BLResult blBitSetAssignWeak(BLBitSetCore* self, const BLBitSetCore* other) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
 
   BL_ASSERT(self->_d.isBitSet());
   BL_ASSERT(other->_d.isBitSet());
@@ -1228,7 +1230,7 @@ BL_API_IMPL BLResult blBitSetAssignWeak(BLBitSetCore* self, const BLBitSetCore* 
 }
 
 BL_API_IMPL BLResult blBitSetAssignDeep(BLBitSetCore* self, const BLBitSetCore* other) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
 
   BL_ASSERT(self->_d.isBitSet());
   BL_ASSERT(other->_d.isBitSet());
@@ -1259,11 +1261,11 @@ BL_API_IMPL BLResult blBitSetAssignDeep(BLBitSetCore* self, const BLBitSetCore* 
   return replaceInstance(self, &tmp);
 }
 
-// BLBitSet - API - Assign Range
-// =============================
+// bl::BitSet - API - Assign Range
+// ===============================
 
 BL_API_IMPL BLResult blBitSetAssignRange(BLBitSetCore* self, uint32_t startBit, uint32_t endBit) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (BL_UNLIKELY(startBit >= endBit)) {
@@ -1291,11 +1293,11 @@ BL_API_IMPL BLResult blBitSetAssignRange(BLBitSetCore* self, uint32_t startBit, 
   return initSSORange(self, startBit, endBit);
 }
 
-// BLBitSet - API - Assign Words
-// =============================
+// bl::BitSet - API - Assign Words
+// ===============================
 
 static BL_INLINE BLResult normalizeWordDataParams(uint32_t& startWord, const uint32_t*& wordData, uint32_t& wordCount) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
 
   if (BL_UNLIKELY(startWord > kLastWord))
     return blTraceError(BL_ERROR_INVALID_VALUE);
@@ -1325,7 +1327,7 @@ static BL_INLINE BLResult normalizeWordDataParams(uint32_t& startWord, const uin
 }
 
 BL_API_IMPL BLResult blBitSetAssignWords(BLBitSetCore* self, uint32_t startWord, const uint32_t* wordData, uint32_t wordCount) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   BL_PROPAGATE(normalizeWordDataParams(startWord, wordData, wordCount));
@@ -1368,7 +1370,7 @@ BL_API_IMPL BLResult blBitSetAssignWords(BLBitSetCore* self, uint32_t startWord,
         uint32_t ssoWordOffset = startWord - ssoStartWord;
 
         initSSODense(&tmp, ssoStartWord);
-        BLMemOps::copyForwardInlineT(tmp._d.u32_data + ssoWordOffset, wordData, wordCount);
+        bl::MemOps::copyForwardInlineT(tmp._d.u32_data + ssoWordOffset, wordData, wordCount);
         return replaceInstance(self, &tmp);
       }
 
@@ -1396,7 +1398,7 @@ BL_API_IMPL BLResult blBitSetAssignWords(BLBitSetCore* self, uint32_t startWord,
       uint32_t segmentWordCount = blMin<uint32_t>(wordCount, kSegmentWordCount - segmentWordOffset);
 
       initDenseSegment(*dstSegment, wordIndex);
-      BLMemOps::copyForwardInlineT(dstSegment->data() + segmentWordOffset, wordData, segmentWordCount);
+      bl::MemOps::copyForwardInlineT(dstSegment->data() + segmentWordOffset, wordData, segmentWordCount);
 
       dstSegment++;
       wordData += segmentWordCount;
@@ -1440,7 +1442,7 @@ BL_API_IMPL BLResult blBitSetAssignWords(BLBitSetCore* self, uint32_t startWord,
     // Trailing segment requires special handling, if it doesn't end on a segment boundary.
     if (wordIndex != wordIndexEnd) {
       initDenseSegment(*dstSegment, wordIndex);
-      BLMemOps::copyForwardInlineT(dstSegment->data(), wordData, (size_t)(wordIndexEnd - wordIndex));
+      bl::MemOps::copyForwardInlineT(dstSegment->data(), wordData, (size_t)(wordIndexEnd - wordIndex));
 
       dstSegment++;
     }
@@ -1458,11 +1460,11 @@ BL_API_IMPL BLResult blBitSetAssignWords(BLBitSetCore* self, uint32_t startWord,
   }
 }
 
-// BLBitSet - API - Accessors
-// ==========================
+// bl::BitSet - API - Accessors
+// ============================
 
 BL_API_IMPL bool blBitSetIsEmpty(const BLBitSetCore* self) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (self->_d.sso())
@@ -1484,7 +1486,7 @@ BL_API_IMPL bool blBitSetIsEmpty(const BLBitSetCore* self) noexcept {
 }
 
 BL_API_IMPL BLResult blBitSetGetData(const BLBitSetCore* self, BLBitSetData* out) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (self->_d.sso()) {
@@ -1501,7 +1503,7 @@ BL_API_IMPL BLResult blBitSetGetData(const BLBitSetCore* self, BLBitSetData* out
 }
 
 BL_API_IMPL uint32_t blBitSetGetSegmentCount(const BLBitSetCore* self) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (self->_d.sso()) {
@@ -1524,7 +1526,7 @@ BL_API_IMPL uint32_t blBitSetGetSegmentCount(const BLBitSetCore* self) noexcept 
 }
 
 BL_API_IMPL uint32_t blBitSetGetSegmentCapacity(const BLBitSetCore* self) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (self->_d.sso())
@@ -1533,11 +1535,11 @@ BL_API_IMPL uint32_t blBitSetGetSegmentCapacity(const BLBitSetCore* self) noexce
   return getImpl(self)->segmentCapacity;
 }
 
-// BLBitSet - API - Bit Test Operations
-// ====================================
+// bl::BitSet - API - Bit Test Operations
+// ======================================
 
 BL_API_IMPL bool blBitSetHasBit(const BLBitSetCore* self, uint32_t bitIndex) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   uint32_t wordIndex = wordIndexOf(bitIndex);
@@ -1548,7 +1550,7 @@ BL_API_IMPL bool blBitSetHasBit(const BLBitSetCore* self, uint32_t bitIndex) noe
 
     SSODenseInfo info = getSSODenseInfo(self);
     if (info.hasIndex(bitIndex))
-      return BLBitSetOps::hasBit(self->_d.u32_data[wordIndex - info.startWord()], bitIndex % BLBitSetOps::kNumBits);
+      return bl::BitSetOps::hasBit(self->_d.u32_data[wordIndex - info.startWord()], bitIndex % bl::BitSetOps::kNumBits);
     else
       return false;
   }
@@ -1557,7 +1559,7 @@ BL_API_IMPL bool blBitSetHasBit(const BLBitSetCore* self, uint32_t bitIndex) noe
     const BLBitSetSegment* segmentData = selfI->segmentData();
 
     uint32_t segmentCount = selfI->segmentCount;
-    uint32_t segmentIndex = uint32_t(BLAlgorithm::lowerBound(segmentData, segmentCount, SegmentWordIndex{wordIndex}));
+    uint32_t segmentIndex = uint32_t(bl::lowerBound(segmentData, segmentCount, SegmentWordIndex{wordIndex}));
 
     if (segmentIndex >= segmentCount)
       return false;
@@ -1571,7 +1573,7 @@ BL_API_IMPL bool blBitSetHasBit(const BLBitSetCore* self, uint32_t bitIndex) noe
 }
 
 BL_API_IMPL bool blBitSetHasBitsInRange(const BLBitSetCore* self, uint32_t startBit, uint32_t endBit) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (startBit >= endBit)
@@ -1603,7 +1605,7 @@ BL_API_IMPL bool blBitSetHasBitsInRange(const BLBitSetCore* self, uint32_t start
     endWord = wordIndexOf(lastBit) + 1u;
 
     initDenseSegment(ssoSegment, curWord);
-    BLMemOps::copyForwardInlineT(ssoSegment._data, self->_d.u32_data + (curWord - info.startWord()), info.endWord() - curWord);
+    bl::MemOps::copyForwardInlineT(ssoSegment._data, self->_d.u32_data + (curWord - info.startWord()), info.endWord() - curWord);
 
     segmentPtr = &ssoSegment;
     segmentEnd = segmentPtr + 1;
@@ -1616,7 +1618,7 @@ BL_API_IMPL bool blBitSetHasBitsInRange(const BLBitSetCore* self, uint32_t start
 
     segmentPtr = selfI->segmentData();
     segmentEnd = selfI->segmentData() + selfI->segmentCount;
-    segmentPtr += BLAlgorithm::lowerBound(segmentPtr, selfI->segmentCount, SegmentWordIndex{curWord});
+    segmentPtr += bl::lowerBound(segmentPtr, selfI->segmentCount, SegmentWordIndex{curWord});
 
     // False if the range doesn't overlap any segment.
     if (segmentPtr == segmentEnd || endWord <= segmentPtr->startWord())
@@ -1630,8 +1632,8 @@ BL_API_IMPL bool blBitSetHasBitsInRange(const BLBitSetCore* self, uint32_t start
     if (segmentPtr->allOnes())
       return true;
 
-    uint32_t index = startBit % BLBitSetOps::kNumBits;
-    uint32_t mask = BLBitSetOps::nonZeroStartMask(blMin<uint32_t>(BLBitSetOps::kNumBits - index, endBit - startBit), index);
+    uint32_t index = startBit % bl::BitSetOps::kNumBits;
+    uint32_t mask = bl::BitSetOps::nonZeroStartMask(blMin<uint32_t>(bl::BitSetOps::kNumBits - index, endBit - startBit), index);
 
     if (segmentPtr->wordAt(curWord - segmentPtr->_denseStartWord()) & mask)
       return true;
@@ -1658,8 +1660,8 @@ BL_API_IMPL bool blBitSetHasBitsInRange(const BLBitSetCore* self, uint32_t start
         curWord++;
 
         if (bits) {
-          uint32_t count = curWord != endWord ? 32 : ((endBit - 1) % BLBitSetOps::kNumBits) + 1;
-          uint32_t mask = BLBitSetOps::nonZeroStartMask(count);
+          uint32_t count = curWord != endWord ? 32 : ((endBit - 1) % bl::BitSetOps::kNumBits) + 1;
+          uint32_t mask = bl::BitSetOps::nonZeroStartMask(count);
           return (bits & mask) != 0;
         }
       } while (--n);
@@ -1669,11 +1671,11 @@ BL_API_IMPL bool blBitSetHasBitsInRange(const BLBitSetCore* self, uint32_t start
   return false;
 }
 
-// BLBitSet - API - Subsumes Test
-// ==============================
+// bl::BitSet - API - Subsumes Test
+// ================================
 
 BL_API_IMPL bool blBitSetSubsumes(const BLBitSetCore* a, const BLBitSetCore* b) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
 
   BL_ASSERT(a->_d.isBitSet());
   BL_ASSERT(b->_d.isBitSet());
@@ -1708,11 +1710,11 @@ BL_API_IMPL bool blBitSetSubsumes(const BLBitSetCore* a, const BLBitSetCore* b) 
   return testOp(aSegmentData, aSegmentCount, bSegmentData, bSegmentCount, SubsumesTestOp{});
 }
 
-// BLBitSet - API - Intersects Test
-// ================================
+// bl::BitSet - API - Intersects Test
+// ==================================
 
 BL_API_IMPL bool blBitSetIntersects(const BLBitSetCore* a, const BLBitSetCore* b) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
 
   BL_ASSERT(a->_d.isBitSet());
   BL_ASSERT(b->_d.isBitSet());
@@ -1784,11 +1786,11 @@ BL_API_IMPL bool blBitSetIntersects(const BLBitSetCore* a, const BLBitSetCore* b
   return testOp(aSegmentData, aSegmentCount, bSegmentData, bSegmentCount, IntersectsTestOp{});
 }
 
-// BLBitSet - API - Range Query
-// ============================
+// bl::BitSet - API - Range Query
+// ==============================
 
 BL_API_IMPL bool blBitSetGetRange(const BLBitSetCore* self, uint32_t* startOut, uint32_t* endOut) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (self->_d.sso()) {
@@ -1820,7 +1822,7 @@ BL_API_IMPL bool blBitSetGetRange(const BLBitSetCore* self, uint32_t* startOut, 
         break;
       }
 
-      if (BLBitSetOps::bitArrayFirstBit(segmentPtr->data(), kSegmentWordCount, &firstBit)) {
+      if (bl::BitSetOps::bitArrayFirstBit(segmentPtr->data(), kSegmentWordCount, &firstBit)) {
         firstBit += segmentPtr->startBit();
         break;
       }
@@ -1843,7 +1845,7 @@ BL_API_IMPL bool blBitSetGetRange(const BLBitSetCore* self, uint32_t* startOut, 
         break;
       }
 
-      if (BLBitSetOps::bitArrayLastBit(segmentEnd->data(), kSegmentWordCount, &lastBit)) {
+      if (bl::BitSetOps::bitArrayLastBit(segmentEnd->data(), kSegmentWordCount, &lastBit)) {
         lastBit += segmentEnd->startBit();
         break;
       }
@@ -1855,10 +1857,11 @@ BL_API_IMPL bool blBitSetGetRange(const BLBitSetCore* self, uint32_t* startOut, 
   }
 }
 
-// BLBitSet - API - Cardinality Query
-// ==================================
+// bl::BitSet - API - Cardinality Query
+// ====================================
 
-namespace BLBitSetPrivate {
+namespace bl {
+namespace BitSetInternal {
 
 class SegmentCardinalityAggregator {
 public:
@@ -1866,7 +1869,7 @@ public:
   uint32_t _rangeCardinalityInWords = 0;
 
   BL_INLINE uint32_t value() const noexcept {
-    return _denseCardinalityInBits + _rangeCardinalityInWords * BLBitSetOps::kNumBits;
+    return _denseCardinalityInBits + _rangeCardinalityInWords * BitSetOps::kNumBits;
   }
 
   BL_INLINE void aggregate(const BLBitSetSegment& segment) noexcept {
@@ -1882,10 +1885,11 @@ public:
   }
 };
 
-} // {BLBitSetPrivate}
+} // {BitSetInternal}
+} // {bl}
 
 BL_API_IMPL uint32_t blBitSetGetCardinality(const BLBitSetCore* self) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (self->_d.sso()) {
@@ -1910,7 +1914,7 @@ BL_API_IMPL uint32_t blBitSetGetCardinality(const BLBitSetCore* self) noexcept {
 }
 
 BL_API_IMPL uint32_t blBitSetGetCardinalityInRange(const BLBitSetCore* self, uint32_t startBit, uint32_t endBit) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (startBit >= endBit)
@@ -1961,11 +1965,11 @@ BL_API_IMPL uint32_t blBitSetGetCardinalityInRange(const BLBitSetCore* self, uin
   return aggregator.value();
 }
 
-// BLBitSet - API - Equality & Comparison
-// ======================================
+// bl::BitSet - API - Equality & Comparison
+// ========================================
 
 BL_API_IMPL bool blBitSetEquals(const BLBitSetCore* a, const BLBitSetCore* b) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
 
   BL_ASSERT(a->_d.isBitSet());
   BL_ASSERT(b->_d.isBitSet());
@@ -2025,7 +2029,7 @@ BL_API_IMPL bool blBitSetEquals(const BLBitSetCore* a, const BLBitSetCore* b) no
 }
 
 BL_API_IMPL int blBitSetCompare(const BLBitSetCore* a, const BLBitSetCore* b) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
 
   BL_ASSERT(a->_d.isBitSet());
   BL_ASSERT(b->_d.isBitSet());
@@ -2060,11 +2064,11 @@ BL_API_IMPL int blBitSetCompare(const BLBitSetCore* a, const BLBitSetCore* b) no
   return testOp(aSegmentData, aSegmentCount, bSegmentData, bSegmentCount, CompareTestOp{});
 }
 
-// BLBitSet - API - Data Manipulation - Clear
-// ==========================================
+// bl::BitSet - API - Data Manipulation - Clear
+// ============================================
 
 BL_API_IMPL BLResult blBitSetClear(BLBitSetCore* self) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (!self->_d.sso()) {
@@ -2079,10 +2083,11 @@ BL_API_IMPL BLResult blBitSetClear(BLBitSetCore* self) noexcept {
   return initSSOEmpty(self);
 }
 
-// BLBitSet - API - Data Manipulation - Shrink & Optimize
-// ======================================================
+// bl::BitSet - API - Data Manipulation - Shrink & Optimize
+// ========================================================
 
-namespace BLBitSetPrivate {
+namespace bl {
+namespace BitSetInternal {
 
 // Calculates the number of segments required to make a BitSet optimized. Optimized BitSet uses
 // ranges where applicable and doesn't have any zero segments (Dense segments with all bits zero).
@@ -2156,7 +2161,7 @@ static bool testSegmentsForRange(const BLBitSetSegment* segmentData, uint32_t se
     Range local;
 
     if (segmentData->allOnes()) {
-      local.reset(startWord * BLBitSetOps::kNumBits, endWord * BLBitSetOps::kNumBits);
+      local.reset(startWord * BitSetOps::kNumBits, endWord * BitSetOps::kNumBits);
     }
     else {
       PreciseDataAnalysis pa = preciseDataAnalysis(startWord, segmentData->data(), kSegmentWordCount);
@@ -2222,9 +2227,9 @@ static BLResult optimizeInternal(BLBitSetCore* self, bool shrink) noexcept {
     if (optimizedSegmentCount <= 2) {
       if (optimizedSegmentCount == 1 || optimizedSegmentData[0].endWord() == optimizedSegmentData[1].startWord()) {
         uint32_t optimizedWordData[kSegmentWordCount * 2];
-        BLMemOps::copyForwardInlineT(optimizedWordData, optimizedSegmentData[0].data(), kSegmentWordCount);
+        bl::MemOps::copyForwardInlineT(optimizedWordData, optimizedSegmentData[0].data(), kSegmentWordCount);
         if (optimizedSegmentCount > 1)
-          BLMemOps::copyForwardInlineT(optimizedWordData + kSegmentWordCount, optimizedSegmentData[1].data(), kSegmentWordCount);
+          bl::MemOps::copyForwardInlineT(optimizedWordData + kSegmentWordCount, optimizedSegmentData[1].data(), kSegmentWordCount);
 
         // Skip zero words from the beginning and from the end.
         const uint32_t* wordData = optimizedWordData;
@@ -2245,7 +2250,7 @@ static BLResult optimizeInternal(BLBitSetCore* self, bool shrink) noexcept {
 
           BLBitSetCore tmp;
           initSSODense(&tmp, ssoStartWord);
-          BLMemOps::copyForwardInlineT(tmp._d.u32_data + ssoWordOffset, wordData, wordCount);
+          bl::MemOps::copyForwardInlineT(tmp._d.u32_data + ssoWordOffset, wordData, wordCount);
           return replaceInstance(self, &tmp);
         }
       }
@@ -2276,27 +2281,28 @@ static BLResult optimizeInternal(BLBitSetCore* self, bool shrink) noexcept {
   }
 }
 
-} // {BLBitSetPrivate}
+} // {BitSetInternal}
+} // {bl}
 
 BL_API_IMPL BLResult blBitSetShrink(BLBitSetCore* self) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   return optimizeInternal(self, true);
 }
 
 BL_API_IMPL BLResult blBitSetOptimize(BLBitSetCore* self) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   return optimizeInternal(self, false);
 }
 
-// BLBitSet - API - Data Manipulation - Chop
-// =========================================
+// bl::BitSet - API - Data Manipulation - Chop
+// ===========================================
 
 BL_API_IMPL BLResult blBitSetChop(BLBitSetCore* self, uint32_t startBit, uint32_t endBit) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (BL_UNLIKELY(startBit >= endBit)) {
@@ -2355,8 +2361,8 @@ BL_API_IMPL BLResult blBitSetChop(BLBitSetCore* self, uint32_t startBit, uint32_
     if (chopped.leadingCount() != chopped.middleIndex())
       memmove(segmentData + chopped.leadingCount(), segmentData + chopped.middleIndex(), chopped.middleCount() * sizeof(BLBitSetSegment));
 
-    BLMemOps::copyForwardInlineT(segmentData, chopped.leadingData(), chopped.leadingCount());
-    BLMemOps::copyForwardInlineT(segmentData + chopped.leadingCount() + chopped.middleCount(), chopped.trailingData(), chopped.trailingCount());
+    bl::MemOps::copyForwardInlineT(segmentData, chopped.leadingData(), chopped.leadingCount());
+    bl::MemOps::copyForwardInlineT(segmentData + chopped.leadingCount() + chopped.middleCount(), chopped.trailingData(), chopped.trailingCount());
 
     selfI->segmentCount = finalCount;
     resetCachedCardinality(self);
@@ -2371,11 +2377,11 @@ BL_API_IMPL BLResult blBitSetChop(BLBitSetCore* self, uint32_t startBit, uint32_
   }
 }
 
-// BLBitSet - API - Data Manipulation - Add Bit
-// ============================================
+// bl::BitSet - API - Data Manipulation - Add Bit
+// ==============================================
 
 BL_API_IMPL BLResult blBitSetAddBit(BLBitSetCore* self, uint32_t bitIndex) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (BL_UNLIKELY(bitIndex == kInvalidIndex))
@@ -2419,8 +2425,8 @@ BL_API_IMPL BLResult blBitSetAddBit(BLBitSetCore* self, uint32_t bitIndex) noexc
 
       if (denseLastWord - denseFirstWord < kSSOWordCount) {
         initSSODense(self, denseFirstWord);
-        BLBitSetOps::bitArrayFill(self->_d.u32_data, rSSO.start - bitIndexOf(denseFirstWord), rSSO.size());
-        BLBitSetOps::bitArraySetBit(self->_d.u32_data, bitIndex - bitIndexOf(denseFirstWord));
+        bl::BitSetOps::bitArrayFill(self->_d.u32_data, rSSO.start - bitIndexOf(denseFirstWord), rSSO.size());
+        bl::BitSetOps::bitArraySetBit(self->_d.u32_data, bitIndex - bitIndexOf(denseFirstWord));
         return BL_SUCCESS;
       }
     }
@@ -2433,7 +2439,7 @@ BL_API_IMPL BLResult blBitSetAddBit(BLBitSetCore* self, uint32_t bitIndex) noexc
         // Just set the bit if it lies within the current window.
         uint32_t startWord = info.startWord();
         if (wordIndex >= startWord) {
-          BLBitSetOps::bitArraySetBit(self->_d.u32_data, bitIndex - info.startBit());
+          bl::BitSetOps::bitArraySetBit(self->_d.u32_data, bitIndex - info.startBit());
           return BL_SUCCESS;
         }
 
@@ -2443,11 +2449,11 @@ BL_API_IMPL BLResult blBitSetAddBit(BLBitSetCore* self, uint32_t bitIndex) noexc
 
         if (wordIndex + kSSOWordCount >= startWord + n) {
           uint32_t tmp[kSSOWordCount];
-          BLMemOps::copyForwardInlineT(tmp, self->_d.u32_data, kSSOWordCount);
+          bl::MemOps::copyForwardInlineT(tmp, self->_d.u32_data, kSSOWordCount);
 
           initSSODense(self, wordIndex);
-          BLMemOps::copyForwardInlineT(self->_d.u32_data + (startWord - wordIndex), tmp, n);
-          self->_d.u32_data[0] |= BLBitSetOps::indexAsMask(bitIndex % BLBitSetOps::kNumBits);
+          bl::MemOps::copyForwardInlineT(self->_d.u32_data + (startWord - wordIndex), tmp, n);
+          self->_d.u32_data[0] |= bl::BitSetOps::indexAsMask(bitIndex % bl::BitSetOps::kNumBits);
 
           return BL_SUCCESS;
         }
@@ -2491,7 +2497,7 @@ BL_API_IMPL BLResult blBitSetAddBit(BLBitSetCore* self, uint32_t bitIndex) noexc
   if (segmentCount && segmentData[segmentCount - 1].startWord() <= wordIndex)
     segmentIndex = segmentCount - uint32_t(segmentData[segmentCount - 1].endWord() > wordIndex);
   else
-    segmentIndex = uint32_t(BLAlgorithm::lowerBound(segmentData, segmentCount, SegmentWordIndex{wordIndex}));
+    segmentIndex = uint32_t(bl::lowerBound(segmentData, segmentCount, SegmentWordIndex{wordIndex}));
 
   if (segmentIndex < segmentCount) {
     BLBitSetSegment& segment = segmentData[segmentIndex];
@@ -2528,7 +2534,7 @@ BL_API_IMPL BLResult blBitSetAddBit(BLBitSetCore* self, uint32_t bitIndex) noexc
     BLBitSetImpl* selfI = getImpl(self);
 
     selfI->segmentCount++;
-    BLMemOps::copyBackwardInlineT(segmentData + segmentIndex + 1, segmentData + segmentIndex, segmentCount - segmentIndex);
+    bl::MemOps::copyBackwardInlineT(segmentData + segmentIndex + 1, segmentData + segmentIndex, segmentCount - segmentIndex);
 
     BLBitSetSegment& dstSegment = segmentData[segmentIndex];
     initDenseSegment(dstSegment, segmentStartWord);
@@ -2544,8 +2550,8 @@ BL_API_IMPL BLResult blBitSetAddBit(BLBitSetCore* self, uint32_t bitIndex) noexc
     BL_PROPAGATE(initDynamic(self, implSize));
     BLBitSetImpl* selfI = getImpl(self);
 
-    BLMemOps::copyForwardInlineT(selfI->segmentData(), segmentData, segmentIndex);
-    BLMemOps::copyForwardInlineT(selfI->segmentData() + segmentIndex + 1, segmentData + segmentIndex, segmentCount - segmentIndex);
+    bl::MemOps::copyForwardInlineT(selfI->segmentData(), segmentData, segmentIndex);
+    bl::MemOps::copyForwardInlineT(selfI->segmentData() + segmentIndex + 1, segmentData + segmentIndex, segmentCount - segmentIndex);
     selfI->segmentCount = segmentCount + 1;
 
     BLBitSetSegment& dstSegment = selfI->segmentData()[segmentIndex];
@@ -2556,11 +2562,11 @@ BL_API_IMPL BLResult blBitSetAddBit(BLBitSetCore* self, uint32_t bitIndex) noexc
   }
 }
 
-// BLBitSet - API - Data Manipulation - Add Range
-// ==============================================
+// bl::BitSet - API - Data Manipulation - Add Range
+// ================================================
 
 BL_API_IMPL BLResult blBitSetAddRange(BLBitSetCore* self, uint32_t rangeStartBit, uint32_t rangeEndBit) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (BL_UNLIKELY(rangeStartBit >= rangeEndBit)) {
@@ -2602,8 +2608,8 @@ BL_API_IMPL BLResult blBitSetAddRange(BLBitSetCore* self, uint32_t rangeStartBit
 
       if (denseLastWord - denseFirstWord < kSSOWordCount) {
         initSSODense(self, denseFirstWord);
-        BLBitSetOps::bitArrayFill(self->_d.u32_data, rSSO.start - bitIndexOf(denseFirstWord), rSSO.size());
-        BLBitSetOps::bitArrayFill(self->_d.u32_data, rangeStartBit - bitIndexOf(denseFirstWord), rangeEndBit - rangeStartBit);
+        bl::BitSetOps::bitArrayFill(self->_d.u32_data, rSSO.start - bitIndexOf(denseFirstWord), rSSO.size());
+        bl::BitSetOps::bitArrayFill(self->_d.u32_data, rangeStartBit - bitIndexOf(denseFirstWord), rangeEndBit - rangeStartBit);
         return BL_SUCCESS;
       }
     }
@@ -2615,7 +2621,7 @@ BL_API_IMPL BLResult blBitSetAddRange(BLBitSetCore* self, uint32_t rangeStartBit
         // Just fill the range if it lies within the current window.
         uint32_t iStartWord = info.startWord();
         if (rangeStartWord >= iStartWord) {
-          BLBitSetOps::bitArrayFill(self->_d.u32_data, rangeStartBit - info.startBit(), rangeEndBit - rangeStartBit);
+          bl::BitSetOps::bitArrayFill(self->_d.u32_data, rangeStartBit - info.startBit(), rangeEndBit - rangeStartBit);
           return BL_SUCCESS;
         }
 
@@ -2626,11 +2632,11 @@ BL_API_IMPL BLResult blBitSetAddRange(BLBitSetCore* self, uint32_t rangeStartBit
 
         if ((rangeLastWord - rangeStartWord) < kSSOWordCount && rangeLastWord < iStartWord + n) {
           uint32_t tmp[kSSOWordCount];
-          BLMemOps::copyForwardInlineT(tmp, self->_d.u32_data, kSSOWordCount);
+          bl::MemOps::copyForwardInlineT(tmp, self->_d.u32_data, kSSOWordCount);
 
           initSSODense(self, rangeStartWord);
-          BLMemOps::copyForwardInlineT(self->_d.u32_data + (iStartWord - rangeStartWord), tmp, n);
-          BLBitSetOps::bitArrayFill(self->_d.u32_data, rangeStartBit - bitIndexOf(rangeStartWord), rangeEndBit - rangeStartBit);
+          bl::MemOps::copyForwardInlineT(self->_d.u32_data + (iStartWord - rangeStartWord), tmp, n);
+          bl::BitSetOps::bitArrayFill(self->_d.u32_data, rangeStartBit - bitIndexOf(rangeStartWord), rangeEndBit - rangeStartBit);
 
           return BL_SUCCESS;
         }
@@ -2640,13 +2646,13 @@ BL_API_IMPL BLResult blBitSetAddRange(BLBitSetCore* self, uint32_t rangeStartBit
       // To simplify all the remaining checks we copy the current content to a temporary buffer and fill the
       // intersecting part of it, otherwise we wouldn't do it properly and we will miss cases that we shouldn't.
       uint32_t tmp[kSSOWordCount];
-      BLMemOps::copyForwardInlineT(tmp, self->_d.u32_data, kSSOWordCount);
+      bl::MemOps::copyForwardInlineT(tmp, self->_d.u32_data, kSSOWordCount);
 
       Range intersection = Range{rangeStartWord, rangeLastWord + 1}.intersect(info.startWord(), info.endWord());
       if (!intersection.empty()) {
         uint32_t iFirst = blMax(info.startBit(), rangeStartBit);
         uint32_t iLast = blMin(info.lastBit(), rangeEndBit - 1);
-        BLBitSetOps::bitArrayFill(tmp, iFirst - info.startBit(), iLast - iFirst + 1);
+        bl::BitSetOps::bitArrayFill(tmp, iFirst - info.startBit(), iLast - iFirst + 1);
       }
 
       PreciseDataAnalysis pa = preciseDataAnalysis(info.startWord(), tmp, info.wordCount());
@@ -2676,7 +2682,7 @@ BL_API_IMPL BLResult blBitSetAddRange(BLBitSetCore* self, uint32_t rangeStartBit
   if (segmentCount && segmentData[segmentCount - 1].startWord() <= rangeStartWord)
     segmentIndex = segmentCount - uint32_t(segmentData[segmentCount - 1].endWord() > rangeStartWord);
   else
-    segmentIndex = uint32_t(BLAlgorithm::lowerBound(segmentData, segmentCount, SegmentWordIndex{rangeStartWord}));
+    segmentIndex = uint32_t(bl::lowerBound(segmentData, segmentCount, SegmentWordIndex{rangeStartWord}));
 
   // If the range spans across a single segment or segments that have all bits set, we can avoid a more generic case.
   while (segmentIndex < segmentCount) {
@@ -2772,7 +2778,7 @@ InitRange:
         break;
       }
       else {
-        BLBitSetOps::bitArrayCombineWords<BitOperator::Or>(inserter.prev().data(), segmentData[segmentIndex].data(), kSegmentWordCount);
+        bl::BitSetOps::bitArrayCombineWords<bl::BitOperator::Or>(inserter.prev().data(), segmentData[segmentIndex].data(), kSegmentWordCount);
         segmentIndex++;
       }
     }
@@ -2793,10 +2799,11 @@ InitRange:
   return spliceInternal(self, segmentData, segmentCount, insertIndex, segmentIndex - insertIndex, inserter.segments(), inserter.count(), canModify);
 }
 
-// BLBitSet - API - Data Manipulation - Add Words
-// ==============================================
+// bl::BitSet - API - Data Manipulation - Add Words
+// ================================================
 
-namespace BLBitSetPrivate {
+namespace bl {
+namespace BitSetInternal {
 
 // Inserts temporary segments into segmentData.
 //
@@ -2825,10 +2832,11 @@ static BL_INLINE void mergeInsertedSegments(BLBitSetSegment* segmentData, uint32
   BL_ASSERT(p == segmentEnd);
 }
 
-} // {BLBitSetPrivate}
+} // {BitSetInternal}
+} // {bl}
 
 BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, const uint32_t* wordData, uint32_t wordCount) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   BL_PROPAGATE(normalizeWordDataParams(startWord, wordData, wordCount));
@@ -2840,7 +2848,7 @@ BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, co
   uint32_t segmentCount = 0;
   uint32_t segmentCapacity = 0;
 
-  BLScopedBufferTmp<sizeof(BLBitSetSegment) * kTmpSegmentDataSize> tmpSegmentBuffer;
+  bl::ScopedBufferTmp<sizeof(BLBitSetSegment) * kTmpSegmentDataSize> tmpSegmentBuffer;
   DynamicSegmentInserter inserter;
 
   // SSO BitSet
@@ -2861,8 +2869,8 @@ BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, co
           BLBitSetCore tmp;
           initSSODense(&tmp, startWord);
 
-          BLMemOps::copyForwardInlineT(tmp._d.u32_data, wordData, wordCount);
-          BLMemOps::combineSmall<BitOperator::Or>(tmp._d.u32_data, self->_d.u32_data + distance, ssoWordCount);
+          bl::MemOps::copyForwardInlineT(tmp._d.u32_data, wordData, wordCount);
+          bl::MemOps::combineSmall<bl::BitOperator::Or>(tmp._d.u32_data, self->_d.u32_data + distance, ssoWordCount);
 
           self->_d = tmp._d;
           return BL_SUCCESS;
@@ -2871,7 +2879,7 @@ BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, co
       else {
         uint32_t distance = startWord - ssoWordIndex;
         if (distance + wordCount <= kSSOWordCount) {
-          BLMemOps::combineSmall<BitOperator::Or>(self->_d.u32_data + distance, wordData, wordCount);
+          bl::MemOps::combineSmall<bl::BitOperator::Or>(self->_d.u32_data + distance, wordData, wordCount);
           return BL_SUCCESS;
         }
       }
@@ -2904,7 +2912,7 @@ BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, co
   uint32_t segmentIndex = segmentCount;
 
   if (segmentData[segmentCount - 1].endWord() > startWordAlignedToSegment)
-    segmentIndex = uint32_t(BLAlgorithm::lowerBound(segmentData, segmentCount, SegmentWordIndex{startWordAlignedToSegment}));
+    segmentIndex = uint32_t(bl::lowerBound(segmentData, segmentCount, SegmentWordIndex{startWordAlignedToSegment}));
 
   uint32_t wordIndexEnd = startWord + wordCount;
   uint32_t insertSegmentCount = (endWordAlignedToSegment - startWordAlignedToSegment) / kSegmentWordCount;
@@ -2952,14 +2960,14 @@ BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, co
 
     if (segmentIndex != segmentCount && hasSegmentWordIndex(segmentData[segmentIndex], wordIndex)) {
       if (!segmentData[segmentIndex].allOnes())
-        BLMemOps::combineSmall<BitOperator::Or>(segmentData[segmentIndex].data() + segmentWordOffset, wordData, segmentWordCount);
+        bl::MemOps::combineSmall<bl::BitOperator::Or>(segmentData[segmentIndex].data() + segmentWordOffset, wordData, segmentWordCount);
 
       if (segmentData[segmentIndex].endWord() == wordIndex + kSegmentWordCount)
         segmentIndex++;
     }
     else {
       initDenseSegment(inserter.current(), wordIndex);
-      BLMemOps::copyForwardInlineT(inserter.current().data() + segmentWordOffset, wordData, segmentWordCount);
+      bl::MemOps::copyForwardInlineT(inserter.current().data() + segmentWordOffset, wordData, segmentWordCount);
       inserter.advance();
     }
 
@@ -2969,7 +2977,7 @@ BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, co
   }
 
   // Main loop - wordIndex is aligned to a segment boundary, so process a single segment at a time.
-  uint32_t wordIndexAlignedEnd = wordIndex + BLIntOps::alignDown<uint32_t>(wordCount, kSegmentWordCount);
+  uint32_t wordIndexAlignedEnd = wordIndex + bl::IntOps::alignDown<uint32_t>(wordCount, kSegmentWordCount);
   while (wordIndex != wordIndexAlignedEnd) {
     // Combine with an existing segment, if there is an intersection.
     if (segmentIndex != segmentCount) {
@@ -2985,7 +2993,7 @@ BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, co
           wordIndex += skipCount;
         }
         else {
-          BLMemOps::combineSmall<BitOperator::Or>(current.data(), wordData, kSegmentWordCount);
+          bl::MemOps::combineSmall<bl::BitOperator::Or>(current.data(), wordData, kSegmentWordCount);
           wordData += kSegmentWordCount;
           wordIndex += kSegmentWordCount;
         }
@@ -3080,13 +3088,13 @@ BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, co
       // Combine with an existing segment, if data and segment overlaps.
       BLBitSetSegment& current = segmentData[segmentIndex];
       if (!current.allOnes())
-        BLMemOps::combineSmall<BitOperator::Or>(current.data(), wordData, wordIndexEnd - wordIndexAlignedEnd);
+        bl::MemOps::combineSmall<bl::BitOperator::Or>(current.data(), wordData, wordIndexEnd - wordIndexAlignedEnd);
       segmentIndex++;
     }
     else {
       // Insert a new Dense segment if data doesn't overlap with an existing segment.
       initDenseSegment(inserter.current(), wordIndex);
-      BLMemOps::copyForwardInlineT(inserter.current().data(), wordData, wordIndexEnd - wordIndexAlignedEnd);
+      bl::MemOps::copyForwardInlineT(inserter.current().data(), wordData, wordIndexEnd - wordIndexAlignedEnd);
       inserter.advance();
     }
   }
@@ -3100,11 +3108,11 @@ BL_API_IMPL BLResult blBitSetAddWords(BLBitSetCore* self, uint32_t startWord, co
   return BL_SUCCESS;
 }
 
-// BLBitSet - API - Data Manipulation - Clear Bit
-// ==============================================
+// bl::BitSet - API - Data Manipulation - Clear Bit
+// ================================================
 
 BL_API_IMPL BLResult blBitSetClearBit(BLBitSetCore* self, uint32_t bitIndex) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (BL_UNLIKELY(bitIndex == kInvalidIndex))
@@ -3147,8 +3155,8 @@ BL_API_IMPL BLResult blBitSetClearBit(BLBitSetCore* self, uint32_t bitIndex) noe
 
       if (lastWord - firstWord < kSSOWordCount) {
         initSSODense(self, firstWord);
-        BLBitSetOps::bitArrayFill(self->_d.u32_data, rSSO.start % BLBitSetOps::kNumBits, rSSO.size());
-        BLBitSetOps::bitArrayClearBit(self->_d.u32_data, bitIndex - bitIndexOf(firstWord));
+        bl::BitSetOps::bitArrayFill(self->_d.u32_data, rSSO.start % bl::BitSetOps::kNumBits, rSSO.size());
+        bl::BitSetOps::bitArrayClearBit(self->_d.u32_data, bitIndex - bitIndexOf(firstWord));
         return BL_SUCCESS;
       }
     }
@@ -3162,14 +3170,14 @@ BL_API_IMPL BLResult blBitSetClearBit(BLBitSetCore* self, uint32_t bitIndex) noe
         return BL_SUCCESS;
 
       // No data shift necessary if the first word is non-zero after the operation.
-      BLBitSetOps::bitArrayClearBit(self->_d.u32_data, bitIndex - info.startBit());
+      bl::BitSetOps::bitArrayClearBit(self->_d.u32_data, bitIndex - info.startBit());
       if (self->_d.u32_data[0] != 0)
         return BL_SUCCESS;
 
       // If the first word was cleared out, it would most likely have to be shifted and start index updated.
       uint32_t i = 1;
       uint32_t buffer[kSSOWordCount];
-      BLMemOps::copyForwardInlineT(buffer, self->_d.u32_data, kSSOWordCount);
+      bl::MemOps::copyForwardInlineT(buffer, self->_d.u32_data, kSSOWordCount);
 
       BL_NOUNROLL
       while (buffer[i] == 0)
@@ -3197,7 +3205,7 @@ BL_API_IMPL BLResult blBitSetClearBit(BLBitSetCore* self, uint32_t bitIndex) noe
   // --------------
 
   // Nothing to do if the bit of the given `bitIndex` is not within any segment.
-  uint32_t segmentIndex = uint32_t(BLAlgorithm::lowerBound(segmentData, segmentCount, SegmentWordIndex{wordIndexOf(bitIndex)}));
+  uint32_t segmentIndex = uint32_t(bl::lowerBound(segmentData, segmentCount, SegmentWordIndex{wordIndexOf(bitIndex)}));
   if (segmentIndex >= segmentCount)
     return BL_SUCCESS;
 
@@ -3256,11 +3264,11 @@ BL_API_IMPL BLResult blBitSetClearBit(BLBitSetCore* self, uint32_t bitIndex) noe
   }
 }
 
-// BLBitSet - API - Data Manipulation - Clear Range
-// ================================================
+// bl::BitSet - API - Data Manipulation - Clear Range
+// ==================================================
 
 BL_API_IMPL BLResult blBitSetClearRange(BLBitSetCore* self, uint32_t rangeStartBit, uint32_t rangeEndBit) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (BL_UNLIKELY(rangeStartBit >= rangeEndBit)) {
@@ -3306,8 +3314,8 @@ BL_API_IMPL BLResult blBitSetClearRange(BLBitSetCore* self, uint32_t rangeStartB
 
       if (denseFirstWord - denseLastWord < kSSOWordCount) {
         initSSODense(self, denseFirstWord);
-        BLBitSetOps::bitArrayFill(self->_d.u32_data, rSSO.start % BLBitSetOps::kNumBits, rSSO.size());
-        BLBitSetOps::bitArrayClear(self->_d.u32_data, intersection.start - bitIndexOf(denseFirstWord), intersection.size());
+        bl::BitSetOps::bitArrayFill(self->_d.u32_data, rSSO.start % bl::BitSetOps::kNumBits, rSSO.size());
+        bl::BitSetOps::bitArrayClear(self->_d.u32_data, intersection.start - bitIndexOf(denseFirstWord), intersection.size());
         return BL_SUCCESS;
       }
     }
@@ -3325,14 +3333,14 @@ BL_API_IMPL BLResult blBitSetClearRange(BLBitSetCore* self, uint32_t rangeStartB
         return BL_SUCCESS;
 
       // No data shift necessary if the first word is non-zero after the operation.
-      BLBitSetOps::bitArrayClear(self->_d.u32_data, rStart - info.startBit(), rLast - rStart + 1);
+      bl::BitSetOps::bitArrayClear(self->_d.u32_data, rStart - info.startBit(), rLast - rStart + 1);
       if (self->_d.u32_data[0] != 0)
         return BL_SUCCESS;
 
       // If the first word was cleared out, it would most likely have to be shifted and start index updated.
       uint32_t i = 1;
       uint32_t buffer[kSSOWordCount];
-      BLMemOps::copyForwardInlineT(buffer, self->_d.u32_data, kSSOWordCount);
+      bl::MemOps::copyForwardInlineT(buffer, self->_d.u32_data, kSSOWordCount);
 
       BL_NOUNROLL
       while (buffer[i] == 0)
@@ -3361,7 +3369,7 @@ BL_API_IMPL BLResult blBitSetClearRange(BLBitSetCore* self, uint32_t rangeStartB
 
   uint32_t rangeStartWord = wordIndexOf(rangeStartBit);
   uint32_t rangeLastWord = wordIndexOf(rangeEndBit - 1);
-  uint32_t segmentIndex = uint32_t(BLAlgorithm::lowerBound(segmentData, segmentCount, SegmentWordIndex{rangeStartWord}));
+  uint32_t segmentIndex = uint32_t(bl::lowerBound(segmentData, segmentCount, SegmentWordIndex{rangeStartWord}));
 
   // If no existing segment matches the range to clear, then there is nothing to clear.
   if (segmentIndex >= segmentCount)
@@ -3435,7 +3443,7 @@ BL_API_IMPL BLResult blBitSetClearRange(BLBitSetCore* self, uint32_t rangeStartB
         uint32_t denseRangeCount = blMin(kSegmentBitCount - denseRangeIndex, rangeEndBit - rangeStartBit);
 
         initDenseSegmentWithOnes(inserter.current(), segmentStartWord);
-        BLBitSetOps::bitArrayClear(inserter.current().data(), denseRangeIndex, denseRangeCount);
+        bl::BitSetOps::bitArrayClear(inserter.current().data(), denseRangeIndex, denseRangeCount);
         inserter.advance();
 
         rangeStartWord = segmentStartWord;
@@ -3456,7 +3464,7 @@ BL_API_IMPL BLResult blBitSetClearRange(BLBitSetCore* self, uint32_t rangeStartB
         uint32_t denseRangeCount = rangeEndBit & kSegmentBitMask;
 
         initDenseSegmentWithOnes(inserter.current(), segmentStartWord);
-        BLBitSetOps::bitArrayClear(inserter.current().data(), denseRangeIndex, denseRangeCount);
+        bl::BitSetOps::bitArrayClear(inserter.current().data(), denseRangeIndex, denseRangeCount);
         inserter.advance();
 
         segmentStartWord += kSegmentWordCount;
@@ -3490,7 +3498,7 @@ BL_API_IMPL BLResult blBitSetClearRange(BLBitSetCore* self, uint32_t rangeStartB
       if (rangeLastWord < segment.endWord()) {
         // If this is the only segment to touch, and the BitSet is mutable, do it in place and return
         if (canModify && insertIndex == segmentIndex && inserter.empty()) {
-          BLBitSetOps::bitArrayClear(segmentData[segmentIndex].data(), segmentStartBit, segmentRange);
+          bl::BitSetOps::bitArrayClear(segmentData[segmentIndex].data(), segmentStartBit, segmentRange);
           return resetCachedCardinality(self);
         }
       }
@@ -3499,7 +3507,7 @@ BL_API_IMPL BLResult blBitSetClearRange(BLBitSetCore* self, uint32_t rangeStartB
       }
 
       inserter.current() = segment;
-      BLBitSetOps::bitArrayClear(inserter.current().data(), segmentStartBit, segmentRange);
+      bl::BitSetOps::bitArrayClear(inserter.current().data(), segmentStartBit, segmentRange);
       inserter.advance();
     }
   } while (++segmentIndex < segmentCount);
@@ -3510,8 +3518,8 @@ BL_API_IMPL BLResult blBitSetClearRange(BLBitSetCore* self, uint32_t rangeStartB
 /*
 // TODO: Future API (BitSet).
 
-// BLBitSet - API - Data Manipulation - Combine
-// ============================================
+// bl::BitSet - API - Data Manipulation - Combine
+// ==============================================
 
 BL_API_IMPL BLResult blBitSetCombine(BLBitSetCore* dst, const BLBitSetCore* a, const BLBitSetCore* b, BLBooleanOp booleanOp) noexcept {
   BL_ASSERT(dst->_d.isBitSet());
@@ -3522,15 +3530,15 @@ BL_API_IMPL BLResult blBitSetCombine(BLBitSetCore* dst, const BLBitSetCore* a, c
 }
 */
 
-// BLBitSet - API - Builder Interface
-// ==================================
+// bl::BitSet - API - Builder Interface
+// ====================================
 
 BL_API_IMPL BLResult blBitSetBuilderCommit(BLBitSetCore* self, BLBitSetBuilderCore* builder, uint32_t newAreaIndex) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   uint32_t areaShift = builder->_areaShift;
-  uint32_t wordCount = (1 << areaShift) / BLBitSetOps::kNumBits;
+  uint32_t wordCount = (1 << areaShift) / bl::BitSetOps::kNumBits;
 
   if (builder->_areaIndex != BLBitSetBuilderCore::kInvalidAreaIndex) {
     uint32_t startWord = wordIndexOf(builder->_areaIndex << areaShift);
@@ -3538,13 +3546,13 @@ BL_API_IMPL BLResult blBitSetBuilderCommit(BLBitSetCore* self, BLBitSetBuilderCo
   }
 
   builder->_areaIndex = newAreaIndex;
-  BLMemOps::fillInlineT(builder->areaWords(), uint32_t(0), wordCount);
+  bl::MemOps::fillInlineT(builder->areaWords(), uint32_t(0), wordCount);
 
   return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult blBitSetBuilderAddRange(BLBitSetCore* self, BLBitSetBuilderCore* builder, uint32_t startBit, uint32_t endBit) noexcept {
-  using namespace BLBitSetPrivate;
+  using namespace bl::BitSetInternal;
   BL_ASSERT(self->_d.isBitSet());
 
   if (startBit >= endBit)
@@ -3562,13 +3570,13 @@ BL_API_IMPL BLResult blBitSetBuilderAddRange(BLBitSetCore* self, BLBitSetBuilder
     BL_PROPAGATE(blBitSetBuilderCommit(self, builder, areaIndex));
 
   uint32_t areaBitIndex = startBit - (areaIndex << areaShift);
-  BLBitSetOps::bitArrayFill(builder->areaWords(), areaBitIndex, endBit - startBit);
+  bl::BitSetOps::bitArrayFill(builder->areaWords(), areaBitIndex, endBit - startBit);
 
   return BL_SUCCESS;
 }
 
-// BLBitSet - Runtime Registration
-// ===============================
+// bl::BitSet - Runtime Registration
+// =================================
 
 void blBitSetRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);

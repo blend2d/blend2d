@@ -9,21 +9,22 @@
 #include "../raster/workermanager_p.h"
 #include "../support/intops_p.h"
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
-// BLRasterEngine::WorkerManager - Init
-// ====================================
+// bl::RasterEngine::WorkerManager - Init
+// ======================================
 
 BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInfo* createInfo) noexcept {
   uint32_t initFlags = createInfo->flags;
   uint32_t threadCount = createInfo->threadCount;
-  uint32_t commandQueueLimit = BLIntOps::alignUp(createInfo->commandQueueLimit, kRenderQueueCapacity);
+  uint32_t commandQueueLimit = IntOps::alignUp(createInfo->commandQueueLimit, kRenderQueueCapacity);
 
   BL_ASSERT(!isActive());
   BL_ASSERT(threadCount > 0);
 
-  BLArenaAllocator& zone = ctxI->baseZone;
-  BLArenaAllocator::StatePtr zoneState = zone.saveState();
+  ArenaAllocator& zone = ctxI->baseZone;
+  ArenaAllocator::StatePtr zoneState = zone.saveState();
 
   // We must enforce some hard limit here...
   if (threadCount > BL_RUNTIME_MAX_THREAD_COUNT)
@@ -49,8 +50,8 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInf
 
   // Allocate space for worker threads data.
   if (workerCount) {
-    BLThread** workerThreads = zone.allocT<BLThread*>(BLIntOps::alignUp(workerCount * sizeof(void*), 8));
-    WorkData** workDataStorage = zone.allocT<WorkData*>(BLIntOps::alignUp(workerCount * sizeof(void*), 8));
+    BLThread** workerThreads = zone.allocT<BLThread*>(IntOps::alignUp(workerCount * sizeof(void*), 8));
+    WorkData** workDataStorage = zone.allocT<WorkData*>(IntOps::alignUp(workerCount * sizeof(void*), 8));
 
     if (!workerThreads || !workDataStorage) {
       zone.restoreState(zoneState);
@@ -79,7 +80,7 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInf
     for (uint32_t i = 0; i < n; i++) {
       // NOTE: We really want work data to be aligned to the cache line as each instance will be used from a different
       // thread. This means that they should not interfere with each other as that could slow down things significantly.
-      WorkData* workData = zone.allocT<WorkData>(BLIntOps::alignUp(sizeof(WorkData), BL_CACHE_LINE_SIZE), BL_CACHE_LINE_SIZE);
+      WorkData* workData = zone.allocT<WorkData>(IntOps::alignUp(sizeof(WorkData), BL_CACHE_LINE_SIZE), BL_CACHE_LINE_SIZE);
       workDataStorage[i] = workData;
 
       if (!workData) {
@@ -136,8 +137,8 @@ BLResult WorkerManager::initWorkMemory(size_t zeroedMemorySize) noexcept {
   return BL_SUCCESS;
 }
 
-// BLRasterEngine::WorkerManager - Reset
-// =====================================
+// bl::RasterEngine::WorkerManager - Reset
+// =======================================
 
 void WorkerManager::reset() noexcept {
   if (!isActive())
@@ -165,4 +166,5 @@ void WorkerManager::reset() noexcept {
   _stateSlotCount = 0;
 }
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}

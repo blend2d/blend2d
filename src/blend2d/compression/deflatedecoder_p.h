@@ -11,7 +11,8 @@
 
 //! \cond INTERNAL
 
-namespace BLCompression {
+namespace bl {
+namespace Compression {
 namespace Deflate {
 
 //! Callback that is used to read a chunk of data to be consumed by the decoder. It was introduced for PNG support,
@@ -25,7 +26,8 @@ typedef bool (BL_CDECL* ReadFunc)(void* readCtx, const uint8_t** pData, const ui
 BLResult deflate(BLArray<uint8_t>& dst, void* readCtx, ReadFunc readFunc, bool hasHeader) noexcept;
 
 } // {Deflate}
-} // {BLCompression}
+} // {Compression}
+} // {bl}
 
 //! \endcond
 

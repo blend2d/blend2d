@@ -15,14 +15,14 @@
   #include <process.h>
 #endif
 
-// Thread - Globals
-// ================
+// bl::Thread - Globals
+// ====================
 
 static BLWorkerThreadVirt blFutexWorkerThreadVirt;
 static BLWorkerThreadVirt blPortableWorkerThreadVirt;
 
-// Thread - InternalWorkerThread
-// =============================
+// bl::Thread - InternalWorkerThread
+// =================================
 
 // Internal, implements the worker entry point, which then calls work items.
 typedef void (BL_CDECL* BLThreadEntryFunc)(BLThread* self) BL_NOEXCEPT;
@@ -31,12 +31,12 @@ typedef void (BL_CDECL* BLThreadEntryFunc)(BLThread* self) BL_NOEXCEPT;
 //!
 //! By default the thread is running, if it's not running then it's either idling or quitting.
 enum BLWorkerThreadFlags : uint32_t {
-  //! Thread has no work and is spleeping.
+  //! Thread has no work and is sleeping.
   BL_WORKER_THREAD_FLAG_SLEEPING = 0x00000001u,
   //! Thread is quitting (may still have work, but won't accept more work).
   BL_WORKER_THREAD_FLAG_QUITTING = 0x00000002u,
   //! A work item is currently being enqueued.
-  BL_WORKER_THREAD_FLAG_ENQUEING_WORK = 0x00000004u,
+  BL_WORKER_THREAD_FLAG_ENQUEUING_WORK = 0x00000004u,
   //! A work item has been enqueued.
   BL_WORKER_THREAD_FLAG_ENQUEUED_WORK = 0x00000008u
 };
@@ -109,8 +109,8 @@ static uint32_t BL_CDECL blInternalWorkerThreadStatus(const BLThread* self) noex
   return BL_THREAD_STATUS_IDLE;
 }
 
-// Thread - PortableWorkerThread
-// =============================
+// bl::Thread - PortableWorkerThread
+// =================================
 
 static void BL_CDECL blPortableWorkerThreadEntryPoint(BLThread* self) noexcept;
 
@@ -141,7 +141,7 @@ static BLResult BL_CDECL blPortableWorkerThreadRun(BLThread* self, BLThreadFunc 
 
   BLLockGuard<BLMutex> guard(thread->_mutex);
   uint32_t flags = thread->_statusData.flags;
-  uint32_t kBusyFlags = BL_WORKER_THREAD_FLAG_ENQUEING_WORK | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK | BL_WORKER_THREAD_FLAG_QUITTING;
+  uint32_t kBusyFlags = BL_WORKER_THREAD_FLAG_ENQUEUING_WORK | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK | BL_WORKER_THREAD_FLAG_QUITTING;
 
   if (flags & kBusyFlags)
     return BL_ERROR_BUSY;
@@ -222,8 +222,8 @@ static void BL_CDECL blPortableWorkerThreadEntryPoint(BLThread* self) noexcept {
   thread->_exitFunc(thread, thread->_exitData);
 }
 
-// Thread - FutexWorkerThread
-// ==========================
+// bl::Thread - FutexWorkerThread
+// ==============================
 
 static void BL_CDECL blFutexWorkerThreadEntryPoint(BLThread* self) noexcept;
 
@@ -253,15 +253,15 @@ static BLResult BL_CDECL blFutexWorkerThreadRun(BLThread* self, BLThreadFunc wor
 
   // We want to enqueue work atomically here. For that purpose we have two status flags:
   //
-  //   - BL_WORKER_THREAD_FLAG_ENQUEING_WORK - work is being enqueued.
+  //   - BL_WORKER_THREAD_FLAG_ENQUEUING_WORK - work is being enqueued.
   //   - BL_WORKER_THREAD_FLAG_ENQUEUED_WORK - work has been enqueued.
   //
-  // We just want to OR `ENQUEING` flag here and if we encounter that another thread was faster enqueuing we just
-  // return `BL_ERROR_BUSY`. It does no harm when both `ENQUEING` and `ENQUEUED` flags are set as when the work is
+  // We just want to OR `ENQUEUING` flag here and if we encounter that another thread was faster enqueuing we just
+  // return `BL_ERROR_BUSY`. It does no harm when both `ENQUEUING` and `ENQUEUED` flags are set as when the work is
   // picked both flags would be cleared.
 
-  uint32_t prevFlags = blAtomicFetchOrStrong(&thread->_statusData.flags, uint32_t(BL_WORKER_THREAD_FLAG_ENQUEING_WORK));
-  uint32_t kBusyFlags = BL_WORKER_THREAD_FLAG_ENQUEING_WORK | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK | BL_WORKER_THREAD_FLAG_QUITTING;
+  uint32_t prevFlags = blAtomicFetchOrStrong(&thread->_statusData.flags, uint32_t(BL_WORKER_THREAD_FLAG_ENQUEUING_WORK));
+  uint32_t kBusyFlags = BL_WORKER_THREAD_FLAG_ENQUEUING_WORK | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK | BL_WORKER_THREAD_FLAG_QUITTING;
 
   if (prevFlags & kBusyFlags)
     return BL_ERROR_BUSY;
@@ -315,7 +315,7 @@ static void BL_CDECL blFutexWorkerThreadEntryPoint(BLThread* self) noexcept {
       BLThreadFunc workFunc = blAtomicFetchRelaxed(&thread->_workItem.func);
       void* workData = blAtomicFetchRelaxed(&thread->_workItem.data);
 
-      constexpr uint32_t kEnqueingOrEnqueued = BL_WORKER_THREAD_FLAG_ENQUEING_WORK | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK;
+      constexpr uint32_t kEnqueingOrEnqueued = BL_WORKER_THREAD_FLAG_ENQUEUING_WORK | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK;
       blAtomicFetchAndSeqCst(&thread->_statusData.flags, ~kEnqueingOrEnqueued);
 
       spinCount = 0;
@@ -330,7 +330,7 @@ static void BL_CDECL blFutexWorkerThreadEntryPoint(BLThread* self) noexcept {
 
     // If another thread is enqueing work at the moment, spin for a little
     // time to either pick it up immediately or before going to wait.
-    if (flags & BL_WORKER_THREAD_FLAG_ENQUEING_WORK && ++spinCount < kSpinLimit)
+    if (flags & BL_WORKER_THREAD_FLAG_ENQUEUING_WORK && ++spinCount < kSpinLimit)
       continue;
 
     // Let's wait for more work or a quit signal.
@@ -345,8 +345,8 @@ static void BL_CDECL blFutexWorkerThreadEntryPoint(BLThread* self) noexcept {
   }
 }
 
-// Thread - WorkerThread - API
-// ===========================
+// bl::Thread - WorkerThread - API
+// ===============================
 
 static BLInternalWorkerThread* blThreadNew(BLThreadFunc exitFunc, void* exitData) noexcept {
   uint32_t alignment = BL_CACHE_LINE_SIZE;
@@ -359,7 +359,7 @@ static BLInternalWorkerThread* blThreadNew(BLThreadFunc exitFunc, void* exitData
   if (BL_UNLIKELY(!allocatedPtr))
     return nullptr;
 
-  void* alignedPtr = BLIntOps::alignUp(allocatedPtr, alignment);
+  void* alignedPtr = bl::IntOps::alignUp(allocatedPtr, alignment);
   if (futexEnabled)
     return new(BLInternal::PlacementNew{alignedPtr}) BLFutexWorkerThread(exitFunc, exitData, allocatedPtr);
   else
@@ -368,8 +368,8 @@ static BLInternalWorkerThread* blThreadNew(BLThreadFunc exitFunc, void* exitData
 
 #ifdef _WIN32
 
-// Thread - Windows Implementation
-// ===============================
+// bl::Thread - Windows Implementation
+// ===================================
 
 static unsigned BL_STDCALL blThreadEntryPoint(void* arg) noexcept {
   BLInternalWorkerThread* thread = static_cast<BLInternalWorkerThread*>(arg);
@@ -410,8 +410,8 @@ BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes*
 
 #else
 
-// Thread - POSIX Implementation
-// =============================
+// bl::Thread - POSIX Implementation
+// =================================
 
 static std::atomic<size_t> blThreadMinimumProbedStackSize;
 
@@ -486,8 +486,8 @@ BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes*
 }
 #endif
 
-// Thread - Runtime Registration
-// =============================
+// bl::Thread - Runtime Registration
+// =================================
 
 void blThreadRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);

@@ -14,19 +14,20 @@
 #include "../../pipeline/jit/pipegenruntime_p.h"
 #include "../../support/wrap_p.h"
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
-// BLPipeline::JIT::Runtime - Globals
-// ==================================
+// bl::Pipeline::JIT::Runtime - Globals
+// ====================================
 
-BLWrap<PipeDynamicRuntime> PipeDynamicRuntime::_global;
+Wrap<PipeDynamicRuntime> PipeDynamicRuntime::_global;
 
-// BLPipeline::JIT::Runtime - FunctionCache
-// ========================================
+// bl::Pipeline::JIT::Runtime - FunctionCache
+// ==========================================
 
 FunctionCache::FunctionCache() noexcept
-  : _allocator(4096 - BLArenaAllocator::kBlockOverhead),
+  : _allocator(4096 - ArenaAllocator::kBlockOverhead),
     _funcMap(&_allocator) {}
 FunctionCache::~FunctionCache() noexcept {}
 
@@ -43,8 +44,8 @@ BLResult FunctionCache::put(uint32_t signature, void* func) noexcept {
   return BL_SUCCESS;
 }
 
-// BLPipeline::JIT::Runtime - Compiler Error Handler
-// =================================================
+// bl::Pipeline::JIT::Runtime - Compiler Error Handler
+// ===================================================
 
 //! JIT error handler that implements `asmjit::ErrorHandler` interface.
 class CompilerErrorHandler : public asmjit::ErrorHandler {
@@ -52,17 +53,17 @@ public:
   asmjit::Error _err;
 
   CompilerErrorHandler() noexcept : _err(asmjit::kErrorOk) {}
-  virtual ~CompilerErrorHandler() noexcept {}
+  ~CompilerErrorHandler() noexcept override {}
 
   void handleError(asmjit::Error err, const char* message, asmjit::BaseEmitter* origin) override {
     blUnused(origin);
     _err = err;
-    blRuntimeMessageFmt("BLPipeline assembling error: %s\n", message);
+    blRuntimeMessageFmt("bl::Pipeline assembling error: %s\n", message);
   }
 };
 
-// BLPipeline::JIT::Runtime - Dynamic Runtime Implementation
-// =========================================================
+// bl::Pipeline::JIT::Runtime - Dynamic Runtime Implementation
+// ===========================================================
 
 static void BL_CDECL blPipeGenRuntimeDestroy(PipeRuntime* self_) noexcept {
   PipeDynamicRuntime* self = static_cast<PipeDynamicRuntime*>(self_);
@@ -249,54 +250,52 @@ void PipeDynamicRuntime::_restrictFeatures(uint32_t mask) noexcept {
 }
 
 #ifndef ASMJIT_NO_LOGGING
-static const char* stringifyFormat(BLInternalFormat value) noexcept {
+static const char* stringifyFormat(FormatExt value) noexcept {
   switch (value) {
-    case BLInternalFormat::kNone  : return "None";
-    case BLInternalFormat::kPRGB32: return "PRGB32";
-    case BLInternalFormat::kXRGB32: return "XRGB32";
-    case BLInternalFormat::kA8    : return "A8";
-    case BLInternalFormat::kFRGB32: return "FRGB32";
-    case BLInternalFormat::kZERO32: return "ZERO32";
+    case FormatExt::kNone  : return "None";
+    case FormatExt::kPRGB32: return "PRGB32";
+    case FormatExt::kXRGB32: return "XRGB32";
+    case FormatExt::kA8    : return "A8";
+    case FormatExt::kFRGB32: return "FRGB32";
+    case FormatExt::kZERO32: return "ZERO32";
 
     default:
       return "<Unknown>";
   }
 }
 
-static const char* stringifyCompOp(uint32_t value) noexcept {
+static const char* stringifyCompOp(CompOpExt value) noexcept {
   switch (value) {
-    case BL_COMP_OP_SRC_OVER    : return "SrcOver";
-    case BL_COMP_OP_SRC_COPY    : return "SrcCopy";
-    case BL_COMP_OP_SRC_IN      : return "SrcIn";
-    case BL_COMP_OP_SRC_OUT     : return "SrcOut";
-    case BL_COMP_OP_SRC_ATOP    : return "SrcAtop";
-    case BL_COMP_OP_DST_OVER    : return "DstOver";
-    case BL_COMP_OP_DST_COPY    : return "DstCopy";
-    case BL_COMP_OP_DST_IN      : return "DstIn";
-    case BL_COMP_OP_DST_OUT     : return "DstOut";
-    case BL_COMP_OP_DST_ATOP    : return "DstAtop";
-    case BL_COMP_OP_XOR         : return "Xor";
-    case BL_COMP_OP_CLEAR       : return "Clear";
-    case BL_COMP_OP_PLUS        : return "Plus";
-    case BL_COMP_OP_MINUS       : return "Minus";
-    case BL_COMP_OP_MODULATE    : return "Modulate";
-    case BL_COMP_OP_MULTIPLY    : return "Multiply";
-    case BL_COMP_OP_SCREEN      : return "Screen";
-    case BL_COMP_OP_OVERLAY     : return "Overlay";
-    case BL_COMP_OP_DARKEN      : return "Darken";
-    case BL_COMP_OP_LIGHTEN     : return "Lighten";
-    case BL_COMP_OP_COLOR_DODGE : return "ColorDodge";
-    case BL_COMP_OP_COLOR_BURN  : return "ColorBurn";
-    case BL_COMP_OP_LINEAR_BURN : return "LinearBurn";
-    case BL_COMP_OP_LINEAR_LIGHT: return "LinearLight";
-    case BL_COMP_OP_PIN_LIGHT   : return "PinLight";
-    case BL_COMP_OP_HARD_LIGHT  : return "HardLight";
-    case BL_COMP_OP_SOFT_LIGHT  : return "SoftLight";
-    case BL_COMP_OP_DIFFERENCE  : return "Difference";
-    case BL_COMP_OP_EXCLUSION   : return "Exclusion";
-
-    case BL_COMP_OP_INTERNAL_ALPHA_INV:
-      return "AlphaInv";
+    case CompOpExt::kSrcOver    : return "SrcOver";
+    case CompOpExt::kSrcCopy    : return "SrcCopy";
+    case CompOpExt::kSrcIn      : return "SrcIn";
+    case CompOpExt::kSrcOut     : return "SrcOut";
+    case CompOpExt::kSrcAtop    : return "SrcAtop";
+    case CompOpExt::kDstOver    : return "DstOver";
+    case CompOpExt::kDstCopy    : return "DstCopy";
+    case CompOpExt::kDstIn      : return "DstIn";
+    case CompOpExt::kDstOut     : return "DstOut";
+    case CompOpExt::kDstAtop    : return "DstAtop";
+    case CompOpExt::kXor        : return "Xor";
+    case CompOpExt::kClear      : return "Clear";
+    case CompOpExt::kPlus       : return "Plus";
+    case CompOpExt::kMinus      : return "Minus";
+    case CompOpExt::kModulate   : return "Modulate";
+    case CompOpExt::kMultiply   : return "Multiply";
+    case CompOpExt::kScreen     : return "Screen";
+    case CompOpExt::kOverlay    : return "Overlay";
+    case CompOpExt::kDarken     : return "Darken";
+    case CompOpExt::kLighten    : return "Lighten";
+    case CompOpExt::kColorDodge : return "ColorDodge";
+    case CompOpExt::kColorBurn  : return "ColorBurn";
+    case CompOpExt::kLinearBurn : return "LinearBurn";
+    case CompOpExt::kLinearLight: return "LinearLight";
+    case CompOpExt::kPinLight   : return "PinLight";
+    case CompOpExt::kHardLight  : return "HardLight";
+    case CompOpExt::kSoftLight  : return "SoftLight";
+    case CompOpExt::kDifference : return "Difference";
+    case CompOpExt::kExclusion  : return "Exclusion";
+    case CompOpExt::kAlphaInv   : return "AlphaInv";
 
     default:
       return "<Unknown>";
@@ -355,16 +354,16 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
 
   // CLEAR is Always simplified to SRC_COPY.
   // DST_COPY is NOP, which should never be propagated to the compiler
-  if (sig.compOp() == BL_COMP_OP_CLEAR || sig.compOp() == BL_COMP_OP_DST_COPY || sig.compOp() >= BL_COMP_OP_INTERNAL_COUNT)
+  if (sig.compOp() == CompOpExt::kClear || sig.compOp() == CompOpExt::kDstCopy || uint32_t(sig.compOp()) >= kCompOpExtCount)
     return nullptr;
 
-  if (sig.fillType() == BLPipeline::FillType::kNone)
+  if (sig.fillType() == FillType::kNone)
     return nullptr;
 
-  if (sig.dstFormat() == BLInternalFormat::kNone)
+  if (sig.dstFormat() == FormatExt::kNone)
     return nullptr;
 
-  if (sig.srcFormat() == BLInternalFormat::kNone)
+  if (sig.srcFormat() == FormatExt::kNone)
     return nullptr;
 
   CompilerErrorHandler eh;
@@ -403,7 +402,7 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
       sig.value,
       stringifyFormat(sig.dstFormat()),
       stringifyFormat(sig.srcFormat()),
-      stringifyCompOp(BLCompOp(sig.compOp())),
+      stringifyCompOp(sig.compOp()),
       stringifyFillType(sig.fillType()),
       stringifyFetchType(sig.fetchType()));
   }
@@ -449,15 +448,16 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
 }
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
-// BLPipeline::JIT::Runtime - Runtime Registration
-// ===============================================
+// bl::Pipeline::JIT::Runtime - Runtime Registration
+// =================================================
 
 static void BL_CDECL blDynamicPipeRtResourceInfo(BLRuntimeContext* rt, BLRuntimeResourceInfo* resourceInfo) noexcept {
   blUnused(rt);
 
-  BLPipeline::JIT::PipeDynamicRuntime& pipeGenRuntime = BLPipeline::JIT::PipeDynamicRuntime::_global();
+  bl::Pipeline::JIT::PipeDynamicRuntime& pipeGenRuntime = bl::Pipeline::JIT::PipeDynamicRuntime::_global();
   asmjit::JitAllocator::Statistics pipeStats = pipeGenRuntime._jitRuntime.allocator()->statistics();
 
   resourceInfo->vmUsed += pipeStats.usedSize();
@@ -469,11 +469,11 @@ static void BL_CDECL blDynamicPipeRtResourceInfo(BLRuntimeContext* rt, BLRuntime
 
 static void BL_CDECL blDynamicPipeRtShutdown(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
-  BLPipeline::JIT::PipeDynamicRuntime::_global.destroy();
+  bl::Pipeline::JIT::PipeDynamicRuntime::_global.destroy();
 }
 
 void blDynamicPipelineRtInit(BLRuntimeContext* rt) noexcept {
-  BLPipeline::JIT::PipeDynamicRuntime::_global.init();
+  bl::Pipeline::JIT::PipeDynamicRuntime::_global.init();
 
   rt->shutdownHandlers.add(blDynamicPipeRtShutdown);
   rt->resourceInfoHandlers.add(blDynamicPipeRtResourceInfo);

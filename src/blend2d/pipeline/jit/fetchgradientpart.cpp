@@ -13,13 +13,14 @@
 
 #include "../../pipeline/jit/pipedebug_p.h"
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 #define REL_GRADIENT(FIELD) BL_OFFSET_OF(FetchData::Gradient, FIELD)
 
-// BLPipeline::JIT::GradientDitheringContext
-// =========================================
+// bl::Pipeline::JIT::GradientDitheringContext
+// ===========================================
 
 void GradientDitheringContext::initY(const x86::Gp& x, const x86::Gp& y) noexcept {
   x86::Compiler* cc = pc->cc;
@@ -30,8 +31,8 @@ void GradientDitheringContext::initY(const x86::Gp& x, const x86::Gp& y) noexcep
 
   _isRectFill = x.isValid();
 
-  cc->mov(_dmPosition, x86::ptr(pc->_ctxData, BL_OFFSET_OF(BLPipeline::ContextData, pixelOrigin.y)));
-  cc->mov(_dmOriginX, x86::ptr(pc->_ctxData, BL_OFFSET_OF(BLPipeline::ContextData, pixelOrigin.x)));
+  cc->mov(_dmPosition, x86::ptr(pc->_ctxData, BL_OFFSET_OF(ContextData, pixelOrigin.y)));
+  cc->mov(_dmOriginX, x86::ptr(pc->_ctxData, BL_OFFSET_OF(ContextData, pixelOrigin.x)));
 
   cc->add(_dmPosition, y.r32());
   if (isRectFill())
@@ -69,7 +70,7 @@ void GradientDitheringContext::startAtX(const x86::Gp& x) noexcept {
 
   x86::Mem m;
   if (cc->is32Bit()) {
-    m = x86::ptr(uint64_t(uintptr_t(blCommonTable.bayerMatrix16x16)), dmPosition);
+    m = x86::ptr(uint64_t(uintptr_t(commonTable.bayerMatrix16x16)), dmPosition);
   }
   else {
     pc->_initCommonTablePtr();
@@ -99,7 +100,7 @@ void GradientDitheringContext::ditherUnpackedPixels(Pixel& p) noexcept {
   x86::Compiler* cc = pc->cc;
   SimdWidth simdWidth = SimdWidthUtils::simdWidthOf(p.uc[0]);
 
-  Operand shufflePredicate = pc->simdConst(&blCommonTable.pshufb_dither_rgba64_lo, Bcst::kNA_Unique, simdWidth);
+  Operand shufflePredicate = pc->simdConst(&commonTable.pshufb_dither_rgba64_lo, Bcst::kNA_Unique, simdWidth);
   x86::Vec ditherPredicate = cc->newSimilarReg(p.uc[0], "ditherPredicate");
   x86::Vec ditherThreshold = cc->newSimilarReg(p.uc[0], "ditherThreshold");
 
@@ -109,7 +110,7 @@ void GradientDitheringContext::ditherUnpackedPixels(Pixel& p) noexcept {
         pc->v_shuffle_i8(ditherPredicate, _dmValues.cloneAs(ditherPredicate), shufflePredicate);
       }
       else {
-        pc->v_interleave_lo_u8(ditherPredicate, _dmValues, pc->simdConst(&blCommonTable.i_0000000000000000, Bcst::kNA, ditherPredicate));
+        pc->v_interleave_lo_u8(ditherPredicate, _dmValues, pc->simdConst(&commonTable.i_0000000000000000, Bcst::kNA, ditherPredicate));
         pc->v_swizzle_lo_u16(ditherPredicate, ditherPredicate, x86::shuffleImm(0, 0, 0, 0));
       }
 
@@ -147,7 +148,7 @@ void GradientDitheringContext::ditherUnpackedPixels(Pixel& p) noexcept {
             pc->v_shuffle_i8(ditherPredicate, dm, shufflePredicate);
           }
           else {
-            pc->v_interleave_lo_u8(ditherPredicate, dm, pc->simdConst(&blCommonTable.i_0000000000000000, Bcst::kNA, ditherPredicate));
+            pc->v_interleave_lo_u8(ditherPredicate, dm, pc->simdConst(&commonTable.i_0000000000000000, Bcst::kNA, ditherPredicate));
             pc->v_interleave_lo_u16(ditherPredicate, ditherPredicate, ditherPredicate);
             pc->v_swizzle_u32(ditherPredicate, ditherPredicate, x86::shuffleImm(1, 1, 0, 0));
           }
@@ -176,10 +177,10 @@ void GradientDitheringContext::ditherUnpackedPixels(Pixel& p) noexcept {
   }
 }
 
-// BLPipeline::JIT::FetchGradientPart - Construction & Destruction
-// ===============================================================
+// bl::Pipeline::JIT::FetchGradientPart - Construction & Destruction
+// =================================================================
 
-FetchGradientPart::FetchGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept
+FetchGradientPart::FetchGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept
   : FetchPart(pc, fetchType, format),
     _ditheringContext(pc) {
 
@@ -194,7 +195,7 @@ void FetchGradientPart::fetchSinglePixel(Pixel& dst, PixelFlags flags, const x86
     _ditheringContext.ditherUnpackedPixels(dst);
   }
   else {
-    pc->x_fetch_pixel(dst, PixelCount(1), flags, BLInternalFormat::kPRGB32, src, Alignment(4));
+    pc->x_fetch_pixel(dst, PixelCount(1), flags, FormatExt::kPRGB32, src, Alignment(4));
   }
 }
 
@@ -204,7 +205,7 @@ void FetchGradientPart::fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags
 
   if (ditheringEnabled()) {
     dst.setType(PixelType::kRGBA64);
-    FetchUtils::x_gather_pixels(pc, dst, n, BLInternalFormat::kPRGB64, PixelFlags::kUC, src, idx, idxShift, indexLayout, cb, cbData);
+    FetchUtils::x_gather_pixels(pc, dst, n, FormatExt::kPRGB64, PixelFlags::kUC, src, idx, idxShift, indexLayout, cb, cbData);
     _ditheringContext.ditherUnpackedPixels(dst);
 
     dst.setType(PixelType::kRGBA32);
@@ -215,10 +216,10 @@ void FetchGradientPart::fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags
   }
 }
 
-// BLPipeline::JIT::FetchLinearGradientPart - Construction & Destruction
-// =====================================================================
+// bl::Pipeline::JIT::FetchLinearGradientPart - Construction & Destruction
+// =======================================================================
 
-FetchLinearGradientPart::FetchLinearGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept
+FetchLinearGradientPart::FetchLinearGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept
   : FetchGradientPart(pc, fetchType, format) {
 
   _maxSimdWidthSupported = SimdWidth::k256;
@@ -237,15 +238,15 @@ FetchLinearGradientPart::FetchLinearGradientPart(PipeCompiler* pc, FetchType fet
   JitUtils::resetVarStruct(&f, sizeof(f));
 }
 
-// BLPipeline::JIT::FetchLinearGradientPart - Prepare
-// ==================================================
+// bl::Pipeline::JIT::FetchLinearGradientPart - Prepare
+// ====================================================
 
 void FetchLinearGradientPart::preparePart() noexcept {
   _maxPixels = uint8_t(pc->hasSSSE3() ? 8 : 4);
 }
 
-// BLPipeline::JIT::FetchLinearGradientPart - Init & Fini
-// ======================================================
+// bl::Pipeline::JIT::FetchLinearGradientPart - Init & Fini
+// ========================================================
 
 void FetchLinearGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   // Local Registers
@@ -323,8 +324,8 @@ void FetchLinearGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
 void FetchLinearGradientPart::_finiPart() noexcept {}
 
-// BLPipeline::JIT::FetchLinearGradientPart - Advance
-// ==================================================
+// bl::Pipeline::JIT::FetchLinearGradientPart - Advance
+// ====================================================
 
 void FetchLinearGradientPart::advanceY() noexcept {
   pc->v_add_i64(f->py, f->py, f->dy);
@@ -369,8 +370,8 @@ void FetchLinearGradientPart::calcAdvanceX(const x86::Vec& dst, const x86::Gp& d
   }
 }
 
-// BLPipeline::JIT::FetchLinearGradientPart - Fetch
-// ================================================
+// bl::Pipeline::JIT::FetchLinearGradientPart - Fetch
+// ==================================================
 
 void FetchLinearGradientPart::prefetch1() noexcept {}
 
@@ -577,10 +578,10 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
   }
 }
 
-// BLPipeline::JIT::FetchRadialGradientPart - Construction & Destruction
-// =====================================================================
+// bl::Pipeline::JIT::FetchRadialGradientPart - Construction & Destruction
+// =======================================================================
 
-FetchRadialGradientPart::FetchRadialGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept
+FetchRadialGradientPart::FetchRadialGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept
   : FetchGradientPart(pc, fetchType, format) {
 
   _partFlags |= PipePartFlags::kAdvanceXNeedsX;
@@ -600,15 +601,15 @@ FetchRadialGradientPart::FetchRadialGradientPart(PipeCompiler* pc, FetchType fet
   JitUtils::resetVarStruct(&f, sizeof(f));
 }
 
-// BLPipeline::JIT::FetchRadialGradientPart - Prepare
-// ==================================================
+// bl::Pipeline::JIT::FetchRadialGradientPart - Prepare
+// ====================================================
 
 void FetchRadialGradientPart::preparePart() noexcept {
   _maxPixels = 4;
 }
 
-// BLPipeline::JIT::FetchRadialGradientPart - Init & Fini
-// ======================================================
+// bl::Pipeline::JIT::FetchRadialGradientPart - Init & Fini
+// ========================================================
 
 void FetchRadialGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   // Local Registers
@@ -695,8 +696,8 @@ void FetchRadialGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
 void FetchRadialGradientPart::_finiPart() noexcept {}
 
-// BLPipeline::JIT::FetchRadialGradientPart - Advance
-// ==================================================
+// bl::Pipeline::JIT::FetchRadialGradientPart - Advance
+// ====================================================
 
 void FetchRadialGradientPart::advanceY() noexcept {
   pc->v_add_f64(f->px_py, f->px_py, f->yx_yy);
@@ -746,8 +747,8 @@ void FetchRadialGradientPart::advanceX(const x86::Gp& x, const x86::Gp& diff) no
     _ditheringContext.advanceX(x, diff);
 }
 
-// BLPipeline::JIT::FetchRadialGradientPart - Fetch
-// ================================================
+// bl::Pipeline::JIT::FetchRadialGradientPart - Fetch
+// ==================================================
 
 void FetchRadialGradientPart::prefetch1() noexcept {
   pc->v_cvt_f64_f32(f->value, f->d_b);
@@ -956,10 +957,10 @@ void FetchRadialGradientPart::precalc(const x86::Vec& px_py) noexcept {
   pc->s_add_f64(dd_bd, dd_bd, x1);                       // [Dd + Ddx.Px + Ddy.Py              | Bd            ]
 }
 
-// BLPipeline::JIT::FetchConicGradientPart - Construction & Destruction
-// ====================================================================
+// bl::Pipeline::JIT::FetchConicGradientPart - Construction & Destruction
+// ======================================================================
 
-FetchConicGradientPart::FetchConicGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept
+FetchConicGradientPart::FetchConicGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept
   : FetchGradientPart(pc, fetchType, format) {
 
   _partFlags |= PipePartFlags::kMaskedAccess | PipePartFlags::kAdvanceXNeedsX;
@@ -970,15 +971,15 @@ FetchConicGradientPart::FetchConicGradientPart(PipeCompiler* pc, FetchType fetch
   JitUtils::resetVarStruct(&f, sizeof(f));
 }
 
-// BLPipeline::JIT::FetchConicGradientPart - Prepare
-// =================================================
+// bl::Pipeline::JIT::FetchConicGradientPart - Prepare
+// ===================================================
 
 void FetchConicGradientPart::preparePart() noexcept {
   _maxPixels = uint8_t(4 * pc->simdMultiplier());
 }
 
-// BLPipeline::JIT::FetchConicGradientPart - Init & Fini
-// =====================================================
+// bl::Pipeline::JIT::FetchConicGradientPart - Init & Fini
+// =======================================================
 
 void FetchConicGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   // Local Registers
@@ -1053,8 +1054,8 @@ void FetchConicGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
 void FetchConicGradientPart::_finiPart() noexcept {}
 
-// BLPipeline::JIT::FetchConicGradientPart - Advance
-// =================================================
+// bl::Pipeline::JIT::FetchConicGradientPart - Advance
+// ===================================================
 
 void FetchConicGradientPart::advanceY() noexcept {
   pc->v_add_f64(f->hx_hy, f->hx_hy, f->yx_yy);
@@ -1073,7 +1074,7 @@ void FetchConicGradientPart::startAtX(const x86::Gp& x) noexcept {
 
   pc->v_and_f32(f->ay, f->by, pc->simdConst(&ct.f32_abs, Bcst::kNA, f->ay));
   pc->v_sra_i32(f->by, f->by, 31);
-  pc->v_and_f32(f->by, f->by, x86::ptr(f->consts, BL_OFFSET_OF(BLCommonTable::Conic, n_div_1)));
+  pc->v_and_f32(f->by, f->by, x86::ptr(f->consts, BL_OFFSET_OF(CommonTable::Conic, n_div_1)));
 
   advanceX(x, pc->_gpNone);
 }
@@ -1115,7 +1116,7 @@ void FetchConicGradientPart::recalcX() noexcept {
     pc->s_div_f32(t2, t2, tmp);
 
     pc->v_sra_i32(t0, t0, 31);
-    pc->v_and_f32(t1, t1, x86::ptr(f->consts, BL_OFFSET_OF(BLCommonTable::Conic, n_div_4)));
+    pc->v_and_f32(t1, t1, x86::ptr(f->consts, BL_OFFSET_OF(CommonTable::Conic, n_div_4)));
   }
   else {
     x86::Vec t0 = f->t0;
@@ -1140,8 +1141,8 @@ void FetchConicGradientPart::recalcX() noexcept {
   }
 }
 
-// BLPipeline::JIT::FetchConicGradientPart - Fetch
-// ===============================================
+// bl::Pipeline::JIT::FetchConicGradientPart - Fetch
+// =================================================
 
 void FetchConicGradientPart::prefetchN() noexcept {}
 
@@ -1171,13 +1172,13 @@ void FetchConicGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
 
       pc->s_mul_f32(t3, t2, t2);
       pc->v_sra_i32(t0, t0, 31);
-      pc->v_load_f32(t4, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conic, q3)));
+      pc->v_load_f32(t4, x86::ptr(consts, BL_OFFSET_OF(CommonTable::Conic, q3)));
 
-      pc->s_mul_12_add_3(t4, t3, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conic, q2)));
-      pc->v_and_f32(t1, t1, x86::ptr(f->consts, BL_OFFSET_OF(BLCommonTable::Conic, n_div_4)));
-      pc->s_mul_12_add_3(t4, t3, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conic, q1)));
-      pc->v_and_f32(t0, t0, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conic, n_div_2)));
-      pc->s_mul_12_add_3(t4, t3, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conic, q0)));
+      pc->s_mul_12_add_3(t4, t3, x86::ptr(consts, BL_OFFSET_OF(CommonTable::Conic, q2)));
+      pc->v_and_f32(t1, t1, x86::ptr(f->consts, BL_OFFSET_OF(CommonTable::Conic, n_div_4)));
+      pc->s_mul_12_add_3(t4, t3, x86::ptr(consts, BL_OFFSET_OF(CommonTable::Conic, q1)));
+      pc->v_and_f32(t0, t0, x86::ptr(consts, BL_OFFSET_OF(CommonTable::Conic, n_div_2)));
+      pc->s_mul_12_add_3(t4, t3, x86::ptr(consts, BL_OFFSET_OF(CommonTable::Conic, q0)));
       pc->s_mul_12_sub_3(t4, t2, t1);
 
       pc->v_and_f32(t4, t4, pc->simdConst(&ct.f32_abs, Bcst::k32, t4));
@@ -1204,17 +1205,17 @@ void FetchConicGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
     case 16: {
       pc->v_mul_f32(t3, t2, t2);
       pc->v_sra_i32(t0, t0, 31);
-      pc->v_mov(t4, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conic, q3)));
+      pc->v_mov(t4, x86::ptr(consts, BL_OFFSET_OF(CommonTable::Conic, q3)));
 
       if (pc->hasAVX512())
-        cc->k(f->t1Pred).z().vmovdqa32(t1, x86::ptr(f->consts, BL_OFFSET_OF(BLCommonTable::Conic, n_div_4)));
+        cc->k(f->t1Pred).z().vmovdqa32(t1, x86::ptr(f->consts, BL_OFFSET_OF(CommonTable::Conic, n_div_4)));
       else
-        pc->v_and_f32(t1, t1, x86::ptr(f->consts, BL_OFFSET_OF(BLCommonTable::Conic, n_div_4)));
+        pc->v_and_f32(t1, t1, x86::ptr(f->consts, BL_OFFSET_OF(CommonTable::Conic, n_div_4)));
 
-      pc->v_mul_12_add_3(t4, t3, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conic, q2)));
-      pc->v_and_f32(t0, t0, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conic, n_div_2)));
-      pc->v_mul_12_add_3(t4, t3, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conic, q1)));
-      pc->v_mul_12_add_3(t4, t3, x86::ptr(consts, BL_OFFSET_OF(BLCommonTable::Conic, q0)));
+      pc->v_mul_12_add_3(t4, t3, x86::ptr(consts, BL_OFFSET_OF(CommonTable::Conic, q2)));
+      pc->v_and_f32(t0, t0, x86::ptr(consts, BL_OFFSET_OF(CommonTable::Conic, n_div_2)));
+      pc->v_mul_12_add_3(t4, t3, x86::ptr(consts, BL_OFFSET_OF(CommonTable::Conic, q1)));
+      pc->v_mul_12_add_3(t4, t3, x86::ptr(consts, BL_OFFSET_OF(CommonTable::Conic, q0)));
       pc->v_mul_12_sub_3(t4, t2, t1);
 
       pc->v_and_f32(t4, t4, pc->simdConst(&ct.f32_abs, Bcst::k32, t4));
@@ -1262,6 +1263,7 @@ void FetchConicGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
 }
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 #endif

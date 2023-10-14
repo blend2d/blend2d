@@ -8,17 +8,18 @@
 
 #include "fonttagdatainfo_p.h"
 
-// BLFontTagData - Tests
-// =====================
+// bl::FontTagData - Tests
+// =======================
 
-namespace BLFontTagDataTests {
+namespace bl {
+namespace Tests {
 
 UNIT(fonttagdata_info, BL_TEST_GROUP_TEXT_OPENTYPE) {
   // Make sure that featureBitIdToFeatureIdTable contains a correct reverse mapping.
   INFO("Verifying whether the feature id to feature bit mapping and its reverse mapping match");
   for (uint32_t bitId = 0; bitId < 32u; bitId++) {
-    uint32_t bitIdToFeatureId = BLFontTagData::featureBitIdToFeatureIdTable[bitId];
-    uint32_t featureIdToBitId = BLFontTagData::featureInfoTable[bitIdToFeatureId].bitId;
+    uint32_t bitIdToFeatureId = FontTagData::featureBitIdToFeatureIdTable[bitId];
+    uint32_t featureIdToBitId = FontTagData::featureInfoTable[bitIdToFeatureId].bitId;
 
     EXPECT_EQ(bitId, featureIdToBitId)
       .message("FeatureInfoTable and FeatureBitIdToFeatureIdTable mismatch - bitId(%u != %u) (featureId=%u))",
@@ -26,6 +27,7 @@ UNIT(fonttagdata_info, BL_TEST_GROUP_TEXT_OPENTYPE) {
   }
 }
 
-} // {BLFontTagDataTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

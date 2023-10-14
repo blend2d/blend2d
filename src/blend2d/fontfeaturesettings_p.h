@@ -17,9 +17,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLFontFeatureSettingsPrivate {
-
-using BLObjectPrivate::RCMode;
+namespace bl {
+namespace FontFeatureSettingsInternal {
 
 //! \name BLFontFeatureSettings - Internals - Common Functionality (Container)
 //! \{
@@ -38,16 +37,16 @@ static BL_INLINE constexpr size_t capacityFromImplSize(BLObjectImplSize implSize
 //! \{
 
 static BL_INLINE bool isImplMutable(BLFontFeatureSettingsImpl* impl) noexcept {
-  return BLObjectPrivate::isImplMutable(impl);
+  return ObjectInternal::isImplMutable(impl);
 }
 
 static BL_INLINE BLResult freeImpl(BLFontFeatureSettingsImpl* impl) noexcept {
-  return BLObjectPrivate::freeImpl(impl);
+  return ObjectInternal::freeImpl(impl);
 }
 
 template<RCMode kRCMode>
 static BL_INLINE BLResult releaseImpl(BLFontFeatureSettingsImpl* impl) noexcept {
-  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -60,7 +59,7 @@ static BL_INLINE BLFontFeatureSettingsImpl* getImpl(const BLFontFeatureSettingsC
 }
 
 static BL_INLINE BLResult retainInstance(const BLFontFeatureSettingsCore* self, size_t n = 1) noexcept {
-  return BLObjectPrivate::retainInstance(self, n);
+  return ObjectInternal::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLFontFeatureSettingsCore* self) noexcept {
@@ -80,8 +79,8 @@ static BL_INLINE BLResult replaceInstance(BLFontFeatureSettingsCore* self, const
 //! \name BLFontFeatureSettings - Internals - SSO Fat Representation
 //! \{
 
-using BLFontTagData::FeatureInfo;
-using FatBitOps = BLParametrizedBitOps<BLBitOrder::kLSB, uint32_t>;
+using FontTagData::FeatureInfo;
+using FatBitOps = ParametrizedBitOps<BitOrder::kLSB, uint32_t>;
 
 static constexpr uint32_t kSSOFatFeatureCount = 4;
 static constexpr uint32_t kSSOFatFeatureTagBitCount = 8;
@@ -124,11 +123,11 @@ static BL_INLINE bool findSSOFatTag(const BLFontFeatureSettingsCore* self, uint3
 static BL_INLINE uint32_t getSSOTagValue(const BLFontFeatureSettingsCore* self, BLTag featureTag, uint32_t notFoundValue = BL_FONT_FEATURE_INVALID_VALUE) noexcept {
   BL_ASSERT(self->_d.sso());
 
-  uint32_t featureId = BLFontTagData::featureTagToId(featureTag);
-  if (featureId == BLFontTagData::kInvalidId)
+  uint32_t featureId = FontTagData::featureTagToId(featureTag);
+  if (featureId == FontTagData::kInvalidId)
     return notFoundValue;
 
-  BLFontTagData::FeatureInfo featureInfo = BLFontTagData::featureInfoTable[featureId];
+  FontTagData::FeatureInfo featureInfo = FontTagData::featureInfoTable[featureId];
   if (featureInfo.hasBitId()) {
     uint32_t featureBitId = featureInfo.bitId;
     if (!hasSSOBitTag(self, featureBitId))
@@ -150,7 +149,7 @@ static BL_INLINE uint32_t getDynamicTagValue(const BLFontFeatureSettingsCore* se
   const BLFontFeatureItem* data = selfI->data;
 
   size_t size = selfI->size;
-  size_t index = BLAlgorithm::lowerBound(data, selfI->size, featureTag, [](const BLFontFeatureItem& item, uint32_t tag) noexcept { return item.tag < tag; });
+  size_t index = lowerBound(data, selfI->size, featureTag, [](const BLFontFeatureItem& item, uint32_t tag) noexcept { return item.tag < tag; });
 
   if (index < size && data[index].tag == featureTag)
     return data[index].value;
@@ -165,14 +164,15 @@ static BL_INLINE uint32_t getTagValue(const BLFontFeatureSettingsCore* self, BLT
 
 template<bool kSSO>
 static BL_INLINE bool isFeatureEnabledForPlan(const BLFontFeatureSettingsCore* self, BLTag featureTag) noexcept {
-  uint32_t featureId = BLFontTagData::featureTagToId(featureTag);
-  uint32_t featureInfoIndex = blMin<uint32_t>(featureId, BLFontTagData::kFeatureIdCount);
-  const BLFontTagData::FeatureInfo& featureInfo = BLFontTagData::featureInfoTable[featureInfoIndex];
+  uint32_t featureId = FontTagData::featureTagToId(featureTag);
+  uint32_t featureInfoIndex = blMin<uint32_t>(featureId, FontTagData::kFeatureIdCount);
+  const FontTagData::FeatureInfo& featureInfo = FontTagData::featureInfoTable[featureInfoIndex];
 
   return getTagValue<kSSO>(self, featureTag, featureInfo.enabledByDefault) > 0u;
 }
 
-} // {BLFontFeatureSettingsPrivate}
+} // {FontFeatureSettingsInternal}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -12,12 +12,14 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! \name Arena Allocated BLArenaList
+namespace bl {
+
+//! \name Arena Allocated ArenaList
 //! \{
 
 //! Zone-allocated double-linked list node.
 template<typename NodeT>
-class BLArenaListNode {
+class ArenaListNode {
 public:
   union {
     NodeT* _listNodes[2];
@@ -27,12 +29,12 @@ public:
     };
   };
 
-  BL_NONCOPYABLE(BLArenaListNode)
+  BL_NONCOPYABLE(ArenaListNode)
 
-  BL_INLINE BLArenaListNode() noexcept
+  BL_INLINE ArenaListNode() noexcept
     : _listNodes { nullptr, nullptr } {}
 
-  BL_INLINE BLArenaListNode(BLArenaListNode&& other) noexcept
+  BL_INLINE ArenaListNode(ArenaListNode&& other) noexcept
     : _listNodes { other._listNodes[0], other._listNodes[1] } {}
 
   BL_INLINE bool hasPrev() const noexcept { return _listPrev != nullptr; }
@@ -44,19 +46,19 @@ public:
 
 //! Zone-allocated double-linked list container.
 template <typename NodeT>
-class BLArenaList {
+class ArenaList {
 public:
-  BL_NONCOPYABLE(BLArenaList)
+  BL_NONCOPYABLE(ArenaList)
 
   NodeT* _nodes[2];
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLArenaList() noexcept
+  BL_INLINE ArenaList() noexcept
     : _nodes { nullptr, nullptr } {}
 
-  BL_INLINE BLArenaList(BLArenaList&& other) noexcept
+  BL_INLINE ArenaList(ArenaList&& other) noexcept
     : _nodes { other._nodes[0], other._nodes[1] } {}
 
   //! \}
@@ -64,7 +66,7 @@ public:
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE void swap(BLArenaList& other) noexcept {
+  BL_INLINE void swap(ArenaList& other) noexcept {
     std::swap(_nodes[0], other._nodes[0]);
     std::swap(_nodes[1], other._nodes[1]);
   }
@@ -83,7 +85,7 @@ public:
 
   //! \}
 
-  //! \name BLArenaList Functionality
+  //! \name ArenaList Functionality
   //! \{
 
   // Can be used to both prepend and append.
@@ -183,6 +185,8 @@ public:
 };
 
 //! \}
+
+} // {bl}
 
 //! \}
 //! \endcond

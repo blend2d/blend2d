@@ -18,27 +18,14 @@
 //! \addtogroup blend2d_codec_impl
 //! \{
 
-enum BLPngDecoderStatusFlags : uint32_t {
-  BL_PNG_DECODER_STATUS_SEEN_IHDR = 0x00000001u,
-  BL_PNG_DECODER_STATUS_SEEN_IDAT = 0x00000002u,
-  BL_PNG_DECODER_STATUS_SEEN_IEND = 0x00000004u,
-  BL_PNG_DECODER_STATUS_SEEN_PLTE = 0x00000010u,
-  BL_PNG_DECODER_STATUS_SEEN_tRNS = 0x00000020u,
-  BL_PNG_DECODER_STATUS_SEEN_CgBI = 0x00000040u
-};
+namespace bl {
+namespace Png {
 
-enum BLPngColorType : uint32_t {
-  //! Each pixel is a grayscale sample (1/2/4/8/16-bits per sample).
-  BL_PNG_COLOR_TYPE0_LUM  = 0,
-  //! Each pixel is an RGB triple (8/16-bits per sample).
-  BL_PNG_COLOR_TYPE2_RGB  = 2,
-  //! Each pixel is a palette index (1/2/4/8 bits per sample).
-  BL_PNG_COLOR_TYPE3_PAL  = 3,
-  //! Each pixel is a grayscale+alpha sample (8/16-bits per sample).
-  BL_PNG_COLOR_TYPE4_LUMA = 4,
-  //! Each pixel is an RGBA quad (8/16 bits per sample).
-  BL_PNG_COLOR_TYPE6_RGBA = 6
-};
+static constexpr uint32_t kColorType0_LUM  = 0; //!< Each pixel is a grayscale sample (1/2/4/8/16-bits per sample).
+static constexpr uint32_t kColorType2_RGB  = 2; //!< Each pixel is an RGB triple (8/16-bits per sample).
+static constexpr uint32_t kColorType3_PAL  = 3; //!< Each pixel is a palette index (1/2/4/8 bits per sample).
+static constexpr uint32_t kColorType4_LUMA = 4; //!< Each pixel is a grayscale+alpha sample (8/16-bits per sample).
+static constexpr uint32_t kColorType6_RGBA = 6; //!< Each pixel is an RGBA quad (8/16 bits per sample).
 
 enum PngFilterType : uint32_t {
   BL_PNG_FILTER_TYPE_NONE  = 0,
@@ -51,6 +38,20 @@ enum PngFilterType : uint32_t {
   //! Synthetic filter used only by Blend2D's reverse-filter implementation.
   BL_PNG_FILTER_TYPE_AVG0  = 5
 };
+
+enum BLPngDecoderStatusFlags : uint32_t {
+  BL_PNG_DECODER_STATUS_SEEN_IHDR = 0x00000001u,
+  BL_PNG_DECODER_STATUS_SEEN_IDAT = 0x00000002u,
+  BL_PNG_DECODER_STATUS_SEEN_IEND = 0x00000004u,
+  BL_PNG_DECODER_STATUS_SEEN_PLTE = 0x00000010u,
+  BL_PNG_DECODER_STATUS_SEEN_tRNS = 0x00000020u,
+  BL_PNG_DECODER_STATUS_SEEN_CgBI = 0x00000040u
+};
+
+BL_HIDDEN void pngCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
+
+} // {Png}
+} // {bl}
 
 struct BLPngDecoderImpl : public BLImageDecoderImpl {
   //! Decoder image information.
@@ -72,8 +73,6 @@ struct BLPngEncoderImpl : public BLImageEncoderImpl {
 };
 
 struct BLPngCodecImpl : public BLImageCodecImpl {};
-
-BL_HIDDEN void blPngCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
 
 //! \}
 //! \endcond

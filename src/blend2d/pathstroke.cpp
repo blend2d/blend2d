@@ -5,25 +5,26 @@
 
 #include "api-build_p.h"
 #include "geometry_p.h"
-#include "math_p.h"
 #include "matrix_p.h"
 #include "path_p.h"
 #include "pathstroke_p.h"
 #include "support/lookuptable_p.h"
+#include "support/math_p.h"
 
-namespace BLPathPrivate {
+namespace bl {
+namespace PathInternal {
 
-// BLPath - Stroke - Constants
-// ===========================
+// bl::Path - Stroke - Constants
+// =============================
 
 // Default minimum miter-join length that always bypasses any other join-type. The reason behind this is to
 // prevent emitting very small line segments in case that normals of joining segments are almost equal.
 static constexpr double kStrokeMiterMinimum = 1e-10;
-static constexpr double kStrokeMiterMinimumSq = blSquare(kStrokeMiterMinimum);
+static constexpr double kStrokeMiterMinimumSq = Math::square(kStrokeMiterMinimum);
 
 // Minimum length for a line/curve the stroker will accept. If the segment is smaller than this it would be skipped.
 static constexpr double kStrokeLengthEpsilon = 1e-10;
-static constexpr double kStrokeLengthEpsilonSq = blSquare(kStrokeLengthEpsilon);
+static constexpr double kStrokeLengthEpsilonSq = Math::square(kStrokeLengthEpsilon);
 
 static constexpr double kStrokeCollinearityEpsilon = 1e-10;
 
@@ -45,8 +46,8 @@ static constexpr double kOffsetQuadEpsilonT = 1e-5;
 //     line-to  : 1 vertex
 static constexpr size_t kStrokeMaxJoinVertices = 9;
 
-// BLPath - Stroke - Tables
-// ========================
+// bl::Path - Stroke - Tables
+// ==========================
 
 struct CapVertexCountGen {
   static constexpr uint8_t value(size_t cap) noexcept {
@@ -60,10 +61,10 @@ struct CapVertexCountGen {
 };
 
 static const auto capVertexCountTable =
-  blMakeLookupTable<uint8_t, BL_STROKE_CAP_MAX_VALUE + 1, CapVertexCountGen>();
+  makeLookupTable<uint8_t, BL_STROKE_CAP_MAX_VALUE + 1, CapVertexCountGen>();
 
-// BLPath - Stroke - Utilities
-// ===========================
+// bl::Path - Stroke - Utilities
+// =============================
 
 enum class Side : size_t {
   kA = 0,
@@ -73,7 +74,7 @@ enum class Side : size_t {
 static BL_INLINE Side oppositeSide(Side side) noexcept { return Side(size_t(1) - size_t(side)); }
 
 static BL_INLINE Side sideFromNormals(const BLPoint& n0, const BLPoint& n1) noexcept {
-  return Side(size_t(BLGeometry::cross(n0, n1) >= 0));
+  return Side(size_t(Geometry::cross(n0, n1) >= 0));
 }
 
 static BL_INLINE uint32_t sanityStrokeCap(uint32_t cap) noexcept {
@@ -103,10 +104,10 @@ static BL_INLINE bool testInnerJoinIntersecion(const BLPoint& a0, const BLPoint&
          (join.x <= max.x) & (join.y <= max.y) ;
 }
 
-static BL_INLINE void dullAngleArcTo(BLPathAppender& appender, const BLPoint& p0, const BLPoint& pa, const BLPoint& pb, const BLPoint& intersection) noexcept {
+static BL_INLINE void dullAngleArcTo(PathAppender& appender, const BLPoint& p0, const BLPoint& pa, const BLPoint& pb, const BLPoint& intersection) noexcept {
   BLPoint pm = (pa + pb) * 0.5;
 
-  double w = blSqrt(BLGeometry::length(p0 - pm) / BLGeometry::length(p0 - intersection));
+  double w = Math::sqrt(Geometry::length(p0 - pm) / Geometry::length(p0 - intersection));
   double a = 4 * w / (3.0 * (1.0 + w));
 
   BLPoint c0 = pa + a * (intersection - pa);
@@ -115,8 +116,8 @@ static BL_INLINE void dullAngleArcTo(BLPathAppender& appender, const BLPoint& p0
   appender.cubicTo(c0, c1, pb);
 };
 
-// BLPath - Stroke - Implementation
-// ================================
+// bl::Path - Stroke - Implementation
+// ==================================
 
 class PathStroker {
 public:
@@ -126,7 +127,7 @@ public:
   };
 
   // Stroke input.
-  BLPathIterator _iter;
+  PathIterator _iter;
 
   // Stroke options.
   const BLStrokeOptions& _options;
@@ -135,7 +136,7 @@ public:
   struct SideData {
     BLPath* path;            // Output path (outer/inner, per side).
     size_t figureOffset;     // Start of the figure offset in output path (only A path).
-    BLPathAppender appender; // Output path appended (outer/inner, per side).
+    PathAppender appender; // Output path appended (outer/inner, per side).
     double d;                // Distance (StrokeWidth / 2).
     double d2;               // Distance multiplied by 2.
   };
@@ -181,7 +182,7 @@ public:
 
       // Final miter limit is `0.5 * width * miterLimit`.
       _miterLimit = d() * options.miterLimit;
-      _miterLimitSq = blSquare(_miterLimit);
+      _miterLimitSq = Math::square(_miterLimit);
     }
     else {
       _miterLimit = kStrokeMiterMinimum;
@@ -207,11 +208,11 @@ public:
   BL_INLINE BLPath* outerPath(Side side) const noexcept { return _sideData[size_t(side)].path; }
   BL_INLINE BLPath* innerPath(Side side) const noexcept { return _sideData[size_t(oppositeSide(side))].path; }
 
-  BL_INLINE BLPathAppender& aOut() noexcept { return _sideData[size_t(Side::kA)].appender; }
-  BL_INLINE BLPathAppender& bOut() noexcept { return _sideData[size_t(Side::kB)].appender; }
+  BL_INLINE PathAppender& aOut() noexcept { return _sideData[size_t(Side::kA)].appender; }
+  BL_INLINE PathAppender& bOut() noexcept { return _sideData[size_t(Side::kB)].appender; }
 
-  BL_INLINE BLPathAppender& outerAppender(Side side) noexcept { return _sideData[size_t(side)].appender; }
-  BL_INLINE BLPathAppender& innerAppender(Side side) noexcept { return _sideData[size_t(oppositeSide(side))].appender; }
+  BL_INLINE PathAppender& outerAppender(Side side) noexcept { return _sideData[size_t(side)].appender; }
+  BL_INLINE PathAppender& innerAppender(Side side) noexcept { return _sideData[size_t(oppositeSide(side))].appender; }
 
   BL_INLINE BLResult ensureAppendersCapacity(size_t aRequired, size_t bRequired) noexcept {
     uint32_t ok = uint32_t(aOut().remainingSize() >= aRequired) &
@@ -270,10 +271,10 @@ public:
           _iter++;
 LineTo:
           v1 = p1 - _p0;
-          if (BLGeometry::lengthSq(v1) < kStrokeLengthEpsilonSq)
+          if (Geometry::lengthSq(v1) < kStrokeLengthEpsilonSq)
             continue;
 
-          n1 = BLGeometry::normal(BLGeometry::unitVector(v1));
+          n1 = Geometry::normal(Geometry::unitVector(v1));
           if (!isOpen()) {
             BL_PROPAGATE(openLineTo(p1, n1));
             continue;
@@ -295,10 +296,10 @@ LineTo:
 
             _iter++;
             v1 = p1 - _p0;
-            if (BLGeometry::lengthSq(v1) < kStrokeLengthEpsilonSq)
+            if (Geometry::lengthSq(v1) < kStrokeLengthEpsilonSq)
               break;
 
-            n1 = BLGeometry::normal(BLGeometry::unitVector(v1));
+            n1 = Geometry::normal(Geometry::unitVector(v1));
           }
           continue;
 
@@ -318,23 +319,23 @@ SmoothPolyTo:
           BLPoint v2 = p2 - p1;
 
           v1 = p1 - _p0;
-          n1 = BLGeometry::normal(BLGeometry::unitVector(v1));
+          n1 = Geometry::normal(Geometry::unitVector(v1));
 
-          double cm = BLGeometry::cross(v2, v1);
+          double cm = Geometry::cross(v2, v1);
           if (blAbs(cm) <= kStrokeCollinearityEpsilon) {
             // All points are [almost] collinear (degenerate case).
-            double dot = BLGeometry::dot(-v1, v2);
+            double dot = Geometry::dot(-v1, v2);
 
             // Check if control point lies outside of the start/end points.
             if (dot > 0.0) {
               // Rotate all points to x-axis.
-              double r1 = BLGeometry::dot(p1 - _p0, v1);
-              double r2 = BLGeometry::dot(p2 - _p0, v1);
+              double r1 = Geometry::dot(p1 - _p0, v1);
+              double r2 = Geometry::dot(p2 - _p0, v1);
 
               // Parameter of the cusp if it's within (0, 1).
               double t = r1 / (2.0 * r1 - r2);
               if (t > 0.0 && t < 1.0) {
-                polyPts[0] = BLGeometry::evalQuad(quad, t);
+                polyPts[0] = Geometry::evalQuad(quad, t);
                 polyPts[1] = p2;
                 polySize = 2;
                 goto SmoothPolyTo;
@@ -347,7 +348,7 @@ SmoothPolyTo:
           }
 
           // Very small curve segment => straight line.
-          if (BLGeometry::lengthSq(v1) < kStrokeLengthEpsilonSq || BLGeometry::lengthSq(v2) < kStrokeLengthEpsilonSq) {
+          if (Geometry::lengthSq(v1) < kStrokeLengthEpsilonSq || Geometry::lengthSq(v2) < kStrokeLengthEpsilonSq) {
             p1 = p2;
             goto LineTo;
           }
@@ -376,21 +377,21 @@ SmoothPolyTo:
           p[3] = _iter.vtx[-1];
 
           // Check if the curve is flat enough to be potentially degenerate.
-          if (BLGeometry::isCubicFlat(p, kStrokeDegenerateFlatness)) {
-            double dot1 = BLGeometry::dot(p[0] - p[1], p[3] - p[1]);
-            double dot2 = BLGeometry::dot(p[0] - p[2], p[3] - p[2]);
+          if (Geometry::isCubicFlat(p, kStrokeDegenerateFlatness)) {
+            double dot1 = Geometry::dot(p[0] - p[1], p[3] - p[1]);
+            double dot2 = Geometry::dot(p[0] - p[2], p[3] - p[2]);
 
             if (!(dot1 < 0.0) || !(dot2 < 0.0)) {
               // Rotate all points to x-axis.
-              const BLPoint r = BLGeometry::cubicStartTangent(p);
+              const BLPoint r = Geometry::cubicStartTangent(p);
 
-              double r1 = BLGeometry::dot(p[1] - p[0], r);
-              double r2 = BLGeometry::dot(p[2] - p[0], r);
-              double r3 = BLGeometry::dot(p[3] - p[0], r);
+              double r1 = Geometry::dot(p[1] - p[0], r);
+              double r2 = Geometry::dot(p[2] - p[0], r);
+              double r3 = Geometry::dot(p[3] - p[0], r);
 
               double a = 1.0 / (3.0 * r1 - 3.0 * r2 + r3);
               double b = 2.0 * r1 - r2;
-              double s = blSqrt(r2 * (r2 - r1) - r1 * (r3 - r1));
+              double s = Math::sqrt(r2 * (r2 - r1) - r1 * (r3 - r1));
 
               // Parameters of the cusps.
               double t1 = a * (b - s);
@@ -399,10 +400,10 @@ SmoothPolyTo:
               // Offset the first and second cusps (if they exist).
               polySize = 0;
               if (t1 > kStrokeCuspTThreshold && t1 < 1.0 - kStrokeCuspTThreshold)
-                polyPts[polySize++] = BLGeometry::evalCubic(p, t1);
+                polyPts[polySize++] = Geometry::evalCubic(p, t1);
 
               if (t2 > kStrokeCuspTThreshold && t2 < 1.0 - kStrokeCuspTThreshold)
-                polyPts[polySize++] = BLGeometry::evalCubic(p, t2);
+                polyPts[polySize++] = Geometry::evalCubic(p, t2);
 
               if (polySize == 0) {
                 p1 = p[3];
@@ -419,19 +420,19 @@ SmoothPolyTo:
           }
           else {
             double tl;
-            BLGeometry::getCubicInflectionParameter(p, tCusp, tl);
+            Geometry::getCubicInflectionParameter(p, tCusp, tl);
 
             if (tl == 0.0 && tCusp > 0.0 && tCusp < 1.0) {
-              BLGeometry::splitCubic(p, p, p + 3);
+              Geometry::splitCubic(p, p, p + 3);
               cusp = 1;
             }
           }
 
           for (;;) {
             v1 = p[1] - _p0;
-            if (blIsZero(v1))
+            if (Geometry::isZero(v1))
               v1 = p[2] - _p0;
-            n1 = BLGeometry::normal(BLGeometry::unitVector(v1));
+            n1 = Geometry::normal(Geometry::unitVector(v1));
 
             if (!isOpen())
               BL_PROPAGATE(openCurve(n1));
@@ -504,7 +505,7 @@ SmoothPolyTo:
         BL_PROPAGATE(aOut().ensure(aPath(), capVertexCountTable[endCap]));
         BL_PROPAGATE(addCap(aOut(), _p0, bOut().vtx[-1], endCap));
 
-        BLPathAppender cOut;
+        PathAppender cOut;
         BL_PROPAGATE(cOut.begin(cPath(), BL_MODIFY_OP_ASSIGN_GROW, capVertexCountTable[startCap] + 1));
         cOut.moveTo(bPath()->vertexData()[0]);
         BL_PROPAGATE(addCap(cOut, _pInitial, aPath()->vertexData()[sideData(Side::kA).figureOffset], startCap));
@@ -564,28 +565,28 @@ SmoothPolyTo:
     else {
       Side side = sideFromNormals(_n0, n1);
       BLPoint m = _n0 + n1;
-      BLPoint k = m * d2(side) / BLGeometry::lengthSq(m);
+      BLPoint k = m * d2(side) / Geometry::lengthSq(m);
       BLPoint w1 = n1 * d(side);
 
       size_t miterFlag = 0;
 
       if (side == Side::kA) {
-        BLPathAppender& outer = aOut();
+        PathAppender& outer = aOut();
         outerJoin(outer, n1, w1, k, d(side), d2(side), miterFlag);
         outer.back(miterFlag);
         outer.lineTo(p1 + w1);
 
-        BLPathAppender& inner = bOut();
+        PathAppender& inner = bOut();
         innerJoinLineTo(inner, _p0 - w1, p1 - w1, _p0 - k);
         inner.lineTo(p1 - w1);
       }
       else {
-        BLPathAppender& outer = bOut();
+        PathAppender& outer = bOut();
         outerJoin(outer, n1, w1, k, d(side), d2(side), miterFlag);
         outer.back(miterFlag);
         outer.lineTo(p1 + w1);
 
-        BLPathAppender& inner = aOut();
+        PathAppender& inner = aOut();
         innerJoinLineTo(inner, _p0 - w1, p1 - w1, _p0 - k);
         inner.lineTo(p1 - w1);
       }
@@ -622,7 +623,7 @@ SmoothPolyTo:
 
     Side side = sideFromNormals(_n0, n1);
     BLPoint m = _n0 + n1;
-    BLPoint k = m * d2(side) / BLGeometry::lengthSq(m);
+    BLPoint k = m * d2(side) / Geometry::lengthSq(m);
     BLPoint w1 = n1 * d(side);
     size_t dummyMiterFlag;
 
@@ -648,11 +649,11 @@ SmoothPolyTo:
     Side side = sideFromNormals(_n0, n1);
     BLPoint w1 = n1 * d(side);
 
-    BLPathAppender& outer = outerAppender(side);
+    PathAppender& outer = outerAppender(side);
     dullRoundJoin(outer, d(side), d2(side), w1);
     outer.lineTo(p1 + w1);
 
-    BLPathAppender& inner = innerAppender(side);
+    PathAppender& inner = innerAppender(side);
     inner.lineTo(_p0 - w1);
     inner.lineTo(p1 - w1);
 
@@ -666,10 +667,10 @@ SmoothPolyTo:
 
     BLPoint p1 = poly[0];
     BLPoint v1 = p1 - _p0;
-    if (BLGeometry::lengthSq(v1) < kStrokeLengthEpsilonSq)
+    if (Geometry::lengthSq(v1) < kStrokeLengthEpsilonSq)
       return BL_SUCCESS;
 
-    BLPoint n1 = BLGeometry::normal(BLGeometry::unitVector(v1));
+    BLPoint n1 = Geometry::normal(Geometry::unitVector(v1));
     if (!isOpen())
       BL_PROPAGATE(openLineTo(p1, n1));
     else
@@ -683,10 +684,10 @@ SmoothPolyTo:
     for (size_t i = 1; i < count; i++) {
       p1 = poly[i];
       v1 = p1 - _p0;
-      if (BLGeometry::lengthSq(v1) < kStrokeLengthEpsilonSq)
+      if (Geometry::lengthSq(v1) < kStrokeLengthEpsilonSq)
         continue;
 
-      n1 = BLGeometry::normal(BLGeometry::unitVector(v1));
+      n1 = Geometry::normal(Geometry::unitVector(v1));
       BL_PROPAGATE(joinCuspAndLineTo(n1, p1));
     }
 
@@ -705,14 +706,14 @@ SmoothPolyTo:
     Side side = sideFromNormals(_n0, n1);
     BLPoint m = _n0 + n1;
     BLPoint w1 = n1 * d(side);
-    BLPoint k = m * d2(side) / BLGeometry::lengthSq(m);
+    BLPoint k = m * d2(side) / Geometry::lengthSq(m);
 
     size_t miterFlag = 0;
 
     BLPathPrivateImpl* outerImpl = getImpl(outerPath(side));
     size_t outerStart = sideData(side).figureOffset;
 
-    BLPathAppender& outer = outerAppender(side);
+    PathAppender& outer = outerAppender(side);
     outerJoin(outer, n1, w1, k, d(side), d2(side), miterFlag);
 
     // Shift the start point to be at the miter intersection and remove the
@@ -735,12 +736,12 @@ SmoothPolyTo:
     return BL_SUCCESS;
   }
 
-  BL_INLINE_IF_NOT_DEBUG void innerJoinCurveTo(BLPathAppender& out, const BLPoint& p1) noexcept {
+  BL_INLINE_IF_NOT_DEBUG void innerJoinCurveTo(PathAppender& out, const BLPoint& p1) noexcept {
     out.lineTo(_p0);
     out.lineTo(p1);
   }
 
-  BL_INLINE_IF_NOT_DEBUG void innerJoinLineTo(BLPathAppender& out, const BLPoint& lineP0, const BLPoint& lineP1, const BLPoint& innerPt) noexcept {
+  BL_INLINE_IF_NOT_DEBUG void innerJoinLineTo(PathAppender& out, const BLPoint& lineP0, const BLPoint& lineP1, const BLPoint& innerPt) noexcept {
     if (out.cmd[-2].value <= BL_PATH_CMD_ON && testInnerJoinIntersecion(out.vtx[-2], out.vtx[-1], lineP0, lineP1, innerPt)) {
       out.vtx[-1] = innerPt;
     }
@@ -750,7 +751,7 @@ SmoothPolyTo:
     }
   }
 
-  BL_INLINE_IF_NOT_DEBUG void innerJoinEndPoint(BLPathAppender& out, BLPoint& lineP0, const BLPoint& lineP1, const BLPoint& innerPt) noexcept {
+  BL_INLINE_IF_NOT_DEBUG void innerJoinEndPoint(PathAppender& out, BLPoint& lineP0, const BLPoint& lineP1, const BLPoint& innerPt) noexcept {
     if (out.cmd[-2].value <= BL_PATH_CMD_ON && testInnerJoinIntersecion(out.vtx[-2], out.vtx[-1], lineP0, lineP1, innerPt)) {
       lineP0 = innerPt;
       out.back(1);
@@ -762,10 +763,10 @@ SmoothPolyTo:
   }
 
   // Calculates outer join to `pb`.
-  BL_INLINE_IF_NOT_DEBUG BLResult outerJoin(BLPathAppender& appender, const BLPoint& n1, const BLPoint& w1, const BLPoint& k, double d, double d2, size_t& miterFlag) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult outerJoin(PathAppender& appender, const BLPoint& n1, const BLPoint& w1, const BLPoint& k, double d, double d2, size_t& miterFlag) noexcept {
     BLPoint pb = _p0 + w1;
 
-    if (BLGeometry::lengthSq(k) <= _miterLimitSq) {
+    if (Geometry::lengthSq(k) <= _miterLimitSq) {
       // Miter condition is met.
       appender.back(appender.cmd[-2].value <= BL_PATH_CMD_ON);
       appender.lineTo(_p0 + k);
@@ -776,17 +777,17 @@ SmoothPolyTo:
     }
 
     if (_joinType == BL_STROKE_JOIN_MITER_CLIP) {
-      double b2 = blAbs(BLGeometry::cross(k, _n0));
+      double b2 = blAbs(Geometry::cross(k, _n0));
 
       // Avoid degenerate cases and NaN.
       if (b2 > 0)
-        b2 = b2 * _miterLimit / BLGeometry::length(k);
+        b2 = b2 * _miterLimit / Geometry::length(k);
       else
         b2 = _miterLimit;
 
       appender.back(appender.cmd[-2].value <= BL_PATH_CMD_ON);
-      appender.lineTo(_p0 + d * _n0 - b2 * BLGeometry::normal(_n0));
-      appender.lineTo(_p0 + d *  n1 + b2 * BLGeometry::normal(n1));
+      appender.lineTo(_p0 + d * _n0 - b2 * Geometry::normal(_n0));
+      appender.lineTo(_p0 + d *  n1 + b2 * Geometry::normal(n1));
 
       miterFlag = 1;
       appender.lineTo(pb);
@@ -795,26 +796,26 @@ SmoothPolyTo:
 
     if (_joinType == BL_STROKE_JOIN_ROUND) {
       BLPoint pa = appender.vtx[-1];
-      if (BLGeometry::dot(_p0 - pa, _p0 - pb) < 0.0) {
+      if (Geometry::dot(_p0 - pa, _p0 - pb) < 0.0) {
         // Dull angle.
-        BLPoint n2 = BLGeometry::normal(BLGeometry::unitVector(pb - pa));
+        BLPoint n2 = Geometry::normal(Geometry::unitVector(pb - pa));
         BLPoint m = _n0 + n2;
-        BLPoint k0 = d2 * m / BLGeometry::lengthSq(m);
+        BLPoint k0 = d2 * m / Geometry::lengthSq(m);
         BLPoint q = d * n2;
 
         BLPoint pc1 = _p0 + k0;
         BLPoint pp1 = _p0 + q;
-        BLPoint pc2 = blLerp(pc1, pp1, 2.0);
+        BLPoint pc2 = Math::lerp(pc1, pp1, 2.0);
 
         dullAngleArcTo(appender, _p0, pa, pp1, pc1);
         dullAngleArcTo(appender, _p0, pp1, pb, pc2);
       }
       else {
         // Acute angle.
-        BLPoint pm = blLerp(pa, pb);
+        BLPoint pm = Math::lerp(pa, pb);
         BLPoint pi = _p0 + k;
 
-        double w = blSqrt(BLGeometry::length(_p0 - pm) / BLGeometry::length(_p0 - pi));
+        double w = Math::sqrt(Geometry::length(_p0 - pm) / Geometry::length(_p0 - pi));
         double a = 4.0 * w / (3.0 * (1.0 + w));
 
         BLPoint c0 = pa + a * (pi - pa);
@@ -831,21 +832,21 @@ SmoothPolyTo:
   }
 
   // Calculates round join to `pb` (dull angle), only used by offsetting cusps.
-  BL_INLINE_IF_NOT_DEBUG BLResult dullRoundJoin(BLPathAppender& out, double d, double d2, const BLPoint& w1) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult dullRoundJoin(PathAppender& out, double d, double d2, const BLPoint& w1) noexcept {
     BLPoint pa = out.vtx[-1];
     BLPoint pb = _p0 + w1;
-    BLPoint n2 = BLGeometry::normal(BLGeometry::unitVector(pb - pa));
+    BLPoint n2 = Geometry::normal(Geometry::unitVector(pb - pa));
 
-    if (!blIsFinite(n2.x))
+    if (!Math::isFinite(n2.x))
       return BL_SUCCESS;
 
     BLPoint m = _n0 + n2;
-    BLPoint k = m * d2 / BLGeometry::lengthSq(m);
+    BLPoint k = m * d2 / Geometry::lengthSq(m);
     BLPoint q = n2 * d;
 
     BLPoint pc1 = _p0 + k;
     BLPoint pp1 = _p0 + q;
-    BLPoint pc2 = blLerp(pc1, pp1, 2.0);
+    BLPoint pc2 = Math::lerp(pc1, pp1, 2.0);
 
     dullAngleArcTo(out, _p0, pa, pp1, pc1);
     dullAngleArcTo(out, _p0, pp1, pb, pc2);
@@ -854,22 +855,22 @@ SmoothPolyTo:
 
   BL_INLINE_IF_NOT_DEBUG BLResult offsetQuad(const BLPoint bez[3]) noexcept {
     double ts[3];
-    size_t tn = BLGeometry::getQuadOffsetCuspTs(bez, d(), ts);
+    size_t tn = Geometry::getQuadOffsetCuspTs(bez, d(), ts);
     ts[tn++] = 1.0;
 
-    BLGeometry::QuadCurveTsIter iter(bez, ts, tn);
+    Geometry::QuadCurveTsIter iter(bez, ts, tn);
     double m = _approx.offsetParameter;
 
     do {
       for (;;) {
         BL_PROPAGATE(ensureAppendersCapacity(2, 2));
 
-        double t = BLGeometry::quadParameterAtAngle(iter.part, m);
+        double t = Geometry::quadParameterAtAngle(iter.part, m);
         if (!(t > kOffsetQuadEpsilonT && t < 1.0 - kOffsetQuadEpsilonT))
           t = 1.0;
 
         BLPoint part[3];
-        BLGeometry::splitQuad(iter.part, part, iter.part, t);
+        Geometry::splitQuad(iter.part, part, iter.part, t);
         offsetQuadSimple(part[0], part[1], part[2]);
 
         if (t == 1.0)
@@ -887,14 +888,14 @@ SmoothPolyTo:
     BLPoint v0 = p1 - p0;
     BLPoint v1 = p2 - p1;
 
-    BLPoint m0 = BLGeometry::normal(BLGeometry::unitVector(p0 != p1 ? v0 : v1));
-    BLPoint m2 = BLGeometry::normal(BLGeometry::unitVector(p1 != p2 ? v1 : v0));
+    BLPoint m0 = Geometry::normal(Geometry::unitVector(p0 != p1 ? v0 : v1));
+    BLPoint m2 = Geometry::normal(Geometry::unitVector(p1 != p2 ? v1 : v0));
 
     _p0 = p2;
     _n0 = m2;
 
     BLPoint m = m0 + m2;
-    BLPoint k1 = m * d2() / BLGeometry::lengthSq(m);
+    BLPoint k1 = m * d2() / Geometry::lengthSq(m);
     BLPoint k2 = m2 * d();
 
     aOut().quadTo(p1 + k1, p2 + k2);
@@ -914,12 +915,12 @@ SmoothPolyTo:
 
   BL_INLINE_IF_NOT_DEBUG BLResult offsetCubic(const BLPoint bez[4]) noexcept {
     CubicApproximateSink sink(*this);
-    return BLGeometry::approximateCubicWithQuads(bez, _approx.simplifyTolerance, sink);
+    return Geometry::approximateCubicWithQuads(bez, _approx.simplifyTolerance, sink);
   }
 
-  BL_INLINE_IF_NOT_DEBUG BLResult addCap(BLPathAppender& out, BLPoint pivot, BLPoint p1, uint32_t capType) noexcept {
+  BL_INLINE_IF_NOT_DEBUG BLResult addCap(PathAppender& out, BLPoint pivot, BLPoint p1, uint32_t capType) noexcept {
     BLPoint p0 = out.vtx[-1];
-    BLPoint q = BLGeometry::normal(p1 - p0) * 0.5;
+    BLPoint q = Geometry::normal(p1 - p0) * 0.5;
 
     switch (capType) {
       case BL_STROKE_CAP_BUTT:
@@ -968,8 +969,8 @@ SmoothPolyTo:
   }
 };
 
-// BLPath - Stroke - Interface
-// ===========================
+// bl::Path - Stroke - Interface
+// =============================
 
 BLResult strokePath(
   const BLPathView& input,
@@ -983,4 +984,5 @@ BLResult strokePath(
   return PathStroker(input, options, approx, &a, &b, &c).stroke(sink, userData);
 }
 
-} // {BLPathPrivate}
+} // {PathInternal}
+} // {bl}

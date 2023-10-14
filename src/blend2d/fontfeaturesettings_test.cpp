@@ -11,10 +11,11 @@
 #include "fonttagdata_p.h"
 #include "object_p.h"
 
-// BLFontFeatureSettings - Tests
-// =============================
+// bl::FontFeatureSettings - Tests
+// ===============================
 
-namespace BLFontFeatureSettingsTests {
+namespace bl {
+namespace Tests {
 
 static void verifyFontFeatureSettings(const BLFontFeatureSettings& ffs) noexcept {
   BLFontFeatureSettingsView view;
@@ -35,8 +36,8 @@ UNIT(fontfeaturesettings_allocation_strategy, BL_TEST_GROUP_TEXT_CONTAINERS) {
   BLFontFeatureSettings ffs;
   size_t capacity = ffs.capacity();
 
-  constexpr uint32_t kCharRange = BLFontTagData::kCharRangeInTag;
-  constexpr uint32_t kNumItems = BLFontTagData::kUniqueTagCount / 100;
+  constexpr uint32_t kCharRange = FontTagData::kCharRangeInTag;
+  constexpr uint32_t kNumItems = FontTagData::kUniqueTagCount / 100;
 
   for (uint32_t i = 0; i < kNumItems; i++) {
     BLTag tag = BL_MAKE_TAG(
@@ -47,7 +48,7 @@ UNIT(fontfeaturesettings_allocation_strategy, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     ffs.setValue(tag, i & 0xFFFFu);
     if (capacity != ffs.capacity()) {
-      size_t implSize = BLFontFeatureSettingsPrivate::implSizeFromCapacity(ffs.capacity()).value();
+      size_t implSize = FontFeatureSettingsInternal::implSizeFromCapacity(ffs.capacity()).value();
       INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, ffs.capacity(), implSize);
       capacity = ffs.capacity();
     }
@@ -75,8 +76,8 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     EXPECT_EQ(ffs.capacity(), BLFontFeatureSettings::kSSOCapacity);
 
     // SSO mode should present all available features as invalid (unassigned).
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
+    for (uint32_t featureId = 0; featureId < FontTagData::kFeatureIdCount; featureId++) {
+      BLTag featureTag = FontTagData::featureIdToTagTable[featureId];
       EXPECT_EQ(ffs.getValue(featureTag), BL_FONT_FEATURE_INVALID_VALUE);
     }
 
@@ -92,10 +93,10 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     // SSO storage must allow to store ALL font features that have bit mapping.
     uint32_t numTags = 0;
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
+    for (uint32_t featureId = 0; featureId < FontTagData::kFeatureIdCount; featureId++) {
+      if (FontTagData::featureInfoTable[featureId].hasBitId()) {
         numTags++;
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
+        BLTag featureTag = FontTagData::featureIdToTagTable[featureId];
 
         EXPECT_SUCCESS(ffs.setValue(featureTag, 1u));
         EXPECT_EQ(ffs.getValue(featureTag), 1u);
@@ -107,9 +108,9 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     }
 
     // Set all features to zero (disabled, but still present in the mapping).
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
+    for (uint32_t featureId = 0; featureId < FontTagData::kFeatureIdCount; featureId++) {
+      if (FontTagData::featureInfoTable[featureId].hasBitId()) {
+        BLTag featureTag = FontTagData::featureIdToTagTable[featureId];
 
         EXPECT_SUCCESS(ffs.setValue(featureTag, 0u));
         EXPECT_EQ(ffs.getValue(featureTag), 0u);
@@ -120,10 +121,10 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     }
 
     // Remove all features.
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
+    for (uint32_t featureId = 0; featureId < FontTagData::kFeatureIdCount; featureId++) {
+      if (FontTagData::featureInfoTable[featureId].hasBitId()) {
         numTags--;
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
+        BLTag featureTag = FontTagData::featureIdToTagTable[featureId];
 
         EXPECT_SUCCESS(ffs.removeValue(featureTag));
         EXPECT_EQ(ffs.getValue(featureTag), BL_FONT_FEATURE_INVALID_VALUE);
@@ -143,9 +144,9 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     BLFontFeatureSettings ffs;
 
     // Trying to set any other value than 0-1 with bit tags fails.
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
+    for (uint32_t featureId = 0; featureId < FontTagData::kFeatureIdCount; featureId++) {
+      if (FontTagData::featureInfoTable[featureId].hasBitId()) {
+        BLTag featureTag = FontTagData::featureIdToTagTable[featureId];
         EXPECT_EQ(ffs.setValue(featureTag, 2u), BL_ERROR_INVALID_VALUE);
       }
     }
@@ -179,10 +180,10 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     }
 
     // Add bit tag/value data.
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
+    for (uint32_t featureId = 0; featureId < FontTagData::kFeatureIdCount; featureId++) {
+      if (FontTagData::featureInfoTable[featureId].hasBitId()) {
         numTags++;
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
+        BLTag featureTag = FontTagData::featureIdToTagTable[featureId];
 
         EXPECT_SUCCESS(ffs.setValue(featureTag, 1u));
         EXPECT_EQ(ffs.getValue(featureTag), 1u);
@@ -205,10 +206,10 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     }
 
     // Remove bit tag/value data.
-    for (uint32_t featureId = 0; featureId < BLFontTagData::kFeatureIdCount; featureId++) {
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
+    for (uint32_t featureId = 0; featureId < FontTagData::kFeatureIdCount; featureId++) {
+      if (FontTagData::featureInfoTable[featureId].hasBitId()) {
         numTags--;
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
+        BLTag featureTag = FontTagData::featureIdToTagTable[featureId];
 
         EXPECT_SUCCESS(ffs.removeValue(featureTag));
         EXPECT_EQ(ffs.size(), numTags);
@@ -228,19 +229,19 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     BLFontFeatureSettings ffsB;
 
     // Assign bit tag/value data.
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
+    for (uint32_t i = 0; i < FontTagData::kFeatureIdCount; i++) {
       uint32_t featureId = i;
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
+      if (FontTagData::featureInfoTable[featureId].hasBitId()) {
+        BLTag featureTag = FontTagData::featureIdToTagTable[featureId];
         EXPECT_SUCCESS(ffsA.setValue(featureTag, 1u));
         verifyFontFeatureSettings(ffsA);
       }
     }
 
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
-      uint32_t featureId = BLFontTagData::kFeatureIdCount - 1 - i;
-      if (BLFontTagData::featureInfoTable[featureId].hasBitId()) {
-        BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
+    for (uint32_t i = 0; i < FontTagData::kFeatureIdCount; i++) {
+      uint32_t featureId = FontTagData::kFeatureIdCount - 1 - i;
+      if (FontTagData::featureInfoTable[featureId].hasBitId()) {
+        BLTag featureTag = FontTagData::featureIdToTagTable[featureId];
         EXPECT_SUCCESS(ffsB.setValue(featureTag, 1u));
         verifyFontFeatureSettings(ffsB);
       }
@@ -281,9 +282,9 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
   {
     BLFontFeatureSettings ffs;
 
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
-      uint32_t featureId = BLFontTagData::kFeatureIdCount - 1 - i;
-      BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
+    for (uint32_t i = 0; i < FontTagData::kFeatureIdCount; i++) {
+      uint32_t featureId = FontTagData::kFeatureIdCount - 1 - i;
+      BLTag featureTag = FontTagData::featureIdToTagTable[featureId];
       EXPECT_SUCCESS(ffs.setValue(featureTag, 1u));
       EXPECT_EQ(ffs.getValue(featureTag), 1u);
       EXPECT_EQ(ffs.size(), i + 1u);
@@ -292,11 +293,11 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     EXPECT_FALSE(ffs._d.sso());
 
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
-      uint32_t featureId = BLFontTagData::kFeatureIdCount - 1 - i;
-      BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
+    for (uint32_t i = 0; i < FontTagData::kFeatureIdCount; i++) {
+      uint32_t featureId = FontTagData::kFeatureIdCount - 1 - i;
+      BLTag featureTag = FontTagData::featureIdToTagTable[featureId];
 
-      if (!BLFontTagData::featureInfoTable[featureId].hasBitId()) {
+      if (!FontTagData::featureInfoTable[featureId].hasBitId()) {
         EXPECT_SUCCESS(ffs.setValue(featureTag, 65535u));
         EXPECT_EQ(ffs.getValue(featureTag), 65535u);
       }
@@ -310,9 +311,9 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     EXPECT_FALSE(ffs._d.sso());
 
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
+    for (uint32_t i = 0; i < FontTagData::kFeatureIdCount; i++) {
       uint32_t featureId = i;
-      BLTag featureTag = BLFontTagData::featureIdToTagTable[featureId];
+      BLTag featureTag = FontTagData::featureIdToTagTable[featureId];
 
       EXPECT_SUCCESS(ffs.removeValue(featureTag));
       EXPECT_EQ(ffs.getValue(featureTag), BL_FONT_FEATURE_INVALID_VALUE);
@@ -331,9 +332,9 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     BLFontFeatureSettings ffs1;
     BLFontFeatureSettings ffs2;
 
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
-      EXPECT_SUCCESS(ffs1.setValue(BLFontTagData::featureIdToTagTable[i], 1u));
-      EXPECT_SUCCESS(ffs2.setValue(BLFontTagData::featureIdToTagTable[BLFontTagData::kFeatureIdCount - 1u - i], 1u));
+    for (uint32_t i = 0; i < FontTagData::kFeatureIdCount; i++) {
+      EXPECT_SUCCESS(ffs1.setValue(FontTagData::featureIdToTagTable[i], 1u));
+      EXPECT_SUCCESS(ffs2.setValue(FontTagData::featureIdToTagTable[FontTagData::kFeatureIdCount - 1u - i], 1u));
 
       verifyFontFeatureSettings(ffs1);
       verifyFontFeatureSettings(ffs2);
@@ -347,10 +348,10 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
     BLFontFeatureSettings ffs1;
     BLFontFeatureSettings ffs2;
 
-    for (uint32_t i = 0; i < BLFontTagData::kFeatureIdCount; i++) {
-      if (BLFontTagData::featureInfoTable[i].hasBitId()) {
-        EXPECT_SUCCESS(ffs1.setValue(BLFontTagData::featureIdToTagTable[i], 1u));
-        EXPECT_SUCCESS(ffs2.setValue(BLFontTagData::featureIdToTagTable[i], 1u));
+    for (uint32_t i = 0; i < FontTagData::kFeatureIdCount; i++) {
+      if (FontTagData::featureInfoTable[i].hasBitId()) {
+        EXPECT_SUCCESS(ffs1.setValue(FontTagData::featureIdToTagTable[i], 1u));
+        EXPECT_SUCCESS(ffs2.setValue(FontTagData::featureIdToTagTable[i], 1u));
 
         verifyFontFeatureSettings(ffs1);
         verifyFontFeatureSettings(ffs2);
@@ -373,6 +374,7 @@ UNIT(fontfeaturesettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
   }
 }
 
-} // {BLFontFeatureSettingsTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

@@ -38,42 +38,14 @@ BL_DEFINE_ENUM(BLImageScaleFilter) {
   BL_IMAGE_SCALE_FILTER_BILINEAR = 2,
   //! Bicubic filter (radius 2.0).
   BL_IMAGE_SCALE_FILTER_BICUBIC = 3,
-  //! Bell filter (radius 1.5).
-  BL_IMAGE_SCALE_FILTER_BELL = 4,
-  //! Gauss filter (radius 2.0).
-  BL_IMAGE_SCALE_FILTER_GAUSS = 5,
-  //! Hermite filter (radius 1.0).
-  BL_IMAGE_SCALE_FILTER_HERMITE = 6,
-  //! Hanning filter (radius 1.0).
-  BL_IMAGE_SCALE_FILTER_HANNING = 7,
-  //! Catrom filter (radius 2.0).
-  BL_IMAGE_SCALE_FILTER_CATROM = 8,
-  //! Bessel filter (radius 3.2383).
-  BL_IMAGE_SCALE_FILTER_BESSEL = 9,
-  //! Sinc filter (radius 2.0, adjustable through `BLImageScaleOptions`).
-  BL_IMAGE_SCALE_FILTER_SINC = 10,
-  //! Lanczos filter (radius 2.0, adjustable through `BLImageScaleOptions`).
-  BL_IMAGE_SCALE_FILTER_LANCZOS = 11,
-  //! Blackman filter (radius 2.0, adjustable through `BLImageScaleOptions`).
-  BL_IMAGE_SCALE_FILTER_BLACKMAN = 12,
-  //! Mitchell filter (radius 2.0, parameters 'b' and 'c' passed through `BLImageScaleOptions`).
-  BL_IMAGE_SCALE_FILTER_MITCHELL = 13,
-  //! Filter using a user-function, must be passed through `BLImageScaleOptions`.
-  BL_IMAGE_SCALE_FILTER_USER = 14,
+  //! Lanczos filter (radius 2.0).
+  BL_IMAGE_SCALE_FILTER_LANCZOS = 4,
 
   //! Maximum value of `BLImageScaleFilter`.
-  BL_IMAGE_SCALE_FILTER_MAX_VALUE = 14
+  BL_IMAGE_SCALE_FILTER_MAX_VALUE = 4
 
   BL_FORCE_ENUM_UINT32(BL_IMAGE_SCALE_FILTER)
 };
-
-//! \}
-
-//! \name BLImage - Types
-//! \{
-
-//! A user function that can be used by `BLImage::scale()`.
-typedef BLResult (BL_CDECL* BLImageScaleUserFunc)(double* dst, const double* tArray, size_t n, const void* data) BL_NOEXCEPT;
 
 //! \}
 
@@ -119,33 +91,6 @@ struct BLImageInfo {
 #endif
 };
 
-//! Options that can used to customize image scaling.
-struct BLImageScaleOptions {
-  BLImageScaleUserFunc userFunc;
-  void* userData;
-
-  double radius;
-  union {
-    double data[3];
-    struct {
-      double b, c;
-    } mitchell;
-  };
-
-#ifdef __cplusplus
-  BL_INLINE void reset() noexcept { *this = BLImageScaleOptions{}; }
-
-  BL_INLINE void resetToDefaults() noexcept {
-    userFunc = nullptr;
-    userData = nullptr;
-    radius = 2.0;
-    mitchell.b = 1.0 / 3.0;
-    mitchell.c = 1.0 / 3.0;
-    data[2] = 0.0;
-  }
-#endif
-};
-
 //! \}
 
 //! \name BLImage - C API
@@ -169,7 +114,7 @@ BL_API BLResult BL_CDECL blImageGetData(const BLImageCore* self, BLImageData* da
 BL_API BLResult BL_CDECL blImageMakeMutable(BLImageCore* self, BLImageData* dataOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageConvert(BLImageCore* self, BLFormat format) BL_NOEXCEPT_C;
 BL_API bool BL_CDECL blImageEquals(const BLImageCore* a, const BLImageCore* b) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageScale(BLImageCore* dst, const BLImageCore* src, const BLSizeI* size, uint32_t filter, const BLImageScaleOptions* options) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageScale(BLImageCore* dst, const BLImageCore* src, const BLSizeI* size, BLImageScaleFilter filter) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageReadFromFile(BLImageCore* self, const char* fileName, const BLArrayCore* codecs) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageReadFromData(BLImageCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blImageWriteToFile(const BLImageCore* self, const char* fileName, const BLImageCodecCore* codec) BL_NOEXCEPT_C;
@@ -394,8 +339,8 @@ public:
 
   //! \}
 
-  static BL_INLINE_NODEBUG BLResult scale(BLImage& dst, const BLImage& src, const BLSizeI& size, uint32_t filter, const BLImageScaleOptions* options = nullptr) noexcept {
-    return blImageScale(&dst, &src, &size, filter, options);
+  static BL_INLINE_NODEBUG BLResult scale(BLImage& dst, const BLImage& src, const BLSizeI& size, BLImageScaleFilter filter) noexcept {
+    return blImageScale(&dst, &src, &size, filter);
   }
 };
 

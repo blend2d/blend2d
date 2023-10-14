@@ -12,10 +12,11 @@
 #include "simd/simd_p.h"
 #include "support/ptrops_p.h"
 
-namespace BLTransformPrivate {
+namespace bl {
+namespace TransformInternal {
 
-// Transform - MapPointDArray (SSE2)
-// =================================
+// bl::Transform - MapPointDArray (SSE2)
+// =====================================
 
 static BLResult BL_CDECL mapPointDArrayIdentity_SSE2(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
@@ -25,7 +26,7 @@ static BLResult BL_CDECL mapPointDArrayIdentity_SSE2(const BLMatrix2D* self, BLP
     return BL_SUCCESS;
 
   size_t i = size;
-  if (BLPtrOps::bothAligned(dst, src, 16)) {
+  if (PtrOps::bothAligned(dst, src, 16)) {
     while (i >= 4) {
       Vec2xF64 v0 = loada<Vec2xF64>(src + 0);
       Vec2xF64 v1 = loada<Vec2xF64>(src + 1);
@@ -69,7 +70,7 @@ static BLResult BL_CDECL mapPointDArrayTranslate_SSE2(const BLMatrix2D* self, BL
   size_t i = size;
   Vec2xF64 m21_m20 = loadu<Vec2xF64>(&self->m20);
 
-  if (BLPtrOps::bothAligned(dst, src, 16)) {
+  if (PtrOps::bothAligned(dst, src, 16)) {
     while (i >= 4) {
       Vec2xF64 v0 = loada<Vec2xF64>(src + 0) + m21_m20;
       Vec2xF64 v1 = loada<Vec2xF64>(src + 1) + m21_m20;
@@ -130,7 +131,7 @@ static BLResult BL_CDECL mapPointDArrayScale_SSE2(const BLMatrix2D* self, BLPoin
   Vec2xF64 m11_m00 = make128_f64(self->m11, self->m00);
   Vec2xF64 m21_m20 = loadu<Vec2xF64>(&self->m20);
 
-  if (BLPtrOps::bothAligned(dst, src, 16)) {
+  if (PtrOps::bothAligned(dst, src, 16)) {
     while (i >= 4) {
       Vec2xF64 v0 = loada<Vec2xF64>(src + 0) * m11_m00 + m21_m20;
       Vec2xF64 v1 = loada<Vec2xF64>(src + 1) * m11_m00 + m21_m20;
@@ -191,7 +192,7 @@ static BLResult BL_CDECL mapPointDArraySwap_SSE2(const BLMatrix2D* self, BLPoint
   Vec2xF64 m21_m20 = loadu<Vec2xF64>(&self->m20);
 
   size_t i = size;
-  if (BLPtrOps::bothAligned(dst, src, 16)) {
+  if (bl::PtrOps::bothAligned(dst, src, 16)) {
     while (i >= 4) {
       Vec2xF64 v0 = swap_f64(loada<Vec2xF64>(src + 0)) * m01_m10 + m21_m20;
       Vec2xF64 v1 = swap_f64(loada<Vec2xF64>(src + 1)) * m01_m10 + m21_m20;
@@ -253,7 +254,7 @@ static BLResult BL_CDECL mapPointDArrayAffine_SSE2(const BLMatrix2D* self, BLPoi
   Vec2xF64 m01_m10 = make128_f64(self->m01, self->m10);
   Vec2xF64 m21_m20 = loadu<Vec2xF64>(&self->m20);
 
-  if (BLPtrOps::bothAligned(dst, src, 16)) {
+  if (PtrOps::bothAligned(dst, src, 16)) {
     while (i >= 4) {
       Vec2xF64 v0 = loada<Vec2xF64>(src + 0);
       Vec2xF64 v1 = loada<Vec2xF64>(src + 1);
@@ -314,7 +315,7 @@ static BLResult BL_CDECL mapPointDArrayAffine_SSE2(const BLMatrix2D* self, BLPoi
 
 void blTransformRtInit_SSE2(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
-  BLMapPointDArrayFunc* funcs = BLTransformPrivate::mapPointDArrayFuncs;
+  BLMapPointDArrayFunc* funcs = mapPointDArrayFuncs;
 
   blAssignFunc(&funcs[BL_TRANSFORM_TYPE_IDENTITY ], mapPointDArrayIdentity_SSE2);
   blAssignFunc(&funcs[BL_TRANSFORM_TYPE_TRANSLATE], mapPointDArrayTranslate_SSE2);
@@ -324,6 +325,7 @@ void blTransformRtInit_SSE2(BLRuntimeContext* rt) noexcept {
   blAssignFunc(&funcs[BL_TRANSFORM_TYPE_INVALID  ], mapPointDArrayAffine_SSE2);
 }
 
-} // {BLTransformPrivate}
+} // {TransformInternal}
+} // {bl}
 
 #endif

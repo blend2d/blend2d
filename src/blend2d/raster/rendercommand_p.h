@@ -18,14 +18,15 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 struct RenderFetchData;
 
 //! Source data that belongs to a \ref RenderCommand, but stored separately.
 union RenderCommandSource {
   //! Solid data.
-  BLPipeline::FetchData::Solid solid;
+  Pipeline::FetchData::Solid solid;
   //! Fetch data.
   RenderFetchData* fetchData;
 
@@ -168,9 +169,9 @@ struct RenderCommand {
 
   union {
     //! Dispatch data.
-    BLPipeline::DispatchData _dispatchData;
+    Pipeline::DispatchData _dispatchData;
     //! Signature, used during command construction, replaced by `_dispatchData` when constructed.
-    BLPipeline::Signature _signature;
+    Pipeline::Signature _signature;
   };
 
   //! \}
@@ -209,7 +210,7 @@ struct RenderCommand {
   }
 
   BL_INLINE void initFillBoxMaskA(const BLBoxI& boxA, const BLImageCore* maskImage, const BLPointI& maskOffsetI) noexcept {
-    _payload.boxMaskA.maskImageI.ptr = BLImagePrivate::getImpl(maskImage);
+    _payload.boxMaskA.maskImageI.ptr = ImageInternal::getImpl(maskImage);
     _payload.boxMaskA.maskOffsetI = maskOffsetI;
     _payload.boxMaskA.boxI = boxA;
     _type = RenderCommandType::kFillBoxMaskA;
@@ -267,14 +268,14 @@ struct RenderCommand {
     return _payload.analytic.edges.ptr;
   }
 
-  //! Returns a pointer to `BLPipeline::FillData` that is only valid when the command type is `kTypeFillBoxA`. It casts
+  //! Returns a pointer to `Pipeline::FillData` that is only valid when the command type is `kTypeFillBoxA`. It casts
   //! `_rect` member to the requested data type as it's  compatible. This trick cannot be used for any other command types.
   BL_INLINE const void* getPipeFillDataOfBoxA() const noexcept {
     BL_ASSERT(isFillBoxA());
     return &_payload.box.boxI;
   }
 
-  //! Returns `_solidData` or `_fetchData` casted properly to `BLPipeline::FetchData` type.
+  //! Returns `_solidData` or `_fetchData` casted properly to `Pipeline::FetchData` type.
   BL_INLINE const void* getPipeFetchData() const noexcept {
     const void* data = &_source.solid;
     if (hasStyleFetchData())
@@ -282,13 +283,14 @@ struct RenderCommand {
     return data;
   }
 
-  BL_INLINE_NODEBUG BLPipeline::DispatchData* pipeDispatchData() noexcept { return &_dispatchData; }
-  BL_INLINE_NODEBUG const BLPipeline::DispatchData* pipeDispatchData() const noexcept { return &_dispatchData; }
+  BL_INLINE_NODEBUG Pipeline::DispatchData* pipeDispatchData() noexcept { return &_dispatchData; }
+  BL_INLINE_NODEBUG const Pipeline::DispatchData* pipeDispatchData() const noexcept { return &_dispatchData; }
 
   //! \}
 };
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

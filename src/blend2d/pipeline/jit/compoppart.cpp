@@ -14,13 +14,14 @@
 #include "../../pipeline/jit/fetchsolidpart_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
-// BLPipeline::JIT::CompOpPart - Construction & Destruction
-// ========================================================
+// bl::Pipeline::JIT::CompOpPart - Construction & Destruction
+// ==========================================================
 
-CompOpPart::CompOpPart(PipeCompiler* pc, uint32_t compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept
+CompOpPart::CompOpPart(PipeCompiler* pc, CompOpExt compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept
   : PipePart(pc, PipePartType::kComposite),
     _compOp(compOp),
     _pixelType(dstPart->hasRGB() ? PixelType::kRGBA32 : PixelType::kA8),
@@ -46,37 +47,37 @@ CompOpPart::CompOpPart(PipeCompiler* pc, uint32_t compOp, FetchPart* dstPart, Fe
 
     case PixelType::kRGBA32: {
       switch (compOp) {
-        case BL_COMP_OP_SRC_OVER    :
-        case BL_COMP_OP_SRC_COPY    :
-        case BL_COMP_OP_SRC_IN      :
-        case BL_COMP_OP_SRC_OUT     :
-        case BL_COMP_OP_SRC_ATOP    :
-        case BL_COMP_OP_DST_OVER    :
-        case BL_COMP_OP_DST_IN      :
-        case BL_COMP_OP_DST_OUT     :
-        case BL_COMP_OP_DST_ATOP    :
-        case BL_COMP_OP_XOR         :
-        case BL_COMP_OP_CLEAR       :
-        case BL_COMP_OP_PLUS        :
-        case BL_COMP_OP_MINUS       :
-        case BL_COMP_OP_MODULATE    :
-        case BL_COMP_OP_MULTIPLY    :
-        case BL_COMP_OP_SCREEN      :
-        case BL_COMP_OP_OVERLAY     :
-        case BL_COMP_OP_DARKEN      :
-        case BL_COMP_OP_LIGHTEN     :
-        case BL_COMP_OP_LINEAR_BURN :
-        case BL_COMP_OP_PIN_LIGHT   :
-        case BL_COMP_OP_HARD_LIGHT  :
-        case BL_COMP_OP_DIFFERENCE  :
-        case BL_COMP_OP_EXCLUSION   :
+        case CompOpExt::kSrcOver    :
+        case CompOpExt::kSrcCopy    :
+        case CompOpExt::kSrcIn      :
+        case CompOpExt::kSrcOut     :
+        case CompOpExt::kSrcAtop    :
+        case CompOpExt::kDstOver    :
+        case CompOpExt::kDstIn      :
+        case CompOpExt::kDstOut     :
+        case CompOpExt::kDstAtop    :
+        case CompOpExt::kXor        :
+        case CompOpExt::kClear      :
+        case CompOpExt::kPlus       :
+        case CompOpExt::kMinus      :
+        case CompOpExt::kModulate   :
+        case CompOpExt::kMultiply   :
+        case CompOpExt::kScreen     :
+        case CompOpExt::kOverlay    :
+        case CompOpExt::kDarken     :
+        case CompOpExt::kLighten    :
+        case CompOpExt::kLinearBurn :
+        case CompOpExt::kPinLight   :
+        case CompOpExt::kHardLight  :
+        case CompOpExt::kDifference :
+        case CompOpExt::kExclusion  :
           maxSimdWidth = SimdWidth::k512;
           break;
 
-        case BL_COMP_OP_COLOR_DODGE :
-        case BL_COMP_OP_COLOR_BURN  :
-        case BL_COMP_OP_LINEAR_LIGHT:
-        case BL_COMP_OP_SOFT_LIGHT  :
+        case CompOpExt::kColorDodge :
+        case CompOpExt::kColorBurn  :
+        case CompOpExt::kLinearLight:
+        case CompOpExt::kSoftLight  :
           break;
       }
       break;
@@ -89,8 +90,8 @@ CompOpPart::CompOpPart(PipeCompiler* pc, uint32_t compOp, FetchPart* dstPart, Fe
   _maxSimdWidthSupported = maxSimdWidth;
 }
 
-// BLPipeline::JIT::CompOpPart - Prepare
-// =====================================
+// bl::Pipeline::JIT::CompOpPart - Prepare
+// =======================================
 
 void CompOpPart::preparePart() noexcept {
   bool isSolid = srcPart()->isSolid();
@@ -121,34 +122,34 @@ void CompOpPart::preparePart() noexcept {
 
     case PixelType::kRGBA32: {
       switch (compOp()) {
-        case BL_COMP_OP_SRC_OVER    : maxPixels = 8; break;
-        case BL_COMP_OP_SRC_COPY    : maxPixels = 8; break;
-        case BL_COMP_OP_SRC_IN      : maxPixels = 8; break;
-        case BL_COMP_OP_SRC_OUT     : maxPixels = 8; break;
-        case BL_COMP_OP_SRC_ATOP    : maxPixels = 8; break;
-        case BL_COMP_OP_DST_OVER    : maxPixels = 8; break;
-        case BL_COMP_OP_DST_IN      : maxPixels = 8; break;
-        case BL_COMP_OP_DST_OUT     : maxPixels = 8; break;
-        case BL_COMP_OP_DST_ATOP    : maxPixels = 8; break;
-        case BL_COMP_OP_XOR         : maxPixels = 8; break;
-        case BL_COMP_OP_CLEAR       : maxPixels = 8; break;
-        case BL_COMP_OP_PLUS        : maxPixels = 8; break;
-        case BL_COMP_OP_MINUS       : maxPixels = 4; break;
-        case BL_COMP_OP_MODULATE    : maxPixels = 8; break;
-        case BL_COMP_OP_MULTIPLY    : maxPixels = 8; break;
-        case BL_COMP_OP_SCREEN      : maxPixels = 8; break;
-        case BL_COMP_OP_OVERLAY     : maxPixels = 4; break;
-        case BL_COMP_OP_DARKEN      : maxPixels = 8; break;
-        case BL_COMP_OP_LIGHTEN     : maxPixels = 8; break;
-        case BL_COMP_OP_COLOR_DODGE : maxPixels = 1; break;
-        case BL_COMP_OP_COLOR_BURN  : maxPixels = 1; break;
-        case BL_COMP_OP_LINEAR_BURN : maxPixels = 8; break;
-        case BL_COMP_OP_LINEAR_LIGHT: maxPixels = 1; break;
-        case BL_COMP_OP_PIN_LIGHT   : maxPixels = 4; break;
-        case BL_COMP_OP_HARD_LIGHT  : maxPixels = 4; break;
-        case BL_COMP_OP_SOFT_LIGHT  : maxPixels = 1; break;
-        case BL_COMP_OP_DIFFERENCE  : maxPixels = 4; break;
-        case BL_COMP_OP_EXCLUSION   : maxPixels = 4; break;
+        case CompOpExt::kSrcOver    : maxPixels = 8; break;
+        case CompOpExt::kSrcCopy    : maxPixels = 8; break;
+        case CompOpExt::kSrcIn      : maxPixels = 8; break;
+        case CompOpExt::kSrcOut     : maxPixels = 8; break;
+        case CompOpExt::kSrcAtop    : maxPixels = 8; break;
+        case CompOpExt::kDstOver    : maxPixels = 8; break;
+        case CompOpExt::kDstIn      : maxPixels = 8; break;
+        case CompOpExt::kDstOut     : maxPixels = 8; break;
+        case CompOpExt::kDstAtop    : maxPixels = 8; break;
+        case CompOpExt::kXor        : maxPixels = 8; break;
+        case CompOpExt::kClear      : maxPixels = 8; break;
+        case CompOpExt::kPlus       : maxPixels = 8; break;
+        case CompOpExt::kMinus      : maxPixels = 4; break;
+        case CompOpExt::kModulate   : maxPixels = 8; break;
+        case CompOpExt::kMultiply   : maxPixels = 8; break;
+        case CompOpExt::kScreen     : maxPixels = 8; break;
+        case CompOpExt::kOverlay    : maxPixels = 4; break;
+        case CompOpExt::kDarken     : maxPixels = 8; break;
+        case CompOpExt::kLighten    : maxPixels = 8; break;
+        case CompOpExt::kColorDodge : maxPixels = 1; break;
+        case CompOpExt::kColorBurn  : maxPixels = 1; break;
+        case CompOpExt::kLinearBurn : maxPixels = 8; break;
+        case CompOpExt::kLinearLight: maxPixels = 1; break;
+        case CompOpExt::kPinLight   : maxPixels = 4; break;
+        case CompOpExt::kHardLight  : maxPixels = 4; break;
+        case CompOpExt::kSoftLight  : maxPixels = 1; break;
+        case CompOpExt::kDifference : maxPixels = 4; break;
+        case CompOpExt::kExclusion  : maxPixels = 4; break;
 
         default:
           BL_NOT_REACHED();
@@ -177,8 +178,8 @@ void CompOpPart::preparePart() noexcept {
   setMaxPixels(maxPixels);
 }
 
-// BLPipeline::JIT::CompOpPart - Init & Fini
-// =========================================
+// bl::Pipeline::JIT::CompOpPart - Init & Fini
+// ===========================================
 
 void CompOpPart::init(x86::Gp& x, x86::Gp& y, uint32_t pixelGranularity) noexcept {
   _pixelGranularity = uint8_t(pixelGranularity);
@@ -194,8 +195,8 @@ void CompOpPart::fini() noexcept {
   _pixelGranularity = 0;
 }
 
-// BLPipeline::JIT::CompOpPart - Optimization Opportunities
-// ========================================================
+// bl::Pipeline::JIT::CompOpPart - Optimization Opportunities
+// ==========================================================
 
 bool CompOpPart::shouldOptimizeOpaqueFill() const noexcept {
   // Should be always optimized if the source is not solid.
@@ -205,7 +206,7 @@ bool CompOpPart::shouldOptimizeOpaqueFill() const noexcept {
   // Do not optimize if the CompOp is TypeA. This operator doesn't need any
   // special handling as the source pixel is multiplied with mask before it's
   // passed to the compositor.
-  if (blTestFlag(compOpFlags(), BLCompOpFlags::kTypeA))
+  if (blTestFlag(compOpFlags(), CompOpFlags::kTypeA))
     return false;
 
   // Modulate operator just needs to multiply source with mask and add (1 - m)
@@ -231,8 +232,8 @@ bool CompOpPart::shouldJustCopyOpaqueFill() const noexcept {
   return false;
 }
 
-// BLPipeline::JIT::CompOpPart - Advance
-// =====================================
+// bl::Pipeline::JIT::CompOpPart - Advance
+// =======================================
 
 void CompOpPart::startAtX(const x86::Gp& x) noexcept {
   dstPart()->startAtX(x);
@@ -249,8 +250,8 @@ void CompOpPart::advanceY() noexcept {
   srcPart()->advanceY();
 }
 
-// BLPipeline::JIT::CompOpPart - Prefetch & Postfetch
-// ==================================================
+// bl::Pipeline::JIT::CompOpPart - Prefetch & Postfetch
+// ====================================================
 
 void CompOpPart::prefetch1() noexcept {
   dstPart()->prefetch1();
@@ -277,8 +278,8 @@ void CompOpPart::postfetchN() noexcept {
   srcPart()->postfetchN();
 }
 
-// BLPipeline::JIT::CompOpPart - Fetch
-// ===================================
+// bl::Pipeline::JIT::CompOpPart - Fetch
+// =====================================
 
 void CompOpPart::dstFetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
   dstPart()->fetch(p, n, flags, predicate);
@@ -387,8 +388,8 @@ void CompOpPart::srcFetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredica
   srcPart()->fetch(p, n, flags, predicate);
 }
 
-// BLPipeline::JIT::CompOpPart - PartialFetch
-// ==========================================
+// bl::Pipeline::JIT::CompOpPart - PartialFetch
+// ============================================
 
 void CompOpPart::enterPartialMode(PixelFlags partialFlags) noexcept {
   // Doesn't apply to solid fills.
@@ -444,8 +445,8 @@ void CompOpPart::nextPartialPixel() noexcept {
   }
 }
 
-// BLPipeline::JIT::CompOpPart - CMask - Init & Fini
-// =================================================
+// bl::Pipeline::JIT::CompOpPart - CMask - Init & Fini
+// ===================================================
 
 void CompOpPart::cMaskInit(const x86::Mem& mem) noexcept {
   switch (pixelType()) {
@@ -545,8 +546,8 @@ void CompOpPart::_cMaskLoopFini() noexcept {
   _cMaskLoopHook = nullptr;
 }
 
-// BLPipeline::JIT::CompOpPart - CMask - Generic Loop
-// ==================================================
+// bl::Pipeline::JIT::CompOpPart - CMask - Generic Loop
+// ====================================================
 
 void CompOpPart::cMaskGenericLoop(x86::Gp& i) noexcept {
   if (isLoopOpaque() && shouldJustCopyOpaqueFill()) {
@@ -889,8 +890,8 @@ void CompOpPart::cMaskGenericLoopVec(x86::Gp& i) noexcept {
   BL_NOT_REACHED();
 }
 
-// BLPipeline::JIT::CompOpPart - CMask - Granular Loop
-// ===================================================
+// bl::Pipeline::JIT::CompOpPart - CMask - Granular Loop
+// =====================================================
 
 void CompOpPart::cMaskGranularLoop(x86::Gp& i) noexcept {
   if (isLoopOpaque() && shouldJustCopyOpaqueFill()) {
@@ -1000,8 +1001,8 @@ void CompOpPart::cMaskGranularLoopVec(x86::Gp& i) noexcept {
   BL_NOT_REACHED();
 }
 
-// BLPipeline::JIT::CompOpPart - CMask - MemCpy & MemSet Loop
-// ==========================================================
+// bl::Pipeline::JIT::CompOpPart - CMask - MemCpy & MemSet Loop
+// ============================================================
 
 void CompOpPart::cMaskMemcpyOrMemsetLoop(x86::Gp& i) noexcept {
   BL_ASSERT(shouldJustCopyOpaqueFill());
@@ -1021,8 +1022,8 @@ void CompOpPart::cMaskMemcpyOrMemsetLoop(x86::Gp& i) noexcept {
   }
 }
 
-// BLPipeline::JIT::CompOpPart - CMask - Composition Helpers
-// =========================================================
+// bl::Pipeline::JIT::CompOpPart - CMask - Composition Helpers
+// ===========================================================
 
 void CompOpPart::cMaskProcStoreAdvance(const x86::Gp& dPtr, PixelCount n, Alignment alignment) noexcept {
   PixelPredicate ptrMask;
@@ -1053,8 +1054,8 @@ void CompOpPart::cMaskProcStoreAdvance(const x86::Gp& dPtr, PixelCount n, Alignm
   }
 }
 
-// BLPipeline::JIT::CompOpPart - VMask - Composition Helpers
-// =========================================================
+// bl::Pipeline::JIT::CompOpPart - VMask - Composition Helpers
+// ===========================================================
 
 void CompOpPart::vMaskGenericLoop(x86::Gp& i, const x86::Gp& dPtr, const x86::Gp& mPtr, GlobalAlpha& ga, const Label& done) noexcept {
   Label L_Done = done.isValid() ? done : cc->newLabel();
@@ -1212,8 +1213,8 @@ void CompOpPart::vMaskProc(Pixel& out, PixelFlags flags, x86::Gp& msk, bool mImm
   }
 }
 
-// BLPipeline::JIT::CompOpPart - CMask - Init & Fini - A8
-// ======================================================
+// bl::Pipeline::JIT::CompOpPart - CMask - Init & Fini - A8
+// ========================================================
 
 void CompOpPart::cMaskInitA8(const x86::Gp& sm_, const x86::Vec& vm_) noexcept {
   x86::Gp sm(sm_);
@@ -1502,8 +1503,8 @@ void CompOpPart::cMaskFiniA8() noexcept {
   _cMaskLoopFini();
 }
 
-// BLPipeline::JIT::CompOpPart - CMask - Proc - A8
-// ===============================================
+// bl::Pipeline::JIT::CompOpPart - CMask - Proc - A8
+// =================================================
 
 void CompOpPart::cMaskProcA8Gp(Pixel& out, PixelFlags flags) noexcept {
   out.setCount(PixelCount(1));
@@ -1796,8 +1797,8 @@ void CompOpPart::cMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, Pixe
   vMaskProcA8Vec(out, n, flags, vm, true, predicate);
 }
 
-// BLPipeline::JIT::CompOpPart - VMask Proc - A8 (Scalar)
-// ======================================================
+// bl::Pipeline::JIT::CompOpPart - VMask Proc - A8 (Scalar)
+// ========================================================
 
 void CompOpPart::vMaskProcA8Gp(Pixel& out, PixelFlags flags, x86::Gp& msk, bool mImmutable) noexcept {
   bool hasMask = msk.isValid();
@@ -2041,7 +2042,7 @@ void CompOpPart::vMaskProcA8Gp(Pixel& out, PixelFlags flags, x86::Gp& msk, bool 
   // VMask - A8 - Invert
   // -------------------
 
-  if (compOp() == BL_COMP_OP_INTERNAL_ALPHA_INV) {
+  if (isAlphaInv()) {
     // Da' = 1 - Da
     // Da' = Da.(1 - m) + (1 - Da).m
     if (hasMask) {
@@ -2069,8 +2070,8 @@ void CompOpPart::vMaskProcA8Gp(Pixel& out, PixelFlags flags, x86::Gp& msk, bool 
   BL_NOT_REACHED();
 }
 
-// BLPipeline::JIT::CompOpPart - VMask - Proc - A8 (Vec)
-// =====================================================
+// bl::Pipeline::JIT::CompOpPart - VMask - Proc - A8 (Vec)
+// =======================================================
 
 void CompOpPart::vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, VecArray& vm_, bool mImmutable, PixelPredicate& predicate) noexcept {
   SimdWidth simdWidth = pc->simdWidthOf(DataWidth::k16, n);
@@ -2321,7 +2322,7 @@ void CompOpPart::vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, VecA
   // VMask - A8 - Invert
   // -------------------
 
-  if (compOp() == BL_COMP_OP_INTERNAL_ALPHA_INV) {
+  if (isAlphaInv()) {
     if (!hasMask) {
       // Da' = 1 - Da
       dstFetch(d, n, PixelFlags::kUA, predicate);
@@ -2349,8 +2350,8 @@ void CompOpPart::vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, VecA
   BL_NOT_REACHED();
 }
 
-// BLPipeline::JIT::CompOpPart - CMask - Init & Fini - RGBA
-// ========================================================
+// bl::Pipeline::JIT::CompOpPart - CMask - Init & Fini - RGBA
+// ==========================================================
 
 void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
   bool hasMask = vm.isValid();
@@ -2845,7 +2846,7 @@ void CompOpPart::cMaskInitRGBA32(const x86::Vec& vm) noexcept {
     // CMaskInit - RGBA32 - Solid - TypeA (Non-Opaque)
     // -----------------------------------------------
 
-    else if (blTestFlag(compOpFlags(), BLCompOpFlags::kTypeA) && hasMask) {
+    else if (blTestFlag(compOpFlags(), CompOpFlags::kTypeA) && hasMask) {
       // Multiply the source pixel with the mask if `TypeA`.
       srcPart()->as<FetchSolidPart>()->initSolidFlags(PixelFlags::kUC);
 
@@ -2895,8 +2896,8 @@ void CompOpPart::cMaskFiniRGBA32() noexcept {
   _cMaskLoopFini();
 }
 
-// BLPipeline::JIT::CompOpPart - CMask - Proc - RGBA
-// =================================================
+// bl::Pipeline::JIT::CompOpPart - CMask - Proc - RGBA
+// ===================================================
 
 void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
   bool hasMask = isLoopCMask();
@@ -3403,8 +3404,8 @@ void CompOpPart::cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
   vMaskProcRGBA32Vec(out, n, flags, vm, true, predicate);
 }
 
-// BLPipeline::JIT::CompOpPart - VMask - RGBA32 (Vec)
-// ==================================================
+// bl::Pipeline::JIT::CompOpPart - VMask - RGBA32 (Vec)
+// ====================================================
 
 void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, VecArray& vm_, bool mImmutable, PixelPredicate& predicate) noexcept {
   SimdWidth simdWidth = pc->simdWidthOf(DataWidth::k64, n);
@@ -5186,6 +5187,7 @@ void CompOpPart::vMaskProcRGBA32InvertDone(VecArray& vn, bool mImmutable) noexce
 }
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 #endif

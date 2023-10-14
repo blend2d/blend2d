@@ -10,8 +10,11 @@
 #include "object_p.h"
 #include "rgba_p.h"
 
-// BLGradient - Tests
-// ==================
+namespace bl {
+namespace Tests {
+
+// bl::Gradient - Tests
+// ====================
 
 UNIT(gradient_allocation_strategy, BL_TEST_GROUP_RENDERING_STYLES) {
   BLGradient g;
@@ -22,7 +25,7 @@ UNIT(gradient_allocation_strategy, BL_TEST_GROUP_RENDERING_STYLES) {
     g.addStop(double(i) / double(kNumItems), BLRgba32(0xFFFFFFFF));
 
     if (capacity != g.capacity()) {
-      size_t implSize = BLGradientPrivate::implSizeFromCapacity(g.capacity()).value();
+      size_t implSize = GradientInternal::implSizeFromCapacity(g.capacity()).value();
       INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, g.capacity(), implSize);
 
       capacity = g.capacity();
@@ -124,5 +127,8 @@ UNIT(gradient_values, BL_TEST_GROUP_RENDERING_STYLES) {
     EXPECT_EQ(g.angle(), 0.1);
   }
 }
+
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

@@ -17,7 +17,8 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 class WorkerSynchronization;
 
@@ -48,11 +49,11 @@ public:
   WorkerSynchronization* _synchronization;
 
   //! Contains all jobs of this batch.
-  BLArenaList<RenderJobQueue> _jobList;
+  ArenaList<RenderJobQueue> _jobList;
   //! Contains all commands of this batch.
-  BLArenaList<RenderCommandQueue> _commandList;
+  ArenaList<RenderCommandQueue> _commandList;
 
-  BLArenaAllocator::Block* _pastBlock;
+  ArenaAllocator::Block* _pastBlock;
 
   uint32_t _workerCount;
   uint32_t _jobCount;
@@ -89,8 +90,8 @@ public:
   BL_INLINE_NODEBUG size_t nextJobIndex() noexcept { return blAtomicFetchAddStrong(&_jobIndex); }
   BL_INLINE_NODEBUG size_t nextBandIndex() noexcept { return blAtomicFetchAddStrong(&_bandIndex); }
 
-  BL_INLINE_NODEBUG const BLArenaList<RenderJobQueue>& jobList() const noexcept { return _jobList; }
-  BL_INLINE_NODEBUG const BLArenaList<RenderCommandQueue>& commandList() const noexcept { return _commandList; }
+  BL_INLINE_NODEBUG const ArenaList<RenderJobQueue>& jobList() const noexcept { return _jobList; }
+  BL_INLINE_NODEBUG const ArenaList<RenderCommandQueue>& commandList() const noexcept { return _commandList; }
 
   BL_INLINE_NODEBUG uint32_t workerCount() const noexcept { return _workerCount; }
 
@@ -107,7 +108,8 @@ public:
   //! \}
 };
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

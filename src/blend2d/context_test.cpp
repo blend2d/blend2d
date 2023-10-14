@@ -11,10 +11,11 @@
 #include "image_p.h"
 #include "pattern_p.h"
 
-// BLContext - Tests
-// =================
+// bl::Context - Tests
+// ===================
 
-namespace BLContextTests {
+namespace bl {
+namespace Tests {
 
 static void test_context_state(BLContext& ctx) {
   // Prepare non-solid styles.
@@ -389,6 +390,7 @@ UNIT(context, BL_TEST_GROUP_RENDERING_CONTEXT) {
   test_context_state(ctx);
 }
 
-} // {BLContextTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

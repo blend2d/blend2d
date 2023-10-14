@@ -246,8 +246,8 @@ static BL_INLINE BLResult bl_convert_unpremultiply_8888_template_sse2(
   dstStride -= uintptr_t(w) * 4u + gap;
   srcStride -= uintptr_t(w) * 4u;
 
-  const uint32_t* rcpTable = blCommonTable.unpremultiplyPmaddwdRcp;
-  const uint32_t* rndTable = blCommonTable.unpremultiplyPmaddwdRnd;
+  const uint32_t* rcpTable = bl::commonTable.unpremultiplyPmaddwdRcp;
+  const uint32_t* rndTable = bl::commonTable.unpremultiplyPmaddwdRnd;
 
   Vec16xU8 alphaMask = make128_u32<Vec16xU8>(0xFFu << A_Shift);
   Vec4xU32 componentMask = make128_u32<Vec4xU32>(0xFFu);
@@ -360,8 +360,8 @@ BLResult bl_convert_unpremultiply_8888_trailing_alpha_sse2(
   return bl_convert_unpremultiply_8888_template_sse2<0>(self, dstData, dstStride, srcData, srcStride, w, h, options);
 }
 
-// BLPixelConverter - RGB32 From A8/L8 (SSE2)
-// ==========================================
+// bl::PixelConverter - RGB32 From A8/L8 (SSE2)
+// ============================================
 
 BLResult bl_convert_8888_from_x8_sse2(
   const BLPixelConverterCore* self,
@@ -422,7 +422,7 @@ BLResult bl_convert_8888_from_x8_sse2(
 
     BL_NOUNROLL
     while (i) {
-      BLMemOps::writeU32u(dstData, ((uint32_t(srcData[0]) * 0x01010101u) & zeroMask32) | fillMask32);
+      bl::MemOps::writeU32u(dstData, ((uint32_t(srcData[0]) * 0x01010101u) & zeroMask32) | fillMask32);
       dstData += 4;
       srcData += 1;
       i--;

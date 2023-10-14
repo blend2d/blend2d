@@ -12,7 +12,8 @@
 
 //! \cond INTERNAL
 
-namespace BLCompression {
+namespace bl {
+namespace Compression {
 namespace Deflate {
 
 struct EncoderImpl;
@@ -34,7 +35,8 @@ public:
 };
 
 } // {Deflate}
-} // {BLCompression}
+} // {Compression}
+} // {bl}
 
 //! \endcond
 

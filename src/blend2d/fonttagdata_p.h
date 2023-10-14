@@ -14,7 +14,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLFontTagData {
+namespace bl {
+namespace FontTagData {
 
 //! Number of valid ASCII characters that can be used within a single tag character, includes 'A-Z', 'a-z', '0-9', ...
 static constexpr uint32_t kCharRangeInTag = 95;
@@ -58,7 +59,8 @@ static BL_INLINE void tagToAscii(char str[5], uint32_t tag) noexcept {
   str[4] = '\0';
 }
 
-} // {BLFontTagData}
+} // {FontTagData}
+} // {bl}
 
 //! \}
 //! \endcond

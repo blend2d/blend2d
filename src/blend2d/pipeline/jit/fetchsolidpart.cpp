@@ -10,15 +10,16 @@
 #include "../../pipeline/jit/fetchsolidpart_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 #define REL_SOLID(FIELD) BL_OFFSET_OF(FetchData::Solid, FIELD)
 
-// BLPipeline::JIT::FetchSolidPart - Construction & Destruction
-// ============================================================
+// bl::Pipeline::JIT::FetchSolidPart - Construction & Destruction
+// ==============================================================
 
-FetchSolidPart::FetchSolidPart(PipeCompiler* pc, BLInternalFormat format) noexcept
+FetchSolidPart::FetchSolidPart(PipeCompiler* pc, FormatExt format) noexcept
   : FetchPart(pc, FetchType::kSolid, format),
     _pixel("solid") {
 
@@ -32,13 +33,13 @@ FetchSolidPart::FetchSolidPart(PipeCompiler* pc, BLInternalFormat format) noexce
   _pixel.setCount(PixelCount(1));
 }
 
-// BLPipeline::JIT::FetchSolidPart - Prepare
-// =========================================
+// bl::Pipeline::JIT::FetchSolidPart - Prepare
+// ===========================================
 
 void FetchSolidPart::preparePart() noexcept {}
 
-// BLPipeline::JIT::FetchSolidPart - Init & Fini
-// =============================================
+// bl::Pipeline::JIT::FetchSolidPart - Init & Fini
+// ===============================================
 
 void FetchSolidPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   blUnused(x, y);
@@ -53,8 +54,8 @@ void FetchSolidPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
 void FetchSolidPart::_finiPart() noexcept {}
 
-// BLPipeline::JIT::FetchSolidPart - InitSolidFlags
-// ================================================
+// bl::Pipeline::JIT::FetchSolidPart - InitSolidFlags
+// ==================================================
 
 void FetchSolidPart::initSolidFlags(PixelFlags flags) noexcept {
   ScopedInjector injector(cc, &_globalHook);
@@ -89,8 +90,8 @@ void FetchSolidPart::initSolidFlags(PixelFlags flags) noexcept {
   pc->x_satisfy_solid(s, flags);
 }
 
-// BLPipeline::JIT::FetchSolidPart - Fetch
-// =======================================
+// bl::Pipeline::JIT::FetchSolidPart - Fetch
+// =========================================
 
 void FetchSolidPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
   BL_ASSERT(_pixel.type() == p.type());
@@ -200,6 +201,7 @@ void FetchSolidPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredic
 }
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 #endif

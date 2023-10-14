@@ -7,10 +7,11 @@
 #if defined(BL_TARGET_OPT_SSE2)
 
 #include "../gradient_p.h"
-#include "../math_p.h"
 #include "../simd/simd_p.h"
+#include "../support/math_p.h"
 
-namespace BLPixelOps {
+namespace bl {
+namespace PixelOps {
 namespace Interpolation {
 
 void BL_CDECL interpolate_prgb32_sse2(uint32_t* dPtr, uint32_t dSize, const BLGradientStop* sPtr, size_t sSize) noexcept {
@@ -39,7 +40,7 @@ void BL_CDECL interpolate_prgb32_sse2(uint32_t* dPtr, uint32_t dSize, const BLGr
 
   do {
     c1 = loada_64<Vec8xU16>(&sPtr[sIndex].rgba);
-    p1 = uint32_t(blRoundToInt(sPtr[sIndex].offset * fWidth));
+    p1 = uint32_t(Math::roundToInt(sPtr[sIndex].offset * fWidth));
 
     dSpanPtr = dPtr + (p0 >> 8);
     i = ((p1 >> 8) - (p0 >> 8));
@@ -167,6 +168,7 @@ void BL_CDECL interpolate_prgb32_sse2(uint32_t* dPtr, uint32_t dSize, const BLGr
 }
 
 } // {Interpolation}
-} // {BLPixelOps}
+} // {PixelOps}
+} // {bl}
 
 #endif

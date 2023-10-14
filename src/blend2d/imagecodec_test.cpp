@@ -10,10 +10,11 @@
 #include "image_p.h"
 #include "imagecodec.h"
 
-// BLImageCodec - Tests
-// ====================
+// bl::ImageCodec - Tests
+// ======================
 
-namespace BLImageCodecTests {
+namespace bl {
+namespace Tests {
 
 UNIT(image_codec_find, BL_TEST_GROUP_IMAGE_CODECS) {
   INFO("Testing BLImageCodec::findByName() and BLImageCodec::findByData()");
@@ -63,6 +64,7 @@ UNIT(image_codec_find, BL_TEST_GROUP_IMAGE_CODECS) {
   }
 }
 
-} // {BLImageCodecTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

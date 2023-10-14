@@ -14,7 +14,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 
 struct PipeRuntime;
 struct PipeProvider;
@@ -117,7 +118,7 @@ struct alignas(16) PipeLookupCache {
     uint32_t _bits;
 
     BL_INLINE_NODEBUG bool isValid() const noexcept { return _bits != 0; }
-    BL_INLINE_NODEBUG size_t index() const noexcept { return BLIntOps::ctz(_bits); }
+    BL_INLINE_NODEBUG size_t index() const noexcept { return IntOps::ctz(_bits); }
   };
 
   //! Array of signatures for the lookup, uninitialized signatures are zero.
@@ -168,7 +169,8 @@ static BL_INLINE IndexMatch cacheLookup(const PipeLookupCache& cache, uint32_t s
 #endif
 
 } // {anonymous}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

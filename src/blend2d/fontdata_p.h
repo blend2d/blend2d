@@ -20,21 +20,23 @@ struct BLFontDataPrivateImpl : public BLFontDataImpl {
   BLArray<BLFontFaceImpl*> faceCache;
 };
 
-namespace BLFontDataPrivate {
+namespace bl {
+namespace FontDataInternal {
 
 static BL_INLINE BLFontDataPrivateImpl* getImpl(const BLFontDataCore* self) noexcept {
   return static_cast<BLFontDataPrivateImpl*>(self->_d.impl);
 }
 
-} // {BLFontDataPrivate}
-
-static BL_INLINE void blFontDataImplCtor(BLFontDataPrivateImpl* impl, BLFontDataVirt* virt) noexcept {
+static BL_INLINE void initImpl(BLFontDataPrivateImpl* impl, BLFontDataVirt* virt) noexcept {
   impl->virt = virt;
   impl->faceCount = 0;
   impl->faceType = BL_FONT_FACE_TYPE_NONE;
   impl->flags = 0;
   blCallCtor(impl->faceCache);
-};
+}
+
+} // {FontDataInternal}
+} // {bl}
 
 //! \}
 

@@ -14,9 +14,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLFontVariationSettingsPrivate {
-
-using BLObjectPrivate::RCMode;
+namespace bl {
+namespace FontVariationSettingsInternal {
 
 //! \name BLFontVariationSettings - Internals - Common Functionality (Container)
 //! \{
@@ -35,21 +34,21 @@ static BL_INLINE_NODEBUG constexpr size_t capacityFromImplSize(BLObjectImplSize 
 //! \{
 
 static BL_INLINE bool isImplMutable(BLFontVariationSettingsImpl* impl) noexcept {
-  return BLObjectPrivate::isImplMutable(impl);
+  return ObjectInternal::isImplMutable(impl);
 }
 
 static BL_INLINE BLResult freeImpl(BLFontVariationSettingsImpl* impl) noexcept {
-  return BLObjectPrivate::freeImpl(impl);
+  return ObjectInternal::freeImpl(impl);
 }
 
 template<RCMode kRCMode>
 static BL_INLINE void retainImpl(BLFontVariationSettingsImpl* impl, size_t n = 1) noexcept {
-  BLObjectPrivate::retainImpl<kRCMode>(impl, n);
+  ObjectInternal::retainImpl<kRCMode>(impl, n);
 }
 
 template<RCMode kRCMode>
 static BL_INLINE BLResult releaseImpl(BLFontVariationSettingsImpl* impl) noexcept {
-  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -62,7 +61,7 @@ static BL_INLINE_NODEBUG BLFontVariationSettingsImpl* getImpl(const BLFontVariat
 }
 
 static BL_INLINE BLResult retainInstance(const BLFontVariationSettingsCore* self, size_t n = 1) noexcept {
-  return BLObjectPrivate::retainInstance(self, n);
+  return ObjectInternal::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLFontVariationSettingsCore* self) noexcept {
@@ -79,7 +78,8 @@ static BL_INLINE BLResult replaceInstance(BLFontVariationSettingsCore* self, con
 
 //! \}
 
-} // {BLFontFeatureSettingsPrivate}
+} // {FontVariationSettingsInternal}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -12,7 +12,8 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 //! Pipeline solid-fetch part.
@@ -21,7 +22,7 @@ public:
   //! Source pixel, expanded to the whole register if necessary.
   Pixel _pixel;
 
-  FetchSolidPart(PipeCompiler* pc, BLInternalFormat format) noexcept;
+  FetchSolidPart(PipeCompiler* pc, FormatExt format) noexcept;
 
   void preparePart() noexcept override;
 
@@ -41,7 +42,8 @@ public:
 };
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

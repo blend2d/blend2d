@@ -14,7 +14,8 @@
 //! \addtogroup blend2d_pipeline_reference
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 
 //! Static pipline runtime.
 //!
@@ -24,10 +25,11 @@ public:
   PipeStaticRuntime() noexcept;
   ~PipeStaticRuntime() noexcept;
 
-  static BLWrap<PipeStaticRuntime> _global;
+  static Wrap<PipeStaticRuntime> _global;
 };
 
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -11,7 +11,8 @@
 
 //! \cond INTERNAL
 
-namespace BLCompression {
+namespace bl {
+namespace Compression {
 namespace Deflate {
 
 enum FormatType : uint32_t {
@@ -87,7 +88,8 @@ static BL_INLINE uint32_t loaded_u32_to_u24(uint32_t v) noexcept
 }
 
 } // {Deflate}
-} // {BLCompression}
+} // {Compression}
+} // {bl}
 
 //! \endcond
 

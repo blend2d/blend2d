@@ -9,7 +9,7 @@
 #include "../../api-internal_p.h"
 #include "../../support/intops_p.h"
 
-// External dependencies of BLPipeline.
+// External dependencies of `bl::Pipeline::JIT`.
 #if BL_TARGET_ARCH_X86
   #include <asmjit/x86.h>
 #endif
@@ -18,7 +18,8 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 // AsmJit Integration
@@ -399,7 +400,8 @@ public:
 };
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

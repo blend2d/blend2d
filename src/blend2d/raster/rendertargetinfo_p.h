@@ -12,7 +12,8 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 //! Rendering target information
 //! Describes precision used for pixel blending and fixed point calculations of
@@ -47,7 +48,8 @@ struct RenderTargetInfo {
 
 extern const RenderTargetInfo renderTargetInfoByComponentType[RenderTargetInfo::kPixelComponentCount];
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

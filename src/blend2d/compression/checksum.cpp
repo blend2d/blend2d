@@ -6,7 +6,8 @@
 #include "../api-build_p.h"
 #include "../compression/checksum_p.h"
 
-namespace BLCompression {
+namespace bl {
+namespace Compression {
 
 // Compression - CheckSum - Crc32
 // ==============================
@@ -155,4 +156,5 @@ uint32_t adler32(const uint8_t* data, size_t size) noexcept {
   return (s2 << 16) | s1;
 }
 
-} // {BLCompression}
+} // {Compression}
+} // {bl}

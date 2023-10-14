@@ -151,8 +151,8 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_ssse3(
 
     BL_NOUNROLL
     while (i) {
-      uint32_t yx = BLMemOps::readU16u(srcData + 0);
-      uint32_t z  = BLMemOps::readU8(srcData + 2);
+      uint32_t yx = bl::MemOps::readU16u(srcData + 0);
+      uint32_t z  = bl::MemOps::readU8(srcData + 2);
       Vec16xU8 p0 = cast_from_u32<Vec16xU8>((z << 16) | yx);
 
       storeu_32(dstData, swizzlev_u8(p0, predicate) | fillMask);
@@ -170,8 +170,8 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_ssse3(
   return BL_SUCCESS;
 }
 
-// BLPixelConverter - Premultiply (SSSE3)
-// ======================================
+// bl::PixelConverter - Premultiply (SSSE3)
+// ========================================
 
 template<uint32_t A_Shift>
 static BL_INLINE BLResult bl_convert_premultiply_8888_shufb_template_ssse3(

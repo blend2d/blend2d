@@ -12,12 +12,14 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! A fixed bit-array that cannot grow.
 template<typename T, size_t N>
-class BLFixedBitArray {
+class FixedBitArray {
 public:
   enum : size_t {
-    kSizeOfTInBits = BLIntOps::bitSizeOf<T>(),
+    kSizeOfTInBits = IntOps::bitSizeOf<T>(),
     kFixedArraySize = (N + kSizeOfTInBits - 1) / kSizeOfTInBits
   };
 
@@ -60,9 +62,11 @@ public:
 
   BL_INLINE void setAll() noexcept {
     for (size_t i = 0; i < kFixedArraySize; i++)
-      data[i] = BLIntOps::allOnes<T>();
+      data[i] = IntOps::allOnes<T>();
   }
 };
+
+} // {bl}
 
 //! \}
 //! \endcond

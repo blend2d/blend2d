@@ -12,12 +12,14 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! \name Compile-Time Lookup Table
 //! \{
 
 //! Struct that holds `N` items of `T` type - output of lookup table generators.
 template<typename T, size_t N>
-struct BLLookupTable {
+struct LookupTable {
   T data[N];
 
   BL_INLINE constexpr size_t size() const noexcept { return N; }
@@ -58,8 +60,8 @@ template<> struct make_index_sequence<1> : index_sequence<0> {};
 #endif
 
 template<typename T, size_t N, class Gen, size_t... Indexes>
-static BL_INLINE constexpr BLLookupTable<T, N> makeLookupTableImpl(Internal::index_sequence<Indexes...>) noexcept {
-  return BLLookupTable<T, N> {{ T(Gen::value(Indexes))... }};
+static BL_INLINE constexpr LookupTable<T, N> makeLookupTableImpl(Internal::index_sequence<Indexes...>) noexcept {
+  return LookupTable<T, N> {{ T(Gen::value(Indexes))... }};
 }
 
 template<typename Generator>
@@ -101,14 +103,14 @@ struct BitTableGeneratorAdapter {
 
 }
 
-//! Creates a lookup table of `BLLookupTable<T[N]>` by using the generator `Gen`.
+//! Creates a lookup table of `LookupTable<T[N]>` by using the generator `Gen`.
 template<typename T, size_t N, class Gen>
-static BL_INLINE constexpr BLLookupTable<T, N> blMakeLookupTable() noexcept {
+static BL_INLINE constexpr LookupTable<T, N> makeLookupTable() noexcept {
   return Internal::makeLookupTableImpl<T, N, Gen>(Internal::make_index_sequence<N>{});
 }
 
 template<size_t N>
-struct BLBitTable {
+struct BitLookupTable {
   enum : size_t {
     kBitsPerBitWord = sizeof(BLBitWord) * 8,
 
@@ -116,7 +118,7 @@ struct BLBitTable {
     kWordCount = (N + kBitsPerBitWord - 1) / (kBitsPerBitWord)
   };
 
-  BLLookupTable<BLBitWord, kWordCount> data;
+  LookupTable<BLBitWord, kWordCount> data;
 
   BL_INLINE constexpr size_t size() const noexcept { return N; }
 
@@ -127,18 +129,20 @@ struct BLBitTable {
 };
 
 template<size_t N, class Generator>
-static BL_INLINE constexpr BLBitTable<N> blMakeBitTable() noexcept {
-  return BLBitTable<N>{
-    Internal::makeLookupTableImpl<BLBitWord, BLBitTable<N>::kWordCount,
-                                  Internal::BitTableGeneratorAdapter<Generator>>(Internal::make_index_sequence<BLBitTable<N>::kWordCount>{})
+static BL_INLINE constexpr BitLookupTable<N> makeBitTable() noexcept {
+  return BitLookupTable<N>{
+    Internal::makeLookupTableImpl<BLBitWord, BitLookupTable<N>::kWordCount,
+                                  Internal::BitTableGeneratorAdapter<Generator>>(Internal::make_index_sequence<BitLookupTable<N>::kWordCount>{})
   };
 }
 
 #define BL_CONSTEXPR_TABLE(Name, Generator, T, N) \
-  static constexpr const BLLookupTable<T, N> Name##_constexpr = blMakeLookupTable<T, N, Generator>(); \
-  const BLLookupTable<T, N> Name = Name##_constexpr
+  static constexpr const LookupTable<T, N> Name##_constexpr = makeLookupTable<T, N, Generator>(); \
+  const LookupTable<T, N> Name = Name##_constexpr
 
 //! \}
+
+} // {bl}
 
 //! \}
 //! \endcond

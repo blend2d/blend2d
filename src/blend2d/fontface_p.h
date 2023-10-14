@@ -17,7 +17,13 @@
 
 //! \cond INTERNAL
 
-namespace BLOpenType { struct OTFaceImpl; }
+namespace bl {
+namespace OpenType {
+
+struct OTFaceImpl;
+
+} // {OpenType}
+} // {bl}
 
 //! \addtogroup blend2d_internal
 //! \{
@@ -52,7 +58,7 @@ struct BLFontFacePrivateFuncs {
     const BLMatrix2D* userTransform,
     BLPath* out,
     size_t* contourCountOut,
-    BLScopedBuffer* tmpBuffer) BL_NOEXCEPT;
+    bl::ScopedBuffer* tmpBuffer) BL_NOEXCEPT;
 
   BLResult (BL_CDECL* applyKern)(
     const BLFontFaceImpl* faceI,
@@ -85,19 +91,21 @@ struct BLFontFacePrivateImpl : public BLFontFaceImpl {
   BLFontFacePrivateFuncs funcs;
   BLBitSetCore characterCoverage;
 
-  BLFontTagData::ScriptTagSet scriptTagSet;
-  BLFontTagData::FeatureTagSet featureTagSet;
-  BLFontTagData::VariationTagSet variationTagSet;
+  bl::FontTagData::ScriptTagSet scriptTagSet;
+  bl::FontTagData::FeatureTagSet featureTagSet;
+  bl::FontTagData::VariationTagSet variationTagSet;
 };
 
-namespace BLFontFacePrivate {
+namespace bl {
+namespace FontFaceInternal {
 
 template<typename T = BLFontFacePrivateImpl>
 static BL_INLINE T* getImpl(const BLFontFaceCore* self) noexcept {
   return static_cast<T*>(static_cast<BLFontFacePrivateImpl*>(self->_d.impl));
 }
 
-} // {BLFontFacePrivate}
+} // {FontFaceInternal}
+} // {bl}
 
 static BL_INLINE void blFontFaceImplCtor(BLFontFacePrivateImpl* impl, BLFontFaceVirt* virt, BLFontFacePrivateFuncs& funcs) noexcept {
   impl->virt = virt;

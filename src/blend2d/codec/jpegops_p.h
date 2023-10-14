@@ -12,9 +12,8 @@
 //! \addtogroup blend2d_codec_impl
 //! \{
 
-// ============================================================================
-// [BLJpegOps - Macros]
-// ============================================================================
+namespace bl {
+namespace Jpeg {
 
 // Derived from jidctint's `jpeg_idct_islow`.
 #define BL_JPEG_IDCT_PREC 12
@@ -49,12 +48,11 @@
 #define BL_JPEG_YCBCR_SCALE(x) ((x) << BL_JPEG_YCBCR_PREC)
 #define BL_JPEG_YCBCR_FIXED(x) int(double(x) * double(1 << BL_JPEG_YCBCR_PREC) + 0.5)
 
-// ============================================================================
-// [BLJpegOps - Globals]
-// ============================================================================
+// bl::Jpeg::Opts - Dispatch
+// =========================
 
 //! Optimized JPEG functions.
-struct BLJpegOps {
+struct FuncOpts {
   //! Dequantize and perform IDCT and store clamped 8-bit results to `dst`.
   void (BL_CDECL* idct8)(uint8_t* dst, intptr_t dstStride, const int16_t* src, const uint16_t* qTable) BL_NOEXCEPT;
 
@@ -72,29 +70,30 @@ struct BLJpegOps {
   //! Perform planar YCbCr to RGB conversion and pack to XRGB32.
   void (BL_CDECL* convYCbCr8ToRGB32)(uint8_t* dst, const uint8_t* pY, const uint8_t* pCb, const uint8_t* pCr, uint32_t count) BL_NOEXCEPT;
 };
-extern BLJpegOps blJpegOps;
+extern FuncOpts opts;
 
-// ============================================================================
-// [BLJpegOps - Base]
-// ============================================================================
+// bl::Jpeg::Opts - Baseline
+// =========================
 
-BL_HIDDEN void BL_CDECL blJpegIDCT8(uint8_t* dst, intptr_t dstStride, const int16_t* src, const uint16_t* qTable) noexcept;
-BL_HIDDEN void BL_CDECL blJpegRGB32FromYCbCr8(uint8_t* dst, const uint8_t* pY, const uint8_t* pCb, const uint8_t* pCr, uint32_t count) noexcept;
+BL_HIDDEN void BL_CDECL idct8(uint8_t* dst, intptr_t dstStride, const int16_t* src, const uint16_t* qTable) noexcept;
+BL_HIDDEN void BL_CDECL rgb32_from_ycbcr8(uint8_t* dst, const uint8_t* pY, const uint8_t* pCb, const uint8_t* pCr, uint32_t count) noexcept;
 
-BL_HIDDEN uint8_t* BL_CDECL blJpegUpsample1x1(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
-BL_HIDDEN uint8_t* BL_CDECL blJpegUpsample1x2(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
-BL_HIDDEN uint8_t* BL_CDECL blJpegUpsample2x1(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
-BL_HIDDEN uint8_t* BL_CDECL blJpegUpsample2x2(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
-BL_HIDDEN uint8_t* BL_CDECL blJpegUpsampleAny(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
+BL_HIDDEN uint8_t* BL_CDECL upsample_1x1(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
+BL_HIDDEN uint8_t* BL_CDECL upsample_1x2(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
+BL_HIDDEN uint8_t* BL_CDECL upsample_2x1(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
+BL_HIDDEN uint8_t* BL_CDECL upsample_2x2(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
+BL_HIDDEN uint8_t* BL_CDECL upsample_generic(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
 
-// ============================================================================
-// [BLJpegOps - SSE2]
-// ============================================================================
+// bl::Jpeg::Opts - SSE2
+// ========================
 
 #ifdef BL_BUILD_OPT_SSE2
-BL_HIDDEN void BL_CDECL blJpegIDCT8_SSE2(uint8_t* dst, intptr_t dstStride, const int16_t* src, const uint16_t* qTable) noexcept;
-BL_HIDDEN void BL_CDECL blJpegRGB32FromYCbCr8_SSE2(uint8_t* dst, const uint8_t* pY, const uint8_t* pCb, const uint8_t* pCr, uint32_t count) noexcept;
+BL_HIDDEN void BL_CDECL idct8_SSE2(uint8_t* dst, intptr_t dstStride, const int16_t* src, const uint16_t* qTable) noexcept;
+BL_HIDDEN void BL_CDECL rgb32_from_ycbcr8_SSE2(uint8_t* dst, const uint8_t* pY, const uint8_t* pCb, const uint8_t* pCr, uint32_t count) noexcept;
 #endif
+
+} // {Jpeg}
+} // {bl}
 
 //! \}
 //! \endcond

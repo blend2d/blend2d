@@ -7,8 +7,8 @@
 #define BLEND2D_RGBA_P_H_INCLUDED
 
 #include "api-internal_p.h"
-#include "math_p.h"
 #include "rgba.h"
+#include "support/math_p.h"
 
 #if defined(BL_BUILD_OPT_SSE2)
   #include "simd/simd_p.h"
@@ -18,10 +18,11 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLRgbaPrivate {
+namespace bl {
+namespace RgbaInternal {
 
 static BL_INLINE bool isValid(const BLRgba& rgba) noexcept {
-  return !blIsNaN(rgba.r, rgba.g, rgba.b, rgba.a);
+  return !Math::isNaN(rgba.r, rgba.g, rgba.b, rgba.a);
 }
 
 static BL_INLINE bool isRgba32FullyOpaque(uint32_t rgba32) noexcept {
@@ -72,7 +73,8 @@ static BL_INLINE uint32_t rgba32FromRgba64(uint64_t src) noexcept {
 #endif
 }
 
-} // {BLRgbaPrivate}
+} // {RgbaInternal}
+} // {bl}
 
 //! \}
 //! \endcond

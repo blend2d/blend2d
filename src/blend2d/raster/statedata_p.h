@@ -15,7 +15,8 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 //! Raster rendering context state - based on public `BLContextState`.
 class alignas(16) RasterContextState : public BLContextState {
@@ -167,7 +168,8 @@ struct SharedExtendedStrokeState : public SharedBaseStrokeState {
     : SharedBaseStrokeState(strokeOptions, approximationOptions) {}
 };
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

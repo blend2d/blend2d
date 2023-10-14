@@ -16,9 +16,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLStringPrivate {
-
-using BLObjectPrivate::RCMode;
+namespace bl {
+namespace StringInternal {
 
 //! \name BLString - Internals - Common Functionality (Container)
 //! \{
@@ -37,17 +36,17 @@ static BL_INLINE constexpr size_t capacityFromImplSize(BLObjectImplSize implSize
 //! \{
 
 static BL_INLINE bool isImplMutable(BLStringImpl* impl) noexcept {
-  return BLObjectPrivate::isImplMutable(impl);
+  return ObjectInternal::isImplMutable(impl);
 }
 
 
 static BL_INLINE BLResult freeImpl(BLStringImpl* impl) noexcept {
-  return BLObjectPrivate::freeImpl(impl);
+  return ObjectInternal::freeImpl(impl);
 }
 
 template<RCMode kRCMode>
 static BL_INLINE BLResult releaseImpl(BLStringImpl* impl) noexcept {
-  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -60,11 +59,11 @@ static BL_INLINE BLStringImpl* getImpl(const BLStringCore* self) noexcept {
 }
 
 static BL_INLINE bool isInstanceMutable(const BLStringCore* self) noexcept {
-  return BLObjectPrivate::isInstanceMutable(self);
+  return ObjectInternal::isInstanceMutable(self);
 }
 
 static BL_INLINE BLResult retainInstance(const BLStringCore* self, size_t n = 1) noexcept {
-  return BLObjectPrivate::retainInstance(self, n);
+  return ObjectInternal::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLStringCore* self) noexcept {
@@ -134,11 +133,11 @@ struct StaticStringData {
   char data[kSize + 1];
 };
 
-#define BL_DEFINE_STATIC_STRING(name, content)                                              \
-  static const constexpr ::BLStringPrivate::StaticStringData<sizeof(content) - 1u> name = { \
-    {},                                                                                     \
-    {sizeof(content) - 1u, sizeof(content) - 1u},                                           \
-    content                                                                                 \
+#define BL_DEFINE_STATIC_STRING(name, content)                                                 \
+  static const constexpr ::bl::StringInternal::StaticStringData<sizeof(content) - 1u> name = { \
+    {},                                                                                        \
+    {sizeof(content) - 1u, sizeof(content) - 1u},                                              \
+    content                                                                                    \
   };
 
 template<size_t kSize>
@@ -148,7 +147,8 @@ static BL_INLINE void initStatic(BLStringCore* self, const StaticStringData<kSiz
 
 //! \}
 
-} // {BLStringPrivate}
+} // {StringInternal}
+} // {bl}
 
 //! \}
 //! \endcond

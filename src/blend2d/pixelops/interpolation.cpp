@@ -5,14 +5,15 @@
 
 #include "../api-build_p.h"
 #include "../gradient_p.h"
-#include "../math_p.h"
 #include "../pixelops/scalar_p.h"
+#include "../support/math_p.h"
 
-namespace BLPixelOps {
+namespace bl {
+namespace PixelOps {
 namespace Interpolation {
 
-// BLPixelOps - Interpolate PRGB32
-// ===============================
+// bl::PixelOps - Interpolate PRGB32
+// =================================
 
 void BL_CDECL interpolate_prgb32(uint32_t* dPtr, uint32_t dSize, const BLGradientStop* sPtr, size_t sSize) noexcept {
   BL_ASSERT(dPtr != nullptr);
@@ -24,7 +25,7 @@ void BL_CDECL interpolate_prgb32(uint32_t* dPtr, uint32_t dSize, const BLGradien
   uint32_t* dSpanPtr = dPtr;
   uint32_t i = dSize;
 
-  uint32_t c0 = BLRgbaPrivate::rgba32FromRgba64(sPtr[0].rgba.value);
+  uint32_t c0 = RgbaInternal::rgba32FromRgba64(sPtr[0].rgba.value);
   uint32_t c1 = c0;
 
   uint32_t p0 = 0;
@@ -40,8 +41,8 @@ void BL_CDECL interpolate_prgb32(uint32_t* dPtr, uint32_t dSize, const BLGradien
     goto SolidLoop;
 
   do {
-    c1 = BLRgbaPrivate::rgba32FromRgba64(sPtr[sIndex].rgba.value);
-    p1 = uint32_t(blRoundToInt(sPtr[sIndex].offset * fWidth));
+    c1 = RgbaInternal::rgba32FromRgba64(sPtr[sIndex].rgba.value);
+    p1 = uint32_t(Math::roundToInt(sPtr[sIndex].offset * fWidth));
 
     dSpanPtr = dPtr + (p0 >> 8);
     i = ((p1 >> 8) - (p0 >> 8));
@@ -85,7 +86,7 @@ SolidLoop:
         gPos += 1u << (kShift - 1);
         bPos += 1u << (kShift - 1);
 
-        if (BLRgbaPrivate::isRgba32FullyOpaque(c0 & c1)) {
+        if (RgbaInternal::isRgba32FullyOpaque(c0 & c1)) {
           // Both fully opaque, no need to premultiply.
           do {
             rPos += rInc;
@@ -153,8 +154,8 @@ SolidLoop:
   dPtr[0] = cpFirst;
 }
 
-// BLPixelOps - Interpolate PRGB64
-// ===============================
+// bl::PixelOps - Interpolate PRGB64
+// =================================
 
 void BL_CDECL interpolate_prgb64(uint64_t* dPtr, uint32_t dSize, const BLGradientStop* sPtr, size_t sSize) noexcept {
   BL_ASSERT(dPtr != nullptr);
@@ -183,7 +184,7 @@ void BL_CDECL interpolate_prgb64(uint64_t* dPtr, uint32_t dSize, const BLGradien
 
   do {
     c1 = sPtr[sIndex].rgba.value;
-    p1 = uint32_t(blRoundToInt(sPtr[sIndex].offset * fWidth));
+    p1 = uint32_t(Math::roundToInt(sPtr[sIndex].offset * fWidth));
 
     dSpanPtr = dPtr + (p0 >> 8);
     i = ((p1 >> 8) - (p0 >> 8));
@@ -227,7 +228,7 @@ SolidLoop:
         gPos += 1u << (kShift - 1);
         bPos += 1u << (kShift - 1);
 
-        if (BLRgbaPrivate::isRgba64FullyOpaque(c0 & c1)) {
+        if (RgbaInternal::isRgba64FullyOpaque(c0 & c1)) {
           // Both fully opaque, no need to premultiply.
           do {
             rPos += rInc;
@@ -257,11 +258,11 @@ SolidLoop:
             bPos += bInc;
 
             uint32_t ca = aPos >> kShift;
-            uint32_t cr = BLPixelOps::Scalar::udiv65535((rPos >> kShift) * ca);
-            uint32_t cg = BLPixelOps::Scalar::udiv65535((gPos >> kShift) * ca);
-            uint32_t cb = BLPixelOps::Scalar::udiv65535((bPos >> kShift) * ca);
+            uint32_t cr = Scalar::udiv65535((rPos >> kShift) * ca);
+            uint32_t cg = Scalar::udiv65535((gPos >> kShift) * ca);
+            uint32_t cb = Scalar::udiv65535((bPos >> kShift) * ca);
 
-            cp = BLRgbaPrivate::packRgba64(cr, cg, cb, ca);
+            cp = RgbaInternal::packRgba64(cr, cg, cb, ca);
             dSpanPtr[0] = cp;
             dSpanPtr++;
           } while (--i);
@@ -286,4 +287,5 @@ SolidLoop:
 }
 
 } // {Interpolation}
-} // {BLPixelOps}
+} // {PixelOps}
+} // {bl}

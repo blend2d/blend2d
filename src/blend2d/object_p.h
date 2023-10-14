@@ -69,7 +69,7 @@ struct BLObjectImplHeader {
   enum : uint32_t {
     kRefCountedFlagShift = 0,
     kImmutableFlagShift = 1,
-    kExternalFlagShift = BLIntOps::bitSizeOf<size_t>() - 1u,
+    kExternalFlagShift = bl::IntOps::bitSizeOf<size_t>() - 1u,
     kAlignmentMaskShift = 2
   };
 
@@ -138,14 +138,14 @@ struct alignas(16) BLObjectEternalHeader {
 template<typename Impl>
 struct alignas(16) BLObjectEternalImpl {
   BLObjectEternalHeader header;
-  BLWrap<Impl> impl;
+  bl::Wrap<Impl> impl;
 };
 
 //! Only used for storing built-in default Impls with virtual function table.
 template<typename Impl, typename Virt>
 struct alignas(16) BLObjectEternalVirtualImpl {
   BLObjectEternalHeader header;
-  BLWrap<Impl> impl;
+  bl::Wrap<Impl> impl;
   Virt virt;
 };
 
@@ -192,19 +192,32 @@ static BL_INLINE const BLObjectCore* blAsObject(const BLUnknown* unknown) { retu
 
 BL_HIDDEN BLResult blObjectDestroyUnknownImpl(BLObjectImpl* impl, BLObjectInfo info) noexcept;
 
-namespace BLObjectPrivate {
+namespace bl {
+
+//! Reference counting mode.
+enum class RCMode : uint32_t {
+  //! It's not known whether the Impl is reference counted (useful for "always-dynamic" objects that don't check object info).
+  kMaybe,
+  //! It's guaranteed that the Impl is reference counted (for example BLObjectInfo::isRefCountedObject() returned true).
+  kForce
+};
+
+} // {bl}
+
+namespace bl {
+namespace ObjectInternal {
 
 //! \name BLObject - Internals - Impl - Header
 //! \{
 
 //! Returns a pointer to the header of `impl`.
 static BL_INLINE_NODEBUG BLObjectImplHeader* getImplHeader(BLObjectImpl* impl) noexcept {
-  return BLPtrOps::deoffset<BLObjectImplHeader>(impl, sizeof(BLObjectImplHeader));
+  return PtrOps::deoffset<BLObjectImplHeader>(impl, sizeof(BLObjectImplHeader));
 }
 
 //! Returns a pointer to the header of `impl` (const).
 static BL_INLINE_NODEBUG const BLObjectImplHeader* getImplHeader(const BLObjectImpl* impl) noexcept {
-  return BLPtrOps::deoffset<const BLObjectImplHeader>(impl, sizeof(BLObjectImplHeader));
+  return PtrOps::deoffset<const BLObjectImplHeader>(impl, sizeof(BLObjectImplHeader));
 }
 
 //! \}
@@ -219,7 +232,7 @@ static BL_INLINE void* getAllocatedPtr(BLObjectImpl* impl) noexcept {
   if (header->isExternal())
     offset = sizeof(BLObjectExternalInfo) + sizeof(BLObjectImplHeader);
 
-  return BLPtrOps::deoffset(impl, offset + header->alignmentOffset());
+  return PtrOps::deoffset(impl, offset + header->alignmentOffset());
 }
 
 template<typename T>
@@ -265,23 +278,23 @@ static BL_INLINE bool isImplExternal(const BLObjectImpl* impl) noexcept {
 
 //! Returns a pointer to the header of `impl`.
 static BL_INLINE_NODEBUG BLObjectExternalInfo* getExternalInfo(BLObjectImpl* impl) noexcept {
-  return BLPtrOps::deoffset<BLObjectExternalInfo>(impl, sizeof(BLObjectExternalInfo) + sizeof(BLObjectImplHeader));
+  return PtrOps::deoffset<BLObjectExternalInfo>(impl, sizeof(BLObjectExternalInfo) + sizeof(BLObjectImplHeader));
 }
 
 //! Returns a pointer to the header of `impl` (const).
 static BL_INLINE_NODEBUG const BLObjectExternalInfo* getExternalInfo(const BLObjectImpl* impl) noexcept {
-  return BLPtrOps::deoffset<const BLObjectExternalInfo>(impl, sizeof(BLObjectExternalInfo) + sizeof(BLObjectImplHeader));
+  return PtrOps::deoffset<const BLObjectExternalInfo>(impl, sizeof(BLObjectExternalInfo) + sizeof(BLObjectImplHeader));
 }
 
 static BL_INLINE void initExternalDestroyFunc(BLObjectImpl* impl, BLDestroyExternalDataFunc destroyFunc, void* userData) noexcept {
-  BLObjectExternalInfo* externalInfo = BLObjectPrivate::getExternalInfo(impl);
+  BLObjectExternalInfo* externalInfo = getExternalInfo(impl);
   externalInfo->destroyFunc = destroyFunc ? destroyFunc : blObjectDestroyExternalDataDummy;
   externalInfo->userData = userData;
 
 }
 
 static BL_INLINE void callExternalDestroyFunc(BLObjectImpl* impl, void* externalData) noexcept {
-  BLObjectExternalInfo* externalInfo = BLObjectPrivate::getExternalInfo(impl);
+  BLObjectExternalInfo* externalInfo = getExternalInfo(impl);
   externalInfo->destroyFunc(impl, externalData, externalInfo->userData);
 }
 
@@ -324,14 +337,6 @@ static BL_INLINE void initRefCountToBase(BLObjectImpl* impl, bool immutable) noe
 static BL_INLINE size_t getImplRefCount(const BLObjectImpl* impl) noexcept {
   return getImplHeader(impl)->refCount;
 }
-
-//! Reference counting mode.
-enum class RCMode {
-  //! It's not known whether the Impl is reference counted (useful for "always-dynamic" objects that don't check object info).
-  kMaybe,
-  //! It's guaranteed that the Impl is reference counted (for example BLObjectInfo::isRefCountedObject() returned true).
-  kForce
-};
 
 template<RCMode kRCMode>
 static BL_INLINE void retainImpl(BLObjectImpl* impl, size_t n = 1u) noexcept {
@@ -386,7 +391,7 @@ static BL_INLINE bool isDynamicInstanceMutable(const BLObjectCore* self) noexcep
 template<typename T>
 static BL_INLINE BLResult retainInstance(const T* self, size_t n = 1) noexcept {
   if (self->_d.isRefCountedObject())
-    BLObjectPrivate::retainImpl<RCMode::kForce>(self->_d.impl, n);
+    retainImpl<RCMode::kForce>(self->_d.impl, n);
   return BL_SUCCESS;
 }
 
@@ -411,13 +416,13 @@ static BL_INLINE BLResult replaceVirtualInstance(T* self, const T* other) noexce
 
   BLObjectImpl* impl = self->_d.impl;
   self->_d = other->_d;
-  return BLObjectPrivate::releaseVirtualImpl<RCMode::kMaybe>(impl);
+  return releaseVirtualImpl<RCMode::kMaybe>(impl);
 }
 
 template<typename T>
 static BL_INLINE BLResult assignVirtualInstance(T* dst, const T* src) noexcept {
-  BLObjectPrivate::retainInstance(src);
-  BLObjectPrivate::releaseVirtualInstance(dst);
+  retainInstance(src);
+  releaseVirtualInstance(dst);
 
   dst->_d = src->_d;
   return BL_SUCCESS;
@@ -425,7 +430,8 @@ static BL_INLINE BLResult assignVirtualInstance(T* dst, const T* src) noexcept {
 
 //! \}
 
-} // {BLObjectPrivate}
+} // {ObjectInternal}
+} // {bl}
 
 //! \name BLObject - Internals - Reference Counting and Object Lifetime
 //! \{
@@ -447,19 +453,19 @@ static BL_INLINE BLResult blObjectPrivateInitMoveUnknown(T* dst, T* src) noexcep
 template<typename T>
 static BL_INLINE BLResult blObjectPrivateInitWeakTagged(T* dst, const T* src) noexcept {
   dst->_d = src->_d;
-  return BLObjectPrivate::retainInstance(dst);
+  return bl::ObjectInternal::retainInstance(dst);
 }
 
 template<typename T>
 static BL_INLINE BLResult blObjectPrivateInitWeakUnknown(T* dst, const T* src) noexcept {
   dst->_d = src->_d;
-  return BLObjectPrivate::retainInstance(dst);
+  return bl::ObjectInternal::retainInstance(dst);
 }
 
 template<typename T>
 static BL_INLINE BLResult blObjectPrivateAssignWeakUnknown(T* dst, const T* src) noexcept {
-  BLObjectPrivate::retainInstance(src);
-  BLObjectPrivate::releaseUnknownInstance(dst);
+  bl::ObjectInternal::retainInstance(src);
+  bl::ObjectInternal::releaseUnknownInstance(dst);
 
   dst->_d = src->_d;
   return BL_SUCCESS;
@@ -471,11 +477,11 @@ static BL_INLINE BLResult blObjectPrivateAssignWeakUnknown(T* dst, const T* src)
 //! \{
 
 static BL_INLINE size_t blObjectGrowImplSizeToPowerOf2(size_t x) noexcept {
-  return size_t(1u) << (BLIntOps::bitSizeOf<size_t>() - BLIntOps::clz(x + 1u));
+  return size_t(1u) << (bl::IntOps::bitSizeOf<size_t>() - bl::IntOps::clz(x + 1u));
 }
 
 static BL_INLINE BLObjectImplSize blObjectAlignImplSize(BLObjectImplSize implSize) noexcept {
-  return BLObjectImplSize(BLIntOps::alignUp(implSize.value(), 64u));
+  return BLObjectImplSize(bl::IntOps::alignUp(implSize.value(), 64u));
 }
 
 static BL_INLINE BLObjectImplSize blObjectExpandImplSize(BLObjectImplSize implSize) noexcept {
@@ -522,7 +528,7 @@ static BL_INLINE bool blObjectAtomicContentTest(const BLObjectCore* self) noexce
 //! The `self` object must have been initialized by `blObjectAtomicContentInit()` or assigned by
 //! `blObjectAtomicAssignMove()` - the later case would be detected by the implementation.
 //!
-//! Returns `true` when the object was sucessfully moved, `false` otherwise.
+//! Returns `true` when the object was successfully moved, `false` otherwise.
 //!
 //! \note If `false` was returned it doesn't mean that `self` has been successfully initialized by other thread. It
 //! means that the implementation failed to move `other` to `self`, because some other thread started moving into

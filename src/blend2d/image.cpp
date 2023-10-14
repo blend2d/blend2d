@@ -18,22 +18,23 @@
 #include "support/intops_p.h"
 #include "support/memops_p.h"
 
-namespace BLImagePrivate {
+namespace bl {
+namespace ImageInternal {
 
-// BLImage - Globals
-// =================
+// bl::Image - Globals
+// ===================
 
 static BLObjectEternalImpl<BLImagePrivateImpl> defaultImage;
 
-// BLImage - Constants
-// ===================
+// bl::Image - Constants
+// =====================
 
 static constexpr uint32_t kLargeDataAlignment = 64;
 static constexpr uint32_t kLargeDataThreshold = 1024;
 static constexpr uint32_t kMaxAddressableOffset = 0x7FFFFFFFu;
 
-// BLImage - Utilities
-// ===================
+// bl::Image - Utilities
+// =====================
 
 static BL_INLINE uint32_t strideForWidth(uint32_t width, uint32_t depth) noexcept {
   return (uint32_t(width) * depth + 7u) / 8u;
@@ -61,7 +62,7 @@ static BL_INLINE BLResultT<intptr_t> calcStrideFromCreateParams(int w, int h, BL
     // rendering is used and bytesPerLine not aligned, some bands could share a cache line, which would potentially
     // affect the performance in a very negative way.
     if (bytesPerLine > 256u)
-      bytesPerLine = BLIntOps::alignUp(bytesPerLine, 16);
+      bytesPerLine = IntOps::alignUp(bytesPerLine, 16);
 
     BLResult result = bytesPerImage <= kMaxAddressableOffset ? BL_SUCCESS : BL_ERROR_IMAGE_TOO_LARGE;
     return BLResultT<intptr_t>{result, intptr_t(bytesPerLine)};
@@ -101,7 +102,7 @@ static void copyImageData(uint8_t* dstData, intptr_t dstStride, const uint8_t* s
     size_t gap = dstStride > 0 ? size_t(dstStride) - bytesPerLine : size_t(0);
     for (unsigned y = unsigned(h); y; y--) {
       memcpy(dstData, srcData, bytesPerLine);
-      BLMemOps::fillSmallT(dstData + bytesPerLine, uint8_t(0), gap);
+      bl::MemOps::fillSmallT(dstData + bytesPerLine, uint8_t(0), gap);
 
       dstData += dstStride;
       srcData += srcStride;
@@ -109,8 +110,8 @@ static void copyImageData(uint8_t* dstData, intptr_t dstStride, const uint8_t* s
   }
 }
 
-// BLImage - Alloc & Free Impl
-// ===========================
+// bl::Image - Alloc & Free Impl
+// =============================
 
 static BL_INLINE void initImplData(BLImagePrivateImpl* impl, int w, int h, BLFormat format, void* pixelData, intptr_t stride) noexcept {
   impl->pixelData = pixelData;
@@ -129,7 +130,7 @@ static BL_NOINLINE BLResult allocImpl(BLImageCore* self, int w, int h, BLFormat 
   BL_ASSERT(format <= BL_FORMAT_MAX_VALUE);
   BL_ASSERT(stride > 0);
 
-  size_t kBaseImplSize = BLIntOps::alignUp(sizeof(BLImagePrivateImpl), BL_OBJECT_IMPL_ALIGNMENT);
+  size_t kBaseImplSize = IntOps::alignUp(sizeof(BLImagePrivateImpl), BL_OBJECT_IMPL_ALIGNMENT);
   size_t pixelDataSize = size_t(h) * size_t(stride);
 
   BLObjectImplSize implSize(kBaseImplSize + pixelDataSize);
@@ -137,13 +138,13 @@ static BL_NOINLINE BLResult allocImpl(BLImageCore* self, int w, int h, BLFormat 
     implSize += kLargeDataAlignment - BL_OBJECT_IMPL_ALIGNMENT;
 
   BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE);
-  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLImagePrivateImpl>(self, info, implSize));
+  BL_PROPAGATE(ObjectInternal::allocImplT<BLImagePrivateImpl>(self, info, implSize));
 
   BLImagePrivateImpl* impl = getImpl(self);
   uint8_t* pixelData = reinterpret_cast<uint8_t*>(impl) + kBaseImplSize;
 
   if (pixelDataSize >= kLargeDataThreshold)
-    pixelData = BLIntOps::alignUp(pixelData, kLargeDataAlignment);
+    pixelData = bl::IntOps::alignUp(pixelData, kLargeDataAlignment);
 
   initImplData(impl, w, h, format, pixelData, stride);
   impl->writerCount = 0;
@@ -157,7 +158,7 @@ static BL_NOINLINE BLResult allocExternal(BLImageCore* self, int w, int h, BLFor
   BL_ASSERT(format <= BL_FORMAT_MAX_VALUE);
 
   BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE);
-  BL_PROPAGATE(BLObjectPrivate::allocImplExternalT<BLImagePrivateImpl>(self, info, immutable, destroyFunc, userData));
+  BL_PROPAGATE(ObjectInternal::allocImplExternalT<BLImagePrivateImpl>(self, info, immutable, destroyFunc, userData));
 
   BLImagePrivateImpl* impl = getImpl(self);
   initImplData(impl, w, h, format, pixelData, stride);
@@ -173,26 +174,27 @@ BLResult freeImpl(BLImagePrivateImpl* impl) noexcept {
   if (impl->writerCount != 0)
     return BL_SUCCESS;
 
-  if (BLObjectPrivate::isImplExternal(impl))
-    BLObjectPrivate::callExternalDestroyFunc(impl, impl->pixelData);
+  if (ObjectInternal::isImplExternal(impl))
+    ObjectInternal::callExternalDestroyFunc(impl, impl->pixelData);
 
-  return BLObjectPrivate::freeImpl(impl);
+  return ObjectInternal::freeImpl(impl);
 }
 
-} // {BLImagePrivate}
+} // {ImageInternal}
+} // {bl}
 
-// BLImage - API - Init & Destroy
-// ==============================
+// bl::Image - API - Init & Destroy
+// ================================
 
 BL_API_IMPL BLResult blImageInit(BLImageCore* self) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   self->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE]._d;
   return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult blImageInitMove(BLImageCore* self, BLImageCore* other) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isImage());
@@ -204,7 +206,7 @@ BL_API_IMPL BLResult blImageInitMove(BLImageCore* self, BLImageCore* other) noex
 }
 
 BL_API_IMPL BLResult blImageInitWeak(BLImageCore* self, const BLImageCore* other) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isImage());
@@ -214,7 +216,7 @@ BL_API_IMPL BLResult blImageInitWeak(BLImageCore* self, const BLImageCore* other
 }
 
 BL_API_IMPL BLResult blImageInitAs(BLImageCore* self, int w, int h, BLFormat format) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   self->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE]._d;
   return blImageCreate(self, w, h, format);
@@ -226,34 +228,34 @@ BL_API_IMPL BLResult blImageInitAsFromData(
     BLDataAccessFlags accessFlags,
     BLDestroyExternalDataFunc destroyFunc, void* userData) noexcept {
 
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   self->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE]._d;
   return blImageCreateFromData(self, w, h, format, pixelData, stride, accessFlags, destroyFunc, userData);
 }
 
 BL_API_IMPL BLResult blImageDestroy(BLImageCore* self) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
   return releaseInstance(self);
 }
 
-// BLImage - API - Reset
-// =====================
+// bl::Image - API - Reset
+// =======================
 
 BL_API_IMPL BLResult blImageReset(BLImageCore* self) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
   return replaceInstance(self, static_cast<BLImageCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE]));
 }
 
-// BLImage - API - Assign
-// ======================
+// bl::Image - API - Assign
+// ========================
 
 BL_API_IMPL BLResult blImageAssignMove(BLImageCore* self, BLImageCore* other) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
   BL_ASSERT(other->_d.isImage());
@@ -264,7 +266,7 @@ BL_API_IMPL BLResult blImageAssignMove(BLImageCore* self, BLImageCore* other) no
 }
 
 BL_API_IMPL BLResult blImageAssignWeak(BLImageCore* self, const BLImageCore* other) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
   BL_ASSERT(other->_d.isImage());
@@ -274,7 +276,7 @@ BL_API_IMPL BLResult blImageAssignWeak(BLImageCore* self, const BLImageCore* oth
 }
 
 BL_API_IMPL BLResult blImageAssignDeep(BLImageCore* self, const BLImageCore* other) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
   BL_ASSERT(other->_d.isImage());
@@ -300,11 +302,11 @@ BL_API_IMPL BLResult blImageAssignDeep(BLImageCore* self, const BLImageCore* oth
   return BL_SUCCESS;
 }
 
-// BLImage - API - Create
-// ======================
+// bl::Image - API - Create
+// ========================
 
 BL_API_IMPL BLResult blImageCreate(BLImageCore* self, int w, int h, BLFormat format) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
 
@@ -318,7 +320,7 @@ BL_API_IMPL BLResult blImageCreate(BLImageCore* self, int w, int h, BLFormat for
 
   BLImagePrivateImpl* selfI = getImpl(self);
   if (selfI->size == BLSizeI(w, h) && selfI->format == format)
-    if (BLObjectPrivate::isImplMutable(selfI) && !BLObjectPrivate::isImplExternal(selfI))
+    if (bl::ObjectInternal::isImplMutable(selfI) && !bl::ObjectInternal::isImplExternal(selfI))
       return BL_SUCCESS;
 
   BLImageCore newO;
@@ -333,7 +335,7 @@ BL_API_IMPL BLResult blImageCreateFromData(
     BLDataAccessFlags accessFlags,
     BLDestroyExternalDataFunc destroyFunc, void* userData) noexcept {
 
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
 
@@ -344,12 +346,12 @@ BL_API_IMPL BLResult blImageCreateFromData(
   BLImagePrivateImpl* selfI = getImpl(self);
   bool immutable = !(accessFlags & BL_DATA_ACCESS_WRITE);
 
-  if (BLObjectPrivate::isImplExternal(selfI) && BLObjectPrivate::isImplRefCountEqualToBase(selfI) && selfI->writerCount == 0) {
+  if (bl::ObjectInternal::isImplExternal(selfI) && bl::ObjectInternal::isImplRefCountEqualToBase(selfI) && selfI->writerCount == 0) {
     // OPTIMIZATION: If the user code calls BLImage::createFromData() for every frame, use the same Impl
     // if the `refCount == 1` and the Impl is external to avoid a malloc()/free() roundtrip for each call.
-    BLObjectPrivate::callExternalDestroyFunc(selfI, selfI->pixelData);
-    BLObjectPrivate::initExternalDestroyFunc(selfI, destroyFunc, userData);
-    BLObjectPrivate::initRefCountToBase(selfI, immutable);
+    bl::ObjectInternal::callExternalDestroyFunc(selfI, selfI->pixelData);
+    bl::ObjectInternal::initExternalDestroyFunc(selfI, destroyFunc, userData);
+    bl::ObjectInternal::initRefCountToBase(selfI, immutable);
 
     initImplData(selfI, w, h, format, pixelData, stride);
     return BL_SUCCESS;
@@ -362,11 +364,11 @@ BL_API_IMPL BLResult blImageCreateFromData(
   }
 }
 
-// BLImage - API - Accessors
-// =========================
+// bl::Image - API - Accessors
+// ===========================
 
 BL_API_IMPL BLResult blImageGetData(const BLImageCore* self, BLImageData* dataOut) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
   BLImagePrivateImpl* selfI = getImpl(self);
@@ -381,7 +383,7 @@ BL_API_IMPL BLResult blImageGetData(const BLImageCore* self, BLImageData* dataOu
 }
 
 BL_API_IMPL BLResult blImageMakeMutable(BLImageCore* self, BLImageData* dataOut) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
   BLImagePrivateImpl* selfI = getImpl(self);
@@ -415,11 +417,11 @@ BL_API_IMPL BLResult blImageMakeMutable(BLImageCore* self, BLImageData* dataOut)
   }
 }
 
-// BLImage - API - Convert
-// =======================
+// bl::Image - API - Convert
+// =========================
 
 BL_API_IMPL BLResult blImageConvert(BLImageCore* self, BLFormat format) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
   BLImagePrivateImpl* selfI = getImpl(self);
@@ -473,11 +475,11 @@ BL_API_IMPL BLResult blImageConvert(BLImageCore* self, BLFormat format) noexcept
   return result;
 }
 
-// BLImage - API - Equality & Comparison
-// =====================================
+// bl::Image - API - Equality & Comparison
+// =======================================
 
 BL_API_IMPL bool blImageEquals(const BLImageCore* a, const BLImageCore* b) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(a->_d.isImage());
   BL_ASSERT(b->_d.isImage());
@@ -511,11 +513,11 @@ BL_API_IMPL bool blImageEquals(const BLImageCore* a, const BLImageCore* b) noexc
   return true;
 }
 
-// BLImage - API - Scale
-// =====================
+// bl::Image - API - Scale
+// =======================
 
-BL_API_IMPL BLResult blImageScale(BLImageCore* dst, const BLImageCore* src, const BLSizeI* size, uint32_t filter, const BLImageScaleOptions* options) noexcept {
-  using namespace BLImagePrivate;
+BL_API_IMPL BLResult blImageScale(BLImageCore* dst, const BLImageCore* src, const BLSizeI* size, BLImageScaleFilter filter) noexcept {
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(dst->_d.isImage());
   BL_ASSERT(src->_d.isImage());
@@ -524,8 +526,8 @@ BL_API_IMPL BLResult blImageScale(BLImageCore* dst, const BLImageCore* src, cons
   if (srcI->format == BL_FORMAT_NONE)
     return blImageReset(dst);
 
-  BLImageScaleContext scaleCtx;
-  BL_PROPAGATE(scaleCtx.create(*size, srcI->size, filter, options));
+  bl::ImageScaleContext scaleCtx;
+  BL_PROPAGATE(scaleCtx.create(*size, srcI->size, filter));
 
   BLFormat format = BLFormat(srcI->format);
   int tw = scaleCtx.dstWidth();
@@ -565,11 +567,11 @@ BL_API_IMPL BLResult blImageScale(BLImageCore* dst, const BLImageCore* src, cons
   return BL_SUCCESS;
 }
 
-// BLImage - API - Read File
-// =========================
+// bl::Image - API - Read File
+// ===========================
 
 BL_API_IMPL BLResult blImageReadFromFile(BLImageCore* self, const char* fileName, const BLArrayCore* codecs) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
 
@@ -590,11 +592,11 @@ BL_API_IMPL BLResult blImageReadFromFile(BLImageCore* self, const char* fileName
   return decoder.readFrame(*self, buffer);
 }
 
-// BLImage - API - Read Data
-// =========================
+// bl::Image - API - Read Data
+// ===========================
 
 BL_API_IMPL BLResult blImageReadFromData(BLImageCore* self, const void* data, size_t size, const BLArrayCore* codecs) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
 
@@ -609,14 +611,13 @@ BL_API_IMPL BLResult blImageReadFromData(BLImageCore* self, const void* data, si
   return decoder.readFrame(*self, data, size);
 }
 
-// BLImage - API - Write File
-// ==========================
+// bl::Image - API - Write File
+// ============================
 
-namespace BLImagePrivate {
+namespace bl {
+namespace ImageInternal {
 
 static BLResult writeToFileInternal(const BLImageCore* self, const char* fileName, const BLImageCodecCore* codec) noexcept {
-  using namespace BLImagePrivate;
-
   BL_ASSERT(self->_d.isImage());
   BL_ASSERT(codec->_d.isImageCodec());
 
@@ -625,10 +626,11 @@ static BLResult writeToFileInternal(const BLImageCore* self, const char* fileNam
   return BLFileSystem::writeFile(fileName, buffer);
 }
 
-} // {BLImagePrivate}
+} // {ImageInternal}
+} // {bl}
 
 BL_API_IMPL BLResult blImageWriteToFile(const BLImageCore* self, const char* fileName, const BLImageCodecCore* codec) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
 
@@ -643,11 +645,11 @@ BL_API_IMPL BLResult blImageWriteToFile(const BLImageCore* self, const char* fil
   }
 }
 
-// BLImage - API - Write Data
-// ==========================
+// bl::Image - API - Write Data
+// ============================
 
 BL_API_IMPL BLResult blImageWriteToData(const BLImageCore* self, BLArrayCore* dst, const BLImageCodecCore* codec) noexcept {
-  using namespace BLImagePrivate;
+  using namespace bl::ImageInternal;
 
   BL_ASSERT(self->_d.isImage());
   BL_ASSERT(codec->_d.isImageCodec());
@@ -660,13 +662,13 @@ BL_API_IMPL BLResult blImageWriteToData(const BLImageCore* self, BLArrayCore* ds
   return encoder.writeFrame(dst->dcast<BLArray<uint8_t>>(), self->dcast());
 }
 
-// BLImage - Runtime Registration
-// ==============================
+// bl::Image - Runtime Registration
+// ================================
 
 void blImageRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
-  auto& defaultImage = BLImagePrivate::defaultImage;
+  auto& defaultImage = bl::ImageInternal::defaultImage;
   blObjectDefaults[BL_OBJECT_TYPE_IMAGE]._d.initDynamic(
     BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE), &defaultImage.impl);
 }

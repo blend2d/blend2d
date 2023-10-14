@@ -13,17 +13,18 @@
 //! \addtogroup blend2d_codec_impl
 //! \{
 
-//! Acceleration constants for huffman decoding. Accel bits should be either 8 or 9. More bits consume more memory,
-//! but allow easier decoding of a code that fits within the number of bits. Libjpeg uses 8 bits with a comment that
-//! 8 bits is sufficient for decoding approximately 95% of codes so we use the same.
-enum BLJpegHuffmanAccelConstants : uint32_t {
-  BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS = 8,
-  BL_JPEG_DECODER_HUFFMAN_ACCEL_SIZE = 1 << BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS,
-  BL_JPEG_DECODER_HUFFMAN_ACCEL_MASK = BL_JPEG_DECODER_HUFFMAN_ACCEL_SIZE - 1
-};
+namespace bl {
+namespace Jpeg {
+
+// Acceleration constants for huffman decoding. Accel bits should be either 8 or 9. More bits consume more memory,
+// but allow easier decoding of a code that fits within the number of bits. Libjpeg uses 8 bits with a comment that
+// 8 bits is sufficient for decoding approximately 95% of codes so we use the same.
+static constexpr uint32_t kHuffmanAccelBits = 8;
+static constexpr uint32_t kHuffmanAccelSize = 1 << kHuffmanAccelBits;
+static constexpr uint32_t kHuffmanAccelMask = kHuffmanAccelSize - 1;
 
 //! JPEG Huffman decompression table.
-struct BLJpegDecoderHuffmanTable {
+struct DecoderHuffmanTable {
   //! Largest code of length k (-1 if none).
   uint32_t maxCode[18];
   //! Value offsets (deltas) for codes of length k.
@@ -32,24 +33,24 @@ struct BLJpegDecoderHuffmanTable {
   uint8_t size[257];
   //! Huffman symbols, in order of increasing code length (part of DHT marker).
   uint8_t values[256];
-  //! Acceleration table for decoding huffman codes up to `BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS`.
-  uint8_t accel[BL_JPEG_DECODER_HUFFMAN_ACCEL_SIZE];
+  //! Acceleration table for decoding huffman codes up to `kHuffmanAccelBits`.
+  uint8_t accel[kHuffmanAccelSize];
 };
 
-struct BLJpegDecoderHuffmanACTable : public BLJpegDecoderHuffmanTable {
+struct DecoderHuffmanACTable : public DecoderHuffmanTable {
   //! Additional table that decodes both magnitude and value of small ACs in one go.
-  int16_t acAccel[BL_JPEG_DECODER_HUFFMAN_ACCEL_SIZE];
+  int16_t acAccel[kHuffmanAccelSize];
 };
 
-struct BLJpegDecoderHuffmanDCTable : public BLJpegDecoderHuffmanTable {
+struct DecoderHuffmanDCTable : public DecoderHuffmanTable {
   // No additional fields.
 };
 
 //! JPEG decoder's bit-stream.
 //!
 //! Holds the current decoder position in a bit-stream, but it's not used to fetch bits from it. Use
-//! `BLJpegDecoderBitReader` to actually read from the bit-stream.
-struct BLJpegDecoderBitStream {
+//! `DecoderBitReader` to actually read from the bit-stream.
+struct DecoderBitStream {
   //! Data pointer (points to the byte to be processed).
   const uint8_t* ptr;
   //! End of input (points to the first invalid byte).
@@ -63,20 +64,21 @@ struct BLJpegDecoderBitStream {
   //! Restart counter in the current stream (reset by DRI and RST markers).
   uint32_t restartCounter;
 
-  BL_INLINE void reset() noexcept { reset(nullptr, nullptr); }
   BL_INLINE void reset(const uint8_t* ptr_, const uint8_t* end_) noexcept {
-    this->ptr = ptr_;
-    this->end = end_;
-    this->bitData = 0;
-    this->bitCount = 0;
-    this->eobRun = 0;
+    ptr = ptr_;
+    end = end_;
+    bitData = 0;
+    bitCount = 0;
+    eobRun = 0;
   }
+
+  BL_INLINE void reset() noexcept { reset(nullptr, nullptr); }
 };
 
 //! JPEG decoder's bit-reader.
 //!
-//! Class that is used to read data from `BLJpegDecoderBitStream`.
-struct BLJpegDecoderBitReader {
+//! Class that is used to read data from `DecoderBitStream`.
+struct DecoderBitReader {
   //! Data pointer (points to the byte to be processed).
   const uint8_t* ptr;
   //! End of input (points to the first invalid byte).
@@ -86,13 +88,13 @@ struct BLJpegDecoderBitReader {
   //! Number of valid bits in `bitData`.
   size_t bitCount;
 
-  BL_INLINE explicit BLJpegDecoderBitReader(BLJpegDecoderBitStream& stream) noexcept
+  BL_INLINE explicit DecoderBitReader(DecoderBitStream& stream) noexcept
     : ptr(stream.ptr),
       end(stream.end),
       bitData(stream.bitData),
       bitCount(stream.bitCount) {}
 
-  BL_INLINE void done(BLJpegDecoderBitStream& stream) noexcept {
+  BL_INLINE void done(DecoderBitStream& stream) noexcept {
     stream.bitData = bitData;
     stream.bitCount = bitCount;
     stream.ptr = ptr;
@@ -126,11 +128,11 @@ struct BLJpegDecoderBitReader {
   template<typename T = BLBitWord>
   BL_INLINE T peek(size_t n) const noexcept {
     typedef typename std::make_unsigned<T>::type U;
-    return T(U(bitData >> (BLIntOps::bitSizeOf<BLBitWord>() - n)));
+    return T(U(bitData >> (IntOps::bitSizeOf<BLBitWord>() - n)));
   }
 
   BL_INLINE void refill() noexcept {
-    while (bitCount <= BLIntOps::bitSizeOf<BLBitWord>() - 8 && ptr != end) {
+    while (bitCount <= IntOps::bitSizeOf<BLBitWord>() - 8 && ptr != end) {
       uint32_t tmpByte = *ptr++;
 
       // The [0xFF] byte has to be escaped by [0xFF, 0x00], so read two bytes.
@@ -146,13 +148,13 @@ struct BLJpegDecoderBitReader {
         }
       }
 
-      bitData += BLBitWord(tmpByte) << ((BLIntOps::bitSizeOf<BLBitWord>() - 8) - bitCount);
+      bitData += BLBitWord(tmpByte) << ((IntOps::bitSizeOf<BLBitWord>() - 8) - bitCount);
       bitCount += 8;
     }
   }
 
   BL_INLINE void refillIf32Bit() noexcept {
-    if (BLIntOps::bitSizeOf<BLBitWord>() <= 32)
+    if (IntOps::bitSizeOf<BLBitWord>() <= 32)
       return refill();
   }
 
@@ -170,7 +172,7 @@ struct BLJpegDecoderBitReader {
   BL_INLINE int32_t readSigned(size_t n) noexcept {
     BL_ASSERT(bitCount >= n);
 
-    int32_t tmpMask = BLIntOps::shl(int32_t(-1), n) + 1;
+    int32_t tmpMask = IntOps::shl(int32_t(-1), n) + 1;
     int32_t tmpSign = -peek<int32_t>(1);
 
     int32_t result = peek<int32_t>(n) + (tmpMask & ~tmpSign);
@@ -188,8 +190,8 @@ struct BLJpegDecoderBitReader {
   }
 
   template<typename T>
-  BL_INLINE BLResult readCode(T& dst, const BLJpegDecoderHuffmanTable* table) noexcept {
-    uint32_t code = table->accel[peek(BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS)];
+  BL_INLINE BLResult readCode(T& dst, const DecoderHuffmanTable* table) noexcept {
+    uint32_t code = table->accel[peek(kHuffmanAccelBits)];
     uint32_t codeSize;
 
     if (code < 255) {
@@ -200,11 +202,11 @@ struct BLJpegDecoderBitReader {
     }
     else {
       // SLOW: Naive test is to shift the `bitData` down so `s` bits are valid, then test against `maxCode`. To speed
-      // this up, we've preshifted maxCode left so that it has `16-s` 0s at the end; in other words, regardless of the
+      // this up, we've pre-shifted maxCode left so that it has `16-s` 0s at the end; in other words, regardless of the
       // number of bits, it wants to be compared against something shifted to have 16; that way we don't need to shift
       // inside the loop.
       code = peek<uint32_t>(16);
-      codeSize = BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS + 1;
+      codeSize = kHuffmanAccelBits + 1;
 
       while (code >= table->maxCode[codeSize])
         codeSize++;
@@ -224,8 +226,11 @@ struct BLJpegDecoderBitReader {
   }
 };
 
-BL_HIDDEN BLResult blJpegDecoderBuildHuffmanAC(BLJpegDecoderHuffmanACTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept;
-BL_HIDDEN BLResult blJpegDecoderBuildHuffmanDC(BLJpegDecoderHuffmanDCTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept;
+BL_HIDDEN BLResult buildHuffmanAC(DecoderHuffmanACTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept;
+BL_HIDDEN BLResult buildHuffmanDC(DecoderHuffmanDCTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept;
+
+} // {Jpeg}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -14,7 +14,8 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 
 //! OpenType 'CFF' or 'CFF2' table (Compact Font Format).
 //!
@@ -140,7 +141,7 @@ struct CFFTable {
     UInt8 data[...];
     */
 
-    BL_INLINE const uint8_t* offsetArray() const noexcept { return BLPtrOps::offset<const uint8_t>(this, 3); }
+    BL_INLINE const uint8_t* offsetArray() const noexcept { return PtrOps::offset<const uint8_t>(this, 3); }
   };
 
   //! Index table (v2).
@@ -156,13 +157,13 @@ struct CFFTable {
     UInt8 data[...];
     */
 
-    BL_INLINE const uint8_t* offsetArray() const noexcept { return BLPtrOps::offset<const uint8_t>(this, 5); }
+    BL_INLINE const uint8_t* offsetArray() const noexcept { return PtrOps::offset<const uint8_t>(this, 5); }
   };
 
   Header header;
 
-  BL_INLINE const HeaderV1* headerV1() const noexcept { return BLPtrOps::offset<const HeaderV1>(this, 0); }
-  BL_INLINE const HeaderV2* headerV2() const noexcept { return BLPtrOps::offset<const HeaderV2>(this, 0); }
+  BL_INLINE const HeaderV1* headerV1() const noexcept { return PtrOps::offset<const HeaderV1>(this, 0); }
+  BL_INLINE const HeaderV2* headerV2() const noexcept { return PtrOps::offset<const HeaderV2>(this, 0); }
 };
 
 //! CFF data stored in \ref OTFontFace.
@@ -228,8 +229,8 @@ namespace CFFImpl {
 //! decimal value (0..9), decimal point, or other instructions which meaning is described by `NibbleAbove9` enum.
 BL_HIDDEN BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size_t& valueSizeInBytes) noexcept;
 
-// BLOpenType::CFFImpl - DictEntry
-// ===============================
+// bl::OpenType::CFFImpl - DictEntry
+// =================================
 
 //! CFF dictionary entry.
 struct DictEntry {
@@ -274,7 +275,8 @@ public:
 BL_HIDDEN BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noexcept;
 
 } // {CFFImpl}
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 //! \}
 //! \endcond

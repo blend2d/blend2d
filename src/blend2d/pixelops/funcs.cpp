@@ -7,15 +7,16 @@
 #include "../runtime_p.h"
 #include "../pixelops/funcs_p.h"
 
-namespace BLPixelOps {
+namespace bl {
+namespace PixelOps {
 
-// BLPixelOps - Globals
-// ====================
+// bl::PixelOps - Globals
+// ======================
 
 Funcs funcs;
 
-// BLPixelOps - Interpolation Functions
-// ====================================
+// bl::PixelOps - Interpolation Functions
+// ======================================
 
 namespace Interpolation {
 
@@ -31,31 +32,31 @@ BL_HIDDEN void BL_CDECL interpolate_prgb32_avx2(uint32_t* dPtr, uint32_t dWidth,
 #endif
 
 } // {Interpolation}
+} // {PixelOps}
+} // {bl}
 
-} // {BLPixelOps}
-
-// BLPixelOps - Runtime Registration
-// =================================
+// bl::PixelOps - Runtime Registration
+// ===================================
 
 void blPixelOpsRtInit(BLRuntimeContext* rt) noexcept {
   // Maybe unused, if no architecture dependent optimizations are available.
   blUnused(rt);
 
-  BLPixelOps::Funcs& funcs = BLPixelOps::funcs;
+  bl::PixelOps::Funcs& funcs = bl::PixelOps::funcs;
 
   // Initialize gradient ops.
-  funcs.interpolate_prgb32 = BLPixelOps::Interpolation::interpolate_prgb32;
-  funcs.interpolate_prgb64 = BLPixelOps::Interpolation::interpolate_prgb64;
+  funcs.interpolate_prgb32 = bl::PixelOps::Interpolation::interpolate_prgb32;
+  funcs.interpolate_prgb64 = bl::PixelOps::Interpolation::interpolate_prgb64;
 
 #ifdef BL_BUILD_OPT_SSE2
   if (blRuntimeHasSSE2(rt)) {
-    funcs.interpolate_prgb32 = BLPixelOps::Interpolation::interpolate_prgb32_sse2;
+    funcs.interpolate_prgb32 = bl::PixelOps::Interpolation::interpolate_prgb32_sse2;
   }
 #endif
 
 #ifdef BL_BUILD_OPT_AVX2
   if (blRuntimeHasAVX2(rt)) {
-    funcs.interpolate_prgb32 = BLPixelOps::Interpolation::interpolate_prgb32_avx2;
+    funcs.interpolate_prgb32 = bl::PixelOps::Interpolation::interpolate_prgb32_avx2;
   }
 #endif
 }

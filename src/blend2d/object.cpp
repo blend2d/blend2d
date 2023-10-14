@@ -21,8 +21,8 @@
 #include "support/intops_p.h"
 #include "support/ptrops_p.h"
 
-// BLObject - Globals
-// ==================
+// bl::Object - Globals
+// ====================
 
 BLObjectCore blObjectDefaults[BL_OBJECT_TYPE_MAX_VALUE + 1];
 const BLObjectImplHeader blObjectHeaderWithRefCountEq0 = { 0, 0 };
@@ -32,14 +32,14 @@ void blObjectDestroyExternalDataDummy(void* impl, void* externalData, void* user
   blUnused(impl, externalData, userData);
 }
 
-// BLObject - API - Alloc & Free Impl
-// ==================================
+// bl::Object - API - Alloc & Free Impl
+// ====================================
 
 static BL_INLINE BLResult blObjectAllocImplInternal(BLObjectCore* self, uint32_t objectInfo, size_t implSize, size_t implFlags, size_t implAlignment, bool isExternal = false) noexcept {
   if (BL_UNLIKELY(implSize > BL_OBJECT_IMPL_MAX_SIZE))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-  implSize = BLIntOps::alignUp(implSize, implAlignment);
+  implSize = bl::IntOps::alignUp(implSize, implAlignment);
 
   size_t headerSize = sizeof(BLObjectImplHeader) + (isExternal ? sizeof(BLObjectExternalInfo) : size_t(0));
   size_t allocationSize = implSize + headerSize + implAlignment;
@@ -49,8 +49,8 @@ static BL_INLINE BLResult blObjectAllocImplInternal(BLObjectCore* self, uint32_t
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
   BLObjectImpl* impl = static_cast<BLObjectImpl*>(
-    BLIntOps::alignUp(BLPtrOps::offset(ptr, headerSize), implAlignment));
-  BLObjectImplHeader* implHeader = BLObjectPrivate::getImplHeader(impl);
+    bl::IntOps::alignUp(bl::PtrOps::offset(ptr, headerSize), implAlignment));
+  BLObjectImplHeader* implHeader = bl::ObjectInternal::getImplHeader(impl);
 
   size_t alignmentOffset = size_t(uintptr_t(impl) - uintptr_t(ptr)) - headerSize;
   BL_ASSERT((alignmentOffset & ~BLObjectImplHeader::kAlignmentOffsetMask) == 0);
@@ -71,7 +71,7 @@ BL_API_IMPL BLResult blObjectAllocImpl(BLObjectCore* self, uint32_t objectInfo, 
 }
 
 BL_API_IMPL BLResult blObjectAllocImplAligned(BLObjectCore* self, uint32_t objectInfo, size_t implSize, size_t implAlignment) noexcept {
-  if (!BLIntOps::isPowerOf2(implAlignment))
+  if (!bl::IntOps::isPowerOf2(implAlignment))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   size_t flags = BLObjectImplHeader::kRefCountedFlag;
@@ -85,45 +85,45 @@ BL_API_IMPL BLResult blObjectAllocImplExternal(BLObjectCore* self, uint32_t obje
                  (size_t(immutable) << BLObjectImplHeader::kImmutableFlagShift);
 
   BL_PROPAGATE(blObjectAllocImplInternal(self, objectInfo, implSize, flags, BL_OBJECT_IMPL_ALIGNMENT, true));
-  BLObjectPrivate::initExternalDestroyFunc(self->_d.impl, destroyFunc, userData);
+  bl::ObjectInternal::initExternalDestroyFunc(self->_d.impl, destroyFunc, userData);
   return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult blObjectFreeImpl(BLObjectImpl* impl) noexcept {
-  return BLObjectPrivate::freeImpl(impl);
+  return bl::ObjectInternal::freeImpl(impl);
 }
 
 BLResult blObjectDestroyUnknownImpl(BLObjectImpl* impl, BLObjectInfo info) noexcept {
   BL_ASSERT(info.isDynamicObject());
 
   if (info.isVirtualObject())
-    return BLObjectPrivate::freeVirtualImpl(impl);
+    return bl::ObjectInternal::freeVirtualImpl(impl);
 
   BLObjectType type = info.rawType();
   switch (type) {
     case BL_OBJECT_TYPE_GRADIENT:
-      return BLGradientPrivate::freeImpl(static_cast<BLGradientPrivateImpl*>(impl));
+      return bl::GradientInternal::freeImpl(static_cast<BLGradientPrivateImpl*>(impl));
 
     case BL_OBJECT_TYPE_PATTERN:
-      return BLPatternPrivate::freeImpl(static_cast<BLPatternPrivateImpl*>(impl));
+      return bl::PatternInternal::freeImpl(static_cast<BLPatternPrivateImpl*>(impl));
 
     case BL_OBJECT_TYPE_STRING:
-      return BLStringPrivate::freeImpl(static_cast<BLStringImpl*>(impl));
+      return bl::StringInternal::freeImpl(static_cast<BLStringImpl*>(impl));
 
     case BL_OBJECT_TYPE_PATH:
-      return BLPathPrivate::freeImpl(static_cast<BLPathPrivateImpl*>(impl));
+      return bl::PathInternal::freeImpl(static_cast<BLPathPrivateImpl*>(impl));
 
     case BL_OBJECT_TYPE_IMAGE:
-      return BLImagePrivate::freeImpl(static_cast<BLImagePrivateImpl*>(impl));
+      return bl::ImageInternal::freeImpl(static_cast<BLImagePrivateImpl*>(impl));
 
     case BL_OBJECT_TYPE_FONT:
-      return BLFontPrivate::freeImpl(static_cast<BLFontPrivateImpl*>(impl));
+      return bl::FontInternal::freeImpl(static_cast<BLFontPrivateImpl*>(impl));
 
     case BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS:
-      return BLFontFeatureSettingsPrivate::freeImpl(static_cast<BLFontFeatureSettingsImpl*>(impl));
+      return bl::FontFeatureSettingsInternal::freeImpl(static_cast<BLFontFeatureSettingsImpl*>(impl));
 
     case BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS:
-      return BLFontVariationSettingsPrivate::freeImpl(static_cast<BLFontVariationSettingsImpl*>(impl));
+      return bl::FontVariationSettingsInternal::freeImpl(static_cast<BLFontVariationSettingsImpl*>(impl));
 
     case BL_OBJECT_TYPE_ARRAY_OBJECT:
     case BL_OBJECT_TYPE_ARRAY_INT8:
@@ -148,20 +148,20 @@ BLResult blObjectDestroyUnknownImpl(BLObjectImpl* impl, BLObjectInfo info) noexc
     case BL_OBJECT_TYPE_ARRAY_STRUCT_20:
     case BL_OBJECT_TYPE_ARRAY_STRUCT_24:
     case BL_OBJECT_TYPE_ARRAY_STRUCT_32:
-      return BLArrayPrivate::freeImpl(static_cast<BLArrayImpl*>(impl));
+      return bl::ArrayInternal::freeImpl(static_cast<BLArrayImpl*>(impl));
 
     case BL_OBJECT_TYPE_BIT_SET:
       // NOTE: It's guaranteed that this BitSet is dynamic, so we don't have to correct the type.
-      return BLBitSetPrivate::freeImpl(static_cast<BLBitSetImpl*>(impl));
+      return bl::BitSetInternal::freeImpl(static_cast<BLBitSetImpl*>(impl));
 
     default:
       // TODO: This shouldn't happen.
-      return BLObjectPrivate::freeImpl(impl);
+      return bl::ObjectInternal::freeImpl(impl);
   }
 }
 
-// BLObject - API - Construction & Destruction
-// ===========================================
+// bl::Object - API - Construction & Destruction
+// =============================================
 
 BL_API_IMPL BLResult blObjectInitMove(BLUnknown* self, BLUnknown* other) noexcept {
   BL_ASSERT(self != other);
@@ -175,27 +175,27 @@ BL_API_IMPL BLResult blObjectInitWeak(BLUnknown* self, const BLUnknown* other) n
   return blObjectPrivateInitWeakUnknown(blAsObject(self), blAsObject(other));
 }
 
-// BLObject - API - Reset
-// ======================
+// bl::Object - API - Reset
+// ========================
 
 BL_API_IMPL BLResult blObjectReset(BLUnknown* self) noexcept {
   BLObjectType type = blAsObject(self)->_d.getType();
 
-  BLObjectPrivate::releaseUnknownInstance(blAsObject(self));
+  bl::ObjectInternal::releaseUnknownInstance(blAsObject(self));
   blAsObject(self)->_d = blObjectDefaults[type]._d;
 
   return BL_SUCCESS;
 }
 
-// BLObject - API - Assign
-// =======================
+// bl::Object - API - Assign
+// =========================
 
 BL_API_IMPL BLResult blObjectAssignMove(BLUnknown* self, BLUnknown* other) noexcept {
   BLObjectType type = blAsObject(other)->_d.getType();
   BLObjectCore tmp = *blAsObject(other);
 
   blAsObject(other)->_d = blObjectDefaults[type]._d;
-  BLObjectPrivate::releaseUnknownInstance(blAsObject(self));
+  bl::ObjectInternal::releaseUnknownInstance(blAsObject(self));
 
   blAsObject(self)->_d = tmp._d;
   return BL_SUCCESS;
@@ -205,8 +205,8 @@ BL_API_IMPL BLResult blObjectAssignWeak(BLUnknown* self, const BLUnknown* other)
   return blObjectPrivateAssignWeakUnknown(blAsObject(self), blAsObject(other));
 }
 
-// BLObject - API - Properties
-// ===========================
+// bl::Object - API - Properties
+// =============================
 
 BL_API_IMPL BLResult blObjectGetProperty(const BLUnknown* self, const char* name, size_t nameSize, BLVarCore* valueOut) noexcept {
   if (nameSize == SIZE_MAX)

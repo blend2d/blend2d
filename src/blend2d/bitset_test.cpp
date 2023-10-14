@@ -11,27 +11,28 @@
 #include "simd/simd_p.h"
 #include "support/intops_p.h"
 
-// BLBitSet - Tests
-// ================
+// bl::BitSet - Tests
+// ==================
 
-namespace BLBitSetTests {
+namespace bl {
+namespace Tests {
 
 static void dumpBitSet(const BLBitSetCore* self) noexcept {
   if (self->_d.sso()) {
     if (self->_d.isBitSetRange()) {
-      BLBitSetPrivate::Range range = BLBitSetPrivate::getSSORange(self);
+      BitSetInternal::Range range = BitSetInternal::getSSORange(self);
       printf("BitSet<SSO_Range> {%u-%u}\n", range.start, range.end);
     }
     else {
-      uint32_t wordIndex = BLBitSetPrivate::getSSOWordIndex(self);
-      printf("BitSet<SSO_Dense> {%u-%u}\n", wordIndex, wordIndex + BLBitSetPrivate::kSSOWordCount);
-      for (uint32_t i = 0; i < BLBitSetPrivate::kSSOWordCount; i++) {
+      uint32_t wordIndex = BitSetInternal::getSSOWordIndex(self);
+      printf("BitSet<SSO_Dense> {%u-%u}\n", wordIndex, wordIndex + BitSetInternal::kSSOWordCount);
+      for (uint32_t i = 0; i < BitSetInternal::kSSOWordCount; i++) {
         printf("  [%u] %08X\n", i, self->_d.u32_data[i]);
       }
     }
   }
   else {
-    const BLBitSetImpl* impl = BLBitSetPrivate::getImpl(self);
+    const BLBitSetImpl* impl = BitSetInternal::getImpl(self);
     printf("BitSet<Dynamic> {Count=%u Capacity=%u}\n", impl->segmentCount, impl->segmentCapacity);
 
     for (uint32_t i = 0; i < impl->segmentCount; i++) {
@@ -40,7 +41,7 @@ static void dumpBitSet(const BLBitSetCore* self) noexcept {
           printf("  [%u] {%u-%llu} [ones]\n", i, segment->startBit(), (unsigned long long)segment->lastBit() + 1);
       }
       else {
-        for (uint32_t j = 0; j < BLBitSetPrivate::kSegmentWordCount; j++) {
+        for (uint32_t j = 0; j < BitSetInternal::kSegmentWordCount; j++) {
           uint32_t bitIndex = segment->startBit() + j * 32;
           printf("  [%u] {%u-%llu} [%08X]\n", i, bitIndex, (unsigned long long)bitIndex + 32, segment->data()[j]);
         }
@@ -53,7 +54,7 @@ static void testBits(const BLBitSet& bitSet, uint32_t wordIndex, const uint32_t*
   for (uint32_t i = 0; i < wordCount; i++) {
     for (uint32_t j = 0; j < 32; j++) {
       uint32_t bitIndex = (wordIndex + i) * 32 + j;
-      bool bitValue = BLBitSetOps::hasBit(wordData[i], j);
+      bool bitValue = BitSetOps::hasBit(wordData[i], j);
       EXPECT_EQ(bitSet.hasBit(bitIndex), bitValue)
         .message("Failed to test bit [%u] - the bit value is not '%s'", bitIndex, bitValue ? "true" : "false");
     }
@@ -62,7 +63,7 @@ static void testBits(const BLBitSet& bitSet, uint32_t wordIndex, const uint32_t*
 
 UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
   uint32_t kNumBits = 1000000u;
-  uint32_t kSSOLastWord = BLBitSetPrivate::kSSOLastWord;
+  uint32_t kSSOLastWord = BitSetInternal::kSSOLastWord;
 
   INFO("Checking SSO BitSet basics");
   {
@@ -80,15 +81,15 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
     EXPECT_SUCCESS(set.addBit(35));
     EXPECT_TRUE(set._d.sso());
     EXPECT_FALSE(set._d.isBitSetRange());
-    EXPECT_EQ(BLBitSetPrivate::getSSODenseInfo(&set).startBit(), 32u);
-    EXPECT_EQ(set._d.u32_data[0], (BLBitSetOps::indexAsMask(0) | BLBitSetOps::indexAsMask(1) | BLBitSetOps::indexAsMask(3)));
+    EXPECT_EQ(BitSetInternal::getSSODenseInfo(&set).startBit(), 32u);
+    EXPECT_EQ(set._d.u32_data[0], (BitSetOps::indexAsMask(0) | BitSetOps::indexAsMask(1) | BitSetOps::indexAsMask(3)));
 
     EXPECT_SUCCESS(set.clearBit(35));
     EXPECT_SUCCESS(set.clearBit(33));
     EXPECT_TRUE(set._d.sso());
     EXPECT_FALSE(set._d.isBitSetRange());
-    EXPECT_EQ(BLBitSetPrivate::getSSODenseInfo(&set).startBit(), 32u);
-    EXPECT_EQ(set._d.u32_data[0], BLBitSetOps::indexAsMask(0));
+    EXPECT_EQ(BitSetInternal::getSSODenseInfo(&set).startBit(), 32u);
+    EXPECT_EQ(set._d.u32_data[0], BitSetOps::indexAsMask(0));
 
     EXPECT_SUCCESS(set.clearBit(32));
     EXPECT_TRUE(set.empty());
@@ -103,22 +104,22 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
     EXPECT_SUCCESS(set.addBit(0xFFFFFFFAu));
     EXPECT_TRUE(set._d.sso());
     EXPECT_FALSE(set._d.isBitSetRange());
-    EXPECT_EQ(BLBitSetPrivate::getSSODenseInfo(&set).startWord(), kSSOLastWord);
+    EXPECT_EQ(BitSetInternal::getSSODenseInfo(&set).startWord(), kSSOLastWord);
     EXPECT_EQ(set._d.u32_data[0], 0u);
-    EXPECT_EQ(set._d.u32_data[1], (BLBitSetOps::indexAsMask(26) | BLBitSetOps::indexAsMask(30)));
+    EXPECT_EQ(set._d.u32_data[1], (BitSetOps::indexAsMask(26) | BitSetOps::indexAsMask(30)));
 
     EXPECT_SUCCESS(set.addBit(0xFFFFFFD0u));
     EXPECT_TRUE(set._d.sso());
     EXPECT_FALSE(set._d.isBitSetRange());
-    EXPECT_EQ(set._d.u32_data[0], BLBitSetOps::indexAsMask(16));
-    EXPECT_EQ(set._d.u32_data[1], (BLBitSetOps::indexAsMask(26) | BLBitSetOps::indexAsMask(30)));
+    EXPECT_EQ(set._d.u32_data[0], BitSetOps::indexAsMask(16));
+    EXPECT_EQ(set._d.u32_data[1], (BitSetOps::indexAsMask(26) | BitSetOps::indexAsMask(30)));
 
     // Clearing the bit in the first word in this case won't shift the offset, as it would overflow addressable words.
     EXPECT_SUCCESS(set.clearBit(0xFFFFFFD0u));
     EXPECT_TRUE(set._d.sso());
     EXPECT_FALSE(set._d.isBitSetRange());
     EXPECT_EQ(set._d.u32_data[0], 0u);
-    EXPECT_EQ(set._d.u32_data[1], (BLBitSetOps::indexAsMask(26) | BLBitSetOps::indexAsMask(30)));
+    EXPECT_EQ(set._d.u32_data[1], (BitSetOps::indexAsMask(26) | BitSetOps::indexAsMask(30)));
 
     // Adding a range that fully subsumes a dense SSO data should result in SSO BitSet.
     EXPECT_SUCCESS(set.clear());
@@ -264,7 +265,7 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
       const uint32_t words[] = { 0x80000000u, 0x01010101u };
       EXPECT_SUCCESS(set.assignWords(0, words, BL_ARRAY_SIZE(words)));
       EXPECT_TRUE(set._d.sso());
-      EXPECT_EQ(BLBitSetPrivate::getSSOWordIndex(&set), 0u);
+      EXPECT_EQ(BitSetInternal::getSSOWordIndex(&set), 0u);
       EXPECT_EQ(set._d.u32_data[0], 0x80000000u);
       EXPECT_EQ(set._d.u32_data[1], 0x01010101u);
       EXPECT_EQ(set.cardinality(), 5u);
@@ -274,7 +275,7 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
       const uint32_t words[] = { 0x80000000u, 0x01010101u };
       EXPECT_SUCCESS(set.assignWords(55, words, BL_ARRAY_SIZE(words)));
       EXPECT_TRUE(set._d.sso());
-      EXPECT_EQ(BLBitSetPrivate::getSSOWordIndex(&set), 55u);
+      EXPECT_EQ(BitSetInternal::getSSOWordIndex(&set), 55u);
       EXPECT_EQ(set._d.u32_data[0], 0x80000000u);
       EXPECT_EQ(set._d.u32_data[1], 0x01010101u);
       EXPECT_EQ(set.cardinality(), 5u);
@@ -284,7 +285,7 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
       const uint32_t words[] = { 0x00000000u, 0x80000000u, 0x01010101u };
       EXPECT_SUCCESS(set.assignWords(0, words, BL_ARRAY_SIZE(words)));
       EXPECT_TRUE(set._d.sso());
-      EXPECT_EQ(BLBitSetPrivate::getSSOWordIndex(&set), 1u);
+      EXPECT_EQ(BitSetInternal::getSSOWordIndex(&set), 1u);
       EXPECT_EQ(set._d.u32_data[0], 0x80000000u);
       EXPECT_EQ(set._d.u32_data[1], 0x01010101u);
       EXPECT_EQ(set.cardinality(), 5u);
@@ -294,7 +295,7 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
       const uint32_t words[] = { 0x00000000u, 0x80000000u, 0x01010101u, 0x00000000u };
       EXPECT_SUCCESS(set.assignWords(0, words, BL_ARRAY_SIZE(words)));
       EXPECT_TRUE(set._d.sso());
-      EXPECT_EQ(BLBitSetPrivate::getSSOWordIndex(&set), 1u);
+      EXPECT_EQ(BitSetInternal::getSSOWordIndex(&set), 1u);
       EXPECT_EQ(set._d.u32_data[0], 0x80000000u);
       EXPECT_EQ(set._d.u32_data[1], 0x01010101u);
       EXPECT_EQ(set.cardinality(), 5u);
@@ -304,7 +305,7 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
       const uint32_t words[] = { 0x00000000u, 0x00000000u, 0x80000000u, 0x01010101u, 0x00000000u, 0x00000000u };
       EXPECT_SUCCESS(set.assignWords(0, words, BL_ARRAY_SIZE(words)));
       EXPECT_TRUE(set._d.sso());
-      EXPECT_EQ(BLBitSetPrivate::getSSOWordIndex(&set), 2u);
+      EXPECT_EQ(BitSetInternal::getSSOWordIndex(&set), 2u);
       EXPECT_EQ(set._d.u32_data[0], 0x80000000u);
       EXPECT_EQ(set._d.u32_data[1], 0x01010101u);
       EXPECT_EQ(set.cardinality(), 5u);
@@ -312,9 +313,9 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
 
     {
       const uint32_t words[] = { 0xFFFF0000u };
-      EXPECT_SUCCESS(set.assignWords(BLBitSetPrivate::kLastWord, words, BL_ARRAY_SIZE(words)));
+      EXPECT_SUCCESS(set.assignWords(BitSetInternal::kLastWord, words, BL_ARRAY_SIZE(words)));
       EXPECT_TRUE(set._d.sso());
-      EXPECT_EQ(BLBitSetPrivate::getSSOWordIndex(&set), BLBitSetPrivate::kSSOLastWord);
+      EXPECT_EQ(BitSetInternal::getSSOWordIndex(&set), BitSetInternal::kSSOLastWord);
       EXPECT_EQ(set._d.u32_data[0], 0x00000000u);
       EXPECT_EQ(set._d.u32_data[1], 0xFFFF0000u);
       EXPECT_EQ(set.cardinality(), 16u);
@@ -322,9 +323,9 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
 
     {
       const uint32_t words[] = { 0x0000FFFFu, 0xFFFF0000u };
-      EXPECT_SUCCESS(set.assignWords(BLBitSetPrivate::kLastWord - 1, words, BL_ARRAY_SIZE(words)));
+      EXPECT_SUCCESS(set.assignWords(BitSetInternal::kLastWord - 1, words, BL_ARRAY_SIZE(words)));
       EXPECT_TRUE(set._d.sso());
-      EXPECT_EQ(BLBitSetPrivate::getSSOWordIndex(&set), BLBitSetPrivate::kSSOLastWord);
+      EXPECT_EQ(BitSetInternal::getSSOWordIndex(&set), BitSetInternal::kSSOLastWord);
       EXPECT_EQ(set._d.u32_data[0], 0x0000FFFFu);
       EXPECT_EQ(set._d.u32_data[1], 0xFFFF0000u);
       EXPECT_EQ(set.cardinality(), 32u);
@@ -335,9 +336,9 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
     // are outside of the addressable range, which is [0, 4294967296).
     {
       const uint32_t words[] = { 0x00000000u, 0x0000FFFFu, 0xFFFF0000u };
-      EXPECT_SUCCESS(set.assignWords(BLBitSetPrivate::kLastWord - 2, words, BL_ARRAY_SIZE(words)));
+      EXPECT_SUCCESS(set.assignWords(BitSetInternal::kLastWord - 2, words, BL_ARRAY_SIZE(words)));
       EXPECT_TRUE(set._d.sso());
-      EXPECT_EQ(BLBitSetPrivate::getSSOWordIndex(&set), BLBitSetPrivate::kSSOLastWord);
+      EXPECT_EQ(BitSetInternal::getSSOWordIndex(&set), BitSetInternal::kSSOLastWord);
       EXPECT_EQ(set._d.u32_data[0], 0x0000FFFFu);
       EXPECT_EQ(set._d.u32_data[1], 0xFFFF0000u);
       EXPECT_EQ(set.cardinality(), 32u);
@@ -345,9 +346,9 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
 
     {
       const uint32_t words[] = { 0x00000000u, 0x00000000u, 0x0000FFFFu, 0xFFFF0000u };
-      EXPECT_SUCCESS(set.assignWords(BLBitSetPrivate::kLastWord - 3, words, BL_ARRAY_SIZE(words)));
+      EXPECT_SUCCESS(set.assignWords(BitSetInternal::kLastWord - 3, words, BL_ARRAY_SIZE(words)));
       EXPECT_TRUE(set._d.sso());
-      EXPECT_EQ(BLBitSetPrivate::getSSOWordIndex(&set), BLBitSetPrivate::kSSOLastWord);
+      EXPECT_EQ(BitSetInternal::getSSOWordIndex(&set), BitSetInternal::kSSOLastWord);
       EXPECT_EQ(set._d.u32_data[0], 0x0000FFFFu);
       EXPECT_EQ(set._d.u32_data[1], 0xFFFF0000u);
       EXPECT_EQ(set.cardinality(), 32u);
@@ -356,7 +357,7 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
     // BitSet should refuse words, which are outside of the addressable range.
     {
       const uint32_t words[] = { 0x0000FFFFu, 0xFFFF0000u };
-      EXPECT_EQ(set.assignWords(BLBitSetPrivate::kLastWord, words, BL_ARRAY_SIZE(words)), BL_ERROR_INVALID_VALUE);
+      EXPECT_EQ(set.assignWords(BitSetInternal::kLastWord, words, BL_ARRAY_SIZE(words)), BL_ERROR_INVALID_VALUE);
     }
   }
 
@@ -701,7 +702,7 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
       }
 
       set.addWords(i * kWordCount, wordData, kWordCount);
-      cardinality += BLIntOps::popCount(pattern) * kWordCount;
+      cardinality += IntOps::popCount(pattern) * kWordCount;
     }
 
     EXPECT_EQ(set.cardinality(), cardinality);
@@ -809,7 +810,7 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
   INFO("Checking functionality of shrink() & optimize()");
   {
     BLBitSet set;
-    uint32_t kCount = BLBitSetPrivate::kSegmentBitCount * 100;
+    uint32_t kCount = BitSetInternal::kSegmentBitCount * 100;
 
     for (uint32_t i = 0; i < kCount; i += 2)
       EXPECT_SUCCESS(set.addBit(i));
@@ -1000,6 +1001,7 @@ UNIT(bitset, BL_TEST_GROUP_CORE_CONTAINERS) {
   }
 }
 
-} // {BLBitSetTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

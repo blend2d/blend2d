@@ -17,7 +17,8 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 
 //! OpenType 'loca' table.
 //!
@@ -35,8 +36,8 @@ struct LocaTable {
   };
   */
 
-  BL_INLINE const Offset16* offsetArray16() const noexcept { return BLPtrOps::offset<const Offset16>(this, 0); }
-  BL_INLINE const Offset32* offsetArray32() const noexcept { return BLPtrOps::offset<const Offset32>(this, 0); }
+  BL_INLINE const Offset16* offsetArray16() const noexcept { return PtrOps::offset<const Offset16>(this, 0); }
+  BL_INLINE const Offset32* offsetArray32() const noexcept { return PtrOps::offset<const Offset32>(this, 0); }
 };
 
 //! OpenType 'glyf' table.
@@ -108,8 +109,8 @@ struct GlyfTable {
     FWord xMax;
     FWord yMax;
 
-    const Simple* simple() const noexcept { return BLPtrOps::offset<const Simple>(this, sizeof(GlyphData)); }
-    const Compound* compound() const noexcept { return BLPtrOps::offset<const Compound>(this, sizeof(GlyphData)); }
+    const Simple* simple() const noexcept { return PtrOps::offset<const Simple>(this, sizeof(GlyphData)); }
+    const Compound* compound() const noexcept { return PtrOps::offset<const Compound>(this, sizeof(GlyphData)); }
   };
 
   /*
@@ -140,7 +141,7 @@ struct CompoundEntry {
 
 namespace GlyfImpl {
 
-BL_HIDDEN extern const BLLookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1)> vertexSizeTable;
+BL_HIDDEN extern const LookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1)> vertexSizeTable;
 
 #ifdef BL_BUILD_OPT_AVX2
 BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_AVX2(
@@ -149,7 +150,7 @@ BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_AVX2(
   const BLMatrix2D* transform,
   BLPath* out,
   size_t* contourCountOut,
-  BLScopedBuffer* tmpBuffer) noexcept;
+  ScopedBuffer* tmpBuffer) noexcept;
 #endif
 
 #ifdef BL_BUILD_OPT_SSE4_2
@@ -159,14 +160,15 @@ BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_SSE4_2(
   const BLMatrix2D* transform,
   BLPath* out,
   size_t* contourCountOut,
-  BLScopedBuffer* tmpBuffer) noexcept;
+  ScopedBuffer* tmpBuffer) noexcept;
 #endif
 
 BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 
 } // {GlyfImpl}
 
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 //! \}
 //! \endcond

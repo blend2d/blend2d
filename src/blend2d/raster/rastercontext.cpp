@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
-#include "../compop_p.h"
+#include "../compopinfo_p.h"
 #include "../font_p.h"
 #include "../format_p.h"
 #include "../geometry_p.h"
@@ -39,24 +39,25 @@
   #include "../pipeline/reference/fixedpiperuntime_p.h"
 #endif
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 static constexpr bool kNoBail = false;
 
 static constexpr RenderingMode kSync = RenderingMode::kSync;
 static constexpr RenderingMode kAsync = RenderingMode::kAsync;
 
-// BLRasterEngine - ContextImpl - Globals
-// ======================================
+// bl::RasterEngine - ContextImpl - Globals
+// ========================================
 
 static BLContextVirt rasterImplVirtSync;
 static BLContextVirt rasterImplVirtAsync;
 
-// BLRasterEngine - ContextImpl - Tables
-// =====================================
+// bl::RasterEngine - ContextImpl - Tables
+// =======================================
 
 struct SolidDataWrapperU8 {
-  BLPipeline::Signature signature;
+  Pipeline::Signature signature;
   uint32_t dummy1;
   uint64_t dummy2;
   uint32_t prgb32;
@@ -64,7 +65,7 @@ struct SolidDataWrapperU8 {
 };
 
 struct SolidDataWrapperU16 {
-  BLPipeline::Signature signature;
+  Pipeline::Signature signature;
   uint32_t dummy1;
   uint64_t dummy2;
   uint64_t prgb64;
@@ -88,16 +89,16 @@ static const constexpr SolidDataWrapperU16 solidOverrideFillU16[] = {
 
 static const uint8_t textByteSizeShiftByEncoding[] = { 0, 1, 2, 0 };
 
-// BLRasterEngine - ContextImpl - Internals - Uncategorized Yet
-// ============================================================
+// bl::RasterEngine - ContextImpl - Internals - Uncategorized Yet
+// ==============================================================
 
-static BL_INLINE BLInternalFormat formatFromRgba32(uint32_t rgba32) noexcept {
-  return rgba32 == 0x00000000u ? BLInternalFormat::kZERO32 :
-         rgba32 >= 0xFF000000u ? BLInternalFormat::kFRGB32 : BLInternalFormat::kPRGB32;
+static BL_INLINE FormatExt formatFromRgba32(uint32_t rgba32) noexcept {
+  return rgba32 == 0x00000000u ? FormatExt::kZERO32 :
+         rgba32 >= 0xFF000000u ? FormatExt::kFRGB32 : FormatExt::kPRGB32;
 }
 
-// BLRasterEngine - ContextImpl - Internals - Dispatch Info / Style
-// ================================================================
+// bl::RasterEngine - ContextImpl - Internals - Dispatch Info / Style
+// ==================================================================
 
 // We want to pass some data from the frontend down during the dispatching. Ideally, we just want to pass this data
 // as value in registers. To minimize the registers required to pass some values as parameters, we can use 64-bit
@@ -109,11 +110,11 @@ union DispatchInfo {
   uint64_t packed;
   struct {
 #if BL_BYTE_ORDER == 1234
-    BLPipeline::Signature signature;
+    Pipeline::Signature signature;
     uint32_t alpha;
 #else
     uint32_t alpha;
-    BLPipeline::Signature signature;
+    Pipeline::Signature signature;
 #endif
   };
 
@@ -122,12 +123,12 @@ union DispatchInfo {
   //! \name Interface
   //! \{
 
-  BL_INLINE_NODEBUG void init(BLPipeline::Signature signatureValue, uint32_t alphaValue) noexcept {
+  BL_INLINE_NODEBUG void init(Pipeline::Signature signatureValue, uint32_t alphaValue) noexcept {
     alpha = alphaValue;
     signature = signatureValue;
   }
 
-  BL_INLINE_NODEBUG void addSignature(BLPipeline::Signature sgn) noexcept {
+  BL_INLINE_NODEBUG void addSignature(Pipeline::Signature sgn) noexcept {
 #if BL_TARGET_ARCH_BITS >= 64
     packed |= sgn.value;
 #else
@@ -135,8 +136,8 @@ union DispatchInfo {
 #endif
   }
 
-  BL_INLINE_NODEBUG void addFillType(BLPipeline::FillType fillType) noexcept {
-    addSignature(BLPipeline::Signature::fromFillType(fillType));
+  BL_INLINE_NODEBUG void addFillType(Pipeline::FillType fillType) noexcept {
+    addSignature(Pipeline::Signature::fromFillType(fillType));
   }
 
   //! \}
@@ -152,8 +153,8 @@ struct DispatchStyle {
   //! \}
 };
 
-// BLRasterEngine - ContextImpl - Internals - DirectStateAccessor
-// ==============================================================
+// bl::RasterEngine - ContextImpl - Internals - DirectStateAccessor
+// ================================================================
 
 class DirectStateAccessor {
 public:
@@ -186,8 +187,8 @@ public:
   }
 };
 
-// BLRasterEngine - ContextImpl - Internals - SyncWorkState
-// ========================================================
+// bl::RasterEngine - ContextImpl - Internals - SyncWorkState
+// ==========================================================
 
 //! State that is used by the synchronous rendering context when using `syncWorkData` to execute the work
 //! in user thread. Some properties of `WorkData` are used as states, and those have to be saved/restored.
@@ -199,8 +200,8 @@ public:
   BL_INLINE_NODEBUG void restore(WorkData& workData) const noexcept { workData.edgeBuilder._clipBoxD = _clipBoxD; }
 };
 
-// BLRasterEngine - ContextImpl - Internals - Core State
-// =====================================================
+// bl::RasterEngine - ContextImpl - Internals - Core State
+// =======================================================
 
 static BL_INLINE void onBeforeConfigChange(BLRasterContextImpl* ctxI) noexcept {
   if (blTestFlag(ctxI->contextFlags, ContextFlags::kWeakStateConfig)) {
@@ -211,7 +212,7 @@ static BL_INLINE void onBeforeConfigChange(BLRasterContextImpl* ctxI) noexcept {
 
 static BL_INLINE void onAfterFlattenToleranceChanged(BLRasterContextImpl* ctxI) noexcept {
   ctxI->internalState.toleranceFixedD = ctxI->approximationOptions().flattenTolerance * ctxI->renderTargetInfo.fpScaleD;
-  ctxI->syncWorkData.edgeBuilder.setFlattenToleranceSq(blSquare(ctxI->internalState.toleranceFixedD));
+  ctxI->syncWorkData.edgeBuilder.setFlattenToleranceSq(Math::square(ctxI->internalState.toleranceFixedD));
 }
 
 static BL_INLINE void onAfterOffsetParameterChanged(BLRasterContextImpl* ctxI) noexcept {
@@ -219,19 +220,19 @@ static BL_INLINE void onAfterOffsetParameterChanged(BLRasterContextImpl* ctxI) n
 }
 
 static BL_INLINE void onAfterCompOpChanged(BLRasterContextImpl* ctxI) noexcept {
-  ctxI->compOpSimplifyInfo = blCompOpSimplifyInfoArrayOf(ctxI->compOp(), ctxI->format());
+  ctxI->compOpSimplifyInfo = compOpSimplifyInfoArrayOf(CompOpExt(ctxI->compOp()), ctxI->format());
 }
 
-// BLRasterEngine - ContextImpl - Internals - Style State
-// ======================================================
+// bl::RasterEngine - ContextImpl - Internals - Style State
+// ========================================================
 
 static BL_INLINE void initStyleToDefault(BLRasterContextImpl* ctxI, BLContextStyleSlot slot) noexcept {
   ctxI->internalState.styleType[slot] = uint8_t(BL_OBJECT_TYPE_RGBA32);
 
   StyleData& style = ctxI->internalState.style[slot];
   style = StyleData{};
-  style.solid.initHeader(0, BLInternalFormat(ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB]));
-  style.solid.pipelineData = ctxI->solidOverrideFillTable[size_t(BLCompOpSolidId::kOpaqueBlack)].pipelineData;
+  style.solid.initHeader(0, FormatExt(ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB]));
+  style.solid.pipelineData = ctxI->solidOverrideFillTable[size_t(CompOpSolidId::kOpaqueBlack)].pipelineData;
   style.solid.original.rgba32.value = 0xFF000000u;
   style.makeFetchDataImplicit();
 }
@@ -257,22 +258,22 @@ static BL_INLINE void onBeforeStyleChange(BLRasterContextImpl* ctxI, BLContextSt
   ctxI->savedState->style[slot].copyFrom(style);
 }
 
-// BLRasterEngine - ContextImpl - Internals - Fetch Data Initialization
-// ====================================================================
+// bl::RasterEngine - ContextImpl - Internals - Fetch Data Initialization
+// ======================================================================
 
 // Recycle means that the FetchData was allocated by the rendering context 'setStyle()' function and it's pooled.
 static void BL_CDECL recycleFetchDataImage(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept {
-  BLImagePrivate::releaseInstance(static_cast<BLImageCore*>(&fetchData->style));
+  ImageInternal::releaseInstance(static_cast<BLImageCore*>(&fetchData->style));
   ctxI->freeFetchData(fetchData);
 }
 
 static void BL_CDECL recycleFetchDataPattern(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept {
-  BLPatternPrivate::releaseInstance(static_cast<BLPatternCore*>(&fetchData->style));
+  PatternInternal::releaseInstance(static_cast<BLPatternCore*>(&fetchData->style));
   ctxI->freeFetchData(fetchData);
 }
 
 static void BL_CDECL recycleFetchDataGradient(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept {
-  BLGradientPrivate::releaseInstance(static_cast<BLGradientCore*>(&fetchData->style));
+  GradientInternal::releaseInstance(static_cast<BLGradientCore*>(&fetchData->style));
   ctxI->freeFetchData(fetchData);
 }
 
@@ -281,12 +282,12 @@ static void BL_CDECL recycleFetchDataGradient(BLRasterContextImpl* ctxI, RenderF
 // one-shot: only one reference to it exists.
 static void BL_CDECL destroyFetchDataImage(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept {
   blUnused(ctxI);
-  BLImagePrivate::releaseInstance(static_cast<BLImageCore*>(&fetchData->style));
+  ImageInternal::releaseInstance(static_cast<BLImageCore*>(&fetchData->style));
 }
 
 static void BL_CDECL destroyFetchDataGradient(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept {
   blUnused(ctxI);
-  BLGradientPrivate::releaseInstance(static_cast<BLGradientCore*>(&fetchData->style));
+  GradientInternal::releaseInstance(static_cast<BLGradientCore*>(&fetchData->style));
 }
 
 // Creating FetchData
@@ -375,12 +376,12 @@ static BL_INLINE bool initNonSolidFetchData(
   BLMatrix2D transformStorage;
 
   applier.initStyleType(ctxI, styleType);
-  BLPipeline::Signature pendingBit{0};
+  Pipeline::Signature pendingBit{0};
 
   switch (styleType) {
     case BL_OBJECT_TYPE_PATTERN: {
       const BLPattern* pattern = static_cast<const BLPattern*>(style);
-      BLPatternImpl* patternI = BLPatternPrivate::getImpl(pattern);
+      BLPatternImpl* patternI = PatternInternal::getImpl(pattern);
 
       if BL_CONSTEXPR (Applier::kIsExplicit) {
         // Reinitialize this style to use the image instead of the pattern if this is an explicit operation.
@@ -405,29 +406,29 @@ static BL_INLINE bool initNonSolidFetchData(
 
       BLTransformType styleTransformType = pattern->transformType();
       if (styleTransformType != BL_TRANSFORM_TYPE_IDENTITY) {
-        BLTransformPrivate::multiply(transformStorage, patternI->transform, *transform);
+        TransformInternal::multiply(transformStorage, patternI->transform, *transform);
         transform = &transformStorage;
         styleTransformType = transformStorage.type();
       }
       applier.initComputedTransform(ctxI, *transform, transformType);
 
       BLPatternQuality quality = BLPatternQuality(ctxI->hints().patternQuality);
-      BLExtendMode extendMode = BLPatternPrivate::getExtendMode(pattern);
+      BLExtendMode extendMode = PatternInternal::getExtendMode(pattern);
 
       BLImageCore* image = &patternI->image;
-      BLImageImpl* imageI = BLImagePrivate::getImpl(image);
+      BLImageImpl* imageI = ImageInternal::getImpl(image);
 
       fetchData->extra.format = uint8_t(imageI->format);
       fetchData->initImageSource(imageI, area);
 
-      fetchData->signature = BLPipeline::FetchUtils::initPatternAffine(
+      fetchData->signature = Pipeline::FetchUtils::initPatternAffine(
         fetchData->pipelineData.pattern, extendMode, quality, uint32_t(imageI->depth) / 8u, *transform);
       break;
     }
 
     case BL_OBJECT_TYPE_GRADIENT: {
       const BLGradient* gradient = static_cast<const BLGradient*>(style);
-      BLGradientPrivateImpl* gradientI = BLGradientPrivate::getImpl(gradient);
+      BLGradientPrivateImpl* gradientI = GradientInternal::getImpl(gradient);
 
       if BL_CONSTEXPR (Applier::kIsExplicit)
         fetchData->initDestroyFunc(destroyFetchDataGradient);
@@ -436,13 +437,13 @@ static BL_INLINE bool initNonSolidFetchData(
 
       BLTransformType styleTransformType = gradient->transformType();
       if (styleTransformType != BL_TRANSFORM_TYPE_IDENTITY) {
-        BLTransformPrivate::multiply(transformStorage, gradientI->transform, *transform);
+        TransformInternal::multiply(transformStorage, gradientI->transform, *transform);
         transform = &transformStorage;
         styleTransformType = transformStorage.type();
       }
       applier.initComputedTransform(ctxI, *transform, transformType);
 
-      BLGradientInfo gradientInfo = BLGradientPrivate::ensureInfo(gradientI);
+      BLGradientInfo gradientInfo = GradientInternal::ensureInfo(gradientI);
       fetchData->extra.format = uint8_t(gradientInfo.format);
 
       if (gradientInfo.empty()) {
@@ -452,13 +453,13 @@ static BL_INLINE bool initNonSolidFetchData(
       }
       else if (gradientInfo.solid) {
         // Using last color according to the SVG specification.
-        uint32_t rgba32 = BLPixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(BLRgbaPrivate::rgba32FromRgba64(gradientI->stops[gradientI->size - 1].rgba.value));
+        uint32_t rgba32 = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(RgbaInternal::rgba32FromRgba64(gradientI->stops[gradientI->size - 1].rgba.value));
         fetchData->pipelineData.solid.prgb32 = rgba32;
       }
       else {
-        BLGradientType type = BLGradientPrivate::getGradientType(gradient);
+        BLGradientType type = GradientInternal::getGradientType(gradient);
         BLGradientQuality quality = BLGradientQuality(ctxI->hints().gradientQuality);
-        BLExtendMode extendMode = BLGradientPrivate::getExtendMode(gradient);
+        BLExtendMode extendMode = GradientInternal::getExtendMode(gradient);
 
         // Do not dither gradients when rendering into A8 targets.
         if (ctxI->syncWorkData.ctxData.dst.format == BL_FORMAT_A8)
@@ -474,9 +475,9 @@ static BL_INLINE bool initNonSolidFetchData(
         // We have to store the quality somewhere as if this FetchData would be lazily materialized we have to
         // cache the desired quality and the size of the LUT calculated (to avoid going over GradientInfo again).
         fetchData->extra.custom[0] = uint8_t(quality);
-        pendingBit = BLPipeline::Signature::fromPendingFlag(!lut);
+        pendingBit = Pipeline::Signature::fromPendingFlag(!lut);
 
-        fetchData->signature = BLPipeline::FetchUtils::initGradient(
+        fetchData->signature = Pipeline::FetchUtils::initGradient(
           fetchData->pipelineData.gradient, type, extendMode, quality, gradientI->values, lutData, lutSize, *transform);
       }
       break;
@@ -497,8 +498,8 @@ static BL_INLINE bool initNonSolidFetchData(
   return applier.finalize(ctxI);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Fill & Stroke Style
-// =============================================================
+// bl::RasterEngine - ContextImpl - Frontend - Fill & Stroke Style
+// ===============================================================
 
 static BL_INLINE_NODEBUG uint32_t restrictedIndexFromSlot(BLContextStyleSlot slot) noexcept {
   return blMin<uint32_t>(slot, uint32_t(BL_CONTEXT_STYLE_SLOT_MAX_VALUE) + 1);
@@ -576,8 +577,8 @@ static BLResult BL_CDECL setStyleRgba32Impl(BLContextImpl* baseImpl, BLContextSt
   StyleData& style = ctxI->internalState.style[slot];
   style.solid.original.rgba32.value = rgba32;
 
-  uint32_t premultiplied = BLPixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32);
-  BLInternalFormat format = formatFromRgba32(rgba32);
+  uint32_t premultiplied = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32);
+  FormatExt format = formatFromRgba32(rgba32);
 
   ctxI->contextFlags = contextFlags & ~(styleFlags | (ContextFlags::kNoBaseStyle << slot));
   ctxI->internalState.styleType[slot] = uint8_t(BL_OBJECT_TYPE_RGBA32);
@@ -603,9 +604,9 @@ static BLResult BL_CDECL setStyleRgba64Impl(BLContextImpl* baseImpl, BLContextSt
   StyleData& style = ctxI->internalState.style[slot];
   style.solid.original.rgba64.value = rgba64;
 
-  uint32_t rgba32 = BLRgbaPrivate::rgba32FromRgba64(rgba64);
-  uint32_t premultiplied = BLPixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32);
-  BLInternalFormat format = formatFromRgba32(rgba32);
+  uint32_t rgba32 = RgbaInternal::rgba32FromRgba64(rgba64);
+  uint32_t premultiplied = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32);
+  FormatExt format = formatFromRgba32(rgba32);
 
   ctxI->contextFlags = contextFlags & ~(styleFlags | (ContextFlags::kNoBaseStyle << slot));
   ctxI->internalState.styleType[slot] = uint8_t(BL_OBJECT_TYPE_RGBA64);
@@ -623,7 +624,7 @@ static BLResult BL_CDECL setStyleRgbaImpl(BLContextImpl* baseImpl, BLContextStyl
   ContextFlags styleFlags = (ContextFlags::kWeakStateBaseStyle | ContextFlags::kFetchDataBase) << restrictedIndexFromSlot(slot);
 
   BLRgba norm = blClamp(*rgba, BLRgba(0.0f, 0.0f, 0.0f, 0.0f), BLRgba(1.0f, 1.0f, 1.0f, 1.0f));
-  if (!BLRgbaPrivate::isValid(*rgba))
+  if (!RgbaInternal::isValid(*rgba))
     return disableStyleImpl(baseImpl, slot);
 
   if (blTestFlag(contextFlags, styleFlags)) {
@@ -637,12 +638,12 @@ static BLResult BL_CDECL setStyleRgbaImpl(BLContextImpl* baseImpl, BLContextStyl
 
   // Premultiply and convert to RGBA32.
   float aScale = norm.a * 255.0f;
-  uint32_t r = uint32_t(blRoundToInt(norm.r * aScale));
-  uint32_t g = uint32_t(blRoundToInt(norm.g * aScale));
-  uint32_t b = uint32_t(blRoundToInt(norm.b * aScale));
-  uint32_t a = uint32_t(blRoundToInt(aScale));
+  uint32_t r = uint32_t(Math::roundToInt(norm.r * aScale));
+  uint32_t g = uint32_t(Math::roundToInt(norm.g * aScale));
+  uint32_t b = uint32_t(Math::roundToInt(norm.b * aScale));
+  uint32_t a = uint32_t(Math::roundToInt(aScale));
   uint32_t premultiplied = BLRgba32(r, g, b, a).value;
-  BLInternalFormat format = formatFromRgba32(premultiplied);
+  FormatExt format = formatFromRgba32(premultiplied);
 
   ctxI->contextFlags = contextFlags & ~(styleFlags | (ContextFlags::kNoBaseStyle << slot));
   ctxI->internalState.styleType[slot] = uint8_t(BL_OBJECT_TYPE_RGBA);
@@ -687,7 +688,7 @@ static BLResult BL_CDECL setStyleImpl(BLContextImpl* baseImpl, BLContextStyleSlo
 
   fetchData->initHeader(1);
   fetchData->initStyleObject(style);
-  BLObjectPrivate::retainInstance(style);
+  ObjectInternal::retainInstance(style);
 
   styleState.fetchData = fetchData;
   contextFlags &= ~(styleFlags | (ContextFlags::kNoBaseStyle << slot));
@@ -698,14 +699,14 @@ static BLResult BL_CDECL setStyleImpl(BLContextImpl* baseImpl, BLContextStyleSlo
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Internals - Stroke State
-// =======================================================
+// bl::RasterEngine - ContextImpl - Internals - Stroke State
+// =========================================================
 
 static BL_INLINE void onBeforeStrokeChange(BLRasterContextImpl* ctxI) noexcept {
   if (blTestFlag(ctxI->contextFlags, ContextFlags::kWeakStateStrokeOptions)) {
     SavedState* state = ctxI->savedState;
     state->strokeOptions._copyFrom(ctxI->strokeOptions());
-    BLArrayPrivate::retainInstance(&state->strokeOptions.dashArray);
+    ArrayInternal::retainInstance(&state->strokeOptions.dashArray);
   }
 }
 
@@ -715,12 +716,12 @@ static BL_INLINE void onBeforeStrokeChangeAndDestroyDashArray(BLRasterContextImp
     state->strokeOptions._copyFrom(ctxI->strokeOptions());
   }
   else {
-    BLArrayPrivate::releaseInstance(&ctxI->internalState.strokeOptions.dashArray);
+    ArrayInternal::releaseInstance(&ctxI->internalState.strokeOptions.dashArray);
   }
 }
 
-// BLRasterEngine - ContextImpl - Internals - Transform State
-// ==========================================================
+// bl::RasterEngine - ContextImpl - Internals - Transform State
+// ============================================================
 
 // Called before `userTransform` is changed.
 //
@@ -744,7 +745,7 @@ static BL_INLINE void onBeforeUserTransformChange(BLRasterContextImpl* ctxI, Mat
 }
 
 static BL_INLINE void updateFinalTransform(BLRasterContextImpl* ctxI) noexcept {
-  BLTransformPrivate::multiply(ctxI->internalState.finalTransform, ctxI->userTransform(), ctxI->metaTransform());
+  TransformInternal::multiply(ctxI->internalState.finalTransform, ctxI->userTransform(), ctxI->metaTransform());
 }
 
 static BL_INLINE void updateMetaTransformFixed(BLRasterContextImpl* ctxI) noexcept {
@@ -783,8 +784,8 @@ static BL_INLINE void onAfterUserTransformChanged(BLRasterContextImpl* ctxI, con
         ft.m21 >= ctxI->fpMinSafeCoordD && ft.m21 <= ctxI->fpMaxSafeCoordD) {
       // We need 64-bit ints here as we are already scaled. We also need a `floor` function as we have to handle
       // negative translations which cannot be truncated (the default conversion).
-      int64_t tx64 = blFloorToInt64(ft.m20);
-      int64_t ty64 = blFloorToInt64(ft.m21);
+      int64_t tx64 = Math::floorToInt64(ft.m20);
+      int64_t ty64 = Math::floorToInt64(ft.m21);
 
       // Pixel to pixel translation is only possible when both fixed points `tx64` and `ty64` have all zeros in
       // their fraction parts.
@@ -815,8 +816,8 @@ static BL_INLINE void onAfterUserTransformChanged(BLRasterContextImpl* ctxI, con
   ctxI->contextFlags = contextFlags;
 }
 
-// BLRasterEngine - ContextImpl - Internals - Clip State
-// =====================================================
+// bl::RasterEngine - ContextImpl - Internals - Clip State
+// =======================================================
 
 static BL_INLINE void onBeforeClipBoxChange(BLRasterContextImpl* ctxI) noexcept {
   if (blTestFlag(ctxI->contextFlags, ContextFlags::kWeakStateClip)) {
@@ -836,10 +837,10 @@ static BL_INLINE void restoreClippingFromState(BLRasterContextImpl* ctxI, SavedS
   // TODO: [Rendering Context] Path-based clipping.
   ctxI->internalState.finalClipBoxD = savedState->finalClipBoxD;
   ctxI->internalState.finalClipBoxI.reset(
-    blTruncToInt(ctxI->finalClipBoxD().x0),
-    blTruncToInt(ctxI->finalClipBoxD().y0),
-    blCeilToInt(ctxI->finalClipBoxD().x1),
-    blCeilToInt(ctxI->finalClipBoxD().y1));
+    Math::truncToInt(ctxI->finalClipBoxD().x0),
+    Math::truncToInt(ctxI->finalClipBoxD().y0),
+    Math::ceilToInt(ctxI->finalClipBoxD().x1),
+    Math::ceilToInt(ctxI->finalClipBoxD().y1));
 
   double fpScale = ctxI->renderTargetInfo.fpScaleD;
   ctxI->setFinalClipBoxFixedD(BLBox(
@@ -849,8 +850,8 @@ static BL_INLINE void restoreClippingFromState(BLRasterContextImpl* ctxI, SavedS
     ctxI->finalClipBoxD().y1 * fpScale));
 }
 
-// BLRasterEngine - ContextImpl - Internals - Clip Utilities
-// =========================================================
+// bl::RasterEngine - ContextImpl - Internals - Clip Utilities
+// ===========================================================
 
 #if 0
 // TODO: Experiment, not ready yet.
@@ -879,12 +880,12 @@ static BL_INLINE bool translateAndClipRectToFillI(const BLRasterContextImpl* ctx
   int rh = srcRect->h;
 
   if (BL_TARGET_ARCH_BITS < 64) {
-    BLOverflowFlag of = 0;
+    OverflowFlag of{};
 
-    int x0 = BLIntOps::addOverflow(rx, ctxI->translationI().x, &of);
-    int y0 = BLIntOps::addOverflow(ry, ctxI->translationI().y, &of);
-    int x1 = BLIntOps::addOverflow(rw, x0, &of);
-    int y1 = BLIntOps::addOverflow(rh, y0, &of);
+    int x0 = IntOps::addOverflow(rx, ctxI->translationI().x, &of);
+    int y0 = IntOps::addOverflow(ry, ctxI->translationI().y, &of);
+    int x1 = IntOps::addOverflow(rw, x0, &of);
+    int y1 = IntOps::addOverflow(rh, y0, &of);
 
     if (BL_UNLIKELY(of))
       goto Use64Bit;
@@ -943,15 +944,15 @@ static BL_INLINE bool translateAndClipRectToBlitI(const BLRasterContextImpl* ctx
 
   *resultOut = BL_SUCCESS;
   if (BL_TARGET_ARCH_BITS < 64) {
-    BLOverflowFlag of = 0;
+    OverflowFlag of{};
 
-    int dx = BLIntOps::addOverflow(origin->x, ctxI->translationI().x, &of);
-    int dy = BLIntOps::addOverflow(origin->y, ctxI->translationI().y, &of);
+    int dx = IntOps::addOverflow(origin->x, ctxI->translationI().x, &of);
+    int dy = IntOps::addOverflow(origin->y, ctxI->translationI().y, &of);
 
     int x0 = dx;
     int y0 = dy;
-    int x1 = BLIntOps::addOverflow(x0, size.w, &of);
-    int y1 = BLIntOps::addOverflow(y0, size.h, &of);
+    int x1 = IntOps::addOverflow(x0, size.w, &of);
+    int y1 = IntOps::addOverflow(y0, size.h, &of);
 
     if (BL_UNLIKELY(of))
       goto Use64Bit;
@@ -996,15 +997,15 @@ Use64Bit:
   }
 }
 
-// BLRasterEngine - ContextImpl - Internals - Async - Render Batch
-// ===============================================================
+// bl::RasterEngine - ContextImpl - Internals - Async - Render Batch
+// =================================================================
 
 static BL_INLINE void releaseBatchFetchData(BLRasterContextImpl* ctxI, RenderCommandQueue* queue) noexcept {
   while (queue) {
     RenderCommand* commandData = queue->_data;
     for (size_t i = 0; i < queue->_fetchDataMarks.sizeInWords(); i++) {
       BLBitWord bits = queue->_fetchDataMarks.data[i];
-      BLParametrizedBitOps<BLBitOrder::kLSB, BLBitWord>::BitIterator it(bits);
+      ParametrizedBitOps<BitOrder::kLSB, BLBitWord>::BitIterator it(bits);
 
       while (it.hasNext()) {
         size_t bitIndex = it.next();
@@ -1014,9 +1015,9 @@ static BL_INLINE void releaseBatchFetchData(BLRasterContextImpl* ctxI, RenderCom
           command._source.fetchData->release(ctxI);
 
         if (command.retainsMaskImageData())
-          BLImagePrivate::releaseImpl<BLObjectPrivate::RCMode::kMaybe>(command._payload.boxMaskA.maskImageI.ptr);
+          ImageInternal::releaseImpl<RCMode::kMaybe>(command._payload.boxMaskA.maskImageI.ptr);
       }
-      commandData += BLIntOps::bitSizeOf<BLBitWord>();
+      commandData += IntOps::bitSizeOf<BLBitWord>();
     }
     queue = queue->next();
   }
@@ -1077,11 +1078,11 @@ static BL_NOINLINE BLResult flushRenderBatch(BLRasterContextImpl* ctxI) noexcept
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Internals - Render Call - Data Allocation
-// ========================================================================
+// bl::RasterEngine - ContextImpl - Internals - Render Call - Data Allocation
+// ==========================================================================
 
 static BL_INLINE void markQueueFullOrExhausted(BLRasterContextImpl* ctxI, bool flag) noexcept {
-  constexpr uint32_t kMTFullOrExhaustedShift = BLIntOps::bitShiftOf(ContextFlags::kMTFullOrExhausted);
+  constexpr uint32_t kMTFullOrExhaustedShift = IntOps::bitShiftOf(ContextFlags::kMTFullOrExhausted);
   ctxI->contextFlags |= ContextFlags(uint32_t(flag) << kMTFullOrExhaustedShift);
 }
 
@@ -1124,20 +1125,20 @@ static BL_INLINE void advanceFetchPtr(BLRasterContextImpl* ctxI) noexcept {
   markQueueFullOrExhausted(ctxI, ctxI->workerMgr()._fetchDataPool.exhausted());
 }
 
-// BLRasterEngine - ContextImpl - Internals - Render Call - Fetch And Dispatch Data
-// ================================================================================
+// bl::RasterEngine - ContextImpl - Internals - Render Call - Fetch And Dispatch Data
+// ==================================================================================
 
 // Slow path - if the pipeline is not in cache there is also a chance that FetchData has not been setup yet.
 // In that case it would have PendingFlag set to 1, which would indicate the pending setup.
 static BL_NOINLINE BLResult ensureFetchAndDispatchDataSlow(
     BLRasterContextImpl* ctxI,
-    BLPipeline::Signature signature, RenderFetchDataHeader* fetchData, BLPipeline::DispatchData* out) noexcept {
+    Pipeline::Signature signature, RenderFetchDataHeader* fetchData, Pipeline::DispatchData* out) noexcept {
 
   if (signature.hasPendingFlag()) {
     BL_PROPAGATE(computePendingFetchData(static_cast<RenderFetchData*>(fetchData)));
 
     signature.clearPendingBit();
-    auto m = BLPipeline::cacheLookup(ctxI->pipeLookupCache, signature.value);
+    auto m = Pipeline::cacheLookup(ctxI->pipeLookupCache, signature.value);
 
     if (m.matched()) {
       *out = ctxI->pipeLookupCache.dispatchData(m.index());
@@ -1153,10 +1154,10 @@ static BL_NOINLINE BLResult ensureFetchAndDispatchDataSlow(
 // multiple times or this render call is a blit).
 static BL_INLINE BLResult ensureFetchAndDispatchData(
     BLRasterContextImpl* ctxI,
-    BLPipeline::Signature signature, RenderFetchDataHeader* fetchData, BLPipeline::DispatchData* out) noexcept {
+    Pipeline::Signature signature, RenderFetchDataHeader* fetchData, Pipeline::DispatchData* out) noexcept {
 
   // Must be inlined for greater performance.
-  auto m = BLPipeline::cacheLookup(ctxI->pipeLookupCache, signature.value);
+  auto m = Pipeline::cacheLookup(ctxI->pipeLookupCache, signature.value);
 
   // Likely if there is not a lot of diverse render commands.
   if (BL_LIKELY(m.matched())) {
@@ -1167,8 +1168,8 @@ static BL_INLINE BLResult ensureFetchAndDispatchData(
   return ensureFetchAndDispatchDataSlow(ctxI, signature, fetchData, out);
 }
 
-// BLRasterEngine - ContextImpl - Internals - Render Call - Queues and Pools
-// =========================================================================
+// bl::RasterEngine - ContextImpl - Internals - Render Call - Queues and Pools
+// ===========================================================================
 
 // This function is called when a command/job queue is full or when pool(s) get exhausted.
 //
@@ -1208,8 +1209,8 @@ static BL_NOINLINE BLResult handleQueuesFullOrPoolsExhausted(BLRasterContextImpl
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Internals - Render Call - Resolve
-// ================================================================
+// bl::RasterEngine - ContextImpl - Internals - Render Call - Resolve
+// ==================================================================
 
 // These functions are intended to be used by the entry function (frontend). The purpose is to calculate the optimal
 // pipeline signature and to perform the necessary initialization of the render command. Sync mode is pretty trivial
@@ -1220,7 +1221,7 @@ struct RenderCallResolvedOp {
   //! \name Members
   //! \{
 
-  BLPipeline::Signature signature;
+  Pipeline::Signature signature;
   ContextFlags flags;
 
   //! \}
@@ -1238,8 +1239,8 @@ template<RenderingMode kRM>
 static BL_INLINE RenderCallResolvedOp resolveClearOp(BLRasterContextImpl* ctxI, ContextFlags nopFlags) noexcept {
   constexpr ContextFlags kNopExtra = kRM == kSync ? ContextFlags::kNoFlagsSet : ContextFlags::kMTFullOrExhausted;
 
-  BLCompOpSimplifyInfo simplifyInfo = blCompOpSimplifyInfo(BL_COMP_OP_SRC_COPY, ctxI->format(), BLInternalFormat::kPRGB32);
-  BLCompOpSolidId solidId = simplifyInfo.solidId();
+  CompOpSimplifyInfo simplifyInfo = compOpSimplifyInfo(CompOpExt::kSrcCopy, ctxI->format(), FormatExt::kPRGB32);
+  CompOpSolidId solidId = simplifyInfo.solidId();
 
   ContextFlags combinedFlags = ctxI->contextFlags | ContextFlags(solidId);
   ContextFlags resolvedFlags = combinedFlags & (nopFlags | kNopExtra);
@@ -1252,10 +1253,10 @@ template<RenderingMode kRM>
 static BL_INLINE RenderCallResolvedOp resolveImplicitStyleOp(BLRasterContextImpl* ctxI, ContextFlags nopFlags, const RenderFetchDataHeader* fetchData, bool bail) noexcept {
   constexpr ContextFlags kNopExtra = kRM == kSync ? ContextFlags::kNoFlagsSet : ContextFlags::kMTFullOrExhausted;
 
-  BLCompOpSimplifyInfo simplifyInfo = ctxI->compOpSimplifyInfo[fetchData->extra.format];
-  BLCompOpSolidId solidId = simplifyInfo.solidId();
+  CompOpSimplifyInfo simplifyInfo = ctxI->compOpSimplifyInfo[fetchData->extra.format];
+  CompOpSolidId solidId = simplifyInfo.solidId();
 
-  ContextFlags bailFlag = ContextFlags(uint32_t(bail) << BLIntOps::bitShiftOf(uint32_t(ContextFlags::kNoOperation)));
+  ContextFlags bailFlag = ContextFlags(uint32_t(bail) << IntOps::bitShiftOf(uint32_t(ContextFlags::kNoOperation)));
   ContextFlags resolvedFlags = (ctxI->contextFlags | ContextFlags(solidId) | bailFlag) & (nopFlags | kNopExtra);
 
   return RenderCallResolvedOp{simplifyInfo.signature(), resolvedFlags};
@@ -1266,15 +1267,15 @@ template<RenderingMode kRM>
 static BL_INLINE RenderCallResolvedOp resolveExplicitSolidOp(BLRasterContextImpl* ctxI, ContextFlags nopFlags, uint32_t rgba32, RenderFetchDataSolid& solid, bool bail) noexcept {
   constexpr ContextFlags kNopExtra = kRM == kSync ? ContextFlags::kNoFlagsSet : ContextFlags::kMTFullOrExhausted;
 
-  BLInternalFormat fmt = formatFromRgba32(rgba32);
-  BLCompOpSimplifyInfo simplifyInfo = ctxI->compOpSimplifyInfo[size_t(fmt)];
-  BLCompOpSolidId solidId = simplifyInfo.solidId();
+  FormatExt fmt = formatFromRgba32(rgba32);
+  CompOpSimplifyInfo simplifyInfo = ctxI->compOpSimplifyInfo[size_t(fmt)];
+  CompOpSolidId solidId = simplifyInfo.solidId();
 
-  ContextFlags bailFlag = ContextFlags(uint32_t(bail) << BLIntOps::bitShiftOf(uint32_t(ContextFlags::kNoOperation)));
+  ContextFlags bailFlag = ContextFlags(uint32_t(bail) << IntOps::bitShiftOf(uint32_t(ContextFlags::kNoOperation)));
   ContextFlags resolvedFlags = (ctxI->contextFlags | ContextFlags(solidId) | bailFlag) & (nopFlags | kNopExtra);
 
   solid.signature.reset();
-  solid.pipelineData.prgb32 = BLPixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32);
+  solid.pipelineData.prgb32 = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32);
   solid.pipelineData.reserved32 = 0;
 
   return RenderCallResolvedOp{simplifyInfo.signature(), resolvedFlags};
@@ -1296,7 +1297,7 @@ static BL_NOINLINE BLResultT<RenderCallResolvedOp> resolveExplicitStyleOp(BLRast
   fetchDataStorage.init(ctxI);
   RenderFetchData* fetchData = fetchDataStorage.ptr();
 
-  BLInternalFormat format = BLInternalFormat::kNone;
+  FormatExt format = FormatExt::kNone;
   BLObjectType styleType = style->_d.getType();
   fetchData->initHeader(0);
 
@@ -1313,7 +1314,7 @@ static BL_NOINLINE BLResultT<RenderCallResolvedOp> resolveExplicitStyleOp(BLRast
       return BLResultT<RenderCallResolvedOp>{BL_SUCCESS, kNop};
 
     format = formatFromRgba32(rgba32.value);
-    fetchData->pipelineData.solid.prgb32 = BLPixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32.value);
+    fetchData->pipelineData.solid.prgb32 = PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32.value);
   }
   else {
     if (BL_UNLIKELY(styleType > BL_OBJECT_TYPE_MAX_STYLE))
@@ -1324,12 +1325,12 @@ static BL_NOINLINE BLResultT<RenderCallResolvedOp> resolveExplicitStyleOp(BLRast
       return BLResultT<RenderCallResolvedOp>{BL_SUCCESS, kNop};
 
     fetchData->initStyleObject(style);
-    format = BLInternalFormat(fetchData->extra.format);
+    format = FormatExt(fetchData->extra.format);
   }
 
-  BLCompOpSimplifyInfo simplifyInfo = ctxI->compOpSimplifyInfo[size_t(format)];
-  BLCompOpSolidId solidId = simplifyInfo.solidId();
-  ContextFlags bailFlag = ContextFlags(uint32_t(bail) << BLIntOps::bitShiftOf(uint32_t(ContextFlags::kNoOperation)));
+  CompOpSimplifyInfo simplifyInfo = ctxI->compOpSimplifyInfo[size_t(format)];
+  CompOpSolidId solidId = simplifyInfo.solidId();
+  ContextFlags bailFlag = ContextFlags(uint32_t(bail) << IntOps::bitShiftOf(uint32_t(ContextFlags::kNoOperation)));
 
   ContextFlags resolvedFlags = (ctxI->contextFlags | ContextFlags(solidId) | bailFlag) & nopFlags;
   return BLResultT<RenderCallResolvedOp>{BL_SUCCESS, {simplifyInfo.signature(), resolvedFlags}};
@@ -1340,10 +1341,10 @@ template<RenderingMode kRM>
 static BL_INLINE RenderCallResolvedOp resolveBlitOp(BLRasterContextImpl* ctxI, ContextFlags nopFlags, uint32_t format, bool bail) noexcept {
   constexpr ContextFlags kNopExtra = kRM == kSync ? ContextFlags::kNoFlagsSet : ContextFlags::kMTFullOrExhausted;
 
-  BLCompOpSimplifyInfo simplifyInfo = ctxI->compOpSimplifyInfo[format];
-  BLCompOpSolidId solidId = simplifyInfo.solidId();
+  CompOpSimplifyInfo simplifyInfo = ctxI->compOpSimplifyInfo[format];
+  CompOpSolidId solidId = simplifyInfo.solidId();
 
-  ContextFlags bailFlag = ContextFlags(uint32_t(bail) << BLIntOps::bitShiftOf(uint32_t(ContextFlags::kNoOperation)));
+  ContextFlags bailFlag = ContextFlags(uint32_t(bail) << IntOps::bitShiftOf(uint32_t(ContextFlags::kNoOperation)));
   ContextFlags resolvedFlags = (ctxI->contextFlags | ContextFlags(solidId) | bailFlag) & (nopFlags | kNopExtra);
 
   return RenderCallResolvedOp{simplifyInfo.signature(), resolvedFlags};
@@ -1352,7 +1353,7 @@ static BL_INLINE RenderCallResolvedOp resolveBlitOp(BLRasterContextImpl* ctxI, C
 // Prepare means to prepare an already resolved and initialized render call. We don't have to worry about memory
 // allocations here, just to setup the render call object in the way it can be consumed by all the layers below.
 
-static BL_INLINE void prepareOverriddenFetch(BLRasterContextImpl* ctxI, DispatchInfo& di, DispatchStyle& ds, BLCompOpSolidId solidId) noexcept {
+static BL_INLINE void prepareOverriddenFetch(BLRasterContextImpl* ctxI, DispatchInfo& di, DispatchStyle& ds, CompOpSolidId solidId) noexcept {
   blUnused(di);
   ds.fetchData = ctxI->solidFetchDataOverrideTable[size_t(solidId)];
 }
@@ -1460,8 +1461,8 @@ static BL_INLINE void prepareNonSolidFetch(BLRasterContextImpl* ctxI, DispatchIn
   DispatchStyle ds;                                                              \
   di.init(resolved.signature, ctxI->globalAlphaI())
 
-// BLRasterEngine - ContextImpl - Internals - Render Call - Finalize
-// =================================================================
+// bl::RasterEngine - ContextImpl - Internals - Render Call - Finalize
+// ===================================================================
 
 template<RenderingMode kRM>
 BL_INLINE_NODEBUG BLResult finalizeExplicitOp(BLRasterContextImpl* ctxI, RenderFetchData* fetchData, BLResult result) noexcept;
@@ -1476,14 +1477,14 @@ template<>
 BL_INLINE_NODEBUG BLResult finalizeExplicitOp<kAsync>(BLRasterContextImpl* ctxI, RenderFetchData* fetchData, BLResult result) noexcept {
   // The reference count of FetchData is always incremented when a command using it is enqueued. Initially it's zero, so check for one.
   if (fetchData->refCount == 1u) {
-    BLImagePrivate::retainInstance(static_cast<BLImageCore*>(&fetchData->style));
+    ImageInternal::retainInstance(static_cast<BLImageCore*>(&fetchData->style));
     advanceFetchPtr(ctxI);
   }
   return result;
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Flush
-// ===============================================
+// bl::RasterEngine - ContextImpl - Frontend - Flush
+// =================================================
 
 static BLResult BL_CDECL flushImpl(BLContextImpl* baseImpl, BLContextFlushFlags flags) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
@@ -1499,8 +1500,8 @@ static BLResult BL_CDECL flushImpl(BLContextImpl* baseImpl, BLContextFlushFlags 
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Properties
-// ====================================================
+// bl::RasterEngine - ContextImpl - Frontend - Properties
+// ======================================================
 
 static BLResult BL_CDECL getPropertyImpl(const BLObjectImpl* impl, const char* name, size_t nameSize, BLVarCore* valueOut) noexcept {
   const BLRasterContextImpl* ctxI = static_cast<const BLRasterContextImpl*>(impl);
@@ -1523,8 +1524,8 @@ static BLResult BL_CDECL setPropertyImpl(BLObjectImpl* impl, const char* name, s
   return blObjectImplSetProperty(ctxI, name, nameSize, value);
 }
 
-// BLRasterEngine - ContextImpl - Save & Restore
-// =============================================
+// bl::RasterEngine - ContextImpl - Save & Restore
+// ===============================================
 
 // Returns how many states have to be restored to match the `stateId`. It would return zero if there is no state
 // that matches `stateId`.
@@ -1639,7 +1640,7 @@ static BLResult BL_CDECL saveImpl(BLContextImpl* baseImpl, BLContextCookie* cook
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
   newState->prevState = ctxI->savedState;
-  newState->stateId = BLTraits::maxValue<uint64_t>();
+  newState->stateId = Traits::maxValue<uint64_t>();
 
   ctxI->savedState = newState;
   ctxI->internalState.savedStateCount++;
@@ -1680,7 +1681,7 @@ static BLResult BL_CDECL restoreImpl(BLContextImpl* baseImpl, const BLContextCoo
   }
   else {
     // A state that has a `stateId` assigned cannot be restored without a matching cookie.
-    if (savedState->stateId != BLTraits::maxValue<uint64_t>())
+    if (savedState->stateId != Traits::maxValue<uint64_t>())
       return blTraceError(BL_ERROR_NO_MATCHING_COOKIE);
   }
 
@@ -1728,7 +1729,7 @@ static BLResult BL_CDECL restoreImpl(BLContextImpl* baseImpl, const BLContextCoo
     if (!blTestFlag(currentFlags, ContextFlags::kWeakStateStrokeOptions)) {
       // NOTE: This code is unsafe, but since we know that `BLStrokeOptions` is movable it's just fine. We
       // destroy `BLStrokeOptions` first and then move it into that destroyed instance from the saved state.
-      BLArrayPrivate::releaseInstance(&ctxI->internalState.strokeOptions.dashArray);
+      ArrayInternal::releaseInstance(&ctxI->internalState.strokeOptions.dashArray);
       ctxI->internalState.strokeOptions._copyFrom(savedState->strokeOptions);
       contextFlagsToKeep &= ~(ContextFlags::kSharedStateStrokeBase | ContextFlags::kSharedStateStrokeExt);
     }
@@ -1765,8 +1766,8 @@ static BLResult BL_CDECL restoreImpl(BLContextImpl* baseImpl, const BLContextCoo
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Transformations
-// =========================================================
+// bl::RasterEngine - ContextImpl - Frontend - Transformations
+// ===========================================================
 
 static BLResult BL_CDECL applyTransformOpImpl(BLContextImpl* baseImpl, BLTransformOp opType, const void* opData) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
@@ -1807,8 +1808,8 @@ static BLResult BL_CDECL userToMetaImpl(BLContextImpl* baseImpl) noexcept {
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Rendering Hints
-// =========================================================
+// bl::RasterEngine - ContextImpl - Frontend - Rendering Hints
+// ===========================================================
 
 static BLResult BL_CDECL setHintImpl(BLContextImpl* baseImpl, BLContextHint hintType, uint32_t value) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
@@ -1858,8 +1859,8 @@ static BLResult BL_CDECL setHintsImpl(BLContextImpl* baseImpl, const BLContextHi
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Approximation Options
-// ===============================================================
+// bl::RasterEngine - ContextImpl - Frontend - Approximation Options
+// =================================================================
 
 static BLResult BL_CDECL setFlattenModeImpl(BLContextImpl* baseImpl, BLFlattenMode mode) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
@@ -1877,14 +1878,14 @@ static BLResult BL_CDECL setFlattenModeImpl(BLContextImpl* baseImpl, BLFlattenMo
 static BLResult BL_CDECL setFlattenToleranceImpl(BLContextImpl* baseImpl, double tolerance) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
 
-  if (BL_UNLIKELY(blIsNaN(tolerance)))
+  if (BL_UNLIKELY(Math::isNaN(tolerance)))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   onBeforeConfigChange(ctxI);
   ctxI->contextFlags &= ~(ContextFlags::kWeakStateConfig | ContextFlags::kSharedStateFill);
 
-  tolerance = blClamp(tolerance, BLContextPrivate::kMinimumTolerance, BLContextPrivate::kMaximumTolerance);
-  BL_ASSERT(blIsFinite(tolerance));
+  tolerance = blClamp(tolerance, ContextInternal::kMinimumTolerance, ContextInternal::kMaximumTolerance);
+  BL_ASSERT(Math::isFinite(tolerance));
 
   ctxI->internalState.approximationOptions.flattenTolerance = tolerance;
   onAfterFlattenToleranceChanged(ctxI);
@@ -1903,8 +1904,8 @@ static BLResult BL_CDECL setApproximationOptionsImpl(BLContextImpl* baseImpl, co
 
   if (BL_UNLIKELY(flattenMode > BL_FLATTEN_MODE_MAX_VALUE ||
                   offsetMode > BL_OFFSET_MODE_MAX_VALUE ||
-                  blIsNaN(flattenTolerance) ||
-                  blIsNaN(offsetParameter)))
+                  Math::isNaN(flattenTolerance) ||
+                  Math::isNaN(offsetParameter)))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   onBeforeConfigChange(ctxI);
@@ -1913,7 +1914,7 @@ static BLResult BL_CDECL setApproximationOptionsImpl(BLContextImpl* baseImpl, co
   BLApproximationOptions& dst = ctxI->internalState.approximationOptions;
   dst.flattenMode = uint8_t(flattenMode);
   dst.offsetMode = uint8_t(offsetMode);
-  dst.flattenTolerance = blClamp(flattenTolerance, BLContextPrivate::kMinimumTolerance, BLContextPrivate::kMaximumTolerance);
+  dst.flattenTolerance = blClamp(flattenTolerance, ContextInternal::kMinimumTolerance, ContextInternal::kMaximumTolerance);
   dst.offsetParameter = offsetParameter;
 
   onAfterFlattenToleranceChanged(ctxI);
@@ -1922,20 +1923,20 @@ static BLResult BL_CDECL setApproximationOptionsImpl(BLContextImpl* baseImpl, co
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Style Alpha
-// =====================================================
+// bl::RasterEngine - ContextImpl - Frontend - Style Alpha
+// =======================================================
 
 static BLResult BL_CDECL setStyleAlphaImpl(BLContextImpl* baseImpl, BLContextStyleSlot slot, double alpha) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
 
-  if (BL_UNLIKELY(slot > BL_CONTEXT_STYLE_SLOT_MAX_VALUE || blIsNaN(alpha)))
+  if (BL_UNLIKELY(slot > BL_CONTEXT_STYLE_SLOT_MAX_VALUE || Math::isNaN(alpha)))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   ContextFlags noAlpha = ContextFlags::kNoBaseAlpha << slot;
   ContextFlags contextFlags = ctxI->contextFlags & ~noAlpha;
 
   alpha = blClamp(alpha, 0.0, 1.0);
-  uint32_t alphaI = uint32_t(blRoundToInt(ctxI->globalAlphaD() * ctxI->fullAlphaD() * alpha));
+  uint32_t alphaI = uint32_t(Math::roundToInt(ctxI->globalAlphaD() * ctxI->fullAlphaD() * alpha));
 
   if (alphaI)
     noAlpha = ContextFlags::kNoFlagsSet;
@@ -1946,8 +1947,8 @@ static BLResult BL_CDECL setStyleAlphaImpl(BLContextImpl* baseImpl, BLContextSty
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Swap Styles
-// =====================================================
+// bl::RasterEngine - ContextImpl - Frontend - Swap Styles
+// =======================================================
 
 static BLResult BL_CDECL swapStylesImpl(BLContextImpl* baseImpl, BLContextStyleSwapMode mode) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
@@ -2002,13 +2003,13 @@ static BLResult BL_CDECL swapStylesImpl(BLContextImpl* baseImpl, BLContextStyleS
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Composition Options
-// =============================================================
+// bl::RasterEngine - ContextImpl - Frontend - Composition Options
+// ===============================================================
 
 static BLResult BL_CDECL setGlobalAlphaImpl(BLContextImpl* baseImpl, double alpha) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
 
-  if (BL_UNLIKELY(blIsNaN(alpha)))
+  if (BL_UNLIKELY(Math::isNaN(alpha)))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   alpha = blClamp(alpha, 0.0, 1.0);
@@ -2017,8 +2018,8 @@ static BLResult BL_CDECL setGlobalAlphaImpl(BLContextImpl* baseImpl, double alph
   double fillAlphaD = intAlphaD * ctxI->internalState.styleAlpha[BL_CONTEXT_STYLE_SLOT_FILL];
   double strokeAlphaD = intAlphaD * ctxI->internalState.styleAlpha[BL_CONTEXT_STYLE_SLOT_STROKE];
 
-  uint32_t globalAlphaI = uint32_t(blRoundToInt(intAlphaD));
-  uint32_t styleAlphaI[2] = { uint32_t(blRoundToInt(fillAlphaD)), uint32_t(blRoundToInt(strokeAlphaD)) };
+  uint32_t globalAlphaI = uint32_t(Math::roundToInt(intAlphaD));
+  uint32_t styleAlphaI[2] = { uint32_t(Math::roundToInt(fillAlphaD)), uint32_t(Math::roundToInt(strokeAlphaD)) };
 
   ctxI->internalState.globalAlpha = alpha;
   ctxI->internalState.globalAlphaI = globalAlphaI;
@@ -2048,8 +2049,8 @@ static BLResult BL_CDECL setCompOpImpl(BLContextImpl* baseImpl, BLCompOp compOp)
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Fill Options
-// ======================================================
+// bl::RasterEngine - ContextImpl - Frontend - Fill Options
+// ========================================================
 
 static BLResult BL_CDECL setFillRuleImpl(BLContextImpl* baseImpl, BLFillRule fillRule) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
@@ -2061,8 +2062,8 @@ static BLResult BL_CDECL setFillRuleImpl(BLContextImpl* baseImpl, BLFillRule fil
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Stroke Options
-// ========================================================
+// bl::RasterEngine - ContextImpl - Frontend - Stroke Options
+// ==========================================================
 
 static BLResult BL_CDECL setStrokeWidthImpl(BLContextImpl* baseImpl, double width) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
@@ -2143,7 +2144,7 @@ static BLResult BL_CDECL setStrokeDashArrayImpl(BLContextImpl* baseImpl, const B
   ctxI->contextFlags &= ~(ContextFlags::kNoStrokeOptions | ContextFlags::kWeakStateStrokeOptions | ContextFlags::kSharedStateStrokeBase);
 
   ctxI->internalState.strokeOptions.dashArray._d = dashArray->_d;
-  return BLArrayPrivate::retainInstance(&ctxI->internalState.strokeOptions.dashArray);
+  return ArrayInternal::retainInstance(&ctxI->internalState.strokeOptions.dashArray);
 }
 
 static BLResult BL_CDECL setStrokeTransformOrderImpl(BLContextImpl* baseImpl, BLStrokeTransformOrder transformOrder) noexcept {
@@ -2173,14 +2174,14 @@ static BLResult BL_CDECL setStrokeOptionsImpl(BLContextImpl* baseImpl, const BLS
   return blStrokeOptionsAssignWeak(&ctxI->internalState.strokeOptions, options);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Clip Operations
-// =========================================================
+// bl::RasterEngine - ContextImpl - Frontend - Clip Operations
+// ===========================================================
 
 static BLResult clipToFinalBox(BLRasterContextImpl* ctxI, const BLBox& inputBox) noexcept {
   BLBox b;
   onBeforeClipBoxChange(ctxI);
 
-  if (BLGeometry::intersect(b, ctxI->finalClipBoxD(), inputBox)) {
+  if (Geometry::intersect(b, ctxI->finalClipBoxD(), inputBox)) {
     int fpMaskI = ctxI->renderTargetInfo.fpMaskI;
     int fpShiftI = ctxI->renderTargetInfo.fpShiftI;
 
@@ -2217,7 +2218,7 @@ static BLResult BL_CDECL clipToRectDImpl(BLContextImpl* baseImpl, const BLRect* 
 
   // TODO: [Rendering Context] Path-based clipping.
   BLBox inputBox = BLBox(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
-  return clipToFinalBox(ctxI, BLTransformPrivate::mapBox(ctxI->finalTransform(), inputBox));
+  return clipToFinalBox(ctxI, TransformInternal::mapBox(ctxI->finalTransform(), inputBox));
 }
 
 static BLResult BL_CDECL clipToRectIImpl(BLContextImpl* baseImpl, const BLRectI* rect) noexcept {
@@ -2240,12 +2241,12 @@ static BLResult BL_CDECL clipToRectIImpl(BLContextImpl* baseImpl, const BLRectI*
   int ty = ctxI->translationI().y;
 
   if (BL_TARGET_ARCH_BITS < 64) {
-    BLOverflowFlag of = 0;
+    OverflowFlag of{};
 
-    int x0 = BLIntOps::addOverflow(tx, rect->x, &of);
-    int y0 = BLIntOps::addOverflow(ty, rect->y, &of);
-    int x1 = BLIntOps::addOverflow(x0, rect->w, &of);
-    int y1 = BLIntOps::addOverflow(y0, rect->h, &of);
+    int x0 = IntOps::addOverflow(tx, rect->x, &of);
+    int y0 = IntOps::addOverflow(ty, rect->y, &of);
+    int x1 = IntOps::addOverflow(x0, rect->w, &of);
+    int y1 = IntOps::addOverflow(y0, rect->h, &of);
 
     if (BL_UNLIKELY(of))
       goto Use64Bit;
@@ -2307,8 +2308,8 @@ static BLResult BL_CDECL restoreClippingImpl(BLContextImpl* baseImpl) noexcept {
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Mask & Blit Utilities
-// ====================================================
+// bl::RasterEngine - ContextImpl - Mask & Blit Utilities
+// ======================================================
 
 static BL_INLINE BLResult checkImageArea(BLRectI& out, const BLImageImpl* image, const BLRectI* area) noexcept {
   out.reset(0, 0, image->size.w, image->size.h);
@@ -2327,8 +2328,8 @@ static BL_INLINE BLResult checkImageArea(BLRectI& out, const BLImageImpl* image,
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Internals - Asynchronous Rendering - Shared State
-// ================================================================================
+// bl::RasterEngine - ContextImpl - Internals - Asynchronous Rendering - Shared State
+// ==================================================================================
 
 static constexpr ContextFlags sharedStrokeStateFlagsTable[BL_STROKE_TRANSFORM_ORDER_MAX_VALUE + 1] = {
   ContextFlags::kSharedStateStrokeBase,
@@ -2390,8 +2391,8 @@ static BL_INLINE SharedBaseStrokeState* getSharedStrokeState(BLRasterContextImpl
   return sharedStrokeState;
 }
 
-// BLRasterEngine - ContextImpl - Internals - Asynchronous Rendering - Jobs
-// ========================================================================
+// bl::RasterEngine - ContextImpl - Internals - Asynchronous Rendering - Jobs
+// ==========================================================================
 
 template<typename JobType>
 static BL_INLINE BLResult newFillJob(BLRasterContextImpl* ctxI, size_t jobDataSize, JobType** out) noexcept {
@@ -2415,14 +2416,14 @@ static BL_INLINE BLResult newStrokeJob(BLRasterContextImpl* ctxI, size_t jobData
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Internals - Asynchronous Rendering - Enqueue
-// ===========================================================================
+// bl::RasterEngine - ContextImpl - Internals - Asynchronous Rendering - Enqueue
+// =============================================================================
 
 template<typename CommandFinalizer>
 static BL_INLINE BLResult enqueueCommand(BLRasterContextImpl* ctxI, RenderCommand* command, RenderFetchDataHeader* fetchData, const CommandFinalizer& commandFinalizer) noexcept {
   WorkerManager& mgr = ctxI->workerMgr();
 
-  constexpr uint32_t kRetainsStyleFetchDataShift = BLIntOps::bitShiftOf(uint32_t(RenderCommandFlags::kRetainsStyleFetchData));
+  constexpr uint32_t kRetainsStyleFetchDataShift = IntOps::bitShiftOf(uint32_t(RenderCommandFlags::kRetainsStyleFetchData));
 
   if (fetchData->isSolid()) {
     command->_source.solid = static_cast<RenderFetchDataSolid*>(fetchData)->pipelineData;
@@ -2520,8 +2521,8 @@ static BL_INLINE BLResult enqueueCommandWithFillOrStrokeJob(
     return enqueueCommandWithStrokeJob<JobType, JobFinalizer>(ctxI, di, ds, jobSize, originFixed, jobFinalizer);
 }
 
-// BLRasterEngine - ContextImpl - Asynchronous Rendering - Enqueue GlyphRun & TextData
-// ===================================================================================
+// bl::RasterEngine - ContextImpl - Asynchronous Rendering - Enqueue GlyphRun & TextData
+// =====================================================================================
 
 struct BLGlyphPlacementRawData {
   uint64_t data[2];
@@ -2536,8 +2537,8 @@ static BL_INLINE BLResult enqueueFillOrStrokeGlyphRun(
     const BLPoint* origin, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
 
   size_t size = glyphRun->size;
-  size_t glyphDataSize = BLIntOps::alignUp(size * sizeof(uint32_t), WorkerManager::kAllocatorAlignment);
-  size_t placementDataSize = BLIntOps::alignUp(size * sizeof(BLGlyphPlacementRawData), WorkerManager::kAllocatorAlignment);
+  size_t glyphDataSize = IntOps::alignUp(size * sizeof(uint32_t), WorkerManager::kAllocatorAlignment);
+  size_t placementDataSize = IntOps::alignUp(size * sizeof(BLGlyphPlacementRawData), WorkerManager::kAllocatorAlignment);
 
   uint32_t* glyphData = ctxI->workerMgr()._allocator.template allocNoAlignT<uint32_t>(glyphDataSize);
   BLGlyphPlacementRawData* placementData = ctxI->workerMgr()._allocator.template allocNoAlignT<BLGlyphPlacementRawData>(placementDataSize);
@@ -2556,7 +2557,7 @@ static BL_INLINE BLResult enqueueFillOrStrokeGlyphRun(
   }
 
   BLPoint originFixed = ctxI->finalTransformFixed().mapPoint(*origin);
-  di.addFillType(BLPipeline::FillType::kAnalytic);
+  di.addFillType(Pipeline::FillType::kAnalytic);
 
   RenderCommand* command = ctxI->workerMgr->currentCommand();
   command->initCommand(di.alpha);
@@ -2564,7 +2565,7 @@ static BL_INLINE BLResult enqueueFillOrStrokeGlyphRun(
 
   return enqueueCommandWithFillOrStrokeJob<OpType, RenderJob_TextOp>(
     ctxI, di, ds,
-    BLIntOps::alignUp(sizeof(RenderJob_TextOp), WorkerManager::kAllocatorAlignment), originFixed,
+    IntOps::alignUp(sizeof(RenderJob_TextOp), WorkerManager::kAllocatorAlignment), originFixed,
     [&](RenderJob_TextOp* job) {
       job->initFont(*font);
       job->initGlyphRun(glyphData, placementData, size, glyphRun->placementType, glyphRun->flags);
@@ -2577,13 +2578,13 @@ static BL_INLINE BLResult enqueueFillOrStrokeText(
     const BLPoint* origin, const BLFontCore* font, const void* text, size_t size, BLTextEncoding encoding) noexcept {
 
   if (size == SIZE_MAX)
-    size = blStrLenWithEncoding(text, encoding);
+    size = StringOps::lengthWithEncoding(text, encoding);
 
   if (!size)
     return BL_SUCCESS;
 
   BLResult result = BL_SUCCESS;
-  BLWrap<BLGlyphBuffer> gb;
+  Wrap<BLGlyphBuffer> gb;
 
   void* serializedTextData = nullptr;
   size_t serializedTextSize = size << textByteSizeShiftByEncoding[encoding];
@@ -2593,7 +2594,7 @@ static BL_INLINE BLResult enqueueFillOrStrokeText(
     result = gb->setText(text, size, encoding);
   }
   else {
-    serializedTextData = ctxI->workerMgr->_allocator.alloc(BLIntOps::alignUp(serializedTextSize, 8));
+    serializedTextData = ctxI->workerMgr->_allocator.alloc(IntOps::alignUp(serializedTextSize, 8));
     if (!serializedTextData)
       result = BL_ERROR_OUT_OF_MEMORY;
     else
@@ -2602,7 +2603,7 @@ static BL_INLINE BLResult enqueueFillOrStrokeText(
 
   if (result == BL_SUCCESS) {
     BLPoint originFixed = ctxI->finalTransformFixed().mapPoint(*origin);
-    di.addFillType(BLPipeline::FillType::kAnalytic);
+    di.addFillType(Pipeline::FillType::kAnalytic);
 
     RenderCommand* command = ctxI->workerMgr->currentCommand();
     command->initCommand(di.alpha);
@@ -2610,7 +2611,7 @@ static BL_INLINE BLResult enqueueFillOrStrokeText(
 
     result = enqueueCommandWithFillOrStrokeJob<OpType, RenderJob_TextOp>(
       ctxI, di, ds,
-      BLIntOps::alignUp(sizeof(RenderJob_TextOp), WorkerManager::kAllocatorAlignment), originFixed,
+      IntOps::alignUp(sizeof(RenderJob_TextOp), WorkerManager::kAllocatorAlignment), originFixed,
       [&](RenderJob_TextOp* job) {
         job->initFont(*font);
         if (serializedTextSize > BL_RASTER_CONTEXT_MAXIMUM_EMBEDDED_TEXT_SIZE)
@@ -2626,16 +2627,16 @@ static BL_INLINE BLResult enqueueFillOrStrokeText(
   return result;
 }
 
-// BLRasterEngine - ContextImpl - Internals - Fill Clipped Box
-// ===========================================================
+// bl::RasterEngine - ContextImpl - Internals - Fill Clipped Box
+// =============================================================
 
 template<RenderingMode kRM>
 static BL_INLINE BLResult fillClippedBoxA(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxA) noexcept;
 
 template<>
 BL_INLINE BLResult fillClippedBoxA<kSync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxA) noexcept {
-  BLPipeline::DispatchData dispatchData;
-  di.addFillType(BLPipeline::FillType::kBoxA);
+  Pipeline::DispatchData dispatchData;
+  di.addFillType(Pipeline::FillType::kBoxA);
   BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, &dispatchData));
 
   return CommandProcSync::fillBoxA(ctxI->syncWorkData, dispatchData, di.alpha, boxA, ds.fetchData->getPipelineData());
@@ -2645,7 +2646,7 @@ template<>
 BL_INLINE BLResult fillClippedBoxA<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxA) noexcept {
   RenderCommand* command = ctxI->workerMgr->currentCommand();
 
-  di.addFillType(BLPipeline::FillType::kBoxA);
+  di.addFillType(Pipeline::FillType::kBoxA);
   BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData()));
 
   command->initCommand(di.alpha);
@@ -2658,8 +2659,8 @@ static BL_INLINE BLResult fillClippedBoxU(BLRasterContextImpl* ctxI, DispatchInf
 
 template<>
 BL_INLINE BLResult fillClippedBoxU<kSync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxU) noexcept {
-  BLPipeline::DispatchData dispatchData;
-  di.addFillType(BLPipeline::FillType::kMask);
+  Pipeline::DispatchData dispatchData;
+  di.addFillType(Pipeline::FillType::kMask);
   BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, &dispatchData));
 
   return CommandProcSync::fillBoxU(ctxI->syncWorkData, dispatchData, di.alpha, boxU, ds.fetchData->getPipelineData());
@@ -2669,7 +2670,7 @@ template<>
 BL_INLINE BLResult fillClippedBoxU<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLBoxI& boxU) noexcept {
   RenderCommand* command = ctxI->workerMgr->currentCommand();
 
-  di.addFillType(BLPipeline::FillType::kMask);
+  di.addFillType(Pipeline::FillType::kMask);
   BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData()));
 
   command->initCommand(di.alpha);
@@ -2694,11 +2695,11 @@ BL_INLINE BLResult fillClippedBoxF<kAsync>(BLRasterContextImpl* ctxI, DispatchIn
   command->initCommand(di.alpha);
 
   if (isBoxAligned24x8(boxU)) {
-    di.addFillType(BLPipeline::FillType::kBoxA);
+    di.addFillType(Pipeline::FillType::kBoxA);
     command->initFillBoxA(BLBoxI(boxU.x0 >> 8, boxU.y0 >> 8, boxU.x1 >> 8, boxU.y1 >> 8));
   }
   else {
-    di.addFillType(BLPipeline::FillType::kMask);
+    di.addFillType(Pipeline::FillType::kMask);
     command->initFillBoxU(boxU);
   }
 
@@ -2706,8 +2707,8 @@ BL_INLINE BLResult fillClippedBoxF<kAsync>(BLRasterContextImpl* ctxI, DispatchIn
   return enqueueCommand(ctxI, command, ds.fetchData, [&](RenderCommand*) noexcept {});
 }
 
-// BLRasterEngine - ContextImpl - Internals - Fill All
-// ===================================================
+// bl::RasterEngine - ContextImpl - Internals - Fill All
+// =====================================================
 
 template<RenderingMode kRM>
 static BL_NOINLINE BLResult fillAll(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds) noexcept {
@@ -2716,8 +2717,8 @@ static BL_NOINLINE BLResult fillAll(BLRasterContextImpl* ctxI, DispatchInfo di, 
     : fillClippedBoxU<kRM>(ctxI, di, ds, ctxI->finalClipBoxFixedI());
 }
 
-// BLRasterEngine - ContextImpl - Internals - Fill Clipped Edges
-// =============================================================
+// bl::RasterEngine - ContextImpl - Internals - Fill Clipped Edges
+// ===============================================================
 
 template<RenderingMode kRM>
 static BLResult fillClippedEdges(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLFillRule fillRule) noexcept;
@@ -2731,8 +2732,8 @@ BL_NOINLINE BLResult fillClippedEdges<kSync>(BLRasterContextImpl* ctxI, Dispatch
   if (edgeStorage.empty() || edgeStorage.boundingBox().y0 >= edgeStorage.boundingBox().y1)
     return BL_SUCCESS;
 
-  BLPipeline::DispatchData dispatchData;
-  di.addFillType(BLPipeline::FillType::kAnalytic);
+  Pipeline::DispatchData dispatchData;
+  di.addFillType(Pipeline::FillType::kAnalytic);
   BLResult result = ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, &dispatchData);
   if (BL_UNLIKELY(result != BL_SUCCESS)) {
     // Must revert the edge builder if we have failed here as we cannot execute the render call.
@@ -2754,7 +2755,7 @@ BL_NOINLINE BLResult fillClippedEdges<kAsync>(BLRasterContextImpl* ctxI, Dispatc
   if (edgeStorage.empty() || edgeStorage.boundingBox().y0 >= edgeStorage.boundingBox().y1)
     return BL_SUCCESS;
 
-  di.addFillType(BLPipeline::FillType::kAnalytic);
+  di.addFillType(Pipeline::FillType::kAnalytic);
   command->initCommand(di.alpha);
   command->initFillAnalytic(edgeStorage.flattenEdgeLinks(), edgeStorage.boundingBox().y0, fillRule);
   edgeStorage.resetBoundingBox();
@@ -2771,8 +2772,8 @@ BL_NOINLINE BLResult fillClippedEdges<kAsync>(BLRasterContextImpl* ctxI, Dispatc
   });
 }
 
-// BLRasterEngine - ContextImpl - Internals - Fill Unclipped Path
-// ==============================================================
+// bl::RasterEngine - ContextImpl - Internals - Fill Unclipped Path
+// ================================================================
 
 template<RenderingMode kRM>
 static BL_INLINE BLResult fillUnclippedPath(
@@ -2824,7 +2825,7 @@ BL_INLINE BLResult fillUnclippedPathWithOrigin<kAsync>(
   }
 
   size_t jobSize = sizeof(RenderJob_GeometryOp) + sizeof(BLPathCore);
-  di.addFillType(BLPipeline::FillType::kAnalytic);
+  di.addFillType(Pipeline::FillType::kAnalytic);
 
   RenderCommand* command = ctxI->workerMgr->currentCommand();
   command->initCommand(di.alpha);
@@ -2832,8 +2833,8 @@ BL_INLINE BLResult fillUnclippedPathWithOrigin<kAsync>(
   return enqueueCommandWithFillJob<RenderJob_GeometryOp>(ctxI, di, ds, jobSize, originFixed, [&](RenderJob_GeometryOp* job) noexcept { job->setGeometryWithPath(&path); });
 }
 
-// BLRasterEngine - ContextImpl - Internals - Fill Unclipped Polygon
-// =================================================================
+// bl::RasterEngine - ContextImpl - Internals - Fill Unclipped Polygon
+// ===================================================================
 
 template<RenderingMode kRM, typename PointType>
 static BL_INLINE BLResult fillUnclippedPolygonT(
@@ -2855,8 +2856,8 @@ static BL_INLINE BLResult fillUnclippedPolygonT(
   return fillUnclippedPolygonT<kRM>(ctxI, di, ds, pts, size, fillRule, ctxI->finalTransformFixed(), ctxI->finalTransformFixedType());
 }
 
-// BLRasterEngine - ContextImpl - Internals - Fill Unclipped Box & Rect
-// ====================================================================
+// bl::RasterEngine - ContextImpl - Internals - Fill Unclipped Box & Rect
+// ======================================================================
 
 template<RenderingMode kRM>
 static BL_INLINE BLResult fillUnclippedBoxD(
@@ -2865,10 +2866,10 @@ static BL_INLINE BLResult fillUnclippedBoxD(
 
   if (transformType <= BL_TRANSFORM_TYPE_SWAP) {
     BLBox finalBoxD;
-    if (!BLGeometry::intersect(finalBoxD, BLTransformPrivate::mapBoxScaledSwapped(transform, boxD), ctxI->finalClipBoxFixedD()))
+    if (!Geometry::intersect(finalBoxD, TransformInternal::mapBoxScaledSwapped(transform, boxD), ctxI->finalClipBoxFixedD()))
       return BL_SUCCESS;
 
-    BLBoxI boxU = blTruncToInt(finalBoxD);
+    BLBoxI boxU = Math::truncToInt(finalBoxD);
     if (boxU.x0 >= boxU.x1 || boxU.y0 >= boxU.y1)
       return BL_SUCCESS;
 
@@ -2906,8 +2907,8 @@ static BL_INLINE BLResult fillUnclippedRectI(BLRasterContextImpl* ctxI, Dispatch
   return fillClippedBoxA<kRM>(ctxI, di, ds, dstBoxI);
 }
 
-// BLRasterEngine - ContextImpl - Internals - Fill Unclipped Geometry
-// ==================================================================
+// bl::RasterEngine - ContextImpl - Internals - Fill Unclipped Geometry
+// ====================================================================
 
 template<RenderingMode kRM>
 static BLResult fillUnclippedGeometry(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept;
@@ -3035,7 +3036,7 @@ BLResult BL_NOINLINE fillUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, Di
       size_t jobSize = sizeof(RenderJob_GeometryOp) + sizeof(BLPathCore);
       BLPoint originFixed(ctxI->finalTransformFixed().m20, ctxI->finalTransformFixed().m21);
 
-      di.addFillType(BLPipeline::FillType::kAnalytic);
+      di.addFillType(Pipeline::FillType::kAnalytic);
 
       RenderCommand* command = ctxI->workerMgr->currentCommand();
       command->initCommand(di.alpha);
@@ -3044,14 +3045,14 @@ BLResult BL_NOINLINE fillUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, Di
     }
 
     default: {
-      if (!BLGeometry::isSimpleGeometryType(type))
+      if (!Geometry::isSimpleGeometryType(type))
         return blTraceError(BL_ERROR_INVALID_VALUE);
 
-      size_t geometrySize = BLGeometry::blGeometryTypeSizeTable[type];
+      size_t geometrySize = Geometry::geometryTypeSizeTable[type];
       size_t jobSize = sizeof(RenderJob_GeometryOp) + geometrySize;
       BLPoint originFixed(ctxI->finalTransformFixed().m20, ctxI->finalTransformFixed().m21);
 
-      di.addFillType(BLPipeline::FillType::kAnalytic);
+      di.addFillType(Pipeline::FillType::kAnalytic);
 
       RenderCommand* command = ctxI->workerMgr->currentCommand();
       command->initCommand(di.alpha);
@@ -3062,8 +3063,8 @@ BLResult BL_NOINLINE fillUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, Di
   }
 }
 
-// BLRasterEngine - ContextImpl - Internals - Fill Unclipped Text
-// ==============================================================
+// bl::RasterEngine - ContextImpl - Internals - Fill Unclipped Text
+// ================================================================
 
 template<RenderingMode kRM>
 static BLResult fillUnclippedText(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* data) noexcept;
@@ -3118,8 +3119,8 @@ BL_NOINLINE BLResult fillUnclippedText<kAsync>(BLRasterContextImpl* ctxI, Dispat
   }
 }
 
-// BLRasterEngine - ContextImpl - Internals - Fill Mask
-// ====================================================
+// bl::RasterEngine - ContextImpl - Internals - Fill Mask
+// ======================================================
 
 template<RenderingMode kRM>
 static BLResult fillClippedBoxMaskedA(
@@ -3131,13 +3132,13 @@ BL_NOINLINE BLResult fillClippedBoxMaskedA<kSync>(
     BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
     const BLBoxI& boxA, const BLImageCore* mask, const BLPointI& maskOffsetI) noexcept {
 
-  BLPipeline::DispatchData dispatchData;
+  Pipeline::DispatchData dispatchData;
 
-  di.addFillType(BLPipeline::FillType::kMask);
+  di.addFillType(Pipeline::FillType::kMask);
   BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, &dispatchData));
 
   RenderCommand::FillBoxMaskA payload;
-  payload.maskImageI.ptr = BLImagePrivate::getImpl(mask);
+  payload.maskImageI.ptr = ImageInternal::getImpl(mask);
   payload.maskOffsetI = maskOffsetI;
   payload.boxI = boxA;
   return CommandProcSync::fillBoxMaskedA(ctxI->syncWorkData, dispatchData, di.alpha, payload, ds.fetchData->getPipelineData());
@@ -3150,18 +3151,18 @@ BL_NOINLINE BLResult fillClippedBoxMaskedA<kAsync>(
 
   RenderCommand* command = ctxI->workerMgr->currentCommand();
 
-  di.addFillType(BLPipeline::FillType::kMask);
+  di.addFillType(Pipeline::FillType::kMask);
   BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData()));
 
   command->initCommand(di.alpha);
   command->initFillBoxMaskA(boxA, mask, maskOffsetI);
   return enqueueCommand(ctxI, command, ds.fetchData, [&](RenderCommand* command) noexcept {
-    BLObjectPrivate::retainImpl<BLObjectPrivate::RCMode::kMaybe>(command->_payload.boxMaskA.maskImageI.ptr);
+    ObjectInternal::retainImpl<RCMode::kMaybe>(command->_payload.boxMaskA.maskImageI.ptr);
   });
 }
 
-// BLRasterEngine - ContextImpl - Internals - Stroke Unclipped Path
-// ================================================================
+// bl::RasterEngine - ContextImpl - Internals - Stroke Unclipped Path
+// ==================================================================
 
 template<RenderingMode kRM>
 static BLResult strokeUnclippedPath(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint& originFixed, const BLPath& path) noexcept;
@@ -3177,7 +3178,7 @@ BL_NOINLINE BLResult strokeUnclippedPath<kSync>(BLRasterContextImpl* ctxI, Dispa
 template<>
 BL_NOINLINE BLResult strokeUnclippedPath<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint& originFixed, const BLPath& path) noexcept {
   size_t jobSize = sizeof(RenderJob_GeometryOp) + sizeof(BLPathCore);
-  di.addFillType(BLPipeline::FillType::kAnalytic);
+  di.addFillType(Pipeline::FillType::kAnalytic);
 
   RenderCommand* command = ctxI->workerMgr->currentCommand();
   command->initCommand(di.alpha);
@@ -3188,8 +3189,8 @@ BL_NOINLINE BLResult strokeUnclippedPath<kAsync>(BLRasterContextImpl* ctxI, Disp
   });
 }
 
-// BLRasterEngine - ContextImpl - Internals - Stroke Unclipped Geometry
-// ====================================================================
+// bl::RasterEngine - ContextImpl - Internals - Stroke Unclipped Geometry
+// ======================================================================
 
 template<RenderingMode kRM>
 static BLResult strokeUnclippedGeometry(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept;
@@ -3214,8 +3215,8 @@ BL_NOINLINE BLResult strokeUnclippedGeometry<kSync>(BLRasterContextImpl* ctxI, D
 template<>
 BL_NOINLINE BLResult strokeUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLGeometryType type, const void* data) noexcept {
   size_t geometrySize = sizeof(BLPathCore);
-  if (BLGeometry::isSimpleGeometryType(type)) {
-    geometrySize = BLGeometry::blGeometryTypeSizeTable[type];
+  if (Geometry::isSimpleGeometryType(type)) {
+    geometrySize = Geometry::geometryTypeSizeTable[type];
   }
   else if (type != BL_GEOMETRY_TYPE_PATH) {
     BLPath* temporaryPath = &ctxI->syncWorkData.tmpPath[3];
@@ -3230,7 +3231,7 @@ BL_NOINLINE BLResult strokeUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, 
   size_t jobSize = sizeof(RenderJob_GeometryOp) + geometrySize;
   BLPoint originFixed(ctxI->finalTransformFixed().m20, ctxI->finalTransformFixed().m21);
 
-  di.addFillType(BLPipeline::FillType::kAnalytic);
+  di.addFillType(Pipeline::FillType::kAnalytic);
 
   RenderCommand* command = ctxI->workerMgr->currentCommand();
   command->initCommand(di.alpha);
@@ -3241,8 +3242,8 @@ BL_NOINLINE BLResult strokeUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, 
   });
 }
 
-// BLRasterEngine - ContextImpl - Internals - Stroke Unclipped Text
-// ================================================================
+// bl::RasterEngine - ContextImpl - Internals - Stroke Unclipped Text
+// ==================================================================
 
 template<RenderingMode kRM>
 static BLResult strokeUnclippedText(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* data) noexcept;
@@ -3297,8 +3298,8 @@ BL_NOINLINE BLResult strokeUnclippedText<kAsync>(BLRasterContextImpl* ctxI, Disp
   }
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Clear All
-// ===================================================
+// bl::RasterEngine - ContextImpl - Frontend - Clear All
+// =====================================================
 
 template<RenderingMode kRM>
 static BLResult BL_CDECL clearAllImpl(BLContextImpl* baseImpl) noexcept {
@@ -3309,8 +3310,8 @@ static BLResult BL_CDECL clearAllImpl(BLContextImpl* baseImpl) noexcept {
   return fillAll<kRM>(ctxI, di, ds);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Clear Rect
-// ====================================================
+// bl::RasterEngine - ContextImpl - Frontend - Clear Rect
+// ======================================================
 
 template<RenderingMode kRM>
 static BLResult BL_CDECL clearRectIImpl(BLContextImpl* baseImpl, const BLRectI* rect) noexcept {
@@ -3331,8 +3332,8 @@ static BLResult BL_CDECL clearRectDImpl(BLContextImpl* baseImpl, const BLRect* r
   return fillUnclippedBoxD<kRM>(ctxI, di, ds, boxD);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Fill All
-// ==================================================
+// bl::RasterEngine - ContextImpl - Frontend - Fill All
+// ====================================================
 
 template<RenderingMode kRM>
 static BLResult BL_CDECL fillAllImpl(BLContextImpl* baseImpl) noexcept {
@@ -3363,8 +3364,8 @@ static BLResult BL_CDECL fillAllExtImpl(BLContextImpl* baseImpl, const BLObjectC
   return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Fill Rect
-// ===================================================
+// bl::RasterEngine - ContextImpl - Frontend - Fill Rect
+// =====================================================
 
 template<RenderingMode kRM>
 static BLResult BL_CDECL fillRectIImpl(BLContextImpl* baseImpl, const BLRectI* rect) noexcept {
@@ -3427,8 +3428,8 @@ static BLResult BL_CDECL fillRectDExtImpl(BLContextImpl* baseImpl, const BLRect*
   return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Fill Path
-// ===================================================
+// bl::RasterEngine - ContextImpl - Frontend - Fill Path
+// =====================================================
 
 template<RenderingMode kRM>
 static BLResult BL_CDECL fillPathDImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLPathCore* path) noexcept {
@@ -3474,8 +3475,8 @@ static BLResult BL_CDECL fillPathDExtImpl(BLContextImpl* baseImpl, const BLPoint
   return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Fill Geometry
-// =======================================================
+// bl::RasterEngine - ContextImpl - Frontend - Fill Geometry
+// =========================================================
 
 template<RenderingMode kRM>
 static BLResult BL_CDECL fillGeometryImpl(BLContextImpl* baseImpl, BLGeometryType type, const void* data) noexcept {
@@ -3506,8 +3507,8 @@ static BLResult BL_CDECL fillGeometryExtImpl(BLContextImpl* baseImpl, BLGeometry
   return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Fill Unclipped Text
-// =============================================================
+// bl::RasterEngine - ContextImpl - Frontend - Fill Unclipped Text
+// ===============================================================
 
 template<RenderingMode kRM>
 static BLResult BL_CDECL fillTextOpDImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData) noexcept {
@@ -3574,8 +3575,8 @@ static BLResult BL_CDECL fillTextOpIExtImpl(BLContextImpl* baseImpl, const BLPoi
   return fillTextOpDExtImpl<kRM>(baseImpl, &originD, font, opType, opData, style);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Fill Mask
-// ===================================================
+// bl::RasterEngine - ContextImpl - Frontend - Fill Mask
+// =====================================================
 
 template<RenderingMode kRM>
 static BL_INLINE BLResult fillUnclippedMaskD(BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds, BLPoint dst, const BLImageCore* mask, BLRectI maskRect) noexcept {
@@ -3592,10 +3593,10 @@ static BL_INLINE BLResult fillUnclippedMaskD(BLRasterContextImpl* ctxI, Dispatch
     if (!((dstBoxD.x0 < dstBoxD.x1) & (dstBoxD.y0 < dstBoxD.y1)))
       return BL_SUCCESS;
 
-    int64_t startFx = blFloorToInt64(startX);
-    int64_t startFy = blFloorToInt64(startY);
+    int64_t startFx = Math::floorToInt64(startX);
+    int64_t startFy = Math::floorToInt64(startY);
 
-    BLBoxI dstBoxU = blTruncToInt(dstBoxD);
+    BLBoxI dstBoxU = Math::truncToInt(dstBoxD);
 
     if (!((startFx | startFy) & ctxI->renderTargetInfo.fpMaskI)) {
       // Pixel aligned mask.
@@ -3669,7 +3670,7 @@ static BLResult BL_CDECL fillMaskDImpl(BLContextImpl* baseImpl, const BLPoint* o
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
 
   BLRectI maskRect;
-  BLResult bailResult = checkImageArea(maskRect, BLImagePrivate::getImpl(mask), maskArea);
+  BLResult bailResult = checkImageArea(maskRect, ImageInternal::getImpl(mask), maskArea);
   bool bail = bailResult != BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_IMPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, bail);
@@ -3683,7 +3684,7 @@ static BLResult BL_CDECL fillMaskDRgba32Impl(BLContextImpl* baseImpl, const BLPo
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
 
   BLRectI maskRect;
-  BLResult bailResult = checkImageArea(maskRect, BLImagePrivate::getImpl(mask), maskArea);
+  BLResult bailResult = checkImageArea(maskRect, ImageInternal::getImpl(mask), maskArea);
   bool bail = bailResult != BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_SOLID_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, rgba32, bail);
@@ -3697,7 +3698,7 @@ static BLResult BL_CDECL fillMaskDExtImpl(BLContextImpl* baseImpl, const BLPoint
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
 
   BLRectI maskRect;
-  BLResult bailResult = checkImageArea(maskRect, BLImagePrivate::getImpl(mask), maskArea);
+  BLResult bailResult = checkImageArea(maskRect, ImageInternal::getImpl(mask), maskArea);
   bool bail = bailResult != BL_SUCCESS;
 
   BL_CONTEXT_RESOLVE_EXPLICIT_STYLE_OP(ContextFlags::kNoFillOpImplicit, BL_CONTEXT_STYLE_SLOT_FILL, style, bail);
@@ -3716,7 +3717,7 @@ static BLResult BL_CDECL fillMaskIImpl(BLContextImpl* baseImpl, const BLPointI* 
     return fillMaskDImpl<kRM>(ctxI, &originD, mask, maskArea);
   }
 
-  BLImageImpl* maskI = BLImagePrivate::getImpl(mask);
+  BLImageImpl* maskI = ImageInternal::getImpl(mask);
 
   BLBoxI dstBox;
   BLPointI srcOffset;
@@ -3738,7 +3739,7 @@ static BLResult BL_CDECL fillMaskIRgba32Impl(BLContextImpl* baseImpl, const BLPo
     return fillMaskDRgba32Impl<kRM>(ctxI, &originD, mask, maskArea, rgba32);
   }
 
-  BLImageImpl* maskI = BLImagePrivate::getImpl(mask);
+  BLImageImpl* maskI = ImageInternal::getImpl(mask);
 
   BLBoxI dstBox;
   BLPointI srcOffset;
@@ -3760,7 +3761,7 @@ static BLResult BL_CDECL fillMaskIExtImpl(BLContextImpl* baseImpl, const BLPoint
     return fillMaskDExtImpl<kRM>(ctxI, &originD, mask, maskArea, style);
   }
 
-  BLImageImpl* maskI = BLImagePrivate::getImpl(mask);
+  BLImageImpl* maskI = ImageInternal::getImpl(mask);
 
   BLBoxI dstBox;
   BLPointI srcOffset;
@@ -3774,8 +3775,8 @@ static BLResult BL_CDECL fillMaskIExtImpl(BLContextImpl* baseImpl, const BLPoint
   return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Stroke Geometry
-// =========================================================
+// bl::RasterEngine - ContextImpl - Frontend - Stroke Geometry
+// ===========================================================
 
 template<RenderingMode kRM>
 static BLResult BL_CDECL strokeGeometryImpl(BLContextImpl* baseImpl, BLGeometryType type, const void* data) noexcept {
@@ -3806,8 +3807,8 @@ static BLResult BL_CDECL strokeGeometryExtImpl(BLContextImpl* baseImpl, BLGeomet
   return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Stroke Path
-// =====================================================
+// bl::RasterEngine - ContextImpl - Frontend - Stroke Path
+// =======================================================
 
 template<RenderingMode kRM>
 static BLResult BL_CDECL strokePathDImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLPathCore* path) noexcept {
@@ -3853,8 +3854,8 @@ static BLResult BL_CDECL strokePathDExtImpl(BLContextImpl* baseImpl, const BLPoi
   return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), result);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Stroke Text
-// =====================================================
+// bl::RasterEngine - ContextImpl - Frontend - Stroke Text
+// =======================================================
 
 template<RenderingMode kRM>
 static BLResult BL_CDECL strokeTextOpDImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp opType, const void* opData) noexcept {
@@ -3921,15 +3922,15 @@ static BLResult BL_CDECL strokeTextOpIExtImpl(BLContextImpl* baseImpl, const BLP
   return strokeTextOpDExtImpl<kRM>(baseImpl, &originD, font, opType, opData, style);
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Blit Image
-// ====================================================
+// bl::RasterEngine - ContextImpl - Frontend - Blit Image
+// ======================================================
 
 template<RenderingMode kRM>
 static BLResult BL_CDECL blitImageDImpl(BLContextImpl* baseImpl, const BLPoint* origin, const BLImageCore* img, const BLRectI* imgArea) noexcept {
   BL_ASSERT(img->_d.isImage());
 
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLImageImpl* imgI = BLImagePrivate::getImpl(img);
+  BLImageImpl* imgI = ImageInternal::getImpl(img);
 
   BLPoint dst(*origin);
   BLRectI srcRect;
@@ -3959,13 +3960,13 @@ static BLResult BL_CDECL blitImageDImpl(BLContextImpl* baseImpl, const BLPoint* 
       if (!(unsigned(dx0 < dx1) & unsigned(dy0 < dy1)))
         return BL_SUCCESS;
 
-      int64_t startFx = blFloorToInt64(startX);
-      int64_t startFy = blFloorToInt64(startY);
+      int64_t startFx = Math::floorToInt64(startX);
+      int64_t startFy = Math::floorToInt64(startY);
 
-      int ix0 = blTruncToInt(dx0);
-      int iy0 = blTruncToInt(dy0);
-      int ix1 = blTruncToInt(dx1);
-      int iy1 = blTruncToInt(dy1);
+      int ix0 = Math::truncToInt(dx0);
+      int iy0 = Math::truncToInt(dy0);
+      int ix1 = Math::truncToInt(dx1);
+      int iy1 = Math::truncToInt(dy1);
 
       if (!((startFx | startFy) & ctxI->renderTargetInfo.fpMaskI)) {
         // Pixel aligned blit. At this point we still don't know whether the area where the pixels will be composited
@@ -4006,7 +4007,7 @@ static BLResult BL_CDECL blitImageDImpl(BLContextImpl* baseImpl, const BLPoint* 
     finalBox = BLBox(dst.x, dst.y, dst.x + double(srcRect.w), dst.y + double(srcRect.h));
   }
   else {
-    prepareOverriddenFetch(ctxI, di, ds, BLCompOpSolidId(resolved.flags));
+    prepareOverriddenFetch(ctxI, di, ds, CompOpSolidId(resolved.flags));
     finalBox = BLBox(dst.x, dst.y, dst.x + double(srcRect.w), dst.y + double(srcRect.h));
   }
 
@@ -4018,7 +4019,7 @@ static BLResult BL_CDECL blitImageIImpl(BLContextImpl* baseImpl, const BLPointI*
   BL_ASSERT(img->_d.isImage());
 
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLImageImpl* imgI = BLImagePrivate::getImpl(img);
+  BLImageImpl* imgI = ImageInternal::getImpl(img);
 
   if (!blTestFlag(ctxI->contextFlags, ContextFlags::kInfoIntegralTranslation)) {
     BLPoint originD(*origin);
@@ -4043,21 +4044,21 @@ static BLResult BL_CDECL blitImageIImpl(BLContextImpl* baseImpl, const BLPointI*
     prepareNonSolidFetch(ctxI, di, ds, fetchData.ptr());
   }
   else {
-    prepareOverriddenFetch(ctxI, di, ds, BLCompOpSolidId(resolved.flags));
+    prepareOverriddenFetch(ctxI, di, ds, CompOpSolidId(resolved.flags));
   }
 
   return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), fillClippedBoxA<kRM>(ctxI, di, ds, dstBox));
 }
 
-// BLRasterEngine - ContextImpl - Frontend - Blit Scaled Image
-// ===========================================================
+// bl::RasterEngine - ContextImpl - Frontend - Blit Scaled Image
+// =============================================================
 
 template<RenderingMode kRM>
 static BLResult BL_CDECL blitScaledImageDImpl(BLContextImpl* baseImpl, const BLRect* rect, const BLImageCore* img, const BLRectI* imgArea) noexcept {
   BL_ASSERT(img->_d.isImage());
 
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLImageImpl* imgI = BLImagePrivate::getImpl(img);
+  BLImageImpl* imgI = ImageInternal::getImpl(img);
 
   BLRectI srcRect;
   BL_PROPAGATE(checkImageArea(srcRect, imgI, imgArea));
@@ -4075,7 +4076,7 @@ static BLResult BL_CDECL blitScaledImageDImpl(BLContextImpl* baseImpl, const BLR
       fetchData->initStyleObjectAndDestroyFunc(img, destroyFetchDataImage);
 
     BLMatrix2D ft(rect->w / double(srcRect.w), 0.0, 0.0, rect->h / double(srcRect.h), rect->x, rect->y);
-    BLTransformPrivate::multiply(ft, ft, ctxI->finalTransform());
+    TransformInternal::multiply(ft, ft, ctxI->finalTransform());
 
     uint32_t imgBytesPerPixel = imgI->depth / 8u;
     fetchData->initImageSource(imgI, srcRect);
@@ -4086,7 +4087,7 @@ static BLResult BL_CDECL blitScaledImageDImpl(BLContextImpl* baseImpl, const BLR
     prepareNonSolidFetch(ctxI, di, ds, fetchData.ptr());
   }
   else {
-    prepareOverriddenFetch(ctxI, di, ds, BLCompOpSolidId(resolved.flags));
+    prepareOverriddenFetch(ctxI, di, ds, CompOpSolidId(resolved.flags));
   }
 
   return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), fillUnclippedBoxD<kRM>(ctxI, di, ds, finalBox));
@@ -4097,7 +4098,7 @@ static BLResult BL_CDECL blitScaledImageIImpl(BLContextImpl* baseImpl, const BLR
   BL_ASSERT(img->_d.isImage());
 
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(baseImpl);
-  BLImageImpl* imgI = BLImagePrivate::getImpl(img);
+  BLImageImpl* imgI = ImageInternal::getImpl(img);
 
   BLRectI srcRect;
   BL_PROPAGATE(checkImageArea(srcRect, imgI, imgArea));
@@ -4115,7 +4116,7 @@ static BLResult BL_CDECL blitScaledImageIImpl(BLContextImpl* baseImpl, const BLR
       fetchData->initStyleObjectAndDestroyFunc(img, destroyFetchDataImage);
 
     BLMatrix2D transform(double(rect->w) / double(srcRect.w), 0.0, 0.0, double(rect->h) / double(srcRect.h), double(rect->x), double(rect->y));
-    BLTransformPrivate::multiply(transform, transform, ctxI->finalTransform());
+    TransformInternal::multiply(transform, transform, ctxI->finalTransform());
 
     uint32_t imgBytesPerPixel = imgI->depth / 8u;
     fetchData->initImageSource(imgI, srcRect);
@@ -4125,14 +4126,14 @@ static BLResult BL_CDECL blitScaledImageIImpl(BLContextImpl* baseImpl, const BLR
     prepareNonSolidFetch(ctxI, di, ds, fetchData.ptr());
   }
   else {
-    prepareOverriddenFetch(ctxI, di, ds, BLCompOpSolidId(resolved.flags));
+    prepareOverriddenFetch(ctxI, di, ds, CompOpSolidId(resolved.flags));
   }
 
   return finalizeExplicitOp<kRM>(ctxI, fetchData.ptr(), fillUnclippedBoxD<kRM>(ctxI, di, ds, finalBox));
 }
 
-// BLRasterEngine - ContextImpl - Attach & Detach
-// ==============================================
+// bl::RasterEngine - ContextImpl - Attach & Detach
+// ================================================
 
 static BL_INLINE uint32_t calculateBandHeight(uint32_t format, const BLSizeI& size, const BLContextCreateInfo* options) noexcept {
   // TODO: [Rendering Context] We should use the format and calculate how many bytes are used by raster storage per band.
@@ -4159,7 +4160,7 @@ static BL_INLINE uint32_t calculateBandHeight(uint32_t format, const BLSizeI& si
 
   uint32_t threadCount = options->threadCount;
   if (bandHeight > kMinBandHeight && threadCount > 1) {
-    uint32_t bandHeightShift = BLIntOps::ctz(bandHeight);
+    uint32_t bandHeightShift = IntOps::ctz(bandHeight);
     uint32_t minimumBandCount = threadCount;
 
     do {
@@ -4176,37 +4177,37 @@ static BL_INLINE uint32_t calculateBandHeight(uint32_t format, const BLSizeI& si
 }
 
 static BL_INLINE size_t calculateZeroedMemorySize(uint32_t width, uint32_t height) noexcept {
-  size_t alignedWidth = BLIntOps::alignUp(size_t(width + 1u + BL_PIPE_PIXELS_PER_ONE_BIT), 16);
+  size_t alignedWidth = IntOps::alignUp(size_t(width + 1u + BL_PIPE_PIXELS_PER_ONE_BIT), 16);
 
-  size_t bitStride = BLIntOps::wordCountFromBitCount<BLBitWord>(alignedWidth / BL_PIPE_PIXELS_PER_ONE_BIT) * sizeof(BLBitWord);
+  size_t bitStride = IntOps::wordCountFromBitCount<BLBitWord>(alignedWidth / BL_PIPE_PIXELS_PER_ONE_BIT) * sizeof(BLBitWord);
   size_t cellStride = alignedWidth * sizeof(uint32_t);
 
   size_t minimumSize = bitStride * size_t(height) + cellStride * size_t(height);
-  return BLIntOps::alignUp(minimumSize + sizeof(BLBitWord) * 16, BL_CACHE_LINE_SIZE);
+  return IntOps::alignUp(minimumSize + sizeof(BLBitWord) * 16, BL_CACHE_LINE_SIZE);
 }
 
 static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLContextCreateInfo* options) noexcept {
   BL_ASSERT(image != nullptr);
   BL_ASSERT(options != nullptr);
 
-  uint32_t format = BLImagePrivate::getImpl(image)->format;
-  BLSizeI size = BLImagePrivate::getImpl(image)->size;
+  uint32_t format = ImageInternal::getImpl(image)->format;
+  BLSizeI size = ImageInternal::getImpl(image)->size;
 
   // TODO: [Rendering Context] Hardcoded for 8bpc.
   uint32_t targetComponentType = RenderTargetInfo::kPixelComponentUInt8;
 
   uint32_t bandHeight = calculateBandHeight(format, size, options);
-  uint32_t bandCount = (uint32_t(size.h) + bandHeight - 1) >> BLIntOps::ctz(bandHeight);
+  uint32_t bandCount = (uint32_t(size.h) + bandHeight - 1) >> IntOps::ctz(bandHeight);
 
   size_t zeroedMemorySize = calculateZeroedMemorySize(uint32_t(size.w), bandHeight);
 
   // Initialization.
   BLResult result = BL_SUCCESS;
-  BLPipeline::PipeRuntime* pipeRuntime = nullptr;
+  Pipeline::PipeRuntime* pipeRuntime = nullptr;
 
   // If anything fails we would restore the zone state to match this point.
-  BLArenaAllocator& baseZone = ctxI->baseZone;
-  BLArenaAllocator::StatePtr zoneState = baseZone.saveState();
+  ArenaAllocator& baseZone = ctxI->baseZone;
+  ArenaAllocator::StatePtr zoneState = baseZone.saveState();
 
   // Not a real loop, just a scope we can escape early via 'break'.
   do {
@@ -4230,13 +4231,13 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
     // Step 3: Initialize pipeline runtime (JIT or fixed).
 #if !defined(BL_BUILD_NO_JIT)
     if (!(options->flags & BL_CONTEXT_CREATE_FLAG_DISABLE_JIT)) {
-      pipeRuntime = &BLPipeline::JIT::PipeDynamicRuntime::_global;
+      pipeRuntime = &Pipeline::JIT::PipeDynamicRuntime::_global;
 
       if (options->flags & BL_CONTEXT_CREATE_FLAG_ISOLATED_JIT_RUNTIME) {
         // Create an isolated `BLPipeGenRuntime` if specified. It will be used to store all functions
         // generated during the rendering and will be destroyed together with the context.
-        BLPipeline::JIT::PipeDynamicRuntime* isolatedRT =
-          baseZone.newT<BLPipeline::JIT::PipeDynamicRuntime>(BLPipeline::PipeRuntimeFlags::kIsolated);
+        Pipeline::JIT::PipeDynamicRuntime* isolatedRT =
+          baseZone.newT<Pipeline::JIT::PipeDynamicRuntime>(Pipeline::PipeRuntimeFlags::kIsolated);
 
         // This should not really happen as the first block is allocated with the impl.
         if (BL_UNLIKELY(!isolatedRT)) {
@@ -4263,7 +4264,7 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
 
 #if !defined(BL_BUILD_NO_FIXED_PIPE)
     if (!pipeRuntime)
-      pipeRuntime = &BLPipeline::PipeStaticRuntime::_global;
+      pipeRuntime = &Pipeline::PipeStaticRuntime::_global;
 #endif
 
     if (BL_UNLIKELY(!pipeRuntime)) {
@@ -4300,7 +4301,7 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
     // If we failed we don't want the pipeline runtime associated with the
     // context so we simply destroy it and pretend like nothing happened.
     if (pipeRuntime) {
-      if (blTestFlag(pipeRuntime->runtimeFlags(), BLPipeline::PipeRuntimeFlags::kIsolated))
+      if (blTestFlag(pipeRuntime->runtimeFlags(), Pipeline::PipeRuntimeFlags::kIsolated))
         pipeRuntime->destroy();
     }
 
@@ -4315,7 +4316,7 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
   }
 
   // Increase `writerCount` of the image, will be decreased by `detach()`.
-  BLImagePrivateImpl* imageI = BLImagePrivate::getImpl(image);
+  BLImagePrivateImpl* imageI = ImageInternal::getImpl(image);
   blAtomicFetchAddRelaxed(&imageI->writerCount);
   ctxI->dstImage._d = image->_d;
 
@@ -4332,13 +4333,13 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
 
   // Initialize members that are related to target precision.
   ctxI->renderTargetInfo = renderTargetInfoByComponentType[targetComponentType];
-  ctxI->fpMinSafeCoordD = blFloor(double(BLTraits::minValue<int32_t>() + 1) * ctxI->fpScaleD());
-  ctxI->fpMaxSafeCoordD = blFloor(double(BLTraits::maxValue<int32_t>() - 1 - blMax(size.w, size.h)) * ctxI->fpScaleD());
+  ctxI->fpMinSafeCoordD = Math::floor(double(Traits::minValue<int32_t>() + 1) * ctxI->fpScaleD());
+  ctxI->fpMaxSafeCoordD = Math::floor(double(Traits::maxValue<int32_t>() - 1 - blMax(size.w, size.h)) * ctxI->fpScaleD());
 
   // Initialize members that are related to alpha blending and composition.
-  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_ARGB] = uint8_t(BLInternalFormat::kPRGB32);
-  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB] = uint8_t(BLInternalFormat::kFRGB32);
-  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_ZERO] = uint8_t(BLInternalFormat::kZERO32);
+  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_ARGB] = uint8_t(FormatExt::kPRGB32);
+  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_FRGB] = uint8_t(FormatExt::kFRGB32);
+  ctxI->solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_ZERO] = uint8_t(FormatExt::kZERO32);
 
   // Const-casted, because this would replace fetchData, which is non-const, but guaranteed to not modify solid styles.
   RenderFetchDataSolid* solidOverrideFillTable =
@@ -4347,11 +4348,11 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
       : (RenderFetchDataSolid*)solidOverrideFillU16;
 
   ctxI->solidOverrideFillTable = solidOverrideFillTable;
-  ctxI->solidFetchDataOverrideTable[size_t(BLCompOpSolidId::kNone       )] = nullptr;
-  ctxI->solidFetchDataOverrideTable[size_t(BLCompOpSolidId::kTransparent)] = &solidOverrideFillTable[size_t(BLCompOpSolidId::kTransparent)];
-  ctxI->solidFetchDataOverrideTable[size_t(BLCompOpSolidId::kOpaqueBlack)] = &solidOverrideFillTable[size_t(BLCompOpSolidId::kOpaqueBlack)];
-  ctxI->solidFetchDataOverrideTable[size_t(BLCompOpSolidId::kOpaqueWhite)] = &solidOverrideFillTable[size_t(BLCompOpSolidId::kOpaqueWhite)];
-  ctxI->solidFetchDataOverrideTable[size_t(BLCompOpSolidId::kAlwaysNop  )] = &solidOverrideFillTable[size_t(BLCompOpSolidId::kAlwaysNop  )];
+  ctxI->solidFetchDataOverrideTable[size_t(CompOpSolidId::kNone       )] = nullptr;
+  ctxI->solidFetchDataOverrideTable[size_t(CompOpSolidId::kTransparent)] = &solidOverrideFillTable[size_t(CompOpSolidId::kTransparent)];
+  ctxI->solidFetchDataOverrideTable[size_t(CompOpSolidId::kOpaqueBlack)] = &solidOverrideFillTable[size_t(CompOpSolidId::kOpaqueBlack)];
+  ctxI->solidFetchDataOverrideTable[size_t(CompOpSolidId::kOpaqueWhite)] = &solidOverrideFillTable[size_t(CompOpSolidId::kOpaqueWhite)];
+  ctxI->solidFetchDataOverrideTable[size_t(CompOpSolidId::kAlwaysNop  )] = &solidOverrideFillTable[size_t(CompOpSolidId::kAlwaysNop  )];
 
   // Initialize the rendering state to defaults.
   ctxI->stateIdCounter = 0;
@@ -4367,7 +4368,7 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
   ctxI->internalState.styleType[BL_CONTEXT_STYLE_SLOT_FILL] = uint8_t(BL_OBJECT_TYPE_RGBA);
   ctxI->internalState.styleType[BL_CONTEXT_STYLE_SLOT_STROKE] = uint8_t(BL_OBJECT_TYPE_RGBA);
   ctxI->internalState.savedStateCount = 0;
-  ctxI->internalState.approximationOptions = BLPathPrivate::makeDefaultApproximationOptions();
+  ctxI->internalState.approximationOptions = PathInternal::makeDefaultApproximationOptions();
   ctxI->internalState.globalAlpha = 1.0;
   ctxI->internalState.styleAlpha[0] = 1.0;
   ctxI->internalState.styleAlpha[1] = 1.0;
@@ -4413,7 +4414,7 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
 
 static BLResult detach(BLRasterContextImpl* ctxI) noexcept {
   // Release the ImageImpl.
-  BLImagePrivateImpl* imageI = BLImagePrivate::getImpl(&ctxI->dstImage);
+  BLImagePrivateImpl* imageI = ImageInternal::getImpl(&ctxI->dstImage);
   BL_ASSERT(imageI != nullptr);
 
   flushImpl(ctxI, BL_CONTEXT_FLUSH_SYNC);
@@ -4423,7 +4424,7 @@ static BLResult detach(BLRasterContextImpl* ctxI) noexcept {
     ctxI->workerMgr->reset();
 
   // Release PipeRuntime.
-  if (blTestFlag(ctxI->pipeProvider.runtime()->runtimeFlags(), BLPipeline::PipeRuntimeFlags::kIsolated))
+  if (blTestFlag(ctxI->pipeProvider.runtime()->runtimeFlags(), Pipeline::PipeRuntimeFlags::kIsolated))
     ctxI->pipeProvider.runtime()->destroy();
   ctxI->pipeProvider.reset();
 
@@ -4455,8 +4456,8 @@ static BLResult detach(BLRasterContextImpl* ctxI) noexcept {
   // from the consumer's perspective as the resulting image can never be used again, but it can happen in some
   // cases (for example when an asynchronous rendering is terminated and the target image released with it).
   if (blAtomicFetchSubStrong(&imageI->writerCount) == 1)
-    if (BLObjectPrivate::getImplRefCount(imageI) == 0)
-      BLImagePrivate::freeImpl(imageI);
+    if (ObjectInternal::getImplRefCount(imageI) == 0)
+      ImageInternal::freeImpl(imageI);
 
   ctxI->dstImage._d.impl = nullptr;
   ctxI->dstData.reset();
@@ -4464,8 +4465,8 @@ static BLResult detach(BLRasterContextImpl* ctxI) noexcept {
   return BL_SUCCESS;
 }
 
-// BLRasterEngine - ContextImpl - Destroy
-// ======================================
+// bl::RasterEngine - ContextImpl - Destroy
+// ========================================
 
 static BLResult BL_CDECL destroyImpl(BLObjectImpl* impl) noexcept {
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(impl);
@@ -4477,8 +4478,8 @@ static BLResult BL_CDECL destroyImpl(BLObjectImpl* impl) noexcept {
   return blObjectFreeImpl(ctxI);
 }
 
-// BLRasterEngine - ContextImpl - Virtual Function Table
-// =====================================================
+// bl::RasterEngine - ContextImpl - Virtual Function Table
+// =======================================================
 
 template<RenderingMode kRM>
 static void initVirt(BLContextVirt* virt) noexcept {
@@ -4590,18 +4591,19 @@ static void initVirt(BLContextVirt* virt) noexcept {
   virt->blitScaledImageD         = blitScaledImageDImpl<kRM>;
 }
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
-// BLRasterEngine - ContextImpl - Runtime Registration
-// ===================================================
+// bl::RasterEngine - ContextImpl - Runtime Registration
+// =====================================================
 
 BLResult blRasterContextInitImpl(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* options) noexcept {
   BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_CONTEXT);
-  BL_PROPAGATE(BLObjectPrivate::allocImplAlignedT<BLRasterContextImpl>(self, info, BLObjectImplSize{sizeof(BLRasterContextImpl)}, 64));
+  BL_PROPAGATE(bl::ObjectInternal::allocImplAlignedT<BLRasterContextImpl>(self, info, BLObjectImplSize{sizeof(BLRasterContextImpl)}, 64));
 
   BLRasterContextImpl* ctxI = static_cast<BLRasterContextImpl*>(self->_d.impl);
-  blCallCtor(*ctxI, &BLRasterEngine::rasterImplVirtSync);
-  BLResult result = BLRasterEngine::attach(ctxI, image, options);
+  blCallCtor(*ctxI, &bl::RasterEngine::rasterImplVirtSync);
+  BLResult result = bl::RasterEngine::attach(ctxI, image, options);
 
   if (result != BL_SUCCESS)
     ctxI->virt->base.destroy(ctxI);
@@ -4612,6 +4614,6 @@ BLResult blRasterContextInitImpl(BLContextCore* self, BLImageCore* image, const 
 void blRasterContextOnInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
-  BLRasterEngine::initVirt<BLRasterEngine::RenderingMode::kSync>(&BLRasterEngine::rasterImplVirtSync);
-  BLRasterEngine::initVirt<BLRasterEngine::RenderingMode::kAsync>(&BLRasterEngine::rasterImplVirtAsync);
+  bl::RasterEngine::initVirt<bl::RasterEngine::RenderingMode::kSync>(&bl::RasterEngine::rasterImplVirtSync);
+  bl::RasterEngine::initVirt<bl::RasterEngine::RenderingMode::kAsync>(&bl::RasterEngine::rasterImplVirtAsync);
 }

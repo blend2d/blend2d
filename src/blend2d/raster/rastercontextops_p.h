@@ -16,7 +16,8 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 // The purpose of this file is to share as much as possible between both sync and async implementations.
 
@@ -123,7 +124,7 @@ static BL_INLINE BLResult addStrokedPathEdges(
   a->clear();
   workData->edgeBuilder.begin();
 
-  BLResult result = BLPathPrivate::strokePath(
+  BLResult result = PathInternal::strokePath(
     path->view(),
     accessor.strokeOptions(),
     accessor.approximationOptions(),
@@ -189,7 +190,8 @@ static BL_INLINE BLResult addStrokedGlyphRunEdges(
   return workData->accumulateError(result);
 }
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -14,7 +14,8 @@
 //! \addtogroup blend2d_pipeline_reference
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace Reference {
 
 static BL_INLINE_NODEBUG float msbMask(float a) noexcept { return blBitCast<float>(blBitCast<int32_t>(a) >> 31); }
@@ -204,7 +205,7 @@ struct FetchPatternVertAAExtendCtxAny {
       // Vertical Extend - Repeat or Reflect
       // -----------------------------------
 
-      _y = BLIntOps::pmod(uint32_t(_y), uint32_t(ry));
+      _y = IntOps::pmod(uint32_t(_y), uint32_t(ry));
 
       // If reflecting, we need few additional checks to reflect vertically. We are either reflecting now
       // (the first check) or we would be reflecting after the initial repeat (the second condition).
@@ -320,7 +321,7 @@ struct FetchPatternHorzExtendCtxRepeat {
     blUnused(rectWidth);
 
     _initPattern(pattern);
-    _tx = BLIntOps::pmod(uintptr_t(xPos) * kBPP + _tx, _w);
+    _tx = IntOps::pmod(uintptr_t(xPos) * kBPP + _tx, _w);
   }
 
   BL_INLINE void rectStart(uint32_t xPos) noexcept {
@@ -333,7 +334,7 @@ struct FetchPatternHorzExtendCtxRepeat {
   }
 
   BL_INLINE void spanStart(uint32_t xPos) noexcept {
-    _x = BLIntOps::pmod(uintptr_t(xPos) * kBPP + _tx, _w);
+    _x = IntOps::pmod(uintptr_t(xPos) * kBPP + _tx, _w);
   }
 
   BL_INLINE void spanAdvance(uint32_t xPos, uint32_t xDiff) noexcept {
@@ -341,7 +342,7 @@ struct FetchPatternHorzExtendCtxRepeat {
 
     _x += xDiff * kBPP;
     if (_x >= _w)
-      _x = BLIntOps::pmod(_x, _w);
+      _x = IntOps::pmod(_x, _w);
   }
 
   BL_INLINE void spanEnd(uint32_t xPos) noexcept {
@@ -376,7 +377,7 @@ struct FetchPatternHorzExtendCtxRoR {
     blUnused(rectWidth);
 
     _initPattern(pattern);
-    _tx = intptr_t(BLIntOps::pmod(uintptr_t(xPos) + _tx, _rx));
+    _tx = intptr_t(IntOps::pmod(uintptr_t(xPos) + _tx, _rx));
     if (uintptr_t(_tx) >= _w)
       _tx -= intptr_t(_rx);
   }
@@ -391,7 +392,7 @@ struct FetchPatternHorzExtendCtxRoR {
   }
 
   BL_INLINE void spanStart(uint32_t xPos) noexcept {
-    _x = BLIntOps::pmod(intptr_t(xPos) + _tx, intptr_t(_rx));
+    _x = IntOps::pmod(intptr_t(xPos) + _tx, intptr_t(_rx));
     if (_x >= intptr_t(_w))
       _x -= _rx;
   }
@@ -401,7 +402,7 @@ struct FetchPatternHorzExtendCtxRoR {
 
     _x += xDiff;
     if (uintptr_t(_x) >= _w) {
-      _x = BLIntOps::pmod(uintptr_t(_x), _rx);
+      _x = IntOps::pmod(uintptr_t(_x), _rx);
       if (_x >= intptr_t(_w)) {
         _x -= _rx;
       }
@@ -413,7 +414,7 @@ struct FetchPatternHorzExtendCtxRoR {
   }
 
   BL_INLINE size_t index() const noexcept {
-    return blMin<uintptr_t>(_x, _x ^ BLIntOps::allOnes<uintptr_t>()) * kBPP;
+    return blMin<uintptr_t>(_x, _x ^ IntOps::allOnes<uintptr_t>()) * kBPP;
   }
 
   BL_INLINE void advance1() noexcept {
@@ -530,8 +531,8 @@ struct FetchPatternAffineCtx {
     int32_t x = int32_t(px_py.x >> 32);
     int32_t y = int32_t(px_py.y >> 32);
 
-    x -= (BLIntOps::bitMaskFromBool<int32_t>(x > ox_oy.x) & rx_ry.x);
-    y -= (BLIntOps::bitMaskFromBool<int32_t>(y > ox_oy.y) & rx_ry.y);
+    x -= (IntOps::bitMaskFromBool<int32_t>(x > ox_oy.x) & rx_ry.x);
+    y -= (IntOps::bitMaskFromBool<int32_t>(y > ox_oy.y) & rx_ry.y);
 
     px_py = Vec2U64{(uint64_t(uint32_t(x)) << 32) | (px_py.x & 0xFFFFFFFFu),
                     (uint64_t(uint32_t(y)) << 32) | (px_py.y & 0xFFFFFFFFu)};
@@ -541,7 +542,7 @@ struct FetchPatternAffineCtx {
 // Fetch - Pattern - Aligned
 // =========================
 
-template<typename DstPixelT, BLInternalFormat kFormat>
+template<typename DstPixelT, FormatExt kFormat>
 struct FetchPatternAlignedBlit : public FetchNonSolid {
   typedef DstPixelT PixelType;
 
@@ -608,7 +609,7 @@ struct FetchPatternAlignedBlit : public FetchNonSolid {
   }
 };
 
-template<typename DstPixelT, BLInternalFormat kFormat, typename CtxX>
+template<typename DstPixelT, FormatExt kFormat, typename CtxX>
 struct FetchPatternAlignedAny : public FetchNonSolid {
   typedef DstPixelT PixelType;
 
@@ -658,19 +659,19 @@ struct FetchPatternAlignedAny : public FetchNonSolid {
   }
 };
 
-template<typename DstPixelT, BLInternalFormat kFormat>
+template<typename DstPixelT, FormatExt kFormat>
 struct FetchPatternAlignedPad : public FetchPatternAlignedAny<DstPixelT, kFormat, FetchPatternHorzExtendCtxPad<FormatMetadata<kFormat>::kBPP>> {};
 
-template<typename DstPixelT, BLInternalFormat kFormat>
+template<typename DstPixelT, FormatExt kFormat>
 struct FetchPatternAlignedRepeat : public FetchPatternAlignedAny<DstPixelT, kFormat, FetchPatternHorzExtendCtxRepeat<FormatMetadata<kFormat>::kBPP>> {};
 
-template<typename DstPixelT, BLInternalFormat kFormat>
+template<typename DstPixelT, FormatExt kFormat>
 struct FetchPatternAlignedRoR : public FetchPatternAlignedAny<DstPixelT, kFormat, FetchPatternHorzExtendCtxRoR<FormatMetadata<kFormat>::kBPP>> {};
 
 // Fetch - Pattern - FxFy
 // ======================
 
-template<typename DstPixelT, BLInternalFormat kFormat, typename CtxX>
+template<typename DstPixelT, FormatExt kFormat, typename CtxX>
 struct FetchPatternFxFyAny : public FetchNonSolid {
   typedef DstPixelT PixelType;
 
@@ -763,16 +764,16 @@ struct FetchPatternFxFyAny : public FetchNonSolid {
   }
 };
 
-template<typename DstPixelT, BLInternalFormat kFormat>
+template<typename DstPixelT, FormatExt kFormat>
 struct FetchPatternFxFyPad : public FetchPatternFxFyAny<DstPixelT, kFormat, FetchPatternHorzExtendCtxPad<FormatMetadata<kFormat>::kBPP>> {};
 
-template<typename DstPixelT, BLInternalFormat kFormat>
+template<typename DstPixelT, FormatExt kFormat>
 struct FetchPatternFxFyRoR : public FetchPatternFxFyAny<DstPixelT, kFormat, FetchPatternHorzExtendCtxRoR<FormatMetadata<kFormat>::kBPP>> {};
 
 // Fetch - Pattern - Affine
 // ========================
 
-template<typename DstPixelT, BLInternalFormat kFormat>
+template<typename DstPixelT, FormatExt kFormat>
 struct FetchPatternAffineNNBase : public FetchNonSolid {
   const uint8_t* _pixelData;
   intptr_t _stride;
@@ -816,7 +817,7 @@ struct FetchPatternAffineNNBase : public FetchNonSolid {
   }
 };
 
-template<typename DstPixelT, BLInternalFormat kFormat>
+template<typename DstPixelT, FormatExt kFormat>
 struct FetchPatternAffineNNAny : public FetchPatternAffineNNBase<DstPixelT, kFormat> {
   typedef DstPixelT PixelType;
 
@@ -835,7 +836,7 @@ struct FetchPatternAffineNNAny : public FetchPatternAffineNNBase<DstPixelT, kFor
   }
 };
 
-template<typename DstPixelT, BLInternalFormat kFormat>
+template<typename DstPixelT, FormatExt kFormat>
 struct FetchPatternAffineBIAny : public FetchPatternAffineNNBase<DstPixelT, kFormat> {
   typedef DstPixelT PixelType;
 
@@ -890,7 +891,7 @@ struct FetchGradientBase<PixelType, BL_GRADIENT_QUALITY_NEAREST> : public FetchN
   BL_INLINE void _advanceGradientY() noexcept {}
 
   BL_INLINE PixelType fetchPixel(uint32_t idx) const noexcept {
-    return PixelIO<PixelType, BLInternalFormat::kPRGB32>::fetch(static_cast<const uint32_t*>(_table) + idx);
+    return PixelIO<PixelType, FormatExt::kPRGB32>::fetch(static_cast<const uint32_t*>(_table) + idx);
   }
 };
 
@@ -919,7 +920,7 @@ struct FetchGradientBase<PixelType, BL_GRADIENT_QUALITY_DITHER> : public FetchNo
 
   BL_INLINE PixelType fetchPixel(uint32_t idx) noexcept {
     BLRgba64 v{static_cast<const uint64_t*>(_table)[idx]};
-    uint32_t dd = blCommonTable.bayerMatrix16x16[_dmOffsetY + _dmOffsetX];
+    uint32_t dd = commonTable.bayerMatrix16x16[_dmOffsetY + _dmOffsetX];
 
     uint32_t a = v.a() >> 8;
     uint32_t r = blMin<uint32_t>((v.r() + dd) >> 8, a);
@@ -927,7 +928,7 @@ struct FetchGradientBase<PixelType, BL_GRADIENT_QUALITY_DITHER> : public FetchNo
     uint32_t b = blMin<uint32_t>((v.b() + dd) >> 8, a);
 
     _dmOffsetX = (_dmOffsetX + 1u) & 15u;
-    return PixelIO<PixelType, BLInternalFormat::kPRGB32>::make(r, g, b, a);
+    return PixelIO<PixelType, FormatExt::kPRGB32>::make(r, g, b, a);
   }
 };
 
@@ -1100,7 +1101,7 @@ struct FetchRadialGradient : public FetchGradientBase<PixelType, kQuality> {
   }
 
   BL_INLINE PixelType fetch() noexcept {
-    float v_f32 = blSqrt(blAbs(float(d_b.x)));
+    float v_f32 = Math::sqrt(blAbs(float(d_b.x)));
     float b_f32 = float(d_b.y);
 
     d_b += dd_bd;
@@ -1137,7 +1138,7 @@ struct FetchConicGradient : public FetchGradientBase<PixelType, kQuality> {
   Vec2D hx_hy;
   Vec2D px_py;
 
-  const BLCommonTable::Conic* consts;
+  const CommonTable::Conic* consts;
   float angleOffset;
   int maxi;
 
@@ -1205,7 +1206,7 @@ struct FetchConicGradient : public FetchGradientBase<PixelType, kQuality> {
     float x2 = blMax(x1.x, x1.y);
     float x3 = blMin(x1.x, x1.y);
 
-    float s = bitAnd(blBitCast<float>(BLIntOps::bitMaskFromBool<uint32_t>(x1.x == x3)), consts->n_div_4[0]);
+    float s = bitAnd(blBitCast<float>(IntOps::bitMaskFromBool<uint32_t>(x1.x == x3)), consts->n_div_4[0]);
     x3 = x3 / x2;
     x2 = x3 * x3;
     pt = msbMask(pt) & Vec2F{consts->n_extra[0], consts->n_extra[1]};
@@ -1225,7 +1226,8 @@ struct FetchConicGradient : public FetchGradientBase<PixelType, kQuality> {
 };
 
 } // {Reference}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

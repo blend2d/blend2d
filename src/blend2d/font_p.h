@@ -47,22 +47,21 @@ static BL_INLINE void blFontImplCtor(BLFontPrivateImpl* impl) noexcept {
   blCallCtor(impl->variationSettings.dcast());
 }
 
-namespace BLFontPrivate {
-
-using BLObjectPrivate::RCMode;
+namespace bl {
+namespace FontInternal {
 
 //! \name BLFont - Internals - Common Functionality (Impl)
 //! \{
 
 static BL_INLINE bool isImplMutable(const BLFontPrivateImpl* impl) noexcept {
-  return BLObjectPrivate::isImplMutable(impl);
+  return ObjectInternal::isImplMutable(impl);
 }
 
 BL_HIDDEN BLResult freeImpl(BLFontPrivateImpl* impl) noexcept;
 
 template<RCMode kRCMode>
 static BL_INLINE BLResult releaseImpl(BLFontPrivateImpl* impl) noexcept {
-  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -75,11 +74,11 @@ static BL_INLINE BLFontPrivateImpl* getImpl(const BLFontCore* self) noexcept {
 }
 
 static BL_INLINE bool isInstanceMutable(const BLFontCore* self) noexcept {
-  return BLObjectPrivate::isImplMutable(self->_d.impl);
+  return ObjectInternal::isImplMutable(self->_d.impl);
 }
 
 static BL_INLINE BLResult retainInstance(const BLFontCore* self, size_t n = 1) noexcept {
-  return BLObjectPrivate::retainInstance(self, n);
+  return ObjectInternal::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLFontCore* self) noexcept {
@@ -94,7 +93,8 @@ static BL_INLINE BLResult replaceInstance(BLFontCore* self, const BLFontCore* ot
 
 //! \}
 
-} // {BLFontPrivate}
+} // {FontInternal}
+} // {bl}
 
 //! \}
 //! \endcond

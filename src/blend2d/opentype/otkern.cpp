@@ -12,11 +12,12 @@
 #include "../support/memops_p.h"
 #include "../support/ptrops_p.h"
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 namespace KernImpl {
 
-// BLOpenType::KernImpl - Tracing
-// ==============================
+// bl::OpenType::KernImpl - Tracing
+// ================================
 
 #if defined(BL_TRACE_OT_ALL) || defined(BL_TRACE_OT_KERN)
   #define Trace BLDebugTrace
@@ -24,8 +25,8 @@ namespace KernImpl {
   #define Trace BLDummyTrace
 #endif
 
-// BLOpenType::KernImpl - Lookup Tables
-// ====================================
+// bl::OpenType::KernImpl - Lookup Tables
+// ======================================
 
 static const uint8_t minKernSubTableSize[4] = {
   uint8_t(sizeof(KernTable::Format0)),
@@ -34,8 +35,8 @@ static const uint8_t minKernSubTableSize[4] = {
   uint8_t(sizeof(KernTable::Format3))
 };
 
-// BLOpenType::KernImpl - Match
-// ============================
+// bl::OpenType::KernImpl - Match
+// ==============================
 
 struct KernMatch {
   uint32_t combined;
@@ -44,8 +45,8 @@ struct KernMatch {
 static BL_INLINE bool operator==(const KernTable::Pair& a, const KernMatch& b) noexcept { return a.combined() == b.combined; }
 static BL_INLINE bool operator<=(const KernTable::Pair& a, const KernMatch& b) noexcept { return a.combined() <= b.combined; }
 
-// BLOpenType::KernImpl - Utilities
-// ================================
+// bl::OpenType::KernImpl - Utilities
+// ==================================
 
 // Used to define a range of unsorted kerning pairs.
 struct UnsortedRange {
@@ -154,7 +155,7 @@ static BLResult fixUnsortedKernPairs(KernCollection& collection, const KernTable
     }
     BL_ASSERT(synthesizedIndex == unsortedPairSum);
 
-    BLAlgorithm::quickSort(synthesizedPairs, unsortedPairSum, [](const Pair& a, const Pair& b) noexcept -> int {
+    quickSort(synthesizedPairs, unsortedPairSum, [](const Pair& a, const Pair& b) noexcept -> int {
       uint32_t aCombined = a.combined();
       uint32_t bCombined = b.combined();
       return aCombined < bCombined ? -1 : aCombined > bCombined ? 1 : 0;
@@ -168,11 +169,11 @@ static BLResult fixUnsortedKernPairs(KernCollection& collection, const KernTable
 }
 
 static BL_INLINE size_t findKernPair(const KernTable::Pair* pairs, size_t count, uint32_t pair) noexcept {
-  return BLAlgorithm::binarySearch(pairs, count, KernMatch(pair));
+  return binarySearch(pairs, count, KernMatch(pair));
 }
 
-// BLOpenType::KernImpl - Apply
-// ============================
+// bl::OpenType::KernImpl - Apply
+// ==============================
 
 static constexpr int32_t kKernMaskOverride = 0x0;
 static constexpr int32_t kKernMaskMinimum = 0x1;
@@ -231,15 +232,15 @@ static BL_INLINE int32_t applyKernFormat2(const OTFaceImpl* faceI, const void* d
   typedef KernTable::Format2 Format2;
   typedef Format2::ClassTable ClassTable;
 
-  const Format2* subTable = BLPtrOps::offset<const Format2>(dataPtr, faceI->kern.headerSize);
+  const Format2* subTable = PtrOps::offset<const Format2>(dataPtr, faceI->kern.headerSize);
   uint32_t leftClassTableOffset = subTable->leftClassTable();
   uint32_t rightClassTableOffset = subTable->rightClassTable();
 
   if (BL_UNLIKELY(blMax(leftClassTableOffset, rightClassTableOffset) > dataSize - sizeof(ClassTable)))
     return 0;
 
-  const ClassTable* leftClassTable = BLPtrOps::offset<const ClassTable>(dataPtr, leftClassTableOffset);
-  const ClassTable* rightClassTable = BLPtrOps::offset<const ClassTable>(dataPtr, rightClassTableOffset);
+  const ClassTable* leftClassTable = PtrOps::offset<const ClassTable>(dataPtr, leftClassTableOffset);
+  const ClassTable* rightClassTable = PtrOps::offset<const ClassTable>(dataPtr, rightClassTableOffset);
 
   uint32_t leftGlyphCount = leftClassTable->glyphCount();
   uint32_t rightGlyphCount = rightClassTable->glyphCount();
@@ -274,7 +275,7 @@ static BL_INLINE int32_t applyKernFormat2(const OTFaceImpl* faceI, const void* d
     if (leftClass * rightClass == 0 || valueOffset > dataSize - 2u)
       continue;
 
-    int32_t value = BLPtrOps::offset<const FWord>(dataPtr, valueOffset)->value();
+    int32_t value = PtrOps::offset<const FWord>(dataPtr, valueOffset)->value();
     int32_t combined = combineKernValue(placementData[i].placement.x, value, mask);
 
     placementData[i].placement.x = combined;
@@ -288,7 +289,7 @@ static BL_INLINE int32_t applyKernFormat2(const OTFaceImpl* faceI, const void* d
 static BL_INLINE int32_t applyKernFormat3(const OTFaceImpl* faceI, const void* dataPtr, size_t dataSize, uint32_t* glyphData, BLGlyphPlacement* placementData, size_t count, int32_t mask) noexcept {
   typedef KernTable::Format3 Format3;
 
-  const Format3* subTable = BLPtrOps::offset<const Format3>(dataPtr, faceI->kern.headerSize);
+  const Format3* subTable = PtrOps::offset<const Format3>(dataPtr, faceI->kern.headerSize);
   uint32_t glyphCount = subTable->glyphCount();
   uint32_t kernValueCount = subTable->kernValueCount();
   uint32_t leftClassCount = subTable->leftClassCount();
@@ -298,8 +299,8 @@ static BL_INLINE int32_t applyKernFormat3(const OTFaceImpl* faceI, const void* d
   if (BL_UNLIKELY(requiredSize < dataSize))
     return 0;
 
-  const FWord* valueTable = BLPtrOps::offset<const FWord>(subTable, sizeof(Format3));
-  const UInt8* classTable = BLPtrOps::offset<const UInt8>(valueTable, kernValueCount * 2u);
+  const FWord* valueTable = PtrOps::offset<const FWord>(subTable, sizeof(Format3));
+  const UInt8* classTable = PtrOps::offset<const UInt8>(valueTable, kernValueCount * 2u);
   const UInt8* indexTable = classTable + glyphCount * 2u;
 
   int32_t allCombined = 0;
@@ -377,8 +378,8 @@ static BLResult BL_CDECL applyKern(const BLFontFaceImpl* faceI_, uint32_t* glyph
   return BL_SUCCESS;
 }
 
-// BLOpenType::KernImpl - Init
-// ===========================
+// bl::OpenType::KernImpl - Init
+// =============================
 
 BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   typedef KernTable::WinGroupHeader WinGroupHeader;
@@ -389,7 +390,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
     return BL_SUCCESS;
 
   Trace trace;
-  trace.info("BLOpenType::OTFaceImpl::Init 'kern' [Size=%zu]\n", kern.size);
+  trace.info("bl::OpenType::OTFaceImpl::Init 'kern' [Size=%zu]\n", kern.size);
   trace.indent();
 
   if (BL_UNLIKELY(!kern.fits())) {
@@ -407,7 +408,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   // Detect the header format. Windows header uses 16-bit field describing the version of the table and only defines
   // version 0. Apple uses a different header format which uses a 32-bit version number (`F16x16`). Luckily we can
   // distinguish between these two easily.
-  uint32_t majorVersion = BLMemOps::readU16uBE(dataPtr);
+  uint32_t majorVersion = MemOps::readU16uBE(dataPtr);
 
   uint32_t headerType = 0xFFu;
   uint32_t headerSize = 0;
@@ -416,7 +417,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   if (majorVersion == 0) {
     headerType = KernData::kHeaderWindows;
     headerSize = uint32_t(sizeof(WinGroupHeader));
-    groupCount = BLMemOps::readU16uBE(dataPtr + 2u);
+    groupCount = MemOps::readU16uBE(dataPtr + 2u);
 
     trace.info("Version: 0 (WINDOWS)\n");
     trace.info("GroupCount: %u\n", groupCount);
@@ -430,7 +431,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
     dataPtr += 4;
   }
   else if (majorVersion == 1) {
-    uint32_t minorVersion = BLMemOps::readU16uBE(dataPtr + 2u);
+    uint32_t minorVersion = MemOps::readU16uBE(dataPtr + 2u);
     trace.info("Version: 1 (MAC)\n");
 
     if (minorVersion != 0) {
@@ -450,7 +451,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
     headerType = KernData::kHeaderMac;
     headerSize = uint32_t(sizeof(MacGroupHeader));
 
-    groupCount = BLMemOps::readU32uBE(dataPtr + 4u);
+    groupCount = MemOps::readU32uBE(dataPtr + 4u);
     trace.info("GroupCount: %u\n", groupCount);
 
     // Not forbidden by the spec, just ignore the table if true.
@@ -631,8 +632,8 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
             break;
           }
 
-          const KernTable::Format2::ClassTable* leftClassTable = BLPtrOps::offset<const KernTable::Format2::ClassTable>(subTable, leftClassTableOffset);
-          const KernTable::Format2::ClassTable* rightClassTable = BLPtrOps::offset<const KernTable::Format2::ClassTable>(subTable, rightClassTableOffset);
+          const KernTable::Format2::ClassTable* leftClassTable = PtrOps::offset<const KernTable::Format2::ClassTable>(subTable, leftClassTableOffset);
+          const KernTable::Format2::ClassTable* rightClassTable = PtrOps::offset<const KernTable::Format2::ClassTable>(subTable, rightClassTableOffset);
 
           uint32_t leftGlyphCount = leftClassTable->glyphCount();
           uint32_t rightGlyphCount = rightClassTable->glyphCount();
@@ -701,7 +702,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
     faceI->kern.table = kern;
     faceI->kern.collection[BL_ORIENTATION_HORIZONTAL].groups.shrink();
     faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_HORIZONTAL_KERNING;
-    faceI->featureTagSet._addKnownTagId(uint32_t(BLFontTagData::FeatureId::kKERN));
+    faceI->featureTagSet._addKnownTagId(uint32_t(FontTagData::FeatureId::kKERN));
     faceI->funcs.applyKern = applyKern;
   }
 
@@ -709,4 +710,5 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 }
 
 } // {KernImpl}
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}

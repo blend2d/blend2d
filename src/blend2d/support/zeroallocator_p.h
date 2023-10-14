@@ -16,10 +16,12 @@ BL_HIDDEN void* blZeroAllocatorAlloc(size_t size, size_t* allocatedSize) noexcep
 BL_HIDDEN void* blZeroAllocatorResize(void* prevPtr, size_t prevSize, size_t size, size_t* allocatedSize) noexcept;
 BL_HIDDEN void  blZeroAllocatorRelease(void* ptr, size_t size) noexcept;
 
+namespace bl {
+
 //! Memory buffer that is initially zeroed and that must be zeroed upon release.
-class BLZeroBuffer {
+class ZeroBuffer {
 public:
-  BL_NONCOPYABLE(BLZeroBuffer)
+  BL_NONCOPYABLE(ZeroBuffer)
 
   //! \name Members
   //! \{
@@ -34,16 +36,16 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLZeroBuffer() noexcept = default;
+  BL_INLINE ZeroBuffer() noexcept = default;
 
-  BL_INLINE BLZeroBuffer(BLZeroBuffer&& other) noexcept
+  BL_INLINE ZeroBuffer(ZeroBuffer&& other) noexcept
     : data(other.data),
       size(other.size) {
     other.data = nullptr;
     other.size = 0;
   }
 
-  BL_INLINE ~BLZeroBuffer() noexcept {
+  BL_INLINE ~ZeroBuffer() noexcept {
     if (data)
       blZeroAllocatorRelease(data, size);
   }
@@ -72,6 +74,8 @@ public:
 
   //! \}
 };
+
+} // {bl}
 
 //! \}
 //! \endcond

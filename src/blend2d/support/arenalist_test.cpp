@@ -9,16 +9,17 @@
 #include "../support/arenaallocator_p.h"
 #include "../support/arenalist_p.h"
 
-// BLArenaList - Tests
-// ===================
+// bl::ArenaList - Tests
+// =====================
 
-namespace BLArenaListTests {
+namespace bl {
+namespace Tests {
 
-class MyListNode : public BLArenaListNode<MyListNode> {};
+class MyListNode : public ArenaListNode<MyListNode> {};
 
 UNIT(arena_list, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
-  BLArenaAllocator zone(4096);
-  BLArenaList<MyListNode> list;
+  ArenaAllocator zone(4096);
+  ArenaList<MyListNode> list;
 
   MyListNode* a = zone.newT<MyListNode>();
   MyListNode* b = zone.newT<MyListNode>();
@@ -160,6 +161,7 @@ UNIT(arena_list, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   EXPECT_EQ(a->next(), nullptr);
 }
 
-} // {BLArenaListTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

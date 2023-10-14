@@ -8,11 +8,12 @@
 
 #include "../../pipeline/jit/fetchutils_p.h"
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
-// BLPipeline::JIT::IndexExtractor
-// ===============================
+// bl::Pipeline::JIT::IndexExtractor
+// =================================
 
 IndexExtractor::IndexExtractor(PipeCompiler* pc) noexcept
   : _pc(pc),
@@ -100,8 +101,8 @@ void IndexExtractor::extract(const x86::Gp& dst, uint32_t index) noexcept {
   }
 }
 
-// BLPipeline::JIT::FetchContext
-// =============================
+// bl::Pipeline::JIT::FetchContext
+// ===============================
 
 void FetchContext::_init(PixelCount n) noexcept {
   BL_ASSERT(n == 4 || n == 8);
@@ -111,7 +112,7 @@ void FetchContext::_init(PixelCount n) noexcept {
 
   // The strategy for fetching alpha pixels is a bit different compared to fetching RGBA pixels.
   // In general we prefer to fetch into a GP accumulator and then convert it to XMM|YMM at the end.
-  _a8FetchMode = _fetchFormat == BLInternalFormat::kA8 || _pixel->isA8();
+  _a8FetchMode = _fetchFormat == FormatExt::kA8 || _pixel->isA8();
 
   x86::Compiler* cc = _pc->cc;
   switch (_pixel->type()) {
@@ -184,7 +185,7 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
     x86::Mem m(src);
     m.setSize(1);
 
-    if (_fetchFormat == BLInternalFormat::kPRGB32)
+    if (_fetchFormat == FormatExt::kPRGB32)
       m.addOffset(3);
 
     bool clearAcc = _fetchIndex == 0 || (_fetchIndex == 4 && aAcc.size() == 4);
@@ -606,7 +607,7 @@ void FetchContext::end() noexcept {
   _fetchDone = true;
 }
 
-void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, BLInternalFormat format, PixelFlags flags, const x86::Mem& src, const x86::Vec& idx, uint32_t shift, IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept {
+void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, FormatExt format, PixelFlags flags, const x86::Mem& src, const x86::Vec& idx, uint32_t shift, IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept {
   x86::Compiler* cc = pc->cc;
 
   x86::Mem mem(src);
@@ -838,6 +839,7 @@ void FetchUtils::x_convert_gathered_pixels(PipeCompiler* pc, Pixel& p, PixelCoun
 }
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 #endif

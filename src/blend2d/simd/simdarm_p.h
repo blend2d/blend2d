@@ -975,9 +975,9 @@ BL_INLINE_NODEBUG uint8x16_t simd_interleave_lo_u8(const uint8x16_t& a, const ui
 #if defined(BL_SIMD_AARCH64)
   return vzip1q_u8(a, b);
 #else
-  uint8x8_t al = vget_low_u8(a);
-  uint8x8_t bl = vget_low_u8(b);
-  uint8x8x2_t ab = vzip_u8(al, bl);
+  uint8x8_t a_low = vget_low_u8(a);
+  uint8x8_t b_low = vget_low_u8(b);
+  uint8x8x2_t ab = vzip_u8(a_low, b_low);
   return vcombine_u8(ab.val[0], ab.val[1]);
 #endif
 }
@@ -986,10 +986,10 @@ BL_INLINE_NODEBUG uint8x16_t simd_interleave_hi_u8(const uint8x16_t& a, const ui
 #if defined(BL_SIMD_AARCH64)
   return vzip2q_u8(a, b);
 #else
-  uint8x8_t ah = vget_high_u8(a);
-  uint8x8_t bh = vget_high_u8(b);
-  uint8x8x2_t ab = vzip_u8(ah, bh);
-  return vcombine_u8(ab.val[0], ab.val[1]);
+  uint8x8_t a_high = vget_high_u8(a);
+  uint8x8_t b_high = vget_high_u8(b);
+  uint8x8x2_t ab = vzip_u8(a_high, b_high);
+  return vcombine_u8(ab.va_low[0], ab.va_low[1]);
 #endif
 }
 
@@ -997,10 +997,10 @@ BL_INLINE_NODEBUG uint16x8_t simd_interleave_lo_u16(const uint16x8_t& a, const u
 #if defined(BL_SIMD_AARCH64)
   return vzip1q_u16(a, b);
 #else
-  uint16x4_t al = vget_low_u16(a);
-  uint16x4_t bl = vget_low_u16(b);
-  uint16x4x2_t ab = vzip_u16(al, bl);
-  return vcombine_u16(ab.val[0], ab.val[1]);
+  uint16x4_t a_low = vget_low_u16(a);
+  uint16x4_t b_low = vget_low_u16(b);
+  uint16x4x2_t ab = vzip_u16(a_low, b_low);
+  return vcombine_u16(ab.va_low[0], ab.va_low[1]);
 #endif
 }
 
@@ -1008,10 +1008,10 @@ BL_INLINE_NODEBUG uint16x8_t simd_interleave_hi_u16(const uint16x8_t& a, const u
 #if defined(BL_SIMD_AARCH64)
   return vzip2q_u16(a, b);
 #else
-  uint16x4_t ah = vget_high_u16(a);
-  uint16x4_t bh = vget_high_u16(b);
-  uint16x4x2_t ab = vzip_u16(ah, bh);
-  return vcombine_u16(ab.val[0], ab.val[1]);
+  uint16x4_t a_high = vget_high_u16(a);
+  uint16x4_t b_high = vget_high_u16(b);
+  uint16x4x2_t ab = vzip_u16(a_high, b_high);
+  return vcombine_u16(ab.va_low[0], ab.va_low[1]);
 #endif
 }
 
@@ -1019,10 +1019,10 @@ BL_INLINE_NODEBUG uint32x4_t simd_interleave_lo_u32(const uint32x4_t& a, const u
 #if defined(BL_SIMD_AARCH64)
   return vzip1q_u32(a, b);
 #else
-  uint32x2_t al = vget_low_u32(a);
-  uint32x2_t bl = vget_low_u32(b);
-  uint32x2x2_t ab = vzip_u32(al, bl);
-  return vcombine_u32(ab.val[0], ab.val[1]);
+  uint32x2_t a_low = vget_low_u32(a);
+  uint32x2_t b_low = vget_low_u32(b);
+  uint32x2x2_t ab = vzip_u32(a_low, b_low);
+  return vcombine_u32(ab.va_low[0], ab.va_low[1]);
 #endif
 }
 
@@ -1030,10 +1030,10 @@ BL_INLINE_NODEBUG uint32x4_t simd_interleave_hi_u32(const uint32x4_t& a, const u
 #if defined(BL_SIMD_AARCH64)
   return vzip2q_u32(a, b);
 #else
-  uint32x2_t ah = vget_high_u32(a);
-  uint32x2_t bh = vget_high_u32(b);
-  uint32x2x2_t ab = vzip_u32(ah, bh);
-  return vcombine_u32(ab.val[0], ab.val[1]);
+  uint32x2_t a_high = vget_high_u32(a);
+  uint32x2_t b_high = vget_high_u32(b);
+  uint32x2x2_t ab = vzip_u32(a_high, b_high);
+  return vcombine_u32(ab.va_low[0], ab.va_low[1]);
 #endif
 }
 
@@ -1041,9 +1041,9 @@ BL_INLINE_NODEBUG uint64x2_t simd_interleave_lo_u64(const uint64x2_t& a, const u
 #if defined(BL_SIMD_AARCH64)
   return vzip1q_u64(a, b);
 #else
-  uint64x1_t al = vget_low_u64(a);
-  uint64x1_t bl = vget_low_u64(b);
-  return vcombine_u64(al, bl);
+  uint64x1_t a_low = vget_low_u64(a);
+  uint64x1_t b_low = vget_low_u64(b);
+  return vcombine_u64(a_low, b_low);
 #endif
 }
 
@@ -1051,9 +1051,9 @@ BL_INLINE_NODEBUG uint64x2_t simd_interleave_hi_u64(const uint64x2_t& a, const u
 #if defined(BL_SIMD_AARCH64)
   return vzip2q_u64(a, b);
 #else
-  uint64x1_t ah = vget_high_u64(a);
-  uint64x1_t bh = vget_high_u64(b);
-  return vcombine_u64(ah, bh);
+  uint64x1_t a_high = vget_high_u64(a);
+  uint64x1_t b_high = vget_high_u64(b);
+  return vcombine_u64(a_high, b_high);
 #endif
 }
 
@@ -1061,10 +1061,10 @@ BL_INLINE_NODEBUG float32x4_t simd_interleave_lo_f32(const float32x4_t& a, const
 #if defined(BL_SIMD_AARCH64)
   return vzip1q_f32(a, b);
 #else
-  float32x2_t al = vget_low_f32(a);
-  float32x2_t bl = vget_low_f32(b);
-  float32x2x2_t ab = vzip_f32(al, bl);
-  return vcombine_f32(ab.val[0], ab.val[1]);
+  float32x2_t a_low = vget_low_f32(a);
+  float32x2_t b_low = vget_low_f32(b);
+  float32x2x2_t ab = vzip_f32(a_low, b_low);
+  return vcombine_f32(ab.va_low[0], ab.va_low[1]);
 #endif
 }
 
@@ -1072,10 +1072,10 @@ BL_INLINE_NODEBUG float32x4_t simd_interleave_hi_f32(const float32x4_t& a, const
 #if defined(BL_SIMD_AARCH64)
   return vzip2q_f32(a, b);
 #else
-  float32x2_t ah = vget_high_f32(a);
-  float32x2_t bh = vget_high_f32(b);
-  float32x2x2_t ab = vzip_f32(ah, bh);
-  return vcombine_f32(ab.val[0], ab.val[1]);
+  float32x2_t a_high = vget_high_f32(a);
+  float32x2_t b_high = vget_high_f32(b);
+  float32x2x2_t ab = vzip_f32(a_high, b_high);
+  return vcombine_f32(ab.va_low[0], ab.va_low[1]);
 #endif
 }
 
@@ -1642,8 +1642,8 @@ template<> BL_INLINE_NODEBUG uint8x8_t simd_loada_16<8>(const void* src) noexcep
 template<> BL_INLINE_NODEBUG uint8x8_t simd_loada_32<8>(const void* src) noexcept { return simd_u8(vld1_lane_u32(static_cast<const uint32_t*>(src), vdup_n_u32(0), 0)); }
 template<> BL_INLINE_NODEBUG uint8x8_t simd_loada_64<8>(const void* src) noexcept { return simd_u8(vld1_u64(static_cast<const uint64_t*>(src))); }
 
-template<> BL_INLINE_NODEBUG uint8x8_t simd_loadu_16<8>(const void* src) noexcept { return simd_u8(vset_lane_u16(BLMemOps::readU16u(src), vdup_n_u16(0), 0)); }
-template<> BL_INLINE_NODEBUG uint8x8_t simd_loadu_32<8>(const void* src) noexcept { return simd_u8(vset_lane_u32(BLMemOps::readU32u(src), vdup_n_u32(0), 0)); }
+template<> BL_INLINE_NODEBUG uint8x8_t simd_loadu_16<8>(const void* src) noexcept { return simd_u8(vset_lane_u16(bl::MemOps::readU16u(src), vdup_n_u16(0), 0)); }
+template<> BL_INLINE_NODEBUG uint8x8_t simd_loadu_32<8>(const void* src) noexcept { return simd_u8(vset_lane_u32(bl::MemOps::readU32u(src), vdup_n_u32(0), 0)); }
 template<> BL_INLINE_NODEBUG uint8x8_t simd_loadu_64<8>(const void* src) noexcept { return simd_u8(vld1_u8(static_cast<const uint8_t*>(src))); }
 
 template<> BL_INLINE_NODEBUG uint8x8_t simd_loada<8>(const void* src) noexcept { return simd_u8(vld1_u64(static_cast<const uint64_t*>(src))); }
@@ -1654,9 +1654,9 @@ template<> BL_INLINE_NODEBUG uint8x16_t simd_loada_16<16>(const void* src) noexc
 template<> BL_INLINE_NODEBUG uint8x16_t simd_loada_32<16>(const void* src) noexcept { return simd_u8(vld1q_lane_u32(static_cast<const uint32_t*>(src), vdupq_n_u32(0), 0)); }
 template<> BL_INLINE_NODEBUG uint8x16_t simd_loada_64<16>(const void* src) noexcept { return simd_u8(vld1q_lane_u64(static_cast<const uint64_t*>(src), vdupq_n_u64(0), 0)); }
 
-template<> BL_INLINE_NODEBUG uint8x16_t simd_loadu_16<16>(const void* src) noexcept { return simd_u8(vsetq_lane_u16(BLMemOps::readU16u(src), vdupq_n_u16(0), 0)); }
-template<> BL_INLINE_NODEBUG uint8x16_t simd_loadu_32<16>(const void* src) noexcept { return simd_u8(vsetq_lane_u32(BLMemOps::readU32u(src), vdupq_n_u32(0), 0)); }
-template<> BL_INLINE_NODEBUG uint8x16_t simd_loadu_64<16>(const void* src) noexcept { return simd_u8(vsetq_lane_u64(BLMemOps::readU64u(src), vdupq_n_u64(0), 0)); }
+template<> BL_INLINE_NODEBUG uint8x16_t simd_loadu_16<16>(const void* src) noexcept { return simd_u8(vsetq_lane_u16(bl::MemOps::readU16u(src), vdupq_n_u16(0), 0)); }
+template<> BL_INLINE_NODEBUG uint8x16_t simd_loadu_32<16>(const void* src) noexcept { return simd_u8(vsetq_lane_u32(bl::MemOps::readU32u(src), vdupq_n_u32(0), 0)); }
+template<> BL_INLINE_NODEBUG uint8x16_t simd_loadu_64<16>(const void* src) noexcept { return simd_u8(vsetq_lane_u64(bl::MemOps::readU64u(src), vdupq_n_u64(0), 0)); }
 
 BL_INLINE_NODEBUG uint8x16_t simd_loada_128(const void* src) noexcept { return simd_u8(vld1q_u64(static_cast<const uint64_t*>(src))); }
 BL_INLINE_NODEBUG uint8x16_t simd_loadu_128(const void* src) noexcept { return simd_u8(vld1q_u8(static_cast<const uint8_t*>(src))); }
@@ -1670,14 +1670,14 @@ BL_INLINE_NODEBUG void simd_store_8(void* dst, uint8x16_t src) noexcept { vst1q_
 BL_INLINE_NODEBUG void simd_storea_16(void* dst, uint8x8_t src) noexcept { vst1_lane_u16(static_cast<uint16_t*>(dst), simd_u16(src), 0); }
 BL_INLINE_NODEBUG void simd_storea_16(void* dst, uint8x16_t src) noexcept { vst1q_lane_u16(static_cast<uint16_t*>(dst), simd_u16(src), 0); }
 
-BL_INLINE_NODEBUG void simd_storeu_16(void* dst, uint8x8_t src) noexcept { BLMemOps::writeU16u(dst, vget_lane_u16(simd_u16(src), 0)); }
-BL_INLINE_NODEBUG void simd_storeu_16(void* dst, uint8x16_t src) noexcept { BLMemOps::writeU16u(dst, vgetq_lane_u16(simd_u16(src), 0)); }
+BL_INLINE_NODEBUG void simd_storeu_16(void* dst, uint8x8_t src) noexcept { bl::MemOps::writeU16u(dst, vget_lane_u16(simd_u16(src), 0)); }
+BL_INLINE_NODEBUG void simd_storeu_16(void* dst, uint8x16_t src) noexcept { bl::MemOps::writeU16u(dst, vgetq_lane_u16(simd_u16(src), 0)); }
 
 BL_INLINE_NODEBUG void simd_storea_32(void* dst, uint8x8_t src) noexcept { vst1_lane_u32(static_cast<uint32_t*>(dst), simd_u32(src), 0); }
 BL_INLINE_NODEBUG void simd_storea_32(void* dst, uint8x16_t src) noexcept { vst1q_lane_u32(static_cast<uint32_t*>(dst), simd_u32(src), 0); }
 
-BL_INLINE_NODEBUG void simd_storeu_32(void* dst, uint8x8_t src) noexcept { BLMemOps::writeU32u(dst, vget_lane_u32(simd_u32(src), 0)); }
-BL_INLINE_NODEBUG void simd_storeu_32(void* dst, uint8x16_t src) noexcept { BLMemOps::writeU32u(dst, vgetq_lane_u32(simd_u32(src), 0)); }
+BL_INLINE_NODEBUG void simd_storeu_32(void* dst, uint8x8_t src) noexcept { bl::MemOps::writeU32u(dst, vget_lane_u32(simd_u32(src), 0)); }
+BL_INLINE_NODEBUG void simd_storeu_32(void* dst, uint8x16_t src) noexcept { bl::MemOps::writeU32u(dst, vgetq_lane_u32(simd_u32(src), 0)); }
 
 BL_INLINE_NODEBUG void simd_storea_64(void* dst, uint8x8_t src) noexcept { vst1_u64(static_cast<uint64_t*>(dst), simd_u64(src)); }
 BL_INLINE_NODEBUG void simd_storea_64(void* dst, uint8x16_t src) noexcept { vst1q_lane_u64(static_cast<uint64_t*>(dst), simd_u64(src), 0); }
@@ -2647,7 +2647,7 @@ struct ArrayLookupResult {
   BL_INLINE_NODEBUG bool matched() const noexcept { return _mask != 0; }
   BL_INLINE_NODEBUG uint32_t index() const noexcept {
     constexpr uint32_t kShift = (kN == 4u) ? 4u : (kN == 8u) ? 3u : 2u;
-    return (63 - BLIntOps::clz(_mask)) >> kShift;
+    return (63 - bl::IntOps::clz(_mask)) >> kShift;
   }
 };
 

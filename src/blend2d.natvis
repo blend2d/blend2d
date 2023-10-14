@@ -726,7 +726,7 @@
 
   <!-- Internals -->
 
-  <Type Name="BLWrap&lt;*&gt;">
+  <Type Name="bl::Wrap&lt;*&gt;">
     <Expand HideRawView="true">
       <ExpandedItem>*(($T1*)_data)</ExpandedItem>
     </Expand>

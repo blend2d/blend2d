@@ -10,10 +10,11 @@
 #include "../raster/rastercontextops_p.h"
 #include "../raster/workdata_p.h"
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
-// BLRasterEngine - Edge Building Utilities
-// ========================================
+// bl::RasterEngine - Edge Building Utilities
+// ==========================================
 
 template<typename PointType>
 static BL_INLINE BLResult blRasterContextBuildPolyEdgesT(
@@ -45,8 +46,8 @@ BLResult addFilledPathEdges(WorkData* workData, const BLPathView& pathView, cons
   return workData->accumulateError(result);
 }
 
-// BLRasterEngine - Sinks & Sink Utilities
-// =======================================
+// bl::RasterEngine - Sinks & Sink Utilities
+// =========================================
 
 BLResult fillGlyphRunSink(BLPathCore* path, const void* info, void* userData) noexcept {
   blUnused(info);
@@ -54,7 +55,7 @@ BLResult fillGlyphRunSink(BLPathCore* path, const void* info, void* userData) no
   EdgeBuilderSink* sink = static_cast<EdgeBuilderSink*>(userData);
   EdgeBuilder<int>* edgeBuilder = sink->edgeBuilder;
 
-  BL_PROPAGATE(edgeBuilder->addPath(path->dcast().view(), true, BLTransformPrivate::identityTransform, BL_TRANSFORM_TYPE_IDENTITY));
+  BL_PROPAGATE(edgeBuilder->addPath(path->dcast().view(), true, TransformInternal::identityTransform, BL_TRANSFORM_TYPE_IDENTITY));
   return path->dcast().clear();
 }
 
@@ -82,7 +83,7 @@ BLResult strokeGlyphRunSink(BLPathCore* path, const void* info, void* userData) 
   BLPath& c = sink->paths[2];
 
   a.clear();
-  BLResult localResult = BLPathPrivate::strokePath(
+  BLResult localResult = PathInternal::strokePath(
     path->dcast().view(),
     *sink->strokeOptions,
     *sink->approximationOptions,
@@ -96,4 +97,5 @@ BLResult strokeGlyphRunSink(BLPathCore* path, const void* info, void* userData) 
   return localResult;
 }
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}

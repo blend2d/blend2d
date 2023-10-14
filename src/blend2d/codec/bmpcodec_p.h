@@ -12,66 +12,54 @@
 #include "../imagedecoder.h"
 #include "../imageencoder.h"
 #include "../pixelconverter.h"
+#include "../runtime_p.h"
 #include "../support/intops_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_codec_impl
 //! \{
 
-struct BLBmpFileHeader;
-struct BLBmpInfoHeader;
+namespace bl {
+namespace Bmp {
 
-struct BLBmpOS2InfoHeader;
-struct BLBmpWinInfoHeader;
+static constexpr uint32_t kHeaderSizeOS2_V1 = 12;
+static constexpr uint32_t kHeaderSizeWIN_V1 = 40;
+static constexpr uint32_t kHeaderSizeWIN_V2 = 52;
+static constexpr uint32_t kHeaderSizeWIN_V3 = 56;
+static constexpr uint32_t kHeaderSizeWIN_V4 = 108;
+static constexpr uint32_t kHeaderSizeWIN_V5 = 12;
 
-enum BLBmpHeaderSize : uint32_t {
-  BL_BMP_HEADER_SIZE_OS2_V1           = 12,
-  BL_BMP_HEADER_SIZE_WIN_V1           = 40,
-  BL_BMP_HEADER_SIZE_WIN_V2           = 52,
-  BL_BMP_HEADER_SIZE_WIN_V3           = 56,
-  BL_BMP_HEADER_SIZE_WIN_V4           = 108,
-  BL_BMP_HEADER_SIZE_WIN_V5           = 124
-};
+static constexpr uint32_t kCompressionRGB = 0;
+static constexpr uint32_t kCompressionRLE8 = 1;
+static constexpr uint32_t kCompressionRLE4 = 2;
+static constexpr uint32_t kCompressionBitFields = 3;
+static constexpr uint32_t kCompressionJPEG = 4;
+static constexpr uint32_t kCompressionPNG = 5;
+static constexpr uint32_t kCompressionAlphaBitFields = 6;
+static constexpr uint32_t kCompressionCMYK = 11;
+static constexpr uint32_t kCompressionCMYK_RLE8 = 12;
+static constexpr uint32_t kCompressionCMYK_RLE4 = 1;
 
-enum BLBmpCompression : uint32_t {
-  BL_BMP_COMPRESSION_RGB              = 0,
-  BL_BMP_COMPRESSION_RLE8             = 1,
-  BL_BMP_COMPRESSION_RLE4             = 2,
-  BL_BMP_COMPRESSION_BIT_FIELDS       = 3,
-  BL_BMP_COMPRESSION_JPEG             = 4,
-  BL_BMP_COMPRESSION_PNG              = 5,
-  BL_BMP_COMPRESSION_ALPHA_BIT_FIELDS = 6,
-  BL_BMP_COMPRESSION_CMYK             = 11,
-  BL_BMP_COMPRESSION_CMYK_RLE8        = 12,
-  BL_BMP_COMPRESSION_CMYK_RLE4        = 13
-};
+static constexpr uint32_t kColorSpaceCalibratedRGB = 0;
+static constexpr uint32_t kColorSpaceDD_RGB = 1;
+static constexpr uint32_t kColorSpaceDD_CMYK = 2;
 
-enum BLBmpColorSpace : uint32_t {
-  BL_BMP_COLOR_SPACE_CALIBRATED_RGB   = 0,
-  BL_BMP_COLOR_SPACE_DD_RGB           = 1,
-  BL_BMP_COLOR_SPACE_DD_CMYK          = 2
-};
+static constexpr uint32_t kRleLine = 0;
+static constexpr uint32_t kRleStop = 1;
+static constexpr uint32_t kRleMove = 2;
+static constexpr uint32_t kRleCount = 3;
 
-enum BLBmpRLECmd : uint32_t {
-  BL_BMP_RLE_CMD_LINE                 = 0,
-  BL_BMP_RLE_CMD_STOP                 = 1,
-  BL_BMP_RLE_CMD_MOVE                 = 2,
-  BL_BMP_RLE_CMD_COUNT                = 3
-};
-
-enum : uint32_t {
-  // Spec says that skipped pixels contain background color, transparent for us.
-  BL_BMP_RLE_BACKGROUND               = 0x00000000u
-};
+// Specification describes that skipped pixels contain background color, transparent for us.
+static constexpr uint32_t kRleBackground = 0u;
 
 //! Bitmap file signature [2 Bytes].
-struct BLBmpFileSignature {
+struct BmpFileSignature {
   //! Bitmap signature data - "BM".
   uint8_t data[2];
 };
 
 //! Bitmap File Header [12 Bytes] (we don't count signature here, it's separate).
-struct BLBmpFileHeader {
+struct BmpFileHeader {
   //! Bitmap file size in bytes.
   uint32_t fileSize;
   //! Reserved, should be zero.
@@ -79,16 +67,16 @@ struct BLBmpFileHeader {
   //! Offset to image data (54, 124, ...).
   uint32_t imageOffset;
 
-  BL_INLINE void reset() noexcept { *this = BLBmpFileHeader{}; }
+  BL_INLINE void reset() noexcept { *this = BmpFileHeader{}; }
 
   BL_INLINE void byteSwap() {
-    fileSize          = BLIntOps::byteSwap32(fileSize);
-    imageOffset       = BLIntOps::byteSwap32(imageOffset);
+    fileSize          = IntOps::byteSwap32(fileSize);
+    imageOffset       = IntOps::byteSwap32(imageOffset);
   }
 };
 
 //! All bitmap headers in one union.
-struct BLBmpInfoHeader {
+struct BmpInfoHeader {
   //! Helper that contains XYZ (colorspace).
   struct XYZ {
     uint32_t x, y, z;
@@ -108,11 +96,11 @@ struct BLBmpInfoHeader {
     uint16_t bitsPerPixel;
 
     BL_INLINE void byteSwap() noexcept {
-      headerSize      = BLIntOps::byteSwap32(headerSize);
-      width           = BLIntOps::byteSwap16(width);
-      height          = BLIntOps::byteSwap16(height);
-      planes          = BLIntOps::byteSwap16(planes);
-      bitsPerPixel    = BLIntOps::byteSwap16(bitsPerPixel);
+      headerSize      = IntOps::byteSwap32(headerSize);
+      width           = IntOps::byteSwap16(width);
+      height          = IntOps::byteSwap16(height);
+      planes          = IntOps::byteSwap16(planes);
+      bitsPerPixel    = IntOps::byteSwap16(bitsPerPixel);
     }
   };
 
@@ -180,7 +168,7 @@ struct BLBmpInfoHeader {
 
     //! Rendering intent for bitmap.
     uint32_t intent;
-    //! ProfileData offset (in bytes), from the beginning of `BLBmpWinInfoHeader`.
+    //! ProfileData offset (in bytes), from the beginning of `BLBmpInfoHeader::Win`.
     uint32_t profileData;
     //! Size, in bytes, of embedded profile data.
     uint32_t profileSize;
@@ -188,37 +176,37 @@ struct BLBmpInfoHeader {
     uint32_t reserved;
 
     BL_INLINE void byteSwap() noexcept {
-      headerSize      = BLIntOps::byteSwap32(headerSize);
-      width           = BLIntOps::byteSwap32(width);
-      height          = BLIntOps::byteSwap32(height);
-      planes          = BLIntOps::byteSwap16(planes);
-      bitsPerPixel    = BLIntOps::byteSwap16(bitsPerPixel);
-      compression     = BLIntOps::byteSwap32(compression);
-      imageSize       = BLIntOps::byteSwap32(imageSize);
-      horzResolution  = BLIntOps::byteSwap32(horzResolution);
-      vertResolution  = BLIntOps::byteSwap32(vertResolution);
-      colorsUsed      = BLIntOps::byteSwap32(colorsUsed);
-      colorsImportant = BLIntOps::byteSwap32(colorsImportant);
-      rMask           = BLIntOps::byteSwap32(rMask);
-      gMask           = BLIntOps::byteSwap32(gMask);
-      bMask           = BLIntOps::byteSwap32(bMask);
-      aMask           = BLIntOps::byteSwap32(aMask);
-      colorspace      = BLIntOps::byteSwap32(colorspace);
-      r.x             = BLIntOps::byteSwap32(r.x);
-      r.y             = BLIntOps::byteSwap32(r.y);
-      r.z             = BLIntOps::byteSwap32(r.z);
-      g.x             = BLIntOps::byteSwap32(g.x);
-      g.y             = BLIntOps::byteSwap32(g.y);
-      g.z             = BLIntOps::byteSwap32(g.z);
-      b.x             = BLIntOps::byteSwap32(b.x);
-      b.y             = BLIntOps::byteSwap32(b.y);
-      b.z             = BLIntOps::byteSwap32(b.z);
-      rGamma          = BLIntOps::byteSwap32(rGamma);
-      gGamma          = BLIntOps::byteSwap32(gGamma);
-      bGamma          = BLIntOps::byteSwap32(bGamma);
-      intent          = BLIntOps::byteSwap32(intent);
-      profileData     = BLIntOps::byteSwap32(profileData);
-      profileSize     = BLIntOps::byteSwap32(profileSize);
+      headerSize      = IntOps::byteSwap32(headerSize);
+      width           = IntOps::byteSwap32(width);
+      height          = IntOps::byteSwap32(height);
+      planes          = IntOps::byteSwap16(planes);
+      bitsPerPixel    = IntOps::byteSwap16(bitsPerPixel);
+      compression     = IntOps::byteSwap32(compression);
+      imageSize       = IntOps::byteSwap32(imageSize);
+      horzResolution  = IntOps::byteSwap32(horzResolution);
+      vertResolution  = IntOps::byteSwap32(vertResolution);
+      colorsUsed      = IntOps::byteSwap32(colorsUsed);
+      colorsImportant = IntOps::byteSwap32(colorsImportant);
+      rMask           = IntOps::byteSwap32(rMask);
+      gMask           = IntOps::byteSwap32(gMask);
+      bMask           = IntOps::byteSwap32(bMask);
+      aMask           = IntOps::byteSwap32(aMask);
+      colorspace      = IntOps::byteSwap32(colorspace);
+      r.x             = IntOps::byteSwap32(r.x);
+      r.y             = IntOps::byteSwap32(r.y);
+      r.z             = IntOps::byteSwap32(r.z);
+      g.x             = IntOps::byteSwap32(g.x);
+      g.y             = IntOps::byteSwap32(g.y);
+      g.z             = IntOps::byteSwap32(g.z);
+      b.x             = IntOps::byteSwap32(b.x);
+      b.y             = IntOps::byteSwap32(b.y);
+      b.z             = IntOps::byteSwap32(b.z);
+      rGamma          = IntOps::byteSwap32(rGamma);
+      gGamma          = IntOps::byteSwap32(gGamma);
+      bGamma          = IntOps::byteSwap32(bGamma);
+      intent          = IntOps::byteSwap32(intent);
+      profileData     = IntOps::byteSwap32(profileData);
+      profileSize     = IntOps::byteSwap32(profileSize);
     }
   };
 
@@ -228,13 +216,18 @@ struct BLBmpInfoHeader {
     Win win;
   };
 
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE void reset() noexcept { *this = BmpInfoHeader{}; }
 };
+
+BL_HIDDEN void bmpCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
+
+} // {Bmp}
+} // {bl}
 
 struct BLBmpDecoderImpl : public BLImageDecoderImpl {
   BLImageInfo imageInfo;
-  BLBmpFileHeader file;
-  BLBmpInfoHeader info;
+  bl::Bmp::BmpFileHeader file;
+  bl::Bmp::BmpInfoHeader info;
   BLFormatInfo fmt;
   uint32_t stride;
 };
@@ -242,8 +235,6 @@ struct BLBmpDecoderImpl : public BLImageDecoderImpl {
 struct BLBmpEncoderImpl : public BLImageEncoderImpl {};
 
 struct BLBmpCodecImpl : public BLImageCodecImpl {};
-
-BL_HIDDEN void blBmpCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
 
 //! \}
 //! \endcond

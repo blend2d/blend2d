@@ -21,10 +21,11 @@
 //! This type of assert is used in every place that works with a validated table.
 #define BL_ASSERT_VALIDATED(...) BL_ASSERT(__VA_ARGS__)
 
-//! \namespace BLOpenType
+//! \namespace bl::OpenType
 //! Low-level OpenType functionality, not exposed to users directly.
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 
 struct OTFaceImpl;
 union OTFaceTables;
@@ -143,7 +144,7 @@ struct RawTable {
 
   BL_INLINE uint32_t readU16(size_t offset) const noexcept {
     BL_ASSERT(offset + 2 <= size);
-    return BLMemOps::readU16aBE(data + offset);
+    return MemOps::readU16aBE(data + offset);
   }
 
   BL_INLINE RawTable subTable(uint32_t offset) const noexcept {
@@ -247,46 +248,46 @@ struct DataAccess {};
 template<>
 struct DataAccess<1> {
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return BLMemOps::readU8(data); }
+  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return MemOps::readU8(data); }
 
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { BLMemOps::writeU8(data, value); }
+  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { MemOps::writeU8(data, value); }
 };
 
 template<>
 struct DataAccess<2> {
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return BLMemOps::readU16<ByteOrder, Alignment>(data); }
+  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return MemOps::readU16<ByteOrder, Alignment>(data); }
 
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { BLMemOps::writeU16<ByteOrder, Alignment>(data, value); }
+  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { MemOps::writeU16<ByteOrder, Alignment>(data, value); }
 };
 
 template<>
 struct DataAccess<3> {
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return BLMemOps::readU24u<ByteOrder>(data); }
+  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return MemOps::readU24u<ByteOrder>(data); }
 
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { BLMemOps::writeU24u<ByteOrder>(data, value); }
+  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { MemOps::writeU24u<ByteOrder>(data, value); }
 };
 
 template<>
 struct DataAccess<4> {
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return BLMemOps::readU32<ByteOrder, Alignment>(data); }
+  static BL_INLINE uint32_t readValue(const uint8_t* data) noexcept { return MemOps::readU32<ByteOrder, Alignment>(data); }
 
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { BLMemOps::writeU32<ByteOrder, Alignment>(data, value); }
+  static BL_INLINE void writeValue(uint8_t* data, uint32_t value) noexcept { MemOps::writeU32<ByteOrder, Alignment>(data, value); }
 };
 
 template<>
 struct DataAccess<8> {
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE uint64_t readValue(const uint8_t* data) noexcept { return BLMemOps::readU64<ByteOrder, Alignment>(data); }
+  static BL_INLINE uint64_t readValue(const uint8_t* data) noexcept { return MemOps::readU64<ByteOrder, Alignment>(data); }
 
   template<uint32_t ByteOrder, size_t Alignment>
-  static BL_INLINE void writeValue(uint8_t* data, uint64_t value) noexcept { BLMemOps::writeU64<ByteOrder, Alignment>(data, value); }
+  static BL_INLINE void writeValue(uint8_t* data, uint64_t value) noexcept { MemOps::writeU64<ByteOrder, Alignment>(data, value); }
 };
 
 #pragma pack(push, 1)
@@ -348,7 +349,7 @@ struct Array16 {
   enum : uint32_t { kBaseSize = 2 };
 
   UInt16 count;
-  BL_INLINE const T* array() const noexcept { return BLPtrOps::offset<const T>(this, 2); }
+  BL_INLINE const T* array() const noexcept { return PtrOps::offset<const T>(this, 2); }
 };
 
 template<typename T>
@@ -356,7 +357,7 @@ struct Array32 {
   enum : uint32_t { kBaseSize = 4 };
 
   UInt32 count;
-  BL_INLINE const T* array() const noexcept { return BLPtrOps::offset<const T>(this, 4); }
+  BL_INLINE const T* array() const noexcept { return PtrOps::offset<const T>(this, 4); }
 };
 
 //! Tag and offset.
@@ -367,7 +368,8 @@ struct TagRef16 {
   Offset16 offset;
 };
 
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 //! \}
 //! \endcond

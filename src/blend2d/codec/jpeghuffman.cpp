@@ -6,10 +6,13 @@
 #include "../api-build_p.h"
 #include "../codec/jpeghuffman_p.h"
 
-// JpegDecoder - BuildHuffmanTable
-// ===============================
+namespace bl {
+namespace Jpeg {
 
-static BLResult blJpegDecoderBuildHuffmanTable(BLJpegDecoderHuffmanTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept {
+// bl::Jpeg::Huffman - BuildHuffmanTable
+// =====================================
+
+static BLResult buildHuffmanTable(DecoderHuffmanTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept {
   uint32_t i;
   uint32_t k;
   uint32_t n = 0;
@@ -62,12 +65,12 @@ static BLResult blJpegDecoderBuildHuffmanTable(BLJpegDecoderHuffmanTable* table,
   memset(table->values + n, 0, 256 - n);
 
   // Build acceleration table; 255 is a flag for not-accelerated.
-  memset(table->accel, 255, BL_JPEG_DECODER_HUFFMAN_ACCEL_SIZE);
+  memset(table->accel, 255, kHuffmanAccelSize);
   for (i = 0; i < k; i++) {
     uint32_t s = table->size[i];
 
-    if (s <= BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS) {
-      s = BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS - s;
+    if (s <= kHuffmanAccelBits) {
+      s = kHuffmanAccelBits - s;
 
       uint32_t code = uint32_t(table->code[i]) << s;
       uint32_t cMax = code + (1u << s);
@@ -81,15 +84,15 @@ static BLResult blJpegDecoderBuildHuffmanTable(BLJpegDecoderHuffmanTable* table,
   return BL_SUCCESS;
 }
 
-BLResult blJpegDecoderBuildHuffmanDC(BLJpegDecoderHuffmanDCTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept {
-  return blJpegDecoderBuildHuffmanTable(table, data, dataSize, bytesConsumed);
+BLResult buildHuffmanDC(DecoderHuffmanDCTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept {
+  return buildHuffmanTable(table, data, dataSize, bytesConsumed);
 }
 
-BLResult blJpegDecoderBuildHuffmanAC(BLJpegDecoderHuffmanACTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept {
-  BL_PROPAGATE(blJpegDecoderBuildHuffmanTable(table, data, dataSize, bytesConsumed));
+BLResult buildHuffmanAC(DecoderHuffmanACTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept {
+  BL_PROPAGATE(buildHuffmanTable(table, data, dataSize, bytesConsumed));
 
   // Build an AC specific acceleration table.
-  for (uint32_t i = 0; i < BL_JPEG_DECODER_HUFFMAN_ACCEL_SIZE; i++) {
+  for (uint32_t i = 0; i < kHuffmanAccelSize; i++) {
     uint32_t accel = table->accel[i];
     int32_t ac = 0;
 
@@ -100,17 +103,17 @@ BLResult blJpegDecoderBuildHuffmanAC(BLJpegDecoderHuffmanACTable* table, const u
       uint32_t run = val >> 4;
       uint32_t mag = val & 15;
 
-      if (mag != 0 && size + mag <= BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS) {
+      if (mag != 0 && size + mag <= kHuffmanAccelBits) {
         // Magnitude code followed by receive/extend code.
-        int32_t k = ((i << size) & BL_JPEG_DECODER_HUFFMAN_ACCEL_MASK) >> (BL_JPEG_DECODER_HUFFMAN_ACCEL_BITS - mag);
-        int32_t m = BLIntOps::shl(1, mag - 1);
+        int32_t k = ((i << size) & kHuffmanAccelMask) >> (kHuffmanAccelBits - mag);
+        int32_t m = IntOps::shl(1, mag - 1);
 
         if (k < m)
-          k += BLIntOps::shl(-1, mag) + 1;
+          k += IntOps::shl(-1, mag) + 1;
 
         // If the result is small enough, we can fit it in acAccel table.
         if (k >= -128 && k <= 127)
-          ac = int32_t(BLIntOps::shl(k, 8)) + int32_t(BLIntOps::shl(run, 4) + size + mag);
+          ac = int32_t(IntOps::shl(k, 8)) + int32_t(IntOps::shl(run, 4) + size + mag);
       }
     }
 
@@ -119,3 +122,6 @@ BLResult blJpegDecoderBuildHuffmanAC(BLJpegDecoderHuffmanACTable* table, const u
 
   return BL_SUCCESS;
 }
+
+} // {Jpeg}
+} // {bl}

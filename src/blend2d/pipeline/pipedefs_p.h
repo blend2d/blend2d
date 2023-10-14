@@ -7,6 +7,7 @@
 #define BLEND2D_PIPELINE_PIPEDEFS_P_H_INCLUDED
 
 #include "../api-internal_p.h"
+#include "../compop_p.h"
 #include "../format_p.h"
 #include "../gradient_p.h"
 #include "../matrix_p.h"
@@ -20,11 +21,11 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-//! \namespace BLPipeline
+//! \namespace bl::Pipeline
 //!
 //! Blend2D pipeline.
 
-//! \namespace BLPipeline::JIT
+//! \namespace bl::Pipeline::JIT
 //!
 //! Blend2D JIT pipeline compiler.
 
@@ -41,7 +42,8 @@ enum BLPipeGlobalConsts : uint32_t {
   BL_PIPE_PIXELS_PER_ONE_BIT = 4
 };
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 
 struct ContextData;
 struct DispatchData;
@@ -266,17 +268,17 @@ struct Signature {
   //! \{
 
   //! Returns a signature only containing a DstFormat.
-  static BL_INLINE_NODEBUG constexpr Signature fromDstFormat(BLInternalFormat format) noexcept { return Signature{uint32_t(format) << BLIntOps::bitShiftOf(kMaskDstFormat)}; }
+  static BL_INLINE_NODEBUG constexpr Signature fromDstFormat(FormatExt format) noexcept { return Signature{uint32_t(format) << IntOps::bitShiftOf(kMaskDstFormat)}; }
   //! Returns a signature only containing a SrcFormat.
-  static BL_INLINE_NODEBUG constexpr Signature fromSrcFormat(BLInternalFormat format) noexcept { return Signature{uint32_t(format) << BLIntOps::bitShiftOf(kMaskSrcFormat)}; }
+  static BL_INLINE_NODEBUG constexpr Signature fromSrcFormat(FormatExt format) noexcept { return Signature{uint32_t(format) << IntOps::bitShiftOf(kMaskSrcFormat)}; }
   //! Returns a signature only containing a CompOp.
-  static BL_INLINE_NODEBUG constexpr Signature fromCompOp(uint32_t compOp) noexcept { return Signature{uint32_t(compOp) << BLIntOps::bitShiftOf(kMaskCompOp)}; }
+  static BL_INLINE_NODEBUG constexpr Signature fromCompOp(CompOpExt compOp) noexcept { return Signature{uint32_t(compOp) << IntOps::bitShiftOf(kMaskCompOp)}; }
   //! Returns a signature only containing a FillType.
-  static BL_INLINE_NODEBUG constexpr Signature fromFillType(FillType fillType) noexcept { return Signature{uint32_t(fillType) << BLIntOps::bitShiftOf(kMaskFillType)}; }
+  static BL_INLINE_NODEBUG constexpr Signature fromFillType(FillType fillType) noexcept { return Signature{uint32_t(fillType) << IntOps::bitShiftOf(kMaskFillType)}; }
   //! Returns a signature only containing a FetchType.
-  static BL_INLINE_NODEBUG constexpr Signature fromFetchType(FetchType fetchType) noexcept { return Signature{uint32_t(fetchType) << BLIntOps::bitShiftOf(kMaskFetchType)}; }
+  static BL_INLINE_NODEBUG constexpr Signature fromFetchType(FetchType fetchType) noexcept { return Signature{uint32_t(fetchType) << IntOps::bitShiftOf(kMaskFetchType)}; }
   //! Returns a signature only containing a PendingFlag.
-  static BL_INLINE_NODEBUG constexpr Signature fromPendingFlag(uint32_t flag) noexcept { return  Signature{uint32_t(flag) << BLIntOps::bitShiftOf(kMaskPendingFlag)}; }
+  static BL_INLINE_NODEBUG constexpr Signature fromPendingFlag(uint32_t flag) noexcept { return  Signature{uint32_t(flag) << IntOps::bitShiftOf(kMaskPendingFlag)}; }
 
   //! \}
 
@@ -290,17 +292,17 @@ struct Signature {
   BL_INLINE_NODEBUG Signature& operator^=(const Signature& other) noexcept { value ^= other.value; return *this; }
 
   BL_INLINE_NODEBUG uint32_t _get(uint32_t mask) const noexcept {
-    return (this->value & mask) >> BLIntOps::bitShiftOf(mask);
+    return (this->value & mask) >> IntOps::bitShiftOf(mask);
   }
 
   BL_INLINE void _set(uint32_t mask, uint32_t v) noexcept {
-    BL_ASSERT(v <= (mask >> BLIntOps::bitShiftOf(mask)));
-    this->value = (this->value & ~mask) | (v << BLIntOps::bitShiftOf(mask));
+    BL_ASSERT(v <= (mask >> IntOps::bitShiftOf(mask)));
+    this->value = (this->value & ~mask) | (v << IntOps::bitShiftOf(mask));
   }
 
   BL_INLINE void _add(uint32_t mask, uint32_t v) noexcept {
-    BL_ASSERT(v <= (mask >> BLIntOps::bitShiftOf(mask)));
-    this->value |= (v << BLIntOps::bitShiftOf(mask));
+    BL_ASSERT(v <= (mask >> IntOps::bitShiftOf(mask)));
+    this->value |= (v << IntOps::bitShiftOf(mask));
   }
 
   //! Reset all values to zero.
@@ -316,11 +318,11 @@ struct Signature {
   BL_INLINE_NODEBUG void setValue(const Signature& other) noexcept { this->value = other.value; }
 
   //! Extracts destination pixel format from the signature.
-  BL_INLINE_NODEBUG BLInternalFormat dstFormat() const noexcept { return BLInternalFormat(_get(kMaskDstFormat)); }
+  BL_INLINE_NODEBUG FormatExt dstFormat() const noexcept { return FormatExt(_get(kMaskDstFormat)); }
   //! Extracts source pixel format from the signature.
-  BL_INLINE_NODEBUG BLInternalFormat srcFormat() const noexcept { return BLInternalFormat(_get(kMaskSrcFormat)); }
+  BL_INLINE_NODEBUG FormatExt srcFormat() const noexcept { return FormatExt(_get(kMaskSrcFormat)); }
   //! Extracts composition operator from the signature.
-  BL_INLINE_NODEBUG uint32_t compOp() const noexcept { return _get(kMaskCompOp); }
+  BL_INLINE_NODEBUG CompOpExt compOp() const noexcept { return CompOpExt(_get(kMaskCompOp)); }
   //! Extracts sweep type from the signature.
   BL_INLINE_NODEBUG FillType fillType() const noexcept { return FillType(_get(kMaskFillType)); }
   //! Extracts fetch type from the signature.
@@ -335,11 +337,11 @@ struct Signature {
   }
 
   //! Add destination pixel format.
-  BL_INLINE_NODEBUG void setDstFormat(BLInternalFormat v) noexcept { _set(kMaskDstFormat, uint32_t(v)); }
+  BL_INLINE_NODEBUG void setDstFormat(FormatExt v) noexcept { _set(kMaskDstFormat, uint32_t(v)); }
   //! Add source pixel format.
-  BL_INLINE_NODEBUG void setSrcFormat(BLInternalFormat v) noexcept { _set(kMaskSrcFormat, uint32_t(v)); }
+  BL_INLINE_NODEBUG void setSrcFormat(FormatExt v) noexcept { _set(kMaskSrcFormat, uint32_t(v)); }
   //! Add clip mode.
-  BL_INLINE_NODEBUG void setCompOp(uint32_t v) noexcept { _set(kMaskCompOp, v); }
+  BL_INLINE_NODEBUG void setCompOp(CompOpExt v) noexcept { _set(kMaskCompOp, uint32_t(v)); }
   //! Add sweep type.
   BL_INLINE_NODEBUG void setFillType(FillType v) noexcept { _set(kMaskFillType, uint32_t(v)); }
   //! Add fetch type.
@@ -355,11 +357,11 @@ struct Signature {
   BL_INLINE_NODEBUG void add(const Signature& other) noexcept { this->value |= other.value; }
 
   //! Add destination pixel format.
-  BL_INLINE_NODEBUG void addDstFormat(BLInternalFormat v) noexcept { _add(kMaskDstFormat, uint32_t(v)); }
+  BL_INLINE_NODEBUG void addDstFormat(FormatExt v) noexcept { _add(kMaskDstFormat, uint32_t(v)); }
   //! Add source pixel format.
-  BL_INLINE_NODEBUG void addSrcFormat(BLInternalFormat v) noexcept { _add(kMaskSrcFormat, uint32_t(v)); }
+  BL_INLINE_NODEBUG void addSrcFormat(FormatExt v) noexcept { _add(kMaskSrcFormat, uint32_t(v)); }
   //! Add clip mode.
-  BL_INLINE_NODEBUG void addCompOp(uint32_t v) noexcept { _add(kMaskCompOp, v); }
+  BL_INLINE_NODEBUG void addCompOp(CompOpExt v) noexcept { _add(kMaskCompOp, uint32_t(v)); }
   //! Add sweep type.
   BL_INLINE_NODEBUG void addFillType(FillType v) noexcept { _add(kMaskFillType, uint32_t(v)); }
   //! Add fetch type.
@@ -523,14 +525,14 @@ static BL_INLINE void writeBoxUMaskTo16ByteBuffer(uint8_t* dst, uint32_t m) noex
 #if BL_TARGET_ARCH_BITS >= 64
   uint64_t repeated = uint64_t(m) * 0x0101010101010101u;
   uint64_t mask = BL_BYTE_ORDER == 1234 ? 0xFFFFFFFF00000000u : 0x00000000FFFFFFFFu;
-  BLMemOps::writeU64a(dst +  8, repeated);
-  BLMemOps::writeU64a(dst +  0, repeated & mask);
+  MemOps::writeU64a(dst +  8, repeated);
+  MemOps::writeU64a(dst +  0, repeated & mask);
 #else
   uint32_t repeated = m * 0x01010101u;
-  BLMemOps::writeU32a(dst +  0, 0u);
-  BLMemOps::writeU32a(dst +  4, repeated);
-  BLMemOps::writeU32a(dst +  8, repeated);
-  BLMemOps::writeU32a(dst + 12, repeated);
+  MemOps::writeU32a(dst +  0, 0u);
+  MemOps::writeU32a(dst +  4, repeated);
+  MemOps::writeU32a(dst +  8, repeated);
+  MemOps::writeU32a(dst + 12, repeated);
 #endif
 }
 
@@ -630,10 +632,10 @@ struct FillData {
   template<typename T>
   BL_INLINE bool initBoxU8bpcT(uint32_t alpha, T x0, T y0, T x1, T y1, BoxUToMaskData& maskData) noexcept {
     return initBoxU8bpc24x8(alpha,
-      blTruncToInt(x0 * T(256)),
-      blTruncToInt(y0 * T(256)),
-      blTruncToInt(x1 * T(256)),
-      blTruncToInt(y1 * T(256)),
+      Math::truncToInt(x0 * T(256)),
+      Math::truncToInt(y0 * T(256)),
+      Math::truncToInt(x1 * T(256)),
+      Math::truncToInt(y1 * T(256)),
       maskData);
   }
 
@@ -742,7 +744,7 @@ struct FillData {
     maskPtr[36] = uint8_t(m2x0);
 
     maskPtr += 4;
-    uint32_t wAlign = BLIntOps::alignUpDiff(w, 4);
+    uint32_t wAlign = IntOps::alignUpDiff(w, 4);
 
     if (wAlign > ax0)
       wAlign = 0;
@@ -893,7 +895,7 @@ struct alignas(16) FetchData {
       //! Repeat/Reflect w/h.
       int32_t rx, ry;
       //! Safe X increments by 1..16 (fetchN).
-      BLModuloTable ix;
+      ModuloTable ix;
       //! 9-bit or 17-bit weight at [0, 0] (A).
       uint32_t wa;
       //! 9-bit or 17-bit weight at [1, 0] (B).
@@ -1001,7 +1003,7 @@ struct alignas(16) FetchData {
     //! Conic gradient data.
     struct alignas(16) Conic {
       //! Atan2 approximation constants.
-      const BLCommonTable::Conic* consts;
+      const CommonTable::Conic* consts;
       //! Gradient X increment (horizontal)
       //!
       //! \note There is no Y increment in X direction as the transformation matrix has been rotated in a way to
@@ -1091,7 +1093,8 @@ Signature initGradient(
   const BLMatrix2D& transform) noexcept;
 
 } // {FetchUtils}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

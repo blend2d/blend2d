@@ -9,10 +9,11 @@
 #include "random_p.h"
 #include "simd/simd_p.h"
 
-// BLRandom - Tests
-// ================
+// bl::Random - Tests
+// ==================
 
-namespace BLRandomTests {
+namespace bl {
+namespace Tests {
 
 UNIT(random, BL_TEST_GROUP_CORE_UTILITIES) {
   // Number of iterations for tests that use loop.
@@ -24,7 +25,7 @@ UNIT(random, BL_TEST_GROUP_CORE_UTILITIES) {
     BLRandom a(0);
     BLRandom b(0);
 
-    SIMD::Vec2xU64 bLo = BLRandomPrivate::nextUInt64AsI128(&b);
+    SIMD::Vec2xU64 bLo = RandomInternal::nextUInt64AsI128(&b);
     SIMD::Vec2xU64 bHi = SIMD::swizzle_u32<2, 3, 0, 1>(bLo);
 
     uint64_t aVal = a.nextUInt64();
@@ -62,6 +63,7 @@ UNIT(random, BL_TEST_GROUP_CORE_UTILITIES) {
   }
 }
 
-} // {BLRandomTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

@@ -8,28 +8,29 @@
 
 #include "../support/bitops_p.h"
 
-// BLSupport - BitOps - Tests
-// ==========================
+// bl::BitOps - Tests
+// ==================
 
-namespace BLBitOpsTests {
-
-template<typename T>
-using LSBBitOps = BLParametrizedBitOps<BLBitOrder::kLSB, T>;
+namespace bl {
+namespace Tests {
 
 template<typename T>
-using MSBBitOps = BLParametrizedBitOps<BLBitOrder::kMSB, T>;
+using LSBBitOps = ParametrizedBitOps<BitOrder::kLSB, T>;
+
+template<typename T>
+using MSBBitOps = ParametrizedBitOps<BitOrder::kMSB, T>;
 
 static void testBitArrayOps() {
   uint32_t bits[3];
 
-  INFO("BLParametrizedBitOps<BLBitOrder::kLSB>::bitArrayFill");
+  INFO("bl::ParametrizedBitOps<bl::BitOrder::kLSB>::bitArrayFill");
   memset(bits, 0, sizeof(bits));
   LSBBitOps<uint32_t>::bitArrayFill(bits, 1, 94);
   EXPECT_EQ(bits[0], 0xFFFFFFFEu);
   EXPECT_EQ(bits[1], 0xFFFFFFFFu);
   EXPECT_EQ(bits[2], 0x7FFFFFFFu);
 
-  INFO("BLParametrizedBitOps<BLBitOrder::kMSB>::bitArrayFill");
+  INFO("bl::ParametrizedBitOps<bl::BitOrder::kMSB>::bitArrayFill");
   memset(bits, 0, sizeof(bits));
   MSBBitOps<uint32_t>::bitArrayFill(bits, 1, 94);
   EXPECT_EQ(bits[0], 0x7FFFFFFFu);
@@ -38,7 +39,7 @@ static void testBitArrayOps() {
 }
 
 static void testBitIterator() {
-  INFO("BLParametrizedBitOps<BLBitOrder::kLSB>::BitIterator<uint32_t>");
+  INFO("bl::ParametrizedBitOps<bl::BitOrder::kLSB>::BitIterator<uint32_t>");
   LSBBitOps<uint32_t>::BitIterator lsbIt(0x40000010u);
 
   EXPECT_TRUE(lsbIt.hasNext());
@@ -47,7 +48,7 @@ static void testBitIterator() {
   EXPECT_EQ(lsbIt.next(), 30u);
   EXPECT_TRUE(!lsbIt.hasNext());
 
-  INFO("BLParametrizedBitOps<BLBitOrder::kMSB>::BitIterator<uint32_t>");
+  INFO("bl::ParametrizedBitOps<bl::BitOrder::kMSB>::BitIterator<uint32_t>");
   MSBBitOps<uint32_t>::BitIterator msbIt(0x40000010u);
 
   EXPECT_TRUE(msbIt.hasNext());
@@ -61,7 +62,7 @@ static void testBitVectorIterator() {
   static const uint32_t lsbBits[] = { 0x00000001u, 0x80000000u };
   static const uint32_t msbBits[] = { 0x00000001u, 0x80000000u };
 
-  INFO("BLParametrizedBitOps<BLBitOrder::kLSB>::BitVectorIterator<uint32_t>");
+  INFO("bl::ParametrizedBitOps<bl::BitOrder::kLSB>::BitVectorIterator<uint32_t>");
   LSBBitOps<uint32_t>::BitVectorIterator lsbIt(lsbBits, BL_ARRAY_SIZE(lsbBits));
 
   EXPECT_TRUE(lsbIt.hasNext());
@@ -70,7 +71,7 @@ static void testBitVectorIterator() {
   EXPECT_EQ(lsbIt.next(), 63u);
   EXPECT_TRUE(!lsbIt.hasNext());
 
-  INFO("BLParametrizedBitOps<BLBitOrder::kMSB>::BitVectorIterator<uint32_t>");
+  INFO("bl::ParametrizedBitOps<bl::BitOrder::kMSB>::BitVectorIterator<uint32_t>");
   MSBBitOps<uint32_t>::BitVectorIterator msbIt(msbBits, BL_ARRAY_SIZE(msbBits));
 
   EXPECT_TRUE(msbIt.hasNext());
@@ -84,7 +85,7 @@ static void testBitVectorFlipIterator() {
   static const uint32_t lsbBits[] = { 0xFFFFFFF0u, 0x00FFFFFFu };
   static const uint32_t msbBits[] = { 0x0FFFFFFFu, 0xFFFFFF00u };
 
-  INFO("BLParametrizedBitOps<BLBitOrder::kLSB>::BitVectorFlipIterator<uint32_t>");
+  INFO("bl::ParametrizedBitOps<bl::BitOrder::kLSB>::BitVectorFlipIterator<uint32_t>");
   LSBBitOps<uint32_t>::BitVectorFlipIterator lsbIt(lsbBits, BL_ARRAY_SIZE(lsbBits));
   EXPECT_TRUE(lsbIt.hasNext());
   EXPECT_EQ(lsbIt.peekNext(), 4u);
@@ -94,7 +95,7 @@ static void testBitVectorFlipIterator() {
   EXPECT_EQ(lsbIt.nextAndFlip(), 56u);
   EXPECT_TRUE(!lsbIt.hasNext());
 
-  INFO("BLParametrizedBitOps<BLBitOrder::kMSB>::BitVectorFlipIterator<uint32_t>");
+  INFO("bl::ParametrizedBitOps<bl::BitOrder::kMSB>::BitVectorFlipIterator<uint32_t>");
   MSBBitOps<uint32_t>::BitVectorFlipIterator msbIt(msbBits, BL_ARRAY_SIZE(msbBits));
   EXPECT_TRUE(msbIt.hasNext());
   EXPECT_EQ(msbIt.peekNext(), 4u);
@@ -112,6 +113,7 @@ UNIT(support_bitops, BL_TEST_GROUP_SUPPORT_UTILITIES) {
   testBitVectorFlipIterator();
 }
 
-} // {BLBitOpsTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

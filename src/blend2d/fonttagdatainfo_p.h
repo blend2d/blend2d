@@ -14,8 +14,11 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+//! \namespace bl::FontTagData
 //! Namespace that provides private information regarding font features.
-namespace BLFontTagData {
+
+namespace bl {
+namespace FontTagData {
 
 static constexpr uint32_t kInvalidFeatureBitId = 63;
 
@@ -27,7 +30,7 @@ struct FeatureInfo {
   BL_INLINE bool hasBitId() const noexcept { return bitId != kInvalidFeatureBitId; };
 };
 
-extern const BLLookupTable<FeatureInfo, kFeatureIdCount + 1u> featureInfoTable;
+extern const LookupTable<FeatureInfo, kFeatureIdCount + 1u> featureInfoTable;
 
 extern const uint8_t featureBitIdToFeatureIdTable[32];
 
@@ -41,7 +44,8 @@ static BL_INLINE uint32_t featureIdToFeatureBitId(FeatureId featureId) noexcept 
   return featureInfoTable[size_t(featureId)].bitId;
 }
 
-} // {BLFontTagData}
+} // {FontTagData}
+} // {bl}
 
 //! \}
 //! \endcond

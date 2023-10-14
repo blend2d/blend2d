@@ -11,10 +11,11 @@
 #include "../raster/analyticrasterizer_p.h"
 #include "../support/intops_p.h"
 
-// BLRasterEngine - AnalyticRasterizer - Tests
-// ===========================================
+// bl::RasterEngine - AnalyticRasterizer - Tests
+// =============================================
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 static bool checkRasterizerState(const AnalyticState& a, const AnalyticState& b) noexcept {
   int yDltMask = (a._dy >= a._dx) ? 255 : -1;
@@ -35,27 +36,27 @@ UNIT(analytic_rasterizer, BL_TEST_GROUP_RENDERING_UTILITIES) {
   int w = 1000;
   int h = 1000;
 
-  typedef BLPipeline::A8Info A8Info;
+  typedef Pipeline::A8Info A8Info;
 
   uint32_t maxBandHeight = 64;
   uint32_t edgeCount = BrokenAPI::hasArg("--quick") ? 5000 : 100000;
 
-  for (uint32_t bandHeightShift = 0; bandHeightShift < BLIntOps::ctz(maxBandHeight); bandHeightShift++) {
+  for (uint32_t bandHeightShift = 0; bandHeightShift < IntOps::ctz(maxBandHeight); bandHeightShift++) {
     uint32_t bandHeight = 1 << bandHeightShift;
     INFO("Testing advanceToY() correctness [bandHeight=%u]", bandHeight);
 
     // TODO: Wrap this logic into something, now it's duplicated 3x.
-    size_t requiredWidth = BLIntOps::alignUp(uint32_t(w) + 1u + BL_PIPE_PIXELS_PER_ONE_BIT, BL_PIPE_PIXELS_PER_ONE_BIT);
+    size_t requiredWidth = IntOps::alignUp(uint32_t(w) + 1u + BL_PIPE_PIXELS_PER_ONE_BIT, BL_PIPE_PIXELS_PER_ONE_BIT);
     size_t requiredHeight = bandHeight;
     size_t cellAlignment = 16;
 
-    size_t bitStride = BLIntOps::wordCountFromBitCount<BLBitWord>(requiredWidth / BL_PIPE_PIXELS_PER_ONE_BIT) * sizeof(BLBitWord);
+    size_t bitStride = IntOps::wordCountFromBitCount<BLBitWord>(requiredWidth / BL_PIPE_PIXELS_PER_ONE_BIT) * sizeof(BLBitWord);
     size_t cellStride = requiredWidth * sizeof(uint32_t);
 
     size_t bitsStart = 0;
     size_t bitsSize = requiredHeight * bitStride;
 
-    size_t cellsStart = BLIntOps::alignUp(bitsStart + bitsSize, cellAlignment);
+    size_t cellsStart = IntOps::alignUp(bitsStart + bitsSize, cellAlignment);
     size_t cellsSize = requiredHeight * cellStride;
 
     uint8_t* buffer = static_cast<uint8_t*>(calloc(bitsSize + cellsSize + cellAlignment, 1));
@@ -64,7 +65,7 @@ UNIT(analytic_rasterizer, BL_TEST_GROUP_RENDERING_UTILITIES) {
     AnalyticCellStorage cellStorage;
     cellStorage.init(
       reinterpret_cast<BLBitWord*>(buffer + bitsStart), bitStride,
-      BLIntOps::alignUp(reinterpret_cast<uint32_t*>(buffer + cellsStart), cellAlignment), cellStride);
+      IntOps::alignUp(reinterpret_cast<uint32_t*>(buffer + cellsStart), cellAlignment), cellStride);
 
     BLRandom rnd(0x1234);
     for (uint32_t i = 0; i < edgeCount; i++) {
@@ -157,6 +158,7 @@ UNIT(analytic_rasterizer, BL_TEST_GROUP_RENDERING_UTILITIES) {
   }
 }
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 #endif // BL_TEST

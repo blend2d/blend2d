@@ -13,11 +13,12 @@
 #include "../../pipeline/jit/pipecompiler_p.h"
 #include "../../pipeline/jit/pipedebug_p.h"
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
-// BLPipeline::JIT::FillPart - Construction & Destruction
-// ======================================================
+// bl::Pipeline::JIT::FillPart - Construction & Destruction
+// ========================================================
 
 FillPart::FillPart(PipeCompiler* pc, FillType fillType, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept
   : PipePart(pc, PipePartType::kFill),
@@ -33,8 +34,8 @@ FillPart::FillPart(PipeCompiler* pc, FillType fillType, FetchPixelPtrPart* dstPa
 // [[pure virtual]]
 void FillPart::compile() noexcept { BL_NOT_REACHED(); }
 
-// BLPipeline::JIT::FillBoxAPart - Construction & Destruction
-// ==========================================================
+// bl::Pipeline::JIT::FillBoxAPart - Construction & Destruction
+// ============================================================
 
 FillBoxAPart::FillBoxAPart(PipeCompiler* pc, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept
   : FillPart(pc, FillType::kBoxA, dstPart, compOpPart) {
@@ -43,8 +44,8 @@ FillBoxAPart::FillBoxAPart(PipeCompiler* pc, FetchPixelPtrPart* dstPart, CompOpP
   _isRectFill = true;
 }
 
-// BLPipeline::JIT::FillBoxAPart - Compile
-// =======================================
+// bl::Pipeline::JIT::FillBoxAPart - Compile
+// =========================================
 
 void FillBoxAPart::compile() noexcept {
   // Prepare
@@ -173,8 +174,8 @@ void FillBoxAPart::compile() noexcept {
   _finiGlobalHook();
 }
 
-// BLPipeline::JIT::FillMaskPart - Construction & Destruction
-// ==========================================================
+// bl::Pipeline::JIT::FillMaskPart - Construction & Destruction
+// ============================================================
 
 FillMaskPart::FillMaskPart(PipeCompiler* pc, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept
   : FillPart(pc, FillType::kMask, dstPart, compOpPart) {
@@ -182,8 +183,8 @@ FillMaskPart::FillMaskPart(PipeCompiler* pc, FetchPixelPtrPart* dstPart, CompOpP
   _maxSimdWidthSupported = SimdWidth::k512;
 }
 
-// BLPipeline::JIT::FillMaskPart - Compile
-// =======================================
+// bl::Pipeline::JIT::FillMaskPart - Compile
+// =========================================
 
 void FillMaskPart::compile() noexcept {
   // EndOrRepeat is expected to be zero for fast termination of the scanline.
@@ -383,9 +384,9 @@ void FillMaskPart::compile() noexcept {
 void FillMaskPart::disadvanceDstPtr(const x86::Gp& dstPtr, const x86::Gp& x, int dstBpp) noexcept {
   x86::Gp xAdv = x.cloneAs(dstPtr);
 
-  if (BLIntOps::isPowerOf2(dstBpp)) {
+  if (IntOps::isPowerOf2(dstBpp)) {
     if (dstBpp > 1)
-      cc->shl(xAdv, BLIntOps::ctz(dstBpp));
+      cc->shl(xAdv, IntOps::ctz(dstBpp));
     cc->sub(dstPtr, xAdv);
   }
   else {
@@ -395,8 +396,8 @@ void FillMaskPart::disadvanceDstPtr(const x86::Gp& dstPtr, const x86::Gp& x, int
   }
 }
 
-// BLPipeline::JIT::FillAnalyticPart - Construction & Destruction
-// ==============================================================
+// bl::Pipeline::JIT::FillAnalyticPart - Construction & Destruction
+// ================================================================
 
 FillAnalyticPart::FillAnalyticPart(PipeCompiler* pc, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept
   : FillPart(pc, FillType::kAnalytic, dstPart, compOpPart) {
@@ -404,8 +405,8 @@ FillAnalyticPart::FillAnalyticPart(PipeCompiler* pc, FetchPixelPtrPart* dstPart,
   _maxSimdWidthSupported = SimdWidth::k256;
 }
 
-// BLPipeline::JIT::FillAnalyticPart - Compile
-// ===========================================
+// bl::Pipeline::JIT::FillAnalyticPart - Compile
+// =============================================
 
 void FillAnalyticPart::compile() noexcept {
   using x86::shuffleImm;
@@ -439,11 +440,11 @@ void FillAnalyticPart::compile() noexcept {
   int bwSizeInBits = bwSize * 8;
 
   int pixelsPerOneBit = 4;
-  int pixelsPerOneBitShift = int(BLIntOps::ctz(pixelsPerOneBit));
+  int pixelsPerOneBitShift = int(IntOps::ctz(pixelsPerOneBit));
 
   int pixelGranularity = pixelsPerOneBit;
   int pixelsPerBitWord = pixelsPerOneBit * bwSizeInBits;
-  int pixelsPerBitWordShift = int(BLIntOps::ctz(pixelsPerBitWord));
+  int pixelsPerBitWordShift = int(IntOps::ctz(pixelsPerBitWord));
 
   if (compOpPart()->maxPixelsOfChildren() < 4)
     pixelGranularity = 1;
@@ -547,11 +548,11 @@ void FillAnalyticPart::compile() noexcept {
 
   cc->sub(bitPtrRunLen.r32(), xStart);
   cc->inc(bitPtrRunLen.r32());
-  cc->shl(bitPtrRunLen, BLIntOps::ctz(bwSize));
+  cc->shl(bitPtrRunLen, IntOps::ctz(bwSize));
   cc->sub(bitPtrSkipLen, bitPtrRunLen);
 
   // Make `xStart` to become the X offset of the first active BitWord.
-  cc->lea(bitPtr, x86::ptr(bitPtr, xStart.cloneAs(bitPtr), BLIntOps::ctz(bwSize)));
+  cc->lea(bitPtr, x86::ptr(bitPtr, xStart.cloneAs(bitPtr), IntOps::ctz(bwSize)));
   cc->shl(xStart, pixelsPerBitWordShift);
 
   pc->v_broadcast_u16(globalAlpha, x86::ptr(fillData, BL_OFFSET_OF(FillData::Analytic, alpha)));
@@ -1179,6 +1180,7 @@ void FillAnalyticPart::disadvanceDstPtrAndCellPtr(const x86::Gp& dstPtr, const x
 }
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 #endif

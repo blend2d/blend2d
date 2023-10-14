@@ -12,7 +12,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLPixelOps {
+namespace bl {
+namespace PixelOps {
 
 struct Funcs {
   void (BL_CDECL* interpolate_prgb32)(uint32_t* dst, uint32_t dstSize, const BLGradientStop* stops, size_t stopCount) BL_NOEXCEPT;
@@ -21,7 +22,8 @@ struct Funcs {
 
 extern Funcs funcs;
 
-} // {BLPixelOps}
+} // {PixelOps}
+} // {bl}
 
 //! \}
 //! \endcond

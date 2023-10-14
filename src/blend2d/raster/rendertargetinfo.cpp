@@ -10,7 +10,8 @@
 #include "../raster/rastercontext_p.h"
 #include "../raster/renderfetchdata_p.h"
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 // RasterEngine - RenderTargetInfo - Table
 // =======================================
@@ -36,4 +37,5 @@ const RenderTargetInfo renderTargetInfoByComponentType[RenderTargetInfo::kPixelC
   #undef ROW
 };
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}

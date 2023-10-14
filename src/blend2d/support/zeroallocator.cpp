@@ -18,11 +18,13 @@
 // Define to always check whether the memory has been zeroed before release.
 // #define BL_BUILD_DEBUG_ZERO_ALLOCATOR
 
+namespace bl {
+
 #if defined(BL_BUILD_DEBUG) || defined(BL_BUILD_DEBUG_ZERO_ALLOCATOR)
-static void BLZeroAllocator_checkReleasedMemory(uint8_t* ptr, size_t size) noexcept {
+static void ZeroAllocator_checkReleasedMemory(uint8_t* ptr, size_t size) noexcept {
   // Must be aligned.
-  BL_ASSERT(BLIntOps::isAligned(ptr , sizeof(uintptr_t)));
-  BL_ASSERT(BLIntOps::isAligned(size, sizeof(uintptr_t)));
+  BL_ASSERT(IntOps::isAligned(ptr , sizeof(uintptr_t)));
+  BL_ASSERT(IntOps::isAligned(size, sizeof(uintptr_t)));
 
   uintptr_t* p = reinterpret_cast<uintptr_t*>(ptr);
   bool zeroedMemoryWasNotZero = false;
@@ -30,7 +32,7 @@ static void BLZeroAllocator_checkReleasedMemory(uint8_t* ptr, size_t size) noexc
   for (size_t i = 0; i < size / sizeof(uintptr_t); i++) {
     if (p[i] != 0) {
       zeroedMemoryWasNotZero = true;
-      blRuntimeMessageFmt("BLZeroAllocator::checkReleasedMemory(): Found non-zero: %p[%zu] == %zu\n", p, i * sizeof(uintptr_t), size_t(p[i]));
+      blRuntimeMessageFmt("bl::ZeroAllocator::checkReleasedMemory(): Found non-zero: %p[%zu] == %zu\n", p, i * sizeof(uintptr_t), size_t(p[i]));
     }
   }
 
@@ -38,19 +40,19 @@ static void BLZeroAllocator_checkReleasedMemory(uint8_t* ptr, size_t size) noexc
 }
 #endif
 
-//! Calculate the number of elements that would be required if `base` is granularized by `granularity`. This function
-//! can be used to calculate the number of BitWords to represent N bits, for example.
+//! Calculate the number of elements that would be required if `base` is granularized by `granularity`.
+//! This function can be used to calculate the number of BitWords to represent N bits, for example.
 template<typename X, typename Y>
-static constexpr X BLZeroAllocator_numGranularized(X base, Y granularity) noexcept {
-  typedef typename BLInternal::StdInt<sizeof(X), 1>::Type U;
+static constexpr X ZeroAllocator_numGranularized(const X& base, const Y& granularity) noexcept {
+  using U = BLInternal::UIntByType<X>;
   return X((U(base) + U(granularity) - 1) / U(granularity));
 }
 
 //! Based on asmjit's JitAllocator, but modified and enhanced for our own purposes.
-class BLZeroAllocator {
+class ZeroAllocator {
 public:
-  BL_NONCOPYABLE(BLZeroAllocator)
-  typedef BLPrivateBitWordOps BitOps;
+  BL_NONCOPYABLE(ZeroAllocator)
+  typedef PrivateBitWordOps BitOps;
 
   enum : uint32_t {
     kBlockAlignment = 64,
@@ -61,11 +63,10 @@ public:
   };
 
   static constexpr size_t bitWordCountFromAreaSize(uint32_t areaSize) noexcept {
-    return BLIntOps::alignUp<size_t>(areaSize, BLIntOps::bitSizeOf<BLBitWord>()) / BLIntOps::bitSizeOf<BLBitWord>();
+    return IntOps::alignUp<size_t>(areaSize, IntOps::bitSizeOf<BLBitWord>()) / IntOps::bitSizeOf<BLBitWord>();
   }
 
-  class Block : public BLArenaTreeNode<Block>,
-                public BLArenaListNode<Block> {
+  class Block : public ArenaTreeNode<Block>, public ArenaListNode<Block> {
   public:
     BL_NONCOPYABLE(Block)
 
@@ -99,9 +100,9 @@ public:
     BLBitWord _bitVector[1];
 
     BL_INLINE Block(uint8_t* buffer, size_t blockSize, uint32_t areaSize) noexcept
-      : BLArenaTreeNode(),
+      : ArenaTreeNode(),
         _buffer(buffer),
-        _bufferAligned(BLIntOps::alignUp(buffer, kBlockAlignment)),
+        _bufferAligned(IntOps::alignUp(buffer, kBlockAlignment)),
         _blockSize(blockSize),
         _flags(0),
         _areaSize(areaSize),
@@ -114,7 +115,7 @@ public:
     BL_INLINE size_t blockSize() const noexcept { return _blockSize; }
 
     BL_INLINE size_t overheadSize() const noexcept {
-      return sizeof(Block) - sizeof(BLBitWord) + BLZeroAllocator_numGranularized(areaSize(), BLIntOps::bitSizeOf<BLBitWord>());
+      return sizeof(Block) - sizeof(BLBitWord) + ZeroAllocator_numGranularized(areaSize(), IntOps::bitSizeOf<BLBitWord>());
     }
 
     BL_INLINE uint32_t flags() const noexcept { return _flags; }
@@ -128,7 +129,7 @@ public:
     BL_INLINE uint32_t largestUnusedArea() const noexcept { return _largestUnusedArea; }
 
     BL_INLINE void resetBitVector() noexcept {
-      memset(_bitVector, 0, BLZeroAllocator_numGranularized(_areaSize, BLIntOps::bitSizeOf<BLBitWord>()) * sizeof(BLBitWord));
+      memset(_bitVector, 0, ZeroAllocator_numGranularized(_areaSize, IntOps::bitSizeOf<BLBitWord>()) * sizeof(BLBitWord));
     }
 
     // RBTree default CMP uses '<' and '>' operators.
@@ -143,9 +144,9 @@ public:
   //! Mutex for thread safety.
   mutable BLMutex _mutex;
   //! Tree that contains all blocks.
-  BLArenaTree<Block> _tree;
+  ArenaTree<Block> _tree;
   //! Double linked list of blocks.
-  BLArenaList<Block> _blocks;
+  ArenaList<Block> _blocks;
   //! Allocated block count.
   size_t _blockCount;
   //! Area size of base block.
@@ -162,7 +163,7 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLZeroAllocator(Block* baseBlock) noexcept
+  BL_INLINE ZeroAllocator(Block* baseBlock) noexcept
     : _tree(),
       _blocks(),
       _blockCount(0),
@@ -179,7 +180,7 @@ public:
     _cleanupThreshold = _totalAreaSize;
   }
 
-  BL_INLINE ~BLZeroAllocator() noexcept {
+  BL_INLINE ~ZeroAllocator() noexcept {
     _cleanupInternal();
   }
 
@@ -188,10 +189,10 @@ public:
   //! \name Block Management
   //! \{
 
-  // Allocate a new `BLZeroAllocator::Block` for the given `blockSize`.
+  // Allocate a new `ZeroAllocator::Block` for the given `blockSize`.
   Block* newBlock(size_t blockSize) noexcept {
     uint32_t areaSize = uint32_t((blockSize + kBlockGranularity - 1) / kBlockGranularity);
-    uint32_t numBitWords = (areaSize + BLIntOps::bitSizeOf<BLBitWord>() - 1u) / BLIntOps::bitSizeOf<BLBitWord>();
+    uint32_t numBitWords = (areaSize + IntOps::bitSizeOf<BLBitWord>() - 1u) / IntOps::bitSizeOf<BLBitWord>();
 
     size_t blockStructSize = sizeof(Block) + size_t(numBitWords - 1) * sizeof(BLBitWord);
     Block* block = static_cast<Block*>(malloc(blockStructSize));
@@ -243,12 +244,12 @@ public:
   }
 
   BL_INLINE size_t calculateIdealBlockSize(size_t allocationSize) noexcept {
-    uint32_t kMaxSizeShift = BLIntOps::ctzStatic(kMaxBlockSize) -
-                             BLIntOps::ctzStatic(kMinBlockSize) ;
+    uint32_t kMaxSizeShift = IntOps::ctzStatic(kMaxBlockSize) -
+                             IntOps::ctzStatic(kMinBlockSize) ;
 
     size_t blockSize = size_t(kMinBlockSize) << blMin<size_t>(_blockCount, kMaxSizeShift);
     if (blockSize < allocationSize)
-      blockSize = BLIntOps::alignUp(allocationSize, blockSize);
+      blockSize = IntOps::alignUp(allocationSize, blockSize);
     return blockSize;
   }
 
@@ -288,18 +289,18 @@ public:
   //! \{
 
   void* _allocInternal(size_t size, size_t* allocatedSize) noexcept {
-    constexpr uint32_t kNoIndex = BLTraits::maxValue<uint32_t>();
+    constexpr uint32_t kNoIndex = Traits::maxValue<uint32_t>();
 
     // Align to minimum granularity by default.
-    size = BLIntOps::alignUp<size_t>(size, kBlockGranularity);
+    size = IntOps::alignUp<size_t>(size, kBlockGranularity);
     *allocatedSize = 0;
 
-    if (BL_UNLIKELY(size == 0 || size > BLTraits::maxValue<uint32_t>() / 2))
+    if (BL_UNLIKELY(size == 0 || size > Traits::maxValue<uint32_t>() / 2))
       return nullptr;
 
     Block* block = _blocks.first();
     uint32_t areaIndex = kNoIndex;
-    uint32_t areaSize = uint32_t(BLZeroAllocator_numGranularized(size, kBlockGranularity));
+    uint32_t areaSize = uint32_t(ZeroAllocator_numGranularized(size, kBlockGranularity));
 
     // Try to find the requested memory area in existing blocks.
     if (block) {
@@ -313,7 +314,7 @@ public:
             uint32_t searchEnd = block->_searchEnd;
 
             BitOps::BitVectorFlipIterator it(
-              block->_bitVector, BLZeroAllocator_numGranularized(searchEnd, BitOps::kNumBits), searchStart, BitOps::ones());
+              block->_bitVector, ZeroAllocator_numGranularized(searchEnd, BitOps::kNumBits), searchStart, BitOps::ones());
 
             // If there is unused area available then there has to be at least one match.
             BL_ASSERT(it.hasNext());
@@ -412,7 +413,7 @@ public:
     BL_ASSERT(block != nullptr);
 
 #if defined(BL_BUILD_DEBUG) || defined(BL_BUILD_DEBUG_ZERO_ALLOCATOR)
-    BLZeroAllocator_checkReleasedMemory(static_cast<uint8_t*>(ptr), size);
+    ZeroAllocator_checkReleasedMemory(static_cast<uint8_t*>(ptr), size);
 #endif
 
     // Offset relative to the start of the block.
@@ -420,7 +421,7 @@ public:
 
     // The first bit representing the allocated area and its size.
     uint32_t areaIndex = uint32_t(byteOffset / kBlockGranularity);
-    uint32_t areaSize = uint32_t(BLZeroAllocator_numGranularized(size, kBlockGranularity));
+    uint32_t areaSize = uint32_t(ZeroAllocator_numGranularized(size, kBlockGranularity));
 
     // Update the search region and statistics.
     block->_searchStart = blMin(block->_searchStart, areaIndex);
@@ -476,9 +477,9 @@ public:
   //! \}
 };
 
-static BLWrap<BLZeroAllocator> blZeroMemAllocator;
+static Wrap<ZeroAllocator> zeroAllocatorGlobal;
 
-// BLZeroAllocator - Static Buffer
+// ZeroAllocator - Static Buffer
 // ===============================
 
 // Base memory is a zeroed memory allocated by the linker. By default we use 1MB of memory that we will use
@@ -487,11 +488,11 @@ static BLWrap<BLZeroAllocator> blZeroMemAllocator;
 struct ZeroAllocatorStaticBlock {
   enum : uint32_t {
     kBlockSize = 1024u * 1024u,
-    kAreaSize = BLZeroAllocator_numGranularized(kBlockSize, BLZeroAllocator::kBlockGranularity),
-    kBitWordCount = BLZeroAllocator_numGranularized(kAreaSize, BLIntOps::bitSizeOf<BLBitWord>())
+    kAreaSize = ZeroAllocator_numGranularized(kBlockSize, ZeroAllocator::kBlockGranularity),
+    kBitWordCount = ZeroAllocator_numGranularized(kAreaSize, IntOps::bitSizeOf<BLBitWord>())
   };
 
-  BLWrap<BLZeroAllocator::Block> block;
+  Wrap<ZeroAllocator::Block> block;
   BLBitWord bitWords[kBitWordCount];
 };
 
@@ -499,51 +500,53 @@ struct alignas(64) ZeroAllocatorStaticBuffer {
   uint8_t buffer[ZeroAllocatorStaticBlock::kBlockSize];
 };
 
-static ZeroAllocatorStaticBlock blZeroAllocatorStaticBlock;
-static ZeroAllocatorStaticBuffer blZeroAllocatorStaticBuffer;
+static ZeroAllocatorStaticBlock zeroAllocatorStaticBlock;
+static ZeroAllocatorStaticBuffer zeroAllocatorStaticBuffer;
 
-// BLZeroAllocator - API
-// =====================
+} // {bl}
+
+// bl::ZeroAllocator - API
+// =======================
 
 void* blZeroAllocatorAlloc(size_t size, size_t* allocatedSize) noexcept {
-  return blZeroMemAllocator->alloc(size, allocatedSize);
+  return bl::zeroAllocatorGlobal->alloc(size, allocatedSize);
 }
 
 void* blZeroAllocatorResize(void* prevPtr, size_t prevSize, size_t size, size_t* allocatedSize) noexcept {
-  return blZeroMemAllocator->resize(prevPtr, prevSize, size, allocatedSize);
+  return bl::zeroAllocatorGlobal->resize(prevPtr, prevSize, size, allocatedSize);
 }
 
 void blZeroAllocatorRelease(void* ptr, size_t size) noexcept {
-  blZeroMemAllocator->release(ptr, size);
+  bl::zeroAllocatorGlobal->release(ptr, size);
 }
 
-// BLZeroAllocator - Runtime
-// =========================
+// bl::ZeroAllocator - Runtime
+// ===========================
 
 static void BL_CDECL blZeroAllocatorRtShutdown(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
-  blZeroMemAllocator.destroy();
+  bl::zeroAllocatorGlobal.destroy();
 }
 
 static void BL_CDECL blZeroAllocatorRtCleanup(BLRuntimeContext* rt, BLRuntimeCleanupFlags cleanupFlags) noexcept {
   blUnused(rt);
   if (cleanupFlags & BL_RUNTIME_CLEANUP_ZEROED_POOL)
-    blZeroMemAllocator->cleanup();
+    bl::zeroAllocatorGlobal->cleanup();
 }
 
 static void BL_CDECL blZeroAllocatorRtResourceInfo(BLRuntimeContext* rt, BLRuntimeResourceInfo* resourceInfo) noexcept {
   blUnused(rt);
-  blZeroMemAllocator->onResourceInfo(resourceInfo);
+  bl::zeroAllocatorGlobal->onResourceInfo(resourceInfo);
 }
 
 void blZeroAllocatorRtInit(BLRuntimeContext* rt) noexcept {
-  BLZeroAllocator::Block* block =
-    blZeroAllocatorStaticBlock.block.init(
-      blZeroAllocatorStaticBuffer.buffer,
-      ZeroAllocatorStaticBlock::kBlockSize,
-      ZeroAllocatorStaticBlock::kAreaSize);
+  bl::ZeroAllocator::Block* block =
+    bl::zeroAllocatorStaticBlock.block.init(
+      bl::zeroAllocatorStaticBuffer.buffer,
+      bl::ZeroAllocatorStaticBlock::kBlockSize,
+      bl::ZeroAllocatorStaticBlock::kAreaSize);
 
-  blZeroMemAllocator.init(block);
+  bl::zeroAllocatorGlobal.init(block);
 
   rt->shutdownHandlers.add(blZeroAllocatorRtShutdown);
   rt->cleanupHandlers.add(blZeroAllocatorRtCleanup);

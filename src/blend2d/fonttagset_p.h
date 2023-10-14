@@ -17,7 +17,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLFontTagData {
+namespace bl {
+namespace FontTagData {
 
 BL_HIDDEN BLResult finalizeTagArray(BLArray<BLTag>& tags) noexcept;
 
@@ -33,19 +34,19 @@ template<size_t kKnownTagCount>
 class TagSet {
 public:
   BLArray<BLTag> unknownTags;
-  BLFixedBitArray<BLBitWord, kKnownTagCount> knownTags {};
+  FixedBitArray<BLBitWord, kKnownTagCount> knownTags {};
   size_t knownTagCount {};
 
   BL_INLINE bool _hasTag(BLTag tag, uint32_t id) const noexcept {
-    if (id != BLFontTagData::kInvalidId)
+    if (id != kInvalidId)
       return knownTags.bitAt(id);
 
-    size_t index = BLAlgorithm::lowerBound(unknownTags.data(), unknownTags.size(), id);
+    size_t index = lowerBound(unknownTags.data(), unknownTags.size(), id);
     return index < unknownTags.size() && unknownTags[index] == tag;
   }
 
   BL_INLINE BLResult _addTag(BLTag tag, uint32_t id) noexcept {
-    if (id != BLFontTagData::kInvalidId)
+    if (id != kInvalidId)
       return _addKnownTagId(id);
     else
       return _addUnknownTag(tag);
@@ -78,7 +79,7 @@ public:
 
     size_t dstDataIndex = 0;
     size_t unknownTagIndex = 0;
-    BLParametrizedBitOps<BLBitOrder::kLSB, BLBitWord>::BitVectorIterator it(knownTags.data, knownTags.sizeInWords());
+    ParametrizedBitOps<BitOrder::kLSB, BLBitWord>::BitVectorIterator it(knownTags.data, knownTags.sizeInWords());
 
     while (it.hasNext()) {
       uint32_t tagId = it.next();
@@ -172,7 +173,8 @@ public:
   }
 };
 
-} // {BLFontTagData}
+} // {FontTagData}
+} // {bl}
 
 //! \}
 //! \endcond

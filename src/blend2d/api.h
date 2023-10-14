@@ -55,7 +55,7 @@
 //! $$DOCS_GROUP_OVERVIEW$$
 
 //! \defgroup blend2d_api_globals Global API
-//! \brief Global functions, constants,  and classes used universally across
+//! \brief Global functions, constants, and classes used universally across
 //! the library.
 
 //! \defgroup blend2d_api_geometry Geometry API
@@ -659,7 +659,6 @@ BL_FORWARD_DECLARE_STRUCT(BLPathView);
 
 BL_FORWARD_DECLARE_STRUCT(BLImageData);
 BL_FORWARD_DECLARE_STRUCT(BLImageInfo);
-BL_FORWARD_DECLARE_STRUCT(BLImageScaleOptions);
 
 BL_FORWARD_DECLARE_STRUCT(BLImageCore);
 BL_FORWARD_DECLARE_STRUCT(BLImageImpl);
@@ -1119,21 +1118,29 @@ BL_DEFINE_ENUM(BLTextEncoding) {
 //! There should never be functionality that is not used by public headers, that should always be hidden.
 namespace BLInternal {
 
-//! StdInt provides an integer defined by <stdint.h> by size and signedness.
-//!
-//! This struct is visible to Blend2D users, because it's required by the `BLArray<>` template. However, it's
-//! still considered internal and should not be used outside of Blend2D source code.
-template<size_t Size, unsigned Unsigned>
-struct StdInt {};
+//! StdIntT provides a signed integer type as defined by <stdint.h> by size.
+template<size_t kSize, bool kUnsigned = false> struct StdIntT;
 
-template<> struct StdInt<1, 0> { typedef int8_t   Type; };
-template<> struct StdInt<1, 1> { typedef uint8_t  Type; };
-template<> struct StdInt<2, 0> { typedef int16_t  Type; };
-template<> struct StdInt<2, 1> { typedef uint16_t Type; };
-template<> struct StdInt<4, 0> { typedef int32_t  Type; };
-template<> struct StdInt<4, 1> { typedef uint32_t Type; };
-template<> struct StdInt<8, 0> { typedef int64_t  Type; };
-template<> struct StdInt<8, 1> { typedef uint64_t Type; };
+template<> struct StdIntT<1, false> { typedef int8_t Type; };
+template<> struct StdIntT<2, false> { typedef int16_t Type; };
+template<> struct StdIntT<4, false> { typedef int32_t Type; };
+template<> struct StdIntT<8, false> { typedef int64_t Type; };
+template<> struct StdIntT<1, true> { typedef uint8_t Type; };
+template<> struct StdIntT<2, true> { typedef uint16_t Type; };
+template<> struct StdIntT<4, true> { typedef uint32_t Type; };
+template<> struct StdIntT<8, true> { typedef uint64_t Type; };
+
+template<size_t kSize, bool kUnsigned = false>
+using IntBySize = typename StdIntT<kSize, kUnsigned>::Type;
+
+template<size_t kSize>
+using UIntBySize = typename StdIntT<kSize, true>::Type;
+
+template<typename T, bool kUnsigned = false>
+using IntByType = typename StdIntT<sizeof(T), kUnsigned>::Type;
+
+template<typename T>
+using UIntByType = typename StdIntT<sizeof(T), 1>::Type;
 
 template<uint64_t kInput>
 struct ConstCTZ {

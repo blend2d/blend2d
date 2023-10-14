@@ -11,10 +11,11 @@
 #include "string_p.h"
 #include "var_p.h"
 
-// BLArray - Tests
-// ===============
+// bl::Array - Tests
+// =================
 
-namespace BLArrayTests {
+namespace bl {
+namespace Tests {
 
 UNIT(array, BL_TEST_GROUP_CORE_CONTAINERS) {
   INFO("Basic functionality - BLArray<int>");
@@ -230,6 +231,7 @@ UNIT(array, BL_TEST_GROUP_CORE_CONTAINERS) {
   }
 }
 
-} // {BLArrayTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

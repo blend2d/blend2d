@@ -9,22 +9,23 @@
 #include "../support/arenaallocator_p.h"
 #include "../support/arenabitarray_p.h"
 
-// BLArenaBitArray - Tests
-// =======================
+// bl::ArenaBitArray - Tests
+// =========================
 
-namespace BLArenaBitArrayTests {
+namespace bl {
+namespace Tests {
 
 UNIT(support_arenabitarray, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
-  BLArenaAllocator arena(8096 - BLArenaAllocator::kBlockOverhead);
+  ArenaAllocator arena(8096 - ArenaAllocator::kBlockOverhead);
 
   uint32_t i, count;
   uint32_t kMaxCount = 1000;
 
-  BLArenaBitArray<BLBitWord> ba;
+  ArenaBitArray<BLBitWord> ba;
   EXPECT_TRUE(ba.empty());
   EXPECT_EQ(ba.size(), 0u);
 
-  INFO("BLArenaBitArray::resize()");
+  INFO("bl::ArenaBitArray::resize()");
   for (count = 1; count < kMaxCount; count++) {
     ba.clear();
 
@@ -42,7 +43,7 @@ UNIT(support_arenabitarray, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
       EXPECT_TRUE(ba.bitAt(i));
   }
 
-  INFO("BLArenaBitArray::fillBits() / clearBits()");
+  INFO("bl::ArenaBitArray::fillBits() / clearBits()");
   for (count = 1; count < kMaxCount; count += 2) {
     ba.clear();
 
@@ -63,6 +64,7 @@ UNIT(support_arenabitarray, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   }
 }
 
-} // {BLArenaBitArrayTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

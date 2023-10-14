@@ -9,14 +9,15 @@
 #include "../support/arenaallocator_p.h"
 #include "../support/arenatree_p.h"
 
-// BLArenaTree - Tests
-// ===================
+// bl::ArenaTree - Tests
+// =====================
 
-namespace BLArenaTreeTests {
+namespace bl {
+namespace Tests {
 
 template<typename NodeT>
 struct TreeTestUtils {
-  typedef BLArenaTree<NodeT> Tree;
+  typedef ArenaTree<NodeT> Tree;
 
   static void verifyTree(Tree& tree) noexcept {
     EXPECT_GT(checkHeight(static_cast<NodeT*>(tree._root)), 0);
@@ -34,7 +35,7 @@ struct TreeTestUtils {
     EXPECT_TRUE(rn == nullptr || *rn > *node);
 
     // Red violation.
-    EXPECT_TRUE(!node->isRed() || (!BLArenaTreeNodeBase::_isValidRed(ln) && !BLArenaTreeNodeBase::_isValidRed(rn)));
+    EXPECT_TRUE(!node->isRed() || (!ArenaTreeNodeBase::_isValidRed(ln) && !ArenaTreeNodeBase::_isValidRed(rn)));
 
     // Black violation.
     int lh = checkHeight(ln);
@@ -46,7 +47,7 @@ struct TreeTestUtils {
   }
 };
 
-class MyTreeNode : public BLArenaTreeNode<MyTreeNode> {
+class MyTreeNode : public ArenaTreeNode<MyTreeNode> {
 public:
   BL_NONCOPYABLE(MyTreeNode)
 
@@ -65,8 +66,8 @@ public:
 UNIT(arena_tree, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   constexpr uint32_t kCount = 2000;
 
-  BLArenaAllocator zone(4096);
-  BLArenaTree<MyTreeNode> rbTree;
+  ArenaAllocator zone(4096);
+  ArenaTree<MyTreeNode> rbTree;
 
   uint32_t key;
   INFO("Inserting %u elements to the tree and validating each operation", unsigned(kCount));
@@ -94,6 +95,7 @@ UNIT(arena_tree, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   EXPECT_TRUE(rbTree.empty());
 }
 
-} // {BLArenaTreeTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

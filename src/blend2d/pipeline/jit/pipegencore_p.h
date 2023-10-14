@@ -15,7 +15,7 @@
 #include "../../pipeline/jit/jitbase_p.h"
 #include "../../tables/tables_p.h"
 
-// External dependencies of BLPipeline.
+// External dependencies of bl::Pipeline::JIT.
 #if BL_TARGET_ARCH_X86
   #include <asmjit/x86.h>
 #endif
@@ -24,10 +24,11 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-//! \namespace BLPipeline::JIT
-//! Everything related to JIT pipeline generator and runtime is within `BLPipeline::JIT` namespace.
+//! \namespace bl::Pipeline::JIT
+//! Everything related to JIT pipeline generator and runtime is within `bl::Pipeline::JIT` namespace.
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 class PipeCompiler;
@@ -350,7 +351,8 @@ struct PixelPredicate {
 };
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

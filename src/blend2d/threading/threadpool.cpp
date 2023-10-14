@@ -29,7 +29,7 @@ static BLThreadPoolVirt blThreadPoolVirt;
 class BLInternalThreadPool : public BLThreadPool {
 public:
   enum : uint32_t { kMaxThreadCount = 64 };
-  typedef BLFixedBitArray<BLBitWord, kMaxThreadCount> BitArray;
+  typedef bl::FixedBitArray<BLBitWord, kMaxThreadCount> BitArray;
 
   size_t refCount;
   uint32_t stackSize;
@@ -145,7 +145,7 @@ static BLResult BL_CDECL blThreadPoolSetThreadAttributes(BLThreadPool* self_, co
   uint32_t stackSize = attributes->stackSize;
   if (stackSize) {
     const BLRuntimeSystemInfo& si = blRuntimeContext.systemInfo;
-    if (stackSize < si.threadStackSize || !BLIntOps::isAligned(stackSize, si.allocationGranularity))
+    if (stackSize < si.threadStackSize || !bl::IntOps::isAligned(stackSize, si.allocationGranularity))
       return blTraceError(BL_ERROR_INVALID_VALUE);
   }
 
@@ -179,10 +179,10 @@ static uint32_t BL_CDECL blThreadPoolCleanup(BLThreadPool* self_, uint32_t threa
 
   do {
     BLBitWord mask = self->pooledThreadBits.data[bwIndex];
-    BLBitWordIterator<BLBitWord> it(mask);
+    bl::BitWordIterator<BLBitWord> it(mask);
 
     while (it.hasNext()) {
-      uint32_t threadIndex = bwIndex * BLIntOps::bitSizeOf<BLBitWord>() + it.next();
+      uint32_t threadIndex = bwIndex * bl::IntOps::bitSizeOf<BLBitWord>() + it.next();
       BLThread* thread = self->threads[threadIndex];
 
       self->threads[threadIndex] = nullptr;
@@ -205,14 +205,14 @@ static void blThreadPoolReleaseThreadsInternal(BLInternalThreadPool* self, BLThr
   uint32_t bwIndex = 0;
 
   do {
-    BLBitWord mask = self->pooledThreadBits.data[bwIndex] ^ BLIntOps::allOnes<BLBitWord>();
-    BLBitWordIterator<BLBitWord> it(mask);
+    BLBitWord mask = self->pooledThreadBits.data[bwIndex] ^ bl::IntOps::allOnes<BLBitWord>();
+    bl::BitWordIterator<BLBitWord> it(mask);
 
     while (it.hasNext()) {
       uint32_t bit = it.next();
-      mask ^= BLIntOps::lsbBitAt<BLBitWord>(bit);
+      mask ^= bl::IntOps::lsbBitAt<BLBitWord>(bit);
 
-      uint32_t threadIndex = bwIndex * BLIntOps::bitSizeOf<BLBitWord>() + bit;
+      uint32_t threadIndex = bwIndex * bl::IntOps::bitSizeOf<BLBitWord>() + bit;
       BL_ASSERT(self->threads[threadIndex] == nullptr);
 
       BLThread* thread = threads[i];
@@ -222,7 +222,7 @@ static void blThreadPoolReleaseThreadsInternal(BLInternalThreadPool* self, BLThr
         break;
     }
 
-    self->pooledThreadBits.data[bwIndex] = mask ^ BLIntOps::allOnes<BLBitWord>();
+    self->pooledThreadBits.data[bwIndex] = mask ^ bl::IntOps::allOnes<BLBitWord>();
   } while (i < n && ++bwIndex < BLInternalThreadPool::BitArray::kFixedArraySize);
 
   // This shouldn't happen. What is acquired must be released. If more threads are released than acquired it means
@@ -280,13 +280,13 @@ static uint32_t blThreadPoolAcquireThreadsInternal(BLInternalThreadPool* self, B
 
   while (nAcquired < n) {
     BLBitWord mask = self->pooledThreadBits.data[bwIndex];
-    BLBitWordIterator<BLBitWord> it(mask);
+    bl::BitWordIterator<BLBitWord> it(mask);
 
     while (it.hasNext()) {
       uint32_t bit = it.next();
-      mask ^= BLIntOps::lsbBitAt<BLBitWord>(bit);
+      mask ^= bl::IntOps::lsbBitAt<BLBitWord>(bit);
 
-      uint32_t threadIndex = bwIndex * BLIntOps::bitSizeOf<BLBitWord>() + bit;
+      uint32_t threadIndex = bwIndex * bl::IntOps::bitSizeOf<BLBitWord>() + bit;
       BLThread* thread = self->threads[threadIndex];
 
       BL_ASSERT(thread != nullptr);
@@ -326,7 +326,7 @@ static void BL_CDECL blThreadPoolReleaseThreads(BLThreadPool* self_, BLThread** 
 // ThreadPool - Global
 // ===================
 
-static BLWrap<BLInternalThreadPool> blGlobalThreadPool;
+static bl::Wrap<BLInternalThreadPool> blGlobalThreadPool;
 BLThreadPool* blThreadPoolGlobal() noexcept { return &blGlobalThreadPool; }
 
 // ThreadPool - Runtime Registration

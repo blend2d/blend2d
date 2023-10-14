@@ -9,11 +9,12 @@
 #include "../opentype/otcmap_p.h"
 #include "../opentype/otface_p.h"
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 namespace CoreImpl {
 
-// BLOpenType::CoreImpl - Trace
-// ============================
+// bl::OpenType::CoreImpl - Trace
+// ==============================
 
 #if defined(BL_TRACE_OT_ALL) || defined(BL_TRACE_OT_CORE)
 #define Trace BLDebugTrace
@@ -21,8 +22,8 @@ namespace CoreImpl {
 #define Trace BLDummyTrace
 #endif
 
-// BLOpenType::CoreImpl - Utilities
-// ================================
+// bl::OpenType::CoreImpl - Utilities
+// ==================================
 
 static BL_INLINE const char* stringFromBool(bool value) noexcept {
   static const char str[] = "False\0\0\0True";
@@ -33,14 +34,14 @@ static BL_INLINE const char* sizeCheckMessage(size_t size) noexcept {
   return size ? "Table is truncated" : "Table not found";
 }
 
-// BLOpenType::CoreImpl - Init
-// ===========================
+// bl::OpenType::CoreImpl - Init
+// =============================
 
 static BLResult initHead(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   Table<HeadTable> head = tables.head;
 
   Trace trace;
-  trace.info("BLOpenType::OTFaceImpl::InitHead [Size=%zu]\n", head.size);
+  trace.info("bl::OpenType::OTFaceImpl::InitHead [Size=%zu]\n", head.size);
   trace.indent();
 
   if (!head.fits()) {
@@ -109,7 +110,7 @@ static BLResult initMaxP(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   Table<MaxPTable> maxp = tables.maxp;
 
   Trace trace;
-  trace.info("BLOpenType::OTFaceImpl::InitMaxP [Size=%zu]\n", maxp.size);
+  trace.info("bl::OpenType::OTFaceImpl::InitMaxP [Size=%zu]\n", maxp.size);
   trace.indent();
 
   if (!maxp.fits()) {
@@ -136,7 +137,7 @@ static BLResult initOS_2(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   Table<OS2Table> os2 = tables.os_2;
 
   Trace trace;
-  trace.info("BLOpenType::OTFaceImpl::InitOS/2 [Size=%zu]\n", os2.size);
+  trace.info("bl::OpenType::OTFaceImpl::InitOS/2 [Size=%zu]\n", os2.size);
   trace.indent();
 
   if (!os2.fits()) {
@@ -227,7 +228,7 @@ static BLResult initPost(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   Table<PostTable> post = tables.post;
 
   Trace trace;
-  trace.info("BLOpenType::OTFaceImpl::InitPost [Size=%zu]\n", post.size);
+  trace.info("bl::OpenType::OTFaceImpl::InitPost [Size=%zu]\n", post.size);
   trace.indent();
 
   if (!post.fits()) {
@@ -258,4 +259,5 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 }
 
 } // {CoreImpl}
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}

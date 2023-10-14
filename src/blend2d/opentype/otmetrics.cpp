@@ -9,11 +9,12 @@
 #include "../opentype/otmetrics_p.h"
 #include "../support/ptrops_p.h"
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 namespace MetricsImpl {
 
-// BLOpenType::MetricsImpl - Trace
-// ===============================
+// bl::OpenType::MetricsImpl - Trace
+// =================================
 
 #if defined(BL_TRACE_OT_ALL) || defined(BL_TRACE_OT_CORE)
 #define Trace BLDebugTrace
@@ -21,8 +22,8 @@ namespace MetricsImpl {
 #define Trace BLDummyTrace
 #endif
 
-// BLOpenType::MetricsImpl - Utilities
-// ===================================
+// bl::OpenType::MetricsImpl - Utilities
+// =====================================
 
 static BL_INLINE const char* stringFromBool(bool value) noexcept {
   static const char str[] = "False\0\0\0True";
@@ -33,8 +34,8 @@ static BL_INLINE const char* sizeCheckMessage(size_t size) noexcept {
   return size ? "Table is truncated" : "Table not found";
 }
 
-// BLOpenType::MetricsImpl - GetGlyphAdvances
-// ==========================================
+// bl::OpenType::MetricsImpl - GetGlyphAdvances
+// ============================================
 
 static BLResult BL_CDECL getGlyphAdvances(const BLFontFaceImpl* faceI_, const uint32_t* glyphData, intptr_t glyphAdvance, BLGlyphPlacement* placementData, size_t count) noexcept {
   const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
@@ -49,7 +50,7 @@ static BLResult BL_CDECL getGlyphAdvances(const BLFontFaceImpl* faceI_, const ui
 
   for (size_t i = 0; i < count; i++) {
     BLGlyphId glyphId = glyphData[0];
-    glyphData = BLPtrOps::offset(glyphData, glyphAdvance);
+    glyphData = PtrOps::offset(glyphData, glyphAdvance);
 
     uint32_t metricIndex = blMin(glyphId, longMetricMax);
     int32_t advance = mtxTable->lmArray()[metricIndex].advance.value();
@@ -61,8 +62,8 @@ static BLResult BL_CDECL getGlyphAdvances(const BLFontFaceImpl* faceI_, const ui
   return BL_SUCCESS;
 }
 
-// BLOpenType::MetricsImpl - Init
-// ==============================
+// bl::OpenType::MetricsImpl - Init
+// ================================
 
 BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   BLFontDesignMetrics& dm = faceI->designMetrics;
@@ -134,4 +135,5 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 }
 
 } // {MetricsImpl}
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}

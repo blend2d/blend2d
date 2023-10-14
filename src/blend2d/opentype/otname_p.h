@@ -13,7 +13,8 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 
 //! OpenType 'name' table.
 //!
@@ -50,15 +51,15 @@ struct NameTable {
 
   //! The name records where count is the number of records.
   BL_INLINE const NameRecord* nameRecords() const noexcept {
-    return BLPtrOps::offset<const NameRecord>(this, 6);
+    return PtrOps::offset<const NameRecord>(this, 6);
   }
 
   BL_INLINE uint16_t langTagCount(size_t recordCount_) const noexcept {
-    return BLPtrOps::offset<const UInt16>(this, 6 + recordCount_ * sizeof(NameRecord))->value();
+    return PtrOps::offset<const UInt16>(this, 6 + recordCount_ * sizeof(NameRecord))->value();
   }
 
   BL_INLINE const LangTagRecord* langTagRecords(size_t recordCount_) const noexcept {
-    return BLPtrOps::offset<const LangTagRecord>(this, 6 + recordCount_ * sizeof(NameRecord) + 2);
+    return PtrOps::offset<const LangTagRecord>(this, 6 + recordCount_ * sizeof(NameRecord) + 2);
   }
 };
 
@@ -66,7 +67,8 @@ namespace NameImpl {
 BL_HIDDEN BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 } // {NameImpl}
 
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 //! \}
 //! \endcond

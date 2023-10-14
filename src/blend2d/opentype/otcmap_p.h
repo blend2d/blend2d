@@ -13,7 +13,8 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 
 //! OpenType 'cmap' table.
 //!
@@ -71,8 +72,8 @@ struct CMapTable {
     UInt16 glyphIdArray[];
     */
 
-    BL_INLINE const SubHeader* subHeaderArray() const noexcept { return BLPtrOps::offset<const SubHeader>(this, sizeof(Format2)); }
-    BL_INLINE const UInt16* glyphIdArray(size_t nSub) const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(Format2) + nSub * sizeof(SubHeader)); }
+    BL_INLINE const SubHeader* subHeaderArray() const noexcept { return PtrOps::offset<const SubHeader>(this, sizeof(Format2)); }
+    BL_INLINE const UInt16* glyphIdArray(size_t nSub) const noexcept { return PtrOps::offset<const UInt16>(this, sizeof(Format2) + nSub * sizeof(SubHeader)); }
   };
 
   struct Format4 {
@@ -94,11 +95,11 @@ struct CMapTable {
     UInt16 glyphIdArray[];
     */
 
-    BL_INLINE const UInt16* lastCharArray() const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(*this)); }
-    BL_INLINE const UInt16* firstCharArray(size_t numSeg) const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 2u); }
-    BL_INLINE const UInt16* idDeltaArray(size_t numSeg) const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 4u); }
-    BL_INLINE const UInt16* idOffsetArray(size_t numSeg) const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 6u); }
-    BL_INLINE const UInt16* glyphIdArray(size_t numSeg) const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 8u); }
+    BL_INLINE const UInt16* lastCharArray() const noexcept { return PtrOps::offset<const UInt16>(this, sizeof(*this)); }
+    BL_INLINE const UInt16* firstCharArray(size_t numSeg) const noexcept { return PtrOps::offset<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 2u); }
+    BL_INLINE const UInt16* idDeltaArray(size_t numSeg) const noexcept { return PtrOps::offset<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 4u); }
+    BL_INLINE const UInt16* idOffsetArray(size_t numSeg) const noexcept { return PtrOps::offset<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 6u); }
+    BL_INLINE const UInt16* glyphIdArray(size_t numSeg) const noexcept { return PtrOps::offset<const UInt16>(this, sizeof(Format4) + 2u + numSeg * 8u); }
   };
 
   struct Format6 {
@@ -113,7 +114,7 @@ struct CMapTable {
     UInt16 glyphIdArray[count];
     */
 
-    BL_INLINE const UInt16* glyphIdArray() const noexcept { return BLPtrOps::offset<const UInt16>(this, sizeof(Format6)); }
+    BL_INLINE const UInt16* glyphIdArray() const noexcept { return PtrOps::offset<const UInt16>(this, sizeof(Format6)); }
   };
 
   //! This format is dead and it's not supported by Blend2D [only defined for reference].
@@ -220,7 +221,8 @@ BL_HIDDEN BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 
 } // {CMapImpl}
 
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 //! \}
 //! \endcond

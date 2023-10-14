@@ -14,7 +14,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLPathPrivate {
+namespace bl {
+namespace PathInternal {
 
 BL_HIDDEN BLResult strokePath(
   const BLPathView& input,
@@ -25,7 +26,8 @@ BL_HIDDEN BLResult strokePath(
   BLPath& cPath,
   BLPathStrokeSinkFunc sink, void* userData) noexcept;
 
-} // {BLPathPrivate}
+} // {PathInternal}
+} // {bl}
 
 //! \}
 //! \endcond

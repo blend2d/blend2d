@@ -11,17 +11,18 @@
 #include "runtime_p.h"
 #include "raster/rastercontext_p.h"
 
-namespace BLContextPrivate {
+namespace bl {
+namespace ContextInternal {
 
-// BLContext - Globals
-// ===================
+// bl::Context - Globals
+// =====================
 
-static BLWrap<BLContextState> nullState;
+static Wrap<BLContextState> nullState;
 static BLObjectEternalVirtualImpl<BLContextImpl, BLContextVirt> defaultContext;
 static const constexpr BLContextCreateInfo noCreateInfo {};
 
-// BLContext - Null Context
-// ========================
+// bl::Context - Null Context
+// ==========================
 
 namespace NullContext {
 
@@ -218,10 +219,11 @@ static void initNullContextVirt(BLContextVirt* virt) noexcept {
   virt->blitScaledImageD         = NullContext::blitScaledImageDImpl;
 }
 
-} // {BLContextPrivate}
+} // {ContextInternal}
+} // {bl}
 
-// BLContext - API - Init & Destroy
-// ================================
+// bl::Context - API - Init & Destroy
+// ==================================
 
 BL_API_IMPL BLResult blContextInit(BLContextCore* self) noexcept {
   self->_d = blObjectDefaults[BL_OBJECT_TYPE_CONTEXT]._d;
@@ -243,7 +245,7 @@ BL_API_IMPL BLResult blContextInitWeak(BLContextCore* self, const BLContextCore*
   BL_ASSERT(other->_d.isContext());
 
   self->_d = other->_d;
-  return BLObjectPrivate::retainInstance(self);
+  return bl::ObjectInternal::retainInstance(self);
 }
 
 BL_API_IMPL BLResult blContextInitAs(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* cci) noexcept {
@@ -254,20 +256,20 @@ BL_API_IMPL BLResult blContextInitAs(BLContextCore* self, BLImageCore* image, co
 BL_API_IMPL BLResult blContextDestroy(BLContextCore* self) noexcept {
   BL_ASSERT(self->_d.isContext());
 
-  return BLObjectPrivate::releaseVirtualInstance(self);
+  return bl::ObjectInternal::releaseVirtualInstance(self);
 }
 
-// BLContext - API - Reset
-// =======================
+// bl::Context - API - Reset
+// =========================
 
 BL_API_IMPL BLResult blContextReset(BLContextCore* self) noexcept {
   BL_ASSERT(self->_d.isContext());
 
-  return BLObjectPrivate::replaceVirtualInstance(self, static_cast<BLContextCore*>(&blObjectDefaults[BL_OBJECT_TYPE_CONTEXT]));
+  return bl::ObjectInternal::replaceVirtualInstance(self, static_cast<BLContextCore*>(&blObjectDefaults[BL_OBJECT_TYPE_CONTEXT]));
 }
 
-// BLContext - API - Assign
-// ========================
+// bl::Context - API - Assign
+// ==========================
 
 BL_API_IMPL BLResult blContextAssignMove(BLContextCore* self, BLContextCore* other) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -275,18 +277,18 @@ BL_API_IMPL BLResult blContextAssignMove(BLContextCore* self, BLContextCore* oth
 
   BLContextCore tmp = *other;
   other->_d = blObjectDefaults[BL_OBJECT_TYPE_CONTEXT]._d;
-  return BLObjectPrivate::replaceVirtualInstance(self, &tmp);
+  return bl::ObjectInternal::replaceVirtualInstance(self, &tmp);
 }
 
 BL_API_IMPL BLResult blContextAssignWeak(BLContextCore* self, const BLContextCore* other) noexcept {
   BL_ASSERT(self->_d.isContext());
   BL_ASSERT(other->_d.isContext());
 
-  return BLObjectPrivate::assignVirtualInstance(self, other);
+  return bl::ObjectInternal::assignVirtualInstance(self, other);
 }
 
-// BLContext - API - Accessors
-// ===========================
+// bl::Context - API - Accessors
+// =============================
 
 BL_API_IMPL BLContextType blContextGetType(const BLContextCore* self) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -310,8 +312,8 @@ BL_API_IMPL BLImageCore* blContextGetTargetImage(const BLContextCore* self) noex
   return impl->state->targetImage;
 }
 
-// BLContext - API - Begin & End
-// =============================
+// bl::Context - API - Begin & End
+// ===============================
 
 BL_API_IMPL BLResult blContextBegin(BLContextCore* self, BLImageCore* image, const BLContextCreateInfo* cci) noexcept {
   // Reject empty images.
@@ -319,12 +321,12 @@ BL_API_IMPL BLResult blContextBegin(BLContextCore* self, BLImageCore* image, con
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   if (!cci)
-    cci = &BLContextPrivate::noCreateInfo;
+    cci = &bl::ContextInternal::noCreateInfo;
 
   BLContextCore newO;
   BL_PROPAGATE(blRasterContextInitImpl(&newO, image, cci));
 
-  return BLObjectPrivate::replaceVirtualInstance(self, &newO);
+  return bl::ObjectInternal::replaceVirtualInstance(self, &newO);
 }
 
 BL_API_IMPL BLResult blContextEnd(BLContextCore* self) noexcept {
@@ -332,8 +334,8 @@ BL_API_IMPL BLResult blContextEnd(BLContextCore* self) noexcept {
   return blContextReset(self);
 }
 
-// BLContext - API - Flush
-// =======================
+// bl::Context - API - Flush
+// =========================
 
 BL_API_IMPL BLResult blContextFlush(BLContextCore* self, BLContextFlushFlags flags) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -342,8 +344,8 @@ BL_API_IMPL BLResult blContextFlush(BLContextCore* self, BLContextFlushFlags fla
   return impl->virt->flush(impl, flags);
 }
 
-// BLContext - API - Save & Restore
-// ================================
+// bl::Context - API - Save & Restore
+// ==================================
 
 BL_API_IMPL BLResult blContextSave(BLContextCore* self, BLContextCookie* cookie) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -359,8 +361,8 @@ BL_API_IMPL BLResult blContextRestore(BLContextCore* self, const BLContextCookie
   return impl->virt->restore(impl, cookie);
 }
 
-// BLContext - API - Transformations
-// =================================
+// bl::Context - API - Transformations
+// ===================================
 
 BL_API_IMPL BLResult blContextGetMetaTransform(const BLContextCore* self, BLMatrix2D* transformOut) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -400,8 +402,8 @@ BL_API_IMPL BLResult blContextApplyTransformOp(BLContextCore* self, BLTransformO
   return impl->virt->applyTransformOp(impl, opType, opData);
 }
 
-// BLContext - API - Rendering Hints
-// =================================
+// bl::Context - API - Rendering Hints
+// ===================================
 
 BL_API_IMPL uint32_t blContextGetHint(const BLContextCore* self, BLContextHint hintType) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -435,8 +437,8 @@ BL_API_IMPL BLResult blContextSetHints(BLContextCore* self, const BLContextHints
   return impl->virt->setHints(impl, hints);
 }
 
-// BLContext - API - Approximation Options
-// =======================================
+// bl::Context - API - Approximation Options
+// =========================================
 
 BL_API_IMPL BLResult blContextSetFlattenMode(BLContextCore* self, BLFlattenMode mode) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -459,8 +461,8 @@ BL_API_IMPL BLResult blContextSetApproximationOptions(BLContextCore* self, const
   return impl->virt->setApproximationOptions(impl, options);
 }
 
-// BLContext - API - Fill Style & Alpha
-// ====================================
+// bl::Context - API - Fill Style & Alpha
+// ======================================
 
 BL_API_IMPL BLResult blContextGetFillStyle(const BLContextCore* self, BLVarCore* styleOut) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -532,8 +534,8 @@ BL_API_IMPL BLResult blContextSetFillAlpha(BLContextCore* self, double alpha) no
   return impl->virt->setStyleAlpha(impl, BL_CONTEXT_STYLE_SLOT_FILL, alpha);
 }
 
-// BLContext - API - Stroke Style & Alpha
-// ======================================
+// bl::Context - API - Stroke Style & Alpha
+// ========================================
 
 BL_API_IMPL BLResult blContextGetStrokeStyle(const BLContextCore* self, BLVarCore* styleOut) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -612,8 +614,8 @@ BL_API_IMPL BLResult blContextSwapStyles(BLContextCore* self, BLContextStyleSwap
   return impl->virt->swapStyles(impl, mode);
 }
 
-// BLContext - API - Composition Options
-// =====================================
+// bl::Context - API - Composition Options
+// =======================================
 
 BL_API_IMPL double blContextGetGlobalAlpha(const BLContextCore* self) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -643,8 +645,8 @@ BL_API_IMPL BLResult blContextSetCompOp(BLContextCore* self, BLCompOp compOp) no
   return impl->virt->setCompOp(impl, compOp);
 }
 
-// BLContext - API - Fill Options
-// ==============================
+// bl::Context - API - Fill Options
+// ================================
 
 BL_API_IMPL BLFillRule blContextGetFillRule(const BLContextCore* self) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -660,8 +662,8 @@ BL_API_IMPL BLResult blContextSetFillRule(BLContextCore* self, BLFillRule fillRu
   return impl->virt->setFillRule(impl, fillRule);
 }
 
-// BLContext - API - Stroke Options
-// ================================
+// bl::Context - API - Stroke Options
+// ==================================
 
 BL_API_IMPL double blContextGetStrokeWidth(const BLContextCore* self) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -785,8 +787,8 @@ BL_API_IMPL BLResult blContextSetStrokeOptions(BLContextCore* self, const BLStro
   return impl->virt->setStrokeOptions(impl, options);
 }
 
-// BLContext - API - Clip Operations
-// =================================
+// bl::Context - API - Clip Operations
+// ===================================
 
 BL_API_IMPL BLResult blContextClipToRectI(BLContextCore* self, const BLRectI* rect) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -809,8 +811,8 @@ BL_API_IMPL BLResult blContextRestoreClipping(BLContextCore* self) noexcept {
   return impl->virt->restoreClipping(impl);
 }
 
-// BLContext - API - Clear Geometry Operations
-// ===========================================
+// bl::Context - API - Clear Geometry Operations
+// =============================================
 
 BL_API_IMPL BLResult blContextClearAll(BLContextCore* self) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -833,8 +835,8 @@ BL_API_IMPL BLResult blContextClearRectD(BLContextCore* self, const BLRect* rect
   return impl->virt->clearRectD(impl, rect);
 }
 
-// BLContext - API - Fill All Operations
-// =====================================
+// bl::Context - API - Fill All Operations
+// =======================================
 
 BL_API_IMPL BLResult blContextFillAll(BLContextCore* self) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -865,8 +867,8 @@ BL_API_IMPL BLResult blContextFillAllExt(BLContextCore* self, const BLUnknown* s
   return impl->virt->fillAllExt(impl, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Fill Rect Operations
-// ======================================
+// bl::Context - API - Fill Rect Operations
+// ========================================
 
 BL_API_IMPL BLResult blContextFillRectI(BLContextCore* self, const BLRectI* rect) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -926,8 +928,8 @@ BL_API_IMPL BLResult blContextFillRectDExt(BLContextCore* self, const BLRect* re
   return impl->virt->fillRectDExt(impl, rect, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Fill Path Operations
-// ======================================
+// bl::Context - API - Fill Path Operations
+// ========================================
 
 BL_API_IMPL BLResult blContextFillPathD(BLContextCore* self, const BLPoint* origin, const BLPathCore* path) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -958,8 +960,8 @@ BL_API_IMPL BLResult blContextFillPathDExt(BLContextCore* self, const BLPoint* o
   return impl->virt->fillPathDExt(impl, origin, path, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Fill Geometry Operations
-// ==========================================
+// bl::Context - API - Fill Geometry Operations
+// ============================================
 
 BL_API_IMPL BLResult blContextFillGeometry(BLContextCore* self, BLGeometryType type, const void* data) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -990,8 +992,8 @@ BL_API_IMPL BLResult blContextFillGeometryExt(BLContextCore* self, BLGeometryTyp
   return impl->virt->fillGeometryExt(impl, type, data, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Fill UTF-8 Text Operations
-// ============================================
+// bl::Context - API - Fill UTF-8 Text Operations
+// ==============================================
 
 BL_API_IMPL BLResult blContextFillUtf8TextI(BLContextCore* self, const BLPointI* origin, const BLFontCore* font, const char* text, size_t size) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1059,8 +1061,8 @@ BL_API_IMPL BLResult blContextFillUtf8TextDExt(BLContextCore* self, const BLPoin
   return impl->virt->fillTextOpDExt(impl, origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Fill UTF-16 Text Operations
-// =============================================
+// bl::Context - API - Fill UTF-16 Text Operations
+// ===============================================
 
 BL_API_IMPL BLResult blContextFillUtf16TextI(BLContextCore* self, const BLPointI* origin, const BLFontCore* font, const uint16_t* text, size_t size) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1128,8 +1130,8 @@ BL_API_IMPL BLResult blContextFillUtf16TextDExt(BLContextCore* self, const BLPoi
   return impl->virt->fillTextOpDExt(impl, origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF16, &view, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Fill UTF-32 Text Operations
-// =============================================
+// bl::Context - API - Fill UTF-32 Text Operations
+// ===============================================
 
 BL_API_IMPL BLResult blContextFillUtf32TextI(BLContextCore* self, const BLPointI* origin, const BLFontCore* font, const uint32_t* text, size_t size) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1197,8 +1199,8 @@ BL_API_IMPL BLResult blContextFillUtf32TextDExt(BLContextCore* self, const BLPoi
   return impl->virt->fillTextOpDExt(impl, origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF32, &view, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Fill Glyph Run Operations
-// ===========================================
+// bl::Context - API - Fill Glyph Run Operations
+// =============================================
 
 BL_API_IMPL BLResult blContextFillGlyphRunI(BLContextCore* self, const BLPointI* origin, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1258,8 +1260,8 @@ BL_API_IMPL BLResult blContextFillGlyphRunDExt(BLContextCore* self, const BLPoin
   return impl->virt->fillTextOpDExt(impl, origin, font, BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN, glyphRun, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Fill Mask Operations
-// ======================================
+// bl::Context - API - Fill Mask Operations
+// ========================================
 
 BL_API_IMPL BLResult blContextFillMaskI(BLContextCore* self, const BLPointI* origin, const BLImageCore* mask, const BLRectI* maskArea) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1319,8 +1321,8 @@ BL_API_IMPL BLResult blContextFillMaskDExt(BLContextCore* self, const BLPoint* o
   return impl->virt->fillMaskDExt(impl, origin, mask, maskArea, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Stroke Rect Operations
-// ========================================
+// bl::Context - API - Stroke Rect Operations
+// ==========================================
 
 BL_API_IMPL BLResult blContextStrokeRectI(BLContextCore* self, const BLRectI* rect) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1380,8 +1382,8 @@ BL_API_IMPL BLResult blContextStrokeRectDExt(BLContextCore* self, const BLRect* 
   return impl->virt->strokeGeometryExt(impl, BL_GEOMETRY_TYPE_RECTD, rect, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Stroke Path Operations
-// ========================================
+// bl::Context - API - Stroke Path Operations
+// ==========================================
 
 BL_API_IMPL BLResult blContextStrokePathD(BLContextCore* self, const BLPoint* origin, const BLPathCore* path) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1412,8 +1414,8 @@ BL_API_IMPL BLResult blContextStrokePathDExt(BLContextCore* self, const BLPoint*
   return impl->virt->strokePathDExt(impl, origin, path, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Stroke Geometry Operations
-// ============================================
+// bl::Context - API - Stroke Geometry Operations
+// ==============================================
 
 BL_API_IMPL BLResult blContextStrokeGeometry(BLContextCore* self, BLGeometryType type, const void* data) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1444,8 +1446,8 @@ BL_API_IMPL BLResult blContextStrokeGeometryExt(BLContextCore* self, BLGeometryT
   return impl->virt->strokeGeometryExt(impl, type, data, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Stroke UTF-8 Text Operations
-// ==============================================
+// bl::Context - API - Stroke UTF-8 Text Operations
+// ================================================
 
 BL_API_IMPL BLResult blContextStrokeUtf8TextI(BLContextCore* self, const BLPointI* origin, const BLFontCore* font, const char* text, size_t size) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1513,8 +1515,8 @@ BL_API_IMPL BLResult blContextStrokeUtf8TextDExt(BLContextCore* self, const BLPo
   return impl->virt->strokeTextOpDExt(impl, origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Stroke UTF-16 Text Operations
-// ===============================================
+// bl::Context - API - Stroke UTF-16 Text Operations
+// =================================================
 
 BL_API_IMPL BLResult blContextStrokeUtf16TextI(BLContextCore* self, const BLPointI* origin, const BLFontCore* font, const uint16_t* text, size_t size) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1582,8 +1584,8 @@ BL_API_IMPL BLResult blContextStrokeUtf16TextDExt(BLContextCore* self, const BLP
   return impl->virt->strokeTextOpDExt(impl, origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF16, &view, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Stroke UTF-32 Text Operations
-// ===============================================
+// bl::Context - API - Stroke UTF-32 Text Operations
+// =================================================
 
 BL_API_IMPL BLResult blContextStrokeUtf32TextI(BLContextCore* self, const BLPointI* origin, const BLFontCore* font, const uint32_t* text, size_t size) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1651,8 +1653,8 @@ BL_API_IMPL BLResult blContextStrokeUtf32TextDExt(BLContextCore* self, const BLP
   return impl->virt->strokeTextOpDExt(impl, origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF32, &view, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Stroke Glyph Run Operations
-// =============================================
+// bl::Context - API - Stroke Glyph Run Operations
+// ===============================================
 
 BL_API_IMPL BLResult blContextStrokeGlyphRunI(BLContextCore* self, const BLPointI* origin, const BLFontCore* font, const BLGlyphRun* glyphRun) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1712,8 +1714,8 @@ BL_API_IMPL BLResult blContextStrokeGlyphRunDExt(BLContextCore* self, const BLPo
   return impl->virt->strokeTextOpDExt(impl, origin, font, BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN, glyphRun, static_cast<const BLObjectCore*>(style));
 }
 
-// BLContext - API - Blit Operations
-// =================================
+// bl::Context - API - Blit Operations
+// ===================================
 
 BL_API_IMPL BLResult blContextBlitImageI(BLContextCore* self, const BLPointI* pt, const BLImageCore* img, const BLRectI* imgArea) noexcept {
   BL_ASSERT(self->_d.isContext());
@@ -1743,19 +1745,19 @@ BL_API_IMPL BLResult blContextBlitScaledImageD(BLContextCore* self, const BLRect
   return impl->virt->blitScaledImageD(impl, rect, img, imgArea);
 }
 
-// BLContext - Runtime Registration
-// ================================
+// bl::Context - Runtime Registration
+// ==================================
 
 void blContextRtInit(BLRuntimeContext* rt) noexcept {
-  auto& defaultContext = BLContextPrivate::defaultContext;
+  auto& defaultContext = bl::ContextInternal::defaultContext;
 
   // Initialize a NullContextImpl.
-  BLContextPrivate::initState(&BLContextPrivate::nullState);
-  BLContextPrivate::initNullContextVirt(&defaultContext.virt);
+  bl::ContextInternal::initState(&bl::ContextInternal::nullState);
+  bl::ContextInternal::initNullContextVirt(&defaultContext.virt);
 
   // Initialize a default context object (that points to NullContextImpl).
   defaultContext.impl->virt = &defaultContext.virt;
-  defaultContext.impl->state = &BLContextPrivate::nullState;
+  defaultContext.impl->state = &bl::ContextInternal::nullState;
   blObjectDefaults[BL_OBJECT_TYPE_CONTEXT]._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_CONTEXT), &defaultContext.impl);
 
   // Initialize built-in rendering context implementations.

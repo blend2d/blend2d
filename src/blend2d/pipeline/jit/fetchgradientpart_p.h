@@ -14,7 +14,8 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 class GradientDitheringContext {
@@ -49,7 +50,7 @@ public:
   x86::Gp _tablePtr;
   GradientDitheringContext _ditheringContext;
 
-  FetchGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
+  FetchGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
 
   //! Returns the gradient extend mode.
   BL_INLINE_NODEBUG ExtendMode extendMode() const noexcept { return _extendMode; }
@@ -91,9 +92,9 @@ public:
     x86::Vec vIdx;
   };
 
-  BLWrap<LinearRegs> f;
+  Wrap<LinearRegs> f;
 
-  FetchLinearGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
+  FetchLinearGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
 
   void preparePart() noexcept override;
 
@@ -146,9 +147,9 @@ public:
     x86::Vec dd_bd_prev;
   };
 
-  BLWrap<RadialRegs> f;
+  Wrap<RadialRegs> f;
 
-  FetchRadialGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
+  FetchRadialGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
 
   void preparePart() noexcept override;
 
@@ -192,9 +193,9 @@ public:
     x86::Vec xx_off;
   };
 
-  BLWrap<ConicRegs> f;
+  Wrap<ConicRegs> f;
 
-  FetchConicGradientPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
+  FetchConicGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
 
   void preparePart() noexcept override;
 
@@ -213,7 +214,8 @@ public:
 };
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

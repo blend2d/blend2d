@@ -3,20 +3,23 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#include "api-build_p.h"
-#include "math_p.h"
-#include "support/algorithm_p.h"
-#include "support/intops_p.h"
-#include "support/traits_p.h"
+#include "../api-build_p.h"
+#include "../support/algorithm_p.h"
+#include "../support/intops_p.h"
+#include "../support/math_p.h"
+#include "../support/traits_p.h"
 
-// BLMath - Cubic Roots
-// ====================
+namespace bl {
+namespace Math {
+
+// bl::Math - Cubic Roots
+// ======================
 
 // Ax^3 + Bx^2 + Cx + D = 0.
 //
 // Roots3And4.c: Graphics Gems, original author Jochen Schwarze (schwarze@isa.de). See also the wiki article
 // at <http://en.wikipedia.org/wiki/Cubic_function> for other equations.
-size_t blCubicRoots(double* dst, const double* poly, double tMin, double tMax) noexcept {
+size_t cubicRoots(double* dst, const double* poly, double tMin, double tMax) noexcept {
   constexpr double k1Div3 = 1.0 / 3.0;
   constexpr double k1Div6 = 1.0 / 6.0;
   constexpr double k1Div9 = 1.0 / 9.0;
@@ -29,7 +32,7 @@ size_t blCubicRoots(double* dst, const double* poly, double tMin, double tMax) n
   double c = poly[3];
 
   if (norm == 0.0)
-    return blQuadRoots(dst, a, b, c, tMin, tMax);
+    return quadRoots(dst, a, b, c, tMin, tMax);
 
   // Convert to a normalized form `x^3 + Ax^2 + Bx + C == 0`.
   a /= norm;
@@ -56,7 +59,7 @@ size_t blCubicRoots(double* dst, const double* poly, double tMin, double tMax) n
     }
 
     // One single and one double solution.
-    double u = blCbrt(-q);
+    double u = cbrt(-q);
     nRoots = 2;
 
     dst[0] = sub + 2.0 * u;
@@ -68,13 +71,13 @@ size_t blCubicRoots(double* dst, const double* poly, double tMin, double tMax) n
   }
   else if (d < 0.0) {
     // Three real solutions.
-    double phi = k1Div3 * blAcos(-q / blSqrt(-p3));
-    double t = 2.0 * blSqrt(-p);
+    double phi = k1Div3 * Math::acos(-q / sqrt(-p3));
+    double t = 2.0 * sqrt(-p);
 
     nRoots = 3;
-    dst[0] = sub + t * blCos(phi);
-    dst[1] = sub - t * blCos(phi + BL_M_PI_DIV_3);
-    dst[2] = sub - t * blCos(phi - BL_M_PI_DIV_3);
+    dst[0] = sub + t * cos(phi);
+    dst[1] = sub - t * cos(phi + kPI_DIV_3);
+    dst[2] = sub - t * cos(phi - kPI_DIV_3);
 
     // Sort.
     if (dst[0] > dst[1]) std::swap(dst[0], dst[1]);
@@ -83,9 +86,9 @@ size_t blCubicRoots(double* dst, const double* poly, double tMin, double tMax) n
   }
   else {
     // One real solution.
-    double sqrt_d = blSqrt(d);
-    double u =  blCbrt(sqrt_d - q);
-    double v = -blCbrt(sqrt_d + q);
+    double sqrt_d = sqrt(d);
+    double u =  cbrt(sqrt_d - q);
+    double v = -cbrt(sqrt_d + q);
 
     nRoots = 1;
     dst[0] = sub + u + v;
@@ -97,3 +100,6 @@ size_t blCubicRoots(double* dst, const double* poly, double tMin, double tMax) n
       dst[n++] = dst[i];
   return n;
 }
+
+} // {Math}
+} // {bl}

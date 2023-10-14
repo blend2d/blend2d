@@ -409,11 +409,10 @@ if (NOT BLEND2D_NO_JIT)
     set(ASMJIT_EMBED TRUE CACHE BOOL "")
   endif()
 
-  set(ASMJIT_NO_FOREIGN TRUE)
   include("${ASMJIT_DIR}/CMakeLists.txt")
   list(APPEND BLEND2D_DEPS ${ASMJIT_LIBS})
   list(APPEND BLEND2D_PRIVATE_CFLAGS ${ASMJIT_CFLAGS})
-  list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_NO_STDCXX)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_NO_STDCXX -DASMJIT_NO_FOREIGN)
 
   # A possibility to reduce the resulting binary size by disabling asmjit logging.
   if (BLEND2D_NO_JIT_LOGGING)
@@ -459,8 +458,9 @@ set(BLEND2D_SRC_LIST
   blend2d/bitset_test.cpp
   blend2d/bitset.h
   blend2d/bitset_p.h
-  blend2d/compop.cpp
   blend2d/compop_p.h
+  blend2d/compopinfo_p.h
+  blend2d/compopinfo.cpp
   blend2d/context.cpp
   blend2d/context_test.cpp
   blend2d/context.h
@@ -526,9 +526,6 @@ set(BLEND2D_SRC_LIST
   blend2d/imageencoder.h
   blend2d/imagescale.cpp
   blend2d/imagescale_p.h
-  blend2d/math.cpp
-  blend2d/math_test.cpp
-  blend2d/math_p.h
   blend2d/matrix.cpp
   blend2d/matrix_avx.cpp
   blend2d/matrix_sse2.cpp
@@ -740,6 +737,9 @@ set(BLEND2D_SRC_LIST
   blend2d/support/intops_test.cpp
   blend2d/support/intops_p.h
   blend2d/support/lookuptable_p.h
+  blend2d/support/math.cpp
+  blend2d/support/math_test.cpp
+  blend2d/support/math_p.h
   blend2d/support/memops_test.cpp
   blend2d/support/memops_p.h
   blend2d/support/ptrops_test.cpp

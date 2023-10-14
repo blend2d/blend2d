@@ -7,7 +7,8 @@
 #include "fonttagset_p.h"
 #include "support/algorithm_p.h"
 
-namespace BLFontTagData {
+namespace bl {
+namespace FontTagData {
 
 BLResult finalizeTagArray(BLArray<BLTag>& tags) noexcept {
   size_t size = tags.size();
@@ -16,7 +17,7 @@ BLResult finalizeTagArray(BLArray<BLTag>& tags) noexcept {
     BL_PROPAGATE(tags.makeMutable(&data));
 
     // Sort and deduplicate afterwards.
-    BLAlgorithm::quickSort(data, size);
+    quickSort(data, size);
 
     size_t j = 1;
     BLTag prevTag = data[0];
@@ -49,7 +50,7 @@ BLResult flattenTagSetTo(BLArray<BLTag>& dst,
 
   size_t dstDataIndex = 0;
   size_t unknownTagIndex = 0;
-  BLParametrizedBitOps<BLBitOrder::kLSB, BLBitWord>::BitVectorIterator it(knownTagData, knownTagDataSize);
+  ParametrizedBitOps<BitOrder::kLSB, BLBitWord>::BitVectorIterator it(knownTagData, knownTagDataSize);
 
   while (it.hasNext()) {
     uint32_t tagId = uint32_t(it.next());
@@ -67,4 +68,5 @@ BLResult flattenTagSetTo(BLArray<BLTag>& dst,
   return BL_SUCCESS;
 }
 
-} // {BLFontTagData}
+} // {FontTagData}
+} // {bl}

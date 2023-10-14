@@ -9,14 +9,15 @@
 #include "../support/arenaallocator_p.h"
 #include "../support/arenahashmap_p.h"
 
-// BLArenaHashMap - Tests
-// ======================
+// bl::ArenaHashMap - Tests
+// ========================
 
-namespace BLArenaHashMapTests {
+namespace bl {
+namespace Tests {
 
-struct MyHashMapNode : public BLArenaHashMapNode {
+struct MyHashMapNode : public ArenaHashMapNode {
   inline MyHashMapNode(uint32_t key) noexcept
-    : BLArenaHashMapNode(key),
+    : ArenaHashMapNode(key),
       _key(key) {}
 
   uint32_t _key;
@@ -35,8 +36,8 @@ struct MyKeyMatcher {
 UNIT(arena_hashmap, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   uint32_t kCount = BrokenAPI::hasArg("--quick") ? 1000 : 10000;
 
-  BLArenaAllocator allocator(4096);
-  BLArenaHashMap<MyHashMapNode> hashTable(&allocator);
+  ArenaAllocator allocator(4096);
+  ArenaHashMap<MyHashMapNode> hashTable(&allocator);
   uint32_t key;
 
   INFO("Inserting %u elements to HashTable", unsigned(kCount));
@@ -68,6 +69,7 @@ UNIT(arena_hashmap, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
   EXPECT_TRUE(hashTable.empty());
 }
 
-} // {BLArenaHashMapTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

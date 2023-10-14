@@ -6,15 +6,16 @@
 #ifndef BLEND2D_RASTER_EDGESTORAGE_P_H_INCLUDED
 #define BLEND2D_RASTER_EDGESTORAGE_P_H_INCLUDED
 
-#include "../math_p.h"
 #include "../support/intops_p.h"
+#include "../support/math_p.h"
 #include "../support/traits_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 //! Parametrized point used by edge builder that should represent either 16-bit
 //! or 32-bit fixed point.
@@ -32,7 +33,7 @@ template<typename CoordT>
 struct alignas(8) EdgeVector {
   EdgeVector<CoordT>* next;
   size_t signBit : 1;
-  size_t count : BLIntOps::bitSizeOf<size_t>() - 1;
+  size_t count : IntOps::bitSizeOf<size_t>() - 1;
   EdgePoint<CoordT> pts[1];
 
   static constexpr uint32_t minSizeOf() noexcept {
@@ -108,7 +109,7 @@ public:
     }
   }
 
-  BL_INLINE bool empty() const noexcept { return _boundingBox.y0 == BLTraits::maxValue<int>(); }
+  BL_INLINE bool empty() const noexcept { return _boundingBox.y0 == Traits::maxValue<int>(); }
 
   BL_INLINE EdgeList<CoordT>* bandEdges() const noexcept { return _bandEdges; }
   BL_INLINE uint32_t bandCount() const noexcept { return _bandCount; }
@@ -122,11 +123,11 @@ public:
     _bandCount = bandCount;
     _bandCapacity = bandCapacity;
     _bandHeight = bandHeight;
-    _fixedBandHeightShift = BLIntOps::ctz(bandHeight) + BLPipeline::A8Info::kShift;
+    _fixedBandHeightShift = IntOps::ctz(bandHeight) + Pipeline::A8Info::kShift;
   }
 
   BL_INLINE void resetBoundingBox() noexcept {
-    _boundingBox.reset(BLTraits::maxValue<int>(), BLTraits::maxValue<int>(), BLTraits::minValue<int>(), BLTraits::minValue<int>());
+    _boundingBox.reset(Traits::maxValue<int>(), Traits::maxValue<int>(), Traits::minValue<int>(), Traits::minValue<int>());
   }
 
   BL_INLINE uint32_t bandStartFromBBox() const noexcept {
@@ -168,7 +169,8 @@ public:
   }
 };
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

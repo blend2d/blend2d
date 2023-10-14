@@ -22,11 +22,12 @@
 #include "../support/scopedbuffer_p.h"
 #include "../tables/tables_p.h"
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 namespace GlyfImpl {
 
-// BLOpenType::GlyfImpl - GetGlyphOutlines (SSE4.2 | AVX2)
-// =======================================================
+// bl::OpenType::GlyfImpl - GetGlyphOutlines (SSE4.2 | AVX2)
+// =========================================================
 
 //! Flags that are used by the vectorized outline decoder implementation.
 //!
@@ -56,7 +57,7 @@ enum VecFlags : uint8_t {
   kVecFlagRepeat = 0x80
 };
 
-static constexpr uint32_t kVecFlagOnCurveShift = BLIntOps::ctzStatic(kVecFlagOnCurve);
+static constexpr uint32_t kVecFlagOnCurveShift = IntOps::ctzStatic(kVecFlagOnCurve);
 
 namespace {
 
@@ -266,17 +267,17 @@ static BL_INLINE Vec2xF64 transformDecodedVertex(const DecodedVertex* decodedVer
   return xy_f64 * m00_m11 + yx_f64 * m10_m01;
 }
 
-static BL_INLINE void storeVertex(BLPathAppender& appender, uint8_t cmd, const Vec2xF64& vtx) noexcept {
+static BL_INLINE void storeVertex(PathAppender& appender, uint8_t cmd, const Vec2xF64& vtx) noexcept {
   appender.cmd[0].value = cmd;
   storeu(appender.vtx, vtx);
 }
 
-static BL_INLINE void appendVertex(BLPathAppender& appender, uint8_t cmd, const Vec2xF64& vtx) noexcept {
+static BL_INLINE void appendVertex(PathAppender& appender, uint8_t cmd, const Vec2xF64& vtx) noexcept {
   storeVertex(appender, cmd, vtx);
   appender._advance(1);
 }
 
-static BL_INLINE void appendVertex2x(BLPathAppender& appender, uint8_t cmd0, const Vec2xF64& vtx0, uint8_t cmd1, const Vec2xF64& vtx1) noexcept {
+static BL_INLINE void appendVertex2x(PathAppender& appender, uint8_t cmd0, const Vec2xF64& vtx0, uint8_t cmd1, const Vec2xF64& vtx1) noexcept {
   appender.cmd[0].value = cmd0;
   appender.cmd[1].value = cmd1;
   storeu(appender.vtx + 0, vtx0);
@@ -296,7 +297,7 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
   const BLMatrix2D* transform,
   BLPath* out,
   size_t* contourCountOut,
-  BLScopedBuffer* tmpBuffer) noexcept {
+  ScopedBuffer* tmpBuffer) noexcept {
 
   using namespace SIMD;
 
@@ -323,7 +324,7 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
   compoundData[0].compoundFlags = Compound::kArgsAreXYValues;
   compoundData[0].transform = *transform;
 
-  BLPathAppender appender;
+  PathAppender appender;
   size_t contourCountTotal = 0;
 
   for (;;) {
@@ -368,14 +369,14 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
       int contourCountSigned = reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->numberOfContours();
       if (contourCountSigned > 0) {
         size_t contourCount = size_t(unsigned(contourCountSigned));
-        BLOverflowFlag of = 0;
+        bl::OverflowFlag of{};
 
         // Minimum data size is:
         //   10                     [GlyphData header]
         //   (numberOfContours * 2) [endPtsOfContours]
         //   2                      [instructionLength]
         gPtr += sizeof(GlyfTable::GlyphData);
-        remainingSize = BLIntOps::subOverflow(remainingSize, sizeof(GlyfTable::GlyphData) + contourCount * 2u + 2u, &of);
+        remainingSize = IntOps::subOverflow(remainingSize, sizeof(GlyfTable::GlyphData) + contourCount * 2u + 2u, &of);
         if (BL_UNLIKELY(of))
           goto InvalidData;
 
@@ -384,8 +385,8 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
         contourCountTotal += contourCount;
 
         // We don't use hinting instructions, so skip them.
-        size_t instructionCount = BLMemOps::readU16uBE(gPtr);
-        remainingSize = BLIntOps::subOverflow(remainingSize, instructionCount, &of);
+        size_t instructionCount = MemOps::readU16uBE(gPtr);
+        remainingSize = IntOps::subOverflow(remainingSize, instructionCount, &of);
         if (BL_UNLIKELY(of))
           goto InvalidData;
 
@@ -426,9 +427,9 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
           if (BL_UNLIKELY(!fDataPtr))
             return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-          fDataPtr = BLIntOps::alignUp(fDataPtr, kDataAlignment);
-          uint8_t* xPredPtr = fDataPtr + BLIntOps::alignUp(ttVertexCount, kDataAlignment) + kDataAlignment;
-          uint8_t* yPredPtr = xPredPtr + BLIntOps::alignUp(ttVertexCount, kDataAlignment) + kDataAlignment;
+          fDataPtr = IntOps::alignUp(fDataPtr, kDataAlignment);
+          uint8_t* xPredPtr = fDataPtr + IntOps::alignUp(ttVertexCount, kDataAlignment) + kDataAlignment;
+          uint8_t* yPredPtr = xPredPtr + IntOps::alignUp(ttVertexCount, kDataAlignment) + kDataAlignment;
 
           // Sizes of xCoordinates[] and yCoordinates[] arrays in TrueType data.
           size_t xCoordinatesSize;
@@ -437,9 +438,9 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
           size_t offCurveSplineCount = 0;
 
           {
-            Vec16xU8 v0x3030 = blCommonTable.i_3030303030303030.as<Vec16xU8>();
-            Vec16xU8 v0x0F0F = blCommonTable.i_0F0F0F0F0F0F0F0F.as<Vec16xU8>();
-            Vec16xU8 v0x8080 = blCommonTable.i_8080808080808080.as<Vec16xU8>();
+            Vec16xU8 v0x3030 = commonTable.i_3030303030303030.as<Vec16xU8>();
+            Vec16xU8 v0x0F0F = commonTable.i_0F0F0F0F0F0F0F0F.as<Vec16xU8>();
+            Vec16xU8 v0x8080 = commonTable.i_8080808080808080.as<Vec16xU8>();
             Vec16xU8 vSizesPerXYPredicate = loada<Vec16xU8>(sizesPerXYPredicate);
             Vec16xU8 vConvertFlagsPredicate = loada<Vec16xU8>(convertFlagsPredicate);
 
@@ -453,7 +454,7 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
             // Instead of doing such checks in a loop, we check it here and go to the slow loop if we are at the end of
             // glyph table and 16-byte loads would read beyond. It's very unlikely, but we have to make sure it won't
             // happen.
-            size_t slowFlagsDecodeFinishedCheck = BLIntOps::allOnes<size_t>();
+            size_t slowFlagsDecodeFinishedCheck = IntOps::allOnes<size_t>();
             if (remainingSize + remainingSizeAfterGlyphData < ttVertexCount + 15)
               goto SlowFlagsDecode;
 
@@ -531,7 +532,7 @@ SlowFlagsDecode:
                     if (BL_UNLIKELY(n >= ttVertexCount - i))
                       goto InvalidData;
 
-                    BLMemOps::fillSmall(fDataPtr + i, uint8_t(f), n);
+                    MemOps::fillSmall(fDataPtr + i, uint8_t(f), n);
                     i += n;
                   }
 
@@ -573,7 +574,7 @@ SlowFlagsDecode:
             yCoordinatesSize = extract_u16<4>(vSumXY);
           }
 
-          remainingSize = BLIntOps::subOverflow((size_t)(gEnd - gPtr), xCoordinatesSize + yCoordinatesSize, &of);
+          remainingSize = IntOps::subOverflow((size_t)(gEnd - gPtr), xCoordinatesSize + yCoordinatesSize, &of);
           if (BL_UNLIKELY(of))
             goto InvalidData;
 
@@ -603,8 +604,8 @@ SlowFlagsDecode:
           BL_PROPAGATE(appender.beginAppend(out, maxVertexCount));
 
           // Temporary data where 16-bit coordinates (per X and Y) are stored before they are converted to double precision.
-          DecodedVertex* decodedVertexArray = BLIntOps::alignUp(
-            reinterpret_cast<DecodedVertex*>(appender.vtx + maxVertexCount) - BLIntOps::alignUp(ttVertexCount, 16) - 4, 16);
+          DecodedVertex* decodedVertexArray = IntOps::alignUp(
+            reinterpret_cast<DecodedVertex*>(appender.vtx + maxVertexCount) - IntOps::alignUp(ttVertexCount, 16) - 4, 16);
 
           {
             // Since we know exactly how many bytes both vertex arrays consume we can decode both X and Y coordinates at
@@ -890,7 +891,7 @@ SlowFlagsDecode:
             storeVertex(appender, BL_PATH_CMD_MOVE, initialPt);
             appender._advance(startsOnCurve);
 
-            size_t iEndMinus3 = BLIntOps::usubSaturate<size_t>(iEnd, 3);
+            size_t iEndMinus3 = IntOps::usubSaturate<size_t>(iEnd, 3);
 
             static constexpr uint32_t kPathCmdFromFlagsShift0 = kVecFlagOnCurveShift;
             static constexpr uint32_t kPathCmdFromFlagsShift1 = kVecFlagOnCurveShift + 8;
@@ -907,7 +908,7 @@ SlowFlagsDecode:
             // that there will be multiple off-curve splines and it's not uncommon to have multiple off-curve splines
             // having more than 3 consecutive off points.
             while (i < iEndMinus3) {
-              f = BLMemOps::readU32u(fDataPtr + i);
+              f = MemOps::readU32u(fDataPtr + i);
 
               Vec2xF64 d0 = transformDecodedVertex(decodedVertexArray + i + 0, m00_m11, m10_m01);
               Vec2xF64 d1 = transformDecodedVertex(decodedVertexArray + i + 1, m00_m11, m10_m01);
@@ -919,7 +920,7 @@ SlowFlagsDecode:
               currentPt += d0;
 
               uint32_t pathCmds = (f >> kPathCmdFromFlagsShift0) & 0x03030303u;
-              BLMemOps::writeU32u(appender.cmd, pathCmds);
+              MemOps::writeU32u(appender.cmd, pathCmds);
 
               if (f & kVecFlagOffSpline0)
                 goto EmitSpline0Advance;
@@ -1022,7 +1023,7 @@ EmitSpline3Continue:
 
             f = fDataPtr[i - 1];
             if (!startsOnCurve) {
-              BLPathImpl* outI = BLPathPrivate::getImpl(out);
+              BLPathImpl* outI = PathInternal::getImpl(out);
               Vec2xF64 finalPt = loadu<Vec2xF64>(outI->vertexData + initialVertexIndex);
 
               outI->commandData[initialVertexIndex] = BL_PATH_CMD_MOVE;
@@ -1095,28 +1096,28 @@ ContinueCompound:
         {
           uint32_t flags;
           int arg1, arg2;
-          BLOverflowFlag of = 0;
+          OverflowFlag of{};
 
-          remainingSize = BLIntOps::subOverflow<size_t>(remainingSize, 6, &of);
+          remainingSize = IntOps::subOverflow<size_t>(remainingSize, 6, &of);
           if (BL_UNLIKELY(of))
             goto InvalidData;
 
-          flags = BLMemOps::readU16uBE(gPtr);
-          glyphId = BLMemOps::readU16uBE(gPtr + 2);
+          flags = MemOps::readU16uBE(gPtr);
+          glyphId = MemOps::readU16uBE(gPtr + 2);
           if (BL_UNLIKELY(glyphId >= faceI->faceInfo.glyphCount))
             goto InvalidData;
 
-          arg1 = BLMemOps::readI8(gPtr + 4);
-          arg2 = BLMemOps::readI8(gPtr + 5);
+          arg1 = MemOps::readI8(gPtr + 4);
+          arg2 = MemOps::readI8(gPtr + 5);
           gPtr += 6;
 
           if (flags & Compound::kArgsAreWords) {
-            remainingSize = BLIntOps::subOverflow<size_t>(remainingSize, 2, &of);
+            remainingSize = IntOps::subOverflow<size_t>(remainingSize, 2, &of);
             if (BL_UNLIKELY(of))
               goto InvalidData;
 
-            arg1 = BLIntOps::shl(arg1, 8) | (arg2 & 0xFF);
-            arg2 = BLMemOps::readI16uBE(gPtr);
+            arg1 = IntOps::shl(arg1, 8) | (arg2 & 0xFF);
+            arg2 = MemOps::readI16uBE(gPtr);
             gPtr += 2;
           }
 
@@ -1138,11 +1139,11 @@ ContinueCompound:
               // Simple scaling:
               //   [Sc, 0]
               //   [0, Sc]
-              remainingSize = BLIntOps::subOverflow<size_t>(remainingSize, 2, &of);
+              remainingSize = IntOps::subOverflow<size_t>(remainingSize, 2, &of);
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
-              double scale = double(BLMemOps::readI16uBE(gPtr)) * kScaleF2x14;
+              double scale = double(MemOps::readI16uBE(gPtr)) * kScaleF2x14;
               cm.m00 = scale;
               cm.m11 = scale;
               gPtr += 2;
@@ -1151,26 +1152,26 @@ ContinueCompound:
               // Simple scaling:
               //   [Sx, 0]
               //   [0, Sy]
-              remainingSize = BLIntOps::subOverflow<size_t>(remainingSize, 4, &of);
+              remainingSize = IntOps::subOverflow<size_t>(remainingSize, 4, &of);
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
-              cm.m00 = double(BLMemOps::readI16uBE(gPtr + 0)) * kScaleF2x14;
-              cm.m11 = double(BLMemOps::readI16uBE(gPtr + 2)) * kScaleF2x14;
+              cm.m00 = double(MemOps::readI16uBE(gPtr + 0)) * kScaleF2x14;
+              cm.m11 = double(MemOps::readI16uBE(gPtr + 2)) * kScaleF2x14;
               gPtr += 4;
             }
             else {
               // Affine case:
               //   [A, B]
               //   [C, D]
-              remainingSize = BLIntOps::subOverflow<size_t>(remainingSize, 8, &of);
+              remainingSize = IntOps::subOverflow<size_t>(remainingSize, 8, &of);
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
-              cm.m00 = double(BLMemOps::readI16uBE(gPtr + 0)) * kScaleF2x14;
-              cm.m01 = double(BLMemOps::readI16uBE(gPtr + 2)) * kScaleF2x14;
-              cm.m10 = double(BLMemOps::readI16uBE(gPtr + 4)) * kScaleF2x14;
-              cm.m11 = double(BLMemOps::readI16uBE(gPtr + 6)) * kScaleF2x14;
+              cm.m00 = double(MemOps::readI16uBE(gPtr + 0)) * kScaleF2x14;
+              cm.m01 = double(MemOps::readI16uBE(gPtr + 2)) * kScaleF2x14;
+              cm.m10 = double(MemOps::readI16uBE(gPtr + 4)) * kScaleF2x14;
+              cm.m11 = double(MemOps::readI16uBE(gPtr + 6)) * kScaleF2x14;
               gPtr += 8;
             }
 
@@ -1182,15 +1183,15 @@ ContinueCompound:
               // This is what FreeType does and what's not 100% according to the specification. However, according to
               // FreeType this would produce much better offsets so we will match FreeType instead of following the
               // specification.
-              cm.m20 *= BLGeometry::length(BLPoint(cm.m00, cm.m01));
-              cm.m21 *= BLGeometry::length(BLPoint(cm.m10, cm.m11));
+              cm.m20 *= Geometry::length(BLPoint(cm.m00, cm.m01));
+              cm.m21 *= Geometry::length(BLPoint(cm.m10, cm.m11));
             }
           }
 
           compoundData[compoundLevel].gPtr = gPtr;
           compoundData[compoundLevel].remainingSize = remainingSize;
           compoundData[compoundLevel].compoundFlags = flags;
-          BLTransformPrivate::multiply(cm, cm, compoundData[compoundLevel - 1].transform);
+          TransformInternal::multiply(cm, cm, compoundData[compoundLevel - 1].transform);
           continue;
         }
       }
@@ -1210,6 +1211,7 @@ InvalidData:
 #undef getGlyphOutlines_SIMD
 
 } // {GlyfImpl}
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 #endif

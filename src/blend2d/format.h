@@ -58,7 +58,7 @@ BL_DEFINE_ENUM(BLFormatFlags) {
   BL_FORMAT_FLAG_LUM = 0x00000004u,
   //! A combination of `BL_FORMAT_FLAG_LUM | BL_FORMAT_FLAG_ALPHA`.
   BL_FORMAT_FLAG_LUMA = 0x00000006u,
-  //! Indexed pixel format the requres a palette (I/O only).
+  //! Indexed pixel format the requires a palette (I/O only).
   BL_FORMAT_FLAG_INDEXED = 0x00000010u,
   //! RGB components are premultiplied by alpha component.
   BL_FORMAT_FLAG_PREMULTIPLIED = 0x00000100u,
@@ -117,7 +117,7 @@ BL_END_C_DECLS
 //! native pixel formats.
 struct BLFormatInfo {
   uint32_t depth;
-  uint32_t flags;
+  BLFormatFlags flags;
 
   union {
     struct {
@@ -146,7 +146,7 @@ struct BLFormatInfo {
 
   BL_INLINE_NODEBUG void reset() noexcept { *this = BLFormatInfo{}; }
 
-  BL_INLINE void init(uint32_t depth_, uint32_t flags_, const uint8_t sizes_[4], const uint8_t shifts_[4]) noexcept {
+  BL_INLINE void init(uint32_t depth_, BLFormatFlags flags_, const uint8_t sizes_[4], const uint8_t shifts_[4]) noexcept {
     depth = depth_;
     flags = flags_;
     setSizes(sizes_[0], sizes_[1], sizes_[2], sizes_[3]);
@@ -166,6 +166,10 @@ struct BLFormatInfo {
     bShift = b;
     aShift = a;
   }
+
+  BL_INLINE_NODEBUG bool hasFlag(BLFormatFlags f) const noexcept { return (flags & f) != 0; }
+  BL_INLINE_NODEBUG void addFlags(BLFormatFlags f) noexcept { flags = BLFormatFlags(flags | f); }
+  BL_INLINE_NODEBUG void clearFlags(BLFormatFlags f) noexcept { flags = BLFormatFlags(flags & ~f); }
 
   //! Query Blend2D `format` and copy it to this format info, see `BLFormat`.
   //!

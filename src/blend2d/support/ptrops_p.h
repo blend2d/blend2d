@@ -12,7 +12,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLPtrOps {
+namespace bl {
+namespace PtrOps {
 namespace {
 
 //! \name Pointer Arithmetic
@@ -47,7 +48,8 @@ static BL_INLINE_NODEBUG bool haveEqualAlignment(const T* ptr1, const U* ptr2, s
 //! \}
 
 } // {anonymous}
-} // {BLPtrOps}
+} // {PtrOps}
+} // {bl}
 
 //! \}
 //! \endcond

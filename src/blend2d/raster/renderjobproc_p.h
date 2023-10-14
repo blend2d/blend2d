@@ -18,11 +18,12 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 namespace JobProc {
 
-// BLRasterEngine - Job Processor - State Accessor
-// ===============================================
+// bl::RasterEngine - Job Processor - State Accessor
+// =================================================
 
 namespace {
 
@@ -76,13 +77,13 @@ public:
 
 } // {anonymous}
 
-// BLRasterEngine - Job Processor - Utilities
-// ==========================================
+// bl::RasterEngine - Job Processor - Utilities
+// ============================================
 
 static BL_INLINE void prepareEdgeBuilder(WorkData* workData, const SharedFillState* fillState) noexcept {
   workData->saveState();
   workData->edgeBuilder.setClipBox(fillState->finalClipBoxFixedD);
-  workData->edgeBuilder.setFlattenToleranceSq(blSquare(fillState->toleranceFixedD));
+  workData->edgeBuilder.setFlattenToleranceSq(Math::square(fillState->toleranceFixedD));
 }
 
 static BL_INLINE BLPath* getGeometryAsPath(WorkData* workData, RenderJob_GeometryOp* job) noexcept {
@@ -110,8 +111,8 @@ static BL_INLINE void finalizeGeometryData(WorkData* workData, RenderJob_Geometr
     job->geometryData<BLPath>()->~BLPath();
 }
 
-// BLRasterEngine - Job Processor - Fill Geometry Job
-// ==================================================
+// bl::RasterEngine - Job Processor - Fill Geometry Job
+// ====================================================
 
 static void processFillGeometryJob(WorkData* workData, RenderJob_GeometryOp* job) noexcept {
   BLPath* path = getGeometryAsPath(workData, job);
@@ -135,8 +136,8 @@ static void processFillGeometryJob(WorkData* workData, RenderJob_GeometryOp* job
   finalizeGeometryData(workData, job);
 }
 
-// BLRasterEngine - Job Processor - Fill Text Job
-// ==============================================
+// bl::RasterEngine - Job Processor - Fill Text Job
+// ================================================
 
 static void processFillTextJob(WorkData* workData, RenderJob_TextOp* job) noexcept {
   BLResult result = BL_SUCCESS;
@@ -183,8 +184,8 @@ static void processFillTextJob(WorkData* workData, RenderJob_TextOp* job) noexce
   job->destroy();
 }
 
-// BLRasterEngine - Job Processor - Stroke Geometry Job
-// ====================================================
+// bl::RasterEngine - Job Processor - Stroke Geometry Job
+// ======================================================
 
 static void processStrokeGeometryJob(WorkData* workData, RenderJob_GeometryOp* job) noexcept {
   BLPath* path = getGeometryAsPath(workData, job);
@@ -207,8 +208,8 @@ static void processStrokeGeometryJob(WorkData* workData, RenderJob_GeometryOp* j
   finalizeGeometryData(workData, job);
 }
 
-// BLRasterEngine - Job Processor - Stroke Text Job
-// ================================================
+// bl::RasterEngine - Job Processor - Stroke Text Job
+// ==================================================
 
 static void processStrokeTextJob(WorkData* workData, RenderJob_TextOp* job) noexcept {
   BLResult result = BL_SUCCESS;
@@ -255,8 +256,8 @@ static void processStrokeTextJob(WorkData* workData, RenderJob_TextOp* job) noex
   job->destroy();
 }
 
-// BLRasterEngine - Job Processor - Dispatch
-// =========================================
+// bl::RasterEngine - Job Processor - Dispatch
+// ===========================================
 
 static void processJob(WorkData* workData, RenderJob* job) noexcept {
   if (job->hasJobFlag(RenderJobFlags::kComputePendingFetchData)) {
@@ -287,7 +288,8 @@ static void processJob(WorkData* workData, RenderJob* job) noexcept {
 }
 
 } // {JobProc}
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

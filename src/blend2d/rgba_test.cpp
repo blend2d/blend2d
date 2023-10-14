@@ -8,10 +8,11 @@
 
 #include "rgba_p.h"
 
-// BLRgba - Tests
-// ==============
+// bl::Rgba - Tests
+// ================
 
-namespace BLRgbaTests {
+namespace bl {
+namespace Tests {
 
 UNIT(rgba, BL_TEST_GROUP_RENDERING_STYLES) {
   BLRgba32 c32(0x01, 0x02, 0x03, 0xFF);
@@ -24,6 +25,7 @@ UNIT(rgba, BL_TEST_GROUP_RENDERING_STYLES) {
   EXPECT_EQ(BLRgba32(c64).value, 0xFF010203u);
 }
 
-} // {BLRgbaTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

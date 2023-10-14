@@ -20,42 +20,42 @@ typedef uint32_t BLTag;
 
 int main(int argc, char* argv[]) {
   printf("-- Finding table tags to ids hash function --\n");
-  StupidHash::Finder tableTagsFinder(BLFontTagData::tableIdToTagTable, BLFontTagData::kTableIdCount);
+  StupidHash::Finder tableTagsFinder(bl::FontTagData::tableIdToTagTable, bl::FontTagData::kTableIdCount);
   if (!tableTagsFinder.findSolution()) {
     printf("Solution not found!\n");
     return 1;
   }
 
   printf("-- Finding script tags to ids hash function --\n");
-  StupidHash::Finder scriptTagsFinder(BLFontTagData::scriptIdToTagTable, BLFontTagData::kScriptIdCount);
+  StupidHash::Finder scriptTagsFinder(bl::FontTagData::scriptIdToTagTable, bl::FontTagData::kScriptIdCount);
   if (!scriptTagsFinder.findSolution()) {
     printf("Solution not found!\n");
     return 1;
   }
 
   printf("-- Finding language tags to ids hash function --\n");
-  StupidHash::Finder languageTagsFinder(BLFontTagData::languageIdToTagTable, BLFontTagData::kLanguageIdCount);
+  StupidHash::Finder languageTagsFinder(bl::FontTagData::languageIdToTagTable, bl::FontTagData::kLanguageIdCount);
   if (!languageTagsFinder.findSolution()) {
     printf("Solution not found!\n");
     return 1;
   }
 
   printf("-- Finding feature tags to ids hash function --\n");
-  StupidHash::Finder featureTagsFinder(BLFontTagData::featureIdToTagTable, BLFontTagData::kFeatureIdCount);
+  StupidHash::Finder featureTagsFinder(bl::FontTagData::featureIdToTagTable, bl::FontTagData::kFeatureIdCount);
   if (!featureTagsFinder.findSolution()) {
     printf("Solution not found!\n");
     return 1;
   }
 
   printf("-- Finding baseline tags to ids hash function --\n");
-  StupidHash::Finder baselineTagsFinder(BLFontTagData::baselineIdToTagTable, BLFontTagData::kBaselineIdCount);
+  StupidHash::Finder baselineTagsFinder(bl::FontTagData::baselineIdToTagTable, bl::FontTagData::kBaselineIdCount);
   if (!baselineTagsFinder.findSolution()) {
     printf("Solution not found!\n");
     return 1;
   }
 
   printf("-- Finding variation tags to ids hash function --\n");
-  StupidHash::Finder variationTagsFinder(BLFontTagData::variationIdToTagTable, BLFontTagData::kVariationIdCount);
+  StupidHash::Finder variationTagsFinder(bl::FontTagData::variationIdToTagTable, bl::FontTagData::kVariationIdCount);
   if (!variationTagsFinder.findSolution()) {
     printf("Solution not found!\n");
     return 1;

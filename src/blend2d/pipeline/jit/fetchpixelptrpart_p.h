@@ -12,7 +12,8 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 //! Pipeline fetch pixel-pointer part.
@@ -23,7 +24,7 @@ public:
   //! Pixel pointer alignment (updated by FillPart|CompOpPart).
   Alignment _alignment {};
 
-  FetchPixelPtrPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
+  FetchPixelPtrPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
 
   //! Initializes the pixel pointer to `p`.
   BL_INLINE void initPtr(const x86::Gp& p) noexcept { _ptr = p; }
@@ -39,7 +40,8 @@ public:
 };
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

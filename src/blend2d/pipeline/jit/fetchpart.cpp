@@ -9,22 +9,23 @@
 #include "../../pipeline/jit/fetchpart_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
-// BLPipeline::JIT::FetchPart - Construction & Destruction
-// =======================================================
+// bl::Pipeline::JIT::FetchPart - Construction & Destruction
+// =========================================================
 
-FetchPart::FetchPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept
+FetchPart::FetchPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept
   : PipePart(pc, PipePartType::kFetch),
     _fetchType(fetchType),
     _format(format),
     _bpp(uint8_t(blFormatInfo[size_t(format)].depth / 8u)),
-    _hasRGB((blFormatInfo[size_t(format)].flags & BL_FORMAT_FLAG_RGB) != 0),
-    _hasAlpha((blFormatInfo[size_t(format)].flags & BL_FORMAT_FLAG_ALPHA) != 0) {}
+    _hasRGB(blFormatInfo[size_t(format)].hasFlag(BL_FORMAT_FLAG_RGB)),
+    _hasAlpha(blFormatInfo[size_t(format)].hasFlag(BL_FORMAT_FLAG_ALPHA)) {}
 
-// BLPipeline::JIT::FetchPart - Init & Fini
-// ========================================
+// bl::Pipeline::JIT::FetchPart - Init & Fini
+// ==========================================
 
 void FetchPart::init(x86::Gp& x, x86::Gp& y, PixelType pixelType, uint32_t pixelGranularity) noexcept {
   _isRectFill = x.isValid();
@@ -35,7 +36,7 @@ void FetchPart::init(x86::Gp& x, x86::Gp& y, PixelType pixelType, uint32_t pixel
   // Initialize alpha fetch information. The fetch would be A8 if either the
   // requested pixel is alpha-only or the source pixel format is alpha-only
   // (or both).
-  _alphaFetch = _pixelType == PixelType::kA8 || _format == BLInternalFormat::kA8;
+  _alphaFetch = _pixelType == PixelType::kA8 || _format == FormatExt::kA8;
   _alphaOffset = blFormatInfo[size_t(_format)].aShift / 8;
 
   _initPart(x, y);
@@ -57,8 +58,8 @@ void FetchPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
 void FetchPart::_finiPart() noexcept {}
 
-// BLPipeline::JIT::FetchPart - Advance
-// ====================================
+// bl::Pipeline::JIT::FetchPart - Advance
+// ======================================
 
 // By default these do nothing, only used by `SolidFetch()` this way.
 void FetchPart::advanceY() noexcept {
@@ -75,8 +76,8 @@ void FetchPart::advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept {
   blUnused(x, diff);
 }
 
-// BLPipeline::JIT::FetchPart - Fetch
-// ==================================
+// bl::Pipeline::JIT::FetchPart - Fetch
+// ====================================
 
 void FetchPart::prefetch1() noexcept {
   // Nothing by default.
@@ -174,6 +175,7 @@ void FetchPart::_fetch2x4(Pixel& p, PixelFlags flags) noexcept {
 }
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 #endif

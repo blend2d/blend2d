@@ -23,7 +23,7 @@ class BLFontManagerPrivateImpl : public BLFontManagerImpl {
 public:
   BL_NONCOPYABLE(BLFontManagerPrivateImpl)
 
-  class FamiliesMapNode : public BLArenaHashMapNode {
+  class FamiliesMapNode : public bl::ArenaHashMapNode {
   public:
     BL_NONCOPYABLE(FamiliesMapNode)
 
@@ -31,7 +31,7 @@ public:
     BLArray<BLFontFace> faces;
 
     BL_INLINE FamiliesMapNode(uint32_t hashCode, const BLString& familyName) noexcept
-      : BLArenaHashMapNode(hashCode),
+      : bl::ArenaHashMapNode(hashCode),
         familyName(familyName),
         faces() {}
     BL_INLINE ~FamiliesMapNode() noexcept {}
@@ -47,7 +47,7 @@ public:
     BL_INLINE bool matches(const FamiliesMapNode* node) const noexcept { return node->familyName.equals(_family); }
   };
 
-  class SubstitutionMapNode : public BLArenaHashMapNode {
+  class SubstitutionMapNode : public bl::ArenaHashMapNode {
   public:
     BL_NONCOPYABLE(SubstitutionMapNode)
 
@@ -55,7 +55,7 @@ public:
     BLString to;
 
     BL_INLINE SubstitutionMapNode(uint32_t hashCode, const BLString& from, const BLString& to) noexcept
-      : BLArenaHashMapNode(hashCode),
+      : bl::ArenaHashMapNode(hashCode),
         from(from),
         to(to) {}
     BL_INLINE ~SubstitutionMapNode() noexcept {}
@@ -64,27 +64,29 @@ public:
   };
 
   BLSharedMutex mutex;
-  BLArenaAllocator allocator;
-  BLArenaHashMap<FamiliesMapNode> familiesMap;
-  BLArenaHashMap<SubstitutionMapNode> substitutionMap;
+  bl::ArenaAllocator allocator;
+  bl::ArenaHashMap<FamiliesMapNode> familiesMap;
+  bl::ArenaHashMap<SubstitutionMapNode> substitutionMap;
   size_t faceCount = 0;
 
   BL_INLINE BLFontManagerPrivateImpl(const BLFontManagerVirt* virt_) noexcept
     : mutex(),
-      allocator(8192 - BLArenaAllocator::kBlockOverhead),
+      allocator(8192 - bl::ArenaAllocator::kBlockOverhead),
       familiesMap(&allocator),
       substitutionMap(&allocator) { virt = virt_; }
 
   BL_INLINE ~BLFontManagerPrivateImpl() noexcept {}
 };
 
-namespace BLFontManagerPrivate {
+namespace bl {
+namespace FontManagerInternal {
 
 static BL_INLINE BLFontManagerPrivateImpl* getImpl(const BLFontManagerCore* self) noexcept {
   return static_cast<BLFontManagerPrivateImpl*>(self->_d.impl);
 }
 
-} // {BLFontManagerPrivate}
+} // {FontManagerInternal}
+} // {bl}
 
 //! \}
 

@@ -7,9 +7,9 @@
 #define BLEND2D_MATRIX_P_H_INCLUDED
 
 #include "api-internal_p.h"
-#include "math_p.h"
 #include "matrix.h"
 #include "runtime_p.h"
+#include "support/math_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -19,7 +19,8 @@
 //! function will be 99.99% of time used with `BLMatrix2D` so the `ctx` would point to a `const BLMatrix2D*` instance.
 typedef BLResult (BL_CDECL* BLMapPointDArrayFunc)(const void* ctx, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT;
 
-namespace BLTransformPrivate {
+namespace bl {
+namespace TransformInternal {
 
 //! Array of functions for transforming points indexed by `BLMatrixType`. Each function is optimized for the respective
 //! type. This is mostly used internally, but exported for users that can take advantage of Blend2D SIMD optimziations.
@@ -62,7 +63,8 @@ static BL_INLINE void multiply(BLMatrix2D& dst, const BLMatrix2D& a, const BLMat
             a.m20 * b.m01 + a.m21 * b.m11 + b.m21);
 }
 
-} // {BLTransformPrivate}
+} // {TransformInternal}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -13,8 +13,10 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! Low-level image scaling context.
-class BLImageScaleContext {
+class ImageScaleContext {
 public:
   enum Dir : uint32_t {
     kDirHorz = 0,
@@ -42,10 +44,10 @@ public:
 
   Data* data;
 
-  BL_INLINE BLImageScaleContext() noexcept
+  BL_INLINE ImageScaleContext() noexcept
     : data(nullptr) {}
 
-  BL_INLINE ~BLImageScaleContext() noexcept { reset(); }
+  BL_INLINE ~ImageScaleContext() noexcept { reset(); }
 
   BL_INLINE bool isInitialized() const noexcept { return data != nullptr; }
 
@@ -56,11 +58,13 @@ public:
   BL_INLINE int srcHeight() const noexcept { return data->srcSize[kDirVert]; }
 
   BL_HIDDEN BLResult reset() noexcept;
-  BL_HIDDEN BLResult create(const BLSizeI& to, const BLSizeI& from, uint32_t filter, const BLImageScaleOptions* options) noexcept;
+  BL_HIDDEN BLResult create(const BLSizeI& to, const BLSizeI& from, uint32_t filter) noexcept;
 
   BL_HIDDEN BLResult processHorzData(uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t format) const noexcept;
   BL_HIDDEN BLResult processVertData(uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t format) const noexcept;
 };
+
+} // {bl}
 
 //! \}
 //! \endcond

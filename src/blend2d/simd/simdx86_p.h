@@ -1418,7 +1418,7 @@ template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u32<16>(const __m128i& a) no
 template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u64<16>(const __m128i& a) noexcept { return _mm_broadcastq_epi64(a); }
 #elif defined(BL_TARGET_OPT_SSSE3)
 template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u8<16>(const __m128i& a) noexcept { return _mm_shuffle_epi8(a, _mm_setzero_si128()); }
-template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u16<16>(const __m128i& a) noexcept { return _mm_shuffle_epi8(a, blCommonTable.i_0100010001000100.as<__m128i>()); }
+template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u16<16>(const __m128i& a) noexcept { return _mm_shuffle_epi8(a, bl::commonTable.i_0100010001000100.as<__m128i>()); }
 template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u32<16>(const __m128i& a) noexcept { return _mm_shuffle_epi32(a, _MM_SHUFFLE(0, 0, 0, 0)); }
 template<> BL_INLINE_NODEBUG __m128i simd_broadcast_u64<16>(const __m128i& a) noexcept { return _mm_shuffle_epi32(a, _MM_SHUFFLE(1, 0, 1, 0)); }
 #else
@@ -1700,18 +1700,18 @@ BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u16(const __m128i& a) noexcept { re
 BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u16(const __m128i& a, const __m128i& b) noexcept { return simd_packs_128_i32_u16(a, b); }
 #else
 BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u16(const __m128i& a) noexcept {
-  return simd_swizzlev_u8(a, vec_const<__m128i>(&blCommonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210));
+  return simd_swizzlev_u8(a, vec_const<__m128i>(&bl::commonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210));
 }
 
 BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u16(const __m128i& a, const __m128i& b) noexcept {
-  __m128i aLo = simd_swizzlev_u8(a, vec_const<__m128i>(&blCommonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210));
-  __m128i bLo = simd_swizzlev_u8(b, vec_const<__m128i>(&blCommonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210));
+  __m128i aLo = simd_swizzlev_u8(a, vec_const<__m128i>(&bl::commonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210));
+  __m128i bLo = simd_swizzlev_u8(b, vec_const<__m128i>(&bl::commonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210));
   return _mm_unpacklo_epi64(aLo, bLo);
 }
 #endif
 
 #if defined(BL_TARGET_OPT_SSSE3)
-BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u8(const __m128i& a) noexcept { return simd_swizzlev_u8(a, vec_const<__m128i>(&blCommonTable.pshufb_xxx3xxx2xxx1xxx0_to_3210321032103210)); }
+BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u8(const __m128i& a) noexcept { return simd_swizzlev_u8(a, vec_const<__m128i>(&bl::commonTable.pshufb_xxx3xxx2xxx1xxx0_to_3210321032103210)); }
 #else
 BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u8(const __m128i& a) noexcept { return simd_packs_128_i16_u8(_mm_packs_epi32(a, a)); }
 #endif
@@ -1897,7 +1897,7 @@ BL_INLINE_NODEBUG Vec<16, typename V::ElementType> insert_i16(const V& dst, int1
 
 template<uint32_t kIndex, typename V>
 BL_INLINE_NODEBUG Vec<16, typename V::ElementType> insert_m16(const V& dst, const void* src) noexcept {
-  return insert_u16<kIndex>(dst, BLMemOps::readU16u(src));
+  return insert_u16<kIndex>(dst, bl::MemOps::readU16u(src));
 }
 
 #if defined(BL_TARGET_OPT_SSE4_1)
@@ -1936,7 +1936,7 @@ BL_INLINE_NODEBUG Vec<16, typename V::ElementType> insert_i32(const V& dst, int3
 
 template<uint32_t kIndex, typename V>
 BL_INLINE_NODEBUG Vec<16, typename V::ElementType> insert_m32(const V& dst, const void* src) noexcept {
-  return insert_u32<kIndex>(dst, BLMemOps::readU32u(src));
+  return insert_u32<kIndex>(dst, bl::MemOps::readU32u(src));
 }
 
 // Convenience function used to insert RGB24 components.
@@ -1948,13 +1948,13 @@ BL_INLINE_NODEBUG Vec<16, typename V::ElementType> insert_m24(const V& dst, cons
   if BL_CONSTEXPR ((kIndex & 0x1) == 0)
     return from_simd<Vec128>(
       _mm_insert_epi8(
-        _mm_insert_epi16(to_simd<__m128i>(dst), BLMemOps::readU16u(src_u8), kIndex / 2),
-        BLMemOps::readU8(src_u8 + 2), kIndex + 2));
+        _mm_insert_epi16(to_simd<__m128i>(dst), bl::MemOps::readU16u(src_u8), kIndex / 2),
+        bl::MemOps::readU8(src_u8 + 2), kIndex + 2));
   else
     return from_simd<Vec128>(
       _mm_insert_epi16(
-        _mm_insert_epi8(to_simd<__m128i>(dst), BLMemOps::readU8(src_u8), kIndex),
-        BLMemOps::readU16u(src_u8 + 1), (kIndex + 1) / 2));
+        _mm_insert_epi8(to_simd<__m128i>(dst), bl::MemOps::readU8(src_u8), kIndex),
+        bl::MemOps::readU16u(src_u8 + 1), (kIndex + 1) / 2));
 }
 
 #else
@@ -2120,8 +2120,8 @@ BL_INLINE_NODEBUG __m128d simd_min_f64(const __m128d& a, const __m128d& b) noexc
 BL_INLINE_NODEBUG __m128 simd_max_f32(const __m128& a, const __m128& b) noexcept { return _mm_max_ps(a, b); }
 BL_INLINE_NODEBUG __m128d simd_max_f64(const __m128d& a, const __m128d& b) noexcept { return _mm_max_pd(a, b); }
 
-BL_INLINE_NODEBUG __m128 simd_abs_f32(const __m128& a) noexcept { return _mm_and_ps(a, blCommonTable.f32_abs.as<__m128>()); }
-BL_INLINE_NODEBUG __m128d simd_abs_f64(const __m128d& a) noexcept { return _mm_and_pd(a, blCommonTable.f64_abs.as<__m128d>()); }
+BL_INLINE_NODEBUG __m128 simd_abs_f32(const __m128& a) noexcept { return _mm_and_ps(a, bl::commonTable.f32_abs.as<__m128>()); }
+BL_INLINE_NODEBUG __m128d simd_abs_f64(const __m128d& a) noexcept { return _mm_and_pd(a, bl::commonTable.f64_abs.as<__m128d>()); }
 
 BL_INLINE_NODEBUG __m128 simd_sqrt_f32(const __m128& a) noexcept { return _mm_sqrt_ps(a); }
 BL_INLINE_NODEBUG __m128d simd_sqrt_f64(const __m128d& a) noexcept { return _mm_sqrt_pd(a); }
@@ -2493,8 +2493,8 @@ BL_INLINE_NODEBUG __m256d simd_min_f64(const __m256d& a, const __m256d& b) noexc
 BL_INLINE_NODEBUG __m256 simd_max_f32(const __m256& a, const __m256& b) noexcept { return _mm256_max_ps(a, b); }
 BL_INLINE_NODEBUG __m256d simd_max_f64(const __m256d& a, const __m256d& b) noexcept { return _mm256_max_pd(a, b); }
 
-BL_INLINE_NODEBUG __m256 simd_abs_f32(const __m256& a) noexcept { return _mm256_and_ps(a, blCommonTable.f32_abs.as<__m256>()); }
-BL_INLINE_NODEBUG __m256d simd_abs_f64(const __m256d& a) noexcept { return _mm256_and_pd(a, blCommonTable.f64_abs.as<__m256d>()); }
+BL_INLINE_NODEBUG __m256 simd_abs_f32(const __m256& a) noexcept { return _mm256_and_ps(a, bl::commonTable.f32_abs.as<__m256>()); }
+BL_INLINE_NODEBUG __m256d simd_abs_f64(const __m256d& a) noexcept { return _mm256_and_pd(a, bl::commonTable.f64_abs.as<__m256d>()); }
 
 BL_INLINE_NODEBUG __m256 simd_sqrt_f32(const __m256& a) noexcept { return _mm256_sqrt_ps(a); }
 BL_INLINE_NODEBUG __m256d simd_sqrt_f64(const __m256d& a) noexcept { return _mm256_sqrt_pd(a); }
@@ -2789,8 +2789,8 @@ BL_INLINE_NODEBUG __m512d simd_cmp_gt_f64(const __m512d& a, const __m512d& b) no
 BL_INLINE_NODEBUG __m512 simd_cmp_ge_f32(const __m512& a, const __m512& b) noexcept { return simd_512f_from_mask32(_mm512_cmp_ps_mask(a, b, _CMP_GE_OQ)); }
 BL_INLINE_NODEBUG __m512d simd_cmp_ge_f64(const __m512d& a, const __m512d& b) noexcept { return simd_512d_from_mask64(_mm512_cmp_pd_mask(a, b, _CMP_GE_OQ)); }
 
-BL_INLINE_NODEBUG __m512 simd_abs_f32(const __m512& a) noexcept { return _mm512_and_ps(a, _mm512_broadcastss_ps(_mm_load_ss(&blCommonTable.f32_abs.as<float>()))); }
-BL_INLINE_NODEBUG __m512d simd_abs_f64(const __m512d& a) noexcept { return _mm512_and_pd(a, _mm512_broadcastsd_pd(_mm_load_sd(&blCommonTable.f64_abs.as<double>()))); }
+BL_INLINE_NODEBUG __m512 simd_abs_f32(const __m512& a) noexcept { return _mm512_and_ps(a, _mm512_broadcastss_ps(_mm_load_ss(&bl::commonTable.f32_abs.as<float>()))); }
+BL_INLINE_NODEBUG __m512d simd_abs_f64(const __m512d& a) noexcept { return _mm512_and_pd(a, _mm512_broadcastsd_pd(_mm_load_sd(&bl::commonTable.f64_abs.as<double>()))); }
 
 BL_INLINE_NODEBUG __m512 simd_sqrt_f32(const __m512& a) noexcept { return _mm512_sqrt_ps(a); }
 BL_INLINE_NODEBUG __m512d simd_sqrt_f64(const __m512d& a) noexcept { return _mm512_sqrt_pd(a); }
@@ -5291,7 +5291,7 @@ struct ArrayLookupResult {
   uint32_t _indexes;
 
   BL_INLINE_NODEBUG bool matched() const noexcept { return _indexes != 0; }
-  BL_INLINE_NODEBUG uint32_t index() const noexcept { return BLIntOps::ctz(_indexes); }
+  BL_INLINE_NODEBUG uint32_t index() const noexcept { return bl::IntOps::ctz(_indexes); }
 };
 
 template<uint32_t kN>

@@ -6,6 +6,7 @@
 #ifndef BLEND2D_PIPELINE_JIT_COMPOPPART_P_H_INCLUDED
 #define BLEND2D_PIPELINE_JIT_COMPOPPART_P_H_INCLUDED
 
+#include "../../compopinfo_p.h"
 #include "../../pipeline/jit/fetchpart_p.h"
 #include "../../pipeline/jit/pipepart_p.h"
 #include "../../support/wrap_p.h"
@@ -14,7 +15,8 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 //! Pipeline combine part.
@@ -26,7 +28,7 @@ public:
   };
 
   //! Composition operator.
-  uint32_t _compOp {};
+  CompOpExt _compOp{};
   //! Pixel type of the composition.
   PixelType _pixelType = PixelType::kNone;
   //! The current span mode.
@@ -53,50 +55,49 @@ public:
   //! Partial fetch that happened at the end of the scanline (border case).
   Pixel _partialPixel {};
   //! Const mask.
-  BLWrap<PipeCMask> _mask;
+  Wrap<PipeCMask> _mask;
 
-  CompOpPart(PipeCompiler* pc, uint32_t compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept;
+  CompOpPart(PipeCompiler* pc, CompOpExt compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept;
 
   BL_INLINE FetchPart* dstPart() const noexcept { return reinterpret_cast<FetchPart*>(_children[kIndexDstPart]); }
   BL_INLINE FetchPart* srcPart() const noexcept { return reinterpret_cast<FetchPart*>(_children[kIndexSrcPart]); }
 
   //! Returns the composition operator id, see `BLCompOp`.
-  BL_INLINE uint32_t compOp() const noexcept { return _compOp; }
+  BL_INLINE CompOpExt compOp() const noexcept { return _compOp; }
 
-  BL_INLINE bool isSrcCopy() const noexcept { return _compOp == BL_COMP_OP_SRC_COPY; }
-  BL_INLINE bool isSrcOver() const noexcept { return _compOp == BL_COMP_OP_SRC_OVER; }
-  BL_INLINE bool isSrcIn() const noexcept { return _compOp == BL_COMP_OP_SRC_IN; }
-  BL_INLINE bool isSrcOut() const noexcept { return _compOp == BL_COMP_OP_SRC_OUT; }
-  BL_INLINE bool isSrcAtop() const noexcept { return _compOp == BL_COMP_OP_SRC_ATOP; }
+  BL_INLINE bool isSrcCopy() const noexcept { return _compOp == CompOpExt::kSrcCopy; }
+  BL_INLINE bool isSrcOver() const noexcept { return _compOp == CompOpExt::kSrcOver; }
+  BL_INLINE bool isSrcIn() const noexcept { return _compOp == CompOpExt::kSrcIn; }
+  BL_INLINE bool isSrcOut() const noexcept { return _compOp == CompOpExt::kSrcOut; }
+  BL_INLINE bool isSrcAtop() const noexcept { return _compOp == CompOpExt::kSrcAtop; }
+  BL_INLINE bool isDstCopy() const noexcept { return _compOp == CompOpExt::kDstCopy; }
+  BL_INLINE bool isDstOver() const noexcept { return _compOp == CompOpExt::kDstOver; }
+  BL_INLINE bool isDstIn() const noexcept { return _compOp == CompOpExt::kDstIn; }
+  BL_INLINE bool isDstOut() const noexcept { return _compOp == CompOpExt::kDstOut; }
+  BL_INLINE bool isDstAtop() const noexcept { return _compOp == CompOpExt::kDstAtop; }
+  BL_INLINE bool isXor() const noexcept { return _compOp == CompOpExt::kXor; }
+  BL_INLINE bool isPlus() const noexcept { return _compOp == CompOpExt::kPlus; }
+  BL_INLINE bool isMinus() const noexcept { return _compOp == CompOpExt::kMinus; }
+  BL_INLINE bool isModulate() const noexcept { return _compOp == CompOpExt::kModulate; }
+  BL_INLINE bool isMultiply() const noexcept { return _compOp == CompOpExt::kMultiply; }
+  BL_INLINE bool isScreen() const noexcept { return _compOp == CompOpExt::kScreen; }
+  BL_INLINE bool isOverlay() const noexcept { return _compOp == CompOpExt::kOverlay; }
+  BL_INLINE bool isDarken() const noexcept { return _compOp == CompOpExt::kDarken; }
+  BL_INLINE bool isLighten() const noexcept { return _compOp == CompOpExt::kLighten; }
+  BL_INLINE bool isColorDodge() const noexcept { return _compOp == CompOpExt::kColorDodge; }
+  BL_INLINE bool isColorBurn() const noexcept { return _compOp == CompOpExt::kColorBurn; }
+  BL_INLINE bool isLinearBurn() const noexcept { return _compOp == CompOpExt::kLinearBurn; }
+  BL_INLINE bool isLinearLight() const noexcept { return _compOp == CompOpExt::kLinearLight; }
+  BL_INLINE bool isPinLight() const noexcept { return _compOp == CompOpExt::kPinLight; }
+  BL_INLINE bool isHardLight() const noexcept { return _compOp == CompOpExt::kHardLight; }
+  BL_INLINE bool isSoftLight() const noexcept { return _compOp == CompOpExt::kSoftLight; }
+  BL_INLINE bool isDifference() const noexcept { return _compOp == CompOpExt::kDifference; }
+  BL_INLINE bool isExclusion() const noexcept { return _compOp == CompOpExt::kExclusion; }
 
-  BL_INLINE bool isDstCopy() const noexcept { return _compOp == BL_COMP_OP_DST_COPY; }
-  BL_INLINE bool isDstOver() const noexcept { return _compOp == BL_COMP_OP_DST_OVER; }
-  BL_INLINE bool isDstIn() const noexcept { return _compOp == BL_COMP_OP_DST_IN; }
-  BL_INLINE bool isDstOut() const noexcept { return _compOp == BL_COMP_OP_DST_OUT; }
-  BL_INLINE bool isDstAtop() const noexcept { return _compOp == BL_COMP_OP_DST_ATOP; }
+  BL_INLINE bool isAlphaInv() const noexcept { return _compOp == CompOpExt::kAlphaInv; }
 
-  BL_INLINE bool isXor() const noexcept { return _compOp == BL_COMP_OP_XOR; }
-  BL_INLINE bool isPlus() const noexcept { return _compOp == BL_COMP_OP_PLUS; }
-  BL_INLINE bool isMinus() const noexcept { return _compOp == BL_COMP_OP_MINUS; }
-  BL_INLINE bool isModulate() const noexcept { return _compOp == BL_COMP_OP_MODULATE; }
-  BL_INLINE bool isMultiply() const noexcept { return _compOp == BL_COMP_OP_MULTIPLY; }
-  BL_INLINE bool isScreen() const noexcept { return _compOp == BL_COMP_OP_SCREEN; }
-  BL_INLINE bool isOverlay() const noexcept { return _compOp == BL_COMP_OP_OVERLAY; }
-  BL_INLINE bool isDarken() const noexcept { return _compOp == BL_COMP_OP_DARKEN; }
-  BL_INLINE bool isLighten() const noexcept { return _compOp == BL_COMP_OP_LIGHTEN; }
-  BL_INLINE bool isColorDodge() const noexcept { return _compOp == BL_COMP_OP_COLOR_DODGE; }
-  BL_INLINE bool isColorBurn() const noexcept { return _compOp == BL_COMP_OP_COLOR_BURN; }
-  BL_INLINE bool isLinearBurn() const noexcept { return _compOp == BL_COMP_OP_LINEAR_BURN; }
-  BL_INLINE bool isLinearLight() const noexcept { return _compOp == BL_COMP_OP_LINEAR_LIGHT; }
-  BL_INLINE bool isPinLight() const noexcept { return _compOp == BL_COMP_OP_PIN_LIGHT; }
-  BL_INLINE bool isHardLight() const noexcept { return _compOp == BL_COMP_OP_HARD_LIGHT; }
-  BL_INLINE bool isSoftLight() const noexcept { return _compOp == BL_COMP_OP_SOFT_LIGHT; }
-  BL_INLINE bool isDifference() const noexcept { return _compOp == BL_COMP_OP_DIFFERENCE; }
-  BL_INLINE bool isExclusion() const noexcept { return _compOp == BL_COMP_OP_EXCLUSION; }
-
-
-  //! Returns the composition operator flags, see `BLCompOpFlags`.
-  BL_INLINE BLCompOpFlags compOpFlags() const noexcept { return blCompOpInfo[_compOp].flags(); }
+  //! Returns the composition operator flags, see `CompOpFlags`.
+  BL_INLINE CompOpFlags compOpFlags() const noexcept { return compOpInfoTable[size_t(_compOp)].flags(); }
 
   //! Tests whether the destination pixel format has an alpha component.
   BL_INLINE bool hasDa() const noexcept { return _hasDa != 0; }
@@ -216,7 +217,8 @@ public:
 };
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

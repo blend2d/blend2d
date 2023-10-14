@@ -6,12 +6,13 @@
 #include "api-build_p.h"
 #include "geometry_p.h"
 
-namespace BLGeometry {
+namespace bl {
+namespace Geometry {
 
-// BLGeometry - Tables
-// ===================
+// bl::Geometry - Tables
+// =====================
 
-struct BLGeometryTypeSizeTableGen {
+struct GeometryTypeSizeTableGen {
   static BL_INLINE constexpr uint8_t value(size_t i) noexcept {
     return i == BL_GEOMETRY_TYPE_BOXI       ? uint8_t(sizeof(BLBoxI))      :
            i == BL_GEOMETRY_TYPE_BOXD       ? uint8_t(sizeof(BLBox))       :
@@ -28,7 +29,8 @@ struct BLGeometryTypeSizeTableGen {
   }
 };
 
-static constexpr auto blGeometryTypeSizeTable_ = blMakeLookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1, BLGeometryTypeSizeTableGen>();
-const BLLookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1> blGeometryTypeSizeTable = blGeometryTypeSizeTable_;
+static constexpr auto geometryTypeSizeTable_ = makeLookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1, GeometryTypeSizeTableGen>();
+const LookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1> geometryTypeSizeTable = geometryTypeSizeTable_;
 
-} // {BLGeometry}
+} // {Geometry}
+} // {bl}

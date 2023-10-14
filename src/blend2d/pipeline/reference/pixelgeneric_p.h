@@ -12,7 +12,8 @@
 //! \addtogroup blend2d_pipeline_reference
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace Reference {
 namespace Pixel {
 
@@ -388,11 +389,11 @@ typedef U32_8888<Format_A8R8G8B8> U32_A8R8G8B8;
 
 } // {Pixel}
 
-template<BLInternalFormat format>
+template<FormatExt format>
 struct FormatMetadata {};
 
 template<>
-struct FormatMetadata<BLInternalFormat::kPRGB32> {
+struct FormatMetadata<FormatExt::kPRGB32> {
   static constexpr bool kHasAlpha = true;
   static constexpr bool kHasRGB = true;
   static constexpr bool kIsPremultiplied = true;
@@ -400,7 +401,7 @@ struct FormatMetadata<BLInternalFormat::kPRGB32> {
 };
 
 template<>
-struct FormatMetadata<BLInternalFormat::kXRGB32> {
+struct FormatMetadata<FormatExt::kXRGB32> {
   static constexpr bool kHasAlpha = false;
   static constexpr bool kHasRGB = true;
   static constexpr bool kIsPremultiplied = false;
@@ -408,7 +409,7 @@ struct FormatMetadata<BLInternalFormat::kXRGB32> {
 };
 
 template<>
-struct FormatMetadata<BLInternalFormat::kA8> {
+struct FormatMetadata<FormatExt::kA8> {
   static constexpr bool kHasAlpha = true;
   static constexpr bool kHasRGB = false;
   static constexpr bool kIsPremultiplied = false;
@@ -416,7 +417,7 @@ struct FormatMetadata<BLInternalFormat::kA8> {
 };
 
 template<>
-struct FormatMetadata<BLInternalFormat::kFRGB32> {
+struct FormatMetadata<FormatExt::kFRGB32> {
   static constexpr bool kHasAlpha = true;
   static constexpr bool kHasRGB = true;
   static constexpr bool kIsPremultiplied = true;
@@ -424,18 +425,18 @@ struct FormatMetadata<BLInternalFormat::kFRGB32> {
 };
 
 template<>
-struct FormatMetadata<BLInternalFormat::kZERO32> {
+struct FormatMetadata<FormatExt::kZERO32> {
   static constexpr bool kHasAlpha = true;
   static constexpr bool kHasRGB = true;
   static constexpr bool kIsPremultiplied = true;
   static constexpr uint32_t kBPP = 4;
 };
 
-template<typename PixelT, BLInternalFormat kFormat>
+template<typename PixelT, FormatExt kFormat>
 struct PixelIO {};
 
 template<>
-struct PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32> {
+struct PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32> {
   typedef Pixel::P32_A8R8G8B8 PixelType;
 
   static BL_INLINE PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
@@ -447,7 +448,7 @@ struct PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32> {
 };
 
 template<>
-struct PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kXRGB32> {
+struct PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kXRGB32> {
   typedef Pixel::P32_A8R8G8B8 PixelType;
 
   static BL_INLINE PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
@@ -460,7 +461,7 @@ struct PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kXRGB32> {
 };
 
 template<>
-struct PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kA8> {
+struct PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kA8> {
   typedef Pixel::P32_A8R8G8B8 PixelType;
 
   static BL_INLINE PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
@@ -472,12 +473,13 @@ struct PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kA8> {
   static BL_INLINE void store(void* dst, const PixelType& src) noexcept { *static_cast<uint8_t*>(dst) = uint8_t(src.a()); }
 };
 
-template<> struct PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kFRGB32> : public PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32> {};
-template<> struct PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kZERO32> : public PixelIO<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32> {};
+template<> struct PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kFRGB32> : public PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32> {};
+template<> struct PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kZERO32> : public PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32> {};
 
 
 } // {Reference}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

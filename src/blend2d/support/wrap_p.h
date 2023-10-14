@@ -12,9 +12,11 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! Wrapper to control construction & destruction of `T`.
 template<typename T>
-struct alignas(alignof(T)) BLWrap {
+struct alignas(alignof(T)) Wrap {
   //! Storage required to instantiate `T`.
   char _data[sizeof(T)];
 
@@ -57,6 +59,8 @@ struct alignas(alignof(T)) BLWrap {
 
   //! \}
 };
+
+} // {bl}
 
 //! \}
 //! \endcond

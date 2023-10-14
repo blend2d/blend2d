@@ -11,10 +11,11 @@
 #include "runtime_p.h"
 #include "simd/simd_p.h"
 
-namespace BLTransformPrivate {
+namespace bl {
+namespace TransformInternal {
 
-// BLTransform - MapPointDArray (AVX)
-// ==================================
+// bl::Transform - MapPointDArray (AVX)
+// ====================================
 
 static BLResult BL_CDECL mapPointDArrayIdentity_AVX(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   using namespace SIMD;
@@ -205,12 +206,12 @@ static BLResult BL_CDECL mapPointDArrayAffine_AVX(const BLMatrix2D* self, BLPoin
   return BL_SUCCESS;
 }
 
-// BLTransform - Runtime Registration (AVX)
-// ========================================
+// bl::Transform - Runtime Registration (AVX)
+// ==========================================
 
 void blTransformRtInit_AVX(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
-  BLMapPointDArrayFunc* funcs = BLTransformPrivate::mapPointDArrayFuncs;
+  BLMapPointDArrayFunc* funcs = mapPointDArrayFuncs;
 
   blAssignFunc(&funcs[BL_TRANSFORM_TYPE_IDENTITY ], mapPointDArrayIdentity_AVX);
   blAssignFunc(&funcs[BL_TRANSFORM_TYPE_TRANSLATE], mapPointDArrayTranslate_AVX);
@@ -220,6 +221,7 @@ void blTransformRtInit_AVX(BLRuntimeContext* rt) noexcept {
   blAssignFunc(&funcs[BL_TRANSFORM_TYPE_INVALID  ], mapPointDArrayAffine_AVX);
 }
 
-} // {BLTransformPrivate}
+} // {TransformInternal}
+} // {bl}
 
 #endif

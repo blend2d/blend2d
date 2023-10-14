@@ -12,28 +12,24 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! \name Types
 //! \{
 
-typedef unsigned char BLOverflowFlag;
+typedef unsigned char OverflowFlag;
 
 //! \}
 
 //! Utility functions and classes simplifying integer operations.
-namespace BLIntOps {
+namespace IntOps {
 
-using BLInternal::StdInt;
+using BLInternal::IntBySize;
+using BLInternal::IntByType;
+using BLInternal::UIntBySize;
+using BLInternal::UIntByType;
 
 namespace {
-
-//! \name Integer Type Traits
-//! \{
-
-template<typename T>
-BL_NODISCARD
-static BL_INLINE_NODEBUG constexpr bool isUnsigned() noexcept { return std::is_unsigned<T>::value; }
-
-//! \}
 
 //! \name Integer Type Conversion
 //! \{
@@ -45,15 +41,15 @@ static BL_INLINE_NODEBUG constexpr bool isUnsigned() noexcept { return std::is_u
 //! just cast to a type as defined by <stdint.h> and specialize for it.
 template<typename T>
 BL_NODISCARD
-static BL_INLINE_NODEBUG constexpr typename StdInt<sizeof(T), isUnsigned<T>()>::Type asStdInt(T x) noexcept {
-  return (typename StdInt<sizeof(T), isUnsigned<T>()>::Type)x;
+static BL_INLINE_NODEBUG constexpr IntBySize<sizeof(T), Traits::isUnsigned<T>()> asStdInt(T x) noexcept {
+  return (IntBySize<sizeof(T), Traits::isUnsigned<T>()>)x;
 }
 
 //! Cast an integer `x` to a fixed-width unsigned type as defined by <stdint.h>
 template<typename T>
 BL_NODISCARD
-static BL_INLINE_NODEBUG constexpr typename StdInt<sizeof(T), 1>::Type asStdUInt(T x) noexcept {
-  return (typename StdInt<sizeof(T), 1>::Type)x;
+static BL_INLINE_NODEBUG constexpr UIntByType<T> asStdUInt(T x) noexcept {
+  return (UIntByType<T>)x;
 }
 
 //! Cast an integer `x` to either `int32_t`, uint32_t`, `int64_t`, or `uint64_t`.
@@ -61,18 +57,15 @@ static BL_INLINE_NODEBUG constexpr typename StdInt<sizeof(T), 1>::Type asStdUInt
 //! Used to keep a signedness of `T`, but to promote it to at least 32-bit type.
 template<typename T>
 BL_NODISCARD
-static BL_INLINE_NODEBUG constexpr typename StdInt<blMax<size_t>(sizeof(T), 4), isUnsigned<T>()>::Type asInt32AtLeast(T x) noexcept {
-  typedef typename StdInt<blMax<size_t>(sizeof(T), 4), isUnsigned<T>()>::Type Result;
-  return Result(x);
+static BL_INLINE_NODEBUG constexpr IntBySize<blMax<size_t>(sizeof(T), 4), Traits::isUnsigned<T>()> asInt32AtLeast(T x) noexcept {
+  return (IntBySize<blMax<size_t>(sizeof(T), 4), Traits::isUnsigned<T>()>)x;
 }
 
 //! Cast an integer `x` to either `uint32_t` or `uint64_t`.
 template<typename T>
 BL_NODISCARD
-static BL_INLINE_NODEBUG constexpr typename StdInt<blMax<size_t>(sizeof(T), 4), 1>::Type asUInt32AtLeast(T x) noexcept {
-  typedef typename StdInt<blMax<size_t>(sizeof(T), 4), 1>::Type Result;
-  typedef typename std::make_unsigned<T>::type U;
-  return Result(U(x));
+static BL_INLINE_NODEBUG constexpr UIntBySize<blMax<size_t>(sizeof(T), 4)> asUInt32AtLeast(T x) noexcept {
+  return (UIntBySize<blMax<size_t>(sizeof(T), 4)>)(UIntByType<T>)x;
 }
 
 //! \}
@@ -127,11 +120,11 @@ BL_NODISCARD
 static BL_INLINE T byteSwap(const T& x) noexcept {
   BL_STATIC_ASSERT(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8);
 
-  if (sizeof(T) == 1)
+  if BL_CONSTEXPR (sizeof(T) == 1)
     return x;
-  else if (sizeof(T) == 2)
+  else if BL_CONSTEXPR (sizeof(T) == 2)
     return byteSwap16(x);
-  else if (sizeof(T) == 4)
+  else if BL_CONSTEXPR (sizeof(T) == 4)
     return byteSwap32(x);
   else
     return byteSwap64(x);
@@ -257,10 +250,7 @@ BL_INLINE_NODEBUG constexpr X shrOr(const X& x, const Y& y, Args... args) noexce
 //! Fills all trailing bits right from the first most significant bit set.
 template<typename T>
 BL_NODISCARD
-BL_INLINE_NODEBUG constexpr T fillTrailingBits(const T& x) noexcept {
-  typedef typename StdInt<sizeof(T), 1>::Type U;
-  return T(fillTrailingBits(U(x)));
-}
+BL_INLINE_NODEBUG constexpr T fillTrailingBits(const T& x) noexcept { return T(fillTrailingBits(UIntByType<T>(x))); }
 
 template<> BL_NODISCARD BL_INLINE_NODEBUG constexpr uint8_t  fillTrailingBits(const uint8_t& x) noexcept { return shrOr(x, 1, 2, 4); }
 template<> BL_NODISCARD BL_INLINE_NODEBUG constexpr uint16_t fillTrailingBits(const uint16_t& x) noexcept { return shrOr(x, 1, 2, 4, 8); }
@@ -603,7 +593,7 @@ using PopCounter = PopCounterHarleySeal<T>;
 template<typename X, typename Y>
 BL_NODISCARD
 static BL_INLINE_NODEBUG constexpr bool isAligned(const X& x, const Y& alignment) noexcept {
-  typedef typename StdInt<sizeof(X), 1>::Type U;
+  using U = UIntByType<X>;
   return ((U)x % (U)alignment) == 0;
 }
 
@@ -611,14 +601,14 @@ static BL_INLINE_NODEBUG constexpr bool isAligned(const X& x, const Y& alignment
 template<typename T>
 BL_NODISCARD
 static BL_INLINE_NODEBUG constexpr bool isPowerOf2(const T& x) noexcept {
-  typedef typename std::make_unsigned<T>::type U;
+  using U = UIntByType<T>;
   return x && !(U(x) & (U(x) - U(1)));
 }
 
 template<typename X, typename Y>
 BL_NODISCARD
 static BL_INLINE_NODEBUG constexpr X alignUp(const X& x, const Y& alignment) noexcept {
-  typedef typename StdInt<sizeof(X), 1>::Type U;
+  using U = UIntByType<X>;
   return (X)( ((U)x + ((U)(alignment) - 1u)) & ~((U)(alignment) - 1u) );
 }
 
@@ -626,21 +616,21 @@ static BL_INLINE_NODEBUG constexpr X alignUp(const X& x, const Y& alignment) noe
 template<typename X, typename Y>
 BL_NODISCARD
 static BL_INLINE_NODEBUG constexpr X alignUpDiff(const X& x, const Y& alignment) noexcept {
-  typedef typename StdInt<sizeof(X), 1>::Type U;
+  using U = UIntByType<X>;
   return (X)((U(0) - U(x)) & (alignment - 1));
 }
 
 template<typename T>
 BL_NODISCARD
 static BL_INLINE_NODEBUG constexpr T alignUpPowerOf2(const T& x) noexcept {
-  typedef typename StdInt<sizeof(T), 1>::Type U;
+  using U = UIntByType<T>;
   return (T)(fillTrailingBits(U(x) - 1u) + 1u);
 }
 
 template<typename X, typename Y>
 BL_NODISCARD
 static BL_INLINE_NODEBUG constexpr X alignDown(const X& x, const Y& alignment) noexcept {
-  typedef typename StdInt<sizeof(X), 1>::Type U;
+  using U = UIntByType<X>;
   return (X)( (U)x & ~((U)(alignment) - 1u) );
 }
 
@@ -650,67 +640,67 @@ static BL_INLINE_NODEBUG constexpr X alignDown(const X& x, const Y& alignment) n
 //! \{
 
 template<typename T>
-BL_INLINE T addOverflowFallback(T x, T y, BLOverflowFlag* of) noexcept {
+BL_INLINE T addOverflowFallback(T x, T y, OverflowFlag* of) noexcept {
   typedef typename std::make_unsigned<T>::type U;
 
   U result = U(x) + U(y);
-  *of = BLOverflowFlag(*of | BLOverflowFlag(isUnsigned<T>() ? result < U(x) : T((U(x) ^ ~U(y)) & (U(x) ^ result)) < 0));
+  *of = OverflowFlag(*of | OverflowFlag(Traits::isUnsigned<T>() ? result < U(x) : T((U(x) ^ ~U(y)) & (U(x) ^ result)) < 0));
   return T(result);
 }
 
 template<typename T>
-BL_INLINE T subOverflowFallback(T x, T y, BLOverflowFlag* of) noexcept {
+BL_INLINE T subOverflowFallback(T x, T y, OverflowFlag* of) noexcept {
   typedef typename std::make_unsigned<T>::type U;
 
   U result = U(x) - U(y);
-  *of = BLOverflowFlag(*of | BLOverflowFlag(isUnsigned<T>() ? result > U(x) : T((U(x) ^ U(y)) & (U(x) ^ result)) < 0));
+  *of = OverflowFlag(*of | OverflowFlag(Traits::isUnsigned<T>() ? result > U(x) : T((U(x) ^ U(y)) & (U(x) ^ result)) < 0));
   return T(result);
 }
 
 template<typename T>
-BL_INLINE T mulOverflowFallback(T x, T y, BLOverflowFlag* of) noexcept {
-  typedef typename StdInt<sizeof(T) * 2, isUnsigned<T>()>::Type I;
-  typedef typename std::make_unsigned<I>::type U;
+BL_INLINE T mulOverflowFallback(T x, T y, OverflowFlag* of) noexcept {
+  using I = IntBySize<sizeof(T) * 2, Traits::isUnsigned<T>()>;
+  using U = UIntByType<I>;
 
-  U mask = U(BLTraits::maxValue<typename std::make_unsigned<T>::type>());
+  U mask = U(Traits::maxValue<typename std::make_unsigned<T>::type>());
   if (std::is_signed<T>::value) {
     U prod = U(I(x)) * U(I(y));
-    *of = BLOverflowFlag(*of | BLOverflowFlag(I(prod) < I(BLTraits::minValue<T>()) || I(prod) > BLTraits::maxValue<T>()));
+    *of = OverflowFlag(*of | OverflowFlag(I(prod) < I(Traits::minValue<T>()) || I(prod) > Traits::maxValue<T>()));
     return T(I(prod & mask));
   }
   else {
     U prod = U(x) * U(y);
-    *of = BLOverflowFlag(*of | BLOverflowFlag((prod & ~mask) != 0));
+    *of = OverflowFlag(*of | OverflowFlag((prod & ~mask) != 0));
     return T(prod & mask);
   }
 }
 
 template<>
-BL_INLINE int64_t mulOverflowFallback(int64_t x, int64_t y, BLOverflowFlag* of) noexcept {
+BL_INLINE int64_t mulOverflowFallback(int64_t x, int64_t y, OverflowFlag* of) noexcept {
   int64_t result = int64_t(uint64_t(x) * uint64_t(y));
-  *of = BLOverflowFlag(*of | BLOverflowFlag(x && (result / x != y)));
+  *of = OverflowFlag(*of | OverflowFlag(x && (result / x != y)));
   return result;
 }
 
 template<>
-BL_INLINE uint64_t mulOverflowFallback(uint64_t x, uint64_t y, BLOverflowFlag* of) noexcept {
+BL_INLINE uint64_t mulOverflowFallback(uint64_t x, uint64_t y, OverflowFlag* of) noexcept {
   uint64_t result = x * y;
-  *of = BLOverflowFlag(*of | BLOverflowFlag(y != 0 && BLTraits::maxValue<uint64_t>() / y < x));
+  *of = OverflowFlag(*of | OverflowFlag(y != 0 && Traits::maxValue<uint64_t>() / y < x));
   return result;
 }
 
 // These can be specialized.
-template<typename T> BL_INLINE T addOverflowImpl(const T& x, const T& y, BLOverflowFlag* of) noexcept { return addOverflowFallback(x, y, of); }
-template<typename T> BL_INLINE T subOverflowImpl(const T& x, const T& y, BLOverflowFlag* of) noexcept { return subOverflowFallback(x, y, of); }
-template<typename T> BL_INLINE T mulOverflowImpl(const T& x, const T& y, BLOverflowFlag* of) noexcept { return mulOverflowFallback(x, y, of); }
+template<typename T> BL_INLINE T addOverflowImpl(const T& x, const T& y, OverflowFlag* of) noexcept { return addOverflowFallback(x, y, of); }
+template<typename T> BL_INLINE T subOverflowImpl(const T& x, const T& y, OverflowFlag* of) noexcept { return subOverflowFallback(x, y, of); }
+template<typename T> BL_INLINE T mulOverflowImpl(const T& x, const T& y, OverflowFlag* of) noexcept { return mulOverflowFallback(x, y, of); }
 
 #if defined(__GNUC__) && !defined(BL_BUILD_NO_INTRINSICS)
 #if defined(__clang__) || __GNUC__ >= 5
 #define BL_ARITH_OVERFLOW_SPECIALIZE(FUNC, T, RESULT_T, BUILTIN)                  \
   template<>                                                                      \
-  BL_INLINE_NODEBUG T FUNC(const T& x, const T& y, BLOverflowFlag* of) noexcept { \
+  BL_INLINE_NODEBUG T FUNC(const T& x, const T& y, OverflowFlag* of) noexcept { \
     RESULT_T result;                                                              \
-    *of = BLOverflowFlag(*of | (BUILTIN((RESULT_T)x, (RESULT_T)y, &result)));     \
+    *of = OverflowFlag(*of | (BUILTIN((RESULT_T)x, (RESULT_T)y, &result)));     \
     return T(result);                                                             \
   }
 BL_ARITH_OVERFLOW_SPECIALIZE(addOverflowImpl, int32_t , int               , __builtin_sadd_overflow  )
@@ -740,9 +730,9 @@ BL_ARITH_OVERFLOW_SPECIALIZE(mulOverflowImpl, uint64_t, unsigned long long, __bu
 #if defined(_MSC_VER) && 0
 #define BL_ARITH_OVERFLOW_SPECIALIZE(FUNC, T, ALT_T, BUILTIN)                 \
   template<>                                                                  \
-  BL_INLINE_NODEBUG T FUNC(T x, T y, BLOverflowFlag* of) noexcept {           \
+  BL_INLINE_NODEBUG T FUNC(T x, T y, OverflowFlag* of) noexcept {           \
     ALT_T result;                                                             \
-    *of = BLOverflowFlag(*of | (BUILTIN(0, (ALT_T)x, (ALT_T)y, &result)));    \
+    *of = OverflowFlag(*of | (BUILTIN(0, (ALT_T)x, (ALT_T)y, &result)));    \
     return T(result);                                                         \
   }
 BL_ARITH_OVERFLOW_SPECIALIZE(addOverflowImpl, uint32_t, unsigned int      , _addcarry_u32 )
@@ -755,18 +745,18 @@ BL_ARITH_OVERFLOW_SPECIALIZE(subOverflowImpl, uint64_t, unsigned __int64  , _sub
 #endif
 
 template<typename T>
-static BL_INLINE T addOverflow(const T& x, const T& y, BLOverflowFlag* of) noexcept { return T(addOverflowImpl(asStdInt(x), asStdInt(y), of)); }
+static BL_INLINE T addOverflow(const T& x, const T& y, OverflowFlag* of) noexcept { return T(addOverflowImpl(asStdInt(x), asStdInt(y), of)); }
 
 template<typename T>
-static BL_INLINE T subOverflow(const T& x, const T& y, BLOverflowFlag* of) noexcept { return T(subOverflowImpl(asStdInt(x), asStdInt(y), of)); }
+static BL_INLINE T subOverflow(const T& x, const T& y, OverflowFlag* of) noexcept { return T(subOverflowImpl(asStdInt(x), asStdInt(y), of)); }
 
 template<typename T>
-static BL_INLINE T mulOverflow(const T& x, const T& y, BLOverflowFlag* of) noexcept { return T(mulOverflowImpl(asStdInt(x), asStdInt(y), of)); }
+static BL_INLINE T mulOverflow(const T& x, const T& y, OverflowFlag* of) noexcept { return T(mulOverflowImpl(asStdInt(x), asStdInt(y), of)); }
 
 template<typename T>
 BL_NODISCARD
 static BL_INLINE T uaddSaturate(const T& x, const T& y) noexcept {
-  BLOverflowFlag of = 0;
+  OverflowFlag of{};
   T result = addOverflow(x, y, &of);
   return T(result | bitMaskFromBool<T>(of));
 }
@@ -774,7 +764,7 @@ static BL_INLINE T uaddSaturate(const T& x, const T& y) noexcept {
 template<typename T>
 BL_NODISCARD
 static BL_INLINE T usubSaturate(const T& x, const T& y) noexcept {
-  BLOverflowFlag of = 0;
+  OverflowFlag of{};
   T result = subOverflow(x, y, &of);
   return T(result & bitMaskFromBool<T>(!of));
 }
@@ -782,7 +772,7 @@ static BL_INLINE T usubSaturate(const T& x, const T& y) noexcept {
 template<typename T>
 BL_NODISCARD
 static BL_INLINE T umulSaturate(const T& x, const T& y) noexcept {
-  BLOverflowFlag of = 0;
+  OverflowFlag of{};
   T result = mulOverflow(x, y, &of);
   return T(result | bitMaskFromBool<T>(of));
 }
@@ -797,7 +787,7 @@ BL_NODISCARD
 static BL_INLINE_NODEBUG constexpr DstT clampToImpl(const SrcT& x, const DstT& y) noexcept {
   typedef typename std::make_unsigned<SrcT>::type U;
   return U(x) <= U(y) ? DstT(x)
-                      : isUnsigned<SrcT>() ? DstT(y) : DstT(SrcT(y) & SrcT(sar(negate(x), sizeof(SrcT) * 8 - 1)));
+                      : Traits::isUnsigned<SrcT>() ? DstT(y) : DstT(SrcT(y) & SrcT(sar(negate(x), sizeof(SrcT) * 8 - 1)));
 }
 
 //! Clamp a value `x` to a byte (unsigned 8-bit type).
@@ -824,13 +814,14 @@ template<typename T>
 BL_NODISCARD
 static BL_INLINE_NODEBUG T pmod(const T& x, const T& y) noexcept {
   T result = x % y;
-  return isUnsigned<T>() ? result : result + (y + (result >> (bitSizeOf<T>() - 1)));
+  return Traits::isUnsigned<T>() ? result : result + (y + (result >> (bitSizeOf<T>() - 1)));
 }
 
 //! \}
 
 } // {anonymous}
-} // {BLIntOps}
+} // {IntOps}
+} // {bl}
 
 //! \}
 //! \endcond

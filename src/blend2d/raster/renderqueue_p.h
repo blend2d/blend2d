@@ -14,7 +14,8 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 struct RenderCommand;
 struct RenderFetchData;
@@ -26,7 +27,7 @@ static constexpr uint32_t kRenderQueueCapacity = 256;
 //!
 //! \note `RenderQueueGenericAppender` is used to add items to the queue.
 template<typename T>
-class RenderGenericQueue : public BLArenaListNode<RenderGenericQueue<T>> {
+class RenderGenericQueue : public ArenaListNode<RenderGenericQueue<T>> {
 public:
   //! \name Members
   //! \{
@@ -78,7 +79,7 @@ public:
 
 typedef RenderGenericQueue<RenderJob*> RenderJobQueue;
 
-class RenderCommandQueue : public BLArenaListNode<RenderCommandQueue> {
+class RenderCommandQueue : public ArenaListNode<RenderCommandQueue> {
 public:
   //! \name Members
   //! \{
@@ -87,7 +88,7 @@ public:
   size_t _size;
 
   //! Bit-array where each bit represents a valid FetchData in `_data`, that has to be released once the batch is done.
-  BLFixedBitArray<BLBitWord, kRenderQueueCapacity> _fetchDataMarks;
+  FixedBitArray<BLBitWord, kRenderQueueCapacity> _fetchDataMarks;
 
   //! Array of render commands.
   RenderCommand _data[kRenderQueueCapacity];
@@ -235,7 +236,8 @@ public:
   //! \}
 };
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -12,7 +12,8 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 
 //! Platform support for TrueType and OpenType fonts.
 //!
@@ -563,7 +564,8 @@ enum WindowsLocaleId : uint32_t {
 };
 
 } // {Platform}
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -8,46 +8,54 @@
 
 #include "api-internal_p.h"
 #include "context.h"
-#include "format_p.h"
-#include "pipeline/pipedefs_p.h"
-#include "support/bitops_p.h"
-#include "support/lookuptable_p.h"
 
 //! \cond INTERNAL
-
 //! \addtogroup blend2d_internal
 //! \{
 
-//! Additional composition operators used internally.
-enum BLCompOpInternal : uint32_t {
-  //! Invert destination alpha (alpha formats only).
-  BL_COMP_OP_INTERNAL_ALPHA_INV = BL_COMP_OP_MAX_VALUE + 1,
-  //! Count of all composition operators including internal ones..
-  BL_COMP_OP_INTERNAL_COUNT
+namespace bl {
+
+//! Composition operator that extends \ref BLCompOp, used internally.
+enum class CompOpExt : uint32_t {
+  kSrcOver     = BL_COMP_OP_SRC_OVER,
+  kSrcCopy     = BL_COMP_OP_SRC_COPY,
+  kSrcIn       = BL_COMP_OP_SRC_IN,
+  kSrcOut      = BL_COMP_OP_SRC_OUT,
+  kSrcAtop     = BL_COMP_OP_SRC_ATOP,
+  kDstOver     = BL_COMP_OP_DST_OVER,
+  kDstCopy     = BL_COMP_OP_DST_COPY,
+  kDstIn       = BL_COMP_OP_DST_IN,
+  kDstOut      = BL_COMP_OP_DST_OUT,
+  kDstAtop     = BL_COMP_OP_DST_ATOP,
+  kXor         = BL_COMP_OP_XOR,
+  kClear       = BL_COMP_OP_CLEAR,
+  kPlus        = BL_COMP_OP_PLUS,
+  kMinus       = BL_COMP_OP_MINUS,
+  kModulate    = BL_COMP_OP_MODULATE,
+  kMultiply    = BL_COMP_OP_MULTIPLY,
+  kScreen      = BL_COMP_OP_SCREEN,
+  kOverlay     = BL_COMP_OP_OVERLAY,
+  kDarken      = BL_COMP_OP_DARKEN,
+  kLighten     = BL_COMP_OP_LIGHTEN,
+  kColorDodge  = BL_COMP_OP_COLOR_DODGE,
+  kColorBurn   = BL_COMP_OP_COLOR_BURN,
+  kLinearBurn  = BL_COMP_OP_LINEAR_BURN,
+  kLinearLight = BL_COMP_OP_LINEAR_LIGHT,
+  kPinLight    = BL_COMP_OP_PIN_LIGHT,
+  kHardLight   = BL_COMP_OP_HARD_LIGHT,
+  kSoftLight   = BL_COMP_OP_SOFT_LIGHT,
+  kDifference  = BL_COMP_OP_DIFFERENCE,
+  kExclusion   = BL_COMP_OP_EXCLUSION,
+
+  kAlphaInv    = BL_COMP_OP_MAX_VALUE + 1,
+
+  kMaxValue    = kAlphaInv
 };
 
-//! Simplification of a composition operator that leads to SOLID fill instead.
-enum class BLCompOpSolidId : uint32_t {
-  //! Source pixels are used.
-  //!
-  //! \note This value must be zero as it's usually combined with rendering context flags and then used for decision
-  //! making about the whole command.
-  kNone = 0,
-  //! Source pixels are always treated as transparent zero (all 0).
-  kTransparent = 1,
-  //! Source pixels are always treated as opaque black (R|G|B=0 A=1).
-  kOpaqueBlack = 2,
-  //! Source pixels are always treated as opaque white (R|G|B=1 A=1).
-  kOpaqueWhite = 3,
+static constexpr uint32_t kCompOpExtCount = uint32_t(CompOpExt::kMaxValue) + 1u;
 
-  //! Source pixels are always treated as transparent zero (all 0) and this composition operator is also a NOP.
-  kAlwaysNop = 4,
-
-  kMaxValue = 4
-};
-
-//! Composition operator flags that can be retrieved through BLCompOpInfo[] table.
-enum class BLCompOpFlags : uint32_t {
+//! Composition operator flags that can be retrieved through CompOpInfo[] table.
+enum class CompOpFlags : uint32_t {
   kNone = 0,
 
   //! TypeA operator - "D*(1-M) + Op(D, S)*M" == "Op(D, S * M)".
@@ -85,82 +93,31 @@ enum class BLCompOpFlags : uint32_t {
   //! Destination is changed only if `Sa != 1`.
   kNopIfSaEq1 = 0x00008000u
 };
-BL_DEFINE_ENUM_FLAGS(BLCompOpFlags)
+BL_DEFINE_ENUM_FLAGS(CompOpFlags)
 
-//! Information about a composition operator.
-struct BLCompOpInfo {
-  uint16_t _flags;
+//! Simplification of a composition operator that leads to SOLID fill instead.
+enum class CompOpSolidId : uint32_t {
+  //! Source pixels are used.
+  //!
+  //! \note This value must be zero as it's usually combined with rendering context flags and then used for decision
+  //! making about the whole command.
+  kNone = 0,
+  //! Source pixels are always treated as transparent zero (all 0).
+  kTransparent = 1,
+  //! Source pixels are always treated as opaque black (R|G|B=0 A=1).
+  kOpaqueBlack = 2,
+  //! Source pixels are always treated as opaque white (R|G|B=1 A=1).
+  kOpaqueWhite = 3,
 
-  BL_INLINE_NODEBUG BLCompOpFlags flags() const noexcept { return (BLCompOpFlags)_flags; }
+  //! Source pixels are always treated as transparent zero (all 0) and this composition operator is also a NOP.
+  kAlwaysNop = 4,
+
+  kMaxValue = 4
 };
 
-//! Provides flags for each composition operator.
-BL_HIDDEN extern const BLLookupTable<BLCompOpInfo, BL_COMP_OP_INTERNAL_COUNT> blCompOpInfo;
-
-//! Information that can be used to simplify a "Dst CompOp Src" into a simpler composition operator with a possible
-//! format conversion and arbitrary source to solid conversion. This is used by the rendering engine to simplify every
-//! composition operator before it considers which pipeline to use.
-//!
-//! There are two reasons for simplification - the first is performance and the second reason is about decreasing the
-//! number of possible pipeline signatures the rendering context may require. For example by using "SRC-COPY" operator
-//! instead of "CLEAR" operator the rendering engine basically eliminated a possible compilation of "CLEAR" operator
-//! that would perform exactly the same as "SRC-COPY".
-struct BLCompOpSimplifyInfo {
-  //! Alternative composition operator, destination format, source format, and solid-id information packed into 32 bits.
-  uint32_t data;
-
-  // Data shift specify where the value is stored in `data`.
-  enum DataShift : uint32_t {
-    kCompOpShift = BLIntOps::bitShiftOf(BLPipeline::Signature::kMaskCompOp),
-    kDstFmtShift = BLIntOps::bitShiftOf(BLPipeline::Signature::kMaskDstFormat),
-    kSrcFmtShift = BLIntOps::bitShiftOf(BLPipeline::Signature::kMaskSrcFormat),
-    kSolidIdShift = 16
-  };
-
-  //! Returns all bits that form the signature (CompOp, DstFormat SrcFormat).
-  BL_INLINE_NODEBUG constexpr uint32_t signatureBits() const noexcept { return data & 0xFFFFu; }
-  //! Returns `Signature` configured to have the same bits set as `signatureBits()`.
-  BL_INLINE_NODEBUG constexpr BLPipeline::Signature signature() const noexcept { return BLPipeline::Signature{signatureBits()}; }
-  //! Returns solid-id information regarding this simplification.
-  BL_INLINE_NODEBUG constexpr BLCompOpSolidId solidId() const noexcept { return (BLCompOpSolidId)(data >> kSolidIdShift); }
-
-  //! Returns `BLCompOpSimplifyInfo` from decomposed arguments.
-  static BL_INLINE_NODEBUG constexpr BLCompOpSimplifyInfo make(uint32_t compOp, BLInternalFormat d, BLInternalFormat s, BLCompOpSolidId solidId) noexcept {
-    return BLCompOpSimplifyInfo {
-      uint32_t((compOp << kCompOpShift) |
-               (uint32_t(d) << kDstFmtShift) |
-               (uint32_t(s) << kSrcFmtShift) |
-               (uint32_t(solidId) << kSolidIdShift))
-    };
-  }
-
-  //! Returns `BLCompOpSimplifyInfo` sentinel containing the only correct value of DST_COPY (NOP) operator. All other
-  //! variations of DST_COPY are invalid.
-  static BL_INLINE_NODEBUG constexpr BLCompOpSimplifyInfo dstCopy() noexcept {
-    return make(BL_COMP_OP_DST_COPY, BLInternalFormat::kNone, BLInternalFormat::kNone, BLCompOpSolidId::kAlwaysNop);
-  }
-};
-
-// Initially we have used a single table, however, some older compilers would reach template instantiation depth limit
-// (as the table is not small), so the implementation was changed to this instead to make sure this won't happen.
-enum : uint32_t {
-  BL_COMP_OP_SIMPLIFY_RECORD_SIZE = uint32_t(BL_COMP_OP_INTERNAL_COUNT) * (uint32_t(BLInternalFormat::kMaxReserved) + 1)
-};
-typedef BLLookupTable<BLCompOpSimplifyInfo, BL_COMP_OP_SIMPLIFY_RECORD_SIZE> BLCompOpSimplifyInfoRecordSet;
-
-struct BLCompOpSimplifyInfoTable { BLCompOpSimplifyInfoRecordSet data[BL_FORMAT_MAX_VALUE + 1u]; };
-BL_HIDDEN extern const BLCompOpSimplifyInfoTable blCompOpSimplifyInfoTable;
-
-static BL_INLINE const BLCompOpSimplifyInfo* blCompOpSimplifyInfoArrayOf(uint32_t compOp, BLInternalFormat dstFormat) noexcept {
-  return &blCompOpSimplifyInfoTable.data[size_t(dstFormat)][size_t(compOp) * (size_t(BLInternalFormat::kMaxReserved) + 1)];
-}
-
-static BL_INLINE const BLCompOpSimplifyInfo& blCompOpSimplifyInfo(uint32_t compOp, BLInternalFormat dstFormat, BLInternalFormat srcFormat) noexcept {
-  return blCompOpSimplifyInfoArrayOf(compOp, dstFormat)[size_t(srcFormat)];
-}
+} // {bl}
 
 //! \}
-
 //! \endcond
 
 #endif // BLEND2D_COMPOP_P_H_INCLUDED

@@ -7,22 +7,24 @@
 #include "../support/arenaallocator_p.h"
 #include "../support/intops_p.h"
 
-// ArenaAllocator - API
-// ====================
+namespace bl {
 
-// Zero size block used by `BLArenaAllocator` that doesn't have any memory allocated.
+// bl::ArenaAllocator - API
+// ========================
+
+// Zero size block used by `ArenaAllocator` that doesn't have any memory allocated.
 // Should be allocated in read-only memory and should never be modified.
-const BLArenaAllocator::ZeroBlock BLArenaAllocator::_zeroBlock = { { 0 }, { nullptr, nullptr, 0 } };
+const ArenaAllocator::ZeroBlock ArenaAllocator::_zeroBlock = { { 0 }, { nullptr, nullptr, 0 } };
 
-void BLArenaAllocator::_init(size_t blockSize, size_t blockAlignment, void* staticData, size_t staticSize) noexcept {
+void ArenaAllocator::_init(size_t blockSize, size_t blockAlignment, void* staticData, size_t staticSize) noexcept {
   BL_ASSERT(blockSize >= kMinBlockSize);
   BL_ASSERT(blockSize <= kMaxBlockSize);
   BL_ASSERT(blockAlignment <= 64);
 
   _assignZeroBlock();
-  _blockSize = blockSize & BLIntOps::nonZeroLsbMask<size_t>(BLIntOps::bitSizeOf<size_t>() - 4);
+  _blockSize = blockSize & IntOps::nonZeroLsbMask<size_t>(IntOps::bitSizeOf<size_t>() - 4);
   _hasStaticBlock = staticData != nullptr;
-  _blockAlignmentShift = BLIntOps::ctz(blockAlignment) & 0x7;
+  _blockAlignmentShift = IntOps::ctz(blockAlignment) & 0x7;
 
   // Setup the first [temporary] block, if necessary.
   if (staticData) {
@@ -37,13 +39,13 @@ void BLArenaAllocator::_init(size_t blockSize, size_t blockAlignment, void* stat
   }
 }
 
-void BLArenaAllocator::reset() noexcept {
+void ArenaAllocator::reset() noexcept {
   // Can't be altered.
   Block* cur = _block;
   if (cur == &_zeroBlock.block)
     return;
 
-  Block* initial = const_cast<BLArenaAllocator::Block*>(&_zeroBlock.block);
+  Block* initial = const_cast<ArenaAllocator::Block*>(&_zeroBlock.block);
   _ptr = initial->data();
   _end = initial->data();
   _block = initial;
@@ -74,18 +76,18 @@ void BLArenaAllocator::reset() noexcept {
   }
 }
 
-void* BLArenaAllocator::_alloc(size_t size, size_t alignment) noexcept {
+void* ArenaAllocator::_alloc(size_t size, size_t alignment) noexcept {
   Block* curBlock = _block;
   Block* next = curBlock->next;
 
   size_t rawBlockAlignment = blockAlignment();
   size_t minimumAlignment = blMax<size_t>(alignment, rawBlockAlignment);
 
-  // If the `BLArenaAllocator` has been cleared the current block doesn't have to be the last one. Check if there is
+  // If the `ArenaAllocator` has been cleared the current block doesn't have to be the last one. Check if there is
   // a block that can be used instead of allocating a new one. If there is a `next` block it's completely unused,
   // we don't have to check for remaining bytes in that case.
   if (next) {
-    uint8_t* ptr = BLIntOps::alignUp(next->data(), minimumAlignment);
+    uint8_t* ptr = IntOps::alignUp(next->data(), minimumAlignment);
     uint8_t* end = next->data() + next->size;
 
     if (size <= (size_t)(end - ptr)) {
@@ -102,7 +104,7 @@ void* BLArenaAllocator::_alloc(size_t size, size_t alignment) noexcept {
     return nullptr;
 
   // Allocate new block - we add alignment overhead to `newSize`, which becomes the new block size, and we also add
-  // `kBlockOverhead` to the allocator as it includes members of `BLArenaAllocator::Block` structure.
+  // `kBlockOverhead` to the allocator as it includes members of `ArenaAllocator::Block` structure.
   newSize += kMaxAlignment;
   Block* newBlock = static_cast<Block*>(malloc(newSize + kBlockSize));
 
@@ -113,10 +115,10 @@ void* BLArenaAllocator::_alloc(size_t size, size_t alignment) noexcept {
   // the block, but we will never go beyond the end of the block on alignment allocation request.
   //
   // NOTE: There was a bug in the past regarding this, do not remove this code.
-  newSize = (size_t)(BLIntOps::alignDown(newBlock->data() + newSize, kMaxAlignment) - newBlock->data());
+  newSize = (size_t)(IntOps::alignDown(newBlock->data() + newSize, kMaxAlignment) - newBlock->data());
 
   // Align the pointer to `minimumAlignment` and adjust the size of this block accordingly. It's the same as using
-  // `minimumAlignment - BLIntOps::alignUpDiff()`, just written differently.
+  // `minimumAlignment - IntOps::alignUpDiff()`, just written differently.
   newBlock->prev = nullptr;
   newBlock->next = nullptr;
   newBlock->size = newSize;
@@ -133,7 +135,7 @@ void* BLArenaAllocator::_alloc(size_t size, size_t alignment) noexcept {
     }
   }
 
-  uint8_t* ptr = BLIntOps::alignUp(newBlock->data(), minimumAlignment);
+  uint8_t* ptr = IntOps::alignUp(newBlock->data(), minimumAlignment);
   uint8_t* end = newBlock->data() + newSize;
 
   _ptr = ptr + size;
@@ -144,9 +146,11 @@ void* BLArenaAllocator::_alloc(size_t size, size_t alignment) noexcept {
   return static_cast<void*>(ptr);
 }
 
-void* BLArenaAllocator::allocZeroed(size_t size, size_t alignment) noexcept {
+void* ArenaAllocator::allocZeroed(size_t size, size_t alignment) noexcept {
   void* p = alloc(size, alignment);
   if (BL_UNLIKELY(!p))
     return p;
   return memset(p, 0, size);
 }
+
+} // {bl}

@@ -11,11 +11,13 @@
 #include "../support/intops_p.h"
 #include "../support/memops_p.h"
 
-// ============================================================================
-// [BLPngOps [InverseFilter@SSE2]]
-// ============================================================================
+namespace bl {
+namespace Png {
 
-BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl, uint32_t h) noexcept {
+// bl::Png::Opts - InverseFilter - SSE2
+// ====================================
+
+BLResult BL_CDECL inverseFilterImpl_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl, uint32_t h) noexcept {
   using namespace SIMD;
 
   BL_ASSERT(bpp > 0);
@@ -33,7 +35,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
   uint32_t filterType = *p++;
   if (BL_UNLIKELY(filterType >= BL_PNG_FILTER_TYPE_COUNT))
     return blTraceError(BL_ERROR_INVALID_DATA);
-  filterType = blPngFirstRowFilterReplacement(filterType);
+  filterType = simplifyFilterOfFirstRow(filterType);
 
   #define BL_PNG_PAETH(DST, A, B, C)                                           \
     do {                                                                       \
@@ -115,9 +117,9 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
         if (i >= 32) {
           // Align to 16-BYTE boundary.
-          uint32_t j = uint32_t(BLIntOps::alignUpDiff(uintptr_t(p + bpp), 16));
+          uint32_t j = uint32_t(IntOps::alignUpDiff(uintptr_t(p + bpp), 16));
           for (i -= j; j != 0; j--, p++)
-            p[bpp] = blPngSumFilter(p[bpp], p[0]);
+            p[bpp] = applySumFilter(p[bpp], p[0]);
 
           if (bpp == 1) {
             Vec16xU8 p0, p1, p2, p3;
@@ -184,7 +186,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             Vec16xU8 t0, t2;
 
             // Process 64 BYTEs at a time.
-            p0 = cast_from_u32<Vec16xU8>(BLMemOps::readU16a(p));
+            p0 = cast_from_u32<Vec16xU8>(MemOps::readU16a(p));
             while (i >= 64) {
               p0 = add_i8(p0, loada<Vec16xU8>(p + 2));
               p1 = loada<Vec16xU8>(p + 18);
@@ -240,7 +242,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             Vec16xU8 ext3b = make128_u32<Vec16xU8>(0x01000001u);
 
             // Process 64 BYTEs at a time.
-            p0 = cast_from_u32<Vec16xU8>(BLMemOps::readU32u(p) & 0x00FFFFFFu);
+            p0 = cast_from_u32<Vec16xU8>(MemOps::readU32u(p) & 0x00FFFFFFu);
             while (i >= 64) {
               p0 = add_i8(p0, loada<Vec16xU8>(p + 3));
               p1 = loada<Vec16xU8>(p + 19);
@@ -303,7 +305,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             Vec16xU8 t0, t1, t2;
 
             // Process 64 BYTEs at a time.
-            p0 = cast_from_u32<Vec16xU8>(BLMemOps::readU32a(p));
+            p0 = cast_from_u32<Vec16xU8>(MemOps::readU32a(p));
             while (i >= 64) {
               p0 = add_i8(p0, loada<Vec16xU8>(p + 4));
               p1 = loada<Vec16xU8>(p + 20);
@@ -461,7 +463,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
         }
 
         for (; i != 0; i--, p++)
-          p[bpp] = blPngSumFilter(p[bpp], p[0]);
+          p[bpp] = applySumFilter(p[bpp], p[0]);
 
         p += bpp;
         break;
@@ -488,9 +490,9 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
         if (i >= 24) {
           // Align to 16-BYTE boundary.
-          uint32_t j = uint32_t(BLIntOps::alignUpDiff(uintptr_t(p), 16));
+          uint32_t j = uint32_t(IntOps::alignUpDiff(uintptr_t(p), 16));
           for (i -= j; j != 0; j--, p++, u++)
-            p[0] = blPngSumFilter(p[0], u[0]);
+            p[0] = applySumFilter(p[0], u[0]);
 
           // Process 64 BYTEs at a time.
           while (i >= 64) {
@@ -528,7 +530,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
         }
 
         for (; i != 0; i--, p++, u++)
-          p[0] = blPngSumFilter(p[0], u[0]);
+          p[0] = applySumFilter(p[0], u[0]);
         break;
       }
 
@@ -554,18 +556,18 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
       //     Y5' = ...
       case BL_PNG_FILTER_TYPE_AVG: {
         for (i = 0; i < bpp; i++)
-          p[i] = blPngSumFilter(p[i], u[i] >> 1);
+          p[i] = applySumFilter(p[i], u[i] >> 1);
 
         i = bpl - bpp;
         u += bpp;
 
         if (i >= 32) {
           // Align to 16-BYTE boundary.
-          uint32_t j = uint32_t(BLIntOps::alignUpDiff(uintptr_t(p + bpp), 16));
+          uint32_t j = uint32_t(IntOps::alignUpDiff(uintptr_t(p + bpp), 16));
           Vec16xU8 zero = make_zero<Vec16xU8>();
 
           for (i -= j; j != 0; j--, p++, u++)
-            p[bpp] = blPngSumFilter(p[bpp], blPngAvgFilter(p[0], u[0]));
+            p[bpp] = applySumFilter(p[bpp], applyAvgFilter(p[0], u[0]));
 
           if (bpp == 1) {
             // This is one of the most difficult AVG filters. 1-BPP has a huge sequential dependency, which is
@@ -783,7 +785,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
         }
 
         for (; i != 0; i--, p++, u++)
-          p[bpp] = blPngSumFilter(p[bpp], blPngAvgFilter(p[0], u[0]));
+          p[bpp] = applySumFilter(p[bpp], applyAvgFilter(p[0], u[0]));
 
         p += bpp;
         break;
@@ -810,19 +812,19 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
         }
         else {
           for (i = 0; i < bpp; i++)
-            p[i] = blPngSumFilter(p[i], u[i]);
+            p[i] = applySumFilter(p[i], u[i]);
 
           i = bpl - bpp;
 
           if (i >= 32) {
             // Align to 16-BYTE boundary.
-            uint32_t j = uint32_t(BLIntOps::alignUpDiff(uintptr_t(p + bpp), 16));
+            uint32_t j = uint32_t(IntOps::alignUpDiff(uintptr_t(p + bpp), 16));
 
             Vec16xU8 zero = make_zero<Vec16xU8>();
             Vec16xU8 rcp3 = make128_u16<Vec16xU8>(0xABu << 7);
 
             for (i -= j; j != 0; j--, p++, u++)
-              p[bpp] = blPngSumFilter(p[bpp], blPngPaethFilter(p[0], u[bpp], u[0]));
+              p[bpp] = applySumFilter(p[bpp], blPngPaethFilter(p[0], u[bpp], u[0]));
 
             // TODO: [PNG] Not complete.
             /*
@@ -830,8 +832,8 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
             }
             */
             if (bpp == 3) {
-              Vec16xU8 pz = interleave_lo_u8(cast_from_u32<Vec16xU8>(BLMemOps::readU32u(p) & 0x00FFFFFFu), zero);
-              Vec16xU8 uz = interleave_lo_u8(cast_from_u32<Vec16xU8>(BLMemOps::readU32u(u) & 0x00FFFFFFu), zero);
+              Vec16xU8 pz = interleave_lo_u8(cast_from_u32<Vec16xU8>(MemOps::readU32u(p) & 0x00FFFFFFu), zero);
+              Vec16xU8 uz = interleave_lo_u8(cast_from_u32<Vec16xU8>(MemOps::readU32u(u) & 0x00FFFFFFu), zero);
               Vec16xU8 mask = make128_u32<Vec16xU8>(0u, 0u, 0x0000FFFFu, 0xFFFFFFFFu);
 
               // Process 8 BYTEs at a time.
@@ -1008,7 +1010,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
           }
 
           for (; i != 0; i--, p++, u++)
-            p[bpp] = blPngSumFilter(p[bpp], blPngPaethFilter(p[0], u[bpp], u[0]));
+            p[bpp] = applySumFilter(p[bpp], blPngPaethFilter(p[0], u[bpp], u[0]));
 
           p += bpp;
         }
@@ -1017,7 +1019,7 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
       case BL_PNG_FILTER_TYPE_AVG0: {
         for (i = bpl - bpp; i != 0; i--, p++)
-          p[bpp] = blPngSumFilter(p[bpp], p[0] >> 1);
+          p[bpp] = applySumFilter(p[bpp], p[0] >> 1);
 
         p += bpp;
         break;
@@ -1040,5 +1042,8 @@ BLResult BL_CDECL blPngInverseFilter_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl
 
   return BL_SUCCESS;
 }
+
+} // {Png}
+} // {bl}
 
 #endif

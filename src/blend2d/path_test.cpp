@@ -9,8 +9,11 @@
 #include "object_p.h"
 #include "path_p.h"
 
-// BLPath - Tests
-// ==============
+// bl::Path - Tests
+// ================
+
+namespace bl {
+namespace Tests {
 
 UNIT(path_allocation_strategy, BL_TEST_GROUP_GEOMETRY_CONTAINERS) {
   BLPath p;
@@ -24,12 +27,15 @@ UNIT(path_allocation_strategy, BL_TEST_GROUP_GEOMETRY_CONTAINERS) {
       p.moveTo(double(i), double(i));
 
     if (capacity != p.capacity()) {
-      size_t implSize = BLPathPrivate::implSizeFromCapacity(p.capacity()).value();
+      size_t implSize = PathInternal::implSizeFromCapacity(p.capacity()).value();
       INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, p.capacity(), implSize);
 
       capacity = p.capacity();
     }
   }
 }
+
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

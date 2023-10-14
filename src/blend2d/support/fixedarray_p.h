@@ -13,9 +13,11 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! A fixed array that cannot grow beyond `N`.
 template<typename T, size_t N>
-class BLFixedArray {
+class FixedArray {
 public:
   //! \name Constants
   //! \{
@@ -35,17 +37,17 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLFixedArray() noexcept
+  BL_INLINE FixedArray() noexcept
     : _size(0) {}
 
-  BL_INLINE BLFixedArray(const BLFixedArray& other) noexcept { assign(other.data(), other.size()); }
+  BL_INLINE FixedArray(const FixedArray& other) noexcept { assign(other.data(), other.size()); }
 
   //! \}
 
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE BLFixedArray& operator=(const BLFixedArray& other) noexcept {
+  BL_INLINE FixedArray& operator=(const FixedArray& other) noexcept {
     assign(other.data(), other.size());
     return *this;
   }
@@ -88,7 +90,7 @@ public:
   BL_INLINE void assign(const T* data, size_t size) noexcept {
     BL_ASSERT(_size < _size);
 
-    BLMemOps::copyForwardInlineT(_data, data, size);
+    MemOps::copyForwardInlineT(_data, data, size);
     _size = size;
   }
 
@@ -110,7 +112,7 @@ public:
   BL_INLINE void prepend(const T& item) noexcept {
     BL_ASSERT(_size != kCapacity);
 
-    BLMemOps::copyBackwardInlineT(_data + 1, _data, _size);
+    MemOps::copyBackwardInlineT(_data + 1, _data, _size);
     _data[0] = item;
     _size++;
   }
@@ -119,7 +121,7 @@ public:
     BL_ASSERT(index <= _size);
     BL_ASSERT(_size != kCapacity);
 
-    BLMemOps::copyBackwardInlineT(_data + index + 1, _data + index, (_size - index));
+    MemOps::copyBackwardInlineT(_data + index + 1, _data + index, (_size - index));
     _data[index] = item;
     _size++;
   }
@@ -149,6 +151,8 @@ public:
 
   //! \}
 };
+
+} // {bl}
 
 //! \}
 //! \endcond

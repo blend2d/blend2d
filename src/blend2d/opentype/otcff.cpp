@@ -18,11 +18,12 @@
 #include "../support/scopedbuffer_p.h"
 #include "../support/traits_p.h"
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 namespace CFFImpl {
 
-// BLOpenType::CFFImpl - Tracing
-// =============================
+// bl::OpenType::CFFImpl - Tracing
+// ===============================
 
 #if defined(BL_TRACE_OT_ALL) && !defined(BL_TRACE_OT_CFF)
   #define BL_TRACE_OT_CFF
@@ -34,8 +35,8 @@ namespace CFFImpl {
   #define Trace BLDummyTrace
 #endif
 
-// BLOpenType::CFFImpl - Utilities
-// ===============================
+// bl::OpenType::CFFImpl - Utilities
+// =================================
 
 // Specified by "CFF - Local/Global Subrs INDEXes"
 static BL_INLINE uint16_t calcSubRBias(uint32_t subrCount) noexcept {
@@ -124,11 +125,11 @@ BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size
       if (digits < kSafeDigits) {
         value = value * 10.0 + double(int(nib));
         digits += uint32_t(value != 0.0);
-        if (BLIntOps::bitTest(flags, kDecimalPoint))
+        if (IntOps::bitTest(flags, kDecimalPoint))
           scale--;
       }
       else {
-        if (!BLIntOps::bitTest(flags, kDecimalPoint))
+        if (!IntOps::bitTest(flags, kDecimalPoint))
           scale++;
       }
       flags |= msk;
@@ -186,18 +187,18 @@ BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size
     return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
   if (scale) {
-    double s = blPow(10.0, blAbs(double(scale)));
+    double s = Math::pow(10.0, blAbs(double(scale)));
     value = scale > 0 ? value * s : value / s;
   }
 
-  valueOut = BLIntOps::bitTest(flags, kMinusSign) ? -value : value;
+  valueOut = IntOps::bitTest(flags, kMinusSign) ? -value : value;
   valueSizeInBytes = (size_t)(p - pStart);
 
   return BL_SUCCESS;
 }
 
-// BLOpenType::CFFImpl - Index
-// ===========================
+// bl::OpenType::CFFImpl - Index
+// =============================
 
 struct Index {
   uint32_t count;
@@ -215,8 +216,8 @@ struct Index {
   }
 };
 
-// BLOpenType::CFFImpl - ReadIndex
-// ===============================
+// bl::OpenType::CFFImpl - ReadIndex
+// =================================
 
 static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion, Index* indexOut) noexcept {
   uint32_t count = 0;
@@ -226,14 +227,14 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
     if (BL_UNLIKELY(dataSize < 2))
       return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-    count = BLMemOps::readU16uBE(data);
+    count = MemOps::readU16uBE(data);
     headerSize = 2;
   }
   else {
     if (BL_UNLIKELY(dataSize < 4))
       return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-    count = BLMemOps::readU32uBE(data);
+    count = MemOps::readU32uBE(data);
     headerSize = 4;
   }
 
@@ -248,14 +249,14 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
   if (BL_UNLIKELY(dataSize < headerSize))
     return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-  uint32_t offsetSize = BLMemOps::readU8(BLPtrOps::offset<const uint8_t>(data, headerSize - 1));
+  uint32_t offsetSize = MemOps::readU8(PtrOps::offset<const uint8_t>(data, headerSize - 1));
   uint32_t offsetArraySize = (count + 1) * offsetSize;
   uint32_t indexSizeIncludingOffsets = headerSize + offsetArraySize;
 
   if (BL_UNLIKELY(offsetSize < 1 || offsetSize > 4 || indexSizeIncludingOffsets > dataSize))
     return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-  const uint8_t* offsetArray = BLPtrOps::offset<const uint8_t>(data, headerSize);
+  const uint8_t* offsetArray = PtrOps::offset<const uint8_t>(data, headerSize);
   uint32_t offset = readOffset(offsetArray, offsetSize);
 
   // The first offset should be 1.
@@ -268,12 +269,12 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
   //
   // Please note the use of `kOffsetAdjustment`. Since all offsets are relative to "RELATIVE TO THE BYTE THAT
   // PRECEDES THE OBJECT DATA" we must account that.
-  uint32_t maxOffset = uint32_t(blMin<size_t>(BLTraits::maxValue<uint32_t>(), dataSize - indexSizeIncludingOffsets + CFFTable::kOffsetAdjustment));
+  uint32_t maxOffset = uint32_t(blMin<size_t>(Traits::maxValue<uint32_t>(), dataSize - indexSizeIncludingOffsets + CFFTable::kOffsetAdjustment));
 
   switch (offsetSize) {
     case 1: {
       for (uint32_t i = 1; i <= count; i++) {
-        uint32_t next = BLMemOps::readU8(offsetArray + i);
+        uint32_t next = MemOps::readU8(offsetArray + i);
         if (BL_UNLIKELY(next < offset || next > maxOffset))
           return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
@@ -283,7 +284,7 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
 
     case 2:
       for (uint32_t i = 1; i <= count; i++) {
-        uint32_t next = BLMemOps::readU16uBE(offsetArray + i * 2u);
+        uint32_t next = MemOps::readU16uBE(offsetArray + i * 2u);
         if (BL_UNLIKELY(next < offset || next > maxOffset))
           return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
@@ -292,7 +293,7 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
 
     case 3:
       for (uint32_t i = 1; i <= count; i++) {
-        uint32_t next = BLMemOps::readU24uBE(offsetArray + i * 3u);
+        uint32_t next = MemOps::readU24uBE(offsetArray + i * 3u);
         if (BL_UNLIKELY(next < offset || next > maxOffset))
           return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
@@ -301,7 +302,7 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
 
     case 4:
       for (uint32_t i = 1; i <= count; i++) {
-        uint32_t next = BLMemOps::readU32uBE(offsetArray + i * 4u);
+        uint32_t next = MemOps::readU32uBE(offsetArray + i * 4u);
         if (BL_UNLIKELY(next < offset || next > maxOffset))
           return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
         offset = next;
@@ -324,8 +325,8 @@ static BLResult readIndex(const void* data, size_t dataSize, uint32_t cffVersion
   return BL_SUCCESS;
 }
 
-// BLOpenType::CFFImpl - DictIterator
-// ==================================
+// bl::OpenType::CFFImpl - DictIterator
+// ====================================
 
 BLResult DictIterator::next(DictEntry& entry) noexcept {
   BL_ASSERT(hasNext());
@@ -375,13 +376,13 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
           _dataPtr += 2;
           if (BL_UNLIKELY(_dataPtr > _dataEnd))
             return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
-          vInt = BLMemOps::readI16uBE(_dataPtr - 2);
+          vInt = MemOps::readI16uBE(_dataPtr - 2);
         }
         else if (b0 == 29) {
           _dataPtr += 4;
           if (BL_UNLIKELY(_dataPtr > _dataEnd))
             return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
-          vInt = BLMemOps::readI32uBE(_dataPtr - 4);
+          vInt = MemOps::readI32uBE(_dataPtr - 4);
         }
         else {
           // Byte values 22..27, 31, and 255 are reserved.
@@ -409,8 +410,8 @@ BLResult DictIterator::next(DictEntry& entry) noexcept {
   return BL_SUCCESS;
 }
 
-// BLOpenType::CFFImpl - Constants
-// ===============================
+// bl::OpenType::CFFImpl - Constants
+// =================================
 
 // ADOBE uses a limit of 20 million instructions in their AVALON rasterizer, but it's not clear that it's because of
 // font complexity or their PostScript support.
@@ -526,8 +527,8 @@ enum CSOpCode : uint32_t {
   kCSOpGet        = 0x0C15  // CFFv1:    I get (12 21) out
 };
 
-// BLOpenType::CFFImpl - ExecutionFeaturesInfo
-// ===========================================
+// bl::OpenType::CFFImpl - ExecutionFeaturesInfo
+// =============================================
 
 //! Describes features that can be used during execution and their requirements.
 //!
@@ -546,9 +547,9 @@ struct ExecutionFeaturesInfo {
   static constexpr const uint16_t kUnknown = 0xFFFFu;
 
   //! Stack size required to process a base operator.
-  BLLookupTable<uint16_t, kBaseOpCount> baseOpStackSize;
+  LookupTable<uint16_t, kBaseOpCount> baseOpStackSize;
   //! Stack size required to process an escaped operator.
-  BLLookupTable<uint16_t, kEscapedOpCount> escapedOpStackSize;
+  LookupTable<uint16_t, kEscapedOpCount> escapedOpStackSize;
 };
 
 template<uint32_t Escape, uint32_t V>
@@ -619,19 +620,19 @@ struct ExecutionFeaturesInfoOpStackSizeGen {
 static constexpr const ExecutionFeaturesInfo executionFeaturesInfo[2] = {
   // CFFv1 [Index #0]
   {
-    blMakeLookupTable<uint16_t, ExecutionFeaturesInfo::kBaseOpCount   , ExecutionFeaturesInfoOpStackSizeGen<0x0000, 1>>(),
-    blMakeLookupTable<uint16_t, ExecutionFeaturesInfo::kEscapedOpCount, ExecutionFeaturesInfoOpStackSizeGen<0x0C00, 1>>()
+    makeLookupTable<uint16_t, ExecutionFeaturesInfo::kBaseOpCount   , ExecutionFeaturesInfoOpStackSizeGen<0x0000, 1>>(),
+    makeLookupTable<uint16_t, ExecutionFeaturesInfo::kEscapedOpCount, ExecutionFeaturesInfoOpStackSizeGen<0x0C00, 1>>()
   },
 
   // CFFv2 [Index #1]
   {
-    blMakeLookupTable<uint16_t, ExecutionFeaturesInfo::kBaseOpCount   , ExecutionFeaturesInfoOpStackSizeGen<0x0000, 2>>(),
-    blMakeLookupTable<uint16_t, ExecutionFeaturesInfo::kEscapedOpCount, ExecutionFeaturesInfoOpStackSizeGen<0x0C00, 2>>()
+    makeLookupTable<uint16_t, ExecutionFeaturesInfo::kBaseOpCount   , ExecutionFeaturesInfoOpStackSizeGen<0x0000, 2>>(),
+    makeLookupTable<uint16_t, ExecutionFeaturesInfo::kEscapedOpCount, ExecutionFeaturesInfoOpStackSizeGen<0x0C00, 2>>()
   }
 };
 
-// BLOpenType::CFFImpl - ExecutionState
-// ====================================
+// bl::OpenType::CFFImpl - ExecutionState
+// ======================================
 
 //! Execution state is used in a call-stack array to remember from where a subroutine was called. When a subroutine
 //! reaches the end of a "Return" opcode it would pop the state from call-stack and return the execution after the
@@ -646,8 +647,8 @@ struct ExecutionState {
   const uint8_t* _end;
 };
 
-// BLOpenType::CFFImpl - Matrix2x2
-// ===============================
+// bl::OpenType::CFFImpl - Matrix2x2
+// =================================
 
 struct Matrix2x2 {
   BL_INLINE double xByA(double x, double y) const noexcept { return x * m00 + y * m10; }
@@ -663,8 +664,8 @@ struct Matrix2x2 {
   double m10, m11;
 };
 
-// BLOpenType::CFFImpl - Trace
-// ===========================
+// bl::OpenType::CFFImpl - Trace
+// =============================
 
 #ifdef BL_TRACE_OT_CFF
 static void traceCharStringOp(const OTFaceImpl* faceI, Trace& trace, uint32_t op, const double* values, size_t count) noexcept {
@@ -759,8 +760,8 @@ static void traceCharStringOp(const OTFaceImpl* faceI, Trace& trace, uint32_t op
 }
 #endif
 
-// BLOpenType::CFFImpl - Interpreter
-// =================================
+// bl::OpenType::CFFImpl - Interpreter
+// ===================================
 
 static BL_INLINE bool findGlyphInRange3(BLGlyphId glyphId, const uint8_t* ranges, size_t nRanges, uint32_t& fd) noexcept {
   constexpr size_t kRangeSize = 3;
@@ -768,7 +769,7 @@ static BL_INLINE bool findGlyphInRange3(BLGlyphId glyphId, const uint8_t* ranges
     const uint8_t* half = ranges + (i >> 1) * kRangeSize;
 
     // Read either the next Range3[] record or sentinel.
-    uint32_t gEnd = BLMemOps::readU16uBE(half + kRangeSize);
+    uint32_t gEnd = MemOps::readU16uBE(half + kRangeSize);
 
     if (glyphId >= gEnd) {
       ranges = half + kRangeSize;
@@ -776,7 +777,7 @@ static BL_INLINE bool findGlyphInRange3(BLGlyphId glyphId, const uint8_t* ranges
       continue;
     }
 
-    uint32_t gStart = BLMemOps::readU16uBE(half);
+    uint32_t gStart = MemOps::readU16uBE(half);
     if (glyphId < gStart)
       continue;
 
@@ -793,14 +794,14 @@ static BLResult getGlyphOutlinesT(
   BLGlyphId glyphId,
   const BLMatrix2D* transform,
   Consumer& consumer,
-  BLScopedBuffer* tmpBuffer) noexcept {
+  ScopedBuffer* tmpBuffer) noexcept {
 
   blUnused(tmpBuffer);
   const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
 
   // Will only do something if tracing is enabled.
   Trace trace;
-  trace.info("BLOpenType::CFFImpl::DecodeGlyph #%u\n", glyphId);
+  trace.info("bl::OpenType::CFFImpl::DecodeGlyph #%u\n", glyphId);
   trace.indent();
 
   // --------------------------------------------------------------------------
@@ -876,7 +877,7 @@ static BLResult getGlyphOutlinesT(
       //   } ranges[nRanges];
       //   UInt16 sentinel;
       if (fdDataSize >= 2) {
-        uint32_t nRanges = BLMemOps::readU16uBE(fdData);
+        uint32_t nRanges = MemOps::readU16uBE(fdData);
         if (fdDataSize >= 2u + nRanges * 3u + 2u)
           findGlyphInRange3(glyphId, fdData + 2u, nRanges, fd);
       }
@@ -996,7 +997,7 @@ OnSubRCall:
             if (BL_UNLIKELY(ip > ipEnd))
               goto InvalidData;
 
-            int v = BLMemOps::readI32uBE(ip - 4);
+            int v = MemOps::readI32uBE(ip - 4);
             vBuf[vIdx - 1] = double(v) * kCFFDoubleFromF16x16;
           }
           continue;
@@ -1040,7 +1041,7 @@ OnOperator:
           if (BL_UNLIKELY(ip > ipEnd || ++vIdx > kCFFValueStackSizeV1))
             goto InvalidData;
 
-          int v = BLMemOps::readI16uBE(ip - 2);
+          int v = MemOps::readI16uBE(ip - 2);
           vBuf[vIdx - 1] = double(v);
           continue;
         }
@@ -1650,7 +1651,7 @@ OnReturn:
             // in sqrt (12 26) out {sqrt(in)}
             case kCSOpSqrt & 0xFFu: {
               BL_ASSERT(vMinOperands >= 1);
-              vBuf[vIdx - 1] = blSqrt(blMax(vBuf[vIdx - 1], 0.0));
+              vBuf[vIdx - 1] = Math::sqrt(blMax(vBuf[vIdx - 1], 0.0));
               continue;
             }
 
@@ -1658,7 +1659,7 @@ OnReturn:
             case kCSOpAdd & 0xFFu: {
               BL_ASSERT(vMinOperands >= 2);
               double result = vBuf[vIdx - 2] + vBuf[vIdx - 1];
-              vBuf[vIdx - 2] = blIsFinite(result) ? result : 0.0;
+              vBuf[vIdx - 2] = Math::isFinite(result) ? result : 0.0;
               vIdx--;
               continue;
             }
@@ -1667,7 +1668,7 @@ OnReturn:
             case kCSOpSub & 0xFFu: {
               BL_ASSERT(vMinOperands >= 2);
               double result = vBuf[vIdx - 2] - vBuf[vIdx - 1];
-              vBuf[vIdx - 2] = blIsFinite(result) ? result : 0.0;
+              vBuf[vIdx - 2] = Math::isFinite(result) ? result : 0.0;
               vIdx--;
               continue;
             }
@@ -1676,7 +1677,7 @@ OnReturn:
             case kCSOpMul & 0xFFu: {
               BL_ASSERT(vMinOperands >= 2);
               double result = vBuf[vIdx - 2] * vBuf[vIdx - 1];
-              vBuf[vIdx - 2] = blIsFinite(result) ? result : 0.0;
+              vBuf[vIdx - 2] = Math::isFinite(result) ? result : 0.0;
               vIdx--;
               continue;
             }
@@ -1685,7 +1686,7 @@ OnReturn:
             case kCSOpDiv & 0xFFu: {
               BL_ASSERT(vMinOperands >= 2);
               double result = vBuf[vIdx - 2] / vBuf[vIdx - 1];
-              vBuf[vIdx - 2] = blIsFinite(result) ? result : 0.0;
+              vBuf[vIdx - 2] = Math::isFinite(result) ? result : 0.0;
               vIdx--;
               continue;
             }
@@ -1763,7 +1764,7 @@ OnReturn:
               // to the right and not in both directions. This is easy as the
               // shift is always bound to [0, count) regardless of the direction.
               if (int(shift) < 0)
-                shift = BLIntOps::negate(BLIntOps::negate(shift) % count) + count;
+                shift = IntOps::negate(IntOps::negate(shift) % count) + count;
               else
                 shift %= count;
 
@@ -1771,7 +1772,7 @@ OnReturn:
                 continue;
 
               double last = 0;
-              uint32_t curIdx = BLIntOps::negate(uint32_t(1));
+              uint32_t curIdx = IntOps::negate(uint32_t(1));
               uint32_t baseIdx = curIdx;
 
               for (uint32_t i = 0; i < count; i++) {
@@ -1795,7 +1796,7 @@ OnReturn:
               unsigned int sIdx = unsigned(int(vBuf[vIdx - 1]));
               if (sIdx < kCFFStorageSize) {
                 sBuf[sIdx] = vBuf[vIdx - 2];
-                sMsk |= BLIntOps::lsbBitAt<uint32_t>(sIdx);
+                sMsk |= IntOps::lsbBitAt<uint32_t>(sIdx);
               }
 
               vIdx -= 2;
@@ -1809,7 +1810,7 @@ OnReturn:
               // When `sIdx == kCFFStorageSize` it points to `0.0` (the only value guaranteed to be set).
               // Otherwise we check the bit in `sMsk` and won't allow to get an uninitialized value that
               // was not stored at `sIdx` before (for security reasons).
-              if (sIdx >= kCFFStorageSize || !BLIntOps::bitTest(sMsk, sIdx))
+              if (sIdx >= kCFFStorageSize || !IntOps::bitTest(sMsk, sIdx))
                 sIdx = kCFFStorageSize;
 
               vBuf[vIdx - 1] = sBuf[sIdx];
@@ -1851,8 +1852,8 @@ InvalidData:
   return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 }
 
-// BLOpenType::CFFImpl - GetGlyphBounds
-// ====================================
+// bl::OpenType::CFFImpl - GetGlyphBounds
+// ======================================
 
 namespace {
 
@@ -1866,7 +1867,7 @@ public:
 
   BL_INLINE BLResult begin(size_t n) noexcept {
     blUnused(n);
-    bounds.reset(BLTraits::maxValue<double>(), BLTraits::maxValue<double>(), BLTraits::minValue<double>(), BLTraits::minValue<double>());
+    bounds.reset(Traits::maxValue<double>(), Traits::maxValue<double>(), Traits::minValue<double>(), Traits::minValue<double>());
     cx = 0;
     cy = 0;
     return BL_SUCCESS;
@@ -1880,20 +1881,20 @@ public:
   }
 
   BL_INLINE void moveTo(double x0, double y0) noexcept {
-    BLGeometry::bound(bounds, BLPoint(x0, y0));
+    Geometry::bound(bounds, BLPoint(x0, y0));
     cx = x0;
     cy = y0;
   }
 
   BL_INLINE void lineTo(double x1, double y1) noexcept {
-    BLGeometry::bound(bounds, BLPoint(x1, y1));
+    Geometry::bound(bounds, BLPoint(x1, y1));
     cx = x1;
     cy = y1;
   }
 
   // Not used by CFF, provided for completness.
   BL_INLINE void quadTo(double x1, double y1, double x2, double y2) noexcept {
-    BLGeometry::bound(bounds, BLPoint(x2, y2));
+    Geometry::bound(bounds, BLPoint(x2, y2));
     if (!bounds.contains(x1, y1))
       mergeQuadExtrema(x1, y1, x2, y2);
     cx = x2;
@@ -1901,8 +1902,8 @@ public:
   }
 
   BL_INLINE void cubicTo(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
-    BLGeometry::bound(bounds, BLPoint(x3, y3));
-    if (!BLGeometry::subsumes(bounds, BLBox(blMin(x1, x2), blMin(y1, y2), blMax(x1, x2), blMax(y1, y2))))
+    Geometry::bound(bounds, BLPoint(x3, y3));
+    if (!Geometry::subsumes(bounds, BLBox(blMin(x1, x2), blMin(y1, y2), blMax(x1, x2), blMax(y1, y2))))
       mergeCubicExtrema(x1, y1, x2, y2, x3, y3);
     cx = x3;
     cy = y3;
@@ -1916,17 +1917,17 @@ public:
   // Making these two functions no-inline saves around 8kB.
   BL_NOINLINE void mergeQuadExtrema(double x1, double y1, double x2, double y2) noexcept {
     BLPoint quad[3] { { cx, cy }, { x1, y1 }, { x2, y2 } };
-    BLPoint extrema = BLGeometry::quadExtremaPoint(quad);
-    BLGeometry::bound(bounds, extrema);
+    BLPoint extrema = Geometry::quadExtremaPoint(quad);
+    Geometry::bound(bounds, extrema);
   }
 
   BL_NOINLINE void mergeCubicExtrema(double x1, double y1, double x2, double y2, double x3, double y3) noexcept {
     BLPoint cubic[4] { { cx, cy }, { x1, y1 }, { x2, y2 }, { x3, y3 } };
     BLPoint extrema[2];
 
-    BLGeometry::getCubicExtremaPoints(cubic, extrema);
-    BLGeometry::bound(bounds, extrema[0]);
-    BLGeometry::bound(bounds, extrema[1]);
+    Geometry::getCubicExtremaPoints(cubic, extrema);
+    Geometry::bound(bounds, extrema[0]);
+    Geometry::bound(bounds, extrema[1]);
   }
 };
 
@@ -1942,12 +1943,12 @@ static BLResult BL_CDECL getGlyphBounds(
   BLResult result = BL_SUCCESS;
   BLMatrix2D transform = BLMatrix2D::makeIdentity();
 
-  BLScopedBufferTmp<1024> tmpBuffer;
+  ScopedBufferTmp<1024> tmpBuffer;
   GlyphBoundsConsumer consumer;
 
   for (size_t i = 0; i < count; i++) {
     BLGlyphId glyphId = glyphData[0];
-    glyphData = BLPtrOps::offset(glyphData, glyphAdvance);
+    glyphData = PtrOps::offset(glyphData, glyphAdvance);
 
     BLResult localResult = getGlyphOutlinesT<GlyphBoundsConsumer>(faceI_, glyphId, &transform, consumer, &tmpBuffer);
     if (localResult) {
@@ -1957,18 +1958,23 @@ static BLResult BL_CDECL getGlyphBounds(
     }
     else {
       const BLBox& bounds = consumer.bounds;
-      if (bounds.x0 <= bounds.x1 && bounds.y0 <= bounds.y1)
-        boxes[i].reset(blFloorToInt(bounds.x0), blFloorToInt(bounds.y0), blCeilToInt(bounds.x1), blCeilToInt(bounds.y1));
-      else
+      if (bounds.x0 <= bounds.x1 && bounds.y0 <= bounds.y1) {
+        boxes[i].reset(Math::floorToInt(bounds.x0),
+                       Math::floorToInt(bounds.y0),
+                       Math::ceilToInt(bounds.x1),
+                       Math::ceilToInt(bounds.y1));
+      }
+      else {
         boxes[i].reset();
+      }
     }
   }
 
   return result;
 }
 
-// BLOpenType::CFFImpl - GetGlyphOutlines
-// ======================================
+// bl::OpenType::CFFImpl - GetGlyphOutlines
+// ========================================
 
 namespace {
 
@@ -1977,7 +1983,7 @@ class GlyphOutlineConsumer {
 public:
   BLPath* path;
   size_t contourCount;
-  BLPathAppender appender;
+  PathAppender appender;
 
   BL_INLINE GlyphOutlineConsumer(BLPath* p) noexcept
     : path(p),
@@ -2026,7 +2032,7 @@ static BLResult BL_CDECL getGlyphOutlines(
   const BLMatrix2D* transform,
   BLPath* out,
   size_t* contourCountOut,
-  BLScopedBuffer* tmpBuffer) noexcept {
+  ScopedBuffer* tmpBuffer) noexcept {
 
   GlyphOutlineConsumer consumer(out);
   BLResult result = getGlyphOutlinesT<GlyphOutlineConsumer>(faceI_, glyphId, transform, consumer, tmpBuffer);
@@ -2035,8 +2041,8 @@ static BLResult BL_CDECL getGlyphOutlines(
   return result;
 }
 
-// BLOpenType::CIDInfo - Struct
-// ============================
+// bl::OpenType::CIDInfo - Struct
+// ==============================
 
 struct CIDInfo {
   enum Flags : uint32_t {
@@ -2053,8 +2059,8 @@ struct CIDInfo {
   uint8_t fdSelectFormat;
 };
 
-// BLOpenType::CFFImpl - Init
-// ==========================
+// bl::OpenType::CFFImpl - Init
+// ============================
 
 static BL_INLINE bool isSupportedFDSelectFormat(uint32_t format) noexcept {
   return format == 0 || format == 3;
@@ -2404,4 +2410,5 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
 };
 
 } // {CFFImpl}
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}

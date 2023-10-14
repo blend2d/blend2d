@@ -27,22 +27,21 @@ struct BLPatternPrivateImpl : public BLPatternImpl {
 //! \name BLPattern - Private API
 //! \{
 
-namespace BLPatternPrivate {
-
-using BLObjectPrivate::RCMode;
+namespace bl {
+namespace PatternInternal {
 
 //! \name BLPattern - Internals - Common Functionality (Impl)
 //! \{
 
 static BL_INLINE bool isImplMutable(BLPatternImpl* impl) noexcept {
-  return BLObjectPrivate::isImplMutable(impl);
+  return ObjectInternal::isImplMutable(impl);
 }
 
 BL_HIDDEN BLResult freeImpl(BLPatternPrivateImpl* impl) noexcept;
 
 template<RCMode kRCMode>
 static BL_INLINE BLResult releaseImpl(BLPatternPrivateImpl* impl) noexcept {
-  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -59,7 +58,7 @@ static BL_INLINE bool isInstanceMutable(const BLPatternCore* self) noexcept {
 }
 
 static BL_INLINE BLResult retainInstance(const BLPatternCore* self, size_t n = 1) noexcept {
-  return BLObjectPrivate::retainInstance(self, n);
+  return ObjectInternal::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLPatternCore* self) noexcept {
@@ -101,7 +100,8 @@ static BL_INLINE bool isAreaValidAndNonZero(const BLRectI& area, const BLSizeI& 
 
 //! \}
 
-} // {BLPatternPrivate}
+} // {PatternInternal}
+} // {bl}
 
 //! \}
 

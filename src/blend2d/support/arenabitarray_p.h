@@ -13,15 +13,17 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! Arena allocated bit array that uses `T` as an underlying bitword.
 //!
 //! T is usually wither `uint32_t` for compatibility with public API or `BLBitWord`, for maximum performance.
 template<typename T>
-class BLArenaBitArray {
+class ArenaBitArray {
 public:
-  BL_NONCOPYABLE(BLArenaBitArray)
+  BL_NONCOPYABLE(ArenaBitArray)
 
-  typedef BLParametrizedBitOps<BLBitOrder::kMSB, T> Ops;
+  typedef ParametrizedBitOps<BitOrder::kMSB, T> Ops;
 
   //! \name Constants
   //! \{
@@ -71,9 +73,9 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLArenaBitArray() noexcept {}
+  BL_INLINE ArenaBitArray() noexcept {}
 
-  BL_INLINE BLArenaBitArray(BLArenaBitArray&& other) noexcept
+  BL_INLINE ArenaBitArray(ArenaBitArray&& other) noexcept
     : _data(other._data),
       _size(other._size),
       _capacity(other._capacity) {}
@@ -83,8 +85,8 @@ public:
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE bool operator==(const BLArenaBitArray& other) const noexcept { return  eq(other); }
-  BL_INLINE bool operator!=(const BLArenaBitArray& other) const noexcept { return !eq(other); }
+  BL_INLINE bool operator==(const ArenaBitArray& other) const noexcept { return  eq(other); }
+  BL_INLINE bool operator!=(const ArenaBitArray& other) const noexcept { return !eq(other); }
 
   //! \}
 
@@ -113,7 +115,7 @@ public:
   //! \name Utilities
   //! \{
 
-  BL_INLINE void swap(BLArenaBitArray& other) noexcept {
+  BL_INLINE void swap(ArenaBitArray& other) noexcept {
     std::swap(_data, other._data);
     std::swap(_size, other._size);
     std::swap(_capacity, other._capacity);
@@ -176,7 +178,7 @@ public:
   //! bits than `this` then all remaining bits are set to zero.
   //!
   //! \note The size of the BitVector is unaffected by this operation.
-  BL_INLINE void and_(const BLArenaBitArray& other) noexcept {
+  BL_INLINE void and_(const ArenaBitArray& other) noexcept {
     T* dst = _data;
     const T* src = other._data;
 
@@ -200,7 +202,7 @@ public:
   //! has less bits than `this` then all remaining bits are kept intact.
   //!
   //! \note The size of the BitVector is unaffected by this operation.
-  BL_INLINE void andNot(const BLArenaBitArray& other) noexcept {
+  BL_INLINE void andNot(const ArenaBitArray& other) noexcept {
     T* dst = _data;
     const T* src = other._data;
 
@@ -213,7 +215,7 @@ public:
   //! bits than `this` then all remaining bits are kept intact.
   //!
   //! \note The size of the BitVector is unaffected by this operation.
-  BL_INLINE void or_(const BLArenaBitArray& other) noexcept {
+  BL_INLINE void or_(const ArenaBitArray& other) noexcept {
     T* dst = _data;
     const T* src = other._data;
 
@@ -232,7 +234,7 @@ public:
     _data[idx] &= Ops::nonZeroStartMask(bit);
   }
 
-  BL_INLINE bool eq(const BLArenaBitArray& other) const noexcept {
+  BL_INLINE bool eq(const ArenaBitArray& other) const noexcept {
     if (_size != other._size)
       return false;
 
@@ -252,7 +254,7 @@ public:
   //! \name Memory Management
   //! \{
 
-  BL_INLINE void release(BLArenaAllocator* allocator) noexcept {
+  BL_INLINE void release(ArenaAllocator* allocator) noexcept {
     if (!_data)
       return;
 
@@ -260,11 +262,11 @@ public:
     reset();
   }
 
-  BL_INLINE BLResult resize(BLArenaAllocator* allocator, uint32_t newSize, bool newBitsValue = false) noexcept {
+  BL_INLINE BLResult resize(ArenaAllocator* allocator, uint32_t newSize, bool newBitsValue = false) noexcept {
     return _resize(allocator, newSize, newSize, newBitsValue);
   }
 
-  BL_NOINLINE BLResult _resize(BLArenaAllocator* allocator, uint32_t newSize, uint32_t capacityHint, bool newBitsValue) noexcept {
+  BL_NOINLINE BLResult _resize(ArenaAllocator* allocator, uint32_t newSize, uint32_t capacityHint, bool newBitsValue) noexcept {
     BL_ASSERT(capacityHint >= newSize);
 
     if (newSize <= _size) {
@@ -279,7 +281,7 @@ public:
 
     if (newSize > _capacity) {
       // Realloc needed, calculate the minimum capacity (in bytes) required.
-      uint32_t capacityInBits = BLIntOps::alignUp<uint32_t>(capacityHint, kTSizeInBits);
+      uint32_t capacityInBits = IntOps::alignUp<uint32_t>(capacityHint, kTSizeInBits);
 
       if (BL_UNLIKELY(capacityInBits < newSize))
         return blTraceError(BL_ERROR_OUT_OF_MEMORY);
@@ -307,7 +309,7 @@ public:
 
     // Set new bits to either 0 or 1. The `pattern` is used to set multiple bits per word and contains either all
     // zeros or all ones.
-    T pattern = BLIntOps::bitMaskFromBool<T>(newBitsValue);
+    T pattern = IntOps::bitMaskFromBool<T>(newBitsValue);
 
     // First initialize the last word of the old size.
     if (startBit)
@@ -326,6 +328,7 @@ public:
   //! \}
 };
 
+} // {bl}
 
 //! \}
 //! \endcond

@@ -8,10 +8,11 @@
 
 #include "fonttagdata_p.h"
 
-// BLFontTagData - Tests
-// =====================
+// bl::FontTagData - Tests
+// =======================
 
-namespace BLFontTagDataTests {
+namespace bl {
+namespace Tests {
 
 typedef uint32_t (*TagToIdFunc)(BLTag tag);
 
@@ -34,14 +35,15 @@ static void verifyTags(const char* category, const BLTag* tags, uint32_t count, 
 }
 
 UNIT(fonttagdata_ids, BL_TEST_GROUP_TEXT_OPENTYPE) {
-  verifyTags("tableId", BLFontTagData::tableIdToTagTable, BLFontTagData::kTableIdCount, BLFontTagData::tableTagToId);
-  verifyTags("scriptId", BLFontTagData::scriptIdToTagTable, BLFontTagData::kScriptIdCount, BLFontTagData::scriptTagToId);
-  verifyTags("languageId", BLFontTagData::languageIdToTagTable, BLFontTagData::kLanguageIdCount, BLFontTagData::languageTagToId);
-  verifyTags("featureId", BLFontTagData::featureIdToTagTable, BLFontTagData::kFeatureIdCount, BLFontTagData::featureTagToId);
-  verifyTags("baselineId", BLFontTagData::baselineIdToTagTable, BLFontTagData::kBaselineIdCount, BLFontTagData::baselineTagToId);
-  verifyTags("variationId", BLFontTagData::variationIdToTagTable, BLFontTagData::kVariationIdCount, BLFontTagData::variationTagToId);
+  verifyTags("tableId", FontTagData::tableIdToTagTable, FontTagData::kTableIdCount, FontTagData::tableTagToId);
+  verifyTags("scriptId", FontTagData::scriptIdToTagTable, FontTagData::kScriptIdCount, FontTagData::scriptTagToId);
+  verifyTags("languageId", FontTagData::languageIdToTagTable, FontTagData::kLanguageIdCount, FontTagData::languageTagToId);
+  verifyTags("featureId", FontTagData::featureIdToTagTable, FontTagData::kFeatureIdCount, FontTagData::featureTagToId);
+  verifyTags("baselineId", FontTagData::baselineIdToTagTable, FontTagData::kBaselineIdCount, FontTagData::baselineTagToId);
+  verifyTags("variationId", FontTagData::variationIdToTagTable, FontTagData::kVariationIdCount, FontTagData::variationTagToId);
 }
 
-} // {BLFontTagDataTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

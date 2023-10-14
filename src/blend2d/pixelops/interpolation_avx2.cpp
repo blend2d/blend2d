@@ -7,10 +7,11 @@
 #ifdef BL_TARGET_OPT_AVX2
 
 #include "../gradient_p.h"
-#include "../math_p.h"
 #include "../simd/simd_p.h"
+#include "../support/math_p.h"
 
-namespace BLPixelOps {
+namespace bl {
+namespace PixelOps {
 namespace Interpolation {
 
 void BL_CDECL interpolate_prgb32_avx2(uint32_t* dPtr, uint32_t dSize, const BLGradientStop* sPtr, size_t sSize) noexcept {
@@ -39,7 +40,7 @@ void BL_CDECL interpolate_prgb32_avx2(uint32_t* dPtr, uint32_t dSize, const BLGr
 
   do {
     c1 = loada_64<Vec8xU16>(&sPtr[sIndex].rgba);
-    u1 = uint32_t(blRoundToInt(sPtr[sIndex].offset * fWidth));
+    u1 = uint32_t(Math::roundToInt(sPtr[sIndex].offset * fWidth));
 
     dSpanPtr = dPtr + (u0 >> 8);
     i = ((u1 >> 8) - (u0 >> 8));
@@ -126,7 +127,7 @@ void BL_CDECL interpolate_prgb32_avx2(uint32_t* dPtr, uint32_t dSize, const BLGr
         p76543210 = vec_u8(packs_128_i16_u8(p5410, p7632));
 
         if (n <= 8u) {
-          Vec8xI32 msk = loada_64_i8_i32<Vec8xI32>(blCommonTable.loadstore16_lo8_msk8() + n);
+          Vec8xI32 msk = loada_64_i8_i32<Vec8xI32>(commonTable.loadstore16_lo8_msk8() + n);
           storeu_256_mask32(dSpanPtr, p76543210, msk);
           dSpanPtr += n;
           break;
@@ -171,6 +172,7 @@ void BL_CDECL interpolate_prgb32_avx2(uint32_t* dPtr, uint32_t dSize, const BLGr
 }
 
 } // {Interpolation}
-} // {BLPixelOps}
+} // {PixelOps}
+} // {bl}
 
 #endif

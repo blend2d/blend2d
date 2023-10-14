@@ -13,7 +13,8 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 
 enum class LookupFlags : uint32_t {
   //! Relates only to the correct processing of the cursive attachment lookup type (GPOS lookup type 3).
@@ -63,8 +64,8 @@ struct CoverageTable {
   UInt16 format;
   Array16<void> array;
 
-  BL_INLINE const Format1* format1() const noexcept { return BLPtrOps::offset<const Format1>(this, 0); }
-  BL_INLINE const Format2* format2() const noexcept { return BLPtrOps::offset<const Format2>(this, 0); }
+  BL_INLINE const Format1* format1() const noexcept { return PtrOps::offset<const Format1>(this, 0); }
+  BL_INLINE const Format2* format2() const noexcept { return PtrOps::offset<const Format2>(this, 0); }
 
   // Format 1 has 2 byte entries, format 2 has 6 byte entries - other formats don't exist.
   static BL_INLINE uint32_t entrySizeByFormat(uint32_t format) noexcept { return format * 4u - 2u; }
@@ -196,8 +197,8 @@ struct ClassDefTable {
 
   UInt16 format;
 
-  BL_INLINE const Format1* format1() const noexcept { return BLPtrOps::offset<const Format1>(this, 0); }
-  BL_INLINE const Format2* format2() const noexcept { return BLPtrOps::offset<const Format2>(this, 0); }
+  BL_INLINE const Format1* format1() const noexcept { return PtrOps::offset<const Format1>(this, 0); }
+  BL_INLINE const Format2* format2() const noexcept { return PtrOps::offset<const Format2>(this, 0); }
 };
 
 class ClassDefTableIterator {
@@ -328,7 +329,7 @@ struct ConditionTable {
 
   UInt16 format;
 
-  BL_INLINE const Format1* format1() const noexcept { return BLPtrOps::offset<const Format1>(this, 0); }
+  BL_INLINE const Format1* format1() const noexcept { return PtrOps::offset<const Format1>(this, 0); }
 };
 
 //! OpenType 'GDEF' table.
@@ -363,8 +364,8 @@ struct GDefTable {
   HeaderV1_0 header;
 
   BL_INLINE const HeaderV1_0* v1_0() const noexcept { return &header; }
-  BL_INLINE const HeaderV1_2* v1_2() const noexcept { return BLPtrOps::offset<const HeaderV1_2>(this, 0); }
-  BL_INLINE const HeaderV1_3* v1_3() const noexcept { return BLPtrOps::offset<const HeaderV1_3>(this, 0); }
+  BL_INLINE const HeaderV1_2* v1_2() const noexcept { return PtrOps::offset<const HeaderV1_2>(this, 0); }
+  BL_INLINE const HeaderV1_3* v1_3() const noexcept { return PtrOps::offset<const HeaderV1_3>(this, 0); }
 };
 
 //! Base class for 'GSUB' and 'GPOS' tables.
@@ -480,11 +481,11 @@ struct GSubGPosTable {
     */
 
     BL_INLINE const UInt16* inputSequence() const noexcept {
-      return BLPtrOps::offset<const UInt16>(this, 4);
+      return PtrOps::offset<const UInt16>(this, 4);
     }
 
     BL_INLINE const SequenceLookupRecord* lookupRecordArray(uint32_t glyphCount_) const noexcept {
-      return BLPtrOps::offset<const SequenceLookupRecord>(this, kBaseSize + glyphCount_ * 2u - 2u);
+      return PtrOps::offset<const SequenceLookupRecord>(this, kBaseSize + glyphCount_ * 2u - 2u);
     }
   };
 
@@ -511,8 +512,8 @@ struct GSubGPosTable {
     SequenceLookupRecord lookupRecords[lookupRecordCount];
     */
 
-    BL_INLINE const UInt16* coverageOffsetArray() const noexcept { return BLPtrOps::offset<const UInt16>(this, kBaseSize); }
-    BL_INLINE const SequenceLookupRecord* lookupRecordArray(size_t glyphCount_) const noexcept { return BLPtrOps::offset<const SequenceLookupRecord>(this, kBaseSize + glyphCount_ * 2u); }
+    BL_INLINE const UInt16* coverageOffsetArray() const noexcept { return PtrOps::offset<const UInt16>(this, kBaseSize); }
+    BL_INLINE const SequenceLookupRecord* lookupRecordArray(size_t glyphCount_) const noexcept { return PtrOps::offset<const SequenceLookupRecord>(this, kBaseSize + glyphCount_ * 2u); }
   };
 
   //! \}
@@ -534,7 +535,7 @@ struct GSubGPosTable {
     SequenceLookupRecord lookupRecords[lookupRecordCount];
     */
 
-    BL_INLINE const UInt16* backtrackSequence() const noexcept { return BLPtrOps::offset<const UInt16>(this, 2); }
+    BL_INLINE const UInt16* backtrackSequence() const noexcept { return PtrOps::offset<const UInt16>(this, 2); }
   };
 
   typedef Array16<UInt16> ChainedSequenceRuleSet;
@@ -568,7 +569,7 @@ struct GSubGPosTable {
     SequenceLookupRecord lookupRecords[substCount];
     */
 
-    BL_INLINE const UInt16* backtrackCoverageOffsets() const noexcept { return BLPtrOps::offset<const UInt16>(this, 4); }
+    BL_INLINE const UInt16* backtrackCoverageOffsets() const noexcept { return PtrOps::offset<const UInt16>(this, 4); }
   };
 
   //! \}
@@ -584,7 +585,7 @@ struct GSubGPosTable {
   //! \{
 
   BL_INLINE const HeaderV1_0* v1_0() const noexcept { return &header; }
-  BL_INLINE const HeaderV1_1* v1_1() const noexcept { return BLPtrOps::offset<const HeaderV1_1>(this, 0); }
+  BL_INLINE const HeaderV1_1* v1_1() const noexcept { return PtrOps::offset<const HeaderV1_1>(this, 0); }
 
   //! \}
 };
@@ -692,7 +693,7 @@ struct GSubTable : public GSubGPosTable {
     UInt16 substGlyphArray[substGlyphCount];
     */
 
-    BL_INLINE const UInt16* backtrackCoverageOffsets() const noexcept { return BLPtrOps::offset<const UInt16>(this, 6); }
+    BL_INLINE const UInt16* backtrackCoverageOffsets() const noexcept { return PtrOps::offset<const UInt16>(this, 6); }
   };
 };
 
@@ -783,7 +784,7 @@ struct GPosTable : public GSubGPosTable {
 
     UInt16 valueFormat;
 
-    BL_INLINE const UInt16* valueRecords() const noexcept { return BLPtrOps::offset<const UInt16>(this, 6u); }
+    BL_INLINE const UInt16* valueRecords() const noexcept { return PtrOps::offset<const UInt16>(this, 6u); }
   };
 
   struct SingleAdjustment2 : public LookupHeaderWithCoverage {
@@ -792,7 +793,7 @@ struct GPosTable : public GSubGPosTable {
     UInt16 valueFormat;
     UInt16 valueCount;
 
-    BL_INLINE const UInt16* valueRecords() const noexcept { return BLPtrOps::offset<const UInt16>(this, 8u); }
+    BL_INLINE const UInt16* valueRecords() const noexcept { return PtrOps::offset<const UInt16>(this, 8u); }
   };
 
   // Lookup Type 2 - Pair Adjustment
@@ -801,13 +802,13 @@ struct GPosTable : public GSubGPosTable {
   struct PairSet {
     UInt16 pairValueCount;
 
-    BL_INLINE const UInt16* pairValueRecords() const noexcept { return BLPtrOps::offset<const UInt16>(this, 2); }
+    BL_INLINE const UInt16* pairValueRecords() const noexcept { return PtrOps::offset<const UInt16>(this, 2); }
   };
 
   struct PairValueRecord {
     UInt16 secondGlyph;
 
-    BL_INLINE const UInt16* valueRecords() const noexcept { return BLPtrOps::offset<const UInt16>(this, 2); }
+    BL_INLINE const UInt16* valueRecords() const noexcept { return PtrOps::offset<const UInt16>(this, 2); }
   };
 
   struct PairAdjustment1 : public LookupHeaderWithCoverage {
@@ -907,7 +908,8 @@ struct GPosTable : public GSubGPosTable {
   // Use `ExtensionLookup` to handle this lookup type.
 };
 
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 //! \}
 //! \endcond

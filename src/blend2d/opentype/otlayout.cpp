@@ -24,11 +24,12 @@
 // TODO: [OpenType] This is not complete so we had to disable some warnings here...
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 namespace LayoutImpl {
 
-// BLOpenType::LayoutImpl - Tracing
-// ================================
+// bl::OpenType::LayoutImpl - Tracing
+// ==================================
 
 #if defined(BL_TRACE_OT_ALL) || defined(BL_TRACE_OT_LAYOUT)
   #define Trace BLDebugTrace
@@ -113,8 +114,8 @@ public:
   //! \}
 };
 
-// BLOpenType::LayoutImpl - GDEF - Init
-// ====================================
+// bl::OpenType::LayoutImpl - GDEF - Init
+// ======================================
 
 static BLResult initGDef(OTFaceImpl* faceI, Table<GDefTable> gdef) noexcept {
   if (!gdef.fits())
@@ -169,8 +170,8 @@ static BLResult initGDef(OTFaceImpl* faceI, Table<GDefTable> gdef) noexcept {
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - Constants
-// ================================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - Constants
+// ==================================================
 
 // Artificial format bits that describe either two/three/four Coverage/ClassDef tables having formats in [1-2] range.
 enum class FormatBits2X : uint32_t {
@@ -210,8 +211,8 @@ enum class FormatBits4X : uint32_t {
   k2222 = 0xF
 };
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - Metadata
-// ===============================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - Metadata
+// =================================================
 
 static const char* gsubLookupName(uint32_t lookupType) noexcept {
   static const char lookupNames[] = {
@@ -356,8 +357,8 @@ static const GSubGPosLookupInfo gposLookupInfoTable = {
   }
 };
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - Validation Helpers
-// =========================================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - Validation Helpers
+// ===========================================================
 
 // TODO: [OpenType] REMOVE?
 /*
@@ -406,8 +407,8 @@ static bool validateTagRef16Array(ValidationContext& validator, RawTable data, c
 }
 */
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - Apply Scope
-// ==================================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - Apply Scope
+// ====================================================
 
 //! A single index to be applied when processing a lookup.
 struct ApplyIndex {
@@ -438,8 +439,8 @@ struct ApplyRange {
   }
 };
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - ClassDef Validation
-// ==========================================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - ClassDef Validation
+// ============================================================
 
 static bool validateClassDefTable(ValidationContext& validator, Table<ClassDefTable> table, const char* tableName) noexcept {
   // Ignore if it doesn't fit.
@@ -510,8 +511,8 @@ static bool validateClassDefTable(ValidationContext& validator, Table<ClassDefTa
   }
 }
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - Coverage Validation
-// ==========================================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - Coverage Validation
+// ============================================================
 
 static bool validateCoverageTable(ValidationContext& validator, Table<CoverageTable> coverageTable, uint32_t& coverageCount) noexcept {
   const char* tableName = "CoverageTable";
@@ -613,8 +614,8 @@ static bool validateCoverageTables(
   return true;
 }
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - Lookup Table Validation
-// ==============================================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - Lookup Table Validation
+// ================================================================
 
 static bool validateLookupWithCoverage(ValidationContext& validator, RawTable data, const char* tableName, uint32_t headerSize, uint32_t& coverageCount) noexcept {
   if (!data.fits(headerSize))
@@ -627,8 +628,8 @@ static bool validateLookupWithCoverage(ValidationContext& validator, RawTable da
   return validateCoverageTable(validator, data.subTable(coverageOffset), coverageCount);
 }
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - Sequence Context Validation
-// ==================================================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - Sequence Context Validation
+// ====================================================================
 
 static bool validateSequenceLookupRecordArray(ValidationContext& validator, const GSubGPosTable::SequenceLookupRecord* lookupRecordArray, uint32_t lookupRecordCount) noexcept {
   const LayoutData& layoutData = validator.faceImpl()->layout;
@@ -772,8 +773,8 @@ static bool validateContextFormat3(ValidationContext& validator, Table<GSubGPosT
   return validateSequenceLookupRecordArray(validator, table->lookupRecordArray(glyphCount), lookupRecordCount);
 }
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - Sequence Context Utilities
-// =================================================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - Sequence Context Utilities
+// ===================================================================
 
 struct SequenceMatch {
   uint32_t glyphCount;
@@ -787,7 +788,7 @@ static BL_INLINE bool matchSequenceRuleFormat1(Table<Array16<Offset16>> ruleOffs
     uint32_t ruleOffset = ruleOffsets->array()[ruleIndex].value();
     BL_ASSERT_VALIDATED(ruleOffset <= ruleOffsets.size - 4u);
 
-    const GSubGPosTable::SequenceRule* rule = BLPtrOps::offset<const GSubGPosTable::SequenceRule>(ruleOffsets.data, ruleOffset);
+    const GSubGPosTable::SequenceRule* rule = PtrOps::offset<const GSubGPosTable::SequenceRule>(ruleOffsets.data, ruleOffset);
     uint32_t glyphCount = rule->glyphCount();
     uint32_t glyphCountMinus1 = glyphCount - 1u;
 
@@ -828,7 +829,7 @@ static BL_INLINE bool matchSequenceRuleFormat2(Table<Array16<Offset16>> ruleOffs
     uint32_t ruleOffset = ruleOffsets->array()[ruleIndex].value();
     BL_ASSERT_VALIDATED(ruleOffset <= ruleOffsets.size - 4u);
 
-    const GSubGPosTable::SequenceRule* rule = BLPtrOps::offset<const GSubGPosTable::SequenceRule>(ruleOffsets.data, ruleOffset);
+    const GSubGPosTable::SequenceRule* rule = PtrOps::offset<const GSubGPosTable::SequenceRule>(ruleOffsets.data, ruleOffset);
     uint32_t glyphCount = rule->glyphCount();
     uint32_t glyphCountMinus1 = glyphCount - 1u;
 
@@ -947,8 +948,8 @@ static BL_INLINE bool matchSequenceFormat3(
   return true;
 }
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - Chained Sequence Context Validation
-// ==========================================================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - Chained Sequence Context Validation
+// ============================================================================
 
 template<typename ChainedSequenceLookupTable>
 static bool validateChainedContextFormat1_2(ValidationContext& validator, Table<ChainedSequenceLookupTable> table, const char* tableName) noexcept {
@@ -1023,7 +1024,7 @@ static bool validateChainedContextFormat1_2(ValidationContext& validator, Table<
       if (!lookupRecordCount)
         return validator.fail("%s.ruleSet[%u].rule[%u] has invalid lookupRecordCount (%u)", tableName, i, ruleIndex, lookupRecordCount);
 
-      const GSubGPosTable::SequenceLookupRecord* lookupRecordArray = BLPtrOps::offset<const GSubGPosTable::SequenceLookupRecord>(rule.data, lookupRecordOffset + 2u);
+      const GSubGPosTable::SequenceLookupRecord* lookupRecordArray = PtrOps::offset<const GSubGPosTable::SequenceLookupRecord>(rule.data, lookupRecordOffset + 2u);
       if (!validateSequenceLookupRecordArray(validator, lookupRecordArray, lookupRecordCount))
         return false;
     }
@@ -1106,8 +1107,8 @@ static bool validateChainedContextFormat3(ValidationContext& validator, Table<GS
   OffsetRange offsetRange{headerSize, table.size - 2u};
 
   const UInt16* backtrackCoverageOffsets = table->backtrackCoverageOffsets();
-  const UInt16* inputGlyphCoverageOffsets = BLPtrOps::offset<const UInt16>(table.data, inputGlyphCountOffset + 2u);
-  const UInt16* lookaheadCoverageOffsets = BLPtrOps::offset<const UInt16>(table.data, lookaheadGlyphCountOffset + 2u);
+  const UInt16* inputGlyphCoverageOffsets = PtrOps::offset<const UInt16>(table.data, inputGlyphCountOffset + 2u);
+  const UInt16* lookaheadCoverageOffsets = PtrOps::offset<const UInt16>(table.data, lookaheadGlyphCountOffset + 2u);
 
   if (!validateCoverageTables(validator, table, tableName, "backtrack", backtrackCoverageOffsets, backtrackGlyphCount, offsetRange))
     return false;
@@ -1118,12 +1119,12 @@ static bool validateChainedContextFormat3(ValidationContext& validator, Table<GS
   if (!validateCoverageTables(validator, table, tableName, "lookahead", lookaheadCoverageOffsets, lookaheadGlyphCount, offsetRange))
     return false;
 
-  const GSubGPosTable::SequenceLookupRecord* lookupRecordArray = BLPtrOps::offset<const GSubGPosTable::SequenceLookupRecord>(table.data, lookupRecordCountOffset + 2u);
+  const GSubGPosTable::SequenceLookupRecord* lookupRecordArray = PtrOps::offset<const GSubGPosTable::SequenceLookupRecord>(table.data, lookupRecordCountOffset + 2u);
   return validateSequenceLookupRecordArray(validator, lookupRecordArray, lookupRecordCount);
 }
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - Chained Sequence Context Lookup
-// ======================================================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - Chained Sequence Context Lookup
+// ========================================================================
 
 struct ChainedMatchContext {
   RawTable table;
@@ -1415,8 +1416,8 @@ static BL_INLINE bool matchChainedSequenceFormat3(
          matchAheadGlyphsFormat3(mCtx.table, mCtx.aheadGlyphPtr + inputGlyphCount, lookaheadCoverageOffsetArray, lookaheadGlyphCount);
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #1 - Single Substitution Validation
-// ===============================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #1 - Single Substitution Validation
+// =================================================================================
 
 static bool validateGSubLookupType1Format1(ValidationContext& validator, Table<GSubTable::SingleSubst1> table) noexcept {
   const char* tableName = "SingleSubst1";
@@ -1444,8 +1445,8 @@ static bool validateGSubLookupType1Format2(ValidationContext& validator, Table<G
   return true;
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #1 - Single Substitution Lookup
-// ===========================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #1 - Single Substitution Lookup
+// =============================================================================
 
 template<uint32_t kCovFmt, typename ApplyScope>
 static BL_INLINE BLResult applyGSubLookupType1Format1(GSubContext& ctx, Table<GSubTable::SingleSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
@@ -1501,8 +1502,8 @@ static BL_INLINE BLResult applyGSubLookupType1Format2(GSubContext& ctx, Table<GS
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #2 - Multiple Substitution Validation
-// =================================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #2 - Multiple Substitution Validation
+// ===================================================================================
 
 static bool validateGSubLookupType2Format1(ValidationContext& validator, Table<GSubTable::MultipleSubst1> table) noexcept {
   const char* tableName = "MultipleSubst1";
@@ -1543,8 +1544,8 @@ static bool validateGSubLookupType2Format1(ValidationContext& validator, Table<G
   return true;
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #2 - Multiple Substitution Lookup
-// =============================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #2 - Multiple Substitution Lookup
+// ===============================================================================
 
 // TODO: [OpenType] [SECURITY] What if the glyph contains kSeqMask???
 template<uint32_t kCovFmt, typename ApplyScope>
@@ -1575,7 +1576,7 @@ static BL_INLINE BLResult applyGSubLookupType2Format1(GSubContext& ctx, Table<GS
         uint32_t sequenceOffset = table->sequenceOffsets.array()[coverageIndex].value();
         BL_ASSERT_VALIDATED(sequenceOffset <= table.size - 2u);
 
-        uint32_t sequenceLength = BLMemOps::readU16uBE(table.data + sequenceOffset);
+        uint32_t sequenceLength = MemOps::readU16uBE(table.data + sequenceOffset);
         BL_ASSERT_VALIDATED(sequenceOffset + sequenceLength * 2u <= table.size - 2u);
 
         glyphInPtr[0] = sequenceOffset | kSequenceMarker;
@@ -1609,7 +1610,7 @@ static BL_INLINE BLResult applyGSubLookupType2Format1(GSubContext& ctx, Table<GS
 
     if (glyphId & kSequenceMarker) {
       size_t sequenceOffset = glyphId & ~kSequenceMarker;
-      size_t sequenceLength = BLMemOps::readU16uBE(table.data + sequenceOffset);
+      size_t sequenceLength = MemOps::readU16uBE(table.data + sequenceOffset);
       const UInt16* sequenceData = table.dataAs<UInt16>(sequenceOffset + 2u);
 
       glyphOutPtr -= sequenceLength;
@@ -1627,8 +1628,8 @@ static BL_INLINE BLResult applyGSubLookupType2Format1(GSubContext& ctx, Table<GS
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #3 - Alternate Substitution Validation
-// ==================================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #3 - Alternate Substitution Validation
+// ====================================================================================
 
 static bool validateGSubLookupType3Format1(ValidationContext& validator, RawTable table) noexcept {
   const char* tableName = "AlternateSubst1";
@@ -1656,7 +1657,7 @@ static bool validateGSubLookupType3Format1(ValidationContext& validator, RawTabl
     if (!offsetRange.contains(offset))
       return validator.invalidOffsetEntry(tableName, "alternateSetOffsets", i, offset, offsetRange);
 
-    const Array16<UInt16>* alternateSet = BLPtrOps::offset<const Array16<UInt16>>(table.data, offset);
+    const Array16<UInt16>* alternateSet = PtrOps::offset<const Array16<UInt16>>(table.data, offset);
     uint32_t alternateSetLength = alternateSet->count();
 
     // Specification forbids an empty AlternateSet.
@@ -1671,8 +1672,8 @@ static bool validateGSubLookupType3Format1(ValidationContext& validator, RawTabl
   return true;
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #3 - Alternate Substitution Lookup
-// ==============================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #3 - Alternate Substitution Lookup
+// ================================================================================
 
 template<uint32_t kCovFmt, typename ApplyScope>
 static BL_INLINE BLResult applyGSubLookupType3Format1(GSubContext& ctx, Table<GSubTable::AlternateSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
@@ -1713,8 +1714,8 @@ static BL_INLINE BLResult applyGSubLookupType3Format1(GSubContext& ctx, Table<GS
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #4 - Ligature Substitution Validation
-// =================================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #4 - Ligature Substitution Validation
+// ===================================================================================
 
 static bool validateGSubLookupType4Format1(ValidationContext& validator, Table<GSubTable::LigatureSubst1> table) noexcept {
   const char* tableName = "LigatureSubst1";
@@ -1774,8 +1775,8 @@ static bool validateGSubLookupType4Format1(ValidationContext& validator, Table<G
   return true;
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #4 - Ligature Substitution Lookup
-// =============================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #4 - Ligature Substitution Lookup
+// ===============================================================================
 
 static BL_INLINE bool matchLigature(
   Table<Array16<Offset16>> ligatureOffsets,
@@ -1790,7 +1791,7 @@ static BL_INLINE bool matchLigature(
     uint32_t ligatureOffset = ligatureOffsets->array()[i].value();
     BL_ASSERT_VALIDATED(ligatureOffset <= ligatureOffsets.size - 4u);
 
-    const GSubTable::Ligature* ligature = BLPtrOps::offset<const GSubTable::Ligature>(ligatureOffsets.data, ligatureOffset);
+    const GSubTable::Ligature* ligature = PtrOps::offset<const GSubTable::Ligature>(ligatureOffsets.data, ligatureOffset);
     ligatureGlyphCount = uint32_t(ligature->glyphs.count());
     if (ligatureGlyphCount > maxGlyphCount)
       continue;
@@ -1918,15 +1919,15 @@ static BL_INLINE BLResult applyGSubLookupType4Format1(GSubContext& ctx, Table<GS
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GSUB - Nested Lookups
-// ==============================================
+// bl::OpenType::LayoutImpl - GSUB - Nested Lookups
+// ================================================
 
 static void applyGSubNestedLookup(GSubContext& ctx) noexcept {
   // TODO: [OpenType] GSUB nested lookups
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #5 - Context Substitution Validation
-// ================================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #5 - Context Substitution Validation
+// ==================================================================================
 
 static bool validateGSubLookupType5Format1(ValidationContext& validator, Table<GSubTable::SequenceContext1> table) noexcept {
   return validateContextFormat1(validator, table, "ContextSubst1");
@@ -1940,8 +1941,8 @@ static bool validateGSubLookupType5Format3(ValidationContext& validator, Table<G
   return validateContextFormat3(validator, table, "ContextSubst3");
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #5 - Context Substitution Lookup
-// ============================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #5 - Context Substitution Lookup
+// ==============================================================================
 
 template<uint32_t kCovFmt>
 static BL_INLINE BLResult applyGSubLookupType5Format1(GSubContext& ctx, Table<GSubTable::SequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
@@ -2026,8 +2027,8 @@ static BL_INLINE BLResult applyGSubLookupType5Format3(GSubContext& ctx, Table<GS
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #6 - Chained Context Substitution Validation
-// ========================================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #6 - Chained Context Substitution Validation
+// ==========================================================================================
 
 static bool validateGSubLookupType6Format1(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext1> table) noexcept {
   return validateChainedContextFormat1(validator, table, "ChainedContextSubst1");
@@ -2041,8 +2042,8 @@ static bool validateGSubLookupType6Format3(ValidationContext& validator, Table<G
   return validateChainedContextFormat3(validator, table, "ChainedContextSubst3");
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #6 - Chained Context Substitution Lookup
-// ====================================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #6 - Chained Context Substitution Lookup
+// ======================================================================================
 
 template<uint32_t kCovFmt>
 static BL_INLINE BLResult applyGSubLookupType6Format1(GSubContext& ctx, Table<GSubTable::ChainedSequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
@@ -2173,8 +2174,8 @@ static BL_INLINE BLResult applyGSubLookupType6Format3(GSubContext& ctx, Table<GS
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #8 - Reverse Chained Context Validation
-// ===================================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #8 - Reverse Chained Context Validation
+// =====================================================================================
 
 static bool validateGSubLookupType8Format1(ValidationContext& validator, Table<GSubTable::ReverseChainedSingleSubst1> table) noexcept {
   const char* tableName = "ReverseChainedSingleSubst1";
@@ -2222,8 +2223,8 @@ static bool validateGSubLookupType8Format1(ValidationContext& validator, Table<G
   return true;
 }
 
-// BLOpenType::LayoutImpl - GSUB - Lookup Type #8 - Reverse Chained Context Lookup
-// ===============================================================================
+// bl::OpenType::LayoutImpl - GSUB - Lookup Type #8 - Reverse Chained Context Lookup
+// =================================================================================
 
 static BL_INLINE BLResult applyGSubLookupType8Format1(GSubContext& ctx, Table<GSubTable::ReverseChainedSingleSubst1> table, ApplyRange scope, LookupFlags flags) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
@@ -2278,8 +2279,8 @@ static BL_INLINE BLResult applyGSubLookupType8Format1(GSubContext& ctx, Table<GS
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GSUB - Dispatch
-// ========================================
+// bl::OpenType::LayoutImpl - GSUB - Dispatch
+// ==========================================
 
 static bool validateGSubLookup(ValidationContext& validator, RawTable table, GSubLookupAndFormat typeAndFormat) noexcept {
   switch (typeAndFormat) {
@@ -2422,8 +2423,8 @@ static BLResult applyGSubLookup(GSubContext& ctx, RawTable table, GSubLookupAndF
   return result;
 }
 
-// BLOpenType::LayoutImpl - GPOS - Utilities
-// =========================================
+// bl::OpenType::LayoutImpl - GPOS - Utilities
+// ===========================================
 
 // struct ValueRecords {
 //   ?[Int16 xPlacement]
@@ -2436,7 +2437,7 @@ static BLResult applyGSubLookup(GSubContext& ctx, RawTable table, GSubLookupAndF
 //   ?[UInt16 yAdvanceDeviceOffset]
 // }
 static BL_INLINE uint32_t sizeOfValueRecordByFormat(uint32_t valueFormat) noexcept {
-  return uint32_t(blBitCountByteTable[valueFormat & 0xFFu]) * 2u;
+  return uint32_t(bitCountByteTable[valueFormat & 0xFFu]) * 2u;
 }
 
 template<typename T>
@@ -2471,8 +2472,8 @@ static BL_INLINE const Int16* applyGPosValue(const Int16* p, uint32_t valueForma
   return p;
 }
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Type #1 - Single Adjustment Validation
-// =============================================================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Type #1 - Single Adjustment Validation
+// ===============================================================================
 
 static bool validateGPosLookupType1Format1(ValidationContext& validator, Table<GPosTable::SingleAdjustment1> table) noexcept {
   const char* tableName = "SingleAdjustment1";
@@ -2518,8 +2519,8 @@ static bool validateGPosLookupType1Format2(ValidationContext& validator, Table<G
   return true;
 }
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Type #1 - Single Adjustment Lookup
-// =========================================================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Type #1 - Single Adjustment Lookup
+// ===========================================================================
 
 template<uint32_t kCovFmt, typename ApplyScope>
 static BL_INLINE BLResult applyGPosLookupType1Format1(GPosContext& ctx, Table<GPosTable::SingleAdjustment1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
@@ -2584,8 +2585,8 @@ static BL_INLINE BLResult applyGPosLookupType1Format2(GPosContext& ctx, Table<GP
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Type #2 - Pair Adjustment Validation
-// ===========================================================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Type #2 - Pair Adjustment Validation
+// =============================================================================
 
 static bool validateGPosLookupType2Format1(ValidationContext& validator, Table<GPosTable::PairAdjustment1> table) noexcept {
   const char* tableName = "PairAdjustment1";
@@ -2647,8 +2648,8 @@ static bool validateGPosLookupType2Format2(ValidationContext& validator, Table<G
   return true;
 }
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Type #2 - Pair Adjustment Lookup
-// =======================================================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Type #2 - Pair Adjustment Lookup
+// =========================================================================
 
 template<uint32_t kCovFmt, typename ApplyScope>
 static BL_INLINE BLResult applyGPosLookupType2Format1(GPosContext& ctx, Table<GPosTable::PairAdjustment1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
@@ -2691,7 +2692,7 @@ static BL_INLINE BLResult applyGPosLookupType2Format1(GPosContext& ctx, Table<GP
         uint32_t pairSetOffset = table->pairSetOffsets.array()[coverageIndex].value();
         BL_ASSERT_VALIDATED(pairSetOffset <= table.size - 2u);
 
-        const GPosTable::PairSet* pairSet = BLPtrOps::offset<const GPosTable::PairSet>(table.data, pairSetOffset);
+        const GPosTable::PairSet* pairSet = PtrOps::offset<const GPosTable::PairSet>(table.data, pairSetOffset);
         uint32_t pairSetCount = pairSet->pairValueCount();
         BL_ASSERT_VALIDATED(pairSetCount * valueRecordSize <= table.size - pairSetOffset);
 
@@ -2759,7 +2760,7 @@ static BL_INLINE BLResult applyGPosLookupType2Format2(GPosContext& ctx, Table<GP
         uint32_t cIndex = c1 * class2Count + c2;
 
         if (cIndex < valueRecordCount) {
-          const Int16* p = BLPtrOps::offset<const Int16>(valueBasePtr, cIndex * valueRecordSize);
+          const Int16* p = PtrOps::offset<const Int16>(valueBasePtr, cIndex * valueRecordSize);
           if (value1Format) p = applyGPosValue(p, value1Format, &placementData[i + 0]);
           if (value2Format) p = applyGPosValue(p, value2Format, &placementData[i + 1]);
         }
@@ -2772,8 +2773,8 @@ static BL_INLINE BLResult applyGPosLookupType2Format2(GPosContext& ctx, Table<GP
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Type #3 - Cursive Attachment Validation
-// ==============================================================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Type #3 - Cursive Attachment Validation
+// ================================================================================
 
 static bool validateGPosLookupType3Format1(ValidationContext& validator, Table<GPosTable::CursiveAttachment1> table) noexcept {
   const char* tableName = "CursiveAttachment1";
@@ -2792,31 +2793,31 @@ static bool validateGPosLookupType3Format1(ValidationContext& validator, Table<G
   return false;
 }
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Type #4 - MarkToBase Attachment Validation
-// =================================================================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Type #4 - MarkToBase Attachment Validation
+// ===================================================================================
 
 // TODO: [OpenType] GPOS MarkToBase attachment
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Type #5 - MarkToLigature Attachment Validation
-// =====================================================================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Type #5 - MarkToLigature Attachment Validation
+// =======================================================================================
 
 // TODO: [OpenType] GPOS MarkToLigature attachment
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Type #6 - MarkToMark Attachment Validation
-// =================================================================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Type #6 - MarkToMark Attachment Validation
+// ===================================================================================
 
 // TODO: [OpenType] GPOS MarkToMark attachment
 
-// BLOpenType::LayoutImpl - GPOS - Nested Lookups
-// ==============================================
+// bl::OpenType::LayoutImpl - GPOS - Nested Lookups
+// ================================================
 
 static BL_NOINLINE BLResult applyGPosNestedLookups(GPosContext& ctx, size_t index, const SequenceMatch& match) noexcept {
   // TODO: [OpenType] GPOS nested lookups
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Type #7 - Contextual Positioning Validation
-// ==================================================================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Type #7 - Contextual Positioning Validation
+// ====================================================================================
 
 static bool validateGPosLookupType7Format1(ValidationContext& validator, Table<GSubTable::SequenceContext1> table) noexcept {
   return validateContextFormat1(validator, table, "ContextPositioning1");
@@ -2830,8 +2831,8 @@ static bool validateGPosLookupType7Format3(ValidationContext& validator, Table<G
   return validateContextFormat3(validator, table, "ContextPositioning3");
 }
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Type #7 - Contextual Positioning Lookup
-// ==============================================================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Type #7 - Contextual Positioning Lookup
+// ================================================================================
 
 template<uint32_t kCovFmt>
 static BL_INLINE BLResult applyGPosLookupType7Format1(GPosContext& ctx, Table<GPosTable::SequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
@@ -2921,8 +2922,8 @@ static BL_INLINE BLResult applyGPosLookupType7Format3(GPosContext& ctx, Table<GP
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Type #8 - Chained Context Positioning Validation
-// =======================================================================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Type #8 - Chained Context Positioning Validation
+// =========================================================================================
 
 static bool validateGPosLookupType8Format1(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext1> table) noexcept {
   return validateChainedContextFormat1(validator, table, "ChainedContextPositioning1");
@@ -2936,8 +2937,8 @@ static bool validateGPosLookupType8Format3(ValidationContext& validator, Table<G
   return validateChainedContextFormat3(validator, table, "ChainedContextPositioning3");
 }
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Type #8 - Chained Context Positioning Lookup
-// ===================================================================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Type #8 - Chained Context Positioning Lookup
+// =====================================================================================
 
 template<uint32_t kCovFmt>
 static BL_INLINE BLResult applyGPosLookupType8Format1(GPosContext& ctx, Table<GPosTable::ChainedSequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
@@ -3071,8 +3072,8 @@ static BL_INLINE BLResult applyGPosLookupType8Format3(GPosContext& ctx, Table<GP
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GPOS - Lookup Dispatch
-// ===============================================
+// bl::OpenType::LayoutImpl - GPOS - Lookup Dispatch
+// =================================================
 
 static bool validateGPosLookup(ValidationContext& validator, RawTable table, GPosLookupAndFormat typeAndFormat) noexcept {
   switch (typeAndFormat) {
@@ -3235,8 +3236,8 @@ static BLResult applyGPosLookup(GPosContext& ctx, RawTable table, GPosLookupAndF
   return result;
 }
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - Validate
-// ===============================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - Validate
+// =================================================
 
 static bool validateLookup(ValidationContext& validator, Table<GSubGPosTable> table, uint32_t lookupIndex) noexcept {
   const char* tableName = "LookupList";
@@ -3347,7 +3348,7 @@ static BL_NOINLINE LayoutData::LookupStatusBits validateLookups(const OTFaceImpl
   uint32_t analyzedBits = lookupBits;
   uint32_t validBits = 0;
 
-  BLBitSetOps::BitIterator it(analyzedBits);
+  BitSetOps::BitIterator it(analyzedBits);
   while (it.hasNext()) {
     uint32_t bitIndex = it.next();
     uint32_t lookupIndex = baseIndex + bitIndex;
@@ -3356,14 +3357,14 @@ static BL_NOINLINE LayoutData::LookupStatusBits validateLookups(const OTFaceImpl
       break;
 
     if (validateLookup(validator, table, lookupIndex))
-      validBits |= BLBitSetOps::indexAsMask(bitIndex);
+      validBits |= BitSetOps::indexAsMask(bitIndex);
   }
 
   return faceI->layout.commitLookupStatusBits(lookupKind, wordIndex, LayoutData::LookupStatusBits::make(analyzedBits, validBits));
 }
 
-// BLOpenType::LayoutImpl - Apply
-// ==============================
+// bl::OpenType::LayoutImpl - Apply
+// ================================
 
 static BL_INLINE BLResult applyLookup(GSubContext& ctx, RawTable table, uint32_t typeAndFormat, ApplyRange scope, LookupFlags flags) noexcept {
   return applyGSubLookup(ctx, table, GSubLookupAndFormat(typeAndFormat), scope, flags);
@@ -3434,7 +3435,7 @@ static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffe
     lookupBits &= statusBits.valid;
 
     uint32_t bitOffset = wordIndex * 32u;
-    BLBitSetOps::BitIterator it(lookupBits);
+    BitSetOps::BitIterator it(lookupBits);
 
     while (it.hasNext()) {
       uint32_t lookupTableIndex = it.next() + bitOffset;
@@ -3512,8 +3513,8 @@ static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffe
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - GSUB & GPOS - Init
-// ===========================================
+// bl::OpenType::LayoutImpl - GSUB & GPOS - Init
+// =============================================
 
 static BLResult initGSubGPos(OTFaceImpl* faceI, Table<GSubGPosTable> table, LookupKind lookupKind) noexcept {
   if (BL_UNLIKELY(!table.fits()))
@@ -3616,8 +3617,8 @@ static BLResult initGSubGPos(OTFaceImpl* faceI, Table<GSubGPosTable> table, Look
   return BL_SUCCESS;
 }
 
-// BLOpenType::LayoutImpl - Plan
-// =============================
+// bl::OpenType::LayoutImpl - Plan
+// ===============================
 
 static Table<GSubGPosTable::ScriptTable> findScriptInScriptList(Table<Array16<TagRef16>> scriptListOffsets, BLTag scriptTag) noexcept {
   const TagRef16* scriptListArray = scriptListOffsets->array();
@@ -3653,7 +3654,7 @@ static BL_INLINE void populateGSubGPosLookupBits(
       break;
 
     BLTag featureTag = featureListOffsets->array()[featureIndex].tag();
-    if (!BLFontFeatureSettingsPrivate::isFeatureEnabledForPlan<kSSO>(&settings, featureTag))
+    if (!FontFeatureSettingsInternal::isFeatureEnabledForPlan<kSSO>(&settings, featureTag))
       continue;
 
     uint32_t featureOffset = featureListOffsets->array()[featureIndex].offset();
@@ -3671,7 +3672,7 @@ static BL_INLINE void populateGSubGPosLookupBits(
     for (uint32_t j = 0; j < lookupIndexCount; j++) {
       uint32_t lookupIndex = featureTable->lookupListIndexes.array()[j].value();
       if (BL_LIKELY(lookupIndex < lookupCount))
-        BLBitArrayOps::bitArraySetBit(planBits, lookupIndex);
+        BitArrayOps::bitArraySetBit(planBits, lookupIndex);
     }
   }
 }
@@ -3735,8 +3736,8 @@ BLResult calculateGPosPlan(const OTFaceImpl* faceI, const BLFontFeatureSettings&
   return calculateGSubGPosPlan(faceI, settings, LookupKind::kGPOS, plan);
 }
 
-// BLOpenType::LayoutImpl - Init
-// =============================
+// bl::OpenType::LayoutImpl - Init
+// ===============================
 
 BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   if (tables.gdef)
@@ -3754,6 +3755,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 }
 
 } // {LayoutImpl}
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 BL_DIAGNOSTIC_POP

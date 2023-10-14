@@ -17,10 +17,11 @@
 #include "../opentype/otmetrics_p.h"
 #include "../opentype/otname_p.h"
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 
-// BLOpenType - OTFaceImpl - Tracing
-// =================================
+// bl::OpenType - OTFaceImpl - Tracing
+// ===================================
 
 #if defined(BL_TRACE_OT_ALL) || defined(BL_TRACE_OT_CORE)
 #define Trace BLDebugTrace
@@ -28,13 +29,13 @@ namespace BLOpenType {
 #define Trace BLDummyTrace
 #endif
 
-// BLOpenType - OTFaceImpl - Globals
-// =================================
+// bl::OpenType - OTFaceImpl - Globals
+// ===================================
 
 static BLFontFaceVirt blOTFaceVirt;
 
-// BLOpenType - OTFaceImpl - Init & Destroy
-// ========================================
+// bl::OpenType - OTFaceImpl - Init & Destroy
+// ==========================================
 
 static BLResult initOpenTypeFace(OTFaceImpl* faceI, const BLFontData* fontData) noexcept {
   OTFaceTables tables;
@@ -88,7 +89,7 @@ static BLResult BL_CDECL destroyOpenTypeFace(BLObjectImpl* impl) noexcept {
 
 BLResult createOpenTypeFace(BLFontFaceCore* self, const BLFontData* fontData, uint32_t faceIndex) noexcept {
   BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT_FACE);
-  BL_PROPAGATE(BLObjectPrivate::allocImplT<OTFaceImpl>(self, info));
+  BL_PROPAGATE(ObjectInternal::allocImplT<OTFaceImpl>(self, info));
 
   // Zero everything so we don't have to initialize features not provided by the font.
   OTFaceImpl* faceI = static_cast<OTFaceImpl*>(self->_d.impl);
@@ -115,15 +116,16 @@ BLResult createOpenTypeFace(BLFontFaceCore* self, const BLFontData* fontData, ui
   return BL_SUCCESS;
 }
 
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
-// BLOpenType - Runtime Registration
-// =================================
+// bl::OpenType - Runtime Registration
+// ===================================
 
 void blOpenTypeRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
-  BLOpenType::blOTFaceVirt.base.destroy = BLOpenType::destroyOpenTypeFace;
-  BLOpenType::blOTFaceVirt.base.getProperty = blObjectImplGetProperty;
-  BLOpenType::blOTFaceVirt.base.setProperty = blObjectImplSetProperty;
+  bl::OpenType::blOTFaceVirt.base.destroy = bl::OpenType::destroyOpenTypeFace;
+  bl::OpenType::blOTFaceVirt.base.getProperty = blObjectImplGetProperty;
+  bl::OpenType::blOTFaceVirt.base.setProperty = blObjectImplSetProperty;
 }

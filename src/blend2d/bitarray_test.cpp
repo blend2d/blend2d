@@ -9,10 +9,11 @@
 #include "bitarray_p.h"
 #include "object_p.h"
 
-// BLBitArray - Tests
-// ==================
+// bl::BitArray - Tests
+// ====================
 
-namespace BLBitArrayTests {
+namespace bl {
+namespace Tests {
 
 UNIT(bitarray, BL_TEST_GROUP_CORE_CONTAINERS) {
   constexpr uint32_t kSSOBitCapacity = BLBitArray::kSSOWordCount * 32u;
@@ -158,6 +159,7 @@ UNIT(bitarray, BL_TEST_GROUP_CORE_CONTAINERS) {
   }
 }
 
-} // {BLBitArrayTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

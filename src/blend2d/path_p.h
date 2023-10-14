@@ -7,9 +7,9 @@
 #define BLEND2D_PATH_P_H_INCLUDED
 
 #include "api-internal_p.h"
-#include "math_p.h"
 #include "object_p.h"
 #include "path.h"
+#include "support/math_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
@@ -26,9 +26,8 @@ struct BLPathPrivateImpl : public BLPathImpl {
 
 //! \}
 
-namespace BLPathPrivate {
-
-using BLObjectPrivate::RCMode;
+namespace bl {
+namespace PathInternal {
 
 //! \name BLPath - Internals - Common Functionality (Container)
 //! \{
@@ -47,16 +46,16 @@ static BL_INLINE constexpr BLObjectImplSize implSizeFromCapacity(size_t capacity
 //! \{
 
 static BL_INLINE bool isImplMutable(BLPathImpl* impl) noexcept {
-  return BLObjectPrivate::isImplMutable(impl);
+  return ObjectInternal::isImplMutable(impl);
 }
 
 static BL_INLINE BLResult freeImpl(BLPathPrivateImpl* impl) noexcept {
-  return BLObjectPrivate::freeImpl(impl);
+  return ObjectInternal::freeImpl(impl);
 }
 
 template<RCMode kRCMode>
 static BL_INLINE BLResult releaseImpl(BLPathPrivateImpl* impl) noexcept {
-  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -69,7 +68,7 @@ static BL_INLINE BLPathPrivateImpl* getImpl(const BLPathCore* self) noexcept {
 }
 
 static BL_INLINE BLResult retainInstance(const BLPathCore* self, size_t n = 1) noexcept {
-  return BLObjectPrivate::retainInstance(self, n);
+  return ObjectInternal::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLPathCore* self) noexcept {
@@ -100,29 +99,29 @@ static BL_INLINE constexpr BLApproximationOptions makeDefaultApproximationOption
 
 //! \}
 
-} // {BLPathPrivate}
+} // {PathPrivate}
 
-//! \name BLPath - Private Iterator
+//! \name BLPath Iterator
 //! \{
 
 //! Path iterator that can iterate over RAW data.
-struct BLPathIterator {
+struct PathIterator {
   const uint8_t* cmd;
   const uint8_t* end;
   const BLPoint* vtx;
 
-  BL_INLINE BLPathIterator() noexcept = default;
-  BL_INLINE BLPathIterator(const BLPathView& view) noexcept { reset(view); }
-  BL_INLINE BLPathIterator(const uint8_t* cmd_, const BLPoint* vtx_, size_t n) noexcept { reset(cmd_, vtx_, n); }
+  BL_INLINE PathIterator() noexcept = default;
+  BL_INLINE PathIterator(const BLPathView& view) noexcept { reset(view); }
+  BL_INLINE PathIterator(const uint8_t* cmd_, const BLPoint* vtx_, size_t n) noexcept { reset(cmd_, vtx_, n); }
 
-  BL_INLINE BLPathIterator operator++(int) noexcept { BLPathIterator out(*this); cmd++; vtx++; return out; }
-  BL_INLINE BLPathIterator operator--(int) noexcept { BLPathIterator out(*this); cmd--; vtx--; return out; }
+  BL_INLINE PathIterator operator++(int) noexcept { PathIterator out(*this); cmd++; vtx++; return out; }
+  BL_INLINE PathIterator operator--(int) noexcept { PathIterator out(*this); cmd--; vtx--; return out; }
 
-  BL_INLINE BLPathIterator& operator++() noexcept { cmd++; vtx++; return *this; }
-  BL_INLINE BLPathIterator& operator--() noexcept { cmd--; vtx--; return *this; }
+  BL_INLINE PathIterator& operator++() noexcept { cmd++; vtx++; return *this; }
+  BL_INLINE PathIterator& operator--() noexcept { cmd--; vtx--; return *this; }
 
-  BL_INLINE BLPathIterator& operator+=(size_t n) noexcept { cmd += n; vtx += n; return *this; }
-  BL_INLINE BLPathIterator& operator-=(size_t n) noexcept { cmd -= n; vtx -= n; return *this; }
+  BL_INLINE PathIterator& operator+=(size_t n) noexcept { cmd += n; vtx += n; return *this; }
+  BL_INLINE PathIterator& operator-=(size_t n) noexcept { cmd -= n; vtx -= n; return *this; }
 
   BL_INLINE bool atEnd() const noexcept { return cmd == end; }
   BL_INLINE bool afterEnd() const noexcept { return cmd > end; }
@@ -152,7 +151,7 @@ struct BLPathIterator {
 
 //! \}
 
-//! \name BLPath - Private Appender
+//! \name BLPath Appender
 //! \{
 
 //! Low-level interface that can be used to append vertices & commands to an existing path fast. The interface is
@@ -167,7 +166,7 @@ struct BLPathIterator {
 //! ```
 //! template<typename Iterator>
 //! BLResult appendToPath(BLPath& dst, const Iterator& iter) noexcept {
-//!   BLPathPrivate::BLPathAppender appender;
+//!   bl::PathAppender appender;
 //!   BL_PROPAGATE(appender.beginAssign(dst, 32));
 //!
 //!   while (!iter.end()) {
@@ -189,7 +188,7 @@ struct BLPathIterator {
 //!   return BL_SUCCESS;
 //! }
 //! ```
-class BLPathAppender {
+class PathAppender {
 public:
   // Internal struct that represents a single command and prevents compile thinking that it may alias.
   struct Cmd { uint8_t value; };
@@ -198,7 +197,7 @@ public:
   Cmd* end;
   BLPoint* vtx;
 
-  BL_INLINE BLPathAppender() noexcept
+  BL_INLINE PathAppender() noexcept
     : cmd(nullptr) {}
 
   BL_INLINE void reset() noexcept { cmd = nullptr; }
@@ -206,7 +205,7 @@ public:
   BL_INLINE size_t remainingSize() const noexcept { return (size_t)(end - cmd); }
 
   BL_INLINE size_t currentIndex(const BLPath& dst) const noexcept {
-    return (size_t)(cmd - reinterpret_cast<Cmd*>(BLPathPrivate::getImpl(&dst)->commandData));
+    return (size_t)(cmd - reinterpret_cast<Cmd*>(PathInternal::getImpl(&dst)->commandData));
   }
 
   BL_INLINE void _advance(size_t n) noexcept {
@@ -221,7 +220,7 @@ public:
     uint8_t* cmdPtrLocal;
     BL_PROPAGATE(blPathModifyOp(dst, op, n, &cmdPtrLocal, &vtxPtrLocal));
 
-    BLPathImpl* dstI = BLPathPrivate::getImpl(dst);
+    BLPathImpl* dstI = PathInternal::getImpl(dst);
     vtx = vtxPtrLocal;
     cmd = reinterpret_cast<Cmd*>(cmdPtrLocal);
     end = reinterpret_cast<Cmd*>(dstI->commandData + dstI->capacity);
@@ -237,7 +236,7 @@ public:
     if (BL_LIKELY(remainingSize() >= n))
       return BL_SUCCESS;
 
-    BLPathImpl* dstI = BLPathPrivate::getImpl(dst);
+    BLPathImpl* dstI = PathInternal::getImpl(dst);
 
     dstI->size = (size_t)(reinterpret_cast<uint8_t*>(cmd) - dstI->commandData);
     BL_ASSERT(dstI->size <= dstI->capacity);
@@ -246,7 +245,7 @@ public:
     BLPoint* vtxPtrLocal;
     BL_PROPAGATE(blPathModifyOp(dst, BL_MODIFY_OP_APPEND_GROW, n, &cmdPtrLocal, &vtxPtrLocal));
 
-    dstI = BLPathPrivate::getImpl(dst);
+    dstI = PathInternal::getImpl(dst);
     vtx = vtxPtrLocal;
     cmd = reinterpret_cast<Cmd*>(cmdPtrLocal);
     end = reinterpret_cast<Cmd*>(dstI->commandData + dstI->capacity);
@@ -261,7 +260,7 @@ public:
   }
 
   BL_INLINE void sync(BLPathCore* dst) noexcept {
-    BLPathImpl* dstI = BLPathPrivate::getImpl(dst);
+    BLPathImpl* dstI = PathInternal::getImpl(dst);
     size_t newSize = (size_t)(reinterpret_cast<uint8_t*>(cmd) - dstI->commandData);
 
     BL_ASSERT(!empty());
@@ -317,6 +316,43 @@ public:
     vtx += 2;
   }
 
+  BL_INLINE void conicTo(const BLPoint& p1, const BLPoint& p2, double w) noexcept {
+    BL_ASSERT(remainingSize() >= 3);
+    double k = 4.0 * w / (3.0 * (1.0 + w));
+
+    cmd[0].value = BL_PATH_CMD_CUBIC;
+    cmd[1].value = BL_PATH_CMD_CUBIC;
+    cmd[2].value = BL_PATH_CMD_ON;
+
+    BLPoint p0 = vtx[-1];
+    vtx[0] = p0 + (p1 - p0) * k;
+    vtx[1] = p2 + (p1 - p2) * k;
+    vtx[2] = p2;
+
+    cmd += 3;
+    vtx += 3;
+  }
+
+/*
+  // TODO [Conic]: Use this instead of cubic approximation
+  BL_INLINE void conicTo(const BLPoint& p1, const BLPoint& p2, double w) noexcept {
+    quadTo(p1.x, p1.y, p2.x, p2.y);
+  }
+
+  BL_INLINE void conicTo(double x1, double y1, double x2, double y2, double w) noexcept {
+    BL_ASSERT(remainingSize() >= 3);
+
+    cmd[0].value = BL_PATH_CMD_CONIC;
+    cmd[1].value = BL_PATH_CMD_WEIGHT;
+    cmd[2].value = BL_PATH_CMD_ON;
+    vtx[0].reset(x1, y1);
+    vtx[1].reset(w, bl::Math::nan<double>());
+    vtx[2].reset(x2, y2);
+
+    cmd += 3;
+    vtx += 3;
+  }
+*/
   BL_INLINE void cubicTo(const BLPoint& p1, const BLPoint& p2, const BLPoint& p3) noexcept {
     return cubicTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
   }
@@ -343,25 +379,8 @@ public:
     cmd[2].value = BL_PATH_CMD_ON;
 
     BLPoint p0 = vtx[-1];
-    vtx[0] = p0 + (p1 - p0) * BL_M_KAPPA;
-    vtx[1] = p2 + (p1 - p2) * BL_M_KAPPA;
-    vtx[2] = p2;
-
-    cmd += 3;
-    vtx += 3;
-  }
-
-  BL_INLINE void conicTo(const BLPoint& p1, const BLPoint& p2, double w) noexcept {
-    BL_ASSERT(remainingSize() >= 3);
-    double k = 4.0 * w / (3.0 * (1.0 + w));
-
-    cmd[0].value = BL_PATH_CMD_CUBIC;
-    cmd[1].value = BL_PATH_CMD_CUBIC;
-    cmd[2].value = BL_PATH_CMD_ON;
-
-    BLPoint p0 = vtx[-1];
-    vtx[0] = p0 + (p1 - p0) * k;
-    vtx[1] = p2 + (p1 - p2) * k;
+    vtx[0] = p0 + (p1 - p0) * Math::kKAPPA;
+    vtx[1] = p2 + (p1 - p2) * Math::kKAPPA;
     vtx[2] = p2;
 
     cmd += 3;
@@ -392,7 +411,7 @@ public:
     BL_ASSERT(remainingSize() >= 1);
 
     cmd[0].value = BL_PATH_CMD_CLOSE;
-    vtx[0].reset(blNaN<double>(), blNaN<double>());
+    vtx[0].reset(Math::nan<double>(), Math::nan<double>());
 
     cmd++;
     vtx++;
@@ -411,7 +430,7 @@ public:
     vtx[1].reset(x1, y0);
     vtx[2].reset(x1, y1);
     vtx[3].reset(x0, y1);
-    vtx[4].reset(blNaN<double>(), blNaN<double>());
+    vtx[4].reset(Math::nan<double>(), Math::nan<double>());
 
     if (dir != BL_GEOMETRY_DIRECTION_CW) {
       vtx[1].reset(x0, y1);
@@ -432,6 +451,8 @@ public:
 };
 
 //! \}
+
+} // {bl}
 
 //! \}
 //! \endcond

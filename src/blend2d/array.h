@@ -157,7 +157,7 @@ struct ArrayTraitsByCategory<T, kTypeCategoryPtr> {
   static constexpr const uint32_t kArrayType =
     sizeof(T) == 4 ? BL_OBJECT_TYPE_ARRAY_UINT32 : BL_OBJECT_TYPE_ARRAY_UINT64;
 
-  typedef typename StdInt<sizeof(T), 1>::Type CompatibleType;
+  using CompatibleType = BLInternal::UIntByType<T>;
   static BL_INLINE_NODEBUG CompatibleType pass(const T& arg) noexcept { return (CompatibleType)arg; }
 };
 
@@ -173,7 +173,7 @@ struct ArrayTraitsByCategory<T, kTypeCategoryInt> {
     sizeof(T) == 8 && std::is_signed  <T>::value ? BL_OBJECT_TYPE_ARRAY_INT64  :
     sizeof(T) == 8 && std::is_unsigned<T>::value ? BL_OBJECT_TYPE_ARRAY_UINT64 : BL_OBJECT_TYPE_NULL;
 
-  typedef typename StdInt<sizeof(T), 1>::Type CompatibleType;
+  using CompatibleType = BLInternal::UIntByType<T>;
   static BL_INLINE_NODEBUG CompatibleType pass(const T& arg) noexcept { return (CompatibleType)arg; }
 };
 

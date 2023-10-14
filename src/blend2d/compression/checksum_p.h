@@ -10,7 +10,8 @@
 
 //! \cond INTERNAL
 
-namespace BLCompression {
+namespace bl {
+namespace Compression {
 
 BL_HIDDEN extern const uint32_t crc32_table[];
 
@@ -21,7 +22,8 @@ static BL_INLINE uint32_t crc32_update_byte(uint32_t hash, uint8_t b) noexcept {
 BL_HIDDEN uint32_t crc32(const uint8_t* data, size_t size) noexcept;
 BL_HIDDEN uint32_t adler32(const uint8_t* data, size_t size) noexcept;
 
-} // {BLCompression}
+} // {Compression}
+} // {bl}
 
 //! \endcond
 

@@ -27,25 +27,25 @@ static BL_INLINE typename std::remove_volatile<T>::type blNonAtomicFetch(const T
 
 template<typename T>
 static BL_INLINE T blAtomicFetchRelaxed(const T* p) noexcept {
-  typedef typename BLInternal::StdInt<sizeof(T), 0>::Type RawT;
+  using RawT = BLInternal::UIntByType<T>;
   return T(((const std::atomic<RawT>*)p)->load(std::memory_order_relaxed));
 }
 
 template<typename T>
 static BL_INLINE T blAtomicFetchStrong(const T* p) noexcept {
-  typedef typename BLInternal::StdInt<sizeof(T), 0>::Type RawT;
+  using RawT = BLInternal::UIntByType<T>;
   return T(((const std::atomic<RawT>*)p)->load(std::memory_order_acquire));
 }
 
 template<typename T, typename V>
 static BL_INLINE void blAtomicStoreRelaxed(T* p, V value) noexcept {
-  typedef typename BLInternal::StdInt<sizeof(T), 0>::Type RawT;
+  using RawT = BLInternal::UIntByType<T>;
   return ((std::atomic<RawT>*)p)->store(RawT(T(value)), std::memory_order_relaxed);
 }
 
 template<typename T, typename V>
 static BL_INLINE void blAtomicStoreStrong(T* p, V value) noexcept {
-  typedef typename BLInternal::StdInt<sizeof(T), 0>::Type RawT;
+  using RawT = BLInternal::UIntByType<T>;
   return ((std::atomic<RawT>*)p)->store(RawT(T(value)), std::memory_order_release);
 }
 

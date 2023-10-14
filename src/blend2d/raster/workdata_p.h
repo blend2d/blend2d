@@ -18,7 +18,8 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 class RenderBatch;
 
@@ -38,7 +39,7 @@ public:
   //! Batch data to process in case this data is used in a worker thread.
   RenderBatch* batch;
   //! Context data used by pipelines (either the destination data or layer).
-  BLPipeline::ContextData ctxData;
+  Pipeline::ContextData ctxData;
 
   //! Clip mode.
   uint8_t clipMode;
@@ -57,11 +58,11 @@ public:
   BLGlyphBuffer glyphBuffer;
 
   //! Zone memory used by the worker context.
-  BLArenaAllocator workZone;
+  ArenaAllocator workZone;
   //! The last state of the zone to be reverted to in case of failure.
-  BLArenaAllocator::StatePtr workState;
+  ArenaAllocator::StatePtr workState;
   //! Zero memory filled by rasterizers and zeroed back by pipelines.
-  BLZeroBuffer zeroBuffer;
+  ZeroBuffer zeroBuffer;
   //! Edge storage.
   EdgeStorage<int> edgeStorage;
   //! Edge builder.
@@ -97,7 +98,7 @@ public:
 
   BL_INLINE void startOver() noexcept {
     workZone.clear();
-    workState = BLArenaAllocator::StatePtr{};
+    workState = ArenaAllocator::StatePtr{};
     edgeStorage.clear();
   }
 
@@ -120,7 +121,8 @@ public:
   BLResult accumulateError(BLResult error) noexcept;
 };
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -16,13 +16,13 @@
 #include "object_p.h"
 #include "path_p.h"
 #include "pattern_p.h"
-#include "math_p.h"
 #include "rgba_p.h"
 #include "string_p.h"
 #include "var_p.h"
+#include "support/math_p.h"
 
-// BLVar - API - Init & Destroy
-// ============================
+// bl::Var - API - Init & Destroy
+// ==============================
 
 BL_API_IMPL BLResult blVarInitType(BLUnknown* self, BLObjectType type) noexcept {
   BLResult result = BL_SUCCESS;
@@ -72,7 +72,7 @@ BL_API_IMPL BLResult blVarInitDouble(BLUnknown* self, double value) noexcept {
 }
 
 BL_API_IMPL BLResult blVarInitRgba(BLUnknown* self, const BLRgba* rgba) noexcept {
-  return BLVarPrivate::initRgba(blAsObject(self), rgba);
+  return bl::VarInternal::initRgba(blAsObject(self), rgba);
 }
 
 BL_API_IMPL BLResult blVarInitRgba32(BLUnknown* self, uint32_t rgba32) noexcept {
@@ -98,79 +98,79 @@ BL_API_IMPL BLResult blVarInitWeak(BLUnknown* self, const BLUnknown* other) noex
 }
 
 BL_API_IMPL BLResult blVarDestroy(BLUnknown* self) noexcept {
-  return BLObjectPrivate::releaseUnknownInstance(blAsObject(self));
+  return bl::ObjectInternal::releaseUnknownInstance(blAsObject(self));
 }
 
-// BLVar - API - Reset
-// ===================
+// bl::Var - API - Reset
+// =====================
 
 BL_API_IMPL BLResult blVarReset(BLUnknown* self) noexcept {
   BLObjectCore tmp = *blAsObject(self);
   blAsObject(self)->_d.initNull();
-  return BLObjectPrivate::releaseUnknownInstance(&tmp);
+  return bl::ObjectInternal::releaseUnknownInstance(&tmp);
 }
 
-// BLVar - API - Assign
-// ====================
+// bl::Var - API - Assign
+// ======================
 
 BL_API_IMPL BLResult blVarAssignNull(BLUnknown* self) noexcept {
   BLObjectCore tmp = *blAsObject(self);
   blAsObject(self)->_d.initNull();
-  return BLObjectPrivate::releaseUnknownInstance(&tmp);
+  return bl::ObjectInternal::releaseUnknownInstance(&tmp);
 }
 
 BL_API_IMPL BLResult blVarAssignBool(BLUnknown* self, bool value) noexcept {
   BLObjectCore tmp = *blAsObject(self);
   blAsObject(self)->_d.initBool(value);
-  return BLObjectPrivate::releaseUnknownInstance(&tmp);
+  return bl::ObjectInternal::releaseUnknownInstance(&tmp);
 }
 
 BL_API_IMPL BLResult blVarAssignInt32(BLUnknown* self, int32_t value) noexcept {
   BLObjectCore tmp = *blAsObject(self);
   blAsObject(self)->_d.initInt64(value);
-  return BLObjectPrivate::releaseUnknownInstance(&tmp);
+  return bl::ObjectInternal::releaseUnknownInstance(&tmp);
 }
 
 BL_API_IMPL BLResult blVarAssignInt64(BLUnknown* self, int64_t value) noexcept {
   BLObjectCore tmp = *blAsObject(self);
   blAsObject(self)->_d.initInt64(value);
-  return BLObjectPrivate::releaseUnknownInstance(&tmp);
+  return bl::ObjectInternal::releaseUnknownInstance(&tmp);
 }
 
 BL_API_IMPL BLResult blVarAssignUInt32(BLUnknown* self, uint32_t value) noexcept {
   BLObjectCore tmp = *blAsObject(self);
   blAsObject(self)->_d.initUInt64(value);
-  return BLObjectPrivate::releaseUnknownInstance(&tmp);
+  return bl::ObjectInternal::releaseUnknownInstance(&tmp);
 }
 
 BL_API_IMPL BLResult blVarAssignUInt64(BLUnknown* self, uint64_t value) noexcept {
   BLObjectCore tmp = *blAsObject(self);
   blAsObject(self)->_d.initUInt64(value);
-  return BLObjectPrivate::releaseUnknownInstance(&tmp);
+  return bl::ObjectInternal::releaseUnknownInstance(&tmp);
 }
 
 BL_API_IMPL BLResult blVarAssignDouble(BLUnknown* self, double value) noexcept {
   BLObjectCore tmp = *blAsObject(self);
   blAsObject(self)->_d.initDouble(value);
-  return BLObjectPrivate::releaseUnknownInstance(&tmp);
+  return bl::ObjectInternal::releaseUnknownInstance(&tmp);
 }
 
 BL_API_IMPL BLResult blVarAssignRgba(BLUnknown* self, const BLRgba* rgba) noexcept {
   BLObjectCore tmp = *blAsObject(self);
-  BLVarPrivate::initRgba(blAsObject(self), rgba);
-  return BLObjectPrivate::releaseUnknownInstance(&tmp);
+  bl::VarInternal::initRgba(blAsObject(self), rgba);
+  return bl::ObjectInternal::releaseUnknownInstance(&tmp);
 }
 
 BL_API_IMPL BLResult blVarAssignRgba32(BLUnknown* self, uint32_t rgba32) noexcept {
   BLObjectCore tmp = *blAsObject(self);
   blAsObject(self)->_d.initRgba32(rgba32);
-  return BLObjectPrivate::releaseUnknownInstance(&tmp);
+  return bl::ObjectInternal::releaseUnknownInstance(&tmp);
 }
 
 BL_API_IMPL BLResult blVarAssignRgba64(BLUnknown* self, uint64_t rgba64) noexcept {
   BLObjectCore tmp = *blAsObject(self);
   blAsObject(self)->_d.initRgba64(rgba64);
-  return BLObjectPrivate::releaseUnknownInstance(&tmp);
+  return bl::ObjectInternal::releaseUnknownInstance(&tmp);
 }
 
 BL_API_IMPL BLResult blVarAssignMove(BLUnknown* self, BLUnknown* other) noexcept {
@@ -178,7 +178,7 @@ BL_API_IMPL BLResult blVarAssignMove(BLUnknown* self, BLUnknown* other) noexcept
   BLObjectCore tmp = *blAsObject(other);
 
   blAsObject(other)->_d = blObjectDefaults[otherType]._d;
-  BLObjectPrivate::releaseUnknownInstance(blAsObject(self));
+  bl::ObjectInternal::releaseUnknownInstance(blAsObject(self));
 
   blAsObject(self)->_d = tmp._d;
   return BL_SUCCESS;
@@ -188,8 +188,8 @@ BL_API_IMPL BLResult blVarAssignWeak(BLUnknown* self, const BLUnknown* other) no
   return blObjectPrivateAssignWeakUnknown(blAsObject(self), blAsObject(other));
 }
 
-// BLVar - API - Get Type & Value
-// ==============================
+// bl::Var - API - Get Type & Value
+// ================================
 
 BL_API_IMPL BLObjectType blVarGetType(const BLUnknown* self) noexcept {
   return blAsObject(self)->_d.getType();
@@ -212,7 +212,7 @@ BL_API_IMPL BLResult blVarToBool(const BLUnknown* self, bool* out) noexcept {
     }
 
     case BL_OBJECT_TYPE_DOUBLE: {
-      *out = (d.f64_data[0] != 0.0 && !blIsNaN(d.f64_data[0]));
+      *out = (d.f64_data[0] != 0.0 && !bl::Math::isNaN(d.f64_data[0]));
       return BL_SUCCESS;
     }
 
@@ -271,7 +271,7 @@ BL_API_IMPL BLResult blVarToInt32(const BLUnknown* self, int32_t* out) noexcept 
     case BL_OBJECT_TYPE_DOUBLE: {
       double f = d.f64_data[0];
 
-      if (blIsNaN(f)) {
+      if (bl::Math::isNaN(f)) {
         *out = 0;
         return blTraceError(BL_ERROR_INVALID_CONVERSION);
       }
@@ -286,7 +286,7 @@ BL_API_IMPL BLResult blVarToInt32(const BLUnknown* self, int32_t* out) noexcept 
         return blTraceError(BL_ERROR_OVERFLOW);
       }
 
-      int32_t v = blTruncToInt(f);
+      int32_t v = bl::Math::truncToInt(f);
 
       *out = v;
       if (double(v) != f)
@@ -329,7 +329,8 @@ BL_API_IMPL BLResult blVarToInt64(const BLUnknown* self, int64_t* out) noexcept 
 
     case BL_OBJECT_TYPE_DOUBLE: {
       double f = d.f64_data[0];
-      if (blIsNaN(f)) {
+
+      if (bl::Math::isNaN(f)) {
         *out = 0;
         return blTraceError(BL_ERROR_INVALID_CONVERSION);
       }
@@ -344,7 +345,7 @@ BL_API_IMPL BLResult blVarToInt64(const BLUnknown* self, int64_t* out) noexcept 
         return blTraceError(BL_ERROR_OVERFLOW);
       }
 
-      int64_t v = blTruncToInt64(f);
+      int64_t v = bl::Math::truncToInt64(f);
 
       *out = v;
       if (double(v) != f)
@@ -405,7 +406,8 @@ BL_API_IMPL BLResult blVarToUInt32(const BLUnknown* self, uint32_t* out) noexcep
 
     case BL_OBJECT_TYPE_DOUBLE: {
       double f = d.f64_data[0];
-      if (blIsNaN(f)) {
+
+      if (bl::Math::isNaN(f)) {
         *out = 0u;
         return blTraceError(BL_ERROR_INVALID_CONVERSION);
       }
@@ -466,7 +468,7 @@ BL_API_IMPL BLResult blVarToUInt64(const BLUnknown* self, uint64_t* out) noexcep
     case BL_OBJECT_TYPE_DOUBLE: {
       double f = d.f64_data[0];
 
-      if (blIsNaN(f)) {
+      if (bl::Math::isNaN(f)) {
         *out = 0u;
         return blTraceError(BL_ERROR_INVALID_CONVERSION);
       }
@@ -605,8 +607,8 @@ BL_API_IMPL BLResult blVarToRgba64(const BLUnknown* self, uint64_t* out) noexcep
   return blTraceError(BL_ERROR_INVALID_STATE);
 }
 
-// BLVar - API - Equality & Comparison
-// ===================================
+// bl::Var - API - Equality & Comparison
+// =====================================
 
 BL_API_IMPL bool blVarEquals(const BLUnknown* a, const BLUnknown* b) noexcept {
   const BLObjectDetail& aD = blAsObject(a)->_d;
@@ -800,7 +802,7 @@ BL_API_IMPL bool blVarEqualsDouble(const BLUnknown* self, double value) noexcept
       return double(d.u64_data[0]) == value && uint64_t(double(d.u64_data[0])) == d.u64_data[0];
 
     case BL_OBJECT_TYPE_DOUBLE:
-      return d.f64_data[0] == value || (blIsNaN(d.f64_data[0]) && blIsNaN(value));
+      return d.f64_data[0] == value || (bl::Math::isNaN(d.f64_data[0]) && bl::Math::isNaN(value));
 
     default:
       return false;

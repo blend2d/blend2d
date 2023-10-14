@@ -24,43 +24,44 @@
 #include "../support/memops_p.h"
 #include "../support/scopedbuffer_p.h"
 
-// ============================================================================
-// [Global Variables]
-// ============================================================================
+namespace bl {
+namespace Png {
 
-static BLImageCodecCore blPngCodecObject;
-static BLObjectEternalVirtualImpl<BLPngCodecImpl, BLImageCodecVirt> blPngCodec;
-static BLImageDecoderVirt blPngDecoderVirt;
-static BLImageEncoderVirt blPngEncoderVirt;
+// bl::Png::Codec - Globals
+// ========================
 
-// ============================================================================
-// [BLPngCodec - Constants]
-// ============================================================================
+static BLObjectEternalVirtualImpl<BLPngCodecImpl, BLImageCodecVirt> pngCodec;
+static BLImageCodecCore pngCodecInstance;
+
+static BLImageDecoderVirt pngDecoderVirt;
+static BLImageEncoderVirt pngEncoderVirt;
+
+// bl::Png::Codec - Constants
+// ==========================
 
 // PNG file signature (8 bytes).
-static const uint8_t blPngSignature[8] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+static const uint8_t pngSignature[8] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
 
 // Allowed bits-per-sample per "ColorType"
-static const uint8_t blPngColorTypeBitDepthsTable[7] = { 0x1F, 0, 0x18, 0x0F, 0x18, 0, 0x18 };
+static const uint8_t colorTypeBitDepthTable[7] = { 0x1F, 0, 0x18, 0x0F, 0x18, 0, 0x18 };
 
 // Count of samples per "ColorType".
-static const uint8_t blPngColorTypeToSampleCountTable[7] = { 0x01, 0, 0x03, 0x01, 0x02, 0, 0x04 };
+static const uint8_t colorTypeToSampleCountTable[7] = { 0x01, 0, 0x03, 0x01, 0x02, 0, 0x04 };
 
-// ============================================================================
-// [BLPngCodec - Utilities]
-// ============================================================================
+// bl::Png::Codec - Utilities
+// ==========================
 
-static BL_INLINE bool blPngCheckColorTypeAndBitDepth(uint32_t colorType, uint32_t depth) noexcept {
+static BL_INLINE bool checkColorTypeAndBitDepth(uint32_t colorType, uint32_t depth) noexcept {
   // TODO: [PNG] 16-BPC.
   if (depth == 16)
     return false;
 
-  return colorType < BL_ARRAY_SIZE(blPngColorTypeBitDepthsTable) &&
-         (blPngColorTypeBitDepthsTable[colorType] & depth) != 0 &&
-         BLIntOps::isPowerOf2(depth);
+  return colorType < BL_ARRAY_SIZE(colorTypeBitDepthTable) &&
+         (colorTypeBitDepthTable[colorType] & depth) != 0 &&
+         IntOps::isPowerOf2(depth);
 }
 
-static BL_INLINE void blPngCreateGrayscalePalette(BLRgba32* pal, uint32_t depth) noexcept {
+static BL_INLINE void createGrayscalePalette(BLRgba32* pal, uint32_t depth) noexcept {
   static const uint32_t scaleTable[9] = { 0, 0xFF, 0x55, 0, 0x11, 0, 0, 0, 0x01 };
   BL_ASSERT(depth < BL_ARRAY_SIZE(scaleTable));
 
@@ -72,12 +73,11 @@ static BL_INLINE void blPngCreateGrayscalePalette(BLRgba32* pal, uint32_t depth)
     pal[i].value = value;
 }
 
-// ============================================================================
-// [BLPngCodec - Interlace / Deinterlace]
-// ============================================================================
+// bl::Png::Codec - Interlace / Deinterlace
+// ========================================
 
 // A single PNG interlace/deinterlace step related to the full image size.
-struct BLPngInterlaceStep {
+struct InterlaceStep {
   uint32_t used;
   uint32_t width;
   uint32_t height;
@@ -88,7 +88,7 @@ struct BLPngInterlaceStep {
 };
 
 // PNG deinterlace table data.
-struct BLPngInterlaceTable {
+struct InterlaceTable {
   uint8_t xOff;
   uint8_t yOff;
   uint8_t xPow;
@@ -96,7 +96,7 @@ struct BLPngInterlaceTable {
 };
 
 // No interlacing.
-static const BLPngInterlaceTable blPngInterlaceTableNone[1] = {
+static const InterlaceTable interlaceTableNone[1] = {
   { 0, 0, 0, 0 }
 };
 
@@ -115,7 +115,7 @@ static const BLPngInterlaceTable blPngInterlaceTableNone[1] = {
 //   | 4 5 4 5 4 5 4 5 |
 //   | 6 6 6 6 6 6 6 6 |
 //   +-----------------+
-static const BLPngInterlaceTable blPngInterlaceTableAdam7[7] = {
+static const InterlaceTable interlaceTableAdam7[7] = {
   { 0, 0, 3, 3 },
   { 4, 0, 3, 3 },
   { 0, 4, 2, 3 },
@@ -125,8 +125,8 @@ static const BLPngInterlaceTable blPngInterlaceTableAdam7[7] = {
   { 0, 1, 0, 1 }
 };
 
-static uint32_t blPngCalculateInterlaceSteps(
-  BLPngInterlaceStep* dst, const BLPngInterlaceTable* table, uint32_t stepCount,
+static uint32_t calculateInterlaceSteps(
+  InterlaceStep* dst, const InterlaceTable* table, uint32_t stepCount,
   uint32_t sampleDepth, uint32_t sampleCount,
   uint32_t w, uint32_t h) noexcept {
 
@@ -134,7 +134,7 @@ static uint32_t blPngCalculateInterlaceSteps(
   uint32_t offset = 0;
 
   for (uint32_t i = 0; i < stepCount; i++, dst++) {
-    const BLPngInterlaceTable& tab = table[i];
+    const InterlaceTable& tab = table[i];
 
     uint32_t sx = 1 << tab.xPow;
     uint32_t sy = 1 << tab.yPow;
@@ -160,8 +160,8 @@ static uint32_t blPngCalculateInterlaceSteps(
     dst->size = size;
 
     // Here we should be safe...
-    BLOverflowFlag of = 0;
-    offset = BLIntOps::addOverflow(offset, size, &of);
+    bl::OverflowFlag of{};
+    offset = IntOps::addOverflow(offset, size, &of);
 
     if (BL_UNLIKELY(of))
       return 0;
@@ -182,16 +182,14 @@ static BL_INLINE uint8_t combineByte4bpp(uint32_t b0, uint32_t b1) noexcept {
   return uint8_t(((b0) & 0xF0) + ((b1) & 0x0F));
 }
 
-// Deinterlace a PNG image that has depth less than 8 bits. This is a bit
-// tricky as one byte describes two or more pixels that can be fetched from
-// 1st to 6th progressive images. Basically each bit depth is implemented
-// separatery as generic case would be very inefficient. Also, the destination
-// image is handled pixel-by-pixel fetching data from all possible scanlines
-// as necessary - this is a bit different compared with `blPngDeinterlaceBytes()`.
+// Deinterlace a PNG image that has depth less than 8 bits. This is a bit tricky as one byte describes two or more
+// pixels that can be fetched from 1st to 6th progressive images. Basically each bit depth is implemented separately
+// as generic case would be very inefficient. Also, the destination image is handled pixel-by-pixel fetching data
+// from all possible scanlines as necessary - this is a bit different compared with `deinterlaceBytes()`.
 template<uint32_t N>
-static void blPngDeinterlaceBits(
+static void deinterlaceBits(
   uint8_t* dstLine, intptr_t dstStride, const BLPixelConverter& pc,
-  uint8_t* tmpLine, intptr_t tmpStride, const uint8_t* data, const BLPngInterlaceStep* steps,
+  uint8_t* tmpLine, intptr_t tmpStride, const uint8_t* data, const InterlaceStep* steps,
   uint32_t w, uint32_t h) noexcept {
 
   const uint8_t* d0 = data + steps[0].offset;
@@ -211,9 +209,8 @@ static void blPngDeinterlaceBits(
     uint8_t* tmpData = tmpLine + n * tmpStride;
     uint32_t x = w;
 
-    // ------------------------------------------------------------------------
-    // [1-BPP]
-    // ------------------------------------------------------------------------
+    // 1-BPP
+    // -----
 
     if (N == 1) {
       switch (n) {
@@ -347,9 +344,8 @@ static void blPngDeinterlaceBits(
       }
     }
 
-    // ------------------------------------------------------------------------
-    // [2-BPP]
-    // ------------------------------------------------------------------------
+    // 2-BPP
+    // -----
 
     else if (N == 2) {
       switch (n) {
@@ -486,9 +482,8 @@ static void blPngDeinterlaceBits(
       }
     }
 
-    // ------------------------------------------------------------------------
-    // [4-BPP]
-    // ------------------------------------------------------------------------
+    // 4-BPP
+    // -----
 
     else if (N == 4) {
       switch (n) {
@@ -638,16 +633,16 @@ static void blPngDeinterlaceBits(
 // Copy `N` bytes from unaligned `src` into aligned `dst`. Allows us to handle
 // some special cases if the CPU supports unaligned reads/writes from/to memory.
 template<uint32_t N>
-static BL_INLINE const uint8_t* blPngCopyBytes(uint8_t* dst, const uint8_t* src) noexcept {
+static BL_INLINE const uint8_t* copyBytes(uint8_t* dst, const uint8_t* src) noexcept {
   if (N == 2) {
-    BLMemOps::writeU16a(dst, BLMemOps::readU16u(src));
+    MemOps::writeU16a(dst, MemOps::readU16u(src));
   }
   else if (N == 4) {
-    BLMemOps::writeU32a(dst, BLMemOps::readU32u(src));
+    MemOps::writeU32a(dst, MemOps::readU32u(src));
   }
   else if (N == 8) {
-    BLMemOps::writeU32a(dst + 0, BLMemOps::readU32u(src + 0));
-    BLMemOps::writeU32a(dst + 4, BLMemOps::readU32u(src + 4));
+    MemOps::writeU32a(dst + 0, MemOps::readU32u(src + 0));
+    MemOps::writeU32a(dst + 4, MemOps::readU32u(src + 4));
   }
   else {
     if (N >= 1) dst[0] = src[0];
@@ -663,9 +658,9 @@ static BL_INLINE const uint8_t* blPngCopyBytes(uint8_t* dst, const uint8_t* src)
 }
 
 template<uint32_t N>
-static void blPngDeinterlaceBytes(
+static void deinterlaceBytes(
   uint8_t* dstLine, intptr_t dstStride, const BLPixelConverter& pc,
-  uint8_t* tmpLine, intptr_t tmpStride, const uint8_t* data, const BLPngInterlaceStep* steps,
+  uint8_t* tmpLine, intptr_t tmpStride, const uint8_t* data, const InterlaceStep* steps,
   uint32_t w, uint32_t h) noexcept {
 
   const uint8_t* d0 = data + steps[0].offset;
@@ -694,10 +689,10 @@ static void blPngDeinterlaceBytes(
         d3 += (w >= 3);
         d5 += (w >= 2);
 
-        for (x = 0 * N; x < xMax; x += 8 * N) d0 = blPngCopyBytes<N>(tmpData + x, d0);
-        for (x = 4 * N; x < xMax; x += 8 * N) d1 = blPngCopyBytes<N>(tmpData + x, d1);
-        for (x = 2 * N; x < xMax; x += 4 * N) d3 = blPngCopyBytes<N>(tmpData + x, d3);
-        for (x = 1 * N; x < xMax; x += 2 * N) d5 = blPngCopyBytes<N>(tmpData + x, d5);
+        for (x = 0 * N; x < xMax; x += 8 * N) d0 = copyBytes<N>(tmpData + x, d0);
+        for (x = 4 * N; x < xMax; x += 8 * N) d1 = copyBytes<N>(tmpData + x, d1);
+        for (x = 2 * N; x < xMax; x += 4 * N) d3 = copyBytes<N>(tmpData + x, d3);
+        for (x = 1 * N; x < xMax; x += 2 * N) d5 = copyBytes<N>(tmpData + x, d5);
 
         break;
       }
@@ -708,9 +703,9 @@ static void blPngDeinterlaceBytes(
         d3 += (w >= 3);
         d5 += (w >= 2);
 
-        for (x = 0 * N; x < xMax; x += 4 * N) d2 = blPngCopyBytes<N>(tmpData + x, d2);
-        for (x = 2 * N; x < xMax; x += 4 * N) d3 = blPngCopyBytes<N>(tmpData + x, d3);
-        for (x = 1 * N; x < xMax; x += 2 * N) d5 = blPngCopyBytes<N>(tmpData + x, d5);
+        for (x = 0 * N; x < xMax; x += 4 * N) d2 = copyBytes<N>(tmpData + x, d2);
+        for (x = 2 * N; x < xMax; x += 4 * N) d3 = copyBytes<N>(tmpData + x, d3);
+        for (x = 1 * N; x < xMax; x += 2 * N) d5 = copyBytes<N>(tmpData + x, d5);
 
         break;
       }
@@ -721,8 +716,8 @@ static void blPngDeinterlaceBytes(
         d4 += 1;
         d5 += (w >= 2);
 
-        for (x = 0 * N; x < xMax; x += 2 * N) d4 = blPngCopyBytes<N>(tmpData + x, d4);
-        for (x = 1 * N; x < xMax; x += 2 * N) d5 = blPngCopyBytes<N>(tmpData + x, d5);
+        for (x = 0 * N; x < xMax; x += 2 * N) d4 = copyBytes<N>(tmpData + x, d4);
+        for (x = 1 * N; x < xMax; x += 2 * N) d5 = copyBytes<N>(tmpData + x, d5);
 
         break;
       }
@@ -740,16 +735,15 @@ static void blPngDeinterlaceBytes(
   }
 }
 
-// ============================================================================
-// [BLPngCodec - DecoderImpl]
-// ============================================================================
+// bl::Png::Decoder
+// ================
 
-struct BLPngDecoderReadData {
+struct DecoderDataSpan {
   const uint8_t* p;
   size_t index;
 };
 
-static bool BL_CDECL blPngDecoderImplReadFunc(BLPngDecoderReadData* rd, const uint8_t** pData, const uint8_t** end) noexcept {
+static bool BL_CDECL decoderReadFunc(DecoderDataSpan* rd, const uint8_t** pData, const uint8_t** end) noexcept {
   const uint8_t* p = rd->p;
   size_t index = rd->index;
 
@@ -764,8 +758,8 @@ static bool BL_CDECL blPngDecoderImplReadFunc(BLPngDecoderReadData* rd, const ui
   // The spec doesn't forbid zero-size IDAT chunks so the implementation must
   // handle them as well.
   do {
-    chunkTag = BLMemOps::readU32uBE(p + index + 4);
-    chunkSize = BLMemOps::readU32uBE(p + index + 0);
+    chunkTag = MemOps::readU32uBE(p + index + 4);
+    chunkSize = MemOps::readU32uBE(p + index + 0);
 
     // IDAT's have to be consecutive, if terminated it means that there is no
     // more data to be consumed by deflate.
@@ -785,7 +779,7 @@ static bool BL_CDECL blPngDecoderImplReadFunc(BLPngDecoderReadData* rd, const ui
   return true;
 }
 
-static BLResult BL_CDECL blPngDecoderImplRestart(BLImageDecoderImpl* impl) noexcept {
+static BLResult BL_CDECL decoderRestartImpl(BLImageDecoderImpl* impl) noexcept {
   BLPngDecoderImpl* decoderI = static_cast<BLPngDecoderImpl*>(impl);
 
   decoderI->lastResult = BL_SUCCESS;
@@ -802,7 +796,7 @@ static BLResult BL_CDECL blPngDecoderImplRestart(BLImageDecoderImpl* impl) noexc
   return BL_SUCCESS;
 }
 
-static BLResult blPngDecoderImplReadInfoInternal(BLPngDecoderImpl* decoderI, const uint8_t* p, size_t size) noexcept {
+static BLResult decoderReadInfoInternal(BLPngDecoderImpl* decoderI, const uint8_t* p, size_t size) noexcept {
   // Signature (8 bytes), IHDR tag (8 bytes), IHDR data (13 bytes), and IHDR CRC (4 bytes).
   const size_t kMinSize = 8 + 8 + 13 + 4;
   const size_t kTagSize_CgBI = 16;
@@ -813,17 +807,16 @@ static BLResult blPngDecoderImplReadInfoInternal(BLPngDecoderImpl* decoderI, con
 
   const uint8_t* start = p;
   // Check PNG signature.
-  if (memcmp(p, blPngSignature, 8) != 0)
+  if (memcmp(p, pngSignature, 8) != 0)
     return blTraceError(BL_ERROR_INVALID_SIGNATURE);
   p += 8;
 
   // Expect IHDR or CgBI chunk.
-  uint32_t chunkTag = BLMemOps::readU32uBE(p + 4);
-  uint32_t chunkSize = BLMemOps::readU32uBE(p + 0);
+  uint32_t chunkTag = MemOps::readU32uBE(p + 4);
+  uint32_t chunkSize = MemOps::readU32uBE(p + 0);
 
-  // --------------------------------------------------------------------------
-  // [CgBI]
-  // --------------------------------------------------------------------------
+  // CgBI
+  // ----
 
   // Support "CgBI" aka "CoreGraphicsBrokenImage" - a violation of the PNG Spec:
   //   1. http://www.jongware.com/pngdefry.html
@@ -838,8 +831,8 @@ static BLResult blPngDecoderImplReadInfoInternal(BLPngDecoderImpl* decoderI, con
     // Skip "CgBI" chunk, data, and CRC.
     p += 12 + chunkSize;
 
-    chunkTag = BLMemOps::readU32uBE(p + 4);
-    chunkSize = BLMemOps::readU32uBE(p + 0);
+    chunkTag = MemOps::readU32uBE(p + 4);
+    chunkSize = MemOps::readU32uBE(p + 0);
 
     decoderI->statusFlags |= BL_PNG_DECODER_STATUS_SEEN_CgBI;
     decoderI->cgbi = true;
@@ -847,16 +840,15 @@ static BLResult blPngDecoderImplReadInfoInternal(BLPngDecoderImpl* decoderI, con
 
   p += 8;
 
-  // --------------------------------------------------------------------------
-  // [IHDR]
-  // --------------------------------------------------------------------------
+  // IHDR
+  // ----
 
   if (chunkTag != BL_MAKE_TAG('I', 'H', 'D', 'R') || chunkSize != 13)
     return blTraceError(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
 
   // IHDR Data [13 bytes].
-  uint32_t w = BLMemOps::readU32uBE(p + 0);
-  uint32_t h = BLMemOps::readU32uBE(p + 4);
+  uint32_t w = MemOps::readU32uBE(p + 0);
+  uint32_t h = MemOps::readU32uBE(p + 4);
 
   uint32_t sampleDepth = p[8];
   uint32_t colorType   = p[9];
@@ -876,7 +868,7 @@ static BLResult blPngDecoderImplReadInfoInternal(BLPngDecoderImpl* decoderI, con
   if (w >= 0x80000000u || h >= 0x80000000u)
     return blTraceError(BL_ERROR_IMAGE_TOO_LARGE);
 
-  if (!blPngCheckColorTypeAndBitDepth(colorType, sampleDepth))
+  if (!checkColorTypeAndBitDepth(colorType, sampleDepth))
     return blTraceError(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
 
   // Compression and filter has to be zero, progressive can be [0, 1].
@@ -887,7 +879,7 @@ static BLResult blPngDecoderImplReadInfoInternal(BLPngDecoderImpl* decoderI, con
   decoderI->statusFlags |= BL_PNG_DECODER_STATUS_SEEN_IHDR;
   decoderI->colorType = uint8_t(colorType);
   decoderI->sampleDepth = uint8_t(sampleDepth);
-  decoderI->sampleCount = blPngColorTypeToSampleCountTable[colorType];
+  decoderI->sampleCount = colorTypeToSampleCountTable[colorType];
 
   decoderI->imageInfo.size.reset(int(w), int(h));
   decoderI->imageInfo.depth = uint16_t(sampleDepth * uint32_t(decoderI->sampleCount));
@@ -897,7 +889,7 @@ static BLResult blPngDecoderImplReadInfoInternal(BLPngDecoderImpl* decoderI, con
   return BL_SUCCESS;
 }
 
-static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BLImage* imageOut, const uint8_t* p, size_t size) noexcept {
+static BLResult decoderReadFrameImplInternal(BLPngDecoderImpl* decoderI, BLImage* imageOut, const uint8_t* p, size_t size) noexcept {
   BLResult result = BL_SUCCESS;
   const uint8_t* begin = p;
   const uint8_t* end = p + size;
@@ -931,8 +923,8 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
     if ((size_t)(end - p) < 12)
       return blTraceError(BL_ERROR_DATA_TRUNCATED);
 
-    uint32_t chunkTag = BLMemOps::readU32uBE(p + 4);
-    uint32_t chunkSize = BLMemOps::readU32uBE(p + 0);
+    uint32_t chunkTag = MemOps::readU32uBE(p + 4);
+    uint32_t chunkSize = MemOps::readU32uBE(p + 0);
 
     // Make sure that we have p of the whole chunk.
     if ((size_t)(end - p) - 12 < chunkSize)
@@ -982,23 +974,23 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
       if ((decoderI->statusFlags & (BL_PNG_DECODER_STATUS_SEEN_tRNS | BL_PNG_DECODER_STATUS_SEEN_IDAT)) != 0)
         return blTraceError(BL_ERROR_PNG_INVALID_TRNS);
 
-      if (colorType == BL_PNG_COLOR_TYPE4_LUMA || colorType == BL_PNG_COLOR_TYPE6_RGBA)
+      if (colorType == kColorType4_LUMA || colorType == kColorType6_RGBA)
         return blTraceError(BL_ERROR_PNG_INVALID_TRNS);
 
-      if (colorType == BL_PNG_COLOR_TYPE0_LUM) {
+      if (colorType == kColorType0_LUM) {
         // For color type 0 (grayscale), the tRNS chunk contains a single gray level value, stored in the format:
         //   [0..1] Gray:  2 bytes, range 0 .. (2^depth)-1
         if (chunkSize != 2)
           return blTraceError(BL_ERROR_PNG_INVALID_TRNS);
 
-        uint32_t gray = BLMemOps::readU16uBE(p);
+        uint32_t gray = MemOps::readU16uBE(p);
 
         colorKey.reset(gray, gray, gray, 0);
         hasColorKey = true;
 
         p += 2;
       }
-      else if (colorType == BL_PNG_COLOR_TYPE2_RGB) {
+      else if (colorType == kColorType2_RGB) {
         // For color type 2 (truecolor), the tRNS chunk contains a single RGB color value, stored in the format:
         //   [0..1] Red:   2 bytes, range 0 .. (2^depth)-1
         //   [2..3] Green: 2 bytes, range 0 .. (2^depth)-1
@@ -1006,9 +998,9 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
         if (chunkSize != 6)
           return blTraceError(BL_ERROR_PNG_INVALID_TRNS);
 
-        uint32_t r = BLMemOps::readU16uBE(p + 0);
-        uint32_t g = BLMemOps::readU16uBE(p + 2);
-        uint32_t b = BLMemOps::readU16uBE(p + 4);
+        uint32_t r = MemOps::readU16uBE(p + 0);
+        uint32_t g = MemOps::readU16uBE(p + 2);
+        uint32_t b = MemOps::readU16uBE(p + 4);
 
         colorKey.reset(r, g, b, 0);
         hasColorKey = true;
@@ -1018,7 +1010,7 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
       else {
         // For color type 3 (indexed color), the tRNS chunk contains a series of one-byte alpha values, corresponding
         // to entries in the PLTE chunk.
-        BL_ASSERT(colorType == BL_PNG_COLOR_TYPE3_PAL);
+        BL_ASSERT(colorType == kColorType3_PAL);
         // 1. Has to follow PLTE if color type is 3.
         // 2. The tRNS chunk can contain 1...palSize alpha values, but in general it can contain less than `palSize`
         //    values, in that case the remaining alpha values are assumed to be 255.
@@ -1042,8 +1034,8 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
         idatOff = (size_t)(p - begin) - 8;
         decoderI->statusFlags |= BL_PNG_DECODER_STATUS_SEEN_IDAT;
 
-        BLOverflowFlag of = 0;
-        idatSize = BLIntOps::addOverflow<size_t>(idatSize, chunkSize, &of);
+        bl::OverflowFlag of{};
+        idatSize = IntOps::addOverflow<size_t>(idatSize, chunkSize, &of);
 
         if (BL_UNLIKELY(of))
           return blTraceError(BL_ERROR_PNG_INVALID_IDAT);
@@ -1089,9 +1081,9 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
   uint32_t progressive = (decoderI->imageInfo.flags & BL_IMAGE_INFO_FLAG_PROGRESSIVE) != 0;
   uint32_t stepCount = progressive ? 7 : 1;
 
-  BLPngInterlaceStep steps[7];
-  uint32_t outputSize = blPngCalculateInterlaceSteps(steps,
-    progressive ? blPngInterlaceTableAdam7 : blPngInterlaceTableNone,
+  InterlaceStep steps[7];
+  uint32_t outputSize = calculateInterlaceSteps(steps,
+    progressive ? interlaceTableAdam7 : interlaceTableNone,
     stepCount, sampleDepth, sampleCount, w, h);
 
   if (outputSize == 0)
@@ -1100,11 +1092,11 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
   BLArray<uint8_t> output;
   BL_PROPAGATE(output.reserve(outputSize));
 
-  BLPngDecoderReadData rd;
+  DecoderDataSpan rd;
   rd.p = begin;
   rd.index = idatOff;
 
-  result = BLCompression::Deflate::deflate(output, &rd, (BLCompression::Deflate::ReadFunc)blPngDecoderImplReadFunc, !decoderI->cgbi);
+  result = Compression::Deflate::deflate(output, &rd, (Compression::Deflate::ReadFunc)decoderReadFunc, !decoderI->cgbi);
   if (result != BL_SUCCESS)
     return result;
 
@@ -1113,10 +1105,10 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
 
   // If progressive `stepCount` is 7 and `steps` contains all windows.
   for (i = 0; i < stepCount; i++) {
-    BLPngInterlaceStep& step = steps[i];
+    InterlaceStep& step = steps[i];
     if (!step.used)
       continue;
-    BL_PROPAGATE(blPngOps.inverseFilter(data + step.offset, bytesPerPixel, step.bpl, step.height));
+    BL_PROPAGATE(opts.inverseFilter(data + step.offset, bytesPerPixel, step.bpl, step.height));
   }
 
   // Convert / Deinterlace
@@ -1133,44 +1125,44 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
   pngFmt.depth = sampleDepth;
 
   if (BL_BYTE_ORDER_NATIVE == BL_BYTE_ORDER_LE)
-    pngFmt.flags |= BL_FORMAT_FLAG_BYTE_SWAP;
+    pngFmt.addFlags(BL_FORMAT_FLAG_BYTE_SWAP);
 
-  if (colorType == BL_PNG_COLOR_TYPE0_LUM && sampleDepth <= 8) {
+  if (colorType == kColorType0_LUM && sampleDepth <= 8) {
     // Treat grayscale images up to 8bpp as indexed and create a dummy palette.
-    blPngCreateGrayscalePalette(pal, sampleDepth);
+    createGrayscalePalette(pal, sampleDepth);
 
     // Handle color-key properly.
     if (hasColorKey && colorKey.r() < (1u << sampleDepth))
       pal[colorKey.r()] = BLRgba32(0);
 
-    pngFmt.flags |= BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_INDEXED;
+    pngFmt.addFlags(BLFormatFlags(BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_INDEXED));
     pngFmt.palette = pal;
   }
-  else if (colorType == BL_PNG_COLOR_TYPE3_PAL) {
-    pngFmt.flags |= BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_INDEXED;
+  else if (colorType == kColorType3_PAL) {
+    pngFmt.addFlags(BLFormatFlags(BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_INDEXED));
     pngFmt.palette = pal;
   }
   else {
     pngFmt.depth *= sampleCount;
 
-    if (colorType == BL_PNG_COLOR_TYPE0_LUM) {
+    if (colorType == kColorType0_LUM) {
       // TODO: [PNG] 16-BPC.
     }
-    else if (colorType == BL_PNG_COLOR_TYPE2_RGB) {
-      pngFmt.flags |= BL_FORMAT_FLAG_RGB;
+    else if (colorType == kColorType2_RGB) {
+      pngFmt.addFlags(BL_FORMAT_FLAG_RGB);
       pngFmt.rSize = 8; pngFmt.rShift = 16;
       pngFmt.gSize = 8; pngFmt.gShift = 8;
       pngFmt.bSize = 8; pngFmt.bShift = 0;
     }
-    else if (colorType == BL_PNG_COLOR_TYPE4_LUMA) {
-      pngFmt.flags |= BL_FORMAT_FLAG_LUMA;
+    else if (colorType == kColorType4_LUMA) {
+      pngFmt.addFlags(BL_FORMAT_FLAG_LUMA);
       pngFmt.rSize = 8; pngFmt.rShift = 8;
       pngFmt.gSize = 8; pngFmt.gShift = 8;
       pngFmt.bSize = 8; pngFmt.bShift = 8;
       pngFmt.aSize = 8; pngFmt.aShift = 0;
     }
-    else if (colorType == BL_PNG_COLOR_TYPE6_RGBA) {
-      pngFmt.flags |= BL_FORMAT_FLAG_RGBA;
+    else if (colorType == kColorType6_RGBA) {
+      pngFmt.addFlags(BL_FORMAT_FLAG_RGBA);
       pngFmt.rSize = 8; pngFmt.rShift = 24;
       pngFmt.gSize = 8; pngFmt.gShift = 16;
       pngFmt.bSize = 8; pngFmt.bShift = 8;
@@ -1179,8 +1171,8 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
 
     if (decoderI->cgbi) {
       std::swap(pngFmt.rShift, pngFmt.bShift);
-      if (pngFmt.flags & BL_FORMAT_FLAG_ALPHA)
-        pngFmt.flags |= BL_FORMAT_FLAG_PREMULTIPLIED;
+      if (pngFmt.hasFlag(BL_FORMAT_FLAG_ALPHA))
+        pngFmt.addFlags(BL_FORMAT_FLAG_PREMULTIPLIED);
     }
   }
 
@@ -1214,10 +1206,10 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
       pc.convertRect(dstPixels + dstStride, dstStride * 2, data + 1 + steps[6].offset, tmpBpl, w, steps[6].height);
 
     // Align `tmpBpl` so we can use aligned memory writes and reads while using it.
-    tmpBpl = BLIntOps::alignUp(tmpBpl, 16);
+    tmpBpl = IntOps::alignUp(tmpBpl, 16);
     tmpSize = tmpBpl * tmpHeight;
 
-    BLScopedBuffer tmpAlloc;
+    ScopedBuffer tmpAlloc;
     uint8_t* tmp;
 
     // Decide whether to alloc an extra buffer of to reuse 7th.
@@ -1229,15 +1221,15 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
     if (!tmp)
       return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-    tmp = BLIntOps::alignUp(tmp, 16);
+    tmp = IntOps::alignUp(tmp, 16);
     switch (depth) {
-      case 1 : blPngDeinterlaceBits<1>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
-      case 2 : blPngDeinterlaceBits<2>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
-      case 4 : blPngDeinterlaceBits<4>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
-      case 8 : blPngDeinterlaceBytes<1>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
-      case 16: blPngDeinterlaceBytes<2>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
-      case 24: blPngDeinterlaceBytes<3>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
-      case 32: blPngDeinterlaceBytes<4>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
+      case 1 : deinterlaceBits<1>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
+      case 2 : deinterlaceBits<2>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
+      case 4 : deinterlaceBits<4>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
+      case 8 : deinterlaceBytes<1>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
+      case 16: deinterlaceBytes<2>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
+      case 24: deinterlaceBytes<3>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
+      case 32: deinterlaceBytes<4>(dstPixels, dstStride, pc, tmp, tmpBpl, data, steps, w, h); break;
     }
   }
   else {
@@ -1251,12 +1243,12 @@ static BLResult blPngDecoderImplReadFrameInternal(BLPngDecoderImpl* decoderI, BL
   return result;
 }
 
-static BLResult BL_CDECL blPngDecoderImplReadInfo(BLImageDecoderImpl* impl, BLImageInfo* infoOut, const uint8_t* data, size_t size) noexcept {
+static BLResult BL_CDECL decoderReadInfoImpl(BLImageDecoderImpl* impl, BLImageInfo* infoOut, const uint8_t* data, size_t size) noexcept {
   BLPngDecoderImpl* decoderI = static_cast<BLPngDecoderImpl*>(impl);
   BLResult result = decoderI->lastResult;
 
   if (decoderI->bufferIndex == 0 && result == BL_SUCCESS) {
-    result = blPngDecoderImplReadInfoInternal(decoderI, data, size);
+    result = decoderReadInfoInternal(decoderI, data, size);
     if (result != BL_SUCCESS)
       decoderI->lastResult = result;
   }
@@ -1267,47 +1259,46 @@ static BLResult BL_CDECL blPngDecoderImplReadInfo(BLImageDecoderImpl* impl, BLIm
   return result;
 }
 
-static BLResult BL_CDECL blPngDecoderImplReadFrame(BLImageDecoderImpl* impl, BLImageCore* imageOut, const uint8_t* data, size_t size) noexcept {
+static BLResult BL_CDECL decoderReadFrameImpl(BLImageDecoderImpl* impl, BLImageCore* imageOut, const uint8_t* data, size_t size) noexcept {
   BLPngDecoderImpl* decoderI = static_cast<BLPngDecoderImpl*>(impl);
-  BL_PROPAGATE(blPngDecoderImplReadInfo(decoderI, nullptr, data, size));
+  BL_PROPAGATE(decoderReadInfoImpl(decoderI, nullptr, data, size));
 
   if (decoderI->frameIndex)
     return blTraceError(BL_ERROR_NO_MORE_DATA);
 
-  BLResult result = blPngDecoderImplReadFrameInternal(decoderI, static_cast<BLImage*>(imageOut), data, size);
+  BLResult result = decoderReadFrameImplInternal(decoderI, static_cast<BLImage*>(imageOut), data, size);
   if (result != BL_SUCCESS)
     decoderI->lastResult = result;
   return result;
 }
 
-static BLResult BL_CDECL blPngDecoderImplCreate(BLImageDecoderCore* self) noexcept {
+static BLResult BL_CDECL decoderCreateImpl(BLImageDecoderCore* self) noexcept {
   BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_DECODER);
-  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLPngDecoderImpl>(self, info));
+  BL_PROPAGATE(ObjectInternal::allocImplT<BLPngDecoderImpl>(self, info));
 
   BLPngDecoderImpl* decoderI = static_cast<BLPngDecoderImpl*>(self->_d.impl);
-  decoderI->ctor(&blPngDecoderVirt, &blPngCodecObject);
-  return blPngDecoderImplRestart(decoderI);
+  decoderI->ctor(&pngDecoderVirt, &pngCodecInstance);
+  return decoderRestartImpl(decoderI);
 }
 
-static BLResult BL_CDECL blPngDecoderImplDestroy(BLObjectImpl* impl) noexcept {
+static BLResult BL_CDECL decoderDestroyImpl(BLObjectImpl* impl) noexcept {
   BLPngDecoderImpl* decoderI = static_cast<BLPngDecoderImpl*>(impl);
   decoderI->dtor();
   return blObjectFreeImpl(decoderI);
 }
 
-// ============================================================================
-// [BLPngEncoder]
-// ============================================================================
+// bl::Png::Encoder
+// ================
 
-class BLOutputBuffer {
+class OutputBuffer {
 public:
   uint8_t* _data = nullptr;
   uint8_t* _ptr = nullptr;
   uint8_t* _end = nullptr;
 
-  BL_INLINE BLOutputBuffer() noexcept {}
+  BL_INLINE OutputBuffer() noexcept {}
 
-  BL_INLINE BLOutputBuffer(uint8_t* data, size_t size) noexcept
+  BL_INLINE OutputBuffer(uint8_t* data, size_t size) noexcept
     : _data(data),
       _ptr(data),
       _end(data + size) {}
@@ -1338,55 +1329,55 @@ public:
 
   BL_INLINE void appendUInt16(uint16_t value) noexcept {
     BL_ASSERT(remainingSize() >= 2);
-    BLMemOps::writeU16u(_ptr, value);
+    MemOps::writeU16u(_ptr, value);
     _ptr += 2;
   }
 
   BL_INLINE void appendUInt16LE(uint16_t value) noexcept {
     BL_ASSERT(remainingSize() >= 2);
-    BLMemOps::writeU16uLE(_ptr, value);
+    MemOps::writeU16uLE(_ptr, value);
     _ptr += 2;
   }
 
   BL_INLINE void appendUInt16BE(uint16_t value) noexcept {
     BL_ASSERT(remainingSize() >= 2);
-    BLMemOps::writeU16uBE(_ptr, value);
+    MemOps::writeU16uBE(_ptr, value);
     _ptr += 2;
   }
 
   BL_INLINE void appendUInt32(uint32_t value) noexcept {
     BL_ASSERT(remainingSize() >= 4);
-    BLMemOps::writeU32u(_ptr, value);
+    MemOps::writeU32u(_ptr, value);
     _ptr += 4;
   }
 
   BL_INLINE void appendUInt32LE(uint32_t value) noexcept {
     BL_ASSERT(remainingSize() >= 4);
-    BLMemOps::writeU32uLE(_ptr, value);
+    MemOps::writeU32uLE(_ptr, value);
     _ptr += 4;
   }
 
   BL_INLINE void appendUInt32BE(uint32_t value) noexcept {
     BL_ASSERT(remainingSize() >= 4);
-    BLMemOps::writeU32uBE(_ptr, value);
+    MemOps::writeU32uBE(_ptr, value);
     _ptr += 4;
   }
 
   BL_INLINE void appendUInt64(uint64_t value) noexcept {
     BL_ASSERT(remainingSize() >= 4);
-    BLMemOps::writeU64u(_ptr, value);
+    MemOps::writeU64u(_ptr, value);
     _ptr += 8;
   }
 
   BL_INLINE void appendUInt64LE(uint64_t value) noexcept {
     BL_ASSERT(remainingSize() >= 4);
-    BLMemOps::writeU64uLE(_ptr, value);
+    MemOps::writeU64uLE(_ptr, value);
     _ptr += 8;
   }
 
   BL_INLINE void appendUInt64BE(uint64_t value) noexcept {
     BL_ASSERT(remainingSize() >= 4);
-    BLMemOps::writeU64uBE(_ptr, value);
+    MemOps::writeU64uBE(_ptr, value);
     _ptr += 8;
   }
 
@@ -1397,7 +1388,7 @@ public:
   }
 };
 
-static BLResult BL_CDECL blPngEncoderImplRestart(BLImageEncoderImpl* impl) noexcept {
+static BLResult BL_CDECL encoderRestartImpl(BLImageEncoderImpl* impl) noexcept {
   BLPngEncoderImpl* encoderI = static_cast<BLPngEncoderImpl*>(impl);
 
   encoderI->lastResult = BL_SUCCESS;
@@ -1408,7 +1399,7 @@ static BLResult BL_CDECL blPngEncoderImplRestart(BLImageEncoderImpl* impl) noexc
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blPngEncoderImplGetProperty(const BLObjectImpl* impl, const char* name, size_t nameSize, BLVarCore* valueOut) noexcept {
+static BLResult BL_CDECL encoderGetPropertyImpl(const BLObjectImpl* impl, const char* name, size_t nameSize, BLVarCore* valueOut) noexcept {
   const BLPngEncoderImpl* encoderI = static_cast<const BLPngEncoderImpl*>(impl);
 
   if (blMatchProperty(name, nameSize, "compression")) {
@@ -1418,7 +1409,7 @@ static BLResult BL_CDECL blPngEncoderImplGetProperty(const BLObjectImpl* impl, c
   return blObjectImplGetProperty(encoderI, name, nameSize, valueOut);
 }
 
-static BLResult BL_CDECL blPngEncoderImplSetProperty(BLObjectImpl* impl, const char* name, size_t nameSize, const BLVarCore* value) noexcept {
+static BLResult BL_CDECL encoderSetPropertyImpl(BLObjectImpl* impl, const char* name, size_t nameSize, const BLVarCore* value) noexcept {
   BLPngEncoderImpl* encoderI = static_cast<BLPngEncoderImpl*>(impl);
 
   if (blMatchProperty(name, nameSize, "compression")) {
@@ -1435,20 +1426,20 @@ class ChunkWriter {
 public:
   uint8_t* chunkData = nullptr;
 
-  BL_INLINE void start(BLOutputBuffer& output, uint32_t tag) noexcept {
+  BL_INLINE void start(OutputBuffer& output, uint32_t tag) noexcept {
     chunkData = output.ptr();
     output.appendUInt32BE(0);
     output.appendUInt32BE(tag);
   }
 
-  BL_INLINE void done(BLOutputBuffer& output) noexcept {
+  BL_INLINE void done(OutputBuffer& output) noexcept {
     const uint8_t* start = chunkData + 8;
     size_t chunkLength = (size_t)(output.ptr() - start);
-    BLMemOps::writeU32uBE(chunkData, uint32_t(chunkLength));
+    MemOps::writeU32uBE(chunkData, uint32_t(chunkLength));
 
     // PNG Specification: CRC is calculated on the preceding bytes in the chunk, including
     // the chunk type code and chunk data fields, but not including the length field.
-    output.appendUInt32BE(BLCompression::crc32(start - 4, chunkLength + 4));
+    output.appendUInt32BE(Compression::crc32(start - 4, chunkLength + 4));
   }
 };
 
@@ -1463,7 +1454,7 @@ static BLResult filterImageData(uint8_t* data, intptr_t stride, uint32_t bitsPer
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blPngEncoderImplWriteFrame(BLImageEncoderImpl* impl, BLArrayCore* dst, const BLImageCore* image) noexcept {
+static BLResult BL_CDECL encoderWriteFrameImpl(BLImageEncoderImpl* impl, BLArrayCore* dst, const BLImageCore* image) noexcept {
   BLPngEncoderImpl* encoderI = static_cast<BLPngEncoderImpl*>(impl);
   BL_PROPAGATE(encoderI->lastResult);
 
@@ -1491,7 +1482,7 @@ static BLResult BL_CDECL blPngEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
   switch (format) {
     case BL_FORMAT_PRGB32:
       pngFormatInfo.depth = 32;
-      pngFormatInfo.flags = BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_BE;
+      pngFormatInfo.flags = BLFormatFlags(BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_BE);
       pngFormatInfo.setSizes(8, 8, 8, 8);
       pngFormatInfo.setShifts(24, 16, 8, 0);
       pngBitDepth = 8;
@@ -1500,7 +1491,7 @@ static BLResult BL_CDECL blPngEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
 
     case BL_FORMAT_XRGB32:
       pngFormatInfo.depth = 24;
-      pngFormatInfo.flags = BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_BE;
+      pngFormatInfo.flags = BLFormatFlags(BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_BE);
       pngFormatInfo.setSizes(8, 8, 8, 0);
       pngFormatInfo.setShifts(16, 8, 0, 0);
       pngBitDepth = 8;
@@ -1524,7 +1515,7 @@ static BLResult BL_CDECL blPngEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
   uint32_t uncompressedStride = ((w * pngFormatInfo.depth + 7) / 8u) + 1;
   size_t uncompressedDataSize = uncompressedStride * h;
 
-  BLScopedBuffer uncompressedBuffer;
+  ScopedBuffer uncompressedBuffer;
   uint8_t* uncompressedData = static_cast<uint8_t*>(uncompressedBuffer.alloc(uncompressedDataSize));
 
   if (BL_UNLIKELY(!uncompressedData))
@@ -1534,8 +1525,8 @@ static BLResult BL_CDECL blPngEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
   BL_PROPAGATE(filterImageData(uncompressedData, uncompressedStride, pngFormatInfo.depth, w, h));
 
   // Setup a deflate encoder - higher compression levels require more space, so init it now.
-  BLCompression::Deflate::Encoder deflateEncoder;
-  BL_PROPAGATE(deflateEncoder.init(BLCompression::Deflate::kFormatZlib, encoderI->compressionLevel));
+  Compression::Deflate::Encoder deflateEncoder;
+  BL_PROPAGATE(deflateEncoder.init(Compression::Deflate::kFormatZlib, encoderI->compressionLevel));
 
   // Create PNG file.
   size_t outputWorstCaseSize = deflateEncoder.minimumOutputBufferSize(uncompressedDataSize);
@@ -1550,11 +1541,11 @@ static BLResult BL_CDECL blPngEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
   BL_PROPAGATE(buf.modifyOp(BL_MODIFY_OP_APPEND_FIT, reserveBytes, &outputData));
 
   // Prepare output buffer and chunk writer.
-  BLOutputBuffer output(outputData, reserveBytes);
+  OutputBuffer output(outputData, reserveBytes);
   ChunkWriter chunk;
 
   // Write PNG signature.
-  output.appendData(blPngSignature, signatureSize);
+  output.appendData(pngSignature, signatureSize);
 
   // Write IHDR chunk.
   chunk.start(output, BL_MAKE_TAG('I', 'H', 'D', 'R'));
@@ -1576,103 +1567,112 @@ static BLResult BL_CDECL blPngEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
   chunk.start(output, BL_MAKE_TAG('I', 'E', 'N', 'D'));
   chunk.done(output);
 
-  BLArrayPrivate::setSize(dst, (size_t)(output.ptr() - buf.data()));
+  ArrayInternal::setSize(dst, (size_t)(output.ptr() - buf.data()));
   return BL_SUCCESS;
 }
 
-static BLResult blPngEncoderImplCreate(BLImageEncoderCore* self) noexcept {
+static BLResult encoderCreateImpl(BLImageEncoderCore* self) noexcept {
   BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_ENCODER);
-  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLPngEncoderImpl>(self, info));
+  BL_PROPAGATE(ObjectInternal::allocImplT<BLPngEncoderImpl>(self, info));
 
   BLPngEncoderImpl* encoderI = static_cast<BLPngEncoderImpl*>(self->_d.impl);
-  encoderI->ctor(&blPngEncoderVirt, &blPngCodecObject);
-  return blPngEncoderImplRestart(encoderI);
+  encoderI->ctor(&pngEncoderVirt, &pngCodecInstance);
+  return encoderRestartImpl(encoderI);
 }
 
-static BLResult BL_CDECL blPngEncoderImplDestroy(BLObjectImpl* impl) noexcept {
+static BLResult BL_CDECL encoderDestroyImpl(BLObjectImpl* impl) noexcept {
   BLPngEncoderImpl* encoderI = static_cast<BLPngEncoderImpl*>(impl);
   encoderI->dtor();
   return blObjectFreeImpl(encoderI);
 }
 
-// ============================================================================
-// [BLPngCodec - Impl]
-// ============================================================================
+// bl::Png::Codec
+// ==============
 
-static BLResult BL_CDECL blPngCodecImplDestroy(BLObjectImpl* impl) noexcept {
+static BLResult BL_CDECL codecDestroyImpl(BLObjectImpl* impl) noexcept {
   // Built-in codecs are never destroyed.
   blUnused(impl);
   return BL_SUCCESS;
 }
 
-static uint32_t BL_CDECL blPngCodecImplInspectData(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept {
+static uint32_t BL_CDECL codecInspectDataImpl(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept {
   blUnused(impl);
 
   // Minimum PNG size and signature.
-  if (size < 8 || memcmp(data, blPngSignature, 8) != 0)
+  if (size < 8 || memcmp(data, pngSignature, 8) != 0)
     return 0;
 
   return 100;
 }
 
-static BLResult BL_CDECL blPngCodecImplCreateDecoder(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept {
+static BLResult BL_CDECL codecCreateDecoderImpl(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept {
   blUnused(impl);
 
   BLImageDecoderCore tmp;
-  BL_PROPAGATE(blPngDecoderImplCreate(&tmp));
+  BL_PROPAGATE(decoderCreateImpl(&tmp));
   return blImageDecoderAssignMove(dst, &tmp);
 }
 
-static BLResult BL_CDECL blPngCodecImplCreateEncoder(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept {
+static BLResult BL_CDECL codecCreateEncoderImpl(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept {
   blUnused(impl);
 
   BLImageEncoderCore tmp;
-  BL_PROPAGATE(blPngEncoderImplCreate(&tmp));
+  BL_PROPAGATE(encoderCreateImpl(&tmp));
   return blImageEncoderAssignMove(dst, &tmp);
 }
 
-// ============================================================================
-// [BLPngCodec - Runtime]
-// ============================================================================
+// bl::Png::Codec - Runtime Registration
+// =====================================
 
-void blPngCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept {
+void pngCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept {
+  using namespace bl::Png;
+
+  blUnused(rt);
+
   // Initialize PNG ops.
-  blPngOpsOnInit(rt);
+  opts.inverseFilter = inverseFilterImpl;
+
+#ifdef BL_BUILD_OPT_SSE2
+  opts.inverseFilter = inverseFilterImpl_SSE2;
+#endif
 
   // Initialize PNG codec.
-  blPngCodec.virt.base.destroy = blPngCodecImplDestroy;
-  blPngCodec.virt.base.getProperty = blObjectImplGetProperty;
-  blPngCodec.virt.base.setProperty = blObjectImplSetProperty;
-  blPngCodec.virt.inspectData = blPngCodecImplInspectData;
-  blPngCodec.virt.createDecoder = blPngCodecImplCreateDecoder;
-  blPngCodec.virt.createEncoder = blPngCodecImplCreateEncoder;
+  pngCodec.virt.base.destroy = codecDestroyImpl;
+  pngCodec.virt.base.getProperty = blObjectImplGetProperty;
+  pngCodec.virt.base.setProperty = blObjectImplSetProperty;
+  pngCodec.virt.inspectData = codecInspectDataImpl;
+  pngCodec.virt.createDecoder = codecCreateDecoderImpl;
+  pngCodec.virt.createEncoder = codecCreateEncoderImpl;
 
-  blPngCodec.impl->ctor(&blPngCodec.virt);
-  blPngCodec.impl->features =
+  pngCodec.impl->ctor(&pngCodec.virt);
+  pngCodec.impl->features =
     BL_IMAGE_CODEC_FEATURE_READ     |
     BL_IMAGE_CODEC_FEATURE_WRITE    |
     BL_IMAGE_CODEC_FEATURE_LOSSLESS ;
-  blPngCodec.impl->name.dcast().assign("PNG");
-  blPngCodec.impl->vendor.dcast().assign("Blend2D");
-  blPngCodec.impl->mimeType.dcast().assign("image/png");
-  blPngCodec.impl->extensions.dcast().assign("png");
+  pngCodec.impl->name.dcast().assign("PNG");
+  pngCodec.impl->vendor.dcast().assign("Blend2D");
+  pngCodec.impl->mimeType.dcast().assign("image/png");
+  pngCodec.impl->extensions.dcast().assign("png");
 
-  blPngCodecObject._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_CODEC), &blPngCodec.impl);
+  pngCodecInstance._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_CODEC), &pngCodec.impl);
 
   // Initialize PNG decoder virtual functions.
-  blPngDecoderVirt.base.destroy = blPngDecoderImplDestroy;
-  blPngDecoderVirt.base.getProperty = blObjectImplGetProperty;
-  blPngDecoderVirt.base.setProperty = blObjectImplSetProperty;
-  blPngDecoderVirt.restart = blPngDecoderImplRestart;
-  blPngDecoderVirt.readInfo = blPngDecoderImplReadInfo;
-  blPngDecoderVirt.readFrame = blPngDecoderImplReadFrame;
+  pngDecoderVirt.base.destroy = decoderDestroyImpl;
+  pngDecoderVirt.base.getProperty = blObjectImplGetProperty;
+  pngDecoderVirt.base.setProperty = blObjectImplSetProperty;
+  pngDecoderVirt.restart = decoderRestartImpl;
+  pngDecoderVirt.readInfo = decoderReadInfoImpl;
+  pngDecoderVirt.readFrame = decoderReadFrameImpl;
 
   // Initialize PNG encoder virtual functions.
-  blPngEncoderVirt.base.destroy = blPngEncoderImplDestroy;
-  blPngEncoderVirt.base.getProperty = blPngEncoderImplGetProperty;
-  blPngEncoderVirt.base.setProperty = blPngEncoderImplSetProperty;
-  blPngEncoderVirt.restart = blPngEncoderImplRestart;
-  blPngEncoderVirt.writeFrame = blPngEncoderImplWriteFrame;
+  pngEncoderVirt.base.destroy = encoderDestroyImpl;
+  pngEncoderVirt.base.getProperty = encoderGetPropertyImpl;
+  pngEncoderVirt.base.setProperty = encoderSetPropertyImpl;
+  pngEncoderVirt.restart = encoderRestartImpl;
+  pngEncoderVirt.writeFrame = encoderWriteFrameImpl;
 
-  codecs->append(blPngCodecObject.dcast());
+  codecs->append(pngCodecInstance.dcast());
 }
+
+} // {Png}
+} // {bl}

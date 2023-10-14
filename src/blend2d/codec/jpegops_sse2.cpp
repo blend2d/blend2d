@@ -16,11 +16,13 @@
 #include "../support/intops_p.h"
 #include "../support/memops_p.h"
 
-// ============================================================================
-// [BLJpegOps - IDCT@SSE2]
-// ============================================================================
+namespace bl {
+namespace Jpeg {
 
-struct alignas(16) BLJpegSSE2Constants {
+// bl::Jpeg::Opts - IDCT - SSE2
+// ============================
+
+struct alignas(16) OptConstSSE2 {
   // IDCT.
   int16_t idct_rot0a[8], idct_rot0b[8];
   int16_t idct_rot1a[8], idct_rot1b[8];
@@ -40,7 +42,7 @@ struct alignas(16) BLJpegSSE2Constants {
 };
 
 #define DATA_4X(...) { __VA_ARGS__, __VA_ARGS__, __VA_ARGS__, __VA_ARGS__ }
-static const BLJpegSSE2Constants blJpegSSE2Constants = {
+static const OptConstSSE2 optConstSSE2 = {
   // IDCT.
   DATA_4X(BL_JPEG_IDCT_P_0_541196100                              ,
           BL_JPEG_IDCT_P_0_541196100 + BL_JPEG_IDCT_M_1_847759065),
@@ -77,15 +79,15 @@ static const BLJpegSSE2Constants blJpegSSE2Constants = {
 
 // out(0) = c0[even]*x + c0[odd]*y (in 16-bit, out 32-bit).
 // out(1) = c1[even]*x + c1[odd]*y (in 16-bit, out 32-bit).
-#define BL_JPEG_IDCT_ROTATE_XMM(dst0, dst1, x, y, c0, c1)              \
-  VecPair<Vec4xI32> dst0;                                              \
-  VecPair<Vec4xI32> dst1;                                              \
-                                                                       \
-  {                                                                    \
-    VecPair<Vec4xI32> tmp;                                             \
-                                                                       \
-    tmp[0] = vec_i32(interleave_lo_u16(x, y));                        \
-    tmp[1] = vec_i32(interleave_hi_u16(x, y));                        \
+#define BL_JPEG_IDCT_ROTATE_XMM(dst0, dst1, x, y, c0, c1)               \
+  VecPair<Vec4xI32> dst0;                                               \
+  VecPair<Vec4xI32> dst1;                                               \
+                                                                        \
+  {                                                                     \
+    VecPair<Vec4xI32> tmp;                                              \
+                                                                        \
+    tmp[0] = vec_i32(interleave_lo_u16(x, y));                          \
+    tmp[1] = vec_i32(interleave_hi_u16(x, y));                          \
     dst0[0] = maddw_i16_i32(tmp[0], vec_const<Vec4xI32>(constants.c0)); \
     dst0[1] = maddw_i16_i32(tmp[1], vec_const<Vec4xI32>(constants.c0)); \
     dst1[0] = maddw_i16_i32(tmp[0], vec_const<Vec4xI32>(constants.c1)); \
@@ -93,8 +95,8 @@ static const BLJpegSSE2Constants blJpegSSE2Constants = {
   }
 
 // out = in << 12 (in 16-bit, out 32-bit)
-#define BL_JPEG_IDCT_WIDEN_XMM(dst, in)                                         \
-  VecPair<Vec4xI32> dst;                                                        \
+#define BL_JPEG_IDCT_WIDEN_XMM(dst, in)                                        \
+  VecPair<Vec4xI32> dst;                                                       \
   dst[0] = srai_i32<4>(vec_i32(interleave_lo_u16(make_zero<Vec8xI16>(), in))); \
   dst[1] = srai_i32<4>(vec_i32(interleave_hi_u16(make_zero<Vec8xI16>(), in)));
 
@@ -107,12 +109,12 @@ static const BLJpegSSE2Constants blJpegSSE2Constants = {
   VecPair<Vec4xI32> dst{sub_i32(a[0], b[0]), sub_i32(a[1], b[1])};
 
 // Butterfly a/b, add bias, then shift by `norm` and pack to 16-bit.
-#define BL_JPEG_IDCT_BFLY_XMM(dst0, dst1, a, b, bias, norm)                               \
-  {                                                                                       \
-    VecPair<Vec4xI32> a_biased{add_i32(a[0], bias), add_i32(a[1], bias)};                 \
-    BL_JPEG_IDCT_WADD_XMM(sum, a_biased, b)                                               \
-    BL_JPEG_IDCT_WSUB_XMM(diff, a_biased, b)                                              \
-                                                                                          \
+#define BL_JPEG_IDCT_BFLY_XMM(dst0, dst1, a, b, bias, norm)                              \
+  {                                                                                      \
+    VecPair<Vec4xI32> a_biased{add_i32(a[0], bias), add_i32(a[1], bias)};                \
+    BL_JPEG_IDCT_WADD_XMM(sum, a_biased, b)                                              \
+    BL_JPEG_IDCT_WSUB_XMM(diff, a_biased, b)                                             \
+                                                                                         \
     dst0 = vec_i16(packs_128_i32_i16(srai_i32<norm>(sum[0]), srai_i32<norm>(sum[1])));   \
     dst1 = vec_i16(packs_128_i32_i16(srai_i32<norm>(diff[0]), srai_i32<norm>(diff[1]))); \
   }
@@ -150,10 +152,10 @@ static const BLJpegSSE2Constants blJpegSSE2Constants = {
   BL_JPEG_IDCT_BFLY_XMM(row3, row4, x3, x4, bias, norm)                  \
 }
 
-void BL_CDECL blJpegIDCT8_SSE2(uint8_t* dst, intptr_t dstStride, const int16_t* src, const uint16_t* qTable) noexcept {
+void BL_CDECL idct8_SSE2(uint8_t* dst, intptr_t dstStride, const int16_t* src, const uint16_t* qTable) noexcept {
   using namespace SIMD;
 
-  const BLJpegSSE2Constants& constants = blJpegSSE2Constants;
+  const OptConstSSE2& constants = optConstSSE2;
 
   // Load and dequantize (`src` is aligned to 16 bytes, `qTable` doesn't have to be).
   Vec8xI16 row0 = loadu<Vec8xI16>(qTable +  0) * loada<Vec8xI16>(src +  0);
@@ -219,15 +221,14 @@ void BL_CDECL blJpegIDCT8_SSE2(uint8_t* dst, intptr_t dstStride, const int16_t* 
   storeh_64(dst1, row6);
 }
 
-// ============================================================================
-// [BLJpegOps - RGB32FromYCbCr8@SSE2]
-// ============================================================================
+// bl::Jpeg::Opts - RGB32 From YCbCr8 - SSE2
+// =========================================
 
-void BL_CDECL blJpegRGB32FromYCbCr8_SSE2(uint8_t* dst, const uint8_t* pY, const uint8_t* pCb, const uint8_t* pCr, uint32_t count) noexcept {
+void BL_CDECL rgb32_from_ycbcr8_SSE2(uint8_t* dst, const uint8_t* pY, const uint8_t* pCb, const uint8_t* pCr, uint32_t count) noexcept {
   using namespace SIMD;
   uint32_t i = count;
 
-  const BLJpegSSE2Constants& constants = blJpegSSE2Constants;
+  const OptConstSSE2& constants = optConstSSE2;
 
   while (i >= 8) {
     Vec8xI16 yy = unpack_lo64_u8_u16(loadu_64<Vec8xI16>(pY));
@@ -292,10 +293,10 @@ void BL_CDECL blJpegRGB32FromYCbCr8_SSE2(uint8_t* dst, const uint8_t* pY, const 
     int g = yy - cr * BL_JPEG_YCBCR_FIXED(0.71414) - cb * BL_JPEG_YCBCR_FIXED(0.34414);
     int b = yy + cb * BL_JPEG_YCBCR_FIXED(1.77200);
 
-    uint32_t rgba32 = BLRgbaPrivate::packRgba32(BLIntOps::clampToByte(r >> BL_JPEG_YCBCR_PREC),
-                                                BLIntOps::clampToByte(g >> BL_JPEG_YCBCR_PREC),
-                                                BLIntOps::clampToByte(b >> BL_JPEG_YCBCR_PREC));
-    BLMemOps::writeU32a(dst, rgba32);
+    uint32_t rgba32 = RgbaInternal::packRgba32(IntOps::clampToByte(r >> BL_JPEG_YCBCR_PREC),
+                                               IntOps::clampToByte(g >> BL_JPEG_YCBCR_PREC),
+                                               IntOps::clampToByte(b >> BL_JPEG_YCBCR_PREC));
+    MemOps::writeU32a(dst, rgba32);
 
     dst += 4;
     pY  += 1;
@@ -304,5 +305,8 @@ void BL_CDECL blJpegRGB32FromYCbCr8_SSE2(uint8_t* dst, const uint8_t* pY, const 
     i   -= 1;
   }
 }
+
+} // {Jpeg}
+} // {bl}
 
 #endif // BL_TARGET_OPT_SSE2

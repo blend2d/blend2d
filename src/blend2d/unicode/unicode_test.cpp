@@ -10,10 +10,11 @@
 #include "../support/intops_p.h"
 #include "../support/memops_p.h"
 
-// BLUnicode - Tests
-// =================
+// bl::Unicode - Tests
+// ===================
 
-namespace BLUnicodeTests {
+namespace bl {
+namespace Tests {
 
 UNIT(unicode, BL_TEST_GROUP_CORE_UTILITIES) {
   struct TestEntry {
@@ -66,7 +67,7 @@ UNIT(unicode, BL_TEST_GROUP_CORE_UTILITIES) {
     ENTRY("\xFF\x10"                        , UTF16 , "\xEF\xBC\x90"                    , UTF8  , BL_SUCCESS),
     #endif
 
-    // Tests `BL_CHAR_MAX` character (4 BYTEs per UTF-8 character, the highest possible unicode code-point).
+    // Tests `kCharMax` character (4 BYTEs per UTF-8 character, the highest possible unicode code-point).
     #if BL_BYTE_ORDER == 1234
     ENTRY("\xF4\x8F\xBF\xBF"                , UTF8  , "\xFF\xDB\xFF\xDF"                , UTF16 , BL_SUCCESS),
     ENTRY("\xFF\xDB\xFF\xDF"                , UTF16 , "\xF4\x8F\xBF\xBF"                , UTF8  , BL_SUCCESS),
@@ -127,8 +128,8 @@ UNIT(unicode, BL_TEST_GROUP_CORE_UTILITIES) {
     const TestEntry& entry = testEntries[i];
     char output[32];
 
-    BLUnicodeConversionState state;
-    BLResult result = blConvertUnicode(output, 32, entry.dstEncoding, entry.src, entry.srcSize, entry.srcEncoding, state);
+    Unicode::ConversionState state;
+    BLResult result = Unicode::convertUnicode(output, 32, entry.dstEncoding, entry.src, entry.srcSize, entry.srcEncoding, state);
 
     bool failed = (result != entry.result) ||
                   (state.dstIndex != entry.dstSize) ||
@@ -163,22 +164,22 @@ UNIT(unicode, BL_TEST_GROUP_CORE_UTILITIES) {
 }
 
 UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
-  INFO("BLUtf8Reader");
+  INFO("bl::Unicode::Utf8Reader");
   {
     const uint8_t data[] = {
       0xE2, 0x82, 0xAC,      // U+0020AC
       0xF0, 0x90, 0x8D, 0x88 // U+010348
     };
 
-    BLUtf8Reader it(data, BL_ARRAY_SIZE(data));
+    Unicode::Utf8Reader it(data, BL_ARRAY_SIZE(data));
     uint32_t uc;
 
     EXPECT_TRUE(it.hasNext());
-    EXPECT_SUCCESS(it.next<BL_UNICODE_IO_CALC_INDEX>(uc));
+    EXPECT_SUCCESS(it.next<Unicode::IOFlags::kCalcIndex>(uc));
     EXPECT_EQ(uc, 0x0020ACu);
 
     EXPECT_TRUE(it.hasNext());
-    EXPECT_SUCCESS(it.next<BL_UNICODE_IO_CALC_INDEX>(uc));
+    EXPECT_SUCCESS(it.next<Unicode::IOFlags::kCalcIndex>(uc));
     EXPECT_EQ(uc, 0x010348u);
 
     EXPECT_FALSE(it.hasNext());
@@ -203,22 +204,22 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
     EXPECT_EQ(it.utf32Index(invalidData), 0u);
   }
 
-  INFO("BLUtf16Reader");
+  INFO("bl::Unicode::Utf16Reader");
   {
     const uint16_t data[] = {
       0x20AC,                // U+0020AC
       0xD800, 0xDF48         // U+010348
     };
 
-    BLUtf16Reader it(data, BL_ARRAY_SIZE(data) * sizeof(uint16_t));
+    Unicode::Utf16Reader it(data, BL_ARRAY_SIZE(data) * sizeof(uint16_t));
     uint32_t uc;
 
     EXPECT_TRUE(it.hasNext());
-    EXPECT_SUCCESS(it.next<BL_UNICODE_IO_CALC_INDEX>(uc));
+    EXPECT_SUCCESS(it.next<Unicode::IOFlags::kCalcIndex>(uc));
     EXPECT_EQ(uc, 0x0020ACu);
 
     EXPECT_TRUE(it.hasNext());
-    EXPECT_SUCCESS(it.next<BL_UNICODE_IO_CALC_INDEX>(uc));
+    EXPECT_SUCCESS(it.next<Unicode::IOFlags::kCalcIndex>(uc));
     EXPECT_EQ(uc, 0x010348u);
 
     EXPECT_FALSE(it.hasNext());
@@ -233,7 +234,7 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
     it.reset(invalidData, BL_ARRAY_SIZE(invalidData) * sizeof(uint16_t));
 
     EXPECT_TRUE(it.hasNext());
-    EXPECT_EQ(it.next<BL_UNICODE_IO_CALC_INDEX | BL_UNICODE_IO_STRICT>(uc), BL_ERROR_DATA_TRUNCATED);
+    EXPECT_EQ(it.next<Unicode::IOFlags::kCalcIndex | Unicode::IOFlags::kStrict>(uc), BL_ERROR_DATA_TRUNCATED);
 
     // After an error the iterator should not move.
     EXPECT_TRUE(it.hasNext());
@@ -247,22 +248,22 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
     EXPECT_FALSE(it.hasNext());
   }
 
-  INFO("BLUtf32Reader");
+  INFO("bl::Unicode::Utf32Reader");
   {
     const uint32_t data[] = {
       0x0020AC,
       0x010348
     };
 
-    BLUtf32Reader it(data, BL_ARRAY_SIZE(data) * sizeof(uint32_t));
+    Unicode::Utf32Reader it(data, BL_ARRAY_SIZE(data) * sizeof(uint32_t));
     uint32_t uc;
 
     EXPECT_TRUE(it.hasNext());
-    EXPECT_SUCCESS(it.next<BL_UNICODE_IO_CALC_INDEX>(uc));
+    EXPECT_SUCCESS(it.next<Unicode::IOFlags::kCalcIndex>(uc));
     EXPECT_EQ(uc, 0x0020ACu);
 
     EXPECT_TRUE(it.hasNext());
-    EXPECT_SUCCESS(it.next<BL_UNICODE_IO_CALC_INDEX>(uc));
+    EXPECT_SUCCESS(it.next<Unicode::IOFlags::kCalcIndex>(uc));
     EXPECT_EQ(uc, 0x010348u);
 
     EXPECT_FALSE(it.hasNext());
@@ -277,7 +278,7 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
     it.reset(invalidData, BL_ARRAY_SIZE(invalidData) * sizeof(uint32_t));
 
     EXPECT_TRUE(it.hasNext());
-    EXPECT_EQ(it.next<BL_UNICODE_IO_CALC_INDEX | BL_UNICODE_IO_STRICT>(uc), BL_ERROR_INVALID_STRING);
+    EXPECT_EQ(it.next<Unicode::IOFlags::kCalcIndex | Unicode::IOFlags::kStrict>(uc), BL_ERROR_INVALID_STRING);
 
     // After an error the iterator should not move.
     EXPECT_TRUE(it.hasNext());
@@ -291,10 +292,10 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
     EXPECT_FALSE(it.hasNext());
   }
 
-  INFO("BLUtf8Writer");
+  INFO("bl::Unicode::Utf8Writer");
   {
     char dst[7];
-    BLUtf8Writer writer(dst, BL_ARRAY_SIZE(dst));
+    Unicode::Utf8Writer writer(dst, BL_ARRAY_SIZE(dst));
 
     EXPECT_SUCCESS(writer.write(0x20ACu));
     EXPECT_EQ(uint8_t(dst[0]), 0xE2u);
@@ -326,10 +327,10 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
     EXPECT_EQ(writer.write('a'), BL_ERROR_NO_SPACE_LEFT);
   }
 
-  INFO("BLUtf16Writer");
+  INFO("bl::Unicode::Utf16Writer");
   {
     uint16_t dst[3];
-    BLUtf16Writer<> writer(dst, BL_ARRAY_SIZE(dst));
+    Unicode::Utf16Writer<> writer(dst, BL_ARRAY_SIZE(dst));
 
     EXPECT_SUCCESS(writer.write(0x010348u));
     EXPECT_EQ(dst[0], 0xD800u);
@@ -342,6 +343,7 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
   }
 }
 
-} // {BLUnicodeTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

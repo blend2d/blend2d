@@ -12,8 +12,18 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLTraits {
+namespace bl {
+namespace Traits {
 namespace {
+
+//! \name Type Traits
+//! \{
+
+template<typename T>
+BL_NODISCARD
+static BL_INLINE_NODEBUG constexpr bool isUnsigned() noexcept { return std::is_unsigned<T>::value; }
+
+//! \}
 
 //! \name Numeric Limits
 //! \{
@@ -35,7 +45,8 @@ static BL_INLINE constexpr T maxValue() noexcept { return std::numeric_limits<T>
 //! \}
 
 } // {anonymous}
-} // {BLTraits}
+} // {Traits}
+} // {bl}
 
 //! \}
 //! \endcond

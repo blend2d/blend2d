@@ -18,31 +18,31 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! \name BLBitArray - Types
 //! \{
 
-typedef BLParametrizedBitOps<BLBitOrder::kMSB, uint32_t> BLBitArrayOps;
+typedef ParametrizedBitOps<BitOrder::kMSB, uint32_t> BitArrayOps;
 
 //! \}
 
-namespace BLBitArrayPrivate {
-
-using BLObjectPrivate::RCMode;
+namespace BitArrayInternal {
 
 //! \name BLBitArray - Internals - Common Functionality (Impl)
 //! \{
 
 static BL_INLINE bool isImplMutable(BLBitArrayImpl* impl) noexcept {
-  return BLObjectPrivate::isImplMutable(impl);
+  return ObjectInternal::isImplMutable(impl);
 }
 
 static BL_INLINE_NODEBUG BLResult freeImpl(BLBitArrayImpl* impl) noexcept {
-  return BLObjectPrivate::freeImpl(impl);
+  return ObjectInternal::freeImpl(impl);
 }
 
 template<RCMode kRCMode>
 static BL_INLINE BLResult releaseImpl(BLBitArrayImpl* impl) noexcept {
-  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -55,7 +55,7 @@ static BL_INLINE_NODEBUG BLBitArrayImpl* getImpl(const BLBitArrayCore* self) noe
 }
 
 static BL_INLINE BLResult retainInstance(const BLBitArrayCore* self, size_t n = 1) noexcept {
-  return BLObjectPrivate::retainInstance(self, n);
+  return ObjectInternal::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLBitArrayCore* self) noexcept {
@@ -120,7 +120,9 @@ static BL_INLINE void setSize(BLBitArrayCore* self, size_t newSize) noexcept {
 }
 
 //! \}
-} // {BLBitArrayPrivate}
+
+} // {BitArrayInternal}
+} // {bl}
 
 //! \}
 //! \endcond

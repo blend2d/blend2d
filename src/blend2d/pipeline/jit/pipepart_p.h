@@ -12,7 +12,8 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 //! Pipeline part type.
@@ -63,7 +64,7 @@ public:
   x86::Compiler* cc = nullptr;
 
   //! Reference to a common constant pool.
-  const BLCommonTable& ct;
+  const CommonTable& ct;
 
   //! Part type.
   PipePartType _partType {};
@@ -154,7 +155,8 @@ public:
 };
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

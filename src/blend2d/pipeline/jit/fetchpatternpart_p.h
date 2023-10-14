@@ -13,7 +13,8 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 //! Base class for all pattern fetch parts.
@@ -26,7 +27,7 @@ public:
   //! Extend in X direction, used only by `FetchSimplePatternPart`.
   ExtendMode _extendX {};
 
-  FetchPatternPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
+  FetchPatternPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
 
   //! Tests whether the fetch-type is simple pattern {axis-aligned or axis-unaligned}.
   BL_INLINE bool isSimple() const noexcept { return isFetchType(FetchType::kPatternSimpleFirst, FetchType::kPatternSimpleLast); }
@@ -100,9 +101,9 @@ public:
     x86::Xmm xMax4;
   };
 
-  BLWrap<SimpleRegs> f;
+  Wrap<SimpleRegs> f;
 
-  FetchSimplePatternPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
+  FetchSimplePatternPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
 
   //! Tests whether the fetch-type is axis-aligned blit (no extend modes, no overflows)
   BL_INLINE bool isAlignedBlit() const noexcept { return isFetchType(FetchType::kPatternAlignedBlit); }
@@ -195,9 +196,9 @@ public:
     kClampStepC_BI
   };
 
-  BLWrap<AffineRegs> f;
+  Wrap<AffineRegs> f;
 
-  FetchAffinePatternPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
+  FetchAffinePatternPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
 
   BL_INLINE bool isAffineNn() const noexcept { return isFetchType(FetchType::kPatternAffineNNAny) || isFetchType(FetchType::kPatternAffineNNOpt); }
   BL_INLINE bool isAffineBi() const noexcept { return isFetchType(FetchType::kPatternAffineBIAny) || isFetchType(FetchType::kPatternAffineBIOpt); }
@@ -224,7 +225,8 @@ public:
 };
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

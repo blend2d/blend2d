@@ -13,6 +13,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! \name Arena Allocated Hash Map
 //! \{
 
@@ -20,31 +22,31 @@
 //!
 //! You must provide function `bool eq(const Key& key)` in order to make
 //! `ZoneHash::get()` working.
-class BLArenaHashMapNode {
+class ArenaHashMapNode {
 public:
-  BL_NONCOPYABLE(BLArenaHashMapNode)
+  BL_NONCOPYABLE(ArenaHashMapNode)
 
   //! Next node in the chain, null if it terminates the chain.
-  BLArenaHashMapNode* _hashNext;
+  ArenaHashMapNode* _hashNext;
   //! Precalculated hash-code of key.
   uint32_t _hashCode;
-  //! Padding, can be reused by any Node that inherits `BLArenaHashMapNode`.
+  //! Padding, can be reused by any Node that inherits `ArenaHashMapNode`.
   union {
     uint32_t _customData;
     uint16_t _customDataU16[2];
     uint8_t _customDataU8[4];
   };
 
-  BL_INLINE BLArenaHashMapNode(uint32_t hashCode = 0, uint32_t customData = 0) noexcept
+  BL_INLINE ArenaHashMapNode(uint32_t hashCode = 0, uint32_t customData = 0) noexcept
     : _hashNext(nullptr),
       _hashCode(hashCode),
       _customData(customData) {}
 };
 
-//! Base class used by `BLArenaHashMap<>` template to share the common functionality.
-class BLArenaHashMapBase {
+//! Base class used by `ArenaHashMap<>` template to share the common functionality.
+class ArenaHashMapBase {
 public:
-  BL_NONCOPYABLE(BLArenaHashMapBase)
+  BL_NONCOPYABLE(ArenaHashMapBase)
 
   // NOTE: There must be at least 2 embedded buckets, otherwise we wouldn't be
   // able to implement division as multiplication and shift in 32-bit mode the
@@ -57,9 +59,9 @@ public:
     kNullRcpShift = BL_TARGET_ARCH_BITS >= 64 ? 32 : 0
   };
 
-  BLArenaAllocator* _allocator;
+  ArenaAllocator* _allocator;
   //! Buckets data.
-  BLArenaHashMapNode** _data;
+  ArenaHashMapNode** _data;
   //! Count of records inserted into the hash table.
   size_t _size;
   //! Count of hash buckets.
@@ -75,12 +77,12 @@ public:
   //! Padding...
   uint8_t _reserved[2];
   //! Embedded and initial hash data.
-  BLArenaHashMapNode* _embedded[kNullCount];
+  ArenaHashMapNode* _embedded[kNullCount];
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLArenaHashMapBase(BLArenaAllocator* allocator) noexcept
+  BL_INLINE ArenaHashMapBase(ArenaAllocator* allocator) noexcept
     : _allocator(allocator),
       _data(_embedded),
       _size(0),
@@ -91,7 +93,7 @@ public:
       _primeIndex(0),
       _embedded {} {}
 
-  BL_INLINE BLArenaHashMapBase(BLArenaHashMapBase&& other) noexcept
+  BL_INLINE ArenaHashMapBase(ArenaHashMapBase&& other) noexcept
     : _allocator(other._allocator),
       _data(other._data),
       _size(other._size),
@@ -108,18 +110,18 @@ public:
     other._rcpShift = kNullRcpShift;
     other._primeIndex = 0;
 
-    memcpy(_embedded, other._embedded, kNullCount * sizeof(BLArenaHashMapNode*));
-    memset(other._embedded, 0, kNullCount * sizeof(BLArenaHashMapNode*));
+    memcpy(_embedded, other._embedded, kNullCount * sizeof(ArenaHashMapNode*));
+    memset(other._embedded, 0, kNullCount * sizeof(ArenaHashMapNode*));
   }
 
-  BL_INLINE ~BLArenaHashMapBase() noexcept {
+  BL_INLINE ~ArenaHashMapBase() noexcept {
     if (_data != _embedded)
-      _allocator->release(_data, _bucketCount * sizeof(BLArenaHashMapNode*));
+      _allocator->release(_data, _bucketCount * sizeof(ArenaHashMapNode*));
   }
 
   BL_INLINE void reset() noexcept {
     if (_data != _embedded)
-      _allocator->release(_data, _bucketCount * sizeof(BLArenaHashMapNode*));
+      _allocator->release(_data, _bucketCount * sizeof(ArenaHashMapNode*));
 
     _data = _embedded;
     _size = 0;
@@ -128,7 +130,7 @@ public:
     _rcpValue = kNullRcpValue;
     _rcpShift = kNullRcpShift;
     _primeIndex = 0;
-    memset(_embedded, 0, kNullCount * sizeof(BLArenaHashMapNode*));
+    memset(_embedded, 0, kNullCount * sizeof(ArenaHashMapNode*));
   }
 
   //! \}
@@ -144,7 +146,7 @@ public:
   //! \name Internals
   //! \{
 
-  BL_INLINE void _swap(BLArenaHashMapBase& other) noexcept {
+  BL_INLINE void _swap(ArenaHashMapBase& other) noexcept {
     std::swap(_allocator, other._allocator);
     std::swap(_data, other._data);
     std::swap(_size, other._size);
@@ -173,8 +175,8 @@ public:
   }
 
   void _rehash(uint32_t newCount) noexcept;
-  void _insert(BLArenaHashMapNode* node) noexcept;
-  bool _remove(BLArenaHashMapNode* node) noexcept;
+  void _insert(ArenaHashMapNode* node) noexcept;
+  bool _remove(ArenaHashMapNode* node) noexcept;
 
   //! \}
 };
@@ -186,22 +188,22 @@ public:
 //! `get()` the node and then modify it or insert a new node by using `insert()`,
 //! depending on the intention).
 template<typename NodeT>
-class BLArenaHashMap : public BLArenaHashMapBase {
+class ArenaHashMap : public ArenaHashMapBase {
 public:
-  BL_NONCOPYABLE(BLArenaHashMap)
+  BL_NONCOPYABLE(ArenaHashMap)
 
   typedef NodeT Node;
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLArenaHashMap(BLArenaAllocator* allocator) noexcept
-    : BLArenaHashMapBase(allocator) {}
+  BL_INLINE ArenaHashMap(ArenaAllocator* allocator) noexcept
+    : ArenaHashMapBase(allocator) {}
 
-  BL_INLINE BLArenaHashMap(BLArenaHashMap&& other) noexcept
-    : BLArenaHashMap(other) {}
+  BL_INLINE ArenaHashMap(ArenaHashMap&& other) noexcept
+    : ArenaHashMap(other) {}
 
-  BL_INLINE ~BLArenaHashMap() noexcept {
+  BL_INLINE ~ArenaHashMap() noexcept {
     if (!std::is_trivially_destructible<NodeT>::value)
       _destroy();
   }
@@ -211,8 +213,8 @@ public:
   //! \name Utilities
   //! \{
 
-  BL_INLINE void swap(BLArenaHashMap& other) noexcept {
-    BLArenaHashMapBase::_swap(other);
+  BL_INLINE void swap(ArenaHashMap& other) noexcept {
+    ArenaHashMapBase::_swap(other);
   }
 
   BL_NOINLINE void _destroy() noexcept {
@@ -252,7 +254,7 @@ public:
 
   template<typename Lambda>
   BL_INLINE void forEach(Lambda&& f) const noexcept {
-    BLArenaHashMapNode** buckets = _data;
+    ArenaHashMapNode** buckets = _data;
     uint32_t bucketCount = _bucketCount;
 
     for (uint32_t i = 0; i < bucketCount; i++) {
@@ -269,6 +271,8 @@ public:
 };
 
 //! \}
+
+} // {bl}
 
 //! \}
 //! \endcond

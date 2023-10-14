@@ -13,7 +13,8 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 
 //! OpenType 'SFNT' header.
 //!
@@ -42,7 +43,7 @@ struct SFNTHeader {
   UInt16 entrySelector;
   UInt16 rangeShift;
 
-  BL_INLINE const TableRecord* tableRecords() const noexcept { return BLPtrOps::offset<const TableRecord>(this, sizeof(SFNTHeader)); }
+  BL_INLINE const TableRecord* tableRecords() const noexcept { return PtrOps::offset<const TableRecord>(this, sizeof(SFNTHeader)); }
 };
 
 //! OpenType 'TTCF' header.
@@ -176,8 +177,8 @@ struct MaxPTable {
 
   V0_5 header;
 
-  BL_INLINE const V0_5* v0_5() const noexcept { return BLPtrOps::offset<const V0_5>(this, 0); }
-  BL_INLINE const V1_0* v1_0() const noexcept { return BLPtrOps::offset<const V1_0>(this, 0); }
+  BL_INLINE const V0_5* v0_5() const noexcept { return PtrOps::offset<const V0_5>(this, 0); }
+  BL_INLINE const V1_0* v1_0() const noexcept { return PtrOps::offset<const V1_0>(this, 0); }
 };
 
 //! OpenType 'OS/2' table.
@@ -263,11 +264,11 @@ struct OS2Table {
 
   V0A header;
 
-  BL_INLINE const V0A* v0a() const noexcept { return BLPtrOps::offset<const V0A>(this, 0); }
-  BL_INLINE const V0B* v0b() const noexcept { return BLPtrOps::offset<const V0B>(this, 0); }
-  BL_INLINE const V1* v1() const noexcept { return BLPtrOps::offset<const V1>(this, 0); }
-  BL_INLINE const V2* v2() const noexcept { return BLPtrOps::offset<const V2>(this, 0); }
-  BL_INLINE const V5* v5() const noexcept { return BLPtrOps::offset<const V5>(this, 0); }
+  BL_INLINE const V0A* v0a() const noexcept { return PtrOps::offset<const V0A>(this, 0); }
+  BL_INLINE const V0B* v0b() const noexcept { return PtrOps::offset<const V0B>(this, 0); }
+  BL_INLINE const V1* v1() const noexcept { return PtrOps::offset<const V1>(this, 0); }
+  BL_INLINE const V2* v2() const noexcept { return PtrOps::offset<const V2>(this, 0); }
+  BL_INLINE const V5* v5() const noexcept { return PtrOps::offset<const V5>(this, 0); }
 };
 
 //! OpenType 'post' table.
@@ -293,7 +294,8 @@ namespace CoreImpl {
 BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 } // {CoreImpl}
 
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 //! \}
 //! \endcond

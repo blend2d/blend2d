@@ -28,22 +28,21 @@ struct BLImagePrivateImpl : public BLImageImpl {
 
 //! \}
 
-namespace BLImagePrivate {
-
-using BLObjectPrivate::RCMode;
+namespace bl {
+namespace ImageInternal {
 
 //! \name BLImage - Internals - Common Functionality (Impl)
 //! \{
 
 static BL_INLINE bool isImplMutable(const BLImageImpl* impl) noexcept {
-  return BLObjectPrivate::isImplMutable(impl);
+  return ObjectInternal::isImplMutable(impl);
 }
 
 BL_HIDDEN BLResult freeImpl(BLImagePrivateImpl* impl) noexcept;
 
 template<RCMode kRCMode>
 static BL_INLINE BLResult releaseImpl(BLImageImpl* impl) noexcept {
-  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(static_cast<BLImagePrivateImpl*>(impl)) : BLResult(BL_SUCCESS);
+  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(static_cast<BLImagePrivateImpl*>(impl)) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -56,7 +55,7 @@ static BL_INLINE_NODEBUG BLImagePrivateImpl* getImpl(const BLImageCore* self) no
 }
 
 static BL_INLINE BLResult retainInstance(const BLImageCore* self, size_t n = 1) noexcept {
-  return BLObjectPrivate::retainInstance(self, n);
+  return ObjectInternal::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLImageCore* self) noexcept {
@@ -71,7 +70,8 @@ static BL_INLINE BLResult replaceInstance(BLImageCore* self, const BLImageCore* 
 
 //! \}
 
-} // {BLImagePrivate}
+} // {ImageInternal}
+} // {bl}
 
 //! \}
 //! \endcond

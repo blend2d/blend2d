@@ -8,8 +8,11 @@
 
 #include "image_p.h"
 
-// BLImage - Tests
-// ===============
+// bl::Image - Tests
+// =================
+
+namespace bl {
+namespace Tests {
 
 UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
   constexpr uint32_t kSize = 256;
@@ -178,5 +181,8 @@ UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
     EXPECT_EQ(img0, img1);
   }
 }
+
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

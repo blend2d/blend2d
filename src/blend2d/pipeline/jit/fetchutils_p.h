@@ -13,7 +13,8 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 // Interleave callback is used to interleae a sequence of code into pixel fetching sequence. There are two scenarios in
@@ -74,7 +75,7 @@ public:
 
   PixelFlags _fetchFlags;
   uint32_t _fetchIndex;
-  BLInternalFormat _fetchFormat;
+  FormatExt _fetchFormat;
   uint8_t _fetchDone;
   uint8_t _a8FetchMode;
   uint8_t _a8FetchShift;
@@ -84,7 +85,7 @@ public:
   x86::Xmm pTmp0;
   x86::Xmm pTmp1;
 
-  inline FetchContext(PipeCompiler* pc, Pixel* pixel, PixelCount n, BLInternalFormat format, PixelFlags fetchFlags) noexcept
+  inline FetchContext(PipeCompiler* pc, Pixel* pixel, PixelCount n, FormatExt format, PixelFlags fetchFlags) noexcept
     : _pc(pc),
       _pixel(pixel),
       _fetchFlags(fetchFlags),
@@ -123,10 +124,10 @@ enum class IndexLayout : uint32_t {
 
 namespace FetchUtils {
 
-void x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, BLInternalFormat format, PixelFlags flags, const x86::Mem& src, const x86::Vec& idx, uint32_t shift, IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept;
+void x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, FormatExt format, PixelFlags flags, const x86::Mem& src, const x86::Vec& idx, uint32_t shift, IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept;
 
 template<class InterleaveFunc>
-static void x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, BLInternalFormat format, PixelFlags flags, const x86::Mem& src, const x86::Vec& idx, uint32_t shift, IndexLayout indexLayout, InterleaveFunc&& interleaveFunc) noexcept {
+static void x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, FormatExt format, PixelFlags flags, const x86::Mem& src, const x86::Vec& idx, uint32_t shift, IndexLayout indexLayout, InterleaveFunc&& interleaveFunc) noexcept {
   x_gather_pixels(pc, p, n, format, flags, src, idx, shift, indexLayout, [](uint32_t step, void* data) noexcept {
     (*static_cast<const InterleaveFunc*>(data))(step);
   }, (void*)&interleaveFunc);
@@ -230,7 +231,7 @@ BL_NOINLINE void xFilterBilinearA8_1x(
   x86::Vec& out,
   const Pixels& pixels,
   const Stride& stride,
-  BLInternalFormat format,
+  FormatExt format,
   uint32_t indexShift,
   const x86::Vec& indexes,
   const x86::Vec& weights) noexcept {
@@ -250,11 +251,11 @@ BL_NOINLINE void xFilterBilinearA8_1x(
 
   int32_t alphaOffset = 0;
   switch (format) {
-    case BLInternalFormat::kPRGB32:
+    case FormatExt::kPRGB32:
       alphaOffset = 3;
       break;
 
-    case BLInternalFormat::kXRGB32:
+    case FormatExt::kXRGB32:
       alphaOffset = 3;
       break;
 
@@ -366,7 +367,8 @@ BL_NOINLINE void xFilterBilinearARGB32_1x(
 } // {FetchUtils}
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

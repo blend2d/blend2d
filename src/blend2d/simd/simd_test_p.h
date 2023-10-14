@@ -195,16 +195,16 @@ template<typename T> struct iop_add : public op_base_2<T, iop_add<T>> {
 
 template<typename T> struct iop_adds : public op_base_2<T, iop_adds<T>> {
   static BL_INLINE T apply_one(const T& a, const T& b) noexcept {
-    BLOverflowFlag of {};
-    T result = BLIntOps::addOverflow(a, b, &of);
+    bl::OverflowFlag of{};
+    T result = bl::IntOps::addOverflow(a, b, &of);
 
     if (!of)
       return result;
 
-    if (BLIntOps::isUnsigned<T>() || b > 0)
-      return BLTraits::maxValue<T>();
+    if (bl::Traits::isUnsigned<T>() || b > 0)
+      return bl::Traits::maxValue<T>();
     else
-      return BLTraits::minValue<T>();
+      return bl::Traits::minValue<T>();
   }
 };
 
@@ -214,16 +214,16 @@ template<typename T> struct iop_sub : public op_base_2<T, iop_sub<T>> {
 
 template<typename T> struct iop_subs : public op_base_2<T, iop_subs<T>> {
   static BL_INLINE T apply_one(const T& a, const T& b) noexcept {
-    BLOverflowFlag of {};
-    T result = BLIntOps::subOverflow(a, b, &of);
+    bl::OverflowFlag of{};
+    T result = bl::IntOps::subOverflow(a, b, &of);
 
     if (!of)
       return result;
 
-    if (BLIntOps::isUnsigned<T>() || b > 0)
-      return BLTraits::minValue<T>();
+    if (bl::Traits::isUnsigned<T>() || b > 0)
+      return bl::Traits::minValue<T>();
     else
-      return BLTraits::maxValue<T>();
+      return bl::Traits::maxValue<T>();
   }
 };
 
@@ -259,27 +259,27 @@ template<typename T, uint32_t kN> struct iop_srai : public op_base_1<T, iop_srai
 };
 
 template<typename T> struct iop_cmp_eq : public op_base_2<T, iop_cmp_eq<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a == b ? BLIntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a == b ? bl::IntOps::allOnes<T>() : T(0); }
 };
 
 template<typename T> struct iop_cmp_ne : public op_base_2<T, iop_cmp_ne<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a != b ? BLIntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a != b ? bl::IntOps::allOnes<T>() : T(0); }
 };
 
 template<typename T> struct iop_cmp_gt : public op_base_2<T, iop_cmp_gt<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >  b ? BLIntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >  b ? bl::IntOps::allOnes<T>() : T(0); }
 };
 
 template<typename T> struct iop_cmp_ge : public op_base_2<T, iop_cmp_ge<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >= b ? BLIntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a >= b ? bl::IntOps::allOnes<T>() : T(0); }
 };
 
 template<typename T> struct iop_cmp_lt : public op_base_2<T, iop_cmp_lt<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <  b ? BLIntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <  b ? bl::IntOps::allOnes<T>() : T(0); }
 };
 
 template<typename T> struct iop_cmp_le : public op_base_2<T, iop_cmp_le<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <= b ? BLIntOps::allOnes<T>() : T(0); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return a <= b ? bl::IntOps::allOnes<T>() : T(0); }
 };
 
 template<typename T, uint32_t kN> struct iop_sllb_u128 {
@@ -591,7 +591,7 @@ static BL_NOINLINE BLString format_items(const T* items, uint32_t count) noexcep
   BLString s;
   s.append('{');
   for (uint32_t i = 0; i < count; i++)
-    s.appendFormat("%s%llu", i == 0 ? "" : ", ", (unsigned long long)items[i] & BLIntOps::allOnes<typename std::make_unsigned<T>::type>());
+    s.appendFormat("%s%llu", i == 0 ? "" : ", ", (unsigned long long)items[i] & bl::IntOps::allOnes<typename std::make_unsigned<T>::type>());
   s.append('}');
   return s;
 }

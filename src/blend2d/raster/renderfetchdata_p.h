@@ -12,9 +12,10 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
-//! A small struct that precedes `BLPipeline::FetchData` in `RenderFetchData` struct.
+//! A small struct that precedes `Pipeline::FetchData` in `RenderFetchData` struct.
 //!
 //! When a pipeline signature is built, there is a lot of unknowns and in general two code paths to build SOLID
 //! and NON-SOLID pipelines. However, it's just a detail and the only thing that NON-SOLID render call needs is
@@ -23,7 +24,7 @@ namespace BLRasterEngine {
 //! we would hit once we know that the style is really going to be used - in general, some properties are materialized
 //! lazily.
 //!
-//! To make this materialization simpler, we have a little prefix before a real `BLPipeline::FetchData` that contains
+//! To make this materialization simpler, we have a little prefix before a real `Pipeline::FetchData` that contains
 //! a signature (other members are here just to use the space as FetchData should be aligned to 16 bytes, so we need
 //! a 16 byte prefix as well). When the signature has only a PendingFlag set, it means that the FetchData hasn't been
 //! setup yet and it has to be setup before the pipeline signature can be obtained.
@@ -36,7 +37,7 @@ struct RenderFetchDataHeader {
   //! \{
 
   //! Signature if the fetch data is initialized, otherwise a Signature with PendingFlag bit set (last MSB).
-  BLPipeline::Signature signature;
+  Pipeline::Signature signature;
   //! Batch id.
   uint32_t batchId;
   //! Non-atomic reference count (never manipulated concurrently by multiple threads, usually the user thread only).
@@ -60,7 +61,7 @@ struct RenderFetchDataHeader {
   //! \{
 
   //! Initializes the fetch data header by resetting all header members and initializing the reference count to `rc`.
-  BL_INLINE void initHeader(uint32_t rc, BLInternalFormat format = BLInternalFormat::kNone) noexcept {
+  BL_INLINE void initHeader(uint32_t rc, FormatExt format = FormatExt::kNone) noexcept {
     signature.reset();
     batchId = 0;
     refCount = rc;
@@ -88,7 +89,7 @@ BL_STATIC_ASSERT(sizeof(RenderFetchDataHeader) == 16);
 
 //! FetchData that can only hold a solid color.
 struct RenderFetchDataSolid : public RenderFetchDataHeader {
-  BLPipeline::FetchData::Solid pipelineData;
+  Pipeline::FetchData::Solid pipelineData;
 };
 
 //! Raster context fetch data.
@@ -107,7 +108,7 @@ struct alignas(16) RenderFetchData : public RenderFetchDataHeader {
   //! \{
 
   //! Fetch data part, which is used by pipelines.
-  BLPipeline::FetchData pipelineData;
+  Pipeline::FetchData pipelineData;
 
   //! Link to the external object holding the style data (BLImage or BLGradient).
   BLObjectCore style;
@@ -122,7 +123,7 @@ struct alignas(16) RenderFetchData : public RenderFetchDataHeader {
   //! \{
 
   BL_INLINE_NODEBUG bool isPending() const noexcept { return signature.hasPendingFlag(); }
-  BL_INLINE_NODEBUG BLPipeline::FetchType fetchType() const noexcept { return signature.fetchType(); }
+  BL_INLINE_NODEBUG Pipeline::FetchType fetchType() const noexcept { return signature.fetchType(); }
 
   template<typename T>
   BL_INLINE_NODEBUG const T& styleAs() const noexcept { return static_cast<const T&>(style); }
@@ -153,22 +154,22 @@ struct alignas(16) RenderFetchData : public RenderFetchDataHeader {
     const uint8_t* srcPixelData = static_cast<const uint8_t*>(imageI->pixelData);
     intptr_t srcStride = imageI->stride;
     uint32_t srcBytesPerPixel = imageI->depth / 8u;
-    BLPipeline::FetchUtils::initImageSource(pipelineData.pattern, srcPixelData + uint32_t(area.y) * srcStride + uint32_t(area.x) * srcBytesPerPixel, imageI->stride, area.w, area.h);
+    Pipeline::FetchUtils::initImageSource(pipelineData.pattern, srcPixelData + uint32_t(area.y) * srcStride + uint32_t(area.x) * srcBytesPerPixel, imageI->stride, area.w, area.h);
   }
 
   // Initializes `fetchData` for a blit. Blits are never repeating and are always 1:1 (no scaling, no fractional translation).
   BL_INLINE bool setupPatternBlit(int tx, int ty) noexcept {
-    signature = BLPipeline::FetchUtils::initPatternBlit(pipelineData.pattern, tx, ty);
+    signature = Pipeline::FetchUtils::initPatternBlit(pipelineData.pattern, tx, ty);
     return true;
   }
 
   BL_INLINE bool setupPatternFxFy(BLExtendMode extendMode, BLPatternQuality quality, uint32_t bytesPerPixel, int64_t txFixed, int64_t tyFixed) noexcept {
-    signature = BLPipeline::FetchUtils::initPatternFxFy(pipelineData.pattern, extendMode, quality, bytesPerPixel, txFixed, tyFixed);
+    signature = Pipeline::FetchUtils::initPatternFxFy(pipelineData.pattern, extendMode, quality, bytesPerPixel, txFixed, tyFixed);
     return true;
   }
 
   BL_INLINE bool setupPatternAffine(BLExtendMode extendMode, BLPatternQuality quality, uint32_t bytesPerPixel, const BLMatrix2D& transform) noexcept {
-    signature = BLPipeline::FetchUtils::initPatternAffine(pipelineData.pattern, extendMode, quality, bytesPerPixel, transform);
+    signature = Pipeline::FetchUtils::initPatternAffine(pipelineData.pattern, extendMode, quality, bytesPerPixel, transform);
     return !signature.hasPendingFlag();
   }
 
@@ -187,7 +188,8 @@ struct alignas(16) RenderFetchData : public RenderFetchDataHeader {
 
 BL_HIDDEN BLResult computePendingFetchData(RenderFetchData* fetchData) noexcept;
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

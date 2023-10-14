@@ -13,17 +13,19 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! \name Arena Allocated Tree
 //! \{
 
-//! BLArenaTree node (base class).
+//! ArenaTree node (base class).
 //!
 //! The color is stored in a least significant bit of the `left` node.
 //!
 //! \note Always use accessors to access left and right nodes.
-class BLArenaTreeNodeBase {
+class ArenaTreeNodeBase {
 public:
-  BL_NONCOPYABLE(BLArenaTreeNodeBase)
+  BL_NONCOPYABLE(ArenaTreeNodeBase)
 
   //! \name Constants
   //! \{
@@ -40,7 +42,7 @@ public:
 
   //! \}
 
-  BL_INLINE BLArenaTreeNodeBase() noexcept
+  BL_INLINE ArenaTreeNodeBase() noexcept
     : _treeNodes { 0, 0 } {}
 
   //! \name Accessors
@@ -50,19 +52,19 @@ public:
   BL_INLINE bool hasLeft() const noexcept { return _treeNodes[0] > kRedMask; }
   BL_INLINE bool hasRight() const noexcept { return _treeNodes[1] != 0; }
 
-  BL_INLINE BLArenaTreeNodeBase* _getChild(size_t i) const noexcept { return (BLArenaTreeNodeBase*)(_treeNodes[i] & kPtrMask); }
-  BL_INLINE BLArenaTreeNodeBase* _getLeft() const noexcept { return (BLArenaTreeNodeBase*)(_treeNodes[0] & kPtrMask); }
-  BL_INLINE BLArenaTreeNodeBase* _getRight() const noexcept { return (BLArenaTreeNodeBase*)(_treeNodes[1]); }
+  BL_INLINE ArenaTreeNodeBase* _getChild(size_t i) const noexcept { return (ArenaTreeNodeBase*)(_treeNodes[i] & kPtrMask); }
+  BL_INLINE ArenaTreeNodeBase* _getLeft() const noexcept { return (ArenaTreeNodeBase*)(_treeNodes[0] & kPtrMask); }
+  BL_INLINE ArenaTreeNodeBase* _getRight() const noexcept { return (ArenaTreeNodeBase*)(_treeNodes[1]); }
 
-  BL_INLINE void _setChild(size_t i, BLArenaTreeNodeBase* node) noexcept { _treeNodes[i] = (_treeNodes[i] & kRedMask) | (uintptr_t)node; }
-  BL_INLINE void _setLeft(BLArenaTreeNodeBase* node) noexcept { _treeNodes[0] = (_treeNodes[0] & kRedMask) | (uintptr_t)node; }
-  BL_INLINE void _setRight(BLArenaTreeNodeBase* node) noexcept { _treeNodes[1] = (uintptr_t)node; }
+  BL_INLINE void _setChild(size_t i, ArenaTreeNodeBase* node) noexcept { _treeNodes[i] = (_treeNodes[i] & kRedMask) | (uintptr_t)node; }
+  BL_INLINE void _setLeft(ArenaTreeNodeBase* node) noexcept { _treeNodes[0] = (_treeNodes[0] & kRedMask) | (uintptr_t)node; }
+  BL_INLINE void _setRight(ArenaTreeNodeBase* node) noexcept { _treeNodes[1] = (uintptr_t)node; }
 
-  template<typename T = BLArenaTreeNodeBase>
+  template<typename T = ArenaTreeNodeBase>
   BL_INLINE T* child(size_t i) const noexcept { return static_cast<T*>(_getChild(i)); }
-  template<typename T = BLArenaTreeNodeBase>
+  template<typename T = ArenaTreeNodeBase>
   BL_INLINE T* left() const noexcept { return static_cast<T*>(_getLeft()); }
-  template<typename T = BLArenaTreeNodeBase>
+  template<typename T = ArenaTreeNodeBase>
   BL_INLINE T* right() const noexcept { return static_cast<T*>(_getRight()); }
 
   BL_INLINE bool isRed() const noexcept { return static_cast<bool>(_treeNodes[0] & kRedMask); }
@@ -72,17 +74,17 @@ public:
   //! \}
 
   //! Tests whether the node is RED (RED node must be non-null and must have RED flag set).
-  static BL_INLINE bool _isValidRed(BLArenaTreeNodeBase* node) noexcept { return node && node->isRed(); }
+  static BL_INLINE bool _isValidRed(ArenaTreeNodeBase* node) noexcept { return node && node->isRed(); }
 };
 
-//! BLArenaTree node.
+//! ArenaTree node.
 template<typename NodeT>
-class BLArenaTreeNode : public BLArenaTreeNodeBase {
+class ArenaTreeNode : public ArenaTreeNodeBase {
 public:
-  BL_NONCOPYABLE(BLArenaTreeNode)
+  BL_NONCOPYABLE(ArenaTreeNode)
 
-  BL_INLINE BLArenaTreeNode() noexcept
-    : BLArenaTreeNodeBase() {}
+  BL_INLINE ArenaTreeNode() noexcept
+    : ArenaTreeNodeBase() {}
 
   //! \name Accessors
   //! \{
@@ -94,11 +96,11 @@ public:
   //! \}
 };
 
-//! A red-black tree that uses nodes allocated by `BLArenaAllocator`.
+//! A red-black tree that uses nodes allocated by `ArenaAllocator`.
 template<typename NodeT>
-class BLArenaTree {
+class ArenaTree {
 public:
-  BL_NONCOPYABLE(BLArenaTree)
+  BL_NONCOPYABLE(ArenaTree)
 
   typedef NodeT Node;
   NodeT* _root;
@@ -106,10 +108,10 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLArenaTree() noexcept
+  BL_INLINE ArenaTree() noexcept
     : _root(nullptr) {}
 
-  BL_INLINE BLArenaTree(BLArenaTree&& other) noexcept
+  BL_INLINE ArenaTree(ArenaTree&& other) noexcept
     : _root(other._root) {}
 
   //! \}
@@ -117,7 +119,7 @@ public:
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE void swap(BLArenaTree& other) noexcept {
+  BL_INLINE void swap(ArenaTree& other) noexcept {
     std::swap(_root, other._root);
   }
 
@@ -125,11 +127,11 @@ public:
 
   //! \}
 
-  //! \name BLArenaTree Functionality
+  //! \name ArenaTree Functionality
   //! \{
 
   //! Insert a node into the tree.
-  template<typename CompareT = BLAlgorithm::CompareOp<BLAlgorithm::SortOrder::kAscending>>
+  template<typename CompareT = CompareOp<SortOrder::kAscending>>
   void insert(NodeT* node, const CompareT& cmp = CompareT()) noexcept {
     // Node to insert must not contain garbage.
     BL_ASSERT(!node->hasLeft());
@@ -141,13 +143,13 @@ public:
       return;
     }
 
-    BLArenaTreeNodeBase head;          // False root node,
+    ArenaTreeNodeBase head;          // False root node,
     head._setRight(_root);           // having root on the right.
 
-    BLArenaTreeNodeBase* g = nullptr;  // Grandparent.
-    BLArenaTreeNodeBase* p = nullptr;  // Parent.
-    BLArenaTreeNodeBase* t = &head;    // Iterator.
-    BLArenaTreeNodeBase* q = _root;    // Query.
+    ArenaTreeNodeBase* g = nullptr;  // Grandparent.
+    ArenaTreeNodeBase* p = nullptr;  // Parent.
+    ArenaTreeNodeBase* t = &head;    // Iterator.
+    ArenaTreeNodeBase* q = _root;    // Query.
 
     size_t dir = 0;                  // Direction for accessing child nodes.
     size_t last = 0;                 // Not needed to initialize, but makes some tools happy.
@@ -192,17 +194,17 @@ public:
   }
 
   //! Remove a node from the tree.
-  template<typename CompareT = BLAlgorithm::CompareOp<BLAlgorithm::SortOrder::kAscending>>
-  void remove(BLArenaTreeNodeBase* node, const CompareT& cmp = CompareT()) noexcept {
-    BLArenaTreeNodeBase head;          // False root node,
+  template<typename CompareT = CompareOp<SortOrder::kAscending>>
+  void remove(ArenaTreeNodeBase* node, const CompareT& cmp = CompareT()) noexcept {
+    ArenaTreeNodeBase head;          // False root node,
     head._setRight(_root);           // having root on the right.
 
-    BLArenaTreeNodeBase* g = nullptr;  // Grandparent.
-    BLArenaTreeNodeBase* p = nullptr;  // Parent.
-    BLArenaTreeNodeBase* q = &head;    // Query.
+    ArenaTreeNodeBase* g = nullptr;  // Grandparent.
+    ArenaTreeNodeBase* p = nullptr;  // Parent.
+    ArenaTreeNodeBase* q = &head;    // Query.
 
-    BLArenaTreeNodeBase* f  = nullptr; // Found item.
-    BLArenaTreeNodeBase* gf = nullptr; // Found grandparent.
+    ArenaTreeNodeBase* f  = nullptr; // Found item.
+    ArenaTreeNodeBase* gf = nullptr; // Found grandparent.
     size_t dir = 1;                  // Direction (0 or 1).
 
     // Search and push a red down.
@@ -224,12 +226,12 @@ public:
       // Push the red node down.
       if (!_isValidRed(q) && !_isValidRed(q->_getChild(dir))) {
         if (_isValidRed(q->_getChild(!dir))) {
-          BLArenaTreeNodeBase* child = _singleRotate(q, dir);
+          ArenaTreeNodeBase* child = _singleRotate(q, dir);
           p->_setChild(last, child);
           p = child;
         }
         else if (!_isValidRed(q->_getChild(!dir)) && p->_getChild(!last)) {
-          BLArenaTreeNodeBase* s = p->_getChild(!last);
+          ArenaTreeNodeBase* s = p->_getChild(!last);
           if (!_isValidRed(s->_getChild(!last)) && !_isValidRed(s->_getChild(last))) {
             // Color flip.
             p->_makeBlack();
@@ -238,7 +240,7 @@ public:
           }
           else {
             size_t dir2 = g->_getRight() == p;
-            BLArenaTreeNodeBase* child = g->_getChild(dir2);
+            ArenaTreeNodeBase* child = g->_getChild(dir2);
 
             if (_isValidRed(s->_getChild(last))) {
               child = _doubleRotate(p, last);
@@ -273,7 +275,7 @@ public:
       BL_ASSERT(f != &head);
       BL_ASSERT(f != gf);
 
-      BLArenaTreeNodeBase* n = gf ? gf : &head;
+      ArenaTreeNodeBase* n = gf ? gf : &head;
       dir = (n == &head) ? 1  : cmp(*static_cast<NodeT*>(n), *static_cast<NodeT*>(node)) < 0;
 
       for (;;) {
@@ -298,9 +300,9 @@ public:
     if (_root) _root->_makeBlack();
   }
 
-  template<typename KeyT, typename CompareT = BLAlgorithm::CompareOp<BLAlgorithm::SortOrder::kAscending>>
+  template<typename KeyT, typename CompareT = CompareOp<SortOrder::kAscending>>
   BL_INLINE NodeT* get(const KeyT& key, const CompareT& cmp = CompareT()) const noexcept {
-    BLArenaTreeNodeBase* node = _root;
+    ArenaTreeNodeBase* node = _root;
     while (node) {
       auto result = cmp(*static_cast<const NodeT*>(node), key);
       if (result == 0) break;
@@ -324,11 +326,11 @@ public:
   //! \name Internals
   //! \{
 
-  static BL_INLINE bool _isValidRed(BLArenaTreeNodeBase* node) noexcept { return BLArenaTreeNodeBase::_isValidRed(node); }
+  static BL_INLINE bool _isValidRed(ArenaTreeNodeBase* node) noexcept { return ArenaTreeNodeBase::_isValidRed(node); }
 
   //! Single rotation.
-  static BL_INLINE BLArenaTreeNodeBase* _singleRotate(BLArenaTreeNodeBase* root, size_t dir) noexcept {
-    BLArenaTreeNodeBase* save = root->_getChild(!dir);
+  static BL_INLINE ArenaTreeNodeBase* _singleRotate(ArenaTreeNodeBase* root, size_t dir) noexcept {
+    ArenaTreeNodeBase* save = root->_getChild(!dir);
     root->_setChild(!dir, save->_getChild(dir));
     save->_setChild( dir, root);
     root->_makeRed();
@@ -337,7 +339,7 @@ public:
   }
 
   //! Double rotation.
-  static BL_INLINE BLArenaTreeNodeBase* _doubleRotate(BLArenaTreeNodeBase* root, size_t dir) noexcept {
+  static BL_INLINE ArenaTreeNodeBase* _doubleRotate(ArenaTreeNodeBase* root, size_t dir) noexcept {
     root->_setChild(!dir, _singleRotate(root->_getChild(!dir), !dir));
     return _singleRotate(root, dir);
   }
@@ -346,6 +348,8 @@ public:
 };
 
 //! \}
+
+} // {bl}
 
 //! \}
 //! \endcond

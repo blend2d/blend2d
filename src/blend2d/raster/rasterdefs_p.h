@@ -23,7 +23,8 @@
 
 class BLRasterContextImpl;
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 struct RenderFetchData;
 struct StyleData;
@@ -60,7 +61,7 @@ enum class RenderingMode : uint32_t {
 //!    the rendering context is created, all WEAK state flags are false, which means that there is no previous state
 //!    where to save.
 //!
-//!  - queue flags - these fa
+//!  - queue flags - TODO
 enum class ContextFlags : uint32_t {
   //! No flags set.
   kNoFlagsSet = 0u,
@@ -70,7 +71,7 @@ enum class ContextFlags : uint32_t {
 
   //! The operation is always NOP regardless of the composition operator, source, etc...
   //!
-  //! \note When `BLCompOpSolidId::kAlwaysNop` is combined with ContextFlags the 3 LSB bits would be modified. This
+  //! \note When `CompOpSolidId::kAlwaysNop` is combined with ContextFlags the 3 LSB bits would be modified. This
   //! would always be set when the composition is simplified to \ref BL_COMP_OP_DST_COPY. Since this flag is part of
   //! 'no-' flags family, we don't have to do anything else to reject render calls that would implicitly or explicitly
   //! have this flag set during the call invocation.
@@ -190,19 +191,20 @@ enum class ContextFlags : uint32_t {
   kPreservedFlags = kMTFullOrExhausted
 };
 
-BL_DEFINE_ENUM_FLAGS(BLRasterEngine::ContextFlags)
+BL_DEFINE_ENUM_FLAGS(ContextFlags)
 
 template<typename ShiftT>
-static BL_INLINE_NODEBUG constexpr BLRasterEngine::ContextFlags operator<<(BLRasterEngine::ContextFlags a, const ShiftT& n) noexcept {
-  return BLRasterEngine::ContextFlags((std::underlying_type<BLRasterEngine::ContextFlags>::type)(a) << n);
+static BL_INLINE_NODEBUG constexpr ContextFlags operator<<(ContextFlags a, const ShiftT& n) noexcept {
+  return ContextFlags((std::underlying_type<ContextFlags>::type)(a) << n);
 }
 
 template<typename ShiftT>
-static BL_INLINE_NODEBUG constexpr BLRasterEngine::ContextFlags operator>>(BLRasterEngine::ContextFlags a, const ShiftT& n) noexcept {
-  return BLRasterEngine::ContextFlags((std::underlying_type<BLRasterEngine::ContextFlags>::type)(a) >> n);
+static BL_INLINE_NODEBUG constexpr ContextFlags operator>>(ContextFlags a, const ShiftT& n) noexcept {
+  return ContextFlags((std::underlying_type<ContextFlags>::type)(a) >> n);
 }
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! Indexes to a `BLRasterContextImpl::solidFormatTable`, which describes pixel
 //! formats used by solid fills. There are in total 3 choices that are selected

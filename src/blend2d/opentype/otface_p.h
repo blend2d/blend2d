@@ -20,7 +20,8 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 
 enum class OTFaceFlags : uint32_t {
   // Flags related to 'loca' table
@@ -165,7 +166,8 @@ union OTFaceTables {
 
 BL_HIDDEN BLResult createOpenTypeFace(BLFontFaceCore* self, const BLFontData* fontData, uint32_t faceIndex) noexcept;
 
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 //! \}
 //! \endcond

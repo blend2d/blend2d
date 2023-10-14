@@ -12,7 +12,8 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 //! Pipeline fetch part.
@@ -26,7 +27,7 @@ public:
   FetchType _fetchType;
 
   //! Source pixel format.
-  BLInternalFormat _format = BLInternalFormat::kNone;
+  FormatExt _format = FormatExt::kNone;
   //! Source bytes-per-pixel (only required by pattern fetcher).
   uint8_t _bpp = 0;
   //! Maximum pixel step that the fetcher can fetch at a time (0=unlimited).
@@ -51,7 +52,7 @@ public:
   //! If the fetched pixels contain alpha channel.
   bool _hasAlpha = false;
 
-  FetchPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept;
+  FetchPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
 
   //! Returns the fetch type.
   BL_INLINE FetchType fetchType() const noexcept { return _fetchType; }
@@ -79,7 +80,7 @@ public:
   BL_INLINE bool isPixelPtr() const noexcept { return isFetchType(FetchType::kPixelPtr); }
 
   //! Returns source pixel format.
-  BL_INLINE BLInternalFormat format() const noexcept { return _format; }
+  BL_INLINE FormatExt format() const noexcept { return _format; }
   //! Returns source pixel format information.
   BL_INLINE BLFormatInfo formatInfo() const noexcept { return blFormatInfo[size_t(_format)]; }
 
@@ -156,7 +157,8 @@ public:
 };
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

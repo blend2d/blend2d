@@ -12,7 +12,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLAlgorithm {
+namespace bl {
 
 //! \name Binary Search & Bound
 //! \{
@@ -211,7 +211,7 @@ static BL_INLINE void quickSort(T* base, size_t size, const Compare& cmp = Compa
 
 //! \}
 
-} // {BLAlgorithm}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -16,11 +16,12 @@
 #include "../support/ptrops_p.h"
 #include "../support/scopedbuffer_p.h"
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 namespace GlyfImpl {
 
-// BLOpenType::GlyfImpl - FlagToSizeTable
-// =======================================
+// bl::OpenType::GlyfImpl - FlagToSizeTable
+// =========================================
 
 // This table provides information about the number of bytes vertex data consumes per each flag. It's used to
 // calculate the size of X and Y arrays of all contours a simple glyph is composed of to speed up decoding.
@@ -31,12 +32,12 @@ struct FlagToSizeGen {
   }
 };
 
-static constexpr const auto vertexSizeTable_ = blMakeLookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1), FlagToSizeGen>();
+static constexpr const auto vertexSizeTable_ = makeLookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1), FlagToSizeGen>();
 
-const BLLookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1)> vertexSizeTable = vertexSizeTable_;
+const LookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1)> vertexSizeTable = vertexSizeTable_;
 
-// BLOpenType::GlyfImpl - GetGlyphBounds
-// =====================================
+// bl::OpenType::GlyfImpl - GetGlyphBounds
+// =======================================
 
 static const uint8_t blBlankGlyphData[sizeof(GlyfTable::GlyphData)] = { 0 };
 
@@ -58,7 +59,7 @@ static BLResult BL_CDECL getGlyphBounds(
 
   for (size_t i = 0; i < count; i++) {
     BLGlyphId glyphId = glyphData[0] & 0xFFFFu;
-    glyphData = BLPtrOps::offset(glyphData, glyphAdvance);
+    glyphData = PtrOps::offset(glyphData, glyphAdvance);
 
     size_t offset;
     size_t endOff;
@@ -112,8 +113,8 @@ InvalidData:
   return result;
 }
 
-// BLOpenType::GlyfImpl - GetGlyphOutlines
-// =======================================
+// bl::OpenType::GlyfImpl - GetGlyphOutlines
+// =========================================
 
 namespace {
 
@@ -150,7 +151,7 @@ public:
     }
     else if (!(flags & GlyfTable::Simple::kXIsSameOrXByteIsPositive)) {
       BL_ASSERT(_xCoordPtr <= _endPtr - 2);
-      x16 = BLMemOps::readI16uBE(_xCoordPtr);
+      x16 = MemOps::readI16uBE(_xCoordPtr);
       _xCoordPtr += 2;
     }
 
@@ -163,7 +164,7 @@ public:
     }
     else if (!(flags & GlyfTable::Simple::kYIsSameOrYByteIsPositive)) {
       BL_ASSERT(_yCoordPtr <= _endPtr - 2);
-      y16 = BLMemOps::readI16uBE(_yCoordPtr);
+      y16 = MemOps::readI16uBE(_yCoordPtr);
       _yCoordPtr += 2;
     }
 
@@ -179,7 +180,7 @@ static BLResult BL_CDECL getGlyphOutlines(
   const BLMatrix2D* transform,
   BLPath* out,
   size_t* contourCountOut,
-  BLScopedBuffer* tmpBuffer) noexcept {
+  ScopedBuffer* tmpBuffer) noexcept {
 
   const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
 
@@ -204,7 +205,7 @@ static BLResult BL_CDECL getGlyphOutlines(
   compoundData[0].compoundFlags = Compound::kArgsAreXYValues;
   compoundData[0].transform = *transform;
 
-  BLPathAppender appender;
+  PathAppender appender;
   size_t contourCountTotal = 0;
 
   for (;;) {
@@ -246,14 +247,14 @@ static BLResult BL_CDECL getGlyphOutlines(
       int contourCountSigned = reinterpret_cast<const GlyfTable::GlyphData*>(gPtr)->numberOfContours();
       if (contourCountSigned > 0) {
         size_t contourCount = size_t(unsigned(contourCountSigned));
-        BLOverflowFlag of = 0;
+        OverflowFlag of{};
 
         // Minimum data size is:
         //   10                     [GlyphData header]
         //   (numberOfContours * 2) [endPtsOfContours]
         //   2                      [instructionLength]
         gPtr += sizeof(GlyfTable::GlyphData);
-        remainingSize = BLIntOps::subOverflow(remainingSize, sizeof(GlyfTable::GlyphData) + contourCount * 2u + 2u, &of);
+        remainingSize = IntOps::subOverflow(remainingSize, sizeof(GlyfTable::GlyphData) + contourCount * 2u + 2u, &of);
         if (BL_UNLIKELY(of))
           goto InvalidData;
 
@@ -262,8 +263,8 @@ static BLResult BL_CDECL getGlyphOutlines(
         contourCountTotal += contourCount;
 
         // We don't use hinting instructions, so skip them.
-        size_t instructionCount = BLMemOps::readU16uBE(gPtr);
-        remainingSize = BLIntOps::subOverflow(remainingSize, instructionCount, &of);
+        size_t instructionCount = MemOps::readU16uBE(gPtr);
+        remainingSize = IntOps::subOverflow(remainingSize, instructionCount, &of);
         if (BL_UNLIKELY(of))
           goto InvalidData;
 
@@ -335,7 +336,7 @@ static BLResult BL_CDECL getGlyphOutlines(
               xyCoordinatesSize += uint32_t(n) * vertexSize;
               offCurveSplineCount += n * size_t((f & Simple::kOnCurvePoint) == 0);
 
-              BLMemOps::fillSmall(fDataPtr + i, uint8_t(f), n);
+              MemOps::fillSmall(fDataPtr + i, uint8_t(f), n);
               i += n;
             } while (i < ttVertexCount);
 
@@ -427,7 +428,7 @@ static BLResult BL_CDECL getGlyphOutlines(
             }
 
             if (offCurveStart != SIZE_MAX) {
-              BLPathImpl* outI = BLPathPrivate::getImpl(out);
+              BLPathImpl* outI = PathInternal::getImpl(out);
               BLPoint finalPt = outI->vertexData[offCurveStart];
 
               outI->commandData[offCurveStart] = BL_PATH_CMD_MOVE;
@@ -501,28 +502,28 @@ ContinueCompound:
         {
           uint32_t flags;
           int arg1, arg2;
-          BLOverflowFlag of = 0;
+          OverflowFlag of{};
 
-          remainingSize = BLIntOps::subOverflow<size_t>(remainingSize, 6, &of);
+          remainingSize = IntOps::subOverflow<size_t>(remainingSize, 6, &of);
           if (BL_UNLIKELY(of))
             goto InvalidData;
 
-          flags = BLMemOps::readU16uBE(gPtr);
-          glyphId = BLMemOps::readU16uBE(gPtr + 2);
+          flags = MemOps::readU16uBE(gPtr);
+          glyphId = MemOps::readU16uBE(gPtr + 2);
           if (BL_UNLIKELY(glyphId >= faceI->faceInfo.glyphCount))
             goto InvalidData;
 
-          arg1 = BLMemOps::readI8(gPtr + 4);
-          arg2 = BLMemOps::readI8(gPtr + 5);
+          arg1 = MemOps::readI8(gPtr + 4);
+          arg2 = MemOps::readI8(gPtr + 5);
           gPtr += 6;
 
           if (flags & Compound::kArgsAreWords) {
-            remainingSize = BLIntOps::subOverflow<size_t>(remainingSize, 2, &of);
+            remainingSize = IntOps::subOverflow<size_t>(remainingSize, 2, &of);
             if (BL_UNLIKELY(of))
               goto InvalidData;
 
-            arg1 = BLIntOps::shl(arg1, 8) | (arg2 & 0xFF);
-            arg2 = BLMemOps::readI16uBE(gPtr);
+            arg1 = IntOps::shl(arg1, 8) | (arg2 & 0xFF);
+            arg2 = MemOps::readI16uBE(gPtr);
             gPtr += 2;
           }
 
@@ -544,11 +545,11 @@ ContinueCompound:
               // Simple scaling:
               //   [Sc, 0]
               //   [0, Sc]
-              remainingSize = BLIntOps::subOverflow<size_t>(remainingSize, 2, &of);
+              remainingSize = IntOps::subOverflow<size_t>(remainingSize, 2, &of);
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
-              double scale = double(BLMemOps::readI16uBE(gPtr)) * kScaleF2x14;
+              double scale = double(MemOps::readI16uBE(gPtr)) * kScaleF2x14;
               cm.m00 = scale;
               cm.m11 = scale;
               gPtr += 2;
@@ -557,26 +558,26 @@ ContinueCompound:
               // Simple scaling:
               //   [Sx, 0]
               //   [0, Sy]
-              remainingSize = BLIntOps::subOverflow<size_t>(remainingSize, 4, &of);
+              remainingSize = IntOps::subOverflow<size_t>(remainingSize, 4, &of);
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
-              cm.m00 = double(BLMemOps::readI16uBE(gPtr + 0)) * kScaleF2x14;
-              cm.m11 = double(BLMemOps::readI16uBE(gPtr + 2)) * kScaleF2x14;
+              cm.m00 = double(MemOps::readI16uBE(gPtr + 0)) * kScaleF2x14;
+              cm.m11 = double(MemOps::readI16uBE(gPtr + 2)) * kScaleF2x14;
               gPtr += 4;
             }
             else {
               // Affine case:
               //   [A, B]
               //   [C, D]
-              remainingSize = BLIntOps::subOverflow<size_t>(remainingSize, 8, &of);
+              remainingSize = IntOps::subOverflow<size_t>(remainingSize, 8, &of);
               if (BL_UNLIKELY(of))
                 goto InvalidData;
 
-              cm.m00 = double(BLMemOps::readI16uBE(gPtr + 0)) * kScaleF2x14;
-              cm.m01 = double(BLMemOps::readI16uBE(gPtr + 2)) * kScaleF2x14;
-              cm.m10 = double(BLMemOps::readI16uBE(gPtr + 4)) * kScaleF2x14;
-              cm.m11 = double(BLMemOps::readI16uBE(gPtr + 6)) * kScaleF2x14;
+              cm.m00 = double(MemOps::readI16uBE(gPtr + 0)) * kScaleF2x14;
+              cm.m01 = double(MemOps::readI16uBE(gPtr + 2)) * kScaleF2x14;
+              cm.m10 = double(MemOps::readI16uBE(gPtr + 4)) * kScaleF2x14;
+              cm.m11 = double(MemOps::readI16uBE(gPtr + 6)) * kScaleF2x14;
               gPtr += 8;
             }
 
@@ -588,15 +589,15 @@ ContinueCompound:
               // This is what FreeType does and what's not 100% according to the specification. However, according to
               // FreeType this would produce much better offsets so we will match FreeType instead of following the
               // specification.
-              cm.m20 *= BLGeometry::length(BLPoint(cm.m00, cm.m01));
-              cm.m21 *= BLGeometry::length(BLPoint(cm.m10, cm.m11));
+              cm.m20 *= Geometry::length(BLPoint(cm.m00, cm.m01));
+              cm.m21 *= Geometry::length(BLPoint(cm.m10, cm.m11));
             }
           }
 
           compoundData[compoundLevel].gPtr = gPtr;
           compoundData[compoundLevel].remainingSize = remainingSize;
           compoundData[compoundLevel].compoundFlags = flags;
-          BLTransformPrivate::multiply(cm, cm, compoundData[compoundLevel - 1].transform);
+          TransformInternal::multiply(cm, cm, compoundData[compoundLevel - 1].transform);
           continue;
         }
       }
@@ -613,8 +614,8 @@ InvalidData:
   return blTraceError(BL_ERROR_INVALID_DATA);
 }
 
-// BLOpenType::GlyfImpl - Init
-// ===========================
+// bl::OpenType::GlyfImpl - Init
+// =============================
 
 BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   faceI->faceInfo.outlineType = BL_FONT_OUTLINE_TYPE_TRUETYPE;
@@ -647,4 +648,5 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 }
 
 } // {GlyfImpl}
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}

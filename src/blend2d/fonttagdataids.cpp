@@ -6,10 +6,11 @@
 #include "api-build_p.h"
 #include "fonttagdataids_p.h"
 
-namespace BLFontTagData {
+namespace bl {
+namespace FontTagData {
 
-// BLFontTagData - Table IDs
-// =========================
+// bl::FontTagData - Table IDs
+// ===========================
 
 const BLTag tableIdToTagTable[] = {
   BL_MAKE_TAG('B', 'A', 'S', 'E'), // kBASE - Baseline data                      (OpenType advanced typography)
@@ -86,8 +87,8 @@ const BLTag tableIdToTagTable[] = {
   BL_MAKE_TAG('x', 'r', 'e', 'f')  // kXREF - Cross-reference table              (Apple advanced typography)
 };
 
-// BLFontTagData - Script IDs
-// ==========================
+// bl::FontTagData - Script IDs
+// ============================
 
 const BLTag scriptIdToTagTable[] = {
   BL_MAKE_TAG('D', 'F', 'L', 'T'), // kDFLT - Default.
@@ -266,8 +267,8 @@ const BLTag scriptIdToTagTable[] = {
   BL_MAKE_TAG('z', 'a', 'n', 'b')  // kZANB - Zanabazar Square.
 };
 
-// BLFontTagData - Language IDs
-// ============================
+// bl::FontTagData - Language IDs
+// ==============================
 
 const BLTag languageIdToTagTable[] = {
   BL_MAKE_TAG('A', 'B', 'A', ' '), // kABA  - Abaza.
@@ -906,8 +907,8 @@ const BLTag languageIdToTagTable[] = {
   BL_MAKE_TAG('Z', 'Z', 'A', ' ')  // kZZA  - Zazaki.
 };
 
-// BLFontTagData - Feature IDs
-// ===========================
+// bl::FontTagData - Feature IDs
+// =============================
 
 const BLTag featureIdToTagTable[] = {
   BL_MAKE_TAG('a', 'a', 'l', 't'), // kAALT - Access All Alternates.
@@ -1153,8 +1154,8 @@ const BLTag featureIdToTagTable[] = {
   BL_MAKE_TAG('z', 'e', 'r', 'o')  // kZERO - Slashed Zero.
 };
 
-// BLFontTagData - Baseline IDs
-// ============================
+// bl::FontTagData - Baseline IDs
+// ==============================
 
 const BLTag baselineIdToTagTable[] = {
   BL_MAKE_TAG('I', 'c', 'f', 'c'), // kICFC - Ideographic face center.
@@ -1168,8 +1169,8 @@ const BLTag baselineIdToTagTable[] = {
   BL_MAKE_TAG('r', 'o', 'm', 'n')  // kROMN - Alphabetic scripts baseline (Latin, Cyrillic, Greek, ...).
 };
 
-// BLFontTagData - Variation IDs
-// =============================
+// bl::FontTagData - Variation IDs
+// ===============================
 
 const BLTag variationIdToTagTable[] = {
   BL_MAKE_TAG('i', 't', 'a', 'l'), // kITAL - Italic.
@@ -1179,4 +1180,5 @@ const BLTag variationIdToTagTable[] = {
   BL_MAKE_TAG('w', 'g', 'h', 't')  // kWGHT - Weight.
 };
 
-} // {BLFontTagData}
+} // {FontTagData}
+} // {bl}

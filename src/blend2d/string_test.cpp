@@ -11,14 +11,15 @@
 #include "string_p.h"
 #include "runtime_p.h"
 
-// BLString - Tests
-// ================
+// bl::String - Tests
+// ==================
 
-namespace BLStringTests {
+namespace bl {
+namespace Tests {
 
 static void verifyString(const BLString& s) noexcept {
-  size_t size = BLStringPrivate::getSize(&s);
-  const char* data = BLStringPrivate::getData(&s);
+  size_t size = StringInternal::getSize(&s);
+  const char* data = StringInternal::getData(&s);
 
   EXPECT_EQ(data[size], 0)
     .message("BLString's data is not null terminated");
@@ -38,7 +39,7 @@ UNIT(string_allocation_strategy, BL_TEST_GROUP_CORE_CONTAINERS) {
     char c = char(size_t('a') + (i % size_t('z' - 'a')));
     s.append(c);
     if (capacity != s.capacity()) {
-      size_t implSize = BLStringPrivate::implSizeFromCapacity(s.capacity()).value();
+      size_t implSize = StringInternal::implSizeFromCapacity(s.capacity()).value();
       INFO("Capacity increased from %zu to %zu [ImplSize=%zu]\n", capacity, s.capacity(), implSize);
       capacity = s.capacity();
     }
@@ -187,6 +188,7 @@ UNIT(string, BL_TEST_GROUP_CORE_CONTAINERS) {
   }
 }
 
-} // {BLStringTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

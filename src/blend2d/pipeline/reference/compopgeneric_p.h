@@ -17,7 +17,8 @@
 //! \addtogroup blend2d_pipeline_reference
 //! \{
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace Reference {
 
 using Pixel::Repeat;
@@ -53,7 +54,7 @@ struct CompOp_SrcOver_Op {
   // Dca' = Sca + Dca.(1 - Sa)
   // Da'  = Sa  + Da .(1 - Sa)
   static BL_INLINE PixelType op_prgb32_prgb32(PixelType d, PixelType s) noexcept {
-    return s + (d.unpack() * Repeat{BLPixelOps::Scalar::neg255(s.a())}).div255().pack();
+    return s + (d.unpack() * Repeat{PixelOps::Scalar::neg255(s.a())}).div255().pack();
   }
 
   // Dca' = Sca.m + Dca.(1 - Sa.m)
@@ -130,17 +131,17 @@ struct CompOp_Base_PRGB32 : public CompOp_Base<OpT, PixelT, kDstBPP> {
 
   BL_INLINE uint8_t* compositePixelOpaque(uint8_t* dstPtr) noexcept {
     if (uint32_t(OpT::kCompOp) == BL_COMP_OP_SRC_COPY) {
-      BLMemOps::writeU32a(dstPtr, fetchOp.fetch().value());
+      MemOps::writeU32a(dstPtr, fetchOp.fetch().value());
       return dstPtr + kDstBPP;
     }
     else {
-      BLMemOps::writeU32a(dstPtr, OpT::op_prgb32_prgb32(PixelT::fromValue(BLMemOps::readU32a(dstPtr)), fetchOp.fetch()).value());
+      MemOps::writeU32a(dstPtr, OpT::op_prgb32_prgb32(PixelT::fromValue(MemOps::readU32a(dstPtr)), fetchOp.fetch()).value());
       return dstPtr + kDstBPP;
     }
   }
 
   BL_INLINE uint8_t* compositePixelMasked(uint8_t* dstPtr, uint32_t m) noexcept {
-    BLMemOps::writeU32a(dstPtr, OpT::op_prgb32_prgb32(PixelT::fromValue(BLMemOps::readU32a(dstPtr)), fetchOp.fetch(), m).value());
+    MemOps::writeU32a(dstPtr, OpT::op_prgb32_prgb32(PixelT::fromValue(MemOps::readU32a(dstPtr)), fetchOp.fetch(), m).value());
     return dstPtr + kDstBPP;
   }
 
@@ -179,7 +180,7 @@ struct CompOp_Base_PRGB32 : public CompOp_Base<OpT, PixelT, kDstBPP> {
   BL_INLINE uint8_t* compositeVSpanWithoutGA(uint8_t* BL_RESTRICT dstPtr, const uint8_t* BL_RESTRICT maskPtr, uint32_t globalAlpha, size_t w) noexcept {
     size_t i = w;
     do {
-      uint32_t msk = BLPixelOps::Scalar::udiv255(uint32_t(maskPtr[0]) * globalAlpha);
+      uint32_t msk = PixelOps::Scalar::udiv255(uint32_t(maskPtr[0]) * globalAlpha);
       maskPtr++;
       dstPtr = compositePixelMasked(dstPtr, msk);
     } while (--i);
@@ -231,40 +232,41 @@ typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8
 typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchConicGradient<Pixel::P32_A8R8G8B8, BL_GRADIENT_QUALITY_DITHER>, 4> CompOp_SrcOver_PRGB32_Conic_Dither;
 typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchConicGradient<Pixel::P32_A8R8G8B8, BL_GRADIENT_QUALITY_DITHER>, 4> CompOp_Plus_PRGB32_Conic_Dither;
 
-typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedBlit<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAlignedBlit_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedBlit<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAlignedBlit_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedBlit<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAlignedBlit_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedBlit<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAlignedBlit_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedBlit<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAlignedBlit_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedBlit<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAlignedBlit_PRGB32;
 
-typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedPad<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAlignedPad_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedPad<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAlignedPad_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedPad<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAlignedPad_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedPad<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAlignedPad_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedPad<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAlignedPad_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedPad<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAlignedPad_PRGB32;
 
-typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedRepeat<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAlignedRepeat_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedRepeat<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAlignedRepeat_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedRepeat<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAlignedRepeat_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedRepeat<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAlignedRepeat_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedRepeat<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAlignedRepeat_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedRepeat<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAlignedRepeat_PRGB32;
 
-typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedRoR<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAlignedRoR_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedRoR<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAlignedRoR_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedRoR<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAlignedRoR_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedRoR<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAlignedRoR_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedRoR<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAlignedRoR_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAlignedRoR<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAlignedRoR_PRGB32;
 
-typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternFxFyPad<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternFxFyPad_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternFxFyPad<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternFxFyPad_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternFxFyPad<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternFxFyPad_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternFxFyPad<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternFxFyPad_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternFxFyPad<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternFxFyPad_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternFxFyPad<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternFxFyPad_PRGB32;
 
-typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternFxFyRoR<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternFxFyRoR_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternFxFyRoR<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternFxFyRoR_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternFxFyRoR<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternFxFyRoR_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternFxFyRoR<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternFxFyRoR_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternFxFyRoR<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternFxFyRoR_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternFxFyRoR<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternFxFyRoR_PRGB32;
 
-typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineNNAny<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAffineNNAny_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineNNAny<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAffineNNAny_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineNNAny<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAffineNNAny_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineNNAny<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAffineNNAny_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineNNAny<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAffineNNAny_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineNNAny<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAffineNNAny_PRGB32;
 
-typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineBIAny<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAffineBIAny_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineBIAny<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAffineBIAny_PRGB32;
-typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineBIAny<Pixel::P32_A8R8G8B8, BLInternalFormat::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAffineBIAny_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineBIAny<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcCopy_PRGB32_PatternAffineBIAny_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineBIAny<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAffineBIAny_PRGB32;
+typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineBIAny<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAffineBIAny_PRGB32;
 
 } // {Reference}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 //! \}
 //! \endcond

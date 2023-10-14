@@ -141,9 +141,8 @@ struct BLGradientPrivateImpl : public BLGradientImpl {
 
 //! \}
 
-namespace BLGradientPrivate {
-
-using BLObjectPrivate::RCMode;
+namespace bl {
+namespace GradientInternal {
 
 //! \name BLGradient - Internals - Common Functionality (Container)
 //! \{
@@ -162,14 +161,14 @@ static BL_INLINE_NODEBUG constexpr size_t capacityFromImplSize(BLObjectImplSize 
 //! \{
 
 static BL_INLINE bool isImplMutable(BLGradientImpl* impl) noexcept {
-  return BLObjectPrivate::isImplMutable(impl);
+  return ObjectInternal::isImplMutable(impl);
 }
 
 BL_HIDDEN BLResult freeImpl(BLGradientPrivateImpl* impl) noexcept;
 
 template<RCMode kRCMode>
 static BL_INLINE BLResult releaseImpl(BLGradientPrivateImpl* impl) noexcept {
-  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -182,7 +181,7 @@ static BL_INLINE_NODEBUG BLGradientPrivateImpl* getImpl(const BLGradientCore* se
 }
 
 static BL_INLINE BLResult retainInstance(const BLGradientCore* self, size_t n = 1) noexcept {
-  return BLObjectPrivate::retainInstance(self, n);
+  return ObjectInternal::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLGradientCore* self) noexcept {
@@ -223,7 +222,8 @@ BL_HIDDEN BLGradientLUT* ensureLut64(BLGradientPrivateImpl* impl_, uint32_t lutS
 
 //! \}
 
-} // {BLGradientPrivate}
+} // {GradientInternal}
+} // {bl}
 
 //! \}
 //! \endcond

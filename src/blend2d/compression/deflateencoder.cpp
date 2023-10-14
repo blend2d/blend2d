@@ -95,7 +95,8 @@
 #define LENGTH_NOSTAT_BITS  13
 #define OFFSET_NOSTAT_BITS  10
 
-namespace BLCompression {
+namespace bl {
+namespace Compression {
 namespace Deflate {
 
 static const uint8_t minOutputSizeExtras[] = {
@@ -373,7 +374,7 @@ struct NearOptimalEncoderImpl : public EncoderImpl {
 };
 
 // Can the specified number of bits always be added to 'bitbuf' after any pending bytes have been flushed?
-#define CAN_BUFFER(n)  ((n) <= BLIntOps::bitSizeOf<BLBitWord>() - 7)
+#define CAN_BUFFER(n)  ((n) <= IntOps::bitSizeOf<BLBitWord>() - 7)
 
 // Structure to keep track of the current state of sending bits to the compressed output buffer.
 struct deflate_output_bitstream {
@@ -390,7 +391,7 @@ struct deflate_output_bitstream {
   uint8_t *end;
 };
 
-#define MIN_OUTPUT_SIZE  (BLMemOps::kUnalignedMem32 ? sizeof(BLBitWord) : 1)
+#define MIN_OUTPUT_SIZE  (MemOps::kUnalignedMem32 ? sizeof(BLBitWord) : 1)
 
 // Initialize the output bitstream.
 static void deflate_init_output(deflate_output_bitstream* os, void* buffer, size_t size) noexcept {
@@ -413,18 +414,18 @@ static BL_INLINE void deflate_add_bits(deflate_output_bitstream *os, BLBitWord b
 template<typename T>
 static BL_INLINE void blWriteT_LE(void* dst, const T& value) noexcept {
   if (sizeof(T) == 1)
-    BLMemOps::writeU8(dst, reinterpret_cast<const uint8_t&>(value));
+    MemOps::writeU8(dst, reinterpret_cast<const uint8_t&>(value));
   else if (sizeof(T) == 2)
-    BLMemOps::writeU16uLE(dst, reinterpret_cast<const uint16_t&>(value));
+    MemOps::writeU16uLE(dst, reinterpret_cast<const uint16_t&>(value));
   else if (sizeof(T) == 4)
-    BLMemOps::writeU32uLE(dst, reinterpret_cast<const uint32_t&>(value));
+    MemOps::writeU32uLE(dst, reinterpret_cast<const uint32_t&>(value));
   else if (sizeof(T) == 8)
-    BLMemOps::writeU64uLE(dst, reinterpret_cast<const uint64_t&>(value));
+    MemOps::writeU64uLE(dst, reinterpret_cast<const uint64_t&>(value));
 }
 
 // Flush bits from the bitbuffer variable to the output buffer.
 static BL_INLINE void deflate_flush_bits(deflate_output_bitstream* os) noexcept {
-  if (BLMemOps::kUnalignedMem) {
+  if (MemOps::kUnalignedMem) {
     // Flush a whole word (branchlessly).
     blWriteT_LE(os->next, os->bitbuf);
     os->bitbuf >>= os->bitcount & ~7;
@@ -445,7 +446,7 @@ static BL_INLINE void deflate_flush_bits(deflate_output_bitstream* os) noexcept 
 
 // Align the bitstream on a byte boundary.
 static BL_INLINE void deflate_align_bitstream(deflate_output_bitstream* os) noexcept {
-  os->bitcount += BLIntOps::negate(os->bitcount) & 0x7u;
+  os->bitcount += IntOps::negate(os->bitcount) & 0x7u;
   deflate_flush_bits(os);
 }
 
@@ -1361,9 +1362,9 @@ static void deflate_write_uncompressed_block(deflate_output_bitstream *os, const
     return;
   }
 
-  BLMemOps::writeU16uLE(os->next, len);
+  MemOps::writeU16uLE(os->next, len);
   os->next += 2;
-  BLMemOps::writeU16uLE(os->next, ~len);
+  MemOps::writeU16uLE(os->next, ~len);
   os->next += 2;
   memcpy(os->next, data, len);
   os->next += len;
@@ -1434,7 +1435,7 @@ static void deflate_flush_block(EncoderImpl* impl, deflate_output_bitstream* BL_
   }
 
   // Compute the cost of using uncompressed blocks.
-  uncompressed_cost += (BLIntOps::negate(os->bitcount + 3u) & 7u) + 32u + (40 * (DIV_ROUND_UP(block_length, UINT16_MAX) - 1)) + (8 * block_length);
+  uncompressed_cost += (IntOps::negate(os->bitcount + 3u) & 7u) + 32u + (40 * (DIV_ROUND_UP(block_length, UINT16_MAX) - 1)) + (8 * block_length);
 
   // Choose the cheapest block type.
   uint32_t block_type;
@@ -1767,8 +1768,8 @@ have_cur_match:
   return deflate_flush_output(&os);
 }
 
-// BLCompression - Deflate - Near-Optimal Implementation
-// =====================================================
+// bl::Compression - Deflate - Near-Optimal Implementation
+// =======================================================
 
 // Follow the minimum-cost path in the graph of possible match/literal choices for the current block
 // and compute the frequencies of the Huffman symbols that would be needed to output those matches
@@ -2169,7 +2170,7 @@ BLResult Encoder::init(uint32_t format, uint32_t compressionLevel) noexcept {
   if (BL_UNLIKELY(!allocatedPtr))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
-  EncoderImpl* newImpl = static_cast<EncoderImpl*>(BLIntOps::alignUp(allocatedPtr, implAlignment));
+  EncoderImpl* newImpl = static_cast<EncoderImpl*>(IntOps::alignUp(allocatedPtr, implAlignment));
   newImpl->allocated_ptr = allocatedPtr;
 
   switch (compressionLevel) {
@@ -2265,11 +2266,11 @@ size_t Encoder::compress(void* output, size_t outputSize, const void* input, siz
       hdr |= compression_level_hint << 6;
       hdr |= 31 - (hdr % 31);
 
-      BLMemOps::writeU16uBE(output, hdr);
+      MemOps::writeU16uBE(output, hdr);
 
       // ADLER32.
       uint32_t checksum = adler32(static_cast<const uint8_t*>(input), inputSize);
-      BLMemOps::writeU32uBE(static_cast<uint8_t*>(output) + 2 + compressedSize, checksum);
+      MemOps::writeU32uBE(static_cast<uint8_t*>(output) + 2 + compressedSize, checksum);
 
       return compressedSize + 6;
     }
@@ -2329,4 +2330,5 @@ libdeflate_zlib_compress(struct libdeflate_compressor *c,
 }
 
 } // {Deflate}
-} // {BLCompression}
+} // {Compression}
+} // {bl}

@@ -6,9 +6,6 @@
 #include "api-build_test_p.h"
 #if defined(BL_TEST)
 
-// BLFont - Tests
-// ==============
-
 #include "bitset.h"
 #include "font.h"
 #include "fontdata.h"
@@ -18,7 +15,11 @@
 
 #include "../test/resources/abeezee_regular_ttf.h"
 
-namespace BLFontTests {
+// bl::Font - Tests
+// ================
+
+namespace bl {
+namespace Tests {
 
 UNIT(font, BL_TEST_GROUP_TEXT_COMBINED) {
   BLFontData fontData;
@@ -39,6 +40,7 @@ UNIT(font, BL_TEST_GROUP_TEXT_COMBINED) {
   }
 }
 
-} // {BLFontTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

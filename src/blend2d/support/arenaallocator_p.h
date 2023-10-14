@@ -13,24 +13,26 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! Arena memory allocator.
 //!
 //! Arena allocator is an incremental memory allocator that allocates memory by simply incrementing a pointer.
 //! It allocates blocks of memory by using standard C library `malloc/free`, but divides these blocks into
-//! smaller chunks requested by calling `BLArenaAllocator::alloc()` and friends.
+//! smaller chunks requested by calling `ArenaAllocator::alloc()` and friends.
 //!
 //! Arena allocators are designed to either allocate memory for data that has a short lifetime or data in containers
 //! where it's expected that many small chunks will be allocated.
 //!
-//! \note It's not recommended to use `BLArenaAllocator` to allocate larger data structures than the initial `blockSize`
+//! \note It's not recommended to use `ArenaAllocator` to allocate larger data structures than the initial `blockSize`
 //! passed to its constructor. The block size should be always greater than the maximum `size` passed to `alloc()`.
 //! Arena allocator is designed to handle such cases, but it may allocate new block for each call to `alloc()` that
 //! exceeds the default block size.
-class BLArenaAllocator {
+class ArenaAllocator {
 public:
-  BL_NONCOPYABLE(BLArenaAllocator)
+  BL_NONCOPYABLE(ArenaAllocator)
 
-  //! A single block of memory managed by `BLArenaAllocator`.
+  //! A single block of memory managed by `ArenaAllocator`.
   struct Block {
     //! Link to the previous block.
     Block* prev;
@@ -48,7 +50,7 @@ public:
     }
   };
 
-  //! Zero block, used by a default constructed `BLArenaAllocator`, which doesn't hold any allocated block. This block
+  //! Zero block, used by a default constructed `ArenaAllocator`, which doesn't hold any allocated block. This block
   //! must be properly aligned so when arena allocator aligns its current pointer to check for aligned allocation it
   //! would not overflow past the end of the block - which is the same as the beginning of the block as it has no size.
   struct alignas(64) ZeroBlock {
@@ -78,8 +80,8 @@ public:
   union {
     struct {
       //! Default block size.
-      size_t _blockSize : BLIntOps::bitSizeOf<size_t>() - 4;
-      //! First block is temporary (BLArenaAllocatorTmp).
+      size_t _blockSize : IntOps::bitSizeOf<size_t>() - 4;
+      //! First block is temporary (ArenaAllocatorTmp).
       size_t _hasStaticBlock : 1;
       //! Block alignment (1 << alignment).
       size_t _blockAlignmentShift : 3;
@@ -92,32 +94,32 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  //! Create a new `BLArenaAllocator`.
+  //! Create a new `ArenaAllocator`.
   //!
   //! The `blockSize` parameter describes the default size of the block. If the `size` parameter passed to
-  //! `alloc()` is greater than the default size `BLArenaAllocator` will allocate and use a larger block, but
+  //! `alloc()` is greater than the default size `ArenaAllocator` will allocate and use a larger block, but
   //! it will not change the default `blockSize`.
   //!
   //! It's not required, but it's good practice to set `blockSize` to a reasonable value that depends on the
-  //! usage of `BLArenaAllocator`. Greater block sizes are generally safer and perform better than unreasonably
+  //! usage of `ArenaAllocator`. Greater block sizes are generally safer and perform better than unreasonably
   //! low block sizes.
-  BL_INLINE explicit BLArenaAllocator(size_t blockSize, size_t blockAlignment = 1) noexcept {
+  BL_INLINE explicit ArenaAllocator(size_t blockSize, size_t blockAlignment = 1) noexcept {
     _init(blockSize, blockAlignment, nullptr, 0);
   }
 
-  BL_INLINE BLArenaAllocator(size_t blockSize, size_t blockAlignment, void* staticData, size_t staticSize) noexcept {
+  BL_INLINE ArenaAllocator(size_t blockSize, size_t blockAlignment, void* staticData, size_t staticSize) noexcept {
     _init(blockSize, blockAlignment, staticData, staticSize);
   }
 
-  //! Destroy the `BLArenaAllocator` instance.
+  //! Destroy the `ArenaAllocator` instance.
   //!
-  //! This will destroy the `BLArenaAllocator` instance and release all blocks of memory allocated by it. It
+  //! This will destroy the `ArenaAllocator` instance and release all blocks of memory allocated by it. It
   //! performs implicit `reset()`.
-  BL_INLINE ~BLArenaAllocator() noexcept { reset(); }
+  BL_INLINE ~ArenaAllocator() noexcept { reset(); }
 
   BL_HIDDEN void _init(size_t blockSize, size_t blockAlignment, void* staticData, size_t staticSize) noexcept;
 
-  //! Resets the `BLArenaAllocator` and invalidates all blocks it has allocated.
+  //! Resets the `ArenaAllocator` and invalidates all blocks it has allocated.
   BL_HIDDEN void reset() noexcept;
 
   //! \}
@@ -134,7 +136,7 @@ public:
     _assignBlock(cur);
   }
 
-  BL_INLINE void swap(BLArenaAllocator& other) noexcept {
+  BL_INLINE void swap(ArenaAllocator& other) noexcept {
     // This could lead to a disaster.
     BL_ASSERT(!this->hasStaticBlock());
     BL_ASSERT(!other.hasStaticBlock());
@@ -150,7 +152,7 @@ public:
   //! \name Accessors
   //! \{
 
-  //! Tests whether this `BLArenaAllocator` is actually a `BLArenaAllocatorTmp` that uses temporary memory.
+  //! Tests whether this `ArenaAllocator` is actually a `ArenaAllocatorTmp` that uses temporary memory.
   BL_NODISCARD
   BL_INLINE bool hasStaticBlock() const noexcept { return _hasStaticBlock != 0; }
 
@@ -200,7 +202,7 @@ public:
 
   //! Align the current pointer to `alignment`.
   BL_INLINE void align(size_t alignment) noexcept {
-    _ptr = blMin(BLIntOps::alignUp(_ptr, alignment), _end);
+    _ptr = blMin(IntOps::alignUp(_ptr, alignment), _end);
   }
 
   //! Ensures the remaining size is at least equal or greater than `size`.
@@ -217,7 +219,7 @@ public:
 
   BL_INLINE void _assignBlock(Block* block) noexcept {
     size_t alignment = blockAlignment();
-    _ptr = BLIntOps::alignUp(block->data(), alignment);
+    _ptr = IntOps::alignUp(block->data(), alignment);
     _end = block->data() + block->size;
     _block = block;
   }
@@ -240,14 +242,14 @@ public:
 
   //! Allocates the requested memory specified by `size`.
   //!
-  //! Pointer returned is valid until the `BLArenaAllocator` instance is destroyed or reset by calling `reset()`.
+  //! Pointer returned is valid until the `ArenaAllocator` instance is destroyed or reset by calling `reset()`.
   //! If you plan to make an instance of C++ from the given pointer use placement `new` and `delete` operators:
   //!
   //! ```
   //! class Object { ... };
   //!
   //! // Create a new arena with default block size of approximately 65536 bytes.
-  //! BLArenaAllocator arena(65536 - BLArenaAllocator::kBlockOverhead);
+  //! ArenaAllocator arena(65536 - ArenaAllocator::kBlockOverhead);
   //!
   //! // Create your objects using arena object allocating, for example:
   //! Object* obj = static_cast<Object*>(arena.alloc(sizeof(Object)));
@@ -264,7 +266,7 @@ public:
   //! // To destroy the instance (if required).
   //! obj->~Object();
   //!
-  //! // Reset or destroy `BLArenaAllocator`.
+  //! // Reset or destroy `ArenaAllocator`.
   //! arena.reset();
   //! ```
   BL_NODISCARD
@@ -279,11 +281,11 @@ public:
 
   //! Allocates the requested memory specified by `size` and `alignment`.
   //!
-  //! Performs the same operation as `BLArenaAllocator::alloc(size)` with `alignment` applied.
+  //! Performs the same operation as `ArenaAllocator::alloc(size)` with `alignment` applied.
   BL_NODISCARD
   BL_INLINE void* alloc(size_t size, size_t alignment) noexcept {
-    BL_ASSERT(BLIntOps::isPowerOf2(alignment));
-    uint8_t* ptr = BLIntOps::alignUp(_ptr, alignment);
+    BL_ASSERT(IntOps::isPowerOf2(alignment));
+    uint8_t* ptr = IntOps::alignUp(_ptr, alignment);
 
     if (size > (size_t)(_end - ptr))
       return _alloc(size, alignment);
@@ -306,12 +308,12 @@ public:
 
   //! Allocates the requested memory specified by `size` and `alignment` without doing any checks.
   //!
-  //! Performs the same operation as `BLArenaAllocator::allocNoCheck(size)` with `alignment` applied.
+  //! Performs the same operation as `ArenaAllocator::allocNoCheck(size)` with `alignment` applied.
   BL_NODISCARD
   BL_INLINE void* allocNoCheck(size_t size, size_t alignment) noexcept {
-    BL_ASSERT(BLIntOps::isPowerOf2(alignment));
+    BL_ASSERT(IntOps::isPowerOf2(alignment));
 
-    uint8_t* ptr = BLIntOps::alignUp(_ptr, alignment);
+    uint8_t* ptr = IntOps::alignUp(_ptr, alignment);
     BL_ASSERT(size <= (size_t)(_end - ptr));
 
     _ptr = ptr + size;
@@ -335,7 +337,7 @@ public:
   BL_NODISCARD
   BL_INLINE T* allocNoAlignT(size_t size = sizeof(T)) noexcept {
     T* ptr = static_cast<T*>(alloc(size));
-    BL_ASSERT(BLIntOps::isAligned(ptr, alignof(T)));
+    BL_ASSERT(IntOps::isAligned(ptr, alignof(T)));
     return ptr;
   }
 
@@ -353,7 +355,7 @@ public:
     return static_cast<T*>(allocZeroed(size, alignment));
   }
 
-  //! Like `new(std::nothrow) T(...)`, but allocated by `BLArenaAllocator`.
+  //! Like `new(std::nothrow) T(...)`, but allocated by `ArenaAllocator`.
   template<typename T>
   BL_NODISCARD
   BL_INLINE T* newT() noexcept {
@@ -363,7 +365,7 @@ public:
     return new(BLInternal::PlacementNew{p}) T();
   }
 
-  //! Like `new(std::nothrow) T(...)`, but allocated by `BLArenaAllocator`.
+  //! Like `new(std::nothrow) T(...)`, but allocated by `ArenaAllocator`.
   template<typename T, typename... Args>
   BL_NODISCARD
   BL_INLINE T* newT(Args&&... args) noexcept {
@@ -389,7 +391,7 @@ public:
     return _ptr;
   }
 
-  //! Restores the state of `BLArenaAllocator` from the previously saved `state`.
+  //! Restores the state of `ArenaAllocator` from the previously saved `state`.
   BL_INLINE void restoreState(StatePtr p) noexcept {
     Block* block = _block;
     size_t alignment = blockAlignment();
@@ -399,7 +401,7 @@ public:
         // Special case - can happen in case that the allocator didn't have allocated any block when `saveState()`
         // was called. In that case we won't restore to the shared null block, instead we restore to the first block
         // the allocator has.
-        p = BLIntOps::alignUp(block->data(), alignment);
+        p = IntOps::alignUp(block->data(), alignment);
         break;
       }
       block = block->prev;
@@ -446,14 +448,14 @@ public:
   //! \}
 };
 
-//! A temporary `BLArenaAllocator`.
+//! A temporary `ArenaAllocator`.
 template<size_t N>
-class BLArenaAllocatorTmp : public BLArenaAllocator {
+class ArenaAllocatorTmp : public ArenaAllocator {
 public:
-  BL_NONCOPYABLE(BLArenaAllocatorTmp)
+  BL_NONCOPYABLE(ArenaAllocatorTmp)
 
-  BL_INLINE explicit BLArenaAllocatorTmp(size_t blockSize, size_t blockAlignment = 1) noexcept
-    : BLArenaAllocator(blockSize, blockAlignment, _storage.data, N) {}
+  BL_INLINE explicit ArenaAllocatorTmp(size_t blockSize, size_t blockAlignment = 1) noexcept
+    : ArenaAllocator(blockSize, blockAlignment, _storage.data, N) {}
 
   struct Storage {
     char data[N];
@@ -462,25 +464,25 @@ public:
 
 //! Helper class for implementing pooling of arena-allocated objects.
 template<typename T, size_t SizeOfT = sizeof(T)>
-class BLArenaPool {
+class ArenaPool {
 public:
-  BL_NONCOPYABLE(BLArenaPool)
+  BL_NONCOPYABLE(ArenaPool)
 
   struct Link { Link* next; };
   Link* _pool;
 
-  BL_INLINE BLArenaPool() noexcept
+  BL_INLINE ArenaPool() noexcept
     : _pool(nullptr) {}
 
   //! Resets the arena pool.
   //!
-  //! Reset must be called after the associated `BLArenaAllocator` has been reset, otherwise the existing pool will
-  //! collide with possible allocations made on the `BLArenaAllocator` object after the reset.
+  //! Reset must be called after the associated `ArenaAllocator` has been reset, otherwise the existing pool will
+  //! collide with possible allocations made on the `ArenaAllocator` object after the reset.
   BL_INLINE void reset() noexcept { _pool = nullptr; }
 
   //! Ensures that there is at least one object in the pool.
   BL_NODISCARD
-  BL_INLINE bool ensure(BLArenaAllocator& arena) noexcept {
+  BL_INLINE bool ensure(ArenaAllocator& arena) noexcept {
     if (_pool) return true;
 
     Link* p = static_cast<Link*>(arena.alloc(SizeOfT));
@@ -493,7 +495,7 @@ public:
 
   //! Allocates a memory (or reuses the existing allocation) of `SizeOfT` (in bytes).
   BL_NODISCARD
-  BL_INLINE T* alloc(BLArenaAllocator& arena) noexcept {
+  BL_INLINE T* alloc(ArenaAllocator& arena) noexcept {
     Link* p = _pool;
     if (BL_UNLIKELY(p == nullptr))
       return static_cast<T*>(arena.alloc(SizeOfT));
@@ -520,6 +522,8 @@ public:
     _pool = p;
   }
 };
+
+} // {bl}
 
 //! \}
 //! \endcond

@@ -6,10 +6,10 @@
 #include "api-build_test_p.h"
 #if defined(BL_TEST)
 
-#include "math_p.h"
 #include "matrix_p.h"
 #include "runtime_p.h"
 #include "simd/simd_p.h"
+#include "support/math_p.h"
 
 // BLTransform - Tests
 // ===================
@@ -87,7 +87,7 @@ UNIT(matrix, BL_TEST_GROUP_GEOMETRY_UTILITIES) {
                           blAbs(a.m20 - b.m20),
                           blAbs(a.m21 - b.m21));
       // If Blend2D is compiled with FMA enabled there could be a difference
-      // greater than our blEpsilon<double>, so use a more relaxed value here.
+      // greater than our Math::epsilon<double>, so use a more relaxed value here.
       return diff < 1e-8;
     };
 

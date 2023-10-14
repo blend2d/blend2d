@@ -7,8 +7,10 @@
 #include "../support/arenaallocator_p.h"
 #include "../support/arenahashmap_p.h"
 
-// ArenaHashMap - Prime Table
-// ==========================
+namespace bl {
+
+// bl::ArenaHashMap - Prime Table
+// ==============================
 
 #define BLEND2D_POPULATE_PRIMES(ENTRY) \
   ENTRY(2         , 0x80000000, 32), /* [N * 0x80000000 >> 32] (rcp=2147483648) */ \
@@ -164,20 +166,20 @@ static const uint8_t blPrimeShiftTable[] = {
   #undef E
 };
 
-// ArenaHashMap - API
-// ==================
+// bl::ArenaHashMap - API
+// ======================
 
-void BLArenaHashMapBase::_rehash(uint32_t primeIndex) noexcept {
+void ArenaHashMapBase::_rehash(uint32_t primeIndex) noexcept {
   BL_ASSERT(primeIndex < BL_ARRAY_SIZE(blPrimeNumberTable));
 
   uint32_t newCount = blPrimeNumberTable[primeIndex].prime;
-  BLArenaHashMapNode** newData = _allocator->allocZeroedT<BLArenaHashMapNode*>(newCount * sizeof(BLArenaHashMapNode*));
+  ArenaHashMapNode** newData = _allocator->allocZeroedT<ArenaHashMapNode*>(newCount * sizeof(ArenaHashMapNode*));
 
   // We can still store nodes into the table, but it will degrade.
   if (BL_UNLIKELY(newData == nullptr))
     return;
 
-  BLArenaHashMapNode** oldData = _data;
+  ArenaHashMapNode** oldData = _data;
   uint32_t oldCount = _bucketCount;
 
   // 92.8% is the occupancy that causes rehashing. The multiplication should not overflow
@@ -190,9 +192,9 @@ void BLArenaHashMapBase::_rehash(uint32_t primeIndex) noexcept {
   _primeIndex = uint8_t(primeIndex);
 
   for (uint32_t i = 0; i < oldCount; i++) {
-    BLArenaHashMapNode* node = oldData[i];
+    ArenaHashMapNode* node = oldData[i];
     while (node) {
-      BLArenaHashMapNode* next = node->_hashNext;
+      ArenaHashMapNode* next = node->_hashNext;
       uint32_t hashMod = _calcMod(node->_hashCode);
 
       node->_hashNext = newData[hashMod];
@@ -203,12 +205,12 @@ void BLArenaHashMapBase::_rehash(uint32_t primeIndex) noexcept {
 
   memset(_embedded, 0, sizeof(_embedded));
   if (oldData != _embedded)
-    _allocator->release(reinterpret_cast<void*>(oldData), oldCount * sizeof(BLArenaHashMapNode*));
+    _allocator->release(reinterpret_cast<void*>(oldData), oldCount * sizeof(ArenaHashMapNode*));
 }
 
-void BLArenaHashMapBase::_insert(BLArenaHashMapNode* node) noexcept {
+void ArenaHashMapBase::_insert(ArenaHashMapNode* node) noexcept {
   uint32_t hashMod = _calcMod(node->_hashCode);
-  BLArenaHashMapNode* next = _data[hashMod];
+  ArenaHashMapNode* next = _data[hashMod];
 
   node->_hashNext = next;
   _data[hashMod] = node;
@@ -220,11 +222,11 @@ void BLArenaHashMapBase::_insert(BLArenaHashMapNode* node) noexcept {
   }
 }
 
-bool BLArenaHashMapBase::_remove(BLArenaHashMapNode* node) noexcept {
+bool ArenaHashMapBase::_remove(ArenaHashMapNode* node) noexcept {
   uint32_t hashMod = _calcMod(node->_hashCode);
 
-  BLArenaHashMapNode** pPrev = &_data[hashMod];
-  BLArenaHashMapNode* p = *pPrev;
+  ArenaHashMapNode** pPrev = &_data[hashMod];
+  ArenaHashMapNode* p = *pPrev;
 
   while (p) {
     if (p == node) {
@@ -239,3 +241,5 @@ bool BLArenaHashMapBase::_remove(BLArenaHashMapNode* node) noexcept {
 
   return false;
 }
+
+} // {bl}

@@ -15,7 +15,8 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 namespace Debugging {
 
 static void debugEdges(EdgeStorage<int>* edgeStorage) noexcept {
@@ -23,10 +24,10 @@ static void debugEdges(EdgeStorage<int>* edgeStorage) noexcept {
   size_t count = edgeStorage->bandCount();
   uint32_t bandHeight = edgeStorage->bandHeight();
 
-  int minX = BLTraits::maxValue<int>();
-  int minY = BLTraits::maxValue<int>();
-  int maxX = BLTraits::minValue<int>();
-  int maxY = BLTraits::minValue<int>();
+  int minX = Traits::maxValue<int>();
+  int minY = Traits::maxValue<int>();
+  int maxX = Traits::minValue<int>();
+  int maxY = Traits::minValue<int>();
 
   const BLBoxI& bb = edgeStorage->boundingBox();
   printf("EDGE STORAGE [%d.%d %d.%d %d.%d %d.%d]:\n",
@@ -77,7 +78,8 @@ static void debugEdges(EdgeStorage<int>* edgeStorage) noexcept {
 }
 
 } // {Debugging}
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

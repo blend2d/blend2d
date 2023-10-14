@@ -14,22 +14,21 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLArrayPrivate {
-
-using BLObjectPrivate::RCMode;
+namespace bl {
+namespace ArrayInternal {
 
 //! \name BLArray - Internals - Common Functionality (Impl)
 //! \{
 
 static BL_INLINE bool isImplMutable(const BLArrayImpl* impl) noexcept {
-  return BLObjectPrivate::isImplMutable(impl);
+  return ObjectInternal::isImplMutable(impl);
 }
 
 BL_HIDDEN BLResult freeImpl(BLArrayImpl* impl) noexcept;
 
 template<RCMode kRCMode>
 static BL_INLINE BLResult releaseImpl(BLArrayImpl* impl) noexcept {
-  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -42,19 +41,19 @@ static BL_INLINE BLArrayImpl* getImpl(const BLArrayCore* self) noexcept {
 }
 
 static BL_INLINE bool isInstanceMutable(const BLArrayCore* self) noexcept {
-  return BLObjectPrivate::isInstanceMutable(self);
+  return ObjectInternal::isInstanceMutable(self);
 }
 
 static BL_INLINE bool isInstanceDynamicAndMutable(const BLArrayCore* self) noexcept {
-  return BLObjectPrivate::isInstanceDynamicAndMutable(self);
+  return ObjectInternal::isInstanceDynamicAndMutable(self);
 }
 
 static BL_INLINE bool isDynamicInstanceMutable(const BLArrayCore* self) noexcept {
-  return BLObjectPrivate::isDynamicInstanceMutable(self);
+  return ObjectInternal::isDynamicInstanceMutable(self);
 }
 
 static BL_INLINE BLResult retainInstance(const BLArrayCore* self, size_t n = 1) noexcept {
-  return BLObjectPrivate::retainInstance(self, n);
+  return ObjectInternal::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLArrayCore* self) noexcept {
@@ -123,7 +122,8 @@ static BL_INLINE void setSize(BLArrayCore* self, size_t newSize) noexcept {
 
 //! \}
 
-} // {BLArrayPrivate}
+} // {ArrayInternal}
+} // {bl}
 
 //! \}
 //! \endcond

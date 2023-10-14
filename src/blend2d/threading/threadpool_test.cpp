@@ -11,10 +11,11 @@
 #include "../threading/mutex_p.h"
 #include "../threading/threadpool_p.h"
 
-// BLThreadPool - Tests
-// ====================
+// bl::ThreadPool - Tests
+// ======================
 
-namespace BLThreadPoolTests {
+namespace bl {
+namespace Tests {
 
 struct ThreadTestData {
   uint32_t iter;
@@ -94,6 +95,7 @@ UNIT(thread_pool, BL_TEST_GROUP_THREADING) {
   INFO("Done");
 }
 
-} // {BLThreadPoolTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

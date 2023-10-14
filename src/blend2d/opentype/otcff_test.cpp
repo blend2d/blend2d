@@ -20,11 +20,12 @@
 #include "../support/scopedbuffer_p.h"
 #include "../support/traits_p.h"
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 namespace CFFImpl {
 
-// BLOpenType::CFFImpl - Tests
-// ===========================
+// bl::OpenType::CFFImpl - Tests
+// =============================
 
 static void testReadFloat() noexcept {
   struct TestEntry {
@@ -144,14 +145,15 @@ static void testDictIterator() noexcept {
 }
 
 UNIT(opentype_cff, BL_TEST_GROUP_TEXT_OPENTYPE) {
-  INFO("BLOpenType::CFFImpl::readFloat()");
+  INFO("bl::OpenType::CFFImpl::readFloat()");
   testReadFloat();
 
-  INFO("BLOpenType::CFFImpl::DictIterator");
+  INFO("bl::OpenType::CFFImpl::DictIterator");
   testDictIterator();
 }
 
 } // {CFFImpl}
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 #endif // BL_TEST

@@ -16,11 +16,12 @@
 #include "../../pipeline/jit/pipecompiler_p.h"
 #include "../../support/intops_p.h"
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
-// BLPipeline::PipeCompiler - Constants
-// ====================================
+// bl::Pipeline::PipeCompiler - Constants
+// ======================================
 
 static constexpr OperandSignature signatureOfXmmYmmZmm[] = {
   OperandSignature{x86::Xmm::kSignature},
@@ -28,20 +29,20 @@ static constexpr OperandSignature signatureOfXmmYmmZmm[] = {
   OperandSignature{x86::Zmm::kSignature}
 };
 
-// BLPipeline::PipeCompiler - Construction & Destruction
-// =====================================================
+// bl::Pipeline::PipeCompiler - Construction & Destruction
+// =======================================================
 
 PipeCompiler::PipeCompiler(x86::Compiler* cc, const CpuFeatures& features, PipeOptFlags optFlags) noexcept
   : cc(cc),
-    ct(blCommonTable),
+    ct(commonTable),
     _features(features),
     _optFlags(optFlags),
     _commonTableOff(512 + 128) {}
 
 PipeCompiler::~PipeCompiler() noexcept {}
 
-// BLPipeline::PipeCompiler - CPU Features and Optimization Options
-// ================================================================
+// bl::Pipeline::PipeCompiler - CPU Features and Optimization Options
+// ==================================================================
 
 bool PipeCompiler::hasMaskedAccessOf(uint32_t dataSize) const noexcept {
   switch (dataSize) {
@@ -55,8 +56,8 @@ bool PipeCompiler::hasMaskedAccessOf(uint32_t dataSize) const noexcept {
   }
 }
 
-// BLPipeline::PipeCompiler - BeginFunction & EndFunction
-// ======================================================
+// bl::Pipeline::PipeCompiler - BeginFunction & EndFunction
+// ========================================================
 
 void PipeCompiler::beginFunction() noexcept {
   // Function prototype and arguments.
@@ -87,8 +88,8 @@ void PipeCompiler::endFunction() noexcept {
   cc->endFunc();
 }
 
-// BLPipeline::PipeCompiler - Parts
-// ================================
+// bl::Pipeline::PipeCompiler - Parts
+// ==================================
 
 FillPart* PipeCompiler::newFillPart(FillType fillType, FetchPart* dstPart, CompOpPart* compOpPart) noexcept {
   if (fillType == FillType::kBoxA)
@@ -103,7 +104,7 @@ FillPart* PipeCompiler::newFillPart(FillType fillType, FetchPart* dstPart, CompO
   return nullptr;
 }
 
-FetchPart* PipeCompiler::newFetchPart(FetchType fetchType, BLInternalFormat format) noexcept {
+FetchPart* PipeCompiler::newFetchPart(FetchType fetchType, FormatExt format) noexcept {
   if (fetchType == FetchType::kSolid)
     return newPartT<FetchSolidPart>(format);
 
@@ -128,12 +129,12 @@ FetchPart* PipeCompiler::newFetchPart(FetchType fetchType, BLInternalFormat form
   return nullptr;
 }
 
-CompOpPart* PipeCompiler::newCompOpPart(uint32_t compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept {
+CompOpPart* PipeCompiler::newCompOpPart(CompOpExt compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept {
   return newPartT<CompOpPart>(compOp, dstPart, srcPart);
 }
 
-// BLPipeline::PipeCompiler - Init
-// ===============================
+// bl::Pipeline::PipeCompiler - Init
+// =================================
 
 static RegType simdRegTypeFromWidth(SimdWidth simdWidth) noexcept {
   if (simdWidth == SimdWidth::k512)
@@ -181,11 +182,11 @@ void PipeCompiler::initPipeline(PipePart* root) noexcept {
   });
 }
 
-// BLPipeline::PipeCompiler - Constants
-// ====================================
+// bl::Pipeline::PipeCompiler - Constants
+// ======================================
 
 void PipeCompiler::_initCommonTablePtr() noexcept {
-  const void* global = &blCommonTable;
+  const void* global = &commonTable;
 
   if (!_commonTablePtr.isValid()) {
     asmjit::BaseNode* prevNode = cc->setCursor(_funcInit);
@@ -242,10 +243,10 @@ Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, SimdWidth constWi
   // has enough registers to hold all the constants that we need. However, in SSE/AVX2 case, we don't want so many
   // constants in registers as that could limit registers that we need during fetching and composition.
   if (!hasAVX512()) {
-    bool useVReg = c == &blCommonTable.i_0000000000000000 || // Required if the CPU doesn't have SSE4.1.
-                   c == &blCommonTable.i_0080008000800080 || // Required by `div255()` and friends.
-                   c == &blCommonTable.i_0101010101010101 || // Required by `div255()` and friends.
-                   c == &blCommonTable.i_FF000000FF000000 ;  // Required by fetching XRGB32 pixels as PRGB32 pixels.
+    bool useVReg = c == &commonTable.i_0000000000000000 || // Required if the CPU doesn't have SSE4.1.
+                   c == &commonTable.i_0080008000800080 || // Required by `div255()` and friends.
+                   c == &commonTable.i_0101010101010101 || // Required by `div255()` and friends.
+                   c == &commonTable.i_FF000000FF000000 ;  // Required by fetching XRGB32 pixels as PRGB32 pixels.
 
     if (!useVReg)
       return simdMemConst(c, bcstWidth, constWidth);
@@ -319,10 +320,10 @@ x86::Mem PipeCompiler::simdMemConst(const void* c, Bcst bcstWidth, const VecArra
 }
 
 x86::Mem PipeCompiler::_getMemConst(const void* c) noexcept {
-  // Make sure we are addressing a constant from the `blCommonTable` constant pool.
-  const void* global = &blCommonTable;
+  // Make sure we are addressing a constant from the `commonTable` constant pool.
+  const void* global = &commonTable;
   BL_ASSERT((uintptr_t)c >= (uintptr_t)global &&
-            (uintptr_t)c <  (uintptr_t)global + sizeof(BLCommonTable));
+            (uintptr_t)c <  (uintptr_t)global + sizeof(CommonTable));
 
   if (cc->is32Bit()) {
     // 32-bit mode - These constants will never move in memory so the absolute addressing is a win/win as we can save
@@ -330,7 +331,7 @@ x86::Mem PipeCompiler::_getMemConst(const void* c) noexcept {
     return x86::ptr((uint64_t)c);
   }
   else {
-    // 64-bit mode - One GP register is sacrificed to hold the pointer to the `blCommonTable`. This is probably the
+    // 64-bit mode - One GP register is sacrificed to hold the pointer to the `commonTable`. This is probably the
     // safest approach as relying on absolute addressing or anything else could lead to problems or performance issues.
     _initCommonTablePtr();
 
@@ -343,9 +344,9 @@ x86::Vec PipeCompiler::_newVecConst(const void* c, bool isUniqueConst) noexcept 
   x86::Vec vReg;
   const char* specialConstName = nullptr;
 
-  if (c == blCommonTable.pshufb_dither_rgba64_lo.data)
+  if (c == commonTable.pshufb_dither_rgba64_lo.data)
     specialConstName = "pshufb_dither_rgba64_lo";
-  else if (c == blCommonTable.pshufb_dither_rgba64_hi.data)
+  else if (c == commonTable.pshufb_dither_rgba64_hi.data)
     specialConstName = "pshufb_dither_rgba64_hi";
 
   if (specialConstName) {
@@ -370,7 +371,7 @@ x86::Vec PipeCompiler::_newVecConst(const void* c, bool isUniqueConst) noexcept 
   vConst.vRegId = vReg.id();
   _vecConsts.append(zoneAllocator(), vConst);
 
-  if (c == &blCommonTable.i_0000000000000000) {
+  if (c == &commonTable.i_0000000000000000) {
     ScopedInjector inject(cc, &_funcInit);
     v_zero_i(vReg.xmm());
   }
@@ -391,11 +392,11 @@ x86::Vec PipeCompiler::_newVecConst(const void* c, bool isUniqueConst) noexcept 
   return vReg;
 }
 
-// BLPipeline::PipeCompiler - Stack
-// ================================
+// bl::Pipeline::PipeCompiler - Stack
+// ==================================
 
 x86::Mem PipeCompiler::tmpStack(uint32_t size) noexcept {
-  BL_ASSERT(BLIntOps::isPowerOf2(size));
+  BL_ASSERT(IntOps::isPowerOf2(size));
   BL_ASSERT(size <= 32);
 
   // Only used by asserts.
@@ -406,8 +407,8 @@ x86::Mem PipeCompiler::tmpStack(uint32_t size) noexcept {
   return _tmpStack;
 }
 
-// BLPipeline::PipeCompiler - Utilities
-// ====================================
+// bl::Pipeline::PipeCompiler - Utilities
+// ======================================
 
 void PipeCompiler::embedJumpTable(const Label* jumpTable, size_t jumpTableSize, const Label& jumpTableBase, uint32_t entrySize) noexcept {
   static const uint8_t zeros[8] {};
@@ -420,8 +421,8 @@ void PipeCompiler::embedJumpTable(const Label* jumpTable, size_t jumpTableSize, 
   }
 }
 
-// BLPipeline::PipeCompiler - Emit
-// ===============================
+// bl::Pipeline::PipeCompiler - Emit
+// =================================
 
 static inline uint32_t shuf32ToShuf64(uint32_t imm) noexcept {
   uint32_t imm0 = uint32_t(imm     ) & 1u;
@@ -1705,11 +1706,11 @@ void PipeCompiler::v_emit_k_vvvi(InstId instId, const x86::KReg& mask, const OpA
   }
 }
 
-// BLPipeline::PipeCompiler - Predicate Helpers
-// ============================================
+// bl::Pipeline::PipeCompiler - Predicate Helpers
+// ==============================================
 
 void PipeCompiler::x_make_predicate_v32(const x86::Vec& vmask, const x86::Gp& count) noexcept {
-  x86::Mem maskPtr = _getMemConst(blCommonTable.loadstore16_lo8_msk8());
+  x86::Mem maskPtr = _getMemConst(commonTable.loadstore16_lo8_msk8());
   maskPtr._setIndex(cc->_gpSignature.regType(), count.id());
   maskPtr.setShift(3);
   cc->vpmovsxbd(vmask, maskPtr);
@@ -1722,7 +1723,7 @@ void PipeCompiler::x_ensure_predicate_8(PixelPredicate& predicate, uint32_t maxW
 
   if (hasAVX512()) {
     if (!predicate.k.isValid()) {
-      x86::Mem mem = _getMemConst(blCommonTable.k_msk16_data);
+      x86::Mem mem = _getMemConst(commonTable.k_msk16_data);
       predicate.k = cc->newKq("mask_k");
       mem._setIndex(cc->_gpSignature.regType(), predicate.count.id());
       mem.setShift(1);
@@ -1739,7 +1740,7 @@ void PipeCompiler::x_ensure_predicate_32(PixelPredicate& predicate, uint32_t max
 
   if (hasAVX512()) {
     if (!predicate.k.isValid()) {
-      x86::Mem mem = _getMemConst(blCommonTable.k_msk16_data);
+      x86::Mem mem = _getMemConst(commonTable.k_msk16_data);
       predicate.k = cc->newKq("mask_k");
       mem._setIndex(cc->_gpSignature.regType(), predicate.count.id());
       mem.setShift(1);
@@ -1757,8 +1758,8 @@ void PipeCompiler::x_ensure_predicate_32(PixelPredicate& predicate, uint32_t max
   }
 }
 
-// BLPipeline::PipeCompiler - Fetch Helpers
-// ========================================
+// bl::Pipeline::PipeCompiler - Fetch Helpers
+// ==========================================
 
 void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType pixelType, const x86::Gp& mPtr, const x86::Vec& globalAlpha) noexcept {
   x86::Mem m = x86::ptr(mPtr);
@@ -1945,12 +1946,12 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
   }
 }
 
-void PipeCompiler::x_fetch_pixel(Pixel& p, PixelCount n, PixelFlags flags, BLInternalFormat format, const x86::Mem& src_, Alignment alignment) noexcept {
+void PipeCompiler::x_fetch_pixel(Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const x86::Mem& src_, Alignment alignment) noexcept {
   PixelPredicate noPredicate;
   x_fetch_pixel(p, n, flags, format, src_, alignment, noPredicate);
 }
 
-void PipeCompiler::x_fetch_pixel(Pixel& p, PixelCount n, PixelFlags flags, BLInternalFormat format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept  {
+void PipeCompiler::x_fetch_pixel(Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept  {
   switch (p.type()) {
     case PixelType::kA8:
       _x_fetch_pixel_a8(p, n, flags, format, src_, alignment, predicate);
@@ -1965,7 +1966,7 @@ void PipeCompiler::x_fetch_pixel(Pixel& p, PixelCount n, PixelFlags flags, BLInt
   }
 }
 
-void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, BLInternalFormat format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept {
+void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept {
   BL_ASSERT(p.isA8());
 
   blUnused(predicate);
@@ -1984,7 +1985,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, B
   BL_ASSERT((flags & (PixelFlags::kPA | PixelFlags::kUA)) != (PixelFlags::kPA | PixelFlags::kUA));
 
   switch (format) {
-    case BLInternalFormat::kPRGB32: {
+    case FormatExt::kPRGB32: {
       SimdWidth p32Width = simdWidthOf(DataWidth::k32, n);
       uint32_t p32RegCount = SimdWidthUtils::regCountOf(p32Width, DataWidth::k32, n);
 
@@ -2203,7 +2204,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, B
       break;
     }
 
-    case BLInternalFormat::kXRGB32: {
+    case FormatExt::kXRGB32: {
       BL_ASSERT(predicate.empty());
 
       switch (n.value()) {
@@ -2220,7 +2221,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, B
       break;
     }
 
-    case BLInternalFormat::kA8: {
+    case FormatExt::kA8: {
       x86::Vec predicatedPixel;
       if (!predicate.empty()) {
         // TODO: [JIT] Do we want to support masked loading of more that 1 register?
@@ -2373,7 +2374,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, B
   _x_satisfy_pixel_a8(p, flags);
 }
 
-void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flags, BLInternalFormat format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept  {
+void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const x86::Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept  {
   BL_ASSERT(p.isRGBA32());
 
   x86::Mem src(src_);
@@ -2381,8 +2382,8 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
 
   switch (format) {
     // RGBA32 <- PRGB32 | XRGB32.
-    case BLInternalFormat::kPRGB32:
-    case BLInternalFormat::kXRGB32: {
+    case FormatExt::kPRGB32:
+    case FormatExt::kXRGB32: {
       SimdWidth pcWidth = simdWidthOf(DataWidth::k32, n);
       SimdWidth ucWidth = simdWidthOf(DataWidth::k64, n);
 
@@ -2506,14 +2507,14 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
         }
       }
 
-      if (format == BLInternalFormat::kXRGB32)
+      if (format == FormatExt::kXRGB32)
         x_fill_pixel_alpha(p);
 
       break;
     }
 
     // RGBA32 <- A8.
-    case BLInternalFormat::kA8: {
+    case FormatExt::kA8: {
       BL_ASSERT(predicate.empty());
 
       switch (n.value()) {
@@ -3071,7 +3072,7 @@ void PipeCompiler::_x_unpack_pixel(VecArray& ux, VecArray& px, uint32_t n, const
     else {
       for (uint32_t i = 0; i < uxCount; i++) {
         if (i & 1)
-          v_shuffle_i8(ux[i], px[i / 2u], simdConst(&blCommonTable.pshufb_76543210xxxxxxxx_to_z7z6z5z4z3z2z1z0, Bcst::kNA, ux[i]));
+          v_shuffle_i8(ux[i], px[i / 2u], simdConst(&commonTable.pshufb_76543210xxxxxxxx_to_z7z6z5z4z3z2z1z0, Bcst::kNA, ux[i]));
         else
           v_mov_u8_u16_(ux[i], px[i / 2u]);
       }
@@ -3096,14 +3097,14 @@ void PipeCompiler::_x_unpack_pixel(VecArray& ux, VecArray& px, uint32_t n, const
   }
 }
 
-void PipeCompiler::x_fetch_unpacked_a8_2x(const x86::Xmm& dst, BLInternalFormat format, const x86::Mem& src1, const x86::Mem& src0) noexcept {
+void PipeCompiler::x_fetch_unpacked_a8_2x(const x86::Xmm& dst, FormatExt format, const x86::Mem& src1, const x86::Mem& src0) noexcept {
   x86::Mem m0 = src0;
   x86::Mem m1 = src1;
 
   m0.setSize(1);
   m1.setSize(1);
 
-  if (format == BLInternalFormat::kPRGB32) {
+  if (format == FormatExt::kPRGB32) {
     m0.addOffset(3);
     m1.addOffset(3);
   }
@@ -3363,17 +3364,17 @@ void PipeCompiler::x_store_pixel_advance(const x86::Gp& dPtr, Pixel& p, PixelCou
   }
 }
 
-// BLPipeline::PipeCompiler - PixelFill
-// ====================================
+// bl::Pipeline::PipeCompiler - PixelFill
+// ======================================
 
 void PipeCompiler::x_inline_pixel_fill_loop(x86::Gp& dst, x86::Vec& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity) noexcept {
-  BL_ASSERT(BLIntOps::isPowerOf2(itemSize));
+  BL_ASSERT(IntOps::isPowerOf2(itemSize));
   BL_ASSERT(itemSize <= 16u);
 
   uint32_t granularityInBytes = itemSize * itemGranularity;
   uint32_t mainStepInItems = mainLoopSize / itemSize;
 
-  BL_ASSERT(BLIntOps::isPowerOf2(granularityInBytes));
+  BL_ASSERT(IntOps::isPowerOf2(granularityInBytes));
   BL_ASSERT(mainStepInItems * itemSize == mainLoopSize);
 
   BL_ASSERT(mainLoopSize >= 16u);
@@ -3437,7 +3438,7 @@ void PipeCompiler::x_inline_pixel_fill_loop(x86::Gp& dst, x86::Vec& src, x86::Gp
   if (granularityInBytes == 4u) {
     BL_ASSERT(itemSize <= 4u);
 
-    uint32_t sizeShift = BLIntOps::ctz(itemSize);
+    uint32_t sizeShift = IntOps::ctz(itemSize);
     uint32_t alignPattern = ((vecSize - 1u) * itemSize) & (vecSize - 1u);
 
     uint32_t oneStepInItems = 4u >> sizeShift;
@@ -3770,17 +3771,17 @@ void PipeCompiler::x_inline_pixel_fill_loop(x86::Gp& dst, x86::Vec& src, x86::Gp
   BL_NOT_REACHED();
 }
 
-// BLPipeline::PipeCompiler - PixelCopy
-// ====================================
+// bl::Pipeline::PipeCompiler - PixelCopy
+// ======================================
 
-void PipeCompiler::x_inline_pixel_copy_loop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity, BLInternalFormat format) noexcept {
-  BL_ASSERT(BLIntOps::isPowerOf2(itemSize));
+void PipeCompiler::x_inline_pixel_copy_loop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity, FormatExt format) noexcept {
+  BL_ASSERT(IntOps::isPowerOf2(itemSize));
   BL_ASSERT(itemSize <= 16u);
 
   uint32_t granularityInBytes = itemSize * itemGranularity;
   uint32_t mainStepInItems = mainLoopSize / itemSize;
 
-  BL_ASSERT(BLIntOps::isPowerOf2(granularityInBytes));
+  BL_ASSERT(IntOps::isPowerOf2(granularityInBytes));
   BL_ASSERT(mainStepInItems * itemSize == mainLoopSize);
 
   BL_ASSERT(mainLoopSize >= 16u);
@@ -3789,8 +3790,8 @@ void PipeCompiler::x_inline_pixel_copy_loop(x86::Gp& dst, x86::Gp& src, x86::Gp&
   x86::Vec t0 = cc->newXmm("t0");
   x86::Vec fillMask;
 
-  if (format == BLInternalFormat::kXRGB32)
-    fillMask = simdVecConst(&blCommonTable.i_FF000000FF000000, t0);
+  if (format == FormatExt::kXRGB32)
+    fillMask = simdVecConst(&commonTable.i_FF000000FF000000, t0);
 
   // Granularity >= 16 Bytes
   // -----------------------
@@ -3848,7 +3849,7 @@ void PipeCompiler::x_inline_pixel_copy_loop(x86::Gp& dst, x86::Gp& src, x86::Gp&
 
   if (granularityInBytes == 4u) {
     BL_ASSERT(itemSize <= 4u);
-    uint32_t sizeShift = BLIntOps::ctz(itemSize);
+    uint32_t sizeShift = IntOps::ctz(itemSize);
     uint32_t alignPattern = (15u * itemSize) & 15u;
 
     uint32_t oneStepInItems = 4u >> sizeShift;
@@ -4135,6 +4136,7 @@ void PipeCompiler::_x_inline_memcpy_sequence_xmm(
 }
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 #endif

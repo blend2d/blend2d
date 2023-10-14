@@ -17,7 +17,8 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 //! Analytic rasterizer cell and bit-vector storage.
 struct AnalyticCellStorage {
@@ -75,7 +76,7 @@ static BL_INLINE void accErrStep(AccT& acc, IterT& iter, const IterT& step, cons
   iter -= step;
 
   // Contains all ones if the iterator has underflown (requires correction).
-  IterT mask = IterT(BLIntOps::sar(iter, BLIntOps::bitSizeOf<IterT>() - 1));
+  IterT mask = IterT(IntOps::sar(iter, IntOps::bitSizeOf<IterT>() - 1));
 
   acc -= AccT(mask);         // if (iter < 0) acc++;
   iter += mask & correction; // if (iter < 0) iter += correction;
@@ -104,7 +105,7 @@ static BL_INLINE void accErrMultiStep(AccT& acc, IterT& iter, const IterT& step,
 //! Analytic rasterizer state.
 //!
 //! This state can be used to temporarily terminate rasterization. It's used in case that the context uses banding
-//! (large inputs) or asyncronous rendering possibly combined with multithreading.
+//! (large inputs) or asynchronous rendering possibly combined with multithreading.
 struct AnalyticState {
   enum Flags : uint32_t {
     //! This flag is always set by `AnalyticRasterizer::prepare()`, however,
@@ -176,7 +177,7 @@ struct AnalyticRasterizer : public AnalyticState {
   };
 
   //! Bit operations that the rasterizer uses.
-  typedef BLPrivateBitWordOps BitOps;
+  typedef PrivateBitWordOps BitOps;
 
   //! BitWords and Cells, initialized by `init()`, never modified.
   AnalyticCellStorage _cellStorage;
@@ -195,7 +196,7 @@ struct AnalyticRasterizer : public AnalyticState {
   //! Recorded maximum X, only updated when `kOptionRecordMinXMaxX` is set.
   uint32_t _cellMaxX;
 
-  typedef BLPipeline::A8Info A8Info;
+  typedef Pipeline::A8Info A8Info;
 
   //! \name Initialization
   //! \{
@@ -252,7 +253,7 @@ struct AnalyticRasterizer : public AnalyticState {
 
   BL_INLINE uint32_t signMask() const noexcept { return _signMask; }
   BL_INLINE void setSignMask(uint32_t signMask) noexcept { _signMask = signMask; }
-  BL_INLINE void setSignMaskFromBit(uint32_t signBit) noexcept { _signMask = BLIntOps::negate(signBit); }
+  BL_INLINE void setSignMaskFromBit(uint32_t signBit) noexcept { _signMask = IntOps::negate(signBit); }
 
   //! \}
 
@@ -264,7 +265,7 @@ struct AnalyticRasterizer : public AnalyticState {
   }
 
   BL_INLINE void resetBounds() noexcept {
-    _cellMinX = BLTraits::maxValue<uint32_t>();
+    _cellMinX = Traits::maxValue<uint32_t>();
     _cellMaxX = 0;
   }
 
@@ -292,8 +293,8 @@ struct AnalyticRasterizer : public AnalyticState {
     // Line should be already reversed in case it has a negative sign.
     BL_ASSERT(p0.y <= p1.y);
 
-    // Should not happen regularly, but in some edge cases this can happen in cases where a curve was flatenned
-    // into line sergments that don't change vertically or produced by `EdgeBuilderFromSource` that doesn't
+    // Should not happen regularly, but in some edge cases this can happen in cases where a curve was flattened
+    // into line segments that don't change vertically or produced by `EdgeBuilderFromSource` that doesn't
     // eliminate strictly horizontal edges.
     if (p0.y == p1.y)
       return false;
@@ -481,8 +482,8 @@ struct AnalyticRasterizer : public AnalyticState {
     if (OPTIONS & kOptionBandOffset)
       yOffset -= _bandOffset;
 
-    BLBitWord* bitPtr = BLPtrOps::offset(bitPtrTop(), yOffset * bitStride<OPTIONS>());
-    uint32_t* cellPtr = BLPtrOps::offset(cellPtrTop(), yOffset * cellStride());
+    BLBitWord* bitPtr = PtrOps::offset(bitPtrTop(), yOffset * bitStride<OPTIONS>());
+    uint32_t* cellPtr = PtrOps::offset(cellPtrTop(), yOffset * cellStride());
 
     if (OPTIONS & kOptionBandingMode) {
       // Advance `_ey0` so it's valid for a next band if it crosses the current one.
@@ -503,9 +504,9 @@ struct AnalyticRasterizer : public AnalyticState {
       updateMaxX<OPTIONS>(_ex0);
 
       size_t bitIndex = unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT;
-      BLBitWord bitMask = BitOps::indexAsMask(bitIndex % BLIntOps::bitSizeOf<BLBitWord>());
+      BLBitWord bitMask = BitOps::indexAsMask(bitIndex % IntOps::bitSizeOf<BLBitWord>());
 
-      bitPtr += (bitIndex / BLIntOps::bitSizeOf<BLBitWord>());
+      bitPtr += (bitIndex / IntOps::bitSizeOf<BLBitWord>());
       cellPtr += unsigned(_ex0);
 
       // First scanline or a line that occupies a single cell only. In case of banding support this code
@@ -535,16 +536,16 @@ struct AnalyticRasterizer : public AnalyticState {
       }
 
       // All scanlines between [_ey0:_ey1], exclusive.
-      bitPtr = BLPtrOps::offset(bitPtr, bitStride<OPTIONS>());
-      cellPtr = BLPtrOps::offset(cellPtr, cellStride());
+      bitPtr = PtrOps::offset(bitPtr, bitStride<OPTIONS>());
+      cellPtr = PtrOps::offset(cellPtr, cellStride());
 
       cover = fullCover;
       while (--i) {
         cellMerge(cellPtr, 0, cover, cover * area);
-        cellPtr = BLPtrOps::offset(cellPtr, cellStride());
+        cellPtr = PtrOps::offset(cellPtr, cellStride());
 
         bitPtr[0] |= bitMask;
-        bitPtr = BLPtrOps::offset(bitPtr, bitStride<OPTIONS>());
+        bitPtr = PtrOps::offset(bitPtr, bitStride<OPTIONS>());
       }
 
       if (OPTIONS & kOptionBandingMode) {
@@ -623,8 +624,8 @@ VertRightToLeftSingleFirstOrLast:
           }
 
           _fy0 = 0;
-          bitPtr = BLPtrOps::offset(bitPtr, bitStride<OPTIONS>());
-          cellPtr = BLPtrOps::offset(cellPtr, cellStride());
+          bitPtr = PtrOps::offset(bitPtr, bitStride<OPTIONS>());
+          cellPtr = PtrOps::offset(cellPtr, cellStride());
 
           if (!i) {
             updateMinX<OPTIONS>(_ex0);
@@ -663,22 +664,22 @@ VertRightToLeftSingleFirstOrLast:
 
               bitSet<OPTIONS>(bitPtr, unsigned(_ex0 + 0) / BL_PIPE_PIXELS_PER_ONE_BIT);
               bitSet<OPTIONS>(bitPtr, unsigned(_ex0 + 1) / BL_PIPE_PIXELS_PER_ONE_BIT);
-              bitPtr = BLPtrOps::offset(bitPtr, bitStride<OPTIONS>());
+              bitPtr = PtrOps::offset(bitPtr, bitStride<OPTIONS>());
 
               cov1 = applySignMask(uint32_t(_yDlt));
               area = cov1 * area;
               cellAdd(cellPtr, _ex0 + 2, area);
 
               cov0 = fullCover - cov1;
-              cov1 = BLIntOps::shl(cov1, 9) - area;
+              cov1 = IntOps::shl(cov1, 9) - area;
               area = cov0 * (uint32_t(_fx0) + A8Info::kScale);
 
-              cov0 = BLIntOps::shl(cov0, 9) - area;
+              cov0 = IntOps::shl(cov0, 9) - area;
               cov1 = cov1 + area;
 
               cellAdd(cellPtr, _ex0 + 0, cov0);
               cellAdd(cellPtr, _ex0 + 1, cov1);
-              cellPtr = BLPtrOps::offset(cellPtr, cellStride());
+              cellPtr = PtrOps::offset(cellPtr, cellStride());
 
               accErrStep(_yDlt, _yErr, _yRem, _dx);
               _yDlt += _yLift;
@@ -686,11 +687,11 @@ VertRightToLeftSingleFirstOrLast:
             else {
 VertRightToLeftSingleInLoop:
               bitSet<OPTIONS>(bitPtr, unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT);
-              bitPtr = BLPtrOps::offset(bitPtr, bitStride<OPTIONS>());
+              bitPtr = PtrOps::offset(bitPtr, bitStride<OPTIONS>());
               area = fullCover * (area + uint32_t(_fx0));
 
               cellMerge(cellPtr, _ex0, fullCover, area);
-              cellPtr = BLPtrOps::offset(cellPtr, cellStride());
+              cellPtr = PtrOps::offset(cellPtr, cellStride());
             }
           }
 
@@ -698,7 +699,7 @@ VertRightToLeftSingleInLoop:
             if (_ey0 >= _ey1) {
               // Last scanline, we will do it either now or in the next band (border-case).
               _fy1 = _savedFy1;
-              _xDlt = BLIntOps::shl(_ex0 - _ex1, A8Info::kShift) + _fx0 - _fx1;
+              _xDlt = IntOps::shl(_ex0 - _ex1, A8Info::kShift) + _fx0 - _fx1;
               BL_ASSERT(_xDlt >= 0);
 
               // Border case, last scanline is the first scanline in the next band.
@@ -717,7 +718,7 @@ VertRightToLeftSingleInLoop:
           else {
             // Prepare the last scanline.
             _fy1 = _savedFy1;
-            _xDlt = BLIntOps::shl(_ex0 - _ex1, A8Info::kShift) + _fx0 - _fx1;
+            _xDlt = IntOps::shl(_ex0 - _ex1, A8Info::kShift) + _fx0 - _fx1;
             BL_ASSERT(_xDlt >= 0);
           }
         }
@@ -771,8 +772,8 @@ VertRightToLeftSingleInLoop:
           }
 
           _fy0 = 0;
-          bitPtr = BLPtrOps::offset(bitPtr, bitStride<OPTIONS>());
-          cellPtr = BLPtrOps::offset(cellPtr, cellStride());
+          bitPtr = PtrOps::offset(bitPtr, bitStride<OPTIONS>());
+          cellPtr = PtrOps::offset(cellPtr, cellStride());
 
           if (!i) {
             updateMaxX<OPTIONS>(_ex0);
@@ -800,11 +801,11 @@ VertRightToLeftSingleInLoop:
             bitSet<OPTIONS>(bitPtr, unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT);
 
             if (_fx0 <= int(A8Info::kScale)) {
-              bitPtr = BLPtrOps::offset(bitPtr, bitStride<OPTIONS>());
+              bitPtr = PtrOps::offset(bitPtr, bitStride<OPTIONS>());
               area = fullCover * (area + uint32_t(_fx0));
 
               cellMerge(cellPtr, _ex0, fullCover, area);
-              cellPtr = BLPtrOps::offset(cellPtr, cellStride());
+              cellPtr = PtrOps::offset(cellPtr, cellStride());
 
               if (_fx0 < int(A8Info::kScale))
                 continue;
@@ -819,20 +820,20 @@ VertRightToLeftSingleInLoop:
               cov0 = applySignMask(uint32_t(_yDlt));
               cov1 = cov0 * (area + A8Info::kScale);
 
-              cov0 = BLIntOps::shl(cov0, 9) - cov1;
+              cov0 = IntOps::shl(cov0, 9) - cov1;
               cellAdd(cellPtr, _ex0 + 0, cov0);
               _ex0++;
 
               cov0 = applySignMask(A8Info::kScale - uint32_t(_yDlt));
               area = cov0 * uint32_t(_fx0);
 
-              cov0 = BLIntOps::shl(cov0, 9) - area + cov1;
+              cov0 = IntOps::shl(cov0, 9) - area + cov1;
               cellAdd(cellPtr, _ex0 + 0, cov0);
               cellAdd(cellPtr, _ex0 + 1, area);
-              cellPtr = BLPtrOps::offset(cellPtr, cellStride());
+              cellPtr = PtrOps::offset(cellPtr, cellStride());
 
               bitSet<OPTIONS>(bitPtr, unsigned(_ex0) / BL_PIPE_PIXELS_PER_ONE_BIT);
-              bitPtr = BLPtrOps::offset(bitPtr, bitStride<OPTIONS>());
+              bitPtr = PtrOps::offset(bitPtr, bitStride<OPTIONS>());
             }
 
             _yDlt += _yLift;
@@ -912,8 +913,8 @@ VertRightToLeftSingleInLoop:
           _xDlt = _xLift;
           accErrStep(_xDlt, _xErr, _xRem, _dy);
 
-          bitPtr = BLPtrOps::offset(bitPtr, bitStride<OPTIONS>());
-          cellPtr = BLPtrOps::offset(cellPtr, cellStride());
+          bitPtr = PtrOps::offset(bitPtr, bitStride<OPTIONS>());
+          cellPtr = PtrOps::offset(cellPtr, cellStride());
 
           i--;
         }
@@ -963,8 +964,8 @@ HorzRightToLeftInside:
             _xDlt = _xLift;
             accErrStep(_xDlt, _xErr, _xRem, _dy);
 
-            bitPtr = BLPtrOps::offset(bitPtr, bitStride<OPTIONS>());
-            cellPtr = BLPtrOps::offset(cellPtr, cellStride());
+            bitPtr = PtrOps::offset(bitPtr, bitStride<OPTIONS>());
+            cellPtr = PtrOps::offset(cellPtr, cellStride());
 
             i--;
           }
@@ -1052,8 +1053,8 @@ HorzRightToLeftInside:
           _xDlt = _xLift;
           accErrStep(_xDlt, _xErr, _xRem, _dy);
 
-          bitPtr = BLPtrOps::offset(bitPtr, bitStride<OPTIONS>());
-          cellPtr = BLPtrOps::offset(cellPtr, cellStride());
+          bitPtr = PtrOps::offset(bitPtr, bitStride<OPTIONS>());
+          cellPtr = PtrOps::offset(cellPtr, cellStride());
 
           i--;
         }
@@ -1106,8 +1107,8 @@ HorzLeftToRightInside:
             _xDlt = _xLift;
             accErrStep(_xDlt, _xErr, _xRem, _dy);
 
-            bitPtr = BLPtrOps::offset(bitPtr, bitStride<OPTIONS>());
-            cellPtr = BLPtrOps::offset(cellPtr, cellStride());
+            bitPtr = PtrOps::offset(bitPtr, bitStride<OPTIONS>());
+            cellPtr = PtrOps::offset(cellPtr, cellStride());
 
             i--;
           }
@@ -1204,7 +1205,7 @@ HorzLeftToRightInside:
     BL_ASSERT(x >= 0);
     typedef typename std::make_unsigned<X>::type U;
 
-    cellPtr[size_t(U(x)) + 0] += BLIntOps::shl(cover, 9) - area;
+    cellPtr[size_t(U(x)) + 0] += IntOps::shl(cover, 9) - area;
     cellPtr[size_t(U(x)) + 1] += area;
   }
 
@@ -1260,7 +1261,8 @@ HorzLeftToRightInside:
   //! \}
 };
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

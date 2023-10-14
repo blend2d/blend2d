@@ -12,32 +12,34 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! \name Memory Buffer
 //! \{
 
 //! Memory buffer.
 //!
 //! Memory buffer is a helper class which holds pointer to an allocated memory block, which will be released
-//! automatically by `BLScopedBuffer` destructor or  `reset()` call.
-class BLScopedBuffer {
+//! automatically by `ScopedBuffer` destructor or  `reset()` call.
+class ScopedBuffer {
 public:
-  BL_NONCOPYABLE(BLScopedBuffer)
+  BL_NONCOPYABLE(ScopedBuffer)
 
   void* _mem;
   void* _buf;
   size_t _capacity;
 
-  BL_INLINE BLScopedBuffer() noexcept
+  BL_INLINE ScopedBuffer() noexcept
     : _mem(nullptr),
       _buf(nullptr),
       _capacity(0) {}
 
-  BL_INLINE ~BLScopedBuffer() noexcept {
+  BL_INLINE ~ScopedBuffer() noexcept {
     _reset();
   }
 
 protected:
-  BL_INLINE BLScopedBuffer(void* mem, void* buf, size_t capacity) noexcept
+  BL_INLINE ScopedBuffer(void* mem, void* buf, size_t capacity) noexcept
     : _mem(mem),
       _buf(buf),
       _capacity(capacity) {}
@@ -84,21 +86,21 @@ public:
 
 //! Memory buffer (temporary).
 //!
-//! This template is for fast routines that need to use memory  allocated on the stack, but the memory requirement
+//! This template is for fast routines that need to use memory allocated on the stack, but the memory requirement
 //! is not known at compile time. The number of bytes allocated on the stack is described by `N` parameter.
 template<size_t N>
-class BLScopedBufferTmp : public BLScopedBuffer {
+class ScopedBufferTmp : public ScopedBuffer {
 public:
-  BL_NONCOPYABLE(BLScopedBufferTmp)
+  BL_NONCOPYABLE(ScopedBufferTmp)
 
   uint8_t _storage[N];
 
-  BL_INLINE BLScopedBufferTmp() noexcept
-    : BLScopedBuffer(_storage, _storage, N) {}
+  BL_INLINE ScopedBufferTmp() noexcept
+    : ScopedBuffer(_storage, _storage, N) {}
 
-  BL_INLINE ~BLScopedBufferTmp() noexcept {}
+  BL_INLINE ~ScopedBufferTmp() noexcept {}
 
-  using BLScopedBuffer::alloc;
+  using ScopedBuffer::alloc;
 
   BL_INLINE void reset() noexcept {
     _reset();
@@ -108,6 +110,8 @@ public:
 };
 
 //! \}
+
+} // {bl}
 
 //! \}
 //! \endcond

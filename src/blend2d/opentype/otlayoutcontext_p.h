@@ -13,7 +13,8 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 
 //! A context used for OpenType glyph substitution (GSUB) processing.
 struct GSubContext {
@@ -246,7 +247,8 @@ struct GPosContext {
   BL_INLINE size_t size() const noexcept { return _workBuffer.size; }
 };
 
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 //! \}
 //! \endcond

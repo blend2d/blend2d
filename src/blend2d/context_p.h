@@ -17,7 +17,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLContextPrivate {
+namespace bl {
+namespace ContextInternal {
 
 //! \name BLContext - Private - Constants
 //! \{
@@ -45,7 +46,7 @@ static BL_INLINE void initState(BLContextState* self) noexcept {
   self->styleAlpha[BL_CONTEXT_STYLE_SLOT_STROKE] = 1.0;
 
   blStrokeOptionsInit(&self->strokeOptions);
-  self->approximationOptions = BLPathPrivate::makeDefaultApproximationOptions();
+  self->approximationOptions = PathInternal::makeDefaultApproximationOptions();
 
   self->metaTransform.reset();
   self->userTransform.reset();
@@ -57,7 +58,8 @@ static BL_INLINE void destroyState(BLContextState* self) noexcept {
 
 //! \}
 
-} // {BLContextPrivate}
+} // {ContextInternal}
+} // {bl}
 
 //! \}
 //! \endcond

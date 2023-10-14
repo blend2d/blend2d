@@ -7,7 +7,7 @@
 #define BLEND2D_RASTER_RASTERCONTEXT_P_H_INCLUDED
 
 #include "../api-internal_p.h"
-#include "../compop_p.h"
+#include "../compopinfo_p.h"
 #include "../context_p.h"
 #include "../font_p.h"
 #include "../gradient_p.h"
@@ -70,51 +70,51 @@ public:
   BL_NONCOPYABLE(BLRasterContextImpl)
 
   //! Context flags.
-  BLRasterEngine::ContextFlags contextFlags;
+  bl::RasterEngine::ContextFlags contextFlags;
   //! Rendering mode.
   uint8_t renderingMode;
   //! Whether workerMgr has been initialized.
   uint8_t workerMgrInitialized;
   //! Precision information.
-  BLRasterEngine::RenderTargetInfo renderTargetInfo;
+  bl::RasterEngine::RenderTargetInfo renderTargetInfo;
 
   //! Work data used by synchronous rendering that also holds part of the current state. In async mode the work data
   //! can still be used by user thread in case it's allowed, otherwise it would only hold some states that are used
   //! by the rendering context directly.
-  BLRasterEngine::WorkData syncWorkData;
+  bl::RasterEngine::WorkData syncWorkData;
 
   //! Pipeline lookup cache (always used before attempting to use `pipeProvider`).
-  BLPipeline::PipeLookupCache pipeLookupCache;
+  bl::Pipeline::PipeLookupCache pipeLookupCache;
 
   //! Composition operator simplification that matches the destination format and current `compOp`.
-  const BLCompOpSimplifyInfo* compOpSimplifyInfo;
+  const bl::CompOpSimplifyInfo* compOpSimplifyInfo;
   //! Solid format table used to select the best pixel format for solid fills.
   uint8_t solidFormatTable[BL_RASTER_CONTEXT_SOLID_FORMAT_COUNT];
   //! Table that can be used to override a fill/stroke color by one from SolidId (after a simplification).
-  BLRasterEngine::RenderFetchDataSolid* solidOverrideFillTable;
-  //! Solid fill override table indexed by \ref BLCompOpSolidId.
-  BLRasterEngine::RenderFetchDataHeader* solidFetchDataOverrideTable[uint32_t(BLCompOpSolidId::kAlwaysNop) + 1u];
+  bl::RasterEngine::RenderFetchDataSolid* solidOverrideFillTable;
+  //! Solid fill override table indexed by \ref CompOpSolidId.
+  bl::RasterEngine::RenderFetchDataHeader* solidFetchDataOverrideTable[uint32_t(bl::CompOpSolidId::kAlwaysNop) + 1u];
 
   //! The current state of the rendering context, the `BLContextState` part is public.
-  BLRasterEngine::RasterContextState internalState;
+  bl::RasterEngine::RasterContextState internalState;
   //! Link to the previous saved state that will be restored by `BLContext::restore()`.
-  BLRasterEngine::SavedState* savedState;
+  bl::RasterEngine::SavedState* savedState;
   //! An actual shared fill-state (asynchronous rendering).
-  BLRasterEngine::SharedFillState* sharedFillState;
+  bl::RasterEngine::SharedFillState* sharedFillState;
   //! An actual shared stroke-state (asynchronous rendering).
-  BLRasterEngine::SharedBaseStrokeState* sharedStrokeState;
+  bl::RasterEngine::SharedBaseStrokeState* sharedStrokeState;
 
   //! Zone allocator used to allocate base data structures required by `BLRasterContextImpl`.
-  BLArenaAllocator baseZone;
+  bl::ArenaAllocator baseZone;
   //! Object pool used to allocate `RenderFetchData`.
-  BLArenaPool<BLRasterEngine::RenderFetchData> fetchDataPool;
+  bl::ArenaPool<bl::RasterEngine::RenderFetchData> fetchDataPool;
   //! Object pool used to allocate `SavedState`.
-  BLArenaPool<BLRasterEngine::SavedState> savedStatePool;
+  bl::ArenaPool<bl::RasterEngine::SavedState> savedStatePool;
 
   //! Pipeline runtime (either global or isolated, depending on create-options).
-  BLPipeline::PipeProvider pipeProvider;
+  bl::Pipeline::PipeProvider pipeProvider;
   //! Worker manager (only used by asynchronous rendering context).
-  BLWrap<BLRasterEngine::WorkerManager> workerMgr;
+  bl::Wrap<bl::RasterEngine::WorkerManager> workerMgr;
 
   //! Context origin ID used in `data0` member of `BLContextCookie`.
   uint64_t contextOriginId;
@@ -144,8 +144,8 @@ public:
   //! \{
 
   BL_INLINE BLRasterContextImpl(BLContextVirt* virtIn) noexcept
-    : contextFlags(BLRasterEngine::ContextFlags::kNoFlagsSet),
-      renderingMode(uint8_t(BLRasterEngine::RenderingMode::kSync)),
+    : contextFlags(bl::RasterEngine::ContextFlags::kNoFlagsSet),
+      renderingMode(uint8_t(bl::RasterEngine::RenderingMode::kSync)),
       workerMgrInitialized(false),
       renderTargetInfo {},
       syncWorkData(this),
@@ -157,7 +157,7 @@ public:
       savedState{},
       sharedFillState{},
       sharedStrokeState{},
-      baseZone(8192 - BLArenaAllocator::kBlockOverhead, 16, staticBuffer, sizeof(staticBuffer)),
+      baseZone(8192 - bl::ArenaAllocator::kBlockOverhead, 16, staticBuffer, sizeof(staticBuffer)),
       fetchDataPool(),
       savedStatePool(),
       pipeProvider(),
@@ -175,7 +175,7 @@ public:
     state = &internalState;
     transformPtrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_USER] = &internalState.finalTransform;
     transformPtrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_META] = &internalState.metaTransform;
-    transformPtrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_NONE] = &BLTransformPrivate::identityTransform;
+    transformPtrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_NONE] = &bl::TransformInternal::identityTransform;
   }
 
   BL_INLINE ~BLRasterContextImpl() noexcept {
@@ -187,14 +187,14 @@ public:
   //! \name Memory Management
   //! \{
 
-  BL_INLINE_NODEBUG BLArenaAllocator& fetchDataZone() noexcept { return baseZone; }
-  BL_INLINE_NODEBUG BLArenaAllocator& savedStateZone() noexcept { return baseZone; }
+  BL_INLINE_NODEBUG bl::ArenaAllocator& fetchDataZone() noexcept { return baseZone; }
+  BL_INLINE_NODEBUG bl::ArenaAllocator& savedStateZone() noexcept { return baseZone; }
 
-  BL_INLINE BLRasterEngine::RenderFetchData* allocFetchData() noexcept { return fetchDataPool.alloc(fetchDataZone()); }
-  BL_INLINE void freeFetchData(BLRasterEngine::RenderFetchData* fetchData) noexcept { fetchDataPool.free(fetchData); }
+  BL_INLINE bl::RasterEngine::RenderFetchData* allocFetchData() noexcept { return fetchDataPool.alloc(fetchDataZone()); }
+  BL_INLINE void freeFetchData(bl::RasterEngine::RenderFetchData* fetchData) noexcept { fetchDataPool.free(fetchData); }
 
-  BL_INLINE BLRasterEngine::SavedState* allocSavedState() noexcept { return savedStatePool.alloc(savedStateZone()); }
-  BL_INLINE void freeSavedState(BLRasterEngine::SavedState* state) noexcept { savedStatePool.free(state); }
+  BL_INLINE bl::RasterEngine::SavedState* allocSavedState() noexcept { return savedStatePool.alloc(savedStateZone()); }
+  BL_INLINE void freeSavedState(bl::RasterEngine::SavedState* state) noexcept { savedStatePool.free(state); }
 
   BL_INLINE void ensureWorkerMgr() noexcept {
     if (!workerMgrInitialized) {
@@ -215,9 +215,9 @@ public:
   //! \name Context Accessors
   //! \{
 
-  BL_INLINE_NODEBUG bool isSync() const noexcept { return renderingMode == uint8_t(BLRasterEngine::RenderingMode::kSync); }
+  BL_INLINE_NODEBUG bool isSync() const noexcept { return renderingMode == uint8_t(bl::RasterEngine::RenderingMode::kSync); }
 
-  BL_INLINE_NODEBUG BLInternalFormat format() const noexcept { return BLInternalFormat(dstData.format); }
+  BL_INLINE_NODEBUG bl::FormatExt format() const noexcept { return bl::FormatExt(dstData.format); }
   BL_INLINE_NODEBUG double fpScaleD() const noexcept { return renderTargetInfo.fpScaleD; }
   BL_INLINE_NODEBUG double fullAlphaD() const noexcept { return renderTargetInfo.fullAlphaD; }
 
@@ -241,7 +241,7 @@ public:
   BL_INLINE_NODEBUG uint32_t globalAlphaI() const noexcept { return internalState.globalAlphaI; }
   BL_INLINE_NODEBUG double globalAlphaD() const noexcept { return internalState.globalAlpha; }
 
-  BL_INLINE_NODEBUG const BLRasterEngine::StyleData* getStyle(size_t index) const noexcept { return &internalState.style[index]; }
+  BL_INLINE_NODEBUG const bl::RasterEngine::StyleData* getStyle(size_t index) const noexcept { return &internalState.style[index]; }
 
   BL_INLINE_NODEBUG const BLMatrix2D& metaTransform() const noexcept { return internalState.metaTransform; }
   BL_INLINE_NODEBUG BLTransformType metaTransformType() const noexcept { return BLTransformType(internalState.metaTransformType); }

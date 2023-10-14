@@ -17,16 +17,16 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+namespace bl {
+
 //! \name BLBitSet - Types
 //! \{
 
-typedef BLParametrizedBitOps<BLBitOrder::kMSB, uint32_t> BLBitSetOps;
+typedef ParametrizedBitOps<BitOrder::kMSB, uint32_t> BitSetOps;
 
 //! \}
 
-namespace BLBitSetPrivate {
-
-using BLObjectPrivate::RCMode;
+namespace BitSetInternal {
 
 //! \name BLBitSet - Constants
 //! \{
@@ -35,14 +35,14 @@ static constexpr uint32_t kInvalidIndex = BL_BIT_SET_INVALID_INDEX;
 static constexpr uint32_t kSegmentWordCount = BL_BIT_SET_SEGMENT_WORD_COUNT;
 
 static constexpr uint32_t kSSOWordCount = BLBitSet::kSSOWordCount;
-static constexpr uint32_t kLastWord = 0xFFFFFFFFu / BLBitSetOps::kNumBits;
+static constexpr uint32_t kLastWord = 0xFFFFFFFFu / BitSetOps::kNumBits;
 
 //! Index of the last large word index of SSE Dense BitSet.
 //!
 //! We don't want to overflow the maximum addressable word, so large word index cannot exceed this value.
 static constexpr uint32_t kSSOLastWord = kLastWord - kSSOWordCount + 1;
 
-static constexpr uint32_t kSegmentBitCount = BL_BIT_SET_SEGMENT_WORD_COUNT * BLIntOps::bitSizeOf<uint32_t>();
+static constexpr uint32_t kSegmentBitCount = BL_BIT_SET_SEGMENT_WORD_COUNT * IntOps::bitSizeOf<uint32_t>();
 static constexpr uint32_t kSegmentBitMask = kSegmentBitCount - 1;
 
 /*
@@ -58,16 +58,16 @@ static constexpr uint32_t kMaxImplSize = uint32_t(sizeof(BLBitSetImpl) + kMaxSeg
 //! \{
 
 static BL_INLINE bool isImplMutable(BLBitSetImpl* impl) noexcept {
-  return BLObjectPrivate::isImplMutable(impl);
+  return ObjectInternal::isImplMutable(impl);
 }
 
 static BL_INLINE BLResult freeImpl(BLBitSetImpl* impl) noexcept {
-  return BLObjectPrivate::freeImpl(impl);
+  return ObjectInternal::freeImpl(impl);
 }
 
 template<RCMode kRCMode>
 static BL_INLINE BLResult releaseImpl(BLBitSetImpl* impl) noexcept {
-  return BLObjectPrivate::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
+  return ObjectInternal::derefImplAndTest<kRCMode>(impl) ? freeImpl(impl) : BLResult(BL_SUCCESS);
 }
 
 //! \}
@@ -80,7 +80,7 @@ static BL_INLINE_NODEBUG BLBitSetImpl* getImpl(const BLBitSetCore* self) noexcep
 }
 
 static BL_INLINE BLResult retainInstance(const BLBitSetCore* self, size_t n = 1) noexcept {
-  return BLObjectPrivate::retainInstance(self, n);
+  return ObjectInternal::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLBitSetCore* self) noexcept {
@@ -134,7 +134,7 @@ struct Range {
   BL_INLINE_NODEBUG Range intersect(const Range& other) const noexcept { return intersect(other.start, other.end); }
 
   BL_INLINE void normalize() noexcept {
-    uint32_t mask = BLIntOps::bitMaskFromBool<uint32_t>(valid());
+    uint32_t mask = IntOps::bitMaskFromBool<uint32_t>(valid());
     start &= mask;
     end &= mask;
   }
@@ -174,10 +174,10 @@ struct SSODenseInfo {
   BL_INLINE_NODEBUG uint32_t endWord() const noexcept { return _wordIndex + _wordCount; }
   BL_INLINE_NODEBUG uint32_t wordCount() const noexcept { return _wordCount; }
 
-  BL_INLINE_NODEBUG uint32_t startBit() const noexcept { return _wordIndex * BLBitSetOps::kNumBits; }
-  BL_INLINE_NODEBUG uint32_t lastBit() const noexcept { return (_wordIndex + _wordCount) * BLBitSetOps::kNumBits - 1; }
+  BL_INLINE_NODEBUG uint32_t startBit() const noexcept { return _wordIndex * BitSetOps::kNumBits; }
+  BL_INLINE_NODEBUG uint32_t lastBit() const noexcept { return (_wordIndex + _wordCount) * BitSetOps::kNumBits - 1; }
 
-  BL_INLINE_NODEBUG bool hasIndex(uint32_t index) const noexcept { return (index / BLBitSetOps::kNumBits) - _wordIndex < _wordCount; }
+  BL_INLINE_NODEBUG bool hasIndex(uint32_t index) const noexcept { return (index / BitSetOps::kNumBits) - _wordIndex < _wordCount; }
 };
 
 static BL_INLINE SSODenseInfo getSSODenseInfo(const BLBitSetCore* self) noexcept {
@@ -186,7 +186,8 @@ static BL_INLINE SSODenseInfo getSSODenseInfo(const BLBitSetCore* self) noexcept
 
 //! \}
 
-} // {BLBitSetPrivate}
+} // {BitSetInternal}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -7,13 +7,15 @@
 #include "../support/intops_p.h"
 #include "../support/scopedallocator_p.h"
 
-// ScopedAllocator - Alloc
-// =======================
+namespace bl {
 
-void* BLScopedAllocator::alloc(size_t size, size_t alignment) noexcept {
+// bl::ScopedAllocator - Alloc
+// ===========================
+
+void* ScopedAllocator::alloc(size_t size, size_t alignment) noexcept {
   // First try to allocate from the local memory pool.
-  uint8_t* p = BLIntOps::alignUp(poolPtr, alignment);
-  size_t remain = size_t(BLIntOps::usubSaturate((uintptr_t)poolEnd, (uintptr_t)p));
+  uint8_t* p = IntOps::alignUp(poolPtr, alignment);
+  size_t remain = size_t(IntOps::usubSaturate((uintptr_t)poolEnd, (uintptr_t)p));
 
   if (remain >= size) {
     poolPtr = p + size;
@@ -30,13 +32,13 @@ void* BLScopedAllocator::alloc(size_t size, size_t alignment) noexcept {
   reinterpret_cast<Link*>(p)->next = links;
   links = reinterpret_cast<Link*>(p);
 
-  return BLIntOps::alignUp(p + sizeof(Link), alignment);
+  return IntOps::alignUp(p + sizeof(Link), alignment);
 }
 
 // ScopedAllocator - Reset
 // =======================
 
-void BLScopedAllocator::reset() noexcept {
+void ScopedAllocator::reset() noexcept {
   Link* link = links;
   while (link) {
     Link* next = link->next;
@@ -47,3 +49,5 @@ void BLScopedAllocator::reset() noexcept {
   links = nullptr;
   poolPtr = poolMem;
 }
+
+} // {bl}

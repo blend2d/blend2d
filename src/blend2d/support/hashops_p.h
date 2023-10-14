@@ -13,7 +13,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLHashOps {
+namespace bl {
+namespace HashOps {
 namespace {
 
 //! \name Hash Functions
@@ -24,7 +25,7 @@ static BL_INLINE uint32_t hashRound(uint32_t hash, uint32_t c) noexcept {
 }
 
 static BL_INLINE uint32_t hashRoundCI(uint32_t hash, uint32_t c) noexcept {
-  return hash * 65599u + blAsciiToLower(c);
+  return hash * 65599u + Unicode::asciiToLower(c);
 }
 
 // Gets a hash of the given string `data` of size `size`. Size must be valid
@@ -58,7 +59,8 @@ static BL_INLINE uint32_t hashStringCI(BLStringView view) noexcept {
 //! \}
 
 } // {anonymous}
-} // {BLHashOps}
+} // {HashOps}
+} // {bl}
 
 //! \}
 //! \endcond

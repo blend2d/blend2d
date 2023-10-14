@@ -8,15 +8,16 @@
 
 #include "../pixelops/scalar_p.h"
 
-// BLPixelOps - Scalar - Tests
-// ===========================
+// bl::PixelOps - Scalar - Tests
+// =============================
 
-namespace BLPixelOpsTests {
+namespace bl {
+namespace Tests {
 
-using namespace BLPixelOps;
+using namespace PixelOps;
 
 static void test_udiv255() noexcept {
-  INFO("BLPixelOps::Scalar::udiv255()");
+  INFO("bl::PixelOps::Scalar::udiv255()");
   for (uint32_t i = 0; i < 255 * 255; i++) {
     uint32_t result = Scalar::udiv255(i);
     uint32_t j = i + 128;
@@ -25,7 +26,7 @@ static void test_udiv255() noexcept {
     uint32_t expected = (j + (j >> 8)) >> 8;
 
     EXPECT_EQ(result, expected)
-      .message("BLPixelOps::Scalar::udiv255(%u) -> %u (Expected %u)", i, result, expected);
+      .message("bl::PixelOps::Scalar::udiv255(%u) -> %u (Expected %u)", i, result, expected);
   }
 }
 
@@ -39,10 +40,10 @@ static void test_cvt_xrgb32_0888_from_xrgb16_0555() noexcept {
     uint32_t b = ((c      ) & 0x1F) << 3;
 
     uint32_t result   = Scalar::cvt_xrgb32_0888_from_xrgb16_0555(c);
-    uint32_t expected = BLRgbaPrivate::packRgba32(r + (r >> 5), g + (g >> 5), b + (b >> 5), 0xFF);
+    uint32_t expected = RgbaInternal::packRgba32(r + (r >> 5), g + (g >> 5), b + (b >> 5), 0xFF);
 
     EXPECT_EQ(result, expected)
-      .message("BLPixelOps::Scalar::cvt_xrgb32_0888_from_xrgb16_0555() - %08X -> %08X (Expected %08X)", c, result, expected);
+      .message("bl::PixelOps::Scalar::cvt_xrgb32_0888_from_xrgb16_0555() - %08X -> %08X (Expected %08X)", c, result, expected);
 
     if (c == 0xFFFF)
       break;
@@ -60,10 +61,10 @@ static void test_cvt_xrgb32_0888_from_xrgb16_0565() noexcept {
     uint32_t b = ((c      ) & 0x1F) << 3;
 
     uint32_t result   = Scalar::cvt_xrgb32_0888_from_xrgb16_0565(c);
-    uint32_t expected = BLRgbaPrivate::packRgba32(r + (r >> 5), g + (g >> 6), b + (b >> 5), 0xFF);
+    uint32_t expected = RgbaInternal::packRgba32(r + (r >> 5), g + (g >> 6), b + (b >> 5), 0xFF);
 
     EXPECT_EQ(result, expected)
-      .message("BLPixelOps::Scalar::cvt_xrgb32_0888_from_xrgb16_0555() - %08X -> %08X (Expected %08X)", c, result, expected);
+      .message("bl::PixelOps::Scalar::cvt_xrgb32_0888_from_xrgb16_0555() - %08X -> %08X (Expected %08X)", c, result, expected);
 
     if (c == 0xFFFF)
       break;
@@ -82,10 +83,10 @@ static void test_cvt_argb32_8888_from_argb16_4444() noexcept {
     uint32_t b = ((c      ) & 0xF) * 0x11;
 
     uint32_t result   = Scalar::cvt_argb32_8888_from_argb16_4444(c);
-    uint32_t expected = BLRgbaPrivate::packRgba32(r, g, b, a);
+    uint32_t expected = RgbaInternal::packRgba32(r, g, b, a);
 
     EXPECT_EQ(result, expected)
-      .message("BLPixelOps::Scalar::cvt_argb32_8888_from_argb16_4444() - %08X -> %08X (Expected %08X)", c, result, expected);
+      .message("bl::PixelOps::Scalar::cvt_argb32_8888_from_argb16_4444() - %08X -> %08X (Expected %08X)", c, result, expected);
 
     if (c == 0xFFFF)
       break;
@@ -106,10 +107,10 @@ static void test_cvt_prgb32_8888_from_argb32_8888() noexcept {
     uint32_t b = (c      ) & 0xFF;
 
     uint32_t result = Scalar::cvt_prgb32_8888_from_argb32_8888(c);
-    uint32_t expected = BLRgbaPrivate::packRgba32(Scalar::udiv255(r * a), Scalar::udiv255(g * a), Scalar::udiv255(b * a), a);
+    uint32_t expected = RgbaInternal::packRgba32(Scalar::udiv255(r * a), Scalar::udiv255(g * a), Scalar::udiv255(b * a), a);
 
     EXPECT_EQ(result, expected)
-      .message("BLPixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888() - %08X -> %08X (Expected %08X)", c, result, expected);
+      .message("bl::PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888() - %08X -> %08X (Expected %08X)", c, result, expected);
 
     c += 7919;
   }
@@ -123,7 +124,8 @@ UNIT(pixelops_scalar, BL_TEST_GROUP_RENDERING_PIXEL_OPS) {
   test_cvt_prgb32_8888_from_argb32_8888();
 }
 
-} // {BLPixelOpsTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST
 

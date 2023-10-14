@@ -15,27 +15,30 @@
 #include "../support/memops_p.h"
 #include "../support/traits_p.h"
 
-// BLBmpCodecImpl - Globals
+namespace bl {
+namespace Bmp {
+
+// bl::Bmp::Codec - Globals
 // ========================
 
-static BLImageCodecCore blBmpCodecObject;
-static BLObjectEternalVirtualImpl<BLBmpCodecImpl, BLImageCodecVirt> blBmpCodec;
-static BLImageDecoderVirt blBmpDecoderVirt;
-static BLImageEncoderVirt blBmpEncoderVirt;
+static BLObjectEternalVirtualImpl<BLBmpCodecImpl, BLImageCodecVirt> bmpCodec;
+static BLImageCodecCore bmpCodecInstance;
+static BLImageDecoderVirt bmpDecoderVirt;
+static BLImageEncoderVirt bmpEncoderVirt;
 
-// BLBmpDecoderImpl - Utilities
+// bl::Bmp::Decoder - Utilities
 // ============================
 
-static bool blBmpCheckHeaderSize(uint32_t headerSize) noexcept {
-  return headerSize == BL_BMP_HEADER_SIZE_OS2_V1 ||
-         headerSize == BL_BMP_HEADER_SIZE_WIN_V1 ||
-         headerSize == BL_BMP_HEADER_SIZE_WIN_V2 ||
-         headerSize == BL_BMP_HEADER_SIZE_WIN_V3 ||
-         headerSize == BL_BMP_HEADER_SIZE_WIN_V4 ||
-         headerSize == BL_BMP_HEADER_SIZE_WIN_V5 ;
+static bool checkHeaderSize(uint32_t headerSize) noexcept {
+  return headerSize == kHeaderSizeOS2_V1 ||
+         headerSize == kHeaderSizeWIN_V1 ||
+         headerSize == kHeaderSizeWIN_V2 ||
+         headerSize == kHeaderSizeWIN_V3 ||
+         headerSize == kHeaderSizeWIN_V4 ||
+         headerSize == kHeaderSizeWIN_V5 ;
 }
 
-static bool blBmpCheckDepth(uint32_t depth) noexcept {
+static bool checkDepth(uint32_t depth) noexcept {
   return depth ==  1 ||
          depth ==  4 ||
          depth ==  8 ||
@@ -44,12 +47,12 @@ static bool blBmpCheckDepth(uint32_t depth) noexcept {
          depth == 32 ;
 }
 
-static bool blBmpCheckImageSize(const BLSizeI& size) noexcept {
+static bool checkImageSize(const BLSizeI& size) noexcept {
   return uint32_t(size.w) <= BL_RUNTIME_MAX_IMAGE_SIZE &&
          uint32_t(size.h) <= BL_RUNTIME_MAX_IMAGE_SIZE ;
 }
 
-static bool blBmpCheckBitMasks(const uint32_t* masks, uint32_t n) noexcept {
+static bool checkBitMasks(const uint32_t* masks, uint32_t n) noexcept {
   uint32_t combined = 0;
   for (uint32_t i = 0; i < n; i++) {
     uint32_t m = masks[i];
@@ -59,7 +62,7 @@ static bool blBmpCheckBitMasks(const uint32_t* masks, uint32_t n) noexcept {
       return false;
 
     // Mask has to have consecutive bits set, masks like 000110011 are not allowed.
-    if (m != 0 && !BLIntOps::isBitMaskConsecutive(m))
+    if (m != 0 && !IntOps::isBitMaskConsecutive(m))
       return false;
 
     // Mask can't overlap with other.
@@ -71,10 +74,10 @@ static bool blBmpCheckBitMasks(const uint32_t* masks, uint32_t n) noexcept {
   return true;
 }
 
-// BLBmpDecoderImpl - RLE4
+// bl::Bmp::Decoder - RLE4
 // =======================
 
-static BLResult blBmpDecodeRLE4(uint8_t* dstLine, intptr_t dstStride, const uint8_t* p, size_t size, uint32_t w, uint32_t h, const BLRgba32* pal) noexcept {
+static BLResult decodeRLE4(uint8_t* dstLine, intptr_t dstStride, const uint8_t* p, size_t size, uint32_t w, uint32_t h, const BLRgba32* pal) noexcept {
   uint8_t* dstData = dstLine;
   const uint8_t* end = p + size;
 
@@ -95,16 +98,16 @@ static BLResult blBmpDecodeRLE4(uint8_t* dstLine, intptr_t dstStride, const uint
 
       uint32_t i = blMin<uint32_t>(b0, w - x);
       for (x += i; i >= 2; i -= 2, dstData += 8) {
-        BLMemOps::writeU32a(dstData + 0, c0);
-        BLMemOps::writeU32a(dstData + 4, c1);
+        MemOps::writeU32a(dstData + 0, c0);
+        MemOps::writeU32a(dstData + 4, c1);
       }
 
       if (i) {
-        BLMemOps::writeU32a(dstData + 0, c0);
+        MemOps::writeU32a(dstData + 0, c0);
         dstData += 4;
       }
     }
-    else if (b1 >= BL_BMP_RLE_CMD_COUNT) {
+    else if (b1 >= kRleCount) {
       // Absolute (b1 = Size).
       uint32_t i = blMin<uint32_t>(b1, w - x);
       uint32_t reqBytes = ((b1 + 3u) >> 1) & ~uint32_t(0x1);
@@ -116,25 +119,25 @@ static BLResult blBmpDecodeRLE4(uint8_t* dstLine, intptr_t dstStride, const uint
         b0 = p[0];
         b1 = p[1]; p += 2;
 
-        BLMemOps::writeU32a(dstData +  0, pal[b0 >> 4].value);
-        BLMemOps::writeU32a(dstData +  4, pal[b0 & 15].value);
-        BLMemOps::writeU32a(dstData +  8, pal[b1 >> 4].value);
-        BLMemOps::writeU32a(dstData + 12, pal[b1 & 15].value);
+        MemOps::writeU32a(dstData +  0, pal[b0 >> 4].value);
+        MemOps::writeU32a(dstData +  4, pal[b0 & 15].value);
+        MemOps::writeU32a(dstData +  8, pal[b1 >> 4].value);
+        MemOps::writeU32a(dstData + 12, pal[b1 & 15].value);
       }
 
       if (i) {
         b0 = p[0];
         b1 = p[1]; p += 2;
 
-        BLMemOps::writeU32a(dstData, pal[b0 >> 4].value);
+        MemOps::writeU32a(dstData, pal[b0 >> 4].value);
         dstData += 4;
 
         if (--i) {
-          BLMemOps::writeU32a(dstData, pal[b0 & 15].value);
+          MemOps::writeU32a(dstData, pal[b0 & 15].value);
           dstData += 4;
 
           if (--i) {
-            BLMemOps::writeU32a(dstData, pal[b1 >> 4].value);
+            MemOps::writeU32a(dstData, pal[b1 >> 4].value);
             dstData += 4;
           }
         }
@@ -145,11 +148,11 @@ static BLResult blBmpDecodeRLE4(uint8_t* dstLine, intptr_t dstStride, const uint
       uint32_t toX = x;
       uint32_t toY = y;
 
-      if (b1 == BL_BMP_RLE_CMD_LINE) {
+      if (b1 == kRleLine) {
         toX = 0;
         toY++;
       }
-      else if (b1 == BL_BMP_RLE_CMD_MOVE) {
+      else if (b1 == kRleMove) {
         if ((size_t)(end - p) < 2)
           return blTraceError(BL_ERROR_DATA_TRUNCATED);
 
@@ -166,7 +169,7 @@ static BLResult blBmpDecodeRLE4(uint8_t* dstLine, intptr_t dstStride, const uint
 
       for (; y < toY; y++) {
         for (x = w - x; x; x--, dstData += 4) {
-          BLMemOps::writeU32a(dstData, BL_BMP_RLE_BACKGROUND);
+          MemOps::writeU32a(dstData, kRleBackground);
         }
 
         dstLine += dstStride;
@@ -174,19 +177,19 @@ static BLResult blBmpDecodeRLE4(uint8_t* dstLine, intptr_t dstStride, const uint
       }
 
       for (; x < toX; x++, dstData += 4) {
-        BLMemOps::writeU32a(dstData, BL_BMP_RLE_BACKGROUND);
+        MemOps::writeU32a(dstData, kRleBackground);
       }
 
-      if (b1 == BL_BMP_RLE_CMD_STOP || y == h)
+      if (b1 == kRleStop || y == h)
         return BL_SUCCESS;
     }
   }
 }
 
-// BLBmpDecoderImpl - RLE8
+// bl::Bmp::Decoder - RLE8
 // =======================
 
-static BLResult blBmpDecodeRLE8(uint8_t* dstLine, intptr_t dstStride, const uint8_t* p, size_t size, uint32_t w, uint32_t h, const BLRgba32* pal) noexcept {
+static BLResult decodeRLE8(uint8_t* dstLine, intptr_t dstStride, const uint8_t* p, size_t size, uint32_t w, uint32_t h, const BLRgba32* pal) noexcept {
   uint8_t* dstData = dstLine;
   const uint8_t* end = p + size;
 
@@ -206,10 +209,10 @@ static BLResult blBmpDecodeRLE8(uint8_t* dstLine, intptr_t dstStride, const uint
       uint32_t i = blMin<uint32_t>(b0, w - x);
 
       for (x += i; i; i--, dstData += 4) {
-        BLMemOps::writeU32a(dstData, c0);
+        MemOps::writeU32a(dstData, c0);
       }
     }
-    else if (b1 >= BL_BMP_RLE_CMD_COUNT) {
+    else if (b1 >= kRleCount) {
       // Absolute (b1 = Size).
       uint32_t i = blMin<uint32_t>(b1, w - x);
       uint32_t reqBytes = ((b1 + 1) >> 1) << 1;
@@ -221,14 +224,14 @@ static BLResult blBmpDecodeRLE8(uint8_t* dstLine, intptr_t dstStride, const uint
         b0 = p[0];
         b1 = p[1]; p += 2;
 
-        BLMemOps::writeU32a(dstData + 0, pal[b0].value);
-        BLMemOps::writeU32a(dstData + 4, pal[b1].value);
+        MemOps::writeU32a(dstData + 0, pal[b0].value);
+        MemOps::writeU32a(dstData + 4, pal[b1].value);
       }
 
       if (i) {
         b0 = p[0]; p += 2;
 
-        BLMemOps::writeU32a(dstData, pal[b0].value);
+        MemOps::writeU32a(dstData, pal[b0].value);
         dstData += 4;
       }
     }
@@ -237,11 +240,11 @@ static BLResult blBmpDecodeRLE8(uint8_t* dstLine, intptr_t dstStride, const uint
       uint32_t toX = x;
       uint32_t toY = y;
 
-      if (b1 == BL_BMP_RLE_CMD_LINE) {
+      if (b1 == kRleLine) {
         toX = 0;
         toY++;
       }
-      else if (b1 == BL_BMP_RLE_CMD_MOVE) {
+      else if (b1 == kRleMove) {
         if ((size_t)(end - p) < 2)
           return blTraceError(BL_ERROR_DATA_TRUNCATED);
 
@@ -258,7 +261,7 @@ static BLResult blBmpDecodeRLE8(uint8_t* dstLine, intptr_t dstStride, const uint
 
       for (; y < toY; y++) {
         for (x = w - x; x; x--, dstData += 4) {
-          BLMemOps::writeU32a(dstData, BL_BMP_RLE_BACKGROUND);
+          MemOps::writeU32a(dstData, kRleBackground);
         }
 
         dstLine += dstStride;
@@ -266,19 +269,19 @@ static BLResult blBmpDecodeRLE8(uint8_t* dstLine, intptr_t dstStride, const uint
       }
 
       for (; x < toX; x++, dstData += 4) {
-        BLMemOps::writeU32a(dstData, BL_BMP_RLE_BACKGROUND);
+        MemOps::writeU32a(dstData, kRleBackground);
       }
 
-      if (b1 == BL_BMP_RLE_CMD_STOP || y == h)
+      if (b1 == kRleStop || y == h)
         return BL_SUCCESS;
     }
   }
 }
 
-// BLBmpDecoderImpl - Read Internal
-// ================================
+// bl::Bmp::Decoder - Read Info (Internal)
+// =======================================
 
-static BLResult blBmpDecoderImplReadInfoInternal(BLBmpDecoderImpl* decoderI, const uint8_t* data, size_t size) noexcept {
+static BLResult decoderReadInfoInternal(BLBmpDecoderImpl* decoderI, const uint8_t* data, size_t size) noexcept {
   // Signature + BmpFile header + BmpInfo header size (18 bytes total).
   const size_t kBmpMinSize = 2 + 12 + 4;
   if (size < kBmpMinSize)
@@ -297,10 +300,10 @@ static BLResult blBmpDecoderImplReadInfoInternal(BLBmpDecoderImpl* decoderI, con
   if (BL_BYTE_ORDER_NATIVE != BL_BYTE_ORDER_LE) decoderI->file.byteSwap();
 
   // First check if the header is supported by the decoder.
-  uint32_t headerSize = BLMemOps::readU32uLE(data);
+  uint32_t headerSize = MemOps::readU32uLE(data);
   uint32_t fileAndInfoHeaderSize = 14 + headerSize;
 
-  if (!blBmpCheckHeaderSize(headerSize))
+  if (!checkHeaderSize(headerSize))
     return blTraceError(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
 
   // Read BMP info header.
@@ -313,10 +316,10 @@ static BLResult blBmpDecoderImplReadInfoInternal(BLBmpDecoderImpl* decoderI, con
   int32_t w, h;
   uint32_t depth;
   uint32_t planeCount;
-  uint32_t compression = BL_BMP_COMPRESSION_RGB;
+  uint32_t compression = kCompressionRGB;
   bool rleUsed = false;
 
-  if (headerSize == BL_BMP_HEADER_SIZE_OS2_V1) {
+  if (headerSize == kHeaderSizeOS2_V1) {
     // Handle OS/2 BMP.
     if (BL_BYTE_ORDER_NATIVE != BL_BYTE_ORDER_LE) decoderI->info.os2.byteSwap();
 
@@ -344,7 +347,7 @@ static BLResult blBmpDecoderImplReadInfoInternal(BLBmpDecoderImpl* decoderI, con
   }
 
   // Verify whether input data is ok.
-  if (h == BLTraits::minValue<int32_t>() || w <= 0)
+  if (h == Traits::minValue<int32_t>() || w <= 0)
     return blTraceError(BL_ERROR_INVALID_DATA);
 
   if (planeCount != 1)
@@ -359,10 +362,10 @@ static BLResult blBmpDecoderImplReadInfoInternal(BLBmpDecoderImpl* decoderI, con
   decoderI->imageInfo.frameCount = 1;
 
   // Check if the compression field is correct when depth <= 8.
-  if (compression != BL_BMP_COMPRESSION_RGB) {
+  if (compression != kCompressionRGB) {
     if (depth <= 8) {
-      rleUsed = (depth == 4 && compression == BL_BMP_COMPRESSION_RLE4) |
-                (depth == 8 && compression == BL_BMP_COMPRESSION_RLE8) ;
+      rleUsed = (depth == 4 && compression == kCompressionRLE4) |
+                (depth == 8 && compression == kCompressionRLE8) ;
 
       if (!rleUsed)
         return blTraceError(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
@@ -373,26 +376,26 @@ static BLResult blBmpDecoderImplReadInfoInternal(BLBmpDecoderImpl* decoderI, con
     return blTraceError(BL_ERROR_INVALID_DATA);
 
   // Check if the size is valid.
-  if (!blBmpCheckImageSize(decoderI->imageInfo.size))
+  if (!checkImageSize(decoderI->imageInfo.size))
     return blTraceError(BL_ERROR_IMAGE_TOO_LARGE);
 
   // Check if the depth is valid.
-  if (!blBmpCheckDepth(decoderI->imageInfo.depth))
+  if (!checkDepth(decoderI->imageInfo.depth))
     return blTraceError(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
 
   // Calculate a stride aligned to 32 bits.
-  BLOverflowFlag of = 0;
+  OverflowFlag of{};
   uint64_t stride = (((uint64_t(w) * uint64_t(depth) + 7u) / 8u) + 3u) & ~uint32_t(3);
-  uint32_t imageSize = BLIntOps::mulOverflow(uint32_t(decoderI->stride & 0xFFFFFFFFu), uint32_t(h), &of);
+  uint32_t imageSize = IntOps::mulOverflow(uint32_t(decoderI->stride & 0xFFFFFFFFu), uint32_t(h), &of);
 
-  if (stride >= BLTraits::maxValue<uint32_t>() || of)
+  if (stride >= Traits::maxValue<uint32_t>() || of)
     return blTraceError(BL_ERROR_INVALID_DATA);
 
   decoderI->stride = uint32_t(stride);
 
   // 1. OS/2 format doesn't specify imageSize, it's always calculated.
   // 2. BMP allows `imageSize` to be zero in case of uncompressed bitmaps.
-  if (headerSize == BL_BMP_HEADER_SIZE_OS2_V1 || (decoderI->info.win.imageSize == 0 && !rleUsed))
+  if (headerSize == kHeaderSizeOS2_V1 || (decoderI->info.win.imageSize == 0 && !rleUsed))
     decoderI->info.win.imageSize = imageSize;
 
   // Check if the `imageSize` matches the calculated one. It's malformed if it doesn't.
@@ -401,13 +404,13 @@ static BLResult blBmpDecoderImplReadInfoInternal(BLBmpDecoderImpl* decoderI, con
 
   decoderI->fmt.depth = depth;
   if (depth <= 8) {
-    decoderI->fmt.flags = BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_INDEXED;
+    decoderI->fmt.flags = BLFormatFlags(BL_FORMAT_FLAG_RGB | BL_FORMAT_FLAG_INDEXED);
   }
   else {
     decoderI->fmt.flags = BL_FORMAT_FLAG_RGB;
 
     if (BL_BYTE_ORDER_NATIVE != BL_BYTE_ORDER_LE)
-      decoderI->fmt.flags |= BL_FORMAT_FLAG_BYTE_SWAP;
+      decoderI->fmt.addFlags(BL_FORMAT_FLAG_BYTE_SWAP);
 
     if (depth == 16) {
       decoderI->fmt.rSize = 5; decoderI->fmt.rShift = 10;
@@ -422,11 +425,11 @@ static BLResult blBmpDecoderImplReadInfoInternal(BLBmpDecoderImpl* decoderI, con
     }
   }
 
-  bool hasBitFields = depth > 8 && headerSize >= BL_BMP_HEADER_SIZE_WIN_V2;
-  if (headerSize == BL_BMP_HEADER_SIZE_WIN_V1) {
+  bool hasBitFields = depth > 8 && headerSize >= kHeaderSizeWIN_V2;
+  if (headerSize == kHeaderSizeWIN_V1) {
     // Use BITFIELDS if specified.
-    if (compression == BL_BMP_COMPRESSION_BIT_FIELDS || compression == BL_BMP_COMPRESSION_ALPHA_BIT_FIELDS) {
-      uint32_t channels = 3 + (compression == BL_BMP_COMPRESSION_ALPHA_BIT_FIELDS);
+    if (compression == kCompressionBitFields || compression == kCompressionAlphaBitFields) {
+      uint32_t channels = 3 + (compression == kCompressionAlphaBitFields);
       if (depth != 16 && depth != 32)
         return blTraceError(BL_ERROR_IMAGE_UNKNOWN_FILE_FORMAT);
 
@@ -434,7 +437,7 @@ static BLResult blBmpDecoderImplReadInfoInternal(BLBmpDecoderImpl* decoderI, con
         return blTraceError(BL_ERROR_DATA_TRUNCATED);
 
       for (uint32_t i = 0; i < channels; i++)
-        decoderI->info.win.masks[i] = BLMemOps::readU32uLE(data + i * 4);
+        decoderI->info.win.masks[i] = MemOps::readU32uLE(data + i * 4);
 
       hasBitFields = true;
       data += channels * 4;
@@ -443,24 +446,25 @@ static BLResult blBmpDecoderImplReadInfoInternal(BLBmpDecoderImpl* decoderI, con
 
   if (hasBitFields) {
     // BitFields provided by info header must be continuous and non-overlapping.
-    if (!blBmpCheckBitMasks(decoderI->info.win.masks, 4))
+    if (!checkBitMasks(decoderI->info.win.masks, 4))
       return blTraceError(BL_ERROR_INVALID_DATA);
 
-    blFormatInfoAssignAbsoluteMasks(decoderI->fmt, decoderI->info.win.masks);
+    FormatInternal::assignAbsoluteMasks(decoderI->fmt, decoderI->info.win.masks);
     if (decoderI->info.win.aMask)
-      decoderI->fmt.flags |= BL_FORMAT_FLAG_ALPHA | BL_FORMAT_FLAG_PREMULTIPLIED;
+      decoderI->fmt.addFlags(BLFormatFlags(BL_FORMAT_FLAG_ALPHA | BL_FORMAT_FLAG_PREMULTIPLIED));
   }
 
   decoderI->bufferIndex = (size_t)(data - start);
   return BL_SUCCESS;
 }
 
-static BLResult blBmpDecoderImplReadFrameInternal(BLBmpDecoderImpl* decoderI, BLImage* imageOut, const uint8_t* data, size_t size) noexcept {
-  uint32_t result = BL_SUCCESS;
+static BLResult decoderReadFrameInternal(BLBmpDecoderImpl* decoderI, BLImage* imageOut, const uint8_t* data, size_t size) noexcept {
+  BLResult result = BL_SUCCESS;
+
   const uint8_t* start = data;
   const uint8_t* end = data + size;
 
-  // BLImage info.
+  // Image info.
   uint32_t w = uint32_t(decoderI->imageInfo.size.w);
   uint32_t h = uint32_t(decoderI->imageInfo.size.h);
 
@@ -479,7 +483,7 @@ static BLResult blBmpDecoderImplReadFrameInternal(BLBmpDecoderImpl* decoderI, BL
     const uint8_t* pPal = data + fileAndInfoHeaderSize;
     palSize = decoderI->file.imageOffset - fileAndInfoHeaderSize;
 
-    uint32_t palEntitySize = decoderI->info.headerSize == BL_BMP_HEADER_SIZE_OS2_V1 ? 3 : 4;
+    uint32_t palEntitySize = decoderI->info.headerSize == kHeaderSizeOS2_V1 ? 3 : 4;
     uint32_t palBytesTotal;
 
     palSize = blMin<uint32_t>(palSize / palEntitySize, 256);
@@ -527,11 +531,11 @@ static BLResult blBmpDecoderImplReadFrameInternal(BLBmpDecoderImpl* decoderI, BL
   }
 
   // Decode.
-  if (depth == 4 && decoderI->info.win.compression == BL_BMP_COMPRESSION_RLE4) {
-    BL_PROPAGATE(blBmpDecodeRLE4(dstLine, dstStride, data, decoderI->info.win.imageSize, w, h, pal));
+  if (depth == 4 && decoderI->info.win.compression == kCompressionRLE4) {
+    BL_PROPAGATE(decodeRLE4(dstLine, dstStride, data, decoderI->info.win.imageSize, w, h, pal));
   }
-  else if (depth == 8 && decoderI->info.win.compression == BL_BMP_COMPRESSION_RLE8) {
-    BL_PROPAGATE(blBmpDecodeRLE8(dstLine, dstStride, data, decoderI->info.win.imageSize, w, h, pal));
+  else if (depth == 8 && decoderI->info.win.compression == kCompressionRLE8) {
+    BL_PROPAGATE(decodeRLE8(dstLine, dstStride, data, decoderI->info.win.imageSize, w, h, pal));
   }
   else {
     BLPixelConverter pc;
@@ -547,10 +551,10 @@ static BLResult blBmpDecoderImplReadFrameInternal(BLBmpDecoderImpl* decoderI, BL
   return BL_SUCCESS;
 }
 
-// BLBmpDecoderImpl - Interface
+// bl::Bmp::Decoder - Interface
 // ============================
 
-static BLResult BL_CDECL blBmpDecoderImplRestart(BLImageDecoderImpl* impl) noexcept {
+static BLResult BL_CDECL decoderRestartImpl(BLImageDecoderImpl* impl) noexcept {
   BLBmpDecoderImpl* decoderI = static_cast<BLBmpDecoderImpl*>(impl);
 
   decoderI->lastResult = BL_SUCCESS;
@@ -565,12 +569,12 @@ static BLResult BL_CDECL blBmpDecoderImplRestart(BLImageDecoderImpl* impl) noexc
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blBmpDecoderImplReadInfo(BLImageDecoderImpl* impl, BLImageInfo* infoOut, const uint8_t* data, size_t size) noexcept {
+static BLResult BL_CDECL decoderReadInfoImpl(BLImageDecoderImpl* impl, BLImageInfo* infoOut, const uint8_t* data, size_t size) noexcept {
   BLBmpDecoderImpl* decoderI = static_cast<BLBmpDecoderImpl*>(impl);
   BLResult result = decoderI->lastResult;
 
   if (decoderI->bufferIndex == 0 && result == BL_SUCCESS) {
-    result = blBmpDecoderImplReadInfoInternal(decoderI, data, size);
+    result = decoderReadInfoInternal(decoderI, data, size);
     if (result != BL_SUCCESS)
       decoderI->lastResult = result;
   }
@@ -581,39 +585,39 @@ static BLResult BL_CDECL blBmpDecoderImplReadInfo(BLImageDecoderImpl* impl, BLIm
   return result;
 }
 
-static BLResult BL_CDECL blBmpDecoderImplReadFrame(BLImageDecoderImpl* impl, BLImageCore* imageOut, const uint8_t* data, size_t size) noexcept {
+static BLResult BL_CDECL decoderReadFrameImpl(BLImageDecoderImpl* impl, BLImageCore* imageOut, const uint8_t* data, size_t size) noexcept {
   BLBmpDecoderImpl* decoderI = static_cast<BLBmpDecoderImpl*>(impl);
-  BL_PROPAGATE(blBmpDecoderImplReadInfo(decoderI, nullptr, data, size));
+  BL_PROPAGATE(decoderReadInfoImpl(decoderI, nullptr, data, size));
 
   if (decoderI->frameIndex)
     return blTraceError(BL_ERROR_NO_MORE_DATA);
 
-  BLResult result = blBmpDecoderImplReadFrameInternal(decoderI, static_cast<BLImage*>(imageOut), data, size);
+  BLResult result = decoderReadFrameInternal(decoderI, static_cast<BLImage*>(imageOut), data, size);
   if (result != BL_SUCCESS)
     decoderI->lastResult = result;
   return result;
 }
 
-static BLResult BL_CDECL blBmpDecoderImplCreate(BLImageDecoderCore* self) noexcept {
+static BLResult BL_CDECL decoderCreateImpl(BLImageDecoderCore* self) noexcept {
   BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_DECODER);
-  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLBmpDecoderImpl>(self, info));
+  BL_PROPAGATE(ObjectInternal::allocImplT<BLBmpDecoderImpl>(self, info));
 
   BLBmpDecoderImpl* decoderI = static_cast<BLBmpDecoderImpl*>(self->_d.impl);
-  decoderI->ctor(&blBmpDecoderVirt, &blBmpCodecObject);
-  return blBmpDecoderImplRestart(decoderI);
+  decoderI->ctor(&bmpDecoderVirt, &bmpCodecInstance);
+  return decoderRestartImpl(decoderI);
 }
 
-static BLResult BL_CDECL blBmpDecoderImplDestroy(BLObjectImpl* impl) noexcept {
+static BLResult BL_CDECL decoderDestroyImpl(BLObjectImpl* impl) noexcept {
   BLBmpDecoderImpl* decoderI = static_cast<BLBmpDecoderImpl*>(impl);
 
   decoderI->dtor();
   return blObjectFreeImpl(decoderI);
 }
 
-// BLBmpEncoderImpl - Interface
+// bl::Bmp::Encoder - Interface
 // ============================
 
-static BLResult BL_CDECL blBmpEncoderImplRestart(BLImageEncoderImpl* impl) noexcept {
+static BLResult BL_CDECL encoderRestartImpl(BLImageEncoderImpl* impl) noexcept {
   BLBmpEncoderImpl* encoderI = static_cast<BLBmpEncoderImpl*>(impl);
   encoderI->lastResult = BL_SUCCESS;
   encoderI->frameIndex = 0;
@@ -621,7 +625,7 @@ static BLResult BL_CDECL blBmpEncoderImplRestart(BLImageEncoderImpl* impl) noexc
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blBmpEncoderImplWriteFrame(BLImageEncoderImpl* impl, BLArrayCore* dst, const BLImageCore* image) noexcept {
+static BLResult BL_CDECL encoderWriteFrameImpl(BLImageEncoderImpl* impl, BLArrayCore* dst, const BLImageCore* image) noexcept {
   BLBmpEncoderImpl* encoderI = static_cast<BLBmpEncoderImpl*>(impl);
   BL_PROPAGATE(encoderI->lastResult);
 
@@ -641,29 +645,29 @@ static BLResult BL_CDECL blBmpEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
   uint32_t h = uint32_t(imageData.size.h);
   uint32_t format = imageData.format;
 
-  uint32_t headerSize = BL_BMP_HEADER_SIZE_WIN_V1;
+  uint32_t headerSize = kHeaderSizeWIN_V1;
   uint32_t bpl = 0;
   uint32_t gap = 0;
   uint32_t paletteSize = 0;
 
   BLPixelConverter pc;
-  BLBmpFileHeader file {};
-  BLBmpInfoHeader info {};
+  BmpFileHeader file {};
+  BmpInfoHeader info {};
   BLFormatInfo bmpFmt {};
 
   info.win.width = int32_t(w);
   info.win.height = int32_t(h);
   info.win.planes = 1;
-  info.win.compression = BL_BMP_COMPRESSION_RGB;
-  info.win.colorspace = BL_BMP_COLOR_SPACE_DD_RGB;
+  info.win.compression = kCompressionRGB;
+  info.win.colorspace = kColorSpaceDD_RGB;
 
   switch (format) {
     case BL_FORMAT_PRGB32: {
       // NOTE: Version 3 would be okay, but not all tools can read BMPv3.
-      headerSize = BL_BMP_HEADER_SIZE_WIN_V4;
+      headerSize = kHeaderSizeWIN_V4;
       bpl = w * 4;
       bmpFmt.depth = 32;
-      bmpFmt.flags = BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_PREMULTIPLIED;
+      bmpFmt.flags = BLFormatFlags(BL_FORMAT_FLAG_RGBA | BL_FORMAT_FLAG_PREMULTIPLIED);
       bmpFmt.rSize = 8; bmpFmt.rShift = 16;
       bmpFmt.gSize = 8; bmpFmt.gShift = 8;
       bmpFmt.bSize = 8; bmpFmt.bShift = 0;
@@ -673,7 +677,7 @@ static BLResult BL_CDECL blBmpEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
 
     case BL_FORMAT_XRGB32: {
       bpl = w * 3;
-      gap = BLIntOps::alignUpDiff(bpl, 4);
+      gap = IntOps::alignUpDiff(bpl, 4);
       bmpFmt.depth = 24;
       bmpFmt.flags = BL_FORMAT_FLAG_RGB;
       bmpFmt.rSize = 8; bmpFmt.rShift = 16;
@@ -684,7 +688,7 @@ static BLResult BL_CDECL blBmpEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
 
     case BL_FORMAT_A8: {
       bpl = w;
-      gap = BLIntOps::alignUpDiff(bpl, 4);
+      gap = IntOps::alignUpDiff(bpl, 4);
       bmpFmt.depth = 8;
       paletteSize = 256 * 4;
       info.win.colorsUsed = 256;
@@ -703,13 +707,13 @@ static BLResult BL_CDECL blBmpEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
   info.win.imageSize = imageSize;
 
   if (paletteSize == 0) {
-    info.win.rMask = (bmpFmt.rSize ? BLIntOps::nonZeroLsbMask<uint32_t>(bmpFmt.rSize) : uint32_t(0)) << bmpFmt.rShift;
-    info.win.gMask = (bmpFmt.gSize ? BLIntOps::nonZeroLsbMask<uint32_t>(bmpFmt.gSize) : uint32_t(0)) << bmpFmt.gShift;
-    info.win.bMask = (bmpFmt.bSize ? BLIntOps::nonZeroLsbMask<uint32_t>(bmpFmt.bSize) : uint32_t(0)) << bmpFmt.bShift;
-    info.win.aMask = (bmpFmt.aSize ? BLIntOps::nonZeroLsbMask<uint32_t>(bmpFmt.aSize) : uint32_t(0)) << bmpFmt.aShift;
+    info.win.rMask = (bmpFmt.rSize ? IntOps::nonZeroLsbMask<uint32_t>(bmpFmt.rSize) : uint32_t(0)) << bmpFmt.rShift;
+    info.win.gMask = (bmpFmt.gSize ? IntOps::nonZeroLsbMask<uint32_t>(bmpFmt.gSize) : uint32_t(0)) << bmpFmt.gShift;
+    info.win.bMask = (bmpFmt.bSize ? IntOps::nonZeroLsbMask<uint32_t>(bmpFmt.bSize) : uint32_t(0)) << bmpFmt.bShift;
+    info.win.aMask = (bmpFmt.aSize ? IntOps::nonZeroLsbMask<uint32_t>(bmpFmt.aSize) : uint32_t(0)) << bmpFmt.aShift;
 
     if (BL_BYTE_ORDER_NATIVE != BL_BYTE_ORDER_LE)
-      bmpFmt.flags |= BL_FORMAT_FLAG_BYTE_SWAP;
+      bmpFmt.addFlags(BL_FORMAT_FLAG_BYTE_SWAP);
 
     // This should never fail as only a limited subset of possibilities exist
     // that are guaranteed by the implementation.
@@ -759,7 +763,7 @@ static BLResult BL_CDECL blBmpEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
     for (i = h; i; i--) {
       memcpy(dstData, srcData + (i - 1) * srcStride, bpl);
       dstData += bpl;
-      BLMemOps::fillInlineT(dstData, uint8_t(0), gap);
+      MemOps::fillInlineT(dstData, uint8_t(0), gap);
       dstData += gap;
     }
   }
@@ -767,32 +771,32 @@ static BLResult BL_CDECL blBmpEncoderImplWriteFrame(BLImageEncoderImpl* impl, BL
   return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blBmpEncoderImplCreate(BLImageEncoderCore* self) noexcept {
+static BLResult BL_CDECL encoderCreateImpl(BLImageEncoderCore* self) noexcept {
   BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_ENCODER);
-  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLBmpEncoderImpl>(self, info));
+  BL_PROPAGATE(ObjectInternal::allocImplT<BLBmpEncoderImpl>(self, info));
 
   BLBmpEncoderImpl* encoderI = static_cast<BLBmpEncoderImpl*>(self->_d.impl);
-  encoderI->ctor(&blBmpEncoderVirt, &blBmpCodecObject);
-  return blBmpEncoderImplRestart(encoderI);
+  encoderI->ctor(&bmpEncoderVirt, &bmpCodecInstance);
+  return encoderRestartImpl(encoderI);
 }
 
-static BLResult BL_CDECL blBmpEncoderImplDestroy(BLObjectImpl* impl) noexcept {
+static BLResult BL_CDECL encoderDestroyImpl(BLObjectImpl* impl) noexcept {
   BLBmpEncoderImpl* encoderI = static_cast<BLBmpEncoderImpl*>(impl);
 
   encoderI->dtor();
   return blObjectFreeImpl(encoderI);
 }
 
-// BLBmpCodecImpl - Interface
+// bl::Bmp::Codec - Interface
 // ==========================
 
-static BLResult BL_CDECL blBmpCodecImplDestroy(BLObjectImpl* impl) noexcept {
+static BLResult BL_CDECL codecDestroyImpl(BLObjectImpl* impl) noexcept {
   // Built-in codecs are never destroyed.
   blUnused(impl);
   return BL_SUCCESS;
 };
 
-static uint32_t BL_CDECL blBmpCodecImplInspectData(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept {
+static uint32_t BL_CDECL codecInspectDataImpl(const BLImageCodecImpl* impl, const uint8_t* data, size_t size) noexcept {
   blUnused(impl);
 
   // BMP minimum size and signature (BM).
@@ -804,69 +808,73 @@ static uint32_t BL_CDECL blBmpCodecImplInspectData(const BLImageCodecImpl* impl,
     return 1;
 
   // Check whether `data` contains a correct BMP header.
-  uint32_t headerSize = BLMemOps::readU32uLE(data + 14);
-  if (!blBmpCheckHeaderSize(headerSize))
+  uint32_t headerSize = MemOps::readU32uLE(data + 14);
+  if (!checkHeaderSize(headerSize))
     return 0;
 
   return 100;
 }
 
-static BLResult BL_CDECL blBmpCodecImplCreateDecoder(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept {
+static BLResult BL_CDECL codecCreateDecoderImpl(const BLImageCodecImpl* impl, BLImageDecoderCore* dst) noexcept {
   blUnused(impl);
 
   BLImageDecoderCore tmp;
-  BL_PROPAGATE(blBmpDecoderImplCreate(&tmp));
+  BL_PROPAGATE(decoderCreateImpl(&tmp));
   return blImageDecoderAssignMove(dst, &tmp);
 }
 
-static BLResult BL_CDECL blBmpCodecImplCreateEncoder(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept {
+static BLResult BL_CDECL codecCreateEncoderImpl(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) noexcept {
   blUnused(impl);
 
   BLImageEncoderCore tmp;
-  BL_PROPAGATE(blBmpEncoderImplCreate(&tmp));
+  BL_PROPAGATE(encoderCreateImpl(&tmp));
   return blImageEncoderAssignMove(dst, &tmp);
 }
 
-// BLBmpCodecImpl - Runtime Registration
+// bl::Bmp::Codec - Runtime Registration
 // =====================================
 
-void blBmpCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept {
+void bmpCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept {
+  using namespace bl::Bmp;
+
   blUnused(rt);
 
   // Initialize BMP codec.
-  blBmpCodec.virt.base.destroy = blBmpCodecImplDestroy;
-  blBmpCodec.virt.base.getProperty = blObjectImplGetProperty;
-  blBmpCodec.virt.base.setProperty = blObjectImplSetProperty;
-  blBmpCodec.virt.inspectData = blBmpCodecImplInspectData;
-  blBmpCodec.virt.createDecoder = blBmpCodecImplCreateDecoder;
-  blBmpCodec.virt.createEncoder = blBmpCodecImplCreateEncoder;
+  bmpCodec.virt.base.destroy = codecDestroyImpl;
+  bmpCodec.virt.base.getProperty = blObjectImplGetProperty;
+  bmpCodec.virt.base.setProperty = blObjectImplSetProperty;
+  bmpCodec.virt.inspectData = codecInspectDataImpl;
+  bmpCodec.virt.createDecoder = codecCreateDecoderImpl;
+  bmpCodec.virt.createEncoder = codecCreateEncoderImpl;
 
-  blBmpCodec.impl->ctor(&blBmpCodec.virt);
-  blBmpCodec.impl->features =
-    BL_IMAGE_CODEC_FEATURE_READ     |
-    BL_IMAGE_CODEC_FEATURE_WRITE    |
-    BL_IMAGE_CODEC_FEATURE_LOSSLESS ;
-  blBmpCodec.impl->name.dcast().assign("BMP");
-  blBmpCodec.impl->vendor.dcast().assign("Blend2D");
-  blBmpCodec.impl->mimeType.dcast().assign("image/x-bmp");
-  blBmpCodec.impl->extensions.dcast().assign("bmp|ras");
+  bmpCodec.impl->ctor(&bmpCodec.virt);
+  bmpCodec.impl->features = BLImageCodecFeatures(BL_IMAGE_CODEC_FEATURE_READ     |
+                                                 BL_IMAGE_CODEC_FEATURE_WRITE    |
+                                                 BL_IMAGE_CODEC_FEATURE_LOSSLESS);
+  bmpCodec.impl->name.dcast().assign("BMP");
+  bmpCodec.impl->vendor.dcast().assign("Blend2D");
+  bmpCodec.impl->mimeType.dcast().assign("image/x-bmp");
+  bmpCodec.impl->extensions.dcast().assign("bmp|ras");
 
-  blBmpCodecObject._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_CODEC), &blBmpCodec.impl);
+  bmpCodecInstance._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_CODEC), &bmpCodec.impl);
 
   // Initialize BMP decoder virtual functions.
-  blBmpDecoderVirt.base.destroy = blBmpDecoderImplDestroy;
-  blBmpDecoderVirt.base.getProperty = blObjectImplGetProperty;
-  blBmpDecoderVirt.base.setProperty = blObjectImplSetProperty;
-  blBmpDecoderVirt.restart = blBmpDecoderImplRestart;
-  blBmpDecoderVirt.readInfo = blBmpDecoderImplReadInfo;
-  blBmpDecoderVirt.readFrame = blBmpDecoderImplReadFrame;
+  bmpDecoderVirt.base.destroy = decoderDestroyImpl;
+  bmpDecoderVirt.base.getProperty = blObjectImplGetProperty;
+  bmpDecoderVirt.base.setProperty = blObjectImplSetProperty;
+  bmpDecoderVirt.restart = decoderRestartImpl;
+  bmpDecoderVirt.readInfo = decoderReadInfoImpl;
+  bmpDecoderVirt.readFrame = decoderReadFrameImpl;
 
   // Initialize BMP encoder virtual functions.
-  blBmpEncoderVirt.base.destroy = blBmpEncoderImplDestroy;
-  blBmpEncoderVirt.base.getProperty = blObjectImplGetProperty;
-  blBmpEncoderVirt.base.setProperty = blObjectImplSetProperty;
-  blBmpEncoderVirt.restart = blBmpEncoderImplRestart;
-  blBmpEncoderVirt.writeFrame = blBmpEncoderImplWriteFrame;
+  bmpEncoderVirt.base.destroy = encoderDestroyImpl;
+  bmpEncoderVirt.base.getProperty = blObjectImplGetProperty;
+  bmpEncoderVirt.base.setProperty = blObjectImplSetProperty;
+  bmpEncoderVirt.restart = encoderRestartImpl;
+  bmpEncoderVirt.writeFrame = encoderWriteFrameImpl;
 
-  codecs->append(blBmpCodecObject.dcast());
+  codecs->append(bmpCodecInstance.dcast());
 }
+
+} // {Bmp}
+} // {bl}

@@ -183,7 +183,7 @@ static BL_INLINE void blRuntimeInitSystemInfo(BLRuntimeContext* rt) noexcept {
   // especially on archs that have a big register file. In addition, some compilers like GCC/clang will use stack
   // slot for every variable in code, which means that heavily inlined code may need relatively large stack when
   // compiled in debug mode.
-  info.threadStackSize = BLIntOps::alignUp(blMax<uint32_t>(info.threadStackSize, 128u * 1024u), info.allocationGranularity);
+  info.threadStackSize = bl::IntOps::alignUp(blMax<uint32_t>(info.threadStackSize, 128u * 1024u), info.allocationGranularity);
 }
 
 static BL_INLINE void blRuntimeInitOptimizationInfo(BLRuntimeContext* rt) noexcept {

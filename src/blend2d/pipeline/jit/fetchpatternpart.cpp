@@ -13,21 +13,22 @@
 #include "../../pipeline/jit/pipedebug_p.h"
 #include "../../support/intops_p.h"
 
-namespace BLPipeline {
+namespace bl {
+namespace Pipeline {
 namespace JIT {
 
 #define REL_PATTERN(FIELD) BL_OFFSET_OF(FetchData::Pattern, FIELD)
 
-// BLPipeline::JIT::FetchPatternPart - Construction & Destruction
-// ==============================================================
+// bl::Pipeline::JIT::FetchPatternPart - Construction & Destruction
+// ================================================================
 
-FetchPatternPart::FetchPatternPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept
+FetchPatternPart::FetchPatternPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept
   : FetchPart(pc, fetchType, format) {}
 
-// BLPipeline::JIT::FetchSimplePatternPart - Construction & Destruction
-// ====================================================================
+// bl::Pipeline::JIT::FetchSimplePatternPart - Construction & Destruction
+// ======================================================================
 
-FetchSimplePatternPart::FetchSimplePatternPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept
+FetchSimplePatternPart::FetchSimplePatternPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept
   : FetchPatternPart(pc, fetchType, format) {
 
   static const ExtendMode aExtendTable[] = { ExtendMode::kPad, ExtendMode::kRepeat, ExtendMode::kRoR };
@@ -78,15 +79,15 @@ FetchSimplePatternPart::FetchSimplePatternPart(PipeCompiler* pc, FetchType fetch
   }
 
   if (extendX() == ExtendMode::kPad || extendX() == ExtendMode::kRoR) {
-    if (BLIntOps::isPowerOf2(_bpp))
-      _idxShift = uint8_t(BLIntOps::ctz(_bpp));
+    if (IntOps::isPowerOf2(_bpp))
+      _idxShift = uint8_t(IntOps::ctz(_bpp));
   }
 
   JitUtils::resetVarStruct(&f, sizeof(f));
 }
 
-// BLPipeline::JIT::FetchSimplePatternPart - Init & Fini
-// =====================================================
+// bl::Pipeline::JIT::FetchSimplePatternPart - Init & Fini
+// =======================================================
 
 void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   if (isAlignedBlit()) {
@@ -121,7 +122,7 @@ void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
     f->stride       = cc->newIntPtr("f.stride");      // Init only.
     f->ry           = cc->newInt32("f.ry");           // Init only.
-    f->vExtendData  = cc->newStack(sizeof(BLPipeline::FetchData::Pattern::VertExtendData), 16, "f.vExtendData");
+    f->vExtendData  = cc->newStack(sizeof(FetchData::Pattern::VertExtendData), 16, "f.vExtendData");
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     cc->mov(f->y, x86::ptr(pc->_fetchData, REL_PATTERN(simple.ty)));
@@ -138,7 +139,7 @@ void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
     // cc->mov(f->pixelPtrRewindOffset, x86::ptr(pc->_fetchData, REL_PATTERN(simple.pixelPtrRewindOffset)));
 
     // Vertical Extend
-    // ===============
+    // ---------------
     //
     // Vertical extend modes are not hardcoded in the generated pipeline to decrease the number of possible pipeline
     // combinations. This means that the compiled pipeline supports all vertical extend modes. The amount of code
@@ -231,7 +232,7 @@ void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
     }
 
     // Horizontal Extend
-    // =================
+    // -----------------
     //
     // Horizontal extend modes are hardcoded for performance reasons. Every extend mode
     // requires different strategy to make horizontal advancing as fast as possible.
@@ -386,7 +387,7 @@ void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
     }
 
     // Fractional - Fx|Fy|FxFy
-    // =======================
+    // -----------------------
 
     if (isPatternUnaligned()) {
       // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -456,8 +457,8 @@ void FetchSimplePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
 void FetchSimplePatternPart::_finiPart() noexcept {}
 
-// BLPipeline::JIT::FetchSimplePatternPart - Utilities
-// ===================================================
+// bl::Pipeline::JIT::FetchSimplePatternPart - Utilities
+// =====================================================
 
 void FetchSimplePatternPart::swapStrideStopData(VecArray& v) noexcept {
   if (cc->is32Bit())
@@ -466,8 +467,8 @@ void FetchSimplePatternPart::swapStrideStopData(VecArray& v) noexcept {
     pc->v_swap_u64(v, v);
 }
 
-// BLPipeline::JIT::FetchSimplePatternPart - Advance
-// =================================================
+// bl::Pipeline::JIT::FetchSimplePatternPart - Advance
+// ===================================================
 
 void FetchSimplePatternPart::advanceY() noexcept {
   if (isAlignedBlit()) {
@@ -771,8 +772,8 @@ void FetchSimplePatternPart::prefetchAccX() noexcept {
   advanceXByOne();
 }
 
-// BLPipeline::JIT::FetchSimplePatternPart - Fetch
-// ===============================================
+// bl::Pipeline::JIT::FetchSimplePatternPart - Fetch
+// =================================================
 
 void FetchSimplePatternPart::enterN() noexcept {
   if (isAlignedBlit()) {
@@ -1834,12 +1835,12 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             const x86::Vec& reg = p.pc[0];
 
             switch (format()) {
-              case BLInternalFormat::kPRGB32:
-              case BLInternalFormat::kXRGB32: {
+              case FormatExt::kPRGB32:
+              case FormatExt::kXRGB32: {
                 pc->v_loadu_i128_ro(reg, mem);
                 break;
               }
-              case BLInternalFormat::kA8: {
+              case FormatExt::kA8: {
                 pc->v_load_i32(reg, mem);
                 pc->v_interleave_lo_u8(reg, reg, reg);
                 pc->v_interleave_lo_u16(reg, reg, reg);
@@ -1852,13 +1853,13 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             const x86::Vec& uc1 = p.uc[1];
 
             switch (format()) {
-              case BLInternalFormat::kPRGB32:
-              case BLInternalFormat::kXRGB32: {
+              case FormatExt::kPRGB32:
+              case FormatExt::kXRGB32: {
                 pc->v_mov_u8_u16(uc0, mem);
                 pc->v_mov_u8_u16(uc1, mem.cloneAdjusted(8));
                 break;
               }
-              case BLInternalFormat::kA8: {
+              case FormatExt::kA8: {
                 pc->v_load_i32(uc0, mem);
                 pc->v_interleave_lo_u8(uc0, uc0, uc0);
                 pc->v_mov_u8_u16(uc0, uc0);
@@ -1873,8 +1874,8 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           if (blTestFlag(flags, PixelFlags::kPA)) {
             const x86::Vec& reg = p.pa[0];
             switch (format()) {
-              case BLInternalFormat::kPRGB32:
-              case BLInternalFormat::kXRGB32: {
+              case FormatExt::kPRGB32:
+              case FormatExt::kXRGB32: {
                 pc->v_loadu_i128_ro(reg, mem);
                 if (pc->hasSSSE3()) {
                   pc->v_shuffle_i8(reg, reg, pc->simdConst(&ct.pshufb_3xxx2xxx1xxx0xxx_to_zzzzzzzzzzzz3210, Bcst::kNA, reg));
@@ -1886,7 +1887,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
                 }
                 break;
               }
-              case BLInternalFormat::kA8: {
+              case FormatExt::kA8: {
                 pc->v_load_i32(reg, mem);
                 break;
               }
@@ -1895,14 +1896,14 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           else {
             const x86::Vec& reg = p.ua[0];
             switch (format()) {
-              case BLInternalFormat::kPRGB32:
-              case BLInternalFormat::kXRGB32: {
+              case FormatExt::kPRGB32:
+              case FormatExt::kXRGB32: {
                 pc->v_loadu_i128_ro(reg, mem);
                 pc->v_srl_i32(reg, reg, 24);
                 pc->v_packs_i32_i16(reg, reg, reg);
                 break;
               }
-              case BLInternalFormat::kA8: {
+              case FormatExt::kA8: {
                 pc->v_load_i32(reg, mem);
                 pc->v_mov_u8_u16(reg, reg);
                 break;
@@ -1954,10 +1955,10 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
   }
 }
 
-// BLPipeline::JIT::FetchAffinePatternPart - Construction & Destruction
-// ====================================================================
+// bl::Pipeline::JIT::FetchAffinePatternPart - Construction & Destruction
+// ======================================================================
 
-FetchAffinePatternPart::FetchAffinePatternPart(PipeCompiler* pc, FetchType fetchType, BLInternalFormat format) noexcept
+FetchAffinePatternPart::FetchAffinePatternPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept
   : FetchPatternPart(pc, fetchType, format) {
 
   _partFlags |= PipePartFlags::kAdvanceXNeedsDiff;
@@ -1982,12 +1983,12 @@ FetchAffinePatternPart::FetchAffinePatternPart(PipeCompiler* pc, FetchType fetch
 
   JitUtils::resetVarStruct(&f, sizeof(f));
 
-  if (BLIntOps::isPowerOf2(_bpp))
-    _idxShift = uint8_t(BLIntOps::ctz(_bpp));
+  if (IntOps::isPowerOf2(_bpp))
+    _idxShift = uint8_t(IntOps::ctz(_bpp));
 }
 
-// BLPipeline::JIT::FetchAffinePatternPart - Init & Fini
-// =====================================================
+// bl::Pipeline::JIT::FetchAffinePatternPart - Init & Fini
+// =======================================================
 
 void FetchAffinePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2064,8 +2065,8 @@ void FetchAffinePatternPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
 void FetchAffinePatternPart::_finiPart() noexcept {}
 
-// BLPipeline::JIT::FetchAffinePatternPart - Advance
-// =================================================
+// bl::Pipeline::JIT::FetchAffinePatternPart - Advance
+// ===================================================
 
 void FetchAffinePatternPart::advanceY() noexcept {
   pc->v_add_i64(f->tx_ty, f->tx_ty, f->yx_yy);
@@ -2210,8 +2211,8 @@ void FetchAffinePatternPart::clampVIdx32(x86::Xmm& dst, const x86::Xmm& src, Cla
   }
 }
 
-// BLPipeline::JIT::FetchAffinePatternPart - Fetch
-// ===============================================
+// bl::Pipeline::JIT::FetchAffinePatternPart - Fetch
+// =================================================
 
 void FetchAffinePatternPart::prefetch1() noexcept {
   x86::Xmm vIdx = f->vIdx;
@@ -2567,6 +2568,7 @@ void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
 }
 
 } // {JIT}
-} // {BLPipeline}
+} // {Pipeline}
+} // {bl}
 
 #endif

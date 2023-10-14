@@ -24,13 +24,22 @@ BL_DEFINE_ENUM(BLPathCmd) {
   BL_PATH_CMD_ON = 1,
   //! Quad-to control point.
   BL_PATH_CMD_QUAD = 2,
+  //! Conic-to control point
+  BL_PATH_CMD_CONIC = 3,
   //! Cubic-to control point (always used as a pair of commands).
-  BL_PATH_CMD_CUBIC = 3,
+  BL_PATH_CMD_CUBIC = 4,
   //! Close path.
-  BL_PATH_CMD_CLOSE = 4,
+  BL_PATH_CMD_CLOSE = 5,
+
+  //! Conic weight.
+  //!
+  //! \note This is not a point. This is a pair of values from which only the first (x) is used to represent weight
+  //! as used by conic curve. The other value (y) is always set to NaN by Blend2D, but can be arbitrary as it has
+  //! no meaning.
+  BL_PATH_CMD_WEIGHT = 6,
 
   //! Maximum value of `BLPathCmd`.
-  BL_PATH_CMD_MAX_VALUE = 4
+  BL_PATH_CMD_MAX_VALUE = 6
 
   BL_FORCE_ENUM_UINT32(BL_PATH_CMD)
 };
@@ -51,8 +60,10 @@ BL_DEFINE_ENUM(BLPathFlags) {
   BL_PATH_FLAG_MULTIPLE = 0x00000002u,
   //! Path contains one or more quad curves.
   BL_PATH_FLAG_QUADS = 0x00000004u,
+  //! Path contains one or more conic curves.
+  BL_PATH_FLAG_CONICS = 0x00000008u,
   //! Path contains one or more cubic curves.
-  BL_PATH_FLAG_CUBICS = 0x00000008u,
+  BL_PATH_FLAG_CUBICS = 0x00000010u,
   //! Path is invalid.
   BL_PATH_FLAG_INVALID = 0x40000000u,
   //! Flags are dirty (not reflecting the current status).
@@ -272,6 +283,7 @@ BL_API BLResult BL_CDECL blPathMoveTo(BLPathCore* self, double x0, double y0) BL
 BL_API BLResult BL_CDECL blPathLineTo(BLPathCore* self, double x1, double y1) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathPolyTo(BLPathCore* self, const BLPoint* poly, size_t count) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathQuadTo(BLPathCore* self, double x1, double y1, double x2, double y2) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blPathConicTo(BLPathCore* self, double x1, double y1, double x2, double y2, double w) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathCubicTo(BLPathCore* self, double x1, double y1, double x2, double y2, double x3, double y3) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathSmoothQuadTo(BLPathCore* self, double x2, double y2) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blPathSmoothCubicTo(BLPathCore* self, double x2, double y2, double x3, double y3) BL_NOEXCEPT_C;
@@ -441,6 +453,36 @@ public:
 
 BL_DIAGNOSTIC_POP
 
+namespace BLInternal {
+
+template<typename T>
+static BL_INLINE size_t pathSegmentCount(const T&) noexcept { return T::kVertexCount; }
+template<typename T, typename... Args>
+static BL_INLINE size_t pathSegmentCount(const T&, Args&&... args) noexcept { return T::kVertexCount + pathSegmentCount(std::forward<Args>(args)...); }
+
+template<typename T> void storePathSegmentCmd(uint8_t* cmd, const T& segment) noexcept = delete;
+template<typename T> void storePathSegmentVtx(BLPoint* vtx, const T& segment) noexcept = delete;
+
+template<typename T>
+static BL_INLINE void storePathSegmentsCmd(uint8_t* cmd, const T& segment) noexcept { storePathSegmentCmd<T>(cmd, segment); }
+
+template<typename T, typename... Args>
+static BL_INLINE void storePathSegmentsCmd(uint8_t* cmd, const T& segment, Args&&... args) noexcept {
+  storePathSegmentCmd<T>(cmd, segment);
+  storePathSegmentsCmd(cmd + T::kVertexCount, std::forward<Args>(args)...);
+}
+
+template<typename T>
+static BL_INLINE void storePathSegmentsVtx(BLPoint* vtx, const T& segment) noexcept { storePathSegmentVtx<T>(vtx, segment); }
+
+template<typename T, typename... Args>
+static BL_INLINE void storePathSegmentsVtx(BLPoint* vtx, const T& segment, Args&&... args) noexcept {
+  storePathSegmentVtx<T>(vtx, segment);
+  storePathSegmentsVtx(vtx + T::kVertexCount, std::forward<Args>(args)...);
+}
+
+} // {BLInternal}
+
 //! 2D vector path [C++ API].
 class BLPath /* final */ : public BLPathCore {
 public:
@@ -538,9 +580,17 @@ public:
     return blPathModifyOp(this, op, n, cmdDataOut, vtxDataOut);
   }
 
-  BL_INLINE_NODEBUG BLResult assign(BLPathCore&& other) noexcept { return blPathAssignMove(this, &other);  }
-  BL_INLINE_NODEBUG BLResult assign(const BLPathCore& other) noexcept { return blPathAssignWeak(this, &other);  }
-  BL_INLINE_NODEBUG BLResult assignDeep(const BLPathCore& other) noexcept { return blPathAssignDeep(this, &other); }
+  BL_INLINE_NODEBUG BLResult assign(BLPathCore&& other) noexcept {
+    return blPathAssignMove(this, &other);
+  }
+
+  BL_INLINE_NODEBUG BLResult assign(const BLPathCore& other) noexcept {
+    return blPathAssignWeak(this, &other);
+  }
+
+  BL_INLINE_NODEBUG BLResult assignDeep(const BLPathCore& other) noexcept {
+    return blPathAssignDeep(this, &other);
+  }
 
   //! Sets vertex at `index` to `cmd` and `pt`.
   //!
@@ -613,6 +663,14 @@ public:
   //!   - https://www.w3.org/TR/SVG/paths.html#PathDataQuadraticBezierCommands
   BL_INLINE_NODEBUG BLResult quadTo(double x1, double y1, double x2, double y2) noexcept {
     return blPathQuadTo(this, x1, y1, x2, y2);
+  }
+
+  BL_INLINE BLResult conicTo(const BLPoint& p1, const BLPoint& p2, double w) noexcept {
+    return blPathConicTo(this, p1.x, p1.y, p2.x, p2.y, w);
+  }
+
+  BL_INLINE BLResult conicTo(double x1, double y1, double x2, double y2, double w) noexcept {
+    return blPathConicTo(this, x1, y1, x2, y2, w);
   }
 
   //! Adds a cubic curve to `p1`, `p2`, `p3`.
@@ -739,7 +797,58 @@ public:
 
   //! \}
 
+  //! \name Adding Multiple Segments
+  //!
+  //! Adding multiple segments API was designed to provide high-performance path building in case that the user knows
+  //! the segments that will be added to the path in advance.
+  //!
+  //! \{
+
+  struct MoveTo {
+    double x, y;
+
+    static constexpr uint32_t kVertexCount = 1;
+  };
+
+  struct LineTo {
+    double x, y;
+
+    static constexpr uint32_t kVertexCount = 1;
+  };
+
+  struct QuadTo {
+    double x0, y0, x1, y1;
+
+    static constexpr uint32_t kVertexCount = 2;
+  };
+
+  struct CubicTo {
+    double x0, y0, x1, y1, x2, y2;
+
+    static constexpr uint32_t kVertexCount = 3;
+  };
+
+  template<typename... Args>
+  BL_INLINE BLResult addSegments(Args&&... args) noexcept {
+    uint8_t* cmdPtr;
+    BLPoint* vtxPtr;
+
+    size_t kVertexCount = BLInternal::pathSegmentCount(std::forward<Args>(args)...);
+    BL_PROPAGATE(modifyOp(BL_MODIFY_OP_APPEND_GROW, kVertexCount, &cmdPtr, &vtxPtr));
+
+    BLInternal::storePathSegmentsCmd(cmdPtr, std::forward<Args>(args)...);
+    BLInternal::storePathSegmentsVtx(vtxPtr, std::forward<Args>(args)...);
+
+    return BL_SUCCESS;
+  }
+
+  //! \}
+
   //! \name Adding Figures
+  //!
+  //! Adding a figure means starting with a move-to segment. For example `addBox()` would start a new figure
+  //! by adding `BL_PATH_CMD_MOVE_TO` segment, and then by adding 3 lines, and finally a close command.
+  //!
   //! \{
 
   //! Adds a closed rectangle to the path specified by `box`.
@@ -797,7 +906,7 @@ public:
     return addGeometry(BL_GEOMETRY_TYPE_ELLIPSE, &ellipse, &transform, dir);
   }
 
-  //! Adds a closed rounded ractangle to the path.
+  //! Adds a closed rounded rectangle to the path.
   BL_INLINE_NODEBUG BLResult addRoundRect(const BLRoundRect& rr, BLGeometryDirection dir = BL_GEOMETRY_DIRECTION_CW) noexcept {
     return addGeometry(BL_GEOMETRY_TYPE_ROUND_RECT, &rr, nullptr, dir);
   }
@@ -1189,6 +1298,56 @@ public:
 
   //! \}
 };
+
+namespace BLInternal {
+
+template<>
+BL_INLINE void storePathSegmentCmd(uint8_t* cmd, const BLPath::MoveTo&) noexcept {
+  cmd[0] = uint8_t(BL_PATH_CMD_MOVE);
+}
+
+template<>
+BL_INLINE void storePathSegmentVtx(BLPoint* vtx, const BLPath::MoveTo& segment) noexcept {
+  vtx[0] = BLPoint(segment.x, segment.y);
+}
+
+template<>
+BL_INLINE void storePathSegmentCmd(uint8_t* cmd, const BLPath::LineTo&) noexcept {
+  cmd[0] = uint8_t(BL_PATH_CMD_ON);
+}
+
+template<>
+BL_INLINE void storePathSegmentVtx(BLPoint* vtx, const BLPath::LineTo& segment) noexcept {
+  vtx[0] = BLPoint(segment.x, segment.y);
+}
+
+template<>
+BL_INLINE void storePathSegmentCmd(uint8_t* cmd, const BLPath::QuadTo&) noexcept {
+  cmd[0] = uint8_t(BL_PATH_CMD_QUAD);
+  cmd[1] = uint8_t(BL_PATH_CMD_ON);
+}
+
+template<>
+BL_INLINE void storePathSegmentVtx(BLPoint* vtx, const BLPath::QuadTo& segment) noexcept {
+  vtx[0] = BLPoint(segment.x0, segment.y0);
+  vtx[1] = BLPoint(segment.x1, segment.y1);
+}
+
+template<>
+BL_INLINE void storePathSegmentCmd(uint8_t* cmd, const BLPath::CubicTo&) noexcept {
+  cmd[0] = uint8_t(BL_PATH_CMD_CUBIC);
+  cmd[1] = uint8_t(BL_PATH_CMD_CUBIC);
+  cmd[2] = uint8_t(BL_PATH_CMD_ON);
+}
+
+template<>
+BL_INLINE void storePathSegmentVtx(BLPoint* vtx, const BLPath::CubicTo& segment) noexcept {
+  vtx[0] = BLPoint(segment.x0, segment.y0);
+  vtx[1] = BLPoint(segment.x1, segment.y1);
+  vtx[2] = BLPoint(segment.x2, segment.y2);
+}
+
+} // {BLInternal}
 
 #endif
 //! \}

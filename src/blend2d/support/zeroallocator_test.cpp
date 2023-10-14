@@ -14,10 +14,11 @@
 #include "../support/traits_p.h"
 #include "../support/zeroallocator_p.h"
 
-// BLZeroAllocator - Tests
-// =======================
+// bl::ZeroAllocator - Tests
+// =========================
 
-namespace BLZeroAllocatorTests {
+namespace bl {
+namespace Tests {
 
 // A helper class to verify that BLZeroAllocator doesn't return addresses that overlap.
 class ZeroAllocatorWrapper {
@@ -35,11 +36,11 @@ public:
   };
 
   // Based on BLZeroAllocator::Block, serves our purpose well...
-  class Record : public BLArenaTreeNode<Record>,
+  class Record : public ArenaTreeNode<Record>,
                  public Range {
   public:
     BL_INLINE Record(uint8_t* addr, size_t size)
-      : BLArenaTreeNode<Record>(),
+      : ArenaTreeNode<Record>(),
         Range(addr, size) {}
 
     BL_INLINE bool operator<(const Record& other) const noexcept { return addr < other.addr; }
@@ -49,7 +50,7 @@ public:
     BL_INLINE bool operator>(const uint8_t* key) const noexcept { return addr > key; }
   };
 
-  BLArenaTree<Record> _records;
+  ArenaTree<Record> _records;
 
   void _insert(void* p_, size_t size) noexcept {
     uint8_t* p = static_cast<uint8_t*>(p_);
@@ -172,6 +173,7 @@ UNIT(zero_allocator, BL_TEST_GROUP_CORE_UTILITIES) {
   free(ptrArray);
 }
 
-} // {BLZeroAllocatorTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

@@ -14,10 +14,11 @@
 #include "string_p.h"
 #include "var_p.h"
 
-// BLVar - Tests
-// =============
+// bl::Var - Tests
+// ===============
 
-namespace BLVarTests {
+namespace bl {
+namespace Tests {
 
 UNIT(var_basic_types, BL_TEST_GROUP_CORE_OBJECT) {
   INFO("Verifying null value functionality");
@@ -91,8 +92,8 @@ UNIT(var_basic_types, BL_TEST_GROUP_CORE_OBJECT) {
   {
     EXPECT_EQ(BLVar(0.0f).type(), BL_OBJECT_TYPE_DOUBLE);
     EXPECT_EQ(BLVar(0.0).type(), BL_OBJECT_TYPE_DOUBLE);
-    EXPECT_EQ(BLVar(blNaN<float>()).type(), BL_OBJECT_TYPE_DOUBLE);
-    EXPECT_EQ(BLVar(blNaN<double>()).type(), BL_OBJECT_TYPE_DOUBLE);
+    EXPECT_EQ(BLVar(Math::nan<float>()).type(), BL_OBJECT_TYPE_DOUBLE);
+    EXPECT_EQ(BLVar(Math::nan<double>()).type(), BL_OBJECT_TYPE_DOUBLE);
 
     EXPECT_EQ(BLVar(float(0)), float(0));
     EXPECT_EQ(BLVar(float(0.5)), float(0.5));
@@ -106,7 +107,7 @@ UNIT(var_basic_types, BL_TEST_GROUP_CORE_OBJECT) {
     EXPECT_TRUE(BLVar(0).toBool(&b) == BL_SUCCESS && b == false);
     EXPECT_TRUE(BLVar(1).toBool(&b) == BL_SUCCESS && b == true);
     EXPECT_TRUE(BLVar(0.0).toBool(&b) == BL_SUCCESS && b == false);
-    EXPECT_TRUE(BLVar(blNaN<double>()).toBool(&b) == BL_SUCCESS && b == false);
+    EXPECT_TRUE(BLVar(Math::nan<double>()).toBool(&b) == BL_SUCCESS && b == false);
     EXPECT_TRUE(BLVar(1.0).toBool(&b) == BL_SUCCESS && b == true);
     EXPECT_TRUE(BLVar(123456.0).toBool(&b) == BL_SUCCESS && b == true);
     EXPECT_TRUE(BLVar(-123456.0).toBool(&b) == BL_SUCCESS && b == true);
@@ -117,7 +118,7 @@ UNIT(var_basic_types, BL_TEST_GROUP_CORE_OBJECT) {
     EXPECT_TRUE(BLVar(INT64_MIN).toInt64(&i64) == BL_SUCCESS && i64 == INT64_MIN);
     EXPECT_TRUE(BLVar(INT64_MAX).toInt64(&i64) == BL_SUCCESS && i64 == INT64_MAX);
     EXPECT_TRUE(BLVar(0.0).toInt64(&i64) == BL_SUCCESS && i64 == 0);
-    EXPECT_TRUE(BLVar(blNaN<double>()).toInt64(&i64) == BL_ERROR_INVALID_CONVERSION && i64 == 0);
+    EXPECT_TRUE(BLVar(Math::nan<double>()).toInt64(&i64) == BL_ERROR_INVALID_CONVERSION && i64 == 0);
     EXPECT_TRUE(BLVar(1.0).toInt64(&i64) == BL_SUCCESS && i64 == 1);
     EXPECT_TRUE(BLVar(123456.0).toInt64(&i64) == BL_SUCCESS && i64 == 123456);
     EXPECT_TRUE(BLVar(-123456.0).toInt64(&i64) == BL_SUCCESS && i64 == -123456);
@@ -130,7 +131,7 @@ UNIT(var_basic_types, BL_TEST_GROUP_CORE_OBJECT) {
     EXPECT_TRUE(BLVar(INT64_MIN).toUInt64(&u64) == BL_ERROR_OVERFLOW && u64 == 0);
     EXPECT_TRUE(BLVar(INT64_MAX).toUInt64(&u64) == BL_SUCCESS && u64 == uint64_t(INT64_MAX));
     EXPECT_TRUE(BLVar(0.0).toUInt64(&u64) == BL_SUCCESS && u64 == 0);
-    EXPECT_TRUE(BLVar(blNaN<double>()).toUInt64(&u64) == BL_ERROR_INVALID_CONVERSION && u64 == 0);
+    EXPECT_TRUE(BLVar(Math::nan<double>()).toUInt64(&u64) == BL_ERROR_INVALID_CONVERSION && u64 == 0);
     EXPECT_TRUE(BLVar(1.0).toUInt64(&u64) == BL_SUCCESS && u64 == 1);
     EXPECT_TRUE(BLVar(123456.0).toUInt64(&u64) == BL_SUCCESS && u64 == 123456);
     EXPECT_TRUE(BLVar(-123456.0).toUInt64(&u64) == BL_ERROR_OVERFLOW && u64 == 0);
@@ -146,7 +147,7 @@ UNIT(var_basic_types, BL_TEST_GROUP_CORE_OBJECT) {
     EXPECT_TRUE(BLVar(1u).toDouble(&f64) == BL_SUCCESS && f64 == 1.0);
     EXPECT_TRUE(BLVar(0.0).toDouble(&f64) == BL_SUCCESS && f64 == 0.0);
     EXPECT_TRUE(BLVar(1.0).toDouble(&f64) == BL_SUCCESS && f64 == 1.0);
-    EXPECT_TRUE(BLVar(blNaN<double>()).toDouble(&f64) == BL_SUCCESS && blIsNaN(f64));
+    EXPECT_TRUE(BLVar(Math::nan<double>()).toDouble(&f64) == BL_SUCCESS && Math::isNaN(f64));
   }
 }
 
@@ -225,6 +226,7 @@ UNIT(var_styles, BL_TEST_GROUP_CORE_OBJECT) {
   }
 }
 
-} // {BLVarTests}
+} // {Tests}
+} // {bl}
 
 #endif // BL_TEST

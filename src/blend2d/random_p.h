@@ -13,7 +13,8 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace BLRandomPrivate {
+namespace bl {
+namespace RandomInternal {
 
 //! \name Constants
 //! \{
@@ -107,7 +108,8 @@ static BL_INLINE double nextDouble(BLRandom* self) noexcept {
 
 //! \}
 
-} // {BLRandomPrivate}
+} // {RandomInternal}
+} // {bl}
 
 //! \}
 //! \endcond

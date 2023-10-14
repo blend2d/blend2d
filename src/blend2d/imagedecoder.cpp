@@ -8,17 +8,19 @@
 #include "object_p.h"
 #include "runtime_p.h"
 
-// BLImageDecoder - Globals
-// ========================
+// bl::ImageDecoder - Globals
+// ==========================
 
-namespace BLImageDecoderPrivate {
+namespace bl {
+namespace ImageDecoderInternal {
 
 static BLObjectEternalVirtualImpl<BLImageDecoderImpl, BLImageDecoderVirt> defaultDecoder;
 
-} // {BLImageDecoderPrivate}
+} // {ImageDecoderInternal}
+} // {bl}
 
-// BLImageDecoder - API - Init & Destroy
-// =====================================
+// bl::ImageDecoder - API - Init & Destroy
+// =======================================
 
 BL_API_IMPL BLResult blImageDecoderInit(BLImageDecoderCore* self) noexcept {
   self->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE_DECODER]._d;
@@ -43,20 +45,20 @@ BL_API_IMPL BLResult blImageDecoderInitWeak(BLImageDecoderCore* self, const BLIm
 }
 
 BL_API_IMPL BLResult blImageDecoderDestroy(BLImageDecoderCore* self) noexcept {
-  return BLObjectPrivate::releaseVirtualInstance(self);
+  return bl::ObjectInternal::releaseVirtualInstance(self);
 }
 
-// BLImageDecoder - API - Reset
-// ============================
+// bl::ImageDecoder - API - Reset
+// ==============================
 
 BL_API_IMPL BLResult blImageDecoderReset(BLImageDecoderCore* self) noexcept {
   BL_ASSERT(self->_d.isImageDecoder());
 
-  return BLObjectPrivate::replaceVirtualInstance(self, static_cast<BLImageDecoderCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_DECODER]));
+  return bl::ObjectInternal::replaceVirtualInstance(self, static_cast<BLImageDecoderCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_DECODER]));
 }
 
-// BLImageDecoder - API - Assign
-// =============================
+// bl::ImageDecoder - API - Assign
+// ===============================
 
 BL_API_IMPL BLResult blImageDecoderAssignMove(BLImageDecoderCore* self, BLImageDecoderCore* other) noexcept {
   BL_ASSERT(self->_d.isImageDecoder());
@@ -64,18 +66,18 @@ BL_API_IMPL BLResult blImageDecoderAssignMove(BLImageDecoderCore* self, BLImageD
 
   BLImageDecoderCore tmp = *other;
   other->_d = blObjectDefaults[BL_OBJECT_TYPE_IMAGE_DECODER]._d;
-  return BLObjectPrivate::replaceVirtualInstance(self, &tmp);
+  return bl::ObjectInternal::replaceVirtualInstance(self, &tmp);
 }
 
 BL_API_IMPL BLResult blImageDecoderAssignWeak(BLImageDecoderCore* self, const BLImageDecoderCore* other) noexcept {
   BL_ASSERT(self->_d.isImageDecoder());
   BL_ASSERT(other->_d.isImageDecoder());
 
-  return BLObjectPrivate::assignVirtualInstance(self, other);
+  return bl::ObjectInternal::assignVirtualInstance(self, other);
 }
 
-// BLImageDecoder - API - Interface
-// ================================
+// bl::ImageDecoder - API - Interface
+// ==================================
 
 BL_API_IMPL BLResult blImageDecoderRestart(BLImageDecoderCore* self) noexcept {
   BL_ASSERT(self->_d.isImageDecoder());
@@ -98,8 +100,8 @@ BL_API_IMPL BLResult blImageDecoderReadFrame(BLImageDecoderCore* self, BLImageCo
   return selfI->virt->readFrame(selfI, imageOut, data, size);
 }
 
-// BLImageDecoder - Virtual Functions (Null)
-// =========================================
+// bl::ImageDecoder - Virtual Functions (Null)
+// ===========================================
 
 static BLResult BL_CDECL blImageDecoderImplDestroy(BLObjectImpl* impl) noexcept {
   blUnused(impl);
@@ -121,11 +123,11 @@ static BLResult BL_CDECL blImageDecoderImplReadFrame(BLImageDecoderImpl* impl, B
   return BL_ERROR_INVALID_STATE;
 }
 
-// BLImageDecoder - Runtime Registration
-// =====================================
+// bl::ImageDecoder - Runtime Registration
+// =======================================
 
 void blImageDecoderRtInit(BLRuntimeContext* rt) noexcept {
-  using namespace BLImageDecoderPrivate;
+  using namespace bl::ImageDecoderInternal;
 
   blUnused(rt);
 

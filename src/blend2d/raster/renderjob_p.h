@@ -20,7 +20,8 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace BLRasterEngine {
+namespace bl {
+namespace RasterEngine {
 
 enum class RenderJobType : uint8_t {
   kNone = 0,
@@ -216,7 +217,8 @@ struct RenderJob_TextOp : public RenderJob_BaseOp {
   BL_INLINE_NODEBUG const BLGlyphBuffer& glyphBuffer() const noexcept { return _glyphBuffer.dcast(); }
 };
 
-} // {BLRasterEngine}
+} // {RasterEngine}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -5,295 +5,81 @@
 
 #include "api-build_p.h"
 #include "imagescale_p.h"
-#include "math_p.h"
 #include "format_p.h"
 #include "geometry_p.h"
 #include "rgba_p.h"
 #include "runtime_p.h"
+#include "support/math_p.h"
 #include "support/memops_p.h"
 #include "support/ptrops_p.h"
 #include "support/scopedbuffer_p.h"
 
-// BLImageScale - Globals
-// ======================
+namespace bl {
 
-static constexpr const BLImageScaleOptions blImageScaleOptionsNone = {
-  nullptr,   // UserFunc.
-  nullptr,   // UserData.
-  2.0,       // Radius.
-  {{
-    1.0 / 3.0, // Mitchell B.
-    1.0 / 3.0, // Mitchell C.
-    0.0        // Reserved.
-  }}
+typedef void (BL_CDECL* ImageScaleFilterFunc)(double* dst, const double* tArray, size_t n) BL_NOEXCEPT;
+
+// bl::ImageScale - Ops
+// ====================
+
+struct ImageScaleOps {
+  BLResult (BL_CDECL* weights)(ImageScaleContext::Data* d, uint32_t dir, ImageScaleFilterFunc filterFunc) BL_NOEXCEPT;
+  void (BL_CDECL* horz[BL_FORMAT_MAX_VALUE + 1])(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) BL_NOEXCEPT;
+  void (BL_CDECL* vert[BL_FORMAT_MAX_VALUE + 1])(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) BL_NOEXCEPT;
 };
+static ImageScaleOps imageScaleOps;
 
-// BLImageScale - Ops
-// ==================
+// bl::ImageScale - Filter Implementations
+// =======================================
 
-struct BLImageScaleOps {
-  BLResult (BL_CDECL* weights)(BLImageScaleContext::Data* d, uint32_t dir, BLImageScaleUserFunc func, const void* data) BL_NOEXCEPT;
-  void (BL_CDECL* horz[BL_FORMAT_MAX_VALUE + 1])(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) BL_NOEXCEPT;
-  void (BL_CDECL* vert[BL_FORMAT_MAX_VALUE + 1])(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) BL_NOEXCEPT;
-};
-static BLImageScaleOps imageScaleOps;
-
-// BLImageScale - BuiltInParams
-// ============================
-
-// Data needed by some functions that take additional parameters.
-struct BLImageScaleBuiltInParams {
-  double radius;
-
-  struct Mitchell {
-    double p0, p2, p3;
-    double q0, q1, q2, q3;
-  } mitchell;
-
-  BL_INLINE void initMitchell(double b, double c) noexcept {
-    constexpr double k1Div3 = 1.0 / 3.0;
-    constexpr double k1Div6 = 1.0 / 6.0;
-    constexpr double k4Div3 = 4.0 / 3.0;
-
-    mitchell.p0 =  1.0 - k1Div3 * b;
-    mitchell.p2 = -3.0 + 2.0    * b + c;
-    mitchell.p3 =  2.0 - 1.5    * b - c;
-
-    mitchell.q0 =  k4Div3       * b + c * 4.0;
-    mitchell.q1 = -2.0          * b - c * 8.0;
-    mitchell.q2 =                 b + c * 5.0;
-    mitchell.q3 = -k1Div6       * b - c;
-  }
-};
-
-// BLImageScale - Utilities
-// ========================
-
-// Calculates a Bessel function of first kind of order `n`.
-//
-// Adapted for use in AGG library by Andy Wilk <castor.vulgaris@gmail.com>
-static BL_INLINE double blBessel(double x, int n) noexcept {
-  double d = 1e-6;
-  double b0 = 0.0;
-  double b1 = 0.0;
-
-  if (blAbs(x) <= d)
-    return n != 0 ? 0.0 : 1.0;
-
-  // Set up a starting order for recurrence.
-  int m1 = blAbs(x) > 5.0 ? int(blAbs(1.4 * x + 60.0 / x)) : int(blAbs(x) + 6);
-  int m2 = blMax(int(blAbs(x)) / 4 + 2 + n, m1);
-
-  for (;;) {
-    double c2 = blEpsilon<double>();
-    double c3 = 0.0;
-    double c4 = 0.0;
-
-    int m8 = m2 & 1;
-    for (int i = 1, iEnd = m2 - 1; i < iEnd; i++) {
-      double c6 = 2 * (m2 - i) * c2 / x - c3;
-      c3 = c2;
-      c2 = c6;
-
-      if (m2 - i - 1 == n)
-        b1 = c6;
-
-      m8 ^= 1;
-      if (m8)
-        c4 += c6 * 2.0;
-    }
-
-    double c6 = 2.0 * c2 / x - c3;
-    if (n == 0)
-      b1 = c6;
-
-    c4 += c6;
-    b1 /= c4;
-
-    if (blAbs(b1 - b0) < d)
-      return b1;
-
-    b0 = b1;
-    m2 += 3;
-  }
-}
-
-static BL_INLINE double blSinXDivX(double x) noexcept {
-  return blSin(x) / x;
-}
-
-static BL_INLINE double blLanczos(double x, double y) noexcept {
-  return blSinXDivX(x) * blSinXDivX(y);
-}
-
-static BL_INLINE double blBlackman(double x, double y) noexcept {
-  return blSinXDivX(x) * (0.42 + 0.5 * blCos(y) + 0.08 * blCos(y * 2.0));
-}
-
-// BLImageScale - Functions
-// ========================
-
-static BLResult BL_CDECL blImageScaleNearestFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  blUnused(data);
-
+static void BL_CDECL imageScaleNearestFilter(double* dst, const double* tArray, size_t n) noexcept {
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
     dst[i] = t <= 0.5 ? 1.0 : 0.0;
   }
-
-  return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blImageScaleBilinearFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  blUnused(data);
-
+static void BL_CDECL imageScaleBilinearFilter(double* dst, const double* tArray, size_t n) noexcept {
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
     dst[i] = t < 1.0 ? 1.0 - t : 0.0;
   }
-
-  return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blImageScaleBicubicFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  blUnused(data);
+static void BL_CDECL imageScaleBicubicFilter(double* dst, const double* tArray, size_t n) noexcept {
   constexpr double k2Div3 = 2.0 / 3.0;
 
   // 0.5t^3 - t^2 + 2/3 == (0.5t - 1.0) t^2 + 2/3
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
-    dst[i] = t < 1.0 ? (t * 0.5 - 1.0) * blSquare(t) + k2Div3 :
-             t < 2.0 ? blPow3(2.0 - t) / 6.0 : 0.0;
+    dst[i] = t < 1.0 ? (t * 0.5 - 1.0) * Math::square(t) + k2Div3 :
+             t < 2.0 ? Math::cube(2.0 - t) / 6.0 : 0.0;
   }
-
-  return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blImageScaleBellFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  blUnused(data);
+static BL_INLINE double lanczos(double x, double y) noexcept {
+  double sin_x = Math::sin(x);
+  double sin_y = Math::sin(y);
+
+  return (sin_x * sin_y) / (x * y);
+}
+
+static void BL_CDECL imageScaleLanczosFilter(double* dst, const double* tArray, size_t n) noexcept {
+  constexpr double r = 2.0;
+  constexpr double x = Math::kPI;
+  constexpr double y = Math::kPI_DIV_2;
 
   for (size_t i = 0; i < n; i++) {
     double t = tArray[i];
-    dst[i] = t < 0.5 ? 0.75 - blSquare(t) :
-             t < 1.5 ? 0.50 * blSquare(t - 1.5) : 0.0;
+    dst[i] = t == 0.0 ? 1.0 : t <= r ? lanczos(t * x, t * y) : 0.0;
   }
-
-  return BL_SUCCESS;
 }
 
-static BLResult BL_CDECL blImageScaleGaussFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  blUnused(data);
-  constexpr double x = 0.7978845608; // sqrt(2 / PI);
+// bl::ImageScale - Weights
+// ========================
 
-  for (size_t i = 0; i < n; i++) {
-    double t = tArray[i];
-    dst[i] = t <= 2.0 ? exp(blSquare(t) * -2.0) * x : 0.0;
-  }
-
-  return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blImageScaleHermiteFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  blUnused(data);
-
-  for (size_t i = 0; i < n; i++) {
-    double t = tArray[i];
-    dst[i] = t < 1.0 ? (2.0 * t - 3.0) * blSquare(t) + 1.0 : 0.0;
-  }
-
-  return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blImageScaleHanningFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  blUnused(data);
-
-  for (size_t i = 0; i < n; i++) {
-    double t = tArray[i];
-    dst[i] = t <= 1.0 ? 0.5 + 0.5 * blCos(t * BL_M_PI) : 0.0;
-  }
-
-  return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blImageScaleCatromFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  blUnused(data);
-
-  for (size_t i = 0; i < n; i++) {
-    double t = tArray[i];
-    dst[i] = t < 1.0 ? 0.5 * (2.0 + t * t * (t * 3.0 - 5.0)) :
-             t < 2.0 ? 0.5 * (4.0 + t * (t * (5.0 - t) - 8.0)) : 0.0;
-  }
-
-  return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blImageScaleBesselFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  blUnused(data);
-  constexpr double x = BL_M_PI * 0.25;
-
-  for (size_t i = 0; i < n; i++) {
-    double t = tArray[i];
-    dst[i] = t == 0.0 ? x : t <= 3.2383 ? blBessel(t * BL_M_PI, 1) / (2.0 * t) : 0.0;
-  }
-
-  return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blImageScaleSincFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  const double r = static_cast<const BLImageScaleBuiltInParams*>(data)->radius;
-
-  for (size_t i = 0; i < n; i++) {
-    double t = tArray[i];
-    dst[i] = t == 0.0 ? 1.0 : t <= r ? blSinXDivX(t * BL_M_PI) : 0.0;
-  }
-
-  return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blImageScaleLanczosFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  const double r = static_cast<const BLImageScaleBuiltInParams*>(data)->radius;
-  const double x = BL_M_PI;
-  const double y = BL_M_PI / r;
-
-  for (size_t i = 0; i < n; i++) {
-    double t = tArray[i];
-    dst[i] = t == 0.0 ? 1.0 : t <= r ? blLanczos(t * x, t * y) : 0.0;
-  }
-
-  return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blImageScaleBlackmanFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  const double r = static_cast<const BLImageScaleBuiltInParams*>(data)->radius;
-  const double x = BL_M_PI;
-  const double y = BL_M_PI / r;
-
-  for (size_t i = 0; i < n; i++) {
-    double t = tArray[i];
-    dst[i] = t == 0.0 ? 1.0 : t <= r ? blBlackman(t * x, t * y) : 0.0;
-  }
-
-  return BL_SUCCESS;
-}
-
-static BLResult BL_CDECL blImageScaleMitchellFunc(double* dst, const double* tArray, size_t n, const void* data) noexcept {
-  const BLImageScaleBuiltInParams::Mitchell& p = static_cast<const BLImageScaleBuiltInParams*>(data)->mitchell;
-
-  for (size_t i = 0; i < n; i++) {
-    double t = tArray[i];
-    dst[i] = t < 1.0 ? p.p0 + blSquare(t) * (p.p2 + t * p.p3) :
-             t < 2.0 ? p.q0 + t         * (p.q1 + t * (p.q2 + t * p.q3)) : 0.0;
-  }
-
-  return BL_SUCCESS;
-}
-
-// BLImageScale - Weights
-// ======================
-
-static BLResult BL_CDECL blImageScaleWeights(BLImageScaleContext::Data* d, uint32_t dir, BLImageScaleUserFunc userFunc, const void* userData) noexcept {
+static BLResult BL_CDECL imageScaleWeights(ImageScaleContext::Data* d, uint32_t dir, ImageScaleFilterFunc filter) noexcept {
   int32_t* weightList = d->weightList[dir];
-  BLImageScaleContext::Record* recordList = d->recordList[dir];
+  ImageScaleContext::Record* recordList = d->recordList[dir];
 
   int dstSize = d->dstSize[dir];
   int srcSize = d->srcSize[dir];
@@ -304,7 +90,7 @@ static BLResult BL_CDECL blImageScaleWeights(BLImageScaleContext::Data* d, uint3
   double scale = d->scale[dir];
   int32_t isUnbound = 0;
 
-  BLScopedBufferTmp<512> wMem;
+  bl::ScopedBufferTmp<512> wMem;
   double* wData = static_cast<double*>(wMem.alloc(unsigned(kernelSize) * sizeof(double)));
 
   if (BL_UNLIKELY(!wData))
@@ -324,8 +110,7 @@ static BLResult BL_CDECL blImageScaleWeights(BLImageScaleContext::Data* d, uint3
       wData[wIndex] = blAbs(wPos * factor);
     }
 
-    // User function can fail.
-    BL_PROPAGATE(userFunc(wData, wData, unsigned(kernelSize), userData));
+    filter(wData, wData, unsigned(kernelSize));
 
     // Remove padded pixels from left and right.
     wIndex = 0;
@@ -405,18 +190,18 @@ static BLResult BL_CDECL blImageScaleWeights(BLImageScaleContext::Data* d, uint3
   return BL_SUCCESS;
 }
 
-// BLImageScale - Horz
-// ===================
+// bl::ImageScale - Horz
+// =====================
 
-static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
+static void BL_CDECL imageScaleHorzPrgb32(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
   uint32_t dw = uint32_t(d->dstSize[0]);
   uint32_t sh = uint32_t(d->srcSize[1]);
   uint32_t kernelSize = uint32_t(d->kernelSize[0]);
 
-  if (!d->isUnbound[BLImageScaleContext::kDirHorz]) {
+  if (!d->isUnbound[ImageScaleContext::kDirHorz]) {
     for (uint32_t y = 0; y < sh; y++) {
-      const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirHorz];
-      const int32_t* weightList = d->weightList[BLImageScaleContext::kDirHorz];
+      const ImageScaleContext::Record* recordList = d->recordList[ImageScaleContext::kDirHorz];
+      const int32_t* weightList = d->weightList[ImageScaleContext::kDirHorz];
 
       uint8_t* dp = dstLine;
 
@@ -428,7 +213,7 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
         uint32_t ca_cg = 0x00800080u;
 
         for (uint32_t i = recordList->count; i; i--) {
-          uint32_t p0 = BLMemOps::readU32a(sp);
+          uint32_t p0 = MemOps::readU32a(sp);
           uint32_t w0 = unsigned(wp[0]);
 
           ca_cg += ((p0 >> 8) & 0x00FF00FFu) * w0;
@@ -438,7 +223,7 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
           wp += 1;
         }
 
-        BLMemOps::writeU32a(dp, (ca_cg & 0xFF00FF00u) + ((cr_cb & 0xFF00FF00u) >> 8));
+        MemOps::writeU32a(dp, (ca_cg & 0xFF00FF00u) + ((cr_cb & 0xFF00FF00u) >> 8));
         dp += 4;
 
         recordList += 1;
@@ -451,8 +236,8 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
   }
   else {
     for (uint32_t y = 0; y < sh; y++) {
-      const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirHorz];
-      const int32_t* weightList = d->weightList[BLImageScaleContext::kDirHorz];
+      const ImageScaleContext::Record* recordList = d->recordList[ImageScaleContext::kDirHorz];
+      const int32_t* weightList = d->weightList[ImageScaleContext::kDirHorz];
 
       uint8_t* dp = dstLine;
 
@@ -466,7 +251,7 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
         int32_t cb = 0x80;
 
         for (uint32_t i = recordList->count; i; i--) {
-          uint32_t p0 = BLMemOps::readU32a(sp);
+          uint32_t p0 = MemOps::readU32a(sp);
           int32_t w0 = wp[0];
 
           ca += int32_t((p0 >> 24)        ) * w0;
@@ -483,7 +268,7 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
         cg = blClamp<int32_t>(cg >> 8, 0, ca);
         cb = blClamp<int32_t>(cb >> 8, 0, ca);
 
-        BLMemOps::writeU32a(dp, BLRgbaPrivate::packRgba32(uint32_t(cr), uint32_t(cg), uint32_t(cb), uint32_t(ca)));
+        MemOps::writeU32a(dp, RgbaInternal::packRgba32(uint32_t(cr), uint32_t(cg), uint32_t(cb), uint32_t(ca)));
         dp += 4;
 
         recordList += 1;
@@ -496,15 +281,15 @@ static void BL_CDECL blImageScaleHorzPrgb32(const BLImageScaleContext::Data* d, 
   }
 }
 
-static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
+static void BL_CDECL imageScaleHorzXrgb32(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
   uint32_t dw = uint32_t(d->dstSize[0]);
   uint32_t sh = uint32_t(d->srcSize[1]);
   uint32_t kernelSize = uint32_t(d->kernelSize[0]);
 
-  if (!d->isUnbound[BLImageScaleContext::kDirHorz]) {
+  if (!d->isUnbound[ImageScaleContext::kDirHorz]) {
     for (uint32_t y = 0; y < sh; y++) {
-      const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirHorz];
-      const int32_t* weightList = d->weightList[BLImageScaleContext::kDirHorz];
+      const ImageScaleContext::Record* recordList = d->recordList[ImageScaleContext::kDirHorz];
+      const int32_t* weightList = d->weightList[ImageScaleContext::kDirHorz];
 
       uint8_t* dp = dstLine;
 
@@ -516,7 +301,7 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
         uint32_t cr_cb = 0x00800080u;
 
         for (uint32_t i = recordList->count; i; i--) {
-          uint32_t p0 = BLMemOps::readU32a(sp);
+          uint32_t p0 = MemOps::readU32a(sp);
           uint32_t w0 = unsigned(wp[0]);
 
           cx_cg += (p0 & 0x0000FF00u) * w0;
@@ -526,7 +311,7 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
           wp += 1;
         }
 
-        BLMemOps::writeU32a(dp, 0xFF000000u + (((cx_cg & 0x00FF0000u) | (cr_cb & 0xFF00FF00u)) >> 8));
+        MemOps::writeU32a(dp, 0xFF000000u + (((cx_cg & 0x00FF0000u) | (cr_cb & 0xFF00FF00u)) >> 8));
         dp += 4;
 
         recordList += 1;
@@ -539,8 +324,8 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
   }
   else {
     for (uint32_t y = 0; y < sh; y++) {
-      const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirHorz];
-      const int32_t* weightList = d->weightList[BLImageScaleContext::kDirHorz];
+      const ImageScaleContext::Record* recordList = d->recordList[ImageScaleContext::kDirHorz];
+      const int32_t* weightList = d->weightList[ImageScaleContext::kDirHorz];
 
       uint8_t* dp = dstLine;
 
@@ -553,7 +338,7 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
         int32_t cb = 0x80;
 
         for (uint32_t i = recordList->count; i; i--) {
-          uint32_t p0 = BLMemOps::readU32a(sp);
+          uint32_t p0 = MemOps::readU32a(sp);
           int32_t w0 = wp[0];
 
           cr += int32_t((p0 >> 16) & 0xFF) * w0;
@@ -568,7 +353,7 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
         cg = blClamp<int32_t>(cg >> 8, 0, 255);
         cb = blClamp<int32_t>(cb >> 8, 0, 255);
 
-        BLMemOps::writeU32a(dp, BLRgbaPrivate::packRgba32(uint32_t(cr), uint32_t(cg), uint32_t(cb), 0xFFu));
+        MemOps::writeU32a(dp, RgbaInternal::packRgba32(uint32_t(cr), uint32_t(cg), uint32_t(cb), 0xFFu));
         dp += 4;
 
         recordList += 1;
@@ -581,15 +366,15 @@ static void BL_CDECL blImageScaleHorzXrgb32(const BLImageScaleContext::Data* d, 
   }
 }
 
-static void BL_CDECL blImageScaleHorzA8(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
+static void BL_CDECL imageScaleHorzA8(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
   uint32_t dw = uint32_t(d->dstSize[0]);
   uint32_t sh = uint32_t(d->srcSize[1]);
   uint32_t kernelSize = uint32_t(d->kernelSize[0]);
 
-  if (!d->isUnbound[BLImageScaleContext::kDirHorz]) {
+  if (!d->isUnbound[ImageScaleContext::kDirHorz]) {
     for (uint32_t y = 0; y < sh; y++) {
-      const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirHorz];
-      const int32_t* weightList = d->weightList[BLImageScaleContext::kDirHorz];
+      const ImageScaleContext::Record* recordList = d->recordList[ImageScaleContext::kDirHorz];
+      const int32_t* weightList = d->weightList[ImageScaleContext::kDirHorz];
 
       uint8_t* dp = dstLine;
 
@@ -623,8 +408,8 @@ static void BL_CDECL blImageScaleHorzA8(const BLImageScaleContext::Data* d, uint
   }
   else {
     for (uint32_t y = 0; y < sh; y++) {
-      const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirHorz];
-      const int32_t* weightList = d->weightList[BLImageScaleContext::kDirHorz];
+      const ImageScaleContext::Record* recordList = d->recordList[ImageScaleContext::kDirHorz];
+      const int32_t* weightList = d->weightList[ImageScaleContext::kDirHorz];
 
       uint8_t* dp = dstLine;
 
@@ -644,7 +429,7 @@ static void BL_CDECL blImageScaleHorzA8(const BLImageScaleContext::Data* d, uint
           wp += 1;
         }
 
-        dp[0] = BLIntOps::clampToByte(ca >> 8);
+        dp[0] = IntOps::clampToByte(ca >> 8);
 
         recordList += 1;
         weightList += kernelSize;
@@ -658,18 +443,18 @@ static void BL_CDECL blImageScaleHorzA8(const BLImageScaleContext::Data* d, uint
   }
 }
 
-// BLImageScale - Vert
-// ===================
+// bl::ImageScale - Vert
+// =====================
 
-static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
+static void BL_CDECL imageScaleVertPrgb32(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
   uint32_t dw = uint32_t(d->dstSize[0]);
   uint32_t dh = uint32_t(d->dstSize[1]);
-  uint32_t kernelSize = uint32_t(d->kernelSize[BLImageScaleContext::kDirVert]);
+  uint32_t kernelSize = uint32_t(d->kernelSize[ImageScaleContext::kDirVert]);
 
-  const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirVert];
-  const int32_t* weightList = d->weightList[BLImageScaleContext::kDirVert];
+  const ImageScaleContext::Record* recordList = d->recordList[ImageScaleContext::kDirVert];
+  const int32_t* weightList = d->weightList[ImageScaleContext::kDirVert];
 
-  if (!d->isUnbound[BLImageScaleContext::kDirVert]) {
+  if (!d->isUnbound[ImageScaleContext::kDirVert]) {
     for (uint32_t y = 0; y < dh; y++) {
       const uint8_t* srcData = srcLine + intptr_t(recordList->pos) * srcStride;
       uint8_t* dp = dstLine;
@@ -683,7 +468,7 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
         uint32_t ca_cg = 0x00800080;
 
         for (uint32_t i = count; i; i--) {
-          uint32_t p0 = BLMemOps::readU32a(sp);
+          uint32_t p0 = MemOps::readU32a(sp);
           uint32_t w0 = unsigned(wp[0]);
 
           ca_cg += ((p0 >> 8) & 0x00FF00FF) * w0;
@@ -693,7 +478,7 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
           wp += 1;
         }
 
-        BLMemOps::writeU32a(dp, (ca_cg & 0xFF00FF00) + ((cr_cb & 0xFF00FF00) >> 8));
+        MemOps::writeU32a(dp, (ca_cg & 0xFF00FF00) + ((cr_cb & 0xFF00FF00) >> 8));
         dp += 4;
         srcData += 4;
       }
@@ -720,7 +505,7 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
         int32_t cb = 0x80;
 
         for (uint32_t i = count; i; i--) {
-          uint32_t p0 = BLMemOps::readU32a(sp);
+          uint32_t p0 = MemOps::readU32a(sp);
           int32_t w0 = wp[0];
 
           ca += int32_t((p0 >> 24)        ) * w0;
@@ -737,7 +522,7 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
         cg = blClamp<int32_t>(cg >> 8, 0, ca);
         cb = blClamp<int32_t>(cb >> 8, 0, ca);
 
-        BLMemOps::writeU32a(dp, BLRgbaPrivate::packRgba32(uint32_t(cr), uint32_t(cg), uint32_t(cb), uint32_t(ca)));
+        MemOps::writeU32a(dp, RgbaInternal::packRgba32(uint32_t(cr), uint32_t(cg), uint32_t(cb), uint32_t(ca)));
         dp += 4;
         srcData += 4;
       }
@@ -750,15 +535,15 @@ static void BL_CDECL blImageScaleVertPrgb32(const BLImageScaleContext::Data* d, 
   }
 }
 
-static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
+static void BL_CDECL imageScaleVertXrgb32(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
   uint32_t dw = uint32_t(d->dstSize[0]);
   uint32_t dh = uint32_t(d->dstSize[1]);
-  uint32_t kernelSize = uint32_t(d->kernelSize[BLImageScaleContext::kDirVert]);
+  uint32_t kernelSize = uint32_t(d->kernelSize[ImageScaleContext::kDirVert]);
 
-  const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirVert];
-  const int32_t* weightList = d->weightList[BLImageScaleContext::kDirVert];
+  const ImageScaleContext::Record* recordList = d->recordList[ImageScaleContext::kDirVert];
+  const int32_t* weightList = d->weightList[ImageScaleContext::kDirVert];
 
-  if (!d->isUnbound[BLImageScaleContext::kDirVert]) {
+  if (!d->isUnbound[ImageScaleContext::kDirVert]) {
     for (uint32_t y = 0; y < dh; y++) {
       const uint8_t* srcData = srcLine + intptr_t(recordList->pos) * srcStride;
       uint8_t* dp = dstLine;
@@ -772,7 +557,7 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
         uint32_t cr_cb = 0x00800080u;
 
         for (uint32_t i = count; i; i--) {
-          uint32_t p0 = BLMemOps::readU32a(sp);
+          uint32_t p0 = MemOps::readU32a(sp);
           uint32_t w0 = unsigned(wp[0]);
 
           cx_cg += (p0 & 0x0000FF00u) * w0;
@@ -782,7 +567,7 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
           wp += 1;
         }
 
-        BLMemOps::writeU32a(dp, 0xFF000000u + (((cx_cg & 0x00FF0000u) | (cr_cb & 0xFF00FF00u)) >> 8));
+        MemOps::writeU32a(dp, 0xFF000000u + (((cx_cg & 0x00FF0000u) | (cr_cb & 0xFF00FF00u)) >> 8));
         dp += 4;
         srcData += 4;
       }
@@ -808,7 +593,7 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
         int32_t cb = 0x80;
 
         for (uint32_t i = count; i; i--) {
-          uint32_t p0 = BLMemOps::readU32a(sp);
+          uint32_t p0 = MemOps::readU32a(sp);
           int32_t w0 = wp[0];
 
           cr += int32_t((p0 >> 16) & 0xFFu) * w0;
@@ -823,7 +608,7 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
         cg = blClamp<int32_t>(cg >> 8, 0, 255);
         cb = blClamp<int32_t>(cb >> 8, 0, 255);
 
-        BLMemOps::writeU32a(dp, BLRgbaPrivate::packRgba32(uint32_t(cr), uint32_t(cg), uint32_t(cb), 0xFFu));
+        MemOps::writeU32a(dp, RgbaInternal::packRgba32(uint32_t(cr), uint32_t(cg), uint32_t(cb), 0xFFu));
         dp += 4;
         srcData += 4;
       }
@@ -836,15 +621,15 @@ static void BL_CDECL blImageScaleVertXrgb32(const BLImageScaleContext::Data* d, 
   }
 }
 
-static void BL_CDECL blImageScaleVertBytes(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t wScale) noexcept {
+static void BL_CDECL blImageScaleVertBytes(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t wScale) noexcept {
   uint32_t dw = uint32_t(d->dstSize[0]) * wScale;
   uint32_t dh = uint32_t(d->dstSize[1]);
-  uint32_t kernelSize = uint32_t(d->kernelSize[BLImageScaleContext::kDirVert]);
+  uint32_t kernelSize = uint32_t(d->kernelSize[ImageScaleContext::kDirVert]);
 
-  const BLImageScaleContext::Record* recordList = d->recordList[BLImageScaleContext::kDirVert];
-  const int32_t* weightList = d->weightList[BLImageScaleContext::kDirVert];
+  const ImageScaleContext::Record* recordList = d->recordList[ImageScaleContext::kDirVert];
+  const int32_t* weightList = d->weightList[ImageScaleContext::kDirVert];
 
-  if (!d->isUnbound[BLImageScaleContext::kDirVert]) {
+  if (!d->isUnbound[ImageScaleContext::kDirVert]) {
     for (uint32_t y = 0; y < dh; y++) {
       const uint8_t* srcData = srcLine + intptr_t(recordList->pos) * srcStride;
       uint8_t* dp = dstLine;
@@ -891,8 +676,8 @@ BoundLarge:
         uint32_t c3 = 0x00800080u;
 
         for (uint32_t j = count; j; j--) {
-          uint32_t p0 = BLMemOps::readU32a(sp + 0u);
-          uint32_t p1 = BLMemOps::readU32a(sp + 4u);
+          uint32_t p0 = MemOps::readU32a(sp + 0u);
+          uint32_t p1 = MemOps::readU32a(sp + 4u);
           uint32_t w0 = unsigned(wp[0]);
 
           c0 += ((p0     ) & 0x00FF00FFu) * w0;
@@ -904,8 +689,8 @@ BoundLarge:
           wp += 1;
         }
 
-        BLMemOps::writeU32a(dp + 0u, ((c0 & 0xFF00FF00u) >> 8) + (c1 & 0xFF00FF00u));
-        BLMemOps::writeU32a(dp + 4u, ((c2 & 0xFF00FF00u) >> 8) + (c3 & 0xFF00FF00u));
+        MemOps::writeU32a(dp + 0u, ((c0 & 0xFF00FF00u) >> 8) + (c1 & 0xFF00FF00u));
+        MemOps::writeU32a(dp + 4u, ((c2 & 0xFF00FF00u) >> 8) + (c3 & 0xFF00FF00u));
 
         dp += 8;
         srcData += 8;
@@ -969,7 +754,7 @@ UnboundLarge:
         int32_t c3 = 0x80;
 
         for (uint32_t j = count; j; j--) {
-          uint32_t p0 = BLMemOps::readU32a(sp);
+          uint32_t p0 = MemOps::readU32a(sp);
           uint32_t w0 = unsigned(wp[0]);
 
           c0 += ((p0      ) & 0xFF) * w0;
@@ -981,7 +766,7 @@ UnboundLarge:
           wp += 1;
         }
 
-        BLMemOps::writeU32a(dp, uint32_t(blClamp<int32_t>(c0 >> 8, 0, 255)      ) |
+        MemOps::writeU32a(dp, uint32_t(blClamp<int32_t>(c0 >> 8, 0, 255)      ) |
                            uint32_t(blClamp<int32_t>(c1 >> 8, 0, 255) <<  8) |
                            uint32_t(blClamp<int32_t>(c2 >> 8, 0, 255) << 16) |
                            uint32_t(blClamp<int32_t>(c3 >> 8, 0, 255) << 24));
@@ -1002,77 +787,41 @@ UnboundLarge:
   }
 }
 
-static void BL_CDECL blImageScaleVertA8(const BLImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
+static void BL_CDECL imageScaleVertA8(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept {
   blImageScaleVertBytes(d, dstLine, dstStride, srcLine, srcStride, 1);
 }
 
-// BLImageScale - Reset
-// ====================
+// bl::ImageScaleContext - Reset
+// =============================
 
-BLResult BLImageScaleContext::reset() noexcept {
+BLResult ImageScaleContext::reset() noexcept {
   free(data);
   data = nullptr;
   return BL_SUCCESS;
 }
 
-// BLImageScale - Create
-// =====================
+// bl::ImageScaleContext - Create
+// ==============================
 
-BLResult BLImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uint32_t filter, const BLImageScaleOptions* options) noexcept {
-  if (!options)
-    options = &blImageScaleOptionsNone;
-
-  BLImageScaleBuiltInParams p;
-  BLImageScaleUserFunc userFunc;
-  const void* userData = &p;
+BLResult ImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uint32_t filter) noexcept {
+  ImageScaleFilterFunc filterFunc;
+  double r = 0.0;
 
   // Setup Parameters
   // ----------------
 
-  if (!BLGeometry::isValid(to) || !BLGeometry::isValid(from))
+  if (!Geometry::isValid(to) || !Geometry::isValid(from))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   switch (filter) {
-    case BL_IMAGE_SCALE_FILTER_NEAREST : userFunc = blImageScaleNearestFunc ; p.radius = 1.0; break;
-    case BL_IMAGE_SCALE_FILTER_BILINEAR: userFunc = blImageScaleBilinearFunc; p.radius = 1.0; break;
-    case BL_IMAGE_SCALE_FILTER_BICUBIC : userFunc = blImageScaleBicubicFunc ; p.radius = 2.0; break;
-    case BL_IMAGE_SCALE_FILTER_BELL    : userFunc = blImageScaleBellFunc    ; p.radius = 1.5; break;
-    case BL_IMAGE_SCALE_FILTER_GAUSS   : userFunc = blImageScaleGaussFunc   ; p.radius = 2.0; break;
-    case BL_IMAGE_SCALE_FILTER_HERMITE : userFunc = blImageScaleHermiteFunc ; p.radius = 1.0; break;
-    case BL_IMAGE_SCALE_FILTER_HANNING : userFunc = blImageScaleHanningFunc ; p.radius = 1.0; break;
-    case BL_IMAGE_SCALE_FILTER_CATROM  : userFunc = blImageScaleCatromFunc  ; p.radius = 2.0; break;
-    case BL_IMAGE_SCALE_FILTER_BESSEL  : userFunc = blImageScaleBesselFunc  ; p.radius = 3.2383; break;
-
-    case BL_IMAGE_SCALE_FILTER_SINC    : userFunc = blImageScaleSincFunc    ; p.radius = options->radius; break;
-    case BL_IMAGE_SCALE_FILTER_LANCZOS : userFunc = blImageScaleLanczosFunc ; p.radius = options->radius; break;
-    case BL_IMAGE_SCALE_FILTER_BLACKMAN: userFunc = blImageScaleBlackmanFunc; p.radius = options->radius; break;
-
-    case BL_IMAGE_SCALE_FILTER_MITCHELL: {
-      p.radius = 2.0;
-      if (!blIsFinite(options->mitchell.b) || !blIsFinite(options->mitchell.c))
-        return blTraceError(BL_ERROR_INVALID_VALUE);
-
-      p.initMitchell(options->mitchell.b, options->mitchell.c);
-      userFunc = blImageScaleMitchellFunc;
-      break;
-    }
-
-    case BL_IMAGE_SCALE_FILTER_USER: {
-      userFunc = options->userFunc;
-      userData = options->userData;
-      p.radius = options->radius;
-
-      if (!userFunc)
-        return blTraceError(BL_ERROR_INVALID_VALUE);
-      break;
-    }
+    case BL_IMAGE_SCALE_FILTER_NEAREST : filterFunc = imageScaleNearestFilter ; r = 1.0; break;
+    case BL_IMAGE_SCALE_FILTER_BILINEAR: filterFunc = imageScaleBilinearFilter; r = 1.0; break;
+    case BL_IMAGE_SCALE_FILTER_BICUBIC : filterFunc = imageScaleBicubicFilter ; r = 2.0; break;
+    case BL_IMAGE_SCALE_FILTER_LANCZOS : filterFunc = imageScaleLanczosFilter ; r = 2.0; break;
 
     default:
       return blTraceError(BL_ERROR_INVALID_VALUE);
   }
-
-  if (!(p.radius >= 1.0 && p.radius <= 16.0))
-    return blTraceError(BL_ERROR_INVALID_VALUE);
 
   // Setup Weights
   // -------------
@@ -1089,14 +838,14 @@ BLResult BLImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uin
   factor[0] = 1.0;
   factor[1] = 1.0;
 
-  radius[0] = p.radius;
-  radius[1] = p.radius;
+  radius[0] = r;
+  radius[1] = r;
 
-  if (scale[0] < 1.0) { factor[0] = scale[0]; radius[0] = p.radius / scale[0]; }
-  if (scale[1] < 1.0) { factor[1] = scale[1]; radius[1] = p.radius / scale[1]; }
+  if (scale[0] < 1.0) { factor[0] = scale[0]; radius[0] = r / scale[0]; }
+  if (scale[1] < 1.0) { factor[1] = scale[1]; radius[1] = r / scale[1]; }
 
-  kernelSize[0] = blCeilToInt(1.0 + 2.0 * radius[0]);
-  kernelSize[1] = blCeilToInt(1.0 + 2.0 * radius[1]);
+  kernelSize[0] = Math::ceilToInt(1.0 + 2.0 * radius[0]);
+  kernelSize[1] = Math::ceilToInt(1.0 + 2.0 * radius[1]);
 
   isUnbound[0] = false;
   isUnbound[1] = false;
@@ -1133,7 +882,7 @@ BLResult BLImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uin
   d->radius[1] = radius[1];
 
   // Distribute the memory buffer.
-  uint8_t* dataPtr = BLPtrOps::offset<uint8_t>(d, sizeof(Data));
+  uint8_t* dataPtr = PtrOps::offset<uint8_t>(d, sizeof(Data));
 
   d->weightList[kDirHorz] = reinterpret_cast<int32_t*>(dataPtr); dataPtr += wWeightDataSize;
   d->weightList[kDirVert] = reinterpret_cast<int32_t*>(dataPtr); dataPtr += hWeightDataSize;
@@ -1142,40 +891,42 @@ BLResult BLImageScaleContext::create(const BLSizeI& to, const BLSizeI& from, uin
 
   // Built-in filters will probably never fail, however, custom filters can and
   // it wouldn't be safe to just continue.
-  BL_PROPAGATE(imageScaleOps.weights(d, kDirHorz, userFunc, userData));
-  BL_PROPAGATE(imageScaleOps.weights(d, kDirVert, userFunc, userData));
+  imageScaleOps.weights(d, kDirHorz, filterFunc);
+  imageScaleOps.weights(d, kDirVert, filterFunc);
 
   return BL_SUCCESS;
 }
 
-// BLImageScale - Process
-// ======================
+// bl::ImageScale - Process
+// ========================
 
-BLResult BLImageScaleContext::processHorzData(uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t format) const noexcept {
+BLResult ImageScaleContext::processHorzData(uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t format) const noexcept {
   BL_ASSERT(isInitialized());
   imageScaleOps.horz[format](this->data, dstLine, dstStride, srcLine, srcStride);
   return BL_SUCCESS;
 }
 
-BLResult BLImageScaleContext::processVertData(uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t format) const noexcept {
+BLResult ImageScaleContext::processVertData(uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride, uint32_t format) const noexcept {
   BL_ASSERT(isInitialized());
   imageScaleOps.vert[format](this->data, dstLine, dstStride, srcLine, srcStride);
   return BL_SUCCESS;
 }
 
-// BLImageScale - Runtime Registration
-// ===================================
+} // {bl}
+
+// bl::ImageScale - Runtime Registration
+// =====================================
 
 void blImageScaleRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
-  imageScaleOps.weights = blImageScaleWeights;
+  bl::imageScaleOps.weights = bl::imageScaleWeights;
 
-  imageScaleOps.horz[BL_FORMAT_PRGB32] = blImageScaleHorzPrgb32;
-  imageScaleOps.horz[BL_FORMAT_XRGB32] = blImageScaleHorzXrgb32;
-  imageScaleOps.horz[BL_FORMAT_A8    ] = blImageScaleHorzA8;
+  bl::imageScaleOps.horz[BL_FORMAT_PRGB32] = bl::imageScaleHorzPrgb32;
+  bl::imageScaleOps.horz[BL_FORMAT_XRGB32] = bl::imageScaleHorzXrgb32;
+  bl::imageScaleOps.horz[BL_FORMAT_A8    ] = bl::imageScaleHorzA8;
 
-  imageScaleOps.vert[BL_FORMAT_PRGB32] = blImageScaleVertPrgb32;
-  imageScaleOps.vert[BL_FORMAT_XRGB32] = blImageScaleVertXrgb32;
-  imageScaleOps.vert[BL_FORMAT_A8    ] = blImageScaleVertA8;
+  bl::imageScaleOps.vert[BL_FORMAT_PRGB32] = bl::imageScaleVertPrgb32;
+  bl::imageScaleOps.vert[BL_FORMAT_XRGB32] = bl::imageScaleVertXrgb32;
+  bl::imageScaleOps.vert[BL_FORMAT_A8    ] = bl::imageScaleVertA8;
 }

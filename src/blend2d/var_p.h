@@ -8,16 +8,17 @@
 #define BLEND2D_VAR_P_H_INCLUDED
 
 #include "api-internal_p.h"
-#include "math_p.h"
 #include "object_p.h"
 #include "rgba_p.h"
 #include "var.h"
+#include "support/math_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_api_globals
 //! \{
 
-namespace BLVarPrivate {
+namespace bl {
+namespace VarInternal {
 
 //! \name Variant - Internals - Initialization
 //! \{
@@ -35,7 +36,8 @@ static BL_INLINE BLResult initRgba(BLObjectCore* self, const BLRgba* rgba) noexc
 
 //! \}
 
-} // {BLVarPrivate}
+} // {VarInternal}
+} // {bl}
 
 //! \}
 //! \endcond

@@ -14,7 +14,8 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace BLOpenType {
+namespace bl {
+namespace OpenType {
 
 //! OpenType 'kern' table.
 //!
@@ -83,7 +84,7 @@ struct KernTable {
     Pair pairArray[pairCount];
     */
 
-    BL_INLINE const Pair* pairArray() const noexcept { return BLPtrOps::offset<const Pair>(this, 8); }
+    BL_INLINE const Pair* pairArray() const noexcept { return PtrOps::offset<const Pair>(this, 8); }
   };
 
   struct Format1 {
@@ -112,7 +113,7 @@ struct KernTable {
       Offset16 offsetArray[glyphCount];
       */
 
-      BL_INLINE const Offset16* offsetArray() const noexcept { return BLPtrOps::offset<const Offset16>(this, 4); }
+      BL_INLINE const Offset16* offsetArray() const noexcept { return PtrOps::offset<const Offset16>(this, 4); }
     };
 
     UInt16 rowWidth;
@@ -233,7 +234,8 @@ namespace KernImpl {
 BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 } // {KernImpl}
 
-} // {BLOpenType}
+} // {OpenType}
+} // {bl}
 
 //! \}
 //! \endcond

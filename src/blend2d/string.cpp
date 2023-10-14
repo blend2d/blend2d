@@ -12,17 +12,18 @@
 #include "support/memops_p.h"
 #include "support/stringops_p.h"
 
-namespace BLStringPrivate {
+namespace bl {
+namespace StringInternal {
 
-// BLString - Private - Preconditions
-// ==================================
+// bl::String - Private - Preconditions
+// ====================================
 
 static_assert(((BL_OBJECT_TYPE_STRING << BL_OBJECT_INFO_TYPE_SHIFT) & 0xFFFFu) == 0,
               "BL_OBJECT_TYPE_STRING must be a value that would not use any bits in the two lowest bytes in the "
               "object info, which can be used by BLString on little endian targets to store 13th and 14th byte.");
 
-// BLString - Private - Commons
-// ============================
+// bl::String - Private - Commons
+// ==============================
 
 static BL_INLINE constexpr size_t getMaximumSize() noexcept {
   return capacityFromImplSize(BLObjectImplSize(BL_OBJECT_IMPL_MAX_SIZE));
@@ -52,8 +53,8 @@ static BL_INLINE void clearSSOData(BLStringCore* self) noexcept {
   memset(self->_d.char_data, 0, blMax<size_t>(BLString::kSSOCapacity, BLObjectDetail::kStaticDataSize));
 }
 
-// BLString - Private - Alloc & Free Impl
-// ======================================
+// bl::String - Private - Alloc & Free Impl
+// ========================================
 
 static BL_INLINE BLResult initSSO(BLStringCore* self, size_t size = 0u) noexcept {
   self->_d.initStatic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_STRING) |
@@ -63,7 +64,7 @@ static BL_INLINE BLResult initSSO(BLStringCore* self, size_t size = 0u) noexcept
 
 static BL_INLINE BLResult initDynamic(BLStringCore* self, BLObjectImplSize implSize, size_t size = 0u) noexcept {
   BLObjectInfo info = BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_STRING);
-  BL_PROPAGATE(BLObjectPrivate::allocImplT<BLStringImpl>(self, info, implSize));
+  BL_PROPAGATE(ObjectInternal::allocImplT<BLStringImpl>(self, info, implSize));
 
   BLStringImpl* impl = getImpl(self);
   impl->capacity = capacityFromImplSize(implSize);
@@ -98,14 +99,14 @@ static BL_NOINLINE BLResult initStringAndCopy(BLStringCore* self, size_t capacit
   return BL_SUCCESS;
 }
 
-// BLString - Private - Manipulation
-// =================================
+// bl::String - Private - Manipulation
+// ===================================
 
 static BLResult modifyAndCopy(BLStringCore* self, BLModifyOp op, const char* str, size_t n) noexcept {
   UnpackedData u = unpackData(self);
   size_t index = blModifyOpIsAppend(op) ? u.size : size_t(0);
-  size_t sizeAfter = BLIntOps::uaddSaturate(index, n);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
+  size_t sizeAfter = IntOps::uaddSaturate(index, n);
+  size_t immutableMsk = IntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
 
   if ((sizeAfter | immutableMsk) > u.capacity) {
     if (BL_UNLIKELY(sizeAfter > getMaximumSize()))
@@ -138,7 +139,7 @@ static BLResult modifyAndCopy(BLStringCore* self, BLModifyOp op, const char* str
   if (self->_d.sso()) {
     setSSOSize(self, sizeAfter);
     if (blModifyOpIsAssign(op))
-      BLMemOps::fillInlineT(u.data + sizeAfter, char(0), BLString::kSSOCapacity - sizeAfter);
+      MemOps::fillInlineT(u.data + sizeAfter, char(0), BLString::kSSOCapacity - sizeAfter);
     return BL_SUCCESS;
   }
   else {
@@ -150,8 +151,8 @@ static BLResult modifyAndCopy(BLStringCore* self, BLModifyOp op, const char* str
 static BLResult insertAndCopy(BLStringCore* self, size_t index, const char* str, size_t n) noexcept {
   UnpackedData u = unpackData(self);
   size_t endIndex = index + n;
-  size_t sizeAfter = BLIntOps::uaddSaturate(u.size, n);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
+  size_t sizeAfter = IntOps::uaddSaturate(u.size, n);
+  size_t immutableMsk = IntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
 
   if ((sizeAfter | immutableMsk) > u.capacity) {
     if (BL_UNLIKELY(sizeAfter > getMaximumSize()))
@@ -224,20 +225,21 @@ static BLResult insertAndCopy(BLStringCore* self, size_t index, const char* str,
   }
 }
 
-} // {BLStringPrivate}
+} // {StringInternal}
+} // {bl}
 
-// BLString - API - Construction & Destruction
-// ===========================================
+// bl::String - API - Construction & Destruction
+// =============================================
 
 BL_API_IMPL BLResult blStringInit(BLStringCore* self) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
 
   initSSO(self);
   return BL_SUCCESS;
 }
 
 BL_API_IMPL BLResult blStringInitMove(BLStringCore* self, BLStringCore* other) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
 
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isString());
@@ -249,7 +251,7 @@ BL_API_IMPL BLResult blStringInitMove(BLStringCore* self, BLStringCore* other) n
 }
 
 BL_API_IMPL BLResult blStringInitWeak(BLStringCore* self, const BLStringCore* other) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
 
   BL_ASSERT(self != other);
   BL_ASSERT(other->_d.isString());
@@ -259,7 +261,7 @@ BL_API_IMPL BLResult blStringInitWeak(BLStringCore* self, const BLStringCore* ot
 }
 
 BL_API_IMPL BLResult blStringInitWithData(BLStringCore* self, const char* str, size_t size) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
 
   if (size == SIZE_MAX)
     size = strlen(str);
@@ -271,17 +273,17 @@ BL_API_IMPL BLResult blStringInitWithData(BLStringCore* self, const char* str, s
 }
 
 BL_API_IMPL BLResult blStringDestroy(BLStringCore* self) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   return releaseInstance(self);
 }
 
-// BLString - API - Common Functionality
-// =====================================
+// bl::String - API - Common Functionality
+// =======================================
 
 BL_API_IMPL BLResult blStringReset(BLStringCore* self) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   releaseInstance(self);
@@ -290,35 +292,35 @@ BL_API_IMPL BLResult blStringReset(BLStringCore* self) noexcept {
   return BL_SUCCESS;
 }
 
-// BLString - API - Accessors
-// ==========================
+// bl::String - API - Accessors
+// ============================
 
 BL_API_IMPL const char* blStringGetData(const BLStringCore* self) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   return getData(self);
 }
 
 BL_API_IMPL size_t blStringGetSize(const BLStringCore* self) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   return getSize(self);
 }
 
 BL_API_IMPL size_t blStringGetCapacity(const BLStringCore* self) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   return getCapacity(self);
 }
 
-// BLString - API - Data Manipulation - Storage Management
-// =======================================================
+// bl::String - API - Data Manipulation - Storage Management
+// =========================================================
 
 BL_API_IMPL BLResult blStringClear(BLStringCore* self) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   if (self->_d.sso()) {
@@ -351,14 +353,14 @@ BL_API_IMPL BLResult blStringClear(BLStringCore* self) noexcept {
 }
 
 BL_API_IMPL BLResult blStringShrink(BLStringCore* self) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   if (self->_d.sso())
     return BL_SUCCESS;
 
   BLStringImpl* selfI = getImpl(self);
-  if (!BLObjectPrivate::isImplRefCounted(selfI))
+  if (!bl::ObjectInternal::isImplRefCounted(selfI))
     return BL_SUCCESS;
 
   const char* data = selfI->data();
@@ -377,11 +379,11 @@ BL_API_IMPL BLResult blStringShrink(BLStringCore* self) noexcept {
 }
 
 BL_API_IMPL BLResult blStringReserve(BLStringCore* self, size_t n) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   UnpackedData u = unpackData(self);
-  size_t immutableMask = BLIntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
+  size_t immutableMask = bl::IntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
 
   if ((n | immutableMask) <= u.capacity)
     return BL_SUCCESS;
@@ -395,7 +397,7 @@ BL_API_IMPL BLResult blStringReserve(BLStringCore* self, size_t n) noexcept {
 }
 
 BL_API_IMPL BLResult blStringResize(BLStringCore* self, size_t n, char fill) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   UnpackedData u = unpackData(self);
@@ -412,7 +414,7 @@ BL_API_IMPL BLResult blStringResize(BLStringCore* self, size_t n, char fill) noe
     else {
       if (self->_d.sso()) {
         // Clears all unused bytes in the SSO storage.
-        BLMemOps::fillInlineT<char>(u.data + n, '\0', u.size - n);
+        bl::MemOps::fillInlineT<char>(u.data + n, '\0', u.size - n);
         setSSOSize(self, n);
         return BL_SUCCESS;
       }
@@ -434,11 +436,11 @@ BL_API_IMPL BLResult blStringResize(BLStringCore* self, size_t n, char fill) noe
   }
 }
 
-// BLString - API - Data Manipulation - Modify Operations
-// ======================================================
+// bl::String - API - Data Manipulation - Modify Operations
+// ========================================================
 
 BL_API_IMPL BLResult blStringMakeMutable(BLStringCore* self, char** dataOut) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   if (self->_d.sso()) {
@@ -462,13 +464,13 @@ BL_API_IMPL BLResult blStringMakeMutable(BLStringCore* self, char** dataOut) noe
 }
 
 BL_API_IMPL BLResult blStringModifyOp(BLStringCore* self, BLModifyOp op, size_t n, char** dataOut) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   UnpackedData u = unpackData(self);
   size_t index = blModifyOpIsAppend(op) ? u.size : size_t(0);
-  size_t sizeAfter = BLIntOps::uaddSaturate(index, n);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
+  size_t sizeAfter = bl::IntOps::uaddSaturate(index, n);
+  size_t immutableMsk = bl::IntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
 
   if ((sizeAfter | immutableMsk) > u.capacity) {
     BLStringCore tmp = *self;
@@ -514,12 +516,12 @@ BL_API_IMPL BLResult blStringModifyOp(BLStringCore* self, BLModifyOp op, size_t 
 }
 
 BL_API_IMPL BLResult blStringInsertOp(BLStringCore* self, size_t index, size_t n, char** dataOut) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   UnpackedData u = unpackData(self);
-  size_t sizeAfter = BLIntOps::uaddSaturate(u.size, n);
-  size_t immutableMsk = BLIntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
+  size_t sizeAfter = bl::IntOps::uaddSaturate(u.size, n);
+  size_t immutableMsk = bl::IntOps::bitMaskFromBool<size_t>(!isInstanceMutable(self));
 
   if ((sizeAfter | immutableMsk) > u.capacity) {
     *dataOut = nullptr;
@@ -548,11 +550,11 @@ BL_API_IMPL BLResult blStringInsertOp(BLStringCore* self, size_t index, size_t n
   }
 }
 
-// BLString - API - Data Manipulation - Assignment
-// ===============================================
+// bl::String - API - Data Manipulation - Assignment
+// =================================================
 
 BL_API_IMPL BLResult blStringAssignMove(BLStringCore* self, BLStringCore* other) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
 
   BL_ASSERT(self->_d.isString());
   BL_ASSERT(other->_d.isString());
@@ -563,17 +565,17 @@ BL_API_IMPL BLResult blStringAssignMove(BLStringCore* self, BLStringCore* other)
 }
 
 BL_API_IMPL BLResult blStringAssignWeak(BLStringCore* self, const BLStringCore* other) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
 
   BL_ASSERT(self->_d.isString());
   BL_ASSERT(other->_d.isString());
 
-  BLObjectPrivate::retainInstance(other);
+  bl::ObjectInternal::retainInstance(other);
   return replaceInstance(self, other);
 }
 
 BL_API_IMPL BLResult blStringAssignDeep(BLStringCore* self, const BLStringCore* other) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
 
   BL_ASSERT(self->_d.isString());
   BL_ASSERT(other->_d.isString());
@@ -582,7 +584,7 @@ BL_API_IMPL BLResult blStringAssignDeep(BLStringCore* self, const BLStringCore* 
 }
 
 BL_API_IMPL BLResult blStringAssignData(BLStringCore* self, const char* str, size_t n) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   if (n == SIZE_MAX)
@@ -591,11 +593,11 @@ BL_API_IMPL BLResult blStringAssignData(BLStringCore* self, const char* str, siz
   return modifyAndCopy(self, BL_MODIFY_OP_ASSIGN_FIT, str, n);
 }
 
-// BLString - API - Data Manipulation - ApplyOp
-// ============================================
+// bl::String - API - Data Manipulation - ApplyOp
+// ==============================================
 
 BL_API_IMPL BLResult blStringApplyOpChar(BLStringCore* self, BLModifyOp op, char c, size_t n) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   char* dst;
@@ -606,7 +608,7 @@ BL_API_IMPL BLResult blStringApplyOpChar(BLStringCore* self, BLModifyOp op, char
 }
 
 BL_API_IMPL BLResult blStringApplyOpData(BLStringCore* self, BLModifyOp op, const char* str, size_t n) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   if (n == SIZE_MAX)
@@ -616,20 +618,20 @@ BL_API_IMPL BLResult blStringApplyOpData(BLStringCore* self, BLModifyOp op, cons
 }
 
 BL_API_IMPL BLResult blStringApplyOpString(BLStringCore* self, BLModifyOp op, const BLStringCore* other) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   return modifyAndCopy(self, op, getData(other), getSize(other));
 }
 
 BL_API_IMPL BLResult blStringApplyOpFormatV(BLStringCore* self, BLModifyOp op, const char* fmt, va_list ap) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   UnpackedData u = unpackData(self);
   size_t index = blModifyOpIsAppend(op) ? u.size : size_t(0);
   size_t remaining = u.capacity - index;
-  size_t mutableMsk = BLIntOps::bitMaskFromBool<size_t>(isInstanceMutable(self));
+  size_t mutableMsk = bl::IntOps::bitMaskFromBool<size_t>(isInstanceMutable(self));
 
   char buf[1024];
   int fmtResult;
@@ -670,7 +672,7 @@ BL_API_IMPL BLResult blStringApplyOpFormatV(BLStringCore* self, BLModifyOp op, c
 
   // If we are here it means that the string is either not large enough to hold the formatted text or it's not
   // mutable. In both cases we have to allocate a new buffer and call `vsnprintf` again.
-  size_t sizeAfter = BLIntOps::uaddSaturate(index, outputSize);
+  size_t sizeAfter = bl::IntOps::uaddSaturate(index, outputSize);
   if (BL_UNLIKELY(sizeAfter > getMaximumSize()))
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
@@ -695,7 +697,7 @@ BL_API_IMPL BLResult blStringApplyOpFormatV(BLStringCore* self, BLModifyOp op, c
 }
 
 BL_API_IMPL BLResult blStringApplyOpFormat(BLStringCore* self, BLModifyOp op, const char* fmt, ...) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   BLResult result;
@@ -708,11 +710,11 @@ BL_API_IMPL BLResult blStringApplyOpFormat(BLStringCore* self, BLModifyOp op, co
   return result;
 }
 
-// BLString - API - Data Manipulation - Insert
-// ===========================================
+// bl::String - API - Data Manipulation - Insert
+// =============================================
 
 BL_API_IMPL BLResult blStringInsertChar(BLStringCore* self, size_t index, char c, size_t n) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   char* dst;
@@ -723,7 +725,7 @@ BL_API_IMPL BLResult blStringInsertChar(BLStringCore* self, size_t index, char c
 }
 
 BL_API_IMPL BLResult blStringInsertData(BLStringCore* self, size_t index, const char* str, size_t n) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   if (n == SIZE_MAX)
@@ -733,7 +735,7 @@ BL_API_IMPL BLResult blStringInsertData(BLStringCore* self, size_t index, const 
 }
 
 BL_API_IMPL BLResult blStringInsertString(BLStringCore* self, size_t index, const BLStringCore* other) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
 
   BL_ASSERT(self->_d.isString());
   BL_ASSERT(other->_d.isString());
@@ -747,11 +749,11 @@ BL_API_IMPL BLResult blStringInsertString(BLStringCore* self, size_t index, cons
   }
 }
 
-// BLString - API - Data Manipulation - Remove
-// ===========================================
+// bl::String - API - Data Manipulation - Remove
+// =============================================
 
 BL_API_IMPL BLResult blStringRemoveIndex(BLStringCore* self, size_t index) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   return blStringRemoveRange(self, index, index + 1);
@@ -759,7 +761,7 @@ BL_API_IMPL BLResult blStringRemoveIndex(BLStringCore* self, size_t index) noexc
 
 BL_API_IMPL BLResult blStringRemoveRange(BLStringCore* self, size_t rStart, size_t rEnd) noexcept {
   BL_ASSERT(self->_d.isString());
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
 
   size_t size = getSize(self);
   size_t end = blMin(rEnd, size);
@@ -773,8 +775,8 @@ BL_API_IMPL BLResult blStringRemoveRange(BLStringCore* self, size_t rStart, size
 
   if (self->_d.sso()) {
     char* data = self->_d.char_data;
-    BLMemOps::copySmall(data + index, data + index + n, size - end);
-    BLMemOps::fillSmallT(data + sizeAfter, char(0), BLString::kSSOCapacity - sizeAfter);
+    bl::MemOps::copySmall(data + index, data + index + n, size - end);
+    bl::MemOps::fillSmallT(data + sizeAfter, char(0), BLString::kSSOCapacity - sizeAfter);
 
     setSSOSize(self, sizeAfter);
     return BL_SUCCESS;
@@ -801,11 +803,11 @@ BL_API_IMPL BLResult blStringRemoveRange(BLStringCore* self, size_t rStart, size
   return releaseInstance(&tmp);
 }
 
-// BLString - API - Equality / Comparison
-// ======================================
+// bl::String - API - Equality / Comparison
+// ========================================
 
 BL_API_IMPL bool blStringEquals(const BLStringCore* a, const BLStringCore* b) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
 
   BL_ASSERT(a->_d.isString());
   BL_ASSERT(b->_d.isString());
@@ -820,7 +822,7 @@ BL_API_IMPL bool blStringEquals(const BLStringCore* a, const BLStringCore* b) no
 }
 
 BL_API_IMPL bool blStringEqualsData(const BLStringCore* self, const char* str, size_t n) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   const char* aData = getData(self);
@@ -843,7 +845,7 @@ BL_API_IMPL bool blStringEqualsData(const BLStringCore* self, const char* str, s
 }
 
 BL_API_IMPL int blStringCompare(const BLStringCore* a, const BLStringCore* b) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
 
   BL_ASSERT(a->_d.isString());
   BL_ASSERT(b->_d.isString());
@@ -861,7 +863,7 @@ BL_API_IMPL int blStringCompare(const BLStringCore* a, const BLStringCore* b) no
 }
 
 BL_API_IMPL int blStringCompareData(const BLStringCore* self, const char* str, size_t n) noexcept {
-  using namespace BLStringPrivate;
+  using namespace bl::StringInternal;
   BL_ASSERT(self->_d.isString());
 
   UnpackedData u = unpackData(self);
@@ -906,10 +908,10 @@ BL_API_IMPL int blStringCompareData(const BLStringCore* self, const char* str, s
   }
 }
 
-// BLString - Runtime Registration
-// ===============================
+// bl::String - Runtime Registration
+// =================================
 
 void blStringRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
-  BLStringPrivate::initSSO(static_cast<BLStringCore*>(&blObjectDefaults[BL_OBJECT_TYPE_STRING]));
+  bl::StringInternal::initSSO(static_cast<BLStringCore*>(&blObjectDefaults[BL_OBJECT_TYPE_STRING]));
 }
