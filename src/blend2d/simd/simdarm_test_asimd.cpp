@@ -15,9 +15,10 @@ namespace SIMDTests {
 
 BL_HIDDEN void simd_test_arm_asimd() noexcept {
   const char ext[] = "ASIMD";
+  print_cost_matrix(ext);
   test_integer<16>(ext);
 }
 
-} // {BLContextTests}
+} // {SIMDTests}
 
 #endif // BL_TEST && BL_TARGET_OPT_ASIMD

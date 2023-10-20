@@ -20,6 +20,34 @@ namespace {
 static constexpr uint64_t kRandomSeed = 0x1234u;
 static constexpr uint32_t kTestIterCount = 1000u;
 
+// SIMD - Tests - Costs
+// ====================
+
+static void print_cost_matrix(const char* ext) noexcept {
+  INFO("%s Cost Matrix:", ext);
+  INFO("  abs_i8=%u"        , BL_SIMD_COST_ABS_I8);
+  INFO("  abs_i16=%u"       , BL_SIMD_COST_ABS_I16);
+  INFO("  abs_i32=%u"       , BL_SIMD_COST_ABS_I32);
+  INFO("  abs_i64=%u"       , BL_SIMD_COST_ABS_I64);
+  INFO("  alignr_u8=%u"     , BL_SIMD_COST_ALIGNR_U8);
+  INFO("  cmp_eq_i64=%u"    , BL_SIMD_COST_CMP_EQ_I64);
+  INFO("  cmp_lt_gt_i64=%u" , BL_SIMD_COST_CMP_LT_GT_I64);
+  INFO("  cmp_le_ge_i64=%u" , BL_SIMD_COST_CMP_LE_GE_I64);
+  INFO("  cmp_lt_gt_u64=%u" , BL_SIMD_COST_CMP_LT_GT_U64);
+  INFO("  cmp_le_ge_u64=%u" , BL_SIMD_COST_CMP_LE_GE_U64);
+  INFO("  min_max_i8=%u"    , BL_SIMD_COST_MIN_MAX_I8);
+  INFO("  min_max_u8=%u"    , BL_SIMD_COST_MIN_MAX_U8);
+  INFO("  min_max_i16=%u"   , BL_SIMD_COST_MIN_MAX_I16);
+  INFO("  min_max_u16=%u"   , BL_SIMD_COST_MIN_MAX_U16);
+  INFO("  min_max_i32=%u"   , BL_SIMD_COST_MIN_MAX_I32);
+  INFO("  min_max_u32=%u"   , BL_SIMD_COST_MIN_MAX_U32);
+  INFO("  min_max_i64=%u"   , BL_SIMD_COST_MIN_MAX_I64);
+  INFO("  min_max_u64=%u"   , BL_SIMD_COST_MIN_MAX_U64);
+  INFO("  mul_i16=%u"       , BL_SIMD_COST_MUL_I16);
+  INFO("  mul_i32=%u"       , BL_SIMD_COST_MUL_I32);
+  INFO("  mul_i64=%u"       , BL_SIMD_COST_MUL_I64);
+}
+
 // SIMD - Tests - Vector Overlay
 // =============================
 
@@ -1027,13 +1055,17 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
   {
     test_iop2<V_I16, iop_mul<int16_t>>([](const V_I16& a, const V_I16& b) { return mul(a, b); });
     test_iop2<V_I32, iop_mul<int32_t>>([](const V_I32& a, const V_I32& b) { return mul(a, b); });
+    test_iop2<V_I64, iop_mul<int64_t>>([](const V_I64& a, const V_I64& b) { return mul(a, b); });
     test_iop2<V_U16, iop_mul<uint16_t>>([](const V_U16& a, const V_U16& b) { return mul(a, b); });
     test_iop2<V_U32, iop_mul<uint32_t>>([](const V_U32& a, const V_U32& b) { return mul(a, b); });
+    test_iop2<V_U64, iop_mul<uint64_t>>([](const V_U64& a, const V_U64& b) { return mul(a, b); });
 
     test_iop2<V_I16, iop_mul<int16_t>>([](const V_I16& a, const V_I16& b) { return mul_i16(a, b); });
     test_iop2<V_I32, iop_mul<int32_t>>([](const V_I32& a, const V_I32& b) { return mul_i32(a, b); });
+    test_iop2<V_I64, iop_mul<int64_t>>([](const V_I64& a, const V_I64& b) { return mul_i64(a, b); });
     test_iop2<V_U16, iop_mul<uint16_t>>([](const V_U16& a, const V_U16& b) { return mul_u16(a, b); });
     test_iop2<V_U32, iop_mul<uint32_t>>([](const V_U32& a, const V_U32& b) { return mul_u32(a, b); });
+    test_iop2<V_U64, iop_mul<uint64_t>>([](const V_U64& a, const V_U64& b) { return mul_u64(a, b); });
   }
 
   INFO("Testing %d-bit %s vector ops - cmp", kW*8, ext);
@@ -1086,6 +1118,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U8, iop_cmp_gt<uint8_t>>([](const V_U8& a, const V_U8& b) { return cmp_gt(a, b); });
     test_iop2<V_U16, iop_cmp_gt<uint16_t>>([](const V_U16& a, const V_U16& b) { return cmp_gt(a, b); });
     test_iop2<V_U32, iop_cmp_gt<uint32_t>>([](const V_U32& a, const V_U32& b) { return cmp_gt(a, b); });
+    test_iop2<V_U64, iop_cmp_gt<uint64_t>>([](const V_U64& a, const V_U64& b) { return cmp_gt(a, b); });
 
     test_iop2<V_I8, iop_cmp_gt<int8_t>>([](const V_I8& a, const V_I8& b) { return cmp_gt_i8(a, b); });
     test_iop2<V_I16, iop_cmp_gt<int16_t>>([](const V_I16& a, const V_I16& b) { return cmp_gt_i16(a, b); });
@@ -1095,6 +1128,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U8, iop_cmp_gt<uint8_t>>([](const V_U8& a, const V_U8& b) { return cmp_gt_u8(a, b); });
     test_iop2<V_U16, iop_cmp_gt<uint16_t>>([](const V_U16& a, const V_U16& b) { return cmp_gt_u16(a, b); });
     test_iop2<V_U32, iop_cmp_gt<uint32_t>>([](const V_U32& a, const V_U32& b) { return cmp_gt_u32(a, b); });
+    test_iop2<V_U64, iop_cmp_gt<uint64_t>>([](const V_U64& a, const V_U64& b) { return cmp_gt_u64(a, b); });
 
     test_iop2<V_I8, iop_cmp_ge<int8_t>>([](const V_I8& a, const V_I8& b) { return cmp_ge(a, b); });
     test_iop2<V_I16, iop_cmp_ge<int16_t>>([](const V_I16& a, const V_I16& b) { return cmp_ge(a, b); });
@@ -1104,6 +1138,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U8, iop_cmp_ge<uint8_t>>([](const V_U8& a, const V_U8& b) { return cmp_ge(a, b); });
     test_iop2<V_U16, iop_cmp_ge<uint16_t>>([](const V_U16& a, const V_U16& b) { return cmp_ge(a, b); });
     test_iop2<V_U32, iop_cmp_ge<uint32_t>>([](const V_U32& a, const V_U32& b) { return cmp_ge(a, b); });
+    test_iop2<V_U64, iop_cmp_ge<uint64_t>>([](const V_U64& a, const V_U64& b) { return cmp_ge(a, b); });
 
     test_iop2<V_I8, iop_cmp_ge<int8_t>>([](const V_I8& a, const V_I8& b) { return cmp_ge_i8(a, b); });
     test_iop2<V_I16, iop_cmp_ge<int16_t>>([](const V_I16& a, const V_I16& b) { return cmp_ge_i16(a, b); });
@@ -1113,6 +1148,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U8, iop_cmp_ge<uint8_t>>([](const V_U8& a, const V_U8& b) { return cmp_ge_u8(a, b); });
     test_iop2<V_U16, iop_cmp_ge<uint16_t>>([](const V_U16& a, const V_U16& b) { return cmp_ge_u16(a, b); });
     test_iop2<V_U32, iop_cmp_ge<uint32_t>>([](const V_U32& a, const V_U32& b) { return cmp_ge_u32(a, b); });
+    test_iop2<V_U64, iop_cmp_ge<uint64_t>>([](const V_U64& a, const V_U64& b) { return cmp_ge_u64(a, b); });
 
     test_iop2<V_I8, iop_cmp_lt<int8_t>>([](const V_I8& a, const V_I8& b) { return cmp_lt(a, b); });
     test_iop2<V_I16, iop_cmp_lt<int16_t>>([](const V_I16& a, const V_I16& b) { return cmp_lt(a, b); });
@@ -1122,6 +1158,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U8, iop_cmp_lt<uint8_t>>([](const V_U8& a, const V_U8& b) { return cmp_lt(a, b); });
     test_iop2<V_U16, iop_cmp_lt<uint16_t>>([](const V_U16& a, const V_U16& b) { return cmp_lt(a, b); });
     test_iop2<V_U32, iop_cmp_lt<uint32_t>>([](const V_U32& a, const V_U32& b) { return cmp_lt(a, b); });
+    test_iop2<V_U64, iop_cmp_lt<uint64_t>>([](const V_U64& a, const V_U64& b) { return cmp_lt(a, b); });
 
     test_iop2<V_I8, iop_cmp_lt<int8_t>>([](const V_I8& a, const V_I8& b) { return cmp_lt_i8(a, b); });
     test_iop2<V_I16, iop_cmp_lt<int16_t>>([](const V_I16& a, const V_I16& b) { return cmp_lt_i16(a, b); });
@@ -1131,6 +1168,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U8, iop_cmp_lt<uint8_t>>([](const V_U8& a, const V_U8& b) { return cmp_lt_u8(a, b); });
     test_iop2<V_U16, iop_cmp_lt<uint16_t>>([](const V_U16& a, const V_U16& b) { return cmp_lt_u16(a, b); });
     test_iop2<V_U32, iop_cmp_lt<uint32_t>>([](const V_U32& a, const V_U32& b) { return cmp_lt_u32(a, b); });
+    test_iop2<V_U64, iop_cmp_lt<uint64_t>>([](const V_U64& a, const V_U64& b) { return cmp_lt_u64(a, b); });
 
     test_iop2<V_I8, iop_cmp_le<int8_t>>([](const V_I8& a, const V_I8& b) { return cmp_le(a, b); });
     test_iop2<V_I16, iop_cmp_le<int16_t>>([](const V_I16& a, const V_I16& b) { return cmp_le(a, b); });
@@ -1140,6 +1178,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U8, iop_cmp_le<uint8_t>>([](const V_U8& a, const V_U8& b) { return cmp_le(a, b); });
     test_iop2<V_U16, iop_cmp_le<uint16_t>>([](const V_U16& a, const V_U16& b) { return cmp_le(a, b); });
     test_iop2<V_U32, iop_cmp_le<uint32_t>>([](const V_U32& a, const V_U32& b) { return cmp_le(a, b); });
+    test_iop2<V_U64, iop_cmp_le<uint64_t>>([](const V_U64& a, const V_U64& b) { return cmp_le(a, b); });
 
     test_iop2<V_I8, iop_cmp_le<int8_t>>([](const V_I8& a, const V_I8& b) { return cmp_le_i8(a, b); });
     test_iop2<V_I16, iop_cmp_le<int16_t>>([](const V_I16& a, const V_I16& b) { return cmp_le_i16(a, b); });
@@ -1149,6 +1188,7 @@ static BL_NOINLINE void test_integer(const char* ext) noexcept {
     test_iop2<V_U8, iop_cmp_le<uint8_t>>([](const V_U8& a, const V_U8& b) { return cmp_le_u8(a, b); });
     test_iop2<V_U16, iop_cmp_le<uint16_t>>([](const V_U16& a, const V_U16& b) { return cmp_le_u16(a, b); });
     test_iop2<V_U32, iop_cmp_le<uint32_t>>([](const V_U32& a, const V_U32& b) { return cmp_le_u32(a, b); });
+    test_iop2<V_U64, iop_cmp_le<uint64_t>>([](const V_U64& a, const V_U64& b) { return cmp_le_u64(a, b); });
   }
 
   INFO("Testing %d-bit %s vector ops - min / max", kW*8, ext);

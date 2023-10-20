@@ -15,9 +15,10 @@ namespace SIMDTests {
 
 BL_HIDDEN void simd_test_x86_ssse3() noexcept {
   const char ext[] = "SSSE3";
+  print_cost_matrix(ext);
   test_integer<16>(ext);
 }
 
-} // {BLContextTests}
+} // {SIMDTests}
 
 #endif // BL_TEST && BL_TARGET_OPT_SSSE3

@@ -119,6 +119,6 @@ UNIT(simd, BL_TEST_GROUP_SIMD) {
 #endif
 }
 
-} // {BLContextTests}
+} // {SIMDTests}
 
 #endif // BL_TEST

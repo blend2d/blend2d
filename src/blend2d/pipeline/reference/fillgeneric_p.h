@@ -19,6 +19,7 @@
 namespace bl {
 namespace Pipeline {
 namespace Reference {
+namespace {
 
 template<typename CompOp>
 struct FillBoxA_Base {
@@ -388,6 +389,7 @@ L_Scanline_Init:
   }
 };
 
+} // {anonymous}
 } // {Reference}
 } // {Pipeline}
 } // {bl}

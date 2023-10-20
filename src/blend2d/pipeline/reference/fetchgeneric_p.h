@@ -9,6 +9,7 @@
 #include "../../pipeline/pipedefs_p.h"
 #include "../../pipeline/reference/pixelgeneric_p.h"
 #include "../../support/intops_p.h"
+#include "../../support/vecops_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_pipeline_reference
@@ -18,80 +19,7 @@ namespace bl {
 namespace Pipeline {
 namespace Reference {
 
-static BL_INLINE_NODEBUG float msbMask(float a) noexcept { return blBitCast<float>(blBitCast<int32_t>(a) >> 31); }
-static BL_INLINE_NODEBUG float bitNot(float a) noexcept { return blBitCast<float>(~blBitCast<uint32_t>(a)); }
-static BL_INLINE_NODEBUG float bitAnd(float a, float b) noexcept { return blBitCast<float>(blBitCast<uint32_t>(a) & blBitCast<uint32_t>(b)); }
-static BL_INLINE_NODEBUG float bitOr(float a, float b) noexcept { return blBitCast<float>(blBitCast<uint32_t>(a) | blBitCast<uint32_t>(b)); }
-static BL_INLINE_NODEBUG float bitXor(float a, float b) noexcept { return blBitCast<float>(blBitCast<uint32_t>(a) ^ blBitCast<uint32_t>(b)); }
-
-static BL_INLINE_NODEBUG double msbMask(double a) noexcept { return blBitCast<double>(blBitCast<int64_t>(a) >> 63); }
-static BL_INLINE_NODEBUG double bitNot(double a) noexcept { return blBitCast<double>(~blBitCast<uint64_t>(a)); }
-static BL_INLINE_NODEBUG double bitAnd(double a, double b) noexcept { return blBitCast<double>(blBitCast<uint64_t>(a) & blBitCast<uint64_t>(b)); }
-static BL_INLINE_NODEBUG double bitOr(double a, double b) noexcept { return blBitCast<double>(blBitCast<uint64_t>(a) | blBitCast<uint64_t>(b)); }
-static BL_INLINE_NODEBUG double bitXor(double a, double b) noexcept { return blBitCast<double>(blBitCast<uint64_t>(a) ^ blBitCast<uint64_t>(b)); }
-
-template<typename T>
-struct Vec2T {
-  T x, y;
-
-  BL_INLINE_NODEBUG Vec2T swap() const noexcept { return Vec2T{y, x}; }
-
-  BL_INLINE_NODEBUG void reset(double x_, double y_) noexcept { x = x_; y = y_; }
-  BL_INLINE_NODEBUG double hadd() const noexcept { return x + y; }
-  BL_INLINE_NODEBUG double hmul() const noexcept { return x * y; }
-
-  BL_INLINE_NODEBUG Vec2T& operator+=(T scalar) noexcept { *this = Vec2T{x + scalar, y + scalar}; return *this; }
-  BL_INLINE_NODEBUG Vec2T& operator-=(T scalar) noexcept { *this = Vec2T{x - scalar, y - scalar}; return *this; }
-  BL_INLINE_NODEBUG Vec2T& operator*=(T scalar) noexcept { *this = Vec2T{x * scalar, y * scalar}; return *this; }
-  BL_INLINE_NODEBUG Vec2T& operator/=(T scalar) noexcept { *this = Vec2T{x / scalar, y / scalar}; return *this; }
-  BL_INLINE_NODEBUG Vec2T& operator&=(T scalar) noexcept { *this = Vec2T{bitAnd(x, scalar), bitAnd(y, scalar)}; return *this; }
-  BL_INLINE_NODEBUG Vec2T& operator|=(T scalar) noexcept { *this = Vec2T{bitOr(x, scalar), bitOr(y, scalar)}; return *this; }
-  BL_INLINE_NODEBUG Vec2T& operator^=(T scalar) noexcept { *this = Vec2T{bitXor(x, scalar), bitXor(y, scalar)}; return *this; }
-
-  BL_INLINE_NODEBUG Vec2T& operator+=(const Vec2T& other) noexcept { *this = Vec2T{x + other.x, y + other.y}; return *this; }
-  BL_INLINE_NODEBUG Vec2T& operator-=(const Vec2T& other) noexcept { *this = Vec2T{x - other.x, y - other.y}; return *this; }
-  BL_INLINE_NODEBUG Vec2T& operator*=(const Vec2T& other) noexcept { *this = Vec2T{x * other.x, y * other.y}; return *this; }
-  BL_INLINE_NODEBUG Vec2T& operator/=(const Vec2T& other) noexcept { *this = Vec2T{x / other.x, y / other.y}; return *this; }
-  BL_INLINE_NODEBUG Vec2T& operator&=(const Vec2T& other) noexcept { *this = Vec2T{bitAnd(x, other.x), bitAnd(y, other.y)}; return *this; }
-  BL_INLINE_NODEBUG Vec2T& operator|=(const Vec2T& other) noexcept { *this = Vec2T{bitOr(x, other.x), bitOr(y, other.y)}; return *this; }
-  BL_INLINE_NODEBUG Vec2T& operator^=(const Vec2T& other) noexcept { *this = Vec2T{bitXor(x, other.x), bitXor(y, other.y)}; return *this; }
-};
-
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator+(T a, const Vec2T<T>& b) noexcept { return Vec2T<T>{a + b.x, a + b.y}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator-(T a, const Vec2T<T>& b) noexcept { return Vec2T<T>{a - b.x, a - b.y}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator*(T a, const Vec2T<T>& b) noexcept { return Vec2T<T>{a * b.x, a * b.y}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator/(T a, const Vec2T<T>& b) noexcept { return Vec2T<T>{a / b.x, a / b.y}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator&(T a, const Vec2T<T>& b) noexcept { return Vec2T<T>{bitAnd(a, b.x), bitAnd(a, b.y)}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator|(T a, const Vec2T<T>& b) noexcept { return Vec2T<T>{bitOr(a, b.x), bitOr(a, b.y)}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator^(T a, const Vec2T<T>& b) noexcept { return Vec2T<T>{bitXor(a, b.x), bitXor(a, b.y)}; };
-
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator+(const Vec2T<T>& a, T b) noexcept { return Vec2T<T>{a.x + b, a.y + b}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator-(const Vec2T<T>& a, T b) noexcept { return Vec2T<T>{a.x - b, a.y - b}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator*(const Vec2T<T>& a, T b) noexcept { return Vec2T<T>{a.x * b, a.y * b}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator/(const Vec2T<T>& a, T b) noexcept { return Vec2T<T>{a.x / b, a.y / b}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator&(const Vec2T<T>& a, T b) noexcept { return Vec2T<T>{bitAnd(a.x, b), bitAnd(a.y, b)}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator|(const Vec2T<T>& a, T b) noexcept { return Vec2T<T>{bitOr(a.x, b), bitOr(a.y, b)}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator^(const Vec2T<T>& a, T b) noexcept { return Vec2T<T>{bitXor(a.x, b), bitXor(a.y, b)}; };
-
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator+(const Vec2T<T>& a, const Vec2T<T>& b) noexcept { return Vec2T<T>{a.x + b.x, a.y + b.y}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator-(const Vec2T<T>& a, const Vec2T<T>& b) noexcept { return Vec2T<T>{a.x - b.x, a.y - b.y}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator*(const Vec2T<T>& a, const Vec2T<T>& b) noexcept { return Vec2T<T>{a.x * b.x, a.y * b.y}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator/(const Vec2T<T>& a, const Vec2T<T>& b) noexcept { return Vec2T<T>{a.x / b.x, a.y / b.y}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator&(const Vec2T<T>& a, const Vec2T<T>& b) noexcept { return Vec2T<T>{bitAnd(a.x, b.x), bitAnd(a.y, b.y)}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator|(const Vec2T<T>& a, const Vec2T<T>& b) noexcept { return Vec2T<T>{bitOr(a.x, b.x), bitOr(a.y, b.y)}; };
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> operator^(const Vec2T<T>& a, const Vec2T<T>& b) noexcept { return Vec2T<T>{bitXor(a.x, b.x), bitXor(a.y, b.y)}; };
-
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> msbMask(Vec2T<T> a) noexcept { return Vec2T<T>{msbMask(a.x), msbMask(a.y)}; }
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> v_abs(const Vec2T<T>& v) noexcept { return Vec2T<T>{blAbs(v.x), blAbs(v.y)}; }
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> v_min(const Vec2T<T>& a, const Vec2T<T>& b) noexcept { return Vec2T<T>{blMin(a.x, b.x), blMin(a.y, b.y)}; }
-template<typename T> static BL_INLINE_NODEBUG Vec2T<T> v_max(const Vec2T<T>& a, const Vec2T<T>& b) noexcept { return Vec2T<T>{blMax(a.x, b.x), blMax(a.y, b.y)}; }
-
-typedef Vec2T<float> Vec2F;
-typedef Vec2T<double> Vec2D;
-typedef Vec2T<int32_t> Vec2I32;
-typedef Vec2T<uint32_t> Vec2U32;
-typedef Vec2T<int64_t> Vec2I64;
-typedef Vec2T<uint64_t> Vec2U64;
+namespace {
 
 // Fetch - Solid
 // =============
@@ -424,32 +352,32 @@ struct FetchPatternHorzExtendCtxRoR {
 };
 
 struct FetchPatternAffineCtx {
-  Vec2U64 xx_xy;
-  Vec2U64 yx_yy;
-  Vec2U64 tx_ty;
-  Vec2U64 px_py;
-  Vec2I32 ox_oy;
-  Vec2I32 rx_ry;
-  Vec2I32 minx_miny;
-  Vec2I32 maxx_maxy;
-  Vec2I32 corx_cory;
-  Vec2I32 tw_th;
-  // Vec2D tw_th;
+  Vec::u64x2 xx_xy;
+  Vec::u64x2 yx_yy;
+  Vec::u64x2 tx_ty;
+  Vec::u64x2 px_py;
+  Vec::i32x2 ox_oy;
+  Vec::i32x2 rx_ry;
+  Vec::i32x2 minx_miny;
+  Vec::i32x2 maxx_maxy;
+  Vec::i32x2 corx_cory;
+  Vec::i32x2 tw_th;
+  // Vec::f64x2 tw_th;
 
   BL_INLINE void _initPattern(const FetchData::Pattern* pattern) noexcept {
-    xx_xy = Vec2U64{pattern->affine.xx.u64, pattern->affine.xy.u64};
-    yx_yy = Vec2U64{pattern->affine.yx.u64, pattern->affine.yy.u64};
-    tx_ty = Vec2U64{pattern->affine.tx.u64, pattern->affine.ty.u64};
-    ox_oy = Vec2I32{int32_t(pattern->affine.ox.u64 >> 32), int32_t(pattern->affine.oy.u64 >> 32)};
-    rx_ry = Vec2I32{int32_t(pattern->affine.rx.u64 >> 32), int32_t(pattern->affine.ry.u64 >> 32)};
-    minx_miny = Vec2I32{pattern->affine.minX, pattern->affine.minY};
-    maxx_maxy = Vec2I32{pattern->affine.maxX, pattern->affine.maxY};
-    corx_cory = Vec2I32{pattern->affine.corX, pattern->affine.corY};
+    xx_xy = Vec::u64x2{pattern->affine.xx.u64, pattern->affine.xy.u64};
+    yx_yy = Vec::u64x2{pattern->affine.yx.u64, pattern->affine.yy.u64};
+    tx_ty = Vec::u64x2{pattern->affine.tx.u64, pattern->affine.ty.u64};
+    ox_oy = Vec::i32x2{int32_t(pattern->affine.ox.u64 >> 32), int32_t(pattern->affine.oy.u64 >> 32)};
+    rx_ry = Vec::i32x2{int32_t(pattern->affine.rx.u64 >> 32), int32_t(pattern->affine.ry.u64 >> 32)};
+    minx_miny = Vec::i32x2{pattern->affine.minX, pattern->affine.minY};
+    maxx_maxy = Vec::i32x2{pattern->affine.maxX, pattern->affine.maxY};
+    corx_cory = Vec::i32x2{pattern->affine.corX, pattern->affine.corY};
 
-    tw_th = Vec2I32{int(pattern->affine.tw), int(pattern->affine.th)};
+    tw_th = Vec::i32x2{int(pattern->affine.tw), int(pattern->affine.th)};
   }
 
-  BL_INLINE void normalizePxPy(Vec2U64& v) noexcept {
+  BL_INLINE void normalizePxPy(Vec::u64x2& v) noexcept {
     uint32_t x = uint32_t(int32_t(v.x >> 32) % tw_th.x);
     uint32_t y = uint32_t(int32_t(v.y >> 32) % tw_th.y);
 
@@ -459,7 +387,7 @@ struct FetchPatternAffineCtx {
     if (int32_t(x) > ox_oy.x) x -= rx_ry.x;
     if (int32_t(y) > ox_oy.y) y -= rx_ry.y;
 
-    v = Vec2U64{(uint64_t(x) << 32) | (v.x & 0xFFFFFFFF), (uint64_t(y) << 32) | (v.y & 0xFFFFFFFF)};
+    v = Vec::u64x2{(uint64_t(x) << 32) | (v.x & 0xFFFFFFFF), (uint64_t(y) << 32) | (v.y & 0xFFFFFFFF)};
   }
 
   BL_INLINE void rectInitY(ContextData* ctxData, const FetchData::Pattern* pattern, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
@@ -506,7 +434,7 @@ struct FetchPatternAffineCtx {
   BL_INLINE uint32_t fracX() const noexcept { return uint32_t(px_py.x & 0xFFFFFFFFu) >> 24; }
   BL_INLINE uint32_t fracY() const noexcept { return uint32_t(px_py.y & 0xFFFFFFFFu) >> 24; }
 
-  BL_INLINE Vec2T<size_t> index(int32_t offX = 0, int32_t offY = 0) const noexcept {
+  BL_INLINE Vec::u32x2 index(int32_t offX = 0, int32_t offY = 0) const noexcept {
     int32_t x = int32_t(px_py.x >> 32) + offX;
     int32_t y = int32_t(px_py.y >> 32) + offY;
 
@@ -522,7 +450,7 @@ struct FetchPatternAffineCtx {
     x = x ^ (x >> 31);
     y = y ^ (y >> 31);
 
-    return Vec2T<size_t>{uint32_t(x), uint32_t(y)};
+    return Vec::u32x2{uint32_t(x), uint32_t(y)};
   }
 
   BL_INLINE void advanceX() noexcept {
@@ -534,8 +462,8 @@ struct FetchPatternAffineCtx {
     x -= (IntOps::bitMaskFromBool<int32_t>(x > ox_oy.x) & rx_ry.x);
     y -= (IntOps::bitMaskFromBool<int32_t>(y > ox_oy.y) & rx_ry.y);
 
-    px_py = Vec2U64{(uint64_t(uint32_t(x)) << 32) | (px_py.x & 0xFFFFFFFFu),
-                    (uint64_t(uint32_t(y)) << 32) | (px_py.y & 0xFFFFFFFFu)};
+    px_py = Vec::u64x2{(uint64_t(uint32_t(x)) << 32) | (px_py.x & 0xFFFFFFFFu),
+                       (uint64_t(uint32_t(y)) << 32) | (px_py.y & 0xFFFFFFFFu)};
   }
 };
 
@@ -828,10 +756,10 @@ struct FetchPatternAffineNNAny : public FetchPatternAffineNNBase<DstPixelT, kFor
   using FetchPatternAffineNNBase<DstPixelT, kFormat>::_ctx;
 
   BL_INLINE PixelType fetch() noexcept {
-    Vec2T<size_t> index = _ctx.index();
+    Vec::u32x2 index = _ctx.index();
     _ctx.advanceX();
 
-    const uint8_t* p = _pixelData + intptr_t(index.y) * _stride + index.x * kSrcBPP;
+    const uint8_t* p = _pixelData + intptr_t(index.y) * _stride + size_t(index.x) * kSrcBPP;
     return PixelIO<PixelType, kFormat>::fetch(p);
   }
 };
@@ -847,8 +775,8 @@ struct FetchPatternAffineBIAny : public FetchPatternAffineNNBase<DstPixelT, kFor
   using FetchPatternAffineNNBase<DstPixelT, kFormat>::_ctx;
 
   BL_INLINE PixelType fetch() noexcept {
-    Vec2T<size_t> index0 = _ctx.index();
-    Vec2T<size_t> index1 = _ctx.index(1, 1);
+    Vec::u32x2 index0 = _ctx.index();
+    Vec::u32x2 index1 = _ctx.index(1, 1);
 
     uint32_t wx = _ctx.fracX();
     uint32_t wy = _ctx.fracY();
@@ -863,10 +791,10 @@ struct FetchPatternAffineBIAny : public FetchPatternAffineNNBase<DstPixelT, kFor
     const uint8_t* line0 = _pixelData + intptr_t(index0.y) * _stride;
     const uint8_t* line1 = _pixelData + intptr_t(index1.y) * _stride;
 
-    auto p = PixelIO<PixelType, kFormat>::fetch(line0 + index0.x * kSrcBPP).unpack() * Pixel::Repeat{wa} +
-             PixelIO<PixelType, kFormat>::fetch(line0 + index1.x * kSrcBPP).unpack() * Pixel::Repeat{wb} +
-             PixelIO<PixelType, kFormat>::fetch(line1 + index0.x * kSrcBPP).unpack() * Pixel::Repeat{wc} +
-             PixelIO<PixelType, kFormat>::fetch(line1 + index1.x * kSrcBPP).unpack() * Pixel::Repeat{wd} ;
+    auto p = PixelIO<PixelType, kFormat>::fetch(line0 + size_t(index0.x) * kSrcBPP).unpack() * Pixel::Repeat{wa} +
+             PixelIO<PixelType, kFormat>::fetch(line0 + size_t(index1.x) * kSrcBPP).unpack() * Pixel::Repeat{wb} +
+             PixelIO<PixelType, kFormat>::fetch(line1 + size_t(index0.x) * kSrcBPP).unpack() * Pixel::Repeat{wc} +
+             PixelIO<PixelType, kFormat>::fetch(line1 + size_t(index1.x) * kSrcBPP).unpack() * Pixel::Repeat{wd} ;
     return p.div256().pack();
   }
 };
@@ -1017,17 +945,17 @@ struct FetchRadialGradient : public FetchGradientBase<PixelType, kQuality> {
   using Base = FetchGradientBase<PixelType, kQuality>;
   using Base::fetchPixel;
 
-  Vec2D xx_xy;
-  Vec2D yx_yy;
-  Vec2D px_py;
+  Vec::f64x2 xx_xy;
+  Vec::f64x2 yx_yy;
+  Vec::f64x2 px_py;
 
-  Vec2D ax_ay;
-  Vec2D fx_fy;
-  Vec2D da_ba;
+  Vec::f64x2 ax_ay;
+  Vec::f64x2 fx_fy;
+  Vec::f64x2 da_ba;
 
-  Vec2D d_b;
-  Vec2D dd_bd;
-  Vec2D ddx_ddy;
+  Vec::f64x2 d_b;
+  Vec::f64x2 dd_bd;
+  Vec::f64x2 ddx_ddy;
 
   double ddd;
   float scale_f32;
@@ -1039,13 +967,13 @@ struct FetchRadialGradient : public FetchGradientBase<PixelType, kQuality> {
     const FetchData::Gradient::Radial& radial = gradient->radial;
 
     Base::_initGradientBase(ctxData, gradient, yPos);
-    xx_xy = Vec2D{radial.xx, radial.xy};
-    yx_yy = Vec2D{radial.yx, radial.yy};
-    px_py = Vec2D{radial.ox, radial.oy};
-    ax_ay = Vec2D{radial.ax, radial.ay};
-    fx_fy = Vec2D{radial.fx, radial.fy};
-    da_ba = Vec2D{radial.dd, radial.bd};
-    ddx_ddy = Vec2D{radial.ddx, radial.ddy};
+    xx_xy = Vec::f64x2{radial.xx, radial.xy};
+    yx_yy = Vec::f64x2{radial.yx, radial.yy};
+    px_py = Vec::f64x2{radial.ox, radial.oy};
+    ax_ay = Vec::f64x2{radial.ax, radial.ay};
+    fx_fy = Vec::f64x2{radial.fx, radial.fy};
+    da_ba = Vec::f64x2{radial.dd, radial.bd};
+    ddx_ddy = Vec::f64x2{radial.ddx, radial.ddy};
     ddd = radial.ddd;
     scale_f32 = float(radial.scale);
     _maxi = radial.maxi;
@@ -1056,7 +984,7 @@ struct FetchRadialGradient : public FetchGradientBase<PixelType, kQuality> {
     blUnused(width);
 
     _initFetch(ctxData, fetchData, y);
-    Vec2D pt = Vec2D{double(int32_t(x)), double(int32_t(y))};
+    Vec::f64x2 pt = Vec::f64x2{double(int32_t(x)), double(int32_t(y))};
     px_py += pt.y * yx_yy + pt.x * xx_xy;
   }
 
@@ -1091,13 +1019,13 @@ struct FetchRadialGradient : public FetchGradientBase<PixelType, kQuality> {
     Base::_advanceGradientY();
   }
 
-  BL_INLINE void precalc(const Vec2D& tx_ty) noexcept {
-    Vec2D tx_fx_ty_fy = tx_ty * fx_fy;
-    Vec2D tx_ddx_ty_ddy = tx_ty * ddx_ddy;
-    double z = tx_fx_ty_fy.hmul();
+  BL_INLINE void precalc(const Vec::f64x2& tx_ty) noexcept {
+    Vec::f64x2 tx_fx_ty_fy = tx_ty * fx_fy;
+    Vec::f64x2 tx_ddx_ty_ddy = tx_ty * ddx_ddy;
+    double z = Vec::hmul(tx_fx_ty_fy);
 
-    d_b = Vec2D{(ax_ay * tx_ty * tx_ty).hadd() + z + z, tx_fx_ty_fy.hadd()};
-    dd_bd = Vec2D{da_ba.x + tx_ddx_ty_ddy.x + tx_ddx_ty_ddy.y, da_ba.y};
+    d_b = Vec::f64x2{Vec::hadd(ax_ay * tx_ty * tx_ty) + z + z, Vec::hadd(tx_fx_ty_fy)};
+    dd_bd = Vec::f64x2{da_ba.x + tx_ddx_ty_ddy.x + tx_ddx_ty_ddy.y, da_ba.y};
   }
 
   BL_INLINE PixelType fetch() noexcept {
@@ -1134,9 +1062,9 @@ struct FetchConicGradient : public FetchGradientBase<PixelType, kQuality> {
   using Base::fetchPixel;
 
   double xx;
-  Vec2D yx_yy;
-  Vec2D hx_hy;
-  Vec2D px_py;
+  Vec::f64x2 yx_yy;
+  Vec::f64x2 hx_hy;
+  Vec::f64x2 px_py;
 
   const CommonTable::Conic* consts;
   float angleOffset;
@@ -1148,8 +1076,8 @@ struct FetchConicGradient : public FetchGradientBase<PixelType, kQuality> {
 
     Base::_initGradientBase(ctxData, gradient, yPos);
     xx = conic.xx;
-    yx_yy = Vec2D{conic.yx, conic.yy};
-    hx_hy = Vec2D{conic.ox, conic.oy};
+    yx_yy = Vec::f64x2{conic.yx, conic.yy};
+    hx_hy = Vec::f64x2{conic.ox, conic.oy};
     consts = conic.consts;
     angleOffset = conic.offset;
     maxi = conic.maxi;
@@ -1161,8 +1089,8 @@ struct FetchConicGradient : public FetchGradientBase<PixelType, kQuality> {
     _initFetch(ctxData, fetchData, y);
     Base::_initGradientX(x);
 
-    Vec2D pt = Vec2D{double(int32_t(x)), double(int32_t(y))};
-    hx_hy += pt.y * yx_yy + Vec2D{pt.x * xx, 0.0};
+    Vec::f64x2 pt = Vec::f64x2{double(int32_t(x)), double(int32_t(y))};
+    hx_hy += pt.y * yx_yy + Vec::f64x2{pt.x * xx, 0.0};
   }
 
   BL_INLINE void rectStartX(uint32_t xPos) noexcept {
@@ -1198,18 +1126,18 @@ struct FetchConicGradient : public FetchGradientBase<PixelType, kQuality> {
   }
 
   BL_INLINE PixelType fetch() noexcept {
-    Vec2F pt = Vec2F{float(px_py.x), float(px_py.y)};
-    Vec2F x1 = v_abs(pt);
+    Vec::f32x2 pt = Vec::f32x2(float(px_py.x), float(px_py.y));
+    Vec::f32x2 x1 = Vec::abs(pt);
 
     px_py.x += xx;
 
     float x2 = blMax(x1.x, x1.y);
     float x3 = blMin(x1.x, x1.y);
 
-    float s = bitAnd(blBitCast<float>(IntOps::bitMaskFromBool<uint32_t>(x1.x == x3)), consts->n_div_4[0]);
+    float s = Vec::and_(blBitCast<float>(IntOps::bitMaskFromBool<uint32_t>(x1.x == x3)), consts->n_div_4[0]);
     x3 = x3 / x2;
     x2 = x3 * x3;
-    pt = msbMask(pt) & Vec2F{consts->n_extra[0], consts->n_extra[1]};
+    pt = msbMask(pt) & Vec::f32x2(consts->n_extra[0], consts->n_extra[1]);
 
     float x4 = x2 * consts->q3[0];
     x4 = x4 + consts->q2[0];
@@ -1225,6 +1153,7 @@ struct FetchConicGradient : public FetchGradientBase<PixelType, kQuality> {
   }
 };
 
+} // {anonymous}
 } // {Reference}
 } // {Pipeline}
 } // {bl}

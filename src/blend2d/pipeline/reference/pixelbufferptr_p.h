@@ -16,6 +16,7 @@
 namespace bl {
 namespace Pipeline {
 namespace Reference {
+namespace {
 
 template<uint32_t BytesPerPixel>
 class PixelBufferPtr {
@@ -64,6 +65,7 @@ public:
   BL_INLINE void advanceY() noexcept { advanceY(1); }
 };
 
+} // {anonymous}
 } // {Reference}
 } // {Pipeline}
 } // {bl}

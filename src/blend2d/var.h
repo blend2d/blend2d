@@ -16,7 +16,7 @@
 //! \name BLVar - C API
 //! \{
 
-//! Var [C API].
+//! Variant [C API].
 struct BLVarCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
   BL_DEFINE_OBJECT_DCAST(BLVar)
@@ -221,7 +221,7 @@ struct VarCastImpl<BLRgba64> {
 } // {BLInternal}
 //! \endcond
 
-//! Value [C++ API].
+//! Variant [C++ API].
 class BLVar final : public BLVarCore {
 public:
   //! \cond INTERNAL

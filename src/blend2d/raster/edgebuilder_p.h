@@ -216,8 +216,8 @@ public:
   BL_INLINE bool isClose() const noexcept { return _cmdPtr != _cmdEnd && _cmdPtr[0] == BL_PATH_CMD_CLOSE; }
   BL_INLINE bool isLineTo() const noexcept { return _cmdPtr != _cmdEnd && _cmdPtr[0] == BL_PATH_CMD_ON; }
   BL_INLINE bool isQuadTo() const noexcept { return _cmdPtr <= _cmdEndMinus2 && _cmdPtr[0] == BL_PATH_CMD_QUAD; }
-  BL_INLINE bool isCubicTo() const noexcept { return _cmdPtr < _cmdEndMinus2 && _cmdPtr[0] == BL_PATH_CMD_CUBIC; }
   BL_INLINE bool isConicTo() const noexcept { return _cmdPtr < _cmdEndMinus2 && _cmdPtr[0] == BL_PATH_CMD_CONIC; }
+  BL_INLINE bool isCubicTo() const noexcept { return _cmdPtr < _cmdEndMinus2 && _cmdPtr[0] == BL_PATH_CMD_CUBIC; }
 
   BL_INLINE void nextLineTo(BLPoint& pt1) noexcept {
     _transform.apply(pt1, _vtxPtr[0]);
@@ -282,7 +282,7 @@ public:
 
 // Stroke sink never produces invalid paths, thus:
 //   - this path will only have a single figure.
-//   - we don't have to check whether the path is valid, it was produced by our stroker, which produces valid paths.
+//   - we don't have to check whether the path is valid as it was produced by the stroker.
 template<class Transform = EdgeTransformNone>
 class EdgeSourceReversePathFromStrokeSink {
 public:
@@ -2080,14 +2080,14 @@ RestartClipLoop:
     if ((yStart >= yEnd) | (yEnd <= _clipBoxD.y0))
       return BL_SUCCESS;
 
-    // This delta should be okay even for 16-bit AA.
-    double kDeltaLimit = 0.00001;
+    // The delta must be enough to represent our fixed point.
+    double kDeltaLimit = 0.00390625;
     double xDelta = blAbs(monoCurve.first().x - monoCurve.last().x);
 
     uint32_t completelyOut = 0;
     typename MonoCurveT::SplitStep step;
 
-    if (xDelta < kDeltaLimit) {
+    if (xDelta <= kDeltaLimit) {
       // Straight-Line
       // -------------
 

@@ -25,8 +25,8 @@
 // The reason for doing so is to make the public interface using SIMD::Internal easier to read.
 #define I Internal
 
-// SIMD - Features
-// ===============
+// SIMD - Register Widths
+// ======================
 
 #if BL_TARGET_ARCH_ARM >= 64
   #define BL_SIMD_AARCH64
@@ -41,6 +41,9 @@
   #define BL_SIMD_WIDTH_D 0
 #endif
 
+// SIMD - Features
+// ===============
+
 #if defined(BL_SIMD_AARCH64)
   #define BL_SIMD_FEATURE_ARRAY_LOOKUP
 #else
@@ -52,6 +55,43 @@
 #define BL_SIMD_FEATURE_MOVW
 #define BL_SIMD_FEATURE_SWIZZLEV_U8
 #define BL_SIMD_FEATURE_RSRL
+
+// SIMD - Cost Tables
+// ==================
+
+#define BL_SIMD_COST_ABS_I8          1  // native
+#define BL_SIMD_COST_ABS_I16         1  // native
+#define BL_SIMD_COST_ABS_I32         1  // native
+#define BL_SIMD_COST_ALIGNR_U8       1  // native
+#define BL_SIMD_COST_MIN_MAX_I8      1  // native
+#define BL_SIMD_COST_MIN_MAX_U8      1  // native
+#define BL_SIMD_COST_MIN_MAX_I16     1  // native
+#define BL_SIMD_COST_MIN_MAX_U16     1  // native
+#define BL_SIMD_COST_MIN_MAX_I32     1  // native
+#define BL_SIMD_COST_MIN_MAX_U32     1  // native
+#define BL_SIMD_COST_MUL_I16         1  // native
+#define BL_SIMD_COST_MUL_I32         1  // native
+#define BL_SIMD_COST_MUL_I64         7  // emulated (complex)
+
+#if defined(BL_SIMD_AARCH64)
+  #define BL_SIMD_COST_ABS_I64       1  // native
+  #define BL_SIMD_COST_CMP_EQ_I64    1  // native
+  #define BL_SIMD_COST_CMP_LT_GT_I64 1  // native
+  #define BL_SIMD_COST_CMP_LE_GE_I64 1  // native
+  #define BL_SIMD_COST_CMP_LT_GT_U64 1  // native
+  #define BL_SIMD_COST_CMP_LE_GE_U64 1  // native
+  #define BL_SIMD_COST_MIN_MAX_I64   2  // emulated ('cmp_gt_i64' + 'blend')
+  #define BL_SIMD_COST_MIN_MAX_U64   2  // emulated ('cmp_gt_u64' + 'blend')
+#else
+  #define BL_SIMD_COST_ABS_I64       3  // emulated
+  #define BL_SIMD_COST_CMP_EQ_I64    3  // emulated
+  #define BL_SIMD_COST_CMP_LT_GT_I64 2  // emulated
+  #define BL_SIMD_COST_CMP_LE_GE_I64 3  // emulated
+  #define BL_SIMD_COST_CMP_LT_GT_U64 3  // emulated
+  #define BL_SIMD_COST_CMP_LE_GE_U64 3  // emulated
+  #define BL_SIMD_COST_MIN_MAX_I64   3  // emulated
+  #define BL_SIMD_COST_MIN_MAX_U64   2  // emulated
+#endif
 
 namespace SIMD {
 
@@ -1411,9 +1451,18 @@ BL_INLINE_NODEBUG int8x16_t simd_mul_i8(const int8x16_t& a, const int8x16_t& b) 
 BL_INLINE_NODEBUG int16x8_t simd_mul_i16(const int16x8_t& a, const int16x8_t& b) noexcept { return vmulq_s16(a, b); }
 BL_INLINE_NODEBUG int32x4_t simd_mul_i32(const int32x4_t& a, const int32x4_t& b) noexcept { return vmulq_s32(a, b); }
 
+BL_INLINE_NODEBUG int64x2_t simd_mul_i64(const int64x2_t& a, const int64x2_t& b) noexcept {
+  uint32x4_t hi = vmulq_u32(simd_u32(b), vrev64q_u32(simd_u32(a)));
+  return simd_i64(
+    vmlal_u32(vshlq_n_u64(simd_u64(vpaddlq_u32(hi)), 32),
+              vmovn_u64(simd_u64(a)),
+              vmovn_u64(simd_u64(b))));
+}
+
 BL_INLINE_NODEBUG uint8x16_t simd_mul_u8(const uint8x16_t& a, const uint8x16_t& b) noexcept { return vmulq_u8(a, b); }
 BL_INLINE_NODEBUG uint16x8_t simd_mul_u16(const uint16x8_t& a, const uint16x8_t& b) noexcept { return vmulq_u16(a, b); }
 BL_INLINE_NODEBUG uint32x4_t simd_mul_u32(const uint32x4_t& a, const uint32x4_t& b) noexcept { return vmulq_u32(a, b); }
+BL_INLINE_NODEBUG uint64x2_t simd_mul_u64(const uint64x2_t& a, const uint64x2_t& b) noexcept { return simd_u64(simd_mul_i64(simd_i64(a), simd_i64(b))); }
 
 BL_INLINE_NODEBUG int8x16_t simd_cmp_eq_i8(const int8x16_t& a, const int8x16_t& b) noexcept { return simd_i8(vceqq_s8(a, b)); }
 BL_INLINE_NODEBUG int16x8_t simd_cmp_eq_i16(const int16x8_t& a, const int16x8_t& b) noexcept { return simd_i16(vceqq_s16(a, b)); }
@@ -2212,12 +2261,12 @@ template<size_t W> BL_INLINE_NODEBUG Vec<W, float> div(const Vec<W, float>& a, c
 template<size_t W> BL_INLINE_NODEBUG Vec<W, float> min(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_min_f32(a.v, b.v)); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, float> max(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_max_f32(a.v, b.v)); }
 
-template<size_t W> BL_INLINE_NODEBUG Vec<W, float> cmp_eq_f32(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_cmp_eq_f32(a.v, b.v)); }
-template<size_t W> BL_INLINE_NODEBUG Vec<W, float> cmp_ne_f32(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_cmp_ne_f32(a.v, b.v)); }
-template<size_t W> BL_INLINE_NODEBUG Vec<W, float> cmp_ge_f32(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_cmp_ge_f32(a.v, b.v)); }
-template<size_t W> BL_INLINE_NODEBUG Vec<W, float> cmp_gt_f32(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_cmp_gt_f32(a.v, b.v)); }
-template<size_t W> BL_INLINE_NODEBUG Vec<W, float> cmp_le_f32(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_cmp_le_f32(a.v, b.v)); }
-template<size_t W> BL_INLINE_NODEBUG Vec<W, float> cmp_lt_f32(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_cmp_lt_f32(a.v, b.v)); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, float> cmp_eq(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_cmp_eq_f32(a.v, b.v)); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, float> cmp_ne(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_cmp_ne_f32(a.v, b.v)); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, float> cmp_ge(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_cmp_ge_f32(a.v, b.v)); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, float> cmp_gt(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_cmp_gt_f32(a.v, b.v)); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, float> cmp_le(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_cmp_le_f32(a.v, b.v)); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, float> cmp_lt(const Vec<W, float>& a, const Vec<W, float>& b) noexcept { return vec_wt<W, float>(I::simd_cmp_lt_f32(a.v, b.v)); }
 
 template<size_t W> BL_INLINE_NODEBUG Vec<W, float> abs(const Vec<W, float>& a) noexcept { return vec_wt<W, float>(I::simd_abs_f32(a.v)); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, float> sqrt(const Vec<W, float>& a) noexcept { return vec_wt<W, float>(I::simd_sqrt_f32(a.v)); }
@@ -2230,12 +2279,12 @@ template<size_t W> BL_INLINE_NODEBUG Vec<W, double> div(const Vec<W, double>& a,
 template<size_t W> BL_INLINE_NODEBUG Vec<W, double> min(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_min_f64(a.v, b.v)); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, double> max(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_max_f64(a.v, b.v)); }
 
-template<size_t W> BL_INLINE_NODEBUG Vec<W, double> cmp_eq_f64(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_cmp_eq_f64(a.v, b.v)); }
-template<size_t W> BL_INLINE_NODEBUG Vec<W, double> cmp_ne_f64(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_cmp_ne_f64(a.v, b.v)); }
-template<size_t W> BL_INLINE_NODEBUG Vec<W, double> cmp_ge_f64(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_cmp_ge_f64(a.v, b.v)); }
-template<size_t W> BL_INLINE_NODEBUG Vec<W, double> cmp_gt_f64(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_cmp_gt_f64(a.v, b.v)); }
-template<size_t W> BL_INLINE_NODEBUG Vec<W, double> cmp_le_f64(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_cmp_le_f64(a.v, b.v)); }
-template<size_t W> BL_INLINE_NODEBUG Vec<W, double> cmp_lt_f64(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_cmp_lt_f64(a.v, b.v)); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, double> cmp_eq(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_cmp_eq_f64(a.v, b.v)); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, double> cmp_ne(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_cmp_ne_f64(a.v, b.v)); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, double> cmp_ge(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_cmp_ge_f64(a.v, b.v)); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, double> cmp_gt(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_cmp_gt_f64(a.v, b.v)); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, double> cmp_le(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_cmp_le_f64(a.v, b.v)); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, double> cmp_lt(const Vec<W, double>& a, const Vec<W, double>& b) noexcept { return vec_wt<W, double>(I::simd_cmp_lt_f64(a.v, b.v)); }
 
 template<size_t W> BL_INLINE_NODEBUG Vec<W, double> abs(const Vec<W, double>& a) noexcept { return vec_wt<W, double>(I::simd_abs_f64(a.v)); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, double> sqrt(const Vec<W, double>& a) noexcept { return vec_wt<W, double>(I::simd_sqrt_f64(a.v)); }
@@ -2326,16 +2375,20 @@ template<size_t W> BL_INLINE_NODEBUG Vec<W, uint64_t> subs(const Vec<W, uint64_t
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> mul_i8(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_mul_i8(simd_i8(a.v), simd_i8(b.v))); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> mul_i16(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_mul_i16(simd_i16(a.v), simd_i16(b.v))); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> mul_i32(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_mul_i32(simd_i32(a.v), simd_i32(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> mul_i64(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_mul_i64(simd_i64(a.v), simd_i64(b.v))); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> mul_u8(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_mul_u8(simd_u8(a.v), simd_u8(b.v))); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> mul_u16(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_mul_u16(simd_u16(a.v), simd_u16(b.v))); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> mul_u32(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_mul_u32(simd_u32(a.v), simd_u32(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> mul_u64(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_mul_u64(simd_u64(a.v), simd_u64(b.v))); }
 
 template<size_t W> BL_INLINE_NODEBUG Vec<W, int8_t> mul(const Vec<W, int8_t>& a, const Vec<W, int8_t>& b) noexcept { return mul_i8(a, b); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, int16_t> mul(const Vec<W, int16_t>& a, const Vec<W, int16_t>& b) noexcept { return mul_i16(a, b); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, int32_t> mul(const Vec<W, int32_t>& a, const Vec<W, int32_t>& b) noexcept { return mul_i32(a, b); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, int64_t> mul(const Vec<W, int64_t>& a, const Vec<W, int64_t>& b) noexcept { return mul_i64(a, b); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, uint8_t> mul(const Vec<W, uint8_t>& a, const Vec<W, uint8_t>& b) noexcept { return mul_u8(a, b); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, uint16_t> mul(const Vec<W, uint16_t>& a, const Vec<W, uint16_t>& b) noexcept { return mul_u16(a, b); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, uint32_t> mul(const Vec<W, uint32_t>& a, const Vec<W, uint32_t>& b) noexcept { return mul_u32(a, b); }
+template<size_t W> BL_INLINE_NODEBUG Vec<W, uint64_t> mul(const Vec<W, uint64_t>& a, const Vec<W, uint64_t>& b) noexcept { return mul_u64(a, b); }
 
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_i8(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_i8(simd_i8(a.v), simd_i8(b.v))); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> cmp_eq_i16(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_cmp_eq_i16(simd_i16(a.v), simd_i16(b.v))); }
@@ -2608,7 +2661,6 @@ template<size_t W, typename T> static BL_INLINE_NODEBUG Vec<W, T> operator+(cons
 template<size_t W, typename T> static BL_INLINE_NODEBUG Vec<W, T> operator-(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return sub(a, b); }
 template<size_t W, typename T> static BL_INLINE_NODEBUG Vec<W, T> operator*(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return mul(a, b); }
 template<size_t W, typename T> static BL_INLINE_NODEBUG Vec<W, T> operator/(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return div(a, b); }
-
 template<size_t W, typename T> static BL_INLINE_NODEBUG Vec<W, T>& operator&=(Vec<W, T>& a, const Vec<W, T>& b) noexcept { a = and_(a, b); return a; }
 template<size_t W, typename T> static BL_INLINE_NODEBUG Vec<W, T>& operator|=(Vec<W, T>& a, const Vec<W, T>& b) noexcept { a = or_(a, b); return a; }
 template<size_t W, typename T> static BL_INLINE_NODEBUG Vec<W, T>& operator^=(Vec<W, T>& a, const Vec<W, T>& b) noexcept { a = xor_(a, b); return a; }

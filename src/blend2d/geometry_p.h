@@ -38,23 +38,23 @@ BL_HIDDEN extern const LookupTable<uint8_t, BL_GEOMETRY_TYPE_SIMPLE_LAST + 1> ge
 //! \name Validity Checks
 //! \{
 
-static BL_INLINE bool isValid(const BLSizeI& size) noexcept { return (size.w > 0) & (size.h > 0); }
-static BL_INLINE bool isValid(const BLSize& size) noexcept { return (size.w > 0) & (size.h > 0); }
+static BL_INLINE bool isValid(const BLSizeI& size) noexcept { return bool(unsigned(size.w > 0) & unsigned(size.h > 0)); }
+static BL_INLINE bool isValid(const BLSize& size) noexcept { return bool(unsigned(size.w > 0) & unsigned(size.h > 0)); }
 
-static BL_INLINE bool isValid(const BLBoxI& box) noexcept { return (box.x0 < box.x1) & (box.y0 < box.y1); }
-static BL_INLINE bool isValid(const BLBox& box) noexcept { return (box.x0 < box.x1) & (box.y0 < box.y1); }
+static BL_INLINE bool isValid(const BLBoxI& box) noexcept { return bool(unsigned(box.x0 < box.x1) & unsigned(box.y0 < box.y1)); }
+static BL_INLINE bool isValid(const BLBox& box) noexcept { return bool(unsigned(box.x0 < box.x1) & unsigned(box.y0 < box.y1)); }
 
 static BL_INLINE bool isValid(const BLRectI& rect) noexcept {
   OverflowFlag of = 0;
   int x1 = IntOps::addOverflow(rect.x, rect.w, &of);
   int y1 = IntOps::addOverflow(rect.y, rect.h, &of);
-  return (rect.x < x1) & (rect.y < y1) & (!of);
+  return bool(unsigned(rect.x < x1) & unsigned(rect.y < y1) & unsigned(!of));
 }
 
 static BL_INLINE bool isValid(const BLRect& rect) noexcept {
   double x1 = rect.x + rect.w;
   double y1 = rect.y + rect.h;
-  return (rect.x < x1) & (rect.y < y1);
+  return bool(unsigned(rect.x < x1) & unsigned(rect.y < y1));
 }
 
 //! \}
@@ -101,20 +101,30 @@ static BL_INLINE void bound(BLBoxI& box, const BLBoxI& other) noexcept {
 static BL_INLINE bool intersect(BLBoxI& dst, const BLBoxI& a, const BLBoxI& b) noexcept {
   dst.reset(blMax(a.x0, b.x0), blMax(a.y0, b.y0),
             blMin(a.x1, b.x1), blMin(a.y1, b.y1));
-  return (dst.x0 < dst.x1) & (dst.y0 < dst.y1);
+  return bool(unsigned(dst.x0 < dst.x1) & unsigned(dst.y0 < dst.y1));
 }
 
 static BL_INLINE bool intersect(BLBox& dst, const BLBox& a, const BLBox& b) noexcept {
   dst.reset(blMax(a.x0, b.x0), blMax(a.y0, b.y0),
             blMin(a.x1, b.x1), blMin(a.y1, b.y1));
-  return (dst.x0 < dst.x1) & (dst.y0 < dst.y1);
+  return bool(unsigned(dst.x0 < dst.x1) & unsigned(dst.y0 < dst.y1));
 }
 
-static BL_INLINE bool subsumes(const BLBoxI& a, const BLBoxI& b) noexcept { return (a.x0 <= b.x0) & (a.y0 <= b.y0) & (a.x1 >= b.x1) & (a.y1 >= b.y1); }
-static BL_INLINE bool subsumes(const BLBox& a, const BLBox& b) noexcept { return (a.x0 <= b.x0) & (a.y0 <= b.y0) & (a.x1 >= b.x1) & (a.y1 >= b.y1); }
+static BL_INLINE bool subsumes(const BLBoxI& a, const BLBoxI& b) noexcept {
+  return bool(unsigned(a.x0 <= b.x0) & unsigned(a.y0 <= b.y0) & unsigned(a.x1 >= b.x1) & unsigned(a.y1 >= b.y1));
+}
 
-static BL_INLINE bool overlaps(const BLBoxI& a, const BLBoxI& b) noexcept { return (a.x1 > b.x0) & (a.y1 > b.y0) & (a.x0 < b.x1) & (a.y0 < b.y1); }
-static BL_INLINE bool overlaps(const BLBox& a, const BLBox& b) noexcept { return (a.x1 > b.x0) & (a.y1 > b.y0) & (a.x0 < b.x1) & (a.y0 < b.y1); }
+static BL_INLINE bool subsumes(const BLBox& a, const BLBox& b) noexcept {
+  return bool(unsigned(a.x0 <= b.x0) & unsigned(a.y0 <= b.y0) & unsigned(a.x1 >= b.x1) & unsigned(a.y1 >= b.y1));
+}
+
+static BL_INLINE bool overlaps(const BLBoxI& a, const BLBoxI& b) noexcept {
+  return bool(unsigned(a.x1 > b.x0) & unsigned(a.y1 > b.y0) & unsigned(a.x0 < b.x1) & unsigned(a.y0 < b.y1));
+}
+
+static BL_INLINE bool overlaps(const BLBox& a, const BLBox& b) noexcept {
+  return bool(unsigned(a.x1 > b.x0) & unsigned(a.y1 > b.y0) & unsigned(a.x0 < b.x1) & unsigned(a.y0 < b.y1));
+}
 
 //! \}
 
@@ -356,7 +366,7 @@ static BL_INLINE BLPoint* splitQuadToSpline(const BLPoint p[3], BLPoint* out) no
   return out;
 }
 
-//! Coverts quadratic curve to cubic curve.
+//! Converts quadratic curve to cubic curve.
 //!
 //! \code
 //! cubic[0] = q0
@@ -453,7 +463,6 @@ public:
 //! ```
 //!
 //! \{
-
 
 static BL_INLINE void getCubicCoefficients(const BLPoint p[4], BLPoint& a, BLPoint& b, BLPoint& c, BLPoint& d) noexcept {
   BLPoint v1 = p[1] - p[0];
@@ -950,7 +959,6 @@ static BL_INLINE void getConicExtremaPoints(const BLPoint p[4], BLPoint out[2]) 
   out[0] = evalConicPrecise(p, t[0]);
   out[1] = evalConicPrecise(p, t[1]);
 }
-
 
 //! \}
 

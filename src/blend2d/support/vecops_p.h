@@ -23,25 +23,52 @@ namespace bl {
 // Vec2 Storage
 // ============
 
-//! Vec2Storage is a storage type of a vector of two values.
+//! A storage type of a vector of two values.
 template<typename T>
-struct BL_ALIGN_TYPE(Vec2Storage, sizeof(T)*2) {
+struct BL_ALIGN_TYPE(Vec2Data, sizeof(T) * 2u) {
+  using Type = T;
+
   T x, y;
 };
 
+//! A storage type of a vector of three values.
+template<typename T>
+struct BL_ALIGN_TYPE(Vec3Data, sizeof(T)) {
+  using Type = T;
+
+  T x, y, z;
+};
+
+//! A storage type of a vector of four values.
+template<typename T>
+struct BL_ALIGN_TYPE(Vec4Data, sizeof(T) * 2u) {
+  using Type = T;
+
+  T x, y, z, w;
+};
+
+namespace Vec {
 namespace {
 
 // Scalar Operations
 // =================
 
 template<typename T> BL_INLINE_NODEBUG T not_(const T& a) noexcept { return blBitCast<T>(~blBitCast<UIntByType<T>>(a)); }
+template<typename T> BL_INLINE_NODEBUG T msbMask(const T& a) noexcept { return blBitCast<T>(blBitCast<IntByType<T>>(a) >> (IntOps::bitSizeOf<T>() - 1u)); }
+
+template<typename T> BL_INLINE_NODEBUG T abs(const T& a) noexcept {
+  UIntByType<T> msk = UIntByType<T>(msbMask(a));
+  return T((UIntByType<T>(a) ^ msk) - msk);
+}
+
+template<> BL_INLINE_NODEBUG float abs(const float& a) noexcept { return blAbs(a); }
+template<> BL_INLINE_NODEBUG double abs(const double& a) noexcept { return blAbs(a); }
+
 template<typename T> BL_INLINE_NODEBUG T and_(const T& a, const T& b) noexcept { return blBitCast<T>(blBitCast<UIntByType<T>>(a) & blBitCast<UIntByType<T>>(b)); }
 template<typename T> BL_INLINE_NODEBUG T or_(const T& a, const T& b) noexcept { return blBitCast<T>(blBitCast<UIntByType<T>>(a) | blBitCast<UIntByType<T>>(b)); }
 template<typename T> BL_INLINE_NODEBUG T xor_(const T& a, const T& b) noexcept { return blBitCast<T>(blBitCast<UIntByType<T>>(a) ^ blBitCast<UIntByType<T>>(b)); }
-
-template<typename T> BL_INLINE_NODEBUG T msbMask(const T& a) noexcept { return blBitCast<T>(blBitCast<IntByType<T>>(a) >> (IntOps::bitSizeOf<T>() - 1u)); }
-template<typename T> BL_INLINE_NODEBUG T min(const T& a) noexcept { return blMin(a); }
-template<typename T> BL_INLINE_NODEBUG T max(const T& a) noexcept { return blMax(a); }
+template<typename T> BL_INLINE_NODEBUG T min(const T& a, const T& b) noexcept { return blMin(a, b); }
+template<typename T> BL_INLINE_NODEBUG T max(const T& a, const T& b) noexcept { return blMax(a, b); }
 
 template<typename T> BL_INLINE_NODEBUG UIntByType<T> cmp_eq(const T& a, const T& b) noexcept { return UIntByType<T>(0) - UIntByType<T>(a == b); }
 template<typename T> BL_INLINE_NODEBUG UIntByType<T> cmp_ne(const T& a, const T& b) noexcept { return UIntByType<T>(0) - UIntByType<T>(a != b); }
@@ -49,10 +76,6 @@ template<typename T> BL_INLINE_NODEBUG UIntByType<T> cmp_gt(const T& a, const T&
 template<typename T> BL_INLINE_NODEBUG UIntByType<T> cmp_ge(const T& a, const T& b) noexcept { return UIntByType<T>(0) - UIntByType<T>(a >= b); }
 template<typename T> BL_INLINE_NODEBUG UIntByType<T> cmp_lt(const T& a, const T& b) noexcept { return UIntByType<T>(0) - UIntByType<T>(a <  b); }
 template<typename T> BL_INLINE_NODEBUG UIntByType<T> cmp_le(const T& a, const T& b) noexcept { return UIntByType<T>(0) - UIntByType<T>(a <= b); }
-
-template<typename T> BL_INLINE_NODEBUG T abs(const T& a) noexcept { UIntByType<T> msk = UIntByType<T>(msbMask(a)); return T((UIntByType<T>(a) ^ msk) - msk); }
-template<> BL_INLINE_NODEBUG float abs(const float& a) noexcept { return blAbs(a); }
-template<> BL_INLINE_NODEBUG double abs(const double& a) noexcept { return blAbs(a); }
 
 // Vec2 Definitions
 // ================
@@ -66,7 +89,7 @@ struct Vec2 {
   BL_INLINE Vec2() noexcept = default;
   BL_INLINE Vec2(const Vec2& other) noexcept = default;
 
-  BL_INLINE Vec2(const Vec2Storage<Type>& other) noexcept
+  BL_INLINE Vec2(const Vec2Data<Type>& other) noexcept
     : x(other.x),
       y(other.y) {}
 
@@ -77,12 +100,12 @@ struct Vec2 {
   BL_INLINE Vec2& operator=(const Vec2& other) noexcept = default;
 };
 
-typedef Vec2<float> f32x2;
-typedef Vec2<double> f64x2;
 typedef Vec2<int32_t> i32x2;
 typedef Vec2<uint32_t> u32x2;
 typedef Vec2<int64_t> i64x2;
 typedef Vec2<uint64_t> u64x2;
+typedef Vec2<float> f32x2;
+typedef Vec2<double> f64x2;
 
 // Vec2 Operations - Int64 & UInt64 (SIMD)
 // =======================================
@@ -104,7 +127,7 @@ struct Vec2<uint64_t> {
   BL_INLINE Vec2(const SIMDType& vec) noexcept
     : v(vec) {}
 
-  BL_INLINE Vec2(const Vec2Storage<Type>& other) noexcept
+  BL_INLINE Vec2(const Vec2Data<Type>& other) noexcept
     : v(SIMD::make128_u64(other.y, other.x)) {}
 
   BL_INLINE Vec2(const Type& v0, const Type& v1) noexcept
@@ -114,29 +137,27 @@ struct Vec2<uint64_t> {
   BL_INLINE Vec2& operator=(const Vec2& other) noexcept { v = other.v; return *this; }
 };
 
-template<> BL_INLINE_NODEBUG u64x2 operator+(const u64x2& a, const u64x2& b) noexcept { return u64x2(a.v + b.v); }
-template<> BL_INLINE_NODEBUG u64x2 operator-(const u64x2& a, const u64x2& b) noexcept { return u64x2(a.v - b.v); }
-template<> BL_INLINE_NODEBUG u64x2 operator*(const u64x2& a, const u64x2& b) noexcept { return u64x2(a.v * b.v); }
+BL_INLINE_NODEBUG u64x2 operator+(const u64x2& a, const u64x2& b) noexcept { return u64x2(a.v + b.v); }
+BL_INLINE_NODEBUG u64x2 operator-(const u64x2& a, const u64x2& b) noexcept { return u64x2(a.v - b.v); }
+BL_INLINE_NODEBUG u64x2 operator*(const u64x2& a, const u64x2& b) noexcept { return u64x2(a.v * b.v); }
+BL_INLINE_NODEBUG u64x2 operator&(const u64x2& a, const u64x2& b) noexcept { return u64x2(a.v & b.v); }
+BL_INLINE_NODEBUG u64x2 operator|(const u64x2& a, const u64x2& b) noexcept { return u64x2(a.v | b.v); }
+BL_INLINE_NODEBUG u64x2 operator^(const u64x2& a, const u64x2& b) noexcept { return u64x2(a.v ^ b.v); }
 
-template<> BL_INLINE_NODEBUG u64x2 operator&(const u64x2& a, const u64x2& b) noexcept { return u64x2(a.v & b.v); }
-template<> BL_INLINE_NODEBUG u64x2 operator|(const u64x2& a, const u64x2& b) noexcept { return u64x2(a.v | b.v); }
-template<> BL_INLINE_NODEBUG u64x2 operator^(const u64x2& a, const u64x2& b) noexcept { return u64x2(a.v ^ b.v); }
+BL_INLINE_NODEBUG u64x2 operator==(const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::cmp_eq(a.v, b.v)); }
+BL_INLINE_NODEBUG u64x2 operator!=(const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::cmp_ne(a.v, b.v)); }
+BL_INLINE_NODEBUG u64x2 operator> (const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::cmp_gt(a.v, b.v)); }
+BL_INLINE_NODEBUG u64x2 operator>=(const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::cmp_ge(a.v, b.v)); }
+BL_INLINE_NODEBUG u64x2 operator< (const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::cmp_lt(a.v, b.v)); }
+BL_INLINE_NODEBUG u64x2 operator<=(const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::cmp_le(a.v, b.v)); }
 
-template<typename T> BL_INLINE_NODEBUG u64x2 operator==(const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_eq(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator!=(const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_ne(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator> (const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_gt(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator>=(const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_ge(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator< (const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_lt(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator<=(const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_le(a.v, b.v))); }
+BL_INLINE_NODEBUG u64x2 not_(const u64x2& a) noexcept { return u64x2(SIMD::not_(a.v)); }
+BL_INLINE_NODEBUG u64x2 abs(const u64x2& a) noexcept { return a; }
+BL_INLINE_NODEBUG u64x2 swap(const u64x2& a) noexcept { return u64x2(SIMD::swap_u64(a.v)); }
+BL_INLINE_NODEBUG u64x2 msbMask(const u64x2& a) noexcept { return u64x2(SIMD::srai_i64<63>(a.v)); }
 
-template<> BL_INLINE_NODEBUG u64x2 not_(const u64x2& a) noexcept { return u64x2(SIMD::not_(a.v)); }
-template<> BL_INLINE_NODEBUG u64x2 msbMask(const u64x2& a) noexcept { return u64x2(SIMD::srai_i64<63>(a.v)); }
-
-template<> BL_INLINE_NODEBUG u64x2 abs(const u64x2& a) noexcept { return a; }
-template<> BL_INLINE_NODEBUG u64x2 min(const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::min(a.v, b.v)); }
-template<> BL_INLINE_NODEBUG u64x2 max(const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::max(a.v, b.v)); }
-
-template<typename T> BL_INLINE_NODEBUG u64x2 swap(const u64x2& a) noexcept { return u64x2(SIMD::swap_u64(a.v)); }
+BL_INLINE_NODEBUG u64x2 min(const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::min(a.v, b.v)); }
+BL_INLINE_NODEBUG u64x2 max(const u64x2& a, const u64x2& b) noexcept { return u64x2(SIMD::max(a.v, b.v)); }
 
 template<>
 struct Vec2<int64_t> {
@@ -154,7 +175,7 @@ struct Vec2<int64_t> {
   BL_INLINE Vec2(const SIMDType& vec) noexcept
     : v(vec) {}
 
-  BL_INLINE Vec2(const Vec2Storage<Type>& other) noexcept
+  BL_INLINE Vec2(const Vec2Data<Type>& other) noexcept
     : v(SIMD::make128_i64(other.y, other.x)) {}
 
   BL_INLINE Vec2(const Type& v0, const Type& v1) noexcept
@@ -164,31 +185,29 @@ struct Vec2<int64_t> {
   BL_INLINE Vec2& operator=(const Vec2& other) noexcept { v = other.v; return *this; }
 };
 
-template<> BL_INLINE_NODEBUG i64x2 operator+(const i64x2& a, const i64x2& b) noexcept { return i64x2(a.v + b.v); }
-template<> BL_INLINE_NODEBUG i64x2 operator-(const i64x2& a, const i64x2& b) noexcept { return i64x2(a.v - b.v); }
-template<> BL_INLINE_NODEBUG i64x2 operator*(const i64x2& a, const i64x2& b) noexcept { return i64x2(a.v * b.v); }
+BL_INLINE_NODEBUG i64x2 operator+(const i64x2& a, const i64x2& b) noexcept { return i64x2(a.v + b.v); }
+BL_INLINE_NODEBUG i64x2 operator-(const i64x2& a, const i64x2& b) noexcept { return i64x2(a.v - b.v); }
+BL_INLINE_NODEBUG i64x2 operator*(const i64x2& a, const i64x2& b) noexcept { return i64x2(a.v * b.v); }
+BL_INLINE_NODEBUG i64x2 operator&(const i64x2& a, const i64x2& b) noexcept { return i64x2(a.v & b.v); }
+BL_INLINE_NODEBUG i64x2 operator|(const i64x2& a, const i64x2& b) noexcept { return i64x2(a.v | b.v); }
+BL_INLINE_NODEBUG i64x2 operator^(const i64x2& a, const i64x2& b) noexcept { return i64x2(a.v ^ b.v); }
 
-template<> BL_INLINE_NODEBUG i64x2 operator&(const i64x2& a, const i64x2& b) noexcept { return i64x2(a.v & b.v); }
-template<> BL_INLINE_NODEBUG i64x2 operator|(const i64x2& a, const i64x2& b) noexcept { return i64x2(a.v | b.v); }
-template<> BL_INLINE_NODEBUG i64x2 operator^(const i64x2& a, const i64x2& b) noexcept { return i64x2(a.v ^ b.v); }
+BL_INLINE_NODEBUG u64x2 operator==(const i64x2& a, const i64x2& b) noexcept { return u64x2(SIMD::vec_cast<SIMD::Vec2xU64>(SIMD::cmp_eq(a.v, b.v))); }
+BL_INLINE_NODEBUG u64x2 operator!=(const i64x2& a, const i64x2& b) noexcept { return u64x2(SIMD::vec_cast<SIMD::Vec2xU64>(SIMD::cmp_ne(a.v, b.v))); }
+BL_INLINE_NODEBUG u64x2 operator> (const i64x2& a, const i64x2& b) noexcept { return u64x2(SIMD::vec_cast<SIMD::Vec2xU64>(SIMD::cmp_gt(a.v, b.v))); }
+BL_INLINE_NODEBUG u64x2 operator>=(const i64x2& a, const i64x2& b) noexcept { return u64x2(SIMD::vec_cast<SIMD::Vec2xU64>(SIMD::cmp_ge(a.v, b.v))); }
+BL_INLINE_NODEBUG u64x2 operator< (const i64x2& a, const i64x2& b) noexcept { return u64x2(SIMD::vec_cast<SIMD::Vec2xU64>(SIMD::cmp_lt(a.v, b.v))); }
+BL_INLINE_NODEBUG u64x2 operator<=(const i64x2& a, const i64x2& b) noexcept { return u64x2(SIMD::vec_cast<SIMD::Vec2xU64>(SIMD::cmp_le(a.v, b.v))); }
 
-template<typename T> BL_INLINE_NODEBUG u64x2 operator==(const i64x2& a, const i64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_eq(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator!=(const i64x2& a, const i64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_ne(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator> (const i64x2& a, const i64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_gt(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator>=(const i64x2& a, const i64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_ge(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator< (const i64x2& a, const i64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_lt(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator<=(const i64x2& a, const i64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_le(a.v, b.v))); }
+BL_INLINE_NODEBUG i64x2 not_(const i64x2& a) noexcept { return i64x2(SIMD::not_(a.v)); }
+BL_INLINE_NODEBUG i64x2 abs(const i64x2& a) noexcept { return i64x2(SIMD::abs(a.v)); }
+BL_INLINE_NODEBUG i64x2 swap(const i64x2& a) noexcept { return i64x2(SIMD::swap_u64(a.v)); }
+BL_INLINE_NODEBUG i64x2 msbMask(const i64x2& a) noexcept { return i64x2(SIMD::srai_i64<63>(a.v)); }
 
-template<> BL_INLINE_NODEBUG i64x2 not_(const i64x2& a) noexcept { return i64x2(SIMD::not_(a.v)); }
-template<> BL_INLINE_NODEBUG i64x2 msbMask(const i64x2& a) noexcept { return i64x2(SIMD::srai_i64<63>(a.v)); }
+BL_INLINE_NODEBUG i64x2 min(const i64x2& a, const i64x2& b) noexcept { return i64x2(SIMD::min(a.v, b.v)); }
+BL_INLINE_NODEBUG i64x2 max(const i64x2& a, const i64x2& b) noexcept { return i64x2(SIMD::max(a.v, b.v)); }
 
-template<> BL_INLINE_NODEBUG i64x2 abs(const i64x2& a) noexcept { return i64x2(SIMD::abs(a.v)); }
-template<> BL_INLINE_NODEBUG i64x2 min(const i64x2& a, const i64x2& b) noexcept { return i64x2(SIMD::min(a.v, b.v)); }
-template<> BL_INLINE_NODEBUG i64x2 max(const i64x2& a, const i64x2& b) noexcept { return i64x2(SIMD::max(a.v, b.v)); }
-
-template<typename T> BL_INLINE_NODEBUG i64x2 swap(const i64x2& a) noexcept { return i64x2(SIMD::swap_u64(a.v)); }
-
-#endif
+#endif // BL_SIMD_WIDTH_I >= 128
 
 // Vec2 Operations - Float64 (SIMD)
 // ================================
@@ -210,7 +229,7 @@ struct Vec2<double> {
   BL_INLINE Vec2(const SIMDType& vec) noexcept
     : v(vec) {}
 
-  BL_INLINE Vec2(const Vec2Storage<Type>& other) noexcept
+  BL_INLINE Vec2(const Vec2Data<Type>& other) noexcept
     : v(SIMD::make128_f64(other.y, other.x)) {}
 
   BL_INLINE Vec2(const Type& v0, const Type& v1) noexcept
@@ -220,31 +239,30 @@ struct Vec2<double> {
   BL_INLINE Vec2& operator=(const Vec2& other) noexcept { v = other.v; return *this; }
 };
 
-template<> BL_INLINE_NODEBUG f64x2 operator+(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v + b.v); }
-template<> BL_INLINE_NODEBUG f64x2 operator-(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v - b.v); }
-template<> BL_INLINE_NODEBUG f64x2 operator*(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v * b.v); }
-template<> BL_INLINE_NODEBUG f64x2 operator/(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v / b.v); }
+BL_INLINE_NODEBUG f64x2 operator+(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v + b.v); }
+BL_INLINE_NODEBUG f64x2 operator-(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v - b.v); }
+BL_INLINE_NODEBUG f64x2 operator*(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v * b.v); }
+BL_INLINE_NODEBUG f64x2 operator/(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v / b.v); }
+BL_INLINE_NODEBUG f64x2 operator&(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v & b.v); }
+BL_INLINE_NODEBUG f64x2 operator|(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v | b.v); }
+BL_INLINE_NODEBUG f64x2 operator^(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v ^ b.v); }
 
-template<> BL_INLINE_NODEBUG f64x2 operator&(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v & b.v); }
-template<> BL_INLINE_NODEBUG f64x2 operator|(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v | b.v); }
-template<> BL_INLINE_NODEBUG f64x2 operator^(const f64x2& a, const f64x2& b) noexcept { return f64x2(a.v ^ b.v); }
+BL_INLINE_NODEBUG u64x2 operator==(const f64x2& a, const f64x2& b) noexcept { return u64x2(SIMD::vec_cast<SIMD::Vec2xU64>(SIMD::cmp_eq(a.v, b.v))); }
+BL_INLINE_NODEBUG u64x2 operator!=(const f64x2& a, const f64x2& b) noexcept { return u64x2(SIMD::vec_cast<SIMD::Vec2xU64>(SIMD::cmp_ne(a.v, b.v))); }
+BL_INLINE_NODEBUG u64x2 operator> (const f64x2& a, const f64x2& b) noexcept { return u64x2(SIMD::vec_cast<SIMD::Vec2xU64>(SIMD::cmp_gt(a.v, b.v))); }
+BL_INLINE_NODEBUG u64x2 operator>=(const f64x2& a, const f64x2& b) noexcept { return u64x2(SIMD::vec_cast<SIMD::Vec2xU64>(SIMD::cmp_ge(a.v, b.v))); }
+BL_INLINE_NODEBUG u64x2 operator< (const f64x2& a, const f64x2& b) noexcept { return u64x2(SIMD::vec_cast<SIMD::Vec2xU64>(SIMD::cmp_lt(a.v, b.v))); }
+BL_INLINE_NODEBUG u64x2 operator<=(const f64x2& a, const f64x2& b) noexcept { return u64x2(SIMD::vec_cast<SIMD::Vec2xU64>(SIMD::cmp_le(a.v, b.v))); }
 
-template<typename T> BL_INLINE_NODEBUG u64x2 operator==(const f64x2& a, const f64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_eq(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator!=(const f64x2& a, const f64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_ne(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator> (const f64x2& a, const f64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_gt(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator>=(const f64x2& a, const f64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_ge(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator< (const f64x2& a, const f64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_lt(a.v, b.v))); }
-template<typename T> BL_INLINE_NODEBUG u64x2 operator<=(const f64x2& a, const f64x2& b) noexcept { return u64x2(SIMD::vec_u64(SIMD::cmp_le(a.v, b.v))); }
+BL_INLINE_NODEBUG f64x2 not_(const f64x2& a) noexcept { return f64x2(SIMD::not_(a.v)); }
+BL_INLINE_NODEBUG f64x2 abs(const f64x2& a) noexcept { return f64x2(SIMD::abs(a.v)); }
+BL_INLINE_NODEBUG f64x2 swap(const f64x2& a) noexcept { return f64x2(SIMD::swap_f64(a.v)); }
+BL_INLINE_NODEBUG f64x2 msbMask(const f64x2& a) noexcept { return f64x2(SIMD::srai_i64<63>(a.v)); }
 
-template<> BL_INLINE_NODEBUG f64x2 not_(const f64x2& a) noexcept { return f64x2(SIMD::not_(a.v)); }
-template<> BL_INLINE_NODEBUG f64x2 msbMask(const f64x2& a) noexcept { return f64x2(SIMD::srai_i64<64>(a.v)); }
+BL_INLINE_NODEBUG f64x2 min(const f64x2& a, const f64x2& b) noexcept { return f64x2(SIMD::min(a.v, b.v)); }
+BL_INLINE_NODEBUG f64x2 max(const f64x2& a, const f64x2& b) noexcept { return f64x2(SIMD::max(a.v, b.v)); }
 
-template<> BL_INLINE_NODEBUG f64x2 abs(const f64x2& a) noexcept { return f64x2(SIMD::abs(a.v)); }
-template<> BL_INLINE_NODEBUG f64x2 min(const f64x2& a, const f64x2& b) noexcept { return f64x2(SIMD::min(a.v, b.v)); }
-template<> BL_INLINE_NODEBUG f64x2 max(const f64x2& a, const f64x2& b) noexcept { return f64x2(SIMD::max(a.v, b.v)); }
-
-template<typename T> BL_INLINE_NODEBUG f64x2 swap(const f64x2& a) noexcept { return f64x2(SIMD::swap_f64(a.v)); }
-#endif // BL_SIMD_WIDTH_D
+#endif // BL_SIMD_WIDTH_D >= 128
 
 // Vec2 Operations
 // ===============
@@ -323,6 +341,7 @@ template<typename T> BL_INLINE_NODEBUG T hmul(const Vec2<T>& a) noexcept { retur
 template<typename T> BL_INLINE_NODEBUG Vec2<T> swap(const Vec2<T>& a) noexcept { return Vec2<T>(a.y, a.x); }
 
 } // {anonymous}
+} // {Vec}
 } // {bl}
 
 //! \}

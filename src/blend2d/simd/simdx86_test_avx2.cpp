@@ -15,10 +15,11 @@ namespace SIMDTests {
 
 BL_HIDDEN void simd_test_x86_avx2() noexcept {
   const char ext[] = "AVX2";
+  print_cost_matrix(ext);
   test_integer<16>(ext);
   test_integer<32>(ext);
 }
 
-} // {BLContextTests}
+} // {SIMDTests}
 
 #endif // BL_TEST && BL_TARGET_OPT_AVX2

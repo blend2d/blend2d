@@ -20,6 +20,7 @@
 namespace bl {
 namespace Pipeline {
 namespace Reference {
+namespace {
 
 using Pixel::Repeat;
 
@@ -264,6 +265,7 @@ typedef CompOp_Base_PRGB32<CompOp_SrcCopy_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8
 typedef CompOp_Base_PRGB32<CompOp_SrcOver_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineBIAny<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_SrcOver_PRGB32_PatternAffineBIAny_PRGB32;
 typedef CompOp_Base_PRGB32<CompOp_Plus_Op<Pixel::P32_A8R8G8B8>, Pixel::P32_A8R8G8B8, FetchPatternAffineBIAny<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32>, 4> CompOp_Plus_PRGB32_PatternAffineBIAny_PRGB32;
 
+} // {anonymous}
 } // {Reference}
 } // {Pipeline}
 } // {bl}
