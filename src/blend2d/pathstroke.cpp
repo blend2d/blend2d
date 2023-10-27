@@ -727,7 +727,7 @@ SmoothPolyTo:
     }
 
     BLPathPrivateImpl* innerImpl = getImpl(innerPath(side));
-    size_t innerStart = sideData(side).figureOffset;
+    size_t innerStart = sideData(oppositeSide(side)).figureOffset;
 
     if (innerImpl->commandData[innerStart + 1] <= BL_PATH_CMD_ON) {
       innerJoinEndPoint(innerAppender(side), innerImpl->vertexData[innerStart], innerImpl->vertexData[innerStart + 1], _p0 - k);

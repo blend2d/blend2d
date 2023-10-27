@@ -1964,10 +1964,13 @@ static BLResult appendStrokedPathSink(BLPathCore* a, BLPathCore* b, BLPathCore* 
   blUnused(figureStart, figureEnd, userData);
 
   PathAppender dst;
-  BL_PROPAGATE(dst.begin(a, BL_MODIFY_OP_APPEND_GROW, b->dcast().size() + c->dcast().size()));
+  BL_PROPAGATE(dst.begin(a, BL_MODIFY_OP_APPEND_GROW, b->dcast().size() + c->dcast().size() + 1u));
 
   BLResult result = joinReversedFigure(dst, PathIterator(b->dcast().view()));
   result |= joinFigure(dst, PathIterator(c->dcast().view()));
+
+  if (dst.cmd[-1].value != BL_PATH_CMD_CLOSE)
+    dst.close();
 
   dst.done(a);
   return result;
