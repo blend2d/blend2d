@@ -88,8 +88,8 @@ jobs:
 
           - { host: "macos-12"         , os: "freebsd", osver: "13.2", cc: "clang", arch: "x86-64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
           - { host: "macos-12"         , os: "netbsd" , osver: "9.3" , cc: "clang", arch: "x86-64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { host: "macos-12"         , os: "openbsd", osver: "7.3" , cc: "clang", arch: "x86-64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
-          - { host: "ubuntu-latest"    , os: "openbsd", osver: "7.3" , cc: "clang", arch: "arm64" , build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { host: "macos-12"         , os: "openbsd", osver: "7.4" , cc: "clang", arch: "x86-64", build_type: "Release", defs: "BLEND2D_TEST=ON" }
+          - { host: "ubuntu-latest"    , os: "openbsd", osver: "7.4" , cc: "clang", arch: "arm64" , build_type: "Release", defs: "BLEND2D_TEST=ON" }
 
     name: "${{matrix.title || format('{0}-{1}', matrix.os, matrix.osver)}} (${{matrix.cc}}, ${{matrix.arch}}, ${{matrix.build_type}})"
     runs-on: "${{matrix.host || matrix.os}}"
@@ -135,6 +135,7 @@ jobs:
           operating_system: ${{matrix.os}}
           architecture: ${{matrix.arch}}
           version: ${{matrix.osver}}
+          sync_files: runner-to-vm
           shell: bash
           run: |
             set -e
