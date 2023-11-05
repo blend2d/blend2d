@@ -3402,13 +3402,15 @@ static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffe
   const OTFaceImpl* faceI = static_cast<const OTFaceImpl*>(faceI_);
   const GSubGPosLookupInfo& lookupInfo = kLookupKind == LookupKind::kGSUB ? gsubLookupInfoTable : gposLookupInfoTable;
 
-  RawTable table(faceI->layout.tables[size_t(kLookupKind)]);
-  const LayoutData::GSubGPos& layoutData = faceI->layout.kinds[size_t(kLookupKind)];
-
-  Table<Array16<UInt16>> lookupListTable(table.subTableUnchecked(layoutData.lookupListOffset));
-
   Context ctx;
   ctx.init(blGlyphBufferGetImpl(gb));
+
+  if (ctx.empty())
+    return BL_SUCCESS;
+
+  RawTable table(faceI->layout.tables[size_t(kLookupKind)]);
+  const LayoutData::GSubGPos& layoutData = faceI->layout.kinds[size_t(kLookupKind)];
+  Table<Array16<UInt16>> lookupListTable(table.subTableUnchecked(layoutData.lookupListOffset));
 
   bool didProcessLookup = false;
   uint32_t wordCount = uint32_t(blMin<size_t>(bitWordCount, layoutData.lookupStatusDataSize));
@@ -3430,7 +3432,7 @@ static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffe
     if (BL_UNLIKELY(nonAnalyzedBits))
       statusBits = validateLookups(faceI, kLookupKind, wordIndex, nonAnalyzedBits);
 
-    // Remove lookpus from bits that are invalid, and thus won't be processed. Note that conforming fonts will
+    // Remove lookups from bits that are invalid, and thus won't be processed. Note that conforming fonts will
     // never have invalid lookups, but it's possible that a font is corrupted or malformed on purpose.
     lookupBits &= statusBits.valid;
 
@@ -3499,10 +3501,14 @@ static BLResult BL_CDECL applyLookups(const BLFontFaceImpl* faceI_, BLGlyphBuffe
         }
 
         BL_PROPAGATE(applyLookup(ctx, lookupHeader, lookupTypeAndFormat, ApplyRange{0, ctx.size()}, LookupFlags(lookupFlags)));
+
+        if (ctx.empty())
+          goto done;
       }
     }
   }
 
+done:
   if (ctx._debugSink.enabled()) {
     if (didProcessLookup)
       debugContextToMessageSink(ctx);
