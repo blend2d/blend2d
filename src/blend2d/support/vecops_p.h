@@ -110,7 +110,7 @@ typedef Vec2<double> f64x2;
 // Vec2 Operations - Int64 & UInt64 (SIMD)
 // =======================================
 
-#if BL_SIMD_WIDTH_I >= 128
+#if BL_SIMD_WIDTH_I >= 128 && BL_SIMD_WIDTH_D >= 128
 template<>
 struct Vec2<uint64_t> {
   using Type = uint64_t;
@@ -207,12 +207,12 @@ BL_INLINE_NODEBUG i64x2 msbMask(const i64x2& a) noexcept { return i64x2(SIMD::sr
 BL_INLINE_NODEBUG i64x2 min(const i64x2& a, const i64x2& b) noexcept { return i64x2(SIMD::min(a.v, b.v)); }
 BL_INLINE_NODEBUG i64x2 max(const i64x2& a, const i64x2& b) noexcept { return i64x2(SIMD::max(a.v, b.v)); }
 
-#endif // BL_SIMD_WIDTH_I >= 128
+#endif // BL_SIMD_WIDTH_I >= 128 && BL_SIMD_WIDTH_D >= 128
 
 // Vec2 Operations - Float64 (SIMD)
 // ================================
 
-#if BL_SIMD_WIDTH_D >= 128
+#if BL_SIMD_WIDTH_I >= 128 && BL_SIMD_WIDTH_D >= 128
 template<>
 struct Vec2<double> {
   using Type = double;
@@ -262,7 +262,7 @@ BL_INLINE_NODEBUG f64x2 msbMask(const f64x2& a) noexcept { return f64x2(SIMD::sr
 BL_INLINE_NODEBUG f64x2 min(const f64x2& a, const f64x2& b) noexcept { return f64x2(SIMD::min(a.v, b.v)); }
 BL_INLINE_NODEBUG f64x2 max(const f64x2& a, const f64x2& b) noexcept { return f64x2(SIMD::max(a.v, b.v)); }
 
-#endif // BL_SIMD_WIDTH_D >= 128
+#endif // BL_SIMD_WIDTH_I >= 128 && BL_SIMD_WIDTH_D >= 128
 
 // Vec2 Operations
 // ===============
