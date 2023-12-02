@@ -1029,10 +1029,7 @@ BL_INLINE_NODEBUG uint8x16_t simd_interleave_hi_u8(const uint8x16_t& a, const ui
   uint8x8_t a_high = vget_high_u8(a);
   uint8x8_t b_high = vget_high_u8(b);
   uint8x8x2_t ab = vzip_u8(a_high, b_high);
-#if defined(__ANDROID__)
   return vcombine_u8(ab.val[0], ab.val[1]);
-#else
-  return vcombine_u8(ab.va_low[0], ab.va_low[1]);
 #endif
 #endif
 }
@@ -1044,10 +1041,7 @@ BL_INLINE_NODEBUG uint16x8_t simd_interleave_lo_u16(const uint16x8_t& a, const u
   uint16x4_t a_low = vget_low_u16(a);
   uint16x4_t b_low = vget_low_u16(b);
   uint16x4x2_t ab = vzip_u16(a_low, b_low);
-#if defined(__ANDROID__)
   return vcombine_u16(ab.val[0], ab.val[1]);
-#else
-  return vcombine_u16(ab.va_low[0], ab.va_low[1]);
 #endif
 #endif
 }
@@ -1059,10 +1053,7 @@ BL_INLINE_NODEBUG uint16x8_t simd_interleave_hi_u16(const uint16x8_t& a, const u
   uint16x4_t a_high = vget_high_u16(a);
   uint16x4_t b_high = vget_high_u16(b);
   uint16x4x2_t ab = vzip_u16(a_high, b_high);
-#if defined(__ANDROID__)
   return vcombine_u16(ab.val[0], ab.val[1]);
-#else
-  return vcombine_u16(ab.va_low[0], ab.va_low[1]);
 #endif
 #endif
 }
@@ -1074,10 +1065,7 @@ BL_INLINE_NODEBUG uint32x4_t simd_interleave_lo_u32(const uint32x4_t& a, const u
   uint32x2_t a_low = vget_low_u32(a);
   uint32x2_t b_low = vget_low_u32(b);
   uint32x2x2_t ab = vzip_u32(a_low, b_low);
-#if defined(__ANDROID__)
   return vcombine_u32(ab.val[0], ab.val[1]);
-#else
-  return vcombine_u32(ab.va_low[0], ab.va_low[1]);
 #endif
 #endif
 }
@@ -1089,11 +1077,7 @@ BL_INLINE_NODEBUG uint32x4_t simd_interleave_hi_u32(const uint32x4_t& a, const u
   uint32x2_t a_high = vget_high_u32(a);
   uint32x2_t b_high = vget_high_u32(b);
   uint32x2x2_t ab = vzip_u32(a_high, b_high);
-#if defined(__ANDROID__)
   return vcombine_u32(ab.val[0], ab.val[1]);
-#else
-return vcombine_u32(ab.va_low[0], ab.va_low[1]);
-#endif
 #endif
 }
 
@@ -1124,11 +1108,7 @@ BL_INLINE_NODEBUG float32x4_t simd_interleave_lo_f32(const float32x4_t& a, const
   float32x2_t a_low = vget_low_f32(a);
   float32x2_t b_low = vget_low_f32(b);
   float32x2x2_t ab = vzip_f32(a_low, b_low);
-#if defined(__ANDROID__)
-return vcombine_f32(ab.val[0], ab.val[1]);
-#else
-return vcombine_f32(ab.va_low[0], ab.va_low[1]);
-#endif
+  return vcombine_f32(ab.val[0], ab.val[1]);
 #endif
 }
 
@@ -1139,11 +1119,7 @@ BL_INLINE_NODEBUG float32x4_t simd_interleave_hi_f32(const float32x4_t& a, const
   float32x2_t a_high = vget_high_f32(a);
   float32x2_t b_high = vget_high_f32(b);
   float32x2x2_t ab = vzip_f32(a_high, b_high);
-#if defined(__ANDROID__)
-return vcombine_f32(ab.val[0], ab.val[1]);
-#else
-return vcombine_f32(ab.va_low[0], ab.va_low[1]);
-#endif
+  return vcombine_f32(ab.val[0], ab.val[1]);
 #endif
 }
 
