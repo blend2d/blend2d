@@ -61,7 +61,7 @@ public:
   BL_INLINE bool isAnalyticFill() const noexcept { return _fillType == FillType::kAnalytic; }
 
   //! Compiles the fill part.
-  virtual void compile() noexcept = 0;
+  virtual void compile() noexcept;
 };
 
 class FillBoxAPart final : public FillPart {

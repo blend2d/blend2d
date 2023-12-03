@@ -384,19 +384,6 @@ BL_API_IMPL BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noex
 // BLFile - API - POSIX Implementation
 // ===================================
 
-// These OSes use 64-bit offsets by default.
-#if defined(__APPLE__    ) || \
-    defined(__HAIKU__    ) || \
-    defined(__bsdi__     ) || \
-    defined(__DragonFly__) || \
-    defined(__FreeBSD__  ) || \
-    defined(__NetBSD__   ) || \
-    defined(__OpenBSD__  )
-  #define BL_FILE64_API(NAME) NAME
-#else
-  #define BL_FILE64_API(NAME) NAME##64
-#endif
-
 BL_API_IMPL BLResult blFileOpen(BLFileCore* self, const char* fileName, BLFileOpenFlags openFlags) noexcept {
   int of = 0;
 
@@ -595,8 +582,6 @@ BL_API_IMPL BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noex
   *fileSizeOut = uint64_t(s.st_size);
   return BL_SUCCESS;
 }
-
-#undef BL_FILE64_API
 #endif
 
 #if defined(_WIN32)

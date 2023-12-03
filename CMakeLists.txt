@@ -17,6 +17,7 @@ if (NOT CMAKE_PROJECT_NAME OR "${CMAKE_PROJECT_NAME}" STREQUAL "blend2d")
 endif()
 
 include(CheckCXXCompilerFlag)
+INCLUDE(CheckCSourceCompiles)
 include(GNUInstallDirs)
 
 # Blend2D - Configuration
@@ -71,10 +72,10 @@ set(BLEND2D_INCLUDE_DIRS "${BLEND2D_DIR}/src")   # Include directory is the same
 set(BLEND2D_DEPS "")                             # Blend2D dependencies (libraries) for the linker.
 set(BLEND2D_LIBS "")                             # Dependencies of libs/apps that want to use Blend2D.
 set(BLEND2D_CFLAGS "")                           # Public compiler flags.
-set(BLEND2D_PRIVATE_LFLAGS "")                   # Private linker flags.
 set(BLEND2D_PRIVATE_CFLAGS "")                   # Private compiler flags independent of build type.
 set(BLEND2D_PRIVATE_CFLAGS_DBG "")               # Private compiler flags used by debug builds.
 set(BLEND2D_PRIVATE_CFLAGS_REL "")               # Private compiler flags used by release builds.
+set(BLEND2D_PRIVATE_LFLAGS "")                   # Private linker flags.
 set(BLEND2D_SANITIZE_CFLAGS "")                  # Compiler flags required by currently enabled sanitizers.
 set(BLEND2D_SANITIZE_LFLAGS "")                  # Linker flags required by currently enabled sanitizers.
 set(BLEND2D_NO_STDCXX_CFLAGS "")                 # Private compiler flags to disable linking to a standard C++ library.
@@ -230,7 +231,8 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
     #   list(APPEND BLEND2D_NO_STDCXX_LFLAGS -nodefaultlibs)
     # This has similar effect as we don't really use anything from libstdc++:
     list(APPEND BLEND2D_NO_STDCXX_CFLAGS -DBL_BUILD_NO_STDCXX)
-    list(APPEND BLEND2D_NO_STDCXX_LFLAGS -static-libstdc++)
+    list(APPEND BLEND2D_NO_STDCXX_LFLAGS  -static-libstdc++)
+    blend2d_detect_cflags(BLEND2D_NO_STDCXX_LFLAGS -static-libgcc)
   endif()
 endif()
 
@@ -277,6 +279,25 @@ endif()
 if (BLEND2D_NO_JIT)
   message("-- Disabling JIT compiler support (BL_BUILD_NO_JIT)")
   list(APPEND BLEND2D_PRIVATE_CFLAGS "-DBL_BUILD_NO_JIT")
+else()
+  # Detect whether Blend2D JIT compiler supports the target architecture.
+  check_c_source_compiles("
+    #if defined(_M_X64) || defined(__x86_64__)
+      int blend2d_jit_available() { return 1; }
+    #elif defined(_M_IX86) || defined(__X86__) || defined(__i386__)
+      int blend2d_jit_available() { return 1; }
+    #else
+      // JIT not available
+    #endif
+
+    int main() {
+      return blend2d_jit_available();
+    }
+    " BLEND2D_HAS_JIT_SUPPORT)
+  if (NOT BLEND2D_HAS_JIT_SUPPORT)
+    message("-- Disabling JIT compiler support (unsupported target architecture)")
+    set(BLEND2D_NO_JIT TRUE)
+  endif()
 endif()
 
 if (BLEND2D_NO_TLS)
@@ -379,14 +400,61 @@ endif()
 # Blend2D - Dependencies
 # ======================
 
-if (NOT WIN32)
-  if (HAIKU)
-    list(APPEND BLEND2D_DEPS root m pthread)
+if (WIN32)
+  # Dependency: nothing extra at the moment.
+elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
+  # Dependency: libc is the only required library on Android as it also provides libthread.
+  message("-- Dependency: adding libc (Android target detected)")
+  list(APPEND BLEND2D_DEPS c)
+elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Haiku")
+  # Dependency: libroot is used by Haiku instead of libc, so link to libroot and libpthread.
+  message("-- Dependency: adding libroot, libm, and libpthread (Haiku target detected)")
+  list(APPEND BLEND2D_DEPS root m pthread)
+else()
+  # Dependency: libc is always required.
+  message("-- Dependency: adding libc (Linux, BSD, or other UNIX/POSIX environment)")
+  list(APPEND BLEND2D_DEPS c)
+
+  # Dependency: pthread (required so Blend2D can use pthread_rwlock, pthread_create, ...).
+  check_c_source_compiles("
+    #include <pthread.h>
+
+    static void* thread_entry_point(void* arg) { return arg; }
+
+    int main() {
+      pthread_rwlock_t m;
+      pthread_rwlock_init(&m, (void*)0);
+      pthread_rwlock_wrlock(&m);
+      pthread_rwlock_unlock(&m);
+
+      pthread_attr_t attr;
+      pthread_attr_init(&attr);
+      pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+      pthread_attr_setstacksize(&attr, 1024*1024);
+
+      pthread_t handle;
+      return pthread_create(&handle, &attr, thread_entry_point, (void*)0);
+    }
+    " BLEND2D_LIBC_HAS_LIBPTHREAD)
+  if (BLEND2D_LIBC_HAS_LIBPTHREAD)
+    message("-- Dependency: libpthread provided by libc (not linking to libpthread)")
   else()
-    list(APPEND BLEND2D_DEPS c m pthread)
+    message("-- Dependency: libpthread not provided by libc, linking to libpthread")
+    list(APPEND BLEND2D_DEPS pthread)
   endif()
-  if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-    list(APPEND BLEND2D_DEPS rt)
+
+  check_c_source_compiles("
+    #include <math.h>
+    int main(int argc, char* argv[]) {
+      (void)argv;
+      return (int)sin((double)argc * 0.1234);
+    }
+    " BLEND2D_LIBC_HAS_LIBM)
+  if (BLEND2D_LIBC_HAS_LIBM)
+    message("-- Dependency: libm provided by libc (not linking to libm)")
+  else()
+    message("-- Dependency: libm not provided by libc, linking to libm")
+    list(APPEND BLEND2D_DEPS m)
   endif()
 endif()
 
@@ -409,7 +477,11 @@ if (NOT BLEND2D_NO_JIT)
     set(ASMJIT_EMBED TRUE CACHE BOOL "")
   endif()
 
+  message("-- Dependency: embedding libasmjit (including its CMakeLists.txt)")
+  message("[[ AsmJit Embed Begin ]]")
   include("${ASMJIT_DIR}/CMakeLists.txt")
+  message("[[ AsmJit Embed End ]]")
+
   list(APPEND BLEND2D_DEPS ${ASMJIT_LIBS})
   list(APPEND BLEND2D_PRIVATE_CFLAGS ${ASMJIT_CFLAGS})
   list(APPEND BLEND2D_PRIVATE_CFLAGS -DASMJIT_NO_STDCXX -DASMJIT_NO_FOREIGN)

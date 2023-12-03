@@ -150,7 +150,7 @@ public:
   virtual void postfetchN() noexcept;
 
   //! Fetches N pixels to `p` and advances by N.
-  virtual void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept = 0;
+  virtual void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
 
   //! Fetches 8 pixels by calling fetch() twice to fetch 4 pixels each time.
   void _fetch2x4(Pixel& p, PixelFlags flags) noexcept;

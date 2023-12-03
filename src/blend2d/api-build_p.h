@@ -110,6 +110,19 @@
 // including any header.
 #if !defined(_WIN32) && !defined(_LARGEFILE64_SOURCE)
   #define _LARGEFILE64_SOURCE 1
+
+  // These OSes use 64-bit offsets by default.
+  #if defined(__APPLE__    ) || \
+      defined(__HAIKU__    ) || \
+      defined(__bsdi__     ) || \
+      defined(__DragonFly__) || \
+      defined(__FreeBSD__  ) || \
+      defined(__NetBSD__   ) || \
+      defined(__OpenBSD__  )
+    #define BL_FILE64_API(NAME) NAME
+  #else
+    #define BL_FILE64_API(NAME) NAME##64
+  #endif
 #endif
 
 // The FileSystem API supports extensions offered by Linux.
