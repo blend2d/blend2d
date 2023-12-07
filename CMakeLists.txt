@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 cmake_policy(PUSH)
 
@@ -17,7 +17,8 @@ if (NOT CMAKE_PROJECT_NAME OR "${CMAKE_PROJECT_NAME}" STREQUAL "blend2d")
 endif()
 
 include(CheckCXXCompilerFlag)
-INCLUDE(CheckCSourceCompiles)
+include(CheckCSourceCompiles)
+include(CheckLinkerFlag)
 include(GNUInstallDirs)
 
 # Blend2D - Configuration
@@ -84,7 +85,7 @@ set(BLEND2D_NO_STDCXX_LFLAGS "")                 # Private linker flags to disab
 # Blend2D - Utilities
 # ===================
 
-# Detects C++ flags and appends all detected ones to `out`.
+# Detects C++ compile flags and appends all detected ones to `out`.
 function(blend2d_detect_cflags out)
   set(_out_array ${${out}})
   string(REGEX REPLACE "[+]" "x" _flag_signature "${ARGN}")
@@ -99,6 +100,22 @@ function(blend2d_detect_cflags out)
   if (${__CxxFlag_${_flag_signature}})
     list(APPEND _out_array ${ARGN})
   endif()
+  set(${out} "${_out_array}" PARENT_SCOPE)
+endfunction()
+
+# Detects C++ link flags and appends all detected ones to `out`.
+function(blend2d_detect_lflags out)
+  set(_out_array ${${out}})
+
+  foreach(_flag ${ARGN})
+    string(REGEX REPLACE "[+]" "x" _flag_signature "${_flag}")
+    string(REGEX REPLACE "[-= :;/.\]" "_" _flag_signature "${_flag_signature}")
+    check_linker_flag(CXX "${_flag}" "__LinkFlag_${_flag_signature}")
+    if (${__LinkFlag_${_flag_signature}})
+      list(APPEND _out_array ${_flag})
+    endif()
+  endforeach()
+
   set(${out} "${_out_array}" PARENT_SCOPE)
 endfunction()
 
@@ -146,11 +163,7 @@ function(blend2d_add_target target target_type)
     set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " ${link_flag}")
   endforeach()
 
-  if (${CMAKE_VERSION} VERSION_LESS "3.8.0")
-    set_property(TARGET ${target} PROPERTY CXX_STANDARD 11)
-  else()
-    target_compile_features(${target} PUBLIC cxx_std_11)
-  endif()
+  target_compile_features(${target} PUBLIC cxx_std_11)
   set_property(TARGET ${target} PROPERTY CXX_EXTENSIONS ON)
   set_property(TARGET ${target} PROPERTY CXX_VISIBILITY_PRESET hidden)
   target_compile_options(${target} PRIVATE ${X_CFLAGS} ${BLEND2D_SANITIZE_CFLAGS} $<IF:$<CONFIG:Debug>,${X_CFLAGS_DBG},${X_CFLAGS_REL}>)
@@ -159,7 +172,6 @@ function(blend2d_add_target target target_type)
     add_test(NAME ${target} COMMAND ${target})
   endif()
 endfunction()
-
 
 # Blend2D - Compiler Support
 # ==========================
@@ -226,13 +238,8 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(GNU|Clang|AppleClang)$")
   # Building Blend2D without C++ library support requires these to be setup.
   if (BLEND2D_NO_STDCXX)
     message("-- Enabling build without linking to the C++ standard library")
-    # This fails when a compiler emits a symbol which requires libgcc:
-    #   list(APPEND BLEND2D_NO_STDCXX_CFLAGS -nodefaultlibs -DBL_BUILD_NO_STDCXX)
-    #   list(APPEND BLEND2D_NO_STDCXX_LFLAGS -nodefaultlibs)
-    # This has similar effect as we don't really use anything from libstdc++:
     list(APPEND BLEND2D_NO_STDCXX_CFLAGS -DBL_BUILD_NO_STDCXX)
-    list(APPEND BLEND2D_NO_STDCXX_LFLAGS  -static-libstdc++)
-    blend2d_detect_cflags(BLEND2D_NO_STDCXX_LFLAGS -static-libgcc)
+    blend2d_detect_lflags(BLEND2D_NO_STDCXX_LFLAGS -static-libgcc -static-libstdc++)
   endif()
 endif()
 
