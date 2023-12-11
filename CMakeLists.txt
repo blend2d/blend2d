@@ -290,9 +290,11 @@ else()
   # Detect whether Blend2D JIT compiler supports the target architecture.
   check_c_source_compiles("
     #if defined(_M_X64) || defined(__x86_64__)
-      int blend2d_jit_available() { return 1; }
+      int blend2d_jit_available() { return 1; } /* arch: x86_64 */
     #elif defined(_M_IX86) || defined(__X86__) || defined(__i386__)
-      int blend2d_jit_available() { return 1; }
+      int blend2d_jit_available() { return 1; } /* arch: x86 */
+    #elif defined(_M_ARM64) || defined(__aarch64__) 
+      int blend2d_jit_available() { return 1; } /* arch: aarch64 (arm 64-bit) */
     #else
       // JIT not available
     #endif
