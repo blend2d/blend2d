@@ -4,8 +4,6 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../../api-build_p.h"
-#if !defined(BL_BUILD_NO_FIXED_PIPE)
-
 #include "../../pipeline/reference/compopgeneric_p.h"
 #include "../../pipeline/reference/fillgeneric_p.h"
 #include "../../pipeline/reference/fixedpiperuntime_p.h"
@@ -237,5 +235,3 @@ void blStaticPipelineRtInit(BLRuntimeContext* rt) noexcept {
 
   bl::Pipeline::PipeStaticRuntime::_global.init();
 }
-
-#endif

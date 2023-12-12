@@ -18,6 +18,7 @@
 #include "../var_p.h"
 #include "../pipeline/piperuntime_p.h"
 #include "../pixelops/scalar_p.h"
+#include "../pipeline/reference/fixedpiperuntime_p.h"
 #include "../raster/edgebuilder_p.h"
 #include "../raster/rastercontext_p.h"
 #include "../raster/rastercontextops_p.h"
@@ -33,10 +34,6 @@
 
 #ifndef BL_BUILD_NO_JIT
   #include "../pipeline/jit/pipegenruntime_p.h"
-#endif
-
-#ifndef BL_BUILD_NO_FIXED_PIPE
-  #include "../pipeline/reference/fixedpiperuntime_p.h"
 #endif
 
 namespace bl {
@@ -1308,7 +1305,7 @@ static BL_NOINLINE BLResultT<RenderCallResolvedOp> resolveExplicitStyleOp(BLRast
       rgba32.reset(style->_d.rgba32);
     else if (styleType == BL_OBJECT_TYPE_RGBA64)
       rgba32.reset(style->_d.rgba64);
-    else if (styleType == BL_OBJECT_TYPE_RGBA64)
+    else if (styleType == BL_OBJECT_TYPE_RGBA)
       rgba32 = style->_d.rgba.toRgba32();
     else
       return BLResultT<RenderCallResolvedOp>{BL_SUCCESS, kNop};
@@ -4177,7 +4174,7 @@ static BL_INLINE uint32_t calculateBandHeight(uint32_t format, const BLSizeI& si
 }
 
 static BL_INLINE size_t calculateZeroedMemorySize(uint32_t width, uint32_t height) noexcept {
-  size_t alignedWidth = IntOps::alignUp(size_t(width + 1u + BL_PIPE_PIXELS_PER_ONE_BIT), 16);
+  size_t alignedWidth = IntOps::alignUp(size_t(width) + 1u + BL_PIPE_PIXELS_PER_ONE_BIT, 16);
 
   size_t bitStride = IntOps::wordCountFromBitCount<BLBitWord>(alignedWidth / BL_PIPE_PIXELS_PER_ONE_BIT) * sizeof(BLBitWord);
   size_t cellStride = alignedWidth * sizeof(uint32_t);
@@ -4262,14 +4259,8 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
     }
 #endif
 
-#if !defined(BL_BUILD_NO_FIXED_PIPE)
-    if (!pipeRuntime)
+    if (!pipeRuntime) {
       pipeRuntime = &Pipeline::PipeStaticRuntime::_global;
-#endif
-
-    if (BL_UNLIKELY(!pipeRuntime)) {
-      result = blTraceError(BL_ERROR_INVALID_CREATE_FLAGS);
-      break;
     }
 
     // Step 4: Allocate zeroed memory for the user thread and all worker threads.

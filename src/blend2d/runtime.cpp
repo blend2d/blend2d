@@ -261,10 +261,7 @@ BL_API_IMPL BLResult blRuntimeInit() noexcept {
   blOpenTypeRtInit(rt);
   blFontRtInit(rt);
   blFontManagerRtInit(rt);
-
-#if !defined(BL_BUILD_NO_FIXED_PIPE)
   blStaticPipelineRtInit(rt);
-#endif
 
 #if !defined(BL_BUILD_NO_JIT)
   blDynamicPipelineRtInit(rt);

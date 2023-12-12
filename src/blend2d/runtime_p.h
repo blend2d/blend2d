@@ -211,10 +211,7 @@ BL_HIDDEN void blOpenTypeRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blFontRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blFontManagerRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blContextRtInit(BLRuntimeContext* rt) noexcept;
-
-#if !defined(BL_BUILD_NO_FIXED_PIPE)
 BL_HIDDEN void blStaticPipelineRtInit(BLRuntimeContext* rt) noexcept;
-#endif
 
 #if !defined(BL_BUILD_NO_JIT)
 BL_HIDDEN void blDynamicPipelineRtInit(BLRuntimeContext* rt) noexcept;
