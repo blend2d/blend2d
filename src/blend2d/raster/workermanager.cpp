@@ -146,19 +146,17 @@ void WorkerManager::reset() noexcept {
 
   _isActive = false;
 
-  if (_threadCount) {
+  if (_threadPool) {
     for (uint32_t i = 0; i < _threadCount; i++)
       blCallDtor(*_workDataStorage[i]);
 
     _threadPool->releaseThreads(_workerThreads, _threadCount);
-    _threadCount = 0;
+    _threadPool->release();
+
+    _threadPool = nullptr;
     _workerThreads = nullptr;
     _workDataStorage = nullptr;
-  }
-
-  if (_threadPool) {
-    _threadPool->release();
-    _threadPool = nullptr;
+    _threadCount = 0;
   }
 
   _commandQueueCount = 0;

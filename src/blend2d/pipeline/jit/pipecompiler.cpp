@@ -1880,11 +1880,9 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
               v_div255_u16(vm[0]);
             }
 
-            if (simdWidth == SimdWidth::k128) {
-              v_interleave_lo_u16(vm[0], vm[0], vm[0]);                 // vm[0] = [M3 M3 M2 M2 M1 M1 M0 M0]
-              v_swizzle_u32(vm[1], vm[0], x86::shuffleImm(3, 3, 2, 2)); // vm[1] = [M3 M3 M3 M3 M2 M2 M2 M2]
-              v_swizzle_u32(vm[0], vm[0], x86::shuffleImm(1, 1, 0, 0)); // vm[0] = [M1 M1 M1 M1 M0 M0 M0 M0]
-            }
+            v_interleave_lo_u16(vm[0], vm[0], vm[0]);                 // vm[0] = [M3 M3 M2 M2 M1 M1 M0 M0]
+            v_swizzle_u32(vm[1], vm[0], x86::shuffleImm(3, 3, 2, 2)); // vm[1] = [M3 M3 M3 M3 M2 M2 M2 M2]
+            v_swizzle_u32(vm[0], vm[0], x86::shuffleImm(1, 1, 0, 0)); // vm[0] = [M1 M1 M1 M1 M0 M0 M0 M0]
           }
           break;
         }

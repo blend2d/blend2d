@@ -366,8 +366,10 @@ static BL_INLINE BLResult bl_convert_premultiply_8888_template_avx2(
       Vec32xU8 packed0 = loadu<Vec32xU8>(srcData +  0);
       Vec32xU8 packed1 = loadu<Vec32xU8>(srcData + 32);
 
-      if (UseShufB) packed0 = swizzlev_u8(packed0, predicate);
-      if (UseShufB) packed1 = swizzlev_u8(packed1, predicate);
+      if (UseShufB) {
+        packed0 = swizzlev_u8(packed0, predicate);
+        packed1 = swizzlev_u8(packed1, predicate);
+      }
 
       Vec16xU16 p1 = vec_u16(interleave_hi_u8(packed0, zero));
       Vec16xU16 p0 = vec_u16(interleave_lo_u8(packed0, zero));
@@ -391,8 +393,10 @@ static BL_INLINE BLResult bl_convert_premultiply_8888_template_avx2(
       Vec32xU8 packed0 = loadu_256_mask32<Vec32xU8>(srcData +  0, loadStoreMaskLo);
       Vec32xU8 packed1 = loadu_256_mask32<Vec32xU8>(srcData + 32, loadStoreMaskHi);
 
-      if (UseShufB) packed0 = swizzlev_u8(packed0, predicate);
-      if (UseShufB) packed1 = swizzlev_u8(packed1, predicate);
+      if (UseShufB) {
+        packed0 = swizzlev_u8(packed0, predicate);
+        packed1 = swizzlev_u8(packed1, predicate);
+      }
 
       Vec16xU16 p1 = vec_u16(interleave_hi_u8(packed0, zero));
       Vec16xU16 p0 = vec_u16(interleave_lo_u8(packed0, zero));

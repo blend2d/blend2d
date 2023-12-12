@@ -181,30 +181,30 @@ enum DeflateState {
 // In-memory DEFLATE decoder.
 struct DeflateDecoder {
   //! Read context - passed to `_readFunc`.
-  void* _readCtx;
+  void* _readCtx {};
   //! Read function - Callback that provides next input chunk.
-  ReadFunc _readFunc;
+  ReadFunc _readFunc {};
 
   //! Destination buffer reference.
   BLArray<uint8_t>& _dstBuffer;
   //! The start of `_dstBuffer`.
-  uint8_t* _dstStart;
+  uint8_t* _dstStart {};
   //! The current position in `_dstBuffer`.
-  uint8_t* _dstPtr;
+  uint8_t* _dstPtr {};
   //! The end of `_dstBuffer` (the first invalid byte).
-  uint8_t* _dstEnd;
+  uint8_t* _dstEnd {};
 
   //! The current position in the last chunk retrieved by calling `_readFunc`.
-  const uint8_t* _srcPtr;
+  const uint8_t* _srcPtr {};
   //! The end of the last chunk retrieved by calling `_readFunc`.
-  const uint8_t* _srcEnd;
+  const uint8_t* _srcEnd {};
 
   //! The current code data (bits).
-  BLBitWord _codeData;
+  BLBitWord _codeData {};
   //! The current code size in bits.
-  uint32_t _codeSize;
+  uint32_t _codeSize {};
   //! The current decoder state.
-  uint32_t _state;
+  uint32_t _state {};
 
   DeflateTable _zSize;
   DeflateTable _zDist;
@@ -236,13 +236,6 @@ DeflateDecoder::DeflateDecoder(BLArray<uint8_t>& output, void* readCtx, ReadFunc
   : _readCtx(readCtx),
     _readFunc(readFunc),
     _dstBuffer(output),
-    _dstStart(nullptr),
-    _dstPtr(nullptr),
-    _dstEnd(nullptr),
-    _srcPtr(nullptr),
-    _srcEnd(nullptr),
-    _codeData(0),
-    _codeSize(0),
     _state(kDeflateStateZLibHeader) {}
 DeflateDecoder::~DeflateDecoder() noexcept {}
 

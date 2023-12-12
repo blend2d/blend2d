@@ -448,7 +448,7 @@ BLResult BL_CDECL blThreadCreate(BLThread** threadOut, const BLThreadAttributes*
 
   BLInternalWorkerThread* thread = blThreadNew(exitFunc, exitData);
   if (BL_UNLIKELY(!thread)) {
-    err = pthread_attr_destroy(&ptAttr);
+    pthread_attr_destroy(&ptAttr);
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
   }
 

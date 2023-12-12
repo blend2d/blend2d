@@ -191,7 +191,7 @@ public:
 
   BLArray<KernGroup> groups;
 
-  BL_INLINE KernCollection() noexcept {}
+  BL_INLINE KernCollection() noexcept = default;
   BL_INLINE ~KernCollection() noexcept { releaseData(); }
 
   BL_INLINE bool empty() const noexcept { return groups.empty(); }
@@ -217,17 +217,17 @@ public:
   BL_NONCOPYABLE(KernData)
 
   enum HeaderType : uint32_t {
-    kHeaderWindows   = 0,
-    kHeaderMac       = 1
+    kHeaderWindows = 0,
+    kHeaderMac = 1
   };
 
-  RawTable table;
-  uint8_t headerType;
-  uint8_t headerSize;
-  uint8_t reserved[6];
+  RawTable table {};
+  uint8_t headerType {};
+  uint8_t headerSize {};
+  uint8_t reserved[6] {};
   KernCollection collection[2];
 
-  BL_INLINE KernData() noexcept {}
+  BL_INLINE KernData() noexcept = default;
 };
 
 namespace KernImpl {

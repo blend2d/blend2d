@@ -1932,7 +1932,7 @@ static BLResult blPixelConverterInit8888FromForeign(BLPixelConverterCore* self, 
   bool isSrcPremultiplied  = (si.flags & BL_FORMAT_FLAG_PREMULTIPLIED) != 0;
   bool hasSrcHostBO        = (si.flags & BL_FORMAT_FLAG_BYTE_SWAP) == 0;
 
-  if (di.depth == 32 && !isSrcRGBA)
+  if (!isSrcRGBA)
     d.fillMask = 0xFF000000u;
 
   for (uint32_t i = 0; i < 4; i++) {

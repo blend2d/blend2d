@@ -127,8 +127,8 @@ public:
     NodeT* prev = node->prev();
     NodeT* next = node->next();
 
-    if (prev) { prev->_listNext = next; node->_listPrev = nullptr; } else { _nodes[0] = next; }
-    if (next) { next->_listPrev = prev; node->_listNext = nullptr; } else { _nodes[1] = prev; }
+    if (prev) { prev->_listNext = next; } else { _nodes[0] = next; }
+    if (next) { next->_listPrev = prev; } else { _nodes[1] = prev; }
 
     node->_listPrev = nullptr;
     node->_listNext = nullptr;

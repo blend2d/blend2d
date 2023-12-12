@@ -1860,10 +1860,9 @@ namespace {
 // Glyph outlines consumer that calculates glyph bounds.
 class GlyphBoundsConsumer {
 public:
-  BLBox bounds;
-  double cx, cy;
-
-  BL_INLINE GlyphBoundsConsumer() noexcept {}
+  BLBox bounds {};
+  double cx = 0.0;
+  double cy = 0.0;
 
   BL_INLINE BLResult begin(size_t n) noexcept {
     blUnused(n);

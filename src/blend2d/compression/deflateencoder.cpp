@@ -1007,7 +1007,6 @@ static void deflate_make_huffman_code(uint32_t num_syms, uint32_t max_codeword_l
 // a set of tables that map symbols to codewords and codeword lengths.
 static void deflate_make_huffman_codes(const deflate_freqs *freqs, deflate_codes *codes) noexcept {
   BL_STATIC_ASSERT(MAX_LITLEN_CODEWORD_LEN <= kMaxLitLenCodeWordLen);
-  BL_STATIC_ASSERT(kMaxOffsetCodeWordLen <= kMaxOffsetCodeWordLen);
 
   deflate_make_huffman_code(kNumLitLenSymbols, MAX_LITLEN_CODEWORD_LEN, freqs->litlen, codes->lens.litlen, codes->codewords.litlen);
   deflate_make_huffman_code(kNumOffsetSymbols, kMaxOffsetCodeWordLen, freqs->offset, codes->lens.offset, codes->codewords.offset);
@@ -1149,7 +1148,6 @@ static void deflate_precompute_huffman_header(EncoderImpl* impl) noexcept {
   impl->num_precode_items = deflate_compute_precode_items((uint8_t *)&impl->codes.lens, impl->num_litlen_syms + impl->num_offset_syms, impl->precode_freqs, impl->precode_items);
 
   // Build the precode.
-  BL_STATIC_ASSERT(kMaxPreCodeWordLen <= kMaxPreCodeWordLen);
   deflate_make_huffman_code(kNumPrecodeSymbols, kMaxPreCodeWordLen, impl->precode_freqs, impl->precode_lens, impl->precode_codewords);
 
   // Count how many precode lengths we actually need to output.

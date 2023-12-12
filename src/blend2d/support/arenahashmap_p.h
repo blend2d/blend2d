@@ -59,39 +59,32 @@ public:
     kNullRcpShift = BL_TARGET_ARCH_BITS >= 64 ? 32 : 0
   };
 
-  ArenaAllocator* _allocator;
+  ArenaAllocator* _allocator {};
   //! Buckets data.
-  ArenaHashMapNode** _data;
+  ArenaHashMapNode** _data {};
   //! Count of records inserted into the hash table.
-  size_t _size;
+  size_t _size {};
   //! Count of hash buckets.
-  uint32_t _bucketCount;
+  uint32_t _bucketCount = kNullCount;
   //! When buckets array should grow (only checked after insertion).
-  uint32_t _bucketGrow;
+  uint32_t _bucketGrow = kNullGrow;
   //! Reciprocal value of `_bucketCount`.
-  uint32_t _rcpValue;
+  uint32_t _rcpValue = kNullRcpValue;
   //! How many bits to shift right when hash is multiplied with `_rcpValue`.
-  uint8_t _rcpShift;
+  uint8_t _rcpShift = kNullRcpShift;
   //! Prime value index in internal prime array.
-  uint8_t _primeIndex;
+  uint8_t _primeIndex = 0;
   //! Padding...
-  uint8_t _reserved[2];
+  uint8_t _reserved[2] {};
   //! Embedded and initial hash data.
-  ArenaHashMapNode* _embedded[kNullCount];
+  ArenaHashMapNode* _embedded[kNullCount] {};
 
   //! \name Construction & Destruction
   //! \{
 
   BL_INLINE ArenaHashMapBase(ArenaAllocator* allocator) noexcept
     : _allocator(allocator),
-      _data(_embedded),
-      _size(0),
-      _bucketCount(kNullCount),
-      _bucketGrow(kNullGrow),
-      _rcpValue(kNullRcpValue),
-      _rcpShift(kNullRcpShift),
-      _primeIndex(0),
-      _embedded {} {}
+      _data(_embedded) {}
 
   BL_INLINE ArenaHashMapBase(ArenaHashMapBase&& other) noexcept
     : _allocator(other._allocator),

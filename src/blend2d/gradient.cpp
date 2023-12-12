@@ -986,7 +986,7 @@ BL_API_IMPL BLResult blGradientApplyTransformOp(BLGradientCore* self, BLTransfor
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   BLGradientPrivateImpl* selfI = getImpl(self);
-  if (opType == 0 && getTransformType(self) == BL_TRANSFORM_TYPE_IDENTITY)
+  if (opType == BL_TRANSFORM_OP_RESET && getTransformType(self) == BL_TRANSFORM_TYPE_IDENTITY)
     return BL_SUCCESS;
 
   BL_PROPAGATE(makeMutable(self, true));

@@ -88,7 +88,7 @@ public:
   BL_INLINE void clear() noexcept { _size = 0; }
 
   BL_INLINE void assign(const T* data, size_t size) noexcept {
-    BL_ASSERT(_size < _size);
+    BL_ASSERT(size <= kCapacity);
 
     MemOps::copyForwardInlineT(_data, data, size);
     _size = size;
@@ -127,11 +127,12 @@ public:
   }
 
   BL_INLINE void _setSize(size_t size) noexcept {
+    BL_ASSERT(size <= kCapacity);
     _size = size;
   }
 
   BL_INLINE void _incrementSize(size_t n) noexcept {
-    BL_ASSERT(kCapacity - _size >= n);
+    BL_ASSERT(n <= kCapacity - _size);
     _size += n;
   }
 

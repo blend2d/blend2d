@@ -60,7 +60,7 @@ struct CapVertexCountGen {
   }
 };
 
-static const auto capVertexCountTable =
+static constexpr auto capVertexCountTable =
   makeLookupTable<uint8_t, BL_STROKE_CAP_MAX_VALUE + 1, CapVertexCountGen>();
 
 // bl::Path - Stroke - Utilities

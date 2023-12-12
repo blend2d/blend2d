@@ -99,7 +99,7 @@ template<uint32_t ByteOrder = BL_BYTE_ORDER_NATIVE>
 BL_NODISCARD
 static BL_INLINE uint32_t readU24u(const void* p) noexcept {
   uint32_t b0 = readU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 2 : 0));
-  uint32_t b1 = readU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 1 : 1));
+  uint32_t b1 = readU8(static_cast<const uint8_t*>(p) + 1);
   uint32_t b2 = readU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 0 : 2));
   return IntOps::shl(b0, 16) | IntOps::shl(b1, 8) | b2;
 }
@@ -212,7 +212,7 @@ static BL_INLINE void writeU16(void* p, uint32_t x) noexcept {
 template<uint32_t ByteOrder = BL_BYTE_ORDER_NATIVE>
 static BL_INLINE void writeU24u(void* p, uint32_t v) noexcept {
   static_cast<uint8_t*>(p)[0] = uint8_t((v >> (ByteOrder == BL_BYTE_ORDER_LE ?  0 : 16)) & 0xFFu);
-  static_cast<uint8_t*>(p)[1] = uint8_t((v >> (ByteOrder == BL_BYTE_ORDER_LE ?  8 :  8)) & 0xFFu);
+  static_cast<uint8_t*>(p)[1] = uint8_t((v >> 8) & 0xFFu);
   static_cast<uint8_t*>(p)[2] = uint8_t((v >> (ByteOrder == BL_BYTE_ORDER_LE ? 16 :  0)) & 0xFFu);
 }
 
