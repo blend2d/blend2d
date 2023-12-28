@@ -137,7 +137,24 @@
 
 //! \cond NEVER
 
-#if defined(_MSC_VER)
+#if defined(__clang__)
+  #pragma clang diagnostic ignored "-Wconstant-logical-operand"
+  #pragma clang diagnostic ignored "-Wunnamed-type-template-args"
+  #pragma clang diagnostic ignored "-Wunused-function"
+  #pragma clang diagnostic ignored "-Wswitch"
+  #pragma clang diagnostic warning "-Wattributes"
+#elif defined(__GNUC__)
+  #pragma GCC diagnostic ignored "-Wenum-compare"
+  #pragma GCC diagnostic ignored "-Wunused-function"
+  #pragma GCC diagnostic ignored "-Wswitch"
+  #pragma GCC diagnostic warning "-Wattributes"
+  #if __GNUC__ >= 7
+  #pragma GCC diagnostic ignored "-Wnoexcept-type"    // Hits when compiling in C++11 mode with a function pointer having noexcept
+  #endif
+  #if __GNUC__ <= 8
+  #pragma GCC diagnostic ignored "-Wstrict-aliasing"  // Reports some cases that are perfectly fine.
+  #endif
+#elif defined(_MSC_VER)
   #pragma warning(disable: 4102) // Unreferenced label.
   #pragma warning(disable: 4127) // Conditional expression is constant.
   #pragma warning(disable: 4201) // Nameless struct/union.
@@ -151,17 +168,6 @@
   #pragma warning(disable: 4800) // Forcing value to bool true or false.
   #pragma warning(disable: 4582) // Constructor is not implicitly called.
   #pragma warning(disable: 4583) // Destructor is not implicitly called.
-#elif defined(__clang__)
-  #pragma clang diagnostic ignored "-Wconstant-logical-operand"
-  #pragma clang diagnostic ignored "-Wunnamed-type-template-args"
-  #pragma clang diagnostic ignored "-Wunused-function"
-  #pragma clang diagnostic ignored "-Wswitch"
-  #pragma clang diagnostic warning "-Wattributes"
-#elif defined(__GNUC__)
-  #pragma GCC diagnostic ignored "-Wenum-compare"
-  #pragma GCC diagnostic ignored "-Wunused-function"
-  #pragma GCC diagnostic ignored "-Wswitch"
-  #pragma GCC diagnostic warning "-Wattributes"
 #endif
 
 //! \endcond

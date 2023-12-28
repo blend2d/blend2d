@@ -985,12 +985,11 @@ BL_API_IMPL BLResult blGradientApplyTransformOp(BLGradientCore* self, BLTransfor
   if (BL_UNLIKELY(uint32_t(opType) > BL_TRANSFORM_OP_MAX_VALUE))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
-  BLGradientPrivateImpl* selfI = getImpl(self);
   if (opType == BL_TRANSFORM_OP_RESET && getTransformType(self) == BL_TRANSFORM_TYPE_IDENTITY)
     return BL_SUCCESS;
 
   BL_PROPAGATE(makeMutable(self, true));
-  selfI = getImpl(self);
+  BLGradientPrivateImpl* selfI = getImpl(self);
 
   blMatrix2DApplyOp(&selfI->transform, opType, opData);
   setTransformType(self, selfI->transform.type());

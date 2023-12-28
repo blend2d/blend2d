@@ -500,7 +500,6 @@ static BLResult decoderProcessMarker(BLJpegDecoderImpl* decoderI, uint32_t m, co
           break;
 
         default:
-          densityUnit = kDensityOnlyAspect;
           break;
       }
 

@@ -61,7 +61,7 @@ bool PipeCompiler::hasMaskedAccessOf(uint32_t dataSize) const noexcept {
 
 void PipeCompiler::beginFunction() noexcept {
   // Function prototype and arguments.
-  _funcNode = cc->addFunc(asmjit::FuncSignatureT<void, ContextData*, const void*, const void*>(asmjit::CallConvId::kCDecl));
+  _funcNode = cc->addFunc(asmjit::FuncSignature::build<void, ContextData*, const void*, const void*>(asmjit::CallConvId::kCDecl));
   _funcInit = cc->cursor();
   _funcEnd = _funcNode->endNode()->prev();
 

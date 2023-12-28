@@ -81,22 +81,27 @@ public:
     return prev;
   }
 
-  template<typename... Args>
-  inline void print(Args&&... args) {
-    printf(std::forward<Args>(args)...);
+  inline void print(const char* fmt) {
+    puts(fmt);
     fflush(stdout);
   }
 
   template<typename... Args>
-  inline void debug(Args&&... args) {
-    if (_verbosity <= Verbosity::Debug)
-      printf(std::forward<Args>(args)...);
+  inline void print(const char* fmt, Args&&... args) {
+    printf(fmt, std::forward<Args>(args)...);
+    fflush(stdout);
   }
 
   template<typename... Args>
-  inline void info(Args&&... args) {
+  inline void debug(const char* fmt, Args&&... args) {
+    if (_verbosity <= Verbosity::Debug)
+      print(fmt, std::forward<Args>(args)...);
+  }
+
+  template<typename... Args>
+  inline void info(const char* fmt, Args&&... args) {
     if (_verbosity <= Verbosity::Info)
-      printf(std::forward<Args>(args)...);
+      print(fmt, std::forward<Args>(args)...);
   }
 };
 

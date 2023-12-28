@@ -325,10 +325,13 @@
 //! \def BL_NOUNROLL
 //!
 //! Compiler-specific macro that annotates a do/for/while loop to not get unrolled.
-#if defined(__clang__) && BL_CLANG_AT_LEAST(3, 6)
+#if defined(__clang__)
   #define BL_NOUNROLL _Pragma("nounroll")
 #elif defined(__GNUC__) && (__GNUC__ >= 8)
-  #define BL_NOUNROLL _Pragma("GCC unroll 1")
+  // NOTE: We could use `_Pragma("GCC unroll 1")`, however, this doesn't apply to all loops and GCC emits a lot of
+  // warnings such as "ignoring loop annotation", which cannot be turned off globally nor locally. So we disable
+  // loop annotations when compiling with GCC. This comment is here so we can re-enable in the future.
+  #define BL_NOUNROLL
 #else
   #define BL_NOUNROLL
 #endif

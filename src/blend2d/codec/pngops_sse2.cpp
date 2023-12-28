@@ -486,6 +486,7 @@ BLResult BL_CDECL inverseFilterImpl_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl,
       //     |   Y1+U1   |   Y2+U2   |   Y3+U3   |   Y4+U4   | <---+
       //     +-----------+-----------+-----------+-----------+
       case BL_PNG_FILTER_TYPE_UP: {
+        BL_ASSERT(u != nullptr);
         i = bpl;
 
         if (i >= 24) {
@@ -555,6 +556,8 @@ BLResult BL_CDECL inverseFilterImpl_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl,
       //     Y4' = byte((2*Y4 + U4 + byte((2*Y3 + U3 + byte((2*Y2 + U2 + byte((2*Y1 + U1) >> 1)) >> 1)) >> 1)) >> 1)
       //     Y5' = ...
       case BL_PNG_FILTER_TYPE_AVG: {
+        BL_ASSERT(u != nullptr);
+
         for (i = 0; i < bpp; i++)
           p[i] = applySumFilter(p[i], u[i] >> 1);
 
@@ -792,6 +795,8 @@ BLResult BL_CDECL inverseFilterImpl_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl,
       }
 
       case BL_PNG_FILTER_TYPE_PAETH: {
+        BL_ASSERT(u != nullptr);
+
         if (bpp == 1) {
           // There is not much to optimize for 1BPP. The only thing this code
           // does is to keep `p0` and `u0` values from the current iteration

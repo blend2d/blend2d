@@ -50,12 +50,14 @@ BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint
       }
 
       case BL_PNG_FILTER_TYPE_UP: {
+        BL_ASSERT(u != nullptr);
         for (i = bpl; i != 0; i--, p++, u++)
           p[0] = applySumFilter(p[0], u[0]);
         break;
       }
 
       case BL_PNG_FILTER_TYPE_AVG: {
+        BL_ASSERT(u != nullptr);
         for (i = 0; i < bpp; i++)
           p[i] = applySumFilter(p[i], u[i] >> 1);
 
@@ -68,6 +70,7 @@ BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint
       }
 
       case BL_PNG_FILTER_TYPE_PAETH: {
+        BL_ASSERT(u != nullptr);
         for (i = 0; i < bpp; i++)
           p[i] = applySumFilter(p[i], u[i]);
 

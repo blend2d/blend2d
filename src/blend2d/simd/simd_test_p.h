@@ -162,7 +162,7 @@ static BL_INLINE_NODEBUG typename std::make_signed<T>::type cast_int(const T& x)
 template<typename T, typename Derived> struct op_base_1 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t i = 0; i < kW / sizeof(T); i++)
       out.items[i] = Derived::apply_one(a.items[i]);
     return out;
@@ -172,7 +172,7 @@ template<typename T, typename Derived> struct op_base_1 {
 template<typename T, typename Derived> struct op_base_2 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a, const VecOverlay<kW, T>& b) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t i = 0; i < kW / sizeof(T); i++)
       out.items[i] = Derived::apply_one(a.items[i], b.items[i]);
     return out;
@@ -182,7 +182,7 @@ template<typename T, typename Derived> struct op_base_2 {
 template<typename T, typename Derived> struct op_base_3 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a, const VecOverlay<kW, T>& b, const VecOverlay<kW, T>& c) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t i = 0; i < kW / sizeof(T); i++)
       out.items[i] = Derived::apply_one(a.items[i], b.items[i], c.items[i]);
     return out;
@@ -313,7 +313,7 @@ template<typename T> struct iop_cmp_le : public op_base_2<T, iop_cmp_le<T>> {
 template<typename T, uint32_t kN> struct iop_sllb_u128 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       for (uint32_t i = 0; i < 16; i++) {
         out.data_u8[off + i] = i < kN ? uint8_t(0) : a.data_u8[off + i - kN];
@@ -326,7 +326,7 @@ template<typename T, uint32_t kN> struct iop_sllb_u128 {
 template<typename T, uint32_t kN> struct iop_srlb_u128 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       for (uint32_t i = 0; i < 16; i++) {
         out.data_u8[off + i] = i + kN < 16u ? a.data_u8[off + i + kN] : uint8_t(0);
@@ -339,7 +339,7 @@ template<typename T, uint32_t kN> struct iop_srlb_u128 {
 template<typename T, uint32_t kN> struct iop_alignr_u128 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a, const VecOverlay<kW, T>& b) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       for (uint32_t i = 0; i < 16; i++) {
         out.data_u8[off + i] = i + kN < 16 ? b.data_u8[off + i + kN] : a.data_u8[off + i + kN - 16];
@@ -352,7 +352,7 @@ template<typename T, uint32_t kN> struct iop_alignr_u128 {
 template<typename T> struct iop_broadcast_u8 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t i = 0; i < kW; i++)
       out.data_u8[i] = a.data_u8[0];
     return out;
@@ -362,7 +362,7 @@ template<typename T> struct iop_broadcast_u8 {
 template<typename T> struct iop_broadcast_u16 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t i = 0; i < kW / 2u; i++)
       out.data_u16[i] = a.data_u16[0];
     return out;
@@ -372,7 +372,7 @@ template<typename T> struct iop_broadcast_u16 {
 template<typename T> struct iop_broadcast_u32 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t i = 0; i < kW / 4u; i++)
       out.data_u32[i] = a.data_u32[0];
     return out;
@@ -382,7 +382,7 @@ template<typename T> struct iop_broadcast_u32 {
 template<typename T> struct iop_broadcast_u64 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t i = 0; i < kW / 8u; i++)
       out.data_u64[i] = a.data_u64[0];
     return out;
@@ -392,7 +392,7 @@ template<typename T> struct iop_broadcast_u64 {
 template<typename T> struct iop_swizzlev_u8 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a, const VecOverlay<kW, T>& b) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       for (uint32_t i = 0; i < 16; i++) {
         size_t sel = b.data_u8[off + i] & (0x8F); // 3 bits ignored.
@@ -406,7 +406,7 @@ template<typename T> struct iop_swizzlev_u8 {
 template<typename T, uint8_t D, uint8_t C, uint8_t B, uint8_t A> struct iop_swizzle_u16 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       out.data_u16[off / 2 + 0] = a.data_u16[off / 2 + 0 + A];
       out.data_u16[off / 2 + 1] = a.data_u16[off / 2 + 0 + B];
@@ -424,7 +424,7 @@ template<typename T, uint8_t D, uint8_t C, uint8_t B, uint8_t A> struct iop_swiz
 template<typename T, uint8_t D, uint8_t C, uint8_t B, uint8_t A> struct iop_swizzle_lo_u16 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       out.data_u16[off / 2 + 0] = a.data_u16[off / 2 + A];
       out.data_u16[off / 2 + 1] = a.data_u16[off / 2 + B];
@@ -439,7 +439,7 @@ template<typename T, uint8_t D, uint8_t C, uint8_t B, uint8_t A> struct iop_swiz
 template<typename T, uint8_t D, uint8_t C, uint8_t B, uint8_t A> struct iop_swizzle_hi_u16 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       memcpy(out.data_u8 + off, a.data_u8 + off, 8);
       out.data_u16[off / 2 + 4] = a.data_u16[off / 2 + 4 + A];
@@ -454,7 +454,7 @@ template<typename T, uint8_t D, uint8_t C, uint8_t B, uint8_t A> struct iop_swiz
 template<typename T, uint8_t D, uint8_t C, uint8_t B, uint8_t A> struct iop_swizzle_u32 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       out.data_u32[off / 4 + 0] = a.data_u32[off / 4 + A];
       out.data_u32[off / 4 + 1] = a.data_u32[off / 4 + B];
@@ -468,7 +468,7 @@ template<typename T, uint8_t D, uint8_t C, uint8_t B, uint8_t A> struct iop_swiz
 template<typename T, uint8_t B, uint8_t A> struct iop_swizzle_u64 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       out.data_u64[off / 8 + 0] = a.data_u64[off / 8 + A];
       out.data_u64[off / 8 + 1] = a.data_u64[off / 8 + B];
@@ -480,7 +480,7 @@ template<typename T, uint8_t B, uint8_t A> struct iop_swizzle_u64 {
 template<typename T> struct iop_interleave_lo_u8 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a, const VecOverlay<kW, T>& b) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       for (uint32_t i = 0; i < 8; i++) {
         out.data_u8[off + i * 2 + 0] = a.data_u8[off + i];
@@ -494,7 +494,7 @@ template<typename T> struct iop_interleave_lo_u8 {
 template<typename T> struct iop_interleave_hi_u8 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a, const VecOverlay<kW, T>& b) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       for (uint32_t i = 0; i < 8; i++) {
         out.data_u8[off + i * 2 + 0] = a.data_u8[off + 8 + i];
@@ -508,7 +508,7 @@ template<typename T> struct iop_interleave_hi_u8 {
 template<typename T> struct iop_interleave_lo_u16 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a, const VecOverlay<kW, T>& b) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       for (uint32_t i = 0; i < 4; i++) {
         out.data_u16[off / 2 + i * 2 + 0] = a.data_u16[off / 2 + i];
@@ -522,7 +522,7 @@ template<typename T> struct iop_interleave_lo_u16 {
 template<typename T> struct iop_interleave_hi_u16 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a, const VecOverlay<kW, T>& b) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       for (uint32_t i = 0; i < 4; i++) {
         out.data_u16[off / 2 + i * 2 + 0] = a.data_u16[off / 2 + 4 + i];
@@ -536,7 +536,7 @@ template<typename T> struct iop_interleave_hi_u16 {
 template<typename T> struct iop_interleave_lo_u32 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a, const VecOverlay<kW, T>& b) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       for (uint32_t i = 0; i < 2; i++) {
         out.data_u32[off / 4 + i * 2 + 0] = a.data_u32[off / 4 + i];
@@ -550,7 +550,7 @@ template<typename T> struct iop_interleave_lo_u32 {
 template<typename T> struct iop_interleave_hi_u32 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a, const VecOverlay<kW, T>& b) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       for (uint32_t i = 0; i < 2; i++) {
         out.data_u32[off / 4 + i * 2 + 0] = a.data_u32[off / 4 + 2 + i];
@@ -564,7 +564,7 @@ template<typename T> struct iop_interleave_hi_u32 {
 template<typename T> struct iop_interleave_lo_u64 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a, const VecOverlay<kW, T>& b) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       out.data_u64[off / 8 + 0] = a.data_u64[off / 8 + 0];
       out.data_u64[off / 8 + 1] = b.data_u64[off / 8 + 0];
@@ -576,7 +576,7 @@ template<typename T> struct iop_interleave_lo_u64 {
 template<typename T> struct iop_interleave_hi_u64 {
   template<uint32_t kW>
   static BL_INLINE VecOverlay<kW, T> apply(const VecOverlay<kW, T>& a, const VecOverlay<kW, T>& b) noexcept {
-    VecOverlay<kW, T> out;
+    VecOverlay<kW, T> out{};
     for (uint32_t off = 0; off < kW; off += 16) {
       out.data_u64[off / 8 + 0] = a.data_u64[off / 8 + 1];
       out.data_u64[off / 8 + 1] = b.data_u64[off / 8 + 1];
