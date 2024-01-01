@@ -22,9 +22,9 @@ struct PipeDebug {
     asmjit::InvokeNode* invokeNode;
 
     if (reg.size() <= 4)
-      cc.invoke(&invokeNode, imm(_printGp32Cb), asmjit::FuncSignature::build<void, void*, int32_t>(asmjit::CallConvId::kHost));
+      cc.invoke(&invokeNode, imm(_printGp32Cb), asmjit::FuncSignature::build<void, void*, int32_t>());
     else
-      cc.invoke(&invokeNode, imm(_printGp64Cb), asmjit::FuncSignature::build<void, void*, int64_t>(asmjit::CallConvId::kHost));
+      cc.invoke(&invokeNode, imm(_printGp64Cb), asmjit::FuncSignature::build<void, void*, int64_t>());
 
     invokeNode->setArg(0, imm(key));
     invokeNode->setArg(1, reg);
@@ -48,7 +48,7 @@ struct PipeDebug {
     asmjit::InvokeNode* invokeNode;
     cc.invoke(&invokeNode,
       imm(_printXmmPiCb),
-      asmjit::FuncSignature::build<void, void*, int>(asmjit::CallConvId::kHost));
+      asmjit::FuncSignature::build<void, void*, int>());
 
     invokeNode->setArg(0, imm(key));
     invokeNode->setArg(1, a);
@@ -73,7 +73,7 @@ struct PipeDebug {
     asmjit::InvokeNode* invokeNode;
     cc.invoke(&invokeNode,
       imm(_printXmmPsCb),
-      asmjit::FuncSignature::build<void, void*, int>(asmjit::CallConvId::kHost));
+      asmjit::FuncSignature::build<void, void*, int>());
 
     invokeNode->setArg(0, imm(key));
     invokeNode->setArg(1, a);
@@ -101,7 +101,7 @@ struct PipeDebug {
     asmjit::InvokeNode* invokeNode;
     cc.invoke(&invokeNode,
       imm(_printXmmPdCb),
-      asmjit::FuncSignature::build<void, void*, int>(asmjit::CallConvId::kHost));
+      asmjit::FuncSignature::build<void, void*, int>());
 
     invokeNode->setArg(0, imm(key));
     invokeNode->setArg(1, a);
