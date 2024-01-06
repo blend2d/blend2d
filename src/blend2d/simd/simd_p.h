@@ -11,10 +11,10 @@
 // SIMD - Architecture
 // ===================
 
-#if BL_TARGET_ARCH_ARM
-  #include "../simd/simdarm_p.h"
-#elif BL_TARGET_ARCH_X86
+#if BL_TARGET_ARCH_X86
   #include "../simd/simdx86_p.h"
+#elif BL_TARGET_ARCH_ARM && defined(__ARM_NEON)
+  #include "../simd/simdarm_p.h"
 #else
   #define BL_TARGET_SIMD_I 0
   #define BL_TARGET_SIMD_F 0

@@ -17,7 +17,7 @@ namespace bl {
 namespace Pipeline {
 namespace JIT {
 
-// Interleave callback is used to interleae a sequence of code into pixel fetching sequence. There are two scenarios in
+// Interleave callback is used to interleave a sequence of code into pixel fetching sequence. There are two scenarios in
 // general:
 //
 //   - Fetching is performed by scalar loads and shuffles to form the destination pixel. In this case individual fetches
