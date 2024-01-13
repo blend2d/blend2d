@@ -4,14 +4,12 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../../api-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
+#if defined(BL_JIT_ARCH_X86)
 
 #include "../../pipeline/jit/compoppart_p.h"
 #include "../../pipeline/jit/fetchgradientpart_p.h"
 #include "../../pipeline/jit/fetchutils_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
-
-#include "../../pipeline/jit/pipedebug_p.h"
 
 namespace bl {
 namespace Pipeline {
@@ -22,54 +20,49 @@ namespace JIT {
 // bl::Pipeline::JIT::GradientDitheringContext
 // ===========================================
 
-void GradientDitheringContext::initY(const x86::Gp& x, const x86::Gp& y) noexcept {
-  x86::Compiler* cc = pc->cc;
-
-  _dmPosition = cc->newUInt32("dm.position");
-  _dmOriginX = cc->newUInt32("dm.originX");
+void GradientDitheringContext::initY(const Gp& x, const Gp& y) noexcept {
+  _dmPosition = pc->newGp32("dm.position");
+  _dmOriginX = pc->newGp32("dm.originX");
   _dmValues = pc->newVec(pc->simdWidth(), "dm.values");
 
   _isRectFill = x.isValid();
 
-  cc->mov(_dmPosition, x86::ptr(pc->_ctxData, BL_OFFSET_OF(ContextData, pixelOrigin.y)));
-  cc->mov(_dmOriginX, x86::ptr(pc->_ctxData, BL_OFFSET_OF(ContextData, pixelOrigin.x)));
+  pc->load_u32(_dmPosition, x86::ptr(pc->_ctxData, BL_OFFSET_OF(ContextData, pixelOrigin.y)));
+  pc->load_u32(_dmOriginX, x86::ptr(pc->_ctxData, BL_OFFSET_OF(ContextData, pixelOrigin.x)));
 
-  cc->add(_dmPosition, y.r32());
+  pc->add(_dmPosition, _dmPosition, y.r32());
   if (isRectFill())
-    cc->add(_dmOriginX, x.r32());
+    pc->add(_dmOriginX, _dmOriginX, x.r32());
 
-  cc->and_(_dmPosition, 15);
+  pc->and_(_dmPosition, _dmPosition, 15);
   if (isRectFill())
-    cc->and_(_dmOriginX, 15);
+    pc->and_(_dmOriginX, _dmOriginX, 15);
 
-  cc->shl(_dmPosition, 5);
+  pc->shl(_dmPosition, _dmPosition, 5);
   if (isRectFill())
-    cc->add(_dmPosition, _dmOriginX);
+    pc->add(_dmPosition, _dmPosition, _dmOriginX);
 }
 
 void GradientDitheringContext::advanceY() noexcept {
-  x86::Compiler* cc = pc->cc;
-
-  cc->add(_dmPosition, 16 * 2);
-  cc->and_(_dmPosition, 16 * 16 * 2 - 1);
+  pc->add(_dmPosition, _dmPosition, 16 * 2);
+  pc->and_(_dmPosition, _dmPosition, 16 * 16 * 2 - 1);
 }
 
-void GradientDitheringContext::startAtX(const x86::Gp& x) noexcept {
-  x86::Compiler* cc = pc->cc;
-  x86::Gp dmPosition = _dmPosition;
+void GradientDitheringContext::startAtX(const Gp& x) noexcept {
+  Gp dmPosition = _dmPosition;
 
   if (!isRectFill()) {
     // If not rectangular, we have to calculate the final position according to `x`.
-    dmPosition = cc->newUInt32("dm.finalPosition");
+    dmPosition = pc->newGp32("dm.finalPosition");
 
-    cc->mov(dmPosition, _dmOriginX);
-    cc->add(dmPosition, x.r32());
-    cc->and_(dmPosition, 15);
-    cc->add(dmPosition, _dmPosition);
+    pc->mov(dmPosition, _dmOriginX);
+    pc->add(dmPosition, dmPosition, x.r32());
+    pc->and_(dmPosition, dmPosition, 15);
+    pc->add(dmPosition, dmPosition, _dmPosition);
   }
 
-  x86::Mem m;
-  if (cc->is32Bit()) {
+  Mem m;
+  if (pc->is32Bit()) {
     m = x86::ptr(uint64_t(uintptr_t(commonTable.bayerMatrix16x16)), dmPosition);
   }
   else {
@@ -83,7 +76,7 @@ void GradientDitheringContext::startAtX(const x86::Gp& x) noexcept {
     pc->v_broadcast_u32x4(_dmValues, m);
 }
 
-void GradientDitheringContext::advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept {
+void GradientDitheringContext::advanceX(const Gp& x, const Gp& diff) noexcept {
   // FillRect never advance X as that would mean that there is a hole, which is impossible.
   BL_ASSERT(!isRectFill());
 
@@ -97,12 +90,11 @@ void GradientDitheringContext::advanceXAfterFetch(uint32_t n) noexcept {
 }
 
 void GradientDitheringContext::ditherUnpackedPixels(Pixel& p) noexcept {
-  x86::Compiler* cc = pc->cc;
   SimdWidth simdWidth = SimdWidthUtils::simdWidthOf(p.uc[0]);
 
   Operand shufflePredicate = pc->simdConst(&commonTable.pshufb_dither_rgba64_lo, Bcst::kNA_Unique, simdWidth);
-  x86::Vec ditherPredicate = cc->newSimilarReg(p.uc[0], "ditherPredicate");
-  x86::Vec ditherThreshold = cc->newSimilarReg(p.uc[0], "ditherThreshold");
+  Vec ditherPredicate = pc->newSimilarReg(p.uc[0], "ditherPredicate");
+  Vec ditherThreshold = pc->newSimilarReg(p.uc[0], "ditherThreshold");
 
   switch (p.count().value()) {
     case 1: {
@@ -142,7 +134,7 @@ void GradientDitheringContext::ditherUnpackedPixels(Pixel& p) noexcept {
       }
       else {
         for (uint32_t i = 0; i < p.uc.size(); i++) {
-          x86::Vec dm = (i == 0) ? _dmValues.cloneAs(ditherPredicate) : ditherPredicate;
+          Vec dm = (i == 0) ? _dmValues.cloneAs(ditherPredicate) : ditherPredicate;
 
           if (pc->hasSSSE3()) {
             pc->v_shuffle_i8(ditherPredicate, dm, shufflePredicate);
@@ -187,8 +179,8 @@ FetchGradientPart::FetchGradientPart(PipeCompiler* pc, FetchType fetchType, Form
   _partFlags |= PipePartFlags::kAdvanceXNeedsDiff;
 }
 
-void FetchGradientPart::fetchSinglePixel(Pixel& dst, PixelFlags flags, const x86::Gp& idx) noexcept {
-  x86::Mem src = x86::ptr(_tablePtr, idx, tablePtrShift());
+void FetchGradientPart::fetchSinglePixel(Pixel& dst, PixelFlags flags, const Gp& idx) noexcept {
+  Mem src = x86::ptr(_tablePtr, idx, tablePtrShift());
   if (ditheringEnabled()) {
     pc->newVecArray(dst.uc, 1, SimdWidth::k128, dst.name(), "uc");
     pc->v_load_i64(dst.uc[0], src);
@@ -199,8 +191,8 @@ void FetchGradientPart::fetchSinglePixel(Pixel& dst, PixelFlags flags, const x86
   }
 }
 
-void FetchGradientPart::fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags flags, const x86::Vec& idx, IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept {
-  x86::Mem src = x86::ptr(_tablePtr);
+void FetchGradientPart::fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags flags, const Vec& idx, IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept {
+  Mem src = x86::ptr(_tablePtr);
   uint32_t idxShift = tablePtrShift();
 
   if (ditheringEnabled()) {
@@ -248,11 +240,11 @@ void FetchLinearGradientPart::preparePart() noexcept {
 // bl::Pipeline::JIT::FetchLinearGradientPart - Init & Fini
 // ========================================================
 
-void FetchLinearGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
+void FetchLinearGradientPart::_initPart(Gp& x, Gp& y) noexcept {
   // Local Registers
   // ---------------
 
-  _tablePtr = cc->newIntPtr("f.table");               // Reg.
+  _tablePtr = pc->newGpPtr("f.table");                // Reg.
   f->pt = pc->newVec("f.pt");                         // Reg.
   f->dt = pc->newVec("f.dt");                         // Reg/Mem.
   f->dtN = pc->newVec("f.dtN");                       // Reg/Mem.
@@ -264,14 +256,14 @@ void FetchLinearGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
 
   // In 64-bit mode it's easier to use imul for 64-bit multiplication instead of SIMD, because
   // we need to multiply a scalar anyway that we then broadcast and add to our 'f.pt' vector.
-  if (cc->is64Bit()) {
-    f->dtGp = cc->newUInt64("f.dtGp");                // Reg/Mem.
+  if (pc->is64Bit()) {
+    f->dtGp = pc->newGp64("f.dtGp");                  // Reg/Mem.
   }
 
   // Part Initialization
   // -------------------
 
-  cc->mov(_tablePtr, x86::ptr(pc->_fetchData, REL_GRADIENT(lut.data)));
+  pc->load(_tablePtr, x86::ptr(pc->_fetchData, REL_GRADIENT(lut.data)));
 
   if (ditheringEnabled())
     _ditheringContext.initY(x, y);
@@ -309,11 +301,11 @@ void FetchLinearGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
     pc->v_sub_i16(f->maxi, f->maxi, pc->simdConst(&ct.i_8000800080008000, Bcst::kNA, f->maxi));
   }
 
-  if (cc->is64Bit())
+  if (pc->is64Bit())
     pc->s_mov_i64(f->dtGp, f->dt);
 
   if (isRectFill()) {
-    x86::Vec adv = cc->newSimilarReg(f->dt, "f.adv");
+    Vec adv = pc->newSimilarReg(f->dt, "f.adv");
     calcAdvanceX(adv, x);
     pc->v_add_i64(f->py, f->py, adv);
   }
@@ -334,7 +326,7 @@ void FetchLinearGradientPart::advanceY() noexcept {
     _ditheringContext.advanceY();
 }
 
-void FetchLinearGradientPart::startAtX(const x86::Gp& x) noexcept {
+void FetchLinearGradientPart::startAtX(const Gp& x) noexcept {
   if (!isRectFill()) {
     calcAdvanceX(f->pt, x);
     pc->v_add_i64(f->pt, f->pt, f->py);
@@ -347,8 +339,8 @@ void FetchLinearGradientPart::startAtX(const x86::Gp& x) noexcept {
     _ditheringContext.startAtX(x);
 }
 
-void FetchLinearGradientPart::advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept {
-  x86::Vec adv = cc->newSimilarReg(f->pt, "f.adv");
+void FetchLinearGradientPart::advanceX(const Gp& x, const Gp& diff) noexcept {
+  Vec adv = pc->newSimilarReg(f->pt, "f.adv");
   calcAdvanceX(adv, diff);
   pc->v_add_i64(f->pt, f->pt, adv);
 
@@ -356,12 +348,11 @@ void FetchLinearGradientPart::advanceX(const x86::Gp& x, const x86::Gp& diff) no
     _ditheringContext.advanceX(x, diff);
 }
 
-void FetchLinearGradientPart::calcAdvanceX(const x86::Vec& dst, const x86::Gp& diff) const noexcept {
-  // Use imul on 64-bit targets as it's much shorter than doing vectorized 64x32 multiply.
-  if (cc->is64Bit()) {
-    x86::Gp advTmp = cc->newUInt64("f.advTmp");
-    cc->mov(advTmp.r32(), diff.r32());
-    pc->i_mul(advTmp, advTmp, f->dtGp);
+void FetchLinearGradientPart::calcAdvanceX(const Vec& dst, const Gp& diff) const noexcept {
+  // Use imul on 64-bit targets as it's much shorter than doing a vectorized 64x32 multiply.
+  if (pc->is64Bit()) {
+    Gp advTmp = pc->newGp64("f.advTmp");
+    pc->mul(advTmp, diff.r64(), f->dtGp);
     pc->v_broadcast_u64(dst, advTmp);
   }
   else {
@@ -379,7 +370,7 @@ void FetchLinearGradientPart::enterN() noexcept {}
 void FetchLinearGradientPart::leaveN() noexcept {}
 
 void FetchLinearGradientPart::prefetchN() noexcept {
-  x86::Vec vIdx = f->vIdx;
+  Vec vIdx = f->vIdx;
 
   if (pc->simdWidth() >= SimdWidth::k256) {
     if (isPad()) {
@@ -389,7 +380,7 @@ void FetchLinearGradientPart::prefetchN() noexcept {
       pc->v_min_u16(vIdx, vIdx, f->maxi);
     }
     else {
-      x86::Vec vTmp = cc->newSimilarReg(f->vIdx, "f.vTmp");
+      Vec vTmp = pc->newSimilarReg(f->vIdx, "f.vTmp");
       pc->v_and_i32(vIdx, f->pt, f->maxi);
       pc->v_add_i64(f->pt, f->pt, f->dtN);
       pc->v_and_i32(vTmp, f->pt, f->maxi);
@@ -419,8 +410,8 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
 
   switch (n.value()) {
     case 1: {
-      x86::Gp gIdx = cc->newInt32("f.gIdx");
-      x86::Xmm vIdx = cc->newXmm("f.vIdx");
+      Gp gIdx = pc->newGp32("f.gIdx");
+      Vec vIdx = pc->newXmm("f.vIdx");
       uint32_t vIdxLane = 1u + uint32_t(!isPad());
 
       if (isPad() && pc->hasSSE4_1()) {
@@ -433,7 +424,7 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
         pc->v_add_i16(vIdx, vIdx, pc->simdConst(&ct.i_8000800080008000, Bcst::kNA, vIdx));
       }
       else {
-        x86::Xmm vTmp = cc->newXmm("f.vTmp");
+        Vec vTmp = pc->newXmm("f.vTmp");
         pc->v_and_i32(vIdx, f->pt.xmm(), f->maxi.xmm());
         pc->v_xor_i32(vTmp, vIdx, f->rori.xmm());
         pc->v_min_i16(vIdx, vIdx, vTmp);
@@ -447,8 +438,8 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
     }
 
     case 4: {
-      x86::Vec vIdx = f->vIdx;
-      x86::Vec vTmp = pc->cc->newSimilarReg(vIdx, "f.vTmp");
+      Vec vIdx = f->vIdx;
+      Vec vTmp = pc->newSimilarReg(vIdx, "f.vTmp");
 
       if (pc->simdWidth() >= SimdWidth::k256) {
         fetchMultiplePixels(p, n, flags, vIdx.xmm(), IndexLayout::kUInt32Hi16, [&](uint32_t step) noexcept {
@@ -508,8 +499,8 @@ void FetchLinearGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
     }
 
     case 8: {
-      x86::Vec vIdx = f->vIdx;
-      x86::Vec vTmp = pc->cc->newSimilarReg(vIdx, "f.vTmp");
+      Vec vIdx = f->vIdx;
+      Vec vTmp = pc->newSimilarReg(vIdx, "f.vTmp");
 
       if (pc->simdWidth() >= SimdWidth::k256) {
         fetchMultiplePixels(p, n, flags, vIdx, IndexLayout::kUInt32Hi16, [&](uint32_t step) noexcept {
@@ -611,11 +602,11 @@ void FetchRadialGradientPart::preparePart() noexcept {
 // bl::Pipeline::JIT::FetchRadialGradientPart - Init & Fini
 // ========================================================
 
-void FetchRadialGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
+void FetchRadialGradientPart::_initPart(Gp& x, Gp& y) noexcept {
   // Local Registers
   // ---------------
 
-  _tablePtr = cc->newIntPtr("f.table");               // Reg.
+  _tablePtr = pc->newGpPtr("f.table");                // Reg.
   f->xx_xy = cc->newXmmPd("f.xx_xy");                 // Mem.
   f->yx_yy = cc->newXmmPd("f.yx_yy");                 // Mem.
   f->ax_ay = cc->newXmmPd("f.ax_ay");                 // Mem.
@@ -631,19 +622,19 @@ void FetchRadialGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   f->ddd = cc->newXmmPd("f.ddd");                     // Mem.
   f->value = cc->newXmmPs("f.value");                 // Reg/Tmp.
 
-  f->vmaxi = cc->newXmm("f.vmaxi");                   // Mem.
-  f->vrori = cc->newXmm("f.vrori");                   // Mem.
+  f->vmaxi = pc->newXmm("f.vmaxi");                   // Mem.
+  f->vrori = pc->newXmm("f.vrori");                   // Mem.
   f->vmaxf = cc->newXmmPd("f.vmaxf");                 // Mem.
 
   f->d_b_prev = cc->newXmmPd("f.d_b_prev");           // Mem.
   f->dd_bd_prev = cc->newXmmPd("f.dd_bd_prev");       // Mem.
 
-  x86::Xmm off = cc->newXmmPd("f.off");               // Initialization only.
+  Xmm off = cc->newXmmPd("f.off");                    // Initialization only.
 
   // Part Initialization
   // -------------------
 
-  cc->mov(_tablePtr, x86::ptr(pc->_fetchData, REL_GRADIENT(lut.data)));
+  pc->load(_tablePtr, x86::ptr(pc->_fetchData, REL_GRADIENT(lut.data)));
 
   if (ditheringEnabled())
     _ditheringContext.initY(x, y);
@@ -706,12 +697,12 @@ void FetchRadialGradientPart::advanceY() noexcept {
     _ditheringContext.advanceY();
 }
 
-void FetchRadialGradientPart::startAtX(const x86::Gp& x) noexcept {
+void FetchRadialGradientPart::startAtX(const Gp& x) noexcept {
   if (isRectFill()) {
     precalc(f->px_py);
   }
   else {
-    x86::Xmm px_py = cc->newXmmPd("f.px_py");
+    Xmm px_py = cc->newXmmPd("f.px_py");
 
     pc->v_zero_d(px_py);
     pc->s_cvt_int_f64(px_py, px_py, x);
@@ -726,12 +717,12 @@ void FetchRadialGradientPart::startAtX(const x86::Gp& x) noexcept {
     _ditheringContext.startAtX(x);
 }
 
-void FetchRadialGradientPart::advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept {
+void FetchRadialGradientPart::advanceX(const Gp& x, const Gp& diff) noexcept {
   if (isRectFill()) {
     precalc(f->px_py);
   }
   else {
-    x86::Xmm px_py = cc->newXmmPd("f.px_py");
+    Xmm px_py = cc->newXmmPd("f.px_py");
 
     // TODO: [PIPEGEN] Duplicated code :(
     pc->v_zero_d(px_py);
@@ -757,14 +748,14 @@ void FetchRadialGradientPart::prefetch1() noexcept {
 }
 
 void FetchRadialGradientPart::prefetchN() noexcept {
-  x86::Vec& d_b = f->d_b;
-  x86::Vec& dd_bd = f->dd_bd;
-  x86::Vec& ddd = f->ddd;
-  x86::Vec& value = f->value;
+  Vec& d_b = f->d_b;
+  Vec& dd_bd = f->dd_bd;
+  Vec& ddd = f->ddd;
+  Vec& value = f->value;
 
-  x86::Vec x0 = cc->newXmmSd("f.x0");
-  x86::Vec x1 = cc->newXmmSd("f.x1");
-  x86::Vec x2 = cc->newXmmSd("f.x2");
+  Vec x0 = cc->newXmmSd("f.x0");
+  Vec x1 = cc->newXmmSd("f.x1");
+  Vec x2 = cc->newXmmSd("f.x2");
 
   pc->v_mov(f->d_b_prev, f->d_b);     // Save `d_b`.
   pc->v_mov(f->dd_bd_prev, f->dd_bd); // Save `dd_bd`.
@@ -808,8 +799,8 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
 
   switch (n.value()) {
     case 1: {
-      x86::Xmm x0 = cc->newXmmPs("f.x0");
-      x86::Gp gIdx = cc->newInt32("f.gIdx");
+      Xmm x0 = cc->newXmmPs("f.x0");
+      Gp gIdx = pc->newGp32("f.gIdx");
 
       pc->v_swizzle_u32(x0, f->value, x86::shuffleImm(1, 1, 1, 1));
       pc->v_add_f64(f->d_b, f->d_b, f->dd_bd);
@@ -825,7 +816,7 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       pc->s_add_f64(f->dd_bd, f->dd_bd, f->ddd);
       pc->s_sqrt_f32(f->value, f->value, f->value);
 
-      x86::Xmm vIdx = cc->newXmm("f.vIdx");
+      Vec vIdx = pc->newXmm("f.vIdx");
       if (isPad() && pc->hasSSE4_1()) {
         pc->v_packs_i32_u16_(vIdx, x0, x0);
         pc->v_min_u16(vIdx, vIdx, f->vmaxi.xmm());
@@ -836,7 +827,7 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
         pc->v_max_i16(vIdx, vIdx, pc->simdConst(&ct.i_0000000000000000, Bcst::kNA, vIdx));
       }
       else {
-        x86::Xmm vTmp = cc->newXmm("f.vTmp");
+        Vec vTmp = pc->newXmm("f.vTmp");
         pc->v_and_i32(vIdx, x0, f->vmaxi.xmm());
         pc->v_xor_i32(vTmp, vIdx, f->vrori.xmm());
         pc->v_min_i16(vIdx, vIdx, vTmp);
@@ -849,15 +840,15 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
     }
 
     case 4: {
-      x86::Vec& d_b   = f->d_b;
-      x86::Vec& dd_bd = f->dd_bd;
-      x86::Vec& ddd   = f->ddd;
-      x86::Vec& value = f->value;
+      Vec& d_b   = f->d_b;
+      Vec& dd_bd = f->dd_bd;
+      Vec& ddd   = f->ddd;
+      Vec& value = f->value;
 
-      x86::Vec x0 = cc->newXmmSd("f.x0");
-      x86::Vec x1 = cc->newXmmSd("f.x1");
-      x86::Vec x2 = cc->newXmmSd("f.x2");
-      x86::Vec x3 = cc->newXmmSd("f.x3");
+      Vec x0 = cc->newXmmSd("f.x0");
+      Vec x1 = cc->newXmmSd("f.x1");
+      Vec x2 = cc->newXmmSd("f.x2");
+      Vec x3 = cc->newXmmSd("f.x3");
 
       pc->v_mul_f32(value, value, f->scale);
       pc->v_cvt_f64_f32(x0, d_b);
@@ -875,7 +866,7 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       pc->s_add_f64(dd_bd, dd_bd, ddd);
 
       IndexLayout indexLayout = IndexLayout::kUInt16;
-      x86::Xmm vIdx = cc->newXmm("vIdx");
+      Vec vIdx = pc->newXmm("vIdx");
 
       if (isPad() && pc->hasSSE4_1()) {
         pc->v_packs_i32_u16_(vIdx, x3, x3);
@@ -888,7 +879,7 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
       }
       else {
         indexLayout = IndexLayout::kUInt32Lo16;
-        x86::Xmm vTmp = cc->newXmm("f.vTmp");
+        Vec vTmp = pc->newXmm("f.vTmp");
 
         pc->v_and_i32(vIdx, x3, f->vmaxi.xmm());
         pc->v_xor_i32(vTmp, vIdx, f->vrori.xmm());
@@ -932,13 +923,13 @@ void FetchRadialGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pi
   }
 }
 
-void FetchRadialGradientPart::precalc(const x86::Vec& px_py) noexcept {
-  x86::Vec& d_b   = f->d_b;
-  x86::Vec& dd_bd = f->dd_bd;
+void FetchRadialGradientPart::precalc(const Vec& px_py) noexcept {
+  Vec& d_b   = f->d_b;
+  Vec& dd_bd = f->dd_bd;
 
-  x86::Vec x0 = cc->newXmmPd("f.x0");
-  x86::Vec x1 = cc->newXmmPd("f.x1");
-  x86::Vec x2 = cc->newXmmPd("f.x2");
+  Vec x0 = cc->newXmmPd("f.x0");
+  Vec x1 = cc->newXmmPd("f.x1");
+  Vec x2 = cc->newXmmPd("f.x2");
 
   pc->v_mul_f64(d_b, px_py, f->ax_ay);                   // [Ax.Px                             | Ay.Py         ]
   pc->v_mul_f64(x0, px_py, f->fx_fy);                    // [Fx.Px                             | Fy.Py         ]
@@ -981,12 +972,12 @@ void FetchConicGradientPart::preparePart() noexcept {
 // bl::Pipeline::JIT::FetchConicGradientPart - Init & Fini
 // =======================================================
 
-void FetchConicGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
+void FetchConicGradientPart::_initPart(Gp& x, Gp& y) noexcept {
   // Local Registers
   // ---------------
 
-  _tablePtr = cc->newIntPtr("f.table");               // Reg.
-  f->consts = cc->newIntPtr("f.consts");              // Reg.
+  _tablePtr = pc->newGpPtr("f.table");                // Reg.
+  f->consts = pc->newGpPtr("f.consts");               // Reg.
   f->px = cc->newXmmPd("f.px");                       // Reg.
   f->xx = cc->newXmmPd("f.xx");                       // Reg/Mem.
   f->hx_hy = cc->newXmmPd("f.hx_hy");                 // Reg. (TODO: Make spillable).
@@ -1002,12 +993,12 @@ void FetchConicGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   f->t2 = pc->newVec("f.t2");                         // Reg/Tmp.
   f->t1Pred = cc->newKw("f.t1Pred");
 
-  x86::Xmm off = cc->newXmmPd("f.off");               // Initialization only.
+  Xmm off = cc->newXmmPd("f.off");                    // Initialization only.
 
   // Part Initialization
   // -------------------
 
-  cc->mov(_tablePtr, x86::ptr(pc->_fetchData, REL_GRADIENT(lut.data)));
+  pc->load(_tablePtr, x86::ptr(pc->_fetchData, REL_GRADIENT(lut.data)));
 
   if (ditheringEnabled())
     _ditheringContext.initY(x, y);
@@ -1026,7 +1017,7 @@ void FetchConicGradientPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
   pc->v_mul_f64(f->hx_hy, f->hx_hy, f->yx_yy);
   pc->v_add_f64(f->hx_hy, f->hx_hy, off);
 
-  cc->mov(f->consts, x86::ptr(pc->_fetchData, REL_GRADIENT(conic.consts)));
+  pc->load(f->consts, x86::ptr(pc->_fetchData, REL_GRADIENT(conic.consts)));
 
   if (isRectFill()) {
     pc->v_zero_d(off);
@@ -1064,7 +1055,7 @@ void FetchConicGradientPart::advanceY() noexcept {
     _ditheringContext.advanceY();
 }
 
-void FetchConicGradientPart::startAtX(const x86::Gp& x) noexcept {
+void FetchConicGradientPart::startAtX(const Gp& x) noexcept {
   pc->v_cvt_f64_f32(f->by.xmm(), f->hx_hy);
   pc->v_swizzle_f32(f->by.xmm(), f->by.xmm(), x86::shuffleImm(1, 1, 1, 1));
 
@@ -1079,7 +1070,7 @@ void FetchConicGradientPart::startAtX(const x86::Gp& x) noexcept {
   advanceX(x, pc->_gpNone);
 }
 
-void FetchConicGradientPart::advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept {
+void FetchConicGradientPart::advanceX(const Gp& x, const Gp& diff) noexcept {
   blUnused(diff);
 
   if (isRectFill()) {
@@ -1102,11 +1093,11 @@ void FetchConicGradientPart::recalcX() noexcept {
   pc->v_cvt_f64_f32(f->t0.xmm(), f->px);
 
   if (maxPixels() == 1) {
-    x86::Vec t0 = f->t0.xmm();
-    x86::Vec t1 = f->t1.xmm();
-    x86::Vec t2 = f->t2.xmm();
-    x86::Vec ay = f->ay.xmm();
-    x86::Vec tmp = cc->newXmm("f.tmp");
+    Vec t0 = f->t0.xmm();
+    Vec t1 = f->t1.xmm();
+    Vec t2 = f->t2.xmm();
+    Vec ay = f->ay.xmm();
+    Vec tmp = pc->newXmm("f.tmp");
 
     pc->v_and_f32(t1, t0, pc->simdConst(&ct.f32_abs, Bcst::k32, t1));
     pc->s_max_f32(tmp, t1, ay);
@@ -1119,11 +1110,11 @@ void FetchConicGradientPart::recalcX() noexcept {
     pc->v_and_f32(t1, t1, x86::ptr(f->consts, BL_OFFSET_OF(CommonTable::Conic, n_div_4)));
   }
   else {
-    x86::Vec t0 = f->t0;
-    x86::Vec t1 = f->t1;
-    x86::Vec t2 = f->t2;
-    x86::Vec ay = f->ay;
-    x86::Vec tmp = cc->newSimilarReg(f->t0, "f.tmp");
+    Vec t0 = f->t0;
+    Vec t1 = f->t1;
+    Vec t2 = f->t2;
+    Vec ay = f->ay;
+    Vec tmp = pc->newSimilarReg(f->t0, "f.tmp");
 
     pc->v_broadcast_u32(t0, t0);
     pc->v_add_f32(t0, t0, f->xx_off);
@@ -1149,12 +1140,11 @@ void FetchConicGradientPart::prefetchN() noexcept {}
 void FetchConicGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
   p.setCount(n);
 
-  x86::Gp consts = f->consts;
-  x86::Xmm px = f->px;
-
-  x86::Vec t0 = f->t0;
-  x86::Vec t1 = f->t1;
-  x86::Vec t2 = f->t2;
+  Gp consts = f->consts;
+  Vec px = f->px;
+  Vec t0 = f->t0;
+  Vec t1 = f->t1;
+  Vec t2 = f->t2;
 
   // Use 128-bit SIMD if the number of pixels is 4 or less.
   if (n.value() <= 4) {
@@ -1163,12 +1153,12 @@ void FetchConicGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
     t2 = t2.xmm();
   }
 
-  x86::Vec t3 = cc->newSimilarReg(t0, "f.t3");
-  x86::Vec t4 = cc->newSimilarReg(t0, "f.t4");
+  Vec t3 = pc->newSimilarReg(t0, "f.t3");
+  Vec t4 = pc->newSimilarReg(t0, "f.t4");
 
   switch (n.value()) {
     case 1: {
-      x86::Gp idx = cc->newIntPtr("f.idx");
+      Gp idx = pc->newGpPtr("f.idx");
 
       pc->s_mul_f32(t3, t2, t2);
       pc->v_sra_i32(t0, t0, 31);
@@ -1236,7 +1226,7 @@ void FetchConicGradientPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
 
         switch (step) {
           case 1: if (maxPixels() >= 8 && n.value() == 4) {
-                    x86::Xmm tmp = cc->newXmm("f.tmp");
+                    Vec tmp = pc->newXmm("f.tmp");
                     pc->v_duph_f64(tmp, f->xx_inc);
                     pc->s_add_f64(px, px, tmp);
                   }

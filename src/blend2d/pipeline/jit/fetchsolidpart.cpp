@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../../api-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
+#if defined(BL_JIT_ARCH_X86)
 
 #include "../../pipeline/jit/compoppart_p.h"
 #include "../../pipeline/jit/fetchsolidpart_p.h"
@@ -41,7 +41,7 @@ void FetchSolidPart::preparePart() noexcept {}
 // bl::Pipeline::JIT::FetchSolidPart - Init & Fini
 // ===============================================
 
-void FetchSolidPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
+void FetchSolidPart::_initPart(Gp& x, Gp& y) noexcept {
   blUnused(x, y);
   if (_pixel.type() != _pixelType) {
     _pixel.setType(_pixelType);
@@ -64,8 +64,8 @@ void FetchSolidPart::initSolidFlags(PixelFlags flags) noexcept {
   switch (s.type()) {
     case PixelType::kA8: {
       if (blTestFlag(flags, PixelFlags::kSA | PixelFlags::kPA | PixelFlags::kUA | PixelFlags::kUI) && !s.sa.isValid()) {
-        s.sa = cc->newUInt32("solid.sa");
-        pc->i_load_u8(s.sa, x86::ptr_8(pc->_fetchData, 3));
+        s.sa = pc->newGp32("solid.sa");
+        pc->load_u8(s.sa, x86::ptr_8(pc->_fetchData, 3));
       }
 
       if (blTestFlag(flags, PixelFlags::kPA | PixelFlags::kUA | PixelFlags::kUI) && s.ua.empty()) {
@@ -113,8 +113,8 @@ void FetchSolidPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredic
           }
           else {
             if (blTestFlag(flags, PixelFlags::kSA)) {
-              p.sa = cc->newUInt32("%ssa", p.name());
-              cc->mov(p.sa, s.sa);
+              p.sa = pc->newGp32("%ssa", p.name());
+              pc->mov(p.sa, s.sa);
             }
           }
         }

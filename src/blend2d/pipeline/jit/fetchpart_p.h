@@ -108,10 +108,10 @@ public:
   BL_INLINE bool isComplexFetch() const noexcept { return _isComplexFetch; }
   BL_INLINE void setComplexFetch(bool value) noexcept { _isComplexFetch = value; }
 
-  void init(x86::Gp& x, x86::Gp& y, PixelType pixelType, uint32_t pixelGranularity) noexcept;
+  void init(Gp& x, Gp& y, PixelType pixelType, uint32_t pixelGranularity) noexcept;
   void fini() noexcept;
 
-  virtual void _initPart(x86::Gp& x, x86::Gp& y) noexcept;
+  virtual void _initPart(Gp& x, Gp& y) noexcept;
   virtual void _finiPart() noexcept;
 
   //! Advances the current y coordinate by one pixel.
@@ -122,11 +122,11 @@ public:
   //! \note This initializer is generally called once per scanline to setup the current position by initializing it
   //! to `x`. The position is then advanced automatically by pixel fetchers and by `advanceX()`, which is used when
   //! there is a gap in the scanline that has to be skipped.
-  virtual void startAtX(const x86::Gp& x) noexcept;
+  virtual void startAtX(const Gp& x) noexcept;
 
   //! Advances the current x coordinate by `diff` pixels. The final x position after advance will be `x`. The fetcher
   //! can decide whether to use `x`, `diff`, or both.
-  virtual void advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept;
+  virtual void advanceX(const Gp& x, const Gp& diff) noexcept;
 
   //! Called before `fetch()` with `n == 1`.
   virtual void prefetch1() noexcept;
@@ -152,8 +152,10 @@ public:
   //! Fetches N pixels to `p` and advances by N.
   virtual void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
 
+#if defined(BL_JIT_ARCH_X86)
   //! Fetches 8 pixels by calling fetch() twice to fetch 4 pixels each time.
   void _fetch2x4(Pixel& p, PixelFlags flags) noexcept;
+#endif
 };
 
 } // {JIT}

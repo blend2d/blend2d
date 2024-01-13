@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../../api-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
+#if defined(BL_JIT_ARCH_X86)
 
 #include "../../pipeline/jit/fetchutils_p.h"
 
@@ -22,12 +22,12 @@ IndexExtractor::IndexExtractor(PipeCompiler* pc) noexcept
     _indexSize(0),
     _memSize(0) {}
 
-void IndexExtractor::begin(uint32_t type, const x86::Vec& vec) noexcept {
+void IndexExtractor::begin(uint32_t type, const Vec& vec) noexcept {
   BL_ASSERT(type != kTypeNone);
   BL_ASSERT(type < kTypeCount);
 
   uint32_t vecSize = vec.size();
-  x86::Mem mem = _pc->tmpStack(vecSize);
+  Mem mem = _pc->tmpStack(vecSize);
 
   if (vecSize <= 16)
     _pc->v_storea_i128(mem, vec);
@@ -37,7 +37,7 @@ void IndexExtractor::begin(uint32_t type, const x86::Vec& vec) noexcept {
   begin(type, mem, vec.size());
 }
 
-void IndexExtractor::begin(uint32_t type, const x86::Mem& mem, uint32_t memSize) noexcept {
+void IndexExtractor::begin(uint32_t type, const Mem& mem, uint32_t memSize) noexcept {
   BL_ASSERT(type != kTypeNone);
   BL_ASSERT(type < kTypeCount);
 
@@ -61,13 +61,13 @@ void IndexExtractor::begin(uint32_t type, const x86::Mem& mem, uint32_t memSize)
   }
 }
 
-void IndexExtractor::extract(const x86::Gp& dst, uint32_t index) noexcept {
+void IndexExtractor::extract(const Gp& dst, uint32_t index) noexcept {
   BL_ASSERT(dst.size() >= 4);
   BL_ASSERT(_type != kTypeNone);
   BL_ASSERT((index + 1u) * _indexSize <= _memSize);
 
-  x86::Mem m = _mem;
-  x86::Compiler* cc = _pc->cc;
+  Mem m = _mem;
+  AsmCompiler* cc = _pc->cc;
 
   m.setSize(_indexSize);
   m.addOffset(int(index * _indexSize));
@@ -114,7 +114,6 @@ void FetchContext::_init(PixelCount n) noexcept {
   // In general we prefer to fetch into a GP accumulator and then convert it to XMM|YMM at the end.
   _a8FetchMode = _fetchFormat == FormatExt::kA8 || _pixel->isA8();
 
-  x86::Compiler* cc = _pc->cc;
   switch (_pixel->type()) {
     case PixelType::kA8: {
       if (blTestFlag(_fetchFlags, PixelFlags::kPA)) {
@@ -131,8 +130,8 @@ void FetchContext::_init(PixelCount n) noexcept {
     case PixelType::kRGBA32: {
       if (!_pc->hasSSE4_1() && !_a8FetchMode) {
         // We need some temporaries if the CPU doesn't support `SSE4.1`.
-        pTmp0 = cc->newXmm("@pTmp0");
-        pTmp1 = cc->newXmm("@pTmp1");
+        pTmp0 = _pc->newXmm("@pTmp0");
+        pTmp1 = _pc->newXmm("@pTmp1");
       }
 
       if (blTestFlag(_fetchFlags, PixelFlags::kPC) || _pc->use256BitSimd()) {
@@ -149,7 +148,7 @@ void FetchContext::_init(PixelCount n) noexcept {
     case PixelType::kRGBA64: {
       if (_pc->use256BitSimd() && n.value() > 2u) {
         _pc->newYmmArray(_pixel->uc, (n.value() + 3) / 4, "uc");
-        pTmp0 = cc->newXmm("@pTmp0");
+        pTmp0 = _pc->newXmm("@pTmp0");
       }
       else {
         _pc->newXmmArray(_pixel->uc, (n.value() + 1) / 2, "uc");
@@ -162,27 +161,27 @@ void FetchContext::_init(PixelCount n) noexcept {
   }
 
   if (_a8FetchMode) {
-    if (cc->is64Bit() && n > 4) {
-      aAcc = cc->newUInt64("@aAcc");
+    if (_pc->is64Bit() && n > 4) {
+      aAcc = _pc->newGp64("@aAcc");
       _a8FetchShift = 8;
     }
-    else if (cc->is64Bit() && blTestFlag(_fetchFlags, PixelFlags::kUA | PixelFlags::kUC)) {
-      aAcc = cc->newUInt64("@aAcc");
+    else if (_pc->is64Bit() && blTestFlag(_fetchFlags, PixelFlags::kUA | PixelFlags::kUC)) {
+      aAcc = _pc->newGp64("@aAcc");
       _a8FetchShift = 16;
     }
     else {
-      aAcc = cc->newUInt32("@aAcc");
+      aAcc = _pc->newGp32("@aAcc");
       _a8FetchShift = 8;
     }
   }
 }
 
-void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
+void FetchContext::fetchPixel(const Mem& src) noexcept {
   BL_ASSERT(_fetchIndex < _pixel->count().value());
-  x86::Compiler* cc = _pc->cc;
+  AsmCompiler* cc = _pc->cc;
 
   if (_a8FetchMode) {
-    x86::Mem m(src);
+    Mem m(src);
     m.setSize(1);
 
     if (_fetchFormat == FormatExt::kPRGB32)
@@ -195,7 +194,7 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
       cc->movzx(aAcc.r32(), m);
     else
       cc->mov(aAcc.r8(), m);
-    cc->ror(aAcc, _a8FetchShift);
+    _pc->ror(aAcc, aAcc, _a8FetchShift);
 
     if (finalize) {
       // The last pixel -> Convert to XMM.
@@ -207,7 +206,7 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
           _pc->v_insert_u32_(aTmp, aTmp, aAcc, 1);
         }
         else {
-          x86::Xmm aHi = cc->newXmm("@aHi");
+          Vec aHi = _pc->newXmm("@aHi");
           _pc->s_mov_i32(aHi, aAcc);
           _pc->v_interleave_lo_u32(aTmp, aTmp, aHi);
         }
@@ -227,7 +226,7 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
   }
   else if (_pixel->isRGBA32()) {
     if (_pc->use256BitSimd()) {
-      x86::Vec& pix = _pixel->pc[_fetchIndex / 4u];
+      Vec& pix = _pixel->pc[_fetchIndex / 4u];
       switch (_fetchIndex) {
         case 0:
         case 4: _pc->v_load_i32(pix, src); break;
@@ -250,8 +249,8 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
       bool isPC = blTestFlag(_fetchFlags, PixelFlags::kPC);
       VecArray& uc = _pixel->uc;
 
-      x86::Vec p0 = isPC ? _pixel->pc[0] : uc[0];
-      x86::Vec p1;
+      Vec p0 = isPC ? _pixel->pc[0] : uc[0];
+      Vec p1;
 
       if (_pixel->count() > 4)
         p1 = isPC ? _pixel->pc[1] : uc[2];
@@ -329,7 +328,7 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
   }
   else if (_pixel->isRGBA64()) {
     if (_pc->use256BitSimd()) {
-      x86::Vec pix;
+      Vec pix;
       if ((_fetchIndex & 0x3u) < 2u)
         pix = _pixel->uc[_fetchIndex / 4u].xmm();
       else
@@ -341,12 +340,12 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
         _pc->v_loadh_2xf32(pix.xmm(), pix, src);
 
       if ((_fetchIndex & 0x3u) == 0x3u) {
-        x86::Vec pYmm = _pixel->uc[_fetchIndex / 4u].ymm();
+        Vec pYmm = _pixel->uc[_fetchIndex / 4u].ymm();
         _pc->cc->vinserti128(pYmm, pYmm, pTmp0.xmm(), 1);
       }
     }
     else {
-      x86::Vec pix = _pixel->uc[_fetchIndex / 2u];
+      Vec pix = _pixel->uc[_fetchIndex / 2u];
       if ((_fetchIndex & 0x1u) == 0u)
         _pc->v_load_i64(pix, src);
       else
@@ -359,16 +358,14 @@ void FetchContext::fetchPixel(const x86::Mem& src) noexcept {
   _fetchIndex++;
 }
 
-void FetchContext::_fetchAll(const x86::Mem& src, uint32_t srcShift, IndexExtractor& extractor, const uint8_t* indexes, InterleaveCallback cb, void* cbData) noexcept {
+void FetchContext::_fetchAll(const Mem& src, uint32_t srcShift, IndexExtractor& extractor, const uint8_t* indexes, InterleaveCallback cb, void* cbData) noexcept {
   BL_ASSERT(_fetchIndex == 0);
 
-  x86::Compiler* cc = _pc->cc;
+  Gp idx0 = _pc->newGpPtr("@idx0");
+  Gp idx1 = _pc->newGpPtr("@idx1");
 
-  x86::Gp idx0 = cc->newIntPtr("@idx0");
-  x86::Gp idx1 = cc->newIntPtr("@idx1");
-
-  x86::Mem src0 = src;
-  x86::Mem src1 = src;
+  Mem src0 = src;
+  Mem src1 = src;
 
   src0.setIndex(idx0, srcShift);
   src1.setIndex(idx1, srcShift);
@@ -409,8 +406,8 @@ void FetchContext::_fetchAll(const x86::Mem& src, uint32_t srcShift, IndexExtrac
     case 8: {
       bool isPC = _pc->use256BitSimd() || (_pc->hasSSE4_1() && blTestFlag(_fetchFlags, PixelFlags::kPC));
       if (isPC && blFormatInfo[size_t(_fetchFormat)].depth == 32) {
-        x86::Vec& pc0 = _pixel->pc[0];
-        x86::Vec& pc1 = _pixel->pc[1];
+        Vec& pc0 = _pixel->pc[0];
+        Vec& pc1 = _pixel->pc[1];
 
         extractor.extract(idx0, indexes[0]);
         extractor.extract(idx1, indexes[4]);
@@ -523,7 +520,7 @@ void FetchContext::end() noexcept {
       if (blTestFlag(_fetchFlags, PixelFlags::kPC)) {
         switch (n) {
           case 4: {
-            x86::Vec& a0 = _pixel->pc[0];
+            Vec& a0 = _pixel->pc[0];
 
             _pc->v_interleave_lo_u8(a0, a0, a0);
             _pc->v_interleave_lo_u16(a0, a0, a0);
@@ -531,8 +528,8 @@ void FetchContext::end() noexcept {
           }
 
           case 8: {
-            x86::Vec& a0 = _pixel->pc[0];
-            x86::Vec& a1 = _pixel->pc[1];
+            Vec& a0 = _pixel->pc[0];
+            Vec& a1 = _pixel->pc[1];
 
             _pc->v_interleave_hi_u8(a1, a0, a0);
             _pc->v_interleave_lo_u8(a0, a0, a0);
@@ -548,8 +545,8 @@ void FetchContext::end() noexcept {
       else {
         switch (n) {
           case 4: {
-            x86::Vec& a0 = _pixel->uc[0];
-            x86::Vec& a1 = _pixel->uc[1];
+            Vec& a0 = _pixel->uc[0];
+            Vec& a1 = _pixel->uc[1];
 
             _pc->v_interleave_lo_u16(a0, a0, a0);
 
@@ -559,10 +556,10 @@ void FetchContext::end() noexcept {
           }
 
           case 8: {
-            x86::Vec& a0 = _pixel->uc[0];
-            x86::Vec& a1 = _pixel->uc[1];
-            x86::Vec& a2 = _pixel->uc[2];
-            x86::Vec& a3 = _pixel->uc[3];
+            Vec& a0 = _pixel->uc[0];
+            Vec& a1 = _pixel->uc[1];
+            Vec& a2 = _pixel->uc[2];
+            Vec& a3 = _pixel->uc[3];
 
             _pc->v_interleave_hi_u16(a2, a0, a0);
             _pc->v_interleave_lo_u16(a0, a0, a0);
@@ -586,12 +583,12 @@ void FetchContext::end() noexcept {
   else {
     if (!_pc->hasSSE4_1()) {
       if (blTestFlag(_fetchFlags, PixelFlags::kPC)) {
-        const x86::Vec& pcLast = _pixel->pc[_pixel->pc.size() - 1];
+        const Vec& pcLast = _pixel->pc[_pixel->pc.size() - 1];
         _pc->v_interleave_lo_u32(pTmp0, pTmp0, pTmp1);
         _pc->v_interleave_lo_u64(pcLast, pcLast, pTmp0);
       }
       else {
-        const x86::Vec& ucLast = _pixel->uc[_pixel->uc.size() - 1];
+        const Vec& ucLast = _pixel->uc[_pixel->uc.size() - 1];
         _pc->v_interleave_lo_u32(ucLast, ucLast, pTmp1);
       }
     }
@@ -607,10 +604,10 @@ void FetchContext::end() noexcept {
   _fetchDone = true;
 }
 
-void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, FormatExt format, PixelFlags flags, const x86::Mem& src, const x86::Vec& idx, uint32_t shift, IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept {
-  x86::Compiler* cc = pc->cc;
+void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, FormatExt format, PixelFlags flags, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept {
+  AsmCompiler* cc = pc->cc;
 
-  x86::Mem mem(src);
+  Mem mem(src);
   uint32_t count = p.count().value();
 
   if (pc->hasOptFlag(PipeOptFlags::kFastGather)) {
@@ -625,11 +622,11 @@ void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, Forma
       else
         pc->newZmmArray(pixels, 1, p.name(), "pc");
 
-      x86::Vec gatherIndex = idx.cloneAs(pixels[0]);
+      Vec gatherIndex = idx.cloneAs(pixels[0]);
 
       switch (indexLayout) {
         case IndexLayout::kUInt16:
-          gatherIndex = cc->newSimilarReg(pixels[0], "gatherIndex");
+          gatherIndex = pc->newSimilarReg(pixels[0], "gatherIndex");
           cc->vpmovzxwd(gatherIndex, idx.xmm());
           break;
 
@@ -639,7 +636,7 @@ void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, Forma
           break;
 
         case IndexLayout::kUInt32Hi16:
-          gatherIndex = cc->newSimilarReg(pixels[0], "gatherIndex");
+          gatherIndex = pc->newSimilarReg(pixels[0], "gatherIndex");
           pc->v_srl_i32(gatherIndex, idx.cloneAs(gatherIndex), 16);
           break;
 
@@ -652,12 +649,12 @@ void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, Forma
 
       pc->v_zero_i(pixels[0]);
       if (pc->hasAVX512()) {
-        x86::KReg pred = cc->newKw("pred");
+        KReg pred = cc->newKw("pred");
         cc->kxnorw(pred, pred, pred);
         cc->k(pred).vpgatherdd(pixels[0], mem);
       }
       else {
-        x86::Vec pred = cc->newSimilarReg(pixels[0], "pred");
+        Vec pred = pc->newSimilarReg(pixels[0], "pred");
         pc->v_ones_i(pred);
         cc->vpgatherdd(pixels[0], mem, pred);
       }
@@ -684,11 +681,11 @@ void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, Forma
         }
       }
 
-      x86::Vec gatherIndex = idx.cloneAs(pixels[0]);
+      Vec gatherIndex = idx.cloneAs(pixels[0]);
 
       switch (indexLayout) {
         case IndexLayout::kUInt16:
-          gatherIndex = cc->newSimilarReg(pixels[0], "gatherIndex");
+          gatherIndex = pc->newSimilarReg(pixels[0], "gatherIndex");
           cc->vpmovzxwd(gatherIndex, idx.xmm());
           break;
 
@@ -698,7 +695,7 @@ void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, Forma
           break;
 
         case IndexLayout::kUInt32Hi16:
-          gatherIndex = cc->newSimilarReg(pixels[0], "gatherIndex");
+          gatherIndex = pc->newSimilarReg(pixels[0], "gatherIndex");
           pc->v_srl_i32(gatherIndex, idx.cloneAs(gatherIndex), 16);
           break;
 
@@ -715,12 +712,12 @@ void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, Forma
       for (uint32_t i = 0; i < pixels.size(); i++) {
         if (i == 1) {
           if (pc->use512BitSimd() && n.value() == 16) {
-            x86::Vec gi2 = cc->newSimilarReg(gatherIndex, "gatherIndex2");
+            Vec gi2 = pc->newSimilarReg(gatherIndex, "gatherIndex2");
             cc->vextracti32x8(gi2.ymm(), gatherIndex.zmm(), 1);
             mem.setIndex(gi2.ymm());
           }
           else {
-            x86::Vec gi2 = cc->newSimilarReg(gatherIndex, "gatherIndex2");
+            Vec gi2 = pc->newSimilarReg(gatherIndex, "gatherIndex2");
             cc->vextracti128(gi2.xmm(), gatherIndex.ymm(), 1);
             mem.setIndex(gi2.xmm());
           }
@@ -728,12 +725,12 @@ void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, Forma
 
         pc->v_zero_i(pixels[i]);
         if (pc->hasAVX512()) {
-          x86::KReg pred = cc->newKw("pred");
+          KReg pred = cc->newKw("pred");
           cc->kxnorw(pred, pred, pred);
           cc->k(pred).vpgatherdq(pixels[i], mem);
         }
         else {
-          x86::Vec pred = cc->newSimilarReg(pixels[i], "pred");
+          Vec pred = pc->newSimilarReg(pixels[i], "pred");
           pc->v_ones_i(pred);
           cc->vpgatherdq(pixels[i], mem, pred);
         }
@@ -788,7 +785,7 @@ void FetchUtils::x_gather_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, Forma
 }
 
 void FetchUtils::x_convert_gathered_pixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, const VecArray& gPix) noexcept {
-  x86::Compiler* cc = pc->cc;
+  AsmCompiler* cc = pc->cc;
 
   if (p.isA8()) {
     pc->v_srl_i32(gPix, gPix, 24);
@@ -827,7 +824,7 @@ void FetchUtils::x_convert_gathered_pixels(PipeCompiler* pc, Pixel& p, PixelCoun
   }
   else {
     if (!pc->use256BitSimd() && gPix[0].isYmm()) {
-      x86::Vec uc1 = pc->newXmm(p.name(), "uc1");
+      Vec uc1 = pc->newXmm(p.name(), "uc1");
       p.uc.init(gPix[0].xmm(), uc1);
       cc->vextracti128(uc1, gPix[0], 1);
     }

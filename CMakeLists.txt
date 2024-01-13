@@ -723,7 +723,7 @@ set(BLEND2D_SRC_LIST
   blend2d/pipeline/jit/fillpart.cpp
   blend2d/pipeline/jit/fillpart_p.h
   blend2d/pipeline/jit/jitbase_p.h
-  blend2d/pipeline/jit/pipecompiler.cpp
+  blend2d/pipeline/jit/pipecompiler_x86.cpp
   blend2d/pipeline/jit/pipecompiler_p.h
   blend2d/pipeline/jit/pipedebug_p.h
   blend2d/pipeline/jit/pipegencore.cpp

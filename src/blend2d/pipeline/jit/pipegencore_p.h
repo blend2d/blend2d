@@ -15,11 +15,6 @@
 #include "../../pipeline/jit/jitbase_p.h"
 #include "../../tables/tables_p.h"
 
-// External dependencies of bl::Pipeline::JIT.
-#if BL_TARGET_ARCH_X86
-  #include <asmjit/x86.h>
-#endif
-
 //! \cond INTERNAL
 //! \addtogroup blend2d_pipeline_jit
 //! \{
@@ -148,7 +143,7 @@ public:
   PixelCount _count;
 
   //! Scalar alpha component (single value only, no packing/unpacking here).
-  x86::Gp sa;
+  Gp sa;
   //! Packed alpha components.
   VecArray pa;
   //! Unpacked alpha components.
@@ -233,25 +228,25 @@ public:
   BL_INLINE SolidPixel() noexcept { reset(); }
 
   //! Scalar alpha or stencil value (A8 pipeline).
-  x86::Gp sa;
+  Gp sa;
   //! Scalar pre-processed component, shown as "X" in equations.
-  x86::Gp sx;
+  Gp sx;
   //! Scalar pre-processed component, shown as "Y" in equations.
-  x86::Gp sy;
+  Gp sy;
 
   //! Packed pre-processed components, shown as "X" in equations.
-  x86::Vec px;
+  Vec px;
   //! Packed pre-processed components, shown as "Y" in equations.
-  x86::Vec py;
+  Vec py;
   //! Unpacked pre-processed components, shown as "X" in equations.
-  x86::Vec ux;
+  Vec ux;
   //! Unpacked pre-processed components, shown as "Y" in equations.
-  x86::Vec uy;
+  Vec uy;
 
   //! Mask vector.
-  x86::Vec vm;
+  Vec vm;
   //! Inverted mask vector.
-  x86::Vec vn;
+  Vec vn;
 
   BL_INLINE void reset() noexcept {
     sa.reset();
@@ -272,14 +267,14 @@ public:
 //! A constant mask (CMASK) stored in either GP or XMM register.
 struct PipeCMask {
   //! Mask scalar.
-  x86::Gp sm;
+  Gp sm;
   //! Inverted mask scalar.
-  x86::Gp sn;
+  Gp sn;
 
   //! Mask vector.
-  x86::Vec vm;
+  Vec vm;
   //! Inverted mask vector.
-  x86::Vec vn;
+  Vec vn;
 
   BL_INLINE void reset() noexcept {
     JitUtils::resetVarStruct<PipeCMask>(this);
@@ -320,21 +315,24 @@ struct PixelPredicate {
   //! stores for 0-7 pixels.
   uint32_t _size = 0;
   //! Predicate flags.
-  PredicateFlags _flags;
+  PredicateFlags _flags {};
 
   //! Number of pixels to load/store (starting at #0).
   //!
   //! For example if count is 3, pixels at [0, 1, 2] will be fetched / stored.
-  x86::Gp count;
-  //! AVX-512 predicate (mask) register.
-  x86::KReg k;
+  Gp count;
   //! Vector of 32-bit masks.
-  x86::Vec v32;
+  Vec v32;
   //! Vector of 64-bit masks.
-  x86::Vec v64;
+  Vec v64;
+
+#if defined(BL_JIT_ARCH_X86)
+  //! AVX-512 predicate (mask) register.
+  KReg k;
+#endif // BL_JIT_ARCH_X86
 
   BL_INLINE PixelPredicate() noexcept = default;
-  BL_INLINE explicit PixelPredicate(uint32_t size, PredicateFlags flags, const x86::Gp& i) noexcept { init(size, flags, i); }
+  BL_INLINE explicit PixelPredicate(uint32_t size, PredicateFlags flags, const Gp& i) noexcept { init(size, flags, i); }
 
   BL_INLINE bool empty() const noexcept { return _size == 0; }
   BL_INLINE uint32_t size() const noexcept { return _size; }
@@ -343,7 +341,7 @@ struct PixelPredicate {
   BL_INLINE bool isNeverEmpty() const noexcept { return blTestFlag(_flags, PredicateFlags::kNeverEmpty); }
   BL_INLINE bool isNeverFull() const noexcept { return blTestFlag(_flags, PredicateFlags::kNeverFull); }
 
-  BL_INLINE void init(uint32_t size, PredicateFlags flags, const x86::Gp& i) noexcept {
+  BL_INLINE void init(uint32_t size, PredicateFlags flags, const Gp& i) noexcept {
     _size = size;
     _flags = flags;
     count = i;

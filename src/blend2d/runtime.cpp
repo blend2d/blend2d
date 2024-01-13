@@ -136,6 +136,8 @@ static BL_INLINE uint32_t blRuntimeDetectCpuFeatures(const asmjit::CpuInfo& asmC
       asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_VL)) {
     features |= BL_RUNTIME_CPU_FEATURE_X86_AVX512;
   }
+#else
+  blUnused(asmCpuInfo);
 #endif
 
   return features;

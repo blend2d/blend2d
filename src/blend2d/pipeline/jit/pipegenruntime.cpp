@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../../api-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
+#if !defined(BL_BUILD_NO_JIT)
 
 #include "../../pipeline/jit/compoppart_p.h"
 #include "../../pipeline/jit/fetchpart_p.h"
@@ -58,7 +58,7 @@ public:
   void handleError(asmjit::Error err, const char* message, asmjit::BaseEmitter* origin) override {
     blUnused(origin);
     _err = err;
-    blRuntimeMessageFmt("bl::Pipeline assembling error: %s\n", message);
+    blRuntimeMessageFmt("bl::Pipeline::JIT assembling error: %s\n", message);
   }
 };
 
@@ -129,7 +129,7 @@ PipeDynamicRuntime::PipeDynamicRuntime(PipeRuntimeFlags runtimeFlags) noexcept
     _pipelineCount(0),
     _cpuFeatures(),
     _maxPixels(0),
-    _loggerEnabled(false),
+    _loggerEnabled(true),
     _emitStackFrames(false) {
 
   // Setup the `PipeRuntime` base.
@@ -153,6 +153,7 @@ void PipeDynamicRuntime::_initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept {
   _cpuFeatures = cpuInfo.features();
   _optFlags = PipeOptFlags::kNone;
 
+#if defined(BL_JIT_ARCH_X86)
   const CpuFeatures::X86& f = _cpuFeatures.x86();
 
   // Vendor Independent CPU Features
@@ -208,12 +209,13 @@ void PipeDynamicRuntime::_initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept {
     // TODO: It seems that masked stores are very expensive on consumer CPUs supporting AVX2 and AVX-512.
     // _optFlags |= PipeOptFlags::kFastStoreWithMask;
   }
+#endif
 
   // Other vendors should follow here, if any...
 }
 
 void PipeDynamicRuntime::_restrictFeatures(uint32_t mask) noexcept {
-#if BL_TARGET_ARCH_X86
+#if defined(BL_JIT_ARCH_X86)
   if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX512)) {
     _cpuFeatures.remove(asmjit::CpuFeatures::X86::kAVX512_F,
                         asmjit::CpuFeatures::X86::kAVX512_BW,
@@ -386,7 +388,7 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
   }
 #endif
 
-  asmjit::x86::Compiler cc(&code);
+  AsmCompiler cc(&code);
   cc.addEncodingOptions(
     asmjit::EncodingOptions::kOptimizeForSize |
     asmjit::EncodingOptions::kOptimizedAlign);

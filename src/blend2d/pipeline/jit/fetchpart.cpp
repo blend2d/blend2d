@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../../api-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
+#if !defined(BL_BUILD_NO_JIT)
 
 #include "../../pipeline/jit/fetchpart_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
@@ -27,7 +27,7 @@ FetchPart::FetchPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) no
 // bl::Pipeline::JIT::FetchPart - Init & Fini
 // ==========================================
 
-void FetchPart::init(x86::Gp& x, x86::Gp& y, PixelType pixelType, uint32_t pixelGranularity) noexcept {
+void FetchPart::init(Gp& x, Gp& y, PixelType pixelType, uint32_t pixelGranularity) noexcept {
   _isRectFill = x.isValid();
 
   _pixelType = pixelType;
@@ -52,7 +52,7 @@ void FetchPart::fini() noexcept {
   _pixelGranularity = 0;
 }
 
-void FetchPart::_initPart(x86::Gp& x, x86::Gp& y) noexcept {
+void FetchPart::_initPart(Gp& x, Gp& y) noexcept {
   blUnused(x, y);
 }
 
@@ -66,12 +66,12 @@ void FetchPart::advanceY() noexcept {
   // Nothing by default.
 }
 
-void FetchPart::startAtX(const x86::Gp& x) noexcept {
+void FetchPart::startAtX(const Gp& x) noexcept {
   // Nothing by default.
   blUnused(x);
 }
 
-void FetchPart::advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept {
+void FetchPart::advanceX(const Gp& x, const Gp& diff) noexcept {
   // Nothing by default.
   blUnused(x, diff);
 }
@@ -105,6 +105,7 @@ void FetchPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& 
   BL_NOT_REACHED();
 }
 
+#if defined(BL_JIT_ARCH_X86)
 void FetchPart::_fetch2x4(Pixel& p, PixelFlags flags) noexcept {
   // Fallback to `fetch4()` by default.
   p.setCount(PixelCount(8));
@@ -173,6 +174,7 @@ void FetchPart::_fetch2x4(Pixel& p, PixelFlags flags) noexcept {
     p.setImmutable(x.isImmutable());
   }
 }
+#endif
 
 } // {JIT}
 } // {Pipeline}

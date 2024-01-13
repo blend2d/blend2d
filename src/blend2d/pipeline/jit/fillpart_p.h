@@ -76,7 +76,7 @@ public:
   FillMaskPart(PipeCompiler* pc, FetchPixelPtrPart* dstPart, CompOpPart* compOpPart) noexcept;
 
   void compile() noexcept override;
-  void disadvanceDstPtr(const x86::Gp& dstPtr, const x86::Gp& x, int dstBpp) noexcept;
+  void disadvanceDstPtr(const Gp& dstPtr, const Gp& x, int dstBpp) noexcept;
 };
 
 class FillAnalyticPart final : public FillPart {
@@ -85,11 +85,11 @@ public:
 
   void compile() noexcept override;
 
-  void accumulateCoverages(const x86::Vec& cov) noexcept;
-  void normalizeCoverages(const x86::Vec& cov) noexcept;
+  void accumulateCoverages(const Vec& cov) noexcept;
+  void normalizeCoverages(const Vec& cov) noexcept;
 
   //! Calculates masks for 4 pixels - this works for both NonZero and EvenOdd fill rules.
-  void calcMasksFromCells(const x86::Vec& dst, const x86::Vec& cov, const x86::Vec& fillRuleMask, const x86::Vec& globalAlpha) noexcept;
+  void calcMasksFromCells(const Vec& dst, const Vec& cov, const Vec& fillRuleMask, const Vec& globalAlpha) noexcept;
 
   //! Emits the following:
   //!
@@ -97,7 +97,7 @@ public:
   //! dstPtr -= x * dstBpp;
   //! cellPtr -= x * 4;
   //! ```
-  void disadvanceDstPtrAndCellPtr(const x86::Gp& dstPtr, const x86::Gp& cellPtr, const x86::Gp& x, uint32_t dstBpp) noexcept;
+  void disadvanceDstPtrAndCellPtr(const Gp& dstPtr, const Gp& cellPtr, const Gp& x, uint32_t dstBpp) noexcept;
 };
 
 } // {JIT}

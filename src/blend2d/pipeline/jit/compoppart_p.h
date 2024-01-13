@@ -27,6 +27,9 @@ public:
     kIndexSrcPart = 1
   };
 
+  //! \name Members
+  //! \{
+
   //! Composition operator.
   CompOpExt _compOp{};
   //! Pixel type of the composition.
@@ -57,10 +60,22 @@ public:
   //! Const mask.
   Wrap<PipeCMask> _mask;
 
+  //! \}
+
+  //! \name Construction & Destruction
+  //! \{
+
   CompOpPart(PipeCompiler* pc, CompOpExt compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept;
+
+  //! \}
+
+  //! \name Part Accessors
+  //! \{
 
   BL_INLINE FetchPart* dstPart() const noexcept { return reinterpret_cast<FetchPart*>(_children[kIndexDstPart]); }
   BL_INLINE FetchPart* srcPart() const noexcept { return reinterpret_cast<FetchPart*>(_children[kIndexSrcPart]); }
+
+  //! \}
 
   //! Returns the composition operator id, see `BLCompOp`.
   BL_INLINE CompOpExt compOp() const noexcept { return _compOp; }
@@ -139,7 +154,7 @@ public:
 
   void preparePart() noexcept override;
 
-  void init(x86::Gp& x, x86::Gp& y, uint32_t pixelGranularity) noexcept;
+  void init(Gp& x, Gp& y, uint32_t pixelGranularity) noexcept;
   void fini() noexcept;
 
   //! Tests whether the opaque fill should be optimized and placed into a separate
@@ -151,8 +166,8 @@ public:
   //! an inlined version of `memcpy()` or `memset()`.
   bool shouldJustCopyOpaqueFill() const noexcept;
 
-  void startAtX(const x86::Gp& x) noexcept;
-  void advanceX(const x86::Gp& x, const x86::Gp& diff) noexcept;
+  void startAtX(const Gp& x) noexcept;
+  void advanceX(const Gp& x, const Gp& diff) noexcept;
   void advanceY() noexcept;
 
   // These are just wrappers that call these on both source & destination parts.
@@ -171,43 +186,43 @@ public:
   void exitPartialMode() noexcept;
   void nextPartialPixel() noexcept;
 
-  void cMaskInit(const x86::Mem& mem) noexcept;
-  void cMaskInit(const x86::Gp& sm_, const x86::Vec& vm_) noexcept;
+  void cMaskInit(const Mem& mem) noexcept;
+  void cMaskInit(const Gp& sm_, const Vec& vm_) noexcept;
   void cMaskInitOpaque() noexcept;
   void cMaskFini() noexcept;
 
   void _cMaskLoopInit(CMaskLoopType loopType) noexcept;
   void _cMaskLoopFini() noexcept;
 
-  void cMaskGenericLoop(x86::Gp& i) noexcept;
-  void cMaskGenericLoopVec(x86::Gp& i) noexcept;
+  void cMaskGenericLoop(Gp& i) noexcept;
+  void cMaskGenericLoopVec(Gp& i) noexcept;
 
-  void cMaskGranularLoop(x86::Gp& i) noexcept;
-  void cMaskGranularLoopVec(x86::Gp& i) noexcept;
+  void cMaskGranularLoop(Gp& i) noexcept;
+  void cMaskGranularLoopVec(Gp& i) noexcept;
 
-  void cMaskMemcpyOrMemsetLoop(x86::Gp& i) noexcept;
+  void cMaskMemcpyOrMemsetLoop(Gp& i) noexcept;
 
-  void cMaskProcStoreAdvance(const x86::Gp& dPtr, PixelCount n, Alignment alignment = Alignment(1)) noexcept;
-  void cMaskProcStoreAdvance(const x86::Gp& dPtr, PixelCount n, Alignment alignment, PixelPredicate& predicate) noexcept;
+  void cMaskProcStoreAdvance(const Gp& dPtr, PixelCount n, Alignment alignment = Alignment(1)) noexcept;
+  void cMaskProcStoreAdvance(const Gp& dPtr, PixelCount n, Alignment alignment, PixelPredicate& predicate) noexcept;
 
-  void vMaskGenericLoop(x86::Gp& i, const x86::Gp& dPtr, const x86::Gp& mPtr, GlobalAlpha& ga, const Label& done) noexcept;
-  void vMaskGenericStep(const x86::Gp& dPtr, PixelCount n, const x86::Gp& mPtr, const x86::Reg& ga) noexcept;
+  void vMaskGenericLoop(Gp& i, const Gp& dPtr, const Gp& mPtr, GlobalAlpha& ga, const Label& done) noexcept;
+  void vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, const Reg& ga) noexcept;
 
-  void vMaskProcStoreAdvance(const x86::Gp& dPtr, PixelCount n, VecArray& vm, bool vmImmutable, Alignment alignment = Alignment(1)) noexcept;
-  void vMaskProcStoreAdvance(const x86::Gp& dPtr, PixelCount n, VecArray& vm, bool vmImmutable, Alignment alignment, PixelPredicate& predicate) noexcept;
+  void vMaskProcStoreAdvance(const Gp& dPtr, PixelCount n, VecArray& vm, bool vmImmutable, Alignment alignment = Alignment(1)) noexcept;
+  void vMaskProcStoreAdvance(const Gp& dPtr, PixelCount n, VecArray& vm, bool vmImmutable, Alignment alignment, PixelPredicate& predicate) noexcept;
 
-  void vMaskProc(Pixel& out, PixelFlags flags, x86::Gp& msk, bool mImmutable) noexcept;
+  void vMaskProc(Pixel& out, PixelFlags flags, Gp& msk, bool mImmutable) noexcept;
 
-  void cMaskInitA8(const x86::Gp& sm_, const x86::Vec& vm_) noexcept;
+  void cMaskInitA8(const Gp& sm_, const Vec& vm_) noexcept;
   void cMaskFiniA8() noexcept;
 
   void cMaskProcA8Gp(Pixel& out, PixelFlags flags) noexcept;
-  void vMaskProcA8Gp(Pixel& out, PixelFlags flags, x86::Gp& msk, bool mImmutable) noexcept;
+  void vMaskProcA8Gp(Pixel& out, PixelFlags flags, Gp& msk, bool mImmutable) noexcept;
 
   void cMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;
   void vMaskProcA8Vec(Pixel& out, PixelCount n, PixelFlags flags, VecArray& vm, bool mImmutable, PixelPredicate& predicate) noexcept;
 
-  void cMaskInitRGBA32(const x86::Vec& vm) noexcept;
+  void cMaskInitRGBA32(const Vec& vm) noexcept;
   void cMaskFiniRGBA32() noexcept;
 
   void cMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept;

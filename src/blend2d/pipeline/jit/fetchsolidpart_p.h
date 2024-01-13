@@ -26,7 +26,7 @@ public:
 
   void preparePart() noexcept override;
 
-  void _initPart(x86::Gp& x, x86::Gp& y) noexcept override;
+  void _initPart(Gp& x, Gp& y) noexcept override;
   void _finiPart() noexcept override;
 
   //! Injects code at the beginning of the pipeline that is required to prepare the requested variables that will

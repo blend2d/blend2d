@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../../api-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
+#if defined(BL_JIT_ARCH_X86)
 
 #include "../../pipeline/jit/compoppart_p.h"
 #include "../../pipeline/jit/fetchpart_p.h"
@@ -32,7 +32,7 @@ static constexpr OperandSignature signatureOfXmmYmmZmm[] = {
 // bl::Pipeline::PipeCompiler - Construction & Destruction
 // =======================================================
 
-PipeCompiler::PipeCompiler(x86::Compiler* cc, const CpuFeatures& features, PipeOptFlags optFlags) noexcept
+PipeCompiler::PipeCompiler(AsmCompiler* cc, const CpuFeatures& features, PipeOptFlags optFlags) noexcept
   : cc(cc),
     ct(commonTable),
     _features(features),
@@ -74,9 +74,9 @@ void PipeCompiler::beginFunction() noexcept {
     _funcNode->frame().setAvx512Enabled();
   }
 
-  _ctxData = cc->newIntPtr("ctxData");
-  _fillData = cc->newIntPtr("fillData");
-  _fetchData = cc->newIntPtr("fetchData");
+  _ctxData = newGpPtr("ctxData");
+  _fillData = newGpPtr("fillData");
+  _fetchData = newGpPtr("fetchData");
 
   _funcNode->setArg(0, _ctxData);
   _funcNode->setArg(1, _fillData);
@@ -159,7 +159,7 @@ void PipeCompiler::_initSimdWidth(PipePart* root) noexcept {
   // Use 512-bit SIMD width if AVX512 is available and the target is 64-bit. We never use 512-bit SIMD in 32-bit mode
   // as it doesn't have enough registers to hold 512-bit constants and we don't store 512-bit constants in memory
   // (they must be broadcasted to full width).
-  if (hasAVX512() && cc->is64Bit())
+  if (hasAVX512() && is64Bit())
     simdWidth = SimdWidth::k512;
 
   root->forEachPart([&](PipePart* part) {
@@ -190,7 +190,7 @@ void PipeCompiler::_initCommonTablePtr() noexcept {
 
   if (!_commonTablePtr.isValid()) {
     asmjit::BaseNode* prevNode = cc->setCursor(_funcInit);
-    _commonTablePtr = cc->newIntPtr("commonTablePtr");
+    _commonTablePtr = newGpPtr("commonTablePtr");
 
     cc->mov(_commonTablePtr, (int64_t)global + _commonTableOff);
     _funcInit = cc->setCursor(prevNode);
@@ -204,7 +204,7 @@ x86::KReg PipeCompiler::kConst(uint64_t value) noexcept {
       return _kReg[slot];
 
   asmjit::BaseNode* prevNode = nullptr;
-  x86::Gp tmp;
+  Gp tmp;
   x86::KReg kReg;
 
   if (slot < kMaxKRegConstCount) {
@@ -212,13 +212,13 @@ x86::KReg PipeCompiler::kConst(uint64_t value) noexcept {
   }
 
   if (value & 0xFFFFFFFF00000000u) {
-    tmp = cc->newUInt64("kTmp");
+    tmp = newGp64("kTmp");
     kReg = cc->newKq("k0x%016llX", (unsigned long long)value);
     cc->mov(tmp, value);
     cc->kmovq(kReg, tmp);
   }
   else {
-    tmp = cc->newUInt32("kTmp");
+    tmp = newGp32("kTmp");
     kReg = cc->newKd("k0x%08llX", (unsigned long long)value);
     cc->mov(tmp, value);
     cc->kmovd(kReg, tmp);
@@ -237,7 +237,7 @@ Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, SimdWidth constWi
 
   for (size_t i = 0; i < constCount; i++)
     if (_vecConsts[i].ptr == c)
-      return x86::Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _vecConsts[i].vRegId);
+      return Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _vecConsts[i].vRegId);
 
   // We don't use memory constants when compiling for AVX-512, because we don't store 64-byte constants and AVX-512
   // has enough registers to hold all the constants that we need. However, in SSE/AVX2 case, we don't want so many
@@ -252,10 +252,10 @@ Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, SimdWidth constWi
       return simdMemConst(c, bcstWidth, constWidth);
   }
 
-  return x86::Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _newVecConst(c, bcstWidth == Bcst::kNA_Unique).id());
+  return Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _newVecConst(c, bcstWidth == Bcst::kNA_Unique).id());
 }
 
-Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, const x86::Vec& similarTo) noexcept {
+Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept {
   SimdWidth constWidth = SimdWidth(uint32_t(similarTo.type()) - uint32_t(asmjit::RegType::kX86_Xmm));
   return simdConst(c, bcstWidth, constWidth);
 }
@@ -267,22 +267,22 @@ Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, const VecArray& s
   return simdConst(c, bcstWidth, constWidth);
 }
 
-x86::Vec PipeCompiler::simdVecConst(const void* c, SimdWidth constWidth) noexcept {
+Vec PipeCompiler::simdVecConst(const void* c, SimdWidth constWidth) noexcept {
   size_t constCount = _vecConsts.size();
 
   for (size_t i = 0; i < constCount; i++)
     if (_vecConsts[i].ptr == c)
-      return x86::Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _vecConsts[i].vRegId);
+      return Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _vecConsts[i].vRegId);
 
-  return x86::Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _newVecConst(c, false).id());
+  return Vec(signatureOfXmmYmmZmm[size_t(constWidth)], _newVecConst(c, false).id());
 }
 
-x86::Vec PipeCompiler::simdVecConst(const void* c, const x86::Vec& similarTo) noexcept {
+Vec PipeCompiler::simdVecConst(const void* c, const Vec& similarTo) noexcept {
   SimdWidth constWidth = SimdWidth(uint32_t(similarTo.type()) - uint32_t(asmjit::RegType::kX86_Xmm));
   return simdVecConst(c, constWidth);
 }
 
-x86::Vec PipeCompiler::simdVecConst(const void* c, const VecArray& similarTo) noexcept {
+Vec PipeCompiler::simdVecConst(const void* c, const VecArray& similarTo) noexcept {
   BL_ASSERT(!similarTo.empty());
 
   SimdWidth constWidth = SimdWidth(uint32_t(similarTo[0].type()) - uint32_t(asmjit::RegType::kX86_Xmm));
@@ -307,7 +307,7 @@ x86::Mem PipeCompiler::simdMemConst(const void* c, Bcst bcstWidth, SimdWidth con
   return m;
 }
 
-x86::Mem PipeCompiler::simdMemConst(const void* c, Bcst bcstWidth, const x86::Vec& similarTo) noexcept {
+x86::Mem PipeCompiler::simdMemConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept {
   SimdWidth constWidth = SimdWidth(uint32_t(similarTo.type()) - uint32_t(asmjit::RegType::kX86_Xmm));
   return simdMemConst(c, bcstWidth, constWidth);
 }
@@ -325,7 +325,7 @@ x86::Mem PipeCompiler::_getMemConst(const void* c) noexcept {
   BL_ASSERT((uintptr_t)c >= (uintptr_t)global &&
             (uintptr_t)c <  (uintptr_t)global + sizeof(CommonTable));
 
-  if (cc->is32Bit()) {
+  if (is32Bit()) {
     // 32-bit mode - These constants will never move in memory so the absolute addressing is a win/win as we can save
     // one GP register that can be used for something else.
     return x86::ptr((uint64_t)c);
@@ -340,8 +340,8 @@ x86::Mem PipeCompiler::_getMemConst(const void* c) noexcept {
   }
 }
 
-x86::Vec PipeCompiler::_newVecConst(const void* c, bool isUniqueConst) noexcept {
-  x86::Vec vReg;
+Vec PipeCompiler::_newVecConst(const void* c, bool isUniqueConst) noexcept {
+  Vec vReg;
   const char* specialConstName = nullptr;
 
   if (c == commonTable.pshufb_dither_rgba64_lo.data)
@@ -421,8 +421,1035 @@ void PipeCompiler::embedJumpTable(const Label* jumpTable, size_t jumpTableSize, 
   }
 }
 
-// bl::Pipeline::PipeCompiler - Emit
-// =================================
+// bl::Pipeline::PipeCompiler - Emit (General Purpose)
+// ===================================================
+
+static inline bool isSameReg(const Operand_& a, const Operand_& b) noexcept {
+  return a.id() == b.id() && a.id() && b.id();
+}
+
+void PipeCompiler::i_emit_2(InstId instId, const Operand_& op1, int imm) noexcept {
+  cc->emit(instId, op1, imm);
+}
+
+void PipeCompiler::i_emit_2(InstId instId, const Operand_& op1, const Operand_& op2) noexcept {
+  cc->emit(instId, op1, op2);
+}
+
+void PipeCompiler::i_emit_3(InstId instId, const Operand_& op1, const Operand_& op2, int imm) noexcept {
+  cc->emit(instId, op1, op2, imm);
+}
+
+void PipeCompiler::emit_mov(const Gp& dst, const Operand_& src) noexcept {
+  if (src.isImm() && src.as<Imm>().value() == 0) {
+    Gp r(dst);
+    if (r.isGpq())
+      r = r.r32();
+    cc->xor_(r, r);
+  }
+  else {
+    cc->emit(x86::Inst::kIdMov, dst, src);
+  }
+}
+
+void PipeCompiler::emit_load(const Gp& dst, const Mem& src, uint32_t size) noexcept {
+  Gp r(dst);
+  Mem m(src);
+
+  InstId instId = x86::Inst::kIdMov;
+  if (size <= 4) {
+    BL_ASSERT(size == 1 || size == 2 || size == 4);
+    r.setTypeAndId(RegType::kGp32, r.id());
+    m.setSize(size);
+    if (size < 4)
+      instId = x86::Inst::kIdMovzx;
+  }
+  else {
+    BL_ASSERT(r.size() == 8);
+    BL_ASSERT(size == 8);
+    m.setSize(8);
+  }
+
+  cc->emit(instId, r, m);
+}
+
+void PipeCompiler::emit_store(const Mem& dst, const Gp& src, uint32_t size) noexcept {
+  Mem m(dst);
+  Gp r;
+
+  m.setSize(size);
+  switch (size) {
+    case 1: r = src.r8(); break;
+    case 2: r = src.r16(); break;
+    case 4: r = src.r32(); break;
+    case 8: r = src.r64(); break;
+    default: BL_NOT_REACHED();
+  }
+
+  cc->mov(m, r);
+}
+
+static constexpr InstId conditionToInstId[size_t(Condition::Op::kMaxValue) + 1] = {
+  x86::Inst::kIdAnd,  // kAssignAnd
+  x86::Inst::kIdOr,   // kAssignOr
+  x86::Inst::kIdXor,  // kAssignXor
+  x86::Inst::kIdAdd,  // kAssignAdd
+  x86::Inst::kIdSub,  // kAssignSub
+  x86::Inst::kIdShr,  // kAssignSHR
+  x86::Inst::kIdTest, // kTest
+  x86::Inst::kIdBt,   // kBitTest
+  x86::Inst::kIdCmp   // kCompare
+};
+
+class ConditionApplier : public Condition {
+public:
+  BL_INLINE ConditionApplier(const Condition& condition) noexcept : Condition(condition) {
+    // The first operand must always be a register.
+    BL_ASSERT(a.isReg() && a.as<Reg>().isGp());
+  }
+
+  BL_NOINLINE void optimize(PipeCompiler* pc) noexcept {
+    switch (op) {
+      case Op::kCompare:
+        if (b.isImm() && b.as<Imm>().value() == 0 && (cond == CondCode::kEqual || cond == CondCode::kNotEqual)) {
+          op = Op::kTest;
+          b = a;
+          reverse();
+        }
+        break;
+
+      case Op::kBitTest: {
+        if (b.isImm()) {
+          uint64_t bitIndex = b.as<Imm>().valueAs<uint64_t>();
+
+          // NOTE: AMD has no performance difference between 'test' and 'bt' instructions, however, Intel can execute less
+          // 'bt' instructions per cycle than 'test's, so we prefer 'test' if bitIndex is low. Additionally, we only use
+          // test on 64-bit hardware as it's guaranteed that any register index is encodable. On 32-bit hardware only the
+          // first 4 registers can be used, which could mean that the register would have to be moved just to be tested,
+          // which is something we would like to avoid.
+          if (pc->is64Bit() && bitIndex < 8) {
+            op = Condition::Op::kTest;
+            b = Imm(1u << bitIndex);
+            cond = cond == CondCode::kC ? CondCode::kNZ : CondCode::kZ;
+          }
+        }
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
+
+  BL_INLINE void reverse() noexcept {
+    cond = x86::reverseCond(cond);
+  }
+
+  BL_NOINLINE void emit(PipeCompiler* pc) noexcept {
+    AsmCompiler* cc = pc->cc;
+    InstId instId = conditionToInstId[size_t(op)];
+
+    if (instId == x86::Inst::kIdTest && cc->is64Bit()) {
+      if (b.isImm() && b.as<Imm>().value() <= 255u) {
+        // Emit 8-bit operation if targeting 64-bit mode and the immediate fits 8 bits.
+        cc->test(a.as<Gp>().r8(), b.as<Imm>());
+        return;
+      }
+      else if (a.as<Gp>().size() > 4 && b.isImm() && uint64_t(b.as<Imm>().value()) <= 0xFFFFFFFFu) {
+        // Emit 32-bit operation if targeting 64-bit mode and the immediate is lesser than UINT32_MAX.
+        // This possibly saves a REX prefix required to promote the instruction to a 64-bit operation.
+        cc->test(a.as<Gp>().r32(), b.as<Imm>());
+        return;
+      }
+    }
+
+    if (instId == x86::Inst::kIdShr && b.isReg()) {
+      cc->emit(instId, a, b.as<Gp>().r8());
+      return;
+    }
+
+
+    cc->emit(instId, a, b);
+  }
+};
+
+void PipeCompiler::emit_cmov(const Gp& dst, const Operand_& sel, const Condition& condition) noexcept {
+  ConditionApplier ca(condition);
+  ca.optimize(this);
+  ca.emit(this);
+  cc->emit(x86::Inst::cmovccFromCond(ca.cond), dst, sel);
+}
+
+void PipeCompiler::emit_select(const Gp& dst, const Operand_& sel1_, const Operand_& sel2_, const Condition& condition) noexcept {
+  ConditionApplier ca(condition);
+  ca.optimize(this);
+
+  bool dstIsA = ca.a.isReg() && dst.id() == ca.a.as<Reg>().id();
+  bool dstIsB = ca.b.isReg() && dst.id() == ca.b.as<Reg>().id();
+
+  Operand sel1(sel1_);
+  Operand sel2(sel2_);
+
+  // Reverse the condition if we can place the immediate value first or if `dst == sel2`.
+  if ((!sel1.isImm() && sel2.isImm()) || (sel2.isReg() && dst.id() == sel2.id())) {
+    ca.reverse();
+    std::swap(sel1, sel2);
+  }
+
+  bool dstIsSel = sel1.isReg() && dst.id() == sel1.id();
+  if (sel1 == sel2) {
+    if (!dstIsSel)
+      cc->emit(x86::Inst::kIdMov, dst, sel1);
+    return;
+  }
+
+  if (sel1.isImm() && sel1.as<Imm>().value() == 0 && !dstIsA && !dstIsB && !dstIsSel) {
+    cc->xor_(dst, dst);
+    ca.emit(this);
+  }
+  else {
+    ca.emit(this);
+    if (!dstIsSel)
+      cc->emit(x86::Inst::kIdMov, sel1);
+  }
+
+  if (sel2.isImm()) {
+    int64_t value = sel2.as<Imm>().value();
+    Mem sel2Mem = cc->newConst(asmjit::ConstPoolScope::kLocal, &value, dst.size());
+    sel2 = sel2Mem;
+  }
+
+  cc->emit(x86::Inst::cmovccFromCond(x86::negateCond(ca.cond)), dst, sel2);
+}
+
+void PipeCompiler::emit_arith2(Arith2Op op, const Gp& dst, const Operand_& src_) noexcept {
+  // We need a pointer as we may need to convert the source operand to something else.
+  Operand src(src_);
+
+  // Notes
+  //
+  //   - CTZ:
+  //     - INTEL - No difference, `bsf` and `tzcnt` both have latency ~2.5 cycles.
+  //     - AMD   - Big difference, `tzcnt` has only ~1.5 cycle latency while `bsf` has ~2.5 cycles.
+
+  // ArithOp Reg, Any
+  // ----------------
+
+  if (src.isRegOrMem()) {
+    switch (op) {
+      case Arith2Op::kCLZ: {
+        if (hasLZCNT()) {
+          cc->emit(x86::Inst::kIdLzcnt, dst, src);
+        }
+        else {
+          uint32_t msk = (1u << dst.size() * 8u) - 1u;
+          cc->emit(x86::Inst::kIdBsr, dst, src);
+          cc->xor_(dst, msk);
+        }
+        return;
+      }
+
+      case Arith2Op::kCTZ: {
+        cc->emit(hasBMI() ? x86::Inst::kIdTzcnt : x86::Inst::kIdBsf, dst, src);
+        return;
+      }
+
+      case Arith2Op::kReflect: {
+        int nBits = int(dst.size()) * 8 - 1;
+
+        if (src.isReg() && dst.id() == src.as<Reg>().id()) {
+          BL_ASSERT(dst.size() == src.as<Reg>().size());
+          Gp copy = newSimilarReg(dst, "@copy");
+
+          cc->mov(copy, dst);
+          cc->sar(copy, nBits);
+          cc->xor_(dst, copy);
+        }
+        else {
+          cc->emit(x86::Inst::kIdMov, dst, src);
+          cc->sar(dst, nBits);
+          cc->emit(x86::Inst::kIdXor, dst, src);
+        }
+        return;
+      }
+
+      default:
+        break;
+    }
+  }
+
+  // ArithOp Reg, Mem
+  // ----------------
+
+  if (src.isMem()) {
+    Gp srcGp = newSimilarReg(dst, "@src");
+    cc->mov(srcGp, src.as<Mem>());
+    src = srcGp;
+  }
+
+  // ArithOp Reg, Reg
+  // ----------------
+
+  if (src.isReg()) {
+    const Gp& srcGp = src.as<Gp>();
+    bool dstIsSrc = dst.id() == srcGp.id();
+
+    switch (op) {
+      case Arith2Op::kAbs: {
+        if (dstIsSrc) {
+          Gp tmp = newSimilarReg(dst, "@tmp");
+          cc->mov(tmp, dst);
+          cc->neg(dst);
+          cc->cmovs(dst, tmp);
+        }
+        else {
+          cc->mov(dst, srcGp);
+          cc->neg(dst);
+          cc->cmovs(dst, srcGp);
+        }
+        return;
+      }
+
+      case Arith2Op::kNeg:
+      case Arith2Op::kNot: {
+        if (!dstIsSrc)
+          cc->mov(dst, srcGp);
+        cc->emit(op == Arith2Op::kNeg ? x86::Inst::kIdNeg : x86::Inst::kIdNot, dst);
+        return;
+      }
+
+      default:
+        break;
+    }
+  }
+
+  // Everything should be handled, so this should never be reached!
+  BL_NOT_REACHED();
+}
+
+static constexpr uint64_t kArith3OpCommutativeMask =
+  (uint64_t(1) << unsigned(PipeCompiler::Arith3Op::kAnd )) |
+  (uint64_t(1) << unsigned(PipeCompiler::Arith3Op::kOr  )) |
+  (uint64_t(1) << unsigned(PipeCompiler::Arith3Op::kXor )) |
+  (uint64_t(1) << unsigned(PipeCompiler::Arith3Op::kAdd )) |
+  (uint64_t(1) << unsigned(PipeCompiler::Arith3Op::kMul )) |
+  (uint64_t(1) << unsigned(PipeCompiler::Arith3Op::kSMin)) |
+  (uint64_t(1) << unsigned(PipeCompiler::Arith3Op::kSMax)) |
+  (uint64_t(1) << unsigned(PipeCompiler::Arith3Op::kUMin)) |
+  (uint64_t(1) << unsigned(PipeCompiler::Arith3Op::kUMax)) ;
+
+static BL_INLINE_NODEBUG bool isArithOpCommutative(PipeCompiler::Arith3Op op) noexcept {
+  return (kArith3OpCommutativeMask & (uint64_t(1) << unsigned(op))) != 0;
+}
+
+struct Arith3OpMinMaxCMovInst { InstId a, b; };
+
+void PipeCompiler::emit_arith3(Arith3Op op, const Gp& dst, const Operand_& src1_, const Operand_& src2_) noexcept {
+  Operand src1(src1_);
+  Operand src2(src2_);
+
+  static constexpr Arith3OpMinMaxCMovInst arithMinMaxCMovInstTable[4] = {
+    { x86::Inst::kIdCmovl, x86::Inst::kIdCmovg }, // MinI
+    { x86::Inst::kIdCmovg, x86::Inst::kIdCmovl }, // MaxI
+    { x86::Inst::kIdCmovb, x86::Inst::kIdCmova }, // MinU
+    { x86::Inst::kIdCmova, x86::Inst::kIdCmovb }  // MaxU
+  };
+
+  static constexpr InstId legacyShiftInstTable[5] = {
+    x86::Inst::kIdShl,  // SHL
+    x86::Inst::kIdShr,  // SHR
+    x86::Inst::kIdSar,  // SAR
+    x86::Inst::kIdRol,  // ROL
+    x86::Inst::kIdRor   // ROR
+  };
+
+  static constexpr InstId legacyLogicalInstTable[3] = {
+    x86::Inst::kIdAnd,  // AND
+    x86::Inst::kIdOr,   // OR
+    x86::Inst::kIdXor   // XOR
+  };
+
+  static constexpr InstId bmi2ShiftInstTable[5] = {
+    x86::Inst::kIdShlx, // SHL
+    x86::Inst::kIdShrx, // SHR
+    x86::Inst::kIdSarx, // SAR
+    x86::Inst::kIdNone, // ROL (doesn't exist).
+    x86::Inst::kIdRorx  // ROR
+  };
+
+  // ArithOp Reg, Mem, Imm
+  // ---------------------
+
+  if (src1.isMem() && src2.isImm()) {
+    const Mem& a = src1.as<Mem>();
+    const Imm& b = src2.as<Imm>();
+
+    switch (op) {
+      case Arith3Op::kMul:
+        cc->imul(dst, a, b);
+        return;
+
+      default:
+        break;
+    }
+
+    cc->mov(dst, a);
+    src1 = dst;
+  }
+
+  if (!src1.isReg() && isArithOpCommutative(op)) {
+    std::swap(src1, src2);
+  }
+
+  // ArithOp Reg, Reg, Imm
+  // ---------------------
+
+  if (src1.isReg() && src2.isImm()) {
+    const Gp& a = src1.as<Gp>();
+    const Imm& b = src2.as<Imm>();
+
+    bool dstIsA = dst.id() == a.id();
+    BL_ASSERT(dst.size() == a.size());
+
+    switch (op) {
+      case Arith3Op::kAnd:
+      case Arith3Op::kOr:
+      case Arith3Op::kXor: {
+        InstId instId = legacyLogicalInstTable[size_t(op) - size_t(Arith3Op::kAnd)];
+        if (!dstIsA)
+          cc->mov(dst, a);
+        cc->emit(instId, dst, b);
+        return;
+      }
+
+      case Arith3Op::kAndN: {
+        if (!dstIsA)
+          cc->mov(dst, a);
+        cc->not_(dst);
+        cc->and_(dst, b);
+        return;
+      }
+
+      case Arith3Op::kAdd: {
+        if (!dstIsA && b.isInt32()) {
+          lea(dst, x86::ptr(a, b.valueAs<int32_t>()));
+        }
+        else {
+          if (!dstIsA)
+            cc->mov(dst, a);
+          cc->add(dst, b);
+        }
+        return;
+      }
+
+      case Arith3Op::kSub: {
+        if (!dstIsA)
+          lea(dst, x86::ptr(a, b.valueAs<int32_t>()));
+        else
+          cc->sub(dst, b);
+        return;
+      }
+
+      case Arith3Op::kMul: {
+        switch (b.value()) {
+          case 0:
+            cc->xor_(dst, dst);
+            return;
+
+          case 1:
+            if (!dstIsA)
+              cc->mov(dst, a);
+            return;
+
+          case 2:
+            if (dstIsA)
+              cc->shl(dst, 1);
+            else
+              lea(dst, x86::ptr(a, a));
+            return;
+
+          case 3:
+            lea(dst, x86::ptr(a, a, 1));
+            return;
+
+          case 4:
+          case 8: {
+            int shift = 2 + (b.value() == 8);
+            if (dstIsA)
+              cc->shl(dst, shift);
+            else
+              break;
+            return;
+          }
+
+          default:
+            break;
+        }
+
+        cc->imul(dst, a, b);
+        return;
+      }
+
+      case Arith3Op::kSMin:
+      case Arith3Op::kSMax:
+      case Arith3Op::kUMin:
+      case Arith3Op::kUMax: {
+        const Arith3OpMinMaxCMovInst& cmovInst = arithMinMaxCMovInstTable[size_t(op) - size_t(Arith3Op::kSMin)];
+
+        if (dstIsA) {
+          Gp tmp = newSimilarReg(dst, "@tmp");
+          cc->mov(tmp, b);
+          cc->cmp(dst, tmp);
+          cc->emit(cmovInst.b, dst, tmp);
+        }
+        else {
+          cc->mov(dst, b);
+          cc->cmp(dst, a);
+          cc->emit(cmovInst.b, dst, a); // cmovInst.b is correct, we have reversed the comparison in this case.
+        }
+        return;
+      }
+
+      case Arith3Op::kSHL:
+        // Optimize `dst = dst << 1` to `dst = dst + dst` as it has a higher throughput.
+        if (b.value() == 1 && dstIsA) {
+          cc->add(dst, dst);
+          return;
+        }
+
+        BL_FALLTHROUGH
+
+      case Arith3Op::kSHR:
+      case Arith3Op::kSAR: {
+        InstId legacyInst = legacyShiftInstTable[size_t(op) - size_t(Arith3Op::kSHL)];
+
+        if (!dstIsA)
+          cc->mov(dst, a);
+        cc->emit(legacyInst, dst, b);
+        return;
+      }
+
+      case Arith3Op::kROL: {
+        if (hasBMI2()) {
+          uint32_t regSize = dst.size() * 8u;
+          uint32_t imm = (regSize - b.valueAs<uint32_t>()) & asmjit::Support::lsbMask<uint32_t>(regSize);
+          cc->rorx(dst, a, imm);
+        }
+        else {
+          if (!dstIsA)
+            cc->mov(dst, a);
+          cc->rol(dst, b);
+        }
+        return;
+      }
+
+      case Arith3Op::kROR: {
+        if (hasBMI2()) {
+          cc->rorx(dst, a, b);
+        }
+        else {
+          if (!dstIsA)
+            cc->mov(dst, a);
+          cc->ror(dst, b);
+        }
+        return;
+      }
+    }
+
+    Gp bTmp = newSimilarReg(dst, "@bImm");
+    cc->mov(bTmp, b);
+    src2 = bTmp;
+  }
+
+  // ArithOp Reg, Mem, Reg
+  // ---------------------
+
+  if (src1.isMem() && src2.isReg()) {
+    const Mem& a = src1.as<Mem>();
+    const Gp& b = src2.as<Gp>();
+
+    bool dstIsB = dst.id() == b.id();
+
+    switch (op) {
+      case Arith3Op::kAnd:
+      case Arith3Op::kOr:
+      case Arith3Op::kXor:
+      case Arith3Op::kAdd:
+      case Arith3Op::kMul:
+      case Arith3Op::kSMin:
+      case Arith3Op::kSMax:
+      case Arith3Op::kUMin:
+      case Arith3Op::kUMax:
+        // These are commutative, so this should never happen as these should have been corrected to `Reg, Reg, Mem`.
+        BL_NOT_REACHED();
+
+      case Arith3Op::kSub: {
+        BL_ASSERT(dst.size() == b.size());
+
+        if (dstIsB) {
+          cc->neg(dst);
+          cc->add(dst, a);
+          return;
+        }
+
+        // Bail to `Reg, Reg, Reg` form.
+        break;
+      }
+
+      case Arith3Op::kSHL:
+      case Arith3Op::kSHR:
+      case Arith3Op::kSAR: {
+        // Prefer BMI2 variants: SHLX, SHRX, SARX, and RORX.
+        if (hasBMI2()) {
+          InstId bmi2Inst = bmi2ShiftInstTable[size_t(op) - size_t(Arith3Op::kSHL)];
+          cc->emit(bmi2Inst, dst, a, b.cloneAs(dst));
+          return;
+        }
+
+        // Bail to `Reg, Reg, Reg` form if BMI2 is not available.
+        break;
+      }
+    }
+
+    if (!dstIsB) {
+      cc->mov(dst, a);
+      src1 = dst;
+    }
+    else {
+      Gp aTmp = newSimilarReg(dst, "@aTmp");
+      cc->mov(aTmp, a);
+      src1 = aTmp;
+    }
+  }
+
+  // ArithOp Reg, Reg, Mem
+  // ---------------------
+
+  if (src1.isReg() && src2.isMem()) {
+    const Gp& a = src1.as<Gp>();
+    const Mem& b = src2.as<Mem>();
+
+    bool dstIsA = dst.id() == a.id();
+    BL_ASSERT(dst.size() == a.size());
+
+    switch (op) {
+      case Arith3Op::kAnd:
+      case Arith3Op::kOr:
+      case Arith3Op::kXor: {
+        InstId instId = legacyLogicalInstTable[size_t(op) - size_t(Arith3Op::kAnd)];
+        if (!dstIsA)
+          cc->mov(dst, a);
+        cc->emit(instId, dst, b);
+        return;
+      }
+
+      case Arith3Op::kAndN: {
+        if (!dstIsA)
+          cc->mov(dst, a);
+        cc->not_(dst);
+        cc->and_(dst, b);
+        return;
+      }
+
+      case Arith3Op::kAdd: {
+        if (!dstIsA)
+          cc->mov(dst, a);
+        cc->add(dst, b);
+        return;
+      }
+
+      case Arith3Op::kSub: {
+        if (!dstIsA)
+          cc->mov(dst, a);
+        cc->sub(dst, b);
+        return;
+      }
+
+      case Arith3Op::kMul: {
+        if (!dstIsA)
+          cc->mov(dst, a);
+        cc->imul(dst, b);
+        return;
+      }
+
+      case Arith3Op::kUDiv: {
+        Gp tmp1 = newSimilarReg(dst, "@tmp1");
+        cc->xor_(tmp1, tmp1);
+
+        if (dstIsA) {
+          cc->div(tmp1, dst, b);
+        }
+        else {
+          cc->mov(dst, a);
+          cc->div(tmp1, dst, b);
+        }
+        return;
+      }
+
+      case Arith3Op::kUMod: {
+        Gp tmp1 = newSimilarReg(dst, "@tmp1");
+        cc->xor_(tmp1, tmp1);
+
+        if (dstIsA) {
+          cc->div(tmp1, dst, b);
+          cc->mov(dst, tmp1);
+        }
+        else {
+          Gp tmp2 = newSimilarReg(dst, "@tmp2");
+          cc->mov(tmp2, a);
+          cc->div(tmp1, tmp2, b);
+          cc->mov(dst, tmp1);
+        }
+        return;
+      }
+
+      case Arith3Op::kSMin:
+      case Arith3Op::kSMax:
+      case Arith3Op::kUMin:
+      case Arith3Op::kUMax: {
+        const Arith3OpMinMaxCMovInst& cmovInst = arithMinMaxCMovInstTable[size_t(op) - size_t(Arith3Op::kSMin)];
+
+        if (dstIsA) {
+          cc->cmp(dst, b);
+          cc->emit(cmovInst.b, dst, b);
+        }
+        else {
+          cc->mov(dst, b);
+          cc->cmp(dst, a);
+          cc->emit(cmovInst.b, dst, a); // cmovInst.b is correct, we have reversed the comparison in this case.
+        }
+        return;
+      }
+    }
+
+    Gp bTmp = newSimilarReg(dst, "@bTmp");
+    cc->mov(bTmp, b);
+    src2 = bTmp;
+  }
+
+  // ArithOp Reg, Reg, Reg
+  // ---------------------
+
+  if (src1.isReg() && src2.isReg()) {
+    const Gp& a = src1.as<Gp>();
+    const Gp& b = src2.as<Gp>();
+
+    bool aIsB = a.id() == b.id();
+    bool dstIsA = dst.id() == a.id();
+    bool dstIsB = dst.id() == b.id();
+
+    BL_ASSERT(dst.size() == a.size());
+
+    switch (op) {
+      case Arith3Op::kAnd:
+      case Arith3Op::kOr:
+      case Arith3Op::kXor: {
+        BL_ASSERT(dst.size() == b.size());
+
+        InstId instId = legacyLogicalInstTable[size_t(op) - size_t(Arith3Op::kAnd)];
+        if (!dstIsA)
+          cc->mov(dst, a);
+        cc->emit(instId, dst, b);
+        return;
+      }
+
+      case Arith3Op::kAndN: {
+        BL_ASSERT(dst.size() == b.size());
+
+        if (hasBMI()) {
+          cc->andn(dst, a, b);
+        }
+        else if (dstIsB) {
+          Gp tmp = newSimilarReg(dst, "@tmp");
+          cc->mov(tmp, a);
+          cc->not_(a);
+          cc->and_(dst, a);
+        }
+        else {
+          if (!dstIsA)
+            cc->mov(dst, a);
+          cc->not_(dst);
+          cc->and_(dst, b);
+        }
+        return;
+      }
+
+      case Arith3Op::kAdd: {
+        BL_ASSERT(dst.size() == b.size());
+
+        if (dstIsA || dstIsB) {
+          cc->add(dst, dstIsB ? a : b);
+        }
+        else if (dst.size() >= 4) {
+          lea(dst, x86::ptr(a, b));
+        }
+        else {
+          cc->mov(dst, a);
+          cc->add(dst, b);
+        }
+        return;
+      }
+
+      case Arith3Op::kSub: {
+        BL_ASSERT(dst.size() == b.size());
+
+        if (aIsB) {
+          cc->xor_(dst, dst);
+        }
+        else if (dstIsA) {
+          cc->sub(dst, b);
+        }
+        else if (dstIsB) {
+          cc->neg(dst);
+          cc->add(dst, a);
+        }
+        else {
+          cc->mov(dst, a);
+          cc->sub(dst, b);
+        }
+        return;
+      }
+
+      case Arith3Op::kMul: {
+        BL_ASSERT(dst.size() == b.size());
+
+        if (!dstIsA && !dstIsB)
+          cc->mov(dst, a);
+        cc->imul(dst, dstIsB ? a : b);
+        return;
+      }
+
+      case Arith3Op::kUDiv: {
+        BL_ASSERT(dst.size() == b.size());
+
+        Gp tmp1 = newSimilarReg(dst, "@tmp1");
+        cc->xor_(tmp1, tmp1);
+
+        if (dstIsA) {
+          cc->div(tmp1, dst, b);
+        }
+        else if (dstIsB) {
+          Gp tmp2 = newSimilarReg(dst, "@tmp2");
+          cc->mov(tmp2, a);
+          cc->div(tmp1, tmp2, b);
+          cc->mov(dst, tmp2);
+        }
+        else {
+          cc->mov(dst, a);
+          cc->div(tmp1, dst, b);
+        }
+        return;
+      }
+
+      case Arith3Op::kUMod: {
+        BL_ASSERT(dst.size() == b.size());
+
+        Gp tmp1 = newSimilarReg(dst, "@tmp1");
+        cc->xor_(tmp1, tmp1);
+
+        if (dstIsA) {
+          cc->div(tmp1, dst, b);
+          cc->mov(dst, tmp1);
+        }
+        else {
+          Gp tmp2 = newSimilarReg(dst, "@tmp2");
+          cc->mov(tmp2, a);
+          cc->div(tmp1, tmp2, b);
+          cc->mov(dst, tmp1);
+        }
+        return;
+      }
+
+      case Arith3Op::kSMin:
+      case Arith3Op::kSMax:
+      case Arith3Op::kUMin:
+      case Arith3Op::kUMax: {
+        BL_ASSERT(dst.size() == b.size());
+        const Arith3OpMinMaxCMovInst& cmovInst = arithMinMaxCMovInstTable[size_t(op) - size_t(Arith3Op::kSMin)];
+
+        cc->cmp(a, b);
+        if (dstIsB) {
+          cc->emit(cmovInst.a, dst, a);
+        }
+        else {
+          if (!dstIsA)
+            cc->mov(dst, a);
+          cc->emit(cmovInst.b, dst, b);
+        }
+        return;
+      }
+
+      case Arith3Op::kSHL:
+      case Arith3Op::kSHR:
+      case Arith3Op::kSAR:
+      case Arith3Op::kROL:
+      case Arith3Op::kROR: {
+        // Prefer BMI2 variants: SHLX, SHRX, SARX, and RORX.
+        if (hasBMI2()) {
+          InstId bmi2Inst = bmi2ShiftInstTable[size_t(op) - size_t(Arith3Op::kSHL)];
+          if (bmi2Inst != x86::Inst::kIdNone) {
+            cc->emit(bmi2Inst, dst, a, b.cloneAs(dst));
+            return;
+          }
+        }
+
+        InstId legacyInst = legacyShiftInstTable[size_t(op) - size_t(Arith3Op::kSHL)];
+        if (dstIsA) {
+          cc->emit(legacyInst, dst, b.r8());
+          return;
+        }
+        else if (dstIsB) {
+          Gp tmp = newGp32("@tmp");
+          if (!dstIsA)
+            cc->mov(dst, a);
+          cc->mov(tmp, b.r32());
+          cc->emit(legacyInst, dst, tmp.r8());
+        }
+        else {
+          cc->mov(dst, a);
+          cc->emit(legacyInst, dst, b.r8());
+        }
+        return;
+      }
+    }
+  }
+
+  // Everything should be handled, so this should never be reached!
+  BL_NOT_REACHED();
+}
+
+void PipeCompiler::emit_jmp(const Operand_& target) noexcept {
+  cc->emit(x86::Inst::kIdJmp, target);
+}
+
+void PipeCompiler::emit_jmp_if(const Label& target, const Condition& condition) noexcept {
+  ConditionApplier ca(condition);
+  ca.optimize(this);
+  ca.emit(this);
+  cc->j(ca.cond, target);
+}
+
+void PipeCompiler::adds_u8(const Gp& dst, const Gp& src1, const Gp& src2) noexcept {
+  BL_ASSERT(dst.size() == src1.size());
+  BL_ASSERT(dst.size() == src2.size());
+
+  if (dst.id() == src1.id()) {
+    cc->add(dst.r8(), src2.r8());
+  }
+  else if (dst.id() == src2.id()) {
+    cc->add(dst.r8(), src1.r8());
+  }
+  else {
+    cc->mov(dst, src1);
+    cc->add(dst, src2);
+  }
+
+  Gp u8_msk = newGp32("@u8_msk");
+  cc->sbb(u8_msk, u8_msk);
+  cc->or_(dst.r8(), u8_msk.r8());
+}
+
+void PipeCompiler::inv_u8(const Gp& dst, const Gp& src) noexcept {
+  if (dst.id() != src.id())
+    cc->mov(dst, src);
+  cc->xor_(dst.r8(), 0xFF);
+}
+
+void PipeCompiler::div_255_u32(const Gp& dst, const Gp& src) noexcept {
+  BL_ASSERT(dst.size() == src.size());
+
+  if (dst.id() == src.id()) {
+    // tmp = src + 128;
+    // dst = (tmp + (tmp >> 8)) >> 8
+    Gp tmp = newSimilarReg(dst, "@tmp");
+    cc->sub(dst, -128);
+    cc->mov(tmp, dst);
+    cc->shr(tmp, 8);
+    cc->add(dst, tmp);
+    cc->shr(dst, 8);
+  }
+  else {
+    // dst = (src + 128 + ((src + 128) >> 8)) >> 8
+    lea(dst, x86::ptr(src, 128));
+    cc->shr(dst, 8);
+    lea(dst, x86::ptr(dst, src, 0, 128));
+    cc->shr(dst, 8);
+  }
+}
+
+void PipeCompiler::mul_257_hu16(const Gp& dst, const Gp& src) noexcept {
+  BL_ASSERT(dst.size() == src.size());
+  cc->imul(dst, src, 257);
+  cc->shr(dst, 16);
+}
+
+void PipeCompiler::add_scaled(const Gp& dst, const Gp& a, int b) noexcept {
+  switch (b) {
+    case 1:
+      cc->add(dst, a);
+      return;
+
+    case 2:
+    case 4:
+    case 8: {
+      uint32_t shift = b == 2 ? 1 :
+                       b == 4 ? 2 : 3;
+      lea(dst, x86::ptr(dst, a, shift));
+      return;
+    }
+
+    default: {
+      Gp tmp = newSimilarReg(dst, "@tmp");
+      cc->imul(tmp, a, b);
+      cc->add(dst, tmp);
+      return;
+    }
+  }
+}
+
+void PipeCompiler::lea_bpp(const Gp& dst, const Gp& src_, const Gp& idx_, uint32_t scale, int32_t disp) noexcept {
+  Gp src = src_.cloneAs(dst);
+  Gp idx = idx_.cloneAs(dst);
+
+  switch (scale) {
+    case 1:
+      if (dst.id() == src.id() && disp == 0)
+        cc->add(dst, idx);
+      else
+        lea(dst, x86::ptr(src, idx, 0, disp));
+      break;
+
+    case 2:
+      lea(dst, x86::ptr(src, idx, 1, disp));
+      break;
+
+    case 3:
+      lea(dst, x86::ptr(src, idx, 1, disp));
+      cc->add(dst, idx);
+      break;
+
+    case 4:
+      lea(dst, x86::ptr(src, idx, 2, disp));
+      break;
+
+    default:
+      BL_NOT_REACHED();
+  }
+}
+
+void PipeCompiler::lea(const Gp& dst, const Mem& src) noexcept {
+  Mem m(src);
+
+  if (is64Bit() && dst.size() == 4) {
+    if (m.baseType() == asmjit::RegType::kGp32) m.setBaseType(asmjit::RegType::kGp64);
+    if (m.indexType() == asmjit::RegType::kGp32) m.setIndexType(asmjit::RegType::kGp64);
+  }
+
+  cc->lea(dst, m);
+}
+
+// bl::Pipeline::PipeCompiler - Emit (SIMD)
+// ========================================
 
 static inline uint32_t shuf32ToShuf64(uint32_t imm) noexcept {
   uint32_t imm0 = uint32_t(imm     ) & 1u;
@@ -447,22 +1474,6 @@ static inline void fixVecWidthToHalf(Operand_& dst, const Operand_& ref) noexcep
       ? x86::Reg::signatureOfT<RegType::kX86_Ymm>()
       : x86::Reg::signatureOfT<RegType::kX86_Xmm>());
   }
-}
-
-static inline bool isSameReg(const Operand_& a, const Operand_& b) noexcept {
-  return a.id() == b.id() && a.id() && b.id();
-}
-
-void PipeCompiler::i_emit_2(InstId instId, const Operand_& op1, int imm) noexcept {
-  cc->emit(instId, op1, imm);
-}
-
-void PipeCompiler::i_emit_2(InstId instId, const Operand_& op1, const Operand_& op2) noexcept {
-  cc->emit(instId, op1, op2);
-}
-
-void PipeCompiler::i_emit_3(InstId instId, const Operand_& op1, const Operand_& op2, int imm) noexcept {
-  cc->emit(instId, op1, op2, imm);
 }
 
 void PipeCompiler::v_emit_xmov(const Operand_& dst, const Operand_& src, uint32_t width) noexcept {
@@ -570,7 +1581,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
         }
 
         if (isSameReg(dst, src)) {
-          x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
+          Vec tmp = newSimilarReg(dst.as<Vec>(), "@tmp");
           v_zero_i(tmp);
           v_sub_i8(tmp, tmp, dst);
           v_min_u8(dst, dst, tmp);
@@ -590,7 +1601,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
         }
 
         if (isSameReg(dst, src)) {
-          x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
+          Vec tmp = newSimilarReg(dst.as<Vec>(), "@tmp");
           v_zero_i(tmp);
           v_sub_i16(tmp, tmp, dst);
           v_max_i16(dst, dst, tmp);
@@ -609,7 +1620,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
           break;
         }
 
-        x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
+        Vec tmp = newSimilarReg(dst.as<Vec>(), "@tmp");
 
         v_mov(tmp, src);
         v_sra_i32(tmp, tmp, 31);
@@ -619,7 +1630,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
       }
 
       case kIntrin2Vabsi64: {
-        x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
+        Vec tmp = newSimilarReg(dst.as<Vec>(), "@tmp");
 
         v_duph_i32(tmp, src);
         v_sra_i32(tmp, tmp, 31);
@@ -629,7 +1640,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
       }
 
       case kIntrin2Vinv255u16: {
-        Operand u16_255 = simdConst(&ct.i_00FF00FF00FF00FF, Bcst::k32, dst.as<x86::Vec>());
+        Operand u16_255 = simdConst(&ct.i_00FF00FF00FF00FF, Bcst::k32, dst.as<Vec>());
 
         if (hasAVX() || isSameReg(dst, src)) {
           v_xor_i32(dst, src, u16_255);
@@ -642,7 +1653,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
       }
 
       case kIntrin2Vinv256u16: {
-        Operand u16_0100 = simdConst(&ct.i_0100010001000100, Bcst::kNA, dst.as<x86::Vec>());
+        Operand u16_0100 = simdConst(&ct.i_0100010001000100, Bcst::kNA, dst.as<Vec>());
 
         if (!isSameReg(dst, src)) {
           v_mov(dst, u16_0100);
@@ -653,14 +1664,14 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
           v_abs_i16(dst, dst);
         }
         else {
-          v_xor_i32(dst, dst, simdConst(&ct.i_FFFFFFFFFFFFFFFF, Bcst::kNA, dst.as<x86::Vec>()));
+          v_xor_i32(dst, dst, simdConst(&ct.i_FFFFFFFFFFFFFFFF, Bcst::kNA, dst.as<Vec>()));
           v_add_i16(dst, dst, u16_0100);
         }
         return;
       }
 
       case kIntrin2Vinv255u32: {
-        Operand u32_255 = simdConst(&ct.i_000000FF000000FF, Bcst::kNA, dst.as<x86::Vec>());
+        Operand u32_255 = simdConst(&ct.i_000000FF000000FF, Bcst::kNA, dst.as<Vec>());
 
         if (hasAVX() || isSameReg(dst, src)) {
           v_xor_i32(dst, src, u32_255);
@@ -709,30 +1720,30 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
           // Reg <- BroadcastB(Reg).
           if (src.as<x86::Reg>().isGp()) {
             if (!hasAVX2()) {
-              x86::Gp tmp = cc->newUInt32("tmp");
-              cc->imul(tmp, src.as<x86::Gp>().r32(), 0x01010101u);
-              s_mov_i32(dst.as<x86::Vec>(), tmp);
+              Gp tmp = newGp32("tmp");
+              cc->imul(tmp, src.as<Gp>().r32(), 0x01010101u);
+              s_mov_i32(dst.as<Vec>(), tmp);
               v_swizzle_u32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
               return;
             }
 
             if (!hasAVX512()) {
-              s_mov_i32(dst.as<x86::Vec>().xmm(), src.as<x86::Gp>().r32());
+              s_mov_i32(dst.as<Vec>().xmm(), src.as<Gp>().r32());
               x = dst;
             }
             else {
-              x = src.as<x86::Gp>().r32();
+              x = src.as<Gp>().r32();
             }
           }
 
           if (hasAVX2()) {
             if (x86::Reg::isVec(x))
-              cc->emit(x86::Inst::kIdVpbroadcastb, dst, x.as<x86::Vec>().xmm());
+              cc->emit(x86::Inst::kIdVpbroadcastb, dst, x.as<Vec>().xmm());
             else
               cc->emit(x86::Inst::kIdVpbroadcastb, dst, x);
           }
           else if (hasSSSE3()) {
-            v_shuffle_i8(dst, x, simdConst(&ct.i_0000000000000000, Bcst::kNA, dst.as<x86::Vec>()));
+            v_shuffle_i8(dst, x, simdConst(&ct.i_0000000000000000, Bcst::kNA, dst.as<Vec>()));
           }
           else {
             v_interleave_lo_u8(dst, x, x);
@@ -749,10 +1760,10 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
             cc->emit(x86::Inst::kIdVpbroadcastb, dst, m);
           }
           else {
-            x86::Gp tmp = cc->newUInt32("tmp");
+            Gp tmp = newGp32("tmp");
             cc->movzx(tmp, m);
             cc->imul(tmp, tmp, 0x01010101u);
-            s_mov_i32(dst.as<x86::Vec>(), tmp);
+            s_mov_i32(dst.as<Vec>(), tmp);
             v_swizzle_u32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
           }
         }
@@ -768,17 +1779,17 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
           // Reg <- BroadcastW(Reg).
           if (src.as<x86::Reg>().isGp()) {
             if (!hasAVX512()) {
-              s_mov_i32(dst.as<x86::Vec>().xmm(), src.as<x86::Gp>().r32());
+              s_mov_i32(dst.as<Vec>().xmm(), src.as<Gp>().r32());
               x = dst;
             }
             else {
-              x = src.as<x86::Gp>().r32();
+              x = src.as<Gp>().r32();
             }
           }
 
           if (hasAVX2()) {
             if (x86::Reg::isVec(x))
-              cc->emit(x86::Inst::kIdVpbroadcastw, dst, x.as<x86::Vec>().xmm());
+              cc->emit(x86::Inst::kIdVpbroadcastw, dst, x.as<Vec>().xmm());
             else
               cc->emit(x86::Inst::kIdVpbroadcastw, dst, x);
           }
@@ -821,12 +1832,12 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
           Operand x(src);
           // VReg <- BroadcastD(Reg).
           if (src.as<x86::Reg>().isGp() && !hasAVX512()) {
-            s_mov_i32(dst.as<x86::Vec>().xmm(), src.as<x86::Gp>().r32());
+            s_mov_i32(dst.as<Vec>().xmm(), src.as<Gp>().r32());
             x = dst;
           }
 
           if (x.as<x86::Reg>().isVec())
-            x = x.as<x86::Vec>().xmm();
+            x = x.as<Vec>().xmm();
 
           if (hasAVX2())
             cc->emit(x86::Inst::kIdVpbroadcastd, dst, x);
@@ -842,7 +1853,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
             cc->emit(x86::Inst::kIdVpbroadcastd, dst, m);
           }
           else {
-            v_load_i32(dst.as<x86::Vec>(), m);
+            v_load_i32(dst.as<Vec>(), m);
             v_swizzle_u32(dst, dst, x86::shuffleImm(0, 0, 0, 0));
           }
         }
@@ -857,12 +1868,12 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
           Operand x(src);
           // VReg <- BroadcastQ(Reg).
           if (src.as<x86::Reg>().isGp() && !hasAVX512()) {
-            s_mov_i64(dst.as<x86::Vec>().xmm(), src.as<x86::Gp>().r64());
+            s_mov_i64(dst.as<Vec>().xmm(), src.as<Gp>().r64());
             x = dst;
           }
 
           if (x.as<x86::Reg>().isVec())
-            x = x.as<x86::Vec>().xmm();
+            x = x.as<Vec>().xmm();
 
           if (hasAVX2())
             cc->emit(x86::Inst::kIdVpbroadcastq, dst, x);
@@ -878,7 +1889,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
             cc->emit(x86::Inst::kIdVpbroadcastq, dst, m);
           }
           else {
-            v_load_i64(dst.as<x86::Vec>(), m);
+            v_load_i64(dst.as<Vec>(), m);
             v_swizzle_u32(dst, dst, x86::shuffleImm(1, 0, 1, 0));
           }
         }
@@ -892,7 +1903,7 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
       case kIntrin2VBroadcastF64x2: {
         BL_ASSERT(x86::Reg::isVec(dst));
 
-        if (dst.as<x86::Vec>().isXmm()) {
+        if (dst.as<Vec>().isXmm()) {
           if (src.isMem())
             v_loadu_i128(dst, src.as<x86::Mem>());
           else
@@ -900,11 +1911,11 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
         }
         else if (!hasAVX512()) {
           if (src.isMem()) {
-            cc->vbroadcastf128(dst.as<x86::Vec>(), src.as<x86::Mem>());
+            cc->vbroadcastf128(dst.as<Vec>(), src.as<x86::Mem>());
           }
           else {
-            x86::Vec srcAsXmm = src.as<x86::Vec>().xmm();
-            cc->vinsertf128(dst.as<x86::Vec>(), srcAsXmm.ymm(), srcAsXmm, 1u);
+            Vec srcAsXmm = src.as<Vec>().xmm();
+            cc->vinsertf128(dst.as<Vec>(), srcAsXmm.ymm(), srcAsXmm, 1u);
           }
         }
         else {
@@ -916,11 +1927,11 @@ void PipeCompiler::v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const O
           if (src.isMem()) {
             cc->emit(bcstTable[tableIndex], dst, src);
           }
-          else if (dst.as<x86::Vec>().isYmm()) {
-            cc->emit(insrTable[tableIndex], dst, src.as<x86::Vec>().cloneAs(dst.as<x86::Vec>()), src.as<x86::Vec>().xmm(), 1u);
+          else if (dst.as<Vec>().isYmm()) {
+            cc->emit(insrTable[tableIndex], dst, src.as<Vec>().cloneAs(dst.as<Vec>()), src.as<Vec>().xmm(), 1u);
           }
           else {
-            Operand srcAsDst = src.as<x86::Vec>().cloneAs(dst.as<x86::Vec>());
+            Operand srcAsDst = src.as<Vec>().cloneAs(dst.as<Vec>());
             cc->emit(shufTable[tableIndex], dst, srcAsDst, srcAsDst, 0u);
           }
         }
@@ -1225,7 +2236,7 @@ void PipeCompiler::v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const 
 
       case kIntrin3Vmulu64x32: {
         if (isSameReg(dst, src1)) {
-          x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
+          Vec tmp = newSimilarReg(dst.as<Vec>(), "@tmp");
 
           v_swizzle_u32(tmp, dst, x86::shuffleImm(2, 3, 0, 1));
           v_mulx_ll_u32_(dst, dst, src2);
@@ -1234,7 +2245,7 @@ void PipeCompiler::v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const 
           v_add_i64(dst, dst, tmp);
         }
         else if (isSameReg(dst, src2)) {
-          x86::Vec tmp = cc->newSimilarReg(dst.as<x86::Vec>(), "@tmp");
+          Vec tmp = newSimilarReg(dst.as<Vec>(), "@tmp");
 
           v_swizzle_u32(tmp, src1, x86::shuffleImm(2, 3, 0, 1));
           v_mulx_ll_u32_(tmp, tmp, dst);
@@ -1299,7 +2310,7 @@ void PipeCompiler::v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const 
           case x86::Inst::kIdVpcmpub:
           case x86::Inst::kIdVpcmpeqb:
           case x86::Inst::kIdVpcmpgtb:
-            cc->vpmovm2b(dst.as<x86::Vec>(), k);
+            cc->vpmovm2b(dst.as<Vec>(), k);
             break;
 
           case x86::Inst::kIdVpcmpw:
@@ -1307,7 +2318,7 @@ void PipeCompiler::v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const 
           case x86::Inst::kIdVpcmpeqw:
           case x86::Inst::kIdVpcmpgtw:
           case x86::Inst::kIdVcmpph:
-            cc->vpmovm2w(dst.as<x86::Vec>(), k);
+            cc->vpmovm2w(dst.as<Vec>(), k);
             break;
 
           case x86::Inst::kIdVpcmpd:
@@ -1315,7 +2326,7 @@ void PipeCompiler::v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const 
           case x86::Inst::kIdVpcmpeqd:
           case x86::Inst::kIdVpcmpgtd:
           case x86::Inst::kIdVcmpps:
-            cc->vpmovm2d(dst.as<x86::Vec>(), k);
+            cc->vpmovm2d(dst.as<Vec>(), k);
             break;
 
           case x86::Inst::kIdVpcmpq:
@@ -1323,7 +2334,7 @@ void PipeCompiler::v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const 
           case x86::Inst::kIdVpcmpeqq:
           case x86::Inst::kIdVpcmpgtq:
           case x86::Inst::kIdVcmppd:
-            cc->vpmovm2q(dst.as<x86::Vec>(), k);
+            cc->vpmovm2q(dst.as<Vec>(), k);
             break;
 
           default:
@@ -1420,7 +2431,7 @@ void PipeCompiler::v_emit_vvvi_vvi(uint32_t packedId, const Operand_& dst_, cons
         uint32_t src1Shift = (16u - imm) % 16u;
         uint32_t src2Shift = imm;
 
-        x86::Vec tmp = cc->newXmm("@tmp");
+        Vec tmp = cc->newXmm("@tmp");
 
         if (isSameReg(dst, src1)) {
           v_srlb_u128(tmp, src2, src2Shift);
@@ -1709,7 +2720,7 @@ void PipeCompiler::v_emit_k_vvvi(InstId instId, const x86::KReg& mask, const OpA
 // bl::Pipeline::PipeCompiler - Predicate Helpers
 // ==============================================
 
-void PipeCompiler::x_make_predicate_v32(const x86::Vec& vmask, const x86::Gp& count) noexcept {
+void PipeCompiler::x_make_predicate_v32(const Vec& vmask, const Gp& count) noexcept {
   x86::Mem maskPtr = _getMemConst(commonTable.loadstore16_lo8_msk8());
   maskPtr._setIndex(cc->_gpSignature.regType(), count.id());
   maskPtr.setShift(3);
@@ -1761,7 +2772,7 @@ void PipeCompiler::x_ensure_predicate_32(PixelPredicate& predicate, uint32_t max
 // bl::Pipeline::PipeCompiler - Fetch Helpers
 // ==========================================
 
-void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType pixelType, const x86::Gp& mPtr, const x86::Vec& globalAlpha) noexcept {
+void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType pixelType, const Gp& mPtr, const Vec& globalAlpha) noexcept {
   x86::Mem m = x86::ptr(mPtr);
 
   switch (pixelType) {
@@ -1800,7 +2811,7 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
         }
       }
 
-      i_add(mPtr, mPtr, n.value());
+      add(mPtr, mPtr, n.value());
 
       if (globalAlpha.isValid()) {
         v_mul_i16(vm, vm, globalAlpha.cloneAs(vm[0]));
@@ -1822,12 +2833,12 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
 
           if (hasAVX2()) {
             v_broadcast_u8(vm[0], m);
-            i_add(mPtr, mPtr, n.value());
+            add(mPtr, mPtr, n.value());
             v_mov_u8_u16(vm[0], vm[0]);
           }
           else {
             v_load_i8(vm[0], m);
-            i_add(mPtr, mPtr, n.value());
+            add(mPtr, mPtr, n.value());
             v_swizzle_lo_u16(vm[0], vm[0], x86::shuffleImm(0, 0, 0, 0));
           }
 
@@ -1843,12 +2854,12 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
 
           if (hasAVX2()) {
             v_mov_u8_u64_(vm[0], m);
-            i_add(mPtr, mPtr, n.value());
+            add(mPtr, mPtr, n.value());
             v_shuffle_i8(vm[0], vm[0], simdConst(&ct.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, vm[0]));
           }
           else {
             v_load_i8(vm[0], m);
-            i_add(mPtr, mPtr, n.value());
+            add(mPtr, mPtr, n.value());
             v_swizzle_lo_u16(vm[0], vm[0], x86::shuffleImm(0, 0, 0, 0));
           }
 
@@ -1862,7 +2873,7 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
         case 4: {
           if (simdWidth >= SimdWidth::k256) {
             v_mov_u8_u64_(vm[0], m);
-            i_add(mPtr, mPtr, n.value());
+            add(mPtr, mPtr, n.value());
             v_shuffle_i8(vm[0], vm[0], simdConst(&ct.pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA, vm[0]));
 
             if (globalAlpha.isValid()) {
@@ -1872,7 +2883,7 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
           }
           else {
             v_load_i32(vm[0], m);
-            i_add(mPtr, mPtr, n.value());
+            add(mPtr, mPtr, n.value());
             v_mov_u8_u16(vm[0], vm[0]);
 
             if (globalAlpha.isValid()) {
@@ -1894,7 +2905,7 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
               m.addOffsetLo32(vm[i].size() / 8u);
             }
 
-            i_add(mPtr, mPtr, n.value());
+            add(mPtr, mPtr, n.value());
 
             if (globalAlpha.isValid()) {
               if (hasOptFlag(PipeOptFlags::kFastVpmulld)) {
@@ -1923,7 +2934,7 @@ void PipeCompiler::x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType
               v_div255_u16(vm[0]);
             }
 
-            i_add(mPtr, mPtr, n.value());
+            add(mPtr, mPtr, n.value());
 
             v_interleave_hi_u16(vm[2], vm[0], vm[0]);                 // vm[2] = [M7 M7 M6 M6 M5 M5 M4 M4]
             v_interleave_lo_u16(vm[0], vm[0], vm[0]);                 // vm[0] = [M3 M3 M2 M2 M1 M1 M0 M0]
@@ -1987,7 +2998,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, F
       SimdWidth p32Width = simdWidthOf(DataWidth::k32, n);
       uint32_t p32RegCount = SimdWidthUtils::regCountOf(p32Width, DataWidth::k32, n);
 
-      x86::Vec predicatedPixel;
+      Vec predicatedPixel;
       if (!predicate.empty()) {
         // TODO: [JIT] Do we want to support masked loading of more that 1 register?
         BL_ASSERT(n.value() > 1);
@@ -1998,7 +3009,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, F
         v_load_predicated_v32(predicatedPixel, predicate, src);
       }
 
-      auto fetch4Shifted = [](PipeCompiler* pc, const x86::Vec& dst, const x86::Mem& src, Alignment alignment, const x86::Vec& predicatedPixel) noexcept {
+      auto fetch4Shifted = [](PipeCompiler* pc, const Vec& dst, const x86::Mem& src, Alignment alignment, const Vec& predicatedPixel) noexcept {
         if (predicatedPixel.isValid()) {
           pc->v_srl_i32(dst, predicatedPixel, 24);
         }
@@ -2013,9 +3024,9 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, F
 
       switch (n.value()) {
         case 1: {
-          p.sa = cc->newUInt32("a");
+          p.sa = newGp32("a");
           src.addOffset(3);
-          i_load_u8(p.sa, src);
+          load_u8(p.sa, src);
           break;
         }
 
@@ -2147,7 +3158,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, F
               }
             };
 
-            for (const x86::Vec& v : p32) {
+            for (const Vec& v : p32) {
               if (predicatedPixel.isValid())
                 v_srl_i32(v, predicatedPixel, 24);
               else
@@ -2207,7 +3218,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, F
 
       switch (n.value()) {
         case 1: {
-          p.sa = cc->newUInt32("a");
+          p.sa = newGp32("a");
           cc->mov(p.sa, 255);
           break;
         }
@@ -2220,7 +3231,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, F
     }
 
     case FormatExt::kA8: {
-      x86::Vec predicatedPixel;
+      Vec predicatedPixel;
       if (!predicate.empty()) {
         // TODO: [JIT] Do we want to support masked loading of more that 1 register?
         BL_ASSERT(n.value() > 1);
@@ -2233,14 +3244,14 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, F
 
       switch (n.value()) {
         case 1: {
-          p.sa = cc->newUInt32("a");
-          i_load_u8(p.sa, src);
+          p.sa = newGp32("a");
+          load_u8(p.sa, src);
 
           break;
         }
 
         case 4: {
-          x86::Vec a;
+          Vec a;
 
           if (predicatedPixel.isValid()) {
             a = predicatedPixel;
@@ -2264,7 +3275,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, F
 
         case 8: {
           if (predicatedPixel.isValid()) {
-            x86::Vec a = predicatedPixel;
+            Vec a = predicatedPixel;
 
             if (blTestFlag(flags, PixelFlags::kPA)) {
               p.pa.init(a);
@@ -2275,7 +3286,7 @@ void PipeCompiler::_x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, F
             }
           }
           else {
-            x86::Vec a = cc->newXmm("a");
+            Vec a = cc->newXmm("a");
             src.setSize(8);
 
             if (blTestFlag(flags, PixelFlags::kPA)) {
@@ -2524,9 +3535,9 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
               cc->vpbroadcastb(p.pc[0].xmm(), src);
             }
             else {
-              x86::Gp tmp = cc->newUInt32("tmp");
-              i_load_u8(tmp, src);
-              i_mul(tmp, tmp, 0x01010101u);
+              Gp tmp = newGp32("tmp");
+              load_u8(tmp, src);
+              mul(tmp, tmp, 0x01010101u);
               s_mov_i32(p.pc[0], tmp);
             }
           }
@@ -2538,8 +3549,8 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
               v_swizzle_lo_u16(p.uc[0], p.uc[0], x86::shuffleImm(0, 0, 0, 0));
             }
             else {
-              x86::Gp tmp = cc->newUInt32("tmp");
-              i_load_u8(tmp, src);
+              Gp tmp = newGp32("tmp");
+              load_u8(tmp, src);
               s_mov_i32(p.uc[0], tmp);
               v_swizzle_lo_u16(p.uc[0], p.uc[0], x86::shuffleImm(0, 0, 0, 0));
             }
@@ -2562,8 +3573,8 @@ void PipeCompiler::_x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flag
               v_shuffle_i8(p.pc[0], p.pc[0], simdConst(&ct.pshufb_xxxxxxx1xxxxxxx0_to_zzzzzzzz11110000, Bcst::kNA, p.pc[0]));
             }
             else {
-              x86::Gp tmp = cc->newUInt32("tmp");
-              i_load_u16(tmp, src);
+              Gp tmp = newGp32("tmp");
+              load_u16(tmp, src);
               s_mov_i32(p.pc[0], tmp);
               v_interleave_lo_u8(p.pc[0], p.pc[0], p.pc[0]);
               v_interleave_lo_u16(p.pc[0], p.pc[0], p.pc[0]);
@@ -3095,7 +4106,7 @@ void PipeCompiler::_x_unpack_pixel(VecArray& ux, VecArray& px, uint32_t n, const
   }
 }
 
-void PipeCompiler::x_fetch_unpacked_a8_2x(const x86::Xmm& dst, FormatExt format, const x86::Mem& src1, const x86::Mem& src0) noexcept {
+void PipeCompiler::x_fetch_unpacked_a8_2x(const Vec& dst, FormatExt format, const x86::Mem& src1, const x86::Mem& src0) noexcept {
   x86::Mem m0 = src0;
   x86::Mem m1 = src1;
 
@@ -3113,7 +4124,7 @@ void PipeCompiler::x_fetch_unpacked_a8_2x(const x86::Xmm& dst, FormatExt format,
     v_insert_u8_(dst, dst, m1, 2);
   }
   else {
-    x86::Gp aGp = cc->newUInt32("aGp");
+    Gp aGp = newGp32("aGp");
     cc->movzx(aGp, m1);
     cc->shl(aGp, 16);
     cc->mov(aGp.r8(), m0);
@@ -3121,13 +4132,13 @@ void PipeCompiler::x_fetch_unpacked_a8_2x(const x86::Xmm& dst, FormatExt format,
   }
 }
 
-void PipeCompiler::x_assign_unpacked_alpha_values(Pixel& p, PixelFlags flags, x86::Xmm& vec) noexcept {
+void PipeCompiler::x_assign_unpacked_alpha_values(Pixel& p, PixelFlags flags, Vec& vec) noexcept {
   blUnused(flags);
 
   BL_ASSERT(p.type() != PixelType::kNone);
   BL_ASSERT(p.count() != 0);
 
-  x86::Xmm v0 = vec;
+  Vec v0 = vec;
 
   if (p.isRGBA32()) {
     switch (p.count().value()) {
@@ -3158,9 +4169,9 @@ void PipeCompiler::x_assign_unpacked_alpha_values(Pixel& p, PixelFlags flags, x8
       }
 
       case 8: {
-        x86::Xmm v1 = cc->newXmm();
-        x86::Xmm v2 = cc->newXmm();
-        x86::Xmm v3 = cc->newXmm();
+        Vec v1 = cc->newXmm();
+        Vec v2 = cc->newXmm();
+        Vec v3 = cc->newXmm();
 
         v_interleave_hi_u16(v2, v0, v0);
         v_interleave_lo_u16(v0, v0, v0);
@@ -3185,7 +4196,7 @@ void PipeCompiler::x_assign_unpacked_alpha_values(Pixel& p, PixelFlags flags, x8
       case 1: {
         BL_ASSERT(blTestFlag(flags, PixelFlags::kSA));
 
-        x86::Gp sa = cc->newUInt32("sa");
+        Gp sa = newGp32("sa");
         v_extract_u16(sa, vec, 0);
 
         p.sa = sa;
@@ -3216,7 +4227,7 @@ void PipeCompiler::x_fill_pixel_alpha(Pixel& p) noexcept {
   }
 }
 
-void PipeCompiler::x_store_pixel_advance(const x86::Gp& dPtr, Pixel& p, PixelCount n, uint32_t bpp, Alignment alignment, PixelPredicate& predicate) noexcept {
+void PipeCompiler::x_store_pixel_advance(const Gp& dPtr, Pixel& p, PixelCount n, uint32_t bpp, Alignment alignment, PixelPredicate& predicate) noexcept {
   x86::Mem dMem = x86::ptr(dPtr);
 
   switch (bpp) {
@@ -3229,12 +4240,12 @@ void PipeCompiler::x_store_pixel_advance(const x86::Gp& dPtr, Pixel& p, PixelCou
 
         x_ensure_predicate_8(predicate, n.value());
         v_store_predicated_v8(dMem, predicate, p.pa[0]);
-        i_add(dPtr, dPtr, predicate.count.cloneAs(dPtr));
+        add(dPtr, dPtr, predicate.count.cloneAs(dPtr));
       }
       else {
         if (n == 1) {
           x_satisfy_pixel(p, PixelFlags::kSA | PixelFlags::kImmutable);
-          i_store_u8(dMem, p.sa);
+          store_8(dMem, p.sa);
         }
         else {
           x_satisfy_pixel(p, PixelFlags::kPA | PixelFlags::kImmutable);
@@ -3258,7 +4269,7 @@ void PipeCompiler::x_store_pixel_advance(const x86::Gp& dPtr, Pixel& p, PixelCou
           }
         }
 
-        i_add(dPtr, dPtr, n.value());
+        add(dPtr, dPtr, n.value());
       }
 
       break;
@@ -3271,51 +4282,51 @@ void PipeCompiler::x_store_pixel_advance(const x86::Gp& dPtr, Pixel& p, PixelCou
         if (hasOptFlag(PipeOptFlags::kFastStoreWithMask)) {
           x_ensure_predicate_32(predicate, n.value());
           v_store_predicated_v32(dMem, predicate, p.pc[0]);
-          i_add_scaled(dPtr, predicate.count.cloneAs(dPtr), bpp);
+          add_scaled(dPtr, predicate.count.cloneAs(dPtr), bpp);
         }
         else {
-          Label L_StoreSkip1 = cc->newLabel();
+          Label L_StoreSkip1 = newLabel();
 
-          const x86::Gp& count = predicate.count;
-          const x86::Vec& pc0 = p.pc[0];
+          const Gp& count = predicate.count;
+          const Vec& pc0 = p.pc[0];
 
           if (n > 8) {
-            Label L_StoreSkip8 = cc->newLabel();
+            Label L_StoreSkip8 = newLabel();
             x86::Ymm pc0YmmHigh = cc->newYmm("pc0.ymmHigh");
 
             v_extract_i256(pc0YmmHigh, pc0.zmm(), 1);
-            i_jmp_if_bit_zero(count, 3, L_StoreSkip8);
+            j(L_StoreSkip8, bt_z(count, 3));
             v_storeu_i256(dMem, pc0.ymm());
             v_mov(pc0.ymm(), pc0YmmHigh);
-            i_add(dPtr, dPtr, 8u * 4u);
+            add(dPtr, dPtr, 8u * 4u);
             bind(L_StoreSkip8);
           }
 
           if (n > 4) {
-            Label L_StoreSkip4 = cc->newLabel();
+            Label L_StoreSkip4 = newLabel();
             x86::Xmm pc0XmmHigh = cc->newXmm("pc0.xmmHigh");
 
             v_extract_i128(pc0XmmHigh, pc0.ymm(), 1);
-            i_jmp_if_bit_zero(count, 2, L_StoreSkip4);
+            j(L_StoreSkip4, bt_z(count, 2));
             v_storeu_i128(dMem, pc0.xmm());
             v_mov(pc0.xmm(), pc0XmmHigh);
-            i_add(dPtr, dPtr, 4u * 4u);
+            add(dPtr, dPtr, 4u * 4u);
             bind(L_StoreSkip4);
           }
 
           if (n > 2) {
-            Label L_StoreSkip2 = cc->newLabel();
+            Label L_StoreSkip2 = newLabel();
 
-            i_jmp_if_bit_zero(count, 1, L_StoreSkip2);
+            j(L_StoreSkip2, bt_z(count, 1));
             v_store_i64(dMem, pc0.xmm());
             v_srlb_u128(pc0.xmm(), pc0.xmm(), 8);
-            i_add(dPtr, dPtr, 2u * 4u);
+            add(dPtr, dPtr, 2u * 4u);
             bind(L_StoreSkip2);
           }
 
-          i_jmp_if_bit_zero(count, 0, L_StoreSkip1);
+          j(L_StoreSkip1, bt_z(count, 0));
           v_store_i32(dMem, pc0.xmm());
-          i_add(dPtr, dPtr, 1u * 4u);
+          add(dPtr, dPtr, 1u * 4u);
           bind(L_StoreSkip1);
         }
       }
@@ -3365,7 +4376,7 @@ void PipeCompiler::x_store_pixel_advance(const x86::Gp& dPtr, Pixel& p, PixelCou
 // bl::Pipeline::PipeCompiler - PixelFill
 // ======================================
 
-void PipeCompiler::x_inline_pixel_fill_loop(x86::Gp& dst, x86::Vec& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity) noexcept {
+void PipeCompiler::x_inline_pixel_fill_loop(Gp& dst, Vec& src, Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity) noexcept {
   BL_ASSERT(IntOps::isPowerOf2(itemSize));
   BL_ASSERT(itemSize <= 16u);
 
@@ -3378,55 +4389,49 @@ void PipeCompiler::x_inline_pixel_fill_loop(x86::Gp& dst, x86::Vec& src, x86::Gp
   BL_ASSERT(mainLoopSize >= 16u);
   BL_ASSERT(mainLoopSize >= granularityInBytes);
 
-  uint32_t j;
+  uint32_t k;
   uint32_t vecSize = src.size();
 
   // Granularity >= 16 Bytes
   // -----------------------
 
   if (granularityInBytes >= 16u) {
-    Label L_End = cc->newLabel();
+    Label L_End = newLabel();
 
     // MainLoop
     // --------
 
     {
-      Label L_MainIter = cc->newLabel();
-      Label L_MainSkip = cc->newLabel();
+      Label L_MainIter = newLabel();
+      Label L_MainSkip = newLabel();
 
-      cc->sub(i, mainStepInItems);
-      cc->jc(L_MainSkip);
-
-      cc->bind(L_MainIter);
-      cc->add(dst, mainLoopSize);
-      cc->sub(i, mainStepInItems);
-
+      j(L_MainSkip, sub_c(i, mainStepInItems));
+      bind(L_MainIter);
+      add(dst, dst, mainLoopSize);
       x_storeu_fill(x86::ptr(dst, -int(mainLoopSize)), src, mainLoopSize);
-      cc->jnc(L_MainIter);
+      j(L_MainIter, sub_nc(i, mainStepInItems));
 
-      cc->bind(L_MainSkip);
-      cc->add(i, mainStepInItems);
-      cc->jz(L_End);
+      bind(L_MainSkip);
+      j(L_End, add_z(i, mainStepInItems));
     }
 
     // TailLoop / TailSequence
     // -----------------------
 
     if (mainLoopSize * 2 > granularityInBytes) {
-      Label L_TailIter = cc->newLabel();
+      Label L_TailIter = newLabel();
 
-      cc->bind(L_TailIter);
+      bind(L_TailIter);
       x_storeu_fill(x86::ptr(dst), src, granularityInBytes);
-      cc->add(dst, granularityInBytes);
-      cc->sub(i, itemGranularity);
-      cc->jnz(L_TailIter);
+      add(dst, dst, granularityInBytes);
+      j(L_TailIter, sub_nz(i, itemGranularity));
     }
     else if (mainLoopSize * 2 == granularityInBytes) {
       x_storeu_fill(x86::ptr(dst), src, granularityInBytes);
-      cc->add(dst, granularityInBytes);
+      add(dst, dst, granularityInBytes);
     }
 
-    cc->bind(L_End);
+    bind(L_End);
     return;
   }
 
@@ -3444,217 +4449,201 @@ void PipeCompiler::x_inline_pixel_fill_loop(x86::Gp& dst, x86::Vec& src, x86::Gp
 
     if (vecSize >= 32u) {
       // Make `i` contain the number of 32-bit units to fill.
-      x86::Gp iNative = i.cloneAs(dst);
+      Gp i_ptr = i.cloneAs(dst);
       if (itemSize != 4u)
-        cc->shr(i, 2u - sizeShift);
+        shr(i, i, 2u - sizeShift);
 
       if (hasMaskedAccessOf(4) && hasOptFlag(PipeOptFlags::kFastStoreWithMask)) {
-        Label L_MainIter = cc->newLabel();
-        Label L_MainSkip = cc->newLabel();
-        Label L_TailIter = cc->newLabel();
-        Label L_TailSkip = cc->newLabel();
-        Label L_End = cc->newLabel();
+        Label L_MainIter = newLabel();
+        Label L_MainSkip = newLabel();
+        Label L_TailIter = newLabel();
+        Label L_TailSkip = newLabel();
+        Label L_End = newLabel();
 
-        cc->sub(iNative, vecSize);
-        cc->jc(L_MainSkip);
+        j(L_MainSkip, sub_c(i_ptr, vecSize));
 
-        cc->bind(L_MainIter);
+        bind(L_MainIter);
         x_storeu_fill(x86::ptr(dst), src, vecSize * 4u);
-        cc->add(dst, vecSize * 4u);
-        cc->sub(iNative, vecSize);
-        cc->jnc(L_MainIter);
+        add(dst, dst, vecSize * 4u);
+        j(L_MainIter, sub_nc(i_ptr, vecSize));
 
-        cc->bind(L_MainSkip);
-        cc->add(iNative, vecSize - vecSize / 4u);
-        cc->js(L_TailSkip);
+        bind(L_MainSkip);
+        j(L_TailSkip, add_s(i_ptr, vecSize - vecSize / 4u));
 
-        cc->bind(L_TailIter);
+        bind(L_TailIter);
         x_storeu_fill(x86::ptr(dst), src, vecSize);
-        cc->add(dst, vecSize);
-        cc->sub(iNative, vecSize / 4u);
-        cc->jnc(L_TailIter);
+        add(dst, dst, vecSize);
+        j(L_TailIter, sub_nc(i_ptr, vecSize / 4u));
 
-        cc->bind(L_TailSkip);
-        cc->add(iNative, vecSize / 4u);
-        cc->jz(L_End);
+        bind(L_TailSkip);
+        j(L_End, add_z(i_ptr, vecSize / 4u));
 
         PixelPredicate predicate(vecSize / 4u, PredicateFlags::kNeverEmptyOrFull, i);
         x_ensure_predicate_32(predicate, vecSize / 4u);
         v_store_predicated_v32(x86::ptr(dst), predicate, src);
 
-        cc->lea(dst, x86::ptr(dst, iNative, 2));
-        cc->bind(L_End);
+        lea(dst, x86::ptr(dst, i_ptr, 2));
+        bind(L_End);
       }
       else {
-        Label L_LargeIter = cc->newLabel();
-        Label L_SmallIter = cc->newLabel();
-        Label L_SmallCheck = cc->newLabel();
-        Label L_TinyCase16 = cc->newLabel();
-        Label L_TinyCase8 = cc->newLabel();
-        Label L_TinyCase4 = cc->newLabel();
-        Label L_TinyCase2 = cc->newLabel();
-        Label L_End = cc->newLabel();
+        Label L_LargeIter = newLabel();
+        Label L_SmallIter = newLabel();
+        Label L_SmallCheck = newLabel();
+        Label L_TinyCase16 = newLabel();
+        Label L_TinyCase8 = newLabel();
+        Label L_TinyCase4 = newLabel();
+        Label L_TinyCase2 = newLabel();
+        Label L_End = newLabel();
 
-        cc->sub(iNative, vecSize / 4u);
-        cc->jc(vecSize == 64 ? L_TinyCase16 : L_TinyCase8);
-
-        cc->cmp(iNative, vecSize);
-        cc->jc(L_SmallIter);
+        j(vecSize == 64 ? L_TinyCase16 : L_TinyCase8, sub_c(i_ptr, vecSize / 4u));
+        j(L_SmallIter, ucmp_lt(i_ptr, vecSize));
 
         // Align to a vecSize, but keep two LSB bits in case the alignment is unfixable.
         v_storeu_ivec(x86::ptr(dst), src);
-        cc->add(dst, vecSize);
-        cc->lea(iNative, x86::ptr(dst, iNative, 2));
-        cc->and_(dst, -int(vecSize) | 0x3);
-        cc->sub(iNative, dst);
-        cc->sar(iNative, 2);
-        cc->sub(iNative, vecSize);
+        add(dst, dst, vecSize);
+        lea(i_ptr, x86::ptr(dst, i_ptr, 2));
+        and_(dst, dst, -int(vecSize) | 0x3);
+        sub(i_ptr, i_ptr, dst);
+        sar(i_ptr, i_ptr, 2);
+        sub(i_ptr, i_ptr, vecSize);
 
-        cc->bind(L_LargeIter);
+        bind(L_LargeIter);
         x_storeu_fill(x86::ptr(dst), src, vecSize * 4);
-        cc->add(dst, vecSize * 4);
-        cc->sub(iNative, vecSize);
+        add(dst, dst, vecSize * 4);
+        cc->sub(i_ptr, vecSize);
         cc->ja(L_LargeIter);
 
-        cc->add(iNative, vecSize);
-        cc->jmp(L_SmallCheck);
+        add(i_ptr, i_ptr, vecSize);
+        j(L_SmallCheck);
 
-        cc->bind(L_SmallIter);
+        bind(L_SmallIter);
         v_storeu_ivec(x86::ptr(dst), src);
-        cc->add(dst, vecSize);
-        cc->bind(L_SmallCheck);
-        cc->sub(iNative, vecSize / 4u);
+        add(dst, dst, vecSize);
+        bind(L_SmallCheck);
+        cc->sub(i_ptr, vecSize / 4u);
         cc->ja(L_SmallIter);
 
-        cc->lea(dst, x86::ptr(dst, iNative, 2, vecSize));
+        lea(dst, x86::ptr(dst, i_ptr, 2, vecSize));
         v_storeu_ivec(x86::ptr(dst, -int(vecSize)), src);
-        cc->jmp(L_End);
+        j(L_End);
 
         if (vecSize == 64) {
           bind(L_TinyCase16);
-          i_jmp_if_bit_zero(i, 3, L_TinyCase8);
+          j(L_TinyCase8, bt_z(i, 3));
           v_storeu_i256(x86::ptr(dst), src);
-          i_add(dst, dst, 32);
+          add(dst, dst, 32);
         }
 
         bind(L_TinyCase8);
-        i_jmp_if_bit_zero(i, 2, L_TinyCase4);
+        j(L_TinyCase4, bt_z(i, 2));
         v_storeu_i128(x86::ptr(dst), src);
-        i_add(dst, dst, 16);
+        add(dst, dst, 16);
 
         bind(L_TinyCase4);
-        i_jmp_if_bit_zero(i, 1, L_TinyCase2);
+        j(L_TinyCase2, bt_z(i, 1));
         v_store_i64(x86::ptr(dst), src);
-        i_add(dst, dst, 8);
+        add(dst, dst, 8);
 
         bind(L_TinyCase2);
-        cc->and_(i, 0x1);
-        cc->shl(i, 2);
-        i_add(dst, dst, iNative);
+        and_(i, i, 0x1);
+        shl(i, i, 2);
+        add(dst, dst, i_ptr);
         v_store_i32(x86::ptr(dst, -4), src);
 
         bind(L_End);
       }
     }
     else {
-      Label L_Finalize = cc->newLabel();
-      Label L_End = cc->newLabel();
+      Label L_Finalize = newLabel();
+      Label L_End = newLabel();
 
       // Preparation / Alignment
       // -----------------------
 
       {
-        cc->cmp(i, oneStepInItems * (vecSize / 4u));
-        cc->jb(L_Finalize);
+        j(L_Finalize, ucmp_lt(i, oneStepInItems * (vecSize / 4u)));
 
-        x86::Gp iptr = i.cloneAs(dst);
+        Gp i_ptr = i.cloneAs(dst);
         if (sizeShift)
-          cc->shl(iptr, sizeShift);
-        cc->add(iptr, dst);
+          cc->shl(i_ptr, sizeShift);
+        add(i_ptr, i_ptr, dst);
 
         v_storeu_ivec(x86::ptr(dst), src);
 
-        cc->add(dst, src.size());
-        cc->and_(dst, -1 ^ int(alignPattern));
+        add(dst, dst, src.size());
+        and_(dst, dst, -1 ^ int(alignPattern));
 
-        cc->sub(iptr, dst);
-        if (sizeShift)
-          cc->shr(iptr, sizeShift);
-        cc->jz(L_End);
+        if (sizeShift == 0) {
+          j(L_End, sub_z(i_ptr, dst));
+        }
+        else {
+          sub(i_ptr, i_ptr, dst);
+          j(L_End, shr_z(i_ptr, sizeShift));
+        }
       }
 
       // MainLoop
       // --------
 
       {
-        Label L_MainIter = cc->newLabel();
-        Label L_MainSkip = cc->newLabel();
+        Label L_MainIter = newLabel();
+        Label L_MainSkip = newLabel();
 
-        cc->sub(i, mainStepInItems);
-        cc->jc(L_MainSkip);
+        j(L_MainSkip, sub_c(i, mainStepInItems));
 
-        cc->bind(L_MainIter);
-        cc->add(dst, mainLoopSize);
-        cc->sub(i, mainStepInItems);
+        bind(L_MainIter);
+        add(dst, dst, mainLoopSize);
         x_storea_fill(x86::ptr(dst, -int(mainLoopSize)), src.xmm(), mainLoopSize);
-        cc->jnc(L_MainIter);
+        j(L_MainIter, sub_nc(i, mainStepInItems));
 
-        cc->bind(L_MainSkip);
-        cc->add(i, mainStepInItems);
-        cc->jz(L_End);
+        bind(L_MainSkip);
+        j(L_End, add_z(i, mainStepInItems));
       }
 
       // TailLoop / TailSequence
       // -----------------------
 
       if (mainLoopSize > vecSize * 2u) {
-        Label L_TailIter = cc->newLabel();
-        Label L_TailSkip = cc->newLabel();
+        Label L_TailIter = newLabel();
+        Label L_TailSkip = newLabel();
 
-        cc->sub(i, tailStepInItems);
-        cc->jc(L_TailSkip);
+        j(L_TailSkip, sub_c(i, tailStepInItems));
 
-        cc->bind(L_TailIter);
-        cc->add(dst, vecSize);
-        cc->sub(i, tailStepInItems);
+        bind(L_TailIter);
+        add(dst, dst, vecSize);
         v_storea_ivec(x86::ptr(dst, -int(vecSize)), src);
-        cc->jnc(L_TailIter);
+        j(L_TailIter, sub_nc(i, tailStepInItems));
 
-        cc->bind(L_TailSkip);
-        cc->add(i, tailStepInItems);
-        cc->jz(L_End);
+        bind(L_TailSkip);
+        j(L_End, add_z(i, tailStepInItems));
       }
       else if (mainLoopSize >= vecSize * 2u) {
-        cc->cmp(i, tailStepInItems);
-        cc->jb(L_Finalize);
+        j(L_Finalize, ucmp_lt(i, tailStepInItems));
 
         v_storea_ivec(x86::ptr(dst), src);
-        cc->add(dst, vecSize);
-        cc->sub(i, tailStepInItems);
-        cc->jz(L_End);
+        add(dst, dst, vecSize);
+        j(L_End, sub_z(i, tailStepInItems));
       }
 
       // Finalize
       // --------
 
       {
-        Label L_Store1 = cc->newLabel();
+        Label L_Store1 = newLabel();
 
-        cc->bind(L_Finalize);
-        cc->cmp(i, 8u / itemSize);
-        cc->jb(L_Store1);
+        bind(L_Finalize);
+        j(L_Store1, ucmp_lt(i, 8u / itemSize));
 
         v_store_i64(x86::ptr(dst), src);
-        cc->add(dst, 8);
-        cc->sub(i, 8u / itemSize);
-        cc->jz(L_End);
+        add(dst, dst, 8);
+        j(L_End, sub_z(i, 8u / itemSize));
 
-        cc->bind(L_Store1);
+        bind(L_Store1);
         v_store_i32(x86::ptr(dst), src);
-        cc->add(dst, 4);
+        add(dst, dst, 4);
       }
 
-      cc->bind(L_End);
+      bind(L_End);
     }
 
     return;
@@ -3666,103 +4655,89 @@ void PipeCompiler::x_inline_pixel_fill_loop(x86::Gp& dst, x86::Vec& src, x86::Gp
   if (granularityInBytes == 1) {
     BL_ASSERT(itemSize == 1u);
 
-    Label L_Finalize = cc->newLabel();
-    Label L_End      = cc->newLabel();
+    Label L_Finalize = newLabel();
+    Label L_End      = newLabel();
 
     // Preparation / Alignment
     // -----------------------
 
     {
-      Label L_Small = cc->newLabel();
-      Label L_Large = cc->newLabel();
+      Label L_Small = newLabel();
+      Label L_Large = newLabel();
+      Gp srcGp = newGp32("srcGp");
 
-      cc->cmp(i, 15);
-      cc->ja(L_Large);
-
-      x86::Gp srcGp = cc->newInt32("srcGp");
+      j(L_Large, ucmp_gt(i, 15));
       s_mov_i32(srcGp, src);
 
-      cc->bind(L_Small);
-      cc->mov(ptr_8(dst), srcGp.r8());
-      cc->inc(dst);
-      cc->dec(i);
-      cc->jnz(L_Small);
+      bind(L_Small);
+      store_8(ptr(dst), srcGp);
+      inc(dst);
+      j(L_Small, sub_nz(i, 1));
+      j(L_End);
 
-      cc->jmp(L_End);
-
-      cc->bind(L_Large);
-      x86::Gp iptr = i.cloneAs(dst);
-      cc->add(iptr, dst);
+      bind(L_Large);
+      Gp i_ptr = i.cloneAs(dst);
+      add(i_ptr, i_ptr, dst);
 
       v_storeu_i128(x86::ptr(dst), src);
-      cc->add(dst, 16);
-      cc->and_(dst, -16);
+      add(dst, dst, 16);
+      and_(dst, dst, -16);
 
-      cc->sub(iptr, dst);
-      cc->jz(L_End);
+      j(L_End, sub_z(i_ptr, dst));
     }
 
     // MainLoop
     // --------
 
     {
-      Label L_MainIter = cc->newLabel();
-      Label L_MainSkip = cc->newLabel();
+      Label L_MainIter = newLabel();
+      Label L_MainSkip = newLabel();
 
-      cc->sub(i, mainLoopSize);
-      cc->jc(L_MainSkip);
+      j(L_MainSkip, sub_c(i, mainLoopSize));
 
-      cc->bind(L_MainIter);
-      cc->add(dst, mainLoopSize);
-      cc->sub(i, mainLoopSize);
-      for (j = 0; j < mainLoopSize; j += 16u)
-        v_storea_i128(x86::ptr(dst, int(j) - int(mainLoopSize)), src);
-      cc->jnc(L_MainIter);
+      bind(L_MainIter);
+      add(dst, dst, mainLoopSize);
+      for (k = 0; k < mainLoopSize; k += 16u)
+        v_storea_i128(x86::ptr(dst, int(k) - int(mainLoopSize)), src);
+      j(L_MainIter, sub_nc(i, mainLoopSize));
 
-      cc->bind(L_MainSkip);
-      cc->add(i, mainLoopSize);
-      cc->jz(L_End);
+      bind(L_MainSkip);
+      j(L_End, add_z(i, mainLoopSize));
     }
 
     // TailLoop / TailSequence
     // -----------------------
 
     if (mainLoopSize > 32) {
-      Label L_TailIter = cc->newLabel();
-      Label L_TailSkip = cc->newLabel();
+      Label L_TailIter = newLabel();
+      Label L_TailSkip = newLabel();
 
-      cc->sub(i, 16);
-      cc->jc(L_TailSkip);
+      j(L_TailSkip, sub_c(i, 16));
 
-      cc->bind(L_TailIter);
-      cc->add(dst, 16);
-      cc->sub(i, 16);
+      bind(L_TailIter);
+      add(dst, dst, 16);
       v_storea_i128(x86::ptr(dst, -16), src);
-      cc->jnc(L_TailIter);
+      j(L_TailIter, sub_nc(i, 16));
 
-      cc->bind(L_TailSkip);
-      cc->add(i, 16);
-      cc->jz(L_End);
+      bind(L_TailSkip);
+      j(L_End, add_z(i, 16));
     }
     else if (mainLoopSize >= 32) {
-      cc->cmp(i, 16);
-      cc->jb(L_Finalize);
-
-      v_storea_i128(x86::ptr(dst, int(j)), src);
-      cc->add(dst, 16);
-      cc->sub(i, 16);
-      cc->jz(L_End);
+      j(L_Finalize, scmp_lt(i, 16));
+      v_storea_i128(x86::ptr(dst, int(k)), src);
+      add(dst, dst, 16);
+      j(L_End, sub_z(i, 16));
     }
 
     // Finalize
     // --------
 
     {
-      cc->add(dst, i.cloneAs(dst));
+      add(dst, dst, i.cloneAs(dst));
       v_storeu_i128(x86::ptr(dst, -16), src);
     }
 
-    cc->bind(L_End);
+    bind(L_End);
     return;
   }
 
@@ -3772,7 +4747,7 @@ void PipeCompiler::x_inline_pixel_fill_loop(x86::Gp& dst, x86::Vec& src, x86::Gp
 // bl::Pipeline::PipeCompiler - PixelCopy
 // ======================================
 
-void PipeCompiler::x_inline_pixel_copy_loop(x86::Gp& dst, x86::Gp& src, x86::Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity, FormatExt format) noexcept {
+void PipeCompiler::x_inline_pixel_copy_loop(Gp& dst, Gp& src, Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity, FormatExt format) noexcept {
   BL_ASSERT(IntOps::isPowerOf2(itemSize));
   BL_ASSERT(itemSize <= 16u);
 
@@ -3785,8 +4760,8 @@ void PipeCompiler::x_inline_pixel_copy_loop(x86::Gp& dst, x86::Gp& src, x86::Gp&
   BL_ASSERT(mainLoopSize >= 16u);
   BL_ASSERT(mainLoopSize >= granularityInBytes);
 
-  x86::Vec t0 = cc->newXmm("t0");
-  x86::Vec fillMask;
+  Vec t0 = cc->newXmm("t0");
+  Vec fillMask;
 
   if (format == FormatExt::kXRGB32)
     fillMask = simdVecConst(&commonTable.i_FF000000FF000000, t0);
@@ -3795,50 +4770,47 @@ void PipeCompiler::x_inline_pixel_copy_loop(x86::Gp& dst, x86::Gp& src, x86::Gp&
   // -----------------------
 
   if (granularityInBytes >= 16u) {
-    Label L_End = cc->newLabel();
+    Label L_End = newLabel();
 
     // MainLoop
     // --------
 
     {
-      Label L_MainIter = cc->newLabel();
-      Label L_MainSkip = cc->newLabel();
+      Label L_MainIter = newLabel();
+      Label L_MainSkip = newLabel();
       int ptrOffset = -int(mainLoopSize);
 
-      cc->sub(i, mainStepInItems);
-      cc->jc(L_MainSkip);
+      j(L_MainSkip, sub_c(i, mainStepInItems));
 
-      cc->bind(L_MainIter);
-      cc->add(dst, mainLoopSize);
-      cc->add(src, mainLoopSize);
-      cc->sub(i, mainStepInItems);
+      bind(L_MainIter);
+      add(dst, dst, mainLoopSize);
+      add(src, src, mainLoopSize);
       _x_inline_memcpy_sequence_xmm(x86::ptr(dst, ptrOffset), false, x86::ptr(src, ptrOffset), false, mainLoopSize, fillMask);
-      cc->jnc(L_MainIter);
+      j(L_MainIter, sub_nc(i, mainStepInItems));
 
-      cc->bind(L_MainSkip);
-      cc->add(i, mainStepInItems);
-      cc->jz(L_End);
+      bind(L_MainSkip);
+      j(L_End, add_z(i, mainStepInItems));
     }
 
     // TailLoop / TailSequence
     // -----------------------
 
     if (mainLoopSize * 2 > granularityInBytes) {
-      Label L_TailIter = cc->newLabel();
-      cc->bind(L_TailIter);
+      Label L_TailIter = newLabel();
+
+      bind(L_TailIter);
       _x_inline_memcpy_sequence_xmm(x86::ptr(dst), false, x86::ptr(src), false, granularityInBytes, fillMask);
-      cc->add(dst, granularityInBytes);
-      cc->add(src, granularityInBytes);
-      cc->sub(i, itemGranularity);
-      cc->jnz(L_TailIter);
+      add(dst, dst, granularityInBytes);
+      add(src, src, granularityInBytes);
+      j(L_TailIter, sub_nz(i, itemGranularity));
     }
     else if (mainLoopSize * 2 == granularityInBytes) {
       _x_inline_memcpy_sequence_xmm(x86::ptr(dst), false, x86::ptr(src), false, granularityInBytes, fillMask);
-      cc->add(dst, granularityInBytes);
-      cc->add(src, granularityInBytes);
+      add(dst, dst, granularityInBytes);
+      add(src, src, granularityInBytes);
     }
 
-    cc->bind(L_End);
+    bind(L_End);
     return;
   }
 
@@ -3853,114 +4825,107 @@ void PipeCompiler::x_inline_pixel_copy_loop(x86::Gp& dst, x86::Gp& src, x86::Gp&
     uint32_t oneStepInItems = 4u >> sizeShift;
     uint32_t tailStepInItems = 16u >> sizeShift;
 
-    Label L_Finalize = cc->newLabel();
-    Label L_End      = cc->newLabel();
+    Label L_Finalize = newLabel();
+    Label L_End      = newLabel();
 
     // Preparation / Alignment
     // -----------------------
 
     {
-      cc->cmp(i, oneStepInItems * 4u);
-      cc->jb(L_Finalize);
+      j(L_Finalize, ucmp_lt(i, oneStepInItems * 4u));
 
-      x86::Gp iptr = i.cloneAs(dst);
+      Gp i_ptr = i.cloneAs(dst);
       v_loadu_i128(t0, x86::ptr(src));
       if (sizeShift)
-        cc->shl(iptr, sizeShift);
+        shl(i_ptr, i_ptr, sizeShift);
 
-      cc->add(iptr, dst);
-      cc->sub(src, dst);
+      add(i_ptr, i_ptr, dst);
+      sub(src, src, dst);
       v_storeu_i128(x86::ptr(dst), t0);
-      cc->add(dst, 16);
-      cc->and_(dst, -1 ^ int(alignPattern));
+      add(dst, dst, 16);
+      and_(dst, dst, -1 ^ int(alignPattern));
+      add(src, src, dst);
 
-      cc->add(src, dst);
-      cc->sub(iptr, dst);
-      if (sizeShift)
-        cc->shr(iptr, sizeShift);
-      cc->jz(L_End);
+      if (sizeShift == 0) {
+        j(L_End, sub_z(i_ptr, dst));
+      }
+      else {
+        sub(i_ptr, i_ptr, dst);
+        j(L_End, shr_z(i_ptr, sizeShift));
+      }
     }
 
     // MainLoop
     // --------
 
     {
-      Label L_MainIter = cc->newLabel();
-      Label L_MainSkip = cc->newLabel();
+      Label L_MainIter = newLabel();
+      Label L_MainSkip = newLabel();
 
-      cc->sub(i, mainStepInItems);
-      cc->jc(L_MainSkip);
+      j(L_MainSkip, sub_c(i, mainStepInItems));
 
-      cc->bind(L_MainIter);
-      cc->add(dst, mainLoopSize);
-      cc->add(src, mainLoopSize);
-      cc->sub(i, mainStepInItems);
+      bind(L_MainIter);
+      add(dst, dst, mainLoopSize);
+      add(src, src, mainLoopSize);
+
       int ptrOffset = - int(mainLoopSize);
       _x_inline_memcpy_sequence_xmm(x86::ptr(dst, ptrOffset), true, x86::ptr(src, ptrOffset), false, mainLoopSize, fillMask);
-      cc->jnc(L_MainIter);
+      j(L_MainIter, sub_nc(i, mainStepInItems));
 
-      cc->bind(L_MainSkip);
-      cc->add(i, mainStepInItems);
-      cc->jz(L_End);
+      bind(L_MainSkip);
+      j(L_End, add_z(i, mainStepInItems));
     }
 
     // TailLoop / TailSequence
     // -----------------------
 
     if (mainLoopSize > 32) {
-      Label L_TailIter = cc->newLabel();
-      Label L_TailSkip = cc->newLabel();
+      Label L_TailIter = newLabel();
+      Label L_TailSkip = newLabel();
 
-      cc->sub(i, tailStepInItems);
-      cc->jc(L_TailSkip);
+      j(L_TailSkip, sub_c(i, tailStepInItems));
 
-      cc->bind(L_TailIter);
-      cc->add(dst, 16);
-      cc->add(src, 16);
-      cc->sub(i, tailStepInItems);
+      bind(L_TailIter);
+      add(dst, dst, 16);
+      add(src, src, 16);
       _x_inline_memcpy_sequence_xmm(x86::ptr(dst, -16), true, x86::ptr(src, -16), false, 16, fillMask);
-      cc->jnc(L_TailIter);
+      j(L_TailIter, sub_nc(i, tailStepInItems));
 
-      cc->bind(L_TailSkip);
-      cc->add(i, tailStepInItems);
-      cc->jz(L_End);
+      bind(L_TailSkip);
+      j(L_End, add_z(i, tailStepInItems));
     }
     else if (mainLoopSize >= 32) {
-      cc->cmp(i, tailStepInItems);
-      cc->jb(L_Finalize);
+      j(L_Finalize, ucmp_lt(i, tailStepInItems));
 
       _x_inline_memcpy_sequence_xmm(x86::ptr(dst), true, x86::ptr(src), false, 16, fillMask);
-      cc->add(dst, 16);
-      cc->add(src, 16);
-      cc->sub(i, tailStepInItems);
-      cc->jz(L_End);
+      add(dst, dst, 16);
+      add(src, src, 16);
+      j(L_End, sub_z(i, tailStepInItems));
     }
 
     // Finalize
     // --------
 
     {
-      Label L_Store1 = cc->newLabel();
+      Label L_Store1 = newLabel();
 
-      cc->bind(L_Finalize);
-      cc->cmp(i, 8u / itemSize);
-      cc->jb(L_Store1);
+      bind(L_Finalize);
+      j(L_Store1, ucmp_lt(i, 8u / itemSize));
 
       v_load_i64(t0, x86::ptr(src));
-      cc->add(src, 8);
+      add(src, src, 8);
       v_store_i64(x86::ptr(dst), t0);
-      cc->add(dst, 8);
-      cc->sub(i, 8u / itemSize);
-      cc->jz(L_End);
+      add(dst, dst, 8);
+      j(L_End, sub_z(i, 8u / itemSize));
 
-      cc->bind(L_Store1);
+      bind(L_Store1);
       v_load_i32(t0, x86::ptr(src));
-      cc->add(src, 4);
+      add(src, src, 4);
       v_store_i32(x86::ptr(dst), t0);
-      cc->add(dst, 4);
+      add(dst, dst, 4);
     }
 
-    cc->bind(L_End);
+    bind(L_End);
     return;
   }
 
@@ -3970,116 +4935,105 @@ void PipeCompiler::x_inline_pixel_copy_loop(x86::Gp& dst, x86::Gp& src, x86::Gp&
   if (granularityInBytes == 1) {
     BL_ASSERT(itemSize == 1u);
 
-    Label L_Finalize = cc->newLabel();
-    Label L_End      = cc->newLabel();
+    Label L_Finalize = newLabel();
+    Label L_End      = newLabel();
 
     // Preparation / Alignment
     // -----------------------
 
     {
-      Label L_Small = cc->newLabel();
-      Label L_Large = cc->newLabel();
+      Label L_Small = newLabel();
+      Label L_Large = newLabel();
 
-      x86::Gp iptr = i.cloneAs(dst);
-      x86::Gp byte_val = cc->newInt32("byte_val");
+      Gp i_ptr = i.cloneAs(dst);
+      Gp byte_val = newGp32("@byte_val");
 
-      cc->cmp(i, 15);
-      cc->ja(L_Large);
+      j(L_Large, ucmp_gt(i, 15));
 
-      cc->bind(L_Small);
-      cc->movzx(byte_val, ptr_8(src));
-      cc->inc(src);
-      cc->mov(ptr_8(dst), byte_val.r8());
-      cc->inc(dst);
-      cc->dec(i);
-      cc->jnz(L_Small);
-      cc->jmp(L_End);
+      bind(L_Small);
+      load_u8(byte_val, ptr(src));
+      inc(src);
+      store_8(ptr(dst), byte_val);
+      inc(dst);
+      j(L_Small, sub_nz(i, 1));
+      j(L_End);
 
-      cc->bind(L_Large);
+      bind(L_Large);
       v_loadu_i128(t0, x86::ptr(src));
-      cc->add(iptr, dst);
-      cc->sub(src, dst);
+      add(i_ptr, i_ptr, dst);
+      sub(src, src, dst);
 
       v_storeu_i128(x86::ptr(dst), t0);
-      cc->add(dst, 16);
-      cc->and_(dst, -16);
+      add(dst, dst, 16);
+      and_(dst, dst, -16);
 
-      cc->add(src, dst);
-      cc->sub(iptr, dst);
-      cc->jz(L_End);
+      add(src, src, dst);
+      j(L_End, sub_z(i_ptr, dst));
     }
 
     // MainLoop
     // --------
 
     {
-      Label L_MainIter = cc->newLabel();
-      Label L_MainSkip = cc->newLabel();
+      Label L_MainIter = newLabel();
+      Label L_MainSkip = newLabel();
 
-      cc->sub(i, mainLoopSize);
-      cc->jc(L_MainSkip);
+      j(L_MainSkip, sub_c(i, mainLoopSize));
 
-      cc->bind(L_MainIter);
+      bind(L_MainIter);
       _x_inline_memcpy_sequence_xmm(x86::ptr(dst), true, x86::ptr(src), false, mainLoopSize, fillMask);
-      cc->add(dst, mainLoopSize);
-      cc->add(src, mainLoopSize);
-      cc->sub(i, mainLoopSize);
-      cc->jnc(L_MainIter);
+      add(dst, dst, mainLoopSize);
+      add(src, src, mainLoopSize);
+      j(L_MainIter, sub_nc(i, mainLoopSize));
 
-      cc->bind(L_MainSkip);
-      cc->add(i, mainLoopSize);
-      cc->jz(L_End);
+      bind(L_MainSkip);
+      j(L_End, add_z(i, mainLoopSize));
     }
 
     // TailLoop / TailSequence
     // -----------------------
 
     if (mainLoopSize > 32) {
-      Label L_TailIter = cc->newLabel();
-      Label L_TailSkip = cc->newLabel();
+      Label L_TailIter = newLabel();
+      Label L_TailSkip = newLabel();
 
-      cc->sub(i, 16);
-      cc->jc(L_TailSkip);
+      j(L_TailSkip, sub_c(i, 16));
 
-      cc->bind(L_TailIter);
+      bind(L_TailIter);
       _x_inline_memcpy_sequence_xmm(x86::ptr(dst), true, x86::ptr(src), false, 16, fillMask);
-      cc->add(dst, 16);
-      cc->add(src, 16);
-      cc->sub(i, 16);
-      cc->jnc(L_TailIter);
+      add(dst, dst, 16);
+      add(src, src, 16);
+      j(L_TailIter, sub_nc(i, 16));
 
-      cc->bind(L_TailSkip);
-      cc->add(i, 16);
-      cc->jz(L_End);
+      bind(L_TailSkip);
+      j(L_End, add_z(i, 16));
     }
     else if (mainLoopSize >= 32) {
-      cc->cmp(i, 16);
-      cc->jb(L_Finalize);
+      j(L_Finalize, ucmp_lt(i, 16));
 
       _x_inline_memcpy_sequence_xmm(x86::ptr(dst), true, x86::ptr(src), false, 16, fillMask);
-      cc->add(dst, 16);
-      cc->add(src, 16);
-      cc->sub(i, 16);
-      cc->jz(L_End);
+      add(dst, dst, 16);
+      add(src, src, 16);
+      j(L_End, sub_z(i, 16));
     }
 
     // Finalize
     // --------
 
     {
-      cc->add(dst, i.cloneAs(dst));
-      cc->add(src, i.cloneAs(src));
+      add(dst, dst, i.cloneAs(dst));
+      add(src, src, i.cloneAs(src));
       _x_inline_memcpy_sequence_xmm(x86::ptr(dst, -16), false, x86::ptr(src, -16), false, 16, fillMask);
     }
 
-    cc->bind(L_End);
+    bind(L_End);
     return;
   }
 }
 
 void PipeCompiler::_x_inline_memcpy_sequence_xmm(
   const x86::Mem& dPtr, bool dstAligned,
-  const x86::Mem& sPtr, bool srcAligned, uint32_t numBytes, const x86::Vec& fillMask) noexcept {
+  const x86::Mem& sPtr, bool srcAligned, uint32_t numBytes, const Vec& fillMask) noexcept {
 
   x86::Mem dAdj(dPtr);
   x86::Mem sAdj(sPtr);

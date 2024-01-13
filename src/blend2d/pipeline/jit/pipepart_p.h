@@ -60,8 +60,8 @@ public:
 
   //! Pointer to `PipeCompiler`.
   PipeCompiler* pc = nullptr;
-  //! Pointer to `asmjit::x86::Compiler`.
-  x86::Compiler* cc = nullptr;
+  //! Pointer to `asmjit::<arch>::Compiler`.
+  AsmCompiler* cc = nullptr;
 
   //! Reference to a common constant pool.
   const CommonTable& ct;

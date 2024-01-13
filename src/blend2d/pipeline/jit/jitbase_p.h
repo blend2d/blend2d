@@ -10,8 +10,12 @@
 #include "../../support/intops_p.h"
 
 // External dependencies of `bl::Pipeline::JIT`.
-#if BL_TARGET_ARCH_X86
+#if defined(BL_JIT_ARCH_X86)
   #include <asmjit/x86.h>
+#endif
+
+#if defined(BL_JIT_ARCH_A64)
+  #include <asmjit/a64.h>
 #endif
 
 //! \cond INTERNAL
@@ -24,8 +28,6 @@ namespace JIT {
 
 // AsmJit Integration
 // ==================
-
-namespace x86 { using namespace ::asmjit::x86; }
 
 using asmjit::AlignMode;
 using asmjit::CpuFeatures;
@@ -40,6 +42,30 @@ using asmjit::Operand;
 using asmjit::Operand_;
 using asmjit::OperandSignature;
 using asmjit::JumpAnnotation;
+
+#if defined(BL_JIT_ARCH_X86)
+namespace x86 { using namespace ::asmjit::x86; }
+using Reg = x86::Reg;
+using Gp = x86::Gp;
+using Vec = x86::Vec;
+using Xmm = x86::Xmm;
+using Ymm = x86::Ymm;
+using Zmm = x86::Zmm;
+using KReg = x86::KReg;
+using Mem = x86::Mem;
+using CondCode = x86::CondCode;
+using AsmCompiler = x86::Compiler;
+#endif
+
+#if defined(BL_JIT_ARCH_A64)
+namespace a64 { using namespace ::asmjit::a64; }
+using Reg = a64::Reg;
+using Gp = a64::Gp;
+using Vec = a64::Vec;
+using Mem = a64::Mem;
+using CondCode = a64::CondCode;
+using AsmCompiler = a64::Compiler;
+#endif
 
 // Strong Enums
 // ------------
@@ -57,7 +83,13 @@ enum class SimdWidth : uint8_t {
   //! 256-bit SIMD (AVX2+).
   k256 = 1,
   //! 512-bit SIMD (AVX512_DQ & AVX512_BW & AVX512_VL).
-  k512 = 2
+  k512 = 2,
+
+#if defined(BL_JIT_ARCH_X86)
+  kMaxPlatformWidth = k512
+#else
+  kMaxPlatformWidth = k128
+#endif
 };
 
 //! SIMD data width.
@@ -81,16 +113,23 @@ enum class Bcst : uint8_t {
 namespace SimdWidthUtils {
 
 static BL_INLINE OperandSignature signatureOf(SimdWidth simdWidth) noexcept {
+#if defined(BL_JIT_ARCH_X86)
   static const OperandSignature table[] = {
     OperandSignature{asmjit::x86::Xmm::kSignature},
     OperandSignature{asmjit::x86::Ymm::kSignature},
     OperandSignature{asmjit::x86::Zmm::kSignature}
   };
-
   return table[size_t(simdWidth)];
+#endif
+
+#if defined(BL_JIT_ARCH_A64)
+  blUnused(simdWidth);
+  return OperandSignature{asmjit::a64::VecV::kSignature};
+#endif
 }
 
 static BL_INLINE asmjit::TypeId typeIdOf(SimdWidth simdWidth) noexcept {
+#if defined(BL_JIT_ARCH_X86)
   static const asmjit::TypeId table[] = {
     asmjit::TypeId::kInt32x4,
     asmjit::TypeId::kInt32x8,
@@ -98,13 +137,19 @@ static BL_INLINE asmjit::TypeId typeIdOf(SimdWidth simdWidth) noexcept {
   };
 
   return table[size_t(simdWidth)];
+#endif
+
+#if defined(BL_JIT_ARCH_A64)
+  blUnused(simdWidth);
+  return asmjit::TypeId::kInt32x4;
+#endif
 }
 
-static BL_INLINE SimdWidth simdWidthOf(const x86::Vec& reg) noexcept {
-  return SimdWidth(uint32_t(reg.type()) - uint32_t(RegType::kX86_Xmm));
+static BL_INLINE_NODEBUG SimdWidth simdWidthOf(const Vec& reg) noexcept {
+  return SimdWidth(uint32_t(reg.type()) - uint32_t(RegType::kVec128));
 }
 
-static BL_INLINE SimdWidth simdWidthOf(SimdWidth simdWidth, DataWidth dataWidth, uint32_t n) noexcept {
+static BL_INLINE_NODEBUG SimdWidth simdWidthOf(SimdWidth simdWidth, DataWidth dataWidth, uint32_t n) noexcept {
   return SimdWidth(blMin<uint32_t>((n << uint32_t(dataWidth)) >> 5, uint32_t(simdWidth)));
 }
 
@@ -118,8 +163,8 @@ static BL_INLINE uint32_t regCountOf(SimdWidth simdWidth, DataWidth dataWidth, P
   return regCountOf(simdWidth, dataWidth, n.value());
 }
 
-static BL_INLINE x86::Vec cloneVecAs(const x86::Vec& src, SimdWidth simdWidth) noexcept {
-  x86::Vec result(src);
+static BL_INLINE Vec cloneVecAs(const Vec& src, SimdWidth simdWidth) noexcept {
+  Vec result(src);
   result.setSignature(signatureOf(simdWidth));
   return result;
 }
@@ -314,9 +359,12 @@ public:
 
   BL_INLINE_NODEBUG OpArrayT<T> cloneAs(SimdWidth simdWidth) const noexcept { return cloneAs(SimdWidthUtils::signatureOf(simdWidth)); }
   BL_INLINE_NODEBUG OpArrayT<T> cloneAs(const asmjit::BaseReg& reg) const noexcept { return cloneAs(reg.signature()); }
+
+#if defined(BL_JIT_ARCH_X86)
   BL_INLINE_NODEBUG OpArrayT<T> xmm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Xmm::kSignature}); }
   BL_INLINE_NODEBUG OpArrayT<T> ymm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Ymm::kSignature}); }
   BL_INLINE_NODEBUG OpArrayT<T> zmm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Zmm::kSignature}); }
+#endif
 
   // Iterator compatibility.
   BL_INLINE_NODEBUG T* begin() noexcept { return reinterpret_cast<T*>(v); }
@@ -329,7 +377,7 @@ public:
   BL_INLINE_NODEBUG const T* cend() const noexcept { return reinterpret_cast<const T*>(v) + _size; }
 };
 
-typedef OpArrayT<x86::Vec> VecArray;
+typedef OpArrayT<Vec> VecArray;
 
 //! JIT Utilities used by PipeCompiler and other parts of the library.
 namespace JitUtils {
@@ -351,9 +399,11 @@ static BL_INLINE_NODEBUG const Operand_& firstOp(const OpArray& opArray) noexcep
 static BL_INLINE_NODEBUG uint32_t countOp(const Operand_&) noexcept { return 1u; }
 static BL_INLINE_NODEBUG uint32_t countOp(const OpArray& opArray) noexcept { return opArray.size(); }
 
+#if defined(BL_JIT_ARCH_X86)
 template<typename T> static BL_INLINE bool isXmm(const T& op) noexcept { return x86::Reg::isXmm(firstOp(op)); }
 template<typename T> static BL_INLINE bool isYmm(const T& op) noexcept { return x86::Reg::isYmm(firstOp(op)); }
 template<typename T> static BL_INLINE bool isZmm(const T& op) noexcept { return x86::Reg::isZmm(firstOp(op)); }
+#endif
 
 } // {JitUtils}
 

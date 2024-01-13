@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../../api-build_p.h"
-#if BL_TARGET_ARCH_X86 && !defined(BL_BUILD_NO_JIT)
+#if !defined(BL_BUILD_NO_JIT)
 
 #include "../../pipeline/jit/pipecompiler_p.h"
 #include "../../pipeline/jit/pipepart_p.h"

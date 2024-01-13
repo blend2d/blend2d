@@ -111,6 +111,14 @@
   #define BL_TARGET_HAS_ATOMIC_64B 0
 #endif
 
+#if !defined(BL_BUILD_NO_JIT)
+  #if BL_TARGET_ARCH_X86 != 0
+    #define BL_JIT_ARCH_X86
+  #elif BL_TARGET_ARCH_ARM == 64
+    // #define BL_JIT_ARCH_A64 // Not ready!
+  #endif
+#endif // !BL_BUILD_NO_JIT
+
 // Build optimizations control compile-time optimizations to be used by Blend2D and C++ compiler. These optimizations
 // are not related to the code-generator optimizations (JIT) that are always auto-detected at runtime.
 #if defined(BL_BUILD_OPT_AVX512) && !defined(BL_BUILD_OPT_AVX2)

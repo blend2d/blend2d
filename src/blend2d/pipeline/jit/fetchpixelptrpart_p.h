@@ -20,16 +20,16 @@ namespace JIT {
 class FetchPixelPtrPart : public FetchPart {
 public:
   //! Pixel pointer.
-  x86::Gp _ptr;
+  Gp _ptr;
   //! Pixel pointer alignment (updated by FillPart|CompOpPart).
   Alignment _alignment {};
 
   FetchPixelPtrPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
 
   //! Initializes the pixel pointer to `p`.
-  BL_INLINE void initPtr(const x86::Gp& p) noexcept { _ptr = p; }
+  BL_INLINE void initPtr(const Gp& p) noexcept { _ptr = p; }
   //! Returns the pixel-pointer.
-  BL_INLINE x86::Gp& ptr() noexcept { return _ptr; }
+  BL_INLINE Gp& ptr() noexcept { return _ptr; }
 
   //! Returns the pixel-pointer alignment.
   BL_INLINE Alignment alignment() const noexcept { return _alignment; }
