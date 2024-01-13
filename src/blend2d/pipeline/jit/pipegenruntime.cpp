@@ -129,7 +129,7 @@ PipeDynamicRuntime::PipeDynamicRuntime(PipeRuntimeFlags runtimeFlags) noexcept
     _pipelineCount(0),
     _cpuFeatures(),
     _maxPixels(0),
-    _loggerEnabled(true),
+    _loggerEnabled(false),
     _emitStackFrames(false) {
 
   // Setup the `PipeRuntime` base.
