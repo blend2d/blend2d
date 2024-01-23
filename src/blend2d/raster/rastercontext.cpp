@@ -3957,13 +3957,17 @@ static BLResult BL_CDECL blitImageDImpl(BLContextImpl* baseImpl, const BLPoint* 
       if (!(unsigned(dx0 < dx1) & unsigned(dy0 < dy1)))
         return BL_SUCCESS;
 
-      int64_t startFx = Math::floorToInt64(startX);
-      int64_t startFy = Math::floorToInt64(startY);
-
       int ix0 = Math::truncToInt(dx0);
       int iy0 = Math::truncToInt(dy0);
       int ix1 = Math::truncToInt(dx1);
       int iy1 = Math::truncToInt(dy1);
+
+      // Clipped out - this is required as the difference between x0 & x1 and y0 & y1 could be smaller than our fixed point.
+      if (!(unsigned(ix0 < ix1) & unsigned(iy0 < iy1)))
+        return BL_SUCCESS;
+
+      int64_t startFx = Math::floorToInt64(startX);
+      int64_t startFy = Math::floorToInt64(startY);
 
       if (!((startFx | startFy) & ctxI->renderTargetInfo.fpMaskI)) {
         // Pixel aligned blit. At this point we still don't know whether the area where the pixels will be composited

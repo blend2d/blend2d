@@ -383,11 +383,215 @@ static void test_context_state(BLContext& ctx) {
   }
 }
 
+// NOTE: The purpose of these tests is to see whether the render call is clipped
+// properly and that there is no out of bounds access or a failed assertion.
+static void test_context_blit_fill_clip(BLContext& ctx) {
+  const double kNaN = Math::nan<double>();
+  const double kInf = Math::inf<double>();
+
+  int cw = int(ctx.targetWidth());
+  int ch = int(ctx.targetHeight());
+  int sw = 23;
+  int sh = 23;
+  BLImage sprite(sw, sh, BL_FORMAT_PRGB32);
+
+  {
+    BLContext sctx(sprite);
+    sctx.fillAll(BLRgba32(0xFFFFFFFF));
+  }
+
+  BLMatrix2D matrixData[] = {
+    BLMatrix2D::makeIdentity(),
+    BLMatrix2D::makeTranslation(11.3, 11.9),
+    BLMatrix2D::makeScaling(100.0, 100.0),
+    BLMatrix2D::makeScaling(-100.0, -100.0),
+    BLMatrix2D::makeScaling(1, 0.000001),
+    BLMatrix2D::makeScaling(0.000001, 1),
+    BLMatrix2D::makeScaling(0.000001, 0.000001),
+    BLMatrix2D::makeScaling(1e-20, 1e-20),
+    BLMatrix2D::makeScaling(1e-100, 1e-100),
+  };
+
+  BLPointI pointIData[] = {
+    BLPointI(        0,         0),
+    BLPointI(        0,        -1),
+    BLPointI(       -1,         0),
+    BLPointI(       -1,        -1),
+    BLPointI(        0,    ch - 1),
+    BLPointI(   cw - 1,         0),
+    BLPointI(   cw - 1,    ch - 1),
+    BLPointI(        0,   -sh + 1),
+    BLPointI(  -sw + 1,         0),
+    BLPointI(  -sw + 1,   -sh + 1),
+    BLPointI(INT32_MIN,         0),
+    BLPointI(INT32_MIN,        -1),
+    BLPointI(        0, INT32_MIN),
+    BLPointI(       -1, INT32_MIN),
+    BLPointI(INT32_MIN, INT32_MIN),
+    BLPointI(INT32_MAX,         0),
+    BLPointI(INT32_MAX,        -1),
+    BLPointI(        0, INT32_MAX),
+    BLPointI(       -1, INT32_MAX),
+    BLPointI(INT32_MAX, INT32_MAX)
+  };
+
+  BLPoint pointDData[] = {
+    BLPoint(       0.0,       0.0),
+    BLPoint(       0.0,       0.3),
+    BLPoint(       0.3,       0.0),
+    BLPoint(       0.3,       0.3),
+    BLPoint(       0.0,       100),
+    BLPoint(       100,       0.0),
+    BLPoint(       100,       100),
+    BLPoint(       0.0,  -sh+1e-1),
+    BLPoint(       0.0,  -sh+1e-2),
+    BLPoint(       0.0,  -sh+1e-3),
+    BLPoint(       0.0,  -sh+1e-4),
+    BLPoint(       0.0,  -sh+1e-5),
+    BLPoint(       0.0,  -sh+1e-6),
+    BLPoint(       0.0,  -sh+1e-7),
+    BLPoint(         0,     -sh+1),
+    BLPoint(  -sw+1e-1,       0.0),
+    BLPoint(  -sw+1e-2,       0.0),
+    BLPoint(  -sw+1e-3,       0.0),
+    BLPoint(  -sw+1e-4,       0.0),
+    BLPoint(  -sw+1e-5,       0.0),
+    BLPoint(  -sw+1e-6,       0.0),
+    BLPoint(  -sw+1e-7,       0.0),
+    BLPoint(     -sw+1,         0),
+    BLPoint(         0,    ch-0.1),
+    BLPoint(         0,   ch-0.01),
+    BLPoint(         0,  ch-0.001),
+    BLPoint(         0, ch-0.0001),
+    BLPoint(         0,ch-0.00001),
+    BLPoint(    cw-0.1,         0),
+    BLPoint(   cw-0.01,         0),
+    BLPoint(  cw-0.001,         0),
+    BLPoint( cw-0.0001,         0),
+    BLPoint(cw-0.00001,         0),
+    BLPoint(cw-0.00001,ch-0.00001),
+    BLPoint(   -1000.0,       0.0),
+    BLPoint(-1000000.0,       0.0),
+    BLPoint(       0.0,   -1000.0),
+    BLPoint(       0.0,-1000000.0),
+    BLPoint(   -1000.0,   -1000.0),
+    BLPoint(-1000000.0,-1000000.0),
+    BLPoint(     -1e50,     -1e50),
+    BLPoint(    -1e100,    -1e100),
+    BLPoint(    -1e200,    -1e200),
+    BLPoint(      1e50,      1e50),
+    BLPoint(     1e100,     1e100),
+    BLPoint(     1e200,     1e200),
+    BLPoint(      kInf,       0.0),
+    BLPoint(       0.0,      kInf),
+    BLPoint(      kInf,      kInf),
+    BLPoint(     -kInf,       0.0),
+    BLPoint(       0.0,     -kInf),
+    BLPoint(     -kInf,     -kInf),
+    BLPoint(      kNaN,       0.0),
+    BLPoint(       0.0,      kNaN),
+    BLPoint(      kNaN,      kNaN)
+  };
+
+  BLSizeI sizeIData[] = {
+    BLSizeI(       sw,       sh),
+    BLSizeI(   sw / 2,   sh / 2),
+    BLSizeI(        1,        1),
+    BLSizeI(        0,        0),
+    BLSizeI(        0,INT32_MIN),
+    BLSizeI(INT32_MIN,        0),
+    BLSizeI(INT32_MIN,INT32_MIN),
+    BLSizeI(        0,INT32_MAX),
+    BLSizeI(INT32_MAX,        0),
+    BLSizeI(INT32_MAX,INT32_MAX)
+  };
+
+  BLSize sizeDData[] = {
+    BLSize(       sw,       sh),
+    BLSize(   sw / 2,   sh / 2),
+    BLSize(      1.0,      1.0),
+    BLSize(      0.0,      0.0),
+    BLSize(      0.0,       sh),
+    BLSize(       sw,      0.0),
+    BLSize(      0.1,      0.1),
+    BLSize(  0.00001,       sh),
+    BLSize(       sw,  0.00001),
+    BLSize(  0.00001,  0.00001),
+    BLSize(0.0000001,0.0000001),
+    BLSize( -0.00001,       sh),
+    BLSize(       sw, -0.00001),
+    BLSize( -0.00001, -0.00001),
+    BLSize(       sw,     1e40),
+    BLSize(       sw,     1e80),
+    BLSize(       sw,    1e120),
+    BLSize(       sw,    1e160),
+    BLSize(       sw,    1e200),
+    BLSize(     1e40,       sh),
+    BLSize(     1e80,       sh),
+    BLSize(    1e120,       sh),
+    BLSize(    1e160,       sh),
+    BLSize(    1e200,       sh),
+    BLSize(     kInf,       sh),
+    BLSize(     kInf,       sh),
+    BLSize(     kInf,     kInf),
+    BLSize(       sw,    -kInf),
+    BLSize(    -kInf,       sh),
+    BLSize(    -kInf,    -kInf),
+    BLSize(       sw,     kNaN),
+    BLSize(     kNaN,       sh),
+    BLSize(     kNaN,     kNaN)
+  };
+
+  INFO("Testing fill clipping");
+
+  ctx.clearAll();
+
+  for (size_t i = 0; i < BL_ARRAY_SIZE(matrixData); i++) {
+    ctx.setTransform(matrixData[i]);
+    ctx.setFillStyle(BLRgba32(0xFFFFFFFF));
+
+    for (size_t j = 0; j < BL_ARRAY_SIZE(pointIData); j++) {
+      for (size_t k = 0; k < BL_ARRAY_SIZE(sizeIData); k++) {
+        ctx.fillRect(BLRectI(pointIData[j].x, pointIData[j].y, sizeIData[k].w, sizeIData[k].h));
+      }
+    }
+
+    for (size_t j = 0; j < BL_ARRAY_SIZE(pointDData); j++) {
+      for (size_t k = 0; k < BL_ARRAY_SIZE(sizeDData); k++) {
+        ctx.fillRect(BLRect(pointDData[j].x, pointDData[j].y, sizeDData[k].w, sizeDData[k].h));
+      }
+    }
+  }
+
+  INFO("Testing blit clipping");
+
+  ctx.clearAll();
+
+  for (size_t i = 0; i < BL_ARRAY_SIZE(matrixData); i++) {
+    ctx.setTransform(matrixData[i]);
+
+    for (size_t j = 0; j < BL_ARRAY_SIZE(pointIData); j++) {
+      ctx.blitImage(pointIData[j], sprite);
+      for (size_t k = 0; k < BL_ARRAY_SIZE(sizeIData); k++) {
+        ctx.blitImage(BLRectI(pointIData[j].x, pointIData[j].y, sizeIData[k].w, sizeIData[k].h), sprite);
+      }
+    }
+
+    for (size_t j = 0; j < BL_ARRAY_SIZE(pointDData); j++) {
+      ctx.blitImage(pointDData[j], sprite);
+      for (size_t k = 0; k < BL_ARRAY_SIZE(sizeDData); k++) {
+        ctx.blitImage(BLRect(pointDData[j].x, pointDData[j].y, sizeDData[k].w, sizeDData[k].h), sprite);
+      }
+    }
+  }
+}
+
 UNIT(context, BL_TEST_GROUP_RENDERING_CONTEXT) {
   BLImage img(256, 256, BL_FORMAT_PRGB32);
   BLContext ctx(img);
 
   test_context_state(ctx);
+  test_context_blit_fill_clip(ctx);
 }
 
 } // {Tests}

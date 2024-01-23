@@ -441,7 +441,7 @@ BL_API_IMPL BLResult blMatrix2DApplyOp(BLMatrix2D* self, BLTransformOp opType, c
 BL_API_IMPL BLResult blMatrix2DInvert(BLMatrix2D* dst, const BLMatrix2D* src) noexcept {
   double d = src->m00 * src->m11 - src->m01 * src->m10;
 
-  if (d == 0.0)
+  if (d == 0.0 || !bl::Math::isFinite(d))
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   double t00 =  src->m11;
