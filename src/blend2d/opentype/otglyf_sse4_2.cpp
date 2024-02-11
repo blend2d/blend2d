@@ -38,7 +38,7 @@ namespace GlyfImpl {
 //!      instruction. These 4 bits are the only important bits to decode X/Y vertices.
 //!   2. XSameOrPositive and YSameOrPositive flags were negated. After negation when all [3:0] bits are zero, the
 //!      vertex is zero as well. This is required when processing multiple flags at once at the end. Extra flags
-//!      in a loop that processes 8 or 16 flags at a time are zero, thus they don't contribute to X/Y data lenghts.
+//!      in a loop that processes 8 or 16 flags at a time are zero, thus they don't contribute to X/Y data lengths.
 //!   3. OnCurve flag and its complement flag (OffCurve) are stored next to each other. When these flags are shifted
 //!      to [1:0] bits they represent either `BL_PATH_CMD_ON` or `BL_PATH_CMD_QUAD` commands, which is handy in the
 //!      last loop that appends vertices.
@@ -412,7 +412,7 @@ BLResult BL_CDECL getGlyphOutlines_SIMD(
           // The `xPredPtr` and `yPredPtr` buffers contain data grouped for 8 flags. Each byte contains the side of
           // the coordinate (either 0, 1, or 2 bytes are used in TrueType data) aggregated in the following way:
           //
-          // Input cordinate sizes      = [A B C D E F G H]
+          // Input coordinate sizes     = [A B C D E F G H]
           // Aggregated in [x|y]PredPtr = [A A+B A+B+C A+B+C+D A+B+C+D+E A+B+C+D+E+F A+B+C+D+E+F+G A+B+C+D+E+F+G+H]
           //
           // The aggregated sizes are very useful, because they describe where each vertex starts in decode buffer.

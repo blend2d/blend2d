@@ -333,6 +333,8 @@ static BLResult BL_CDECL getGlyphOutlines(
               if (BL_UNLIKELY(n > ttVertexCount - i))
                 goto InvalidData;
 
+              f = ((f << 7) | ttFlag) & 0xFFu;
+
               xyCoordinatesSize += uint32_t(n) * vertexSize;
               offCurveSplineCount += n * size_t((f & Simple::kOnCurvePoint) == 0);
 
