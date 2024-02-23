@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
-#ifdef BL_BUILD_OPT_AVX2
+#if BL_TARGET_ARCH_ARM >= 64 && defined(BL_BUILD_OPT_ASIMD)
 
 #include "../opentype/otglyfsimdimpl_p.h"
 
@@ -12,7 +12,7 @@ namespace bl {
 namespace OpenType {
 namespace GlyfImpl {
 
-BLResult BL_CDECL getGlyphOutlines_AVX2(
+BLResult BL_CDECL getGlyphOutlines_ASIMD(
   const BLFontFaceImpl* faceI_,
   BLGlyphId glyphId,
   const BLMatrix2D* transform,
@@ -27,4 +27,4 @@ BLResult BL_CDECL getGlyphOutlines_AVX2(
 } // {OpenType}
 } // {bl}
 
-#endif // BL_BUILD_OPT_AVX2
+#endif // BL_BUILD_OPT_ASIMD

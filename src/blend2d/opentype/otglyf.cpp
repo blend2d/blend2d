@@ -630,20 +630,33 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
   faceI->funcs.getGlyphOutlines = getGlyphOutlines_AVX2;
 #elif defined(BL_TARGET_OPT_SSE4_2)
   faceI->funcs.getGlyphOutlines = getGlyphOutlines_SSE4_2;
+#elif BL_TARGET_ARCH_ARM >= 64 && defined(BL_TARGET_OPT_ASIMD)
+  faceI->funcs.getGlyphOutlines = getGlyphOutlines_ASIMD;
 #else
 #if defined(BL_BUILD_OPT_AVX2)
-  if (blRuntimeHasAVX2(&blRuntimeContext)) {
+  if (blRuntimeHasAVX2(&blRuntimeContext))
+  {
     faceI->funcs.getGlyphOutlines = getGlyphOutlines_AVX2;
   }
   else
 #endif
 #if defined(BL_BUILD_OPT_SSE4_2)
-  if (blRuntimeHasSSE4_2(&blRuntimeContext)) {
+  if (blRuntimeHasSSE4_2(&blRuntimeContext))
+  {
     faceI->funcs.getGlyphOutlines = getGlyphOutlines_SSE4_2;
   }
   else
 #endif
-  faceI->funcs.getGlyphOutlines = getGlyphOutlines;
+#if BL_TARGET_ARCH_ARM >= 64 && defined(BL_BUILD_OPT_ASIMD)
+  if (blRuntimeHasASIMD(&blRuntimeContext))
+  {
+    faceI->funcs.getGlyphOutlines = getGlyphOutlines_ASIMD;
+  }
+  else
+#endif
+  {
+    faceI->funcs.getGlyphOutlines = getGlyphOutlines;
+  }
 #endif
 
   return BL_SUCCESS;

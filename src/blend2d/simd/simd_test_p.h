@@ -723,8 +723,8 @@ static void fill_val(T* arr, T v, uint32_t count, uint32_t repeat = 1) noexcept 
   }
 }
 
-// SIMD - Tests - Integer Operations - 2 Operands
-// ==============================================
+// SIMD - Tests - Integer Operations - 1 Source Operand
+// ====================================================
 
 template<typename V, typename GenericOp, typename Constraint, typename VecOp>
 static BL_NOINLINE void test_iop1_constraint(VecOp&& vecOp) noexcept {
@@ -755,6 +755,9 @@ template<typename V, typename GenericOp, typename VecOp>
 static void test_iop1(VecOp&& vecOp) noexcept {
   return test_iop1_constraint<V, GenericOp, ConstraintNone, VecOp>(std::forward<VecOp>(vecOp));
 }
+
+// SIMD - Tests - Integer Operations - 2 Source Operands
+// =====================================================
 
 template<typename V, typename GenericOp, typename Constraint, typename VecOp>
 static BL_NOINLINE void test_iop2_constraint(VecOp&& vecOp) noexcept {
@@ -789,6 +792,9 @@ template<typename V, typename GenericOp, typename VecOp>
 static void test_iop2(VecOp&& vecOp) noexcept {
   return test_iop2_constraint<V, GenericOp, ConstraintNone, VecOp>(std::forward<VecOp>(vecOp));
 }
+
+// SIMD - Tests - Integer Operations - 3 Source Operands
+// =====================================================
 
 template<typename V, typename GenericOp, typename Constraint, typename VecOp>
 static BL_NOINLINE void test_iop3_constraint(VecOp&& vecOp) noexcept {

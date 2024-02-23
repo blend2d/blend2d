@@ -143,17 +143,7 @@ namespace GlyfImpl {
 
 BL_HIDDEN extern const LookupTable<uint32_t, ((GlyfTable::Simple::kImportantFlagsMask + 1) >> 1)> vertexSizeTable;
 
-#ifdef BL_BUILD_OPT_AVX2
-BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_AVX2(
-  const BLFontFaceImpl* faceI_,
-  BLGlyphId glyphId,
-  const BLMatrix2D* transform,
-  BLPath* out,
-  size_t* contourCountOut,
-  ScopedBuffer* tmpBuffer) noexcept;
-#endif
-
-#ifdef BL_BUILD_OPT_SSE4_2
+#if defined(BL_BUILD_OPT_SSE4_2)
 BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_SSE4_2(
   const BLFontFaceImpl* faceI_,
   BLGlyphId glyphId,
@@ -161,7 +151,27 @@ BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_SSE4_2(
   BLPath* out,
   size_t* contourCountOut,
   ScopedBuffer* tmpBuffer) noexcept;
-#endif
+#endif // BL_BUILD_OPT_SSE4_2
+
+#if defined(BL_BUILD_OPT_AVX2)
+BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_AVX2(
+  const BLFontFaceImpl* faceI_,
+  BLGlyphId glyphId,
+  const BLMatrix2D* transform,
+  BLPath* out,
+  size_t* contourCountOut,
+  ScopedBuffer* tmpBuffer) noexcept;
+#endif // BL_BUILD_OPT_AVX2
+
+#if BL_TARGET_ARCH_ARM >= 64 && defined(BL_BUILD_OPT_ASIMD)
+BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_ASIMD(
+  const BLFontFaceImpl* faceI_,
+  BLGlyphId glyphId,
+  const BLMatrix2D* transform,
+  BLPath* out,
+  size_t* contourCountOut,
+  ScopedBuffer* tmpBuffer) noexcept;
+#endif // BL_BUILD_OPT_ASIMD
 
 BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 

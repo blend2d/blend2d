@@ -372,10 +372,8 @@ struct GDefTable {
 struct GSubGPosTable {
   enum : uint32_t { kBaseSize = 10 };
 
-  enum : uint16_t {
-    //! No feature required, possibly stored in `LangSysTable::requiredFeatureIndex`.
-    kFeatureNotRequired = 0xFFFFu
-  };
+  //! No feature required, possibly stored in `LangSysTable::requiredFeatureIndex`.
+  static constexpr uint16_t kFeatureNotRequired = 0xFFFFu;
 
   //! \name GPOS & GSUB - Core Tables
   //! \{

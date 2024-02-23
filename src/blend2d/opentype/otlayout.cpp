@@ -3626,20 +3626,24 @@ static BLResult initGSubGPos(OTFaceImpl* faceI, Table<GSubGPosTable> table, Look
 // bl::OpenType::LayoutImpl - Plan
 // ===============================
 
-static Table<GSubGPosTable::ScriptTable> findScriptInScriptList(Table<Array16<TagRef16>> scriptListOffsets, BLTag scriptTag) noexcept {
+static Table<GSubGPosTable::ScriptTable> findScriptInScriptList(Table<Array16<TagRef16>> scriptListOffsets, BLTag scriptTag, BLTag defaultScriptTag) noexcept {
   const TagRef16* scriptListArray = scriptListOffsets->array();
   uint32_t scriptCount = scriptListOffsets->count();
+
+  Table<GSubGPosTable::ScriptTable> tableOut{};
 
   if (scriptListOffsets.size >= 2u + scriptCount * uint32_t(sizeof(TagRef16))) {
     for (uint32_t i = 0; i < scriptCount; i++) {
       BLTag recordTag = scriptListArray[i].tag();
-      if (recordTag == scriptTag) {
-        return scriptListOffsets.subTableUnchecked(scriptListArray[i].offset());
+      if (recordTag == scriptTag || recordTag == defaultScriptTag) {
+        tableOut = scriptListOffsets.subTableUnchecked(scriptListArray[i].offset());
+        if (recordTag == scriptTag)
+          break;
       }
     }
   }
 
-  return Table<GSubGPosTable::ScriptTable>{};
+  return tableOut;
 }
 
 template<bool kSSO>
@@ -3654,38 +3658,43 @@ static BL_INLINE void populateGSubGPosLookupBits(
 
   BL_ASSERT(settings._d.sso() == kSSO);
 
-  for (uint32_t i = 0; i < featureIndexCount; i++) {
-    uint32_t featureIndex = langSysTable->featureIndexes.array()[i].value();
-    if (featureIndex >= featureCount)
+  // We need to process requiredFeatureIndex as well as all the features from the list. To not duplicate the
+  // code inside, we setup the `requiredFeatureIndex` here and just continue using the list after it's processed.
+  uint32_t i = uint32_t(0) - 1u;
+  uint32_t featureIndex = langSysTable->requiredFeatureIndex();
+
+  for (;;) {
+    if (BL_LIKELY(featureIndex < featureCount)) {
+      BLTag featureTag = featureListOffsets->array()[featureIndex].tag();
+      if (FontFeatureSettingsInternal::isFeatureEnabledForPlan<kSSO>(&settings, featureTag)) {
+        uint32_t featureOffset = featureListOffsets->array()[featureIndex].offset();
+        Table<GSubGPosTable::FeatureTable> featureTable(featureListOffsets.subTableUnchecked(featureOffset));
+
+        // Don't use a feature if its offset is out of bounds.
+        if (BL_LIKELY(blFontTableFitsT<GSubGPosTable::FeatureTable>(featureTable))) {
+          // Don't use a lookup if its offset is out of bounds.
+          uint32_t lookupIndexCount = featureTable->lookupListIndexes.count();
+          if (BL_LIKELY(featureTable.size >= GSubGPosTable::FeatureTable::kBaseSize + lookupIndexCount * 2u)) {
+            for (uint32_t j = 0; j < lookupIndexCount; j++) {
+              uint32_t lookupIndex = featureTable->lookupListIndexes.array()[j].value();
+              if (BL_LIKELY(lookupIndex < lookupCount))
+                BitArrayOps::bitArraySetBit(planBits, lookupIndex);
+            }
+          }
+        }
+      }
+    }
+
+    if (++i >= featureIndexCount)
       break;
 
-    BLTag featureTag = featureListOffsets->array()[featureIndex].tag();
-    if (!FontFeatureSettingsInternal::isFeatureEnabledForPlan<kSSO>(&settings, featureTag))
-      continue;
-
-    uint32_t featureOffset = featureListOffsets->array()[featureIndex].offset();
-    Table<GSubGPosTable::FeatureTable> featureTable(featureListOffsets.subTableUnchecked(featureOffset));
-
-    // Don't use a feature if its offset is out of bounds.
-    if (BL_UNLIKELY(!blFontTableFitsT<GSubGPosTable::FeatureTable>(featureTable)))
-      continue;
-
-    // Don't use a lookup if its offset is out of bounds.
-    uint32_t lookupIndexCount = featureTable->lookupListIndexes.count();
-    if (BL_UNLIKELY(featureTable.size < GSubGPosTable::FeatureTable::kBaseSize + lookupIndexCount * 2u))
-      continue;
-
-    for (uint32_t j = 0; j < lookupIndexCount; j++) {
-      uint32_t lookupIndex = featureTable->lookupListIndexes.array()[j].value();
-      if (BL_LIKELY(lookupIndex < lookupCount))
-        BitArrayOps::bitArraySetBit(planBits, lookupIndex);
-    }
+    featureIndex = langSysTable->featureIndexes.array()[i].value();
   }
 }
 
 static BLResult calculateGSubGPosPlan(const OTFaceImpl* faceI, const BLFontFeatureSettings& settings, LookupKind lookupKind, BLBitArrayCore* plan) noexcept {
-  BLTag scriptTag = BL_MAKE_TAG('D', 'F', 'L', 'T');
-  BLTag altScriptTag = BL_MAKE_TAG('l', 'a', 't', 'n');
+  BLTag scriptTag = BL_MAKE_TAG('l', 'a', 't', 'n');
+  BLTag dfltScriptTag = BL_MAKE_TAG('D', 'F', 'L', 'T');
 
   const LayoutData::GSubGPos& d = faceI->layout.kinds[size_t(lookupKind)];
   Table<GSubGPosTable> table = faceI->layout.tables[size_t(lookupKind)];
@@ -3695,15 +3704,28 @@ static BLResult calculateGSubGPosPlan(const OTFaceImpl* faceI, const BLFontFeatu
 
   Table<Array16<TagRef16>> scriptListOffsets(table.subTableUnchecked(d.scriptListOffset));
   Table<Array16<TagRef16>> featureListOffsets(table.subTableUnchecked(d.featureListOffset));
-  Table<GSubGPosTable::ScriptTable> scriptTable(findScriptInScriptList(scriptListOffsets, scriptTag));
+  Table<GSubGPosTable::ScriptTable> scriptTable(findScriptInScriptList(scriptListOffsets, scriptTag, dfltScriptTag));
 
   if (scriptTable.empty())
-    scriptTable = findScriptInScriptList(scriptListOffsets, altScriptTag);
+    return BL_SUCCESS;
 
   if (BL_UNLIKELY(!blFontTableFitsT<GSubGPosTable::ScriptTable>(scriptTable)))
     return BL_SUCCESS;
 
   uint32_t langSysOffset = scriptTable->langSysDefault();
+
+  /*
+  {
+    uint32_t langSysCount = scriptTable->langSysOffsets.count();
+    for (uint32_t i = 0; i < langSysCount; i++) {
+      uint32_t tag = scriptTable->langSysOffsets.array()[i].tag();
+      if (tag == BL_MAKE_TAG('D', 'F', 'L', 'T')) {
+        langSysOffset = scriptTable->langSysOffsets.array()[i].offset();
+      }
+    }
+  }
+  */
+
   if (langSysOffset == 0)
     return BL_SUCCESS;
 
