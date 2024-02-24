@@ -262,11 +262,12 @@ void FillMaskPart::compile() noexcept {
   pc->load_u32(repeat, x86::ptr(cmdPtr, BL_OFFSET_OF(MaskCommand, _x0)));
   pc->j(L_End, sub_z(y, 1));
 
-  pc->add(cmdPtr, cmdPtr, kMaskCmdSize);
+  pc->sub(repeat, repeat, 1);
   pc->add(dstPtr, dstPtr, dstStride);
+  pc->store_32(x86::ptr(cmdPtr, BL_OFFSET_OF(MaskCommand, _x0)), repeat);
+  pc->add(cmdPtr, cmdPtr, kMaskCmdSize);
   compOpPart()->advanceY();
-  pc->store_32(x86::ptr(cmdPtr, BL_OFFSET_OF(MaskCommand, _x0) - kMaskCmdSize), repeat);
-  pc->cmov(cmdPtr, cmdBegin, sub_nz(repeat, 1));
+  pc->cmov(cmdPtr, cmdBegin, cmp_ne(repeat, 0));
 
   // Scanline Init
   // -------------
