@@ -306,13 +306,39 @@ Signature initPatternAffine(FetchData::Pattern& fetchData, BLExtendMode extendMo
     if (xy >= th_d) xy = fmod(xy, th_d);
   }
 
-  fetchData.affine.xx.i64 = Math::floorToInt64(xx * fpScale);
-  fetchData.affine.xy.i64 = Math::floorToInt64(xy * fpScale);
-  fetchData.affine.yx.i64 = Math::floorToInt64(yx * fpScale);
-  fetchData.affine.yy.i64 = Math::floorToInt64(yy * fpScale);
+  xx *= fpScale;
+  xy *= fpScale;
+  yx *= fpScale;
+  yy *= fpScale;
+  tx *= fpScale;
+  ty *= fpScale;
 
-  fetchData.affine.tx.i64 = Math::floorToInt64(tx * fpScale);
-  fetchData.affine.ty.i64 = Math::floorToInt64(ty * fpScale);
+  // To prevent undefined behavior and thus passing invalid integer coordinates to the fetcher, we have to verify that
+  // double to int64 conversion is actually valid. To do that we simply combine min/max in a way to always propagate
+  // NaNs in case there is any.
+  double allMin = blMin(blMin(yy, yx), blMin(xy, xx));
+  double allMax = blMax(blMax(xx, xy), blMax(yx, yy));
+
+  allMin = blMin(allMin, blMin(ty, tx));
+  allMax = blMax(blMax(tx, ty), allMax);
+
+  if (allMin >= double(INT64_MIN + 1) && allMax <= double(INT64_MAX)) {
+    fetchData.affine.xx.i64 = Math::floorToInt64(xx);
+    fetchData.affine.xy.i64 = Math::floorToInt64(xy);
+    fetchData.affine.yx.i64 = Math::floorToInt64(yx);
+    fetchData.affine.yy.i64 = Math::floorToInt64(yy);
+    fetchData.affine.tx.i64 = Math::floorToInt64(tx);
+    fetchData.affine.ty.i64 = Math::floorToInt64(ty);
+  }
+  else {
+    fetchData.affine.xx.i64 = 0;
+    fetchData.affine.xy.i64 = 0;
+    fetchData.affine.yx.i64 = 0;
+    fetchData.affine.yy.i64 = 0;
+    fetchData.affine.tx.i64 = 0;
+    fetchData.affine.ty.i64 = 0;
+  }
+
   fetchData.affine.rx.i64 = IntOps::shl(int64_t(rx), 32);
   fetchData.affine.ry.i64 = IntOps::shl(int64_t(ry), 32);
 

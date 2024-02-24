@@ -44,11 +44,12 @@ if (NOT DEFINED BLEND2D_NO_NATVIS)
   set(BLEND2D_NO_NATVIS FALSE)
 endif()
 
-set(BLEND2D_DIR      "${BLEND2D_DIR}"      CACHE PATH "Location of 'blend2d'")
-set(BLEND2D_TEST     "${BLEND2D_TEST}"     CACHE BOOL "Build 'blend2d' tests and samples")
-set(BLEND2D_EMBED    "${BLEND2D_EMBED}"    CACHE BOOL "Embed 'blend2d' library (no targets)")
-set(BLEND2D_STATIC   "${BLEND2D_STATIC}"   CACHE BOOL "Build 'blend2d' statically")
-set(BLEND2D_SANITIZE "${BLEND2D_SANITIZE}" CACHE STRING "List of sanitizers to use")
+set(BLEND2D_DIR             "${BLEND2D_DIR}"           CACHE PATH "Location of 'blend2d'")
+set(BLEND2D_TEST            "${BLEND2D_TEST}"          CACHE BOOL "Build 'blend2d' tests and samples")
+set(BLEND2D_EMBED           "${BLEND2D_EMBED}"         CACHE BOOL "Embed 'blend2d' library (no targets)")
+set(BLEND2D_STATIC          "${BLEND2D_STATIC}"        CACHE BOOL "Build 'blend2d' statically")
+set(BLEND2D_SANITIZE        "${BLEND2D_SANITIZE}"      CACHE STRING "List of sanitizers to use")
+set(BLEND2D_SANITIZE_OPTS   "${BLEND2D_SANITIZE_OPTS}" CACHE STRING "Additional flags to pass to sanitizers")
 
 # Experimental build options.
 # set(BLEND2D_NO_JIT 1)
@@ -69,18 +70,18 @@ endif()
 # Blend2D - Project
 # =================
 
-set(BLEND2D_INCLUDE_DIRS "${BLEND2D_DIR}/src")   # Include directory is the same as source dir.
-set(BLEND2D_DEPS "")                             # Blend2D dependencies (libraries) for the linker.
-set(BLEND2D_LIBS "")                             # Dependencies of libs/apps that want to use Blend2D.
-set(BLEND2D_CFLAGS "")                           # Public compiler flags.
-set(BLEND2D_PRIVATE_CFLAGS "")                   # Private compiler flags independent of build type.
-set(BLEND2D_PRIVATE_CFLAGS_DBG "")               # Private compiler flags used by debug builds.
-set(BLEND2D_PRIVATE_CFLAGS_REL "")               # Private compiler flags used by release builds.
-set(BLEND2D_PRIVATE_LFLAGS "")                   # Private linker flags.
-set(BLEND2D_SANITIZE_CFLAGS "")                  # Compiler flags required by currently enabled sanitizers.
-set(BLEND2D_SANITIZE_LFLAGS "")                  # Linker flags required by currently enabled sanitizers.
-set(BLEND2D_NO_STDCXX_CFLAGS "")                 # Private compiler flags to disable linking to a standard C++ library.
-set(BLEND2D_NO_STDCXX_LFLAGS "")                 # Private linker flags to disable linking to a standard C++ library.
+set(BLEND2D_INCLUDE_DIRS "${BLEND2D_DIR}/src")          # Include directory is the same as source dir.
+set(BLEND2D_DEPS "")                                    # Blend2D dependencies (libraries) for the linker.
+set(BLEND2D_LIBS "")                                    # Dependencies of libs/apps that want to use Blend2D.
+set(BLEND2D_CFLAGS "")                                  # Public compiler flags.
+set(BLEND2D_PRIVATE_CFLAGS "")                          # Private compiler flags independent of build type.
+set(BLEND2D_PRIVATE_CFLAGS_DBG "")                      # Private compiler flags used by debug builds.
+set(BLEND2D_PRIVATE_CFLAGS_REL "")                      # Private compiler flags used by release builds.
+set(BLEND2D_PRIVATE_LFLAGS "")                          # Private linker flags.
+set(BLEND2D_SANITIZE_CFLAGS "${BLEND2D_SANITIZE_OPTS}") # Compiler flags required by currently enabled sanitizers.
+set(BLEND2D_SANITIZE_LFLAGS "")                         # Linker flags required by currently enabled sanitizers.
+set(BLEND2D_NO_STDCXX_CFLAGS "")                        # Private compiler flags to disable linking to a standard C++ library.
+set(BLEND2D_NO_STDCXX_LFLAGS "")                        # Private linker flags to disable linking to a standard C++ library.
 
 # Blend2D - Utilities
 # ===================
