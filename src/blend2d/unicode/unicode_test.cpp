@@ -87,7 +87,7 @@ UNIT(unicode, BL_TEST_GROUP_CORE_UTILITIES) {
     ENTRY("Test"                            , UTF8  , "\0\0\0T\0\0\0e\0\0\0s\0\0\0t"    , UTF32 , BL_SUCCESS),
     ENTRY("\0T\0e\0s\0t"                    , UTF16 , "\0\0\0T\0\0\0e\0\0\0s\0\0\0t"    , UTF32 , BL_SUCCESS),
     ENTRY("\0\0\0T\0\0\0e\0\0\0s\0\0\0t"    , UTF32 , "\0\0\0T\0\0\0e\0\0\0s\0\0\0t"    , UTF32 , BL_SUCCESS),
-    ENTRY("\0\0\0T\0\0\0e\0\0\0s\0\0\0t"    , UTF32 , "\0T\0e\0s\0t"                    , UTF16 , BL_SUCCESS)
+    ENTRY("\0\0\0T\0\0\0e\0\0\0s\0\0\0t"    , UTF32 , "\0T\0e\0s\0t"                    , UTF16 , BL_SUCCESS),
     ENTRY("\0\0\0T\0\0\0e\0\0\0s\0\0\0t"    , UTF32 , "Test"                            , LATIN1, BL_SUCCESS),
     ENTRY("\0\0\0T\0\0\0e\0\0\0s\0\0\0t"    , UTF32 , "Test"                            , UTF8  , BL_SUCCESS),
     #endif
