@@ -1165,7 +1165,7 @@ struct CompOpSimplifyInfoGen {
            compOp == CompOpExt::kDifference  ? difference(d, s)  :
            compOp == CompOpExt::kExclusion   ? exclusion(d, s)   :
 
-           // Externded operators, only used to simplify others.
+           // Extended operators, only used to simplify others.
            compOp == CompOpExt::kAlphaInv    ? alphaInv(d, s)    : valueDecomposed_2(compOp, d, s);
   }
 

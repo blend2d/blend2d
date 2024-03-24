@@ -3,8 +3,8 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_PIPELINE_JIT_PIPEGENCORE_P_H_INCLUDED
-#define BLEND2D_PIPELINE_JIT_PIPEGENCORE_P_H_INCLUDED
+#ifndef BLEND2D_PIPELINE_JIT_PIPEPRIMITIVES_P_H_INCLUDED
+#define BLEND2D_PIPELINE_JIT_PIPEPRIMITIVES_P_H_INCLUDED
 
 #include "../../api-internal_p.h"
 #include "../../compop_p.h"
@@ -20,7 +20,7 @@
 //! \{
 
 //! \namespace bl::Pipeline::JIT
-//! Everything related to JIT pipeline generator and runtime is within `bl::Pipeline::JIT` namespace.
+//! Everything related to JIT pipeline generator and runtime.
 
 namespace bl {
 namespace Pipeline {
@@ -40,41 +40,6 @@ class FetchPatternPart;
 class FillPart;
 class FillBoxAPart;
 class FillAnalyticPart;
-
-class GlobalAlpha;
-
-//! Pipeline optimization flags used by \ref PipeCompiler.
-enum class PipeOptFlags : uint32_t {
-  //! No flags.
-  kNone = 0x0u,
-
-  //! CPU has instructions that can perform 8-bit masked loads and stores.
-  kMaskOps8Bit = 0x00000001u,
-
-  //! CPU has instructions that can perform 16-bit masked loads and stores.
-  kMaskOps16Bit = 0x00000002u,
-
-  //! CPU has instructions that can perform 32-bit masked loads and stores.
-  kMaskOps32Bit = 0x00000004u,
-
-  //! CPU has instructions that can perform 64-bit masked loads and stores.
-  kMaskOps64Bit = 0x00000008u,
-
-  //! CPU provides low-latency 32-bit multiplication (AMD CPUs).
-  kFastVpmulld = 0x00000010u,
-
-  //! CPU provides low-latency 64-bit multiplication (AMD CPUs).
-  kFastVpmullq = 0x00000020u,
-
-  //! CPU performs hardware gathers faster than a sequence of loads and packing.
-  kFastGather = 0x00000040u,
-
-  //! CPU has fast stores with mask.
-  //!
-  //! \note This is a hint to the compiler to emit a masked store instead of a sequence having branches.
-  kFastStoreWithMask = 0x00000080u
-};
-BL_DEFINE_ENUM_FLAGS(PipeOptFlags)
 
 //! Pipeline generator loop-type, used by fillers & compositors.
 enum class CMaskLoopType : uint8_t {
@@ -103,20 +68,25 @@ enum class PixelFlags : uint32_t {
   kSA = 0x00000001u,
   //! Packed alpha or stencil components stored in `Pixel::pa`.
   kPA = 0x00000002u,
+  //! Packed inverted alpha or stencil components stored in `Pixel::pi`.
+  kPI = 0x00000004u,
   //! Unpacked alpha or stencil components stored in `Pixel::ua`.
-  kUA = 0x00000004u,
+  kUA = 0x00000008u,
   //! Unpacked and inverted alpha or stencil components stored in `Pixel::ui`
-  kUI = 0x00000008u,
+  kUI = 0x00000010u,
 
   //! Packed ARGB32 components stored in `Pixel::pc`.
-  kPC = 0x00000010u,
+  kPC = 0x00000020u,
   //! Unpacked ARGB32 components stored in `Pixel::uc`.
-  kUC = 0x00000020u,
+  kUC = 0x00000040u,
 
   //! Last fetch in this scanline, thus at most `N-1` pixels would be used.
   kLastPartial = 0x40000000u,
   //! Fetch read-only, registers won't be modified.
-  kImmutable   = 0x80000000u
+  kImmutable = 0x80000000u,
+
+  kPA_PI_UA_UI = kPA | kPI | kUA | kUI,
+  kPC_UC = kPC | kUC
 };
 BL_DEFINE_ENUM_FLAGS(PixelFlags)
 
@@ -146,6 +116,8 @@ public:
   Gp sa;
   //! Packed alpha components.
   VecArray pa;
+  //! Packed inverted alpha components.
+  VecArray pi;
   //! Unpacked alpha components.
   VecArray ua;
   //! Unpacked and inverted alpha components.
@@ -297,7 +269,7 @@ enum class PredicateFlags : uint32_t {
 
   kNeverEmptyOrFull = kNeverEmpty | kNeverFull
 };
-BL_DEFINE_ENUM_FLAGS(PredicateFlags);
+BL_DEFINE_ENUM_FLAGS(PredicateFlags)
 
 //! Provides an abstraction regarding predicated loads and stores.
 //!
@@ -313,7 +285,7 @@ struct PixelPredicate {
   //!
   //! This is typically power of 2 minus one - for example 8 pixel wide pipeline would use predicated loads and
   //! stores for 0-7 pixels.
-  uint32_t _size = 0;
+  uint32_t _size {};
   //! Predicate flags.
   PredicateFlags _flags {};
 
@@ -331,15 +303,15 @@ struct PixelPredicate {
   KReg k;
 #endif // BL_JIT_ARCH_X86
 
-  BL_INLINE PixelPredicate() noexcept = default;
+  BL_INLINE_NODEBUG PixelPredicate() noexcept = default;
   BL_INLINE explicit PixelPredicate(uint32_t size, PredicateFlags flags, const Gp& i) noexcept { init(size, flags, i); }
 
-  BL_INLINE bool empty() const noexcept { return _size == 0; }
-  BL_INLINE uint32_t size() const noexcept { return _size; }
+  BL_INLINE_NODEBUG bool empty() const noexcept { return _size == 0; }
+  BL_INLINE_NODEBUG uint32_t size() const noexcept { return _size; }
 
-  BL_INLINE PredicateFlags flags() const noexcept { return _flags; }
-  BL_INLINE bool isNeverEmpty() const noexcept { return blTestFlag(_flags, PredicateFlags::kNeverEmpty); }
-  BL_INLINE bool isNeverFull() const noexcept { return blTestFlag(_flags, PredicateFlags::kNeverFull); }
+  BL_INLINE_NODEBUG PredicateFlags flags() const noexcept { return _flags; }
+  BL_INLINE_NODEBUG bool isNeverEmpty() const noexcept { return blTestFlag(_flags, PredicateFlags::kNeverEmpty); }
+  BL_INLINE_NODEBUG bool isNeverFull() const noexcept { return blTestFlag(_flags, PredicateFlags::kNeverFull); }
 
   BL_INLINE void init(uint32_t size, PredicateFlags flags, const Gp& i) noexcept {
     _size = size;
@@ -348,6 +320,30 @@ struct PixelPredicate {
   }
 };
 
+//! Pixel coverage format that is consumed by the compositor.
+enum class PixelCoverageFormat : uint8_t {
+  //! Uninitialized format (invalid when passed to API that expects an initialized one).
+  kNone = 0,
+  //! Pixel coverage must be packed.
+  kPacked,
+  //! Pixel coverage must be unpacked.
+  kUnpacked
+};
+
+//! Pixel coverage flags used by \ref PixelCoverage.
+enum class PixelCoverageFlags : uint8_t {
+  //! No coverage flags set.
+  kNone = 0,
+  //! The coverage is repeated (c-mask fills).
+  kRepeated = 0x01,
+  //! The coverage is immutable (cannot be altered by the compositor).
+  kImmutable = 0x02,
+
+  //! A combination of `kRepeated` and `kImmutable`.
+  kRepeatedImmutable = kRepeated | kImmutable
+};
+BL_DEFINE_ENUM_FLAGS(PixelCoverageFlags)
+
 } // {JIT}
 } // {Pipeline}
 } // {bl}
@@ -355,4 +351,4 @@ struct PixelPredicate {
 //! \}
 //! \endcond
 
-#endif // BLEND2D_PIPELINE_JIT_PIPEGENCORE_P_H_INCLUDED
+#endif // BLEND2D_PIPELINE_JIT_PIPEPRIMITIVES_P_H_INCLUDED

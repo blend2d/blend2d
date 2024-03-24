@@ -23,29 +23,29 @@ BL_DEFINE_ENUM(BLFileOpenFlags) {
   //! Opens the file for reading.
   //!
   //! The following system flags are used when opening the file:
-  //!   * `O_RDONLY` (Posix)
-  //!   * `GENERIC_READ` (Windows)
+  //!   - `O_RDONLY` (Posix)
+  //!   - `GENERIC_READ` (Windows)
   BL_FILE_OPEN_READ = 0x00000001u,
 
   //! Opens the file for writing:
   //!
   //! The following system flags are used when opening the file:
-  //!   * `O_WRONLY` (Posix)
-  //!   * `GENERIC_WRITE` (Windows)
+  //!   - `O_WRONLY` (Posix)
+  //!   - `GENERIC_WRITE` (Windows)
   BL_FILE_OPEN_WRITE = 0x00000002u,
 
   //! Opens the file for reading & writing.
   //!
   //! The following system flags are used when opening the file:
-  //!   * `O_RDWR` (Posix)
-  //!   * `GENERIC_READ | GENERIC_WRITE` (Windows)
+  //!   - `O_RDWR` (Posix)
+  //!   - `GENERIC_READ | GENERIC_WRITE` (Windows)
   BL_FILE_OPEN_RW = 0x00000003u,
 
   //! Creates the file if it doesn't exist or opens it if it does.
   //!
   //! The following system flags are used when opening the file:
-  //!   * `O_CREAT` (Posix)
-  //!   * `CREATE_ALWAYS` or `OPEN_ALWAYS` depending on other flags (Windows)
+  //!   - `O_CREAT` (Posix)
+  //!   - `CREATE_ALWAYS` or `OPEN_ALWAYS` depending on other flags (Windows)
   BL_FILE_OPEN_CREATE = 0x00000004u,
 
   //! Opens the file for deleting or renaming (Windows).
@@ -56,8 +56,8 @@ BL_DEFINE_ENUM(BLFileOpenFlags) {
   //! Truncates the file.
   //!
   //! The following system flags are used when opening the file:
-  //!   * `O_TRUNC` (Posix)
-  //!   * `TRUNCATE_EXISTING` (Windows)
+  //!   - `O_TRUNC` (Posix)
+  //!   - `TRUNCATE_EXISTING` (Windows)
   BL_FILE_OPEN_TRUNCATE = 0x00000010u,
 
   //! Opens the file for reading in exclusive mode (Windows).
@@ -79,8 +79,8 @@ BL_DEFINE_ENUM(BLFileOpenFlags) {
   //! Creates the file in exclusive mode - fails if the file already exists.
   //!
   //! The following system flags are used when opening the file:
-  //!   * `O_EXCL` (Posix)
-  //!   * `CREATE_NEW` (Windows)
+  //!   - `O_EXCL` (Posix)
+  //!   - `CREATE_NEW` (Windows)
   BL_FILE_OPEN_CREATE_EXCLUSIVE = 0x40000000u,
 
   //! Opens the file for deleting or renaming in exclusive mode (Windows).

@@ -34,8 +34,8 @@ static constexpr const BLMatrix2D noMatrix(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
 
 struct BLGradientValueCountTableGen {
   static constexpr uint8_t value(size_t i) noexcept {
-    return i == BL_GRADIENT_TYPE_LINEAR  ? uint8_t(sizeof(BLLinearGradientValues ) / sizeof(double)) :
-           i == BL_GRADIENT_TYPE_RADIAL  ? uint8_t(sizeof(BLRadialGradientValues ) / sizeof(double)) :
+    return i == BL_GRADIENT_TYPE_LINEAR ? uint8_t(sizeof(BLLinearGradientValues ) / sizeof(double)) :
+           i == BL_GRADIENT_TYPE_RADIAL ? uint8_t(sizeof(BLRadialGradientValues ) / sizeof(double)) :
            i == BL_GRADIENT_TYPE_CONIC ? uint8_t(sizeof(BLConicGradientValues) / sizeof(double)) : uint8_t(0);
   }
 };

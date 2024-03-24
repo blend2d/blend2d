@@ -31,6 +31,122 @@ static BL_INLINE FillFunc getFillFunc(FillType fillType) noexcept {
   }
 }
 
+template<typename CompOp, uint32_t kDstBPP>
+static BL_INLINE FillFunc getFillFuncEx(Signature s) noexcept {
+  using PixelType = typename CompOp::PixelType;
+
+  FillType fillType = s.fillType();
+  FormatExt srcFormat = s.srcFormat();
+
+  switch (s.fetchType()) {
+    case FetchType::kSolid:
+      return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchSolid<PixelType>, kDstBPP>>(fillType);
+
+    case FetchType::kPatternAlignedBlit:
+      switch (srcFormat) {
+        case FormatExt::kPRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAlignedBlit<PixelType, FormatExt::kPRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kXRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAlignedBlit<PixelType, FormatExt::kXRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kA8    : return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAlignedBlit<PixelType, FormatExt::kA8    >, kDstBPP>>(fillType);
+        default: return nullptr;
+      }
+
+    case FetchType::kPatternAlignedPad:
+      switch (srcFormat) {
+        case FormatExt::kPRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAlignedPad<PixelType, FormatExt::kPRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kXRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAlignedPad<PixelType, FormatExt::kXRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kA8    : return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAlignedPad<PixelType, FormatExt::kA8    >, kDstBPP>>(fillType);
+        default: return nullptr;
+      }
+
+    case FetchType::kPatternAlignedRepeat:
+      switch (srcFormat) {
+        case FormatExt::kPRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAlignedRepeat<PixelType, FormatExt::kPRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kXRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAlignedRepeat<PixelType, FormatExt::kXRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kA8    : return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAlignedRepeat<PixelType, FormatExt::kA8    >, kDstBPP>>(fillType);
+        default: return nullptr;
+      }
+
+    case FetchType::kPatternAlignedRoR:
+      switch (srcFormat) {
+        case FormatExt::kPRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAlignedRoR<PixelType, FormatExt::kPRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kXRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAlignedRoR<PixelType, FormatExt::kXRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kA8    : return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAlignedRoR<PixelType, FormatExt::kA8    >, kDstBPP>>(fillType);
+        default: return nullptr;
+      }
+
+    case FetchType::kPatternFxPad:
+    case FetchType::kPatternFyPad:
+    case FetchType::kPatternFxFyPad:
+      switch (srcFormat) {
+        case FormatExt::kPRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternFxFyPad<PixelType, FormatExt::kPRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kXRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternFxFyPad<PixelType, FormatExt::kXRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kA8    : return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternFxFyPad<PixelType, FormatExt::kA8    >, kDstBPP>>(fillType);
+        default: return nullptr;
+      }
+
+    case FetchType::kPatternFxRoR:
+    case FetchType::kPatternFyRoR:
+    case FetchType::kPatternFxFyRoR:
+      switch (srcFormat) {
+        case FormatExt::kPRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternFxFyRoR<PixelType, FormatExt::kPRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kXRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternFxFyRoR<PixelType, FormatExt::kXRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kA8    : return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternFxFyRoR<PixelType, FormatExt::kA8    >, kDstBPP>>(fillType);
+        default: return nullptr;
+      }
+
+    case FetchType::kPatternAffineNNAny:
+    case FetchType::kPatternAffineNNOpt:
+      switch (srcFormat) {
+        case FormatExt::kPRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAffineNNAny<PixelType, FormatExt::kPRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kXRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAffineNNAny<PixelType, FormatExt::kXRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kA8    : return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAffineNNAny<PixelType, FormatExt::kA8    >, kDstBPP>>(fillType);
+        default: return nullptr;
+      }
+
+    case FetchType::kPatternAffineBIAny:
+    case FetchType::kPatternAffineBIOpt:
+      switch (srcFormat) {
+        case FormatExt::kPRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAffineBIAny<PixelType, FormatExt::kPRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kXRGB32: return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAffineBIAny<PixelType, FormatExt::kXRGB32>, kDstBPP>>(fillType);
+        case FormatExt::kA8    : return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchPatternAffineBIAny<PixelType, FormatExt::kA8    >, kDstBPP>>(fillType);
+        default: return nullptr;
+      }
+
+    case FetchType::kGradientLinearNNPad:
+      return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchLinearGradient<PixelType, BL_GRADIENT_QUALITY_NEAREST, true >, kDstBPP>>(fillType);
+
+    case FetchType::kGradientLinearNNRoR:
+      return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchLinearGradient<PixelType, BL_GRADIENT_QUALITY_NEAREST, false>, kDstBPP>>(fillType);
+
+    case FetchType::kGradientLinearDitherPad:
+      return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchLinearGradient<PixelType, BL_GRADIENT_QUALITY_DITHER , true >, kDstBPP>>(fillType);
+
+    case FetchType::kGradientLinearDitherRoR:
+      return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchLinearGradient<PixelType, BL_GRADIENT_QUALITY_DITHER , false>, kDstBPP>>(fillType);
+
+    case FetchType::kGradientRadialNNPad:
+      return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchRadialGradient<PixelType, BL_GRADIENT_QUALITY_NEAREST, true >, kDstBPP>>(fillType);
+
+    case FetchType::kGradientRadialNNRoR:
+      return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchRadialGradient<PixelType, BL_GRADIENT_QUALITY_NEAREST, false>, kDstBPP>>(fillType);
+
+    case FetchType::kGradientRadialDitherPad:
+      return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchRadialGradient<PixelType, BL_GRADIENT_QUALITY_DITHER , true >, kDstBPP>>(fillType);
+
+    case FetchType::kGradientRadialDitherRoR:
+      return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchRadialGradient<PixelType, BL_GRADIENT_QUALITY_DITHER , false>, kDstBPP>>(fillType);
+
+    case FetchType::kGradientConicNN:
+      return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchConicGradient<PixelType, BL_GRADIENT_QUALITY_NEAREST>, kDstBPP>>(fillType);
+
+    case FetchType::kGradientConicDither:
+      return getFillFunc<Reference::CompOp_Base_PRGB32<CompOp, PixelType, Reference::FetchConicGradient<PixelType, BL_GRADIENT_QUALITY_DITHER>, kDstBPP>>(fillType);
+
+    default:
+      return nullptr;
+  }
+}
+
 static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signature, DispatchData* dispatchData, PipeLookupCache* cache) noexcept {
   blUnused(self_);
 
@@ -38,164 +154,26 @@ static BLResult BL_CDECL blPipeGenRuntimeGet(PipeRuntime* self_, uint32_t signat
   FillFunc fillFunc = nullptr;
   FetchFunc fetchFunc = nullptr;
 
-  switch (s.fetchType()) {
-    case FetchType::kSolid:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Solid>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Solid>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Solid>(s.fillType()); break;
-      }
-      break;
+  FormatExt dstFormat = s.dstFormat();
+  if (dstFormat == FormatExt::kA8) {
+    switch (s.compOp()) {
+      case CompOpExt::kSrcCopy: fillFunc = getFillFuncEx<Reference::CompOp_SrcCopy_Op<Reference::Pixel::P8_Alpha>, 1>(s); break;
+      case CompOpExt::kSrcOver: fillFunc = getFillFuncEx<Reference::CompOp_SrcOver_Op<Reference::Pixel::P8_Alpha>, 1>(s); break;
+      case CompOpExt::kPlus   : fillFunc = getFillFuncEx<Reference::CompOp_Plus_Op   <Reference::Pixel::P8_Alpha>, 1>(s); break;
 
-    case FetchType::kPatternAlignedBlit:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedBlit_PRGB32>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedBlit_PRGB32>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedBlit_PRGB32>(s.fillType()); break;
-      }
-      break;
+      default:
+        break;
+    }
+  }
+  else if (dstFormat == FormatExt::kPRGB32 || dstFormat == FormatExt::kXRGB32) {
+    switch (s.compOp()) {
+      case CompOpExt::kSrcCopy: fillFunc = getFillFuncEx<Reference::CompOp_SrcCopy_Op<Reference::Pixel::P32_A8R8G8B8>, 4>(s); break;
+      case CompOpExt::kSrcOver: fillFunc = getFillFuncEx<Reference::CompOp_SrcOver_Op<Reference::Pixel::P32_A8R8G8B8>, 4>(s); break;
+      case CompOpExt::kPlus   : fillFunc = getFillFuncEx<Reference::CompOp_Plus_Op   <Reference::Pixel::P32_A8R8G8B8>, 4>(s); break;
 
-    case FetchType::kPatternAlignedPad:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedPad_PRGB32>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedPad_PRGB32>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedPad_PRGB32>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kPatternAlignedRepeat:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedRepeat_PRGB32>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedRepeat_PRGB32>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedRepeat_PRGB32>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kPatternAlignedRoR:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAlignedRoR_PRGB32>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAlignedRoR_PRGB32>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAlignedRoR_PRGB32>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kPatternFxPad:
-    case FetchType::kPatternFyPad:
-    case FetchType::kPatternFxFyPad:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternFxFyPad_PRGB32>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternFxFyPad_PRGB32>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternFxFyPad_PRGB32>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kPatternFxRoR:
-    case FetchType::kPatternFyRoR:
-    case FetchType::kPatternFxFyRoR:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternFxFyRoR_PRGB32>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternFxFyRoR_PRGB32>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternFxFyRoR_PRGB32>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kPatternAffineNNAny:
-    case FetchType::kPatternAffineNNOpt:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAffineNNAny_PRGB32>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAffineNNAny_PRGB32>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAffineNNAny_PRGB32>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kPatternAffineBIAny:
-    case FetchType::kPatternAffineBIOpt:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_PatternAffineBIAny_PRGB32>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_PatternAffineBIAny_PRGB32>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_PatternAffineBIAny_PRGB32>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kGradientLinearNNPad:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearPad_NN>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearPad_NN>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearPad_NN>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kGradientLinearNNRoR:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearRoR_NN>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearRoR_NN>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearRoR_NN>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kGradientLinearDitherPad:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearPad_Dither>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearPad_Dither>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearPad_Dither>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kGradientLinearDitherRoR:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_LinearRoR_Dither>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_LinearRoR_Dither>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_LinearRoR_Dither>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kGradientRadialNNPad:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialPad_NN>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialPad_NN>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialPad_NN>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kGradientRadialNNRoR:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialRoR_NN>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialRoR_NN>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialRoR_NN>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kGradientRadialDitherPad:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialPad_Dither>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialPad_Dither>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialPad_Dither>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kGradientRadialDitherRoR:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_RadialRoR_Dither>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_RadialRoR_Dither>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_RadialRoR_Dither>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kGradientConicNN:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Conic_NN>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Conic_NN>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Conic_NN>(s.fillType()); break;
-      }
-      break;
-
-    case FetchType::kGradientConicDither:
-      switch (s.compOp()) {
-        case CompOpExt::kSrcCopy: fillFunc = getFillFunc<Reference::CompOp_SrcCopy_PRGB32_Conic_Dither>(s.fillType()); break;
-        case CompOpExt::kSrcOver: fillFunc = getFillFunc<Reference::CompOp_SrcOver_PRGB32_Conic_Dither>(s.fillType()); break;
-        case CompOpExt::kPlus   : fillFunc = getFillFunc<Reference::CompOp_Plus_PRGB32_Conic_Dither>(s.fillType()); break;
-      }
-      break;
+      default:
+        break;
+    }
   }
 
   if (!fillFunc)
@@ -222,6 +200,7 @@ PipeStaticRuntime::PipeStaticRuntime() noexcept {
   _funcs.test = blPipeGenRuntimeGet;
   _funcs.get = blPipeGenRuntimeGet;
 }
+
 PipeStaticRuntime::~PipeStaticRuntime() noexcept {}
 
 } // {Pipeline}

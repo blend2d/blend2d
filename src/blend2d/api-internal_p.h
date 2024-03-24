@@ -115,7 +115,8 @@
   #if BL_TARGET_ARCH_X86 != 0
     #define BL_JIT_ARCH_X86
   #elif BL_TARGET_ARCH_ARM == 64
-    // #define BL_JIT_ARCH_A64 // Not ready!
+    // TODO: Not ready!
+    #define BL_JIT_ARCH_A64
   #endif
 #endif // !BL_BUILD_NO_JIT
 

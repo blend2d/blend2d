@@ -110,12 +110,9 @@ enum class MaskCommandType : uint32_t {
 };
 
 //! Fill rule mask used during composition of mask produced by analytic-rasterizer.
-//!
-//! See FillAnalytic pipeline how this is used. What you see in these values
-//! is mask shifted left by one bit as we expect such values in the pipeline.
 enum class FillRuleMask : uint32_t {
-  kNonZeroMask = uint32_t(0xFFFFFFFFu << 1),
-  kEvenOddMask = uint32_t(0x000001FFu << 1)
+  kNonZeroMask = 0xFFFFFFFFu,
+  kEvenOddMask = 0x000001FFu
 };
 
 //! Pipeline fetch-type.
@@ -844,7 +841,7 @@ struct alignas(16) FetchData {
       };
     };
 
-    BL_INLINE void reset() noexcept { prgb64 = 0; }
+    BL_INLINE_NODEBUG void reset() noexcept { prgb64 = 0; }
   };
 
   //! Pattern fetch data.
@@ -980,19 +977,19 @@ struct alignas(16) FetchData {
 
     //! Radial gradient data.
     struct alignas(16) Radial {
-      //! Gradient X/Y increments (horizontal).
-      double xx, xy;
+      //! Gradient X/Y offsets at [0, 0].
+      double tx, ty;
       //! Gradient X/Y increments (vertical).
       double yx, yy;
-      //! Gradient X/Y offsets of the pixel at [0, 0].
-      double ox, oy;
 
-      double ax, ay;
-      double fx, fy;
+      double amul4, inv2a;
+      double sq_fr, sq_inv2a;
 
-      double dd, bd;
-      double ddx, ddy;
-      double ddd, scale;
+      double b0, dd0;
+      double by, ddy;
+
+      float f32_ddd;
+      float f32_bd;
 
       //! Maximum index value taking into account pad, repeat, and reflection - `(repeated_or_reflected_size - 1)`.
       uint32_t maxi;
@@ -1032,7 +1029,7 @@ struct alignas(16) FetchData {
       Conic conic;
     };
 
-    BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+    BL_INLINE_NODEBUG void reset() noexcept { memset(this, 0, sizeof(*this)); }
   };
 
   //! Union of all possible fetch data types.
@@ -1045,7 +1042,7 @@ struct alignas(16) FetchData {
     Gradient gradient;
   };
 
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
+  BL_INLINE_NODEBUG void reset() noexcept { memset(this, 0, sizeof(*this)); }
 };
 
 namespace FetchUtils {

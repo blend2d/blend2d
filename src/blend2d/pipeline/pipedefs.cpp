@@ -186,6 +186,7 @@ Signature initPatternAffine(FetchData::Pattern& fetchData, BLExtendMode extendMo
   int tw = int(fetchData.src.size.w);
   int th = int(fetchData.src.size.h);
 
+#if 1 // BL_TARGET_ARCH_X86
   uint32_t opt = blMax(tw, th) < 32767 &&
                  fetchData.src.stride >= 0 &&
                  fetchData.src.stride <= intptr_t(Traits::maxValue<int16_t>());
@@ -193,6 +194,9 @@ Signature initPatternAffine(FetchData::Pattern& fetchData, BLExtendMode extendMo
   // TODO: [PIPEGEN] Not implemented for bilinear yet.
   if (quality == BL_PATTERN_QUALITY_BILINEAR)
     opt = 0;
+#else
+  constexpr uint32_t opt = 0;
+#endif // BL_TARGET_ARCH_X86
 
   fetchType = FetchType(uint32_t(fetchType) + opt);
 
@@ -362,7 +366,7 @@ Signature initPatternAffine(FetchData::Pattern& fetchData, BLExtendMode extendMo
   }
   else {
     fetchData.affine.addrMul32[0] = int32_t(bytesPerPixel);
-    fetchData.affine.addrMul32[1] = int32_t(fetchData.src.stride);;
+    fetchData.affine.addrMul32[1] = int32_t(fetchData.src.stride);
   }
 
   return Signature::fromFetchType(fetchType);
@@ -469,75 +473,76 @@ static BL_INLINE Signature initRadialGradient(FetchData::Gradient& fetchData, co
   BL_ASSERT(extendMode <= BL_EXTEND_MODE_SIMPLE_MAX_VALUE);
   BL_ASSERT(fetchData.lut.size > 0u);
 
-  // Inverted transformation matrix.
   BLMatrix2D inv;
   if (BLMatrix2D::invert(inv, transform) != BL_SUCCESS)
     return Signature::fromPendingFlag(1);
-
-  BLPoint c(values.x0, values.y0);
-  BLPoint f(values.x1, values.y1);
-  double r = values.r0;
 
   uint32_t lutSize = fetchData.lut.size;
   uint32_t maxi = extendMode == BL_EXTEND_MODE_REFLECT ? lutSize * 2u - 1u : lutSize - 1u;
   uint32_t rori = extendMode == BL_EXTEND_MODE_REFLECT ? maxi : 0u;
 
-  BLPoint fOrig = f;
-  f -= c;
+  fetchData.radial.maxi = maxi;
+  fetchData.radial.rori = rori;
 
-  double fxfx = f.x * f.x;
-  double fyfy = f.y * f.y;
+  BLPoint cp = BLPoint(values.x0, values.y0);
+  BLPoint fp = BLPoint(values.x1, values.y1);
 
-  double rr = r * r;
-  double dd = rr - fxfx - fyfy;
+  double cr = values.r0;
+  double fr = values.r1;
 
-  // If the focal point is near the border we move it slightly to prevent division by zero. This idea comes from
-  // AntiGrain library.
-  if (Math::isNearZero(dd)) {
-    if (!Math::isNearZero(f.x)) f.x += (f.x < 0.0) ? 0.5 : -0.5;
-    if (!Math::isNearZero(f.y)) f.y += (f.y < 0.0) ? 0.5 : -0.5;
-
-    fxfx = f.x * f.x;
-    fyfy = f.y * f.y;
-    dd = rr - fxfx - fyfy;
-  }
-
-  double scale = double(int(lutSize)) / dd;
-  double ax = rr - fyfy;
-  double ay = rr - fxfx;
-
-  fetchData.radial.ax = ax;
-  fetchData.radial.ay = ay;
-  fetchData.radial.fx = f.x;
-  fetchData.radial.fy = f.y;
+  BLPoint dp = cp - fp;
 
   double xx = inv.m00;
   double xy = inv.m01;
   double yx = inv.m10;
   double yy = inv.m11;
 
-  fetchData.radial.xx = xx;
-  fetchData.radial.xy = xy;
+  BLPoint tp = BLPoint(inv.m20 + (xx + xy) * 0.5, inv.m21 + (yx + yy) * 0.5) - fp;
+
+  fetchData.radial.tx = tp.x;
+  fetchData.radial.ty = tp.y;
   fetchData.radial.yx = yx;
   fetchData.radial.yy = yy;
-  fetchData.radial.ox = (inv.m20 - fOrig.x) + 0.5 * (xx + yx);
-  fetchData.radial.oy = (inv.m21 - fOrig.y) + 0.5 * (xy + yy);
 
-  double ax_xx = ax * xx;
-  double ay_xy = ay * xy;
-  double fx_xx = f.x * xx;
-  double fy_xy = f.y * xy;
+  double scale = double(lutSize);
 
-  fetchData.radial.dd = ax_xx * xx + ay_xy * xy + 2.0 * (fx_xx * fy_xy);
-  fetchData.radial.bd = fx_xx + fy_xy;
+  double dr = cr - fr;
+  double sq_fr = Math::square(fr);
 
-  fetchData.radial.ddx = 2.0 * (ax_xx + fy_xy * f.x);
-  fetchData.radial.ddy = 2.0 * (ay_xy + fx_xx * f.y);
+  double a = Math::square(dr) - Math::square(dp.x) - Math::square(dp.y);
+  double a_mul_4 = a * 4.0;
 
-  fetchData.radial.ddd = 2.0 * fetchData.radial.dd;
-  fetchData.radial.scale = scale;
-  fetchData.radial.maxi = maxi;
-  fetchData.radial.rori = rori;
+  double inv2a = (scale * 0.5) / a; // scale * (1 / 2a) => (scale * 0.5) / a
+  double sq_inv2a = Math::square(inv2a);
+
+  fetchData.radial.amul4 = a_mul_4;
+  fetchData.radial.inv2a = inv2a;
+  fetchData.radial.sq_inv2a = sq_inv2a;
+  fetchData.radial.sq_fr = sq_fr;
+
+  double sq_xx_plus_sq_yx = Math::square(xx) + Math::square(xy);
+
+  double b0 = 2.0 * (dr * fr + tp.x * dp.x + tp.y * dp.y);
+  double bx = 2.0 * (dp.x * xx + dp.y * xy);
+  double by = 2.0 * (dp.x * yx + dp.y * yy);
+
+  fetchData.radial.b0 = -b0;
+  fetchData.radial.by = -by;
+
+  double a_mul_8 = a_mul_4 * 2.0;
+  double bx_mul_2 = bx * 2.0;
+  double sq_bx = Math::square(bx);
+
+  double dd0 = sq_bx + bx_mul_2 * b0 + a_mul_4 * sq_xx_plus_sq_yx + a_mul_8 * (tp.x * xx + tp.y * xy);
+  double ddy = bx_mul_2 * by + a_mul_8 * (xx * yx + yy * xy);
+
+  double ddd = (sq_bx * 2.0 + a_mul_8 * sq_xx_plus_sq_yx);
+  double ddd_inv = ddd * sq_inv2a;
+
+  fetchData.radial.dd0 = dd0 - ddd * 0.5;
+  fetchData.radial.ddy = ddy;
+  fetchData.radial.f32_bd = float(-bx * inv2a);
+  fetchData.radial.f32_ddd = float(ddd_inv * 0.5);
 
   FetchType fetchTypeBase =
     quality < BL_GRADIENT_QUALITY_DITHER

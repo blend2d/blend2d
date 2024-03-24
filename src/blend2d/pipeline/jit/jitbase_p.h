@@ -55,6 +55,9 @@ using KReg = x86::KReg;
 using Mem = x86::Mem;
 using CondCode = x86::CondCode;
 using AsmCompiler = x86::Compiler;
+
+static BL_INLINE_NODEBUG Mem mem_ptr(const Gp& base, int32_t disp = 0) noexcept { return x86::ptr(base, disp); }
+static BL_INLINE_NODEBUG Mem mem_ptr(const Gp& base, const Gp& index, uint32_t shift = 0, int32_t disp = 0) noexcept { return x86::ptr(base, index, shift, disp); }
 #endif
 
 #if defined(BL_JIT_ARCH_A64)
@@ -65,6 +68,9 @@ using Vec = a64::Vec;
 using Mem = a64::Mem;
 using CondCode = a64::CondCode;
 using AsmCompiler = a64::Compiler;
+
+static BL_INLINE_NODEBUG Mem mem_ptr(const Gp& base, int32_t disp = 0) noexcept { return a64::ptr(base, disp); }
+static BL_INLINE_NODEBUG Mem mem_ptr(const Gp& base, const Gp& index, uint32_t shift = 0) noexcept { return a64::ptr(base, index, a64::lsl(shift)); }
 #endif
 
 // Strong Enums
@@ -97,7 +103,8 @@ enum class DataWidth : uint8_t {
   k8 = 0,
   k16 = 1,
   k32 = 2,
-  k64 = 3
+  k64 = 3,
+  k128 = 4
 };
 
 //! Broadcast width.
@@ -143,6 +150,21 @@ static BL_INLINE asmjit::TypeId typeIdOf(SimdWidth simdWidth) noexcept {
   blUnused(simdWidth);
   return asmjit::TypeId::kInt32x4;
 #endif
+}
+
+//! Calculates ideal SIMD width for the requested `byteCount` considering the given `maxSimdWidth`.
+//!
+//! The returned SimdWidth is at most `maxSimdWidth`, but could be lesser in case
+//! the whole SimdWidth is not required to process the requested `byteCount`.
+static BL_INLINE_NODEBUG SimdWidth simdWidthForByteCount(SimdWidth maxSimdWidth, uint32_t byteCount) noexcept {
+  return blMin(maxSimdWidth, SimdWidth((byteCount + 15) >> 5));
+}
+
+//! Calculates the number of registers that would be necessary to hold the requested `byteCount`, considering
+//! the given `maxSimdWidth`.
+static BL_INLINE_NODEBUG uint32_t vecCountForByteCount(SimdWidth maxSimdWidth, uint32_t byteCount) noexcept {
+  uint32_t shift = uint32_t(maxSimdWidth) + 4u;
+  return (byteCount + ((1u << shift) - 1u)) >> shift;
 }
 
 static BL_INLINE_NODEBUG SimdWidth simdWidthOf(const Vec& reg) noexcept {
@@ -239,10 +261,14 @@ public:
     v[3] = op3;
   }
 
+  BL_INLINE_NODEBUG void init(const Operand_* array, uint32_t size) noexcept {
+    _size = size;
+    if (size)
+      memcpy(v, array, size * sizeof(Operand_));
+  }
+
   BL_INLINE_NODEBUG void init(const OpArray& other) noexcept {
-    _size = other._size;
-    if (_size)
-      memcpy(v, other.v, _size * sizeof(Operand_));
+    init(other.v, other._size);
   }
 
   //! Resets `OpArray` to a default construction state.
@@ -292,6 +318,7 @@ public:
   BL_INLINE_NODEBUG OpArray hi() const noexcept { return OpArray(*this, _size > 1 ? (_size + 1) / 2 : 0, 1, _size); }
   BL_INLINE_NODEBUG OpArray even() const noexcept { return OpArray(*this, 0, 2, _size); }
   BL_INLINE_NODEBUG OpArray odd() const noexcept { return OpArray(*this, _size > 1, 2, _size); }
+  BL_INLINE_NODEBUG OpArray half() const noexcept { return OpArray(*this, 0, 1, (_size + 1) / 2); }
 
   //! Returns a new vector consisting of either even (from == 0) or odd
   //! (from == 1) elements. It's like calling `even()` and `odd()`, but
@@ -322,6 +349,8 @@ public:
   BL_INLINE_NODEBUG void init(const T& op0, const T& op1) noexcept { OpArray::init(op0, op1); }
   BL_INLINE_NODEBUG void init(const T& op0, const T& op1, const T& op2) noexcept { OpArray::init(op0, op1, op2); }
   BL_INLINE_NODEBUG void init(const T& op0, const T& op1, const T& op2, const T& op3) noexcept { OpArray::init(op0, op1, op2, op3); }
+
+  BL_INLINE_NODEBUG void init(const T* array, uint32_t size) noexcept { OpArray::init(array, size); }
   BL_INLINE_NODEBUG void init(const OpArrayT<T>& other) noexcept { OpArray::init(other); }
 
   BL_INLINE T& operator[](size_t index) noexcept {
@@ -349,6 +378,11 @@ public:
   BL_INLINE_NODEBUG OpArrayT<T> even() const noexcept { return OpArrayT<T>(*this, 0, 2, _size); }
   BL_INLINE_NODEBUG OpArrayT<T> odd() const noexcept { return OpArrayT<T>(*this, _size > 1, 2, _size); }
   BL_INLINE_NODEBUG OpArrayT<T> even_odd(uint32_t from) const noexcept { return OpArrayT<T>(*this, _size > 1 ? from : 0, 2, _size); }
+  BL_INLINE_NODEBUG OpArrayT<T> half() const noexcept { return OpArrayT<T>(*this, 0, 1, (_size + 1) / 2); }
+
+  BL_INLINE_NODEBUG void truncate(uint32_t newSize) noexcept {
+    _size = blMin(_size, newSize);
+  }
 
   BL_INLINE OpArrayT<T> cloneAs(asmjit::OperandSignature signature) const noexcept {
     OpArrayT<T> out(*this);
@@ -399,6 +433,7 @@ static BL_INLINE_NODEBUG const Operand_& firstOp(const OpArray& opArray) noexcep
 static BL_INLINE_NODEBUG uint32_t countOp(const Operand_&) noexcept { return 1u; }
 static BL_INLINE_NODEBUG uint32_t countOp(const OpArray& opArray) noexcept { return opArray.size(); }
 
+// TODO: REMOVE!
 #if defined(BL_JIT_ARCH_X86)
 template<typename T> static BL_INLINE bool isXmm(const T& op) noexcept { return x86::Reg::isXmm(firstOp(op)); }
 template<typename T> static BL_INLINE bool isYmm(const T& op) noexcept { return x86::Reg::isYmm(firstOp(op)); }
@@ -425,7 +460,6 @@ static BL_INLINE uint8_t perm2x128Imm(Perm2x128 hi, Perm2x128 lo) noexcept {
 // Injecting
 // ---------
 
-
 //! Provides scope-based code injection.
 //!
 //! Scope-based code injection is used in some places to inject code at a specific point in the generated code.
@@ -433,19 +467,24 @@ static BL_INLINE uint8_t perm2x128Imm(Perm2x128 hi, Perm2x128 lo) noexcept {
 //! as at the initialization phase it still doesn't know whether everything required to generate the code in place.
 class ScopedInjector {
 public:
-  asmjit::BaseCompiler* cc;
-  asmjit::BaseNode** hook;
-  asmjit::BaseNode* prev;
+  asmjit::BaseCompiler* cc {};
+  asmjit::BaseNode** hook {};
+  asmjit::BaseNode* prev {};
+  bool hookWasCursor = false;
 
   BL_NONCOPYABLE(ScopedInjector)
 
   BL_INLINE ScopedInjector(asmjit::BaseCompiler* cc, asmjit::BaseNode** hook) noexcept
     : cc(cc),
       hook(hook),
-      prev(cc->setCursor(*hook)) {}
+      prev(cc->setCursor(*hook)),
+      hookWasCursor(*hook == prev) {}
 
   BL_INLINE ~ScopedInjector() noexcept {
-    *hook = cc->setCursor(prev);
+    if (!hookWasCursor)
+      *hook = cc->setCursor(prev);
+    else
+      *hook = cc->cursor();
   }
 };
 

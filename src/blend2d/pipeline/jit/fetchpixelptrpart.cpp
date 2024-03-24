@@ -4,9 +4,10 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../../api-build_p.h"
-#if defined(BL_JIT_ARCH_X86)
+#if !defined(BL_BUILD_NO_JIT)
 
 #include "../../pipeline/jit/fetchpixelptrpart_p.h"
+#include "../../pipeline/jit/fetchutilspixelaccess_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
 
 namespace bl {
@@ -20,7 +21,7 @@ FetchPixelPtrPart::FetchPixelPtrPart(PipeCompiler* pc, FetchType fetchType, Form
   : FetchPart(pc, fetchType, format) {
 
   _partFlags |= PipePartFlags::kAdvanceXIsSimple;
-  _maxSimdWidthSupported = SimdWidth::k512;
+  _maxSimdWidthSupported = SimdWidth::kMaxPlatformWidth;
   _maxPixels = kUnlimitedMaxPixels;
 
   if (pc->hasMaskedAccessOf(bpp()))
@@ -31,11 +32,11 @@ FetchPixelPtrPart::FetchPixelPtrPart(PipeCompiler* pc, FetchType fetchType, Form
 // ============================================
 
 void FetchPixelPtrPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
-  pc->x_fetch_pixel(p, n, flags, format(), x86::ptr(_ptr), _alignment, predicate);
+  FetchUtils::x_fetch_pixel(pc, p, n, flags, format(), mem_ptr(_ptr), _alignment, predicate);
 }
 
 } // {JIT}
 } // {Pipeline}
 } // {bl}
 
-#endif
+#endif // !BL_BUILD_NO_JIT

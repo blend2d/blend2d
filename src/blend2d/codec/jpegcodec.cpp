@@ -1187,9 +1187,10 @@ static BLResult decoderConvertToRGB(BLJpegDecoderImpl* decoderI, BLImageData& ds
 
   bl::ScopedBufferTmp<1024 * 3 + 16> tmpMem;
 
-  // Allocate a line buffer that's big enough for upsampling off the edges with
-  // upsample factor of 4.
+  // Allocate a line buffer that's big enough for up-sampling off the edges with up-sample factor of 4.
   uint32_t componentCount = decoderI->imageInfo.planeCount;
+  BL_ASSERT(componentCount > 0u && componentCount <= 4u);
+
   uint32_t lineStride = IntOps::alignUp(w + 3, 16);
   uint8_t* lineBuffer = static_cast<uint8_t*>(tmpMem.alloc(lineStride * componentCount));
 
@@ -1197,12 +1198,10 @@ static BLResult decoderConvertToRGB(BLJpegDecoderImpl* decoderI, BLImageData& ds
     return blTraceError(BL_ERROR_OUT_OF_MEMORY);
 
   DecoderUpsample upsample[4];
-  uint32_t y, k;
-
   uint8_t* pPlane[4];
   uint8_t* pBuffer[4];
 
-  for (k = 0; k < componentCount; k++) {
+  for (uint32_t k = 0; k < componentCount; k++) {
     DecoderComponent& comp = decoderI->comp[k];
     DecoderUpsample* r = &upsample[k];
 
@@ -1224,8 +1223,8 @@ static BLResult decoderConvertToRGB(BLJpegDecoderImpl* decoderI, BLImageData& ds
   }
 
   // Now go ahead and resample.
-  for (y = 0; y < h; y++, dstLine += dstStride) {
-    for (k = 0; k < componentCount; k++) {
+  for (uint32_t y = 0; y < h; y++, dstLine += dstStride) {
+    for (uint32_t k = 0; k < componentCount; k++) {
       DecoderComponent& comp = decoderI->comp[k];
       DecoderUpsample* r = &upsample[k];
 

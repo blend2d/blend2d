@@ -26,4 +26,4 @@ void PipePart::preparePart() noexcept {}
 } // {Pipeline}
 } // {bl}
 
-#endif
+#endif // !BL_BUILD_NO_JIT

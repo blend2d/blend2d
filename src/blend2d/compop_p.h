@@ -60,7 +60,7 @@ enum class CompOpFlags : uint32_t {
 
   //! TypeA operator - "D*(1-M) + Op(D, S)*M" == "Op(D, S * M)".
   kTypeA = 0x00000001u,
-  //! TypeB operator - "D*(1-M) + Op(D, S)*M" == "Op(D, S*M) + D*(1-M)".
+  //! TypeB operator - "D*(1-M) + Op(D, S)*M" == "Op(D, S * M) + D * (1 - M)".
   kTypeB = 0x00000002u,
   //! TypeC operator - cannot be simplified.
   kTypeC = 0x00000004u,

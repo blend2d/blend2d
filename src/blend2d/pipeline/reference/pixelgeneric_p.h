@@ -86,6 +86,150 @@ struct Format8888 {
 
 typedef Format8888<16, 8, 0, 24> Format_A8R8G8B8;
 
+struct U8_Alpha;
+
+//! Packed 8-bit alpha value.
+struct P8_Alpha {
+  //! Packed pixel value.
+  uint8_t p;
+
+  //! Pixel format information.
+  typedef FormatA8 Format;
+
+  //! Type of a packed compatible pixel.
+  typedef P8_Alpha Packed;
+
+  //! Type of an unpacked compatible pixel.
+  typedef U8_Alpha Unpacked;
+
+  static BL_INLINE_NODEBUG Packed fromValue(uint32_t value) noexcept { return Packed { uint8_t(value) }; }
+
+  BL_INLINE_NODEBUG uint32_t a() const noexcept { return p; }
+  BL_INLINE_NODEBUG uint32_t value() noexcept { return p; }
+
+  BL_INLINE_NODEBUG Packed pack() const noexcept { return *this; }
+  BL_INLINE_NODEBUG Unpacked unpack() const noexcept;
+
+  BL_INLINE_NODEBUG Packed operator&(uint32_t x) const noexcept { return Packed { uint8_t((p & x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator|(uint32_t x) const noexcept { return Packed { uint8_t((p | x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator^(uint32_t x) const noexcept { return Packed { uint8_t((p ^ x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator+(uint32_t x) const noexcept { return Packed { uint8_t((p + x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator-(uint32_t x) const noexcept { return Packed { uint8_t((p - x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator*(uint32_t x) const noexcept { return Packed { uint8_t((p * x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator>>(uint32_t x) const noexcept { return Packed { uint8_t((p >> x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator<<(uint32_t x) const noexcept { return Packed { uint8_t((p << x) & 0xFFu) }; }
+
+  BL_INLINE_NODEBUG Packed operator&(const Packed& x) const noexcept { return Packed { uint8_t((p & x.p) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator|(const Packed& x) const noexcept { return Packed { uint8_t((p | x.p) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator^(const Packed& x) const noexcept { return Packed { uint8_t((p ^ x.p) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator+(const Packed& x) const noexcept { return Packed { uint8_t((p + x.p) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator-(const Packed& x) const noexcept { return Packed { uint8_t((p - x.p) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator*(const Packed& x) const noexcept { return Packed { uint8_t((p * x.p) & 0xFFu) }; }
+
+  BL_INLINE_NODEBUG Packed& operator&=(uint32_t x) noexcept { *this = *this & x; return *this; }
+  BL_INLINE_NODEBUG Packed& operator|=(uint32_t x) noexcept { *this = *this | x; return *this; }
+  BL_INLINE_NODEBUG Packed& operator^=(uint32_t x) noexcept { *this = *this ^ x; return *this; }
+  BL_INLINE_NODEBUG Packed& operator+=(uint32_t x) noexcept { *this = *this + x; return *this; }
+  BL_INLINE_NODEBUG Packed& operator-=(uint32_t x) noexcept { *this = *this - x; return *this; }
+  BL_INLINE_NODEBUG Packed& operator*=(uint32_t x) noexcept { *this = *this * x; return *this; }
+  BL_INLINE_NODEBUG Packed& operator>>=(uint32_t x) noexcept { *this = *this >> x; return *this; }
+  BL_INLINE_NODEBUG Packed& operator<<=(uint32_t x) noexcept { *this = *this << x; return *this; }
+
+  BL_INLINE_NODEBUG Packed& operator&=(const Packed& x) noexcept { *this = *this & x; return *this; }
+  BL_INLINE_NODEBUG Packed& operator|=(const Packed& x) noexcept { *this = *this | x; return *this; }
+  BL_INLINE_NODEBUG Packed& operator^=(const Packed& x) noexcept { *this = *this ^ x; return *this; }
+  BL_INLINE_NODEBUG Packed& operator+=(const Packed& x) noexcept { *this = *this + x; return *this; }
+  BL_INLINE_NODEBUG Packed& operator-=(const Packed& x) noexcept { *this = *this - x; return *this; }
+  BL_INLINE_NODEBUG Packed& operator*=(const Packed& x) noexcept { *this = *this * x; return *this; }
+};
+
+//! Unpacked 8-bit alpha value to 16-bit.
+struct U8_Alpha {
+  //! Unpacked pixel value.
+  uint16_t u;
+
+  //! Pixel format information.
+  typedef FormatA8 Format;
+
+  //! Type of a packed compatible pixel.
+  typedef P8_Alpha Packed;
+
+  //! Type of an unpacked compatible pixel.
+  typedef U8_Alpha Unpacked;
+
+  static BL_INLINE_NODEBUG Unpacked fromValue(uint32_t value) noexcept { return Unpacked{uint16_t(value)}; }
+
+  BL_INLINE_NODEBUG uint32_t a() const noexcept { return u; }
+  BL_INLINE_NODEBUG uint32_t value() noexcept { return u; }
+
+  BL_INLINE_NODEBUG Packed pack() const noexcept { return Packed{uint8_t(u * 0xFFu)}; }
+  BL_INLINE_NODEBUG Unpacked unpack() const noexcept { return Unpacked{u}; }
+
+  BL_INLINE_NODEBUG Unpacked operator&(uint32_t x) const noexcept { return Unpacked{uint16_t((uint32_t(u) & x) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator|(uint32_t x) const noexcept { return Unpacked{uint16_t((uint32_t(u) | x) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator^(uint32_t x) const noexcept { return Unpacked{uint16_t((uint32_t(u) ^ x) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator+(uint32_t x) const noexcept { return Unpacked{uint16_t((uint32_t(u) + x) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator-(uint32_t x) const noexcept { return Unpacked{uint16_t((uint32_t(u) - x) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator*(uint32_t x) const noexcept { return Unpacked{uint16_t((uint32_t(u) * x) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator>>(uint32_t x) const noexcept { return Unpacked{uint16_t((uint32_t(u) >> x) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator<<(uint32_t x) const noexcept { return Unpacked{uint16_t((uint32_t(u) << x) & 0xFFFFu)}; }
+
+  BL_INLINE_NODEBUG Unpacked operator&(const Repeat& x) const noexcept { return Unpacked{uint16_t((uint32_t(u) & x.v) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator|(const Repeat& x) const noexcept { return Unpacked{uint16_t((uint32_t(u) | x.v) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator^(const Repeat& x) const noexcept { return Unpacked{uint16_t((uint32_t(u) ^ x.v) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator+(const Repeat& x) const noexcept { return Unpacked{uint16_t((uint32_t(u) + x.v) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator-(const Repeat& x) const noexcept { return Unpacked{uint16_t((uint32_t(u) - x.v) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator*(const Repeat& x) const noexcept { return Unpacked{uint16_t((uint32_t(u) * x.v) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator>>(const Repeat& x) const noexcept { return Unpacked{uint16_t((uint32_t(u) >> x.v) & 0xFFFFu)}; }
+  BL_INLINE_NODEBUG Unpacked operator<<(const Repeat& x) const noexcept { return Unpacked{uint16_t((uint32_t(u) << x.v) & 0xFFFFu)}; }
+
+  BL_INLINE_NODEBUG Unpacked operator&(const Unpacked& x) const noexcept { return Unpacked { uint16_t((uint32_t(u) & x.u) & 0xFFFFu) }; }
+  BL_INLINE_NODEBUG Unpacked operator|(const Unpacked& x) const noexcept { return Unpacked { uint16_t((uint32_t(u) | x.u) & 0xFFFFu) }; }
+  BL_INLINE_NODEBUG Unpacked operator^(const Unpacked& x) const noexcept { return Unpacked { uint16_t((uint32_t(u) ^ x.u) & 0xFFFFu) }; }
+  BL_INLINE_NODEBUG Unpacked operator+(const Unpacked& x) const noexcept { return Unpacked { uint16_t((uint32_t(u) + x.u) & 0xFFFFu) }; }
+  BL_INLINE_NODEBUG Unpacked operator-(const Unpacked& x) const noexcept { return Unpacked { uint16_t((uint32_t(u) - x.u) & 0xFFFFu) }; }
+  BL_INLINE_NODEBUG Unpacked operator*(const Unpacked& x) const noexcept { return Unpacked { uint16_t((uint32_t(u) * x.u) & 0xFFFFu) }; }
+
+  BL_INLINE_NODEBUG Unpacked& operator&=(uint32_t x) noexcept { *this = *this & x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator|=(uint32_t x) noexcept { *this = *this | x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator^=(uint32_t x) noexcept { *this = *this ^ x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator+=(uint32_t x) noexcept { *this = *this + x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator-=(uint32_t x) noexcept { *this = *this - x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator*=(uint32_t x) noexcept { *this = *this * x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator>>=(uint32_t x) noexcept { *this = *this >> x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator<<=(uint32_t x) noexcept { *this = *this << x; return *this; }
+
+  BL_INLINE_NODEBUG Unpacked& operator&=(const Repeat& x) noexcept { *this = *this & x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator|=(const Repeat& x) noexcept { *this = *this | x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator^=(const Repeat& x) noexcept { *this = *this ^ x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator+=(const Repeat& x) noexcept { *this = *this + x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator-=(const Repeat& x) noexcept { *this = *this - x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator*=(const Repeat& x) noexcept { *this = *this * x; return *this; }
+
+  BL_INLINE_NODEBUG Unpacked& operator&=(const Unpacked& x) noexcept { *this = *this & x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator|=(const Unpacked& x) noexcept { *this = *this | x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator^=(const Unpacked& x) noexcept { *this = *this ^ x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator+=(const Unpacked& x) noexcept { *this = *this + x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator-=(const Unpacked& x) noexcept { *this = *this - x; return *this; }
+  BL_INLINE_NODEBUG Unpacked& operator*=(const Unpacked& x) noexcept { *this = *this * x; return *this; }
+
+  BL_INLINE Unpacked div255() const noexcept {
+    return ((*this + ((*this >> 8) & Repeat{0xFFu}) + Repeat{0x80u}) >> 8) & Repeat{0xFFu};
+  }
+
+  BL_INLINE Unpacked div256() const noexcept {
+    return (*this >> 8) & Repeat{0xFFu};
+  }
+
+  BL_INLINE Unpacked addus8(const Unpacked& x) const noexcept {
+    Unpacked val = (*this + x);
+    Unpacked msk = ((val >> 8) & Repeat{0x1u}) * Repeat{0xFF};
+    return (val | msk) & Repeat{0xFFu};
+  }
+};
+
+BL_INLINE_NODEBUG U8_Alpha P8_Alpha::unpack() const noexcept { return Unpacked{p}; }
+
 //! Packed 32-bit pixel.
 template<typename FormatT>
 struct P32_8888 {
@@ -141,8 +285,6 @@ struct P32_8888 {
   BL_INLINE Packed& operator^=(const Packed& x) noexcept { *this = *this ^ x; return *this; }
   BL_INLINE Packed& operator+=(const Packed& x) noexcept { *this = *this + x; return *this; }
   BL_INLINE Packed& operator-=(const Packed& x) noexcept { *this = *this - x; return *this; }
-  BL_INLINE Packed& operator*=(const Packed& x) noexcept { *this = *this * x; return *this; }
-
 };
 
 #if BL_TARGET_ARCH_BITS >= 64
@@ -434,6 +576,49 @@ struct FormatMetadata<FormatExt::kZERO32> {
 
 template<typename PixelT, FormatExt kFormat>
 struct PixelIO {};
+
+template<>
+struct PixelIO<Pixel::P8_Alpha, FormatExt::kPRGB32> {
+  typedef Pixel::P8_Alpha PixelType;
+
+  static BL_INLINE PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
+    blUnused(r, g, b);
+    return PixelType::fromValue(a);
+  }
+
+  static BL_INLINE PixelType fetch(const void* src) noexcept { return PixelType{uint8_t(*static_cast<const uint32_t*>(src) >> 24)}; }
+};
+
+template<>
+struct PixelIO<Pixel::P8_Alpha, FormatExt::kXRGB32> {
+  typedef Pixel::P8_Alpha PixelType;
+
+  static BL_INLINE PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
+    blUnused(r, g, b);
+    return PixelType::fromValue(a);
+  }
+
+  static BL_INLINE PixelType fetch(const void* src) noexcept {
+    blUnused(src);
+    return PixelType{uint8_t(0xFFu)};
+  }
+};
+
+template<>
+struct PixelIO<Pixel::P8_Alpha, FormatExt::kFRGB32> : public PixelIO<Pixel::P8_Alpha, FormatExt::kXRGB32> {};
+
+template<>
+struct PixelIO<Pixel::P8_Alpha, FormatExt::kA8> {
+  typedef Pixel::P8_Alpha PixelType;
+
+  static BL_INLINE PixelType make(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 0xFFu) noexcept {
+    blUnused(r, g, b);
+    return PixelType::fromValue(a);
+  }
+
+  static BL_INLINE PixelType fetch(const void* src) noexcept { return PixelType{*static_cast<const uint8_t*>(src)}; }
+  static BL_INLINE void store(void* dst, const PixelType& src) noexcept { *static_cast<uint8_t*>(dst) = src.p; }
+};
 
 template<>
 struct PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32> {

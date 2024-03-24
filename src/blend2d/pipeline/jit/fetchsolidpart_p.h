@@ -19,6 +19,9 @@ namespace JIT {
 //! Pipeline solid-fetch part.
 class FetchSolidPart : public FetchPart {
 public:
+  //! Pointer to fetch data, which is needed in `initSolidFlags()` - initially retrieved from \ref PipeFunction.
+  Gp _fetchData;
+
   //! Source pixel, expanded to the whole register if necessary.
   Pixel _pixel;
 
@@ -26,7 +29,7 @@ public:
 
   void preparePart() noexcept override;
 
-  void _initPart(Gp& x, Gp& y) noexcept override;
+  void _initPart(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
   void _finiPart() noexcept override;
 
   //! Injects code at the beginning of the pipeline that is required to prepare the requested variables that will

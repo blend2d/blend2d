@@ -567,13 +567,12 @@ static uint32_t sort_symbols(uint32_t num_syms, const uint32_t* BL_RESTRICT freq
   uint32_t num_counters = GET_NUM_COUNTERS(num_syms);
   uint32_t counters[GET_NUM_COUNTERS(kMaxSymbolCount)] {};
 
-  /* Count the frequencies.  */
+  // Count the frequencies.
   for (sym = 0; sym < num_syms; sym++)
     counters[blMin(freqs[sym], num_counters - 1)]++;
 
-  /* Make the counters cumulative, ignoring the zero-th, which
-   * counted symbols with zero frequency.  As a side effect, this
-   * calculates the number of symbols with nonzero frequency.  */
+  // Make the counters cumulative, ignoring the zero-th, which counted symbols with zero
+  // frequency.  As a side effect, this calculates the number of symbols with nonzero frequency.
   uint32_t num_used_syms = 0;
   for (uint32_t i = 1; i < num_counters; i++) {
     uint32_t count = counters[i];
@@ -581,9 +580,8 @@ static uint32_t sort_symbols(uint32_t num_syms, const uint32_t* BL_RESTRICT freq
     num_used_syms += count;
   }
 
-  /* Sort nonzero-frequency symbols using the counters.  At the
-   * same time, set the codeword lengths of zero-frequency symbols
-   * to 0.  */
+  // Sort nonzero-frequency symbols using the counters.  At the same time, set the codeword
+  // lengths of zero-frequency symbols to 0.
   for (sym = 0; sym < num_syms; sym++) {
     uint32_t freq = freqs[sym];
     if (freq != 0)
@@ -592,7 +590,7 @@ static uint32_t sort_symbols(uint32_t num_syms, const uint32_t* BL_RESTRICT freq
       lens[sym] = 0;
   }
 
-  /* Sort the symbols counted in the last counter.  */
+  // Sort the symbols counted in the last counter.
   heap_sort(symout + counters[num_counters - 2],
       counters[num_counters - 1] - counters[num_counters - 2]);
 
@@ -1058,19 +1056,19 @@ static uint32_t deflate_compute_precode_items(const uint8_t* BL_RESTRICT lens, c
   do {
     /* Find the next run of codeword lengths.  */
 
-    /* len = the length being repeated  */
+    // len = the length being repeated.
     uint8_t len = lens[run_start];
 
-    /* Extend the run.  */
+    // Extend the run.
     uint32_t run_end = run_start;
     do {
       run_end++;
     } while (run_end != num_lens && len == lens[run_end]);
 
     if (len == 0) {
-      /* Run of zeroes.  */
+      // Run of zeroes.
 
-      /* Symbol 18: RLE 11 to 138 zeroes at a time.  */
+      // Symbol 18: RLE 11 to 138 zeroes at a time.
       while ((run_end - run_start) >= 11) {
         uint32_t extra_bits = blMin<uint32_t>((run_end - run_start) - 11, 0x7F);
         precode_freqs[18]++;
@@ -1078,7 +1076,7 @@ static uint32_t deflate_compute_precode_items(const uint8_t* BL_RESTRICT lens, c
         run_start += 11 + extra_bits;
       }
 
-      /* Symbol 17: RLE 3 to 10 zeroes at a time.  */
+      // Symbol 17: RLE 3 to 10 zeroes at a time.
       if ((run_end - run_start) >= 3) {
         uint32_t extra_bits = blMin<uint32_t>((run_end - run_start) - 3, 0x7);
         precode_freqs[17]++;
@@ -1087,9 +1085,9 @@ static uint32_t deflate_compute_precode_items(const uint8_t* BL_RESTRICT lens, c
       }
     }
     else {
-      /* A run of nonzero lengths. */
+      // A run of nonzero lengths.
 
-      /* Symbol 16: RLE 3 to 6 of the previous length.  */
+      // Symbol 16: RLE 3 to 6 of the previous length.
       if ((run_end - run_start) >= 4) {
         precode_freqs[len]++;
         *itemptr++ = len;
@@ -1103,7 +1101,7 @@ static uint32_t deflate_compute_precode_items(const uint8_t* BL_RESTRICT lens, c
       }
     }
 
-    /* Output any remaining lengths without RLE.  */
+    // Output any remaining lengths without RLE.
     while (run_start != run_end) {
       precode_freqs[len]++;
       *itemptr++ = len;
@@ -1114,15 +1112,11 @@ static uint32_t deflate_compute_precode_items(const uint8_t* BL_RESTRICT lens, c
   return uint32_t(itemptr - precode_items);
 }
 
-/*
- * Huffman codeword lengths for dynamic Huffman blocks are compressed using a
- * separate Huffman code, the "precode", which contains a symbol for each
- * possible codeword length in the larger code as well as several special
- * symbols to represent repeated codeword lengths (a form of run-length
- * encoding). The precode is itself constructed in canonical form, and its
- * codeword lengths are represented literally in 19 3-bit fields that
- * immediately precede the compressed codeword lengths of the larger code.
- */
+// Huffman codeword lengths for dynamic Huffman blocks are compressed using a separate Huffman code, the "precode",
+// which contains a symbol for each possible codeword length in the larger code as well as several special symbols
+// to represent repeated codeword lengths (a form of run-length encoding). The precode is itself constructed in
+// canonical form, and its codeword lengths are represented literally in 19 3-bit fields that immediately precede
+// the compressed codeword lengths of the larger code.
 
 // Precompute the information needed to output Huffman codes.
 static void deflate_precompute_huffman_header(EncoderImpl* impl) noexcept {
@@ -1135,16 +1129,15 @@ static void deflate_precompute_huffman_header(EncoderImpl* impl) noexcept {
     if (impl->codes.lens.offset[impl->num_offset_syms - 1] != 0)
       break;
 
-  // If we're not using the full set of literal/length codeword lengths, then
-  // temporarily move the offset codeword lengths over so that the literal/length
-  // and offset codeword lengths are contiguous.
+  // If we're not using the full set of literal/length codeword lengths, then temporarily move the offset codeword
+  // lengths over so that the literal/length and offset codeword lengths are contiguous.
   BL_STATIC_ASSERT(offsetof(deflate_lens, offset) == kNumLitLenSymbols);
 
   if (impl->num_litlen_syms != kNumLitLenSymbols)
     memmove((uint8_t *)&impl->codes.lens + impl->num_litlen_syms, (uint8_t *)&impl->codes.lens + kNumLitLenSymbols, impl->num_offset_syms);
 
-  // Compute the "items" (RLE / literal tokens and extra bits) with which
-  // the codeword lengths in the larger code will be output.
+  // Compute the "items" (RLE / literal tokens and extra bits) with which the codeword lengths in the larger code
+  // will be output.
   impl->num_precode_items = deflate_compute_precode_items((uint8_t *)&impl->codes.lens, impl->num_litlen_syms + impl->num_offset_syms, impl->precode_freqs, impl->precode_items);
 
   // Build the precode.
@@ -1160,7 +1153,7 @@ static void deflate_precompute_huffman_header(EncoderImpl* impl) noexcept {
     memmove((uint8_t *)&impl->codes.lens + kNumLitLenSymbols, (uint8_t *)&impl->codes.lens + impl->num_litlen_syms, impl->num_offset_syms);
 }
 
-/* Output the Huffman codes. */
+// Output the Huffman codes.
 static void deflate_write_huffman_header(EncoderImpl* impl, deflate_output_bitstream *os) noexcept {
   uint32_t i;
 
@@ -1169,13 +1162,13 @@ static void deflate_write_huffman_header(EncoderImpl* impl, deflate_output_bitst
   deflate_add_bits(os, impl->num_explicit_lens - 4, 4);
   deflate_flush_bits(os);
 
-  /* Output the lengths of the codewords in the precode.  */
+  // Output the lengths of the codewords in the precode.
   for (i = 0; i < impl->num_explicit_lens; i++) {
     deflate_add_bits(os, impl->precode_lens[deflate_precode_lens_permutation[i]], 3);
     deflate_flush_bits(os);
   }
 
-  /* Output the encoded lengths of the codewords in the larger code.  */
+  // Output the encoded lengths of the codewords in the larger code.
   for (i = 0; i < impl->num_precode_items; i++) {
     uint32_t precode_item = impl->precode_items[i];
     uint32_t precode_sym = precode_item & 0x1F;
@@ -1316,13 +1309,13 @@ static void deflate_write_item_list(deflate_output_bitstream *os, const deflate_
     uint32_t offset_slot;
 
     if (length == 1) {
-      /* Literal  */
+      // Literal.
       litlen_symbol = offset;
       deflate_add_bits(os, codes->codewords.litlen[litlen_symbol], codes->lens.litlen[litlen_symbol]);
       deflate_flush_bits(os);
     }
     else {
-      /* Match length  */
+      // Match length.
       length_slot = deflate_length_slot[length];
       litlen_symbol = 257 + length_slot;
       deflate_add_bits(os, codes->codewords.litlen[litlen_symbol], codes->lens.litlen[litlen_symbol]);
@@ -1331,7 +1324,7 @@ static void deflate_write_item_list(deflate_output_bitstream *os, const deflate_
       if (!CAN_BUFFER(MAX_LITLEN_CODEWORD_LEN + kMaxExtraLengthBits + kMaxOffsetCodeWordLen + kMaxExtraOffsetBits))
         deflate_flush_bits(os);
 
-      /* Match offset  */
+      // Match offset.
       offset_slot = deflate_get_offset_slot(impl, offset);
       deflate_add_bits(os, codes->codewords.offset[offset_slot], codes->lens.offset[offset_slot]);
 
@@ -1500,8 +1493,6 @@ static BL_INLINE void deflate_finish_sequence(deflate_sequence *seq, uint32_t li
   seq->litrunlen = uint16_t(litrunlen);
   seq->length = 0;
 }
-
-/******************************************************************************/
 
 // Block splitting algorithm. The problem is to decide when it is worthwhile to start a new block
 // with new Huffman codesThere is a theoretically optimal solution: recursively consider every

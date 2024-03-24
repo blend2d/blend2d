@@ -84,7 +84,7 @@ using FatBitOps = ParametrizedBitOps<BitOrder::kLSB, uint32_t>;
 
 static constexpr uint32_t kSSOFatFeatureCount = 4;
 static constexpr uint32_t kSSOFatFeatureTagBitCount = 8;
-static constexpr uint32_t kSSOFatFeatureTagBitMask = (1u << kSSOFatFeatureTagBitCount) - 1u;;
+static constexpr uint32_t kSSOFatFeatureTagBitMask = (1u << kSSOFatFeatureTagBitCount) - 1u;
 static constexpr uint32_t kSSOFatFeatureValueBitCount = 4;
 static constexpr uint32_t kSSOFatFeatureValueBitMask = (1u << kSSOFatFeatureValueBitCount) - 1u;
 

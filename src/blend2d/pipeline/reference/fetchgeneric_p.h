@@ -32,7 +32,7 @@ struct FetchSolid {
   PixelType _src;
 
   BL_INLINE void _initFetch(const void* fetchData) noexcept {
-    _src = PixelType::fromValue(static_cast<const FetchData::Solid*>(fetchData)->prgb32);
+    _src = PixelIO<PixelType, FormatExt::kPRGB32>::fetch(&static_cast<const FetchData::Solid*>(fetchData)->prgb32);
   }
 
   BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t rectWidth) noexcept {
@@ -945,20 +945,29 @@ struct FetchRadialGradient : public FetchGradientBase<PixelType, kQuality> {
   using Base = FetchGradientBase<PixelType, kQuality>;
   using Base::fetchPixel;
 
-  Vec::f64x2 xx_xy;
-  Vec::f64x2 yx_yy;
-  Vec::f64x2 px_py;
+  Vec::f64x2 _tp;
+  Vec::f64x2 _yy_yx;
 
-  Vec::f64x2 ax_ay;
-  Vec::f64x2 fx_fy;
-  Vec::f64x2 da_ba;
+  double _b0;
+  double _by;
+  double _dd0;
+  double _ddy;
 
-  Vec::f64x2 d_b;
-  Vec::f64x2 dd_bd;
-  Vec::f64x2 ddx_ddy;
+  double _inv2a;
+  double _amul4;
+  double _sq_inv2a;
+  double _sq_fr;
 
-  double ddd;
-  float scale_f32;
+  double _y;
+
+  float _x;
+  float _b;
+  float _d;
+  float _dd;
+
+  float _bd;
+  float _ddd;
+
   uint32_t _maxi;
   uint32_t _rori;
 
@@ -967,47 +976,58 @@ struct FetchRadialGradient : public FetchGradientBase<PixelType, kQuality> {
     const FetchData::Gradient::Radial& radial = gradient->radial;
 
     Base::_initGradientBase(ctxData, gradient, yPos);
-    xx_xy = Vec::f64x2{radial.xx, radial.xy};
-    yx_yy = Vec::f64x2{radial.yx, radial.yy};
-    px_py = Vec::f64x2{radial.ox, radial.oy};
-    ax_ay = Vec::f64x2{radial.ax, radial.ay};
-    fx_fy = Vec::f64x2{radial.fx, radial.fy};
-    da_ba = Vec::f64x2{radial.dd, radial.bd};
-    ddx_ddy = Vec::f64x2{radial.ddx, radial.ddy};
-    ddd = radial.ddd;
-    scale_f32 = float(radial.scale);
+
+    _tp = Vec::f64x2{radial.tx, radial.ty};
+    _yy_yx = Vec::f64x2{radial.yx, radial.yy};
+
+    _b0 = radial.b0;
+    _by = radial.by;
+    _dd0 = radial.dd0;
+    _ddy = radial.ddy;
+
+    _inv2a = radial.inv2a;
+    _amul4 = radial.amul4;
+    _sq_fr = radial.sq_fr;
+    _sq_inv2a = radial.sq_inv2a;
+
+    _bd = radial.f32_bd;
+    _ddd = radial.f32_ddd;
+
     _maxi = radial.maxi;
     _rori = radial.rori;
+
+    _y = double(int32_t(yPos));
   }
 
-  BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t x, uint32_t y, uint32_t width) noexcept {
-    blUnused(width);
-
-    _initFetch(ctxData, fetchData, y);
-    Vec::f64x2 pt = Vec::f64x2{double(int32_t(x)), double(int32_t(y))};
-    px_py += pt.y * yx_yy + pt.x * xx_xy;
+  BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t width) noexcept {
+    blUnused(xPos, width);
+    _initFetch(ctxData, fetchData, yPos);
   }
 
   BL_INLINE void rectStartX(uint32_t xPos) noexcept {
-    Base::_initGradientX(xPos);
-    precalc(px_py);
+    spanStartX(xPos);
   }
 
   BL_INLINE void spanInitY(ContextData* ctxData, const void* fetchData, uint32_t yPos) noexcept {
     _initFetch(ctxData, fetchData, yPos);
-    px_py += double(int32_t(yPos)) * yx_yy;
   }
 
-  BL_INLINE void spanStartX(uint32_t x) noexcept {
-    Base::_initGradientX(x);
-    precalc(px_py + xx_xy * double(int(x)));
+  BL_INLINE void spanStartX(uint32_t xPos) noexcept {
+    Base::_initGradientX(xPos);
+
+    Vec::f64x2 pt = _tp + _yy_yx * _y;
+    double b = Math::madd(_y, _by, _b0);
+    double sq_dist = Math::square(pt.x) + Math::square(pt.y);
+
+    _x = float(int32_t(xPos));
+    _b = float(b * _inv2a);
+    _d = float((Math::square(b) + _amul4 * (sq_dist - _sq_fr)) * _sq_inv2a);
+    _dd = float(Math::madd(_y, _ddy, _dd0) * _sq_inv2a);
   }
 
   BL_INLINE void spanAdvanceX(uint32_t xPos, uint32_t xDiff) noexcept {
-    blUnused(xDiff);
-
     Base::_initGradientX(xPos);
-    precalc(px_py + xx_xy * double(int(xPos)));
+    _x += float(int32_t(xDiff));
   }
 
   BL_INLINE void spanEndX(uint32_t xPos) noexcept {
@@ -1015,34 +1035,21 @@ struct FetchRadialGradient : public FetchGradientBase<PixelType, kQuality> {
   }
 
   BL_INLINE void advanceY() noexcept {
-    px_py += yx_yy;
+    _y += 1.0;
     Base::_advanceGradientY();
   }
 
-  BL_INLINE void precalc(const Vec::f64x2& tx_ty) noexcept {
-    Vec::f64x2 tx_fx_ty_fy = tx_ty * fx_fy;
-    Vec::f64x2 tx_ddx_ty_ddy = tx_ty * ddx_ddy;
-    double z = Vec::hmul(tx_fx_ty_fy);
-
-    d_b = Vec::f64x2{Vec::hadd(ax_ay * tx_ty * tx_ty) + z + z, Vec::hadd(tx_fx_ty_fy)};
-    dd_bd = Vec::f64x2{da_ba.x + tx_ddx_ty_ddy.x + tx_ddx_ty_ddy.y, da_ba.y};
-  }
-
   BL_INLINE PixelType fetch() noexcept {
-    float v_f32 = Math::sqrt(blAbs(float(d_b.x)));
-    float b_f32 = float(d_b.y);
+    float sq_x = Math::square(_x);
+    float v = Math::sqrt(blAbs(Math::madd(sq_x, _ddd, Math::madd(_x, _dd, _d)))) + Math::madd(_x, _bd, _b);
+    uint32_t idx = uint32_t(int32_t(v));
 
-    d_b += dd_bd;
-    v_f32 = (v_f32 + b_f32) * scale_f32;
-
-    uint32_t idx = uint32_t(int(v_f32));
+    _x += 1.0f;
 
     if (kIsPad)
       idx = uint32_t(blClamp<int32_t>(int32_t(idx), 0, int32_t(_maxi)));
     else
       idx = blMin<uint32_t>(idx & _maxi, (idx & _maxi) ^ _rori);
-
-    dd_bd.x += ddd;
     return fetchPixel(idx);
   }
 };

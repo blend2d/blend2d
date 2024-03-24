@@ -462,6 +462,8 @@ BL_NODISCARD
 static BL_INLINE_NODEBUG uint32_t popCountImpl(uint32_t x) noexcept {
 #if defined(__GNUC__)
   return uint32_t(__builtin_popcount(x));
+#elif defined(BL_TARGET_OPT_SSE4_2)
+  return uint32_t(_mm_popcnt_u32(x));
 #elif defined(_MSC_VER) && defined(BL_TARGET_OPT_POPCNT)
   return __popcnt(x);
 #else
@@ -473,6 +475,8 @@ BL_NODISCARD
 static BL_INLINE_NODEBUG uint32_t popCountImpl(uint64_t x) noexcept {
 #if defined(__GNUC__)
   return uint32_t(__builtin_popcountll(x));
+#elif defined(BL_TARGET_OPT_SSE4_2) && BL_TARGET_ARCH_BITS >= 64
+  return uint32_t(_mm_popcnt_u64(x));
 #elif defined(_MSC_VER) && defined(BL_TARGET_OPT_POPCNT) && BL_TARGET_ARCH_BITS >= 64
   return uint32_t(__popcnt64(x));
 #elif BL_TARGET_ARCH_BITS >= 64

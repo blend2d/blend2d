@@ -31,7 +31,7 @@ public:
 
   BL_INLINE_NODEBUG bool isRectFill() const noexcept { return _isRectFill; }
 
-  void initY(const Gp& x, const Gp& y) noexcept;
+  void initY(const PipeFunction& fn, const Gp& x, const Gp& y) noexcept;
   void advanceY() noexcept;
 
   void startAtX(const Gp& x) noexcept;
@@ -67,10 +67,10 @@ public:
 
   void fetchSinglePixel(Pixel& dst, PixelFlags flags, const Gp& idx) noexcept;
 
-  void fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags flags, const Vec& idx, IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept;
+  void fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags flags, const Vec& idx, FetchUtils::IndexLayout indexLayout, InterleaveCallback cb, void* cbData) noexcept;
 
   template<class InterleaveFunc>
-  void fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags flags, const Vec& idx, IndexLayout indexLayout, InterleaveFunc&& interleaveFunc) noexcept {
+  void fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags flags, const Vec& idx, FetchUtils::IndexLayout indexLayout, InterleaveFunc&& interleaveFunc) noexcept {
     fetchMultiplePixels(dst, n, flags, idx, indexLayout, [](uint32_t step, void* data) noexcept {
       (*static_cast<const InterleaveFunc*>(data))(step);
     }, (void*)&interleaveFunc);
@@ -98,7 +98,7 @@ public:
 
   void preparePart() noexcept override;
 
-  void _initPart(Gp& x, Gp& y) noexcept override;
+  void _initPart(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
   void _finiPart() noexcept override;
 
   void advanceY() noexcept override;
@@ -122,38 +122,38 @@ public:
   // `dd`  - determinant delta.
   // `ddd` - determinant-delta delta.
   struct RadialRegs {
-    Vec xx_xy;
-    Vec yx_yy;
+    Vec ty_tx;
+    Vec yy_yx;
+    Vec dd0_b0;
+    Vec ddy_by;
 
-    Vec ax_ay;
-    Vec fx_fy;
-    Vec da_ba;
+    Vec vy;
+    Vec inv2a_4a;
+    Vec sqinv2a_sqfr;
 
-    Vec d_b;
-    Vec dd_bd;
-    Vec ddx_ddy;
-
-    Vec px_py;
-    Vec scale;
-    Vec ddd;
+    Vec d;
+    Vec b;
+    Vec dd;
+    Vec vx;
+    Vec vx_start;
     Vec value;
+
+    Vec bd;
+    Vec ddd;
 
     Vec vmaxi;
     Vec vrori;
-    Vec vmaxf; // Like `vmaxi`, but converted to `float`.
-
-    // 4+ pixels.
-    Vec d_b_prev;
-    Vec dd_bd_prev;
   };
 
   Wrap<RadialRegs> f;
 
   FetchRadialGradientPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept;
 
+  BL_INLINE_NODEBUG SimdWidth simdWidth() const noexcept { return blMin(pc->simdWidth(), SimdWidth::k256); }
+
   void preparePart() noexcept override;
 
-  void _initPart(Gp& x, Gp& y) noexcept override;
+  void _initPart(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
   void _finiPart() noexcept override;
 
   void advanceY() noexcept override;
@@ -166,7 +166,8 @@ public:
 
   void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 
-  void precalc(const Vec& px_py) noexcept;
+  void initVx(const Vec& vx, const Gp& x) noexcept;
+  FetchUtils::IndexLayout applyExtend(const Vec& idx, const Vec& tmp) noexcept;
 };
 
 //! Conic gradient fetch part.
@@ -177,8 +178,8 @@ public:
 
     Vec px;
     Vec xx;
-    Vec hx_hy;
-    Vec yx_yy;
+    Vec hy_hx;
+    Vec yy_yx;
     Vec ay;
     Vec by;
     Vec angleOffset;
@@ -186,10 +187,6 @@ public:
 
     // Temporary values precalculated for the next fetch loop.
     Vec t0, t1, t2;
-
-#if defined(BL_JIT_ARCH_X86)
-    KReg t1Pred;
-#endif // BL_JIT_ARCH_X86
 
     // 4+ pixels.
     Vec xx_inc;
@@ -202,7 +199,7 @@ public:
 
   void preparePart() noexcept override;
 
-  void _initPart(Gp& x, Gp& y) noexcept override;
+  void _initPart(const PipeFunction& fn, Gp& x, Gp& y) noexcept override;
   void _finiPart() noexcept override;
 
   void advanceY() noexcept override;

@@ -11,7 +11,8 @@
 #include "../../support/wrap_p.h"
 #include "../../threading/mutex_p.h"
 #include "../../pipeline/piperuntime_p.h"
-#include "../../pipeline/jit/pipegencore_p.h"
+#include "../../pipeline/jit/pipecompiler_p.h"
+#include "../../pipeline/jit/pipeprimitives_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_pipeline_jit

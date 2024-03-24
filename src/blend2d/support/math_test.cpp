@@ -10,6 +10,7 @@
 #include "../support/intops_p.h"
 #include "../support/math_p.h"
 #include "../support/traits_p.h"
+#include "../random_p.h"
 
 // bl::Math - Tests
 // ================
@@ -18,100 +19,215 @@ namespace bl {
 namespace Tests {
 
 UNIT(math, BL_TEST_GROUP_SUPPORT_UTILITIES) {
-  INFO("bl::Math::floor()");
+  constexpr uint32_t kRoundRandomCount = 1000000;
+
+  const float round_ints_f32[] = {
+    -4503599627370496.0f,
+    -274877906944.0f,
+    -8589934592.0f,
+    -536870912.0f,
+    -134217728.0f,
+    -8388608.0f,
+    -8388607.0f,
+    -7066973.0f,
+    -7066972.0f,
+    -6066973.0f,
+    -6066972.0f,
+    -60672.0f,
+    -60673.0f,
+    -1001.0f,
+    -100.0f,
+    -10.5f,
+    -2.5f,
+    -1.5f,
+    -1.3f,
+    -1.13f,
+    -1.0f,
+    -0.9f,
+    -0.5f,
+    -0.1f,
+    0.0f,
+    0.1f,
+    0.5f,
+    0.9f,
+    1.0f,
+    1.13f,
+    1.3f,
+    1.5f,
+    2.5f,
+    10.5f,
+    100.0f,
+    1001.0f,
+    60672.0f,
+    60673.0f,
+    6066972.0f,
+    6066973.0f,
+    7066972.0f,
+    7066973.0f,
+    8388607.0f,
+    8388608.0f,
+    134217728.0f,
+    536870912.0f,
+    8589934592.0f,
+    274877906944.0f,
+    4503599627370496.0f
+  };
+
+  const double round_ints_f64[] = {
+    -4503599627370496.0,
+    -4503599627370491.1,
+    -2251799813685248.0,
+    -2251799813685247.0,
+    -2251799813685246.0,
+    -274877906944.1,
+    -274877906944.0,
+    -8589934592.3,
+    -8589934592.0,
+    -536870913.5,
+    -536870912.0,
+    -134217727.5,
+    -134217728.0,
+    -8388608.0,
+    -8388607.0,
+    -7066973.0,
+    -7066972.0,
+    -6066973.0,
+    -6066972.0,
+    -60672.0,
+    -60673.0,
+    -1001.0,
+    -100.0,
+    -1.0,
+    0.0,
+    1.0,
+    100.0,
+    1001.0,
+    60672.0,
+    60673.0,
+    6066972.0,
+    6066973.0,
+    7066972.0,
+    7066973.0,
+    8388607.0,
+    8388608.0,
+    8388608.3,
+    134217728.0,
+    536870912.0,
+    536870913.44,
+    8589934592.0,
+    8589934592.99,
+    274877906944.0,
+    274877906944.1,
+    2251799813685246.0,
+    2251799813685247.0,
+    2251799813685248.0,
+    3390239813685248.0,
+    3693847462732321.0,
+    3693847462732322.0,
+    3893847462732319.0,
+    3993847462732321.0,
+    3993847462732322.0,
+    4193847462732321.0,
+    4193847462732322.0,
+    4393847462732321.0,
+    4393847462732322.0,
+    4493847462732321.0,
+    4493847462732322.0,
+    4503599627370491.1,
+    4503599627370496.0,
+    8.4499309581281154e+50
+  };
+
+  BLRandom rnd(0x123456789ABCDEF);
+
+  auto rnd_f32 = [&]() -> float {
+    float sign = rnd.nextDouble() < 0.5 ? 1.0f : -1.0f;
+    return float(rnd.nextDouble() * float(1e25)) * sign;
+  };
+
+  auto rnd_f64 = [&]() -> double {
+    double sign = rnd.nextDouble() < 0.5 ? 1.0 : -1.0;
+    return rnd.nextDouble() * double(1e52) * sign;
+  };
+
+  INFO("Testing floating point rounding - trunc(float32)");
   {
-    EXPECT_EQ(Math::floor(-1.5f),-2.0f);
-    EXPECT_EQ(Math::floor(-1.5 ),-2.0 );
-    EXPECT_EQ(Math::floor(-0.9f),-1.0f);
-    EXPECT_EQ(Math::floor(-0.9 ),-1.0 );
-    EXPECT_EQ(Math::floor(-0.5f),-1.0f);
-    EXPECT_EQ(Math::floor(-0.5 ),-1.0 );
-    EXPECT_EQ(Math::floor(-0.1f),-1.0f);
-    EXPECT_EQ(Math::floor(-0.1 ),-1.0 );
-    EXPECT_EQ(Math::floor( 0.0f), 0.0f);
-    EXPECT_EQ(Math::floor( 0.0 ), 0.0 );
-    EXPECT_EQ(Math::floor( 0.1f), 0.0f);
-    EXPECT_EQ(Math::floor( 0.1 ), 0.0 );
-    EXPECT_EQ(Math::floor( 0.5f), 0.0f);
-    EXPECT_EQ(Math::floor( 0.5 ), 0.0 );
-    EXPECT_EQ(Math::floor( 0.9f), 0.0f);
-    EXPECT_EQ(Math::floor( 0.9 ), 0.0 );
-    EXPECT_EQ(Math::floor( 1.5f), 1.0f);
-    EXPECT_EQ(Math::floor( 1.5 ), 1.0 );
-    EXPECT_EQ(Math::floor(-4503599627370496.0), -4503599627370496.0);
-    EXPECT_EQ(Math::floor( 4503599627370496.0),  4503599627370496.0);
+    for (uint32_t i = 0; i < kRoundRandomCount; i++) {
+      float x = i < BL_ARRAY_SIZE(round_ints_f32) ? round_ints_f32[i] : rnd_f32();
+      float a = Math::trunc(x);
+      float b = ::truncf(x);
+      EXPECT_EQ(a, b).message("Failed to trunc float32(%0.20f) %0.20f (Math::trunc) != %0.20f (std::trunc)", x, a, b);
+    }
   }
 
-  INFO("bl::Math::ceil()");
+  INFO("Testing floating point rounding - trunc(float64)");
   {
-    EXPECT_EQ(Math::ceil(-1.5f),-1.0f);
-    EXPECT_EQ(Math::ceil(-1.5 ),-1.0 );
-    EXPECT_EQ(Math::ceil(-0.9f), 0.0f);
-    EXPECT_EQ(Math::ceil(-0.9 ), 0.0 );
-    EXPECT_EQ(Math::ceil(-0.5f), 0.0f);
-    EXPECT_EQ(Math::ceil(-0.5 ), 0.0 );
-    EXPECT_EQ(Math::ceil(-0.1f), 0.0f);
-    EXPECT_EQ(Math::ceil(-0.1 ), 0.0 );
-    EXPECT_EQ(Math::ceil( 0.0f), 0.0f);
-    EXPECT_EQ(Math::ceil( 0.0 ), 0.0 );
-    EXPECT_EQ(Math::ceil( 0.1f), 1.0f);
-    EXPECT_EQ(Math::ceil( 0.1 ), 1.0 );
-    EXPECT_EQ(Math::ceil( 0.5f), 1.0f);
-    EXPECT_EQ(Math::ceil( 0.5 ), 1.0 );
-    EXPECT_EQ(Math::ceil( 0.9f), 1.0f);
-    EXPECT_EQ(Math::ceil( 0.9 ), 1.0 );
-    EXPECT_EQ(Math::ceil( 1.5f), 2.0f);
-    EXPECT_EQ(Math::ceil( 1.5 ), 2.0 );
-    EXPECT_EQ(Math::ceil(-4503599627370496.0), -4503599627370496.0);
-    EXPECT_EQ(Math::ceil( 4503599627370496.0),  4503599627370496.0);
+    for (uint32_t i = 0; i < kRoundRandomCount; i++) {
+      double x = i < BL_ARRAY_SIZE(round_ints_f64) ? round_ints_f64[i] : rnd_f64();
+      double a = Math::trunc(x);
+      double b = ::trunc(x);
+      EXPECT_EQ(a, b).message("Failed to trunc float64(%0.20f) %0.20f (Math::trunc) != %0.20f (std::trunc)", x, a, b);
+    }
   }
 
-  INFO("bl::Math::trunc()");
+  INFO("Testing floating point rounding - floor(float32)");
   {
-    EXPECT_EQ(Math::trunc(-1.5f),-1.0f);
-    EXPECT_EQ(Math::trunc(-1.5 ),-1.0 );
-    EXPECT_EQ(Math::trunc(-0.9f), 0.0f);
-    EXPECT_EQ(Math::trunc(-0.9 ), 0.0 );
-    EXPECT_EQ(Math::trunc(-0.5f), 0.0f);
-    EXPECT_EQ(Math::trunc(-0.5 ), 0.0 );
-    EXPECT_EQ(Math::trunc(-0.1f), 0.0f);
-    EXPECT_EQ(Math::trunc(-0.1 ), 0.0 );
-    EXPECT_EQ(Math::trunc( 0.0f), 0.0f);
-    EXPECT_EQ(Math::trunc( 0.0 ), 0.0 );
-    EXPECT_EQ(Math::trunc( 0.1f), 0.0f);
-    EXPECT_EQ(Math::trunc( 0.1 ), 0.0 );
-    EXPECT_EQ(Math::trunc( 0.5f), 0.0f);
-    EXPECT_EQ(Math::trunc( 0.5 ), 0.0 );
-    EXPECT_EQ(Math::trunc( 0.9f), 0.0f);
-    EXPECT_EQ(Math::trunc( 0.9 ), 0.0 );
-    EXPECT_EQ(Math::trunc( 1.5f), 1.0f);
-    EXPECT_EQ(Math::trunc( 1.5 ), 1.0 );
-    EXPECT_EQ(Math::trunc(-4503599627370496.0), -4503599627370496.0);
-    EXPECT_EQ(Math::trunc( 4503599627370496.0),  4503599627370496.0);
+    for (uint32_t i = 0; i < kRoundRandomCount; i++) {
+      float x = i < BL_ARRAY_SIZE(round_ints_f32) ? round_ints_f32[i] : rnd_f32();
+      float a = Math::floor(x);
+      float b = ::floorf(x);
+      EXPECT_EQ(a, b).message("Failed to floor float32(%0.20f) %0.20f (Math::floor) != %0.20f (std::floor)", x, a, b);
+    }
   }
 
-  INFO("bl::Math::round()");
+  INFO("Testing floating point rounding - floor(float64)");
   {
-    EXPECT_EQ(Math::round(-1.5f),-1.0f);
-    EXPECT_EQ(Math::round(-1.5 ),-1.0 );
-    EXPECT_EQ(Math::round(-0.9f),-1.0f);
-    EXPECT_EQ(Math::round(-0.9 ),-1.0 );
-    EXPECT_EQ(Math::round(-0.5f), 0.0f);
-    EXPECT_EQ(Math::round(-0.5 ), 0.0 );
-    EXPECT_EQ(Math::round(-0.1f), 0.0f);
-    EXPECT_EQ(Math::round(-0.1 ), 0.0 );
-    EXPECT_EQ(Math::round( 0.0f), 0.0f);
-    EXPECT_EQ(Math::round( 0.0 ), 0.0 );
-    EXPECT_EQ(Math::round( 0.1f), 0.0f);
-    EXPECT_EQ(Math::round( 0.1 ), 0.0 );
-    EXPECT_EQ(Math::round( 0.5f), 1.0f);
-    EXPECT_EQ(Math::round( 0.5 ), 1.0 );
-    EXPECT_EQ(Math::round( 0.9f), 1.0f);
-    EXPECT_EQ(Math::round( 0.9 ), 1.0 );
-    EXPECT_EQ(Math::round( 1.5f), 2.0f);
-    EXPECT_EQ(Math::round( 1.5 ), 2.0 );
-    EXPECT_EQ(Math::round(-4503599627370496.0), -4503599627370496.0);
-    EXPECT_EQ(Math::round( 4503599627370496.0),  4503599627370496.0);
+    for (uint32_t i = 0; i < kRoundRandomCount; i++) {
+      double x = i < BL_ARRAY_SIZE(round_ints_f64) ? round_ints_f64[i] : rnd_f64();
+      double a = Math::floor(x);
+      double b = ::floor(x);
+      EXPECT_EQ(a, b).message("Failed to floor float64(%0.20f) %0.20f (Math::floor) != %0.20f (std::floor)", x, a, b);
+    }
+  }
+
+  INFO("Testing floating point rounding - ceil(float32)");
+  {
+    for (uint32_t i = 0; i < kRoundRandomCount; i++) {
+      float x = i < BL_ARRAY_SIZE(round_ints_f32) ? round_ints_f32[i] : rnd_f32();
+      float a = Math::ceil(x);
+      float b = ::ceilf(x);
+      EXPECT_EQ(a, b).message("Failed to ceil float32(%0.20f) %0.20f (Math::ceil) != %0.20f (std::ceil)", x, a, b);
+    }
+  }
+
+  INFO("Testing floating point rounding - ceil(float64)");
+  {
+    for (uint32_t i = 0; i < kRoundRandomCount; i++) {
+      double x = i < BL_ARRAY_SIZE(round_ints_f64) ? round_ints_f64[i] : rnd_f64();
+      double a = Math::ceil(x);
+      double b = ::ceil(x);
+      EXPECT_EQ(a, b).message("Failed to ceil float64(%0.20f) %0.20f (Math::ceil) != %0.20f (std::ceil)", x, a, b);
+    }
+  }
+
+  INFO("Testing floating point rounding - nearby(float32)");
+  {
+    for (uint32_t i = 0; i < kRoundRandomCount; i++) {
+      float x = i < BL_ARRAY_SIZE(round_ints_f32) ? round_ints_f32[i] : rnd_f32();
+      float a = Math::nearby(x);
+      float b = ::nearbyintf(x);
+      EXPECT_EQ(a, b).message("Failed to nearby float32(%0.20f) %0.20f (Math::nearby) != %0.20f (std::nearbyint)", x, a, b);
+    }
+  }
+
+  INFO("Testing floating point rounding - nearby(float64)");
+  {
+    for (uint32_t i = 0; i < kRoundRandomCount; i++) {
+      double x = i < BL_ARRAY_SIZE(round_ints_f64) ? round_ints_f64[i] : rnd_f64();
+      double a = Math::nearby(x);
+      double b = ::nearbyint(x);
+      EXPECT_EQ(a, b).message("Failed to nearby float64(%0.20f) %0.20f (Math::nearby) != %0.20f (std::nearbyint)", x, a, b);
+    }
   }
 
   INFO("bl::Math::floorToInt()");

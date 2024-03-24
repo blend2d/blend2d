@@ -123,12 +123,6 @@ public:
 template<typename Result>
 static inline bool check(Result&& result) noexcept { return !!result; }
 
-template<typename Result>
-static inline bool checkTrue(Result&& result) noexcept { return !!result; }
-
-template<typename Result>
-static inline bool checkFalse(Result&& result) noexcept { return !result; }
-
 template<typename LHS, typename RHS>
 static inline bool checkEq(LHS&& lhs, RHS&& rhs) noexcept { return lhs == rhs; }
 
@@ -146,6 +140,18 @@ static inline bool checkLt(LHS&& lhs, RHS&& rhs) noexcept { return lhs <  rhs; }
 
 template<typename LHS, typename RHS>
 static inline bool checkLe(LHS&& lhs, RHS&& rhs) noexcept { return lhs <= rhs; }
+
+template<typename Result>
+static inline bool checkTrue(Result&& result) noexcept { return !!result; }
+
+template<typename Result>
+static inline bool checkFalse(Result&& result) noexcept { return !result; }
+
+template<typename Result>
+static inline bool checkNull(Result&& result) noexcept { return result == nullptr; }
+
+template<typename Result>
+static inline bool checkNotNull(Result&& result) noexcept { return result != nullptr; }
 
 } // {BrokenAPI}
 
@@ -186,6 +192,8 @@ static inline bool checkLe(LHS&& lhs, RHS&& rhs) noexcept { return lhs <= rhs; }
 #define EXPECT_LE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_LE(" #__VA_ARGS__ ")", ::BrokenAPI::checkLe(__VA_ARGS__))
 #define EXPECT_TRUE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_TRUE(" #__VA_ARGS__ ")", ::BrokenAPI::checkTrue(__VA_ARGS__))
 #define EXPECT_FALSE(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_FALSE(" #__VA_ARGS__ ")", ::BrokenAPI::checkFalse(__VA_ARGS__))
+#define EXPECT_NULL(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_NULL(" #__VA_ARGS__ ")", ::BrokenAPI::checkNull(__VA_ARGS__))
+#define EXPECT_NOT_NULL(...) BROKEN_EXPECT_INTERNAL(__FILE__, __LINE__, "EXPECT_NOT_NULL(" #__VA_ARGS__ ")", ::BrokenAPI::checkNotNull(__VA_ARGS__))
 
 //! \endcond
 

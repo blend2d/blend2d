@@ -134,6 +134,7 @@ struct BL_ALIGN_TYPE(CommonTable, 64) {
   VecConstNative<uint64_t> i_0000000000000000 {{ REPEAT_64B(0x0000000000000000u) }};
   VecConstNative<uint64_t> i_3030303030303030 {{ REPEAT_64B(0x3030303030303030u) }};
   VecConstNative<uint64_t> i_0F0F0F0F0F0F0F0F {{ REPEAT_64B(0x0F0F0F0F0F0F0F0Fu) }};
+  VecConstNative<uint64_t> i_1010101010101010 {{ REPEAT_64B(0x1010101010101010u) }};
   VecConstNative<uint64_t> i_8080808080808080 {{ REPEAT_64B(0x8080808080808080u) }};
   VecConstNative<uint64_t> i_FFFFFFFFFFFFFFFF {{ REPEAT_64B(0xFFFFFFFFFFFFFFFFu) }};
 
@@ -174,23 +175,26 @@ struct BL_ALIGN_TYPE(CommonTable, 64) {
   VecConstNative<uint32_t> u32_0_1_2_3 {{ REPEAT_128B(0, 1, 2, 3) }};
   VecConstNative<uint32_t> u32_4_4_4_4 {{ REPEAT_128B(4, 4, 4, 4) }};
 
+  VecConst128<uint32_t> f32_sgn_scalar {{ 0x80000000u, 0, 0, 0 }};
+  VecConst128<uint64_t> f64_sgn_scalar {{ 0x8000000000000000u, 0}};
+
   // Mask of all `float` bits containing a sign.
   VecConstNative<uint32_t> f32_sgn {{ REPEAT_32B(0x80000000u) }};
   // Mask of all `float` bits without a sign.
   VecConstNative<uint32_t> f32_abs {{ REPEAT_32B(0x7FFFFFFFu) }};
   // Mask of all LO `float` bits without a sign.
   VecConstNative<uint32_t> f32_abs_lo {{ REPEAT_128B(0x7FFFFFFFu, 0xFFFFFFFFu, 0x7FFFFFFFu, 0xFFFFFFFFu) }};
-  VecConstNative<uint32_t> f32_abs_hi {{ REPEAT_128B(0xFFFFFFFFu, 0x7FFFFFFFu, 0xFFFFFFFFu, 0x7FFFFFFFu) }};
   // Mask of all HI `float` bits without a sign.
+  VecConstNative<uint32_t> f32_abs_hi {{ REPEAT_128B(0xFFFFFFFFu, 0x7FFFFFFFu, 0xFFFFFFFFu, 0x7FFFFFFFu) }};
   // Maximum float value to round (8388608).
   VecConstNative<float> f32_round_max {{ REPEAT_32B(8388608.0f) }};
-  // Magic float used by round (12582912).
-  VecConstNative<float> f32_round_magic {{ REPEAT_32B(12582912.0f) }};
 
   // Vector of `1.0f`.
   VecConstNative<float> f32_1 {{ REPEAT_32B(1.0f) }};
   // Vector of `4.0f`.
   VecConstNative<float> f32_4 {{ REPEAT_32B(4.0f) }};
+  // Vector of `8.0f`.
+  VecConstNative<float> f32_8 {{ REPEAT_32B(8.0f) }};
   // Vector of `255.0f`.
   VecConstNative<float> f32_255 {{ REPEAT_32B(255.0f) }};
   // Vector of `1e-3`.
@@ -212,15 +216,13 @@ struct BL_ALIGN_TYPE(CommonTable, 64) {
   VecConstNative<uint64_t> f64_abs_hi {{ REPEAT_128B(0xFFFFFFFFFFFFFFFFu, 0x7FFFFFFFFFFFFFFFu) }};
   // Maximum double value to round (4503599627370496).
   VecConstNative<double> f64_round_max {{ REPEAT_64B(4503599627370496.0) }};
-  // Magic double used by round (6755399441055744).
-  VecConstNative<double> f64_round_magic {{ REPEAT_64B(6755399441055744.0) }};
 
   // Vector of `1.0`.
   VecConstNative<double> f64_1 {{ REPEAT_64B(1.0) }};
-  // Vector of `1e-20`.
-  VecConstNative<double> f64_1e_m20 {{ REPEAT_64B(1e-20) }};
   // Vector of `4.0`.
   VecConstNative<double> f64_4 {{ REPEAT_64B(4.0) }};
+  // Vector of `1e-20`.
+  VecConstNative<double> f64_1e_m20 {{ REPEAT_64B(1e-20) }};
   // Vector of `-1.0`.
   VecConstNative<double> f64_m1 {{ REPEAT_64B(-1.0) }};
 
@@ -231,10 +233,8 @@ struct BL_ALIGN_TYPE(CommonTable, 64) {
 
   //! \}
 
-  //! \name 128-bit and 256-bit VPSHUFB Predicates (X86 specific)
+  //! \name 128-bit and 256-bit VPSHUFB (X86) and TBL (ARM) predicates.
   //! \{
-
-#if BL_TARGET_ARCH_X86
 
   VecConstNative<uint64_t> pshufb_xxxxxxxxxxxx3210_to_3333222211110000 {{ REPEAT_128B(0x0101010100000000u, 0x0303030302020202u) }};
   VecConstNative<uint64_t> pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0 {{ REPEAT_128B(0xff03ff03ff03ff03u, 0xff07ff07ff07ff07u) }};
@@ -242,11 +242,24 @@ struct BL_ALIGN_TYPE(CommonTable, 64) {
   VecConstNative<uint64_t> pshufb_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0 {{ REPEAT_128B(0xff00ff00ff00ff00u, 0xff08ff08ff08ff08u) }};
   VecConstNative<uint64_t> pshufb_xxx3xxx2xxx1xxx0_to_3210321032103210 {{ REPEAT_128B(0x0C0804000C080400u, 0x0C0804000C080400u) }};
   VecConstNative<uint64_t> pshufb_xxx3xxx2xxx1xxx0_to_3333222211110000 {{ REPEAT_128B(0x0404040400000000u, 0x0C0C0C0C08080808u) }};
+  VecConstNative<uint64_t> pshufb_xxx3xxx2xxx1xxx0_to_z3z3z2z2z1z1z0z0 {{ REPEAT_128B(0xff04ff04ff00ff00u, 0xff0Cff0Cff08ff08u) }};
+  VecConstNative<uint64_t> pshufb_xxxxxxxxx3x2x1x0_to_3333222211110000 {{ REPEAT_128B(0x0202020200000000u, 0x0606060604040404u) }};
   VecConstNative<uint64_t> pshufb_xx76xx54xx32xx10_to_7654321076543210 {{ REPEAT_128B(0x0D0C090805040100u, 0x0D0C090805040100u) }};
   VecConstNative<uint64_t> pshufb_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0 {{ REPEAT_128B(0xff0Bff0Bff0Bff0Bu, 0xff0ffF0ffF0ffF0Fu) }};
-  VecConstNative<uint64_t> pshufb_3xxx2xxx1xxx0xxx_to_zzzzzzzzzzzz3210 {{ REPEAT_128B(0xffffffffffffffffu, 0xffffffff0F0B0703u) }};
+  VecConstNative<uint64_t> pshufb_3xxx2xxx1xxx0xxx_to_zzzzzzzzzzzz3210 {{ REPEAT_128B(0xffffffff0F0B0703u, 0xffffffffffffffffu) }};
+  VecConstNative<uint64_t> pshufb_3xxx2xxx1xxx0xxx_to_3333222211110000 {{ REPEAT_128B(0x0707070703030303u, 0x0F0F0F0F0B0B0B0Bu) }};
   VecConstNative<uint64_t> pshufb_32xxxxxx10xxxxxx_to_3232323210101010 {{ REPEAT_128B(0x0706070607060706u, 0x0F0E0F0E0F0E0F0Eu) }};
+  VecConstNative<uint64_t> pshufb_x1xxxxxxx0xxxxxx_to_1111000011110000 {{ REPEAT_128B(0x0E0E0E0E06060606u, 0x0E0E0E0E06060606u) }};
   VecConstNative<uint64_t> pshufb_76543210xxxxxxxx_to_z7z6z5z4z3z2z1z0 {{ REPEAT_128B(0xff0Bff0Aff09ff08u, 0xff0ffF0Eff0Dff0Cu) }};
+
+#if BL_TARGET_ARCH_X86
+
+  VecConst512<uint64_t> vpermb_a8_to_rgba32_uc {{
+    0xff00ff00ff00ff00u, 0xff01ff01ff01ff01u,
+    0xff02ff02ff02ff02u, 0xff03ff03ff03ff03u,
+    0xff04ff04ff04ff04u, 0xff05ff05ff05ff05u,
+    0xff06ff06ff06ff06u, 0xff07ff07ff07ff07u
+  }};
 
   VecConst512<uint64_t> pshufb_dither_rgba64_lo {{
     0xffffff00ff00ff00u, 0xffffff01ff01ff01u,
@@ -261,6 +274,11 @@ struct BL_ALIGN_TYPE(CommonTable, 64) {
     0xffffff0Cff0Cff0Cu, 0xffffff0Dff0Dff0Du,
     0xffffff0Eff0Eff0Eu, 0xffffff0ffF0ffF0Fu
   }};
+
+#else
+
+  VecConst128<uint64_t> pshufb_dither_rgba64_lo {{ 0xffffff00ff00ff00u, 0xffffff01ff01ff01u }};
+  VecConst128<uint64_t> pshufb_dither_rgba64_hi {{ 0xffffff08ff08ff08u, 0xffffff09ff09ff09u }};
 
 #endif // BL_TARGET_ARCH_X86
 

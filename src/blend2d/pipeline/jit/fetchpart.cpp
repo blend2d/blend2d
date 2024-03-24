@@ -27,19 +27,18 @@ FetchPart::FetchPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) no
 // bl::Pipeline::JIT::FetchPart - Init & Fini
 // ==========================================
 
-void FetchPart::init(Gp& x, Gp& y, PixelType pixelType, uint32_t pixelGranularity) noexcept {
+void FetchPart::init(const PipeFunction& fn, Gp& x, Gp& y, PixelType pixelType, uint32_t pixelGranularity) noexcept {
   _isRectFill = x.isValid();
 
   _pixelType = pixelType;
   _pixelGranularity = uint8_t(pixelGranularity);
 
-  // Initialize alpha fetch information. The fetch would be A8 if either the
-  // requested pixel is alpha-only or the source pixel format is alpha-only
-  // (or both).
+  // Initialize alpha fetch information. The fetch would be A8 if either the requested
+  // pixel is alpha-only or the source pixel format is alpha-only (or both).
   _alphaFetch = _pixelType == PixelType::kA8 || _format == FormatExt::kA8;
   _alphaOffset = blFormatInfo[size_t(_format)].aShift / 8;
 
-  _initPart(x, y);
+  _initPart(fn, x, y);
   _initGlobalHook(cc->cursor());
 }
 
@@ -52,8 +51,8 @@ void FetchPart::fini() noexcept {
   _pixelGranularity = 0;
 }
 
-void FetchPart::_initPart(Gp& x, Gp& y) noexcept {
-  blUnused(x, y);
+void FetchPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noexcept {
+  blUnused(fn, x, y);
 }
 
 void FetchPart::_finiPart() noexcept {}
@@ -105,7 +104,6 @@ void FetchPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& 
   BL_NOT_REACHED();
 }
 
-#if defined(BL_JIT_ARCH_X86)
 void FetchPart::_fetch2x4(Pixel& p, PixelFlags flags) noexcept {
   // Fallback to `fetch4()` by default.
   p.setCount(PixelCount(8));
@@ -122,11 +120,15 @@ void FetchPart::_fetch2x4(Pixel& p, PixelFlags flags) noexcept {
   if (p.isRGBA32()) {
     if (!x.pc.empty()) {
       BL_ASSERT(!y.pc.empty());
+
+#if defined(BL_JIT_ARCH_X86)
       if (pc->simdWidth() >= SimdWidth::k256) {
-        pc->newYmmArray(p.pc, 1, p.name(), "pc");
-        cc->vinserti128(p.pc[0], x.pc[0].ymm(), y.pc[0], 1);
+        pc->newV256Array(p.pc, 1, p.name(), "pc");
+        pc->v_insert_v128_u32(p.pc[0], x.pc[0], y.pc[0], 1);
       }
-      else {
+      else
+#endif // BL_JIT_ARCH_X86
+      {
         p.pc.init(x.pc[0], y.pc[0]);
         pc->rename(p.pc, "pc");
       }
@@ -174,10 +176,9 @@ void FetchPart::_fetch2x4(Pixel& p, PixelFlags flags) noexcept {
     p.setImmutable(x.isImmutable());
   }
 }
-#endif
 
 } // {JIT}
 } // {Pipeline}
 } // {bl}
 
-#endif
+#endif // !BL_BUILD_NO_JIT
