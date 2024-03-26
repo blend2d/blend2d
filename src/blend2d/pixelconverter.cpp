@@ -542,7 +542,12 @@ BLResult bl_convert_a8_from_8888(
 
   const BLPixelConverterData::X8FromRgb32Data& d = blPixelConverterGetData(self)->x8FromRgb32Data;
   const size_t srcBPP = d.bytesPerPixel;
+
+#if BL_BYTE_ORDER == 1234
   const size_t srcAI = d.alphaShift / 8u;
+#else
+  const size_t srcAI = (24u - d.alphaShift) / 8u;
+#endif
 
   srcData += srcAI;
 
