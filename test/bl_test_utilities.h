@@ -133,6 +133,9 @@ public:
 
   inline void seed(uint64_t value) { _rnd.reset(value); }
 
+  inline uint32_t nextUInt32() { return _rnd.nextUInt32(); }
+  inline uint64_t nextUInt64() { return _rnd.nextUInt64(); }
+
   inline BLRgba32 nextRgb32() { return BLRgba32(_rnd.nextUInt32() | 0xFF000000u); }
 
   int nextXCoordI() { return (int)((_rnd.nextDouble() * _size.w) + _bounds.x0); }
@@ -265,8 +268,7 @@ public:
       BLRectI rect = _rnd.nextRectI();
 
       _logger.debug("%sFillRectI(%d, %d, %d, %d)\n", _prefix, rect.x, rect.y, rect.w, rect.h);
-      _ctx.setFillStyle(_rnd.nextRgb32());
-      _ctx.fillRect(rect);
+      _ctx.fillRect(rect, _rnd.nextRgb32());
 
       recordIteration(i);
     }
@@ -282,8 +284,7 @@ public:
       BLRect rect = _rnd.nextRectD();
 
       _logger.debug("%sFillRectD(%g, %g, %g, %g)\n", _prefix, rect.x, rect.y, rect.w, rect.h);
-      _ctx.setFillStyle(_rnd.nextRgb32());
-      _ctx.fillRect(rect);
+      _ctx.fillRect(rect, _rnd.nextRgb32());
 
       recordIteration(i);
     }
@@ -299,8 +300,7 @@ public:
       BLTriangle t = _rnd.nextTriangle();
 
       _logger.debug("%sFillTriangle(%g, %g, %g, %g, %g, %g)\n", _prefix, t.x0, t.y0, t.x1, t.y1, t.x2, t.y2);
-      _ctx.setFillStyle(_rnd.nextRgb32());
-      _ctx.fillTriangle(t);
+      _ctx.fillTriangle(t, _rnd.nextRgb32());
 
       recordIteration(i);
     }
@@ -317,8 +317,7 @@ public:
 
       path.moveTo(_rnd.nextPointD());
       path.quadTo(_rnd.nextPointD(), _rnd.nextPointD());
-      _ctx.setFillStyle(_rnd.nextRgb32());
-      _ctx.fillPath(path);
+      _ctx.fillPath(path, _rnd.nextRgb32());
 
       recordIteration(i);
     }
@@ -335,8 +334,49 @@ public:
 
       path.moveTo(_rnd.nextPointD());
       path.cubicTo(_rnd.nextPointD(), _rnd.nextPointD(), _rnd.nextPointD());
-      _ctx.setFillStyle(_rnd.nextRgb32());
-      _ctx.fillPath(path);
+      _ctx.fillPath(path, _rnd.nextRgb32());
+
+      recordIteration(i);
+    }
+
+    finished(fuzzName);
+  }
+
+  void fuzzFillText(size_t n, const BLFontData& fontData, uint32_t faceIndex, float fontSize) {
+    const char* fuzzName = "FillText";
+    static const char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01234567890!@#$%^&*()_{}:;<>?|";
+
+    started(fuzzName);
+
+    for (size_t i = 0; i < n; i++) {
+      BLFontFace face;
+      face.createFromData(fontData, faceIndex);
+
+      BLFont font;
+      font.createFromFace(face, fontSize);
+
+      // We want to render at least two text runs so there is a chance that text processing
+      // and rendering happens in parallel in case the rendering context uses multi-threading.
+      uint32_t rnd0 = _rnd.nextUInt32();
+      uint32_t rnd1 = _rnd.nextUInt32();
+
+      char str0[5] {};
+      str0[0] = alphabet[((rnd0 >>  0) & 0xFF) % (sizeof(alphabet) - 1u)];
+      str0[1] = alphabet[((rnd0 >>  8) & 0xFF) % (sizeof(alphabet) - 1u)];
+      str0[2] = alphabet[((rnd0 >> 16) & 0xFF) % (sizeof(alphabet) - 1u)];
+      str0[3] = alphabet[((rnd0 >> 24) & 0xFF) % (sizeof(alphabet) - 1u)];
+
+      char str1[5] {};
+      str1[0] = alphabet[((rnd1 >>  0) & 0xFF) % (sizeof(alphabet) - 1u)];
+      str1[1] = alphabet[((rnd1 >>  8) & 0xFF) % (sizeof(alphabet) - 1u)];
+      str1[2] = alphabet[((rnd1 >> 16) & 0xFF) % (sizeof(alphabet) - 1u)];
+      str1[3] = alphabet[((rnd1 >> 24) & 0xFF) % (sizeof(alphabet) - 1u)];
+
+      BLPoint pt0 = _rnd.nextPointD();
+      BLPoint pt1 = _rnd.nextPointD();
+
+      _ctx.fillUtf8Text(pt0, font, BLStringView{str0, 4}, _rnd.nextRgb32());
+      _ctx.fillUtf8Text(pt1, font, BLStringView{str1, 4}, _rnd.nextRgb32());
 
       recordIteration(i);
     }

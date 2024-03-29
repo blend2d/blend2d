@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include "bl_test_utilities.h"
+#include "resources/abeezee_regular_ttf.h"
 
 class App {
 public:
@@ -38,7 +39,7 @@ public:
     seed(1),
     width(513),
     height(513),
-    count(1000000),
+    count(200000),
     mismatchCount(0) {}
 
   void info() {
@@ -87,7 +88,8 @@ public:
     return 0;
   }
 
-  void fuzz(const char* fuzzName, ContextFuzzer& aFuzzer, ContextFuzzer& bFuzzer, FuzzFunc fuzzFunc) {
+  template<typename FuzzFunc>
+  void fuzz(const char* fuzzName, ContextFuzzer& aFuzzer, ContextFuzzer& bFuzzer, FuzzFunc&& fuzzFunc) {
     aFuzzer.clear();
     bFuzzer.clear();
 
@@ -119,7 +121,8 @@ public:
     return false;
   }
 
-  void findProblem(const char* fuzzName, ContextFuzzer& aFuzzer, ContextFuzzer& bFuzzer, FuzzFunc fuzzFunc) {
+  template<typename FuzzFunc>
+  void findProblem(const char* fuzzName, ContextFuzzer& aFuzzer, ContextFuzzer& bFuzzer, FuzzFunc&& fuzzFunc) {
     // Do a binary search to find exactly the failing command.
     size_t base = 0;
     size_t size = count;
@@ -193,7 +196,9 @@ public:
     count = cmdLine.valueAsUInt("--count", count);
 
     const char* command = cmdLine.valueOf("--command", "");
+
     bool all = command[0] == '\0' || StringUtils::strieq(command, "all");
+    auto&& shouldRun = [&](const char* runCmd) { return all || StringUtils::strieq(command, runCmd); };
 
     ContextFuzzer aFuzzer("[ST] ", verbose ? Logger::Verbosity::Debug : Logger::Verbosity::Info);
     ContextFuzzer bFuzzer("[MT] ", Logger::Verbosity::Info);
@@ -207,20 +212,31 @@ public:
       return 1;
     }
 
-    #define FUZZ(fuzzName) \
-      if (all || StringUtils::strieq(command, #fuzzName)) { \
-        fuzz(#fuzzName, aFuzzer, bFuzzer, [](ContextFuzzer* fuzzer, size_t n) { \
-          fuzzer->fuzz##fuzzName(n); } \
-        ); \
-      }
+    if (shouldRun("FillRectI")) {
+      fuzz("FillRectI", aFuzzer, bFuzzer, [](ContextFuzzer* fuzzer, size_t n) { fuzzer->fuzzFillRectI(n); });
+    }
 
-    FUZZ(FillRectI)
-    FUZZ(FillRectD)
-    FUZZ(FillTriangle)
-    FUZZ(FillPathQuads)
-    FUZZ(FillPathCubics)
+    if (shouldRun("FillRectD")) {
+      fuzz("FillRectD", aFuzzer, bFuzzer, [](ContextFuzzer* fuzzer, size_t n) { fuzzer->fuzzFillRectD(n); });
+    }
 
-    #undef FUZZ
+    if (shouldRun("FillTriangle")) {
+      fuzz("FillTriangle", aFuzzer, bFuzzer, [](ContextFuzzer* fuzzer, size_t n) { fuzzer->fuzzFillTriangle(n); });
+    }
+
+    if (shouldRun("FillPathQuads")) {
+      fuzz("FillPathQuads", aFuzzer, bFuzzer, [](ContextFuzzer* fuzzer, size_t n) { fuzzer->fuzzFillPathQuads(n); });
+    }
+
+    if (shouldRun("FillPathCubics")) {
+      fuzz("FillPathCubics", aFuzzer, bFuzzer, [](ContextFuzzer* fuzzer, size_t n) { fuzzer->fuzzFillPathCubics(n); });
+    }
+
+    if (shouldRun("FillText")) {
+      BLFontData fontData;
+      fontData.createFromData(resource_abeezee_regular_ttf, sizeof(resource_abeezee_regular_ttf));
+      fuzz("FillText", aFuzzer, bFuzzer, [&](ContextFuzzer* fuzzer, size_t n) { fuzzer->fuzzFillText(n, fontData, 0u, 20.0f); });
+    }
 
     aFuzzer.reset();
     bFuzzer.reset();

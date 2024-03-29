@@ -51,7 +51,7 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE ValidationContext(const OTFaceImpl* faceI, LookupKind lookupKind) noexcept
+  BL_INLINE_NODEBUG ValidationContext(const OTFaceImpl* faceI, LookupKind lookupKind) noexcept
     : _faceI(faceI),
       _lookupKind(lookupKind) {}
 
@@ -60,8 +60,8 @@ public:
   //! \name Accessors
   //! \{
 
-  BL_INLINE const OTFaceImpl* faceImpl() const noexcept { return _faceI; }
-  BL_INLINE LookupKind lookupKind() const noexcept { return _lookupKind; }
+  BL_INLINE_NODEBUG const OTFaceImpl* faceImpl() const noexcept { return _faceI; }
+  BL_INLINE_NODEBUG LookupKind lookupKind() const noexcept { return _lookupKind; }
 
   //! \}
 
@@ -117,7 +117,7 @@ public:
 // bl::OpenType::LayoutImpl - GDEF - Init
 // ======================================
 
-static BLResult initGDef(OTFaceImpl* faceI, Table<GDefTable> gdef) noexcept {
+static BL_NOINLINE BLResult initGDef(OTFaceImpl* faceI, Table<GDefTable> gdef) noexcept {
   if (!gdef.fits())
     return BL_SUCCESS;
 
@@ -214,7 +214,7 @@ enum class FormatBits4X : uint32_t {
 // bl::OpenType::LayoutImpl - GSUB & GPOS - Metadata
 // =================================================
 
-static const char* gsubLookupName(uint32_t lookupType) noexcept {
+static BL_NOINLINE const char* gsubLookupName(uint32_t lookupType) noexcept {
   static const char lookupNames[] = {
     "<INVALID>\0"
     "SingleSubst\0"
@@ -245,7 +245,7 @@ static const char* gsubLookupName(uint32_t lookupType) noexcept {
   return lookupNames + lookupIndex[lookupType];
 }
 
-static const char* gposLookupName(uint32_t lookupType) noexcept {
+static BL_NOINLINE const char* gposLookupName(uint32_t lookupType) noexcept {
   static const char lookupNames[] = {
     "<INVALID>\0"
     "SingleAdjustment\0"
@@ -414,10 +414,10 @@ static bool validateTagRef16Array(ValidationContext& validator, RawTable data, c
 struct ApplyIndex {
   size_t _index;
 
-  BL_INLINE constexpr bool isRange() const noexcept { return false; }
-  BL_INLINE size_t index() const noexcept { return _index; }
-  BL_INLINE size_t end() const noexcept { return _index + 1; }
-  BL_INLINE size_t size() const noexcept { return 1; }
+  BL_INLINE_NODEBUG constexpr bool isRange() const noexcept { return false; }
+  BL_INLINE_NODEBUG size_t index() const noexcept { return _index; }
+  BL_INLINE_NODEBUG size_t end() const noexcept { return _index + 1; }
+  BL_INLINE_NODEBUG size_t size() const noexcept { return 1; }
 };
 
 //! A range to be applied when processing a lookup.
@@ -428,10 +428,10 @@ struct ApplyRange {
   size_t _index;
   size_t _end;
 
-  BL_INLINE constexpr bool isRange() const noexcept { return true; }
-  BL_INLINE size_t index() const noexcept { return _index; }
-  BL_INLINE size_t end() const noexcept { return _end; }
-  BL_INLINE size_t size() const noexcept { return _end - _index; }
+  BL_INLINE_NODEBUG constexpr bool isRange() const noexcept { return true; }
+  BL_INLINE_NODEBUG size_t index() const noexcept { return _index; }
+  BL_INLINE_NODEBUG size_t end() const noexcept { return _end; }
+  BL_INLINE_NODEBUG size_t size() const noexcept { return _end - _index; }
 
   BL_INLINE void intersect(size_t index, size_t end) noexcept {
     _index = blMax(_index, index);
@@ -442,7 +442,7 @@ struct ApplyRange {
 // bl::OpenType::LayoutImpl - GSUB & GPOS - ClassDef Validation
 // ============================================================
 
-static bool validateClassDefTable(ValidationContext& validator, Table<ClassDefTable> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validateClassDefTable(ValidationContext& validator, Table<ClassDefTable> table, const char* tableName) noexcept {
   // Ignore if it doesn't fit.
   if (!table.fits())
     return validator.invalidTableSize(tableName, table.size, ClassDefTable::kBaseSize);
@@ -514,7 +514,7 @@ static bool validateClassDefTable(ValidationContext& validator, Table<ClassDefTa
 // bl::OpenType::LayoutImpl - GSUB & GPOS - Coverage Validation
 // ============================================================
 
-static bool validateCoverageTable(ValidationContext& validator, Table<CoverageTable> coverageTable, uint32_t& coverageCount) noexcept {
+static BL_NOINLINE bool validateCoverageTable(ValidationContext& validator, Table<CoverageTable> coverageTable, uint32_t& coverageCount) noexcept {
   const char* tableName = "CoverageTable";
 
   coverageCount = 0;
@@ -591,7 +591,7 @@ static bool validateCoverageTable(ValidationContext& validator, Table<CoverageTa
   }
 }
 
-static bool validateCoverageTables(
+static BL_NOINLINE bool validateCoverageTables(
   ValidationContext& validator,
   RawTable table,
   const char* tableName,
@@ -617,7 +617,7 @@ static bool validateCoverageTables(
 // bl::OpenType::LayoutImpl - GSUB & GPOS - Lookup Table Validation
 // ================================================================
 
-static bool validateLookupWithCoverage(ValidationContext& validator, RawTable data, const char* tableName, uint32_t headerSize, uint32_t& coverageCount) noexcept {
+static BL_NOINLINE bool validateLookupWithCoverage(ValidationContext& validator, RawTable data, const char* tableName, uint32_t headerSize, uint32_t& coverageCount) noexcept {
   if (!data.fits(headerSize))
     return validator.invalidTableSize(tableName, data.size, headerSize);
 
@@ -631,7 +631,7 @@ static bool validateLookupWithCoverage(ValidationContext& validator, RawTable da
 // bl::OpenType::LayoutImpl - GSUB & GPOS - Sequence Context Validation
 // ====================================================================
 
-static bool validateSequenceLookupRecordArray(ValidationContext& validator, const GSubGPosTable::SequenceLookupRecord* lookupRecordArray, uint32_t lookupRecordCount) noexcept {
+static BL_NOINLINE bool validateSequenceLookupRecordArray(ValidationContext& validator, const GSubGPosTable::SequenceLookupRecord* lookupRecordArray, uint32_t lookupRecordCount) noexcept {
   const LayoutData& layoutData = validator.faceImpl()->layout;
   uint32_t lookupCount = layoutData.byKind(validator.lookupKind()).lookupCount;
 
@@ -647,7 +647,7 @@ static bool validateSequenceLookupRecordArray(ValidationContext& validator, cons
 }
 
 template<typename SequenceLookupTable>
-static bool validateContextFormat1_2(ValidationContext& validator, Table<SequenceLookupTable> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validateContextFormat1_2(ValidationContext& validator, Table<SequenceLookupTable> table, const char* tableName) noexcept {
   typedef GSubGPosTable::SequenceRule SequenceRule;
   typedef GSubGPosTable::SequenceRuleSet SequenceRuleSet;
 
@@ -714,11 +714,11 @@ static bool validateContextFormat1_2(ValidationContext& validator, Table<Sequenc
   return true;
 }
 
-static bool validateContextFormat1(ValidationContext& validator, Table<GSubGPosTable::SequenceContext1> table, const char* tableName) noexcept {
+static BL_INLINE bool validateContextFormat1(ValidationContext& validator, Table<GSubGPosTable::SequenceContext1> table, const char* tableName) noexcept {
   return validateContextFormat1_2<GSubGPosTable::SequenceContext1>(validator, table, tableName);
 }
 
-static bool validateContextFormat2(ValidationContext& validator, Table<GSubGPosTable::SequenceContext2> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validateContextFormat2(ValidationContext& validator, Table<GSubGPosTable::SequenceContext2> table, const char* tableName) noexcept {
   if (!table.fits())
     return validator.invalidTableSize(tableName, table.size, GSubGPosTable::SequenceContext2::kBaseSize);
 
@@ -740,7 +740,7 @@ static bool validateContextFormat2(ValidationContext& validator, Table<GSubGPosT
   return validateContextFormat1_2<GSubGPosTable::SequenceContext2>(validator, table, tableName);
 }
 
-static bool validateContextFormat3(ValidationContext& validator, Table<GSubGPosTable::SequenceContext3> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validateContextFormat3(ValidationContext& validator, Table<GSubGPosTable::SequenceContext3> table, const char* tableName) noexcept {
   if (!table.fits())
     return validator.invalidTableSize(tableName, table.size, GSubGPosTable::SequenceContext3::kBaseSize);
 
@@ -952,7 +952,7 @@ static BL_INLINE bool matchSequenceFormat3(
 // ============================================================================
 
 template<typename ChainedSequenceLookupTable>
-static bool validateChainedContextFormat1_2(ValidationContext& validator, Table<ChainedSequenceLookupTable> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validateChainedContextFormat1_2(ValidationContext& validator, Table<ChainedSequenceLookupTable> table, const char* tableName) noexcept {
   typedef GSubGPosTable::ChainedSequenceRule ChainedSequenceRule;
   typedef GSubGPosTable::ChainedSequenceRuleSet ChainedSequenceRuleSet;
 
@@ -1033,11 +1033,11 @@ static bool validateChainedContextFormat1_2(ValidationContext& validator, Table<
   return true;
 }
 
-static bool validateChainedContextFormat1(ValidationContext& validator, Table<GSubGPosTable::ChainedSequenceContext1> table, const char* tableName) noexcept {
+static BL_INLINE bool validateChainedContextFormat1(ValidationContext& validator, Table<GSubGPosTable::ChainedSequenceContext1> table, const char* tableName) noexcept {
   return validateChainedContextFormat1_2(validator, table, tableName);
 }
 
-static bool validateChainedContextFormat2(ValidationContext& validator, Table<GSubGPosTable::ChainedSequenceContext2> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validateChainedContextFormat2(ValidationContext& validator, Table<GSubGPosTable::ChainedSequenceContext2> table, const char* tableName) noexcept {
   if (!table.fits())
     return validator.invalidTableSize(tableName, table.size, GSubGPosTable::SequenceContext2::kBaseSize);
 
@@ -1073,7 +1073,7 @@ static bool validateChainedContextFormat2(ValidationContext& validator, Table<GS
   return validateChainedContextFormat1_2(validator, table, tableName);
 }
 
-static bool validateChainedContextFormat3(ValidationContext& validator, Table<GSubGPosTable::ChainedSequenceContext3> table, const char* tableName) noexcept {
+static BL_NOINLINE bool validateChainedContextFormat3(ValidationContext& validator, Table<GSubGPosTable::ChainedSequenceContext3> table, const char* tableName) noexcept {
   if (!table.fits())
     return validator.invalidTableSize(tableName, table.size, GSubGPosTable::ChainedSequenceContext3::kBaseSize);
 
@@ -1419,13 +1419,13 @@ static BL_INLINE bool matchChainedSequenceFormat3(
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #1 - Single Substitution Validation
 // =================================================================================
 
-static bool validateGSubLookupType1Format1(ValidationContext& validator, Table<GSubTable::SingleSubst1> table) noexcept {
+static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType1Format1(ValidationContext& validator, Table<GSubTable::SingleSubst1> table) noexcept {
   const char* tableName = "SingleSubst1";
   uint32_t unusedCoverageCount;
   return validateLookupWithCoverage(validator, table, tableName, GSubTable::SingleSubst1::kBaseSize, unusedCoverageCount);
 }
 
-static bool validateGSubLookupType1Format2(ValidationContext& validator, Table<GSubTable::SingleSubst2> table) noexcept {
+static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType1Format2(ValidationContext& validator, Table<GSubTable::SingleSubst2> table) noexcept {
   const char* tableName = "SingleSubst2";
 
   uint32_t coverageCount;
@@ -1449,7 +1449,7 @@ static bool validateGSubLookupType1Format2(ValidationContext& validator, Table<G
 // =============================================================================
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE BLResult applyGSubLookupType1Format1(GSubContext& ctx, Table<GSubTable::SingleSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType1Format1(GSubContext& ctx, Table<GSubTable::SingleSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -1475,7 +1475,7 @@ static BL_INLINE BLResult applyGSubLookupType1Format1(GSubContext& ctx, Table<GS
 }
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE BLResult applyGSubLookupType1Format2(GSubContext& ctx, Table<GSubTable::SingleSubst2> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType1Format2(GSubContext& ctx, Table<GSubTable::SingleSubst2> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -1505,7 +1505,7 @@ static BL_INLINE BLResult applyGSubLookupType1Format2(GSubContext& ctx, Table<GS
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #2 - Multiple Substitution Validation
 // ===================================================================================
 
-static bool validateGSubLookupType2Format1(ValidationContext& validator, Table<GSubTable::MultipleSubst1> table) noexcept {
+static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType2Format1(ValidationContext& validator, Table<GSubTable::MultipleSubst1> table) noexcept {
   const char* tableName = "MultipleSubst1";
 
   uint32_t coverageCount;
@@ -1549,7 +1549,7 @@ static bool validateGSubLookupType2Format1(ValidationContext& validator, Table<G
 
 // TODO: [OpenType] [SECURITY] What if the glyph contains kSeqMask???
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE BLResult applyGSubLookupType2Format1(GSubContext& ctx, Table<GSubTable::MultipleSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType2Format1(GSubContext& ctx, Table<GSubTable::MultipleSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -1631,7 +1631,7 @@ static BL_INLINE BLResult applyGSubLookupType2Format1(GSubContext& ctx, Table<GS
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #3 - Alternate Substitution Validation
 // ====================================================================================
 
-static bool validateGSubLookupType3Format1(ValidationContext& validator, RawTable table) noexcept {
+static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType3Format1(ValidationContext& validator, RawTable table) noexcept {
   const char* tableName = "AlternateSubst1";
 
   uint32_t coverageCount;
@@ -1676,7 +1676,7 @@ static bool validateGSubLookupType3Format1(ValidationContext& validator, RawTabl
 // ================================================================================
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE BLResult applyGSubLookupType3Format1(GSubContext& ctx, Table<GSubTable::AlternateSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType3Format1(GSubContext& ctx, Table<GSubTable::AlternateSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -1717,7 +1717,7 @@ static BL_INLINE BLResult applyGSubLookupType3Format1(GSubContext& ctx, Table<GS
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #4 - Ligature Substitution Validation
 // ===================================================================================
 
-static bool validateGSubLookupType4Format1(ValidationContext& validator, Table<GSubTable::LigatureSubst1> table) noexcept {
+static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType4Format1(ValidationContext& validator, Table<GSubTable::LigatureSubst1> table) noexcept {
   const char* tableName = "LigatureSubst1";
 
   uint32_t coverageCount;
@@ -1820,7 +1820,7 @@ static BL_INLINE bool matchLigature(
 }
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE BLResult applyGSubLookupType4Format1(GSubContext& ctx, Table<GSubTable::LigatureSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType4Format1(GSubContext& ctx, Table<GSubTable::LigatureSubst1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -1929,15 +1929,15 @@ static void applyGSubNestedLookup(GSubContext& ctx) noexcept {
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #5 - Context Substitution Validation
 // ==================================================================================
 
-static bool validateGSubLookupType5Format1(ValidationContext& validator, Table<GSubTable::SequenceContext1> table) noexcept {
+static BL_INLINE bool validateGSubLookupType5Format1(ValidationContext& validator, Table<GSubTable::SequenceContext1> table) noexcept {
   return validateContextFormat1(validator, table, "ContextSubst1");
 }
 
-static bool validateGSubLookupType5Format2(ValidationContext& validator, Table<GSubTable::SequenceContext2> table) noexcept {
+static BL_INLINE bool validateGSubLookupType5Format2(ValidationContext& validator, Table<GSubTable::SequenceContext2> table) noexcept {
   return validateContextFormat2(validator, table, "ContextSubst2");
 }
 
-static bool validateGSubLookupType5Format3(ValidationContext& validator, Table<GSubTable::SequenceContext3> table) noexcept {
+static BL_INLINE bool validateGSubLookupType5Format3(ValidationContext& validator, Table<GSubTable::SequenceContext3> table) noexcept {
   return validateContextFormat3(validator, table, "ContextSubst3");
 }
 
@@ -1945,7 +1945,7 @@ static bool validateGSubLookupType5Format3(ValidationContext& validator, Table<G
 // ==============================================================================
 
 template<uint32_t kCovFmt>
-static BL_INLINE BLResult applyGSubLookupType5Format1(GSubContext& ctx, Table<GSubTable::SequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType5Format1(GSubContext& ctx, Table<GSubTable::SequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -1969,7 +1969,7 @@ static BL_INLINE BLResult applyGSubLookupType5Format1(GSubContext& ctx, Table<GS
 }
 
 template<uint32_t kCovFmt, uint32_t kCDFmt>
-static BL_INLINE BLResult applyGSubLookupType5Format2(GSubContext& ctx, Table<GSubTable::SequenceContext2> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt, const ClassDefTableIterator& cdIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType5Format2(GSubContext& ctx, Table<GSubTable::SequenceContext2> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt, const ClassDefTableIterator& cdIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -1992,7 +1992,7 @@ static BL_INLINE BLResult applyGSubLookupType5Format2(GSubContext& ctx, Table<GS
   return BL_SUCCESS;
 }
 
-static BL_INLINE BLResult applyGSubLookupType5Format3(GSubContext& ctx, Table<GSubTable::SequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType5Format3(GSubContext& ctx, Table<GSubTable::SequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -2030,15 +2030,15 @@ static BL_INLINE BLResult applyGSubLookupType5Format3(GSubContext& ctx, Table<GS
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #6 - Chained Context Substitution Validation
 // ==========================================================================================
 
-static bool validateGSubLookupType6Format1(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext1> table) noexcept {
+static BL_INLINE bool validateGSubLookupType6Format1(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext1> table) noexcept {
   return validateChainedContextFormat1(validator, table, "ChainedContextSubst1");
 }
 
-static bool validateGSubLookupType6Format2(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext2> table) noexcept {
+static BL_INLINE bool validateGSubLookupType6Format2(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext2> table) noexcept {
   return validateChainedContextFormat2(validator, table, "ChainedContextSubst2");
 }
 
-static bool validateGSubLookupType6Format3(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext3> table) noexcept {
+static BL_INLINE bool validateGSubLookupType6Format3(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext3> table) noexcept {
   return validateChainedContextFormat3(validator, table, "ChainedContextSubst3");
 }
 
@@ -2046,7 +2046,7 @@ static bool validateGSubLookupType6Format3(ValidationContext& validator, Table<G
 // ======================================================================================
 
 template<uint32_t kCovFmt>
-static BL_INLINE BLResult applyGSubLookupType6Format1(GSubContext& ctx, Table<GSubTable::ChainedSequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType6Format1(GSubContext& ctx, Table<GSubTable::ChainedSequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT(scope.index() < scope.end());
   BL_ASSERT_VALIDATED(table.fits());
@@ -2076,7 +2076,7 @@ static BL_INLINE BLResult applyGSubLookupType6Format1(GSubContext& ctx, Table<GS
 }
 
 template<uint32_t kCovFmt, uint32_t kCD1Fmt, uint32_t kCD2Fmt, uint32_t kCD3Fmt>
-static BL_INLINE BLResult applyGSubLookupType6Format2(
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType6Format2(
   GSubContext& ctx,
   Table<GSubTable::ChainedSequenceContext2> table,
   ApplyRange scope,
@@ -2111,7 +2111,7 @@ static BL_INLINE BLResult applyGSubLookupType6Format2(
   return BL_SUCCESS;
 }
 
-static BL_INLINE BLResult applyGSubLookupType6Format3(GSubContext& ctx, Table<GSubTable::ChainedSequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType6Format3(GSubContext& ctx, Table<GSubTable::ChainedSequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -2177,7 +2177,7 @@ static BL_INLINE BLResult applyGSubLookupType6Format3(GSubContext& ctx, Table<GS
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #8 - Reverse Chained Context Validation
 // =====================================================================================
 
-static bool validateGSubLookupType8Format1(ValidationContext& validator, Table<GSubTable::ReverseChainedSingleSubst1> table) noexcept {
+static BL_INLINE_IF_NOT_DEBUG bool validateGSubLookupType8Format1(ValidationContext& validator, Table<GSubTable::ReverseChainedSingleSubst1> table) noexcept {
   const char* tableName = "ReverseChainedSingleSubst1";
 
   if (!table.fits())
@@ -2226,7 +2226,7 @@ static bool validateGSubLookupType8Format1(ValidationContext& validator, Table<G
 // bl::OpenType::LayoutImpl - GSUB - Lookup Type #8 - Reverse Chained Context Lookup
 // =================================================================================
 
-static BL_INLINE BLResult applyGSubLookupType8Format1(GSubContext& ctx, Table<GSubTable::ReverseChainedSingleSubst1> table, ApplyRange scope, LookupFlags flags) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType8Format1(GSubContext& ctx, Table<GSubTable::ReverseChainedSingleSubst1> table, ApplyRange scope, LookupFlags flags) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -2282,7 +2282,7 @@ static BL_INLINE BLResult applyGSubLookupType8Format1(GSubContext& ctx, Table<GS
 // bl::OpenType::LayoutImpl - GSUB - Dispatch
 // ==========================================
 
-static bool validateGSubLookup(ValidationContext& validator, RawTable table, GSubLookupAndFormat typeAndFormat) noexcept {
+static BL_NOINLINE bool validateGSubLookup(ValidationContext& validator, RawTable table, GSubLookupAndFormat typeAndFormat) noexcept {
   switch (typeAndFormat) {
     case GSubLookupAndFormat::kType1Format1: return validateGSubLookupType1Format1(validator, table);
     case GSubLookupAndFormat::kType1Format2: return validateGSubLookupType1Format2(validator, table);
@@ -2301,7 +2301,7 @@ static bool validateGSubLookup(ValidationContext& validator, RawTable table, GSu
   }
 }
 
-static BLResult applyGSubLookup(GSubContext& ctx, RawTable table, GSubLookupAndFormat typeAndFormat, ApplyRange scope, LookupFlags flags) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookup(GSubContext& ctx, RawTable table, GSubLookupAndFormat typeAndFormat, ApplyRange scope, LookupFlags flags) noexcept {
   BL_ASSERT_VALIDATED(table.fits(gsubLookupInfoTable.lookupInfo[size_t(typeAndFormat)].headerSize));
 
   #define BL_APPLY_WITH_COVERAGE(FN, TABLE)                                        \
@@ -2475,7 +2475,7 @@ static BL_INLINE const Int16* applyGPosValue(const Int16* p, uint32_t valueForma
 // bl::OpenType::LayoutImpl - GPOS - Lookup Type #1 - Single Adjustment Validation
 // ===============================================================================
 
-static bool validateGPosLookupType1Format1(ValidationContext& validator, Table<GPosTable::SingleAdjustment1> table) noexcept {
+static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType1Format1(ValidationContext& validator, Table<GPosTable::SingleAdjustment1> table) noexcept {
   const char* tableName = "SingleAdjustment1";
 
   uint32_t coverageCount;
@@ -2495,7 +2495,7 @@ static bool validateGPosLookupType1Format1(ValidationContext& validator, Table<G
   return true;
 }
 
-static bool validateGPosLookupType1Format2(ValidationContext& validator, Table<GPosTable::SingleAdjustment2> table) noexcept {
+static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType1Format2(ValidationContext& validator, Table<GPosTable::SingleAdjustment2> table) noexcept {
   const char* tableName = "SingleAdjustment2";
 
   uint32_t coverageCount;
@@ -2523,7 +2523,7 @@ static bool validateGPosLookupType1Format2(ValidationContext& validator, Table<G
 // ===========================================================================
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE BLResult applyGPosLookupType1Format1(GPosContext& ctx, Table<GPosTable::SingleAdjustment1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType1Format1(GPosContext& ctx, Table<GPosTable::SingleAdjustment1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -2553,7 +2553,7 @@ static BL_INLINE BLResult applyGPosLookupType1Format1(GPosContext& ctx, Table<GP
 }
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE BLResult applyGPosLookupType1Format2(GPosContext& ctx, Table<GPosTable::SingleAdjustment2> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType1Format2(GPosContext& ctx, Table<GPosTable::SingleAdjustment2> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -2588,7 +2588,7 @@ static BL_INLINE BLResult applyGPosLookupType1Format2(GPosContext& ctx, Table<GP
 // bl::OpenType::LayoutImpl - GPOS - Lookup Type #2 - Pair Adjustment Validation
 // =============================================================================
 
-static bool validateGPosLookupType2Format1(ValidationContext& validator, Table<GPosTable::PairAdjustment1> table) noexcept {
+static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType2Format1(ValidationContext& validator, Table<GPosTable::PairAdjustment1> table) noexcept {
   const char* tableName = "PairAdjustment1";
 
   uint32_t coverageCount;
@@ -2623,7 +2623,7 @@ static bool validateGPosLookupType2Format1(ValidationContext& validator, Table<G
   return true;
 }
 
-static bool validateGPosLookupType2Format2(ValidationContext& validator, Table<GPosTable::PairAdjustment2> table) noexcept {
+static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType2Format2(ValidationContext& validator, Table<GPosTable::PairAdjustment2> table) noexcept {
   const char* tableName = "PairAdjustment2";
 
   uint32_t coverageCount;
@@ -2652,7 +2652,7 @@ static bool validateGPosLookupType2Format2(ValidationContext& validator, Table<G
 // =========================================================================
 
 template<uint32_t kCovFmt, typename ApplyScope>
-static BL_INLINE BLResult applyGPosLookupType2Format1(GPosContext& ctx, Table<GPosTable::PairAdjustment1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType2Format1(GPosContext& ctx, Table<GPosTable::PairAdjustment1> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -2715,7 +2715,7 @@ static BL_INLINE BLResult applyGPosLookupType2Format1(GPosContext& ctx, Table<GP
 }
 
 template<uint32_t kCovFmt, uint32_t kCD1Fmt, uint32_t kCD2Fmt, typename ApplyScope>
-static BL_INLINE BLResult applyGPosLookupType2Format2(GPosContext& ctx, Table<GPosTable::PairAdjustment2> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt, const ClassDefTableIterator& cd1It, ClassDefTableIterator& cd2It) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType2Format2(GPosContext& ctx, Table<GPosTable::PairAdjustment2> table, ApplyScope scope, LookupFlags flags, const CoverageTableIterator& covIt, const ClassDefTableIterator& cd1It, ClassDefTableIterator& cd2It) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -2776,7 +2776,7 @@ static BL_INLINE BLResult applyGPosLookupType2Format2(GPosContext& ctx, Table<GP
 // bl::OpenType::LayoutImpl - GPOS - Lookup Type #3 - Cursive Attachment Validation
 // ================================================================================
 
-static bool validateGPosLookupType3Format1(ValidationContext& validator, Table<GPosTable::CursiveAttachment1> table) noexcept {
+static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookupType3Format1(ValidationContext& validator, Table<GPosTable::CursiveAttachment1> table) noexcept {
   const char* tableName = "CursiveAttachment1";
 
   uint32_t coverageCount;
@@ -2819,15 +2819,15 @@ static BL_NOINLINE BLResult applyGPosNestedLookups(GPosContext& ctx, size_t inde
 // bl::OpenType::LayoutImpl - GPOS - Lookup Type #7 - Contextual Positioning Validation
 // ====================================================================================
 
-static bool validateGPosLookupType7Format1(ValidationContext& validator, Table<GSubTable::SequenceContext1> table) noexcept {
+static BL_INLINE bool validateGPosLookupType7Format1(ValidationContext& validator, Table<GSubTable::SequenceContext1> table) noexcept {
   return validateContextFormat1(validator, table, "ContextPositioning1");
 }
 
-static bool validateGPosLookupType7Format2(ValidationContext& validator, Table<GSubTable::SequenceContext2> table) noexcept {
+static BL_INLINE bool validateGPosLookupType7Format2(ValidationContext& validator, Table<GSubTable::SequenceContext2> table) noexcept {
   return validateContextFormat2(validator, table, "ContextPositioning2");
 }
 
-static bool validateGPosLookupType7Format3(ValidationContext& validator, Table<GSubTable::SequenceContext3> table) noexcept {
+static BL_INLINE bool validateGPosLookupType7Format3(ValidationContext& validator, Table<GSubTable::SequenceContext3> table) noexcept {
   return validateContextFormat3(validator, table, "ContextPositioning3");
 }
 
@@ -2925,15 +2925,15 @@ static BL_INLINE BLResult applyGPosLookupType7Format3(GPosContext& ctx, Table<GP
 // bl::OpenType::LayoutImpl - GPOS - Lookup Type #8 - Chained Context Positioning Validation
 // =========================================================================================
 
-static bool validateGPosLookupType8Format1(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext1> table) noexcept {
+static BL_INLINE bool validateGPosLookupType8Format1(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext1> table) noexcept {
   return validateChainedContextFormat1(validator, table, "ChainedContextPositioning1");
 }
 
-static bool validateGPosLookupType8Format2(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext2> table) noexcept {
+static BL_INLINE bool validateGPosLookupType8Format2(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext2> table) noexcept {
   return validateChainedContextFormat2(validator, table, "ChainedContextPositioning2");
 }
 
-static bool validateGPosLookupType8Format3(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext3> table) noexcept {
+static BL_INLINE bool validateGPosLookupType8Format3(ValidationContext& validator, Table<GSubTable::ChainedSequenceContext3> table) noexcept {
   return validateChainedContextFormat3(validator, table, "ChainedContextPositioning3");
 }
 
@@ -3075,7 +3075,7 @@ static BL_INLINE BLResult applyGPosLookupType8Format3(GPosContext& ctx, Table<GP
 // bl::OpenType::LayoutImpl - GPOS - Lookup Dispatch
 // =================================================
 
-static bool validateGPosLookup(ValidationContext& validator, RawTable table, GPosLookupAndFormat typeAndFormat) noexcept {
+static BL_INLINE_IF_NOT_DEBUG bool validateGPosLookup(ValidationContext& validator, RawTable table, GPosLookupAndFormat typeAndFormat) noexcept {
   switch (typeAndFormat) {
     case GPosLookupAndFormat::kType1Format1: return validateGPosLookupType1Format1(validator, table);
     case GPosLookupAndFormat::kType1Format2: return validateGPosLookupType1Format2(validator, table);

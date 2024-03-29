@@ -17,6 +17,7 @@
 #include <string.h>
 
 #include "bl_test_utilities.h"
+#include "resources/abeezee_regular_ttf.h"
 
 static int help() {
   printf("Usage:\n");
@@ -76,10 +77,12 @@ int main(int argc, char* argv[]) {
   uint32_t seed = cmdLine.valueAsUInt("--seed", 1);
   uint32_t width = cmdLine.valueAsUInt("--width", 513);
   uint32_t height = cmdLine.valueAsUInt("--height", 513);
-  uint32_t count = cmdLine.valueAsUInt("--count", 1000000);
+  uint32_t count = cmdLine.valueAsUInt("--count", 200000);
 
   const char* command = cmdLine.valueOf("--command", "");
+
   bool all = command[0] == '\0' || StringUtils::strieq(command, "all");
+  auto&& shouldRun = [&](const char* runCmd) { return all || StringUtils::strieq(command, runCmd); };
 
   // Fuzzing...
   ContextFuzzer fuzzer("", verbose ? Logger::Verbosity::Debug : Logger::Verbosity::Info);
@@ -92,18 +95,31 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  #define FUZZ(fuzzName) \
-    if (all || StringUtils::strieq(command, #fuzzName)) { \
-      fuzzer.fuzz##fuzzName(count); \
-    }
+  if (shouldRun("FillRectI")) {
+    fuzzer.fuzzFillRectI(count);
+  }
 
-  FUZZ(FillRectI)
-  FUZZ(FillRectD)
-  FUZZ(FillTriangle)
-  FUZZ(FillPathQuads)
-  FUZZ(FillPathCubics)
+  if (shouldRun("FillRectD")) {
+    fuzzer.fuzzFillRectD(count);
+  }
 
-  #undef FUZZ
+  if (shouldRun("FillTriangle")) {
+    fuzzer.fuzzFillTriangle(count);
+  }
+
+  if (shouldRun("FillPathQuads")) {
+    fuzzer.fuzzFillPathQuads(count);
+  }
+
+  if (shouldRun("FillPathCubics")) {
+    fuzzer.fuzzFillPathCubics(count);
+  }
+
+  if (shouldRun("FillText")) {
+    BLFontData fontData;
+    fontData.createFromData(resource_abeezee_regular_ttf, sizeof(resource_abeezee_regular_ttf));
+    fuzzer.fuzzFillText(count, fontData, 0u, 20.0f);
+  }
 
   fuzzer.reset();
 
