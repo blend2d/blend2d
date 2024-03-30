@@ -2835,7 +2835,7 @@ static BL_INLINE bool validateGPosLookupType7Format3(ValidationContext& validato
 // ================================================================================
 
 template<uint32_t kCovFmt>
-static BL_INLINE BLResult applyGPosLookupType7Format1(GPosContext& ctx, Table<GPosTable::SequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType7Format1(GPosContext& ctx, Table<GPosTable::SequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -2860,7 +2860,7 @@ static BL_INLINE BLResult applyGPosLookupType7Format1(GPosContext& ctx, Table<GP
 }
 
 template<uint32_t kCovFmt, uint32_t kCDFmt>
-static BL_INLINE BLResult applyGPosLookupType7Format2(GPosContext& ctx, Table<GPosTable::SequenceContext2> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt, const ClassDefTableIterator& cdIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType7Format2(GPosContext& ctx, Table<GPosTable::SequenceContext2> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt, const ClassDefTableIterator& cdIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -2884,7 +2884,7 @@ static BL_INLINE BLResult applyGPosLookupType7Format2(GPosContext& ctx, Table<GP
   return BL_SUCCESS;
 }
 
-static BL_INLINE BLResult applyGPosLookupType7Format3(GPosContext& ctx, Table<GPosTable::SequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType7Format3(GPosContext& ctx, Table<GPosTable::SequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 
@@ -2941,7 +2941,7 @@ static BL_INLINE bool validateGPosLookupType8Format3(ValidationContext& validato
 // =====================================================================================
 
 template<uint32_t kCovFmt>
-static BL_INLINE BLResult applyGPosLookupType8Format1(GPosContext& ctx, Table<GPosTable::ChainedSequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType8Format1(GPosContext& ctx, Table<GPosTable::ChainedSequenceContext1> table, ApplyRange scope, LookupFlags flags, const CoverageTableIterator& covIt) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT(scope.index() < scope.end());
   BL_ASSERT_VALIDATED(table.fits());
@@ -2971,7 +2971,7 @@ static BL_INLINE BLResult applyGPosLookupType8Format1(GPosContext& ctx, Table<GP
 }
 
 template<uint32_t kCovFmt, uint32_t kCD1Fmt, uint32_t kCD2Fmt, uint32_t kCD3Fmt>
-static BL_INLINE BLResult applyGPosLookupType8Format2(
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType8Format2(
   GPosContext& ctx,
   Table<GPosTable::ChainedSequenceContext2> table,
   ApplyRange scope,
@@ -3006,7 +3006,7 @@ static BL_INLINE BLResult applyGPosLookupType8Format2(
   return BL_SUCCESS;
 }
 
-static BL_INLINE BLResult applyGPosLookupType8Format3(GPosContext& ctx, Table<GPosTable::ChainedSequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
+static BL_INLINE_IF_NOT_DEBUG BLResult applyGPosLookupType8Format3(GPosContext& ctx, Table<GPosTable::ChainedSequenceContext3> table, ApplyRange scope, LookupFlags flags) noexcept {
   BL_ASSERT(scope.end() <= ctx.size());
   BL_ASSERT_VALIDATED(table.fits());
 

@@ -181,11 +181,18 @@ static BL_INLINE void blRuntimeInitSystemInfo(BLRuntimeContext* rt) noexcept {
 #endif
 
   // NOTE: It seems that on some archs 16kB stack-size is the bare minimum even when sysconf() or PTHREAD_STACK_MIN
-  // report a smaller value. Even if we don't need it we slightly increase the bare minimum to 128kB to make it safer
-  // especially on archs that have a big register file. In addition, some compilers like GCC/clang will use stack
-  // slot for every variable in code, which means that heavily inlined code may need relatively large stack when
-  // compiled in debug mode.
-  info.threadStackSize = bl::IntOps::alignUp(blMax<uint32_t>(info.threadStackSize, 128u * 1024u), info.allocationGranularity);
+  // report a smaller value. Even if we don't need it we slightly increase the bare minimum to 128kB in release
+  // builds and to 256kB in debug builds to make it safer especially on archs that have a big register file.
+  // Additionally, modern compilers like GCC/Clang use stack slot for every variable in code in debug builds, which
+  // means that heavily inlined code may need relatively large stack when compiled in debug mode - using sanitizers
+  // such as ASAN makes the problem even bigger.
+#if defined(BL_BUILD_DEBUG)
+  constexpr uint32_t kMinStackKiB = 256;
+#else
+  constexpr uint32_t kMinStackKiB = 128;
+#endif
+
+  info.threadStackSize = bl::IntOps::alignUp(blMax<uint32_t>(info.threadStackSize, kMinStackKiB * 1024u), info.allocationGranularity);
 }
 
 static BL_INLINE void blRuntimeInitOptimizationInfo(BLRuntimeContext* rt) noexcept {
