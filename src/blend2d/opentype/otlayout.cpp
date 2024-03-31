@@ -2137,7 +2137,7 @@ static BL_INLINE_IF_NOT_DEBUG BLResult applyGSubLookupType6Format3(GSubContext& 
   scope.intersect(backtrackGlyphCount, ctx.size() - inputAndLookaheadGlyphCount);
 
   // Bail if the buffer or the scope is too small for this chained context substitution.
-  if (ctx.size() < inputAndLookaheadGlyphCount || scope.index() >= scope.end())
+  if (scope.size() < inputAndLookaheadGlyphCount || scope.index() >= scope.end())
     return BL_SUCCESS;
 
   const Offset16* backtrackCoverageOffsets = table->backtrackCoverageOffsets();
