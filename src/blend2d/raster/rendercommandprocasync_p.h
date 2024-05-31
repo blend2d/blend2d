@@ -61,9 +61,9 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE ProcData(WorkData* workData) noexcept
+  BL_INLINE ProcData(WorkData* workData, RenderBatch* batch) noexcept
     : _workData(workData),
-      _batch(workData->batch),
+      _batch(batch),
       _bandY0(0),
       _bandY1(0),
       _bandFixedY0(0),

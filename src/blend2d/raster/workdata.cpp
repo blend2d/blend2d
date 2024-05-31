@@ -13,9 +13,10 @@ namespace RasterEngine {
 // bl::RasterEngine::WorkData - Construction & Destruction
 // =======================================================
 
-WorkData::WorkData(BLRasterContextImpl* ctxI, uint32_t workerId) noexcept
+WorkData::WorkData(BLRasterContextImpl* ctxI, WorkerSynchronization* synchronization, uint32_t workerId) noexcept
   : ctxI(ctxI),
-    batch(nullptr),
+    synchronization(synchronization),
+    _batch(nullptr),
     ctxData(),
     clipMode(BL_CLIP_MODE_ALIGNED_RECT),
     reserved{},

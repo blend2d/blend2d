@@ -216,7 +216,7 @@
 #define BL_MAKE_VERSION(MAJOR, MINOR, PATCH) (((MAJOR) << 16) | ((MINOR) << 8) | (PATCH))
 
 //! Blend2D library version.
-#define BL_VERSION BL_MAKE_VERSION(0, 10, 6)
+#define BL_VERSION BL_MAKE_VERSION(0, 11, 0)
 
 //! \}
 //! \}
@@ -602,6 +602,7 @@ BL_FORWARD_DECLARE_STRUCT(BLRange);
 BL_FORWARD_DECLARE_STRUCT(BLRandom);
 BL_FORWARD_DECLARE_STRUCT(BLFileCore);
 
+BL_FORWARD_DECLARE_STRUCT(BLRuntimeScopeCore);
 BL_FORWARD_DECLARE_STRUCT(BLRuntimeBuildInfo);
 BL_FORWARD_DECLARE_STRUCT(BLRuntimeSystemInfo);
 BL_FORWARD_DECLARE_STRUCT(BLRuntimeResourceInfo);
@@ -748,6 +749,7 @@ BL_FORWARD_DECLARE_STRUCT(BLVarCore);
 // C++ API.
 #ifdef __cplusplus
 class BLFile;
+class BLRuntimeScope;
 template<typename T> class BLArray;
 class BLBitArray;
 class BLBitSet;
@@ -1408,7 +1410,7 @@ static BL_INLINE_NODEBUG Out blBitCast(const In& x) noexcept {
 //! Returns an absolute value of `a`.
 template<typename T>
 BL_NODISCARD
-BL_INLINE_NODEBUG constexpr T blAbs(const T& a) noexcept { return T(a < 0 ? -a : a); }
+BL_INLINE_NODEBUG constexpr T blAbs(const T& a) noexcept { return T(a < T(0) ? -a : a); }
 
 //! Returns a minimum value of `a` and `b`.
 template<typename T>

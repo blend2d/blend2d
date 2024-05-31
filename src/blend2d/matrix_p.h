@@ -24,7 +24,7 @@ namespace TransformInternal {
 
 //! Array of functions for transforming points indexed by `BLMatrixType`. Each function is optimized for the respective
 //! type. This is mostly used internally, but exported for users that can take advantage of Blend2D SIMD optimziations.
-extern BL_API BLMapPointDArrayFunc mapPointDArrayFuncs[BL_TRANSFORM_TYPE_MAX_VALUE + 1];
+extern BLMapPointDArrayFunc mapPointDArrayFuncs[BL_TRANSFORM_TYPE_MAX_VALUE + 1];
 
 BL_HIDDEN extern const BLMatrix2D identityTransform;
 

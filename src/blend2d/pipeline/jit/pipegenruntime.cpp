@@ -11,6 +11,7 @@
 #include "../../pipeline/jit/fetchsolidpart_p.h"
 #include "../../pipeline/jit/fillpart_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
+#include "../../pipeline/jit/pipecomposer_p.h"
 #include "../../pipeline/jit/pipegenruntime_p.h"
 #include "../../support/wrap_p.h"
 
@@ -177,22 +178,22 @@ void PipeDynamicRuntime::_initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept {
   // -------------------------
 
   if (strcmp(cpuInfo.vendor(), "AMD") == 0) {
-    // Zen provides a low-latency VPMULLD instruction.
-    if (_cpuFeatures.x86().hasAVX2()) {
-      _optFlags |= PipeOptFlags::kFastVpmulld;
-    }
-
-    // Zen 3 and onwards has fast gathers, scalar loads and shuffles are faster on Zen 2 and older CPUs.
+    // Zen 3+ has fast gathers, scalar loads and shuffles are faster on Zen 2 and older CPUs.
     if (cpuInfo.familyId() >= 0x19u) {
       _optFlags |= PipeOptFlags::kFastGather;
     }
 
-    // Zen 4 provides a low-latency VPMULLQ instruction.
+    // Zen 1+ provides a low-latency VPMULLD instruction.
+    if (_cpuFeatures.x86().hasAVX2()) {
+      _optFlags |= PipeOptFlags::kFastVpmulld;
+    }
+
+    // Zen 4+ provides a low-latency VPMULLQ instruction.
     if (_cpuFeatures.x86().hasAVX512_DQ()) {
       _optFlags |= PipeOptFlags::kFastVpmullq;
     }
 
-    // Zen 4 and onwards has fast mask operations (starts with AVX-512).
+    // Zen 4+ has fast mask operations (starts with AVX-512).
     if (_cpuFeatures.x86().hasAVX512_F()) {
       _optFlags |= PipeOptFlags::kFastStoreWithMask;
     }
@@ -203,13 +204,49 @@ void PipeDynamicRuntime::_initCpuInfo(const asmjit::CpuInfo& cpuInfo) noexcept {
 
   if (strcmp(cpuInfo.vendor(), "INTEL") == 0) {
     if (_cpuFeatures.x86().hasAVX2()) {
-      _optFlags |= PipeOptFlags::kFastGather;
+      uint32_t familyId = cpuInfo.familyId();
+      uint32_t modelId = cpuInfo.modelId();
+
+      // NOTE: We only want to hint fast gathers in cases the CPU is immune to DOWNFALL. The reason is that the
+      // DOWNFALL mitigation delivered via a micro-code update makes gathers almost useless in a way that scalar
+      // loads can beat it significantly (in Blend2D case scalar loads can offer up to 50% more performance).
+      // This table basically picks CPUs that are known to not be affected by DOWNFALL.
+      if (familyId == 0x06u) {
+        switch (modelId) {
+          case 0x8Fu: // Sapphire Rapids.
+          case 0x96u: // Elkhart Lake.
+          case 0x97u: // Alder Lake / Catlow.
+          case 0x9Au: // Alder Lake / Arizona Beach.
+          case 0x9Cu: // Jasper Lake.
+          case 0xAAu: // Meteor Lake.
+          case 0xACu: // Meteor Lake.
+          case 0xADu: // Granite Rapids.
+          case 0xAEu: // Granite Rapids.
+          case 0xAFu: // Sierra Forest.
+          case 0xBAu: // Raptor Lake.
+          case 0xB5u: // Arrow Lake.
+          case 0xB6u: // Grand Ridge.
+          case 0xB7u: // Raptor Lake / Catlow.
+          case 0xBDu: // Lunar Lake.
+          case 0xBEu: // Alder Lake (N).
+          case 0xBFu: // Raptor Lake.
+          case 0xC5u: // Arrow Lake.
+          case 0xC6u: // Arrow Lake.
+          case 0xCFu: // Emerald Rapids.
+          case 0xDDu: // Clearwater Forest.
+            _optFlags |= PipeOptFlags::kFastGather;
+            break;
+
+          default:
+            break;
+        }
+      }
     }
 
-    // TODO: It seems that masked stores are very expensive on consumer CPUs supporting AVX2 and AVX-512.
+    // TODO: [JIT] It seems that masked stores are very expensive on consumer CPUs supporting AVX2 and AVX-512.
     // _optFlags |= PipeOptFlags::kFastStoreWithMask;
   }
-#endif
+#endif // BL_JIT_ARCH_X86
 
   // Other vendors should follow here, if any...
 }
@@ -220,10 +257,15 @@ void PipeDynamicRuntime::_restrictFeatures(uint32_t mask) noexcept {
     _cpuFeatures.remove(asmjit::CpuFeatures::X86::kAVX512_F,
                         asmjit::CpuFeatures::X86::kAVX512_BW,
                         asmjit::CpuFeatures::X86::kAVX512_DQ,
+                        asmjit::CpuFeatures::X86::kAVX512_CD,
                         asmjit::CpuFeatures::X86::kAVX512_VL);
 
     if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX2)) {
       _cpuFeatures.remove(asmjit::CpuFeatures::X86::kAVX2);
+      _cpuFeatures.remove(asmjit::CpuFeatures::X86::kFMA);
+      _cpuFeatures.remove(asmjit::CpuFeatures::X86::kF16C);
+      _cpuFeatures.remove(asmjit::CpuFeatures::X86::kGFNI);
+      _cpuFeatures.remove(asmjit::CpuFeatures::X86::kVPCLMULQDQ);
       if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_AVX)) {
         _cpuFeatures.remove(asmjit::CpuFeatures::X86::kAVX);
         if (!(mask & BL_RUNTIME_CPU_FEATURE_X86_SSE4_2)) {
@@ -248,6 +290,8 @@ void PipeDynamicRuntime::_restrictFeatures(uint32_t mask) noexcept {
                    PipeOptFlags::kFastStoreWithMask |
                    PipeOptFlags::kFastGather        );
   }
+#else
+  blUnused(mask);
 #endif
 }
 
@@ -375,7 +419,8 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
   code.setErrorHandler(&eh);
 
 #ifndef ASMJIT_NO_LOGGING
-  asmjit::StringLogger _logger;
+  asmjit::StringLogger logger;
+  asmjit::FileLogger fl(stdout);
 
   if (_loggerEnabled) {
     const asmjit::FormatFlags kFormatFlags =
@@ -383,8 +428,8 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
       asmjit::FormatFlags::kMachineCode |
       asmjit::FormatFlags::kExplainImms ;
 
-    _logger.addFlags(kFormatFlags);
-    code.setLogger(&_logger);
+    fl.addFlags(kFormatFlags);
+    code.setLogger(&fl);
   }
 #endif
 
@@ -396,6 +441,10 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
 #ifdef BL_BUILD_DEBUG
   cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateIntermediate);
 #endif
+  cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kRAAnnotate);
+
+  //cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kRADebugAssignment |
+  //                        asmjit::DiagnosticOptions::kRADebugAll);
 
 #ifndef ASMJIT_NO_LOGGING
   if (_loggerEnabled) {
@@ -412,23 +461,25 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
 
   // Construct the pipeline and compile it.
   {
+    // TODO: [JIT] Limit MaxPixels.
     PipeCompiler pc(&cc, _cpuFeatures, _optFlags);
 
-    // TODO: [JIT] Limit MaxPixels.
-    FetchPart* dstPart = pc.newFetchPart(FetchType::kPixelPtr, sig.dstFormat());
-    FetchPart* srcPart = pc.newFetchPart(sig.fetchType(), sig.srcFormat());
+    PipeComposer pipeComposer(pc);
+    FetchPart* dstPart = pipeComposer.newFetchPart(FetchType::kPixelPtr, sig.dstFormat());
+    FetchPart* srcPart = pipeComposer.newFetchPart(sig.fetchType(), sig.srcFormat());
+    CompOpPart* compOpPart = pipeComposer.newCompOpPart(sig.compOp(), dstPart, srcPart);
+    FillPart* fillPart = pipeComposer.newFillPart(sig.fillType(), dstPart, compOpPart);
 
-    CompOpPart* compOpPart = pc.newCompOpPart(sig.compOp(), dstPart, srcPart);
-    FillPart* fillPart = pc.newFillPart(sig.fillType(), dstPart, compOpPart);
+    PipeFunction pipeFunction;
 
-    pc.beginFunction();
+    pipeFunction.prepare(pc, fillPart);
+    pipeFunction.beginFunction(pc);
 
     if (_emitStackFrames)
       pc._funcNode->frame().addAttributes(asmjit::FuncAttributes::kHasPreservedFP);
+    fillPart->compile(pipeFunction);
 
-    pc.initPipeline(fillPart);
-    fillPart->compile();
-    pc.endFunction();
+    pipeFunction.endFunction(pc);
   }
 
   if (eh._err)
@@ -439,7 +490,7 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
 
 #ifndef ASMJIT_NO_LOGGING
   if (_loggerEnabled) {
-    blRuntimeMessageOut(_logger.data());
+    blRuntimeMessageOut(logger.data());
     blRuntimeMessageFmt("[Pipeline size: %u bytes]\n\n", uint32_t(code.codeSize()));
   }
 #endif
@@ -481,4 +532,4 @@ void blDynamicPipelineRtInit(BLRuntimeContext* rt) noexcept {
   rt->resourceInfoHandlers.add(blDynamicPipeRtResourceInfo);
 }
 
-#endif
+#endif // !BL_BUILD_NO_JIT

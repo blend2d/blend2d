@@ -18,6 +18,7 @@
 
 namespace bl {
 namespace Math {
+namespace {
 
 //! \name Floating Point Constants
 //! \{
@@ -115,6 +116,24 @@ static BL_INLINE_NODEBUG float copySign(float x, float y) noexcept { return std:
 static BL_INLINE_NODEBUG double copySign(double x, double y) noexcept { return std::copysign(x, y); }
 static BL_INLINE_NODEBUG BLPoint copySign(const BLPoint& a, const BLPoint& b) noexcept { return BLPoint(copySign(a.x, b.x), copySign(a.y, b.y)); }
 
+static BL_INLINE_NODEBUG float cutOff(float x, uint32_t bits) noexcept {
+  uint32_t msk = (uint32_t(1) << bits) - 1u;
+  return blBitCast<float>(blBitCast<uint32_t>(x) & ~msk);
+}
+
+static BL_INLINE_NODEBUG double cutOff(double x, uint32_t bits) noexcept {
+  uint64_t msk = (uint64_t(1) << bits) - 1u;
+  return blBitCast<double>(blBitCast<uint64_t>(x) & ~msk);
+}
+
+//! \}
+
+//! \name FMA or Mul+Add (depending on target / compile flags)
+//! \{
+
+static BL_INLINE_NODEBUG float madd(float x, float y, float a) noexcept { return x * y + a; }
+static BL_INLINE_NODEBUG double madd(double x, double y, double a) noexcept { return x * y + a; }
+
 //! \}
 
 //! \name Rounding
@@ -140,12 +159,12 @@ BL_INLINE __m128d bl_roundd_sse4_1(double x) noexcept {
 
 static BL_INLINE float nearby(float x) noexcept { return _mm_cvtss_f32(bl_roundf_sse4_1<_MM_FROUND_CUR_DIRECTION>(x)); }
 static BL_INLINE double nearby(double x) noexcept { return _mm_cvtsd_f64(bl_roundd_sse4_1<_MM_FROUND_CUR_DIRECTION>(x)); }
-static BL_INLINE float trunc(float x) noexcept { return _mm_cvtss_f32(bl_roundf_sse4_1<_MM_FROUND_TO_ZERO      >(x)); }
-static BL_INLINE double trunc(double x) noexcept { return _mm_cvtsd_f64(bl_roundd_sse4_1<_MM_FROUND_TO_ZERO      >(x)); }
-static BL_INLINE float floor(float x) noexcept { return _mm_cvtss_f32(bl_roundf_sse4_1<_MM_FROUND_TO_NEG_INF   >(x)); }
-static BL_INLINE double floor(double x) noexcept { return _mm_cvtsd_f64(bl_roundd_sse4_1<_MM_FROUND_TO_NEG_INF   >(x)); }
-static BL_INLINE float ceil(float x) noexcept { return _mm_cvtss_f32(bl_roundf_sse4_1<_MM_FROUND_TO_POS_INF   >(x)); }
-static BL_INLINE double ceil(double x) noexcept { return _mm_cvtsd_f64(bl_roundd_sse4_1<_MM_FROUND_TO_POS_INF   >(x)); }
+static BL_INLINE float trunc(float x) noexcept { return _mm_cvtss_f32(bl_roundf_sse4_1<_MM_FROUND_TO_ZERO>(x)); }
+static BL_INLINE double trunc(double x) noexcept { return _mm_cvtsd_f64(bl_roundd_sse4_1<_MM_FROUND_TO_ZERO>(x)); }
+static BL_INLINE float floor(float x) noexcept { return _mm_cvtss_f32(bl_roundf_sse4_1<_MM_FROUND_TO_NEG_INF>(x)); }
+static BL_INLINE double floor(double x) noexcept { return _mm_cvtsd_f64(bl_roundd_sse4_1<_MM_FROUND_TO_NEG_INF>(x)); }
+static BL_INLINE float ceil(float x) noexcept { return _mm_cvtss_f32(bl_roundf_sse4_1<_MM_FROUND_TO_POS_INF>(x)); }
+static BL_INLINE double ceil(double x) noexcept { return _mm_cvtsd_f64(bl_roundd_sse4_1<_MM_FROUND_TO_POS_INF>(x)); }
 
 #elif defined(BL_TARGET_OPT_SSE2)
 
@@ -153,16 +172,15 @@ static BL_INLINE double ceil(double x) noexcept { return _mm_cvtsd_f64(bl_roundd
 // The only method which is cheap is `rint()`, which uses the current FPU/SSE rounding mode to round a floating
 // point. The code below can be used to implement `roundeven()`, which can be then used to implement any other
 // rounding operation. Blend2D implementation then assumes that `nearby` is round to even as it's the default
-// mode CPU is setup to.
+// mode CPU is setup to and in general software like math libraries expect that this mode is used.
 //
 // Single Precision
 // ----------------
 //
 // ```
 // float roundeven(float x) {
-//   float maxn = pow(2, 23);                  // 8388608
-//   float magic = pow(2, 23) + pow(2, 22);    // 12582912
-//   return x >= maxn ? x : x + magic - magic;
+//   float magic = x >= 0 ? pow(2, 22) : pow(2, 22) + pow(2, 21);
+//   return x >= magic ? x : x + magic - magic;
 // }
 // ```
 //
@@ -171,9 +189,8 @@ static BL_INLINE double ceil(double x) noexcept { return _mm_cvtsd_f64(bl_roundd
 //
 // ```
 // double roundeven(double x) {
-//   double maxn = pow(2, 52);                 // 4503599627370496
-//   double magic = pow(2, 52) + pow(2, 51);   // 6755399441055744
-//   return x >= maxn ? x : x + magic - magic;
+//   double magic = x >= 0 ? pow(2, 52) : pow(2, 52) + pow(2, 51);
+//   return x >= magic ? x : x + magic - magic;
 // }
 // ```
 
@@ -181,39 +198,35 @@ static BL_INLINE float nearby(float x) noexcept {
   using namespace SIMD;
 
   Vec4xF32 src = cast_from_f32(x);
-  Vec4xF32 mask = cmp_lt_1xf32(src, bl::commonTable.f32_round_max.as<Vec4xF32>());
-  Vec4xF32 magic = mask & bl::commonTable.f32_round_magic.as<Vec4xF32>();
-  Vec4xF32 rounded = sub_1xf32(add_1xf32(src, magic), magic);
+  Vec4xF32 cvt = Vec4xF32{_mm_cvt_si2ss(src.v, _mm_cvt_ss2si(src.v))};
+  Vec4xF32 src_abs = src & commonTable.f32_abs.as<Vec4xF32>();
+  Vec4xF32 mask = cmp_lt_1xf32(src_abs, commonTable.f32_round_max.as<Vec4xF32>());
+  Vec4xF32 result = blendv_bits(src, cvt, mask);
 
-  return cast_to_f32(rounded);
+  return cast_to_f32(result);
 }
 
 static BL_INLINE float trunc(float x) noexcept {
   using namespace SIMD;
 
   Vec4xF32 src = cast_from_f32(x);
-  Vec4xF32 msk_abs = bl::commonTable.f32_abs.as<Vec4xF32>();
-  Vec4xF32 src_abs = src & msk_abs;
+  Vec4xF32 cvt = Vec4xF32{_mm_cvt_si2ss(src.v, _mm_cvtt_ss2si(src.v))};
+  Vec4xF32 src_abs = src & commonTable.f32_abs.as<Vec4xF32>();
+  Vec4xF32 mask = cmp_lt_1xf32(src_abs, commonTable.f32_round_max.as<Vec4xF32>());
+  Vec4xF32 result = blendv_bits(src, cvt, mask);
 
-  Vec4xF32 sign = andnot(msk_abs, src);
-  Vec4xF32 magic = bl::commonTable.f32_round_magic.as<Vec4xF32>();
-
-  Vec4xF32 mask = cmp_ge_1xf32(src_abs, bl::commonTable.f32_round_max.as<Vec4xF32>()) | sign;
-  Vec4xF32 rounded = sub_1xf32(add_1xf32(src_abs, magic), magic);
-  Vec4xF32 maybeone = cmp_lt_1xf32(src_abs, rounded) & bl::commonTable.f32_1.as<Vec4xF32>();
-
-  return cast_to_f32(blendv_bits(sub_1xf32(rounded, maybeone), src, mask));
+  return cast_to_f32(result);
 }
 
 static BL_INLINE float floor(float x) noexcept {
   using namespace SIMD;
 
   Vec4xF32 src = cast_from_f32(x);
-  Vec4xF32 magic =  bl::commonTable.f32_round_magic.as<Vec4xF32>();
+  Vec4xF32 magic = slli_u32<32 - 9>(srli_u32<31>(src)) | commonTable.f32_round_max.as<Vec4xF32>();
 
-  Vec4xF32 mask = cmp_ge_1xf32(src, bl::commonTable.f32_round_max.as<Vec4xF32>());
+  Vec4xF32 mask = cmp_ge_1xf32(src, magic);
   Vec4xF32 rounded = sub_1xf32(add_1xf32(src, magic), magic);
-  Vec4xF32 maybeone = cmp_lt_1xf32(src, rounded) & bl::commonTable.f32_1.as<Vec4xF32>();
+  Vec4xF32 maybeone = cmp_lt_1xf32(src, rounded) & commonTable.f32_1.as<Vec4xF32>();
 
   return cast_to_f32(blendv_bits(sub_1xf32(rounded, maybeone), src, mask));
 }
@@ -221,12 +234,12 @@ static BL_INLINE float floor(float x) noexcept {
 static BL_INLINE float ceil(float x) noexcept {
   using namespace SIMD;
 
-  Vec4xF32 src = SIMD::cast_from_f32(x);
-  Vec4xF32 magic =  bl::commonTable.f32_round_magic.as<Vec4xF32>();
+  Vec4xF32 src = cast_from_f32(x);
+  Vec4xF32 magic = slli_u32<32 - 9>(srli_u32<31>(src)) | commonTable.f32_round_max.as<Vec4xF32>();
 
-  Vec4xF32 mask = cmp_ge_1xf32(src, bl::commonTable.f32_round_max.as<Vec4xF32>());
+  Vec4xF32 mask = cmp_ge_1xf32(src, magic);
   Vec4xF32 rounded = sub_1xf32(add_1xf32(src, magic), magic);
-  Vec4xF32 maybeone = cmp_gt_1xf32(src, rounded) & bl::commonTable.f32_1.as<Vec4xF32>();
+  Vec4xF32 maybeone = cmp_gt_1xf32(src, rounded) & commonTable.f32_1.as<Vec4xF32>();
 
   return cast_to_f32(blendv_bits(add_1xf32(rounded, maybeone), src, mask));
 }
@@ -235,8 +248,8 @@ static BL_INLINE double nearby(double x) noexcept {
   using namespace SIMD;
 
   Vec2xF64 src = cast_from_f64(x);
-  Vec2xF64 mask = cmp_lt_1xf64(src, bl::commonTable.f64_round_max.as<Vec2xF64>());
-  Vec2xF64 magic = mask & bl::commonTable.f64_round_magic.as<Vec2xF64>();
+  Vec2xF64 mask = cmp_lt_1xf64(src, commonTable.f64_round_max.as<Vec2xF64>());
+  Vec2xF64 magic = mask & (commonTable.f64_round_max.as<Vec2xF64>() | slli_u64<64 - 13>(srli_u64<63>(src)));
   Vec2xF64 rounded = sub_1xf64(add_1xf64(src, magic), magic);
 
   return cast_to_f64(rounded);
@@ -246,15 +259,15 @@ static BL_INLINE double trunc(double x) noexcept {
   using namespace SIMD;
 
   Vec2xF64 src = cast_from_f64(x);
-  Vec2xF64 msk_abs = bl::commonTable.f64_abs.as<Vec2xF64>();
+  Vec2xF64 msk_abs = commonTable.f64_abs.as<Vec2xF64>();
   Vec2xF64 src_abs = src & msk_abs;
 
   Vec2xF64 sign = andnot(msk_abs, src);
-  Vec2xF64 magic = bl::commonTable.f64_round_magic.as<Vec2xF64>();
+  Vec2xF64 magic = commonTable.f64_round_max.as<Vec2xF64>();
 
-  Vec2xF64 mask = cmp_ge_1xf64(src_abs, bl::commonTable.f64_round_max.as<Vec2xF64>()) | sign;
+  Vec2xF64 mask = cmp_ge_1xf64(src_abs, magic) | sign;
   Vec2xF64 rounded = sub_1xf64(add_1xf64(src_abs, magic), magic);
-  Vec2xF64 maybeone = cmp_lt_1xf64(src_abs, rounded) & bl::commonTable.f64_1.as<Vec2xF64>();
+  Vec2xF64 maybeone = cmp_lt_1xf64(src_abs, rounded) & commonTable.f64_1.as<Vec2xF64>();
 
   return cast_to_f64(blendv_bits(sub_1xf64(rounded, maybeone), src, mask));
 }
@@ -263,11 +276,11 @@ static BL_INLINE double floor(double x) noexcept {
   using namespace SIMD;
 
   Vec2xF64 src = cast_from_f64(x);
-  Vec2xF64 magic = bl::commonTable.f64_round_magic.as<Vec2xF64>();
+  Vec2xF64 magic = slli_u64<64 - 13>(srli_u64<63>(src)) | commonTable.f64_round_max.as<Vec2xF64>();
 
-  Vec2xF64 mask = cmp_ge_1xf64(src, bl::commonTable.f64_round_max.as<Vec2xF64>());
+  Vec2xF64 mask = cmp_ge_1xf64(src, magic);
   Vec2xF64 rounded = sub_1xf64(add_1xf64(src, magic), magic);
-  Vec2xF64 maybeone = cmp_lt_1xf64(src, rounded) & bl::commonTable.f64_1.as<Vec2xF64>();
+  Vec2xF64 maybeone = cmp_lt_1xf64(src, rounded) & commonTable.f64_1.as<Vec2xF64>();
 
   return cast_to_f64(blendv_bits(sub_1xf64(rounded, maybeone), src, mask));
 }
@@ -276,11 +289,11 @@ static BL_INLINE double ceil(double x) noexcept {
   using namespace SIMD;
 
   Vec2xF64 src = cast_from_f64(x);
-  Vec2xF64 magic = bl::commonTable.f64_round_magic.as<Vec2xF64>();
+  Vec2xF64 magic = slli_u64<64 - 13>(srli_u64<63>(src)) | commonTable.f64_round_max.as<Vec2xF64>();
 
-  Vec2xF64 mask = cmp_ge_1xf64(src, bl::commonTable.f64_round_max.as<Vec2xF64>());
+  Vec2xF64 mask = cmp_ge_1xf64(src, magic);
   Vec2xF64 rounded = sub_1xf64(add_1xf64(src, magic), magic);
-  Vec2xF64 maybeone = cmp_gt_1xf64(src, rounded) & bl::commonTable.f64_1.as<Vec2xF64>();
+  Vec2xF64 maybeone = cmp_gt_1xf64(src, rounded) & commonTable.f64_1.as<Vec2xF64>();
 
   return cast_to_f64(blendv_bits(add_1xf64(rounded, maybeone), src, mask));
 }
@@ -602,12 +615,13 @@ static BL_INLINE size_t simplifiedQuadRoots(BLPoint dst[2], const BLPoint& a, co
   return 2;
 }
 
+} // {anonymous}
+
 //! Solve a cubic polynomial and store the result in `dst`.
 //!
 //! Returns the number of roots found within [tMin, tMax] - `0` to `3`.
 BL_HIDDEN size_t cubicRoots(double* dst, const double* poly, double tMin, double tMax) noexcept;
 
-//! \overload
 static BL_INLINE size_t cubicRoots(double dst[3], double a, double b, double c, double d, double tMin, double tMax) noexcept {
   double poly[4] = { a, b, c, d };
   return cubicRoots(dst, poly, tMin, tMax);

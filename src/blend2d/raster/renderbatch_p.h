@@ -39,15 +39,6 @@ public:
     uint32_t _accumulatedErrorFlags;
   };
 
-  struct alignas(BL_CACHE_LINE_SIZE) {
-    //! Band index, incremented by workers to get a band index to process.
-    //! Can go out of range in case there is no more bands to process.
-    size_t _bandIndex;
-  };
-
-  //! Pointer to the synchronization data.
-  WorkerSynchronization* _synchronization;
-
   //! Contains all jobs of this batch.
   ArenaList<RenderJobQueue> _jobList;
   //! Contains all commands of this batch.
@@ -63,32 +54,10 @@ public:
 
   //! \}
 
-  //! \name Construction & Destruction
-  //! \{
-
-  BL_INLINE RenderBatch() noexcept
-    : _jobIndex(0),
-      _accumulatedErrorFlags(0),
-      _bandIndex(0),
-      _synchronization(nullptr),
-      _jobList(),
-      _commandList(),
-      _pastBlock(nullptr),
-      _workerCount(0),
-      _jobCount(0),
-      _commandCount(0),
-      _bandCount(0),
-      _stateSlotCount(0) {}
-
-  BL_INLINE ~RenderBatch() noexcept {}
-
-  //! \}
-
   //! name Accessors
   //! \{
 
   BL_INLINE_NODEBUG size_t nextJobIndex() noexcept { return blAtomicFetchAddStrong(&_jobIndex); }
-  BL_INLINE_NODEBUG size_t nextBandIndex() noexcept { return blAtomicFetchAddStrong(&_bandIndex); }
 
   BL_INLINE_NODEBUG const ArenaList<RenderJobQueue>& jobList() const noexcept { return _jobList; }
   BL_INLINE_NODEBUG const ArenaList<RenderCommandQueue>& commandList() const noexcept { return _commandList; }

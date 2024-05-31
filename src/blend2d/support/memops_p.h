@@ -314,7 +314,7 @@ static BL_INLINE void fillSmallT(T* dst, const T& pattern, size_t count) noexcep
 }
 
 static BL_INLINE void fillSmall(void* dst, uint8_t pattern, size_t count) noexcept {
-#if defined(__GNUC__) && BL_TARGET_ARCH_X86
+#if defined(__GNUC__) && BL_TARGET_ARCH_X86 && !defined(BL_SANITIZE_MEMORY)
   size_t unused0, unused1;
   __asm__ __volatile__(
     "rep stosb" : "=&c"(unused0), "=&D"(unused1)
@@ -358,7 +358,7 @@ static BL_INLINE void copyForwardAndZeroT(T* dst, T* src, size_t count) noexcept
 
 //! Copies `n` bytes from `src` to `dst` - optimized for small buffers.
 static BL_INLINE void copySmall(void* dst, const void* src, size_t n) noexcept {
-#if defined(__GNUC__) && BL_TARGET_ARCH_X86
+#if defined(__GNUC__) && BL_TARGET_ARCH_X86 && !defined(BL_SANITIZE_MEMORY)
   size_t unused;
   __asm__ __volatile__(
     "rep movsb" : "=&D"(dst), "=&S"(src), "=&c"(unused)

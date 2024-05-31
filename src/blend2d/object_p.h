@@ -184,9 +184,9 @@ static BL_INLINE bool blMatchProperty(const char* key, size_t keySize, const cha
 //! \{
 
 //! Casts the given unknown pointer to `BLObjectCore*`.
-static BL_INLINE BLObjectCore* blAsObject(BLUnknown* unknown) { return static_cast<BLObjectCore*>(unknown); }
+static BL_INLINE_NODEBUG BLObjectCore* blAsObject(BLUnknown* unknown) { return static_cast<BLObjectCore*>(unknown); }
 //! Casts the given unknown pointer to `BLObjectCore*` (const).
-static BL_INLINE const BLObjectCore* blAsObject(const BLUnknown* unknown) { return static_cast<const BLObjectCore*>(unknown); }
+static BL_INLINE_NODEBUG const BLObjectCore* blAsObject(const BLUnknown* unknown) { return static_cast<const BLObjectCore*>(unknown); }
 
 //! \}
 

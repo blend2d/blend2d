@@ -2429,7 +2429,7 @@ BL_API_IMPL BLResult blPathGetClosestVertex(const BLPathCore* self, const BLPoin
   *indexOut = bestIndex;
   *distanceOut = bestDistance;
 
-  return BL_SUCCESS;;
+  return BL_SUCCESS;
 }
 
 // bl::Path - API - Hit Test

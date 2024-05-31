@@ -37,23 +37,47 @@ BL_HIDDEN extern const LookupTable<CompOpInfo, kCompOpExtCount> compOpInfoTable;
 //! instead of "CLEAR" operator the rendering engine basically eliminated a possible compilation of "CLEAR" operator
 //! that would perform exactly the same as "SRC-COPY".
 struct CompOpSimplifyInfo {
+  //! \name Constants
+  //! \{
+
+  // Data shift specify where the value is stored in `data`.
+  static constexpr uint32_t kCompOpShift = IntOps::bitShiftOf(Pipeline::Signature::kMaskCompOp);
+  static constexpr uint32_t kDstFmtShift = IntOps::bitShiftOf(Pipeline::Signature::kMaskDstFormat);
+  static constexpr uint32_t kSrcFmtShift = IntOps::bitShiftOf(Pipeline::Signature::kMaskSrcFormat);
+  static constexpr uint32_t kSolidIdShift = 16;
+
+  //! \}
+
+  //! \name Members
+  //! \{
+
   //! Alternative composition operator, destination format, source format, and solid-id information packed into 32 bits.
   uint32_t data;
 
-  // Data shift specify where the value is stored in `data`.
-  enum DataShift : uint32_t {
-    kCompOpShift = IntOps::bitShiftOf(Pipeline::Signature::kMaskCompOp),
-    kDstFmtShift = IntOps::bitShiftOf(Pipeline::Signature::kMaskDstFormat),
-    kSrcFmtShift = IntOps::bitShiftOf(Pipeline::Signature::kMaskSrcFormat),
-    kSolidIdShift = 16
-  };
+  //! \}
+
+  //! \name Accessors
+  //! \{
 
   //! Returns all bits that form the signature (CompOp, DstFormat SrcFormat).
   BL_INLINE_NODEBUG constexpr uint32_t signatureBits() const noexcept { return data & 0xFFFFu; }
   //! Returns `Signature` configured to have the same bits set as `signatureBits()`.
-  BL_INLINE_NODEBUG constexpr Pipeline::Signature signature() const noexcept { return bl::Pipeline::Signature{signatureBits()}; }
+  BL_INLINE_NODEBUG constexpr Pipeline::Signature signature() const noexcept { return Pipeline::Signature{signatureBits()}; }
+
+  //! Returns the simplified composition operator.
+  BL_INLINE_NODEBUG constexpr CompOpExt compOp() const noexcept { return CompOpExt((data & Pipeline::Signature::kMaskCompOp) >> kCompOpShift); }
+  //! Returns the simplified destination format.
+  BL_INLINE_NODEBUG constexpr FormatExt dstFormat() const noexcept { return FormatExt((data & Pipeline::Signature::kMaskDstFormat) >> kDstFmtShift); }
+  //! Returns the simplified source format.
+  BL_INLINE_NODEBUG constexpr FormatExt srcFormat() const noexcept { return FormatExt((data & Pipeline::Signature::kMaskSrcFormat) >> kSrcFmtShift); }
+
   //! Returns solid-id information regarding this simplification.
-  BL_INLINE_NODEBUG constexpr CompOpSolidId solidId() const noexcept { return (CompOpSolidId)(data >> kSolidIdShift); }
+  BL_INLINE_NODEBUG constexpr CompOpSolidId solidId() const noexcept { return CompOpSolidId(data >> kSolidIdShift); }
+
+  //! \}
+
+  //! \name Make
+  //! \{
 
   //! Returns `CompOpSimplifyInfo` from decomposed arguments.
   static BL_INLINE_NODEBUG constexpr CompOpSimplifyInfo make(CompOpExt compOp, FormatExt d, FormatExt s, CompOpSolidId solidId) noexcept {
@@ -70,6 +94,8 @@ struct CompOpSimplifyInfo {
   static BL_INLINE_NODEBUG constexpr CompOpSimplifyInfo dstCopy() noexcept {
     return make(CompOpExt::kDstCopy, FormatExt::kNone, FormatExt::kNone, CompOpSolidId::kAlwaysNop);
   }
+
+  //! \}
 };
 
 // Initially we have used a single table, however, some older compilers would reach template instantiation depth limit

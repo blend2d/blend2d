@@ -688,27 +688,28 @@ hc_matchfinder_longest_match(
   in_base = *in_base_p;
   cutoff = mf_pos_t(cur_pos - MATCHFINDER_WINDOW_SIZE);
 
-  if (BL_UNLIKELY(max_len < 5)) /* can we read 4 bytes from 'in_next + 1'? */
+  // Can we read 4 bytes from 'in_next + 1'?
+  if (BL_UNLIKELY(max_len < 5))
     goto out;
 
-  /* Get the precomputed hash codes.  */
+  // Get the precomputed hash codes.
   hash3 = next_hashes[0];
   hash4 = next_hashes[1];
 
-  /* From the hash buckets, get the first node of each linked list.  */
+  // From the hash buckets, get the first node of each linked list.
   cur_node3 = mf->hash3_tab[hash3];
   cur_node4 = mf->hash4_tab[hash4];
 
-  /* Update for length 3 matches.  This replaces the singleton node in the
-   * 'hash3' bucket with the node for the current sequence.  */
+  // Update for length 3 matches.  This replaces the singleton node in the 'hash3' bucket with the node
+  // for the current sequence.
   mf->hash3_tab[hash3] = mf_pos_t(cur_pos);
 
-  /* Update for length 4 matches.  This prepends the node for the current
-   * sequence to the linked list in the 'hash4' bucket.  */
+  // Update for length 4 matches.  This prepends the node for the current sequence to the linked list
+  // in the 'hash4' bucket.
   mf->hash4_tab[hash4] = mf_pos_t(cur_pos);
   mf->next_tab[cur_pos] = mf_pos_t(cur_node4);
 
-  /* Compute the next hash codes.  */
+  // Compute the next hash codes.
   next_seq4 = MemOps::readU32u(in_next + 1);
   next_seq3 = loaded_u32_to_u24(next_seq4);
   next_hashes[0] = lz_hash(next_seq3, HC_MATCHFINDER_HASH3_ORDER);
@@ -717,9 +718,9 @@ hc_matchfinder_longest_match(
   blPrefetchW(&mf->hash4_tab[next_hashes[1]]);
 
   if (best_len < 4) {
-    /* No match of length >= 4 found yet?  */
+    // No match of length >= 4 found yet?
 
-    /* Check for a length 3 match if needed.  */
+    // Check for a length 3 match if needed.
     if (cur_node3 <= cutoff)
       goto out;
 
@@ -732,23 +733,23 @@ hc_matchfinder_longest_match(
       }
     }
 
-    /* Check for a length 4 match.  */
+    // Check for a length 4 match.
     if (cur_node4 <= cutoff)
       goto out;
 
     for (;;) {
-      /* No length 4 match found yet.  Check the first 4 bytes.  */
+      // No length 4 match found yet.  Check the first 4 bytes.
       matchptr = &in_base[cur_node4];
       if (MemOps::readU32u(matchptr) == seq4)
         break;
 
-      /* The first 4 bytes did not match.  Keep trying.  */
+      // The first 4 bytes did not match; keep trying...
       cur_node4 = mf->next_tab[cur_node4 & (MATCHFINDER_WINDOW_SIZE - 1)];
       if (cur_node4 <= cutoff || !--depth_remaining)
         goto out;
     }
 
-    /* Found a match of length >= 4.  Extend it to its full length.  */
+    // Found a match of length >= 4. Extend it to its full length.
     best_matchptr = matchptr;
     best_len = lz_extend(in_next, best_matchptr, 4, max_len);
     if (best_len >= nice_len)
@@ -762,8 +763,7 @@ hc_matchfinder_longest_match(
       goto out;
   }
 
-  /* Check for matches of length >= 5.  */
-
+  // Check for matches of length >= 5.
   for (;;) {
     for (;;) {
       matchptr = &in_base[cur_node4];
@@ -809,28 +809,26 @@ out:
   return best_len;
 }
 
-/*
- * Advance the matchfinder, but don't search for matches.
- *
- * @mf
- *  The matchfinder structure.
- * @in_base_p
- *  Location of a pointer which points to the place in the input data the
- *  matchfinder currently stores positions relative to.  This may be updated
- *  by this function.
- * @cur_pos
- *  The current position in the input buffer relative to @in_base.
- * @end_pos
- *  The end position of the input buffer, relative to @in_base.
- * @next_hashes
- *  The precomputed hash codes for the sequence beginning at @in_next.
- *  These will be used and then updated with the precomputed hashcodes for
- *  the sequence beginning at @in_next + @count.
- * @count
- *  The number of bytes to advance.  Must be > 0.
- *
- * Returns @in_next + @count.
- */
+// Advance the matchfinder, but don't search for matches.
+//
+// @mf
+//  The matchfinder structure.
+// @in_base_p
+//  Location of a pointer which points to the place in the input data the
+//  matchfinder currently stores positions relative to.  This may be updated
+//  by this function.
+// @cur_pos
+//  The current position in the input buffer relative to @in_base.
+// @end_pos
+//  The end position of the input buffer, relative to @in_base.
+// @next_hashes
+//  The precomputed hash codes for the sequence beginning at @in_next.
+//  These will be used and then updated with the precomputed hashcodes for
+//  the sequence beginning at @in_next + @count.
+// @count
+//  The number of bytes to advance.  Must be > 0.
+//
+// Returns @in_next + @count.
 static BL_INLINE const uint8_t* hc_matchfinder_skip_positions(
   hc_matchfinder* BL_RESTRICT mf,
   const uint8_t** BL_RESTRICT in_base_p,

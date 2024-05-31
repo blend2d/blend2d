@@ -97,7 +97,7 @@ static BL_NOINLINE BLResult fillAnalytic(WorkData& workData, const Pipeline::Dis
   uint32_t bandHeight = edgeStorage->bandHeight();
   uint32_t bandHeightMask = bandHeight - 1;
 
-  const uint32_t yStart = (uint32_t(edgeStorage->boundingBox().y0)                            ) >> Pipeline::A8Info::kShift;
+  const uint32_t yStart = (uint32_t(edgeStorage->boundingBox().y0)                          ) >> Pipeline::A8Info::kShift;
   const uint32_t yEnd   = (uint32_t(edgeStorage->boundingBox().y1) + Pipeline::A8Info::kMask) >> Pipeline::A8Info::kShift;
 
   size_t requiredWidth = IntOps::alignUp(uint32_t(workData.dstSize().w) + 1u + BL_PIPE_PIXELS_PER_ONE_BIT, BL_PIPE_PIXELS_PER_ONE_BIT);

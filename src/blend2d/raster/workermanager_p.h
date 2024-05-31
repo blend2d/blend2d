@@ -233,7 +233,7 @@ public:
   BLResult initWorkMemory(size_t zeroedMemorySize) noexcept;
 
   BL_INLINE void initFirstBatch() noexcept {
-    RenderBatch* batch = _allocator.newT<RenderBatch>();
+    RenderBatch* batch = _allocator.allocZeroedT<RenderBatch>();
 
     // We have preallocated enough, cannot happen.
     BL_ASSERT(batch != nullptr);
@@ -420,7 +420,7 @@ public:
     _currentBatch->_commandCount += uint32_t(lastCommandQueue->size());
     _currentBatch->_stateSlotCount = _stateSlotCount;
     _currentBatch->_bandCount = _bandCount;
-    // TODO: Not used. the idea is that after the batch is processed we can reuse the blocks of the allocator (basically move it after the current block).
+    // TODO: [Rendering Context] Not used. the idea is that after the batch is processed we can reuse the blocks of the allocator (basically move it after the current block).
     // _currentBatch->_pastBlock = _allocator.pastBlock();
 
     if (++_batchId == 0)

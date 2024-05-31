@@ -69,6 +69,9 @@ class BLRasterContextImpl : public BLContextImpl {
 public:
   BL_NONCOPYABLE(BLRasterContextImpl)
 
+  //! \name Members
+  //! \{
+
   //! Context flags.
   bl::RasterEngine::ContextFlags contextFlags;
   //! Rendering mode.
@@ -137,18 +140,17 @@ public:
   //! Pointers to essential transformations that can be applied to styles.
   const BLMatrix2D* transformPtrs[BL_CONTEXT_STYLE_TRANSFORM_MODE_MAX_VALUE + 1u];
 
-  //! Static buffer used by `baseZone` for the first block.
-  uint64_t staticBuffer[2048 / sizeof(uint64_t)];
+  //! \}
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLRasterContextImpl(BLContextVirt* virtIn) noexcept
+  BL_INLINE BLRasterContextImpl(BLContextVirt* virtIn, void* staticData, size_t staticSize) noexcept
     : contextFlags(bl::RasterEngine::ContextFlags::kNoFlagsSet),
       renderingMode(uint8_t(bl::RasterEngine::RenderingMode::kSync)),
       workerMgrInitialized(false),
       renderTargetInfo {},
-      syncWorkData(this),
+      syncWorkData(this, nullptr),
       pipeLookupCache{},
       compOpSimplifyInfo{},
       solidFormatTable{},
@@ -157,7 +159,7 @@ public:
       savedState{},
       sharedFillState{},
       sharedStrokeState{},
-      baseZone(8192 - bl::ArenaAllocator::kBlockOverhead, 16, staticBuffer, sizeof(staticBuffer)),
+      baseZone(8192 - bl::ArenaAllocator::kBlockOverhead, 16, staticData, staticSize),
       fetchDataPool(),
       savedStatePool(),
       pipeProvider(),

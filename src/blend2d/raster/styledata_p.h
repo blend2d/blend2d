@@ -24,7 +24,7 @@ struct StyleData {
   //! \{
 
   //! Pointer to a fetch data - it points to either a separate `RenderFetchData` data or to `&solid` data in this
-  //! struct. Use \ref hasImplicitFetchData() to check whether fetch data points to external fetch data or to &solid.
+  //! struct. Use `hasImplicitFetchData()` to check whether fetch data points to external fetch data or to &solid.
   RenderFetchDataHeader* fetchData;
 
   struct SolidData : public RenderFetchDataSolid {

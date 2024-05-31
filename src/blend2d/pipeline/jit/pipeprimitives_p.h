@@ -3,8 +3,8 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_PIPELINE_JIT_PIPEGENCORE_P_H_INCLUDED
-#define BLEND2D_PIPELINE_JIT_PIPEGENCORE_P_H_INCLUDED
+#ifndef BLEND2D_PIPELINE_JIT_PIPEPRIMITIVES_P_H_INCLUDED
+#define BLEND2D_PIPELINE_JIT_PIPEPRIMITIVES_P_H_INCLUDED
 
 #include "../../api-internal_p.h"
 #include "../../compop_p.h"
@@ -20,7 +20,7 @@
 //! \{
 
 //! \namespace bl::Pipeline::JIT
-//! Everything related to JIT pipeline generator and runtime is within `bl::Pipeline::JIT` namespace.
+//! Everything related to JIT pipeline generator and runtime.
 
 namespace bl {
 namespace Pipeline {
@@ -41,44 +41,9 @@ class FillPart;
 class FillBoxAPart;
 class FillAnalyticPart;
 
-class GlobalAlpha;
-
-//! Pipeline optimization flags used by \ref PipeCompiler.
-enum class PipeOptFlags : uint32_t {
-  //! No flags.
-  kNone = 0x0u,
-
-  //! CPU has instructions that can perform 8-bit masked loads and stores.
-  kMaskOps8Bit = 0x00000001u,
-
-  //! CPU has instructions that can perform 16-bit masked loads and stores.
-  kMaskOps16Bit = 0x00000002u,
-
-  //! CPU has instructions that can perform 32-bit masked loads and stores.
-  kMaskOps32Bit = 0x00000004u,
-
-  //! CPU has instructions that can perform 64-bit masked loads and stores.
-  kMaskOps64Bit = 0x00000008u,
-
-  //! CPU provides low-latency 32-bit multiplication (AMD CPUs).
-  kFastVpmulld = 0x00000010u,
-
-  //! CPU provides low-latency 64-bit multiplication (AMD CPUs).
-  kFastVpmullq = 0x00000020u,
-
-  //! CPU performs hardware gathers faster than a sequence of loads and packing.
-  kFastGather = 0x00000040u,
-
-  //! CPU has fast stores with mask.
-  //!
-  //! \note This is a hint to the compiler to emit a masked store instead of a sequence having branches.
-  kFastStoreWithMask = 0x00000080u
-};
-BL_DEFINE_ENUM_FLAGS(PipeOptFlags)
-
 //! Pipeline generator loop-type, used by fillers & compositors.
 enum class CMaskLoopType : uint8_t {
-  //! Not in a loop-mode.
+  //! Not in a cmask loop mode.
   kNone = 0,
   //! CMask opaque loop (alpha is 1.0).
   kOpaque = 1,
@@ -103,22 +68,64 @@ enum class PixelFlags : uint32_t {
   kSA = 0x00000001u,
   //! Packed alpha or stencil components stored in `Pixel::pa`.
   kPA = 0x00000002u,
+  //! Packed inverted alpha or stencil components stored in `Pixel::pi`.
+  kPI = 0x00000004u,
   //! Unpacked alpha or stencil components stored in `Pixel::ua`.
-  kUA = 0x00000004u,
+  kUA = 0x00000008u,
   //! Unpacked and inverted alpha or stencil components stored in `Pixel::ui`
-  kUI = 0x00000008u,
+  kUI = 0x00000010u,
 
   //! Packed ARGB32 components stored in `Pixel::pc`.
-  kPC = 0x00000010u,
+  kPC = 0x00000020u,
   //! Unpacked ARGB32 components stored in `Pixel::uc`.
-  kUC = 0x00000020u,
+  kUC = 0x00000040u,
 
   //! Last fetch in this scanline, thus at most `N-1` pixels would be used.
   kLastPartial = 0x40000000u,
   //! Fetch read-only, registers won't be modified.
-  kImmutable   = 0x80000000u
+  kImmutable = 0x80000000u,
+
+  kPA_PI_UA_UI = kPA | kPI | kUA | kUI,
+  kPC_UC = kPC | kUC
 };
 BL_DEFINE_ENUM_FLAGS(PixelFlags)
+
+//! Pixel coverage format that is consumed by the compositor.
+enum class PixelCoverageFormat : uint8_t {
+  //! Uninitialized format (invalid when passed to API that expects an initialized one).
+  kNone = 0,
+  //! Pixel coverage must be packed.
+  kPacked,
+  //! Pixel coverage must be unpacked.
+  kUnpacked
+};
+
+//! Pixel coverage flags used by \ref PixelCoverage.
+enum class PixelCoverageFlags : uint8_t {
+  //! No coverage flags set.
+  kNone = 0,
+  //! The coverage is repeated (c-mask fills).
+  kRepeated = 0x01,
+  //! The coverage is immutable (cannot be altered by the compositor).
+  kImmutable = 0x02,
+
+  //! A combination of `kRepeated` and `kImmutable`.
+  kRepeatedImmutable = kRepeated | kImmutable
+};
+BL_DEFINE_ENUM_FLAGS(PixelCoverageFlags)
+
+//! Specifies whether to advance pointers.
+enum class AdvanceMode : uint32_t {
+  kNoAdvance,
+  kAdvance,
+  kIgnored
+};
+
+//! Specifies gather options.
+enum class GatherMode : uint32_t {
+  kFetchAll = 0,
+  kNeverFull = 1
+};
 
 //! Represents either Alpha or RGBA pixel.
 //!
@@ -146,6 +153,8 @@ public:
   Gp sa;
   //! Packed alpha components.
   VecArray pa;
+  //! Packed inverted alpha components.
+  VecArray pi;
   //! Unpacked alpha components.
   VecArray ua;
   //! Unpacked and inverted alpha components.
@@ -285,19 +294,12 @@ enum class PredicateFlags : uint32_t {
   //! No flags specified.
   kNone = 0x00000000u,
 
-  //! Predicate is never empty - contains at least 1 element to read/write.
-  //!
-  //! This is a hint to the implementation that can be also used as an assertion.
-  kNeverEmpty = 0x00000001u,
-
   //! Predicate is never full - contains at most `size() - 1` elements to read/write.
   //!
   //! This is a hint to the implementation that can be also used as an assertion.
-  kNeverFull = 0x00000002u,
-
-  kNeverEmptyOrFull = kNeverEmpty | kNeverFull
+  kNeverFull = 0x00000001u
 };
-BL_DEFINE_ENUM_FLAGS(PredicateFlags);
+BL_DEFINE_ENUM_FLAGS(PredicateFlags)
 
 //! Provides an abstraction regarding predicated loads and stores.
 //!
@@ -306,45 +308,99 @@ BL_DEFINE_ENUM_FLAGS(PredicateFlags);
 //! always use predicated loads and stores even if it would have to be emitted as branches.
 //!
 //! Predicates can also be used without masking, however, in that case branches may be emitted instead of
-//! predicated (or masked) loads and stores. This is selected automatically depending on the CPU microarchitecture
+//! predicated (or masked) loads and stores. This is selected automatically depending on the CPU micro-architecture
 //! and features.
 struct PixelPredicate {
-  //! Maximum number of pixels that can be loaded / stored.
+  //! Maximum number of elements that can be loaded / stored.
   //!
   //! This is typically power of 2 minus one - for example 8 pixel wide pipeline would use predicated loads and
   //! stores for 0-7 pixels.
-  uint32_t _size = 0;
+  uint32_t _size {};
   //! Predicate flags.
   PredicateFlags _flags {};
 
   //! Number of pixels to load/store (starting at #0).
   //!
   //! For example if count is 3, pixels at [0, 1, 2] will be fetched / stored.
-  Gp count;
-  //! Vector of 32-bit masks.
-  Vec v32;
-  //! Vector of 64-bit masks.
-  Vec v64;
+  Gp _count;
 
 #if defined(BL_JIT_ARCH_X86)
-  //! AVX-512 predicate (mask) register.
-  KReg k;
+  static constexpr uint32_t kMaterializedMaskCapacity = 2u;
+
+  //! Contains predicates for load/store instructions that were materialized.
+  struct MaterializedMask {
+    //! The number of elements to access from the end.
+    //!
+    //! Non-zero offsets are used in cases in which there is multiple registers that are written by using predicates.
+    //! In that case the access to the first register can be branched, and only the access to the last register can
+    //! actually use predicate, at least this is how it's been designed.
+    uint8_t lastN {};
+
+    //! Element size in case this is a vector predicate (always zero when it's a {k} predicate).
+    uint8_t elementSize {};
+
+    uint8_t reserved[2] {};
+
+    //! Mask register - either an AVX-512 mask (k register) or an xmm/ymm/zmm vector.
+    Reg mask {};
+  };
+
+  uint32_t _materializedCount {};
+  MaterializedMask _materializedMasks[kMaterializedMaskCapacity];
 #endif // BL_JIT_ARCH_X86
 
-  BL_INLINE PixelPredicate() noexcept = default;
-  BL_INLINE explicit PixelPredicate(uint32_t size, PredicateFlags flags, const Gp& i) noexcept { init(size, flags, i); }
+  static constexpr uint32_t kMaterializedEndPtrCapacity = 2u;
 
-  BL_INLINE bool empty() const noexcept { return _size == 0; }
-  BL_INLINE uint32_t size() const noexcept { return _size; }
+  //! Contains two last clamped pointers of `ref`.
+  struct MaterializedEndPtr {
+    //! Reference pointer (this is the register used to calculate `end1` and `end2`)
+    Gp ref;
+    //! `unsigned_min(ref + 1 * N, ref + (count - 1) * N)`.
+    Gp adjusted1;
+    //! `unsigned_min(ref + 2 * N, ref + (count - 1) * N)`.
+    Gp adjusted2;
+  };
 
-  BL_INLINE PredicateFlags flags() const noexcept { return _flags; }
-  BL_INLINE bool isNeverEmpty() const noexcept { return blTestFlag(_flags, PredicateFlags::kNeverEmpty); }
-  BL_INLINE bool isNeverFull() const noexcept { return blTestFlag(_flags, PredicateFlags::kNeverFull); }
+  uint32_t _materializedEndPtrCount {};
+  MaterializedEndPtr _materializedEndPtrData[kMaterializedEndPtrCapacity];
 
-  BL_INLINE void init(uint32_t size, PredicateFlags flags, const Gp& i) noexcept {
+  BL_INLINE_NODEBUG PixelPredicate() noexcept = default;
+  BL_INLINE explicit PixelPredicate(uint32_t size, PredicateFlags flags, const Gp& count) noexcept { init(size, flags, count); }
+
+  BL_INLINE void init(uint32_t size, PredicateFlags flags, const Gp& count) noexcept {
     _size = size;
     _flags = flags;
-    count = i;
+    _count = count;
+  }
+
+  BL_INLINE_NODEBUG bool empty() const noexcept { return _size == 0; }
+  BL_INLINE_NODEBUG uint32_t size() const noexcept { return _size; }
+
+  BL_INLINE_NODEBUG PredicateFlags flags() const noexcept { return _flags; }
+  BL_INLINE_NODEBUG bool isNeverFull() const noexcept { return blTestFlag(_flags, PredicateFlags::kNeverFull); }
+
+  BL_INLINE_NODEBUG const Gp& count() const noexcept { return _count; }
+
+  BL_INLINE_NODEBUG GatherMode gatherMode() const noexcept {
+    return isNeverFull() ? GatherMode::kNeverFull : GatherMode::kFetchAll;
+  }
+
+  BL_INLINE const MaterializedEndPtr* findMaterializedEndPtr(const Gp& ref) const noexcept {
+    for (uint32_t i = 0; i < _materializedEndPtrCount; i++)
+      if (_materializedEndPtrData[i].ref.id() == ref.id())
+        return &_materializedEndPtrData[i];
+    return nullptr;
+  }
+
+  BL_INLINE void addMaterializedEndPtr(const Gp& ref, const Gp& adjusted1, const Gp& adjusted2) noexcept {
+    if (_materializedEndPtrCount >= kMaterializedEndPtrCapacity)
+      return;
+
+    uint32_t i = _materializedEndPtrCount;
+    _materializedEndPtrData[i].ref = ref;
+    _materializedEndPtrData[i].adjusted1 = adjusted1;
+    _materializedEndPtrData[i].adjusted2 = adjusted2;
+    _materializedEndPtrCount++;
   }
 };
 
@@ -355,4 +411,4 @@ struct PixelPredicate {
 //! \}
 //! \endcond
 
-#endif // BLEND2D_PIPELINE_JIT_PIPEGENCORE_P_H_INCLUDED
+#endif // BLEND2D_PIPELINE_JIT_PIPEPRIMITIVES_P_H_INCLUDED

@@ -166,7 +166,7 @@ struct CFFTable {
   BL_INLINE const HeaderV2* headerV2() const noexcept { return PtrOps::offset<const HeaderV2>(this, 0); }
 };
 
-//! CFF data stored in \ref OTFontFace.
+//! CFF data stored in \ref OTFaceImpl.
 struct CFFData {
   //! CFF version.
   enum Version : uint32_t {

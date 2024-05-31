@@ -5,6 +5,7 @@
 
 #include <blend2d/api-build_test_p.h>
 #include <blend2d/runtime.h>
+#include <blend2d/runtimescope.h>
 
 int main(int argc, const char* argv[]) {
   BLRuntimeBuildInfo buildInfo;
@@ -21,5 +22,6 @@ int main(int argc, const char* argv[]) {
     buildInfo.buildType == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
     buildInfo.compilerInfo);
 
+  BLRuntimeScope rtScope;
   return BrokenAPI::run(argc, argv);
 }

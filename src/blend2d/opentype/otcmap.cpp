@@ -538,7 +538,7 @@ BLResult validateSubTable(RawTable cmapTable, uint32_t subTableOffset, uint32_t&
       if (!subTable.fits())
         return blTraceError(BL_ERROR_INVALID_DATA);
 
-      // TODO: [OPENTYPE] CMAP Format14 not implemented.
+      // TODO: [OpenType] CMAP Format14 not implemented.
       return blTraceError(BL_ERROR_NOT_IMPLEMENTED);
     }
 

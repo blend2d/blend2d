@@ -9,6 +9,7 @@
 #include "../threading/atomic_p.h"
 #include "../threading/conditionvariable_p.h"
 #include "../threading/mutex_p.h"
+#include "../threading/tsanutils_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_raster_engine_impl
@@ -23,6 +24,7 @@ public:
 
   struct alignas(BL_CACHE_LINE_SIZE) Header {
     bool useFutex;
+    Threading::TSanBarrier barrier;
   };
 
   struct alignas(BL_CACHE_LINE_SIZE) Status {
@@ -33,7 +35,7 @@ public:
 
     uint8_t padding[64 - 12];
 
-    // These are only used by futex implementation.
+    // These are only really used by futex implementation, however, the variables are always stored to.
     uint32_t futexJobsFinished;
     uint32_t futexBandsFinished;
   };
@@ -54,12 +56,25 @@ public:
   WorkerSynchronization() noexcept;
   ~WorkerSynchronization() noexcept;
 
-  BL_INLINE bool useFutex() const noexcept { return _header.useFutex; }
+  BL_INLINE_NODEBUG bool useFutex() const noexcept { return _header.useFutex; }
 
   BL_INLINE void beforeStart(uint32_t threadCount, bool hasJobs) noexcept {
     blAtomicStoreRelaxed(&_status.jobsRunningCount, hasJobs ? uint32_t(threadCount + 1) : uint32_t(0));
     blAtomicStoreRelaxed(&_status.threadsRunningCount, threadCount);
-    blAtomicStoreRelaxed(&_status.futexJobsFinished, 0u);
+    blAtomicStoreStrong(&_status.futexJobsFinished, 0u);
+
+    _header.barrier.release();
+  }
+
+  BL_INLINE void threadStarted() noexcept {
+    _header.barrier.acquire();
+  }
+
+  // Called when there are no jobs at all to acknowledge that `waitForJobsToFinish()` would never be called.
+  BL_INLINE void noJobsToWaitFor() noexcept {
+    blUnused(
+      blAtomicFetchStrong(&_status.futexJobsFinished)
+    );
   }
 
   void waitForJobsToFinish() noexcept;

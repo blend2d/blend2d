@@ -22,6 +22,7 @@ namespace bl {
 namespace RasterEngine {
 
 class RenderBatch;
+class WorkerSynchronization;
 
 //! Provides data used by both single-threaded and multi-threaded render command processing. Single-threaded rendering
 //! context uses this data synchronously to process commands that are required before using pipelines. Multi-threaded
@@ -35,22 +36,24 @@ public:
   enum : size_t { kEdgeListSize = sizeof(EdgeList<int>) };
 
   //! Rendering context impl.
-  BLRasterContextImpl* ctxI;
+  BLRasterContextImpl* ctxI {};
+  //! Worker synchronization.
+  WorkerSynchronization* synchronization {};
   //! Batch data to process in case this data is used in a worker thread.
-  RenderBatch* batch;
+  RenderBatch* _batch {};
   //! Context data used by pipelines (either the destination data or layer).
-  Pipeline::ContextData ctxData;
+  Pipeline::ContextData ctxData {};
 
   //! Clip mode.
-  uint8_t clipMode;
+  uint8_t clipMode {};
   //! Reserved.
-  uint8_t reserved[3];
+  uint8_t reserved[3] {};
   //! Id of the worker that uses this WorkData.
-  uint32_t _workerId;
+  uint32_t _workerId {};
   //! Band height.
-  uint32_t _bandHeight;
+  uint32_t _bandHeight {};
   //! Accumulated error flags.
-  uint32_t _accumulatedErrorFlags;
+  uint32_t _accumulatedErrorFlags {};
 
   //! Temporary paths.
   BLPath tmpPath[4];
@@ -60,7 +63,7 @@ public:
   //! Zone memory used by the worker context.
   ArenaAllocator workZone;
   //! The last state of the zone to be reverted to in case of failure.
-  ArenaAllocator::StatePtr workState;
+  ArenaAllocator::StatePtr workState {};
   //! Zero memory filled by rasterizers and zeroed back by pipelines.
   ZeroBuffer zeroBuffer;
   //! Edge storage.
@@ -68,10 +71,14 @@ public:
   //! Edge builder.
   EdgeBuilder<int> edgeBuilder;
 
-  explicit WorkData(BLRasterContextImpl* ctxI, uint32_t workerId = kSyncWorkerId) noexcept;
+  explicit WorkData(BLRasterContextImpl* ctxI, WorkerSynchronization* synchronization, uint32_t workerId = kSyncWorkerId) noexcept;
   ~WorkData() noexcept;
 
   // NOTE: `initContextData()` is called after `initBandData()` in `blRasterContextImplAttach()`.
+
+  BL_INLINE void initBatch(RenderBatch* batch) noexcept { blAtomicStoreStrong(&_batch, batch); }
+  BL_INLINE void resetBatch() noexcept { initBatch(nullptr); }
+  BL_INLINE RenderBatch* acquireBatch() noexcept { return blAtomicFetchStrong(&_batch); }
 
   BL_INLINE_NODEBUG void initContextData(const BLImageData& dstData, const BLPointI& pixelOrigin) noexcept {
     ctxData.dst = dstData;

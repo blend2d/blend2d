@@ -16,7 +16,7 @@ namespace bl {
 namespace RasterEngine {
 namespace WorkerProc {
 
-BL_HIDDEN void processWorkData(WorkData* workData) noexcept;
+BL_HIDDEN void processWorkData(WorkData* workData, RenderBatch* batch) noexcept;
 BL_HIDDEN void BL_CDECL workerThreadEntry(BLThread* thread, void* data) noexcept;
 
 } // {WorkerProc}

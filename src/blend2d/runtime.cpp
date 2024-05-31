@@ -132,6 +132,7 @@ static BL_INLINE uint32_t blRuntimeDetectCpuFeatures(const asmjit::CpuInfo& asmC
 
   if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_F) &&
       asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_BW) &&
+      asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_CD) &&
       asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_DQ) &&
       asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_VL)) {
     features |= BL_RUNTIME_CPU_FEATURE_X86_AVX512;
@@ -156,6 +157,8 @@ static BL_INLINE void blRuntimeInitSystemInfo(BLRuntimeContext* rt) noexcept {
   info.cpuFeatures = blRuntimeDetectCpuFeatures(asmCpuInfo);
   info.coreCount = asmCpuInfo.hwThreadCount();
   info.threadCount = asmCpuInfo.hwThreadCount();
+  memcpy(info.cpuVendor, asmCpuInfo.vendor(), blMin(sizeof(info.cpuVendor), sizeof(asmCpuInfo._vendor)));
+  memcpy(info.cpuBrand, asmCpuInfo.brand(), blMin(sizeof(info.cpuBrand), sizeof(asmCpuInfo._brand)));
 #endif
 
 #ifdef _WIN32

@@ -743,10 +743,13 @@ struct BLContextVirt BL_CLASS_INHERITS(BLObjectVirt) {
   // Interface - Most Used Functions
   // -------------------------------
 
-  // NOTE: These functions are called directly by the BLContext C++ API (the dispatch is inlined). So in general
+  // NOTE 1: These functions are called directly by the BLContext C++ API (the dispatch is inlined). So in general
   // on x86 targets the compiler will generate something like `call [base + offset]` instruction to perform the call.
   // We want to have the most used functions first as these would use 8-bit offset instead of 32-bit offset. We have
   // space for 12 functions as 8-bit offset is signed (from -128 to 127) and the BLObjectVirt already uses 3 functions.
+  //
+  // NOTE 2: On non-X86 platforms such as AArch64 we don't have to worry about offsets as the instruction would be
+  // encoded in 32-bits regardless of the offset.
 
   BLResult (BL_CDECL* applyTransformOp        )(BLContextImpl* impl, BLTransformOp opType, const void* opData) BL_NOEXCEPT;
 
@@ -1209,9 +1212,9 @@ public:
   //!
   //! Possible return conditions:
   //!
-  //!   * `BL_SUCCESS` - State was restored successfully.
-  //!   * `BL_ERROR_NO_STATES_TO_RESTORE` - There are no saved states to restore.
-  //!   * `BL_ERROR_NO_MATCHING_COOKIE` - Previous state was saved with cookie, which was not provided. You would need
+  //!   - `BL_SUCCESS` - State was restored successfully.
+  //!   - `BL_ERROR_NO_STATES_TO_RESTORE` - There are no saved states to restore.
+  //!   - `BL_ERROR_NO_MATCHING_COOKIE` - Previous state was saved with cookie, which was not provided. You would need
   //!     the correct cookie to restore such state.
   BL_INLINE_NODEBUG BLResult restore() noexcept {
     BL_CONTEXT_CALL_RETURN(restore, impl, nullptr);
@@ -1223,9 +1226,9 @@ public:
   //!
   //! Possible return conditions:
   //!
-  //!   * `BL_SUCCESS` - Matching state was restored successfully.
-  //!   * `BL_ERROR_NO_STATES_TO_RESTORE` - There are no saved states to restore.
-  //!   * `BL_ERROR_NO_MATCHING_COOKIE` - The cookie did't match any saved state.
+  //!   - `BL_SUCCESS` - Matching state was restored successfully.
+  //!   - `BL_ERROR_NO_STATES_TO_RESTORE` - There are no saved states to restore.
+  //!   - `BL_ERROR_NO_MATCHING_COOKIE` - The cookie did't match any saved state.
   BL_INLINE_NODEBUG BLResult restore(const BLContextCookie& cookie) noexcept {
     BL_CONTEXT_CALL_RETURN(restore, impl, &cookie);
   }

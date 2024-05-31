@@ -55,10 +55,12 @@ static BL_INLINE_NODEBUG BLImagePrivateImpl* getImpl(const BLImageCore* self) no
 }
 
 static BL_INLINE BLResult retainInstance(const BLImageCore* self, size_t n = 1) noexcept {
+  BL_ASSERT(self->_d.isImage());
   return ObjectInternal::retainInstance(self, n);
 }
 
 static BL_INLINE BLResult releaseInstance(BLImageCore* self) noexcept {
+  BL_ASSERT(self->_d.isImage());
   return releaseImpl<RCMode::kMaybe>(getImpl(self));
 }
 

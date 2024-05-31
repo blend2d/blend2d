@@ -68,7 +68,7 @@ static BLResult convertNameStringToUtf8(BLString& dst, BLArrayView<uint8_t> src,
       uint32_t uc;
       BL_PROPAGATE(srcReader.next<Unicode::IOFlags::kUnaligned | Unicode::IOFlags::kByteOrderBE | Unicode::IOFlags::kStrict>(uc));
 
-      nullTerminatorCount += (uc == 0);
+      nullTerminatorCount += size_t(uc == 0);
       BL_PROPAGATE(dstWriter.writeUnsafe(uc));
     }
   }

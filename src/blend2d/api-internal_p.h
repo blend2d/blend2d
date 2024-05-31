@@ -96,7 +96,7 @@
 #define BL_TARGET_ARCH_BITS (BL_TARGET_ARCH_X86 | BL_TARGET_ARCH_ARM | BL_TARGET_ARCH_MIPS)
 #if BL_TARGET_ARCH_BITS == 0
   #undef BL_TARGET_ARCH_BITS
-  #if defined (__LP64__) || defined(_LP64)
+  #if defined(__LP64__) || defined(_LP64)
     #define BL_TARGET_ARCH_BITS 64
   #else
     #define BL_TARGET_ARCH_BITS 32
@@ -115,7 +115,8 @@
   #if BL_TARGET_ARCH_X86 != 0
     #define BL_JIT_ARCH_X86
   #elif BL_TARGET_ARCH_ARM == 64
-    // #define BL_JIT_ARCH_A64 // Not ready!
+    // TODO: Not ready!
+    #define BL_JIT_ARCH_A64
   #endif
 #endif // !BL_BUILD_NO_JIT
 

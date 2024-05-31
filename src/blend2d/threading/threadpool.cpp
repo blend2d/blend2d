@@ -31,36 +31,36 @@ public:
   enum : uint32_t { kMaxThreadCount = 64 };
   typedef bl::FixedBitArray<BLBitWord, kMaxThreadCount> BitArray;
 
-  size_t refCount;
-  uint32_t stackSize;
-  uint32_t maxThreadCount;
-  uint32_t createdThreadCount;
-  uint32_t pooledThreadCount;
-  uint32_t acquiredThreadCount;
-  uint32_t destroyWaitTimeInMS;
-  uint32_t waitingOnDestroy;
+  //! \name Members
+  //! \{
+
+  size_t refCount {};
+  uint32_t stackSize {};
+  uint32_t maxThreadCount {};
+  uint32_t createdThreadCount {};
+  uint32_t pooledThreadCount {};
+  uint32_t acquiredThreadCount {};
+  uint32_t destroyWaitTimeInMS {};
+  uint32_t waitingOnDestroy {};
 
   BLMutex mutex;
   BLConditionVariable destroyCondition;
-  BLThreadAttributes threadAttributes;
-  BitArray pooledThreadBits;
-  BLThread* threads[kMaxThreadCount];
+  BLThreadAttributes threadAttributes {};
+  BitArray pooledThreadBits {};
+  BLThread* threads[kMaxThreadCount] {};
+
+  //! \}
+
+  //! \name Construction & Destruction
+  //! \{
 
   explicit BLInternalThreadPool(size_t initialRefCount = 1) noexcept
     : BLThreadPool { &blThreadPoolVirt },
       refCount(initialRefCount),
-      stackSize(0),
       maxThreadCount(kMaxThreadCount),
-      createdThreadCount(0),
-      pooledThreadCount(0),
-      acquiredThreadCount(0),
       destroyWaitTimeInMS(100),
-      waitingOnDestroy(0),
       mutex(),
-      destroyCondition(),
-      threadAttributes {},
-      pooledThreadBits {},
-      threads {} { init(); }
+      destroyCondition() { init(); }
 
   ~BLInternalThreadPool() noexcept {
     if (blAtomicFetchStrong(&createdThreadCount) != 0)
@@ -69,10 +69,12 @@ public:
     destroy();
   }
 
+  //! \}
+
   BL_INLINE void init() noexcept {}
   BL_INLINE void destroy() noexcept {}
 
-  void performExitCleanup() {
+  void performExitCleanup() noexcept {
     uint32_t numTries = 5;
     uint64_t waitTime = (uint64_t(destroyWaitTimeInMS) * 1000u) / numTries;
 
@@ -161,8 +163,10 @@ static void blThreadPoolThreadExitFunc(BLThread* thread, void* data) noexcept {
   thread->destroy();
 
   if (blAtomicFetchSubStrong(&threadPool->createdThreadCount) == 1) {
-    if (threadPool->mutex.protect([&]() { return threadPool->waitingOnDestroy; }))
-      threadPool->destroyCondition.signal();
+    threadPool->mutex.protect([&]() {
+      if (threadPool->waitingOnDestroy)
+        threadPool->destroyCondition.signal();
+    });
   }
 }
 

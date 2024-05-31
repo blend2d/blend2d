@@ -187,7 +187,7 @@ struct FillAnalytic_Base {
     size_t bitStride = fillData->bitStride;
     size_t cellStride = fillData->cellStride;
 
-    uint32_t globalAlpha = fillData->alpha.u << 7;
+    uint32_t globalAlpha = fillData->alpha.u;
     uint32_t fillRuleMask = fillData->fillRuleMask;
 
     CompOp compOp;
@@ -381,13 +381,25 @@ L_Scanline_Init:
   }
 
   static BL_INLINE uint32_t calcMask(uint32_t cov, uint32_t fillRuleMask, uint32_t globalAlpha) noexcept {
-    uint32_t c = A8Info::kScale << 1;
-    uint32_t m = (IntOps::sar(cov, A8Info::kShift) & fillRuleMask) - c;
+    uint32_t c = A8Info::kScale;
+    uint32_t m = (IntOps::sar(cov, A8Info::kShift + 1u) & fillRuleMask) - c;
     m = blMin<uint32_t>(uint32_t(blAbs(int32_t(m))), c);
 
-    return (m * globalAlpha) >> 16;
+    return (m * globalAlpha) >> 8;
   }
 };
+
+template<FillType kFillType, typename CompOp>
+struct FillDispatch {};
+
+template<typename CompOp>
+struct FillDispatch<FillType::kBoxA, CompOp> { using Fill = FillBoxA_Base<CompOp>; };
+
+template<typename CompOp>
+struct FillDispatch<FillType::kMask, CompOp> { using Fill = FillMask_Base<CompOp>; };
+
+template<typename CompOp>
+struct FillDispatch<FillType::kAnalytic, CompOp> { using Fill = FillAnalytic_Base<CompOp>; };
 
 } // {anonymous}
 } // {Reference}

@@ -8,7 +8,9 @@
 
 #include "../../runtime_p.h"
 #include "../../pipeline/jit/jitbase_p.h"
-#include "../../pipeline/jit/pipegencore_p.h"
+
+// TODO: [JIT] The intention is to have it as independent as possible, so remove this in the future!
+#include "../../pipeline/jit/pipeprimitives_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_pipeline_jit
@@ -18,174 +20,960 @@ namespace bl {
 namespace Pipeline {
 namespace JIT {
 
+//! The behavior of a floating point scalar operation.
+enum class ScalarOpBehavior : uint8_t {
+  //! The rest of the elements are zeroed, only the first element would contain the result (AArch64).
+  kZeroing,
+  //! The rest of the elements are unchanged, elements above 128-bits are zeroed.
+  kPreservingVec128
+};
+
+//! The behavior of a floating point min/max instructions when comparing against NaN.
+enum class FMinMaxOpBehavior : uint8_t {
+  //! Min and max selects a finite value if one of the compared values is NaN.
+  kFiniteValue,
+  //! Min and max is implemented like `if a <|> b ? a : b`.
+  kTernaryLogic
+};
+
+//! The behavior of floating point `madd` instructions.
+enum class FMulAddOpBehavior : uint8_t {
+  //! FMA is not available, thus `madd` is translated into two instructions (MUL + ADD).
+  kNoFMA,
+  //! FMA is available, the ISA allows to store the result to any of the inputs (X86).
+  kFMAStoreToAny,
+  //! FMA is available, the ISA always uses accumulator register as a destination register (AArch64).
+  kFMAStoreToAccumulator
+};
+
+enum class OpcodeCond : uint32_t {
+  kAssignAnd,
+  kAssignOr,
+  kAssignXor,
+  kAssignAdd,
+  kAssignSub,
+  kAssignShr,
+  kTest,
+  kBitTest,
+  kCompare,
+
+  kMaxValue = kCompare
+};
+
+enum class OpcodeM : uint32_t {
+  kStoreZeroReg,
+  kStoreZeroU8,
+  kStoreZeroU16,
+  kStoreZeroU32,
+  kStoreZeroU64
+};
+
+enum class OpcodeRM : uint32_t {
+  kLoadReg,
+  kLoadI8,
+  kLoadU8,
+  kLoadI16,
+  kLoadU16,
+  kLoadI32,
+  kLoadU32,
+  kLoadI64,
+  kLoadU64,
+  kLoadMergeU8,
+  kLoadMergeU16
+};
+
+enum class OpcodeMR : uint32_t {
+  kStoreReg,
+  kStoreU8,
+  kStoreU16,
+  kStoreU32,
+  kStoreU64,
+  kAddReg,
+  kAddU8,
+  kAddU16,
+  kAddU32,
+  kAddU64
+};
+
+//! Arithmetic operation having 2 operands (dst, src).
+enum class OpcodeRR : uint32_t {
+  kAbs,
+  kNeg,
+  kNot,
+  kBSwap,
+  kCLZ,
+  kCTZ,
+  kReflect,
+  kMaxValue = kReflect
+};
+
+//! Arithmetic operation having 3 operands (dst, src1, src2).
+enum class OpcodeRRR : uint32_t {
+  kAnd,
+  kOr,
+  kXor,
+  kBic,
+  kAdd,
+  kSub,
+  kMul,
+  kUDiv,
+  kUMod,
+  kSMin,
+  kSMax,
+  kUMin,
+  kUMax,
+  kSll,
+  kSrl,
+  kSra,
+  kRol,
+  kRor,
+  kSBound,
+
+  kMaxValue = kSBound
+};
+
+enum class OpcodeVR : uint32_t {
+  kMov,
+  kMovU32,
+  kMovU64,
+  kInsertU8,
+  kInsertU16,
+  kInsertU32,
+  kInsertU64,
+  kExtractU8,
+  kExtractU16,
+  kExtractU32,
+  kExtractU64,
+  kCvtIntToF32,
+  kCvtIntToF64,
+  kCvtTruncF32ToInt,
+  kCvtRoundF32ToInt,
+  kCvtTruncF64ToInt,
+  kCvtRoundF64ToInt,
+
+  kMaxValue = kCvtRoundF64ToInt
+};
+
+enum class OpcodeVM : uint32_t {
+  kLoad8,
+  kLoad16_U16,
+  kLoad32_U32,
+  kLoad32_F32,
+
+  kLoad64_U32,
+  kLoad64_U64,
+  kLoad64_F32,
+  kLoad64_F64,
+
+  kLoad128_U32,
+  kLoad128_U64,
+  kLoad128_F32,
+  kLoad128_F64,
+
+  kLoad256_U32,
+  kLoad256_U64,
+  kLoad256_F32,
+  kLoad256_F64,
+
+  kLoad512_U32,
+  kLoad512_U64,
+  kLoad512_F32,
+  kLoad512_F64,
+
+  kLoadN_U32,
+  kLoadN_U64,
+  kLoadN_F32,
+  kLoadN_F64,
+
+  kLoadCvt16_U8ToU64,
+  kLoadCvt32_U8ToU64,
+  kLoadCvt64_U8ToU64,
+
+  kLoadCvt32_I8ToI16,
+  kLoadCvt32_U8ToU16,
+  kLoadCvt32_I8ToI32,
+  kLoadCvt32_U8ToU32,
+  kLoadCvt32_I16ToI32,
+  kLoadCvt32_U16ToU32,
+  kLoadCvt32_I32ToI64,
+  kLoadCvt32_U32ToU64,
+
+  kLoadCvt64_I8ToI16,
+  kLoadCvt64_U8ToU16,
+  kLoadCvt64_I8ToI32,
+  kLoadCvt64_U8ToU32,
+  kLoadCvt64_I16ToI32,
+  kLoadCvt64_U16ToU32,
+  kLoadCvt64_I32ToI64,
+  kLoadCvt64_U32ToU64,
+
+  kLoadCvt128_I8ToI16,
+  kLoadCvt128_U8ToU16,
+  kLoadCvt128_I8ToI32,
+  kLoadCvt128_U8ToU32,
+  kLoadCvt128_I16ToI32,
+  kLoadCvt128_U16ToU32,
+  kLoadCvt128_I32ToI64,
+  kLoadCvt128_U32ToU64,
+
+  kLoadCvt256_I8ToI16,
+  kLoadCvt256_U8ToU16,
+  kLoadCvt256_I16ToI32,
+  kLoadCvt256_U16ToU32,
+  kLoadCvt256_I32ToI64,
+  kLoadCvt256_U32ToU64,
+
+  kLoadCvtN_U8ToU64,
+
+  kLoadCvtN_I8ToI16,
+  kLoadCvtN_U8ToU16,
+  kLoadCvtN_I8ToI32,
+  kLoadCvtN_U8ToU32,
+  kLoadCvtN_I16ToI32,
+  kLoadCvtN_U16ToU32,
+  kLoadCvtN_I32ToI64,
+  kLoadCvtN_U32ToU64,
+
+  kLoadInsertU8,
+  kLoadInsertU16,
+  kLoadInsertU32,
+  kLoadInsertU64,
+  kLoadInsertF32,
+  kLoadInsertF32x2,
+  kLoadInsertF64,
+
+  kMaxValue = kLoadInsertF64
+};
+
+enum class OpcodeMV : uint32_t {
+  kStore8,
+  kStore16_U16,
+  kStore32_U32,
+  kStore32_F32,
+
+  kStore64_U32,
+  kStore64_U64,
+  kStore64_F32,
+  kStore64_F64,
+
+  kStore128_U32,
+  kStore128_U64,
+  kStore128_F32,
+  kStore128_F64,
+
+  kStore256_U32,
+  kStore256_U64,
+  kStore256_F32,
+  kStore256_F64,
+
+  kStore512_U32,
+  kStore512_U64,
+  kStore512_F32,
+  kStore512_F64,
+
+  kStoreN_U32,
+  kStoreN_U64,
+  kStoreN_F32,
+  kStoreN_F64,
+
+  kStoreExtractU16,
+  kStoreExtractU32,
+  kStoreExtractU64,
+
+  /*
+  kStoreCvtz64_U16ToU8,
+  kStoreCvtz64_U32ToU16,
+  kStoreCvtz64_U64ToU32,
+  kStoreCvts64_I16ToI8,
+  kStoreCvts64_I16ToU8,
+  kStoreCvts64_U16ToU8,
+  kStoreCvts64_I32ToI16,
+  kStoreCvts64_U32ToU16,
+  kStoreCvts64_I64ToI32,
+  kStoreCvts64_U64ToU32,
+
+  kStoreCvtz128_U16ToU8,
+  kStoreCvtz128_U32ToU16,
+  kStoreCvtz128_U64ToU32,
+  kStoreCvts128_I16ToI8,
+  kStoreCvts128_I16ToU8,
+  kStoreCvts128_U16ToU8,
+  kStoreCvts128_I32ToI16,
+  kStoreCvts128_U32ToU16,
+  kStoreCvts128_I64ToI32,
+  kStoreCvts128_U64ToU32,
+
+  kStoreCvtz256_U16ToU8,
+  kStoreCvtz256_U32ToU16,
+  kStoreCvtz256_U64ToU32,
+  kStoreCvts256_I16ToI8,
+  kStoreCvts256_I16ToU8,
+  kStoreCvts256_U16ToU8,
+  kStoreCvts256_I32ToI16,
+  kStoreCvts256_U32ToU16,
+  kStoreCvts256_I64ToI32,
+  kStoreCvts256_U64ToU32,
+
+  kStoreCvtzN_U16ToU8,
+  kStoreCvtzN_U32ToU16,
+  kStoreCvtzN_U64ToU32,
+  kStoreCvtsN_I16ToI8,
+  kStoreCvtsN_I16ToU8,
+  kStoreCvtsN_U16ToU8,
+  kStoreCvtsN_I32ToI16,
+  kStoreCvtsN_U32ToU16,
+  kStoreCvtsN_I64ToI32,
+  kStoreCvtsN_U64ToU32,
+  */
+
+  kMaxValue = kStoreExtractU64
+};
+
+enum class OpcodeVV : uint32_t {
+  kMov,
+  kMovU64,
+
+  kBroadcastU8Z,
+  kBroadcastU16Z,
+  kBroadcastU8,
+  kBroadcastU16,
+  kBroadcastU32,
+  kBroadcastU64,
+  kBroadcastF32,
+  kBroadcastF64,
+  kBroadcastV128_U32,
+  kBroadcastV128_U64,
+  kBroadcastV128_F32,
+  kBroadcastV128_F64,
+  kBroadcastV256_U32,
+  kBroadcastV256_U64,
+  kBroadcastV256_F32,
+  kBroadcastV256_F64,
+
+  kAbsI8,
+  kAbsI16,
+  kAbsI32,
+  kAbsI64,
+
+  kNotU32,
+  kNotU64,
+
+  kCvtI8LoToI16,
+  kCvtI8HiToI16,
+  kCvtU8LoToU16,
+  kCvtU8HiToU16,
+  kCvtI8ToI32,
+  kCvtU8ToU32,
+  kCvtI16LoToI32,
+  kCvtI16HiToI32,
+  kCvtU16LoToU32,
+  kCvtU16HiToU32,
+  kCvtI32LoToI64,
+  kCvtI32HiToI64,
+  kCvtU32LoToU64,
+  kCvtU32HiToU64,
+
+  kAbsF32,
+  kAbsF64,
+
+  kNegF32,
+  kNegF64,
+
+  kNotF32,
+  kNotF64,
+
+  kTruncF32S,
+  kTruncF64S,
+  kTruncF32,
+  kTruncF64,
+
+  kFloorF32S,
+  kFloorF64S,
+  kFloorF32,
+  kFloorF64,
+
+  kCeilF32S,
+  kCeilF64S,
+  kCeilF32,
+  kCeilF64,
+
+  kRoundF32S,
+  kRoundF64S,
+  kRoundF32,
+  kRoundF64,
+
+  kRcpF32,
+  kRcpF64,
+
+  kSqrtF32S,
+  kSqrtF64S,
+  kSqrtF32,
+  kSqrtF64,
+
+  kCvtF32ToF64S,
+  kCvtF64ToF32S,
+  kCvtI32ToF32,
+  kCvtF32LoToF64,
+  kCvtF32HiToF64,
+  kCvtF64ToF32Lo,
+  kCvtF64ToF32Hi,
+  kCvtI32LoToF64,
+  kCvtI32HiToF64,
+  kCvtTruncF32ToI32,
+  kCvtTruncF64ToI32Lo,
+  kCvtTruncF64ToI32Hi,
+  kCvtRoundF32ToI32,
+  kCvtRoundF64ToI32Lo,
+  kCvtRoundF64ToI32Hi,
+
+  kMaxValue = kCvtRoundF64ToI32Hi
+};
+
+enum class OpcodeVVI : uint32_t {
+  kSllU16,
+  kSllU32,
+  kSllU64,
+  kSrlU16,
+  kSrlU32,
+  kSrlU64,
+  kSraI16,
+  kSraI32,
+  kSraI64,
+  kSllbU128,
+  kSrlbU128,
+  kSwizzleU16x4,
+  kSwizzleLoU16x4,
+  kSwizzleHiU16x4,
+  kSwizzleU32x4,
+  kSwizzleU64x2,
+  kSwizzleF32x4,
+  kSwizzleF64x2,
+  kSwizzleU64x4,
+  kSwizzleF64x4,
+  kExtractV128_I32,
+  kExtractV128_I64,
+  kExtractV128_F32,
+  kExtractV128_F64,
+  kExtractV256_I32,
+  kExtractV256_I64,
+  kExtractV256_F32,
+  kExtractV256_F64,
+
+#if defined(BL_JIT_ARCH_A64)
+  kSrlRndU16,
+  kSrlRndU32,
+  kSrlRndU64,
+  kSrlAccU16,
+  kSrlAccU32,
+  kSrlAccU64,
+  kSrlRndAccU16,
+  kSrlRndAccU32,
+  kSrlRndAccU64,
+  kSrlnLoU16,
+  kSrlnHiU16,
+  kSrlnLoU32,
+  kSrlnHiU32,
+  kSrlnLoU64,
+  kSrlnHiU64,
+  kSrlnRndLoU16,
+  kSrlnRndHiU16,
+  kSrlnRndLoU32,
+  kSrlnRndHiU32,
+  kSrlnRndLoU64,
+  kSrlnRndHiU64,
+
+  kMaxValue = kSrlnRndHiU64
+
+#elif defined(BL_JIT_ARCH_X86)
+
+  kMaxValue = kExtractV256_F64
+
+#else
+
+  kMaxValue = kExtractV256_F64
+
+#endif // BL_JIT_ARCH_A64
+};
+
+enum class OpcodeVVV : uint32_t {
+  kAndU32,
+  kAndU64,
+  kOrU32,
+  kOrU64,
+  kXorU32,
+  kXorU64,
+  kAndnU32,
+  kAndnU64,
+  kBicU32,
+  kBicU64,
+  kAvgrU8,
+  kAvgrU16,
+  kAddU8,
+  kAddU16,
+  kAddU32,
+  kAddU64,
+  kSubU8,
+  kSubU16,
+  kSubU32,
+  kSubU64,
+  kAddsI8,
+  kAddsU8,
+  kAddsI16,
+  kAddsU16,
+  kSubsI8,
+  kSubsU8,
+  kSubsI16,
+  kSubsU16,
+  kMulU16,
+  kMulU32,
+  kMulU64,
+  kMulhI16,
+  kMulhU16,
+  kMulU64_LoU32,
+  kMHAddI16_I32,
+  kMinI8,
+  kMinU8,
+  kMinI16,
+  kMinU16,
+  kMinI32,
+  kMinU32,
+  kMinI64,
+  kMinU64,
+  kMaxI8,
+  kMaxU8,
+  kMaxI16,
+  kMaxU16,
+  kMaxI32,
+  kMaxU32,
+  kMaxI64,
+  kMaxU64,
+  kCmpEqU8,
+  kCmpEqU16,
+  kCmpEqU32,
+  kCmpEqU64,
+  kCmpGtI8,
+  kCmpGtU8,
+  kCmpGtI16,
+  kCmpGtU16,
+  kCmpGtI32,
+  kCmpGtU32,
+  kCmpGtI64,
+  kCmpGtU64,
+  kCmpGeI8,
+  kCmpGeU8,
+  kCmpGeI16,
+  kCmpGeU16,
+  kCmpGeI32,
+  kCmpGeU32,
+  kCmpGeI64,
+  kCmpGeU64,
+  kCmpLtI8,
+  kCmpLtU8,
+  kCmpLtI16,
+  kCmpLtU16,
+  kCmpLtI32,
+  kCmpLtU32,
+  kCmpLtI64,
+  kCmpLtU64,
+  kCmpLeI8,
+  kCmpLeU8,
+  kCmpLeI16,
+  kCmpLeU16,
+  kCmpLeI32,
+  kCmpLeU32,
+  kCmpLeI64,
+  kCmpLeU64,
+
+  kAndF32,
+  kAndF64,
+  kOrF32,
+  kOrF64,
+  kXorF32,
+  kXorF64,
+  kAndnF32,
+  kAndnF64,
+  kBicF32,
+  kBicF64,
+  kAddF32S,
+  kAddF64S,
+  kAddF32,
+  kAddF64,
+  kSubF32S,
+  kSubF64S,
+  kSubF32,
+  kSubF64,
+  kMulF32S,
+  kMulF64S,
+  kMulF32,
+  kMulF64,
+  kDivF32S,
+  kDivF64S,
+  kDivF32,
+  kDivF64,
+  kMinF32S,
+  kMinF64S,
+  kMinF32,
+  kMinF64,
+  kMaxF32S,
+  kMaxF64S,
+  kMaxF32,
+  kMaxF64,
+  kCmpEqF32S,
+  kCmpEqF64S,
+  kCmpEqF32,
+  kCmpEqF64,
+  kCmpNeF32S,
+  kCmpNeF64S,
+  kCmpNeF32,
+  kCmpNeF64,
+  kCmpGtF32S,
+  kCmpGtF64S,
+  kCmpGtF32,
+  kCmpGtF64,
+  kCmpGeF32S,
+  kCmpGeF64S,
+  kCmpGeF32,
+  kCmpGeF64,
+  kCmpLtF32S,
+  kCmpLtF64S,
+  kCmpLtF32,
+  kCmpLtF64,
+  kCmpLeF32S,
+  kCmpLeF64S,
+  kCmpLeF32,
+  kCmpLeF64,
+  kCmpOrdF32S,
+  kCmpOrdF64S,
+  kCmpOrdF32,
+  kCmpOrdF64,
+  kCmpUnordF32S,
+  kCmpUnordF64S,
+  kCmpUnordF32,
+  kCmpUnordF64,
+
+  kHAddF64,
+
+  kCombineLoHiU64,
+  kCombineLoHiF64,
+  kCombineHiLoU64,
+  kCombineHiLoF64,
+
+  kInterleaveLoU8,
+  kInterleaveHiU8,
+  kInterleaveLoU16,
+  kInterleaveHiU16,
+  kInterleaveLoU32,
+  kInterleaveHiU32,
+  kInterleaveLoU64,
+  kInterleaveHiU64,
+  kInterleaveLoF32,
+  kInterleaveHiF32,
+  kInterleaveLoF64,
+  kInterleaveHiF64,
+
+  kPacksI16_I8,
+  kPacksI16_U8,
+  kPacksI32_I16,
+  kPacksI32_U16,
+
+  kSwizzlev_U8,
+
+#if defined(BL_JIT_ARCH_A64)
+
+  kMulwLoI8,
+  kMulwLoU8,
+  kMulwHiI8,
+  kMulwHiU8,
+  kMulwLoI16,
+  kMulwLoU16,
+  kMulwHiI16,
+  kMulwHiU16,
+  kMulwLoI32,
+  kMulwLoU32,
+  kMulwHiI32,
+  kMulwHiU32,
+
+  kMAddwLoI8,
+  kMAddwLoU8,
+  kMAddwHiI8,
+  kMAddwHiU8,
+  kMAddwLoI16,
+  kMAddwLoU16,
+  kMAddwHiI16,
+  kMAddwHiU16,
+  kMAddwLoI32,
+  kMAddwLoU32,
+  kMAddwHiI32,
+  kMAddwHiU32,
+
+  kMaxValue = kMAddwHiU32
+
+#elif defined(BL_JIT_ARCH_X86)
+
+  kPermuteU8,
+
+  kMaxValue = kPermuteU8
+
+#else
+
+  kMaxValue = kSwizzlev_U8
+
+#endif // BL_JIT_ARCH_A64
+};
+
+enum class OpcodeVVVI : uint32_t {
+  kAlignr_U128,
+  kInterleaveShuffleU32x4,
+  kInterleaveShuffleU64x2,
+  kInterleaveShuffleF32x4,
+  kInterleaveShuffleF64x2,
+  kInsertV128_U32,
+  kInsertV128_F32,
+  kInsertV128_U64,
+  kInsertV128_F64,
+  kInsertV256_U32,
+  kInsertV256_F32,
+  kInsertV256_U64,
+  kInsertV256_F64,
+
+  kMaxValue = kInsertV256_F64
+};
+
+enum class OpcodeVVVV : uint32_t {
+  kBlendV_U8,
+
+  kMAddU16,
+  kMAddU32,
+
+  kMAddF32S,
+  kMAddF64S,
+  kMAddF32,
+  kMAddF64,
+
+  kMSubF32S,
+  kMSubF64S,
+  kMSubF32,
+  kMSubF64,
+
+  kNMAddF32S,
+  kNMAddF64S,
+  kNMAddF32,
+  kNMAddF64,
+
+  kNMSubF32S,
+  kNMSubF64S,
+  kNMSubF32,
+  kNMSubF64,
+
+  kMaxValue = kNMSubF64
+};
+
+//! Pipeline optimization flags used by \ref PipeCompiler.
+enum class PipeOptFlags : uint32_t {
+  //! No flags.
+  kNone = 0x0u,
+
+  //! CPU has instructions that can perform 8-bit masked loads and stores.
+  kMaskOps8Bit = 0x00000001u,
+
+  //! CPU has instructions that can perform 16-bit masked loads and stores.
+  kMaskOps16Bit = 0x00000002u,
+
+  //! CPU has instructions that can perform 32-bit masked loads and stores.
+  kMaskOps32Bit = 0x00000004u,
+
+  //! CPU has instructions that can perform 64-bit masked loads and stores.
+  kMaskOps64Bit = 0x00000008u,
+
+  //! CPU provides low-latency 32-bit multiplication (AMD CPUs).
+  kFastVpmulld = 0x00000010u,
+
+  //! CPU provides low-latency 64-bit multiplication (AMD CPUs).
+  kFastVpmullq = 0x00000020u,
+
+  //! CPU performs hardware gathers faster than a sequence of loads and packing.
+  kFastGather = 0x00000040u,
+
+  //! CPU has fast stores with mask.
+  //!
+  //! \note This is a hint to the compiler to emit a masked store instead of a sequence having branches.
+  kFastStoreWithMask = 0x00000080u
+};
+BL_DEFINE_ENUM_FLAGS(PipeOptFlags)
+
+struct Swizzle2 {
+  uint32_t value;
+
+  BL_INLINE_NODEBUG bool operator==(const Swizzle2& other) const noexcept { return value == other.value; }
+  BL_INLINE_NODEBUG bool operator!=(const Swizzle2& other) const noexcept { return value != other.value; }
+};
+
+struct Swizzle4 {
+  uint32_t value;
+
+  BL_INLINE_NODEBUG bool operator==(const Swizzle4& other) const noexcept { return value == other.value; }
+  BL_INLINE_NODEBUG bool operator!=(const Swizzle4& other) const noexcept { return value != other.value; }
+};
+
+static BL_INLINE_NODEBUG constexpr Swizzle2 swizzle(uint8_t b, uint8_t a) noexcept {
+  return Swizzle2{(uint32_t(b) << 8) | a};
+}
+
+static BL_INLINE_NODEBUG constexpr Swizzle4 swizzle(uint8_t d, uint8_t c, uint8_t b, uint8_t a) noexcept {
+  return Swizzle4{(uint32_t(d) << 24) | (uint32_t(c) << 16) | (uint32_t(b) << 8) | a};
+}
+
 //! Condition represents either a condition or an assignment operation that can be checked.
 class Condition {
 public:
-  enum class Op : uint8_t {
-    kAssignAnd,
-    kAssignOr,
-    kAssignXor,
-    kAssignAdd,
-    kAssignSub,
-    kAssignSHR,
-    kTest,
-    kBitTest,
-    kCompare,
-    kMaxValue = kCompare
-  };
+  //! \name Members
+  //! \{
 
-  Op op;
+  OpcodeCond op;
   CondCode cond;
   Operand a;
   Operand b;
 
-  BL_INLINE_NODEBUG Condition(Op op, CondCode cond, const Operand& a, const Operand& b) noexcept
+  //! \}
+
+  //! \name Construction & Destruction
+  //! \{
+
+  BL_INLINE_NODEBUG Condition(OpcodeCond op, CondCode cond, const Operand& a, const Operand& b) noexcept
     : op(op),
       cond(cond),
       a(a),
       b(b) {}
 
   BL_INLINE_NODEBUG Condition(const Condition& other) noexcept = default;
+
+  //! \}
+
+  //! \name Overloaded Operators
+  //! \{
+
   BL_INLINE_NODEBUG Condition& operator=(const Condition& other) noexcept = default;
+
+  //! \}
 };
 
-static BL_INLINE Condition and_z(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignAnd, CondCode::kZ, a, b); }
-static BL_INLINE Condition and_z(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignAnd, CondCode::kZ, a, b); }
-static BL_INLINE Condition and_z(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignAnd, CondCode::kZ, a, b); }
-static BL_INLINE Condition and_nz(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignAnd, CondCode::kNZ, a, b); }
-static BL_INLINE Condition and_nz(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignAnd, CondCode::kNZ, a, b); }
-static BL_INLINE Condition and_nz(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignAnd, CondCode::kNZ, a, b); }
-static BL_INLINE Condition and_c(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignAnd, CondCode::kC, a, b); }
-static BL_INLINE Condition and_c(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignAnd, CondCode::kC, a, b); }
-static BL_INLINE Condition and_c(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignAnd, CondCode::kC, a, b); }
-static BL_INLINE Condition and_nc(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignAnd, CondCode::kNC, a, b); }
-static BL_INLINE Condition and_nc(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignAnd, CondCode::kNC, a, b); }
-static BL_INLINE Condition and_nc(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignAnd, CondCode::kNC, a, b); }
+static BL_INLINE Condition and_z(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignAnd, CondCode::kZero, a, b); }
+static BL_INLINE Condition and_z(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignAnd, CondCode::kZero, a, b); }
+static BL_INLINE Condition and_z(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignAnd, CondCode::kZero, a, b); }
+static BL_INLINE Condition and_nz(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignAnd, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition and_nz(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignAnd, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition and_nz(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignAnd, CondCode::kNotZero, a, b); }
 
-static BL_INLINE Condition or_z(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignOr, CondCode::kZ, a, b); }
-static BL_INLINE Condition or_z(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignOr, CondCode::kZ, a, b); }
-static BL_INLINE Condition or_z(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignOr, CondCode::kZ, a, b); }
-static BL_INLINE Condition or_nz(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignOr, CondCode::kNZ, a, b); }
-static BL_INLINE Condition or_nz(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignOr, CondCode::kNZ, a, b); }
-static BL_INLINE Condition or_nz(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignOr, CondCode::kNZ, a, b); }
-static BL_INLINE Condition or_c(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignOr, CondCode::kC, a, b); }
-static BL_INLINE Condition or_c(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignOr, CondCode::kC, a, b); }
-static BL_INLINE Condition or_c(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignOr, CondCode::kC, a, b); }
-static BL_INLINE Condition or_nc(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignOr, CondCode::kNC, a, b); }
-static BL_INLINE Condition or_nc(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignOr, CondCode::kNC, a, b); }
-static BL_INLINE Condition or_nc(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignOr, CondCode::kNC, a, b); }
+static BL_INLINE Condition or_z(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignOr, CondCode::kZero, a, b); }
+static BL_INLINE Condition or_z(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignOr, CondCode::kZero, a, b); }
+static BL_INLINE Condition or_z(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignOr, CondCode::kZero, a, b); }
+static BL_INLINE Condition or_nz(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignOr, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition or_nz(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignOr, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition or_nz(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignOr, CondCode::kNotZero, a, b); }
 
-static BL_INLINE Condition xor_z(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignXor, CondCode::kZ, a, b); }
-static BL_INLINE Condition xor_z(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignXor, CondCode::kZ, a, b); }
-static BL_INLINE Condition xor_z(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignXor, CondCode::kZ, a, b); }
-static BL_INLINE Condition xor_nz(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignXor, CondCode::kNZ, a, b); }
-static BL_INLINE Condition xor_nz(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignXor, CondCode::kNZ, a, b); }
-static BL_INLINE Condition xor_nz(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignXor, CondCode::kNZ, a, b); }
-static BL_INLINE Condition xor_c(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignXor, CondCode::kC, a, b); }
-static BL_INLINE Condition xor_c(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignXor, CondCode::kC, a, b); }
-static BL_INLINE Condition xor_c(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignXor, CondCode::kC, a, b); }
-static BL_INLINE Condition xor_nc(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignXor, CondCode::kNC, a, b); }
-static BL_INLINE Condition xor_nc(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignXor, CondCode::kNC, a, b); }
-static BL_INLINE Condition xor_nc(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignXor, CondCode::kNC, a, b); }
+static BL_INLINE Condition xor_z(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignXor, CondCode::kZero, a, b); }
+static BL_INLINE Condition xor_z(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignXor, CondCode::kZero, a, b); }
+static BL_INLINE Condition xor_z(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignXor, CondCode::kZero, a, b); }
+static BL_INLINE Condition xor_nz(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignXor, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition xor_nz(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignXor, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition xor_nz(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignXor, CondCode::kNotZero, a, b); }
 
-static BL_INLINE Condition add_z(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kZ, a, b); }
-static BL_INLINE Condition add_z(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kZ, a, b); }
-static BL_INLINE Condition add_z(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kZ, a, b); }
-static BL_INLINE Condition add_nz(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kNZ, a, b); }
-static BL_INLINE Condition add_nz(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kNZ, a, b); }
-static BL_INLINE Condition add_nz(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kNZ, a, b); }
-static BL_INLINE Condition add_c(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kC, a, b); }
-static BL_INLINE Condition add_c(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kC, a, b); }
-static BL_INLINE Condition add_c(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kC, a, b); }
-static BL_INLINE Condition add_nc(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kNC, a, b); }
-static BL_INLINE Condition add_nc(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kNC, a, b); }
-static BL_INLINE Condition add_nc(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kNC, a, b); }
-static BL_INLINE Condition add_s(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kS, a, b); }
-static BL_INLINE Condition add_s(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kS, a, b); }
-static BL_INLINE Condition add_s(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kS, a, b); }
-static BL_INLINE Condition add_ns(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kNS, a, b); }
-static BL_INLINE Condition add_ns(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kNS, a, b); }
-static BL_INLINE Condition add_ns(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignAdd, CondCode::kNS, a, b); }
+static BL_INLINE Condition add_z(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kZero, a, b); }
+static BL_INLINE Condition add_z(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kZero, a, b); }
+static BL_INLINE Condition add_z(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kZero, a, b); }
+static BL_INLINE Condition add_nz(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition add_nz(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition add_nz(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition add_c(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kCarry, a, b); }
+static BL_INLINE Condition add_c(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kCarry, a, b); }
+static BL_INLINE Condition add_c(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kCarry, a, b); }
+static BL_INLINE Condition add_nc(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kNotCarry, a, b); }
+static BL_INLINE Condition add_nc(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kNotCarry, a, b); }
+static BL_INLINE Condition add_nc(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kNotCarry, a, b); }
+static BL_INLINE Condition add_s(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kSign, a, b); }
+static BL_INLINE Condition add_s(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kSign, a, b); }
+static BL_INLINE Condition add_s(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kSign, a, b); }
+static BL_INLINE Condition add_ns(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kNotSign, a, b); }
+static BL_INLINE Condition add_ns(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kNotSign, a, b); }
+static BL_INLINE Condition add_ns(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignAdd, CondCode::kNotSign, a, b); }
 
-static BL_INLINE Condition sub_z(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kZ, a, b); }
-static BL_INLINE Condition sub_z(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kZ, a, b); }
-static BL_INLINE Condition sub_z(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kZ, a, b); }
-static BL_INLINE Condition sub_nz(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kNZ, a, b); }
-static BL_INLINE Condition sub_nz(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kNZ, a, b); }
-static BL_INLINE Condition sub_nz(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kNZ, a, b); }
-static BL_INLINE Condition sub_c(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kC, a, b); }
-static BL_INLINE Condition sub_c(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kC, a, b); }
-static BL_INLINE Condition sub_c(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kC, a, b); }
-static BL_INLINE Condition sub_nc(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kNC, a, b); }
-static BL_INLINE Condition sub_nc(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kNC, a, b); }
-static BL_INLINE Condition sub_nc(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kNC, a, b); }
-static BL_INLINE Condition sub_s(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kS, a, b); }
-static BL_INLINE Condition sub_s(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kS, a, b); }
-static BL_INLINE Condition sub_s(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kS, a, b); }
-static BL_INLINE Condition sub_ns(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kNS, a, b); }
-static BL_INLINE Condition sub_ns(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kNS, a, b); }
-static BL_INLINE Condition sub_ns(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignSub, CondCode::kNS, a, b); }
+static BL_INLINE Condition sub_z(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kZero, a, b); }
+static BL_INLINE Condition sub_z(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kZero, a, b); }
+static BL_INLINE Condition sub_z(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kZero, a, b); }
+static BL_INLINE Condition sub_nz(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition sub_nz(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition sub_nz(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition sub_c(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kUnsignedLT, a, b); }
+static BL_INLINE Condition sub_c(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kUnsignedLT, a, b); }
+static BL_INLINE Condition sub_c(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kUnsignedLT, a, b); }
+static BL_INLINE Condition sub_nc(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kUnsignedGE, a, b); }
+static BL_INLINE Condition sub_nc(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kUnsignedGE, a, b); }
+static BL_INLINE Condition sub_nc(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kUnsignedGE, a, b); }
+static BL_INLINE Condition sub_s(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kSign, a, b); }
+static BL_INLINE Condition sub_s(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kSign, a, b); }
+static BL_INLINE Condition sub_s(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kSign, a, b); }
+static BL_INLINE Condition sub_ns(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kNotSign, a, b); }
+static BL_INLINE Condition sub_ns(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kNotSign, a, b); }
+static BL_INLINE Condition sub_ns(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kNotSign, a, b); }
 
-static BL_INLINE Condition shr_z(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignSHR, CondCode::kZ, a, b); }
-static BL_INLINE Condition shr_z(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignSHR, CondCode::kZ, a, b); }
-static BL_INLINE Condition shr_z(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignSHR, CondCode::kZ, a, b); }
-static BL_INLINE Condition shr_nz(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignSHR, CondCode::kNZ, a, b); }
-static BL_INLINE Condition shr_nz(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignSHR, CondCode::kNZ, a, b); }
-static BL_INLINE Condition shr_nz(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignSHR, CondCode::kNZ, a, b); }
-static BL_INLINE Condition shr_c(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignSHR, CondCode::kC, a, b); }
-static BL_INLINE Condition shr_c(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignSHR, CondCode::kC, a, b); }
-static BL_INLINE Condition shr_c(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignSHR, CondCode::kC, a, b); }
-static BL_INLINE Condition shr_nc(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kAssignSHR, CondCode::kNC, a, b); }
-static BL_INLINE Condition shr_nc(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kAssignSHR, CondCode::kNC, a, b); }
-static BL_INLINE Condition shr_nc(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kAssignSHR, CondCode::kNC, a, b); }
+static BL_INLINE Condition sub_ugt(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kUnsignedGT, a, b); }
+static BL_INLINE Condition sub_ugt(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kUnsignedGT, a, b); }
+static BL_INLINE Condition sub_ugt(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignSub, CondCode::kUnsignedGT, a, b); }
 
-static BL_INLINE Condition bt_z(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kBitTest, CondCode::kNC, a, b); }
-static BL_INLINE Condition bt_z(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kBitTest, CondCode::kNC, a, b); }
-static BL_INLINE Condition bt_z(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kBitTest, CondCode::kNC, a, b); }
-static BL_INLINE Condition bt_nz(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kBitTest, CondCode::kC, a, b); }
-static BL_INLINE Condition bt_nz(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kBitTest, CondCode::kC, a, b); }
-static BL_INLINE Condition bt_nz(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kBitTest, CondCode::kC, a, b); }
+static BL_INLINE Condition shr_z(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignShr, CondCode::kZero, a, b); }
+static BL_INLINE Condition shr_z(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignShr, CondCode::kZero, a, b); }
+static BL_INLINE Condition shr_z(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignShr, CondCode::kZero, a, b); }
+static BL_INLINE Condition shr_nz(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kAssignShr, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition shr_nz(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kAssignShr, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition shr_nz(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kAssignShr, CondCode::kNotZero, a, b); }
 
-static BL_INLINE Condition test_z(const Gp& a) noexcept { return Condition(Condition::Op::kCompare, CondCode::kEqual, a, Imm(0)); }
-static BL_INLINE Condition test_nz(const Gp& a) noexcept { return Condition(Condition::Op::kCompare, CondCode::kNotEqual, a, Imm(0)); }
+static BL_INLINE Condition cmp_eq(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kEqual, a, b); }
+static BL_INLINE Condition cmp_eq(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kEqual, a, b); }
+static BL_INLINE Condition cmp_eq(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kEqual, a, b); }
+static BL_INLINE Condition cmp_ne(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kNotEqual, a, b); }
+static BL_INLINE Condition cmp_ne(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kNotEqual, a, b); }
+static BL_INLINE Condition cmp_ne(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kNotEqual, a, b); }
+static BL_INLINE Condition scmp_lt(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kSignedLT, a, b); }
+static BL_INLINE Condition scmp_lt(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kSignedLT, a, b); }
+static BL_INLINE Condition scmp_lt(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kSignedLT, a, b); }
+static BL_INLINE Condition scmp_le(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kSignedLE, a, b); }
+static BL_INLINE Condition scmp_le(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kSignedLE, a, b); }
+static BL_INLINE Condition scmp_le(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kSignedLE, a, b); }
+static BL_INLINE Condition scmp_gt(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kSignedGT, a, b); }
+static BL_INLINE Condition scmp_gt(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kSignedGT, a, b); }
+static BL_INLINE Condition scmp_gt(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kSignedGT, a, b); }
+static BL_INLINE Condition scmp_ge(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kSignedGE, a, b); }
+static BL_INLINE Condition scmp_ge(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kSignedGE, a, b); }
+static BL_INLINE Condition scmp_ge(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kSignedGE, a, b); }
+static BL_INLINE Condition ucmp_lt(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kUnsignedLT, a, b); }
+static BL_INLINE Condition ucmp_lt(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kUnsignedLT, a, b); }
+static BL_INLINE Condition ucmp_lt(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kUnsignedLT, a, b); }
+static BL_INLINE Condition ucmp_le(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kUnsignedLE, a, b); }
+static BL_INLINE Condition ucmp_le(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kUnsignedLE, a, b); }
+static BL_INLINE Condition ucmp_le(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kUnsignedLE, a, b); }
+static BL_INLINE Condition ucmp_gt(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kUnsignedGT, a, b); }
+static BL_INLINE Condition ucmp_gt(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kUnsignedGT, a, b); }
+static BL_INLINE Condition ucmp_gt(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kUnsignedGT, a, b); }
+static BL_INLINE Condition ucmp_ge(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kUnsignedGE, a, b); }
+static BL_INLINE Condition ucmp_ge(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kUnsignedGE, a, b); }
+static BL_INLINE Condition ucmp_ge(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kUnsignedGE, a, b); }
 
-static BL_INLINE Condition test_z(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kTest, CondCode::kZ, a, b); }
-static BL_INLINE Condition test_z(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kTest, CondCode::kZ, a, b); }
-static BL_INLINE Condition test_z(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kTest, CondCode::kZ, a, b); }
-static BL_INLINE Condition test_nz(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kTest, CondCode::kNZ, a, b); }
-static BL_INLINE Condition test_nz(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kTest, CondCode::kNZ, a, b); }
-static BL_INLINE Condition test_nz(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kTest, CondCode::kNZ, a, b); }
+static BL_INLINE Condition test_z(const Gp& a) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kEqual, a, Imm(0)); }
+static BL_INLINE Condition test_nz(const Gp& a) noexcept { return Condition(OpcodeCond::kCompare, CondCode::kNotEqual, a, Imm(0)); }
 
-static BL_INLINE Condition cmp_eq(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kEqual, a, b); }
-static BL_INLINE Condition cmp_eq(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kEqual, a, b); }
-static BL_INLINE Condition cmp_eq(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kEqual, a, b); }
-static BL_INLINE Condition cmp_ne(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kNotEqual, a, b); }
-static BL_INLINE Condition cmp_ne(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kNotEqual, a, b); }
-static BL_INLINE Condition cmp_ne(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kNotEqual, a, b); }
-static BL_INLINE Condition scmp_lt(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kSignedLT, a, b); }
-static BL_INLINE Condition scmp_lt(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kSignedLT, a, b); }
-static BL_INLINE Condition scmp_lt(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kSignedLT, a, b); }
-static BL_INLINE Condition scmp_le(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kSignedLE, a, b); }
-static BL_INLINE Condition scmp_le(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kSignedLE, a, b); }
-static BL_INLINE Condition scmp_le(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kSignedLE, a, b); }
-static BL_INLINE Condition scmp_gt(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kSignedGT, a, b); }
-static BL_INLINE Condition scmp_gt(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kSignedGT, a, b); }
-static BL_INLINE Condition scmp_gt(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kSignedGT, a, b); }
-static BL_INLINE Condition scmp_ge(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kSignedGE, a, b); }
-static BL_INLINE Condition scmp_ge(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kSignedGE, a, b); }
-static BL_INLINE Condition scmp_ge(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kSignedGE, a, b); }
-static BL_INLINE Condition ucmp_lt(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kUnsignedLT, a, b); }
-static BL_INLINE Condition ucmp_lt(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kUnsignedLT, a, b); }
-static BL_INLINE Condition ucmp_lt(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kUnsignedLT, a, b); }
-static BL_INLINE Condition ucmp_le(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kUnsignedLE, a, b); }
-static BL_INLINE Condition ucmp_le(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kUnsignedLE, a, b); }
-static BL_INLINE Condition ucmp_le(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kUnsignedLE, a, b); }
-static BL_INLINE Condition ucmp_gt(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kUnsignedGT, a, b); }
-static BL_INLINE Condition ucmp_gt(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kUnsignedGT, a, b); }
-static BL_INLINE Condition ucmp_gt(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kUnsignedGT, a, b); }
-static BL_INLINE Condition ucmp_ge(const Gp& a, const Gp& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kUnsignedGE, a, b); }
-static BL_INLINE Condition ucmp_ge(const Gp& a, const Mem& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kUnsignedGE, a, b); }
-static BL_INLINE Condition ucmp_ge(const Gp& a, const Imm& b) noexcept { return Condition(Condition::Op::kCompare, CondCode::kUnsignedGE, a, b); }
+static BL_INLINE Condition test_z(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kTest, CondCode::kZero, a, b); }
+static BL_INLINE Condition test_z(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kTest, CondCode::kZero, a, b); }
+static BL_INLINE Condition test_z(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kTest, CondCode::kZero, a, b); }
+static BL_INLINE Condition test_nz(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kTest, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition test_nz(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kTest, CondCode::kNotZero, a, b); }
+static BL_INLINE Condition test_nz(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kTest, CondCode::kNotZero, a, b); }
+
+static BL_INLINE Condition bt_z(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kBitTest, CondCode::kBTZero, a, b); }
+static BL_INLINE Condition bt_z(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kBitTest, CondCode::kBTZero, a, b); }
+static BL_INLINE Condition bt_z(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kBitTest, CondCode::kBTZero, a, b); }
+static BL_INLINE Condition bt_nz(const Gp& a, const Gp& b) noexcept { return Condition(OpcodeCond::kBitTest, CondCode::kBTNotZero, a, b); }
+static BL_INLINE Condition bt_nz(const Gp& a, const Mem& b) noexcept { return Condition(OpcodeCond::kBitTest, CondCode::kBTNotZero, a, b); }
+static BL_INLINE Condition bt_nz(const Gp& a, const Imm& b) noexcept { return Condition(OpcodeCond::kBitTest, CondCode::kBTNotZero, a, b); }
 
 //! Pipeline compiler.
 class PipeCompiler {
@@ -193,6 +981,109 @@ public:
   BL_NONCOPYABLE(PipeCompiler)
 
   enum : uint32_t { kMaxKRegConstCount = 4 };
+
+  //! \name Constants
+  //! \{
+
+  enum class StackId : uint32_t {
+    kIndex,
+    kCustom,
+    kMaxValue = kCustom
+  };
+
+#if defined(BL_JIT_ARCH_X86)
+  enum class GPExt : uint8_t {
+    kADX,
+    kBMI,
+    kBMI2,
+    kLZCNT,
+    kMOVBE,
+    kPOPCNT,
+
+    kIntrin = 31
+  };
+
+  enum class SSEExt : uint8_t {
+    kSSE2 = 0,
+    kSSE3,
+    kSSSE3,
+    kSSE4_1,
+    kSSE4_2,
+    kPCLMULQDQ,
+
+    //! Just to distinguish between a baseline instruction and intrinsic at operation info level.
+    kIntrin = 7
+  };
+
+  enum class AVXExt : uint8_t  {
+    kAVX = 0,
+    kAVX2,
+    kF16C,
+    kFMA,
+    kGFNI,
+    kVAES,
+    kVPCLMULQDQ,
+    kAVX_IFMA,
+    kAVX_NE_CONVERT,
+    kAVX_VNNI,
+    kAVX_VNNI_INT8,
+    kAVX_VNNI_INT16,
+    kAVX512,
+    kAVX512_BF16,
+    kAVX512_BITALG,
+    kAVX512_FP16,
+    kAVX512_IFMA,
+    kAVX512_VBMI,
+    kAVX512_VBMI2,
+    kAVX512_VNNI,
+    kAVX512_VPOPCNTDQ,
+
+    //! Just to distinguish between a baseline instruction and intrinsic at operation info level.
+    kIntrin = 63
+  };
+#endif // BL_JIT_ARCH_X86
+
+#if defined(BL_JIT_ARCH_A64)
+  enum class GPExt : uint8_t {
+    kCSSC,
+    kFLAGM,
+    kFLAGM2,
+    kLS64,
+    kLS64_V,
+    kLSE,
+    kLSE128,
+    kLSE2,
+
+    kIntrin = 31
+  };
+
+  enum class ASIMDExt : uint8_t {
+    kASIMD,
+    kBF16,
+    kDOTPROD,
+    kFCMA,
+    kFHM,
+    kFP16,
+    kFP16CONV,
+    kFP8,
+    kFRINTTS,
+    kI8MM,
+    kJSCVT,
+    kPMULL,
+    kRDM,
+    kSHA1,
+    kSHA256,
+    kSHA3,
+    kSHA512,
+    kSM3,
+    kSM4,
+
+    kIntrin = 63
+  };
+
+#endif // BL_JIT_ARCH_A64
+
+  //! \}
 
   //! \name Members
   //! \{
@@ -202,22 +1093,48 @@ public:
 
   const CommonTable& ct;
 
+#if defined(BL_JIT_ARCH_X86)
+  //! General purpose extension mask (X86 and X86_64 only).
+  uint32_t _gpExtMask {};
+  //! SSE extension mask (X86 and X86_64 only).
+  uint32_t _sseExtMask {};
+  //! AVX extension mask (X86 and X86_64 only).
+  uint64_t _avxExtMask {};
+#endif // BL_JIT_ARCH_X86
+
+#if defined(BL_JIT_ARCH_A64)
+  //! General purpose extension mask (AArch64).
+  uint64_t _gpExtMask {};
+  //! NEON extensions (AArch64).
+  uint64_t _asimdExtMask {};
+#endif // BL_JIT_ARCH_A64
+
+  //! The behavior of scalar operations (mostly floating point).
+  ScalarOpBehavior _scalarOpBehavior {};
+  //! The behavior of floating point min/max operation.
+  FMinMaxOpBehavior _fMinMaxOpBehavior {};
+  //! The behavior of floating point `madd` operation.
+  FMulAddOpBehavior _fMulAddOpBehavior {};
+
   //! Target CPU features.
   CpuFeatures _features {};
   //! Optimization flags.
   PipeOptFlags _optFlags = PipeOptFlags::kNone;
 
+  //! Number of available vector registers.
+  uint32_t _vecRegCount = 0;
+
   //! Empty predicate, used in cases where a predicate is required, but it's empty.
   PixelPredicate _emptyPredicate {};
 
   //! SIMD width.
-  SimdWidth _simdWidth = SimdWidth::k128;
-  //! SIMD multiplier, derived from `_simdWidth` (1, 2, 4).
-  uint8_t _simdMultiplier = 0;
+  VecWidth _vecWidth = VecWidth::k128;
+  //! SIMD multiplier, derived from `_vecWidth` (1, 2, 4).
+  uint8_t _vecMultiplier = 0;
   //! SIMD register type (AsmJit).
-  asmjit::RegType _simdRegType = asmjit::RegType::kNone;
+  asmjit::RegType _vecRegType = asmjit::RegType::kNone;
   //! SIMD type id (AsmJit).
-  asmjit::TypeId _simdTypeId = asmjit::TypeId::kVoid;
+  asmjit::TypeId _vecTypeId = asmjit::TypeId::kVoid;
 
   //! Function node.
   asmjit::FuncNode* _funcNode = nullptr;
@@ -228,14 +1145,8 @@ public:
 
   //! Invalid GP register.
   Gp _gpNone;
-  //! Holds `ctxData` argument.
-  Gp _ctxData;
-  //! Holds `fillData` argument.
-  Gp _fillData;
-  //! Holds `fetchData` argument.
-  Gp _fetchData;
   //! Temporary stack used to transfer SIMD regs to GP/MM.
-  Mem _tmpStack;
+  Mem _tmpStack[size_t(StackId::kMaxValue) + 1];
 
   //! Offset to the first constant to the `commonTable` global.
   int32_t _commonTableOff = 0;
@@ -245,14 +1156,20 @@ public:
 #if defined(BL_JIT_ARCH_X86)
   KReg _kReg[kMaxKRegConstCount];
   uint64_t _kImm[kMaxKRegConstCount] {};
-#endif
+#endif // BL_JIT_ARCH_X86
 
   struct VecConst {
     const void* ptr;
     uint32_t vRegId;
   };
 
+  struct VecConstEx {
+    uint8_t data[16];
+    uint32_t vRegId;
+  };
+
   asmjit::ZoneVector<VecConst> _vecConsts;
+  asmjit::ZoneVector<VecConstEx> _vecConstsEx;
 
   //! \}
 
@@ -267,7 +1184,201 @@ public:
   //! \name Allocators
   //! \{
 
-  inline asmjit::ZoneAllocator* zoneAllocator() noexcept { return &cc->_allocator; }
+  BL_INLINE_NODEBUG asmjit::ZoneAllocator* zoneAllocator() noexcept { return &cc->_allocator; }
+
+  //! \}
+
+  //! \name CPU Architecture, Features and Optimization Options
+  //! \{
+
+  void _initExtensions(const asmjit::CpuFeatures& features) noexcept;
+
+  BL_INLINE_NODEBUG bool is32Bit() const noexcept { return cc->is32Bit(); }
+  BL_INLINE_NODEBUG bool is64Bit() const noexcept { return cc->is64Bit(); }
+  BL_INLINE_NODEBUG uint32_t registerSize() const noexcept { return cc->registerSize(); }
+
+#if defined(BL_JIT_ARCH_X86)
+  BL_INLINE_NODEBUG bool hasGPExt(GPExt ext) const noexcept { return (_gpExtMask & (1u << uint32_t(ext))) != 0; }
+  BL_INLINE_NODEBUG bool hasSSEExt(SSEExt ext) const noexcept { return (_sseExtMask & (1u << uint32_t(ext))) != 0; }
+  BL_INLINE_NODEBUG bool hasAVXExt(AVXExt ext) const noexcept { return (_avxExtMask & (uint64_t(1) << uint32_t(ext))) != 0; }
+
+  //! Tests whether ADX extension is available.
+  BL_INLINE_NODEBUG bool hasADX() const noexcept { return hasGPExt(GPExt::kADX); }
+  //! Tests whether BMI extension is available.
+  BL_INLINE_NODEBUG bool hasBMI() const noexcept { return hasGPExt(GPExt::kBMI); }
+  //! Tests whether BMI2 extension is available.
+  BL_INLINE_NODEBUG bool hasBMI2() const noexcept { return hasGPExt(GPExt::kBMI2); }
+  //! Tests whether LZCNT extension is available.
+  BL_INLINE_NODEBUG bool hasLZCNT() const noexcept { return hasGPExt(GPExt::kLZCNT); }
+  //! Tests whether MOVBE extension is available.
+  BL_INLINE_NODEBUG bool hasMOVBE() const noexcept { return hasGPExt(GPExt::kMOVBE); }
+  //! Tests whether POPCNT extension is available.
+  BL_INLINE_NODEBUG bool hasPOPCNT() const noexcept { return hasGPExt(GPExt::kPOPCNT); }
+
+  //! Tests whether SSE2 extensions are available (this should always return true).
+  BL_INLINE_NODEBUG bool hasSSE2() const noexcept { return hasSSEExt(SSEExt::kSSE2); }
+  //! Tests whether SSE3 extension is available.
+  BL_INLINE_NODEBUG bool hasSSE3() const noexcept { return hasSSEExt(SSEExt::kSSE3); }
+  //! Tests whether SSSE3 extension is available.
+  BL_INLINE_NODEBUG bool hasSSSE3() const noexcept { return hasSSEExt(SSEExt::kSSSE3); }
+  //! Tests whether SSE4.1 extension is available.
+  BL_INLINE_NODEBUG bool hasSSE4_1() const noexcept { return hasSSEExt(SSEExt::kSSE4_1); }
+  //! Tests whether SSE4.2 extension is available.
+  BL_INLINE_NODEBUG bool hasSSE4_2() const noexcept { return hasSSEExt(SSEExt::kSSE4_2); }
+  //! Tests whether PCLMULQDQ extension is available.
+  BL_INLINE_NODEBUG bool hasPCLMULQDQ() const noexcept { return hasSSEExt(SSEExt::kPCLMULQDQ); }
+
+  //! Tests whether AVX extension is available.
+  BL_INLINE_NODEBUG bool hasAVX() const noexcept { return hasAVXExt(AVXExt::kAVX); }
+  //! Tests whether AVX2 extension is available.
+  BL_INLINE_NODEBUG bool hasAVX2() const noexcept { return hasAVXExt(AVXExt::kAVX2); }
+  //! Tests whether F16C extension is available.
+  BL_INLINE_NODEBUG bool hasF16C() const noexcept { return hasAVXExt(AVXExt::kF16C); }
+  //! Tests whether FMA extension is available.
+  BL_INLINE_NODEBUG bool hasFMA() const noexcept { return hasAVXExt(AVXExt::kFMA); }
+  //! Tests whether GFNI extension is available.
+  BL_INLINE_NODEBUG bool hasGFNI() const noexcept { return hasAVXExt(AVXExt::kGFNI); }
+  //! Tests whether VPCLMULQDQ extension is available.
+  BL_INLINE_NODEBUG bool hasVPCLMULQDQ() const noexcept { return hasAVXExt(AVXExt::kVPCLMULQDQ); }
+
+  //! Tests whether AVX_IFMA extension is available.
+  BL_INLINE_NODEBUG bool hasAVX_IFMA() const noexcept { return hasAVXExt(AVXExt::kAVX_IFMA); }
+  //! Tests whether AVX_NE_CONVERT extension is available.
+  BL_INLINE_NODEBUG bool hasAVX_NE_CONVERT() const noexcept { return hasAVXExt(AVXExt::kAVX_NE_CONVERT); }
+  //! Tests whether AVX_VNNI extension is available.
+  BL_INLINE_NODEBUG bool hasAVX_VNNI() const noexcept { return hasAVXExt(AVXExt::kAVX_VNNI); }
+  //! Tests whether AVX_VNNI_INT8 extension is available.
+  BL_INLINE_NODEBUG bool hasAVX_VNNI_INT8() const noexcept { return hasAVXExt(AVXExt::kAVX_VNNI_INT8); }
+  //! Tests whether AVX_VNNI_INT16 extension is available.
+  BL_INLINE_NODEBUG bool hasAVX_VNNI_INT16() const noexcept { return hasAVXExt(AVXExt::kAVX_VNNI_INT16); }
+
+  //! Tests whether a baseline AVX-512 extensions are available (F, CD, BW, DQ, and VL).
+  BL_INLINE_NODEBUG bool hasAVX512() const noexcept { return hasAVXExt(AVXExt::kAVX512); }
+  //! Tests whether AVX512_BF16 extension is available.
+  BL_INLINE_NODEBUG bool hasAVX512_BF16() const noexcept { return hasAVXExt(AVXExt::kAVX512_BF16); }
+  //! Tests whether AVX512_BITALT extension is available.
+  BL_INLINE_NODEBUG bool hasAVX512_BITALG() const noexcept { return hasAVXExt(AVXExt::kAVX512_BITALG); }
+  //! Tests whether AVX512_FP16 extension is available.
+  BL_INLINE_NODEBUG bool hasAVX512_FP16() const noexcept { return hasAVXExt(AVXExt::kAVX512_FP16); }
+  //! Tests whether AVX512_IFMA extension is available.
+  BL_INLINE_NODEBUG bool hasAVX512_IFMA() const noexcept { return hasAVXExt(AVXExt::kAVX512_IFMA); }
+  //! Tests whether AVX512_VBMI extension is available.
+  BL_INLINE_NODEBUG bool hasAVX512_VBMI() const noexcept { return hasAVXExt(AVXExt::kAVX512_VBMI); }
+  //! Tests whether AVX512_VBMI2 extension is available.
+  BL_INLINE_NODEBUG bool hasAVX512_VBMI2() const noexcept { return hasAVXExt(AVXExt::kAVX512_VBMI2); }
+  //! Tests whether AVX512_VNNI extension is available.
+  BL_INLINE_NODEBUG bool hasAVX512_VNNI() const noexcept { return hasAVXExt(AVXExt::kAVX512_VNNI); }
+  //! Tests whether AVX512_VPOPCNTDQ extension is available.
+  BL_INLINE_NODEBUG bool hasAVX512_VPOPCNTDQ() const noexcept { return hasAVXExt(AVXExt::kAVX512_VPOPCNTDQ); }
+
+  //! Tests whether the target SIMD ISA provides instructions with non-destructive source operand (AVX+).
+  BL_INLINE_NODEBUG bool hasNonDestructiveSrc() const noexcept { return hasAVX(); }
+
+#endif // BL_JIT_ARCH_X86
+
+#if defined(BL_JIT_ARCH_A64)
+  BL_INLINE_NODEBUG bool hasGPExt(GPExt ext) const noexcept { return (_gpExtMask & (uint64_t(1) << uint32_t(ext))) != 0; }
+  BL_INLINE_NODEBUG bool hasASIMDExt(ASIMDExt ext) const noexcept { return (_asimdExtMask & (uint64_t(1) << uint32_t(ext))) != 0; }
+
+  //! Tests whether CSSC extension is available.
+  BL_INLINE_NODEBUG bool hasCSSC() const noexcept { return hasGPExt(GPExt::kCSSC); }
+  //! Tests whether FLAGM extension is available.
+  BL_INLINE_NODEBUG bool hasFLAGM() const noexcept { return hasGPExt(GPExt::kFLAGM); }
+  //! Tests whether FLAGM2 extension is available.
+  BL_INLINE_NODEBUG bool hasFLAGM2() const noexcept { return hasGPExt(GPExt::kFLAGM2); }
+  //! Tests whether LS64 extension is available.
+  BL_INLINE_NODEBUG bool hasLS64() const noexcept { return hasGPExt(GPExt::kLS64); }
+  //! Tests whether LS64_V extension is available.
+  BL_INLINE_NODEBUG bool hasLS64_V() const noexcept { return hasGPExt(GPExt::kLS64_V); }
+  //! Tests whether LSE extension is available.
+  BL_INLINE_NODEBUG bool hasLSE() const noexcept { return hasGPExt(GPExt::kLSE); }
+  //! Tests whether LSE128 extension is available.
+  BL_INLINE_NODEBUG bool hasLSE128() const noexcept { return hasGPExt(GPExt::kLSE128); }
+  //! Tests whether LSE2 extension is available.
+  BL_INLINE_NODEBUG bool hasLSE2() const noexcept { return hasGPExt(GPExt::kLSE2); }
+
+  //! Tests whether ASIMD extension is available (must always return true).
+  BL_INLINE_NODEBUG bool hasASIMD() const noexcept { return hasASIMDExt(ASIMDExt::kASIMD); }
+  //! Tests whether BF16 extension is available.
+  BL_INLINE_NODEBUG bool hasBF16() const noexcept { return hasASIMDExt(ASIMDExt::kBF16); }
+  //! Tests whether DOTPROD extension is available.
+  BL_INLINE_NODEBUG bool hasDOTPROD() const noexcept { return hasASIMDExt(ASIMDExt::kDOTPROD); }
+  //! Tests whether FCMA extension is available.
+  BL_INLINE_NODEBUG bool hasFCMA() const noexcept { return hasASIMDExt(ASIMDExt::kFCMA); }
+  //! Tests whether FHM extension is available.
+  BL_INLINE_NODEBUG bool hasFHM() const noexcept { return hasASIMDExt(ASIMDExt::kFHM); }
+  //! Tests whether FP16 extension is available.
+  BL_INLINE_NODEBUG bool hasFP16() const noexcept { return hasASIMDExt(ASIMDExt::kFP16); }
+  //! Tests whether FP16CONV extension is available.
+  BL_INLINE_NODEBUG bool hasFP16CONV() const noexcept { return hasASIMDExt(ASIMDExt::kFP16CONV); }
+  //! Tests whether FP8 extension is available.
+  BL_INLINE_NODEBUG bool hasFP8() const noexcept { return hasASIMDExt(ASIMDExt::kFP8); }
+  //! Tests whether FRINTTS extension is available.
+  BL_INLINE_NODEBUG bool hasFRINTTS() const noexcept { return hasASIMDExt(ASIMDExt::kFRINTTS); }
+  //! Tests whether I8MM extension is available.
+  BL_INLINE_NODEBUG bool hasI8MM() const noexcept { return hasASIMDExt(ASIMDExt::kI8MM); }
+  //! Tests whether JSCVT extension is available.
+  BL_INLINE_NODEBUG bool hasJSCVT() const noexcept { return hasASIMDExt(ASIMDExt::kJSCVT); }
+  //! Tests whether PMULL extension is available.
+  BL_INLINE_NODEBUG bool hasPMULL() const noexcept { return hasASIMDExt(ASIMDExt::kPMULL); }
+  //! Tests whether RDM extension is available.
+  BL_INLINE_NODEBUG bool hasRDM() const noexcept { return hasASIMDExt(ASIMDExt::kRDM); }
+  //! Tests whether SHA1 extension is available.
+  BL_INLINE_NODEBUG bool hasSHA1() const noexcept { return hasASIMDExt(ASIMDExt::kSHA1); }
+  //! Tests whether SHA256 extension is available.
+  BL_INLINE_NODEBUG bool hasSHA256() const noexcept { return hasASIMDExt(ASIMDExt::kSHA256); }
+  //! Tests whether SHA3 extension is available.
+  BL_INLINE_NODEBUG bool hasSHA3() const noexcept { return hasASIMDExt(ASIMDExt::kSHA3); }
+  //! Tests whether SHA512 extension is available.
+  BL_INLINE_NODEBUG bool hasSHA512() const noexcept { return hasASIMDExt(ASIMDExt::kSHA512); }
+  //! Tests whether SM3 extension is available.
+  BL_INLINE_NODEBUG bool hasSM3() const noexcept { return hasASIMDExt(ASIMDExt::kSM3); }
+  //! Tests whether SM4 extension is available.
+  BL_INLINE_NODEBUG bool hasSM4() const noexcept { return hasASIMDExt(ASIMDExt::kSM4); }
+
+  //! Tests whether the target SIMD ISA provides instructions with non-destructive destination (always on AArch64).
+  BL_INLINE_NODEBUG bool hasNonDestructiveSrc() const noexcept { return true; }
+
+#endif // BL_JIT_ARCH_A64
+
+  //! Returns a native register signature, either 32-bit or 64-bit depending on the target architecture).
+  BL_INLINE_NODEBUG OperandSignature gpSignature() const noexcept { return cc->gpSignature(); }
+  //! Clones the given `reg` register into a native register (either 32-bit or 64-bit depending on the target architecture).
+  BL_INLINE_NODEBUG Gp gpz(const Gp& reg) const noexcept { return cc->gpz(reg); }
+
+  //! Returns the behavior of scalar operations (mostly floating point).
+  BL_INLINE_NODEBUG ScalarOpBehavior scalarOpBehavior() const noexcept { return _scalarOpBehavior; }
+  //! Returns the behavior of floating point min/max operations.
+  BL_INLINE_NODEBUG FMinMaxOpBehavior fMinMaxOpBehavior() const noexcept { return _fMinMaxOpBehavior; }
+  //! Returns the behavior of floating point mul+add (`madd`) operations.
+  BL_INLINE_NODEBUG FMulAddOpBehavior fMulAddOpBehavior() const noexcept { return _fMulAddOpBehavior; }
+
+  //! Tests whether a scalar operation is zeroing the rest of the destination register (AArch64).
+  BL_INLINE_NODEBUG bool isScalarOpZeroing() const noexcept { return _scalarOpBehavior == ScalarOpBehavior::kZeroing; }
+  //! Tests whether a scalar operation is preserving the low 128-bit part of the destination register (X86, X86_64).
+  BL_INLINE_NODEBUG bool isScalarOpPreservingVec128() const noexcept { return _scalarOpBehavior == ScalarOpBehavior::kPreservingVec128; }
+
+  //! Tests whether a floating point min/max operation selects a finite value if one of the values is NaN (AArch64).
+  BL_INLINE_NODEBUG bool isFMinMaxFinite() const noexcept { return _fMinMaxOpBehavior == FMinMaxOpBehavior::kFiniteValue; }
+  //! Tests whether a floating point min/max operation works as a ternary if - `if a <|> b ? a : b` (X86, X86_64).
+  BL_INLINE_NODEBUG bool isFMinMaxTernary() const noexcept { return _fMinMaxOpBehavior == FMinMaxOpBehavior::kTernaryLogic; }
+
+  //! Tests whether a floating point mul+add operation is fused (uses FMA).
+  BL_INLINE_NODEBUG bool isMAddFused() const noexcept { return _fMulAddOpBehavior != FMulAddOpBehavior::kNoFMA; }
+  //! Tests whether a FMA operation is available and that it can store the result to any register (true of X86).
+  BL_INLINE_NODEBUG bool isFMAStoringToAnyRegister() const noexcept { return _fMulAddOpBehavior == FMulAddOpBehavior::kFMAStoreToAny; }
+  //! Tests whether a FMA operation is available and that it only stores the result to accumulator register.
+  BL_INLINE_NODEBUG bool isFMAStoringToAccumulator() const noexcept { return _fMulAddOpBehavior == FMulAddOpBehavior::kFMAStoreToAccumulator; }
+
+  BL_INLINE_NODEBUG PipeOptFlags optFlags() const noexcept { return _optFlags; }
+  BL_INLINE_NODEBUG bool hasOptFlag(PipeOptFlags flag) const noexcept { return blTestFlag(_optFlags, flag); }
+
+  BL_INLINE_NODEBUG uint32_t vecRegCount() const noexcept { return _vecRegCount; }
+
+  VecWidth maxVecWidthFromCpuFeatures() noexcept;
+  void initVecWidth(VecWidth vw) noexcept;
+
+  bool hasMaskedAccessOf(uint32_t dataSize) const noexcept;
 
   //! \}
 
@@ -278,112 +1389,30 @@ public:
   //!
   //! \note The returned width is in bytes and it's calculated from the maximum supported widths of all pipeline parts.
   //! This means that SIMD width returned could be actually lower than a SIMD width supported by the target CPU.
-  inline SimdWidth simdWidth() const noexcept { return _simdWidth; }
+  BL_INLINE_NODEBUG VecWidth vecWidth() const noexcept { return _vecWidth; }
 
   //! Returns whether the compiler and all parts use 256-bit SIMD.
-  inline bool use256BitSimd() const noexcept { return _simdWidth >= SimdWidth::k256; }
+  BL_INLINE_NODEBUG bool use256BitSimd() const noexcept { return _vecWidth >= VecWidth::k256; }
   //! Returns whether the compiler and all parts use 512-bit SIMD.
-  inline bool use512BitSimd() const noexcept { return _simdWidth >= SimdWidth::k512; }
+  BL_INLINE_NODEBUG bool use512BitSimd() const noexcept { return _vecWidth >= VecWidth::k512; }
 
-  //! Returns a constant that can be used to multiply a baseline SIMD width to get the value returned by `simdWidth()`.
+  //! Returns a constant that can be used to multiply a baseline SIMD width to get the value returned by `vecWidth()`.
   //!
   //! \note A baseline SIMD width would be 16 bytes on most platforms.
-  inline uint32_t simdMultiplier() const noexcept { return _simdMultiplier; }
+  BL_INLINE_NODEBUG uint32_t vecMultiplier() const noexcept { return _vecMultiplier; }
 
-  inline SimdWidth simdWidthOf(DataWidth dataWidth, uint32_t n) const noexcept { return SimdWidthUtils::simdWidthOf(simdWidth(), dataWidth, n); }
-  inline uint32_t regCountOf(DataWidth dataWidth, uint32_t n) const noexcept { return SimdWidthUtils::regCountOf(simdWidth(), dataWidth, n); }
+  BL_INLINE_NODEBUG VecWidth vecWidthOf(DataWidth dataWidth, uint32_t n) const noexcept { return VecWidthUtils::vecWidthOf(vecWidth(), dataWidth, n); }
+  BL_INLINE_NODEBUG uint32_t vecCountOf(DataWidth dataWidth, uint32_t n) const noexcept { return VecWidthUtils::vecCountOf(vecWidth(), dataWidth, n); }
 
-  inline SimdWidth simdWidthOf(DataWidth dataWidth, PixelCount pixelCount) const noexcept { return SimdWidthUtils::simdWidthOf(simdWidth(), dataWidth, pixelCount.value()); }
-  inline uint32_t regCountOf(DataWidth dataWidth, PixelCount pixelCount) const noexcept { return SimdWidthUtils::regCountOf(simdWidth(), dataWidth, pixelCount.value()); }
-
-  //! \}
-
-  //! \name CPU Features and Optimization Options
-  //! \{
-
-  BL_INLINE_NODEBUG bool is32Bit() const noexcept { return cc->is32Bit(); }
-  BL_INLINE_NODEBUG bool is64Bit() const noexcept { return cc->is64Bit(); }
-  BL_INLINE_NODEBUG uint32_t registerSize() const noexcept { return cc->registerSize(); }
-
-#if defined(BL_JIT_ARCH_X86)
-  //! Tests whether SSE2 extensions are available (this should always return true as Blend2D requires SSE2).
-  inline bool hasSSE2() const noexcept { return _features.x86().hasSSE2(); }
-  //! Tests whether SSE3 extensions are available.
-  inline bool hasSSE3() const noexcept { return _features.x86().hasSSE3(); }
-  //! Tests whether SSSE3 extensions are available.
-  inline bool hasSSSE3() const noexcept { return _features.x86().hasSSSE3(); }
-  //! Tests whether SSE4.1 extensions are available.
-  inline bool hasSSE4_1() const noexcept { return _features.x86().hasSSE4_1(); }
-  //! Tests whether SSE4.2 extensions are available.
-  inline bool hasSSE4_2() const noexcept { return _features.x86().hasSSE4_2(); }
-  //! Tests whether AVX extensions are available.
-  inline bool hasAVX() const noexcept { return _features.x86().hasAVX(); }
-  //! Tests whether AVX2 extensions are available.
-  inline bool hasAVX2() const noexcept { return _features.x86().hasAVX2(); }
-  //! Tests whether FMA extensions are available.
-  inline bool hasFMA() const noexcept { return _features.x86().hasFMA(); }
-  //! Tests whether a baseline AVX-512 extensions are available.
-  //!
-  //! \note Baseline for us is slightly more than AVX512-F, however, there are no CPUs that would implement
-  //! AVX512-F without other extensions that we consider baseline, so we only check AVX512_BW as it's enough
-  //! to verify that the CPU has all the required features.
-  inline bool hasAVX512() const noexcept { return _features.x86().hasAVX512_BW(); }
-
-  inline bool hasADX() const noexcept { return _features.x86().hasADX(); }
-  inline bool hasBMI() const noexcept { return _features.x86().hasBMI(); }
-  inline bool hasBMI2() const noexcept { return _features.x86().hasBMI2(); }
-  inline bool hasLZCNT() const noexcept { return _features.x86().hasLZCNT(); }
-  inline bool hasPOPCNT() const noexcept { return _features.x86().hasPOPCNT(); }
-#endif
-
-  inline PipeOptFlags optFlags() const noexcept { return _optFlags; }
-  inline bool hasOptFlag(PipeOptFlags flag) const noexcept { return blTestFlag(_optFlags, flag); }
-
-  bool hasMaskedAccessOf(uint32_t dataSize) const noexcept;
+  BL_INLINE_NODEBUG VecWidth vecWidthOf(DataWidth dataWidth, PixelCount pixelCount) const noexcept { return VecWidthUtils::vecWidthOf(vecWidth(), dataWidth, pixelCount.value()); }
+  BL_INLINE_NODEBUG uint32_t vecCountOf(DataWidth dataWidth, PixelCount pixelCount) const noexcept { return VecWidthUtils::vecCountOf(vecWidth(), dataWidth, pixelCount.value()); }
 
   //! \}
 
-  //! \name Function Definition
+  //! \name Function
   //! \{
 
-  void beginFunction() noexcept;
-  void endFunction() noexcept;
-
-  //! \}
-
-  //! \name Parts Management
-  //! \{
-
-  // TODO: [PIPEGEN] There should be a getter on asmjit side that will return
-  // the `ZoneAllocator` object that can be used for these kind of purposes.
-  // It doesn't make sense to create another ZoneAllocator.
-  template<typename T>
-  inline T* newPartT() noexcept {
-    void* p = cc->_codeZone.alloc(sizeof(T), 8);
-    if (BL_UNLIKELY(!p))
-      return nullptr;
-    return new(BLInternal::PlacementNew{p}) T(this);
-  }
-
-  template<typename T, typename... Args>
-  inline T* newPartT(Args&&... args) noexcept {
-    void* p = cc->_codeZone.alloc(sizeof(T), 8);
-    if (BL_UNLIKELY(!p))
-      return nullptr;
-    return new(BLInternal::PlacementNew{p}) T(this, std::forward<Args>(args)...);
-  }
-
-  FillPart* newFillPart(FillType fillType, FetchPart* dstPart, CompOpPart* compOpPart) noexcept;
-  FetchPart* newFetchPart(FetchType fetchType, FormatExt format) noexcept;
-  CompOpPart* newCompOpPart(CompOpExt compOp, FetchPart* dstPart, FetchPart* srcPart) noexcept;
-
-  //! \}
-
-  //! \name Initialization
-  //! \{
-
-  void _initSimdWidth(PipePart* root) noexcept;
-  void initPipeline(PipePart* root) noexcept;
+  void initFunction(asmjit::FuncNode* funcNode) noexcept;
 
   //! \}
 
@@ -416,29 +1445,33 @@ public:
   //! \name Virtual Registers & Memory (Target Independent)
   //! \{
 
+  BL_INLINE Gp newGp32() noexcept { return cc->newUInt32(); }
+  BL_INLINE Gp newGp64() noexcept { return cc->newUInt64(); }
+  BL_INLINE Gp newGpPtr() noexcept { return cc->newUIntPtr(); }
+
   template<typename... Args>
   BL_INLINE Gp newGp32(const char* name, Args&&... args) noexcept { return cc->newUInt32(name, std::forward<Args>(args)...); }
-
   template<typename... Args>
   BL_INLINE Gp newGp64(const char* name, Args&&... args) noexcept { return cc->newUInt64(name, std::forward<Args>(args)...); }
-
   template<typename... Args>
   BL_INLINE Gp newGpPtr(const char* name, Args&&... args) noexcept { return cc->newUIntPtr(name, std::forward<Args>(args)...); }
 
+  template<typename RegT>
+  BL_INLINE RegT newSimilarReg(const RegT& ref) noexcept { return cc->newSimilarReg(ref); }
   template<typename RegT, typename... Args>
   BL_INLINE RegT newSimilarReg(const RegT& ref, Args&&... args) noexcept { return cc->newSimilarReg(ref, std::forward<Args>(args)...); }
 
   template<typename... Args>
   BL_INLINE Vec newVec(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, _simdTypeId, name, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, _vecTypeId, name, std::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
-  BL_INLINE Vec newVec(SimdWidth simdWidth, const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec newVec(VecWidth vw, const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, SimdWidthUtils::typeIdOf(simdWidth), name, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, VecWidthUtils::typeIdOf(vw), name, std::forward<Args>(args)...);
     return reg;
   }
 
@@ -474,21 +1507,12 @@ public:
     }
   }
 
-  // TODO: This should be removed - this can lead to bugs.
-  BL_INLINE void newVecArray(OpArray& dst, uint32_t n, const char* name) noexcept {
-    newRegArray(dst, n, _simdTypeId, name);
+  BL_INLINE void newVecArray(OpArray& dst, uint32_t n, VecWidth vw, const char* name) noexcept {
+    newRegArray(dst, n, VecWidthUtils::typeIdOf(vw), name);
   }
 
-  BL_INLINE void newVecArray(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
-    newRegArray(dst, n, _simdTypeId, prefix, name);
-  }
-
-  BL_INLINE void newVecArray(OpArray& dst, uint32_t n, SimdWidth simdWidth, const char* name) noexcept {
-    newRegArray(dst, n, SimdWidthUtils::typeIdOf(simdWidth), name);
-  }
-
-  BL_INLINE void newVecArray(OpArray& dst, uint32_t n, SimdWidth simdWidth, const char* prefix, const char* name) noexcept {
-    newRegArray(dst, n, SimdWidthUtils::typeIdOf(simdWidth), prefix, name);
+  BL_INLINE void newVecArray(OpArray& dst, uint32_t n, VecWidth vw, const char* prefix, const char* name) noexcept {
+    newRegArray(dst, n, VecWidthUtils::typeIdOf(vw), prefix, name);
   }
 
   BL_INLINE void newVecArray(OpArray& dst, uint32_t n, const Vec& ref, const char* name) noexcept {
@@ -499,7 +1523,7 @@ public:
     newRegArray(dst, n, ref, prefix, name);
   }
 
-  Mem tmpStack(uint32_t size) noexcept;
+  Mem tmpStack(StackId id, uint32_t size) noexcept;
 
   //! \}
 
@@ -517,147 +1541,239 @@ public:
   //! \name Virtual Registers (X86)
   //! \{
 
-  template<typename... Args>
-  BL_INLINE Vec newXmm(const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec newV128() noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x4, name, std::forward<Args>(args)...);
+    cc->_newReg(&reg, asmjit::TypeId::kInt32x4);
     return reg;
   }
 
-  BL_INLINE void newXmmArray(OpArray& dst, uint32_t n, const char* name) noexcept {
+  BL_INLINE Vec newV32_F32() noexcept {
+    Vec reg;
+    cc->_newReg(&reg, asmjit::TypeId::kFloat32x1);
+    return reg;
+  }
+
+  BL_INLINE Vec newV64_F64() noexcept {
+    Vec reg;
+    cc->_newReg(&reg, asmjit::TypeId::kFloat64x1);
+    return reg;
+  }
+
+  BL_INLINE Vec newV128_F32() noexcept {
+    Vec reg;
+    cc->_newReg(&reg, asmjit::TypeId::kFloat32x4);
+    return reg;
+  }
+
+  BL_INLINE Vec newV128_F64() noexcept {
+    Vec reg;
+    cc->_newReg(&reg, asmjit::TypeId::kFloat64x2);
+    return reg;
+  }
+
+  template<typename... Args>
+  BL_INLINE Vec newV128(Args&&... args) noexcept {
+    Vec reg;
+    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x4, std::forward<Args>(args)...);
+    return reg;
+  }
+
+  template<typename... Args>
+  BL_INLINE Vec newV32_F32(Args&&... args) noexcept {
+    Vec reg;
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x1, std::forward<Args>(args)...);
+    return reg;
+  }
+
+  template<typename... Args>
+  BL_INLINE Vec newV64_F64(Args&&... args) noexcept {
+    Vec reg;
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x1, std::forward<Args>(args)...);
+    return reg;
+  }
+
+  template<typename... Args>
+  BL_INLINE Vec newV128_F32(Args&&... args) noexcept {
+    Vec reg;
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x4, std::forward<Args>(args)...);
+    return reg;
+  }
+
+  template<typename... Args>
+  BL_INLINE Vec newV128_F64(Args&&... args) noexcept {
+    Vec reg;
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x2, std::forward<Args>(args)...);
+    return reg;
+  }
+
+  BL_INLINE void newV128Array(OpArray& dst, uint32_t n, const char* name) noexcept {
     newRegArray(dst, n, asmjit::TypeId::kInt32x4, name);
   }
 
-  BL_INLINE void newXmmArray(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
+  BL_INLINE void newV128Array(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
     newRegArray(dst, n, asmjit::TypeId::kInt32x4, prefix, name);
   }
 
   template<typename... Args>
-  BL_INLINE Vec newYmm(const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec newV256(const char* name, Args&&... args) noexcept {
     Vec reg;
     cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x8, name, std::forward<Args>(args)...);
     return reg;
   }
 
-  BL_INLINE void newYmmArray(OpArray& dst, uint32_t n, const char* name) noexcept {
+  BL_INLINE void newV256Array(OpArray& dst, uint32_t n, const char* name) noexcept {
     newRegArray(dst, n, asmjit::TypeId::kInt32x8, name);
   }
 
-  BL_INLINE void newYmmArray(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
+  BL_INLINE void newV256Array(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
     newRegArray(dst, n, asmjit::TypeId::kInt32x8, prefix, name);
   }
 
   template<typename... Args>
-  BL_INLINE Vec newZmm(const char* name, Args&&... args) noexcept {
+  BL_INLINE Vec newV512(const char* name, Args&&... args) noexcept {
     Vec reg;
     cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x16, name, std::forward<Args>(args)...);
     return reg;
   }
 
-  BL_INLINE void newZmmArray(OpArray& dst, uint32_t n, const char* name) noexcept {
+  BL_INLINE void newV512Array(OpArray& dst, uint32_t n, const char* name) noexcept {
     newRegArray(dst, n, asmjit::TypeId::kInt32x16, name);
   }
 
-  BL_INLINE void newZmmArray(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
+  BL_INLINE void newV512Array(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
     newRegArray(dst, n, asmjit::TypeId::kInt32x16, prefix, name);
   }
+
+#endif // BL_JIT_ARCH_X86
+
+#if defined(BL_JIT_ARCH_A64)
+
+  template<typename... Args>
+  BL_INLINE Vec newV128(const char* name, Args&&... args) noexcept {
+    Vec reg;
+    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x4, name, std::forward<Args>(args)...);
+    return reg;
+  }
+
+  template<typename... Args>
+  BL_INLINE Vec newV32_F32(const char* name, Args&&... args) noexcept {
+    Vec reg;
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x1, name, std::forward<Args>(args)...);
+    return reg.v128();
+  }
+
+  template<typename... Args>
+  BL_INLINE Vec newV64_F64(const char* name, Args&&... args) noexcept {
+    Vec reg;
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x1, name, std::forward<Args>(args)...);
+    return reg.v128();
+  }
+
+  template<typename... Args>
+  BL_INLINE Vec newV128_F32(const char* name, Args&&... args) noexcept {
+    Vec reg;
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x4, name, std::forward<Args>(args)...);
+    return reg;
+  }
+
+  template<typename... Args>
+  BL_INLINE Vec newV128_F64(const char* name, Args&&... args) noexcept {
+    Vec reg;
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x2, name, std::forward<Args>(args)...);
+    return reg;
+  }
+
+  BL_INLINE void newV128Array(OpArray& dst, uint32_t n, const char* name) noexcept {
+    newRegArray(dst, n, asmjit::TypeId::kInt32x4, name);
+  }
+
+  BL_INLINE void newV128Array(OpArray& dst, uint32_t n, const char* prefix, const char* name) noexcept {
+    newRegArray(dst, n, asmjit::TypeId::kInt32x4, prefix, name);
+  }
+
+#endif
 
   //! \}
 
   //! \name Constants (X86)
   //! \{
 
+#if defined(BL_JIT_ARCH_X86)
   KReg kConst(uint64_t value) noexcept;
+#endif // BL_JIT_ARCH_X86
 
-  Operand simdConst(const void* c, Bcst bcstWidth, SimdWidth constWidth) noexcept;
+  Operand simdConst(const void* c, Bcst bcstWidth, VecWidth constWidth) noexcept;
   Operand simdConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept;
   Operand simdConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept;
 
-  Vec simdVecConst(const void* c, SimdWidth constWidth) noexcept;
-  Vec simdVecConst(const void* c, const Vec& similarTo) noexcept;
-  Vec simdVecConst(const void* c, const VecArray& similarTo) noexcept;
+  Vec simdVecConst(const void* c, Bcst bcstWidth, VecWidth constWidth) noexcept;
+  Vec simdVecConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept;
+  Vec simdVecConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept;
 
-  Mem simdMemConst(const void* c, Bcst bcstWidth, SimdWidth constWidth) noexcept;
+  Mem simdMemConst(const void* c, Bcst bcstWidth, VecWidth constWidth) noexcept;
   Mem simdMemConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept;
   Mem simdMemConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept;
 
   Mem _getMemConst(const void* c) noexcept;
   Vec _newVecConst(const void* c, bool isUniqueConst) noexcept;
 
-  //! \}
+#if defined(BL_JIT_ARCH_A64)
+  Vec simdConst16B(const void* data16) noexcept;
+#endif // BL_JIT_ARCH_A64
 
-  //! \name Emit - Commons
-  //! \{
-
-  // Emit helpers used by GP.
-  void i_emit_2(InstId instId, const Operand_& op1, int imm) noexcept;
-  void i_emit_2(InstId instId, const Operand_& op1, const Operand_& op2) noexcept;
-  void i_emit_3(InstId instId, const Operand_& op1, const Operand_& op2, int imm) noexcept;
+#if defined(BL_JIT_ARCH_A64)
+  inline Vec simdVecZero(const Vec& similarTo) noexcept { return simdVecConst(&ct.i_0000000000000000, Bcst::k32, similarTo); }
+#endif // BL_JIT_ARCH_A64
 
   //! \}
 
-  //! \name Emit - 'I' General Purpose Instructions
+  //! \name Emit - General Purpose Instructions
   //! \{
-
-  //! Arithmetic operation having 2 operands (dst, src).
-  enum class Arith2Op {
-    kAbs,
-    kNeg,
-    kNot,
-    kCLZ,
-    kCTZ,
-    kReflect,
-    kMaxValue = kReflect
-  };
-
-  //! Arithmetic operation having 3 operands (dst, src1, src2).
-  enum class Arith3Op {
-    kAnd,
-    kOr,
-    kXor,
-    kAndN,
-    kAdd,
-    kSub,
-    kMul,
-    kUDiv,
-    kUMod,
-    kSMin,
-    kSMax,
-    kUMin,
-    kUMax,
-    kSHL,
-    kSHR,
-    kSAR,
-    kROL,
-    kROR,
-
-    kMaxValue = kROR
-  };
 
   void emit_mov(const Gp& dst, const Operand_& src) noexcept;
-  void emit_load(const Gp& dst, const Mem& src, uint32_t size) noexcept;
-  void emit_store(const Mem& dst, const Gp& src, uint32_t size) noexcept;
+  void emit_m(OpcodeM op, const Mem& m) noexcept;
+  void emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept;
+  void emit_mr(OpcodeMR op, const Mem& dst, const Gp& src) noexcept;
   void emit_cmov(const Gp& dst, const Operand_& sel, const Condition& condition) noexcept;
   void emit_select(const Gp& dst, const Operand_& sel1_, const Operand_& sel2_, const Condition& condition) noexcept;
-  void emit_arith2(Arith2Op op, const Gp& dst, const Operand_& src_) noexcept;
-  void emit_arith3(Arith3Op op, const Gp& dst, const Operand_& src1_, const Operand_& src2_) noexcept;
-  void emit_jmp(const Operand_& target) noexcept;
-  void emit_jmp_if(const Label& target, const Condition& condition) noexcept;
+  void emit_2i(OpcodeRR op, const Gp& dst, const Operand_& src_) noexcept;
+  void emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, const Operand_& src2_) noexcept;
+  void emit_j(const Operand_& target) noexcept;
+  void emit_j_if(const Label& target, const Condition& condition) noexcept;
 
   BL_INLINE void mov(const Gp& dst, const Gp& src) noexcept { return emit_mov(dst, src); }
   BL_INLINE void mov(const Gp& dst, const Imm& src) noexcept { return emit_mov(dst, src); }
 
-  BL_INLINE void load(const Gp& dst, const Mem& src) noexcept { return emit_load(dst, src, dst.size()); }
-  BL_INLINE void load_u8(const Gp& dst, const Mem& src) noexcept { return emit_load(dst, src, 1); }
-  BL_INLINE void load_u16(const Gp& dst, const Mem& src) noexcept { return emit_load(dst, src, 2); }
-  BL_INLINE void load_u32(const Gp& dst, const Mem& src) noexcept { return emit_load(dst, src, 4); }
-  BL_INLINE void load_u64(const Gp& dst, const Mem& src) noexcept { return emit_load(dst, src, 8); }
+  BL_INLINE void load(const Gp& dst, const Mem& src) noexcept { return emit_rm(OpcodeRM::kLoadReg, dst, src); }
+  BL_INLINE void load_i8(const Gp& dst, const Mem& src) noexcept { return emit_rm(OpcodeRM::kLoadI8, dst, src); }
+  BL_INLINE void load_u8(const Gp& dst, const Mem& src) noexcept { return emit_rm(OpcodeRM::kLoadU8, dst, src); }
+  BL_INLINE void load_i16(const Gp& dst, const Mem& src) noexcept { return emit_rm(OpcodeRM::kLoadI16, dst, src); }
+  BL_INLINE void load_u16(const Gp& dst, const Mem& src) noexcept { return emit_rm(OpcodeRM::kLoadU16, dst, src); }
+  BL_INLINE void load_i32(const Gp& dst, const Mem& src) noexcept { return emit_rm(OpcodeRM::kLoadI32, dst, src); }
+  BL_INLINE void load_u32(const Gp& dst, const Mem& src) noexcept { return emit_rm(OpcodeRM::kLoadU32, dst, src); }
+  BL_INLINE void load_i64(const Gp& dst, const Mem& src) noexcept { return emit_rm(OpcodeRM::kLoadI64, dst, src); }
+  BL_INLINE void load_u64(const Gp& dst, const Mem& src) noexcept { return emit_rm(OpcodeRM::kLoadU64, dst, src); }
 
-  BL_INLINE void store(const Mem& dst, const Gp& src) noexcept { return emit_store(dst, src, src.size()); }
-  BL_INLINE void store_8(const Mem& dst, const Gp& src) noexcept { return emit_store(dst, src, 1); }
-  BL_INLINE void store_16(const Mem& dst, const Gp& src) noexcept { return emit_store(dst, src, 2); }
-  BL_INLINE void store_32(const Mem& dst, const Gp& src) noexcept { return emit_store(dst, src, 4); }
-  BL_INLINE void store_64(const Mem& dst, const Gp& src) noexcept { return emit_store(dst, src, 8); }
+  BL_INLINE void load_merge_u8(const Gp& dst, const Mem& src) noexcept { return emit_rm(OpcodeRM::kLoadMergeU8, dst, src); }
+  BL_INLINE void load_merge_u16(const Gp& dst, const Mem& src) noexcept { return emit_rm(OpcodeRM::kLoadMergeU16, dst, src); }
+
+  BL_INLINE void store(const Mem& dst, const Gp& src) noexcept { return emit_mr(OpcodeMR::kStoreReg, dst, src); }
+  BL_INLINE void store_u8(const Mem& dst, const Gp& src) noexcept { return emit_mr(OpcodeMR::kStoreU8, dst, src); }
+  BL_INLINE void store_u16(const Mem& dst, const Gp& src) noexcept { return emit_mr(OpcodeMR::kStoreU16, dst, src); }
+  BL_INLINE void store_u32(const Mem& dst, const Gp& src) noexcept { return emit_mr(OpcodeMR::kStoreU32, dst, src); }
+  BL_INLINE void store_u64(const Mem& dst, const Gp& src) noexcept { return emit_mr(OpcodeMR::kStoreU64, dst, src); }
+
+  BL_INLINE void store_zero_reg(const Mem& dst) noexcept { return emit_m(OpcodeM::kStoreZeroReg, dst); }
+  BL_INLINE void store_zero_u8(const Mem& dst) noexcept { return emit_m(OpcodeM::kStoreZeroU8, dst); }
+  BL_INLINE void store_zero_u16(const Mem& dst) noexcept { return emit_m(OpcodeM::kStoreZeroU16, dst); }
+  BL_INLINE void store_zero_u32(const Mem& dst) noexcept { return emit_m(OpcodeM::kStoreZeroU32, dst); }
+  BL_INLINE void store_zero_u64(const Mem& dst) noexcept { return emit_m(OpcodeM::kStoreZeroU64, dst); }
+
+  BL_INLINE void mem_add(const Mem& dst, const Gp& src) noexcept { return emit_mr(OpcodeMR::kAddReg, dst, src); }
+  BL_INLINE void mem_add_u8(const Mem& dst, const Gp& src) noexcept { return emit_mr(OpcodeMR::kAddU8, dst, src); }
+  BL_INLINE void mem_add_u16(const Mem& dst, const Gp& src) noexcept { return emit_mr(OpcodeMR::kAddU16, dst, src); }
+  BL_INLINE void mem_add_u32(const Mem& dst, const Gp& src) noexcept { return emit_mr(OpcodeMR::kAddU32, dst, src); }
+  BL_INLINE void mem_add_u64(const Mem& dst, const Gp& src) noexcept { return emit_mr(OpcodeMR::kAddU64, dst, src); }
 
   BL_INLINE void cmov(const Gp& dst, const Gp& sel, const Condition& condition) noexcept { emit_cmov(dst, sel, condition); }
   BL_INLINE void cmov(const Gp& dst, const Mem& sel, const Condition& condition) noexcept { emit_cmov(dst, sel, condition); }
@@ -665,133 +1781,139 @@ public:
   template<typename Sel1, typename Sel2>
   BL_INLINE void select(const Gp& dst, const Sel1& sel1, const Sel2& sel2, const Condition& condition) noexcept { emit_select(dst, sel1, sel2, condition); }
 
-  BL_INLINE void abs(const Gp& dst, const Gp& src) noexcept { emit_arith2(Arith2Op::kAbs, dst, src); }
-  BL_INLINE void abs(const Gp& dst, const Mem& src) noexcept { emit_arith2(Arith2Op::kAbs, dst, src); }
+  BL_INLINE void abs(const Gp& dst, const Gp& src) noexcept { emit_2i(OpcodeRR::kAbs, dst, src); }
+  BL_INLINE void abs(const Gp& dst, const Mem& src) noexcept { emit_2i(OpcodeRR::kAbs, dst, src); }
 
-  BL_INLINE void neg(const Gp& dst, const Gp& src) noexcept { emit_arith2(Arith2Op::kNeg, dst, src); }
-  BL_INLINE void neg(const Gp& dst, const Mem& src) noexcept { emit_arith2(Arith2Op::kNeg, dst, src); }
+  BL_INLINE void neg(const Gp& dst, const Gp& src) noexcept { emit_2i(OpcodeRR::kNeg, dst, src); }
+  BL_INLINE void neg(const Gp& dst, const Mem& src) noexcept { emit_2i(OpcodeRR::kNeg, dst, src); }
 
-  BL_INLINE void not_(const Gp& dst, const Gp& src) noexcept { emit_arith2(Arith2Op::kNot, dst, src); }
-  BL_INLINE void not_(const Gp& dst, const Mem& src) noexcept { emit_arith2(Arith2Op::kNot, dst, src); }
+  BL_INLINE void not_(const Gp& dst, const Gp& src) noexcept { emit_2i(OpcodeRR::kNot, dst, src); }
+  BL_INLINE void not_(const Gp& dst, const Mem& src) noexcept { emit_2i(OpcodeRR::kNot, dst, src); }
 
-  BL_INLINE void clz(const Gp& dst, const Gp& src) noexcept { emit_arith2(Arith2Op::kCLZ, dst, src); }
-  BL_INLINE void clz(const Gp& dst, const Mem& src) noexcept { emit_arith2(Arith2Op::kCLZ, dst, src); }
+  BL_INLINE void bswap(const Gp& dst, const Gp& src) noexcept { emit_2i(OpcodeRR::kBSwap, dst, src); }
+  BL_INLINE void bswap(const Gp& dst, const Mem& src) noexcept { emit_2i(OpcodeRR::kBSwap, dst, src); }
 
-  BL_INLINE void ctz(const Gp& dst, const Gp& src) noexcept { emit_arith2(Arith2Op::kCTZ, dst, src); }
-  BL_INLINE void ctz(const Gp& dst, const Mem& src) noexcept { emit_arith2(Arith2Op::kCTZ, dst, src); }
+  BL_INLINE void clz(const Gp& dst, const Gp& src) noexcept { emit_2i(OpcodeRR::kCLZ, dst, src); }
+  BL_INLINE void clz(const Gp& dst, const Mem& src) noexcept { emit_2i(OpcodeRR::kCLZ, dst, src); }
 
-  BL_INLINE void reflect(const Gp& dst, const Gp& src) noexcept { emit_arith2(Arith2Op::kReflect, dst, src); }
-  BL_INLINE void reflect(const Gp& dst, const Mem& src) noexcept { emit_arith2(Arith2Op::kReflect, dst, src); }
+  BL_INLINE void ctz(const Gp& dst, const Gp& src) noexcept { emit_2i(OpcodeRR::kCTZ, dst, src); }
+  BL_INLINE void ctz(const Gp& dst, const Mem& src) noexcept { emit_2i(OpcodeRR::kCTZ, dst, src); }
 
-  BL_INLINE void inc(const Gp& dst) noexcept { emit_arith3(Arith3Op::kAdd, dst, dst, Imm(1)); }
-  BL_INLINE void dec(const Gp& dst) noexcept { emit_arith3(Arith3Op::kSub, dst, dst, Imm(1)); }
+  BL_INLINE void reflect(const Gp& dst, const Gp& src) noexcept { emit_2i(OpcodeRR::kReflect, dst, src); }
+  BL_INLINE void reflect(const Gp& dst, const Mem& src) noexcept { emit_2i(OpcodeRR::kReflect, dst, src); }
 
-  BL_INLINE void and_(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kAnd, dst, src1, src2); }
-  BL_INLINE void and_(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kAnd, dst, src1, src2); }
-  BL_INLINE void and_(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kAnd, dst, src1, src2); }
-  BL_INLINE void and_(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kAnd, dst, src1, src2); }
-  BL_INLINE void and_(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kAnd, dst, src1, src2); }
+  BL_INLINE void inc(const Gp& dst) noexcept { emit_3i(OpcodeRRR::kAdd, dst, dst, Imm(1)); }
+  BL_INLINE void dec(const Gp& dst) noexcept { emit_3i(OpcodeRRR::kSub, dst, dst, Imm(1)); }
 
-  BL_INLINE void or_(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kOr, dst, src1, src2); }
-  BL_INLINE void or_(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kOr, dst, src1, src2); }
-  BL_INLINE void or_(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kOr, dst, src1, src2); }
-  BL_INLINE void or_(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kOr, dst, src1, src2); }
-  BL_INLINE void or_(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kOr, dst, src1, src2); }
+  BL_INLINE void and_(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kAnd, dst, src1, src2); }
+  BL_INLINE void and_(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kAnd, dst, src1, src2); }
+  BL_INLINE void and_(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kAnd, dst, src1, src2); }
+  BL_INLINE void and_(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kAnd, dst, src1, src2); }
+  BL_INLINE void and_(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kAnd, dst, src1, src2); }
 
-  BL_INLINE void xor_(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kXor, dst, src1, src2); }
-  BL_INLINE void xor_(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kXor, dst, src1, src2); }
-  BL_INLINE void xor_(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kXor, dst, src1, src2); }
-  BL_INLINE void xor_(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kXor, dst, src1, src2); }
-  BL_INLINE void xor_(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kXor, dst, src1, src2); }
+  BL_INLINE void or_(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kOr, dst, src1, src2); }
+  BL_INLINE void or_(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kOr, dst, src1, src2); }
+  BL_INLINE void or_(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kOr, dst, src1, src2); }
+  BL_INLINE void or_(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kOr, dst, src1, src2); }
+  BL_INLINE void or_(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kOr, dst, src1, src2); }
 
-  BL_INLINE void andn(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kAndN, dst, src1, src2); }
-  BL_INLINE void andn(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kAndN, dst, src1, src2); }
-  BL_INLINE void andn(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kAndN, dst, src1, src2); }
-  BL_INLINE void andn(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kAndN, dst, src1, src2); }
-  BL_INLINE void andn(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kAndN, dst, src1, src2); }
+  BL_INLINE void xor_(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kXor, dst, src1, src2); }
+  BL_INLINE void xor_(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kXor, dst, src1, src2); }
+  BL_INLINE void xor_(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kXor, dst, src1, src2); }
+  BL_INLINE void xor_(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kXor, dst, src1, src2); }
+  BL_INLINE void xor_(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kXor, dst, src1, src2); }
 
-  BL_INLINE void add(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kAdd, dst, src1, src2); }
-  BL_INLINE void add(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kAdd, dst, src1, src2); }
-  BL_INLINE void add(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kAdd, dst, src1, src2); }
-  BL_INLINE void add(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kAdd, dst, src1, src2); }
-  BL_INLINE void add(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kAdd, dst, src1, src2); }
+  BL_INLINE void bic(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kBic, dst, src1, src2); }
+  BL_INLINE void bic(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kBic, dst, src1, src2); }
+  BL_INLINE void bic(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kBic, dst, src1, src2); }
+  BL_INLINE void bic(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kBic, dst, src1, src2); }
+  BL_INLINE void bic(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kBic, dst, src1, src2); }
 
-  BL_INLINE void sub(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kSub, dst, src1, src2); }
-  BL_INLINE void sub(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kSub, dst, src1, src2); }
-  BL_INLINE void sub(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kSub, dst, src1, src2); }
-  BL_INLINE void sub(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kSub, dst, src1, src2); }
-  BL_INLINE void sub(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kSub, dst, src1, src2); }
+  BL_INLINE void add(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kAdd, dst, src1, src2); }
+  BL_INLINE void add(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kAdd, dst, src1, src2); }
+  BL_INLINE void add(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kAdd, dst, src1, src2); }
+  BL_INLINE void add(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kAdd, dst, src1, src2); }
+  BL_INLINE void add(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kAdd, dst, src1, src2); }
 
-  BL_INLINE void mul(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kMul, dst, src1, src2); }
-  BL_INLINE void mul(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kMul, dst, src1, src2); }
-  BL_INLINE void mul(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kMul, dst, src1, src2); }
-  BL_INLINE void mul(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kMul, dst, src1, src2); }
-  BL_INLINE void mul(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kMul, dst, src1, src2); }
+  BL_INLINE void sub(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSub, dst, src1, src2); }
+  BL_INLINE void sub(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kSub, dst, src1, src2); }
+  BL_INLINE void sub(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kSub, dst, src1, src2); }
+  BL_INLINE void sub(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSub, dst, src1, src2); }
+  BL_INLINE void sub(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kSub, dst, src1, src2); }
 
-  BL_INLINE void udiv(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kUDiv, dst, src1, src2); }
-  BL_INLINE void udiv(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kUDiv, dst, src1, src2); }
-  BL_INLINE void udiv(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kUDiv, dst, src1, src2); }
-  BL_INLINE void udiv(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kUDiv, dst, src1, src2); }
-  BL_INLINE void udiv(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kUDiv, dst, src1, src2); }
+  BL_INLINE void mul(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kMul, dst, src1, src2); }
+  BL_INLINE void mul(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kMul, dst, src1, src2); }
+  BL_INLINE void mul(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kMul, dst, src1, src2); }
+  BL_INLINE void mul(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kMul, dst, src1, src2); }
+  BL_INLINE void mul(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kMul, dst, src1, src2); }
 
-  BL_INLINE void umod(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kUMod, dst, src1, src2); }
-  BL_INLINE void umod(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kUMod, dst, src1, src2); }
-  BL_INLINE void umod(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kUMod, dst, src1, src2); }
-  BL_INLINE void umod(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kUMod, dst, src1, src2); }
-  BL_INLINE void umod(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kUMod, dst, src1, src2); }
+  BL_INLINE void udiv(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kUDiv, dst, src1, src2); }
+  BL_INLINE void udiv(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kUDiv, dst, src1, src2); }
+  BL_INLINE void udiv(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kUDiv, dst, src1, src2); }
+  BL_INLINE void udiv(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kUDiv, dst, src1, src2); }
+  BL_INLINE void udiv(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kUDiv, dst, src1, src2); }
 
-  BL_INLINE void smin(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kSMin, dst, src1, src2); }
-  BL_INLINE void smin(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kSMin, dst, src1, src2); }
-  BL_INLINE void smin(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kSMin, dst, src1, src2); }
-  BL_INLINE void smin(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kSMin, dst, src1, src2); }
-  BL_INLINE void smin(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kSMin, dst, src1, src2); }
+  BL_INLINE void umod(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kUMod, dst, src1, src2); }
+  BL_INLINE void umod(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kUMod, dst, src1, src2); }
+  BL_INLINE void umod(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kUMod, dst, src1, src2); }
+  BL_INLINE void umod(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kUMod, dst, src1, src2); }
+  BL_INLINE void umod(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kUMod, dst, src1, src2); }
 
-  BL_INLINE void smax(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kSMax, dst, src1, src2); }
-  BL_INLINE void smax(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kSMax, dst, src1, src2); }
-  BL_INLINE void smax(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kSMax, dst, src1, src2); }
-  BL_INLINE void smax(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kSMax, dst, src1, src2); }
-  BL_INLINE void smax(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kSMax, dst, src1, src2); }
+  BL_INLINE void smin(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSMin, dst, src1, src2); }
+  BL_INLINE void smin(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kSMin, dst, src1, src2); }
+  BL_INLINE void smin(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kSMin, dst, src1, src2); }
+  BL_INLINE void smin(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSMin, dst, src1, src2); }
+  BL_INLINE void smin(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kSMin, dst, src1, src2); }
 
-  BL_INLINE void umin(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kUMin, dst, src1, src2); }
-  BL_INLINE void umin(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kUMin, dst, src1, src2); }
-  BL_INLINE void umin(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kUMin, dst, src1, src2); }
-  BL_INLINE void umin(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kUMin, dst, src1, src2); }
-  BL_INLINE void umin(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kUMin, dst, src1, src2); }
+  BL_INLINE void smax(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSMax, dst, src1, src2); }
+  BL_INLINE void smax(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kSMax, dst, src1, src2); }
+  BL_INLINE void smax(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kSMax, dst, src1, src2); }
+  BL_INLINE void smax(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSMax, dst, src1, src2); }
+  BL_INLINE void smax(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kSMax, dst, src1, src2); }
 
-  BL_INLINE void umax(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kUMax, dst, src1, src2); }
-  BL_INLINE void umax(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_arith3(Arith3Op::kUMax, dst, src1, src2); }
-  BL_INLINE void umax(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kUMax, dst, src1, src2); }
-  BL_INLINE void umax(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kUMax, dst, src1, src2); }
-  BL_INLINE void umax(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kUMax, dst, src1, src2); }
+  BL_INLINE void umin(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kUMin, dst, src1, src2); }
+  BL_INLINE void umin(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kUMin, dst, src1, src2); }
+  BL_INLINE void umin(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kUMin, dst, src1, src2); }
+  BL_INLINE void umin(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kUMin, dst, src1, src2); }
+  BL_INLINE void umin(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kUMin, dst, src1, src2); }
 
-  BL_INLINE void shl(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kSHL, dst, src1, src2); }
-  BL_INLINE void shl(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kSHL, dst, src1, src2); }
-  BL_INLINE void shl(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kSHL, dst, src1, src2); }
-  BL_INLINE void shl(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kSHL, dst, src1, src2); }
+  BL_INLINE void umax(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kUMax, dst, src1, src2); }
+  BL_INLINE void umax(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kUMax, dst, src1, src2); }
+  BL_INLINE void umax(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kUMax, dst, src1, src2); }
+  BL_INLINE void umax(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kUMax, dst, src1, src2); }
+  BL_INLINE void umax(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kUMax, dst, src1, src2); }
 
-  BL_INLINE void shr(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kSHR, dst, src1, src2); }
-  BL_INLINE void shr(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kSHR, dst, src1, src2); }
-  BL_INLINE void shr(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kSHR, dst, src1, src2); }
-  BL_INLINE void shr(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kSHR, dst, src1, src2); }
+  BL_INLINE void shl(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSll, dst, src1, src2); }
+  BL_INLINE void shl(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kSll, dst, src1, src2); }
+  BL_INLINE void shl(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSll, dst, src1, src2); }
+  BL_INLINE void shl(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kSll, dst, src1, src2); }
 
-  BL_INLINE void sar(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kSAR, dst, src1, src2); }
-  BL_INLINE void sar(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kSAR, dst, src1, src2); }
-  BL_INLINE void sar(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kSAR, dst, src1, src2); }
-  BL_INLINE void sar(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kSAR, dst, src1, src2); }
+  BL_INLINE void shr(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSrl, dst, src1, src2); }
+  BL_INLINE void shr(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kSrl, dst, src1, src2); }
+  BL_INLINE void shr(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSrl, dst, src1, src2); }
+  BL_INLINE void shr(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kSrl, dst, src1, src2); }
 
-  BL_INLINE void rol(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kROL, dst, src1, src2); }
-  BL_INLINE void rol(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kROL, dst, src1, src2); }
-  BL_INLINE void rol(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kROL, dst, src1, src2); }
-  BL_INLINE void rol(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kROL, dst, src1, src2); }
+  BL_INLINE void sar(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSra, dst, src1, src2); }
+  BL_INLINE void sar(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kSra, dst, src1, src2); }
+  BL_INLINE void sar(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSra, dst, src1, src2); }
+  BL_INLINE void sar(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kSra, dst, src1, src2); }
 
-  BL_INLINE void ror(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kROR, dst, src1, src2); }
-  BL_INLINE void ror(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kROR, dst, src1, src2); }
-  BL_INLINE void ror(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_arith3(Arith3Op::kROR, dst, src1, src2); }
-  BL_INLINE void ror(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_arith3(Arith3Op::kROR, dst, src1, src2); }
+  BL_INLINE void rol(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kRol, dst, src1, src2); }
+  BL_INLINE void rol(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kRol, dst, src1, src2); }
+  BL_INLINE void rol(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kRol, dst, src1, src2); }
+  BL_INLINE void rol(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kRol, dst, src1, src2); }
 
-  BL_INLINE void j(const Gp& target) noexcept { emit_jmp(target); }
-  BL_INLINE void j(const Label& target) noexcept { emit_jmp(target); }
-  BL_INLINE void j(const Label& target, const Condition& condition) noexcept { emit_jmp_if(target, condition); }
+  BL_INLINE void ror(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kRor, dst, src1, src2); }
+  BL_INLINE void ror(const Gp& dst, const Gp& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kRor, dst, src1, src2); }
+  BL_INLINE void ror(const Gp& dst, const Mem& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kRor, dst, src1, src2); }
+  BL_INLINE void ror(const Gp& dst, const Mem& src1, const Imm& src2) noexcept { emit_3i(OpcodeRRR::kRor, dst, src1, src2); }
+
+  BL_INLINE void sbound(const Gp& dst, const Gp& src1, const Gp& src2) noexcept { emit_3i(OpcodeRRR::kSBound, dst, src1, src2); }
+  BL_INLINE void sbound(const Gp& dst, const Gp& src1, const Mem& src2) noexcept { emit_3i(OpcodeRRR::kSBound, dst, src1, src2); }
+
+  BL_INLINE void j(const Gp& target) noexcept { emit_j(target); }
+  BL_INLINE void j(const Label& target) noexcept { emit_j(target); }
+  BL_INLINE void j(const Label& target, const Condition& condition) noexcept { emit_j_if(target, condition); }
 
   void adds_u8(const Gp& dst, const Gp& src1, const Gp& src2) noexcept;
 
@@ -799,713 +1921,811 @@ public:
   void div_255_u32(const Gp& dst, const Gp& src) noexcept;
   void mul_257_hu16(const Gp& dst, const Gp& src) noexcept;
 
-  template<typename LimitT>
-  BL_NOINLINE void bound_u(const Gp& dst, const Gp& src, const LimitT& limit) noexcept {
-    if (dst.id() == src.id()) {
-      Gp zero = newSimilarReg(dst, "@zero");
-
-      cc->xor_(zero, zero);
-      cc->cmp(dst, limit);
-      cc->cmova(dst, zero);
-      cc->cmovg(dst, limit);
-    }
-    else {
-      cc->xor_(dst, dst);
-      cc->cmp(src, limit);
-      cc->cmovbe(dst, src);
-      cc->cmovg(dst, limit);
-    }
-  }
-
-  //! dst += a * b.
   void add_scaled(const Gp& dst, const Gp& a, int b) noexcept;
+  void add_ext(const Gp& dst, const Gp& src_, const Gp& idx_, uint32_t scale, int32_t disp = 0) noexcept;
 
-  void lea_bpp(const Gp& dst, const Gp& src_, const Gp& idx_, uint32_t scale, int32_t disp = 0) noexcept;
-
+#if 1
+  inline void i_prefetch(const Mem& mem) noexcept { blUnused(mem); }
+#else
   inline void i_prefetch(const Mem& mem) noexcept { cc->prefetcht0(mem); }
+#endif
 
   void lea(const Gp& dst, const Mem& src) noexcept;
 
   //! \}
 
-  //! \name Packed Instruction (X86)
+  //! \name Emit - Vector Instructions
   //! \{
 
-  //! Packing generic instructions and SSE+AVX instructions into a single 32-bit integer.
-  //!
-  //! AsmJit has more than 1500 instructions for X86|X64, which means that we need at least 11 bits to represent each.
-  //! Typically we need just one instruction ID at a time, however, since SSE and AVX instructions use different IDs
-  //! we need a way to pack both SSE and AVX instruction ID into one integer as it's much easier to use a unified
-  //! instruction set rather than using specific paths for SSE and AVX code.
-  //!
-  //! PackedInst allows to specify the following:
-  //!
-  //!   - SSE instruction ID for SSE+ code generation.
-  //!   - AVX instruction ID for AVX+ code generation.
-  //!   - Maximum operation width (0=XMM, 1=YMM, 2=ZMM).
-  //!   - Special intrinsic used only by PipeCompiler.
-  struct PackedInst {
-    //! Limit width of operands of vector instructions to Xmm|Ymm|Zmm.
-    enum WidthLimit : uint32_t {
-      kWidthX = 0,
-      kWidthY = 1,
-      kWidthZ = 2
-    };
-
-    enum Bits : uint32_t {
-      kSseIdShift  = 0,
-      kSseIdBits   = 0xFFF,
-
-      kAvxIdShift  = 12,
-      kAvxIdBits   = 0xFFF,
-
-      kWidthShift  = 24,
-      kWidthBits   = 0x3,
-
-      kIntrinShift = 31,
-      kIntrinBits  = 0x1
-    };
-
-    static ASMJIT_INLINE_NODEBUG constexpr uint32_t packIntrin(uint32_t intrinId, uint32_t width = kWidthZ) noexcept {
-      return (intrinId << kSseIdShift ) |
-             (width    << kWidthShift ) |
-             (1u       << kIntrinShift) ;
-    }
-
-    static ASMJIT_INLINE_NODEBUG constexpr uint32_t packAvxSse(uint32_t avxId, uint32_t sseId, uint32_t width = kWidthZ) noexcept {
-      return (avxId << kAvxIdShift) |
-             (sseId << kSseIdShift) |
-             (width << kWidthShift) ;
-    }
-
-    static ASMJIT_INLINE_NODEBUG constexpr uint32_t avxId(uint32_t packedId) noexcept { return (packedId >> kAvxIdShift) & kAvxIdBits; }
-    static ASMJIT_INLINE_NODEBUG constexpr uint32_t sseId(uint32_t packedId) noexcept { return (packedId >> kSseIdShift) & kSseIdBits; }
-    static ASMJIT_INLINE_NODEBUG constexpr uint32_t width(uint32_t packedId) noexcept { return (packedId >> kWidthShift) & kWidthBits; }
-
-    static ASMJIT_INLINE_NODEBUG constexpr uint32_t isIntrin(uint32_t packedId) noexcept { return (packedId & (kIntrinBits << kIntrinShift)) != 0; }
-    static ASMJIT_INLINE_NODEBUG constexpr uint32_t intrinId(uint32_t packedId) noexcept { return (packedId >> kSseIdShift) & kSseIdBits; }
-  };
-
-  //! Intrinsic ID.
-  //!
-  //! Some operations are not available as a single instruction or are part
-  //! of CPU extensions outside of the baseline instruction set. These are
-  //! handled as intrinsics.
-  enum IntrinId : uint32_t {
-    kIntrin2Vloadi128uRO,
-
-    kIntrin2Vmovu8u16,
-    kIntrin2Vmovu8u32,
-    kIntrin2Vmovu16u32,
-    kIntrin2Vabsi8,
-    kIntrin2Vabsi16,
-    kIntrin2Vabsi32,
-    kIntrin2Vabsi64,
-    kIntrin2Vinv255u16,
-    kIntrin2Vinv256u16,
-    kIntrin2Vinv255u32,
-    kIntrin2Vinv256u32,
-    kIntrin2Vduplpd,
-    kIntrin2Vduphpd,
-
-    kIntrin2VBroadcastU8,
-    kIntrin2VBroadcastU16,
-    kIntrin2VBroadcastU32,
-    kIntrin2VBroadcastU64,
-    kIntrin2VBroadcastI32x4,
-    kIntrin2VBroadcastI64x2,
-    kIntrin2VBroadcastF32x4,
-    kIntrin2VBroadcastF64x2,
-
-    kIntrin2iVswizps,
-    kIntrin2iVswizpd,
-
-    kIntrin3Vandi32,
-    kIntrin3Vandi64,
-    kIntrin3Vnandi32,
-    kIntrin3Vnandi64,
-    kIntrin3Vori32,
-    kIntrin3Vori64,
-    kIntrin3Vxori32,
-    kIntrin3Vxori64,
-    kIntrin3Vcombhli64,
-    kIntrin3Vcombhld64,
-    kIntrin3Vminu16,
-    kIntrin3Vmaxu16,
-    kIntrin3Vmulu64x32,
-    kIntrin3Vhaddpd,
-
-    kIntrin3iVpalignr,
-
-    kIntrin4Vpblendvb,
-    kIntrin4VpblendvbDestructive
-  };
-
-  // Emit helpers to emit MOVE from SrcT to DstT, used by pre-AVX instructions. The `width` parameter is important
-  // as it describes how many bytes to read in case that `src` is a memory location. It's important as some
-  // instructions like PMOVZXBW read only 8 bytes, but to make the same operation in pre-SSE4.1 code we need to
-  // read 8 bytes from memory and use PUNPCKLBW to interleave that bytes with zero. PUNPCKLBW would read 16 bytes
-  // from memory and would require them to be aligned to 16 bytes, if used with memory operand.
-  void v_emit_xmov(const Operand_& dst, const Operand_& src, uint32_t width) noexcept;
-  void v_emit_xmov(const OpArray& dst, const Operand_& src, uint32_t width) noexcept;
-  void v_emit_xmov(const OpArray& dst, const OpArray& src, uint32_t width) noexcept;
-
-  // Emit helpers used by SSE|AVX intrinsics.
-  void v_emit_vv_vv(uint32_t packedId, const Operand_& dst_, const Operand_& src_) noexcept;
-  void v_emit_vv_vv(uint32_t packedId, const OpArray& dst_, const Operand_& src_) noexcept;
-  void v_emit_vv_vv(uint32_t packedId, const OpArray& dst_, const OpArray& src_) noexcept;
-
-  void v_emit_vvi_vi(uint32_t packedId, const Operand_& dst_, const Operand_& src_, uint32_t imm) noexcept;
-  void v_emit_vvi_vi(uint32_t packedId, const OpArray& dst_, const Operand_& src_, uint32_t imm) noexcept;
-  void v_emit_vvi_vi(uint32_t packedId, const OpArray& dst_, const OpArray& src_, uint32_t imm) noexcept;
-
-  void v_emit_vvi_vvi(uint32_t packedId, const Operand_& dst_, const Operand_& src_, uint32_t imm) noexcept;
-  void v_emit_vvi_vvi(uint32_t packedId, const OpArray& dst_, const Operand_& src_, uint32_t imm) noexcept;
-  void v_emit_vvi_vvi(uint32_t packedId, const OpArray& dst_, const OpArray& src_, uint32_t imm) noexcept;
-
-  void v_emit_vvv_vv(uint32_t packedId, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_) noexcept;
-  void v_emit_vvv_vv(uint32_t packedId, const OpArray& dst_, const Operand_& src1_, const OpArray& src2_) noexcept;
-  void v_emit_vvv_vv(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const Operand_& src2_) noexcept;
-  void v_emit_vvv_vv(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_) noexcept;
-
-  void v_emit_vvvi_vvi(uint32_t packedId, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_, uint32_t imm) noexcept;
-  void v_emit_vvvi_vvi(uint32_t packedId, const OpArray& dst_, const Operand_& src1_, const OpArray& src2_, uint32_t imm) noexcept;
-  void v_emit_vvvi_vvi(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const Operand_& src2_, uint32_t imm) noexcept;
-  void v_emit_vvvi_vvi(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_, uint32_t imm) noexcept;
-
-  void v_emit_vvvv_vvv(uint32_t packedId, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_, const Operand_& src3_) noexcept;
-  void v_emit_vvvv_vvv(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_, const Operand_& src3_) noexcept;
-  void v_emit_vvvv_vvv(uint32_t packedId, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_, const OpArray& src3_) noexcept;
-
-  void v_emit_k_vv(InstId instId, const KReg& mask, const Operand_& dst, const Operand_& src) noexcept;
-  void v_emit_k_vv(InstId instId, const KReg& mask, OpArray& dst, const Operand_& src) noexcept;
-  void v_emit_k_vv(InstId instId, const KReg& mask, OpArray& dst, const OpArray& src) noexcept;
-
-  void v_emit_k_vvi(InstId instId, const KReg& mask, const Operand_& dst, const Operand_& src, uint32_t imm8) noexcept;
-  void v_emit_k_vvi(InstId instId, const KReg& mask, OpArray& dst, const Operand_& src, uint32_t imm8) noexcept;
-  void v_emit_k_vvi(InstId instId, const KReg& mask, OpArray& dst, const OpArray& src, uint32_t imm8) noexcept;
-
-  void v_emit_k_vvv(InstId instId, const KReg& mask, const Operand_& dst, const Operand_& src1, const Operand_& src2) noexcept;
-  void v_emit_k_vvv(InstId instId, const KReg& mask, const OpArray& dst, const Operand_& src1, const OpArray& src2) noexcept;
-  void v_emit_k_vvv(InstId instId, const KReg& mask, const OpArray& dst, const OpArray& src1, const Operand_& src2) noexcept;
-  void v_emit_k_vvv(InstId instId, const KReg& mask, const OpArray& dst, const OpArray& src1, const OpArray& src2) noexcept;
-
-  void v_emit_k_vvvi(InstId instId, const KReg& mask, const Operand_& dst, const Operand_& src1, const Operand_& src2, uint32_t imm8) noexcept;
-  void v_emit_k_vvvi(InstId instId, const KReg& mask, const OpArray& dst, const Operand_& src1, const OpArray& src2, uint32_t imm8) noexcept;
-  void v_emit_k_vvvi(InstId instId, const KReg& mask, const OpArray& dst, const OpArray& src1, const Operand_& src2, uint32_t imm8) noexcept;
-  void v_emit_k_vvvi(InstId instId, const KReg& mask, const OpArray& dst, const OpArray& src1, const OpArray& src2, uint32_t imm8) noexcept;
-
-  #define V_EMIT_VV_VV(NAME, PACKED_ID)                                       \
-  template<typename DstT, typename SrcT>                                      \
-  inline void NAME(const DstT& dst,                                           \
-                   const SrcT& src) noexcept {                                \
-    v_emit_vv_vv(PACKED_ID, dst, src);                                        \
-  }
-
-  #define V_EMIT_VVI_VI(NAME, PACKED_ID)                                      \
-  template<typename DstT, typename SrcT>                                      \
-  inline void NAME(const DstT& dst,                                           \
-                   const SrcT& src,                                           \
-                   uint32_t imm) noexcept {                                   \
-    v_emit_vvi_vi(PACKED_ID, dst, src, imm);                                  \
-  }
-
-  #define V_EMIT_VVI_VVI(NAME, PACKED_ID)                                     \
-  template<typename DstT, typename SrcT>                                      \
-  inline void NAME(const DstT& dst,                                           \
-                   const SrcT& src,                                           \
-                   uint32_t imm) noexcept {                                   \
-    v_emit_vvi_vvi(PACKED_ID, dst, src, imm);                                 \
-  }
-
-  #define V_EMIT_VVI_VVI_ENUM(NAME, PACKED_ID, ENUM_TYPE)                     \
-  template<typename DstT, typename SrcT>                                      \
-  inline void NAME(const DstT& dst,                                           \
-                   const SrcT& src,                                           \
-                   ENUM_TYPE imm) noexcept {                                  \
-    v_emit_vvi_vvi(PACKED_ID, dst, src, uint32_t(imm));                       \
-  }
-
-  #define V_EMIT_VVi_VVi(NAME, PACKED_ID, IMM_VALUE)                          \
-  template<typename DstT, typename SrcT>                                      \
-  inline void NAME(const DstT& dst,                                           \
-                   const SrcT& src) noexcept {                                \
-    v_emit_vvi_vvi(PACKED_ID, dst, src, IMM_VALUE);                           \
-  }
-
-  #define V_EMIT_VVV_VV(NAME, PACKED_ID)                                      \
-  template<typename DstT, typename Src1T, typename Src2T>                     \
-  inline void NAME(const DstT& dst,                                           \
-                   const Src1T& src1,                                         \
-                   const Src2T& src2) noexcept {                              \
-    v_emit_vvv_vv(PACKED_ID, dst, src1, src2);                                \
-  }
-
-  #define V_EMIT_VVVI_VVI(NAME, PACKED_ID)                                    \
-  template<typename DstT, typename Src1T, typename Src2T>                     \
-  inline void NAME(const DstT& dst,                                           \
-                   const Src1T& src1,                                         \
-                   const Src2T& src2,                                         \
-                   uint32_t imm) noexcept {                                   \
-    v_emit_vvvi_vvi(PACKED_ID, dst, src1, src2, imm);                         \
-  }
-
-  #define V_EMIT_VVVI_VVI_ENUM(NAME, PACKED_ID, ENUM_TYPE)                    \
-  template<typename DstT, typename Src1T, typename Src2T>                     \
-  inline void NAME(const DstT& dst,                                           \
-                   const Src1T& src1,                                         \
-                   const Src2T& src2,                                         \
-                   ENUM_TYPE imm) noexcept {                                  \
-    v_emit_vvvi_vvi(PACKED_ID, dst, src1, src2, uint32_t(imm));               \
-  }
-
-  #define V_EMIT_VVVI(NAME, PACKED_ID)                                        \
-  template<typename DstT, typename Src1T, typename Src2T>                     \
-  inline void NAME(const DstT& dst,                                           \
-                   const Src1T& src1,                                         \
-                   const Src2T& src2,                                         \
-                   uint32_t imm) noexcept {                                   \
-    v_emit_vvvi_vvi(PACKED_ID, dst, src1, src2, imm);                         \
-  }
-
-  #define V_EMIT_VVVi_VVi(NAME, PACKED_ID, IMM_VALUE)                         \
-  template<typename DstT, typename Src1T, typename Src2T>                     \
-  inline void NAME(const DstT& dst,                                           \
-                   const Src1T& src1,                                         \
-                   const Src2T& src2) noexcept {                              \
-    v_emit_vvvi_vvi(PACKED_ID, dst, src1, src2, IMM_VALUE);                   \
-  }
-
-  #define V_EMIT_VVVV_VVV(NAME, PACKED_ID)                                    \
-  template<typename DstT, typename Src1T, typename Src2T, typename Src3T>     \
-  inline void NAME(const DstT& dst,                                           \
-                   const Src1T& src1,                                         \
-                   const Src2T& src2,                                         \
-                   const Src3T& src3) noexcept {                              \
-    v_emit_vvvv_vvv(PACKED_ID, dst, src1, src2, src3);                        \
-  }
-
-  #define PACK_AVX_SSE(AVX_ID, SSE_ID, W) \
-    PackedInst::packAvxSse(x86::Inst::kId##AVX_ID, x86::Inst::kId##SSE_ID, PackedInst::kWidth##W)
-
-  //! \}
-
-  //! \name Emit - 'V' Vector Instructions (128..512-bit SSE|AVX|AVX512)
-  //! \{
-
-  // To make the code generation easier and more parametrizable we support both SSE|AVX through the same interface
-  // (always non-destructive source form) and each intrinsic can accept either `Operand_` or `OpArray`, which can
-  // hold up to 4 registers to form scalars, pairs and quads. Each 'V' instruction maps directly to the ISA so check
-  // the optimization level before using them or use instructions starting with 'x' that are generic and designed to
-  // map to the best instruction(s) possible.
-  //
-  // Also, multiple overloads are provided for convenience, similarly to AsmJit design, we don't want to inline
-  // expansion of `OpArray(op)` here so these overloads are implemented in pipecompiler.cpp.
-
-  // SSE instructions that require SSE3+ are suffixed with `_` to make it clear that they are not part of the
-  // baseline instruction set. Some instructions like that are always provided don't have such suffix, and will be
-  // emulated.
-
-  // Integer SIMD - Core.
-
-  V_EMIT_VV_VV(v_mov               , PACK_AVX_SSE(Vmovaps    , Movaps    , Z))       // AVX  | SSE2
-  V_EMIT_VV_VV(v_mov_i64           , PACK_AVX_SSE(Vmovq      , Movq      , X))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(v_mov_i8_i16_       , PACK_AVX_SSE(Vpmovsxbw  , Pmovsxbw  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(v_mov_u8_u16_       , PACK_AVX_SSE(Vpmovzxbw  , Pmovzxbw  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(v_mov_i8_i32_       , PACK_AVX_SSE(Vpmovsxbd  , Pmovsxbd  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(v_mov_u8_u32_       , PACK_AVX_SSE(Vpmovzxbd  , Pmovzxbd  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(v_mov_i8_i64_       , PACK_AVX_SSE(Vpmovsxbq  , Pmovsxbq  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(v_mov_u8_u64_       , PACK_AVX_SSE(Vpmovzxbq  , Pmovzxbq  , Z))       // AVX2 | SSE4.1
-
-  V_EMIT_VV_VV(v_mov_i16_i32_      , PACK_AVX_SSE(Vpmovsxwd  , Pmovsxwd  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(v_mov_u16_u32_      , PACK_AVX_SSE(Vpmovzxwd  , Pmovzxwd  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(v_mov_i16_i64_      , PACK_AVX_SSE(Vpmovsxwq  , Pmovsxwq  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(v_mov_u16_u64_      , PACK_AVX_SSE(Vpmovzxwq  , Pmovzxwq  , Z))       // AVX2 | SSE4.1
-
-  V_EMIT_VV_VV(v_mov_i32_i64_      , PACK_AVX_SSE(Vpmovsxdq  , Pmovsxdq  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VV_VV(v_mov_u32_u64_      , PACK_AVX_SSE(Vpmovzxdq  , Pmovzxdq  , Z))       // AVX2 | SSE4.1
-
-  V_EMIT_VV_VV(v_mov_mask_u8       , PACK_AVX_SSE(Vpmovmskb  , Pmovmskb  , Z))       // AVX2 | SSE2
-
-  V_EMIT_VVVI_VVI(v_insert_u8_     , PACK_AVX_SSE(Vpinsrb    , Pinsrb    , X))       // AVX2 | SSE4_1
-  V_EMIT_VVVI_VVI(v_insert_u16     , PACK_AVX_SSE(Vpinsrw    , Pinsrw    , X))       // AVX2 | SSE2
-  V_EMIT_VVVI_VVI(v_insert_u32_    , PACK_AVX_SSE(Vpinsrd    , Pinsrd    , X))       // AVX2 | SSE4_1
-  V_EMIT_VVVI_VVI(v_insert_u64_    , PACK_AVX_SSE(Vpinsrq    , Pinsrq    , X))       // AVX2 | SSE4_1
-
-  V_EMIT_VVI_VVI(v_extract_u8_     , PACK_AVX_SSE(Vpextrb    , Pextrb    , X))       // AVX2 | SSE4_1
-  V_EMIT_VVI_VVI(v_extract_u16     , PACK_AVX_SSE(Vpextrw    , Pextrw    , X))       // AVX2 | SSE2
-  V_EMIT_VVI_VVI(v_extract_u32_    , PACK_AVX_SSE(Vpextrd    , Pextrd    , X))       // AVX2 | SSE4_1
-  V_EMIT_VVI_VVI(v_extract_u64_    , PACK_AVX_SSE(Vpextrq    , Pextrq    , X))       // AVX2 | SSE4_1
-
-  V_EMIT_VVV_VV(v_and_i32          , PackedInst::packIntrin(kIntrin3Vandi32))        // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_and_i64          , PackedInst::packIntrin(kIntrin3Vandi64))        // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_and_f32          , PACK_AVX_SSE(Vandps     , Andps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(v_and_f64          , PACK_AVX_SSE(Vandpd     , Andpd     , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(v_nand_i32         , PackedInst::packIntrin(kIntrin3Vnandi32))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_nand_i64         , PackedInst::packIntrin(kIntrin3Vnandi64))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_nand_f32         , PACK_AVX_SSE(Vandnps    , Andnps    , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(v_nand_f64         , PACK_AVX_SSE(Vandnpd    , Andnpd    , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(v_or_i32           , PackedInst::packIntrin(kIntrin3Vori32))         // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_or_i64           , PackedInst::packIntrin(kIntrin3Vori64))         // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_or_f32           , PACK_AVX_SSE(Vorps      , Orps      , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(v_or_f64           , PACK_AVX_SSE(Vorpd      , Orpd      , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(v_xor_i32          , PackedInst::packIntrin(kIntrin3Vxori32))        // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_xor_i64          , PackedInst::packIntrin(kIntrin3Vxori64))        // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_xor_f32          , PACK_AVX_SSE(Vxorps     , Xorps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(v_xor_f64          , PACK_AVX_SSE(Vxorpd     , Xorpd     , Z))       // AVX  | SSE2
-
-  V_EMIT_VVI_VI(v_sll_i16          , PACK_AVX_SSE(Vpsllw     , Psllw     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(v_sll_i32          , PACK_AVX_SSE(Vpslld     , Pslld     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(v_sll_i64          , PACK_AVX_SSE(Vpsllq     , Psllq     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(v_srl_i16          , PACK_AVX_SSE(Vpsrlw     , Psrlw     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(v_srl_i32          , PACK_AVX_SSE(Vpsrld     , Psrld     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(v_srl_i64          , PACK_AVX_SSE(Vpsrlq     , Psrlq     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(v_sra_i16          , PACK_AVX_SSE(Vpsraw     , Psraw     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(v_sra_i32          , PACK_AVX_SSE(Vpsrad     , Psrad     , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(v_sllb_u128        , PACK_AVX_SSE(Vpslldq    , Pslldq    , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VI(v_srlb_u128        , PACK_AVX_SSE(Vpsrldq    , Psrldq    , Z))       // AVX2 | SSE2
-
-  V_EMIT_VVV_VV(v_shuffle_i8       , PACK_AVX_SSE(Vpshufb    , Pshufb    , Z))       // AVX2 | SSSE3
-  V_EMIT_VVVI_VVI(v_shuffle_f32    , PACK_AVX_SSE(Vshufps    , Shufps    , Z))       // AVX  | SSE
-  V_EMIT_VVVI_VVI(v_shuffle_f64    , PACK_AVX_SSE(Vshufpd    , Shufpd    , Z))       // AVX  | SSE2
-
-  V_EMIT_VVI_VVI(v_swizzle_lo_u16  , PACK_AVX_SSE(Vpshuflw   , Pshuflw   , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VVI(v_swizzle_hi_u16  , PACK_AVX_SSE(Vpshufhw   , Pshufhw   , Z))       // AVX2 | SSE2
-  V_EMIT_VVI_VVI(v_swizzle_u32     , PACK_AVX_SSE(Vpshufd    , Pshufd    , Z))       // AVX2 | SSE2
-
-  V_EMIT_VVVI_VVI(v_shuffle_u32    , PACK_AVX_SSE(Vshufps    , Shufps    , Z))       // AVX  | SSE
-  V_EMIT_VVVI_VVI(v_shuffle_u64    , PACK_AVX_SSE(Vshufpd    , Shufpd    , Z))       // AVX  | SSE2
-
-  V_EMIT_VVV_VV(v_interleave_lo_u8 , PACK_AVX_SSE(Vpunpcklbw , Punpcklbw , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_hi_u8 , PACK_AVX_SSE(Vpunpckhbw , Punpckhbw , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_lo_u16, PACK_AVX_SSE(Vpunpcklwd , Punpcklwd , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_hi_u16, PACK_AVX_SSE(Vpunpckhwd , Punpckhwd , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_lo_u32, PACK_AVX_SSE(Vpunpckldq , Punpckldq , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_hi_u32, PACK_AVX_SSE(Vpunpckhdq , Punpckhdq , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_lo_u64, PACK_AVX_SSE(Vpunpcklqdq, Punpcklqdq, Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_hi_u64, PACK_AVX_SSE(Vpunpckhqdq, Punpckhqdq, Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_interleave_lo_f32, PACK_AVX_SSE(Vunpcklps  , Unpcklps  , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(v_interleave_lo_f64, PACK_AVX_SSE(Vunpcklpd  , Unpcklpd  , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(v_interleave_hi_f32, PACK_AVX_SSE(Vunpckhps  , Unpckhps  , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(v_interleave_hi_f64, PACK_AVX_SSE(Vunpckhpd  , Unpckhpd  , Z))       // AVX  | SSE2
-
-  V_EMIT_VVV_VV(v_packs_i32_i16    , PACK_AVX_SSE(Vpackssdw  , Packssdw  , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_packs_i32_u16_   , PACK_AVX_SSE(Vpackusdw  , Packusdw  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(v_packs_i16_i8     , PACK_AVX_SSE(Vpacksswb  , Packsswb  , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_packs_i16_u8     , PACK_AVX_SSE(Vpackuswb  , Packuswb  , Z))       // AVX2 | SSE2
-
-  V_EMIT_VVV_VV(v_avg_u8           , PACK_AVX_SSE(Vpavgb     , Pavgb     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_avg_u16          , PACK_AVX_SSE(Vpavgw     , Pavgw     , Z))       // AVX2 | SSE2
-
-  V_EMIT_VVV_VV(v_sign_i8_         , PACK_AVX_SSE(Vpsignb    , Psignb    , Z))       // AVX2 | SSSE3
-  V_EMIT_VVV_VV(v_sign_i16_        , PACK_AVX_SSE(Vpsignw    , Psignw    , Z))       // AVX2 | SSSE3
-  V_EMIT_VVV_VV(v_sign_i32_        , PACK_AVX_SSE(Vpsignd    , Psignd    , Z))       // AVX2 | SSSE3
-
-  V_EMIT_VVV_VV(v_add_i8           , PACK_AVX_SSE(Vpaddb     , Paddb     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_add_i16          , PACK_AVX_SSE(Vpaddw     , Paddw     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_add_i32          , PACK_AVX_SSE(Vpaddd     , Paddd     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_add_i64          , PACK_AVX_SSE(Vpaddq     , Paddq     , Z))       // AVX2 | SSE2
-
-  V_EMIT_VVV_VV(v_sub_i8           , PACK_AVX_SSE(Vpsubb     , Psubb     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_sub_i16          , PACK_AVX_SSE(Vpsubw     , Psubw     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_sub_i32          , PACK_AVX_SSE(Vpsubd     , Psubd     , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_sub_i64          , PACK_AVX_SSE(Vpsubq     , Psubq     , Z))       // AVX2 | SSE2
-
-  V_EMIT_VVV_VV(v_adds_i8          , PACK_AVX_SSE(Vpaddsb    , Paddsb    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_adds_u8          , PACK_AVX_SSE(Vpaddusb   , Paddusb   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_adds_i16         , PACK_AVX_SSE(Vpaddsw    , Paddsw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_adds_u16         , PACK_AVX_SSE(Vpaddusw   , Paddusw   , Z))       // AVX2 | SSE2
-
-  V_EMIT_VVV_VV(v_subs_i8          , PACK_AVX_SSE(Vpsubsb    , Psubsb    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_subs_i16         , PACK_AVX_SSE(Vpsubsw    , Psubsw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_subs_u8          , PACK_AVX_SSE(Vpsubusb   , Psubusb   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_subs_u16         , PACK_AVX_SSE(Vpsubusw   , Psubusw   , Z))       // AVX2 | SSE2
-
-  V_EMIT_VVV_VV(v_mul_i16          , PACK_AVX_SSE(Vpmullw    , Pmullw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_mul_u16          , PACK_AVX_SSE(Vpmullw    , Pmullw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_mulh_i16         , PACK_AVX_SSE(Vpmulhw    , Pmulhw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_mulh_u16         , PACK_AVX_SSE(Vpmulhuw   , Pmulhuw   , Z))       // AVX2 | SSE2
-
-  V_EMIT_VVV_VV(v_mul_i32_         , PACK_AVX_SSE(Vpmulld    , Pmulld    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(v_mul_u32_         , PACK_AVX_SSE(Vpmulld    , Pmulld    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(v_mulx_ll_i32_     , PACK_AVX_SSE(Vpmuldq    , Pmuldq    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(v_mulx_ll_u32_     , PACK_AVX_SSE(Vpmuludq   , Pmuludq   , Z))       // AVX2 | SSE2
-
-  V_EMIT_VVVi_VVi(v_mulx_ll_u64_   , PACK_AVX_SSE(Vpclmulqdq , Pclmulqdq , Z), 0x00) // AVX2 | PCLMULQDQ
-  V_EMIT_VVVi_VVi(v_mulx_hl_u64_   , PACK_AVX_SSE(Vpclmulqdq , Pclmulqdq , Z), 0x01) // AVX2 | PCLMULQDQ
-  V_EMIT_VVVi_VVi(v_mulx_lh_u64_   , PACK_AVX_SSE(Vpclmulqdq , Pclmulqdq , Z), 0x10) // AVX2 | PCLMULQDQ
-  V_EMIT_VVVi_VVi(v_mulx_hh_u64_   , PACK_AVX_SSE(Vpclmulqdq , Pclmulqdq , Z), 0x11) // AVX2 | PCLMULQDQ
-
-  V_EMIT_VVV_VV(v_min_i8_          , PACK_AVX_SSE(Vpminsb    , Pminsb    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(v_min_u8           , PACK_AVX_SSE(Vpminub    , Pminub    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_min_i16          , PACK_AVX_SSE(Vpminsw    , Pminsw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_min_i32_         , PACK_AVX_SSE(Vpminsd    , Pminsd    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(v_min_u32_         , PACK_AVX_SSE(Vpminud    , Pminud    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(v_max_i8_          , PACK_AVX_SSE(Vpmaxsb    , Pmaxsb    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(v_max_u8           , PACK_AVX_SSE(Vpmaxub    , Pmaxub    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_max_i16          , PACK_AVX_SSE(Vpmaxsw    , Pmaxsw    , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_max_i32_         , PACK_AVX_SSE(Vpmaxsd    , Pmaxsd    , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVV_VV(v_max_u32_         , PACK_AVX_SSE(Vpmaxud    , Pmaxud    , Z))       // AVX2 | SSE4.1
-
-  V_EMIT_VVV_VV(v_cmp_eq_i8        , PACK_AVX_SSE(Vpcmpeqb   , Pcmpeqb   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_cmp_eq_i16       , PACK_AVX_SSE(Vpcmpeqw   , Pcmpeqw   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_cmp_eq_i32       , PACK_AVX_SSE(Vpcmpeqd   , Pcmpeqd   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_cmp_eq_i64_      , PACK_AVX_SSE(Vpcmpeqq   , Pcmpeqq   , Z))       // AVX2 | SSE4.1
-
-  V_EMIT_VVV_VV(v_cmp_gt_i8        , PACK_AVX_SSE(Vpcmpgtb   , Pcmpgtb   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_cmp_gt_i16       , PACK_AVX_SSE(Vpcmpgtw   , Pcmpgtw   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_cmp_gt_i32       , PACK_AVX_SSE(Vpcmpgtd   , Pcmpgtd   , Z))       // AVX2 | SSE2
-  V_EMIT_VVV_VV(v_cmp_gt_i64_      , PACK_AVX_SSE(Vpcmpgtq   , Pcmpgtq   , Z))       // AVX2 | SSE4.2
-
-  V_EMIT_VVVV_VVV(v_blendv_u8_     , PACK_AVX_SSE(Vpblendvb  , Pblendvb  , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVVI_VVI(v_blend_u16_     , PACK_AVX_SSE(Vpblendw   , Pblendw   , Z))       // AVX2 | SSE4.1
-
-  V_EMIT_VVV_VV(v_hadd_i16_        , PACK_AVX_SSE(Vphaddw    , Phaddw    , Z))       // AVX2 | SSSE3
-  V_EMIT_VVV_VV(v_hadd_i32_        , PACK_AVX_SSE(Vphaddd    , Phaddd    , Z))       // AVX2 | SSSE3
-
-  V_EMIT_VVV_VV(v_hsub_i16_        , PACK_AVX_SSE(Vphsubw    , Phsubw    , Z))       // AVX2 | SSSE3
-  V_EMIT_VVV_VV(v_hsub_i32_        , PACK_AVX_SSE(Vphsubd    , Phsubd    , Z))       // AVX2 | SSSE3
-
-  V_EMIT_VVV_VV(v_hadds_i16_       , PACK_AVX_SSE(Vphaddsw   , Phaddsw   , Z))       // AVX2 | SSSE3
-  V_EMIT_VVV_VV(v_hsubs_i16_       , PACK_AVX_SSE(Vphsubsw   , Phsubsw   , Z))       // AVX2 | SSSE3
-
-  // Integer SIMD - Miscellaneous.
-
-  V_EMIT_VV_VV(v_test_             , PACK_AVX_SSE(Vptest     , Ptest     , Z))       // AVX2 | SSE4_1
-
-  // Integer SIMD - Consult X86 manual before using these...
-
-  V_EMIT_VVV_VV(v_sad_u8           , PACK_AVX_SSE(Vpsadbw    , Psadbw    , Z))       // AVX2 | SSE2      [dst.u64[0..X] = SUM{0.7}(ABS(src1.u8[N] - src2.u8[N]))))]
-  V_EMIT_VVV_VV(v_mulrh_i16_       , PACK_AVX_SSE(Vpmulhrsw  , Pmulhrsw  , Z))       // AVX2 | SSSE3     [dst.i16[0..X] = ((((src1.i16[0] * src2.i16[0])) >> 14)) + 1)) >> 1))]
-  V_EMIT_VVV_VV(v_madds_u8_i8_     , PACK_AVX_SSE(Vpmaddubsw , Pmaddubsw , Z))       // AVX2 | SSSE3     [dst.i16[0..X] = SAT(src1.u8[0] * src2.i8[0] + src1.u8[1] * src2.i8[1]))
-  V_EMIT_VVV_VV(v_madd_i16_i32     , PACK_AVX_SSE(Vpmaddwd   , Pmaddwd   , Z))       // AVX2 | SSE2      [dst.i32[0..X] = (src1.i16[0] * src2.i16[0] + src1.i16[1] * src2.i16[1]))
-  V_EMIT_VVVI_VVI(v_mpsad_u8_      , PACK_AVX_SSE(Vmpsadbw   , Mpsadbw   , Z))       // AVX2 | SSE4.1
-  V_EMIT_VVVI_VVI(v_alignr_u128    , PackedInst::packIntrin(kIntrin3iVpalignr))      // AVX2 | SSSE3
-  V_EMIT_VVVI_VVI(v_alignr_u128_   , PACK_AVX_SSE(Vpalignr   , Palignr   , Z))       // AVX2 | SSSE3
-  V_EMIT_VV_VV(v_hmin_pos_u16_     , PACK_AVX_SSE(Vphminposuw, Phminposuw, Z))       // AVX2 | SSE4_1
-
-  // Floating Point - Core.
-
-  V_EMIT_VV_VV(vmovaps             , PACK_AVX_SSE(Vmovaps    , Movaps    , Z))       // AVX  | SSE
-  V_EMIT_VV_VV(vmovapd             , PACK_AVX_SSE(Vmovapd    , Movapd    , Z))       // AVX  | SSE2
-  V_EMIT_VV_VV(vmovups             , PACK_AVX_SSE(Vmovups    , Movups    , Z))       // AVX  | SSE
-  V_EMIT_VV_VV(vmovupd             , PACK_AVX_SSE(Vmovupd    , Movupd    , Z))       // AVX  | SSE2
-
-  V_EMIT_VVV_VV(vmovlps2x          , PACK_AVX_SSE(Vmovlps    , Movlps    , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(vmovhps2x          , PACK_AVX_SSE(Vmovhps    , Movhps    , X))       // AVX  | SSE
-
-  V_EMIT_VVV_VV(vmovlhps2x         , PACK_AVX_SSE(Vmovlhps   , Movlhps   , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(vmovhlps2x         , PACK_AVX_SSE(Vmovhlps   , Movhlps   , X))       // AVX  | SSE
-
-  V_EMIT_VVV_VV(vmovlpd            , PACK_AVX_SSE(Vmovlpd    , Movlpd    , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(vmovhpd            , PACK_AVX_SSE(Vmovhpd    , Movhpd    , X))       // AVX  | SSE
-
-  V_EMIT_VV_VV(vmovduplps_         , PACK_AVX_SSE(Vmovsldup  , Movsldup  , Z))       // AVX  | SSE3
-  V_EMIT_VV_VV(vmovduphps_         , PACK_AVX_SSE(Vmovshdup  , Movshdup  , Z))       // AVX  | SSE3
-
-  V_EMIT_VV_VV(vmov_dupl_2xf32_    , PACK_AVX_SSE(Vmovddup   , Movddup   , Z))       // AVX  | SSE3
-
-  V_EMIT_VV_VV(v_move_mask_f32     , PACK_AVX_SSE(Vmovmskps  , Movmskps  , Z))       // AVX  | SSE
-  V_EMIT_VV_VV(v_move_mask_f64     , PACK_AVX_SSE(Vmovmskpd  , Movmskpd  , Z))       // AVX  | SSE2
-
-  V_EMIT_VVI_VVI(v_insert_f32_     , PACK_AVX_SSE(Vinsertps  , Insertps  , X))       // AVX  | SSE4_1
-  V_EMIT_VVI_VVI(v_extract_f32_    , PACK_AVX_SSE(Vextractps , Extractps , X))       // AVX  | SSE4_1
-
-  V_EMIT_VVV_VV(s_add_f32          , PACK_AVX_SSE(Vaddss     , Addss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(s_add_f64          , PACK_AVX_SSE(Vaddsd     , Addsd     , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(s_sub_f32          , PACK_AVX_SSE(Vsubss     , Subss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(s_sub_f64          , PACK_AVX_SSE(Vsubsd     , Subsd     , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(s_mul_f32          , PACK_AVX_SSE(Vmulss     , Mulss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(s_mul_f64          , PACK_AVX_SSE(Vmulsd     , Mulsd     , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(s_div_f32          , PACK_AVX_SSE(Vdivss     , Divss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(s_div_f64          , PACK_AVX_SSE(Vdivsd     , Divsd     , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(s_min_f32          , PACK_AVX_SSE(Vminss     , Minss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(s_min_f64          , PACK_AVX_SSE(Vminsd     , Minsd     , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(s_max_f32          , PACK_AVX_SSE(Vmaxss     , Maxss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(s_max_f64          , PACK_AVX_SSE(Vmaxsd     , Maxsd     , X))       // AVX  | SSE2
-
-  V_EMIT_VVV_VV(s_rcp_f32          , PACK_AVX_SSE(Vrcpss     , Rcpss     , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(s_rsqrt_f32        , PACK_AVX_SSE(Vrsqrtss   , Rsqrtss   , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(s_sqrt_f32         , PACK_AVX_SSE(Vsqrtss    , Sqrtss    , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(s_sqrt_f64         , PACK_AVX_SSE(Vsqrtsd    , Sqrtsd    , X))       // AVX  | SSE2
-
-  V_EMIT_VVVI_VVI_ENUM(s_round_f32_, PACK_AVX_SSE(Vroundss   , Roundss   , X), x86::RoundImm) // AVX  | SSE4.1
-  V_EMIT_VVVI_VVI_ENUM(s_round_f64_, PACK_AVX_SSE(Vroundsd   , Roundsd   , X), x86::RoundImm) // AVX  | SSE4.1
-  V_EMIT_VVVI_VVI_ENUM(s_cmp_f32   , PACK_AVX_SSE(Vcmpss     , Cmpss     , X), x86::VCmpImm)  // AVX  | SSE
-  V_EMIT_VVVI_VVI_ENUM(s_cmp_f64   , PACK_AVX_SSE(Vcmpsd     , Cmpsd     , X), x86::VCmpImm)  // AVX  | SSE2
-
-  V_EMIT_VVV_VV(v_add_f32          , PACK_AVX_SSE(Vaddps     , Addps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(v_add_f64          , PACK_AVX_SSE(Vaddpd     , Addpd     , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(v_sub_f32          , PACK_AVX_SSE(Vsubps     , Subps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(v_sub_f64          , PACK_AVX_SSE(Vsubpd     , Subpd     , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(v_mul_f32          , PACK_AVX_SSE(Vmulps     , Mulps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(v_mul_f64          , PACK_AVX_SSE(Vmulpd     , Mulpd     , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(v_div_f32          , PACK_AVX_SSE(Vdivps     , Divps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(v_div_f64          , PACK_AVX_SSE(Vdivpd     , Divpd     , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(v_min_f32          , PACK_AVX_SSE(Vminps     , Minps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(v_min_f64          , PACK_AVX_SSE(Vminpd     , Minpd     , Z))       // AVX  | SSE2
-  V_EMIT_VVV_VV(v_max_f32          , PACK_AVX_SSE(Vmaxps     , Maxps     , Z))       // AVX  | SSE
-  V_EMIT_VVV_VV(v_max_f64          , PACK_AVX_SSE(Vmaxpd     , Maxpd     , Z))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(v_rcp_f32           , PACK_AVX_SSE(Vrcpps     , Rcpps     , Z))       // AVX  | SSE
-  V_EMIT_VV_VV(v_rsqrt_f32         , PACK_AVX_SSE(Vrsqrtps   , Rsqrtps   , Z))       // AVX  | SSE
-  V_EMIT_VV_VV(v_sqrt_f32          , PACK_AVX_SSE(Vsqrtps    , Sqrtps    , Z))       // AVX  | SSE
-  V_EMIT_VV_VV(v_sqrt_f64          , PACK_AVX_SSE(Vsqrtpd    , Sqrtpd    , Z))       // AVX  | SSE2
-
-  V_EMIT_VVI_VVI_ENUM(v_round_f32_ , PACK_AVX_SSE(Vroundps   , Roundps   , Z), x86::RoundImm) // AVX  | SSE4.1
-  V_EMIT_VVI_VVI_ENUM(v_round_f64_ , PACK_AVX_SSE(Vroundpd   , Roundpd   , Z), x86::RoundImm) // AVX  | SSE4.1
-  V_EMIT_VVVI_VVI_ENUM(v_cmp_f32   , PACK_AVX_SSE(Vcmpps     , Cmpps     , Z), x86::VCmpImm)  // AVX  | SSE
-  V_EMIT_VVVI_VVI_ENUM(v_cmp_f64   , PACK_AVX_SSE(Vcmppd     , Cmppd     , Z), x86::VCmpImm)  // AVX  | SSE2
-
-  V_EMIT_VVV_VV(v_addsub_f32_      , PACK_AVX_SSE(Vaddsubps  , Addsubps  , Z))       // AVX  | SSE3
-  V_EMIT_VVV_VV(v_addsub_f64_      , PACK_AVX_SSE(Vaddsubpd  , Addsubpd  , Z))       // AVX  | SSE3
-  V_EMIT_VVVI_VVI(v_dot_f32_       , PACK_AVX_SSE(Vdpps      , Dpps      , Z))       // AVX  | SSE4.1
-  V_EMIT_VVVI_VVI(v_dot_f64_       , PACK_AVX_SSE(Vdppd      , Dppd      , Z))       // AVX  | SSE4.1
-
-  V_EMIT_VVVV_VVV(v_blendv_f32_    , PACK_AVX_SSE(Vblendvps  , Blendvps  , Z))       // AVX  | SSE4.1
-  V_EMIT_VVVV_VVV(v_blendv_f64_    , PACK_AVX_SSE(Vblendvpd  , Blendvpd  , Z))       // AVX  | SSE4.1
-  V_EMIT_VVVI_VVI(v_blend_f32_     , PACK_AVX_SSE(Vblendps   , Blendps   , Z))       // AVX  | SSE4.1
-  V_EMIT_VVVI_VVI(v_blend_f64_     , PACK_AVX_SSE(Vblendpd   , Blendpd   , Z))       // AVX  | SSE4.1
-
-  V_EMIT_VVV_VV(s_cvt_f32_f64      , PACK_AVX_SSE(Vcvtss2sd  , Cvtss2sd  , X))       // AVX  | SSE2
-  V_EMIT_VVV_VV(s_cvt_f64_f32      , PACK_AVX_SSE(Vcvtsd2ss  , Cvtsd2ss  , X))       // AVX  | SSE2
-
-  V_EMIT_VVV_VV(s_cvt_int_f32      , PACK_AVX_SSE(Vcvtsi2ss  , Cvtsi2ss  , X))       // AVX  | SSE
-  V_EMIT_VVV_VV(s_cvt_int_f64      , PACK_AVX_SSE(Vcvtsi2sd  , Cvtsi2sd  , X))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(s_cvt_f32_int       , PACK_AVX_SSE(Vcvtss2si  , Cvtss2si  , X))       // AVX  | SSE
-  V_EMIT_VV_VV(s_cvt_f64_int       , PACK_AVX_SSE(Vcvtsd2si  , Cvtsd2si  , X))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(s_cvtt_f32_int      , PACK_AVX_SSE(Vcvttss2si , Cvttss2si , X))       // AVX  | SSE
-  V_EMIT_VV_VV(s_cvtt_f64_int      , PACK_AVX_SSE(Vcvttsd2si , Cvttsd2si , X))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(v_cvt_f32_f64       , PACK_AVX_SSE(Vcvtps2pd  , Cvtps2pd  , Z))       // AVX  | SSE2
-  V_EMIT_VV_VV(v_cvt_f64_f32       , PACK_AVX_SSE(Vcvtpd2ps  , Cvtpd2ps  , Z))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(v_cvt_i32_f32       , PACK_AVX_SSE(Vcvtdq2ps  , Cvtdq2ps  , Z))       // AVX  | SSE2
-  V_EMIT_VV_VV(v_cvt_i32_f64       , PACK_AVX_SSE(Vcvtdq2pd  , Cvtdq2pd  , Z))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(v_cvt_f32_i32       , PACK_AVX_SSE(Vcvtps2dq  , Cvtps2dq  , Z))       // AVX  | SSE2
-  V_EMIT_VV_VV(v_cvt_f64_i32       , PACK_AVX_SSE(Vcvtpd2dq  , Cvtpd2dq  , Z))       // AVX  | SSE2
-
-  V_EMIT_VV_VV(v_cvtt_f32_i32      , PACK_AVX_SSE(Vcvttps2dq , Cvttps2dq , Z))       // AVX  | SSE2
-  V_EMIT_VV_VV(v_cvtt_f64_i32      , PACK_AVX_SSE(Vcvttpd2dq , Cvttpd2dq , Z))       // AVX  | SSE2
-
-  V_EMIT_VVV_VV(v_hadd_f32_        , PACK_AVX_SSE(Vhaddps    , Haddps    , Z))       // AVX  | SSE3
-  V_EMIT_VVV_VV(v_hadd_f64_        , PACK_AVX_SSE(Vhaddpd    , Haddpd    , Z))       // AVX  | SSE3
-  V_EMIT_VVV_VV(v_hsub_f32_        , PACK_AVX_SSE(Vhsubps    , Hsubps    , Z))       // AVX  | SSE3
-  V_EMIT_VVV_VV(v_hsub_f64_        , PACK_AVX_SSE(Vhsubpd    , Hsubpd    , Z))       // AVX  | SSE3
-
-  // Floating Point - Miscellaneous.
-
-  V_EMIT_VV_VV(s_comi_f32          , PACK_AVX_SSE(Vcomiss    , Comiss    , X))       // AVX  | SSE
-  V_EMIT_VV_VV(s_comi_f64          , PACK_AVX_SSE(Vcomisd    , Comisd    , X))       // AVX  | SSE2
-  V_EMIT_VV_VV(s_ucomi_f32         , PACK_AVX_SSE(Vucomiss   , Ucomiss   , X))       // AVX  | SSE
-  V_EMIT_VV_VV(s_ucomi_f64         , PACK_AVX_SSE(Vucomisd   , Ucomisd   , X))       // AVX  | SSE2
-
-  // AVX2 and AVX-512.
-
-  V_EMIT_VVI_VVI(v_extract_i128    , PACK_AVX_SSE(Vextracti128 , None    , Y))       // AVX2
-  V_EMIT_VVI_VVI(v_extract_i256    , PACK_AVX_SSE(Vextracti32x8, None    , Z))       // AVX2
-  V_EMIT_VVI_VVI(v_perm_i64        , PACK_AVX_SSE(Vpermq       , None    , Z))       // AVX2 | AVX512
-
-  V_EMIT_VVVI(v_insert_i256        , PACK_AVX_SSE(Vinserti32x8 , None    , Z))       // AVX2
-  V_EMIT_VVVI(v_insert_i128        , PACK_AVX_SSE(Vinserti128  , None    , Y))       // AVX512
-
-  // FMA
-
-  // 132 = Dst = Dst * Src2 + Src1
-  // 213 = Dst = Dst * Src1 + Src2
-  // 231 = Dst = Dst + Src1 * Src1
-
-  V_EMIT_VVV_VV(s_fmadd_132_f32_   , PACK_AVX_SSE(Vfmadd132ss  , None    , X))       // FMA
-  V_EMIT_VVV_VV(s_fmadd_213_f32_   , PACK_AVX_SSE(Vfmadd213ss  , None    , X))       // FMA
-  V_EMIT_VVV_VV(s_fmadd_231_f32_   , PACK_AVX_SSE(Vfmadd231ss  , None    , X))       // FMA
-  V_EMIT_VVV_VV(s_fmsub_132_f32_   , PACK_AVX_SSE(Vfmsub132ss  , None    , X))       // FMA
-  V_EMIT_VVV_VV(s_fmsub_213_f32_   , PACK_AVX_SSE(Vfmsub213ss  , None    , X))       // FMA
-  V_EMIT_VVV_VV(s_fmsub_231_f32_   , PACK_AVX_SSE(Vfmsub231ss  , None    , X))       // FMA
-
-  V_EMIT_VVV_VV(v_fmadd_132_f32_   , PACK_AVX_SSE(Vfmadd132ps  , None    , Z))       // FMA
-  V_EMIT_VVV_VV(v_fmadd_213_f32_   , PACK_AVX_SSE(Vfmadd213ps  , None    , Z))       // FMA
-  V_EMIT_VVV_VV(v_fmadd_231_f32_   , PACK_AVX_SSE(Vfmadd231ps  , None    , Z))       // FMA
-  V_EMIT_VVV_VV(v_fmsub_132_f32_   , PACK_AVX_SSE(Vfmsub132ps  , None    , Z))       // FMA
-  V_EMIT_VVV_VV(v_fmsub_213_f32_   , PACK_AVX_SSE(Vfmsub213ps  , None    , Z))       // FMA
-  V_EMIT_VVV_VV(v_fmsub_231_f32_   , PACK_AVX_SSE(Vfmsub231ps  , None    , Z))       // FMA
-
-  V_EMIT_VVV_VV(s_fnmadd_132_f32_  , PACK_AVX_SSE(Vfnmadd132ss , None    , X))       // FMA
-  V_EMIT_VVV_VV(s_fnmadd_213_f32_  , PACK_AVX_SSE(Vfnmadd213ss , None    , X))       // FMA
-  V_EMIT_VVV_VV(s_fnmadd_231_f32_  , PACK_AVX_SSE(Vfnmadd231ss , None    , X))       // FMA
-  V_EMIT_VVV_VV(s_fnmsub_132_f32_  , PACK_AVX_SSE(Vfnmsub132ss , None    , X))       // FMA
-  V_EMIT_VVV_VV(s_fnmsub_213_f32_  , PACK_AVX_SSE(Vfnmsub213ss , None    , X))       // FMA
-  V_EMIT_VVV_VV(s_fnmsub_231_f32_  , PACK_AVX_SSE(Vfnmsub231ss , None    , X))       // FMA
-
-  V_EMIT_VVV_VV(v_fnmadd_132_f32_  , PACK_AVX_SSE(Vfnmadd132ps , None    , Z))       // FMA
-  V_EMIT_VVV_VV(v_fnmadd_213_f32_  , PACK_AVX_SSE(Vfnmadd213ps , None    , Z))       // FMA
-  V_EMIT_VVV_VV(v_fnmadd_231_f32_  , PACK_AVX_SSE(Vfnmadd231ps , None    , Z))       // FMA
-  V_EMIT_VVV_VV(v_fnmsub_132_f32_  , PACK_AVX_SSE(Vfnmsub132ps , None    , Z))       // FMA
-  V_EMIT_VVV_VV(v_fnmsub_213_f32_  , PACK_AVX_SSE(Vfnmsub213ps , None    , Z))       // FMA
-  V_EMIT_VVV_VV(v_fnmsub_231_f32_  , PACK_AVX_SSE(Vfnmsub231ps , None    , Z))       // FMA
-
-
-  // Initialization.
-
-  inline void v_zero_i(const Operand_& dst) noexcept { v_emit_vvv_vv(PACK_AVX_SSE(Vpxor , Pxor , Z), dst, dst, dst); }
-  inline void v_zero_f(const Operand_& dst) noexcept { v_emit_vvv_vv(PACK_AVX_SSE(Vxorps, Xorps, Z), dst, dst, dst); }
-  inline void v_zero_d(const Operand_& dst) noexcept { v_emit_vvv_vv(PACK_AVX_SSE(Vxorpd, Xorpd, Z), dst, dst, dst); }
-
-  inline void v_zero_i(const OpArray& dst) noexcept { for (uint32_t i = 0; i < dst.size(); i++) v_zero_i(dst[i]); }
-  inline void v_zero_f(const OpArray& dst) noexcept { for (uint32_t i = 0; i < dst.size(); i++) v_zero_f(dst[i]); }
-  inline void v_zero_d(const OpArray& dst) noexcept { for (uint32_t i = 0; i < dst.size(); i++) v_zero_d(dst[i]); }
-
-  BL_NOINLINE void v_ones_i(const Operand_& dst) noexcept {
-    /*
-    if (hasAVX512())
-      cc->vpternlogd(dst, dst, dst, 0xFFu);
-    */
-    v_emit_vvv_vv(PACK_AVX_SSE(Vpcmpeqb, Pcmpeqb, Z), dst, dst, dst);
-  }
-
-  // Conversion.
-
-  inline void s_mov_i32(const Vec& dst, const Gp& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovd, Movd, X), dst, src); }
-  inline void s_mov_i64(const Vec& dst, const Gp& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovq, Movq, X), dst, src); }
-
-  inline void s_mov_i32(const Gp& dst, const Vec& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovd, Movd, X), dst, src); }
-  inline void s_mov_i64(const Gp& dst, const Vec& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovq, Movq, X), dst, src); }
+  void emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& src_) noexcept;
+  void emit_2v(OpcodeVV op, const OpArray& dst_, const Operand_& src_) noexcept;
+  void emit_2v(OpcodeVV op, const OpArray& dst_, const OpArray& src_) noexcept;
+
+  void emit_2vi(OpcodeVVI op, const Operand_& dst_, const Operand_& src_, uint32_t imm) noexcept;
+  void emit_2vi(OpcodeVVI op, const OpArray& dst_, const Operand_& src_, uint32_t imm) noexcept;
+  void emit_2vi(OpcodeVVI op, const OpArray& dst_, const OpArray& src_, uint32_t imm) noexcept;
+
+  void emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& src_, uint32_t idx = 0) noexcept;
+
+  void emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32_t alignment, uint32_t idx = 0) noexcept;
+  void emit_vm(OpcodeVM op, const OpArray& dst_, const Mem& src_, uint32_t alignment, uint32_t idx = 0) noexcept;
+
+  void emit_mv(OpcodeMV op, const Mem& dst_, const Vec& src_, uint32_t alignment, uint32_t idx = 0) noexcept;
+  void emit_mv(OpcodeMV op, const Mem& dst_, const OpArray& src_, uint32_t alignment, uint32_t idx = 0) noexcept;
+
+  void emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_) noexcept;
+  void emit_3v(OpcodeVVV op, const OpArray& dst_, const Operand_& src1_, const OpArray& src2_) noexcept;
+  void emit_3v(OpcodeVVV op, const OpArray& dst_, const OpArray& src1_, const Operand_& src2_) noexcept;
+  void emit_3v(OpcodeVVV op, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_) noexcept;
+
+  void emit_3vi(OpcodeVVVI op, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_, uint32_t imm) noexcept;
+  void emit_3vi(OpcodeVVVI op, const OpArray& dst_, const Operand_& src1_, const OpArray& src2_, uint32_t imm) noexcept;
+  void emit_3vi(OpcodeVVVI op, const OpArray& dst_, const OpArray& src1_, const Operand_& src2_, uint32_t imm) noexcept;
+  void emit_3vi(OpcodeVVVI op, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_, uint32_t imm) noexcept;
+
+  void emit_4v(OpcodeVVVV op, const Operand_& dst_, const Operand_& src1_, const Operand_& src2_, const Operand_& src3_) noexcept;
+  void emit_4v(OpcodeVVVV op, const OpArray& dst_, const Operand_& src1_, const Operand_& src2_, const OpArray& src3_) noexcept;
+  void emit_4v(OpcodeVVVV op, const OpArray& dst_, const Operand_& src1_, const OpArray& src2_, const Operand& src3_) noexcept;
+  void emit_4v(OpcodeVVVV op, const OpArray& dst_, const Operand_& src1_, const OpArray& src2_, const OpArray& src3_) noexcept;
+  void emit_4v(OpcodeVVVV op, const OpArray& dst_, const OpArray& src1_, const Operand_& src2_, const Operand& src3_) noexcept;
+  void emit_4v(OpcodeVVVV op, const OpArray& dst_, const OpArray& src1_, const Operand_& src2_, const OpArray& src3_) noexcept;
+  void emit_4v(OpcodeVVVV op, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_, const Operand& src3_) noexcept;
+  void emit_4v(OpcodeVVVV op, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_, const OpArray& src3_) noexcept;
+
+  #define DEFINE_OP_2V(name, op) \
+    template<typename Dst, typename Src> \
+    BL_INLINE void name(const Dst& dst, const Src& src) noexcept { emit_2v(op, dst, src); }
+
+  #define DEFINE_OP_2VI(name, op) \
+    template<typename Dst, typename Src> \
+    BL_INLINE void name(const Dst& dst, const Src& src, uint32_t imm) noexcept { emit_2vi(op, dst, src, imm); }
+
+  #define DEFINE_OP_2VI_WRAP(name, imm_wrapper, op) \
+    template<typename Dst, typename Src> \
+    BL_INLINE void name(const Dst& dst, const Src& src, const imm_wrapper& imm) noexcept { emit_2vi(op, dst, src, imm.value); }
+
+  #define DEFINE_OP_VM_U(name, op, alignment) \
+    BL_INLINE void name(const Vec& dst, const Mem& src) noexcept { emit_vm(op, dst, src, alignment); } \
+    BL_INLINE void name(const VecArray& dst, const Mem& src) noexcept { emit_vm(op, dst, src, alignment); }
+
+  #define DEFINE_OP_VM_A(name, op, default_alignment) \
+    BL_INLINE void name(const Vec& dst, const Mem& src, Alignment alignment = Alignment{default_alignment}) noexcept { emit_vm(op, dst, src, alignment._v); } \
+    BL_INLINE void name(const VecArray& dst, const Mem& src, Alignment alignment = Alignment{default_alignment}) noexcept { emit_vm(op, dst, src, alignment._v); }
+
+  #define DEFINE_OP_VM_I(name, op, default_alignment) \
+    BL_INLINE void name(const Vec& dst, const Mem& src, uint32_t idx) noexcept { emit_vm(op, dst, src, default_alignment, idx); } \
+    BL_INLINE void name(const VecArray& dst, const Mem& src, uint32_t idx) noexcept { emit_vm(op, dst, src, default_alignment, idx); }
+
+  #define DEFINE_OP_MV_U(name, op, alignment) \
+    BL_INLINE void name(const Mem& dst, const Vec& src) noexcept { emit_mv(op, dst, src, alignment); } \
+    BL_INLINE void name(const Mem& dst, const VecArray& src) noexcept { emit_mv(op, dst, src, alignment); }
+
+  #define DEFINE_OP_MV_A(name, op, default_alignment) \
+    BL_INLINE void name(const Mem& dst, const Vec& src, Alignment alignment = Alignment{default_alignment}) noexcept { emit_mv(op, dst, src, alignment._v); } \
+    BL_INLINE void name(const Mem& dst, const VecArray& src, Alignment alignment = Alignment{default_alignment}) noexcept { emit_mv(op, dst, src, alignment._v); }
+
+  #define DEFINE_OP_MV_I(name, op, default_alignment) \
+    BL_INLINE void name(const Mem& dst, const Vec& src, uint32_t idx) noexcept { emit_mv(op, dst, src, default_alignment, idx); } \
+    BL_INLINE void name(const Mem& dst, const VecArray& src, uint32_t idx) noexcept { emit_mv(op, dst, src, default_alignment, idx); }
+
+  #define DEFINE_OP_3V(name, op) \
+    template<typename Dst, typename Src1, typename Src2> \
+    BL_INLINE void name(const Dst& dst, const Src1& src1, const Src2& src2) noexcept { emit_3v(op, dst, src1, src2); }
+
+  #define DEFINE_OP_3VI(name, op) \
+    template<typename Dst, typename Src1, typename Src2> \
+    BL_INLINE void name(const Dst& dst, const Src1& src1, const Src2& src2, uint32_t imm) noexcept { emit_3vi(op, dst, src1, src2, imm); }
+
+  #define DEFINE_OP_3VI_WRAP(name, imm_wrapper, op) \
+    template<typename Dst, typename Src1, typename Src2> \
+    BL_INLINE void name(const Dst& dst, const Src1& src1, const Src2& src2, const imm_wrapper& imm) noexcept { emit_3vi(op, dst, src1, src2, imm.value); }
+
+  #define DEFINE_OP_4V(name, op) \
+    template<typename Dst, typename Src1, typename Src2, typename Src3> \
+    BL_INLINE void name(const Dst& dst, const Src1& src1, const Src2& src2, const Src3& src3) noexcept { emit_4v(op, dst, src1, src2, src3); }
+
+  BL_INLINE void s_mov(const Gp& dst, const Vec& src) noexcept { emit_2vs(OpcodeVR::kMov, dst, src); }
+  BL_INLINE void s_mov(const Vec& dst, const Gp& src) noexcept { emit_2vs(OpcodeVR::kMov, dst, src); }
+
+  BL_INLINE void s_mov_u32(const Gp& dst, const Vec& src) noexcept { emit_2vs(OpcodeVR::kMovU32, dst, src); }
+  BL_INLINE void s_mov_u32(const Vec& dst, const Gp& src) noexcept { emit_2vs(OpcodeVR::kMovU32, dst, src); }
+
+  BL_INLINE void s_mov_u64(const Gp& dst, const Vec& src) noexcept { emit_2vs(OpcodeVR::kMovU64, dst, src); }
+  BL_INLINE void s_mov_u64(const Vec& dst, const Gp& src) noexcept { emit_2vs(OpcodeVR::kMovU64, dst, src); }
+
+  BL_INLINE void s_insert_u8(const Vec& dst, const Gp& src, uint32_t idx) noexcept { emit_2vs(OpcodeVR::kInsertU8, dst, src, idx); }
+  BL_INLINE void s_insert_u16(const Vec& dst, const Gp& src, uint32_t idx) noexcept { emit_2vs(OpcodeVR::kInsertU16, dst, src, idx); }
+  BL_INLINE void s_insert_u32(const Vec& dst, const Gp& src, uint32_t idx) noexcept { emit_2vs(OpcodeVR::kInsertU32, dst, src, idx); }
+  BL_INLINE void s_insert_u64(const Vec& dst, const Gp& src, uint32_t idx) noexcept { emit_2vs(OpcodeVR::kInsertU64, dst, src, idx); }
+
+  BL_INLINE void s_extract_u8(const Gp& dst, const Vec& src, uint32_t idx) noexcept { emit_2vs(OpcodeVR::kExtractU8, dst, src, idx); }
+  BL_INLINE void s_extract_u16(const Gp& dst, const Vec& src, uint32_t idx) noexcept { emit_2vs(OpcodeVR::kExtractU16, dst, src, idx); }
+  BL_INLINE void s_extract_u32(const Gp& dst, const Vec& src, uint32_t idx) noexcept { emit_2vs(OpcodeVR::kExtractU32, dst, src, idx); }
+  BL_INLINE void s_extract_u64(const Gp& dst, const Vec& src, uint32_t idx) noexcept { emit_2vs(OpcodeVR::kExtractU64, dst, src, idx); }
+
+  BL_INLINE void s_cvt_int_to_f32(const Vec& dst, const Gp& src) noexcept { emit_2vs(OpcodeVR::kCvtIntToF32, dst, src); }
+  BL_INLINE void s_cvt_int_to_f32(const Vec& dst, const Mem& src) noexcept { emit_2vs(OpcodeVR::kCvtIntToF32, dst, src); }
+  BL_INLINE void s_cvt_int_to_f64(const Vec& dst, const Gp& src) noexcept { emit_2vs(OpcodeVR::kCvtIntToF64, dst, src); }
+  BL_INLINE void s_cvt_int_to_f64(const Vec& dst, const Mem& src) noexcept { emit_2vs(OpcodeVR::kCvtIntToF64, dst, src); }
+
+  BL_INLINE void s_cvt_trunc_f32_to_int(const Gp& dst, const Vec& src) noexcept { emit_2vs(OpcodeVR::kCvtTruncF32ToInt, dst, src); }
+  BL_INLINE void s_cvt_trunc_f32_to_int(const Gp& dst, const Mem& src) noexcept { emit_2vs(OpcodeVR::kCvtTruncF32ToInt, dst, src); }
+  BL_INLINE void s_cvt_round_f32_to_int(const Gp& dst, const Vec& src) noexcept { emit_2vs(OpcodeVR::kCvtRoundF32ToInt, dst, src); }
+  BL_INLINE void s_cvt_round_f32_to_int(const Gp& dst, const Mem& src) noexcept { emit_2vs(OpcodeVR::kCvtRoundF32ToInt, dst, src); }
+  BL_INLINE void s_cvt_trunc_f64_to_int(const Gp& dst, const Vec& src) noexcept { emit_2vs(OpcodeVR::kCvtTruncF64ToInt, dst, src); }
+  BL_INLINE void s_cvt_trunc_f64_to_int(const Gp& dst, const Mem& src) noexcept { emit_2vs(OpcodeVR::kCvtTruncF64ToInt, dst, src); }
+  BL_INLINE void s_cvt_round_f64_to_int(const Gp& dst, const Vec& src) noexcept { emit_2vs(OpcodeVR::kCvtRoundF64ToInt, dst, src); }
+  BL_INLINE void s_cvt_round_f64_to_int(const Gp& dst, const Mem& src) noexcept { emit_2vs(OpcodeVR::kCvtRoundF64ToInt, dst, src); }
+
+  DEFINE_OP_2V(v_mov, OpcodeVV::kMov)
+  DEFINE_OP_2V(v_mov_u64, OpcodeVV::kMovU64)
+  DEFINE_OP_2V(v_broadcast_u8z, OpcodeVV::kBroadcastU8Z)
+  DEFINE_OP_2V(v_broadcast_u16z, OpcodeVV::kBroadcastU16Z)
+  DEFINE_OP_2V(v_broadcast_u8, OpcodeVV::kBroadcastU8)
+  DEFINE_OP_2V(v_broadcast_u16, OpcodeVV::kBroadcastU16)
+  DEFINE_OP_2V(v_broadcast_u32, OpcodeVV::kBroadcastU32)
+  DEFINE_OP_2V(v_broadcast_u64, OpcodeVV::kBroadcastU64)
+  DEFINE_OP_2V(v_broadcast_f32, OpcodeVV::kBroadcastF32)
+  DEFINE_OP_2V(v_broadcast_f64, OpcodeVV::kBroadcastF64)
+  DEFINE_OP_2V(v_broadcast_v128_u32, OpcodeVV::kBroadcastV128_U32)
+  DEFINE_OP_2V(v_broadcast_v128_u64, OpcodeVV::kBroadcastV128_U64)
+  DEFINE_OP_2V(v_broadcast_v128_f32, OpcodeVV::kBroadcastV128_F32)
+  DEFINE_OP_2V(v_broadcast_v128_f64, OpcodeVV::kBroadcastV128_F64)
+  DEFINE_OP_2V(v_broadcast_v256_u32, OpcodeVV::kBroadcastV256_U32)
+  DEFINE_OP_2V(v_broadcast_v256_u64, OpcodeVV::kBroadcastV256_U64)
+  DEFINE_OP_2V(v_broadcast_v256_f32, OpcodeVV::kBroadcastV256_F32)
+  DEFINE_OP_2V(v_broadcast_v256_f64, OpcodeVV::kBroadcastV256_F64)
+  DEFINE_OP_2V(v_abs_i8, OpcodeVV::kAbsI8)
+  DEFINE_OP_2V(v_abs_i16, OpcodeVV::kAbsI16)
+  DEFINE_OP_2V(v_abs_i32, OpcodeVV::kAbsI32)
+  DEFINE_OP_2V(v_abs_i64, OpcodeVV::kAbsI64)
+  DEFINE_OP_2V(v_not_u32, OpcodeVV::kNotU32)
+  DEFINE_OP_2V(v_not_u64, OpcodeVV::kNotU64)
+  DEFINE_OP_2V(v_cvt_i8_lo_to_i16, OpcodeVV::kCvtI8LoToI16)
+  DEFINE_OP_2V(v_cvt_i8_hi_to_i16, OpcodeVV::kCvtI8HiToI16)
+  DEFINE_OP_2V(v_cvt_u8_lo_to_u16, OpcodeVV::kCvtU8LoToU16)
+  DEFINE_OP_2V(v_cvt_u8_hi_to_u16, OpcodeVV::kCvtU8HiToU16)
+  DEFINE_OP_2V(v_cvt_i8_to_i32, OpcodeVV::kCvtI8ToI32)
+  DEFINE_OP_2V(v_cvt_u8_to_u32, OpcodeVV::kCvtU8ToU32)
+  DEFINE_OP_2V(v_cvt_i16_lo_to_i32, OpcodeVV::kCvtI16LoToI32)
+  DEFINE_OP_2V(v_cvt_i16_hi_to_i32, OpcodeVV::kCvtI16HiToI32)
+  DEFINE_OP_2V(v_cvt_u16_lo_to_u32, OpcodeVV::kCvtU16LoToU32)
+  DEFINE_OP_2V(v_cvt_u16_hi_to_u32, OpcodeVV::kCvtU16HiToU32)
+  DEFINE_OP_2V(v_cvt_i32_lo_to_i64, OpcodeVV::kCvtI32LoToI64)
+  DEFINE_OP_2V(v_cvt_i32_hi_to_i64, OpcodeVV::kCvtI32HiToI64)
+  DEFINE_OP_2V(v_cvt_u32_lo_to_u64, OpcodeVV::kCvtU32LoToU64)
+  DEFINE_OP_2V(v_cvt_u32_hi_to_u64, OpcodeVV::kCvtU32HiToU64)
+  DEFINE_OP_2V(v_abs_f32, OpcodeVV::kAbsF32)
+  DEFINE_OP_2V(v_abs_f64, OpcodeVV::kAbsF64)
+  DEFINE_OP_2V(v_neg_f32, OpcodeVV::kNegF32)
+  DEFINE_OP_2V(v_neg_f64, OpcodeVV::kNegF64)
+  DEFINE_OP_2V(v_not_f32, OpcodeVV::kNotF32)
+  DEFINE_OP_2V(v_not_f64, OpcodeVV::kNotF64)
+  DEFINE_OP_2V(s_trunc_f32, OpcodeVV::kTruncF32S)
+  DEFINE_OP_2V(s_trunc_f64, OpcodeVV::kTruncF64S)
+  DEFINE_OP_2V(v_trunc_f32, OpcodeVV::kTruncF32)
+  DEFINE_OP_2V(v_trunc_f64, OpcodeVV::kTruncF64)
+  DEFINE_OP_2V(s_floor_f32, OpcodeVV::kFloorF32S)
+  DEFINE_OP_2V(s_floor_f64, OpcodeVV::kFloorF64S)
+  DEFINE_OP_2V(v_floor_f32, OpcodeVV::kFloorF32)
+  DEFINE_OP_2V(v_floor_f64, OpcodeVV::kFloorF64)
+  DEFINE_OP_2V(s_ceil_f32, OpcodeVV::kCeilF32S)
+  DEFINE_OP_2V(s_ceil_f64, OpcodeVV::kCeilF64S)
+  DEFINE_OP_2V(v_ceil_f32, OpcodeVV::kCeilF32)
+  DEFINE_OP_2V(v_ceil_f64, OpcodeVV::kCeilF64)
+  DEFINE_OP_2V(s_round_f32, OpcodeVV::kRoundF32S)
+  DEFINE_OP_2V(s_round_f64, OpcodeVV::kRoundF64S)
+  DEFINE_OP_2V(v_round_f32, OpcodeVV::kRoundF32)
+  DEFINE_OP_2V(v_round_f64, OpcodeVV::kRoundF64)
+  DEFINE_OP_2V(v_rcp_f32, OpcodeVV::kRcpF32)
+  DEFINE_OP_2V(v_rcp_f64, OpcodeVV::kRcpF64)
+  DEFINE_OP_2V(s_sqrt_f32, OpcodeVV::kSqrtF32S)
+  DEFINE_OP_2V(s_sqrt_f64, OpcodeVV::kSqrtF64S)
+  DEFINE_OP_2V(v_sqrt_f32, OpcodeVV::kSqrtF32)
+  DEFINE_OP_2V(v_sqrt_f64, OpcodeVV::kSqrtF64)
+  DEFINE_OP_2V(s_cvt_f32_to_f64, OpcodeVV::kCvtF32ToF64S)
+  DEFINE_OP_2V(s_cvt_f64_to_f32, OpcodeVV::kCvtF64ToF32S)
+  DEFINE_OP_2V(v_cvt_i32_to_f32, OpcodeVV::kCvtI32ToF32)
+  DEFINE_OP_2V(v_cvt_f32_lo_to_f64, OpcodeVV::kCvtF32LoToF64)
+  DEFINE_OP_2V(v_cvt_f32_hi_to_f64, OpcodeVV::kCvtF32HiToF64)
+  DEFINE_OP_2V(v_cvt_f64_to_f32_lo, OpcodeVV::kCvtF64ToF32Lo)
+  DEFINE_OP_2V(v_cvt_f64_to_f32_hi, OpcodeVV::kCvtF64ToF32Hi)
+  DEFINE_OP_2V(v_cvt_i32_lo_to_f64, OpcodeVV::kCvtI32LoToF64)
+  DEFINE_OP_2V(v_cvt_i32_hi_to_f64, OpcodeVV::kCvtI32HiToF64)
+  DEFINE_OP_2V(v_cvt_trunc_f32_to_i32, OpcodeVV::kCvtTruncF32ToI32)
+  DEFINE_OP_2V(v_cvt_trunc_f64_to_i32_lo, OpcodeVV::kCvtTruncF64ToI32Lo)
+  DEFINE_OP_2V(v_cvt_trunc_f64_to_i32_hi, OpcodeVV::kCvtTruncF64ToI32Hi)
+  DEFINE_OP_2V(v_cvt_round_f32_to_i32, OpcodeVV::kCvtRoundF32ToI32)
+  DEFINE_OP_2V(v_cvt_round_f64_to_i32_lo, OpcodeVV::kCvtRoundF64ToI32Lo)
+  DEFINE_OP_2V(v_cvt_round_f64_to_i32_hi, OpcodeVV::kCvtRoundF64ToI32Hi)
+
+  DEFINE_OP_2VI(v_slli_i16, OpcodeVVI::kSllU16)
+  DEFINE_OP_2VI(v_slli_u16, OpcodeVVI::kSllU16)
+  DEFINE_OP_2VI(v_slli_i32, OpcodeVVI::kSllU32)
+  DEFINE_OP_2VI(v_slli_u32, OpcodeVVI::kSllU32)
+  DEFINE_OP_2VI(v_slli_i64, OpcodeVVI::kSllU64)
+  DEFINE_OP_2VI(v_slli_u64, OpcodeVVI::kSllU64)
+  DEFINE_OP_2VI(v_srli_u16, OpcodeVVI::kSrlU16)
+  DEFINE_OP_2VI(v_srli_u32, OpcodeVVI::kSrlU32)
+  DEFINE_OP_2VI(v_srli_u64, OpcodeVVI::kSrlU64)
+  DEFINE_OP_2VI(v_srai_i16, OpcodeVVI::kSraI16)
+  DEFINE_OP_2VI(v_srai_i32, OpcodeVVI::kSraI32)
+  DEFINE_OP_2VI(v_srai_i64, OpcodeVVI::kSraI64)
+  DEFINE_OP_2VI(v_sllb_u128, OpcodeVVI::kSllbU128)
+  DEFINE_OP_2VI(v_srlb_u128, OpcodeVVI::kSrlbU128)
+  DEFINE_OP_2VI_WRAP(v_swizzle_u16x4, Swizzle4, OpcodeVVI::kSwizzleU16x4)
+  DEFINE_OP_2VI_WRAP(v_swizzle_lo_u16x4, Swizzle4, OpcodeVVI::kSwizzleLoU16x4)
+  DEFINE_OP_2VI_WRAP(v_swizzle_hi_u16x4, Swizzle4, OpcodeVVI::kSwizzleHiU16x4)
+  DEFINE_OP_2VI_WRAP(v_swizzle_u32x4, Swizzle4, OpcodeVVI::kSwizzleU32x4)
+  DEFINE_OP_2VI_WRAP(v_swizzle_u64x2, Swizzle2, OpcodeVVI::kSwizzleU64x2)
+  DEFINE_OP_2VI_WRAP(v_swizzle_f32x4, Swizzle4, OpcodeVVI::kSwizzleF32x4)
+  DEFINE_OP_2VI_WRAP(v_swizzle_f64x2, Swizzle2, OpcodeVVI::kSwizzleF64x2)
+  DEFINE_OP_2VI_WRAP(v_swizzle_u64x4, Swizzle4, OpcodeVVI::kSwizzleU64x4)
+  DEFINE_OP_2VI_WRAP(v_swizzle_f64x4, Swizzle4, OpcodeVVI::kSwizzleF64x4)
+  DEFINE_OP_2VI(v_extract_v128, OpcodeVVI::kExtractV128_I32)
+  DEFINE_OP_2VI(v_extract_v128_i32, OpcodeVVI::kExtractV128_I32)
+  DEFINE_OP_2VI(v_extract_v128_i64, OpcodeVVI::kExtractV128_I64)
+  DEFINE_OP_2VI(v_extract_v128_f32, OpcodeVVI::kExtractV128_F32)
+  DEFINE_OP_2VI(v_extract_v128_f64, OpcodeVVI::kExtractV128_F64)
+  DEFINE_OP_2VI(v_extract_v256, OpcodeVVI::kExtractV256_I32)
+  DEFINE_OP_2VI(v_extract_v256_i32, OpcodeVVI::kExtractV256_I32)
+  DEFINE_OP_2VI(v_extract_v256_i64, OpcodeVVI::kExtractV256_I64)
+  DEFINE_OP_2VI(v_extract_v256_f32, OpcodeVVI::kExtractV256_F32)
+  DEFINE_OP_2VI(v_extract_v256_f64, OpcodeVVI::kExtractV256_F64)
+
+#if defined(BL_JIT_ARCH_A64)
+  DEFINE_OP_2VI(v_srli_rnd_u16, OpcodeVVI::kSrlRndU16)
+  DEFINE_OP_2VI(v_srli_rnd_u32, OpcodeVVI::kSrlRndU32)
+  DEFINE_OP_2VI(v_srli_rnd_u64, OpcodeVVI::kSrlRndU64)
+  DEFINE_OP_2VI(v_srli_acc_u16, OpcodeVVI::kSrlAccU16)
+  DEFINE_OP_2VI(v_srli_acc_u32, OpcodeVVI::kSrlAccU32)
+  DEFINE_OP_2VI(v_srli_acc_u64, OpcodeVVI::kSrlAccU64)
+  DEFINE_OP_2VI(v_srli_rnd_acc_u16, OpcodeVVI::kSrlRndAccU16)
+  DEFINE_OP_2VI(v_srli_rnd_acc_u32, OpcodeVVI::kSrlRndAccU32)
+  DEFINE_OP_2VI(v_srli_rnd_acc_u64, OpcodeVVI::kSrlRndAccU64)
+
+  DEFINE_OP_2VI(v_srlni_lo_u16, OpcodeVVI::kSrlnLoU16)
+  DEFINE_OP_2VI(v_srlni_hi_u16, OpcodeVVI::kSrlnHiU16)
+  DEFINE_OP_2VI(v_srlni_lo_u32, OpcodeVVI::kSrlnLoU32)
+  DEFINE_OP_2VI(v_srlni_hi_u32, OpcodeVVI::kSrlnHiU32)
+  DEFINE_OP_2VI(v_srlni_lo_u64, OpcodeVVI::kSrlnLoU64)
+  DEFINE_OP_2VI(v_srlni_hi_u64, OpcodeVVI::kSrlnHiU64)
+
+  DEFINE_OP_2VI(v_srlni_rnd_lo_u16, OpcodeVVI::kSrlnRndLoU16)
+  DEFINE_OP_2VI(v_srlni_rnd_hi_u16, OpcodeVVI::kSrlnRndHiU16)
+  DEFINE_OP_2VI(v_srlni_rnd_lo_u32, OpcodeVVI::kSrlnRndLoU32)
+  DEFINE_OP_2VI(v_srlni_rnd_hi_u32, OpcodeVVI::kSrlnRndHiU32)
+  DEFINE_OP_2VI(v_srlni_rnd_lo_u64, OpcodeVVI::kSrlnRndLoU64)
+  DEFINE_OP_2VI(v_srlni_rnd_hi_u64, OpcodeVVI::kSrlnRndHiU64)
+#endif // BL_JIT_ARCH_A64
+
+  DEFINE_OP_VM_U(v_load8, OpcodeVM::kLoad8, 1)
+  DEFINE_OP_VM_U(v_loadu16, OpcodeVM::kLoad16_U16, 1)
+  DEFINE_OP_VM_A(v_loada16, OpcodeVM::kLoad16_U16, 2)
+  DEFINE_OP_VM_U(v_loadu32, OpcodeVM::kLoad32_U32, 1)
+  DEFINE_OP_VM_A(v_loada32, OpcodeVM::kLoad32_U32, 4)
+  DEFINE_OP_VM_U(v_loadu32_u32, OpcodeVM::kLoad32_U32, 1)
+  DEFINE_OP_VM_A(v_loada32_u32, OpcodeVM::kLoad32_U32, 4)
+  DEFINE_OP_VM_U(v_loadu32_f32, OpcodeVM::kLoad32_F32, 1)
+  DEFINE_OP_VM_A(v_loada32_f32, OpcodeVM::kLoad32_F32, 4)
+  DEFINE_OP_VM_U(v_loadu64, OpcodeVM::kLoad64_U32, 1)
+  DEFINE_OP_VM_A(v_loada64, OpcodeVM::kLoad64_U32, 8)
+  DEFINE_OP_VM_U(v_loadu64_u32, OpcodeVM::kLoad64_U32, 1)
+  DEFINE_OP_VM_A(v_loada64_u32, OpcodeVM::kLoad64_U32, 8)
+  DEFINE_OP_VM_U(v_loadu64_u64, OpcodeVM::kLoad64_U64, 1)
+  DEFINE_OP_VM_A(v_loada64_u64, OpcodeVM::kLoad64_U64, 8)
+  DEFINE_OP_VM_U(v_loadu64_f32, OpcodeVM::kLoad64_F32, 1)
+  DEFINE_OP_VM_A(v_loada64_f32, OpcodeVM::kLoad64_F32, 8)
+  DEFINE_OP_VM_U(v_loadu64_f64, OpcodeVM::kLoad64_F64, 1)
+  DEFINE_OP_VM_A(v_loada64_f64, OpcodeVM::kLoad64_F64, 8)
+  DEFINE_OP_VM_U(v_loadu128, OpcodeVM::kLoad128_U32, 1)
+  DEFINE_OP_VM_A(v_loada128, OpcodeVM::kLoad128_U32, 16)
+  DEFINE_OP_VM_U(v_loadu128_u32, OpcodeVM::kLoad128_U32, 1)
+  DEFINE_OP_VM_A(v_loada128_u32, OpcodeVM::kLoad128_U32, 16)
+  DEFINE_OP_VM_U(v_loadu128_u64, OpcodeVM::kLoad128_U64, 1)
+  DEFINE_OP_VM_A(v_loada128_u64, OpcodeVM::kLoad128_U64, 16)
+  DEFINE_OP_VM_U(v_loadu128_f32, OpcodeVM::kLoad128_F32, 1)
+  DEFINE_OP_VM_A(v_loada128_f32, OpcodeVM::kLoad128_F32, 16)
+  DEFINE_OP_VM_U(v_loadu128_f64, OpcodeVM::kLoad128_F64, 1)
+  DEFINE_OP_VM_A(v_loada128_f64, OpcodeVM::kLoad128_F64, 16)
+  DEFINE_OP_VM_U(v_loadu256, OpcodeVM::kLoad256_U32, 1)
+  DEFINE_OP_VM_A(v_loada256, OpcodeVM::kLoad256_U32, 32)
+  DEFINE_OP_VM_U(v_loadu256_u32, OpcodeVM::kLoad256_U32, 1)
+  DEFINE_OP_VM_A(v_loada256_u32, OpcodeVM::kLoad256_U32, 32)
+  DEFINE_OP_VM_U(v_loadu256_u64, OpcodeVM::kLoad256_U64, 1)
+  DEFINE_OP_VM_A(v_loada256_u64, OpcodeVM::kLoad256_U64, 32)
+  DEFINE_OP_VM_U(v_loadu256_f32, OpcodeVM::kLoad256_F32, 1)
+  DEFINE_OP_VM_A(v_loada256_f32, OpcodeVM::kLoad256_F32, 32)
+  DEFINE_OP_VM_U(v_loadu256_f64, OpcodeVM::kLoad256_F64, 1)
+  DEFINE_OP_VM_A(v_loada256_f64, OpcodeVM::kLoad256_F64, 32)
+  DEFINE_OP_VM_U(v_loadu512, OpcodeVM::kLoad512_U32, 1)
+  DEFINE_OP_VM_A(v_loada512, OpcodeVM::kLoad512_U32, 64)
+  DEFINE_OP_VM_U(v_loadu512_u32, OpcodeVM::kLoad512_U32, 1)
+  DEFINE_OP_VM_A(v_loada512_u32, OpcodeVM::kLoad512_U32, 64)
+  DEFINE_OP_VM_U(v_loadu512_u64, OpcodeVM::kLoad512_U64, 1)
+  DEFINE_OP_VM_A(v_loada512_u64, OpcodeVM::kLoad512_U64, 64)
+  DEFINE_OP_VM_U(v_loadu512_f32, OpcodeVM::kLoad512_F32, 1)
+  DEFINE_OP_VM_A(v_loada512_f32, OpcodeVM::kLoad512_F32, 64)
+  DEFINE_OP_VM_U(v_loadu512_f64, OpcodeVM::kLoad512_F64, 1)
+  DEFINE_OP_VM_A(v_loada512_f64, OpcodeVM::kLoad512_F64, 64)
+  DEFINE_OP_VM_U(v_loaduvec, OpcodeVM::kLoadN_U32, 1)
+  DEFINE_OP_VM_A(v_loadavec, OpcodeVM::kLoadN_U32, 0)
+  DEFINE_OP_VM_U(v_loaduvec_u32, OpcodeVM::kLoadN_U32, 1)
+  DEFINE_OP_VM_A(v_loadavec_u32, OpcodeVM::kLoadN_U32, 0)
+  DEFINE_OP_VM_U(v_loaduvec_u64, OpcodeVM::kLoadN_U64, 1)
+  DEFINE_OP_VM_A(v_loadavec_u64, OpcodeVM::kLoadN_U64, 0)
+  DEFINE_OP_VM_U(v_loaduvec_f32, OpcodeVM::kLoadN_F32, 1)
+  DEFINE_OP_VM_A(v_loadavec_f32, OpcodeVM::kLoadN_F32, 0)
+  DEFINE_OP_VM_U(v_loaduvec_f64, OpcodeVM::kLoadN_F64, 1)
+  DEFINE_OP_VM_A(v_loadavec_f64, OpcodeVM::kLoadN_F64, 0)
+
+  DEFINE_OP_VM_A(v_loadu16_u8_to_u64, OpcodeVM::kLoadCvt16_U8ToU64, 1)
+  DEFINE_OP_VM_A(v_loada16_u8_to_u64, OpcodeVM::kLoadCvt16_U8ToU64, 2)
+  DEFINE_OP_VM_A(v_loadu32_u8_to_u64, OpcodeVM::kLoadCvt32_U8ToU64, 1)
+  DEFINE_OP_VM_A(v_loada32_u8_to_u64, OpcodeVM::kLoadCvt32_U8ToU64, 2)
+  DEFINE_OP_VM_A(v_loadu64_u8_to_u64, OpcodeVM::kLoadCvt64_U8ToU64, 1)
+  DEFINE_OP_VM_A(v_loada64_u8_to_u64, OpcodeVM::kLoadCvt64_U8ToU64, 2)
+
+  DEFINE_OP_VM_A(v_loadu32_i8_to_i16, OpcodeVM::kLoadCvt32_I8ToI16, 1)
+  DEFINE_OP_VM_A(v_loada32_i8_to_i16, OpcodeVM::kLoadCvt32_I8ToI16, 4)
+  DEFINE_OP_VM_A(v_loadu32_u8_to_u16, OpcodeVM::kLoadCvt32_U8ToU16, 1)
+  DEFINE_OP_VM_A(v_loada32_u8_to_u16, OpcodeVM::kLoadCvt32_U8ToU16, 4)
+  DEFINE_OP_VM_A(v_loadu32_i8_to_i32, OpcodeVM::kLoadCvt32_I8ToI32, 1)
+  DEFINE_OP_VM_A(v_loada32_i8_to_i32, OpcodeVM::kLoadCvt32_I8ToI32, 4)
+  DEFINE_OP_VM_A(v_loadu32_u8_to_u32, OpcodeVM::kLoadCvt32_U8ToU32, 1)
+  DEFINE_OP_VM_A(v_loada32_u8_to_u32, OpcodeVM::kLoadCvt32_U8ToU32, 4)
+  DEFINE_OP_VM_A(v_loadu32_i16_to_i32, OpcodeVM::kLoadCvt32_I16ToI32, 1)
+  DEFINE_OP_VM_A(v_loada32_i16_to_i32, OpcodeVM::kLoadCvt32_I16ToI32, 4)
+  DEFINE_OP_VM_A(v_loadu32_u16_to_u32, OpcodeVM::kLoadCvt32_U16ToU32, 1)
+  DEFINE_OP_VM_A(v_loada32_u16_to_u32, OpcodeVM::kLoadCvt32_U16ToU32, 4)
+  DEFINE_OP_VM_A(v_loadu32_i32_to_i64, OpcodeVM::kLoadCvt32_I32ToI64, 1)
+  DEFINE_OP_VM_A(v_loada32_i32_to_i64, OpcodeVM::kLoadCvt32_I32ToI64, 4)
+  DEFINE_OP_VM_A(v_loadu32_u32_to_u64, OpcodeVM::kLoadCvt32_U32ToU64, 1)
+  DEFINE_OP_VM_A(v_loada32_u32_to_u64, OpcodeVM::kLoadCvt32_U32ToU64, 4)
+  DEFINE_OP_VM_A(v_loadu64_i8_to_i16, OpcodeVM::kLoadCvt64_I8ToI16, 1)
+  DEFINE_OP_VM_A(v_loada64_i8_to_i16, OpcodeVM::kLoadCvt64_I8ToI16, 8)
+  DEFINE_OP_VM_A(v_loadu64_u8_to_u16, OpcodeVM::kLoadCvt64_U8ToU16, 1)
+  DEFINE_OP_VM_A(v_loada64_u8_to_u16, OpcodeVM::kLoadCvt64_U8ToU16, 8)
+  DEFINE_OP_VM_A(v_loadu64_i8_to_i32, OpcodeVM::kLoadCvt64_I8ToI32, 1)
+  DEFINE_OP_VM_A(v_loada64_i8_to_i32, OpcodeVM::kLoadCvt64_I8ToI32, 8)
+  DEFINE_OP_VM_A(v_loadu64_u8_to_u32, OpcodeVM::kLoadCvt64_U8ToU32, 1)
+  DEFINE_OP_VM_A(v_loada64_u8_to_u32, OpcodeVM::kLoadCvt64_U8ToU32, 8)
+  DEFINE_OP_VM_A(v_loadu64_i16_to_i32, OpcodeVM::kLoadCvt64_I16ToI32, 1)
+  DEFINE_OP_VM_A(v_loada64_i16_to_i32, OpcodeVM::kLoadCvt64_I16ToI32, 8)
+  DEFINE_OP_VM_A(v_loadu64_u16_to_u32, OpcodeVM::kLoadCvt64_U16ToU32, 1)
+  DEFINE_OP_VM_A(v_loada64_u16_to_u32, OpcodeVM::kLoadCvt64_U16ToU32, 8)
+  DEFINE_OP_VM_A(v_loadu64_i32_to_i64, OpcodeVM::kLoadCvt64_I32ToI64, 1)
+  DEFINE_OP_VM_A(v_loada64_i32_to_i64, OpcodeVM::kLoadCvt64_I32ToI64, 8)
+  DEFINE_OP_VM_A(v_loadu64_u32_to_u64, OpcodeVM::kLoadCvt64_U32ToU64, 1)
+  DEFINE_OP_VM_A(v_loada64_u32_to_u64, OpcodeVM::kLoadCvt64_U32ToU64, 8)
+  DEFINE_OP_VM_A(v_loadu128_i8_to_i16, OpcodeVM::kLoadCvt128_I8ToI16, 1)
+  DEFINE_OP_VM_A(v_loada128_i8_to_i16, OpcodeVM::kLoadCvt128_I8ToI16, 16)
+  DEFINE_OP_VM_A(v_loadu128_u8_to_u16, OpcodeVM::kLoadCvt128_U8ToU16, 1)
+  DEFINE_OP_VM_A(v_loada128_u8_to_u16, OpcodeVM::kLoadCvt128_U8ToU16, 16)
+  DEFINE_OP_VM_A(v_loadu128_i8_to_i32, OpcodeVM::kLoadCvt128_I8ToI32, 1)
+  DEFINE_OP_VM_A(v_loada128_i8_to_i32, OpcodeVM::kLoadCvt128_I8ToI32, 16)
+  DEFINE_OP_VM_A(v_loadu128_u8_to_u32, OpcodeVM::kLoadCvt128_U8ToU32, 1)
+  DEFINE_OP_VM_A(v_loada128_u8_to_u32, OpcodeVM::kLoadCvt128_U8ToU32, 16)
+  DEFINE_OP_VM_A(v_loadu128_i16_to_i32, OpcodeVM::kLoadCvt128_I16ToI32, 1)
+  DEFINE_OP_VM_A(v_loada128_i16_to_i32, OpcodeVM::kLoadCvt128_I16ToI32, 16)
+  DEFINE_OP_VM_A(v_loadu128_u16_to_u32, OpcodeVM::kLoadCvt128_U16ToU32, 1)
+  DEFINE_OP_VM_A(v_loada128_u16_to_u32, OpcodeVM::kLoadCvt128_U16ToU32, 16)
+  DEFINE_OP_VM_A(v_loadu128_i32_to_i64, OpcodeVM::kLoadCvt128_I32ToI64, 1)
+  DEFINE_OP_VM_A(v_loada128_i32_to_i64, OpcodeVM::kLoadCvt128_I32ToI64, 16)
+  DEFINE_OP_VM_A(v_loadu128_u32_to_u64, OpcodeVM::kLoadCvt128_U32ToU64, 1)
+  DEFINE_OP_VM_A(v_loada128_u32_to_u64, OpcodeVM::kLoadCvt128_U32ToU64, 16)
+  DEFINE_OP_VM_A(v_loadu256_i8_to_i16, OpcodeVM::kLoadCvt256_I8ToI16, 1)
+  DEFINE_OP_VM_A(v_loada256_i8_to_i16, OpcodeVM::kLoadCvt256_I8ToI16, 32)
+  DEFINE_OP_VM_A(v_loadu256_u8_to_u16, OpcodeVM::kLoadCvt256_U8ToU16, 1)
+  DEFINE_OP_VM_A(v_loada256_u8_to_u16, OpcodeVM::kLoadCvt256_U8ToU16, 32)
+  DEFINE_OP_VM_A(v_loadu256_i16_to_i32, OpcodeVM::kLoadCvt256_I16ToI32, 1)
+  DEFINE_OP_VM_A(v_loada256_i16_to_i32, OpcodeVM::kLoadCvt256_I16ToI32, 32)
+  DEFINE_OP_VM_A(v_loadu256_u16_to_u32, OpcodeVM::kLoadCvt256_U16ToU32, 1)
+  DEFINE_OP_VM_A(v_loada256_u16_to_u32, OpcodeVM::kLoadCvt256_U16ToU32, 32)
+  DEFINE_OP_VM_A(v_loadu256_i32_to_i64, OpcodeVM::kLoadCvt256_I32ToI64, 1)
+  DEFINE_OP_VM_A(v_loada256_i32_to_i64, OpcodeVM::kLoadCvt256_I32ToI64, 32)
+  DEFINE_OP_VM_A(v_loadu256_u32_to_u64, OpcodeVM::kLoadCvt256_U32ToU64, 1)
+  DEFINE_OP_VM_A(v_loada256_u32_to_u64, OpcodeVM::kLoadCvt256_U32ToU64, 32)
+  DEFINE_OP_VM_A(v_loaduvec_i8_to_i16, OpcodeVM::kLoadCvtN_I8ToI16, 1)
+  DEFINE_OP_VM_A(v_loadavec_i8_to_i16, OpcodeVM::kLoadCvtN_I8ToI16, 0)
+  DEFINE_OP_VM_A(v_loaduvec_u8_to_u16, OpcodeVM::kLoadCvtN_U8ToU16, 1)
+  DEFINE_OP_VM_A(v_loadavec_u8_to_u16, OpcodeVM::kLoadCvtN_U8ToU16, 0)
+  DEFINE_OP_VM_A(v_loaduvec_i8_to_i32, OpcodeVM::kLoadCvtN_I8ToI32, 1)
+  DEFINE_OP_VM_A(v_loadavec_i8_to_i32, OpcodeVM::kLoadCvtN_I8ToI32, 0)
+  DEFINE_OP_VM_A(v_loaduvec_u8_to_u32, OpcodeVM::kLoadCvtN_U8ToU32, 1)
+  DEFINE_OP_VM_A(v_loadavec_u8_to_u32, OpcodeVM::kLoadCvtN_U8ToU32, 0)
+  DEFINE_OP_VM_A(v_loaduvec_u8_to_u64, OpcodeVM::kLoadCvtN_U8ToU64, 1)
+  DEFINE_OP_VM_A(v_loadavec_u8_to_u64, OpcodeVM::kLoadCvtN_U8ToU64, 0)
+  DEFINE_OP_VM_A(v_loaduvec_i16_to_i32, OpcodeVM::kLoadCvtN_I16ToI32, 1)
+  DEFINE_OP_VM_A(v_loadavec_i16_to_i32, OpcodeVM::kLoadCvtN_I16ToI32, 0)
+  DEFINE_OP_VM_A(v_loaduvec_u16_to_u32, OpcodeVM::kLoadCvtN_U16ToU32, 1)
+  DEFINE_OP_VM_A(v_loadavec_u16_to_u32, OpcodeVM::kLoadCvtN_U16ToU32, 0)
+  DEFINE_OP_VM_A(v_loaduvec_i32_to_i64, OpcodeVM::kLoadCvtN_I32ToI64, 1)
+  DEFINE_OP_VM_A(v_loadavec_i32_to_i64, OpcodeVM::kLoadCvtN_I32ToI64, 0)
+  DEFINE_OP_VM_A(v_loaduvec_u32_to_u64, OpcodeVM::kLoadCvtN_U32ToU64, 1)
+  DEFINE_OP_VM_A(v_loadavec_u32_to_u64, OpcodeVM::kLoadCvtN_U32ToU64, 0)
+
+  DEFINE_OP_VM_I(v_insert_u8, OpcodeVM::kLoadInsertU8, 1)
+  DEFINE_OP_VM_I(v_insert_u16, OpcodeVM::kLoadInsertU16, 1)
+  DEFINE_OP_VM_I(v_insert_u32, OpcodeVM::kLoadInsertU32, 1)
+  DEFINE_OP_VM_I(v_insert_u64, OpcodeVM::kLoadInsertU64, 1)
+  DEFINE_OP_VM_I(v_insert_f32, OpcodeVM::kLoadInsertF32, 1)
+  DEFINE_OP_VM_I(v_insert_f32x2, OpcodeVM::kLoadInsertF32x2, 1)
+  DEFINE_OP_VM_I(v_insert_f64, OpcodeVM::kLoadInsertF64, 1)
+
+  DEFINE_OP_MV_U(v_store8, OpcodeMV::kStore8, 1)
+  DEFINE_OP_MV_U(v_storeu16, OpcodeMV::kStore16_U16, 1)
+  DEFINE_OP_MV_A(v_storea16, OpcodeMV::kStore16_U16, 2)
+  DEFINE_OP_MV_U(v_storeu32, OpcodeMV::kStore32_U32, 1)
+  DEFINE_OP_MV_A(v_storea32, OpcodeMV::kStore32_U32, 4)
+  DEFINE_OP_MV_U(v_storeu32_u32, OpcodeMV::kStore32_U32, 1)
+  DEFINE_OP_MV_A(v_storea32_u32, OpcodeMV::kStore32_U32, 4)
+  DEFINE_OP_MV_U(v_storeu32_f32, OpcodeMV::kStore32_F32, 1)
+  DEFINE_OP_MV_A(v_storea32_f32, OpcodeMV::kStore32_F32, 4)
+  DEFINE_OP_MV_U(v_storeu64, OpcodeMV::kStore64_U32, 1)
+  DEFINE_OP_MV_A(v_storea64, OpcodeMV::kStore64_U32, 8)
+  DEFINE_OP_MV_U(v_storeu64_u32, OpcodeMV::kStore64_U32, 1)
+  DEFINE_OP_MV_A(v_storea64_u32, OpcodeMV::kStore64_U32, 8)
+  DEFINE_OP_MV_U(v_storeu64_u64, OpcodeMV::kStore64_U64, 1)
+  DEFINE_OP_MV_A(v_storea64_u64, OpcodeMV::kStore64_U64, 8)
+  DEFINE_OP_MV_U(v_storeu64_f32, OpcodeMV::kStore64_F32, 1)
+  DEFINE_OP_MV_A(v_storea64_f32, OpcodeMV::kStore64_F32, 8)
+  DEFINE_OP_MV_U(v_storeu64_f64, OpcodeMV::kStore64_F64, 1)
+  DEFINE_OP_MV_A(v_storea64_f64, OpcodeMV::kStore64_F64, 8)
+  DEFINE_OP_MV_U(v_storeu128, OpcodeMV::kStore128_U32, 1)
+  DEFINE_OP_MV_A(v_storea128, OpcodeMV::kStore128_U32, 16)
+  DEFINE_OP_MV_U(v_storeu128_u32, OpcodeMV::kStore128_U32, 1)
+  DEFINE_OP_MV_A(v_storea128_u32, OpcodeMV::kStore128_U32, 16)
+  DEFINE_OP_MV_U(v_storeu128_u64, OpcodeMV::kStore128_U64, 1)
+  DEFINE_OP_MV_A(v_storea128_u64, OpcodeMV::kStore128_U64, 16)
+  DEFINE_OP_MV_U(v_storeu128_f32, OpcodeMV::kStore128_F32, 1)
+  DEFINE_OP_MV_A(v_storea128_f32, OpcodeMV::kStore128_F32, 16)
+  DEFINE_OP_MV_U(v_storeu128_f64, OpcodeMV::kStore128_F64, 1)
+  DEFINE_OP_MV_A(v_storea128_f64, OpcodeMV::kStore128_F64, 16)
+  DEFINE_OP_MV_U(v_storeu256, OpcodeMV::kStore256_U32, 1)
+  DEFINE_OP_MV_A(v_storea256, OpcodeMV::kStore256_U32, 32)
+  DEFINE_OP_MV_U(v_storeu256_u32, OpcodeMV::kStore256_U32, 1)
+  DEFINE_OP_MV_A(v_storea256_u32, OpcodeMV::kStore256_U32, 32)
+  DEFINE_OP_MV_U(v_storeu256_u64, OpcodeMV::kStore256_U64, 1)
+  DEFINE_OP_MV_A(v_storea256_u64, OpcodeMV::kStore256_U64, 32)
+  DEFINE_OP_MV_U(v_storeu256_f32, OpcodeMV::kStore256_F32, 1)
+  DEFINE_OP_MV_A(v_storea256_f32, OpcodeMV::kStore256_F32, 32)
+  DEFINE_OP_MV_U(v_storeu256_f64, OpcodeMV::kStore256_F64, 1)
+  DEFINE_OP_MV_A(v_storea256_f64, OpcodeMV::kStore256_F64, 32)
+  DEFINE_OP_MV_U(v_storeu512, OpcodeMV::kStore512_U32, 1)
+  DEFINE_OP_MV_A(v_storea512, OpcodeMV::kStore512_U32, 64)
+  DEFINE_OP_MV_U(v_storeu512_u32, OpcodeMV::kStore512_U32, 1)
+  DEFINE_OP_MV_A(v_storea512_u32, OpcodeMV::kStore512_U32, 64)
+  DEFINE_OP_MV_U(v_storeu512_u64, OpcodeMV::kStore512_U64, 1)
+  DEFINE_OP_MV_A(v_storea512_u64, OpcodeMV::kStore512_U64, 64)
+  DEFINE_OP_MV_U(v_storeu512_f32, OpcodeMV::kStore512_F32, 1)
+  DEFINE_OP_MV_A(v_storea512_f32, OpcodeMV::kStore512_F32, 64)
+  DEFINE_OP_MV_U(v_storeu512_f64, OpcodeMV::kStore512_F64, 1)
+  DEFINE_OP_MV_A(v_storea512_f64, OpcodeMV::kStore512_F64, 64)
+  DEFINE_OP_MV_U(v_storeuvec, OpcodeMV::kStoreN_U32, 1)
+  DEFINE_OP_MV_A(v_storeavec, OpcodeMV::kStoreN_U32, 0)
+  DEFINE_OP_MV_U(v_storeuvec_u32, OpcodeMV::kStoreN_U32, 1)
+  DEFINE_OP_MV_A(v_storeavec_u32, OpcodeMV::kStoreN_U32, 0)
+  DEFINE_OP_MV_U(v_storeuvec_u64, OpcodeMV::kStoreN_U64, 1)
+  DEFINE_OP_MV_A(v_storeavec_u64, OpcodeMV::kStoreN_U64, 0)
+  DEFINE_OP_MV_U(v_storeuvec_f32, OpcodeMV::kStoreN_F32, 1)
+  DEFINE_OP_MV_A(v_storeavec_f32, OpcodeMV::kStoreN_F32, 0)
+  DEFINE_OP_MV_U(v_storeuvec_f64, OpcodeMV::kStoreN_F64, 1)
+  DEFINE_OP_MV_A(v_storeavec_f64, OpcodeMV::kStoreN_F64, 0)
+
+  DEFINE_OP_MV_I(v_store_extract_u16, OpcodeMV::kStoreExtractU16, 1)
+  DEFINE_OP_MV_I(v_store_extract_u32, OpcodeMV::kStoreExtractU32, 1)
+  DEFINE_OP_MV_I(v_store_extract_u64, OpcodeMV::kStoreExtractU64, 1)
+
+  DEFINE_OP_3V(v_and_i32, OpcodeVVV::kAndU32)
+  DEFINE_OP_3V(v_and_u32, OpcodeVVV::kAndU32)
+  DEFINE_OP_3V(v_and_i64, OpcodeVVV::kAndU64)
+  DEFINE_OP_3V(v_and_u64, OpcodeVVV::kAndU64)
+  DEFINE_OP_3V(v_or_i32, OpcodeVVV::kOrU32)
+  DEFINE_OP_3V(v_or_u32, OpcodeVVV::kOrU32)
+  DEFINE_OP_3V(v_or_i64, OpcodeVVV::kOrU64)
+  DEFINE_OP_3V(v_or_u64, OpcodeVVV::kOrU64)
+  DEFINE_OP_3V(v_xor_i32, OpcodeVVV::kXorU32)
+  DEFINE_OP_3V(v_xor_u32, OpcodeVVV::kXorU32)
+  DEFINE_OP_3V(v_xor_i64, OpcodeVVV::kXorU64)
+  DEFINE_OP_3V(v_xor_u64, OpcodeVVV::kXorU64)
+  DEFINE_OP_3V(v_andn_i32, OpcodeVVV::kAndnU32)
+  DEFINE_OP_3V(v_andn_u32, OpcodeVVV::kAndnU32)
+  DEFINE_OP_3V(v_andn_i64, OpcodeVVV::kAndnU64)
+  DEFINE_OP_3V(v_andn_u64, OpcodeVVV::kAndnU64)
+  DEFINE_OP_3V(v_bic_i32, OpcodeVVV::kBicU32)
+  DEFINE_OP_3V(v_bic_u32, OpcodeVVV::kBicU32)
+  DEFINE_OP_3V(v_bic_i64, OpcodeVVV::kBicU64)
+  DEFINE_OP_3V(v_bic_u64, OpcodeVVV::kBicU64)
+  DEFINE_OP_3V(v_avgr_u8, OpcodeVVV::kAvgrU8)
+  DEFINE_OP_3V(v_avgr_u16, OpcodeVVV::kAvgrU16)
+  DEFINE_OP_3V(v_add_i8, OpcodeVVV::kAddU8)
+  DEFINE_OP_3V(v_add_u8, OpcodeVVV::kAddU8)
+  DEFINE_OP_3V(v_add_i16, OpcodeVVV::kAddU16)
+  DEFINE_OP_3V(v_add_u16, OpcodeVVV::kAddU16)
+  DEFINE_OP_3V(v_add_i32, OpcodeVVV::kAddU32)
+  DEFINE_OP_3V(v_add_u32, OpcodeVVV::kAddU32)
+  DEFINE_OP_3V(v_add_i64, OpcodeVVV::kAddU64)
+  DEFINE_OP_3V(v_add_u64, OpcodeVVV::kAddU64)
+  DEFINE_OP_3V(v_sub_i8, OpcodeVVV::kSubU8)
+  DEFINE_OP_3V(v_sub_u8, OpcodeVVV::kSubU8)
+  DEFINE_OP_3V(v_sub_i16, OpcodeVVV::kSubU16)
+  DEFINE_OP_3V(v_sub_u16, OpcodeVVV::kSubU16)
+  DEFINE_OP_3V(v_sub_i32, OpcodeVVV::kSubU32)
+  DEFINE_OP_3V(v_sub_u32, OpcodeVVV::kSubU32)
+  DEFINE_OP_3V(v_sub_i64, OpcodeVVV::kSubU64)
+  DEFINE_OP_3V(v_sub_u64, OpcodeVVV::kSubU64)
+  DEFINE_OP_3V(v_adds_i8, OpcodeVVV::kAddsI8)
+  DEFINE_OP_3V(v_adds_i16, OpcodeVVV::kAddsI16)
+  DEFINE_OP_3V(v_adds_u8, OpcodeVVV::kAddsU8)
+  DEFINE_OP_3V(v_adds_u16, OpcodeVVV::kAddsU16)
+  DEFINE_OP_3V(v_subs_i8, OpcodeVVV::kSubsI8)
+  DEFINE_OP_3V(v_subs_i16, OpcodeVVV::kSubsI16)
+  DEFINE_OP_3V(v_subs_u8, OpcodeVVV::kSubsU8)
+  DEFINE_OP_3V(v_subs_u16, OpcodeVVV::kSubsU16)
+  DEFINE_OP_3V(v_mul_i16, OpcodeVVV::kMulU16)
+  DEFINE_OP_3V(v_mul_u16, OpcodeVVV::kMulU16)
+  DEFINE_OP_3V(v_mul_i32, OpcodeVVV::kMulU32)
+  DEFINE_OP_3V(v_mul_u32, OpcodeVVV::kMulU32)
+  DEFINE_OP_3V(v_mul_i64, OpcodeVVV::kMulU64)
+  DEFINE_OP_3V(v_mul_u64, OpcodeVVV::kMulU64)
+  DEFINE_OP_3V(v_mul_u64_lo_u32, OpcodeVVV::kMulU64_LoU32)
+  DEFINE_OP_3V(v_mulh_i16, OpcodeVVV::kMulhI16)
+  DEFINE_OP_3V(v_mulh_u16, OpcodeVVV::kMulhU16)
+  DEFINE_OP_3V(v_mhadd_i16_to_i32, OpcodeVVV::kMHAddI16_I32)
+  DEFINE_OP_3V(v_min_i8, OpcodeVVV::kMinI8)
+  DEFINE_OP_3V(v_min_i16, OpcodeVVV::kMinI16)
+  DEFINE_OP_3V(v_min_i32, OpcodeVVV::kMinI32)
+  DEFINE_OP_3V(v_min_i64, OpcodeVVV::kMinI64)
+  DEFINE_OP_3V(v_min_u8, OpcodeVVV::kMinU8)
+  DEFINE_OP_3V(v_min_u16, OpcodeVVV::kMinU16)
+  DEFINE_OP_3V(v_min_u32, OpcodeVVV::kMinU32)
+  DEFINE_OP_3V(v_min_u64, OpcodeVVV::kMinU64)
+  DEFINE_OP_3V(v_max_i8, OpcodeVVV::kMaxI8)
+  DEFINE_OP_3V(v_max_i16, OpcodeVVV::kMaxI16)
+  DEFINE_OP_3V(v_max_i32, OpcodeVVV::kMaxI32)
+  DEFINE_OP_3V(v_max_i64, OpcodeVVV::kMaxI64)
+  DEFINE_OP_3V(v_max_u8, OpcodeVVV::kMaxU8)
+  DEFINE_OP_3V(v_max_u16, OpcodeVVV::kMaxU16)
+  DEFINE_OP_3V(v_max_u32, OpcodeVVV::kMaxU32)
+  DEFINE_OP_3V(v_max_u64, OpcodeVVV::kMaxU64)
+  DEFINE_OP_3V(v_cmp_eq_i8, OpcodeVVV::kCmpEqU8)
+  DEFINE_OP_3V(v_cmp_eq_u8, OpcodeVVV::kCmpEqU8)
+  DEFINE_OP_3V(v_cmp_eq_i16, OpcodeVVV::kCmpEqU16)
+  DEFINE_OP_3V(v_cmp_eq_u16, OpcodeVVV::kCmpEqU16)
+  DEFINE_OP_3V(v_cmp_eq_i32, OpcodeVVV::kCmpEqU32)
+  DEFINE_OP_3V(v_cmp_eq_u32, OpcodeVVV::kCmpEqU32)
+  DEFINE_OP_3V(v_cmp_eq_i64, OpcodeVVV::kCmpEqU64)
+  DEFINE_OP_3V(v_cmp_eq_u64, OpcodeVVV::kCmpEqU64)
+  DEFINE_OP_3V(v_cmp_gt_i8, OpcodeVVV::kCmpGtI8)
+  DEFINE_OP_3V(v_cmp_gt_u8, OpcodeVVV::kCmpGtU8)
+  DEFINE_OP_3V(v_cmp_gt_i16, OpcodeVVV::kCmpGtI16)
+  DEFINE_OP_3V(v_cmp_gt_u16, OpcodeVVV::kCmpGtU16)
+  DEFINE_OP_3V(v_cmp_gt_i32, OpcodeVVV::kCmpGtI32)
+  DEFINE_OP_3V(v_cmp_gt_u32, OpcodeVVV::kCmpGtU32)
+  DEFINE_OP_3V(v_cmp_gt_i64, OpcodeVVV::kCmpGtI64)
+  DEFINE_OP_3V(v_cmp_gt_u64, OpcodeVVV::kCmpGtU64)
+  DEFINE_OP_3V(v_cmp_ge_i8, OpcodeVVV::kCmpGeI8)
+  DEFINE_OP_3V(v_cmp_ge_u8, OpcodeVVV::kCmpGeU8)
+  DEFINE_OP_3V(v_cmp_ge_i16, OpcodeVVV::kCmpGeI16)
+  DEFINE_OP_3V(v_cmp_ge_u16, OpcodeVVV::kCmpGeU16)
+  DEFINE_OP_3V(v_cmp_ge_i32, OpcodeVVV::kCmpGeI32)
+  DEFINE_OP_3V(v_cmp_ge_u32, OpcodeVVV::kCmpGeU32)
+  DEFINE_OP_3V(v_cmp_ge_i64, OpcodeVVV::kCmpGeI64)
+  DEFINE_OP_3V(v_cmp_ge_u64, OpcodeVVV::kCmpGeU64)
+  DEFINE_OP_3V(v_cmp_lt_i8, OpcodeVVV::kCmpLtI8)
+  DEFINE_OP_3V(v_cmp_lt_u8, OpcodeVVV::kCmpLtU8)
+  DEFINE_OP_3V(v_cmp_lt_i16, OpcodeVVV::kCmpLtI16)
+  DEFINE_OP_3V(v_cmp_lt_u16, OpcodeVVV::kCmpLtU16)
+  DEFINE_OP_3V(v_cmp_lt_i32, OpcodeVVV::kCmpLtI32)
+  DEFINE_OP_3V(v_cmp_lt_u32, OpcodeVVV::kCmpLtU32)
+  DEFINE_OP_3V(v_cmp_lt_i64, OpcodeVVV::kCmpLtI64)
+  DEFINE_OP_3V(v_cmp_lt_u64, OpcodeVVV::kCmpLtU64)
+  DEFINE_OP_3V(v_cmp_le_i8, OpcodeVVV::kCmpLeI8)
+  DEFINE_OP_3V(v_cmp_le_u8, OpcodeVVV::kCmpLeU8)
+  DEFINE_OP_3V(v_cmp_le_i16, OpcodeVVV::kCmpLeI16)
+  DEFINE_OP_3V(v_cmp_le_u16, OpcodeVVV::kCmpLeU16)
+  DEFINE_OP_3V(v_cmp_le_i32, OpcodeVVV::kCmpLeI32)
+  DEFINE_OP_3V(v_cmp_le_u32, OpcodeVVV::kCmpLeU32)
+  DEFINE_OP_3V(v_cmp_le_i64, OpcodeVVV::kCmpLeI64)
+  DEFINE_OP_3V(v_cmp_le_u64, OpcodeVVV::kCmpLeU64)
+  DEFINE_OP_3V(v_and_f32, OpcodeVVV::kAndF32)
+  DEFINE_OP_3V(v_and_f64, OpcodeVVV::kAndF64)
+  DEFINE_OP_3V(v_or_f32, OpcodeVVV::kOrF32)
+  DEFINE_OP_3V(v_or_f64, OpcodeVVV::kOrF64)
+  DEFINE_OP_3V(v_xor_f32, OpcodeVVV::kXorF32)
+  DEFINE_OP_3V(v_xor_f64, OpcodeVVV::kXorF64)
+  DEFINE_OP_3V(v_andn_f32, OpcodeVVV::kAndnF32)
+  DEFINE_OP_3V(v_andn_f64, OpcodeVVV::kAndnF64)
+  DEFINE_OP_3V(v_bic_f32, OpcodeVVV::kBicF32)
+  DEFINE_OP_3V(v_bic_f64, OpcodeVVV::kBicF64)
+  DEFINE_OP_3V(s_add_f32, OpcodeVVV::kAddF32S)
+  DEFINE_OP_3V(s_add_f64, OpcodeVVV::kAddF64S)
+  DEFINE_OP_3V(v_add_f32, OpcodeVVV::kAddF32)
+  DEFINE_OP_3V(v_add_f64, OpcodeVVV::kAddF64)
+  DEFINE_OP_3V(s_sub_f32, OpcodeVVV::kSubF32S)
+  DEFINE_OP_3V(s_sub_f64, OpcodeVVV::kSubF64S)
+  DEFINE_OP_3V(v_sub_f32, OpcodeVVV::kSubF32)
+  DEFINE_OP_3V(v_sub_f64, OpcodeVVV::kSubF64)
+  DEFINE_OP_3V(s_mul_f32, OpcodeVVV::kMulF32S)
+  DEFINE_OP_3V(s_mul_f64, OpcodeVVV::kMulF64S)
+  DEFINE_OP_3V(v_mul_f32, OpcodeVVV::kMulF32)
+  DEFINE_OP_3V(v_mul_f64, OpcodeVVV::kMulF64)
+  DEFINE_OP_3V(s_div_f32, OpcodeVVV::kDivF32S)
+  DEFINE_OP_3V(s_div_f64, OpcodeVVV::kDivF64S)
+  DEFINE_OP_3V(v_div_f32, OpcodeVVV::kDivF32)
+  DEFINE_OP_3V(v_div_f64, OpcodeVVV::kDivF64)
+  DEFINE_OP_3V(s_min_f32, OpcodeVVV::kMinF32S)
+  DEFINE_OP_3V(s_min_f64, OpcodeVVV::kMinF64S)
+  DEFINE_OP_3V(v_min_f32, OpcodeVVV::kMinF32)
+  DEFINE_OP_3V(v_min_f64, OpcodeVVV::kMinF64)
+  DEFINE_OP_3V(s_max_f32, OpcodeVVV::kMaxF32S)
+  DEFINE_OP_3V(s_max_f64, OpcodeVVV::kMaxF64S)
+  DEFINE_OP_3V(v_max_f32, OpcodeVVV::kMaxF32)
+  DEFINE_OP_3V(v_max_f64, OpcodeVVV::kMaxF64)
+  DEFINE_OP_3V(s_cmp_eq_f32, OpcodeVVV::kCmpEqF32S)
+  DEFINE_OP_3V(s_cmp_eq_f64, OpcodeVVV::kCmpEqF64S)
+  DEFINE_OP_3V(v_cmp_eq_f32, OpcodeVVV::kCmpEqF32)
+  DEFINE_OP_3V(v_cmp_eq_f64, OpcodeVVV::kCmpEqF64)
+  DEFINE_OP_3V(s_cmp_ne_f32, OpcodeVVV::kCmpNeF32S)
+  DEFINE_OP_3V(s_cmp_ne_f64, OpcodeVVV::kCmpNeF64S)
+  DEFINE_OP_3V(v_cmp_ne_f32, OpcodeVVV::kCmpNeF32)
+  DEFINE_OP_3V(v_cmp_ne_f64, OpcodeVVV::kCmpNeF64)
+  DEFINE_OP_3V(s_cmp_gt_f32, OpcodeVVV::kCmpGtF32S)
+  DEFINE_OP_3V(s_cmp_gt_f64, OpcodeVVV::kCmpGtF64S)
+  DEFINE_OP_3V(v_cmp_gt_f32, OpcodeVVV::kCmpGtF32)
+  DEFINE_OP_3V(v_cmp_gt_f64, OpcodeVVV::kCmpGtF64)
+  DEFINE_OP_3V(s_cmp_ge_f32, OpcodeVVV::kCmpGeF32S)
+  DEFINE_OP_3V(s_cmp_ge_f64, OpcodeVVV::kCmpGeF64S)
+  DEFINE_OP_3V(v_cmp_ge_f32, OpcodeVVV::kCmpGeF32)
+  DEFINE_OP_3V(v_cmp_ge_f64, OpcodeVVV::kCmpGeF64)
+  DEFINE_OP_3V(s_cmp_lt_f32, OpcodeVVV::kCmpLtF32S)
+  DEFINE_OP_3V(s_cmp_lt_f64, OpcodeVVV::kCmpLtF64S)
+  DEFINE_OP_3V(v_cmp_lt_f32, OpcodeVVV::kCmpLtF32)
+  DEFINE_OP_3V(v_cmp_lt_f64, OpcodeVVV::kCmpLtF64)
+  DEFINE_OP_3V(s_cmp_le_f32, OpcodeVVV::kCmpLeF32S)
+  DEFINE_OP_3V(s_cmp_le_f64, OpcodeVVV::kCmpLeF64S)
+  DEFINE_OP_3V(v_cmp_le_f32, OpcodeVVV::kCmpLeF32)
+  DEFINE_OP_3V(v_cmp_le_f64, OpcodeVVV::kCmpLeF64)
+  DEFINE_OP_3V(s_cmp_ord_f32, OpcodeVVV::kCmpOrdF32S)
+  DEFINE_OP_3V(s_cmp_ord_f64, OpcodeVVV::kCmpOrdF64S)
+  DEFINE_OP_3V(v_cmp_ord_f32, OpcodeVVV::kCmpOrdF32)
+  DEFINE_OP_3V(v_cmp_ord_f64, OpcodeVVV::kCmpOrdF64)
+  DEFINE_OP_3V(s_cmp_unord_f32, OpcodeVVV::kCmpUnordF32S)
+  DEFINE_OP_3V(s_cmp_unord_f64, OpcodeVVV::kCmpUnordF64S)
+  DEFINE_OP_3V(v_cmp_unord_f32, OpcodeVVV::kCmpUnordF32)
+  DEFINE_OP_3V(v_cmp_unord_f64, OpcodeVVV::kCmpUnordF64)
+  DEFINE_OP_3V(v_hadd_f64, OpcodeVVV::kHAddF64);
+  DEFINE_OP_3V(v_combine_lo_hi_u64, OpcodeVVV::kCombineLoHiU64)
+  DEFINE_OP_3V(v_combine_lo_hi_f64, OpcodeVVV::kCombineLoHiF64)
+  DEFINE_OP_3V(v_combine_hi_lo_u64, OpcodeVVV::kCombineHiLoU64)
+  DEFINE_OP_3V(v_combine_hi_lo_f64, OpcodeVVV::kCombineHiLoF64)
+  DEFINE_OP_3V(v_interleave_lo_u8, OpcodeVVV::kInterleaveLoU8)
+  DEFINE_OP_3V(v_interleave_hi_u8, OpcodeVVV::kInterleaveHiU8)
+  DEFINE_OP_3V(v_interleave_lo_u16, OpcodeVVV::kInterleaveLoU16)
+  DEFINE_OP_3V(v_interleave_hi_u16, OpcodeVVV::kInterleaveHiU16)
+  DEFINE_OP_3V(v_interleave_lo_u32, OpcodeVVV::kInterleaveLoU32)
+  DEFINE_OP_3V(v_interleave_hi_u32, OpcodeVVV::kInterleaveHiU32)
+  DEFINE_OP_3V(v_interleave_lo_u64, OpcodeVVV::kInterleaveLoU64)
+  DEFINE_OP_3V(v_interleave_hi_u64, OpcodeVVV::kInterleaveHiU64)
+  DEFINE_OP_3V(v_interleave_lo_f32, OpcodeVVV::kInterleaveLoF32)
+  DEFINE_OP_3V(v_interleave_hi_f32, OpcodeVVV::kInterleaveHiF32)
+  DEFINE_OP_3V(v_interleave_lo_f64, OpcodeVVV::kInterleaveLoF64)
+  DEFINE_OP_3V(v_interleave_hi_f64, OpcodeVVV::kInterleaveHiF64)
+  DEFINE_OP_3V(v_packs_i16_i8, OpcodeVVV::kPacksI16_I8)
+  DEFINE_OP_3V(v_packs_i16_u8, OpcodeVVV::kPacksI16_U8)
+  DEFINE_OP_3V(v_packs_i32_i16, OpcodeVVV::kPacksI32_I16)
+  DEFINE_OP_3V(v_packs_i32_u16, OpcodeVVV::kPacksI32_U16)
+  DEFINE_OP_3V(v_swizzlev_u8, OpcodeVVV::kSwizzlev_U8)
+
+#if defined(BL_JIT_ARCH_A64)
+  DEFINE_OP_3V(v_mulw_lo_i8, OpcodeVVV::kMulwLoI8)
+  DEFINE_OP_3V(v_mulw_lo_u8, OpcodeVVV::kMulwLoU8)
+  DEFINE_OP_3V(v_mulw_hi_i8, OpcodeVVV::kMulwHiI8)
+  DEFINE_OP_3V(v_mulw_hi_u8, OpcodeVVV::kMulwHiU8)
+  DEFINE_OP_3V(v_mulw_lo_i16, OpcodeVVV::kMulwLoI16)
+  DEFINE_OP_3V(v_mulw_lo_u16, OpcodeVVV::kMulwLoU16)
+  DEFINE_OP_3V(v_mulw_hi_i16, OpcodeVVV::kMulwHiI16)
+  DEFINE_OP_3V(v_mulw_hi_u16, OpcodeVVV::kMulwHiU16)
+  DEFINE_OP_3V(v_mulw_lo_i32, OpcodeVVV::kMulwLoI32)
+  DEFINE_OP_3V(v_mulw_lo_u32, OpcodeVVV::kMulwLoU32)
+  DEFINE_OP_3V(v_mulw_hi_i32, OpcodeVVV::kMulwHiI32)
+  DEFINE_OP_3V(v_mulw_hi_u32, OpcodeVVV::kMulwHiU32)
+  DEFINE_OP_3V(v_maddw_lo_i8, OpcodeVVV::kMAddwLoI8)
+  DEFINE_OP_3V(v_maddw_lo_u8, OpcodeVVV::kMAddwLoU8)
+  DEFINE_OP_3V(v_maddw_hi_i8, OpcodeVVV::kMAddwHiI8)
+  DEFINE_OP_3V(v_maddw_hi_u8, OpcodeVVV::kMAddwHiU8)
+  DEFINE_OP_3V(v_maddw_lo_i16, OpcodeVVV::kMAddwLoI16)
+  DEFINE_OP_3V(v_maddw_lo_u16, OpcodeVVV::kMAddwLoU16)
+  DEFINE_OP_3V(v_maddw_hi_i16, OpcodeVVV::kMAddwHiI16)
+  DEFINE_OP_3V(v_maddw_hi_u16, OpcodeVVV::kMAddwHiU16)
+  DEFINE_OP_3V(v_maddw_lo_i32, OpcodeVVV::kMAddwLoI32)
+  DEFINE_OP_3V(v_maddw_lo_u32, OpcodeVVV::kMAddwLoU32)
+  DEFINE_OP_3V(v_maddw_hi_i32, OpcodeVVV::kMAddwHiI32)
+  DEFINE_OP_3V(v_maddw_hi_u32, OpcodeVVV::kMAddwHiU32)
+#endif // BL_JIT_ARCH_A64
+
+#if defined(BL_JIT_ARCH_X86)
+  DEFINE_OP_3V(v_permute_u8, OpcodeVVV::kPermuteU8)
+#endif // BL_JIT_ARCH_X86
+
+  DEFINE_OP_3VI(v_alignr_u128, OpcodeVVVI::kAlignr_U128)
+  DEFINE_OP_3VI_WRAP(v_interleave_shuffle_u32x4, Swizzle4, OpcodeVVVI::kInterleaveShuffleU32x4)
+  DEFINE_OP_3VI_WRAP(v_interleave_shuffle_u64x2, Swizzle2, OpcodeVVVI::kInterleaveShuffleU64x2)
+  DEFINE_OP_3VI_WRAP(v_interleave_shuffle_f32x4, Swizzle4, OpcodeVVVI::kInterleaveShuffleF32x4)
+  DEFINE_OP_3VI_WRAP(v_interleave_shuffle_f64x2, Swizzle2, OpcodeVVVI::kInterleaveShuffleF64x2)
+  DEFINE_OP_3VI(v_insert_v128, OpcodeVVVI::kInsertV128_U32)
+  DEFINE_OP_3VI(v_insert_v128_u32, OpcodeVVVI::kInsertV128_U32)
+  DEFINE_OP_3VI(v_insert_v128_f32, OpcodeVVVI::kInsertV128_F32)
+  DEFINE_OP_3VI(v_insert_v128_u64, OpcodeVVVI::kInsertV128_U64)
+  DEFINE_OP_3VI(v_insert_v128_f64, OpcodeVVVI::kInsertV128_F64)
+  DEFINE_OP_3VI(v_insert_v256, OpcodeVVVI::kInsertV256_U32)
+  DEFINE_OP_3VI(v_insert_v256_u32, OpcodeVVVI::kInsertV256_U32)
+  DEFINE_OP_3VI(v_insert_v256_f32, OpcodeVVVI::kInsertV256_F32)
+  DEFINE_OP_3VI(v_insert_v256_u64, OpcodeVVVI::kInsertV256_U64)
+  DEFINE_OP_3VI(v_insert_v256_f64, OpcodeVVVI::kInsertV256_F64)
+
+
+  DEFINE_OP_4V(v_blendv_u8, OpcodeVVVV::kBlendV_U8)
+  DEFINE_OP_4V(v_madd_i16, OpcodeVVVV::kMAddU16)
+  DEFINE_OP_4V(v_madd_u16, OpcodeVVVV::kMAddU16)
+  DEFINE_OP_4V(v_madd_i32, OpcodeVVVV::kMAddU32)
+  DEFINE_OP_4V(v_madd_u32, OpcodeVVVV::kMAddU32)
+  DEFINE_OP_4V(s_madd_f32, OpcodeVVVV::kMAddF32S)
+  DEFINE_OP_4V(s_madd_f64, OpcodeVVVV::kMAddF64S)
+  DEFINE_OP_4V(v_madd_f32, OpcodeVVVV::kMAddF32)
+  DEFINE_OP_4V(v_madd_f64, OpcodeVVVV::kMAddF64)
+  DEFINE_OP_4V(s_msub_f32, OpcodeVVVV::kMSubF32S)
+  DEFINE_OP_4V(s_msub_f64, OpcodeVVVV::kMSubF64S)
+  DEFINE_OP_4V(v_msub_f32, OpcodeVVVV::kMSubF32)
+  DEFINE_OP_4V(v_msub_f64, OpcodeVVVV::kMSubF64)
+  DEFINE_OP_4V(s_nmadd_f32, OpcodeVVVV::kNMAddF32S)
+  DEFINE_OP_4V(s_nmadd_f64, OpcodeVVVV::kNMAddF64S)
+  DEFINE_OP_4V(v_nmadd_f32, OpcodeVVVV::kNMAddF32)
+  DEFINE_OP_4V(v_nmadd_f64, OpcodeVVVV::kNMAddF64)
+  DEFINE_OP_4V(s_nmsub_f32, OpcodeVVVV::kNMSubF32S)
+  DEFINE_OP_4V(s_nmsub_f64, OpcodeVVVV::kNMSubF64S)
+  DEFINE_OP_4V(v_nmsub_f32, OpcodeVVVV::kNMSubF32)
+  DEFINE_OP_4V(v_nmsub_f64, OpcodeVVVV::kNMSubF64)
+
+  #undef DEFINE_OP_4V
+  #undef DEFINE_OP_3VI_WRAP
+  #undef DEFINE_OP_3VI
+  #undef DEFINE_OP_3V
+  #undef DEFINE_OP_MV_A
+  #undef DEFINE_OP_MV_U
+  #undef DEFINE_OP_MV_I
+  #undef DEFINE_OP_VM_A
+  #undef DEFINE_OP_VM_U
+  #undef DEFINE_OP_VM_I
+  #undef DEFINE_OP_2VI_WRAP
+  #undef DEFINE_OP_2VI
+  #undef DEFINE_OP_2V
+
+  template<typename DstT, typename SrcT> BL_INLINE void v_swap_u32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32x4(dst, src, swizzle(2, 3, 0, 1)); }
+  template<typename DstT, typename SrcT> BL_INLINE void v_swap_u64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u64x2(dst, src, swizzle(0, 1)); }
+  template<typename DstT, typename SrcT> BL_INLINE void v_swap_f32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_f32x4(dst, src, swizzle(2, 3, 0, 1)); }
+  template<typename DstT, typename SrcT> BL_INLINE void v_swap_f64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_f64x2(dst, src, swizzle(0, 1)); }
+
+  template<typename DstT, typename SrcT> BL_INLINE void v_dup_lo_u32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32x4(dst, src, swizzle(2, 2, 0, 0)); }
+  template<typename DstT, typename SrcT> BL_INLINE void v_dup_hi_u32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32x4(dst, src, swizzle(3, 3, 1, 1)); }
+  template<typename DstT, typename SrcT> BL_INLINE void v_dup_lo_u64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u64x2(dst, src, swizzle(0, 0)); }
+  template<typename DstT, typename SrcT> BL_INLINE void v_dup_hi_u64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u64x2(dst, src, swizzle(1, 1)); }
+  template<typename DstT, typename SrcT> BL_INLINE void v_dup_lo_f64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_f64x2(dst, src, swizzle(0, 0)); }
+  template<typename DstT, typename SrcT> BL_INLINE void v_dup_hi_f64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_f64x2(dst, src, swizzle(1, 1)); }
+
+  template<typename T> BL_INLINE void v_zero_i(const T& dst) noexcept { v_xor_i32(dst, dst, dst); }
+  template<typename T> BL_INLINE void v_zero_f(const T& dst) noexcept { v_xor_f32(dst, dst, dst); }
+  template<typename T> BL_INLINE void v_zero_d(const T& dst) noexcept { v_xor_f64(dst, dst, dst); }
+  template<typename T> BL_INLINE void v_ones_i(const T& dst) noexcept { v_cmp_eq_u8(dst, dst, dst); }
 
   //! \}
 
   //! \name Memory Loads & Stores
   //! \{
 
-  BL_NOINLINE void v_load_i8(const Operand_& dst, const Mem& src) noexcept {
-    Xmm dst_xmm = dst.as<Vec>().xmm();
-    if (hasSSE4_1()) {
-      v_zero_i(dst_xmm);
-      v_insert_u8_(dst_xmm, dst_xmm, src, 0);
-    }
-    else {
-      Gp tmp = newGp32("@tmp");
-      load_u8(tmp, src);
-      s_mov_i32(dst_xmm, tmp);
-    }
-  }
-
-  BL_NOINLINE void v_load_i16(const Operand_& dst, const Mem& src) noexcept {
-    Xmm dst_xmm = dst.as<Vec>().xmm();
-    if (hasSSE4_1()) {
-      v_zero_i(dst_xmm);
-      v_insert_u16(dst_xmm, dst_xmm, src, 0);
-    }
-    else {
-      Gp tmp = newGp32("@tmp");
-      load_u16(tmp, src);
-      s_mov_i32(dst_xmm, tmp);
-    }
-  }
-
-  BL_NOINLINE void v_load_u8_u16_2x(const Operand_& dst, const Mem& lo, const Mem& hi) noexcept {
+  BL_NOINLINE void v_load_u8_u16_2x(const Vec& dst, const Mem& lo, const Mem& hi) noexcept {
+#if defined(BL_JIT_ARCH_X86)
     Gp reg = newGp32("@tmp");
     Mem mLo(lo);
     Mem mHi(hi);
@@ -1513,289 +2733,19 @@ public:
     mLo.setSize(1);
     mHi.setSize(1);
 
-    cc->movzx(reg, mHi);
-    cc->shl(reg, 16);
+    load_u8(reg, mHi);
+    shl(reg, reg, 16);
     cc->mov(reg.r8(), mLo);
-    s_mov_i32(dst.as<Vec>().xmm(), reg);
-  }
+    s_mov_u32(dst.xmm(), reg);
+#elif defined(BL_JIT_ARCH_A64)
+    Gp tmp_a = newGp32("@tmp_a");
+    Gp tmp_b = newGp32("@tmp_b");
 
-  inline void v_load_i32(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovd, Movd, X), dst, src); }
-  inline void v_load_i64(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovq, Movq, X), dst, src); }
-  inline void v_load_f32(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovss, Movss, X), dst, src); }
-  inline void v_load_f64(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovsd, Movsd, X), dst, src); }
-
-  inline void v_loadl_2xf32(const Operand_& dst, const Operand_& src1, const Mem& src2) noexcept { v_emit_vvv_vv(PACK_AVX_SSE(Vmovlps, Movlps, X), dst, src1, src2); }
-  inline void v_loadh_2xf32(const Operand_& dst, const Operand_& src1, const Mem& src2) noexcept { v_emit_vvv_vv(PACK_AVX_SSE(Vmovhps, Movhps, X), dst, src1, src2); }
-
-  inline void v_loadl_f64(const Operand_& dst, const Operand_& src1, const Mem& src2) noexcept { v_emit_vvv_vv(PACK_AVX_SSE(Vmovlpd, Movlpd, X), dst, src1, src2); }
-  inline void v_loadh_f64(const Operand_& dst, const Operand_& src1, const Mem& src2) noexcept { v_emit_vvv_vv(PACK_AVX_SSE(Vmovhpd, Movhpd, X), dst, src1, src2); }
-
-  inline void v_loada_i128(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, X), dst, src); }
-  inline void v_loadu_i128(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, X), dst, src); }
-  inline void v_loadu_i128_ro(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vloadi128uRO), dst, src); }
-
-  inline void v_loada_f128(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, X), dst, src); }
-  inline void v_loadu_f128(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, X), dst, src); }
-  inline void v_loada_d128(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovapd, Movaps, X), dst, src); }
-  inline void v_loadu_d128(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovupd, Movups, X), dst, src); }
-
-  inline void v_load_i128(const Operand_& dst, const Mem& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovdqu, Movups, X), PACK_AVX_SSE(Vmovdqa, Movaps, X) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 16)], dst, src);
-  }
-
-  inline void v_load_f128(const Operand_& dst, const Mem& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovups, Movups, X), PACK_AVX_SSE(Vmovaps, Movaps, X) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 16)], dst, src);
-  }
-
-  inline void v_load_d128(const Operand_& dst, const Mem& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovupd, Movupd, X), PACK_AVX_SSE(Vmovapd, Movapd, X) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 16)], dst, src);
-  }
-
-  inline void v_loada_i256(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, Y), dst, src); }
-  inline void v_loadu_i256(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, Y), dst, src); }
-  inline void v_loadu_i256_ro(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vloadi128uRO), dst, src); }
-
-  inline void v_loada_f256(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, Y), dst, src); }
-  inline void v_loadu_f256(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, Y), dst, src); }
-  inline void v_loada_d256(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovapd, Movaps, Y), dst, src); }
-  inline void v_loadu_d256(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovupd, Movups, Y), dst, src); }
-
-  inline void v_load_i256(const Operand_& dst, const Mem& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovdqu, None, Y), PACK_AVX_SSE(Vmovdqa, None, Y) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 32)], dst, src);
-  }
-
-  inline void v_load_f256(const Operand_& dst, const Mem& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovups, None, Y), PACK_AVX_SSE(Vmovaps, None, Y) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 32)], dst, src);
-  }
-
-  inline void v_load_d256(const Operand_& dst, const Mem& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovupd, None, Y), PACK_AVX_SSE(Vmovapd, None, Y) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 32)], dst, src);
-  }
-
-  BL_NOINLINE void v_store_i8(const Mem& dst, const Vec& src) noexcept {
-    if (hasSSE4_1()) {
-      v_emit_vvi_vvi(PACK_AVX_SSE(Vpextrb, Pextrb, X), dst, src, 0);
-    }
-    else {
-      Gp tVal = newGp32("tVal");
-      cc->movd(tVal, src.as<Xmm>());
-      cc->mov(dst, tVal.r8());
-    }
-  }
-
-  BL_NOINLINE void v_store_i16(const Mem& dst, const Vec& src) noexcept {
-    if (hasSSE4_1()) {
-      v_emit_vvi_vvi(PACK_AVX_SSE(Vpextrw, Pextrw, X), dst, src, 0);
-    }
-    else {
-      Gp tVal = newGp32("tVal");
-      cc->movd(tVal, src.as<Xmm>());
-      cc->mov(dst, tVal.r16());
-    }
-  }
-
-  inline void v_store_i32(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovd, Movd, X), dst, src); }
-  inline void v_store_i64(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovq, Movq, X), dst, src); }
-
-  inline void v_store_f32(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovss, Movss, X), dst, src); }
-  inline void v_store_f64(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovsd, Movsd, X), dst, src); }
-
-  inline void v_storel_2xf32(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovlps, Movlps, X), dst, src); }
-  inline void v_storeh_2xf32(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovhps, Movhps, X), dst, src); }
-
-  inline void v_storel_f64(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovsd , Movsd , X), dst, src); }
-  inline void v_storeh_f64(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovhpd, Movhpd, X), dst, src); }
-
-  inline void v_storea_i128(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, X), dst, src); }
-  inline void v_storeu_i128(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, X), dst, src); }
-  inline void v_storea_f128(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, X), dst, src); }
-  inline void v_storeu_f128(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, X), dst, src); }
-  inline void v_storea_d128(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovapd, Movaps, X), dst, src); }
-  inline void v_storeu_d128(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovupd, Movups, X), dst, src); }
-
-  inline void v_store_i128(const Mem& dst, const Vec& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovdqu, Movups, X), PACK_AVX_SSE(Vmovdqa, Movaps, X) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 16)], dst, src);
-  }
-
-  inline void v_store_f128(const Mem& dst, const Vec& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovups, Movups, X), PACK_AVX_SSE(Vmovaps, Movaps, X) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 16)], dst, src);
-  }
-
-  inline void v_store_d128(const Mem& dst, const Vec& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovupd, Movupd, X), PACK_AVX_SSE(Vmovapd, Movapd, X) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 16)], dst, src);
-  }
-
-  inline void v_storea_i256(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovdqa, None, Y), dst, src); }
-  inline void v_storeu_i256(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovdqu, None, Y), dst, src); }
-  inline void v_storea_f256(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovaps, None, Y), dst, src); }
-  inline void v_storeu_f256(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovups, None, Y), dst, src); }
-  inline void v_storea_d256(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovapd, None, Y), dst, src); }
-  inline void v_storeu_d256(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovupd, None, Y), dst, src); }
-
-  inline void v_store_i256(const Mem& dst, const Vec& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovdqu, None, Y), PACK_AVX_SSE(Vmovdqa, None, Y) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 32)], dst, src);
-  }
-
-  inline void v_store_f256(const Mem& dst, const Vec& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovups, None, Y), PACK_AVX_SSE(Vmovaps, None, Y) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 32)], dst, src);
-  }
-
-  inline void v_store_d256(const Mem& dst, const Vec& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovupd, None, Y), PACK_AVX_SSE(Vmovapd, None, Y) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 32)], dst, src);
-  }
-
-  inline void v_storea_i512(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovdqa32, None, Z), dst, src); }
-  inline void v_storeu_i512(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovdqu32, None, Z), dst, src); }
-  inline void v_storea_f512(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovaps, None, Z), dst, src); }
-  inline void v_storeu_f512(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovups, None, Z), dst, src); }
-  inline void v_storea_d512(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovapd, None, Z), dst, src); }
-  inline void v_storeu_d512(const Mem& dst, const Operand_& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovupd, None, Z), dst, src); }
-
-  inline void v_store_i512(const Mem& dst, const Vec& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovdqu32, None, Z), PACK_AVX_SSE(Vmovdqa32, None, Z) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 64)], dst, src);
-  }
-
-  inline void v_store_f512(const Mem& dst, const Vec& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovups, None, Z), PACK_AVX_SSE(Vmovaps, None, Z) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 64)], dst, src);
-  }
-
-  inline void v_store_d512(const Mem& dst, const Vec& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovupd, None, Z), PACK_AVX_SSE(Vmovapd, None, Z) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= 64)], dst, src);
-  }
-
-  //! \}
-
-  //! \name Memory Loads & Stores with Packing and Unpacking
-  //! \{
-
-  inline void v_load_i64_u8u16_(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vpmovzxbw, Pmovzxbw, X), dst, src); }
-  inline void v_load_i32_u8u32_(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vpmovzxbd, Pmovzxbd, X), dst, src); }
-  inline void v_load_i16_u8u64_(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vpmovzxbq, Pmovzxbq, X), dst, src); }
-  inline void v_load_i64_u16u32_(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vpmovzxwd, Pmovzxwd, X), dst, src); }
-  inline void v_load_i32_u16u64_(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vpmovzxwq, Pmovzxwq, X), dst, src); }
-  inline void v_load_i64_u32u64_(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vpmovzxdq, Pmovzxdq, X), dst, src); }
-
-  inline void v_load_i64_i8i16_(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vpmovsxbw, Pmovsxbw, X), dst, src); }
-  inline void v_load_i32_i8i32_(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vpmovsxbd, Pmovsxbd, X), dst, src); }
-  inline void v_load_i16_i8i64_(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vpmovsxbq, Pmovsxbq, X), dst, src); }
-  inline void v_load_i64_i16i32_(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vpmovsxwd, Pmovsxwd, X), dst, src); }
-  inline void v_load_i32_i16i64_(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vpmovsxwq, Pmovsxwq, X), dst, src); }
-  inline void v_load_i64_i32i64_(const Operand_& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vpmovsxdq, Pmovsxdq, X), dst, src); }
-
-  //! \}
-
-  //! \name Memory Loads & Stores of Vector Sizes
-  //! \{
-
-  BL_NOINLINE void v_loada_ivec(const Vec& dst, const Mem& src) noexcept {
-    if (dst.isZmm())
-      cc->vmovdqa32(dst, src);
-    else
-      v_emit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, Z), dst, src);
-  }
-
-  inline void v_loada_fvec(const Vec& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, Z), dst, src); }
-  inline void v_loada_dvec(const Vec& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovapd, Movapd, Z), dst, src); }
-
-  BL_NOINLINE void v_loadu_ivec(const Vec& dst, const Mem& src) noexcept {
-    if (dst.isZmm())
-      cc->vmovdqu32(dst, src);
-    else
-      v_emit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, Z), dst, src);
-  }
-
-  inline void v_loadu_fvec(const Vec& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, Z), dst, src); }
-  inline void v_loadu_dvec(const Vec& dst, const Mem& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovupd, Movupd, Z), dst, src); }
-
-  BL_NOINLINE void v_load_ivec(const Vec& dst, const Mem& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable512[2] = { PACK_AVX_SSE(Vmovdqu32, None, Z), PACK_AVX_SSE(Vmovdqa32, None, Z) };
-    static const uint32_t kMovTable256[2] = { PACK_AVX_SSE(Vmovdqu, Movups, Z), PACK_AVX_SSE(Vmovdqa, Movaps, Z) };
-
-    if (dst.isZmm())
-      v_emit_vv_vv(kMovTable512[size_t(alignment >= dst.size())], dst, src);
-    else
-      v_emit_vv_vv(kMovTable256[size_t(alignment >= dst.size())], dst, src);
-  }
-
-  inline void v_load_fvec(const Vec& dst, const Mem& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovups, Movups, Z), PACK_AVX_SSE(Vmovaps, Movaps, Z) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= dst.size())], dst, src);
-  }
-
-  inline void v_load_dvec(const Vec& dst, const Mem& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovupd, Movupd, Z), PACK_AVX_SSE(Vmovapd, Movapd, Z) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= dst.size())], dst, src);
-  }
-
-  BL_NOINLINE void v_storea_ivec(const Mem& dst, const Vec& src) noexcept {
-    if (src.isZmm())
-      v_emit_vv_vv(PACK_AVX_SSE(Vmovdqa32, None, Z), dst, src);
-    else
-      v_emit_vv_vv(PACK_AVX_SSE(Vmovdqa, Movaps, Z), dst, src);
-  }
-
-  inline void v_storea_fvec(const Mem& dst, const Vec& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovaps, Movaps, Z), dst, src); }
-  inline void v_storea_dvec(const Mem& dst, const Vec& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovapd, Movapd, Z), dst, src); }
-
-  BL_NOINLINE void v_storeu_ivec(const Mem& dst, const Vec& src) noexcept {
-    if (src.isZmm())
-      v_emit_vv_vv(PACK_AVX_SSE(Vmovdqu32, None, Z), dst, src);
-    else
-      v_emit_vv_vv(PACK_AVX_SSE(Vmovdqu, Movups, Z), dst, src);
-  }
-
-  inline void v_storeu_fvec(const Mem& dst, const Vec& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovups, Movups, Z), dst, src); }
-  inline void v_storeu_dvec(const Mem& dst, const Vec& src) noexcept { v_emit_vv_vv(PACK_AVX_SSE(Vmovupd, Movupd, Z), dst, src); }
-
-  BL_NOINLINE void v_store_ivec(const Mem& dst, const Vec& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable512[2] = { PACK_AVX_SSE(Vmovdqu32, None, Z), PACK_AVX_SSE(Vmovdqa32, None, Z) };
-    static const uint32_t kMovTable256[2] = { PACK_AVX_SSE(Vmovdqu, Movups, Z), PACK_AVX_SSE(Vmovdqa, Movaps, Z) };
-
-    if (src.isZmm())
-      v_emit_vv_vv(kMovTable512[size_t(alignment >= src.size())], dst, src);
-    else
-      v_emit_vv_vv(kMovTable256[size_t(alignment >= src.size())], dst, src);
-  }
-
-  inline void v_store_fvec(const Mem& dst, const Vec& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovups, Movups, Z), PACK_AVX_SSE(Vmovaps, Movaps, Z) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= src.size())], dst, src);
-  }
-
-  inline void v_store_dvec(const Mem& dst, const Vec& src, Alignment alignment) noexcept {
-    static const uint32_t kMovTable[2] = { PACK_AVX_SSE(Vmovupd, Movupd, Z), PACK_AVX_SSE(Vmovapd, Movapd, Z) };
-    v_emit_vv_vv(kMovTable[size_t(alignment >= src.size())], dst, src);
-  }
-
-  inline void v_load_ivec_array(VecArray& dst, const Mem& src, Alignment alignment) noexcept {
-    Mem m = src;
-    for (size_t i = 0; i < dst.size(); i++) {
-      v_load_ivec(dst[i], m, alignment);
-      m.addOffsetLo32(dst[i].size());
-    }
-  }
-
-  inline void v_store_ivec_array(const Mem& dst, const VecArray& src, Alignment alignment) noexcept {
-    Mem m = dst;
-    for (size_t i = 0; i < src.size(); i++) {
-      v_store_ivec(m, src[i], alignment);
-      m.addOffsetLo32(src[i].size());
-    }
+    load_u8(tmp_a, lo);
+    load_u8(tmp_b, hi);
+    cc->orr(tmp_a, tmp_a, tmp_b, a64::lsl(16));
+    s_mov_u32(dst, tmp_a);
+#endif
   }
 
   //! \}
@@ -1805,12 +2755,13 @@ public:
 
   BL_NOINLINE void v_load_iany(const Vec& dst, const Mem& src, uint32_t nBytes, Alignment alignment) noexcept {
     switch (nBytes) {
-      case 1: v_load_i8(dst, src); break;
-      case 2: v_load_i16(dst, src); break;
-      case 4: v_load_i32(dst, src); break;
-      case 8: v_load_i64(dst, src); break;
-      case 16: v_load_i128(dst, src, alignment); break;
-      case 32: v_load_i256(dst, src, alignment); break;
+      case 1: v_load8(dst, src); break;
+      case 2: v_loada16(dst, src, alignment); break;
+      case 4: v_loada32(dst, src, alignment); break;
+      case 8: v_loada64(dst, src, alignment); break;
+      case 16: v_loada128(dst, src, alignment); break;
+      case 32: v_loada256(dst, src, alignment); break;
+      case 64: v_loada512(dst, src, alignment); break;
 
       default:
         BL_NOT_REACHED();
@@ -1819,12 +2770,13 @@ public:
 
   BL_NOINLINE void v_store_iany(const Mem& dst, const Vec& src, uint32_t nBytes, Alignment alignment) noexcept {
     switch (nBytes) {
-      case 1: v_store_i8(dst, src); break;
-      case 2: v_store_i16(dst, src); break;
-      case 4: v_store_i32(dst, src); break;
-      case 8: v_store_i64(dst, src); break;
-      case 16: v_store_i128(dst, src, alignment); break;
-      case 32: v_store_i256(dst, src, alignment); break;
+      case 1: v_store8(dst, src); break;
+      case 2: v_storea16(dst, src, alignment); break;
+      case 4: v_storea32(dst, src, alignment); break;
+      case 8: v_storea64(dst, src, alignment); break;
+      case 16: v_storea128(dst, src, alignment); break;
+      case 32: v_storea256(dst, src, alignment); break;
+      case 64: v_storea512(dst, src, alignment); break;
 
       default:
         BL_NOT_REACHED();
@@ -1833,186 +2785,64 @@ public:
 
   //! \}
 
-  //! \name Memory Loads & Stores with Predicate
-  //! \{
-
-  BL_NOINLINE void v_load_predicated_v8(const Vec& dst, const PixelPredicate& pred, const Mem& src) noexcept {
-    BL_ASSERT(pred.k.isValid());
-    cc->k(pred.k).z().vmovdqu8(dst, src);
-  }
-
-  BL_NOINLINE void v_load_predicated_v32(const Vec& dst, const PixelPredicate& pred, const Mem& src) noexcept {
-    if (pred.k.isValid())
-      cc->k(pred.k).z().vmovdqu32(dst, src);
-    else if (hasAVX2())
-      cc->vpmaskmovd(dst, pred.v32, src);
+  template<typename Dst, typename Src>
+  BL_INLINE void shiftOrRotateLeft(const Dst& dst, const Src& src, uint32_t n) noexcept {
+  #if defined(BL_JIT_ARCH_X86)
+    if ((n & 3) == 0)
+      v_alignr_u128(dst, src, src, (16u - n) & 15);
     else
-      cc->vmaskmovps(dst, pred.v32, src);
+      v_sllb_u128(dst, src, n);
+  #else
+    // This doesn't rely on a zero constant on AArch64, which is okay as we don't care what's shifted in.
+    v_alignr_u128(dst, src, src, (16u - n) & 15);
+  #endif
   }
 
-  BL_NOINLINE void v_load_predicated_v64(const Vec& dst, const PixelPredicate& pred, const Mem& src) noexcept {
-    if (pred.k.isValid())
-      cc->k(pred.k).z().vmovdqu64(dst, src);
-    else if (hasAVX2())
-      cc->vpmaskmovq(dst, pred.v64, src);
+  template<typename Dst, typename Src>
+  BL_INLINE void shiftOrRotateRight(const Dst& dst, const Src& src, uint32_t n) noexcept {
+  #if defined(BL_JIT_ARCH_X86)
+    if ((n & 3) == 0)
+      v_alignr_u128(dst, src, src, n);
     else
-      cc->vmaskmovpd(dst, pred.v64, src);
-  }
-
-  BL_NOINLINE void v_store_predicated_v8(const Mem& dst, const PixelPredicate& pred, const Vec& src) noexcept {
-    BL_ASSERT(pred.k.isValid());
-    cc->k(pred.k).vmovdqu8(dst, src);
-  }
-
-  BL_NOINLINE void v_store_predicated_v32(const Mem& dst, const PixelPredicate& pred, const Vec& src) noexcept {
-    if (pred.k.isValid())
-      cc->k(pred.k).vmovdqu32(dst, src);
-    else if (hasAVX2())
-      cc->vpmaskmovd(dst, pred.v32, src);
-    else
-      cc->vmaskmovps(dst, pred.v32, src);
-  }
-
-  BL_NOINLINE void v_store_predicated_v64(const Mem& dst, const PixelPredicate& pred, const Vec& src) noexcept {
-    if (pred.k.isValid())
-      cc->k(pred.k).vmovdqu64(dst, src);
-    else if (hasAVX2())
-      cc->vpmaskmovq(dst, pred.v64, src);
-    else
-      cc->vmaskmovpd(dst, pred.v64, src);
-  }
-
-  //! \}
-
-  // Intrinsics:
-  //
-  //   - v_mov{x}{y}   - Move with sign or zero extension from {x} to {y}. Similar to instructions like `pmovzx..`,
-  //                     `pmovsx..`, and `punpckl..`
-  //
-  //   - v_swap{x}     - Swap low and high elements. If the vector has more than 2 elements it's divided into 2
-  //                     element vectors in which the operation is performed separately.
-  //
-  //   - v_dup{l|h}{x} - Duplicate either low or high element into both. If there are more than 2 elements in the
-  //                     vector it's considered they are separate units. For example a 4-element vector can be
-  //                     considered as 2 2-element vectors on which the duplication operation is performed.
-
-  template<typename DstT, typename SrcT>
-  inline void v_mov_u8_u16(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vmovu8u16), dst, src); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_mov_u8_u32(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vmovu8u32), dst, src); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_mov_u16_u32(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vmovu16u32), dst, src); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_abs_i8(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi8), dst, src); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_abs_i16(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi16), dst, src); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_abs_i32(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi32), dst, src); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_abs_i64(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vabsi64), dst, src); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_swap_u32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32(dst, src, x86::shuffleImm(2, 3, 0, 1)); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_swap_u64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32(dst, src, x86::shuffleImm(1, 0, 3, 2)); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_dupl_i32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32(dst, src, x86::shuffleImm(2, 2, 0, 0)); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_duph_i32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32(dst, src, x86::shuffleImm(3, 3, 1, 1)); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_dupl_i64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32(dst, src, x86::shuffleImm(1, 0, 1, 0)); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_duph_i64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_u32(dst, src, x86::shuffleImm(3, 2, 3, 2)); }
-
-  // Dst = (CondBit == 0) ? Src1 : Src2;
-  template<typename DstT, typename Src1T, typename Src2T, typename CondT>
-  inline void v_blendv_u8(const DstT& dst, const Src1T& src1, const Src2T& src2, const CondT& cond) noexcept {
-    v_emit_vvvv_vvv(PackedInst::packIntrin(kIntrin4Vpblendvb), dst, src1, src2, cond);
-  }
-
-  // Dst = (CondBit == 0) ? Src1 : Src2;
-  template<typename DstT, typename Src1T, typename Src2T, typename CondT>
-  inline void v_blendv_u8_destructive(const DstT& dst, const Src1T& src1, const Src2T& src2, const CondT& cond) noexcept {
-    v_emit_vvvv_vvv(PackedInst::packIntrin(kIntrin4VpblendvbDestructive), dst, src1, src2, cond);
+      v_srlb_u128(dst, src, n);
+  #else
+    // This doesn't rely on a zero constant on AArch64, which is okay as we don't care what's shifted in.
+    v_alignr_u128(dst, src, src, n);
+  #endif
   }
 
   template<typename DstT, typename SrcT>
-  inline void v_inv255_u16(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv255u16), dst, src); }
-  template<typename DstT, typename SrcT>
-  inline void v_inv256_u16(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv256u16), dst, src); }
-  template<typename DstT, typename SrcT>
-  inline void v_inv255_u32(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv255u32), dst, src); }
-  template<typename DstT, typename SrcT>
-  inline void v_inv256_u32(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vinv256u32), dst, src); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_dupl_f64(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vduplpd), dst, src); }
-  template<typename DstT, typename SrcT>
-  inline void v_duph_f64(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2Vduphpd), dst, src); }
-
-  template<typename DstT, typename Src1T, typename Src2T>
-  inline void v_hadd_f64(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept { v_emit_vvv_vv(PackedInst::packIntrin(kIntrin3Vhaddpd), dst, src1, src2); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_expand_lo_i32(const DstT& dst, const SrcT& src) noexcept {
-    v_swizzle_u32(dst, src, x86::shuffleImm(0, 0, 0, 0));
-  }
-
-  // dst.u64[0] = src1.u64[1];
-  // dst.u64[1] = src2.u64[0];
-  template<typename DstT, typename Src1T, typename Src2T>
-  inline void v_combine_hl_i64(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
-    v_emit_vvv_vv(PackedInst::packIntrin(kIntrin3Vcombhli64), dst, src1, src2);
-  }
-
-  // dst.d64[0] = src1.d64[1];
-  // dst.d64[1] = src2.d64[0];
-  template<typename DstT, typename Src1T, typename Src2T>
-  inline void v_combine_hl_f64(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
-    v_emit_vvv_vv(PackedInst::packIntrin(kIntrin3Vcombhld64), dst, src1, src2);
-  }
-
-  template<typename DstT, typename Src1T, typename Src2T>
-  inline void v_min_u16(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
-    v_emit_vvv_vv(PackedInst::packIntrin(kIntrin3Vminu16), dst, src1, src2);
-  }
-
-  template<typename DstT, typename Src1T, typename Src2T>
-  inline void v_max_u16(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
-    v_emit_vvv_vv(PackedInst::packIntrin(kIntrin3Vmaxu16), dst, src1, src2);
-  }
-
-  // Multiplies packed uint64_t in `src1` with packed low uint32_t int `src2`.
-  template<typename DstT, typename Src1T, typename Src2T>
-  inline void v_mul_u64_u32_lo(const DstT& dst, const Src1T& src1, const Src2T& src2) noexcept {
-    v_emit_vvv_vv(PackedInst::packIntrin(kIntrin3Vmulu64x32), dst, src1, src2);
+  inline void v_inv255_u16(const DstT& dst, const SrcT& src) noexcept {
+    Operand u16_255 = simdConst(&ct.i_00FF00FF00FF00FF, Bcst::k32, dst);
+    v_xor_i32(dst, src, u16_255);
   }
 
   template<typename DstT, typename SrcT>
   BL_NOINLINE void v_mul257_hi_u16(const DstT& dst, const SrcT& src) {
+#if defined(BL_JIT_ARCH_X86)
     v_mulh_u16(dst, src, simdConst(&commonTable.i_0101010101010101, Bcst::kNA, dst));
+#elif defined(BL_JIT_ARCH_A64)
+    v_srli_acc_u16(dst, src, 8);
+    v_srli_u16(dst, dst, 8);
+#endif
   }
 
-  // TODO: [PIPEGEN] Consolidate this to only one implementation.
+  // TODO: [JIT] Consolidate this to only one implementation.
   template<typename DstSrcT>
   BL_NOINLINE void v_div255_u16(const DstSrcT& x) {
-    v_add_i16(x, x, simdConst(&commonTable.i_0080008000800080, Bcst::kNA, x));
+    Operand i_0080008000800080 = simdConst(&commonTable.i_0080008000800080, Bcst::kNA, x);
+#if defined(BL_JIT_ARCH_X86)
+    v_add_i16(x, x, i_0080008000800080);
     v_mul257_hi_u16(x, x);
+#elif defined(BL_JIT_ARCH_A64)
+    v_srli_rnd_acc_u16(x, x, 8);
+    v_srli_rnd_u16(x, x, 8);
+#endif
   }
 
   template<typename DstSrcT>
   BL_NOINLINE void v_div255_u16_2x(const DstSrcT& v0, const DstSrcT& v1) noexcept {
+#if defined(BL_JIT_ARCH_X86)
     Operand i_0080008000800080 = simdConst(&commonTable.i_0080008000800080, Bcst::kNA, v0);
     Operand i_0101010101010101 = simdConst(&commonTable.i_0101010101010101, Bcst::kNA, v0);
 
@@ -2021,272 +2851,122 @@ public:
 
     v_mulh_u16(v0, v0, i_0101010101010101);
     v_mulh_u16(v1, v1, i_0101010101010101);
-  }
-
-  template<typename DstT, typename SrcT>
-  inline void v_expand_lo_ps(const DstT& dst, const SrcT& src) noexcept {
-    v_expand_lo_i32(dst, src);
-  }
-
-  template<typename DstT, typename SrcT>
-  inline void v_swizzle_f32(const DstT& dst, const SrcT& src, uint32_t imm) noexcept { v_emit_vvi_vi(PackedInst::packIntrin(kIntrin2iVswizps), dst, src, imm); }
-  template<typename DstT, typename SrcT>
-  inline void v_swizzle_f64(const DstT& dst, const SrcT& src, uint32_t imm) noexcept { v_emit_vvi_vi(PackedInst::packIntrin(kIntrin2iVswizpd), dst, src, imm); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_swap_f32(const DstT& dst, const SrcT& src) noexcept { v_swizzle_f32(dst, src, x86::shuffleImm(2, 3, 0, 1)); }
-  template<typename DstT, typename SrcT>
-  inline void v_swap_f64(const DstT& dst, const SrcT& src) noexcept { v_swizzle_f64(dst, src, x86::shuffleImm(0, 1)); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_broadcast_u8(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastU8), dst, src); }
-  template<typename DstT, typename SrcT>
-  inline void v_broadcast_u16(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastU16), dst, src); }
-  template<typename DstT, typename SrcT>
-  inline void v_broadcast_u32(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastU32), dst, src); }
-  template<typename DstT, typename SrcT>
-  inline void v_broadcast_u64(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastU64), dst, src); }
-
-  template<typename DstT, typename SrcT>
-  inline void v_broadcast_u32x4(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastI32x4), dst, src); }
-  template<typename DstT, typename SrcT>
-  inline void v_broadcast_u64x2(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastI64x2), dst, src); }
-  template<typename DstT, typename SrcT>
-  inline void v_broadcast_f32x4(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastF32x4), dst, src); }
-  template<typename DstT, typename SrcT>
-  inline void v_broadcast_f64x2(const DstT& dst, const SrcT& src) noexcept { v_emit_vv_vv(PackedInst::packIntrin(kIntrin2VBroadcastF64x2), dst, src); }
-
-
-  template<typename DstT, typename Src1T, typename Src2T>
-  BL_INLINE void v_min_or_max_u8(const DstT& dst, const Src1T& src1, const Src2T& src2, bool isMin) noexcept {
-    if (isMin)
-      v_min_u8(dst, src1, src2);
-    else
-      v_max_u8(dst, src1, src2);
+#elif defined(BL_JIT_ARCH_A64)
+    v_srli_rnd_acc_u16(v0, v0, 8);
+    v_srli_rnd_acc_u16(v1, v1, 8);
+    v_srli_rnd_u16(v0, v0, 8);
+    v_srli_rnd_u16(v1, v1, 8);
+#endif
   }
 
   // d = int(floor(a / b) * b).
   template<typename VecOrMem>
   BL_NOINLINE void v_mod_pd(const Vec& d, const Vec& a, const VecOrMem& b) noexcept {
-    if (hasSSE4_1()) {
-      v_div_f64(d, a, b);
-      v_round_f64_(d, d, x86::RoundImm::kTrunc | x86::RoundImm::kSuppress);
-      v_mul_f64(d, d, b);
-    }
-    else {
-      Xmm t = cc->newXmm("vModTmp");
+#if defined(BL_JIT_ARCH_X86)
+    if (!hasSSE4_1()) {
+      Vec t = newV128("vModTmp");
 
       v_div_f64(d, a, b);
-      v_cvtt_f64_i32(t, d);
-      v_cvt_i32_f64(t, t);
-      v_cmp_f64(d, d, t, x86::VCmpImm::kLT_OS);
-      v_and_f64(d, d, simdMemConst(&commonTable.f64_m1, Bcst::k64, d));
-      v_add_f64(d, d, t);
+      v_cvt_trunc_f64_to_i32_lo(t, d);
+      v_cvt_i32_lo_to_f64(d, t);
+      v_mul_f64(d, d, b);
+    }
+    else
+#endif // BL_JIT_ARCH_X86
+    {
+      v_div_f64(d, a, b);
+      v_trunc_f64(d, d);
       v_mul_f64(d, d, b);
     }
   }
 
   //! \}
 
-  //! \name Emit - FMA
+#if defined(BL_JIT_ARCH_X86)
+  //! \name Memory Loads & Stores with Predicate
   //! \{
 
-  template<typename DstT, typename SrcA, typename SrcB>
-  inline void s_mul_13_add_2(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
-    if (hasFMA()) {
-      s_fmadd_132_f32_(d1, a2, b3);
+  KReg makeMaskPredicate(PixelPredicate& predicate, uint32_t lastN) noexcept;
+  KReg makeMaskPredicate(PixelPredicate& predicate, uint32_t lastN, const Gp& adjustedCount) noexcept;
+
+  Vec makeVecPredicate32(PixelPredicate& predicate, uint32_t lastN) noexcept;
+  Vec makeVecPredicate32(PixelPredicate& predicate, uint32_t lastN, const Gp& adjustedCount) noexcept;
+
+  BL_NOINLINE void v_load_predicated_u8(const Vec& dst, const Mem& src, uint32_t n, PixelPredicate& predicate) noexcept{
+    if (hasAVX512()) {
+      KReg kPred = makeMaskPredicate(predicate, n);
+      cc->k(kPred).z().vmovdqu8(dst, src);
     }
     else {
-      s_mul_f32(d1, d1, b3);
-      s_add_f32(d1, d1, a2);
+      BL_NOT_REACHED();
     }
   }
 
-  template<typename DstT, typename SrcA, typename SrcB>
-  inline void v_mul_13_add_2(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
-    if (hasFMA()) {
-      v_fmadd_132_f32_(d1, a2, b3);
+  BL_NOINLINE void v_store_predicated_u8(const Mem& dst, const Vec& src, uint32_t n, PixelPredicate& predicate) noexcept{
+    if (hasAVX512()) {
+      KReg kPred = makeMaskPredicate(predicate, n);
+      cc->k(kPred).vmovdqu8(dst, src);
     }
     else {
-      v_mul_f32(d1, d1, b3);
-      v_add_f32(d1, d1, a2);
+      BL_NOT_REACHED();
     }
   }
 
-  template<typename DstT, typename SrcA, typename SrcB>
-  inline void s_mul_12_add_3(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
-    if (hasFMA()) {
-      s_fmadd_213_f32_(d1, a2, b3);
+  BL_NOINLINE void v_load_predicated_u32(const Vec& dst, const Mem& src, uint32_t n, PixelPredicate& predicate) noexcept{
+    if (hasAVX512()) {
+      KReg kPred = makeMaskPredicate(predicate, n);
+      cc->k(kPred).z().vmovdqu32(dst, src);
+    }
+    else if (hasAVX()) {
+      Vec vPred = makeVecPredicate32(predicate, n);
+      InstId instId = hasAVX2() ? x86::Inst::kIdVpmaskmovd : x86::Inst::kIdVmaskmovps;
+      cc->emit(instId, dst, vPred, src);
     }
     else {
-      s_mul_f32(d1, d1, a2);
-      s_add_f32(d1, d1, b3);
+      BL_NOT_REACHED();
     }
   }
 
-  template<typename DstT, typename SrcA, typename SrcB>
-  inline void v_mul_12_add_3(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
-    if (hasFMA()) {
-      v_fmadd_213_f32_(d1, a2, b3);
+  BL_NOINLINE void v_store_predicated_u32(const Mem& dst, const Vec& src, uint32_t n, PixelPredicate& predicate) noexcept{
+    if (hasAVX512()) {
+      KReg kPred = makeMaskPredicate(predicate, n);
+      cc->k(kPred).vmovdqu32(dst, src);
+    }
+    else if (hasAVX()) {
+      Vec vPred = makeVecPredicate32(predicate, n);
+      InstId instId = hasAVX2() ? x86::Inst::kIdVpmaskmovd : x86::Inst::kIdVmaskmovps;
+      cc->emit(instId, dst, vPred, src);
     }
     else {
-      v_mul_f32(d1, d1, a2);
-      v_add_f32(d1, d1, b3);
-    }
-  }
-
-  template<typename DstT, typename SrcA, typename SrcB>
-  inline void s_mul_13_sub_2(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
-    if (hasFMA()) {
-      s_fmsub_132_f32_(d1, a2, b3);
-    }
-    else {
-      s_mul_f32(d1, d1, b3);
-      s_sub_f32(d1, d1, a2);
-    }
-  }
-
-  template<typename DstT, typename SrcA, typename SrcB>
-  inline void v_mul_13_sub_2(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
-    if (hasFMA()) {
-      v_fmsub_132_f32_(d1, a2, b3);
-    }
-    else {
-      v_mul_f32(d1, d1, b3);
-      v_sub_f32(d1, d1, a2);
-    }
-  }
-
-  template<typename DstT, typename SrcA, typename SrcB>
-  inline void s_mul_12_sub_3(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
-    if (hasFMA()) {
-      s_fmsub_213_f32_(d1, a2, b3);
-    }
-    else {
-      s_mul_f32(d1, d1, a2);
-      s_sub_f32(d1, d1, b3);
-    }
-  }
-
-  template<typename DstT, typename SrcA, typename SrcB>
-  inline void v_mul_12_sub_3(const DstT& d1, const SrcA& a2, const SrcB& b3) noexcept {
-    if (hasFMA()) {
-      v_fmsub_213_f32_(d1, a2, b3);
-    }
-    else {
-      v_mul_f32(d1, d1, a2);
-      v_sub_f32(d1, d1, b3);
+      BL_NOT_REACHED();
     }
   }
 
   //! \}
+
+#endif // BL_JIT_ARCH_X86
 
   //! \name Emit - 'X' High Level Functionality
   //! \{
 
-  void x_make_predicate_v32(const Vec& vmask, const Gp& count) noexcept;
-
-  void x_ensure_predicate_8(PixelPredicate& predicate, uint32_t width) noexcept;
-  void x_ensure_predicate_32(PixelPredicate& predicate, uint32_t width) noexcept;
-
   // Kind of a hack - if we don't have SSE4.1 we have to load the byte into GP register first and then we use 'PINSRW',
   // which is provided by baseline SSE2. If we have SSE4.1 then it's much easier as we can load the byte by 'PINSRB'.
   void x_insert_word_or_byte(const Vec& dst, const Mem& src, uint32_t wordIndex) noexcept {
-    Mem m = src;
-    m.setSize(1);
-
+#if defined(BL_JIT_ARCH_X86)
     if (hasSSE4_1()) {
-      v_insert_u8_(dst, dst, m, wordIndex * 2u);
+      Mem m = src;
+      m.setSize(1);
+      v_insert_u8(dst, m, wordIndex * 2u);
     }
     else {
       Gp tmp = newGp32("@tmp");
-      cc->movzx(tmp, m);
-      v_insert_u16(dst, dst, tmp, wordIndex);
+      load_u8(tmp, src);
+      s_insert_u16(dst, tmp, wordIndex);
     }
+#else
+    v_insert_u8(dst, src, wordIndex * 2);
+#endif
   }
-
-  void x_inline_pixel_fill_loop(Gp& dst, Vec& src, Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity) noexcept;
-  void x_inline_pixel_copy_loop(Gp& dst, Gp& src, Gp& i, uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity, FormatExt format) noexcept;
-
-  void _x_inline_memcpy_sequence_xmm(
-    const Mem& dPtr, bool dstAligned,
-    const Mem& sPtr, bool srcAligned, uint32_t numBytes, const Vec& fillMask) noexcept;
-
-  BL_NOINLINE void x_storea_fill(Mem dst, const Vec& src, uint32_t n) noexcept {
-    if (src.isZmm() && n >= 64) {
-      for (uint32_t j = 0; j < n; j += 64u) {
-        v_storea_i512(dst, src);
-        dst.addOffsetLo32(64);
-      }
-    }
-    else if (src.isYmm() && n >= 32) {
-      for (uint32_t j = 0; j < n; j += 32u) {
-        v_storea_i256(dst, src);
-        dst.addOffsetLo32(32);
-      }
-    }
-    else {
-      Xmm srcXmm = src.xmm();
-      for (uint32_t j = 0; j < n; j += 16u) {
-        v_storea_i128(dst, srcXmm);
-        dst.addOffsetLo32(16);
-      }
-    }
-  }
-
-  BL_NOINLINE void x_storeu_fill(Mem dst, const Vec& src_, uint32_t n) noexcept {
-    Vec src = src_;
-
-    if (src.size() > 32 && n <= 32)
-      src = src.ymm();
-
-    if (src.size() > 16 && n <= 16)
-      src = src.xmm();
-
-    uint32_t vecSize = src.size();
-    for (uint32_t i = 0; i < n; i += vecSize) {
-      v_storeu_ivec(dst, src);
-      dst.addOffsetLo32(vecSize);
-    }
-  }
-
-  //! \}
-
-  //! \name Emit - Pixel Fetch & Store Utilities
-  //! \{
-
-  void x_fetch_mask_a8_advance(VecArray& vm, PixelCount n, PixelType pixelType, const Gp& mPtr, const Vec& globalAlpha) noexcept;
-
-  //! Fetches `n` pixels to vector register(s) in `p` from memory location `src_`.
-  void x_fetch_pixel(Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const Mem& src_, Alignment alignment) noexcept;
-  void x_fetch_pixel(Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept;
-
-  void _x_fetch_pixel_a8(Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept;
-  void _x_fetch_pixel_rgba32(Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const Mem& src_, Alignment alignment, PixelPredicate& predicate) noexcept;
-
-  //! Makes sure that the given pixel `p` has all the requrements as specified by `flags`.
-  void x_satisfy_pixel(Pixel& p, PixelFlags flags) noexcept;
-
-  void _x_satisfy_pixel_a8(Pixel& p, PixelFlags flags) noexcept;
-  void _x_satisfy_pixel_rgba32(Pixel& p, PixelFlags flags) noexcept;
-
-  //! Makes sure that the given pixel `p` has all the requrements as specified by `flags` (solid source only).
-  void x_satisfy_solid(Pixel& p, PixelFlags flags) noexcept;
-
-  void _x_satisfy_solid_a8(Pixel& p, PixelFlags flags) noexcept;
-  void _x_satisfy_solid_rgba32(Pixel& p, PixelFlags flags) noexcept;
-
-  void _x_pack_pixel(VecArray& px, VecArray& ux, uint32_t n, const char* prefix, const char* pxName) noexcept;
-  void _x_unpack_pixel(VecArray& ux, VecArray& px, uint32_t n, const char* prefix, const char* uxName) noexcept;
-
-  void x_fetch_unpacked_a8_2x(const Vec& dst, FormatExt format, const Mem& src1, const Mem& src0) noexcept;
-
-  void x_assign_unpacked_alpha_values(Pixel& p, PixelFlags flags, Vec& vec) noexcept;
-
-  //! Fills alpha channel with 1.
-  void x_fill_pixel_alpha(Pixel& p) noexcept;
-
-  void x_store_pixel_advance(const Gp& dPtr, Pixel& p, PixelCount n, uint32_t bpp, Alignment alignment, PixelPredicate& predicate) noexcept;
 
   //! \}
 
@@ -2296,41 +2976,46 @@ public:
   //! Pack 16-bit integers to unsigned 8-bit integers in an AVX2 and AVX512 aware way.
   template<typename Dst, typename Src1, typename Src2>
   BL_NOINLINE void x_packs_i16_u8(const Dst& d, const Src1& s1, const Src2& s2) noexcept {
-    if (JitUtils::isXmm(s1)) {
+#if defined(BL_JIT_ARCH_X86)
+    if (s1.isVec128()) {
       v_packs_i16_u8(d, s1, s2);
     }
     else {
       const Vec& vType = JitUtils::firstOp(s1).template as<Vec>();
       v_packs_i16_u8(d, s1, s2);
-      v_perm_i64(d.cloneAs(vType), d.cloneAs(vType), x86::shuffleImm(3, 1, 2, 0));
+      v_swizzle_u64x4(d.cloneAs(vType), d.cloneAs(vType), swizzle(3, 1, 2, 0));
     }
+#else
+    v_packs_i16_u8(d, s1, s2);
+#endif
   }
 
   BL_NOINLINE void xStorePixel(const Gp& dPtr, const Vec& vSrc, uint32_t count, uint32_t bpp, Alignment alignment) noexcept {
-    v_store_iany(x86::ptr(dPtr), vSrc, count * bpp, alignment);
+    v_store_iany(mem_ptr(dPtr), vSrc, count * bpp, alignment);
   }
 
   inline void xStore32_ARGB(const Mem& dst, const Vec& vSrc) noexcept {
-    v_store_i32(dst, vSrc);
+    v_storea32(dst, vSrc);
   }
 
   BL_NOINLINE void xMovzxBW_LoHi(const Vec& d0, const Vec& d1, const Vec& s) noexcept {
     BL_ASSERT(d0.id() != d1.id());
 
+#if defined(BL_JIT_ARCH_X86)
     if (hasSSE4_1()) {
       if (d0.id() == s.id()) {
-        v_swizzle_u32(d1, d0, x86::shuffleImm(1, 0, 3, 2));
-        v_mov_u8_u16_(d0, d0);
-        v_mov_u8_u16_(d1, d1);
+        v_swizzle_u32x4(d1, d0, swizzle(1, 0, 3, 2));
+        v_cvt_u8_lo_to_u16(d0, d0);
+        v_cvt_u8_lo_to_u16(d1, d1);
       }
       else {
-        v_mov_u8_u16(d0, s);
-        v_swizzle_u32(d1, s, x86::shuffleImm(1, 0, 3, 2));
-        v_mov_u8_u16(d1, d1);
+        v_cvt_u8_lo_to_u16(d0, s);
+        v_swizzle_u32x4(d1, s, swizzle(1, 0, 3, 2));
+        v_cvt_u8_lo_to_u16(d1, d1);
       }
     }
     else {
-      Vec zero = simdVecConst(&commonTable.i_0000000000000000, s);
+      Vec zero = simdVecConst(&commonTable.i_0000000000000000, Bcst::k32, s);
       if (d1.id() != s.id()) {
         v_interleave_hi_u8(d1, s, zero);
         v_interleave_lo_u8(d0, s, zero);
@@ -2340,19 +3025,30 @@ public:
         v_interleave_hi_u8(d1, s, zero);
       }
     }
+#elif defined(BL_JIT_ARCH_A64)
+    if (d0.id() == s.id()) {
+      cc->sshll2(d1, s, 0);
+      cc->sshll(d0, s, 0);
+    }
+    else {
+      cc->sshll(d0, s, 0);
+      cc->sshll2(d1, s, 0);
+    }
+#endif
   }
 
   template<typename Dst, typename Src>
-  inline void vExpandAlphaLo16(const Dst& d, const Src& s) noexcept { v_swizzle_lo_u16(d, s, x86::shuffleImm(3, 3, 3, 3)); }
+  inline void vExpandAlphaLo16(const Dst& d, const Src& s) noexcept { v_swizzle_lo_u16x4(d, s, swizzle(3, 3, 3, 3)); }
 
   template<typename Dst, typename Src>
-  inline void vExpandAlphaHi16(const Dst& d, const Src& s) noexcept { v_swizzle_hi_u16(d, s, x86::shuffleImm(3, 3, 3, 3)); }
+  inline void vExpandAlphaHi16(const Dst& d, const Src& s) noexcept { v_swizzle_hi_u16x4(d, s, swizzle(3, 3, 3, 3)); }
 
   template<typename Dst, typename Src>
   inline void v_expand_alpha_16(const Dst& d, const Src& s, uint32_t useHiPart = 1) noexcept {
+#if defined(BL_JIT_ARCH_X86)
     if (useHiPart) {
       if (hasAVX() || (hasSSSE3() && d == s)) {
-        v_shuffle_i8(d, s, simdConst(&commonTable.pshufb_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, d));
+        v_swizzlev_u8(d, s, simdConst(&commonTable.swizu8_32xxxxxx10xxxxxx_to_3232323210101010, Bcst::kNA, d));
       }
       else {
         vExpandAlphaHi16(d, s);
@@ -2362,10 +3058,14 @@ public:
     else {
       vExpandAlphaLo16(d, s);
     }
+#elif defined(BL_JIT_ARCH_A64)
+    blUnused(useHiPart);
+    v_swizzle_u16x4(d, s, swizzle(3, 3, 3, 3));
+#endif
   }
 
   template<typename Dst, typename Src>
-  inline void vExpandAlphaPS(const Dst& d, const Src& s) noexcept { v_swizzle_u32(d, s, x86::shuffleImm(3, 3, 3, 3)); }
+  inline void vExpandAlphaPS(const Dst& d, const Src& s) noexcept { v_swizzle_u32x4(d, s, swizzle(3, 3, 3, 3)); }
 
   template<typename DstT, typename SrcT>
   inline void vFillAlpha255B(const DstT& dst, const SrcT& src) noexcept { v_or_i32(dst, src, simdConst(&commonTable.i_FF000000FF000000, Bcst::k32, dst)); }
@@ -2390,123 +3090,116 @@ public:
 
   // Performs 32-bit unsigned modulo of 32-bit `a` (hi DWORD) with 32-bit `b` (lo DWORD).
   template<typename VecOrMem_A, typename VecOrMem_B>
-  BL_NOINLINE void xModI64HIxU64LO(const Xmm& d, const VecOrMem_A& a, const VecOrMem_B& b) noexcept {
-    Xmm t0 = cc->newXmm("t0");
-    Xmm t1 = cc->newXmm("t1");
+  BL_NOINLINE void xModI64HIxU64LO(const Vec& d, const VecOrMem_A& a, const VecOrMem_B& b) noexcept {
+    Vec t0 = newV128("t0");
+    Vec t1 = newV128("t1");
 
-    v_swizzle_u32(t1, b, x86::shuffleImm(3, 3, 2, 0));
-    v_swizzle_u32(d , a, x86::shuffleImm(2, 0, 3, 1));
+    v_swizzle_u32x4(t1, b, swizzle(3, 3, 2, 0));
+    v_swizzle_u32x4(d , a, swizzle(2, 0, 3, 1));
 
-    v_cvt_i32_f64(t1, t1);
-    v_cvt_i32_f64(t0, d);
+    v_cvt_i32_lo_to_f64(t1, t1);
+    v_cvt_i32_lo_to_f64(t0, d);
     v_mod_pd(t0, t0, t1);
-    v_cvtt_f64_i32(t0, t0);
+    v_cvt_trunc_f64_to_i32_lo(t0, t0);
 
     v_sub_i32(d, d, t0);
-    v_swizzle_u32(d, d, x86::shuffleImm(1, 3, 0, 2));
+    v_swizzle_u32x4(d, d, swizzle(1, 3, 0, 2));
   }
 
   // Performs 32-bit unsigned modulo of 32-bit `a` (hi DWORD) with 64-bit `b` (DOUBLE).
   template<typename VecOrMem_A, typename VecOrMem_B>
   BL_NOINLINE void xModI64HIxDouble(const Vec& d, const VecOrMem_A& a, const VecOrMem_B& b) noexcept {
-    Vec t0 = cc->newXmm("t0");
+    Vec t0 = newV128("t0");
 
-    v_swizzle_u32(d, a, x86::shuffleImm(2, 0, 3, 1));
-    v_cvt_i32_f64(t0, d);
+    v_swizzle_u32x4(d, a, swizzle(2, 0, 3, 1));
+    v_cvt_i32_lo_to_f64(t0, d);
     v_mod_pd(t0, t0, b);
-    v_cvtt_f64_i32(t0, t0);
+    v_cvt_trunc_f64_to_i32_lo(t0, t0);
 
     v_sub_i32(d, d, t0);
-    v_swizzle_u32(d, d, x86::shuffleImm(1, 3, 0, 2));
+    v_swizzle_u32x4(d, d, swizzle(1, 3, 0, 2));
   }
 
   BL_NOINLINE void xExtractUnpackedAFromPackedARGB32_1(const Vec& d, const Vec& s) noexcept {
-    v_swizzle_lo_u16(d, s, x86::shuffleImm(1, 1, 1, 1));
-    v_srl_i16(d, d, 8);
+    v_swizzle_lo_u16x4(d, s, swizzle(1, 1, 1, 1));
+    v_srli_u16(d, d, 8);
   }
 
   BL_NOINLINE void xExtractUnpackedAFromPackedARGB32_2(const Vec& d, const Vec& s) noexcept {
-    if (hasSSSE3()) {
-      v_shuffle_i8(d, s, simdConst(&commonTable.pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d));
+#if defined(BL_JIT_ARCH_X86)
+    if (!hasSSSE3()) {
+      v_swizzle_lo_u16x4(d, s, swizzle(3, 3, 1, 1));
+      v_swizzle_u32x4(d, d, swizzle(1, 1, 0, 0));
+      v_srli_u16(d, d, 8);
+      return;
     }
-    else {
-      v_swizzle_lo_u16(d, s, x86::shuffleImm(3, 3, 1, 1));
-      v_swizzle_u32(d, d, x86::shuffleImm(1, 1, 0, 0));
-      v_srl_i16(d, d, 8);
-    }
+#endif
+
+    v_swizzlev_u8(d, s, simdConst(&commonTable.swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d));
   }
 
   BL_NOINLINE void xExtractUnpackedAFromPackedARGB32_4(const Vec& d0, const Vec& d1, const Vec& s) noexcept {
     BL_ASSERT(d0.id() != d1.id());
 
-    if (hasSSSE3()) {
-      if (d0.id() == s.id()) {
-        v_shuffle_i8(d1, s, simdConst(&ct.pshufb_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d1));
-        v_shuffle_i8(d0, s, simdConst(&ct.pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d0));
+#if defined(BL_JIT_ARCH_X86)
+    if (!hasSSSE3()) {
+      if (d1.id() != s.id()) {
+        v_swizzle_hi_u16x4(d1, s, swizzle(3, 3, 1, 1));
+        v_swizzle_lo_u16x4(d0, s, swizzle(3, 3, 1, 1));
+
+        v_swizzle_u32x4(d1, d1, swizzle(3, 3, 2, 2));
+        v_swizzle_u32x4(d0, d0, swizzle(1, 1, 0, 0));
+
+        v_srli_u16(d1, d1, 8);
+        v_srli_u16(d0, d0, 8);
       }
       else {
-        v_shuffle_i8(d0, s, simdConst(&ct.pshufb_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d0));
-        v_shuffle_i8(d1, s, simdConst(&ct.pshufb_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d1));
+        v_swizzle_lo_u16x4(d0, s, swizzle(3, 3, 1, 1));
+        v_swizzle_hi_u16x4(d1, s, swizzle(3, 3, 1, 1));
+
+        v_swizzle_u32x4(d0, d0, swizzle(1, 1, 0, 0));
+        v_swizzle_u32x4(d1, d1, swizzle(3, 3, 2, 2));
+
+        v_srli_u16(d0, d0, 8);
+        v_srli_u16(d1, d1, 8);
       }
+      return;
+    }
+#endif
+
+    if (d0.id() == s.id()) {
+      v_swizzlev_u8(d1, s, simdConst(&ct.swizu8_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d1));
+      v_swizzlev_u8(d0, s, simdConst(&ct.swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d0));
     }
     else {
-      if (d1.id() != s.id()) {
-        v_swizzle_hi_u16(d1, s, x86::shuffleImm(3, 3, 1, 1));
-        v_swizzle_lo_u16(d0, s, x86::shuffleImm(3, 3, 1, 1));
-
-        v_swizzle_u32(d1, d1, x86::shuffleImm(3, 3, 2, 2));
-        v_swizzle_u32(d0, d0, x86::shuffleImm(1, 1, 0, 0));
-
-        v_srl_i16(d1, d1, 8);
-        v_srl_i16(d0, d0, 8);
-      }
-      else {
-        v_swizzle_lo_u16(d0, s, x86::shuffleImm(3, 3, 1, 1));
-        v_swizzle_hi_u16(d1, s, x86::shuffleImm(3, 3, 1, 1));
-
-        v_swizzle_u32(d0, d0, x86::shuffleImm(1, 1, 0, 0));
-        v_swizzle_u32(d1, d1, x86::shuffleImm(3, 3, 2, 2));
-
-        v_srl_i16(d0, d0, 8);
-        v_srl_i16(d1, d1, 8);
-      }
+      v_swizzlev_u8(d0, s, simdConst(&ct.swizu8_xxxxxxxx1xxx0xxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d0));
+      v_swizzlev_u8(d1, s, simdConst(&ct.swizu8_1xxx0xxxxxxxxxxx_to_z1z1z1z1z0z0z0z0, Bcst::kNA, d1));
     }
   }
 
   BL_NOINLINE void xPackU32ToU16Lo(const Vec& d0, const Vec& s0) noexcept {
+#if defined(BL_JIT_ARCH_X86)
     if (hasSSE4_1()) {
-      v_packs_i32_u16_(d0, s0, s0);
+      v_packs_i32_u16(d0, s0, s0);
     }
     else if (hasSSSE3()) {
-      v_shuffle_i8(d0, s0, simdConst(&commonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210, Bcst::kNA, d0));
+      v_swizzlev_u8(d0, s0, simdConst(&commonTable.swizu8_xx76xx54xx32xx10_to_7654321076543210, Bcst::kNA, d0));
     }
     else {
       // Sign extend and then use `packssdw()`.
-      v_sll_i32(d0, s0, 16);
-      v_sra_i32(d0, d0, 16);
+      v_slli_i32(d0, s0, 16);
+      v_srai_i32(d0, d0, 16);
       v_packs_i32_i16(d0, d0, d0);
     }
+#elif defined(BL_JIT_ARCH_A64)
+    cc->sqxtun(d0.h4(), s0.s4());
+#endif
   }
 
   BL_NOINLINE void xPackU32ToU16Lo(const VecArray& d0, const VecArray& s0) noexcept {
     for (uint32_t i = 0; i < d0.size(); i++)
       xPackU32ToU16Lo(d0[i], s0[i]);
   }
-
-  #undef PACK_AVX_SSE
-  #undef V_EMIT_VVVV_VVV
-  #undef V_EMIT_VVVi_VVi
-  #undef V_EMIT_VVVI_VVI
-  #undef V_EMIT_VVV_VV
-  #undef V_EMIT_VVi_VVi
-  #undef V_EMIT_VVI_VVI
-  #undef V_EMIT_VVI_VVI
-  #undef V_EMIT_VVI_VI
-  #undef V_EMIT_VV_VV
-#endif // BL_JIT_ARCH_X86
-
-#if defined(BL_JIT_ARCH_A64)
-#endif // BL_JIT_ARCH_A64
 };
 
 class PipeInjectAtTheEnd {
@@ -2515,63 +3208,6 @@ public:
 
   BL_INLINE PipeInjectAtTheEnd(PipeCompiler* pc) noexcept
     : _injector(pc->cc, &pc->_funcEnd) {}
-};
-
-//! Provides unpacked global alpha mask; can be used by \ref FillPart and \ref CompOpPart as a global alpha abstraction.
-class GlobalAlpha {
-public:
-  //! \name Members
-  //! \{
-
-  //! Pipeline compiler.
-  PipeCompiler* _pc = nullptr;
-  //! Node where to emit additional code in case `sm` is not initialized, but required.
-  asmjit::BaseNode* _hook = nullptr;
-
-  //! Global alpha as scalar (only used by scalar alpha-only processing operations).
-  Gp _sm;
-  //! Unpacked global alpha as vector.
-  Vec _vm;
-
-  //! \}
-
-  //! \name Initialization
-  //! \{
-
-  BL_INLINE void initFromMem(PipeCompiler* pc, const Mem& mem) noexcept {
-    _pc = pc;
-    _vm = pc->newVec("ga.vm");
-    _pc->v_broadcast_u16(_vm, mem);
-    _hook = pc->cc->cursor();
-  }
-
-  BL_INLINE void initFromVec(PipeCompiler* pc, const Vec& vm) noexcept {
-    _pc = pc;
-    _hook = pc->cc->cursor();
-    _vm = vm;
-  }
-
-  //! Returns whether global alpha is initialized and should be applied
-  BL_INLINE_NODEBUG bool isInitialized() const noexcept { return _hook != nullptr; }
-
-  //! \}
-
-  //! \name Accessors
-  //! \{
-
-  BL_INLINE_NODEBUG const Vec& vm() const noexcept { return _vm; }
-
-  BL_NOINLINE const Gp& sm() noexcept {
-    if (_vm.isValid() && !_sm.isValid()) {
-      ScopedInjector injector(_pc->cc, &_hook);
-      _sm = _pc->newGp32("ga.sm");
-      _pc->v_extract_u16(_sm, _vm, 0u);
-    }
-
-    return _sm;
-  }
-
-  //! \}
 };
 
 } // {JIT}

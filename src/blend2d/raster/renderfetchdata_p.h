@@ -76,7 +76,7 @@ struct RenderFetchDataHeader {
 
   BL_INLINE_NODEBUG bool isSolid() const noexcept { return signature.isSolid(); }
 
-  BL_INLINE_NODEBUG void retain(uint32_t n = 1) noexcept { refCount += n; }
+  BL_INLINE void retain(uint32_t n = 1) noexcept { refCount += n; }
 
   BL_INLINE_NODEBUG const void* getPipelineData() const noexcept {
     return reinterpret_cast<const uint8_t*>(this) + sizeof(RenderFetchDataHeader);
@@ -137,8 +137,8 @@ struct alignas(16) RenderFetchData : public RenderFetchDataHeader {
   //! \name Initialization
   //! \{
 
-  BL_INLINE_NODEBUG void initStyleObject(const BLObjectCore* src) noexcept { style._d = src->_d; }
-  BL_INLINE_NODEBUG void initDestroyFunc(DestroyFunc fn) noexcept { destroyFunc = fn; }
+  BL_INLINE void initStyleObject(const BLObjectCore* src) noexcept { style._d = src->_d; }
+  BL_INLINE void initDestroyFunc(DestroyFunc fn) noexcept { destroyFunc = fn; }
 
   BL_INLINE void initStyleObjectAndDestroyFunc(const BLObjectCore* src, DestroyFunc fn) noexcept {
     initStyleObject(src);

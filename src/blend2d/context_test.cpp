@@ -383,8 +383,9 @@ static void test_context_state(BLContext& ctx) {
   }
 }
 
-// NOTE: The purpose of these tests is to see whether the render call is clipped
-// properly and that there is no out of bounds access or a failed assertion.
+// NOTE: The purpose of these tests is to see whether the render call is clipped properly and that there is no out
+// of bounds access or a failed assertion. The tests on CI are run with sanitizers so NaNs, Infs, and other extremely
+// high numbers are great to verify whether we are not hitting UB in places where FetchData is initialized.
 static void test_context_blit_fill_clip(BLContext& ctx) {
   const double kNaN = Math::nan<double>();
   const double kInf = Math::inf<double>();

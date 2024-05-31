@@ -426,7 +426,7 @@ static constexpr uint32_t kCFFStorageSize = 32;
 
 static constexpr uint32_t kCFFValueStackSizeV1 = 48;
 
-// TODO: Required by CFF2.
+// TODO: [OpenType] Required by CFF2.
 // static constexpr uint32_t kCFFValueStackSizeV2 = 513;
 
 // We use `double` precision in our implementation, so this constant is used to convert a fixed-point.
@@ -1373,7 +1373,7 @@ OnVHCurveTo:
           if (BL_UNLIKELY((size_t)(ipEnd - ip) < hintByteSize))
             goto InvalidData;
 
-          // TODO: [CFF HINTING]: These bits are ignored atm.
+          // TODO: [OpenType] CFF HINTING: These bits are ignored atm.
           ip += hintByteSize;
 
           vIdx = 0;
@@ -1386,14 +1386,14 @@ OnVHCurveTo:
 
         // |- ivs vsindex (15) |-
         case kCSOpVSIndex: {
-          // TODO: [CFF OPENTYPE VARIATIONS]
+          // TODO: [OpenType] CFF VARIATIONS
           vIdx = 0;
           continue;
         }
 
         // in(0)...in(N-1), d(0,0)...d(K-1,0), d(0,1)...d(K-1,1) ... d(0,N-1)...d(K-1,N-1) N blend (16) out(0)...(N-1)
         case kCSOpBlend: {
-          // TODO: [CFF OPENTYPE VARIATIONS]
+          // TODO: [OpenType] CFF VARIATIONS
           vIdx = 0;
           continue;
         }

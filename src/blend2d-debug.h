@@ -560,10 +560,10 @@ static void blDebugFontFeatureSettings_(const BLFontFeatureSettingsCore* obj, co
       BLTag tag = view.data[i].tag;
       uint32_t value = view.data[i].value;
       BL_DEBUG_FMT("'%c%c%c%c': %u\n",
-        (tag << 24) & 0xFF,
-        (tag << 16) & 0xFF,
-        (tag <<  8) & 0xFF,
-        (tag <<  0) & 0xFF,
+        (tag >> 24) & 0xFF,
+        (tag >> 16) & 0xFF,
+        (tag >>  8) & 0xFF,
+        (tag >>  0) & 0xFF,
         (unsigned)value);
     }
 
@@ -592,10 +592,10 @@ static void blDebugFontVariationSettings_(const BLFontVariationSettingsCore* obj
       BLTag tag = view.data[i].tag;
       float value = view.data[i].value;
       BL_DEBUG_FMT("'%c%c%c%c': %f\n",
-        (tag << 24) & 0xFF,
-        (tag << 16) & 0xFF,
-        (tag <<  8) & 0xFF,
-        (tag <<  0) & 0xFF,
+        (tag >> 24) & 0xFF,
+        (tag >> 16) & 0xFF,
+        (tag >>  8) & 0xFF,
+        (tag >>  0) & 0xFF,
         value);
     }
 

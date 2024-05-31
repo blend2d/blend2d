@@ -574,7 +574,7 @@ static void deinterlaceBits(
           tmpData[0] = combineByte4bpp(a     , b >> 4); if (x <= 2) break;
           tmpData[1] = combineByte4bpp(a >> 8, b     ); if (x <= 4) break;
 
-          if (x >= 5) b = uint32_t(*d5++);
+          b = uint32_t(*d5++);
           tmpData[2] = combineByte4bpp(a << 4, b >> 4); if (x <= 6) break;
           tmpData[3] = combineByte4bpp(a >> 4, b     );
 

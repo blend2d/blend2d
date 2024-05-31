@@ -732,6 +732,8 @@ static BLResult createMemoryMappedFile(BLArray<uint8_t>* dst, BLFile& file, size
 // BLFileSystem - Read & Write File
 // ================================
 
+static constexpr uint32_t kSmallFileSizeThreshold = 16 * 1024;
+
 BL_API_IMPL BLResult blFileSystemReadFile(const char* fileName, BLArrayCore* dst_, size_t maxSize, BLFileReadFlags readFlags) noexcept {
   if (BL_UNLIKELY(dst_->_d.rawType() != BL_OBJECT_TYPE_ARRAY_UINT8))
     return blTraceError(BL_ERROR_INVALID_STATE);
@@ -759,7 +761,7 @@ BL_API_IMPL BLResult blFileSystemReadFile(const char* fileName, BLArrayCore* dst
 
   // Use memory mapped file IO if enabled.
   if (readFlags & BL_FILE_READ_MMAP_ENABLED) {
-    bool isSmall = size < BLFileMapping::kSmallFileSizeThreshold;
+    bool isSmall = size < kSmallFileSizeThreshold;
     if (!(readFlags & BL_FILE_READ_MMAP_AVOID_SMALL) || !isSmall) {
       BLResult result = bl::createMemoryMappedFile(&dst, file, size);
       if (result == BL_SUCCESS)

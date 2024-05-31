@@ -20,18 +20,19 @@ namespace bl {
 namespace RasterEngine {
 namespace WorkerProc {
 
-// TODO: HARDCODED.
+// TODO: [Rendering Context] HARDCODED.
 static const uint32_t fpScale = 256;
 
 // bl::RasterEngine::WorkerProc - ProcessJobs
 // ==========================================
 
-static BL_NOINLINE void processJobs(WorkData* workData) noexcept {
-  RenderBatch* batch = workData->batch;
+static BL_NOINLINE void processJobs(WorkData* workData, RenderBatch* batch) noexcept {
   size_t jobCount = batch->jobCount();
 
-  if (!jobCount)
+  if (!jobCount) {
+    workData->synchronization->noJobsToWaitFor();
     return;
+  }
 
   const RenderJobQueue* queue = batch->jobList().first();
   BL_ASSERT(queue != nullptr);
@@ -59,7 +60,7 @@ static BL_NOINLINE void processJobs(WorkData* workData) noexcept {
   }
 
   workData->avoidCacheLineSharing();
-  batch->_synchronization->waitForJobsToFinish();
+  workData->synchronization->waitForJobsToFinish();
 }
 
 // bl::RasterEngine::WorkerProc - ProcessBand
@@ -123,11 +124,9 @@ static void processBand(CommandProcAsync::ProcData& procData, bool isInitialBand
 // bl::RasterEngine::WorkerProc - ProcessCommands
 // ==============================================
 
-static void processCommands(WorkData* workData) noexcept {
-  RenderBatch* batch = workData->batch;
-
+static void processCommands(WorkData* workData, RenderBatch* batch) noexcept {
   ArenaAllocator::StatePtr zoneState = workData->workZone.saveState();
-  CommandProcAsync::ProcData procData(workData);
+  CommandProcAsync::ProcData procData(workData, batch);
 
   BLResult result = procData.initProcData();
   if (result != BL_SUCCESS) {
@@ -141,7 +140,7 @@ static void processCommands(WorkData* workData) noexcept {
 
   // We can process several consecutive bands at once when there is enough of bands for all the threads.
   //
-  // TODO: At the moment this feature is not used as it regressed bl_bench using 4+ threads.
+  // TODO: [Rendering Context] At the moment this feature is not used as it regressed bl_bench using 4+ threads.
   uint32_t consecutiveBandCount = 1;
 
   uint32_t bandId = workData->workerId() * consecutiveBandCount;
@@ -165,9 +164,8 @@ static void processCommands(WorkData* workData) noexcept {
 // bl::RasterEngine::WorkerProc - Finished
 // =======================================
 
-static void finished(WorkData* workData) noexcept {
-  RenderBatch* batch = workData->batch;
-  workData->batch = nullptr;
+static void finished(WorkData* workData, RenderBatch* batch) noexcept {
+  workData->resetBatch();
 
   if (workData->isSync())
     return;
@@ -184,7 +182,7 @@ static void finished(WorkData* workData) noexcept {
 // ==============================================
 
 // Can be also called by the rendering context from user thread.
-void processWorkData(WorkData* workData) noexcept {
+void processWorkData(WorkData* workData, RenderBatch* batch) noexcept {
   // NOTE: The zone must be cleared when the worker thread starts processing jobs and commands. The reason is that
   // once we finish job processing other threads can still use data produced by such job, so even when we are done
   // we cannot really clear the allocator, we must wait until all threads are done with the current batch, and that
@@ -202,7 +200,7 @@ void processWorkData(WorkData* workData) noexcept {
   //
   // Once the thread acquires a job to process no other thread can have that job. Jobs can be processed in any order,
   // however, we just use atomics to increment the job counter and each thread acquires the next in the queue.
-  processJobs(workData);
+  processJobs(workData, batch);
 
   // Pass 2 - Process commands.
   //
@@ -210,10 +208,10 @@ void processWorkData(WorkData* workData) noexcept {
   // process all commands in a band and then move to the next available band. This ensures that even when there is
   // something more complicated in one band than in all other bands the distribution of threads should be fair as
   // other threads won't wait for a particular band to be rendered.
-  processCommands(workData);
+  processCommands(workData, batch);
 
   // Propagates accumulated error flags into the batch.
-  finished(workData);
+  finished(workData, batch);
 }
 
 // bl::RasterEngine::WorkerProc - WorkerThreadEntry
@@ -223,13 +221,11 @@ void workerThreadEntry(BLThread* thread, void* data) noexcept {
   blUnused(thread);
 
   WorkData* workData = static_cast<WorkData*>(data);
-  RenderBatch* batch = workData->batch;
+  WorkerSynchronization* synchronization = workData->synchronization;
 
-  processWorkData(workData);
-
-  // NOTE: At this point `batch` is no longer referenced by `workData`, we just saved the pointer so we can call
-  // threadDone() after all commands were processed.
-  batch->_synchronization->threadDone();
+  synchronization->threadStarted();
+  processWorkData(workData, workData->acquireBatch());
+  synchronization->threadDone();
 }
 
 } // {WorkerProc}

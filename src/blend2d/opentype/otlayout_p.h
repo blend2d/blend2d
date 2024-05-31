@@ -250,7 +250,16 @@ public:
 
   BL_INLINE LookupStatusBits getLookupStatusBits(LookupKind lookupKind, uint32_t index) const noexcept {
     BL_ASSERT(index < kinds[size_t(lookupKind)].lookupStatusDataSize);
-    return _lookupStatusBitsOf(lookupKind)[index];
+    const LookupStatusBits& bits = _lookupStatusBitsOf(lookupKind)[index];
+
+#if BL_TARGET_ARCH_BITS >= 64
+    uint64_t composed = blAtomicFetchRelaxed(&bits.composed);
+    return LookupStatusBits::makeComposed(composed);
+#else
+    uint32_t analyzed = blAtomicFetchRelaxed(&bits.analyzed);
+    uint32_t valid = blAtomicFetchRelaxed(&bits.valid);
+    return LookupStatusBits::make(analyzed, valid);
+#endif
   }
 
   //! Commit means combining the given `statusBits` with status bits already present.
@@ -261,7 +270,7 @@ public:
     LookupStatusBits* statusData = _lookupStatusBitsOf(lookupKind);
 
 #if BL_TARGET_ARCH_BITS >= 64
-    // The is designed to make it much easier on 64-bit targets as we just issue a single write for both
+    // This is designed to make it much easier on 64-bit targets as we just issue a single write for both
     // 32-bit words.
     uint64_t existingComposed = blAtomicFetchOrStrong(&statusData[index].composed, statusBits.composed);
     return LookupStatusBits::makeComposed(statusBits.composed | existingComposed);

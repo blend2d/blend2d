@@ -1796,18 +1796,18 @@ BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u16(const __m128i& a) noexcept { re
 BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u16(const __m128i& a, const __m128i& b) noexcept { return simd_packs_128_i32_u16(a, b); }
 #else
 BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u16(const __m128i& a) noexcept {
-  return simd_swizzlev_u8(a, vec_const<__m128i>(&bl::commonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210));
+  return simd_swizzlev_u8(a, vec_const<__m128i>(&bl::commonTable.swizu8_xx76xx54xx32xx10_to_7654321076543210));
 }
 
 BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u16(const __m128i& a, const __m128i& b) noexcept {
-  __m128i aLo = simd_swizzlev_u8(a, vec_const<__m128i>(&bl::commonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210));
-  __m128i bLo = simd_swizzlev_u8(b, vec_const<__m128i>(&bl::commonTable.pshufb_xx76xx54xx32xx10_to_7654321076543210));
+  __m128i aLo = simd_swizzlev_u8(a, vec_const<__m128i>(&bl::commonTable.swizu8_xx76xx54xx32xx10_to_7654321076543210));
+  __m128i bLo = simd_swizzlev_u8(b, vec_const<__m128i>(&bl::commonTable.swizu8_xx76xx54xx32xx10_to_7654321076543210));
   return _mm_unpacklo_epi64(aLo, bLo);
 }
 #endif
 
 #if defined(BL_TARGET_OPT_SSSE3)
-BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u8(const __m128i& a) noexcept { return simd_swizzlev_u8(a, vec_const<__m128i>(&bl::commonTable.pshufb_xxx3xxx2xxx1xxx0_to_3210321032103210)); }
+BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u8(const __m128i& a) noexcept { return simd_swizzlev_u8(a, vec_const<__m128i>(&bl::commonTable.swizu8_xxx3xxx2xxx1xxx0_to_3210321032103210)); }
 #else
 BL_INLINE_NODEBUG __m128i simd_packz_128_u32_u8(const __m128i& a) noexcept { return simd_packs_128_i16_u8(_mm_packs_epi32(a, a)); }
 #endif

@@ -105,8 +105,9 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInf
     }
     else {
       // Initialize worker contexts.
+      WorkerSynchronization* synchronization = &_synchronization;
       for (uint32_t i = 0; i < n; i++) {
-        blCallCtor(*workDataStorage[i], ctxI, i + 1);
+        blCallCtor(*workDataStorage[i], ctxI, synchronization, i + 1);
         workDataStorage[i]->initBandData(ctxI->bandHeight(), ctxI->bandCount());
       }
     }

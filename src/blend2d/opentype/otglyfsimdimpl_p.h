@@ -479,6 +479,11 @@ SlowFlagsDecode:
           offCurveSplineCount = offCurveSplineAcc.get();
           remainingSize = IntOps::subOverflow((size_t)(gEnd - gPtr), xCoordinatesSize + yCoordinatesSize, &of);
 
+          // This makes the static analysis happy about not using `remainingSize` afterwards. We don't want to discard
+          // the result of the subtraction as that could possibly introduce an issue in the future if code depending
+          // on `remainingSize` is added below.
+          blUnused(remainingSize);
+
           if (BL_UNLIKELY(of))
             goto InvalidData;
 
@@ -639,8 +644,9 @@ SlowFlagsDecode:
                 Vec16xI16 xVertices = make256_128<Vec16xI16>(loadu<Vec16xU8>(gPtr), xVerticesInitial);
                 Vec16xI16 yVertices = make256_128<Vec16xI16>(loadu<Vec16xU8>(yPtr), yVerticesInitial);
 
-                gPtr += xPredPtr[i + 15];
-                yPtr += yPredPtr[i + 15];
+                // gPtr/yPtr is no longer needed, so the following code is not needed as well:
+                //   gPtr += xPredPtr[i + 15];
+                //   yPtr += yPredPtr[i + 15];
 
                 xVertices = swizzlev_u8(xVertices, xPred256);
                 yVertices = swizzlev_u8(yVertices, yPred256);
@@ -791,7 +797,7 @@ SlowFlagsDecode:
             size_t startsOnCurve = size_t((f >> kVecFlagOnCurveShift) & 0x1u);
             size_t initialVertexIndex = appender.currentIndex(*out);
 
-            // Only emit MoveTo here if we don't start off curve, which requres a special care.
+            // Only emit MoveTo here if we don't start off curve, which requires a special care.
             storeVertex(appender, BL_PATH_CMD_MOVE, initialPt);
             appender._advance(startsOnCurve);
 
@@ -1030,7 +1036,7 @@ ContinueCompound:
             arg1 &= 0xFFFFu;
             arg2 &= 0xFFFFu;
 
-            // TODO: [OPENTYPE GLYF] ArgsAreXYValues not implemented. I don't know how atm.
+            // TODO: [OpenType] GLYF ArgsAreXYValues not implemented. I don't know how atm.
           }
 
           constexpr double kScaleF2x14 = 1.0 / 16384.0;

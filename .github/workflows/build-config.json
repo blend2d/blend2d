@@ -1,6 +1,8 @@
 {
   "diagnostics": {
     "asan": { "definitions": ["BLEND2D_SANITIZE=address"] },
+    "msan": { "definitions": ["BLEND2D_SANITIZE=memory"] },
+    "tsan": { "definitions": ["BLEND2D_SANITIZE=thread"] },
     "ubsan": { "definitions": ["BLEND2D_SANITIZE=undefined"] }
   },
 
@@ -11,19 +13,39 @@
   ],
 
   "tests": [
-    { "cmd": ["bl_test_unit", "--quick"], "optional": true },
-    { "cmd": ["bl_test_c_api"], "optional": true },
-    { "cmd": ["bl_test_fuzzer", "--count=2000"], "optional": true },
-    { "cmd": ["bl_test_verify_mt", "--count=2000"], "optional": true },
-    { "cmd": ["bl_test_verify_mt", "--count=2000", "--flush-sync"], "optional": true },
-    { "cmd": ["bl_sample_1"], "optional": true },
-    { "cmd": ["bl_sample_2"], "optional": true },
-    { "cmd": ["bl_sample_3"], "optional": true },
-    { "cmd": ["bl_sample_4"], "optional": true },
-    { "cmd": ["bl_sample_5"], "optional": true },
-    { "cmd": ["bl_sample_6"], "optional": true },
-    { "cmd": ["bl_sample_7"], "optional": true },
-    { "cmd": ["bl_sample_8"], "optional": true },
-    { "cmd": ["bl_sample_capi"], "optional": true }
+    { "optional": true, "cmd": ["bl_test_unit", "--quick"] },
+
+    { "optional": true, "cmd": ["bl_test_context_simple", "--count=100", "--comp-op=all", "--style=random"] },
+
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=solid"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=gradient-linear"        , "--max-diff=0", "--quiet"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=gradient-linear-dither" , "--max-diff=0", "--quiet"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=gradient-radial"        , "--max-diff=2", "--quiet"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=gradient-radial-dither" , "--max-diff=2", "--quiet"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=gradient-conic"         , "--max-diff=2", "--quiet"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=gradient-conic-dither"  , "--max-diff=2", "--quiet"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=pattern-aligned"        , "--max-diff=0", "--quiet"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=pattern-fx"             , "--max-diff=0", "--quiet"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=pattern-fy"             , "--max-diff=0", "--quiet"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=pattern-fx-fy"          , "--max-diff=0", "--quiet"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=pattern-affine-nearest" , "--max-diff=0", "--quiet"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=pattern-affine-bilinear", "--max-diff=0", "--quiet"] },
+
+    { "optional": true, "cmd": ["bl_test_context_mt"    , "--count=5000", "--thread-count=2", "--comp-op=random", "--opacity-op=random", "--style=solid"                 ] },
+    { "optional": true, "cmd": ["bl_test_context_mt"    , "--count=5000", "--thread-count=2", "--comp-op=random", "--opacity-op=random", "--style=solid" , "--flush-sync"] },
+    { "optional": true, "cmd": ["bl_test_context_mt"    , "--count=5000", "--thread-count=3", "--comp-op=random", "--opacity-op=random", "--style=random"                ] },
+    { "optional": true, "cmd": ["bl_test_context_mt"    , "--count=5000", "--thread-count=3", "--comp-op=random", "--opacity-op=random", "--style=random", "--flush-sync"] },
+    { "optional": true, "cmd": ["bl_test_context_mt"    , "--count=5000", "--thread-count=4", "--comp-op=random", "--opacity-op=random", "--style=random"                ] },
+    { "optional": true, "cmd": ["bl_test_context_mt"    , "--count=5000", "--thread-count=4", "--comp-op=random", "--opacity-op=random", "--style=random", "--flush-sync"] },
+
+    { "optional": true, "cmd": ["bl_sample_1"] },
+    { "optional": true, "cmd": ["bl_sample_2"] },
+    { "optional": true, "cmd": ["bl_sample_3"] },
+    { "optional": true, "cmd": ["bl_sample_4"] },
+    { "optional": true, "cmd": ["bl_sample_5"] },
+    { "optional": true, "cmd": ["bl_sample_6"] },
+    { "optional": true, "cmd": ["bl_sample_7"] },
+    { "optional": true, "cmd": ["bl_sample_8"] },
+    { "optional": true, "cmd": ["bl_sample_capi"] }
   ]
 }

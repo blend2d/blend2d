@@ -534,7 +534,7 @@ ContinueCompound:
             arg1 &= 0xFFFFu;
             arg2 &= 0xFFFFu;
 
-            // TODO: [OPENTYPE GLYF] ArgsAreXYValues not implemented. I don't know how atm.
+            // TODO: [OpenType] GLYF ArgsAreXYValues not implemented. I don't know how atm.
           }
 
           constexpr double kScaleF2x14 = 1.0 / 16384.0;

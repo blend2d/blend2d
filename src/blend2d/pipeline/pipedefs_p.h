@@ -110,12 +110,9 @@ enum class MaskCommandType : uint32_t {
 };
 
 //! Fill rule mask used during composition of mask produced by analytic-rasterizer.
-//!
-//! See FillAnalytic pipeline how this is used. What you see in these values
-//! is mask shifted left by one bit as we expect such values in the pipeline.
 enum class FillRuleMask : uint32_t {
-  kNonZeroMask = uint32_t(0xFFFFFFFFu << 1),
-  kEvenOddMask = uint32_t(0x000001FFu << 1)
+  kNonZeroMask = 0xFFFFFFFFu,
+  kEvenOddMask = 0x000001FFu
 };
 
 //! Pipeline fetch-type.
@@ -123,7 +120,7 @@ enum class FillRuleMask : uint32_t {
 //! A unique id describing how pixels are fetched - supported fetchers include solid pixels, patterns (sometimes
 //! referred as blits), and gradients.
 //!
-//! \note RoR is a shurtcut for repeat-or-reflect - a universal fetcher for both.
+//! \note RoR is a shortcut for repeat-or-reflect - a universal fetcher for both.
 enum class FetchType : uint8_t {
   //! Solid fetch.
   kSolid = 0,
@@ -521,10 +518,12 @@ struct ContextData {
   BL_INLINE void reset() noexcept { *this = ContextData{}; }
 };
 
-static BL_INLINE void writeBoxUMaskTo16ByteBuffer(uint8_t* dst, uint32_t m) noexcept {
+static BL_INLINE void writeBoxUMaskToMaskBuffer(uint8_t* dst, uint32_t m) noexcept {
 #if BL_TARGET_ARCH_BITS >= 64
   uint64_t repeated = uint64_t(m) * 0x0101010101010101u;
   uint64_t mask = BL_BYTE_ORDER == 1234 ? 0xFFFFFFFF00000000u : 0x00000000FFFFFFFFu;
+  MemOps::writeU64a(dst + 24, repeated);
+  MemOps::writeU64a(dst + 16, repeated);
   MemOps::writeU64a(dst +  8, repeated);
   MemOps::writeU64a(dst +  0, repeated & mask);
 #else
@@ -533,6 +532,10 @@ static BL_INLINE void writeBoxUMaskTo16ByteBuffer(uint8_t* dst, uint32_t m) noex
   MemOps::writeU32a(dst +  4, repeated);
   MemOps::writeU32a(dst +  8, repeated);
   MemOps::writeU32a(dst + 12, repeated);
+  MemOps::writeU32a(dst + 16, repeated);
+  MemOps::writeU32a(dst + 20, repeated);
+  MemOps::writeU32a(dst + 24, repeated);
+  MemOps::writeU32a(dst + 28, repeated);
 #endif
 }
 
@@ -647,6 +650,10 @@ struct FillData {
     BL_ASSERT(x0 < x1);
     BL_ASSERT(y0 < y1);
 
+    constexpr uint32_t kInnerAlignment = 8;
+    constexpr uint32_t kMaskScanlineWidth = 32;
+    constexpr uint32_t kMaxMaskOnlyWidth = 20;
+
     uint32_t ax0 = uint32_t(x0) >> 8;
     uint32_t ay0 = uint32_t(y0) >> 8;
     uint32_t ax1 = uint32_t(x1 + 0xFF) >> 8;
@@ -730,18 +737,18 @@ struct FillData {
 
     uint32_t m0x0 = (fx0 * fy0_a) >> 16u;
     uint32_t m0x2 = (fx1 * fy0_a) >> 16u;
-    writeBoxUMaskTo16ByteBuffer(maskPtr, m0x1);
-    maskPtr[4] = uint8_t(m0x0);
+    writeBoxUMaskToMaskBuffer(maskPtr + kMaskScanlineWidth * 0u, m0x1);
+    maskPtr[kMaskScanlineWidth * 0u + 4] = uint8_t(m0x0);
 
     uint32_t m1x0 = (fx0 * alpha) >> 8u;
     uint32_t m1x2 = (fx1 * alpha) >> 8u;
-    writeBoxUMaskTo16ByteBuffer(maskPtr + 16, m1x1);
-    maskPtr[20] = uint8_t(m1x0);
+    writeBoxUMaskToMaskBuffer(maskPtr + kMaskScanlineWidth * 1u, m1x1);
+    maskPtr[kMaskScanlineWidth * 1u + 4] = uint8_t(m1x0);
 
     uint32_t m2x0 = (fx0 * fy1_a) >> 16u;
     uint32_t m2x2 = (fx1 * fy1_a) >> 16u;
-    writeBoxUMaskTo16ByteBuffer(maskPtr + 32, m2x1);
-    maskPtr[36] = uint8_t(m2x0);
+    writeBoxUMaskToMaskBuffer(maskPtr + kMaskScanlineWidth * 2u, m2x1);
+    maskPtr[kMaskScanlineWidth * 2u + 4] = uint8_t(m2x0);
 
     maskPtr += 4;
     uint32_t wAlign = IntOps::alignUpDiff(w, 4);
@@ -753,47 +760,53 @@ struct FillData {
     w += wAlign;
     maskPtr -= wAlign;
 
-    if (w <= 12) {
-      maskPtr[0u  + w - 1u] = uint8_t(m0x2);
-      maskPtr[16u + w - 1u] = uint8_t(m1x2);
-      maskPtr[32u + w - 1u] = uint8_t(m2x2);
+    if (w <= kMaxMaskOnlyWidth) {
+      maskPtr[kMaskScanlineWidth * 0u + w - 1u] = uint8_t(m0x2);
+      maskPtr[kMaskScanlineWidth * 1u + w - 1u] = uint8_t(m1x2);
+      maskPtr[kMaskScanlineWidth * 2u + w - 1u] = uint8_t(m2x2);
 
-      maskCmd[0].initVMaskA8WithGA(ax0, ax1, maskPtr, 0);
+      maskCmd[0].initVMaskA8WithGA(ax0, ax1, maskPtr + kMaskScanlineWidth * 0u, 0);
       maskCmd[1].initEnd();
       maskCmd += m0x1 ? 2u : 0u;
       mask.box.y0 += int(m0x1 == 0);
 
-      maskCmd[0].initVMaskA8WithGA(ax0, ax1, maskPtr + 16, 0);
+      maskCmd[0].initVMaskA8WithGA(ax0, ax1, maskPtr + kMaskScanlineWidth * 1u, 0);
       maskCmd[1].initRepeat(h - 2);
       maskCmd += h > 2 ? 2u : 0u;
 
-      maskCmd[0].initVMaskA8WithGA(ax0, ax1, maskPtr + 32, 0);
+      maskCmd[0].initVMaskA8WithGA(ax0, ax1, maskPtr + kMaskScanlineWidth * 2u, 0);
       maskCmd[1].initEnd();
       mask.box.y1 -= int(m2x1 == 0);
 
       return mask.box.y0 < mask.box.y1;
     }
     else {
-      maskPtr[0u  + 7u] = uint8_t(m0x2);
-      maskPtr[16u + 7u] = uint8_t(m1x2);
-      maskPtr[32u + 7u] = uint8_t(m2x2);
+      uint32_t innerWidth = IntOps::alignDown(w - 5, kInnerAlignment);
+      uint32_t innerEnd = ax0 + 4u + innerWidth;
+      uint32_t tailWidth = ax1 - innerEnd;
 
-      maskCmd[0].initVMaskA8WithGA(ax0, ax0 + 4u, maskPtr, 0);
-      maskCmd[1].initCMaskA8(ax0 + 4u, ax1 - 4u, m0x1);
-      maskCmd[2].initVMaskA8WithGA(ax1 - 4u, ax1, maskPtr + 4, 0);
+      const uint8_t* maskTail = maskPtr + 16 - tailWidth;
+
+      maskPtr[kMaskScanlineWidth * 0u + 15u] = uint8_t(m0x2);
+      maskPtr[kMaskScanlineWidth * 1u + 15u] = uint8_t(m1x2);
+      maskPtr[kMaskScanlineWidth * 2u + 15u] = uint8_t(m2x2);
+
+      maskCmd[0].initVMaskA8WithGA(ax0, ax0 + 4u, maskPtr + kMaskScanlineWidth * 0u, 0);
+      maskCmd[1].initCMaskA8(ax0 + 4u, innerEnd, m0x1);
+      maskCmd[2].initVMaskA8WithGA(innerEnd, ax1, maskTail + kMaskScanlineWidth * 0u, 0);
       maskCmd[3].initEnd();
       maskCmd += m0x1 ? 4u : 0u;
       mask.box.y0 += int(m0x1 == 0);
 
-      maskCmd[0].initVMaskA8WithGA(ax0, ax0 + 4u, maskPtr + 16, 0);
-      maskCmd[1].initCMaskA8(ax0 + 4u, ax1 - 4u, m1x1);
-      maskCmd[2].initVMaskA8WithGA(ax1 - 4u, ax1, maskPtr + 20, 0);
+      maskCmd[0].initVMaskA8WithGA(ax0, ax0 + 4u, maskPtr + kMaskScanlineWidth * 1u, 0);
+      maskCmd[1].initCMaskA8(ax0 + 4u, innerEnd, m1x1);
+      maskCmd[2].initVMaskA8WithGA(innerEnd, ax1, maskTail + kMaskScanlineWidth * 1u, 0);
       maskCmd[3].initRepeat(h - 2);
       maskCmd += h > 2 ? 4u : 0u;
 
-      maskCmd[0].initVMaskA8WithGA(ax0, ax0 + 4u, maskPtr + 32, 0);
-      maskCmd[1].initCMaskA8(ax0 + 4u, ax1 - 4u, m2x1);
-      maskCmd[2].initVMaskA8WithGA(ax1 - 4u, ax1, maskPtr + 36, 0);
+      maskCmd[0].initVMaskA8WithGA(ax0, ax0 + 4u, maskPtr + kMaskScanlineWidth * 2u, 0);
+      maskCmd[1].initCMaskA8(ax0 + 4u, innerEnd, m2x1);
+      maskCmd[2].initVMaskA8WithGA(innerEnd, ax1, maskTail + kMaskScanlineWidth * 2u, 0);
       maskCmd[3].initEnd();
       mask.box.y1 -= int(m2x1 == 0);
 
@@ -843,8 +856,6 @@ struct alignas(16) FetchData {
 #endif
       };
     };
-
-    BL_INLINE void reset() noexcept { prgb64 = 0; }
   };
 
   //! Pattern fetch data.
@@ -933,7 +944,7 @@ struct alignas(16) FetchData {
       double tw, th;
 
       union {
-        //! 32-bit value to be used by VPMADDWD instruction to calculate address from Y/X pairs.
+        //! 16-bit multipliers to be used by [V]PMADDWD instruction to calculate address from Y/X pairs.
         int16_t addrMul16[2];
         //! 32-bit multipliers for X and Y coordinates.
         int32_t addrMul32[2];
@@ -949,8 +960,6 @@ struct alignas(16) FetchData {
       //! Affine pattern data.
       Affine affine;
     };
-
-    BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
   };
 
   //! Gradient fetch data.
@@ -980,19 +989,19 @@ struct alignas(16) FetchData {
 
     //! Radial gradient data.
     struct alignas(16) Radial {
-      //! Gradient X/Y increments (horizontal).
-      double xx, xy;
+      //! Gradient X/Y offsets at [0, 0].
+      double tx, ty;
       //! Gradient X/Y increments (vertical).
       double yx, yy;
-      //! Gradient X/Y offsets of the pixel at [0, 0].
-      double ox, oy;
 
-      double ax, ay;
-      double fx, fy;
+      double amul4, inv2a;
+      double sq_fr, sq_inv2a;
 
-      double dd, bd;
-      double ddx, ddy;
-      double ddd, scale;
+      double b0, dd0;
+      double by, ddy;
+
+      float f32_ddd;
+      float f32_bd;
 
       //! Maximum index value taking into account pad, repeat, and reflection - `(repeated_or_reflected_size - 1)`.
       uint32_t maxi;
@@ -1002,22 +1011,28 @@ struct alignas(16) FetchData {
 
     //! Conic gradient data.
     struct alignas(16) Conic {
-      //! Atan2 approximation constants.
-      const CommonTable::Conic* consts;
+      //! Gradient X/Y offsets of the pixel at [0, 0].
+      double tx, ty;
+      //! Gradient X/Y increments (vertical).
+      double yx, yy;
+
+      //! Atan approximation coefficients.
+      float q_coeff[4];
+      //! Table size divided by 1, 2, and 4.
+      float n_div_1_2_4[3];
+      //! Angle offset.
+      float offset;
+
       //! Gradient X increment (horizontal)
       //!
       //! \note There is no Y increment in X direction as the transformation matrix has been rotated in a way to
       //! make it zero, which simplifies computation requirements per pixel.
-      double xx;
-      //! Gradient X/Y increments (vertical).
-      double yx, yy;
-      //! Gradient X/Y offsets of the pixel at [0, 0].
-      double ox, oy;
+      float xx;
 
-      //! Angle offset.
-      float offset;
       //! Maximum index value - `lut.size - 1`.
       uint32_t maxi;
+      //! Repeat mask to apply to index.
+      uint32_t rori;
     };
 
     //! Precomputed lookup table.
@@ -1031,8 +1046,6 @@ struct alignas(16) FetchData {
       //! Conic gradient specific data.
       Conic conic;
     };
-
-    BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
   };
 
   //! Union of all possible fetch data types.
@@ -1044,8 +1057,6 @@ struct alignas(16) FetchData {
     //! Gradient fetch data.
     Gradient gradient;
   };
-
-  BL_INLINE void reset() noexcept { memset(this, 0, sizeof(*this)); }
 };
 
 namespace FetchUtils {

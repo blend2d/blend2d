@@ -376,7 +376,7 @@ BLResult DeflateDecoder::_decode() noexcept {
       if ((cmf & 0xF) != 8)
         BL_DEFLATE_PROPAGATE(blTraceError(BL_ERROR_INVALID_DATA));
 
-      // TODO: Fix this, we can be ZLIB compliant here and make this configurable.
+      // TODO: [Compression] Fix this, we can be ZLIB compliant here and make this configurable.
       // Preset dictionary not allowed in PNG.
       if ((flg & 0x20) != 0)
         BL_DEFLATE_PROPAGATE(blTraceError(BL_ERROR_INVALID_DATA));

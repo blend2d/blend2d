@@ -19,12 +19,6 @@ static BL_INLINE void blAtomicThreadFence(std::memory_order order = std::memory_
   std::atomic_thread_fence(order);
 }
 
-//! A non-atomic fetch of a value where some stores can happen atomically.
-template<typename T>
-static BL_INLINE typename std::remove_volatile<T>::type blNonAtomicFetch(const T* p) noexcept {
-  return *(volatile const T*)p;
-}
-
 template<typename T>
 static BL_INLINE T blAtomicFetchRelaxed(const T* p) noexcept {
   using RawT = BLInternal::UIntByType<T>;

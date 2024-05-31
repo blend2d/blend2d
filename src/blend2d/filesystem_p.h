@@ -19,10 +19,6 @@ class BLFileMapping {
 public:
   BL_NONCOPYABLE(BLFileMapping)
 
-  enum : uint32_t {
-    kSmallFileSizeThreshold = 16 * 1024
-  };
-
   void* _data = nullptr;
   size_t _size = 0;
 
@@ -42,13 +38,13 @@ public:
     other._data = nullptr;
     other._size = 0;
 
-    this->_data = data;
-    this->_size = size;
+    _data = data;
+    _size = size;
 
 #if defined(_WIN32)
     HANDLE fileMappingHandle = other._fileMappingHandle;
     other._fileMappingHandle = INVALID_HANDLE_VALUE;
-    this->_fileMappingHandle = fileMappingHandle;
+    _fileMappingHandle = fileMappingHandle;
 #endif
   }
 
@@ -73,10 +69,10 @@ public:
 
     unmap();
 
-    this->_data = data;
-    this->_size = size;
+    _data = data;
+    _size = size;
 #if defined(_WIN32)
-    this->_fileMappingHandle = fileMappingHandle;
+    _fileMappingHandle = fileMappingHandle;
 #endif
 
     return *this;

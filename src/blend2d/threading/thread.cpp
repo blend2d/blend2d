@@ -5,6 +5,7 @@
 
 #include "../api-build_p.h"
 #include "../runtime_p.h"
+#include "../runtimescope.h"
 #include "../support/intops_p.h"
 #include "../threading/atomic_p.h"
 #include "../threading/conditionvariable_p.h"
@@ -151,7 +152,6 @@ static BLResult BL_CDECL blPortableWorkerThreadRun(BLThread* self, BLThreadFunc 
   thread->_statusData.flags = flags | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK;
 
   if (flags & BL_WORKER_THREAD_FLAG_SLEEPING) {
-    guard.release();
     thread->_condition.signal();
   }
 
@@ -174,7 +174,6 @@ static BLResult BL_CDECL blPortableWorkerThreadQuit(BLThread* self, uint32_t qui
   thread->_statusData.flags = flags | BL_WORKER_THREAD_FLAG_QUITTING;
 
   if (flags & BL_WORKER_THREAD_FLAG_SLEEPING) {
-    guard.release();
     thread->_condition.signal();
   }
 
@@ -182,9 +181,14 @@ static BLResult BL_CDECL blPortableWorkerThreadQuit(BLThread* self, uint32_t qui
 }
 
 static void BL_CDECL blPortableWorkerThreadEntryPoint(BLThread* self) noexcept {
-  BLPortableWorkerThread* thread = static_cast<BLPortableWorkerThread*>(self);
+  constexpr uint32_t kHasWorkOrQuittingFlags =
+    BL_WORKER_THREAD_FLAG_QUITTING |
+    BL_WORKER_THREAD_FLAG_ENQUEUED_WORK;
 
-  constexpr uint32_t kHasWorkOrQuittingFlags = BL_WORKER_THREAD_FLAG_QUITTING | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK;
+  BLRuntimeScopeCore rtScope;
+  blRuntimeScopeBegin(&rtScope);
+
+  BLPortableWorkerThread* thread = static_cast<BLPortableWorkerThread*>(self);
 
   for (;;) {
     BLLockGuard<BLMutex> guard(thread->_mutex);
@@ -219,6 +223,7 @@ static void BL_CDECL blPortableWorkerThreadEntryPoint(BLThread* self) noexcept {
       break;
   }
 
+  blRuntimeScopeEnd(&rtScope);
   thread->_exitFunc(thread, thread->_exitData);
 }
 
@@ -245,7 +250,7 @@ static BLResult BL_CDECL blFutexWorkerThreadDestroy(BLThread* self) noexcept {
 }
 
 static BL_INLINE void blFutexWorkerThreadWakeUp(BLFutexWorkerThread* thread) noexcept {
-  BLFutex::wakeOne(&thread->_statusData.flags);
+  bl::Futex::wakeOne(&thread->_statusData.flags);
 }
 
 static BLResult BL_CDECL blFutexWorkerThreadRun(BLThread* self, BLThreadFunc workFunc, void* data) noexcept {
@@ -263,8 +268,9 @@ static BLResult BL_CDECL blFutexWorkerThreadRun(BLThread* self, BLThreadFunc wor
   uint32_t prevFlags = blAtomicFetchOrStrong(&thread->_statusData.flags, uint32_t(BL_WORKER_THREAD_FLAG_ENQUEUING_WORK));
   uint32_t kBusyFlags = BL_WORKER_THREAD_FLAG_ENQUEUING_WORK | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK | BL_WORKER_THREAD_FLAG_QUITTING;
 
-  if (prevFlags & kBusyFlags)
+  if (prevFlags & kBusyFlags) {
     return BL_ERROR_BUSY;
+  }
 
   blAtomicStoreRelaxed(&thread->_workItem.func, workFunc);
   blAtomicStoreRelaxed(&thread->_workItem.data, data);
@@ -273,8 +279,9 @@ static BLResult BL_CDECL blFutexWorkerThreadRun(BLThread* self, BLThreadFunc wor
   prevFlags = blAtomicFetchOrSeqCst(&thread->_statusData.flags, uint32_t(BL_WORKER_THREAD_FLAG_ENQUEUED_WORK));
 
   // Wake up the thread if it is waiting.
-  if (prevFlags & BL_WORKER_THREAD_FLAG_SLEEPING)
+  if (prevFlags & BL_WORKER_THREAD_FLAG_SLEEPING) {
     blFutexWorkerThreadWakeUp(thread);
+  }
 
   return BL_SUCCESS;
 }
@@ -292,17 +299,22 @@ static BLResult BL_CDECL blFutexWorkerThreadQuit(BLThread* self, uint32_t quitFl
   uint32_t prevFlags = blAtomicFetchOrStrong(&thread->_statusData.flags, uint32_t(BL_WORKER_THREAD_FLAG_QUITTING));
 
   // If already quitting it makes no sense to even wake it up as it already knows.
-  if (prevFlags & BL_WORKER_THREAD_FLAG_QUITTING)
+  if (prevFlags & BL_WORKER_THREAD_FLAG_QUITTING) {
     return BL_SUCCESS;
+  }
 
   // Wake up the thread if it is waiting.
-  if (prevFlags & BL_WORKER_THREAD_FLAG_SLEEPING)
+  if (prevFlags & BL_WORKER_THREAD_FLAG_SLEEPING) {
     blFutexWorkerThreadWakeUp(thread);
+  }
 
   return BL_SUCCESS;
 }
 
 static void BL_CDECL blFutexWorkerThreadEntryPoint(BLThread* self) noexcept {
+  BLRuntimeScopeCore rtScope;
+  blRuntimeScopeBegin(&rtScope);
+
   BLFutexWorkerThread* thread = static_cast<BLFutexWorkerThread*>(self);
 
   uint32_t spinCount = 0;
@@ -315,8 +327,8 @@ static void BL_CDECL blFutexWorkerThreadEntryPoint(BLThread* self) noexcept {
       BLThreadFunc workFunc = blAtomicFetchRelaxed(&thread->_workItem.func);
       void* workData = blAtomicFetchRelaxed(&thread->_workItem.data);
 
-      constexpr uint32_t kEnqueingOrEnqueued = BL_WORKER_THREAD_FLAG_ENQUEUING_WORK | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK;
-      blAtomicFetchAndSeqCst(&thread->_statusData.flags, ~kEnqueingOrEnqueued);
+      constexpr uint32_t kEnqueuingOrEnqueued = BL_WORKER_THREAD_FLAG_ENQUEUING_WORK | BL_WORKER_THREAD_FLAG_ENQUEUED_WORK;
+      blAtomicFetchAndSeqCst(&thread->_statusData.flags, ~kEnqueuingOrEnqueued);
 
       spinCount = 0;
       workFunc(thread, workData);
@@ -324,25 +336,29 @@ static void BL_CDECL blFutexWorkerThreadEntryPoint(BLThread* self) noexcept {
     }
 
     if (flags & BL_WORKER_THREAD_FLAG_QUITTING) {
-      thread->_exitFunc(thread, thread->_exitData);
-      return;
+      break;
     }
 
-    // If another thread is enqueing work at the moment, spin for a little
+    // If another thread is enqueuing work at the moment, spin for a little
     // time to either pick it up immediately or before going to wait.
-    if (flags & BL_WORKER_THREAD_FLAG_ENQUEUING_WORK && ++spinCount < kSpinLimit)
+    if (flags & BL_WORKER_THREAD_FLAG_ENQUEUING_WORK && ++spinCount < kSpinLimit) {
       continue;
+    }
 
     // Let's wait for more work or a quit signal.
     spinCount = 0;
     flags = blAtomicFetchOrStrong(&thread->_statusData.flags, uint32_t(BL_WORKER_THREAD_FLAG_SLEEPING));
 
     // Last attempt to avoid waiting...
-    if (flags & (BL_WORKER_THREAD_FLAG_ENQUEUED_WORK | BL_WORKER_THREAD_FLAG_QUITTING))
+    if (flags & (BL_WORKER_THREAD_FLAG_ENQUEUED_WORK | BL_WORKER_THREAD_FLAG_QUITTING)) {
       continue;
+    }
 
-    BLFutex::wait(&thread->_statusData.flags, flags | BL_WORKER_THREAD_FLAG_SLEEPING);
+    bl::Futex::wait(&thread->_statusData.flags, flags | BL_WORKER_THREAD_FLAG_SLEEPING);
   }
+
+  blRuntimeScopeEnd(&rtScope);
+  thread->_exitFunc(thread, thread->_exitData);
 }
 
 // bl::Thread - WorkerThread - API

@@ -16,7 +16,7 @@
 
 //! Blend2D runtime limits.
 //!
-//! \note These constanst are used across Blend2D, but they are not designed to be ABI stable. New versions of Blend2D
+//! \note These constants are used across Blend2D, but they are not designed to be ABI stable. New versions of Blend2D
 //! can increase certain limits without notice. Use runtime to query the limits dynamically, see `BLRuntimeBuildInfo`.
 BL_DEFINE_ENUM(BLRuntimeLimits) {
   //! Maximum width and height of an image.
@@ -125,7 +125,7 @@ struct BLRuntimeBuildInfo {
   //!
   //! These features do not represent the features that the host CPU must support, instead, they represent all features
   //! that Blend2D can take advantage of in C++ code that uses instruction intrinsics. For example if AVX2 is part of
-  //! `supportedCpuFeatures` it means that Blend2D can take advantage of it if there is a separate code-path.
+  //! `supportedCpuFeatures` it means that Blend2D can take advantage of it if there is a specialized code-path.
   uint32_t supportedCpuFeatures;
 
   //! Maximum size of an image (both width and height).
@@ -141,7 +141,7 @@ struct BLRuntimeBuildInfo {
   char compilerInfo[32];
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { *this = BLRuntimeBuildInfo{}; }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLRuntimeBuildInfo{}; }
 #endif
 };
 
@@ -163,9 +163,13 @@ struct BLRuntimeSystemInfo {
   uint32_t allocationGranularity;
   //! Reserved for future use.
   uint32_t reserved[5];
+  //! Host CPU vendor string such "AMD", "APPLE", "INTEL", "SAMSUNG", etc...
+  char cpuVendor[16];
+  //! Host CPU brand string or empty string if not detected properly.
+  char cpuBrand[64];
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { *this = BLRuntimeSystemInfo{}; }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLRuntimeSystemInfo{}; }
 #endif
 };
 
@@ -196,7 +200,7 @@ struct BLRuntimeResourceInfo {
   size_t reserved[7];
 
 #ifdef __cplusplus
-  BL_INLINE void reset() noexcept { *this = BLRuntimeResourceInfo{}; }
+  BL_INLINE_NODEBUG void reset() noexcept { *this = BLRuntimeResourceInfo{}; }
 #endif
 };
 
