@@ -3812,7 +3812,7 @@ void CompOpPart::vMaskProcRGBA32Vec(Pixel& out, PixelCount n, PixelFlags flags, 
       VecArray vn;
       vMaskProcRGBA32InvertMask(vn, vm, coverageFlags);
 
-      pc->v_mul_u16(dv, dv, vm);
+      pc->v_mul_u16(dv, dv, vn);
       vMaskProcRGBA32InvertDone(vn, vm, coverageFlags);
 
       pc->v_add_i16(dv, dv, xv);

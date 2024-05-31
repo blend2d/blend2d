@@ -90,4 +90,6 @@ public:
 //! \}
 #endif
 
+//! \}
+
 #endif // BLEND2D_RUNTIMESCOPE_H_INCLUDED

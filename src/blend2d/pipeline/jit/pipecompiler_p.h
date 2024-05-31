@@ -1536,10 +1536,10 @@ public:
 
   void _initCommonTablePtr() noexcept;
 
-#if defined(BL_JIT_ARCH_X86)
-
-  //! \name Virtual Registers (X86)
+  //! \name Virtual Registers
   //! \{
+
+#if defined(BL_JIT_ARCH_X86)
 
   BL_INLINE Vec newV128() noexcept {
     Vec reg;
