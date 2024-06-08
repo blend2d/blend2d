@@ -472,7 +472,9 @@ void inlineFillRectLoop(
   Label L_End(end);
   Label L_Width_LE_256 = pc->newLabel();
   Label L_Width_LE_192 = pc->newLabel();
+  Label L_Width_LE_160 = pc->newLabel();
   Label L_Width_LE_128 = pc->newLabel();
+  Label L_Width_LE_96 = pc->newLabel();
   Label L_Width_LE_64 = pc->newLabel();
   Label L_Width_LE_32 = pc->newLabel();
   Label L_Width_LE_16 = pc->newLabel();
@@ -620,12 +622,13 @@ void inlineFillRectLoop(
     pc->j(L_End);
   }
 
-  // Fill Rect - Width > 128 && Width <= 192 Bytes
+  // Fill Rect - Width > 160 && Width <= 192 Bytes
   // ---------------------------------------------
 
   // NOTE: This one was added as it seems that memory store pressure is bottlenecking
   // more than an additional branch, especially if the height is not super small.
   pc->bind(L_Width_LE_192);
+  pc->j(L_Width_LE_160, ucmp_le(w, 160 >> sizeShift));
 
   {
     Label L_ScanlineLoop = pc->newLabel();
@@ -642,23 +645,91 @@ void inlineFillRectLoop(
     pc->j(L_End);
   }
 
-  // Fill Rect - Width > 64 && Width <= 128 Bytes
-  // --------------------------------------------
+  // Fill Rect - Width > 128 && Width <= 160 Bytes
+  // ---------------------------------------------
 
-  pc->bind(L_Width_LE_128);
-  pc->j(L_Width_LE_64, ucmp_le(w, 64 >> sizeShift));
+  // NOTE: This one was added as it seems that memory store pressure is bottlenecking
+  // more than an additional branch, especially if the height is not super small.
+  pc->bind(L_Width_LE_160);
 
   {
     Label L_ScanlineLoop = pc->newLabel();
     Gp dstEnd = pc->newGpPtr("dstEnd");
 
     pc->bind(L_ScanlineLoop);
-    pc->v_storeuvec(mem_ptr(dstPtr), src256b);
+    pc->v_storeuvec(mem_ptr(dstPtr), src512b);
     pc->add(dstEnd, dstPtr, endIndexB);
-    pc->v_storeuvec(mem_ptr(dstPtr, 32), src256b);
+    pc->v_storeuvec(mem_ptr(dstPtr, 64), src512b);
     pc->add(dstPtr, dstPtr, stride);
-    pc->v_storeuvec(mem_ptr(dstEnd, -32), src512b);
+    pc->v_storeuvec(mem_ptr(dstEnd), src256b);
     pc->j(L_ScanlineLoop, sub_nz(h, 1));
+
+    pc->j(L_End);
+  }
+
+  // Fill Rect - Width > 96 && Width <= 128 Bytes
+  // --------------------------------------------
+
+  pc->bind(L_Width_LE_128);
+  pc->j(L_Width_LE_64, ucmp_le(w, 64 >> sizeShift));
+  pc->j(L_Width_LE_96, ucmp_le(w, 96 >> sizeShift));
+
+  {
+    Label L_ScanlineLoop2x = pc->newLabel();
+    Gp dstAlt = pc->newGpPtr("dstAlt");
+    Gp dstEnd = pc->newGpPtr("dstEnd");
+
+    pc->j(L_ScanlineLoop2x, test_z(h, 0x1));
+    pc->add(dstEnd, dstPtr, endIndexB);
+    pc->v_storeuvec(mem_ptr(dstPtr,  0), src512b);
+    pc->v_storeuvec(mem_ptr(dstPtr, 64), src256b);
+    pc->add(dstPtr, dstPtr, stride);
+    pc->v_storeuvec(mem_ptr(dstEnd    ), src256b);
+    pc->j(L_End, sub_z(h, 1));
+
+    pc->bind(L_ScanlineLoop2x);
+    pc->add(dstAlt, dstPtr, stride);
+    pc->v_storeuvec(mem_ptr(dstPtr,  0), src512b);
+    pc->add(dstEnd, dstPtr, endIndexB);
+    pc->v_storeuvec(mem_ptr(dstPtr, 64), src256b);
+    pc->add_scaled(dstPtr, stride, 2);
+    pc->v_storeuvec(mem_ptr(dstEnd    ), src256b);
+    pc->add(dstEnd, dstAlt, endIndexB);
+    pc->v_storeuvec(mem_ptr(dstAlt,  0), src512b);
+    pc->v_storeuvec(mem_ptr(dstAlt, 64), src256b);
+    pc->v_storeuvec(mem_ptr(dstEnd    ), src256b);
+    pc->j(L_ScanlineLoop2x, sub_nz(h, 2));
+
+    pc->j(L_End);
+  }
+
+  // Fill Rect - Width > 64 && Width <= 96 Bytes
+  // --------------------------------------------
+
+  pc->bind(L_Width_LE_96);
+
+  {
+    Label L_ScanlineLoop2x = pc->newLabel();
+    Gp dstAlt = pc->newGpPtr("dstAlt");
+    Gp dstEnd = pc->newGpPtr("dstEnd");
+
+    pc->j(L_ScanlineLoop2x, test_z(h, 0x1));
+    pc->add(dstEnd, dstPtr, endIndexB);
+    pc->v_storeuvec(mem_ptr(dstPtr), src512b);
+    pc->add(dstPtr, dstPtr, stride);
+    pc->v_storeuvec(mem_ptr(dstEnd), src256b);
+    pc->j(L_End, sub_z(h, 1));
+
+    pc->bind(L_ScanlineLoop2x);
+    pc->add(dstAlt, dstPtr, stride);
+    pc->v_storeuvec(mem_ptr(dstPtr), src512b);
+    pc->add(dstEnd, dstPtr, endIndexB);
+    pc->add_scaled(dstPtr, stride, 2);
+    pc->v_storeuvec(mem_ptr(dstAlt), src512b);
+    pc->add(dstAlt, dstAlt, endIndexB);
+    pc->v_storeuvec(mem_ptr(dstEnd), src256b);
+    pc->v_storeuvec(mem_ptr(dstAlt), src256b);
+    pc->j(L_ScanlineLoop2x, sub_nz(h, 2));
 
     pc->j(L_End);
   }
