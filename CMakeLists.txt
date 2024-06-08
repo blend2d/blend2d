@@ -980,9 +980,16 @@ if (MSVC AND NOT BLEND2D_NO_NATVIS)
 endif()
 
 set(BLEND2D_SRC "")
+set(BLEND2D_TEST_SRC_FILES "")
+
 foreach(src_file ${BLEND2D_SRC_LIST})
   set(src_file "${BLEND2D_DIR}/src/${src_file}")
-  list(APPEND BLEND2D_SRC ${src_file})
+
+  if ("${src_file}" MATCHES "_test(_(sse2|sse3|ssse3|sse4_1|sse4_2|avx|avx2|avx2fma|avx512|asimd))?\\.cpp$")
+    list(APPEND BLEND2D_TEST_SRC_FILES ${src_file})
+  else()
+    list(APPEND BLEND2D_SRC ${src_file})
+  endif()
 
   string(REGEX MATCH "_(sse2|sse3|ssse3|sse4_1|sse4_2|avx|avx2|avx2fma|avx512|asimd)\\.(c|cc|cxx|cpp|m|mm)$" FEATURE ${src_file})
   if (FEATURE)
@@ -1082,19 +1089,37 @@ if (NOT BLEND2D_EMBED)
     # -------------
 
     # Special target that always uses embedded Blend2D to be able to reach internals.
-    blend2d_add_target(bl_test_unit TEST
-                       SOURCES    ${BLEND2D_ALL_SRC_FILES}
-                                  test/bl_test_unit.cpp
-                                  test/broken.cpp
-                                  test/broken.h
-                       LIBRARIES  ${BLEND2D_DEPS}
-                       CFLAGS     ${BLEND2D_PRIVATE_CFLAGS}
-                                  -DBL_TEST
-                                  -DBL_STATIC
-                       CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
-                       CFLAGS_REL ${BLEND2D_PRIVATE_CFLAGS_REL})
-    target_include_directories(bl_test_unit BEFORE PRIVATE ${ASMJIT_INCLUDE_DIRS})
-    target_include_directories(bl_test_unit BEFORE PRIVATE ${BLEND2D_INCLUDE_DIRS})
+    if (BLEND2D_STATIC)
+      # Optimize static builds - since blend2d library is static we can use it directly without build
+      # it as a part of the test application. This results in almost 50% build time optimization.
+      blend2d_add_target(bl_test_unit TEST
+                        SOURCES    ${BLEND2D_TEST_SRC_FILES}
+                                   test/bl_test_unit.cpp
+                                   test/broken.cpp
+                                   test/broken.h
+                        LIBRARIES  blend2d::blend2d
+                        CFLAGS     ${BLEND2D_PRIVATE_CFLAGS}
+                                   -DBL_TEST
+                                   -DBL_STATIC
+                        CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
+                        CFLAGS_REL ${BLEND2D_PRIVATE_CFLAGS_REL})
+      target_include_directories(bl_test_unit BEFORE PRIVATE ${ASMJIT_INCLUDE_DIRS})
+    else()
+      blend2d_add_target(bl_test_unit TEST
+                        SOURCES    ${BLEND2D_TEST_SRC_FILES}
+                                   ${BLEND2D_ALL_SRC_FILES}
+                                   test/bl_test_unit.cpp
+                                   test/broken.cpp
+                                   test/broken.h
+                        LIBRARIES  ${BLEND2D_DEPS}
+                        CFLAGS     ${BLEND2D_PRIVATE_CFLAGS}
+                                   -DBL_TEST
+                                   -DBL_STATIC
+                        CFLAGS_DBG ${BLEND2D_PRIVATE_CFLAGS_DBG}
+                        CFLAGS_REL ${BLEND2D_PRIVATE_CFLAGS_REL})
+      target_include_directories(bl_test_unit BEFORE PRIVATE ${ASMJIT_INCLUDE_DIRS})
+      target_include_directories(bl_test_unit BEFORE PRIVATE ${BLEND2D_INCLUDE_DIRS})
+    endif()
 
     foreach(test_context_app bl_test_context_simple
                              bl_test_context_mt

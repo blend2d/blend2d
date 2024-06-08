@@ -2830,8 +2830,9 @@ public:
   // TODO: [JIT] Consolidate this to only one implementation.
   template<typename DstSrcT>
   BL_NOINLINE void v_div255_u16(const DstSrcT& x) {
-    Operand i_0080008000800080 = simdConst(&commonTable.i_0080008000800080, Bcst::kNA, x);
 #if defined(BL_JIT_ARCH_X86)
+    Operand i_0080008000800080 = simdConst(&commonTable.i_0080008000800080, Bcst::kNA, x);
+
     v_add_i16(x, x, i_0080008000800080);
     v_mul257_hi_u16(x, x);
 #elif defined(BL_JIT_ARCH_A64)
