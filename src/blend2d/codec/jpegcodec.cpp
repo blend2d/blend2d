@@ -172,6 +172,12 @@ static BLResult decoderProcessMarker(BLJpegDecoderImpl* decoderI, uint32_t m, co
       if (sfW == 0 || sfW > 4 || sfH == 0 || sfH > 4)
         return blTraceError(BL_ERROR_INVALID_DATA);
 
+      // Bail to 1 if there is only one component as it contributes to nothing.
+      if (componentCount == 1) {
+        sfW = 1;
+        sfH = 1;
+      }
+
       // Quantization ID.
       uint32_t quantId = p[2];
       if (quantId > 3)
@@ -183,8 +189,7 @@ static BLResult decoderProcessMarker(BLJpegDecoderImpl* decoderI, uint32_t m, co
       comp->sfH     = uint8_t(sfH);
       comp->quantId = uint8_t(quantId);
 
-      // We need to know maximum horizontal and vertical sampling factor to
-      // calculate the correct MCU size (WxH).
+      // We need to know maximum horizontal and vertical sampling factor to calculate the correct MCU size (WxH).
       mcuSfW = blMax(mcuSfW, sfW);
       mcuSfH = blMax(mcuSfH, sfH);
     }
@@ -960,7 +965,7 @@ static BLResult decoderProcessStream(BLJpegDecoderImpl* decoderI, const uint8_t*
   // update the image being decoded.
   bool isBaseline = sofMarker != kMarkerSOF2;
 
-  // If this is a basline stream then the unit-size is 1 byte, because the block of coefficients is immediately
+  // If this is a baseline stream then the unit-size is 1 byte, because the block of coefficients is immediately
   // IDCTed to pixel values after it is decoded. However, progressive decoding cannot use this space optimization
   // as coefficients are updated progressively.
   uint32_t unitSize = isBaseline ? 1 : 2;
