@@ -5,8 +5,8 @@
 
 // This file provides utility classes and functions shared between some tests.
 
-#ifndef BLEND2D_TEST_FUZZ_UTILITIES_H_INCLUDED
-#define BLEND2D_TEST_FUZZ_UTILITIES_H_INCLUDED
+#ifndef BLEND2D_TEST_CONTEXT_UTILITIES_H_INCLUDED
+#define BLEND2D_TEST_CONTEXT_UTILITIES_H_INCLUDED
 
 #include <blend2d.h>
 #include <math.h>
@@ -1136,4 +1136,4 @@ public:
 
 } // {ContextTests}
 
-#endif // BLEND2D_TEST_FUZZ_UTILITIES_H_INCLUDED
+#endif // BLEND2D_TEST_CONTEXT_UTILITIES_H_INCLUDED

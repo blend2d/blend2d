@@ -8,7 +8,6 @@
 // under Blend2D's ZLIB license or under STB's PUBLIC DOMAIN as well.
 
 #include "../api-build_p.h"
-#include "../imagecodec.h"
 #include "../object_p.h"
 #include "../runtime_p.h"
 #include "../string_p.h"
@@ -1385,8 +1384,9 @@ static BLResult decoderReadFrameImplInternal(BLJpegDecoderImpl* decoderI, BLImag
   BL_PROPAGATE(imageOut->makeMutable(&imageData));
   BL_PROPAGATE(decoderConvertToRGB(decoderI, imageData));
 
-  decoderI->frameIndex++;
   decoderI->bufferIndex = (size_t)(p - start);
+  decoderI->frameIndex++;
+
   return BL_SUCCESS;
 }
 

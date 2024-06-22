@@ -54,7 +54,7 @@ struct BLImageDecoderImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Last faulty result (if failed).
   BLResult lastResult;
 
-  //! Handle in case that this decoder wraps a thirt-party library.
+  //! Handle in case that this decoder wraps a third-party library.
   void* handle;
   //! Current frame index.
   uint64_t frameIndex;

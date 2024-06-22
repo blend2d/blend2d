@@ -10,7 +10,6 @@
 #include "../api-build_p.h"
 #include "../array_p.h"
 #include "../format.h"
-#include "../imagecodec.h"
 #include "../object_p.h"
 #include "../runtime_p.h"
 #include "../var_p.h"
@@ -1096,9 +1095,7 @@ static BLResult decoderReadFrameImplInternal(BLPngDecoderImpl* decoderI, BLImage
   rd.p = begin;
   rd.index = idatOff;
 
-  result = Compression::Deflate::deflate(output, &rd, (Compression::Deflate::ReadFunc)decoderReadFunc, !decoderI->cgbi);
-  if (result != BL_SUCCESS)
-    return result;
+  BL_PROPAGATE(Compression::Deflate::deflate(output, &rd, (Compression::Deflate::ReadFunc)decoderReadFunc, !decoderI->cgbi));
 
   uint8_t* data = const_cast<uint8_t*>(output.data());
   uint32_t bytesPerPixel = blMax<uint32_t>((sampleDepth * sampleCount) / 8, 1);
@@ -1465,10 +1462,7 @@ static BLResult BL_CDECL encoderWriteFrameImpl(BLImageEncoderImpl* impl, BLArray
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   BLImageData imageData;
-  BLResult result = img.getData(&imageData);
-
-  if (result != BL_SUCCESS)
-    return result;
+  BL_PROPAGATE(img.getData(&imageData));
 
   uint32_t w = uint32_t(imageData.size.w);
   uint32_t h = uint32_t(imageData.size.h);

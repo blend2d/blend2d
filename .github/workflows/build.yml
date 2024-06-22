@@ -3,6 +3,10 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: ${{github.ref}}
+  cancel-in-progress: ${{github.ref != 'refs/heads/master'}}
+
 defaults:
   run:
     shell: bash
@@ -20,7 +24,7 @@ jobs:
           - { title: "linux/tsan/no-futex", host: "ubuntu-latest" , arch: "x64"    , cc: "clang-18", conf: "Release", diagnostics: "tsan", defs: "BLEND2D_TEST=1,BLEND2D_NO_FUTEX=1" }
           - { title: "linux/ubsan"        , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-18", conf: "Release", diagnostics: "ubsan", defs: "BLEND2D_TEST=1" }
           - { title: "linux/hardened"     , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-18", conf: "Release", diagnostics: "hardened", defs: "BLEND2D_TEST=1" }
-          - { title: "linux/valgrind"     , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-18", conf: "Release", diagnostics: "valgrind", defs: "BLEND2D_TEST=1" }
+          - { title: "linux/valgrind"     , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-18", conf: "Release", diagnostics: "valgrind", defs: "BLEND2D_TEST=1" }
 
           - { title: "linux/no-futex"     , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-18", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_FUTEX=1" }
           - { title: "linux/no-intrin"    , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-18", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_INTRINSICS=1" }
@@ -111,9 +115,11 @@ jobs:
           - { title: "windows"            , host: "windows-2022"  , arch: "x64"    , cc: "vs2022"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
           - { title: "windows"            , host: "windows-2022"  , arch: "x64"    , cc: "vs2022"  , conf: "Release", defs: "BLEND2D_TEST=1" }
 
-          - { title: "freebsd"            , host: "macos-12"      , arch: "x86-64" , cc: "clang"   , conf: "Release", vm: "freebsd", vm_ver: "14.0", defs: "BLEND2D_TEST=1" }
-          - { title: "netbsd"             , host: "macos-12"      , arch: "x86-64" , cc: "clang"   , conf: "Release", vm: "netbsd" , vm_ver: "9.3" , defs: "BLEND2D_TEST=1" }
-          - { title: "openbsd"            , host: "macos-12"      , arch: "x86-64" , cc: "clang"   , conf: "Release", vm: "openbsd", vm_ver: "7.4" , defs: "BLEND2D_TEST=1" }
+          - { title: "freebsd"            , host: "ubuntu-latest" , arch: "x64"    , cc: "clang"   , conf: "Release", vm: "freebsd", vm_ver: "14.1", defs: "BLEND2D_TEST=1" }
+          - { title: "freebsd"            , host: "ubuntu-latest" , arch: "arm64"  , cc: "clang"   , conf: "Release", vm: "freebsd", vm_ver: "14.1", defs: "BLEND2D_TEST=1" }
+          - { title: "netbsd"             , host: "ubuntu-latest" , arch: "x64"    , cc: "clang"   , conf: "Release", vm: "netbsd" , vm_ver: "10.0", defs: "BLEND2D_TEST=1" }
+          - { title: "netbsd"             , host: "ubuntu-latest" , arch: "arm64"  , cc: "clang"   , conf: "Release", vm: "netbsd" , vm_ver: "10.0", defs: "BLEND2D_TEST=1" }
+          - { title: "openbsd"            , host: "ubuntu-latest" , arch: "x64"    , cc: "clang"   , conf: "Release", vm: "openbsd", vm_ver: "7.4" , defs: "BLEND2D_TEST=1" }
           - { title: "openbsd"            , host: "ubuntu-latest" , arch: "arm64"  , cc: "clang"   , conf: "Release", vm: "openbsd", vm_ver: "7.4" , defs: "BLEND2D_TEST=1" }
 
           - { title: "debian"             , host: "ubuntu-latest" , arch: "arm/v7" , cc: "clang"   , conf: "Release", vm: "debian:unstable", defs: "BLEND2D_TEST=1" }

@@ -121,6 +121,7 @@ void BaseTestApp::printAppInfo(const char* title, bool quiet) const {
            buildInfo.buildType == BL_RUNTIME_BUILD_TYPE_DEBUG ? "Debug" : "Release",
            buildInfo.compilerInfo);
   }
+
   fflush(stdout);
 }
 

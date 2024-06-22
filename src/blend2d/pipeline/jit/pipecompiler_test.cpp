@@ -5328,9 +5328,11 @@ static void test_x86_ops(JitContext& ctx, const asmjit::CpuFeatures& hostFeature
   using Ext = asmjit::CpuFeatures::X86;
   using CpuFeatures = asmjit::CpuFeatures;
 
-  asmjit::String sss;
-  dumpFeatureList(sss, hostFeatures);
-  INFO("Available features: %s", sss.data());
+  {
+    asmjit::String s;
+    dumpFeatureList(s, hostFeatures);
+    INFO("Available CPU features: %s", s.data());
+  }
 
   // Features that must always be available;
   CpuFeatures base;

@@ -32,7 +32,7 @@ struct ThreadTestData {
 
 static void BL_CDECL test_thread_entry(BLThread* thread, void* data_) noexcept {
   ThreadTestData* data = static_cast<ThreadTestData*>(data_);
-  INFO("[#%u] Thread %p running\n", data->iter, thread);
+  INFO("[#%u] Thread %p running\n", blAtomicFetchStrong(&data->iter), thread);
 
   if (blAtomicFetchSubStrong(&data->counter) == 1) {
     BLLockGuard<BLMutex> guard(data->mutex);
@@ -62,7 +62,7 @@ UNIT(thread_pool, BL_TEST_GROUP_THREADING) {
 
   INFO("Repeatedly acquiring / releasing %u threads with a simple task", kThreadCount);
   for (uint32_t i = 0; i < 10; i++) {
-    data.iter = i;
+    blAtomicStoreStrong(&data.iter, i);
 
     INFO("[#%u] Acquiring %u threads from thread-pool", i, kThreadCount);
     BLResult reason;

@@ -12,6 +12,7 @@
 #include "codec/bmpcodec_p.h"
 #include "codec/jpegcodec_p.h"
 #include "codec/pngcodec_p.h"
+#include "codec/qoicodec_p.h"
 #include "support/stringops_p.h"
 #include "support/wrap_p.h"
 #include "threading/mutex_p.h"
@@ -319,7 +320,9 @@ void blRegisterBuiltInCodecs(BLRuntimeContext* rt) noexcept {
   using namespace bl::ImageCodecInternal;
 
   BLArray<BLImageCodec>* codecs = &builtinCodecsArray;
+  codecs->reserve(4);
   bl::Bmp::bmpCodecOnInit(rt, codecs);
   bl::Jpeg::jpegCodecOnInit(rt, codecs);
   bl::Png::pngCodecOnInit(rt, codecs);
+  bl::Qoi::qoiCodecOnInit(rt, codecs);
 }

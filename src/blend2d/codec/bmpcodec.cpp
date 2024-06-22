@@ -5,7 +5,6 @@
 
 #include "../api-build_p.h"
 #include "../format_p.h"
-#include "../imagecodec.h"
 #include "../object_p.h"
 #include "../pixelconverter.h"
 #include "../rgba.h"
@@ -459,8 +458,6 @@ static BLResult decoderReadInfoInternal(BLBmpDecoderImpl* decoderI, const uint8_
 }
 
 static BLResult decoderReadFrameInternal(BLBmpDecoderImpl* decoderI, BLImage* imageOut, const uint8_t* data, size_t size) noexcept {
-  BLResult result = BL_SUCCESS;
-
   const uint8_t* start = data;
   const uint8_t* end = data + size;
 
@@ -511,15 +508,11 @@ static BLResult decoderReadFrameInternal(BLBmpDecoderImpl* decoderI, BLImage* im
     return blTraceError(BL_ERROR_DATA_TRUNCATED);
   data += decoderI->file.imageOffset;
 
-  // Make sure that the destination image has the correct pixel format and size.
-  result = imageOut->create(int(w), int(h), format);
-  if (result != BL_SUCCESS)
-    return result;
-
   BLImageData imageData;
-  result = imageOut->makeMutable(&imageData);
-  if (result != BL_SUCCESS)
-    return result;
+
+  // Make sure that the destination image has the correct pixel format and size.
+  BL_PROPAGATE(imageOut->create(int(w), int(h), format));
+  BL_PROPAGATE(imageOut->makeMutable(&imageData));
 
   uint8_t* dstLine = static_cast<uint8_t*>(imageData.pixelData);
   intptr_t dstStride = imageData.stride;
@@ -548,6 +541,7 @@ static BLResult decoderReadFrameInternal(BLBmpDecoderImpl* decoderI, BLImage* im
 
   decoderI->bufferIndex = (size_t)(data - start);
   decoderI->frameIndex++;
+
   return BL_SUCCESS;
 }
 
@@ -636,10 +630,7 @@ static BLResult BL_CDECL encoderWriteFrameImpl(BLImageEncoderImpl* impl, BLArray
     return blTraceError(BL_ERROR_INVALID_VALUE);
 
   BLImageData imageData;
-  BLResult result = img.getData(&imageData);
-
-  if (result != BL_SUCCESS)
-    return result;
+  BL_PROPAGATE(img.getData(&imageData));
 
   uint32_t w = uint32_t(imageData.size.w);
   uint32_t h = uint32_t(imageData.size.h);
@@ -717,8 +708,11 @@ static BLResult BL_CDECL encoderWriteFrameImpl(BLImageEncoderImpl* impl, BLArray
 
     // This should never fail as only a limited subset of possibilities exist
     // that are guaranteed by the implementation.
-    result = pc.create(bmpFmt, blFormatInfo[format]);
+    BLResult result = pc.create(bmpFmt, blFormatInfo[format]);
     BL_ASSERT(result == BL_SUCCESS);
+
+    // Maybe unused in release mode.
+    blUnused(result);
   }
 
   uint8_t* dstData;

@@ -15,6 +15,74 @@
 //!
 //! \{
 
+//! File information flags, used by \ref BLFileInfo.
+BL_DEFINE_ENUM(BLFileInfoFlags) {
+  //! File owner has read permission (compatible with 0400 octal notation).
+  BL_FILE_INFO_OWNER_R = 0x00000100u,
+  //! File owner has write permission (compatible with 0200 octal notation).
+  BL_FILE_INFO_OWNER_W = 0x00000080u,
+  //! File owner has execute permission (compatible with 0100 octal notation).
+  BL_FILE_INFO_OWNER_X = 0x00000040u,
+  //! A combination of \ref BL_FILE_INFO_OWNER_R, \ref BL_FILE_INFO_OWNER_W, and \ref BL_FILE_INFO_OWNER_X.
+  BL_FILE_INFO_OWNER_MASK = 0x000001C0u,
+
+  //! File group owner has read permission (compatible with 040 octal notation).
+  BL_FILE_INFO_GROUP_R = 0x00000020u,
+  //! File group owner has write permission (compatible with 020 octal notation).
+  BL_FILE_INFO_GROUP_W = 0x00000010u,
+  //! File group owner has execute permission (compatible with 010 octal notation).
+  BL_FILE_INFO_GROUP_X = 0x00000008u,
+  //! A combination of \ref BL_FILE_INFO_GROUP_R, \ref BL_FILE_INFO_GROUP_W, and \ref BL_FILE_INFO_GROUP_X.
+  BL_FILE_INFO_GROUP_MASK = 0x00000038u,
+
+  //! Other users have read permission (compatible with 04 octal notation).
+  BL_FILE_INFO_OTHER_R = 0x00000004u,
+  //! Other users have write permission (compatible with 02 octal notation).
+  BL_FILE_INFO_OTHER_W = 0x00000002u,
+  //! Other users have execute permission (compatible with 01 octal notation).
+  BL_FILE_INFO_OTHER_X = 0x00000001u,
+  //! A combination of \ref BL_FILE_INFO_OTHER_R, \ref BL_FILE_INFO_OTHER_W, and \ref BL_FILE_INFO_OTHER_X.
+  BL_FILE_INFO_OTHER_MASK = 0x00000007u,
+
+  //! Set user ID to file owner user ID on execution (compatible with 04000 octal notation).
+  BL_FILE_INFO_SUID = 0x00000800u,
+  //! Set group ID to file's user group ID on execution (compatible with 02000 octal notation).
+  BL_FILE_INFO_SGID = 0x00000400u,
+
+  //! A combination of all file permission bits.
+  BL_FILE_INFO_PERMISSIONS_MASK = 0x00000FFFu,
+
+  //! A flag specifying that this is a regular file.
+  BL_FILE_INFO_REGULAR = 0x00010000u,
+  //! A flag specifying that this is a directory.
+  BL_FILE_INFO_DIRECTORY = 0x00020000u,
+  //! A flag specifying that this is a symbolic link.
+  BL_FILE_INFO_SYMLINK = 0x00040000u,
+
+  //! A flag describing a character device.
+  BL_FILE_INFO_CHAR_DEVICE = 0x00100000u,
+  //! A flag describing a block device.
+  BL_FILE_INFO_BLOCK_DEVICE = 0x00200000u,
+  //! A flag describing a FIFO (named pipe).
+  BL_FILE_INFO_FIFO = 0x00400000u,
+  //! A flag describing a socket.
+  BL_FILE_INFO_SOCKET = 0x00800000u,
+
+  //! A flag describing a hidden file (Windows only).
+  BL_FILE_INFO_HIDDEN = 0x01000000u,
+  //! A flag describing a hidden file (Windows only).
+  BL_FILE_INFO_EXECUTABLE = 0x02000000u,
+  //! A flag describing an archive (Windows only).
+  BL_FILE_INFO_ARCHIVE = 0x04000000u,
+  //! A flag describing a system file (Windows only).
+  BL_FILE_INFO_SYSTEM = 0x08000000u,
+
+  //! File information is valid (the request succeeded).
+  BL_FILE_INFO_VALID = 0x80000000u
+
+  BL_FORCE_ENUM_UINT32(BL_FILE_INFO)
+};
+
 //! File open flags, see `BLFile::open()`.
 BL_DEFINE_ENUM(BLFileOpenFlags) {
   //! No flags.
@@ -152,12 +220,78 @@ struct BLFileCore {
 
 //! \}
 
+//! \name BLFileInfo Structs
+//!
+//! \{
+
+//! File information.
+struct BLFileInfo {
+  //! \name Members
+  //! \{
+
+  uint64_t size;
+  int64_t modifiedTime;
+  BLFileInfoFlags flags;
+  uint32_t uid;
+  uint32_t gid;
+  uint32_t reserved[5];
+
+  //! \}
+
+#if defined(__cplusplus)
+
+  //! \name Accessors
+  //! \{
+
+  //! Tests whether the file information has the given \ref flag set.
+  BL_INLINE_NODEBUG bool hasFlag(BLFileInfoFlags flag) const noexcept { return (flags & flag) != 0; }
+
+  BL_INLINE_NODEBUG bool hasOwnerR() const noexcept { return hasFlag(BL_FILE_INFO_OWNER_R); }
+  BL_INLINE_NODEBUG bool hasOwnerW() const noexcept { return hasFlag(BL_FILE_INFO_OWNER_W); }
+  BL_INLINE_NODEBUG bool hasOwnerX() const noexcept { return hasFlag(BL_FILE_INFO_OWNER_X); }
+
+  BL_INLINE_NODEBUG bool hasGroupR() const noexcept { return hasFlag(BL_FILE_INFO_GROUP_R); }
+  BL_INLINE_NODEBUG bool hasGroupW() const noexcept { return hasFlag(BL_FILE_INFO_GROUP_W); }
+  BL_INLINE_NODEBUG bool hasGroupX() const noexcept { return hasFlag(BL_FILE_INFO_GROUP_X); }
+
+  BL_INLINE_NODEBUG bool hasOtherR() const noexcept { return hasFlag(BL_FILE_INFO_OTHER_R); }
+  BL_INLINE_NODEBUG bool hasOtherW() const noexcept { return hasFlag(BL_FILE_INFO_OTHER_W); }
+  BL_INLINE_NODEBUG bool hasOtherX() const noexcept { return hasFlag(BL_FILE_INFO_OTHER_X); }
+
+  BL_INLINE_NODEBUG bool hasSUID() const noexcept { return hasFlag(BL_FILE_INFO_SUID); }
+  BL_INLINE_NODEBUG bool hasSGID() const noexcept { return hasFlag(BL_FILE_INFO_SGID); }
+
+  BL_INLINE_NODEBUG bool isRegular() const noexcept { return hasFlag(BL_FILE_INFO_REGULAR); }
+  BL_INLINE_NODEBUG bool isDirectory() const noexcept { return hasFlag(BL_FILE_INFO_DIRECTORY); }
+  BL_INLINE_NODEBUG bool isSymlink() const noexcept { return hasFlag(BL_FILE_INFO_SYMLINK); }
+
+  BL_INLINE_NODEBUG bool isCharDevice() const noexcept { return hasFlag(BL_FILE_INFO_CHAR_DEVICE); }
+  BL_INLINE_NODEBUG bool isBlockDevice() const noexcept { return hasFlag(BL_FILE_INFO_BLOCK_DEVICE); }
+  BL_INLINE_NODEBUG bool isFIFO() const noexcept { return hasFlag(BL_FILE_INFO_FIFO); }
+  BL_INLINE_NODEBUG bool isSocket() const noexcept { return hasFlag(BL_FILE_INFO_SOCKET); }
+
+  BL_INLINE_NODEBUG bool isHidden() const noexcept { return hasFlag(BL_FILE_INFO_HIDDEN); }
+  BL_INLINE_NODEBUG bool isExecutable() const noexcept { return hasFlag(BL_FILE_INFO_EXECUTABLE); }
+  BL_INLINE_NODEBUG bool isArchive() const noexcept { return hasFlag(BL_FILE_INFO_ARCHIVE); }
+  BL_INLINE_NODEBUG bool isSystem() const noexcept { return hasFlag(BL_FILE_INFO_SYSTEM); }
+
+  BL_INLINE_NODEBUG bool isValid() const noexcept { return hasFlag(BL_FILE_INFO_VALID); }
+
+  //! \}
+
+#endif
+};
+
+//! \}
+
 BL_BEGIN_C_DECLS
+
 //! \name BLFile C API Functions
 //!
 //! File read/write functionality is provided by \ref BLFileCore in C API and wrapped by \ref BLFile in C++ API.
 //!
 //! \{
+
 BL_API BLResult BL_CDECL blFileInit(BLFileCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFileReset(BLFileCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFileOpen(BLFileCore* self, const char* fileName, BLFileOpenFlags openFlags) BL_NOEXCEPT_C;
@@ -166,11 +300,21 @@ BL_API BLResult BL_CDECL blFileSeek(BLFileCore* self, int64_t offset, BLFileSeek
 BL_API BLResult BL_CDECL blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFileTruncate(BLFileCore* self, int64_t maxSize) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFileGetInfo(BLFileCore* self, BLFileInfo* infoOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) BL_NOEXCEPT_C;
 
+//! \}
+
+//! \name BLFileSystem C API Functions
+//!
+//! \{
+
+BL_API BLResult BL_CDECL blFileSystemGetInfo(const char* fileName, BLFileInfo* infoOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFileSystemReadFile(const char* fileName, BLArrayCore* dst, size_t maxSize, BLFileReadFlags readFlags) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFileSystemWriteFile(const char* fileName, const void* data, size_t size, size_t* bytesWrittenOut) BL_NOEXCEPT_C;
+
 //! \}
+
 BL_END_C_DECLS
 
 #ifdef __cplusplus
@@ -260,6 +404,10 @@ public:
     return blFileTruncate(this, maxSize);
   }
 
+  BL_INLINE_NODEBUG BLResult getInfo(BLFileInfo* infoOut) noexcept {
+    return blFileGetInfo(this, infoOut);
+  }
+
   BL_INLINE_NODEBUG BLResult getSize(uint64_t* sizeOut) noexcept {
     return blFileGetSize(this, sizeOut);
   }
@@ -269,6 +417,10 @@ public:
 
 //! File-system utilities.
 namespace BLFileSystem {
+
+static BL_INLINE_NODEBUG BLResult fileInfo(const char* fileName, BLFileInfo* infoOut) noexcept {
+  return blFileSystemGetInfo(fileName, infoOut);
+}
 
 //! Reads a file into the `dst` buffer.
 //!

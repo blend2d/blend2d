@@ -18,12 +18,20 @@
   #include <sys/mman.h>
   #include <sys/stat.h>
   #include <sys/types.h>
+
+  #if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+    #define BL_FS_STAT_MTIMESPEC(s) s.st_mtim
+  #elif defined(__NetBSD__) || defined(__APPLE__)
+    #define BL_FS_STAT_MTIMESPEC(s) s.st_mtimespec
+  #endif
 #endif
 
 #ifdef _WIN32
 
 // BLUtf16StringTmp
 // ================
+
+static constexpr size_t kStaticUTF16StringSize = 1024;
 
 template<size_t N>
 class BLUtf16StringTmp {
@@ -45,13 +53,13 @@ public:
       free(_data);
   }
 
-  BL_INLINE uint16_t* data() const noexcept { return _data; }
-  BL_INLINE wchar_t* dataAsWideChar() const noexcept { return reinterpret_cast<wchar_t*>(_data); }
+  BL_INLINE_NODEBUG uint16_t* data() const noexcept { return _data; }
+  BL_INLINE_NODEBUG wchar_t* dataAsWCharT() const noexcept { return reinterpret_cast<wchar_t*>(_data); }
 
-  BL_INLINE size_t size() const noexcept { return _size; }
-  BL_INLINE size_t capacity() const noexcept { return _capacity; }
+  BL_INLINE_NODEBUG size_t size() const noexcept { return _size; }
+  BL_INLINE_NODEBUG size_t capacity() const noexcept { return _capacity; }
 
-  BL_INLINE void nullTerminate() noexcept { _data[_size] = uint16_t(0); }
+  BL_INLINE_NODEBUG void nullTerminate() noexcept { _data[_size] = uint16_t(0); }
 
   BL_NOINLINE BLResult fromUtf8(const char* src) noexcept {
     size_t srcSize = strlen(src);
@@ -129,6 +137,76 @@ BL_API_IMPL BLResult blFileReset(BLFileCore* self) noexcept {
 
 #ifdef _WIN32
 
+// BLFileSystem - Windows Implementation (Internal)
+// ================================================
+
+namespace bl {
+namespace FileSystem {
+
+static BL_INLINE uint64_t combineHiLo(uint32_t hi, uint32_t lo) noexcept {
+  return (uint64_t(hi) << 32) | lo;
+}
+
+static BL_INLINE uint64_t unixMicroFromFileTime(FILETIME ft) noexcept {
+  constexpr uint64_t kFileTimeToUnixTimeS = 11644473600;
+  constexpr uint32_t kMicrosecondsPerSecond = 1000000;
+
+  // First convert to microseconds, starting from 1601-01-01 [UTC].
+  uint64_t t = combineHiLo(ft.dwHighDateTime, ft.dwLowDateTime) / 10u;
+
+  return int64_t(t) - int64_t(kFileTimeToUnixTimeS * kMicrosecondsPerSecond);
+}
+
+static BLFileInfoFlags fileFlagsFromDWFileAttributes(DWORD dwAttr) noexcept {
+  uint32_t flags = BL_FILE_INFO_VALID;
+
+  if (dwAttr & FILE_ATTRIBUTE_DIRECTORY)
+    flags |= BL_FILE_INFO_DIRECTORY;
+  else
+    flags |= BL_FILE_INFO_REGULAR;
+
+  if (dwAttr & FILE_ATTRIBUTE_REPARSE_POINT)
+    flags |= BL_FILE_INFO_SYMLINK;
+
+  if (dwAttr & FILE_ATTRIBUTE_DEVICE)
+    flags |= BL_FILE_INFO_CHAR_DEVICE;
+
+  if (dwAttr & FILE_ATTRIBUTE_HIDDEN)
+    flags |= BL_FILE_INFO_HIDDEN;
+
+  // Windows specific file attributes.
+  if (dwAttr & FILE_ATTRIBUTE_ARCHIVE)
+    flags |= BL_FILE_INFO_ARCHIVE;
+
+  if (dwAttr & FILE_ATTRIBUTE_SYSTEM)
+    flags |= BL_FILE_INFO_SYSTEM;
+
+  // Windows specific file attributes.
+  if (dwAttr & FILE_ATTRIBUTE_READONLY) {
+    flags |= BL_FILE_INFO_OWNER_R |
+             BL_FILE_INFO_GROUP_R |
+             BL_FILE_INFO_OTHER_R;
+  }
+  else {
+    flags |= BL_FILE_INFO_OWNER_R | BL_FILE_INFO_OWNER_W |
+             BL_FILE_INFO_GROUP_R | BL_FILE_INFO_GROUP_W |
+             BL_FILE_INFO_OTHER_R | BL_FILE_INFO_OTHER_W ;
+  }
+
+  return BLFileInfoFlags(flags);
+}
+
+static BLResult fileInfoFromFileAttributeData(BLFileInfo& info, const WIN32_FILE_ATTRIBUTE_DATA& fa) noexcept {
+  info.flags = fileFlagsFromDWFileAttributes(fa.dwFileAttributes);
+  info.size = combineHiLo(fa.nFileSizeHigh, fa.nFileSizeLow);
+  info.modifiedTime = unixMicroFromFileTime(fa.ftLastWriteTime);
+
+  return BL_SUCCESS;
+}
+
+} // {FileSystem} namespace
+} // {bl} namespace
+
 // BLFile - API - Windows Implementation
 // =====================================
 
@@ -205,11 +283,11 @@ BL_API_IMPL BLResult blFileOpen(BLFileCore* self, const char* fileName, BLFileOp
 
   // NOTE: Do not close the file before calling `CreateFileW()`. We should behave atomically, which means that
   // we won't close the existing file if `CreateFileW()` fails...
-  BLUtf16StringTmp<1024> fileNameW;
+  BLUtf16StringTmp<kStaticUTF16StringSize> fileNameW;
   BL_PROPAGATE(fileNameW.fromUtf8(fileName));
 
   HANDLE handle = CreateFileW(
-    fileNameW.dataAsWideChar(),
+    fileNameW.dataAsWCharT(),
     dwDesiredAccess,
     dwShareMode,
     lpSecurityAttributes,
@@ -364,22 +442,161 @@ BL_API_IMPL BLResult blFileTruncate(BLFileCore* self, int64_t maxSize) noexcept 
     return BL_SUCCESS;
 }
 
+BL_API_IMPL BLResult blFileGetInfo(BLFileCore* self, BLFileInfo* infoOut) noexcept {
+  *infoOut = BLFileInfo{};
+
+  if (!isFileOpen(self)) {
+    return blTraceError(BL_ERROR_INVALID_HANDLE);
+  }
+
+  HANDLE handle = (HANDLE)self->handle;
+  BY_HANDLE_FILE_INFORMATION fi;
+
+  if (!GetFileInformationByHandle(handle, &fi)) {
+    return blTraceError(blResultFromWinError(GetLastError()));
+  }
+
+  infoOut->size = bl::FileSystem::combineHiLo(fi.nFileSizeHigh, fi.nFileSizeLow);
+  infoOut->modifiedTime = bl::FileSystem::unixMicroFromFileTime(fi.ftLastWriteTime);
+  infoOut->flags = bl::FileSystem::fileFlagsFromDWFileAttributes(fi.dwFileAttributes);
+
+  return BL_SUCCESS;
+}
+
 BL_API_IMPL BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
   *fileSizeOut = 0;
-  if (!isFileOpen(self))
+
+  if (!isFileOpen(self)) {
     return blTraceError(BL_ERROR_INVALID_HANDLE);
+  }
 
+  HANDLE handle = (HANDLE)self->handle;
   LARGE_INTEGER size;
-  BOOL result = GetFileSizeEx((HANDLE)self->handle, &size);
 
-  if (!result)
+  if (!GetFileSizeEx(handle, &size)) {
     return blTraceError(blResultFromWinError(GetLastError()));
+  }
 
   *fileSizeOut = uint64_t(size.QuadPart);
   return BL_SUCCESS;
 }
 
+// BLFileSystem - API - Windows Implementation
+// ===========================================
+
+BL_API_IMPL BLResult BL_CDECL blFileSystemGetInfo(const char* fileName, BLFileInfo* infoOut) noexcept {
+  *infoOut = BLFileInfo{};
+
+  BLUtf16StringTmp<kStaticUTF16StringSize> fileNameW;
+  BL_PROPAGATE(fileNameW.fromUtf8(fileName));
+
+  WIN32_FILE_ATTRIBUTE_DATA fa;
+  if (!GetFileAttributesExW(fileNameW.dataAsWCharT(), GetFileExInfoStandard, &fa)) {
+    return blTraceError(blResultFromWinError(GetLastError()));
+  }
+
+  return bl::FileSystem::fileInfoFromFileAttributeData(*infoOut, fa);
+}
+
 #else
+
+// BLFileSystem - API - POSIX Implementation (Internal)
+// ====================================================
+
+namespace bl {
+namespace FileSystem {
+
+template<uint32_t kDst, uint32_t kSrc, uint32_t kMsk = 0x1>
+static BL_INLINE uint32_t translateFlags(uint32_t src) noexcept {
+  constexpr uint32_t kDstOffset = bl::IntOps::ctzStatic(kDst);
+  constexpr uint32_t kSrcOffset = bl::IntOps::ctzStatic(kSrc);
+
+  if BL_CONSTEXPR (kDstOffset < kSrcOffset) {
+    return (src >> (kSrcOffset - kDstOffset)) & (kMsk << kDstOffset);
+  }
+  else {
+    return (src << (kDstOffset - kSrcOffset)) & (kMsk << kDstOffset);
+  }
+}
+
+template<BLFileInfoFlags kDstX, uint32_t kSrcR, uint32_t kSrcW, uint32_t kSrcX>
+static BL_INLINE uint32_t translateRWX(uint32_t src) noexcept {
+  if BL_CONSTEXPR (kSrcW == (kSrcX << 1) && kSrcR == (kSrcX << 2)) {
+    return translateFlags<kDstX, kSrcX, 0x7>(src);
+  }
+  else {
+    return translateFlags<kDstX << 0, kSrcX>(src) |
+           translateFlags<kDstX << 1, kSrcW>(src) |
+           translateFlags<kDstX << 2, kSrcR>(src) ;
+  }
+}
+
+template<typename T>
+static BL_INLINE int64_t unixMicroFromFileTime(const T& t) noexcept {
+  return int64_t(uint64_t(t) * 1000000);
+}
+
+#if defined(BL_FS_STAT_MTIMESPEC)
+template<typename T>
+static BL_INLINE int64_t unixMicroFromTimeSpec(const T& ts) noexcept {
+  return int64_t(uint64_t(ts.tv_sec) + (uint32_t(ts.tv_nsec) / 1000u));
+}
+#endif
+
+static BLResult fileInfoFromStat(BLFileInfo& info, struct BL_FILE64_API(stat)& s) noexcept {
+  uint32_t flags = BL_FILE_INFO_VALID;
+
+  // Translate file type to a portable representation:
+  if (S_ISREG(s.st_mode)) flags |= BL_FILE_INFO_REGULAR;
+  if (S_ISDIR(s.st_mode)) flags |= BL_FILE_INFO_DIRECTORY;
+
+#if defined(S_ISLNK)
+  if (S_ISLNK(s.st_mode)) flags |= BL_FILE_INFO_SYMLINK;
+#endif // S_ISLNK
+
+#if defined(S_ISCHR)
+  if (S_ISCHR(s.st_mode)) flags |= BL_FILE_INFO_CHAR_DEVICE;
+#endif // S_ISCHR
+
+#if defined(S_ISBLK)
+  if (S_ISBLK(s.st_mode)) flags |= BL_FILE_INFO_BLOCK_DEVICE;
+#endif // S_ISBLK
+
+#if defined(S_ISFIFO)
+  if (S_ISFIFO(s.st_mode)) flags |= BL_FILE_INFO_FIFO;
+#endif // S_ISFIFO
+
+#if defined(S_ISSOCK)
+  if (S_ISSOCK(s.st_mode)) flags |= BL_FILE_INFO_SOCKET;
+#endif // S_ISSOCK
+
+  // Translate file permissions to a portable representation:
+  flags |= translateRWX<BL_FILE_INFO_OWNER_X, S_IRUSR, S_IWUSR, S_IXUSR>(s.st_mode);
+  flags |= translateRWX<BL_FILE_INFO_GROUP_X, S_IRGRP, S_IWGRP, S_IXGRP>(s.st_mode);
+  flags |= translateRWX<BL_FILE_INFO_OTHER_X, S_IROTH, S_IWOTH, S_IXOTH>(s.st_mode);
+  flags |= translateFlags<BL_FILE_INFO_SUID, S_ISUID>(s.st_mode);
+  flags |= translateFlags<BL_FILE_INFO_SGID, S_ISGID>(s.st_mode);
+
+  info = BLFileInfo{};
+
+  if (flags & BL_FILE_INFO_REGULAR)
+    info.size = uint64_t(s.st_size);
+
+  info.flags = BLFileInfoFlags(flags);
+  info.uid = uint32_t(s.st_uid);
+  info.gid = uint32_t(s.st_gid);
+
+#if defined(BL_FS_STAT_MTIMESPEC)
+  info.modifiedTime = unixMicroFromTimeSpec(BL_FS_STAT_MTIMESPEC(s));
+#else
+  info.modifiedTime = unixMicroFromFileTime(s.st_mtime);
+#endif
+
+  return BL_SUCCESS;
+}
+
+} // {FileSystem} namespace
+} // {bl} namespace
 
 // BLFile - API - POSIX Implementation
 // ===================================
@@ -473,7 +690,7 @@ BL_API_IMPL BLResult blFileSeek(BLFileCore* self, int64_t offset, BLFileSeekType
 }
 
 BL_API_IMPL BLResult blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadOut) noexcept {
-  typedef std::make_signed<size_t>::type SignedSizeT;
+  using SignedSizeT = std::make_signed<size_t>::type;
 
   if (!isFileOpen(self)) {
     *bytesReadOut = 0;
@@ -568,19 +785,53 @@ BL_API_IMPL BLResult blFileTruncate(BLFileCore* self, int64_t maxSize) noexcept 
   }
 }
 
-BL_API_IMPL BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
-  *fileSizeOut = 0;
-  if (!isFileOpen(self))
+BL_API_IMPL BLResult blFileGetInfo(BLFileCore* self, BLFileInfo* infoOut) noexcept {
+  if (!isFileOpen(self)) {
+    *infoOut = BLFileInfo{};
     return blTraceError(BL_ERROR_INVALID_HANDLE);
+  }
 
   int fd = int(self->handle);
-  struct stat s;
+  struct BL_FILE64_API(stat) s;
 
-  if (fstat(fd, &s) != 0)
+  if (BL_FILE64_API(fstat)(fd, &s) != 0) {
+    *infoOut = BLFileInfo{};
     return blTraceError(blResultFromPosixError(errno));
+  }
+
+  return bl::FileSystem::fileInfoFromStat(*infoOut, s);
+}
+
+BL_API_IMPL BLResult blFileGetSize(BLFileCore* self, uint64_t* fileSizeOut) noexcept {
+  if (!isFileOpen(self)) {
+    *fileSizeOut = 0;
+    return blTraceError(BL_ERROR_INVALID_HANDLE);
+  }
+
+  int fd = int(self->handle);
+  struct BL_FILE64_API(stat) s;
+
+  if (BL_FILE64_API(fstat)(fd, &s) != 0) {
+    *fileSizeOut = 0;
+    return blTraceError(blResultFromPosixError(errno));
+  }
 
   *fileSizeOut = uint64_t(s.st_size);
   return BL_SUCCESS;
+}
+
+// BLFileSystem - API - POSIX Implementation
+// =========================================
+
+BL_API_IMPL BLResult blFileSystemGetInfo(const char* fileName, BLFileInfo* infoOut) noexcept {
+  struct BL_FILE64_API(stat) s;
+
+  if (BL_FILE64_API(stat)(fileName, &s) != 0) {
+    *infoOut = BLFileInfo{};
+    return blTraceError(blResultFromPosixError(errno));
+  }
+
+  return bl::FileSystem::fileInfoFromStat(*infoOut, s);
 }
 #endif
 

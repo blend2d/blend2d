@@ -64,6 +64,9 @@ struct BLFontFeatureItem {
 
 //! A view unifying the representation of an internal storage used by \ref BLFontFeatureSettings.
 struct BLFontFeatureSettingsView {
+  //! \name Members
+  //! \{
+
   //! Pointer to font feature items, where each item describes a tag and its value.
   //!
   //! \note If the container is in SSO mode the `data` member will point to `ssoData`.
@@ -75,6 +78,8 @@ struct BLFontFeatureSettingsView {
   //! \note This member won't be initialized or zeroed in case `BLFontFeatureSettings` is not in SSO mode. And if the
   //! container is in SSO mode only the number of items used will be overwritten by \ref blFontFeatureSettingsGetView().
   BLFontFeatureItem ssoData[36];
+
+  //! \}
 
 #if defined(__cplusplus)
   //! \name C++ Iterator Compatibility
