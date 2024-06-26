@@ -883,6 +883,7 @@ static BLResult decoderReadInfoInternal(BLPngDecoderImpl* decoderI, const uint8_
   decoderI->imageInfo.size.reset(int(w), int(h));
   decoderI->imageInfo.depth = uint16_t(sampleDepth * uint32_t(decoderI->sampleCount));
   decoderI->imageInfo.frameCount = 1;
+  decoderI->imageInfo.flags = progressive ? BL_IMAGE_INFO_FLAG_PROGRESSIVE : BL_IMAGE_INFO_FLAG_NO_FLAGS;
 
   decoderI->bufferIndex = (size_t)(p - start);
   return BL_SUCCESS;

@@ -29,18 +29,16 @@ BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint
   // First row uses a special filter that doesn't access the previous row,
   // which is assumed to contain all zeros.
   uint32_t filterType = *p++;
-  if (BL_UNLIKELY(filterType >= BL_PNG_FILTER_TYPE_COUNT))
-    return blTraceError(BL_ERROR_INVALID_DATA);
+
+  if (filterType >= BL_PNG_FILTER_TYPE_COUNT)
+    filterType = BL_PNG_FILTER_TYPE_NONE;
+
   filterType = simplifyFilterOfFirstRow(filterType);
 
   for (;;) {
     uint32_t i;
 
     switch (filterType) {
-      case BL_PNG_FILTER_TYPE_NONE:
-        p += bpl;
-        break;
-
       case BL_PNG_FILTER_TYPE_SUB: {
         for (i = bpl - bpp; i != 0; i--, p++)
           p[bpp] = applySumFilter(p[bpp], p[0]);
@@ -88,6 +86,11 @@ BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint
         p += bpp;
         break;
       }
+
+      case BL_PNG_FILTER_TYPE_NONE:
+      default:
+        p += bpl;
+        break;
     }
 
     if (--y == 0)
@@ -96,8 +99,8 @@ BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint
     u = p - bpl;
     filterType = *p++;
 
-    if (BL_UNLIKELY(filterType >= BL_PNG_FILTER_TYPE_COUNT))
-      return blTraceError(BL_ERROR_INVALID_DATA);
+    if (filterType >= BL_PNG_FILTER_TYPE_COUNT)
+      filterType = BL_PNG_FILTER_TYPE_NONE;
   }
 
   return BL_SUCCESS;

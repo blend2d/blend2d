@@ -33,8 +33,10 @@ BLResult BL_CDECL inverseFilterImpl_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl,
   // First row uses a special filter that doesn't access the previous row,
   // which is assumed to contain all zeros.
   uint32_t filterType = *p++;
-  if (BL_UNLIKELY(filterType >= BL_PNG_FILTER_TYPE_COUNT))
-    return blTraceError(BL_ERROR_INVALID_DATA);
+
+  if (filterType >= BL_PNG_FILTER_TYPE_COUNT)
+    filterType = BL_PNG_FILTER_TYPE_NONE;
+
   filterType = simplifyFilterOfFirstRow(filterType);
 
   #define BL_PNG_PAETH(DST, A, B, C)                                           \
@@ -68,10 +70,6 @@ BLResult BL_CDECL inverseFilterImpl_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl,
     uint32_t i;
 
     switch (filterType) {
-      case BL_PNG_FILTER_TYPE_NONE:
-        p += bpl;
-        break;
-
       // This is one of the easiest filters to parallelize. Although it looks like the data dependency
       // is too high, it's simply additions, which are really easy to parallelize. The following formula:
       //
@@ -1029,6 +1027,11 @@ BLResult BL_CDECL inverseFilterImpl_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl,
         p += bpp;
         break;
       }
+
+      case BL_PNG_FILTER_TYPE_NONE:
+      default:
+        p += bpl;
+        break;
     }
 
     if (--y == 0)
@@ -1037,8 +1040,8 @@ BLResult BL_CDECL inverseFilterImpl_SSE2(uint8_t* p, uint32_t bpp, uint32_t bpl,
     u = p - bpl;
     filterType = *p++;
 
-    if (BL_UNLIKELY(filterType >= BL_PNG_FILTER_TYPE_COUNT))
-      return blTraceError(BL_ERROR_INVALID_DATA);
+    if (filterType >= BL_PNG_FILTER_TYPE_COUNT)
+      filterType = BL_PNG_FILTER_TYPE_NONE;
   }
 
   #undef BL_PNG_PAETH
