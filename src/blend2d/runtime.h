@@ -283,7 +283,7 @@ static BL_INLINE_NODEBUG BLResult message(const char* msg) noexcept {
 
 template<typename... Args>
 static BL_INLINE_NODEBUG BLResult message(const char* fmt, Args&&... args) noexcept {
-  return blRuntimeMessageFmt(fmt, std::forward<Args>(args)...);
+  return blRuntimeMessageFmt(fmt, BLInternal::forward<Args>(args)...);
 }
 
 } // {BLRuntime}

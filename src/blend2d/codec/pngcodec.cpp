@@ -1168,7 +1168,7 @@ static BLResult decoderReadFrameImplInternal(BLPngDecoderImpl* decoderI, BLImage
     }
 
     if (decoderI->cgbi) {
-      std::swap(pngFmt.rShift, pngFmt.bShift);
+      BLInternal::swap(pngFmt.rShift, pngFmt.bShift);
       if (pngFmt.hasFlag(BL_FORMAT_FLAG_ALPHA))
         pngFmt.addFlags(BL_FORMAT_FLAG_PREMULTIPLIED);
     }

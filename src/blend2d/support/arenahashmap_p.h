@@ -140,17 +140,17 @@ public:
   //! \{
 
   BL_INLINE void _swap(ArenaHashMapBase& other) noexcept {
-    std::swap(_allocator, other._allocator);
-    std::swap(_data, other._data);
-    std::swap(_size, other._size);
-    std::swap(_bucketCount, other._bucketCount);
-    std::swap(_bucketGrow, other._bucketGrow);
-    std::swap(_rcpValue, other._rcpValue);
-    std::swap(_rcpShift, other._rcpShift);
-    std::swap(_primeIndex, other._primeIndex);
+    BLInternal::swap(_allocator, other._allocator);
+    BLInternal::swap(_data, other._data);
+    BLInternal::swap(_size, other._size);
+    BLInternal::swap(_bucketCount, other._bucketCount);
+    BLInternal::swap(_bucketGrow, other._bucketGrow);
+    BLInternal::swap(_rcpValue, other._rcpValue);
+    BLInternal::swap(_rcpShift, other._rcpShift);
+    BLInternal::swap(_primeIndex, other._primeIndex);
 
     for (uint32_t i = 0; i < kNullCount; i++)
-      std::swap(_embedded[i], other._embedded[i]);
+      BLInternal::swap(_embedded[i], other._embedded[i]);
 
     if (_data == other._embedded) _data = _embedded;
     if (other._data == _embedded) other._data = other._embedded;

@@ -1728,7 +1728,7 @@ BL_API_IMPL bool blBitSetIntersects(const BLBitSetCore* a, const BLBitSetCore* b
 
   // Make 'a' the SSO BitSet to make the logic simpler as the intersection is commutative.
   if (b->_d.sso())
-    std::swap(a, b);
+    BLInternal::swap(a, b);
 
   // Handle intersection of SSO BitSets.
   if (a->_d.sso()) {
@@ -1752,8 +1752,8 @@ BL_API_IMPL bool blBitSetIntersects(const BLBitSetCore* a, const BLBitSetCore* b
 
       // Make `aWordIndex <= bWordIndex`.
       if (aWordIndex > bWordIndex) {
-        std::swap(aWordData, bWordData);
-        std::swap(aWordIndex, bWordIndex);
+        BLInternal::swap(aWordData, bWordData);
+        BLInternal::swap(aWordIndex, bWordIndex);
       }
 
       uint32_t distance = bWordIndex - aWordIndex;
@@ -1993,7 +1993,7 @@ BL_API_IMPL bool blBitSetEquals(const BLBitSetCore* a, const BLBitSetCore* b) no
 
       // One BitSet is SSO Data and the other is SSO Range - let's make 'a' to be the SSO Data one.
       if (a->_d.isBitSetRange())
-        std::swap(a, b);
+        BLInternal::swap(a, b);
 
       SSODenseInfo aInfo = getSSODenseInfo(a);
       PreciseDataAnalysis aPA = preciseDataAnalysis(aInfo.startWord(), a->_d.u32_data, aInfo.wordCount());
@@ -2015,7 +2015,7 @@ BL_API_IMPL bool blBitSetEquals(const BLBitSetCore* a, const BLBitSetCore* b) no
   else {
     // One BitSet is SSO, the other isn't - make 'a' the SSO one.
     if (!a->_d.sso())
-      std::swap(a, b);
+      BLInternal::swap(a, b);
 
     aSegmentData = ssoSegmentData;
     aSegmentCount = makeSegmentsFromSSOBitSet(aSegmentData, a);

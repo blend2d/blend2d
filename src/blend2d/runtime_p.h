@@ -33,14 +33,14 @@ struct BLRuntimeHandlers {
   template<typename... Args>
   BL_INLINE void call(Args&&... args) noexcept {
     for (size_t i = 0; i < size; i++)
-      data[i](std::forward<Args>(args)...);
+      data[i](BLInternal::forward<Args>(args)...);
   }
 
   template<typename... Args>
   BL_INLINE void callInReverseOrder(Args&&... args) noexcept {
     size_t i = size;
     while (i)
-      data[--i](std::forward<Args>(args)...);
+      data[--i](BLInternal::forward<Args>(args)...);
   }
 };
 

@@ -1450,28 +1450,28 @@ public:
   BL_INLINE Gp newGpPtr() noexcept { return cc->newUIntPtr(); }
 
   template<typename... Args>
-  BL_INLINE Gp newGp32(const char* name, Args&&... args) noexcept { return cc->newUInt32(name, std::forward<Args>(args)...); }
+  BL_INLINE Gp newGp32(const char* name, Args&&... args) noexcept { return cc->newUInt32(name, BLInternal::forward<Args>(args)...); }
   template<typename... Args>
-  BL_INLINE Gp newGp64(const char* name, Args&&... args) noexcept { return cc->newUInt64(name, std::forward<Args>(args)...); }
+  BL_INLINE Gp newGp64(const char* name, Args&&... args) noexcept { return cc->newUInt64(name, BLInternal::forward<Args>(args)...); }
   template<typename... Args>
-  BL_INLINE Gp newGpPtr(const char* name, Args&&... args) noexcept { return cc->newUIntPtr(name, std::forward<Args>(args)...); }
+  BL_INLINE Gp newGpPtr(const char* name, Args&&... args) noexcept { return cc->newUIntPtr(name, BLInternal::forward<Args>(args)...); }
 
   template<typename RegT>
   BL_INLINE RegT newSimilarReg(const RegT& ref) noexcept { return cc->newSimilarReg(ref); }
   template<typename RegT, typename... Args>
-  BL_INLINE RegT newSimilarReg(const RegT& ref, Args&&... args) noexcept { return cc->newSimilarReg(ref, std::forward<Args>(args)...); }
+  BL_INLINE RegT newSimilarReg(const RegT& ref, Args&&... args) noexcept { return cc->newSimilarReg(ref, BLInternal::forward<Args>(args)...); }
 
   template<typename... Args>
   BL_INLINE Vec newVec(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, _vecTypeId, name, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, _vecTypeId, name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
   BL_INLINE Vec newVec(VecWidth vw, const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, VecWidthUtils::typeIdOf(vw), name, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, VecWidthUtils::typeIdOf(vw), name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
@@ -1574,35 +1574,35 @@ public:
   template<typename... Args>
   BL_INLINE Vec newV128(Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x4, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x4, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
   BL_INLINE Vec newV32_F32(Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x1, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x1, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
   BL_INLINE Vec newV64_F64(Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x1, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x1, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
   BL_INLINE Vec newV128_F32(Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x4, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x4, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
   BL_INLINE Vec newV128_F64(Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x2, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x2, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
@@ -1617,7 +1617,7 @@ public:
   template<typename... Args>
   BL_INLINE Vec newV256(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x8, name, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x8, name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
@@ -1632,7 +1632,7 @@ public:
   template<typename... Args>
   BL_INLINE Vec newV512(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x16, name, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x16, name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
@@ -1651,35 +1651,35 @@ public:
   template<typename... Args>
   BL_INLINE Vec newV128(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x4, name, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, asmjit::TypeId::kInt32x4, name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
   BL_INLINE Vec newV32_F32(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x1, name, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x1, name, BLInternal::forward<Args>(args)...);
     return reg.v128();
   }
 
   template<typename... Args>
   BL_INLINE Vec newV64_F64(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x1, name, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x1, name, BLInternal::forward<Args>(args)...);
     return reg.v128();
   }
 
   template<typename... Args>
   BL_INLINE Vec newV128_F32(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x4, name, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat32x4, name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 
   template<typename... Args>
   BL_INLINE Vec newV128_F64(const char* name, Args&&... args) noexcept {
     Vec reg;
-    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x2, name, std::forward<Args>(args)...);
+    cc->_newRegFmt(&reg, asmjit::TypeId::kFloat64x2, name, BLInternal::forward<Args>(args)...);
     return reg;
   }
 

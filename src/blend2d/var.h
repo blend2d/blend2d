@@ -113,25 +113,25 @@ struct VarOps<T, kTypeCategoryBool> {
 template<typename T>
 struct VarOps<T, kTypeCategoryInt> {
   static BL_INLINE void init(BLVarCore* self, const T& value) noexcept {
-    if (std::is_signed<T>::value)
+    if BL_CONSTEXPR (std::is_signed<T>::value)
       self->_d.initInt64(int64_t(value));
     else
       self->_d.initUInt64(uint64_t(value));
   }
 
   static BL_INLINE BLResult assign(BLVarCore* self, const T& value) noexcept {
-    if (sizeof(T) <= 4 && std::is_signed<T>::value)
+    if BL_CONSTEXPR (sizeof(T) <= 4 && std::is_signed<T>::value)
       return blVarAssignInt32(self, int32_t(value));
-    else if (sizeof(T) <= 4)
+    else if BL_CONSTEXPR (sizeof(T) <= 4)
       return blVarAssignUInt32(self, uint32_t(value));
-    else if (std::is_signed<T>::value)
+    else if BL_CONSTEXPR (std::is_signed<T>::value)
       return blVarAssignInt64(self, int64_t(value));
     else
       return blVarAssignUInt64(self, uint64_t(value));
   }
 
   static BL_INLINE bool equals(const BLVarCore* self, const T& value) noexcept {
-    if (std::is_signed<T>::value)
+    if BL_CONSTEXPR (std::is_signed<T>::value)
       return blVarEqualsInt64(self, int64_t(value));
     else
       return blVarEqualsUInt64(self, uint64_t(value));
@@ -252,7 +252,7 @@ public:
   template<typename T>
   BL_INLINE_NODEBUG explicit BLVar(T&& value) noexcept {
     typedef typename std::decay<T>::type DecayT;
-    BLInternal::VarOps<DecayT, BLInternal::TypeTraits<DecayT>::kCategory>::init(this, std::forward<T>(value));
+    BLInternal::VarOps<DecayT, BLInternal::TypeTraits<DecayT>::kCategory>::init(this, BLInternal::forward<T>(value));
   }
 
   BL_INLINE_NODEBUG ~BLVar() noexcept {
@@ -273,7 +273,7 @@ public:
   //! \{
 
   template<typename T>
-  BL_INLINE_NODEBUG BLVar& operator=(T&& value) noexcept { assign(std::forward<T>(value)); return *this; }
+  BL_INLINE_NODEBUG BLVar& operator=(T&& value) noexcept { assign(BLInternal::forward<T>(value)); return *this; }
 
   template<typename T>
   BL_INLINE_NODEBUG bool operator==(const T& other) const noexcept { return equals(other); }
@@ -445,7 +445,7 @@ public:
   template<typename T>
   BL_INLINE_NODEBUG BLResult assign(T&& value) noexcept {
     typedef typename std::decay<T>::type DecayT;
-    return BLInternal::VarOps<DecayT, BLInternal::TypeTraits<DecayT>::kCategory>::assign(this, std::forward<T>(value));
+    return BLInternal::VarOps<DecayT, BLInternal::TypeTraits<DecayT>::kCategory>::assign(this, BLInternal::forward<T>(value));
   }
 
   //! \}

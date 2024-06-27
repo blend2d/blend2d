@@ -8,7 +8,7 @@
 
 #include "../api-internal_p.h"
 
-#ifndef _WIN32
+#if !defined(_WIN32)
   #include <sys/time.h>
 #endif
 
@@ -18,7 +18,7 @@
 
 namespace BLThreadingUtils {
 
-#ifndef _WIN32
+#if !defined(_WIN32)
 static void getAbsTimeForWaitCondition(struct timespec& out, uint64_t microseconds) noexcept {
   struct timeval now;
   gettimeofday(&now, nullptr);

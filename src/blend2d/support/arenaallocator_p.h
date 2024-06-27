@@ -141,10 +141,10 @@ public:
     BL_ASSERT(!this->hasStaticBlock());
     BL_ASSERT(!other.hasStaticBlock());
 
-    std::swap(_ptr, other._ptr);
-    std::swap(_end, other._end);
-    std::swap(_block, other._block);
-    std::swap(_packedData, other._packedData);
+    BLInternal::swap(_ptr, other._ptr);
+    BLInternal::swap(_end, other._end);
+    BLInternal::swap(_block, other._block);
+    BLInternal::swap(_packedData, other._packedData);
   }
 
   //! \}
@@ -372,7 +372,7 @@ public:
     void* p = alloc(sizeof(T), alignof(T));
     if (BL_UNLIKELY(!p))
       return nullptr;
-    return new(BLInternal::PlacementNew{p}) T(std::forward<Args>(args)...);
+    return new(BLInternal::PlacementNew{p}) T(BLInternal::forward<Args>(args)...);
   }
 
   BL_INLINE void release(void* ptr, size_t size) noexcept {

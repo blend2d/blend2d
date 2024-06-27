@@ -169,7 +169,7 @@ public:
     uint32_t n = childCount();
     for (uint32_t i = 0; i < n; i++) {
       PipePart* child = children()[i];
-      child->forEachPart(std::forward<Function>(f));
+      child->forEachPart(BLInternal::forward<Function>(f));
     }
 
     f(this);
@@ -183,7 +183,7 @@ public:
     for (uint32_t i = 0; i < n; i++) {
       PipePart* child = children()[i];
       if (uint32_t(child->partFlags() & flag) == 0)
-        child->forEachPartAndMark(flag, std::forward<Function>(f));
+        child->forEachPartAndMark(flag, BLInternal::forward<Function>(f));
     }
 
     f(this);

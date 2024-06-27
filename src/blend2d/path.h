@@ -458,7 +458,7 @@ namespace BLInternal {
 template<typename T>
 static BL_INLINE size_t pathSegmentCount(const T&) noexcept { return T::kVertexCount; }
 template<typename T, typename... Args>
-static BL_INLINE size_t pathSegmentCount(const T&, Args&&... args) noexcept { return T::kVertexCount + pathSegmentCount(std::forward<Args>(args)...); }
+static BL_INLINE size_t pathSegmentCount(const T&, Args&&... args) noexcept { return T::kVertexCount + pathSegmentCount(BLInternal::forward<Args>(args)...); }
 
 template<typename T> void storePathSegmentCmd(uint8_t* cmd, const T& segment) noexcept = delete;
 template<typename T> void storePathSegmentVtx(BLPoint* vtx, const T& segment) noexcept = delete;
@@ -469,7 +469,7 @@ static BL_INLINE void storePathSegmentsCmd(uint8_t* cmd, const T& segment) noexc
 template<typename T, typename... Args>
 static BL_INLINE void storePathSegmentsCmd(uint8_t* cmd, const T& segment, Args&&... args) noexcept {
   storePathSegmentCmd<T>(cmd, segment);
-  storePathSegmentsCmd(cmd + T::kVertexCount, std::forward<Args>(args)...);
+  storePathSegmentsCmd(cmd + T::kVertexCount, BLInternal::forward<Args>(args)...);
 }
 
 template<typename T>
@@ -478,7 +478,7 @@ static BL_INLINE void storePathSegmentsVtx(BLPoint* vtx, const T& segment) noexc
 template<typename T, typename... Args>
 static BL_INLINE void storePathSegmentsVtx(BLPoint* vtx, const T& segment, Args&&... args) noexcept {
   storePathSegmentVtx<T>(vtx, segment);
-  storePathSegmentsVtx(vtx + T::kVertexCount, std::forward<Args>(args)...);
+  storePathSegmentsVtx(vtx + T::kVertexCount, BLInternal::forward<Args>(args)...);
 }
 
 } // {BLInternal}
@@ -833,11 +833,11 @@ public:
     uint8_t* cmdPtr;
     BLPoint* vtxPtr;
 
-    size_t kVertexCount = BLInternal::pathSegmentCount(std::forward<Args>(args)...);
+    size_t kVertexCount = BLInternal::pathSegmentCount(BLInternal::forward<Args>(args)...);
     BL_PROPAGATE(modifyOp(BL_MODIFY_OP_APPEND_GROW, kVertexCount, &cmdPtr, &vtxPtr));
 
-    BLInternal::storePathSegmentsCmd(cmdPtr, std::forward<Args>(args)...);
-    BLInternal::storePathSegmentsVtx(vtxPtr, std::forward<Args>(args)...);
+    BLInternal::storePathSegmentsCmd(cmdPtr, BLInternal::forward<Args>(args)...);
+    BLInternal::storePathSegmentsVtx(vtxPtr, BLInternal::forward<Args>(args)...);
 
     return BL_SUCCESS;
   }

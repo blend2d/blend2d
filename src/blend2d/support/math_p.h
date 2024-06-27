@@ -51,7 +51,7 @@ static BL_INLINE_NODEBUG bool isNaN(double x) noexcept { return std::isnan(x); }
 
 template<typename T, typename... Args>
 static BL_INLINE_NODEBUG bool isNaN(const T& first, Args&&... args) noexcept {
-  return bool(unsigned(isNaN(first)) | unsigned(isNaN(std::forward<Args>(args)...)));
+  return bool(unsigned(isNaN(first)) | unsigned(isNaN(BLInternal::forward<Args>(args)...)));
 }
 
 static BL_INLINE_NODEBUG bool isInf(float x) noexcept { return std::isinf(x); }
@@ -59,7 +59,7 @@ static BL_INLINE_NODEBUG bool isInf(double x) noexcept { return std::isinf(x); }
 
 template<typename T, typename... Args>
 static BL_INLINE_NODEBUG bool isInf(const T& first, Args&&... args) noexcept {
-  return bool(unsigned(isInf(first)) | unsigned(isInf(std::forward<Args>(args)...)));
+  return bool(unsigned(isInf(first)) | unsigned(isInf(BLInternal::forward<Args>(args)...)));
 }
 
 static BL_INLINE_NODEBUG bool isFinite(const float& x) noexcept { return std::isfinite(x); }
@@ -71,7 +71,7 @@ static BL_INLINE_NODEBUG bool isFinite(const BLRect& r) noexcept;
 
 template<typename T, typename... Args>
 static BL_INLINE_NODEBUG bool isFinite(T first, Args&&... args) noexcept {
-  return bool(unsigned(isFinite(first)) & unsigned(isFinite(std::forward<Args>(args)...)));
+  return bool(unsigned(isFinite(first)) & unsigned(isFinite(BLInternal::forward<Args>(args)...)));
 }
 
 static BL_INLINE_NODEBUG bool isFinite(const BLPoint& p) noexcept { return isFinite(p.x, p.y); }
@@ -105,7 +105,7 @@ template<typename T>
 static BL_INLINE_NODEBUG constexpr T sum(const T& first) { return first; }
 
 template<typename T, typename... Args>
-static BL_INLINE_NODEBUG constexpr T sum(const T& first, Args&&... args) { return first + sum(std::forward<Args>(args)...); }
+static BL_INLINE_NODEBUG constexpr T sum(const T& first, Args&&... args) { return first + sum(BLInternal::forward<Args>(args)...); }
 
 //! \}
 

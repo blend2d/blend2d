@@ -601,7 +601,7 @@ BL_API_IMPL bool blFontVariationSettingsEquals(const BLFontVariationSettingsCore
   else {
     // One is SSO and one is dynamic, make `a` the SSO one.
     if (b->_d.sso())
-      std::swap(a, b);
+      BLInternal::swap(a, b);
 
     const BLFontVariationSettingsImpl* bImpl = getImpl(b);
     size_t size = getSSOSize(a);

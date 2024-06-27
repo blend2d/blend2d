@@ -364,7 +364,7 @@ public:
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE_NODEBUG void swap(BLFile& other) noexcept { std::swap(this->handle, other.handle); }
+  BL_INLINE_NODEBUG void swap(BLFile& other) noexcept { BLInternal::swap(this->handle, other.handle); }
 
   //! \}
 

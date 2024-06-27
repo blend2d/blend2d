@@ -9,6 +9,7 @@
 #define BLEND2D_TEST_CONTEXT_UTILITIES_H_INCLUDED
 
 #include <blend2d.h>
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -302,20 +303,20 @@ public:
 
   template<typename... Args>
   inline void print(const char* fmt, Args&&... args) {
-    printf(fmt, std::forward<Args>(args)...);
+    printf(fmt, BLInternal::forward<Args>(args)...);
     fflush(stdout);
   }
 
   template<typename... Args>
   inline void debug(const char* fmt, Args&&... args) {
     if (_verbosity <= Verbosity::Debug)
-      print(fmt, std::forward<Args>(args)...);
+      print(fmt, BLInternal::forward<Args>(args)...);
   }
 
   template<typename... Args>
   inline void info(const char* fmt, Args&&... args) {
     if (_verbosity <= Verbosity::Info)
-      print(fmt, std::forward<Args>(args)...);
+      print(fmt, BLInternal::forward<Args>(args)...);
   }
 };
 
@@ -402,8 +403,8 @@ public:
     int x1 = nextXCoordI();
     int y1 = nextYCoordI();
 
-    if (x0 > x1) std::swap(x0, x1);
-    if (y0 > y1) std::swap(y0, y1);
+    if (x0 > x1) BLInternal::swap(x0, x1);
+    if (y0 > y1) BLInternal::swap(y0, y1);
 
     if (x0 == x1) x1++;
     if (y0 == y1) y1++;
@@ -656,7 +657,7 @@ public:
         gradient.addStop(0.5, _rnd.nextRgba32());
         gradient.addStop(1.0, _rnd.nextRgba32());
         gradient.setExtendMode(_rnd.nextGradientExtend());
-        return BLVar(std::move(gradient));
+        return BLVar(BLInternal::move(gradient));
       }
 
       case StyleId::kGradientRadial:
@@ -664,15 +665,15 @@ public:
         // NOTE: It's tricky with radial gradients as FMA and non-FMA implementations will have a different output.
         // So, we quantize input coordinates to integers to minimize the damage, although we cannot avoid it even
         // in this case.
-        double rad = std::floor(_rnd.nextDouble() * 500 + 20);
-        double dist = std::floor(_rnd.nextDouble() * (rad - 10));
+        double rad = floor(_rnd.nextDouble() * 500 + 20);
+        double dist = floor(_rnd.nextDouble() * (rad - 10));
 
         double angle = _rnd.nextDouble() * kPI;
-        double as = std::sin(angle);
-        double ac = std::cos(angle);
+        double as = sin(angle);
+        double ac = cos(angle);
 
         BLPoint pt0 = _rnd.nextPointI();
-        BLPoint pt1 = BLPoint(std::floor(-as * dist), std::floor(ac * dist)) + pt0;
+        BLPoint pt1 = BLPoint(floor(-as * dist), floor(ac * dist)) + pt0;
 
         BLGradient gradient(BLRadialGradientValues(pt0.x, pt0.y, pt1.x, pt1.y, rad));
         BLRgba32 c = _rnd.nextRgba32();
@@ -680,7 +681,7 @@ public:
         gradient.addStop(0.5, _rnd.nextRgba32());
         gradient.addStop(1.0, c);
         gradient.setExtendMode(_rnd.nextGradientExtend());
-        return BLVar(std::move(gradient));
+        return BLVar(BLInternal::move(gradient));
       }
 
       case StyleId::kGradientConic:
@@ -693,7 +694,7 @@ public:
         gradient.addStop(0.33, _rnd.nextRgba32());
         gradient.addStop(0.66, _rnd.nextRgba32());
         gradient.addStop(1.0 , _rnd.nextRgba32());
-        return BLVar(std::move(gradient));
+        return BLVar(BLInternal::move(gradient));
       }
 
       case StyleId::kPatternAligned:
@@ -707,8 +708,8 @@ public:
         BLExtendMode extendMode = BLExtendMode(_rnd.nextUInt32() % (BL_EXTEND_MODE_MAX_VALUE + 1));
 
         BLPattern pattern(_textures[textureId], extendMode);
-        pattern.translate(std::floor(_rnd.nextDouble() * double(_rnd._size.w + 200) - 100.0),
-                          std::floor(_rnd.nextDouble() * double(_rnd._size.h + 200) - 100.0));
+        pattern.translate(floor(_rnd.nextDouble() * double(_rnd._size.w + 200) - 100.0),
+                          floor(_rnd.nextDouble() * double(_rnd._size.h + 200) - 100.0));
 
         if (styleId == StyleId::kPatternFx || styleId == StyleId::kPatternFxFy) {
           pattern.translate(blClamp(_rnd.nextDouble(), kFracMin, kFracMax), 0.0);
@@ -718,7 +719,7 @@ public:
           pattern.translate(0.0, blClamp(_rnd.nextDouble(), kFracMin, kFracMax));
         }
 
-        return BLVar(std::move(pattern));
+        return BLVar(BLInternal::move(pattern));
       }
 
       case StyleId::kPatternAffineNearest:
@@ -731,7 +732,7 @@ public:
         pattern.rotate(_rnd.nextDouble() * (kPI * 2.0));
         pattern.translate(_rnd.nextDouble() * 300, _rnd.nextDouble() * 300);
         pattern.scale((_rnd.nextDouble() + 0.2) * 2.4);
-        return BLVar(std::move(pattern));
+        return BLVar(BLInternal::move(pattern));
       }
     }
   }

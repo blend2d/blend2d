@@ -17,7 +17,7 @@
 
     { "optional": true, "cmd": ["bl_test_context_simple", "--count=100", "--comp-op=all", "--style=random"] },
 
-    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=solid"] },
+    { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=solid"                  , "--max-diff=0", "--quiet"] },
     { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=gradient-linear"        , "--max-diff=0", "--quiet"] },
     { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=gradient-linear-dither" , "--max-diff=0", "--quiet"] },
     { "optional": true, "cmd": ["bl_test_context_jit"   , "--count=200" , "--simd-level=all", "--comp-op=all", "--opacity-op=all", "--style=gradient-radial"        , "--max-diff=2", "--quiet"] },

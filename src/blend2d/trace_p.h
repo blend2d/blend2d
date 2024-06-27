@@ -45,16 +45,16 @@ public:
   BL_INLINE void deindent() noexcept { indentation--; }
 
   template<typename... Args>
-  BL_INLINE void out(Args&&... args) noexcept { log(0, 0xFFFFFFFFu, std::forward<Args>(args)...); }
+  BL_INLINE void out(Args&&... args) noexcept { log(0, 0xFFFFFFFFu, BLInternal::forward<Args>(args)...); }
 
   template<typename... Args>
-  BL_INLINE void info(Args&&... args) noexcept { log(0, indentation, std::forward<Args>(args)...); }
+  BL_INLINE void info(Args&&... args) noexcept { log(0, indentation, BLInternal::forward<Args>(args)...); }
 
   template<typename... Args>
-  BL_INLINE bool warn(Args&&... args) noexcept { log(1, indentation, std::forward<Args>(args)...); return false; }
+  BL_INLINE bool warn(Args&&... args) noexcept { log(1, indentation, BLInternal::forward<Args>(args)...); return false; }
 
   template<typename... Args>
-  BL_INLINE bool fail(Args&&... args) noexcept { log(2, indentation, std::forward<Args>(args)...); return false; }
+  BL_INLINE bool fail(Args&&... args) noexcept { log(2, indentation, BLInternal::forward<Args>(args)...); return false; }
 
   BL_HIDDEN static void log(uint32_t severity, uint32_t indentation, const char* fmt, ...) noexcept;
 

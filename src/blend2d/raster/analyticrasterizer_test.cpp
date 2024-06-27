@@ -79,8 +79,8 @@ UNIT(analytic_rasterizer, BL_TEST_GROUP_RENDERING_UTILITIES) {
         x1 = x0;
 
       if (y0 > y1) {
-        std::swap(x0, x1);
-        std::swap(y0, y1);
+        BLInternal::swap(x0, x1);
+        BLInternal::swap(y0, y1);
       }
 
       y1 += int((bandHeight + 1) * A8Info::kScale);

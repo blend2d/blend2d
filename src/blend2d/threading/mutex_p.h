@@ -9,6 +9,10 @@
 #include "../api-internal_p.h"
 #include <utility>
 
+#if !defined(_WIN32)
+  #include <pthread.h>
+#endif
+
 //! \cond INTERNAL
 //! \addtogroup blend2d_internal
 //! \{
@@ -129,7 +133,7 @@ public:
   template<typename Fn>
   BL_INLINE decltype(std::declval<Fn>()()) protect(Fn&& fn) noexcept {
     BLLockGuard<BLMutex> guard(this);
-    return std::forward<Fn>(fn)();
+    return BLInternal::forward<Fn>(fn)();
   }
 };
 
@@ -173,14 +177,14 @@ public:
   template<typename Fn>
   BL_INLINE decltype(std::declval<Fn>()()) protect(Fn&& fn) noexcept {
     BLLockGuard<BLSharedMutex> guard(this);
-    return std::forward<Fn>(fn)();
+    return BLInternal::forward<Fn>(fn)();
   }
 
   //! Protects the execution of the given function with `BLSharedLockGuard` making the execution shared.
   template<typename Fn>
   BL_INLINE decltype(std::declval<Fn>()()) protectShared(Fn&& fn) noexcept {
     BLSharedLockGuard<BLSharedMutex> guard(this);
-    return std::forward<Fn>(fn)();
+    return BLInternal::forward<Fn>(fn)();
   }
 };
 

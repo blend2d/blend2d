@@ -107,7 +107,7 @@ public:
 
 static void blZeroAllocatorTestShuffle(void** ptrArray, size_t count, BLRandom& prng) noexcept {
   for (size_t i = 0; i < count; ++i)
-    std::swap(ptrArray[i], ptrArray[size_t(prng.nextUInt32() % count)]);
+    BLInternal::swap(ptrArray[i], ptrArray[size_t(prng.nextUInt32() % count)]);
 }
 
 static void blZeroAllocatorTestUsage() noexcept {

@@ -306,7 +306,7 @@ public:
 
   //! Replaces the content of the string by a result of calling `snprintf(fmt, args...)`.
   template<typename... Args>
-  BL_INLINE_NODEBUG BLResult assignFormat(const char* fmt, Args&&... args) noexcept { return blStringApplyOpFormat(this, BL_MODIFY_OP_ASSIGN_FIT, fmt, std::forward<Args>(args)...); }
+  BL_INLINE_NODEBUG BLResult assignFormat(const char* fmt, Args&&... args) noexcept { return blStringApplyOpFormat(this, BL_MODIFY_OP_ASSIGN_FIT, fmt, BLInternal::forward<Args>(args)...); }
 
   //! Replaces the content of the string by a result of calling `vsnprintf(fmt, ap)`.
   BL_INLINE_NODEBUG BLResult assignFormatV(const char* fmt, va_list ap) noexcept { return blStringApplyOpFormatV(this, BL_MODIFY_OP_ASSIGN_FIT, fmt, ap); }
@@ -322,7 +322,7 @@ public:
   BL_INLINE_NODEBUG BLResult append(const char* str, size_t n = SIZE_MAX) noexcept { return blStringApplyOpData(this, BL_MODIFY_OP_APPEND_GROW, str, n); }
 
   template<typename... Args>
-  BL_INLINE_NODEBUG BLResult appendFormat(const char* fmt, Args&&... args) noexcept { return blStringApplyOpFormat(this, BL_MODIFY_OP_APPEND_GROW, fmt, std::forward<Args>(args)...); }
+  BL_INLINE_NODEBUG BLResult appendFormat(const char* fmt, Args&&... args) noexcept { return blStringApplyOpFormat(this, BL_MODIFY_OP_APPEND_GROW, fmt, BLInternal::forward<Args>(args)...); }
   BL_INLINE_NODEBUG BLResult appendFormatV(const char* fmt, va_list ap) noexcept { return blStringApplyOpFormatV(this, BL_MODIFY_OP_APPEND_GROW, fmt, ap); }
 
   BL_INLINE_NODEBUG BLResult prepend(char c, size_t n = 1) noexcept { return blStringInsertChar(this, 0, c, n); }

@@ -72,16 +72,16 @@ public:
   BL_INLINE void deindent() noexcept { _trace.deindent(); }
 
   template<typename... Args>
-  BL_INLINE void out(Args&&... args) noexcept { _trace.out(std::forward<Args>(args)...); }
+  BL_INLINE void out(Args&&... args) noexcept { _trace.out(BLInternal::forward<Args>(args)...); }
 
   template<typename... Args>
-  BL_INLINE void info(Args&&... args) noexcept { _trace.info(std::forward<Args>(args)...); }
+  BL_INLINE void info(Args&&... args) noexcept { _trace.info(BLInternal::forward<Args>(args)...); }
 
   template<typename... Args>
-  BL_INLINE bool warn(Args&&... args) noexcept { return _trace.warn(std::forward<Args>(args)...); }
+  BL_INLINE bool warn(Args&&... args) noexcept { return _trace.warn(BLInternal::forward<Args>(args)...); }
 
   template<typename... Args>
-  BL_INLINE bool fail(Args&&... args) noexcept { return _trace.fail(std::forward<Args>(args)...); }
+  BL_INLINE bool fail(Args&&... args) noexcept { return _trace.fail(BLInternal::forward<Args>(args)...); }
 
   BL_NOINLINE bool tableEmpty(const char* tableName) noexcept {
     return fail("%s cannot be empty", tableName);

@@ -11,7 +11,7 @@
 #include "threading/atomic_p.h"
 #include "unicode/unicode_p.h"
 
-#ifndef _WIN32
+#if !defined(_WIN32)
   #include <errno.h>
   #include <fcntl.h>
   #include <unistd.h>
@@ -973,7 +973,7 @@ static BLResult createMemoryMappedFile(BLArray<uint8_t>* dst, BLFile& file, size
   impl->capacity = size;
 
   BLFileMapping* implFileMapping = PtrOps::offset<BLFileMapping>(impl, sizeof(BLArrayImpl));
-  blCallCtor(*implFileMapping, std::move(fileMapping));
+  blCallCtor(*implFileMapping, BLInternal::move(fileMapping));
 
   return bl::ArrayInternal::replaceInstance(dst, &newO);
 }

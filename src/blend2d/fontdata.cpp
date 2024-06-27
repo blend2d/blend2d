@@ -365,7 +365,7 @@ static BLResult blFontDataCreateFromDataInternal(BLFontDataCore* self, const voi
   newI->faceCount = faceCount;
   newI->flags = dataFlags;
 
-  blCallCtor(newI->faceCache, std::move(faceCache));
+  blCallCtor(newI->faceCache, BLInternal::move(faceCache));
   blCallCtor(newI->dataArray);
 
   if (array) {

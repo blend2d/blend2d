@@ -198,7 +198,7 @@ UNIT(var_styles, BL_TEST_GROUP_CORE_OBJECT) {
     g.addStop(0.0, BLRgba32(0x00000000u));
     g.addStop(1.0, BLRgba32(0xFFFFFFFFu));
 
-    BLVar var(std::move(g));
+    BLVar var(BLInternal::move(g));
 
     // The object should have been moved, so `g` should be default constructed now.
     EXPECT_EQ(g._d.getType(), BL_OBJECT_TYPE_GRADIENT);
@@ -214,7 +214,7 @@ UNIT(var_styles, BL_TEST_GROUP_CORE_OBJECT) {
     EXPECT_TRUE(BLVar(BLPattern()).isStyle());
 
     BLPattern p(BLImage(16, 16, BL_FORMAT_PRGB32));
-    BLVar var(std::move(p));
+    BLVar var(BLInternal::move(p));
 
     // The object should have been moved, so `p` should be default constructed now.
     EXPECT_EQ(p._d.getType(), BL_OBJECT_TYPE_PATTERN);

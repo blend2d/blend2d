@@ -1977,7 +1977,7 @@ static BLResult BL_CDECL swapStylesImpl(BLContextImpl* baseImpl, BLContextStyleS
   // Swap fill and stroke styles.
   {
     state.style[kFillSlot].swap(state.style[kStrokeSlot]);
-    std::swap(state.styleType[kFillSlot], state.styleType[kStrokeSlot]);
+    BLInternal::swap(state.styleType[kFillSlot], state.styleType[kStrokeSlot]);
 
     constexpr ContextFlags kSwapFlags = ContextFlags::kNoFillAndStrokeStyle | ContextFlags::kFetchDataFillAndStroke;
     contextFlags = (contextFlags & ~kSwapFlags) | ((contextFlags >> 1) & kSwapFlags) | ((contextFlags << 1) & kSwapFlags);
@@ -1985,8 +1985,8 @@ static BLResult BL_CDECL swapStylesImpl(BLContextImpl* baseImpl, BLContextStyleS
 
   // Swap fill and stroke alphas.
   if (mode == BL_CONTEXT_STYLE_SWAP_MODE_STYLES_WITH_ALPHA) {
-    std::swap(state.styleAlpha[kFillSlot], state.styleAlpha[kStrokeSlot]);
-    std::swap(state.styleAlphaI[kFillSlot], state.styleAlphaI[kStrokeSlot]);
+    BLInternal::swap(state.styleAlpha[kFillSlot], state.styleAlpha[kStrokeSlot]);
+    BLInternal::swap(state.styleAlphaI[kFillSlot], state.styleAlphaI[kStrokeSlot]);
 
     constexpr ContextFlags kSwapFlags = ContextFlags::kNoFillAndStrokeAlpha;
     contextFlags = (contextFlags & ~kSwapFlags) | ((contextFlags >> 1) & kSwapFlags) | ((contextFlags << 1) & kSwapFlags);

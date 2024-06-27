@@ -120,7 +120,7 @@ public:
   //! \{
 
   BL_INLINE void swap(ArenaTree& other) noexcept {
-    std::swap(_root, other._root);
+    BLInternal::swap(_root, other._root);
   }
 
   BL_INLINE void reset() noexcept { _root = nullptr; }

@@ -145,7 +145,7 @@ static BLResult blDeflateBuildTable(DeflateTable* table, const uint8_t* sizeList
 
     if (s) {
       uint32_t code = uint32_t(int32_t(nextCode[s]) + table->delta[s]);
-      uint32_t fast = ((s << 9) | i);
+      uint32_t fast = ((s << DeflateTable::kFastBits) | i);
 
       table->size[code] = uint8_t(s);
       table->value[code] = uint16_t(i);
@@ -322,7 +322,7 @@ DeflateOnReturn:                                                \
     uint32_t tmpSize;                                           \
                                                                 \
     if (tmpCode) {                                              \
-      tmpSize = tmpCode >> 9;                                   \
+      tmpSize = tmpCode >> DeflateTable::kFastBits;             \
       tmpCode &= DeflateTable::kFastMask;                       \
     }                                                           \
     else {                                                      \

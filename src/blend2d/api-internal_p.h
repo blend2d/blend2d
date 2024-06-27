@@ -19,7 +19,6 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -35,22 +34,18 @@
 // Platform Specific Headers
 // =========================
 
-#ifdef _WIN32
+#if defined(_WIN32)
   //! \cond NEVER
-  #ifndef WIN32_LEAN_AND_MEAN
+  #if !defined(WIN32_LEAN_AND_MEAN)
     #define WIN32_LEAN_AND_MEAN
   #endif
-  #ifndef NOMINMAX
+  #if !defined(NOMINMAX)
     #define NOMINMAX
   #endif
   //! \endcond
 
   #include <windows.h>   // Required to build Blend2D on Windows platform.
   #include <synchapi.h>  // Synchronization primitivess.
-#else
-  #include <errno.h>     // Need to access it in some cases.
-  #include <pthread.h>   // Required to build Blend2D on POSIX compliant platforms.
-  #include <unistd.h>    // Filesystem, sysconf, etc...
 #endif
 
 // Some intrinsics defined by MSVC compiler are useful and used across the library.
@@ -220,12 +215,6 @@
   #define BL_FALLTHROUGH __attribute__((fallthrough));
 #else
   #define BL_FALLTHROUGH /* fallthrough */
-#endif
-
-#if __cplusplus >= 201703L
-  #define BL_CONSTEXPR constexpr
-#else
-  #define BL_CONSTEXPR
 #endif
 
 //! \def BL_STDCXX_VERSION

@@ -116,9 +116,9 @@ public:
   //! \{
 
   BL_INLINE void swap(ArenaBitArray& other) noexcept {
-    std::swap(_data, other._data);
-    std::swap(_size, other._size);
-    std::swap(_capacity, other._capacity);
+    BLInternal::swap(_data, other._data);
+    BLInternal::swap(_size, other._size);
+    BLInternal::swap(_capacity, other._capacity);
   }
 
   BL_INLINE void clear() noexcept {

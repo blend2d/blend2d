@@ -663,7 +663,7 @@ void PipeCompiler::emit_select(const Gp& dst, const Operand_& sel1_, const Opera
   // Reverse the condition if we can place the immediate value first or if `dst == sel2`.
   if ((!sel1.isImm() && sel2.isImm()) || (sel2.isReg() && dst.id() == sel2.id())) {
     ca.reverse();
-    std::swap(sel1, sel2);
+    BLInternal::swap(sel1, sel2);
   }
 
   bool dstIsSel = sel1.isReg() && dst.id() == sel1.id();
@@ -890,7 +890,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
   }
 
   if (!src1.isReg() && isOp3ICommutative(op)) {
-    std::swap(src1, src2);
+    BLInternal::swap(src1, src2);
   }
 
   // ArithOp Reg, Reg, Imm
@@ -6005,7 +6005,7 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
     };
 
     if (isSameVec(dst, src2) && opInfo.commutative) {
-      std::swap(src1v, src2.as<Vec>());
+      BLInternal::swap(src1v, src2.as<Vec>());
     }
 
     if (isSameVec(src1v, src2)) {
@@ -6828,7 +6828,7 @@ void PipeCompiler::emit_3vi(OpcodeVVVI op, const Operand_& dst_, const Operand_&
     InstId instId = opInfo.sseInstId;
 
     if (isSameVec(dst, src2) && opInfo.commutative) {
-      std::swap(src1v, src2.as<Vec>());
+      BLInternal::swap(src1v, src2.as<Vec>());
     }
 
     // All operations are intrinsics in this case - no direct mapping to instructions without an additional logic.
@@ -6964,7 +6964,7 @@ void PipeCompiler::emit_4v(OpcodeVVVV op, const Operand_& dst_, const Operand_& 
     InstId instId = opInfo.avxInstId;
 
     if (isSameVec(dst, src2) && opInfo.commutative) {
-      std::swap(src1, src2.as<Vec>());
+      BLInternal::swap(src1, src2.as<Vec>());
     }
 
     if (hasAVXExt(AVXExt(opInfo.avxExt))) {
@@ -7221,7 +7221,7 @@ void PipeCompiler::emit_4v(OpcodeVVVV op, const Operand_& dst_, const Operand_& 
           if (fm <= FloatMode::kF64S)
             src2 = sseCopy(this, src2.as<Vec>(), "@copy_src2");
           else
-            std::swap(src1, src2.as<Vec>());
+            BLInternal::swap(src1, src2.as<Vec>());
         }
 
         const FloatInst& fi = sse_float_inst[size_t(fm)];

@@ -12,6 +12,8 @@
 #include "support/memops_p.h"
 #include "support/stringops_p.h"
 
+#include <stdio.h>
+
 namespace bl {
 namespace StringInternal {
 

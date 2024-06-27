@@ -1167,7 +1167,7 @@ DescendingLineLoopA:
                 bFlags = blClipCalcXYFlags(a, _clipBoxD);
                 if (bFlags) {
                   descendingClose();
-                  std::swap(a, b);
+                  BLInternal::swap(a, b);
                   goto BeforeClipEndPoint;
                 }
 
@@ -1234,7 +1234,7 @@ AscendingLineLoopA:
                 bFlags = blClipCalcXYFlags(a, _clipBoxD);
                 if (bFlags) {
                   ascendingClose();
-                  std::swap(a, b);
+                  BLInternal::swap(a, b);
                   goto BeforeClipEndPoint;
                 }
 
@@ -2570,7 +2570,7 @@ RightToLeft_AddLine:
 
   BL_INLINE BLResult accumulateLeftBorder(double y0, double y1, uint32_t signBit) noexcept {
     if (signBit != 0)
-      std::swap(y0, y1);
+      BLInternal::swap(y0, y1);
     return accumulateLeftBorder(y0, y1);
   }
 
@@ -2588,7 +2588,7 @@ RightToLeft_AddLine:
 
   BL_INLINE BLResult accumulateRightBorder(double y0, double y1, uint32_t signBit) noexcept {
     if (signBit != 0)
-      std::swap(y0, y1);
+      BLInternal::swap(y0, y1);
     return accumulateRightBorder(y0, y1);
   }
 

@@ -1721,7 +1721,7 @@ OnReturn:
             // in1 in2 exch (12 28) out1 out2
             case kCSOpExch & 0xFFu: {
               BL_ASSERT(vMinOperands >= 2);
-              std::swap(vBuf[vIdx - 2], vBuf[vIdx - 1]);
+              BLInternal::swap(vBuf[vIdx - 2], vBuf[vIdx - 1]);
               continue;
             }
 
@@ -1785,7 +1785,7 @@ OnReturn:
                 if (curIdx >= count)
                   curIdx -= count;
 
-                std::swap(vBuf[curIdx], last);
+                BLInternal::swap(vBuf[curIdx], last);
               }
 
               continue;

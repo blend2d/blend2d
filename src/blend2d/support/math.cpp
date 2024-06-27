@@ -67,7 +67,7 @@ size_t cubicRoots(double* dst, const double* poly, double tMin, double tMax) noe
 
     // Sort.
     if (dst[0] > dst[1])
-      std::swap(dst[0], dst[1]);
+      BLInternal::swap(dst[0], dst[1]);
   }
   else if (d < 0.0) {
     // Three real solutions.
@@ -80,9 +80,9 @@ size_t cubicRoots(double* dst, const double* poly, double tMin, double tMax) noe
     dst[2] = sub - t * cos(phi - kPI_DIV_3);
 
     // Sort.
-    if (dst[0] > dst[1]) std::swap(dst[0], dst[1]);
-    if (dst[1] > dst[2]) std::swap(dst[1], dst[2]);
-    if (dst[0] > dst[1]) std::swap(dst[0], dst[1]);
+    if (dst[0] > dst[1]) BLInternal::swap(dst[0], dst[1]);
+    if (dst[1] > dst[2]) BLInternal::swap(dst[1], dst[2]);
+    if (dst[0] > dst[1]) BLInternal::swap(dst[0], dst[1]);
   }
   else {
     // One real solution.

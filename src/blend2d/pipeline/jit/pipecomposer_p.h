@@ -58,7 +58,7 @@ public:
     void* p = _zone.alloc(sizeof(T), 8);
     if (BL_UNLIKELY(!p))
       return nullptr;
-    return new(BLInternal::PlacementNew{p}) T(&_pc, std::forward<Args>(args)...);
+    return new(BLInternal::PlacementNew{p}) T(&_pc, BLInternal::forward<Args>(args)...);
   }
 
   FillPart* newFillPart(FillType fillType, FetchPart* dstPart, CompOpPart* compOpPart) noexcept;

@@ -753,7 +753,7 @@ static BL_NOINLINE void test_iop1_constraint(VecOp&& vecOp) noexcept {
 
 template<typename V, typename GenericOp, typename VecOp>
 static void test_iop1(VecOp&& vecOp) noexcept {
-  return test_iop1_constraint<V, GenericOp, ConstraintNone, VecOp>(std::forward<VecOp>(vecOp));
+  return test_iop1_constraint<V, GenericOp, ConstraintNone, VecOp>(BLInternal::forward<VecOp>(vecOp));
 }
 
 // SIMD - Tests - Integer Operations - 2 Source Operands
@@ -790,7 +790,7 @@ static BL_NOINLINE void test_iop2_constraint(VecOp&& vecOp) noexcept {
 
 template<typename V, typename GenericOp, typename VecOp>
 static void test_iop2(VecOp&& vecOp) noexcept {
-  return test_iop2_constraint<V, GenericOp, ConstraintNone, VecOp>(std::forward<VecOp>(vecOp));
+  return test_iop2_constraint<V, GenericOp, ConstraintNone, VecOp>(BLInternal::forward<VecOp>(vecOp));
 }
 
 // SIMD - Tests - Integer Operations - 3 Source Operands
@@ -831,7 +831,7 @@ static BL_NOINLINE void test_iop3_constraint(VecOp&& vecOp) noexcept {
 
 template<typename V, typename GenericOp, typename VecOp>
 static void test_iop3(VecOp&& vecOp) noexcept {
-  return test_iop3_constraint<V, GenericOp, ConstraintNone, VecOp>(std::forward<VecOp>(vecOp));
+  return test_iop3_constraint<V, GenericOp, ConstraintNone, VecOp>(BLInternal::forward<VecOp>(vecOp));
 }
 
 // SIMD - Tests - Integer Operations - Dispatcher

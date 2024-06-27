@@ -721,12 +721,12 @@ BL_INLINE_NODEBUG __m128d simd_make128_f64(double x1, double x0) noexcept {
 
 template<>
 struct SimdMake<16> {
-  template<typename... Args> static BL_INLINE_NODEBUG __m128i make_u8(Args&&... args) noexcept { return simd_make128_u8(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m128i make_u16(Args&&... args) noexcept { return simd_make128_u16(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m128i make_u32(Args&&... args) noexcept { return simd_make128_u32(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m128i make_u64(Args&&... args) noexcept { return simd_make128_u64(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m128 make_f32(Args&&... args) noexcept { return simd_make128_f32(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m128d make_f64(Args&&... args) noexcept { return simd_make128_f64(std::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m128i make_u8(Args&&... args) noexcept { return simd_make128_u8(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m128i make_u16(Args&&... args) noexcept { return simd_make128_u16(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m128i make_u32(Args&&... args) noexcept { return simd_make128_u32(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m128i make_u64(Args&&... args) noexcept { return simd_make128_u64(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m128 make_f32(Args&&... args) noexcept { return simd_make128_f32(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m128d make_f64(Args&&... args) noexcept { return simd_make128_f64(BLInternal::forward<Args>(args)...); }
 };
 
 #ifdef BL_TARGET_OPT_AVX
@@ -916,12 +916,12 @@ BL_INLINE_NODEBUG __m256d simd_make256_f64(double x3, double x2, double x1, doub
 
 template<>
 struct SimdMake<32> {
-  template<typename... Args> static BL_INLINE_NODEBUG __m256i make_u8(Args&&... args) noexcept { return simd_make256_u8(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m256i make_u16(Args&&... args) noexcept { return simd_make256_u16(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m256i make_u32(Args&&... args) noexcept { return simd_make256_u32(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m256i make_u64(Args&&... args) noexcept { return simd_make256_u64(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m256 make_f32(Args&&... args) noexcept { return simd_make256_f32(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m256d make_f64(Args&&... args) noexcept { return simd_make256_f64(std::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m256i make_u8(Args&&... args) noexcept { return simd_make256_u8(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m256i make_u16(Args&&... args) noexcept { return simd_make256_u16(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m256i make_u32(Args&&... args) noexcept { return simd_make256_u32(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m256i make_u64(Args&&... args) noexcept { return simd_make256_u64(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m256 make_f32(Args&&... args) noexcept { return simd_make256_f32(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m256d make_f64(Args&&... args) noexcept { return simd_make256_f64(BLInternal::forward<Args>(args)...); }
 };
 #endif // BL_TARGET_OPT_AVX
 
@@ -1264,25 +1264,25 @@ BL_INLINE_NODEBUG __m512d simd_make512_f64(double x7, double x6, double x5, doub
 
 template<>
 struct SimdMake<64> {
-  template<typename... Args> static BL_INLINE_NODEBUG __m512i make_u8(Args&&... args) noexcept { return simd_make512_u8(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m512i make_u16(Args&&... args) noexcept { return simd_make512_u16(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m512i make_u32(Args&&... args) noexcept { return simd_make512_u32(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m512i make_u64(Args&&... args) noexcept { return simd_make512_u64(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m512 make_f32(Args&&... args) noexcept { return simd_make512_f32(std::forward<Args>(args)...); }
-  template<typename... Args> static BL_INLINE_NODEBUG __m512d make_f64(Args&&... args) noexcept { return simd_make512_f64(std::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m512i make_u8(Args&&... args) noexcept { return simd_make512_u8(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m512i make_u16(Args&&... args) noexcept { return simd_make512_u16(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m512i make_u32(Args&&... args) noexcept { return simd_make512_u32(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m512i make_u64(Args&&... args) noexcept { return simd_make512_u64(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m512 make_f32(Args&&... args) noexcept { return simd_make512_f32(BLInternal::forward<Args>(args)...); }
+  template<typename... Args> static BL_INLINE_NODEBUG __m512d make_f64(Args&&... args) noexcept { return simd_make512_f64(BLInternal::forward<Args>(args)...); }
 };
 #endif // BL_TARGET_OPT_AVX512
 
-template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_i8(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u8(uint8_t(std::forward<Args>(args))...)); }
-template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_i16(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u16(uint16_t(std::forward<Args>(args))...)); }
-template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_i32(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u32(uint32_t(std::forward<Args>(args))...)); }
-template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_i64(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u64(uint64_t(std::forward<Args>(args))...)); }
-template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_u8(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u8(uint8_t(std::forward<Args>(args))...)); }
-template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_u16(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u16(uint16_t(std::forward<Args>(args))...)); }
-template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_u32(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u32(uint32_t(std::forward<Args>(args))...)); }
-template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_u64(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u64(uint64_t(std::forward<Args>(args))...)); }
-template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_f32(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_f32(float(std::forward<Args>(args))...)); }
-template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_f64(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_f64(double(std::forward<Args>(args))...)); }
+template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_i8(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u8(uint8_t(BLInternal::forward<Args>(args))...)); }
+template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_i16(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u16(uint16_t(BLInternal::forward<Args>(args))...)); }
+template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_i32(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u32(uint32_t(BLInternal::forward<Args>(args))...)); }
+template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_i64(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u64(uint64_t(BLInternal::forward<Args>(args))...)); }
+template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_u8(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u8(uint8_t(BLInternal::forward<Args>(args))...)); }
+template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_u16(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u16(uint16_t(BLInternal::forward<Args>(args))...)); }
+template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_u32(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u32(uint32_t(BLInternal::forward<Args>(args))...)); }
+template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_u64(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_u64(uint64_t(BLInternal::forward<Args>(args))...)); }
+template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_f32(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_f32(float(BLInternal::forward<Args>(args))...)); }
+template<typename SimdT, typename... Args> BL_INLINE_NODEBUG SimdT simd_make_f64(Args&&... args) noexcept { return simd_cast<SimdT>(SimdMake<sizeof(SimdT)>::make_f64(double(BLInternal::forward<Args>(args))...)); }
 
 } // {Internal}
 
@@ -3597,16 +3597,16 @@ BL_INLINE_NODEBUG V make_undefined() noexcept { return V{I::simd_make_undefined<
 // SIMD - Public - Make Vector (Any)
 // =================================
 
-template<typename V, typename... Args> BL_INLINE_NODEBUG V make_i8(Args&&... args) noexcept { return V{I::simd_make_i8<typename V::SimdType>(std::forward<Args>(args)...)}; }
-template<typename V, typename... Args> BL_INLINE_NODEBUG V make_i16(Args&&... args) noexcept { return V{I::simd_make_i16<typename V::SimdType>(std::forward<Args>(args)...)}; }
-template<typename V, typename... Args> BL_INLINE_NODEBUG V make_i32(Args&&... args) noexcept { return V{I::simd_make_i32<typename V::SimdType>(std::forward<Args>(args)...)}; }
-template<typename V, typename... Args> BL_INLINE_NODEBUG V make_i64(Args&&... args) noexcept { return V{I::simd_make_i64<typename V::SimdType>(std::forward<Args>(args)...)}; }
-template<typename V, typename... Args> BL_INLINE_NODEBUG V make_u8(Args&&... args) noexcept { return V{I::simd_make_u8<typename V::SimdType>(std::forward<Args>(args)...)}; }
-template<typename V, typename... Args> BL_INLINE_NODEBUG V make_u16(Args&&... args) noexcept { return V{I::simd_make_u16<typename V::SimdType>(std::forward<Args>(args)...)}; }
-template<typename V, typename... Args> BL_INLINE_NODEBUG V make_u32(Args&&... args) noexcept { return V{I::simd_make_u32<typename V::SimdType>(std::forward<Args>(args)...)}; }
-template<typename V, typename... Args> BL_INLINE_NODEBUG V make_u64(Args&&... args) noexcept { return V{I::simd_make_u64<typename V::SimdType>(std::forward<Args>(args)...)}; }
-template<typename V, typename... Args> BL_INLINE_NODEBUG V make_f32(Args&&... args) noexcept { return V{I::simd_make_f32<typename V::SimdType>(std::forward<Args>(args)...)}; }
-template<typename V, typename... Args> BL_INLINE_NODEBUG V make_f64(Args&&... args) noexcept { return V{I::simd_make_f64<typename V::SimdType>(std::forward<Args>(args)...)}; }
+template<typename V, typename... Args> BL_INLINE_NODEBUG V make_i8(Args&&... args) noexcept { return V{I::simd_make_i8<typename V::SimdType>(BLInternal::forward<Args>(args)...)}; }
+template<typename V, typename... Args> BL_INLINE_NODEBUG V make_i16(Args&&... args) noexcept { return V{I::simd_make_i16<typename V::SimdType>(BLInternal::forward<Args>(args)...)}; }
+template<typename V, typename... Args> BL_INLINE_NODEBUG V make_i32(Args&&... args) noexcept { return V{I::simd_make_i32<typename V::SimdType>(BLInternal::forward<Args>(args)...)}; }
+template<typename V, typename... Args> BL_INLINE_NODEBUG V make_i64(Args&&... args) noexcept { return V{I::simd_make_i64<typename V::SimdType>(BLInternal::forward<Args>(args)...)}; }
+template<typename V, typename... Args> BL_INLINE_NODEBUG V make_u8(Args&&... args) noexcept { return V{I::simd_make_u8<typename V::SimdType>(BLInternal::forward<Args>(args)...)}; }
+template<typename V, typename... Args> BL_INLINE_NODEBUG V make_u16(Args&&... args) noexcept { return V{I::simd_make_u16<typename V::SimdType>(BLInternal::forward<Args>(args)...)}; }
+template<typename V, typename... Args> BL_INLINE_NODEBUG V make_u32(Args&&... args) noexcept { return V{I::simd_make_u32<typename V::SimdType>(BLInternal::forward<Args>(args)...)}; }
+template<typename V, typename... Args> BL_INLINE_NODEBUG V make_u64(Args&&... args) noexcept { return V{I::simd_make_u64<typename V::SimdType>(BLInternal::forward<Args>(args)...)}; }
+template<typename V, typename... Args> BL_INLINE_NODEBUG V make_f32(Args&&... args) noexcept { return V{I::simd_make_f32<typename V::SimdType>(BLInternal::forward<Args>(args)...)}; }
+template<typename V, typename... Args> BL_INLINE_NODEBUG V make_f64(Args&&... args) noexcept { return V{I::simd_make_f64<typename V::SimdType>(BLInternal::forward<Args>(args)...)}; }
 
 // SIMD - Public - Make Vector (128-bit)
 // =====================================

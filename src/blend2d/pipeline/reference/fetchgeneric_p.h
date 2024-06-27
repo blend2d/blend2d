@@ -152,8 +152,8 @@ struct FetchPatternVertAAExtendCtxAny {
 
   BL_INLINE void advance1() noexcept {
     if (++_y == _yStop0) {
-      std::swap(_yStop0, _yStop1);
-      std::swap(_stride0, _stride1);
+      BLInternal::swap(_yStop0, _yStop1);
+      BLInternal::swap(_stride0, _stride1);
 
       _y -= _yRewindOffset;
       _pixelPtr -= _pixelPtrRewindOffset;

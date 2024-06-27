@@ -217,13 +217,13 @@ BL_INLINE_NODEBUG const T& firstInVarArgs(const T& arg, Args&&...) noexcept { re
 
 template<typename T, typename Arg0>
 BL_INLINE_NODEBUG void copyToUninitialized(T* dst, Arg0&& src) noexcept {
-  blCallCtor(*dst, std::forward<Arg0>(src));
+  blCallCtor(*dst, forward<Arg0>(src));
 }
 
 template<typename T, typename Arg0, typename... Args>
 BL_INLINE_NODEBUG void copyToUninitialized(T* dst, Arg0&& arg0, Args&&... args) noexcept {
-  copyToUninitialized(dst + 0, std::forward<Arg0>(arg0));
-  copyToUninitialized(dst + 1, std::forward<Args>(args)...);
+  copyToUninitialized(dst + 0, forward<Arg0>(arg0));
+  copyToUninitialized(dst + 1, forward<Args>(args)...);
 }
 
 template<typename T> BL_INLINE_NODEBUG BLResult appendItem(BLArrayCore* self, const T& item) noexcept { return blArrayAppendItem(self, &item); }
@@ -512,7 +512,7 @@ public:
   BL_INLINE BLResult modify_v(BLModifyOp op, Args&&... args) noexcept {
     T* dst;
     BL_PROPAGATE(blArrayModifyOp(this, op, sizeof...(args), (void**)&dst));
-    BLInternal::copyToUninitialized(dst, std::forward<Args>(args)...);
+    BLInternal::copyToUninitialized(dst, BLInternal::forward<Args>(args)...);
     return BL_SUCCESS;
   }
 
@@ -534,7 +534,7 @@ public:
   //! Replaces the content of the array with variadic number of items passed in `args...`.
   template<typename... Args>
   BL_INLINE_NODEBUG BLResult assign_v(Args&&... args) noexcept {
-    return modify_v(BL_MODIFY_OP_ASSIGN_FIT, std::forward<Args>(args)...);
+    return modify_v(BL_MODIFY_OP_ASSIGN_FIT, BLInternal::forward<Args>(args)...);
   }
 
   //! Replaces the content of the array by items in the passed array `view`.
@@ -579,10 +579,10 @@ public:
   //! behavior in such case.
   template<typename... Args>
   BL_INLINE BLResult append(Args&&... args) noexcept {
-    if (sizeof...(args) == 1)
-      return BLInternal::appendItem(this, Traits::pass(BLInternal::firstInVarArgs(std::forward<Args>(args)...)));
+    if BL_CONSTEXPR (sizeof...(args) == 1)
+      return BLInternal::appendItem(this, Traits::pass(BLInternal::firstInVarArgs(BLInternal::forward<Args>(args)...)));
     else
-      return modify_v(BL_MODIFY_OP_APPEND_GROW, std::forward<Args>(args)...);
+      return modify_v(BL_MODIFY_OP_APPEND_GROW, BLInternal::forward<Args>(args)...);
   }
 
   //! Appends items to the array of the given array `view`.
@@ -606,10 +606,10 @@ public:
   //! behavior in such case.
   template<typename... Args>
   BL_INLINE BLResult prepend(Args&&... args) noexcept {
-    if (sizeof...(args) == 1)
-      return BLInternal::insertItem(this, 0, Traits::pass(BLInternal::firstInVarArgs(std::forward<Args>(args)...)));
+    if BL_CONSTEXPR (sizeof...(args) == 1)
+      return BLInternal::insertItem(this, 0, Traits::pass(BLInternal::firstInVarArgs(BLInternal::forward<Args>(args)...)));
     else
-      return insert(0, std::forward<Args>(args)...);
+      return insert(0, BLInternal::forward<Args>(args)...);
   }
 
   //! Prepends items to the array of the given array `view`.
@@ -633,13 +633,13 @@ public:
   //! behavior in such case.
   template<typename... Args>
   BL_INLINE BLResult insert(size_t index, Args&&... args) noexcept {
-    if (sizeof...(args) == 1) {
-      return BLInternal::insertItem(this, index, Traits::pass(BLInternal::firstInVarArgs(std::forward<Args>(args)...)));
+    if BL_CONSTEXPR (sizeof...(args) == 1) {
+      return BLInternal::insertItem(this, index, Traits::pass(BLInternal::firstInVarArgs(BLInternal::forward<Args>(args)...)));
     }
     else {
       T* dst;
       BL_PROPAGATE(blArrayInsertOp(this, index, sizeof...(args), (void**)&dst));
-      BLInternal::copyToUninitialized(dst, std::forward<Args>(args)...);
+      BLInternal::copyToUninitialized(dst, BLInternal::forward<Args>(args)...);
       return BL_SUCCESS;
     }
   }

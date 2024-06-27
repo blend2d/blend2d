@@ -133,7 +133,7 @@ template<typename T, typename Compare = CompareOp<SortOrder::kAscending>>
 static BL_INLINE void insertionSort(T* base, size_t size, const Compare& cmp = Compare()) noexcept {
   for (T* pm = base + 1; pm < base + size; pm++)
     for (T* pl = pm; pl > base && cmp(pl[-1], pl[0]) > 0; pl--)
-      std::swap(pl[-1], pl[0]);
+      BLInternal::swap(pl[-1], pl[0]);
 }
 
 namespace Internal {
@@ -157,11 +157,11 @@ struct QuickSortImpl {
         // We work from second to last - first will be pivot element.
         T* pi = base + 1;
         T* pj = end - 1;
-        std::swap(base[(size_t)(end - base) / 2], base[0]);
+        BLInternal::swap(base[(size_t)(end - base) / 2], base[0]);
 
-        if (cmp(*pi  , *pj  ) > 0) std::swap(*pi  , *pj  );
-        if (cmp(*base, *pj  ) > 0) std::swap(*base, *pj  );
-        if (cmp(*pi  , *base) > 0) std::swap(*pi  , *base);
+        if (cmp(*pi  , *pj  ) > 0) BLInternal::swap(*pi  , *pj  );
+        if (cmp(*base, *pj  ) > 0) BLInternal::swap(*base, *pj  );
+        if (cmp(*pi  , *base) > 0) BLInternal::swap(*pi  , *base);
 
         // Now we have the median for pivot element, entering main loop.
         for (;;) {
@@ -169,11 +169,11 @@ struct QuickSortImpl {
           while (pj > base && cmp(*--pj, *base) > 0) continue; // Move `j` left  until `*j <= pivot`.
 
           if (pi > pj) break;
-          std::swap(*pi, *pj);
+          BLInternal::swap(*pi, *pj);
         }
 
         // Move pivot into correct place.
-        std::swap(*base, *pj);
+        BLInternal::swap(*base, *pj);
 
         // Larger subfile base / end to stack, sort smaller.
         if (pj - base > end - pi) {

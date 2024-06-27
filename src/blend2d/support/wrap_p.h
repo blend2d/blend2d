@@ -27,7 +27,7 @@ struct alignas(alignof(T)) Wrap {
   template<typename... Args>
   BL_INLINE T* init(Args&&... args) noexcept {
     T* instance = static_cast<T*>(static_cast<void*>(_data));
-    blCallCtor(*instance, std::forward<Args>(args)...);
+    blCallCtor(*instance, BLInternal::forward<Args>(args)...);
     return instance;
   }
 

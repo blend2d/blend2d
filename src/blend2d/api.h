@@ -18,10 +18,7 @@
 #include <string.h>
 
 #ifdef __cplusplus
-  #include <cmath>
-  #include <limits>
   #include <type_traits>
-  #include <utility>
 #else
   #include <stdbool.h>
 #endif
@@ -375,6 +372,15 @@
   #define BL_NOEXCEPT noexcept
 #else
   #define BL_NOEXCEPT
+#endif
+
+//! \def BL_CONSTEXPR
+//!
+//! Evaluates to constexpr in C++17 mode.
+#if __cplusplus >= 201703L
+  #define BL_CONSTEXPR constexpr
+#else
+  #define BL_CONSTEXPR
 #endif
 
 //! \def BL_NOEXCEPT_C
@@ -1121,6 +1127,22 @@ BL_DEFINE_ENUM(BLTextEncoding) {
 //! There should never be functionality that is not used by public headers, that should always be hidden.
 namespace BLInternal {
 
+template<typename T>
+BL_INLINE_NODEBUG typename std::remove_reference<T>::type&& move(T&& v) noexcept { return static_cast<typename std::remove_reference<T>::type&&>(v); }
+
+template<typename T>
+BL_INLINE_NODEBUG T&& forward(typename std::remove_reference<T>::type& v) noexcept { return static_cast<T&&>(v); }
+
+template<typename T>
+BL_INLINE_NODEBUG T&& forward(typename std::remove_reference<T>::type&& v) noexcept { return static_cast<T&&>(v); }
+
+template<typename T>
+BL_INLINE void swap(T& t1, T& t2) noexcept {
+  T temp(move(t1));
+  t1 = move(t2);
+  t2 = move(temp);
+}
+
 //! StdIntT provides a signed integer type as defined by <stdint.h> by size.
 template<size_t kSize, bool kUnsigned = false> struct StdIntT;
 
@@ -1310,7 +1332,7 @@ struct PlacementNew { void* ptr; };
 } // {BLInternal}
 
 //! Implementation of a placement new so we don't have to depend on `<new>`.
-BL_INLINE_NODEBUG void* operator new(std::size_t, const BLInternal::PlacementNew& p) {
+BL_INLINE_NODEBUG void* operator new(size_t, const BLInternal::PlacementNew& p) {
 #if defined(_MSC_VER) && !defined(__clang__)
   BL_ASSUME(p.ptr != nullptr); // Otherwise MSVC would emit a nullptr check.
 #endif
@@ -1374,7 +1396,7 @@ static BL_INLINE void blCallCtor(T& instance, Args&&... args) noexcept {
   BL_ASSUME(&instance != nullptr);
 #endif
 
-  new(BLInternal::PlacementNew{&instance}) T(std::forward<Args>(args)...);
+  new(BLInternal::PlacementNew{&instance}) T(BLInternal::forward<Args>(args)...);
 }
 
 //! Destroys an instance in place (calls its destructor).
@@ -1431,12 +1453,12 @@ BL_INLINE_NODEBUG constexpr T blClamp(const T& a, const T& b, const T& c) noexce
 //! Returns a minimum value of all arguments passed.
 template<typename T, typename... Args>
 BL_NODISCARD
-BL_INLINE_NODEBUG constexpr T blMin(const T& a, const T& b, Args&&... args) noexcept { return blMin(blMin(a, b), std::forward<Args>(args)...); }
+BL_INLINE_NODEBUG constexpr T blMin(const T& a, const T& b, Args&&... args) noexcept { return blMin(blMin(a, b), BLInternal::forward<Args>(args)...); }
 
 //! Returns a maximum value of all arguments passed.
 template<typename T, typename... Args>
 BL_NODISCARD
-BL_INLINE_NODEBUG constexpr T blMax(const T& a, const T& b, Args&&... args) noexcept { return blMax(blMax(a, b), std::forward<Args>(args)...); }
+BL_INLINE_NODEBUG constexpr T blMax(const T& a, const T& b, Args&&... args) noexcept { return blMax(blMax(a, b), BLInternal::forward<Args>(args)...); }
 
 //! Returns `true` if `a` and `b` equals at binary level.
 //!

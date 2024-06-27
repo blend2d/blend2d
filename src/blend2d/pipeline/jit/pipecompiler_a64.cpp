@@ -704,7 +704,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
   if (!src1.isReg()) {
     if (src2.isReg() && isOp3ICommutative(op)) {
       BL_ASSERT(src2.isGp());
-      std::swap(src1, src2);
+      BLInternal::swap(src1, src2);
     }
     else {
       src1 = gp_force_reg(this, src1, dst);
@@ -3811,7 +3811,7 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
 
       // Min/Max is commutative, so let's make dst only overlap src1.
       if (dst.id() == src2.id()) {
-        std::swap(src1, src2);
+        BLInternal::swap(src1, src2);
       }
 
       bool dstOverlapsSrc = dst.id() == src1.id();

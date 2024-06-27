@@ -10,7 +10,8 @@
 #include "../threading/mutex_p.h"
 #include "../threading/threadingutils_p.h"
 
-#ifndef _WIN32
+#if !defined(_WIN32)
+  #include <pthread.h>
   #include <sys/time.h>
 #endif
 

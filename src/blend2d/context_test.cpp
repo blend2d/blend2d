@@ -241,12 +241,12 @@ static void test_context_state(BLContext& ctx) {
         EXPECT_SUCCESS(va.toRgba32(&vaRgba32));
         EXPECT_SUCCESS(vb.toRgba32(&vbRgba32));
 
-        std::swap(a, b);
+        BLInternal::swap(a, b);
         EXPECT_EQ(a, vaRgba32);
         EXPECT_EQ(b, vbRgba32);
 
         if (mode == BL_CONTEXT_STYLE_SWAP_MODE_STYLES_WITH_ALPHA) {
-          std::swap(alphaA, alphaB);
+          BLInternal::swap(alphaA, alphaB);
           EXPECT_EQ(ctx.fillAlpha(), alphaA);
           EXPECT_EQ(ctx.strokeAlpha(), alphaB);
         }

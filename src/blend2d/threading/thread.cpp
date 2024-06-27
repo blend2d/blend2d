@@ -14,6 +14,8 @@
 
 #ifdef _WIN32
   #include <process.h>
+#else
+  #include <pthread.h>
 #endif
 
 // bl::Thread - Globals

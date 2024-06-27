@@ -67,8 +67,8 @@ public:
   //! \{
 
   BL_INLINE void swap(ArenaList& other) noexcept {
-    std::swap(_nodes[0], other._nodes[0]);
-    std::swap(_nodes[1], other._nodes[1]);
+    BLInternal::swap(_nodes[0], other._nodes[0]);
+    BLInternal::swap(_nodes[1], other._nodes[1]);
   }
 
   BL_INLINE void reset() noexcept {

@@ -237,7 +237,7 @@ BL_API_IMPL BLResult blStrokeOptionsAssignMove(BLStrokeOptionsCore* self, BLStro
   self->width = other->width;
   self->miterLimit = other->miterLimit;
   self->dashOffset = other->dashOffset;
-  self->dashArray = std::move(other->dashArray);
+  self->dashArray = BLInternal::move(other->dashArray);
 
   return BL_SUCCESS;
 }

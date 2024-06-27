@@ -99,8 +99,8 @@ struct BLGlyphBufferPrivateImpl : public BLGlyphBufferImpl {
   }
 
   BL_INLINE void flip() noexcept {
-    std::swap(buffer[0], buffer[1]);
-    std::swap(capacity[0], capacity[1]);
+    BLInternal::swap(buffer[0], buffer[1]);
+    BLInternal::swap(capacity[0], capacity[1]);
   }
 
   BL_INLINE void getGlyphDataPtrs(size_t bufferId, uint32_t** glyphDataOut, BLGlyphInfo** infoDataOut) noexcept {

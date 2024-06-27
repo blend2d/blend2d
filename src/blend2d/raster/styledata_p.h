@@ -69,7 +69,7 @@ struct StyleData {
     bool thisImplicit = hasImplicitFetchData();
     bool otherImplicit = other.hasImplicitFetchData();
 
-    std::swap(*this, other);
+    BLInternal::swap(*this, other);
 
     if (thisImplicit)
       other.makeFetchDataImplicit();
