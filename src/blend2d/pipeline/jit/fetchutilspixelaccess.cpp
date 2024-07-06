@@ -1951,7 +1951,6 @@ static void fetchPixelsA8(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags f
       switch (n.value()) {
         case 4: {
           Vec a = pc->newV128("a");
-          sMem.setSize(4);
           pc->v_loada32(a, sMem);
 
           if (blTestFlag(flags, PixelFlags::kPA)) {
@@ -1967,7 +1966,6 @@ static void fetchPixelsA8(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags f
 
         case 8: {
           Vec a = pc->newV128("a");
-          sMem.setSize(8);
 
           if (blTestFlag(flags, PixelFlags::kPA)) {
             pc->v_loadu64(a, sMem);

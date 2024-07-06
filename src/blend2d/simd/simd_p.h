@@ -13,7 +13,7 @@
 
 #if BL_TARGET_ARCH_X86
   #include "../simd/simdx86_p.h"
-#elif BL_TARGET_ARCH_ARM && defined(__ARM_NEON)
+#elif BL_TARGET_ARCH_ARM && (defined(__ARM_NEON) || defined(_M_ARM) || defined(_M_ARM64))
   #include "../simd/simdarm_p.h"
 #else
   #define BL_TARGET_SIMD_I 0
