@@ -124,7 +124,20 @@ extern "C" void __tsan_release(void *addr);
 #endif
 
 #if defined(_WIN32) && !defined(_WIN32_WINNT)
-  #define _WIN32_WINNT 0x0600
+  #if !defined(BL_PLATFORM_UWP) && defined(WINAPI_FAMILY) && defined(__has_include)
+    #if __has_include(<winapifamily.h>)
+      #include <winapifamily.h>
+      #if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP
+        #define BL_PLATFORM_UWP
+      #endif
+    #endif
+  #endif
+
+  #if defined(BL_PLATFORM_UWP)
+    #define _WIN32_WINNT 0x0602 // Windows 8+ (CreateFile2, CreateFileMappingFromApp, ...)
+  #else
+    #define _WIN32_WINNT 0x0600 // Windows Vista+ (CONDITION_VARIABLE, ...)
+  #endif
 #endif
 
 // The FileSystem API works fully with 64-bit file sizes and offsets, however, this feature must be enabled before

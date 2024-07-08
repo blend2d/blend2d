@@ -24,10 +24,6 @@
   #elif defined(__NetBSD__) || defined(__APPLE__)
     #define BL_FS_STAT_MTIMESPEC(s) s.st_mtimespec
   #endif
-#else
-  #if !defined(CreateFile)
-    #define BL_PLATFORM_UWP
-  #endif
 #endif
 
 #ifdef _WIN32
