@@ -1066,13 +1066,20 @@ if (NOT BLEND2D_EMBED)
   # Add Blend2D install instructions (library and public headers).
   if (NOT BLEND2D_NO_INSTALL)
     install(TARGETS blend2d
-            EXPORT blend2d-config
+            EXPORT blend2d-targets
             RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
             ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
             LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
             INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-    install(EXPORT blend2d-config
+    install(EXPORT blend2d-targets
             NAMESPACE blend2d::
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/blend2d")
+    include(CMakePackageConfigHelpers)
+    configure_package_config_file("${CMAKE_CURRENT_LIST_DIR}/blend2d-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/blend2d-config.cmake"
+            INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/blend2d"
+            NO_SET_AND_CHECK_MACRO
+            NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/blend2d-config.cmake"
             DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/blend2d")
 
     foreach(_src_file ${BLEND2D_SRC_LIST})
