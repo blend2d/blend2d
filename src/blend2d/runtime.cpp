@@ -14,6 +14,7 @@
 #if !defined(_WIN32)
   #include <pthread.h>
   #include <unistd.h>
+  #include <errno.h>
 #endif
 
 #ifndef BL_BUILD_NO_JIT
