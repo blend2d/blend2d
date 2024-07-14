@@ -18,10 +18,6 @@
 #include "../support/scopedbuffer_p.h"
 #include "../support/traits_p.h"
 
-namespace bl {
-namespace OpenType {
-namespace CFFImpl {
-
 // bl::OpenType::CFFImpl - Tracing
 // ===============================
 
@@ -30,10 +26,15 @@ namespace CFFImpl {
 #endif
 
 #if defined(BL_TRACE_OT_CFF)
+  #include <stdio.h>
   #define Trace BLDebugTrace
 #else
   #define Trace BLDummyTrace
 #endif
+
+namespace bl {
+namespace OpenType {
+namespace CFFImpl {
 
 // bl::OpenType::CFFImpl - Utilities
 // =================================
@@ -2237,20 +2238,24 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
 
   if (privateOffset) {
     if (BL_UNLIKELY(privateOffset < beginDataOffset ||
-                    privateOffset >= cff.size ||
+                    privateOffset > cff.size ||
                     privateLength > cff.size - privateOffset))
-      return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+        return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-    dictIter.reset(cff.data + privateOffset, privateLength);
-    while (dictIter.hasNext()) {
-      BL_PROPAGATE(dictIter.next(dictEntry));
-      switch (dictEntry.op) {
-        case CFFTable::kDictOpPrivSubrs: {
-          if (BL_UNLIKELY(dictEntry.count != 1))
-            return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    // There are fonts where `privateOffset` is equal to `cff.size` and `privateLength` is
+    // zero. So only search the private dictionary if `privateLength` is greater than zero.
+    if (privateLength) {
+      dictIter.reset(cff.data + privateOffset, privateLength);
+      while (dictIter.hasNext()) {
+        BL_PROPAGATE(dictIter.next(dictEntry));
+        switch (dictEntry.op) {
+          case CFFTable::kDictOpPrivSubrs: {
+            if (BL_UNLIKELY(dictEntry.count != 1))
+              return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
 
-          lsubrOffset = uint32_t(dictEntry.values[0]);
-          break;
+            lsubrOffset = uint32_t(dictEntry.values[0]);
+            break;
+          }
         }
       }
     }
