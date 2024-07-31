@@ -8,6 +8,7 @@
 
 #include "../simd/simdbase_p.h"
 #include "../support/memops_p.h"
+#include "../support/bitops_p.h"
 #include "../tables/tables_p.h"
 
 #include <arm_neon.h>
@@ -2755,76 +2756,141 @@ BL_INLINE V div255_u16(const V& a) noexcept { return rsrli_u16<8>(acc_rsrli_u16<
 template<typename V>
 BL_INLINE V div65535_u32(const V& a) noexcept { return rsrli_u32<16>(acc_rsrli_u32<16>(a, a)); }
 
+// SIMD - Public - Extract MSB
+// ===========================
+
+template<typename V>
+BL_INLINE uint32_t extract_mask_bits_i8(const Vec<16, V>& a) noexcept {
+  Vec16xU8 bm = make128_u8(0x80u, 0x40u, 0x20u, 0x10u, 0x08u, 0x04u, 0x02u, 0x01u);
+  Vec16xU8 m0 = and_(vec_cast<Vec16xU8>(a), bm);
+
+#if defined(BL_SIMD_AARCH64)
+  uint8x16_t acc = vpaddq_u8(m0.v, m0.v);
+  acc = vpaddq_u8(acc, acc);
+  acc = vpaddq_u8(acc, acc);
+  return vgetq_lane_u16(vreinterpretq_u16_u8(acc), 0);
+#else
+  uint8x8_t acc = vpadd_u8(vget_low_u8(m0.v), vget_high_u8(m0.v));
+  acc = vpadd_u8(acc, acc);
+  acc = vpadd_u8(acc, acc);
+  return vget_lane_u16(vreinterpret_u16_u8(acc), 0);
+#endif
+}
+
+template<typename V>
+BL_INLINE uint32_t extract_mask_bits_i8(const Vec<16, V>& a, const Vec<16, V>& b) noexcept {
+  Vec16xU8 bm = make128_u8(0x80u, 0x40u, 0x20u, 0x10u, 0x08u, 0x04u, 0x02u, 0x01u);
+  Vec16xU8 m0 = and_(vec_cast<Vec16xU8>(a), bm);
+  Vec16xU8 m1 = and_(vec_cast<Vec16xU8>(b), bm);
+
+#if defined(BL_SIMD_AARCH64)
+  uint8x16_t acc = vpaddq_u8(m0.v, m1.v);
+  acc = vpaddq_u8(acc, acc);
+  acc = vpaddq_u8(acc, acc);
+  return vgetq_lane_u32(vreinterpretq_u32_u8(acc), 0);
+#else
+  uint8x8_t acc0 = vpadd_u8(vget_low_u8(m0.v), vget_high_u8(m0.v));
+  uint8x8_t acc1 = vpadd_u8(vget_low_u8(m1.v), vget_high_u8(m1.v));
+  acc0 = vpadd_u8(acc0, acc1);
+  acc0 = vpadd_u8(acc0, acc0);
+  return vget_lane_u32(vreinterpret_u32_u8(acc0), 0);
+#endif
+}
+
+#if defined(BL_SIMD_AARCH64)
+template<typename V>
+BL_INLINE uint64_t extract_mask_bits_i8(const Vec<16, V>& a, const Vec<16, V>& b, const Vec<16, V>& c, const Vec<16, V>& d) noexcept {
+  Vec16xU8 bm = make128_u8(0x80u, 0x40u, 0x20u, 0x10u, 0x08u, 0x04u, 0x02u, 0x01u);
+  Vec16xU8 m0 = and_(vec_cast<Vec16xU8>(a), bm);
+  Vec16xU8 m1 = and_(vec_cast<Vec16xU8>(b), bm);
+  Vec16xU8 m2 = and_(vec_cast<Vec16xU8>(c), bm);
+  Vec16xU8 m3 = and_(vec_cast<Vec16xU8>(d), bm);
+
+  uint8x16_t acc0 = vpaddq_u8(m0.v, m1.v);
+  uint8x16_t acc1 = vpaddq_u8(m2.v, m3.v);
+  acc0 = vpaddq_u8(acc0, acc1);
+  acc0 = vpaddq_u8(acc0, acc0);
+
+  return vgetq_lane_u64(vreinterpretq_u64_u8(acc0), 0);
+}
+#endif
+
 // SIMD - Public - Utilities - Array Lookup
 // ========================================
 
 #if defined(BL_SIMD_AARCH64)
-// Based on the following article:
+// Array lookup is based on the following article:
 //   https://community.arm.com/arm-community-blogs/b/infrastructure-solutions-blog/posts/porting-x86-vector-bitmask-optimizations-to-arm-neon
 template<uint32_t kN>
 struct ArrayLookupResult {
+  enum : uint32_t {
+    kIndexShift = (kN == 4u) ? 4u :
+                  (kN == 8u) ? 3u : 2u
+  };
+
+  enum : uint64_t {
+    kInputMask = kIndexShift == 4 ? 0x0001000100010001u :
+                 kIndexShift == 3 ? 0x0101010101010101u :
+                 kIndexShift == 2 ? 0x1111111111111111u :
+                 kIndexShift == 1 ? 0x5555555555555555u : 0xFFFFFFFFFFFFFFFFu
+  };
+
   uint64_t _mask;
 
   BL_INLINE_NODEBUG bool matched() const noexcept { return _mask != 0; }
-  BL_INLINE_NODEBUG uint32_t index() const noexcept {
-    constexpr uint32_t kShift = (kN == 4u) ? 4u : (kN == 8u) ? 3u : 2u;
-    return (63 - bl::IntOps::clz(_mask)) >> kShift;
-  }
+  BL_INLINE_NODEBUG uint32_t index() const noexcept { return (63 - bl::IntOps::clz(_mask)) >> kIndexShift; }
+
+  using Iterator = bl::ParametrizedBitOps<bl::BitOrder::kLSB, uint64_t>::BitChunkIterator<kIndexShift>;
+  BL_INLINE_NODEBUG Iterator iterate() const noexcept { return Iterator(static_cast<uint64_t>(_mask & 0x1111111111111111)); }
 };
 
-template<uint32_t kN>
-BL_INLINE_NODEBUG ArrayLookupResult<kN> array_lookup_u32_aligned16(const uint32_t* array, uint32_t value) noexcept;
-
-template<>
-BL_INLINE_NODEBUG ArrayLookupResult<4> array_lookup_u32_aligned16<4>(const uint32_t* array, uint32_t value) noexcept {
-  Vec4xU32 v = make128_u32(value);
-  Vec4xU32 pred = cmp_eq_u32(loada<Vec4xU32>(array), v);
-  uint64_t mask = vget_lane_u64(
-    simd_u64(
-      vshrn_n_u64(simd_u64(pred.v), 16)), 0);
+BL_INLINE_NODEBUG ArrayLookupResult<4> array_lookup_result_from_4x_u32(Vec4xU32 pred) noexcept {
+  uint64_t mask = vget_lane_u64(simd_u64(vshrn_n_u64(simd_u64(pred.v), 16)), 0);
   return ArrayLookupResult<4>{mask};
 }
 
+BL_INLINE_NODEBUG ArrayLookupResult<8> array_lookup_result_from_8x_u16(Vec8xU16 pred) noexcept {
+  uint64_t mask = vget_lane_u64(simd_u64(vshrn_n_u32(simd_u32(pred.v), 8)), 0);
+  return ArrayLookupResult<8>{mask};
+}
+
+BL_INLINE_NODEBUG ArrayLookupResult<16> array_lookup_result_from_16x_u8(Vec16xU8 pred) noexcept {
+  uint64_t mask = vget_lane_u64(simd_u64(vshrn_n_u16(simd_u16(pred.v), 4)), 0);
+  return ArrayLookupResult<16>{mask};
+}
+
+template<uint32_t kN>
+BL_INLINE_NODEBUG ArrayLookupResult<kN> array_lookup_u32_eq_aligned16(const uint32_t* array, uint32_t value) noexcept;
+
 template<>
-BL_INLINE_NODEBUG ArrayLookupResult<8> array_lookup_u32_aligned16<8>(const uint32_t* array, uint32_t value) noexcept {
+BL_INLINE_NODEBUG ArrayLookupResult<4> array_lookup_u32_eq_aligned16<4>(const uint32_t* array, uint32_t value) noexcept {
+  Vec4xU32 v = make128_u32(value);
+  return array_lookup_result_from_4x_u32(
+    cmp_eq_u32(loada<Vec4xU32>(array), v));
+}
+
+template<>
+BL_INLINE_NODEBUG ArrayLookupResult<8> array_lookup_u32_eq_aligned16<8>(const uint32_t* array, uint32_t value) noexcept {
   Vec4xU32 v = make128_u32(value);
   Vec4xU32 pred0 = cmp_eq_u32(loada<Vec4xU32>(array + 0), v);
   Vec4xU32 pred1 = cmp_eq_u32(loada<Vec4xU32>(array + 4), v);
 
-  uint32x4_t combined = vcombine_u32(
-    vshrn_n_u64(simd_u64(pred0.v), 16),
-    vshrn_n_u64(simd_u64(pred1.v), 16));
-
-  uint64_t mask = vget_lane_u64(
-    simd_u64(
-      vshrn_n_u32(combined, 8)), 0);
-  return ArrayLookupResult<8>{mask};
+  uint32x4_t combined = vcombine_u32(vshrn_n_u64(simd_u64(pred0.v), 16), vshrn_n_u64(simd_u64(pred1.v), 16));
+  return array_lookup_result_from_8x_u16(Vec8xU16{simd_u16(combined)});
 }
 
 template<>
-BL_INLINE_NODEBUG ArrayLookupResult<16> array_lookup_u32_aligned16<16>(const uint32_t* array, uint32_t value) noexcept {
+BL_INLINE_NODEBUG ArrayLookupResult<16> array_lookup_u32_eq_aligned16<16>(const uint32_t* array, uint32_t value) noexcept {
   Vec4xU32 v = make128_u32(value);
   Vec4xU32 pred0 = cmp_eq_u32(loada<Vec4xU32>(array + 0), v);
   Vec4xU32 pred1 = cmp_eq_u32(loada<Vec4xU32>(array + 4), v);
   Vec4xU32 pred2 = cmp_eq_u32(loada<Vec4xU32>(array + 8), v);
   Vec4xU32 pred3 = cmp_eq_u32(loada<Vec4xU32>(array + 12), v);
 
-  uint32x4_t combined0 = vcombine_u32(
-    vshrn_n_u64(simd_u64(pred0.v), 16),
-    vshrn_n_u64(simd_u64(pred1.v), 16));
-
-  uint32x4_t combined1 = vcombine_u32(
-    vshrn_n_u64(simd_u64(pred2.v), 16),
-    vshrn_n_u64(simd_u64(pred3.v), 16));
-
-  uint16x8_t combined = vcombine_u16(
-    vshrn_n_u32(combined0, 8),
-    vshrn_n_u32(combined1, 8));
-
-  uint64_t mask = vget_lane_u64(
-    simd_u64(
-      vshrn_n_u16(combined, 4)), 0);
-  return ArrayLookupResult<16>{mask};
+  uint32x4_t combined0 = vcombine_u32(vshrn_n_u64(simd_u64(pred0.v), 16), vshrn_n_u64(simd_u64(pred1.v), 16));
+  uint32x4_t combined1 = vcombine_u32(vshrn_n_u64(simd_u64(pred2.v), 16), vshrn_n_u64(simd_u64(pred3.v), 16));
+  uint16x8_t combined = vcombine_u16(vshrn_n_u32(combined0, 8), vshrn_n_u32(combined1, 8));
+  return array_lookup_result_from_16x_u8(Vec16xU8{simd_u8(combined)});
 }
 #endif // BL_SIMD_AARCH64
 

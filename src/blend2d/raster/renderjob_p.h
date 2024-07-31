@@ -96,6 +96,9 @@ struct RenderJob {
   BL_INLINE_NODEBUG bool hasJobFlag(RenderJobFlags flag) const noexcept { return blTestFlag(_jobFlags, flag); }
   BL_INLINE_NODEBUG void addJobFlags(RenderJobFlags flags) noexcept { _jobFlags |= flags; }
 
+  BL_INLINE_NODEBUG RenderCommandQueue* commandQueue() const noexcept { return _commandQueue; }
+
+  BL_INLINE_NODEBUG size_t commandIndex() const noexcept { return _commandIndex; }
   BL_INLINE_NODEBUG RenderCommand& command() const noexcept { return _commandQueue->at(_commandIndex); }
   BL_INLINE_NODEBUG const BLPoint& originFixed() const noexcept { return _originFixed;}
 

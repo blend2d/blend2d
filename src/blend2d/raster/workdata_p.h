@@ -46,8 +46,12 @@ public:
 
   //! Clip mode.
   uint8_t clipMode {};
+  //! Quantization shift of vertical coordinates - used to store quantized coordinates in command queue (aligned coordinates).
+  uint8_t _commandQuantizationShiftAA;
+  //! Quantization shift of vertical coordinates - used to store quantized coordinates in command queue (fractional coordinates).
+  uint8_t _commandQuantizationShiftFp;
   //! Reserved.
-  uint8_t reserved[3] {};
+  uint8_t reserved[2] {};
   //! Id of the worker that uses this WorkData.
   uint32_t _workerId {};
   //! Band height.
@@ -80,23 +84,26 @@ public:
   BL_INLINE void resetBatch() noexcept { initBatch(nullptr); }
   BL_INLINE RenderBatch* acquireBatch() noexcept { return blAtomicFetchStrong(&_batch); }
 
-  BL_INLINE_NODEBUG void initContextData(const BLImageData& dstData, const BLPointI& pixelOrigin) noexcept {
+  BL_INLINE void initContextData(const BLImageData& dstData, const BLPointI& pixelOrigin) noexcept {
     ctxData.dst = dstData;
     ctxData.pixelOrigin = pixelOrigin;
   }
 
-  BLResult initBandData(uint32_t bandHeight, uint32_t bandCount) noexcept;
+  BLResult initBandData(uint32_t bandHeight, uint32_t bandCount, uint32_t commandQuantizationShift) noexcept;
 
   BL_INLINE_NODEBUG bool isSync() const noexcept { return _workerId == kSyncWorkerId; }
-
   BL_INLINE_NODEBUG const BLSizeI& dstSize() const noexcept { return ctxData.dst.size; }
   BL_INLINE_NODEBUG uint32_t workerId() const noexcept { return _workerId; }
   BL_INLINE_NODEBUG uint32_t bandHeight() const noexcept { return _bandHeight; }
+  BL_INLINE_NODEBUG uint32_t bandHeightFixed() const noexcept { return _bandHeight << 8; }
   BL_INLINE_NODEBUG uint32_t bandCount() const noexcept { return edgeStorage.bandCount(); }
 
-  BL_INLINE_NODEBUG void accumulateErrorFlag(BLContextErrorFlags flag) noexcept { _accumulatedErrorFlags |= uint32_t(flag); }
+  BL_INLINE_NODEBUG uint32_t commandQuantizationShiftAA() const noexcept { return _commandQuantizationShiftAA; }
+  BL_INLINE_NODEBUG uint32_t commandQuantizationShiftFp() const noexcept { return _commandQuantizationShiftFp; }
 
   BL_INLINE_NODEBUG BLContextErrorFlags accumulatedErrorFlags() const noexcept { return BLContextErrorFlags(_accumulatedErrorFlags); }
+
+  BL_INLINE_NODEBUG void accumulateErrorFlag(BLContextErrorFlags flag) noexcept { _accumulatedErrorFlags |= uint32_t(flag); }
   BL_INLINE_NODEBUG void cleanAccumulatedErrorFlags() noexcept { _accumulatedErrorFlags = 0; }
 
   BL_INLINE void avoidCacheLineSharing() noexcept {

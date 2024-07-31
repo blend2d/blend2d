@@ -225,6 +225,8 @@ public:
 
   BL_INLINE_NODEBUG uint32_t bandCount() const noexcept { return syncWorkData.bandCount(); }
   BL_INLINE_NODEBUG uint32_t bandHeight() const noexcept { return syncWorkData.bandHeight(); }
+  BL_INLINE_NODEBUG uint32_t commandQuantizationShiftAA() const noexcept { return syncWorkData.commandQuantizationShiftAA(); }
+  BL_INLINE_NODEBUG uint32_t commandQuantizationShiftFp() const noexcept { return syncWorkData.commandQuantizationShiftFp(); }
 
   //! \}
 

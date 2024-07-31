@@ -173,8 +173,8 @@ struct ParametrizedBitOps {
     return kIsLSB ? IntOps::shl(T(1), index) : IntOps::shr(IntOps::nonZeroMsbMask<T>(), index);
   }
 
-  template<typename Index>
-  static BL_INLINE_NODEBUG constexpr T indexAsMask(const Index& index, bool value) noexcept {
+  template<typename Index, typename Value>
+  static BL_INLINE_NODEBUG constexpr T indexAsMask(const Index& index, const Value& value) noexcept {
     return kIsLSB ? IntOps::shl(T(value), index) : IntOps::shr(T(value) << kBitMask, index);
   }
 
@@ -323,17 +323,46 @@ struct ParametrizedBitOps {
   public:
     T _bitWord;
 
-    BL_INLINE explicit BitIterator(T bitWord = 0) noexcept
+    BL_INLINE_NODEBUG explicit BitIterator(T bitWord = 0) noexcept
       : _bitWord(bitWord) {}
 
-    BL_INLINE void init(T bitWord) noexcept { _bitWord = bitWord; }
-    BL_INLINE bool hasNext() const noexcept { return _bitWord != 0; }
+    BL_INLINE_NODEBUG BitIterator(const BitIterator& other) noexcept = default;
+    BL_INLINE_NODEBUG BitIterator& operator=(const BitIterator& other) noexcept = default;
+
+    BL_INLINE_NODEBUG void init(T bitWord) noexcept { _bitWord = bitWord; }
+    BL_INLINE_NODEBUG bool hasNext() const noexcept { return _bitWord != 0; }
 
     BL_INLINE uint32_t next() noexcept {
       BL_ASSERT(_bitWord != 0);
       uint32_t index = countZerosFromStart(_bitWord);
       _bitWord ^= indexAsMask(index);
       return index;
+    }
+  };
+
+  //! Iterates over each bit in a BitWord, but shifts each iterated index by `kBitsPerChunkShift`.
+  //!
+  //! This class is used for very specific needs, currently only necessary on AArch64 targets when it comes to
+  //! SIMD to GP vector mask handling, essentially workarounding the missing x86's `[V]PMOVMSKB` instruction.
+  template<uint32_t kBitsPerChunkShift>
+  class BitChunkIterator {
+  public:
+    T _bitWord;
+
+    BL_INLINE_NODEBUG BitChunkIterator(T bitWord = 0) noexcept
+      : _bitWord(bitWord) {}
+
+    BL_INLINE_NODEBUG BitChunkIterator(const BitChunkIterator& other) noexcept = default;
+    BL_INLINE_NODEBUG BitChunkIterator& operator=(const BitChunkIterator& other) noexcept = default;
+
+    BL_INLINE_NODEBUG void init(T bitWord) noexcept { _bitWord = bitWord; }
+    BL_INLINE_NODEBUG bool hasNext() const noexcept { return _bitWord != 0; }
+
+    BL_INLINE uint32_t next() noexcept {
+      BL_ASSERT(_bitWord != 0);
+      uint32_t index = countZerosFromStart(_bitWord);
+      _bitWord ^= indexAsMask(index);
+      return index >> kBitsPerChunkShift;
     }
   };
 
@@ -368,7 +397,7 @@ struct ParametrizedBitOps {
       _current = bitWord;
     }
 
-    BL_INLINE bool hasNext() const noexcept {
+    BL_INLINE_NODEBUG bool hasNext() const noexcept {
       return _current != T(0);
     }
 
@@ -419,11 +448,8 @@ struct ParametrizedBitOps {
       _xorMask = xorMask;
     }
 
-    BL_INLINE T xorMask() const noexcept { return _xorMask; }
-
-    BL_INLINE bool hasNext() const noexcept {
-      return _current != T(0);
-    }
+    BL_INLINE_NODEBUG T xorMask() const noexcept { return _xorMask; }
+    BL_INLINE_NODEBUG bool hasNext() const noexcept { return _current != T(0); }
 
     BL_INLINE size_t next() noexcept {
       BL_ASSERT(_current != T(0));

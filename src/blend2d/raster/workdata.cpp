@@ -19,6 +19,8 @@ WorkData::WorkData(BLRasterContextImpl* ctxI, WorkerSynchronization* synchroniza
     _batch(nullptr),
     ctxData(),
     clipMode(BL_CLIP_MODE_ALIGNED_RECT),
+    _commandQuantizationShiftAA(0),
+    _commandQuantizationShiftFp(0),
     reserved{},
     _workerId(workerId),
     _bandHeight(0),
@@ -37,30 +39,34 @@ WorkData::~WorkData() noexcept {
 // bl::RasterEngine::WorkData - Initialization
 // ===========================================
 
-BLResult WorkData::initBandData(uint32_t bandHeight, uint32_t bandCount) noexcept {
+BLResult WorkData::initBandData(uint32_t bandHeight, uint32_t bandCount, uint32_t commandQuantizationShift) noexcept {
   // Can only happen if the storage was already allocated.
   if (bandCount <= edgeStorage.bandCapacity()) {
     _bandHeight = bandHeight;
     edgeStorage.initData(edgeStorage.bandEdges(), bandCount, edgeStorage.bandCapacity(), bandHeight);
-    return BL_SUCCESS;
+  }
+  else {
+    size_t allocatedSize = 0;
+    EdgeList<int>* edges = static_cast<EdgeList<int>*>(
+      blZeroAllocatorResize(
+        edgeStorage.bandEdges(),
+        edgeStorage.bandCapacity() * kEdgeListSize,
+        bandCount * kEdgeListSize,
+        &allocatedSize));
+
+    if (BL_UNLIKELY(!edges)) {
+      edgeStorage.reset();
+      return blTraceError(BL_ERROR_OUT_OF_MEMORY);
+    }
+
+    uint32_t bandCapacity = uint32_t(allocatedSize / kEdgeListSize);
+    _bandHeight = bandHeight;
+    edgeStorage.initData(edges, bandCount, bandCapacity, bandHeight);
   }
 
-  size_t allocatedSize = 0;
-  EdgeList<int>* edges = static_cast<EdgeList<int>*>(
-    blZeroAllocatorResize(
-      edgeStorage.bandEdges(),
-      edgeStorage.bandCapacity() * kEdgeListSize,
-      bandCount * kEdgeListSize,
-      &allocatedSize));
+  _commandQuantizationShiftAA = uint8_t(commandQuantizationShift);
+  _commandQuantizationShiftFp = uint8_t(commandQuantizationShift + 8);
 
-  if (BL_UNLIKELY(!edges)) {
-    edgeStorage.reset();
-    return blTraceError(BL_ERROR_OUT_OF_MEMORY);
-  }
-
-  uint32_t bandCapacity = uint32_t(allocatedSize / kEdgeListSize);
-  _bandHeight = bandHeight;
-  edgeStorage.initData(edges, bandCount, bandCapacity, bandHeight);
   return BL_SUCCESS;
 }
 

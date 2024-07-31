@@ -149,7 +149,7 @@ namespace {
 
 #if defined(BL_SIMD_FEATURE_ARRAY_LOOKUP)
 static BL_INLINE SIMD::ArrayLookupResult<PipeLookupCache::N> cacheLookup(const PipeLookupCache& cache, uint32_t signature) noexcept {
-  return SIMD::array_lookup_u32_aligned16<PipeLookupCache::N>(cache._signatures, signature);
+  return SIMD::array_lookup_u32_eq_aligned16<PipeLookupCache::N>(cache._signatures, signature);
 }
 #else
 struct IndexMatch {

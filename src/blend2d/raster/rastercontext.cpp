@@ -2413,9 +2413,14 @@ static BL_INLINE BLResult newStrokeJob(BLRasterContextImpl* ctxI, size_t jobData
 // =============================================================================
 
 template<typename CommandFinalizer>
-static BL_INLINE BLResult enqueueCommand(BLRasterContextImpl* ctxI, RenderCommand* command, RenderFetchDataHeader* fetchData, const CommandFinalizer& commandFinalizer) noexcept {
-  WorkerManager& mgr = ctxI->workerMgr();
+static BL_INLINE BLResult enqueueCommand(
+    BLRasterContextImpl* ctxI,
+    RenderCommand* command,
+    uint8_t qy0,
+    RenderFetchDataHeader* fetchData,
+    const CommandFinalizer& commandFinalizer) noexcept {
 
+  WorkerManager& mgr = ctxI->workerMgr();
   constexpr uint32_t kRetainsStyleFetchDataShift = IntOps::bitShiftOf(uint32_t(RenderCommandFlags::kRetainsStyleFetchData));
 
   if (fetchData->isSolid()) {
@@ -2436,7 +2441,8 @@ static BL_INLINE BLResult enqueueCommand(BLRasterContextImpl* ctxI, RenderComman
   }
 
   commandFinalizer(command);
-  mgr._commandAppender.advance();
+  mgr.commandAppender().initQuantizedY0(qy0);
+  mgr.commandAppender().advance();
   markQueueFullOrExhausted(ctxI, mgr._commandAppender.full());
 
   return BL_SUCCESS;
@@ -2446,6 +2452,8 @@ template<typename JobType, typename JobFinalizer>
 static BL_INLINE BLResult enqueueCommandWithFillJob(
     BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
     size_t jobSize, const BLPoint& originFixed, const JobFinalizer& jobFinalizer) noexcept {
+
+  constexpr uint8_t kNoCoord = kInvalidQuantizedCoordinate;
 
   RenderCommand* command = ctxI->workerMgr->currentCommand();
   JobType* job;
@@ -2457,7 +2465,7 @@ static BL_INLINE BLResult enqueueCommandWithFillJob(
   BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData()));
   BL_PROPAGATE(newFillJob(ctxI, jobSize, &job));
 
-  return enqueueCommand(ctxI, command, ds.fetchData, [&](RenderCommand* command) noexcept {
+  return enqueueCommand(ctxI, command, kNoCoord, ds.fetchData, [&](RenderCommand* command) noexcept {
     command->_payload.analytic.stateSlotIndex = ctxI->workerMgr().nextStateSlotIndex();
 
     WorkerManager& mgr = ctxI->workerMgr();
@@ -2481,13 +2489,15 @@ static BL_INLINE BLResult enqueueCommandWithStrokeJob(
     BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
     size_t jobSize, const BLPoint& originFixed, const JobFinalizer& jobFinalizer) noexcept {
 
+  constexpr uint8_t kNoCoord = kInvalidQuantizedCoordinate;
+
   RenderCommand* command = ctxI->workerMgr->currentCommand();
   JobType* job;
 
   BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData()));
   BL_PROPAGATE(newStrokeJob(ctxI, jobSize, &job));
 
-  return enqueueCommand(ctxI, command, ds.fetchData, [&](RenderCommand* command) noexcept {
+  return enqueueCommand(ctxI, command, kNoCoord, ds.fetchData, [&](RenderCommand* command) noexcept {
     command->_payload.analytic.stateSlotIndex = ctxI->workerMgr().nextStateSlotIndex();
 
     WorkerManager& mgr = ctxI->workerMgr();
@@ -2644,7 +2654,9 @@ BL_INLINE BLResult fillClippedBoxA<kAsync>(BLRasterContextImpl* ctxI, DispatchIn
 
   command->initCommand(di.alpha);
   command->initFillBoxA(boxA);
-  return enqueueCommand(ctxI, command, ds.fetchData, [&](RenderCommand*) noexcept {});
+
+  uint8_t qy0 = uint8_t((boxA.y0) >> ctxI->commandQuantizationShiftAA());
+  return enqueueCommand(ctxI, command, qy0, ds.fetchData, [&](RenderCommand*) noexcept {});
 }
 
 template<RenderingMode kRM>
@@ -2668,7 +2680,9 @@ BL_INLINE BLResult fillClippedBoxU<kAsync>(BLRasterContextImpl* ctxI, DispatchIn
 
   command->initCommand(di.alpha);
   command->initFillBoxU(boxU);
-  return enqueueCommand(ctxI, command, ds.fetchData, [&](RenderCommand*) noexcept {});
+
+  uint8_t qy0 = uint8_t((boxU.y0) >> ctxI->commandQuantizationShiftFp());
+  return enqueueCommand(ctxI, command, qy0, ds.fetchData, [&](RenderCommand*) noexcept {});
 }
 
 template<RenderingMode kRM>
@@ -2687,6 +2701,8 @@ BL_INLINE BLResult fillClippedBoxF<kAsync>(BLRasterContextImpl* ctxI, DispatchIn
   RenderCommand* command = ctxI->workerMgr->currentCommand();
   command->initCommand(di.alpha);
 
+  uint8_t qy0 = uint8_t(boxU.y0 >> ctxI->commandQuantizationShiftFp());
+
   if (isBoxAligned24x8(boxU)) {
     di.addFillType(Pipeline::FillType::kBoxA);
     command->initFillBoxA(BLBoxI(boxU.x0 >> 8, boxU.y0 >> 8, boxU.x1 >> 8, boxU.y1 >> 8));
@@ -2697,7 +2713,7 @@ BL_INLINE BLResult fillClippedBoxF<kAsync>(BLRasterContextImpl* ctxI, DispatchIn
   }
 
   BL_PROPAGATE(ensureFetchAndDispatchData(ctxI, di.signature, ds.fetchData, command->pipeDispatchData()));
-  return enqueueCommand(ctxI, command, ds.fetchData, [&](RenderCommand*) noexcept {});
+  return enqueueCommand(ctxI, command, qy0, ds.fetchData, [&](RenderCommand*) noexcept {});
 }
 
 // bl::RasterEngine - ContextImpl - Internals - Fill All
@@ -2748,6 +2764,8 @@ BL_NOINLINE BLResult fillClippedEdges<kAsync>(BLRasterContextImpl* ctxI, Dispatc
   if (edgeStorage.empty() || edgeStorage.boundingBox().y0 >= edgeStorage.boundingBox().y1)
     return BL_SUCCESS;
 
+  uint8_t qy0 = uint8_t(edgeStorage.boundingBox().y0 >> ctxI->commandQuantizationShiftFp());
+
   di.addFillType(Pipeline::FillType::kAnalytic);
   command->initCommand(di.alpha);
   command->initFillAnalytic(edgeStorage.flattenEdgeLinks(), edgeStorage.boundingBox().y0, fillRule);
@@ -2760,7 +2778,7 @@ BL_NOINLINE BLResult fillClippedEdges<kAsync>(BLRasterContextImpl* ctxI, Dispatc
     return result;
   }
 
-  return enqueueCommand(ctxI, command, ds.fetchData, [&](RenderCommand* command) noexcept {
+  return enqueueCommand(ctxI, command, qy0, ds.fetchData, [&](RenderCommand* command) noexcept {
     command->_payload.analytic.stateSlotIndex = ctxI->workerMgr().nextStateSlotIndex();
   });
 }
@@ -3149,7 +3167,10 @@ BL_NOINLINE BLResult fillClippedBoxMaskedA<kAsync>(
 
   command->initCommand(di.alpha);
   command->initFillBoxMaskA(boxA, mask, maskOffsetI);
-  return enqueueCommand(ctxI, command, ds.fetchData, [&](RenderCommand* command) noexcept {
+
+  uint8_t qy0 = uint8_t(boxA.y0 >> ctxI->commandQuantizationShiftAA());
+
+  return enqueueCommand(ctxI, command, qy0, ds.fetchData, [&](RenderCommand* command) noexcept {
     ObjectInternal::retainImpl<RCMode::kMaybe>(command->_payload.boxMaskA.maskImageI.ptr);
   });
 }
@@ -4173,6 +4194,14 @@ static BL_INLINE uint32_t calculateBandHeight(uint32_t format, const BLSizeI& si
   return bandHeight;
 }
 
+static BL_INLINE uint32_t calculateCommandQuantizationShift(uint32_t bandHeight, uint32_t bandCount) noexcept {
+  uint32_t bandQuantization = IntOps::ctz(bandHeight);
+  uint32_t coordinateQuantization = blMax<uint32_t>(32 - IntOps::clz(bandHeight * bandCount), 8) - 8u;
+
+  // We should never quantize to less than a band height.
+  return blMax(bandQuantization, coordinateQuantization);
+}
+
 static BL_INLINE size_t calculateZeroedMemorySize(uint32_t width, uint32_t height) noexcept {
   size_t alignedWidth = IntOps::alignUp(size_t(width) + 1u + BL_PIPE_PIXELS_PER_ONE_BIT, 16);
 
@@ -4195,6 +4224,7 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
 
   uint32_t bandHeight = calculateBandHeight(format, size, options);
   uint32_t bandCount = (uint32_t(size.h) + bandHeight - 1) >> IntOps::ctz(bandHeight);
+  uint32_t commandQuantizationShift = calculateCommandQuantizationShift(bandHeight, bandCount);
 
   size_t zeroedMemorySize = calculateZeroedMemorySize(uint32_t(size.w), bandHeight);
 
@@ -4209,7 +4239,7 @@ static BLResult attach(BLRasterContextImpl* ctxI, BLImageCore* image, const BLCo
   // Not a real loop, just a scope we can escape early via 'break'.
   do {
     // Step 1: Initialize edge storage of the sync worker.
-    result = ctxI->syncWorkData.initBandData(bandHeight, bandCount);
+    result = ctxI->syncWorkData.initBandData(bandHeight, bandCount, commandQuantizationShift);
     if (result != BL_SUCCESS)
       break;
 

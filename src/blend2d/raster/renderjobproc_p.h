@@ -111,6 +111,19 @@ static BL_INLINE void finalizeGeometryData(WorkData* workData, RenderJob_Geometr
     job->geometryData<BLPath>()->~BLPath();
 }
 
+template<typename Job>
+static BL_INLINE void assignEdges(WorkData* workData, Job* job, EdgeStorage<int>* edgeStorage) noexcept {
+  if (!edgeStorage->empty()) {
+    RenderCommandQueue* commandQueue = job->commandQueue();
+    size_t commandIndex = job->commandIndex();
+    uint8_t qy0 = uint8_t((edgeStorage->boundingBox().y0) >> workData->commandQuantizationShiftFp());
+
+    commandQueue->initQuantizedY0(commandIndex, qy0);
+    commandQueue->at(commandIndex).setAnalyticEdges(edgeStorage);
+    edgeStorage->resetBoundingBox();
+  }
+}
+
 // bl::RasterEngine - Job Processor - Fill Geometry Job
 // ====================================================
 
@@ -124,13 +137,7 @@ static void processFillGeometryJob(WorkData* workData, RenderJob_GeometryOp* job
   BLResult result = addFilledPathEdges(workData, path->view(), accessor.finalTransformFixed(job->originFixed()), accessor.finalTransformFixedType());
 
   if (result == BL_SUCCESS) {
-    EdgeStorage<int>* edgeStorage = &workData->edgeStorage;
-    RenderCommand& command = job->command();
-
-    if (!edgeStorage->empty()) {
-      command.setAnalyticEdges(edgeStorage);
-      edgeStorage->resetBoundingBox();
-    }
+    assignEdges(workData, job, &workData->edgeStorage);
   }
 
   finalizeGeometryData(workData, job);
@@ -168,16 +175,10 @@ static void processFillTextJob(WorkData* workData, RenderJob_TextOp* job) noexce
   if (result == BL_SUCCESS) {
     JobStateAccessor accessor(job);
     prepareEdgeBuilder(workData, accessor.fillState());
+
     result = addFilledGlyphRunEdges(workData, accessor, originFixed, &font, glyphRun);
-  }
-
-  if (result == BL_SUCCESS) {
-    EdgeStorage<int>* edgeStorage = &workData->edgeStorage;
-    RenderCommand& command = job->command();
-
-    if (!edgeStorage->empty()) {
-      command.setAnalyticEdges(edgeStorage);
-      edgeStorage->resetBoundingBox();
+    if (result == BL_SUCCESS) {
+      assignEdges(workData, job, &workData->edgeStorage);
     }
   }
 
@@ -196,13 +197,7 @@ static void processStrokeGeometryJob(WorkData* workData, RenderJob_GeometryOp* j
   prepareEdgeBuilder(workData, accessor.fillState());
 
   if (addStrokedPathEdges(workData, accessor, job->originFixed(), path) == BL_SUCCESS) {
-    EdgeStorage<int>* edgeStorage = &workData->edgeStorage;
-    RenderCommand& command = job->command();
-
-    if (!edgeStorage->empty()) {
-      command.setAnalyticEdges(edgeStorage);
-      edgeStorage->resetBoundingBox();
-    }
+    assignEdges(workData, job, &workData->edgeStorage);
   }
 
   finalizeGeometryData(workData, job);
@@ -240,16 +235,10 @@ static void processStrokeTextJob(WorkData* workData, RenderJob_TextOp* job) noex
   if (result == BL_SUCCESS) {
     JobStateAccessor accessor(job);
     prepareEdgeBuilder(workData, accessor.fillState());
+
     result = addStrokedGlyphRunEdges(workData, accessor, originFixed, &font, glyphRun);
-  }
-
-  if (result == BL_SUCCESS) {
-    EdgeStorage<int>* edgeStorage = &workData->edgeStorage;
-    RenderCommand& command = job->command();
-
-    if (!edgeStorage->empty()) {
-      command.setAnalyticEdges(edgeStorage);
-      edgeStorage->resetBoundingBox();
+    if (result == BL_SUCCESS) {
+      assignEdges(workData, job, &workData->edgeStorage);
     }
   }
 

@@ -282,6 +282,8 @@ public:
   //! \name Command Data
   //! \{
 
+  BL_INLINE_NODEBUG RenderCommandAppender& commandAppender() noexcept { return _commandAppender; }
+
   BL_INLINE_NODEBUG RenderCommand* currentCommand() noexcept { return _commandAppender.currentCommand(); }
   BL_INLINE_NODEBUG uint32_t nextStateSlotIndex() noexcept { return _stateSlotCount++; }
 

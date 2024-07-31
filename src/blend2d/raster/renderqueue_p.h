@@ -22,6 +22,7 @@ struct RenderFetchData;
 struct RenderJob;
 
 static constexpr uint32_t kRenderQueueCapacity = 256;
+static constexpr uint8_t kInvalidQuantizedCoordinate = 0xFFu;
 
 //! A generic queue used to store rendering jobs and other data.
 //!
@@ -90,6 +91,9 @@ public:
   //! Bit-array where each bit represents a valid FetchData in `_data`, that has to be released once the batch is done.
   FixedBitArray<BLBitWord, kRenderQueueCapacity> _fetchDataMarks;
 
+  //! Quantized Y0 coordinate (shifted right by quantizeShiftY).
+  uint8_t _quantizedY0[kRenderQueueCapacity];
+
   //! Array of render commands.
   RenderCommand _data[kRenderQueueCapacity];
 
@@ -103,6 +107,7 @@ public:
   BL_INLINE_NODEBUG void reset() noexcept {
     _size = 0;
     _fetchDataMarks.clearAll();
+    memset(_quantizedY0, 0xFF, sizeof(_quantizedY0));
   }
 
   BL_INLINE_NODEBUG bool empty() const noexcept { return _size == 0; }
@@ -118,14 +123,19 @@ public:
   BL_INLINE_NODEBUG RenderCommand* end() noexcept { return _data + _size; }
   BL_INLINE_NODEBUG const RenderCommand* end() const noexcept { return _data + _size; }
 
-  BL_INLINE RenderCommand& at(size_t index) noexcept {
-    BL_ASSERT(index < _size);
-    return _data[index];
+  BL_INLINE RenderCommand& at(size_t commandIndex) noexcept {
+    BL_ASSERT(commandIndex < kRenderQueueCapacity);
+    return _data[commandIndex];
   }
 
-  BL_INLINE const RenderCommand& at(size_t index) const noexcept {
-    BL_ASSERT(index < _size);
-    return _data[index];
+  BL_INLINE const RenderCommand& at(size_t commandIndex) const noexcept {
+    BL_ASSERT(commandIndex < kRenderQueueCapacity);
+    return _data[commandIndex];
+  }
+
+  BL_INLINE void initQuantizedY0(size_t commandIndex, uint8_t qy0) noexcept {
+    BL_ASSERT(commandIndex < kRenderQueueCapacity);
+    _quantizedY0[commandIndex] = qy0;
   }
 
   //! \}
@@ -220,17 +230,27 @@ public:
   BL_INLINE_NODEBUG bool full() const noexcept { return _index == kRenderQueueCapacity; }
   BL_INLINE_NODEBUG void done(RenderCommandQueue& queue) noexcept { queue._size = index(); }
 
-  BL_INLINE_NODEBUG RenderCommandQueue* queue() const noexcept { return _queue; }
-  BL_INLINE_NODEBUG RenderCommand* currentCommand() const noexcept { return _queue->data() + _index; }
-
-  BL_INLINE void markFetchData() noexcept { _queue->_fetchDataMarks.setAt(_index); }
-  BL_INLINE void markFetchData(uint32_t v) noexcept { _queue->_fetchDataMarks.fillAt(_index, v); }
-
   //! Used when the data of the next command were already assigned to just advance the pointer. This should be
   //! only used by command queue, other queues should use `append()`.
   BL_INLINE void advance() noexcept {
     BL_ASSERT(!full());
     _index++;
+  }
+
+  BL_INLINE RenderCommand* command(size_t i) const noexcept {
+    BL_ASSERT(i < kRenderQueueCapacity);
+    return _queue->data() + i;
+  }
+
+  BL_INLINE_NODEBUG RenderCommandQueue* queue() const noexcept { return _queue; }
+
+  BL_INLINE_NODEBUG RenderCommand* currentCommand() const noexcept { return _queue->data() + _index; }
+
+  BL_INLINE void markFetchData() noexcept { _queue->_fetchDataMarks.setAt(_index); }
+  BL_INLINE void markFetchData(uint32_t v) noexcept { _queue->_fetchDataMarks.fillAt(_index, v); }
+
+  BL_INLINE void initQuantizedY0(uint8_t qy0) noexcept {
+    _queue->initQuantizedY0(_index, qy0);
   }
 
   //! \}

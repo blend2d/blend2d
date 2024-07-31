@@ -21,6 +21,11 @@ namespace bl {
 namespace RasterEngine {
 namespace CommandProcAsync {
 
+enum class CommandStatus : uint32_t {
+  kContinue = 0,
+  kDone = 1
+};
+
 struct SlotData {
   struct Analytic {
     const EdgeVector<int>* edges;
@@ -146,7 +151,7 @@ public:
   //! \}
 };
 
-static BL_INLINE bool fillBoxA(ProcData& procData, const RenderCommand& command) noexcept {
+static BL_INLINE CommandStatus fillBoxA(ProcData& procData, const RenderCommand& command) noexcept {
   int y0 = blMax(command.boxI().y0, int(procData.bandY0()));
   int y1 = blMin(command.boxI().y1, int(procData.bandY1()));
 
@@ -166,10 +171,10 @@ static BL_INLINE bool fillBoxA(ProcData& procData, const RenderCommand& command)
     }
   }
 
-  return command.boxI().y1 <= int(procData.bandY1());
+  return CommandStatus(command.boxI().y1 <= int(procData.bandY1()));
 }
 
-static BL_INLINE bool fillBoxU(ProcData& procData, const RenderCommand& command) noexcept {
+static BL_INLINE CommandStatus fillBoxU(ProcData& procData, const RenderCommand& command) noexcept {
   int y0 = blMax(command.boxI().y0, int(procData.bandFixedY0()));
   int y1 = blMin(command.boxI().y1, int(procData.bandFixedY1()));
 
@@ -191,10 +196,10 @@ static BL_INLINE bool fillBoxU(ProcData& procData, const RenderCommand& command)
     }
   }
 
-  return command.boxI().y1 <= int(procData.bandFixedY1());
+  return CommandStatus(command.boxI().y1 <= int(procData.bandFixedY1()));
 }
 
-static bool fillBoxMaskA(ProcData& procData, const RenderCommand& command) noexcept {
+static CommandStatus fillBoxMaskA(ProcData& procData, const RenderCommand& command) noexcept {
   const RenderCommand::FillBoxMaskA& payload = command._payload.boxMaskA;
   const BLBoxI& boxI = payload.boxI;
 
@@ -229,10 +234,10 @@ static bool fillBoxMaskA(ProcData& procData, const RenderCommand& command) noexc
     }
   }
 
-  return boxI.y1 <= int(procData.bandY1());
+  return CommandStatus(boxI.y1 <= int(procData.bandY1()));
 }
 
-static bool fillAnalytic(ProcData& procData, const RenderCommand& command, bool isInitialBand) noexcept {
+static CommandStatus fillAnalytic(ProcData& procData, const RenderCommand& command, int32_t prevBandFy1, int32_t nextBandFy0) noexcept {
   // Rasterizer options to use - do not change unless you are improving the existing rasterizers.
   constexpr uint32_t kRasterizerOptions =
     AnalyticRasterizer::kOptionBandOffset     |
@@ -247,28 +252,35 @@ static bool fillAnalytic(ProcData& procData, const RenderCommand& command, bool 
   const EdgeVector<int>* edges;
   AnalyticActiveEdge<int>* active;
 
-  if (isInitialBand) {
-    edges = command.analyticEdges();
-    active = nullptr;
+  // TODO:
+  blUnused(nextBandFy0);
 
-    // Everything clipped out, or all lines horizontal, etc...
-    if (!edges)
-      return true;
+  {
+    int32_t cmdFy0 = command._payload.analytic.fixedY0;
+    bool isFirstBand = prevBandFy1 < cmdFy0;
 
-    // Don't do anything if we haven't advanced enough.
-    if (command._payload.analytic.fixedY0 >= int(bandFixedY1)) {
+    if (isFirstBand) {
+      // If it's the first band we have to initialize the state. This must be done only once per command.
+      edges = command.analyticEdges();
+      active = nullptr;
+
       procState.edges = edges;
       procState.active = active;
-      return false;
-    }
-  }
-  else {
-    // Don't do anything if we haven't advanced enough.
-    if (command._payload.analytic.fixedY0 >= int(bandFixedY1))
-      return false;
 
-    edges = procState.edges;
-    active = procState.active;
+      // Everything clipped out, or all lines horizontal, etc...
+      if (!edges)
+        return CommandStatus::kDone;
+    }
+    else {
+      // If the state has been already initialized, we have to take the remaining `edges` and `active` ones from it.
+      edges = procState.edges;
+      active = procState.active;
+    }
+
+    // Don't do anything if we haven't advanced enough.
+    if (uint32_t(cmdFy0) >= bandFixedY1) {
+      return CommandStatus::kContinue;
+    }
   }
 
   uint32_t bandY0 = procData.bandY0();
@@ -379,7 +391,7 @@ SaveState:
       if (BL_UNLIKELY(!pooled)) {
         // Failed to allocate memory for the current edge.
         procData.workData()->accumulateErrorFlag(BL_CONTEXT_ERROR_FLAG_OUT_OF_MEMORY);
-        return true;
+        return CommandStatus::kDone;
       }
       pooled->next = nullptr;
     }
@@ -455,10 +467,10 @@ SaveState:
     }
   }
 
-  return !edges && !active;
+  return CommandStatus(!edges && !active);
 }
 
-static bool processCommand(ProcData& procData, const RenderCommand& command, bool isInitialBand) noexcept {
+static CommandStatus processCommand(ProcData& procData, const RenderCommand& command, int32_t prevBandFy1, int32_t nextBandFy0) noexcept {
   switch (command.type()) {
     case RenderCommandType::kFillBoxA:
       return fillBoxA(procData, command);
@@ -467,13 +479,13 @@ static bool processCommand(ProcData& procData, const RenderCommand& command, boo
       return fillBoxU(procData, command);
 
     case RenderCommandType::kFillAnalytic:
-      return fillAnalytic(procData, command, isInitialBand);
+      return fillAnalytic(procData, command, prevBandFy1, nextBandFy0);
 
     case RenderCommandType::kFillBoxMaskA:
       return fillBoxMaskA(procData, command);
 
     default:
-      return true;
+      return CommandStatus::kDone;
   }
 }
 
