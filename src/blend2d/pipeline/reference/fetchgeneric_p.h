@@ -491,8 +491,8 @@ struct FetchPatternAlignedBlit : public FetchNonSolid {
     uint32_t tx = uint32_t(pattern->simple.tx);
     uint32_t ty = uint32_t(pattern->simple.ty);
 
-    stride -= intptr_t(uintptr_t(rectWidth) * kSrcBPP);
     pixelPtr += intptr_t(yPos - ty) * stride + intptr_t(xPos - tx) * kSrcBPP;
+    stride -= intptr_t(uintptr_t(rectWidth) * kSrcBPP);
   }
 
   BL_INLINE void rectStartX(uint32_t xPos) noexcept {
