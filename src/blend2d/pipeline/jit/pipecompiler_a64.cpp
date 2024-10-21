@@ -16,7 +16,7 @@ namespace JIT {
 
 using GPExt = PipeCompiler::GPExt;
 using ASIMDExt = PipeCompiler::ASIMDExt;
-using Inst = a64::Inst;
+namespace Inst { using namespace a64::Inst; }
 
 // bl::Pipeline::PipeCompiler - Construction & Destruction
 // =======================================================
