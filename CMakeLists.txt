@@ -1,17 +1,8 @@
-cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.19 FATAL_ERROR)
 
-cmake_policy(PUSH)
-
-if(POLICY CMP0063)
-  cmake_policy(SET CMP0063 NEW) # Honor visibility properties.
-endif()
-
-if(POLICY CMP0092)
-  cmake_policy(SET CMP0092 NEW) # Don't add -W3 warning level by default.
-endif()
-
-# Don't create a project if it was already created by another CMakeLists.txt.
-# This allows one library to embed another library without a project collision.
+# Don't create a project if it was already created by another CMakeLists.txt. This makes
+# it possible to support both add_subdirectory() and include() ways of using Blend2D as
+# a dependency.
 if (NOT CMAKE_PROJECT_NAME OR "${CMAKE_PROJECT_NAME}" STREQUAL "blend2d")
   project(blend2d C CXX)
 endif()
@@ -526,20 +517,16 @@ function(blend2d_add_target target target_type)
     set_target_properties(${target} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$(TargetDir).")
   else()
     add_library(${target} ${target_type} ${X_SOURCES})
-    set_target_properties(${target} PROPERTIES DEFINE_SYMBOL "")
   endif()
 
-  target_link_libraries(${target} PRIVATE ${X_LIBRARIES})
-
-  # target_link_options was added in cmake v3.13, don't use it for now...
-  foreach(link_flag ${BLEND2D_SANITIZE_LFLAGS})
-    set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS " ${link_flag}")
-  endforeach()
-
-  target_compile_features(${target} PUBLIC cxx_std_11)
-  set_property(TARGET ${target} PROPERTY CXX_EXTENSIONS ON)
-  set_property(TARGET ${target} PROPERTY CXX_VISIBILITY_PRESET hidden)
+  set_target_properties(${target}
+    PROPERTIES
+      DEFINE_SYMBOL ""
+      CXX_VISIBILITY_PRESET hidden)
   target_compile_options(${target} PRIVATE ${X_CFLAGS} ${BLEND2D_SANITIZE_CFLAGS} $<IF:$<CONFIG:Debug>,${X_CFLAGS_DBG},${X_CFLAGS_REL}>)
+  target_compile_features(${target} PUBLIC cxx_std_11)
+  target_link_options(${target} PRIVATE ${BLEND2D_SANITIZE_LFLAGS})
+  target_link_libraries(${target} PRIVATE ${X_LIBRARIES})
 
   if ("${target_type}" STREQUAL "TEST")
     add_test(NAME ${target} COMMAND ${target})
@@ -1051,17 +1038,10 @@ if (NOT BLEND2D_EMBED)
   target_include_directories(blend2d BEFORE INTERFACE
                              $<BUILD_INTERFACE:${BLEND2D_INCLUDE_DIRS}>
                              $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+  target_link_options(blend2d PRIVATE ${BLEND2D_NO_STDCXX_LFLAGS})
 
-  # target_link_options was added in cmake 3.13, which doesn't work for us.
-  # target_link_options(blend2d PRIVATE ${BLEND2D_NO_STDCXX_LFLAGS})
-  foreach(link_flag ${BLEND2D_NO_STDCXX_LFLAGS})
-    set_property(TARGET blend2d APPEND_STRING PROPERTY LINK_FLAGS " ${link_flag}")
-  endforeach()
-
-  # Add blend2d::blend2d alias.
+  # Create a blend2d::blend2d alias.
   add_library(blend2d::blend2d ALIAS blend2d)
-  # TODO: [CMAKE] Deprecated alias - we use projectname::libraryname convention now.
-  add_library(Blend2D::Blend2D ALIAS blend2d)
 
   # Add Blend2D install instructions (library and public headers).
   if (NOT BLEND2D_NO_INSTALL)
@@ -1228,5 +1208,3 @@ if (NOT BLEND2D_EMBED)
 
   endif()
 endif()
-
-cmake_policy(POP)
