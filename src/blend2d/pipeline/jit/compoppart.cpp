@@ -1161,8 +1161,9 @@ void CompOpPart::cMaskInitA8(const Gp& sm_, const Vec& vm_) noexcept {
   bool hasMask = sm.isValid() || vm.isValid();
   if (hasMask) {
     // SM must be 32-bit, so make it 32-bit if it's 64-bit for any reason.
-    if (sm.isValid())
+    if (sm.isValid()) {
       sm = sm.r32();
+    }
 
     if (vm.isValid() && !sm.isValid()) {
       sm = pc->newGp32("sm");
@@ -1455,7 +1456,12 @@ void CompOpPart::cMaskInitA8(const Gp& sm_, const Vec& vm_) noexcept {
   else {
     if (sm.isValid() && !vm.isValid() && maxPixels() > 1) {
       vm = pc->newVec("vm");
-      pc->v_broadcast_u16z(vm, sm);
+      if (coverageFormat() == PixelCoverageFormat::kPacked) {
+        pc->v_broadcast_u8z(vm, sm);
+      }
+      else {
+        pc->v_broadcast_u16z(vm, sm);
+      }
       _mask->vm = vm;
     }
 
