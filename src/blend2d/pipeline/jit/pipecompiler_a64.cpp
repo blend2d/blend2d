@@ -199,10 +199,12 @@ Vec PipeCompiler::_newVecConst(const void* c, bool isUniqueConst) noexcept {
   Vec vReg;
   const char* specialConstName = nullptr;
 
-  if (c == commonTable.swizu8_dither_rgba64_lo.data)
+  if (c == commonTable.swizu8_dither_rgba64_lo.data) {
     specialConstName = "swizu8_dither_rgba64_lo";
-  else if (c == commonTable.swizu8_dither_rgba64_hi.data)
+  }
+  else if (c == commonTable.swizu8_dither_rgba64_hi.data) {
     specialConstName = "swizu8_dither_rgba64_hi";
+  }
 
   if (specialConstName) {
     vReg = newVec(vecWidth(), specialConstName);
@@ -243,13 +245,16 @@ Vec PipeCompiler::_newVecConst(const void* c, bool isUniqueConst) noexcept {
 
 Vec PipeCompiler::simdConst16B(const void* data16) noexcept {
   size_t n = _vecConstsEx.size();
-  for (size_t i = 0; i < n; i++)
-    if (memcmp(_vecConstsEx[i].data, data16, 16) == 0)
+
+  for (size_t i = 0; i < n; i++) {
+    if (memcmp(_vecConstsEx[i].data, data16, 16) == 0) {
       return Vec(OperandSignature{a64::VecV::kSignature}, _vecConstsEx[i].vRegId);
+    }
+  }
 
   Vec vReg = newVec(VecWidth::k128, "const");
-
   VecConstEx entry;
+
   memcpy(entry.data, data16, 16);
   entry.vRegId = vReg.id();
   _vecConstsEx.append(zoneAllocator(), entry);
@@ -274,8 +279,9 @@ Mem PipeCompiler::tmpStack(StackId id, uint32_t size) noexcept {
   blUnused(size);
 
   Mem& stack = _tmpStack[size_t(id)];
-  if (!stack.baseId())
+  if (!stack.baseId()) {
     stack = cc->newStack(32, 16, "tmpStack");
+  }
   return stack;
 }
 
@@ -286,15 +292,42 @@ void PipeCompiler::embedJumpTable(const Label* jumpTable, size_t jumpTableSize, 
   static const uint8_t zeros[8] {};
 
   for (size_t i = 0; i < jumpTableSize; i++) {
-    if (jumpTable[i].isValid())
+    if (jumpTable[i].isValid()) {
       cc->embedLabelDelta(jumpTable[i], jumpTableBase, entrySize);
-    else
+    }
+    else {
       cc->embed(zeros, entrySize);
+    }
   }
 }
 
 // bl::Pipeline::PipeCompiler - General Purpose Instructions - Utilities
 // =====================================================================
+
+struct MemInst {
+  uint16_t instId;
+  uint16_t memSize;
+};
+
+static BL_NOINLINE void gp_emit_mem_op(PipeCompiler* pc, const Gp& r, Mem m, MemInst ii) noexcept {
+  AsmCompiler* cc = pc->cc;
+  InstId instId = ii.instId;
+
+  if (m.hasIndex() && m.hasShift()) {
+    // AArch64 limitation: shift can be the same size as the size of the read operation - HWord << 1, Word << 2, etc...
+    // Other shift operations are not supported at the architectural level, so we have to perform it explicitly.
+    uint32_t memSize = ii.memSize ? uint32_t(ii.memSize) : r.size();
+    uint32_t shift = m.shift();
+
+    if (memSize != (1u << shift)) {
+      Gp tmp = pc->newGpPtr("@mem_addr");
+      cc->add(tmp, m.baseReg().as<Gp>(), m.indexReg().as<Gp>(), a64::Shift(m.shiftOp(), shift));
+      m = a64::ptr(tmp);
+    }
+  }
+
+  cc->emit(instId, r, m);
+}
 
 static constexpr Gp gp_zero_regs[2] = { a64::wzr, a64::xzr };
 
@@ -313,16 +346,19 @@ static BL_NOINLINE Gp gp_force_reg(PipeCompiler* pc, const Operand_& op, const G
     return reg;
   }
 
-  if (op.isImm() && op.as<Imm>().value() == 0)
+  if (op.isImm() && op.as<Imm>().value() == 0) {
     return gp_zero_as(ref);
+  }
 
   AsmCompiler* cc = pc->cc;
   reg = pc->newSimilarReg(ref, "@tmp");
 
-  if (op.isMem())
-    cc->ldr(reg, op.as<Mem>());
-  else
+  if (op.isMem()) {
+    gp_emit_mem_op(pc, reg, op.as<Mem>(), MemInst{uint16_t(Inst::kIdLdr), uint16_t(reg.size())});
+  }
+  else {
     cc->mov(reg, op.as<Imm>());
+  }
   return reg;
 }
 
@@ -391,19 +427,23 @@ public:
 
     switch (op) {
       case OpcodeCond::kAssignAnd: {
-        if (b.isImm() && a64::Utils::isLogicalImm(b.as<Imm>().valueAs<uint64_t>(), aGp.size() * 8))
+        if (b.isImm() && a64::Utils::isLogicalImm(b.as<Imm>().valueAs<uint64_t>(), aGp.size() * 8)) {
           cc->emit(info.instId, aGp, aGp, b.as<Imm>());
-        else
+        }
+        else {
           cc->emit(info.instId, aGp, aGp, gp_force_reg(pc, b, aGp));
+        }
         return;
       }
 
       case OpcodeCond::kAssignAdd:
       case OpcodeCond::kAssignSub: {
-        if (b.isImm() && a64::Utils::isAddSubImm(b.as<Imm>().valueAs<uint64_t>()))
+        if (b.isImm() && a64::Utils::isAddSubImm(b.as<Imm>().valueAs<uint64_t>())) {
           cc->emit(info.instId, aGp, aGp, b.as<Imm>());
-        else
+        }
+        else {
           cc->emit(info.instId, aGp, aGp, gp_force_reg(pc, b, aGp));
+        }
         return;
       }
 
@@ -441,18 +481,22 @@ public:
       }
 
       case OpcodeCond::kTest: {
-        if (b.isImm() && a64::Utils::isLogicalImm(b.as<Imm>().valueAs<uint64_t>(), aGp.size() * 8))
+        if (b.isImm() && a64::Utils::isLogicalImm(b.as<Imm>().valueAs<uint64_t>(), aGp.size() * 8)) {
           cc->emit(info.instId, aGp, b.as<Imm>());
-        else
+        }
+        else {
           cc->emit(info.instId, aGp, gp_force_reg(pc, b, aGp));
+        }
         return;
       }
 
       case OpcodeCond::kCompare: {
-        if (b.isImm() && a64::Utils::isAddSubImm(b.as<Imm>().valueAs<uint64_t>()))
+        if (b.isImm() && a64::Utils::isAddSubImm(b.as<Imm>().valueAs<uint64_t>())) {
           cc->emit(info.instId, aGp, b.as<Imm>());
-        else
+        }
+        else {
           cc->emit(info.instId, aGp, gp_force_reg(pc, b, aGp));
+        }
         return;
       }
 
@@ -473,40 +517,42 @@ public:
 // ================================================================
 
 void PipeCompiler::emit_mov(const Gp& dst, const Operand_& src) noexcept {
-  if (src.isMem())
-    cc->ldr(dst, src.as<Mem>());
-  else
+  if (src.isMem()) {
+    gp_emit_mem_op(this, dst, src.as<Mem>(), MemInst{uint16_t(Inst::kIdLdr), uint16_t(dst.size())});
+  }
+  else {
     cc->emit(Inst::kIdMov, dst, src);
+  }
 }
 
 void PipeCompiler::emit_m(OpcodeM op, const Mem& m_) noexcept {
-  static constexpr uint16_t st_inst[] = {
-    Inst::kIdStr,  // kStoreZeroReg
-    Inst::kIdStrb, // kStoreZeroU8
-    Inst::kIdStrh, // kStoreZeroU16
-    Inst::kIdStr,  // kStoreZeroU32
-    Inst::kIdStr   // kStoreZeroU64
+  static constexpr MemInst st_inst[] = {
+    { Inst::kIdStr , 0 }, // kStoreZeroReg
+    { Inst::kIdStrb, 1 }, // kStoreZeroU8
+    { Inst::kIdStrh, 2 }, // kStoreZeroU16
+    { Inst::kIdStr , 4 }, // kStoreZeroU32
+    { Inst::kIdStr , 8 }  // kStoreZeroU64
   };
 
-  Gp zero = a64::wzr;
-  if (op == OpcodeM::kStoreZeroReg || op == OpcodeM::kStoreZeroU64)
-    zero = a64::xzr;
-  cc->emit(st_inst[size_t(op)], zero, m_);
+  Gp zero = gp_zero_regs[size_t(op == OpcodeM::kStoreZeroReg || op == OpcodeM::kStoreZeroU64)];
+  MemInst ii = st_inst[size_t(op)];
+
+  gp_emit_mem_op(this, zero, m_, ii);
 }
 
 void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept {
-  static constexpr uint16_t ld_inst[] = {
-    Inst::kIdLdr,   // kLoadReg
-    Inst::kIdLdrsb, // kLoadI8
-    Inst::kIdLdrb,  // kLoadU8
-    Inst::kIdLdrsh, // kLoadI16
-    Inst::kIdLdrh,  // kLoadU16
-    Inst::kIdLdr,   // kLoadI32
-    Inst::kIdLdr,   // kLoadU32
-    Inst::kIdLdr,   // kLoadI64
-    Inst::kIdLdr,   // kLoadU64
-    Inst::kIdLdrb,  // kLoadInsertU8
-    Inst::kIdLdrh,  // kLoadInsertU16
+  static constexpr MemInst ld_inst[] = {
+    { Inst::kIdLdr  , 0 }, // kLoadReg
+    { Inst::kIdLdrsb, 1 }, // kLoadI8
+    { Inst::kIdLdrb , 1 }, // kLoadU8
+    { Inst::kIdLdrsh, 2 }, // kLoadI16
+    { Inst::kIdLdrh , 2 }, // kLoadU16
+    { Inst::kIdLdr  , 4 }, // kLoadI32
+    { Inst::kIdLdr  , 4 }, // kLoadU32
+    { Inst::kIdLdr  , 8 }, // kLoadI64
+    { Inst::kIdLdr  , 8 }, // kLoadU64
+    { Inst::kIdLdrb , 1 }, // kLoadMergeU8
+    { Inst::kIdLdrh , 2 }  // kLoadMergeU16
   };
 
   static constexpr uint32_t ld_32_mask =
@@ -516,8 +562,8 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
 
   Gp r(dst);
   Mem m(src);
+  MemInst ii = ld_inst[size_t(op)];
 
-  InstId instId = ld_inst[size_t(op)];
   switch (op) {
     case OpcodeRM::kLoadReg:
     case OpcodeRM::kLoadI8:
@@ -528,20 +574,22 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
     case OpcodeRM::kLoadU32:
     case OpcodeRM::kLoadI64:
     case OpcodeRM::kLoadU64: {
-      if (op == OpcodeRM::kLoadI32 && dst.isGpX())
-        instId = Inst::kIdLdrsw;
+      if (op == OpcodeRM::kLoadI32 && dst.isGpX()) {
+        ii.instId = uint16_t(Inst::kIdLdrsw);
+      }
 
-      if ((ld_32_mask >> uint32_t(op)) & 1)
+      if ((ld_32_mask >> uint32_t(op)) & 1) {
         r = r.w();
+      }
 
-      cc->emit(instId, r, m);
+      gp_emit_mem_op(this, r, m, ii);
       return;
     }
 
     case OpcodeRM::kLoadMergeU8:
     case OpcodeRM::kLoadMergeU16: {
       Gp tmp = newSimilarReg(r);
-      cc->emit(instId, tmp.r32(), m);
+      gp_emit_mem_op(this, tmp.r32(), m, ii);
       cc->orr(r, r, tmp);
       return;
     }
@@ -1759,8 +1807,28 @@ static BL_INLINE void vec_set_type_and_index(Vec& vec, ElementSize sz, uint32_t 
   vec.setElementIndex(idx);
 }
 
-static BL_NOINLINE void vec_load_mem(PipeCompiler* pc, const Vec& dst, const Mem& src, uint32_t memSize = 0) noexcept {
+static BL_NOINLINE void vec_load_mem(PipeCompiler* pc, const Vec& dst, Mem src, uint32_t memSize) noexcept {
   AsmCompiler* cc = pc->cc;
+
+  if (src.hasIndex() && src.hasShift()) {
+    // AArch64 limitation: index shift can be the same size as the size of the read operation, so H << 1, S << 2,
+    // etc... Other shift values are not supported at the architectural level, so we have to precalculate the address.
+    uint32_t shift = src.shift();
+    if (memSize != (1u << shift) || src.hasOffset()) {
+      Gp base = src.baseReg().as<Gp>();
+      Gp index = src.indexReg().as<Gp>();
+
+      if (src.isPreIndex()) {
+        cc->add(base, base, index, a64::Shift(src.shiftOp(), shift));
+        src = a64::ptr(base, src.offsetLo32());
+      }
+      else {
+        Gp tmp = pc->newGpPtr("@mem_addr");
+        cc->add(tmp, base, index, a64::Shift(src.shiftOp(), shift));
+        src = a64::ptr(tmp, src.offsetLo32());
+      }
+    }
+  }
 
   switch (memSize) {
     case  1: cc->ldr(dst.b(), src); break;
@@ -1768,7 +1836,6 @@ static BL_NOINLINE void vec_load_mem(PipeCompiler* pc, const Vec& dst, const Mem
     case  4: cc->ldr(dst.s(), src); break;
     case  8: cc->ldr(dst.d(), src); break;
     case 16: cc->ldr(dst.q(), src); break;
-
     default:
       BL_NOT_REACHED();
   }
@@ -1812,7 +1879,7 @@ static BL_NOINLINE Vec vec_mov(PipeCompiler* pc, const Vec& dst_, const Operand_
   }
 
   if (src_.isMem()) {
-    cc->ldr(dst, src_.as<Mem>());
+    vec_load_mem(pc, dst, src_.as<Mem>(), dst.size());
     return dst;
   }
 
@@ -3302,7 +3369,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
     case OpcodeVM::kLoadN_U64:
     case OpcodeVM::kLoadN_F32:
     case OpcodeVM::kLoadN_F64: {
-      cc->ldr(dst.q(), src);
+      vec_load_mem(this, dst.q(), src, 16);
       return;
     }
 
