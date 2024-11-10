@@ -291,7 +291,7 @@ static void fetchPredicatedVec8_1To3(PipeCompiler* pc, const Vec& dVec, Gp sPtr,
     add_shifted(pc, acc, tmp, 16);
 
     pc->add(mid, sPtr, 2);
-    pc->umin(mid, sPtr, end);
+    pc->umin(mid, mid, end);
     pc->load_u8(tmp, mem_ptr(mid, -1));
     add_shifted(pc, acc, tmp, 8);
   }
