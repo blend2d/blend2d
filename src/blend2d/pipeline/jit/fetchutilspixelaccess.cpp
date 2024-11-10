@@ -243,6 +243,31 @@ static void add_shifted(PipeCompiler* pc, const Gp& dst, const Gp& src, uint32_t
 };
 
 static void fetchPredicatedVec8_1To3(PipeCompiler* pc, const Vec& dVec, Gp sPtr, AdvanceMode advanceMode, const Gp& count) noexcept {
+#if defined(BL_JIT_ARCH_A64)
+  // Predicated load of 1-3 elements can be simplified to the following on AArch64:
+  //   - load the first element at [0]    (always valid).
+  //   - load the last element at [i - 1] (always valid, possibly overlapping with the first element if count==2).
+  //   - load the mid element by using CSINC instruction (incrementing when count >= 2).
+  a64::Compiler* cc = pc->cc;
+
+  Gp mid = pc->newGpPtr("@mid");
+  Gp last = pc->newGpPtr("@last");
+
+  cc->cmp(count, 2);
+  cc->cinc(mid, sPtr, CondCode::kUnsignedGE);
+
+  if (advanceMode == AdvanceMode::kAdvance) {
+    cc->ld1r(dVec.b16(), a64::ptr_post(sPtr, count.cloneAs(sPtr)));
+  }
+  else {
+    cc->ldr(dVec.b(), a64::ptr(sPtr));
+  }
+
+  cc->ld1(dVec.b(1), a64::ptr(mid));
+  cc->cinc(last, mid, CondCode::kUnsignedGT);
+  cc->ld1(dVec.b(2), a64::ptr(last));
+
+#else
   Gp acc = pc->newGp32("@acc");
   Gp tmp = pc->newGp32("@tmp");
   Gp mid = pc->newGpPtr("@mid");
@@ -272,6 +297,7 @@ static void fetchPredicatedVec8_1To3(PipeCompiler* pc, const Vec& dVec, Gp sPtr,
   }
 
   pc->s_mov_u32(dVec, acc);
+#endif
 }
 
 static void fetchPredicatedVec8_4To7(PipeCompiler* pc, const Vec& dVec, Gp sPtr, AdvanceMode advanceMode, const Gp& count) noexcept {
@@ -1003,10 +1029,12 @@ void storePredicatedVec8(PipeCompiler* pc, const Gp& dPtr_, const VecArray& sVec
   BL_ASSERT(n >= 2u);
 
 #if defined(BL_JIT_ARCH_X86)
-  if (n <= 16u)
+  if (n <= 16u) {
     sVec[0] = sVec[0].v128();
-  else if (n <= 32u && sVec.size() == 1u)
+  }
+  else if (n <= 32u && sVec.size() == 1u) {
     sVec[0] = sVec[0].v256();
+  }
 
   if (pc->hasAVX512()) {
     storePredicatedVec8_AVX512(pc, dPtr_, sVec, n, advanceMode, predicate);
@@ -1111,8 +1139,8 @@ void storePredicatedVec8(PipeCompiler* pc, const Gp& dPtr_, const VecArray& sVec
     Label L_StoreSkip4 = pc->newLabel();
     pc->j(L_StoreSkip4, bt_z(count, 2));
     pc->v_storeu32(dMem, vLast);
-    pc->shiftOrRotateRight(vLast, vLast, 4);
     pc->add(dPtr, dPtr, 4);
+    pc->shiftOrRotateRight(vLast, vLast, 4);
     pc->bind(L_StoreSkip4);
 
     remaining -= 4u;
@@ -1125,8 +1153,8 @@ void storePredicatedVec8(PipeCompiler* pc, const Gp& dPtr_, const VecArray& sVec
     Label L_StoreSkip2 = pc->newLabel();
     pc->j(L_StoreSkip2, bt_z(count, 1));
     pc->store_u16(dMem, gpLast);
-    pc->shr(gpLast, gpLast, 16);
     pc->add(dPtr, dPtr, 2);
+    pc->shr(gpLast, gpLast, 16);
     pc->bind(L_StoreSkip2);
 
     remaining -= 2u;
@@ -3233,11 +3261,8 @@ void fillAlphaChannel(PipeCompiler* pc, Pixel& p) noexcept {
 void storePixelsAndAdvance(PipeCompiler* pc, const Gp& dPtr, Pixel& p, PixelCount n, uint32_t bpp, Alignment alignment, PixelPredicate& predicate) noexcept {
   Mem dMem = mem_ptr(dPtr);
 
-  blUnused(predicate);
-
   switch (bpp) {
     case 1: {
-#if defined(BL_JIT_ARCH_X86)
       if (!predicate.empty()) {
         // Predicated pixel count must be greater than 1!
         BL_ASSERT(n != 1);
@@ -3245,9 +3270,7 @@ void storePixelsAndAdvance(PipeCompiler* pc, const Gp& dPtr, Pixel& p, PixelCoun
         satisfyPixels(pc, p, PixelFlags::kPA | PixelFlags::kImmutable);
         storePredicatedVec8(pc, dPtr, p.pa, n.value(), AdvanceMode::kAdvance, predicate);
       }
-      else
-#endif // BL_JIT_ARCH_X86
-      {
+      else {
         if (n == 1) {
           satisfyPixels(pc, p, PixelFlags::kSA | PixelFlags::kImmutable);
           pc->store_u8(dMem, p.sa);

@@ -768,6 +768,7 @@ struct FillData {
       maskCmd[0].initVMaskA8WithGA(ax0, ax1, maskPtr + kMaskScanlineWidth * 0u, 0);
       maskCmd[1].initEnd();
       maskCmd += m0x1 ? 2u : 0u;
+
       mask.box.y0 += int(m0x1 == 0);
 
       maskCmd[0].initVMaskA8WithGA(ax0, ax1, maskPtr + kMaskScanlineWidth * 1u, 0);

@@ -82,8 +82,8 @@ BL_NOINLINE void xFilterBilinearA8_1x(
   Mem row1m;
 
   if (alphaOffset != 0) {
-    Gp pixSrcRow0a = pc->newSimilarReg(pixSrcRow0, "!row0_alpha");
-    Gp pixSrcRow1a = pc->newSimilarReg(pixSrcRow1, "!row1_alpha");
+    Gp pixSrcRow0a = pc->newSimilarReg(pixSrcRow0, "@row0_alpha");
+    Gp pixSrcRow1a = pc->newSimilarReg(pixSrcRow1, "@row1_alpha");
 
     pc->add(pixSrcRow0a, pixSrcRow0, alphaOffset);
     pc->add(pixSrcRow1a, pixSrcRow1, alphaOffset);
