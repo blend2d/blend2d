@@ -13,6 +13,7 @@
 #include "../../pipeline/jit/fetchpatternpart_p.h"
 #include "../../pipeline/jit/fetchpixelptrpart_p.h"
 #include "../../pipeline/jit/fetchsolidpart_p.h"
+#include "../../pipeline/jit/fetchutilscoverage_p.h"
 #include "../../pipeline/jit/fetchutilsinlineloops_p.h"
 #include "../../pipeline/jit/fetchutilspixelaccess_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
@@ -935,7 +936,7 @@ enum class CompOpLoopStrategy : uint32_t {
   kLoopNTailN
 };
 
-void CompOpPart::vMaskGenericLoop(Gp& i, const Gp& dPtr, const Gp& mPtr, FetchUtils::GlobalAlpha& ga, const Label& done) noexcept {
+void CompOpPart::vMaskGenericLoop(Gp& i, const Gp& dPtr, const Gp& mPtr, GlobalAlpha* ga, const Label& done) noexcept {
   CompOpLoopStrategy strategy = CompOpLoopStrategy::kLoop1;
 
   if (maxPixels() >= 8) {
@@ -950,13 +951,8 @@ void CompOpPart::vMaskGenericLoop(Gp& i, const Gp& dPtr, const Gp& mPtr, FetchUt
       Label L_Loop1 = pc->newLabel();
       Label L_Done = done.isValid() ? done : pc->newLabel();
 
-      Reg gaSinglePixel;
-
-      if (ga.isInitialized())
-        gaSinglePixel = pixelType() == PixelType::kA8 ? ga.sm().as<Reg>() : ga.vm().as<Reg>();
-
       pc->bind(L_Loop1);
-      vMaskGenericStep(dPtr, PixelCount(1), mPtr, gaSinglePixel);
+      vMaskGenericStep(dPtr, PixelCount(1), mPtr, ga);
       pc->j(L_Loop1, sub_nz(i, 1));
 
       if (done.isValid())
@@ -981,19 +977,19 @@ void CompOpPart::vMaskGenericLoop(Gp& i, const Gp& dPtr, const Gp& mPtr, FetchUt
       pc->j(L_SkipN, sub_c(i, n));
 
       pc->bind(L_LoopN);
-      vMaskGenericStep(dPtr, PixelCount(n), mPtr, ga.vm());
+      vMaskGenericStep(dPtr, PixelCount(n), mPtr, ga);
       pc->j(L_LoopN, sub_nc(i, n));
 
       pc->bind(L_SkipN);
       pc->j(L_Done, add_z(i, n));
 
       pc->j(L_Skip4, ucmp_lt(i, 4));
-      vMaskGenericStep(dPtr, PixelCount(4), mPtr, ga.vm());
+      vMaskGenericStep(dPtr, PixelCount(4), mPtr, ga);
       pc->j(L_Done, sub_z(i, 4));
 
       pc->bind(L_Skip4);
       PixelPredicate predicate(n, PredicateFlags::kNeverFull, i);
-      vMaskGenericStep(dPtr, PixelCount(4), mPtr, ga.vm(), predicate);
+      vMaskGenericStep(dPtr, PixelCount(4), mPtr, ga, predicate);
       pc->bind(L_Done);
 
       postfetchN();
@@ -1018,14 +1014,14 @@ void CompOpPart::vMaskGenericLoop(Gp& i, const Gp& dPtr, const Gp& mPtr, FetchUt
       pc->j(L_SkipN, sub_c(i, n));
 
       pc->bind(L_LoopN);
-      vMaskGenericStep(dPtr, PixelCount(n), mPtr, ga.vm());
+      vMaskGenericStep(dPtr, PixelCount(n), mPtr, ga);
       pc->j(L_LoopN, sub_nc(i, n));
 
       pc->bind(L_SkipN);
       pc->j(L_Done, add_z(i, n));
 
       PixelPredicate predicate(n, PredicateFlags::kNeverFull, i);
-      vMaskGenericStep(dPtr, PixelCount(n), mPtr, ga.vm(), predicate);
+      vMaskGenericStep(dPtr, PixelCount(n), mPtr, ga, predicate);
 
       pc->bind(L_Done);
 
@@ -1040,12 +1036,12 @@ void CompOpPart::vMaskGenericLoop(Gp& i, const Gp& dPtr, const Gp& mPtr, FetchUt
   }
 }
 
-void CompOpPart::vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, const Reg& ga) noexcept {
+void CompOpPart::vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, GlobalAlpha* ga) noexcept {
   PixelPredicate noPredicate;
   vMaskGenericStep(dPtr, n, mPtr, ga, noPredicate);
 }
 
-void CompOpPart::vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, const Reg& ga, PixelPredicate& predicate) noexcept {
+void CompOpPart::vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, GlobalAlpha* ga, PixelPredicate& predicate) noexcept {
   switch (pixelType()) {
     case PixelType::kA8: {
       if (n == 1u) {
@@ -1055,10 +1051,8 @@ void CompOpPart::vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, 
         pc->load_u8(sm, mem_ptr(mPtr));
         pc->add(mPtr, mPtr, n.value());
 
-        if (ga.isValid()) {
-          BL_ASSERT(ga.isGp());
-
-          pc->mul(sm, sm, ga.as<Gp>().r32());
+        if (ga) {
+          pc->mul(sm, sm, ga->sa().r32());
           pc->div_255_u32(sm, sm);
         }
 
@@ -1067,22 +1061,16 @@ void CompOpPart::vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, 
         FetchUtils::storePixelsAndAdvance(pc, dPtr, dPix, n, 1, Alignment(1), pc->emptyPredicate());
       }
       else {
-        // Global alpha must be either invalid or a vector register, to apply it. It cannot be scalar.
-        BL_ASSERT(!ga.isValid() || ga.isVec());
-
         VecArray vm;
-        FetchUtils::fetchMaskA8AndAdvance(pc, vm, mPtr, n, pixelType(), coverageFormat(), ga.as<Vec>(), predicate);
+        FetchUtils::fetchMaskA8(pc, vm, mPtr, n, pixelType(), coverageFormat(), AdvanceMode::kAdvance, ga, predicate);
         vMaskProcStoreAdvance(dPtr, n, vm, PixelCoverageFlags::kNone, Alignment(1), predicate);
       }
       break;
     }
 
     case PixelType::kRGBA32: {
-      // Global alpha must be either invalid or a vector register, to apply it. It cannot be scalar.
-      BL_ASSERT(!ga.isValid() || ga.isVec());
-
       VecArray vm;
-      FetchUtils::fetchMaskA8AndAdvance(pc, vm, mPtr, n, pixelType(), coverageFormat(), ga.as<Vec>(), predicate);
+      FetchUtils::fetchMaskA8(pc, vm, mPtr, n, pixelType(), coverageFormat(), AdvanceMode::kAdvance, ga, predicate);
       vMaskProcStoreAdvance(dPtr, n, vm, PixelCoverageFlags::kNone, Alignment(1), predicate);
       break;
     }

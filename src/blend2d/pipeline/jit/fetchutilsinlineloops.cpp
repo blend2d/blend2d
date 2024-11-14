@@ -485,7 +485,7 @@ void inlineFillRectLoop(
 
   BL_ASSERT(IntOps::isPowerOf2(itemSize));
   uint32_t sizeShift = IntOps::ctz(itemSize);
-  uint32_t sizeMask = itemSize  - 1u;
+  uint32_t sizeMask = itemSize - 1u;
 
   uint32_t storeAlignment = src.size();
   uint32_t storeAlignmentMask = storeAlignment - 1;
@@ -774,7 +774,7 @@ void inlineFillRectLoop(
     Label L_ScanlineLoop2x = pc->newLabel();
     Gp dstAlt = pc->newGpPtr("dstAlt");
 
-    pc->sub(endIndexA, endIndexA, itemSize * 4);
+    pc->sub(endIndexA, endIndexA, 16);
 
     pc->j(L_ScanlineLoop2x, test_z(h, 0x1));
     pc->v_storeu128(mem_ptr(dstPtr, endIndexA), src);
@@ -912,7 +912,7 @@ void inlineFillRectLoop(
       Gp dstAlt = pc->newGpPtr("dstAlt");
 
       pc->j(L_Width_LT_2, ucmp_lt(w, 2));
-      pc->sub(endIndexA, endIndexA, 4);
+      pc->sub(endIndexA, endIndexA, 2);
 
       pc->j(L_ScanlineLoop2x, test_z(h, 0x1));
       pc->store_u16(mem_ptr(dstPtr), src32b);

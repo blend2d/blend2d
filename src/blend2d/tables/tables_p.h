@@ -264,6 +264,13 @@ struct BL_ALIGN_TYPE(CommonTable, 64) {
 
 #if BL_TARGET_ARCH_X86
 
+  VecConst512<uint64_t> permu8_a8_to_rgba32_pc {{
+    0x0101010100000000u, 0x0303030302020202u,
+    0x0505050504040404u, 0x0707070706060606u,
+    0x0909090908080808u, 0x0B0B0B0B0A0A0A0Au,
+    0x0D0D0D0D0C0C0C0Cu, 0x0F0F0F0F0E0E0E0Eu
+  }};
+
   VecConst512<uint64_t> permu8_a8_to_rgba32_uc {{
     0xff00ff00ff00ff00u, 0xff01ff01ff01ff01u,
     0xff02ff02ff02ff02u, 0xff03ff03ff03ff03u,

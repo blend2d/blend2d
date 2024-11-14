@@ -41,6 +41,8 @@ class FillPart;
 class FillBoxAPart;
 class FillAnalyticPart;
 
+class GlobalAlpha;
+
 //! Pipeline generator loop-type, used by fillers & compositors.
 enum class CMaskLoopType : uint8_t {
   //! Not in a cmask loop mode.
@@ -193,14 +195,14 @@ public:
     uc.reset();
   }
 
-  BL_INLINE PixelType type() const noexcept { return _type; }
+  BL_INLINE_NODEBUG PixelType type() const noexcept { return _type; }
   BL_INLINE void setType(PixelType type) noexcept { _type = type; }
 
-  BL_INLINE bool isA8() const noexcept { return _type == PixelType::kA8; }
-  BL_INLINE bool isRGBA32() const noexcept { return _type == PixelType::kRGBA32; }
-  BL_INLINE bool isRGBA64() const noexcept { return _type == PixelType::kRGBA64; }
+  BL_INLINE_NODEBUG bool isA8() const noexcept { return _type == PixelType::kA8; }
+  BL_INLINE_NODEBUG bool isRGBA32() const noexcept { return _type == PixelType::kRGBA32; }
+  BL_INLINE_NODEBUG bool isRGBA64() const noexcept { return _type == PixelType::kRGBA64; }
 
-  BL_INLINE const char* name() const noexcept { return _name; }
+  BL_INLINE_NODEBUG const char* name() const noexcept { return _name; }
 
   BL_NOINLINE void setName(const char* name) noexcept {
     size_t len = strnlen(name, BL_ARRAY_SIZE(_name) - 2);
@@ -213,11 +215,11 @@ public:
     }
   }
 
-  BL_INLINE PixelFlags flags() const noexcept { return _flags; }
+  BL_INLINE_NODEBUG PixelFlags flags() const noexcept { return _flags; }
   //! Tests whether all members are immutable (solid fills).
-  BL_INLINE bool isImmutable() const noexcept { return blTestFlag(_flags, PixelFlags::kImmutable); }
+  BL_INLINE_NODEBUG bool isImmutable() const noexcept { return blTestFlag(_flags, PixelFlags::kImmutable); }
   //! Tests whether this pixel was a partial fetch (the last pixel could be missing).
-  BL_INLINE bool isLastPartial() const noexcept { return blTestFlag(_flags, PixelFlags::kLastPartial); }
+  BL_INLINE_NODEBUG bool isLastPartial() const noexcept { return blTestFlag(_flags, PixelFlags::kLastPartial); }
 
   BL_INLINE void makeImmutable() noexcept { _flags |= PixelFlags::kImmutable; }
 
@@ -225,7 +227,7 @@ public:
     _flags = (_flags & ~PixelFlags::kImmutable) | (immutable ? PixelFlags::kImmutable : PixelFlags::kNone);
   }
 
-  BL_INLINE PixelCount count() const noexcept { return _count; }
+  BL_INLINE_NODEBUG PixelCount count() const noexcept { return _count; }
   BL_INLINE void setCount(PixelCount count) noexcept { _count = count; }
 };
 

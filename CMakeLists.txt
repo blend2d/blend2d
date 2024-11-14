@@ -295,6 +295,7 @@ set(BLEND2D_SRC_LIST
   blend2d/pipeline/jit/fetchsolidpart.cpp
   blend2d/pipeline/jit/fetchsolidpart_p.h
   blend2d/pipeline/jit/fetchutilsbilinear_p.h
+  blend2d/pipeline/jit/fetchutilscoverage.cpp
   blend2d/pipeline/jit/fetchutilscoverage_p.h
   blend2d/pipeline/jit/fetchutilsinlineloops.cpp
   blend2d/pipeline/jit/fetchutilsinlineloops_p.h

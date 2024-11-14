@@ -400,6 +400,7 @@ public:
   BL_INLINE_NODEBUG OpArray even() const noexcept { return OpArray(*this, 0, 2, _size); }
   BL_INLINE_NODEBUG OpArray odd() const noexcept { return OpArray(*this, _size > 1, 2, _size); }
   BL_INLINE_NODEBUG OpArray half() const noexcept { return OpArray(*this, 0, 1, (_size + 1) / 2); }
+  BL_INLINE_NODEBUG OpArray every_nth(uint32_t n) const noexcept { return OpArray(*this, 0, n, _size); }
 
   //! Returns a new vector consisting of either even (from == 0) or odd
   //! (from == 1) elements. It's like calling `even()` and `odd()`, but
@@ -444,8 +445,8 @@ public:
   }
 
 protected:
-  BL_INLINE_NODEBUG VecArray(const VecArray& other, uint32_t n, uint32_t from, uint32_t inc) noexcept
-    : OpArray(other, n, from, inc) {}
+  BL_INLINE_NODEBUG VecArray(const VecArray& other, uint32_t from, uint32_t inc, uint32_t limit) noexcept
+    : OpArray(other, from, inc, limit) {}
 
 public:
   BL_INLINE_NODEBUG void init(const Vec& op0) noexcept {
@@ -514,6 +515,7 @@ public:
   BL_INLINE_NODEBUG VecArray odd() const noexcept { return VecArray(*this, _size > 1, 2, _size); }
   BL_INLINE_NODEBUG VecArray even_odd(uint32_t from) const noexcept { return VecArray(*this, _size > 1 ? from : 0, 2, _size); }
   BL_INLINE_NODEBUG VecArray half() const noexcept { return VecArray(*this, 0, 1, (_size + 1) / 2); }
+  BL_INLINE_NODEBUG VecArray every_nth(uint32_t n) const noexcept { return VecArray(*this, 0, n, _size); }
 
   BL_INLINE_NODEBUG void truncate(uint32_t newSize) noexcept {
     _size = blMin(_size, newSize);

@@ -340,8 +340,7 @@ void FillMaskPart::compile(const PipeFunction& fn) noexcept {
   Gp maskValue = pc->newGpPtr("maskValue");           // Reg.
   Gp maskAdvance = pc->newGpPtr("maskAdvance");       // Reg/Tmp
 
-  FetchUtils::GlobalAlpha ga;                         // Reg/Mem.
-  FetchUtils::GlobalAlpha gaNotApplied;               // None.
+  GlobalAlpha ga;
 
   // Prolog
   // ------
@@ -361,7 +360,7 @@ void FillMaskPart::compile(const PipeFunction& fn) noexcept {
   pc->load(cmdPtr, mem_ptr(fillData, BL_OFFSET_OF(FillData, mask.maskCommandData)));
 
   // Initialize global alpha.
-  ga.initFromMem(pc, mem_ptr(fillData, BL_OFFSET_OF(FillData, mask.alpha)), compOpPart()->coverageFormat());
+  ga.initFromMem(pc, mem_ptr(fillData, BL_OFFSET_OF(FillData, mask.alpha)));
 
   // y = fillData->box.y1 - fillData->box.y0;
   pc->sub(y, mem_ptr(fillData, BL_OFFSET_OF(FillData, mask.box.y1)), y);
@@ -450,10 +449,10 @@ void FillMaskPart::compile(const PipeFunction& fn) noexcept {
   pc->mem_add(mem_ptr(cmdPtr, BL_OFFSET_OF(MaskCommand, _value.ptr)), maskAdvance);
 
   pc->j(L_VMaskA8WithoutGA, cmp_eq(cmdType, uint32_t(MaskCommandType::kVMaskA8WithoutGA)));
-  compOpPart()->vMaskGenericLoop(i, dstPtr, maskValue, gaNotApplied, L_ProcessNext);
+  compOpPart()->vMaskGenericLoop(i, dstPtr, maskValue, nullptr, L_ProcessNext);
 
   pc->bind(L_VMaskA8WithoutGA);
-  compOpPart()->vMaskGenericLoop(i, dstPtr, maskValue, ga, L_ProcessNext);
+  compOpPart()->vMaskGenericLoop(i, dstPtr, maskValue, &ga, L_ProcessNext);
 
   // CMask Command
   // -------------
@@ -566,8 +565,10 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
   Label L_CLoop_Init = pc->newLabel();
 
   Label L_VTail_Init;
-  if (maxPixels >= 4)
+
+  if (maxPixels >= 4) {
     L_VTail_Init = pc->newLabel();
+  }
 
   Label L_Scanline_Done0 = pc->newLabel();
   Label L_Scanline_Done1 = pc->newLabel();
@@ -1059,8 +1060,9 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
   }
 
 #if defined(BL_JIT_ARCH_X86)
-  if (!pc->hasAVX2() && coverageFormat == PixelCoverageFormat::kUnpacked)
+  if (!pc->hasAVX2() && coverageFormat == PixelCoverageFormat::kUnpacked) {
     pc->v_swizzle_u32x4(m[0], m[0], swizzle(0, 0, 0, 0));    //   m0 = [_0 a0 _0 a0 _0 a0 _0 a0|_0 a0 _0 a0 _0 a0 _0 a0]
+  }
 #else
   if (coverageFormat == PixelCoverageFormat::kPacked)
     pc->v_broadcast_u8(m[0], m[0]);                          //   m0 = [a0 a0 a0 a0 a0 a0 a0 a0|a0 a0 a0 a0 a0 a0 a0 a0]
