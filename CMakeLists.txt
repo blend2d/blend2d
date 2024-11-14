@@ -1113,7 +1113,7 @@ if (NOT BLEND2D_EMBED)
     foreach(test_context_app bl_test_context_simple
                              bl_test_context_mt
                              bl_test_context_jit)
-      blend2d_add_target(${test_context_app} TEST
+      blend2d_add_target(${test_context_app} EXECUTABLE
                          SOURCES test/${test_context_app}.cpp
                                  test/bl_test_cmdline.h
                                  test/bl_test_context_baseapp.cpp
@@ -1124,7 +1124,30 @@ if (NOT BLEND2D_EMBED)
                          CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
     endforeach()
 
-    blend2d_add_target(bl_test_image_io TEST
+    add_test(NAME bl_test_context_simple
+             COMMAND bl_test_context_simple "--count=100" "--comp-op=all" "--style=random")
+
+    set(max_diff_2_styles gradient-radial gradient-radial-dither gradient-conic gradient-conic-dither)
+    foreach(style solid gradient-linear gradient-linear-dither pattern-aligned pattern-fx pattern-fy
+                  pattern-fx-fy pattern-affine-nearest pattern-affine-bilinear ${max_diff_2_styles})
+      if("${style}" IN_LIST max_diff_2_styles)
+          set(max_diff 2)
+      else()
+          set(max_diff 0)
+      endif()
+      add_test(NAME "bl_test_context_jit-${style}"
+               COMMAND bl_test_context_jit "--count=200" "--simd-level=all" "--comp-op=all"
+                       "--opacity-op=all" "--style=${style}" "--max-diff=${max_diff}" "--quiet")
+    endforeach()
+
+    foreach(thread_count 2 3 4)
+      set(test_args "--count=5000" "--thread-count=${thread_count}"
+                    "--comp-op=random" "--opacity-op=random" "--style=random")
+      add_test(NAME "bl_test_context_mt-${thread_count}"      COMMAND bl_test_context_mt ${test_args} )
+      add_test(NAME "bl_test_context_mt-${thread_count}-sync" COMMAND bl_test_context_mt ${test_args} "--flush-sync" )
+    endforeach()
+
+    blend2d_add_target(bl_test_image_io EXECUTABLE
                        SOURCES test/bl_test_image_io.cpp
                                test/bl_test_imageutils.h
                                test/bl_test_performance_timer.h
@@ -1167,7 +1190,7 @@ if (NOT BLEND2D_EMBED)
     )
 
     foreach(sample ${BLEND2D_SAMPLES_CXX})
-      blend2d_add_target(${sample} EXECUTABLE
+      blend2d_add_target(${sample} TEST
                          SOURCES test/${sample}.cpp
                          LIBRARIES blend2d::blend2d
                          CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
@@ -1177,7 +1200,7 @@ if (NOT BLEND2D_EMBED)
     # Since this is just examples we won't do anything here that could break some
     # setups.
     foreach(sample ${BLEND2D_SAMPLES_CAPI})
-      blend2d_add_target(${sample} EXECUTABLE
+      blend2d_add_target(${sample} TEST
                          SOURCES test/${sample}.c
                          LIBRARIES blend2d::blend2d
                          CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
