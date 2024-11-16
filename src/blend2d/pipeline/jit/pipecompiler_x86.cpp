@@ -932,16 +932,24 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
         else {
           if (!dstIsA)
             cc->mov(dst, a);
-          cc->add(dst, b);
+
+          if (b.value() == 128) {
+            cc->sub(dst, -128);
+          }
+          else {
+            cc->add(dst, b);
+          }
         }
         return;
       }
 
       case OpcodeRRR::kSub: {
-        if (!dstIsA)
+        if (!dstIsA) {
           lea(dst, x86::ptr(a, int32_t(0u - b.valueAs<uint32_t>())));
-        else
+        }
+        else {
           cc->sub(dst, b);
+        }
         return;
       }
 
@@ -2274,7 +2282,10 @@ static constexpr OpcodeVInfo opcodeInfo3V[size_t(OpcodeVVV::kMaxValue) + 1] = {
   DEFINE_OP(kIdPackusdw   , 2, kSSE4_1, kIdVpackusdw      , kAVX        , 0, 0, kNone, 0, 0x00u, kNone, k32, 0, kNA), // kPacksI32_U16.
   DEFINE_OP(kIdPshufb     , 2, kSSSE3 , kIdVpshufb        , kAVX        , 0, 0, kNone, 0, 0x00u, kNone, k8 , 0, kNA), // kSwizzlev_U8.
 
-  DEFINE_OP(kIdNone       , 0, kIntrin, kIdVpermb         , kAVX512_VBMI, 0, 0, kNone, 0, 0x00u, kNone, k8 , 0, kNA)  // kPermuteU8.
+  DEFINE_OP(kIdNone       , 0, kIntrin, kIdVpermb         , kAVX512_VBMI, 0, 0, kNone, 0, 0x00u, kNone, k8 , 0, kNA), // kPermuteU8.
+  DEFINE_OP(kIdNone       , 0, kIntrin, kIdVpermw         , kAVX512     , 0, 0, kNone, 0, 0x00u, kNone, k16, 0, kNA), // kPermuteU16.
+  DEFINE_OP(kIdNone       , 0, kIntrin, kIdVpermd         , kAVX512     , 0, 0, kNone, 0, 0x00u, kNone, k32, 0, kNA), // kPermuteU32.
+  DEFINE_OP(kIdNone       , 0, kIntrin, kIdVpermq         , kAVX512     , 0, 0, kNone, 0, 0x00u, kNone, k64, 0, kNA)  // kPermuteU64.
 };
 
 static constexpr OpcodeVInfo opcodeInfo3VI[size_t(OpcodeVVVI::kMaxValue) + 1] = {
@@ -2326,179 +2337,182 @@ struct OpcodeVMInfo {
   uint32_t reserved1    : 6;
   uint32_t cvt          : 5;
   uint32_t memSize      : 8;
-  uint32_t reserved2    : 6;
+  uint32_t memSizeShift : 3;
+  uint32_t reserved2    : 3;
 
   //! \}
 };
 
-#define DEFINE_OP(sseInstId, avxInstId, cvt, memSize) \
-  OpcodeVMInfo {                                      \
-    Inst::sseInstId,                                  \
-    Inst::avxInstId,                                  \
-    0,                                                \
-    uint8_t(WideningOp::cvt),                         \
-    memSize,                                          \
-    0                                                 \
+#define DEFINE_OP(sseInstId, avxInstId, cvt, memSize, memSizeShift) \
+  OpcodeVMInfo {                                                    \
+    Inst::sseInstId,                                                \
+    Inst::avxInstId,                                                \
+    0,                                                              \
+    uint8_t(WideningOp::cvt),                                       \
+    memSize,                                                        \
+    memSizeShift,                                                   \
+    0                                                               \
   }
 
 static constexpr OpcodeVMInfo opcodeInfo2VM[size_t(OpcodeVM::kMaxValue) + 1] = {
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  1), // kLoad8.
-  DEFINE_OP(kIdNone          , kIdVmovsh         , kNone    ,  2), // kLoad16_U16.
-  DEFINE_OP(kIdMovd          , kIdVmovd          , kNone    ,  4), // kLoad32_U32.
-  DEFINE_OP(kIdMovss         , kIdVmovss         , kNone    ,  4), // kLoad32_F32.
-  DEFINE_OP(kIdMovq          , kIdVmovq          , kNone    ,  8), // kLoad64_U32.
-  DEFINE_OP(kIdMovq          , kIdVmovq          , kNone    ,  8), // kLoad64_U64.
-  DEFINE_OP(kIdMovq          , kIdVmovq          , kNone    ,  8), // kLoad64_F32.
-  DEFINE_OP(kIdMovsd         , kIdVmovsd         , kNone    ,  8), // kLoad64_F64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16), // kLoad128_U32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16), // kLoad128_U64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16), // kLoad128_F32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16), // kLoad128_F64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32), // kLoad256_U32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32), // kLoad256_U64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32), // kLoad256_F32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32), // kLoad256_F64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64), // kLoad512_U32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64), // kLoad512_U64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64), // kLoad512_F32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64), // kLoad512_F64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0), // kLoadN_U32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0), // kLoadN_U64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0), // kLoadN_F32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0), // kLoadN_F64.
-  DEFINE_OP(kIdPmovzxbq      , kIdVpmovzxbq      , kU8ToU64 ,  2), // kLoadCvt16_U8ToU64.
-  DEFINE_OP(kIdPmovzxbq      , kIdVpmovzxbq      , kU8ToU64 ,  4), // kLoadCvt32_U8ToU64.
-  DEFINE_OP(kIdPmovzxbq      , kIdVpmovzxbq      , kU8ToU64 ,  8), // kLoadCvt64_U8ToU64.
-  DEFINE_OP(kIdPmovsxbw      , kIdVpmovsxbw      , kI8ToI16 ,  4), // kLoadCvt32_I8ToI16.
-  DEFINE_OP(kIdPmovzxbw      , kIdVpmovzxbw      , kU8ToU16 ,  4), // kLoadCvt32_U8ToU16.
-  DEFINE_OP(kIdPmovsxbd      , kIdVpmovsxbd      , kI8ToI32 ,  4), // kLoadCvt32_I8ToI32.
-  DEFINE_OP(kIdPmovzxbd      , kIdVpmovzxbd      , kU8ToU32 ,  4), // kLoadCvt32_U8ToU32.
-  DEFINE_OP(kIdPmovsxwd      , kIdVpmovsxwd      , kI16ToI32,  4), // kLoadCvt32_I16ToI32.
-  DEFINE_OP(kIdPmovzxwd      , kIdVpmovzxwd      , kU16ToU32,  4), // kLoadCvt32_U16ToU32.
-  DEFINE_OP(kIdPmovsxdq      , kIdVpmovsxdq      , kI32ToI64,  4), // kLoadCvt32_I32ToI64.
-  DEFINE_OP(kIdPmovzxdq      , kIdVpmovzxdq      , kU32ToU64,  4), // kLoadCvt32_U32ToU64.
-  DEFINE_OP(kIdPmovsxbw      , kIdVpmovsxbw      , kI8ToI16 ,  8), // kLoadCvt64_I8ToI16.
-  DEFINE_OP(kIdPmovzxbw      , kIdVpmovzxbw      , kU8ToU16 ,  8), // kLoadCvt64_U8ToU16.
-  DEFINE_OP(kIdPmovsxbd      , kIdVpmovsxbd      , kI8ToI32 ,  8), // kLoadCvt64_I8ToI32.
-  DEFINE_OP(kIdPmovzxbd      , kIdVpmovzxbd      , kU8ToU32 ,  8), // kLoadCvt64_U8ToU32.
-  DEFINE_OP(kIdPmovsxwd      , kIdVpmovsxwd      , kI16ToI32,  8), // kLoadCvt64_I16ToI32.
-  DEFINE_OP(kIdPmovzxwd      , kIdVpmovzxwd      , kU16ToU32,  8), // kLoadCvt64_U16ToU32.
-  DEFINE_OP(kIdPmovsxdq      , kIdVpmovsxdq      , kI32ToI64,  8), // kLoadCvt64_I32ToI64.
-  DEFINE_OP(kIdPmovzxdq      , kIdVpmovzxdq      , kU32ToU64,  8), // kLoadCvt64_U32ToU64.
-  DEFINE_OP(kIdNone          , kIdVpmovsxbw      , kI8ToI16 , 16), // kLoadCvt128_I8ToI16.
-  DEFINE_OP(kIdNone          , kIdVpmovzxbw      , kU8ToU16 , 16), // kLoadCvt128_U8ToU16.
-  DEFINE_OP(kIdNone          , kIdVpmovsxbd      , kI8ToI32 , 16), // kLoadCvt128_I8ToI32.
-  DEFINE_OP(kIdNone          , kIdVpmovzxbd      , kU8ToU32 , 16), // kLoadCvt128_U8ToU32.
-  DEFINE_OP(kIdNone          , kIdVpmovsxwd      , kI16ToI32, 16), // kLoadCvt128_I16ToI32.
-  DEFINE_OP(kIdNone          , kIdVpmovzxwd      , kU16ToU32, 16), // kLoadCvt128_U16ToU32.
-  DEFINE_OP(kIdNone          , kIdVpmovsxdq      , kI32ToI64, 16), // kLoadCvt128_I32ToI64.
-  DEFINE_OP(kIdNone          , kIdVpmovzxdq      , kU32ToU64, 16), // kLoadCvt128_U32ToU64.
-  DEFINE_OP(kIdNone          , kIdVpmovsxbw      , kI8ToI16 , 32), // kLoadCvt256_I8ToI16.
-  DEFINE_OP(kIdNone          , kIdVpmovzxbw      , kU8ToU16 , 32), // kLoadCvt256_U8ToU16.
-  DEFINE_OP(kIdNone          , kIdVpmovsxwd      , kI16ToI32, 32), // kLoadCvt256_I16ToI32.
-  DEFINE_OP(kIdNone          , kIdVpmovzxwd      , kU16ToU32, 32), // kLoadCvt256_U16ToU32.
-  DEFINE_OP(kIdNone          , kIdVpmovsxdq      , kI32ToI64, 32), // kLoadCvt256_I32ToI64.
-  DEFINE_OP(kIdNone          , kIdVpmovzxdq      , kU32ToU64, 32), // kLoadCvt256_U32ToU64.
-  DEFINE_OP(kIdPmovzxbq      , kIdVpmovzxbq      , kU8ToU64 ,  0), // kLoadCvtN_U8ToU64.
-  DEFINE_OP(kIdPmovsxbw      , kIdVpmovsxbw      , kI8ToI16 ,  0), // kLoadCvtN_I8ToI16.
-  DEFINE_OP(kIdPmovzxbw      , kIdVpmovzxbw      , kU8ToU16 ,  0), // kLoadCvtN_U8ToU16.
-  DEFINE_OP(kIdPmovsxbd      , kIdVpmovsxbd      , kI8ToI32 ,  0), // kLoadCvtN_I8ToI32.
-  DEFINE_OP(kIdPmovzxbd      , kIdVpmovzxbd      , kU8ToU32 ,  0), // kLoadCvtN_U8ToU32.
-  DEFINE_OP(kIdPmovsxwd      , kIdVpmovsxwd      , kI16ToI32,  0), // kLoadCvtN_I16ToI32.
-  DEFINE_OP(kIdPmovzxwd      , kIdVpmovzxwd      , kU16ToU32,  0), // kLoadCvtN_U16ToU32.
-  DEFINE_OP(kIdPmovsxdq      , kIdVpmovsxdq      , kI32ToI64,  0), // kLoadCvtN_I32ToI64.
-  DEFINE_OP(kIdPmovzxdq      , kIdVpmovzxdq      , kU32ToU64,  0), // kLoadCvtN_U32ToU64.
-  DEFINE_OP(kIdPinsrb        , kIdVpinsrb        , kNone    ,  1), // kLoadInsertU8.
-  DEFINE_OP(kIdPinsrw        , kIdVpinsrw        , kNone    ,  2), // kLoadInsertU16.
-  DEFINE_OP(kIdPinsrd        , kIdVpinsrd        , kNone    ,  4), // kLoadInsertU32.
-  DEFINE_OP(kIdPinsrq        , kIdVpinsrq        , kNone    ,  8), // kLoadInsertU64.
-  DEFINE_OP(kIdInsertps      , kIdVinsertps      , kNone    ,  4), // kLoadInsertF32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  8), // kLoadInsertF32x2.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  8)  // kLoadInsertF64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  1, 0), // kLoad8.
+  DEFINE_OP(kIdNone          , kIdVmovsh         , kNone    ,  2, 0), // kLoad16_U16.
+  DEFINE_OP(kIdMovd          , kIdVmovd          , kNone    ,  4, 0), // kLoad32_U32.
+  DEFINE_OP(kIdMovss         , kIdVmovss         , kNone    ,  4, 0), // kLoad32_F32.
+  DEFINE_OP(kIdMovq          , kIdVmovq          , kNone    ,  8, 0), // kLoad64_U32.
+  DEFINE_OP(kIdMovq          , kIdVmovq          , kNone    ,  8, 0), // kLoad64_U64.
+  DEFINE_OP(kIdMovq          , kIdVmovq          , kNone    ,  8, 0), // kLoad64_F32.
+  DEFINE_OP(kIdMovsd         , kIdVmovsd         , kNone    ,  8, 0), // kLoad64_F64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16, 0), // kLoad128_U32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16, 0), // kLoad128_U64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16, 0), // kLoad128_F32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16, 0), // kLoad128_F64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32, 0), // kLoad256_U32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32, 0), // kLoad256_U64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32, 0), // kLoad256_F32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32, 0), // kLoad256_F64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64, 0), // kLoad512_U32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64, 0), // kLoad512_U64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64, 0), // kLoad512_F32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64, 0), // kLoad512_F64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0, 0), // kLoadN_U32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0, 0), // kLoadN_U64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0, 0), // kLoadN_F32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0, 0), // kLoadN_F64.
+  DEFINE_OP(kIdPmovzxbq      , kIdVpmovzxbq      , kU8ToU64 ,  2, 3), // kLoadCvt16_U8ToU64.
+  DEFINE_OP(kIdPmovzxbq      , kIdVpmovzxbq      , kU8ToU64 ,  4, 3), // kLoadCvt32_U8ToU64.
+  DEFINE_OP(kIdPmovzxbq      , kIdVpmovzxbq      , kU8ToU64 ,  8, 3), // kLoadCvt64_U8ToU64.
+  DEFINE_OP(kIdPmovsxbw      , kIdVpmovsxbw      , kI8ToI16 ,  4, 1), // kLoadCvt32_I8ToI16.
+  DEFINE_OP(kIdPmovzxbw      , kIdVpmovzxbw      , kU8ToU16 ,  4, 1), // kLoadCvt32_U8ToU16.
+  DEFINE_OP(kIdPmovsxbd      , kIdVpmovsxbd      , kI8ToI32 ,  4, 2), // kLoadCvt32_I8ToI32.
+  DEFINE_OP(kIdPmovzxbd      , kIdVpmovzxbd      , kU8ToU32 ,  4, 2), // kLoadCvt32_U8ToU32.
+  DEFINE_OP(kIdPmovsxwd      , kIdVpmovsxwd      , kI16ToI32,  4, 1), // kLoadCvt32_I16ToI32.
+  DEFINE_OP(kIdPmovzxwd      , kIdVpmovzxwd      , kU16ToU32,  4, 1), // kLoadCvt32_U16ToU32.
+  DEFINE_OP(kIdPmovsxdq      , kIdVpmovsxdq      , kI32ToI64,  4, 1), // kLoadCvt32_I32ToI64.
+  DEFINE_OP(kIdPmovzxdq      , kIdVpmovzxdq      , kU32ToU64,  4, 1), // kLoadCvt32_U32ToU64.
+  DEFINE_OP(kIdPmovsxbw      , kIdVpmovsxbw      , kI8ToI16 ,  8, 1), // kLoadCvt64_I8ToI16.
+  DEFINE_OP(kIdPmovzxbw      , kIdVpmovzxbw      , kU8ToU16 ,  8, 1), // kLoadCvt64_U8ToU16.
+  DEFINE_OP(kIdPmovsxbd      , kIdVpmovsxbd      , kI8ToI32 ,  8, 2), // kLoadCvt64_I8ToI32.
+  DEFINE_OP(kIdPmovzxbd      , kIdVpmovzxbd      , kU8ToU32 ,  8, 2), // kLoadCvt64_U8ToU32.
+  DEFINE_OP(kIdPmovsxwd      , kIdVpmovsxwd      , kI16ToI32,  8, 1), // kLoadCvt64_I16ToI32.
+  DEFINE_OP(kIdPmovzxwd      , kIdVpmovzxwd      , kU16ToU32,  8, 1), // kLoadCvt64_U16ToU32.
+  DEFINE_OP(kIdPmovsxdq      , kIdVpmovsxdq      , kI32ToI64,  8, 1), // kLoadCvt64_I32ToI64.
+  DEFINE_OP(kIdPmovzxdq      , kIdVpmovzxdq      , kU32ToU64,  8, 1), // kLoadCvt64_U32ToU64.
+  DEFINE_OP(kIdNone          , kIdVpmovsxbw      , kI8ToI16 , 16, 3), // kLoadCvt128_I8ToI16.
+  DEFINE_OP(kIdNone          , kIdVpmovzxbw      , kU8ToU16 , 16, 3), // kLoadCvt128_U8ToU16.
+  DEFINE_OP(kIdNone          , kIdVpmovsxbd      , kI8ToI32 , 16, 2), // kLoadCvt128_I8ToI32.
+  DEFINE_OP(kIdNone          , kIdVpmovzxbd      , kU8ToU32 , 16, 2), // kLoadCvt128_U8ToU32.
+  DEFINE_OP(kIdNone          , kIdVpmovsxwd      , kI16ToI32, 16, 1), // kLoadCvt128_I16ToI32.
+  DEFINE_OP(kIdNone          , kIdVpmovzxwd      , kU16ToU32, 16, 1), // kLoadCvt128_U16ToU32.
+  DEFINE_OP(kIdNone          , kIdVpmovsxdq      , kI32ToI64, 16, 1), // kLoadCvt128_I32ToI64.
+  DEFINE_OP(kIdNone          , kIdVpmovzxdq      , kU32ToU64, 16, 1), // kLoadCvt128_U32ToU64.
+  DEFINE_OP(kIdNone          , kIdVpmovsxbw      , kI8ToI16 , 32, 1), // kLoadCvt256_I8ToI16.
+  DEFINE_OP(kIdNone          , kIdVpmovzxbw      , kU8ToU16 , 32, 1), // kLoadCvt256_U8ToU16.
+  DEFINE_OP(kIdNone          , kIdVpmovsxwd      , kI16ToI32, 32, 1), // kLoadCvt256_I16ToI32.
+  DEFINE_OP(kIdNone          , kIdVpmovzxwd      , kU16ToU32, 32, 1), // kLoadCvt256_U16ToU32.
+  DEFINE_OP(kIdNone          , kIdVpmovsxdq      , kI32ToI64, 32, 1), // kLoadCvt256_I32ToI64.
+  DEFINE_OP(kIdNone          , kIdVpmovzxdq      , kU32ToU64, 32, 1), // kLoadCvt256_U32ToU64.
+  DEFINE_OP(kIdPmovzxbq      , kIdVpmovzxbq      , kU8ToU64 ,  0, 3), // kLoadCvtN_U8ToU64.
+  DEFINE_OP(kIdPmovsxbw      , kIdVpmovsxbw      , kI8ToI16 ,  0, 1), // kLoadCvtN_I8ToI16.
+  DEFINE_OP(kIdPmovzxbw      , kIdVpmovzxbw      , kU8ToU16 ,  0, 1), // kLoadCvtN_U8ToU16.
+  DEFINE_OP(kIdPmovsxbd      , kIdVpmovsxbd      , kI8ToI32 ,  0, 2), // kLoadCvtN_I8ToI32.
+  DEFINE_OP(kIdPmovzxbd      , kIdVpmovzxbd      , kU8ToU32 ,  0, 2), // kLoadCvtN_U8ToU32.
+  DEFINE_OP(kIdPmovsxwd      , kIdVpmovsxwd      , kI16ToI32,  0, 1), // kLoadCvtN_I16ToI32.
+  DEFINE_OP(kIdPmovzxwd      , kIdVpmovzxwd      , kU16ToU32,  0, 1), // kLoadCvtN_U16ToU32.
+  DEFINE_OP(kIdPmovsxdq      , kIdVpmovsxdq      , kI32ToI64,  0, 1), // kLoadCvtN_I32ToI64.
+  DEFINE_OP(kIdPmovzxdq      , kIdVpmovzxdq      , kU32ToU64,  0, 1), // kLoadCvtN_U32ToU64.
+  DEFINE_OP(kIdPinsrb        , kIdVpinsrb        , kNone    ,  1, 0), // kLoadInsertU8.
+  DEFINE_OP(kIdPinsrw        , kIdVpinsrw        , kNone    ,  2, 0), // kLoadInsertU16.
+  DEFINE_OP(kIdPinsrd        , kIdVpinsrd        , kNone    ,  4, 0), // kLoadInsertU32.
+  DEFINE_OP(kIdPinsrq        , kIdVpinsrq        , kNone    ,  8, 0), // kLoadInsertU64.
+  DEFINE_OP(kIdInsertps      , kIdVinsertps      , kNone    ,  4, 0), // kLoadInsertF32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  8, 0), // kLoadInsertF32x2.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  8, 0)  // kLoadInsertF64.
 };
 
 #undef DEFINE_OP
 
-#define DEFINE_OP(sseInstId, avxInstId, cvt, memSize) \
-  OpcodeVMInfo {                                      \
-    Inst::sseInstId,                                  \
-    Inst::avxInstId,                                  \
-    0,                                                \
-    uint8_t(NarrowingOp::cvt),                        \
-    memSize,                                          \
-    0                                                 \
+#define DEFINE_OP(sseInstId, avxInstId, cvt, memSize, memSizeShift) \
+  OpcodeVMInfo {                                                    \
+    Inst::sseInstId,                                                \
+    Inst::avxInstId,                                                \
+    0,                                                              \
+    uint8_t(NarrowingOp::cvt),                                      \
+    memSize,                                                        \
+    memSizeShift,                                                   \
+    0                                                               \
   }
 
 static constexpr OpcodeVMInfo opcodeInfo2MV[size_t(OpcodeMV::kMaxValue) + 1] = {
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  1), // kStore8.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  2), // kStore16_U16.
-  DEFINE_OP(kIdMovd          , kIdVmovd          , kNone    ,  4), // kStore32_U32.
-  DEFINE_OP(kIdMovss         , kIdVmovss         , kNone    ,  4), // kStore32_F32.
-  DEFINE_OP(kIdMovq          , kIdVmovq          , kNone    ,  8), // kStore64_U32.
-  DEFINE_OP(kIdMovq          , kIdVmovq          , kNone    ,  8), // kStore64_U64.
-  DEFINE_OP(kIdMovq          , kIdVmovq          , kNone    ,  8), // kStore64_F32.
-  DEFINE_OP(kIdMovsd         , kIdVmovsd         , kNone    ,  8), // kStore64_F64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16), // kStore128_U32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16), // kStore128_U64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16), // kStore128_F32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16), // kStore128_F64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32), // kStore256_U32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32), // kStore256_U64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32), // kStore256_F32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32), // kStore256_F64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64), // kStore512_U32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64), // kStore512_U64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64), // kStore512_F32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64), // kStore512_F64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0), // kStoreN_U32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0), // kStoreN_U64.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0), // kStoreN_F32.
-  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0), // kStoreN_F64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  1, 0), // kStore8.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  2, 0), // kStore16_U16.
+  DEFINE_OP(kIdMovd          , kIdVmovd          , kNone    ,  4, 0), // kStore32_U32.
+  DEFINE_OP(kIdMovss         , kIdVmovss         , kNone    ,  4, 0), // kStore32_F32.
+  DEFINE_OP(kIdMovq          , kIdVmovq          , kNone    ,  8, 0), // kStore64_U32.
+  DEFINE_OP(kIdMovq          , kIdVmovq          , kNone    ,  8, 0), // kStore64_U64.
+  DEFINE_OP(kIdMovq          , kIdVmovq          , kNone    ,  8, 0), // kStore64_F32.
+  DEFINE_OP(kIdMovsd         , kIdVmovsd         , kNone    ,  8, 0), // kStore64_F64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16, 0), // kStore128_U32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16, 0), // kStore128_U64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16, 0), // kStore128_F32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 16, 0), // kStore128_F64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32, 0), // kStore256_U32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32, 0), // kStore256_U64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32, 0), // kStore256_F32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 32, 0), // kStore256_F64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64, 0), // kStore512_U32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64, 0), // kStore512_U64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64, 0), // kStore512_F32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    , 64, 0), // kStore512_F64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0, 0), // kStoreN_U32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0, 0), // kStoreN_U64.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0, 0), // kStoreN_F32.
+  DEFINE_OP(kIdNone          , kIdNone           , kNone    ,  0, 0), // kStoreN_F64.
   /*
-  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 ,  8), // kStoreCvtz64_U16ToU8.
-  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16,  8), // kStoreCvtz64_U32ToU16.
-  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32,  8), // kStoreCvtz64_U64ToU32.
-  DEFINE_OP(kIdNone          , kIdNone           , kI16ToI8 ,  8), // kStoreCvts64_I16ToI8.
-  DEFINE_OP(kIdNone          , kIdNone           , kI16ToU8 ,  8), // kStoreCvts64_I16ToU8.
-  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 ,  8), // kStoreCvts64_U16ToU8.
-  DEFINE_OP(kIdNone          , kIdNone           , kI32ToI16,  8), // kStoreCvts64_I32ToI16.
-  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16,  8), // kStoreCvts64_U32ToU16.
-  DEFINE_OP(kIdNone          , kIdNone           , kI64ToI32,  8), // kStoreCvts64_I64ToI32.
-  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32,  8), // kStoreCvts64_U64ToU32.
-  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 , 16), // kStoreCvtz128_U16ToU8.
-  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16, 16), // kStoreCvtz128_U32ToU16.
-  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32, 16), // kStoreCvtz128_U64ToU32.
-  DEFINE_OP(kIdNone          , kIdNone           , kI16ToI8 , 16), // kStoreCvts128_I16ToI8.
-  DEFINE_OP(kIdNone          , kIdNone           , kI16ToU8 , 16), // kStoreCvts128_I16ToU8.
-  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 , 16), // kStoreCvts128_U16ToU8.
-  DEFINE_OP(kIdNone          , kIdNone           , kI32ToI16, 16), // kStoreCvts128_I32ToI16.
-  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16, 16), // kStoreCvts128_U32ToU16.
-  DEFINE_OP(kIdNone          , kIdNone           , kI64ToI32, 16), // kStoreCvts128_I64ToI32.
-  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32, 16), // kStoreCvts128_U64ToU32.
-  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 , 32), // kStoreCvtz256_U16ToU8.
-  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16, 32), // kStoreCvtz256_U32ToU16.
-  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32, 32), // kStoreCvtz256_U64ToU32.
-  DEFINE_OP(kIdNone          , kIdNone           , kI16ToI8 , 32), // kStoreCvts256_I16ToI8.
-  DEFINE_OP(kIdNone          , kIdNone           , kI16ToU8 , 32), // kStoreCvts256_I16ToU8.
-  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 , 32), // kStoreCvts256_U16ToU8.
-  DEFINE_OP(kIdNone          , kIdNone           , kI32ToI16, 32), // kStoreCvts256_I32ToI16.
-  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16, 32), // kStoreCvts256_U32ToU16.
-  DEFINE_OP(kIdNone          , kIdNone           , kI64ToI32, 32), // kStoreCvts256_I64ToI32.
-  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32, 32), // kStoreCvts256_U64ToU32.
-  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 ,  0), // kStoreCvtzN_U16ToU8.
-  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16,  0), // kStoreCvtzN_U32ToU16.
-  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32,  0), // kStoreCvtzN_U64ToU32.
-  DEFINE_OP(kIdNone          , kIdNone           , kI16ToI8 ,  0), // kStoreCvtsN_I16ToI8.
-  DEFINE_OP(kIdNone          , kIdNone           , kI16ToU8 ,  0), // kStoreCvtsN_I16ToU8.
-  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 ,  0), // kStoreCvtsN_U16ToU8.
-  DEFINE_OP(kIdNone          , kIdNone           , kI32ToI16,  0), // kStoreCvtsN_I32ToI16.
-  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16,  0), // kStoreCvtsN_U32ToU16.
-  DEFINE_OP(kIdNone          , kIdNone           , kI64ToI32,  0), // kStoreCvtsN_I64ToI32.
-  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32,  0)  // kStoreCvtsN_U64ToU32.
+  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 ,  8, 1), // kStoreCvtz64_U16ToU8.
+  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16,  8, 1), // kStoreCvtz64_U32ToU16.
+  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32,  8, 1), // kStoreCvtz64_U64ToU32.
+  DEFINE_OP(kIdNone          , kIdNone           , kI16ToI8 ,  8, 1), // kStoreCvts64_I16ToI8.
+  DEFINE_OP(kIdNone          , kIdNone           , kI16ToU8 ,  8, 1), // kStoreCvts64_I16ToU8.
+  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 ,  8, 1), // kStoreCvts64_U16ToU8.
+  DEFINE_OP(kIdNone          , kIdNone           , kI32ToI16,  8, 1), // kStoreCvts64_I32ToI16.
+  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16,  8, 1), // kStoreCvts64_U32ToU16.
+  DEFINE_OP(kIdNone          , kIdNone           , kI64ToI32,  8, 1), // kStoreCvts64_I64ToI32.
+  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32,  8, 1), // kStoreCvts64_U64ToU32.
+  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 , 16, 1), // kStoreCvtz128_U16ToU8.
+  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16, 16, 1), // kStoreCvtz128_U32ToU16.
+  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32, 16, 1), // kStoreCvtz128_U64ToU32.
+  DEFINE_OP(kIdNone          , kIdNone           , kI16ToI8 , 16, 1), // kStoreCvts128_I16ToI8.
+  DEFINE_OP(kIdNone          , kIdNone           , kI16ToU8 , 16, 1), // kStoreCvts128_I16ToU8.
+  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 , 16, 1), // kStoreCvts128_U16ToU8.
+  DEFINE_OP(kIdNone          , kIdNone           , kI32ToI16, 16, 1), // kStoreCvts128_I32ToI16.
+  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16, 16, 1), // kStoreCvts128_U32ToU16.
+  DEFINE_OP(kIdNone          , kIdNone           , kI64ToI32, 16, 1), // kStoreCvts128_I64ToI32.
+  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32, 16, 1), // kStoreCvts128_U64ToU32.
+  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 , 32, 1), // kStoreCvtz256_U16ToU8.
+  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16, 32, 1), // kStoreCvtz256_U32ToU16.
+  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32, 32, 1), // kStoreCvtz256_U64ToU32.
+  DEFINE_OP(kIdNone          , kIdNone           , kI16ToI8 , 32, 1), // kStoreCvts256_I16ToI8.
+  DEFINE_OP(kIdNone          , kIdNone           , kI16ToU8 , 32, 1), // kStoreCvts256_I16ToU8.
+  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 , 32, 1), // kStoreCvts256_U16ToU8.
+  DEFINE_OP(kIdNone          , kIdNone           , kI32ToI16, 32, 1), // kStoreCvts256_I32ToI16.
+  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16, 32, 1), // kStoreCvts256_U32ToU16.
+  DEFINE_OP(kIdNone          , kIdNone           , kI64ToI32, 32, 1), // kStoreCvts256_I64ToI32.
+  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32, 32, 1), // kStoreCvts256_U64ToU32.
+  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 ,  0, 1), // kStoreCvtzN_U16ToU8.
+  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16,  0, 1), // kStoreCvtzN_U32ToU16.
+  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32,  0, 1), // kStoreCvtzN_U64ToU32.
+  DEFINE_OP(kIdNone          , kIdNone           , kI16ToI8 ,  0, 1), // kStoreCvtsN_I16ToI8.
+  DEFINE_OP(kIdNone          , kIdNone           , kI16ToU8 ,  0, 1), // kStoreCvtsN_I16ToU8.
+  DEFINE_OP(kIdNone          , kIdNone           , kU16ToU8 ,  0, 1), // kStoreCvtsN_U16ToU8.
+  DEFINE_OP(kIdNone          , kIdNone           , kI32ToI16,  0, 1), // kStoreCvtsN_I32ToI16.
+  DEFINE_OP(kIdNone          , kIdNone           , kU32ToU16,  0, 1), // kStoreCvtsN_U32ToU16.
+  DEFINE_OP(kIdNone          , kIdNone           , kI64ToI32,  0, 1), // kStoreCvtsN_I64ToI32.
+  DEFINE_OP(kIdNone          , kIdNone           , kU64ToU32,  0, 1)  // kStoreCvtsN_U64ToU32.
   */
-  DEFINE_OP(kIdPextrw        , kIdVpextrw        , kNone    ,  2), // kStoreExtractU16.
-  DEFINE_OP(kIdPextrd        , kIdVpextrd        , kNone    ,  4), // kStoreExtractU32.
-  DEFINE_OP(kIdPextrq        , kIdVpextrq        , kNone    ,  8)  // kStoreExtractU64.
+  DEFINE_OP(kIdPextrw        , kIdVpextrw        , kNone    ,  2, 0), // kStoreExtractU16.
+  DEFINE_OP(kIdPextrd        , kIdVpextrd        , kNone    ,  4, 0), // kStoreExtractU32.
+  DEFINE_OP(kIdPextrq        , kIdVpextrq        , kNone    ,  8, 0)  // kStoreExtractU64.
 };
 
 #undef DEFINE_OP
@@ -5235,11 +5249,12 @@ void PipeCompiler::emit_vm(OpcodeVM op, const OpArray& dst_, const Mem& src_, ui
   uint32_t memSize = opInfo.memSize;
 
   if (memSize == 0) {
+    uint32_t memSizeShift = opInfo.memSizeShift;
     for (uint32_t i = 0, n = dst_.size(); i < n; i++) {
       BL_ASSERT(dst_[i].isReg() && dst_[i].isVec());
 
       const Vec& dst = dst_[i].as<Vec>();
-      memSize = dst.size();
+      memSize = dst.size() >> memSizeShift;
 
       emit_vm(op, dst, src, alignment > 0 ? alignment : memSize, idx);
       src.addOffsetLo32(int32_t(memSize));

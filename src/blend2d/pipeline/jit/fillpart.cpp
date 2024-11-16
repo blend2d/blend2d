@@ -58,6 +58,7 @@ static void initVecCoverage(
   PipeCompiler* pc,
   VecArray& dst,
   PixelCount maxPixelCount,
+  VecWidth accVecWidth,
   VecWidth maxVecWidth,
   PixelType pixelType,
   PixelCoverageFormat coverageFormat) noexcept {
@@ -66,7 +67,11 @@ static void initVecCoverage(
   VecWidth vecWidth = VecWidthUtils::vecWidthForByteCount(maxVecWidth, coverageByteCount);
   uint32_t vecCount = VecWidthUtils::vecCountForByteCount(vecWidth, coverageByteCount);
 
-  pc->newVecArray(dst, vecCount, vecWidth, "vm");
+  pc->newVecArray(dst, vecCount, blMax(vecWidth, accVecWidth), "vm");
+
+  // The width of the register must match the accumulator (as otherwise AsmJit could
+  // spill and only load a part of it in case the vector width of `dst` is smaller).
+  dst.setVecWidth(vecWidth);
 }
 
 static void passVecCoverage(
@@ -340,8 +345,7 @@ void FillMaskPart::compile(const PipeFunction& fn) noexcept {
   Gp maskValue = pc->newGpPtr("maskValue");           // Reg.
   Gp maskAdvance = pc->newGpPtr("maskAdvance");       // Reg/Tmp
 
-  FetchUtils::GlobalAlpha ga;                         // Reg/Mem.
-  FetchUtils::GlobalAlpha gaNotApplied;               // None.
+  GlobalAlpha ga;
 
   // Prolog
   // ------
@@ -361,7 +365,7 @@ void FillMaskPart::compile(const PipeFunction& fn) noexcept {
   pc->load(cmdPtr, mem_ptr(fillData, BL_OFFSET_OF(FillData, mask.maskCommandData)));
 
   // Initialize global alpha.
-  ga.initFromMem(pc, mem_ptr(fillData, BL_OFFSET_OF(FillData, mask.alpha)), compOpPart()->coverageFormat());
+  ga.initFromMem(pc, mem_ptr(fillData, BL_OFFSET_OF(FillData, mask.alpha)));
 
   // y = fillData->box.y1 - fillData->box.y0;
   pc->sub(y, mem_ptr(fillData, BL_OFFSET_OF(FillData, mask.box.y1)), y);
@@ -450,10 +454,10 @@ void FillMaskPart::compile(const PipeFunction& fn) noexcept {
   pc->mem_add(mem_ptr(cmdPtr, BL_OFFSET_OF(MaskCommand, _value.ptr)), maskAdvance);
 
   pc->j(L_VMaskA8WithoutGA, cmp_eq(cmdType, uint32_t(MaskCommandType::kVMaskA8WithoutGA)));
-  compOpPart()->vMaskGenericLoop(i, dstPtr, maskValue, gaNotApplied, L_ProcessNext);
+  compOpPart()->vMaskGenericLoop(i, dstPtr, maskValue, nullptr, L_ProcessNext);
 
   pc->bind(L_VMaskA8WithoutGA);
-  compOpPart()->vMaskGenericLoop(i, dstPtr, maskValue, ga, L_ProcessNext);
+  compOpPart()->vMaskGenericLoop(i, dstPtr, maskValue, &ga, L_ProcessNext);
 
   // CMask Command
   // -------------
@@ -566,8 +570,10 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
   Label L_CLoop_Init = pc->newLabel();
 
   Label L_VTail_Init;
-  if (maxPixels >= 4)
+
+  if (maxPixels >= 4) {
     L_VTail_Init = pc->newLabel();
+  }
 
   Label L_Scanline_Done0 = pc->newLabel();
   Label L_Scanline_Done1 = pc->newLabel();
@@ -607,7 +613,7 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
   Gp bitWord = pc->newGpPtr("bitWord");                      // Reg/Mem.
   Gp bitWordTmp = pc->newGpPtr("bitWordTmp");                // Reg/Tmp.
 
-  Vec cov = pc->newVec(vProcWidth, "cov");                   // Reg.
+  Vec acc = pc->newVec(vProcWidth, "acc");                   // Reg.
   Vec globalAlpha = pc->newVec(vProcWidth, "globalAlpha");   // Mem.
   Vec fillRuleMask = pc->newVec(vProcWidth, "fillRuleMask"); // Mem.
   Vec vecZero;                                               // Reg/Tmp.
@@ -616,7 +622,7 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
 
   VecArray m;                                                // Reg.
   VecArray compCov;                                          // Tmp (only for passing coverages to the compositor).
-  initVecCoverage(pc, m, PixelCount(maxPixels), pc->vecWidth(), pixelType, coverageFormat);
+  initVecCoverage(pc, m, PixelCount(maxPixels), VecWidthUtils::vecWidthOf(acc), pc->vecWidth(), pixelType, coverageFormat);
 
   // Prolog
   // ------
@@ -671,7 +677,7 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
   pc->v_slli_i16(fillRuleMask, fillRuleMask, 1);
 #else
   // In non-x86 case we want to keep zero in `vecZero` - no need to clear it every time we want to clear memory.
-  vecZero = pc->simdVecZero(cov);
+  vecZero = pc->simdVecZero(acc);
 #endif
 
   pc->j(L_Scanline_Init);
@@ -717,7 +723,7 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
   else if (pixelGranularity > 1)
     compOpPart()->srcPart()->prefetchN();
 
-  pc->v_loada32(cov, pc->_getMemConst(&ct.i_0002000000020000));
+  pc->v_loada32(acc, pc->_getMemConst(&ct.i_0002000000020000));
 
   // If `bitWord ^ bitWordTmp` results in non-zero value it means that the current span ends within the same BitWord,
   // otherwise the span crosses multiple BitWords.
@@ -748,12 +754,12 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
 
 #if defined(BL_JIT_ARCH_X86)
   if (vProcPixelCount == 8) {
-    pc->v_add_i32(cov.v256(), cov.v256(), mem_ptr(cellPtr)); //   acc[7:0] += cellPtr[7:0];
+    pc->v_add_i32(acc.v256(), acc.v256(), mem_ptr(cellPtr)); //   acc[7:0] += cellPtr[7:0];
   }
   else
 #endif // BL_JIT_ARCH_X86
   {
-    pc->v_add_i32(cov.v128(), cov.v128(), mem_ptr(cellPtr)); //   acc[3:0] += cellPtr[3:0];
+    pc->v_add_i32(acc.v128(), acc.v128(), mem_ptr(cellPtr)); //   acc[3:0] += cellPtr[3:0];
   }
 
   pc->mov(bitWordTmp, -1);                                   //   bitWordTmp = -1; (all ones).
@@ -786,20 +792,20 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
     Label L_VLoop_End = pc->newLabel();
 
     pc->bind(L_VLoop_Iter8);                                 // L_VLoop_Iter8:
-    pc->v_extract_v128(cov, cov, 1);
+    pc->v_extract_v128(acc, acc, 1);
 
     passVecCoverage(compCov, m, PixelCount(8), pixelType, coverageFormat);
     compOpPart()->vMaskProcStoreAdvance(dstPtr, PixelCount(8), compCov, PixelCoverageFlags::kNone);
 
     pc->add(cellPtr, cellPtr, 8 * 4);                        //   cellPtr += 8 * sizeof(uint32_t);
-    pc->v_add_i32(cov, cov, mem_ptr(cellPtr));               //   cov[7:0] += cellPtr[7:0]
+    pc->v_add_i32(acc, acc, mem_ptr(cellPtr));               //   acc[7:0] += cellPtr[7:0]
     pc->v_zero_i(vecZero);                                   //   vecZero = 0;
     pc->v_storeu256(mem_ptr(cellPtr, -16), vecZero.v256());  //   cellPtr[3:-4] = 0;
 
     pc->bind(L_VLoop_Init);                                  // L_VLoop_Init:
-    accumulateCoverages(cov);
-    calcMasksFromCells(m[0], cov, fillRuleMask, globalAlpha);
-    normalizeCoverages(cov);
+    accumulateCoverages(acc);
+    calcMasksFromCells(m[0], acc, fillRuleMask, globalAlpha);
+    normalizeCoverages(acc);
     expandMask(m, PixelCount(8));
 
     pc->j(L_VLoop_Iter8, sub_nc(i, 8));                      //   if ((i -= 8) >= 0) goto L_VLoop_Iter8;
@@ -825,11 +831,11 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
       BL_NOT_REACHED();
     }
 
-    pc->v_extract_v128(cov, cov, 1);
+    pc->v_extract_v128(acc, acc, 1);
     pc->j(L_VTail_Init, sub_nz(i, 4));                       //   if ((i -= 4) > 0) goto L_VTail_Init;
 
     pc->bind(L_VLoop_End);                                   // L_VLoop_End:
-    pc->v_extract_v128(cov, cov, 0);
+    pc->v_extract_v128(acc, acc, 0);
     pc->j(L_Scanline_Done1, ucmp_ge(x0, xEnd));              //   if (x0 >= xEnd) goto L_Scanline_Done1;
   }
   else
@@ -847,7 +853,7 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
     compOpPart()->vMaskProcStoreAdvance(dstPtr, PixelCount(4), compCov, PixelCoverageFlags::kNone);
 
     pc->add(cellPtr, cellPtr, 4 * 4);                        //   cellPtr += 4 * sizeof(uint32_t);
-    pc->v_add_i32(cov, cov, mem_ptr(cellPtr));               //   cov[3:0] += cellPtr[3:0];
+    pc->v_add_i32(acc, acc, mem_ptr(cellPtr));               //   acc[3:0] += cellPtr[3:0];
 #if defined(BL_JIT_ARCH_X86)
     pc->v_zero_i(vecZero);                                   //   vecZero = 0;
 #endif // BL_JIT_ARCH_X86
@@ -855,9 +861,9 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
     dPix.resetAllExceptTypeAndName();
 
     pc->bind(L_VLoop_Init);                                  // L_VLoop_Init:
-    accumulateCoverages(cov);
-    calcMasksFromCells(m[0], cov, fillRuleMask, globalAlpha);
-    normalizeCoverages(cov);
+    accumulateCoverages(acc);
+    calcMasksFromCells(m[0], acc, fillRuleMask, globalAlpha);
+    normalizeCoverages(acc);
     expandMask(m, PixelCount(4));
 
     pc->j(L_VLoop_Cont, sub_nc(i, 4));                       //   if ((i -= 4) >= 0) goto L_VLoop_Cont;
@@ -945,12 +951,12 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
       // In that case `cellPtr` could already be misaligned if the image width is not divisible by 4.
       Vec covTmp = pc->newV128("@covTmp");
       pc->v_loadu128(covTmp, mem_ptr(cellPtr));              //   covTmp[3:0] = cellPtr[3:0];
-      pc->v_add_i32(cov, cov, covTmp);                       //   cov[3:0] += covTmp
+      pc->v_add_i32(acc, acc, covTmp);                       //   acc[3:0] += covTmp
     }
     else
 #endif // BL_JIT_ARCH_X86
     {
-      pc->v_add_i32(cov, cov, mem_ptr(cellPtr));             //   cov[3:0] += cellPtr[3:0]
+      pc->v_add_i32(acc, acc, mem_ptr(cellPtr));             //   acc[3:0] += cellPtr[3:0]
     }
 
 #if defined(BL_JIT_ARCH_X86)
@@ -960,9 +966,9 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
 
     pc->bind(L_VLoop_Init);                                  // L_VLoop_Init:
 
-    accumulateCoverages(cov);
-    calcMasksFromCells(m[0], cov, fillRuleMask, globalAlpha);
-    normalizeCoverages(cov);
+    accumulateCoverages(acc);
+    calcMasksFromCells(m[0], acc, fillRuleMask, globalAlpha);
+    normalizeCoverages(acc);
 
     pc->j(L_VLoop_Iter, test_nz(i));                         //   if (i != 0) goto L_VLoop_Iter;
     pc->j(L_Scanline_Done1, ucmp_ge(x0, xEnd));              //   if (x0 >= xEnd) goto L_Scanline_Done1;
@@ -1059,8 +1065,9 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
   }
 
 #if defined(BL_JIT_ARCH_X86)
-  if (!pc->hasAVX2() && coverageFormat == PixelCoverageFormat::kUnpacked)
+  if (!pc->hasAVX2() && coverageFormat == PixelCoverageFormat::kUnpacked) {
     pc->v_swizzle_u32x4(m[0], m[0], swizzle(0, 0, 0, 0));    //   m0 = [_0 a0 _0 a0 _0 a0 _0 a0|_0 a0 _0 a0 _0 a0 _0 a0]
+  }
 #else
   if (coverageFormat == PixelCoverageFormat::kPacked)
     pc->v_broadcast_u8(m[0], m[0]);                          //   m0 = [a0 a0 a0 a0 a0 a0 a0 a0|a0 a0 a0 a0 a0 a0 a0 a0]
@@ -1206,25 +1213,25 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
   _finiGlobalHook();
 }
 
-void FillAnalyticPart::accumulateCoverages(const Vec& cov) noexcept {
-  Vec tmp = pc->newSimilarReg<Vec>(cov, "vCovTmp");
+void FillAnalyticPart::accumulateCoverages(const Vec& acc) noexcept {
+  Vec tmp = pc->newSimilarReg<Vec>(acc, "vCovTmp");
 
-  pc->v_sllb_u128(tmp, cov, 4);                              //   tmp[7:0]  = [  c6    c5    c4    0  |  c2    c1    c0    0  ];
-  pc->v_add_i32(cov, cov, tmp);                              //   cov[7:0]  = [c7:c6 c6:c5 c5:c4   c4 |c3:c2 c2:c1 c1:c0   c0 ];
-  pc->v_sllb_u128(tmp, cov, 8);                              //   tmp[7:0]  = [c5:c4   c4    0     0  |c1:c0   c0    0     0  ];
-  pc->v_add_i32(cov, cov, tmp);                              //   cov[7:0]  = [c7:c4 c6:c4 c5:c4   c4 |c3:c0 c2:c0 c1:c0   c0 ];
+  pc->v_sllb_u128(tmp, acc, 4);                              //   tmp[7:0]  = [  c6    c5    c4    0  |  c2    c1    c0    0  ];
+  pc->v_add_i32(acc, acc, tmp);                              //   acc[7:0]  = [c7:c6 c6:c5 c5:c4   c4 |c3:c2 c2:c1 c1:c0   c0 ];
+  pc->v_sllb_u128(tmp, acc, 8);                              //   tmp[7:0]  = [c5:c4   c4    0     0  |c1:c0   c0    0     0  ];
+  pc->v_add_i32(acc, acc, tmp);                              //   acc[7:0]  = [c7:c4 c6:c4 c5:c4   c4 |c3:c0 c2:c0 c1:c0   c0 ];
 
 #if defined(BL_JIT_ARCH_X86)
-  if (cov.isVec256()) {
-    pc->v_swizzle_u32x4(tmp.v128(), cov.v128(), swizzle(3, 3, 3, 3));
+  if (acc.isVec256()) {
+    pc->v_swizzle_u32x4(tmp.v128(), acc.v128(), swizzle(3, 3, 3, 3));
     cc->vperm2i128(tmp, tmp, tmp, perm2x128Imm(Perm2x128::kALo, Perm2x128::kZero));
-    pc->v_add_i32(cov, cov, tmp);                            //   cov[7:0]  = [c7:c0 c6:c0 c5:c0 c4:c0|c3:c0 c2:c0 c1:c0   c0 ];
+    pc->v_add_i32(acc, acc, tmp);                            //   acc[7:0]  = [c7:c0 c6:c0 c5:c0 c4:c0|c3:c0 c2:c0 c1:c0   c0 ];
   }
 #endif // BL_JIT_ARCH_X86
 }
 
-void FillAnalyticPart::normalizeCoverages(const Vec& cov) noexcept {
-  pc->v_srlb_u128(cov, cov, 12);                             //   cov[3:0]  = [  0     0     0     c0 ];
+void FillAnalyticPart::normalizeCoverages(const Vec& acc) noexcept {
+  pc->v_srlb_u128(acc, acc, 12);                             //   acc[3:0]  = [  0     0     0     c0 ];
 }
 
 // Calculate masks from cell and store them to a vector of the following layout:
@@ -1232,15 +1239,15 @@ void FillAnalyticPart::normalizeCoverages(const Vec& cov) noexcept {
 //   [__ __ __ __ a7 a6 a5 a4|__ __ __ __ a3 a2 a1 a0]
 //
 // NOTE: Depending on the vector size the output mask is for either 4 or 8 pixels.
-void FillAnalyticPart::calcMasksFromCells(const Vec& msk_, const Vec& cov, const Vec& fillRuleMask, const Vec& globalAlpha) noexcept {
-  Vec msk = msk_.cloneAs(cov);
+void FillAnalyticPart::calcMasksFromCells(const Vec& msk_, const Vec& acc, const Vec& fillRuleMask, const Vec& globalAlpha) noexcept {
+  Vec msk = msk_.cloneAs(acc);
 
 #if defined(BL_JIT_ARCH_X86)
   // This implementation is a bit tricky. In the original AGG and FreeType `A8_SHIFT + 1` is used. However, we don't do
   // that and mask out the last bit through `fillRuleMask`. The reason we do this is that our `globalAlpha` is already
   // pre-shifted by `7` bits left and we only need to shift the final mask by one bit left after it's been calculated.
   // So instead of shifting it left later we clear the LSB bit now and that's it, we saved one instruction.
-  pc->v_srai_i32(msk, cov, A8Info::kShift);
+  pc->v_srai_i32(msk, acc, A8Info::kShift);
   pc->v_and_i32(msk, msk, fillRuleMask);
 
   // We have to make sure that the cleared LSB bit stays zero. Since we only use SUB with even value and abs we are
@@ -1264,7 +1271,7 @@ void FillAnalyticPart::calcMasksFromCells(const Vec& msk_, const Vec& cov, const
   pc->v_mulh_u16(msk, msk, globalAlpha);
 #else
   // This implementation doesn't need any tricks as a lot of SIMD primitives are just provided natively.
-  pc->v_srai_i32(msk, cov, A8Info::kShift + 1);
+  pc->v_srai_i32(msk, acc, A8Info::kShift + 1);
   pc->v_and_i32(msk, msk, fillRuleMask);
 
   pc->v_sub_i32(msk, msk, pc->simdConst(&ct.i_0000010000000100, Bcst::k32, msk));
@@ -1363,13 +1370,11 @@ void FillAnalyticPart::expandMask(const VecArray& msk, PixelCount pixelCount) no
           return;
 
 #if defined(BL_JIT_ARCH_X86)
-        if (!msk[0].isVec128()) {
-          // We have to convert from:
-          //   cov = [?? ?? ?? ?? a7 a6 a5 a4|?? ?? ?? ?? a3 a2 a1 a0]
-          // To:
-          //   cov = [a7 a6 a5 a4 a3 a2 a1 a0|a7 a6 a5 a4 a3 a2 a1 a0]
-          pc->v_swizzle_u64x4(msk[0].ymm(), msk[0].ymm(), swizzle(2, 0, 2, 0));
-        }
+        // We have to convert from:
+        //   msk = [?? ?? ?? ?? a7 a6 a5 a4|?? ?? ?? ?? a3 a2 a1 a0]
+        // To:
+        //   msk = [a7 a6 a5 a4 a3 a2 a1 a0|a7 a6 a5 a4 a3 a2 a1 a0]
+        pc->v_swizzle_u64x4(msk[0].ymm(), msk[0].ymm(), swizzle(2, 0, 2, 0));
 #endif // BL_JIT_ARCH_X86
 
         return;

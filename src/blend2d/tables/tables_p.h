@@ -264,6 +264,20 @@ struct BL_ALIGN_TYPE(CommonTable, 64) {
 
 #if BL_TARGET_ARCH_X86
 
+  VecConst512<uint64_t> permu8_a8_to_rgba32_pc {{
+    0x0101010100000000u, 0x0303030302020202u,
+    0x0505050504040404u, 0x0707070706060606u,
+    0x0909090908080808u, 0x0B0B0B0B0A0A0A0Au,
+    0x0D0D0D0D0C0C0C0Cu, 0x0F0F0F0F0E0E0E0Eu
+  }};
+
+  VecConst512<uint64_t> permu8_a8_to_rgba32_pc_second {{
+    0x1111111110101010u, 0x1313131312121212u,
+    0x1515151514141414u, 0x1717171716161616u,
+    0x1919191918181818u, 0x1B1B1B1B1A1A1A1Au,
+    0x1D1D1D1D1C1C1C1Cu, 0x1F1F1F1F1E1E1E1Eu
+  }};
+
   VecConst512<uint64_t> permu8_a8_to_rgba32_uc {{
     0xff00ff00ff00ff00u, 0xff01ff01ff01ff01u,
     0xff02ff02ff02ff02u, 0xff03ff03ff03ff03u,
@@ -285,6 +299,20 @@ struct BL_ALIGN_TYPE(CommonTable, 64) {
     0x0D0C0D0C0D0C0D0Cu, 0x0F0E0F0E0F0E0F0Eu
   }};
 
+  VecConst512<uint64_t> permu8_pc_to_pa {{
+    0x1C1814100C080400u, 0x3C3834302C282420u,
+    0x5C5854504C484440u, 0x7C7874706C686460u,
+    0xffffffffffffffffu, 0xffffffffffffffffu,
+    0xffffffffffffffffu, 0xffffffffffffffffu
+  }};
+
+  VecConst512<uint16_t> permu16_pc_to_ua {{
+    1 ,  3,  5,  7,  9, 11, 13, 15,
+    17, 19, 21, 23, 25, 27, 29, 31,
+    33, 35, 37, 39, 41, 43, 45, 47,
+    49, 51, 53, 55, 57, 59, 61, 63
+  }};
+
   VecConst512<uint64_t> swizu8_dither_rgba64_lo {{
     0xffffff00ff00ff00u, 0xffffff01ff01ff01u,
     0xffffff02ff02ff02u, 0xffffff03ff03ff03u,
@@ -297,6 +325,10 @@ struct BL_ALIGN_TYPE(CommonTable, 64) {
     0xffffff0Aff0Aff0Au, 0xffffff0Bff0Bff0Bu,
     0xffffff0Cff0Cff0Cu, 0xffffff0Dff0Dff0Du,
     0xffffff0Eff0Eff0Eu, 0xffffff0Fff0Fff0Fu
+  }};
+
+  VecConst256<uint32_t> permu32_fix_2x_pack_avx2 {{
+    0, 4, 1, 5, 2, 6, 3, 7,
   }};
 
 #else

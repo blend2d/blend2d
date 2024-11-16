@@ -215,9 +215,9 @@ public:
   void cMaskProcStoreAdvance(const Gp& dPtr, PixelCount n, Alignment alignment = Alignment(1)) noexcept;
   void cMaskProcStoreAdvance(const Gp& dPtr, PixelCount n, Alignment alignment, PixelPredicate& predicate) noexcept;
 
-  void vMaskGenericLoop(Gp& i, const Gp& dPtr, const Gp& mPtr, FetchUtils::GlobalAlpha& ga, const Label& done) noexcept;
-  void vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, const Reg& ga) noexcept;
-  void vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, const Reg& ga, PixelPredicate& predicate) noexcept;
+  void vMaskGenericLoop(Gp& i, const Gp& dPtr, const Gp& mPtr, GlobalAlpha* ga, const Label& done) noexcept;
+  void vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, GlobalAlpha* ga) noexcept;
+  void vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, GlobalAlpha* ga, PixelPredicate& predicate) noexcept;
 
   void vMaskProcStoreAdvance(const Gp& dPtr, PixelCount n, const VecArray& vm, PixelCoverageFlags coverageFlags, Alignment alignment = Alignment(1)) noexcept;
   void vMaskProcStoreAdvance(const Gp& dPtr, PixelCount n, const VecArray& vm, PixelCoverageFlags coverageFlags, Alignment alignment, PixelPredicate& predicate) noexcept;

@@ -711,8 +711,11 @@ enum class OpcodeVVV : uint32_t {
 #elif defined(BL_JIT_ARCH_X86)
 
   kPermuteU8,
+  kPermuteU16,
+  kPermuteU32,
+  kPermuteU64,
 
-  kMaxValue = kPermuteU8
+  kMaxValue = kPermuteU64
 
 #else
 
@@ -2647,6 +2650,9 @@ public:
 
 #if defined(BL_JIT_ARCH_X86)
   DEFINE_OP_3V(v_permute_u8, OpcodeVVV::kPermuteU8)
+  DEFINE_OP_3V(v_permute_u16, OpcodeVVV::kPermuteU16)
+  DEFINE_OP_3V(v_permute_u32, OpcodeVVV::kPermuteU32)
+  DEFINE_OP_3V(v_permute_u64, OpcodeVVV::kPermuteU64)
 #endif // BL_JIT_ARCH_X86
 
   DEFINE_OP_3VI(v_alignr_u128, OpcodeVVVI::kAlignr_U128)

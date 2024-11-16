@@ -16,9 +16,14 @@
 namespace bl {
 namespace Pipeline {
 namespace JIT {
-namespace FetchUtils {
 
-//! Provides unpacked global alpha mask; can be used by \ref FillPart and \ref CompOpPart as a global alpha abstraction.
+// bl::Pipeline::JIT - GlobalAlpha
+// ===============================
+
+//! Provides a global alpha mask in a format that is requested by during the lifetime of `GlobalAlpha.
+//!
+//! Can be used by \ref FillPart and \ref CompOpPart as a global alpha abstraction and by othe functions as a global
+//! alpha provider.
 class GlobalAlpha {
 public:
   //! \name Members
@@ -29,63 +34,47 @@ public:
   //! Node where to emit additional code in case `sm` is not initialized, but required.
   asmjit::BaseNode* _hook = nullptr;
 
-  //! Global alpha as scalar (only used by scalar alpha-only processing operations).
-  Gp _sm;
-  //! Unpacked global alpha as vector.
-  Vec _vm;
+  //! Memory location from which to fetch the mask. This is only used when `initFromMem()` is used. It's retained
+  //! and then when wither \ref sa(), \ref pa(), or \ref ua() is used the respective members would be initialized
+  //! on demand.
+  Mem _mem {};
+
+  //! Scalar global alpha (only used by scalar alpha-only processing operations that do 1 pixel at a time).
+  Gp _sa {};
+  //! Packed global alpha vector.
+  Vec _pa {};
+  //! Unpacked global alpha vector.
+  Vec _ua {};
 
   //! \}
 
   //! \name Initialization
   //! \{
 
-  BL_INLINE void initFromMem(PipeCompiler* pc, const Mem& mem, PixelCoverageFormat coverageFormat) noexcept {
-    _pc = pc;
-    _vm = pc->newVec("ga.vec");
+private:
+  void _initInternal(PipeCompiler* pc) noexcept;
 
-    if (coverageFormat == PixelCoverageFormat::kPacked)
-      _pc->v_broadcast_u8(_vm, mem);
-    else
-      _pc->v_broadcast_u16(_vm, mem);
-
-    _hook = pc->cc->cursor();
-  }
-
-  BL_INLINE void initFromVec(PipeCompiler* pc, const Vec& vm) noexcept {
-    _pc = pc;
-    _hook = pc->cc->cursor();
-    _vm = vm;
-  }
-
-  //! Returns whether global alpha is initialized and should be applied
-  BL_INLINE_NODEBUG bool isInitialized() const noexcept { return _hook != nullptr; }
+public:
+  void initFromMem(PipeCompiler* pc, const Mem& mem) noexcept;
+  void initFromScalar(PipeCompiler* pc, const Gp& sa) noexcept;
+  void initFromPacked(PipeCompiler* pc, const Vec& pa) noexcept;
+  void initFromUnpacked(PipeCompiler* pc, const Vec& ua) noexcept;
 
   //! \}
 
   //! \name Accessors
   //! \{
 
-  BL_INLINE_NODEBUG const Vec& vm() const noexcept { return _vm; }
+  //! Returns whether global alpha is initialized and should be applied
+  BL_INLINE_NODEBUG bool isInitialized() const noexcept { return _hook != nullptr; }
 
-  BL_NOINLINE const Gp& sm() noexcept {
-    if (_vm.isValid() && !_sm.isValid()) {
-      ScopedInjector injector(_pc->cc, &_hook);
-      _sm = _pc->newGp32("ga.sm");
-
-#if defined(BL_JIT_ARCH_A64)
-      _pc->s_extract_u8(_sm, _vm, 0u);
-#else
-      _pc->s_extract_u16(_sm, _vm, 0u);
-#endif
-    }
-
-    return _sm;
-  }
+  const Gp& sa() noexcept;
+  const Vec& pa() noexcept;
+  const Vec& ua() noexcept;
 
   //! \}
 };
 
-} // {FetchUtils}
 } // {JIT}
 } // {Pipeline}
 } // {bl}

@@ -95,11 +95,11 @@ public:
     pc->emit_3i(op, dst, src1, src2);
   }
 
-  void accumulateCoverages(const Vec& cov) noexcept;
-  void normalizeCoverages(const Vec& cov) noexcept;
+  void accumulateCoverages(const Vec& acc) noexcept;
+  void normalizeCoverages(const Vec& acc) noexcept;
 
   //! Calculates masks for 4 pixels - this works for both NonZero and EvenOdd fill rules.
-  void calcMasksFromCells(const Vec& msk, const Vec& cov, const Vec& fillRuleMask, const Vec& globalAlpha) noexcept;
+  void calcMasksFromCells(const Vec& msk, const Vec& acc, const Vec& fillRuleMask, const Vec& globalAlpha) noexcept;
 
   //! Expands the calculated mask in a way so it can be used by the compositor.
   void expandMask(const VecArray& msk, PixelCount pixelCount) noexcept;

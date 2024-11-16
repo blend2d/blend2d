@@ -400,6 +400,7 @@ public:
   BL_INLINE_NODEBUG OpArray even() const noexcept { return OpArray(*this, 0, 2, _size); }
   BL_INLINE_NODEBUG OpArray odd() const noexcept { return OpArray(*this, _size > 1, 2, _size); }
   BL_INLINE_NODEBUG OpArray half() const noexcept { return OpArray(*this, 0, 1, (_size + 1) / 2); }
+  BL_INLINE_NODEBUG OpArray every_nth(uint32_t n) const noexcept { return OpArray(*this, 0, n, _size); }
 
   //! Returns a new vector consisting of either even (from == 0) or odd
   //! (from == 1) elements. It's like calling `even()` and `odd()`, but
@@ -444,8 +445,8 @@ public:
   }
 
 protected:
-  BL_INLINE_NODEBUG VecArray(const VecArray& other, uint32_t n, uint32_t from, uint32_t inc) noexcept
-    : OpArray(other, n, from, inc) {}
+  BL_INLINE_NODEBUG VecArray(const VecArray& other, uint32_t from, uint32_t inc, uint32_t limit) noexcept
+    : OpArray(other, from, inc, limit) {}
 
 public:
   BL_INLINE_NODEBUG void init(const Vec& op0) noexcept {
@@ -508,12 +509,18 @@ public:
     return static_cast<const Vec&>(v[index]);
   }
 
+  BL_INLINE void reassign(size_t index, const Vec& newVec) noexcept {
+    BL_ASSERT(index < kMaxSize);
+    v[index] = newVec;
+  }
+
   BL_INLINE_NODEBUG VecArray lo() const noexcept { return VecArray(*this, 0, 1, (_size + 1) / 2); }
   BL_INLINE_NODEBUG VecArray hi() const noexcept { return VecArray(*this, _size > 1 ? (_size + 1) / 2 : 0, 1, _size); }
   BL_INLINE_NODEBUG VecArray even() const noexcept { return VecArray(*this, 0, 2, _size); }
   BL_INLINE_NODEBUG VecArray odd() const noexcept { return VecArray(*this, _size > 1, 2, _size); }
   BL_INLINE_NODEBUG VecArray even_odd(uint32_t from) const noexcept { return VecArray(*this, _size > 1 ? from : 0, 2, _size); }
   BL_INLINE_NODEBUG VecArray half() const noexcept { return VecArray(*this, 0, 1, (_size + 1) / 2); }
+  BL_INLINE_NODEBUG VecArray every_nth(uint32_t n) const noexcept { return VecArray(*this, 0, n, _size); }
 
   BL_INLINE_NODEBUG void truncate(uint32_t newSize) noexcept {
     _size = blMin(_size, newSize);
@@ -521,12 +528,20 @@ public:
 
   BL_INLINE VecArray cloneAs(asmjit::OperandSignature signature) const noexcept {
     VecArray out(*this);
-    for (uint32_t i = 0; i < out.size(); i++)
+    for (uint32_t i = 0; i < out.size(); i++) {
       out.v[i].setSignature(signature);
+    }
     return out;
   }
 
   BL_INLINE_NODEBUG VecWidth vecWidth() const noexcept { return VecWidthUtils::vecWidthOf(v[0].as<Vec>()); }
+
+  BL_INLINE_NODEBUG void setVecWidth(VecWidth vw) noexcept {
+    asmjit::OperandSignature signature = VecWidthUtils::signatureOf(vw);
+    for (uint32_t i = 0; i < size(); i++) {
+      v[i].setSignature(signature);
+    }
+  }
 
   BL_INLINE_NODEBUG VecArray cloneAs(VecWidth vw) const noexcept { return cloneAs(VecWidthUtils::signatureOf(vw)); }
   BL_INLINE_NODEBUG VecArray cloneAs(const asmjit::BaseReg& reg) const noexcept { return cloneAs(reg.signature()); }
