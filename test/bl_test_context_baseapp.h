@@ -9,6 +9,7 @@
 #define BLEND2D_TEST_CONTEXT_BASEAPP_H_INCLUDED
 
 #include <blend2d.h>
+#include <vector>
 
 #include "bl_test_cmdline.h"
 #include "bl_test_context_utilities.h"
@@ -22,12 +23,39 @@ public:
     BLString id;
   };
 
+  //! Default options.
   TestOptions defaultOptions {};
+  //! Current options (inherited from default options and parsed from command line).
   TestOptions options {};
+  //! Tests cases to execute.
+  TestCases testCases;
+
+  //! Font data to use during text rendering tests.
   BLFontData fontData;
 
   // Statistics from runMultiple().
   uint32_t mismatchCount {};
+
+  template<typename T>
+  struct CaseIterator {
+    const std::vector<T>& options;
+    uint32_t index {};
+    uint32_t count {};
+    bool randomized {};
+    T randomCase {};
+
+    inline CaseIterator(const std::vector<T>& options, bool randomized, T randomCase = T::kRandom)
+      : options(options),
+        index(0),
+        count(randomized ? uint32_t(1) : uint32_t(options.size())),
+        randomized(randomized),
+        randomCase(randomCase) {}
+
+    inline bool valid() const { return index < count; }
+    inline T value() const { return randomized ? randomCase : options[index]; }
+
+    inline bool next() { return ++index < count; }
+  };
 
   BaseTestApp();
   ~BaseTestApp();
@@ -35,24 +63,26 @@ public:
   static TestOptions makeDefaultOptions();
   bool parseCommonOptions(const CmdLine& cmdLine);
 
-  bool shouldRun(CommandId cmd) const;
-
   template<typename RunFunc>
   void dispatchRuns(RunFunc&& run) {
-    uint32_t compOpCount = options.compOp <= CompOp::kRandom ? 1 : uint32_t(CompOp::kRandom);
-    uint32_t opacityOpCount = options.opacityOp <= OpacityOp::kRandom ? 1 : uint32_t(OpacityOp::kRandom);
-
-    for (uint32_t i = 0; i < uint32_t(CommandId::kAll); i++) {
-      CommandId commandId = CommandId(i);
-      if (shouldRun(commandId)) {
-        for (uint32_t j = 0; j < compOpCount; j++) {
-          CompOp compOp = compOpCount != 1 ? CompOp(j) : options.compOp;
-          for (uint32_t k = 0; k < opacityOpCount; k++) {
-            OpacityOp opacityOp = opacityOpCount != 1 ? OpacityOp(k) : options.opacityOp;
-            run(commandId, compOp, opacityOp);
-          }
-        }
-      }
+    for (CommandId commandId : testCases.commandIds) {
+      CaseIterator<StyleId> styleIdIterator(testCases.styleIds, isRandomStyle(options.styleId), options.styleId);
+      do {
+        CaseIterator<StyleOp> styleOpIterator(testCases.styleOps, options.styleOp == StyleOp::kRandom);
+        do {
+          CaseIterator<CompOp> compOpIterator(testCases.compOps, options.compOp == CompOp::kRandom);
+          do {
+            CaseIterator<OpacityOp> opacityOpIterator(testCases.opacityOps, options.opacityOp == OpacityOp::kRandom);
+            do {
+              run(commandId,
+                  styleIdIterator.value(),
+                  styleOpIterator.value(),
+                  compOpIterator.value(),
+                  opacityOpIterator.value());
+            } while (opacityOpIterator.next());
+          } while (compOpIterator.next());
+        } while (styleOpIterator.next());
+      } while (styleIdIterator.next());
     }
   }
 

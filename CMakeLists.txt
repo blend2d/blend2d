@@ -1125,7 +1125,7 @@ if (NOT BLEND2D_EMBED)
                          CFLAGS "${BLEND2D_SANITIZE_CFLAGS}")
     endforeach()
 
-    blend2d_add_target(bl_test_image_io TEST
+    blend2d_add_target(bl_test_image_io EXECUTABLE
                        SOURCES test/bl_test_image_io.cpp
                                test/bl_test_imageutils.h
                                test/bl_test_performance_timer.h

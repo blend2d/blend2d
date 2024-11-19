@@ -295,14 +295,16 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // Apply alpha offset to source pointers.
-    if (_alphaFetch)
-      _alphaOffsetApplied = _alphaOffset;
+    if (_alphaFetch && extendX() != ExtendMode::kRepeat) {
+      _fetchInfo.applyAlphaOffset();
+    }
 
     pc->add(f->y, y, mem_ptr(fn.fetchData(), REL_PATTERN(simple.ty)));
 
     // The idea is that both Fx and Fy are compatible with FxFy so we increment Y if this is Fx only fetch.
-    if (isPatternFx())
+    if (isPatternFx()) {
       pc->inc(f->y);
+    }
 
     pc->load_u32(f->h, mem_ptr(fn.fetchData(), REL_PATTERN(src.size.h)));
     pc->load_u32(f->ry, mem_ptr(fn.fetchData(), REL_PATTERN(simple.ry)));
@@ -395,8 +397,9 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
       pc->v_storeavec(f->vExtendData, vStrideStopVec, Alignment(16));
       pc->add(f->srcp1, yMod.cloneAs(f->srcp1), mem_ptr(fn.fetchData(), REL_PATTERN(src.pixelData)));
 
-      if (_alphaOffsetApplied)
-        pc->add(f->srcp1, f->srcp1, _alphaOffsetApplied);
+      if (_fetchInfo.appliedOffset()) {
+        pc->add(f->srcp1, f->srcp1, _fetchInfo.appliedOffset());
+      }
     }
 
     // Horizontal Extend
@@ -426,11 +429,13 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
 
       // Fy pattern falls to Fx/Fy/FxFy category, which means that it's compatible with FxFy, we must increment the
       // X origin in that case as we know that weights for the first pixel are all zeros (compatibility with FxFy).
-      if (isPatternFy())
+      if (isPatternFy()) {
         pc->inc(f->xOrigin);
+      }
 
-      if (isRectFill())
+      if (isRectFill()) {
         pc->add(f->xOrigin, f->xOrigin, x);
+      }
 
       pc->dec(f->w);
     }
@@ -585,8 +590,9 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
       if (isAlphaFetch()) {
         if (isPatternFy()) {
           pc->v_swizzle_lo_u16x4(f->wd_wb, weights, swizzle(3, 1, 3, 1));
-          if (maxPixels() >= 4)
+          if (maxPixels() >= 4) {
             pc->v_swizzle_u32x4(f->wd_wb, f->wd_wb, swizzle(1, 0, 1, 0));
+          }
         }
         else if (isPatternFx()) {
           pc->v_swizzle_u32x4(f->wc_wd, weights, swizzle(3, 3, 3, 3));
@@ -632,8 +638,9 @@ void FetchSimplePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
     // If the pattern has a fractional Y then advance in vertical direction.
     // This ensures that both `srcp0` and `srcp1` are initialized, otherwise
     // `srcp0` would contain undefined content.
-    if (hasFracY())
+    if (hasFracY()) {
       advanceY();
+    }
   }
 }
 
@@ -677,8 +684,9 @@ void FetchSimplePatternPart::advanceY() noexcept {
     // If this pattern fetch uses two source pointers (one for current scanline
     // and one for previous one) copy current to the previous so it can be used
     // (only fetchers that use Fy).
-    if (hasFracY())
+    if (hasFracY()) {
       pc->mov(f->srcp0, f->srcp1);
+    }
 
     pc->j(L_YStop, cmp_eq(f->y, f->vExtendData.cloneAdjusted(kYStopArrayOffset)));
     pc->add(f->srcp1, f->srcp1, f->vExtendData.cloneAdjusted(kStrideArrayOffset));
@@ -773,8 +781,9 @@ void FetchSimplePatternPart::advanceX(const Gp& x, const Gp& diff) noexcept {
   blUnused(x);
   Gp fx32 = f->x.r32();
 
-  if (pixelGranularity() > 1)
+  if (pixelGranularity() > 1) {
     leaveN();
+  }
 
   if (isAlignedBlit()) {
     // Blit AA
@@ -806,8 +815,9 @@ void FetchSimplePatternPart::advanceX(const Gp& x, const Gp& diff) noexcept {
 
   prefetchAccX();
 
-  if (pixelGranularity() > 1)
+  if (pixelGranularity() > 1) {
     enterN();
+  }
 }
 
 void FetchSimplePatternPart::advanceXByOne() noexcept {
@@ -992,7 +1002,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
   }
 
   if (isAlignedBlit()) {
-    FetchUtils::fetchPixels(pc, p, n, flags, format(), f->srcp1, Alignment(1), AdvanceMode::kAdvance, predicate);
+    FetchUtils::fetchPixels(pc, p, n, flags, fetchInfo(), f->srcp1, Alignment(1), AdvanceMode::kAdvance, predicate);
     return;
   }
 
@@ -1027,14 +1037,14 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
       }
 
       if (isPatternAligned()) {
-        FetchUtils::fetchPixel(pc, p, flags, format(), mem_ptr(f->srcp1, idx, _idxShift));
+        FetchUtils::fetchPixel(pc, p, flags, fetchInfo(), mem_ptr(f->srcp1, idx, _idxShift));
         advanceXByOne();
       }
       else if (isPatternFy()) {
         if (isAlphaFetch()) {
           Vec pixA = pc->newV128("@pixA");
 
-          FetchUtils::x_fetch_unpacked_a8_2x(pc, pixA, format(), mem_ptr(f->srcp1, idx, _idxShift), mem_ptr(f->srcp0, idx, _idxShift));
+          FetchUtils::x_fetch_unpacked_a8_2x(pc, pixA, fetchInfo(), mem_ptr(f->srcp1, idx, _idxShift), mem_ptr(f->srcp0, idx, _idxShift));
           pc->v_mhadd_i16_to_i32(pixA, pixA, f->wd_wb);
           pc->v_srli_u16(pixA, pixA, 8);
 
@@ -1151,7 +1161,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
         // ------------------------------
 
         if (isPatternAligned()) {
-          FetchUtils::FetchContext fCtx(pc, &p, PixelCount(4), format(), flags, gatherMode);
+          FetchUtils::FetchContext fCtx(pc, &p, PixelCount(4), flags, fetchInfo(), gatherMode);
 
           fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
           fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
@@ -1175,7 +1185,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
 
           if (isAlphaFetch()) {
             Pixel fPix("fPix", intermediateType);
-            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(8), format(), intermediateFlags, GatherMode::kFetchAll);
+            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(8), intermediateFlags, fetchInfo(), GatherMode::kFetchAll);
 
             idx = pCtx.nextIndex();
             fCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
@@ -1209,8 +1219,8 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             Pixel pix0("pix0", intermediateType);
             Pixel pix1("pix1", intermediateType);
 
-            FetchUtils::FetchContext aCtx(pc, &pix0, PixelCount(4), format(), intermediateFlags, gatherMode);
-            FetchUtils::FetchContext bCtx(pc, &pix1, PixelCount(4), format(), intermediateFlags, gatherMode);
+            FetchUtils::FetchContext aCtx(pc, &pix0, PixelCount(4), intermediateFlags, fetchInfo(), gatherMode);
+            FetchUtils::FetchContext bCtx(pc, &pix1, PixelCount(4), intermediateFlags, fetchInfo(), gatherMode);
 
             idx = pCtx.nextIndex();
             aCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
@@ -1251,7 +1261,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
         if (isPatternFx()) {
           if (isAlphaFetch()) {
             Pixel fPix("fPix", intermediateType);
-            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(4), format(), intermediateFlags, GatherMode::kFetchAll);
+            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(4), intermediateFlags, fetchInfo(), GatherMode::kFetchAll);
 
             Vec& pixA = fPix.ua[0];
             Vec& pixL = f->pixL;
@@ -1279,7 +1289,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           }
           else if (p.isRGBA32()) {
             Pixel fPix("fPix", intermediateType);
-            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(4), format(), PixelFlags::kPC, GatherMode::kFetchAll);
+            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(4), PixelFlags::kPC, fetchInfo(), GatherMode::kFetchAll);
 
             fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
             fCtx.fetchPixel(mem_ptr(f->srcp1, pCtx.nextIndex(), _idxShift));
@@ -1326,7 +1336,7 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
 
           if (isAlphaFetch()) {
             Pixel fPix("fPix", intermediateType);
-            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(8), format(), intermediateFlags, GatherMode::kFetchAll);
+            FetchUtils::FetchContext fCtx(pc, &fPix, PixelCount(8), intermediateFlags, fetchInfo(), GatherMode::kFetchAll);
 
             idx = pCtx.nextIndex();
             fCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
@@ -1369,8 +1379,8 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             Pixel aPix("aPix", intermediateType);
             Pixel bPix("bPix", intermediateType);
 
-            FetchUtils::FetchContext aCtx(pc, &aPix, PixelCount(4), format(), PixelFlags::kPC, GatherMode::kFetchAll);
-            FetchUtils::FetchContext bCtx(pc, &bPix, PixelCount(4), format(), PixelFlags::kPC, GatherMode::kFetchAll);
+            FetchUtils::FetchContext aCtx(pc, &aPix, PixelCount(4), PixelFlags::kPC, fetchInfo(), GatherMode::kFetchAll);
+            FetchUtils::FetchContext bCtx(pc, &bPix, PixelCount(4), PixelFlags::kPC, fetchInfo(), GatherMode::kFetchAll);
 
             idx = pCtx.nextIndex();
             aCtx.fetchPixel(mem_ptr(f->srcp0, idx, _idxShift));
@@ -1455,10 +1465,11 @@ void FetchSimplePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
         BL_ASSERT(isPatternAligned());
 
         PixelFlags overriddenFlags = flags;
-        if (pc->use256BitSimd() && p.isRGBA32())
+        if (pc->use256BitSimd() && p.isRGBA32()) {
           overriddenFlags = PixelFlags::kPC;
+        }
 
-        FetchUtils::FetchContext fCtx(pc, &p, PixelCount(4), format(), overriddenFlags, gatherMode);
+        FetchUtils::FetchContext fCtx(pc, &p, PixelCount(4), overriddenFlags, fetchInfo(), gatherMode);
         Gp x = f->x;
 
         if (predicate.empty()) {
@@ -1966,7 +1977,7 @@ void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           pc->v_sub_i32(f->px_py, f->px_py, vMsk);
           pc->add(texPtr, texPtr, f->srctop);
 
-          FetchUtils::fetchPixel(pc, p, flags, format(), mem_ptr(texPtr, texOff, _idxShift));
+          FetchUtils::fetchPixel(pc, p, flags, fetchInfo(), mem_ptr(texPtr, texOff, _idxShift));
           FetchUtils::satisfyPixels(pc, p, flags);
           break;
         }
@@ -1993,7 +2004,7 @@ void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           pc->s_mov_u32(texPtr.r32(), vIdx);
           pc->add(texPtr, texPtr, f->srctop);
 
-          FetchUtils::fetchPixel(pc, p, flags, format(), mem_ptr(texPtr));
+          FetchUtils::fetchPixel(pc, p, flags, fetchInfo(), mem_ptr(texPtr));
           FetchUtils::satisfyPixels(pc, p, flags);
           break;
         }
@@ -2084,7 +2095,7 @@ void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
     case 4: {
       switch (fetchType()) {
         case FetchType::kPatternAffineNNAny: {
-          FetchUtils::FetchContext fCtx(pc, &p, PixelCount(4), format(), flags);
+          FetchUtils::FetchContext fCtx(pc, &p, PixelCount(4), flags, fetchInfo());
           FetchUtils::IndexExtractor iExt(pc);
 
           Gp texPtr0 = pc->newGpPtr("texPtr0");
@@ -2193,7 +2204,7 @@ void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
           pc->v_xor_i32(vIdx, vIdx, vMsk0);
 
           pc->v_mhadd_i16_to_i32(vIdx, vIdx, f->vAddrMul);
-          FetchUtils::gatherPixels(pc, p, PixelCount(4), format(), flags, mem_ptr(f->srctop), vIdx, 0, FetchUtils::IndexLayout::kUInt32, gatherMode, [&](uint32_t step) noexcept {
+          FetchUtils::gatherPixels(pc, p, PixelCount(4), flags, fetchInfo(), mem_ptr(f->srctop), vIdx, 0, FetchUtils::IndexLayout::kUInt32, gatherMode, [&](uint32_t step) noexcept {
             switch (step) {
               case 0:
                 pc->v_add_i64(f->px_py, f->px_py, f->xx2_xy2);

@@ -29,7 +29,7 @@ FetchPixelPtrPart::FetchPixelPtrPart(PipeCompiler* pc, FetchType fetchType, Form
 // ============================================
 
 void FetchPixelPtrPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept {
-  FetchUtils::fetchPixels(pc, p, n, flags, format(), _ptr, _alignment, AdvanceMode::kNoAdvance, predicate);
+  FetchUtils::fetchPixels(pc, p, n, flags, fetchInfo(), _ptr, _alignment, AdvanceMode::kNoAdvance, predicate);
 }
 
 } // {JIT}

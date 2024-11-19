@@ -1952,7 +1952,7 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& dVec, const Gp& sPtr, PixelCo
   }
 }
 
-void fetchMaskA8(PipeCompiler* pc, VecArray& dVec, const Gp& sPtr, PixelCount n, PixelType pixelType, PixelCoverageFormat coverageFormat, AdvanceMode advanceMode, GlobalAlpha* ga, PixelPredicate& predicate) noexcept {
+void fetchMaskA8(PipeCompiler* pc, VecArray& dVec, const Gp& sPtr, PixelCount n, PixelType pixelType, PixelCoverageFormat coverageFormat, AdvanceMode advanceMode, PixelPredicate& predicate, GlobalAlpha* ga) noexcept {
   switch (pixelType) {
     case PixelType::kA8: {
       BL_ASSERT(n != 1u);
@@ -2579,7 +2579,7 @@ void fetchPRGB32IntoUA(PipeCompiler* pc, VecArray& dVec, const Gp& sPtr, PixelCo
   } while (remaining > 0u);
 }
 
-static void fetchPixelsA8(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, Gp sPtr, Alignment alignment, AdvanceMode advanceMode, PixelPredicate& predicate) noexcept {
+static void fetchPixelsA8(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, Gp sPtr, Alignment alignment, AdvanceMode advanceMode, PixelPredicate& predicate) noexcept {
   BL_ASSERT(p.isA8());
   BL_ASSERT(n.value() > 1u);
 
@@ -2600,7 +2600,7 @@ static void fetchPixelsA8(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags f
   VecWidth uaWidth = pc->vecWidthOf(DataWidth::k16, n);
   uint32_t uaCount = pc->vecCountOf(DataWidth::k16, n);
 
-  switch (format) {
+  switch (fInfo.format()) {
     // A8 <- PRGB32.
     case FormatExt::kPRGB32: {
       if (blTestFlag(flags, PixelFlags::kPA)) {
@@ -2634,14 +2634,14 @@ static void fetchPixelsA8(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags f
   satisfyPixelsA8(pc, p, flags);
 }
 
-static void fetchPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, Gp sPtr, Alignment alignment, AdvanceMode advanceMode, PixelPredicate& predicate) noexcept {
+static void fetchPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, Gp sPtr, Alignment alignment, AdvanceMode advanceMode, PixelPredicate& predicate) noexcept {
   BL_ASSERT(p.isRGBA32());
   BL_ASSERT(n.value() > 1u);
 
   p.setCount(n);
 
   Mem sMem = ptr(sPtr);
-  uint32_t srcBPP = blFormatInfo[uint32_t(format)].depth / 8u;
+  uint32_t srcBPP = fInfo.bpp();
 
   VecWidth pcWidth = pc->vecWidthOf(DataWidth::k32, n);
   uint32_t pcCount = VecWidthUtils::vecCountOf(pcWidth, DataWidth::k32, n);
@@ -2649,7 +2649,7 @@ static void fetchPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFla
   VecWidth ucWidth = pc->vecWidthOf(DataWidth::k64, n);
   uint32_t ucCount = VecWidthUtils::vecCountOf(ucWidth, DataWidth::k64, n);
 
-  switch (format) {
+  switch (fInfo.format()) {
     // RGBA32 <- PRGB32 | XRGB32.
     case FormatExt::kPRGB32:
     case FormatExt::kXRGB32: {
@@ -2750,7 +2750,7 @@ static void fetchPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFla
         }
       }
 
-      if (format == FormatExt::kXRGB32) {
+      if (fInfo.format() == FormatExt::kXRGB32) {
         fillAlphaChannel(pc, p);
       }
 
@@ -2779,20 +2779,25 @@ static void fetchPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFla
   satisfyPixelsRGBA32(pc, p, flags);
 }
 
-void fetchPixel(PipeCompiler* pc, Pixel& p, PixelFlags flags, FormatExt format, Mem sMem) noexcept {
+void fetchPixel(PipeCompiler* pc, Pixel& p, PixelFlags flags, PixelFetchInfo fInfo, Mem sMem) noexcept {
   p.setCount(PixelCount{1u});
 
   switch (p.type()) {
     case PixelType::kA8: {
-      switch (format) {
+      switch (fInfo.format()) {
         case FormatExt::kPRGB32: {
           p.sa = pc->newGp32("a");
 #if defined(BL_JIT_ARCH_X86)
-          sMem.addOffset(3);
+          sMem.addOffset(fInfo.fetchAlphaOffset());
           pc->load_u8(p.sa, sMem);
 #else
-          pc->load_u32(p.sa, sMem);
-          pc->shr(p.sa, p.sa, 24);
+          if (fInfo.fetchAlphaOffset() == 0) {
+            pc->load_u8(p.sa, sMem);
+          }
+          else {
+            pc->load_u32(p.sa, sMem);
+            pc->shr(p.sa, p.sa, 24);
+          }
 #endif
           break;
         }
@@ -2818,7 +2823,7 @@ void fetchPixel(PipeCompiler* pc, Pixel& p, PixelFlags flags, FormatExt format, 
     }
 
     case PixelType::kRGBA32: {
-      switch (format) {
+      switch (fInfo.format()) {
         case FormatExt::kA8: {
           if (blTestFlag(flags, PixelFlags::kPC)) {
             pc->newV128Array(p.pc, 1, p.name(), "pc");
@@ -2880,28 +2885,28 @@ void fetchPixel(PipeCompiler* pc, Pixel& p, PixelFlags flags, FormatExt format, 
   }
 }
 
-void fetchPixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const Gp& sPtr, Alignment alignment, AdvanceMode advanceMode) noexcept {
-  fetchPixels(pc, p, n, flags, format, sPtr, alignment, advanceMode, pc->emptyPredicate());
+void fetchPixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Gp& sPtr, Alignment alignment, AdvanceMode advanceMode) noexcept {
+  fetchPixels(pc, p, n, flags, fInfo, sPtr, alignment, advanceMode, pc->emptyPredicate());
 }
 
-void fetchPixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, FormatExt format, const Gp& sPtr, Alignment alignment, AdvanceMode advanceMode, PixelPredicate& predicate) noexcept {
+void fetchPixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Gp& sPtr, Alignment alignment, AdvanceMode advanceMode, PixelPredicate& predicate) noexcept {
   if (n == 1u) {
     BL_ASSERT(predicate.empty());
-    fetchPixel(pc, p, flags, format, mem_ptr(sPtr));
+    fetchPixel(pc, p, flags, fInfo, mem_ptr(sPtr));
 
     if (advanceMode == AdvanceMode::kAdvance) {
-      pc->add(sPtr, sPtr, blFormatInfo[uint32_t(format)].depth / 8u);
+      pc->add(sPtr, sPtr, fInfo.bpp());
     }
     return;
   }
 
   switch (p.type()) {
     case PixelType::kA8:
-      fetchPixelsA8(pc, p, n, flags, format, sPtr, alignment, advanceMode, predicate);
+      fetchPixelsA8(pc, p, n, flags, fInfo, sPtr, alignment, advanceMode, predicate);
       break;
 
     case PixelType::kRGBA32:
-      fetchPixelsRGBA32(pc, p, n, flags, format, sPtr, alignment, advanceMode, predicate);
+      fetchPixelsRGBA32(pc, p, n, flags, fInfo, sPtr, alignment, advanceMode, predicate);
       break;
 
     default:
@@ -3424,14 +3429,14 @@ void _x_unpack_pixel(PipeCompiler* pc, VecArray& ux, VecArray& px, uint32_t n, c
 #endif
 }
 
-void x_fetch_unpacked_a8_2x(PipeCompiler* pc, const Vec& dst, FormatExt format, const Mem& src1, const Mem& src0) noexcept {
+void x_fetch_unpacked_a8_2x(PipeCompiler* pc, const Vec& dst, PixelFetchInfo fInfo, const Mem& src1, const Mem& src0) noexcept {
 #if defined(BL_JIT_ARCH_X86)
   Mem m0 = src0;
   Mem m1 = src1;
 
-  if (format == FormatExt::kPRGB32) {
-    m0.addOffset(3);
-    m1.addOffset(3);
+  if (fInfo.format() == FormatExt::kPRGB32) {
+    m0.addOffset(fInfo.fetchAlphaOffset());
+    m1.addOffset(fInfo.fetchAlphaOffset());
   }
 
   if (pc->hasSSE4_1()) {
@@ -3448,7 +3453,7 @@ void x_fetch_unpacked_a8_2x(PipeCompiler* pc, const Vec& dst, FormatExt format, 
 #else
   Vec tmp = pc->newSimilarReg(dst, "@tmp");
 
-  if (format == FormatExt::kPRGB32) {
+  if (fInfo.format() == FormatExt::kPRGB32 && fInfo.fetchAlphaOffset()) {
     pc->v_loadu32(dst, src0);
     pc->v_loadu32(tmp, src1);
     pc->v_srli_u32(dst, dst, 24);

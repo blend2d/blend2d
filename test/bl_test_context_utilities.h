@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <vector>
+
 namespace ContextTests {
 
 enum class CommandId : uint32_t {
@@ -43,11 +45,13 @@ enum class CommandId : uint32_t {
 };
 
 enum class CompOp : uint32_t {
-  kSrcOver,
-  kSrcCopy,
+  kSrcOver = BL_COMP_OP_SRC_OVER,
+  kSrcCopy = BL_COMP_OP_SRC_COPY,
 
   kRandom,
   kAll,
+
+  kMaxValue = kAll,
   kUnknown = 0xFFFFFFFFu
 };
 
@@ -58,7 +62,9 @@ enum class OpacityOp : uint32_t {
 
   kRandom,
   kAll,
-  kUnknown
+
+  kMaxValue = kAll,
+  kUnknown = 0xFFFFFFFFu
 };
 
 enum class StyleId : uint32_t {
@@ -78,7 +84,14 @@ enum class StyleId : uint32_t {
   kPatternAffineBilinear,
 
   kRandom,
-  kMaxValue = kRandom,
+  kRandomStable,
+  kRandomUnstable,
+
+  kAll,
+  kAllStable,
+  kAllUnstable,
+
+  kMaxValue = kAllUnstable,
   kUnknown = 0xFFFFFFFFu
 };
 
@@ -87,8 +100,31 @@ enum class StyleOp : uint32_t {
   kImplicit,
 
   kRandom,
-  kUnknown
+  kAll,
+
+  kMaxValue = kAll,
+  kUnknown = 0xFFFFFFFFu
 };
+
+static inline bool isRandomStyle(StyleId styleId) noexcept {
+  return styleId >= StyleId::kRandom && styleId <= StyleId::kRandomUnstable;
+}
+
+static inline uint32_t maximumPixelDifferenceOf(StyleId styleId) noexcept {
+  switch (styleId) {
+    // These use FMA, thus Portable VS JIT implementation could differ.
+    case StyleId::kGradientRadial:
+    case StyleId::kGradientRadialDither:
+    case StyleId::kGradientConic:
+    case StyleId::kGradientConicDither:
+    case StyleId::kRandom:
+    case StyleId::kRandomUnstable:
+      return 2;
+
+    default:
+      return 0;
+  }
+}
 
 namespace StringUtils {
 
@@ -103,8 +139,8 @@ static bool strieq(const char* a, const char* b) {
     unsigned ac = (unsigned char)a[i];
     unsigned bc = (unsigned char)b[i];
 
-    if (ac >= 'A' && ac <= 'Z') ac += 'A' - 'a';
-    if (bc >= 'A' && bc <= 'Z') bc += 'A' - 'a';
+    if (ac >= 'a' && ac <= 'z') ac -= 'a' - 'A';
+    if (bc >= 'a' && bc <= 'z') bc -= 'a' - 'A';
 
     if (ac != bc)
       return false;
@@ -162,6 +198,11 @@ static const char* styleIdToString(StyleId styleId) {
     case StyleId::kPatternAffineNearest : return "pattern-affine-nearest";
     case StyleId::kPatternAffineBilinear: return "pattern-affine-bilinear";
     case StyleId::kRandom               : return "random";
+    case StyleId::kRandomStable         : return "random-stable";
+    case StyleId::kRandomUnstable       : return "random-unstable";
+    case StyleId::kAll                  : return "all";
+    case StyleId::kAllStable            : return "all-stable";
+    case StyleId::kAllUnstable          : return "all-unstable";
 
     default:
       return "unknown";
@@ -246,21 +287,21 @@ static StyleId parseStyleId(const char* s) {
 }
 
 static StyleOp parseStyleOp(const char* s) {
-  for (uint32_t i = 0; i <= uint32_t(StyleOp::kRandom); i++)
+  for (uint32_t i = 0; i <= uint32_t(StyleOp::kMaxValue); i++)
     if (strieq(s, styleOpToString(StyleOp(i))))
       return StyleOp(i);
   return StyleOp::kUnknown;
 }
 
 static CompOp parseCompOp(const char* s) {
-  for (uint32_t i = 0; i <= uint32_t(CompOp::kAll); i++)
+  for (uint32_t i = 0; i <= uint32_t(CompOp::kMaxValue); i++)
     if (strieq(s, compOpToString(CompOp(i))))
       return CompOp(i);
   return CompOp::kUnknown;
 }
 
 static OpacityOp parseOpacityOp(const char* s) {
-  for (uint32_t i = 0; i <= uint32_t(OpacityOp::kAll); i++)
+  for (uint32_t i = 0; i <= uint32_t(OpacityOp::kMaxValue); i++)
     if (strieq(s, opacityOpToString(OpacityOp(i))))
       return OpacityOp(i);
   return OpacityOp::kUnknown;
@@ -318,6 +359,19 @@ public:
     if (_verbosity <= Verbosity::Info)
       print(fmt, BLInternal::forward<Args>(args)...);
   }
+};
+
+struct TestCases {
+  //! List of commands to test.
+  std::vector<CommandId> commandIds;
+  //! List of styles test.
+  std::vector<StyleId> styleIds;
+  //! List of styles operations to test (implicit, explicit, random).
+  std::vector<StyleOp> styleOps;
+  //! List of composition operators to test (or that should be randomized in random case).
+  std::vector<CompOp> compOps;
+  //! List of opacity operators to test (or that should be randomized in random case).
+  std::vector<OpacityOp> opacityOps;
 };
 
 struct TestOptions {
@@ -440,6 +494,8 @@ public:
 
   enum class Op { kFill, kStroke };
 
+  const TestCases& _testCases;
+
   RandomDataGenerator _rnd;
   BLRandom _rndSync;
   BLRandom _rndCompOp;
@@ -458,8 +514,9 @@ public:
   BLImage _textures[kTextureCount];
   BLFontData _fontData;
 
-  ContextTester(const char* prefix)
-    : _rndSync(0u),
+  ContextTester(const TestCases& testCases, const char* prefix)
+    : _testCases(testCases),
+      _rndSync(0u),
       _prefix(prefix),
       _flushSync(false) {}
 
@@ -508,9 +565,8 @@ public:
 
     BL_PROPAGATE(_textures[id].create(size, size, format));
 
-    // Disable JIT here as we may be testing it in the future.
-    // If there is a bug in JIT we want to find it by tests,
-    // and not to face it here...
+    // Disable JIT here as we may be testing it in the future. If there is
+    // a bug in JIT we want to find it by tests, and not to face it here...
     BLContextCreateInfo cci {};
     cci.flags = BL_CONTEXT_CREATE_FLAG_DISABLE_JIT;
 
@@ -561,33 +617,35 @@ public:
   }
 
   inline void recordIteration(size_t n) {
-    if (_flushSync && _rndSync.nextUInt32() > 0xF0000000u)
+    if (_flushSync && _rndSync.nextUInt32() > 0xF0000000u) {
       _ctx.flush(BL_CONTEXT_FLUSH_SYNC);
+    }
   }
 
   inline StyleId nextStyleId() {
     StyleId styleId = _styleId;
-    if (styleId >= StyleId::kRandom)
-      styleId = StyleId(_rnd.nextUInt32() % uint32_t(StyleId::kRandom));
+    if (isRandomStyle(styleId)) {
+      styleId = _testCases.styleIds[_rnd.nextUInt32() % _testCases.styleIds.size()];
+    }
     return styleId;
   }
 
   inline StyleOp nextStyleOp() {
     if (_styleOp == StyleOp::kRandom)
-      return StyleOp(_rndStyleOp.nextUInt32() % uint32_t(StyleOp::kRandom));
+      return _testCases.styleOps[_rndStyleOp.nextUInt32() % _testCases.styleOps.size()];
     else
       return _styleOp;
   }
 
   void setupCommonOptions(BLContext& ctx) {
     if (_compOp == CompOp::kRandom) {
-      ctx.setCompOp(BLCompOp(_rndCompOp.nextUInt32() % uint32_t(CompOp::kRandom)));
+      ctx.setCompOp(BLCompOp(_testCases.compOps[_rndCompOp.nextUInt32() % _testCases.compOps.size()]));
     }
 
     if (_opacityOp == OpacityOp::kRandom || _opacityOp == OpacityOp::kSemi) {
       OpacityOp op = _opacityOp;
       if (op == OpacityOp::kRandom) {
-        op = OpacityOp(_rndOpacityOp.nextUInt32() % uint32_t(OpacityOp::kRandom));
+        op = _testCases.opacityOps[_rndOpacityOp.nextUInt32() % _testCases.opacityOps.size()];
       }
 
       double alpha = 0.0;

@@ -28,7 +28,7 @@ public:
 
   bool iterateAllJitFeatures = false;
   uint32_t selectedCpuFeatures {};
-  uint32_t maximumPixelDifference {};
+  uint32_t maximumPixelDifference = 0xFFFFFFFFu;
 
   uint32_t failedCount {};
   uint32_t passedCount {};
@@ -69,8 +69,8 @@ public:
     printCommonOptions(defaultOptions);
 
     printf("JIT options:\n");
-    printf("  --max-diff=<value>      - Maximum pixel difference allowed  [default=0]\n");
-    printf("  --simd-level=<name>     - SIMD level                        [default=native]\n");
+    printf("  --max-diff=<value>      - Maximum pixel difference allowed  [default=auto]\n");
+    printf("  --simd-level=<name>     - SIMD level                        [default=all]\n");
     printf("\n");
 
 #if defined(BL_JIT_ARCH_X86)
@@ -109,9 +109,15 @@ public:
   }
 
   bool parseJITOptions(CmdLine cmdLine) {
-    maximumPixelDifference = cmdLine.valueAsUInt("--max-diff", 0);
-    const char* simdLevel = cmdLine.valueOf("--simd-level", "native");
+    const char* maxDiffValue = cmdLine.valueOf("--max-diff", "auto");
+    if (strcmp(maxDiffValue, "auto") == 0) {
+      maximumPixelDifference = 0xFFFFFFFFu;
+    }
+    else {
+      maximumPixelDifference = cmdLine.valueAsUInt("--max-diff", 0);
+    }
 
+    const char* simdLevel = cmdLine.valueOf("--simd-level", "all");
     if (simdLevel) {
       if (StringUtils::strieq(simdLevel, "native")) {
         // Nothing to do if configured to auto-detect.
@@ -173,8 +179,8 @@ public:
     BLString aTesterName;
     BLString bTesterName;
 
-    ContextTester aTester("ref");
-    ContextTester bTester("jit");
+    ContextTester aTester(testCases, "ref");
+    ContextTester bTester(testCases, "jit");
 
     aTester.setFontData(fontData);
     bTester.setFontData(fontData);
@@ -200,30 +206,45 @@ public:
     }
 
     TestInfo info;
-    dispatchRuns([&](CommandId commandId, CompOp compOp, OpacityOp opacityOp) {
+    dispatchRuns([&](CommandId commandId, StyleId styleId, StyleOp styleOp, CompOp compOp, OpacityOp opacityOp) {
+      BLString s0;
+      s0.appendFormat("%s/%s",
+        StringUtils::styleIdToString(styleId),
+        StringUtils::styleOpToString(styleOp));
+
+      BLString s1;
+      s1.appendFormat("%s/%s",
+        StringUtils::compOpToString(compOp),
+        StringUtils::opacityOpToString(opacityOp));
+
       info.name.assignFormat(
-          "%s | comp-op=%s | opacity=%s | style=%s | simd-level=%s",
+          "%-21s | style+api=%-25s| comp+op=%-20s| simd-level=%-9s",
           StringUtils::commandIdToString(commandId),
-          StringUtils::compOpToString(compOp),
-          StringUtils::opacityOpToString(opacityOp),
-          StringUtils::styleIdToString(options.styleId),
+          s0.data(),
+          s1.data(),
           _cpuFeaturesString.data());
 
-      info.id.assignFormat("%s-%s-%s-%s-%s",
+      info.id.assignFormat("ctx-jit-%s-%s-%s-%s-%s-%s",
         StringUtils::commandIdToString(commandId),
+        StringUtils::styleIdToString(styleId),
+        StringUtils::styleOpToString(styleOp),
         StringUtils::compOpToString(compOp),
         StringUtils::opacityOpToString(opacityOp),
-        StringUtils::styleIdToString(options.styleId),
         _cpuFeaturesString.data());
 
       if (!options.quiet) {
-        printf("Testing [%s]:\n", info.name.data());
+        printf("Running [%s]\n", info.name.data());
       }
 
-      aTester.setOptions(compOp, opacityOp, options.styleId, options.styleOp);
-      bTester.setOptions(compOp, opacityOp, options.styleId, options.styleOp);
+      aTester.setOptions(compOp, opacityOp, styleId, styleOp);
+      bTester.setOptions(compOp, opacityOp, styleId, styleOp);
 
-      if (runMultiple(commandId, info, aTester, bTester, maximumPixelDifference))
+      uint32_t adjustedMaxDiff = maximumPixelDifference;
+      if (adjustedMaxDiff == 0xFFFFFFFFu) {
+        adjustedMaxDiff = maximumPixelDifferenceOf(styleId);
+      }
+
+      if (runMultiple(commandId, info, aTester, bTester, adjustedMaxDiff))
         passedCount++;
       else
         failedCount++;

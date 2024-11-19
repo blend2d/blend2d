@@ -142,6 +142,8 @@ public:
 
   //! Required fetch flags, possibly enhanced to make the fetching logic simpler.
   PixelFlags _fetchFlags {};
+  //! Pixel fetch information.
+  PixelFetchInfo _fetchInfo {};
   //! The index of the pixel to be fetched next, starts at 0.
   uint32_t _pixelIndex {};
   //! The current vector index where the pixel will be fetched, incremented by `_vecStep`.
@@ -153,8 +155,6 @@ public:
   //! Number of lanes to fetch pixels to - when `_laneIndex` reaches `_laneCount` it's zeroed and `_vecIndex`
   //! incremented by `_vecStep`.
   uint32_t _laneCount {};
-  //! Format of source pixels - doesn't have to be the same as the format of `_pixel`.
-  FormatExt _fetchFormat {};
   //! Fetch mode - selects the approach used to fetch pixels.
   FetchMode _fetchMode {};
 
@@ -197,14 +197,15 @@ public:
 
   //! \}
 
-  inline FetchContext(PipeCompiler* pc, Pixel* pixel, PixelCount n, FormatExt format, PixelFlags fetchFlags, GatherMode mode = GatherMode::kFetchAll) noexcept
+  inline FetchContext(PipeCompiler* pc, Pixel* pixel, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, GatherMode mode = GatherMode::kFetchAll) noexcept
     : _pc(pc),
       _pixel(pixel),
-      _fetchFlags(fetchFlags),
-      _fetchFormat(format),
+      _fetchFlags(flags),
+      _fetchInfo(fInfo),
       _gatherMode(mode),
       _fetchDone(false) { _init(n); }
 
+  BL_INLINE_NODEBUG FormatExt fetchFormat() const noexcept { return _fetchInfo.format(); }
   BL_INLINE_NODEBUG FetchMode fetchMode() const noexcept { return _fetchMode; }
   BL_INLINE_NODEBUG GatherMode gatherMode() const noexcept { return _gatherMode; }
 
@@ -228,11 +229,11 @@ public:
   void end() noexcept;
 };
 
-void gatherPixels(PipeCompiler* pc, Pixel& p, PixelCount n, FormatExt format, PixelFlags flags, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout indexLayout, GatherMode mode, InterleaveCallback cb, void* cbData) noexcept;
+void gatherPixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout indexLayout, GatherMode mode, InterleaveCallback cb, void* cbData) noexcept;
 
 template<class InterleaveFunc>
-static void gatherPixels(PipeCompiler* pc, Pixel& p, PixelCount n, FormatExt format, PixelFlags flags, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout indexLayout, GatherMode mode, InterleaveFunc&& interleaveFunc) noexcept {
-  gatherPixels(pc, p, n, format, flags, src, idx, shift, indexLayout, mode, [](uint32_t step, void* data) noexcept {
+static void gatherPixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout indexLayout, GatherMode mode, InterleaveFunc&& interleaveFunc) noexcept {
+  gatherPixels(pc, p, n, flags, fInfo, src, idx, shift, indexLayout, mode, [](uint32_t step, void* data) noexcept {
     (*static_cast<const InterleaveFunc*>(data))(step);
   }, (void*)&interleaveFunc);
 }

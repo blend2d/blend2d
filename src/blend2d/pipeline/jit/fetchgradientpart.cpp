@@ -259,7 +259,7 @@ void FetchGradientPart::fetchSinglePixel(Pixel& dst, PixelFlags flags, const Gp&
     _ditheringContext.ditherUnpackedPixels(dst, AdvanceMode::kAdvance);
   }
   else {
-    FetchUtils::fetchPixel(pc, dst, flags, FormatExt::kPRGB32, src);
+    FetchUtils::fetchPixel(pc, dst, flags, PixelFetchInfo(FormatExt::kPRGB32), src);
   }
 }
 
@@ -269,14 +269,14 @@ void FetchGradientPart::fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags
 
   if (ditheringEnabled()) {
     dst.setType(PixelType::kRGBA64);
-    FetchUtils::gatherPixels(pc, dst, n, FormatExt::kPRGB64, PixelFlags::kUC, src, idx, idxShift, indexLayout, mode, cb, cbData);
+    FetchUtils::gatherPixels(pc, dst, n, PixelFlags::kUC, PixelFetchInfo(FormatExt::kPRGB64), src, idx, idxShift, indexLayout, mode, cb, cbData);
     _ditheringContext.ditherUnpackedPixels(dst, mode == GatherMode::kFetchAll ? AdvanceMode::kAdvance : AdvanceMode::kNoAdvance);
 
     dst.setType(PixelType::kRGBA32);
     FetchUtils::satisfyPixels(pc, dst, flags);
   }
   else {
-    FetchUtils::gatherPixels(pc, dst, n, format(), flags, src, idx, idxShift, indexLayout, mode, cb, cbData);
+    FetchUtils::gatherPixels(pc, dst, n, flags, fetchInfo(), src, idx, idxShift, indexLayout, mode, cb, cbData);
   }
 }
 

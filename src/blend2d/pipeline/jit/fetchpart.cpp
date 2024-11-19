@@ -19,10 +19,8 @@ namespace JIT {
 FetchPart::FetchPart(PipeCompiler* pc, FetchType fetchType, FormatExt format) noexcept
   : PipePart(pc, PipePartType::kFetch),
     _fetchType(fetchType),
-    _format(format),
-    _bpp(uint8_t(blFormatInfo[size_t(format)].depth / 8u)),
-    _hasRGB(blFormatInfo[size_t(format)].hasFlag(BL_FORMAT_FLAG_RGB)),
-    _hasAlpha(blFormatInfo[size_t(format)].hasFlag(BL_FORMAT_FLAG_ALPHA)) {}
+    _fetchInfo(format),
+    _bpp(uint8_t(blFormatInfo[size_t(format)].depth / 8u)) {}
 
 // bl::Pipeline::JIT::FetchPart - Init & Fini
 // ==========================================
@@ -35,8 +33,7 @@ void FetchPart::init(const PipeFunction& fn, Gp& x, Gp& y, PixelType pixelType, 
 
   // Initialize alpha fetch information. The fetch would be A8 if either the requested
   // pixel is alpha-only or the source pixel format is alpha-only (or both).
-  _alphaFetch = _pixelType == PixelType::kA8 || _format == FormatExt::kA8;
-  _alphaOffset = blFormatInfo[size_t(_format)].aShift / 8;
+  _alphaFetch = _pixelType == PixelType::kA8 || format() == FormatExt::kA8;
 
   _initPart(fn, x, y);
   _initGlobalHook(cc->cursor());

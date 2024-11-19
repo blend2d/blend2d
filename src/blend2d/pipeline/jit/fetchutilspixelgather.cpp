@@ -137,7 +137,7 @@ void FetchContext::_initFetchMode() noexcept {
       if (!blTestFlag(_fetchFlags, PixelFlags::kPA_PI_UA_UI))
         _fetchFlags |= PixelFlags::kPA;
 
-      switch (_fetchFormat) {
+      switch (fetchFormat()) {
         case FormatExt::kA8: {
           if (blTestFlag(_fetchFlags, PixelFlags::kPA))
             _fetchMode = FetchMode::kA8FromA8_PA;
@@ -166,7 +166,7 @@ void FetchContext::_initFetchMode() noexcept {
       if (!blTestFlag(_fetchFlags, PixelFlags::kPA_PI_UA_UI | PixelFlags::kPC_UC))
         _fetchFlags |= PixelFlags::kPC;
 
-      switch (_fetchFormat) {
+      switch (fetchFormat()) {
         case FormatExt::kA8: {
           if (blTestFlag(_fetchFlags, PixelFlags::kPC))
             _fetchMode = FetchMode::kRGBA32FromA8_PC;
@@ -428,17 +428,17 @@ void FetchContext::fetchPixel(const Mem& src) noexcept {
     case FetchMode::kA8FromRGBA32_UA:
     case FetchMode::kRGBA32FromA8_PC:
     case FetchMode::kRGBA32FromA8_UC: {
-      bool packed = (_fetchMode == FetchMode::kA8FromA8_PA ||
-                     _fetchMode == FetchMode::kA8FromRGBA32_PA ||
-                     _fetchMode == FetchMode::kRGBA32FromA8_PC ||
-                     _fetchMode == FetchMode::kRGBA32FromA8_UC);
+      bool fetchPacked = (_fetchMode == FetchMode::kA8FromA8_PA ||
+                          _fetchMode == FetchMode::kA8FromRGBA32_PA ||
+                          _fetchMode == FetchMode::kRGBA32FromA8_PC ||
+                          _fetchMode == FetchMode::kRGBA32FromA8_UC);
 
-      bool rgba32 = (_fetchMode == FetchMode::kA8FromRGBA32_PA ||
-                     _fetchMode == FetchMode::kA8FromRGBA32_UA);
+      bool a8FromRgba32 = (_fetchMode == FetchMode::kA8FromRGBA32_PA ||
+                           _fetchMode == FetchMode::kA8FromRGBA32_UA);
 
 #if defined(BL_JIT_ARCH_A64)
       if (_laneIndex == 0) {
-        if (rgba32) {
+        if (a8FromRgba32 && _fetchInfo.fetchAlphaOffset()) {
           _pc->v_loadu32(v, m);
           _pc->v_srli_u32(v, v, 24);
         }
@@ -448,7 +448,7 @@ void FetchContext::fetchPixel(const Mem& src) noexcept {
       }
       else {
         uint32_t srcLane = 0;
-        if (rgba32) {
+        if (a8FromRgba32 && _fetchInfo.fetchAlphaOffset()) {
           _pc->v_loadu32(_pTmp[0], m);
           srcLane = 3;
         }
@@ -456,29 +456,30 @@ void FetchContext::fetchPixel(const Mem& src) noexcept {
           _pc->v_load8(_pTmp[0], m);
         }
 
-        _pc->cc->ins(v.b(packed ? _laneIndex : _laneIndex * 2u), _pTmp[0].b(srcLane));
+        _pc->cc->ins(v.b(fetchPacked ? _laneIndex : _laneIndex * 2u), _pTmp[0].b(srcLane));
       }
 #else
       uint32_t accByteSize = _aAcc.size();
 
-      if (rgba32)
-        m.addOffset(3);
+      if (a8FromRgba32) {
+        m.addOffset(_fetchInfo.fetchAlphaOffset());
+      }
 
       if (_aAccIndex == 0)
         _pc->load_u8(_aAcc, m);
       else
         _pc->load_merge_u8(_aAcc, m);
 
-      _pc->ror(_aAcc, _aAcc, (packed ? 8u : 16u) * quantity);
+      _pc->ror(_aAcc, _aAcc, (fetchPacked ? 8u : 16u) * quantity);
 
-      uint32_t accBytesScale = packed ? 1 : 2;
+      uint32_t accBytesScale = fetchPacked ? 1 : 2;
       uint32_t accBytes = (_aAccIndex + quantity) * accBytesScale;
 
       _aAccIndex++;
 
       if (accBytes >= accByteSize || _pixelIndex + quantity >= pixelCount) {
         if (accByteSize == 4) {
-          uint32_t dstLaneIndex = (packed ? _laneIndex : _laneIndex * 2u) / 4u;
+          uint32_t dstLaneIndex = (fetchPacked ? _laneIndex : _laneIndex * 2u) / 4u;
 
           if (dstLaneIndex == 0) {
             _pc->s_mov(v, _aAcc);
@@ -502,7 +503,7 @@ void FetchContext::fetchPixel(const Mem& src) noexcept {
           }
         }
         else {
-          uint32_t dstLaneIndex = (packed ? _laneIndex : _laneIndex * 2u) / 8u;
+          uint32_t dstLaneIndex = (fetchPacked ? _laneIndex : _laneIndex * 2u) / 8u;
           if (dstLaneIndex == 0) {
             _pc->s_mov(v, _aAcc);
           }
@@ -1001,11 +1002,11 @@ static void convertGatheredPixels(PipeCompiler* pc, Pixel& p, PixelCount n, Pixe
 // bl::Pipeline::JIT::FetchUtils - Gather Pixels
 // =============================================
 
-void gatherPixels(PipeCompiler* pc, Pixel& p, PixelCount n, FormatExt format, PixelFlags flags, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout indexLayout, GatherMode mode, InterleaveCallback cb, void* cbData) noexcept {
+void gatherPixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, PixelFetchInfo fInfo, const Mem& src, const Vec& idx, uint32_t shift, IndexLayout indexLayout, GatherMode mode, InterleaveCallback cb, void* cbData) noexcept {
   Mem mem(src);
 
 #if defined(BL_JIT_ARCH_X86)
-  uint32_t bpp = blFormatInfo[size_t(format)].depth / 8u;
+  uint32_t bpp = fInfo.bpp();
 
   // Disabled gather means that we would gather to a wider register than enabled by the pipeline.
   bool disabledGather = pc->vecWidth() == VecWidth::k128 && n * bpp > 16u;
@@ -1189,7 +1190,7 @@ void gatherPixels(PipeCompiler* pc, Pixel& p, PixelCount n, FormatExt format, Pi
   IndexExtractor indexExtractor(pc);
   indexExtractor.begin(indexType, idx);
 
-  FetchContext fCtx(pc, &p, n, format, flags, mode);
+  FetchContext fCtx(pc, &p, n, flags, fInfo, mode);
   fCtx._fetchAll(src, shift, indexExtractor, indexSequence, cb, cbData);
   fCtx.end();
 }

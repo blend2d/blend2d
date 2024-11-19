@@ -1062,7 +1062,7 @@ void CompOpPart::vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, 
       }
       else {
         VecArray vm;
-        FetchUtils::fetchMaskA8(pc, vm, mPtr, n, pixelType(), coverageFormat(), AdvanceMode::kAdvance, ga, predicate);
+        FetchUtils::fetchMaskA8(pc, vm, mPtr, n, pixelType(), coverageFormat(), AdvanceMode::kAdvance, predicate, ga);
         vMaskProcStoreAdvance(dPtr, n, vm, PixelCoverageFlags::kNone, Alignment(1), predicate);
       }
       break;
@@ -1070,7 +1070,7 @@ void CompOpPart::vMaskGenericStep(const Gp& dPtr, PixelCount n, const Gp& mPtr, 
 
     case PixelType::kRGBA32: {
       VecArray vm;
-      FetchUtils::fetchMaskA8(pc, vm, mPtr, n, pixelType(), coverageFormat(), AdvanceMode::kAdvance, ga, predicate);
+      FetchUtils::fetchMaskA8(pc, vm, mPtr, n, pixelType(), coverageFormat(), AdvanceMode::kAdvance, predicate, ga);
       vMaskProcStoreAdvance(dPtr, n, vm, PixelCoverageFlags::kNone, Alignment(1), predicate);
       break;
     }

@@ -20,15 +20,21 @@ namespace JIT {
 
 class GradientDitheringContext {
 public:
+  //! \name Members
+  //! \{
+
   PipeCompiler* pc {};
   bool _isRectFill {};
   Gp _dmPosition;
   Gp _dmOriginX;
   Vec _dmValues;
 
+  //! \}
+
   BL_INLINE explicit GradientDitheringContext(PipeCompiler* pc) noexcept
     : pc(pc) {}
 
+  //! Returns whether this dithering context is used in a rectangular fill.
   BL_INLINE_NODEBUG bool isRectFill() const noexcept { return _isRectFill; }
 
   void initY(const PipeFunction& fn, const Gp& x, const Gp& y) noexcept;

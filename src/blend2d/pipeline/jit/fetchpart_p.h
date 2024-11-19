@@ -31,30 +31,20 @@ public:
   //! \{
 
   //! Fetch part type.
-  FetchType _fetchType;
+  FetchType _fetchType {};
+  //! Information about a fetched pixel.
+  PixelFetchInfo _fetchInfo {};
 
-  //! Source pixel format.
-  FormatExt _format = FormatExt::kNone;
+  //! Pixel type.
+  PixelType _pixelType = PixelType::kNone;
+  //! True if the fetching should happen in alpha mode (no RGB).
+  uint8_t _alphaFetch = 0;
   //! Source bytes-per-pixel (only required by pattern fetcher).
   uint8_t _bpp = 0;
   //! Maximum pixel step that the fetcher can fetch at a time (0=unlimited).
   uint8_t _maxPixels = 1;
-  //! Pixel type.
-  PixelType _pixelType = PixelType::kNone;
   //! Pixel granularity passed to init().
   uint8_t _pixelGranularity = 0;
-
-  //! True if the fetching should happen in alpha mode (no RGB).
-  uint8_t _alphaFetch = 0;
-  //! Alpha channel [memory] offset, only used when `_alphaFetch` is true and non-zero when alpha offset was not accounted in source ptr.
-  uint8_t _alphaOffset = 0;
-  //! Applied offset to srcp0 and srcp1.
-  uint8_t _alphaOffsetApplied = 0;
-
-  //! If the fetched pixels contain RGB channels.
-  bool _hasRGB = false;
-  //! If the fetched pixels contain alpha channel.
-  bool _hasAlpha = false;
 
   //! \}
 
@@ -91,28 +81,24 @@ public:
   //! Tests whether the fetch is the destination (special type).
   BL_INLINE_NODEBUG bool isPixelPtr() const noexcept { return isFetchType(FetchType::kPixelPtr); }
 
+  //! Returns information about a fetched pixel.
+  BL_INLINE_NODEBUG PixelFetchInfo fetchInfo() const noexcept { return _fetchInfo; }
   //! Returns source pixel format.
-  BL_INLINE_NODEBUG FormatExt format() const noexcept { return _format; }
+  BL_INLINE_NODEBUG FormatExt format() const noexcept { return _fetchInfo.format(); }
   //! Returns source pixel format information.
-  BL_INLINE_NODEBUG BLFormatInfo formatInfo() const noexcept { return blFormatInfo[size_t(_format)]; }
-
+  BL_INLINE_NODEBUG BLFormatInfo formatInfo() const noexcept { return _fetchInfo.formatInfo(); }
+  //! Tests whether the fetched pixels contain RGB channels.
+  BL_INLINE_NODEBUG bool hasRGB() const noexcept { return _fetchInfo.hasRGB(); }
+  //! Tests whether the fetched pixels contain Alpha channel.
+  BL_INLINE_NODEBUG bool hasAlpha() const noexcept { return _fetchInfo.hasAlpha(); }
   //! Returns source bytes-per-pixel (only used when `isPattern()` is true).
   BL_INLINE_NODEBUG uint32_t bpp() const noexcept { return _bpp; }
 
   //! Returns the maximum pixels the fetch part can fetch at a time.
   BL_INLINE_NODEBUG uint32_t maxPixels() const noexcept { return _maxPixels; }
 
-  //! Tests whether the fetched pixels contain RGB channels.
-  BL_INLINE_NODEBUG bool hasRGB() const noexcept { return _hasRGB; }
-  //! Tests whether the fetched pixels contain Alpha channel.
-  BL_INLINE_NODEBUG bool hasAlpha() const noexcept { return _hasAlpha; }
-
   //! Tests whether the fetching should happen in alpha-only mode.
   BL_INLINE_NODEBUG bool isAlphaFetch() const noexcept { return _alphaFetch != 0; }
-  //! Returns a byte offset of alpha channel (if provided), used when fetching alpha from memory.
-  BL_INLINE_NODEBUG uint32_t alphaOffset() const noexcept { return _alphaOffset; }
-  //! Returns a byte offset of alpha channel that has been applied to source pointers srcp0 and srcp1.
-  BL_INLINE_NODEBUG uint32_t alphaOffsetApplied() const noexcept { return _alphaOffsetApplied; }
 
   //! Returns the pixel granularity passed to `FetchPath::init()`.
   BL_INLINE_NODEBUG uint32_t pixelGranularity() const noexcept { return _pixelGranularity; }

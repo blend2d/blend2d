@@ -129,6 +129,202 @@ enum class GatherMode : uint32_t {
   kNeverFull = 1
 };
 
+//! Flags used by predicated load and store operations.
+enum class PredicateFlags : uint32_t {
+  //! No flags specified.
+  kNone = 0x00000000u,
+
+  //! Predicate is never full - contains at most `size() - 1` elements to read/write.
+  //!
+  //! This is a hint to the implementation that can be also used as an assertion.
+  kNeverFull = 0x00000001u
+};
+BL_DEFINE_ENUM_FLAGS(PredicateFlags)
+
+//! Options used by pixel fetchers.
+struct PixelFetchInfo {
+  //! \name Members
+  //! \{
+
+  //! Pixel format.
+  FormatExt _format {};
+
+  //! Pixel components, compatible with \ref BL_FORMAT_FLAG.
+  uint8_t _components {};
+
+  //! A byte offset (memory) where the alpha can be accessed.
+  //!
+  //! This offset can be added to a memory operand on architectures that provide addressing modes with offsets.
+  uint8_t _alphaOffset {};
+
+  //! A byte offset already applied to a pointer
+  //!
+  //! This is used in cases in which the pipeline loads pixels in a scalar way (for example extend modes are applied).
+  uint8_t _appliedOffset {};
+
+  //! \}
+
+  //! \name Construction & Destruction
+  //! \{
+
+  BL_INLINE_NODEBUG PixelFetchInfo() noexcept = default;
+  BL_INLINE_NODEBUG PixelFetchInfo(const PixelFetchInfo& other) noexcept = default;
+  BL_INLINE_NODEBUG explicit PixelFetchInfo(FormatExt format) noexcept { init(format); }
+
+  //! \}
+
+  //! \name Initialization
+  //! \{
+
+  BL_INLINE void init(FormatExt format) noexcept {
+    _format = format;
+    _components = uint8_t(blFormatInfo[size_t(format)].flags & 0xFFu);
+    _alphaOffset = uint8_t(blFormatInfo[size_t(format)].aShift / 8u);
+    _appliedOffset = 0;
+  }
+
+  //! Makes the current `byteOffset` applies, which means that ALL source pointers have `byteOffset` incremented.
+  BL_INLINE void applyAlphaOffset() noexcept { _appliedOffset = _alphaOffset; }
+
+  //! \}
+
+  //! \name Interface
+  //! \{
+
+  //! Returns pixel format.
+  BL_INLINE_NODEBUG FormatExt format() const noexcept { return _format; }
+  //! Returns source pixel format information.
+  BL_INLINE_NODEBUG BLFormatInfo formatInfo() const noexcept { return blFormatInfo[size_t(_format)]; }
+  //! Returns bytes per pixel.
+  BL_INLINE_NODEBUG uint32_t bpp() const noexcept { return blFormatInfo[size_t(_format)].depth / 8u; }
+
+  //! Returns a byte offset of the alpha component that can be applied when loading alpha component from memory.
+  BL_INLINE_NODEBUG int alphaOffset() const noexcept { return _alphaOffset; }
+
+  //! Returns a byte offset that has been already applied to source pointer(s).
+  BL_INLINE_NODEBUG int appliedOffset() const noexcept { return _appliedOffset; }
+
+  //! Calculates the offset that must be used to fetch a full pixel and not just the alpha.
+  BL_INLINE_NODEBUG int fetchPixelOffset() const noexcept { return -int(_appliedOffset); }
+
+  //! Calculates the offset that must be used when fetching alpha component from a possibly adjusted source pointer.
+  //!
+  //! \note When the offset has been applied the return value should be 0 as that's the purpose of applying it,
+  //! however, when the offset hasn't been applied, the returned value would be the same as `byteOffset`.
+  BL_INLINE_NODEBUG int fetchAlphaOffset() const noexcept { return int(_alphaOffset) - int(_appliedOffset); }
+
+  // Returns whether the pixel format has RGB components.
+  BL_INLINE_NODEBUG bool hasRGB() const noexcept { return (_components & BL_FORMAT_FLAG_RGB) != 0; }
+
+  // Returns whether the pixel format has Alpha component.
+  BL_INLINE_NODEBUG bool hasAlpha() const noexcept { return (_components & BL_FORMAT_FLAG_ALPHA) != 0; }
+
+  //! \}
+};
+
+//! Provides an abstraction regarding predicated loads and stores.
+//!
+//! Predicated composition may improve performance of span tails if the number of pixels to process is greater
+//! than 1 and the processing pipeline can efficiently process more than 4 pixels. In that case it's better to
+//! always use predicated loads and stores even if it would have to be emitted as branches.
+//!
+//! Predicates can also be used without masking, however, in that case branches may be emitted instead of
+//! predicated (or masked) loads and stores. This is selected automatically depending on the CPU micro-architecture
+//! and features.
+struct PixelPredicate {
+  //! Maximum number of elements that can be loaded / stored.
+  //!
+  //! This is typically power of 2 minus one - for example 8 pixel wide pipeline would use predicated loads and
+  //! stores for 0-7 pixels.
+  uint32_t _size {};
+  //! Predicate flags.
+  PredicateFlags _flags {};
+
+  //! Number of pixels to load/store (starting at #0).
+  //!
+  //! For example if count is 3, pixels at [0, 1, 2] will be fetched / stored.
+  Gp _count;
+
+#if defined(BL_JIT_ARCH_X86)
+  static constexpr uint32_t kMaterializedMaskCapacity = 2u;
+
+  //! Contains predicates for load/store instructions that were materialized.
+  struct MaterializedMask {
+    //! The number of elements to access from the end.
+    //!
+    //! Non-zero offsets are used in cases in which there is multiple registers that are written by using predicates.
+    //! In that case the access to the first register can be branched, and only the access to the last register can
+    //! actually use predicate, at least this is how it's been designed.
+    uint8_t lastN {};
+
+    //! Element size in case this is a vector predicate (always zero when it's a {k} predicate).
+    uint8_t elementSize {};
+
+    uint8_t reserved[2] {};
+
+    //! Mask register - either an AVX-512 mask (k register) or an xmm/ymm/zmm vector.
+    Reg mask {};
+  };
+
+  uint32_t _materializedCount {};
+  MaterializedMask _materializedMasks[kMaterializedMaskCapacity];
+#endif // BL_JIT_ARCH_X86
+
+  static constexpr uint32_t kMaterializedEndPtrCapacity = 2u;
+
+  //! Contains two last clamped pointers of `ref`.
+  struct MaterializedEndPtr {
+    //! Reference pointer (this is the register used to calculate `end1` and `end2`)
+    Gp ref;
+    //! `unsigned_min(ref + 1 * N, ref + (count - 1) * N)`.
+    Gp adjusted1;
+    //! `unsigned_min(ref + 2 * N, ref + (count - 1) * N)`.
+    Gp adjusted2;
+  };
+
+  uint32_t _materializedEndPtrCount {};
+  MaterializedEndPtr _materializedEndPtrData[kMaterializedEndPtrCapacity];
+
+  BL_INLINE_NODEBUG PixelPredicate() noexcept = default;
+  BL_INLINE explicit PixelPredicate(uint32_t size, PredicateFlags flags, const Gp& count) noexcept { init(size, flags, count); }
+
+  BL_INLINE void init(uint32_t size, PredicateFlags flags, const Gp& count) noexcept {
+    _size = size;
+    _flags = flags;
+    _count = count;
+  }
+
+  BL_INLINE_NODEBUG bool empty() const noexcept { return _size == 0; }
+  BL_INLINE_NODEBUG uint32_t size() const noexcept { return _size; }
+
+  BL_INLINE_NODEBUG PredicateFlags flags() const noexcept { return _flags; }
+  BL_INLINE_NODEBUG bool isNeverFull() const noexcept { return blTestFlag(_flags, PredicateFlags::kNeverFull); }
+
+  BL_INLINE_NODEBUG const Gp& count() const noexcept { return _count; }
+
+  BL_INLINE_NODEBUG GatherMode gatherMode() const noexcept {
+    return isNeverFull() ? GatherMode::kNeverFull : GatherMode::kFetchAll;
+  }
+
+  BL_INLINE const MaterializedEndPtr* findMaterializedEndPtr(const Gp& ref) const noexcept {
+    for (uint32_t i = 0; i < _materializedEndPtrCount; i++)
+      if (_materializedEndPtrData[i].ref.id() == ref.id())
+        return &_materializedEndPtrData[i];
+    return nullptr;
+  }
+
+  BL_INLINE void addMaterializedEndPtr(const Gp& ref, const Gp& adjusted1, const Gp& adjusted2) noexcept {
+    if (_materializedEndPtrCount >= kMaterializedEndPtrCapacity)
+      return;
+
+    uint32_t i = _materializedEndPtrCount;
+    _materializedEndPtrData[i].ref = ref;
+    _materializedEndPtrData[i].adjusted1 = adjusted1;
+    _materializedEndPtrData[i].adjusted2 = adjusted2;
+    _materializedEndPtrCount++;
+  }
+};
+
 //! Represents either Alpha or RGBA pixel.
 //!
 //! Convention used to define and process pixel components:
@@ -289,120 +485,6 @@ struct PipeCMask {
 
   BL_INLINE void reset() noexcept {
     JitUtils::resetVarStruct<PipeCMask>(this);
-  }
-};
-
-enum class PredicateFlags : uint32_t {
-  //! No flags specified.
-  kNone = 0x00000000u,
-
-  //! Predicate is never full - contains at most `size() - 1` elements to read/write.
-  //!
-  //! This is a hint to the implementation that can be also used as an assertion.
-  kNeverFull = 0x00000001u
-};
-BL_DEFINE_ENUM_FLAGS(PredicateFlags)
-
-//! Provides an abstraction regarding predicated loads and stores.
-//!
-//! Predicated composition may improve performance of span tails if the number of pixels to process is greater
-//! than 1 and the processing pipeline can efficiently process more than 4 pixels. In that case it's better to
-//! always use predicated loads and stores even if it would have to be emitted as branches.
-//!
-//! Predicates can also be used without masking, however, in that case branches may be emitted instead of
-//! predicated (or masked) loads and stores. This is selected automatically depending on the CPU micro-architecture
-//! and features.
-struct PixelPredicate {
-  //! Maximum number of elements that can be loaded / stored.
-  //!
-  //! This is typically power of 2 minus one - for example 8 pixel wide pipeline would use predicated loads and
-  //! stores for 0-7 pixels.
-  uint32_t _size {};
-  //! Predicate flags.
-  PredicateFlags _flags {};
-
-  //! Number of pixels to load/store (starting at #0).
-  //!
-  //! For example if count is 3, pixels at [0, 1, 2] will be fetched / stored.
-  Gp _count;
-
-#if defined(BL_JIT_ARCH_X86)
-  static constexpr uint32_t kMaterializedMaskCapacity = 2u;
-
-  //! Contains predicates for load/store instructions that were materialized.
-  struct MaterializedMask {
-    //! The number of elements to access from the end.
-    //!
-    //! Non-zero offsets are used in cases in which there is multiple registers that are written by using predicates.
-    //! In that case the access to the first register can be branched, and only the access to the last register can
-    //! actually use predicate, at least this is how it's been designed.
-    uint8_t lastN {};
-
-    //! Element size in case this is a vector predicate (always zero when it's a {k} predicate).
-    uint8_t elementSize {};
-
-    uint8_t reserved[2] {};
-
-    //! Mask register - either an AVX-512 mask (k register) or an xmm/ymm/zmm vector.
-    Reg mask {};
-  };
-
-  uint32_t _materializedCount {};
-  MaterializedMask _materializedMasks[kMaterializedMaskCapacity];
-#endif // BL_JIT_ARCH_X86
-
-  static constexpr uint32_t kMaterializedEndPtrCapacity = 2u;
-
-  //! Contains two last clamped pointers of `ref`.
-  struct MaterializedEndPtr {
-    //! Reference pointer (this is the register used to calculate `end1` and `end2`)
-    Gp ref;
-    //! `unsigned_min(ref + 1 * N, ref + (count - 1) * N)`.
-    Gp adjusted1;
-    //! `unsigned_min(ref + 2 * N, ref + (count - 1) * N)`.
-    Gp adjusted2;
-  };
-
-  uint32_t _materializedEndPtrCount {};
-  MaterializedEndPtr _materializedEndPtrData[kMaterializedEndPtrCapacity];
-
-  BL_INLINE_NODEBUG PixelPredicate() noexcept = default;
-  BL_INLINE explicit PixelPredicate(uint32_t size, PredicateFlags flags, const Gp& count) noexcept { init(size, flags, count); }
-
-  BL_INLINE void init(uint32_t size, PredicateFlags flags, const Gp& count) noexcept {
-    _size = size;
-    _flags = flags;
-    _count = count;
-  }
-
-  BL_INLINE_NODEBUG bool empty() const noexcept { return _size == 0; }
-  BL_INLINE_NODEBUG uint32_t size() const noexcept { return _size; }
-
-  BL_INLINE_NODEBUG PredicateFlags flags() const noexcept { return _flags; }
-  BL_INLINE_NODEBUG bool isNeverFull() const noexcept { return blTestFlag(_flags, PredicateFlags::kNeverFull); }
-
-  BL_INLINE_NODEBUG const Gp& count() const noexcept { return _count; }
-
-  BL_INLINE_NODEBUG GatherMode gatherMode() const noexcept {
-    return isNeverFull() ? GatherMode::kNeverFull : GatherMode::kFetchAll;
-  }
-
-  BL_INLINE const MaterializedEndPtr* findMaterializedEndPtr(const Gp& ref) const noexcept {
-    for (uint32_t i = 0; i < _materializedEndPtrCount; i++)
-      if (_materializedEndPtrData[i].ref.id() == ref.id())
-        return &_materializedEndPtrData[i];
-    return nullptr;
-  }
-
-  BL_INLINE void addMaterializedEndPtr(const Gp& ref, const Gp& adjusted1, const Gp& adjusted2) noexcept {
-    if (_materializedEndPtrCount >= kMaterializedEndPtrCapacity)
-      return;
-
-    uint32_t i = _materializedEndPtrCount;
-    _materializedEndPtrData[i].ref = ref;
-    _materializedEndPtrData[i].adjusted1 = adjusted1;
-    _materializedEndPtrData[i].adjusted2 = adjusted2;
-    _materializedEndPtrCount++;
   }
 };
 

@@ -72,8 +72,8 @@ public:
     if (!parseCommonOptions(cmdLine) || !parseMTOptions(cmdLine))
       return 1;
 
-    ContextTester aTester("st");
-    ContextTester bTester("mt");
+    ContextTester aTester(testCases, "st");
+    ContextTester bTester(testCases, "mt");
 
     aTester.setFlushSync(options.flushSync);
     bTester.setFlushSync(options.flushSync);
@@ -90,26 +90,38 @@ public:
     }
 
     TestInfo info;
-    dispatchRuns([&](CommandId commandId, CompOp compOp, OpacityOp opacityOp) {
-      info.name.assignFormat(
-        "%s | comp-op=%s | opacity=%s | style=%s",
-        StringUtils::commandIdToString(commandId),
-        StringUtils::compOpToString(compOp),
-        StringUtils::opacityOpToString(opacityOp),
-        StringUtils::styleIdToString(options.styleId));
+    dispatchRuns([&](CommandId commandId, StyleId styleId, StyleOp styleOp, CompOp compOp, OpacityOp opacityOp) {
+      BLString s0;
+      s0.appendFormat("%s/%s",
+        StringUtils::styleIdToString(styleId),
+        StringUtils::styleOpToString(styleOp));
 
-      info.id.assignFormat("%s-%s-%s-%s",
+      BLString s1;
+      s1.appendFormat("%s/%s",
+        StringUtils::compOpToString(compOp),
+        StringUtils::opacityOpToString(opacityOp));
+
+      info.name.assignFormat(
+          "%-21s | style+api=%-25s| comp+op=%-20s| thread-count=%d",
+          StringUtils::commandIdToString(commandId),
+          s0.data(),
+          s1.data(),
+          options.threadCount);
+
+      info.id.assignFormat("ctx-mt-%s-%s-%s-%s-%s-%d",
         StringUtils::commandIdToString(commandId),
+        StringUtils::styleIdToString(styleId),
+        StringUtils::styleOpToString(styleOp),
         StringUtils::compOpToString(compOp),
         StringUtils::opacityOpToString(opacityOp),
-        StringUtils::styleIdToString(options.styleId));
+        options.threadCount);
 
       if (!options.quiet) {
-        printf("Testing [%s]:\n", info.name.data());
+        printf("Running [%s]\n", info.name.data());
       }
 
-      aTester.setOptions(compOp, opacityOp, options.styleId, options.styleOp);
-      bTester.setOptions(compOp, opacityOp, options.styleId, options.styleOp);
+      aTester.setOptions(compOp, opacityOp, styleId, styleOp);
+      bTester.setOptions(compOp, opacityOp, styleId, styleOp);
 
       if (runMultiple(commandId, info, aTester, bTester, 0))
         passedCount++;
