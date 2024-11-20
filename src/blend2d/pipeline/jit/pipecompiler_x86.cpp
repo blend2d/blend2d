@@ -1015,9 +1015,20 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
       }
 
       case OpcodeRRR::kSll:
-        // Optimize `dst = dst << 1` to `dst = dst + dst` as it has a higher throughput.
-        if (b.value() == 1 && dstIsA) {
-          cc->add(dst, dst);
+        // Optimize `dst = dst << 1`.
+        if (b.value() == 1) {
+          if (dstIsA) {
+            // `dst = dst + dst`.
+            cc->add(dst, dst);
+          }
+          else if (is64Bit()) {
+            // `dst = a + a` (using a 64-bit address saves address-override prefix).
+            cc->lea(dst, x86::ptr(a.r64(), a.r64()));
+          }
+          else {
+            // `dst = a + a`.
+            cc->lea(dst, x86::ptr(a, a));
+          }
           return;
         }
         BL_FALLTHROUGH
@@ -1306,7 +1317,10 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
           cc->add(dst, dstIsB ? a : b);
         }
         else if (dst.size() >= 4) {
-          lea(dst, x86::ptr(a, b));
+          if (is64Bit())
+            lea(dst, x86::ptr(a.r64(), b.r64()));
+          else
+            lea(dst, x86::ptr(a, b));
         }
         else {
           cc->mov(dst, a);

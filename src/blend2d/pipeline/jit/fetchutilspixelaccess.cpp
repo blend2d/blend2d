@@ -248,7 +248,7 @@ static void fetchPredicatedVec8_1To3(PipeCompiler* pc, const Vec& dVec, Gp sPtr,
   // Predicated load of 1-3 elements can be simplified to the following on AArch64:
   //   - load the first element at [0]    (always valid).
   //   - load the last element at [i - 1] (always valid, possibly overlapping with the first element if count==2).
-  //   - load the mid element by using CSINC instruction (incrementing when count >= 2).
+  //   - load the mid element by using CINC instruction (incrementing when count >= 2).
   a64::Compiler* cc = pc->cc;
 
   Gp mid = pc->newGpPtr("@mid");
@@ -301,57 +301,88 @@ static void fetchPredicatedVec8_1To3(PipeCompiler* pc, const Vec& dVec, Gp sPtr,
 #endif
 }
 
-static void fetchPredicatedVec8_4To7(PipeCompiler* pc, const Vec& dVec, Gp sPtr, AdvanceMode advanceMode, const Gp& count) noexcept {
-  Gp highAcc = pc->newGp32("@highAcc");
-  Gp shift = pc->newGp32("@shift");
-  Mem highPtr;
+// Predicated load of 1-7 bytes.
+static void fetchPredicatedVec8_1To7(PipeCompiler* pc, const Vec& dVec, Gp sPtr, AdvanceMode advanceMode, const Gp& count) noexcept {
+#if defined(BL_JIT_ARCH_X86)
+  if (pc->is32Bit()) {
+    // Not optimized, probably not worth spending time on trying to optimize this version as we don't expect 32-bit
+    // targets to be important.
+    Label L_Iter = pc->newLabel();
+    Label L_Done = pc->newLabel();
 
-  pc->mov(shift, 8);
-  pc->v_loadu32(dVec, mem_ptr(sPtr));
-  pc->sub(shift, shift, count.cloneAs(shift));
+    Gp i = pc->newGp32("@fetch_x");
+    Gp acc = pc->newGp32("@fetch_acc");
+    Vec tmp = pc->newV128("@fetch_tmp");
+
+    pc->mov(i, count);
+    pc->mov(acc, 0);
+    pc->v_xor_i32(dVec, dVec, dVec);
+    pc->j(L_Iter, ucmp_lt(i, 4));
+
+    pc->v_loadu32(dVec, x86::ptr(sPtr, i, 0, -4));
+    pc->j(L_Done, sub_z(i, 4));
+
+    pc->bind(L_Iter);
+    pc->shl(acc, acc, 8);
+    pc->load_merge_u8(acc, x86::ptr(sPtr, i, 0, -1));
+    pc->v_slli_u64(dVec, dVec, 8);
+    pc->j(L_Iter, sub_nz(i, 1));
+
+    pc->bind(L_Done);
+    pc->s_mov(tmp, acc);
+    pc->v_or_i32(dVec, dVec, tmp);
+
+    if (advanceMode == AdvanceMode::kAdvance) {
+      pc->add(sPtr, sPtr, count.cloneAs(sPtr));
+    }
+
+    return;
+  }
+#endif // BL_JIT_ARCH_X86
+
+  // This implementation uses a single branch to skip the loading of the rest when `count == 1`. The reason is that we
+  // want to use 3x 16-bit fetches to fetch 2..6 bytes, and combine that with the first byte if `count & 1 == 1`. This
+  // approach seems to be good and it's also pretty short. Since the branch depends on `count == 1` it should also make
+  // branch predictor happier as we expect that `count == 2..7` case should be much more likely than `count == 1`.
+  Label L_Done = pc->newLabel();
+
+  Gp acc = pc->newGpPtr("@fetch_acc");
+  Gp index0 = pc->newGpPtr("@fetch_index0");
+  Gp index1 = pc->newGpPtr("@fetch_index1");
+
+  pc->load_u8(acc, ptr(sPtr));
+  pc->j(L_Done, cmp_eq(count.r32(), 1));
+
+  // This is how indexes are calculated for count:
+  //   - count == 2 -> index0 = 0 | index0' = 0 | index1 = 0
+  //   - count == 3 -> index0 = 1 | index0' = 1 | index1 = 1
+  //   - count == 4 -> index0 = 2 | index0' = 2 | index1 = 0
+  //   - count == 5 -> index0 = 3 | index0' = 3 | index1 = 1
+  //   - count == 6 -> index0 = 4 | index0' = 2 | index1 = 0
+  //   - count == 7 -> index0 = 5 | index0' = 3 | index1 = 1
+  pc->shl(acc, acc, 24);
+  pc->sub(index0.r32(), count.r32(), 2);
+  pc->and_(index1.r32(), count.r32(), 0x1);
+  pc->load_merge_u16(acc, ptr(sPtr, index0));
+
+  pc->add(index1.r32(), index1.r32(), 2);
+  pc->shl(acc, acc, 16);
+  pc->umin(index0.r32(), index0.r32(), index1.r32());
+  pc->load_merge_u16(acc, ptr(sPtr, index0));
+
+  pc->and_(index1.r32(), index1.r32(), 1);
+  pc->shl(acc, acc, 16);
+  pc->load_merge_u16(acc, ptr(sPtr, index1));
+
+  pc->shl(index1.r32(), index1.r32(), 3);
+  pc->rol(acc, acc, index1.r64());
+
+  pc->bind(L_Done);
+  pc->s_mov_u64(dVec, acc);
 
   if (advanceMode == AdvanceMode::kAdvance) {
     pc->add(sPtr, sPtr, count.cloneAs(sPtr));
-    highPtr = mem_ptr(sPtr, -4);
   }
-  else {
-#if defined(BL_JIT_ARCH_X86)
-    highPtr = x86::ptr(sPtr, count.cloneAs(sPtr), 0, -4);
-#else
-    Gp end = pc->newGpPtr("@end");
-    pc->add(end, sPtr, count.cloneAs(sPtr));
-    highPtr = mem_ptr(end, -4);
-#endif
-  }
-
-  pc->shl(shift, shift, 3);
-  pc->load_u32(highAcc, highPtr);
-  pc->shr(highAcc, highAcc, shift);
-
-#if defined(BL_JIT_ARCH_X86)
-  if (!pc->hasSSE4_1()) {
-    Vec highVec = pc->newSimilarReg(dVec, "@high");
-    pc->s_mov_u32(highVec, highAcc);
-    pc->v_interleave_lo_u32(dVec, dVec, highVec);
-  }
-  else
-#endif
-  {
-    pc->s_insert_u32(dVec, highAcc, 1);
-  }
-}
-
-static void fetchPredicatedVec8_1To7(PipeCompiler* pc, const Vec& dVec, Gp sPtr, AdvanceMode advanceMode, const Gp& count) noexcept {
-  Label L_LessThan4 = pc->newLabel();
-  Label L_Done = pc->newLabel();
-
-  pc->j(L_LessThan4, ucmp_lt(count, 4));
-  fetchPredicatedVec8_4To7(pc, dVec, sPtr, advanceMode, count);
-  pc->j(L_Done);
-
-  pc->bind(L_LessThan4);
-  fetchPredicatedVec8_1To3(pc, dVec, sPtr, advanceMode, count);
-  pc->bind(L_Done);
 }
 
 static void fetchPredicatedVec8_4To15(PipeCompiler* pc, const Vec& dVec, Gp sPtr, AdvanceMode advanceMode, const Gp& count) noexcept {
@@ -537,6 +568,11 @@ static void fetchPredicatedVec8_AVX(PipeCompiler* pc, const VecArray& dVec, Gp s
 
   if (n <= 4) {
     fetchPredicatedVec8_1To3(pc, dVec[0], sPtr, advanceMode, predicate.count());
+    return;
+  }
+
+  if (n <= 8) {
+    fetchPredicatedVec8_1To7(pc, dVec[0], sPtr, advanceMode, predicate.count());
     return;
   }
 

@@ -102,8 +102,8 @@ static BL_INLINE uint32_t hashPixelRGBA32(uint32_t pixel) noexcept {
 #endif
 }
 
-static BL_INLINE uint32_t hashPixelA8(uint8_t a) noexcept {
-  return (0xFFu * (kQoiHashR + kQoiHashG + kQoiHashB) + uint32_t(a) * kQoiHashA) & kQoiHashMask;
+static BL_INLINE uint32_t hashPixelA8(uint32_t a) noexcept {
+  return (0xFFu * (kQoiHashR + kQoiHashG + kQoiHashB) + a * kQoiHashA) & kQoiHashMask;
 }
 
 // bl::Qoi::Codec - UnpackedPixel
@@ -488,14 +488,21 @@ static BLResult BL_CDECL decoderDestroyImpl(BLObjectImpl* impl) noexcept {
 
 // QOI isn't good for compressing alpha-only images - we can optimize the encoder's performance, but not the final size.
 static uint8_t* encodeQoiDataA8(uint8_t* dstData, uint32_t w, uint32_t h, const uint8_t* srcData, intptr_t srcStride) noexcept {
-  uint8_t pixel = 0xFFu;
-  uint8_t pixelTable[64] {};
+  // NOTE: Use an initial value which is not representable, because the encoder/decoder starts with RGB==0,
+  // which would decode badly into RGBA formats (the components would be zero and thus it would not be the
+  // same as when used by Blend2D, which defaults to having RGB components the same as 0xFF premultiplied).
+  uint32_t pixel = 0xFFFFFFFFu;
+  uint16_t pixelTable[64];
+
+  for (size_t i = 0; i < 64; i++) {
+    pixelTable[i] = 0xFFFFu;
+  }
 
   srcStride -= intptr_t(w);
   uint32_t x = w;
 
   for (;;) {
-    uint8_t p = *srcData++;
+    uint32_t p = *srcData++;
 
     // Run length encoding.
     if (p == pixel) {
@@ -540,13 +547,13 @@ static uint8_t* encodeQoiDataA8(uint8_t* dstData, uint32_t w, uint32_t h, const 
       *dstData++ = uint8_t(kQoiOpIndex | hash);
     }
     else {
-      pixelTable[hash] = p;
+      pixelTable[hash] = uint16_t(p);
 
       dstData[0] = kQoiOpRgba;
       dstData[1] = uint8_t(0xFFu);
       dstData[2] = uint8_t(0xFFu);
       dstData[3] = uint8_t(0xFFu);
-      dstData[4] = p;
+      dstData[4] = uint8_t(p);
       dstData += 5;
     }
 

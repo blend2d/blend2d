@@ -102,13 +102,13 @@ public:
         StringUtils::opacityOpToString(opacityOp));
 
       info.name.assignFormat(
-          "%-21s | style+api=%-25s| comp+op=%-20s| thread-count=%d",
+          "%-21s | style+api=%-30s| comp+op=%-20s| thread-count=%u",
           StringUtils::commandIdToString(commandId),
           s0.data(),
           s1.data(),
           options.threadCount);
 
-      info.id.assignFormat("ctx-mt-%s-%s-%s-%s-%s-%d",
+      info.id.assignFormat("ctx-mt-%s-%s-%s-%s-%s-%u",
         StringUtils::commandIdToString(commandId),
         StringUtils::styleIdToString(styleId),
         StringUtils::styleOpToString(styleOp),

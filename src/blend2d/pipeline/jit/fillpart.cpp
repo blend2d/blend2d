@@ -196,7 +196,7 @@ void FillBoxAPart::compile(const PipeFunction& fn) noexcept {
     // ----------
 
     if (isSrcCopyFill) {
-      // Optimize fill rect if it's it can be implemented as a memset. The main reason is
+      // Optimize fill rect if it can be implemented as a memset. The main reason is
       // that if the width is reasonably small we want to only check that condition once.
       compOpPart()->cMaskInitOpaque();
       BL_ASSERT(compOpPart()->_solidOpt.px.isValid());
@@ -1064,16 +1064,17 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
     pc->bind(L_CLoop_Msk);                                   // L_CLoop_Msk:
   }
 
+  if (coverageFormat == PixelCoverageFormat::kPacked) {
+    pc->v_broadcast_u8(m[0], m[0]);                          //   m0 = [a0 a0 a0 a0 a0 a0 a0 a0|a0 a0 a0 a0 a0 a0 a0 a0]
+  }
 #if defined(BL_JIT_ARCH_X86)
-  if (!pc->hasAVX2() && coverageFormat == PixelCoverageFormat::kUnpacked) {
+  else if (!pc->hasAVX2()) {
     pc->v_swizzle_u32x4(m[0], m[0], swizzle(0, 0, 0, 0));    //   m0 = [_0 a0 _0 a0 _0 a0 _0 a0|_0 a0 _0 a0 _0 a0 _0 a0]
   }
-#else
-  if (coverageFormat == PixelCoverageFormat::kPacked)
-    pc->v_broadcast_u8(m[0], m[0]);                          //   m0 = [a0 a0 a0 a0 a0 a0 a0 a0|a0 a0 a0 a0 a0 a0 a0 a0]
-  else
-    pc->v_broadcast_u16(m[0], m[0]);                         //   m0 = [_0 a0 _0 a0 _0 a0 _0 a0|_0 a0 _0 a0 _0 a0 _0 a0]
 #endif
+  else {
+    pc->v_broadcast_u16(m[0], m[0]);                         //   m0 = [_0 a0 _0 a0 _0 a0 _0 a0|_0 a0 _0 a0 _0 a0 _0 a0]
+  }
 
   compOpPart()->cMaskInit(cMaskAlpha, m[0]);
   if (pixelGranularity >= 4)

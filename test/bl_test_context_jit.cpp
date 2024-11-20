@@ -218,7 +218,7 @@ public:
         StringUtils::opacityOpToString(opacityOp));
 
       info.name.assignFormat(
-          "%-21s | style+api=%-25s| comp+op=%-20s| simd-level=%-9s",
+          "%-21s | style+api=%-30s| comp+op=%-20s| simd-level=%-9s",
           StringUtils::commandIdToString(commandId),
           s0.data(),
           s1.data(),
