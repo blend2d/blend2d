@@ -323,8 +323,7 @@ static void fetchPredicatedVec8_1To7(PipeCompiler* pc, const Vec& dVec, Gp sPtr,
     pc->j(L_Done, sub_z(i, 4));
 
     pc->bind(L_Iter);
-    pc->shl(acc, acc, 8);
-    pc->load_merge_u8(acc, x86::ptr(sPtr, i, 0, -1));
+    pc->load_shift_u8(acc, x86::ptr(sPtr, i, 0, -1));
     pc->v_slli_u64(dVec, dVec, 8);
     pc->j(L_Iter, sub_nz(i, 1));
 
@@ -366,13 +365,11 @@ static void fetchPredicatedVec8_1To7(PipeCompiler* pc, const Vec& dVec, Gp sPtr,
   pc->load_merge_u16(acc, ptr(sPtr, index0));
 
   pc->add(index1.r32(), index1.r32(), 2);
-  pc->shl(acc, acc, 16);
   pc->umin(index0.r32(), index0.r32(), index1.r32());
-  pc->load_merge_u16(acc, ptr(sPtr, index0));
+  pc->load_shift_u16(acc, ptr(sPtr, index0));
 
   pc->and_(index1.r32(), index1.r32(), 1);
-  pc->shl(acc, acc, 16);
-  pc->load_merge_u16(acc, ptr(sPtr, index1));
+  pc->load_shift_u16(acc, ptr(sPtr, index1));
 
   pc->shl(index1.r32(), index1.r32(), 3);
   pc->rol(acc, acc, index1.r64());

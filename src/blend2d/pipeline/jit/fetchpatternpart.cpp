@@ -1728,6 +1728,16 @@ void FetchAffinePatternPart::_initPart(const PipeFunction& fn, Gp& x, Gp& y) noe
   pc->load(f->srctop, mem_ptr(fn.fetchData(), REL_PATTERN(src.pixelData)));
   pc->load(f->stride, mem_ptr(fn.fetchData(), REL_PATTERN(src.stride)));
 
+#if defined(BL_JIT_ARCH_A64)
+  // Apply alpha offset to source pointers when on AArch64 as we cannot use offsets together with indexes.
+  if (_alphaFetch) {
+    _fetchInfo.applyAlphaOffset();
+    if (_fetchInfo.appliedOffset()) {
+      pc->add(f->srctop, f->srctop, _fetchInfo.appliedOffset());
+    }
+  }
+#endif // BL_JIT_ARCH_A64
+
   pc->v_loadu128(f->xx_xy, mem_ptr(fn.fetchData(), REL_PATTERN(affine.xx)));
   pc->v_loadu128(f->yx_yy, mem_ptr(fn.fetchData(), REL_PATTERN(affine.yx)));
 
@@ -2037,7 +2047,7 @@ void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
             pc->v_add_u16(vWeights, vWeights, pc->simdConst(&ct.i_0101000001010000, Bcst::kNA, vWeights));
 
             Vec pixA = pc->newV128("pixA");
-            FetchUtils::xFilterBilinearA8_1x(pc, pixA, f->srctop, f->stride, format(), _idxShift, vIdx, vWeights);
+            FetchUtils::xFilterBilinearA8_1x(pc, pixA, f->srctop, f->stride, fetchInfo(), _idxShift, vIdx, vWeights);
 
             FetchUtils::x_assign_unpacked_alpha_values(pc, p, flags, pixA);
             FetchUtils::satisfyPixels(pc, p, flags);

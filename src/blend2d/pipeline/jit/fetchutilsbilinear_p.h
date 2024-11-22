@@ -43,7 +43,7 @@ BL_NOINLINE void xFilterBilinearA8_1x(
   Vec& out,
   const Pixels& pixels,
   const Stride& stride,
-  FormatExt format,
+  PixelFetchInfo fInfo,
   uint32_t indexShift,
   const Vec& indexes,
   const Vec& weights) noexcept {
@@ -60,33 +60,26 @@ BL_NOINLINE void xFilterBilinearA8_1x(
   extractor.extract(pixSrcRow0, 2);
   extractor.extract(pixSrcRow1, 3);
 
-  int32_t alphaOffset = 0;
-  switch (format) {
-    case FormatExt::kPRGB32:
-      alphaOffset = 3;
-      break;
+  int32_t fetchAlphaOffset = fInfo.fetchAlphaOffset();
 
-    case FormatExt::kXRGB32:
-      alphaOffset = 3;
-      break;
-
-    default:
-      break;
-  }
+  pc->mul(pixSrcRow0, pixSrcRow0, stride);
+  pc->mul(pixSrcRow1, pixSrcRow1, stride);
+  pc->add(pixSrcRow0, pixSrcRow0, pixels);
+  pc->add(pixSrcRow1, pixSrcRow1, pixels);
 
 #if defined(BL_JIT_ARCH_X86)
-  Mem row0m = mem_ptr(pixSrcRow0, pixSrcOff, indexShift, alphaOffset);
-  Mem row1m = mem_ptr(pixSrcRow1, pixSrcOff, indexShift, alphaOffset);
+  Mem row0m = mem_ptr(pixSrcRow0, pixSrcOff, indexShift, fetchAlphaOffset);
+  Mem row1m = mem_ptr(pixSrcRow1, pixSrcOff, indexShift, fetchAlphaOffset);
 #else
   Mem row0m;
   Mem row1m;
 
-  if (alphaOffset != 0) {
+  if (fetchAlphaOffset != 0) {
     Gp pixSrcRow0a = pc->newSimilarReg(pixSrcRow0, "@row0_alpha");
     Gp pixSrcRow1a = pc->newSimilarReg(pixSrcRow1, "@row1_alpha");
 
-    pc->add(pixSrcRow0a, pixSrcRow0, alphaOffset);
-    pc->add(pixSrcRow1a, pixSrcRow1, alphaOffset);
+    pc->add(pixSrcRow0a, pixSrcRow0, fetchAlphaOffset);
+    pc->add(pixSrcRow1a, pixSrcRow1, fetchAlphaOffset);
 
     row0m = mem_ptr(pixSrcRow0a, pixSrcOff, indexShift);
     row1m = mem_ptr(pixSrcRow1a, pixSrcOff, indexShift);
@@ -97,21 +90,13 @@ BL_NOINLINE void xFilterBilinearA8_1x(
   }
 #endif
 
-  pc->mul(pixSrcRow0, pixSrcRow0, stride);
-  pc->mul(pixSrcRow1, pixSrcRow1, stride);
-  pc->add(pixSrcRow0, pixSrcRow0, pixels);
-  pc->add(pixSrcRow1, pixSrcRow1, pixels);
-
   extractor.extract(pixSrcOff, 0);
   pc->load_u8(pixAcc, row0m);       // [0    , 0    , 0    , Px0y0]
-  pc->shl(pixAcc, pixAcc, 8);       // [0    , 0    , Px0y0, 0    ]
-  pc->load_merge_u8(pixAcc, row1m); // [0    , 0    , Px0y0, Px0y1]
-  pc->shl(pixAcc, pixAcc, 8);       // [0    , Px0y0, Px0y1, 0    ]
+  pc->load_shift_u8(pixAcc, row1m); // [0    , 0    , Px0y0, Px0y1]
 
   extractor.extract(pixSrcOff, 1);
-  pc->load_merge_u8(pixAcc, row0m); // [0    , Px0y0, Px0y1, Px1y0]
-  pc->shl(pixAcc, pixAcc, 8);       // [Px0y0, Px0y1, Px1y0, 0    ]
-  pc->load_merge_u8(pixAcc, row1m); // [Px0y0, Px0y1, Px1y0, Px1y1]
+  pc->load_shift_u8(pixAcc, row0m); // [0    , Px0y0, Px0y1, Px1y0]
+  pc->load_shift_u8(pixAcc, row1m); // [Px0y0, Px0y1, Px1y0, Px1y1]
 
   pc->s_mov_u32(out, pixAcc);
   pc->v_swizzle_u32x4(wTmp, weights, swizzle(3, 3, 2, 2));

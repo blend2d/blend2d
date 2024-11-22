@@ -548,9 +548,11 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
     4, // kLoadI32
     4, // kLoadU32
     8, // kLoadI64
-    8, // kLoadU64,
-    1, // kLoadInsertU8,
-    2, // kLoadInsertU16
+    8, // kLoadU64
+    1, // kLoadMergeU8
+    1, // kLoadShiftU8
+    2, // kLoadMergeU16
+    2  // kLoadShiftU16
   };
 
   Gp r(dst);
@@ -587,10 +589,16 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
       m.setSize(8);
       break;
 
+    case OpcodeRM::kLoadShiftU8:
+      cc->shl(r, 8);
+      BL_FALLTHROUGH
     case OpcodeRM::kLoadMergeU8:
       r = r.r8();
       break;
 
+    case OpcodeRM::kLoadShiftU16:
+      cc->shl(r, 16);
+      BL_FALLTHROUGH
     case OpcodeRM::kLoadMergeU16:
       r = r.r16();
       break;

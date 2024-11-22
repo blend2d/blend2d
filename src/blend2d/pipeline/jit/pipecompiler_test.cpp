@@ -687,9 +687,17 @@ static BL_NOINLINE void test_rm_ops(JitContext& ctx) noexcept {
   mem.u8 = uint8_t(0xAA);
   EXPECT_EQ(fn_load_merge_u8(0x1F2FFF00, mem.buffer), 0x1F2FFFAAu);
 
+  TestRMFunc fn_load_shift_u8 = create_func_rm(ctx, OpcodeRM::kLoadShiftU8);
+  mem.u8 = uint8_t(0xAA);
+  EXPECT_EQ(fn_load_shift_u8(0x002FFF00, mem.buffer), 0x2FFF00AAu);
+
   TestRMFunc fn_load_merge_u16 = create_func_rm(ctx, OpcodeRM::kLoadMergeU16);
   mem.u16 = uint16_t(0xAABB);
   EXPECT_EQ(fn_load_merge_u16(0x1F2F0000, mem.buffer), 0x1F2FAABBu);
+
+  TestRMFunc fn_load_shift_u16 = create_func_rm(ctx, OpcodeRM::kLoadShiftU16);
+  mem.u16 = uint16_t(0xAABB);
+  EXPECT_EQ(fn_load_shift_u16(0x00001F2F, mem.buffer), 0x1F2FAABBu);
 
   ctx.rt.reset();
 }

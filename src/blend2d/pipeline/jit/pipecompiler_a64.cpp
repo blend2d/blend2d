@@ -552,7 +552,9 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
     { Inst::kIdLdr  , 8 }, // kLoadI64
     { Inst::kIdLdr  , 8 }, // kLoadU64
     { Inst::kIdLdrb , 1 }, // kLoadMergeU8
-    { Inst::kIdLdrh , 2 }  // kLoadMergeU16
+    { Inst::kIdLdrb , 1 }, // kLoadShiftU8
+    { Inst::kIdLdrh , 2 }, // kLoadMergeU16
+    { Inst::kIdLdrh , 2 }  // kLoadShiftU16
   };
 
   static constexpr uint32_t ld_32_mask =
@@ -583,6 +585,14 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
       }
 
       gp_emit_mem_op(this, r, m, ii);
+      return;
+    }
+
+    case OpcodeRM::kLoadShiftU8:
+    case OpcodeRM::kLoadShiftU16: {
+      Gp tmp = newSimilarReg(r);
+      gp_emit_mem_op(this, tmp.r32(), m, ii);
+      cc->orr(r, tmp, r, a64::lsl(ii.memSize * 8));
       return;
     }
 
