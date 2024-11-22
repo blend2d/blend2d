@@ -172,7 +172,7 @@ public:
       out.assign("native");
   }
 
-  bool runWithFeatures(uint32_t cpuFeatures) {
+  bool runWithFeatures(BLFormat format, uint32_t cpuFeatures) {
     resetCounters();
     stringifyFeatureId(_cpuFeaturesString, cpuFeatures);
 
@@ -199,8 +199,8 @@ public:
       bCreateInfo.cpuFeatures = cpuFeatures;
     }
 
-    if (aTester.init(int(options.width), int(options.height), options.format, aCreateInfo) != BL_SUCCESS ||
-        bTester.init(int(options.width), int(options.height), options.format, bCreateInfo) != BL_SUCCESS) {
+    if (aTester.init(int(options.width), int(options.height), format, aCreateInfo) != BL_SUCCESS ||
+        bTester.init(int(options.width), int(options.height), format, bCreateInfo) != BL_SUCCESS) {
       printf("Failed to initialize rendering contexts\n");
       return 1;
     }
@@ -218,13 +218,15 @@ public:
         StringUtils::opacityOpToString(opacityOp));
 
       info.name.assignFormat(
-          "%-21s | style+api=%-30s| comp+op=%-20s| simd-level=%-9s",
+          "%-21s | fmt=%-7s| style+api=%-30s| comp+op=%-20s| simd-level=%-9s",
           StringUtils::commandIdToString(commandId),
+          StringUtils::formatToString(format),
           s0.data(),
           s1.data(),
           _cpuFeaturesString.data());
 
-      info.id.assignFormat("ctx-jit-%s-%s-%s-%s-%s-%s",
+      info.id.assignFormat("ctx-jit-%s-%s-%s-%s-%s-%s-%s",
+        StringUtils::formatToString(format),
         StringUtils::commandIdToString(commandId),
         StringUtils::styleIdToString(styleId),
         StringUtils::styleOpToString(styleOp),
@@ -295,15 +297,21 @@ public:
           printf("Testing [%s] (quiet mode)\n", _cpuFeaturesString.data());
         }
 
-        runWithFeatures(feature);
+        for (BLFormat format : testCases.formatIds) {
+          runWithFeatures(format, feature);
+        }
       }
 #endif
 
       // Now run with all features if everything above has passed.
-      runWithFeatures(0);
+      for (BLFormat format : testCases.formatIds) {
+        runWithFeatures(format, 0);
+      }
     }
     else {
-      runWithFeatures(selectedCpuFeatures);
+      for (BLFormat format : testCases.formatIds) {
+        runWithFeatures(format, selectedCpuFeatures);
+      }
     }
 
     if (failedCount) {

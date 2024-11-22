@@ -66,7 +66,7 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInf
         return blTraceError(BL_ERROR_OUT_OF_MEMORY);
     }
     else {
-      threadPool = blThreadPoolGlobal();
+      threadPool = blThreadPoolGlobal()->addRef();
     }
 
     // Acquire threads passed to thread-pool.
@@ -94,7 +94,6 @@ BLResult WorkerManager::init(BLRasterContextImpl* ctxI, const BLContextCreateInf
     if (!n) {
       threadPool->release();
       threadPool = nullptr;
-
       workerThreads = nullptr;
       workDataStorage = nullptr;
       zone.restoreState(zoneState);

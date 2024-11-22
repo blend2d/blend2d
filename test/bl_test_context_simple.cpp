@@ -60,59 +60,63 @@ public:
     if (!parseCommonOptions(cmdLine))
       return 1;
 
-    ContextTester tester(testCases, "simple");
+    for (BLFormat format : testCases.formatIds) {
+      ContextTester tester(testCases, "simple");
 
-    tester.seed(options.seed);
-    tester.setFontData(fontData);
-    tester.setFlushSync(options.flushSync);
+      tester.seed(options.seed);
+      tester.setFontData(fontData);
+      tester.setFlushSync(options.flushSync);
 
-    BLContextCreateInfo cci {};
-    cci.threadCount = options.threadCount;
+      BLContextCreateInfo cci {};
+      cci.threadCount = options.threadCount;
 
-    if (tester.init(int(options.width), int(options.height), options.format, cci) != BL_SUCCESS) {
-      printf("Failed to initialize the rendering context\n");
-      return 1;
-    }
+      if (tester.init(int(options.width), int(options.height), format, cci) != BL_SUCCESS) {
+        printf("Failed to initialize the rendering context\n");
+        return 1;
+      }
 
-    TestInfo info;
-    dispatchRuns([&](CommandId commandId, StyleId styleId, StyleOp styleOp, CompOp compOp, OpacityOp opacityOp) {
-      BLString s0;
-      s0.appendFormat("%s/%s",
-        StringUtils::styleIdToString(styleId),
-        StringUtils::styleOpToString(styleOp));
+      TestInfo info;
+      dispatchRuns([&](CommandId commandId, StyleId styleId, StyleOp styleOp, CompOp compOp, OpacityOp opacityOp) {
+        BLString s0;
+        s0.appendFormat("%s/%s",
+          StringUtils::styleIdToString(styleId),
+          StringUtils::styleOpToString(styleOp));
 
-      BLString s1;
-      s1.appendFormat("%s/%s",
-        StringUtils::compOpToString(compOp),
-        StringUtils::opacityOpToString(opacityOp));
+        BLString s1;
+        s1.appendFormat("%s/%s",
+          StringUtils::compOpToString(compOp),
+          StringUtils::opacityOpToString(opacityOp));
 
-      info.name.assignFormat(
-          "%-21s | style+api=%-30s| comp+op=%-20s",
+        info.name.assignFormat(
+            "%-21s | fmt=%-7s| style+api=%-30s| comp+op=%-20s",
+            StringUtils::commandIdToString(commandId),
+            StringUtils::formatToString(format),
+            s0.data(),
+            s1.data());
+
+        if (!options.quiet) {
+          printf("Running [%s]\n", info.name.data());
+        }
+
+        info.id.assignFormat("ctx-simple-%s-%s-%s-%s-%s-%s",
+          StringUtils::formatToString(format),
           StringUtils::commandIdToString(commandId),
-          s0.data(),
-          s1.data());
+          StringUtils::styleIdToString(styleId),
+          StringUtils::styleOpToString(styleOp),
+          StringUtils::compOpToString(compOp),
+          StringUtils::opacityOpToString(opacityOp));
 
-      if (!options.quiet) {
-        printf("Running [%s]\n", info.name.data());
-      }
+        tester.clear();
+        tester.setOptions(compOp, opacityOp, styleId, options.styleOp);
+        tester.render(commandId, options.count, options);
 
-      info.id.assignFormat("ctx-simple-%s-%s-%s-%s-%s",
-        StringUtils::commandIdToString(commandId),
-        StringUtils::styleIdToString(styleId),
-        StringUtils::styleOpToString(styleOp),
-        StringUtils::compOpToString(compOp),
-        StringUtils::opacityOpToString(opacityOp));
+        if (options.storeImages) {
+          storeImage(tester.image(), info.id.data());
+        }
+      });
 
-      tester.clear();
-      tester.setOptions(compOp, opacityOp, styleId, options.styleOp);
-      tester.render(commandId, options.count, options);
-
-      if (options.storeImages) {
-        storeImage(tester.image(), info.id.data());
-      }
-    });
-
-    tester.reset();
+      tester.reset();
+    }
 
     printf("Testing finished...\n");
     return 0;

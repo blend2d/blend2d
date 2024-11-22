@@ -72,65 +72,69 @@ public:
     if (!parseCommonOptions(cmdLine) || !parseMTOptions(cmdLine))
       return 1;
 
-    ContextTester aTester(testCases, "st");
-    ContextTester bTester(testCases, "mt");
+    for (BLFormat format : testCases.formatIds) {
+      ContextTester aTester(testCases, "st");
+      ContextTester bTester(testCases, "mt");
 
-    aTester.setFlushSync(options.flushSync);
-    bTester.setFlushSync(options.flushSync);
+      aTester.setFlushSync(options.flushSync);
+      bTester.setFlushSync(options.flushSync);
 
-    BLContextCreateInfo aCreateInfo {};
-    BLContextCreateInfo bCreateInfo {};
+      BLContextCreateInfo aCreateInfo {};
+      BLContextCreateInfo bCreateInfo {};
 
-    bCreateInfo.threadCount = options.threadCount;
+      bCreateInfo.threadCount = options.threadCount;
 
-    if (aTester.init(int(options.width), int(options.height), options.format, aCreateInfo) != BL_SUCCESS ||
-        bTester.init(int(options.width), int(options.height), options.format, bCreateInfo) != BL_SUCCESS) {
-      printf("Failed to initialize rendering contexts\n");
-      return 1;
-    }
-
-    TestInfo info;
-    dispatchRuns([&](CommandId commandId, StyleId styleId, StyleOp styleOp, CompOp compOp, OpacityOp opacityOp) {
-      BLString s0;
-      s0.appendFormat("%s/%s",
-        StringUtils::styleIdToString(styleId),
-        StringUtils::styleOpToString(styleOp));
-
-      BLString s1;
-      s1.appendFormat("%s/%s",
-        StringUtils::compOpToString(compOp),
-        StringUtils::opacityOpToString(opacityOp));
-
-      info.name.assignFormat(
-          "%-21s | style+api=%-30s| comp+op=%-20s| thread-count=%u",
-          StringUtils::commandIdToString(commandId),
-          s0.data(),
-          s1.data(),
-          options.threadCount);
-
-      info.id.assignFormat("ctx-mt-%s-%s-%s-%s-%s-%u",
-        StringUtils::commandIdToString(commandId),
-        StringUtils::styleIdToString(styleId),
-        StringUtils::styleOpToString(styleOp),
-        StringUtils::compOpToString(compOp),
-        StringUtils::opacityOpToString(opacityOp),
-        options.threadCount);
-
-      if (!options.quiet) {
-        printf("Running [%s]\n", info.name.data());
+      if (aTester.init(int(options.width), int(options.height), format, aCreateInfo) != BL_SUCCESS ||
+          bTester.init(int(options.width), int(options.height), format, bCreateInfo) != BL_SUCCESS) {
+        printf("Failed to initialize rendering contexts\n");
+        return 1;
       }
 
-      aTester.setOptions(compOp, opacityOp, styleId, styleOp);
-      bTester.setOptions(compOp, opacityOp, styleId, styleOp);
+      TestInfo info;
+      dispatchRuns([&](CommandId commandId, StyleId styleId, StyleOp styleOp, CompOp compOp, OpacityOp opacityOp) {
+        BLString s0;
+        s0.appendFormat("%s/%s",
+          StringUtils::styleIdToString(styleId),
+          StringUtils::styleOpToString(styleOp));
 
-      if (runMultiple(commandId, info, aTester, bTester, 0))
-        passedCount++;
-      else
-        failedCount++;
-    });
+        BLString s1;
+        s1.appendFormat("%s/%s",
+          StringUtils::compOpToString(compOp),
+          StringUtils::opacityOpToString(opacityOp));
 
-    aTester.reset();
-    bTester.reset();
+        info.name.assignFormat(
+            "%-21s | fmt=%-7s| style+api=%-30s| comp+op=%-20s| thread-count=%u",
+            StringUtils::commandIdToString(commandId),
+            StringUtils::formatToString(format),
+            s0.data(),
+            s1.data(),
+            options.threadCount);
+
+        info.id.assignFormat("ctx-mt-%s-%s-%s-%s-%s-%s-%u",
+          StringUtils::formatToString(format),
+          StringUtils::commandIdToString(commandId),
+          StringUtils::styleIdToString(styleId),
+          StringUtils::styleOpToString(styleOp),
+          StringUtils::compOpToString(compOp),
+          StringUtils::opacityOpToString(opacityOp),
+          options.threadCount);
+
+        if (!options.quiet) {
+          printf("Running [%s]\n", info.name.data());
+        }
+
+        aTester.setOptions(compOp, opacityOp, styleId, styleOp);
+        bTester.setOptions(compOp, opacityOp, styleId, styleOp);
+
+        if (runMultiple(commandId, info, aTester, bTester, 0))
+          passedCount++;
+        else
+          failedCount++;
+      });
+
+      aTester.reset();
+      bTester.reset();
+    }
 
     if (failedCount) {
       printf("[FAILED] %u tests out of %u failed\n", failedCount, passedCount + failedCount);

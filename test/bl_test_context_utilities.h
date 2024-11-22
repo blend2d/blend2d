@@ -362,6 +362,8 @@ public:
 };
 
 struct TestCases {
+  //! List of pixel formats to test.
+  std::vector<BLFormat> formatIds;
   //! List of commands to test.
   std::vector<CommandId> commandIds;
   //! List of styles test.

@@ -43,7 +43,6 @@ bool BaseTestApp::parseCommonOptions(const CmdLine& cmdLine) {
 
   options.width = cmdLine.valueAsUInt("--width", defaultOptions.width);
   options.height = cmdLine.valueAsUInt("--height", defaultOptions.height);
-  options.format = parseFormat(cmdLine.valueOf("--format", formatToString(defaultOptions.format)));
   options.count = cmdLine.valueAsUInt("--count", defaultOptions.count);
   options.seed = cmdLine.valueAsUInt("--seed", defaultOptions.seed);
   options.styleId = parseStyleId(cmdLine.valueOf("--style", styleIdToString(defaultOptions.styleId)));
@@ -57,14 +56,26 @@ bool BaseTestApp::parseCommonOptions(const CmdLine& cmdLine) {
   options.quiet = cmdLine.hasArg("--quiet") || defaultOptions.quiet;
   options.storeImages = cmdLine.hasArg("--store") || defaultOptions.storeImages;
 
-  if (options.format == BL_FORMAT_NONE ||
+  const char* formatString = cmdLine.valueOf("--format", "all");
+  options.format = parseFormat(formatString);
+
+  bool formatValid = options.format != BL_FORMAT_NONE;
+  bool formatAll = false;
+
+  if (!formatValid && StringUtils::strieq(formatString, "all")) {
+    formatAll = true;
+    formatValid = true;
+  }
+
+  if (!formatValid ||
       options.command == CommandId::kUnknown ||
       options.styleId == StyleId::kUnknown ||
       options.compOp == CompOp::kUnknown ||
-      options.opacityOp == OpacityOp::kUnknown) {
+      options.opacityOp == OpacityOp::kUnknown
+  ) {
     printf("Failed to process command line arguments:\n");
 
-    if (options.format == BL_FORMAT_NONE)
+    if (!formatValid)
       printf("  Unknown format '%s' - please use --help to list all available pixel formats\n", cmdLine.valueOf("--format", ""));
 
     if (options.compOp == CompOp::kUnknown)
@@ -104,6 +115,14 @@ bool BaseTestApp::parseCommonOptions(const CmdLine& cmdLine) {
   }
 
   // Add all choices into the lists that are iterated during testing.
+  if (options.format == BL_FORMAT_NONE) {
+    testCases.formatIds.push_back(BL_FORMAT_PRGB32);
+    testCases.formatIds.push_back(BL_FORMAT_A8);
+  }
+  else {
+    testCases.formatIds.push_back(options.format);
+  }
+
   if (options.command == CommandId::kAll) {
     for (uint32_t i = 0; i < uint32_t(CommandId::kAll); i++) {
       testCases.commandIds.push_back(CommandId(i));
