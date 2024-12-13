@@ -8,7 +8,7 @@
 
 #include "api.h"
 
-//! \addtogroup blend2d_api_imaging
+//! \addtogroup bl_imaging
 //! \{
 
 //! \name BLFormat - Constants
@@ -96,6 +96,10 @@ BL_DEFINE_ENUM(BLFormatFlags) {
 };
 
 //! \}
+//! \}
+
+//! \addtogroup bl_c_api
+//! \{
 
 //! \name BLFormat - C API
 //! \{
@@ -108,12 +112,15 @@ BL_API BLResult BL_CDECL blFormatInfoSanitize(BLFormatInfo* self) BL_NOEXCEPT_C;
 BL_END_C_DECLS
 
 //! \}
+//! \}
 
+//! \addtogroup bl_imaging
+//! \{
 
 //! \name BLFormat - Structs
 //! \{
 
-//! Provides a detailed information about a pixel format. Use `blFormatInfo` array to get an information of Blend2D
+//! Provides a detailed information about a pixel format. Use \ref blFormatInfo array to get an information of Blend2D
 //! native pixel formats.
 struct BLFormatInfo {
   uint32_t depth;
@@ -171,16 +178,16 @@ struct BLFormatInfo {
   BL_INLINE_NODEBUG void addFlags(BLFormatFlags f) noexcept { flags = BLFormatFlags(flags | f); }
   BL_INLINE_NODEBUG void clearFlags(BLFormatFlags f) noexcept { flags = BLFormatFlags(flags & ~f); }
 
-  //! Query Blend2D `format` and copy it to this format info, see `BLFormat`.
+  //! Query Blend2D `format` and copy it to this format info, see \ref BLFormat.
   //!
-  //! Copies data from `blFormatInfo()` to this `BLFormatInfo` struct and returns `BL_SUCCESS` if the `format` was
-  //! valid, otherwise the `BLFormatInfo` is reset and `BL_ERROR_INVALID_VALUE` is returned.
+  //! Copies data from \ref blFormatInfo() to this \ref BLFormatInfo struct and returns \ref BL_SUCCESS if the
+  //! `format` was valid, otherwise the \ref BLFormatInfo is reset and \ref BL_ERROR_INVALID_VALUE is returned.
   //!
-  //! \note The `BL_FORMAT_NONE` is considered invalid format, thus if it's passed to `query()` the return value
-  //! would be `BL_ERROR_INVALID_VALUE`.
+  //! \note The \ref BL_FORMAT_NONE is considered invalid format, thus if it's passed to `query()` the return
+  //! value would be \ref BL_ERROR_INVALID_VALUE.
   BL_INLINE_NODEBUG BLResult query(BLFormat format) noexcept { return blFormatInfoQuery(this, format); }
 
-  //! Sanitize this `BLFormatInfo`.
+  //! Sanitize this \ref BLFormatInfo.
   //!
   //! Sanitizer verifies whether the format is valid and updates the format information about flags to values that
   //! Blend2D expects. For example format flags are properly examined and simplified if possible, byte-swap is
@@ -196,13 +203,12 @@ struct BLFormatInfo {
 
 BL_BEGIN_C_DECLS
 
-//! Pixel format information of Blend2D native pixel formats, see `BLFormat`.
+//! Pixel format information of Blend2D native pixel formats, see \ref BLFormat.
 extern BL_API const BLFormatInfo blFormatInfo[];
 
 BL_END_C_DECLS
 
 //! \}
-
 //! \}
 
 #endif // BLEND2D_FORMAT_H_INCLUDED

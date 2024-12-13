@@ -21,13 +21,45 @@
 #include "path.h"
 #include "string.h"
 
-//! \addtogroup blend2d_api_text
+//! \addtogroup bl_c_api
 //! \{
 
 //! \name BLFont - C API
 //! \{
 
+//! Font [C API].
+struct BLFontCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFont)
+};
+
 BL_BEGIN_C_DECLS
+
+//! \cond INTERNAL
+//! Font [C API Impl].
+struct BLFontImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Font face used by this font.
+  BLFontFaceCore face;
+
+  //! Font width (1..1000) [0 if the font is not initialized].
+  uint16_t weight;
+  //! Font stretch (1..9) [0 if the font is not initialized].
+  uint8_t stretch;
+  //! Font style.
+  uint8_t style;
+  //! Reserved for future use.
+  uint32_t reserved;
+  //! Font metrics.
+  BLFontMetrics metrics;
+  //! Font matrix.
+  BLFontMatrix matrix;
+
+  //! Assigned font features (key/value pairs).
+  BLFontFeatureSettingsCore featureSettings;
+  //! Assigned font variations (key/value pairs).
+  BLFontVariationSettingsCore variationSettings;
+};
+//! \endcond
 
 BL_API BLResult BL_CDECL blFontInit(BLFontCore* self) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blFontInitMove(BLFontCore* self, BLFontCore* other) BL_NOEXCEPT_C;
@@ -65,44 +97,11 @@ BL_API BLResult BL_CDECL blFontGetGlyphRunOutlines(const BLFontCore* self, const
 
 BL_END_C_DECLS
 
-//! Font [C API].
-struct BLFontCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLFont)
-};
-
+//! \}
 //! \}
 
-//! \cond INTERNAL
-//! \name BLFont - Internals
+//! \addtogroup bl_text
 //! \{
-
-//! Font [Impl].
-struct BLFontImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Font face used by this font.
-  BLFontFaceCore face;
-
-  //! Font width (1..1000) [0 if the font is not initialized].
-  uint16_t weight;
-  //! Font stretch (1..9) [0 if the font is not initialized].
-  uint8_t stretch;
-  //! Font style.
-  uint8_t style;
-  //! Reserved for future use.
-  uint32_t reserved;
-  //! Font metrics.
-  BLFontMetrics metrics;
-  //! Font matrix.
-  BLFontMatrix matrix;
-
-  //! Assigned font features (key/value pairs).
-  BLFontFeatureSettingsCore featureSettings;
-  //! Assigned font variations (key/value pairs).
-  BLFontVariationSettingsCore variationSettings;
-};
-
-//! \}
-//! \endcond
 
 //! \name BLFont - C++ API
 //! \{
@@ -124,10 +123,20 @@ public:
   //! \name Construction & Destruction
   //! \{
 
+  //! Creates a default initialized font
+  //!
+  //! A default initialized font is not a valid font that could be used for rendering. It can be considered an empty
+  //! or null font, which has no family, no glyphs, no tables, it's essentially empty.
   BL_INLINE_NODEBUG BLFont() noexcept { blFontInit(this); }
-  BL_INLINE_NODEBUG BLFont(BLFont&& other) noexcept { blFontInitMove(this, &other); }
+
+  //! Copy constructor makes a weak copy of the underlying representation of the `other` font.
   BL_INLINE_NODEBUG BLFont(const BLFont& other) noexcept { blFontInitWeak(this, &other); }
 
+  //! Move constructor moves the underlying representation of the `other` font into this newly created instance and
+  //! resets the `other` font to a default constructed state.
+  BL_INLINE_NODEBUG BLFont(BLFont&& other) noexcept { blFontInitMove(this, &other); }
+
+  //! Destroys the font.
   BL_INLINE_NODEBUG ~BLFont() noexcept {
     if (BLInternal::objectNeedsCleanup(_d.info.bits))
       blFontDestroy(this);
@@ -138,10 +147,11 @@ public:
   //! \name Overloaded Operators
   //! \{
 
+  //! Returns whether the font is valid, which means that it was constructed from a valid \ref BLFontFace.
   BL_INLINE_NODEBUG explicit operator bool() const noexcept { return isValid(); }
 
-  BL_INLINE_NODEBUG BLFont& operator=(BLFont&& other) noexcept { blFontAssignMove(this, &other); return *this; }
   BL_INLINE_NODEBUG BLFont& operator=(const BLFont& other) noexcept { blFontAssignWeak(this, &other); return *this; }
+  BL_INLINE_NODEBUG BLFont& operator=(BLFont&& other) noexcept { blFontAssignMove(this, &other); return *this; }
 
   BL_INLINE_NODEBUG bool operator==(const BLFont& other) const noexcept { return  equals(other); }
   BL_INLINE_NODEBUG bool operator!=(const BLFont& other) const noexcept { return !equals(other); }
@@ -151,17 +161,29 @@ public:
   //! \name Common Functionality
   //! \{
 
+  //! Resets the font to a default constructed state.
+  //!
+  //! \note This operation always succeeds and returns \ref BL_SUCCESS.
   BL_INLINE_NODEBUG BLResult reset() noexcept { return blFontReset(this); }
+
+  //! Swaps the underlying representation of this font with the `other` font.
   BL_INLINE_NODEBUG void swap(BLFont& other) noexcept { _d.swap(other._d); }
 
-  BL_INLINE_NODEBUG BLResult assign(BLFont&& other) noexcept { return blFontAssignMove(this, &other); }
+  //! Copy assignment creates a weak copy of the underlying representation of the `other` font and stores it in this
+  //! font.
   BL_INLINE_NODEBUG BLResult assign(const BLFont& other) noexcept { return blFontAssignWeak(this, &other); }
+
+  //! Move assignment moves the underlying representation of the `other` font into this font and then resets the
+  //! `other` font to a default constructed state.
+  BL_INLINE_NODEBUG BLResult assign(BLFont&& other) noexcept { return blFontAssignMove(this, &other); }
 
   //! Tests whether the font is a valid instance.
   BL_INLINE_NODEBUG bool isValid() const noexcept { return _impl()->face.dcast().isValid(); }
+
   //! Tests whether the font is empty, which is the same as `!isValid()`.
   BL_INLINE_NODEBUG bool empty() const noexcept { return !isValid(); }
 
+  //! Tests whether this and `other` fonts are equal.
   BL_INLINE_NODEBUG bool equals(const BLFontCore& other) const noexcept { return blFontEquals(this, &other); }
 
   //! \}
@@ -221,7 +243,7 @@ public:
 
   //! Returns a 2x2 matrix of the font.
   //!
-  //! The returned `BLFontMatrix` is used to scale fonts from design units into user units. The matrix
+  //! The returned \ref BLFontMatrix is used to scale fonts from design units into user units. The matrix
   //! usually has a negative `m11` member as fonts use a different coordinate system than Blend2D.
   BL_INLINE_NODEBUG const BLFontMatrix& matrix() const noexcept { return _impl()->matrix; }
 
@@ -232,7 +254,7 @@ public:
 
   //! Returns the design metrics of the font.
   //!
-  //! The returned metrics is compatible with the metrics of `BLFontFace` associated with this font.
+  //! The returned metrics is compatible with the metrics of \ref BLFontFace associated with this font.
   BL_INLINE_NODEBUG const BLFontDesignMetrics& designMetrics() const noexcept { return face().designMetrics(); }
 
   //! Returns font feature settings.
@@ -294,18 +316,38 @@ public:
     return blFontGetGlyphAdvances(this, glyphData, glyphAdvance, out, count);
   }
 
+  //! Retrieves outlines of a single glyph into the `out` path.
+  //!
+  //! Optionally, a user can provide a `sink` function with `userData`, which will be called periodically by the
+  //! glyph outline decoder. The `sink` can be used to immediately process the outline to prevent accumulating a
+  //! large path in `out`.
   BL_INLINE_NODEBUG BLResult getGlyphOutlines(BLGlyphId glyphId, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
     return blFontGetGlyphOutlines(this, glyphId, nullptr, &out, sink, userData);
   }
 
+  //! Retrieves outlines of a single glyph into the `out` path transformed by `userTransform`.
+  //!
+  //! Optionally, a user can provide a `sink` function with `userData`, which will be called periodically by the
+  //! glyph outline decoder. The `sink` can be used to immediately process the outline to prevent accumulating a
+  //! large path in `out`.
   BL_INLINE_NODEBUG BLResult getGlyphOutlines(BLGlyphId glyphId, const BLMatrix2D& userTransform, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
     return blFontGetGlyphOutlines(this, glyphId, &userTransform, &out, sink, userData);
   }
 
+  //! Retrieves outlines of a glyph run into the `out` path.
+  //!
+  //! Optionally, a user can provide a `sink` function with `userData`, which will be called periodically by the
+  //! glyph outline decoder. The `sink` can be used to immediately process the outline to prevent accumulating a
+  //! large path in `out`.
   BL_INLINE_NODEBUG BLResult getGlyphRunOutlines(const BLGlyphRun& glyphRun, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
     return blFontGetGlyphRunOutlines(this, &glyphRun, nullptr, &out, sink, userData);
   }
 
+  //! Retrieves outlines of a glyph run into the `out` path transformed by `userTransform`.
+  //!
+  //! Optionally, a user can provide a `sink` function with `userData`, which will be called periodically by the
+  //! glyph outline decoder. The `sink` can be used to immediately process the outline to prevent accumulating a
+  //! large path in `out`.
   BL_INLINE_NODEBUG BLResult getGlyphRunOutlines(const BLGlyphRun& glyphRun, const BLMatrix2D& userTransform, BLPathCore& out, BLPathSinkFunc sink = nullptr, void* userData = nullptr) const noexcept {
     return blFontGetGlyphRunOutlines(this, &glyphRun, &userTransform, &out, sink, userData);
   }

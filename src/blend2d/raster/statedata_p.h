@@ -70,7 +70,7 @@ public:
   alignas(16) BLBox finalClipBoxD;
 };
 
-//! Structure that holds a previously saved state (see `save()` and `restore()`).
+//! Structure that holds a previously saved state, see \ref BLContext::save() and \ref BLContext::restore().
 //!
 //! \note The struct is designed to have no gaps required by alignment so the order of members doesn't have to make
 //! much sense.

@@ -8,11 +8,35 @@
 
 #include "object.h"
 
-//! \addtogroup blend2d_api_globals
+//! \addtogroup bl_c_api
 //! \{
 
 //! \name BLBitArray - C API
 //! \{
+
+//! BitArray container [C API].
+struct BLBitArrayCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLBitArray)
+};
+
+//! \cond INTERNAL
+//! BitArray container [C API Impl].
+struct BLBitArrayImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Size in bit units.
+  uint32_t size;
+  //! Capacity in bit-word units.
+  uint32_t capacity;
+
+#ifdef __cplusplus
+  //! Pointer to array data.
+  BL_INLINE_NODEBUG uint32_t* data() noexcept { return reinterpret_cast<uint32_t*>(this + 1); }
+
+  //! Pointer to array data (const).
+  BL_INLINE_NODEBUG const uint32_t* data() const noexcept { return reinterpret_cast<const uint32_t*>(this + 1); }
+#endif
+};
+//! \endcond
 
 BL_BEGIN_C_DECLS
 
@@ -64,36 +88,12 @@ BL_API BLResult BL_CDECL blBitArrayCombine(BLBitArrayCore* dst, const BLBitArray
 
 BL_END_C_DECLS
 
-//! BitArray container [C API].
-struct BLBitArrayCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLBitArray)
-};
+//! \}
 
 //! \}
 
-//! \cond INTERNAL
-//! \name BLBitArray - Internals
+//! \addtogroup bl_containers
 //! \{
-
-//! BitArray container [Impl].
-struct BLBitArrayImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Size in bit units.
-  uint32_t size;
-  //! Capacity in bit-word units.
-  uint32_t capacity;
-
-#ifdef __cplusplus
-  //! Pointer to array data.
-  BL_INLINE_NODEBUG uint32_t* data() noexcept { return reinterpret_cast<uint32_t*>(this + 1); }
-
-  //! Pointer to array data (const).
-  BL_INLINE_NODEBUG const uint32_t* data() const noexcept { return reinterpret_cast<const uint32_t*>(this + 1); }
-#endif
-};
-
-//! \}
-//! \endcond
 
 //! \name BLBitArray - C++ API
 //! \{

@@ -8,11 +8,33 @@
 
 #include "object.h"
 
-//! \addtogroup blend2d_api_globals
+//! \addtogroup bl_c_api
 //! \{
 
 //! \name BLString - C API
 //! \{
+
+//! Byte string [C API].
+struct BLStringCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLString)
+};
+
+//! \cond INTERNAL
+//! Byte string [Impl].
+struct BLStringImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! String size [in bytes].
+  size_t size;
+  //! String data capacity [in bytes].
+  size_t capacity;
+
+#ifdef __cplusplus
+  //! String data [null terminated] follows BLStringImpl data.
+  BL_NODISCARD
+  BL_INLINE_NODEBUG char* data() noexcept { return reinterpret_cast<char*>(this) + sizeof(BLStringImpl); }
+#endif
+};
+//! \endcond
 
 BL_BEGIN_C_DECLS
 
@@ -53,34 +75,11 @@ BL_API int BL_CDECL blStringCompareData(const BLStringCore* self, const char* st
 
 BL_END_C_DECLS
 
-//! Byte string [C API].
-struct BLStringCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLString)
-};
-
+//! \}
 //! \}
 
-//! \cond INTERNAL
-//! \name BLString - Internal
+//! \addtogroup bl_containers
 //! \{
-
-//! Byte string [Impl].
-struct BLStringImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! String size [in bytes].
-  size_t size;
-  //! String data capacity [in bytes].
-  size_t capacity;
-
-#ifdef __cplusplus
-  //! String data [null terminated] follows BLStringImpl data.
-  BL_NODISCARD
-  BL_INLINE_NODEBUG char* data() noexcept { return reinterpret_cast<char*>(this) + sizeof(BLStringImpl); }
-#endif
-};
-
-//! \}
-//! \endcond
 
 //! \name BLString - C++ API
 //! \{
@@ -90,7 +89,7 @@ struct BLStringImpl BL_CLASS_INHERITS(BLObjectImpl) {
 //!
 //! Blend2D always uses UTF-8 encoding in public APIs so all strings are assumed UTF-8 by default. However, `BLString`
 //! doesn't guarantee any assumptions about the encoding of the data it holds. It can hold arbitrary byte sequence and
-//! acts as a raw byte-string when this functionality is required.
+//! act as a raw byte-string when this functionality is desired.
 class BLString final : public BLStringCore {
 public:
   //! \cond INTERNAL

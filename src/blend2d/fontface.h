@@ -17,7 +17,7 @@
 #include "path.h"
 #include "string.h"
 
-//! \addtogroup blend2d_api_text
+//! \addtogroup bl_text
 //! \{
 
 //! \name BLFontFace - Constants
@@ -148,38 +148,13 @@ struct BLFontFaceInfo {
 };
 
 //! \}
+//! \}
+
+//! \addtogroup bl_c_api
+//! \{
 
 //! \name BLFontFace - C API
 //! \{
-
-BL_BEGIN_C_DECLS
-
-BL_API BLResult BL_CDECL blFontFaceInit(BLFontFaceCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceInitMove(BLFontFaceCore* self, BLFontFaceCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceInitWeak(BLFontFaceCore* self, const BLFontFaceCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceDestroy(BLFontFaceCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceReset(BLFontFaceCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceAssignMove(BLFontFaceCore* self, BLFontFaceCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceAssignWeak(BLFontFaceCore* self, const BLFontFaceCore* other) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontFaceEquals(const BLFontFaceCore* a, const BLFontFaceCore* b) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName, BLFileReadFlags readFlags) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceCreateFromData(BLFontFaceCore* self, const BLFontDataCore* fontData, uint32_t faceIndex) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetFullName(const BLFontFaceCore* self, BLStringCore* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetFamilyName(const BLFontFaceCore* self, BLStringCore* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetSubfamilyName(const BLFontFaceCore* self, BLStringCore* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetPostScriptName(const BLFontFaceCore* self, BLStringCore* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self, BLFontUnicodeCoverage* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetCharacterCoverage(const BLFontFaceCore* self, BLBitSetCore* out) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontFaceHasScriptTag(const BLFontFaceCore* self, BLTag scriptTag) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontFaceHasFeatureTag(const BLFontFaceCore* self, BLTag featureTag) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontFaceHasVariationTag(const BLFontFaceCore* self, BLTag variationTag) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetScriptTags(const BLFontFaceCore* self, BLArrayCore* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetFeatureTags(const BLFontFaceCore* self, BLArrayCore* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFaceGetVariationTags(const BLFontFaceCore* self, BLArrayCore* out) BL_NOEXCEPT_C;
-
-BL_END_C_DECLS
 
 //! Font face [C API].
 struct BLFontFaceCore BL_CLASS_INHERITS(BLObjectCore) {
@@ -187,18 +162,13 @@ struct BLFontFaceCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DCAST(BLFontFace)
 };
 
-//! \}
-
 //! \cond INTERNAL
-//! \name BLFontFace - Internals
-//! \{
-
-//! Font face [Virtual Function Table].
+//! Font face [C API Virtual Function Table].
 struct BLFontFaceVirt BL_CLASS_INHERITS(BLObjectVirt) {
   BL_DEFINE_VIRT_BASE
 };
 
-//! Font face [Impl].
+//! Font face [C API Impl].
 struct BLFontFaceImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Virtual function table.
   const BLFontFaceVirt* virt;
@@ -233,9 +203,42 @@ struct BLFontFaceImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! Font face panose classification.
   BLFontPanose panose;
 };
+//! \endcond
+
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blFontFaceInit(BLFontFaceCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceInitMove(BLFontFaceCore* self, BLFontFaceCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceInitWeak(BLFontFaceCore* self, const BLFontFaceCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceDestroy(BLFontFaceCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceReset(BLFontFaceCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceAssignMove(BLFontFaceCore* self, BLFontFaceCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceAssignWeak(BLFontFaceCore* self, const BLFontFaceCore* other) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontFaceEquals(const BLFontFaceCore* a, const BLFontFaceCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceCreateFromFile(BLFontFaceCore* self, const char* fileName, BLFileReadFlags readFlags) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceCreateFromData(BLFontFaceCore* self, const BLFontDataCore* fontData, uint32_t faceIndex) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetFullName(const BLFontFaceCore* self, BLStringCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetFamilyName(const BLFontFaceCore* self, BLStringCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetSubfamilyName(const BLFontFaceCore* self, BLStringCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetPostScriptName(const BLFontFaceCore* self, BLStringCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetFaceInfo(const BLFontFaceCore* self, BLFontFaceInfo* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetrics* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self, BLFontUnicodeCoverage* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetCharacterCoverage(const BLFontFaceCore* self, BLBitSetCore* out) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontFaceHasScriptTag(const BLFontFaceCore* self, BLTag scriptTag) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontFaceHasFeatureTag(const BLFontFaceCore* self, BLTag featureTag) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontFaceHasVariationTag(const BLFontFaceCore* self, BLTag variationTag) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetScriptTags(const BLFontFaceCore* self, BLArrayCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetFeatureTags(const BLFontFaceCore* self, BLArrayCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFaceGetVariationTags(const BLFontFaceCore* self, BLArrayCore* out) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
 
 //! \}
-//! \endcond
+//! \}
+
+//! \addtogroup bl_text
+//! \{
 
 //! \name BLFontFace - C++ API
 //! \{
@@ -303,22 +306,22 @@ public:
 
   //! Creates a new \ref BLFontFace from a file specified by `fileName`.
   //!
-  //! This is a utility function that first creates a `BLFontData` and then calls `createFromData(fontData, 0)`.
+  //! This is a utility function that first creates a \ref BLFontData` and then calls `createFromData(fontData, 0)`.
   //! See \ref BLFontData::createFromFile() for more details, especially the use of `readFlags` is important for
   //! system fonts.
   //!
-  //! \note This function offers a simplified creation of `BLFontFace` directly from a file, but doesn't provide
+  //! \note This function offers a simplified creation of \ref BLFontFace directly from a file, but doesn't provide
   //! as much flexibility as \ref createFromData() as it allows to specify a `faceIndex`, which can be used to load
-  //! multiple font faces from a TrueType/OpenType collection. The use of `createFromData()` is recommended for any
-  //! serious font handling.
+  //! multiple font faces from a TrueType/OpenType collection. The use of \ref createFromData() is recommended for
+  //! any serious font handling.
   BL_INLINE_NODEBUG BLResult createFromFile(const char* fileName, BLFileReadFlags readFlags = BL_FILE_READ_NO_FLAGS) noexcept {
     return blFontFaceCreateFromFile(this, fileName, readFlags);
   }
 
-  //! Creates a new `BLFontFace` from `BLFontData` at the given `faceIndex`.
+  //! Creates a new \ref BLFontFace from \ref BLFontData at the given `faceIndex`.
   //!
-  //! On success the existing `BLFontFace` is completely replaced by a new one, on failure an error is returned in
-  //! `BLResult` and the existing `BLFontFace` is kept as is.
+  //! On success the existing \ref BLFontFace is completely replaced by a new one, on failure an error is returned
+  //! in \ref BLResult and the existing \ref BLFontFace is kept as is.
   BL_INLINE_NODEBUG BLResult createFromData(const BLFontDataCore& fontData, uint32_t faceIndex) noexcept {
     return blFontFaceCreateFromData(this, &fontData, faceIndex);
   }
@@ -409,21 +412,21 @@ public:
   //! Returns a PostScript name of the font.
   BL_INLINE_NODEBUG const BLString& postScriptName() const noexcept { return _impl()->postScriptName.dcast(); }
 
-  //! Returns design metrics of this `BLFontFace`.
+  //! Returns design metrics of this \ref BLFontFace.
   BL_INLINE_NODEBUG const BLFontDesignMetrics& designMetrics() const noexcept { return _impl()->designMetrics; }
   //! Returns units per em, which are part of font's design metrics.
   BL_INLINE_NODEBUG int unitsPerEm() const noexcept { return _impl()->designMetrics.unitsPerEm; }
 
-  //! Returns PANOSE classification of this `BLFontFace`.
+  //! Returns PANOSE classification of this \ref BLFontFace`.
   BL_INLINE_NODEBUG const BLFontPanose& panose() const noexcept { return _impl()->panose; }
 
-  //! Returns unicode coverage of this `BLFontFace`.
+  //! Returns unicode coverage of this \ref BLFontFace.
   //!
   //! \note The returned unicode-coverage is not calculated by Blend2D so in general the value doesn't have to be
   //! correct. Consider `getCharacterCoverage()` to get a coverage calculated by Blend2D at character granularity.
   BL_INLINE_NODEBUG const BLFontUnicodeCoverage& unicodeCoverage() const noexcept { return _impl()->unicodeCoverage; }
 
-  //! Calculates the character coverage of this `BLFontFace`.
+  //! Calculates the character coverage of this \ref BLFontFace.
   //!
   //! Each unicode character is represented by a single bit in the given BitSet.
   BL_INLINE_NODEBUG BLResult getCharacterCoverage(BLBitSetCore* out) const noexcept { return blFontFaceGetCharacterCoverage(this, out); }
@@ -437,22 +440,22 @@ public:
   //! Tests whether the font face provides the given OpenType `variationTag`.
   BL_INLINE_NODEBUG bool hasVariationTag(BLTag variationTag) const noexcept { return blFontFaceHasVariationTag(this, variationTag); }
 
-  //! Retrieves OpenType script tags provided by this `BLFontFace`.
+  //! Retrieves OpenType script tags provided by this \ref BLFontFace.
   //!
-  //! Each script tag is represented by 4 characters encoded in `BLTag`.
+  //! Each script tag is represented by 4 characters encoded in \ref BLTag.
   BL_INLINE_NODEBUG BLResult getScriptTags(BLArray<BLTag>* out) const noexcept { return blFontFaceGetScriptTags(this, out); }
 
-  //! Retrieves OpenType feature tags provided by this `BLFontFace`.
+  //! Retrieves OpenType feature tags provided by this \ref BLFontFace.
   //!
-  //! Each feature tag is represented by 4 characters encoded in `BLTag`.
+  //! Each feature tag is represented by 4 characters encoded in \ref BLTag.
   //!
   //! Feature tag registry:
   //!   - Microsoft <https://docs.microsoft.com/en-us/typography/opentype/spec/featurelist>
   BL_INLINE_NODEBUG BLResult getFeatureTags(BLArray<BLTag>* out) const noexcept { return blFontFaceGetFeatureTags(this, out); }
 
-  //! Retrieves OpenType variation tags provided by this `BLFontFace`.
+  //! Retrieves OpenType variation tags provided by this \ref BLFontFace.
   //!
-  //! Each variation tag is represented by 4 characters encoded in `BLTag`.
+  //! Each variation tag is represented by 4 characters encoded in \ref BLTag.
   //!
   //! Variation tag registry:
   //!   - Microsoft <https://docs.microsoft.com/en-us/typography/opentype/spec/dvaraxisreg>

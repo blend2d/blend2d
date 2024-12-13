@@ -10,7 +10,7 @@
 #include "format.h"
 #include "geometry.h"
 
-//! \addtogroup blend2d_api_imaging
+//! \addtogroup bl_imaging
 //! \{
 
 //! \cond INTERNAL
@@ -70,6 +70,10 @@ struct BLPixelConverterOptions {
 };
 
 //! \}
+//! \}
+
+//! \addtogroup bl_c_api
+//! \{
 
 //! \name BLPixelConverter - C API
 //! \{
@@ -106,6 +110,10 @@ BL_API BLResult BL_CDECL blPixelConverterConvert(const BLPixelConverterCore* sel
 BL_END_C_DECLS
 
 //! \}
+//! \}
+
+//! \addtogroup bl_imaging
+//! \{
 
 //! \name BLPixelConverter - C++ API
 //! \{

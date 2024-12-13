@@ -10,7 +10,56 @@
 #include "object.h"
 #include "string.h"
 
-//! \addtogroup blend2d_api_text
+//! \addtogroup bl_c_api
+//! \{
+
+//! \name BLFontManager - C API
+//! \{
+
+//! Font manager [C API].
+struct BLFontManagerCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontManager)
+};
+
+//! \cond INTERNAL
+//! Font manager [C API Virtual Function Table].
+struct BLFontManagerVirt BL_CLASS_INHERITS(BLObjectVirt) {
+  BL_DEFINE_VIRT_BASE
+};
+
+//! Font manager [C API Impl].
+struct BLFontManagerImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Virtual function table.
+  const BLFontManagerVirt* virt;
+};
+//! \endcond
+
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blFontManagerInit(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerInitMove(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerInitWeak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerInitNew(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerDestroy(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerReset(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerAssignMove(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerAssignWeak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerCreate(BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blFontManagerGetFaceCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blFontManagerGetFamilyCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontManagerHasFace(const BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerAddFace(BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerQueryFace(const BLFontManagerCore* self, const char* name, size_t nameSize, const BLFontQueryProperties* properties, BLFontFaceCore* out) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontManagerQueryFacesByFamilyName(const BLFontManagerCore* self, const char* name, size_t nameSize, BLArrayCore* out) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontManagerEquals(const BLFontManagerCore* a, const BLFontManagerCore* b) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+
+//! \}
+//! \}
+
+//! \addtogroup bl_text
 //! \{
 
 //! \name BLFontManager - Structs
@@ -44,57 +93,9 @@ struct BLFontQueryProperties {
 
 //! \}
 
-//! \name BLFontManager - C API
-//! \{
-
-//! Font manager [C API].
-struct BLFontManagerCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLFontManager)
-};
-
-BL_BEGIN_C_DECLS
-
-BL_API BLResult BL_CDECL blFontManagerInit(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerInitMove(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerInitWeak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerInitNew(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerDestroy(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerReset(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerAssignMove(BLFontManagerCore* self, BLFontManagerCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerAssignWeak(BLFontManagerCore* self, const BLFontManagerCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerCreate(BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontManagerGetFaceCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontManagerGetFamilyCount(const BLFontManagerCore* self) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontManagerHasFace(const BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerAddFace(BLFontManagerCore* self, const BLFontFaceCore* face) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerQueryFace(const BLFontManagerCore* self, const char* name, size_t nameSize, const BLFontQueryProperties* properties, BLFontFaceCore* out) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontManagerQueryFacesByFamilyName(const BLFontManagerCore* self, const char* name, size_t nameSize, BLArrayCore* out) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontManagerEquals(const BLFontManagerCore* a, const BLFontManagerCore* b) BL_NOEXCEPT_C;
-
-BL_END_C_DECLS
-//! \}
-
-//! \cond INTERNAL
-//! \name BLFontManager - Internals
-//! \{
-
-//! Font manager [Virtual Function Table].
-struct BLFontManagerVirt BL_CLASS_INHERITS(BLObjectVirt) {
-  BL_DEFINE_VIRT_BASE
-};
-
-//! Font manager [Impl].
-struct BLFontManagerImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Virtual function table.
-  const BLFontManagerVirt* virt;
-};
-
-//! \}
-//! \endcond
-
 //! \name BLFontManager - C++ API
 //! \{
+
 #ifdef __cplusplus
 
 //! Font manager [C++ API].
@@ -169,11 +170,11 @@ public:
 
   //! Adds a font `face` to the font manager.
   //!
-  //! Important conditions:
-  //!   - `BL_SUCCESS` is returned if the `face` was successfully added to font manager or if font manager already
+  //! Important result conditions:
+  //!   - \ref BL_SUCCESS is returned if the `face` was successfully added to font manager or if font manager already
   //!     held it.
-  //!   - `BL_ERROR_FONT_NOT_INITIALIZED` is returned if the font `face` is invalid.
-  //!   - `BL_ERROR_OUT_OF_MEMORY` is returned if memory allocation failed.
+  //!   - \ref BL_ERROR_FONT_NOT_INITIALIZED is returned if the font `face` is invalid.
+  //!   - \ref BL_ERROR_OUT_OF_MEMORY is returned if memory allocation failed.
   BL_INLINE_NODEBUG BLResult addFace(const BLFontFaceCore& face) noexcept {
     return blFontManagerAddFace(this, &face);
   }

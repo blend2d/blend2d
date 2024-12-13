@@ -8,7 +8,7 @@
 
 #include "api.h"
 
-//! \addtogroup blend2d_api_geometry
+//! \addtogroup bl_geometry
 //! \{
 
 //! Direction of a geometry used by geometric primitives and paths.
@@ -752,7 +752,7 @@ struct BLArc {
 //! \}
 
 #ifdef __cplusplus
-//! \addtogroup blend2d_api_geometry
+//! \addtogroup bl_geometry
 //! \{
 
 //! \name Global Specializations

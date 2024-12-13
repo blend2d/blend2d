@@ -8,7 +8,7 @@
 
 #include "geometry.h"
 
-//! \addtogroup blend2d_api_text
+//! \addtogroup bl_text
 //! \{
 
 //! \name BLFont Related Constants
@@ -384,7 +384,7 @@ typedef uint32_t BLGlyphId;
 //! \name BLFont Related Structs
 //! \{
 
-//! Contains additional information associated with a glyph used by `BLGlyphBuffer`.
+//! Contains additional information associated with a glyph used by \ref BLGlyphBuffer.
 struct BLGlyphInfo {
   //! \name Members
   //! \{
@@ -450,7 +450,7 @@ struct BLGlyphMappingState {
 #endif
 };
 
-//! Information passed to a `BLPathSinkFunc` sink by `BLFont::getGlyphOutlines()`.
+//! Information passed to a \ref BLPathSinkFunc sink by \ref BLFont::getGlyphOutlines().
 struct BLGlyphOutlineSinkInfo {
   size_t glyphIndex;
   size_t contourCount;
@@ -563,8 +563,8 @@ struct BLFontPanose {
 #endif
 };
 
-//! 2x2 transformation matrix used by `BLFont`. It's similar to `BLMatrix2D`, however, it doesn't provide a
-//! translation part as it's assumed to be zero.
+//! 2x2 transformation matrix used by \ref BLFont. It's similar to \ref BLMatrix2D,
+//! however, it doesn't provide a translation part as it's assumed to be zero.
 struct BLFontMatrix {
   union {
     double m[4];
@@ -601,7 +601,7 @@ struct BLFontMatrix {
 #endif
 };
 
-//! Scaled `BLFontDesignMetrics` based on font size and other properties.
+//! Scaled \ref BLFontDesignMetrics based on font size and other properties.
 struct BLFontMetrics {
   //! Font size.
   float size;
@@ -656,11 +656,11 @@ struct BLFontMetrics {
 
 //! Design metrics of a font.
 //!
-//! Design metrics is information that `BLFontFace` collected directly from the font data. It means that all
+//! Design metrics is information that \ref BLFontFace collected directly from the font data. It means that all
 //! fields are measured in font design units.
 //!
-//! When a new `BLFont` instance is created a scaled metrics `BLFontMetrics` is automatically calculated from
-//! `BLFontDesignMetrics` including other members like transformation, etc...
+//! When a new \ref BLFont instance is created a scaled metrics \ref BLFontMetrics is automatically calculated
+//! from \ref BLFontDesignMetrics including other members like transformation, etc...
 struct BLFontDesignMetrics {
   //! Units per EM square.
   int unitsPerEm;

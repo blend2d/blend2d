@@ -8,11 +8,10 @@
 
 #include "array.h"
 
-//! \addtogroup blend2d_api_filesystem
+//! \addtogroup bl_filesystem
 //! \{
 
 //! \name BLFile API Constants
-//!
 //! \{
 
 //! File information flags, used by \ref BLFileInfo.
@@ -83,7 +82,7 @@ BL_DEFINE_ENUM(BLFileInfoFlags) {
   BL_FORCE_ENUM_UINT32(BL_FILE_INFO)
 };
 
-//! File open flags, see `BLFile::open()`.
+//! File open flags, see \ref BLFile::open().
 BL_DEFINE_ENUM(BLFileOpenFlags) {
   //! No flags.
   BL_FILE_OPEN_NO_FLAGS = 0u,
@@ -140,8 +139,7 @@ BL_DEFINE_ENUM(BLFileOpenFlags) {
 
   //! Opens the file for both reading and writing (Windows).
   //!
-  //! This is a combination of both `BL_FILE_OPEN_READ_EXCLUSIVE` and
-  //! `BL_FILE_OPEN_WRITE_EXCLUSIVE`.
+  //! This is a combination of both `BL_FILE_OPEN_READ_EXCLUSIVE` and `BL_FILE_OPEN_WRITE_EXCLUSIVE`.
   BL_FILE_OPEN_RW_EXCLUSIVE = 0x30000000u,
 
   //! Creates the file in exclusive mode - fails if the file already exists.
@@ -159,7 +157,7 @@ BL_DEFINE_ENUM(BLFileOpenFlags) {
   BL_FORCE_ENUM_UINT32(BL_FILE_OPEN)
 };
 
-//! File seek mode, see `BLFile::seek()`.
+//! File seek mode, see \ref BLFile::seek().
 //!
 //! \note Seek constants should be compatible with constants used by both POSIX
 //! and Windows API.
@@ -177,7 +175,7 @@ BL_DEFINE_ENUM(BLFileSeekType) {
   BL_FORCE_ENUM_UINT32(BL_FILE_SEEK)
 };
 
-//! File read flags used by `BLFileSystem::readFile()`.
+//! File read flags used by \ref BLFileSystem::readFile().
 BL_DEFINE_ENUM(BLFileReadFlags) {
   //! No flags.
   BL_FILE_READ_NO_FLAGS = 0u,
@@ -212,9 +210,8 @@ struct BLFileCore {
   //! A file handle - either a file descriptor used by POSIX or file handle used by Windows. On both platforms the
   //! handle is always `intptr_t` to make FFI easier (it's basically the size of a pointer / machine register).
   //!
-  //! \note In C++ mode you can use `BLFileCore::Handle` or `BLFile::Handle` to get the handle type. In C mode you
-  //! must use `intptr_t`. A handle of value `-1` is considered invalid and/or uninitialized. This value also matches
-  //! `INVALID_HANDLE_VALUE`, which is used by Windows API and defined to -1 as well.
+  //! \note A handle of value `-1` is considered invalid and/or uninitialized. This value also matches Windows API
+  //! `INVALID_HANDLE_VALUE`, which is also defined to be -1.
   intptr_t handle;
 };
 
@@ -243,7 +240,7 @@ struct BLFileInfo {
   //! \name Accessors
   //! \{
 
-  //! Tests whether the file information has the given \ref flag set.
+  //! Tests whether the file information has the given `flag` set in `flags`.
   BL_INLINE_NODEBUG bool hasFlag(BLFileInfoFlags flag) const noexcept { return (flags & flag) != 0; }
 
   BL_INLINE_NODEBUG bool hasOwnerR() const noexcept { return hasFlag(BL_FILE_INFO_OWNER_R); }
@@ -284,6 +281,11 @@ struct BLFileInfo {
 
 //! \}
 
+//! \}
+
+//! \addtogroup bl_c_api
+//! \{
+
 BL_BEGIN_C_DECLS
 
 //! \name BLFile C API Functions
@@ -317,9 +319,13 @@ BL_API BLResult BL_CDECL blFileSystemWriteFile(const char* fileName, const void*
 
 BL_END_C_DECLS
 
+//! \}
+
+//! \addtogroup bl_filesystem
+//! \{
+
 #ifdef __cplusplus
 //! \name BLFile C++ API
-//!
 //! \{
 
 //! A thin abstraction over a native OS file IO [C++ API].
@@ -335,15 +341,22 @@ public:
   //! \name Construction & Destruction
   //! \{
 
+  //! Creates an empty file instance, which doesn't represent any open file.
+  //!
+  //! \note The internal file handle of non-opened files is set to -1.
   BL_INLINE_NODEBUG BLFile() noexcept
     : BLFileCore { -1 } {}
 
+  //! Move constructor - copies file descriptor from `other` to this instance and resets `other` to a default
+  //! constructed state.
   BL_INLINE_NODEBUG BLFile(BLFile&& other) noexcept {
     intptr_t h = other.handle;
     other.handle = -1;
     handle = h;
   }
 
+  //! Creates a file instance from an existing file `handle`, which either represents a file descriptor or Windows
+  //! `HANDLE` (if compiled for Windows platform).
   BL_INLINE_NODEBUG explicit BLFile(intptr_t handle) noexcept
     : BLFileCore { handle } {}
 
@@ -357,6 +370,7 @@ public:
     return *this;
   }
 
+  //! Destroys this file instance - closes the file descriptor or handle when it's referencing an open file.
   BL_INLINE_NODEBUG ~BLFile() noexcept { blFileReset(this); }
 
   //! \}
@@ -374,6 +388,7 @@ public:
   //! Tests whether the file is open.
   BL_INLINE_NODEBUG bool isOpen() const noexcept { return handle != -1; }
 
+  //! Attempts to open a file specified by `fileName` with the given `openFlags`.
   BL_INLINE_NODEBUG BLResult open(const char* fileName, BLFileOpenFlags openFlags) noexcept {
     return blFileOpen(this, fileName, openFlags);
   }
@@ -383,31 +398,41 @@ public:
     return blFileClose(this);
   }
 
+  //! Sets the file position of the file to the given `offset` by using the specified `seekType`.
   BL_INLINE_NODEBUG BLResult seek(int64_t offset, BLFileSeekType seekType) noexcept {
     int64_t positionOut;
     return blFileSeek(this, offset, seekType, &positionOut);
   }
 
+  //! Sets the file position of the file to the given `offset` by using the specified `seekType` and writes the new
+  //! position into `positionOut` output parameter.
   BL_INLINE_NODEBUG BLResult seek(int64_t offset, BLFileSeekType seekType, int64_t* positionOut) noexcept {
     return blFileSeek(this, offset, seekType, positionOut);
   }
 
+  //! Reads `n` bytes from the file into the given `buffer` and stores the number of bytes actually read into
+  //! the `bytesReadOut` output parameter.
   BL_INLINE_NODEBUG BLResult read(void* buffer, size_t n, size_t* bytesReadOut) noexcept {
     return blFileRead(this, buffer, n, bytesReadOut);
   }
 
+  //! Writes `n` bytes to the file from the given `buffer` and stores the number of bytes actually written into
+  //! the `bytesReadOut` output parameter.
   BL_INLINE_NODEBUG BLResult write(const void* buffer, size_t n, size_t* bytesWrittenOut) noexcept {
     return blFileWrite(this, buffer, n, bytesWrittenOut);
   }
 
+  //! Truncates the file to the given maximum size `maxSize`.
   BL_INLINE_NODEBUG BLResult truncate(int64_t maxSize) noexcept {
     return blFileTruncate(this, maxSize);
   }
 
+  //! Queries an information of the file and stores it to `infoOut`.
   BL_INLINE_NODEBUG BLResult getInfo(BLFileInfo* infoOut) noexcept {
     return blFileGetInfo(this, infoOut);
   }
 
+  //! Queries a size of the file and stores it to `sizeOut`.
   BL_INLINE_NODEBUG BLResult getSize(uint64_t* sizeOut) noexcept {
     return blFileGetSize(this, sizeOut);
   }
@@ -424,8 +449,8 @@ static BL_INLINE_NODEBUG BLResult fileInfo(const char* fileName, BLFileInfo* inf
 
 //! Reads a file into the `dst` buffer.
 //!
-//! Optionally you can set `maxSize` to non-zero value that would restrict the maximum bytes to read to such
-//! value. In addition, `readFlags` can be used to enable file mapping. See `BLFileReadFlags` for more details.
+//! Optionally you can set `maxSize` to non-zero value that would restrict the maximum bytes to read to such value.
+//! In addition, `readFlags` can be used to enable file mapping. See \ref BLFileReadFlags for more details.
 static BL_INLINE_NODEBUG BLResult readFile(const char* fileName, BLArray<uint8_t>& dst, size_t maxSize = 0, BLFileReadFlags readFlags = BL_FILE_READ_NO_FLAGS) noexcept {
   return blFileSystemReadFile(fileName, &dst, maxSize, readFlags);
 }

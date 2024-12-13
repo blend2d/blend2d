@@ -46,7 +46,7 @@ public:
     _children[kIndexCompOpPart] = reinterpret_cast<PipePart*>(part);
   }
 
-  //! Returns fill type, see `BLPipeFillType`.
+  //! Returns fill type, see \ref FillType.
   BL_INLINE_NODEBUG FillType fillType() const noexcept { return _fillType; }
   //! Tests whether the fill type matches `fillType`.
   BL_INLINE_NODEBUG bool isFillType(FillType fillType) const noexcept { return _fillType == fillType; }

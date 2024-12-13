@@ -82,7 +82,7 @@ public:
   //! \name Accessors
   //! \{
 
-  //! Returns the composition operator id, see `BLCompOp`.
+  //! Returns the composition operator id, see \ref BLCompOp.
   BL_INLINE_NODEBUG CompOpExt compOp() const noexcept { return _compOp; }
 
   BL_INLINE_NODEBUG bool isSrcCopy() const noexcept { return _compOp == CompOpExt::kSrcCopy; }
@@ -116,7 +116,7 @@ public:
 
   BL_INLINE_NODEBUG bool isAlphaInv() const noexcept { return _compOp == CompOpExt::kAlphaInv; }
 
-  //! Returns the composition operator flags, see `CompOpFlags`.
+  //! Returns the composition operator flags.
   BL_INLINE_NODEBUG CompOpFlags compOpFlags() const noexcept { return compOpInfoTable[size_t(_compOp)].flags(); }
   //! Returns a pixel coverage format, which must be honored when calling the composition API.
   BL_INLINE_NODEBUG PixelCoverageFormat coverageFormat() const noexcept { return _coverageFormat; }

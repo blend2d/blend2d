@@ -252,13 +252,13 @@ struct BLJpegDecoderImpl : public BLImageDecoderImpl {
   //! JPEG image information.
   BLImageInfo imageInfo;
 
-  //! JPEG decoder flags, see \ref bl::Jpeg::DecoderStatusFlags.
+  //! JPEG decoder flags.
   bl::Jpeg::DecoderStatusFlags statusFlags;
   //! Restart interval as specified by DRI marker.
   uint32_t restartInterval;
   //! SOF marker (so we can select right decompression algorithm), initially zero.
   uint8_t sofMarker;
-  //! Colorspace, see `JpegColorspace`.
+  //! Colorspace.
   uint8_t colorspace;
   //! True if the data contains zero height (delayed height).
   uint8_t delayedHeight;

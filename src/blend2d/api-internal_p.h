@@ -54,7 +54,7 @@
 #endif
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_api_globals
+//! \addtogroup bl_globals
 //! \{
 
 // Build - Target Architecture & Optimizations
@@ -583,7 +583,7 @@ enum : uint32_t {
   BL_FONT_DATA_MAX_FACE_COUNT = 256,
 
   //! BLResult value that is used internally to signalize that the function didn't succeed, but also didn't fail.
-  //! This is not an error state. At the moment this is only used by `BLPixelConverter` when setting up optimized
+  //! This is not an error state. At the moment this is only used by \ref BLPixelConverter when setting up optimized
   //! conversion functions.
   //!
   //! \note This result code can be never propagated to the user code!

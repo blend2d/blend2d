@@ -154,10 +154,10 @@ struct alignas(16) BLObjectEternalVirtualImpl {
 //! \name BLObject - Internals - Globals
 //! \{
 
-//! Object header used by \ref isInstanceMutable() and similar functions to avoid branching in SSO case.
+//! Object header used by \ref bl::ObjectInternal::isInstanceMutable() and similar functions to avoid branching in SSO case.
 BL_HIDDEN extern const BLObjectImplHeader blObjectHeaderWithRefCountEq0;
 
-//! Object header used by \ref isInstanceMutable() and similar functions to avoid branching in SSO case.
+//! Object header used by \ref bl::ObjectInternal::isInstanceMutable() and similar functions to avoid branching in SSO case.
 BL_HIDDEN extern const BLObjectImplHeader blObjectHeaderWithRefCountEq1;
 
 //! A table that contains default constructed objects of each object type.

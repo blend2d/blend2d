@@ -16,7 +16,58 @@
 #include "path.h"
 #include "string.h"
 
-//! \addtogroup blend2d_api_text
+//! \addtogroup bl_c_api
+//! \{
+
+//! \name BLFontVariationSettings - C API
+//! \{
+
+//! Font variation settings [C API].
+struct BLFontVariationSettingsCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontVariationSettings)
+};
+
+//! \cond INTERNAL
+//! Font variation settings [C API Impl].
+//!
+//! \note This Impl's layout is fully compatible with \ref BLArrayImpl.
+struct BLFontVariationSettingsImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Pointer to variation items.
+  BLFontVariationItem* data;
+  //! Number of variation items in `data`.
+  size_t size;
+  //! Capacity of `data`.
+  size_t capacity;
+};
+//! \endcond
+
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blFontVariationSettingsInit(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontVariationSettingsInitMove(BLFontVariationSettingsCore* self, BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontVariationSettingsInitWeak(BLFontVariationSettingsCore* self, const BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontVariationSettingsDestroy(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontVariationSettingsReset(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontVariationSettingsClear(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontVariationSettingsShrink(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontVariationSettingsAssignMove(BLFontVariationSettingsCore* self, BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontVariationSettingsAssignWeak(BLFontVariationSettingsCore* self, const BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blFontVariationSettingsGetSize(const BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blFontVariationSettingsGetCapacity(const BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontVariationSettingsGetView(const BLFontVariationSettingsCore* self, BLFontVariationSettingsView* out) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontVariationSettingsHasValue(const BLFontVariationSettingsCore* self, BLTag variationTag) BL_NOEXCEPT_C;
+BL_API float BL_CDECL blFontVariationSettingsGetValue(const BLFontVariationSettingsCore* self, BLTag variationTag) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontVariationSettingsSetValue(BLFontVariationSettingsCore* self, BLTag variationTag, float value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontVariationSettingsRemoveValue(BLFontVariationSettingsCore* self, BLTag variationTag) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontVariationSettingsEquals(const BLFontVariationSettingsCore* a, const BLFontVariationSettingsCore* b) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+
+//! \}
+//! \}
+
+//! \addtogroup bl_text
 //! \{
 
 //! \name BLFontVariationSettings - Structs
@@ -54,10 +105,11 @@ struct BLFontVariationSettingsView {
   const BLFontVariationItem* data;
   //! Count of items in `data.
   size_t size;
-  //! Unpacked SSO items into `BLFontVariationItem` array.
+  //! Unpacked SSO items into \ref BLFontVariationItem array.
   //!
-  //! \note This member won't be initialized or zeroed in case `BLFontVariationSettings` is not in SSO mode. And if the
-  //! container is in SSO mode only the number of items used will be overwritten by \ref blFontVariationSettingsGetView().
+  //! \note This member won't be initialized or zeroed in case \ref BLFontVariationSettings is not in
+  //! SSO mode. And if the container is in SSO mode only the number of items used will be overwritten
+  //! by \ref BLFontVariationSettings::getView().
   BLFontVariationItem ssoData[3];
 
 #if defined(__cplusplus)
@@ -89,58 +141,6 @@ struct BLFontVariationSettingsView {
 };
 
 //! \}
-
-//! \name BLFontVariationSettings - C API
-//! \{
-
-BL_BEGIN_C_DECLS
-
-BL_API BLResult BL_CDECL blFontVariationSettingsInit(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsInitMove(BLFontVariationSettingsCore* self, BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsInitWeak(BLFontVariationSettingsCore* self, const BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsDestroy(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsReset(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsClear(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsShrink(BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsAssignMove(BLFontVariationSettingsCore* self, BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsAssignWeak(BLFontVariationSettingsCore* self, const BLFontVariationSettingsCore* other) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontVariationSettingsGetSize(const BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontVariationSettingsGetCapacity(const BLFontVariationSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsGetView(const BLFontVariationSettingsCore* self, BLFontVariationSettingsView* out) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontVariationSettingsHasValue(const BLFontVariationSettingsCore* self, BLTag variationTag) BL_NOEXCEPT_C;
-BL_API float BL_CDECL blFontVariationSettingsGetValue(const BLFontVariationSettingsCore* self, BLTag variationTag) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsSetValue(BLFontVariationSettingsCore* self, BLTag variationTag, float value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontVariationSettingsRemoveValue(BLFontVariationSettingsCore* self, BLTag variationTag) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontVariationSettingsEquals(const BLFontVariationSettingsCore* a, const BLFontVariationSettingsCore* b) BL_NOEXCEPT_C;
-
-BL_END_C_DECLS
-
-//! Font variation settings [C API].
-struct BLFontVariationSettingsCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLFontVariationSettings)
-};
-
-//! \}
-
-//! \cond INTERNAL
-//! \name BLFontVariationSettings - Internals
-//! \{
-
-//! Font variation settings [Impl].
-//!
-//! \note This Impl is fully compatible with `BLArrayImpl`.
-struct BLFontVariationSettingsImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Pointer to variation items.
-  BLFontVariationItem* data;
-  //! Number of variation items in `data`.
-  size_t size;
-  //! Capacity of `data`.
-  size_t capacity;
-};
-
-//! \}
-//! \endcond
 
 //! \name BLFontVariationSettings - C++ API
 //! \{
@@ -227,13 +227,14 @@ public:
   //! for simple tag/value pairs (where the tag is known by Blend2D and has associated an internal ID that represents it).
   BL_INLINE_NODEBUG size_t capacity() const noexcept { return _d.sso() ? size_t(kSSOCapacity) : _impl()->capacity; }
 
-  //! Returns a normalized view of tag/value pairs as an iterable `BLFontVariationItem` array in the output view.
+  //! Returns a normalized view of tag/value pairs as an iterable \ref BLFontVariationItem array in the output view.
   //!
-  //! \note If the container is in SSO mode then all `BLFontVariationItem` values will be created from the underlying SSO
-  //! representation and `BLFontVariationSettingsView::data` will point to `BLFontVariationSettingsView::ssoData`. If the
-  //! container is dynamic, `BLFontVariationSettingsView::ssoData` won't be initialized and `BLFontVariationSettingsView::data`
-  //! will point to the container's data. This means that the view cannot outlive the container, and also during iteration the
-  //! view the container cannot be modified as that could invalidate the entire view.
+  //! \note If the container is in SSO mode then all \ref BLFontVariationItem values will be created from the
+  //! underlying SSO representation and \ref BLFontVariationSettingsView::data will point to \ref
+  //! BLFontVariationSettingsView::ssoData. If the container is dynamic, \ref BLFontVariationSettingsView::ssoData
+  //! won't be initialized and \ref BLFontVariationSettingsView::data will point to the container's data. This means
+  //! that the view cannot outlive the container, and also during iteration the view the container cannot be modified
+  //! as that could invalidate the entire view.
   BL_INLINE_NODEBUG BLResult getView(BLFontVariationSettingsView* out) const noexcept { return blFontVariationSettingsGetView(this, out); }
 
   //! Tests whether the settings contains the given `variationTag`.

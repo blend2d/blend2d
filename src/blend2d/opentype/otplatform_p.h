@@ -228,8 +228,8 @@ enum WindowsEncodingId : uint32_t {
 
 //! Primary language of Windows platform.
 //!
-//! \note Don't confuse with `WindowsLocaleId`, which is the right enumeration used by `languageId` records in 'cmap'
-//! and 'name' tables, see `WindowsLocaleId`.
+//! \note Don't confuse with \ref WindowsLocaleId, which is the right enumeration used by `languageId` records in 'cmap'
+//! and 'name' tables, see \ref WindowsLocaleId.
 enum WindowsLanguageId : uint32_t {
   kWindowsLanguageNeutral                = 0x00,
   kWindowsLanguageAfrikaans              = 0x36,

@@ -16,7 +16,58 @@
 #include "path.h"
 #include "string.h"
 
-//! \addtogroup blend2d_api_text
+//! \addtogroup bl_c_api
+//! \{
+
+//! \name BLFontFeatureSettings - C API
+//! \{
+
+//! Font feature settings [C API].
+struct BLFontFeatureSettingsCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontFeatureSettings)
+};
+
+//! \cond INTERNAL
+//! Font feature settings [C API Impl].
+//!
+//! \note This Impl's layout is fully compatible with \ref BLArrayImpl.
+struct BLFontFeatureSettingsImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Pointer to feature items.
+  BLFontFeatureItem* data;
+  //! Number of feature items in `data`.
+  size_t size;
+  //! Capacity of `data`.
+  size_t capacity;
+};
+//! \endcond
+
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blFontFeatureSettingsInit(BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFeatureSettingsInitMove(BLFontFeatureSettingsCore* self, BLFontFeatureSettingsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFeatureSettingsInitWeak(BLFontFeatureSettingsCore* self, const BLFontFeatureSettingsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFeatureSettingsDestroy(BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFeatureSettingsReset(BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFeatureSettingsClear(BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFeatureSettingsShrink(BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFeatureSettingsAssignMove(BLFontFeatureSettingsCore* self, BLFontFeatureSettingsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFeatureSettingsAssignWeak(BLFontFeatureSettingsCore* self, const BLFontFeatureSettingsCore* other) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blFontFeatureSettingsGetSize(const BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
+BL_API size_t BL_CDECL blFontFeatureSettingsGetCapacity(const BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFeatureSettingsGetView(const BLFontFeatureSettingsCore* self, BLFontFeatureSettingsView* out) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontFeatureSettingsHasValue(const BLFontFeatureSettingsCore* self, BLTag featureTag) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blFontFeatureSettingsGetValue(const BLFontFeatureSettingsCore* self, BLTag featureTag) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFeatureSettingsSetValue(BLFontFeatureSettingsCore* self, BLTag featureTag, uint32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blFontFeatureSettingsRemoveValue(BLFontFeatureSettingsCore* self, BLTag featureTag) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blFontFeatureSettingsEquals(const BLFontFeatureSettingsCore* a, const BLFontFeatureSettingsCore* b) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+
+//! \}
+//! \}
+
+//! \addtogroup bl_text
 //! \{
 
 //! \name BLFontFeatureSettings - Constants
@@ -73,10 +124,10 @@ struct BLFontFeatureSettingsView {
   const BLFontFeatureItem* data;
   //! Count of items in `data.
   size_t size;
-  //! Unpacked SSO items into `BLFontFeatureItem` array.
+  //! Unpacked SSO items into \ref BLFontFeatureItem array.
   //!
-  //! \note This member won't be initialized or zeroed in case `BLFontFeatureSettings` is not in SSO mode. And if the
-  //! container is in SSO mode only the number of items used will be overwritten by \ref blFontFeatureSettingsGetView().
+  //! \note This member won't be initialized or zeroed in case \ref BLFontFeatureSettings is not in SSO mode. And if the
+  //! container is in SSO mode only the number of items used will be overwritten by \ref BLFontFeatureSettings::getView().
   BLFontFeatureItem ssoData[36];
 
   //! \}
@@ -110,58 +161,6 @@ struct BLFontFeatureSettingsView {
 };
 
 //! \}
-
-//! \name BLFontFeatureSettings - C API
-//! \{
-
-BL_BEGIN_C_DECLS
-
-BL_API BLResult BL_CDECL blFontFeatureSettingsInit(BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFeatureSettingsInitMove(BLFontFeatureSettingsCore* self, BLFontFeatureSettingsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFeatureSettingsInitWeak(BLFontFeatureSettingsCore* self, const BLFontFeatureSettingsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFeatureSettingsDestroy(BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFeatureSettingsReset(BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFeatureSettingsClear(BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFeatureSettingsShrink(BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFeatureSettingsAssignMove(BLFontFeatureSettingsCore* self, BLFontFeatureSettingsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFeatureSettingsAssignWeak(BLFontFeatureSettingsCore* self, const BLFontFeatureSettingsCore* other) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontFeatureSettingsGetSize(const BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
-BL_API size_t BL_CDECL blFontFeatureSettingsGetCapacity(const BLFontFeatureSettingsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFeatureSettingsGetView(const BLFontFeatureSettingsCore* self, BLFontFeatureSettingsView* out) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontFeatureSettingsHasValue(const BLFontFeatureSettingsCore* self, BLTag featureTag) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blFontFeatureSettingsGetValue(const BLFontFeatureSettingsCore* self, BLTag featureTag) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFeatureSettingsSetValue(BLFontFeatureSettingsCore* self, BLTag featureTag, uint32_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blFontFeatureSettingsRemoveValue(BLFontFeatureSettingsCore* self, BLTag featureTag) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blFontFeatureSettingsEquals(const BLFontFeatureSettingsCore* a, const BLFontFeatureSettingsCore* b) BL_NOEXCEPT_C;
-
-BL_END_C_DECLS
-
-//! Font feature settings [C API].
-struct BLFontFeatureSettingsCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLFontFeatureSettings)
-};
-
-//! \}
-
-//! \cond INTERNAL
-//! \name BLFontFeatureSettings - Internals
-//! \{
-
-//! Font feature settings [Impl].
-//!
-//! \note This Impl is fully compatible with `BLArrayImpl`.
-struct BLFontFeatureSettingsImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Pointer to feature items.
-  BLFontFeatureItem* data;
-  //! Number of feature items in `data`.
-  size_t size;
-  //! Capacity of `data`.
-  size_t capacity;
-};
-
-//! \}
-//! \endcond
 
 //! \name BLFontFeatureSettings - C++ API
 //! \{
@@ -253,13 +252,14 @@ public:
   //! to use SSO representation.
   BL_INLINE_NODEBUG size_t capacity() const noexcept { return _d.sso() ? size_t(kSSOCapacity) : _impl()->capacity; }
 
-  //! Returns a normalized view of tag/value pairs as an iterable `BLFontFeatureItem` array in the output view `out`.
+  //! Returns a normalized view of tag/value pairs as an iterable \ref BLFontFeatureItem array in the output view `out`.
   //!
-  //! \note If the container is in SSO mode then all `BLFontFeatureItem` values will be created from the underlying SSO
-  //! representation and `BLFontFeatureSettingsView::data` will point to `BLFontFeatureSettingsView::ssoData`. If the
-  //! container is dynamic, `BLFontFeatureSettingsView::ssoData` won't be initialized and `BLFontFeatureSettingsView::data`
-  //! will point to the container's data. This means that the view cannot outlive the container, and also during iteration
-  //! the view the container cannot be modified as that coult invalidate the entire view.
+  //! \note If the container is in SSO mode then all \ref BLFontFeatureItem values will be created from the underlying
+  //! SSO representation and \ref BLFontFeatureSettingsView::data will point to \ref BLFontFeatureSettingsView::ssoData.
+  //! If the container is dynamic, \ref BLFontFeatureSettingsView::ssoData won't be initialized and
+  //! \ref BLFontFeatureSettingsView::data will point to the container's data. This means that the view cannot outlive
+  //! the container, and also during iteration the view the container cannot be modified as that could invalidate the
+  //! entire view.
   BL_INLINE_NODEBUG BLResult getView(BLFontFeatureSettingsView* out) const noexcept { return blFontFeatureSettingsGetView(this, out); }
 
   //! Tests whether the settings contains the given `featureTag`.

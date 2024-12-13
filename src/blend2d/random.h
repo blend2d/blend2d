@@ -8,7 +8,7 @@
 
 #include "api.h"
 
-//! \addtogroup blend2d_api_globals
+//! \addtogroup bl_c_api
 //! \{
 
 //! \name BLRandom - C API
@@ -24,6 +24,10 @@ BL_API double BL_CDECL blRandomNextDouble(BLRandom* self) BL_NOEXCEPT_C;
 BL_END_C_DECLS
 
 //! \}
+//! \}
+
+//! \addtogroup bl_miscellaneous
+//! \{
 
 //! \name BLRandom - C/C++ API
 //! \{

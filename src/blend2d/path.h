@@ -10,7 +10,7 @@
 #include "geometry.h"
 #include "object.h"
 
-//! \addtogroup blend2d_api_geometry
+//! \addtogroup bl_geometry
 //! \{
 
 //! \name BLPath - Constants
@@ -199,9 +199,9 @@ BL_DEFINE_ENUM(BLOffsetMode) {
 //! // ... now safely use approximation options in your code ...
 //! ```
 struct BLApproximationOptions {
-  //! Specifies how curves are flattened, see `FlattenMode`.
+  //! Specifies how curves are flattened, see \ref BLFlattenMode.
   uint8_t flattenMode;
-  //! Specifies how curves are offsetted (used by stroking), see `BLOffsetMode`.
+  //! Specifies how curves are offsetted (used by stroking), see \ref BLOffsetMode.
   uint8_t offsetMode;
   //! Reserved for future use, must be zero.
   uint8_t reservedFlags[6];
@@ -233,20 +233,7 @@ struct BLPathView {
 
 //! \}
 
-//! \name BLPath - Globals
-//!
-//! 2D path functionality is provided by \ref BLPathCore in C API and wrapped by \ref BLPath in C++ API.
-//!
-//! \{
-BL_BEGIN_C_DECLS
-
-//! Default approximation options used by Blend2D.
-extern BL_API const BLApproximationOptions blDefaultApproximationOptions;
-
-BL_END_C_DECLS
-//! \}
-
-//! \name BLPath - C API
+//! \name BLPath - Sinks
 //! \{
 
 //! Optional callback that can be used to consume a path data.
@@ -259,6 +246,35 @@ typedef BLResult (BL_CDECL* BLPathSinkFunc)(BLPathCore* path, const void* info, 
 //! The sink must also clean up the paths as this is not done by the offsetter. The reason is that in case the `a` path
 //! is the output path you can just keep it and insert `b` path into it (clearing only `b` path after each call).
 typedef BLResult (BL_CDECL* BLPathStrokeSinkFunc)(BLPathCore* a, BLPathCore* b, BLPathCore* c, size_t inputStart, size_t inputEnd, void* userData) BL_NOEXCEPT;
+
+//! \}
+
+//! \name BLPath - Globals
+//!
+//! 2D path functionality is provided by \ref BLPathCore in C API and wrapped by \ref BLPath in C++ API.
+//!
+//! \{
+BL_BEGIN_C_DECLS
+
+//! Default approximation options used by Blend2D.
+extern BL_API const BLApproximationOptions blDefaultApproximationOptions;
+
+BL_END_C_DECLS
+
+//! \}
+//! \}
+
+//! \addtogroup bl_c_api
+//! \{
+
+//! \name BLPath - C API
+//! \{
+
+//! 2D vector path [C API].
+struct BLPathCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLPath)
+};
 
 BL_BEGIN_C_DECLS
 
@@ -314,32 +330,7 @@ BL_API BLResult BL_CDECL blPathGetLastVertex(const BLPathCore* self, BLPoint* vt
 BL_API BLResult BL_CDECL blPathGetClosestVertex(const BLPathCore* self, const BLPoint* p, double maxDistance, size_t* indexOut, double* distanceOut) BL_NOEXCEPT_C;
 BL_API BLHitTest BL_CDECL blPathHitTest(const BLPathCore* self, const BLPoint* p, BLFillRule fillRule) BL_NOEXCEPT_C;
 
-BL_API BLResult BL_CDECL blStrokeOptionsInit(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStrokeOptionsInitMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStrokeOptionsInitWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStrokeOptionsDestroy(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStrokeOptionsReset(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
-BL_API bool BL_CDECL blStrokeOptionsEquals(const BLStrokeOptionsCore* a, const BLStrokeOptionsCore* b) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStrokeOptionsAssignMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
-
-BL_API BLResult BL_CDECL blPathStrokeToSink(
-  const BLPathCore* self,
-  const BLRange* range,
-  const BLStrokeOptionsCore* strokeOptions,
-  const BLApproximationOptions* approximationOptions,
-  BLPathCore *a,
-  BLPathCore *b,
-  BLPathCore *c,
-  BLPathStrokeSinkFunc sink, void* userData) BL_NOEXCEPT_C;
-
 BL_END_C_DECLS
-
-//! 2D vector path [C API].
-struct BLPathCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLPath)
-};
 
 //! Stroke options [C API].
 struct BLStrokeOptionsCore {
@@ -383,7 +374,34 @@ struct BLStrokeOptionsCore {
   BL_DEFINE_OBJECT_DCAST(BLStrokeOptions)
 };
 
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blStrokeOptionsInit(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsInitMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsInitWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsDestroy(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsReset(BLStrokeOptionsCore* self) BL_NOEXCEPT_C;
+BL_API bool BL_CDECL blStrokeOptionsEquals(const BLStrokeOptionsCore* a, const BLStrokeOptionsCore* b) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsAssignMove(BLStrokeOptionsCore* self, BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blStrokeOptionsAssignWeak(BLStrokeOptionsCore* self, const BLStrokeOptionsCore* other) BL_NOEXCEPT_C;
+
+BL_API BLResult BL_CDECL blPathStrokeToSink(
+  const BLPathCore* self,
+  const BLRange* range,
+  const BLStrokeOptionsCore* strokeOptions,
+  const BLApproximationOptions* approximationOptions,
+  BLPathCore *a,
+  BLPathCore *b,
+  BLPathCore *c,
+  BLPathStrokeSinkFunc sink, void* userData) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+
 //! \}
+//! \}
+
+//! \addtogroup bl_geometry
+//! \{
 
 //! \cond INTERNAL
 //! \name BLPath - Internals

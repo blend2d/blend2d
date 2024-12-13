@@ -15,10 +15,10 @@
 //! \addtogroup blend2d_support
 //! \{
 
+namespace bl {
+
 //! \name Math Vectorized
 //! \{
-
-namespace bl {
 
 // Vec2 Storage
 // ============
@@ -342,6 +342,9 @@ template<typename T> BL_INLINE_NODEBUG Vec2<T> swap(const Vec2<T>& a) noexcept {
 
 } // {anonymous}
 } // {Vec}
+
+//! \}
+
 } // {bl}
 
 //! \}

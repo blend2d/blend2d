@@ -9,7 +9,7 @@
 #include "api.h"
 #include "rgba.h"
 
-//! \defgroup blend2d_api_object Object Model
+//! \defgroup bl_object Object Model
 //! \brief Object Model & Memory Layout
 //!
 //! Blend2D object model is a foundation of all Blend2D objects. It was designed only for Blend2D and it's not
@@ -171,7 +171,7 @@
 //! +--------------------------+---+---+---+---+---+---+---+
 //! ```
 
-//! \addtogroup blend2d_api_object
+//! \addtogroup bl_object
 //! \{
 
 //! \name BLObject - Constants
@@ -234,34 +234,34 @@ BL_DEFINE_ENUM(BLObjectInfoBits) {
 
 //! Object type identifier.
 BL_DEFINE_ENUM(BLObjectType) {
-  //! Object represents a RGBA value stored as four 32-bit floating point components (can be used as Style).
+  //! Object represents a \ref BLRgba value stored as four 32-bit floating point components (can be used as Style).
   BL_OBJECT_TYPE_RGBA = 0,
-  //! Object represents a RGBA32 value stored as 32-bit integer in `0xAARRGGBB` form.
+  //! Object represents a \ref BLRgba32 value stored as 32-bit integer in `0xAARRGGBB` form.
   BL_OBJECT_TYPE_RGBA32 = 1,
-  //! Object represents a RGBA64 value stored as 64-bit integer in `0xAAAARRRRGGGGBBBB` form.
+  //! Object represents a \ref BLRgba64 value stored as 64-bit integer in `0xAAAARRRRGGGGBBBB` form.
   BL_OBJECT_TYPE_RGBA64 = 2,
   //! Object is `Null` (can be used as style).
   BL_OBJECT_TYPE_NULL = 3,
-  //! Object is `BLPattern` (can be used as style).
+  //! Object is \ref BLPattern (can be used as style).
   BL_OBJECT_TYPE_PATTERN = 4,
-  //! Object is `BLGradient` (can be used as style).
+  //! Object is \ref BLGradient (can be used as style).
   BL_OBJECT_TYPE_GRADIENT = 5,
 
-  //! Object is `BLImage`.
+  //! Object is \ref BLImage.
   BL_OBJECT_TYPE_IMAGE = 9,
-  //! Object is `BLPath`.
+  //! Object is \ref BLPath.
   BL_OBJECT_TYPE_PATH = 10,
 
-  //! Object is `BLFont`.
+  //! Object is \ref BLFont.
   BL_OBJECT_TYPE_FONT = 16,
-  //! Object is `BLFontFeatureSettings`.
+  //! Object is \ref BLFontFeatureSettings.
   BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS = 17,
-  //! Object is `BLFontVariationSettings`.
+  //! Object is \ref BLFontVariationSettings.
   BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS = 18,
 
-  //! Object is `BLBitArray`.
+  //! Object is \ref BLBitArray.
   BL_OBJECT_TYPE_BIT_ARRAY = 25,
-  //! Object is `BLBitSet`.
+  //! Object is \ref BLBitSet.
   BL_OBJECT_TYPE_BIT_SET = 26,
 
   //! Object represents a boolean value.
@@ -272,71 +272,71 @@ BL_DEFINE_ENUM(BLObjectType) {
   BL_OBJECT_TYPE_UINT64 = 30,
   //! Object represents a 64-bit floating point value.
   BL_OBJECT_TYPE_DOUBLE = 31,
-  //! Object is `BLString`.
+  //! Object is \ref BLString.
   BL_OBJECT_TYPE_STRING = 32,
 
-  //! Object is `BLArray<T>` where `T` is a `BLObject` compatible type.
+  //! Object is \ref BLArray<T> where `T` is a `BLObject` compatible type.
   BL_OBJECT_TYPE_ARRAY_OBJECT = 33,
-  //! Object is `BLArray<T>` where `T` matches 8-bit signed integral type.
+  //! Object is \ref BLArray<T> where `T` matches 8-bit signed integral type.
   BL_OBJECT_TYPE_ARRAY_INT8 = 34,
-  //! Object is `BLArray<T>` where `T` matches 8-bit unsigned integral type.
+  //! Object is \ref BLArray<T> where `T` matches 8-bit unsigned integral type.
   BL_OBJECT_TYPE_ARRAY_UINT8 = 35,
-  //! Object is `BLArray<T>` where `T` matches 16-bit signed integral type.
+  //! Object is \ref BLArray<T> where `T` matches 16-bit signed integral type.
   BL_OBJECT_TYPE_ARRAY_INT16 = 36,
-  //! Object is `BLArray<T>` where `T` matches 16-bit unsigned integral type.
+  //! Object is \ref BLArray<T> where `T` matches 16-bit unsigned integral type.
   BL_OBJECT_TYPE_ARRAY_UINT16 = 37,
-  //! Object is `BLArray<T>` where `T` matches 32-bit signed integral type.
+  //! Object is \ref BLArray<T> where `T` matches 32-bit signed integral type.
   BL_OBJECT_TYPE_ARRAY_INT32 = 38,
-  //! Object is `BLArray<T>` where `T` matches 32-bit unsigned integral type.
+  //! Object is \ref BLArray<T> where `T` matches 32-bit unsigned integral type.
   BL_OBJECT_TYPE_ARRAY_UINT32 = 39,
-  //! Object is `BLArray<T>` where `T` matches 64-bit signed integral type.
+  //! Object is \ref BLArray<T> where `T` matches 64-bit signed integral type.
   BL_OBJECT_TYPE_ARRAY_INT64 = 40,
-  //! Object is `BLArray<T>` where `T` matches 64-bit unsigned integral type.
+  //! Object is \ref BLArray<T> where `T` matches 64-bit unsigned integral type.
   BL_OBJECT_TYPE_ARRAY_UINT64 = 41,
-  //! Object is `BLArray<T>` where `T` matches 32-bit floating point type.
+  //! Object is \ref BLArray<T> where `T` matches 32-bit floating point type.
   BL_OBJECT_TYPE_ARRAY_FLOAT32 = 42,
-  //! Object is `BLArray<T>` where `T` matches 64-bit floating point type.
+  //! Object is \ref BLArray<T> where `T` matches 64-bit floating point type.
   BL_OBJECT_TYPE_ARRAY_FLOAT64 = 43,
-  //! Object is `BLArray<T>` where `T` is a struct of size 1.
+  //! Object is \ref BLArray<T> where `T` is a struct of size 1.
   BL_OBJECT_TYPE_ARRAY_STRUCT_1 = 44,
-  //! Object is `BLArray<T>` where `T` is a struct of size 2.
+  //! Object is \ref BLArray<T> where `T` is a struct of size 2.
   BL_OBJECT_TYPE_ARRAY_STRUCT_2 = 45,
-  //! Object is `BLArray<T>` where `T` is a struct of size 3.
+  //! Object is \ref BLArray<T> where `T` is a struct of size 3.
   BL_OBJECT_TYPE_ARRAY_STRUCT_3 = 46,
-  //! Object is `BLArray<T>` where `T` is a struct of size 4.
+  //! Object is \ref BLArray<T> where `T` is a struct of size 4.
   BL_OBJECT_TYPE_ARRAY_STRUCT_4 = 47,
-  //! Object is `BLArray<T>` where `T` is a struct of size 6.
+  //! Object is \ref BLArray<T> where `T` is a struct of size 6.
   BL_OBJECT_TYPE_ARRAY_STRUCT_6 = 48,
-  //! Object is `BLArray<T>` where `T` is a struct of size 8.
+  //! Object is \ref BLArray<T> where `T` is a struct of size 8.
   BL_OBJECT_TYPE_ARRAY_STRUCT_8 = 49,
-  //! Object is `BLArray<T>` where `T` is a struct of size 10.
+  //! Object is \ref BLArray<T> where `T` is a struct of size 10.
   BL_OBJECT_TYPE_ARRAY_STRUCT_10 = 50,
-  //! Object is `BLArray<T>` where `T` is a struct of size 12.
+  //! Object is \ref BLArray<T> where `T` is a struct of size 12.
   BL_OBJECT_TYPE_ARRAY_STRUCT_12 = 51,
-  //! Object is `BLArray<T>` where `T` is a struct of size 16.
+  //! Object is \ref BLArray<T> where `T` is a struct of size 16.
   BL_OBJECT_TYPE_ARRAY_STRUCT_16 = 52,
-  //! Object is `BLArray<T>` where `T` is a struct of size 20.
+  //! Object is \ref BLArray<T> where `T` is a struct of size 20.
   BL_OBJECT_TYPE_ARRAY_STRUCT_20 = 53,
-  //! Object is `BLArray<T>` where `T` is a struct of size 24.
+  //! Object is \ref BLArray<T> where `T` is a struct of size 24.
   BL_OBJECT_TYPE_ARRAY_STRUCT_24 = 54,
-  //! Object is `BLArray<T>` where `T` is a struct of size 32.
+  //! Object is \ref BLArray<T> where `T` is a struct of size 32.
   BL_OBJECT_TYPE_ARRAY_STRUCT_32 = 55,
 
-  //! Object is `BLContext`.
+  //! Object is \ref BLContext.
   BL_OBJECT_TYPE_CONTEXT = 100,
 
-  //! Object is `BLImageCodec`.
+  //! Object is \ref BLImageCodec.
   BL_OBJECT_TYPE_IMAGE_CODEC = 101,
-  //! Object is `BLImageDecoder`.
+  //! Object is \ref BLImageDecoder.
   BL_OBJECT_TYPE_IMAGE_DECODER = 102,
-  //! Object is `BLImageEncoder`.
+  //! Object is \ref BLImageEncoder.
   BL_OBJECT_TYPE_IMAGE_ENCODER = 103,
 
-  //! Object is `BLFontFace`.
+  //! Object is \ref BLFontFace.
   BL_OBJECT_TYPE_FONT_FACE = 104,
-  //! Object is `BLFontData`.
+  //! Object is \ref BLFontData.
   BL_OBJECT_TYPE_FONT_DATA = 105,
-  //! Object is `BLFontManager`.
+  //! Object is \ref BLFontManager.
   BL_OBJECT_TYPE_FONT_MANAGER = 106,
 
   //! Minimum object type of an array object.
@@ -902,38 +902,13 @@ static_assert(sizeof(BLObjectDetail) == 16, "BLObjectDetail must be exactly 16 b
 typedef void (BL_CDECL* BLDestroyExternalDataFunc)(void* impl, void* externalData, void* userData) BL_NOEXCEPT;
 
 //! \}
+//! \}
+
+//! \addtogroup bl_c_api
+//! \{
 
 //! \name BLObject - C API
 //! \{
-
-BL_BEGIN_C_DECLS
-
-BL_API BLResult BL_CDECL blObjectAllocImpl(BLObjectCore* self, uint32_t objectInfo, size_t implSize) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectAllocImplAligned(BLObjectCore* self, uint32_t objectInfo, size_t implSize, size_t implAlignment) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectAllocImplExternal(BLObjectCore* self, uint32_t objectInfo, size_t implSize, bool immutable, BLDestroyExternalDataFunc destroyFunc, void* userData) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectFreeImpl(BLObjectImpl* impl) BL_NOEXCEPT_C;
-
-BL_API BLResult BL_CDECL blObjectInitMove(BLUnknown* self, BLUnknown* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectInitWeak(BLUnknown* self, const BLUnknown* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectReset(BLUnknown* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectAssignMove(BLUnknown* self, BLUnknown* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectAssignWeak(BLUnknown* self, const BLUnknown* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectGetProperty(const BLUnknown* self, const char* name, size_t nameSize, BLVarCore* valueOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectGetPropertyBool(const BLUnknown* self, const char* name, size_t nameSize, bool* valueOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectGetPropertyInt32(const BLUnknown* self, const char* name, size_t nameSize, int32_t* valueOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectGetPropertyInt64(const BLUnknown* self, const char* name, size_t nameSize, int64_t* valueOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectGetPropertyUInt32(const BLUnknown* self, const char* name, size_t nameSize, uint32_t* valueOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectGetPropertyUInt64(const BLUnknown* self, const char* name, size_t nameSize, uint64_t* valueOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectGetPropertyDouble(const BLUnknown* self, const char* name, size_t nameSize, double* valueOut) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectSetProperty(BLUnknown* self, const char* name, size_t nameSize, const BLUnknown* value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectSetPropertyBool(BLUnknown* self, const char* name, size_t nameSize, bool value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectSetPropertyInt32(BLUnknown* self, const char* name, size_t nameSize, int32_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectSetPropertyInt64(BLUnknown* self, const char* name, size_t nameSize, int64_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectSetPropertyUInt32(BLUnknown* self, const char* name, size_t nameSize, uint32_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectSetPropertyUInt64(BLUnknown* self, const char* name, size_t nameSize, uint64_t value) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blObjectSetPropertyDouble(BLUnknown* self, const char* name, size_t nameSize, double value) BL_NOEXCEPT_C;
-
-BL_END_C_DECLS
 
 //! BLObject [Impl].
 //!
@@ -979,7 +954,40 @@ struct BLObjectCore {
   BLObjectDetail _d;
 };
 
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blObjectAllocImpl(BLObjectCore* self, uint32_t objectInfo, size_t implSize) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectAllocImplAligned(BLObjectCore* self, uint32_t objectInfo, size_t implSize, size_t implAlignment) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectAllocImplExternal(BLObjectCore* self, uint32_t objectInfo, size_t implSize, bool immutable, BLDestroyExternalDataFunc destroyFunc, void* userData) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectFreeImpl(BLObjectImpl* impl) BL_NOEXCEPT_C;
+
+BL_API BLResult BL_CDECL blObjectInitMove(BLUnknown* self, BLUnknown* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectInitWeak(BLUnknown* self, const BLUnknown* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectReset(BLUnknown* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectAssignMove(BLUnknown* self, BLUnknown* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectAssignWeak(BLUnknown* self, const BLUnknown* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectGetProperty(const BLUnknown* self, const char* name, size_t nameSize, BLVarCore* valueOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectGetPropertyBool(const BLUnknown* self, const char* name, size_t nameSize, bool* valueOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectGetPropertyInt32(const BLUnknown* self, const char* name, size_t nameSize, int32_t* valueOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectGetPropertyInt64(const BLUnknown* self, const char* name, size_t nameSize, int64_t* valueOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectGetPropertyUInt32(const BLUnknown* self, const char* name, size_t nameSize, uint32_t* valueOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectGetPropertyUInt64(const BLUnknown* self, const char* name, size_t nameSize, uint64_t* valueOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectGetPropertyDouble(const BLUnknown* self, const char* name, size_t nameSize, double* valueOut) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectSetProperty(BLUnknown* self, const char* name, size_t nameSize, const BLUnknown* value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectSetPropertyBool(BLUnknown* self, const char* name, size_t nameSize, bool value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectSetPropertyInt32(BLUnknown* self, const char* name, size_t nameSize, int32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectSetPropertyInt64(BLUnknown* self, const char* name, size_t nameSize, int64_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectSetPropertyUInt32(BLUnknown* self, const char* name, size_t nameSize, uint32_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectSetPropertyUInt64(BLUnknown* self, const char* name, size_t nameSize, uint64_t value) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blObjectSetPropertyDouble(BLUnknown* self, const char* name, size_t nameSize, double value) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+
 //! \}
+//! \}
+
+//! \addtogroup bl_object
+//! \{
 
 //! \cond INTERNAL
 //! \name BLObject - Macros

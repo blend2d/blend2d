@@ -8,7 +8,7 @@
 
 #include "api.h"
 
-//! \addtogroup blend2d_api_runtime
+//! \addtogroup bl_runtime
 //! \{
 
 //! \name BLRuntimeScope - C API

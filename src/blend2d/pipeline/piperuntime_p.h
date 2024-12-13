@@ -38,7 +38,7 @@ BL_DEFINE_ENUM_FLAGS(PipeRuntimeFlags)
 //! This is a base class used by either `PipeDynamicRuntime` or `PipeStaticRuntime`. The purpose of this class is to
 //! create an interface that is used by the rendering context so it doesn't have to know which kind of pipelines it uses.
 struct PipeRuntime {
-  //! Type of the runtime, see `PipeRuntimeType`.
+  //! Type of the runtime, see \ref PipeRuntimeType.
   PipeRuntimeType _runtimeType;
   //! Runtime flags.
   PipeRuntimeFlags _runtimeFlags;

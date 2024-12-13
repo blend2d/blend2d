@@ -32,7 +32,7 @@ union RenderCommandSource {
 
   //! Reset all data to zero.
   BL_INLINE_NODEBUG void reset() noexcept { solid.prgb64 = 0; }
-  //! Copy all data from \ref other to this command source.
+  //! Copy all data from `other` to this command source.
   BL_INLINE_NODEBUG void reset(const RenderCommandSource& other) noexcept { *this = other; }
 };
 
@@ -158,9 +158,9 @@ struct RenderCommand {
 
   //! Global alpha value.
   uint32_t _alpha;
-  //! Command type, see \ref RenderCommandType.
+  //! Command type.
   RenderCommandType _type;
-  //! Command flags, see \ref RenderCommandFlags.
+  //! Command flags.
   RenderCommandFlags _flags;
   //! Reserved.
   uint16_t _reserved;

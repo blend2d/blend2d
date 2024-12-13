@@ -68,8 +68,11 @@ public:
   //! Returns whether global alpha is initialized and should be applied
   BL_INLINE_NODEBUG bool isInitialized() const noexcept { return _hook != nullptr; }
 
+  //! Returns scalar alpha (in a GP register).
   const Gp& sa() noexcept;
+  //! Returns packed alpha (in a SIMD register).
   const Vec& pa() noexcept;
+  //! Returns unpacked alpha (in a SIMD register).
   const Vec& ua() noexcept;
 
   //! \}

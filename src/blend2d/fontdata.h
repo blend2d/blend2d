@@ -12,7 +12,7 @@
 #include "object.h"
 #include "string.h"
 
-//! \addtogroup blend2d_api_text
+//! \addtogroup bl_text
 //! \{
 
 //! \name BLFontData - Constants
@@ -77,9 +77,43 @@ struct BLFontTable {
 };
 
 //! \}
+//! \}
+
+//! \addtogroup bl_c_api
+//! \{
 
 //! \name BLFontData - C API
 //! \{
+
+//! Font data [C API].
+struct BLFontDataCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLFontData)
+};
+
+//! \cond INTERNAL
+//! Font data [C API Virtual Function Table].
+struct BLFontDataVirt BL_CLASS_INHERITS(BLObjectVirt) {
+  BL_DEFINE_VIRT_BASE
+
+  BLResult (BL_CDECL* getTableTags)(const BLFontDataImpl* impl, uint32_t faceIndex, BLArrayCore* out) BL_NOEXCEPT;
+  size_t (BL_CDECL* getTables)(const BLFontDataImpl* impl, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t n) BL_NOEXCEPT;
+};
+
+//! Font data [C API Impl].
+struct BLFontDataImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Virtual function table.
+  const BLFontDataVirt* virt;
+
+  //! Type of the face that would be created with this font data.
+  uint8_t faceType;
+
+  //! Number of font faces stored in this font data instance.
+  uint32_t faceCount;
+  //! Font data flags.
+  uint32_t flags;
+};
+//! \endcond
 
 BL_BEGIN_C_DECLS
 
@@ -102,42 +136,11 @@ BL_API size_t BL_CDECL blFontDataGetTables(const BLFontDataCore* self, uint32_t 
 
 BL_END_C_DECLS
 
-//! Font data [C API].
-struct BLFontDataCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLFontData)
-};
-
+//! \}
 //! \}
 
-//! \cond INTERNAL
-//! \name BLFontData - Internals
+//! \addtogroup bl_text
 //! \{
-
-//! Font data [Virtual Function Table].
-struct BLFontDataVirt BL_CLASS_INHERITS(BLObjectVirt) {
-  BL_DEFINE_VIRT_BASE
-
-  BLResult (BL_CDECL* getTableTags)(const BLFontDataImpl* impl, uint32_t faceIndex, BLArrayCore* out) BL_NOEXCEPT;
-  size_t (BL_CDECL* getTables)(const BLFontDataImpl* impl, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t n) BL_NOEXCEPT;
-};
-
-//! Font data [Impl].
-struct BLFontDataImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Virtual function table.
-  const BLFontDataVirt* virt;
-
-  //! Type of the face that would be created with this font data.
-  uint8_t faceType;
-
-  //! Number of font faces stored in this font data instance.
-  uint32_t faceCount;
-  //! Font data flags.
-  uint32_t flags;
-};
-
-//! \}
-//! \endcond
 
 //! \name BLFontData - C++ API
 //! \{
@@ -204,26 +207,26 @@ public:
   //! \name Create Functionality
   //! \{
 
-  //! Creates a `BLFontData` from a file specified by the given `fileName`.
+  //! Creates a \ref BLFontData from a file specified by the given `fileName`.
   //!
-  //! \remarks The `readFlags` argument allows to specify flags that will be passed to `BLFileSystem::readFile()` to
-  //! read the content of the file. It's possible to use memory mapping to get its content, which is the recommended
-  //! way for reading system fonts. The best combination is to use `BL_FILE_READ_MMAP_ENABLED` flag combined with
-  //! `BL_FILE_READ_MMAP_AVOID_SMALL`. This combination means to try to use memory mapping only when the size of the
+  //! \remarks The `readFlags` argument allows to specify flags that will be passed to \ref BLFileSystem::readFile()`
+  //! to read the content of the file. It's possible to use memory mapping to get its content, which is the recommended
+  //! way for reading system fonts. The best combination is to use \ref BL_FILE_READ_MMAP_ENABLED flag combined with
+  //! \ref BL_FILE_READ_MMAP_AVOID_SMALL. This combination means to try to use memory mapping only when the size of the
   //! font is greater than a minimum value (determined by Blend2D), and would fallback to a regular open/read in case
   //! the memory mapping is not possible or failed for some other reason. Please note that not all files can be memory
-  //! mapped so `BL_FILE_READ_MMAP_NO_FALLBACK` flag is not recommended.
+  //! mapped so \ref BL_FILE_READ_MMAP_NO_FALLBACK flag is not recommended.
   BL_INLINE_NODEBUG BLResult createFromFile(const char* fileName, BLFileReadFlags readFlags = BL_FILE_READ_NO_FLAGS) noexcept {
     return blFontDataCreateFromFile(this, fileName, readFlags);
   }
 
-  //! Creates a `BLFontData` from the given `data` stored in `BLArray<uint8_t>`
+  //! Creates a \ref BLFontData from the given `data` stored in `BLArray<uint8_t>`
   //!
   //! The given `data` would be weak copied on success so the given array can be safely destroyed after the function
   //! returns.
   //!
   //! \remarks The weak copy of the passed `data` is internal and there is no API to access it after the function
-  //! returns. The reason for making it internal is that multiple implementations of `BLFontData` may exist and some
+  //! returns. The reason for making it internal is that multiple implementations of \ref BLFontData may exist and some
   //! can only store data at table level, so Blend2D doesn't expose the detail about how the data is stored.
   BL_INLINE_NODEBUG BLResult createFromData(const BLArray<uint8_t>& data) noexcept {
     return blFontDataCreateFromDataArray(this, &data);
@@ -245,7 +248,7 @@ public:
   //! Type of font face that this data describes.
   //!
   //! It doesn't matter if the content is a single font or a collection. In any case the `faceType()` would always
-  //! return the type of the font face that will be created by `BLFontFace::createFromData()`.
+  //! return the type of the font face that will be created by \ref BLFontFace::createFromData().
   BL_INLINE_NODEBUG BLFontFaceType faceType() const noexcept { return BLFontFaceType(_impl()->faceType); }
 
   //! Returns the number of faces of this font data.

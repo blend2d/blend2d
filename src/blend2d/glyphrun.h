@@ -8,7 +8,7 @@
 
 #include "fontdefs.h"
 
-//! \addtogroup blend2d_api_text
+//! \addtogroup bl_text
 //! \{
 
 //! \name BLGlyphRun - Constants

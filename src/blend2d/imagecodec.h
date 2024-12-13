@@ -10,64 +10,11 @@
 #include "object.h"
 #include "string.h"
 
-//! \addtogroup blend2d_api_imaging
+//! \addtogroup bl_c_api
 //! \{
-
-//! \name BLImageCodec - Constants
-//! \{
-
-//! Image codec feature bits.
-BL_DEFINE_ENUM(BLImageCodecFeatures) {
-  //! No features.
-  BL_IMAGE_CODEC_NO_FEATURES = 0u,
-  //! Image codec supports reading images (can create BLImageDecoder).
-  BL_IMAGE_CODEC_FEATURE_READ = 0x00000001u,
-  //! Image codec supports writing images (can create BLImageEncoder).
-  BL_IMAGE_CODEC_FEATURE_WRITE = 0x00000002u,
-  //! Image codec supports lossless compression.
-  BL_IMAGE_CODEC_FEATURE_LOSSLESS = 0x00000004u,
-  //! Image codec supports loosy compression.
-  BL_IMAGE_CODEC_FEATURE_LOSSY = 0x00000008u,
-  //! Image codec supports writing multiple frames (GIF).
-  BL_IMAGE_CODEC_FEATURE_MULTI_FRAME = 0x00000010u,
-  //! Image codec supports IPTC metadata.
-  BL_IMAGE_CODEC_FEATURE_IPTC = 0x10000000u,
-  //! Image codec supports EXIF metadata.
-  BL_IMAGE_CODEC_FEATURE_EXIF = 0x20000000u,
-  //! Image codec supports XMP metadata.
-  BL_IMAGE_CODEC_FEATURE_XMP = 0x40000000u
-
-  BL_FORCE_ENUM_UINT32(BL_IMAGE_CODEC_FEATURE)
-};
-
-//! \}
 
 //! \name BLImageCodec - C API
 //! \{
-
-BL_BEGIN_C_DECLS
-
-BL_API BLResult BL_CDECL blImageCodecInit(BLImageCodecCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecInitMove(BLImageCodecCore* self, BLImageCodecCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecInitWeak(BLImageCodecCore* self, const BLImageCodecCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecInitByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecDestroy(BLImageCodecCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecReset(BLImageCodecCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecAssignMove(BLImageCodecCore* self, BLImageCodecCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecAssignWeak(BLImageCodecCore* self, const BLImageCodecCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecFindByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecFindByExtension(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecFindByData(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
-BL_API uint32_t BL_CDECL blImageCodecInspectData(const BLImageCodecCore* self, const void* data, size_t size) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecCreateDecoder(const BLImageCodecCore* self, BLImageDecoderCore* dst) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecCreateEncoder(const BLImageCodecCore* self, BLImageEncoderCore* dst) BL_NOEXCEPT_C;
-
-BL_API BLResult BL_CDECL blImageCodecArrayInitBuiltInCodecs(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecArrayAssignBuiltInCodecs(BLArrayCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecAddToBuiltIn(const BLImageCodecCore* codec) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* codec) BL_NOEXCEPT_C;
-
-BL_END_C_DECLS
 
 //! Image codec [C API].
 struct BLImageCodecCore BL_CLASS_INHERITS(BLObjectCore) {
@@ -75,7 +22,8 @@ struct BLImageCodecCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DCAST(BLImageCodec)
 };
 
-//! Image codec [Virtual Function Table].
+//! \cond
+//! Image codec [C API Virtual Function Table].
 struct BLImageCodecVirt BL_CLASS_INHERITS(BLObjectVirt) {
   BL_DEFINE_VIRT_BASE
 
@@ -84,7 +32,7 @@ struct BLImageCodecVirt BL_CLASS_INHERITS(BLObjectVirt) {
   BLResult (BL_CDECL* createEncoder)(const BLImageCodecImpl* impl, BLImageEncoderCore* dst) BL_NOEXCEPT;
 };
 
-//! Image codec [Impl].
+//! Image codec [C API Impl].
 struct BLImageCodecImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! \name Members
   //! \{
@@ -130,6 +78,64 @@ struct BLImageCodecImpl BL_CLASS_INHERITS(BLObjectImpl) {
 
   //! \}
 #endif
+};
+//! \endcond
+
+BL_BEGIN_C_DECLS
+
+BL_API BLResult BL_CDECL blImageCodecInit(BLImageCodecCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecInitMove(BLImageCodecCore* self, BLImageCodecCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecInitWeak(BLImageCodecCore* self, const BLImageCodecCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecInitByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecDestroy(BLImageCodecCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecReset(BLImageCodecCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecAssignMove(BLImageCodecCore* self, BLImageCodecCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecAssignWeak(BLImageCodecCore* self, const BLImageCodecCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecFindByName(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecFindByExtension(BLImageCodecCore* self, const char* name, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecFindByData(BLImageCodecCore* self, const void* data, size_t size, const BLArrayCore* codecs) BL_NOEXCEPT_C;
+BL_API uint32_t BL_CDECL blImageCodecInspectData(const BLImageCodecCore* self, const void* data, size_t size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecCreateDecoder(const BLImageCodecCore* self, BLImageDecoderCore* dst) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecCreateEncoder(const BLImageCodecCore* self, BLImageEncoderCore* dst) BL_NOEXCEPT_C;
+
+BL_API BLResult BL_CDECL blImageCodecArrayInitBuiltInCodecs(BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecArrayAssignBuiltInCodecs(BLArrayCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecAddToBuiltIn(const BLImageCodecCore* codec) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageCodecRemoveFromBuiltIn(const BLImageCodecCore* codec) BL_NOEXCEPT_C;
+
+BL_END_C_DECLS
+
+//! \}
+//! \}
+
+//! \addtogroup bl_imaging
+//! \{
+
+//! \name BLImageCodec - Constants
+//! \{
+
+//! Image codec feature bits.
+BL_DEFINE_ENUM(BLImageCodecFeatures) {
+  //! No features.
+  BL_IMAGE_CODEC_NO_FEATURES = 0u,
+  //! Image codec supports reading images (can create BLImageDecoder).
+  BL_IMAGE_CODEC_FEATURE_READ = 0x00000001u,
+  //! Image codec supports writing images (can create BLImageEncoder).
+  BL_IMAGE_CODEC_FEATURE_WRITE = 0x00000002u,
+  //! Image codec supports lossless compression.
+  BL_IMAGE_CODEC_FEATURE_LOSSLESS = 0x00000004u,
+  //! Image codec supports loosy compression.
+  BL_IMAGE_CODEC_FEATURE_LOSSY = 0x00000008u,
+  //! Image codec supports writing multiple frames (GIF).
+  BL_IMAGE_CODEC_FEATURE_MULTI_FRAME = 0x00000010u,
+  //! Image codec supports IPTC metadata.
+  BL_IMAGE_CODEC_FEATURE_IPTC = 0x10000000u,
+  //! Image codec supports EXIF metadata.
+  BL_IMAGE_CODEC_FEATURE_EXIF = 0x20000000u,
+  //! Image codec supports XMP metadata.
+  BL_IMAGE_CODEC_FEATURE_XMP = 0x40000000u
+
+  BL_FORCE_ENUM_UINT32(BL_IMAGE_CODEC_FEATURE)
 };
 
 //! \}
@@ -220,7 +226,7 @@ public:
   BL_NODISCARD
   BL_INLINE_NODEBUG const BLString& extensions() const noexcept { return _impl()->extensions.dcast(); }
 
-  //! Returns image codec flags, see `BLImageCodecFeatures`.
+  //! Returns image codec flags, see \ref BLImageCodecFeatures.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLImageCodecFeatures features() const noexcept { return BLImageCodecFeatures(_impl()->features); }
 
@@ -318,16 +324,19 @@ public:
   //! \name Built-In Codecs
   //! \{
 
+  //! Returns an array of built-in codecs, which are present in a global registry.
   static BL_INLINE_NODEBUG BLArray<BLImageCodec> builtInCodecs() noexcept {
     BLArray<BLImageCodec> result;
     blImageCodecArrayInitBuiltInCodecs(&result);
     return result;
   }
 
+  //! Adds a codec to a global built-in codecs registry.
   static BL_INLINE_NODEBUG BLResult addToBuiltIn(const BLImageCodecCore& codec) noexcept {
     return blImageCodecAddToBuiltIn(&codec);
   }
 
+  //! Removes a codec from a global built-in codecs registry.
   static BL_INLINE_NODEBUG BLResult removeFromBuiltIn(const BLImageCodecCore& codec) noexcept {
     return blImageCodecRemoveFromBuiltIn(&codec);
   }

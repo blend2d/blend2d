@@ -102,7 +102,7 @@ enum class PixelCoverageFormat : uint8_t {
   kUnpacked
 };
 
-//! Pixel coverage flags used by \ref PixelCoverage.
+//! Pixel coverage flags.
 enum class PixelCoverageFlags : uint8_t {
   //! No coverage flags set.
   kNone = 0,
@@ -149,7 +149,7 @@ struct PixelFetchInfo {
   //! Pixel format.
   FormatExt _format {};
 
-  //! Pixel components, compatible with \ref BL_FORMAT_FLAG.
+  //! Pixel components, compatible with \ref BLFormatFlags.
   uint8_t _components {};
 
   //! A byte offset (memory) where the alpha can be accessed.

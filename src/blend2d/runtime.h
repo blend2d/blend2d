@@ -8,7 +8,7 @@
 
 #include "api.h"
 
-//! \addtogroup blend2d_api_runtime
+//! \addtogroup bl_runtime
 //! \{
 
 //! \name Runtime - Constants
@@ -17,7 +17,7 @@
 //! Blend2D runtime limits.
 //!
 //! \note These constants are used across Blend2D, but they are not designed to be ABI stable. New versions of Blend2D
-//! can increase certain limits without notice. Use runtime to query the limits dynamically, see `BLRuntimeBuildInfo`.
+//! can increase certain limits without notice. Use runtime to query the limits dynamically, see \ref BLRuntimeBuildInfo.
 BL_DEFINE_ENUM(BLRuntimeLimits) {
   //! Maximum width and height of an image.
   BL_RUNTIME_MAX_IMAGE_SIZE = 65535,
@@ -109,10 +109,10 @@ struct BLRuntimeBuildInfo {
   //! Patch version number.
   uint32_t patchVersion;
 
-  //! Blend2D build type, see `BLRuntimeBuildType`.
+  //! Blend2D build type, see \ref BLRuntimeBuildType.
   uint32_t buildType;
 
-  //! Baseline CPU features, see `BLRuntimeCpuFeatures`.
+  //! Baseline CPU features, see \ref BLRuntimeCpuFeatures.
   //!
   //! These features describe CPU features that were detected at compile-time. Baseline features are used to compile
   //! all source files so they represent the minimum feature-set the target CPU must support to run Blend2D.
@@ -121,7 +121,7 @@ struct BLRuntimeBuildInfo {
   //! a different baseline, which can be read through `BLRuntimeBuildInfo`.
   uint32_t baselineCpuFeatures;
 
-  //! Supported CPU features, see `BLRuntimeCpuFeatures`.
+  //! Supported CPU features, see \ref BLRuntimeCpuFeatures.
   //!
   //! These features do not represent the features that the host CPU must support, instead, they represent all features
   //! that Blend2D can take advantage of in C++ code that uses instruction intrinsics. For example if AVX2 is part of
@@ -147,9 +147,9 @@ struct BLRuntimeBuildInfo {
 
 //! System information queried by the runtime.
 struct BLRuntimeSystemInfo {
-  //! Host CPU architecture, see `BLRuntimeCpuArch`.
+  //! Host CPU architecture, see \ref BLRuntimeCpuArch.
   uint32_t cpuArch;
-  //! Host CPU features, see `BLRuntimeCpuFeatures`.
+  //! Host CPU features, see \ref BLRuntimeCpuFeatures.
   uint32_t cpuFeatures;
   //! Number of cores of the host CPU/CPUs.
   uint32_t coreCount;
@@ -205,14 +205,21 @@ struct BLRuntimeResourceInfo {
 };
 
 //! \}
+//! \}
 
-//! \name Runtime - C API
+//! \addtogroup bl_c_api
+//! \{
+
+//! \name BLRuntime - C API
 //! \{
 
 BL_BEGIN_C_DECLS
 
+//! Initialized Blend2D runtime
 BL_API BLResult BL_CDECL blRuntimeInit() BL_NOEXCEPT_C;
+//! Shuts down Blend2D runtime
 BL_API BLResult BL_CDECL blRuntimeShutdown() BL_NOEXCEPT_C;
+
 BL_API BLResult BL_CDECL blRuntimeCleanup(BLRuntimeCleanupFlags cleanupFlags) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blRuntimeQueryInfo(BLRuntimeInfoType infoType, void* infoOut) BL_NOEXCEPT_C;
 BL_API BLResult BL_CDECL blRuntimeMessageOut(const char* msg) BL_NOEXCEPT_C;
@@ -228,6 +235,10 @@ BL_API BLResult BL_CDECL blResultFromPosixError(int e) BL_NOEXCEPT_C;
 BL_END_C_DECLS
 
 //! \}
+//! \}
+
+//! \addtogroup bl_runtime
+//! \{
 
 //! \name Runtime - C++ API
 //! \{

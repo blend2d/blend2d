@@ -10,26 +10,30 @@
 #include "object.h"
 #include "string.h"
 
-//! \addtogroup blend2d_api_imaging
+//! \addtogroup bl_c_api
 //! \{
 
 //! \name BLImageEncoder - C API
 //! \{
 
-BL_BEGIN_C_DECLS
+//! Image encoder [C API].
+struct BLImageEncoderCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLImageEncoder)
 
-BL_API BLResult BL_CDECL blImageEncoderInit(BLImageEncoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderInitMove(BLImageEncoderCore* self, BLImageEncoderCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderInitWeak(BLImageEncoderCore* self, const BLImageEncoderCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderDestroy(BLImageEncoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderReset(BLImageEncoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderAssignMove(BLImageEncoderCore* self, BLImageEncoderCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderAssignWeak(BLImageEncoderCore* self, const BLImageEncoderCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderRestart(BLImageEncoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageEncoderWriteFrame(BLImageEncoderCore* self, BLArrayCore* dst, const BLImageCore* image) BL_NOEXCEPT_C;
+#ifdef __cplusplus
+  //! \name Impl Utilities
+  //! \{
 
-BL_END_C_DECLS
+  //! Returns Impl of the image encoder (only provided for use cases that implement BLImageEncoder).
+  template<typename T = BLImageEncoderImpl>
+  BL_INLINE T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
 
+  //! \}
+#endif
+};
+
+//! \cond INTERNAL
 //! Image encoder [Virtual Function Table].
 struct BLImageEncoderVirt BL_CLASS_INHERITS(BLObjectVirt) {
   BL_DEFINE_VIRT_BASE
@@ -83,25 +87,27 @@ struct BLImageEncoderImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! \}
 #endif
 };
+//! \endcond
 
-//! Image encoder [C API].
-struct BLImageEncoderCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLImageEncoder)
+BL_BEGIN_C_DECLS
 
-#ifdef __cplusplus
-  //! \name Impl Utilities
-  //! \{
+BL_API BLResult BL_CDECL blImageEncoderInit(BLImageEncoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderInitMove(BLImageEncoderCore* self, BLImageEncoderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderInitWeak(BLImageEncoderCore* self, const BLImageEncoderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderDestroy(BLImageEncoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderReset(BLImageEncoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderAssignMove(BLImageEncoderCore* self, BLImageEncoderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderAssignWeak(BLImageEncoderCore* self, const BLImageEncoderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderRestart(BLImageEncoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageEncoderWriteFrame(BLImageEncoderCore* self, BLArrayCore* dst, const BLImageCore* image) BL_NOEXCEPT_C;
 
-  //! Returns Impl of the image encoder (only provided for use cases that implement BLImageEncoder).
-  template<typename T = BLImageEncoderImpl>
-  BL_INLINE T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
-
-  //! \}
-#endif
-};
+BL_END_C_DECLS
 
 //! \}
+//! \}
+
+//! \addtogroup bl_imaging
+//! \{
 
 //! \name BLImageCodec - C++ API
 //! \{

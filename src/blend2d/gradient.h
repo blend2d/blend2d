@@ -11,7 +11,7 @@
 #include "object.h"
 #include "rgba.h"
 
-//! \addtogroup blend2d_api_styling
+//! \addtogroup bl_styling
 //! \{
 
 //! \name BLGradient - Constants
@@ -79,8 +79,7 @@ BL_DEFINE_ENUM(BLGradientQuality) {
 //! \name BLGradient - Structs
 //! \{
 
-//! Defines an `offset` and `rgba` color that us used by `BLGradient` to define
-//! a linear transition between colors.
+//! Defines an `offset` and `rgba` color that us used by \ref BLGradient to define a linear transition between colors.
 struct BLGradientStop {
   double offset;
   BLRgba64 rgba;
@@ -240,6 +239,10 @@ struct BLConicGradientValues {
 };
 
 //! \}
+//! \}
+
+//! \addtogroup bl_c_api
+//! \{
 
 //! \name BLGradient - C API
 //! \{
@@ -249,6 +252,32 @@ struct BLGradientCore BL_CLASS_INHERITS(BLObjectCore) {
   BL_DEFINE_OBJECT_DETAIL
   BL_DEFINE_OBJECT_DCAST(BLGradient)
 };
+
+//! \cond INTERNAL
+//! Gradient [C API Impl].
+struct BLGradientImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Gradient stop data.
+  BLGradientStop* stops;
+  //! Gradient stop count.
+  size_t size;
+  //! Stop capacity.
+  size_t capacity;
+
+  //! Gradient transformation matrix.
+  BLMatrix2D transform;
+
+  union {
+    //! Gradient values (coordinates, radius, angle).
+    double values[BL_GRADIENT_VALUE_MAX_VALUE + 1];
+    //! Linear parameters.
+    BLLinearGradientValues linear;
+    //! Radial parameters.
+    BLRadialGradientValues radial;
+    //! Conic parameters.
+    BLConicGradientValues conic;
+  };
+};
+//! \endcond
 
 BL_BEGIN_C_DECLS
 
@@ -292,37 +321,10 @@ BL_API bool BL_CDECL blGradientEquals(const BLGradientCore* a, const BLGradientC
 BL_END_C_DECLS
 
 //! \}
-
-//! \cond INTERNAL
-//! \name BLGradient - Internals
-//! \{
-
-//! Gradient [Impl].
-struct BLGradientImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Gradient stop data.
-  BLGradientStop* stops;
-  //! Gradient stop count.
-  size_t size;
-  //! Stop capacity.
-  size_t capacity;
-
-  //! Gradient transformation matrix.
-  BLMatrix2D transform;
-
-  union {
-    //! Gradient values (coordinates, radius, angle).
-    double values[BL_GRADIENT_VALUE_MAX_VALUE + 1];
-    //! Linear parameters.
-    BLLinearGradientValues linear;
-    //! Radial parameters.
-    BLRadialGradientValues radial;
-    //! Conic parameters.
-    BLConicGradientValues conic;
-  };
-};
-
 //! \}
-//! \endcond
+
+//! \addtogroup bl_styling
+//! \{
 
 //! \name BLGradient - C++ API
 //! \{
@@ -340,7 +342,8 @@ public:
 
   //! Creates a default constructed gradient.
   //!
-  //! A default constructed gradient has `BL_GRADIENT_TYPE_LINEAR` type, all values set to zero, and has no color stops.
+  //! A default constructed gradient has \ref BL_GRADIENT_TYPE_LINEAR type, all values set to zero, and has no color
+  //! stops.
   BL_INLINE BLGradient() noexcept { blGradientInit(this); }
 
   //! Move constructor.
@@ -416,8 +419,8 @@ public:
 
   //! Resets the gradient to its construction state.
   //!
-  //! \note This operation always succeeds and returns `BL_SUCCESS`. The return value is provided for convenience
-  //! so `reset()` can be used in tail calls in case other functions need to return `BLResult`.
+  //! \note This operation always succeeds and returns \ref BL_SUCCESS. The return value is provided for convenience
+  //! so `reset()` can be used in tail calls in case other functions need to return \ref BLResult.
   BL_INLINE BLResult reset() noexcept { return blGradientReset(this); }
 
   //! Swaps this gradient with `other`.
@@ -478,13 +481,13 @@ public:
   //! Sets the type of the gradient.
   BL_INLINE BLResult setType(BLGradientType type) noexcept { return blGradientSetType(this, type); }
 
-  //! Returns the gradient extend mode, see `BLExtendMode`.
+  //! Returns the gradient extend mode, see \ref BLExtendMode.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLExtendMode extendMode() const noexcept { return BLExtendMode(_d.info.bField()); }
 
-  //! Set the gradient extend mode, see `BLExtendMode`.
+  //! Set the gradient extend mode, see \ref BLExtendMode.
   BL_INLINE BLResult setExtendMode(BLExtendMode extendMode) noexcept { return blGradientSetExtendMode(this, extendMode); }
-  //! Resets the gradient extend mode to `BL_EXTEND_MODE_PAD`.
+  //! Resets the gradient extend mode to \ref BL_EXTEND_MODE_PAD.
   BL_INLINE BLResult resetExtendMode() noexcept { return blGradientSetExtendMode(this, BL_EXTEND_MODE_PAD); }
 
   BL_NODISCARD
@@ -581,7 +584,7 @@ public:
     return _impl()->stops[i];
   }
 
-  //! Returns gradient stops and their count as `BLArrayView<BLGradientStop>`.
+  //! Returns gradient stops and their count as \ref BLArrayView<BLGradientStop>.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLArrayView<BLGradientStop> stopsView() const noexcept { return BLArrayView<BLGradientStop>{_impl()->stops, _impl()->size}; }
 

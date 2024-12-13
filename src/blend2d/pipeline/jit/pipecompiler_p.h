@@ -2795,6 +2795,9 @@ public:
 
   //! \}
 
+  //! \name Utilities
+  //! \{
+
   template<typename Dst, typename Src>
   BL_INLINE void shiftOrRotateLeft(const Dst& dst, const Src& src, uint32_t n) noexcept {
   #if defined(BL_JIT_ARCH_X86)

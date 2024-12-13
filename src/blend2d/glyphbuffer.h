@@ -9,7 +9,7 @@
 #include "fontdefs.h"
 #include "glyphrun.h"
 
-//! \addtogroup blend2d_api_text
+//! \addtogroup bl_c_api
 //! \{
 
 //! \name BLGlyphBuffer - C API
@@ -37,8 +37,8 @@ struct BLGlyphBufferImpl {
     //! Glyph run data that can be passed directly to the rendering context.
     //!
     //! Glyph run shares data with other members like `content`, `placementData`, `size`, and `flags`. When working
-    //! with data it's better to access these members directly as they are typed, whereas `BLGlyphRun` stores pointers
-    //! as `const void*` as it offers more flexibility, which `BLGlyphRun` doesn't need.
+    //! with data it's better to access these members directly as they are typed, whereas \ref BLGlyphRun stores
+    //! pointers as `const void*` as it offers more flexibility, which \ref BLGlyphRun doesn't need.
     BLGlyphRun glyphRun;
   };
 
@@ -75,6 +75,10 @@ BL_API BLResult BL_CDECL blGlyphBufferResetDebugSink(BLGlyphBufferCore* self) BL
 BL_END_C_DECLS
 
 //! \}
+//! \}
+
+//! \addtogroup bl_text
+//! \{
 
 //! \name BLGlyphBuffer - C++ API
 //!
@@ -164,18 +168,18 @@ public:
   //! \name Operations
   //! \{
 
-  //! Resets the `BLGlyphBuffer` into its construction state. The content will be cleared and allocated memory
-  //! released.
+  //! Resets the \ref BLGlyphBuffer into its default constructed state. The content will be cleared and allocated
+  //! memory released.
   BL_INLINE_NODEBUG BLResult reset() noexcept {
     return blGlyphBufferReset(this);
   }
 
-  //! Clears the content of `BLGlyphBuffer` without releasing internal buffers.
+  //! Clears the content of \ref BLGlyphBuffer without releasing internal buffers.
   BL_INLINE_NODEBUG BLResult clear() noexcept {
     return blGlyphBufferClear(this);
   }
 
-  //! Assigns a text content of this `BLGlyphBuffer`.
+  //! Assigns a text content of this \ref BLGlyphBuffer.
   //!
   //! This is a generic function that accepts `void*` data, which is specified by `encoding`. The `size` argument
   //! depends on encoding as well. If the encoding specifies byte string (LATIN1 or UTF8) then it's bytes, if the
@@ -187,12 +191,12 @@ public:
     return blGlyphBufferSetText(this, textData, size, encoding);
   }
 
-  //! Assigns a text content of this `BLGlyphBuffer` from LATIN1 (ISO/IEC 8859-1) string.
+  //! Assigns a text content of this \ref BLGlyphBuffer from LATIN1 (ISO/IEC 8859-1) string.
   BL_INLINE_NODEBUG BLResult setLatin1Text(const char* text, size_t size = SIZE_MAX) noexcept {
     return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_LATIN1);
   }
 
-  //! Assigns a text content of this `BLGlyphBuffer` from UTF-8 encoded string. The `size` parameter represents the
+  //! Assigns a text content of this \ref BLGlyphBuffer from UTF-8 encoded string. The `size` parameter represents the
   //! length of the `text` in bytes.
   BL_INLINE_NODEBUG BLResult setUtf8Text(const char* text, size_t size = SIZE_MAX) noexcept {
     return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF8);
@@ -202,32 +206,33 @@ public:
     return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF8);
   }
 
-  //! Assigns a text content of this `BLGlyphBuffer` from UTF-16 encoded string. The `size` parameter represents the
+  //! Assigns a text content of this \ref BLGlyphBuffer from UTF-16 encoded string. The `size` parameter represents the
   //! length of the `text` in 16-bit units.
   BL_INLINE_NODEBUG BLResult setUtf16Text(const uint16_t* text, size_t size = SIZE_MAX) noexcept {
     return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF16);
   }
 
-  //! Assigns a text content of this `BLGlyphBuffer` from UTF-32 encoded string. The `size` parameter represents the
+  //! Assigns a text content of this \ref BLGlyphBuffer from UTF-32 encoded string. The `size` parameter represents the
   //! length of the `text` in 32-bit units.
   BL_INLINE_NODEBUG BLResult setUtf32Text(const uint32_t* text, size_t size = SIZE_MAX) noexcept {
     return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_UTF32);
   }
 
-  //! Assigns a text content of this `BLGlyphBuffer` from `wchar_t` encoded string. The `size` parameter represents
+  //! Assigns a text content of this \ref BLGlyphBuffer from `wchar_t` encoded string. The `size` parameter represents
   //! the length of the `text` in `wchar_t` units.
   BL_INLINE_NODEBUG BLResult setWCharText(const wchar_t* text, size_t size = SIZE_MAX) noexcept {
     return blGlyphBufferSetText(this, text, size, BL_TEXT_ENCODING_WCHAR);
   }
 
-  //! Assigns a glyph content of this `BLGlyphBuffer` from either the given `glyphData`.
+  //! Assigns a glyph content of this \ref BLGlyphBuffer from either the given `glyphData`.
   BL_INLINE_NODEBUG BLResult setGlyphs(const uint32_t* glyphData, size_t size) noexcept {
     return blGlyphBufferSetGlyphs(this, glyphData, size);
   }
 
-  //! Assigns a glyph content of this `BLGlyphBuffer` from an array of glyphs or from a foreign structure that contains
-  //! glyphs and possibly other members that have to be skipped. The glyph size can be either 16-bit (2) or 32-bit (4).
-  //! The last parameter `glyphAdvance` specifies how many bytes to advance after a glyph value is read.
+  //! Assigns a glyph content of this \ref BLGlyphBuffer from an array of glyphs or from a foreign structure that
+  //! contains glyphs and possibly other members that have to be skipped. The glyph size can be either 16-bit (2)
+  //! or 32-bit (4). The last parameter `glyphAdvance` specifies how many bytes to advance after a glyph value is
+  //! read.
   BL_INLINE_NODEBUG BLResult setGlyphsFromStruct(const void* glyphData, size_t size, size_t glyphIdSize, intptr_t glyphAdvance) noexcept {
     return blGlyphBufferSetGlyphsFromStruct(this, glyphData, size, glyphIdSize, glyphAdvance);
   }

@@ -10,28 +10,31 @@
 #include "object.h"
 #include "string.h"
 
-//! \addtogroup blend2d_api_imaging
+//! \addtogroup bl_c_api
 //! \{
 
 //! \name BLImageDecoder - C API
 //! \{
 
-BL_BEGIN_C_DECLS
+//! Image decoder [C API]
+struct BLImageDecoderCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLImageDecoder)
 
-BL_API BLResult BL_CDECL blImageDecoderInit(BLImageDecoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderInitMove(BLImageDecoderCore* self, BLImageDecoderCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderInitWeak(BLImageDecoderCore* self, const BLImageDecoderCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderDestroy(BLImageDecoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderReset(BLImageDecoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderAssignMove(BLImageDecoderCore* self, BLImageDecoderCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderAssignWeak(BLImageDecoderCore* self, const BLImageDecoderCore* other) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderRestart(BLImageDecoderCore* self) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderReadInfo(BLImageDecoderCore* self, BLImageInfo* infoOut, const uint8_t* data, size_t size) BL_NOEXCEPT_C;
-BL_API BLResult BL_CDECL blImageDecoderReadFrame(BLImageDecoderCore* self, BLImageCore* imageOut, const uint8_t* data, size_t size) BL_NOEXCEPT_C;
+#ifdef __cplusplus
+  //! \name Impl Utilities
+  //! \{
 
-BL_END_C_DECLS
+  //! Returns Impl of the image decoder (only provided for use cases that implement BLImageDecoder).
+  template<typename T = BLImageDecoderImpl>
+  BL_INLINE_NODEBUG T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
 
-//! Image decoder [Virtual Function Table].
+  //! \}
+#endif
+};
+
+//! \cond INTERNAL
+//! Image decoder [C API Virtual Function Table].
 struct BLImageDecoderVirt BL_CLASS_INHERITS(BLObjectVirt) {
   BL_DEFINE_VIRT_BASE
 
@@ -40,7 +43,7 @@ struct BLImageDecoderVirt BL_CLASS_INHERITS(BLObjectVirt) {
   BLResult (BL_CDECL* readFrame)(BLImageDecoderImpl* impl, BLImageCore* imageOut, const uint8_t* data, size_t size) BL_NOEXCEPT;
 };
 
-//! Image decoder [Impl].
+//! Image decoder [C API Impl].
 struct BLImageDecoderImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! \name Members
   //! \{
@@ -85,25 +88,28 @@ struct BLImageDecoderImpl BL_CLASS_INHERITS(BLObjectImpl) {
   //! \}
 #endif
 };
+//! \endcond
 
-//! Image decoder [C API]
-struct BLImageDecoderCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLImageDecoder)
+BL_BEGIN_C_DECLS
 
-#ifdef __cplusplus
-  //! \name Impl Utilities
-  //! \{
+BL_API BLResult BL_CDECL blImageDecoderInit(BLImageDecoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderInitMove(BLImageDecoderCore* self, BLImageDecoderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderInitWeak(BLImageDecoderCore* self, const BLImageDecoderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderDestroy(BLImageDecoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderReset(BLImageDecoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderAssignMove(BLImageDecoderCore* self, BLImageDecoderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderAssignWeak(BLImageDecoderCore* self, const BLImageDecoderCore* other) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderRestart(BLImageDecoderCore* self) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderReadInfo(BLImageDecoderCore* self, BLImageInfo* infoOut, const uint8_t* data, size_t size) BL_NOEXCEPT_C;
+BL_API BLResult BL_CDECL blImageDecoderReadFrame(BLImageDecoderCore* self, BLImageCore* imageOut, const uint8_t* data, size_t size) BL_NOEXCEPT_C;
 
-  //! Returns Impl of the image decoder (only provided for use cases that implement BLImageDecoder).
-  template<typename T = BLImageDecoderImpl>
-  BL_INLINE_NODEBUG T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
-
-  //! \}
-#endif
-};
+BL_END_C_DECLS
 
 //! \}
+//! \}
+
+//! \addtogroup bl_imaging
+//! \{
 
 //! \name BLImageDecoder - C++ API
 //! \{

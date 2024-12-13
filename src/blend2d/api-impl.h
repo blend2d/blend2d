@@ -11,7 +11,7 @@
 
 #include <atomic>
 
-//! \addtogroup blend2d_api_impl
+//! \addtogroup bl_impl
 //! \{
 
 //! \name Atomic Operations

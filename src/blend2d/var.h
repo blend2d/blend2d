@@ -10,7 +10,7 @@
 #include "object.h"
 #include "rgba.h"
 
-//! \addtogroup blend2d_api_globals
+//! \addtogroup bl_c_api
 //! \{
 
 //! \name BLVar - C API
@@ -80,6 +80,10 @@ BL_API bool BL_CDECL blVarStrictEquals(const BLUnknown* a, const BLUnknown* b) B
 BL_END_C_DECLS
 
 //! \}
+//! \}
+
+//! \addtogroup bl_globals
+//! \{
 
 //! \name BLVar - C++ API
 //! \{

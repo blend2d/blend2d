@@ -532,7 +532,7 @@ static BL_INLINE_NODEBUG T fastLerp(const T& a, const T& b) noexcept {
 
 //! \}
 
-//! \name Polynomial Root Solving
+//! \name Quadratic Roots
 //! \{
 
 //! Solve a quadratic polynomial `Ax^2 + Bx + C = 0` and store the result in `dst`.
@@ -615,7 +615,12 @@ static BL_INLINE size_t simplifiedQuadRoots(BLPoint dst[2], const BLPoint& a, co
   return 2;
 }
 
+//! \}
+
 } // {anonymous}
+
+//! \name Cubic Roots
+//! \{
 
 //! Solve a cubic polynomial and store the result in `dst`.
 //!

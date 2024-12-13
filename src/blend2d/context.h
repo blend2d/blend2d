@@ -18,7 +18,7 @@
 #include "rgba.h"
 #include "var.h"
 
-//! \addtogroup blend2d_api_rendering
+//! \addtogroup bl_rendering
 //! \{
 
 //! \name BLContext - Constants
@@ -80,17 +80,17 @@ BL_DEFINE_ENUM(BLContextStyleSlot) {
 //! \note In most cases this should not be required to use by Blend2D users. The C API provides functions that
 //! wrap all of the text operations and C++ API provides functions that use `BLContextRenderTextOp` internally.
 BL_DEFINE_ENUM(BLContextRenderTextOp) {
-  //! UTF-8 text rendering operation - UTF-8 string passed as `BLStringView` or `BLArrayView<uint8_t>`.
+  //! UTF-8 text rendering operation - UTF-8 string passed as \ref BLStringView or \ref BLArrayView<uint8_t>.
   BL_CONTEXT_RENDER_TEXT_OP_UTF8 = BL_TEXT_ENCODING_UTF8,
-  //! UTF-16 text rendering operation - UTF-16 string passed as `BLArrayView<uint16_t>`.
+  //! UTF-16 text rendering operation - UTF-16 string passed as \ref BLArrayView<uint16_t>.
   BL_CONTEXT_RENDER_TEXT_OP_UTF16 = BL_TEXT_ENCODING_UTF16,
-  //! UTF-32 text rendering operation - UTF-32 string passed as `BLArrayView<uint32_t>`.
+  //! UTF-32 text rendering operation - UTF-32 string passed as \ref BLArrayView<uint32_t>.
   BL_CONTEXT_RENDER_TEXT_OP_UTF32 = BL_TEXT_ENCODING_UTF32,
-  //! LATIN1 text rendering operation - LATIN1 string is passed as `BLStringView` or `BLArrayView<uint8_t>`.
+  //! LATIN1 text rendering operation - LATIN1 string is passed as \ref BLStringView or \ref BLArrayView<uint8_t>.
   BL_CONTEXT_RENDER_TEXT_OP_LATIN1 = BL_TEXT_ENCODING_LATIN1,
-  //! `wchar_t` text rendering operation - wchar_t string is passed as `BLArrayView<wchar_t>`.
+  //! `wchar_t` text rendering operation - wchar_t string is passed as \ref BLArrayView<wchar_t>.
   BL_CONTEXT_RENDER_TEXT_OP_WCHAR = BL_TEXT_ENCODING_WCHAR,
-  //! Glyph run text rendering operation - the `BLGlyphRun` parameter is passed.
+  //! Glyph run text rendering operation - the \ref BLGlyphRun parameter is passed.
   BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN = 4,
 
   //! Maximum value of `BLContextRenderTextInputType`
@@ -154,14 +154,14 @@ BL_DEFINE_ENUM(BLContextCreateFlags) {
 };
 
 //! Error flags that are accumulated during the rendering context lifetime and that can be queried through
-//! `BLContext::queryAccumulatedErrorFlags()`. The reason why these flags exist is that errors can happen during
+//! \ref BLContext::accumulatedErrorFlags(). The reason why these flags exist is that errors can happen during
 //! asynchronous rendering, and there is no way the user can catch these errors.
 BL_DEFINE_ENUM(BLContextErrorFlags) {
   //! No flags.
   BL_CONTEXT_ERROR_NO_FLAGS = 0u,
 
-  //! The rendering context returned or encountered `BL_ERROR_INVALID_VALUE`, which is mostly related to the function
-  //! argument handling. It's very likely some argument was wrong when calling `BLContext` API.
+  //! The rendering context returned or encountered \ref BL_ERROR_INVALID_VALUE, which is mostly related to
+  //! the function argument handling. It's very likely some argument was wrong when calling \ref BLContext API.
   BL_CONTEXT_ERROR_FLAG_INVALID_VALUE = 0x00000001u,
 
   //! Invalid state describes something wrong, for example a pipeline compilation error.
@@ -336,7 +336,7 @@ struct BLContextCreateInfo {
   uint32_t threadCount;
 
   //! CPU features to use in isolated JIT runtime (if supported), only used when `flags` contains
-  //! `BL_CONTEXT_CREATE_FLAG_OVERRIDE_CPU_FEATURES`.
+  //! \ref BL_CONTEXT_CREATE_FLAG_OVERRIDE_CPU_FEATURES.
   uint32_t cpuFeatures;
 
   //! Maximum number of commands to be queued.
@@ -423,6 +423,11 @@ struct BLContextHints {
 
 //! \}
 
+//! \}
+
+//! \addtogroup bl_c_api
+//! \{
+
 //! \name BLContext - C API
 //! \{
 
@@ -442,6 +447,183 @@ struct BLContextCore BL_CLASS_INHERITS(BLObjectCore) {
   //! \}
 #endif
 };
+
+//! \cond INTERNAL
+//! Rendering context [Virtual Function Table].
+struct BLContextVirt BL_CLASS_INHERITS(BLObjectVirt) {
+  BL_DEFINE_VIRT_BASE
+
+  // Interface - Most Used Functions
+  // -------------------------------
+
+  // NOTE 1: These functions are called directly by the BLContext C++ API (the dispatch is inlined). So in general
+  // on x86 targets the compiler will generate something like `call [base + offset]` instruction to perform the call.
+  // We want to have the most used functions first as these would use 8-bit offset instead of 32-bit offset. We have
+  // space for 12 functions as 8-bit offset is signed (from -128 to 127) and the BLObjectVirt already uses 3 functions.
+  //
+  // NOTE 2: On non-X86 platforms such as AArch64 we don't have to worry about offsets as the instruction would be
+  // encoded in 32-bits regardless of the offset.
+
+  BLResult (BL_CDECL* applyTransformOp        )(BLContextImpl* impl, BLTransformOp opType, const void* opData) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* fillRectI               )(BLContextImpl* impl, const BLRectI* rect) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillRectIRgba32         )(BLContextImpl* impl, const BLRectI* rect, uint32_t rgba32) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillRectIExt            )(BLContextImpl* impl, const BLRectI* rect, const BLObjectCore* style) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* fillRectD               )(BLContextImpl* impl, const BLRect* rect) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillRectDRgba32         )(BLContextImpl* impl, const BLRect* rect, uint32_t rgba32) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillRectDExt            )(BLContextImpl* impl, const BLRect* rect, const BLObjectCore* style) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* fillPathD               )(BLContextImpl* impl, const BLPoint* origin, const BLPathCore* path) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillPathDRgba32         )(BLContextImpl* impl, const BLPoint* origin, const BLPathCore* path, uint32_t rgba32) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillPathDExt            )(BLContextImpl* impl, const BLPoint* origin, const BLPathCore* path, const BLObjectCore* style) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* blitImageI              )(BLContextImpl* impl, const BLPointI* origin, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT;
+  BLResult (BL_CDECL* blitScaledImageI        )(BLContextImpl* impl, const BLRectI* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT;
+
+  // Interface
+  // ---------
+
+  BLResult (BL_CDECL* flush                   )(BLContextImpl* impl, BLContextFlushFlags flags) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* save                    )(BLContextImpl* impl, BLContextCookie* cookie) BL_NOEXCEPT;
+  BLResult (BL_CDECL* restore                 )(BLContextImpl* impl, const BLContextCookie* cookie) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* userToMeta              )(BLContextImpl* impl) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* setHint                 )(BLContextImpl* impl, BLContextHint hintType, uint32_t value) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setHints                )(BLContextImpl* impl, const BLContextHints* hints) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setFlattenMode          )(BLContextImpl* impl, BLFlattenMode mode) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setFlattenTolerance     )(BLContextImpl* impl, double tolerance) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setApproximationOptions )(BLContextImpl* impl, const BLApproximationOptions* options) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* getStyle                )(const BLContextImpl* impl, BLContextStyleSlot slot, bool transformed, BLVarCore* styleOut) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStyle                )(BLContextImpl* impl, BLContextStyleSlot slot, const BLObjectCore* style, BLContextStyleTransformMode transformMode) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStyleRgba            )(BLContextImpl* impl, BLContextStyleSlot slot, const BLRgba* rgba) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStyleRgba32          )(BLContextImpl* impl, BLContextStyleSlot slot, uint32_t rgba32) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStyleRgba64          )(BLContextImpl* impl, BLContextStyleSlot slot, uint64_t rgba64) BL_NOEXCEPT;
+  BLResult (BL_CDECL* disableStyle            )(BLContextImpl* impl, BLContextStyleSlot slot) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStyleAlpha           )(BLContextImpl* impl, BLContextStyleSlot slot, double alpha) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* swapStyles              )(BLContextImpl* impl, BLContextStyleSwapMode mode) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* setGlobalAlpha          )(BLContextImpl* impl, double alpha) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setCompOp               )(BLContextImpl* impl, BLCompOp compOp) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* setFillRule             )(BLContextImpl* impl, BLFillRule fillRule) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeWidth          )(BLContextImpl* impl, double width) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeMiterLimit     )(BLContextImpl* impl, double miterLimit) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeCap            )(BLContextImpl* impl, BLStrokeCapPosition position, BLStrokeCap strokeCap) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeCaps           )(BLContextImpl* impl, BLStrokeCap strokeCap) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeJoin           )(BLContextImpl* impl, BLStrokeJoin strokeJoin) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeDashOffset     )(BLContextImpl* impl, double dashOffset) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeDashArray      )(BLContextImpl* impl, const BLArrayCore* dashArray) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeTransformOrder )(BLContextImpl* impl, BLStrokeTransformOrder transformOrder) BL_NOEXCEPT;
+  BLResult (BL_CDECL* setStrokeOptions        )(BLContextImpl* impl, const BLStrokeOptionsCore* options) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* clipToRectI             )(BLContextImpl* impl, const BLRectI* rect) BL_NOEXCEPT;
+  BLResult (BL_CDECL* clipToRectD             )(BLContextImpl* impl, const BLRect* rect) BL_NOEXCEPT;
+  BLResult (BL_CDECL* restoreClipping         )(BLContextImpl* impl) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* clearAll                )(BLContextImpl* impl) BL_NOEXCEPT;
+  BLResult (BL_CDECL* clearRectI              )(BLContextImpl* impl, const BLRectI* rect) BL_NOEXCEPT;
+  BLResult (BL_CDECL* clearRectD              )(BLContextImpl* impl, const BLRect* rect) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* fillAll                 )(BLContextImpl* impl) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillAllRgba32           )(BLContextImpl* impl, uint32_t rgba32) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillAllExt              )(BLContextImpl* impl, const BLObjectCore* style) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* fillGeometry            )(BLContextImpl* impl, BLGeometryType type, const void* data) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillGeometryRgba32      )(BLContextImpl* impl, BLGeometryType type, const void* data, uint32_t rgba32) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillGeometryExt         )(BLContextImpl* impl, BLGeometryType type, const void* data, const BLObjectCore* style) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* fillTextOpI             )(BLContextImpl* self, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* fillTextOpIRgba32       )(BLContextImpl* self, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, uint32_t rgba32) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* fillTextOpIExt          )(BLContextImpl* self, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, const BLObjectCore* style) BL_NOEXCEPT_C;
+
+  BLResult (BL_CDECL* fillTextOpD             )(BLContextImpl* self, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* fillTextOpDRgba32       )(BLContextImpl* self, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, uint32_t rgba32) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* fillTextOpDExt          )(BLContextImpl* self, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, const BLObjectCore* style) BL_NOEXCEPT_C;
+
+  BLResult (BL_CDECL* fillMaskI               )(BLContextImpl* impl, const BLPointI* origin, const BLImageCore* mask, const BLRectI* maskArea) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillMaskIRgba32         )(BLContextImpl* impl, const BLPointI* origin, const BLImageCore* mask, const BLRectI* maskArea, uint32_t rgba32) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillMaskIExt            )(BLContextImpl* impl, const BLPointI* origin, const BLImageCore* mask, const BLRectI* maskArea, const BLObjectCore* style) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* fillMaskD               )(BLContextImpl* impl, const BLPoint* origin, const BLImageCore* mask, const BLRectI* maskArea) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillMaskDRgba32         )(BLContextImpl* impl, const BLPoint* origin, const BLImageCore* mask, const BLRectI* maskArea, uint32_t rgba32) BL_NOEXCEPT;
+  BLResult (BL_CDECL* fillMaskDExt            )(BLContextImpl* impl, const BLPoint* origin, const BLImageCore* mask, const BLRectI* maskArea, const BLObjectCore* style) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* strokePathD             )(BLContextImpl* impl, const BLPoint* origin, const BLPathCore* path) BL_NOEXCEPT;
+  BLResult (BL_CDECL* strokePathDRgba32       )(BLContextImpl* impl, const BLPoint* origin, const BLPathCore* path, uint32_t rgba32) BL_NOEXCEPT;
+  BLResult (BL_CDECL* strokePathDExt          )(BLContextImpl* impl, const BLPoint* origin, const BLPathCore* path, const BLObjectCore* style) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* strokeGeometry          )(BLContextImpl* impl, BLGeometryType type, const void* data) BL_NOEXCEPT;
+  BLResult (BL_CDECL* strokeGeometryRgba32    )(BLContextImpl* impl, BLGeometryType type, const void* data, uint32_t rgba32) BL_NOEXCEPT;
+  BLResult (BL_CDECL* strokeGeometryExt       )(BLContextImpl* impl, BLGeometryType type, const void* data, const BLObjectCore* style) BL_NOEXCEPT;
+
+  BLResult (BL_CDECL* strokeTextOpI           )(BLContextImpl* self, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* strokeTextOpIRgba32     )(BLContextImpl* self, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, uint32_t rgba32) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* strokeTextOpIExt        )(BLContextImpl* self, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, const BLObjectCore* style) BL_NOEXCEPT_C;
+
+  BLResult (BL_CDECL* strokeTextOpD           )(BLContextImpl* self, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* strokeTextOpDRgba32     )(BLContextImpl* self, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, uint32_t rgba32) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* strokeTextOpDExt        )(BLContextImpl* self, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, const BLObjectCore* style) BL_NOEXCEPT_C;
+
+  BLResult (BL_CDECL* blitImageD              )(BLContextImpl* impl, const BLPoint* origin, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT;
+  BLResult (BL_CDECL* blitScaledImageD        )(BLContextImpl* impl, const BLRect* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT;
+};
+
+//! Rendering context state.
+//!
+//! This state is not meant to be created by users, it's only provided for users that want to introspect
+//! the rendering context state and for C++ API that accesses it directly for performance reasons.
+struct BLContextState {
+  //! Target image or image object with nullptr impl in case that the rendering context doesn't render to an image.
+  BLImageCore* targetImage;
+  //! Current size of the target in abstract units, pixels if rendering to \ref BLImage.
+  BLSize targetSize;
+
+  //! Current rendering context hints.
+  BLContextHints hints;
+  //! Current composition operator.
+  uint8_t compOp;
+  //! Current fill rule.
+  uint8_t fillRule;
+  //! Current type of a style object of fill and stroke operations indexed by \ref BLContextStyleSlot.
+  uint8_t styleType[2];
+  //! Count of saved states in the context.
+  uint32_t savedStateCount;
+
+  //! Current global alpha value [0, 1].
+  double globalAlpha;
+  //! Current fill or stroke alpha indexed by style slot, see \ref BLContextStyleSlot.
+  double styleAlpha[2];
+
+  //! Current stroke options.
+  BLStrokeOptionsCore strokeOptions;
+
+  //! Current approximation options.
+  BLApproximationOptions approximationOptions;
+
+  //! Current meta transformation matrix.
+  BLMatrix2D metaTransform;
+  //! Current user transformation matrix.
+  BLMatrix2D userTransform;
+  //! Current final transformation matrix, which combines all transformation matrices.
+  BLMatrix2D finalTransform;
+};
+
+//! Rendering context [C API Impl].
+struct BLContextImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Virtual function table.
+  const BLContextVirt* virt;
+  //! Current state of the context.
+  const BLContextState* state;
+
+  //! Type of the rendering context, see \ref BLContextType.
+  uint32_t contextType;
+};
+//! \endcond
 
 BL_BEGIN_C_DECLS
 
@@ -690,189 +872,12 @@ BL_API BLResult BL_CDECL blContextBlitScaledImageI(BLContextCore* self, const BL
 BL_API BLResult BL_CDECL blContextBlitScaledImageD(BLContextCore* self, const BLRect* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
+
+//! \}
 //! \}
 
-//! \cond INTERNAL
-//! \name BLContext - Internals
+//! \addtogroup bl_rendering
 //! \{
-
-//! Rendering context state.
-//!
-//! This state is not meant to be created by users, it's only provided for users that want to introspect
-//! the rendering context state and for C++ API that accesses it directly for performance reasons.
-struct BLContextState {
-  //! Target image or image object with nullptr impl in case that the rendering context doesn't render to an image.
-  BLImageCore* targetImage;
-  //! Current size of the target in abstract units, pixels if rendering to `BLImage`.
-  BLSize targetSize;
-
-  //! Current rendering context hints.
-  BLContextHints hints;
-  //! Current composition operator.
-  uint8_t compOp;
-  //! Current fill rule.
-  uint8_t fillRule;
-  //! Current type of a style object of fill and stroke operations indexed by \ref BLContextStyleSlot.
-  uint8_t styleType[2];
-  //! Count of saved states in the context.
-  uint32_t savedStateCount;
-
-  //! Current global alpha value [0, 1].
-  double globalAlpha;
-  //! Current fill or stroke alpha indexed by style slot, see \ref BLContextStyleSlot.
-  double styleAlpha[2];
-
-  //! Current stroke options.
-  BLStrokeOptionsCore strokeOptions;
-
-  //! Current approximation options.
-  BLApproximationOptions approximationOptions;
-
-  //! Current meta transformation matrix.
-  BLMatrix2D metaTransform;
-  //! Current user transformation matrix.
-  BLMatrix2D userTransform;
-  //! Current final transformation matrix, which combines all transformation matrices.
-  BLMatrix2D finalTransform;
-};
-
-//! Rendering context [Virtual Function Table].
-struct BLContextVirt BL_CLASS_INHERITS(BLObjectVirt) {
-  BL_DEFINE_VIRT_BASE
-
-  // Interface - Most Used Functions
-  // -------------------------------
-
-  // NOTE 1: These functions are called directly by the BLContext C++ API (the dispatch is inlined). So in general
-  // on x86 targets the compiler will generate something like `call [base + offset]` instruction to perform the call.
-  // We want to have the most used functions first as these would use 8-bit offset instead of 32-bit offset. We have
-  // space for 12 functions as 8-bit offset is signed (from -128 to 127) and the BLObjectVirt already uses 3 functions.
-  //
-  // NOTE 2: On non-X86 platforms such as AArch64 we don't have to worry about offsets as the instruction would be
-  // encoded in 32-bits regardless of the offset.
-
-  BLResult (BL_CDECL* applyTransformOp        )(BLContextImpl* impl, BLTransformOp opType, const void* opData) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* fillRectI               )(BLContextImpl* impl, const BLRectI* rect) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillRectIRgba32         )(BLContextImpl* impl, const BLRectI* rect, uint32_t rgba32) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillRectIExt            )(BLContextImpl* impl, const BLRectI* rect, const BLObjectCore* style) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* fillRectD               )(BLContextImpl* impl, const BLRect* rect) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillRectDRgba32         )(BLContextImpl* impl, const BLRect* rect, uint32_t rgba32) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillRectDExt            )(BLContextImpl* impl, const BLRect* rect, const BLObjectCore* style) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* fillPathD               )(BLContextImpl* impl, const BLPoint* origin, const BLPathCore* path) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillPathDRgba32         )(BLContextImpl* impl, const BLPoint* origin, const BLPathCore* path, uint32_t rgba32) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillPathDExt            )(BLContextImpl* impl, const BLPoint* origin, const BLPathCore* path, const BLObjectCore* style) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* blitImageI              )(BLContextImpl* impl, const BLPointI* origin, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT;
-  BLResult (BL_CDECL* blitScaledImageI        )(BLContextImpl* impl, const BLRectI* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT;
-
-  // Interface
-  // ---------
-
-  BLResult (BL_CDECL* flush                   )(BLContextImpl* impl, BLContextFlushFlags flags) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* save                    )(BLContextImpl* impl, BLContextCookie* cookie) BL_NOEXCEPT;
-  BLResult (BL_CDECL* restore                 )(BLContextImpl* impl, const BLContextCookie* cookie) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* userToMeta              )(BLContextImpl* impl) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* setHint                 )(BLContextImpl* impl, BLContextHint hintType, uint32_t value) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setHints                )(BLContextImpl* impl, const BLContextHints* hints) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setFlattenMode          )(BLContextImpl* impl, BLFlattenMode mode) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setFlattenTolerance     )(BLContextImpl* impl, double tolerance) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setApproximationOptions )(BLContextImpl* impl, const BLApproximationOptions* options) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* getStyle                )(const BLContextImpl* impl, BLContextStyleSlot slot, bool transformed, BLVarCore* styleOut) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStyle                )(BLContextImpl* impl, BLContextStyleSlot slot, const BLObjectCore* style, BLContextStyleTransformMode transformMode) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStyleRgba            )(BLContextImpl* impl, BLContextStyleSlot slot, const BLRgba* rgba) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStyleRgba32          )(BLContextImpl* impl, BLContextStyleSlot slot, uint32_t rgba32) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStyleRgba64          )(BLContextImpl* impl, BLContextStyleSlot slot, uint64_t rgba64) BL_NOEXCEPT;
-  BLResult (BL_CDECL* disableStyle            )(BLContextImpl* impl, BLContextStyleSlot slot) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStyleAlpha           )(BLContextImpl* impl, BLContextStyleSlot slot, double alpha) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* swapStyles              )(BLContextImpl* impl, BLContextStyleSwapMode mode) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* setGlobalAlpha          )(BLContextImpl* impl, double alpha) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setCompOp               )(BLContextImpl* impl, BLCompOp compOp) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* setFillRule             )(BLContextImpl* impl, BLFillRule fillRule) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeWidth          )(BLContextImpl* impl, double width) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeMiterLimit     )(BLContextImpl* impl, double miterLimit) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeCap            )(BLContextImpl* impl, BLStrokeCapPosition position, BLStrokeCap strokeCap) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeCaps           )(BLContextImpl* impl, BLStrokeCap strokeCap) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeJoin           )(BLContextImpl* impl, BLStrokeJoin strokeJoin) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeDashOffset     )(BLContextImpl* impl, double dashOffset) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeDashArray      )(BLContextImpl* impl, const BLArrayCore* dashArray) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeTransformOrder )(BLContextImpl* impl, BLStrokeTransformOrder transformOrder) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setStrokeOptions        )(BLContextImpl* impl, const BLStrokeOptionsCore* options) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* clipToRectI             )(BLContextImpl* impl, const BLRectI* rect) BL_NOEXCEPT;
-  BLResult (BL_CDECL* clipToRectD             )(BLContextImpl* impl, const BLRect* rect) BL_NOEXCEPT;
-  BLResult (BL_CDECL* restoreClipping         )(BLContextImpl* impl) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* clearAll                )(BLContextImpl* impl) BL_NOEXCEPT;
-  BLResult (BL_CDECL* clearRectI              )(BLContextImpl* impl, const BLRectI* rect) BL_NOEXCEPT;
-  BLResult (BL_CDECL* clearRectD              )(BLContextImpl* impl, const BLRect* rect) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* fillAll                 )(BLContextImpl* impl) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillAllRgba32           )(BLContextImpl* impl, uint32_t rgba32) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillAllExt              )(BLContextImpl* impl, const BLObjectCore* style) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* fillGeometry            )(BLContextImpl* impl, BLGeometryType type, const void* data) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillGeometryRgba32      )(BLContextImpl* impl, BLGeometryType type, const void* data, uint32_t rgba32) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillGeometryExt         )(BLContextImpl* impl, BLGeometryType type, const void* data, const BLObjectCore* style) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* fillTextOpI             )(BLContextImpl* self, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data) BL_NOEXCEPT_C;
-  BLResult (BL_CDECL* fillTextOpIRgba32       )(BLContextImpl* self, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, uint32_t rgba32) BL_NOEXCEPT_C;
-  BLResult (BL_CDECL* fillTextOpIExt          )(BLContextImpl* self, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, const BLObjectCore* style) BL_NOEXCEPT_C;
-
-  BLResult (BL_CDECL* fillTextOpD             )(BLContextImpl* self, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data) BL_NOEXCEPT_C;
-  BLResult (BL_CDECL* fillTextOpDRgba32       )(BLContextImpl* self, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, uint32_t rgba32) BL_NOEXCEPT_C;
-  BLResult (BL_CDECL* fillTextOpDExt          )(BLContextImpl* self, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, const BLObjectCore* style) BL_NOEXCEPT_C;
-
-  BLResult (BL_CDECL* fillMaskI               )(BLContextImpl* impl, const BLPointI* origin, const BLImageCore* mask, const BLRectI* maskArea) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillMaskIRgba32         )(BLContextImpl* impl, const BLPointI* origin, const BLImageCore* mask, const BLRectI* maskArea, uint32_t rgba32) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillMaskIExt            )(BLContextImpl* impl, const BLPointI* origin, const BLImageCore* mask, const BLRectI* maskArea, const BLObjectCore* style) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* fillMaskD               )(BLContextImpl* impl, const BLPoint* origin, const BLImageCore* mask, const BLRectI* maskArea) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillMaskDRgba32         )(BLContextImpl* impl, const BLPoint* origin, const BLImageCore* mask, const BLRectI* maskArea, uint32_t rgba32) BL_NOEXCEPT;
-  BLResult (BL_CDECL* fillMaskDExt            )(BLContextImpl* impl, const BLPoint* origin, const BLImageCore* mask, const BLRectI* maskArea, const BLObjectCore* style) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* strokePathD             )(BLContextImpl* impl, const BLPoint* origin, const BLPathCore* path) BL_NOEXCEPT;
-  BLResult (BL_CDECL* strokePathDRgba32       )(BLContextImpl* impl, const BLPoint* origin, const BLPathCore* path, uint32_t rgba32) BL_NOEXCEPT;
-  BLResult (BL_CDECL* strokePathDExt          )(BLContextImpl* impl, const BLPoint* origin, const BLPathCore* path, const BLObjectCore* style) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* strokeGeometry          )(BLContextImpl* impl, BLGeometryType type, const void* data) BL_NOEXCEPT;
-  BLResult (BL_CDECL* strokeGeometryRgba32    )(BLContextImpl* impl, BLGeometryType type, const void* data, uint32_t rgba32) BL_NOEXCEPT;
-  BLResult (BL_CDECL* strokeGeometryExt       )(BLContextImpl* impl, BLGeometryType type, const void* data, const BLObjectCore* style) BL_NOEXCEPT;
-
-  BLResult (BL_CDECL* strokeTextOpI           )(BLContextImpl* self, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data) BL_NOEXCEPT_C;
-  BLResult (BL_CDECL* strokeTextOpIRgba32     )(BLContextImpl* self, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, uint32_t rgba32) BL_NOEXCEPT_C;
-  BLResult (BL_CDECL* strokeTextOpIExt        )(BLContextImpl* self, const BLPointI* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, const BLObjectCore* style) BL_NOEXCEPT_C;
-
-  BLResult (BL_CDECL* strokeTextOpD           )(BLContextImpl* self, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data) BL_NOEXCEPT_C;
-  BLResult (BL_CDECL* strokeTextOpDRgba32     )(BLContextImpl* self, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, uint32_t rgba32) BL_NOEXCEPT_C;
-  BLResult (BL_CDECL* strokeTextOpDExt        )(BLContextImpl* self, const BLPoint* origin, const BLFontCore* font, BLContextRenderTextOp op, const void* data, const BLObjectCore* style) BL_NOEXCEPT_C;
-
-  BLResult (BL_CDECL* blitImageD              )(BLContextImpl* impl, const BLPoint* origin, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT;
-  BLResult (BL_CDECL* blitScaledImageD        )(BLContextImpl* impl, const BLRect* rect, const BLImageCore* img, const BLRectI* imgArea) BL_NOEXCEPT;
-};
-
-//! Rendering context [Impl].
-struct BLContextImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Virtual function table.
-  const BLContextVirt* virt;
-  //! Current state of the context.
-  const BLContextState* state;
-
-  //! Type of the rendering context, see \ref BLContextType.
-  uint32_t contextType;
-};
-
-//! \}
-//! \endcond
 
 #ifdef __cplusplus
 
@@ -966,7 +971,8 @@ public:
   //! Creates a default constructed rendering context.
   //!
   //! Default constructed means that the instance is valid, but uninitialized,  which means the rendering context does
-  //! not have attached any target. Any attempt to use uninitialized context results in `BL_ERROR_NOT_INITIALIZED` error.
+  //! not have attached any target. Any attempt to use uninitialized context results in \ref BL_ERROR_NOT_INITIALIZED
+  //! error.
   BL_INLINE_NODEBUG BLContext() noexcept {
     blContextInit(this);
     BL_ASSUME(_d.info.bits == kDefaultSignature);
@@ -974,7 +980,9 @@ public:
 
   //! Move constructor.
   //!
-  //! Moves the `other` rendering context into this one and resets the `other`.
+  //! Moves the `other` rendering context into this one and resets the `other` rendering context to
+  //! a default-constructed state. This is an efficient way of "moving" the rendering context as it doesn't touch its
+  //! internal reference count, which is atomic, because moving is internally implemented as a trivial memory copy.
   BL_INLINE_NODEBUG BLContext(BLContext&& other) noexcept {
     blContextInitMove(this, &other);
   }
@@ -986,7 +994,8 @@ public:
   //! affect this context.
   //!
   //! This function is mostly provided for C++ users that may keep a global reference to the same rendering context,
-  //! for example, otherwise sharing is not that useful as they also share a state.
+  //! for example, otherwise sharing is not that useful as the rendering context has states that are manipulated during
+  //! rendering.
   //!
   //! Two weak copies of the same rendering context cannot be used by different threads simultaneously.
   BL_INLINE_NODEBUG BLContext(const BLContext& other) noexcept {
@@ -994,14 +1003,25 @@ public:
   }
 
   //! Creates a new rendering context for rendering to the image `target`.
+  //!
+  //! This is a simplified constructor that can be used to create a rendering context without any additional parameters,
+  //! which means that the rendering context will use a single-threaded synchronous rendering.
+  //!
+  //! \note Since Blend2D doesn't use exceptions in C++ this function always succeeds even when an error happened.
+  //! The underlying C-API function \ref blContextInitAs() returns an error, but it just cannot be propagated back.
+  //! Use \ref begin() function, which returns a \ref BLResult to check the status of the call immediately.
   BL_INLINE_NODEBUG explicit BLContext(BLImageCore& target) noexcept {
     blContextInitAs(this, &target, nullptr);
   }
 
   //! Creates a new rendering context for rendering to the image `target`.
   //!
-  //! This overload accepts create options that can be used to change the
-  //! implementation of the rendering context.
+  //! This is an advanced constructor that can be used to create a rendering context with additional parameters. These
+  //! parameters can be used to specify the number of threads to be used during rendering and to select other features.
+  //!
+  //! \note Since Blend2D doesn't use exceptions in C++ this function always succeeds even when an error happened.
+  //! The underlying C-API function \ref blContextInitAs() returns an error, but it just cannot be propagated back.
+  //! Use \ref begin() function, which returns a \ref BLResult to check the status of the call immediately.
   BL_INLINE_NODEBUG BLContext(BLImageCore& target, const BLContextCreateInfo& createInfo) noexcept {
     blContextInitAs(this, &target, &createInfo);
   }
@@ -1015,6 +1035,9 @@ public:
   //!
   //! Waits for all operations, detaches the target from the rendering context and then destroys it. Does nothing if
   //! the context is not initialized.
+  //!
+  //! \note Destroying the rendering context would always internally call `flush(BL_CONTEXT_FLUSH_SYNC)`, which would
+  //! flush the render calls queue in case multi-threaded rendering is used.
   BL_INLINE_NODEBUG ~BLContext() noexcept {
     if (BLInternal::objectNeedsCleanup(_d.info.bits))
       blContextDestroy(this);
@@ -1030,14 +1053,25 @@ public:
   //! Provided for users that want to use bool idiom in C++ to check for the status of the object.
   //!
   //! ```
+  //! BLContext ctx(some_image);
   //! if (ctx) {
   //!   // Rendering context is initialized.
   //! }
   //! ```
   BL_INLINE_NODEBUG explicit operator bool() const noexcept { return isValid(); }
 
-  BL_INLINE_NODEBUG BLContext& operator=(BLContext&& other) noexcept { blContextAssignMove(this, &other); return *this; }
+  //! Implements a copy-assignment operator.
+  //!
+  //! Copying a rendering context creates a weak-copy only, which means that all copied instances share the same
+  //! underlying rendering context. The rendering context internally uses atomic reference counting to manage ots
+  //! lifetime.
   BL_INLINE_NODEBUG BLContext& operator=(const BLContext& other) noexcept { blContextAssignWeak(this, &other); return *this; }
+
+  //! Implements a move-assignment operator.
+  //!
+  //! Moves the rendering context of `other` to this rendering context and makes the `other` rendering context
+  //! default constructed (which uses an internal "null" implementation that renders to nothing).
+  BL_INLINE_NODEBUG BLContext& operator=(BLContext&& other) noexcept { blContextAssignMove(this, &other); return *this; }
 
   //! Returns whether this and `other` point to the same rendering context.
   BL_NODISCARD
@@ -1052,15 +1086,15 @@ public:
   //! \name Target Information
   //! \{
 
-  //! Returns the target size in abstract units (pixels in case of `BLImage`).
+  //! Returns the target size in abstract units (pixels in case of \ref BLImage).
   BL_NODISCARD
   BL_INLINE_NODEBUG BLSize targetSize() const noexcept { return BL_CONTEXT_IMPL()->state->targetSize; }
 
-  //! Returns the target width in abstract units (pixels in case of `BLImage`).
+  //! Returns the target width in abstract units (pixels in case of \ref BLImage).
   BL_NODISCARD
   BL_INLINE_NODEBUG double targetWidth() const noexcept { return BL_CONTEXT_IMPL()->state->targetSize.w; }
 
-  //! Returns the target height in abstract units (pixels in case of `BLImage`).
+  //! Returns the target height in abstract units (pixels in case of \ref BLImage).
   BL_NODISCARD
   BL_INLINE_NODEBUG double targetHeight() const noexcept { return BL_CONTEXT_IMPL()->state->targetSize.h; }
 
@@ -1069,8 +1103,8 @@ public:
   //! \note The rendering context doesn't own the image, but it increases its writer count, which means that the image
   //! will not be destroyed even when user destroys it during the rendering (in such case it will be destroyed after
   //! the rendering ends when the writer count goes to zero). This means that the rendering context must hold the image
-  //! and not the pointer to the `BLImage` passed to either the constructor or `begin()` function. So the returned
-  //! pointer is not the same as the pointer passed to `begin()`, but it points to the same impl.
+  //! and not the pointer to the \ref BLImage passed to either the constructor or `begin()` function. So the returned
+  //! pointer is not the same as the pointer passed to `begin()`, but it points to the same underlying data.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLImage* targetImage() const noexcept {
     return static_cast<BLImage*>(BL_CONTEXT_IMPL()->state->targetImage);
@@ -1081,7 +1115,7 @@ public:
   //! \name Context Lifetime and Others
   //! \{
 
-  //! Returns the type of this context, see `BLContextType`.
+  //! Returns the type of this context, see \ref BLContextType.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLContextType contextType() const noexcept {
     return BLContextType(BL_CONTEXT_IMPL()->contextType);
@@ -1110,23 +1144,40 @@ public:
     return result;
   }
 
-  BL_INLINE_NODEBUG BLResult assign(BLContext&& other) noexcept {
-    return blContextAssignMove(this, &other);
-  }
-
+  //! Assigns the `other` rendering context to this rendering context.
+  //!
+  //! This is the same as using C++ copy-assignment operator, see \ref operator=().
   BL_INLINE_NODEBUG BLResult assign(const BLContext& other) noexcept {
     return blContextAssignWeak(this, &other);
   }
 
+  //! Moves the `other` rendering context to this rendering context, which would make ther `other` rendering context
+  //! default initialized.
+  //!
+  //! This is the same as using C++ move-assignment operator, see \ref operator=().
+  BL_INLINE_NODEBUG BLResult assign(BLContext&& other) noexcept {
+    return blContextAssignMove(this, &other);
+  }
+
   //! Begins rendering to the given `image`.
   //!
-  //! If this operation succeeds then the rendering context will have exclusive access to the image data. This
-  //! means that no other renderer can use it during rendering.
+  //! This is a simplified `begin()` function that can be used to create a rendering context without any additional
+  //! parameters, which means that the rendering context will use a single-threaded synchronous rendering.
+  //!
+  //! If this operation succeeds then the rendering context will have exclusive access to the image data. This means
+  //! that no other renderer can use it during rendering.
   BL_INLINE_NODEBUG BLResult begin(BLImageCore& image) noexcept {
     return blContextBegin(this, &image, nullptr);
   }
 
-  //! \overload
+  //! Begins rendering to the given `image`.
+  //!
+  //! This is an advanced `begin()` function that can be used to create a rendering context with additional parameters.
+  //! These parameters can be used to specify the number of threads to be used during rendering and to select other
+  //! features.
+  //!
+  //! If this operation succeeds then the rendering context will have exclusive access to the image data. This means
+  //! that no other renderer can use it during rendering.
   BL_INLINE_NODEBUG BLResult begin(BLImageCore& image, const BLContextCreateInfo& createInfo) noexcept {
     return blContextBegin(this, &image, &createInfo);
   }
@@ -1139,6 +1190,9 @@ public:
   //! Waits for completion of all render commands and detaches the rendering context from the rendering target.
   //! After `end()` completes the rendering context implementation would be released and replaced by a built-in
   //! null instance (no context).
+  //!
+  //! \note Calling `end()` would implicitly call `flush(BL_CONTEXT_FLUSH_SYNC)`, which would flush the render calls
+  //! queue in case multi-threaded rendering is used.
   BL_INLINE_NODEBUG BLResult end() noexcept {
     BLResult result = blContextEnd(this);
     BL_ASSUME(_d.info.bits == kDefaultSignature);
@@ -1185,6 +1239,10 @@ public:
   //! \{
 
   //! Returns the number of saved states in the context (0 means no saved states).
+  //!
+  //! \note Each successful call to \ref save() increments the saved-state counter and each successful call to
+  //! `restore()` decrements it. However, the calls must be successful as the rendering context allows to restrict
+  //! the number of save states, for example, or to use a \ref BLContextCookie to guard state save and restoration.
   BL_NODISCARD
   BL_INLINE_NODEBUG uint32_t savedStateCount() const noexcept {
     return BL_CONTEXT_IMPL()->state->savedStateCount;
@@ -1192,16 +1250,16 @@ public:
 
   //! Saves the current rendering context state.
   //!
-  //! Blend2D uses optimizations that make `save()` a cheap operation. Only core values are actually saved in `save()`,
-  //! others will only be saved if they are modified. This means that consecutive calls to `save()` and `restore()` do
-  //! almost nothing.
+  //! Blend2D uses optimizations that make \ref save() a cheap operation. Only core values are actually saved in
+  //! \ref save(), others will only be saved if they are modified. This means that consecutive calls to \ref save()
+  //! and \ref restore() do almost nothing.
   BL_INLINE_NODEBUG BLResult save() noexcept {
     BL_CONTEXT_CALL_RETURN(save, impl, nullptr);
   }
 
   //! Saves the current rendering context state and creates a restoration `cookie`.
   //!
-  //! If you use a `cookie` to save a state you have to use the same cookie to restore it otherwise the `restore()`
+  //! If you use a `cookie` to save a state you have to use the same cookie to restore it otherwise the \ref restore()
   //! would fail. Please note that cookies are not a means of security, they are provided for making it easier to
   //! guarantee that a code that you may not control won't break your context.
   BL_INLINE_NODEBUG BLResult save(BLContextCookie& cookie) noexcept {
@@ -1212,9 +1270,9 @@ public:
   //!
   //! Possible return conditions:
   //!
-  //!   - `BL_SUCCESS` - State was restored successfully.
-  //!   - `BL_ERROR_NO_STATES_TO_RESTORE` - There are no saved states to restore.
-  //!   - `BL_ERROR_NO_MATCHING_COOKIE` - Previous state was saved with cookie, which was not provided. You would need
+  //!   - \ref BL_SUCCESS - State was restored successfully.
+  //!   - \ref BL_ERROR_NO_STATES_TO_RESTORE - There are no saved states to restore.
+  //!   - \ref BL_ERROR_NO_MATCHING_COOKIE - Previous state was saved with cookie, which was not provided. You would need
   //!     the correct cookie to restore such state.
   BL_INLINE_NODEBUG BLResult restore() noexcept {
     BL_CONTEXT_CALL_RETURN(restore, impl, nullptr);
@@ -1226,9 +1284,9 @@ public:
   //!
   //! Possible return conditions:
   //!
-  //!   - `BL_SUCCESS` - Matching state was restored successfully.
-  //!   - `BL_ERROR_NO_STATES_TO_RESTORE` - There are no saved states to restore.
-  //!   - `BL_ERROR_NO_MATCHING_COOKIE` - The cookie did't match any saved state.
+  //!   - \ref BL_SUCCESS - Matching state was restored successfully.
+  //!   - \ref BL_ERROR_NO_STATES_TO_RESTORE - There are no saved states to restore.
+  //!   - \ref BL_ERROR_NO_MATCHING_COOKIE - The cookie did't match any saved state.
   BL_INLINE_NODEBUG BLResult restore(const BLContextCookie& cookie) noexcept {
     BL_CONTEXT_CALL_RETURN(restore, impl, &cookie);
   }
@@ -1257,7 +1315,7 @@ public:
   //! \name Transformations
   //! \{
 
-  //! Returns meta transformation matrix.
+  //! Returns a meta transformation matrix.
   //!
   //! Meta matrix is a core transformation matrix that is normally not changed by transformations applied to the
   //! context. Instead it acts as a secondary matrix used to create the final transformation matrix from meta and
@@ -1273,14 +1331,14 @@ public:
   BL_NODISCARD
   BL_INLINE_NODEBUG const BLMatrix2D& metaTransform() const noexcept { return BL_CONTEXT_IMPL()->state->metaTransform; }
 
-  //! Returns user transformation matrix.
+  //! Returns a user transformation matrix.
   //!
   //! User matrix contains all transformations that happened to the rendering context unless the context was restored
   //! or `userToMeta()` was called.
   BL_NODISCARD
   BL_INLINE_NODEBUG const BLMatrix2D& userTransform() const noexcept { return BL_CONTEXT_IMPL()->state->userTransform; }
 
-  //! Returns final transformation matrix.
+  //! Returns a final transformation matrix.
   //!
   //! Final transformation matrix is a combination of meta and user transformation matrices. It's the final
   //! transformation that the rendering context applies to all input coordinates.
@@ -1288,41 +1346,131 @@ public:
   BL_INLINE_NODEBUG const BLMatrix2D& finalTransform() const noexcept { return BL_CONTEXT_IMPL()->state->finalTransform; }
 
   //! Sets user transformation matrix to `m`.
+  //!
+  //! \note This only assigns the user transformation matrix, which means that the meta transformation matrix is kept
+  //! as is. This means that the final transformation matrix will be recalculated based on the given `transform`.
   BL_INLINE_NODEBUG BLResult setTransform(const BLMatrix2D& transform) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_ASSIGN, &transform); }
+
   //! Resets user transformation matrix to identity.
+  //!
+  //! \note This only resets the user transformation matrix, which means that the meta transformation matrix is kept
+  //! as is. This means that the final transformation matrix after \ref resetTransform() would be the same as meta
+  //! transformation matrix.
   BL_INLINE_NODEBUG BLResult resetTransform() noexcept { return _applyTransformOp(BL_TRANSFORM_OP_RESET, nullptr); }
 
+  //! Translates the used transformation matrix by `[x, y]`.
   BL_INLINE_NODEBUG BLResult translate(double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_TRANSLATE, x, y); }
+
+  //! Translates the used transformation matrix by `[p]` (integer).
   BL_INLINE_NODEBUG BLResult translate(const BLPointI& p) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_TRANSLATE, p.x, p.y); }
+
+  //! Translates the used transformation matrix by `[p]` (floating-point).
   BL_INLINE_NODEBUG BLResult translate(const BLPoint& p) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_TRANSLATE, &p); }
+
+  //! Scales the user transformation matrix by `xy` (both X and Y is scaled by `xy`).
   BL_INLINE_NODEBUG BLResult scale(double xy) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_SCALE, xy, xy); }
+
+  //! Scales the user transformation matrix by `[x, y]`.
   BL_INLINE_NODEBUG BLResult scale(double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_SCALE, x, y); }
+
+  //! Scales the user transformation matrix by `[p]` (integer).
   BL_INLINE_NODEBUG BLResult scale(const BLPointI& p) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_SCALE, p.x, p.y); }
+
+  //! Scales the user transformation matrix by `[p]` (floating-point).
   BL_INLINE_NODEBUG BLResult scale(const BLPoint& p) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_SCALE, &p); }
+
+  //! Skews the user transformation matrix by `[x, y]`.
   BL_INLINE_NODEBUG BLResult skew(double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_SKEW, x, y); }
+
+  //! Skews the user transformation matrix by `[p]` (floating-point).
   BL_INLINE_NODEBUG BLResult skew(const BLPoint& p) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_SKEW, &p); }
+
+  //! Rotates the user transformation matrix by `angle`.
   BL_INLINE_NODEBUG BLResult rotate(double angle) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_ROTATE, &angle); }
+
+  //! Rotates the user transformation matrix at `[x, y]` by `angle`.
   BL_INLINE_NODEBUG BLResult rotate(double angle, double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_ROTATE_PT, angle, x, y); }
+
+  //! Rotates the user transformation matrix at `origin` (integer) by `angle`.
   BL_INLINE_NODEBUG BLResult rotate(double angle, const BLPoint& origin) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_ROTATE_PT, angle, origin.x, origin.y); }
+
+  //! Rotates the user transformation matrix at `origin` (floating-point) by `angle`.
   BL_INLINE_NODEBUG BLResult rotate(double angle, const BLPointI& origin) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_ROTATE_PT, angle, origin.x, origin.y); }
+
+  //! Transforms the user transformation matrix by `transform`.
   BL_INLINE_NODEBUG BLResult applyTransform(const BLMatrix2D& transform) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_TRANSFORM, &transform); }
 
+  //! Post-translates the used transformation matrix by `[x, y]`.
+  //!
+  //! \note Post-translation uses a reversed order of matrix multiplication when compared to \ref translate().
   BL_INLINE_NODEBUG BLResult postTranslate(double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_TRANSLATE, x, y); }
+
+  //! Post-Translates the used transformation matrix by `[p]` (integer).
+  //!
+  //! \note Post-translation uses a reversed order of matrix multiplication when compared to \ref translate().
   BL_INLINE_NODEBUG BLResult postTranslate(const BLPointI& p) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_TRANSLATE, p.x, p.y); }
+
+  //! Post-translates the used transformation matrix by `[p]` (floating-point).
+  //!
+  //! \note Post-translation uses a reversed order of matrix multiplication when compared to \ref translate().
   BL_INLINE_NODEBUG BLResult postTranslate(const BLPoint& p) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_POST_TRANSLATE, &p); }
+
+  //! Post-scales the user transformation matrix by `xy` (both X and Y is scaled by `xy`).
+  //!
+  //! \note Post-scale uses a reversed order of matrix multiplication when compared to \ref scale().
   BL_INLINE_NODEBUG BLResult postScale(double xy) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_SCALE, xy, xy); }
+
+  //! Post-scales the user transformation matrix by `[x, y]`.
+  //!
+  //! \note Post-scale uses a reversed order of matrix multiplication when compared to \ref scale().
   BL_INLINE_NODEBUG BLResult postScale(double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_SCALE, x, y); }
+
+  //! Post-scales the user transformation matrix by `[p]` (integer).
+  //!
+  //! \note Post-scale uses a reversed order of matrix multiplication when compared to \ref scale().
   BL_INLINE_NODEBUG BLResult postScale(const BLPointI& p) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_SCALE, p.x, p.y); }
+
+  //! Post-scales the user transformation matrix by `[p]` (floating-point).
+  //!
+  //! \note Post-scale uses a reversed order of matrix multiplication when compared to \ref scale().
   BL_INLINE_NODEBUG BLResult postScale(const BLPoint& p) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_POST_SCALE, &p); }
+
+  //! Skews the user transformation matrix by `[x, y]`.
+  //!
+  //! \note Post-skew uses a reversed order of matrix multiplication when compared to \ref skew().
   BL_INLINE_NODEBUG BLResult postSkew(double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_SKEW, x, y); }
+
+  //! Skews the user transformation matrix by `[p]` (floating-point).
+  //!
+  //! \note Post-skew uses a reversed order of matrix multiplication when compared to \ref skew().
   BL_INLINE_NODEBUG BLResult postSkew(const BLPoint& p) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_POST_SKEW, &p); }
+
+  //! Rotates the user transformation matrix by `angle`.
+  //!
+  //! \note Post-rotation uses a reversed order of matrix multiplication when compared to \ref rotate().
   BL_INLINE_NODEBUG BLResult postRotate(double angle) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_POST_ROTATE, &angle); }
+
+  //! Rotates the user transformation matrix at `[x, y]` by `angle`.
+  //!
+  //! \note Post-rotation uses a reversed order of matrix multiplication when compared to \ref rotate().
   BL_INLINE_NODEBUG BLResult postRotate(double angle, double x, double y) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_ROTATE_PT, angle, x, y); }
+
+  //! Rotates the user transformation matrix at `origin` (integer) by `angle`.
+  //!
+  //! \note Post-rotation uses a reversed order of matrix multiplication when compared to \ref rotate().
   BL_INLINE_NODEBUG BLResult postRotate(double angle, const BLPoint& origin) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_ROTATE_PT, angle, origin.x, origin.y); }
+
+  //! Rotates the user transformation matrix at `origin` (floating-point) by `angle`.
+  //!
+  //! \note Post-rotation uses a reversed order of matrix multiplication when compared to \ref rotate().
   BL_INLINE_NODEBUG BLResult postRotate(double angle, const BLPointI& origin) noexcept { return _applyTransformOpV(BL_TRANSFORM_OP_POST_ROTATE_PT, angle, origin.x, origin.y); }
+
+  //! Transforms the user transformation matrix by `transform`.
+  //!
+  //! \note Post-transform uses a reversed order of matrix multiplication when compared to \ref applyTransform().
   BL_INLINE_NODEBUG BLResult postTransform(const BLMatrix2D& transform) noexcept { return _applyTransformOp(BL_TRANSFORM_OP_POST_TRANSFORM, &transform); }
 
-  //! Store the result of combining the current `MetaTransform` and `UserTransform` to `MetaTransform` and reset
+  //! Stores the result of combining the current `MetaTransform` and `UserTransform` to `MetaTransform` and resets
   //! `UserTransform` to identity as shown below:
   //!
   //! ```
@@ -1330,8 +1478,8 @@ public:
   //! UserTransform = Identity
   //! ```
   //!
-  //! Please note that this operation is irreversible. The only way to restore both matrices to the state before
-  //! the call to `BLContext::userToMeta()` is to use `BLContext::save()` and `BLContext::restore()` functions.
+  //! Please note that this operation is irreversible. The only way to restore a meta-matrix is to \ref save() the
+  //! rendering context state, then to use \ref userToMeta(), and then restored by \ref restore() when needed.
   BL_INLINE_NODEBUG BLResult userToMeta() noexcept {
     BL_CONTEXT_CALL_RETURN(userToMeta, impl);
   }
@@ -1341,23 +1489,25 @@ public:
   //! \name Rendering Hints
   //! \{
 
-  //! Returns rendering hints.
+  //! Returns rendering context hints.
   BL_NODISCARD
   BL_INLINE_NODEBUG const BLContextHints& hints() const noexcept {
     return BL_CONTEXT_IMPL()->state->hints;
   }
 
-  //! Sets the given rendering hint `hintType` to the `value`.
+  //! Sets the given rendering hint `hintType` to `value`.
   BL_INLINE_NODEBUG BLResult setHint(BLContextHint hintType, uint32_t value) noexcept {
     BL_CONTEXT_CALL_RETURN(setHint, impl, hintType, value);
   }
 
-  //! Sets all rendering hints of this context to the given `hints`.
+  //! Sets all rendering hints of this context to `hints`.
   BL_INLINE_NODEBUG BLResult setHints(const BLContextHints& hints) noexcept {
     BL_CONTEXT_CALL_RETURN(setHints, impl, &hints);
   }
 
   //! Returns the rendering quality hint.
+  //!
+  //! \note This is the same as calling \ref hints() and extracting the rendering quality from it.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLRenderingQuality renderingQuality() const noexcept {
     return BLRenderingQuality(hints().renderingQuality);
@@ -1369,6 +1519,8 @@ public:
   }
 
   //! Returns the gradient quality hint.
+  //!
+  //! \note This is the same as calling \ref hints() and extracting the gradient quality from it.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLGradientQuality gradientQuality() const noexcept {
     return BLGradientQuality(hints().gradientQuality);
@@ -1380,6 +1532,8 @@ public:
   }
 
   //! Returns the pattern quality hint.
+  //!
+  //! \note This is the same as calling \ref hints() and extracting the pattern quality from it.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLPatternQuality patternQuality() const noexcept {
     return BLPatternQuality(hints().patternQuality);
@@ -1433,18 +1587,26 @@ public:
   //! \name Composition Options
   //! \{
 
-  //! Returns composition operator.
+  //! Returns a composition operator.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLCompOp compOp() const noexcept { return BLCompOp(BL_CONTEXT_IMPL()->state->compOp); }
 
-  //! Sets composition operator to `compOp`, see `BLCompOp`.
+  //! Sets the composition operator to `compOp`, see \ref BLCompOp.
+  //!
+  //! The composition operator is part of the rendering context state and is subject to \ref save() and
+  //! \ref restore(). The default composition operator is \ref BL_COMP_OP_SRC_OVER, which would be returned
+  //! immediately after the rendering context is created.
   BL_INLINE_NODEBUG BLResult setCompOp(BLCompOp compOp) noexcept { BL_CONTEXT_CALL_RETURN(setCompOp, impl, compOp); }
 
-  //! Returns global alpha value.
+  //! Returns a global alpha value.
   BL_NODISCARD
   BL_INLINE_NODEBUG double globalAlpha() const noexcept { return BL_CONTEXT_IMPL()->state->globalAlpha; }
 
-  //! Sets global alpha value.
+  //! Sets the global alpha value.
+  //!
+  //! The global alpha value is part of the rendering context state and is subject to \ref save() and
+  //! \ref restore(). The default value is `1.0`, which would be returned immediately after the rendering
+  //! context is created.
   BL_INLINE_NODEBUG BLResult setGlobalAlpha(double alpha) noexcept { BL_CONTEXT_CALL_RETURN(setGlobalAlpha, impl, alpha); }
 
   //! \}
@@ -1627,13 +1789,13 @@ public:
     BL_CONTEXT_CALL_RETURN(setStyleAlpha, impl, BL_CONTEXT_STYLE_SLOT_FILL, alpha);
   }
 
-  //! Returns fill-rule, see `BLFillRule`.
+  //! Returns fill-rule, see \ref BLFillRule.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLFillRule fillRule() const noexcept {
     return BLFillRule(BL_CONTEXT_IMPL()->state->fillRule);
   }
 
-  //! Sets fill-rule, see `BLFillRule`.
+  //! Sets fill-rule, see \ref BLFillRule.
   BL_INLINE_NODEBUG BLResult setFillRule(BLFillRule fillRule) noexcept {
     BL_CONTEXT_CALL_RETURN(setFillRule, impl, fillRule);
   }
@@ -1696,25 +1858,25 @@ public:
     return BL_CONTEXT_IMPL()->state->strokeOptions.miterLimit;
   }
 
-  //! Returns stroke join, see `BLStrokeJoin`.
+  //! Returns stroke join, see \ref BLStrokeJoin.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLStrokeJoin strokeJoin() const noexcept {
     return BLStrokeJoin(BL_CONTEXT_IMPL()->state->strokeOptions.join);
   }
 
-  //! Returns stroke start-cap, see `BLStrokeCap`.
+  //! Returns stroke start-cap, see \ref BLStrokeCap.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLStrokeCap strokeStartCap() const noexcept {
     return BLStrokeCap(BL_CONTEXT_IMPL()->state->strokeOptions.startCap);
   }
 
-  //! Returns stroke end-cap, see `BLStrokeCap`.
+  //! Returns stroke end-cap, see \ref BLStrokeCap.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLStrokeCap strokeEndCap() const noexcept {
     return BLStrokeCap(BL_CONTEXT_IMPL()->state->strokeOptions.endCap);
   }
 
-  //! Returns stroke transform order, see `BLStrokeTransformOrder`.
+  //! Returns stroke transform order, see \ref BLStrokeTransformOrder.
   BL_NODISCARD
   BL_INLINE_NODEBUG BLStrokeTransformOrder strokeTransformOrder() const noexcept {
     return BLStrokeTransformOrder(BL_CONTEXT_IMPL()->state->strokeOptions.transformOrder);
@@ -1732,7 +1894,7 @@ public:
     return BL_CONTEXT_IMPL()->state->strokeOptions.dashArray;
   }
 
-  //! Returns stroke options as a reference to `BLStrokeOptions`.
+  //! Returns stroke options as a reference to \ref BLStrokeOptions.
   BL_NODISCARD
   BL_INLINE_NODEBUG const BLStrokeOptions& strokeOptions() const noexcept {
     return BL_CONTEXT_IMPL()->state->strokeOptions.dcast();
@@ -1748,32 +1910,32 @@ public:
     BL_CONTEXT_CALL_RETURN(setStrokeMiterLimit, impl, miterLimit);
   }
 
-  //! Sets stroke join to `strokeJoin`, see `BLStrokeJoin`.
+  //! Sets stroke join to `strokeJoin`, see \ref BLStrokeJoin.
   BL_INLINE_NODEBUG BLResult setStrokeJoin(BLStrokeJoin strokeJoin) noexcept {
     BL_CONTEXT_CALL_RETURN(setStrokeJoin, impl, strokeJoin);
   }
 
-  //! Sets stroke cap of the specified `type` to `strokeCap`, see `BLStrokeCap`.
+  //! Sets stroke cap of the specified `type` to `strokeCap`, see \ref BLStrokeCap.
   BL_INLINE_NODEBUG BLResult setStrokeCap(BLStrokeCapPosition position, BLStrokeCap strokeCap) noexcept {
     BL_CONTEXT_CALL_RETURN(setStrokeCap, impl, position, strokeCap);
   }
 
-  //! Sets stroke start cap to `strokeCap`, see `BLStrokeCap`.
+  //! Sets stroke start cap to `strokeCap`, see \ref BLStrokeCap.
   BL_INLINE_NODEBUG BLResult setStrokeStartCap(BLStrokeCap strokeCap) noexcept {
     return setStrokeCap(BL_STROKE_CAP_POSITION_START, strokeCap);
   }
 
-  //! Sets stroke end cap to `strokeCap`, see `BLStrokeCap`.
+  //! Sets stroke end cap to `strokeCap`, see \ref BLStrokeCap.
   BL_INLINE_NODEBUG BLResult setStrokeEndCap(BLStrokeCap strokeCap) noexcept {
     return setStrokeCap(BL_STROKE_CAP_POSITION_END, strokeCap);
   }
 
-  //! Sets all stroke caps to `strokeCap`, see `BLStrokeCap`.
+  //! Sets all stroke caps to `strokeCap`, see \ref BLStrokeCap.
   BL_INLINE_NODEBUG BLResult setStrokeCaps(BLStrokeCap strokeCap) noexcept {
     BL_CONTEXT_CALL_RETURN(setStrokeCaps, impl, strokeCap);
   }
 
-  //! Sets stroke transformation order to `transformOrder`, see `BLStrokeTransformOrder`.
+  //! Sets stroke transformation order to `transformOrder`, see \ref BLStrokeTransformOrder.
   BL_INLINE_NODEBUG BLResult setStrokeTransformOrder(BLStrokeTransformOrder transformOrder) noexcept {
     BL_CONTEXT_CALL_RETURN(setStrokeTransformOrder, impl, transformOrder);
   }
@@ -1834,20 +1996,39 @@ public:
   //! \name Clear Geometry Operations
   //! \{
 
-  //! Clear everything.
+  //! Clear everything to a transparent black, which is the same operation as temporarily setting the composition
+  //! operator to \ref BL_COMP_OP_CLEAR and then filling everything by `fillAll()`.
+  //!
+  //! \note If the target surface doesn't have alpha, but has X component, like \ref BL_FORMAT_XRGB32, the `X`
+  //! component would be set to `1.0`, which would translate to `0xFF` in case of \ref BL_FORMAT_XRGB32.
   BL_INLINE_NODEBUG BLResult clearAll() noexcept {
     BL_CONTEXT_CALL_RETURN(clearAll, impl);
   }
 
-  //! Clears a rectangle `rect`.
+  //! Clears a rectangle `rect` (integer coordinates) to a transparent black, which is the same operation as
+  //! temporarily setting the composition operator to \ref BL_COMP_OP_CLEAR and then calling `fillRect(rect)`.
+  //!
+  //! \note If the target surface doesn't have alpha, but has X component, like \ref BL_FORMAT_XRGB32, the `X`
+  //! component would be set to `1.0`, which would translate to `0xFF` in case of \ref BL_FORMAT_XRGB32.
   BL_INLINE_NODEBUG BLResult clearRect(const BLRectI& rect) noexcept {
     BL_CONTEXT_CALL_RETURN(clearRectI, impl, &rect);
   }
-  //! Clears a rectangle `rect`.
+
+  //! Clears a rectangle `rect` (floating-point coordinates) to a transparent black, which is the same operation
+  //! as temporarily setting the composition operator to \ref BL_COMP_OP_CLEAR and then calling `fillRect(rect)`.
+  //!
+  //! \note If the target surface doesn't have alpha, but has X component, like \ref BL_FORMAT_XRGB32, the `X`
+  //! component would be set to `1.0`, which would translate to `0xFF` in case of \ref BL_FORMAT_XRGB32.
   BL_INLINE_NODEBUG BLResult clearRect(const BLRect& rect) noexcept {
     BL_CONTEXT_CALL_RETURN(clearRectD, impl, &rect);
   }
-  //! \overload
+
+  //! Clears a rectangle `[x, y, w, h]` (floating-point coordinates) to a transparent black, which is the same
+  //! operation as temporarily setting the composition operator to \ref BL_COMP_OP_CLEAR and then calling
+  //! `fillRect(x, y, w, h)`.
+  //!
+  //! \note If the target surface doesn't have alpha, but has X component, like \ref BL_FORMAT_XRGB32, the `X`
+  //! component would be set to `1.0`, which would translate to `0xFF` in case of \ref BL_FORMAT_XRGB32.
   BL_INLINE_NODEBUG BLResult clearRect(double x, double y, double w, double h) noexcept {
     return clearRect(BLRect(x, y, w, h));
   }
@@ -2121,392 +2302,426 @@ public:
   //! \name Fill Geometry Operations
   //! \{
 
-  //! Fills everything.
+  //! Fills everything non-clipped with the current fill style.
   BL_INLINE_NODEBUG BLResult fillAll() noexcept {
     BL_CONTEXT_CALL_RETURN(fillAll, impl);
   }
 
-  //! Fills everything with an explicit style.
+  //! Fills everything non-clipped with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillAll(const StyleT& style) noexcept {
     return _fillAll(style);
   }
 
-  //! Fills a box (floating point coordinates).
+  //! Fills a `box` (floating point coordinates) with the current fill style.
+  //!
+  //! \note Box is defined as `[x0, y0, x1, y1]`, if you need `[x, y, w, h]`, use \ref fillRect() instead.
   BL_INLINE_NODEBUG BLResult fillBox(const BLBox& box) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_BOXD, &box);
   }
 
-  //! Fills a box (floating point coordinates) with an explicit style.
+  //! Fills a `box` (floating point coordinates) with an explicit fill `style`.
+  //!
+  //! \note Box is defined as `[x0, y0, x1, y1]`, if you need `[x, y, w, h]`, use \ref fillRect() instead.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillBox(const BLBox& box, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_BOXD, &box, style);
   }
 
-  //! Fills a box (integer coordinates).
+  //! Fills a `box` (integer coordinates) with the current fill style.
+  //!
+  //! \note Box is defined as `[x0, y0, x1, y1]`, if you need `[x, y, w, h]`, use \ref fillRect() instead.
   BL_INLINE_NODEBUG BLResult fillBox(const BLBoxI& box) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_BOXI, &box);
   }
 
-  //! Fills a box (integer coordinates) with an explicit style.
+  //! Fills a `box` (integer coordinates) with an explicit fill `style`.
+  //!
+  //! \note Box is defined as `[x0, y0, x1, y1]`, if you need `[x, y, w, h]`, use \ref fillRect() instead.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillBox(const BLBoxI& box, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_BOXI, &box, style);
   }
 
-  //! Fills a box (floating point coordinates).
+  //! Fills a box `[x0, y0, x1, y1]` (floating point coordinates) with the current fill style.
+  //!
+  //! \note Box is defined as `[x0, y0, x1, y1]`, if you need `[x, y, w, h]`, use \ref fillRect() instead.
   BL_INLINE_NODEBUG BLResult fillBox(double x0, double y0, double x1, double y1) noexcept {
     return fillBox(BLBox(x0, y0, x1, y1));
   }
 
-  //! Fills a box (floating point coordinates) with an explicit style.
+  //! Fills a box `[x0, y0, x1, y1]` (floating point coordinates) with an explicit fill `style`.
+  //!
+  //! \note Box is defined as `[x0, y0, x1, y1]`, if you need `[x, y, w, h]`, use \ref fillRect() instead.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillBox(double x0, double y0, double x1, double y1, const StyleT& style) noexcept {
     return fillBox(BLBox(x0, y0, x1, y1), style);
   }
 
-  //! Fills a rectangle `rect` (integer coordinates).
+  //! Fills a rectangle `rect` (integer coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillRect(const BLRectI& rect) noexcept {
     BL_CONTEXT_CALL_RETURN(fillRectI, impl, &rect);
   }
 
-  //! Fills a rectangle `rect` (integer coordinates) with an explicit style.
+  //! Fills a rectangle `rect` (integer coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRect(const BLRectI& rect, const StyleT& style) noexcept {
     return _fillRectI(rect, style);
   }
 
-  //! Fills a rectangle `rect` (floating point coordinates).
+  //! Fills a rectangle `rect` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillRect(const BLRect& rect) noexcept {
     BL_CONTEXT_CALL_RETURN(fillRectD, impl, &rect);
   }
 
-  //! Fills a rectangle `rect` (floating point coordinates) with an explicit style.
+  //! Fills a rectangle `rect` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRect(const BLRect& rect, const StyleT& style) noexcept {
     return _fillRectD(rect, style);
   }
 
-  //! Fills a rectangle `[x, y, w, h]` (floating point coordinates).
+  //! Fills a rectangle `[x, y, w, h]` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillRect(double x, double y, double w, double h) noexcept {
     return fillRect(BLRect(x, y, w, h));
   }
 
-  //! Fills a rectangle `[x, y, w, h]` (floating point coordinates) with an explicit style.
+  //! Fills a rectangle `[x, y, w, h]` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRect(double x, double y, double w, double h, const StyleT& style) noexcept {
     return _fillRectD(BLRect(x, y, w, h), style);
   }
 
-  //! Fills a circle (floating point coordinates).
+  //! Fills a `circle` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillCircle(const BLCircle& circle) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_CIRCLE, &circle);
   }
-  //! \overload
+
+  //! Fills a `circle` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillCircle(const BLCircle& circle, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_CIRCLE, &circle, style);
   }
 
-  //! \overload
+  //! Fills a circle at `[cx, cy]` and radius `r` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillCircle(double cx, double cy, double r) noexcept {
     return fillCircle(BLCircle(cx, cy, r));
   }
-  //! \overload
+
+  //! Fills a circle at `[cx, cy]` and radius `r` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillCircle(double cx, double cy, double r, const StyleT& style) noexcept {
     return fillCircle(BLCircle(cx, cy, r), style);
   }
 
-  //! Fills an ellipse (floating point coordinates).
+  //! Fills an `ellipse` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillEllipse(const BLEllipse& ellipse) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ELLIPSE, &ellipse);
   }
-  //! \overload
+
+  //! Fills an `ellipse` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillEllipse(const BLEllipse& ellipse, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ELLIPSE, &ellipse, style);
   }
 
-  //! \overload
+  //! Fills an ellipse at `[cx, cy]` with radius `[rx, ry]` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillEllipse(double cx, double cy, double rx, double ry) noexcept {
     return fillEllipse(BLEllipse(cx, cy, rx, ry));
   }
-  //! \overload
+
+  //! Fills an ellipse at `[cx, cy]` with radius `[rx, ry]` (floating point coordinates) with en explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillEllipse(double cx, double cy, double rx, double ry, const StyleT& style) noexcept {
     return fillEllipse(BLEllipse(cx, cy, rx, ry), style);
   }
 
-  //! Fills a rounded rectangle (floating point coordinates).
+  //! Fills a rounded rectangle `rr` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillRoundRect(const BLRoundRect& rr) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ROUND_RECT, &rr);
   }
 
-  //! Fills a rounded rectangle (floating point coordinates) with an explicit style.
+  //! Fills a rounded rectangle `rr` (floating point coordinates) with en explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRoundRect(const BLRoundRect& rr, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ROUND_RECT, &rr, style);
   }
 
-  //! Fills a rounded rectangle passed as `rect` with radius `r`.
+  //! Fills a rounded rectangle bounded by `rect` with radius `r` with the current fill style.
   BL_INLINE_NODEBUG BLResult fillRoundRect(const BLRect& rect, double r) noexcept {
     return fillRoundRect(BLRoundRect(rect.x, rect.y, rect.w, rect.h, r));
   }
 
-  //! Fills a rounded rectangle passed as `rect` with radius `[rx, ry]`.
+  //! Fills a rounded rectangle bounded by `rect` with radius `[rx, ry]` with the current fill style.
   BL_INLINE_NODEBUG BLResult fillRoundRect(const BLRect& rect, double rx, double ry) noexcept {
     return fillRoundRect(BLRoundRect(rect.x, rect.y, rect.w, rect.h, rx, ry));
   }
 
-  //! Fills a rounded rectangle passed as `rect` with radius `[rx, ry]` with an explicit style.
+  //! Fills a rounded rectangle bounded by `rect` with radius `[rx, ry]` with en explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRoundRect(const BLRect& rect, double rx, double ry, const StyleT& style) noexcept {
     return fillRoundRect(BLRoundRect(rect.x, rect.y, rect.w, rect.h, rx, ry), style);
   }
 
-  //! Fills a rounded rectangle passed as `[x, y, w, h]` with radius `r`.
+  //! Fills a rounded rectangle bounded by `[x, y, w, h]` with radius `r` with the current fill style.
   BL_INLINE_NODEBUG BLResult fillRoundRect(double x, double y, double w, double h, double r) noexcept {
     return fillRoundRect(BLRoundRect(x, y, w, h, r));
   }
 
-  //! Fills a rounded rectangle passed as `[x, y, w, h]` with radius `[rx, ry]`.
+  //! Fills a rounded rectangle bounded as `[x, y, w, h]` with radius `[rx, ry]` with the current fill style.
   BL_INLINE_NODEBUG BLResult fillRoundRect(double x, double y, double w, double h, double rx, double ry) noexcept {
     return fillRoundRect(BLRoundRect(x, y, w, h, rx, ry));
   }
 
-  //! Fills a rounded rectangle passed as `[x, y, w, h]` with radius `[rx, ry]` with an explicit style.
+  //! Fills a rounded rectangle bounded as `[x, y, w, h]` with radius `[rx, ry]` with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRoundRect(double x, double y, double w, double h, double rx, double ry, const StyleT& style) noexcept {
     return fillRoundRect(BLRoundRect(x, y, w, h, rx, ry), style);
   }
 
-  //! Fills a chord (floating point coordinates).
+  //! Fills a `chord` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillChord(const BLArc& chord) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_CHORD, &chord);
   }
 
-  //! Fills a chord (floating point coordinates) with an explicit style.
+  //! Fills a `chord` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillChord(const BLArc& chord, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_CHORD, &chord, style);
   }
 
-  //! \overload
+  //! Fills a chord at `[cx, cy]` with radius `r` at `start` of `sweep` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillChord(double cx, double cy, double r, double start, double sweep) noexcept {
     return fillChord(BLArc(cx, cy, r, r, start, sweep));
   }
 
-  //! \overload
+  //! Fills a chord at `[cx, cy]` with radius `[rx, ry]` at `start` of `sweep` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillChord(double cx, double cy, double rx, double ry, double start, double sweep) noexcept {
     return fillChord(BLArc(cx, cy, rx, ry, start, sweep));
   }
-  //! \overload
+
+  //! Fills a chord at `[cx, cy]` with radius `[rx, ry]` at `start` of `sweep` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillChord(double cx, double cy, double rx, double ry, double start, double sweep, const StyleT& style) noexcept {
     return fillChord(BLArc(cx, cy, rx, ry, start, sweep), style);
   }
 
-  //! Fills a pie (floating point coordinates).
+  //! Fills a `pie` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillPie(const BLArc& pie) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_PIE, &pie);
   }
 
-  //! Fills a pie (floating point coordinates) with an explicit style.
+  //! Fills a `pie` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillPie(const BLArc& pie, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_PIE, &pie, style);
   }
 
-  //! \overload
+  //! Fills a pie at `[cx, cy]` with radius `r` at `start` of `sweep` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillPie(double cx, double cy, double r, double start, double sweep) noexcept {
     return fillPie(BLArc(cx, cy, r, r, start, sweep));
   }
 
-  //! \overload
+  //! Fills a pie at `[cx, cy]` with radius `[rx, ry]` at `start` of `sweep` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillPie(double cx, double cy, double rx, double ry, double start, double sweep) noexcept {
     return fillPie(BLArc(cx, cy, rx, ry, start, sweep));
   }
-  //! \overload
+
+  //! Fills a pie at `[cx, cy]` with radius `[rx, ry]` at `start` of `sweep` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillPie(double cx, double cy, double rx, double ry, double start, double sweep, const StyleT& style) noexcept {
     return fillPie(BLArc(cx, cy, rx, ry, start, sweep), style);
   }
 
-  //! Fills a triangle (floating point coordinates).
+  //! Fills a `triangle` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillTriangle(const BLTriangle& triangle) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_TRIANGLE, &triangle);
   }
 
-  //! Fills a triangle (floating point coordinates) with an explicit style.
+  //! Fills a `triangle` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillTriangle(const BLTriangle& triangle, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_TRIANGLE, &triangle, style);
   }
 
-  //! Fills a triangle passed as `[x0, y0]`, `[x1, y1]`, `[x2, y2]`.
+  //! Fills a triangle defined by `[x0, y0]`, `[x1, y1]`, `[x2, y2]` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillTriangle(double x0, double y0, double x1, double y1, double x2, double y2) noexcept {
     return fillTriangle(BLTriangle(x0, y0, x1, y1, x2, y2));
   }
 
-  //! Fills a triangle passed as `[x0, y0]`, `[x1, y1]`, `[x2, y2]` with an explicit style.
+  //! Fills a triangle defined by `[x0, y0]`, `[x1, y1]`, `[x2, y2]` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillTriangle(double x0, double y0, double x1, double y1, double x2, double y2, const StyleT& style) noexcept {
     return fillTriangle(BLTriangle(x0, y0, x1, y1, x2, y2), style);
   }
 
-  //! Fills a polygon (floating point coordinates).
+  //! Fills a polygon `poly` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillPolygon(const BLArrayView<BLPoint>& poly) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_POLYGOND, &poly);
   }
-  //! \overload
+
+  //! Fills a polygon `poly` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillPolygon(const BLArrayView<BLPoint>& poly, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_POLYGOND, &poly, style);
   }
 
-  //! \overload
+  //! Fills a polygon `poly` having `n` vertices (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillPolygon(const BLPoint* poly, size_t n) noexcept {
     return fillPolygon(BLArrayView<BLPoint>{poly, n});
   }
-  //! \overload
+
+  //! Fills a polygon `poly` having `n` vertices (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillPolygon(const BLPoint* poly, size_t n, const StyleT& style) noexcept {
     return fillPolygon(BLArrayView<BLPoint>{poly, n}, style);
   }
 
-  //! Fills a polygon (integer coordinates).
+  //! Fills a polygon `poly` (integer coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillPolygon(const BLArrayView<BLPointI>& poly) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_POLYGONI, &poly);
   }
-  //! \overload
+
+  //! Fills a polygon `poly` (integer coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillPolygon(const BLArrayView<BLPointI>& poly, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_POLYGONI, &poly, style);
   }
 
-  //! \overload
+  //! Fills a polygon `poly` having `n` vertices (integer coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillPolygon(const BLPointI* poly, size_t n) noexcept {
     return fillPolygon(BLArrayView<BLPointI>{poly, n});
   }
-  //! \overload
+
+  //! Fills a polygon `poly` having `n` vertices (integer coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillPolygon(const BLPointI* poly, size_t n, const StyleT& style) noexcept {
     return fillPolygon(BLArrayView<BLPointI>{poly, n}, style);
   }
 
-  //! Fills an array of boxes (floating point coordinates).
+  //! Fills an `array` of boxes (floating point coordinates) with the default fill style.
   BL_INLINE_NODEBUG BLResult fillBoxArray(const BLArrayView<BLBox>& array) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXD, &array);
   }
-  //! \overload
+
+  //! Fills an `array` of boxes (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillBoxArray(const BLArrayView<BLBox>& array, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXD, &array, style);
   }
 
-  //! \overload
-  BL_INLINE_NODEBUG BLResult fillBoxArray(const BLBox* data, size_t n) noexcept {
-    return fillBoxArray(BLArrayView<BLBox>{data, n});
-  }
-  //! \overload
-  template<typename StyleT>
-  BL_INLINE_NODEBUG BLResult fillBoxArray(const BLBox* data, size_t n, const StyleT& style) noexcept {
-    return fillBoxArray(BLArrayView<BLBox>{data, n}, style);
+  //! Fills an `array` of boxes of size `n` (floating point coordinates) with the default fill style.
+  BL_INLINE_NODEBUG BLResult fillBoxArray(const BLBox* array, size_t n) noexcept {
+    return fillBoxArray(BLArrayView<BLBox>{array, n});
   }
 
-  //! Fills an array of boxes (integer coordinates).
+  //! Fills an `array` of boxes of size `n` (floating point coordinates) with an explicit fill `style`.
+  template<typename StyleT>
+  BL_INLINE_NODEBUG BLResult fillBoxArray(const BLBox* array, size_t n, const StyleT& style) noexcept {
+    return fillBoxArray(BLArrayView<BLBox>{array, n}, style);
+  }
+
+  //! Fills an `array` of boxes (integer coordinates) with the default fill style.
   BL_INLINE_NODEBUG BLResult fillBoxArray(const BLArrayView<BLBoxI>& array) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXI, &array);
   }
-  //! \overload
+
+  //! Fills an `array` of boxes (integer coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillBoxArray(const BLArrayView<BLBoxI>& array, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXI, &array, style);
   }
 
-  //! \overload
-  BL_INLINE_NODEBUG BLResult fillBoxArray(const BLBoxI* data, size_t n) noexcept {
-    return fillBoxArray(BLArrayView<BLBoxI>{data, n});
-  }
-  //! \overload
-  template<typename StyleT>
-  BL_INLINE_NODEBUG BLResult fillBoxArray(const BLBoxI* data, size_t n, const StyleT& style) noexcept {
-    return fillBoxArray(BLArrayView<BLBoxI>{data, n}, style);
+  //! Fills an `array` of boxes of size `n` (integer coordinates) with the default fill style.
+  BL_INLINE_NODEBUG BLResult fillBoxArray(const BLBoxI* array, size_t n) noexcept {
+    return fillBoxArray(BLArrayView<BLBoxI>{array, n});
   }
 
-  //! Fills an array of rectangles (floating point coordinates).
+  //! Fills an array of boxes of size `n` (integer coordinates) with an explicit fill `style`.
+  template<typename StyleT>
+  BL_INLINE_NODEBUG BLResult fillBoxArray(const BLBoxI* array, size_t n, const StyleT& style) noexcept {
+    return fillBoxArray(BLArrayView<BLBoxI>{array, n}, style);
+  }
+
+  //! Fills an `array` of rectangles (floating point coordinates) with the default fill style.
   BL_INLINE_NODEBUG BLResult fillRectArray(const BLArrayView<BLRect>& array) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTD, &array);
   }
-  //! \overload
+
+  //! Fills an `array` of rectangles (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRectArray(const BLArrayView<BLRect>& array, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTD, &array, style);
   }
 
-  //! \overload
-  BL_INLINE_NODEBUG BLResult fillRectArray(const BLRect* data, size_t n) noexcept {
-    return fillRectArray(BLArrayView<BLRect>{data, n});
-  }
-  //! \overload
-  template<typename StyleT>
-  BL_INLINE_NODEBUG BLResult fillRectArray(const BLRect* data, size_t n, const StyleT& style) noexcept {
-    return fillRectArray(BLArrayView<BLRect>{data, n}, style);
+  //! Fills an `array` of rectangles of size `n` (floating point coordinates) with the default fill style.
+  BL_INLINE_NODEBUG BLResult fillRectArray(const BLRect* array, size_t n) noexcept {
+    return fillRectArray(BLArrayView<BLRect>{array, n});
   }
 
-  //! Fills an array of rectangles (integer coordinates).
+  //! Fills an `array` of rectangles of size `n` (floating point coordinates) with an explicit fill `style`.
+  template<typename StyleT>
+  BL_INLINE_NODEBUG BLResult fillRectArray(const BLRect* array, size_t n, const StyleT& style) noexcept {
+    return fillRectArray(BLArrayView<BLRect>{array, n}, style);
+  }
+
+  //! Fills an array of rectangles (integer coordinates) with the default fill style.
   BL_INLINE_NODEBUG BLResult fillRectArray(const BLArrayView<BLRectI>& array) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTI, &array);
   }
-  //! \overload
+
+  //! Fills an array of rectangles (integer coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillRectArray(const BLArrayView<BLRectI>& array, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTI, &array, style);
   }
 
-  //! \overload
-  BL_INLINE_NODEBUG BLResult fillRectArray(const BLRectI* data, size_t n) noexcept {
-    return fillRectArray(BLArrayView<BLRectI>{data, n});
-  }
-  //! \overload
-  template<typename StyleT>
-  BL_INLINE_NODEBUG BLResult fillRectArray(const BLRectI* data, size_t n, const StyleT& style) noexcept {
-    return fillRectArray(BLArrayView<BLRectI>{data, n}, style);
+  //! Fills an `array` of rectangles of size `n` (integer coordinates) with the default fill style.
+  BL_INLINE_NODEBUG BLResult fillRectArray(const BLRectI* array, size_t n) noexcept {
+    return fillRectArray(BLArrayView<BLRectI>{array, n});
   }
 
-  //! Fills the given `path`.
+  //! Fills an `array` of rectangles of size `n` (integer coordinates) with an explicit fill `style`.
+  template<typename StyleT>
+  BL_INLINE_NODEBUG BLResult fillRectArray(const BLRectI* array, size_t n, const StyleT& style) noexcept {
+    return fillRectArray(BLArrayView<BLRectI>{array, n}, style);
+  }
+
+  //! Fills the given `path` with the default fill style.
   BL_INLINE_NODEBUG BLResult fillPath(const BLPathCore& path) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_PATH, &path);
   }
 
-  //! Fills the given `path` with an explicit style.
+  //! Fills the given `path` with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillPath(const BLPathCore& path, const StyleT& style) noexcept {
     return _fillGeometryOp(BL_GEOMETRY_TYPE_PATH, &path, style);
   }
 
-  //! Fills the given `path` translated by `origin`.
+  //! Fills the given `path` translated by `origin` with the default fill style.
   BL_INLINE_NODEBUG BLResult fillPath(const BLPoint& origin, const BLPathCore& path) noexcept {
     BL_CONTEXT_CALL_RETURN(fillPathD, impl, &origin, &path);
   }
 
-  //! Fills the given `path` translated by `origin` with an explicit style.
+  //! Fills the given `path` translated by `origin` with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillPath(const BLPoint& origin, const BLPathCore& path, const StyleT& style) noexcept {
     return _fillPathD(origin, path, style);
   }
 
-  //! Fills the passed geometry specified by geometry `type` and `data`.
+  //! Fills the passed geometry specified by geometry `type` and `data` with the default fill style.
   //!
-  //! \note This function provides a low-level interface that can be used in cases that geometry `type` and `data`
-  //! parameters are passed to a wrapper function that just passes them to the rendering context. It's a good way
-  //! of creating wrappers.
+  //! \note This function provides a low-level interface that can be used in cases in which geometry `type` and `data`
+  //! parameters are passed to a wrapper function that just passes them to the rendering context. It's a good way of
+  //! creating wrappers, but generally low-level for a general purpose use, so please use this with caution.
   BL_INLINE_NODEBUG BLResult fillGeometry(BLGeometryType type, const void* data) noexcept {
     return _fillGeometryOp(type, data);
   }
 
-  //! Fills the passed geometry specified by geometry `type` and `data` with an explicit style.
+  //! Fills the passed geometry specified by geometry `type` and `data` with an explicit fill `style`.
+  //!
+  //! \note This function provides a low-level interface that can be used in cases in which geometry `type` and `data`
+  //! parameters are passed to a wrapper function that just passes them to the rendering context. It's a good way of
+  //! creating wrappers, but generally low-level for a general purpose use, so please use this with caution.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillGeometry(BLGeometryType type, const void* data, const StyleT& style) noexcept {
     return _fillGeometryOp(type, data, style);
@@ -2517,34 +2732,63 @@ public:
   //! \name Fill Text & Glyphs Operations
   //! \{
 
-  //! Fills UTF-8 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates).
+  //! Fills UTF-8 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with the default fill style.
+  //!
+  //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated string.
+  //! If you want to pass a non-null terminated string or a substring of an existing string, use either this function with
+  //! a `size` parameter set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters)
+  //! or an overloaded function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
   BL_INLINE_NODEBUG BLResult fillUtf8Text(const BLPointI& origin, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
     BLStringView view{text, size};
     return _fillTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view);
   }
-  //! \overload
+
+  //! Fills UTF-8 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with an explicit fill `style`.
+  //!
+  //! \note Pass `SIZE_MAX` to `size` to inform Blend2D that the input is a null terminated string. If you want to pass
+  //! a non-null terminated string or a substring of an existing string, use either this function with a `size` parameter
+  //! set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters) or an overloaded
+  //! function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillUtf8Text(const BLPointI& origin, const BLFontCore& font, const char* text, size_t size, const StyleT& style) noexcept {
     BLStringView view{text, size};
     return _fillTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view, style);
   }
 
-  //! Fills UTF-8 encoded string passed as string `view` by using the given `font` at `origin` (floating point coordinates).
+  //! Fills UTF-8 encoded string passed as string `view` by using the given `font` at `origin` (floating point coordinates)
+  //! with the default fill style.
   BL_INLINE_NODEBUG BLResult fillUtf8Text(const BLPointI& origin, const BLFontCore& font, const BLStringView& view) noexcept {
     return _fillTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view);
   }
-  //! \overload
+
+  //! Fills UTF-8 encoded string passed as string `view` by using the given `font` at `origin` (floating point coordinates)
+  //! with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillUtf8Text(const BLPointI& origin, const BLFontCore& font, const BLStringView& view, const StyleT& style) noexcept {
     return _fillTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view, style);
   }
 
-  //! Fills UTF-8 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates).
+  //! Fills UTF-8 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with the default fill style.
+  //!
+  //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated string.
+  //! If you want to pass a non-null terminated string or a substring of an existing string, use either this function with
+  //! a `size` parameter set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters)
+  //! or an overloaded function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
   BL_INLINE_NODEBUG BLResult fillUtf8Text(const BLPoint& origin, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
     BLStringView view{text, size};
     return _fillTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view);
   }
-  //! \overload
+
+  //! Fills UTF-8 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with an explicit fill `style`.
+  //!
+  //! \note Pass `SIZE_MAX` in `size` to inform Blend2D that the input is a null terminated string. If you want to pass
+  //! a non-null terminated string or a substring of an existing string, use either this function with a `size` parameter
+  //! set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters) or an overloaded
+  //! function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillUtf8Text(const BLPoint& origin, const BLFontCore& font, const char* text, size_t size, const StyleT& style) noexcept {
     BLStringView view{text, size};
@@ -2561,69 +2805,115 @@ public:
     return _fillTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view, style);
   }
 
-  //! Fills UTF-16 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates).
+  //! Fills UTF-16 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with the default fill style.
+  //!
+  //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated UTF-16
+  //! string. If you want to pass a non-null terminated string or a substring of an existing string, specify `size`
+  //! parameter to the size of the `text` buffer in code units (the number of 16-bit values).
   BL_INLINE_NODEBUG BLResult fillUtf16Text(const BLPointI& origin, const BLFontCore& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
     BLArrayView<uint16_t> view{text, size};
     return _fillTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF16, &view);
   }
-  //! \overload
+
+  //! Fills UTF-16 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with an explicit fill `style`.
+  //!
+  //! \note Pass `SIZE_MAX` in `size` to inform Blend2D that the input is a null terminated string. If you want to pass a
+  //! non-null terminated string or a substring of an existing string, specify `size` parameter to the size of the `text`
+  //! buffer in code units (the number of 16-bit values).
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillUtf16Text(const BLPointI& origin, const BLFontCore& font, const uint16_t* text, size_t size, const StyleT& style) noexcept {
     BLArrayView<uint16_t> view{text, size};
     return _fillTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF16, &view, style);
   }
 
-  //! Fills UTF-16 encoded string passed as `text` and `size` by using the given `font` at `origin` (floating point coordinates).
+  //! Fills UTF-16 encoded string passed as `text` and `size` by using the given `font` at `origin` (floating point coordinates)
+  //! with the default fill style.
+  //!
+  //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated UTF-16
+  //! string. If you want to pass a non-null terminated string or a substring of an existing string, specify `size`
+  //! parameter to the size of the `text` buffer in code units (the number of 16-bit values).
   BL_INLINE_NODEBUG BLResult fillUtf16Text(const BLPoint& origin, const BLFontCore& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
     BLArrayView<uint16_t> view{text, size};
     return _fillTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF16, &view);
   }
-  //! \overload
+
+  //! Fills UTF-16 encoded string passed as `text` and `size` by using the given `font` at `origin` (floating point coordinates)
+  //! with an explicit fill `style`.
+  //!
+  //! \note Pass `SIZE_MAX` in `size` to inform Blend2D that the input is a null terminated string. If you want to pass a
+  //! non-null terminated string or a substring of an existing string, specify `size` parameter to the size of the `text`
+  //! buffer in code units (the number of 16-bit values).
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillUtf16Text(const BLPoint& origin, const BLFontCore& font, const uint16_t* text, size_t size, const StyleT& style) noexcept {
     BLArrayView<uint16_t> view{text, size};
     return _fillTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF16, &view, style);
   }
 
-  //! Fills UTF-32 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates).
+  //! Fills UTF-32 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with the default fill style.
+  //!
+  //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated UTF-32
+  //! string. If you want to pass a non-null terminated string or a substring of an existing string, specify `size`
+  //! parameter to the size of the `text` buffer in code units (the number of 32-bit values).
   BL_INLINE_NODEBUG BLResult fillUtf32Text(const BLPointI& origin, const BLFontCore& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
     BLArrayView<uint32_t> view{text, size};
     return _fillTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF32, &view);
   }
-  //! \overload
+
+  //! Fills UTF-32 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with an explicit fill `style`.
+  //!
+  //! \note Pass `SIZE_MAX` in `size` to inform Blend2D that the input is a null terminated string. If you want to pass a
+  //! non-null terminated string or a substring of an existing string, specify `size` parameter to the size of the `text`
+  //! buffer in code units (the number of 32-bit values).
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillUtf32Text(const BLPointI& origin, const BLFontCore& font, const uint32_t* text, size_t size, const StyleT& style) noexcept {
     BLArrayView<uint32_t> view{text, size};
     return _fillTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF32, &view, style);
   }
 
-  //! Fills UTF-32 encoded string passed as `text` and `size` by using the given `font` at `origin` (floating point coordinates).
+  //! Fills UTF-32 encoded string passed as `text` and `size` by using the given `font` at `origin` (floating point coordinates)
+  //! with the default fill style.
+  //!
+  //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated UTF-32
+  //! string. If you want to pass a non-null terminated string or a substring of an existing string, specify `size`
+  //! parameter to the size of the `text` buffer in code units (the number of 32-bit values).
   BL_INLINE_NODEBUG BLResult fillUtf32Text(const BLPoint& origin, const BLFontCore& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
     BLArrayView<uint32_t> view{text, size};
     return _fillTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF32, &view);
   }
-  //! \overload
+
+  //! Fills UTF-32 encoded string passed as `text` and `size` by using the given `font` at `origin` (floating point coordinates)
+  //! with an explicit fill `style`.
+  //!
+  //! \note Pass `SIZE_MAX` in `size` to inform Blend2D that the input is a null terminated string. If you want to pass a
+  //! non-null terminated string or a substring of an existing string, specify `size` parameter to the size of the `text`
+  //! buffer in code units (the number of 32-bit values).
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillUtf32Text(const BLPoint& origin, const BLFontCore& font, const uint32_t* text, size_t size, const StyleT& style) noexcept {
     BLArrayView<uint32_t> view{text, size};
     return _fillTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF32, &view, style);
   }
 
-  //! Fills the passed `glyphRun` by using the given `font` at `origin` (integer coordinates).
+  //! Fills a `glyphRun` by using the given `font` at `origin` (integer coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillGlyphRun(const BLPointI& origin, const BLFontCore& font, const BLGlyphRun& glyphRun) noexcept {
     return _fillTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN, &glyphRun);
   }
-  //! \overload
+
+  //! Fills a `glyphRun` by using the given `font` at `origin` (integer coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillGlyphRun(const BLPointI& origin, const BLFontCore& font, const BLGlyphRun& glyphRun, const StyleT& style) noexcept {
     return _fillTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN, &glyphRun, style);
   }
 
-  //! Fills the passed `glyphRun` by using the given `font` at `origin` (floating point coordinates).
+  //! Fills the passed `glyphRun` by using the given `font` at `origin` (floating point coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillGlyphRun(const BLPoint& origin, const BLFontCore& font, const BLGlyphRun& glyphRun) noexcept {
     return _fillTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN, &glyphRun);
   }
-  //! \overload
+
+  //! Fills the passed `glyphRun` by using the given `font` at `origin` (floating point coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillGlyphRun(const BLPoint& origin, const BLFontCore& font, const BLGlyphRun& glyphRun, const StyleT& style) noexcept {
     return _fillTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN, &glyphRun, style);
@@ -2634,41 +2924,51 @@ public:
   //! \name Fill Mask Operations
   //! \{
 
-  //! Fills a source `mask` image at coordinates specified by `origin` (int coordinates).
+  //! Fills a source `mask` image at coordinates specified by `origin` (int coordinates) with the current fill style.
   BL_INLINE_NODEBUG BLResult fillMask(const BLPointI& origin, const BLImage& mask) noexcept {
     return _fillMaskI(origin, mask, nullptr);
   }
-  //! \overload
+
+  //! Fills a source `mask` image at coordinates specified by `origin` (int coordinates) with an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillMask(const BLPointI& origin, const BLImage& mask, const StyleT& style) noexcept {
     return _fillMaskI(origin, mask, nullptr, style);
   }
 
-  //! Fills a source `mask` image specified by `maskArea` at coordinates specified by `origin` (int coordinates).
+  //! Fills a source `mask` image specified by `maskArea` at coordinates specified by `origin` (int coordinates) with
+  //! the current fill style.
   BL_INLINE_NODEBUG BLResult fillMask(const BLPointI& origin, const BLImage& mask, const BLRectI& maskArea) noexcept {
     return _fillMaskI(origin, mask, &maskArea);
   }
-  //! \overload
+
+  //! Fills a source `mask` image specified by `maskArea` at coordinates specified by `origin` (int coordinates) with
+  //! an explicit fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillMask(const BLPointI& origin, const BLImage& mask, const BLRectI& maskArea, const StyleT& style) noexcept {
     return _fillMaskI(origin, mask, &maskArea, style);
   }
 
-  //! Fills a source `mask` image at coordinates specified by `origin` (floating point coordinates).
+  //! Fills a source `mask` image at coordinates specified by `origin` (floating point coordinates) with the current
+  //! fill style.
   BL_INLINE_NODEBUG BLResult fillMask(const BLPoint& origin, const BLImage& mask) noexcept {
     return _fillMaskD(origin, mask, nullptr);
   }
-  //! \overload
+
+  //! Fills a source `mask` image at coordinates specified by `origin` (floating point coordinates) with an explicit
+  //! fill `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillMask(const BLPoint& origin, const BLImage& mask, const StyleT& style) noexcept {
     return _fillMaskD(origin, mask, nullptr, style);
   }
 
-  //! Fills a source `mask` image specified by `maskArea` at coordinates specified by `origin` (floating point coordinates).
+  //! Fills a source `mask` image specified by `maskArea` at coordinates specified by `origin` (floating point coordinates)
+  //! with the current fill style.
   BL_INLINE_NODEBUG BLResult fillMask(const BLPoint& origin, const BLImage& mask, const BLRectI& maskArea) noexcept {
     return _fillMaskD(origin, mask, &maskArea);
   }
-  //! \overload
+
+  //! Fills a source `mask` image specified by `maskArea` at coordinates specified by `origin` (floating point coordinates)
+  //! with an explicit fill style.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillMask(const BLPoint& origin, const BLImage& mask, const BLRectI& maskArea, const StyleT& style) noexcept {
     return _fillMaskD(origin, mask, &maskArea, style);
@@ -2805,482 +3105,494 @@ public:
   //! \name Stroke Geometry Operations
   //! \{
 
-  //! Strokes a box (floating point coordinates).
+  //! Strokes a `box` (floating point coordinates) with the current stroke style.
+  //!
+  //! \note Box is defined as `[x0, y0, x1, y1]`, if you need `[x, y, w, h]`, use \ref strokeRect() instead.
   BL_INLINE_NODEBUG BLResult strokeBox(const BLBox& box) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_BOXD, &box);
   }
 
-  //! Strokes a box (floating point coordinates) with an explicit style.
+  //! Strokes a `box` (floating point coordinates) with an explicit stroke `style`.
+  //!
+  //! \note Box is defined as `[x0, y0, x1, y1]`, if you need `[x, y, w, h]`, use \ref strokeRect() instead.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeBox(const BLBox& box, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_BOXD, &box, style);
   }
 
-  //! Strokes a box (integer coordinates).
+  //! Strokes a `box` (integer coordinates) with the current stroke style.
+  //!
+  //! \note Box is defined as `[x0, y0, x1, y1]`, if you need `[x, y, w, h]`, use \ref strokeRect() instead.
   BL_INLINE_NODEBUG BLResult strokeBox(const BLBoxI& box) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_BOXI, &box);
   }
 
-  //! Strokes a box (integer coordinates) with an explicit style.
+  //! Strokes a `box` (integer coordinates) with an explicit stroke `style`.
+  //!
+  //! \note Box is defined as `[x0, y0, x1, y1]`, if you need `[x, y, w, h]`, use \ref strokeRect() instead.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeBox(const BLBoxI& box, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_BOXI, &box, style);
   }
 
-  //! Strokes a box (floating point coordinates).
+  //! Strokes a box `[x0, y0, x1, y1]` (floating point coordinates) with the current stroke style.
+  //!
+  //! \note Box is defined as `[x0, y0, x1, y1]`, if you need `[x, y, w, h]`, use \ref strokeRect() instead.
   BL_INLINE_NODEBUG BLResult strokeBox(double x0, double y0, double x1, double y1) noexcept {
     return strokeBox(BLBox(x0, y0, x1, y1));
   }
 
-  //! Strokes a box (floating point coordinates) with an explicit style.
+  //! Strokes a box `[x0, y0, x1, y1]` (floating point coordinates) with an explicit stroke `style`.
+  //!
+  //! \note Box is defined as `[x0, y0, x1, y1]`, if you need `[x, y, w, h]`, use \ref strokeRect() instead.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeBox(double x0, double y0, double x1, double y1, const StyleT& style) noexcept {
     return strokeBox(BLBox(x0, y0, x1, y1), style);
   }
 
-  //! Strokes a rectangle (floating point coordinates).
-  BL_INLINE_NODEBUG BLResult strokeRect(const BLRect& rect) noexcept {
-    return _strokeGeometryOp(BL_GEOMETRY_TYPE_RECTD, &rect);
-  }
-
-  //! Strokes a rectangle (floating point coordinates) with an explicit style.
-  template<typename StyleT>
-  BL_INLINE_NODEBUG BLResult strokeRect(const BLRect& rect, const StyleT& style) noexcept {
-    return _strokeGeometryOp(BL_GEOMETRY_TYPE_RECTD, &rect, style);
-  }
-
-  //! Strokes a rectangle (integer coordinates).
+  //! Strokes a rectangle `rect` (integer coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeRect(const BLRectI& rect) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_RECTI, &rect);
   }
 
-  //! Strokes a rectangle (integer coordinates) with an explicit style.
+  //! Strokes a rectangle `rect` (integer coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRect(const BLRectI& rect, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_RECTI, &rect, style);
   }
 
-  //! Strokes a rectangle (floating point coordinates).
+  //! Strokes a rectangle `rect` (floating point coordinates) with the current stroke style.
+  BL_INLINE_NODEBUG BLResult strokeRect(const BLRect& rect) noexcept {
+    return _strokeGeometryOp(BL_GEOMETRY_TYPE_RECTD, &rect);
+  }
+
+  //! Strokes a rectangle `rect` (floating point coordinates) with an explicit stroke `style`.
+  template<typename StyleT>
+  BL_INLINE_NODEBUG BLResult strokeRect(const BLRect& rect, const StyleT& style) noexcept {
+    return _strokeGeometryOp(BL_GEOMETRY_TYPE_RECTD, &rect, style);
+  }
+
+  //! Strokes a rectangle `[x, y, w, h]` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeRect(double x, double y, double w, double h) noexcept {
     return strokeRect(BLRect(x, y, w, h));
   }
 
-  //! Strokes a rectangle (floating point coordinates) with an explicit style.
+  //! Strokes a rectangle `[x, y, w, h]` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRect(double x, double y, double w, double h, const StyleT& style) noexcept {
     return strokeRect(BLRect(x, y, w, h), style);
   }
 
-  //! Strokes a line specified as `line` (floating point coordinates).
+  //! Strokes a line specified as `line` (floating point coordinates) with the default stroke style.
   BL_INLINE_NODEBUG BLResult strokeLine(const BLLine& line) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_LINE, &line);
   }
 
-  //! Strokes a line specified as `line` (floating point coordinates) with an explicit style.
+  //! Strokes a line specified as `line` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeLine(const BLLine& line, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_LINE, &line, style);
   }
 
-  //! Strokes a line starting at `p0` and ending at `p1` (floating point coordinates).
+  //! Strokes a line starting at `p0` and ending at `p1` (floating point coordinates) with the default stroke style.
   BL_INLINE_NODEBUG BLResult strokeLine(const BLPoint& p0, const BLPoint& p1) noexcept {
     return strokeLine(BLLine(p0.x, p0.y, p1.x, p1.y));
   }
 
-  //! Strokes a line starting at `p0` and ending at `p1` (floating point coordinates) with an explicit style.
+  //! Strokes a line starting at `p0` and ending at `p1` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeLine(const BLPoint& p0, const BLPoint& p1, const StyleT& style) noexcept {
     return strokeLine(BLLine(p0.x, p0.y, p1.x, p1.y), style);
   }
 
-  //! Strokes a line starting at `[x0, y0]` and ending at `[x1, y1]` (floating point coordinates).
+  //! Strokes a line starting at `[x0, y0]` and ending at `[x1, y1]` (floating point coordinates) with the default
+  //! stroke style.
   BL_INLINE_NODEBUG BLResult strokeLine(double x0, double y0, double x1, double y1) noexcept {
     return strokeLine(BLLine(x0, y0, x1, y1));
   }
 
-  //! Strokes a line starting at `[x0, y0]` and ending at `[x1, y1]` (floating point coordinates) with an explicit style.
+  //! Strokes a line starting at `[x0, y0]` and ending at `[x1, y1]` (floating point coordinates) with an explicit
+  //! stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeLine(double x0, double y0, double x1, double y1, const StyleT& style) noexcept {
     return strokeLine(BLLine(x0, y0, x1, y1), style);
   }
 
-  //! Strokes a circle (floating point coordinates).
+  //! Strokes a `circle` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeCircle(const BLCircle& circle) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_CIRCLE, &circle);
   }
 
-  //! Strokes a circle (floating point coordinates) with an explicit style.
+  //! Strokes a `circle` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeCircle(const BLCircle& circle, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_CIRCLE, &circle, style);
   }
 
-  //! Strokes a circle (floating point coordinates).
+  //! Strokes a circle at `[cx, cy]` and radius `r` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeCircle(double cx, double cy, double r) noexcept {
     return strokeCircle(BLCircle(cx, cy, r));
   }
 
-  //! Strokes a circle (floating point coordinates) with an explicit style.
+  //! Strokes a circle at `[cx, cy]` and radius `r` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeCircle(double cx, double cy, double r, const StyleT& style) noexcept {
     return strokeCircle(BLCircle(cx, cy, r), style);
   }
 
-  //! Strokes an ellipse (floating point coordinates).
+  //! Strokes an `ellipse` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeEllipse(const BLEllipse& ellipse) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ELLIPSE, &ellipse);
   }
 
-  //! Strokes an ellipse (floating point coordinates) with an explicit style.
+  //! Strokes an `ellipse` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeEllipse(const BLEllipse& ellipse, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ELLIPSE, &ellipse, style);
   }
 
-  //! Strokes an ellipse (floating point coordinates).
+  //! Strokes an ellipse at `[cx, cy]` with radius `[rx, ry]` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeEllipse(double cx, double cy, double rx, double ry) noexcept {
     return strokeEllipse(BLEllipse(cx, cy, rx, ry));
   }
 
-  //! Strokes an ellipse (floating point coordinates) with an explicit style.
+  //! Strokes an ellipse at `[cx, cy]` with radius `[rx, ry]` (floating point coordinates) with en explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeEllipse(double cx, double cy, double rx, double ry, const StyleT& style) noexcept {
     return strokeEllipse(BLEllipse(cx, cy, rx, ry), style);
   }
 
-  //! Strokes a rounded rectangle (floating point coordinates).
+  //! Strokes a rounded rectangle `rr` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeRoundRect(const BLRoundRect& rr) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ROUND_RECT, &rr);
   }
 
-  //! Strokes a rounded rectangle (floating point coordinates) with an explicit style.
+  //! Strokes a rounded rectangle `rr` (floating point coordinates) with en explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRoundRect(const BLRoundRect& rr, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ROUND_RECT, &rr, style);
   }
 
-  //! Strokes a rounded rectangle passed as `rect` with radius `r`.
+  //! Strokes a rounded rectangle bounded by `rect` with radius `r` with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeRoundRect(const BLRect& rect, double r) noexcept {
     return strokeRoundRect(BLRoundRect(rect.x, rect.y, rect.w, rect.h, r));
   }
 
-  //! Strokes a rounded rectangle passed as `rect` with radius `[rx, ry]`.
+  //! Strokes a rounded rectangle bounded by `rect` with radius `[rx, ry]` with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeRoundRect(const BLRect& rect, double rx, double ry) noexcept {
     return strokeRoundRect(BLRoundRect(rect.x, rect.y, rect.w, rect.h, rx, ry));
   }
 
-  //! Strokes a rounded rectangle passed as `rect` with radius `[rx, ry]` with an explicit style.
+  //! Strokes a rounded rectangle bounded by `rect` with radius `[rx, ry]` with en explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRoundRect(const BLRect& rect, double rx, double ry, const StyleT& style) noexcept {
     return strokeRoundRect(BLRoundRect(rect.x, rect.y, rect.w, rect.h, rx, ry), style);
   }
 
-  //! Strokes a rounded rectangle passed as `[x, y, w, h]` with radius `r`.
+  //! Strokes a rounded rectangle bounded by `[x, y, w, h]` with radius `r` with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeRoundRect(double x, double y, double w, double h, double r) noexcept {
     return strokeRoundRect(BLRoundRect(x, y, w, h, r));
   }
 
-  //! Strokes a rounded rectangle passed as `[x, y, w, h]` with radius `[rx, ry]`.
+  //! Strokes a rounded rectangle bounded as `[x, y, w, h]` with radius `[rx, ry]` with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeRoundRect(double x, double y, double w, double h, double rx, double ry) noexcept {
     return strokeRoundRect(BLRoundRect(x, y, w, h, rx, ry));
   }
 
-  //! Strokes a rounded rectangle passed as `[x, y, w, h]` with radius `[rx, ry]` with an explicit style.
+  //! Strokes a rounded rectangle bounded as `[x, y, w, h]` with radius `[rx, ry]` with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRoundRect(double x, double y, double w, double h, double rx, double ry, const StyleT& style) noexcept {
     return strokeRoundRect(BLRoundRect(x, y, w, h, rx, ry), style);
   }
 
-  //! Strokes an arc (floating point coordinates).
-  BL_INLINE_NODEBUG BLResult strokeArc(const BLArc& arc) noexcept {
-    return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARC, &arc);
-  }
-
-  //! Strokes an arc (floating point coordinates) with an explicit style.
-  template<typename StyleT>
-  BL_INLINE_NODEBUG BLResult strokeArc(const BLArc& arc, const StyleT& style) noexcept {
-    return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARC, &arc, style);
-  }
-
-  //! \overload
-  BL_INLINE_NODEBUG BLResult strokeArc(double cx, double cy, double r, double start, double sweep) noexcept {
-    return strokeArc(BLArc(cx, cy, r, r, start, sweep));
-  }
-
-  //! \overload
-  BL_INLINE_NODEBUG BLResult strokeArc(double cx, double cy, double rx, double ry, double start, double sweep) noexcept {
-    return strokeArc(BLArc(cx, cy, rx, ry, start, sweep));
-  }
-  //! \overload
-  template<typename StyleT>
-  BL_INLINE_NODEBUG BLResult strokeArc(double cx, double cy, double rx, double ry, double start, double sweep, const StyleT& style) noexcept {
-    return strokeArc(BLArc(cx, cy, rx, ry, start, sweep), style);
-  }
-
-  //! Strokes a chord (floating point coordinates).
+  //! Strokes a `chord` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeChord(const BLArc& chord) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_CHORD, &chord);
   }
 
-  //! Strokes a chord (floating point coordinates) with an explicit style.
+  //! Strokes a `chord` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeChord(const BLArc& chord, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_CHORD, &chord, style);
   }
 
-  //! \overload
+  //! Strokes a chord at `[cx, cy]` with radius `r` at `start` of `sweep` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeChord(double cx, double cy, double r, double start, double sweep) noexcept {
     return strokeChord(BLArc(cx, cy, r, r, start, sweep));
   }
 
-  //! \overload
+  //! Strokes a chord at `[cx, cy]` with radius `[rx, ry]` at `start` of `sweep` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeChord(double cx, double cy, double rx, double ry, double start, double sweep) noexcept {
     return strokeChord(BLArc(cx, cy, rx, ry, start, sweep));
   }
-  //! \overload
+
+  //! Strokes a chord at `[cx, cy]` with radius `[rx, ry]` at `start` of `sweep` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeChord(double cx, double cy, double rx, double ry, double start, double sweep, const StyleT& style) noexcept {
     return strokeChord(BLArc(cx, cy, rx, ry, start, sweep), style);
   }
 
-  //! Strokes a pie (floating point coordinates).
+  //! Strokes a `pie` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokePie(const BLArc& pie) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_PIE, &pie);
   }
 
-  //! Strokes a pie (floating point coordinates) with an explicit style.
+  //! Strokes a `pie` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePie(const BLArc& pie, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_PIE, &pie, style);
   }
 
-  //! \overload
+  //! Strokes a pie at `[cx, cy]` with radius `r` at `start` of `sweep` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokePie(double cx, double cy, double r, double start, double sweep) noexcept {
     return strokePie(BLArc(cx, cy, r, r, start, sweep));
   }
 
-  //! \overload
+  //! Strokes a pie at `[cx, cy]` with radius `[rx, ry]` at `start` of `sweep` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokePie(double cx, double cy, double rx, double ry, double start, double sweep) noexcept {
     return strokePie(BLArc(cx, cy, rx, ry, start, sweep));
   }
-  //! \overload
+
+  //! Strokes a pie at `[cx, cy]` with radius `[rx, ry]` at `start` of `sweep` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePie(double cx, double cy, double rx, double ry, double start, double sweep, const StyleT& style) noexcept {
     return strokePie(BLArc(cx, cy, rx, ry, start, sweep), style);
   }
 
-  //! Strokes a triangle (floating point coordinates).
+  //! Strokes a `triangle` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeTriangle(const BLTriangle& triangle) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_TRIANGLE, &triangle);
   }
 
-  //! Strokes a triangle (floating point coordinates) with an explicit style.
+  //! Strokes a `triangle` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeTriangle(const BLTriangle& triangle, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_TRIANGLE, &triangle, style);
   }
 
-  //! Strokes a triangle passed as `[x0, y0]`, `[x1, y1]`, `[x2, y2]`.
+  //! Strokes a triangle defined by `[x0, y0]`, `[x1, y1]`, `[x2, y2]` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeTriangle(double x0, double y0, double x1, double y1, double x2, double y2) noexcept {
     return strokeTriangle(BLTriangle(x0, y0, x1, y1, x2, y2));
   }
 
-  //! Strokes a triangle passed as `[x0, y0]`, `[x1, y1]`, `[x2, y2]` with an explicit style.
+  //! Strokes a triangle defined by `[x0, y0]`, `[x1, y1]`, `[x2, y2]` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeTriangle(double x0, double y0, double x1, double y1, double x2, double y2, const StyleT& style) noexcept {
     return strokeTriangle(BLTriangle(x0, y0, x1, y1, x2, y2), style);
   }
 
-  //! Strokes a polyline (floating point coordinates).
+  //! Strokes a polyline `poly` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokePolyline(const BLArrayView<BLPoint>& poly) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_POLYLINED, &poly);
   }
-  //! \overload
+
+  //! Strokes a polyline `poly` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePolyline(const BLArrayView<BLPoint>& poly, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_POLYLINED, &poly, style);
   }
 
-  //! \overload
+  //! Strokes a polyline `poly` having `n` vertices (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokePolyline(const BLPoint* poly, size_t n) noexcept {
     return strokePolyline(BLArrayView<BLPoint>{poly, n});
   }
-  //! \overload
+
+  //! Strokes a polyline `poly` having `n` vertices (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePolyline(const BLPoint* poly, size_t n, const StyleT& style) noexcept {
     return strokePolyline(BLArrayView<BLPoint>{poly, n}, style);
   }
 
-  //! Strokes a polyline (integer coordinates).
+  //! Strokes a polyline `poly` (integer coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokePolyline(const BLArrayView<BLPointI>& poly) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_POLYLINEI, &poly);
   }
-  //! \overload
+
+  //! Strokes a polyline `poly` (integer coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePolyline(const BLArrayView<BLPointI>& poly, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_POLYLINEI, &poly, style);
   }
 
-  //! \overload
+  //! Strokes a polyline `poly` having `n` vertices (integer coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokePolyline(const BLPointI* poly, size_t n) noexcept {
     return strokePolyline(BLArrayView<BLPointI>{poly, n});
   }
-  //! \overload
+
+  //! Strokes a polyline `poly` having `n` vertices (integer coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePolyline(const BLPointI* poly, size_t n, const StyleT& style) noexcept {
     return strokePolyline(BLArrayView<BLPointI>{poly, n}, style);
   }
 
-  //! Strokes a polygon (floating point coordinates).
+  //! Strokes a polygon `poly` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokePolygon(const BLArrayView<BLPoint>& poly) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_POLYGOND, &poly);
   }
-  //! \overload
+
+  //! Strokes a polygon `poly` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePolygon(const BLArrayView<BLPoint>& poly, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_POLYGOND, &poly, style);
   }
 
-  //! \overload
+  //! Strokes a polygon `poly` having `n` vertices (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokePolygon(const BLPoint* poly, size_t n) noexcept {
     return strokePolygon(BLArrayView<BLPoint>{poly, n});
   }
-  //! \overload
+
+  //! Strokes a polygon `poly` having `n` vertices (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePolygon(const BLPoint* poly, size_t n, const StyleT& style) noexcept {
     return strokePolygon(BLArrayView<BLPoint>{poly, n}, style);
   }
 
-  //! Strokes a polygon (integer coordinates).
+  //! Strokes a polygon `poly` (integer coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokePolygon(const BLArrayView<BLPointI>& poly) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_POLYGONI, &poly);
   }
-  //! \overload
+
+  //! Strokes a polygon `poly` (integer coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePolygon(const BLArrayView<BLPointI>& poly, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_POLYGONI, &poly, style);
   }
 
-  //! \overload
+  //! Strokes a polygon `poly` having `n` vertices (integer coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokePolygon(const BLPointI* poly, size_t n) noexcept {
     return strokePolygon(BLArrayView<BLPointI>{poly, n});
   }
-  //! \overload
+
+  //! Strokes a polygon `poly` having `n` vertices (integer coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePolygon(const BLPointI* poly, size_t n, const StyleT& style) noexcept {
     return strokePolygon(BLArrayView<BLPointI>{poly, n}, style);
   }
 
-  //! Strokes an array of boxes (floating point coordinates).
+  //! Strokes an `array` of boxes (floating point coordinates) with the default stroke style.
   BL_INLINE_NODEBUG BLResult strokeBoxArray(const BLArrayView<BLBox>& array) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXD, &array);
   }
-  //! \overload
+
+  //! Strokes an `array` of boxes (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeBoxArray(const BLArrayView<BLBox>& array, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXD, &array, style);
   }
 
-  //! \overload
-  BL_INLINE_NODEBUG BLResult strokeBoxArray(const BLBox* data, size_t n) noexcept {
-    return strokeBoxArray(BLArrayView<BLBox>{data, n});
-  }
-  //! \overload
-  template<typename StyleT>
-  BL_INLINE_NODEBUG BLResult strokeBoxArray(const BLBox* data, size_t n, const StyleT& style) noexcept {
-    return strokeBoxArray(BLArrayView<BLBox>{data, n}, style);
+  //! Strokes an `array` of boxes of size `n` (floating point coordinates) with the default stroke style.
+  BL_INLINE_NODEBUG BLResult strokeBoxArray(const BLBox* array, size_t n) noexcept {
+    return strokeBoxArray(BLArrayView<BLBox>{array, n});
   }
 
-  //! Strokes an array of boxes (integer coordinates).
+  //! Strokes an `array` of boxes of size `n` (floating point coordinates) with an explicit stroke `style`.
+  template<typename StyleT>
+  BL_INLINE_NODEBUG BLResult strokeBoxArray(const BLBox* array, size_t n, const StyleT& style) noexcept {
+    return strokeBoxArray(BLArrayView<BLBox>{array, n}, style);
+  }
+
+  //! Strokes an `array` of boxes (integer coordinates) with the default stroke style.
   BL_INLINE_NODEBUG BLResult strokeBoxArray(const BLArrayView<BLBoxI>& array) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXI, &array);
   }
-  //! \overload
+
+  //! Strokes an `array` of boxes (integer coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeBoxArray(const BLArrayView<BLBoxI>& array, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_BOXI, &array, style);
   }
 
-  //! \overload
-  BL_INLINE_NODEBUG BLResult strokeBoxArray(const BLBoxI* data, size_t n) noexcept {
-    return strokeBoxArray(BLArrayView<BLBoxI>{data, n});
-  }
-  //! \overload
-  template<typename StyleT>
-  BL_INLINE_NODEBUG BLResult strokeBoxArray(const BLBoxI* data, size_t n, const StyleT& style) noexcept {
-    return strokeBoxArray(BLArrayView<BLBoxI>{data, n}, style);
+  //! Strokes an `array` of boxes of size `n` (integer coordinates) with the default stroke style.
+  BL_INLINE_NODEBUG BLResult strokeBoxArray(const BLBoxI* array, size_t n) noexcept {
+    return strokeBoxArray(BLArrayView<BLBoxI>{array, n});
   }
 
-  //! Strokes an array of rectangles (floating point coordinates).
+  //! Strokes an array of boxes of size `n` (integer coordinates) with an explicit stroke `style`.
+  template<typename StyleT>
+  BL_INLINE_NODEBUG BLResult strokeBoxArray(const BLBoxI* array, size_t n, const StyleT& style) noexcept {
+    return strokeBoxArray(BLArrayView<BLBoxI>{array, n}, style);
+  }
+
+  //! Strokes an `array` of rectangles (floating point coordinates) with the default stroke style.
   BL_INLINE_NODEBUG BLResult strokeRectArray(const BLArrayView<BLRect>& array) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTD, &array);
   }
-  //! \overload
+
+  //! Strokes an `array` of rectangles (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRectArray(const BLArrayView<BLRect>& array, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTD, &array, style);
   }
 
-  //! \overload
-  BL_INLINE_NODEBUG BLResult strokeRectArray(const BLRect* data, size_t n) noexcept {
-    return strokeRectArray(BLArrayView<BLRect>{data, n});
-  }
-  //! \overload
-  template<typename StyleT>
-  BL_INLINE_NODEBUG BLResult strokeRectArray(const BLRect* data, size_t n, const StyleT& style) noexcept {
-    return strokeRectArray(BLArrayView<BLRect>{data, n}, style);
+  //! Strokes an `array` of rectangles of size `n` (floating point coordinates) with the default stroke style.
+  BL_INLINE_NODEBUG BLResult strokeRectArray(const BLRect* array, size_t n) noexcept {
+    return strokeRectArray(BLArrayView<BLRect>{array, n});
   }
 
-  //! Strokes an array of rectangles (integer coordinates).
+  //! Strokes an `array` of rectangles of size `n` (floating point coordinates) with an explicit stroke `style`.
+  template<typename StyleT>
+  BL_INLINE_NODEBUG BLResult strokeRectArray(const BLRect* array, size_t n, const StyleT& style) noexcept {
+    return strokeRectArray(BLArrayView<BLRect>{array, n}, style);
+  }
+
+  //! Strokes an array of rectangles (integer coordinates) with the default stroke style.
   BL_INLINE_NODEBUG BLResult strokeRectArray(const BLArrayView<BLRectI>& array) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTI, &array);
   }
-  //! \overload
+
+  //! Strokes an array of rectangles (integer coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeRectArray(const BLArrayView<BLRectI>& array, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARRAY_VIEW_RECTI, &array, style);
   }
 
-  //! \overload
-  BL_INLINE_NODEBUG BLResult strokeRectArray(const BLRectI* data, size_t n) noexcept {
-    return strokeRectArray(BLArrayView<BLRectI>{data, n});
-  }
-  //! \overload
-  template<typename StyleT>
-  BL_INLINE_NODEBUG BLResult strokeRectArray(const BLRectI* data, size_t n, const StyleT& style) noexcept {
-    return strokeRectArray(BLArrayView<BLRectI>{data, n}, style);
+  //! Strokes an `array` of rectangles of size `n` (integer coordinates) with the default stroke style.
+  BL_INLINE_NODEBUG BLResult strokeRectArray(const BLRectI* array, size_t n) noexcept {
+    return strokeRectArray(BLArrayView<BLRectI>{array, n});
   }
 
-  //! Strokes the given `path`.
+  //! Strokes an `array` of rectangles of size `n` (integer coordinates) with an explicit stroke `style`.
+  template<typename StyleT>
+  BL_INLINE_NODEBUG BLResult strokeRectArray(const BLRectI* array, size_t n, const StyleT& style) noexcept {
+    return strokeRectArray(BLArrayView<BLRectI>{array, n}, style);
+  }
+
+  //! Strokes the given `path` with the default stroke style.
   BL_INLINE_NODEBUG BLResult strokePath(const BLPathCore& path) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_PATH, &path);
   }
 
-  //! Strokes the given `path` with an explicit style.
+  //! Strokes the given `path` with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePath(const BLPathCore& path, const StyleT& style) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_PATH, &path, style);
   }
 
-  //! Strokes the given `path` translated by `origin`.
+  //! Strokes the given `path` translated by `origin` with the default stroke style.
   BL_INLINE_NODEBUG BLResult strokePath(const BLPoint& origin, const BLPathCore& path) noexcept {
     BL_CONTEXT_CALL_RETURN(strokePathD, impl, &origin, &path);
   }
 
-  //! Strokes the given `path` translated by `origin` with an explicit style.
+  //! Strokes the given `path` translated by `origin` with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokePath(const BLPoint& origin, const BLPathCore& path, const StyleT& style) noexcept {
     return _strokePathD(origin, path, style);
   }
 
-  //! Strokes the passed geometry specified by geometry `type` and `data`.
+  //! Strokes the passed geometry specified by geometry `type` and `data` with the default stroke style.
   //!
-  //! \note This function provides a low-level API that can be used in cases that geometry `type` and `data` parameters
-  //! are passed to a function and you just want to render it without further inspection. It's a good way of creating wrappers.
+  //! \note This function provides a low-level interface that can be used in cases in which geometry `type` and `data`
+  //! parameters are passed to a wrapper function that just passes them to the rendering context. It's a good way of
+  //! creating wrappers, but generally low-level for a general purpose use, so please use this with caution.
   BL_INLINE_NODEBUG BLResult strokeGeometry(BLGeometryType type, const void* data) noexcept {
     return _strokeGeometryOp(type, data);
   }
-  //! Strokes the passed geometry specified by geometry `type` and `data` with an explicit style.
+
+  //! Strokes the passed geometry specified by geometry `type` and `data` with an explicit stroke `style`.
+  //!
+  //! \note This function provides a low-level interface that can be used in cases in which geometry `type` and `data`
+  //! parameters are passed to a wrapper function that just passes them to the rendering context. It's a good way of
+  //! creating wrappers, but generally low-level for a general purpose use, so please use this with caution.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeGeometry(BLGeometryType type, const void* data, const StyleT& style) noexcept {
     return _strokeGeometryOp(type, data, style);
@@ -3291,34 +3603,63 @@ public:
   //! \name Stroke Text & Glyphs Operations
   //! \{
 
-  //! Strokes UTF-8 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates).
+  //! Strokes UTF-8 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with the default stroke style.
+  //!
+  //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated string.
+  //! If you want to pass a non-null terminated string or a substring of an existing string, use either this function with
+  //! a `size` parameter set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters)
+  //! or an overloaded function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
   BL_INLINE_NODEBUG BLResult strokeUtf8Text(const BLPointI& origin, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
     BLStringView view{text, size};
     return _strokeTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view);
   }
-  //! \overload
+
+  //! Strokes UTF-8 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with an explicit stroke `style`.
+  //!
+  //! \note Pass `SIZE_MAX` to `size` to inform Blend2D that the input is a null terminated string. If you want to pass
+  //! a non-null terminated string or a substring of an existing string, use either this function with a `size` parameter
+  //! set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters) or an overloaded
+  //! function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeUtf8Text(const BLPointI& origin, const BLFontCore& font, const char* text, size_t size, const StyleT& style) noexcept {
     BLStringView view{text, size};
     return _strokeTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view, style);
   }
 
-  //! Strokes UTF-8 encoded string passed as string `view` by using the given `font` at `origin` (floating point coordinates).
+  //! Strokes UTF-8 encoded string passed as string `view` by using the given `font` at `origin` (floating point coordinates)
+  //! with the default stroke style.
   BL_INLINE_NODEBUG BLResult strokeUtf8Text(const BLPointI& origin, const BLFontCore& font, const BLStringView& view) noexcept {
     return _strokeTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view);
   }
-  //! \overload
+
+  //! Strokes UTF-8 encoded string passed as string `view` by using the given `font` at `origin` (floating point coordinates)
+  //! with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeUtf8Text(const BLPointI& origin, const BLFontCore& font, const BLStringView& view, const StyleT& style) noexcept {
     return _strokeTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view, style);
   }
 
-  //! Strokes UTF-8 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates).
+  //! Strokes UTF-8 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with the default stroke style.
+  //!
+  //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated string.
+  //! If you want to pass a non-null terminated string or a substring of an existing string, use either this function with
+  //! a `size` parameter set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters)
+  //! or an overloaded function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
   BL_INLINE_NODEBUG BLResult strokeUtf8Text(const BLPoint& origin, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
     BLStringView view{text, size};
     return _strokeTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view);
   }
-  //! \overload
+
+  //! Strokes UTF-8 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with an explicit stroke `style`.
+  //!
+  //! \note Pass `SIZE_MAX` in `size` to inform Blend2D that the input is a null terminated string. If you want to pass
+  //! a non-null terminated string or a substring of an existing string, use either this function with a `size` parameter
+  //! set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters) or an overloaded
+  //! function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeUtf8Text(const BLPoint& origin, const BLFontCore& font, const char* text, size_t size, const StyleT& style) noexcept {
     BLStringView view{text, size};
@@ -3335,69 +3676,115 @@ public:
     return _strokeTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view, style);
   }
 
-  //! Strokes UTF-16 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates).
+  //! Strokes UTF-16 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with the default stroke style.
+  //!
+  //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated UTF-16
+  //! string. If you want to pass a non-null terminated string or a substring of an existing string, specify `size`
+  //! parameter to the size of the `text` buffer in code units (the number of 16-bit values).
   BL_INLINE_NODEBUG BLResult strokeUtf16Text(const BLPointI& origin, const BLFontCore& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
     BLArrayView<uint16_t> view{text, size};
     return _strokeTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF16, &view);
   }
-  //! \overload
+
+  //! Strokes UTF-16 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with an explicit stroke `style`.
+  //!
+  //! \note Pass `SIZE_MAX` in `size` to inform Blend2D that the input is a null terminated string. If you want to pass a
+  //! non-null terminated string or a substring of an existing string, specify `size` parameter to the size of the `text`
+  //! buffer in code units (the number of 16-bit values).
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeUtf16Text(const BLPointI& origin, const BLFontCore& font, const uint16_t* text, size_t size, const StyleT& style) noexcept {
     BLArrayView<uint16_t> view{text, size};
     return _strokeTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF16, &view, style);
   }
 
-  //! Strokes UTF-16 encoded string passed as `text` and `size` by using the given `font` at `origin` (floating point coordinates).
+  //! Strokes UTF-16 encoded string passed as `text` and `size` by using the given `font` at `origin` (floating point coordinates)
+  //! with the default stroke style.
+  //!
+  //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated UTF-16
+  //! string. If you want to pass a non-null terminated string or a substring of an existing string, specify `size`
+  //! parameter to the size of the `text` buffer in code units (the number of 16-bit values).
   BL_INLINE_NODEBUG BLResult strokeUtf16Text(const BLPoint& origin, const BLFontCore& font, const uint16_t* text, size_t size = SIZE_MAX) noexcept {
     BLArrayView<uint16_t> view{text, size};
     return _strokeTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF16, &view);
   }
-  //! \overload
+
+  //! Strokes UTF-16 encoded string passed as `text` and `size` by using the given `font` at `origin` (floating point coordinates)
+  //! with an explicit stroke `style`.
+  //!
+  //! \note Pass `SIZE_MAX` in `size` to inform Blend2D that the input is a null terminated string. If you want to pass a
+  //! non-null terminated string or a substring of an existing string, specify `size` parameter to the size of the `text`
+  //! buffer in code units (the number of 16-bit values).
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeUtf16Text(const BLPoint& origin, const BLFontCore& font, const uint16_t* text, size_t size, const StyleT& style) noexcept {
     BLArrayView<uint16_t> view{text, size};
     return _strokeTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF16, &view, style);
   }
 
-  //! Strokes UTF-32 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates).
+  //! Strokes UTF-32 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with the default stroke style.
+  //!
+  //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated UTF-32
+  //! string. If you want to pass a non-null terminated string or a substring of an existing string, specify `size`
+  //! parameter to the size of the `text` buffer in code units (the number of 32-bit values).
   BL_INLINE_NODEBUG BLResult strokeUtf32Text(const BLPointI& origin, const BLFontCore& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
     BLArrayView<uint32_t> view{text, size};
     return _strokeTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF32, &view);
   }
-  //! \overload
+
+  //! Strokes UTF-32 encoded string passed as `text` and `size` by using the given `font` at `origin` (integer coordinates)
+  //! with an explicit stroke `style`.
+  //!
+  //! \note Pass `SIZE_MAX` in `size` to inform Blend2D that the input is a null terminated string. If you want to pass a
+  //! non-null terminated string or a substring of an existing string, specify `size` parameter to the size of the `text`
+  //! buffer in code units (the number of 32-bit values).
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeUtf32Text(const BLPointI& origin, const BLFontCore& font, const uint32_t* text, size_t size, const StyleT& style) noexcept {
     BLArrayView<uint32_t> view{text, size};
     return _strokeTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF32, &view, style);
   }
 
-  //! Strokes UTF-32 encoded string passed as `text` and `size` by using the given `font` at `origin` (floating point coordinates).
+  //! Strokes UTF-32 encoded string passed as `text` and `size` by using the given `font` at `origin` (floating point coordinates)
+  //! with the default stroke style.
+  //!
+  //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated UTF-32
+  //! string. If you want to pass a non-null terminated string or a substring of an existing string, specify `size`
+  //! parameter to the size of the `text` buffer in code units (the number of 32-bit values).
   BL_INLINE_NODEBUG BLResult strokeUtf32Text(const BLPoint& origin, const BLFontCore& font, const uint32_t* text, size_t size = SIZE_MAX) noexcept {
     BLArrayView<uint32_t> view{text, size};
     return _strokeTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF32, &view);
   }
-  //! \overload
+
+  //! Strokes UTF-32 encoded string passed as `text` and `size` by using the given `font` at `origin` (floating point coordinates)
+  //! with an explicit stroke `style`.
+  //!
+  //! \note Pass `SIZE_MAX` in `size` to inform Blend2D that the input is a null terminated string. If you want to pass a
+  //! non-null terminated string or a substring of an existing string, specify `size` parameter to the size of the `text`
+  //! buffer in code units (the number of 32-bit values).
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeUtf32Text(const BLPoint& origin, const BLFontCore& font, const uint32_t* text, size_t size, const StyleT& style) noexcept {
     BLArrayView<uint32_t> view{text, size};
     return _strokeTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF32, &view, style);
   }
 
-  //! Strokes the passed `glyphRun` by using the given `font` at `origin` (integer coordinates).
+  //! Strokes a `glyphRun` by using the given `font` at `origin` (integer coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeGlyphRun(const BLPointI& origin, const BLFontCore& font, const BLGlyphRun& glyphRun) noexcept {
     return _strokeTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN, &glyphRun);
   }
-  //! \overload
+
+  //! Strokes a `glyphRun` by using the given `font` at `origin` (integer coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeGlyphRun(const BLPointI& origin, const BLFontCore& font, const BLGlyphRun& glyphRun, const StyleT& style) noexcept {
     return _strokeTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN, &glyphRun, style);
   }
 
-  //! Strokes the passed `glyphRun` by using the given `font` at `origin` (floating point coordinates).
+  //! Strokes the passed `glyphRun` by using the given `font` at `origin` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeGlyphRun(const BLPoint& origin, const BLFontCore& font, const BLGlyphRun& glyphRun) noexcept {
     return _strokeTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN, &glyphRun);
   }
-  //! \overload
+
+  //! Strokes the passed `glyphRun` by using the given `font` at `origin` (floating point coordinates) with an explicit stroke `style`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeGlyphRun(const BLPoint& origin, const BLFontCore& font, const BLGlyphRun& glyphRun, const StyleT& style) noexcept {
     return _strokeTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_GLYPH_RUN, &glyphRun, style);

@@ -8,7 +8,7 @@
 
 #include "geometry.h"
 
-//! \addtogroup blend2d_api_geometry
+//! \addtogroup bl_geometry
 //! \{
 
 //! \name BLMatrix Constants
@@ -59,7 +59,7 @@ BL_DEFINE_ENUM(BLTransformOp) {
   BL_TRANSFORM_OP_ROTATE = 5,
   //! Rotate the matrix by the given angle about [x, y].
   BL_TRANSFORM_OP_ROTATE_PT = 6,
-  //! Transform this matrix by other `BLMatrix2D`.
+  //! Transform this matrix by other \ref BLMatrix2D.
   BL_TRANSFORM_OP_TRANSFORM = 7,
 
   //! Post-translate the matrix by [x, y].
@@ -72,7 +72,7 @@ BL_DEFINE_ENUM(BLTransformOp) {
   BL_TRANSFORM_OP_POST_ROTATE = 11,
   //! Post-rotate the matrix about a reference BLPoint.
   BL_TRANSFORM_OP_POST_ROTATE_PT = 12,
-  //! Post-transform this matrix by other `BLMatrix2D`.
+  //! Post-transform this matrix by other \ref BLMatrix2D.
   BL_TRANSFORM_OP_POST_TRANSFORM = 13,
 
   //! Maximum value of `BLTransformOp`.
@@ -82,12 +82,17 @@ BL_DEFINE_ENUM(BLTransformOp) {
 };
 
 //! \}
+//! \}
+
+//! \addtogroup bl_c_api
+//! \{
 
 //! \name BLMatrix2D - C API
 //!
 //! Functions that initialize and manipulate \ref BLMatrix2D content.
 //!
 //! \{
+
 BL_BEGIN_C_DECLS
 
 BL_API BLResult BL_CDECL blMatrix2DSetIdentity(BLMatrix2D* self) BL_NOEXCEPT_C;
@@ -101,7 +106,12 @@ BL_API BLTransformType BL_CDECL blMatrix2DGetType(const BLMatrix2D* self) BL_NOE
 BL_API BLResult BL_CDECL blMatrix2DMapPointDArray(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT_C;
 
 BL_END_C_DECLS
+
 //! \}
+//! \}
+
+//! \addtogroup bl_geometry
+//! \{
 
 //! \name BLMatrix C/C++ API
 //! \{
@@ -110,7 +120,7 @@ BL_END_C_DECLS
 struct BLMatrix2D {
   // TODO: Remove the union, keep only m[] array.
   union {
-    //! Matrix values, use `BL_MATRIX2D_VALUE` indexes to get a particular one.
+    //! Matrix values stored in array.
     double m[6];
     //! Matrix values that map `m` to named values that can be used directly.
     struct {
@@ -416,7 +426,7 @@ struct BLMatrix2D {
 
   BL_INLINE BLResult postTransform(const BLMatrix2D& m) noexcept { return blMatrix2DApplyOp(this, BL_TRANSFORM_OP_POST_TRANSFORM, &m); }
 
-  //! Inverts the matrix, returns `BL_SUCCESS` if the matrix has been inverted successfully.
+  //! Inverts the matrix, returns \ref BL_SUCCESS if the matrix has been inverted successfully.
   BL_INLINE BLResult invert() noexcept { return blMatrix2DInvert(this, this); }
 
   //! \}

@@ -14,7 +14,7 @@
 #include "support/math_p.h"
 
 //! \cond INTERNAL
-//! \addtogroup blend2d_api_globals
+//! \addtogroup bl_globals
 //! \{
 
 namespace bl {

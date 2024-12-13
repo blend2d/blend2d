@@ -8,7 +8,7 @@
 
 #include "api.h"
 
-//! \addtogroup blend2d_api_styling
+//! \addtogroup bl_styling
 //! \{
 
 //! 32-bit RGBA color (8-bit per component) stored as `0xAARRGGBB`.

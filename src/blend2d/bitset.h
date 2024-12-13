@@ -8,7 +8,7 @@
 
 #include "object.h"
 
-//! \addtogroup blend2d_api_globals
+//! \addtogroup bl_containers
 //! \{
 
 //! \name BLBitSet - Constants
@@ -98,6 +98,10 @@ struct BLBitSetData {
 };
 
 //! \}
+//! \}
+
+//! \addtogroup bl_c_api
+//! \{
 
 //! \name BLBitSet - C API
 //! \{
@@ -197,6 +201,11 @@ struct BLBitSetImpl BL_CLASS_INHERITS(BLObjectImpl) {
 
 //! \}
 //! \endcond
+
+//! \}
+
+//! \addtogroup bl_containers
+//! \{
 
 //! \name BLBitSet - C++ API
 //! \{

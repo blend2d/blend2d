@@ -46,14 +46,14 @@ struct BLThreadPool {
   //! \note This is mostly informative as it's not guaranteed that successive calls to `pooledThreadCount()`
   //! would return the same result as some  threads may be acquired during the request by another thread.
   //!
-  //! \threadsafe
+  //! \note This function is thread-safe.
   BL_INLINE uint32_t pooledThreadCount() const noexcept {
     return virt->pooledThreadCount(this);
   }
 
   //! Returns the maximum number of threads that would be allocated by the thread-pool.
   //!
-  //! \threadsafe
+  //! \note This function is thread-safe.
   BL_INLINE uint32_t maxThreadCount() const noexcept {
     return virt->maxThreadCount(this);
   }

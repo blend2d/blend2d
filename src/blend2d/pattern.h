@@ -11,7 +11,7 @@
 #include "matrix.h"
 #include "object.h"
 
-//! \addtogroup blend2d_api_styling
+//! \addtogroup bl_styling
 //! \{
 
 //! \name BLPattern - Constants
@@ -31,9 +31,37 @@ BL_DEFINE_ENUM(BLPatternQuality) {
 };
 
 //! \}
+//! \}
+
+//! \addtogroup bl_c_api
+//! \{
 
 //! \name BLPattern - C API
 //! \{
+
+//! Pattern [C API].
+struct BLPatternCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+  BL_DEFINE_OBJECT_DCAST(BLPattern)
+};
+
+//! \cond INTERNAL
+//! Pattern [C API Impl].
+//!
+//! The following properties are stored in BLObjectInfo:
+//!
+//!   - Pattern extend mode is stored in BLObjectInfo's 'b' field.
+//!   - Pattern matrix type is stored in BLObjectInfo's 'c' field.
+struct BLPatternImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Image used by the pattern.
+  BLImageCore image;
+
+  //! Image area to use.
+  BLRectI area;
+  //! Pattern transformation matrix.
+  BLMatrix2D transform;
+};
+//! \endcond
 
 BL_BEGIN_C_DECLS
 
@@ -67,36 +95,11 @@ BL_API bool BL_CDECL blPatternEquals(const BLPatternCore* a, const BLPatternCore
 
 BL_END_C_DECLS
 
-//! Pattern [C API].
-struct BLPatternCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-  BL_DEFINE_OBJECT_DCAST(BLPattern)
-};
-
+//! \}
 //! \}
 
-//! \cond INTERNAL
-//! \name BLPattern - Internals
+//! \addtogroup bl_styling
 //! \{
-
-//! Pattern [Impl].
-//!
-//! The following properties are stored in BLObjectInfo:
-//!
-//!   - Pattern extend mode is stored in BLObjectInfo's 'b' field.
-//!   - Pattern matrix type is stored in BLObjectInfo's 'c' field.
-struct BLPatternImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Image used by the pattern.
-  BLImageCore image;
-
-  //! Image area to use.
-  BLRectI area;
-  //! Pattern transformation matrix.
-  BLMatrix2D transform;
-};
-
-//! \}
-//! \endcond
 
 //! \name BLPattern - C++ API
 //! \{

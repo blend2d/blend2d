@@ -8,7 +8,7 @@
 
 #include "object.h"
 
-//! \addtogroup blend2d_api_globals
+//! \addtogroup bl_c_api
 //! \{
 
 //! \name BLArray - C API
@@ -21,6 +21,49 @@
 //! types at API level as there is no difference between them from an implementation perspective.
 //!
 //! \{
+
+//! Array container [C API].
+struct BLArrayCore BL_CLASS_INHERITS(BLObjectCore) {
+  BL_DEFINE_OBJECT_DETAIL
+
+#ifdef __cplusplus
+  //! \cond INTERNAL
+
+  template<typename T>
+  BL_NODISCARD
+  BL_INLINE_NODEBUG T& dcast() noexcept { return static_cast<T&>(*this); }
+
+  template<typename T>
+  BL_NODISCARD
+  BL_INLINE_NODEBUG const T& dcast() const noexcept { return static_cast<const T&>(*this); }
+
+  //! \endcond
+#endif
+};
+
+//! \cond INTERNAL
+//! Array container [C API Impl].
+struct BLArrayImpl BL_CLASS_INHERITS(BLObjectImpl) {
+  //! Pointer to array data.
+  void* data;
+  //! Array size [in items].
+  size_t size;
+  //! Array capacity [in items].
+  size_t capacity;
+
+#ifdef __cplusplus
+  //! Returns the pointer to the `data` casted to `T*`.
+  template<typename T>
+  BL_NODISCARD
+  BL_INLINE_NODEBUG T* dataAs() noexcept { return (T*)data; }
+
+  //! Returns the pointer to the `data` casted to `const T*`.
+  template<typename T>
+  BL_NODISCARD
+  BL_INLINE_NODEBUG const T* dataAs() const noexcept { return (const T*)data; }
+#endif
+};
+//! \endcond
 
 BL_BEGIN_C_DECLS
 
@@ -85,52 +128,16 @@ BL_API bool BL_CDECL blArrayEquals(const BLArrayCore* a, const BLArrayCore* b) B
 
 BL_END_C_DECLS
 
-//! Array container [C API].
-struct BLArrayCore BL_CLASS_INHERITS(BLObjectCore) {
-  BL_DEFINE_OBJECT_DETAIL
-
-#ifdef __cplusplus
-  //! \cond INTERNAL
-
-  template<typename T>
-  BL_NODISCARD
-  BL_INLINE_NODEBUG T& dcast() noexcept { return static_cast<T&>(*this); }
-
-  template<typename T>
-  BL_NODISCARD
-  BL_INLINE_NODEBUG const T& dcast() const noexcept { return static_cast<const T&>(*this); }
-
-  //! \endcond
-#endif
-};
+//! \}
 
 //! \}
+
+//! \addtogroup bl_containers
+//! \{
 
 //! \cond INTERNAL
 //! \name BLArray - Internals
 //! \{
-
-//! Array container [Impl].
-struct BLArrayImpl BL_CLASS_INHERITS(BLObjectImpl) {
-  //! Pointer to array data.
-  void* data;
-  //! Array size [in items].
-  size_t size;
-  //! Array capacity [in items].
-  size_t capacity;
-
-#ifdef __cplusplus
-  //! Returns the pointer to the `data` casted to `T*`.
-  template<typename T>
-  BL_NODISCARD
-  BL_INLINE_NODEBUG T* dataAs() noexcept { return (T*)data; }
-
-  //! Returns the pointer to the `data` casted to `const T*`.
-  template<typename T>
-  BL_NODISCARD
-  BL_INLINE_NODEBUG const T* dataAs() const noexcept { return (const T*)data; }
-#endif
-};
 
 #ifdef __cplusplus
 namespace BLInternal {
@@ -356,7 +363,7 @@ public:
 
   //! Resets the array into a default constructed state by clearing its content and releasing its memory.
   //!
-  //! \note This function always returns `BL_SUCCESS`.
+  //! \note This function always returns \ref BL_SUCCESS.
   BL_INLINE_NODEBUG BLResult reset() noexcept {
     BLResult result = blArrayReset(this);
     BL_ASSUME(result == BL_SUCCESS);
@@ -458,8 +465,7 @@ public:
 
   //! Resizes the array to `n` items.
   //!
-  //! If `n` is greater than the array length then all new items will be
-  //! initialized by `fill` item.
+  //! If `n` is greater than the array length then all new items will be initialized by `fill` item.
   BL_INLINE_NODEBUG BLResult resize(size_t n, const T& fill) noexcept { return blArrayResize(this, n, &fill); }
 
   //! Makes the array mutable by possibly creating a deep copy of the data if it's either read-only or shared with
@@ -558,7 +564,7 @@ public:
   //! \param data External data buffer to use (cannot be NULL).
   //! \param size Size of the data buffer in items.
   //! \param capacity Capacity of the buffer, cannot be zero or smaller than `size`.
-  //! \param accessFlags Flags that describe whether the data is read-only or read-write, see `BLDataAccessFlags`.
+  //! \param accessFlags Flags that describe whether the data is read-only or read-write, see \ref BLDataAccessFlags.
   //! \param destroyFunc A function that would be called when the array is destroyed (can be null if you don't need it).
   //! \param userData User data passed to `destroyFunc`.
   BL_INLINE_NODEBUG BLResult assignExternalData(
