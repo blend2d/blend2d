@@ -1074,7 +1074,9 @@ static BLResult decoderReadFrameImplInternal(BLPngDecoderImpl* decoderI, BLImage
   // is stored in `idatOff` and should be non-zero.
   BL_ASSERT(idatOff != 0);
 
-  BLFormat format = BL_FORMAT_PRGB32;
+  BLFormat outputFormat = colorType == kColorType2_RGB ? BL_FORMAT_XRGB32 : BL_FORMAT_PRGB32;
+  BLFormat targetConversionFormat = BL_FORMAT_PRGB32;
+
   uint32_t sampleDepth = decoderI->sampleDepth;
   uint32_t sampleCount = decoderI->sampleCount;
 
@@ -1106,14 +1108,14 @@ static BLResult decoderReadFrameImplInternal(BLPngDecoderImpl* decoderI, BLImage
     InterlaceStep& step = steps[i];
     if (!step.used)
       continue;
-    BL_PROPAGATE(opts.inverseFilter(data + step.offset, bytesPerPixel, step.bpl, step.height));
+    BL_PROPAGATE(Ops::funcTable.inverseFilter[bytesPerPixel](data + step.offset, bytesPerPixel, step.bpl, step.height));
   }
 
   // Convert / Deinterlace
   // ---------------------
 
   BLImageData imageData;
-  BL_PROPAGATE(imageOut->create(int(w), int(h), format));
+  BL_PROPAGATE(imageOut->create(int(w), int(h), outputFormat));
   BL_PROPAGATE(imageOut->makeMutable(&imageData));
 
   uint8_t* dstPixels = static_cast<uint8_t*>(imageData.pixelData);
@@ -1175,7 +1177,7 @@ static BLResult decoderReadFrameImplInternal(BLPngDecoderImpl* decoderI, BLImage
   }
 
   BLPixelConverter pc;
-  BL_PROPAGATE(pc.create(blFormatInfo[format], pngFmt,
+  BL_PROPAGATE(pc.create(blFormatInfo[targetConversionFormat], pngFmt,
     BLPixelConverterCreateFlags(
       BL_PIXEL_CONVERTER_CREATE_FLAG_DONT_COPY_PALETTE |
       BL_PIXEL_CONVERTER_CREATE_FLAG_ALTERABLE_PALETTE)));
@@ -1622,14 +1624,7 @@ static BLResult BL_CDECL codecCreateEncoderImpl(const BLImageCodecImpl* impl, BL
 void pngCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept {
   using namespace bl::Png;
 
-  blUnused(rt);
-
-  // Initialize PNG ops.
-  opts.inverseFilter = inverseFilterImpl;
-
-#ifdef BL_BUILD_OPT_SSE2
-  opts.inverseFilter = inverseFilterImpl_SSE2;
-#endif
+  Ops::initFuncTable(rt);
 
   // Initialize PNG codec.
   pngCodec.virt.base.destroy = codecDestroyImpl;

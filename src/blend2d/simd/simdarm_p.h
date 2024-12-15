@@ -2059,6 +2059,19 @@ template<typename V> BL_INLINE_NODEBUG V loadu_64(const void* src) noexcept { re
 template<typename V> BL_INLINE_NODEBUG V loada_128(const void* src) noexcept { return from_simd<V>(I::simd_loada_128(src)); }
 template<typename V> BL_INLINE_NODEBUG V loadu_128(const void* src) noexcept { return from_simd<V>(I::simd_loadu_128(src)); }
 
+template<typename V> BL_INLINE_NODEBUG V loada_64_i8_i16(const void* src) noexcept { return from_simd<V>(I::simd_unpack_lo64_i8_i16(simd_i8(I::simd_loada_64<V::kW>(src)))); }
+template<typename V> BL_INLINE_NODEBUG V loadu_64_i8_i16(const void* src) noexcept { return from_simd<V>(I::simd_unpack_lo64_i8_i16(simd_i8(I::simd_loadu_64<V::kW>(src)))); }
+template<typename V> BL_INLINE_NODEBUG V loada_64_u8_u16(const void* src) noexcept { return from_simd<V>(I::simd_unpack_lo64_u8_u16(simd_u8(I::simd_loada_64<V::kW>(src)))); }
+template<typename V> BL_INLINE_NODEBUG V loadu_64_u8_u16(const void* src) noexcept { return from_simd<V>(I::simd_unpack_lo64_u8_u16(simd_u8(I::simd_loadu_64<V::kW>(src)))); }
+template<typename V> BL_INLINE_NODEBUG V loada_64_i16_i32(const void* src) noexcept { return from_simd<V>(I::simd_unpack_lo64_i16_i32(simd_i16(I::simd_loada_64<V::kW>(src)))); }
+template<typename V> BL_INLINE_NODEBUG V loadu_64_i16_i32(const void* src) noexcept { return from_simd<V>(I::simd_unpack_lo64_i16_i32(simd_i16(I::simd_loadu_64<V::kW>(src)))); }
+template<typename V> BL_INLINE_NODEBUG V loada_64_u16_u32(const void* src) noexcept { return from_simd<V>(I::simd_unpack_lo64_u16_u32(simd_u16(I::simd_loada_64<V::kW>(src)))); }
+template<typename V> BL_INLINE_NODEBUG V loadu_64_u16_u32(const void* src) noexcept { return from_simd<V>(I::simd_unpack_lo64_u16_u32(simd_u16(I::simd_loadu_64<V::kW>(src)))); }
+template<typename V> BL_INLINE_NODEBUG V loada_64_i32_i64(const void* src) noexcept { return from_simd<V>(I::simd_unpack_lo64_i32_i64(simd_i32(I::simd_loada_64<V::kW>(src)))); }
+template<typename V> BL_INLINE_NODEBUG V loadu_64_i32_i64(const void* src) noexcept { return from_simd<V>(I::simd_unpack_lo64_i32_i64(simd_i32(I::simd_loadu_64<V::kW>(src)))); }
+template<typename V> BL_INLINE_NODEBUG V loada_64_u32_u64(const void* src) noexcept { return from_simd<V>(I::simd_unpack_lo64_u32_u64(simd_u32(I::simd_loada_64<V::kW>(src)))); }
+template<typename V> BL_INLINE_NODEBUG V loadu_64_u32_u64(const void* src) noexcept { return from_simd<V>(I::simd_unpack_lo64_u32_u64(simd_u32(I::simd_loadu_64<V::kW>(src)))); }
+
 template<typename V> BL_INLINE_NODEBUG void storea(void* dst, const V& src) noexcept { I::simd_storea(dst, simd_u8(src.v)); }
 template<typename V> BL_INLINE_NODEBUG void storeu(void* dst, const V& src) noexcept { I::simd_storeu(dst, simd_u8(src.v)); }
 template<typename V> BL_INLINE_NODEBUG void store_8(void* dst, const V& src) noexcept { I::simd_store_8(dst, simd_u8(src.v)); }
@@ -2261,8 +2274,8 @@ BL_INLINE_NODEBUG V blend_u64(const V& a, const V& b) noexcept {
   return from_simd<V>(I::simd_blend_u64<B, A>(simd_u8(a.v), simd_u8(b.v)));
 }
 
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> blendv_bits(const Vec<W, T>& a, const Vec<W, T>& b, const Vec<W, T>& msk) noexcept { return vec_wt<W, T>(I::simd_blendv_bits(a.v, b.v, msk.v)); }
-template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> blendv_u8(const Vec<W, T>& a, const Vec<W, T>& b, const Vec<W, T>& msk) noexcept { return vec_wt<W, T>(I::simd_blendv_u8(a.v, b.v, msk.v)); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> blendv_bits(const Vec<W, T>& a, const Vec<W, T>& b, const Vec<W, T>& msk) noexcept { return vec_wt<W, T>(I::simd_blendv_bits(simd_u8(a.v), simd_u8(b.v), simd_u8(msk.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> blendv_u8(const Vec<W, T>& a, const Vec<W, T>& b, const Vec<W, T>& msk) noexcept { return vec_wt<W, T>(I::simd_blendv_u8(simd_u8(a.v), simd_u8(b.v), simd_u8(msk.v))); }
 
 template<typename V> BL_INLINE_NODEBUG V add_f32(const V& a, const V& b) noexcept { return from_simd<V>(I::simd_add_f32(simd_f32(a.v), simd_f32(b.v))); }
 template<typename V> BL_INLINE_NODEBUG V sub_f32(const V& a, const V& b) noexcept { return from_simd<V>(I::simd_sub_f32(simd_f32(a.v), simd_f32(b.v))); }

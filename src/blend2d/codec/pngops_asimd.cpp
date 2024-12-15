@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
-#if defined(BL_TARGET_OPT_SSE2)
+#if defined(BL_TARGET_OPT_ASIMD)
 
 #include "../codec/pngopssimdimpl_p.h"
 
@@ -12,7 +12,7 @@ namespace bl {
 namespace Png {
 namespace Ops {
 
-void initFuncTable_SSE2(FunctionTable& ft) noexcept {
+void initFuncTable_ASIMD(FunctionTable& ft) noexcept {
   initSimdFunctions(ft);
 }
 
@@ -20,4 +20,4 @@ void initFuncTable_SSE2(FunctionTable& ft) noexcept {
 } // {Png}
 } // {bl}
 
-#endif // BL_TARGET_OPT_SSE2
+#endif // BL_TARGET_OPT_ASIMD

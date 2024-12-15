@@ -38,8 +38,18 @@ static DiffInfo diffInfo(const BLImage& aImage, const BLImage& bImage) noexcept 
   if (bImage.getData(&bData) != BL_SUCCESS)
     return info;
 
-  if (aData.format != bData.format)
-    return info;
+  uint32_t aFill = 0;
+  uint32_t bFill = 0;
+
+  if (aData.format != bData.format) {
+    if ((aData.format == BL_FORMAT_XRGB32 && bData.format == BL_FORMAT_PRGB32) ||
+        (aData.format == BL_FORMAT_PRGB32 && bData.format == BL_FORMAT_XRGB32)) {
+      // Pass: We would convert between these two formats on the fly.
+    }
+    else {
+      return info;
+    }
+  }
 
   intptr_t aStride = aData.stride;
   intptr_t bStride = bData.stride;
@@ -52,15 +62,16 @@ static DiffInfo diffInfo(const BLImage& aImage, const BLImage& bImage) noexcept 
   switch (aData.format) {
     case BL_FORMAT_XRGB32:
     case BL_FORMAT_PRGB32: {
-      uint32_t mask = aData.format == BL_FORMAT_XRGB32 ? 0xFF000000u : 0x0u;
+      uint32_t aMask = aData.format == BL_FORMAT_XRGB32 ? 0xFF000000u : 0x0u;
+      uint32_t bMask = bData.format == BL_FORMAT_XRGB32 ? 0xFF000000u : 0x0u;
 
       for (size_t y = 0; y < h; y++) {
         const uint32_t* aPtr = reinterpret_cast<const uint32_t*>(aLine);
         const uint32_t* bPtr = reinterpret_cast<const uint32_t*>(bLine);
 
         for (size_t x = 0; x < w; x++) {
-          uint32_t aVal = aPtr[x] | mask;
-          uint32_t bVal = bPtr[x] | mask;
+          uint32_t aVal = aPtr[x] | aMask;
+          uint32_t bVal = bPtr[x] | bMask;
 
           if (aVal != bVal) {
             int aDiff = blAbs(int((aVal >> 24) & 0xFF) - int((bVal >> 24) & 0xFF));

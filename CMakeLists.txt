@@ -231,8 +231,12 @@ set(BLEND2D_SRC_LIST
   blend2d/codec/pngcodec.cpp
   blend2d/codec/pngcodec_p.h
   blend2d/codec/pngops.cpp
+  blend2d/codec/pngops_asimd.cpp
+  blend2d/codec/pngops_avx.cpp
   blend2d/codec/pngops_sse2.cpp
   blend2d/codec/pngops_p.h
+  blend2d/codec/pngopssimdimpl_p.h
+  blend2d/codec/pngopssimdimpl_test.cpp
   blend2d/codec/qoicodec.cpp
   blend2d/codec/qoicodec_p.h
 

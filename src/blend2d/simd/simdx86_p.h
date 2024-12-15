@@ -3224,9 +3224,9 @@ template<> BL_INLINE_NODEBUG __m128i simd_load_8(const void* src) noexcept { ret
 #endif
 
 template<> BL_INLINE_NODEBUG __m128i simd_loada_16(const void* src) noexcept { return _mm_cvtsi32_si128(*static_cast<const uint16_t*>(src)); }
-template<> BL_INLINE_NODEBUG __m128i simd_loadu_16(const void* src) noexcept { return _mm_cvtsi32_si128(*static_cast<BL_UNALIGNED_TYPE(const uint16_t, 1)*>(src)); }
+template<> BL_INLINE_NODEBUG __m128i simd_loadu_16(const void* src) noexcept { return _mm_cvtsi32_si128(int(bl::MemOps::readU16u(src))); }
 template<> BL_INLINE_NODEBUG __m128i simd_loada_32(const void* src) noexcept { return _mm_cvtsi32_si128(*static_cast<const int*>(src)); }
-template<> BL_INLINE_NODEBUG __m128i simd_loadu_32(const void* src) noexcept { return _mm_cvtsi32_si128(*static_cast<BL_UNALIGNED_TYPE(const int, 1)*>(src)); }
+template<> BL_INLINE_NODEBUG __m128i simd_loadu_32(const void* src) noexcept { return _mm_cvtsi32_si128(int(bl::MemOps::readU32u(src))); }
 template<> BL_INLINE_NODEBUG __m128i simd_loada_64(const void* src) noexcept { return _mm_loadl_epi64(static_cast<const __m128i*>(src)); }
 template<> BL_INLINE_NODEBUG __m128i simd_loadu_64(const void* src) noexcept { return _mm_loadl_epi64(static_cast<const __m128i*>(src)); }
 template<> BL_INLINE_NODEBUG __m128i simd_loada_128(const void* src) noexcept { return _mm_load_si128(static_cast<const __m128i*>(src)); }
@@ -3285,9 +3285,9 @@ BL_INLINE_NODEBUG __m128i simd_loada_16_u8_u64(const void* src) noexcept { retur
 
 BL_INLINE_NODEBUG void simd_store_8(void* dst, __m128i src) noexcept { *static_cast<uint8_t*>(dst) = uint8_t(_mm_cvtsi128_si32(src)); }
 BL_INLINE_NODEBUG void simd_storea_16(void* dst, __m128i src) noexcept { *static_cast<uint16_t*>(dst) = uint16_t(_mm_cvtsi128_si32(src)); }
-BL_INLINE_NODEBUG void simd_storeu_16(void* dst, __m128i src) noexcept { *static_cast<BL_UNALIGNED_TYPE(uint16_t, 1)*>(dst) = uint16_t(_mm_cvtsi128_si32(src)); }
+BL_INLINE_NODEBUG void simd_storeu_16(void* dst, __m128i src) noexcept { bl::MemOps::writeU16u(dst, uint16_t(_mm_cvtsi128_si32(src))); }
 BL_INLINE_NODEBUG void simd_storea_32(void* dst, __m128i src) noexcept { *static_cast<uint32_t*>(dst) = uint32_t(_mm_cvtsi128_si32(src)); }
-BL_INLINE_NODEBUG void simd_storeu_32(void* dst, __m128i src) noexcept { *static_cast<BL_UNALIGNED_TYPE(uint32_t, 1)*>(dst) = uint32_t(_mm_cvtsi128_si32(src)); }
+BL_INLINE_NODEBUG void simd_storeu_32(void* dst, __m128i src) noexcept { bl::MemOps::writeU32u(dst, uint32_t(_mm_cvtsi128_si32(src))); }
 BL_INLINE_NODEBUG void simd_storea_64(void* dst, __m128i src) noexcept { _mm_storel_epi64(static_cast<__m128i*>(dst), src); }
 BL_INLINE_NODEBUG void simd_storeu_64(void* dst, __m128i src) noexcept { _mm_storel_epi64(static_cast<__m128i*>(dst), src); }
 BL_INLINE_NODEBUG void simd_storeh_64(void* dst, __m128i src) noexcept { _mm_storeh_pd(static_cast<double*>(dst), _mm_castsi128_pd(src)); }

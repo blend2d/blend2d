@@ -6,7 +6,7 @@
 #include "api-build_p.h"
 #include "array_p.h"
 #include "filesystem.h"
-#include "format.h"
+#include "format_p.h"
 #include "image_p.h"
 #include "imagecodec.h"
 #include "imagedecoder.h"
@@ -426,21 +426,24 @@ BL_API_IMPL BLResult blImageConvert(BLImageCore* self, BLFormat format) noexcept
   BL_ASSERT(self->_d.isImage());
   BLImagePrivateImpl* selfI = getImpl(self);
 
-  BLFormat srcFormat = BLFormat(selfI->format);
-  BLFormat dstFormat = format;
+  bl::FormatExt srcFormat = bl::FormatExt(selfI->format);
+  bl::FormatExt dstFormat = bl::FormatExt(format);
 
   if (dstFormat == srcFormat)
     return BL_SUCCESS;
 
-  if (srcFormat == BL_FORMAT_NONE)
+  if (dstFormat == bl::FormatExt::kXRGB32)
+    dstFormat = bl::FormatExt::kFRGB32;
+
+  if (srcFormat == bl::FormatExt::kNone)
     return blTraceError(BL_ERROR_NOT_INITIALIZED);
 
   BLResult result = BL_SUCCESS;
   BLPixelConverterCore pc {};
 
   BLSizeI size = selfI->size;
-  const BLFormatInfo& di = blFormatInfo[dstFormat];
-  const BLFormatInfo& si = blFormatInfo[srcFormat];
+  const BLFormatInfo& di = blFormatInfo[size_t(dstFormat)];
+  const BLFormatInfo& si = blFormatInfo[size_t(srcFormat)];
 
   // Save some cycles by calling `blPixelConverterInitInternal` as we don't need to sanitize the destination and
   // source formats in this case.
@@ -454,10 +457,11 @@ BL_API_IMPL BLResult blImageConvert(BLImageCore* self, BLFormat format) noexcept
     // Prefer in-place conversion if the depths are equal and the image mutable.
     pc.convertFunc(&pc, static_cast<uint8_t*>(selfI->pixelData), selfI->stride,
                         static_cast<uint8_t*>(selfI->pixelData), selfI->stride, uint32_t(size.w), uint32_t(size.h), nullptr);
+    selfI->format = uint8_t(format);
   }
   else {
     BLImageCore dstImage;
-    result = blImageInitAs(&dstImage, size.w, size.h, dstFormat);
+    result = blImageInitAs(&dstImage, size.w, size.h, format);
 
     if (result == BL_SUCCESS) {
       BLImagePrivateImpl* dstI = getImpl(&dstImage);

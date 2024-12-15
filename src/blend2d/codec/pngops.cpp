@@ -9,29 +9,30 @@
 
 namespace bl {
 namespace Png {
+namespace Ops {
 
-FuncOpts opts;
+FunctionTable funcTable;
 
-// bl::png::Opts - Inverse Filter
+// bl::Png::Ops - Inverse Filter
 // ==============================
 
-BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint32_t h) noexcept {
-  BL_ASSERT(bpp > 0);
-  BL_ASSERT(bpl > 1);
-  BL_ASSERT(h   > 0);
+static BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint32_t h) noexcept {
+  BL_ASSERT(bpp > 0u);
+  BL_ASSERT(bpl > 1u);
+  BL_ASSERT(h   > 0u);
 
   uint32_t y = h;
   uint8_t* u = nullptr;
 
-  // Subtract one BYTE that is used to store the `filter` ID.
+  // Subtract one BYTE that is used to store the `filter` ID - it's always processed and not part of pixel data.
   bpl--;
 
   // First row uses a special filter that doesn't access the previous row,
   // which is assumed to contain all zeros.
   uint32_t filterType = *p++;
 
-  if (filterType >= BL_PNG_FILTER_TYPE_COUNT)
-    filterType = BL_PNG_FILTER_TYPE_NONE;
+  if (filterType >= kFilterTypeCount)
+    filterType = kFilterTypeNone;
 
   filterType = simplifyFilterOfFirstRow(filterType);
 
@@ -39,7 +40,7 @@ BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint
     uint32_t i;
 
     switch (filterType) {
-      case BL_PNG_FILTER_TYPE_SUB: {
+      case kFilterTypeSub: {
         for (i = bpl - bpp; i != 0; i--, p++)
           p[bpp] = applySumFilter(p[bpp], p[0]);
 
@@ -47,14 +48,14 @@ BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint
         break;
       }
 
-      case BL_PNG_FILTER_TYPE_UP: {
+      case kFilterTypeUp: {
         BL_ASSERT(u != nullptr);
         for (i = bpl; i != 0; i--, p++, u++)
           p[0] = applySumFilter(p[0], u[0]);
         break;
       }
 
-      case BL_PNG_FILTER_TYPE_AVG: {
+      case kFilterTypeAvg: {
         BL_ASSERT(u != nullptr);
         for (i = 0; i < bpp; i++)
           p[i] = applySumFilter(p[i], u[i] >> 1);
@@ -67,19 +68,19 @@ BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint
         break;
       }
 
-      case BL_PNG_FILTER_TYPE_PAETH: {
+      case kFilterTypePaeth: {
         BL_ASSERT(u != nullptr);
         for (i = 0; i < bpp; i++)
           p[i] = applySumFilter(p[i], u[i]);
 
         for (i = bpl - bpp; i != 0; i--, p++, u++)
-          p[bpp] = applySumFilter(p[bpp], blPngPaethFilter(p[0], u[bpp], u[0]));
+          p[bpp] = applySumFilter(p[bpp], applyPaethFilter(p[0], u[bpp], u[0]));
 
         p += bpp;
         break;
       }
 
-      case BL_PNG_FILTER_TYPE_AVG0: {
+      case kFilterTypeAvg0: {
         for (i = bpl - bpp; i != 0; i--, p++)
           p[bpp] = applySumFilter(p[bpp], p[0] >> 1);
 
@@ -87,7 +88,7 @@ BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint
         break;
       }
 
-      case BL_PNG_FILTER_TYPE_NONE:
+      case kFilterTypeNone:
       default:
         p += bpl;
         break;
@@ -99,12 +100,57 @@ BLResult BL_CDECL inverseFilterImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, uint
     u = p - bpl;
     filterType = *p++;
 
-    if (filterType >= BL_PNG_FILTER_TYPE_COUNT)
-      filterType = BL_PNG_FILTER_TYPE_NONE;
+    if (filterType >= kFilterTypeCount)
+      filterType = kFilterTypeNone;
   }
 
   return BL_SUCCESS;
 }
 
+void initFuncTable_Ref(FunctionTable& ft) noexcept {
+  ft.inverseFilter[1] = inverseFilterImpl;
+  ft.inverseFilter[2] = inverseFilterImpl;
+  ft.inverseFilter[3] = inverseFilterImpl;
+  ft.inverseFilter[4] = inverseFilterImpl;
+  ft.inverseFilter[6] = inverseFilterImpl;
+  ft.inverseFilter[8] = inverseFilterImpl;
+}
+
+void initFuncTable(BLRuntimeContext* rt) noexcept {
+  blUnused(rt);
+
+  // Initialize optimized PNG functions.
+  FunctionTable& ft = funcTable;
+
+#if !defined(BL_BUILD_OPT_SSE2) && !defined(BL_BUILD_OPT_ASIMD)
+  initFuncTable_Ref(ft);
+#endif
+
+#if defined(BL_BUILD_OPT_SSE2)
+  if (blRuntimeHasSSE2(rt)) {
+    initFuncTable_SSE2(ft);
+  }
+  else {
+    initFuncTable_Ref(ft);
+  }
+#endif // BL_BUILD_OPT_SSE2
+
+#if defined(BL_BUILD_OPT_AVX)
+  if (blRuntimeHasAVX(rt)) {
+    initFuncTable_AVX(ft);
+  }
+#endif // BL_BUILD_OPT_AVX
+
+#if defined(BL_BUILD_OPT_ASIMD)
+  if (blRuntimeHasASIMD(rt)) {
+    initFuncTable_ASIMD(ft);
+  }
+  else {
+    initFuncTable_Ref(ft);
+  }
+#endif // BL_BUILD_OPT_ASIMD
+}
+
+} // {Ops}
 } // {Png}
 } // {bl}

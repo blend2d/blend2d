@@ -21,11 +21,20 @@ public:
     : _argc(argc),
       _argv(argv) {}
 
-  bool hasArg(const char* key) const {
-    for (int i = 1; i < _argc; i++)
+  inline int count() const { return _argc; }
+  inline const char* const* args() const { return _argv; }
+
+  int findArg(const char* key) const {
+    for (int i = 1; i < _argc; i++) {
       if (strcmp(key, _argv[i]) == 0)
-        return true;
-    return false;
+        return i;
+    }
+
+    return -1;
+  }
+
+  bool hasArg(const char* key) const {
+    return findArg(key) > 0;
   }
 
   const char* valueOf(const char* key, const char* defaultValue) const {

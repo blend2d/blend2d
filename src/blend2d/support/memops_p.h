@@ -62,14 +62,14 @@ template<> struct UnalignedInt<uint64_t, 8> { typedef BL_MAY_ALIAS uint64_t T; }
 //! \{
 
 BL_NODISCARD
-static BL_INLINE uint32_t readU8(const void* p) noexcept { return uint32_t(static_cast<const uint8_t*>(p)[0]); }
+static BL_INLINE_NODEBUG uint32_t readU8(const void* p) noexcept { return uint32_t(static_cast<const uint8_t*>(p)[0]); }
 
 BL_NODISCARD
-static BL_INLINE int32_t readI8(const void* p) noexcept { return int32_t(static_cast<const int8_t*>(p)[0]); }
+static BL_INLINE_NODEBUG int32_t readI8(const void* p) noexcept { return int32_t(static_cast<const int8_t*>(p)[0]); }
 
 template<uint32_t ByteOrder, size_t Alignment>
 BL_NODISCARD
-static BL_INLINE uint32_t readU16(const void* p) noexcept {
+static BL_INLINE_NODEBUG uint32_t readU16(const void* p) noexcept {
   if (ByteOrder == BL_BYTE_ORDER_NATIVE && (kUnalignedMem16 || Alignment >= 2)) {
     typedef typename UnalignedInt<uint16_t, Alignment>::T U16AlignedToN;
     return uint32_t(static_cast<const U16AlignedToN*>(p)[0]);
@@ -83,7 +83,7 @@ static BL_INLINE uint32_t readU16(const void* p) noexcept {
 
 template<uint32_t ByteOrder, size_t Alignment>
 BL_NODISCARD
-static BL_INLINE int32_t readI16(const void* p) noexcept {
+static BL_INLINE_NODEBUG int32_t readI16(const void* p) noexcept {
   if (ByteOrder == BL_BYTE_ORDER_NATIVE && (kUnalignedMem16 || Alignment >= 2)) {
     typedef typename UnalignedInt<uint16_t, Alignment>::T U16AlignedToN;
     return int32_t(int16_t(static_cast<const U16AlignedToN*>(p)[0]));
@@ -97,7 +97,7 @@ static BL_INLINE int32_t readI16(const void* p) noexcept {
 
 template<uint32_t ByteOrder = BL_BYTE_ORDER_NATIVE>
 BL_NODISCARD
-static BL_INLINE uint32_t readU24u(const void* p) noexcept {
+static BL_INLINE_NODEBUG uint32_t readU24u(const void* p) noexcept {
   uint32_t b0 = readU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 2 : 0));
   uint32_t b1 = readU8(static_cast<const uint8_t*>(p) + 1);
   uint32_t b2 = readU8(static_cast<const uint8_t*>(p) + (ByteOrder == BL_BYTE_ORDER_LE ? 0 : 2));
@@ -106,7 +106,7 @@ static BL_INLINE uint32_t readU24u(const void* p) noexcept {
 
 template<uint32_t ByteOrder, size_t Alignment>
 BL_NODISCARD
-static BL_INLINE uint32_t readU32(const void* p) noexcept {
+static BL_INLINE_NODEBUG uint32_t readU32(const void* p) noexcept {
   if (kUnalignedMem32 || Alignment >= 4) {
     typedef typename UnalignedInt<uint32_t, Alignment>::T U32AlignedToN;
     uint32_t x = static_cast<const U32AlignedToN*>(p)[0];
@@ -121,7 +121,7 @@ static BL_INLINE uint32_t readU32(const void* p) noexcept {
 
 template<uint32_t ByteOrder, size_t Alignment>
 BL_NODISCARD
-static BL_INLINE uint64_t readU64(const void* p) noexcept {
+static BL_INLINE_NODEBUG uint64_t readU64(const void* p) noexcept {
   if (ByteOrder == BL_BYTE_ORDER_NATIVE && (kUnalignedMem64 || Alignment >= 8)) {
     typedef typename UnalignedInt<uint64_t, Alignment>::T U64AlignedToN;
     return static_cast<const U64AlignedToN*>(p)[0];
@@ -135,70 +135,70 @@ static BL_INLINE uint64_t readU64(const void* p) noexcept {
 
 template<uint32_t ByteOrder, size_t Alignment>
 BL_NODISCARD
-static  BL_INLINE int32_t readI32(const void* p) noexcept { return int32_t(readU32<ByteOrder, Alignment>(p)); }
+static  BL_INLINE_NODEBUG int32_t readI32(const void* p) noexcept { return int32_t(readU32<ByteOrder, Alignment>(p)); }
 
 template<uint32_t ByteOrder, size_t Alignment>
 BL_NODISCARD
-static BL_INLINE int64_t readI64(const void* p) noexcept { return int64_t(readU64<ByteOrder, Alignment>(p)); }
+static BL_INLINE_NODEBUG int64_t readI64(const void* p) noexcept { return int64_t(readU64<ByteOrder, Alignment>(p)); }
 
-BL_NODISCARD static BL_INLINE int32_t readI16a(const void* p) noexcept { return readI16<BL_BYTE_ORDER_NATIVE, 2>(p); }
-BL_NODISCARD static BL_INLINE int32_t readI16u(const void* p) noexcept { return readI16<BL_BYTE_ORDER_NATIVE, 1>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU16a(const void* p) noexcept { return readU16<BL_BYTE_ORDER_NATIVE, 2>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU16u(const void* p) noexcept { return readU16<BL_BYTE_ORDER_NATIVE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int32_t readI16a(const void* p) noexcept { return readI16<BL_BYTE_ORDER_NATIVE, 2>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int32_t readI16u(const void* p) noexcept { return readI16<BL_BYTE_ORDER_NATIVE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU16a(const void* p) noexcept { return readU16<BL_BYTE_ORDER_NATIVE, 2>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU16u(const void* p) noexcept { return readU16<BL_BYTE_ORDER_NATIVE, 1>(p); }
 
-BL_NODISCARD static BL_INLINE int32_t readI16aLE(const void* p) noexcept { return readI16<BL_BYTE_ORDER_LE, 2>(p); }
-BL_NODISCARD static BL_INLINE int32_t readI16uLE(const void* p) noexcept { return readI16<BL_BYTE_ORDER_LE, 1>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU16aLE(const void* p) noexcept { return readU16<BL_BYTE_ORDER_LE, 2>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU16uLE(const void* p) noexcept { return readU16<BL_BYTE_ORDER_LE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int32_t readI16aLE(const void* p) noexcept { return readI16<BL_BYTE_ORDER_LE, 2>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int32_t readI16uLE(const void* p) noexcept { return readI16<BL_BYTE_ORDER_LE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU16aLE(const void* p) noexcept { return readU16<BL_BYTE_ORDER_LE, 2>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU16uLE(const void* p) noexcept { return readU16<BL_BYTE_ORDER_LE, 1>(p); }
 
-BL_NODISCARD static BL_INLINE int32_t readI16aBE(const void* p) noexcept { return readI16<BL_BYTE_ORDER_BE, 2>(p); }
-BL_NODISCARD static BL_INLINE int32_t readI16uBE(const void* p) noexcept { return readI16<BL_BYTE_ORDER_BE, 1>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU16aBE(const void* p) noexcept { return readU16<BL_BYTE_ORDER_BE, 2>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU16uBE(const void* p) noexcept { return readU16<BL_BYTE_ORDER_BE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int32_t readI16aBE(const void* p) noexcept { return readI16<BL_BYTE_ORDER_BE, 2>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int32_t readI16uBE(const void* p) noexcept { return readI16<BL_BYTE_ORDER_BE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU16aBE(const void* p) noexcept { return readU16<BL_BYTE_ORDER_BE, 2>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU16uBE(const void* p) noexcept { return readU16<BL_BYTE_ORDER_BE, 1>(p); }
 
-BL_NODISCARD static BL_INLINE uint32_t readU24uLE(const void* p) noexcept { return readU24u<BL_BYTE_ORDER_LE>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU24uBE(const void* p) noexcept { return readU24u<BL_BYTE_ORDER_BE>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU24uLE(const void* p) noexcept { return readU24u<BL_BYTE_ORDER_LE>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU24uBE(const void* p) noexcept { return readU24u<BL_BYTE_ORDER_BE>(p); }
 
-BL_NODISCARD static BL_INLINE int32_t readI32a(const void* p) noexcept { return readI32<BL_BYTE_ORDER_NATIVE, 4>(p); }
-BL_NODISCARD static BL_INLINE int32_t readI32u(const void* p) noexcept { return readI32<BL_BYTE_ORDER_NATIVE, 1>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU32a(const void* p) noexcept { return readU32<BL_BYTE_ORDER_NATIVE, 4>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU32u(const void* p) noexcept { return readU32<BL_BYTE_ORDER_NATIVE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int32_t readI32a(const void* p) noexcept { return readI32<BL_BYTE_ORDER_NATIVE, 4>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int32_t readI32u(const void* p) noexcept { return readI32<BL_BYTE_ORDER_NATIVE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU32a(const void* p) noexcept { return readU32<BL_BYTE_ORDER_NATIVE, 4>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU32u(const void* p) noexcept { return readU32<BL_BYTE_ORDER_NATIVE, 1>(p); }
 
-BL_NODISCARD static BL_INLINE int32_t readI32aLE(const void* p) noexcept { return readI32<BL_BYTE_ORDER_LE, 4>(p); }
-BL_NODISCARD static BL_INLINE int32_t readI32uLE(const void* p) noexcept { return readI32<BL_BYTE_ORDER_LE, 1>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU32aLE(const void* p) noexcept { return readU32<BL_BYTE_ORDER_LE, 4>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU32uLE(const void* p) noexcept { return readU32<BL_BYTE_ORDER_LE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int32_t readI32aLE(const void* p) noexcept { return readI32<BL_BYTE_ORDER_LE, 4>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int32_t readI32uLE(const void* p) noexcept { return readI32<BL_BYTE_ORDER_LE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU32aLE(const void* p) noexcept { return readU32<BL_BYTE_ORDER_LE, 4>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU32uLE(const void* p) noexcept { return readU32<BL_BYTE_ORDER_LE, 1>(p); }
 
-BL_NODISCARD static BL_INLINE int32_t readI32aBE(const void* p) noexcept { return readI32<BL_BYTE_ORDER_BE, 4>(p); }
-BL_NODISCARD static BL_INLINE int32_t readI32uBE(const void* p) noexcept { return readI32<BL_BYTE_ORDER_BE, 1>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU32aBE(const void* p) noexcept { return readU32<BL_BYTE_ORDER_BE, 4>(p); }
-BL_NODISCARD static BL_INLINE uint32_t readU32uBE(const void* p) noexcept { return readU32<BL_BYTE_ORDER_BE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int32_t readI32aBE(const void* p) noexcept { return readI32<BL_BYTE_ORDER_BE, 4>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int32_t readI32uBE(const void* p) noexcept { return readI32<BL_BYTE_ORDER_BE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU32aBE(const void* p) noexcept { return readU32<BL_BYTE_ORDER_BE, 4>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint32_t readU32uBE(const void* p) noexcept { return readU32<BL_BYTE_ORDER_BE, 1>(p); }
 
-BL_NODISCARD static BL_INLINE int64_t readI64a(const void* p) noexcept { return readI64<BL_BYTE_ORDER_NATIVE, 8>(p); }
-BL_NODISCARD static BL_INLINE int64_t readI64u(const void* p) noexcept { return readI64<BL_BYTE_ORDER_NATIVE, 1>(p); }
-BL_NODISCARD static BL_INLINE uint64_t readU64a(const void* p) noexcept { return readU64<BL_BYTE_ORDER_NATIVE, 8>(p); }
-BL_NODISCARD static BL_INLINE uint64_t readU64u(const void* p) noexcept { return readU64<BL_BYTE_ORDER_NATIVE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int64_t readI64a(const void* p) noexcept { return readI64<BL_BYTE_ORDER_NATIVE, 8>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int64_t readI64u(const void* p) noexcept { return readI64<BL_BYTE_ORDER_NATIVE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint64_t readU64a(const void* p) noexcept { return readU64<BL_BYTE_ORDER_NATIVE, 8>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint64_t readU64u(const void* p) noexcept { return readU64<BL_BYTE_ORDER_NATIVE, 1>(p); }
 
-BL_NODISCARD static BL_INLINE int64_t readI64aLE(const void* p) noexcept { return readI64<BL_BYTE_ORDER_LE, 8>(p); }
-BL_NODISCARD static BL_INLINE int64_t readI64uLE(const void* p) noexcept { return readI64<BL_BYTE_ORDER_LE, 1>(p); }
-BL_NODISCARD static BL_INLINE uint64_t readU64aLE(const void* p) noexcept { return readU64<BL_BYTE_ORDER_LE, 8>(p); }
-BL_NODISCARD static BL_INLINE uint64_t readU64uLE(const void* p) noexcept { return readU64<BL_BYTE_ORDER_LE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int64_t readI64aLE(const void* p) noexcept { return readI64<BL_BYTE_ORDER_LE, 8>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int64_t readI64uLE(const void* p) noexcept { return readI64<BL_BYTE_ORDER_LE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint64_t readU64aLE(const void* p) noexcept { return readU64<BL_BYTE_ORDER_LE, 8>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint64_t readU64uLE(const void* p) noexcept { return readU64<BL_BYTE_ORDER_LE, 1>(p); }
 
-BL_NODISCARD static BL_INLINE int64_t readI64aBE(const void* p) noexcept { return readI64<BL_BYTE_ORDER_BE, 8>(p); }
-BL_NODISCARD static BL_INLINE int64_t readI64uBE(const void* p) noexcept { return readI64<BL_BYTE_ORDER_BE, 1>(p); }
-BL_NODISCARD static BL_INLINE uint64_t readU64aBE(const void* p) noexcept { return readU64<BL_BYTE_ORDER_BE, 8>(p); }
-BL_NODISCARD static BL_INLINE uint64_t readU64uBE(const void* p) noexcept { return readU64<BL_BYTE_ORDER_BE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int64_t readI64aBE(const void* p) noexcept { return readI64<BL_BYTE_ORDER_BE, 8>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG int64_t readI64uBE(const void* p) noexcept { return readI64<BL_BYTE_ORDER_BE, 1>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint64_t readU64aBE(const void* p) noexcept { return readU64<BL_BYTE_ORDER_BE, 8>(p); }
+BL_NODISCARD static BL_INLINE_NODEBUG uint64_t readU64uBE(const void* p) noexcept { return readU64<BL_BYTE_ORDER_BE, 1>(p); }
 
 //! \}
 
 //! \name Memory Write
 //! \{
 
-static BL_INLINE void writeU8(void* p, uint32_t x) noexcept { static_cast<uint8_t*>(p)[0] = uint8_t(x & 0xFFu); }
-static BL_INLINE void writeI8(void* p, int32_t x) noexcept { static_cast<uint8_t*>(p)[0] = uint8_t(x & 0xFF); }
+static BL_INLINE_NODEBUG void writeU8(void* p, uint32_t x) noexcept { static_cast<uint8_t*>(p)[0] = uint8_t(x & 0xFFu); }
+static BL_INLINE_NODEBUG void writeI8(void* p, int32_t x) noexcept { static_cast<uint8_t*>(p)[0] = uint8_t(x & 0xFF); }
 
 template<uint32_t ByteOrder, size_t Alignment>
-static BL_INLINE void writeU16(void* p, uint32_t x) noexcept {
+static BL_INLINE_NODEBUG void writeU16(void* p, uint32_t x) noexcept {
   if (ByteOrder == BL_BYTE_ORDER_NATIVE && (kUnalignedMem16 || Alignment >= 2)) {
     typedef typename UnalignedInt<uint16_t, Alignment>::T U16AlignedToN;
     static_cast<U16AlignedToN*>(p)[0] = uint16_t(x & 0xFFFFu);
@@ -210,14 +210,14 @@ static BL_INLINE void writeU16(void* p, uint32_t x) noexcept {
 }
 
 template<uint32_t ByteOrder = BL_BYTE_ORDER_NATIVE>
-static BL_INLINE void writeU24u(void* p, uint32_t v) noexcept {
+static BL_INLINE_NODEBUG void writeU24u(void* p, uint32_t v) noexcept {
   static_cast<uint8_t*>(p)[0] = uint8_t((v >> (ByteOrder == BL_BYTE_ORDER_LE ?  0 : 16)) & 0xFFu);
   static_cast<uint8_t*>(p)[1] = uint8_t((v >> 8) & 0xFFu);
   static_cast<uint8_t*>(p)[2] = uint8_t((v >> (ByteOrder == BL_BYTE_ORDER_LE ? 16 :  0)) & 0xFFu);
 }
 
 template<uint32_t ByteOrder, size_t Alignment>
-static BL_INLINE void writeU32(void* p, uint32_t x) noexcept {
+static BL_INLINE_NODEBUG void writeU32(void* p, uint32_t x) noexcept {
   if (kUnalignedMem32 || Alignment >= 4) {
     typedef typename UnalignedInt<uint32_t, Alignment>::T U32AlignedToN;
     static_cast<U32AlignedToN*>(p)[0] = (ByteOrder == BL_BYTE_ORDER_NATIVE) ? x : IntOps::byteSwap32(x);
@@ -229,7 +229,7 @@ static BL_INLINE void writeU32(void* p, uint32_t x) noexcept {
 }
 
 template<uint32_t ByteOrder, size_t Alignment>
-static BL_INLINE void writeU64(void* p, uint64_t x) noexcept {
+static BL_INLINE_NODEBUG void writeU64(void* p, uint64_t x) noexcept {
   if (ByteOrder == BL_BYTE_ORDER_NATIVE && (kUnalignedMem64 || Alignment >= 8)) {
     typedef typename UnalignedInt<uint64_t, Alignment>::T U64AlignedToN;
     static_cast<U64AlignedToN*>(p)[0] = x;
@@ -241,61 +241,61 @@ static BL_INLINE void writeU64(void* p, uint64_t x) noexcept {
 }
 
 template<uint32_t ByteOrder, size_t Alignment>
-static BL_INLINE void writeI16(void* p, int32_t x) noexcept { writeU16<ByteOrder, Alignment>(p, uint32_t(x)); }
+static BL_INLINE_NODEBUG void writeI16(void* p, int32_t x) noexcept { writeU16<ByteOrder, Alignment>(p, uint32_t(x)); }
 
 template<uint32_t ByteOrder, size_t Alignment>
-static BL_INLINE void writeI32(void* p, int32_t x) noexcept { writeU32<ByteOrder, Alignment>(p, uint32_t(x)); }
+static BL_INLINE_NODEBUG void writeI32(void* p, int32_t x) noexcept { writeU32<ByteOrder, Alignment>(p, uint32_t(x)); }
 
 template<uint32_t ByteOrder, size_t Alignment>
-static BL_INLINE void writeI64(void* p, int64_t x) noexcept { writeU64<ByteOrder, Alignment>(p, uint64_t(x)); }
+static BL_INLINE_NODEBUG void writeI64(void* p, int64_t x) noexcept { writeU64<ByteOrder, Alignment>(p, uint64_t(x)); }
 
-static BL_INLINE void writeI16a(void* p, int32_t x) noexcept { writeI16<BL_BYTE_ORDER_NATIVE, 2>(p, x); }
-static BL_INLINE void writeI16u(void* p, int32_t x) noexcept { writeI16<BL_BYTE_ORDER_NATIVE, 1>(p, x); }
-static BL_INLINE void writeU16a(void* p, uint32_t x) noexcept { writeU16<BL_BYTE_ORDER_NATIVE, 2>(p, x); }
-static BL_INLINE void writeU16u(void* p, uint32_t x) noexcept { writeU16<BL_BYTE_ORDER_NATIVE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeI16a(void* p, int32_t x) noexcept { writeI16<BL_BYTE_ORDER_NATIVE, 2>(p, x); }
+static BL_INLINE_NODEBUG void writeI16u(void* p, int32_t x) noexcept { writeI16<BL_BYTE_ORDER_NATIVE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeU16a(void* p, uint32_t x) noexcept { writeU16<BL_BYTE_ORDER_NATIVE, 2>(p, x); }
+static BL_INLINE_NODEBUG void writeU16u(void* p, uint32_t x) noexcept { writeU16<BL_BYTE_ORDER_NATIVE, 1>(p, x); }
 
-static BL_INLINE void writeI16aLE(void* p, int32_t x) noexcept { writeI16<BL_BYTE_ORDER_LE, 2>(p, x); }
-static BL_INLINE void writeI16uLE(void* p, int32_t x) noexcept { writeI16<BL_BYTE_ORDER_LE, 1>(p, x); }
-static BL_INLINE void writeU16aLE(void* p, uint32_t x) noexcept { writeU16<BL_BYTE_ORDER_LE, 2>(p, x); }
-static BL_INLINE void writeU16uLE(void* p, uint32_t x) noexcept { writeU16<BL_BYTE_ORDER_LE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeI16aLE(void* p, int32_t x) noexcept { writeI16<BL_BYTE_ORDER_LE, 2>(p, x); }
+static BL_INLINE_NODEBUG void writeI16uLE(void* p, int32_t x) noexcept { writeI16<BL_BYTE_ORDER_LE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeU16aLE(void* p, uint32_t x) noexcept { writeU16<BL_BYTE_ORDER_LE, 2>(p, x); }
+static BL_INLINE_NODEBUG void writeU16uLE(void* p, uint32_t x) noexcept { writeU16<BL_BYTE_ORDER_LE, 1>(p, x); }
 
-static BL_INLINE void writeI16aBE(void* p, int32_t x) noexcept { writeI16<BL_BYTE_ORDER_BE, 2>(p, x); }
-static BL_INLINE void writeI16uBE(void* p, int32_t x) noexcept { writeI16<BL_BYTE_ORDER_BE, 1>(p, x); }
-static BL_INLINE void writeU16aBE(void* p, uint32_t x) noexcept { writeU16<BL_BYTE_ORDER_BE, 2>(p, x); }
-static BL_INLINE void writeU16uBE(void* p, uint32_t x) noexcept { writeU16<BL_BYTE_ORDER_BE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeI16aBE(void* p, int32_t x) noexcept { writeI16<BL_BYTE_ORDER_BE, 2>(p, x); }
+static BL_INLINE_NODEBUG void writeI16uBE(void* p, int32_t x) noexcept { writeI16<BL_BYTE_ORDER_BE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeU16aBE(void* p, uint32_t x) noexcept { writeU16<BL_BYTE_ORDER_BE, 2>(p, x); }
+static BL_INLINE_NODEBUG void writeU16uBE(void* p, uint32_t x) noexcept { writeU16<BL_BYTE_ORDER_BE, 1>(p, x); }
 
-static BL_INLINE void writeU24uLE(void* p, uint32_t v) noexcept { writeU24u<BL_BYTE_ORDER_LE>(p, v); }
-static BL_INLINE void writeU24uBE(void* p, uint32_t v) noexcept { writeU24u<BL_BYTE_ORDER_BE>(p, v); }
+static BL_INLINE_NODEBUG void writeU24uLE(void* p, uint32_t v) noexcept { writeU24u<BL_BYTE_ORDER_LE>(p, v); }
+static BL_INLINE_NODEBUG void writeU24uBE(void* p, uint32_t v) noexcept { writeU24u<BL_BYTE_ORDER_BE>(p, v); }
 
-static BL_INLINE void writeI32a(void* p, int32_t x) noexcept { writeI32<BL_BYTE_ORDER_NATIVE, 4>(p, x); }
-static BL_INLINE void writeI32u(void* p, int32_t x) noexcept { writeI32<BL_BYTE_ORDER_NATIVE, 1>(p, x); }
-static BL_INLINE void writeU32a(void* p, uint32_t x) noexcept { writeU32<BL_BYTE_ORDER_NATIVE, 4>(p, x); }
-static BL_INLINE void writeU32u(void* p, uint32_t x) noexcept { writeU32<BL_BYTE_ORDER_NATIVE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeI32a(void* p, int32_t x) noexcept { writeI32<BL_BYTE_ORDER_NATIVE, 4>(p, x); }
+static BL_INLINE_NODEBUG void writeI32u(void* p, int32_t x) noexcept { writeI32<BL_BYTE_ORDER_NATIVE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeU32a(void* p, uint32_t x) noexcept { writeU32<BL_BYTE_ORDER_NATIVE, 4>(p, x); }
+static BL_INLINE_NODEBUG void writeU32u(void* p, uint32_t x) noexcept { writeU32<BL_BYTE_ORDER_NATIVE, 1>(p, x); }
 
-static BL_INLINE void writeI32aLE(void* p, int32_t x) noexcept { writeI32<BL_BYTE_ORDER_LE, 4>(p, x); }
-static BL_INLINE void writeI32uLE(void* p, int32_t x) noexcept { writeI32<BL_BYTE_ORDER_LE, 1>(p, x); }
-static BL_INLINE void writeU32aLE(void* p, uint32_t x) noexcept { writeU32<BL_BYTE_ORDER_LE, 4>(p, x); }
-static BL_INLINE void writeU32uLE(void* p, uint32_t x) noexcept { writeU32<BL_BYTE_ORDER_LE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeI32aLE(void* p, int32_t x) noexcept { writeI32<BL_BYTE_ORDER_LE, 4>(p, x); }
+static BL_INLINE_NODEBUG void writeI32uLE(void* p, int32_t x) noexcept { writeI32<BL_BYTE_ORDER_LE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeU32aLE(void* p, uint32_t x) noexcept { writeU32<BL_BYTE_ORDER_LE, 4>(p, x); }
+static BL_INLINE_NODEBUG void writeU32uLE(void* p, uint32_t x) noexcept { writeU32<BL_BYTE_ORDER_LE, 1>(p, x); }
 
-static BL_INLINE void writeI32aBE(void* p, int32_t x) noexcept { writeI32<BL_BYTE_ORDER_BE, 4>(p, x); }
-static BL_INLINE void writeI32uBE(void* p, int32_t x) noexcept { writeI32<BL_BYTE_ORDER_BE, 1>(p, x); }
-static BL_INLINE void writeU32aBE(void* p, uint32_t x) noexcept { writeU32<BL_BYTE_ORDER_BE, 4>(p, x); }
-static BL_INLINE void writeU32uBE(void* p, uint32_t x) noexcept { writeU32<BL_BYTE_ORDER_BE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeI32aBE(void* p, int32_t x) noexcept { writeI32<BL_BYTE_ORDER_BE, 4>(p, x); }
+static BL_INLINE_NODEBUG void writeI32uBE(void* p, int32_t x) noexcept { writeI32<BL_BYTE_ORDER_BE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeU32aBE(void* p, uint32_t x) noexcept { writeU32<BL_BYTE_ORDER_BE, 4>(p, x); }
+static BL_INLINE_NODEBUG void writeU32uBE(void* p, uint32_t x) noexcept { writeU32<BL_BYTE_ORDER_BE, 1>(p, x); }
 
-static BL_INLINE void writeI64a(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_NATIVE, 8>(p, x); }
-static BL_INLINE void writeI64u(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_NATIVE, 1>(p, x); }
-static BL_INLINE void writeU64a(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_NATIVE, 8>(p, x); }
-static BL_INLINE void writeU64u(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_NATIVE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeI64a(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_NATIVE, 8>(p, x); }
+static BL_INLINE_NODEBUG void writeI64u(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_NATIVE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeU64a(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_NATIVE, 8>(p, x); }
+static BL_INLINE_NODEBUG void writeU64u(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_NATIVE, 1>(p, x); }
 
-static BL_INLINE void writeI64aLE(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_LE, 8>(p, x); }
-static BL_INLINE void writeI64uLE(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_LE, 1>(p, x); }
-static BL_INLINE void writeU64aLE(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_LE, 8>(p, x); }
-static BL_INLINE void writeU64uLE(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_LE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeI64aLE(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_LE, 8>(p, x); }
+static BL_INLINE_NODEBUG void writeI64uLE(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_LE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeU64aLE(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_LE, 8>(p, x); }
+static BL_INLINE_NODEBUG void writeU64uLE(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_LE, 1>(p, x); }
 
-static BL_INLINE void writeI64aBE(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_BE, 8>(p, x); }
-static BL_INLINE void writeI64uBE(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_BE, 1>(p, x); }
-static BL_INLINE void writeU64aBE(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_BE, 8>(p, x); }
-static BL_INLINE void writeU64uBE(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_BE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeI64aBE(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_BE, 8>(p, x); }
+static BL_INLINE_NODEBUG void writeI64uBE(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_BE, 1>(p, x); }
+static BL_INLINE_NODEBUG void writeU64aBE(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_BE, 8>(p, x); }
+static BL_INLINE_NODEBUG void writeU64uBE(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_BE, 1>(p, x); }
 
 //! \}
 

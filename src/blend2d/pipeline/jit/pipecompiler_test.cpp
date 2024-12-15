@@ -123,6 +123,7 @@ public:
   void prepare() noexcept {
     logger.clear();
 
+    code.reset();
     code.init(rt.environment());
     code.setErrorHandler(&eh);
 

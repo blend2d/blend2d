@@ -27,17 +27,15 @@ static constexpr uint32_t kColorType3_PAL  = 3; //!< Each pixel is a palette ind
 static constexpr uint32_t kColorType4_LUMA = 4; //!< Each pixel is a grayscale+alpha sample (8/16-bits per sample).
 static constexpr uint32_t kColorType6_RGBA = 6; //!< Each pixel is an RGBA quad (8/16 bits per sample).
 
-enum PngFilterType : uint32_t {
-  BL_PNG_FILTER_TYPE_NONE  = 0,
-  BL_PNG_FILTER_TYPE_SUB   = 1,
-  BL_PNG_FILTER_TYPE_UP    = 2,
-  BL_PNG_FILTER_TYPE_AVG   = 3,
-  BL_PNG_FILTER_TYPE_PAETH = 4,
-  BL_PNG_FILTER_TYPE_COUNT = 5,
+static constexpr uint32_t kFilterTypeNone  = 0;
+static constexpr uint32_t kFilterTypeSub   = 1;
+static constexpr uint32_t kFilterTypeUp    = 2;
+static constexpr uint32_t kFilterTypeAvg   = 3;
+static constexpr uint32_t kFilterTypePaeth = 4;
+static constexpr uint32_t kFilterTypeCount = 5;
 
-  //! Synthetic filter used only by Blend2D's reverse-filter implementation.
-  BL_PNG_FILTER_TYPE_AVG0  = 5
-};
+//! Synthetic filter used only by Blend2D's reverse-filter implementation.
+static constexpr uint32_t kFilterTypeAvg0  = 5;
 
 enum BLPngDecoderStatusFlags : uint32_t {
   BL_PNG_DECODER_STATUS_SEEN_IHDR = 0x00000001u,
