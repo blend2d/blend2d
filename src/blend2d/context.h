@@ -3305,6 +3305,33 @@ public:
     return strokeRoundRect(BLRoundRect(x, y, w, h, rx, ry), style);
   }
 
+  //! Strokes an `arc` with the current stroke style.
+  BL_INLINE_NODEBUG BLResult strokeArc(const BLArc& arc) noexcept {
+    return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARC, &arc);
+  }
+
+  //! Strokes an `arc` with an explicit stroke `style.
+  template<typename StyleT>
+  BL_INLINE_NODEBUG BLResult strokeArc(const BLArc& arc, const StyleT& style) noexcept {
+    return _strokeGeometryOp(BL_GEOMETRY_TYPE_ARC, &arc, style);
+  }
+
+  //! Strokes a chord at `[cx, cy]` with radius `r` at `start` of `sweep` (floating point coordinates) with the current stroke style.
+  BL_INLINE_NODEBUG BLResult strokeArc(double cx, double cy, double r, double start, double sweep) noexcept {
+    return strokeArc(BLArc(cx, cy, r, r, start, sweep));
+  }
+
+  //! Strokes a chord at `[cx, cy]` with radius `[rx, ry]` at `start` of `sweep` (floating point coordinates) with the current stroke style.
+  BL_INLINE_NODEBUG BLResult strokeArc(double cx, double cy, double rx, double ry, double start, double sweep) noexcept {
+    return strokeArc(BLArc(cx, cy, rx, ry, start, sweep));
+  }
+
+  //! Strokes a chord at `[cx, cy]` with radius `[rx, ry]` at `start` of `sweep` (floating point coordinates) with an explicit stroke `style`.
+  template<typename StyleT>
+  BL_INLINE_NODEBUG BLResult strokeArc(double cx, double cy, double rx, double ry, double start, double sweep, const StyleT& style) noexcept {
+    return strokeArc(BLArc(cx, cy, rx, ry, start, sweep), style);
+  }
+
   //! Strokes a `chord` (floating point coordinates) with the current stroke style.
   BL_INLINE_NODEBUG BLResult strokeChord(const BLArc& chord) noexcept {
     return _strokeGeometryOp(BL_GEOMETRY_TYPE_CHORD, &chord);
