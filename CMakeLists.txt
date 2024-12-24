@@ -227,6 +227,10 @@ set(BLEND2D_SRC_LIST
   blend2d/var_test.cpp
   blend2d/var.h
   blend2d/var_p.h
+  blend2d/polygonclipper.cpp
+  blend2d/polygonclipper.h
+  blend2d/polygonclipper_p.h
+  blend2d/polygonclipper_test.cpp
 
   blend2d/codec/bmpcodec.cpp
   blend2d/codec/bmpcodec_p.h

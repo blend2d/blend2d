@@ -946,7 +946,9 @@ BL_DEFINE_ENUM(BLResultCode) {
   BL_ERROR_FONT_PROGRAM_TERMINATED,      //!< Font program terminated because the execution reached the limit.
   BL_ERROR_GLYPH_SUBSTITUTION_TOO_LARGE, //!< Glyph substitution requires too much space and was terminated.
 
-  BL_ERROR_INVALID_GLYPH                 //!< Invalid glyph identifier.
+  BL_ERROR_INVALID_GLYPH,                //!< Invalid glyph identifier.
+
+  BL_ERROR_POLYGON_POLYGON_SELF_OVERLAPS     //!< Polygon is overlapping itself
 
   BL_FORCE_ENUM_UINT32(BL_ERROR)
 };
