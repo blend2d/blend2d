@@ -334,7 +334,7 @@ private:
     std::vector<Segment> _originalSegments;
     std::vector<Segment> _processedSegments;
 
-    double _scale = 10000;
+    double _scale = 1000;
 
     PolygonConnector _connector;
 };
