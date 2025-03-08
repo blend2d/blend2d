@@ -29,7 +29,7 @@ static BL_NOINLINE void emitMemFillSequence(PipeCompiler* pc, Mem dPtr, Vec sVec
   uint32_t vecSize = sVec.size();
   for (uint32_t i = 0; i < n; i += vecSize) {
     pc->v_storeuvec(dPtr, sVec);
-    dPtr.addOffsetLo32(vecSize);
+    dPtr.addOffsetLo32(int32_t(vecSize));
   }
 
   if (advanceMode == AdvanceMode::kAdvance) {
@@ -65,7 +65,7 @@ static BL_NOINLINE void emitMemFillSequence(PipeCompiler* pc, Mem dPtr, Vec sVec
 
       pc->v_store_iany(dPtr, v, count, Alignment{1});
       if (!postIndex)
-        dPtr.addOffsetLo32(count);
+        dPtr.addOffsetLo32(int32_t(count));
 
       n -= count;
     }
@@ -228,7 +228,7 @@ void inlineFillSpanLoop(
         pc->bind(L_SmallCheck);
         pc->j(L_SmallIter, sub_ugt(i_ptr, vecSize / 4u));
 
-        pc->add_ext(dst, dst, i_ptr, 4, vecSize);
+        pc->add_ext(dst, dst, i_ptr, 4, int32_t(vecSize));
         pc->v_storeuvec(mem_ptr(dst, -int(vecSize)), src);
         pc->j(L_End);
 
@@ -1059,19 +1059,22 @@ static BL_NOINLINE void emitMemCopySequence(
 
     for (uint32_t i = 0; i < vecCount; i += 2) {
       cc->ldp(t[i + 0], t[i + 1], sPtr);
-      if (!postIndex)
+      if (!postIndex) {
         sPtr.addOffsetLo32(32);
+      }
     }
 
     if (fillMask.isValid()) {
-      for (uint32_t i = 0; i < vecCount; i++)
+      for (uint32_t i = 0; i < vecCount; i++) {
         pc->v_or_i32(t[i], t[i], fillMask);
+      }
     }
 
     for (uint32_t i = 0; i < vecCount; i += 2) {
       cc->stp(t[i + 0], t[i + 1], dPtr);
-      if (!postIndex)
+      if (!postIndex) {
         dPtr.addOffsetLo32(32);
+      }
     }
 
     n -= vecCount * 16u;
@@ -1087,15 +1090,18 @@ static BL_NOINLINE void emitMemCopySequence(
       }
 
       pc->v_load_iany(v, sPtr, count, Alignment{1});
-      if (!postIndex)
-        sPtr.addOffsetLo32(count);
+      if (!postIndex) {
+        sPtr.addOffsetLo32(int32_t(count));
+      }
 
-      if (fillMask.isValid())
+      if (fillMask.isValid()) {
         pc->v_or_i32(t[0], t[0], fillMask);
+      }
 
       pc->v_store_iany(dPtr, v, count, Alignment{1});
-      if (!postIndex)
-        dPtr.addOffsetLo32(count);
+      if (!postIndex) {
+        dPtr.addOffsetLo32(int32_t(count));
+      }
 
       n -= count;
     }

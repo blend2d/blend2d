@@ -170,7 +170,7 @@ static BLResult blRuntimeScopeEnd_X86(BLRuntimeScopeCore* self) noexcept {
   }
 
   writeCSR(csr);
-  writeFPUCW(fcw);
+  writeFPUCW(uint16_t(fcw));
 #else
   if (BL_UNLIKELY(tag != 0x40000000u)) {
     return blTraceError(BL_ERROR_INVALID_STATE);

@@ -252,7 +252,7 @@ FetchGradientPart::FetchGradientPart(PipeCompiler* pc, FetchType fetchType, Form
     _ditheringContext(pc) {}
 
 void FetchGradientPart::fetchSinglePixel(Pixel& dst, PixelFlags flags, const Gp& idx) noexcept {
-  Mem src = mem_ptr(_tablePtr, idx, tablePtrShift());
+  Mem src = mem_ptr(_tablePtr, idx, uint32_t(tablePtrShift()));
   if (ditheringEnabled()) {
     pc->newVecArray(dst.uc, 1, VecWidth::k128, dst.name(), "uc");
     pc->v_loadu64(dst.uc[0], src);
@@ -265,7 +265,7 @@ void FetchGradientPart::fetchSinglePixel(Pixel& dst, PixelFlags flags, const Gp&
 
 void FetchGradientPart::fetchMultiplePixels(Pixel& dst, PixelCount n, PixelFlags flags, const Vec& idx, FetchUtils::IndexLayout indexLayout, GatherMode mode, InterleaveCallback cb, void* cbData) noexcept {
   Mem src = mem_ptr(_tablePtr);
-  uint32_t idxShift = tablePtrShift();
+  uint32_t idxShift = uint32_t(tablePtrShift());
 
   if (ditheringEnabled()) {
     dst.setType(PixelType::kRGBA64);
@@ -324,7 +324,7 @@ FetchLinearGradientPart::FetchLinearGradientPart(PipeCompiler* pc, FetchType fet
 
 void FetchLinearGradientPart::preparePart() noexcept {
 #if defined(BL_JIT_ARCH_X86)
-  _maxPixels = int8_t(pc->hasSSSE3() ? 8 : 4);
+  _maxPixels = uint8_t(pc->hasSSSE3() ? 8 : 4);
 #else
   _maxPixels = 8;
 #endif
@@ -721,7 +721,7 @@ FetchRadialGradientPart::FetchRadialGradientPart(PipeCompiler* pc, FetchType fet
 
 void FetchRadialGradientPart::preparePart() noexcept {
   VecWidth vw = vecWidth();
-  _maxPixels = 4 << uint32_t(vw);
+  _maxPixels = uint8_t(4u << uint32_t(vw));
 }
 
 // bl::Pipeline::JIT::FetchRadialGradientPart - Init & Fini

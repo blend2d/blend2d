@@ -2187,7 +2187,7 @@ static BLResult clipToFinalBox(BLRasterContextImpl* ctxI, const BLBox& inputBox)
                                             (clipBoxFixedI.x1 + fpMaskI) >> fpShiftI,
                                             (clipBoxFixedI.y1 + fpMaskI) >> fpShiftI);
 
-    uint32_t bits = clipBoxFixedI.x0 | clipBoxFixedI.y0 | clipBoxFixedI.x1 | clipBoxFixedI.y1;
+    int32_t bits = clipBoxFixedI.x0 | clipBoxFixedI.y0 | clipBoxFixedI.x1 | clipBoxFixedI.y1;
 
     if ((bits & fpMaskI) == 0)
       ctxI->syncWorkData.clipMode = BL_CLIP_MODE_ALIGNED_RECT;

@@ -6,34 +6,154 @@
 #include "../api-build_test_p.h"
 #if defined(BL_TEST)
 
+#include "../array.h"
 #include "../compression/checksum_p.h"
 
-// Compression - CheckSum - Tests
-// ==============================
-
 namespace bl {
+namespace Compression {
+namespace Checksum {
 namespace Tests {
 
-UNIT(compression_crc32, BL_TEST_GROUP_COMPRESSION_UTILITIES) {
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("a"), 1), 0xE8B7BE43u);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("ab"), 2), 0x9E83486Du);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abc"), 3), 0x352441C2u);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcd"), 4), 0xED82CD11u);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcde"), 5), 0x8587D865u);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcdef"), 6), 0x4B8E39EFu);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcdefg"), 7), 0x312A6AA6u);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcdefgh"), 8), 0xAEEF2A50u);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcdefghi"), 9), 0x8DA988AFu);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcdefghij"), 10), 0x3981703Au);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcdefghijk"), 11), 0xCE570F9Fu);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcdefghijkl"), 12), 0xF6781B24u);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcdefghijklm"), 13), 0xDDF46EA2u);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcdefghijklmn"), 14), 0x400D9578u);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcdefghijklmno"), 15), 0x519167DFu);
-  EXPECT_EQ(Compression::crc32(reinterpret_cast<const uint8_t*>("abcdefghijklmnop"), 16), 0x943AC093u);
+// bl::Compression - CheckSum - CRC32 - Tests
+// ==========================================
+
+static constexpr uint32_t kCheckSumInputSize = 1024u * 256u;
+static constexpr uint32_t kCheckSumLargeInputSize = 1024u * 1024u * 4u;
+
+static void fillArrayForChecksum(BLArray<uint8_t>& arr, size_t n) noexcept {
+  for (uint32_t i = 0; i < n; i++) {
+    EXPECT_SUCCESS(arr.append(uint8_t((i * 17) & 0xFFu)));
+  }
+}
+
+static void fillArrayWithSameValue(BLArray<uint8_t>& arr, uint8_t b, size_t n) noexcept {
+  for (uint32_t i = 0; i < n; i++) {
+    EXPECT_SUCCESS(arr.append(b));
+  }
+}
+
+UNIT(compression_checksum_adler32, BL_TEST_GROUP_COMPRESSION_CHECKSUMS) {
+  const uint8_t* lowercaseLetters = reinterpret_cast<const uint8_t*>("abcdefghijklmnopqrstuvwxyz");
+
+  EXPECT_EQ(adler32(nullptr         ,  0), 0x00000001u);
+  EXPECT_EQ(adler32(lowercaseLetters,  1), 0x00620062u);
+  EXPECT_EQ(adler32(lowercaseLetters,  2), 0x012600C4u);
+  EXPECT_EQ(adler32(lowercaseLetters,  3), 0x024D0127u);
+  EXPECT_EQ(adler32(lowercaseLetters,  4), 0x03D8018Bu);
+  EXPECT_EQ(adler32(lowercaseLetters,  5), 0x05C801F0u);
+  EXPECT_EQ(adler32(lowercaseLetters,  6), 0x081E0256u);
+  EXPECT_EQ(adler32(lowercaseLetters,  7), 0x0ADB02BDu);
+  EXPECT_EQ(adler32(lowercaseLetters,  8), 0x0E000325u);
+  EXPECT_EQ(adler32(lowercaseLetters,  9), 0x118E038Eu);
+  EXPECT_EQ(adler32(lowercaseLetters, 10), 0x158603F8u);
+  EXPECT_EQ(adler32(lowercaseLetters, 11), 0x19E90463u);
+  EXPECT_EQ(adler32(lowercaseLetters, 12), 0x1EB804CFu);
+  EXPECT_EQ(adler32(lowercaseLetters, 13), 0x23F4053Cu);
+  EXPECT_EQ(adler32(lowercaseLetters, 14), 0x299E05AAu);
+  EXPECT_EQ(adler32(lowercaseLetters, 15), 0x2FB70619u);
+  EXPECT_EQ(adler32(lowercaseLetters, 16), 0x36400689u);
+  EXPECT_EQ(adler32(lowercaseLetters, 17), 0x3D3A06FAu);
+  EXPECT_EQ(adler32(lowercaseLetters, 18), 0x44A6076Cu);
+  EXPECT_EQ(adler32(lowercaseLetters, 19), 0x4C8507DFu);
+  EXPECT_EQ(adler32(lowercaseLetters, 20), 0x54D80853u);
+  EXPECT_EQ(adler32(lowercaseLetters, 21), 0x5DA008C8u);
+  EXPECT_EQ(adler32(lowercaseLetters, 22), 0x66DE093Eu);
+  EXPECT_EQ(adler32(lowercaseLetters, 23), 0x709309B5u);
+  EXPECT_EQ(adler32(lowercaseLetters, 24), 0x7AC00A2Du);
+  EXPECT_EQ(adler32(lowercaseLetters, 25), 0x85660AA6u);
+  EXPECT_EQ(adler32(lowercaseLetters, 26), 0x90860B20u);
+
+  BLArray<uint8_t> input;
+  fillArrayForChecksum(input, kCheckSumInputSize);
+
+  for (uint32_t i = 1; i < kCheckSumInputSize; i += (i >> 10) + 1u) {
+    uint32_t checksum = adler32(input.data(), i);
+    uint32_t expected = adler32Update_Ref(kAdler32Initial, input.data(), i);
+
+    EXPECT_EQ(checksum, expected).message(
+      "ADLER32 checksum of %u random bytes doesn't match (checksum=0x%08X expected=0x%08X", i, checksum, expected);
+  }
+
+  input.clear();
+  fillArrayWithSameValue(input, 0xFFu, kCheckSumInputSize);
+
+  for (uint32_t i = 1; i < kCheckSumInputSize; i += (i >> 10) + 1u) {
+    uint32_t checksum = adler32(input.data(), i);
+    uint32_t expected = adler32Update_Ref(kAdler32Initial, input.data(), i);
+
+    EXPECT_EQ(checksum, expected).message(
+      "ADLER32 checksum of %u '0xFF' bytes doesn't match (checksum=0x%08X expected=0x%08X", i, checksum, expected);
+  }
+
+  input.clear();
+  fillArrayWithSameValue(input, 0xFFu, kCheckSumLargeInputSize);
+
+  {
+    uint32_t checksum = adler32(input.data(), kCheckSumLargeInputSize);
+    uint32_t expected = adler32Update_Ref(kAdler32Initial, input.data(), kCheckSumLargeInputSize);
+
+    EXPECT_EQ(checksum, expected).message(
+      "ADLER32 checksum of %u '0xFF' bytes doesn't match (checksum=0x%08X expected=0x%08X", kCheckSumLargeInputSize, checksum, expected);
+  }
+}
+
+UNIT(compression_checksum_crc32, BL_TEST_GROUP_COMPRESSION_CHECKSUMS) {
+  const uint8_t* lowercaseLetters = reinterpret_cast<const uint8_t*>("abcdefghijklmnopqrstuvwxyz");
+
+  EXPECT_EQ(crc32(nullptr         ,  0), 0x00000000u);
+  EXPECT_EQ(crc32(lowercaseLetters,  1), 0xE8B7BE43u);
+  EXPECT_EQ(crc32(lowercaseLetters,  2), 0x9E83486Du);
+  EXPECT_EQ(crc32(lowercaseLetters,  3), 0x352441C2u);
+  EXPECT_EQ(crc32(lowercaseLetters,  4), 0xED82CD11u);
+  EXPECT_EQ(crc32(lowercaseLetters,  5), 0x8587D865u);
+  EXPECT_EQ(crc32(lowercaseLetters,  6), 0x4B8E39EFu);
+  EXPECT_EQ(crc32(lowercaseLetters,  7), 0x312A6AA6u);
+  EXPECT_EQ(crc32(lowercaseLetters,  8), 0xAEEF2A50u);
+  EXPECT_EQ(crc32(lowercaseLetters,  9), 0x8DA988AFu);
+  EXPECT_EQ(crc32(lowercaseLetters, 10), 0x3981703Au);
+  EXPECT_EQ(crc32(lowercaseLetters, 11), 0xCE570F9Fu);
+  EXPECT_EQ(crc32(lowercaseLetters, 12), 0xF6781B24u);
+  EXPECT_EQ(crc32(lowercaseLetters, 13), 0xDDF46EA2u);
+  EXPECT_EQ(crc32(lowercaseLetters, 14), 0x400D9578u);
+  EXPECT_EQ(crc32(lowercaseLetters, 15), 0x519167DFu);
+  EXPECT_EQ(crc32(lowercaseLetters, 16), 0x943AC093u);
+  EXPECT_EQ(crc32(lowercaseLetters, 17), 0x9C925619u);
+  EXPECT_EQ(crc32(lowercaseLetters, 18), 0x08FEC50Bu);
+  EXPECT_EQ(crc32(lowercaseLetters, 19), 0x8CD4E846u);
+  EXPECT_EQ(crc32(lowercaseLetters, 20), 0x1A596AE5u);
+  EXPECT_EQ(crc32(lowercaseLetters, 21), 0x221725A3u);
+  EXPECT_EQ(crc32(lowercaseLetters, 22), 0x2499DEF3u);
+  EXPECT_EQ(crc32(lowercaseLetters, 23), 0x38F3316Au);
+  EXPECT_EQ(crc32(lowercaseLetters, 24), 0x21836DF4u);
+  EXPECT_EQ(crc32(lowercaseLetters, 25), 0x412A937Du);
+  EXPECT_EQ(crc32(lowercaseLetters, 26), 0x4C2750BDu);
+
+  BLArray<uint8_t> input;
+  fillArrayForChecksum(input, kCheckSumInputSize);
+
+  for (uint32_t i = 1; i < kCheckSumInputSize; i += (i >> 10) + 1u) {
+    uint32_t checksum = crc32(input.data(), i);
+    uint32_t expected = crc32Finalize(crc32Update_Ref(kCrc32Initial, input.data(), i));
+
+    EXPECT_EQ(checksum, expected).message(
+      "CRC32 checksum of %u random bytes doesn't match (checksum=0x%08X expected=0x%08X", i, checksum, expected);
+  }
+
+  input.clear();
+  fillArrayForChecksum(input, kCheckSumLargeInputSize);
+
+  {
+    uint32_t checksum = crc32(input.data(), kCheckSumLargeInputSize);
+    uint32_t expected = crc32Finalize(crc32Update_Ref(kCrc32Initial, input.data(), kCheckSumLargeInputSize));
+
+    EXPECT_EQ(checksum, expected).message(
+      "CRC32 checksum of %u random bytes doesn't match (checksum=0x%08X expected=0x%08X", kCheckSumLargeInputSize, checksum, expected);
+  }
 }
 
 } // {Tests}
+} // {Checksum}
+} // {Compression}
 } // {bl}
 
 #endif // BL_TEST

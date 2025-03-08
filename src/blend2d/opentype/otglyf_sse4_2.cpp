@@ -8,7 +8,7 @@
 // are present.
 
 #include "../api-build_p.h"
-#ifdef BL_BUILD_OPT_SSE4_2
+#ifdef BL_TARGET_OPT_SSE4_2
 
 #include "../opentype/otglyfsimdimpl_p.h"
 

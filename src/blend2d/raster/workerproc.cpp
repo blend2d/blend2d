@@ -186,11 +186,12 @@ static void processBand(CommandProcAsync::ProcData& procData, uint32_t currentBa
   const RenderCommand* commandDataEnd = commandQueue->end();
   const uint8_t* commandQuantizedY0 = commandQueue->_quantizedY0;
 
-  int32_t prevBandFy1 = int32_t((prevBandId + 1u) * workData->bandHeightFixed()) - 1u;
-  int32_t nextBandFy0 = int32_t((nextBandId     ) * workData->bandHeightFixed());
+  int32_t prevBandFy1 = int32_t(prevBandId + 1u) * int32_t(workData->bandHeightFixed()) - 1;
+  int32_t nextBandFy0 = int32_t(nextBandId     ) * int32_t(workData->bandHeightFixed());
 
-  if (currentBandId == prevBandId)
+  if (currentBandId == prevBandId) {
     prevBandFy1 = -1;
+  }
 
   uint32_t bandQy0 = uint8_t(procData.bandY0() >> workData->commandQuantizationShiftAA());
 #if (BL_TARGET_ARCH_X86 || BL_TARGET_ARCH_ARM) && BL_SIMD_WIDTH_I

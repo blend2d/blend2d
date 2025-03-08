@@ -44,7 +44,7 @@ struct BLImageCodecImpl BL_CLASS_INHERITS(BLObjectImpl) {
   BLStringCore name;
   //! Image codec vendor string, built-in codecs use "Blend2D" as a vendor string.
   BLStringCore vendor;
-  //! Mime type.
+  //! Mime types.
   BLStringCore mimeType;
   //! Known file extensions used by this image codec separated by "|".
   BLStringCore extensions;

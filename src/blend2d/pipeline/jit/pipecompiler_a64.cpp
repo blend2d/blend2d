@@ -792,7 +792,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
       case OpcodeRRR::kAnd:
       case OpcodeRRR::kOr:
       case OpcodeRRR::kBic: {
-        if (a64::Utils::isLogicalImm(b.value(), a.size() * 8u)) {
+        if (a64::Utils::isLogicalImm(b.valueAs<uint64_t>(), a.size() * 8u)) {
           cc->emit(logical_inst[size_t(op) - size_t(OpcodeRRR::kAnd)], dst, a, b);
           return;
         }
@@ -2217,22 +2217,22 @@ static void emit_swizzle32_impl(PipeCompiler* pc, const Vec& dst, const Vec& src
     uint32_t b = (imm >>  6) & (0x3 << 2);
     uint32_t a = (imm <<  2) & (0x3 << 2);
 
-    predData[ 0] = a;
-    predData[ 1] = a + 1;
-    predData[ 2] = a + 2;
-    predData[ 3] = a + 3;
-    predData[ 4] = b;
-    predData[ 5] = b + 1;
-    predData[ 6] = b + 2;
-    predData[ 7] = b + 3;
-    predData[ 8] = c;
-    predData[ 9] = c + 1;
-    predData[10] = c + 2;
-    predData[11] = c + 3;
-    predData[12] = d;
-    predData[13] = d + 1;
-    predData[14] = d + 2;
-    predData[15] = d + 3;
+    predData[ 0] = uint8_t(a);
+    predData[ 1] = uint8_t(a + 1u);
+    predData[ 2] = uint8_t(a + 2u);
+    predData[ 3] = uint8_t(a + 3u);
+    predData[ 4] = uint8_t(b);
+    predData[ 5] = uint8_t(b + 1u);
+    predData[ 6] = uint8_t(b + 2u);
+    predData[ 7] = uint8_t(b + 3u);
+    predData[ 8] = uint8_t(c);
+    predData[ 9] = uint8_t(c + 1u);
+    predData[10] = uint8_t(c + 2u);
+    predData[11] = uint8_t(c + 3u);
+    predData[12] = uint8_t(d);
+    predData[13] = uint8_t(d + 1u);
+    predData[14] = uint8_t(d + 2u);
+    predData[15] = uint8_t(d + 3u);
 
     Vec pred = pc->simdConst16B(predData);
     cc->tbl(dst.b16(), src.b16(), pred.b16());
@@ -3137,25 +3137,25 @@ void PipeCompiler::emit_2vi(OpcodeVVI op, const Operand_& dst_, const Operand_& 
       uint32_t a = (imm <<  1) & (0x3 << 1);
 
       if (op != OpcodeVVI::kSwizzleHiU16x4) {
-        predData[ 0] = a;
-        predData[ 1] = a + 1;
-        predData[ 2] = b;
-        predData[ 3] = b + 1;
-        predData[ 4] = c;
-        predData[ 5] = c + 1;
-        predData[ 6] = d;
-        predData[ 7] = d + 1;
+        predData[ 0] = uint8_t(a);
+        predData[ 1] = uint8_t(a + 1u);
+        predData[ 2] = uint8_t(b);
+        predData[ 3] = uint8_t(b + 1u);
+        predData[ 4] = uint8_t(c);
+        predData[ 5] = uint8_t(c + 1u);
+        predData[ 6] = uint8_t(d);
+        predData[ 7] = uint8_t(d + 1u);
       }
 
       if (op != OpcodeVVI::kSwizzleLoU16x4) {
-        predData[ 8] = a + 8;
-        predData[ 9] = a + 9;
-        predData[10] = b + 8;
-        predData[11] = b + 9;
-        predData[12] = c + 8;
-        predData[13] = c + 9;
-        predData[14] = d + 8;
-        predData[15] = d + 9;
+        predData[ 8] = uint8_t(a + 8u);
+        predData[ 9] = uint8_t(a + 9u);
+        predData[10] = uint8_t(b + 8u);
+        predData[11] = uint8_t(b + 9u);
+        predData[12] = uint8_t(c + 8u);
+        predData[13] = uint8_t(c + 9u);
+        predData[14] = uint8_t(d + 8u);
+        predData[15] = uint8_t(d + 9u);
       }
 
       Vec pred = simdConst16B(predData);
@@ -3686,7 +3686,7 @@ void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const OpArray& src_, ui
   uint32_t memSize = overriddenMemSize ? overriddenMemSize : src_[0].as<Vec>().size();
 
   if (op <= OpcodeMV::kStoreN_F64 && memSize >= 4) {
-    bool goodOffset = (dst.offsetLo32() & (memSize - 1)) == 0;
+    bool goodOffset = (uint32_t(dst.offsetLo32()) & (memSize - 1)) == 0u;
 
     if (goodOffset) {
       while (i + 2 <= n) {

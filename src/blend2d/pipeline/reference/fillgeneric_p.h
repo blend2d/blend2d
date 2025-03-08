@@ -196,7 +196,7 @@ struct FillAnalytic_Base {
     y = uint32_t(fillData->box.y1) - y;
 
     size_t x0;
-    size_t xEnd = fillData->box.x1;
+    size_t xEnd = uint32_t(fillData->box.x1);
     size_t xOff;
 
     size_t i;

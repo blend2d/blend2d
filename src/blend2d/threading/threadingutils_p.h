@@ -23,10 +23,18 @@ static void getAbsTimeForWaitCondition(struct timespec& out, uint64_t microsecon
   struct timeval now;
   gettimeofday(&now, nullptr);
 
-  out.tv_sec = now.tv_sec + int64_t(microseconds / 1000000u);
-  out.tv_nsec = (now.tv_usec + int64_t(microseconds % 1000000u)) * 1000;
-  out.tv_sec += out.tv_nsec / 1000000000;
-  out.tv_nsec %= 1000000000;
+  int64_t sec = int64_t(now.tv_sec) + int64_t(microseconds / 1000000u);
+  uint64_t nsec = (uint64_t(now.tv_usec) + uint64_t(microseconds % 1000000u)) * 1000u;
+
+  sec += int64_t(nsec / 1000000000u);
+  nsec %= 1000000000u;
+
+  // To avoid implicit conversion warnings in case the timeval is using 32-bit types (deprecated).
+  using SecType = decltype(out.tv_sec);
+  using NSecType = decltype(out.tv_nsec);
+
+  out.tv_sec = SecType(sec);
+  out.tv_nsec = NSecType(nsec);
 }
 #endif
 

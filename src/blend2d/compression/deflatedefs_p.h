@@ -15,75 +15,73 @@ namespace bl {
 namespace Compression {
 namespace Deflate {
 
-enum FormatType : uint32_t {
-  kFormatRaw,
-  kFormatZlib
+enum class FormatType : uint32_t {
+  kRaw,
+  kZlib
 };
 
 //! Block type.
-enum BlockType : uint32_t {
-  kBlockTypeUncompressed = 0,
-  kBlockTypeStaticHuffman = 1,
-  kBlockTypeDynamicHuffman = 2
+enum class BlockType : uint32_t {
+  kUncompressed = 0,
+  kStaticHuffman = 1,
+  kDynamicHuffman = 2
 };
 
-//! Limits
-enum Limits : uint32_t {
-  //! Minimum supported match length (in bytes).
-  kMinMatchLen = 3,
-  //! Maximum supported match length (in bytes).
-  kMaxMatchLen = 258,
+//! Minimum supported match length (in bytes).
+static constexpr uint32_t kMinMatchLen = 3;
+//! Maximum supported match length (in bytes).
+static constexpr uint32_t kMaxMatchLen = 258;
 
-  //! Minimum supported match offset (in bytes).
-  kMinMatchOffset = 1,
-  //! Maximum supported match offset (in bytes).
-  kMaxMatchOffset = 32768,
+//! Minimum supported match offset (in bytes).
+static constexpr uint32_t kMinMatchOffset = 1;
+//! Maximum supported match offset (in bytes).
+static constexpr uint32_t kMaxMatchOffset = 32768;
 
-  //! Maximum window size.
-  kMaxWindowSize = 32768,
+//! Maximum window size.
+static constexpr uint32_t kMaxWindowSize = 32768;
 
-  // Number of symbols in each Huffman code.
-  //
-  // NOTE for the literal/length and offset codes, these are actually the
-  // maximum values; a given block might use fewer symbols.
-  kNumPrecodeSymbols = 19,
-  kNumLitLenSymbols = 288,
-  kNumOffsetSymbols = 32,
+// Number of symbols in each Huffman code.
+//
+// NOTE for the literal/length and offset codes, these are actually the
+// maximum values; a given block might use fewer symbols.
+static constexpr uint32_t kNumPrecodeSymbols = 19;
+static constexpr uint32_t kNumLitLenSymbols = 288;
+static constexpr uint32_t kNumOffsetSymbols = 32;
 
-  //! The maximum number of symbols across all codes.
-  kMaxSymbolCount = 288,
+// Division of symbols in the literal/length code
+static constexpr uint32_t kNumLiterals = 256;
+static constexpr uint32_t kEndOfBlock = 256;
+static constexpr uint32_t kFirstLengthSymbol = 257;
+static constexpr uint32_t kNumLengthSymbols = 31;
 
-  // Division of symbols in the literal/length code
-  kNumLiterals = 256,
-  kEndOfBlock = 256,
-  kNumLengthSymbols = 31,
+//! The maximum number of symbols across all codes.
+static constexpr uint32_t kMaxSymbolCount = blMax(blMax(kNumPrecodeSymbols, kNumLitLenSymbols), kNumOffsetSymbols);
 
-  // Maximum codeword length, in bits, within each Huffman code
-  kMaxPreCodeWordLen = 7,
-  kMaxLitLenCodeWordLen = 15,
-  kMaxOffsetCodeWordLen = 15,
+// Maximum codeword length, in bits, within each Huffman code.
+static constexpr uint32_t kMaxPreCodeWordLen = 7;
+static constexpr uint32_t kMaxLitLenCodeWordLen = 15;
+static constexpr uint32_t kMaxOffsetCodeWordLen = 15;
 
-  //! The maximum codeword length across all codes.
-  kMaxCodeWordLen = 15,
+//! The maximum codeword length across all codes.
+static constexpr uint32_t kMaxCodeWordLen = 15;
+// Maximum number of extra bits that may be required to represent a match length.
+static constexpr uint32_t kMaxExtraLengthBits = 5;
+// Maximum number of extra bits that may be required to represent a match offset.
+static constexpr uint32_t kMaxExtraOffsetBits = 13;
 
-  //! Maximum possible overrun when decoding codeword lengths .
-  kMaxLensOverrun = 137,
+//! Maximum possible overrun when decoding codeword lengths.
+static constexpr uint32_t kMaxLensOverrun = 137;
 
-  // Maximum number of extra bits that may be required to represent a match length.
-  kMaxExtraLengthBits = 5,
-  // Maximum number of extra bits that may be required to represent a match offset.
-  kMaxExtraOffsetBits = 14,
+// The maximum number of bits in which a match can be represented. This is the absolute worst case,
+// which assumes the longest possible Huffman codewords and the maximum numbers of extra bits.
+static constexpr uint32_t kMaxMatchBits = kMaxLitLenCodeWordLen + kMaxExtraLengthBits + kMaxOffsetCodeWordLen + kMaxExtraOffsetBits;
 
-  // The maximum number of bits in which a match can be represented. This
-  // is the absolute worst case, which assumes the longest possible Huffman
-  // codewords and the maximum numbers of extra bits.
-  kMaxMatchBits = kMaxLitLenCodeWordLen + kMaxExtraLengthBits + kMaxOffsetCodeWordLen + kMaxExtraOffsetBits
-};
+// The order in which precode lengths are stored.
+extern const uint8_t kPrecodeLensPermutation[kNumPrecodeSymbols];
 
 #define DIV_ROUND_UP(n, d)  (((n) + (d) - 1) / (d))
 
-static BL_INLINE uint32_t loaded_u32_to_u24(uint32_t v) noexcept
-{
+static BL_INLINE uint32_t loaded_u32_to_u24(uint32_t v) noexcept {
   return BL_BYTE_ORDER == 1234 ? v & 0xFFFFFFu : v >> 8;
 }
 

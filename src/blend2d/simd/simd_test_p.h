@@ -256,7 +256,7 @@ template<typename T> struct iop_subs : public op_base_2<T, iop_subs<T>> {
 };
 
 template<typename T> struct iop_mul : public op_base_2<T, iop_mul<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return T((uint64_t(a) * uint64_t(b)) & ~T(0)); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return T(T(uint64_t(a) * uint64_t(b)) & T(~T(0))); }
 };
 
 template<typename T> struct iop_min : public op_base_2<T, iop_min<T>> {

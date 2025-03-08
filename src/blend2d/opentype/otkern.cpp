@@ -358,10 +358,10 @@ static BLResult BL_CDECL applyKern(const BLFontFaceImpl* faceI_, uint32_t* glyph
     const KernGroup& kernGroup = kernGroups[groupIndex];
 
     const void* dataPtr = kernGroup.calcDataPtr(basePtr);
-    size_t dataSize = kernGroup.dataSize;
+    size_t dataSize = kernGroup.dataSize();
 
-    uint32_t format = kernGroup.format;
-    int32_t mask = maskFromKernGroupFlags(kernGroup.flags);
+    uint32_t format = kernGroup.format();
+    int32_t mask = maskFromKernGroupFlags(kernGroup.flags());
 
     switch (format) {
       case 0: allCombined |= applyKernFormat0(faceI, dataPtr, dataSize, glyphData, placementData, count, mask); break;
@@ -480,7 +480,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 
   uint32_t groupIndex = 0;
   do {
-    size_t remainingSize = (size_t)(dataEnd - dataPtr);
+    size_t remainingSize = PtrOps::bytesUntil(dataPtr, dataEnd);
     if (BL_UNLIKELY(remainingSize < headerSize)) {
       trace.warn("No more data for group #%u\n", groupIndex);
       break;
@@ -549,7 +549,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
     remainingSize -= headerSize;
 
     // Even on 64-bit machine this cannot overflow as a table length in SFNT header is stored as UInt32.
-    uint32_t offset = (uint32_t)(size_t)(dataPtr - kern.data);
+    uint32_t offset = (uint32_t)PtrOps::byteOffset(kern.data, dataPtr);
     uint32_t orientation = (coverage & WinGroupHeader::kCoverageHorizontal) ? BL_ORIENTATION_HORIZONTAL : BL_ORIENTATION_VERTICAL;
     uint32_t groupFlags = coverage & (KernGroup::kFlagMinimum | KernGroup::kFlagCrossStream | KernGroup::kFlagOverride);
 

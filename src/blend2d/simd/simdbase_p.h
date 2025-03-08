@@ -49,11 +49,11 @@ namespace {
 namespace Internal {
 
 BL_INLINE_NODEBUG uint16_t scalar_u16_from_2x_u8(uint8_t hi, uint8_t lo) noexcept {
-  return (uint16_t(hi) << 8) | uint16_t(lo);
+  return uint16_t((uint16_t(hi) << 8) | uint16_t(lo));
 }
 
 BL_INLINE_NODEBUG uint32_t scalar_u32_from_2x_u16(uint16_t hi, uint16_t lo) noexcept {
-  return (uint32_t(hi) << 16) | uint32_t(lo);
+  return uint32_t((uint32_t(hi) << 16) | uint32_t(lo));
 }
 
 BL_INLINE_NODEBUG uint32_t scalar_u32_from_4x_u8(uint8_t x3, uint8_t x2, uint8_t x1, uint8_t x0) noexcept {

@@ -203,6 +203,7 @@ static BL_INLINE const BLPixelConverterData* blPixelConverterGetData(const BLPix
 
 static BL_INLINE uint8_t* blPixelConverterFillGap(uint8_t* data, size_t size) noexcept {
   uint8_t* end = data + size;
+  BL_NOUNROLL
   while (data != end)
     *data++ = 0;
   return data;

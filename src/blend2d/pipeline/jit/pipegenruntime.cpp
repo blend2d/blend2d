@@ -28,7 +28,7 @@ Wrap<PipeDynamicRuntime> PipeDynamicRuntime::_global;
 // ==========================================
 
 FunctionCache::FunctionCache() noexcept
-  : _allocator(4096 - ArenaAllocator::kBlockOverhead),
+  : _allocator(4096),
     _funcMap(&_allocator) {}
 FunctionCache::~FunctionCache() noexcept {}
 

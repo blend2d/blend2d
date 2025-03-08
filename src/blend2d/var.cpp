@@ -509,7 +509,7 @@ BL_API_IMPL BLResult blVarToDouble(const BLUnknown* self, double* out) noexcept 
     }
 
     case BL_OBJECT_TYPE_BOOL:
-      *out = d.f64_data[0] ? 1.0 : 0.0;
+      *out = d.u64_data[0] ? 1.0 : 0.0;
       return BL_SUCCESS;
 
     case BL_OBJECT_TYPE_INT64: {

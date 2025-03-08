@@ -16,6 +16,7 @@
 #include "../simd/simd_p.h"
 #include "../support/intops_p.h"
 #include "../support/memops_p.h"
+#include "../support/ptrops_p.h"
 #include "../support/scopedbuffer_p.h"
 #include "../tables/tables_p.h"
 
@@ -477,7 +478,7 @@ SlowFlagsDecode:
           }
 
           offCurveSplineCount = offCurveSplineAcc.get();
-          remainingSize = IntOps::subOverflow((size_t)(gEnd - gPtr), xCoordinatesSize + yCoordinatesSize, &of);
+          remainingSize = IntOps::subOverflow(PtrOps::bytesUntil(gPtr, gEnd), xCoordinatesSize + yCoordinatesSize, &of);
 
           // This makes the static analysis happy about not using `remainingSize` afterwards. We don't want to discard
           // the result of the subtraction as that could possibly introduce an issue in the future if code depending

@@ -27,8 +27,8 @@ namespace GlyfImpl {
 // calculate the size of X and Y arrays of all contours a simple glyph is composed of to speed up decoding.
 struct FlagToSizeGen {
   static constexpr uint32_t value(size_t i) noexcept {
-    return ((uint32_t(i & (GlyfTable::Simple::kXIsByte >> 1)) ? 1 : (i & (GlyfTable::Simple::kXIsSameOrXByteIsPositive >> 1)) ? 0 : 2) <<  0) |
-           ((uint32_t(i & (GlyfTable::Simple::kYIsByte >> 1)) ? 1 : (i & (GlyfTable::Simple::kYIsSameOrYByteIsPositive >> 1)) ? 0 : 2) << 16) ;
+    return ((uint32_t(i & (GlyfTable::Simple::kXIsByte >> 1)) ? 1u : (i & (GlyfTable::Simple::kXIsSameOrXByteIsPositive >> 1)) ? 0u : 2u) <<  0) |
+           ((uint32_t(i & (GlyfTable::Simple::kYIsByte >> 1)) ? 1u : (i & (GlyfTable::Simple::kYIsSameOrYByteIsPositive >> 1)) ? 0u : 2u) << 16) ;
   }
 };
 
@@ -346,7 +346,7 @@ static BLResult BL_CDECL getGlyphOutlines(
             yCoordinatesSize = xyCoordinatesSize >> 16;
           }
 
-          remainingSize = (size_t)(gEnd - gPtr);
+          remainingSize = PtrOps::bytesUntil(gPtr, gEnd);
           if (BL_UNLIKELY(xCoordinatesSize + yCoordinatesSize > remainingSize))
             goto InvalidData;
 

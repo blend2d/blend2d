@@ -45,6 +45,22 @@ static BL_INLINE_NODEBUG bool haveEqualAlignment(const T* ptr1, const U* ptr2, s
   return (((uintptr_t)(ptr1) ^ (uintptr_t)(ptr2)) % uintptr_t(alignment)) == 0;
 }
 
+static BL_INLINE_NODEBUG size_t byteOffset(const void* base, const void* ptr) noexcept {
+  // The `byteOffset` function expects `ptr` to always be greater than base - the result must be
+  // zero/positive as it's represented by an unsigned type.
+  BL_ASSERT(static_cast<const uint8_t*>(ptr) >= static_cast<const uint8_t*>(base));
+
+  return (size_t)(static_cast<const uint8_t*>(ptr) - static_cast<const uint8_t*>(base));
+}
+
+static BL_INLINE_NODEBUG size_t bytesUntil(const void* ptr, const void* end) noexcept {
+  // The `bytesUntil` function requires `end` to always be greater than or equal to `ptr` as it
+  // describes the end of a buffer where data is stored or read from.
+  BL_ASSERT(static_cast<const uint8_t*>(ptr) <= static_cast<const uint8_t*>(end));
+
+  return (size_t)(static_cast<const uint8_t*>(end) - static_cast<const uint8_t*>(ptr));
+}
+
 //! \}
 
 } // {anonymous}

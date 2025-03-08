@@ -12,19 +12,48 @@ namespace bl {
 // bl::ArenaAllocator - API
 // ========================
 
+//! Zero block, used by a default constructed `ArenaAllocator`, which doesn't hold any allocated block. This block
+//! must be properly aligned so when arena allocator aligns its current pointer to check for aligned allocation it
+//! would not overflow past the end of the block - which is the same as the beginning of the block as it has no size.
+struct alignas(64) ArenaAllocatorZeroBlock {
+  uint8_t padding[64 - sizeof(ArenaAllocator::Block)];
+  ArenaAllocator::Block block;
+};
+
 // Zero size block used by `ArenaAllocator` that doesn't have any memory allocated.
 // Should be allocated in read-only memory and should never be modified.
-const ArenaAllocator::ZeroBlock ArenaAllocator::_zeroBlock = { { 0 }, { nullptr, nullptr, 0 } };
+static const ArenaAllocatorZeroBlock kArenaAllocatorZeroBlock = { { 0 }, { nullptr, nullptr, 0 } };
+
+static BL_INLINE void ArenaAllocator_assignZeroBlock(ArenaAllocator* self) noexcept {
+  ArenaAllocator::Block* block = const_cast<ArenaAllocator::Block*>(&kArenaAllocatorZeroBlock.block);
+  self->_ptr = block->data();
+  self->_end = block->data();
+  self->_block = block;
+}
+
+static BL_INLINE void ArenaAllocator_assignBlock(ArenaAllocator* self, ArenaAllocator::Block* block) noexcept {
+  size_t alignment = self->blockAlignment();
+  self->_ptr = IntOps::alignUp(block->data(), alignment);
+  self->_end = block->data() + block->size;
+  self->_block = block;
+}
 
 void ArenaAllocator::_init(size_t blockSize, size_t blockAlignment, void* staticData, size_t staticSize) noexcept {
   BL_ASSERT(blockSize >= kMinBlockSize);
   BL_ASSERT(blockSize <= kMaxBlockSize);
   BL_ASSERT(blockAlignment <= 64);
 
-  _assignZeroBlock();
-  _blockSize = blockSize & IntOps::nonZeroLsbMask<size_t>(IntOps::bitSizeOf<size_t>() - 4);
-  _hasStaticBlock = staticData != nullptr;
-  _blockAlignmentShift = IntOps::ctz(blockAlignment) & 0x7;
+  ArenaAllocator_assignZeroBlock(this);
+
+  size_t blockSizeShift = IntOps::bitSizeOf<size_t>() - IntOps::clz(blockSize);
+  size_t blockAlignmentShift = IntOps::bitSizeOf<size_t>() - IntOps::clz(blockAlignment | (size_t(1) << 3));
+
+  _blockAlignmentShift = uint8_t(blockAlignmentShift);
+  _minimumBlockSizeShift = uint8_t(blockSizeShift);
+  _maximumBlockSizeShift = uint8_t(25); // (1 << 25) Equals 32 MiB blocks (should be enough for all cases)
+  _hasStaticBlock = uint8_t(staticData != nullptr);
+  _reserved = uint8_t(0u);
+  _blockCount = size_t(staticData != nullptr);
 
   // Setup the first [temporary] block, if necessary.
   if (staticData) {
@@ -35,20 +64,22 @@ void ArenaAllocator::_init(size_t blockSize, size_t blockAlignment, void* static
     BL_ASSERT(staticSize >= kBlockSize);
     block->size = staticSize - kBlockSize;
 
-    _assignBlock(block);
+    ArenaAllocator_assignBlock(this, block);
+    _blockCount = 1u;
   }
 }
 
 void ArenaAllocator::reset() noexcept {
   // Can't be altered.
   Block* cur = _block;
-  if (cur == &_zeroBlock.block)
+  if (cur == &kArenaAllocatorZeroBlock.block)
     return;
 
-  Block* initial = const_cast<ArenaAllocator::Block*>(&_zeroBlock.block);
+  Block* initial = const_cast<ArenaAllocator::Block*>(&kArenaAllocatorZeroBlock.block);
   _ptr = initial->data();
   _end = initial->data();
   _block = initial;
+  _blockCount = 0u;
 
   // Since cur can be in the middle of the double-linked list, we have to traverse both directions separately.
   Block* next = cur->next;
@@ -60,70 +91,98 @@ void ArenaAllocator::reset() noexcept {
     if (prev == nullptr && _hasStaticBlock) {
       cur->prev = nullptr;
       cur->next = nullptr;
-      _assignBlock(cur);
+      ArenaAllocator_assignBlock(this, cur);
       break;
     }
 
-    free(cur);
+    ::free(cur);
     cur = prev;
   } while (cur);
 
   cur = next;
   while (cur) {
     next = cur->next;
-    free(cur);
+    ::free(cur);
     cur = next;
   }
+}
+
+void ArenaAllocator::clear() noexcept {
+  Block* cur = _block;
+  while (cur->prev) {
+    cur = cur->prev;
+  }
+  ArenaAllocator_assignBlock(this, cur);
 }
 
 void* ArenaAllocator::_alloc(size_t size, size_t alignment) noexcept {
   Block* curBlock = _block;
   Block* next = curBlock->next;
 
-  size_t rawBlockAlignment = blockAlignment();
-  size_t minimumAlignment = blMax<size_t>(alignment, rawBlockAlignment);
+  size_t defaultBlockAlignment = blockAlignment();
+  size_t requiredBlockAlignment = blMax<size_t>(alignment, defaultBlockAlignment);
 
-  // If the `ArenaAllocator` has been cleared the current block doesn't have to be the last one. Check if there is
-  // a block that can be used instead of allocating a new one. If there is a `next` block it's completely unused,
-  // we don't have to check for remaining bytes in that case.
+  // If the `Zone` has been cleared the current block doesn't have to be the last one. Check if there is a block
+  // that can be used instead of allocating a new one. If there is a `next` block it's completely unused, we don't
+  // have to check for remaining bytes in that case.
   if (next) {
-    uint8_t* ptr = IntOps::alignUp(next->data(), minimumAlignment);
+    uint8_t* ptr = IntOps::alignUp(next->data(), requiredBlockAlignment);
     uint8_t* end = next->data() + next->size;
 
     if (size <= (size_t)(end - ptr)) {
       _block = next;
       _ptr = ptr + size;
-      _end = next->data() + next->size;
+      _end = end;
       return static_cast<void*>(ptr);
     }
   }
 
-  // Prevent arithmetic overflow.
-  size_t newSize = blMax(blockSize(), size);
-  if (BL_UNLIKELY(newSize > SIZE_MAX - kBlockSize - kMaxAlignment))
+  // Calculates the "default" size of a next block - in most cases this would be enough for the allocation. In
+  // general we want to gradually increase block size when more and more blocks are allocated until the maximum
+  // block size. Since we use shifts (aka log2(size) sizes) we just need block count and minumum/maximum block
+  // size shift to calculate the final size.
+  size_t defaultBlockSizeShift = blMin<size_t>(_blockCount + _minimumBlockSizeShift, _maximumBlockSizeShift);
+  size_t defaultBlockSize = size_t(1) << defaultBlockSizeShift;
+
+  // Allocate a new block. We have to accommodate all possible overheads so after the memory is allocated and then
+  // properly aligned there will be size for the requested memory. In 99.9999% cases this is never a problem, but
+  // we must be sure that even rare border cases would allocate properly.
+  size_t alignmentOverhead = requiredBlockAlignment - blMin<size_t>(requiredBlockAlignment, BL_ALLOC_ALIGNMENT);
+  size_t blockSizeOverhead = kBlockSize + BL_ALLOC_OVERHEAD + alignmentOverhead;
+
+  // If the requested size is larger than a default calculated block size -> increase block size so the allocation
+  // would be enough to fit the requested size.
+  size_t finalBlockSize = defaultBlockSize;
+
+  if (BL_UNLIKELY(size > defaultBlockSize - blockSizeOverhead)) {
+    if (BL_UNLIKELY(size > SIZE_MAX - blockSizeOverhead)) {
+      // This would probably never happen in practice - however, it needs to be done to stop malicious cases like
+      // `alloc(SIZE_MAX)`.
+      return nullptr;
+    }
+    finalBlockSize = size + alignmentOverhead + kBlockSize;
+  }
+  else {
+    finalBlockSize -= BL_ALLOC_OVERHEAD;
+  }
+
+  // Allocate new block.
+  Block* newBlock = static_cast<Block*>(::malloc(finalBlockSize));
+
+  if (BL_UNLIKELY(!newBlock)) {
     return nullptr;
+  }
 
-  // Allocate new block - we add alignment overhead to `newSize`, which becomes the new block size, and we also add
-  // `kBlockOverhead` to the allocator as it includes members of `ArenaAllocator::Block` structure.
-  newSize += kMaxAlignment;
-  Block* newBlock = static_cast<Block*>(malloc(newSize + kBlockSize));
-
-  if (BL_UNLIKELY(!newBlock))
-    return nullptr;
-
-  // Adjust newSize so the end of the block is aligned to maximum alignment. We will lose some bytes at the end of
-  // the block, but we will never go beyond the end of the block on alignment allocation request.
-  //
-  // NOTE: There was a bug in the past regarding this, do not remove this code.
-  newSize = (size_t)(IntOps::alignDown(newBlock->data() + newSize, kMaxAlignment) - newBlock->data());
+  // finalBlockSize includes the struct size, which must be avoided when assigning the size to a newly allocated block.
+  size_t realBlockSize = finalBlockSize - kBlockSize;
 
   // Align the pointer to `minimumAlignment` and adjust the size of this block accordingly. It's the same as using
-  // `minimumAlignment - IntOps::alignUpDiff()`, just written differently.
+  // `minimumAlignment - Support::alignUpDiff()`, just written differently.
   newBlock->prev = nullptr;
   newBlock->next = nullptr;
-  newBlock->size = newSize;
+  newBlock->size = realBlockSize;
 
-  if (curBlock != &_zeroBlock.block) {
+  if (curBlock != &kArenaAllocatorZeroBlock.block) {
     newBlock->prev = curBlock;
     curBlock->next = newBlock;
 
@@ -135,12 +194,13 @@ void* ArenaAllocator::_alloc(size_t size, size_t alignment) noexcept {
     }
   }
 
-  uint8_t* ptr = IntOps::alignUp(newBlock->data(), minimumAlignment);
-  uint8_t* end = newBlock->data() + newSize;
+  uint8_t* ptr = IntOps::alignUp(newBlock->data(), requiredBlockAlignment);
+  uint8_t* end = newBlock->data() + realBlockSize;
 
   _ptr = ptr + size;
   _end = end;
   _block = newBlock;
+  _blockCount++;
 
   BL_ASSERT(_ptr <= _end);
   return static_cast<void*>(ptr);

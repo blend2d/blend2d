@@ -207,11 +207,11 @@ static CommandStatus fillBoxMaskA(ProcData& procData, const RenderCommand& comma
   int y1 = blMin(boxI.y1, int(procData.bandY1()));
 
   if (y0 < y1) {
-    uint32_t maskX = payload.maskOffsetI.x;
-    uint32_t maskY = payload.maskOffsetI.y + (y0 - boxI.y0);
+    uint32_t maskX = uint32_t(payload.maskOffsetI.x);
+    uint32_t maskY = uint32_t(payload.maskOffsetI.y) + uint32_t(y0 - boxI.y0);
 
     const BLImageImpl* maskI = payload.maskImageI.ptr;
-    const uint8_t* maskData = static_cast<const uint8_t*>(maskI->pixelData) + maskY * maskI->stride + maskX * (maskI->depth / 8u);
+    const uint8_t* maskData = (static_cast<const uint8_t*>(maskI->pixelData) + intptr_t(maskY) * maskI->stride) + maskX * (maskI->depth / 8u);
 
     Pipeline::MaskCommand maskCommands[2];
     Pipeline::MaskCommandType vMaskCmd = command.alpha() >= 255 ? Pipeline::MaskCommandType::kVMaskA8WithoutGA : Pipeline::MaskCommandType::kVMaskA8WithGA;
@@ -398,12 +398,12 @@ SaveState:
 
     do {
       const EdgePoint<int>* pts = edges->pts + 1;
-      const EdgePoint<int>* end = edges->pts + edges->count;
+      const EdgePoint<int>* end = edges->pts + edges->count();
 
       if (pts[-1].y >= int(bandFixedY1))
         break;
 
-      uint32_t signBit = edges->signBit;
+      uint32_t signBit = edges->signBit();
       ras.setSignMaskFromBit(signBit);
 
       edges = edges->next;

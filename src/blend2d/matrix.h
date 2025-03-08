@@ -157,7 +157,7 @@ struct BLMatrix2D {
 
   //! \}
 
-  //! \name Static Constructors
+  //! \name Static Construction
   //! \{
 
   //! Creates a new matrix initialized to identity.

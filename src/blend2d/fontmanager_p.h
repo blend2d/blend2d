@@ -71,7 +71,7 @@ public:
 
   BL_INLINE BLFontManagerPrivateImpl(const BLFontManagerVirt* virt_) noexcept
     : mutex(),
-      allocator(8192 - bl::ArenaAllocator::kBlockOverhead),
+      allocator(8192),
       familiesMap(&allocator),
       substitutionMap(&allocator) { virt = virt_; }
 

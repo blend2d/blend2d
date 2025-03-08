@@ -12,6 +12,7 @@
 #include "../codec/qoicodec_p.h"
 #include "../pixelops/scalar_p.h"
 #include "../support/memops_p.h"
+#include "../support/ptrops_p.h"
 #include "../support/lookuptable_p.h"
 
 #if BL_TARGET_ARCH_BITS >= 64
@@ -239,6 +240,9 @@ static BLResult decoderReadInfoInternal(BLQoiDecoderImpl* decoderI, const uint8_
   decoderI->imageInfo.planeCount = 1;
   decoderI->imageInfo.frameCount = 1;
 
+  memcpy(decoderI->imageInfo.format, "QOI", 4);
+  memcpy(decoderI->imageInfo.compression, "RLE", 4);
+
   return BL_SUCCESS;
 }
 
@@ -274,7 +278,7 @@ static BL_INLINE BLResult decodeQoiData(
   }
 
   for (;;) {
-    size_t remaining = (size_t)(end - src);
+    size_t remaining = PtrOps::bytesUntil(src, end);
     if (BL_UNLIKELY(remaining < kMinRemainingBytesOfNextChunk)) {
       return blTraceError(BL_ERROR_DATA_TRUNCATED);
     }
@@ -352,7 +356,7 @@ store_pixel:
       }
       else {
         // Run-length encoding repeats the previous pixel by `(hbyte0 & 0x3F) + 1` times (N stored with a bias of -1).
-        hbyte0 = size_t(hbyte0 & 0x3Fu) + 1u;
+        hbyte0 = (hbyte0 & 0x3Fu) + 1u;
 
 store_rle:
         {
@@ -418,7 +422,7 @@ static BLResult decoderReadFrameInternal(BLQoiDecoderImpl* decoderI, BLImage* im
   else
     BL_PROPAGATE(decodeQoiData<false>(dstRow, dstStride, w, h, packedTable, unpackedTable, data, end));
 
-  decoderI->bufferIndex = (size_t)(data - start);
+  decoderI->bufferIndex = PtrOps::byteOffset(start, data);
   decoderI->frameIndex++;
 
   return BL_SUCCESS;
@@ -829,26 +833,27 @@ static BLResult BL_CDECL encoderWriteFrameImpl(BLImageEncoderImpl* impl, BLArray
   uint8_t* dstData;
   BL_PROPAGATE(buf.modifyOp(BL_MODIFY_OP_ASSIGN_FIT, size_t(maxSize), &dstData));
 
-  memcpy(dstData, qoiMagic, kQoiMagicSize);
-  MemOps::writeU32uBE(dstData + 4, w);
-  MemOps::writeU32uBE(dstData + 8, h);
-  dstData[12] = uint8_t(channels);
-  dstData[13] = 0;
-  dstData += 14;
+  uint8_t* dstPtr = dstData;
+  memcpy(dstPtr, qoiMagic, kQoiMagicSize);
+  MemOps::writeU32uBE(dstPtr + 4, w);
+  MemOps::writeU32uBE(dstPtr + 8, h);
+  dstPtr[12] = uint8_t(channels);
+  dstPtr[13] = 0;
+  dstPtr += 14;
 
   const uint8_t* srcLine = static_cast<const uint8_t*>(imageData.pixelData);
 
   switch (format) {
     case BL_FORMAT_A8:
-      dstData = encodeQoiDataA8(dstData, w, h, srcLine, imageData.stride);
+      dstPtr = encodeQoiDataA8(dstPtr, w, h, srcLine, imageData.stride);
       break;
 
     case BL_FORMAT_XRGB32:
-      dstData = encodeQoiDataXRGB32(dstData, w, h, srcLine, imageData.stride);
+      dstPtr = encodeQoiDataXRGB32(dstPtr, w, h, srcLine, imageData.stride);
       break;
 
     case BL_FORMAT_PRGB32:
-      dstData = encodeQoiDataPRGB32(dstData, w, h, srcLine, imageData.stride);
+      dstPtr = encodeQoiDataPRGB32(dstPtr, w, h, srcLine, imageData.stride);
       break;
 
     default:
@@ -856,10 +861,10 @@ static BLResult BL_CDECL encoderWriteFrameImpl(BLImageEncoderImpl* impl, BLArray
       return blTraceError(BL_ERROR_INVALID_STATE);
   }
 
-  memcpy(dstData, qoiEndMarker, kQoiEndMarkerSize);
-  dstData += kQoiEndMarkerSize;
+  memcpy(dstPtr, qoiEndMarker, kQoiEndMarkerSize);
+  dstPtr += kQoiEndMarkerSize;
 
-  ArrayInternal::setSize(dst, (size_t)(dstData - buf.data()));
+  ArrayInternal::setSize(dst, PtrOps::byteOffset(dstData, dstPtr));
   return BL_SUCCESS;
 }
 

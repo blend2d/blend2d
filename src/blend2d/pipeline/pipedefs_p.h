@@ -261,7 +261,7 @@ struct Signature {
 
   //! \}
 
-  //! \name Static Constructors
+  //! \name Static Construction
   //! \{
 
   //! Returns a signature only containing a DstFormat.
@@ -460,7 +460,7 @@ struct MaskCommand {
   BL_INLINE_NODEBUG uint32_t maskValue() const noexcept { return uint32_t(_value.data); }
   BL_INLINE_NODEBUG const void* maskData() const noexcept { return _value.ptr; }
 
-  BL_INLINE_NODEBUG intptr_t maskAdvance() const noexcept { return _maskAdvance; }
+  BL_INLINE_NODEBUG intptr_t maskAdvance() const noexcept { return intptr_t(_maskAdvance); }
 
   BL_INLINE void initTypeAndSpan(MaskCommandType type, uint32_t x0, uint32_t x1) noexcept {
     BL_ASSERT(((x1 << kTypeBits) >> kTypeBits) == x1);

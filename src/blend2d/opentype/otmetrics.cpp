@@ -93,7 +93,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 
     if (hmtx) {
       uint32_t longMetricCount = blMin<uint32_t>(hhea->longMetricCount(), faceI->faceInfo.glyphCount);
-      uint32_t longMetricDataSize = longMetricCount * sizeof(XMtxTable::LongMetric);
+      size_t longMetricDataSize = size_t(longMetricCount) * sizeof(XMtxTable::LongMetric);
 
       if (!hmtx.fits(longMetricDataSize))
         return blTraceError(BL_ERROR_INVALID_DATA);
@@ -119,7 +119,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 
     if (vmtx) {
       uint32_t longMetricCount = blMin<uint32_t>(vhea->longMetricCount(), faceI->faceInfo.glyphCount);
-      uint32_t longMetricDataSize = longMetricCount * sizeof(XMtxTable::LongMetric);
+      size_t longMetricDataSize = size_t(longMetricCount) * sizeof(XMtxTable::LongMetric);
 
       if (!vmtx.fits(longMetricDataSize))
         return blTraceError(BL_ERROR_INVALID_DATA);

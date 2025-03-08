@@ -358,166 +358,166 @@ static BL_NOINLINE void test_cond_ops(JitContext& ctx) noexcept {
   test_conditional_op(ctx, OpcodeCond::kTest, CondCode::kNotZero, 111111, -222, true);
   test_conditional_op(ctx, OpcodeCond::kTest, CondCode::kNotZero, -222, 111111, true);
 
-  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTZero, 0x0, 0, true);
-  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTZero, 0x1, 0, false);
-  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTZero, 0xFF, 7, false);
-  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTZero, 0xFF, 9, true);
-  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTZero, 0xFFFFFFFF, 31, false);
-  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTZero, 0x7FFFFFFF, 31, true);
+  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTZero, int32_t(0x0), 0, true);
+  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTZero, int32_t(0x1), 0, false);
+  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTZero, int32_t(0xFF), 7, false);
+  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTZero, int32_t(0xFF), 9, true);
+  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTZero, int32_t(0xFFFFFFFF), 31, false);
+  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTZero, int32_t(0x7FFFFFFF), 31, true);
 
-  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTNotZero, 0x0, 0, false);
-  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTNotZero, 0x1, 0, true);
-  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTNotZero, 0xFF, 7, true);
-  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTNotZero, 0xFF, 9, false);
-  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTNotZero, 0xFFFFFFFF, 31, true);
-  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTNotZero, 0x7FFFFFFF, 31, false);
+  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTNotZero, int32_t(0x0), 0, false);
+  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTNotZero, int32_t(0x1), 0, true);
+  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTNotZero, int32_t(0xFF), 7, true);
+  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTNotZero, int32_t(0xFF), 9, false);
+  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTNotZero, int32_t(0xFFFFFFFF), 31, true);
+  test_conditional_op(ctx, OpcodeCond::kBitTest, CondCode::kBTNotZero, int32_t(0x7FFFFFFF), 31, false);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kZero, 0x00000000, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kZero, 0x00000001, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kZero, 0x000000FF, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kZero, 0x000000FF, 0x000000FF, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kZero, 0xFFFFFFFF, 0xFF000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kZero, 0x7FFFFFFF, 0x80000000, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kZero, int32_t(0x00000000), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kZero, int32_t(0x00000001), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kZero, int32_t(0x000000FF), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kZero, int32_t(0x000000FF), int32_t(0x000000FF), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kZero, int32_t(0xFFFFFFFF), int32_t(0xFF000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kZero, int32_t(0x7FFFFFFF), int32_t(0x80000000), true);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kNotZero, 0x00000000, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kNotZero, 0x00000001, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kNotZero, 0x000000FF, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kNotZero, 0x000000FF, 0x000000FF, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kNotZero, 0xFFFFFFFF, 0xFF000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kNotZero, 0x7FFFFFFF, 0x80000000, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kNotZero, int32_t(0x00000000), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kNotZero, int32_t(0x00000001), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kNotZero, int32_t(0x000000FF), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kNotZero, int32_t(0x000000FF), int32_t(0x000000FF), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kNotZero, int32_t(0xFFFFFFFF), int32_t(0xFF000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAnd, CondCode::kNotZero, int32_t(0x7FFFFFFF), int32_t(0x80000000), false);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kZero, 0x00000000, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kZero, 0x00000001, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kZero, 0x000000FF, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kZero, 0x000000FF, 0x000000FF, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kZero, 0xFFFFFFFF, 0xFF000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kZero, 0x7FFFFFFF, 0x80000000, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kZero, int32_t(0x00000000), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kZero, int32_t(0x00000001), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kZero, int32_t(0x000000FF), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kZero, int32_t(0x000000FF), int32_t(0x000000FF), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kZero, int32_t(0xFFFFFFFF), int32_t(0xFF000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kZero, int32_t(0x7FFFFFFF), int32_t(0x80000000), false);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kNotZero, 0x00000000, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kNotZero, 0x00000001, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kNotZero, 0x000000FF, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kNotZero, 0x000000FF, 0x000000FF, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kNotZero, 0xFFFFFFFF, 0xFF000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kNotZero, 0x7FFFFFFF, 0x80000000, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kNotZero, int32_t(0x00000000), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kNotZero, int32_t(0x00000001), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kNotZero, int32_t(0x000000FF), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kNotZero, int32_t(0x000000FF), int32_t(0x000000FF), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kNotZero, int32_t(0xFFFFFFFF), int32_t(0xFF000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignOr, CondCode::kNotZero, int32_t(0x7FFFFFFF), int32_t(0x80000000), true);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kZero, 0x00000000, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kZero, 0x00000001, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kZero, 0x000000FF, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kZero, 0x000000FF, 0x000000FF, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kZero, 0xFFFFFFFF, 0xFF000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kZero, 0x7FFFFFFF, 0x80000000, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kZero, int32_t(0x00000000), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kZero, int32_t(0x00000001), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kZero, int32_t(0x000000FF), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kZero, int32_t(0x000000FF), int32_t(0x000000FF), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kZero, int32_t(0xFFFFFFFF), int32_t(0xFF000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kZero, int32_t(0x7FFFFFFF), int32_t(0x80000000), false);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kNotZero, 0x00000000, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kNotZero, 0x00000001, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kNotZero, 0x000000FF, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kNotZero, 0x000000FF, 0x000000FF, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kNotZero, 0xFFFFFFFF, 0xFF000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kNotZero, 0x7FFFFFFF, 0x80000000, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kNotZero, int32_t(0x00000000), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kNotZero, int32_t(0x00000001), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kNotZero, int32_t(0x000000FF), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kNotZero, int32_t(0x000000FF), int32_t(0x000000FF), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kNotZero, int32_t(0xFFFFFFFF), int32_t(0xFF000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignXor, CondCode::kNotZero, int32_t(0x7FFFFFFF), int32_t(0x80000000), true);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kZero, 0x00000000, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kZero, 0xFF000000, 0x01000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kZero, 0x000000FF, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kZero, 0x000000FF, 0x000000FF, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kZero, 0xFFFFFFFF, 0xFF000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kZero, 0x7FFFFFFF, 0x80000000, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kZero, int32_t(0x00000000), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kZero, int32_t(0xFF000000), int32_t(0x01000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kZero, int32_t(0x000000FF), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kZero, int32_t(0x000000FF), int32_t(0x000000FF), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kZero, int32_t(0xFFFFFFFF), int32_t(0xFF000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kZero, int32_t(0x7FFFFFFF), int32_t(0x80000000), false);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotZero, 0x00000000, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotZero, 0xFF000000, 0x01000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotZero, 0x000000FF, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotZero, 0x000000FF, 0x000000FF, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotZero, 0xFFFFFFFF, 0xFF000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotZero, 0x7FFFFFFF, 0x80000000, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotZero, int32_t(0x00000000), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotZero, int32_t(0xFF000000), int32_t(0x01000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotZero, int32_t(0x000000FF), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotZero, int32_t(0x000000FF), int32_t(0x000000FF), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotZero, int32_t(0xFFFFFFFF), int32_t(0xFF000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotZero, int32_t(0x7FFFFFFF), int32_t(0x80000000), true);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kCarry, 0x00000000, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kCarry, 0xFF000000, 0x01000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kCarry, 0x000000FF, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kCarry, 0x000000FF, 0x000000FF, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kCarry, 0xFFFFFFFF, 0xFF000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kCarry, 0x7FFFFFFF, 0x80000000, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kCarry, int32_t(0x00000000), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kCarry, int32_t(0xFF000000), int32_t(0x01000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kCarry, int32_t(0x000000FF), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kCarry, int32_t(0x000000FF), int32_t(0x000000FF), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kCarry, int32_t(0xFFFFFFFF), int32_t(0xFF000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kCarry, int32_t(0x7FFFFFFF), int32_t(0x80000000), false);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotCarry, 0x00000000, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotCarry, 0xFF000000, 0x01000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotCarry, 0x000000FF, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotCarry, 0x000000FF, 0x000000FF, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotCarry, 0xFFFFFFFF, 0xFF000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotCarry, 0x7FFFFFFF, 0x80000000, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotCarry, int32_t(0x00000000), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotCarry, int32_t(0xFF000000), int32_t(0x01000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotCarry, int32_t(0x000000FF), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotCarry, int32_t(0x000000FF), int32_t(0x000000FF), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotCarry, int32_t(0xFFFFFFFF), int32_t(0xFF000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotCarry, int32_t(0x7FFFFFFF), int32_t(0x80000000), true);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kSign, 0x00000000, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kSign, 0xFF000000, 0x01000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kSign, 0x000000FF, 0x80000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kSign, 0x000000FF, 0x800000FF, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kSign, 0xFFFFFFFF, 0xFF000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kSign, 0x7FFFFFFF, 0x80000000, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kSign, int32_t(0x00000000), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kSign, int32_t(0xFF000000), int32_t(0x01000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kSign, int32_t(0x000000FF), int32_t(0x80000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kSign, int32_t(0x000000FF), int32_t(0x800000FF), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kSign, int32_t(0xFFFFFFFF), int32_t(0xFF000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kSign, int32_t(0x7FFFFFFF), int32_t(0x80000000), true);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotSign, 0x00000000, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotSign, 0xFF000000, 0x01000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotSign, 0x000000FF, 0x80000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotSign, 0x000000FF, 0x800000FF, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotSign, 0xFFFFFFFF, 0xFF000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotSign, 0x7FFFFFFF, 0x80000000, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotSign, int32_t(0x00000000), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotSign, int32_t(0xFF000000), int32_t(0x01000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotSign, int32_t(0x000000FF), int32_t(0x80000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotSign, int32_t(0x000000FF), int32_t(0x800000FF), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotSign, int32_t(0xFFFFFFFF), int32_t(0xFF000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignAdd, CondCode::kNotSign, int32_t(0x7FFFFFFF), int32_t(0x80000000), false);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kZero, 0x00000000, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kZero, 0xFF000000, 0x01000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kZero, 0x000000FF, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kZero, 0x000000FF, 0x000000FF, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kZero, 0xFFFFFFFF, 0xFF000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kZero, 0x7FFFFFFF, 0x80000000, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kZero, int32_t(0x00000000), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kZero, int32_t(0xFF000000), int32_t(0x01000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kZero, int32_t(0x000000FF), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kZero, int32_t(0x000000FF), int32_t(0x000000FF), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kZero, int32_t(0xFFFFFFFF), int32_t(0xFF000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kZero, int32_t(0x7FFFFFFF), int32_t(0x80000000), false);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotZero, 0x00000000, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotZero, 0xFF000000, 0x01000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotZero, 0x000000FF, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotZero, 0x000000FF, 0x000000FF, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotZero, 0xFFFFFFFF, 0xFF000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotZero, 0x7FFFFFFF, 0x80000000, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotZero, int32_t(0x00000000), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotZero, int32_t(0xFF000000), int32_t(0x01000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotZero, int32_t(0x000000FF), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotZero, int32_t(0x000000FF), int32_t(0x000000FF), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotZero, int32_t(0xFFFFFFFF), int32_t(0xFF000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotZero, int32_t(0x7FFFFFFF), int32_t(0x80000000), true);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, 0x00000000, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, 0xFF000000, 0x01000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, 0x000000FF, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, 0x000000FF, 0x000000FF, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, 0xFFFFFFFF, 0xFF000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, 0x7FFFFFFF, 0x80000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, 0x00000111, 0x0000F0FF, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, int32_t(0x00000000), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, int32_t(0xFF000000), int32_t(0x01000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, int32_t(0x000000FF), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, int32_t(0x000000FF), int32_t(0x000000FF), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, int32_t(0xFFFFFFFF), int32_t(0xFF000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, int32_t(0x7FFFFFFF), int32_t(0x80000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedLT, int32_t(0x00000111), int32_t(0x0000F0FF), true);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGE, 0x00000000, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGE, 0xFF000000, 0x01000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGE, 0x000000FF, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGE, 0x000000FF, 0x000000FF, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGE, 0xFFFFFFFF, 0xFF000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGE, 0x7FFFFFFF, 0x80000000, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGE, int32_t(0x00000000), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGE, int32_t(0xFF000000), int32_t(0x01000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGE, int32_t(0x000000FF), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGE, int32_t(0x000000FF), int32_t(0x000000FF), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGE, int32_t(0xFFFFFFFF), int32_t(0xFF000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGE, int32_t(0x7FFFFFFF), int32_t(0x80000000), false);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kSign, 0x00000000, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kSign, 0x00000000, 0xFFFFFFFF, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kSign, 0x00000000, 0x00000001, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kSign, 0x00000001, 0x00000010, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kSign, 0xFFFFFFFF, 0xFF000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kSign, 0x7FFFFFFF, 0x80000000, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kSign, int32_t(0x00000000), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kSign, int32_t(0x00000000), int32_t(0xFFFFFFFF), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kSign, int32_t(0x00000000), int32_t(0x00000001), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kSign, int32_t(0x00000001), int32_t(0x00000010), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kSign, int32_t(0xFFFFFFFF), int32_t(0xFF000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kSign, int32_t(0x7FFFFFFF), int32_t(0x80000000), true);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotSign, 0x00000000, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotSign, 0x00000000, 0xFFFFFFFF, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotSign, 0x00000000, 0x00000001, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotSign, 0x00000001, 0x00000010, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotSign, 0xFFFFFFFF, 0xFF000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotSign, 0x7FFFFFFF, 0x80000000, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotSign, int32_t(0x00000000), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotSign, int32_t(0x00000000), int32_t(0xFFFFFFFF), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotSign, int32_t(0x00000000), int32_t(0x00000001), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotSign, int32_t(0x00000001), int32_t(0x00000010), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotSign, int32_t(0xFFFFFFFF), int32_t(0xFF000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kNotSign, int32_t(0x7FFFFFFF), int32_t(0x80000000), false);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, 0x00000000, 0x00000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, 0xFF000000, 0x01000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, 0x000000FF, 0x00000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, 0x000000FF, 0x000000FF, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, 0xFFFFFFFF, 0xFF000000, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, 0x7FFFFFFF, 0x80000000, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, 0x00000111, 0x0000F0FF, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, int32_t(0x00000000), int32_t(0x00000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, int32_t(0xFF000000), int32_t(0x01000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, int32_t(0x000000FF), int32_t(0x00000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, int32_t(0x000000FF), int32_t(0x000000FF), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, int32_t(0xFFFFFFFF), int32_t(0xFF000000), true);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, int32_t(0x7FFFFFFF), int32_t(0x80000000), false);
+  test_conditional_op(ctx, OpcodeCond::kAssignSub, CondCode::kUnsignedGT, int32_t(0x00000111), int32_t(0x0000F0FF), false);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kZero, 0x00000000, 1, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kZero, 0x000000FF, 8, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kZero, 0x000000FF, 7, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kZero, 0xFFFFFFFF, 31, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kZero, 0x7FFFFFFF, 31, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kZero, int32_t(0x00000000), 1, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kZero, int32_t(0x000000FF), 8, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kZero, int32_t(0x000000FF), 7, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kZero, int32_t(0xFFFFFFFF), 31, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kZero, int32_t(0x7FFFFFFF), 31, true);
 
-  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kNotZero, 0x00000000, 1, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kNotZero, 0x000000FF, 8, false);
-  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kNotZero, 0x000000FF, 7, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kNotZero, 0xFFFFFFFF, 31, true);
-  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kNotZero, 0x7FFFFFFF, 31, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kNotZero, int32_t(0x00000000), 1, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kNotZero, int32_t(0x000000FF), 8, false);
+  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kNotZero, int32_t(0x000000FF), 7, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kNotZero, int32_t(0xFFFFFFFF), 31, true);
+  test_conditional_op(ctx, OpcodeCond::kAssignShr, CondCode::kNotZero, int32_t(0x7FFFFFFF), 31, false);
 }
 
 // bl::Pipeline::JIT - Tests - M Operations - Functions
@@ -3703,20 +3703,20 @@ template<typename T> struct vec_op_subs : public op_each_vvv<T, vec_op_subs<T>> 
 };
 
 template<typename T> struct vec_op_mul : public op_each_vvv<T, vec_op_mul<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return T((uint64_t(a) * uint64_t(b)) & ~T(0)); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept { return T((uint64_t(a) * uint64_t(b)) & uint64_t(~T(0))); }
 };
 
 template<typename T> struct vec_op_mulhi : public op_each_vvv<T, vec_op_mulhi<T>> {
   static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept {
     uint64_t result = uint64_t(int64_t(cast_int(a))) * uint64_t(int64_t(cast_int(b)));
-    return T((result >> (sizeof(T) * 8u)) & ~T(0));
+    return T(T(result >> (sizeof(T) * 8u)) & T(~T(0)));
   }
 };
 
 template<typename T> struct vec_op_mulhu : public op_each_vvv<T, vec_op_mulhu<T>> {
   static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b) noexcept {
     uint64_t result = uint64_t(a) * uint64_t(b);
-    return T((result >> (sizeof(T) * 8u)) & ~T(0));
+    return T(result >> (sizeof(T) * 8u)) & uint64_t(~T(0));
   }
 };
 
@@ -3739,7 +3739,7 @@ struct vec_op_mhadd_i16_i32 : public op_each_vvv<uint32_t, vec_op_mhadd_i16_i32>
 };
 
 template<typename T> struct vec_op_madd : public op_each_vvvv<T, vec_op_madd<T>> {
-  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b, const T& c) noexcept { return T((uint64_t(a) * uint64_t(b) + uint64_t(c)) & ~T(0)); }
+  static BL_INLINE_NODEBUG T apply_one(const T& a, const T& b, const T& c) noexcept { return T((uint64_t(a) * uint64_t(b) + uint64_t(c)) & uint64_t(~T(0))); }
 };
 
 template<typename T> struct vec_op_min : public op_each_vvv<T, vec_op_min<T>> {

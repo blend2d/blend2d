@@ -44,7 +44,7 @@ namespace Native {
 
 #if !defined(BL_BUILD_NO_FUTEX) && defined(__linux__)
 
-static BL_INLINE_NODEBUG int makeSysCall(uint32_t* addr, int op, int x) noexcept { return syscall(SYS_futex, (void*)addr, op, x, nullptr, nullptr, 0); }
+static BL_INLINE_NODEBUG int makeSysCall(uint32_t* addr, int op, int x) noexcept { return int(syscall(SYS_futex, (void*)addr, op, x, nullptr, nullptr, 0)); }
 
 static BL_INLINE_NODEBUG int wait(uint32_t* addr, uint32_t value) noexcept { return makeSysCall(addr, FUTEX_WAIT_PRIVATE, int(value)); }
 static BL_INLINE_NODEBUG int wakeOne(uint32_t* addr) noexcept { return makeSysCall(addr, FUTEX_WAKE_PRIVATE, 1); }

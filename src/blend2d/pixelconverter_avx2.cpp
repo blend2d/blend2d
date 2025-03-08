@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "api-build_p.h"
-#ifdef BL_BUILD_OPT_AVX2
+#ifdef BL_TARGET_OPT_AVX2
 
 #include "pixelconverter_p.h"
 #include "simd/simd_p.h"
@@ -98,15 +98,15 @@ BLResult bl_convert_copy_or_8888_avx2(
 
     BL_NOUNROLL
     while (i >= 32) {
-      Vec32xU8 p0 = loadu<Vec32xU8>(srcData +  0);
-      Vec32xU8 p1 = loadu<Vec32xU8>(srcData + 32);
-      Vec32xU8 p2 = loadu<Vec32xU8>(srcData + 64);
-      Vec32xU8 p3 = loadu<Vec32xU8>(srcData + 96);
+      Vec32xU8 p0 = fillMask | loadu<Vec32xU8>(srcData +  0);
+      Vec32xU8 p1 = fillMask | loadu<Vec32xU8>(srcData + 32);
+      Vec32xU8 p2 = fillMask | loadu<Vec32xU8>(srcData + 64);
+      Vec32xU8 p3 = fillMask | loadu<Vec32xU8>(srcData + 96);
 
-      storeu(dstData +  0, p0 | fillMask);
-      storeu(dstData + 32, p1 | fillMask);
-      storeu(dstData + 64, p2 | fillMask);
-      storeu(dstData + 96, p3 | fillMask);
+      storeu(dstData +  0, p0);
+      storeu(dstData + 32, p1);
+      storeu(dstData + 64, p2);
+      storeu(dstData + 96, p3);
 
       dstData += 128;
       srcData += 128;
@@ -115,8 +115,8 @@ BLResult bl_convert_copy_or_8888_avx2(
 
     BL_NOUNROLL
     while (i >= 8) {
-      Vec32xU8 p0 = loadu<Vec32xU8>(srcData);
-      storeu(dstData, p0 | fillMask);
+      Vec32xU8 p0 = fillMask | loadu<Vec32xU8>(srcData);
+      storeu(dstData, p0);
 
       dstData += 32;
       srcData += 32;
@@ -124,8 +124,8 @@ BLResult bl_convert_copy_or_8888_avx2(
     }
 
     if (i) {
-      Vec32xU8 p0 = loadu_256_mask32<Vec32xU8>(srcData, loadStoreMask);
-      storeu_256_mask32(dstData, p0 | fillMask, loadStoreMask);
+      Vec32xU8 p0 = fillMask | loadu_256_mask32<Vec32xU8>(srcData, loadStoreMask);
+      storeu_256_mask32(dstData, p0, loadStoreMask);
 
       dstData += i * 4;
       srcData += i * 4;
@@ -243,8 +243,8 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
       p1 = loadu_128<Vec32xU8>(srcData + 16);          // [yA|xA|z9 y9|x9 z8 y8 x8|z7 y7 x7 z6|y6 x6 z5 y5]
       p3 = loadu_128<Vec32xU8>(srcData + 32);          // [zF yF xF zE|yE xE zD yD|xD zC yC xC|zB yB xB zA]
 
-      p2 = alignr_u128<8>(p3, p1);                       // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
-      p1 = alignr_u128<12>(p1, p0);                      // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
+      p2 = alignr_u128<8>(p3, p1);                     // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
+      p1 = alignr_u128<12>(p1, p0);                    // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
       p3 = srlb_u128<4>(p3);                           // [-- -- -- --|zF yF xF zE|yE xE zD yD|xD zC yC xC]
 
       p0 = interleave_i128(p0, p1);
@@ -254,8 +254,8 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
       q1 = loadu_128<Vec32xU8>(srcData + 64);          // [yA|xA|z9 y9|x9 z8 y8 x8|z7 y7 x7 z6|y6 x6 z5 y5]
       q3 = loadu_128<Vec32xU8>(srcData + 80);          // [zF yF xF zE|yE xE zD yD|xD zC yC xC|zB yB xB zA]
 
-      q2 = alignr_u128<8>(q3, q1);                       // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
-      q1 = alignr_u128<12>(q1, q0);                      // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
+      q2 = alignr_u128<8>(q3, q1);                     // [-- -- -- --|zB yB xB zA|yA|xA|z9 y9|x9 z8 y8 x8]
+      q1 = alignr_u128<12>(q1, q0);                    // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
       q3 = srlb_u128<4>(q3);                           // [-- -- -- --|zF yF xF zE|yE xE zD yD|xD zC yC xC]
 
       q0 = interleave_i128(q0, q1);
@@ -277,7 +277,7 @@ BLResult bl_convert_rgb32_from_rgb24_shufb_avx2(
 
       p0 = loadu<Vec16xU8>(srcData);                   // [x5|z4 y4 x4|z3 y3 x3 z2|y2 x2 z1 y1|x1 z0 y0 x0]
       p1 = loadu_64<Vec16xU8>(srcData + 16);           // [-- -- -- --|-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5]
-      p1 = alignr_u128<12>(p1, p0);                      // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
+      p1 = alignr_u128<12>(p1, p0);                    // [-- -- -- --|z7 y7 x7 z6|y6 x6 z5 y5|x5|z4 y4 x4]
 
       storeu(dstData +  0, swizzlev_u8(p0, vec_128(predicate)) | vec_128(fillMask));
       storeu(dstData + 16, swizzlev_u8(p1, vec_128(predicate)) | vec_128(fillMask));

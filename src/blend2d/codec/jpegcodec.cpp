@@ -803,7 +803,7 @@ static BLResult decoderReadProgressiveBlock(BLJpegDecoderImpl* decoderI, Decoder
       BL_PROPAGATE(reader.requireBits(1));
 
       s = reader.readBit<uint32_t>();
-      dst[0] += int16_t(s << shift);
+      dst[0] = int16_t(int32_t(dst[0]) + int32_t(s << shift));
     }
 
     k++;
@@ -1008,7 +1008,7 @@ static BLResult decoderProcessStream(BLJpegDecoderImpl* decoderI, const uint8_t*
 
       for (uint32_t y = 0; y < sfH; y++) {
         for (uint32_t x = 0; x < sfW; x++) {
-          run->offset[count++] = offset + x * unitSize * kDctSize;
+          run->offset[count++] = intptr_t(offset + x * unitSize * kDctSize);
         }
         offset += stride * kDctSize;
       }
@@ -1028,7 +1028,7 @@ static BLResult decoderProcessStream(BLJpegDecoderImpl* decoderI, const uint8_t*
 
       for (uint32_t y = 0; y < sfH; y++) {
         for (uint32_t x = 0; x < sfW; x++) {
-          run->offset[count++] = offset + x * blockSize;
+          run->offset[count++] = intptr_t(offset + x * blockSize);
         }
         offset += blockStride;
       }
@@ -1064,7 +1064,7 @@ static BLResult decoderProcessStream(BLJpegDecoderImpl* decoderI, const uint8_t*
         for (uint32_t n = 0; n < blockCount; n++) {
           tmpBlock.reset();
           BL_PROPAGATE(decoderReadBaselineBlock(decoderI, stream, run->comp, tmpBlock.data));
-          opts.idct8(blockData + run->offset[n], run->stride, tmpBlock.data, run->qTable->data);
+          opts.idct8(blockData + run->offset[n], intptr_t(run->stride), tmpBlock.data, run->qTable->data);
         }
 
         run->data = blockData + run->advance[mcuX == mcuW];
@@ -1152,7 +1152,7 @@ static BLResult decoderProcessMCUs(BLJpegDecoderImpl* decoderI) noexcept {
       for (uint32_t j = 0; j < h; j++) {
         for (uint32_t i = 0; i < w; i++) {
           int16_t *data = comp.coeff + 64 * (i + j * comp.blW);
-          opts.idct8(comp.data + comp.osW * j * 8 + i * 8, comp.osW, data, qTable->data);
+          opts.idct8(comp.data + comp.osW * j * 8 + i * 8, intptr_t(comp.osW), data, qTable->data);
         }
       }
     }
@@ -1274,6 +1274,9 @@ static BLResult decoderReadInfoImplInternal(BLJpegDecoderImpl* decoderI, const u
   if (p[0] != 0xFF || p[1] != kMarkerSOI)
     return blTraceError(BL_ERROR_INVALID_SIGNATURE);
 
+  memcpy(decoderI->imageInfo.format, "JPEG", 5);
+  memcpy(decoderI->imageInfo.compression, "HUFFMAN", 8);
+
   p += 2;
   decoderI->statusFlags |= DecoderStatusFlags::kDoneSOI;
 
@@ -1307,8 +1310,9 @@ static BLResult decoderReadInfoImplInternal(BLJpegDecoderImpl* decoderI, const u
     p += consumedBytes;
 
     // Terminate after SOF has been processed, the rest is handled by `decode()`.
-    if (isMarkerSOF(m))
+    if (isMarkerSOF(m)) {
       break;
+    }
   }
 
   decoderI->bufferIndex = (size_t)(p - start);

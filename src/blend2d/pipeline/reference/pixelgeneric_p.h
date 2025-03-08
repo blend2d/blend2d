@@ -110,21 +110,21 @@ struct P8_Alpha {
   BL_INLINE_NODEBUG Packed pack() const noexcept { return *this; }
   BL_INLINE_NODEBUG Unpacked unpack() const noexcept;
 
-  BL_INLINE_NODEBUG Packed operator&(uint32_t x) const noexcept { return Packed { uint8_t((p & x) & 0xFFu) }; }
-  BL_INLINE_NODEBUG Packed operator|(uint32_t x) const noexcept { return Packed { uint8_t((p | x) & 0xFFu) }; }
-  BL_INLINE_NODEBUG Packed operator^(uint32_t x) const noexcept { return Packed { uint8_t((p ^ x) & 0xFFu) }; }
-  BL_INLINE_NODEBUG Packed operator+(uint32_t x) const noexcept { return Packed { uint8_t((p + x) & 0xFFu) }; }
-  BL_INLINE_NODEBUG Packed operator-(uint32_t x) const noexcept { return Packed { uint8_t((p - x) & 0xFFu) }; }
-  BL_INLINE_NODEBUG Packed operator*(uint32_t x) const noexcept { return Packed { uint8_t((p * x) & 0xFFu) }; }
-  BL_INLINE_NODEBUG Packed operator>>(uint32_t x) const noexcept { return Packed { uint8_t((p >> x) & 0xFFu) }; }
-  BL_INLINE_NODEBUG Packed operator<<(uint32_t x) const noexcept { return Packed { uint8_t((p << x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator&(uint32_t x) const noexcept { return Packed { uint8_t(uint8_t(p & x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator|(uint32_t x) const noexcept { return Packed { uint8_t(uint8_t(p | x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator^(uint32_t x) const noexcept { return Packed { uint8_t(uint8_t(p ^ x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator+(uint32_t x) const noexcept { return Packed { uint8_t(uint8_t(p + x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator-(uint32_t x) const noexcept { return Packed { uint8_t(uint8_t(p - x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator*(uint32_t x) const noexcept { return Packed { uint8_t(uint8_t(p * x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator>>(uint32_t x) const noexcept { return Packed { uint8_t(uint8_t(p >> x) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator<<(uint32_t x) const noexcept { return Packed { uint8_t(uint8_t(p << x) & 0xFFu) }; }
 
-  BL_INLINE_NODEBUG Packed operator&(const Packed& x) const noexcept { return Packed { uint8_t((p & x.p) & 0xFFu) }; }
-  BL_INLINE_NODEBUG Packed operator|(const Packed& x) const noexcept { return Packed { uint8_t((p | x.p) & 0xFFu) }; }
-  BL_INLINE_NODEBUG Packed operator^(const Packed& x) const noexcept { return Packed { uint8_t((p ^ x.p) & 0xFFu) }; }
-  BL_INLINE_NODEBUG Packed operator+(const Packed& x) const noexcept { return Packed { uint8_t((p + x.p) & 0xFFu) }; }
-  BL_INLINE_NODEBUG Packed operator-(const Packed& x) const noexcept { return Packed { uint8_t((p - x.p) & 0xFFu) }; }
-  BL_INLINE_NODEBUG Packed operator*(const Packed& x) const noexcept { return Packed { uint8_t((p * x.p) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator&(const Packed& x) const noexcept { return Packed { uint8_t(uint8_t(p & x.p) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator|(const Packed& x) const noexcept { return Packed { uint8_t(uint8_t(p | x.p) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator^(const Packed& x) const noexcept { return Packed { uint8_t(uint8_t(p ^ x.p) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator+(const Packed& x) const noexcept { return Packed { uint8_t(uint8_t(p + x.p) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator-(const Packed& x) const noexcept { return Packed { uint8_t(uint8_t(p - x.p) & 0xFFu) }; }
+  BL_INLINE_NODEBUG Packed operator*(const Packed& x) const noexcept { return Packed { uint8_t(uint8_t(p * x.p) & 0xFFu) }; }
 
   BL_INLINE_NODEBUG Packed& operator&=(uint32_t x) noexcept { *this = *this & x; return *this; }
   BL_INLINE_NODEBUG Packed& operator|=(uint32_t x) noexcept { *this = *this | x; return *this; }

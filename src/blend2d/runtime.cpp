@@ -133,17 +133,33 @@ static BL_INLINE uint32_t blRuntimeDetectCpuFeatures(const asmjit::CpuInfo& asmC
   if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSE3  )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE3;
   if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSSE3 )) features |= BL_RUNTIME_CPU_FEATURE_X86_SSSE3;
   if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSE4_1)) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_1;
-  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSE4_2)) features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_2;
-  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX   )) features |= BL_RUNTIME_CPU_FEATURE_X86_AVX;
-  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX2  )) features |= BL_RUNTIME_CPU_FEATURE_X86_AVX2;
 
-  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_F) &&
-      asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_BW) &&
-      asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_CD) &&
-      asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_DQ) &&
-      asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_VL)) {
-    features |= BL_RUNTIME_CPU_FEATURE_X86_AVX512;
+  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kSSE4_2) &&
+      asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kPCLMULQDQ)) {
+    features |= BL_RUNTIME_CPU_FEATURE_X86_SSE4_2;
+
+    if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX)) {
+      features |= BL_RUNTIME_CPU_FEATURE_X86_AVX;
+
+      if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX2) &&
+          asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kBMI) &&
+          asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kBMI2) &&
+          asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kPOPCNT)) {
+        features |= BL_RUNTIME_CPU_FEATURE_X86_AVX2;
+
+        if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_F) &&
+            asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_BW) &&
+            asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_CD) &&
+            asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_DQ) &&
+            asmCpuInfo.hasFeature(asmjit::CpuFeatures::X86::kAVX512_VL)) {
+          features |= BL_RUNTIME_CPU_FEATURE_X86_AVX512;
+        }
+      }
+    }
   }
+#elif BL_TARGET_ARCH_ARM
+  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::ARM::kCRC32)) features |= BL_RUNTIME_CPU_FEATURE_ARM_CRC32;
+  if (asmCpuInfo.hasFeature(asmjit::CpuFeatures::ARM::kPMULL)) features |= BL_RUNTIME_CPU_FEATURE_ARM_PMULL;
 #else
   blUnused(asmCpuInfo);
 #endif
@@ -259,6 +275,8 @@ BL_API_IMPL BLResult blRuntimeInit() noexcept {
   blThreadRtInit(rt);
   blThreadPoolRtInit(rt);
   blZeroAllocatorRtInit(rt);
+
+  blCompressionRtInit(rt);
   blPixelOpsRtInit(rt);
   blBitArrayRtInit(rt);
   blBitSetRtInit(rt);

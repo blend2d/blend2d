@@ -55,7 +55,7 @@ static BL_INLINE BLResultT<intptr_t> calcStrideFromCreateParams(int w, int h, BL
     return BLResultT<intptr_t>{result, 0};
   }
   else {
-    uint32_t bytesPerLine = strideForWidth(w, blFormatInfo[format].depth);
+    uint32_t bytesPerLine = strideForWidth(uint32_t(w), blFormatInfo[format].depth);
     uint64_t bytesPerImage = uint64_t(bytesPerLine) * unsigned(h);
 
     // NOTE: Align the stride to 16 bytes if bytesPerLine is not too small. The reason is that when multi-threaded
@@ -71,7 +71,7 @@ static BL_INLINE BLResultT<intptr_t> calcStrideFromCreateParams(int w, int h, BL
 
 // Make sure that the external image won't cause any kind of overflow in rasterization and texture fetching.
 static BL_INLINE BLResult checkCreateFromDataParams(int w, int h, BLFormat format, intptr_t stride) noexcept {
-  uint32_t minimumStride = strideForWidth(w, blFormatInfo[format].depth);
+  uint32_t minimumStride = strideForWidth(uint32_t(w), blFormatInfo[format].depth);
   uintptr_t bytesPerLine = uintptr_t(blAbs(stride));
 
   if (BL_UNLIKELY(!checkSizeAndFormat(w, h, format) || bytesPerLine < minimumStride))
@@ -393,7 +393,8 @@ BL_API_IMPL BLResult blImageMakeMutable(BLImageCore* self, BLImageData* dataOut)
 
   if (format != BL_FORMAT_NONE && !isImplMutable(selfI)) {
     BLImageCore newO;
-    BL_PROPAGATE(allocImpl(&newO, size.w, size.h, format, strideForWidth(size.w, blFormatInfo[format].depth)));
+    BL_PROPAGATE(allocImpl(&newO, size.w, size.h, format,
+      intptr_t(strideForWidth(uint32_t(size.w), blFormatInfo[format].depth))));
 
     BLImagePrivateImpl* newI = getImpl(&newO);
     dataOut->pixelData = newI->pixelData;

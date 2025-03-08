@@ -221,6 +221,7 @@ set(BLEND2D_SRC_LIST
 
   blend2d/codec/bmpcodec.cpp
   blend2d/codec/bmpcodec_p.h
+  blend2d/codec/codec_test.cpp
   blend2d/codec/jpegcodec.cpp
   blend2d/codec/jpegcodec_p.h
   blend2d/codec/jpeghuffman.cpp
@@ -241,13 +242,28 @@ set(BLEND2D_SRC_LIST
   blend2d/codec/qoicodec_p.h
 
   blend2d/compression/checksum.cpp
+  blend2d/compression/checksum_asimd.cpp
+  blend2d/compression/checksum_asimd_crypto.cpp
+  blend2d/compression/checksum_sse2.cpp
+  blend2d/compression/checksum_sse4_2.cpp
   blend2d/compression/checksum_test.cpp
   blend2d/compression/checksum_p.h
+  blend2d/compression/checksumadler32simdimpl_p.h
+  blend2d/compression/checksumcrc32simdimpl_p.h
   blend2d/compression/deflatedecoder.cpp
   blend2d/compression/deflatedecoder_p.h
+  blend2d/compression/deflatedecoderfast.cpp
+  blend2d/compression/deflatedecoderfast_avx2.cpp
+  blend2d/compression/deflatedecoderfast_p.h
+  blend2d/compression/deflatedecoderfastimpl_p.h
+  blend2d/compression/deflatedecoderutils.cpp
+  blend2d/compression/deflatedecoderutils_p.h
   blend2d/compression/deflatedefs_p.h
+  blend2d/compression/deflatedefs.cpp
   blend2d/compression/deflateencoder.cpp
   blend2d/compression/deflateencoder_p.h
+  blend2d/compression/deflateencoderutils_p.h
+  blend2d/compression/deflate_test.cpp
   blend2d/compression/matchfinder_p.h
 
   blend2d/opentype/otcff.cpp
@@ -567,7 +583,7 @@ if ("x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xMSVC" OR "x${CMAKE_CXX_COMPILER_FRONT
     list(APPEND BLEND2D_PRIVATE_CFLAGS -clang:-fno-rtti -clang:-fno-math-errno -clang:-fno-trapping-math)
   endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU|Clang")
-  list(APPEND BLEND2D_PRIVATE_CFLAGS -Wall -Wextra)
+  list(APPEND BLEND2D_PRIVATE_CFLAGS -Wall -Wextra -Wconversion)
   list(APPEND BLEND2D_PRIVATE_CFLAGS -fno-exceptions -fno-rtti -fno-math-errno)
   list(APPEND BLEND2D_PRIVATE_CFLAGS_REL -O2)
 
@@ -724,7 +740,7 @@ if (BLEND2D_ARCH_X86 OR BLEND2D_ARCH_X86_64)
         list(APPEND BLEND2D_CFLAGS_SSE3 -msse3)
         list(APPEND BLEND2D_CFLAGS_SSSE3 -mssse3)
         list(APPEND BLEND2D_CFLAGS_SSE4_1 -msse4.1)
-        list(APPEND BLEND2D_CFLAGS_SSE4_2 -msse4.2)
+        list(APPEND BLEND2D_CFLAGS_SSE4_2 -msse4.2 -mpclmul)
       else()
         # MSVC doesn't provide any preprocessor definitions for SSE3 and higher,
         # thus we have to define them ourselves to match what other compilers do.
@@ -743,14 +759,32 @@ if (BLEND2D_ARCH_X86 OR BLEND2D_ARCH_X86_64)
         blend2d_detect_cflags(BLEND2D_CFLAGS_SSE2 -msse2)
       endif()
     endif()
+
+    # When using AVX2 require also BMI, BMI2, and POPCNT (all CPUs with AVX2 have these extensions, so let's use them).
+    set(BLEND2D_AVX2_REQUIREMENTS -mbmi -mbmi2 -mpopcnt)
+
     blend2d_detect_cflags(BLEND2D_CFLAGS_SSE3 -msse3)
     blend2d_detect_cflags(BLEND2D_CFLAGS_SSSE3 -mssse3)
     blend2d_detect_cflags(BLEND2D_CFLAGS_SSE4_1 -msse4.1)
-    blend2d_detect_cflags(BLEND2D_CFLAGS_SSE4_2 -msse4.2)
+    blend2d_detect_cflags(BLEND2D_CFLAGS_SSE4_2 -msse4.2 -mpclmul)
     blend2d_detect_cflags(BLEND2D_CFLAGS_AVX -mavx)
-    blend2d_detect_cflags(BLEND2D_CFLAGS_AVX2 -mavx2)
-    blend2d_detect_cflags(BLEND2D_CFLAGS_AVX2FMA -mavx2 -mfma)
-    blend2d_detect_cflags(BLEND2D_CFLAGS_AVX512 -mavx512f -mavx512bw -mavx512dq -mavx512cd -mavx512vl)
+    blend2d_detect_cflags(BLEND2D_CFLAGS_AVX2 -mavx2 ${BLEND2D_AVX2_REQUIREMENTS})
+    blend2d_detect_cflags(BLEND2D_CFLAGS_AVX2FMA -mavx2 -mfma ${BLEND2D_AVX2_REQUIREMENTS})
+    blend2d_detect_cflags(BLEND2D_CFLAGS_AVX512 -mavx512f -mavx512bw -mavx512dq -mavx512cd -mavx512vl ${BLEND2D_AVX2_REQUIREMENTS})
+  endif()
+
+  set(BLEND2D_AVX2_ADDITIONAL_DEFINITIONS -DBLEND2D_TARGET_OPT_BMI2 -DBLEND2D_TARGET_OPT_POPCNT)
+
+  if (BLEND2D_CFLAGS_AVX2)
+    list(APPEND BLEND2D_CFLAGS_AVX2 ${BLEND2D_AVX2_ADDITIONAL_DEFINITIONS})
+  endif()
+
+  if (BLEND2D_CFLAGS_AVX2FMA)
+    list(APPEND BLEND2D_CFLAGS_AVX2FMA ${BLEND2D_AVX2_ADDITIONAL_DEFINITIONS})
+  endif()
+
+  if (BLEND2D_CFLAGS_AVX512)
+    list(APPEND BLEND2D_CFLAGS_AVX512 ${BLEND2D_AVX2_ADDITIONAL_DEFINITIONS})
   endif()
 
   if (BLEND2D_CFLAGS_AVX512)
@@ -779,10 +813,19 @@ elseif(BLEND2D_ARCH_AARCH32 OR BLEND2D_ARCH_AARCH64)
     # FIXME: Not sure whether it makes sense to detect anything in this case.
   else()
     blend2d_detect_cflags(BLEND2D_CFLAGS_ASIMD -mfpu=neon-vfpv4)
+    if (BLEND2D_ARCH_AARCH64)
+      blend2d_detect_cflags(BLEND2D_CFLAGS_ASIMD_CRYPTO -march=armv8-a+aes+crc)
+    endif()
   endif()
 
   if (BLEND2D_CFLAGS_ASIMD)
     list(APPEND BLEND2D_PRIVATE_CFLAGS -DBL_BUILD_OPT_ASIMD)
+    list(APPEND BLEND2D_CFLAGS_ASIMD -DBL_TARGET_OPT_ASIMD)
+  endif()
+
+  if (BLEND2D_CFLAGS_ASIMD_CRYPTO)
+    list(APPEND BLEND2D_PRIVATE_CFLAGS -DBL_BUILD_OPT_ASIMD_CRYPTO)
+    list(APPEND BLEND2D_CFLAGS_ASIMD_CRYPTO -DBL_TARGET_OPT_ASIMD_CRYPTO)
   endif()
 endif()
 
@@ -976,16 +1019,18 @@ endif()
 set(BLEND2D_SRC "")
 set(BLEND2D_TEST_SRC_FILES "")
 
+set(BLEND2D_OPT_EXTENSIONS "sse2|sse3|ssse3|sse4_1|sse4_2|avx|avx2|avx2fma|avx512|asimd|asimd_crypto")
+
 foreach(src_file ${BLEND2D_SRC_LIST})
   set(src_file "${BLEND2D_DIR}/src/${src_file}")
 
-  if ("${src_file}" MATCHES "_test(_(sse2|sse3|ssse3|sse4_1|sse4_2|avx|avx2|avx2fma|avx512|asimd))?\\.cpp$")
+  if ("${src_file}" MATCHES "_test(_(${BLEND2D_OPT_EXTENSIONS}))?\\.cpp$")
     list(APPEND BLEND2D_TEST_SRC_FILES ${src_file})
   else()
     list(APPEND BLEND2D_SRC ${src_file})
   endif()
 
-  string(REGEX MATCH "_(sse2|sse3|ssse3|sse4_1|sse4_2|avx|avx2|avx2fma|avx512|asimd)\\.(c|cc|cxx|cpp|m|mm)$" FEATURE ${src_file})
+  string(REGEX MATCH "_(${BLEND2D_OPT_EXTENSIONS})\\.(c|cc|cxx|cpp|m|mm)$" FEATURE ${src_file})
   if (FEATURE)
     # HACK 1: Cmake uses global variables everywhere, `CMAKE_MATCH_1` is the first capture...
     string(TOUPPER "${CMAKE_MATCH_1}" FEATURE)

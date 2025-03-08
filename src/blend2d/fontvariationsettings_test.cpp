@@ -86,7 +86,7 @@ UNIT(fontvariationsettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     for (uint32_t i = 0; i < BL_ARRAY_SIZE(ssoTags); i++) {
       EXPECT_SUCCESS(ffs.setValue(ssoTags[i], 1u));
-      EXPECT_EQ(ffs.getValue(ssoTags[i]), 1u);
+      EXPECT_EQ(ffs.getValue(ssoTags[i]), float(1));
       EXPECT_EQ(ffs.size(), i + 1);
       EXPECT_TRUE(ffs._d.sso());
       verifyFontVariationSettings(ffs);
@@ -94,7 +94,7 @@ UNIT(fontvariationsettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     for (uint32_t i = 0; i < BL_ARRAY_SIZE(ssoTags); i++) {
       EXPECT_SUCCESS(ffs.setValue(ssoTags[i], 0u));
-      EXPECT_EQ(ffs.getValue(ssoTags[i]), 0u);
+      EXPECT_EQ(ffs.getValue(ssoTags[i]), float(0));
       EXPECT_EQ(ffs.size(), BL_ARRAY_SIZE(ssoTags));
       EXPECT_TRUE(ffs._d.sso());
       verifyFontVariationSettings(ffs);
@@ -132,7 +132,7 @@ UNIT(fontvariationsettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     for (uint32_t i = 0; i < BL_ARRAY_SIZE(dynamicTags); i++) {
       EXPECT_SUCCESS(ffs.setValue(dynamicTags[i], 1u));
-      EXPECT_EQ(ffs.getValue(dynamicTags[i]), 1u);
+      EXPECT_EQ(ffs.getValue(dynamicTags[i]), float(1));
       EXPECT_EQ(ffs.size(), i + 1);
       verifyFontVariationSettings(ffs);
     }
@@ -141,7 +141,7 @@ UNIT(fontvariationsettings, BL_TEST_GROUP_TEXT_CONTAINERS) {
 
     for (uint32_t i = 0; i < BL_ARRAY_SIZE(dynamicTags); i++) {
       EXPECT_SUCCESS(ffs.setValue(dynamicTags[i], 0u));
-      EXPECT_EQ(ffs.getValue(dynamicTags[i]), 0u);
+      EXPECT_EQ(ffs.getValue(dynamicTags[i]), float(0));
       EXPECT_EQ(ffs.size(), BL_ARRAY_SIZE(dynamicTags));
       verifyFontVariationSettings(ffs);
     }

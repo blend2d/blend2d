@@ -176,7 +176,19 @@ BL_INLINE bool blRuntimeHasAVX512(BLRuntimeContext* rt) noexcept { return (rt->s
 #if defined(BL_TARGET_OPT_ASIMD)
 constexpr bool blRuntimeHasASIMD(BLRuntimeContext* rt) noexcept { return true; }
 #else
-constexpr bool blRuntimeHasASIMD(BLRuntimeContext* rt) noexcept { return false; }
+constexpr bool blRuntimeHasASIMD(BLRuntimeContext* rt) noexcept { return (rt->systemInfo.cpuFeatures & BL_RUNTIME_CPU_FEATURE_ARM_ASIMD) != 0; }
+#endif
+
+#if defined(BL_TARGET_OPT_ASIMD_CRYPTO)
+constexpr bool blRuntimeHasCRC32(BLRuntimeContext* rt) noexcept { return true; }
+#else
+constexpr bool blRuntimeHasCRC32(BLRuntimeContext* rt) noexcept { return (rt->systemInfo.cpuFeatures & BL_RUNTIME_CPU_FEATURE_ARM_CRC32) != 0; }
+#endif
+
+#if defined(BL_TARGET_OPT_ASIMD_CRYPTO)
+constexpr bool blRuntimeHasPMULL(BLRuntimeContext* rt) noexcept { return true; }
+#else
+constexpr bool blRuntimeHasPMULL(BLRuntimeContext* rt) noexcept { return (rt->systemInfo.cpuFeatures & BL_RUNTIME_CPU_FEATURE_ARM_PMULL) != 0; }
 #endif
 
 } // {anonymous}
@@ -189,6 +201,8 @@ BL_HIDDEN void blFuxexRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blThreadRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blThreadPoolRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blZeroAllocatorRtInit(BLRuntimeContext* rt) noexcept;
+
+BL_HIDDEN void blCompressionRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blPixelOpsRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blBitArrayRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blBitSetRtInit(BLRuntimeContext* rt) noexcept;

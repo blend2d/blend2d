@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "api-build_p.h"
-#ifdef BL_BUILD_OPT_SSE2
+#ifdef BL_TARGET_OPT_SSE2
 
 #include "pixelconverter_p.h"
 #include "simd/simd_p.h"

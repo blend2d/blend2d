@@ -25,7 +25,7 @@ WorkData::WorkData(BLRasterContextImpl* ctxI, WorkerSynchronization* synchroniza
     _workerId(workerId),
     _bandHeight(0),
     _accumulatedErrorFlags(0),
-    workZone(65536 - ArenaAllocator::kBlockOverhead, 8),
+    workZone(65536, 8),
     workState{},
     zeroBuffer(),
     edgeStorage(),

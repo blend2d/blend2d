@@ -621,21 +621,21 @@ template<typename X, typename Y>
 BL_NODISCARD
 static BL_INLINE_NODEBUG constexpr X alignUpDiff(const X& x, const Y& alignment) noexcept {
   using U = UIntByType<X>;
-  return (X)((U(0) - U(x)) & (alignment - 1));
+  return X( U(U(0) - U(x)) & U(alignment - 1) );
 }
 
 template<typename T>
 BL_NODISCARD
 static BL_INLINE_NODEBUG constexpr T alignUpPowerOf2(const T& x) noexcept {
   using U = UIntByType<T>;
-  return (T)(fillTrailingBits(U(x) - 1u) + 1u);
+  return T( fillTrailingBits(U(x) - 1u) + 1u );
 }
 
 template<typename X, typename Y>
 BL_NODISCARD
 static BL_INLINE_NODEBUG constexpr X alignDown(const X& x, const Y& alignment) noexcept {
   using U = UIntByType<X>;
-  return (X)( (U)x & ~((U)(alignment) - 1u) );
+  return X( (U)x & ~((U)(alignment) - 1u) );
 }
 
 //! \}
@@ -647,7 +647,7 @@ template<typename T>
 BL_INLINE T addOverflowFallback(T x, T y, OverflowFlag* of) noexcept {
   typedef typename std::make_unsigned<T>::type U;
 
-  U result = U(x) + U(y);
+  U result = U(U(x) + U(y));
   *of = OverflowFlag(*of | OverflowFlag(Traits::isUnsigned<T>() ? result < U(x) : T((U(x) ^ ~U(y)) & (U(x) ^ result)) < 0));
   return T(result);
 }
@@ -656,7 +656,7 @@ template<typename T>
 BL_INLINE T subOverflowFallback(T x, T y, OverflowFlag* of) noexcept {
   typedef typename std::make_unsigned<T>::type U;
 
-  U result = U(x) - U(y);
+  U result = U(U(x) - U(y));
   *of = OverflowFlag(*of | OverflowFlag(Traits::isUnsigned<T>() ? result > U(x) : T((U(x) ^ U(y)) & (U(x) ^ result)) < 0));
   return T(result);
 }

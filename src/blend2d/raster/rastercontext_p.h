@@ -159,7 +159,7 @@ public:
       savedState{},
       sharedFillState{},
       sharedStrokeState{},
-      baseZone(8192 - bl::ArenaAllocator::kBlockOverhead, 16, staticData, staticSize),
+      baseZone(8192, 16, staticData, staticSize),
       fetchDataPool(),
       savedStatePool(),
       pipeProvider(),

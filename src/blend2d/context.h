@@ -2738,7 +2738,7 @@ public:
   //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated string.
   //! If you want to pass a non-null terminated string or a substring of an existing string, use either this function with
   //! a `size` parameter set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters)
-  //! or an overloaded function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
+  //! or an overloaded function that accepts a convenience \ref BLStringView parameter instead of `text` and `size`.
   BL_INLINE_NODEBUG BLResult fillUtf8Text(const BLPointI& origin, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
     BLStringView view{text, size};
     return _fillTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view);
@@ -2750,7 +2750,7 @@ public:
   //! \note Pass `SIZE_MAX` to `size` to inform Blend2D that the input is a null terminated string. If you want to pass
   //! a non-null terminated string or a substring of an existing string, use either this function with a `size` parameter
   //! set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters) or an overloaded
-  //! function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
+  //! function that accepts a convenience \ref BLStringView parameter instead of `text` and `size`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillUtf8Text(const BLPointI& origin, const BLFontCore& font, const char* text, size_t size, const StyleT& style) noexcept {
     BLStringView view{text, size};
@@ -2776,7 +2776,7 @@ public:
   //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated string.
   //! If you want to pass a non-null terminated string or a substring of an existing string, use either this function with
   //! a `size` parameter set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters)
-  //! or an overloaded function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
+  //! or an overloaded function that accepts a convenience \ref BLStringView parameter instead of `text` and `size`.
   BL_INLINE_NODEBUG BLResult fillUtf8Text(const BLPoint& origin, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
     BLStringView view{text, size};
     return _fillTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view);
@@ -2788,7 +2788,7 @@ public:
   //! \note Pass `SIZE_MAX` in `size` to inform Blend2D that the input is a null terminated string. If you want to pass
   //! a non-null terminated string or a substring of an existing string, use either this function with a `size` parameter
   //! set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters) or an overloaded
-  //! function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
+  //! function that accepts a convenience \ref BLStringView parameter instead of `text` and `size`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult fillUtf8Text(const BLPoint& origin, const BLFontCore& font, const char* text, size_t size, const StyleT& style) noexcept {
     BLStringView view{text, size};
@@ -3636,7 +3636,7 @@ public:
   //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated string.
   //! If you want to pass a non-null terminated string or a substring of an existing string, use either this function with
   //! a `size` parameter set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters)
-  //! or an overloaded function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
+  //! or an overloaded function that accepts a convenience \ref BLStringView parameter instead of `text` and `size`.
   BL_INLINE_NODEBUG BLResult strokeUtf8Text(const BLPointI& origin, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
     BLStringView view{text, size};
     return _strokeTextOpI(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view);
@@ -3648,7 +3648,7 @@ public:
   //! \note Pass `SIZE_MAX` to `size` to inform Blend2D that the input is a null terminated string. If you want to pass
   //! a non-null terminated string or a substring of an existing string, use either this function with a `size` parameter
   //! set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters) or an overloaded
-  //! function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
+  //! function that accepts a convenience \ref BLStringView parameter instead of `text` and `size`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeUtf8Text(const BLPointI& origin, const BLFontCore& font, const char* text, size_t size, const StyleT& style) noexcept {
     BLStringView view{text, size};
@@ -3674,7 +3674,7 @@ public:
   //! \note The `size` parameter defaults to `SIZE_MAX`, which informs Blend2D that the input is a null terminated string.
   //! If you want to pass a non-null terminated string or a substring of an existing string, use either this function with
   //! a `size` parameter set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters)
-  //! or an overloaded function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
+  //! or an overloaded function that accepts a convenience \ref BLStringView parameter instead of `text` and `size`.
   BL_INLINE_NODEBUG BLResult strokeUtf8Text(const BLPoint& origin, const BLFontCore& font, const char* text, size_t size = SIZE_MAX) noexcept {
     BLStringView view{text, size};
     return _strokeTextOpD(origin, font, BL_CONTEXT_RENDER_TEXT_OP_UTF8, &view);
@@ -3686,7 +3686,7 @@ public:
   //! \note Pass `SIZE_MAX` in `size` to inform Blend2D that the input is a null terminated string. If you want to pass
   //! a non-null terminated string or a substring of an existing string, use either this function with a `size` parameter
   //! set (which contains the number of bytes of `text` string, and not the number of UTF-8 characters) or an overloaded
-  //! function that accepts a convenience \ref BLStringView parameter instead of `text` and size`.
+  //! function that accepts a convenience \ref BLStringView parameter instead of `text` and `size`.
   template<typename StyleT>
   BL_INLINE_NODEBUG BLResult strokeUtf8Text(const BLPoint& origin, const BLFontCore& font, const char* text, size_t size, const StyleT& style) noexcept {
     BLStringView view{text, size};

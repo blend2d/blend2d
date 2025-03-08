@@ -50,24 +50,17 @@ public:
     }
   };
 
-  //! Zero block, used by a default constructed `ArenaAllocator`, which doesn't hold any allocated block. This block
-  //! must be properly aligned so when arena allocator aligns its current pointer to check for aligned allocation it
-  //! would not overflow past the end of the block - which is the same as the beginning of the block as it has no size.
-  struct alignas(64) ZeroBlock {
-    uint8_t padding[64 - sizeof(Block)];
-    Block block;
-  };
-
   typedef uint8_t* StatePtr;
 
   enum Limits : size_t {
     kMinBlockSize = 1024, // Safe bet - it must be greater than `kMaxAlignment`.
-    kMaxBlockSize = size_t(1) << (sizeof(size_t) * 8 - 4 - 1),
+    kMaxBlockSize = size_t(1) << (sizeof(size_t) * 8 - 1),
+
     kMinAlignment = 1,
     kMaxAlignment = 64,
 
     kBlockSize = sizeof(Block),
-    kBlockOverhead = sizeof(Block) + kMaxAlignment + BL_ALLOC_OVERHEAD,
+    kBlockOverhead = kBlockSize + kMaxAlignment + BL_ALLOC_OVERHEAD
   };
 
   //! Pointer in the current block.
@@ -77,19 +70,18 @@ public:
   //! Current block.
   Block* _block;
 
-  union {
-    struct {
-      //! Default block size.
-      size_t _blockSize : IntOps::bitSizeOf<size_t>() - 4;
-      //! First block is temporary (ArenaAllocatorTmp).
-      size_t _hasStaticBlock : 1;
-      //! Block alignment (1 << alignment).
-      size_t _blockAlignmentShift : 3;
-    };
-    size_t _packedData;
-  };
-
-  static BL_HIDDEN const ZeroBlock _zeroBlock;
+  //! Block alignment shift
+  uint8_t _blockAlignmentShift;
+  //! Minimum log2(blockSize) to allocate.
+  uint8_t _minimumBlockSizeShift;
+  //! Maximum log2(blockSize) to allocate.
+  uint8_t _maximumBlockSizeShift;
+  //! True when the Zone is actually ZoneTmp.
+  uint8_t _hasStaticBlock;
+  //! Reserved for future use, must be zero.
+  uint32_t _reserved;
+  //! Count of allocated blocks.
+  size_t _blockCount;
 
   //! \name Construction & Destruction
   //! \{
@@ -129,12 +121,7 @@ public:
 
   //! Invalidates all allocations and moves the current block pointer to the first block. It's similar to
   //! `reset()`, however, it doesn't free blocks of memory it holds.
-  BL_INLINE void clear() noexcept {
-    Block* cur = _block;
-    while (cur->prev)
-      cur = cur->prev;
-    _assignBlock(cur);
-  }
+  BL_HIDDEN void clear() noexcept;
 
   BL_INLINE void swap(ArenaAllocator& other) noexcept {
     // This could lead to a disaster.
@@ -144,7 +131,13 @@ public:
     BLInternal::swap(_ptr, other._ptr);
     BLInternal::swap(_end, other._end);
     BLInternal::swap(_block, other._block);
-    BLInternal::swap(_packedData, other._packedData);
+
+    BLInternal::swap(_blockAlignmentShift, other._blockAlignmentShift);
+    BLInternal::swap(_minimumBlockSizeShift, other._minimumBlockSizeShift);
+    BLInternal::swap(_maximumBlockSizeShift, other._maximumBlockSizeShift);
+    BLInternal::swap(_hasStaticBlock, other._hasStaticBlock);
+    BLInternal::swap(_reserved, other._reserved);
+    BLInternal::swap(_blockCount, other._blockCount);
   }
 
   //! \}
@@ -156,9 +149,13 @@ public:
   BL_NODISCARD
   BL_INLINE bool hasStaticBlock() const noexcept { return _hasStaticBlock != 0; }
 
-  //! Returns the default block size.
+  //! Returns the minimum block size.
   BL_NODISCARD
-  BL_INLINE size_t blockSize() const noexcept { return _blockSize; }
+  BL_INLINE size_t minimumBlockSize() const noexcept { return size_t(1) << _minimumBlockSizeShift; }
+
+  //! Returns the maximum block size.
+  BL_NODISCARD
+  BL_INLINE size_t maximumBlockSize() const noexcept { return size_t(1) << _maximumBlockSizeShift; }
 
   //! Returns the default block alignment.
   BL_NODISCARD
@@ -217,20 +214,6 @@ public:
       return _alloc(0, 1) ? BL_SUCCESS : blTraceError(BL_ERROR_OUT_OF_MEMORY);
   }
 
-  BL_INLINE void _assignBlock(Block* block) noexcept {
-    size_t alignment = blockAlignment();
-    _ptr = IntOps::alignUp(block->data(), alignment);
-    _end = block->data() + block->size;
-    _block = block;
-  }
-
-  BL_INLINE void _assignZeroBlock() noexcept {
-    Block* block = const_cast<Block*>(&_zeroBlock.block);
-    _ptr = block->data();
-    _end = block->data();
-    _block = block;
-  }
-
   //! \}
 
   //! \name Allocation
@@ -249,7 +232,7 @@ public:
   //! class Object { ... };
   //!
   //! // Create a new arena with default block size of approximately 65536 bytes.
-  //! ArenaAllocator arena(65536 - ArenaAllocator::kBlockOverhead);
+  //! ArenaAllocator arena(65536);
   //!
   //! // Create your objects using arena object allocating, for example:
   //! Object* obj = static_cast<Object*>(arena.alloc(sizeof(Object)));

@@ -8,6 +8,7 @@
 
 #include "../api-internal_p.h"
 #include "../support/intops_p.h"
+#include "../support/ptrops_p.h"
 
 //! \cond INTERNAL
 //! \addtogroup blend2d_codec_impl
@@ -116,7 +117,7 @@ struct DecoderBitReader {
   }
 
   BL_INLINE void advance(size_t nBytes) noexcept {
-    BL_ASSERT((size_t)(end - ptr) >= nBytes);
+    BL_ASSERT(PtrOps::bytesUntil(ptr, end) >= nBytes);
     ptr += nBytes;
   }
 

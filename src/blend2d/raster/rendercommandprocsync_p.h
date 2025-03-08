@@ -66,7 +66,7 @@ static BL_INLINE BLResult fillBoxU(WorkData& workData, const Pipeline::DispatchD
 static BL_INLINE BLResult fillBoxMaskedA(WorkData& workData, const Pipeline::DispatchData& dispatchData, uint32_t alpha, const RenderCommand::FillBoxMaskA& payload, const void* fetchData) noexcept {
   const BLImageImpl* maskI = payload.maskImageI.ptr;
   const BLPointI& maskOffset = payload.maskOffsetI;
-  const uint8_t* maskData = static_cast<const uint8_t*>(maskI->pixelData) + maskI->stride * maskOffset.y + maskOffset.x * (maskI->depth / 8u);
+  const uint8_t* maskData = static_cast<const uint8_t*>(maskI->pixelData) + maskI->stride * intptr_t(maskOffset.y) + uint32_t(maskOffset.x) * (maskI->depth / 8u);
 
   const BLBoxI& boxI = payload.boxI;
 
@@ -202,9 +202,9 @@ SaveState:
 
       do {
         const EdgePoint<int>* pts = edges->pts + 1;
-        const EdgePoint<int>* end = edges->pts + edges->count;
+        const EdgePoint<int>* end = edges->pts + edges->count();
 
-        uint32_t signBit = edges->signBit;
+        uint32_t signBit = edges->signBit();
         ras.setSignMaskFromBit(signBit);
 
         edges = edges->next;

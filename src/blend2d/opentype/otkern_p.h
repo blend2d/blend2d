@@ -148,40 +148,37 @@ struct KernGroup {
     kFlagSynthesized = 0x01u,
     kFlagMinimum     = 0x02u,
     kFlagCrossStream = 0x04u,
-    kFlagOverride    = 0x08u
+    kFlagOverride    = 0x08u,
+    kFlagsMask       = 0x0Fu
   };
 
-#if BL_TARGET_ARCH_BITS < 64
-  uint32_t format : 2;
-  uint32_t flags : 4;
-  uint32_t dataSize : 26;
-#else
-  uint32_t format : 2;
-  uint32_t flags : 30;
-  uint32_t dataSize;
-#endif
+  size_t packedData;
 
   union {
     uintptr_t dataOffset;
     void* dataPtr;
   };
 
-  BL_INLINE bool hasFlag(uint32_t flag) const noexcept { return (flags & flag) != 0; }
+  BL_INLINE bool hasFlag(uint32_t flag) const noexcept { return (packedData & flag) != 0u; }
   BL_INLINE bool isSynthesized() const noexcept { return hasFlag(kFlagSynthesized); }
   BL_INLINE bool isMinimum() const noexcept { return hasFlag(kFlagMinimum); }
   BL_INLINE bool isCrossStream() const noexcept { return hasFlag(kFlagCrossStream); }
   BL_INLINE bool isOverride() const noexcept { return hasFlag(kFlagOverride); }
+
+  BL_INLINE uint32_t format() const noexcept { return uint32_t((packedData >> 4u) & 3u); }
+  BL_INLINE uint32_t flags() const noexcept { return uint32_t(packedData & 0xFu); }
+  BL_INLINE size_t dataSize() const noexcept { return packedData >> 6u; }
 
   BL_INLINE const void* calcDataPtr(const void* basePtr) const noexcept {
     return isSynthesized() ? dataPtr : static_cast<const void*>(static_cast<const uint8_t*>(basePtr) + dataOffset);
   }
 
   static BL_INLINE KernGroup makeReferenced(uint32_t format, uint32_t flags, uintptr_t dataOffset, uint32_t dataSize) noexcept {
-    return KernGroup { format, flags, dataSize, { dataOffset } };
+    return KernGroup { flags | (format << 2) | (dataSize << 6), { dataOffset } };
   }
 
   static BL_INLINE KernGroup makeSynthesized(uint32_t format, uint32_t flags, void* dataPtr, uint32_t dataSize) noexcept {
-    return KernGroup { format, flags | kFlagSynthesized, dataSize, { (uintptr_t)dataPtr } };
+    return KernGroup { flags | (format << 2) | (dataSize << 6) | kFlagSynthesized, { (uintptr_t)dataPtr } };
   }
 };
 

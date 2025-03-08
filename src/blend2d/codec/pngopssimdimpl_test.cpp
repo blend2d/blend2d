@@ -118,7 +118,7 @@ static void test_simd_impl(
   }
 }
 
-UNIT(codec_png_simd_inverse_filter, BL_TEST_GROUP_IMAGE_CODECS) {
+UNIT(codec_png_simd_inverse_filter, BL_TEST_GROUP_IMAGE_CODEC_OPS) {
   Ops::FunctionTable reference;
   Ops::initFuncTable_Ref(reference);
 

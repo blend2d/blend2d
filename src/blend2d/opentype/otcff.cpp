@@ -193,7 +193,7 @@ BLResult readFloat(const uint8_t* p, const uint8_t* pEnd, double& valueOut, size
   }
 
   valueOut = IntOps::bitTest(flags, kMinusSign) ? -value : value;
-  valueSizeInBytes = (size_t)(p - pStart);
+  valueSizeInBytes = PtrOps::byteOffset(pStart, p);
 
   return BL_SUCCESS;
 }
@@ -1371,8 +1371,9 @@ OnVHCurveTo:
           hintBitCount += (vIdx / 2);
 
           size_t hintByteSize = (hintBitCount + 7u) / 8u;
-          if (BL_UNLIKELY((size_t)(ipEnd - ip) < hintByteSize))
+          if (BL_UNLIKELY(PtrOps::bytesUntil(ip, ipEnd) < hintByteSize)) {
             goto InvalidData;
+          }
 
           // TODO: [OpenType] CFF HINTING: These bits are ignored atm.
           ip += hintByteSize;
@@ -1407,14 +1408,16 @@ OnVHCurveTo:
           BL_ASSERT(vMinOperands >= 1);
 
           cBuf[cIdx].reset(ip, ipEnd);
-          if (BL_UNLIKELY(++cIdx >= kCFFCallStackSize))
+          if (BL_UNLIKELY(++cIdx >= kCFFCallStackSize)) {
             goto InvalidData;
+          }
 
           subrIndex = localSubrIndex;
           subrId = uint32_t(int32_t(vBuf[--vIdx]) + int32_t(subrIndex->bias));
 
-          if (subrId < subrIndex->entryCount)
+          if (subrId < subrIndex->entryCount) {
             goto OnSubRCall;
+          }
 
           goto InvalidData;
         }
@@ -1424,8 +1427,9 @@ OnVHCurveTo:
           BL_ASSERT(vMinOperands >= 1);
 
           cBuf[cIdx].reset(ip, ipEnd);
-          if (BL_UNLIKELY(++cIdx >= kCFFCallStackSize))
+          if (BL_UNLIKELY(++cIdx >= kCFFCallStackSize)) {
             goto InvalidData;
+          }
 
           subrIndex = &cffInfo.index[CFFData::kIndexGSubR];
           subrId = uint32_t(int32_t(vBuf[--vIdx]) + int32_t(subrIndex->bias));
@@ -1438,8 +1442,9 @@ OnVHCurveTo:
 
         // return (11)
         case kCSOpReturn: {
-          if (BL_UNLIKELY(cIdx == 0))
+          if (BL_UNLIKELY(cIdx == 0)) {
             goto InvalidData;
+          }
 OnReturn:
           cIdx--;
           ip    = cBuf[cIdx]._ptr;
@@ -1456,8 +1461,9 @@ OnReturn:
         // -----------------
 
         case kCSOpEscape: {
-          if (BL_UNLIKELY(ip >= ipEnd))
+          if (BL_UNLIKELY(ip >= ipEnd)) {
             goto InvalidData;
+          }
           b0 = *ip++;
 
           #ifdef BL_TRACE_OT_CFF
@@ -1474,8 +1480,9 @@ OnReturn:
           if (BL_UNLIKELY(vIdx < vMinOperands)) {
             // If this is not an unknown operand it would mean that we have less
             // values on stack than the operator requires. That's an error in CS.
-            if (vMinOperands != ExecutionFeaturesInfo::kUnknown)
+            if (vMinOperands != ExecutionFeaturesInfo::kUnknown) {
               goto InvalidData;
+            }
 
             // Unknown operators should clear the stack and act as NOPs.
             vIdx = 0;
@@ -1742,8 +1749,9 @@ OnReturn:
                 // `indexToRead` would become a very large number that would not
                 // pass the condition afterwards.
                 size_t indexToRead = vIdx - 1 - size_t(unsigned(idxValue));
-                if (indexToRead < vIdx - 1)
+                if (indexToRead < vIdx - 1) {
                   valToPush = vBuf[indexToRead];
+                }
               }
 
               vBuf[vIdx - 1] = valToPush;
@@ -1783,8 +1791,9 @@ OnReturn:
                 }
 
                 curIdx += shift;
-                if (curIdx >= count)
+                if (curIdx >= count) {
                   curIdx -= count;
+                }
 
                 BLInternal::swap(vBuf[curIdx], last);
               }
@@ -1811,8 +1820,9 @@ OnReturn:
               // When `sIdx == kCFFStorageSize` it points to `0.0` (the only value guaranteed to be set).
               // Otherwise we check the bit in `sMsk` and won't allow to get an uninitialized value that
               // was not stored at `sIdx` before (for security reasons).
-              if (sIdx >= kCFFStorageSize || !IntOps::bitTest(sMsk, sIdx))
+              if (sIdx >= kCFFStorageSize || !IntOps::bitTest(sMsk, sIdx)) {
                 sIdx = kCFFStorageSize;
+              }
 
               vBuf[vIdx - 1] = sBuf[sIdx];
               continue;
@@ -2110,16 +2120,19 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
   uint32_t headerSize = cff->header.headerSize();
 
   if (cffVersion == CFFData::kVersion1) {
-    if (BL_UNLIKELY(headerSize < 4 || headerSize > cff.size - 4))
+    if (BL_UNLIKELY(headerSize < 4 || headerSize > cff.size - 4)) {
       return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    }
 
     uint32_t offsetSize = cff->headerV1()->offsetSize();
-    if (BL_UNLIKELY(offsetSize < 1 || offsetSize > 4))
+    if (BL_UNLIKELY(offsetSize < 1 || offsetSize > 4)) {
       return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    }
   }
   else {
-    if (BL_UNLIKELY(headerSize < 5 || headerSize > cff.size - 5))
+    if (BL_UNLIKELY(headerSize < 5 || headerSize > cff.size - 5)) {
       return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    }
 
     topDictSize = cff->headerV2()->topDictLength();
   }
@@ -2133,8 +2146,9 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
     BL_PROPAGATE(readIndex(cff.data + nameOffset, cff.size - nameOffset, cffVersion, &nameIndex));
 
     // There should be exactly one font in the table according to OpenType specification.
-    if (BL_UNLIKELY(nameIndex.count != 1))
+    if (BL_UNLIKELY(nameIndex.count != 1)) {
       return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    }
 
     topDictOffset = nameOffset + nameIndex.totalSize;
   }
@@ -2151,15 +2165,17 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
   }
   else {
     // CFF2 specifies the size in the header, so make sure it doesn't overflow our limits.
-    if (BL_UNLIKELY(topDictSize > cff.size - topDictOffset))
+    if (BL_UNLIKELY(topDictSize > cff.size - topDictOffset)) {
       return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    }
   }
 
   BL_PROPAGATE(readIndex(cff.data + topDictOffset, topDictSize, cffVersion, &topDictIndex));
   if (cffVersion == CFFData::kVersion1) {
     // TopDict index size must match NameIndex size (v1).
-    if (BL_UNLIKELY(nameIndex.count != topDictIndex.count))
+    if (BL_UNLIKELY(nameIndex.count != topDictIndex.count)) {
       return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    }
   }
 
   {
@@ -2171,16 +2187,18 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
     BL_PROPAGATE(dictIter.next(dictEntry));
     switch (dictEntry.op) {
       case CFFTable::kDictOpTopCharStrings: {
-        if (BL_UNLIKELY(dictEntry.count != 1))
+        if (BL_UNLIKELY(dictEntry.count != 1)) {
           return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+        }
 
         charStringOffset = uint32_t(dictEntry.values[0]);
         break;
       }
 
       case CFFTable::kDictOpTopPrivate: {
-        if (BL_UNLIKELY(dictEntry.count != 2))
+        if (BL_UNLIKELY(dictEntry.count != 2)) {
           return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+        }
 
         privateOffset = uint32_t(dictEntry.values[1]);
         privateLength = uint32_t(dictEntry.values[0]);
@@ -2239,8 +2257,9 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
   if (privateOffset) {
     if (BL_UNLIKELY(privateOffset < beginDataOffset ||
                     privateOffset > cff.size ||
-                    privateLength > cff.size - privateOffset))
+                    privateLength > cff.size - privateOffset)) {
         return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    }
 
     // There are fonts where `privateOffset` is equal to `cff.size` and `privateLength` is
     // zero. So only search the private dictionary if `privateLength` is greater than zero.
@@ -2250,8 +2269,9 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
         BL_PROPAGATE(dictIter.next(dictEntry));
         switch (dictEntry.op) {
           case CFFTable::kDictOpPrivSubrs: {
-            if (BL_UNLIKELY(dictEntry.count != 1))
+            if (BL_UNLIKELY(dictEntry.count != 1)) {
               return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+            }
 
             lsubrOffset = uint32_t(dictEntry.values[0]);
             break;
@@ -2266,8 +2286,9 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
 
   if (lsubrOffset) {
     // `lsubrOffset` is relative to `privateOffset`.
-    if (BL_UNLIKELY(lsubrOffset < privateLength || lsubrOffset > cff.size - privateOffset))
+    if (BL_UNLIKELY(lsubrOffset < privateLength || lsubrOffset > cff.size - privateOffset)) {
       return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+    }
 
     lsubrOffset += privateOffset;
     BL_PROPAGATE(readIndex(cff.data + lsubrOffset, cff.size - lsubrOffset, cffVersion, &lsubrIndex));
@@ -2276,8 +2297,9 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
   // CFF CharStrings
   // ---------------
 
-  if (BL_UNLIKELY(charStringOffset < beginDataOffset || charStringOffset >= cff.size))
+  if (BL_UNLIKELY(charStringOffset < beginDataOffset || charStringOffset >= cff.size)) {
     return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+  }
 
   BL_PROPAGATE(readIndex(cff.data + charStringOffset, cff.size - charStringOffset, cffVersion, &charStringIndex));
 
@@ -2290,15 +2312,16 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
 
     // CID fonts require both FDArray and FDOffset.
     if (fdArrayOffset && fdSelectOffset) {
-      if (fdArrayOffset < beginDataOffset || fdArrayOffset >= cff.size)
+      if (fdArrayOffset < beginDataOffset || fdArrayOffset >= cff.size) {
         return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+      }
 
-      if (fdSelectOffset < beginDataOffset || fdSelectOffset >= cff.size)
+      if (fdSelectOffset < beginDataOffset || fdSelectOffset >= cff.size) {
         return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+      }
 
-      // The index contains offsets to the additional TopDicts. To speed up
-      // glyph processing we read these TopDicts and build our own array that
-      // will be used during glyph metrics/outline decoding.
+      // The index contains offsets to the additional TopDicts. To speed up glyph processing we read
+      // these TopDicts and build our own array that will be used during glyph metrics/outline decoding.
       Index fdArrayIndex;
       BL_PROPAGATE(readIndex(cff.data + fdArrayOffset, cff.size - fdArrayOffset, cffVersion, &fdArrayIndex));
       BL_PROPAGATE(fdSubrIndexes.reserve(fdArrayIndex.count));
@@ -2328,14 +2351,16 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
             BL_PROPAGATE(dictIter.next(dictEntry));
             switch (dictEntry.op) {
               case CFFTable::kDictOpTopPrivate: {
-                if (BL_UNLIKELY(dictEntry.count != 2))
+                if (BL_UNLIKELY(dictEntry.count != 2)) {
                   return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+                }
 
                 uint32_t offset = uint32_t(dictEntry.values[1]);
                 uint32_t length = uint32_t(dictEntry.values[0]);
 
-                if (BL_UNLIKELY(offset < beginDataOffset || offset > cff.size || length > cff.size - offset))
+                if (BL_UNLIKELY(offset < beginDataOffset || offset > cff.size || length > cff.size - offset)) {
                   return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+                }
 
                 dictData[1].reset(cff.data + offset, length);
                 subrBaseOffset = offset;
@@ -2343,13 +2368,15 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
               }
 
               case CFFTable::kDictOpPrivSubrs: {
-                if (BL_UNLIKELY(dictEntry.count != 1))
+                if (BL_UNLIKELY(dictEntry.count != 1)) {
                   return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+                }
 
                 // The local subr `offset` is relative to the `subrBaseOffset`.
                 subrOffset = uint32_t(dictEntry.values[0]);
-                if (BL_UNLIKELY(subrOffset > cff.size - subrBaseOffset))
+                if (BL_UNLIKELY(subrOffset > cff.size - subrBaseOffset)) {
                   return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+                }
 
                 subrOffset += subrBaseOffset;
                 BL_PROPAGATE(readIndex(cff.data + subrOffset, cff.size - subrOffset, cffVersion, &fdSubrIndex));
@@ -2373,8 +2400,9 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
 
       // Validate FDSelect data.
       cid.fdSelectFormat = cff.data[fdSelectOffset];
-      if (BL_UNLIKELY(!isSupportedFDSelectFormat(cid.fdSelectFormat)))
+      if (BL_UNLIKELY(!isSupportedFDSelectFormat(cid.fdSelectFormat))) {
         return blTraceError(BL_ERROR_FONT_CFF_INVALID_DATA);
+      }
     }
   }
 

@@ -1448,6 +1448,19 @@ BL_INLINE_NODEBUG uint32x4_t simd_adds_u32(const uint32x4_t& a, const uint32x4_t
 BL_INLINE_NODEBUG uint64x2_t simd_adds_u64(const uint64x2_t& a, const uint64x2_t& b) noexcept { return vqaddq_u64(a, b); }
 
 #if defined(BL_SIMD_AARCH64)
+BL_INLINE_NODEBUG int16x8_t simd_addl_lo_i8_to_i16(const int8x16_t& a, const int8x16_t& b) noexcept { return vaddl_s8(vget_low_s8(a), vget_low_s8(b)); }
+BL_INLINE_NODEBUG int16x8_t simd_addl_hi_i8_to_i16(const int8x16_t& a, const int8x16_t& b) noexcept { return vaddl_high_s8(a, b); }
+BL_INLINE_NODEBUG uint16x8_t simd_addl_lo_u8_to_u16(const uint8x16_t& a, const uint8x16_t& b) noexcept { return vaddl_u8(vget_low_u8(a), vget_low_u8(b)); }
+BL_INLINE_NODEBUG uint16x8_t simd_addl_hi_u8_to_u16(const uint8x16_t& a, const uint8x16_t& b) noexcept { return vaddl_high_u8(a, b); }
+BL_INLINE_NODEBUG int32x4_t simd_addl_lo_i16_to_i32(const int16x8_t& a, const int16x8_t& b) noexcept { return vaddl_s16(vget_low_s16(a), vget_low_s16(b)); }
+BL_INLINE_NODEBUG int32x4_t simd_addl_hi_i16_to_i32(const int16x8_t& a, const int16x8_t& b) noexcept { return vaddl_high_s16(a, b); }
+BL_INLINE_NODEBUG uint32x4_t simd_addl_lo_u16_to_u32(const uint16x8_t& a, const uint16x8_t& b) noexcept { return vaddl_u16(vget_low_u16(a), vget_low_u16(b)); }
+BL_INLINE_NODEBUG uint32x4_t simd_addl_hi_u16_to_u32(const uint16x8_t& a, const uint16x8_t& b) noexcept { return vaddl_high_u16(a, b); }
+BL_INLINE_NODEBUG int64x2_t simd_addl_lo_i32_to_i64(const int32x4_t& a, const int32x4_t& b) noexcept { return vaddl_s32(vget_low_s32(a), vget_low_s32(b)); }
+BL_INLINE_NODEBUG int64x2_t simd_addl_hi_i32_to_i64(const int32x4_t& a, const int32x4_t& b) noexcept { return vaddl_high_s32(a, b); }
+BL_INLINE_NODEBUG uint64x2_t simd_addl_lo_u32_to_u64(const uint32x4_t& a, const uint32x4_t& b) noexcept { return vaddl_u32(vget_low_u32(a), vget_low_u32(b)); }
+BL_INLINE_NODEBUG uint64x2_t simd_addl_hi_u32_to_u64(const uint32x4_t& a, const uint32x4_t& b) noexcept { return vaddl_high_u32(a, b); }
+
 BL_INLINE_NODEBUG int16x8_t simd_addw_lo_i8_to_i16(const int16x8_t& a, const int8x16_t& b) noexcept { return vaddw_s8(a, vget_low_s8(b)); }
 BL_INLINE_NODEBUG int16x8_t simd_addw_hi_i8_to_i16(const int16x8_t& a, const int8x16_t& b) noexcept { return vaddw_high_s8(a, b); }
 BL_INLINE_NODEBUG uint16x8_t simd_addw_lo_u8_to_u16(const uint16x8_t& a, const uint8x16_t& b) noexcept { return vaddw_u8(a, vget_low_u8(b)); }
@@ -1461,6 +1474,19 @@ BL_INLINE_NODEBUG int64x2_t simd_addw_hi_i32_to_i64(const int64x2_t& a, const in
 BL_INLINE_NODEBUG uint64x2_t simd_addw_lo_u32_to_u64(const uint64x2_t& a, const uint32x4_t& b) noexcept { return vaddw_u32(a, vget_low_u32(b)); }
 BL_INLINE_NODEBUG uint64x2_t simd_addw_hi_u32_to_u64(const uint64x2_t& a, const uint32x4_t& b) noexcept { return vaddw_high_u32(a, b); }
 #else
+BL_INLINE_NODEBUG int16x8_t simd_addl_lo_i8_to_i16(const int8x16_t& a, const int8x16_t& b) noexcept { return vaddl_s8(vget_low_s8(a), vget_low_s8(b)); }
+BL_INLINE_NODEBUG int16x8_t simd_addl_hi_i8_to_i16(const int8x16_t& a, const int8x16_t& b) noexcept { return vaddl_s8(vget_high_s8(a), vget_high_s8(b)); }
+BL_INLINE_NODEBUG uint16x8_t simd_addl_lo_u8_to_u16(const uint8x16_t& a, const uint8x16_t& b) noexcept { return vaddl_u8(vget_low_u8(a), vget_low_u8(b)); }
+BL_INLINE_NODEBUG uint16x8_t simd_addl_hi_u8_to_u16(const uint8x16_t& a, const uint8x16_t& b) noexcept { return vaddl_u8(vget_high_u8(a), vget_high_u8(b)); }
+BL_INLINE_NODEBUG int32x4_t simd_addl_lo_i16_to_i32(const int16x8_t& a, const int16x8_t& b) noexcept { return vaddl_s16(vget_low_s16(a), vget_low_s16(b)); }
+BL_INLINE_NODEBUG int32x4_t simd_addl_hi_i16_to_i32(const int16x8_t& a, const int16x8_t& b) noexcept { return vaddl_s16(vget_high_s16(a), vget_high_s16(b)); }
+BL_INLINE_NODEBUG uint32x4_t simd_addl_lo_u16_to_u32(const uint16x8_t& a, const uint16x8_t& b) noexcept { return vaddl_u16(vget_low_u16(a), vget_low_u16(b)); }
+BL_INLINE_NODEBUG uint32x4_t simd_addl_hi_u16_to_u32(const uint16x8_t& a, const uint16x8_t& b) noexcept { return vaddl_u16(vget_high_u16(a), vget_high_u16(b)); }
+BL_INLINE_NODEBUG int64x2_t simd_addl_lo_i32_to_i64(const int32x4_t& a, const int32x4_t& b) noexcept { return vaddl_s32(vget_low_s32(a), vget_low_s32(b)); }
+BL_INLINE_NODEBUG int64x2_t simd_addl_hi_i32_to_i64(const int32x4_t& a, const int32x4_t& b) noexcept { return vaddl_s32(vget_high_s32(a), vget_high_s32(b)); }
+BL_INLINE_NODEBUG uint64x2_t simd_addl_lo_u32_to_u64(const uint32x4_t& a, const uint32x4_t& b) noexcept { return vaddl_u32(vget_low_u32(a), vget_low_u32(b)); }
+BL_INLINE_NODEBUG uint64x2_t simd_addl_hi_u32_to_u64(const uint32x4_t& a, const uint32x4_t& b) noexcept { return vaddl_u32(vget_high_u32(a), vget_high_u32(b)); }
+
 BL_INLINE_NODEBUG int16x8_t simd_addw_lo_i8_to_i16(const int16x8_t& a, const int8x16_t& b) noexcept { return vaddw_s8(a, vget_low_s8(b)); }
 BL_INLINE_NODEBUG int16x8_t simd_addw_hi_i8_to_i16(const int16x8_t& a, const int8x16_t& b) noexcept { return vaddw_s8(a, vget_high_s8(b)); }
 BL_INLINE_NODEBUG uint16x8_t simd_addw_lo_u8_to_u16(const uint16x8_t& a, const uint8x16_t& b) noexcept { return vaddw_u8(a, vget_low_u8(b)); }
@@ -1509,6 +1535,12 @@ BL_INLINE_NODEBUG uint8x16_t simd_mul_u8(const uint8x16_t& a, const uint8x16_t& 
 BL_INLINE_NODEBUG uint16x8_t simd_mul_u16(const uint16x8_t& a, const uint16x8_t& b) noexcept { return vmulq_u16(a, b); }
 BL_INLINE_NODEBUG uint32x4_t simd_mul_u32(const uint32x4_t& a, const uint32x4_t& b) noexcept { return vmulq_u32(a, b); }
 BL_INLINE_NODEBUG uint64x2_t simd_mul_u64(const uint64x2_t& a, const uint64x2_t& b) noexcept { return simd_u64(simd_mul_i64(simd_i64(a), simd_i64(b))); }
+
+BL_INLINE_NODEBUG uint16x8_t simd_mul_lo_u8_u16(const uint8x16_t& a, const uint8x16_t& b) noexcept { return vmull_u8(vget_low_u8(a), vget_low_u8(b)); }
+BL_INLINE_NODEBUG uint16x8_t simd_mul_hi_u8_u16(const uint8x16_t& a, const uint8x16_t& b) noexcept { return vmull_u8(vget_high_u8(a), vget_high_u8(b)); }
+
+BL_INLINE_NODEBUG uint32x4_t simd_mul_lo_u16_u32(const uint16x8_t& a, const uint16x8_t& b) noexcept { return vmull_u16(vget_low_u16(a), vget_low_u16(b)); }
+BL_INLINE_NODEBUG uint32x4_t simd_mul_hi_u16_u32(const uint16x8_t& a, const uint16x8_t& b) noexcept { return vmull_u16(vget_high_u16(a), vget_high_u16(b)); }
 
 BL_INLINE_NODEBUG int8x16_t simd_cmp_eq_i8(const int8x16_t& a, const int8x16_t& b) noexcept { return simd_i8(vceqq_s8(a, b)); }
 BL_INLINE_NODEBUG int16x8_t simd_cmp_eq_i16(const int16x8_t& a, const int16x8_t& b) noexcept { return simd_i16(vceqq_s16(a, b)); }
@@ -1698,6 +1730,36 @@ template<uint8_t kN> BL_INLINE_NODEBUG int64x2_t simd_srai_i64(const int64x2_t& 
 
 template<uint8_t kN> BL_INLINE_NODEBUG uint8x16_t simd_sllb_u128(const uint8x16_t& a) noexcept { return !(kN & 15u) ? a : vextq_u8(vdupq_n_u8(0), a, (16 - kN) & 15u); }
 template<uint8_t kN> BL_INLINE_NODEBUG uint8x16_t simd_srlb_u128(const uint8x16_t& a) noexcept { return !(kN & 15u) ? a : vextq_u8(a, vdupq_n_u8(0), kN & 15u); }
+
+#if defined(BL_TARGET_OPT_ASIMD_CRYPTO)
+BL_INLINE_NODEBUG uint64x2_t simd_clmul_u128_ll(const uint64x2_t& a, const uint64x2_t& b) noexcept {
+  return vreinterpretq_u64_p128(
+    vmull_p64((poly64_t)vreinterpret_p64_u64(vget_low_u64(a)),
+              (poly64_t)vreinterpret_p64_u64(vget_low_u64(b)))
+  );
+}
+
+BL_INLINE_NODEBUG uint64x2_t simd_clmul_u128_lh(const uint64x2_t& a, const uint64x2_t& b) noexcept {
+  return vreinterpretq_u64_p128(
+    vmull_p64((poly64_t)vreinterpret_p64_u64(vget_low_u64(a)),
+              (poly64_t)vreinterpret_p64_u64(vget_high_u64(b)))
+  );
+}
+
+BL_INLINE_NODEBUG uint64x2_t simd_clmul_u128_hl(const uint64x2_t& a, const uint64x2_t& b) noexcept {
+  return vreinterpretq_u64_p128(
+    vmull_p64((poly64_t)vreinterpret_p64_u64(vget_high_u64(a)),
+              (poly64_t)vreinterpret_p64_u64(vget_low_u64(b)))
+  );
+}
+
+BL_INLINE_NODEBUG uint64x2_t simd_clmul_u128_hh(const uint64x2_t& a, const uint64x2_t& b) noexcept {
+  return vreinterpretq_u64_p128(
+    vmull_p64((poly64_t)vreinterpret_p64_u64(vget_high_u64(a)),
+              (poly64_t)vreinterpret_p64_u64(vget_high_u64(b)))
+  );
+}
+#endif // BL_TARGET_OPT_ASIMD_CRYPTO
 
 } // {Internal}
 
@@ -2395,6 +2457,19 @@ template<size_t W> BL_INLINE_NODEBUG Vec<W, uint16_t> adds(const Vec<W, uint16_t
 template<size_t W> BL_INLINE_NODEBUG Vec<W, uint32_t> adds(const Vec<W, uint32_t>& a, const Vec<W, uint32_t>& b) noexcept { return adds_u32(a, b); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, uint64_t> adds(const Vec<W, uint64_t>& a, const Vec<W, uint64_t>& b) noexcept { return adds_u64(a, b); }
 
+BL_INLINE_NODEBUG Vec<16, int16_t> addl_lo_i8_to_i16(const Vec<16, int8_t>& a, const Vec<16, int8_t>& b) noexcept { return Vec<16, int16_t>{I::simd_addl_lo_i8_to_i16(a.v, b.v)}; }
+BL_INLINE_NODEBUG Vec<16, int16_t> addl_hi_i8_to_i16(const Vec<16, int8_t>& a, const Vec<16, int8_t>& b) noexcept { return Vec<16, int16_t>{I::simd_addl_hi_i8_to_i16(a.v, b.v)}; }
+BL_INLINE_NODEBUG Vec<16, uint16_t> addl_lo_u8_to_u16(const Vec<16, uint8_t>& a, const Vec<16, uint8_t>& b) noexcept { return Vec<16, uint16_t>{I::simd_addl_lo_u8_to_u16(a.v, b.v)}; }
+BL_INLINE_NODEBUG Vec<16, uint16_t> addl_hi_u8_to_u16(const Vec<16, uint8_t>& a, const Vec<16, uint8_t>& b) noexcept { return Vec<16, uint16_t>{I::simd_addl_hi_u8_to_u16(a.v, b.v)}; }
+BL_INLINE_NODEBUG Vec<16, int32_t> addl_lo_i16_to_i32(const Vec<16, int16_t>& a, const Vec<16, int16_t>& b) noexcept { return Vec<16, int32_t>{I::simd_addl_lo_i16_to_i32(a.v, b.v)}; }
+BL_INLINE_NODEBUG Vec<16, int32_t> addl_hi_i16_to_i32(const Vec<16, int16_t>& a, const Vec<16, int16_t>& b) noexcept { return Vec<16, int32_t>{I::simd_addl_hi_i16_to_i32(a.v, b.v)}; }
+BL_INLINE_NODEBUG Vec<16, uint32_t> addl_lo_u16_to_u32(const Vec<16, uint16_t>& a, const Vec<16, uint16_t>& b) noexcept { return Vec<16, uint32_t>{I::simd_addl_lo_u16_to_u32(a.v, b.v)}; }
+BL_INLINE_NODEBUG Vec<16, uint32_t> addl_hi_u16_to_u32(const Vec<16, uint16_t>& a, const Vec<16, uint16_t>& b) noexcept { return Vec<16, uint32_t>{I::simd_addl_hi_u16_to_u32(a.v, b.v)}; }
+BL_INLINE_NODEBUG Vec<16, int64_t> addl_lo_i32_to_i64(const Vec<16, int32_t>& a, const Vec<16, int32_t>& b) noexcept { return Vec<16, int64_t>{I::simd_addl_lo_i32_to_i64(a.v, b.v)}; }
+BL_INLINE_NODEBUG Vec<16, int64_t> addl_hi_i32_to_i64(const Vec<16, int32_t>& a, const Vec<16, int32_t>& b) noexcept { return Vec<16, int64_t>{I::simd_addl_hi_i32_to_i64(a.v, b.v)}; }
+BL_INLINE_NODEBUG Vec<16, uint64_t> addl_lo_u32_to_u64(const Vec<16, uint32_t>& a, const Vec<16, uint32_t>& b) noexcept { return Vec<16, uint64_t>{I::simd_addl_lo_u32_to_u64(a.v, b.v)}; }
+BL_INLINE_NODEBUG Vec<16, uint64_t> addl_hi_u32_to_u64(const Vec<16, uint32_t>& a, const Vec<16, uint32_t>& b) noexcept { return Vec<16, uint64_t>{I::simd_addl_hi_u32_to_u64(a.v, b.v)}; }
+
 BL_INLINE_NODEBUG Vec<16, int16_t> addw_lo_i8_to_i16(const Vec<16, int16_t>& a, const Vec<16, int8_t>& b) noexcept { return Vec<16, int16_t>{I::simd_addw_lo_i8_to_i16(a.v, b.v)}; }
 BL_INLINE_NODEBUG Vec<16, int16_t> addw_hi_i8_to_i16(const Vec<16, int16_t>& a, const Vec<16, int8_t>& b) noexcept { return Vec<16, int16_t>{I::simd_addw_hi_i8_to_i16(a.v, b.v)}; }
 BL_INLINE_NODEBUG Vec<16, uint16_t> addw_lo_u8_to_u16(const Vec<16, uint16_t>& a, const Vec<16, uint8_t>& b) noexcept { return Vec<16, uint16_t>{I::simd_addw_lo_u8_to_u16(a.v, b.v)}; }
@@ -2452,6 +2527,11 @@ template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> mul_u8(const Vec<W, T
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> mul_u16(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_mul_u16(simd_u16(a.v), simd_u16(b.v))); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> mul_u32(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_mul_u32(simd_u32(a.v), simd_u32(b.v))); }
 template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> mul_u64(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_mul_u64(simd_u64(a.v), simd_u64(b.v))); }
+
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, uint16_t> mul_lo_u8_u16(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, uint16_t>(I::simd_mul_lo_u8_u16(simd_u8(a.v), simd_u8(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, uint16_t> mul_hi_u8_u16(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, uint16_t>(I::simd_mul_hi_u8_u16(simd_u8(a.v), simd_u8(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, uint32_t> mul_lo_u16_u32(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, uint32_t>(I::simd_mul_lo_u16_u32(simd_u16(a.v), simd_u16(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, uint32_t> mul_hi_u16_u32(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, uint32_t>(I::simd_mul_hi_u16_u32(simd_u16(a.v), simd_u16(b.v))); }
 
 template<size_t W> BL_INLINE_NODEBUG Vec<W, int8_t> mul(const Vec<W, int8_t>& a, const Vec<W, int8_t>& b) noexcept { return mul_i8(a, b); }
 template<size_t W> BL_INLINE_NODEBUG Vec<W, int16_t> mul(const Vec<W, int16_t>& a, const Vec<W, int16_t>& b) noexcept { return mul_i16(a, b); }
@@ -2719,6 +2799,13 @@ template<uint32_t kN, size_t W> BL_INLINE_NODEBUG Vec<W, uint8_t> acc_rsrli(cons
 template<uint32_t kN, size_t W> BL_INLINE_NODEBUG Vec<W, uint16_t> acc_rsrli(const Vec<W, uint16_t>& a, const Vec<W, uint16_t>& b) noexcept { return acc_rsrli_u16<kN>(a, b); }
 template<uint32_t kN, size_t W> BL_INLINE_NODEBUG Vec<W, uint32_t> acc_rsrli(const Vec<W, uint32_t>& a, const Vec<W, uint32_t>& b) noexcept { return acc_rsrli_u32<kN>(a, b); }
 template<uint32_t kN, size_t W> BL_INLINE_NODEBUG Vec<W, uint64_t> acc_rsrli(const Vec<W, uint64_t>& a, const Vec<W, uint64_t>& b) noexcept { return acc_rsrli_u64<kN>(a, b); }
+
+#if defined(BL_TARGET_OPT_ASIMD_CRYPTO)
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> clmul_u128_ll(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_clmul_u128_ll(simd_u64(a.v), simd_u64(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> clmul_u128_lh(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_clmul_u128_lh(simd_u64(a.v), simd_u64(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> clmul_u128_hl(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_clmul_u128_hl(simd_u64(a.v), simd_u64(b.v))); }
+template<size_t W, typename T> BL_INLINE_NODEBUG Vec<W, T> clmul_u128_hh(const Vec<W, T>& a, const Vec<W, T>& b) noexcept { return vec_wt<W, T>(I::simd_clmul_u128_hh(simd_u64(a.v), simd_u64(b.v))); }
+#endif // BL_TARGET_OPT_ASIMD_CRYPTO
 
 // SIMD - Public - Overloaded Operators
 // ====================================

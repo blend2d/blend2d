@@ -39,6 +39,7 @@ static constexpr uint32_t kCompressionAlphaBitFields = 6;
 static constexpr uint32_t kCompressionCMYK = 11;
 static constexpr uint32_t kCompressionCMYK_RLE8 = 12;
 static constexpr uint32_t kCompressionCMYK_RLE4 = 1;
+static constexpr uint32_t kCompressionValueCount = 13;
 
 static constexpr uint32_t kColorSpaceCalibratedRGB = 0;
 static constexpr uint32_t kColorSpaceDD_RGB = 1;

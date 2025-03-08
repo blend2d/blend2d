@@ -37,12 +37,12 @@ static void fetchVec8AArch64(PipeCompiler* pc, VecArray& dVec, const Gp& sPtr, u
       uint32_t remaining = n - i;
 
       if (remaining >= 32u) {
-        cc->ldp(dVec[idx], dVec[idx + 1], a64::ptr(sPtr, i));
+        cc->ldp(dVec[idx], dVec[idx + 1], a64::ptr(sPtr, int32_t(i)));
         i += 32;
       }
       else {
         uint32_t count = blMin<uint32_t>(n - i, 16u);
-        pc->v_load_iany(dVec[idx], a64::ptr(sPtr, i), count, Alignment{1});
+        pc->v_load_iany(dVec[idx], a64::ptr(sPtr, int32_t(i)), count, Alignment{1});
         i += count;
       }
     }
@@ -77,12 +77,12 @@ static void storeVec8AArch64(PipeCompiler* pc, const Gp& dPtr, const VecArray& s
       uint32_t remaining = n - i;
 
       if (remaining >= 32u) {
-        cc->stp(sVec[idx], sVec[idx + 1], a64::ptr(dPtr, i));
+        cc->stp(sVec[idx], sVec[idx + 1], a64::ptr(dPtr, int32_t(i)));
         i += 32;
       }
       else {
         uint32_t count = blMin<uint32_t>(n - i, 16u);
-        pc->v_load_iany(sVec[idx], a64::ptr(dPtr, i), count, Alignment{1});
+        pc->v_load_iany(sVec[idx], a64::ptr(dPtr, int32_t(i)), count, Alignment{1});
         i += count;
       }
     }
@@ -123,7 +123,7 @@ void fetchVec8(PipeCompiler* pc, const VecArray& dVec_, Gp sPtr, uint32_t n, Adv
     uint32_t remaining = n - offset;
     uint32_t fetchSize = blMin<uint32_t>(dVec[idx].size(), remaining);
 
-    pc->v_load_iany(dVec[idx], mem_ptr(sPtr, offset), fetchSize, Alignment{1});
+    pc->v_load_iany(dVec[idx], mem_ptr(sPtr, int32_t(offset)), fetchSize, Alignment{1});
     offset += fetchSize;
 
     if (offset >= n)
@@ -151,7 +151,7 @@ void storeVec8(PipeCompiler* pc, const Gp& dPtr, const VecArray& sVec_, uint32_t
     uint32_t remaining = n - offset;
     uint32_t storeSize = blMin<uint32_t>(sVec[idx].size(), remaining);
 
-    pc->v_store_iany(mem_ptr(dPtr, offset), sVec[idx], storeSize, Alignment{1});
+    pc->v_store_iany(mem_ptr(dPtr, int32_t(offset)), sVec[idx], storeSize, Alignment{1});
     offset += storeSize;
 
     if (offset >= n)
@@ -692,7 +692,7 @@ static void fetchPredicatedVec8_AVX512(PipeCompiler* pc, const VecArray& dVec, G
           cc->add(sPtr, nDec);
         }
         else {
-          cc->k(kPred).z().vmovdqu8(dVec[i], mem_ptr(sPtr, i * vecElementCount));
+          cc->k(kPred).z().vmovdqu8(dVec[i], mem_ptr(sPtr, int32_t(i * vecElementCount)));
         }
 
         if (i < vecCount - 1u) {
@@ -721,7 +721,7 @@ static void fetchPredicatedVec8_AVX512(PipeCompiler* pc, const VecArray& dVec, G
           cc->add(sPtr, nMov);
         }
         else {
-          cc->k(kPred).z().vmovdqu8(dVec[i], mem_ptr(sPtr, i * vecElementCount));
+          cc->k(kPred).z().vmovdqu8(dVec[i], mem_ptr(sPtr, int32_t(i * vecElementCount)));
         }
 
         if (i < vecCount - 1u) {
@@ -1468,7 +1468,7 @@ void fetchMaskA8IntoUA(PipeCompiler* pc, VecArray& dVec, const Gp& sPtr, PixelCo
       default: {
         for (uint32_t i = 0; i < vc; i++) {
           pc->v_cvt_u8_lo_to_u16(dVec[i], m);
-          m.addOffsetLo32(dVec[i].size() / 2u);
+          m.addOffsetLo32(int32_t(dVec[i].size() / 2u));
         }
         break;
       }
@@ -1858,7 +1858,7 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& dVec, const Gp& sPtr, PixelCo
         if (predicate.empty()) {
           for (uint32_t i = 0; i < vecCount; i++) {
             pc->v_loaduvec_u8_to_u64(dVec[i], m);
-            m.addOffsetLo32(dVec[i].size() / 8u);
+            m.addOffsetLo32(int32_t(dVec[i].size() / 8u));
           }
 
           if (advanceMode == AdvanceMode::kAdvance) {
@@ -2091,7 +2091,7 @@ static void fetchPRGB32IntoPA_AVX512(PipeCompiler* pc, VecArray& dVec, const Gp&
           const Vec& dv = dVec[iter];
 
           v_prgb32_to_pa_vpermb(pc, dv, bytePerm, m, PixelCount{quantity});
-          m.addOffsetLo32(quantity * 4u);
+          m.addOffsetLo32(int32_t(quantity * 4u));
 
           iter++;
           remaining -= quantity;
@@ -2122,7 +2122,7 @@ static void fetchPRGB32IntoPA_AVX512(PipeCompiler* pc, VecArray& dVec, const Gp&
             v_prgb32_to_pa_vpermb(pc, dv, bytePerm, m, PixelCount{quantity});
           }
 
-          m.addOffsetLo32(quantity * 4u);
+          m.addOffsetLo32(int32_t(quantity * 4u));
 
           iter++;
           remaining -= quantity;
@@ -2226,7 +2226,7 @@ static void fetchPRGB32IntoPA_AVX512(PipeCompiler* pc, VecArray& dVec, const Gp&
         pc->v_insert_v128(dv.zmm(), dv.zmm(), tv.xmm(), fraction);
       }
 
-      m.addOffsetLo32(quantity * 4u);
+      m.addOffsetLo32(int32_t(quantity * 4u));
 
       iter++;
       remaining -= quantity;
@@ -2364,7 +2364,7 @@ static void fetchPRGB32IntoUA_AVX512(PipeCompiler* pc, VecArray& dVec, const Gp&
         const Vec& dv = dVec[iter];
 
         v_prgb32_to_ua_vpermw(pc, dv, permutePredicate, m, PixelCount{quantity});
-        m.addOffsetLo32(quantity * 4u);
+        m.addOffsetLo32(int32_t(quantity * 4u));
 
         iter++;
         remaining -= quantity;
@@ -2395,7 +2395,7 @@ static void fetchPRGB32IntoUA_AVX512(PipeCompiler* pc, VecArray& dVec, const Gp&
           v_prgb32_to_ua_vpermw(pc, dv, permutePredicate, m, PixelCount{quantity});
         }
 
-        m.addOffsetLo32(quantity * 4u);
+        m.addOffsetLo32(int32_t(quantity * 4u));
 
         iter++;
         remaining -= quantity;
@@ -2746,14 +2746,14 @@ static void fetchPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFla
                 pc->newVecArray(p.pc, pcCount, pcWidth, p.name(), "pc");
                 for (uint32_t i = 0; i < pcCount; i++) {
                   pc->v_loadavec(p.pc[i], sMem, alignment);
-                  sMem.addOffsetLo32(p.pc[i].size());
+                  sMem.addOffsetLo32(int32_t(p.pc[i].size()));
                 }
               }
               else {
                 pc->newVecArray(p.uc, ucCount, ucWidth, p.name(), "uc");
                 for (uint32_t i = 0; i < ucCount; i++) {
                   pc->v_cvt_u8_lo_to_u16(p.uc[i], sMem);
-                  sMem.addOffsetLo32(p.uc[i].size() / 2u);
+                  sMem.addOffsetLo32(int32_t(p.uc[i].size() / 2u));
                 }
               }
             }

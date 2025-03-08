@@ -19,7 +19,7 @@ namespace bl {
 namespace Png {
 namespace Ops {
 
-// bl::Png::Opts::SimdImpl
+// bl::Png::Opt - SimdImpl
 // =======================
 
 namespace {
@@ -581,7 +581,6 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
         if (i >= 32) {
           // Align to 16-BYTE boundary.
           uint32_t j = uint32_t(IntOps::alignUpDiff(uintptr_t(p + BPP), 16));
-          Vec16xU8 zero = make_zero<Vec16xU8>();
 
           for (i -= j; j != 0; j--, p++, u++)
             p[BPP] = applySumFilter(p[BPP], applyAvgFilter(p[0], u[0]));
@@ -648,30 +647,27 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
           else if BL_CONSTEXPR (BPP == 4) {
             Vec16xU8 m00FF = make128_u32<Vec16xU8>(0x00FF00FFu);
             Vec16xU8 m01FF = make128_u32<Vec16xU8>(0x01FF01FFu);
-            Vec16xU8 t1 = interleave_lo_u8(loada_32<Vec16xU8>(p), zero);
+            Vec16xU8 t1 = unpack_lo64_u8_u16(loada_32<Vec16xU8>(p));
 
             // Process 16 BYTEs at a time.
             while (i >= 16) {
               Vec16xU8 p0, p1;
               Vec16xU8 u0, u1;
 
-              p0 = loada<Vec16xU8>(p + 4);
-              u0 = loadu<Vec16xU8>(u);
+              p1 = loada<Vec16xU8>(p + 4);
+              u1 = loadu<Vec16xU8>(u);
 
-              p1 = p0;                             // HI | Move Ln
-              p0 = interleave_lo_u8(p0, zero);     // LO | Unpack Ln
-
-              u1 = u0;                             // HI | Move Up
+              p0 = unpack_lo64_u8_u16(p1);         // LO | Unpack Ln
+              p1 = unpack_hi64_u8_u16(p1);         // HI | Unpack Ln
               p0 = slli_i16<1>(p0);                // LO | << 1
 
-              u0 = interleave_lo_u8(u0, zero);     // LO | Unpack Up
+              u0 = unpack_lo64_u8_u16(u1);         // LO | Unpack Up
               p0 = add_i16(p0, t1);                // LO | Add Last
 
-              p1 = interleave_hi_u8(p1, zero);     // HI | Unpack Ln
               p0 = add_i16(p0, u0);                // LO | Add Up
               p0 = p0 & m01FF;                     // LO | & 0x01FE
 
-              u1 = interleave_hi_u8(u1, zero);     // HI | Unpack Up
+              u1 = unpack_hi64_u8_u16(u1);         // HI | Unpack Up
               t1 = sllb_u128<8>(p0);               // LO | Get Last
               p0 = slli_i16<1>(p0);                // LO | << 1
 
@@ -711,7 +707,7 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
               Vec16xU8 u0, u1, u2;
 
               u0 = loadu<Vec16xU8>(u);
-              t1 = interleave_lo_u8(t1, zero);
+              t1 = unpack_lo64_u8_u16(t1);
               p0 = loada<Vec16xU8>(p + 6);
 
               p1 = srlb_u128<6>(p0);               // P1 | Extract
@@ -720,14 +716,14 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
               p2 = srlb_u128<12>(p0);              // P2 | Extract
               u2 = srlb_u128<12>(u0);              // P2 | Extract
 
-              p0 = interleave_lo_u8(p0, zero);     // P0 | Unpack
-              u0 = interleave_lo_u8(u0, zero);     // P0 | Unpack
+              p0 = unpack_lo64_u8_u16(p0);         // P0 | Unpack
+              u0 = unpack_lo64_u8_u16(u0);         // P0 | Unpack
 
-              p1 = interleave_lo_u8(p1, zero);     // P1 | Unpack
-              u1 = interleave_lo_u8(u1, zero);     // P1 | Unpack
+              p1 = unpack_lo64_u8_u16(p1);         // P1 | Unpack
+              u1 = unpack_lo64_u8_u16(u1);         // P1 | Unpack
 
-              p2 = interleave_lo_u8(p2, zero);     // P2 | Unpack
-              u2 = interleave_lo_u8(u2, zero);     // P2 | Unpack
+              p2 = unpack_lo64_u8_u16(p2);         // P2 | Unpack
+              u2 = unpack_lo64_u8_u16(u2);         // P2 | Unpack
 
               u0 = add_i16(u0, t1);                // P0 | Add Last
               u0 = srli_u16<1>(u0);                // P0 | >> 1
@@ -760,24 +756,22 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
           }
           else if BL_CONSTEXPR (BPP == 8) {
             // Process 16 BYTEs at a time.
-            Vec16xU8 t1 = interleave_lo_u8(loadu_64<Vec16xU8>(p), zero);
+            Vec16xU8 t1 = unpack_lo64_u8_u16(loadu_64<Vec16xU8>(p));
 
             while (i >= 16) {
               Vec16xU8 p0, p1;
               Vec16xU8 u0, u1;
 
-              u0 = loadu<Vec16xU8>(u);
-              p0 = loada<Vec16xU8>(p + 8);
+              u1 = loadu<Vec16xU8>(u);
+              p1 = loada<Vec16xU8>(p + 8);
 
-              u1 = u0;                             // HI | Move Up
-              p1 = p0;                             // HI | Move Ln
-              u0 = interleave_lo_u8(u0, zero);     // LO | Unpack Up
-              p0 = interleave_lo_u8(p0, zero);     // LO | Unpack Ln
+              u0 = unpack_lo64_u8_u16(u1);         // LO | Unpack Up
+              p0 = unpack_lo64_u8_u16(p1);         // LO | Unpack Ln
 
               u0 = add_i16(u0, t1);                // LO | Add Last
-              p1 = interleave_hi_u8(p1, zero);     // HI | Unpack Ln
+              p1 = unpack_hi64_u8_u16(p1);         // HI | Unpack Ln
               u0 = srli_u16<1>(u0);                // LO | >> 1
-              u1 = interleave_hi_u8(u1, zero);     // HI | Unpack Up
+              u1 = unpack_hi64_u8_u16(u1);         // HI | Unpack Up
 
               p0 = add_i8(p0, u0);                 // LO | Add (Up+Last)/2
               u1 = add_i16(u1, p0);                // HI | Add LO

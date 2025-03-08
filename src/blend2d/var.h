@@ -266,7 +266,7 @@ public:
 
   //! \}
 
-  //! \name Static Constructors
+  //! \name Static Construction
   //! \{
 
   static BL_INLINE_NODEBUG BLVar null() noexcept { return BLVar(); }

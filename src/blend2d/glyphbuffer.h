@@ -96,7 +96,7 @@ BL_END_C_DECLS
 //! were calculated.
 class BLGlyphBuffer final : public BLGlyphBufferCore {
 public:
-  //! \name Constructors & Destructors
+  //! \name Construction & Destruction
   //! \{
 
   BL_INLINE_NODEBUG BLGlyphBuffer(const BLGlyphBuffer&) noexcept = delete;

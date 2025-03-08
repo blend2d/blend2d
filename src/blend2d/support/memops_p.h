@@ -20,10 +20,10 @@ namespace {
 //! \name Unaligned Constants
 //! \{
 
-static const constexpr bool kUnalignedMem   = BL_TARGET_ARCH_X86 != 0;
-static const constexpr bool kUnalignedMem16 = BL_TARGET_ARCH_X86 != 0;
-static const constexpr bool kUnalignedMem32 = BL_TARGET_ARCH_X86 != 0;
-static const constexpr bool kUnalignedMem64 = BL_TARGET_ARCH_X86 != 0;
+static const constexpr bool kUnalignedMemIO = (BL_TARGET_ARCH_X86 != 0) || (BL_TARGET_ARCH_ARM == 64) || (BL_TARGET_ARCH_WASM != 0);
+static const constexpr bool kUnalignedMem16 = (BL_TARGET_ARCH_X86 != 0) || (BL_TARGET_ARCH_ARM == 64) || (BL_TARGET_ARCH_WASM != 0);
+static const constexpr bool kUnalignedMem32 = (BL_TARGET_ARCH_X86 != 0) || (BL_TARGET_ARCH_ARM == 64) || (BL_TARGET_ARCH_WASM != 0);
+static const constexpr bool kUnalignedMem64 = (BL_TARGET_ARCH_X86 != 0) || (BL_TARGET_ARCH_ARM == 64) || (BL_TARGET_ARCH_WASM != 0);
 
 //! \}
 
@@ -189,6 +189,25 @@ BL_NODISCARD static BL_INLINE_NODEBUG int64_t readI64uBE(const void* p) noexcept
 BL_NODISCARD static BL_INLINE_NODEBUG uint64_t readU64aBE(const void* p) noexcept { return readU64<BL_BYTE_ORDER_BE, 8>(p); }
 BL_NODISCARD static BL_INLINE_NODEBUG uint64_t readU64uBE(const void* p) noexcept { return readU64<BL_BYTE_ORDER_BE, 1>(p); }
 
+template<typename T>
+BL_NODISCARD static BL_INLINE_NODEBUG T loadu(const void* p) noexcept {
+  T tmp;
+  memcpy(&tmp, p, sizeof(T));
+  return tmp;
+}
+
+template<typename T>
+BL_NODISCARD static BL_INLINE_NODEBUG T loadu_le(const void* p) noexcept {
+  T tmp;
+  memcpy(&tmp, p, sizeof(T));
+
+  if (BL_BYTE_ORDER_NATIVE != BL_BYTE_ORDER_LE) {
+    tmp = IntOps::byteSwap(tmp);
+  }
+
+  return tmp;
+}
+
 //! \}
 
 //! \name Memory Write
@@ -296,6 +315,22 @@ static BL_INLINE_NODEBUG void writeI64aBE(void* p, int64_t x) noexcept { writeI6
 static BL_INLINE_NODEBUG void writeI64uBE(void* p, int64_t x) noexcept { writeI64<BL_BYTE_ORDER_BE, 1>(p, x); }
 static BL_INLINE_NODEBUG void writeU64aBE(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_BE, 8>(p, x); }
 static BL_INLINE_NODEBUG void writeU64uBE(void* p, uint64_t x) noexcept { writeU64<BL_BYTE_ORDER_BE, 1>(p, x); }
+
+template<typename T>
+static BL_INLINE_NODEBUG void storeu(void* p, const T& v) noexcept {
+  memcpy(p, &v, sizeof(T));
+}
+
+template<typename T>
+static BL_INLINE_NODEBUG void storeu_le(void* p, const T& v) noexcept {
+  T tmp = v;
+
+  if BL_CONSTEXPR (BL_BYTE_ORDER_NATIVE != BL_BYTE_ORDER_LE) {
+    tmp = IntOps::byteSwap(tmp);
+  }
+
+  memcpy(p, &tmp, sizeof(T));
+}
 
 //! \}
 

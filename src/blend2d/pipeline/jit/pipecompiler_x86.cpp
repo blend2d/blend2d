@@ -131,7 +131,7 @@ void PipeCompiler::initVecWidth(VecWidth vw) noexcept {
   _vecWidth = vw;
   _vecRegType = simdRegTypeFromWidth(vw);
   _vecTypeId = asmjit::ArchTraits::byArch(cc->arch()).regTypeToTypeId(_vecRegType);
-  _vecMultiplier = 1u << (uint32_t(_vecRegType) - uint32_t(RegType::kX86_Xmm));
+  _vecMultiplier = uint8_t(1u << (uint32_t(_vecRegType) - uint32_t(RegType::kX86_Xmm)));
 }
 
 bool PipeCompiler::hasMaskedAccessOf(uint32_t dataSize) const noexcept {

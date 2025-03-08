@@ -199,7 +199,7 @@ public:
   //! \{
 
   BL_INLINE WorkerManager() noexcept
-    : _allocator(131072 - ArenaAllocator::kBlockOverhead, kAllocatorAlignment),
+    : _allocator(131072, kAllocatorAlignment),
       _currentBatch{},
       _commandAppender{},
       _jobAppender{},

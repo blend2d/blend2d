@@ -154,7 +154,8 @@ struct alignas(16) RenderFetchData : public RenderFetchDataHeader {
     const uint8_t* srcPixelData = static_cast<const uint8_t*>(imageI->pixelData);
     intptr_t srcStride = imageI->stride;
     uint32_t srcBytesPerPixel = imageI->depth / 8u;
-    Pipeline::FetchUtils::initImageSource(pipelineData.pattern, srcPixelData + uint32_t(area.y) * srcStride + uint32_t(area.x) * srcBytesPerPixel, imageI->stride, area.w, area.h);
+    Pipeline::FetchUtils::initImageSource(pipelineData.pattern,
+      (srcPixelData + intptr_t(uint32_t(area.y)) * srcStride) + uint32_t(area.x) * srcBytesPerPixel, imageI->stride, area.w, area.h);
   }
 
   // Initializes `fetchData` for a blit. Blits are never repeating and are always 1:1 (no scaling, no fractional translation).

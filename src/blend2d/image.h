@@ -88,8 +88,14 @@ struct BLImageInfo {
   uint16_t depth;
   //! Number of planes.
   uint16_t planeCount;
+
   //! Number of frames (0 = unknown/unspecified).
   uint64_t frameCount;
+  //! Number of animation repeats (0 == infinite).
+  uint32_t repeatCount;
+
+  //! Reserved for future use.
+  uint32_t reserved[3];
 
   //! Image format (as understood by codec).
   char format[16];

@@ -64,6 +64,14 @@
 //! \addtogroup blend2d_internal
 //! \{
 
+#if defined(__wasm64__)
+  #define BL_TARGET_ARCH_WASM 64
+#elif defined(__wasm32__) || defined(__wasm__)
+  #define BL_TARGET_ARCH_WASM 32
+#else
+  #define BL_TARGET_ARCH_WASM 0
+#endif
+
 #if defined(_M_X64) || defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__)
   #define BL_TARGET_ARCH_X86 64
 #elif defined(_M_IX86) || defined(__i386) || defined(__i386__)
@@ -88,7 +96,7 @@
   #define BL_TARGET_ARCH_MIPS 0
 #endif
 
-#define BL_TARGET_ARCH_BITS (BL_TARGET_ARCH_X86 | BL_TARGET_ARCH_ARM | BL_TARGET_ARCH_MIPS)
+#define BL_TARGET_ARCH_BITS (BL_TARGET_ARCH_X86 | BL_TARGET_ARCH_ARM | BL_TARGET_ARCH_MIPS | BL_TARGET_ARCH_WASM)
 #if BL_TARGET_ARCH_BITS == 0
   #undef BL_TARGET_ARCH_BITS
   #if defined(__LP64__) || defined(_LP64)
@@ -116,65 +124,73 @@
 
 // Build optimizations control compile-time optimizations to be used by Blend2D and C++ compiler. These optimizations
 // are not related to the code-generator optimizations (JIT) that are always auto-detected at runtime.
-#if defined(BL_BUILD_OPT_AVX512) && !defined(BL_BUILD_OPT_AVX2)
-  #define BL_BUILD_OPT_AVX2
-#endif
-#if defined(BL_BUILD_OPT_AVX2) && !defined(BL_BUILD_OPT_AVX)
-  #define BL_BUILD_OPT_AVX
-#endif
-#if defined(BL_BUILD_OPT_AVX) && !defined(BL_BUILD_OPT_SSE4_2)
-  #define BL_BUILD_OPT_SSE4_2
-#endif
-#if defined(BL_BUILD_OPT_SSE4_2) && !defined(BL_BUILD_OPT_SSE4_1)
-  #define BL_BUILD_OPT_SSE4_1
-#endif
-#if defined(BL_BUILD_OPT_SSE4_1) && !defined(BL_BUILD_OPT_SSSE3)
-  #define BL_BUILD_OPT_SSSE3
-#endif
-#if defined(BL_BUILD_OPT_SSSE3) && !defined(BL_BUILD_OPT_SSE3)
-  #define BL_BUILD_OPT_SSE3
-#endif
-#if defined(BL_BUILD_OPT_SSE3) && !defined(BL_BUILD_OPT_SSE2)
-  #define BL_BUILD_OPT_SSE2
-#endif
+#if BL_TARGET_ARCH_X86
+  #if defined(BL_BUILD_OPT_AVX512) && !defined(BL_BUILD_OPT_AVX2)
+    #define BL_BUILD_OPT_AVX2
+  #endif
+  #if defined(BL_BUILD_OPT_AVX2) && !defined(BL_BUILD_OPT_AVX)
+    #define BL_BUILD_OPT_AVX
+  #endif
+  #if defined(BL_BUILD_OPT_AVX) && !defined(BL_BUILD_OPT_SSE4_2)
+    #define BL_BUILD_OPT_SSE4_2
+  #endif
+  #if defined(BL_BUILD_OPT_SSE4_2) && !defined(BL_BUILD_OPT_SSE4_1)
+    #define BL_BUILD_OPT_SSE4_1
+  #endif
+  #if defined(BL_BUILD_OPT_SSE4_1) && !defined(BL_BUILD_OPT_SSSE3)
+    #define BL_BUILD_OPT_SSSE3
+  #endif
+  #if defined(BL_BUILD_OPT_SSSE3) && !defined(BL_BUILD_OPT_SSE3)
+    #define BL_BUILD_OPT_SSE3
+  #endif
+  #if defined(BL_BUILD_OPT_SSE3) && !defined(BL_BUILD_OPT_SSE2)
+    #define BL_BUILD_OPT_SSE2
+  #endif
 
-#if defined(__AVX512F__)  && defined(__AVX512BW__) && defined(__AVX512DQ__) && defined(__AVX512CD__) && defined(__AVX512VL__)
-  #define BL_TARGET_OPT_AVX512
-#endif
-#if defined(BL_TARGET_OPT_AVX512) || defined(__AVX2__)
-  #define BL_TARGET_OPT_AVX2
-#endif
-#if defined(BL_TARGET_OPT_AVX2) || defined(__AVX__)
-  #define BL_TARGET_OPT_AVX
-#endif
-#if defined(BL_TARGET_OPT_AVX) || defined(__SSE4_2__)
-  #define BL_TARGET_OPT_SSE4_2
-#endif
-#if defined(BL_TARGET_OPT_SSE4_2) || defined(__SSE4_1__)
-  #define BL_TARGET_OPT_SSE4_1
-#endif
-#if defined(BL_TARGET_OPT_SSE4_1) || defined(__SSSE3__)
-  #define BL_TARGET_OPT_SSSE3
-#endif
-#if defined(BL_TARGET_OPT_SSSE3) || defined(__SSE3__)
-  #define BL_TARGET_OPT_SSE3
-#endif
-#if defined(BL_TARGET_OPT_SSE3) || (BL_TARGET_ARCH_X86 == 64 || defined(__SSE2__) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2))
-  #define BL_TARGET_OPT_SSE2
-#endif
-#if defined(BL_TARGET_OPT_SSE2) || (BL_TARGET_ARCH_X86 == 64 || defined(__SSE__) || (defined(_M_IX86_FP) && _M_IX86_FP >= 1))
-  #define BL_TARGET_OPT_SSE
-#endif
+  #if defined(__AVX512F__)  && defined(__AVX512BW__) && defined(__AVX512DQ__) && defined(__AVX512CD__) && defined(__AVX512VL__)
+    #define BL_TARGET_OPT_AVX512
+  #endif
+  #if defined(BL_TARGET_OPT_AVX512) || defined(__AVX2__)
+    #define BL_TARGET_OPT_AVX2
+  #endif
+  #if defined(BL_TARGET_OPT_AVX2) || defined(__AVX__)
+    #define BL_TARGET_OPT_AVX
+  #endif
+  #if defined(BL_TARGET_OPT_AVX) || defined(__SSE4_2__)
+    #define BL_TARGET_OPT_SSE4_2
+  #endif
+  #if defined(BL_TARGET_OPT_SSE4_2) || defined(__SSE4_1__)
+    #define BL_TARGET_OPT_SSE4_1
+  #endif
+  #if defined(BL_TARGET_OPT_SSE4_1) || defined(__SSSE3__)
+    #define BL_TARGET_OPT_SSSE3
+  #endif
+  #if defined(BL_TARGET_OPT_SSSE3) || defined(__SSE3__)
+    #define BL_TARGET_OPT_SSE3
+  #endif
+  #if defined(BL_TARGET_OPT_SSE3) || (BL_TARGET_ARCH_X86 == 64 || defined(__SSE2__) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2))
+    #define BL_TARGET_OPT_SSE2
+  #endif
+  #if defined(BL_TARGET_OPT_SSE2) || (BL_TARGET_ARCH_X86 == 64 || defined(__SSE__) || (defined(_M_IX86_FP) && _M_IX86_FP >= 1))
+    #define BL_TARGET_OPT_SSE
+  #endif
 
-#if defined(BL_TARGET_OPT_SSE4_2) || defined(__POPCNT__)
-  #define BL_TARGET_OPT_POPCNT
+  #if !defined(BL_TARGET_OPT_BMI2) && defined(__BMI2__)
+    #define BL_TARGET_OPT_BMI2
+  #endif
+
+  #if !defined(BL_TARGET_OPT_POPCNT) && (defined(__POPCNT__) || defined(BL_TARGET_OPT_SSE4_2))
+    #define BL_TARGET_OPT_POPCNT
+  #endif
 #endif
 
 #if BL_TARGET_ARCH_ARM && (BL_TARGET_ARCH_ARM == 64 || defined(__ARM_NEON__))
-  #define BL_TARGET_OPT_ASIMD
+  #ifndef BL_TARGET_OPT_ASIMD
+    #define BL_TARGET_OPT_ASIMD
+  #endif // BL_TARGET_OPT_ASIMD
   #ifndef BL_BUILD_OPT_ASIMD
     #define BL_BUILD_OPT_ASIMD
-  #endif
+  #endif // BL_BUILD_OPT_ASIMD
 #endif
 
 //! \}

@@ -16,7 +16,7 @@ namespace bl {
 namespace Tests {
 
 UNIT(support_arenabitarray, BL_TEST_GROUP_SUPPORT_CONTAINERS) {
-  ArenaAllocator arena(8096 - ArenaAllocator::kBlockOverhead);
+  ArenaAllocator arena(8192);
 
   uint32_t i, count;
   uint32_t kMaxCount = 1000;

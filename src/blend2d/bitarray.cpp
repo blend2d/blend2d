@@ -363,7 +363,7 @@ BL_API_IMPL uint32_t blBitArrayGetSize(const BLBitArrayCore* self) noexcept {
   return uint32_t(getSize(self));
 }
 
-BL_API_IMPL uint32_t BL_CDECL blBitArrayGetWordCount(const BLBitArrayCore* self) noexcept {
+BL_API_IMPL uint32_t blBitArrayGetWordCount(const BLBitArrayCore* self) noexcept {
   using namespace bl::BitArrayInternal;
   BL_ASSERT(self->_d.isBitArray());
 

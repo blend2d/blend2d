@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../api-build_p.h"
-#ifdef BL_BUILD_OPT_AVX2
+#ifdef BL_TARGET_OPT_AVX2
 
 #include "../opentype/otglyfsimdimpl_p.h"
 

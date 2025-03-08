@@ -29,12 +29,21 @@ struct EdgePoint {
   }
 };
 
+static BL_INLINE size_t packCountAndSignBit(size_t count, uint32_t signBit) noexcept {
+  BL_ASSERT(count <= (~size_t(0) >> 1));
+  BL_ASSERT(signBit <= 0x1u);
+
+  return (count << 1u) | signBit;
+}
+
 template<typename CoordT>
 struct alignas(8) EdgeVector {
   EdgeVector<CoordT>* next;
-  size_t signBit : 1;
-  size_t count : IntOps::bitSizeOf<size_t>() - 1;
+  size_t countAndSign;
   EdgePoint<CoordT> pts[1];
+
+  BL_INLINE size_t count() const noexcept { return countAndSign >> 1u; }
+  BL_INLINE uint32_t signBit() const noexcept { return uint32_t(countAndSign & 0x1u); }
 
   static constexpr uint32_t minSizeOf() noexcept {
     return uint32_t(sizeof(EdgeVector<CoordT>) + sizeof(EdgePoint<CoordT>));

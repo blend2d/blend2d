@@ -16,7 +16,7 @@
 namespace bl {
 namespace Tests {
 
-UNIT(image_codec_find, BL_TEST_GROUP_IMAGE_CODECS) {
+UNIT(image_codec_find, BL_TEST_GROUP_IMAGE_CODEC_ROUNDTRIP) {
   INFO("Testing BLImageCodec::findByName() and BLImageCodec::findByData()");
   {
     static const uint8_t bmpSignature[2] = { 'B', 'M' };

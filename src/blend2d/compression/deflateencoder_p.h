@@ -18,6 +18,8 @@ namespace Deflate {
 
 struct EncoderImpl;
 
+static constexpr uint32_t kMaxCompressionLevel = 12;
+
 class Encoder {
 public:
   EncoderImpl* impl;
@@ -27,11 +29,12 @@ public:
 
   BL_INLINE bool isInitialized() const noexcept { return impl != nullptr; }
 
-  BLResult init(uint32_t format, uint32_t compressionLevel) noexcept;
+  BLResult init(FormatType format, uint32_t compressionLevel) noexcept;
   void reset() noexcept;
 
   size_t minimumOutputBufferSize(size_t inputSize) const noexcept;
-  size_t compress(void* output, size_t outputSize, const void* input, size_t inputSize) noexcept;
+  size_t compressTo(uint8_t* output, size_t outputSize, const uint8_t* input, size_t inputSize) noexcept;
+  BLResult compress(BLArray<uint8_t>& dst, BLModifyOp modifyOp, BLDataView input) noexcept;
 };
 
 } // {Deflate}

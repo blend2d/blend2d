@@ -48,9 +48,9 @@ UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
     EXPECT_EQ(imgData1.format, BL_FORMAT_PRGB32);
 
     // Direct memory manipulation.
-    for (uint32_t y = 0; y < kSize; y++) {
-      memset(static_cast<uint8_t*>(imgData0.pixelData) + y * imgData0.stride, int(y & 0xFF), kSize * 4);
-      memset(static_cast<uint8_t*>(imgData1.pixelData) + y * imgData1.stride, int(y & 0xFF), kSize * 4);
+    for (size_t y = 0; y < kSize; y++) {
+      memset(static_cast<uint8_t*>(imgData0.pixelData) + intptr_t(y) * imgData0.stride, int(y & 0xFF), kSize * 4);
+      memset(static_cast<uint8_t*>(imgData1.pixelData) + intptr_t(y) * imgData1.stride, int(y & 0xFF), kSize * 4);
     }
 
     EXPECT_TRUE(img0.equals(img1));
@@ -78,9 +78,9 @@ UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
     EXPECT_SUCCESS(img0.makeMutable(&imgData0));
     EXPECT_SUCCESS(img1.makeMutable(&imgData1));
 
-    for (uint32_t y = 0; y < kSize; y++) {
-      uint32_t* line0 = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(imgData0.pixelData) + y * imgData0.stride);
-      uint8_t* line1 = static_cast<uint8_t*>(imgData1.pixelData) + y * imgData1.stride;
+    for (size_t y = 0; y < kSize; y++) {
+      uint32_t* line0 = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(imgData0.pixelData) + intptr_t(y) * imgData0.stride);
+      uint8_t* line1 = static_cast<uint8_t*>(imgData1.pixelData) + intptr_t(y) * imgData1.stride;
 
       for (uint32_t x = 0; x < kSize; x++) {
         line0[x] = uint32_t((x + y) & 0xFF) << 24;
@@ -163,8 +163,8 @@ UNIT(image, BL_TEST_GROUP_IMAGE_CONTAINERS) {
     EXPECT_SUCCESS(img0.create(kSize, kSize, BL_FORMAT_PRGB32));
     EXPECT_SUCCESS(img0.makeMutable(&imgData0));
 
-    for (uint32_t y = 0; y < kSize; y++) {
-      uint32_t* line = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(imgData0.pixelData) + y * imgData0.stride);
+    for (size_t y = 0; y < kSize; y++) {
+      uint32_t* line = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(imgData0.pixelData) + intptr_t(y) * imgData0.stride);
       for (uint32_t x = 0; x < kSize; x++) {
         line[x] = uint32_t((x + y) & 0xFF) << 24;
       }

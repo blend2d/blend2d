@@ -133,7 +133,7 @@ struct FetchPatternVertAAExtendCtxAny {
       // Vertical Extend - Repeat or Reflect
       // -----------------------------------
 
-      _y = IntOps::pmod(uint32_t(_y), uint32_t(ry));
+      _y = intptr_t(IntOps::pmod(uint32_t(_y), uint32_t(ry)));
 
       // If reflecting, we need few additional checks to reflect vertically. We are either reflecting now
       // (the first check) or we would be reflecting after the initial repeat (the second condition).
@@ -192,15 +192,15 @@ struct FetchPatternHorzExtendCtxPad {
   intptr_t _mx;
 
   BL_INLINE void _initPattern(const FetchData::Pattern* pattern) noexcept {
-    _tx = intptr_t(pattern->simple.tx) * kBPP;
-    _mx = intptr_t(pattern->src.size.w - 1) * kBPP;
+    _tx = intptr_t(uintptr_t(pattern->simple.tx) * kBPP);
+    _mx = intptr_t(uintptr_t(pattern->src.size.w - 1) * kBPP);
   }
 
   BL_INLINE void rectInit(const FetchData::Pattern* pattern, uint32_t xPos, uint32_t rectWidth) noexcept {
     blUnused(rectWidth);
     _initPattern(pattern);
 
-    _tx += intptr_t(xPos) * kBPP;
+    _tx += intptr_t(uintptr_t(xPos) * kBPP);
   }
 
   BL_INLINE void rectStart(uint32_t xPos) noexcept {
@@ -213,12 +213,12 @@ struct FetchPatternHorzExtendCtxPad {
   }
 
   BL_INLINE void spanStart(uint32_t xPos) noexcept {
-    _x = intptr_t(xPos) * kBPP + _tx;
+    _x = intptr_t(uintptr_t(xPos) * kBPP) + _tx;
   }
 
   BL_INLINE void spanAdvance(uint32_t xPos, uint32_t xDiff) noexcept {
     blUnused(xPos);
-    _x += intptr_t(xDiff) * kBPP;
+    _x += intptr_t(uintptr_t(xDiff) * kBPP);
   }
 
   BL_INLINE void spanEnd(uint32_t xPos) noexcept {
@@ -320,7 +320,7 @@ struct FetchPatternHorzExtendCtxRoR {
   }
 
   BL_INLINE void spanStart(uint32_t xPos) noexcept {
-    _x = IntOps::pmod(uintptr_t(xPos) + uintptr_t(_tx), uintptr_t(_rx));
+    _x = intptr_t(IntOps::pmod(uintptr_t(xPos) + uintptr_t(_tx), uintptr_t(_rx)));
     if (_x >= intptr_t(_w))
       _x -= _rx;
   }
@@ -330,7 +330,7 @@ struct FetchPatternHorzExtendCtxRoR {
 
     _x += xDiff;
     if (_x >= intptr_t(_w)) {
-      _x = IntOps::pmod(uintptr_t(_x), _rx);
+      _x = intptr_t(IntOps::pmod(uintptr_t(_x), _rx));
       if (_x >= intptr_t(_w)) {
         _x -= _rx;
       }
@@ -342,13 +342,14 @@ struct FetchPatternHorzExtendCtxRoR {
   }
 
   BL_INLINE size_t index() const noexcept {
-    uintptr_t mask = IntOps::sar(_x, bl::IntOps::bitSizeOf<intptr_t>() - 1u);
-    return (uintptr_t(_x) ^ mask) * kBPP;
+    intptr_t mask = IntOps::sar(_x, bl::IntOps::bitSizeOf<intptr_t>() - 1u);
+    return size_t(_x ^ mask) * kBPP;
   }
 
   BL_INLINE void advance1() noexcept {
-    if (++_x >= intptr_t(_w))
+    if (++_x >= intptr_t(_w)) {
       _x -= _rx;
+    }
   }
 };
 
@@ -491,7 +492,7 @@ struct FetchPatternAlignedBlit : public FetchNonSolid {
     uint32_t tx = uint32_t(pattern->simple.tx);
     uint32_t ty = uint32_t(pattern->simple.ty);
 
-    pixelPtr += intptr_t(yPos - ty) * stride + intptr_t(xPos - tx) * kSrcBPP;
+    pixelPtr += intptr_t(yPos - ty) * stride + intptr_t(xPos - tx) * intptr_t(kSrcBPP);
     stride -= intptr_t(uintptr_t(rectWidth) * kSrcBPP);
   }
 
@@ -507,7 +508,9 @@ struct FetchPatternAlignedBlit : public FetchNonSolid {
 
     uint32_t tx = uint32_t(pattern->simple.tx);
     uint32_t ty = uint32_t(pattern->simple.ty);
-    pixelPtr += intptr_t(uintptr_t(yPos - ty)) * stride - uintptr_t(tx) * kSrcBPP;
+
+    pixelPtr += intptr_t(uintptr_t(yPos - ty)) * stride;
+    pixelPtr -= uintptr_t(tx) * kSrcBPP;
   }
 
   BL_INLINE void spanStartX(uint32_t xPos) noexcept {
@@ -907,7 +910,7 @@ struct FetchGradientBase<PixelType, BL_GRADIENT_QUALITY_DITHER> : public FetchNo
     blUnused(ctxData);
 
     _table = gradient->lut.data;
-    _dmOffsetY = ((uint32_t(ctxData->pixelOrigin.y) + yPos) & 15u) * (16u * 2u) + (ctxData->pixelOrigin.x & 15u);
+    _dmOffsetY = ((uint32_t(ctxData->pixelOrigin.y) + yPos) & 15u) * (16u * 2u) + (uint32_t(ctxData->pixelOrigin.x) & 15u);
   }
 
   BL_INLINE void _initGradientX(uint32_t xPos) noexcept {
@@ -1182,8 +1185,8 @@ struct FetchConicGradient : public FetchGradientBase<PixelType, kQuality> {
     _angleOffset = conic.offset;
     _xx = conic.xx;
 
-    _maxi = conic.maxi;
-    _rori = conic.rori;
+    _maxi = int32_t(conic.maxi);
+    _rori = int32_t(conic.rori);
   }
 
   BL_INLINE void rectInitFetch(ContextData* ctxData, const void* fetchData, uint32_t xPos, uint32_t yPos, uint32_t width) noexcept {

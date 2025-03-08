@@ -12,6 +12,7 @@
 #include "../raster/edgestorage_p.h"
 #include "../support/algorithm_p.h"
 #include "../support/arenaallocator_p.h"
+#include "../support/ptrops_p.h"
 #include "../support/math_p.h"
 #include "../support/traits_p.h"
 
@@ -1100,8 +1101,7 @@ LineTo:
 
     edge->pts[0].reset(x0, y0);
     edge->pts[1].reset(x1, y1);
-    edge->signBit = signBit;
-    edge->count = 2;
+    edge->countAndSign = packCountAndSignBit(2, signBit);
 
     _linkEdge(edge, y0);
     return BL_SUCCESS;
@@ -2480,10 +2480,10 @@ RightToLeft_AddLine:
   }
 
   BL_INLINE void ascendingClose(uint32_t signBit = 1) noexcept {
-    EdgeVector<CoordT>* edge = reinterpret_cast<EdgeVector<CoordT>*>(reinterpret_cast<uint8_t*>(_ptr) - kEdgeOffset);
-    edge->signBit = signBit;
-    edge->count = (size_t)(_zone->end<EdgePoint<CoordT>>() - _ptr);
+    BL_ASSUME(signBit <= 1u);
 
+    EdgeVector<CoordT>* edge = reinterpret_cast<EdgeVector<CoordT>*>(reinterpret_cast<uint8_t*>(_ptr) - kEdgeOffset);
+    edge->countAndSign = packCountAndSignBit((size_t)(_zone->end<EdgePoint<CoordT>>() - _ptr), signBit);
     _zone->setEnd(edge);
     _linkEdge(edge, _ptr[0].y);
   }
@@ -2521,9 +2521,7 @@ RightToLeft_AddLine:
 
   BL_INLINE void descendingClose(uint32_t signBit = 0) noexcept {
     EdgeVector<CoordT>* edge = _zone->ptr<EdgeVector<CoordT>>();
-    edge->signBit = signBit;
-    edge->count = (size_t)(_ptr - edge->pts);
-
+    edge->countAndSign = packCountAndSignBit((size_t)(_ptr - edge->pts), signBit);
     _zone->setPtr(_ptr);
     _linkEdge(edge, edge->pts[0].y);
   }
