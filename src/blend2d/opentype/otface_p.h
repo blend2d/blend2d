@@ -32,6 +32,11 @@ enum class OTFaceFlags : uint32_t {
   //! Glyph offsets in 'loca' table use 32-bit offsets [must be 0x4].
   kLocaOffset32        = 0x00000004u,
 
+  // Flags related to 'kern' table
+  // -----------------------------
+
+  kLegacyKernAvailable = 0x00000010u,
+
   // Flags related to 'GDEF' table
   // -----------------------------
 
@@ -56,8 +61,10 @@ enum class OTFaceFlags : uint32_t {
   kGPosScriptList      = 0x00100000u,
   kGPosFeatureList     = 0x00200000u,
   kGPosLookupList      = 0x00400000u,
-  kGPosFVar            = 0x00800000u
+  kGPosFVar            = 0x00800000u,
+  kGPosKernAvailable   = 0x01000000u
 };
+
 BL_DEFINE_ENUM_FLAGS(OTFaceFlags)
 
 //! OpenType & TrueType font face.

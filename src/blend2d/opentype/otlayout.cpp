@@ -3523,50 +3523,60 @@ done:
 // =============================================
 
 static BLResult initGSubGPos(OTFaceImpl* faceI, Table<GSubGPosTable> table, LookupKind lookupKind) noexcept {
-  if (BL_UNLIKELY(!table.fits()))
+  if (BL_UNLIKELY(!table.fits())) {
     return BL_SUCCESS;
+  }
 
   uint32_t version = table->v1_0()->version();
-  if (BL_UNLIKELY(version < 0x00010000u || version > 0x00010001u))
+  if (BL_UNLIKELY(version < 0x00010000u || version > 0x00010001u)) {
     return BL_SUCCESS;
+  }
 
   uint32_t headerSize = GPosTable::HeaderV1_0::kBaseSize;
-  if (version >= 0x00010001u)
+  if (version >= 0x00010001u) {
     headerSize = GPosTable::HeaderV1_1::kBaseSize;
+  }
 
-  if (BL_UNLIKELY(!table.fits(headerSize)))
+  if (BL_UNLIKELY(!table.fits(headerSize))) {
     return BL_SUCCESS;
+  }
 
   uint32_t lookupListOffset = table->v1_0()->lookupListOffset();
   uint32_t featureListOffset = table->v1_0()->featureListOffset();
   uint32_t scriptListOffset = table->v1_0()->scriptListOffset();
 
   // Some fonts have these set to a table size to indicate that there are no lookups, fix this...
-  if (lookupListOffset == table.size)
+  if (lookupListOffset == table.size) {
     lookupListOffset = 0;
+  }
 
-  if (featureListOffset == table.size)
+  if (featureListOffset == table.size) {
     featureListOffset = 0;
+  }
 
-  if (scriptListOffset == table.size)
+  if (scriptListOffset == table.size) {
     scriptListOffset = 0;
+  }
 
   OffsetRange offsetRange{headerSize, table.size - 2u};
 
   // First validate core offsets - if a core offset is wrong we won't use GSUB/GPOS at all.
   if (lookupListOffset) {
-    if (BL_UNLIKELY(!offsetRange.contains(lookupListOffset)))
+    if (BL_UNLIKELY(!offsetRange.contains(lookupListOffset))) {
       return BL_SUCCESS;
+    }
   }
 
   if (featureListOffset) {
-    if (BL_UNLIKELY(!offsetRange.contains(featureListOffset)))
+    if (BL_UNLIKELY(!offsetRange.contains(featureListOffset))) {
       return BL_SUCCESS;
+    }
   }
 
   if (scriptListOffset) {
-    if (BL_UNLIKELY(!offsetRange.contains(scriptListOffset)))
+    if (BL_UNLIKELY(!offsetRange.contains(scriptListOffset))) {
       return BL_SUCCESS;
+    }
   }
 
   LayoutData::GSubGPos& d = faceI->layout.kinds[size_t(lookupKind)];
@@ -3578,6 +3588,7 @@ static BLResult initGSubGPos(OTFaceImpl* faceI, Table<GSubGPosTable> table, Look
     if (count) {
       d.lookupListOffset = uint16_t(lookupListOffset);
       d.lookupCount = uint16_t(count);
+      faceI->otFlags |= (lookupKind == LookupKind::kGPOS) ? OTFaceFlags::kGPosLookupList : OTFaceFlags::kGSubLookupList;
     }
   }
 
@@ -3594,6 +3605,7 @@ static BLResult initGSubGPos(OTFaceImpl* faceI, Table<GSubGPosTable> table, Look
 
       d.featureCount = uint16_t(count);
       d.featureListOffset = uint16_t(featureListOffset);
+      faceI->otFlags |= (lookupKind == LookupKind::kGPOS) ? OTFaceFlags::kGPosFeatureList : OTFaceFlags::kGSubFeatureList;
     }
   }
 
@@ -3609,6 +3621,7 @@ static BLResult initGSubGPos(OTFaceImpl* faceI, Table<GSubGPosTable> table, Look
       }
 
       d.scriptListOffset = uint16_t(scriptListOffset);
+      faceI->otFlags |= (lookupKind == LookupKind::kGPOS) ? OTFaceFlags::kGPosScriptList : OTFaceFlags::kGSubScriptList;
     }
   }
 
@@ -3637,8 +3650,9 @@ static Table<GSubGPosTable::ScriptTable> findScriptInScriptList(Table<Array16<Ta
       BLTag recordTag = scriptListArray[i].tag();
       if (recordTag == scriptTag || recordTag == defaultScriptTag) {
         tableOut = scriptListOffsets.subTableUnchecked(scriptListArray[i].offset());
-        if (recordTag == scriptTag)
+        if (recordTag == scriptTag) {
           break;
+        }
       }
     }
   }
@@ -3677,16 +3691,18 @@ static BL_INLINE void populateGSubGPosLookupBits(
           if (BL_LIKELY(featureTable.size >= GSubGPosTable::FeatureTable::kBaseSize + lookupIndexCount * 2u)) {
             for (uint32_t j = 0; j < lookupIndexCount; j++) {
               uint32_t lookupIndex = featureTable->lookupListIndexes.array()[j].value();
-              if (BL_LIKELY(lookupIndex < lookupCount))
+              if (BL_LIKELY(lookupIndex < lookupCount)) {
                 BitArrayOps::bitArraySetBit(planBits, lookupIndex);
+              }
             }
           }
         }
       }
     }
 
-    if (++i >= featureIndexCount)
+    if (++i >= featureIndexCount) {
       break;
+    }
 
     featureIndex = langSysTable->featureIndexes.array()[i].value();
   }
@@ -3699,18 +3715,21 @@ static BLResult calculateGSubGPosPlan(const OTFaceImpl* faceI, const BLFontFeatu
   const LayoutData::GSubGPos& d = faceI->layout.kinds[size_t(lookupKind)];
   Table<GSubGPosTable> table = faceI->layout.tables[size_t(lookupKind)];
 
-  if (!table)
+  if (!table) {
     return BL_SUCCESS;
+  }
 
   Table<Array16<TagRef16>> scriptListOffsets(table.subTableUnchecked(d.scriptListOffset));
   Table<Array16<TagRef16>> featureListOffsets(table.subTableUnchecked(d.featureListOffset));
   Table<GSubGPosTable::ScriptTable> scriptTable(findScriptInScriptList(scriptListOffsets, scriptTag, dfltScriptTag));
 
-  if (scriptTable.empty())
+  if (scriptTable.empty()) {
     return BL_SUCCESS;
+  }
 
-  if (BL_UNLIKELY(!blFontTableFitsT<GSubGPosTable::ScriptTable>(scriptTable)))
+  if (BL_UNLIKELY(!blFontTableFitsT<GSubGPosTable::ScriptTable>(scriptTable))) {
     return BL_SUCCESS;
+  }
 
   uint32_t langSysOffset = scriptTable->langSysDefault();
 
@@ -3726,22 +3745,26 @@ static BLResult calculateGSubGPosPlan(const OTFaceImpl* faceI, const BLFontFeatu
   }
   */
 
-  if (langSysOffset == 0)
+  if (langSysOffset == 0) {
     return BL_SUCCESS;
+  }
 
   Table<GSubGPosTable::LangSysTable> langSysTable(scriptTable.subTableUnchecked(langSysOffset));
-  if (BL_UNLIKELY(!blFontTableFitsT<GSubGPosTable::LangSysTable>(langSysTable)))
+  if (BL_UNLIKELY(!blFontTableFitsT<GSubGPosTable::LangSysTable>(langSysTable))) {
     return BL_SUCCESS;
+  }
 
   uint32_t featureIndexCount = langSysTable->featureIndexes.count();
   uint32_t requiredLangSysTableSize = (GSubGPosTable::LangSysTable::kBaseSize) + featureIndexCount * 2u;
 
-  if (langSysTable.size < requiredLangSysTableSize)
+  if (langSysTable.size < requiredLangSysTableSize) {
     return BL_SUCCESS;
+  }
 
   uint32_t featureCount = featureListOffsets->count();
-  if (featureListOffsets.size < 2u + featureCount * 2u)
+  if (featureListOffsets.size < 2u + featureCount * 2u) {
     return BL_SUCCESS;
+  }
 
   uint32_t lookupCount = faceI->layout.byKind(lookupKind).lookupCount;
 
@@ -3768,16 +3791,28 @@ BLResult calculateGPosPlan(const OTFaceImpl* faceI, const BLFontFeatureSettings&
 // ===============================
 
 BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
-  if (tables.gdef)
+  if (tables.gdef) {
     BL_PROPAGATE(initGDef(faceI, tables.gdef));
+  }
 
-  if (tables.gsub)
+  if (tables.gsub) {
     BL_PROPAGATE(initGSubGPos(faceI, tables.gsub, LookupKind::kGSUB));
+  }
 
-  if (tables.gpos)
+  if (tables.gpos) {
     BL_PROPAGATE(initGSubGPos(faceI, tables.gpos, LookupKind::kGPOS));
+  }
 
   BL_PROPAGATE(faceI->layout.allocateLookupStatusBits());
+
+  // Some fonts have both 'GPOS' and 'kern' tables, but 'kern' feature is not provided by GPOS. The practice
+  // is to use both GPOS and kern tables in this case, basically breaking the rule of not using legacy tables
+  // when GSUB/GPOS are provided. We use `OTFaceFlags::kGPosKernAvailable` flag to decide which table to use.
+  if (blTestFlag(faceI->otFlags, OTFaceFlags::kGPosLookupList)) {
+    if (faceI->featureTagSet.hasKnownTag(FontTagData::FeatureId::kKERN)) {
+      faceI->otFlags |= OTFaceFlags::kGPosKernAvailable;
+    }
+  }
 
   return BL_SUCCESS;
 }

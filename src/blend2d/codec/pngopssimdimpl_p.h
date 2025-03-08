@@ -1073,7 +1073,7 @@ BLResult BL_CDECL inverseFilterSimdImpl(uint8_t* p, uint32_t bpp, uint32_t bpl, 
         break;
       }
 
-      // This filter is artificial and only possible for the very first row, there is no need to have it optimized.
+      // This filter is artificial and only possible for the very first row, so there is no need to have it optimized.
       case kFilterTypeAvg0: {
         for (uint32_t i = bpl - BPP; i != 0; i--, p++)
           p[BPP] = applySumFilter(p[BPP], p[0] >> 1);

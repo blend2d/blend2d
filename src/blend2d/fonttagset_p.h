@@ -104,6 +104,10 @@ public:
     return _hasTag(tag, scriptTagToId(tag));
   }
 
+  BL_INLINE bool hasKnownTag(ScriptId id) const noexcept {
+    return knownTags.bitAt(uint32_t(id));
+  }
+
   BL_INLINE BLResult addTag(BLTag tag) noexcept {
     return _addTag(tag, scriptTagToId(tag));
   }
@@ -117,6 +121,10 @@ class LanguageTagSet : public TagSet<kLanguageIdCount> {
 public:
   BL_INLINE bool hasTag(BLTag tag) const noexcept {
     return _hasTag(tag, languageTagToId(tag));
+  }
+
+  BL_INLINE bool hasKnownTag(LanguageId id) const noexcept {
+    return knownTags.bitAt(uint32_t(id));
   }
 
   BL_INLINE BLResult addTag(BLTag tag) noexcept {
@@ -134,6 +142,10 @@ public:
     return _hasTag(tag, featureTagToId(tag));
   }
 
+  BL_INLINE bool hasKnownTag(FeatureId id) const noexcept {
+    return knownTags.bitAt(uint32_t(id));
+  }
+
   BL_INLINE BLResult addTag(BLTag tag) noexcept {
     return _addTag(tag, featureTagToId(tag));
   }
@@ -149,6 +161,10 @@ public:
     return _hasTag(tag, baselineTagToId(tag));
   }
 
+  BL_INLINE bool hasKnownTag(BaselineId id) const noexcept {
+    return knownTags.bitAt(uint32_t(id));
+  }
+
   BL_INLINE BLResult addTag(BLTag tag) noexcept {
     return _addTag(tag, baselineTagToId(tag));
   }
@@ -162,6 +178,10 @@ class VariationTagSet : public TagSet<kVariationIdCount> {
 public:
   BL_INLINE bool hasTag(BLTag tag) const noexcept {
     return _hasTag(tag, variationTagToId(tag));
+  }
+
+  BL_INLINE bool hasKnownTag(VariationId id) const noexcept {
+    return knownTags.bitAt(uint32_t(id));
   }
 
   BL_INLINE BLResult addTag(BLTag tag) noexcept {

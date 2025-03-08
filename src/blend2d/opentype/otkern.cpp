@@ -704,6 +704,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
     faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_HORIZONTAL_KERNING;
     faceI->featureTagSet._addKnownTagId(uint32_t(FontTagData::FeatureId::kKERN));
     faceI->funcs.applyKern = applyKern;
+    faceI->otFlags |= OTFaceFlags::kLegacyKernAvailable;
   }
 
   return BL_SUCCESS;

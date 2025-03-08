@@ -475,15 +475,22 @@ BL_API_IMPL BLResult blFontPositionGlyphs(const BLFontCore* self, BLGlyphBufferC
     gbI->flags |= BL_GLYPH_BUFFER_GLYPH_ADVANCES;
   }
 
-  bl::OpenType::OTFaceImpl* otFaceI = bl::FontFaceInternal::getImpl<bl::OpenType::OTFaceImpl>(&self->dcast().face());
-  if (otFaceI->layout.gpos().lookupCount) {
+  using OTFaceImpl = bl::OpenType::OTFaceImpl;
+  using OTFaceFlags = bl::OpenType::OTFaceFlags;
+
+  OTFaceImpl* otFaceI = bl::FontFaceInternal::getImpl<OTFaceImpl>(&self->dcast().face());
+
+  if (blTestFlag(otFaceI->otFlags, OTFaceFlags::kGPosLookupList)) {
     BLBitArray plan;
     BL_PROPAGATE(bl::OpenType::LayoutImpl::calculateGPosPlan(otFaceI, self->dcast().featureSettings(), &plan));
-    return blFontApplyGPos(self, gb, &plan);
+    BL_PROPAGATE(blFontApplyGPos(self, gb, &plan));
   }
-  else if (!otFaceI->kern.table.empty()) {
-    if (selfI->featureSettings.dcast().getValue(BL_MAKE_TAG('k', 'e', 'r', 'n')) != 0u)
-      return faceI->funcs.applyKern(faceI, gbI->content, gbI->placementData, gbI->size);
+
+  constexpr OTFaceFlags kKernFlags = OTFaceFlags::kGPosKernAvailable | OTFaceFlags::kLegacyKernAvailable;
+  if ((otFaceI->otFlags & kKernFlags) == OTFaceFlags::kLegacyKernAvailable) {
+    if (selfI->featureSettings.dcast().getValue(BL_MAKE_TAG('k', 'e', 'r', 'n')) != 0u) {
+      BL_PROPAGATE(faceI->funcs.applyKern(faceI, gbI->content, gbI->placementData, gbI->size));
+    }
   }
 
   return BL_SUCCESS;

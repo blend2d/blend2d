@@ -65,9 +65,10 @@ static BLResult initOpenTypeFace(OTFaceImpl* faceI, const BLFontData* fontData) 
   BL_PROPAGATE(MetricsImpl::init(faceI, tables));
   BL_PROPAGATE(LayoutImpl::init(faceI, tables));
 
-  // Only setup legacy kerning if we don't have GlyphPositioning 'GPOS' table.
-  if (!blTestFlag(faceI->otFlags, OTFaceFlags::kGPosLookupList))
+  // Only setup legacy kerning if 'kern' feature is not provided by 'GPOS' table.
+  if (!blTestFlag(faceI->otFlags, OTFaceFlags::kGPosKernAvailable)) {
     BL_PROPAGATE(KernImpl::init(faceI, tables));
+  }
 
   BL_PROPAGATE(faceI->scriptTagSet.finalize());
   BL_PROPAGATE(faceI->featureTagSet.finalize());
