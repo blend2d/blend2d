@@ -3,10 +3,6 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-// The DEFLATE algorithm is based on stb_image <https://github.com/nothings/stb>
-// released into PUBLIC DOMAIN. It was initially part of Blend2D's PNG decoder,
-// but later split as it could be useful outside of PNG implementation as well.
-
 #include "../runtime_p.h"
 #include "../compression/deflatedecoder_p.h"
 #include "../compression/deflatedecoderfast_p.h"
@@ -36,7 +32,6 @@ DecoderFastResult decodeImpl(
 
   const DecodeTables& tables = ctx->tables;
 
-  // DecoderTableMask litlenTableMask(kDecoderLitLenTableBits);
   DecoderTableMask litlenTableMask(ctx->_litlenFastTableBits);
   DecoderTableMask offsetTableMask(ctx->_offsetTableInfo.tableBits);
 
@@ -70,10 +65,6 @@ DecoderFastResult decodeImpl(
       BL_ASSERT(PtrOps::bytesUntil(dstPtr, dstEnd) >= kDstBytesPerIter + kMaxMatchLen);
       BL_ASSERT(PtrOps::bytesUntil(srcPtr, srcEnd) >= kSrcBytesPerIter);
 
-      // DecoderBits prevBits = bits;
-      // bits.consumed(entry);
-
-      // size_t entryIndex = bits.extract(litlenTableMask);
       BLBitWord refillData = MemOps::loadu_le<BLBitWord>(srcPtr);
 
       srcPtr += bits.refillBitWord(refillData);
