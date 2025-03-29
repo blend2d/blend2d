@@ -34,7 +34,7 @@ BL_DEFINE_ENUM(BLFontFaceFlags) {
   //! Character to glyph mapping is available.
   BL_FONT_FACE_FLAG_CHAR_TO_GLYPH_MAPPING = 0x00000004u,
   //! Horizontal glyph metrics (advances, side bearings) is available.
-  BL_FONT_FACE_FLAG_HORIZONTAL_METIRCS = 0x00000010u,
+  BL_FONT_FACE_FLAG_HORIZONTAL_METRICS = 0x00000010u,
   //! Vertical glyph metrics (advances, side bearings) is available.
   BL_FONT_FACE_FLAG_VERTICAL_METRICS = 0x00000020u,
   //! Legacy horizontal kerning feature ('kern' table with horizontal kerning data).
@@ -367,7 +367,7 @@ public:
   //! Tests whether the font face provides character to glyph mapping.
   BL_INLINE_NODEBUG bool hasCharToGlyphMapping() const noexcept { return hasFaceFlag(BL_FONT_FACE_FLAG_CHAR_TO_GLYPH_MAPPING); }
   //! Tests whether the font face has horizontal glyph metrics (advances, side bearings).
-  BL_INLINE_NODEBUG bool hasHorizontalMetrics() const noexcept { return hasFaceFlag(BL_FONT_FACE_FLAG_HORIZONTAL_METIRCS); }
+  BL_INLINE_NODEBUG bool hasHorizontalMetrics() const noexcept { return hasFaceFlag(BL_FONT_FACE_FLAG_HORIZONTAL_METRICS); }
   //! Tests whether the font face has vertical glyph metrics (advances, side bearings).
   BL_INLINE_NODEBUG bool hasVerticalMetrics() const noexcept { return hasFaceFlag(BL_FONT_FACE_FLAG_VERTICAL_METRICS); }
   //! Tests whether the font face has a legacy horizontal kerning feature ('kern' table with horizontal kerning data).

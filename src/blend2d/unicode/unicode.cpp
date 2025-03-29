@@ -14,9 +14,8 @@ namespace Unicode {
 // bl::Unicode - Data
 // ==================
 
-// NOTE: Theoretically UTF-8 sequence can be extended to support sequences up
-// to 6 bytes, however, since UCS-4 code-point's maximum value is 0x10FFFF it
-// also limits the maximum length of a UTF-8 sequence to 4 bytes.
+// NOTE: Theoretically UTF-8 sequence can be extended to support sequences up to 6 bytes, however, since UCS-4
+// code-point's maximum value is 0x10FFFF it also limits the maximum length of a UTF-8 encoded character to 4 bytes.
 const uint8_t utf8SizeData[256] = {
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0   - 15
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 16  - 31
@@ -39,7 +38,7 @@ const uint8_t utf8SizeData[256] = {
 // bl::Unicode - Validation
 // ========================
 
-// Not really anything to validate, we just want to calculate a corresponding UTf-8 size.
+// Not really anything to validate, we just want to calculate a corresponding UTF-8 size.
 static BL_INLINE BLResult validateLatin1String(const char* data, size_t size, ValidationState& state) noexcept {
   size_t extra = 0;
   state.utf16Index = size;
