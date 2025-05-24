@@ -117,25 +117,25 @@ struct VarOps<T, kTypeCategoryBool> {
 template<typename T>
 struct VarOps<T, kTypeCategoryInt> {
   static BL_INLINE void init(BLVarCore* self, const T& value) noexcept {
-    if BL_CONSTEXPR (std::is_signed<T>::value)
+    if constexpr (std::is_signed_v<T>)
       self->_d.initInt64(int64_t(value));
     else
       self->_d.initUInt64(uint64_t(value));
   }
 
   static BL_INLINE BLResult assign(BLVarCore* self, const T& value) noexcept {
-    if BL_CONSTEXPR (sizeof(T) <= 4 && std::is_signed<T>::value)
+    if constexpr (sizeof(T) <= 4 && std::is_signed_v<T>)
       return blVarAssignInt32(self, int32_t(value));
-    else if BL_CONSTEXPR (sizeof(T) <= 4)
+    else if constexpr (sizeof(T) <= 4)
       return blVarAssignUInt32(self, uint32_t(value));
-    else if BL_CONSTEXPR (std::is_signed<T>::value)
+    else if constexpr (std::is_signed_v<T>)
       return blVarAssignInt64(self, int64_t(value));
     else
       return blVarAssignUInt64(self, uint64_t(value));
   }
 
   static BL_INLINE bool equals(const BLVarCore* self, const T& value) noexcept {
-    if BL_CONSTEXPR (std::is_signed<T>::value)
+    if constexpr (std::is_signed_v<T>)
       return blVarEqualsInt64(self, int64_t(value));
     else
       return blVarEqualsUInt64(self, uint64_t(value));
@@ -232,9 +232,7 @@ public:
   //! \name Internals
   //! \{
 
-  enum : uint32_t {
-    kNullSignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_NULL)
-  };
+  static inline constexpr uint32_t kNullSignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_NULL);
 
   //! \}
   //! \endcond
@@ -255,13 +253,14 @@ public:
 
   template<typename T>
   BL_INLINE_NODEBUG explicit BLVar(T&& value) noexcept {
-    typedef typename std::decay<T>::type DecayT;
+    using DecayT = std::decay_t<T>;
     BLInternal::VarOps<DecayT, BLInternal::TypeTraits<DecayT>::kCategory>::init(this, BLInternal::forward<T>(value));
   }
 
   BL_INLINE_NODEBUG ~BLVar() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
       blVarDestroy(this);
+    }
   }
 
   //! \}
@@ -299,107 +298,107 @@ public:
   //! \{
 
   //! Returns the type of the underlying object.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLObjectType type() const noexcept { return _d.getType(); }
 
   //! Tests whether this `BLVar` instance represents a `BLArray<T>` storing any supported type.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isArray() const noexcept { return _d.isArray(); }
 
   //! Tests whether this `BLVar` instance represents `BLBitArray`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isBitArray() const noexcept { return _d.isBitArray(); }
 
   //! Tests whether this `BLVar` instance represents `BLBitSet`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isBitSet() const noexcept { return _d.isBitSet(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `bool` value.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isBool() const noexcept { return _d.isBool(); }
 
   //! Tests whether this `BLVar` instance represents `BLContext`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isContext() const noexcept { return _d.isContext(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `double` value.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isDouble() const noexcept { return _d.isDouble(); }
 
   //! Tests whether this `BLVar` instance represents `BLFont`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isFont() const noexcept { return _d.isFont(); }
 
   //! Tests whether this `BLVar` instance represents `BLFontData`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isFontData() const noexcept { return _d.isFontData(); }
 
   //! Tests whether this `BLVar` instance represents `BLFontFace`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isFontFace() const noexcept { return _d.isFontFace(); }
 
   //! Tests whether this `BLVar` instance represents `BLFontManager`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isFontManager() const noexcept { return _d.isFontManager(); }
 
   //! Tests whether this `BLVar` instance represents `BLGradient`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isGradient() const noexcept { return _d.isGradient(); }
 
   //! Tests whether this `BLVar` instance represents `BLImage`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isImage() const noexcept { return _d.isImage(); }
 
   //! Tests whether this `BLVar` instance represents `BLImageCodec`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isImageCodec() const noexcept { return _d.isImageCodec(); }
 
   //! Tests whether this `BLVar` instance represents `BLImageDecoder`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isImageDecoder() const noexcept { return _d.isImageDecoder(); }
 
   //! Tests whether this `BLVar` instance represents `BLImageEncoder`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isImageEncoder() const noexcept { return _d.isImageEncoder(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `int64_t` value.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isInt64() const noexcept { return _d.isInt64(); }
 
   //! Tests whether this `BLVar` instance represents a null value.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isNull() const noexcept { return _d.isNull(); }
 
   //! Tests whether this `BLVar` instance represents `BLPath`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isPath() const noexcept { return _d.isPath(); }
 
   //! Tests whether this `BLVar` instance represents `BLPattern.`
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isPattern() const noexcept { return _d.isPattern(); }
 
   //! Tests whether this `BLVar` instance represents `BLString`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isString() const noexcept { return _d.isString(); }
 
   //! Tests whether this `BLVar` instance represents boxed `BLRgba`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isRgba() const noexcept { return _d.isRgba(); }
 
   //! Tests whether this `BLVar` instance represents boxed `BLRgba32`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isRgba32() const noexcept { return _d.isRgba32(); }
 
   //! Tests whether this `BLVar` instance represents boxed `BLRgba64`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isRgba64() const noexcept { return _d.isRgba64(); }
 
   //! Tests whether this `BLVar` instance represents a boxed `uint64_t` value.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isUInt64() const noexcept { return _d.isUInt64(); }
 
   //! Tests whether this `BLVar` instance is a style that can be used with the rendering context.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isStyle() const noexcept { return _d.isStyle(); }
 
   //! Converts this value to `bool` and stores the result in `out`.
@@ -448,7 +447,7 @@ public:
 
   template<typename T>
   BL_INLINE_NODEBUG BLResult assign(T&& value) noexcept {
-    typedef typename std::decay<T>::type DecayT;
+    using DecayT = std::decay_t<T>;
     return BLInternal::VarOps<DecayT, BLInternal::TypeTraits<DecayT>::kCategory>::assign(this, BLInternal::forward<T>(value));
   }
 
@@ -458,13 +457,13 @@ public:
   //! \{
 
   template<typename T>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const T& value) const noexcept {
-    typedef typename std::decay<T>::type DecayT;
+    using DecayT = std::decay_t<T>;
     return BLInternal::VarOps<DecayT, BLInternal::TypeTraits<DecayT>::kCategory>::equals(this, value);
   }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool strictEquals(const BLVarCore& other) const noexcept { return blVarStrictEquals(this, &other); }
 
   //! \}

@@ -18,8 +18,7 @@
 #include "../support/memops_p.h"
 #include "../support/scopedbuffer_p.h"
 
-namespace bl {
-namespace Jpeg {
+namespace bl::Jpeg {
 
 // bl::Jpeg::Codec - Globals
 // =========================
@@ -1176,7 +1175,7 @@ struct DecoderUpsample {
   // Which pre-expansion row we're on.
   uint32_t ypos;
   // Selected upsample function.
-  uint8_t* (BL_CDECL* upsample)(uint8_t* out, uint8_t* in0, uint8_t* in1, uint32_t w, uint32_t hs) BL_NOEXCEPT;
+  uint8_t* (BL_CDECL* upsample)(uint8_t* out, uint8_t* in0, uint8_t* in1, uint32_t w, uint32_t hs) noexcept;
 };
 
 static BLResult decoderConvertToRGB(BLJpegDecoderImpl* decoderI, BLImageData& dst) noexcept {
@@ -1575,5 +1574,4 @@ void jpegCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexce
   codecs->append(jpegCodecInstance.dcast());
 }
 
-} // {Jpeg}
-} // {bl}
+} // {bl::Jpeg}

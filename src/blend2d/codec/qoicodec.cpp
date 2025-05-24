@@ -19,8 +19,7 @@
   #define BL_QOI_USE_64_BIT_ARITHMETIC
 #endif
 
-namespace bl {
-namespace Qoi {
+namespace bl::Qoi {
 
 // bl::Qoi::Codec - Globals
 // ========================
@@ -125,7 +124,7 @@ struct UnpackedPixel {
   template<bool kHasAlpha>
   BL_INLINE uint32_t pack() const noexcept {
     uint32_t rgba32 = uint32_t(ag_rb >> 24) | uint32_t(ag_rb & 0xFFFFFFFFu);
-    if BL_CONSTEXPR (kHasAlpha)
+    if constexpr (kHasAlpha)
       return PixelOps::Scalar::cvt_prgb32_8888_from_argb32_8888(rgba32);
     else
       return rgba32 | 0xFF000000u;
@@ -989,5 +988,4 @@ void qoiCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcep
   codecs->append(qoiCodecInstance.dcast());
 }
 
-} // {Qoi}
-} // {bl}
+} // {bl::Qoi}

@@ -14,8 +14,7 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 
 //! OpenType 'CFF' or 'CFF2' table (Compact Font Format).
 //!
@@ -275,8 +274,7 @@ public:
 BL_HIDDEN BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noexcept;
 
 } // {CFFImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \}
 //! \endcond

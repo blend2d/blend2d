@@ -8,10 +8,7 @@
 
 #include "../compression/deflatedecoderfastimpl_p.h"
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
-namespace Fast {
+namespace bl::Compression::Deflate::Fast {
 
 DecoderFastResult decode(
   Decoder* ctx,
@@ -24,9 +21,6 @@ DecoderFastResult decode(
   return decodeImpl(ctx, dstStart, dstPtr, dstEnd, srcPtr, srcEnd);
 }
 
-} // {Fast}
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate::Fast}
 
 #endif // BL_TARGET_ARCH_BITS >= 64

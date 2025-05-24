@@ -21,8 +21,7 @@
 //! \addtogroup blend2d_codec_impl
 //! \{
 
-namespace bl {
-namespace Png {
+namespace bl::Png {
 
 static constexpr uint32_t kColorType0_LUM          = 0u; //!< Each pixel is a grayscale sample (1/2/4/8/16-bits per sample).
 static constexpr uint32_t kColorType2_RGB          = 2u; //!< Each pixel is an RGB triple (8/16-bits per sample).
@@ -89,8 +88,7 @@ struct FCTL {
   uint8_t padding[6];
 };
 
-} // {Png}
-} // {bl}
+} // {bl::Png}
 
 struct BLPngDecoderImpl : public BLImageDecoderImpl {
   //! \name Members

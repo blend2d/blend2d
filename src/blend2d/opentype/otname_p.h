@@ -13,8 +13,7 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 
 //! OpenType 'name' table.
 //!
@@ -67,8 +66,7 @@ namespace NameImpl {
 BL_HIDDEN BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 } // {NameImpl}
 
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \}
 //! \endcond

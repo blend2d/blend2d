@@ -22,8 +22,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 namespace CommandProcSync {
 
 static BL_INLINE BLResult fillBoxA(WorkData& workData, const Pipeline::DispatchData& dispatchData, uint32_t alpha, const BLBoxI& boxA, const void* fetchData) noexcept {
@@ -255,8 +254,7 @@ SaveState:
 }
 
 } // {CommandProcSync}
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

@@ -237,7 +237,7 @@ struct BLPathView {
 //! \{
 
 //! Optional callback that can be used to consume a path data.
-typedef BLResult (BL_CDECL* BLPathSinkFunc)(BLPathCore* path, const void* info, void* userData) BL_NOEXCEPT;
+typedef BLResult (BL_CDECL* BLPathSinkFunc)(BLPathCore* path, const void* info, void* userData) BL_NOEXCEPT_C;
 
 //! This is a sink that is used by path offsetting. This sink consumes both `a` and `b` offsets of the path. The sink
 //! will be called for each figure and is responsible for joining these paths. If the paths are not closed then the
@@ -245,7 +245,7 @@ typedef BLResult (BL_CDECL* BLPathSinkFunc)(BLPathCore* path, const void* info, 
 //!
 //! The sink must also clean up the paths as this is not done by the offsetter. The reason is that in case the `a` path
 //! is the output path you can just keep it and insert `b` path into it (clearing only `b` path after each call).
-typedef BLResult (BL_CDECL* BLPathStrokeSinkFunc)(BLPathCore* a, BLPathCore* b, BLPathCore* c, size_t inputStart, size_t inputEnd, void* userData) BL_NOEXCEPT;
+typedef BLResult (BL_CDECL* BLPathStrokeSinkFunc)(BLPathCore* a, BLPathCore* b, BLPathCore* c, size_t inputStart, size_t inputEnd, void* userData) BL_NOEXCEPT_C;
 
 //! \}
 
@@ -505,16 +505,42 @@ static BL_INLINE void storePathSegmentsVtx(BLPoint* vtx, const T& segment, Args&
 class BLPath /* final */ : public BLPathCore {
 public:
   //! \cond INTERNAL
+
+  //! Object info values of a default constructed BLPath.
+  static inline constexpr uint32_t kDefaultSignature =
+    BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_PATH) | BL_OBJECT_INFO_D_FLAG;
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLPathImpl* _impl() const noexcept { return static_cast<BLPathImpl*>(_d.impl); }
+
   //! \endcond
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE_NODEBUG BLPath() noexcept { blPathInit(this); }
-  BL_INLINE_NODEBUG BLPath(BLPath&& other) noexcept { blPathInitMove(this, &other); }
-  BL_INLINE_NODEBUG BLPath(const BLPath& other) noexcept { blPathInitWeak(this, &other); }
-  BL_INLINE_NODEBUG ~BLPath() noexcept { blPathDestroy(this); }
+  BL_INLINE_NODEBUG BLPath() noexcept {
+    blPathInit(this);
+
+    // Assume a default constructed BLPath.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+  }
+
+  BL_INLINE_NODEBUG BLPath(BLPath&& other) noexcept {
+    blPathInitMove(this, &other);
+
+    // Assume a default initialized `other`.
+    BL_ASSUME(other._d.info.bits == kDefaultSignature);
+  }
+
+  BL_INLINE_NODEBUG BLPath(const BLPath& other) noexcept {
+    blPathInitWeak(this, &other);
+  }
+
+  BL_INLINE_NODEBUG ~BLPath() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
+      blPathDestroy(this);
+    }
+  }
 
   //! \}
 
@@ -526,15 +552,28 @@ public:
   BL_INLINE_NODEBUG BLPath& operator=(BLPath&& other) noexcept { blPathAssignMove(this, &other); return *this; }
   BL_INLINE_NODEBUG BLPath& operator=(const BLPath& other) noexcept { blPathAssignWeak(this, &other); return *this; }
 
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLPath& other) const noexcept { return  equals(other); }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLPath& other) const noexcept { return !equals(other); }
+  [[nodiscard]]
+  BL_INLINE_NODEBUG bool operator==(const BLPath& other) const noexcept { return  equals(other); }
+
+  [[nodiscard]]
+  BL_INLINE_NODEBUG bool operator!=(const BLPath& other) const noexcept { return !equals(other); }
 
   //! \}
 
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE_NODEBUG BLResult reset() noexcept { return blPathReset(this); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept {
+    BLResult result = blPathReset(this);
+
+    // Reset operation always succeeds.
+    BL_ASSUME(result == BL_SUCCESS);
+    // Assume a default constructed BLPath after reset.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+
+    return result;
+  }
+
   BL_INLINE_NODEBUG void swap(BLPathCore& other) noexcept { _d.swap(other._d); }
 
   //! \}
@@ -543,35 +582,35 @@ public:
   //! \{
 
   //! Tests whether the path is empty, which means its size equals to zero.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool empty() const noexcept { return size() == 0; }
 
   //! Returns path size (count of vertices used).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t size() const noexcept { return _impl()->size; }
 
   //! Returns path capacity (count of allocated vertices).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t capacity() const noexcept { return _impl()->capacity; }
 
   //! Returns path's vertex data (read-only).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLPoint* vertexData() const noexcept { return _impl()->vertexData; }
 
   //! Returns the end of path's vertex data (read-only).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLPoint* vertexDataEnd() const noexcept { return _impl()->vertexData + _impl()->size; }
 
   //! Returns path's command data (read-only).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const uint8_t* commandData() const noexcept { return _impl()->commandData; }
 
   //! Returns the end of path's command data (read-only).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const uint8_t* commandDataEnd() const noexcept { return _impl()->commandData + _impl()->size; }
 
   //! Returns a read-only path data as `BLPathView`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLPathView view() const noexcept { return _impl()->view; }
 
   //! \}
@@ -823,27 +862,27 @@ public:
   //! \{
 
   struct MoveTo {
-    double x, y;
+    static inline constexpr uint32_t kVertexCount = 1;
 
-    static constexpr uint32_t kVertexCount = 1;
+    double x, y;
   };
 
   struct LineTo {
-    double x, y;
+    static inline constexpr uint32_t kVertexCount = 1;
 
-    static constexpr uint32_t kVertexCount = 1;
+    double x, y;
   };
 
   struct QuadTo {
-    double x0, y0, x1, y1;
+    static inline constexpr uint32_t kVertexCount = 2;
 
-    static constexpr uint32_t kVertexCount = 2;
+    double x0, y0, x1, y1;
   };
 
   struct CubicTo {
-    double x0, y0, x1, y1, x2, y2;
+    static inline constexpr uint32_t kVertexCount = 3;
 
-    static constexpr uint32_t kVertexCount = 3;
+    double x0, y0, x1, y1, x2, y2;
   };
 
   template<typename... Args>
@@ -1252,7 +1291,7 @@ public:
   //!
   //! The equality check is deep. The data of both paths is examined and binary compared (thus a slight difference
   //! like -0 and +0 would make the equality check to fail).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLPath& other) const noexcept { return blPathEquals(this, &other); }
 
   //! \}
@@ -1309,7 +1348,7 @@ public:
   //! \{
 
   //! Hit tests the given point `p` by respecting the given `fillRule`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLHitTest hitTest(const BLPoint& p, BLFillRule fillRule) const noexcept {
     return blPathHitTest(this, &p, fillRule);
   }

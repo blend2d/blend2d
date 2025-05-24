@@ -545,7 +545,7 @@ function(blend2d_add_target target target_type)
       DEFINE_SYMBOL ""
       CXX_VISIBILITY_PRESET hidden)
   target_compile_options(${target} PRIVATE ${X_CFLAGS} ${BLEND2D_SANITIZE_CFLAGS} $<IF:$<CONFIG:Debug>,${X_CFLAGS_DBG},${X_CFLAGS_REL}>)
-  target_compile_features(${target} PUBLIC cxx_std_11)
+  target_compile_features(${target} PUBLIC cxx_std_17)
   target_link_options(${target} PRIVATE ${BLEND2D_SANITIZE_LFLAGS})
   target_link_libraries(${target} PRIVATE ${X_LIBRARIES})
 
@@ -608,13 +608,6 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU|Clang")
 
   # We want this optimization if not enabled by default to autovectorize some of the C++ code.
   blend2d_detect_cflags(BLEND2D_PRIVATE_CFLAGS_REL -ftree-vectorize)
-
-  # GCC 4.X support requires -fabi-version=0 (or 6+). Please note that this
-  # is internal and only required by `simd_p.h` as SIMD registers are used
-  # as types in template specializations, which is not handled by older ABI.
-  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
-    list(APPEND BLEND2D_PRIVATE_CFLAGS "-fabi-version=0")
-  endif()
 
   # Building Blend2D without C++ library support requires these to be setup.
   if (BLEND2D_NO_STDCXX)

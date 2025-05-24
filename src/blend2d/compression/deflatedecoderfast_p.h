@@ -12,10 +12,7 @@
 
 //! \cond INTERNAL
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
-namespace Fast {
+namespace bl::Compression::Deflate::Fast {
 
 // Must be powers of 2 so we can divide easily from raw buffer lengths to calculate `safeIters`.
 // We definitely want extra safety here and to actually be more strict than necessary.
@@ -64,10 +61,7 @@ DecoderFastResult BL_CDECL decode_AVX2(
 
 #endif // BL_TARGET_ARCH_BITS == 64
 
-} // {Fast}
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate::Fast}
 
 //! \endcond
 

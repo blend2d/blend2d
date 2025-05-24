@@ -10,8 +10,7 @@
 #include "../raster/rastercontextops_p.h"
 #include "../raster/workdata_p.h"
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 // bl::RasterEngine - Edge Building Utilities
 // ==========================================
@@ -97,5 +96,4 @@ BLResult strokeGlyphRunSink(BLPathCore* path, const void* info, void* userData) 
   return localResult;
 }
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}

@@ -8,8 +8,7 @@
 #include "../support/intops_p.h"
 #include "../support/memops_p.h"
 
-namespace bl {
-namespace Unicode {
+namespace bl::Unicode {
 
 // bl::Unicode - Data
 // ==================
@@ -395,5 +394,4 @@ BLResult convertUnicode(
   return result;
 }
 
-} // {Unicode}
-} // {bl}
+} // {bl::Unicode}

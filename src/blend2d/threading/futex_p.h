@@ -31,8 +31,7 @@
   #define BL_FUTEX_ENABLED 0
 #endif
 
-namespace bl {
-namespace Futex {
+namespace bl::Futex {
 
 //! Namespace that contains native futex ops. The main reason they have to be wrapped is TSAN support, which
 //! doesn't handle syscalls, so we have to manually annotate `wait()`, `wakeOne()`, and `wakeAll()` functions.
@@ -118,7 +117,6 @@ static BL_INLINE_NODEBUG int wakeOne(uint32_t*) noexcept { return -1; }
 static BL_INLINE_NODEBUG int wakeAll(uint32_t*) noexcept { return -1; }
 #endif
 
-} // {Futex}
-} // {bl}
+} // {bl::Futex}
 
 #endif // BLEND2D_THREADING_FUTEX_P_H

@@ -225,9 +225,9 @@ BL_DEFINE_ENUM(BLObjectInfoBits) {
   BL_OBJECT_INFO_M_FLAG = 0x01u << BL_OBJECT_INFO_M_SHIFT,           // [M.......|........|........|........]
 
   //! A combination of `BL_OBJECT_INFO_M_FLAG` and `BL_OBJECT_INFO_D_FLAG` flags.
-  BL_OBJECT_INFO_MD_FLAGS = BL_OBJECT_INFO_M_FLAG | BL_OBJECT_INFO_D_FLAG,
+  BL_OBJECT_INFO_MD_FLAGS = BL_OBJECT_INFO_D_FLAG | BL_OBJECT_INFO_M_FLAG,
   //! A combination of `BL_OBJECT_INFO_M_FLAG`, `BL_OBJECT_INFO_D_FLAG`, `BL_OBJECT_INFO_R_FLAG` flags.
-  BL_OBJECT_INFO_MDR_FLAGS = BL_OBJECT_INFO_M_FLAG | BL_OBJECT_INFO_D_FLAG | BL_OBJECT_INFO_R_FLAG
+  BL_OBJECT_INFO_MDR_FLAGS = BL_OBJECT_INFO_D_FLAG | BL_OBJECT_INFO_M_FLAG | BL_OBJECT_INFO_R_FLAG
 
   BL_FORCE_ENUM_UINT32(BL_OBJECT_INFO_BITS)
 };
@@ -401,32 +401,32 @@ struct BLObjectInfo {
   //! \{
 
   //! Packs object type into object info bits.
-  static BL_INLINE_NODEBUG constexpr uint32_t packType(BLObjectType type) noexcept {
+  static BL_INLINE_CONSTEXPR uint32_t packType(BLObjectType type) noexcept {
     return uint32_t(type) << BL_OBJECT_INFO_TYPE_SHIFT;
   }
 
   //! Packs object type and M flag into object info bits.
-  static BL_INLINE_NODEBUG constexpr uint32_t packTypeWithMarker(BLObjectType type) noexcept {
+  static BL_INLINE_CONSTEXPR uint32_t packTypeWithMarker(BLObjectType type) noexcept {
     return (uint32_t(type) << BL_OBJECT_INFO_TYPE_SHIFT) | BL_OBJECT_INFO_M_FLAG;
   }
 
   //! Packs A, B, C, and P fields so they can be combined with other object info bits.
-  static BL_INLINE_NODEBUG constexpr uint32_t packAbcp(uint32_t aField, uint32_t bField = 0u, uint32_t cField = 0u, uint32_t pField = 0u) noexcept {
+  static BL_INLINE_CONSTEXPR uint32_t packAbcp(uint32_t aField, uint32_t bField = 0u, uint32_t cField = 0u, uint32_t pField = 0u) noexcept {
     return (aField << BL_OBJECT_INFO_A_SHIFT) |
            (bField << BL_OBJECT_INFO_B_SHIFT) |
            (cField << BL_OBJECT_INFO_C_SHIFT) |
            (pField << BL_OBJECT_INFO_P_SHIFT) ;
   }
 
-  static BL_INLINE_NODEBUG constexpr BLObjectInfo fromType(BLObjectType type) noexcept {
+  static BL_INLINE_CONSTEXPR BLObjectInfo fromType(BLObjectType type) noexcept {
     return BLObjectInfo{packType(type)};
   }
 
-  static BL_INLINE_NODEBUG constexpr BLObjectInfo fromTypeWithMarker(BLObjectType type) noexcept {
+  static BL_INLINE_CONSTEXPR BLObjectInfo fromTypeWithMarker(BLObjectType type) noexcept {
     return BLObjectInfo{packTypeWithMarker(type)};
   }
 
-  static BL_INLINE_NODEBUG constexpr BLObjectInfo fromAbcp(uint32_t aField, uint32_t bField = 0u, uint32_t cField = 0u, uint32_t pField = 0u) noexcept {
+  static BL_INLINE_CONSTEXPR BLObjectInfo fromAbcp(uint32_t aField, uint32_t bField = 0u, uint32_t cField = 0u, uint32_t pField = 0u) noexcept {
     return BLObjectInfo{packAbcp(aField, bField, cField, pField)};
   }
 
@@ -435,16 +435,16 @@ struct BLObjectInfo {
   //! \name Overloaded Operators
   //! \{
 
-  BL_INLINE_NODEBUG constexpr bool operator==(const BLObjectInfo& other) const noexcept { return bits == other.bits; }
-  BL_INLINE_NODEBUG constexpr bool operator!=(const BLObjectInfo& other) const noexcept { return bits != other.bits; }
+  BL_INLINE_CONSTEXPR bool operator==(const BLObjectInfo& other) const noexcept { return bits == other.bits; }
+  BL_INLINE_CONSTEXPR bool operator!=(const BLObjectInfo& other) const noexcept { return bits != other.bits; }
 
-  BL_INLINE_NODEBUG constexpr BLObjectInfo operator|(const BLObjectInfo& v) const noexcept { return BLObjectInfo{bits | v.bits}; }
-  BL_INLINE_NODEBUG constexpr BLObjectInfo operator&(const BLObjectInfo& v) const noexcept { return BLObjectInfo{bits & v.bits}; }
-  BL_INLINE_NODEBUG constexpr BLObjectInfo operator^(const BLObjectInfo& v) const noexcept { return BLObjectInfo{bits ^ v.bits}; }
+  BL_INLINE_CONSTEXPR BLObjectInfo operator|(const BLObjectInfo& v) const noexcept { return BLObjectInfo{bits | v.bits}; }
+  BL_INLINE_CONSTEXPR BLObjectInfo operator&(const BLObjectInfo& v) const noexcept { return BLObjectInfo{bits & v.bits}; }
+  BL_INLINE_CONSTEXPR BLObjectInfo operator^(const BLObjectInfo& v) const noexcept { return BLObjectInfo{bits ^ v.bits}; }
 
-  BL_INLINE_NODEBUG constexpr BLObjectInfo operator|(const BLObjectInfoBits& v) const noexcept { return BLObjectInfo{bits | v}; }
-  BL_INLINE_NODEBUG constexpr BLObjectInfo operator&(const BLObjectInfoBits& v) const noexcept { return BLObjectInfo{bits & v}; }
-  BL_INLINE_NODEBUG constexpr BLObjectInfo operator^(const BLObjectInfoBits& v) const noexcept { return BLObjectInfo{bits ^ v}; }
+  BL_INLINE_CONSTEXPR BLObjectInfo operator|(const BLObjectInfoBits& v) const noexcept { return BLObjectInfo{bits | v}; }
+  BL_INLINE_CONSTEXPR BLObjectInfo operator&(const BLObjectInfoBits& v) const noexcept { return BLObjectInfo{bits & v}; }
+  BL_INLINE_CONSTEXPR BLObjectInfo operator^(const BLObjectInfoBits& v) const noexcept { return BLObjectInfo{bits ^ v}; }
 
   BL_INLINE_NODEBUG BLObjectInfo& operator|=(const BLObjectInfo& v) noexcept { bits |= v.bits; return *this; }
   BL_INLINE_NODEBUG BLObjectInfo& operator&=(const BLObjectInfo& v) noexcept { bits &= v.bits; return *this; }
@@ -463,20 +463,20 @@ struct BLObjectInfo {
   //!
   //! \note It doesn't verify whether the object info is valid, it just extracts the field.
   template<uint32_t Shift, uint32_t Mask>
-  BL_INLINE_NODEBUG constexpr uint32_t getField() const noexcept { return (bits >> Shift) & (Mask >> Shift); }
+  BL_INLINE_CONSTEXPR uint32_t getField() const noexcept { return (bits >> Shift) & (Mask >> Shift); }
 
   template<uint32_t Shift, uint32_t Mask>
   BL_INLINE_NODEBUG void setField(uint32_t value) noexcept { bits = (bits & ~Mask) | (value << Shift); }
 
-  BL_INLINE_NODEBUG constexpr bool sso() const noexcept { return (bits & BL_OBJECT_INFO_D_FLAG) == 0; }
-  BL_INLINE_NODEBUG constexpr bool dynamicFlag() const noexcept { return (bits & BL_OBJECT_INFO_D_FLAG) != 0; }
+  BL_INLINE_CONSTEXPR bool sso() const noexcept { return (bits & BL_OBJECT_INFO_D_FLAG) == 0; }
+  BL_INLINE_CONSTEXPR bool dynamicFlag() const noexcept { return (bits & BL_OBJECT_INFO_D_FLAG) != 0; }
 
-  BL_INLINE_NODEBUG constexpr uint32_t aField() const noexcept { return getField<BL_OBJECT_INFO_A_SHIFT, BL_OBJECT_INFO_A_MASK>(); }
-  BL_INLINE_NODEBUG constexpr uint32_t bField() const noexcept { return getField<BL_OBJECT_INFO_B_SHIFT, BL_OBJECT_INFO_B_MASK>(); }
-  BL_INLINE_NODEBUG constexpr uint32_t cField() const noexcept { return getField<BL_OBJECT_INFO_C_SHIFT, BL_OBJECT_INFO_C_MASK>(); }
-  BL_INLINE_NODEBUG constexpr uint32_t pField() const noexcept { return getField<BL_OBJECT_INFO_P_SHIFT, BL_OBJECT_INFO_P_MASK>(); }
-  BL_INLINE_NODEBUG constexpr uint32_t qField() const noexcept { return getField<BL_OBJECT_INFO_Q_SHIFT, BL_OBJECT_INFO_Q_MASK>(); }
-  BL_INLINE_NODEBUG constexpr uint32_t fields() const noexcept { return bits & BL_OBJECT_INFO_FIELDS_MASK; }
+  BL_INLINE_CONSTEXPR uint32_t aField() const noexcept { return getField<BL_OBJECT_INFO_A_SHIFT, BL_OBJECT_INFO_A_MASK>(); }
+  BL_INLINE_CONSTEXPR uint32_t bField() const noexcept { return getField<BL_OBJECT_INFO_B_SHIFT, BL_OBJECT_INFO_B_MASK>(); }
+  BL_INLINE_CONSTEXPR uint32_t cField() const noexcept { return getField<BL_OBJECT_INFO_C_SHIFT, BL_OBJECT_INFO_C_MASK>(); }
+  BL_INLINE_CONSTEXPR uint32_t pField() const noexcept { return getField<BL_OBJECT_INFO_P_SHIFT, BL_OBJECT_INFO_P_MASK>(); }
+  BL_INLINE_CONSTEXPR uint32_t qField() const noexcept { return getField<BL_OBJECT_INFO_Q_SHIFT, BL_OBJECT_INFO_Q_MASK>(); }
+  BL_INLINE_CONSTEXPR uint32_t fields() const noexcept { return bits & BL_OBJECT_INFO_FIELDS_MASK; }
 
   BL_INLINE_NODEBUG void setAField(uint32_t value) noexcept { setField<BL_OBJECT_INFO_A_SHIFT, BL_OBJECT_INFO_A_MASK>(value); }
   BL_INLINE_NODEBUG void setBField(uint32_t value) noexcept { setField<BL_OBJECT_INFO_B_SHIFT, BL_OBJECT_INFO_B_MASK>(value); }
@@ -492,22 +492,22 @@ struct BLObjectInfo {
 
   //! Tests whether BLObjectInfo describes a valid BLObject and verifies that `additionalBits` match the
   //! given `mask` in BLObjectInfo bits as well. This function is a higher-level function used by others.
-  BL_INLINE_NODEBUG constexpr bool hasObjectSignatureAndFlags(uint32_t mask, uint32_t check) const noexcept {
+  BL_INLINE_CONSTEXPR bool hasObjectSignatureAndFlags(uint32_t mask, uint32_t check) const noexcept {
     return (bits & (BL_OBJECT_INFO_M_FLAG | mask)) == (BL_OBJECT_INFO_M_FLAG | check);
   }
 
   //! Tests whether BLObjectInfo describes a valid BLObject and verifies the the given `flags` are all set.
-  BL_INLINE_NODEBUG constexpr bool hasObjectSignatureAndFlags(uint32_t flags) const noexcept {
+  BL_INLINE_CONSTEXPR bool hasObjectSignatureAndFlags(uint32_t flags) const noexcept {
     return hasObjectSignatureAndFlags(flags, flags);
   }
 
   //! Tests whether the object info represents a valid BLObject signature.
   //!
   //! A valid signature describes a \ref BLObjectCore and not an alternative representation used by \ref BLRgba data.
-  BL_INLINE_NODEBUG constexpr bool hasObjectSignature() const noexcept { return hasObjectSignatureAndFlags(0u); }
+  BL_INLINE_CONSTEXPR bool hasObjectSignature() const noexcept { return hasObjectSignatureAndFlags(0u); }
 
   //! Tests whether BLObjectInfo describes a valid BLObject of the given `type`.
-  BL_INLINE_NODEBUG constexpr bool checkObjectSignatureAndRawType(BLObjectType type) const noexcept {
+  BL_INLINE_CONSTEXPR bool checkObjectSignatureAndRawType(BLObjectType type) const noexcept {
     return hasObjectSignatureAndFlags(uint32_t(type) << BL_OBJECT_INFO_TYPE_SHIFT);
   }
 
@@ -517,27 +517,27 @@ struct BLObjectInfo {
   //! \{
 
   //! Tests a whether this \ref BLObjectInfo represents a valid \ref BLObjectCore.
-  BL_INLINE_NODEBUG constexpr bool isObject() const noexcept {
+  BL_INLINE_CONSTEXPR bool isObject() const noexcept {
     return (bits & BL_OBJECT_INFO_M_FLAG) != 0;
   }
 
   //! Returns a whether this \ref BLObjectInfo represents a valid \ref BLObjectCore as a mask (either all zeros or all ones).
-  BL_INLINE_NODEBUG constexpr uint32_t isObjectMask() const noexcept {
+  BL_INLINE_CONSTEXPR uint32_t isObjectMask() const noexcept {
     return uint32_t((int32_t(bits) >> 31));
   }
 
   //! Tests whether the object info represents a valid BLObject, which has a valid Impl field.
-  BL_INLINE_NODEBUG constexpr bool isDynamicObject() const noexcept {
+  BL_INLINE_CONSTEXPR bool isDynamicObject() const noexcept {
     return bits >= uint32_t(BL_OBJECT_INFO_MD_FLAGS);
   }
 
   //! Tests whether the object info represents a valid BLObject, which has a valid Impl, and is reference counted.
-  BL_INLINE_NODEBUG constexpr bool isRefCountedObject() const noexcept {
+  BL_INLINE_CONSTEXPR bool isRefCountedObject() const noexcept {
     return bits >= uint32_t(BL_OBJECT_INFO_MDR_FLAGS);
   }
 
   //! Tests whether the object info represents a valid BLObject, which has a valid Impl, and has a virtual function table.
-  BL_INLINE_NODEBUG constexpr bool isVirtualObject() const noexcept {
+  BL_INLINE_CONSTEXPR bool isVirtualObject() const noexcept {
     return (bits & (BL_OBJECT_INFO_MD_FLAGS | BL_OBJECT_INFO_TYPE_MASK)) >= uint32_t(kSignatureMinVirtualObject);
   }
 
@@ -546,70 +546,70 @@ struct BLObjectInfo {
   //! This function should only be used in case that the caller knows that the object info is of a valid \ref
   //! BLObjectCore. In any other case the use of \ref getType() is preferred and would always provide a correct
   //! type.
-  BL_INLINE_NODEBUG constexpr BLObjectType rawType() const noexcept {
+  BL_INLINE_CONSTEXPR BLObjectType rawType() const noexcept {
     return BLObjectType(getField<BL_OBJECT_INFO_TYPE_SHIFT, BL_OBJECT_INFO_TYPE_MASK>());
   }
 
   //! Returns a corrected \ref BLObjectType read from object info bits.
   //!
   //! If the object marker bit 'M' is not set, 0 will be returned, which represents \ref BL_OBJECT_TYPE_RGBA.
-  BL_INLINE_NODEBUG constexpr BLObjectType getType() const noexcept { return BLObjectType(uint32_t(rawType()) & isObjectMask()); }
+  BL_INLINE_CONSTEXPR BLObjectType getType() const noexcept { return BLObjectType(uint32_t(rawType()) & isObjectMask()); }
 
   //! Tests whether the object info represents a `BLArray<T>` storing any supported type.
-  BL_INLINE_NODEBUG constexpr bool isArray() const noexcept { return getType() >= BL_OBJECT_TYPE_MIN_ARRAY && getType() <= BL_OBJECT_TYPE_MAX_ARRAY; }
+  BL_INLINE_CONSTEXPR bool isArray() const noexcept { return getType() >= BL_OBJECT_TYPE_MIN_ARRAY && getType() <= BL_OBJECT_TYPE_MAX_ARRAY; }
   //! Tests whether the object info represents a `BLBitArray`.
-  BL_INLINE_NODEBUG constexpr bool isBitArray() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_BIT_ARRAY); }
+  BL_INLINE_CONSTEXPR bool isBitArray() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_BIT_ARRAY); }
   //! Tests whether the object info represents a `BLBitSet`.
-  BL_INLINE_NODEBUG constexpr bool isBitSet() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_BIT_SET); }
+  BL_INLINE_CONSTEXPR bool isBitSet() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_BIT_SET); }
   //! Tests whether the object info represents a boxed `bool` value.
-  BL_INLINE_NODEBUG constexpr bool isBool() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_BOOL); }
+  BL_INLINE_CONSTEXPR bool isBool() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_BOOL); }
   //! Tests whether the object info represents `BLContext`.
-  BL_INLINE_NODEBUG constexpr bool isContext() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_CONTEXT); }
+  BL_INLINE_CONSTEXPR bool isContext() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_CONTEXT); }
   //! Tests whether the object info represents a boxed `double` value.
-  BL_INLINE_NODEBUG constexpr bool isDouble() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_DOUBLE); }
+  BL_INLINE_CONSTEXPR bool isDouble() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_DOUBLE); }
   //! Tests whether the object info represents `BLFont`.
-  BL_INLINE_NODEBUG constexpr bool isFont() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT); }
+  BL_INLINE_CONSTEXPR bool isFont() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT); }
   //! Tests whether the object info represents `BLFontData`.
-  BL_INLINE_NODEBUG constexpr bool isFontData() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_DATA); }
+  BL_INLINE_CONSTEXPR bool isFontData() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_DATA); }
   //! Tests whether the object info represents `BLFontFace`.
-  BL_INLINE_NODEBUG constexpr bool isFontFace() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_FACE); }
+  BL_INLINE_CONSTEXPR bool isFontFace() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_FACE); }
   //! Tests whether the object info represents `BLFontFeatureSettings`.
-  BL_INLINE_NODEBUG constexpr bool isFontFeatureSettings() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS); }
+  BL_INLINE_CONSTEXPR bool isFontFeatureSettings() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS); }
   //! Tests whether the object info represents `BLFontManager`.
-  BL_INLINE_NODEBUG constexpr bool isFontManager() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_MANAGER); }
+  BL_INLINE_CONSTEXPR bool isFontManager() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_MANAGER); }
   //! Tests whether the object info represents `BLFontVariationSettings`.
-  BL_INLINE_NODEBUG constexpr bool isFontVariationSettings() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS); }
+  BL_INLINE_CONSTEXPR bool isFontVariationSettings() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS); }
   //! Tests whether the object info represents `BLGradient`.
-  BL_INLINE_NODEBUG constexpr bool isGradient() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_GRADIENT); }
+  BL_INLINE_CONSTEXPR bool isGradient() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_GRADIENT); }
   //! Tests whether the object info represents `BLImage`.
-  BL_INLINE_NODEBUG constexpr bool isImage() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_IMAGE); }
+  BL_INLINE_CONSTEXPR bool isImage() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_IMAGE); }
   //! Tests whether the object info represents `BLImageCodec`.
-  BL_INLINE_NODEBUG constexpr bool isImageCodec() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_IMAGE_CODEC); }
+  BL_INLINE_CONSTEXPR bool isImageCodec() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_IMAGE_CODEC); }
   //! Tests whether the object info represents `BLImageDecoder`.
-  BL_INLINE_NODEBUG constexpr bool isImageDecoder() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_IMAGE_DECODER); }
+  BL_INLINE_CONSTEXPR bool isImageDecoder() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_IMAGE_DECODER); }
   //! Tests whether the object info represents `BLImageEncoder`.
-  BL_INLINE_NODEBUG constexpr bool isImageEncoder() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_IMAGE_ENCODER); }
+  BL_INLINE_CONSTEXPR bool isImageEncoder() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_IMAGE_ENCODER); }
   //! Tests whether the object info represents a boxed `int64_t` value.
-  BL_INLINE_NODEBUG constexpr bool isInt64() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_INT64); }
+  BL_INLINE_CONSTEXPR bool isInt64() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_INT64); }
   //! Tests whether the object info represents a null value.
-  BL_INLINE_NODEBUG constexpr bool isNull() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_NULL); }
+  BL_INLINE_CONSTEXPR bool isNull() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_NULL); }
   //! Tests whether the object info represents `BLPath`.
-  BL_INLINE_NODEBUG constexpr bool isPath() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_PATH); }
+  BL_INLINE_CONSTEXPR bool isPath() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_PATH); }
   //! Tests whether the object info represents `BLPattern.`
-  BL_INLINE_NODEBUG constexpr bool isPattern() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_PATTERN); }
+  BL_INLINE_CONSTEXPR bool isPattern() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_PATTERN); }
   //! Tests whether the object info represents `BLRgba`.
-  BL_INLINE_NODEBUG constexpr bool isRgba() const noexcept { return !isObject(); }
+  BL_INLINE_CONSTEXPR bool isRgba() const noexcept { return !isObject(); }
   //! Tests whether the object info represents `BLRgba32`.
-  BL_INLINE_NODEBUG constexpr bool isRgba32() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_RGBA32); }
+  BL_INLINE_CONSTEXPR bool isRgba32() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_RGBA32); }
   //! Tests whether the object info represents `BLRgba64`.
-  BL_INLINE_NODEBUG constexpr bool isRgba64() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_RGBA64); }
+  BL_INLINE_CONSTEXPR bool isRgba64() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_RGBA64); }
   //! Tests whether the object info represents `BLString`.
-  BL_INLINE_NODEBUG constexpr bool isString() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_STRING); }
+  BL_INLINE_CONSTEXPR bool isString() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_STRING); }
   //! Tests whether the object info represents a boxed `uint64_t` value.
-  BL_INLINE_NODEBUG constexpr bool isUInt64() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_UINT64); }
+  BL_INLINE_CONSTEXPR bool isUInt64() const noexcept { return checkObjectSignatureAndRawType(BL_OBJECT_TYPE_UINT64); }
 
   //! Tests whether the object info represents a style that can be passed to the rendering context.
-  BL_INLINE_NODEBUG constexpr bool isStyle() const noexcept { return getType() <= BL_OBJECT_TYPE_MAX_STYLE; }
+  BL_INLINE_CONSTEXPR bool isStyle() const noexcept { return getType() <= BL_OBJECT_TYPE_MAX_STYLE; }
 
   // \}
 
@@ -620,7 +620,7 @@ struct BLObjectInfo {
   //! Tests whether the object info represents a `BLBitSet`, which is in SSO range mode.
   //!
   //! \note An empty SSO range [0, 0) is used by default constructed BitSets.
-  BL_INLINE_NODEBUG constexpr bool isBitSetRange() const noexcept { return bits == kSignatureSSOBitSetRange; }
+  BL_INLINE_CONSTEXPR bool isBitSetRange() const noexcept { return bits == kSignatureSSOBitSetRange; }
 
   //! \}
   //! \endcond
@@ -657,10 +657,8 @@ union BLObjectDetail {
   //! \name Constants
   //! \{
 
-  enum : uint32_t {
-    //! Size of object static storage not considering \ref BLObjectInfo.
-    kStaticDataSize = 12
-  };
+  //! Size of object static storage not considering \ref BLObjectInfo.
+  static inline constexpr uint32_t kStaticDataSize = 12;
 
   //! \}
 
@@ -671,11 +669,15 @@ union BLObjectDetail {
   //!
   //! Binary equality is used by some equality implementations as a quick check. This can be used by both SSO and
   //! Dynamic instances.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLObjectDetail& other) const noexcept {
-    return bool(unsigned(u64_data[0] == other.u64_data[0]) & unsigned(u64_data[1] == other.u64_data[1]));
+    return BLInternal::bool_and(u64_data[0] == other.u64_data[0], u64_data[1] == other.u64_data[1]);
   }
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool operator==(const BLObjectDetail& other) const noexcept { return  equals(other); }
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool operator!=(const BLObjectDetail& other) const noexcept { return !equals(other); }
 
   //! \}
@@ -696,7 +698,7 @@ union BLObjectDetail {
     impl = implInit;
 
     u32_data[2] = 0;
-    info.bits = objectInfo.bits | BL_OBJECT_INFO_M_FLAG | BL_OBJECT_INFO_D_FLAG;
+    info.bits = objectInfo.bits | BL_OBJECT_INFO_D_FLAG | BL_OBJECT_INFO_M_FLAG;
   }
 
   BL_INLINE_NODEBUG void initNull() noexcept {
@@ -781,9 +783,11 @@ union BLObjectDetail {
   //! \{
 
   template<typename T>
+  [[nodiscard]]
   BL_INLINE_NODEBUG T* dataAs() noexcept { return reinterpret_cast<T*>(char_data); }
 
   template<typename T>
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T* dataAs() const noexcept { return reinterpret_cast<const T*>(char_data); }
 
   //! \}
@@ -791,14 +795,28 @@ union BLObjectDetail {
   //! \name BLObject Info Accessors - Generic
   //! \{
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool sso() const noexcept { return info.sso(); }
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool dynamicFlag() const noexcept { return info.dynamicFlag(); }
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t aField() const noexcept { return info.aField(); }
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t bField() const noexcept { return info.bField(); }
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t cField() const noexcept { return info.cField(); }
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t pField() const noexcept { return info.pField(); }
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t qField() const noexcept { return info.qField(); }
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t fields() const noexcept { return info.fields(); }
 
   //! \}
@@ -807,74 +825,135 @@ union BLObjectDetail {
   //! \{
 
   //! Tests whether the object info of this BLObjectDetail contains a valid BLObject signature.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool hasObjectSignature() const noexcept { return info.hasObjectSignature(); }
 
   //! Tests whether the object info of this BLObjectDetail contains a valid BLObject, which has a valid Impl field.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isDynamicObject() const noexcept { return info.isDynamicObject(); }
+
   //! Tests whether the object info of this BLObjectDetail represents a valid BLObject, with Impl and Virtual function table.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isVirtualObject() const noexcept { return info.isVirtualObject(); }
+
   //! Tests whether the object info represents a valid BLObject, which has a valid Impl, and is reference counted.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isRefCountedObject() const noexcept { return info.isRefCountedObject(); }
 
   //! Returns a RAW type read from object info data.
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLObjectType rawType() const noexcept { return info.rawType(); }
+
   //! Returns the type of this object.
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLObjectType getType() const noexcept { return info.getType(); }
 
   //! Tests whether this BLObjectDetail represents a `BLArray<T>` storing any supported type.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isArray() const noexcept { return info.isArray(); }
+
   //! Tests whether this BLObjectDetail represents a `BLBitArray`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isBitArray() const noexcept { return info.isBitArray(); }
+
   //! Tests whether this BLObjectDetail represents a `BLBitSet`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isBitSet() const noexcept { return info.isBitSet(); }
+
   //! Tests whether this BLObjectDetail represents a boxed `bool` value.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isBool() const noexcept { return info.isBool(); }
+
   //! Tests whether this BLObjectDetail represents `BLContext`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isContext() const noexcept { return info.isContext(); }
+
   //! Tests whether this BLObjectDetail represents a boxed `double` value.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isDouble() const noexcept { return info.isDouble(); }
+
   //! Tests whether this BLObjectDetail represents `BLFont`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isFont() const noexcept { return info.isFont(); }
+
   //! Tests whether this BLObjectDetail represents `BLFontData`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isFontData() const noexcept { return info.isFontData(); }
+
   //! Tests whether this BLObjectDetail represents `BLFontFace`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isFontFace() const noexcept { return info.isFontFace(); }
+
   //! Tests whether this BLObjectDetail represents `BLFontFeatureSettings`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isFontFeatureSettings() const noexcept { return info.isFontFeatureSettings(); }
+
   //! Tests whether this BLObjectDetail represents `BLFontManager`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isFontManager() const noexcept { return info.isFontManager(); }
+
   //! Tests whether this BLObjectDetail represents `BLFontVariationSettings`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isFontVariationSettings() const noexcept { return info.isFontVariationSettings(); }
+
   //! Tests whether this BLObjectDetail represents `BLGradient`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isGradient() const noexcept { return info.isGradient(); }
+
   //! Tests whether this BLObjectDetail represents `BLImage`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isImage() const noexcept { return info.isImage(); }
+
   //! Tests whether this BLObjectDetail represents `BLImageCodec`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isImageCodec() const noexcept { return info.isImageCodec(); }
+
   //! Tests whether this BLObjectDetail represents `BLImageDecoder`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isImageDecoder() const noexcept { return info.isImageDecoder(); }
+
   //! Tests whether this BLObjectDetail represents `BLImageEncoder`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isImageEncoder() const noexcept { return info.isImageEncoder(); }
+
   //! Tests whether this BLObjectDetail represents a boxed `int64_t` value.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isInt64() const noexcept { return info.isInt64(); }
+
   //! Tests whether this BLObjectDetail represents a null value.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isNull() const noexcept { return info.isNull(); }
+
   //! Tests whether this BLObjectDetail represents `BLPath`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isPath() const noexcept { return info.isPath(); }
+
   //! Tests whether this BLObjectDetail represents `BLPattern.`
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isPattern() const noexcept { return info.isPattern(); }
+
   //! Tests whether this BLObjectDetail represents boxed `BLRgba`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isRgba() const noexcept { return info.isRgba(); }
+
   //! Tests whether this BLObjectDetail represents boxed `BLRgba32`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isRgba32() const noexcept { return info.isRgba32(); }
+
   //! Tests whether this BLObjectDetail represents boxed `BLRgba64`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isRgba64() const noexcept { return info.isRgba64(); }
+
   //! Tests whether this BLObjectDetail represents `BLString`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isString() const noexcept { return info.isString(); }
+
   //! Tests whether this BLObjectDetail represents a boxed `uint64_t` value.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isUInt64() const noexcept { return info.isUInt64(); }
 
   //! Tests whether this BLObjectDetail represents a style that can be passed to the rendering context.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isStyle() const noexcept { return info.isStyle(); }
 
   //! \}
@@ -882,6 +961,7 @@ union BLObjectDetail {
   //! \name BLObject Type Accessors - Object Specific
   //! \{
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isBitSetRange() const noexcept { return info.isBitSetRange(); }
 
   //! \}
@@ -899,7 +979,7 @@ static_assert(sizeof(BLObjectDetail) == 16, "BLObjectDetail must be exactly 16 b
 
 //! A function callback that is called when an Impl that holds external data is going to be destroyed. It's
 //! often used as a notification that a data passed to a certain Impl is no longer in use by Blend2D.
-typedef void (BL_CDECL* BLDestroyExternalDataFunc)(void* impl, void* externalData, void* userData) BL_NOEXCEPT;
+typedef void (BL_CDECL* BLDestroyExternalDataFunc)(void* impl, void* externalData, void* userData) BL_NOEXCEPT_C;
 
 //! \}
 //! \}
@@ -920,10 +1000,12 @@ struct BLObjectImpl {
 
   //! Casts this Impl to `T*`.
   template<typename T>
+  [[nodiscard]]
   BL_INLINE_NODEBUG T* as() noexcept { return static_cast<T*>(this); }
 
   //! Casts this Impl to `T*` (const).
   template<typename T>
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T* as() const noexcept { return static_cast<const T*>(this); }
 
   //! \}
@@ -936,9 +1018,9 @@ struct BLObjectImpl {
 //! inheritance so `Virt` structs actually inherit from \ref BLObjectVirt, but in every case all base members are
 //! provided by `base`.
 struct BLObjectVirtBase {
-  BLResult (BL_CDECL* destroy)(BLObjectImpl* impl) BL_NOEXCEPT;
-  BLResult (BL_CDECL* getProperty)(const BLObjectImpl* impl, const char* name, size_t nameSize, BLVarCore* valueOut) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setProperty)(BLObjectImpl* impl, const char* name, size_t nameSize, const BLVarCore* value) BL_NOEXCEPT;
+  BLResult (BL_CDECL* destroy)(BLObjectImpl* impl) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* getProperty)(const BLObjectImpl* impl, const char* name, size_t nameSize, BLVarCore* valueOut) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* setProperty)(BLObjectImpl* impl, const char* name, size_t nameSize, const BLVarCore* value) BL_NOEXCEPT_C;
 };
 
 //! BLObject [Virtual Function Table].
@@ -1017,11 +1099,11 @@ BL_END_C_DECLS
   #define BL_DEFINE_OBJECT_DCAST(DERIVED_TYPE)                                                     \
     /*! \cond INTERNAL */                                                                          \
     template<typename T = DERIVED_TYPE>                                                            \
-    BL_NODISCARD                                                                                   \
+    [[nodiscard]]                                                                                  \
     BL_INLINE_NODEBUG T& dcast() noexcept { return static_cast<T&>(*this); }                       \
                                                                                                    \
     template<typename T = DERIVED_TYPE>                                                            \
-    BL_NODISCARD                                                                                   \
+    [[nodiscard]]                                                                                  \
     BL_INLINE_NODEBUG const T& dcast() const noexcept { return static_cast<const T&>(*this); }     \
     /*! \endcond */
 
@@ -1061,11 +1143,18 @@ namespace BLInternal {
 //! need to be called in case that the object is dynamic and reference counted. At the moment it's
 //! used to determine whether a type inherited from BLObject requires to call a destructor.
 #if defined(__GNUC__)
-static BL_INLINE_NODEBUG bool objectNeedsCleanup(uint32_t infoBits) noexcept {
-  return __builtin_constant_p(infoBits) ? infoBits >= uint32_t(BL_OBJECT_INFO_MDR_FLAGS) : true;
+[[nodiscard]]
+static BL_INLINE_CONSTEXPR bool objectNeedsCleanup(uint32_t infoBits) noexcept {
+  if (__builtin_constant_p(infoBits)) {
+    return infoBits >= uint32_t(BL_OBJECT_INFO_MDR_FLAGS);
+  }
+  else {
+    return true;
+  }
 }
 #else
-static BL_INLINE_NODEBUG constexpr bool objectNeedsCleanup(uint32_t) noexcept { return true; }
+[[nodiscard]]
+static BL_INLINE_CONSTEXPR bool objectNeedsCleanup(uint32_t) noexcept { return true; }
 #endif
 
 } // {BLInternal}

@@ -274,10 +274,17 @@ BLResult blFontFaceGetDesignMetrics(const BLFontFaceCore* self, BLFontDesignMetr
   return BL_SUCCESS;
 }
 
-BLResult blFontFaceGetUnicodeCoverage(const BLFontFaceCore* self, BLFontUnicodeCoverage* out) noexcept {
+BLResult blFontFaceGetCoverageInfo(const BLFontFaceCore* self, BLFontCoverageInfo* out) noexcept {
   BL_ASSERT(self->_d.isFontFace());
 
-  *out = self->dcast().unicodeCoverage();
+  *out = self->dcast().coverageInfo();
+  return BL_SUCCESS;
+}
+
+BLResult blFontFaceGetPanoseInfo(const BLFontFaceCore* self, BLFontPanoseInfo* out) noexcept {
+  BL_ASSERT(self->_d.isFontFace());
+
+  *out = self->dcast().panoseInfo();
   return BL_SUCCESS;
 }
 

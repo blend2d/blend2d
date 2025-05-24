@@ -109,15 +109,36 @@ BL_END_C_DECLS
 class BLPattern final : public BLPatternCore {
 public:
   //! \cond INTERNAL
+
+  //! Object info values of a default constructed BLPattern.
+  static inline constexpr uint32_t kDefaultSignature =
+    BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_PATTERN) |
+    BLObjectInfo::packAbcp(0u, BL_EXTEND_MODE_REPEAT) | BL_OBJECT_INFO_D_FLAG;
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLPatternImpl* _impl() const noexcept { return static_cast<BLPatternImpl*>(_d.impl); }
   //! \endcond
 
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE BLPattern() noexcept { blPatternInit(this); }
-  BL_INLINE BLPattern(BLPattern&& other) noexcept { blPatternInitMove(this, &other); }
-  BL_INLINE BLPattern(const BLPattern& other) noexcept { blPatternInitWeak(this, &other); }
+  BL_INLINE BLPattern() noexcept {
+    blPatternInit(this);
+
+    // Assume a default constructed BLPattern.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+  }
+
+  BL_INLINE BLPattern(BLPattern&& other) noexcept {
+    blPatternInitMove(this, &other);
+
+    // Assume a default initialized `other`.
+    BL_ASSUME(other._d.info.bits == kDefaultSignature);
+  }
+
+  BL_INLINE BLPattern(const BLPattern& other) noexcept {
+    blPatternInitWeak(this, &other);
+  }
 
   BL_INLINE explicit BLPattern(const BLImage& image, BLExtendMode extendMode = BL_EXTEND_MODE_REPEAT) noexcept {
     blPatternInitAs(this, &image, nullptr, extendMode, nullptr);
@@ -135,7 +156,11 @@ public:
     blPatternInitAs(this, &image, &area, extendMode, &transform);
   }
 
-  BL_INLINE ~BLPattern() noexcept { blPatternDestroy(this); }
+  BL_INLINE ~BLPattern() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
+      blPatternDestroy(this);
+    }
+  }
 
   //! \}
 
@@ -145,22 +170,34 @@ public:
   BL_INLINE BLPattern& operator=(BLPattern&& other) noexcept { blPatternAssignMove(this, &other); return *this; }
   BL_INLINE BLPattern& operator=(const BLPattern& other) noexcept { blPatternAssignWeak(this, &other); return *this; }
 
-  BL_NODISCARD BL_INLINE bool operator==(const BLPattern& other) const noexcept { return  equals(other); }
-  BL_NODISCARD BL_INLINE bool operator!=(const BLPattern& other) const noexcept { return !equals(other); }
+  [[nodiscard]]
+  BL_INLINE bool operator==(const BLPattern& other) const noexcept { return  equals(other); }
+
+  [[nodiscard]]
+  BL_INLINE bool operator!=(const BLPattern& other) const noexcept { return !equals(other); }
 
   //! \}
 
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE BLResult reset() noexcept { return blPatternReset(this); }
+  BL_INLINE BLResult reset() noexcept {
+    BLResult result = blPatternReset(this);
+
+    // Reset operation always succeeds.
+    BL_ASSUME(result == BL_SUCCESS);
+    // Assume a default constructed BLPattern after reset.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+
+    return result;
+  }
 
   BL_INLINE void swap(BLPattern& other) noexcept { _d.swap(other._d); }
 
   BL_INLINE BLResult assign(BLPattern&& other) noexcept { return blPatternAssignMove(this, &other); }
   BL_INLINE BLResult assign(const BLPattern& other) noexcept { return blPatternAssignWeak(this, &other); }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE bool equals(const BLPattern& other) const noexcept { return blPatternEquals(this, &other); }
 
   //! \}
@@ -189,14 +226,14 @@ public:
   //! \name Accessors
   //! \{
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE BLImage getImage() const noexcept {
     BLImage imageOut;
     blPatternGetImage(this, &imageOut);
     return imageOut;
   }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE BLRectI area() const noexcept {
     BLRectI areaOut;
     blPatternGetArea(this, &areaOut);
@@ -215,7 +252,7 @@ public:
   //! Updates the pattern area rectangle to [0, 0, image.width, image.height].
   BL_INLINE_NODEBUG BLResult resetArea() noexcept { return blPatternResetArea(this); }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLExtendMode extendMode() const noexcept {
     return BLExtendMode(_d.bField());
   }
@@ -238,19 +275,19 @@ public:
   //! \name Transformations
   //! \{
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE BLMatrix2D transform() const noexcept {
     BLMatrix2D transformOut;
     blPatternGetTransform(this, &transformOut);
     return transformOut;
   }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE BLTransformType transformType() const noexcept {
     return BLTransformType(_d.cField());
   }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool hasTransform() const noexcept {
     return transformType() != BL_TRANSFORM_TYPE_IDENTITY;
   }

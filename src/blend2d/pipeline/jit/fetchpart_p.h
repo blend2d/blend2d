@@ -13,9 +13,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 //! Pipeline fetch part.
 class FetchPart : public PipePart {
@@ -23,7 +21,7 @@ public:
   //! \name Constants
   //! \{
 
-  static constexpr uint32_t kUnlimitedMaxPixels = 64;
+  static inline constexpr uint32_t kUnlimitedMaxPixels = 64;
 
   //! \}
 
@@ -157,9 +155,7 @@ public:
   //! \}
 };
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

@@ -25,9 +25,7 @@
 #include "../support/lookuptable_p.h"
 #include "../support/ptrops_p.h"
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
+namespace bl::Compression::Deflate {
 
 // bl::Compression::Deflate::Encoder - Options & Settings
 // ======================================================
@@ -328,8 +326,8 @@ struct BlockSplitStats {
 
 // Deflate encoder implementation.
 struct EncoderImpl {
-  using PrepareFunc = void (BL_CDECL*)(EncoderImpl* impl) BL_NOEXCEPT;
-  using CompressFunc = size_t (BL_CDECL*)(EncoderImpl* impl, const uint8_t *, size_t, uint8_t *, size_t) BL_NOEXCEPT;
+  using PrepareFunc = void (BL_CDECL*)(EncoderImpl* impl) noexcept;
+  using CompressFunc = size_t (BL_CDECL*)(EncoderImpl* impl, const uint8_t *, size_t, uint8_t *, size_t) noexcept;
 
   //! The pointer, which must be freed in order to free the Impl, because of an alignment requirement of Impl.
   void* allocated_ptr;
@@ -863,7 +861,7 @@ static BL_NOINLINE void deflate_make_huffman_code(
   make_canonical_huffman_code(num_syms, max_codeword_len, freqs, lens, codewords);
   uint32_t sym = 0;
 
-  if BL_CONSTEXPR (sizeof(BLBitWord) >= 8) {
+  if constexpr (sizeof(BLBitWord) >= 8) {
     // THEORETICAL: Reversing 4x16-bit integers at a time requires codeword to be max 16-bits long.
     BL_STATIC_ASSERT(kMaxCodeWordLen <= 16);
 
@@ -1200,7 +1198,7 @@ static void flushBlock(EncoderImpl* impl, OutputStream& os, const uint8_t* BL_RE
       bits.flush(buf);
 
       // Output the remaining lens of the codewords in the precode.
-      if BL_CONSTEXPR (sizeof(BLBitWord) >= 8) {
+      if constexpr (sizeof(BLBitWord) >= 8) {
         // kNumPrecodeSymbols == 19 -> at most (19 - 2) * 3 bits will be written (51 bits).
         for (uint32_t i = 2; i < precode.explicitLenCount; i++) {
           bits.add(precode.lens[kPrecodeLensPermutation[i]], 3);
@@ -2188,6 +2186,4 @@ BLResult Encoder::compress(BLArray<uint8_t>& dst, BLModifyOp modifyOp, BLDataVie
   return dst.truncate(outputSize);
 }
 
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate}

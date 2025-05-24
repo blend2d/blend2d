@@ -20,8 +20,7 @@
 //! \addtogroup blend2d_codec_impl
 //! \{
 
-namespace bl {
-namespace Jpeg {
+namespace bl::Jpeg {
 
 static constexpr uint32_t kDctSize = 8u;           //!< Size of JPEG's DCT block (N).
 static constexpr uint32_t kDctSize2 = 8u * 8u;     //!< Size of JPEG's DCT block squared (NxN).
@@ -243,8 +242,7 @@ struct DecoderThumbnail {
 
 BL_HIDDEN void jpegCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
 
-} // {Jpeg}
-} // {bl}
+} // {bl::Jpeg}
 
 struct BLJpegDecoderImpl : public BLImageDecoderImpl {
   //! JPEG memory allocator (can allocate aligned blocks and keep track of them).

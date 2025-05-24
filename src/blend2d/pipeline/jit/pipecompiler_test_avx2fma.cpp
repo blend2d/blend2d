@@ -15,10 +15,7 @@
 // bl::Pipeline::JIT - Tests - MAdd - Reference (X86)
 // ==================================================
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
-namespace Tests {
+namespace bl::Pipeline::JIT::Tests {
 
 // NOTE: We have to provide the reference implementation of these functions as it's impossible to test
 // this on 32-bit X86 as the compiler would most likely use FPU registers, which uses the same precision
@@ -50,9 +47,6 @@ void madd_fma_check_valgrind_bug(const float a[4], const float b[4], const float
   _mm_storeu_ps(dst, dv);
 }
 
-} // {Tests}
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT::Tests}
 
 #endif // BL_TEST && !BL_BUILD_NO_JIT

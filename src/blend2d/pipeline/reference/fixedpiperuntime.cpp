@@ -10,8 +10,7 @@
 #include "../../pipeline/reference/fixedpiperuntime_p.h"
 #include "../../support/wrap_p.h"
 
-namespace bl {
-namespace Pipeline {
+namespace bl::Pipeline {
 
 // FixedPipelineRuntime - Globals
 // ==============================
@@ -37,21 +36,21 @@ struct CompOpValid {
 };
 
 struct FillSolidFuncTable {
-  static constexpr uint32_t kFillTypeCount = uint32_t(FillType::_kMaxValue);
+  static inline constexpr uint32_t kFillTypeCount = uint32_t(FillType::_kMaxValue);
 
   FillFunc funcs[kFillTypeCount];
 };
 
 struct FillPatternFuncTable {
-  static constexpr uint32_t kFillTypeCount = uint32_t(FillType::_kMaxValue);
-  static constexpr uint32_t kPatternTypeCount = uint32_t(FetchType::kPatternAnyLast) - uint32_t(FetchType::kPatternAnyFirst) + 1u;
+  static inline constexpr uint32_t kFillTypeCount = uint32_t(FillType::_kMaxValue);
+  static inline constexpr uint32_t kPatternTypeCount = uint32_t(FetchType::kPatternAnyLast) - uint32_t(FetchType::kPatternAnyFirst) + 1u;
 
   FillFunc funcs[kFillTypeCount * kPatternTypeCount];
 };
 
 struct FillGradientFuncTable {
-  static constexpr uint32_t kFillTypeCount = uint32_t(FillType::_kMaxValue);
-  static constexpr uint32_t kGradientTypeCount = uint32_t(FetchType::kGradientAnyLast) - uint32_t(FetchType::kGradientAnyFirst) + 1u;
+  static inline constexpr uint32_t kFillTypeCount = uint32_t(FillType::_kMaxValue);
+  static inline constexpr uint32_t kGradientTypeCount = uint32_t(FetchType::kGradientAnyLast) - uint32_t(FetchType::kGradientAnyFirst) + 1u;
 
   FillFunc funcs[kFillTypeCount * kGradientTypeCount];
 };
@@ -339,8 +338,7 @@ PipeStaticRuntime::PipeStaticRuntime() noexcept {
 
 PipeStaticRuntime::~PipeStaticRuntime() noexcept {}
 
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline}
 
 // FixedPipelineRuntime - Runtime Registration
 // ===========================================

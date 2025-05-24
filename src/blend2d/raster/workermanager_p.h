@@ -30,8 +30,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 template<typename T>
 struct PreallocatedStructPool {
@@ -435,8 +434,7 @@ public:
   //! \}
 };
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

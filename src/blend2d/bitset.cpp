@@ -291,11 +291,11 @@ static SSODenseInfo chopSSODenseData(const BLBitSetCore* self, uint32_t dst[kSSO
 // bl::BitSet - Dynamic - Capacity
 // ===============================
 
-static BL_INLINE_NODEBUG constexpr uint32_t capacityFromImplSize(BLObjectImplSize implSize) noexcept {
+static BL_INLINE_CONSTEXPR uint32_t capacityFromImplSize(BLObjectImplSize implSize) noexcept {
   return uint32_t((implSize.value() - sizeof(BLBitSetImpl)) / sizeof(BLBitSetSegment));
 }
 
-static BL_INLINE_NODEBUG constexpr BLObjectImplSize implSizeFromCapacity(uint32_t capacity) noexcept {
+static BL_INLINE_CONSTEXPR BLObjectImplSize implSizeFromCapacity(uint32_t capacity) noexcept {
   return BLObjectImplSize(sizeof(BLBitSetImpl) + capacity * sizeof(BLBitSetSegment));
 }
 

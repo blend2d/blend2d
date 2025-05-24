@@ -22,8 +22,7 @@ const BLMatrix2D identityTransform { 1.0, 0.0, 0.0, 1.0, 0.0, 0.0 };
 // bl::Transform - Private - MapPointDArray
 // ========================================
 
-BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS)
-
+[[maybe_unused]]
 static BLResult BL_CDECL blMatrix2DMapPointDArrayIdentity(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   blUnused(self);
   if (dst == src)
@@ -35,6 +34,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayIdentity(const BLMatrix2D* self
   return BL_SUCCESS;
 }
 
+[[maybe_unused]]
 static BLResult BL_CDECL blMatrix2DMapPointDArrayTranslate(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   double m20 = self->m20;
   double m21 = self->m21;
@@ -46,6 +46,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayTranslate(const BLMatrix2D* sel
   return BL_SUCCESS;
 }
 
+[[maybe_unused]]
 static BLResult BL_CDECL blMatrix2DMapPointDArrayScale(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   double m00 = self->m00;
   double m11 = self->m11;
@@ -59,6 +60,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayScale(const BLMatrix2D* self, B
   return BL_SUCCESS;
 }
 
+[[maybe_unused]]
 static BLResult BL_CDECL blMatrix2DMapPointDArraySwap(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   double m10 = self->m10;
   double m01 = self->m01;
@@ -72,6 +74,7 @@ static BLResult BL_CDECL blMatrix2DMapPointDArraySwap(const BLMatrix2D* self, BL
   return BL_SUCCESS;
 }
 
+[[maybe_unused]]
 static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine(const BLMatrix2D* self, BLPoint* dst, const BLPoint* src, size_t size) noexcept {
   double m00 = self->m00;
   double m01 = self->m01;
@@ -86,8 +89,6 @@ static BLResult BL_CDECL blMatrix2DMapPointDArrayAffine(const BLMatrix2D* self, 
 
   return BL_SUCCESS;
 }
-
-BL_DIAGNOSTIC_POP
 
 } // {TransformInternal}
 } // {bl}

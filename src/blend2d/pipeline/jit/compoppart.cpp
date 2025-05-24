@@ -18,9 +18,7 @@
 #include "../../pipeline/jit/fetchutilspixelaccess_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 // bl::Pipeline::JIT::CompOpPart - Construction & Destruction
 // ==========================================================
@@ -5403,8 +5401,6 @@ void CompOpPart::vMaskProcRGBA32InvertDone(VecArray& vn, const VecArray& vm, Pix
   CompOpPart_negateMask(this, vn, vn);
 }
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 #endif // !BL_BUILD_NO_JIT

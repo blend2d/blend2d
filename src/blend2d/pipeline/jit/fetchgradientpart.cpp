@@ -12,9 +12,7 @@
 #include "../../pipeline/jit/fetchutilspixelgather_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 #define REL_GRADIENT(FIELD) BL_OFFSET_OF(FetchData::Gradient, FIELD)
 
@@ -1412,8 +1410,6 @@ void FetchConicGradientPart::initVx(const Vec& vx, const Gp& x) noexcept {
   pc->v_add_f32(vx, vx, increments);
 }
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 #endif // !BL_BUILD_NO_JIT

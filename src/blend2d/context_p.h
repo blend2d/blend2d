@@ -17,8 +17,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace bl {
-namespace ContextInternal {
+namespace bl::ContextInternal {
 
 //! \name BLContext - Private - Constants
 //! \{
@@ -58,8 +57,7 @@ static BL_INLINE void destroyState(BLContextState* self) noexcept {
 
 //! \}
 
-} // {ContextInternal}
-} // {bl}
+} // {bl::ContextInternal}
 
 //! \}
 //! \endcond

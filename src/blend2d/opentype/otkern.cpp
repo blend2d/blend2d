@@ -12,8 +12,7 @@
 #include "../support/memops_p.h"
 #include "../support/ptrops_p.h"
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace KernImpl {
 
 // bl::OpenType::KernImpl - Tracing
@@ -711,5 +710,4 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 }
 
 } // {KernImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}

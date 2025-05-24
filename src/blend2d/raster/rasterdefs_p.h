@@ -23,8 +23,7 @@
 
 class BLRasterContextImpl;
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 struct RenderFetchData;
 struct StyleData;
@@ -194,17 +193,16 @@ enum class ContextFlags : uint32_t {
 BL_DEFINE_ENUM_FLAGS(ContextFlags)
 
 template<typename ShiftT>
-static BL_INLINE_NODEBUG constexpr ContextFlags operator<<(ContextFlags a, const ShiftT& n) noexcept {
-  return ContextFlags((std::underlying_type<ContextFlags>::type)(a) << n);
+static BL_INLINE_CONSTEXPR ContextFlags operator<<(ContextFlags a, const ShiftT& n) noexcept {
+  return ContextFlags(std::underlying_type_t<ContextFlags>(a) << n);
 }
 
 template<typename ShiftT>
-static BL_INLINE_NODEBUG constexpr ContextFlags operator>>(ContextFlags a, const ShiftT& n) noexcept {
-  return ContextFlags((std::underlying_type<ContextFlags>::type)(a) >> n);
+static BL_INLINE_CONSTEXPR ContextFlags operator>>(ContextFlags a, const ShiftT& n) noexcept {
+  return ContextFlags(std::underlying_type_t<ContextFlags>(a) >> n);
 }
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! Indexes to a `BLRasterContextImpl::solidFormatTable`, which describes pixel
 //! formats used by solid fills. There are in total 3 choices that are selected

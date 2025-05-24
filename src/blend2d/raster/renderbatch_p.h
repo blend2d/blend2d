@@ -17,8 +17,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 class WorkerSynchronization;
 
@@ -77,8 +76,7 @@ public:
   //! \}
 };
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

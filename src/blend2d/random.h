@@ -55,10 +55,10 @@ struct BLRandom {
   //! \name Overloaded Operators
   //! \{
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool operator==(const BLRandom& other) const noexcept { return  equals(other); }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool operator!=(const BLRandom& other) const noexcept { return !equals(other); }
 
   //! \}
@@ -74,10 +74,10 @@ struct BLRandom {
   //! Tests whether the random number generator is equivalent to `other`.
   //!
   //! \note It would return true only when its internal state matches `other`'s internal state.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLRandom& other) const noexcept {
-    return bool(unsigned(blEquals(this->data[0], other.data[0])) &
-                unsigned(blEquals(this->data[1], other.data[1])));
+    return BLInternal::bool_and(blEquals(data[0], other.data[0]),
+                                blEquals(data[1], other.data[1]));
   }
 
   //! \}
@@ -86,15 +86,15 @@ struct BLRandom {
   //! \{
 
   //! Returns the next pseudo-random `uint64_t` value and advances PRNG state.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint64_t nextUInt64() noexcept { return blRandomNextUInt64(this); }
 
   //! Returns the next pseudo-random `uint32_t` value and advances PRNG state.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t nextUInt32() noexcept { return blRandomNextUInt32(this); }
 
   //! Returns the next pseudo-random `double` precision floating point in [0..1) range and advances PRNG state.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG double nextDouble() noexcept { return blRandomNextDouble(this); }
 
   //! \}

@@ -13,9 +13,7 @@
 #include "../../pipeline/jit/pipecompiler_p.h"
 #include "../../support/intops_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 #define REL_PATTERN(FIELD) BL_OFFSET_OF(FetchData::Pattern, FIELD)
 
@@ -2253,8 +2251,6 @@ void FetchAffinePatternPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, Pix
   }
 }
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 #endif // !BL_BUILD_NO_JIT

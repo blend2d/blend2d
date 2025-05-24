@@ -37,6 +37,7 @@ public:
   FixedBitArray<BLBitWord, kKnownTagCount> knownTags {};
   size_t knownTagCount {};
 
+  [[nodiscard]]
   BL_INLINE bool _hasTag(BLTag tag, uint32_t id) const noexcept {
     if (id != kInvalidId)
       return knownTags.bitAt(id);
@@ -100,10 +101,12 @@ public:
 
 class ScriptTagSet : public TagSet<kScriptIdCount> {
 public:
+  [[nodiscard]]
   BL_INLINE bool hasTag(BLTag tag) const noexcept {
     return _hasTag(tag, scriptTagToId(tag));
   }
 
+  [[nodiscard]]
   BL_INLINE bool hasKnownTag(ScriptId id) const noexcept {
     return knownTags.bitAt(uint32_t(id));
   }
@@ -119,10 +122,12 @@ public:
 
 class LanguageTagSet : public TagSet<kLanguageIdCount> {
 public:
+  [[nodiscard]]
   BL_INLINE bool hasTag(BLTag tag) const noexcept {
     return _hasTag(tag, languageTagToId(tag));
   }
 
+  [[nodiscard]]
   BL_INLINE bool hasKnownTag(LanguageId id) const noexcept {
     return knownTags.bitAt(uint32_t(id));
   }
@@ -138,10 +143,12 @@ public:
 
 class FeatureTagSet : public TagSet<kFeatureIdCount> {
 public:
+  [[nodiscard]]
   BL_INLINE bool hasTag(BLTag tag) const noexcept {
     return _hasTag(tag, featureTagToId(tag));
   }
 
+  [[nodiscard]]
   BL_INLINE bool hasKnownTag(FeatureId id) const noexcept {
     return knownTags.bitAt(uint32_t(id));
   }
@@ -157,10 +164,12 @@ public:
 
 class BaselineTagSet : public TagSet<kBaselineIdCount> {
 public:
+  [[nodiscard]]
   BL_INLINE bool hasTag(BLTag tag) const noexcept {
     return _hasTag(tag, baselineTagToId(tag));
   }
 
+  [[nodiscard]]
   BL_INLINE bool hasKnownTag(BaselineId id) const noexcept {
     return knownTags.bitAt(uint32_t(id));
   }
@@ -176,10 +185,12 @@ public:
 
 class VariationTagSet : public TagSet<kVariationIdCount> {
 public:
+  [[nodiscard]]
   BL_INLINE bool hasTag(BLTag tag) const noexcept {
     return _hasTag(tag, variationTagToId(tag));
   }
 
+  [[nodiscard]]
   BL_INLINE bool hasKnownTag(VariationId id) const noexcept {
     return knownTags.bitAt(uint32_t(id));
   }

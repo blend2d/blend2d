@@ -13,8 +13,7 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 
 //! A context used for OpenType glyph substitution (GSUB) processing.
 struct GSubContext {
@@ -37,7 +36,7 @@ struct GSubContext {
     size_t capacity;
   };
 
-  typedef BLResult (BL_CDECL* PrepareOutputBufferFunc)(GSubContext* self, size_t size) BL_NOEXCEPT;
+  typedef BLResult (BL_CDECL* PrepareOutputBufferFunc)(GSubContext* self, size_t size) noexcept;
 
   //! \name Members
   //! \{
@@ -251,8 +250,7 @@ struct GPosContext {
   BL_INLINE size_t size() const noexcept { return _workBuffer.size; }
 };
 
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \}
 //! \endcond

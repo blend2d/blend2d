@@ -9,9 +9,7 @@
 #include "../../pipeline/jit/fetchpart_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 // bl::Pipeline::JIT::FetchPart - Construction & Destruction
 // =========================================================
@@ -98,8 +96,6 @@ void FetchPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& 
   BL_NOT_REACHED();
 }
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 #endif // !BL_BUILD_NO_JIT

@@ -13,9 +13,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 // bl::Pipeline::JIT - GlobalAlpha
 // ===============================
@@ -78,9 +76,7 @@ public:
   //! \}
 };
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

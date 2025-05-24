@@ -77,11 +77,11 @@ struct BLRuntimeFeaturesInfo {
 //! library and its runtime.
 struct BLRuntimeContext {
   //! Shutdown handler.
-  typedef void (BL_CDECL* ShutdownFunc)(BLRuntimeContext* rt) BL_NOEXCEPT;
+  typedef void (BL_CDECL* ShutdownFunc)(BLRuntimeContext* rt) noexcept;
   //! Cleanup handler.
-  typedef void (BL_CDECL* CleanupFunc)(BLRuntimeContext* rt, BLRuntimeCleanupFlags cleanupFlags) BL_NOEXCEPT;
+  typedef void (BL_CDECL* CleanupFunc)(BLRuntimeContext* rt, BLRuntimeCleanupFlags cleanupFlags) noexcept;
   //! MemoryInfo handler.
-  typedef void (BL_CDECL* ResourceInfoFunc)(BLRuntimeContext* rt, BLRuntimeResourceInfo* resourceInfo) BL_NOEXCEPT;
+  typedef void (BL_CDECL* ResourceInfoFunc)(BLRuntimeContext* rt, BLRuntimeResourceInfo* resourceInfo) noexcept;
 
   //! Counts how many times `blRuntimeInit()` has been called.
   //!
@@ -195,7 +195,8 @@ constexpr bool blRuntimeHasPMULL(BLRuntimeContext* rt) noexcept { return (rt->sy
 
 BL_DIAGNOSTIC_POP
 
-BL_HIDDEN BL_NORETURN void blRuntimeFailure(const char* fmt, ...) noexcept;
+[[noreturn]]
+BL_HIDDEN void blRuntimeFailure(const char* fmt, ...) noexcept;
 
 BL_HIDDEN void blFuxexRtInit(BLRuntimeContext* rt) noexcept;
 BL_HIDDEN void blThreadRtInit(BLRuntimeContext* rt) noexcept;

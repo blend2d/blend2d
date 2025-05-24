@@ -32,8 +32,7 @@
   #define Trace BLDummyTrace
 #endif
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace CFFImpl {
 
 // bl::OpenType::CFFImpl - Utilities
@@ -2442,5 +2441,4 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables, uint32_t cffVersion) noex
 };
 
 } // {CFFImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}

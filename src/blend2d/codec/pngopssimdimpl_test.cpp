@@ -15,9 +15,7 @@
 // bl::Array - Tests
 // =================
 
-namespace bl {
-namespace Png {
-namespace Tests {
+namespace bl::Png::Tests {
 
 static const uint32_t png_bpp_data[] = { 1, 2, 3, 4, 6, 8 };
 static const char* png_filter_names[] = { "None", "Sub", "Up", "Avg", "Paeth", "Random" };
@@ -147,8 +145,6 @@ UNIT(codec_png_simd_inverse_filter, BL_TEST_GROUP_IMAGE_CODEC_OPS) {
 #endif // BL_BUILD_OPT_ASIMD
 }
 
-} // {Tests}
-} // {Png}
-} // {bl}
+} // {bl::Png::Tests}
 
 #endif // BL_TEST

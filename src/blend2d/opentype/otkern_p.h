@@ -14,8 +14,7 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 
 //! OpenType 'kern' table.
 //!
@@ -231,8 +230,7 @@ namespace KernImpl {
 BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 } // {KernImpl}
 
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \}
 //! \endcond

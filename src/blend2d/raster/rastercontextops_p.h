@@ -16,8 +16,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 // The purpose of this file is to share as much as possible between both sync and async implementations.
 
@@ -190,8 +189,7 @@ static BL_INLINE BLResult addStrokedGlyphRunEdges(
   return workData->accumulateError(result);
 }
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

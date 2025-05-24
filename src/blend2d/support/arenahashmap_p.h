@@ -197,7 +197,7 @@ public:
     : ArenaHashMap(other) {}
 
   BL_INLINE ~ArenaHashMap() noexcept {
-    if (!std::is_trivially_destructible<NodeT>::value)
+    if constexpr (!std::is_trivially_destructible_v<NodeT>)
       _destroy();
   }
 

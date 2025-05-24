@@ -20,8 +20,7 @@
 #include "../support/scopedbuffer_p.h"
 #include "../support/traits_p.h"
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace CFFImpl {
 
 // bl::OpenType::CFFImpl - Tests
@@ -153,7 +152,6 @@ UNIT(opentype_cff, BL_TEST_GROUP_TEXT_OPENTYPE) {
 }
 
 } // {CFFImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 #endif // BL_TEST

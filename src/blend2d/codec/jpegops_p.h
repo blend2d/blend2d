@@ -12,8 +12,7 @@
 //! \addtogroup blend2d_codec_impl
 //! \{
 
-namespace bl {
-namespace Jpeg {
+namespace bl::Jpeg {
 
 // Derived from jidctint's `jpeg_idct_islow`.
 #define BL_JPEG_IDCT_PREC 12
@@ -54,21 +53,21 @@ namespace Jpeg {
 //! Optimized JPEG functions.
 struct FuncOpts {
   //! Dequantize and perform IDCT and store clamped 8-bit results to `dst`.
-  void (BL_CDECL* idct8)(uint8_t* dst, intptr_t dstStride, const int16_t* src, const uint16_t* qTable) BL_NOEXCEPT;
+  void (BL_CDECL* idct8)(uint8_t* dst, intptr_t dstStride, const int16_t* src, const uint16_t* qTable) noexcept;
 
   //! No upsampling (stub).
-  uint8_t* (BL_CDECL* upsample1x1)(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) BL_NOEXCEPT;
+  uint8_t* (BL_CDECL* upsample1x1)(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
   //! Upsample row in vertical direction.
-  uint8_t* (BL_CDECL* upsample1x2)(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) BL_NOEXCEPT;
+  uint8_t* (BL_CDECL* upsample1x2)(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
   //! Upsample row in horizontal direction.
-  uint8_t* (BL_CDECL* upsample2x1)(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) BL_NOEXCEPT;
+  uint8_t* (BL_CDECL* upsample2x1)(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
   //! Upsample row in vertical and horizontal direction.
-  uint8_t* (BL_CDECL* upsample2x2)(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) BL_NOEXCEPT;
+  uint8_t* (BL_CDECL* upsample2x2)(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
   //! Upsample row any.
-  uint8_t* (BL_CDECL* upsampleAny)(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) BL_NOEXCEPT;
+  uint8_t* (BL_CDECL* upsampleAny)(uint8_t* dst, uint8_t* src0, uint8_t* src1, uint32_t w, uint32_t hs) noexcept;
 
   //! Perform planar YCbCr to RGB conversion and pack to XRGB32.
-  void (BL_CDECL* convYCbCr8ToRGB32)(uint8_t* dst, const uint8_t* pY, const uint8_t* pCb, const uint8_t* pCr, uint32_t count) BL_NOEXCEPT;
+  void (BL_CDECL* convYCbCr8ToRGB32)(uint8_t* dst, const uint8_t* pY, const uint8_t* pCb, const uint8_t* pCr, uint32_t count) noexcept;
 };
 extern FuncOpts opts;
 
@@ -92,8 +91,7 @@ BL_HIDDEN void BL_CDECL idct8_SSE2(uint8_t* dst, intptr_t dstStride, const int16
 BL_HIDDEN void BL_CDECL rgb32_from_ycbcr8_SSE2(uint8_t* dst, const uint8_t* pY, const uint8_t* pCb, const uint8_t* pCr, uint32_t count) noexcept;
 #endif
 
-} // {Jpeg}
-} // {bl}
+} // {bl::Jpeg}
 
 //! \}
 //! \endcond

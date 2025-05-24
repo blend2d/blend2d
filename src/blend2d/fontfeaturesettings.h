@@ -137,23 +137,23 @@ struct BLFontFeatureSettingsView {
   //! \{
 
   //! Tests whether the view is empty.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool empty() const noexcept { return size == 0; }
 
    //! Returns a const pointer to \ref BLFontFeatureSettingsView data (iterator compatibility).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontFeatureItem* begin() const noexcept { return data; }
 
   //! Returns a const pointer to the end of \ref BLFontFeatureSettingsView data (iterator compatibility).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontFeatureItem* end() const noexcept { return data + size; }
 
    //! Returns a const pointer to \ref BLFontFeatureSettingsView data (iterator compatibility).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontFeatureItem* cbegin() const noexcept { return data; }
 
   //! Returns a const pointer to the end of \ref BLFontFeatureSettingsView data (iterator compatibility).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontFeatureItem* cend() const noexcept { return data + size; }
 
   //! \}
@@ -174,14 +174,13 @@ public:
   //! \name Internals
   //! \{
 
-  enum : uint32_t {
-    //! SSO capacity of \ref BLFontFeatureSettings container.
-    kSSOCapacity = 36u,
+  //! SSO capacity of \ref BLFontFeatureSettings container.
+  static inline constexpr uint32_t kSSOCapacity = 36u;
 
-    //! Signature of an empty font feature settings.
-    kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS)
-  };
+  //! Signature of an empty font feature settings.
+  static inline constexpr uint32_t kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_FONT_FEATURE_SETTINGS);
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLFontFeatureSettingsImpl* _impl() const noexcept { return static_cast<BLFontFeatureSettingsImpl*>(_d.impl); }
 
   //! \}
@@ -206,8 +205,9 @@ public:
   }
 
   BL_INLINE_NODEBUG ~BLFontFeatureSettings() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
       blFontFeatureSettingsDestroy(this);
+    }
   }
 
   //! \}
@@ -226,7 +226,17 @@ public:
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE_NODEBUG BLResult reset() noexcept { return blFontFeatureSettingsReset(this); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept {
+    BLResult result = blFontFeatureSettingsReset(this);
+
+    // Reset operation always succeeds.
+    BL_ASSUME(result == BL_SUCCESS);
+    // Assume a default constructed BLFontFeatureSettings after reset.
+    BL_ASSUME(_d.info.bits == kSSOEmptySignature);
+
+    return result;
+  }
+
   BL_INLINE_NODEBUG BLResult clear() noexcept { return blFontFeatureSettingsClear(this); }
   BL_INLINE_NODEBUG void swap(BLFontFeatureSettings& other) noexcept { _d.swap(other._d); }
 
@@ -239,9 +249,11 @@ public:
   //! \{
 
   //! Tests whether the container is empty, which means that no tag/value pairs are stored in it.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool empty() const noexcept { return size() == 0; }
 
   //! Returns the number of feature tag/value pairs stored in the container.
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t size() const noexcept { return _d.sso() ? size_t(_d.info.aField()) : _impl()->size; }
 
   //! Returns the container capacity
@@ -250,6 +262,7 @@ public:
   //! for simple feature tag/value pairs. Some tags from these can only hold a boolean value (0 or 1) and ther others
   //! can hold a value from 0 to 15. So, if any tag/value pair requires a greater value than 15 it would never be able
   //! to use SSO representation.
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t capacity() const noexcept { return _d.sso() ? size_t(kSSOCapacity) : _impl()->capacity; }
 
   //! Returns a normalized view of tag/value pairs as an iterable \ref BLFontFeatureItem array in the output view `out`.
@@ -263,11 +276,13 @@ public:
   BL_INLINE_NODEBUG BLResult getView(BLFontFeatureSettingsView* out) const noexcept { return blFontFeatureSettingsGetView(this, out); }
 
   //! Tests whether the settings contains the given `featureTag`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool hasValue(BLTag featureTag) const noexcept { return blFontFeatureSettingsHasValue(this, featureTag); }
 
   //! Returns the value associated with the given `featureTag`.
   //!
   //! If the `featureTag` doesn't exist or is invalid \ref BL_FONT_FEATURE_INVALID_VALUE is returned.
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t getValue(BLTag featureTag) const noexcept { return blFontFeatureSettingsGetValue(this, featureTag); }
 
   //! Sets or inserts the given `featureTag` to the settings, associating the `featureTag` with `value`.
@@ -325,6 +340,7 @@ public:
   //! \{
 
   //! Tests whether this font feature settings is equal to `other` - equality means that it has the same tag/value pairs.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLFontFeatureSettings& other) const noexcept { return blFontFeatureSettingsEquals(this, &other); }
 
   //! \}

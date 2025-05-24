@@ -18,9 +18,7 @@
 
 //! \cond INTERNAL
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
+namespace bl::Compression::Deflate {
 
 typedef int16_t mf_pos_t;
 
@@ -191,7 +189,7 @@ static BL_INLINE uint32_t lz_extend(const uint8_t* strptr, const uint8_t* matchp
   return len;
 
 word_differs:
-  if BL_CONSTEXPR (BL_BYTE_ORDER == 1234)
+  if constexpr (BL_BYTE_ORDER == 1234)
     len += IntOps::ctz(v_word) >> 3;
   else
     len += IntOps::clz(v_word) >> 3;
@@ -312,7 +310,7 @@ static BL_INLINE lz_match* bt_matchfinder_advance_one_byte(bt_matchfinder* BL_RE
   mf->hash3_tab[hash3][0] = mf_pos_t(cur_pos);
 
   int32_t cur_node_2 = 0;
-  if BL_CONSTEXPR (BT_MATCHFINDER_HASH3_WAYS >= 2) {
+  if constexpr (BT_MATCHFINDER_HASH3_WAYS >= 2) {
     cur_node_2 = mf->hash3_tab[hash3][1];
     mf->hash3_tab[hash3][1] = mf_pos_t(cur_node);
   }
@@ -325,7 +323,7 @@ static BL_INLINE lz_match* bt_matchfinder_advance_one_byte(bt_matchfinder* BL_RE
       lz_matchptr++;
     }
     else {
-      if BL_CONSTEXPR (BT_MATCHFINDER_HASH3_WAYS >= 2) {
+      if constexpr (BT_MATCHFINDER_HASH3_WAYS >= 2) {
         if (cur_node_2 > cutoff && seq3 == MemOps::readU24u(&in_base[cur_node_2])) {
           lz_matchptr->length = 3;
           lz_matchptr->offset = uint16_t(in_next - &in_base[cur_node_2]);
@@ -727,7 +725,7 @@ static BL_INLINE uint32_t hc_matchfinder_longest_match(
         // Already found a length 4 match.  Try for a longer match; start by checking either the last 4 bytes and
         // the first 4 bytes, or the last byte.  (The last byte, the one which would extend the match length by 1,
         // is the most important.)
-        if BL_CONSTEXPR (MemOps::kUnalignedMem32) {
+        if constexpr (MemOps::kUnalignedMem32) {
           if ((MemOps::loadu<uint32_t>(matchptr + best_len - 3) == MemOps::loadu<uint32_t>(in_next + best_len - 3)) &&
               (MemOps::loadu<uint32_t>(matchptr) == MemOps::loadu<uint32_t>(in_next)))
             break;
@@ -835,8 +833,6 @@ static BL_INLINE const uint8_t* hc_matchfinder_skip_positions(
   return in_next;
 }
 
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate}
 
 //! \endcond

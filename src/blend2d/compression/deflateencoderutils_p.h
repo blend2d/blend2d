@@ -14,9 +14,7 @@
 
 //! \cond INTERNAL
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
+namespace bl::Compression::Deflate {
 
 // We want to write machine work quantities, so the minimum padding is a machine word.
 static constexpr uint32_t kMinOutputBufferPadding = sizeof(BLBitWord);
@@ -86,7 +84,7 @@ struct OutputBits {
     BL_ASSERT(n != IntOps::bitSizeOf<BLBitWord>());
     BL_ASSERT(buffer.canWrite());
 
-    if BL_CONSTEXPR (MemOps::kUnalignedMemIO) {
+    if constexpr (MemOps::kUnalignedMemIO) {
       MemOps::storeu_le(buffer.ptr, bitWord);
       buffer.ptr += n;
 
@@ -107,7 +105,7 @@ struct OutputBits {
 
   template<size_t kN>
   BL_INLINE_NODEBUG void flushIfCannotBufferN(OutputBuffer& buffer) noexcept {
-    if BL_CONSTEXPR (!canBufferN(kN)) {
+    if constexpr (!canBufferN(kN)) {
       flush(buffer);
     }
   }
@@ -133,10 +131,7 @@ struct OutputStream {
 };
 
 } // {anonymous}
-
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate}
 
 //! \endcond
 

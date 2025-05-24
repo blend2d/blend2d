@@ -12,9 +12,7 @@
 
 //! \cond INTERNAL
 
-namespace bl {
-namespace Compression {
-namespace Checksum {
+namespace bl::Compression::Checksum {
 namespace {
 
 static constexpr uint64_t kConstK1 = 0x0154442BD4u;
@@ -121,9 +119,7 @@ BL_INLINE uint32_t crc32Update_CLMUL128(uint32_t checksum, const uint8_t* data, 
 }
 
 } // {anonymous}
-} // {Checksum}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Checksum}
 
 //! \endcond
 

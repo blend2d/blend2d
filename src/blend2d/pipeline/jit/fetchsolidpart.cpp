@@ -11,9 +11,7 @@
 #include "../../pipeline/jit/fetchutilspixelaccess_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 #define REL_SOLID(FIELD) BL_OFFSET_OF(FetchData::Solid, FIELD)
 
@@ -204,8 +202,6 @@ void FetchSolidPart::fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredic
   FetchUtils::satisfyPixels(pc, p, flags);
 }
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 #endif // !BL_BUILD_NO_JIT

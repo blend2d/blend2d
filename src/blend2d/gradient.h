@@ -130,8 +130,8 @@ struct BLGradientStop {
   }
 
   BL_INLINE_NODEBUG bool equals(const BLGradientStop& other) const noexcept {
-    return bool(unsigned(blEquals(offset, other.offset)) &
-                unsigned(blEquals(rgba  , other.rgba  )));
+    return BLInternal::bool_and(blEquals(offset, other.offset),
+                                blEquals(rgba  , other.rgba  ));
   }
 
   //! \}
@@ -334,6 +334,12 @@ BL_END_C_DECLS
 class BLGradient final : public BLGradientCore {
 public:
   //! \cond INTERNAL
+
+  //! Object info values of a default constructed BLGradient.
+  static inline constexpr uint32_t kDefaultSignature =
+    BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_GRADIENT) | BL_OBJECT_INFO_D_FLAG;
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLGradientImpl* _impl() const noexcept { return static_cast<BLGradientImpl*>(_d.impl); }
   //! \endcond
 
@@ -344,15 +350,27 @@ public:
   //!
   //! A default constructed gradient has \ref BL_GRADIENT_TYPE_LINEAR type, all values set to zero, and has no color
   //! stops.
-  BL_INLINE BLGradient() noexcept { blGradientInit(this); }
+  BL_INLINE BLGradient() noexcept {
+    blGradientInit(this);
+
+    // Assume a default constructed BLGradient.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+  }
 
   //! Move constructor.
   //!
   //! The `other` gradient is reset to its construction state after the move.
-  BL_INLINE BLGradient(BLGradient&& other) noexcept { blGradientInitMove(this, &other); }
+  BL_INLINE BLGradient(BLGradient&& other) noexcept {
+    blGradientInitMove(this, &other);
+
+    // Assume a default initialized `other`.
+    BL_ASSUME(other._d.info.bits == kDefaultSignature);
+  }
 
   //! Copy constructor creates a weak copy of `other`.
-  BL_INLINE BLGradient(const BLGradient& other) noexcept { blGradientInitWeak(this, &other); }
+  BL_INLINE BLGradient(const BLGradient& other) noexcept {
+    blGradientInitWeak(this, &other);
+  }
 
   BL_INLINE explicit BLGradient(BLGradientType type, const double* values = nullptr) noexcept {
     blGradientInitAs(this, type, values, BL_EXTEND_MODE_PAD, nullptr, 0, nullptr);
@@ -394,7 +412,11 @@ public:
     blGradientInitAs(this, BL_GRADIENT_TYPE_CONIC, &values, extendMode, stops, n, &transform);
   }
 
-  BL_INLINE ~BLGradient() noexcept { blGradientDestroy(this); }
+  BL_INLINE ~BLGradient() noexcept {
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
+      blGradientDestroy(this);
+    }
+  }
 
   //! \}
 
@@ -408,9 +430,12 @@ public:
   BL_INLINE BLGradient& operator=(const BLGradient& other) noexcept { blGradientAssignWeak(this, &other); return *this; }
 
   //! Equality operator, performs the same operation as `equals(other)`.
-  BL_NODISCARD BL_INLINE bool operator==(const BLGradient& other) const noexcept { return  blGradientEquals(this, &other); }
+  [[nodiscard]]
+  BL_INLINE bool operator==(const BLGradient& other) const noexcept { return  blGradientEquals(this, &other); }
+
   //! Inequality operator, performs the same operation as `!equals(other)`.
-  BL_NODISCARD BL_INLINE bool operator!=(const BLGradient& other) const noexcept { return !blGradientEquals(this, &other); }
+  [[nodiscard]]
+  BL_INLINE bool operator!=(const BLGradient& other) const noexcept { return !blGradientEquals(this, &other); }
 
   //! \}
 
@@ -421,7 +446,16 @@ public:
   //!
   //! \note This operation always succeeds and returns \ref BL_SUCCESS. The return value is provided for convenience
   //! so `reset()` can be used in tail calls in case other functions need to return \ref BLResult.
-  BL_INLINE BLResult reset() noexcept { return blGradientReset(this); }
+  BL_INLINE BLResult reset() noexcept {
+    BLResult result = blGradientReset(this);
+
+    // Reset operation always succeeds.
+    BL_ASSUME(result == BL_SUCCESS);
+    // Assume a default constructed BLGradient after reset.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+
+    return result;
+  }
 
   //! Swaps this gradient with `other`.
   //!
@@ -475,14 +509,14 @@ public:
   //! \{
 
   //! Returns the type of the gradient.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLGradientType type() const noexcept { return BLGradientType(_d.info.aField()); }
 
   //! Sets the type of the gradient.
   BL_INLINE BLResult setType(BLGradientType type) noexcept { return blGradientSetType(this, type); }
 
   //! Returns the gradient extend mode, see \ref BLExtendMode.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLExtendMode extendMode() const noexcept { return BLExtendMode(_d.info.bField()); }
 
   //! Set the gradient extend mode, see \ref BLExtendMode.
@@ -490,19 +524,19 @@ public:
   //! Resets the gradient extend mode to \ref BL_EXTEND_MODE_PAD.
   BL_INLINE BLResult resetExtendMode() noexcept { return blGradientSetExtendMode(this, BL_EXTEND_MODE_PAD); }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE double value(size_t index) const noexcept {
     BL_ASSERT(index <= BL_GRADIENT_VALUE_MAX_VALUE);
     return _impl()->values[index];
   }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLLinearGradientValues& linear() const noexcept { return _impl()->linear; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLRadialGradientValues& radial() const noexcept { return _impl()->radial; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLConicGradientValues& conic() const noexcept { return _impl()->conic; }
 
   BL_INLINE BLResult setValue(size_t index, double value) noexcept { return blGradientSetValue(this, index, value); }
@@ -512,31 +546,31 @@ public:
   BL_INLINE BLResult setValues(const BLRadialGradientValues& values) noexcept { return setValues(0, (const double*)&values, sizeof(BLRadialGradientValues) / sizeof(double)); }
   BL_INLINE BLResult setValues(const BLConicGradientValues& values) noexcept { return setValues(0, (const double*)&values, sizeof(BLConicGradientValues) / sizeof(double)); }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG double x0() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_COMMON_X0]; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG double y0() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_COMMON_Y0]; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG double x1() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_COMMON_X1]; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG double y1() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_COMMON_Y1]; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG double r0() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_RADIAL_R0]; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG double r1() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_RADIAL_R1]; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG double angle() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_CONIC_ANGLE]; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG double conicAngle() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_CONIC_ANGLE]; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG double conicRepeat() const noexcept { return _impl()->values[BL_GRADIENT_VALUE_CONIC_REPEAT]; }
 
   BL_INLINE BLResult setX0(double value) noexcept { return setValue(BL_GRADIENT_VALUE_COMMON_X0, value); }
@@ -557,15 +591,15 @@ public:
   //! Tests whether the gradient is empty.
   //!
   //! Empty gradient is considered any gradient that has no stops.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool empty() const noexcept { return _impl()->size == 0; }
 
   //! Returns the number of stops the gradient has.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t size() const noexcept { return _impl()->size; }
 
   //! Returns the gradient capacity [in stops].
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t capacity() const noexcept { return _impl()->capacity; }
 
   //! Reserves the capacity of gradient for at least `n` stops.
@@ -574,18 +608,18 @@ public:
   BL_INLINE_NODEBUG BLResult shrink() noexcept { return blGradientShrink(this); }
 
   //! Returns the gradient stop data.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLGradientStop* stops() const noexcept { return _impl()->stops; }
 
   //! Returns a gradient stop at `i`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE const BLGradientStop& stopAt(size_t i) const noexcept {
     BL_ASSERT(i < size());
     return _impl()->stops[i];
   }
 
   //! Returns gradient stops and their count as \ref BLArrayView<BLGradientStop>.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLArrayView<BLGradientStop> stopsView() const noexcept { return BLArrayView<BLGradientStop>{_impl()->stops, _impl()->size}; }
 
   //! \}
@@ -659,7 +693,7 @@ public:
   //! Returns the index of a color stop in stops[] array of the given `offset`.
   //!
   //! \note If there is no such offset, `SIZE_MAX` is returned.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t indexOfStop(double offset) const noexcept { return blGradientIndexOfStop(this, offset) ;}
 
   //! \}
@@ -670,7 +704,7 @@ public:
   //! Tests whether the gradient equals `other`.
   //!
   //! \note The equality check returns true if both gradients are the same value-wise.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLGradient& other) const noexcept { return blGradientEquals(this, &other); }
 
   //! \}
@@ -679,15 +713,15 @@ public:
   //! \{
 
   //! Returns the transformation matrix applied to the gradient.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLMatrix2D& transform() const noexcept { return _impl()->transform; }
 
   //! Returns the type of the transformation matrix returned by `transform()`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLTransformType transformType() const noexcept { return BLTransformType(_d.info.cField()); }
 
   //! Tests whether the gradient has a non-identity transformation matrix.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool hasTransform() const noexcept { return transformType() != BL_TRANSFORM_TYPE_IDENTITY; }
 
   //! Applies a matrix operation to the current transformation matrix (internal).

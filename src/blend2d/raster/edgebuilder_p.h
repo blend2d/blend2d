@@ -20,8 +20,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 enum ClipShift : uint32_t {
   kClipShiftX0  = 0,
@@ -777,8 +776,8 @@ public:
 template<typename CoordT>
 class EdgeBuilder {
 public:
-  static constexpr uint32_t kEdgeOffset = uint32_t(sizeof(EdgeVector<CoordT>) - sizeof(EdgePoint<CoordT>));
-  static constexpr uint32_t kMinEdgeSize = uint32_t(sizeof(EdgeVector<CoordT>) + sizeof(EdgePoint<CoordT>));
+  static inline constexpr uint32_t kEdgeOffset = uint32_t(sizeof(EdgeVector<CoordT>) - sizeof(EdgePoint<CoordT>));
+  static inline constexpr uint32_t kMinEdgeSize = uint32_t(sizeof(EdgeVector<CoordT>) + sizeof(EdgePoint<CoordT>));
 
   //! \name Edge Storage
   //! \{
@@ -1446,7 +1445,7 @@ RestartClipLoop:
 
           case kClipFlagX0Y0:
             p.x = _clipBoxD.x0;
-            BL_FALLTHROUGH
+            [[fallthrough]];
 
           case kClipFlagX1Y0:
             p.y = a.y + (p.x - a.x) * d.y / d.x;
@@ -1454,7 +1453,7 @@ RestartClipLoop:
 
             if (p.y >= _clipBoxD.y0)
               break;
-            BL_FALLTHROUGH
+            [[fallthrough]];
 
           case kClipFlagY0:
             p.y = _clipBoxD.y0;
@@ -1465,7 +1464,7 @@ RestartClipLoop:
 
           case kClipFlagX0Y1:
             p.x = _clipBoxD.x0;
-            BL_FALLTHROUGH
+            [[fallthrough]];
 
           case kClipFlagX1Y1:
             p.y = a.y + (p.x - a.x) * d.y / d.x;
@@ -1473,7 +1472,7 @@ RestartClipLoop:
 
             if (p.y <= _clipBoxD.y1)
               break;
-            BL_FALLTHROUGH
+            [[fallthrough]];
 
           case kClipFlagY1:
             p.y = _clipBoxD.y1;
@@ -1484,7 +1483,7 @@ RestartClipLoop:
 
           case kClipFlagX0:
             p.x = _clipBoxD.x0;
-            BL_FALLTHROUGH
+            [[fallthrough]];
 
           case kClipFlagX1:
             p.y = a.y + (p.x - a.x) * d.y / d.x;
@@ -1546,13 +1545,13 @@ RestartClipLoop:
         switch (bFlags) {
           case kClipFlagX0Y0:
             q.x = _clipBoxD.x0;
-            BL_FALLTHROUGH
+            [[fallthrough]];
 
           case kClipFlagX1Y0:
             q.y = a.y + (q.x - a.x) * d.y / d.x;
             if (q.y >= _clipBoxD.y0)
               break;
-            BL_FALLTHROUGH
+            [[fallthrough]];
 
           case kClipFlagY0:
             q.y = _clipBoxD.y0;
@@ -1561,13 +1560,13 @@ RestartClipLoop:
 
           case kClipFlagX0Y1:
             q.x = _clipBoxD.x0;
-            BL_FALLTHROUGH
+            [[fallthrough]];
 
           case kClipFlagX1Y1:
             q.y = a.y + (q.x - a.x) * d.y / d.x;
             if (q.y <= _clipBoxD.y1)
               break;
-            BL_FALLTHROUGH
+            [[fallthrough]];
 
           case kClipFlagY1:
             q.y = _clipBoxD.y1;
@@ -1576,7 +1575,7 @@ RestartClipLoop:
 
           case kClipFlagX0:
             q.x = _clipBoxD.x0;
-            BL_FALLTHROUGH
+            [[fallthrough]];
 
           case kClipFlagX1:
             q.y = a.y + (q.x - a.x) * d.y / d.x;
@@ -2631,8 +2630,7 @@ RightToLeft_AddLine:
 
 //! \}
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

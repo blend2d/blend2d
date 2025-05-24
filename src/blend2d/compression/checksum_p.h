@@ -10,13 +10,11 @@
 
 //! \cond INTERNAL
 
-namespace bl {
-namespace Compression {
-namespace Checksum {
+namespace bl::Compression::Checksum {
 
 struct FunctionTable {
-  using Adler32Func = uint32_t (BL_CDECL*)(uint32_t checksum, const uint8_t* data, size_t size) BL_NOEXCEPT;
-  using Crc32Func = uint32_t (BL_CDECL*)(uint32_t checksum, const uint8_t* data, size_t size) BL_NOEXCEPT;
+  using Adler32Func = uint32_t (BL_CDECL*)(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
+  using Crc32Func = uint32_t (BL_CDECL*)(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
 
   Adler32Func adler32;
   Crc32Func crc32;
@@ -66,9 +64,7 @@ BL_HIDDEN uint32_t BL_CDECL adler32Update_SSE2(uint32_t checksum, const uint8_t*
 BL_HIDDEN uint32_t BL_CDECL adler32Update_ASIMD(uint32_t checksum, const uint8_t* data, size_t size) noexcept;
 #endif // BL_TARGET_OPT_ASIMD
 
-} // {Checksum}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Checksum}
 
 //! \endcond
 

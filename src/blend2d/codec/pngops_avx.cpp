@@ -8,16 +8,12 @@
 
 #include "../codec/pngopssimdimpl_p.h"
 
-namespace bl {
-namespace Png {
-namespace Ops {
+namespace bl::Png::Ops {
 
 void initFuncTable_AVX(FunctionTable& ft) noexcept {
   initSimdFunctions(ft);
 }
 
-} // {Ops}
-} // {Png}
-} // {bl}
+} // {bl::Png::Ops}
 
 #endif // BL_TARGET_OPT_AVX

@@ -27,19 +27,19 @@ namespace {
 //!
 //! \note `T` should be floating point.
 template<typename T>
-BL_NODISCARD
-static BL_INLINE_NODEBUG constexpr T inf() noexcept { return std::numeric_limits<T>::infinity(); }
+[[nodiscard]]
+static BL_INLINE_CONSTEXPR T inf() noexcept { return std::numeric_limits<T>::infinity(); }
 
 //! Returns a quiet NaN of `T` type.
 //!
 //! \note `T` should be floating point.
 template<typename T>
-BL_NODISCARD
-static BL_INLINE_NODEBUG constexpr T nan() noexcept { return std::numeric_limits<T>::quiet_NaN(); }
+[[nodiscard]]
+static BL_INLINE_CONSTEXPR T nan() noexcept { return std::numeric_limits<T>::quiet_NaN(); }
 
 template<typename T> constexpr T epsilon() noexcept = delete;
-template<> BL_INLINE_NODEBUG constexpr float epsilon<float>() noexcept { return 1e-8f; }
-template<> BL_INLINE_NODEBUG constexpr double epsilon<double>() noexcept { return 1e-14; }
+template<> BL_INLINE_CONSTEXPR float epsilon<float>() noexcept { return 1e-8f; }
+template<> BL_INLINE_CONSTEXPR double epsilon<double>() noexcept { return 1e-14; }
 
 //! \}
 
@@ -51,7 +51,7 @@ static BL_INLINE_NODEBUG bool isNaN(double x) noexcept { return std::isnan(x); }
 
 template<typename T, typename... Args>
 static BL_INLINE_NODEBUG bool isNaN(const T& first, Args&&... args) noexcept {
-  return bool(unsigned(isNaN(first)) | unsigned(isNaN(BLInternal::forward<Args>(args)...)));
+  return BLInternal::bool_or(isNaN(first), (isNaN(forward<Args>(args)))...);
 }
 
 static BL_INLINE_NODEBUG bool isInf(float x) noexcept { return std::isinf(x); }
@@ -59,7 +59,7 @@ static BL_INLINE_NODEBUG bool isInf(double x) noexcept { return std::isinf(x); }
 
 template<typename T, typename... Args>
 static BL_INLINE_NODEBUG bool isInf(const T& first, Args&&... args) noexcept {
-  return bool(unsigned(isInf(first)) | unsigned(isInf(BLInternal::forward<Args>(args)...)));
+  return BLInternal::bool_or(isInf(first), (isInf(forward<Args>(args)))...);
 }
 
 static BL_INLINE_NODEBUG bool isFinite(const float& x) noexcept { return std::isfinite(x); }
@@ -71,7 +71,7 @@ static BL_INLINE_NODEBUG bool isFinite(const BLRect& r) noexcept;
 
 template<typename T, typename... Args>
 static BL_INLINE_NODEBUG bool isFinite(T first, Args&&... args) noexcept {
-  return bool(unsigned(isFinite(first)) & unsigned(isFinite(BLInternal::forward<Args>(args)...)));
+  return BLInternal::bool_and(isFinite(first), (isFinite(BLInternal::forward<Args>(args)))...);
 }
 
 static BL_INLINE_NODEBUG bool isFinite(const BLPoint& p) noexcept { return isFinite(p.x, p.y); }
@@ -81,20 +81,20 @@ static BL_INLINE_NODEBUG bool isFinite(const BLRect& r) noexcept { return isFini
 static BL_INLINE_NODEBUG bool isNaN(const BLPoint& p) noexcept { return isNaN(p.x, p.y); }
 
 template<typename T>
-static BL_INLINE_NODEBUG constexpr bool isNear(T x, T y, T eps = epsilon<T>()) noexcept { return blAbs(x - y) <= eps; }
+static BL_INLINE_CONSTEXPR bool isNear(T x, T y, T eps = epsilon<T>()) noexcept { return blAbs(x - y) <= eps; }
 
 template<typename T>
-static BL_INLINE_NODEBUG constexpr bool isNearZero(T x, T eps = epsilon<T>()) noexcept { return blAbs(x) <= eps; }
+static BL_INLINE_CONSTEXPR bool isNearZero(T x, T eps = epsilon<T>()) noexcept { return blAbs(x) <= eps; }
 
 template<typename T>
-static BL_INLINE_NODEBUG constexpr bool isNearZeroPositive(T x, T eps = epsilon<T>()) noexcept { return x >= T(0) && x <= eps; }
+static BL_INLINE_CONSTEXPR bool isNearZeroPositive(T x, T eps = epsilon<T>()) noexcept { return x >= T(0) && x <= eps; }
 
 template<typename T>
-static BL_INLINE_NODEBUG constexpr bool isNearOne(T x, T eps = epsilon<T>()) noexcept { return isNear(x, T(1), eps); }
+static BL_INLINE_CONSTEXPR bool isNearOne(T x, T eps = epsilon<T>()) noexcept { return isNear(x, T(1), eps); }
 
 //! Check if `x` is within [0, 1] range (inclusive).
 template<typename T>
-static BL_INLINE bool isBetween0And1(const T& x) noexcept { return bool(unsigned(x >= T(0)) & unsigned(x <= T(1))); }
+static BL_INLINE bool isBetween0And1(const T& x) noexcept { return bool_and(x >= T(0), x <= T(1)); }
 
 //! \}
 
@@ -102,10 +102,10 @@ static BL_INLINE bool isBetween0And1(const T& x) noexcept { return bool(unsigned
 //! \{
 
 template<typename T>
-static BL_INLINE_NODEBUG constexpr T sum(const T& first) { return first; }
+static BL_INLINE_CONSTEXPR T sum(const T& first) { return first; }
 
 template<typename T, typename... Args>
-static BL_INLINE_NODEBUG constexpr T sum(const T& first, Args&&... args) { return first + sum(BLInternal::forward<Args>(args)...); }
+static BL_INLINE_CONSTEXPR T sum(const T& first, Args&&... args) { return first + sum(BLInternal::forward<Args>(args)...); }
 
 //! \}
 
@@ -447,8 +447,8 @@ static BL_INLINE T repeat(T x, T y) noexcept {
 //! \name Power Functions
 //! \{
 
-template<typename T> BL_INLINE_NODEBUG constexpr T square(const T& x) noexcept { return x * x; }
-template<typename T> BL_INLINE_NODEBUG constexpr T cube(const T& x) noexcept { return x * x * x; }
+template<typename T> BL_INLINE_CONSTEXPR T square(const T& x) noexcept { return x * x; }
+template<typename T> BL_INLINE_CONSTEXPR T cube(const T& x) noexcept { return x * x * x; }
 
 static BL_INLINE_NODEBUG float pow(float x, float y) noexcept { return ::powf(x, y); }
 static BL_INLINE_NODEBUG double pow(double x, double y) noexcept { return ::pow(x, y); }

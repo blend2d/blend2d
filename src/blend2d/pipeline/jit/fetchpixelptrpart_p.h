@@ -12,9 +12,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 //! Pipeline fetch pixel-pointer part.
 class FetchPixelPtrPart : public FetchPart {
@@ -41,9 +39,7 @@ public:
   void fetch(Pixel& p, PixelCount n, PixelFlags flags, PixelPredicate& predicate) noexcept override;
 };
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

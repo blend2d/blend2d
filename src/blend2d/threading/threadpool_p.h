@@ -24,14 +24,14 @@ enum BLThreadPoolAcquireFlags : uint32_t {
 };
 
 struct BLThreadPoolVirt {
-  BLThreadPool* (BL_CDECL* addRef)(BLThreadPool* self) BL_NOEXCEPT;
-  BLResult (BL_CDECL* release)(BLThreadPool* self) BL_NOEXCEPT;
-  uint32_t (BL_CDECL* maxThreadCount)(const BLThreadPool* self) BL_NOEXCEPT;
-  uint32_t (BL_CDECL* pooledThreadCount)(const BLThreadPool* self) BL_NOEXCEPT;
-  BLResult (BL_CDECL* setThreadAttributes)(BLThreadPool* self, const BLThreadAttributes* attributes) BL_NOEXCEPT;
-  uint32_t (BL_CDECL* cleanup)(BLThreadPool* self, uint32_t threadQuitFlags) BL_NOEXCEPT;
-  uint32_t (BL_CDECL* acquireThreads)(BLThreadPool* self, BLThread** threads, uint32_t n, uint32_t flags, BLResult* reason) BL_NOEXCEPT;
-  void     (BL_CDECL* releaseThreads)(BLThreadPool* self, BLThread** threads, uint32_t n) BL_NOEXCEPT;
+  BLThreadPool* (BL_CDECL* addRef)(BLThreadPool* self) noexcept;
+  BLResult (BL_CDECL* release)(BLThreadPool* self) noexcept;
+  uint32_t (BL_CDECL* maxThreadCount)(const BLThreadPool* self) noexcept;
+  uint32_t (BL_CDECL* pooledThreadCount)(const BLThreadPool* self) noexcept;
+  BLResult (BL_CDECL* setThreadAttributes)(BLThreadPool* self, const BLThreadAttributes* attributes) noexcept;
+  uint32_t (BL_CDECL* cleanup)(BLThreadPool* self, uint32_t threadQuitFlags) noexcept;
+  uint32_t (BL_CDECL* acquireThreads)(BLThreadPool* self, BLThread** threads, uint32_t n, uint32_t flags, BLResult* reason) noexcept;
+  void     (BL_CDECL* releaseThreads)(BLThreadPool* self, BLThread** threads, uint32_t n) noexcept;
 };
 
 struct BLThreadPool {

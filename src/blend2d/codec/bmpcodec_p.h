@@ -19,8 +19,7 @@
 //! \addtogroup blend2d_codec_impl
 //! \{
 
-namespace bl {
-namespace Bmp {
+namespace bl::Bmp {
 
 static constexpr uint32_t kHeaderSizeOS2_V1 = 12;
 static constexpr uint32_t kHeaderSizeWIN_V1 = 40;
@@ -222,8 +221,7 @@ struct BmpInfoHeader {
 
 BL_HIDDEN void bmpCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
 
-} // {Bmp}
-} // {bl}
+} // {bl::Bmp}
 
 struct BLBmpDecoderImpl : public BLImageDecoderImpl {
   BLImageInfo imageInfo;

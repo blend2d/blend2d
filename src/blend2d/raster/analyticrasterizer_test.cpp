@@ -14,8 +14,7 @@
 // bl::RasterEngine - AnalyticRasterizer - Tests
 // =============================================
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 static bool checkRasterizerState(const AnalyticState& a, const AnalyticState& b) noexcept {
   int yDltMask = (a._dy >= a._dx) ? 255 : -1;
@@ -158,7 +157,6 @@ UNIT(analytic_rasterizer, BL_TEST_GROUP_RENDERING_UTILITIES) {
   }
 }
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 #endif // BL_TEST

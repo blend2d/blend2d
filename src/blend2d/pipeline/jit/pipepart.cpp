@@ -10,9 +10,7 @@
 #include "../../pipeline/jit/pipepart_p.h"
 #include "../../tables/tables_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 PipePart::PipePart(PipeCompiler* pc, PipePartType partType) noexcept
   : pc(pc),
@@ -22,8 +20,6 @@ PipePart::PipePart(PipeCompiler* pc, PipePartType partType) noexcept
 
 void PipePart::preparePart() noexcept {}
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 #endif // !BL_BUILD_NO_JIT

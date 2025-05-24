@@ -17,13 +17,9 @@
 
 //! \cond INTERNAL
 
-namespace bl {
-namespace OpenType {
-
+namespace bl::OpenType {
 struct OTFaceImpl;
-
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \addtogroup blend2d_internal
 //! \{
@@ -36,21 +32,21 @@ struct BLFontFacePrivateFuncs {
     const BLFontFaceImpl* impl,
     uint32_t* content,
     size_t count,
-    BLGlyphMappingState* state) BL_NOEXCEPT;
+    BLGlyphMappingState* state) noexcept;
 
   BLResult (BL_CDECL* getGlyphBounds)(
     const BLFontFaceImpl* impl,
     const uint32_t* glyphData,
     intptr_t glyphAdvance,
     BLBoxI* boxes,
-    size_t count) BL_NOEXCEPT;
+    size_t count) noexcept;
 
   BLResult (BL_CDECL* getGlyphAdvances)(
     const BLFontFaceImpl* impl,
     const uint32_t* glyphData,
     intptr_t glyphAdvance,
     BLGlyphPlacement* placementData,
-    size_t count) BL_NOEXCEPT;
+    size_t count) noexcept;
 
   BLResult (BL_CDECL* getGlyphOutlines)(
     const BLFontFaceImpl* impl,
@@ -58,31 +54,31 @@ struct BLFontFacePrivateFuncs {
     const BLMatrix2D* userTransform,
     BLPath* out,
     size_t* contourCountOut,
-    bl::ScopedBuffer* tmpBuffer) BL_NOEXCEPT;
+    bl::ScopedBuffer* tmpBuffer) noexcept;
 
   BLResult (BL_CDECL* applyKern)(
     const BLFontFaceImpl* faceI,
     uint32_t* glyphData,
     BLGlyphPlacement* placementData,
-    size_t count) BL_NOEXCEPT;
+    size_t count) noexcept;
 
   BLResult (BL_CDECL* applyGSub)(
     const BLFontFaceImpl* impl,
     BLGlyphBuffer* gb,
     const uint32_t* bitWords,
-    size_t bitWordCount) BL_NOEXCEPT;
+    size_t bitWordCount) noexcept;
 
   BLResult (BL_CDECL* applyGPos)(
     const BLFontFaceImpl* impl,
     BLGlyphBuffer* gb,
     const uint32_t* bitWords,
-    size_t bitWordCount) BL_NOEXCEPT;
+    size_t bitWordCount) noexcept;
 
   BLResult (BL_CDECL* positionGlyphs)(
     const BLFontFaceImpl* impl,
     uint32_t* glyphData,
     BLGlyphPlacement* placementData,
-    size_t count) BL_NOEXCEPT;
+    size_t count) noexcept;
 };
 
 BL_HIDDEN extern BLFontFacePrivateFuncs blNullFontFaceFuncs;

@@ -60,7 +60,7 @@ static BL_INLINE BLResult blObjectAllocImplInternal(BLObjectCore* self, uint32_t
 
   self->_d.clearStaticData();
   self->_d.impl = impl;
-  self->_d.info.bits = objectInfo | BL_OBJECT_INFO_M_FLAG | BL_OBJECT_INFO_D_FLAG | BL_OBJECT_INFO_R_FLAG;
+  self->_d.info.bits = objectInfo | BL_OBJECT_INFO_D_FLAG | BL_OBJECT_INFO_M_FLAG | BL_OBJECT_INFO_R_FLAG;
 
   return BL_SUCCESS;
 }

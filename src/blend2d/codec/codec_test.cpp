@@ -19,9 +19,7 @@
 // bl::Codecs - Tests
 // ==================
 
-namespace bl {
-namespace Codecs {
-namespace Tests {
+namespace bl::Codecs::Tests {
 
 static void render_simple_image(BLImage& image, BLRandom& rnd, uint32_t cmd_count) noexcept {
   BLContext ctx(image);
@@ -162,13 +160,13 @@ UNIT(image_codec_png, BL_TEST_GROUP_IMAGE_CODEC_ROUNDTRIP) {
   static constexpr uint32_t kTestCount = 100;
 
   for (BLSizeI imageSize : image_codec_test_sizes) {
+    INFO("Testing PNG encoder & decoder with %dx%d images", imageSize.w, imageSize.h);
+
     BLImageCodec codec;
     EXPECT_SUCCESS(codec.findByName("PNG"));
 
     BLRandom rnd(0x123456789ABCDEFu);
     for (uint32_t compressionLevel = 0; compressionLevel <= 12; compressionLevel++) {
-      INFO("Testing PNG encoder & decoder with %dx%d images and compressionLevel=%u", imageSize.w, imageSize.h, compressionLevel);
-
       TestOptions testOptions{};
       testOptions.compressionLevel = compressionLevel;
 
@@ -195,8 +193,6 @@ UNIT(image_codec_qoi, BL_TEST_GROUP_IMAGE_CODEC_ROUNDTRIP) {
   }
 }
 
-} // {Tests}
-} // {Compression}
-} // {bl}
+} // {bl::Codecs::Tests}
 
 #endif // BL_TEST

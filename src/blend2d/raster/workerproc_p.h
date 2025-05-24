@@ -12,16 +12,14 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 namespace WorkerProc {
 
 BL_HIDDEN void processWorkData(WorkData* workData, RenderBatch* batch) noexcept;
 BL_HIDDEN void BL_CDECL workerThreadEntry(BLThread* thread, void* data) noexcept;
 
 } // {WorkerProc}
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

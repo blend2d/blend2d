@@ -199,12 +199,6 @@
 // C++ Compiler Support
 // ====================
 
-#if defined(__clang__)
-  #define BL_CLANG_AT_LEAST(MAJOR, MINOR) ((MAJOR > __clang_major__) || (MAJOR == __clang_major__ && MINOR >= __clang_minor__))
-#else
-  #define BL_CLANG_AT_LEAST(MAJOR, MINOR) 0
-#endif
-
 // Some compilers won't optimize our stuff if we won't tell them. However, we have to be careful as Blend2D doesn't
 // use fast-math by default. So when applicable we turn some optimizations on and off locally, but not globally.
 //
@@ -223,36 +217,6 @@
   #define BL_CC_HAS_ATTRIBUTE(x) __has_attribute(x)
 #else
   #define BL_CC_HAS_ATTRIBUTE(x) 0
-#endif
-
-#if __cplusplus >= 201703L
-  #define BL_FALLTHROUGH [[fallthrough]];
-#elif defined(__GNUC__) && __GNUC__ >= 7
-  #define BL_FALLTHROUGH __attribute__((fallthrough));
-#else
-  #define BL_FALLTHROUGH /* fallthrough */
-#endif
-
-//! \def BL_STDCXX_VERSION
-//!
-//! PROBLEM: On Linux the default C++ standard library is called `libstdc++` and comes with GCC. Clang can also use
-//! this standard library and in many cases it is configured to do so, however, the standard library can be older
-//! (and thus provide less features) than the C++ version reported by the compiler via `__cplusplus` macro. This means
-//! that the `__cplusplus` version doesn't correspond to the C++ standard library version!
-//!
-//! The problem is that `libstdc++` doesn't provide any version information, but a timestamp, which is unreliable if
-//! you use other compiler than GCC. Since we only use C++14 and higher optionally we don't have a problem to detect
-//! such case and to conditionally disable C++14 and higher features of the standard  C++ library.
-#if defined(__GLIBCXX__) && defined(__clang__)
-  #if __has_include(<string_view>) && __cplusplus >= 201703L
-    #define BL_STDCXX_VERSION 201703L
-  #elif __has_include(<shared_mutex>) && __cplusplus >= 201402L
-    #define BL_STDCXX_VERSION 201402L
-  #else
-    #define BL_STDCXX_VERSION 201103L
-  #endif
-#else
-  #define BL_STDCXX_VERSION __cplusplus
 #endif
 
 //! \def BL_HIDDEN
@@ -423,8 +387,9 @@
 #define BL_PROPAGATE_IF_NOT_NOTHING(...)                                      \
   do {                                                                        \
     BLResult resultToPropagate = (__VA_ARGS__);                               \
-    if (resultToPropagate != BL_RESULT_NOTHING)                               \
+    if (resultToPropagate != BL_RESULT_NOTHING) {                             \
       return resultToPropagate;                                               \
+    }                                                                         \
   } while (0)
 
 //! Decorates a base class that has virtual functions.
@@ -441,93 +406,87 @@
 #ifdef _DOXYGEN
   #define BL_DEFINE_ENUM_FLAGS(T)
 #else
-  #define BL_DEFINE_ENUM_FLAGS(T)                                                             \
-    static BL_INLINE_NODEBUG constexpr T operator~(T a) noexcept {                            \
-      return T(~(std::underlying_type<T>::type)(a));                                          \
-    }                                                                                         \
-                                                                                              \
-    static BL_INLINE_NODEBUG constexpr T operator|(T a, T b) noexcept {                       \
-      return T((std::underlying_type<T>::type)(a) |                                           \
-              (std::underlying_type<T>::type)(b));                                            \
-    }                                                                                         \
-    static BL_INLINE_NODEBUG constexpr T operator&(T a, T b) noexcept {                       \
-      return T((std::underlying_type<T>::type)(a) &                                           \
-              (std::underlying_type<T>::type)(b));                                            \
-    }                                                                                         \
-    static BL_INLINE_NODEBUG constexpr T operator^(T a, T b) noexcept {                       \
-      return T((std::underlying_type<T>::type)(a) ^                                           \
-              (std::underlying_type<T>::type)(b));                                            \
-    }                                                                                         \
-                                                                                              \
-    static BL_INLINE_NODEBUG T& operator|=(T& a, T b) noexcept {                              \
-      a = T((std::underlying_type<T>::type)(a) |                                              \
-            (std::underlying_type<T>::type)(b));                                              \
-      return a;                                                                               \
-    }                                                                                         \
-    static BL_INLINE_NODEBUG T& operator&=(T& a, T b) noexcept {                              \
-      a = T((std::underlying_type<T>::type)(a) &                                              \
-            (std::underlying_type<T>::type)(b));                                              \
-      return a;                                                                               \
-    }                                                                                         \
-    static BL_INLINE_NODEBUG T& operator^=(T& a, T b) noexcept {                              \
-      a = T((std::underlying_type<T>::type)(a) ^                                              \
-            (std::underlying_type<T>::type)(b));                                              \
-      return a;                                                                               \
+  #define BL_DEFINE_ENUM_FLAGS(T)                                             \
+    static BL_INLINE_CONSTEXPR T operator~(T a) noexcept {                    \
+      return T(~std::underlying_type_t<T>(a));                                \
+    }                                                                         \
+                                                                              \
+    static BL_INLINE_CONSTEXPR T operator|(T a, T b) noexcept {               \
+      return T(std::underlying_type_t<T>(a) | std::underlying_type_t<T>(b));  \
+    }                                                                         \
+    static BL_INLINE_CONSTEXPR T operator&(T a, T b) noexcept {               \
+      return T(std::underlying_type_t<T>(a) & std::underlying_type_t<T>(b));  \
+    }                                                                         \
+    static BL_INLINE_CONSTEXPR T operator^(T a, T b) noexcept {               \
+      return T(std::underlying_type_t<T>(a) ^ std::underlying_type_t<T>(b));  \
+    }                                                                         \
+                                                                              \
+    static BL_INLINE_CONSTEXPR T& operator|=(T& a, T b) noexcept {            \
+      a = T(std::underlying_type_t<T>(a) | std::underlying_type_t<T>(b));     \
+      return a;                                                               \
+    }                                                                         \
+    static BL_INLINE_CONSTEXPR T& operator&=(T& a, T b) noexcept {            \
+      a = T(std::underlying_type_t<T>(a) & std::underlying_type_t<T>(b));     \
+      return a;                                                               \
+    }                                                                         \
+    static BL_INLINE_CONSTEXPR T& operator^=(T& a, T b) noexcept {            \
+      a = T(std::underlying_type_t<T>(a) ^ std::underlying_type_t<T>(b));     \
+      return a;                                                               \
     }
 #endif
 
 //! \def BL_DEFINE_STRONG_TYPE(C, T)
 //!
 //! Defines a strong type `C` that wraps a value of `T`.
-#define BL_DEFINE_STRONG_TYPE(C, T)                                                           \
-struct C {                                                                                    \
-  T _v;                                                                                       \
-                                                                                              \
-  BL_INLINE_NODEBUG C() = default;                                                            \
-  BL_INLINE_NODEBUG constexpr explicit C(T x) noexcept : _v(x) {}                             \
-  BL_INLINE_NODEBUG constexpr C(const C& other) noexcept = default;                           \
-                                                                                              \
-  BL_INLINE_NODEBUG constexpr T value() const noexcept { return _v; }                         \
-                                                                                              \
-  BL_INLINE_NODEBUG T* valuePtr() noexcept { return &_v; }                                    \
-  BL_INLINE_NODEBUG const T* valuePtr() const noexcept { return &_v; }                        \
-                                                                                              \
-  BL_INLINE_NODEBUG C& operator=(T x) noexcept { _v = x; return *this; };                     \
-  BL_INLINE_NODEBUG C& operator=(const C& x) noexcept = default;                              \
-                                                                                              \
-  BL_INLINE_NODEBUG constexpr C operator+(T x) const noexcept { return C(_v + x); }           \
-  BL_INLINE_NODEBUG constexpr C operator-(T x) const noexcept { return C(_v - x); }           \
-  BL_INLINE_NODEBUG constexpr C operator*(T x) const noexcept { return C(_v * x); }           \
-  BL_INLINE_NODEBUG constexpr C operator/(T x) const noexcept { return C(_v / x); }           \
-                                                                                              \
-  BL_INLINE_NODEBUG constexpr C operator+(const C& x) const noexcept { return C(_v + x._v); } \
-  BL_INLINE_NODEBUG constexpr C operator-(const C& x) const noexcept { return C(_v - x._v); } \
-  BL_INLINE_NODEBUG constexpr C operator*(const C& x) const noexcept { return C(_v * x._v); } \
-  BL_INLINE_NODEBUG constexpr C operator/(const C& x) const noexcept { return C(_v / x._v); } \
-                                                                                              \
-  BL_INLINE_NODEBUG C& operator+=(T x) noexcept { _v += x; return *this; }                    \
-  BL_INLINE_NODEBUG C& operator-=(T x) noexcept { _v -= x; return *this; }                    \
-  BL_INLINE_NODEBUG C& operator*=(T x) noexcept { _v *= x; return *this; }                    \
-  BL_INLINE_NODEBUG C& operator/=(T x) noexcept { _v /= x; return *this; }                    \
-                                                                                              \
-  BL_INLINE_NODEBUG C& operator+=(const C& x) noexcept { _v += x._v; return *this; }          \
-  BL_INLINE_NODEBUG C& operator-=(const C& x) noexcept { _v -= x._v; return *this; }          \
-  BL_INLINE_NODEBUG C& operator*=(const C& x) noexcept { _v *= x._v; return *this; }          \
-  BL_INLINE_NODEBUG C& operator/=(const C& x) noexcept { _v /= x._v; return *this; }          \
-                                                                                              \
-  BL_INLINE_NODEBUG bool operator==(T x) const noexcept { return _v == x; }                   \
-  BL_INLINE_NODEBUG bool operator!=(T x) const noexcept { return _v != x; }                   \
-  BL_INLINE_NODEBUG bool operator> (T x) const noexcept { return _v >  x; }                   \
-  BL_INLINE_NODEBUG bool operator>=(T x) const noexcept { return _v >= x; }                   \
-  BL_INLINE_NODEBUG bool operator< (T x) const noexcept { return _v <  x; }                   \
-  BL_INLINE_NODEBUG bool operator<=(T x) const noexcept { return _v <= x; }                   \
-                                                                                              \
-  BL_INLINE_NODEBUG bool operator==(const C& x) const noexcept { return _v == x._v; }         \
-  BL_INLINE_NODEBUG bool operator!=(const C& x) const noexcept { return _v != x._v; }         \
-  BL_INLINE_NODEBUG bool operator> (const C& x) const noexcept { return _v >  x._v; }         \
-  BL_INLINE_NODEBUG bool operator>=(const C& x) const noexcept { return _v >= x._v; }         \
-  BL_INLINE_NODEBUG bool operator< (const C& x) const noexcept { return _v <  x._v; }         \
-  BL_INLINE_NODEBUG bool operator<=(const C& x) const noexcept { return _v <= x._v; }         \
+#define BL_DEFINE_STRONG_TYPE(C, T)                                                     \
+struct C {                                                                              \
+  T _v;                                                                                 \
+                                                                                        \
+  BL_INLINE_NODEBUG C() = default;                                                      \
+  BL_INLINE_CONSTEXPR explicit C(T x) noexcept : _v(x) {}                               \
+  BL_INLINE_CONSTEXPR C(const C& other) noexcept = default;                             \
+                                                                                        \
+  BL_INLINE_CONSTEXPR T value() const noexcept { return _v; }                           \
+                                                                                        \
+  BL_INLINE_CONSTEXPR T* valuePtr() noexcept { return &_v; }                            \
+  BL_INLINE_CONSTEXPR const T* valuePtr() const noexcept { return &_v; }                \
+                                                                                        \
+  BL_INLINE_CONSTEXPR C& operator=(T x) noexcept { _v = x; return *this; };             \
+  BL_INLINE_CONSTEXPR C& operator=(const C& x) noexcept { _v = x._v; return *this; }    \
+                                                                                        \
+  BL_INLINE_CONSTEXPR C operator+(T x) const noexcept { return C(_v + x); }             \
+  BL_INLINE_CONSTEXPR C operator-(T x) const noexcept { return C(_v - x); }             \
+  BL_INLINE_CONSTEXPR C operator*(T x) const noexcept { return C(_v * x); }             \
+  BL_INLINE_CONSTEXPR C operator/(T x) const noexcept { return C(_v / x); }             \
+                                                                                        \
+  BL_INLINE_CONSTEXPR C operator+(const C& x) const noexcept { return C(_v + x._v); }   \
+  BL_INLINE_CONSTEXPR C operator-(const C& x) const noexcept { return C(_v - x._v); }   \
+  BL_INLINE_CONSTEXPR C operator*(const C& x) const noexcept { return C(_v * x._v); }   \
+  BL_INLINE_CONSTEXPR C operator/(const C& x) const noexcept { return C(_v / x._v); }   \
+                                                                                        \
+  BL_INLINE_CONSTEXPR C& operator+=(T x) noexcept { _v += x; return *this; }            \
+  BL_INLINE_CONSTEXPR C& operator-=(T x) noexcept { _v -= x; return *this; }            \
+  BL_INLINE_CONSTEXPR C& operator*=(T x) noexcept { _v *= x; return *this; }            \
+  BL_INLINE_CONSTEXPR C& operator/=(T x) noexcept { _v /= x; return *this; }            \
+                                                                                        \
+  BL_INLINE_CONSTEXPR C& operator+=(const C& x) noexcept { _v += x._v; return *this; }  \
+  BL_INLINE_CONSTEXPR C& operator-=(const C& x) noexcept { _v -= x._v; return *this; }  \
+  BL_INLINE_CONSTEXPR C& operator*=(const C& x) noexcept { _v *= x._v; return *this; }  \
+  BL_INLINE_CONSTEXPR C& operator/=(const C& x) noexcept { _v /= x._v; return *this; }  \
+                                                                                        \
+  BL_INLINE_CONSTEXPR bool operator==(T x) const noexcept { return _v == x; }           \
+  BL_INLINE_CONSTEXPR bool operator!=(T x) const noexcept { return _v != x; }           \
+  BL_INLINE_CONSTEXPR bool operator> (T x) const noexcept { return _v >  x; }           \
+  BL_INLINE_CONSTEXPR bool operator>=(T x) const noexcept { return _v >= x; }           \
+  BL_INLINE_CONSTEXPR bool operator< (T x) const noexcept { return _v <  x; }           \
+  BL_INLINE_CONSTEXPR bool operator<=(T x) const noexcept { return _v <= x; }           \
+                                                                                        \
+  BL_INLINE_CONSTEXPR bool operator==(const C& x) const noexcept { return _v == x._v; } \
+  BL_INLINE_CONSTEXPR bool operator!=(const C& x) const noexcept { return _v != x._v; } \
+  BL_INLINE_CONSTEXPR bool operator> (const C& x) const noexcept { return _v >  x._v; } \
+  BL_INLINE_CONSTEXPR bool operator>=(const C& x) const noexcept { return _v >= x._v; } \
+  BL_INLINE_CONSTEXPR bool operator< (const C& x) const noexcept { return _v <  x._v; } \
+  BL_INLINE_CONSTEXPR bool operator<=(const C& x) const noexcept { return _v <= x._v; } \
 };
 
 // Internal Macros
@@ -553,7 +512,7 @@ struct C {                                                                      
 //! A type used to store a pack of bits (typedef to `uintptr_t`).
 //!
 //! BitWord should be equal in size to a machine word.
-typedef uintptr_t BLBitWord;
+using BLBitWord = uintptr_t;
 
 // Internal Constants
 // ==================
@@ -563,9 +522,9 @@ static constexpr BLModifyOp BL_MODIFY_OP_APPEND_START = BLModifyOp(2);
 //! Mask that can be used to check whether `BLModifyOp` has a grow hint.
 static constexpr BLModifyOp BL_MODIFY_OP_GROW_MASK = BLModifyOp(1);
 
-static BL_INLINE_NODEBUG constexpr bool blModifyOpIsAssign(BLModifyOp modifyOp) noexcept { return modifyOp < BL_MODIFY_OP_APPEND_START; }
-static BL_INLINE_NODEBUG constexpr bool blModifyOpIsAppend(BLModifyOp modifyOp) noexcept { return modifyOp >= BL_MODIFY_OP_APPEND_START; }
-static BL_INLINE_NODEBUG constexpr bool blModifyOpDoesGrow(BLModifyOp modifyOp) noexcept { return (modifyOp & BL_MODIFY_OP_GROW_MASK) != 0; }
+static BL_INLINE_CONSTEXPR bool blModifyOpIsAssign(BLModifyOp modifyOp) noexcept { return modifyOp < BL_MODIFY_OP_APPEND_START; }
+static BL_INLINE_CONSTEXPR bool blModifyOpIsAppend(BLModifyOp modifyOp) noexcept { return modifyOp >= BL_MODIFY_OP_APPEND_START; }
+static BL_INLINE_CONSTEXPR bool blModifyOpDoesGrow(BLModifyOp modifyOp) noexcept { return (modifyOp & BL_MODIFY_OP_GROW_MASK) != 0; }
 
 //! Internal constants and limits used across the library.
 enum : uint32_t {
@@ -633,8 +592,8 @@ template<typename... Args>
 static BL_INLINE_NODEBUG void blUnused(Args&&...) noexcept {}
 
 template<typename T>
-static BL_INLINE_NODEBUG constexpr bool blTestFlag(const T& x, const T& y) noexcept {
-  return ((typename std::underlying_type<T>::type)(x) & (typename std::underlying_type<T>::type)(y)) != 0;
+static BL_INLINE_CONSTEXPR bool blTestFlag(const T& x, const T& y) noexcept {
+  return (std::underlying_type_t<T>(x) & std::underlying_type_t<T>(y)) != std::underlying_type_t<T>(0);
 }
 
 // TODO: Remove.

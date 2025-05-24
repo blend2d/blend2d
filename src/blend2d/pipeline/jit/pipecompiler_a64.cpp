@@ -10,9 +10,7 @@
 #include "../../pipeline/jit/pipepart_p.h"
 #include "../../support/intops_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 using GPExt = PipeCompiler::GPExt;
 using ASIMDExt = PipeCompiler::ASIMDExt;
@@ -456,7 +454,7 @@ public:
             return;
           }
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeCond::kAssignOr: {
         if (b.isImm() && a64::Utils::isLogicalImm(b.as<Imm>().valueAs<uint64_t>(), aGp.size() * 8)) {
           cc->emit(info.instId, aGp, aGp, b.as<Imm>());
@@ -788,7 +786,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
           cc->mvn(dst, a);
           return;
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeRRR::kAnd:
       case OpcodeRRR::kOr:
       case OpcodeRRR::kBic: {
@@ -3000,7 +2998,7 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
         cc->emit(opcodeInfo2V[size_t(op) - 1u].instId, dst, src);
         return;
       }
-      BL_FALLTHROUGH
+      [[fallthrough]];
     case OpcodeVV::kCvtF32LoToF64: {
       Vec src = as_vec(this, src_, dst, 8);
 
@@ -3025,7 +3023,7 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
         cc->scvtf(dst.d2(), dst.d2());
         return;
       }
-      BL_FALLTHROUGH
+      [[fallthrough]];
     case OpcodeVV::kCvtI32LoToF64: {
       Vec src = as_vec(this, src_, dst, 8);
 
@@ -4294,8 +4292,6 @@ void PipeCompiler::emit_4v(OpcodeVVVV op, const OpArray& dst_, const OpArray& sr
 void PipeCompiler::emit_4v(OpcodeVVVV op, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_, const Operand& src3_) noexcept { emit_4v_t(this, op, dst_, src1_, src2_, src3_); }
 void PipeCompiler::emit_4v(OpcodeVVVV op, const OpArray& dst_, const OpArray& src1_, const OpArray& src2_, const OpArray& src3_) noexcept { emit_4v_t(this, op, dst_, src1_, src2_, src3_); }
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 #endif

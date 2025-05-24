@@ -18,8 +18,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 namespace JobProc {
 
 // bl::RasterEngine - Job Processor - State Accessor
@@ -277,8 +276,7 @@ static void processJob(WorkData* workData, RenderJob* job) noexcept {
 }
 
 } // {JobProc}
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

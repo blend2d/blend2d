@@ -9,10 +9,7 @@
 #include "../array.h"
 #include "../compression/checksum_p.h"
 
-namespace bl {
-namespace Compression {
-namespace Checksum {
-namespace Tests {
+namespace bl::Compression::Checksum::Tests {
 
 // bl::Compression - CheckSum - CRC32 - Tests
 // ==========================================
@@ -151,9 +148,6 @@ UNIT(compression_checksum_crc32, BL_TEST_GROUP_COMPRESSION_CHECKSUMS) {
   }
 }
 
-} // {Tests}
-} // {Checksum}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Checksum::Tests}
 
 #endif // BL_TEST

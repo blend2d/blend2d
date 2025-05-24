@@ -11,8 +11,7 @@
 #include "../support/math_p.h"
 #include "../support/traits_p.h"
 
-namespace bl {
-namespace Pipeline {
+namespace bl::Pipeline {
 namespace FetchUtils {
 
 // Pipeline - FetchData - Extend Modes
@@ -691,5 +690,4 @@ Signature initGradient(
 }
 
 } // {FetchUtils}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline}

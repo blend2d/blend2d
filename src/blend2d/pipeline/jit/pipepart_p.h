@@ -12,9 +12,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 //! Pipeline part type.
 enum class PipePartType : uint8_t {
@@ -209,9 +207,7 @@ public:
   //! \}
 };
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

@@ -9,10 +9,7 @@
 #include "../../pipeline/jit/fetchutilscoverage_p.h"
 #include "../../pipeline/jit/fetchutilspixelaccess_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
-namespace FetchUtils {
+namespace bl::Pipeline::JIT::FetchUtils {
 
 static void satisfyPixelsA8(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept;
 static void satisfyPixelsRGBA32(PipeCompiler* pc, Pixel& p, PixelFlags flags) noexcept;
@@ -3691,9 +3688,6 @@ void storePixelsAndAdvance(PipeCompiler* pc, const Gp& dPtr, Pixel& p, PixelCoun
   }
 }
 
-} // {FetchUtils}
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT::FetchUtils}
 
 #endif // !BL_BUILD_NO_JIT

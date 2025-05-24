@@ -20,9 +20,7 @@
 
 //! \cond INTERNAL
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
+namespace bl::Compression::Deflate {
 
 // Forward declarations.
 class Decoder;
@@ -322,7 +320,7 @@ typedef DecoderFastResult (BL_CDECL* DecoderFastFunc)(
   uint8_t* dstEnd,
   const uint8_t* srcPtr,
   const uint8_t* srcEnd
-) BL_NOEXCEPT;
+) noexcept;
 
 //! Decompression context
 class Decoder {
@@ -399,9 +397,7 @@ public:
   BLResult decode(BLArray<uint8_t>& dst, BLDataView input) noexcept;
 };
 
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate}
 
 //! \endcond
 

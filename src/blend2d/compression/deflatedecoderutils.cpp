@@ -6,9 +6,7 @@
 #include "../api-build_p.h"
 #include "../compression/deflatedecoderutils_p.h"
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
+namespace bl::Compression::Deflate {
 
 #if BL_TARGET_ARCH_BITS < 64
 const BLBitWord kScalarRepeatMultiply[sizeof(BLBitWord)] = {
@@ -83,6 +81,4 @@ const SimdRepeatTable16 kSimdRotateTable16[16] = {
   {{1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9 , 10, 11, 12, 13, 14, 0 , 1 }}  // #15
 };
 
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate}

@@ -12,8 +12,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 //! A small struct that precedes `Pipeline::FetchData` in `RenderFetchData` struct.
 //!
@@ -100,7 +99,7 @@ struct alignas(16) RenderFetchData : public RenderFetchDataHeader {
   //! \name Types
   //! \{
 
-  typedef void (BL_CDECL* DestroyFunc)(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) BL_NOEXCEPT;
+  typedef void (BL_CDECL* DestroyFunc)(BLRasterContextImpl* ctxI, RenderFetchData* fetchData) noexcept;
 
   //! \}
 
@@ -189,8 +188,7 @@ struct alignas(16) RenderFetchData : public RenderFetchDataHeader {
 
 BL_HIDDEN BLResult computePendingFetchData(RenderFetchData* fetchData) noexcept;
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

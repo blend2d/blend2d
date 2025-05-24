@@ -68,9 +68,7 @@
 // the "extra bits" and the literal/length/end-of-block division. For the exact decode table entry format we use, see
 // the definitions below.
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
+namespace bl::Compression::Deflate {
 
 // bl::Compression::Deflate - Constants
 // ====================================
@@ -714,7 +712,7 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
         // In general we don't need to refill the BitWord at this point as the generic refill is slower than doing
         // a raw memory copy - so, when we can, don't refill and jump directly to the copy case. This is not required
         // though as the current chunk of data could end here and that's perfectly fine, so it's just an optimization.
-        if BL_CONSTEXPR (sizeof(BLBitWord) < 8) {
+        if constexpr (sizeof(BLBitWord) < 8) {
           // Consuming 32 bits at once never happens except here, so we have to handle this correctly on 32-bit targets
           // as shifting a 32-bit number by 32 is undefined behavior. So reset the bit buffer instead of shifting by 32.
           bits.reset();
@@ -803,7 +801,7 @@ BLResult Decoder::decode(BLArray<uint8_t>& dst, BLDataView input) noexcept {
         tables.precode_lens[kPrecodeLensPermutation[2]] = uint8_t(plen2);
 
         // 4th is only possible on a 64-bit machine as it's not guaranteed we will have enough bits otherwise.
-        if BL_CONSTEXPR (kHeaderPrecodeLens == 4u) {
+        if constexpr (kHeaderPrecodeLens == 4u) {
           uint32_t plen3 = bits.extract<23>(3);
           tables.precode_lens[kPrecodeLensPermutation[3]] = uint8_t(plen3);
         }
@@ -1260,7 +1258,7 @@ BuildHuffmanTables:
             goto NotEnoughOutputBytes;
           }
 
-          if BL_CONSTEXPR (sizeof(BLBitWord) < 8) {
+          if constexpr (sizeof(BLBitWord) < 8) {
             while (bits.canRefillByte() && srcPtr != srcEnd) {
               bits.refillByte(*srcPtr++);
             }
@@ -1290,7 +1288,7 @@ BuildHuffmanTables:
           }
 
           if (BL_UNLIKELY(bits.length() < fullLen)) {
-            if BL_CONSTEXPR (sizeof(BLBitWord) < 8) {
+            if constexpr (sizeof(BLBitWord) < 8) {
               if (srcPtr == srcEnd) {
                 // This is only needed in 32-bit mode as in 64-bit the bit-accumulator is long enough
                 // to hold all 48 bits that can be required to hold both offset+length match data.
@@ -1339,7 +1337,7 @@ BuildHuffmanTables:
         // A state only designed to continue processing an interrupted match since it could need more bytes than
         // a word size. When entering this state the litlen code was already processed and the decoded length was
         // stored to `_copyRemaining` so we only need to process the remaining offset part.
-        if BL_CONSTEXPR (sizeof(BLBitWord) < 8) {
+        if constexpr (sizeof(BLBitWord) < 8) {
           DecoderTableMask offsetTableMask(_offsetTableInfo.tableBits);
           size_t length = _copyRemaining;
 
@@ -1610,6 +1608,4 @@ ErrorInvalidData:
   return blTraceError(BL_ERROR_DECOMPRESSION_FAILED);
 }
 
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate}

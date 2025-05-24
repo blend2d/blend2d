@@ -12,9 +12,7 @@
 
 //! \cond INTERNAL
 
-namespace bl {
-namespace Compression {
-namespace Checksum {
+namespace bl::Compression::Checksum {
 namespace {
 
 BL_INLINE void adler32ReduceAddU32(uint32_t& s1, uint32_t& s2, SIMD::Vec4xU32& v1, SIMD::Vec4xU32& v2) noexcept {
@@ -162,9 +160,7 @@ BL_INLINE uint32_t adler32Update_SIMD(uint32_t checksum, const uint8_t* data, si
 }
 
 } // {anonymous}
-} // {Checksum}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Checksum}
 
 //! \endcond
 

@@ -13,8 +13,7 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 
 enum class LookupFlags : uint32_t {
   //! Relates only to the correct processing of the cursive attachment lookup type (GPOS lookup type 3).
@@ -373,7 +372,7 @@ struct GSubGPosTable {
   enum : uint32_t { kBaseSize = 10 };
 
   //! No feature required, possibly stored in `LangSysTable::requiredFeatureIndex`.
-  static constexpr uint16_t kFeatureNotRequired = 0xFFFFu;
+  static inline constexpr uint16_t kFeatureNotRequired = 0xFFFFu;
 
   //! \name GPOS & GSUB - Core Tables
   //! \{
@@ -906,8 +905,7 @@ struct GPosTable : public GSubGPosTable {
   // Use `ExtensionLookup` to handle this lookup type.
 };
 
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \}
 //! \endcond

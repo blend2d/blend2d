@@ -14,8 +14,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace bl {
-namespace ArrayInternal {
+namespace bl::ArrayInternal {
 
 //! \name BLArray - Internals - Common Functionality (Impl)
 //! \{
@@ -122,8 +121,7 @@ static BL_INLINE void setSize(BLArrayCore* self, size_t newSize) noexcept {
 
 //! \}
 
-} // {ArrayInternal}
-} // {bl}
+} // {bl::ArrayInternal}
 
 //! \}
 //! \endcond

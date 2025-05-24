@@ -13,8 +13,7 @@
 // bl::Unicode - Tests
 // ===================
 
-namespace bl {
-namespace Tests {
+namespace bl::Unicode::Tests {
 
 UNIT(unicode, BL_TEST_GROUP_CORE_UTILITIES) {
   struct TestEntry {
@@ -343,7 +342,6 @@ UNIT(unicode_io, BL_TEST_GROUP_CORE_UTILITIES) {
   }
 }
 
-} // {Tests}
-} // {bl}
+} // {bl::Unicode::Tests}
 
 #endif // BL_TEST

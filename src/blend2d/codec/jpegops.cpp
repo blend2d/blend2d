@@ -14,8 +14,7 @@
 #include "../support/intops_p.h"
 #include "../support/memops_p.h"
 
-namespace bl {
-namespace Jpeg {
+namespace bl::Jpeg {
 
 // bl::Jpeg::Opts - Globals
 // ========================
@@ -229,5 +228,4 @@ uint8_t* BL_CDECL upsample_generic(uint8_t* dst, uint8_t* src0, uint8_t* src1, u
   return dst;
 }
 
-} // {Jpeg}
-} // {bl}
+} // {bl::Jpeg}

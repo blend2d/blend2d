@@ -9,8 +9,7 @@
 #include "../raster/workermanager_p.h"
 #include "../support/intops_p.h"
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 // bl::RasterEngine::WorkerManager - Init
 // ======================================
@@ -164,5 +163,4 @@ void WorkerManager::reset() noexcept {
   _stateSlotCount = 0;
 }
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}

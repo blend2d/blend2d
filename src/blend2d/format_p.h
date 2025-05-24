@@ -75,7 +75,7 @@ BL_DEFINE_ENUM_FLAGS(FormatFlagsExt)
 
 namespace FormatInternal {
 
-static BL_INLINE_NODEBUG constexpr FormatFlagsExt makeFlagsStatic(FormatExt format) noexcept {
+static BL_INLINE_CONSTEXPR FormatFlagsExt makeFlagsStatic(FormatExt format) noexcept {
   return format == FormatExt::kPRGB32 ? FormatFlagsExt::kRGBA          |
                                         FormatFlagsExt::kPremultiplied |
                                         FormatFlagsExt::kByteAligned   :
@@ -123,7 +123,7 @@ static BL_INLINE bool hasSameRgbaLayout(const BLFormatInfo& a, const BLFormatInf
 //! use 32 or less bits.
 template<typename T>
 static void assignAbsoluteMasks(BLFormatInfo& info, const T* masks, size_t n = 4) noexcept {
-  typedef typename std::make_unsigned<T>::type U;
+  using U = std::make_unsigned_t<T>;
 
   memset(info.sizes, 0, sizeof(info.sizes));
   memset(info.shifts, 0, sizeof(info.shifts));

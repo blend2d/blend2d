@@ -36,8 +36,7 @@
   #include "../pipeline/jit/pipegenruntime_p.h"
 #endif
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 static constexpr bool kNoBail = false;
 
@@ -381,7 +380,7 @@ static BL_INLINE bool initNonSolidFetchData(
       BLPatternImpl* patternI = PatternInternal::getImpl(pattern);
       BLImageCore* image = &patternI->image;
 
-      if BL_CONSTEXPR (Applier::kIsExplicit) {
+      if constexpr (Applier::kIsExplicit) {
         // Reinitialize this style to use the image instead of the pattern if this is an explicit operation.
         // The reason is that we don't need the BLPattern data once the FetchData is initialized, so if the
         // user reinitializes the pattern for multiple calls we would save one memory allocation each time
@@ -398,7 +397,7 @@ static BL_INLINE bool initNonSolidFetchData(
 
       if (!area.w || !area.h) {
         applier.markAsNop();
-        if BL_CONSTEXPR (Applier::kIsExplicit)
+        if constexpr (Applier::kIsExplicit)
           return false;
       }
 
@@ -427,7 +426,7 @@ static BL_INLINE bool initNonSolidFetchData(
       BLGradientPrivateImpl* gradientI = GradientInternal::getImpl(gradient);
 
       fetchData->initStyleObject(gradient);
-      if BL_CONSTEXPR (Applier::kIsExplicit)
+      if constexpr (Applier::kIsExplicit)
         fetchData->initDestroyFunc(destroyFetchDataGradient);
       else
         fetchData->initDestroyFunc(recycleFetchDataGradient);
@@ -445,7 +444,7 @@ static BL_INLINE bool initNonSolidFetchData(
 
       if (gradientInfo.empty()) {
         applier.markAsNop();
-        if BL_CONSTEXPR (Applier::kIsExplicit)
+        if constexpr (Applier::kIsExplicit)
           return false;
       }
       else if (gradientInfo.solid) {
@@ -487,7 +486,7 @@ static BL_INLINE bool initNonSolidFetchData(
 
   if (fetchData->signature.hasPendingFlag()) {
     applier.markAsNop();
-    if BL_CONSTEXPR (Applier::kIsExplicit)
+    if constexpr (Applier::kIsExplicit)
       return false;
   }
 
@@ -1281,7 +1280,7 @@ static BL_NOINLINE BLResultT<RenderCallResolvedOp> resolveExplicitStyleOp(BLRast
   constexpr RenderCallResolvedOp kNop = {{0u}, ContextFlags::kNoOperation};
   constexpr BLContextStyleTransformMode kTransformMode = BL_CONTEXT_STYLE_TRANSFORM_MODE_USER;
 
-  if BL_CONSTEXPR (kRM == kAsync) {
+  if constexpr (kRM == kAsync) {
     if (blTestFlag(ctxI->contextFlags, ContextFlags::kMTFullOrExhausted)) {
       BLResult result = handleQueuesFullOrPoolsExhausted(ctxI);
       if (BL_UNLIKELY(result != BL_SUCCESS))
@@ -1362,7 +1361,7 @@ static BL_INLINE void prepareNonSolidFetch(BLRasterContextImpl* ctxI, DispatchIn
 #define BL_CONTEXT_RESOLVE_GENERIC_OP(...)                                       \
   RenderCallResolvedOp resolved = __VA_ARGS__;                                   \
                                                                                  \
-  if BL_CONSTEXPR (kRM == kAsync) {                                              \
+  if constexpr (kRM == kAsync) {                                              \
     /* ASYNC MODE: more flags are used, so make sure our queue is not full */    \
     /* and our pools are not exhausted before rejecting the render call.   */    \
     if (BL_UNLIKELY(resolved.flags >= ContextFlags::kNoOperation)) {             \
@@ -2791,7 +2790,7 @@ static BL_INLINE BLResult fillUnclippedPath(
     BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
     const BLPath& path, BLFillRule fillRule, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
 
-  if BL_CONSTEXPR (kRM == kAsync)
+  if constexpr (kRM == kAsync)
     ctxI->syncWorkData.saveState();
 
   BL_PROPAGATE(addFilledPathEdges(&ctxI->syncWorkData, path.view(), transform, transformType));
@@ -2852,7 +2851,7 @@ static BL_INLINE BLResult fillUnclippedPolygonT(
     BLRasterContextImpl* ctxI, DispatchInfo di, DispatchStyle ds,
     const PointType* pts, size_t size, BLFillRule fillRule, const BLMatrix2D& transform, BLTransformType transformType) noexcept {
 
-  if BL_CONSTEXPR (kRM == kAsync)
+  if constexpr (kRM == kAsync)
     ctxI->syncWorkData.saveState();
 
   BL_PROPAGATE(addFilledPolygonEdges(&ctxI->syncWorkData, pts, size, transform, transformType));
@@ -3036,7 +3035,7 @@ BLResult BL_NOINLINE fillUnclippedGeometry<kAsync>(BLRasterContextImpl* ctxI, Di
       type = BL_GEOMETRY_TYPE_PATH;
       data = temporaryPath;
 
-      BL_FALLTHROUGH
+      [[fallthrough]];
     }
 
     case BL_GEOMETRY_TYPE_PATH: {
@@ -3958,7 +3957,7 @@ static BLResult BL_CDECL blitImageDImpl(BLContextImpl* baseImpl, const BLPoint* 
   if (BL_LIKELY(resolved.unmodified())) {
     uint32_t imgBytesPerPixel = imgI->depth / 8u;
 
-    if BL_CONSTEXPR (kRM == RenderingMode::kAsync)
+    if constexpr (kRM == RenderingMode::kAsync)
       fetchData->initStyleObjectAndDestroyFunc(img, destroyFetchDataImage);
 
     if (ctxI->finalTransformType() <= BL_TRANSFORM_TYPE_TRANSLATE) {
@@ -4053,7 +4052,7 @@ static BLResult BL_CDECL blitImageIImpl(BLContextImpl* baseImpl, const BLPointI*
   BL_CONTEXT_RESOLVE_BLIT_OP(ContextFlags::kNoBlitFlags, imgI->format, bail);
 
   if (BL_LIKELY(resolved.unmodified())) {
-    if BL_CONSTEXPR (kRM == RenderingMode::kAsync)
+    if constexpr (kRM == RenderingMode::kAsync)
       fetchData->initStyleObjectAndDestroyFunc(img, destroyFetchDataImage);
 
     fetchData->initImageSource(imgI, BLRectI(srcOffset.x, srcOffset.y, dstBox.x1 - dstBox.x0, dstBox.y1 - dstBox.y0));
@@ -4090,7 +4089,7 @@ static BLResult BL_CDECL blitScaledImageDImpl(BLContextImpl* baseImpl, const BLR
 
   BLBox finalBox(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h);
   if (BL_LIKELY(resolved.unmodified())) {
-    if BL_CONSTEXPR (kRM == RenderingMode::kAsync)
+    if constexpr (kRM == RenderingMode::kAsync)
       fetchData->initStyleObjectAndDestroyFunc(img, destroyFetchDataImage);
 
     BLMatrix2D ft(rect->w / double(srcRect.w), 0.0, 0.0, rect->h / double(srcRect.h), rect->x, rect->y);
@@ -4130,7 +4129,7 @@ static BLResult BL_CDECL blitScaledImageIImpl(BLContextImpl* baseImpl, const BLR
 
   BLBox finalBox(double(rect->x), double(rect->y), double(rect->x) + double(rect->w), double(rect->y) + double(rect->h));
   if (BL_LIKELY(resolved.unmodified())) {
-    if BL_CONSTEXPR (kRM == RenderingMode::kAsync)
+    if constexpr (kRM == RenderingMode::kAsync)
       fetchData->initStyleObjectAndDestroyFunc(img, destroyFetchDataImage);
 
     BLMatrix2D transform(double(rect->w) / double(srcRect.w), 0.0, 0.0, double(rect->h) / double(srcRect.h), double(rect->x), double(rect->y));
@@ -4614,8 +4613,7 @@ static void initVirt(BLContextVirt* virt) noexcept {
   virt->blitScaledImageD         = blitScaledImageDImpl<kRM>;
 }
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 // bl::RasterEngine - ContextImpl - Runtime Registration
 // =====================================================

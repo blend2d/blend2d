@@ -17,15 +17,13 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 //! Pipeline combine part.
 class CompOpPart : public PipePart {
 public:
-  static constexpr uint32_t kIndexDstPart = 0;
-  static constexpr uint32_t kIndexSrcPart = 1;
+  static inline constexpr uint32_t kIndexDstPart = 0;
+  static inline constexpr uint32_t kIndexSrcPart = 1;
 
   //! \name Members
   //! \{
@@ -243,9 +241,7 @@ public:
   void vMaskProcRGBA32InvertDone(VecArray& vn, const VecArray& vm, PixelCoverageFlags coverageFlags) noexcept;
 };
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

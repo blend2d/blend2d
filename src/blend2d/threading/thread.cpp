@@ -28,7 +28,7 @@ static BLWorkerThreadVirt blPortableWorkerThreadVirt;
 // =================================
 
 // Internal, implements the worker entry point, which then calls work items.
-typedef void (BL_CDECL* BLThreadEntryFunc)(BLThread* self) BL_NOEXCEPT;
+typedef void (BL_CDECL* BLThreadEntryFunc)(BLThread* self) noexcept;
 
 //! Worker thread status flags.
 //!

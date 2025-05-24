@@ -14,8 +14,7 @@
 //! \addtogroup blend2d_codec_impl
 //! \{
 
-namespace bl {
-namespace Jpeg {
+namespace bl::Jpeg {
 
 // Acceleration constants for huffman decoding. Accel bits should be either 8 or 9. More bits consume more memory,
 // but allow easier decoding of a code that fits within the number of bits. Libjpeg uses 8 bits with a comment that
@@ -128,7 +127,7 @@ struct DecoderBitReader {
 
   template<typename T = BLBitWord>
   BL_INLINE T peek(size_t n) const noexcept {
-    typedef typename std::make_unsigned<T>::type U;
+    using U = std::make_unsigned_t<T>;
     return T(U(bitData >> (IntOps::bitSizeOf<BLBitWord>() - n)));
   }
 
@@ -230,8 +229,7 @@ struct DecoderBitReader {
 BL_HIDDEN BLResult buildHuffmanAC(DecoderHuffmanACTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept;
 BL_HIDDEN BLResult buildHuffmanDC(DecoderHuffmanDCTable* table, const uint8_t* data, size_t dataSize, size_t* bytesConsumed) noexcept;
 
-} // {Jpeg}
-} // {bl}
+} // {bl::Jpeg}
 
 //! \}
 //! \endcond

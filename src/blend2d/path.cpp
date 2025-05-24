@@ -2697,6 +2697,8 @@ void blPath2DRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
   bl::PathInternal::defaultPath.impl->flags = BL_PATH_FLAG_EMPTY;
+
   blObjectDefaults[BL_OBJECT_TYPE_PATH]._d.initDynamic(
-    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_PATH), &bl::PathInternal::defaultPath.impl);
+    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_PATH),
+    &bl::PathInternal::defaultPath.impl);
 }

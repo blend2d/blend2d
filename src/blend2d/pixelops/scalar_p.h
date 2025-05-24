@@ -22,7 +22,7 @@ namespace Scalar {
 //! \name Scalar Pixel Utilities
 //! \{
 
-BL_NODISCARD
+[[nodiscard]]
 static BL_INLINE uint32_t neg255(uint32_t x) noexcept { return x ^ 0xFF; }
 
 //! Integer division by 255 with correct rounding semantics.
@@ -30,13 +30,13 @@ static BL_INLINE uint32_t neg255(uint32_t x) noexcept { return x ^ 0xFF; }
 //! Possible implementations:
 //!   - `((x + 128) + ((x + 128) >> 8)) >> 8` (used by scalar operations and AVX+ impls).
 //!   - `((x + 128) * 257) >> 16` (used by SSE2 to SSE4.1 impl, but not by AVX).
-BL_NODISCARD
+[[nodiscard]]
 static BL_INLINE uint32_t udiv255(uint32_t x) noexcept { return ((x + 0x80u) * 0x101u) >> 16; }
 
-BL_NODISCARD
+[[nodiscard]]
 static BL_INLINE uint32_t udiv65535(uint32_t x) noexcept { return ((x + 0x8000u) + ((x + 0x8000u) >> 16)) >> 16; }
 
-BL_NODISCARD
+[[nodiscard]]
 static BL_INLINE uint64_t udiv65535_packed(uint64_t x) noexcept {
   constexpr uint64_t kHalfPacked = 0x0000800000008000u;
   constexpr uint64_t kMaskPacked = 0x0000FFFF0000FFFFu;
@@ -189,7 +189,7 @@ static BL_INLINE uint64_t cvt_prgb64_8888_from_argb64_8888(uint64_t val64, uint3
 
   return cast_to_u64(packz_128_u32_u16(p0));
 #else
-  if BL_CONSTEXPR (BL_TARGET_ARCH_BITS >= 64) {
+  if constexpr (BL_TARGET_ARCH_BITS >= 64) {
     uint64_t rb = udiv65535_packed((val64 & 0x0000FFFF0000FFFFu) * _a);
     uint32_t g = udiv65535(uint32_t((val64 >> 16) & 0xFFFFu) * _a);
     return (uint64_t(_a) << 48) | rb | (g << 16);

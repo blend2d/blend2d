@@ -45,12 +45,13 @@ protected:
       _capacity(capacity) {}
 
 public:
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE void* get() const noexcept { return _mem; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t capacity() const noexcept { return _capacity; }
 
+  [[nodiscard]]
   BL_INLINE void* alloc(size_t size) noexcept {
     if (size <= _capacity)
       return _mem;
@@ -64,6 +65,7 @@ public:
     return _mem;
   }
 
+  [[nodiscard]]
   BL_NOINLINE void* allocZeroed(size_t size) noexcept {
     void* p = alloc(size);
     if (p)

@@ -7,8 +7,7 @@
 #include "../raster/rastercontext_p.h"
 #include "../raster/workdata_p.h"
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 // bl::RasterEngine::WorkData - Construction & Destruction
 // =======================================================
@@ -89,5 +88,4 @@ BLResult WorkData::accumulateError(BLResult error) noexcept {
   return error;
 }
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}

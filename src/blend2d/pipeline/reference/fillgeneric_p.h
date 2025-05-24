@@ -16,9 +16,7 @@
 //! \addtogroup blend2d_pipeline_reference
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace Reference {
+namespace bl::Pipeline::Reference {
 namespace {
 
 template<typename CompOp>
@@ -402,9 +400,7 @@ template<typename CompOp>
 struct FillDispatch<FillType::kAnalytic, CompOp> { using Fill = FillAnalytic_Base<CompOp>; };
 
 } // {anonymous}
-} // {Reference}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::Reference}
 
 //! \}
 //! \endcond

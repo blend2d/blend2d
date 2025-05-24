@@ -7,9 +7,7 @@
 #include "../runtime_p.h"
 #include "../codec/pngops_p.h"
 
-namespace bl {
-namespace Png {
-namespace Ops {
+namespace bl::Png::Ops {
 
 FunctionTable funcTable;
 
@@ -151,6 +149,4 @@ void initFuncTable(BLRuntimeContext* rt) noexcept {
 #endif // BL_BUILD_OPT_ASIMD
 }
 
-} // {Ops}
-} // {Png}
-} // {bl}
+} // {bl::Png::Ops}

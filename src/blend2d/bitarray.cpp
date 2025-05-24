@@ -8,8 +8,7 @@
 #include "object_p.h"
 #include "runtime_p.h"
 
-namespace bl {
-namespace BitArrayInternal {
+namespace bl::BitArrayInternal {
 
 // bl::BitArray - Private - Commons
 // ================================
@@ -17,23 +16,23 @@ namespace BitArrayInternal {
 static constexpr size_t kSSOWordCapacity = uint32_t(BLBitArray::kSSOWordCount);
 static constexpr size_t kSSOBitCapacity = kSSOWordCapacity * uint32_t(BitArrayOps::kNumBits);
 
-static BL_INLINE_NODEBUG constexpr size_t bitIndexOf(size_t wordIndex) noexcept { return wordIndex * BitArrayOps::kNumBits; }
-static BL_INLINE_NODEBUG constexpr size_t wordIndexOf(size_t bitIndex) noexcept { return bitIndex / BitArrayOps::kNumBits; }
+static BL_INLINE_CONSTEXPR size_t bitIndexOf(size_t wordIndex) noexcept { return wordIndex * BitArrayOps::kNumBits; }
+static BL_INLINE_CONSTEXPR size_t wordIndexOf(size_t bitIndex) noexcept { return bitIndex / BitArrayOps::kNumBits; }
 
-static BL_INLINE_NODEBUG constexpr size_t wordCountFromBitCount(size_t bitCount) noexcept {
+static BL_INLINE_CONSTEXPR size_t wordCountFromBitCount(size_t bitCount) noexcept {
   return BL_TARGET_ARCH_BITS >= 64 ? uint32_t((uint64_t(bitCount) + BitArrayOps::kBitMask) / BitArrayOps::kNumBits)
                                    : (bitCount / BitArrayOps::kNumBits) + uint32_t((bitCount & BitArrayOps::kBitMask) != 0u);
 }
 
-static BL_INLINE_NODEBUG constexpr size_t bitCountFromWordCount(size_t wordCount) noexcept {
+static BL_INLINE_CONSTEXPR size_t bitCountFromWordCount(size_t wordCount) noexcept {
   return blMin<size_t>(wordCount * BitArrayOps::kNumBits, 0xFFFFFFFFu);
 }
 
-static BL_INLINE_NODEBUG constexpr BLObjectImplSize implSizeFromWordCapacity(size_t wordCapacity) noexcept {
+static BL_INLINE_CONSTEXPR BLObjectImplSize implSizeFromWordCapacity(size_t wordCapacity) noexcept {
   return BLObjectImplSize(sizeof(BLBitArrayImpl) + wordCapacity * sizeof(uint32_t));
 }
 
-static BL_INLINE_NODEBUG constexpr size_t wordCapacityFromImplSize(BLObjectImplSize implSize) noexcept {
+static BL_INLINE_CONSTEXPR size_t wordCapacityFromImplSize(BLObjectImplSize implSize) noexcept {
   return (implSize.value() - sizeof(BLBitArrayImpl)) / sizeof(uint32_t);
 }
 
@@ -236,8 +235,7 @@ static BL_INLINE BLResult combineWordData(BitData d, size_t bitIndex, const uint
   return BL_SUCCESS;
 }
 
-} // {BitArrayInternal}
-} // {bl}
+} // {bl::BitArrayInternal}
 
 // bl::BitArray - API - Init & Destroy
 // ===================================

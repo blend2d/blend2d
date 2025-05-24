@@ -10,9 +10,7 @@
 #include "../../pipeline/jit/pipefunction_p.h"
 #include "../../pipeline/jit/pipepart_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 // bl::Pipeline::PipeFunction - Construction & Destruction
 // =======================================================
@@ -64,8 +62,6 @@ void PipeFunction::endFunction(PipeCompiler& pc) noexcept {
   cc->endFunc();
 }
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 #endif // !BL_BUILD_NO_JIT

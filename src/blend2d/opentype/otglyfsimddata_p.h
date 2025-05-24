@@ -12,8 +12,7 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace GlyfImpl {
 
 //! Flags that are used by the vectorized outline decoder implementation.
@@ -68,8 +67,7 @@ alignas(16) extern const uint8_t decodeOpXTable[16];
 alignas(16) extern const uint8_t decodeOpYTable[16];
 
 } // {GlyfImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \}
 //! \endcond

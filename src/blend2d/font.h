@@ -115,6 +115,11 @@ public:
   //! \name Internals
   //! \{
 
+  //! Object info values of a default constructed BLFont.
+  static inline constexpr uint32_t kDefaultSignature =
+    BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_FONT) | BL_OBJECT_INFO_D_FLAG;
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLFontImpl* _impl() const noexcept { return static_cast<BLFontImpl*>(_d.impl); }
 
   //! \}
@@ -127,19 +132,32 @@ public:
   //!
   //! A default initialized font is not a valid font that could be used for rendering. It can be considered an empty
   //! or null font, which has no family, no glyphs, no tables, it's essentially empty.
-  BL_INLINE_NODEBUG BLFont() noexcept { blFontInit(this); }
+  BL_INLINE_NODEBUG BLFont() noexcept {
+    blFontInit(this);
 
-  //! Copy constructor makes a weak copy of the underlying representation of the `other` font.
-  BL_INLINE_NODEBUG BLFont(const BLFont& other) noexcept { blFontInitWeak(this, &other); }
+    // Assume a default constructed BLFont.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+  }
 
   //! Move constructor moves the underlying representation of the `other` font into this newly created instance and
   //! resets the `other` font to a default constructed state.
-  BL_INLINE_NODEBUG BLFont(BLFont&& other) noexcept { blFontInitMove(this, &other); }
+  BL_INLINE_NODEBUG BLFont(BLFont&& other) noexcept {
+    blFontInitMove(this, &other);
+
+    // Assume a default initialized `other`.
+    BL_ASSUME(other._d.info.bits == kDefaultSignature);
+  }
+
+  //! Copy constructor makes a weak copy of the underlying representation of the `other` font.
+  BL_INLINE_NODEBUG BLFont(const BLFont& other) noexcept {
+    blFontInitWeak(this, &other);
+  }
 
   //! Destroys the font.
   BL_INLINE_NODEBUG ~BLFont() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
       blFontDestroy(this);
+    }
   }
 
   //! \}
@@ -153,7 +171,10 @@ public:
   BL_INLINE_NODEBUG BLFont& operator=(const BLFont& other) noexcept { blFontAssignWeak(this, &other); return *this; }
   BL_INLINE_NODEBUG BLFont& operator=(BLFont&& other) noexcept { blFontAssignMove(this, &other); return *this; }
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool operator==(const BLFont& other) const noexcept { return  equals(other); }
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool operator!=(const BLFont& other) const noexcept { return !equals(other); }
 
   //! \}
@@ -164,7 +185,16 @@ public:
   //! Resets the font to a default constructed state.
   //!
   //! \note This operation always succeeds and returns \ref BL_SUCCESS.
-  BL_INLINE_NODEBUG BLResult reset() noexcept { return blFontReset(this); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept {
+    BLResult result = blFontReset(this);
+
+    // Reset operation always succeeds.
+    BL_ASSUME(result == BL_SUCCESS);
+    // Assume a default constructed BLFont after reset.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+
+    return result;
+  }
 
   //! Swaps the underlying representation of this font with the `other` font.
   BL_INLINE_NODEBUG void swap(BLFont& other) noexcept { _d.swap(other._d); }
@@ -178,12 +208,15 @@ public:
   BL_INLINE_NODEBUG BLResult assign(BLFont&& other) noexcept { return blFontAssignMove(this, &other); }
 
   //! Tests whether the font is a valid instance.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isValid() const noexcept { return _impl()->face.dcast().isValid(); }
 
   //! Tests whether the font is empty, which is the same as `!isValid()`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool empty() const noexcept { return !isValid(); }
 
   //! Tests whether this and `other` fonts are equal.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLFontCore& other) const noexcept { return blFontEquals(this, &other); }
 
   //! \}
@@ -217,11 +250,14 @@ public:
   //! \{
 
   //! Returns the type of the font's associated font face.
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLFontFaceType faceType() const noexcept { return face().faceType(); }
   //! Returns the flags of the font.
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLFontFaceFlags faceFlags() const noexcept { return face().faceFlags(); }
 
   //! Returns the size of the font (as float).
+  [[nodiscard]]
   BL_INLINE_NODEBUG float size() const noexcept { return _impl()->metrics.size; }
   //! Sets the font size to `size`.
   BL_INLINE_NODEBUG BLResult setSize(float size) noexcept { return blFontSetSize(this, size); }
@@ -229,35 +265,44 @@ public:
   //! Returns the font's associated font face.
   //!
   //! Returns the same font face, which was passed to `createFromFace()`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontFace& face() const noexcept { return _impl()->face.dcast(); }
 
   //! Returns the weight of the font.
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t weight() const noexcept { return _impl()->weight; }
   //! Returns the stretch of the font.
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t stretch() const noexcept { return _impl()->stretch; }
   //! Returns the style of the font.
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t style() const noexcept { return _impl()->style; }
 
   //! Returns the "units per em" (UPEM) of the font's associated font face.
+  [[nodiscard]]
   BL_INLINE_NODEBUG int unitsPerEm() const noexcept { return face().unitsPerEm(); }
 
   //! Returns a 2x2 matrix of the font.
   //!
   //! The returned \ref BLFontMatrix is used to scale fonts from design units into user units. The matrix
   //! usually has a negative `m11` member as fonts use a different coordinate system than Blend2D.
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontMatrix& matrix() const noexcept { return _impl()->matrix; }
 
   //! Returns the scaled metrics of the font.
   //!
   //! The returned metrics is a scale of design metrics that match the font size and its options.
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontMetrics& metrics() const noexcept { return _impl()->metrics; }
 
   //! Returns the design metrics of the font.
   //!
   //! The returned metrics is compatible with the metrics of \ref BLFontFace associated with this font.
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontDesignMetrics& designMetrics() const noexcept { return face().designMetrics(); }
 
   //! Returns font feature settings.
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontFeatureSettings& featureSettings() const noexcept { return _impl()->featureSettings.dcast(); }
   //! Sets font feature settings to `featureSettings`.
   BL_INLINE_NODEBUG BLResult setFeatureSettings(const BLFontFeatureSettingsCore& featureSettings) noexcept { return blFontSetFeatureSettings(this, &featureSettings); }
@@ -265,6 +310,7 @@ public:
   BL_INLINE_NODEBUG BLResult resetFeatureSettings() noexcept { return blFontResetFeatureSettings(this); }
 
   //! Returns font variation settings.
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontVariationSettings& variationSettings() const noexcept { return _impl()->variationSettings.dcast(); }
   //! Sets font variation settings to `variationSettings`.
   BL_INLINE_NODEBUG BLResult setVariationSettings(const BLFontVariationSettingsCore& variationSettings) noexcept { return blFontSetVariationSettings(this, &variationSettings); }

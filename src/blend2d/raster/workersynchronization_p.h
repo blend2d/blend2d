@@ -15,8 +15,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 class alignas(BL_CACHE_LINE_SIZE) WorkerSynchronization {
 public:
@@ -82,8 +81,7 @@ public:
   void waitForThreadsToFinish() noexcept;
 };
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

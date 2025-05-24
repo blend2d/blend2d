@@ -27,6 +27,7 @@ struct BLImageDecoderCore BL_CLASS_INHERITS(BLObjectCore) {
 
   //! Returns Impl of the image decoder (only provided for use cases that implement BLImageDecoder).
   template<typename T = BLImageDecoderImpl>
+  [[nodiscard]]
   BL_INLINE_NODEBUG T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
 
   //! \}
@@ -38,9 +39,9 @@ struct BLImageDecoderCore BL_CLASS_INHERITS(BLObjectCore) {
 struct BLImageDecoderVirt BL_CLASS_INHERITS(BLObjectVirt) {
   BL_DEFINE_VIRT_BASE
 
-  BLResult (BL_CDECL* restart)(BLImageDecoderImpl* impl) BL_NOEXCEPT;
-  BLResult (BL_CDECL* readInfo)(BLImageDecoderImpl* impl, BLImageInfo* infoOut, const uint8_t* data, size_t size) BL_NOEXCEPT;
-  BLResult (BL_CDECL* readFrame)(BLImageDecoderImpl* impl, BLImageCore* imageOut, const uint8_t* data, size_t size) BL_NOEXCEPT;
+  BLResult (BL_CDECL* restart)(BLImageDecoderImpl* impl) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* readInfo)(BLImageDecoderImpl* impl, BLImageInfo* infoOut, const uint8_t* data, size_t size) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* readFrame)(BLImageDecoderImpl* impl, BLImageCore* imageOut, const uint8_t* data, size_t size) BL_NOEXCEPT_C;
 };
 
 //! Image decoder [C API Impl].
@@ -122,8 +123,13 @@ public:
   //! \name Internals
   //! \{
 
+  //! Object info values of a default constructed BLImageDecoder.
+  static inline constexpr uint32_t kDefaultSignature =
+    BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_IMAGE_DECODER) | BL_OBJECT_INFO_D_FLAG;
+
   //! Returns Impl of the image codec (only provided for use cases that implement BLImageCodec).
   template<typename T = BLImageDecoderImpl>
+  [[nodiscard]]
   BL_INLINE_NODEBUG T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
 
   //! \}
@@ -132,13 +138,28 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE_NODEBUG BLImageDecoder() noexcept { blImageDecoderInit(this); }
-  BL_INLINE_NODEBUG BLImageDecoder(BLImageDecoder&& other) noexcept { blImageDecoderInitMove(this, &other); }
-  BL_INLINE_NODEBUG BLImageDecoder(const BLImageDecoder& other) noexcept { blImageDecoderInitWeak(this, &other); }
+  BL_INLINE_NODEBUG BLImageDecoder() noexcept {
+    blImageDecoderInit(this);
+
+    // Assume a default constructed BLImageDecoder.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+  }
+
+  BL_INLINE_NODEBUG BLImageDecoder(BLImageDecoder&& other) noexcept {
+    blImageDecoderInitMove(this, &other);
+
+    // Assume a default initialized `other`.
+    BL_ASSUME(other._d.info.bits == kDefaultSignature);
+  }
+
+  BL_INLINE_NODEBUG BLImageDecoder(const BLImageDecoder& other) noexcept {
+    blImageDecoderInitWeak(this, &other);
+  }
 
   BL_INLINE_NODEBUG ~BLImageDecoder() {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
       blImageDecoderDestroy(this);
+    }
   }
 
   //! \}
@@ -151,25 +172,38 @@ public:
   BL_INLINE_NODEBUG BLImageDecoder& operator=(BLImageDecoder&& other) noexcept { blImageDecoderAssignMove(this, &other); return *this; }
   BL_INLINE_NODEBUG BLImageDecoder& operator=(const BLImageDecoder& other) noexcept { blImageDecoderAssignWeak(this, &other); return *this; }
 
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLImageDecoder& other) const noexcept { return  equals(other); }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLImageDecoder& other) const noexcept { return !equals(other); }
+  [[nodiscard]]
+  BL_INLINE_NODEBUG bool operator==(const BLImageDecoder& other) const noexcept { return  equals(other); }
+
+  [[nodiscard]]
+  BL_INLINE_NODEBUG bool operator!=(const BLImageDecoder& other) const noexcept { return !equals(other); }
 
   //! \}
 
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE_NODEBUG BLResult reset() noexcept { return blImageDecoderReset(this); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept {
+    BLResult result = blImageDecoderReset(this);
+
+    // Reset operation always succeeds.
+    BL_ASSUME(result == BL_SUCCESS);
+    // Assume a default constructed BLImageDecoder after reset.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+
+    return result;
+  }
+
   BL_INLINE_NODEBUG void swap(BLImageDecoderCore& other) noexcept { _d.swap(other._d); }
 
   BL_INLINE_NODEBUG BLResult assign(BLImageDecoderCore&& other) noexcept { return blImageDecoderAssignMove(this, &other); }
   BL_INLINE_NODEBUG BLResult assign(const BLImageDecoderCore& other) noexcept { return blImageDecoderAssignWeak(this, &other); }
 
   //! Tests whether the image decoder is a built-in null instance.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isValid() const noexcept { return _impl()->lastResult != BL_ERROR_NOT_INITIALIZED; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLImageDecoderCore& other) const noexcept { return _d.impl == other._d.impl; }
 
   //! \}
@@ -177,19 +211,19 @@ public:
   //! \name Accessors
   //! \{
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLImageCodec& codec() const noexcept { return _impl()->codec.dcast(); }
 
   //! Returns the last decoding result.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLResult lastResult() const noexcept { return _impl()->lastResult; }
 
   //! Returns the current frame index (to be decoded).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint64_t frameIndex() const noexcept { return _impl()->frameIndex; }
 
   //! Returns the position in source buffer.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t bufferIndex() const noexcept { return _impl()->bufferIndex; }
 
   //! \}

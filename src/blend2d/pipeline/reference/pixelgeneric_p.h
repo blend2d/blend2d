@@ -12,9 +12,7 @@
 //! \addtogroup blend2d_pipeline_reference
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace Reference {
+namespace bl::Pipeline::Reference {
 namespace Pixel {
 
 enum class Type : uint32_t {
@@ -35,16 +33,16 @@ enum class Component : uint32_t {
 struct Repeat {
   uint32_t v;
 
-  BL_INLINE_NODEBUG constexpr uint32_t u16x2() const noexcept { return v | (v << 16); }
-  BL_INLINE_NODEBUG constexpr uint64_t u16x4() const noexcept { return uint64_t(u16x2()) | (uint64_t(u16x2()) << 32); }
+  BL_INLINE_CONSTEXPR uint32_t u16x2() const noexcept { return v | (v << 16); }
+  BL_INLINE_CONSTEXPR uint64_t u16x4() const noexcept { return uint64_t(u16x2()) | (uint64_t(u16x2()) << 32); }
 };
 
 template<typename Format> struct P32_8888;
 template<typename Format> struct U32_8888;
 
 struct FormatA8 {
-  static constexpr Type kType = Type::kAlpha;
-  static constexpr uint32_t kBPP = 1;
+  static inline constexpr Type kType = Type::kAlpha;
+  static inline constexpr uint32_t kBPP = 1;
 };
 
 template<uint32_t rShift, uint32_t gShift, uint32_t bShift, uint32_t aShift>
@@ -539,42 +537,42 @@ struct FormatMetadata {};
 
 template<>
 struct FormatMetadata<FormatExt::kPRGB32> {
-  static constexpr bool kHasAlpha = true;
-  static constexpr bool kHasRGB = true;
-  static constexpr bool kIsPremultiplied = true;
-  static constexpr uint32_t kBPP = 4;
+  static inline constexpr bool kHasAlpha = true;
+  static inline constexpr bool kHasRGB = true;
+  static inline constexpr bool kIsPremultiplied = true;
+  static inline constexpr uint32_t kBPP = 4;
 };
 
 template<>
 struct FormatMetadata<FormatExt::kXRGB32> {
-  static constexpr bool kHasAlpha = false;
-  static constexpr bool kHasRGB = true;
-  static constexpr bool kIsPremultiplied = false;
-  static constexpr uint32_t kBPP = 4;
+  static inline constexpr bool kHasAlpha = false;
+  static inline constexpr bool kHasRGB = true;
+  static inline constexpr bool kIsPremultiplied = false;
+  static inline constexpr uint32_t kBPP = 4;
 };
 
 template<>
 struct FormatMetadata<FormatExt::kA8> {
-  static constexpr bool kHasAlpha = true;
-  static constexpr bool kHasRGB = false;
-  static constexpr bool kIsPremultiplied = false;
-  static constexpr uint32_t kBPP = 1;
+  static inline constexpr bool kHasAlpha = true;
+  static inline constexpr bool kHasRGB = false;
+  static inline constexpr bool kIsPremultiplied = false;
+  static inline constexpr uint32_t kBPP = 1;
 };
 
 template<>
 struct FormatMetadata<FormatExt::kFRGB32> {
-  static constexpr bool kHasAlpha = true;
-  static constexpr bool kHasRGB = true;
-  static constexpr bool kIsPremultiplied = true;
-  static constexpr uint32_t kBPP = 4;
+  static inline constexpr bool kHasAlpha = true;
+  static inline constexpr bool kHasRGB = true;
+  static inline constexpr bool kIsPremultiplied = true;
+  static inline constexpr uint32_t kBPP = 4;
 };
 
 template<>
 struct FormatMetadata<FormatExt::kZERO32> {
-  static constexpr bool kHasAlpha = true;
-  static constexpr bool kHasRGB = true;
-  static constexpr bool kIsPremultiplied = true;
-  static constexpr uint32_t kBPP = 4;
+  static inline constexpr bool kHasAlpha = true;
+  static inline constexpr bool kHasRGB = true;
+  static inline constexpr bool kIsPremultiplied = true;
+  static inline constexpr uint32_t kBPP = 4;
 };
 
 template<typename PixelT>
@@ -677,9 +675,7 @@ struct PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kA8> {
 template<> struct PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kFRGB32> : public PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32> {};
 template<> struct PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kZERO32> : public PixelIO<Pixel::P32_A8R8G8B8, FormatExt::kPRGB32> {};
 
-} // {Reference}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::Reference}
 
 //! \}
 //! \endcond

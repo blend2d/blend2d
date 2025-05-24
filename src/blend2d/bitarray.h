@@ -114,6 +114,7 @@ public:
     kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_BIT_ARRAY)
   };
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLBitArrayImpl* _impl() const noexcept { return static_cast<BLBitArrayImpl*>(_d.impl); }
 
   //! \}
@@ -131,12 +132,15 @@ public:
     other._d.initStatic(BLObjectInfo{kSSOEmptySignature});
   }
 
-  BL_INLINE_NODEBUG BLBitArray(const BLBitArray& other) noexcept { blBitArrayInitWeak(this, &other); }
+  BL_INLINE_NODEBUG BLBitArray(const BLBitArray& other) noexcept {
+    blBitArrayInitWeak(this, &other);
+  }
 
   //! Destroys the BitArray.
   BL_INLINE_NODEBUG ~BLBitArray() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
       blBitArrayDestroy(this);
+    }
   }
 
   //! \}
@@ -172,7 +176,16 @@ public:
   //! Clears the content of the BitArray and releases its data.
   //!
   //! After reset the BitArray content matches a default constructed instance.
-  BL_INLINE_NODEBUG BLResult reset() noexcept { return blBitArrayReset(this); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept {
+    BLResult result = blBitArrayReset(this);
+
+    // Reset operation always succeeds.
+    BL_ASSUME(result == BL_SUCCESS);
+    // Assume a default constructed BLBitArray after reset.
+    BL_ASSUME(_d.info.bits == kSSOEmptySignature);
+
+    return result;
+  }
 
   //! Swaps the content of this string with the `other` string.
   BL_INLINE_NODEBUG void swap(BLBitArrayCore& other) noexcept { _d.swap(other._d); }

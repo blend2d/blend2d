@@ -16,15 +16,15 @@
 
 namespace bl {
 
-typedef void (BL_CDECL* ImageScaleFilterFunc)(double* dst, const double* tArray, size_t n) BL_NOEXCEPT;
+typedef void (BL_CDECL* ImageScaleFilterFunc)(double* dst, const double* tArray, size_t n) noexcept;
 
 // bl::ImageScale - Ops
 // ====================
 
 struct ImageScaleOps {
-  BLResult (BL_CDECL* weights)(ImageScaleContext::Data* d, uint32_t dir, ImageScaleFilterFunc filterFunc) BL_NOEXCEPT;
-  void (BL_CDECL* horz[BL_FORMAT_MAX_VALUE + 1])(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) BL_NOEXCEPT;
-  void (BL_CDECL* vert[BL_FORMAT_MAX_VALUE + 1])(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) BL_NOEXCEPT;
+  BLResult (BL_CDECL* weights)(ImageScaleContext::Data* d, uint32_t dir, ImageScaleFilterFunc filterFunc) noexcept;
+  void (BL_CDECL* horz[BL_FORMAT_MAX_VALUE + 1])(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept;
+  void (BL_CDECL* vert[BL_FORMAT_MAX_VALUE + 1])(const ImageScaleContext::Data* d, uint8_t* dstLine, intptr_t dstStride, const uint8_t* srcLine, intptr_t srcStride) noexcept;
 };
 static ImageScaleOps imageScaleOps;
 

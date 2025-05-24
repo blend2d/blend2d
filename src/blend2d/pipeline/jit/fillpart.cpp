@@ -15,9 +15,7 @@
 #include "../../pipeline/jit/fetchutilspixelaccess_p.h"
 #include "../../pipeline/jit/pipecompiler_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 // bl::Pipeline::JIT::FillPart - Utilities
 // =======================================
@@ -1429,8 +1427,6 @@ void FillAnalyticPart::deadvanceDstPtrAndCellPtr(const Gp& dstPtr, const Gp& cel
 #endif
 }
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 #endif // !BL_BUILD_NO_JIT

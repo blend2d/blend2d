@@ -8,9 +8,7 @@
 
 #include "../../pipeline/jit/fetchutilscoverage_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 // bl::Pipeline::JIT - GlobalAlpha
 // ===============================
@@ -116,8 +114,6 @@ const Vec& GlobalAlpha::ua() noexcept {
   return _ua;
 }
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 #endif // !BL_BUILD_NO_JIT

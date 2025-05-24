@@ -146,35 +146,35 @@ public:
   //! \{
 
   //! Tests whether this `ArenaAllocator` is actually a `ArenaAllocatorTmp` that uses temporary memory.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE bool hasStaticBlock() const noexcept { return _hasStaticBlock != 0; }
 
   //! Returns the minimum block size.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t minimumBlockSize() const noexcept { return size_t(1) << _minimumBlockSizeShift; }
 
   //! Returns the maximum block size.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t maximumBlockSize() const noexcept { return size_t(1) << _maximumBlockSizeShift; }
 
   //! Returns the default block alignment.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t blockAlignment() const noexcept { return size_t(1) << _blockAlignmentShift; }
 
   //! Returns the remaining size of the current block.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t remainingSize() const noexcept { return (size_t)(_end - _ptr); }
 
   //! Returns the current arena allocator cursor (dangerous).
   //!
   //! This is a function that can be used to get exclusive access to the current block's memory buffer.
   template<typename T = uint8_t>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE T* ptr() noexcept { return reinterpret_cast<T*>(_ptr); }
 
   //! Returns the end of the current arena allocator block, only useful if you use `ptr()`.
   template<typename T = uint8_t>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE T* end() noexcept { return reinterpret_cast<T*>(_end); }
 
   // NOTE: The following two functions `setPtr()` and `setEnd()` can be used to perform manual memory allocation
@@ -206,7 +206,7 @@ public:
   //!
   //! \note This function doesn't respect any alignment. If you need to ensure there is enough room for an aligned
   //! allocation you need to call `align()` before calling `ensure()`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE BLResult ensure(size_t size) noexcept {
     if (size <= remainingSize())
       return BL_SUCCESS;
@@ -220,7 +220,7 @@ public:
   //! \{
 
   //! Internal alloc function.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_HIDDEN void* _alloc(size_t size, size_t alignment) noexcept;
 
   //! Allocates the requested memory specified by `size`.
@@ -252,7 +252,7 @@ public:
   //! // Reset or destroy `ArenaAllocator`.
   //! arena.reset();
   //! ```
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE void* alloc(size_t size) noexcept {
     if (BL_UNLIKELY(size > remainingSize()))
       return _alloc(size, 1);
@@ -265,7 +265,7 @@ public:
   //! Allocates the requested memory specified by `size` and `alignment`.
   //!
   //! Performs the same operation as `ArenaAllocator::alloc(size)` with `alignment` applied.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE void* alloc(size_t size, size_t alignment) noexcept {
     BL_ASSERT(IntOps::isPowerOf2(alignment));
     uint8_t* ptr = IntOps::alignUp(_ptr, alignment);
@@ -280,7 +280,7 @@ public:
   //! Allocates the requested memory specified by `size` without doing any checks.
   //!
   //! Can only be called if `remainingSize()` returns size at least equal to `size`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE void* allocNoCheck(size_t size) noexcept {
     BL_ASSERT(remainingSize() >= size);
 
@@ -292,7 +292,7 @@ public:
   //! Allocates the requested memory specified by `size` and `alignment` without doing any checks.
   //!
   //! Performs the same operation as `ArenaAllocator::allocNoCheck(size)` with `alignment` applied.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE void* allocNoCheck(size_t size, size_t alignment) noexcept {
     BL_ASSERT(IntOps::isPowerOf2(alignment));
 
@@ -306,18 +306,18 @@ public:
   //! Allocates the requested memory specified by `size` and `alignment` and clears it before returning its pointer.
   //!
   //! See `alloc()` for more details.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_HIDDEN void* allocZeroed(size_t size, size_t alignment = 1) noexcept;
 
   //! Like `alloc()`, but the return pointer is casted to `T*`.
   template<typename T>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE T* allocT(size_t size = sizeof(T), size_t alignment = alignof(T)) noexcept {
     return static_cast<T*>(alloc(size, alignment));
   }
 
   template<typename T>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE T* allocNoAlignT(size_t size = sizeof(T)) noexcept {
     T* ptr = static_cast<T*>(alloc(size));
     BL_ASSERT(IntOps::isAligned(ptr, alignof(T)));
@@ -326,21 +326,21 @@ public:
 
   //! Like `allocNoCheck()`, but the return pointer is casted to `T*`.
   template<typename T>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE T* allocNoCheckT(size_t size = sizeof(T), size_t alignment = alignof(T)) noexcept {
     return static_cast<T*>(allocNoCheck(size, alignment));
   }
 
   //! Like `allocZeroed()`, but the return pointer is casted to `T*`.
   template<typename T>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE T* allocZeroedT(size_t size = sizeof(T), size_t alignment = alignof(T)) noexcept {
     return static_cast<T*>(allocZeroed(size, alignment));
   }
 
   //! Like `new(std::nothrow) T(...)`, but allocated by `ArenaAllocator`.
   template<typename T>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE T* newT() noexcept {
     void* p = alloc(sizeof(T), alignof(T));
     if (BL_UNLIKELY(!p))
@@ -350,7 +350,7 @@ public:
 
   //! Like `new(std::nothrow) T(...)`, but allocated by `ArenaAllocator`.
   template<typename T, typename... Args>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE T* newT(Args&&... args) noexcept {
     void* p = alloc(sizeof(T), alignof(T));
     if (BL_UNLIKELY(!p))
@@ -369,7 +369,7 @@ public:
   //! \{
 
   //! Stores the current state to `state`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE StatePtr saveState() noexcept {
     return _ptr;
   }
@@ -402,7 +402,7 @@ public:
 
   //! Returns a past block - a block used before the current one, or null if this is the first block. Use together
   //! with `reusePastBlock()`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE Block* pastBlock() const noexcept { return _block->prev; }
 
   //! Moves the passed block after the current block and makes the block after the given `block` first.
@@ -464,7 +464,7 @@ public:
   BL_INLINE void reset() noexcept { _pool = nullptr; }
 
   //! Ensures that there is at least one object in the pool.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE bool ensure(ArenaAllocator& arena) noexcept {
     if (_pool) return true;
 
@@ -477,7 +477,7 @@ public:
   }
 
   //! Allocates a memory (or reuses the existing allocation) of `SizeOfT` (in bytes).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE T* alloc(ArenaAllocator& arena) noexcept {
     Link* p = _pool;
     if (BL_UNLIKELY(p == nullptr))
@@ -487,7 +487,7 @@ public:
   }
 
   //! Like `alloc()`, but can be only called after `ensure()` returned `true`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE T* allocEnsured() noexcept {
     Link* p = _pool;
     BL_ASSERT(p != nullptr);

@@ -30,11 +30,11 @@ struct BLArrayCore BL_CLASS_INHERITS(BLObjectCore) {
   //! \cond INTERNAL
 
   template<typename T>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG T& dcast() noexcept { return static_cast<T&>(*this); }
 
   template<typename T>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T& dcast() const noexcept { return static_cast<const T&>(*this); }
 
   //! \endcond
@@ -54,12 +54,12 @@ struct BLArrayImpl BL_CLASS_INHERITS(BLObjectImpl) {
 #ifdef __cplusplus
   //! Returns the pointer to the `data` casted to `T*`.
   template<typename T>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG T* dataAs() noexcept { return (T*)data; }
 
   //! Returns the pointer to the `data` casted to `const T*`.
   template<typename T>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T* dataAs() const noexcept { return (const T*)data; }
 #endif
 };
@@ -171,14 +171,14 @@ struct ArrayTraitsByCategory<T, kTypeCategoryPtr> {
 template<typename T>
 struct ArrayTraitsByCategory<T, kTypeCategoryInt> {
   static constexpr const uint32_t kArrayType =
-    sizeof(T) == 1 && std::is_signed  <T>::value ? BL_OBJECT_TYPE_ARRAY_INT8   :
-    sizeof(T) == 1 && std::is_unsigned<T>::value ? BL_OBJECT_TYPE_ARRAY_UINT8  :
-    sizeof(T) == 2 && std::is_signed  <T>::value ? BL_OBJECT_TYPE_ARRAY_INT16  :
-    sizeof(T) == 2 && std::is_unsigned<T>::value ? BL_OBJECT_TYPE_ARRAY_UINT16 :
-    sizeof(T) == 4 && std::is_signed  <T>::value ? BL_OBJECT_TYPE_ARRAY_INT32  :
-    sizeof(T) == 4 && std::is_unsigned<T>::value ? BL_OBJECT_TYPE_ARRAY_UINT32 :
-    sizeof(T) == 8 && std::is_signed  <T>::value ? BL_OBJECT_TYPE_ARRAY_INT64  :
-    sizeof(T) == 8 && std::is_unsigned<T>::value ? BL_OBJECT_TYPE_ARRAY_UINT64 : BL_OBJECT_TYPE_NULL;
+    sizeof(T) == 1 && std::is_signed_v  <T> ? BL_OBJECT_TYPE_ARRAY_INT8   :
+    sizeof(T) == 1 && std::is_unsigned_v<T> ? BL_OBJECT_TYPE_ARRAY_UINT8  :
+    sizeof(T) == 2 && std::is_signed_v  <T> ? BL_OBJECT_TYPE_ARRAY_INT16  :
+    sizeof(T) == 2 && std::is_unsigned_v<T> ? BL_OBJECT_TYPE_ARRAY_UINT16 :
+    sizeof(T) == 4 && std::is_signed_v  <T> ? BL_OBJECT_TYPE_ARRAY_INT32  :
+    sizeof(T) == 4 && std::is_unsigned_v<T> ? BL_OBJECT_TYPE_ARRAY_UINT32 :
+    sizeof(T) == 8 && std::is_signed_v  <T> ? BL_OBJECT_TYPE_ARRAY_INT64  :
+    sizeof(T) == 8 && std::is_unsigned_v<T> ? BL_OBJECT_TYPE_ARRAY_UINT64 : BL_OBJECT_TYPE_NULL;
 
   using CompatibleType = BLInternal::UIntByType<T>;
   static BL_INLINE_NODEBUG CompatibleType pass(const T& arg) noexcept { return (CompatibleType)arg; }
@@ -292,6 +292,7 @@ public:
   static_assert(uint32_t(kArrayType) != BL_OBJECT_TYPE_NULL,
                 "Type 'T' cannot be used with 'BLArray<T>' as it's either non-trivial or non-specialized");
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLArrayImpl* _impl() const noexcept { return static_cast<BLArrayImpl*>(_d.impl); }
 
   //! \}
@@ -320,8 +321,9 @@ public:
 
   //! Destroys the array.
   BL_INLINE_NODEBUG ~BLArray() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
       blArrayDestroy(this);
+    }
   }
 
   //! \}
@@ -343,17 +345,17 @@ public:
   BL_INLINE_NODEBUG BLArray& operator=(const BLArray& other) noexcept { blArrayAssignWeak(this, &other); return *this; }
 
   //! Returns true if this and `other` arrays are equal.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool operator==(const BLArray& other) const noexcept { return equals(other); }
 
   //! Returns true if this and `other` arrays are not equal.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool operator!=(const BLArray& other) const noexcept { return !equals(other); }
 
   //! Returns a read-only reference to the array item at the given `index`.
   //!
   //! \note This is the same as calling `at(index)`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T& operator[](size_t index) const noexcept { return at(index); }
 
   //! \}
@@ -366,8 +368,12 @@ public:
   //! \note This function always returns \ref BL_SUCCESS.
   BL_INLINE_NODEBUG BLResult reset() noexcept {
     BLResult result = blArrayReset(this);
+
+    // Reset operation always succeeds.
     BL_ASSUME(result == BL_SUCCESS);
+    // Assume a default constructed BLArray<T> after reset.
     BL_ASSUME(_d.info.bits == kSSOEmptySignature);
+
     return result;
   }
 
@@ -380,41 +386,41 @@ public:
   //! \{
 
   //! Tests whether the array is empty.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool empty() const noexcept { return size() == 0; }
 
   //! Returns the size of the array (number of items).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t size() const noexcept { return _d.sso() ? size_t(_d.aField()) : _impl()->size; }
 
   //! Returns the capacity of the array (number of items).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t capacity() const noexcept { return _d.sso() ? size_t(_d.bField()) : _impl()->capacity; }
 
   //! Returns a pointer to the array data.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T* data() const noexcept { return _d.sso() ? (const T*)(_d.char_data) : (const T*)_impl()->data; }
 
   //! Returns a pointer to the array data (iterator compatibility).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T* begin() const noexcept { return data(); }
 
   //! Returns a pointer to the end of array data (iterator compatibility).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T* end() const noexcept {
     return _d.sso() ? (const T*)(_d.char_data) + size_t(_d.aField())
                     : (const T*)_impl()->data + _impl()->size;
   }
 
   //! Returns the array data as `BLArrayView<T>`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLArrayView<T> view() const noexcept { return BLArrayView<T> { data(), size() }; }
 
   //! Returns a read-only reference to the array item at the given `index`.
   //!
   //! \note The index must be valid, which means it has to be less than the array length. Accessing items out of range
   //! is undefined behavior that would be caught by assertions in debug builds.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE const T& at(size_t index) const noexcept {
     BL_ASSERT(index < size());
     return data()[index];
@@ -425,7 +431,7 @@ public:
   //! \note The array must have at least one item otherwise calling `first()` would point to the end of the array,
   //! which is not initialized, and such reference would be invalid. Debug builds would catch this condition with
   //! an assertion.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T& first() const noexcept { return at(0); }
 
   //! Returns a read-only reference to the last item.
@@ -433,7 +439,7 @@ public:
   //! \note The array must have at least one item otherwise calling `last()`  would point to the end of the array,
   //! which is not initialized, and such reference would be invalid. Debug builds would catch this condition with
   //! an assertion.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T& last() const noexcept { return at(size() - 1); }
 
   //! \}
@@ -585,7 +591,7 @@ public:
   //! behavior in such case.
   template<typename... Args>
   BL_INLINE BLResult append(Args&&... args) noexcept {
-    if BL_CONSTEXPR (sizeof...(args) == 1)
+    if constexpr (sizeof...(args) == 1)
       return BLInternal::appendItem(this, Traits::pass(BLInternal::firstInVarArgs(BLInternal::forward<Args>(args)...)));
     else
       return modify_v(BL_MODIFY_OP_APPEND_GROW, BLInternal::forward<Args>(args)...);
@@ -612,7 +618,7 @@ public:
   //! behavior in such case.
   template<typename... Args>
   BL_INLINE BLResult prepend(Args&&... args) noexcept {
-    if BL_CONSTEXPR (sizeof...(args) == 1)
+    if constexpr (sizeof...(args) == 1)
       return BLInternal::insertItem(this, 0, Traits::pass(BLInternal::firstInVarArgs(BLInternal::forward<Args>(args)...)));
     else
       return insert(0, BLInternal::forward<Args>(args)...);
@@ -639,7 +645,7 @@ public:
   //! behavior in such case.
   template<typename... Args>
   BL_INLINE BLResult insert(size_t index, Args&&... args) noexcept {
-    if BL_CONSTEXPR (sizeof...(args) == 1) {
+    if constexpr (sizeof...(args) == 1) {
       return BLInternal::insertItem(this, index, Traits::pass(BLInternal::firstInVarArgs(BLInternal::forward<Args>(args)...)));
     }
     else {
@@ -695,7 +701,7 @@ public:
   //! \{
 
   //! Returns whether the content of this array and `other` matches.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLArray<T>& other) const noexcept {
     return blArrayEquals(this, &other);
   }
@@ -706,14 +712,14 @@ public:
   //! \{
 
   //! Returns the first index at which a given `item` can be found in the array, or `SIZE_MAX` if not found.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t indexOf(const T& item) const noexcept {
     return indexOf(item, 0);
   }
 
   //! Returns the index at which a given `item` can be found in the array starting from `fromIndex`, or `SIZE_MAX`
   //! if not present.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t indexOf(const T& item, size_t fromIndex) const noexcept {
     const T* p = data();
     size_t iEnd = size();
@@ -726,7 +732,7 @@ public:
   }
 
   //! Returns the last index at which a given `item` can be found in the array, or `SIZE_MAX` if not present.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t lastIndexOf(const T& item) const noexcept {
     const T* p = data();
     size_t i = size();
@@ -739,7 +745,7 @@ public:
 
   //! Returns the index at which a given `item` can be found in the array starting from `fromIndex` and ending
   //! at `0`, or `SIZE_MAX` if not present.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t lastIndexOf(const T& item, size_t fromIndex) const noexcept {
     const T* p = data();
     size_t i = size() - 1;

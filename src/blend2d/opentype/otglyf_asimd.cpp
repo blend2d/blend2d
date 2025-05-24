@@ -8,8 +8,7 @@
 
 #include "../opentype/otglyfsimdimpl_p.h"
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace GlyfImpl {
 
 BLResult BL_CDECL getGlyphOutlines_ASIMD(
@@ -24,7 +23,6 @@ BLResult BL_CDECL getGlyphOutlines_ASIMD(
 }
 
 } // {GlyfImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 #endif // BL_BUILD_OPT_ASIMD

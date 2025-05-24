@@ -17,8 +17,7 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 
 //! Kind of a lookup (either GPOS or GSUB).
 enum class LookupKind {
@@ -296,8 +295,7 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 
 } // {LayoutImpl}
 
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \}
 //! \endcond

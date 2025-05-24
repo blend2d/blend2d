@@ -13,8 +13,7 @@
 #include "support/memops_p.h"
 #include "support/ptrops_p.h"
 
-namespace bl {
-namespace ArrayInternal {
+namespace bl::ArrayInternal {
 
 // bl::Array - Private - Tables
 // ============================
@@ -395,8 +394,7 @@ static BL_INLINE BLResult replaceTypeT(BLArrayCore* self, size_t index, T value)
   }
 }
 
-} // {ArrayInternal}
-} // {bl}
+} // {bl::ArrayInternal}
 
 // bl::Array - API - Init & Destroy
 // ================================
