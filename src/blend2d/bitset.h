@@ -236,6 +236,7 @@ public:
     kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_BIT_SET) | BL_OBJECT_INFO_R_FLAG
   };
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLBitSetImpl* _impl() const noexcept { return static_cast<BLBitSetImpl*>(_d.impl); }
 
   BL_INLINE_NODEBUG void _initRangeInternal(uint32_t startBit = 0u, uint32_t endBit = 0u) noexcept {
@@ -266,8 +267,9 @@ public:
 
   //! Destroys the BitSet.
   BL_INLINE ~BLBitSet() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
       blBitSetDestroy(this);
+    }
   }
 
   //! \}

@@ -14,8 +14,7 @@
 // bl::Array - Tests
 // =================
 
-namespace bl {
-namespace Tests {
+namespace bl::Tests {
 
 UNIT(array, BL_TEST_GROUP_CORE_CONTAINERS) {
   INFO("Basic functionality - BLArray<int>");
@@ -231,7 +230,6 @@ UNIT(array, BL_TEST_GROUP_CORE_CONTAINERS) {
   }
 }
 
-} // {Tests}
-} // {bl}
+} // {bl::Tests}
 
 #endif // BL_TEST

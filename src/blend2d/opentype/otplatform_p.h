@@ -3,8 +3,8 @@
 // See blend2d.h or LICENSE.md for license and copyright information
 // SPDX-License-Identifier: Zlib
 
-#ifndef BLEND2D_OPENTYPE_OTFPLATFORM_P_H_INCLUDED
-#define BLEND2D_OPENTYPE_OTFPLATFORM_P_H_INCLUDED
+#ifndef BLEND2D_OPENTYPE_OTPLATFORM_P_H_INCLUDED
+#define BLEND2D_OPENTYPE_OTPLATFORM_P_H_INCLUDED
 
 #include "../opentype/otcore_p.h"
 
@@ -12,14 +12,11 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace bl {
-namespace OpenType {
-
 //! Platform support for TrueType and OpenType fonts.
 //!
 //! Mostly required by 'cmap' and 'name' tables. This namespace provides all the constants necessary to read the
 //! right information from these tables.
-namespace Platform {
+namespace bl::OpenType::Platform {
 
 //! Platform id.
 enum PlatformId : uint32_t {
@@ -563,11 +560,9 @@ enum WindowsLocaleId : uint32_t {
   kWindowsLocaleYoruba                   = 0x046A
 };
 
-} // {Platform}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType::Platform}
 
 //! \}
 //! \endcond
 
-#endif // BLEND2D_OPENTYPE_OTFPLATFORM_P_H_INCLUDED
+#endif // BLEND2D_OPENTYPE_OTPLATFORM_P_H_INCLUDED

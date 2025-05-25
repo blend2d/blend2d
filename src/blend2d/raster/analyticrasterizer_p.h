@@ -17,8 +17,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 //! Analytic rasterizer cell and bit-vector storage.
 struct AnalyticCellStorage {
@@ -56,7 +55,7 @@ namespace AnalyticUtils {
 //! the sign).
 template<typename X, typename Y>
 BL_INLINE constexpr X applySignMask(const X& x, const Y& mask) noexcept {
-  typedef typename std::make_unsigned<X>::type U;
+  using U = std::make_unsigned_t<X>;
   return X((U(x) ^ U(mask)) - U(mask));
 }
 
@@ -86,7 +85,7 @@ template<typename AccT, typename IterT, typename CountT>
 static BL_INLINE void accErrMultiStep(AccT& acc, IterT& iter, const IterT& step, const IterT& correction, const CountT& count) noexcept {
   BL_STATIC_ASSERT(sizeof(AccT) == sizeof(IterT));
 
-  typedef typename std::make_unsigned<IterT>::type U;
+  using U = std::make_unsigned_t<IterT>;
 
   int64_t i = int64_t(U(iter));
   i -= int64_t(uint64_t(step) * uint32_t(count));
@@ -1195,15 +1194,16 @@ HorzLeftToRightInside:
   template<typename X>
   BL_INLINE void cellAdd(uint32_t* cellPtr, X x, uint32_t value) const noexcept {
     BL_ASSERT(x >= 0);
-    typedef typename std::make_unsigned<X>::type U;
 
+    using U = std::make_unsigned_t<X>;
     cellPtr[size_t(U(x))] += value;
   }
 
   template<typename X>
   BL_INLINE void cellMerge(uint32_t* cellPtr, X x, uint32_t cover, uint32_t area) const noexcept {
     BL_ASSERT(x >= 0);
-    typedef typename std::make_unsigned<X>::type U;
+
+    using U = std::make_unsigned_t<X>;
 
     cellPtr[size_t(U(x)) + 0] += IntOps::shl(cover, 9) - area;
     cellPtr[size_t(U(x)) + 1] += area;
@@ -1217,7 +1217,7 @@ HorzLeftToRightInside:
   //! Set bit `x` to 1 in a bit-vector starting at `bitPtr`.
   template<uint32_t OPTIONS, typename X>
   BL_INLINE void bitSet(BLBitWord* bitPtr, X x) const noexcept {
-    typedef typename std::make_unsigned<X>::type U;
+    using U = std::make_unsigned_t<X>;
 
     if (OPTIONS & kOptionEasyBitStride)
       bitPtr[0] |= BitOps::indexAsMask(U(x));
@@ -1228,9 +1228,9 @@ HorzLeftToRightInside:
   //! Fill bits between `first` and `last` (inclusive) in a bit-vector starting at `bitPtr`.
   template<uint32_t OPTIONS, typename X>
   BL_INLINE BL_FLATTEN void bitFill(BLBitWord* bitPtr, X first, X last) const noexcept {
-    typedef typename std::make_unsigned<X>::type U;
-
     BL_ASSERT(first <= last);
+
+    using U = std::make_unsigned_t<X>;
 
     if (OPTIONS & kOptionEasyBitStride) {
       BL_ASSERT(first < BitOps::kNumBits);
@@ -1261,8 +1261,7 @@ HorzLeftToRightInside:
   //! \}
 };
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

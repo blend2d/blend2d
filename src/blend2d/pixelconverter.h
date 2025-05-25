@@ -22,7 +22,7 @@ typedef BLResult (BL_CDECL* BLPixelConverterFunc)(
   const BLPixelConverterCore* self,
   uint8_t* dstData, intptr_t dstStride,
   const uint8_t* srcData, intptr_t srcStride,
-  uint32_t w, uint32_t h, const BLPixelConverterOptions* options) BL_NOEXCEPT;
+  uint32_t w, uint32_t h, const BLPixelConverterOptions* options) BL_NOEXCEPT_C;
 
 //! \}
 //! \endcond
@@ -153,7 +153,7 @@ public:
   }
 
   //! Tests whether if the converter is initialized.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE bool isInitialized() const noexcept {
     // Internal flags are non-zero when the pixel converter is initialized.
     return internalFlags != 0;

@@ -14,10 +14,7 @@
 // bl::Pipeline::JIT - Tests
 // =========================
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
-namespace Tests {
+namespace bl::Pipeline::JIT::Tests {
 
 // bl::Pipeline::JIT - Tests - Constants
 // =====================================
@@ -25,7 +22,7 @@ namespace Tests {
 static constexpr uint64_t kRandomSeed = 0x1234u;
 static constexpr uint32_t kTestIterCount = 1000u;
 
-static BL_INLINE_NODEBUG constexpr uint32_t byteWidthFromVecWidth(VecWidth vw) noexcept {
+static BL_INLINE_CONSTEXPR uint32_t byteWidthFromVecWidth(VecWidth vw) noexcept {
   return 16u << uint32_t(vw);
 }
 
@@ -2829,13 +2826,13 @@ struct ConstraintRangeU32 : public ConstraintBase<uint32_t, ConstraintRangeU32<k
 // ==============================================
 
 template<typename T>
-static BL_INLINE_NODEBUG typename std::make_unsigned<T>::type cast_uint(const T& x) noexcept {
-  return (typename std::make_unsigned<T>::type)x;
+static BL_INLINE_NODEBUG std::make_unsigned_t<T> cast_uint(const T& x) noexcept {
+  return static_cast<std::make_unsigned_t<T>>(x);
 }
 
 template<typename T>
-static BL_INLINE_NODEBUG typename std::make_signed<T>::type cast_int(const T& x) noexcept {
-  return (typename std::make_signed<T>::type)x;
+static BL_INLINE_NODEBUG std::make_signed_t<T> cast_int(const T& x) noexcept {
+  return static_cast<std::make_signed_t<T>>(x);
 }
 
 static BL_INLINE_NODEBUG int8_t saturate_i16_to_i8(int16_t x) noexcept {
@@ -3676,7 +3673,7 @@ template<typename T> struct vec_op_adds : public op_each_vvv<T, vec_op_adds<T>> 
     if (!of)
       return result;
 
-    if (Traits::isUnsigned<T>() || b > 0)
+    if (std::is_unsigned_v<T> || b > 0)
       return Traits::maxValue<T>();
     else
       return Traits::minValue<T>();
@@ -3695,7 +3692,7 @@ template<typename T> struct vec_op_subs : public op_each_vvv<T, vec_op_subs<T>> 
     if (!of)
       return result;
 
-    if (Traits::isUnsigned<T>() || b > 0)
+    if (std::is_unsigned_v<T> || b > 0)
       return Traits::minValue<T>();
     else
       return Traits::maxValue<T>();
@@ -5501,9 +5498,6 @@ UNIT(pipecompiler, BL_TEST_GROUP_PIPELINE_JIT_COMPILER) {
 #endif
 }
 
-} // {Tests}
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT::Tests}
 
 #endif // BL_TEST && !BL_BUILD_NO_JIT

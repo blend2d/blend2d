@@ -15,8 +15,7 @@
 #include "../support/ptrops_p.h"
 #include "../support/traits_p.h"
 
-namespace bl {
-namespace Bmp {
+namespace bl::Bmp {
 
 // bl::Bmp::Codec - Globals
 // ========================
@@ -959,5 +958,4 @@ void bmpCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcep
   codecs->append(bmpCodecInstance.dcast());
 }
 
-} // {Bmp}
-} // {bl}
+} // {bl::Bmp}

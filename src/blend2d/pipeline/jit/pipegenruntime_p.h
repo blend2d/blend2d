@@ -18,9 +18,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 //! PipeGen function cache.
 //!
@@ -108,9 +106,7 @@ public:
   static Wrap<PipeDynamicRuntime> _global;
 };
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

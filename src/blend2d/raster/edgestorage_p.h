@@ -14,8 +14,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 //! Parametrized point used by edge builder that should represent either 16-bit
 //! or 32-bit fixed point.
@@ -178,8 +177,7 @@ public:
   }
 };
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

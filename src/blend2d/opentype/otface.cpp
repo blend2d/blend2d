@@ -17,8 +17,7 @@
 #include "../opentype/otmetrics_p.h"
 #include "../opentype/otname_p.h"
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 
 // bl::OpenType - OTFaceImpl - Tracing
 // ===================================
@@ -117,8 +116,7 @@ BLResult createOpenTypeFace(BLFontFaceCore* self, const BLFontData* fontData, ui
   return BL_SUCCESS;
 }
 
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 // bl::OpenType - Runtime Registration
 // ===================================

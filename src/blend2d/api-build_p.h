@@ -179,9 +179,6 @@ extern "C" void __tsan_release(void *addr);
   #pragma GCC diagnostic warning "-Wattributes"
   #pragma GCC diagnostic ignored "-Wmaybe-uninitialized" // Unfortunately GCC emits lots of false positives.
   #pragma GCC diagnostic ignored "-Wunused-function"
-  #if __GNUC__ >= 7
-  #pragma GCC diagnostic ignored "-Wnoexcept-type"       // Hits when compiling in C++11 mode with a function pointer having noexcept
-  #endif
   #if __GNUC__ <= 8
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"     // Reports some cases that are perfectly fine.
   #endif

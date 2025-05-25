@@ -13,10 +13,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
-namespace FetchUtils {
+namespace bl::Pipeline::JIT::FetchUtils {
 
 // bl::Pipeline::Jit::FetchUtils -- FillSpan & FillRect Loops
 // ==========================================================
@@ -48,10 +45,7 @@ void inlineCopySpanLoop(
   Gp i,
   uint32_t mainLoopSize, uint32_t itemSize, uint32_t itemGranularity, FormatExt format) noexcept;
 
-} // {FetchUtils}
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT::FetchUtils}
 
 //! \}
 //! \endcond

@@ -8,9 +8,7 @@
 #include "../compression/checksum_p.h"
 #include "../support/ptrops_p.h"
 
-namespace bl {
-namespace Compression {
-namespace Checksum {
+namespace bl::Compression::Checksum {
 
 // bl::Compression - CheckSum - Function Table
 // ===========================================
@@ -146,12 +144,7 @@ uint32_t crc32(const uint8_t* data, size_t size) noexcept {
   return crc32Finalize(functionTable.crc32(kCrc32Initial, data, size));
 }
 
-} // {Checksum}
-} // {Compression}
-} // {bl}
-
-#if defined(BL_BUILD_OPT_SSE4_2)
-#endif // BL_BUILD_OPT_SSE4_2
+} // {bl::Compression::Checksum}
 
 void blCompressionRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);

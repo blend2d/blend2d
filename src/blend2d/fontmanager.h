@@ -102,6 +102,7 @@ struct BLFontQueryProperties {
 class BLFontManager final : public BLFontManagerCore {
 public:
   //! \cond INTERNAL
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLFontManagerImpl* _impl() const noexcept { return static_cast<BLFontManagerImpl*>(_d.impl); }
   //! \endcond
 
@@ -136,10 +137,10 @@ public:
   BL_INLINE_NODEBUG BLResult assign(const BLFontManager& other) noexcept { return blFontManagerAssignWeak(this, &other); }
 
   //! Tests whether the font-manager is a valid FontManager and not a built-in default instance.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isValid() const noexcept { return _d.aField() == 0; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLFontManager& other) const noexcept { return blFontManagerEquals(this, &other); }
 
   //! \}
@@ -152,18 +153,18 @@ public:
   //! \}
 
   //! Returns the number of BLFontFace instances the font manager holds.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t faceCount() const noexcept { return blFontManagerGetFaceCount(this); }
 
   //! Returns the number of unique font families the font manager holds.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t familyCount() const noexcept { return blFontManagerGetFamilyCount(this); }
 
   //! \name Face Management
   //! \{
 
   //! Tests whether the font manager contains the given font `face`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool hasFace(const BLFontFaceCore& face) const noexcept {
     return blFontManagerHasFace(this, &face);
   }

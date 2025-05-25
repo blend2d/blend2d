@@ -523,7 +523,7 @@ static BL_INLINE uint32_t translateFlags(uint32_t src) noexcept {
   constexpr uint32_t kDstOffset = bl::IntOps::ctzStatic(kDst);
   constexpr uint32_t kSrcOffset = bl::IntOps::ctzStatic(kSrc);
 
-  if BL_CONSTEXPR (kDstOffset < kSrcOffset) {
+  if constexpr (kDstOffset < kSrcOffset) {
     return (src >> (kSrcOffset - kDstOffset)) & (kMsk << kDstOffset);
   }
   else {
@@ -533,7 +533,7 @@ static BL_INLINE uint32_t translateFlags(uint32_t src) noexcept {
 
 template<BLFileInfoFlags kDstX, uint32_t kSrcR, uint32_t kSrcW, uint32_t kSrcX>
 static BL_INLINE uint32_t translateRWX(uint32_t src) noexcept {
-  if BL_CONSTEXPR (kSrcW == (kSrcX << 1) && kSrcR == (kSrcX << 2)) {
+  if constexpr (kSrcW == (kSrcX << 1) && kSrcR == (kSrcX << 2)) {
     return translateFlags<kDstX, kSrcX, 0x7>(src);
   }
   else {
@@ -702,7 +702,7 @@ BL_API_IMPL BLResult blFileSeek(BLFileCore* self, int64_t offset, BLFileSeekType
 }
 
 BL_API_IMPL BLResult blFileRead(BLFileCore* self, void* buffer, size_t n, size_t* bytesReadOut) noexcept {
-  using SignedSizeT = std::make_signed<size_t>::type;
+  using SignedSizeT = std::make_signed_t<size_t>;
 
   if (!isFileOpen(self)) {
     *bytesReadOut = 0;
@@ -736,7 +736,7 @@ BL_API_IMPL BLResult blFileRead(BLFileCore* self, void* buffer, size_t n, size_t
 }
 
 BL_API_IMPL BLResult blFileWrite(BLFileCore* self, const void* buffer, size_t n, size_t* bytesWrittenOut) noexcept {
-  typedef std::make_signed<size_t>::type SignedSizeT;
+  using SignedSizeT = std::make_signed_t<size_t>;
 
   if (!isFileOpen(self)) {
     *bytesWrittenOut = 0;

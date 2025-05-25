@@ -24,8 +24,7 @@
 // TODO: [OpenType] This is not complete so we had to disable some warnings here...
 BL_DIAGNOSTIC_PUSH(BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS)
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace LayoutImpl {
 
 // bl::OpenType::LayoutImpl - Tracing
@@ -414,7 +413,7 @@ static bool validateTagRef16Array(ValidationContext& validator, RawTable data, c
 struct ApplyIndex {
   size_t _index;
 
-  BL_INLINE_NODEBUG constexpr bool isRange() const noexcept { return false; }
+  BL_INLINE_CONSTEXPR bool isRange() const noexcept { return false; }
   BL_INLINE_NODEBUG size_t index() const noexcept { return _index; }
   BL_INLINE_NODEBUG size_t end() const noexcept { return _index + 1; }
   BL_INLINE_NODEBUG size_t size() const noexcept { return 1; }
@@ -428,7 +427,7 @@ struct ApplyRange {
   size_t _index;
   size_t _end;
 
-  BL_INLINE_NODEBUG constexpr bool isRange() const noexcept { return true; }
+  BL_INLINE_CONSTEXPR bool isRange() const noexcept { return true; }
   BL_INLINE_NODEBUG size_t index() const noexcept { return _index; }
   BL_INLINE_NODEBUG size_t end() const noexcept { return _end; }
   BL_INLINE_NODEBUG size_t size() const noexcept { return _end - _index; }
@@ -3818,7 +3817,6 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 }
 
 } // {LayoutImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 BL_DIAGNOSTIC_POP

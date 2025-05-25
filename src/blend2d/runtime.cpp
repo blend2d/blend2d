@@ -18,7 +18,7 @@
 #endif
 
 #ifndef BL_BUILD_NO_JIT
-  #include <asmjit/asmjit.h>
+  #include <asmjit/core.h>
 #endif
 
 // BLRuntime - Runtime Context

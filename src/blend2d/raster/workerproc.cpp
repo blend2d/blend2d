@@ -17,8 +17,7 @@
 #include "../support/bitops_p.h"
 #include "../support/intops_p.h"
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 namespace WorkerProc {
 
 // TODO: [Rendering Context] HARDCODED.
@@ -367,5 +366,4 @@ void workerThreadEntry(BLThread* thread, void* data) noexcept {
 }
 
 } // {WorkerProc}
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}

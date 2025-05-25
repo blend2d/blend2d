@@ -17,7 +17,7 @@ namespace Tests {
 
 UNIT(random, BL_TEST_GROUP_CORE_UTILITIES) {
   // Number of iterations for tests that use loop.
-  enum { kCount = 1000000 };
+  static constexpr uint32_t kCount = 1000000;
 
   #if defined(BL_TARGET_OPT_SSE2)
   INFO("Testing whether the SIMD implementation matches the C++ one");

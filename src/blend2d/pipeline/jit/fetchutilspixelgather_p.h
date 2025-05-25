@@ -13,9 +13,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 // Interleave callback is used to interleave a sequence of code into pixel fetching sequence. There are two scenarios in
 // general:
@@ -24,7 +22,7 @@ namespace JIT {
 //     can be interleaved with another code to hide the latency of reading from memory and shuffling.
 //   - Fetching is performed by hardware (vpgatherxx). In this case the interleave code is inserted after gather to hide
 //     its latency (i.e. to not immediately depend on gathered content).
-typedef void (*InterleaveCallback)(uint32_t step, void* data) BL_NOEXCEPT;
+typedef void (*InterleaveCallback)(uint32_t step, void* data) noexcept;
 
 static void dummyInterleaveCallback(uint32_t step, void* data) noexcept { blUnused(step, data); }
 
@@ -239,9 +237,7 @@ static void gatherPixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags fl
 }
 
 } // {FetchUtils}
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

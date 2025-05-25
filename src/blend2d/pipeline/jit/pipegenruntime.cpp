@@ -15,9 +15,7 @@
 #include "../../pipeline/jit/pipegenruntime_p.h"
 #include "../../support/wrap_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 // bl::Pipeline::JIT::Runtime - Globals
 // ====================================
@@ -424,9 +422,10 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
 
   if (_loggerEnabled) {
     const asmjit::FormatFlags kFormatFlags =
-      asmjit::FormatFlags::kRegCasts    |
       asmjit::FormatFlags::kMachineCode |
-      asmjit::FormatFlags::kExplainImms ;
+      asmjit::FormatFlags::kShowAliases |
+      asmjit::FormatFlags::kExplainImms |
+      asmjit::FormatFlags::kRegCasts    ;
 
     fl.addFlags(kFormatFlags);
     code.setLogger(&fl);
@@ -442,9 +441,6 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
   cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kValidateIntermediate);
 #endif
   cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kRAAnnotate);
-
-  //cc.addDiagnosticOptions(asmjit::DiagnosticOptions::kRADebugAssignment |
-  //                        asmjit::DiagnosticOptions::kRADebugAll);
 
 #ifndef ASMJIT_NO_LOGGING
   if (_loggerEnabled) {
@@ -500,9 +496,7 @@ FillFunc PipeDynamicRuntime::_compileFillFunc(uint32_t signature) noexcept {
   return func;
 }
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 // bl::Pipeline::JIT::Runtime - Runtime Registration
 // =================================================

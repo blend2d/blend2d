@@ -33,15 +33,9 @@ void blFuxexRtInit(BLRuntimeContext* rt) noexcept {
 
 #elif !defined(BL_BUILD_NO_FUTEX) && defined(_WIN32)
 
-namespace bl {
-namespace Futex {
-namespace Native {
-
+namespace bl::Futex::Native {
 FutexSyncAPI futexSyncAPI;
-
-} // {Native}
-} // {Futex}
-} // {bl}
+} // {bl::Futex::Native}
 
 void blFuxexRtInit(BLRuntimeContext* rt) noexcept {
   HMODULE hModule = GetModuleHandleA("api-ms-win-core-synch-l1-2-0.dll");

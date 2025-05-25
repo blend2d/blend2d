@@ -15,10 +15,7 @@
 // bl::Pipeline::JIT - Tests - MAdd - Reference (X86)
 // ==================================================
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
-namespace Tests {
+namespace bl::Pipeline::JIT::Tests {
 
 // NOTE: We have to provide the reference implementation of these functions as it's impossible to test
 // this on 32-bit X86 as the compiler would most likely use FPU registers, which uses the same precision
@@ -41,9 +38,6 @@ double madd_nofma_ref_f64(double a, double b, double c) noexcept {
   return _mm_cvtsd_f64(_mm_add_sd(_mm_mul_sd(av, bv), cv));
 }
 
-} // {Tests}
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT::Tests}
 
 #endif // BL_TEST && !BL_BUILD_NO_JIT

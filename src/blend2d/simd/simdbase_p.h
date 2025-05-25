@@ -24,8 +24,8 @@ template<typename V, size_t N>
 struct VecArray {
   typedef typename V::ElementType ElementType;
 
-  static constexpr uint32_t kW = V::kW;
-  static constexpr uint32_t kN = N;
+  static inline constexpr uint32_t kW = V::kW;
+  static inline constexpr uint32_t kN = N;
 
   V data[N];
 

@@ -30,7 +30,7 @@ struct BLStringImpl BL_CLASS_INHERITS(BLObjectImpl) {
 
 #ifdef __cplusplus
   //! String data [null terminated] follows BLStringImpl data.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG char* data() noexcept { return reinterpret_cast<char*>(this) + sizeof(BLStringImpl); }
 #endif
 };
@@ -96,19 +96,19 @@ public:
   //! \name Internals
   //! \{
 
-  enum : uint32_t {
-    //! Capacity of an SSO string - depends actually on architecture endianness.
-    kSSOCapacity =
-      BL_BYTE_ORDER == 1234
-        ? BLObjectDetail::kStaticDataSize + 2u
-        : BLObjectDetail::kStaticDataSize - 1u,
+  //! Capacity of an SSO string - depends actually on architecture endianness.
+  static inline constexpr uint32_t kSSOCapacity =
+    BL_BYTE_ORDER == 1234
+      ? BLObjectDetail::kStaticDataSize + 2u
+      : BLObjectDetail::kStaticDataSize - 1u;
 
-    //! Signature of SSO representation of an empty string (with size XORed with `kSSOCapacity`).
-    //!
-    //! This mask can be used to get quickly SSO string size.
-    kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_STRING) | BLObjectInfo::packAbcp(kSSOCapacity)
-  };
+  //! Signature of SSO representation of an empty string (with size XORed with `kSSOCapacity`).
+  //!
+  //! This mask can be used to get quickly SSO string size.
+  static inline constexpr uint32_t kSSOEmptySignature =
+    BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_STRING) | BLObjectInfo::packAbcp(kSSOCapacity);
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLStringImpl* _impl() const noexcept { return static_cast<BLStringImpl*>(_d.impl); }
 
   //! \}
@@ -138,7 +138,7 @@ public:
   //! \note See other constructors for more details.
   BL_INLINE_NODEBUG explicit BLString(BLStringView view) noexcept { blStringInitWithData(this, view.data, view.size); }
 
-  //! Constructor that creates a string from the given data specified by `str` and `size`. If `size` is `SIZE_MAX`
+  //! Constructor that creates a string from the given dat[[nodiscard]]a specified by `str` and `size`. If `size` is `SIZE_MAX`
   //! the string is assumed to be null terminated.
   //!
   //! This is a convenience function that doesn't provide error handling. If size exceeds small string capacity
@@ -147,8 +147,9 @@ public:
 
   //! Destroys the string.
   BL_INLINE_NODEBUG ~BLString() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
       blStringDestroy(this);
+    }
   }
 
   //! \}
@@ -168,31 +169,31 @@ public:
   //! Copy assignment, performs weak copy of the data held by the `other` string.
   BL_INLINE_NODEBUG BLString& operator=(const BLString& other) noexcept { blStringAssignWeak(this, &other); return *this; }
 
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLString& other) const noexcept { return  equals(other); }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLString& other) const noexcept { return !equals(other); }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator< (const BLString& other) const noexcept { return compare(other) <  0; }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator<=(const BLString& other) const noexcept { return compare(other) <= 0; }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator> (const BLString& other) const noexcept { return compare(other) >  0; }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator>=(const BLString& other) const noexcept { return compare(other) >= 0; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator==(const BLString& other) const noexcept { return  equals(other); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator!=(const BLString& other) const noexcept { return !equals(other); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator< (const BLString& other) const noexcept { return compare(other) <  0; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator<=(const BLString& other) const noexcept { return compare(other) <= 0; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator> (const BLString& other) const noexcept { return compare(other) >  0; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator>=(const BLString& other) const noexcept { return compare(other) >= 0; }
 
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLStringView& view) const noexcept { return  equals(view); }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLStringView& view) const noexcept { return !equals(view); }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator< (const BLStringView& view) const noexcept { return compare(view) <  0; }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator<=(const BLStringView& view) const noexcept { return compare(view) <= 0; }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator> (const BLStringView& view) const noexcept { return compare(view) >  0; }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator>=(const BLStringView& view) const noexcept { return compare(view) >= 0; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator==(const BLStringView& view) const noexcept { return  equals(view); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator!=(const BLStringView& view) const noexcept { return !equals(view); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator< (const BLStringView& view) const noexcept { return compare(view) <  0; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator<=(const BLStringView& view) const noexcept { return compare(view) <= 0; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator> (const BLStringView& view) const noexcept { return compare(view) >  0; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator>=(const BLStringView& view) const noexcept { return compare(view) >= 0; }
 
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const char* str) const noexcept { return  equals(str); }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const char* str) const noexcept { return !equals(str); }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator< (const char* str) const noexcept { return compare(str) <  0; }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator<=(const char* str) const noexcept { return compare(str) <= 0; }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator> (const char* str) const noexcept { return compare(str) >  0; }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator>=(const char* str) const noexcept { return compare(str) >= 0; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator==(const char* str) const noexcept { return  equals(str); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator!=(const char* str) const noexcept { return !equals(str); }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator< (const char* str) const noexcept { return compare(str) <  0; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator<=(const char* str) const noexcept { return compare(str) <= 0; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator> (const char* str) const noexcept { return compare(str) >  0; }
+  [[nodiscard]] BL_INLINE_NODEBUG bool operator>=(const char* str) const noexcept { return compare(str) >= 0; }
 
   //! Returns a character at the given `index`.
   //!
   //! \note This is the same as calling `at(index)`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const char& operator[](size_t index) const noexcept { return at(index); }
 
   //! \}
@@ -216,44 +217,44 @@ public:
   //! Tests whether the string is empty (has no content).
   //!
   //! Returns `true` if the string's length is zero.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool empty() const noexcept { return size() == 0; }
 
   //! Returns a character at the given `index`.
   //!
   //! \note Index must be valid and cannot be out of bounds - there is an assertion.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE const char& at(size_t index) const noexcept {
     BL_ASSERT(index <= size());
     return data()[index];
   }
 
   //! Returns the size of the string [in bytes].
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t size() const noexcept {
     return _d.sso() ? size_t((_d.info.bits ^ kSSOEmptySignature) >> BL_OBJECT_INFO_A_SHIFT) : _impl()->size;
   }
 
   //! Returns the capacity of the string [in bytes].
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t capacity() const noexcept { return _d.sso() ? size_t(kSSOCapacity) : _impl()->capacity; }
 
   //! Returns a pointer to the data of the string.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const char* data() const noexcept { return _d.sso() ? _d.char_data : _impl()->data(); }
 
   //! Returns a pointer to the beginning of string data (iterator compatibility).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const char* begin() const noexcept { return data(); }
 
   //! Returns a pointer to the end of string data (iterator compatibility).
   //!
   //! The returned pointer points to the string null terminator.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const char* end() const noexcept { return data() + size(); }
 
   //! Returns the content of the string as `BLStringView`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLStringView view() const noexcept { return BLStringView { data(), size() }; }
 
   //! \}
@@ -341,27 +342,27 @@ public:
   //! \{
 
   //! Returns whether this string and `other` are equal (i.e. their contents match).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLString& other) const noexcept { return blStringEquals(this, &other); }
 
   //! Returns whether this string and other string `view` are equal.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(BLStringView view) const noexcept { return blStringEqualsData(this, view.data, view.size); }
 
   //! Returns whether this string and the given string data `str` of length `n` are equal.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringEqualsData(this, str, n); }
 
   //! Compares this string with `other` and returns either `-1`, `0`, or `1`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG int compare(const BLString& other) const noexcept { return blStringCompare(this, &other); }
 
   //! Compares this string with other string `view` and returns either `-1`, `0`, or `1`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG int compare(BLStringView view) const noexcept { return blStringCompareData(this, view.data, view.size); }
 
   //! Compares this string with other string data and returns either `-1`, `0`, or `1`.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG int compare(const char* str, size_t n = SIZE_MAX) const noexcept { return blStringCompareData(this, str, n); }
 
   //! \}
@@ -370,12 +371,12 @@ public:
   //! \{
 
   //! Returns the first index at which a given character `c` can be found in the string, or `SIZE_MAX` if not present.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t indexOf(char c) const noexcept { return indexOf(c, 0); }
 
   //! Returns the index at which a given character `c` can be found in the string starting from `fromIndex`, or `SIZE_MAX`
   //! if not present.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t indexOf(char c, size_t fromIndex) const noexcept {
     size_t iEnd = size();
     const char* p = data();
@@ -388,7 +389,7 @@ public:
   }
 
   //! Returns the last index at which a given character `c` can be found in the string, or `SIZE_MAX` if not present.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t lastIndexOf(char c) const noexcept {
     size_t i = size();
     const char* p = data();
@@ -401,7 +402,7 @@ public:
 
   //! Returns the index at which a given character `c` can be found in the string starting from `fromIndex` and ending
   //! at `0`, or `SIZE_MAX` if not present.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t lastIndexOf(char c, size_t fromIndex) const noexcept {
     size_t i = size() - 1;
     const char* p = data();

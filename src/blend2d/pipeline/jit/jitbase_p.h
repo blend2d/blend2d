@@ -22,9 +22,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 // AsmJit Integration
 // ==================
@@ -203,7 +201,7 @@ static BL_INLINE Vec cloneVecAs(const Vec& src, VecWidth vw) noexcept {
 class OpArray {
 public:
   using Op = Operand_;
-  static constexpr uint32_t kMaxSize = 8;
+  static inline constexpr uint32_t kMaxSize = 8;
 
   uint32_t _size;
   Operand_ v[kMaxSize];
@@ -635,9 +633,7 @@ public:
   }
 };
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

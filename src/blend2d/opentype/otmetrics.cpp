@@ -9,8 +9,7 @@
 #include "../opentype/otmetrics_p.h"
 #include "../support/ptrops_p.h"
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace MetricsImpl {
 
 // bl::OpenType::MetricsImpl - Trace
@@ -135,5 +134,4 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 }
 
 } // {MetricsImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}

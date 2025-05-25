@@ -8,8 +8,7 @@
 
 #include "../opentype/otglyfsimddata_p.h"
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace GlyfImpl {
 
 alignas(16) const uint8_t convertFlagsPredicate[64] = {
@@ -156,7 +155,6 @@ alignas(16) const uint8_t decodeOpYTable[16] = {
 };
 
 } // {GlyfImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 #endif // BL_BUILD_OPT_SSE4_2 || BL_BUILD_OPT_ASIMD

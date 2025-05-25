@@ -14,9 +14,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 namespace CompOpUtils {
 
 #if defined(BL_JIT_ARCH_A64)
@@ -95,9 +93,7 @@ static void combineDiv255AndOutRGBA32(PipeCompiler* pc, Pixel& out, PixelFlags f
 }
 
 } // {CompOpUtils}
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

@@ -15,9 +15,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 namespace FetchUtils {
 
 // Bilinear interpolation with calculated weights
@@ -171,9 +169,7 @@ BL_NOINLINE void xFilterBilinearARGB32_1x(
 }
 
 } // {FetchUtils}
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

@@ -41,9 +41,9 @@ static BL_INLINE uint32_t strideForWidth(uint32_t width, uint32_t depth) noexcep
 }
 
 static BL_INLINE bool checkSizeAndFormat(int w, int h, BLFormat format) noexcept {
-  return !(unsigned(w - 1) >= BL_RUNTIME_MAX_IMAGE_SIZE ||
-           unsigned(h - 1) >= BL_RUNTIME_MAX_IMAGE_SIZE ||
-           unsigned(format - 1) >= BL_FORMAT_MAX_VALUE);
+  return !(unsigned(w) - 1u >= BL_RUNTIME_MAX_IMAGE_SIZE ||
+           unsigned(h) - 1u >= BL_RUNTIME_MAX_IMAGE_SIZE ||
+           unsigned(format) - 1u >= BL_FORMAT_MAX_VALUE);
 }
 
 static BL_INLINE BLResultT<intptr_t> calcStrideFromCreateParams(int w, int h, BLFormat format) noexcept {
@@ -674,6 +674,8 @@ void blImageRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
   auto& defaultImage = bl::ImageInternal::defaultImage;
+
   blObjectDefaults[BL_OBJECT_TYPE_IMAGE]._d.initDynamic(
-    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE), &defaultImage.impl);
+    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE),
+    &defaultImage.impl);
 }

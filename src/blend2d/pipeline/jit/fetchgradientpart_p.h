@@ -14,9 +14,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 class GradientDitheringContext {
 public:
@@ -191,15 +189,15 @@ public:
 //! Conic gradient fetch part.
 class FetchConicGradientPart : public FetchGradientPart {
 public:
-  static constexpr uint8_t kQ0 = 0;
-  static constexpr uint8_t kQ1 = 1;
-  static constexpr uint8_t kQ2 = 2;
-  static constexpr uint8_t kQ3 = 3;
+  static inline constexpr uint8_t kQ0 = 0;
+  static inline constexpr uint8_t kQ1 = 1;
+  static inline constexpr uint8_t kQ2 = 2;
+  static inline constexpr uint8_t kQ3 = 3;
 
-  static constexpr uint8_t kNDiv1 = 0;
-  static constexpr uint8_t kNDiv2 = 1;
-  static constexpr uint8_t kNDiv4 = 2;
-  static constexpr uint8_t kAngleOffset = 3;
+  static inline constexpr uint8_t kNDiv1 = 0;
+  static inline constexpr uint8_t kNDiv2 = 1;
+  static inline constexpr uint8_t kNDiv4 = 2;
+  static inline constexpr uint8_t kAngleOffset = 3;
 
   struct ConicRegs {
     Vec ty_tx;
@@ -245,9 +243,7 @@ public:
   void initVx(const Vec& vx, const Gp& x) noexcept;
 };
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

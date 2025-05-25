@@ -11,9 +11,7 @@
 
 //! \cond INTERNAL
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
+namespace bl::Compression::Deflate {
 
 enum class FormatType : uint32_t {
   kRaw,
@@ -85,9 +83,7 @@ static BL_INLINE uint32_t loaded_u32_to_u24(uint32_t v) noexcept {
   return BL_BYTE_ORDER == 1234 ? v & 0xFFFFFFu : v >> 8;
 }
 
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate}
 
 //! \endcond
 

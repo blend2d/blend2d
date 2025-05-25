@@ -117,23 +117,23 @@ struct BLFontVariationSettingsView {
   //! \{
 
   //! Tests whether the view is empty.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool empty() const noexcept { return size == 0; }
 
    //! Returns a const pointer to \ref BLFontVariationSettingsView data (iterator compatibility).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontVariationItem* begin() const noexcept { return data; }
 
   //! Returns a const pointer to the end of \ref BLFontVariationSettingsView data (iterator compatibility).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontVariationItem* end() const noexcept { return data + size; }
 
    //! Returns a const pointer to \ref BLFontVariationSettingsView data (iterator compatibility).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontVariationItem* cbegin() const noexcept { return data; }
 
   //! Returns a const pointer to the end of \ref BLFontVariationSettingsView data (iterator compatibility).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLFontVariationItem* cend() const noexcept { return data + size; }
 
   //! \}
@@ -153,14 +153,13 @@ public:
   //! \name Internals
   //! \{
 
-  enum : uint32_t {
-    //! SSO capacity of \ref BLFontVariationSettings container.
-    kSSOCapacity = 3,
+  //! SSO capacity of \ref BLFontVariationSettings container.
+  static inline constexpr uint32_t kSSOCapacity = 3;
 
-    //! Signature of SSO representation of an empty font variation settings.
-    kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS)
-  };
+  //! Signature of SSO representation of an empty font variation settings.
+  static inline constexpr uint32_t kSSOEmptySignature = BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_FONT_VARIATION_SETTINGS);
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLFontVariationSettingsImpl* _impl() const noexcept { return static_cast<BLFontVariationSettingsImpl*>(_d.impl); }
 
   //! \}
@@ -183,8 +182,9 @@ public:
   }
 
   BL_INLINE_NODEBUG ~BLFontVariationSettings() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
       blFontVariationSettingsDestroy(this);
+    }
   }
 
   //! \}
@@ -203,7 +203,17 @@ public:
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE_NODEBUG BLResult reset() noexcept { return blFontVariationSettingsReset(this); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept {
+    BLResult result = blFontVariationSettingsReset(this);
+
+    // Reset operation always succeeds.
+    BL_ASSUME(result == BL_SUCCESS);
+    // Assume a default constructed BLFontVariationSettings after reset.
+    BL_ASSUME(_d.info.bits == kSSOEmptySignature);
+
+    return result;
+  }
+
   BL_INLINE_NODEBUG BLResult clear() noexcept { return blFontVariationSettingsClear(this); }
   BL_INLINE_NODEBUG void swap(BLFontVariationSettings& other) noexcept { _d.swap(other._d); }
 
@@ -216,15 +226,18 @@ public:
   //! \{
 
   //! Tests whether the container is empty, which means that no tag/value pairs are stored in it.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool empty() const noexcept { return size() == 0; }
 
   //! Returns the number of tag/value pairs stored in the container.
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t size() const noexcept { return _d.sso() ? size_t(_d.info.aField()) : _impl()->size; }
 
   //! Returns the container capacity.
   //!
   //! \note If the container is in SSO mode, it would return the SSO capacity, however, such capacity can only be used
   //! for simple tag/value pairs (where the tag is known by Blend2D and has associated an internal ID that represents it).
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t capacity() const noexcept { return _d.sso() ? size_t(kSSOCapacity) : _impl()->capacity; }
 
   //! Returns a normalized view of tag/value pairs as an iterable \ref BLFontVariationItem array in the output view.
@@ -238,11 +251,13 @@ public:
   BL_INLINE_NODEBUG BLResult getView(BLFontVariationSettingsView* out) const noexcept { return blFontVariationSettingsGetView(this, out); }
 
   //! Tests whether the settings contains the given `variationTag`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool hasValue(BLTag variationTag) const noexcept { return blFontVariationSettingsHasValue(this, variationTag); }
 
   //! Returns the value associated with the given `variationTag`.
   //!
   //! If the `variationTag` doesn't exist or is invalid `NaN` is returned.
+  [[nodiscard]]
   BL_INLINE_NODEBUG float getValue(BLTag variationTag) const noexcept { return blFontVariationSettingsGetValue(this, variationTag); }
 
   //! Sets or inserts the given `variationTag` to the settings and associates it with the given `value`.
@@ -259,6 +274,7 @@ public:
   //! \{
 
   //! Tests whether this font variation settings is equal to `other` - equality means that it has the same tag/value pairs.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLFontVariationSettings& other) const noexcept { return blFontVariationSettingsEquals(this, &other); }
 
   //! \}

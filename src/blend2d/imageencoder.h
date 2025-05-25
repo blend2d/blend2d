@@ -27,7 +27,8 @@ struct BLImageEncoderCore BL_CLASS_INHERITS(BLObjectCore) {
 
   //! Returns Impl of the image encoder (only provided for use cases that implement BLImageEncoder).
   template<typename T = BLImageEncoderImpl>
-  BL_INLINE T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
+  [[nodiscard]]
+  BL_INLINE_NODEBUG T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
 
   //! \}
 #endif
@@ -38,8 +39,8 @@ struct BLImageEncoderCore BL_CLASS_INHERITS(BLObjectCore) {
 struct BLImageEncoderVirt BL_CLASS_INHERITS(BLObjectVirt) {
   BL_DEFINE_VIRT_BASE
 
-  BLResult (BL_CDECL* restart)(BLImageEncoderImpl* impl) BL_NOEXCEPT;
-  BLResult (BL_CDECL* writeFrame)(BLImageEncoderImpl* impl, BLArrayCore* dst, const BLImageCore* image) BL_NOEXCEPT;
+  BLResult (BL_CDECL* restart)(BLImageEncoderImpl* impl) BL_NOEXCEPT_C;
+  BLResult (BL_CDECL* writeFrame)(BLImageEncoderImpl* impl, BLArrayCore* dst, const BLImageCore* image) BL_NOEXCEPT_C;
 };
 
 //! Image encoder [Impl].
@@ -120,8 +121,13 @@ public:
   //! \name Internals
   //! \{
 
+  //! Object info values of a default constructed BLImageEncoder.
+  static inline constexpr uint32_t kDefaultSignature =
+    BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_IMAGE_ENCODER) | BL_OBJECT_INFO_D_FLAG;
+
   //! Returns Impl of the image codec (only provided for use cases that implement BLImageCodec).
   template<typename T = BLImageEncoderImpl>
+  [[nodiscard]]
   BL_INLINE_NODEBUG T* _impl() const noexcept { return static_cast<T*>(_d.impl); }
 
   //! \}
@@ -130,13 +136,28 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE_NODEBUG BLImageEncoder() noexcept { blImageEncoderInit(this); }
-  BL_INLINE_NODEBUG BLImageEncoder(BLImageEncoder&& other) noexcept { blImageEncoderInitMove(this, &other); }
-  BL_INLINE_NODEBUG BLImageEncoder(const BLImageEncoder& other) noexcept { blImageEncoderInitWeak(this, &other); }
+  BL_INLINE_NODEBUG BLImageEncoder() noexcept {
+    blImageEncoderInit(this);
+
+    // Assume a default constructed BLImageEncoder.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+  }
+
+  BL_INLINE_NODEBUG BLImageEncoder(BLImageEncoder&& other) noexcept {
+    blImageEncoderInitMove(this, &other);
+
+    // Assume a default initialized `other`.
+    BL_ASSUME(other._d.info.bits == kDefaultSignature);
+  }
+
+  BL_INLINE_NODEBUG BLImageEncoder(const BLImageEncoder& other) noexcept {
+    blImageEncoderInitWeak(this, &other);
+  }
 
   BL_INLINE_NODEBUG ~BLImageEncoder() {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
       blImageEncoderDestroy(this);
+    }
   }
 
   //! \}
@@ -149,25 +170,38 @@ public:
   BL_INLINE_NODEBUG BLImageEncoder& operator=(BLImageEncoder&& other) noexcept { blImageEncoderAssignMove(this, &other); return *this; }
   BL_INLINE_NODEBUG BLImageEncoder& operator=(const BLImageEncoder& other) noexcept { blImageEncoderAssignWeak(this, &other); return *this; }
 
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLImageEncoder& other) const noexcept { return  equals(other); }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLImageEncoder& other) const noexcept { return !equals(other); }
+  [[nodiscard]]
+  BL_INLINE_NODEBUG bool operator==(const BLImageEncoder& other) const noexcept { return  equals(other); }
+
+  [[nodiscard]]
+  BL_INLINE_NODEBUG bool operator!=(const BLImageEncoder& other) const noexcept { return !equals(other); }
 
   //! \}
 
   //! \name Common Functionality
   //! \{
 
-  BL_INLINE_NODEBUG BLResult reset() noexcept { return blImageEncoderReset(this); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept {
+    BLResult result = blImageEncoderReset(this);
+
+    // Reset operation always succeeds.
+    BL_ASSUME(result == BL_SUCCESS);
+    // Assume a default constructed BLImageEncoder after reset.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+
+    return result;
+  }
+
   BL_INLINE_NODEBUG void swap(BLImageEncoderCore& other) noexcept { _d.swap(other._d); }
 
   BL_INLINE_NODEBUG BLResult assign(BLImageEncoderCore&& other) noexcept { return blImageEncoderAssignMove(this, &other); }
   BL_INLINE_NODEBUG BLResult assign(const BLImageEncoderCore& other) noexcept { return blImageEncoderAssignWeak(this, &other); }
 
   //! Tests whether the image encoder is a built-in null instance.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isValid() const noexcept { return _impl()->lastResult != BL_ERROR_NOT_INITIALIZED; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLImageEncoderCore& other) const noexcept { return _d.impl == other._d.impl; }
 
   //! \}
@@ -175,19 +209,19 @@ public:
   //! \name Accessors
   //! \{
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLImageCodec& codec() const noexcept { return _impl()->codec.dcast(); }
 
   //! Returns the last encoding result.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLResult lastResult() const noexcept { return _impl()->lastResult; }
 
   //! Returns the current frame index (yet to be written).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint64_t frameIndex() const noexcept { return _impl()->frameIndex; }
 
   //! Returns the position in destination buffer.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t bufferIndex() const noexcept { return _impl()->bufferIndex; }
 
   //! \}

@@ -26,7 +26,7 @@ static BL_INLINE void blThreadPause() noexcept { _mm_pause(); }
 static BL_INLINE void blThreadPause() noexcept {}
 #endif
 
-typedef void (BL_CDECL* BLThreadFunc)(BLThread* thread, void* data) BL_NOEXCEPT;
+typedef void (BL_CDECL* BLThreadFunc)(BLThread* thread, void* data) noexcept;
 
 enum BLThreadStatus : uint32_t {
   BL_THREAD_STATUS_IDLE = 0,
@@ -43,10 +43,10 @@ struct BLThreadAttributes {
 };
 
 struct BLWorkerThreadVirt {
-  BLResult (BL_CDECL* destroy)(BLThread* self) BL_NOEXCEPT;
-  uint32_t (BL_CDECL* status)(const BLThread* self) BL_NOEXCEPT;
-  BLResult (BL_CDECL* run)(BLThread* self, BLThreadFunc workFunc, void* data) BL_NOEXCEPT;
-  BLResult (BL_CDECL* quit)(BLThread* self, uint32_t quitFlags) BL_NOEXCEPT;
+  BLResult (BL_CDECL* destroy)(BLThread* self) noexcept;
+  uint32_t (BL_CDECL* status)(const BLThread* self) noexcept;
+  BLResult (BL_CDECL* run)(BLThread* self, BLThreadFunc workFunc, void* data) noexcept;
+  BLResult (BL_CDECL* quit)(BLThread* self, uint32_t quitFlags) noexcept;
 };
 
 struct BLThread {

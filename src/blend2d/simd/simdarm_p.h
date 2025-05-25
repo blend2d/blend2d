@@ -123,28 +123,28 @@ template<> struct Vec<16, uint64_t>;
 template<> struct Vec<16, float>;
 template<> struct Vec<16, double>;
 
-#define BL_DECLARE_SIMD_TYPE(typeName, width, simdType, elementType)          \
-template<>                                                                    \
-struct Vec<width, elementType> {                                              \
-  static constexpr size_t kW = width;                                         \
-  static constexpr uint32_t kHalfVectorWidth = width > 8 ? width / 2u : 8;    \
-                                                                              \
-  static constexpr uint32_t kElementWidth = uint32_t(sizeof(elementType));    \
-  static constexpr uint32_t kElementCount = width / kElementWidth;            \
-                                                                              \
-  typedef Vec<width, elementType> VectorType;                                 \
-  typedef Vec<kHalfVectorWidth, elementType> VectorHalfType;                  \
-  typedef Vec<8, elementType> Vector64Type;                                   \
-  typedef Vec<16, elementType> Vector128Type;                                 \
-                                                                              \
-  typedef simdType SimdType;                                                  \
-  typedef typename VectorHalfType::SimdType HalfSimdType;                     \
-                                                                              \
-  typedef elementType ElementType;                                            \
-                                                                              \
-  SimdType v;                                                                 \
-};                                                                            \
-                                                                              \
+#define BL_DECLARE_SIMD_TYPE(typeName, width, simdType, elementType)              \
+template<>                                                                        \
+struct Vec<width, elementType> {                                                  \
+  static inline constexpr size_t kW = width;                                      \
+  static inline constexpr uint32_t kHalfVectorWidth = width > 8 ? width / 2u : 8; \
+                                                                                  \
+  static inline constexpr uint32_t kElementWidth = uint32_t(sizeof(elementType)); \
+  static inline constexpr uint32_t kElementCount = width / kElementWidth;         \
+                                                                                  \
+  using VectorType = Vec<width, elementType>;                                     \
+  using VectorHalfType = Vec<kHalfVectorWidth, elementType>;                      \
+  using Vector64Type = Vec<8, elementType>;                                       \
+  using Vector128Type = Vec<16, elementType>;                                     \
+                                                                                  \
+  using SimdType = simdType;                                                      \
+  using HalfSimdType = typename VectorHalfType::SimdType;                         \
+                                                                                  \
+  using ElementType = elementType;                                                \
+                                                                                  \
+  SimdType v;                                                                     \
+};                                                                                \
+                                                                                  \
 typedef Vec<width, elementType> typeName
 
 BL_DECLARE_SIMD_TYPE(Vec8xI8, 8, int8x8_t , int8_t);
@@ -742,11 +742,11 @@ BL_INLINE_NODEBUG float64x2_t simd_cvt_f64_from_scalar_i32(int32_t val) noexcept
 
 namespace Internal {
 
-BL_INLINE_NODEBUG constexpr uint8_t simd_shuffle_predicate_4x2b(uint8_t d, uint8_t c, uint8_t b, uint8_t a) noexcept {
+BL_INLINE_CONSTEXPR uint8_t simd_shuffle_predicate_4x2b(uint8_t d, uint8_t c, uint8_t b, uint8_t a) noexcept {
   return (uint8_t)((d << 6) | (c << 4) | (b << 2) | (a));
 }
 
-BL_INLINE_NODEBUG constexpr uint8_t simd_shuffle_predicate_2x1b(uint8_t b, uint8_t a) noexcept {
+BL_INLINE_CONSTEXPR uint8_t simd_shuffle_predicate_2x1b(uint8_t b, uint8_t a) noexcept {
   return (uint8_t)((b << 1) | (a));
 }
 
@@ -873,38 +873,38 @@ BL_INLINE_NODEBUG uint32x4_t simd_swizzle_u32(const uint32x4_t& a) noexcept {
   constexpr uint8_t k3232 = simd_shuffle_predicate_4x2b(3, 2, 3, 2);
   constexpr uint8_t k3333 = simd_shuffle_predicate_4x2b(3, 3, 3, 3);
 
-  if BL_CONSTEXPR (kPredicate == k0000) {
+  if constexpr (kPredicate == k0000) {
     return simd_dup_lane_u32<0>(a);
   }
-  else if BL_CONSTEXPR (kPredicate == k0101) {
+  else if constexpr (kPredicate == k0101) {
     uint32x2_t t = vrev64_u32(vget_low_u32(a));
     return vcombine_u32(t, t);
   }
-  else if BL_CONSTEXPR (kPredicate == k1010) {
+  else if constexpr (kPredicate == k1010) {
     uint32x2_t t = vget_low_u32(a);
     return vcombine_u32(t, t);
   }
-  else if BL_CONSTEXPR (kPredicate == k1023) {
+  else if constexpr (kPredicate == k1023) {
     return vrev64q_u32(a);
   }
-  else if BL_CONSTEXPR (kPredicate == k1111) {
+  else if constexpr (kPredicate == k1111) {
     return simd_dup_lane_u32<1>(a);
   }
-  else if BL_CONSTEXPR (kPredicate == k2222) {
+  else if constexpr (kPredicate == k2222) {
     return simd_dup_lane_u32<2>(a);
   }
-  else if BL_CONSTEXPR (kPredicate == k2323) {
+  else if constexpr (kPredicate == k2323) {
     uint32x2_t t = vrev64_u32(vget_high_u32(a));
     return vcombine_u32(t, t);
   }
-  else if BL_CONSTEXPR (kPredicate == k3210) {
+  else if constexpr (kPredicate == k3210) {
     return a;
   }
-  else if BL_CONSTEXPR (kPredicate == k3232) {
+  else if constexpr (kPredicate == k3232) {
     uint32x2_t t = vget_high_u32(a);
     return vcombine_u32(t, t);
   }
-  else if BL_CONSTEXPR (kPredicate == k3333) {
+  else if constexpr (kPredicate == k3333) {
     return simd_dup_lane_u32<3>(a);
   }
   else {
@@ -925,13 +925,13 @@ BL_INLINE_NODEBUG uint64x2_t simd_swizzle_u64(const uint64x2_t& a) noexcept {
   // (not used in code)
   // constexpr uint8_t k11 = simd_shuffle_predicate_2x1b(1, 1);
 
-  if BL_CONSTEXPR (kPredicate == k00) {
+  if constexpr (kPredicate == k00) {
     return simd_dup_lane_u64<0>(a);
   }
-  else if BL_CONSTEXPR (kPredicate == k01) {
+  else if constexpr (kPredicate == k01) {
     return vcombine_u64(vget_high_u64(a), vget_low_u64(a));
   }
-  else if BL_CONSTEXPR (kPredicate == k10) {
+  else if constexpr (kPredicate == k10) {
     return a;
   }
   else {
@@ -2829,7 +2829,7 @@ template<size_t W, typename T> static BL_INLINE_NODEBUG Vec<W, T>& operator*=(Ve
 template<size_t W, typename T> static BL_INLINE_NODEBUG Vec<W, T>& operator/=(Vec<W, T>& a, const Vec<W, T>& b) noexcept { a = div(a, b); return a; }
 
 template<size_t W, typename T, uint32_t kN> static BL_INLINE_NODEBUG Vec<W, T> operator<<(const Vec<W, T>& a, Shift<kN>) noexcept { return slli<kN>(a); }
-template<size_t W, typename T, uint32_t kN> static BL_INLINE_NODEBUG Vec<W, T> operator>>(const Vec<W, T>& a, Shift<kN>) noexcept { return std::is_unsigned<T>::value ? srli<kN>(a) : srai<kN>(a); }
+template<size_t W, typename T, uint32_t kN> static BL_INLINE_NODEBUG Vec<W, T> operator>>(const Vec<W, T>& a, Shift<kN>) noexcept { return std::is_unsigned_v<T> ? srli<kN>(a) : srai<kN>(a); }
 
 template<size_t W, typename T, uint32_t kN> static BL_INLINE_NODEBUG Vec<W, T>& operator<<=(Vec<W, T>& a, Shift<kN> b) noexcept { a = a << b; return a; }
 template<size_t W, typename T, uint32_t kN> static BL_INLINE_NODEBUG Vec<W, T>& operator>>=(Vec<W, T>& a, Shift<kN> b) noexcept { a = a >> b; return a; }

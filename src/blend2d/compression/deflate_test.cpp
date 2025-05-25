@@ -17,9 +17,7 @@
 // bl::Compression - Deflate - Tests
 // =================================
 
-namespace bl {
-namespace Compression {
-namespace Tests {
+namespace bl::Compression::Tests {
 
 enum class TestStrategy {
   kWholeData = 0,
@@ -940,8 +938,6 @@ UNIT(compression_deflate, BL_TEST_GROUP_COMPRESSION_ALGORITHM) {
   }
 }
 
-} // {Tests}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Tests}
 
 #endif // BL_TEST

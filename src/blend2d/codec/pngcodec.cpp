@@ -24,8 +24,7 @@
 #include "../support/ptrops_p.h"
 #include "../support/scopedbuffer_p.h"
 
-namespace bl {
-namespace Png {
+namespace bl::Png {
 
 // bl::Png::Codec - Globals
 // ========================
@@ -2066,5 +2065,4 @@ void pngCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcep
   codecs->append(pngCodecInstance.dcast());
 }
 
-} // {Png}
-} // {bl}
+} // {bl::Png}

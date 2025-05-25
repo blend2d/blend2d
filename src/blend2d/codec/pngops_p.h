@@ -14,9 +14,7 @@
 //! \addtogroup blend2d_codec_impl
 //! \{
 
-namespace bl {
-namespace Png {
-namespace Ops {
+namespace bl::Png::Ops {
 
 // bl::Png::Ops - Utilities
 // ========================
@@ -129,7 +127,7 @@ BL_INLINE uint32_t applyPaethFilter(uint32_t a, uint32_t b, uint32_t c) noexcept
 
 //! Optimized PNG functions.
 struct FunctionTable {
-  using InverseFilterFunc = BLResult (BL_CDECL*)(uint8_t* p, uint32_t bpp, uint32_t bpl, uint32_t h) BL_NOEXCEPT;
+  using InverseFilterFunc = BLResult (BL_CDECL*)(uint8_t* p, uint32_t bpp, uint32_t bpl, uint32_t h) noexcept;
 
   InverseFilterFunc inverseFilter[9];
 };
@@ -150,9 +148,7 @@ void initFuncTable_AVX(FunctionTable& ft) noexcept;
 void initFuncTable_ASIMD(FunctionTable& ft) noexcept;
 #endif // BL_BUILD_OPT_ASIMD
 
-} // {Ops}
-} // {Png}
-} // {bl}
+} // {bl::Png::Ops}
 
 //! \}
 //! \endcond

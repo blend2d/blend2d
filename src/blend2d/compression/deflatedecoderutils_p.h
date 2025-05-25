@@ -22,11 +22,7 @@
 
 //! \cond INTERNAL
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
-
-namespace DecoderUtils {
+namespace bl::Compression::Deflate::DecoderUtils {
 namespace {
 
 #if defined(BL_TARGET_OPT_BMI2)
@@ -67,11 +63,12 @@ BL_INLINE_NODEBUG uint32_t precodeRepeat(DecodeEntry e) noexcept { return extrac
 BL_INLINE_NODEBUG uint32_t extractExtra(BLBitWord src, DecodeEntry e) noexcept { return extract_entry(src, e) >> baseLength(e); }
 
 } // {anonymous}
-} // {DecoderUtils}
+} // {bl::Compression::Deflate::DecoderUtils}
 
 // bl::Compression::Deflate - Decoder Bits
 // =======================================
 
+namespace bl::Compression::Deflate {
 namespace {
 
 struct DecoderTableMask {
@@ -111,7 +108,7 @@ struct DecoderBits {
   BL_INLINE_NODEBUG bool overflown() const noexcept { return bitLength > IntOps::bitSizeOf<BLBitWord>(); }
 
   BL_INLINE_NODEBUG bool canRefillByte() const noexcept {
-    if BL_CONSTEXPR (sizeof(BLBitWord) >= 8)
+    if constexpr (sizeof(BLBitWord) >= 8)
       return bitLength < (IntOps::bitSizeOf<BLBitWord>() - 8u);
     else
       return bitLength <= (IntOps::bitSizeOf<BLBitWord>() - 8u);
@@ -180,7 +177,7 @@ struct DecoderBits {
   BL_INLINE_NODEBUG void makeByteAligned() noexcept { consumed(bitLength & 0x7u); }
 
   BL_INLINE_NODEBUG void fixLengthAfterFastLoop() noexcept {
-    if BL_CONSTEXPR (sizeof(BLBitWord) >= 8) {
+    if constexpr (sizeof(BLBitWord) >= 8) {
       bitLength &= (IntOps::bitSizeOf<BLBitWord>() - 1u);
     }
   }
@@ -287,10 +284,7 @@ using CopyContext = ScalarCopyContext;
 #endif
 
 } // {anonymous}
-
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate}
 
 //! \endcond
 

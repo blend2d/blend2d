@@ -11,8 +11,7 @@
 #include "runtime_p.h"
 #include "raster/rastercontext_p.h"
 
-namespace bl {
-namespace ContextInternal {
+namespace bl::ContextInternal {
 
 // bl::Context - Globals
 // =====================
@@ -219,8 +218,7 @@ static void initNullContextVirt(BLContextVirt* virt) noexcept {
   virt->blitScaledImageD         = NullContext::blitScaledImageDImpl;
 }
 
-} // {ContextInternal}
-} // {bl}
+} // {bl::ContextInternal}
 
 // bl::Context - API - Init & Destroy
 // ==================================

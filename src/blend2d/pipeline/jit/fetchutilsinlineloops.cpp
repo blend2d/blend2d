@@ -8,10 +8,7 @@
 
 #include "../../pipeline/jit/fetchutilsinlineloops_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
-namespace FetchUtils {
+namespace bl::Pipeline::JIT::FetchUtils {
 
 // bl::Pipeline::JIT::FetchUtils - FillSpan & FillRect Loops
 // =========================================================
@@ -1389,9 +1386,6 @@ void inlineCopySpanLoop(
   }
 }
 
-} // {FetchUtils}
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT::FetchUtils}
 
 #endif // !BL_BUILD_NO_JIT

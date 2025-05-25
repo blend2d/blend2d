@@ -14,8 +14,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 struct RenderCommand;
 struct RenderFetchData;
@@ -71,7 +70,7 @@ public:
   //! \name Statics
   //! \{
 
-  static BL_INLINE_NODEBUG constexpr size_t sizeOf() noexcept {
+  static BL_INLINE_CONSTEXPR size_t sizeOf() noexcept {
     return sizeof(RenderGenericQueue<T>) + sizeof(T) * kRenderQueueCapacity;
   }
 
@@ -143,7 +142,7 @@ public:
   //! \name Statics
   //! \{
 
-  static BL_INLINE_NODEBUG constexpr size_t sizeOf() noexcept {
+  static BL_INLINE_CONSTEXPR size_t sizeOf() noexcept {
     return sizeof(RenderCommandQueue);
   }
 
@@ -256,8 +255,7 @@ public:
   //! \}
 };
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

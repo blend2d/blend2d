@@ -18,8 +18,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 class RenderBatch;
 class WorkerSynchronization;
@@ -135,8 +134,7 @@ public:
   BLResult accumulateError(BLResult error) noexcept;
 };
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

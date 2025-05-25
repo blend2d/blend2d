@@ -16,9 +16,7 @@
 //! \addtogroup blend2d_pipeline_reference
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace Reference {
+namespace bl::Pipeline::Reference {
 namespace {
 
 using Pixel::Repeat;
@@ -186,9 +184,7 @@ struct CompOp_Base {
 };
 
 } // {anonymous}
-} // {Reference}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::Reference}
 
 //! \}
 //! \endcond

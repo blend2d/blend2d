@@ -9,8 +9,7 @@
 #include "../opentype/otcmap_p.h"
 #include "../opentype/otface_p.h"
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace CoreImpl {
 
 // bl::OpenType::CoreImpl - Trace
@@ -163,17 +162,17 @@ static BLResult initOS_2(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
     trace.info("Stretch: %u\n", faceI->stretch);
 
     // Read PANOSE classification.
-    memcpy(&faceI->panose, os2->v0a()->panose, sizeof(BLFontPanose));
-    if (!faceI->panose.empty())
-      faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_PANOSE_DATA;
+    memcpy(&faceI->panoseInfo, os2->v0a()->panose, sizeof(BLFontPanoseInfo));
+    if (!faceI->panoseInfo.empty())
+      faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_PANOSE_INFO;
 
     // Read unicode coverage.
-    faceI->unicodeCoverage.data[0] = os2->v0a()->unicodeCoverage[0].value();
-    faceI->unicodeCoverage.data[1] = os2->v0a()->unicodeCoverage[1].value();
-    faceI->unicodeCoverage.data[2] = os2->v0a()->unicodeCoverage[2].value();
-    faceI->unicodeCoverage.data[3] = os2->v0a()->unicodeCoverage[3].value();
-    if (!faceI->unicodeCoverage.empty())
-      faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_UNICODE_COVERAGE;
+    faceI->coverageInfo.data[0] = os2->v0a()->unicodeCoverage[0].value();
+    faceI->coverageInfo.data[1] = os2->v0a()->unicodeCoverage[1].value();
+    faceI->coverageInfo.data[2] = os2->v0a()->unicodeCoverage[2].value();
+    faceI->coverageInfo.data[3] = os2->v0a()->unicodeCoverage[3].value();
+    if (!faceI->coverageInfo.empty())
+      faceI->faceInfo.faceFlags |= BL_FONT_FACE_FLAG_COVERAGE_INFO;
 
     // Read strikethrough info.
     int strikeoutThickness = os2->v0a()->yStrikeoutSize();
@@ -259,5 +258,4 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 }
 
 } // {CoreImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}

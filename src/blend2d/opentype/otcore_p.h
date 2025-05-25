@@ -13,8 +13,7 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 
 //! OpenType 'SFNT' header.
 //!
@@ -206,7 +205,7 @@ struct OS2Table {
     enum : uint32_t { kBaseSize = 68 };
 
     UInt16 version;
-    Int16 xAverateWidth;
+    Int16 xAverageWidth;
     UInt16 weightClass;
     UInt16 widthClass;
     UInt16 embeddingFlags;
@@ -294,8 +293,7 @@ namespace CoreImpl {
 BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 } // {CoreImpl}
 
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \}
 //! \endcond

@@ -17,8 +17,7 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 
 //! OpenType 'loca' table.
 //!
@@ -176,9 +175,7 @@ BL_HIDDEN BLResult BL_CDECL getGlyphOutlines_ASIMD(
 BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 
 } // {GlyfImpl}
-
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \}
 //! \endcond

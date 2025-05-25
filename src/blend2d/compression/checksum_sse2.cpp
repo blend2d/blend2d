@@ -9,9 +9,7 @@
 #include "../compression/checksum_p.h"
 #include "../compression/checksumadler32simdimpl_p.h"
 
-namespace bl {
-namespace Compression {
-namespace Checksum {
+namespace bl::Compression::Checksum {
 
 // bl::Compression - CheckSum - ADLER32 (SSE2)
 // ===========================================
@@ -20,8 +18,6 @@ uint32_t adler32Update_SSE2(uint32_t checksum, const uint8_t* data, size_t size)
   return adler32Update_SIMD(checksum, data, size);
 }
 
-} // {Checksum}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Checksum}
 
 #endif // BL_TARGET_OPT_SSE2

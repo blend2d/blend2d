@@ -17,13 +17,11 @@
 //! \addtogroup blend2d_codec_impl
 //! \{
 
-namespace bl {
-namespace Qoi {
+namespace bl::Qoi {
 
 BL_HIDDEN void qoiCodecOnInit(BLRuntimeContext* rt, BLArray<BLImageCodec>* codecs) noexcept;
 
-} // {Qoi}
-} // {bl}
+} // {bl::Qoi}
 
 struct BLQoiDecoderImpl : public BLImageDecoderImpl {
   //! Decoder image information.

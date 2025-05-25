@@ -1027,6 +1027,8 @@ void blGradientRtInit(BLRuntimeContext* rt) noexcept {
   blUnused(rt);
 
   bl::GradientInternal::defaultImpl.impl->transform.reset();
+
   blObjectDefaults[BL_OBJECT_TYPE_GRADIENT]._d.initDynamic(
-    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_GRADIENT), &bl::GradientInternal::defaultImpl.impl);
+    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_GRADIENT),
+    &bl::GradientInternal::defaultImpl.impl);
 }

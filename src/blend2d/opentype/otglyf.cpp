@@ -16,8 +16,7 @@
 #include "../support/ptrops_p.h"
 #include "../support/scopedbuffer_p.h"
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace GlyfImpl {
 
 // bl::OpenType::GlyfImpl - FlagToSizeTable
@@ -663,5 +662,4 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 }
 
 } // {GlyfImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}

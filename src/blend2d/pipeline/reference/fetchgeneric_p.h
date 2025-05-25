@@ -15,9 +15,7 @@
 //! \addtogroup blend2d_pipeline_reference
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace Reference {
+namespace bl::Pipeline::Reference {
 
 namespace {
 
@@ -473,7 +471,7 @@ template<typename DstPixelT, FormatExt kFormat>
 struct FetchPatternAlignedBlit : public FetchNonSolid {
   typedef DstPixelT PixelType;
 
-  static constexpr uint32_t kSrcBPP = FormatMetadata<kFormat>::kBPP;
+  static inline constexpr uint32_t kSrcBPP = FormatMetadata<kFormat>::kBPP;
 
   const uint8_t* pixelPtr;
   intptr_t stride;
@@ -745,7 +743,7 @@ template<typename DstPixelT, FormatExt kFormat>
 struct FetchPatternAffineNNAny : public FetchPatternAffineNNBase<DstPixelT, kFormat> {
   typedef DstPixelT PixelType;
 
-  static constexpr uint32_t kSrcBPP = FormatMetadata<kFormat>::kBPP;
+  static inline constexpr uint32_t kSrcBPP = FormatMetadata<kFormat>::kBPP;
 
   using FetchPatternAffineNNBase<DstPixelT, kFormat>::_pixelData;
   using FetchPatternAffineNNBase<DstPixelT, kFormat>::_stride;
@@ -764,7 +762,7 @@ template<typename DstPixelT, FormatExt kFormat>
 struct FetchPatternAffineBIAny : public FetchPatternAffineNNBase<DstPixelT, kFormat> {
   typedef DstPixelT PixelType;
 
-  static constexpr uint32_t kSrcBPP = FormatMetadata<kFormat>::kBPP;
+  static inline constexpr uint32_t kSrcBPP = FormatMetadata<kFormat>::kBPP;
 
   using FetchPatternAffineNNBase<DstPixelT, kFormat>::_pixelData;
   using FetchPatternAffineNNBase<DstPixelT, kFormat>::_stride;
@@ -904,7 +902,7 @@ struct FetchGradientBase<PixelType, BL_GRADIENT_QUALITY_DITHER> : public FetchNo
   uint32_t _dmOffsetY;
   uint32_t _dmOffsetX;
 
-  static constexpr uint32_t kAdvanceYMask = (16u * 16u * 2u) - 1u;
+  static inline constexpr uint32_t kAdvanceYMask = (16u * 16u * 2u) - 1u;
 
   BL_INLINE void _initGradientBase(ContextData* ctxData, const FetchData::Gradient* gradient, uint32_t yPos) noexcept {
     blUnused(ctxData);
@@ -1312,9 +1310,7 @@ struct FetchGradientDispatch<FetchType::kGradientConicDither, DstPixelT> {
 };
 
 } // {anonymous}
-} // {Reference}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::Reference}
 
 //! \}
 //! \endcond

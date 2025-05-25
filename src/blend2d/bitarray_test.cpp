@@ -12,8 +12,7 @@
 // bl::BitArray - Tests
 // ====================
 
-namespace bl {
-namespace Tests {
+namespace bl::Tests {
 
 UNIT(bitarray, BL_TEST_GROUP_CORE_CONTAINERS) {
   constexpr uint32_t kSSOBitCapacity = BLBitArray::kSSOWordCount * 32u;
@@ -159,7 +158,6 @@ UNIT(bitarray, BL_TEST_GROUP_CORE_CONTAINERS) {
   }
 }
 
-} // {Tests}
-} // {bl}
+} // {bl::Tests}
 
 #endif // BL_TEST

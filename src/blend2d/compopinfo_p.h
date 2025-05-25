@@ -41,10 +41,10 @@ struct CompOpSimplifyInfo {
   //! \{
 
   // Data shift specify where the value is stored in `data`.
-  static constexpr uint32_t kCompOpShift = IntOps::bitShiftOf(Pipeline::Signature::kMaskCompOp);
-  static constexpr uint32_t kDstFmtShift = IntOps::bitShiftOf(Pipeline::Signature::kMaskDstFormat);
-  static constexpr uint32_t kSrcFmtShift = IntOps::bitShiftOf(Pipeline::Signature::kMaskSrcFormat);
-  static constexpr uint32_t kSolidIdShift = 16;
+  static inline constexpr uint32_t kCompOpShift = IntOps::bitShiftOf(Pipeline::Signature::kMaskCompOp);
+  static inline constexpr uint32_t kDstFmtShift = IntOps::bitShiftOf(Pipeline::Signature::kMaskDstFormat);
+  static inline constexpr uint32_t kSrcFmtShift = IntOps::bitShiftOf(Pipeline::Signature::kMaskSrcFormat);
+  static inline constexpr uint32_t kSolidIdShift = 16;
 
   //! \}
 
@@ -60,19 +60,19 @@ struct CompOpSimplifyInfo {
   //! \{
 
   //! Returns all bits that form the signature (CompOp, DstFormat SrcFormat).
-  BL_INLINE_NODEBUG constexpr uint32_t signatureBits() const noexcept { return data & 0xFFFFu; }
+  BL_INLINE_CONSTEXPR uint32_t signatureBits() const noexcept { return data & 0xFFFFu; }
   //! Returns `Signature` configured to have the same bits set as `signatureBits()`.
-  BL_INLINE_NODEBUG constexpr Pipeline::Signature signature() const noexcept { return Pipeline::Signature{signatureBits()}; }
+  BL_INLINE_CONSTEXPR Pipeline::Signature signature() const noexcept { return Pipeline::Signature{signatureBits()}; }
 
   //! Returns the simplified composition operator.
-  BL_INLINE_NODEBUG constexpr CompOpExt compOp() const noexcept { return CompOpExt((data & Pipeline::Signature::kMaskCompOp) >> kCompOpShift); }
+  BL_INLINE_CONSTEXPR CompOpExt compOp() const noexcept { return CompOpExt((data & Pipeline::Signature::kMaskCompOp) >> kCompOpShift); }
   //! Returns the simplified destination format.
-  BL_INLINE_NODEBUG constexpr FormatExt dstFormat() const noexcept { return FormatExt((data & Pipeline::Signature::kMaskDstFormat) >> kDstFmtShift); }
+  BL_INLINE_CONSTEXPR FormatExt dstFormat() const noexcept { return FormatExt((data & Pipeline::Signature::kMaskDstFormat) >> kDstFmtShift); }
   //! Returns the simplified source format.
-  BL_INLINE_NODEBUG constexpr FormatExt srcFormat() const noexcept { return FormatExt((data & Pipeline::Signature::kMaskSrcFormat) >> kSrcFmtShift); }
+  BL_INLINE_CONSTEXPR FormatExt srcFormat() const noexcept { return FormatExt((data & Pipeline::Signature::kMaskSrcFormat) >> kSrcFmtShift); }
 
   //! Returns solid-id information regarding this simplification.
-  BL_INLINE_NODEBUG constexpr CompOpSolidId solidId() const noexcept { return CompOpSolidId(data >> kSolidIdShift); }
+  BL_INLINE_CONSTEXPR CompOpSolidId solidId() const noexcept { return CompOpSolidId(data >> kSolidIdShift); }
 
   //! \}
 
@@ -80,7 +80,7 @@ struct CompOpSimplifyInfo {
   //! \{
 
   //! Returns `CompOpSimplifyInfo` from decomposed arguments.
-  static BL_INLINE_NODEBUG constexpr CompOpSimplifyInfo make(CompOpExt compOp, FormatExt d, FormatExt s, CompOpSolidId solidId) noexcept {
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo make(CompOpExt compOp, FormatExt d, FormatExt s, CompOpSolidId solidId) noexcept {
     return CompOpSimplifyInfo {
       uint32_t((uint32_t(compOp) << kCompOpShift) |
                (uint32_t(d) << kDstFmtShift) |
@@ -91,7 +91,7 @@ struct CompOpSimplifyInfo {
 
   //! Returns `CompOpSimplifyInfo` sentinel containing the only correct value of DST_COPY (NOP) operator. All other
   //! variations of DST_COPY are invalid.
-  static BL_INLINE_NODEBUG constexpr CompOpSimplifyInfo dstCopy() noexcept {
+  static BL_INLINE_CONSTEXPR CompOpSimplifyInfo dstCopy() noexcept {
     return make(CompOpExt::kDstCopy, FormatExt::kNone, FormatExt::kNone, CompOpSolidId::kAlwaysNop);
   }
 

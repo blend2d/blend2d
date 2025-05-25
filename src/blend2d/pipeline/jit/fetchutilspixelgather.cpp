@@ -8,10 +8,7 @@
 
 #include "../../pipeline/jit/fetchutilspixelgather_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
-namespace FetchUtils {
+namespace bl::Pipeline::JIT::FetchUtils {
 
 // bl::Pipeline::JIT::FetchUtils - IndexExtractor
 // ==============================================
@@ -1195,9 +1192,6 @@ void gatherPixels(PipeCompiler* pc, Pixel& p, PixelCount n, PixelFlags flags, Pi
   fCtx.end();
 }
 
-} // {FetchUtils}
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT::FetchUtils}
 
 #endif // !BL_BUILD_NO_JIT

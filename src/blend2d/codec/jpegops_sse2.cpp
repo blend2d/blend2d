@@ -16,8 +16,7 @@
 #include "../support/intops_p.h"
 #include "../support/memops_p.h"
 
-namespace bl {
-namespace Jpeg {
+namespace bl::Jpeg {
 
 // bl::Jpeg::Opts - IDCT - SSE2
 // ============================
@@ -306,7 +305,6 @@ void BL_CDECL rgb32_from_ycbcr8_SSE2(uint8_t* dst, const uint8_t* pY, const uint
   }
 }
 
-} // {Jpeg}
-} // {bl}
+} // {bl::Jpeg}
 
 #endif // BL_TARGET_OPT_SSE2

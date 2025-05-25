@@ -13,8 +13,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 //! Style data holds a copy of user-provided style with additional members that allow to create a `RenderFetchData`
 //! from it. When a style is assigned to the rendering context it has to calculate the style transformation matrix
@@ -87,8 +86,7 @@ struct StyleData {
   //! \}
 };
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

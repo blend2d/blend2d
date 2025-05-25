@@ -492,7 +492,7 @@ public:
 
 class ContextTester {
 public:
-  static constexpr uint32_t kTextureCount = 8;
+  static inline constexpr uint32_t kTextureCount = 8;
 
   enum class Op { kFill, kStroke };
 

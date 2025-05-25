@@ -14,8 +14,7 @@
 //! \addtogroup blend2d_internal
 //! \{
 
-namespace bl {
-namespace Pipeline {
+namespace bl::Pipeline {
 
 struct PipeRuntime;
 struct PipeProvider;
@@ -46,13 +45,13 @@ struct PipeRuntime {
   uint16_t _runtimeSize;
 
   //! Runtime destructor.
-  void (BL_CDECL* _destroy)(PipeRuntime* self) BL_NOEXCEPT;
+  void (BL_CDECL* _destroy)(PipeRuntime* self) noexcept;
 
   //! Functions exposed by the runtime that are copied to `PipeProvider` to make them local in the rendering context.
   //! It seems hacky, but this removes one extra indirection that would be needed if they were virtual.
   struct Funcs {
-    BLResult (BL_CDECL* test)(PipeRuntime* self, uint32_t signature, DispatchData* out, PipeLookupCache* cache) BL_NOEXCEPT;
-    BLResult (BL_CDECL* get)(PipeRuntime* self, uint32_t signature, DispatchData* out, PipeLookupCache* cache) BL_NOEXCEPT;
+    BLResult (BL_CDECL* test)(PipeRuntime* self, uint32_t signature, DispatchData* out, PipeLookupCache* cache) noexcept;
+    BLResult (BL_CDECL* get)(PipeRuntime* self, uint32_t signature, DispatchData* out, PipeLookupCache* cache) noexcept;
   } _funcs;
 
   BL_INLINE_NODEBUG PipeRuntimeType runtimeType() const noexcept { return _runtimeType; }
@@ -169,8 +168,7 @@ static BL_INLINE IndexMatch cacheLookup(const PipeLookupCache& cache, uint32_t s
 #endif
 
 } // {anonymous}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline}
 
 //! \}
 //! \endcond

@@ -311,7 +311,8 @@ void blImageCodecRtInit(BLRuntimeContext* rt) noexcept {
   defaultCodec.impl->ctor(&defaultCodec.virt);
 
   blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]._d.initDynamic(
-    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_CODEC), &defaultCodec.impl);
+    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_CODEC),
+    &defaultCodec.impl);
 
   rt->shutdownHandlers.add(blImageCodecRtShutdown);
 }

@@ -15,9 +15,7 @@
 #include "../../pipeline/jit/fillpart_p.h"
 #include "../../pipeline/jit/pipecomposer_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 // bl::Pipeline::PipeComposer - Construction & Destruction
 // =======================================================
@@ -74,8 +72,6 @@ CompOpPart* PipeComposer::newCompOpPart(CompOpExt compOp, FetchPart* dstPart, Fe
   return newPartT<CompOpPart>(compOp, dstPart, srcPart);
 }
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 #endif // !BL_BUILD_NO_JIT

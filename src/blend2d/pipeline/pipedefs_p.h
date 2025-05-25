@@ -42,8 +42,7 @@ enum BLPipeGlobalConsts : uint32_t {
   BL_PIPE_PIXELS_PER_ONE_BIT = 4
 };
 
-namespace bl {
-namespace Pipeline {
+namespace bl::Pipeline {
 
 struct ContextData;
 struct DispatchData;
@@ -227,8 +226,8 @@ enum class FetchType : uint8_t {
   kGradientConicLast = kGradientConicDither
 };
 
-typedef void (BL_CDECL* FillFunc)(ContextData* ctxData, const void* fillData, const void* fetchData) BL_NOEXCEPT;
-typedef void (BL_CDECL* FetchFunc)(ContextData* ctxData, const void* fillData, const void* fetchData) BL_NOEXCEPT;
+typedef void (BL_CDECL* FillFunc)(ContextData* ctxData, const void* fillData, const void* fetchData) noexcept;
+typedef void (BL_CDECL* FetchFunc)(ContextData* ctxData, const void* fillData, const void* fetchData) noexcept;
 
 //! Pipeline signature packed to a single `uint32_t` value.
 //!
@@ -265,17 +264,17 @@ struct Signature {
   //! \{
 
   //! Returns a signature only containing a DstFormat.
-  static BL_INLINE_NODEBUG constexpr Signature fromDstFormat(FormatExt format) noexcept { return Signature{uint32_t(format) << IntOps::bitShiftOf(kMaskDstFormat)}; }
+  static BL_INLINE_CONSTEXPR Signature fromDstFormat(FormatExt format) noexcept { return Signature{uint32_t(format) << IntOps::bitShiftOf(kMaskDstFormat)}; }
   //! Returns a signature only containing a SrcFormat.
-  static BL_INLINE_NODEBUG constexpr Signature fromSrcFormat(FormatExt format) noexcept { return Signature{uint32_t(format) << IntOps::bitShiftOf(kMaskSrcFormat)}; }
+  static BL_INLINE_CONSTEXPR Signature fromSrcFormat(FormatExt format) noexcept { return Signature{uint32_t(format) << IntOps::bitShiftOf(kMaskSrcFormat)}; }
   //! Returns a signature only containing a CompOp.
-  static BL_INLINE_NODEBUG constexpr Signature fromCompOp(CompOpExt compOp) noexcept { return Signature{uint32_t(compOp) << IntOps::bitShiftOf(kMaskCompOp)}; }
+  static BL_INLINE_CONSTEXPR Signature fromCompOp(CompOpExt compOp) noexcept { return Signature{uint32_t(compOp) << IntOps::bitShiftOf(kMaskCompOp)}; }
   //! Returns a signature only containing a FillType.
-  static BL_INLINE_NODEBUG constexpr Signature fromFillType(FillType fillType) noexcept { return Signature{uint32_t(fillType) << IntOps::bitShiftOf(kMaskFillType)}; }
+  static BL_INLINE_CONSTEXPR Signature fromFillType(FillType fillType) noexcept { return Signature{uint32_t(fillType) << IntOps::bitShiftOf(kMaskFillType)}; }
   //! Returns a signature only containing a FetchType.
-  static BL_INLINE_NODEBUG constexpr Signature fromFetchType(FetchType fetchType) noexcept { return Signature{uint32_t(fetchType) << IntOps::bitShiftOf(kMaskFetchType)}; }
+  static BL_INLINE_CONSTEXPR Signature fromFetchType(FetchType fetchType) noexcept { return Signature{uint32_t(fetchType) << IntOps::bitShiftOf(kMaskFetchType)}; }
   //! Returns a signature only containing a PendingFlag.
-  static BL_INLINE_NODEBUG constexpr Signature fromPendingFlag(uint32_t flag) noexcept { return  Signature{uint32_t(flag) << IntOps::bitShiftOf(kMaskPendingFlag)}; }
+  static BL_INLINE_CONSTEXPR Signature fromPendingFlag(uint32_t flag) noexcept { return  Signature{uint32_t(flag) << IntOps::bitShiftOf(kMaskPendingFlag)}; }
 
   //! \}
 
@@ -1105,8 +1104,7 @@ Signature initGradient(
   const BLMatrix2D& transform) noexcept;
 
 } // {FetchUtils}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline}
 
 //! \}
 //! \endcond

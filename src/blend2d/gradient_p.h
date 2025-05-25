@@ -147,11 +147,11 @@ namespace GradientInternal {
 //! \name BLGradient - Internals - Common Functionality (Container)
 //! \{
 
-static BL_INLINE_NODEBUG constexpr BLObjectImplSize implSizeFromCapacity(size_t n) noexcept {
+static BL_INLINE_CONSTEXPR BLObjectImplSize implSizeFromCapacity(size_t n) noexcept {
   return BLObjectImplSize(sizeof(BLGradientPrivateImpl) + n * sizeof(BLGradientStop));
 }
 
-static BL_INLINE_NODEBUG constexpr size_t capacityFromImplSize(BLObjectImplSize implSize) noexcept {
+static BL_INLINE_CONSTEXPR size_t capacityFromImplSize(BLObjectImplSize implSize) noexcept {
   return (implSize.value() - sizeof(BLGradientPrivateImpl)) / sizeof(BLGradientStop);
 }
 

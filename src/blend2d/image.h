@@ -194,6 +194,11 @@ public:
   //! \name Internals
   //! \{
 
+  //! Object info values of a default constructed BLImage.
+  static inline constexpr uint32_t kDefaultSignature =
+    BLObjectInfo::packTypeWithMarker(BL_OBJECT_TYPE_IMAGE) | BL_OBJECT_INFO_D_FLAG;
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLImageImpl* _impl() const noexcept { return static_cast<BLImageImpl*>(_d.impl); }
 
   //! \}
@@ -203,17 +208,29 @@ public:
   //! \{
 
   //! Creates a default constructed image, which is an empty image having pixel format equal to \ref BL_FORMAT_NONE.
-  BL_INLINE_NODEBUG BLImage() noexcept { blImageInit(this); }
+  BL_INLINE_NODEBUG BLImage() noexcept {
+    blImageInit(this);
 
-  //! Copy constructor creates a weak copy of `other` image by incrementing the reference count of the underlying
-  //! representation.
-  BL_INLINE_NODEBUG BLImage(const BLImage& other) noexcept { blImageInitWeak(this, &other); }
+    // Assume a default constructed BLImage.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+  }
 
   //! Move constructor moves `other` image this this image and sets `other` image to a default constructed state.
   //!
   //! This is the most efficient operation as the reference count of the underlying image is not touched by a move
   //! operation.
-  BL_INLINE_NODEBUG BLImage(BLImage&& other) noexcept { blImageInitMove(this, &other); }
+  BL_INLINE_NODEBUG BLImage(BLImage&& other) noexcept {
+    blImageInitMove(this, &other);
+
+    // Assume a default initialized `other`.
+    BL_ASSUME(other._d.info.bits == kDefaultSignature);
+  }
+
+  //! Copy constructor creates a weak copy of `other` image by incrementing the reference count of the underlying
+  //! representation.
+  BL_INLINE_NODEBUG BLImage(const BLImage& other) noexcept {
+    blImageInitWeak(this, &other);
+  }
 
   //! Creates a new image data of `[w, h]` size (specified in pixels) having the given pixel `format`.
   //!
@@ -222,15 +239,18 @@ public:
   //!
   //! \note Since C++ cannot return values via constructors you should verify that the image was created by using
   //! either explicit `operator bool()` or verifying the image is not \ref empty().
-  BL_INLINE_NODEBUG BLImage(int w, int h, BLFormat format) noexcept { blImageInitAs(this, w, h, format); }
+  BL_INLINE_NODEBUG BLImage(int w, int h, BLFormat format) noexcept {
+    blImageInitAs(this, w, h, format);
+  }
 
   //! Destroys the image data held by the instance.
   //!
   //! The pixel data held by the image will only be deallocated if the reference count of the underlying representation
   //! gets decremented to zero.
   BL_INLINE_NODEBUG ~BLImage() {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
       blImageDestroy(this);
+    }
   }
 
   //! \}
@@ -250,9 +270,12 @@ public:
   BL_INLINE_NODEBUG BLImage& operator=(BLImage&& other) noexcept { blImageAssignMove(this, &other); return *this; }
 
   //! Tests whether this image is equal with `other` image , see \ref equals() for more details about image equality.
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLImage& other) const noexcept { return  equals(other); }
+  [[nodiscard]]
+  BL_INLINE_NODEBUG bool operator==(const BLImage& other) const noexcept { return  equals(other); }
+
   //! Tests whether this image is not equal with `other` image , see \ref equals() for more details about image equality.
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLImage& other) const noexcept { return !equals(other); }
+  [[nodiscard]]
+  BL_INLINE_NODEBUG bool operator!=(const BLImage& other) const noexcept { return !equals(other); }
 
   //! \}
 
@@ -263,7 +286,16 @@ public:
   //!
   //! A default constructed image has zero size and a pixel format equal to \ref BL_FORMAT_NONE. Such image is
   //! considered \ref empty() and holds no data that could be used by the rendering context or as a pattern.
-  BL_INLINE_NODEBUG BLResult reset() noexcept { return blImageReset(this); }
+  BL_INLINE_NODEBUG BLResult reset() noexcept {
+    BLResult result = blImageReset(this);
+
+    // Reset operation always succeeds.
+    BL_ASSUME(result == BL_SUCCESS);
+    // Assume a default constructed BLImage after reset.
+    BL_ASSUME(_d.info.bits == kDefaultSignature);
+
+    return result;
+  }
 
   //! Swaps the underlying data with the `other` image.
   BL_INLINE_NODEBUG void swap(BLImage& other) noexcept { _d.swap(other._d); }
@@ -281,14 +313,14 @@ public:
   //!
   //! \note You can use `operator bool()`, which does the reverse of \ref empty() - it checks whether the image is
   //! actually holding pixel data.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool empty() const noexcept { return format() == BL_FORMAT_NONE; }
 
   //! Tests whether the image is equal to `other` image.
   //!
   //! Images are equal when the size, pixel format, and pixel data match. This means that this operation could be
   //! very expensive if the images are large.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLImage& other) const noexcept { return blImageEquals(this, &other); }
 
   //! \}
@@ -331,25 +363,25 @@ public:
   //! \{
 
   //! Returns image width (in pixels).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG int width() const noexcept { return _impl()->size.w; }
 
   //! Returns image height (in pixels).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG int height() const noexcept { return _impl()->size.h; }
 
   //! Returns image size (in pixels).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLSizeI size() const noexcept { return _impl()->size; }
 
   //! Returns image format, see \ref BLFormat.
   //!
   //! \note When an image is \ref empty(), the pixel format returned is always \ref BL_FORMAT_NONE.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLFormat format() const noexcept { return BLFormat(_impl()->format); }
 
   //! Returns image depth (in bits).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t depth() const noexcept { return _impl()->depth; }
 
   //! Returns immutable in `dataOut`, which contains pixel pointer, stride, and other image properties like size and
@@ -360,7 +392,7 @@ public:
   //! data if it's shared with another BLImage instance.
   BL_INLINE_NODEBUG BLResult getData(BLImageData* dataOut) const noexcept { return blImageGetData(this, dataOut); }
 
-  //! Makes the image data mutable and returns them in `dataOut`.
+  //! Makes the image data mutable and returns it in `dataOut`.
   BL_INLINE_NODEBUG BLResult makeMutable(BLImageData* dataOut) noexcept { return blImageMakeMutable(this, dataOut); }
 
   //! \}

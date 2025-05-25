@@ -18,7 +18,7 @@ namespace bl {
 //! \{
 
 template<typename T, typename Value, typename Predicate>
-BL_NODISCARD
+[[nodiscard]]
 static BL_INLINE size_t lowerBound(const T* data, size_t size, const Value& value, Predicate&& pred) noexcept {
   size_t index = 0;
 
@@ -40,7 +40,7 @@ static BL_INLINE size_t lowerBound(const T* data, size_t size, const Value& valu
 }
 
 template<typename T, typename Value>
-BL_NODISCARD
+[[nodiscard]]
 static BL_INLINE size_t lowerBound(const T* data, size_t size, const Value& value) noexcept {
   return lowerBound(data, size, value, [](const T& a, const Value& b) -> bool { return a < b; });
 }
@@ -51,7 +51,7 @@ static BL_INLINE size_t lowerBound(const T* data, size_t size, const Value& valu
 //! \{
 
 template<typename T, typename V>
-BL_NODISCARD
+[[nodiscard]]
 static BL_INLINE size_t binarySearch(const T* array, size_t size, const V& value) noexcept {
   if (!size)
     return SIZE_MAX;
@@ -71,7 +71,7 @@ static BL_INLINE size_t binarySearch(const T* array, size_t size, const V& value
 }
 
 template<typename T, typename V>
-BL_NODISCARD
+[[nodiscard]]
 static BL_INLINE size_t binarySearchClosestFirst(const T* array, size_t size, const V& value) noexcept {
   if (!size)
     return 0;
@@ -91,7 +91,7 @@ static BL_INLINE size_t binarySearchClosestFirst(const T* array, size_t size, co
 }
 
 template<typename T, typename V>
-BL_NODISCARD
+[[nodiscard]]
 static BL_INLINE size_t binarySearchClosestLast(const T* array, size_t size, const V& value) noexcept {
   if (!size)
     return 0;

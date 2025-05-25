@@ -143,5 +143,7 @@ void blImageDecoderRtInit(BLRuntimeContext* rt) noexcept {
     static_cast<BLImageCodecCore*>(&blObjectDefaults[BL_OBJECT_TYPE_IMAGE_CODEC]));
   defaultDecoder.impl->lastResult = BL_ERROR_NOT_INITIALIZED;
 
-  blObjectDefaults[BL_OBJECT_TYPE_IMAGE_DECODER]._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_DECODER), &defaultDecoder.impl);
+  blObjectDefaults[BL_OBJECT_TYPE_IMAGE_DECODER]._d.initDynamic(
+    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_IMAGE_DECODER),
+    &defaultDecoder.impl);
 }

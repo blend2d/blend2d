@@ -13,8 +13,7 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 
 //! OpenType 'cmap' table.
 //!
@@ -220,9 +219,7 @@ BL_HIDDEN BLResult populateCharacterCoverage(const OTFaceImpl* faceI, BLBitSet* 
 BL_HIDDEN BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept;
 
 } // {CMapImpl}
-
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \}
 //! \endcond

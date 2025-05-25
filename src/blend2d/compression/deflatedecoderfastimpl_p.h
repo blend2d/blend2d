@@ -11,10 +11,7 @@
 #include "../support/intops_p.h"
 #include "../support/ptrops_p.h"
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
-namespace Fast {
+namespace bl::Compression::Deflate::Fast {
 namespace {
 
 DecoderFastResult decodeImpl(
@@ -234,7 +231,4 @@ ErrorInvalidData:
 }
 
 } // {anonymous}
-} // {Fast}
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate::Fast}

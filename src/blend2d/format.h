@@ -148,8 +148,11 @@ struct BLFormatInfo {
   };
 
 #ifdef __cplusplus
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator==(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) == 0; }
-  BL_NODISCARD BL_INLINE_NODEBUG bool operator!=(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) != 0; }
+  [[nodiscard]]
+  BL_INLINE_NODEBUG bool operator==(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) == 0; }
+
+  [[nodiscard]]
+  BL_INLINE_NODEBUG bool operator!=(const BLFormatInfo& other) const noexcept { return memcmp(this, &other, sizeof(*this)) != 0; }
 
   BL_INLINE_NODEBUG void reset() noexcept { *this = BLFormatInfo{}; }
 

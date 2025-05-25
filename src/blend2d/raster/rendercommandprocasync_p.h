@@ -17,8 +17,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 namespace CommandProcAsync {
 
 enum class CommandStatus : uint32_t {
@@ -490,8 +489,7 @@ static CommandStatus processCommand(ProcData& procData, const RenderCommand& com
 }
 
 } // {CommandProcAsync}
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

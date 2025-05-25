@@ -7,8 +7,7 @@
 #include "../raster/workersynchronization_p.h"
 #include "../threading/futex_p.h"
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 WorkerSynchronization::WorkerSynchronization() noexcept
   : _header{},
@@ -93,5 +92,4 @@ void WorkerSynchronization::waitForThreadsToFinish() noexcept {
   }
 }
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}

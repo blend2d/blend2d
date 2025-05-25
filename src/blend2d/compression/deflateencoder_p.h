@@ -12,9 +12,7 @@
 
 //! \cond INTERNAL
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
+namespace bl::Compression::Deflate {
 
 struct EncoderImpl;
 
@@ -37,9 +35,7 @@ public:
   BLResult compress(BLArray<uint8_t>& dst, BLModifyOp modifyOp, BLDataView input) noexcept;
 };
 
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate}
 
 //! \endcond
 

@@ -310,8 +310,8 @@
 //!     - \ref BLFontOutlineType - type of outlines used by a font, used by \ref BLFontFace
 //!     - \ref BLFontPanose - panose information, provided by \ref BLFontFace
 //!     - \ref BLFontStringId - identifier of a string stored in a font face, used by \ref BLFontFace
-//!     - \ref BLFontUnicodeCoverage - unicode coverage bits, provided by \ref BLFontFace
-//!     - \ref BLFontUnicodeCoverageIndex - meaning of unicode coverage bits, provided by \ref BLFontUnicodeCoverage
+//!     - \ref BLFontCoverageInfo - unicode coverage bits, provided by \ref BLFontFace
+//!     - \ref BLFontCoverageIndex - meaning of unicode coverage bits of \ref BLFontCoverageInfo
 //!
 //!   - \ref BLFontFeatureSettings - provides feature settings of a \ref BLFont
 //!     - \ref BLFontFeatureSettingsCore - C API type representing \ref BLFontFeatureSettings
@@ -661,6 +661,8 @@
   #define BL_INLINE_NODEBUG BL_INLINE
 #endif
 
+#define BL_INLINE_CONSTEXPR constexpr BL_INLINE_NODEBUG
+
 //! \def BL_NORETURN
 //!
 //! Function attribute used by functions that never return (that terminate the process). This attribute is used
@@ -674,41 +676,9 @@
   #define BL_NORETURN
 #endif
 
-//! \def BL_NODISCARD
-//!
-//! Tells the compiler to issue a warning in case that the return value of a function was not used.
-#if defined(__cplusplus) && __cplusplus >= 201703L
-  #define BL_NODISCARD [[nodiscard]]
-#elif defined(__clang__)
-  // GCC's behavior doesn't respect casting to void so we only support clang.
-  #define BL_NODISCARD __attribute__((__warn_unused_result__))
-#else
-  #define BL_NODISCARD
-#endif
-
-//! \def BL_NOEXCEPT
-//!
-//! Defined to `noexcept` in C++17 mode an nothing in C mode. The reason this macro is provided is because Blend2D
-//! C API doesn't use exceptions and is marked as such.
-#if defined(__cplusplus) && __cplusplus >= 201703L
-  // Function typedefs are `noexcept`, however, it's not available until C++17.
-  #define BL_NOEXCEPT noexcept
-#else
-  #define BL_NOEXCEPT
-#endif
-
-//! \def BL_CONSTEXPR
-//!
-//! Evaluates to constexpr in C++17 mode.
-#if __cplusplus >= 201703L
-  #define BL_CONSTEXPR constexpr
-#else
-  #define BL_CONSTEXPR
-#endif
-
 //! \def BL_NOEXCEPT_C
 //!
-//! Defined to `noexcept` in C++11 mode an nothing in C mode. This is used to mark Blend2D C API, which is `noexcept`
+//! Defined to `noexcept` in C++ mode and nothing in C mode. This is used to mark Blend2D C API, which is `noexcept`
 //! by design.
 #if defined(__cplusplus)
   #define BL_NOEXCEPT_C noexcept
@@ -719,11 +689,8 @@
 //! \def BL_PURE
 //!
 //! Function attribute that describes functions that have no side effects. The macro expands to
-//! `__attribute__((__pure__))` when compiling with GCC or Clang if the attribute is supported, otherwise it expands
-//! to nothing.
-#if defined(__clang_major__) && __clang_major__ >= 6
-  #define BL_PURE __attribute__((__pure__))
-#elif defined(__GNUC__) && __GNUC__ >= 6
+//! `__attribute__((__pure__))` when compiling with GCC or Clang, otherwise it expands to nothing.
+#if defined(__GNUC__)
   #define BL_PURE __attribute__((__pure__))
 #else
   #define BL_PURE
@@ -789,8 +756,9 @@
 #ifdef BL_BUILD_DEBUG
   #define BL_ASSERT(EXP)                                                      \
     do {                                                                      \
-      if (BL_UNLIKELY(!(EXP)))                                                \
+      if (BL_UNLIKELY(!(EXP))) {                                              \
         blRuntimeAssertionFailure(__FILE__, __LINE__, #EXP);                  \
+      }                                                                       \
     } while (0)
 #else
   #define BL_ASSERT(EXP) ((void)0)
@@ -803,8 +771,9 @@
 #define BL_PROPAGATE(...)                                                     \
   do {                                                                        \
     BLResult resultToPropagate = (__VA_ARGS__);                               \
-    if (BL_UNLIKELY(resultToPropagate))                                       \
+    if (BL_UNLIKELY(resultToPropagate)) {                                     \
       return resultToPropagate;                                               \
+    }                                                                         \
   } while (0)
 
 //! \}
@@ -878,19 +847,16 @@
 #if defined(__clang__)
   #define BL_DIAGNOSTIC_PUSH(...)              _Pragma("clang diagnostic push") __VA_ARGS__
   #define BL_DIAGNOSTIC_POP                    _Pragma("clang diagnostic pop")
-  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS    _Pragma("clang diagnostic ignored \"-Wunused-function\"")
   #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")
   #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS      _Pragma("clang diagnostic ignored \"-Wextra\"")
 #elif defined(__GNUC__)
   #define BL_DIAGNOSTIC_PUSH(...)              _Pragma("GCC diagnostic push") __VA_ARGS__
   #define BL_DIAGNOSTIC_POP                    _Pragma("GCC diagnostic pop")
-  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS    _Pragma("GCC diagnostic ignored \"-Wunused-function\"")
   #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
   #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS      _Pragma("GCC diagnostic ignored \"-Wextra\"")
 #elif defined(_MSC_VER)
   #define BL_DIAGNOSTIC_PUSH(...)              __pragma(warning(push)) __VA_ARGS__
   #define BL_DIAGNOSTIC_POP                    __pragma(warning(pop))
-  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS    __pragma(warning(disable: 4505))
   #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS   __pragma(warning(disable: 4100))
   #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS
 #endif
@@ -898,7 +864,6 @@
 #if !defined(BL_DIAGNOSTIC_PUSH)
   #define BL_DIAGNOSTIC_PUSH(...)
   #define BL_DIAGNOSTIC_POP
-  #define BL_DIAGNOSTIC_NO_UNUSED_FUNCTIONS
   #define BL_DIAGNOSTIC_NO_UNUSED_PARAMETERS
   #define BL_DIAGNOSTIC_NO_EXTRA_WARNINGS
 #endif
@@ -1039,7 +1004,7 @@ BL_FORWARD_DECLARE_STRUCT(BLGlyphOutlineSinkInfo);
 BL_FORWARD_DECLARE_STRUCT(BLGlyphPlacement);
 BL_FORWARD_DECLARE_STRUCT(BLGlyphRun);
 
-BL_FORWARD_DECLARE_STRUCT(BLFontUnicodeCoverage);
+BL_FORWARD_DECLARE_STRUCT(BLFontCoverageInfo);
 BL_FORWARD_DECLARE_STRUCT(BLFontFaceInfo);
 BL_FORWARD_DECLARE_STRUCT(BLFontQueryProperties);
 BL_FORWARD_DECLARE_STRUCT(BLFontFeatureItem);
@@ -1049,7 +1014,7 @@ BL_FORWARD_DECLARE_STRUCT(BLFontFeatureSettingsView);
 BL_FORWARD_DECLARE_STRUCT(BLFontDesignMetrics);
 BL_FORWARD_DECLARE_STRUCT(BLFontMatrix);
 BL_FORWARD_DECLARE_STRUCT(BLFontMetrics);
-BL_FORWARD_DECLARE_STRUCT(BLFontPanose);
+BL_FORWARD_DECLARE_STRUCT(BLFontPanoseInfo);
 BL_FORWARD_DECLARE_STRUCT(BLFontTable);
 BL_FORWARD_DECLARE_STRUCT(BLFontVariationItem);
 BL_FORWARD_DECLARE_STRUCT(BLFontVariationSettingsCore);
@@ -1162,7 +1127,7 @@ typedef void BLUnknown;
 //! \ingroup bl_globals
 //!
 //! A sink that can be used to debug various parts of Blend2D.
-typedef void (BL_CDECL* BLDebugMessageSinkFunc)(const char* message, size_t size, void* userData) BL_NOEXCEPT;
+typedef void (BL_CDECL* BLDebugMessageSinkFunc)(const char* message, size_t size, void* userData) BL_NOEXCEPT_C;
 
 // Public Constants
 // ================
@@ -1453,13 +1418,16 @@ BL_DEFINE_ENUM(BLTextEncoding) {
 namespace BLInternal {
 
 template<typename T>
-BL_INLINE_NODEBUG typename std::remove_reference<T>::type&& move(T&& v) noexcept { return static_cast<typename std::remove_reference<T>::type&&>(v); }
+[[nodiscard]]
+BL_INLINE_NODEBUG std::remove_reference_t<T>&& move(T&& v) noexcept { return static_cast<std::remove_reference_t<T>&&>(v); }
 
 template<typename T>
-BL_INLINE_NODEBUG T&& forward(typename std::remove_reference<T>::type& v) noexcept { return static_cast<T&&>(v); }
+[[nodiscard]]
+BL_INLINE_NODEBUG T&& forward(std::remove_reference_t<T>& v) noexcept { return static_cast<T&&>(v); }
 
 template<typename T>
-BL_INLINE_NODEBUG T&& forward(typename std::remove_reference<T>::type&& v) noexcept { return static_cast<T&&>(v); }
+[[nodiscard]]
+BL_INLINE_NODEBUG T&& forward(std::remove_reference_t<T>&& v) noexcept { return static_cast<T&&>(v); }
 
 template<typename T>
 BL_INLINE void swap(T& t1, T& t2) noexcept {
@@ -1468,17 +1436,25 @@ BL_INLINE void swap(T& t1, T& t2) noexcept {
   t2 = move(temp);
 }
 
+template<typename... Args>
+[[nodiscard]]
+BL_INLINE_CONSTEXPR bool bool_and(Args&&... args) noexcept { return bool( (... & unsigned(forward<Args>(args))) ); }
+
+template<typename... Args>
+[[nodiscard]]
+BL_INLINE_CONSTEXPR bool bool_or(Args&&... args) noexcept { return bool( (... | unsigned(forward<Args>(args))) ); }
+
 //! StdIntT provides a signed integer type as defined by <stdint.h> by size.
 template<size_t kSize, bool kUnsigned = false> struct StdIntT;
 
-template<> struct StdIntT<1, false> { typedef int8_t Type; };
-template<> struct StdIntT<2, false> { typedef int16_t Type; };
-template<> struct StdIntT<4, false> { typedef int32_t Type; };
-template<> struct StdIntT<8, false> { typedef int64_t Type; };
-template<> struct StdIntT<1, true> { typedef uint8_t Type; };
-template<> struct StdIntT<2, true> { typedef uint16_t Type; };
-template<> struct StdIntT<4, true> { typedef uint32_t Type; };
-template<> struct StdIntT<8, true> { typedef uint64_t Type; };
+template<> struct StdIntT<1, false> { using Type = int8_t; };
+template<> struct StdIntT<2, false> { using Type = int16_t; };
+template<> struct StdIntT<4, false> { using Type = int32_t; };
+template<> struct StdIntT<8, false> { using Type = int64_t; };
+template<> struct StdIntT<1, true> { using Type = uint8_t; };
+template<> struct StdIntT<2, true> { using Type = uint16_t; };
+template<> struct StdIntT<4, true> { using Type = uint32_t; };
+template<> struct StdIntT<8, true> { using Type = uint64_t; };
 
 template<size_t kSize, bool kUnsigned = false>
 using IntBySize = typename StdIntT<kSize, kUnsigned>::Type;
@@ -1494,40 +1470,39 @@ using UIntByType = typename StdIntT<sizeof(T), 1>::Type;
 
 template<uint64_t kInput>
 struct ConstCTZ {
-  enum : uint32_t {
-    kValue = (kInput & (uint64_t(1) <<  0)) ?  0 : (kInput & (uint64_t(1) <<  1)) ?  1 :
-             (kInput & (uint64_t(1) <<  2)) ?  2 : (kInput & (uint64_t(1) <<  3)) ?  3 :
-             (kInput & (uint64_t(1) <<  4)) ?  4 : (kInput & (uint64_t(1) <<  5)) ?  5 :
-             (kInput & (uint64_t(1) <<  6)) ?  6 : (kInput & (uint64_t(1) <<  7)) ?  7 :
-             (kInput & (uint64_t(1) <<  8)) ?  8 : (kInput & (uint64_t(1) <<  9)) ?  9 :
-             (kInput & (uint64_t(1) << 10)) ? 10 : (kInput & (uint64_t(1) << 11)) ? 11 :
-             (kInput & (uint64_t(1) << 12)) ? 12 : (kInput & (uint64_t(1) << 13)) ? 13 :
-             (kInput & (uint64_t(1) << 14)) ? 14 : (kInput & (uint64_t(1) << 15)) ? 15 :
-             (kInput & (uint64_t(1) << 16)) ? 16 : (kInput & (uint64_t(1) << 17)) ? 17 :
-             (kInput & (uint64_t(1) << 18)) ? 18 : (kInput & (uint64_t(1) << 19)) ? 19 :
-             (kInput & (uint64_t(1) << 20)) ? 20 : (kInput & (uint64_t(1) << 21)) ? 21 :
-             (kInput & (uint64_t(1) << 22)) ? 22 : (kInput & (uint64_t(1) << 23)) ? 23 :
-             (kInput & (uint64_t(1) << 24)) ? 24 : (kInput & (uint64_t(1) << 25)) ? 25 :
-             (kInput & (uint64_t(1) << 26)) ? 26 : (kInput & (uint64_t(1) << 27)) ? 27 :
-             (kInput & (uint64_t(1) << 28)) ? 28 : (kInput & (uint64_t(1) << 29)) ? 29 :
-             (kInput & (uint64_t(1) << 30)) ? 30 : (kInput & (uint64_t(1) << 31)) ? 31 :
-             (kInput & (uint64_t(1) << 32)) ? 32 : (kInput & (uint64_t(1) << 33)) ? 33 :
-             (kInput & (uint64_t(1) << 34)) ? 34 : (kInput & (uint64_t(1) << 35)) ? 35 :
-             (kInput & (uint64_t(1) << 36)) ? 36 : (kInput & (uint64_t(1) << 37)) ? 37 :
-             (kInput & (uint64_t(1) << 38)) ? 38 : (kInput & (uint64_t(1) << 39)) ? 39 :
-             (kInput & (uint64_t(1) << 40)) ? 40 : (kInput & (uint64_t(1) << 41)) ? 41 :
-             (kInput & (uint64_t(1) << 42)) ? 42 : (kInput & (uint64_t(1) << 43)) ? 43 :
-             (kInput & (uint64_t(1) << 44)) ? 44 : (kInput & (uint64_t(1) << 45)) ? 45 :
-             (kInput & (uint64_t(1) << 46)) ? 46 : (kInput & (uint64_t(1) << 47)) ? 47 :
-             (kInput & (uint64_t(1) << 48)) ? 48 : (kInput & (uint64_t(1) << 49)) ? 49 :
-             (kInput & (uint64_t(1) << 50)) ? 50 : (kInput & (uint64_t(1) << 51)) ? 51 :
-             (kInput & (uint64_t(1) << 52)) ? 52 : (kInput & (uint64_t(1) << 53)) ? 53 :
-             (kInput & (uint64_t(1) << 54)) ? 54 : (kInput & (uint64_t(1) << 55)) ? 55 :
-             (kInput & (uint64_t(1) << 56)) ? 56 : (kInput & (uint64_t(1) << 57)) ? 57 :
-             (kInput & (uint64_t(1) << 58)) ? 58 : (kInput & (uint64_t(1) << 59)) ? 59 :
-             (kInput & (uint64_t(1) << 60)) ? 60 : (kInput & (uint64_t(1) << 61)) ? 61 :
-             (kInput & (uint64_t(1) << 62)) ? 62 : (kInput & (uint64_t(1) << 63)) ? 63 : 64
-  };
+  static inline constexpr uint32_t kValue =
+    (kInput & (uint64_t(1) <<  0)) ?  0 : (kInput & (uint64_t(1) <<  1)) ?  1 :
+    (kInput & (uint64_t(1) <<  2)) ?  2 : (kInput & (uint64_t(1) <<  3)) ?  3 :
+    (kInput & (uint64_t(1) <<  4)) ?  4 : (kInput & (uint64_t(1) <<  5)) ?  5 :
+    (kInput & (uint64_t(1) <<  6)) ?  6 : (kInput & (uint64_t(1) <<  7)) ?  7 :
+    (kInput & (uint64_t(1) <<  8)) ?  8 : (kInput & (uint64_t(1) <<  9)) ?  9 :
+    (kInput & (uint64_t(1) << 10)) ? 10 : (kInput & (uint64_t(1) << 11)) ? 11 :
+    (kInput & (uint64_t(1) << 12)) ? 12 : (kInput & (uint64_t(1) << 13)) ? 13 :
+    (kInput & (uint64_t(1) << 14)) ? 14 : (kInput & (uint64_t(1) << 15)) ? 15 :
+    (kInput & (uint64_t(1) << 16)) ? 16 : (kInput & (uint64_t(1) << 17)) ? 17 :
+    (kInput & (uint64_t(1) << 18)) ? 18 : (kInput & (uint64_t(1) << 19)) ? 19 :
+    (kInput & (uint64_t(1) << 20)) ? 20 : (kInput & (uint64_t(1) << 21)) ? 21 :
+    (kInput & (uint64_t(1) << 22)) ? 22 : (kInput & (uint64_t(1) << 23)) ? 23 :
+    (kInput & (uint64_t(1) << 24)) ? 24 : (kInput & (uint64_t(1) << 25)) ? 25 :
+    (kInput & (uint64_t(1) << 26)) ? 26 : (kInput & (uint64_t(1) << 27)) ? 27 :
+    (kInput & (uint64_t(1) << 28)) ? 28 : (kInput & (uint64_t(1) << 29)) ? 29 :
+    (kInput & (uint64_t(1) << 30)) ? 30 : (kInput & (uint64_t(1) << 31)) ? 31 :
+    (kInput & (uint64_t(1) << 32)) ? 32 : (kInput & (uint64_t(1) << 33)) ? 33 :
+    (kInput & (uint64_t(1) << 34)) ? 34 : (kInput & (uint64_t(1) << 35)) ? 35 :
+    (kInput & (uint64_t(1) << 36)) ? 36 : (kInput & (uint64_t(1) << 37)) ? 37 :
+    (kInput & (uint64_t(1) << 38)) ? 38 : (kInput & (uint64_t(1) << 39)) ? 39 :
+    (kInput & (uint64_t(1) << 40)) ? 40 : (kInput & (uint64_t(1) << 41)) ? 41 :
+    (kInput & (uint64_t(1) << 42)) ? 42 : (kInput & (uint64_t(1) << 43)) ? 43 :
+    (kInput & (uint64_t(1) << 44)) ? 44 : (kInput & (uint64_t(1) << 45)) ? 45 :
+    (kInput & (uint64_t(1) << 46)) ? 46 : (kInput & (uint64_t(1) << 47)) ? 47 :
+    (kInput & (uint64_t(1) << 48)) ? 48 : (kInput & (uint64_t(1) << 49)) ? 49 :
+    (kInput & (uint64_t(1) << 50)) ? 50 : (kInput & (uint64_t(1) << 51)) ? 51 :
+    (kInput & (uint64_t(1) << 52)) ? 52 : (kInput & (uint64_t(1) << 53)) ? 53 :
+    (kInput & (uint64_t(1) << 54)) ? 54 : (kInput & (uint64_t(1) << 55)) ? 55 :
+    (kInput & (uint64_t(1) << 56)) ? 56 : (kInput & (uint64_t(1) << 57)) ? 57 :
+    (kInput & (uint64_t(1) << 58)) ? 58 : (kInput & (uint64_t(1) << 59)) ? 59 :
+    (kInput & (uint64_t(1) << 60)) ? 60 : (kInput & (uint64_t(1) << 61)) ? 61 :
+    (kInput & (uint64_t(1) << 62)) ? 62 : (kInput & (uint64_t(1) << 63)) ? 63 : 64;
 };
 
 //! Type category.
@@ -1577,57 +1552,48 @@ enum TypeFlags : uint32_t {
 
 template<typename T>
 struct TypeTraits {
-  enum : uint32_t {
-    kCategory = std::is_pointer<T>::value ? kTypeCategoryPtr :
-                std::is_integral<T>::value ? kTypeCategoryInt :
-                std::is_floating_point<T>::value ? kTypeCategoryFloat : kTypeCategoryStruct,
-    kFlags    = std::is_pointer<T>::value ? kTypeFlagPrimitive :
-                std::is_integral<T>::value ? kTypeFlagPrimitive :
-                std::is_floating_point<T>::value ? kTypeFlagPrimitive : kTypeNoFlags
-  };
+  static inline constexpr uint32_t kCategory =
+    std::is_pointer_v<T> ? kTypeCategoryPtr :
+    std::is_integral_v<T> ? kTypeCategoryInt :
+    std::is_floating_point_v<T> ? kTypeCategoryFloat : kTypeCategoryStruct;
+
+  static inline constexpr uint32_t kFlags =
+    std::is_pointer_v<T> ? kTypeFlagPrimitive :
+    std::is_integral_v<T> ? kTypeFlagPrimitive :
+    std::is_floating_point_v<T> ? kTypeFlagPrimitive : kTypeNoFlags;
 };
 
 template<>
 struct TypeTraits<bool> {
-  enum : uint32_t {
-    kCategory = kTypeCategoryBool,
-    kFlags = kTypeFlagPrimitive
-  };
+  static inline constexpr uint32_t kCategory = kTypeCategoryBool;
+  static inline constexpr uint32_t kFlags = kTypeFlagPrimitive;
 };
 
 // BLArrayCore and BLArray<T> specialization.
 template<>
 struct TypeTraits<BLArrayCore> {
-  enum : uint32_t {
-    kCategory = kTypeCategoryObject,
-    kFlags = kTypeFlagArray | kTypeFlagCore
-  };
+  static inline constexpr uint32_t kCategory = kTypeCategoryObject;
+  static inline constexpr uint32_t kFlags = kTypeFlagArray | kTypeFlagCore;
 };
 
 template<typename T>
 struct TypeTraits<BLArray<T>> {
-  enum : uint32_t {
-    kCategory = kTypeCategoryObject,
-    kFlags = kTypeFlagArray
-  };
+  static inline constexpr uint32_t kCategory = kTypeCategoryObject;
+  static inline constexpr uint32_t kFlags = kTypeFlagArray;
 };
 
 // Other types compatible with BLObjectCore.
-#define BL_DEFINE_OBJECT_TRAITS(T, Flags) \
-  template<>                              \
-  struct TypeTraits<T##Core> {            \
-    enum : uint32_t {                     \
-      kCategory = kTypeCategoryObject,    \
-      kFlags = Flags | kTypeFlagCore      \
-    };                                    \
-  };                                      \
-                                          \
-  template<>                              \
-  struct TypeTraits<T> {                  \
-    enum : uint32_t {                     \
-      kCategory = kTypeCategoryObject,    \
-      kFlags = Flags                      \
-    };                                    \
+#define BL_DEFINE_OBJECT_TRAITS(T, Flags)                             \
+  template<>                                                          \
+  struct TypeTraits<T##Core> {                                        \
+    static inline constexpr uint32_t kCategory = kTypeCategoryObject; \
+    static inline constexpr uint32_t kFlags = Flags | kTypeFlagCore;  \
+  };                                                                  \
+                                                                      \
+  template<>                                                          \
+  struct TypeTraits<T> {                                              \
+    static inline constexpr uint32_t kCategory = kTypeCategoryObject; \
+    static inline constexpr uint32_t kFlags = Flags;                  \
   };
 
 BL_DEFINE_OBJECT_TRAITS(BLBitArray             , kTypeNoFlags)
@@ -1684,7 +1650,9 @@ BL_INLINE_NODEBUG void operator delete(void*, const BLInternal::PlacementNew&) n
 //! of errors reported / returned by Blend2D as each error goes through this function.
 //!
 //! It's a zero-cost solution that doesn't affect release builds in any way.
-BL_NODISCARD
+#ifdef __cplusplus
+[[nodiscard]]
+#endif
 static inline BLResult blTraceError(BLResult result) BL_NOEXCEPT_C { return result; }
 
 BL_BEGIN_C_DECLS
@@ -1754,7 +1722,7 @@ static BL_INLINE void blCallDtor(T& instance) noexcept {
 //! Useful to bit-cast between integers and floating points. The size of `Out` and `In` must be the same otherwise the
 //! compilation would fail. Bit casting is used by \ref blEquals() to implement bit equality for floating point types.
 template<typename Out, typename In>
-BL_NODISCARD
+[[nodiscard]]
 static BL_INLINE_NODEBUG Out blBitCast(const In& x) noexcept {
   static_assert(sizeof(Out) == sizeof(In),
                 "The size of 'In' and 'Out' types must match");
@@ -1764,50 +1732,50 @@ static BL_INLINE_NODEBUG Out blBitCast(const In& x) noexcept {
 
 //! Returns an absolute value of `a`.
 template<typename T>
-BL_NODISCARD
-BL_INLINE_NODEBUG constexpr T blAbs(const T& a) noexcept { return T(a < T(0) ? -a : a); }
+[[nodiscard]]
+BL_INLINE_CONSTEXPR T blAbs(const T& a) noexcept { return T(a < T(0) ? -a : a); }
 
 //! Returns a minimum value of `a` and `b`.
 template<typename T>
-BL_NODISCARD
-BL_INLINE_NODEBUG constexpr T blMin(const T& a, const T& b) noexcept { return T(b < a ? b : a); }
+[[nodiscard]]
+BL_INLINE_CONSTEXPR T blMin(const T& a, const T& b) noexcept { return T(b < a ? b : a); }
 
 //! Returns a maximum value of `a` and `b`.
 template<typename T>
-BL_NODISCARD
-BL_INLINE_NODEBUG constexpr T blMax(const T& a, const T& b) noexcept { return T(a < b ? b : a); }
+[[nodiscard]]
+BL_INLINE_CONSTEXPR T blMax(const T& a, const T& b) noexcept { return T(a < b ? b : a); }
 
 //! Clamps `a` to a range defined as `[b, c]`.
 template<typename T>
-BL_NODISCARD
-BL_INLINE_NODEBUG constexpr T blClamp(const T& a, const T& b, const T& c) noexcept { return blMin(c, blMax(b, a)); }
+[[nodiscard]]
+BL_INLINE_CONSTEXPR T blClamp(const T& a, const T& b, const T& c) noexcept { return blMin(c, blMax(b, a)); }
 
 //! Returns a minimum value of all arguments passed.
 template<typename T, typename... Args>
-BL_NODISCARD
-BL_INLINE_NODEBUG constexpr T blMin(const T& a, const T& b, Args&&... args) noexcept { return blMin(blMin(a, b), BLInternal::forward<Args>(args)...); }
+[[nodiscard]]
+BL_INLINE_CONSTEXPR T blMin(const T& a, const T& b, Args&&... args) noexcept { return blMin(blMin(a, b), BLInternal::forward<Args>(args)...); }
 
 //! Returns a maximum value of all arguments passed.
 template<typename T, typename... Args>
-BL_NODISCARD
-BL_INLINE_NODEBUG constexpr T blMax(const T& a, const T& b, Args&&... args) noexcept { return blMax(blMax(a, b), BLInternal::forward<Args>(args)...); }
+[[nodiscard]]
+BL_INLINE_CONSTEXPR T blMax(const T& a, const T& b, Args&&... args) noexcept { return blMax(blMax(a, b), BLInternal::forward<Args>(args)...); }
 
 //! Returns `true` if `a` and `b` equals at binary level.
 //!
 //! For example `blEquals(NaN, NaN) == true`.
 template<typename T>
-BL_NODISCARD
+[[nodiscard]]
 BL_INLINE_NODEBUG bool blEquals(const T& a, const T& b) noexcept { return a == b; }
 
 //! \cond NEVER
 template<>
-BL_NODISCARD
+[[nodiscard]]
 BL_INLINE_NODEBUG bool blEquals(const float& a, const float& b) noexcept {
   return blBitCast<uint32_t>(a) == blBitCast<uint32_t>(b);
 }
 
 template<>
-BL_NODISCARD
+[[nodiscard]]
 BL_INLINE_NODEBUG bool blEquals(const double& a, const double& b) noexcept {
   return blBitCast<uint64_t>(a) == blBitCast<uint64_t>(b);
 }
@@ -1831,18 +1799,18 @@ struct BLRange {
   //! \name Construction & Destruction
   //! \{
 
-  BL_NODISCARD
-  static BL_INLINE_NODEBUG constexpr BLRange everything() noexcept { return BLRange{0, SIZE_MAX}; }
+  [[nodiscard]]
+  static BL_INLINE_CONSTEXPR BLRange everything() noexcept { return BLRange{0, SIZE_MAX}; }
 
   //! \}
 
   //! \name Overloaded Operators
   //! \{
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool operator==(const BLRange& other) const noexcept { return equals(other); }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool operator!=(const BLRange& other) const noexcept { return !equals(other); }
 
   //! \}
@@ -1861,10 +1829,10 @@ struct BLRange {
   //! \name Equality & Comparison
   //! \{
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLRange& other) const noexcept {
-    return bool(unsigned(blEquals(start, other.start)) &
-                unsigned(blEquals(end, other.end)));
+    return BLInternal::bool_and(blEquals(start, other.start),
+                                blEquals(end, other.end));
   }
 
   //! \}
@@ -1889,25 +1857,32 @@ struct BLArrayView {
     size = sizeIn;
   }
 
+  [[nodiscard]]
   BL_INLINE const T& operator[](size_t index) noexcept {
     BL_ASSERT(index < size);
     return data[index];
   }
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T* begin() const noexcept { return data; }
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T* end() const noexcept { return data + size; }
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T* cbegin() const noexcept { return data; }
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG const T* cend() const noexcept { return data + size; }
 };
 
 // In C++ mode these are just typedefs of `BLArrayView<Type>`.
 
 //! View of `char[]` data used by String.
-typedef BLArrayView<char> BLStringView;
+using BLStringView = BLArrayView<char>;
 
 //! View of untyped data.
-typedef BLArrayView<uint8_t> BLDataView;
+using BLDataView = BLArrayView<uint8_t>;
 
 #else
 

@@ -6,14 +6,10 @@
 #include "../api-build_p.h"
 #include "../compression/deflatedefs_p.h"
 
-namespace bl {
-namespace Compression {
-namespace Deflate {
+namespace bl::Compression::Deflate {
 
 const uint8_t kPrecodeLensPermutation[kNumPrecodeSymbols] = {
   16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
 };
 
-} // {Deflate}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Deflate}

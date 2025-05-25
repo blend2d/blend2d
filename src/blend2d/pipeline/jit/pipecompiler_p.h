@@ -16,9 +16,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 //! The behavior of a floating point scalar operation.
 enum class ScalarOpBehavior : uint8_t {
@@ -820,11 +818,11 @@ struct Swizzle4 {
   BL_INLINE_NODEBUG bool operator!=(const Swizzle4& other) const noexcept { return value != other.value; }
 };
 
-static BL_INLINE_NODEBUG constexpr Swizzle2 swizzle(uint8_t b, uint8_t a) noexcept {
+static BL_INLINE_CONSTEXPR Swizzle2 swizzle(uint8_t b, uint8_t a) noexcept {
   return Swizzle2{(uint32_t(b) << 8) | a};
 }
 
-static BL_INLINE_NODEBUG constexpr Swizzle4 swizzle(uint8_t d, uint8_t c, uint8_t b, uint8_t a) noexcept {
+static BL_INLINE_CONSTEXPR Swizzle4 swizzle(uint8_t d, uint8_t c, uint8_t b, uint8_t a) noexcept {
   return Swizzle4{(uint32_t(d) << 24) | (uint32_t(c) << 16) | (uint32_t(b) << 8) | a};
 }
 
@@ -3224,9 +3222,7 @@ public:
     : _injector(pc->cc, &pc->_funcEnd) {}
 };
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

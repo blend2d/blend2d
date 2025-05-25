@@ -241,29 +241,29 @@ template<> struct Vec<64, uint64_t>;
 template<> struct Vec<64, float>;
 template<> struct Vec<64, double>;
 
-#define BL_DECLARE_SIMD_TYPE(typeName, width, simdType, elementType)          \
-template<>                                                                    \
-struct Vec<width, elementType> {                                              \
-  static constexpr uint32_t kW = width;                                       \
-  static constexpr uint32_t kHalfVectorWidth = width > 16 ? width / 2u : 16;  \
-                                                                              \
-  static constexpr uint32_t kElementWidth = uint32_t(sizeof(elementType));    \
-  static constexpr uint32_t kElementCount = width / kElementWidth;            \
-                                                                              \
-  typedef Vec<width, elementType> VectorType;                                 \
-  typedef Vec<kHalfVectorWidth, elementType> VectorHalfType;                  \
-  typedef Vec<16, elementType> Vector128Type;                                 \
-  typedef Vec<32, elementType> Vector256Type;                                 \
-  typedef Vec<64, elementType> Vector512Type;                                 \
-                                                                              \
-  typedef simdType SimdType;                                                  \
-  typedef typename VectorHalfType::SimdType HalfSimdType;                     \
-                                                                              \
-  typedef elementType ElementType;                                            \
-                                                                              \
-  SimdType v;                                                                 \
-};                                                                            \
-                                                                              \
+#define BL_DECLARE_SIMD_TYPE(typeName, width, simdType, elementType)                 \
+template<>                                                                           \
+struct Vec<width, elementType> {                                                     \
+  static inline constexpr uint32_t kW = width;                                       \
+  static inline constexpr uint32_t kHalfVectorWidth = width > 16 ? width / 2u : 16;  \
+                                                                                     \
+  static inline constexpr uint32_t kElementWidth = uint32_t(sizeof(elementType));    \
+  static inline constexpr uint32_t kElementCount = width / kElementWidth;            \
+                                                                                     \
+  typedef Vec<width, elementType> VectorType;                                        \
+  typedef Vec<kHalfVectorWidth, elementType> VectorHalfType;                         \
+  typedef Vec<16, elementType> Vector128Type;                                        \
+  typedef Vec<32, elementType> Vector256Type;                                        \
+  typedef Vec<64, elementType> Vector512Type;                                        \
+                                                                                     \
+  typedef simdType SimdType;                                                         \
+  typedef typename VectorHalfType::SimdType HalfSimdType;                            \
+                                                                                     \
+  typedef elementType ElementType;                                                   \
+                                                                                     \
+  SimdType v;                                                                        \
+};                                                                                   \
+                                                                                     \
 typedef Vec<width, elementType> typeName
 
 typedef BL_UNALIGNED_TYPE(__m128i, 1) unaligned_m128i;
@@ -2045,7 +2045,7 @@ BL_INLINE_NODEBUG Vec<16, typename V::ElementType> insert_m24(const V& dst, cons
 
   __m128i v = to_simd<__m128i>(dst);
 
-  if BL_CONSTEXPR ((kIndex & 0x1) == 0) {
+  if constexpr ((kIndex & 0x1) == 0) {
     uint32_t u16_val = bl::MemOps::readU16u(src_u8);
     v = _mm_insert_epi16(v, int16_t(u16_val), kIndex / 2u);
 
@@ -2068,7 +2068,7 @@ BL_INLINE_NODEBUG Vec<16, typename V::ElementType> insert_m24(const V& dst, cons
 // Emulation of PEXTRB.
 template<uint32_t kIndex, typename V>
 BL_INLINE_NODEBUG uint32_t extract_u8(const V& src) noexcept {
-  if BL_CONSTEXPR ((kIndex & 1) == 0)
+  if constexpr ((kIndex & 1) == 0)
     return uint32_t(_mm_extract_epi16(to_simd<__m128i>(src), kIndex / 2u)) & 0xFFu;
   else
     return uint32_t(_mm_extract_epi16(to_simd<__m128i>(src), kIndex / 2u)) >> 8;
@@ -2078,11 +2078,12 @@ BL_INLINE_NODEBUG uint32_t extract_u8(const V& src) noexcept {
 template<uint32_t kIndex, typename V>
 BL_INLINE_NODEBUG uint32_t extract_u32(const V& src) noexcept {
 #if BL_TARGET_ARCH_BITS >= 64
-  if BL_CONSTEXPR (kIndex == 1) {
+  if constexpr (kIndex == 1) {
     return uint32_t(uint64_t(_mm_cvtsi128_si64x(to_simd<__m128i>(src))) >> 32);
   }
+  else
 #endif
-  if BL_CONSTEXPR (kIndex == 0) {
+  if constexpr (kIndex == 0) {
     return uint32_t(_mm_cvtsi128_si32(to_simd<__m128i>(src)));
   }
   else {
@@ -2488,10 +2489,10 @@ BL_INLINE_NODEBUG __m128i simd_abs_i64(const __m128i& a) noexcept {
 template<uint8_t kN> BL_INLINE_NODEBUG __m128i simd_slli_i8(const __m128i& a) noexcept {
   constexpr uint8_t kShift = uint8_t(kN & 0x7);
 
-  if BL_CONSTEXPR (kShift == 0) {
+  if constexpr (kShift == 0) {
     return a;
   }
-  else if BL_CONSTEXPR (kShift == 1) {
+  else if constexpr (kShift == 1) {
     return _mm_add_epi8(a, a);
   }
   else {
@@ -2503,7 +2504,7 @@ template<uint8_t kN> BL_INLINE_NODEBUG __m128i simd_slli_i8(const __m128i& a) no
 template<uint8_t kN> BL_INLINE_NODEBUG __m128i simd_srli_u8(const __m128i& a) noexcept {
   constexpr uint8_t kShift = uint8_t(kN & 0x7);
 
-  if BL_CONSTEXPR (kShift == 0) {
+  if constexpr (kShift == 0) {
     return a;
   }
   else {
@@ -2515,10 +2516,10 @@ template<uint8_t kN> BL_INLINE_NODEBUG __m128i simd_srli_u8(const __m128i& a) no
 template<uint8_t kN> BL_INLINE_NODEBUG __m128i simd_srai_i8(const __m128i& a) noexcept {
   constexpr uint8_t kShift = uint8_t(kN & 0x7);
 
-  if BL_CONSTEXPR (kShift == 0) {
+  if constexpr (kShift == 0) {
     return a;
   }
-  else if BL_CONSTEXPR (kShift == 7) {
+  else if constexpr (kShift == 7) {
     return _mm_cmpgt_epi8(simd_make_zero<__m128i>(), a);
   }
   else {
@@ -2543,24 +2544,25 @@ template<uint8_t kN> BL_INLINE_NODEBUG __m128i simd_srai_i64(const __m128i& a) n
 #if defined(BL_TARGET_OPT_AVX512)
   return kN ? _mm_srai_epi64(a, kN) : a;
 #else
-  if BL_CONSTEXPR (kN == 0)
+  if constexpr (kN == 0) {
     return a;
-
-  if BL_CONSTEXPR (kN == 63u)
+  }
+  else if constexpr (kN == 63u) {
     return _mm_srai_epi32(_mm_shuffle_epi32(a, _MM_SHUFFLE(3, 3, 1, 1)), 31);
-
+  }
 #if defined(BL_TARGET_OPT_SSE4_1)
-  if BL_CONSTEXPR (kN < 32u) {
+  else if constexpr (kN < 32u) {
     __m128i hi = _mm_srai_epi32(a, kN & 31u);
     __m128i lo = _mm_srli_epi64(a, kN & 31u);
     return _mm_blend_epi16(lo, hi, 0xCCu);
   }
 #endif
-
-  __m128i highs = _mm_shuffle_epi32(a, _MM_SHUFFLE(3, 3, 1, 1));
-  __m128i signs = _mm_srai_epi32(highs, 31);
-  __m128i msk = _mm_slli_epi64(signs, (64 - kN) & 63);
-  return _mm_or_si128(msk, _mm_srli_epi64(a, kN));
+  else {
+    __m128i highs = _mm_shuffle_epi32(a, _MM_SHUFFLE(3, 3, 1, 1));
+    __m128i signs = _mm_srai_epi32(highs, 31);
+    __m128i msk = _mm_slli_epi64(signs, (64 - kN) & 63);
+    return _mm_or_si128(msk, _mm_srli_epi64(a, kN));
+  }
 #endif
 }
 
@@ -2843,10 +2845,10 @@ BL_INLINE_NODEBUG __m256i simd_abs_i64(const __m256i& a) noexcept {
 template<uint8_t kN> BL_INLINE_NODEBUG __m256i simd_slli_i8(const __m256i& a) noexcept {
   constexpr uint8_t kShift = uint8_t(kN & 0x7);
 
-  if BL_CONSTEXPR (kShift == 0) {
+  if constexpr (kShift == 0) {
     return a;
   }
-  else if BL_CONSTEXPR (kShift == 1) {
+  else if constexpr (kShift == 1) {
     return _mm256_add_epi8(a, a);
   }
   else {
@@ -2858,7 +2860,7 @@ template<uint8_t kN> BL_INLINE_NODEBUG __m256i simd_slli_i8(const __m256i& a) no
 template<uint8_t kN> BL_INLINE_NODEBUG __m256i simd_srli_u8(const __m256i& a) noexcept {
   constexpr uint8_t kShift = uint8_t(kN & 0x7);
 
-  if BL_CONSTEXPR (kShift == 0) {
+  if constexpr (kShift == 0) {
     return a;
   }
   else {
@@ -2870,10 +2872,10 @@ template<uint8_t kN> BL_INLINE_NODEBUG __m256i simd_srli_u8(const __m256i& a) no
 template<uint8_t kN> BL_INLINE_NODEBUG __m256i simd_srai_i8(const __m256i& a) noexcept {
   constexpr uint8_t kShift = uint8_t(kN & 0x7);
 
-  if BL_CONSTEXPR (kShift == 0) {
+  if constexpr (kShift == 0) {
     return a;
   }
-  else if BL_CONSTEXPR (kShift == 7) {
+  else if constexpr (kShift == 7) {
     return _mm256_cmpgt_epi8(simd_make_zero<__m256i>(), a);
   }
   else {
@@ -2898,13 +2900,13 @@ template<uint8_t kN> BL_INLINE_NODEBUG __m256i simd_srai_i32(const __m256i& a) n
 template<uint8_t kN> BL_INLINE_NODEBUG __m256i simd_srai_i64(const __m256i& a) noexcept { return kN ? _mm256_srai_epi64(a, kN) : a; }
 #else
 template<uint8_t kN> BL_INLINE_NODEBUG __m256i simd_srai_i64(const __m256i& a) noexcept {
-  if BL_CONSTEXPR (kN == 0)
+  if constexpr (kN == 0) {
     return a;
-
-  if BL_CONSTEXPR (kN == 63u)
+  }
+  else if constexpr (kN == 63u) {
     return _mm256_srai_epi32(_mm256_shuffle_epi32(a, _MM_SHUFFLE(3, 3, 1, 1)), 31);
-
-  if BL_CONSTEXPR (kN < 32u) {
+  }
+  else if constexpr (kN < 32u) {
     __m256i hi = _mm256_srai_epi32(a, kN & 31u);
     __m256i lo = _mm256_srli_epi64(a, kN & 31u);
     return _mm256_blend_epi16(lo, hi, 0xCCu);
@@ -3127,10 +3129,10 @@ BL_INLINE_NODEBUG __m512i simd_abs_i64(const __m512i& a) noexcept { return _mm51
 template<uint8_t kN> BL_INLINE_NODEBUG __m512i simd_slli_i8(const __m512i& a) noexcept {
   constexpr uint8_t kShift = uint8_t(kN & 0x7);
 
-  if BL_CONSTEXPR (kShift == 0u) {
+  if constexpr (kShift == 0u) {
     return a;
   }
-  else if BL_CONSTEXPR (kShift == 1) {
+  else if constexpr (kShift == 1) {
     return _mm512_add_epi8(a, a);
   }
   else {
@@ -3142,7 +3144,7 @@ template<uint8_t kN> BL_INLINE_NODEBUG __m512i simd_slli_i8(const __m512i& a) no
 template<uint8_t kN> BL_INLINE_NODEBUG __m512i simd_srli_u8(const __m512i& a) noexcept {
   constexpr uint8_t kShift = uint8_t(kN & 0x7);
 
-  if BL_CONSTEXPR (kShift == 0) {
+  if constexpr (kShift == 0) {
     return a;
   }
   else {
@@ -3154,7 +3156,7 @@ template<uint8_t kN> BL_INLINE_NODEBUG __m512i simd_srli_u8(const __m512i& a) no
 template<uint8_t kN> BL_INLINE_NODEBUG __m512i simd_srai_i8(const __m512i& a) noexcept {
   constexpr uint8_t kShift = uint8_t(kN & 0x7);
 
-  if BL_CONSTEXPR (kShift == 0) {
+  if constexpr (kShift == 0) {
     return a;
   }
   else {
@@ -5488,7 +5490,7 @@ template<size_t W, typename T> static BL_INLINE_NODEBUG Vec<W, T>& operator*=(Ve
 template<size_t W, typename T> static BL_INLINE_NODEBUG Vec<W, T>& operator/=(Vec<W, T>& a, const Vec<W, T>& b) noexcept { a = div(a, b); return a; }
 
 template<size_t W, typename T, uint32_t kN> static BL_INLINE_NODEBUG Vec<W, T> operator<<(const Vec<W, T>& a, Shift<kN>) noexcept { return slli<kN>(a); }
-template<size_t W, typename T, uint32_t kN> static BL_INLINE_NODEBUG Vec<W, T> operator>>(const Vec<W, T>& a, Shift<kN>) noexcept { return std::is_unsigned<T>::value ? srli<kN>(a) : srai<kN>(a); }
+template<size_t W, typename T, uint32_t kN> static BL_INLINE_NODEBUG Vec<W, T> operator>>(const Vec<W, T>& a, Shift<kN>) noexcept { return std::is_unsigned_v<T> ? srli<kN>(a) : srai<kN>(a); }
 
 template<size_t W, typename T, uint32_t kN> static BL_INLINE_NODEBUG Vec<W, T>& operator<<=(Vec<W, T>& a, Shift<kN> b) noexcept { a = a << b; return a; }
 template<size_t W, typename T, uint32_t kN> static BL_INLINE_NODEBUG Vec<W, T>& operator>>=(Vec<W, T>& a, Shift<kN> b) noexcept { a = a >> b; return a; }

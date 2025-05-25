@@ -24,8 +24,7 @@
 //! \addtogroup blend2d_opentype_impl
 //! \{
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace GlyfImpl {
 
 // bl::OpenType::GlyfImpl - GetGlyphOutlinesSimdImpl [SSE4.2 & AVX2 & ASIMD]
@@ -1121,8 +1120,7 @@ InvalidData:
 
 } // {anonymous}
 } // {GlyfImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \}
 //! \endcond

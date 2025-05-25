@@ -9,9 +9,7 @@
 #include "../compression/checksum_p.h"
 #include "../compression/checksumcrc32simdimpl_p.h"
 
-namespace bl {
-namespace Compression {
-namespace Checksum {
+namespace bl::Compression::Checksum {
 
 // bl::Compression - CheckSum - CRC32 (ASIMD)
 // ==========================================
@@ -20,8 +18,6 @@ uint32_t crc32Update_ASIMD(uint32_t checksum, const uint8_t* data, size_t size) 
   return crc32Update_CLMUL128(checksum, data, size);
 }
 
-} // {Checksum}
-} // {Compression}
-} // {bl}
+} // {bl::Compression::Checksum}
 
 #endif // BL_TARGET_OPT_ASIMD_CRYPTO

@@ -117,7 +117,7 @@ namespace {
 //! more instructions to workaround the missing instruction.
 template<BitOrder kBO, typename T>
 struct ParametrizedBitOps {
-  typedef typename std::make_unsigned<T>::type U;
+  using U = std::make_unsigned_t<T>;
 
   static constexpr BitOrder kBitOrder = kBO;
   static constexpr BitOrder kReverseBitOrder = BitOrder(uint32_t(kBO) ^ 1u);
@@ -130,51 +130,51 @@ struct ParametrizedBitOps {
     kBitMask = kNumBits - 1
   };
 
-  static BL_INLINE_NODEBUG constexpr T zero() noexcept { return T(0); }
-  static BL_INLINE_NODEBUG constexpr T ones() noexcept { return IntOps::allOnes<T>(); }
+  static BL_INLINE_CONSTEXPR T zero() noexcept { return T(0); }
+  static BL_INLINE_CONSTEXPR T ones() noexcept { return IntOps::allOnes<T>(); }
 
   template<typename Index>
-  static BL_INLINE_NODEBUG constexpr bool hasBit(const T& x, const Index& index) noexcept {
+  static BL_INLINE_CONSTEXPR bool hasBit(const T& x, const Index& index) noexcept {
     return kIsLSB ? bool((x >> index) & 0x1) : bool((x >> (index ^ Index(kBitMask))) & 0x1);
   }
 
   template<typename Count>
-  static BL_INLINE_NODEBUG constexpr T shiftToStart(const T& x, const Count& y) noexcept {
+  static BL_INLINE_CONSTEXPR T shiftToStart(const T& x, const Count& y) noexcept {
     return kIsLSB ? IntOps::shr(x, y) : IntOps::shl(x, y);
   }
 
   template<typename Count>
-  static BL_INLINE_NODEBUG constexpr T shiftToEnd(const T& x, const Count& y) noexcept {
+  static BL_INLINE_CONSTEXPR T shiftToEnd(const T& x, const Count& y) noexcept {
     return kIsLSB ? IntOps::shl(x, y) : IntOps::shr(x, y);
   }
 
   template<typename Count>
-  static BL_INLINE_NODEBUG constexpr T nonZeroStartMask(const Count& count = 1) noexcept {
+  static BL_INLINE_CONSTEXPR T nonZeroStartMask(const Count& count = 1) noexcept {
     return kIsLSB ? IntOps::nonZeroLsbMask<T>(count) : IntOps::nonZeroMsbMask<T>(count);
   }
 
   template<typename Index, typename Count>
-  static BL_INLINE_NODEBUG constexpr T nonZeroStartMask(const Count& count, const Index& index) noexcept {
+  static BL_INLINE_CONSTEXPR T nonZeroStartMask(const Count& count, const Index& index) noexcept {
     return shiftToEnd(nonZeroStartMask(count), index);
   }
 
   template<typename N>
-  static BL_INLINE_NODEBUG constexpr T nonZeroEndMask(const N& n = 1) noexcept {
+  static BL_INLINE_CONSTEXPR T nonZeroEndMask(const N& n = 1) noexcept {
     return kIsLSB ? IntOps::nonZeroMsbMask<T>(n) : IntOps::nonZeroLsbMask<T>(n);
   }
 
   template<typename Index, typename Count>
-  static BL_INLINE_NODEBUG constexpr T nonZeroEndMask(const Count& count, const Index& index) noexcept {
+  static BL_INLINE_CONSTEXPR T nonZeroEndMask(const Count& count, const Index& index) noexcept {
     return shiftToStart(nonZeroEndMask(count), index);
   }
 
   template<typename Index>
-  static BL_INLINE_NODEBUG constexpr T indexAsMask(const Index& index) noexcept {
+  static BL_INLINE_CONSTEXPR T indexAsMask(const Index& index) noexcept {
     return kIsLSB ? IntOps::shl(T(1), index) : IntOps::shr(IntOps::nonZeroMsbMask<T>(), index);
   }
 
   template<typename Index, typename Value>
-  static BL_INLINE_NODEBUG constexpr T indexAsMask(const Index& index, const Value& value) noexcept {
+  static BL_INLINE_CONSTEXPR T indexAsMask(const Index& index, const Value& value) noexcept {
     return kIsLSB ? IntOps::shl(T(value), index) : IntOps::shr(T(value) << kBitMask, index);
   }
 

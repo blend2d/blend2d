@@ -150,13 +150,13 @@ struct ConstraintRangeU32 : public ConstraintBase<uint32_t, ConstraintRangeU32<k
 // =================================
 
 template<typename T>
-static BL_INLINE_NODEBUG typename std::make_unsigned<T>::type cast_uint(const T& x) noexcept {
-  return (typename std::make_unsigned<T>::type)x;
+static BL_INLINE_NODEBUG std::make_unsigned_t<T> cast_uint(const T& x) noexcept {
+  return static_cast<std::make_unsigned_t<T>>(x);
 }
 
 template<typename T>
-static BL_INLINE_NODEBUG typename std::make_signed<T>::type cast_int(const T& x) noexcept {
-  return (typename std::make_signed<T>::type)x;
+static BL_INLINE_NODEBUG std::make_signed_t<T> cast_int(const T& x) noexcept {
+  return static_cast<std::make_signed_t<T>>(x);
 }
 
 template<typename T, typename Derived> struct op_base_1 {
@@ -229,7 +229,7 @@ template<typename T> struct iop_adds : public op_base_2<T, iop_adds<T>> {
     if (!of)
       return result;
 
-    if (bl::Traits::isUnsigned<T>() || b > 0)
+    if (std::is_unsigned_v<T> || b > 0)
       return bl::Traits::maxValue<T>();
     else
       return bl::Traits::minValue<T>();
@@ -248,7 +248,7 @@ template<typename T> struct iop_subs : public op_base_2<T, iop_subs<T>> {
     if (!of)
       return result;
 
-    if (bl::Traits::isUnsigned<T>() || b > 0)
+    if (std::is_unsigned_v<T> || b > 0)
       return bl::Traits::minValue<T>();
     else
       return bl::Traits::maxValue<T>();
@@ -619,7 +619,7 @@ static BL_NOINLINE BLString format_items(const T* items, uint32_t count) noexcep
   BLString s;
   s.append('{');
   for (uint32_t i = 0; i < count; i++)
-    s.appendFormat("%s%llu", i == 0 ? "" : ", ", (unsigned long long)items[i] & bl::IntOps::allOnes<typename std::make_unsigned<T>::type>());
+    s.appendFormat("%s%llu", i == 0 ? "" : ", ", (unsigned long long)items[i] & bl::IntOps::allOnes<std::make_unsigned_t<T>>());
   s.append('}');
   return s;
 }

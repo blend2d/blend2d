@@ -756,5 +756,8 @@ void blFontRtInit(BLRuntimeContext* rt) noexcept {
 
   // Initialize BLFont built-ins.
   blFontImplCtor(&bl::FontInternal::defaultFont.impl);
-  blObjectDefaults[BL_OBJECT_TYPE_FONT]._d.initDynamic(BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT), &bl::FontInternal::defaultFont.impl);
+
+  blObjectDefaults[BL_OBJECT_TYPE_FONT]._d.initDynamic(
+    BLObjectInfo::fromTypeWithMarker(BL_OBJECT_TYPE_FONT),
+    &bl::FontInternal::defaultFont.impl);
 }

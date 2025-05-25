@@ -22,9 +22,7 @@
 //! \namespace bl::Pipeline::JIT
 //! Everything related to JIT pipeline generator and runtime.
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 class PipeCompiler;
 class PipePart;
@@ -246,7 +244,7 @@ struct PixelPredicate {
   Gp _count;
 
 #if defined(BL_JIT_ARCH_X86)
-  static constexpr uint32_t kMaterializedMaskCapacity = 2u;
+  static inline constexpr uint32_t kMaterializedMaskCapacity = 2u;
 
   //! Contains predicates for load/store instructions that were materialized.
   struct MaterializedMask {
@@ -270,7 +268,7 @@ struct PixelPredicate {
   MaterializedMask _materializedMasks[kMaterializedMaskCapacity];
 #endif // BL_JIT_ARCH_X86
 
-  static constexpr uint32_t kMaterializedEndPtrCapacity = 2u;
+  static inline constexpr uint32_t kMaterializedEndPtrCapacity = 2u;
 
   //! Contains two last clamped pointers of `ref`.
   struct MaterializedEndPtr {
@@ -488,9 +486,7 @@ struct PipeCMask {
   }
 };
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 //! \}
 //! \endcond

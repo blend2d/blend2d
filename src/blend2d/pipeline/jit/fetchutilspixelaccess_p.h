@@ -13,10 +13,7 @@
 //! \addtogroup blend2d_pipeline_jit
 //! \{
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
-namespace FetchUtils {
+namespace bl::Pipeline::JIT::FetchUtils {
 
 // bl::Pipeline::Jit::FetchUtils - Fetch & Store
 // =============================================
@@ -95,10 +92,7 @@ void fillAlphaChannel(PipeCompiler* pc, Pixel& p) noexcept;
 
 void storePixelsAndAdvance(PipeCompiler* pc, const Gp& dPtr, Pixel& p, PixelCount n, uint32_t bpp, Alignment alignment, PixelPredicate& predicate) noexcept;
 
-} // {FetchUtils}
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT::FetchUtils}
 
 //! \}
 //! \endcond

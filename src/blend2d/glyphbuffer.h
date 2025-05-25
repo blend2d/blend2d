@@ -118,49 +118,49 @@ public:
   //! \name Accessors
   //! \{
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool empty() const noexcept { return impl->glyphRun.empty(); }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG size_t size() const noexcept { return impl->size; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t flags() const noexcept { return impl->flags; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t* content() const noexcept { return impl->content; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLGlyphInfo* infoData() const noexcept { return impl->infoData; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLGlyphPlacement* placementData() const noexcept { return impl->placementData; }
 
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG const BLGlyphRun& glyphRun() const noexcept { return impl->glyphRun; }
 
   //! Tests whether the glyph-buffer has `flag` set.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool hasFlag(uint32_t flag) const noexcept { return (impl->flags & flag) != 0; }
 
   //! Tests whether the buffer contains unicode data.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool hasText() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
 
   //! Tests whether the buffer contains glyph-id data.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool hasGlyphs() const noexcept { return !hasFlag(BL_GLYPH_RUN_FLAG_UCS4_CONTENT); }
 
   //! Tests whether the input string contained invalid characters (unicode encoding errors).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool hasInvalidChars() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_INVALID_TEXT); }
 
   //! Tests whether the input string contained undefined characters that weren't mapped properly to glyphs.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool hasUndefinedChars() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_UNDEFINED_GLYPHS); }
 
   //! Tests whether one or more operation was terminated before completion because of invalid data in a font.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool hasInvalidFontData() const noexcept { return hasFlag(BL_GLYPH_RUN_FLAG_INVALID_FONT_DATA); }
 
   //! \}

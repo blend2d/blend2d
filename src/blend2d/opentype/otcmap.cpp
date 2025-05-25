@@ -12,8 +12,7 @@
 #include "../support/ptrops_p.h"
 #include "../unicode/unicode_p.h"
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace CMapImpl {
 
 // bl::OpenType::CMapImpl - None
@@ -839,5 +838,4 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 }
 
 } // {CMapImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}

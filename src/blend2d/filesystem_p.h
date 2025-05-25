@@ -84,26 +84,26 @@ public:
   //! \{
 
   //! Returns whether the mapping is empty (i.e. not file has been mapped).
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE bool empty() const noexcept { return _size == 0; }
 
   //! Returns mapped data casted to `T`.
   template<typename T = void>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE T* data() noexcept { return static_cast<T*>(_data); }
 
   //! Returns mapped data casted to `T` (const).
   template<typename T = void>
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE const T* data() const noexcept { return static_cast<const T*>(_data); }
 
   //! Returns the size of the mapped data.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE size_t size() const noexcept { return _size; }
 
 #if defined(_WIN32)
   //! Returns a Windows-specific HANDLE of the mapped object.
-  BL_NODISCARD
+  [[nodiscard]]
   BL_INLINE HANDLE fileMappingHandle() const noexcept { return _fileMappingHandle; }
 #endif
 

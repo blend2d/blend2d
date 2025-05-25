@@ -6,8 +6,7 @@
 #include "../api-build_p.h"
 #include "../raster/renderfetchdata_p.h"
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 
 // bl::RasterEngine - Fetch Data Utilities
 // =======================================
@@ -35,5 +34,4 @@ BLResult computePendingFetchData(RenderFetchData* fetchData) noexcept {
   return BL_SUCCESS;
 }
 
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}

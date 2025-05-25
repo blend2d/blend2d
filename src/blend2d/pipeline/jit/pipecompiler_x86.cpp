@@ -10,9 +10,7 @@
 #include "../../pipeline/jit/pipepart_p.h"
 #include "../../support/intops_p.h"
 
-namespace bl {
-namespace Pipeline {
-namespace JIT {
+namespace bl::Pipeline::JIT {
 
 using GPExt = PipeCompiler::GPExt;
 using SSEExt = PipeCompiler::SSEExt;
@@ -591,14 +589,14 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
 
     case OpcodeRM::kLoadShiftU8:
       cc->shl(r, 8);
-      BL_FALLTHROUGH
+      [[fallthrough]];
     case OpcodeRM::kLoadMergeU8:
       r = r.r8();
       break;
 
     case OpcodeRM::kLoadShiftU16:
       cc->shl(r, 16);
-      BL_FALLTHROUGH
+      [[fallthrough]];
     case OpcodeRM::kLoadMergeU16:
       r = r.r16();
       break;
@@ -1039,7 +1037,7 @@ void PipeCompiler::emit_3i(OpcodeRRR op, const Gp& dst, const Operand_& src1_, c
           }
           return;
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeRRR::kSrl:
       case OpcodeRRR::kSra: {
         InstId legacyInst = legacyShiftInstTable[size_t(op) - size_t(OpcodeRRR::kSll)];
@@ -1584,7 +1582,7 @@ void PipeCompiler::add_ext(const Gp& dst, const Gp& src_, const Gp& idx_, uint32
         cc->add(dst, idx);
         return;
       }
-      BL_FALLTHROUGH
+      [[fallthrough]];
     case 2:
     case 4:
     case 8:
@@ -3528,7 +3526,7 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
         else {
           BL_NOT_REACHED();
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVV::kCvtI8LoToI16:
       case OpcodeVV::kCvtU8LoToU16:
       case OpcodeVV::kCvtI16LoToI32:
@@ -3976,7 +3974,7 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
           cc->emit(instId, dst, dst);
           return;
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVV::kCvtI8HiToI16:
       case OpcodeVV::kCvtI16HiToI32:
       case OpcodeVV::kCvtI32HiToI64:
@@ -4031,7 +4029,7 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
         else {
           BL_NOT_REACHED();
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVV::kCvtI8LoToI16:
       case OpcodeVV::kCvtU8LoToU16:
       case OpcodeVV::kCvtI16LoToI32:
@@ -4080,7 +4078,7 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
           cc->emit(instId, dst, src, Imm(opInfo.imm));
           return;
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVV::kTruncF32S:
       case OpcodeVV::kTruncF64S:
       case OpcodeVV::kFloorF32S:
@@ -4892,7 +4890,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
           avxZero(this, dst);
           cc->vpinsrw(dst.as<Xmm>(), dst.as<Xmm>(), src, 0);
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVM::kLoad32_U32:
       case OpcodeVM::kLoad32_F32:
       case OpcodeVM::kLoad64_U32:
@@ -4919,7 +4917,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
       case OpcodeVM::kLoad512_F64:
         BL_ASSERT(dst.size() >= opInfo.memSize);
         dst.setSignature(signatureOfXmmYmmZmm[opInfo.memSize >> 5]);
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVM::kLoadN_U32:
       case OpcodeVM::kLoadN_U64:
       case OpcodeVM::kLoadN_F32:
@@ -4933,7 +4931,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
       case OpcodeVM::kLoadCvt32_U8ToU64:
       case OpcodeVM::kLoadCvt64_U8ToU64:
         dst.setSignature(signatureOfXmmYmmZmm[opInfo.memSize >> 2]);
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVM::kLoadCvtN_U8ToU64: {
         BL_ASSERT(dst.size() >= opInfo.memSize * 8u);
         src.setSize(dst.size() / 8u);
@@ -4948,7 +4946,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
       case OpcodeVM::kLoadCvt128_I8ToI32:
       case OpcodeVM::kLoadCvt128_U8ToU32:
         dst.setSignature(signatureOfXmmYmmZmm[opInfo.memSize >> 3]);
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVM::kLoadCvtN_I8ToI32:
       case OpcodeVM::kLoadCvtN_U8ToU32: {
         BL_ASSERT(dst.size() >= opInfo.memSize * 4u);
@@ -4990,7 +4988,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
       case OpcodeVM::kLoadCvt256_U32ToU64:
         BL_ASSERT(dst.size() >= opInfo.memSize * 2u);
         dst.setSignature(signatureOfXmmYmmZmm[opInfo.memSize >> 4]);
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVM::kLoadCvtN_I8ToI16:
       case OpcodeVM::kLoadCvtN_U8ToU16:
       case OpcodeVM::kLoadCvtN_I16ToI32:
@@ -5126,7 +5124,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
           cc->emit(opInfo.sseInstId, dst, src);
           return;
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVM::kLoadCvt32_I8ToI16:
       case OpcodeVM::kLoadCvt32_U8ToU16:
       case OpcodeVM::kLoadCvt32_I16ToI32:
@@ -5170,7 +5168,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
 
       case OpcodeVM::kLoadInsertF32:
         op = OpcodeVM::kLoadInsertU32;
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVM::kLoadInsertU8:
       case OpcodeVM::kLoadInsertU32:
       case OpcodeVM::kLoadInsertU64: {
@@ -5346,7 +5344,7 @@ void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const Vec& src_, uint32
       case OpcodeMV::kStore512_F64:
         BL_ASSERT(src.size() >= opInfo.memSize);
         src.setSignature(signatureOfXmmYmmZmm[opInfo.memSize >> 5]);
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeMV::kStoreN_U32:
       case OpcodeMV::kStoreN_U64:
       case OpcodeMV::kStoreN_F32:
@@ -6167,7 +6165,7 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
           sseSelect(this, dst, src1v, src2, msk);
           return;
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVVV::kMinI8:
       case OpcodeVVV::kMinI32: {
         // Native operation requires SSE4.1, which is not supported by the target.
@@ -6188,7 +6186,7 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
           sseSelect(this, dst, src1v, src2, msk);
           return;
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVVV::kMaxI8:
       case OpcodeVVV::kMaxI32: {
         // Native operation requires SSE4.1, which is not supported by the target.
@@ -6353,7 +6351,7 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
           cc->emit(Inst::kIdPcmpeqw, dst, tmp);
           return;
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVVV::kCmpGeI64:
       case OpcodeVVV::kCmpGeU64:
         // Native operation requires AVX512, which is not supported by the target.
@@ -6454,7 +6452,7 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
           }
           return;
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVVV::kCmpLeI64:
       case OpcodeVVV::kCmpLeU64:
         switch (op) {
@@ -6491,7 +6489,7 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
           cc->emit(instId, dst, tmp, pred);
           return;
         }
-        BL_FALLTHROUGH
+        [[fallthrough]];
       case OpcodeVVV::kCmpEqF32S:
       case OpcodeVVV::kCmpEqF64S:
       case OpcodeVVV::kCmpEqF32:
@@ -7450,8 +7448,6 @@ Vec PipeCompiler::makeVecPredicate32(PixelPredicate& predicate, uint32_t lastN, 
 }
 #endif // BL_JIT_ARCH_X86
 
-} // {JIT}
-} // {Pipeline}
-} // {bl}
+} // {bl::Pipeline::JIT}
 
 #endif

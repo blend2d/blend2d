@@ -17,7 +17,7 @@
 
 //! A generic function that can be used to transform an array of points that use `double` precision coordinates. This
 //! function will be 99.99% of time used with \ref BLMatrix2D so the `ctx` would point to a `const BLMatrix2D*` instance.
-typedef BLResult (BL_CDECL* BLMapPointDArrayFunc)(const void* ctx, BLPoint* dst, const BLPoint* src, size_t count) BL_NOEXCEPT;
+typedef BLResult (BL_CDECL* BLMapPointDArrayFunc)(const void* ctx, BLPoint* dst, const BLPoint* src, size_t count) noexcept;
 
 namespace bl {
 namespace TransformInternal {

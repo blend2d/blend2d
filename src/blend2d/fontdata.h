@@ -96,8 +96,8 @@ struct BLFontDataCore BL_CLASS_INHERITS(BLObjectCore) {
 struct BLFontDataVirt BL_CLASS_INHERITS(BLObjectVirt) {
   BL_DEFINE_VIRT_BASE
 
-  BLResult (BL_CDECL* getTableTags)(const BLFontDataImpl* impl, uint32_t faceIndex, BLArrayCore* out) BL_NOEXCEPT;
-  size_t (BL_CDECL* getTables)(const BLFontDataImpl* impl, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t n) BL_NOEXCEPT;
+  BLResult (BL_CDECL* getTableTags)(const BLFontDataImpl* impl, uint32_t faceIndex, BLArrayCore* out) BL_NOEXCEPT_C;
+  size_t (BL_CDECL* getTables)(const BLFontDataImpl* impl, uint32_t faceIndex, BLFontTable* dst, const BLTag* tags, size_t n) BL_NOEXCEPT_C;
 };
 
 //! Font data [C API Impl].
@@ -154,6 +154,7 @@ public:
   //! \name Internals
   //! \{
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLFontDataImpl* _impl() const noexcept { return static_cast<BLFontDataImpl*>(_d.impl); }
 
   //! \}
@@ -162,13 +163,22 @@ public:
   //! \name Construction & Destruction
   //! \{
 
-  BL_INLINE_NODEBUG BLFontData() noexcept { blFontDataInit(this); }
-  BL_INLINE_NODEBUG BLFontData(BLFontData&& other) noexcept { blFontDataInitMove(this, &other); }
-  BL_INLINE_NODEBUG BLFontData(const BLFontData& other) noexcept { blFontDataInitWeak(this, &other); }
+  BL_INLINE_NODEBUG BLFontData() noexcept {
+    blFontDataInit(this);
+  }
+
+  BL_INLINE_NODEBUG BLFontData(BLFontData&& other) noexcept {
+    blFontDataInitMove(this, &other);
+  }
+
+  BL_INLINE_NODEBUG BLFontData(const BLFontData& other) noexcept {
+    blFontDataInitWeak(this, &other);
+  }
 
   BL_INLINE_NODEBUG ~BLFontData() noexcept {
-    if (BLInternal::objectNeedsCleanup(_d.info.bits))
+    if (BLInternal::objectNeedsCleanup(_d.info.bits)) {
       blFontDataDestroy(this);
+    }
   }
 
   //! \}
@@ -181,7 +191,10 @@ public:
   BL_INLINE_NODEBUG BLFontData& operator=(BLFontData&& other) noexcept { blFontDataAssignMove(this, &other); return *this; }
   BL_INLINE_NODEBUG BLFontData& operator=(const BLFontData& other) noexcept { blFontDataAssignWeak(this, &other); return *this; }
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool operator==(const BLFontData& other) const noexcept { return  equals(other); }
+
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool operator!=(const BLFontData& other) const noexcept { return !equals(other); }
 
   //! \}
@@ -196,10 +209,14 @@ public:
   BL_INLINE_NODEBUG BLResult assign(const BLFontData& other) noexcept { return blFontDataAssignWeak(this, &other); }
 
   //! Tests whether the font data is a built-in null instance.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isValid() const noexcept { return _impl()->faceCount != 0; }
+
   //! Tests whether the font data is empty, which is the same as `!isValid()`.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool empty() const noexcept { return !isValid(); }
 
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool equals(const BLFontData& other) const noexcept { return blFontDataEquals(this, &other); }
 
   //! \}
@@ -249,6 +266,7 @@ public:
   //!
   //! It doesn't matter if the content is a single font or a collection. In any case the `faceType()` would always
   //! return the type of the font face that will be created by \ref BLFontFace::createFromData().
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLFontFaceType faceType() const noexcept { return BLFontFaceType(_impl()->faceType); }
 
   //! Returns the number of faces of this font data.
@@ -260,12 +278,15 @@ public:
   //! \note You should not use `faceCount()` to check whether the font is a collection as it's possible to have a
   //! font-collection with just a single font. Using `isCollection()` is more reliable and would always return the
   //! right value.
+  [[nodiscard]]
   BL_INLINE_NODEBUG uint32_t faceCount() const noexcept { return _impl()->faceCount; }
 
   //! Returns font data flags.
+  [[nodiscard]]
   BL_INLINE_NODEBUG BLFontDataFlags flags() const noexcept { return BLFontDataFlags(_impl()->flags); }
 
   //! Tests whether this font data is a font-collection.
+  [[nodiscard]]
   BL_INLINE_NODEBUG bool isCollection() const noexcept { return (_impl()->flags & BL_FONT_DATA_FLAG_COLLECTION) != 0; }
 
   //! Populates `dst` array with all table tags provided by font face at the given `faceIndex`.

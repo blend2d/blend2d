@@ -6,8 +6,7 @@
 #include "../api-build_p.h"
 #include "../codec/jpeghuffman_p.h"
 
-namespace bl {
-namespace Jpeg {
+namespace bl::Jpeg {
 
 // bl::Jpeg::Huffman - BuildHuffmanTable
 // =====================================
@@ -123,5 +122,4 @@ BLResult buildHuffmanAC(DecoderHuffmanACTable* table, const uint8_t* data, size_
   return BL_SUCCESS;
 }
 
-} // {Jpeg}
-} // {bl}
+} // {bl::Jpeg}

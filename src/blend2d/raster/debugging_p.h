@@ -15,8 +15,7 @@
 //! \addtogroup blend2d_raster_engine_impl
 //! \{
 
-namespace bl {
-namespace RasterEngine {
+namespace bl::RasterEngine {
 namespace Debugging {
 
 static void debugEdges(EdgeStorage<int>* edgeStorage) noexcept {
@@ -78,8 +77,7 @@ static void debugEdges(EdgeStorage<int>* edgeStorage) noexcept {
 }
 
 } // {Debugging}
-} // {RasterEngine}
-} // {bl}
+} // {bl::RasterEngine}
 
 //! \}
 //! \endcond

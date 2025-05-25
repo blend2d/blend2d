@@ -12,8 +12,7 @@
 #include "../support/lookuptable_p.h"
 #include "../unicode/unicode_p.h"
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 namespace NameImpl {
 
 // bl::OpenType::NameImpl - Tracing
@@ -361,5 +360,4 @@ BLResult init(OTFaceImpl* faceI, OTFaceTables& tables) noexcept {
 }
 
 } // {NameImpl}
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}

@@ -24,8 +24,7 @@
 //! \namespace bl::OpenType
 //! Low-level OpenType functionality, not exposed to users directly.
 
-namespace bl {
-namespace OpenType {
+namespace bl::OpenType {
 
 struct OTFaceImpl;
 union OTFaceTables;
@@ -36,7 +35,7 @@ struct GlyphRange {
   uint32_t glyphMax;
 
   BL_INLINE_NODEBUG bool contains(BLGlyphId glyphId) const noexcept {
-    return bool(unsigned(glyphId >= glyphMin) & unsigned(glyphId <= glyphMax));
+    return BLInternal::bool_and(glyphId >= glyphMin, glyphId <= glyphMax);
   }
 };
 
@@ -46,7 +45,7 @@ struct OffsetRange {
 
   template<typename T>
   BL_INLINE_NODEBUG bool contains(const T& offset) const noexcept {
-    return bool(unsigned(offset >= start) & unsigned(offset < end));
+    return BLInternal::bool_and(offset >= start, offset < end);
   }
 };
 
@@ -307,13 +306,13 @@ struct DataType {
 
   template<size_t Alignment = 1>
   BL_INLINE void setValue(T value) noexcept {
-    typedef typename std::make_unsigned<T>::type U;
+    using U = std::make_unsigned_t<T>;
     DataAccess<Size>::template writeValue<ByteOrder, Alignment>(data, U(value));
   }
 
   template<size_t Alignment = 1>
   BL_INLINE void setRawValue(T value) noexcept {
-    typedef typename std::make_unsigned<T>::type U;
+    using U = std::make_unsigned_t<T>;
     DataAccess<Size>::template writeValue<BL_BYTE_ORDER_NATIVE, Alignment>(data, U(value));
   }
 
@@ -370,8 +369,7 @@ struct TagRef16 {
   Offset16 offset;
 };
 
-} // {OpenType}
-} // {bl}
+} // {bl::OpenType}
 
 //! \}
 //! \endcond
