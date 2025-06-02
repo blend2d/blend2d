@@ -724,7 +724,7 @@ if (BLEND2D_ARCH_X86 OR BLEND2D_ARCH_X86_64)
         list(APPEND BLEND2D_CFLAGS_SSE3 -arch:SSE2)
         list(APPEND BLEND2D_CFLAGS_SSSE3 -arch:SSE2)
         list(APPEND BLEND2D_CFLAGS_SSE4_1 -arch:SSE2)
-        list(APPEND BLEND2D_CFLAGS_SSE4_2 -arch:SSE2)
+        list(APPEND BLEND2D_CFLAGS_SSE4_2 -arch:SSE4.2)
       endif()
       if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         # MSVC can generate SSE3 intrinsics even in SSE2 mode and has no switch
