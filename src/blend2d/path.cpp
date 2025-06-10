@@ -16,6 +16,7 @@
 #include "support/math_p.h"
 #include "support/ptrops_p.h"
 #include "support/traits_p.h"
+#include "polygonclipper.h"
 
 const BLApproximationOptions blDefaultApproximationOptions = bl::PathInternal::makeDefaultApproximationOptions();
 
@@ -2688,6 +2689,55 @@ OnLine:
     windingNumber &= 1;
 
   return windingNumber != 0 ? BL_HIT_TEST_IN : BL_HIT_TEST_OUT;
+}
+
+static void addPathToPolygonClipper(BLPolygonClipper& clipper, const BLPath& path, bool isSubject) {
+    bl::PathIterator iterator(path.view());
+
+    BLPoint pt;
+    while (!iterator.atEnd()) {
+        switch (iterator.cmd[0]) {
+        case BL_PATH_CMD_MOVE:
+            pt = iterator.vtx[0];
+            break;
+
+        case BL_PATH_CMD_ON:
+            clipper.addEdge(pt, iterator.vtx[0], isSubject);
+            pt = iterator.vtx[0];
+            break;
+        }
+
+        ++iterator;
+    }
+}
+
+static BLPath usePolygonClipper(const BLPath& subject, const BLPath& clip, BLBooleanOperator op) {
+    BLPolygonClipper polygonClipper;
+    polygonClipper.setOperator(op);
+
+    addPathToPolygonClipper(polygonClipper, subject, true);
+    addPathToPolygonClipper(polygonClipper, clip, false);
+
+    if (polygonClipper.perform() == BL_SUCCESS)
+        return polygonClipper.getPath();
+
+    return BLPath();
+}
+
+BLPath BLPath::united(const BLPath& path) const noexcept {
+    return usePolygonClipper(*this, path, BL_BOOLEAN_OPERATOR_UNION);
+}
+
+BLPath BLPath::intersected(const BLPath& path) const noexcept {
+    return usePolygonClipper(*this, path, BL_BOOLEAN_OPERATOR_INTERSECTION);
+}
+
+BLPath BLPath::subtracted(const BLPath& path) const noexcept {
+    return usePolygonClipper(*this, path, BL_BOOLEAN_OPERATOR_DIFFERENCE);
+}
+
+BLPath BLPath::symmetricDifference(const BLPath& path) const noexcept {
+    return usePolygonClipper(*this, path, BL_BOOLEAN_OPERATOR_SYMMETRIC_DIFFERENCE);
 }
 
 // bl::Path - Runtime Registration
