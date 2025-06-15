@@ -409,7 +409,7 @@ static void fetchPredicatedVec8_4To15(PipeCompiler* pc, const Vec& dVec, Gp sPtr
       pc->v_loadu64(acc, x86::ptr(sPtr, count.cloneAs(sPtr), 0, -8));
     }
 
-    cc->psrlq(acc.as<Xmm>(), tmp.as<Xmm>());
+    cc->psrlq(acc, tmp);
     pc->v_interleave_lo_u64(dVec, dVec, acc);
     pc->j(L_Done);
 
@@ -426,7 +426,7 @@ static void fetchPredicatedVec8_4To15(PipeCompiler* pc, const Vec& dVec, Gp sPtr
       pc->v_loadu32(acc, x86::ptr(sPtr, count.cloneAs(sPtr), 0, -4));
     }
 
-    cc->psrld(acc.as<Xmm>(), tmp.as<Xmm>());
+    cc->psrld(acc, tmp);
     pc->v_interleave_lo_u32(dVec, dVec, acc);
 
     pc->bind(L_Done);
@@ -635,7 +635,7 @@ static void fetchPredicatedVec8_AVX512(PipeCompiler* pc, const VecArray& dVec, G
   }
   else {
     BL_ASSERT(n >= 64);
-    BL_ASSERT(dVec[0].isZmm());
+    BL_ASSERT(dVec[0].isVec512());
 
     AsmCompiler* cc = pc->cc;
 
@@ -904,7 +904,7 @@ void fetchPredicatedVec8(PipeCompiler* pc, const VecArray& dVec_, Gp sPtr, uint3
   }
 
   // Must be XMM/YMM if AVX-512 is not available.
-  BL_ASSERT(!dVec[0].isZmm());
+  BL_ASSERT(!dVec[0].isVec512());
 
   if (pc->hasAVX()) {
     fetchPredicatedVec8_AVX(pc, dVec, sPtr, n, advanceMode, predicate);
@@ -912,7 +912,7 @@ void fetchPredicatedVec8(PipeCompiler* pc, const VecArray& dVec_, Gp sPtr, uint3
   }
 
   // Must be XMM if AVX is not available.
-  BL_ASSERT(dVec[0].isXmm());
+  BL_ASSERT(dVec[0].isVec128());
 #endif // BL_JIT_ARCH_X86
 
   fetchPredicatedVec8_V128(pc, dVec, sPtr, n, advanceMode, predicate);
@@ -940,7 +940,7 @@ void fetchPredicatedVec32(PipeCompiler* pc, const VecArray& dVec_, Gp sPtr, uint
   }
 
   // Must be XMM/YMM if AVX-512 is not available.
-  BL_ASSERT(!dVec[0].isZmm());
+  BL_ASSERT(!dVec[0].isVec512());
 
   if (pc->hasAVX()) {
     fetchPredicatedVec32_AVX(pc, dVec, sPtr, n, advanceMode, predicate);
@@ -948,7 +948,7 @@ void fetchPredicatedVec32(PipeCompiler* pc, const VecArray& dVec_, Gp sPtr, uint
   }
 
   // Must be XMM if AVX is not available.
-  BL_ASSERT(dVec[0].isXmm());
+  BL_ASSERT(dVec[0].isVec128());
 #endif // BL_JIT_ARCH_X86
 
   fetchPredicatedVec32_V128(pc, dVec, sPtr, n, advanceMode, predicate);
@@ -1126,7 +1126,7 @@ void storePredicatedVec8(PipeCompiler* pc, const Gp& dPtr_, const VecArray& sVec
   }
 
 #if defined(BL_JIT_ARCH_X86)
-  if (vLast.isZmm()) {
+  if (vLast.isVec512()) {
     BL_ASSERT(remaining > 32u);
 
     Label L_StoreSkip32 = pc->newLabel();
@@ -1140,7 +1140,7 @@ void storePredicatedVec8(PipeCompiler* pc, const Gp& dPtr_, const VecArray& sVec
     remaining -= 32u;
   }
 
-  if (vLast.isYmm()) {
+  if (vLast.isVec256()) {
     BL_ASSERT(remaining > 16u);
 
     Label L_StoreSkip16 = pc->newLabel();
@@ -1290,7 +1290,7 @@ void storePredicatedVec32(PipeCompiler* pc, const Gp& dPtr_, const VecArray& sVe
     return;
   }
 
-  if (vLast.isZmm()) {
+  if (vLast.isVec512()) {
     BL_ASSERT(remaining > 8u);
 
     Label L_StoreSkip8 = pc->newLabel();
@@ -1304,7 +1304,7 @@ void storePredicatedVec32(PipeCompiler* pc, const Gp& dPtr_, const VecArray& sVe
     remaining -= 8u;
   }
 
-  if (vLast.isYmm()) {
+  if (vLast.isVec256()) {
     BL_ASSERT(remaining > 4u);
 
     Label L_StoreSkip4 = pc->newLabel();
@@ -1901,7 +1901,7 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& dVec, const Gp& sPtr, PixelCo
             pc->v_div255_u16(um);
           }
 
-          if (dVec[0].isZmm()) {
+          if (dVec[0].isVec512()) {
             if (pc->hasAVX512_VBMI()) {
               // Extract 128-bit vectors and then use VPERMB to permute 8 elements to 512-bit width.
               Vec pred = pc->simdVecConst(&pc->ct.permu8_4xu8_lo_to_rgba32_uc, Bcst::kNA_Unique, dVec);
@@ -1926,7 +1926,7 @@ void fetchMaskA8IntoUC(PipeCompiler* pc, VecArray& dVec, const Gp& sPtr, PixelCo
               }
             }
           }
-          else if (dVec[0].isYmm()) {
+          else if (dVec[0].isVec256()) {
             Vec pred = pc->simdVecConst(&pc->ct.swizu8_xxxxxxx1xxxxxxx0_to_z1z1z1z1z0z0z0z0, Bcst::kNA_Unique, dVec);
 
             if (dVec.size() >= 2)
@@ -2036,13 +2036,13 @@ static void v_permute_op(PipeCompiler* pc, Vec dst, Vec predicate, Operand src, 
   OperandSignature sgn;
 
   if (byteQuantity == 64u) {
-    sgn = OperandSignature{Zmm::kSignature};
+    sgn = OperandSignature{asmjit::RegTraits<asmjit::RegType::kVec512>::kSignature};
   }
   else if (byteQuantity == 32u) {
-    sgn = OperandSignature{Ymm::kSignature};
+    sgn = OperandSignature{asmjit::RegTraits<asmjit::RegType::kVec256>::kSignature};
   }
   else {
-    sgn = OperandSignature{Xmm::kSignature};
+    sgn = OperandSignature{asmjit::RegTraits<asmjit::RegType::kVec128>::kSignature};
   }
 
   dst.setSignature(sgn);;
@@ -3307,7 +3307,7 @@ void _x_pack_pixel(PipeCompiler* pc, VecArray& px, VecArray& ux, uint32_t n, con
   BL_ASSERT(!ux.empty());
 
 #if defined(BL_JIT_ARCH_X86)
-  if (pc->hasAVX512() && ux[0].type() >= asmjit::RegType::kX86_Ymm) {
+  if (pc->hasAVX512() && ux[0].regType() >= asmjit::RegType::kVec256) {
     VecWidth pxWidth = pc->vecWidthOf(DataWidth::k8, n);
     uint32_t pxCount = pc->vecCountOf(DataWidth::k8, n);
     BL_ASSERT(pxCount <= OpArray::kMaxSize);
@@ -3321,7 +3321,7 @@ void _x_pack_pixel(PipeCompiler* pc, VecArray& px, VecArray& ux, uint32_t n, con
       ux.reset();
       return;
     }
-    else if (ux[0].type() >= asmjit::RegType::kX86_Zmm) {
+    else if (ux[0].regType() >= asmjit::RegType::kVec512) {
       // Pack ZMM to ZMM.
       VecArray pxTmp;
       pc->newV256Array(pxTmp, ux.size(), prefix, "pxTmp");
@@ -3341,7 +3341,7 @@ void _x_pack_pixel(PipeCompiler* pc, VecArray& px, VecArray& ux, uint32_t n, con
     uint32_t pxCount = pc->vecCountOf(DataWidth::k8, n);
     BL_ASSERT(pxCount <= OpArray::kMaxSize);
 
-    if (ux[0].type() >= asmjit::RegType::kX86_Ymm) {
+    if (ux[0].regType() >= asmjit::RegType::kVec256) {
       if (ux.size() == 1) {
         // Pack YMM to XMM.
         BL_ASSERT(pxCount == 1);

@@ -148,9 +148,9 @@ Vec PipeCompiler::simdVecConst(const void* c, Bcst bcstWidth, VecWidth constWidt
   size_t n = _vecConsts.size();
   for (size_t i = 0; i < n; i++)
     if (_vecConsts[i].ptr == c)
-      return Vec(OperandSignature{a64::VecV::kSignature}, _vecConsts[i].vRegId);
+      return Vec(OperandSignature{asmjit::RegTraits<RegType::kVec128>::kSignature}, _vecConsts[i].vRegId);
 
-  return Vec(OperandSignature{a64::VecV::kSignature}, _newVecConst(c, true).id());
+  return Vec(OperandSignature{asmjit::RegTraits<RegType::kVec128>::kSignature}, _newVecConst(c, true).id());
 }
 
 Vec PipeCompiler::simdVecConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept {
@@ -246,7 +246,7 @@ Vec PipeCompiler::simdConst16B(const void* data16) noexcept {
 
   for (size_t i = 0; i < n; i++) {
     if (memcmp(_vecConstsEx[i].data, data16, 16) == 0) {
-      return Vec(OperandSignature{a64::VecV::kSignature}, _vecConstsEx[i].vRegId);
+      return Vec(OperandSignature{asmjit::RegTraits<RegType::kVec128>::kSignature}, _vecConstsEx[i].vRegId);
     }
   }
 
@@ -330,7 +330,7 @@ static BL_NOINLINE void gp_emit_mem_op(PipeCompiler* pc, const Gp& r, Mem m, Mem
 static constexpr Gp gp_zero_regs[2] = { a64::wzr, a64::xzr };
 
 static BL_INLINE const Gp& gp_zero_as(const Gp& ref) noexcept {
-  return gp_zero_regs[size_t(ref.isGpX())];
+  return gp_zero_regs[size_t(ref.isGp64())];
 }
 
 static BL_NOINLINE Gp gp_force_reg(PipeCompiler* pc, const Operand_& op, const Gp& ref) noexcept {
@@ -574,7 +574,7 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
     case OpcodeRM::kLoadU32:
     case OpcodeRM::kLoadI64:
     case OpcodeRM::kLoadU64: {
-      if (op == OpcodeRM::kLoadI32 && dst.isGpX()) {
+      if (op == OpcodeRM::kLoadI32 && dst.isGp64()) {
         ii.instId = uint16_t(Inst::kIdLdrsw);
       }
 
@@ -1797,11 +1797,11 @@ static BL_INLINE bool isSameVec(const Vec& a, const Operand_& b) noexcept {
 
 static BL_INLINE void vec_set_vec_type(Vec& vec, ElementSize sz) noexcept {
   static constexpr uint32_t signatures[5] = {
-    a64::VecB::kSignature,
-    a64::VecH::kSignature,
-    a64::VecS::kSignature,
-    a64::VecD::kSignature,
-    a64::VecV::kSignature
+    asmjit::RegTraits<RegType::kVec8>::kSignature,
+    asmjit::RegTraits<RegType::kVec16>::kSignature,
+    asmjit::RegTraits<RegType::kVec32>::kSignature,
+    asmjit::RegTraits<RegType::kVec64>::kSignature,
+    asmjit::RegTraits<RegType::kVec128>::kSignature
   };
   vec.setSignature(OperandSignature{signatures[size_t(sz)]});
 }
@@ -2932,7 +2932,7 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
     case OpcodeVV::kCeilF32S:
     case OpcodeVV::kRoundF32S:
     case OpcodeVV::kSqrtF32S: {
-      dst.setSignature(a64::VecS::kSignature);
+      dst.setSignature(asmjit::RegTraits<RegType::kVec32>::kSignature);
       Vec src = as_vec(this, src_, dst);
 
       cc->emit(instId, dst, src);
@@ -2944,7 +2944,7 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
     case OpcodeVV::kCeilF64S:
     case OpcodeVV::kRoundF64S:
     case OpcodeVV::kSqrtF64S: {
-      dst.setSignature(a64::VecD::kSignature);
+      dst.setSignature(asmjit::RegTraits<RegType::kVec64>::kSignature);
       Vec src = as_vec(this, src_, dst);
 
       cc->emit(instId, dst, src);
@@ -3291,7 +3291,9 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
       Gp src(src_.as<Gp>());
 
       vec_set_type_and_index(dst, opInfo.dstElement, idx);
-      src.setSignature(op == OpcodeVR::kInsertU64 ? a64::GpX::kSignature : a64::GpW::kSignature);
+      src.setSignature(op == OpcodeVR::kInsertU64 ?
+        asmjit::RegTraits<RegType::kGp64>::kSignature :
+        asmjit::RegTraits<RegType::kGp32>::kSignature);
 
       cc->mov(dst, src);
       return;
@@ -3307,7 +3309,9 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
       Gp dst(dst_.as<Gp>());
       Vec src(src_.as<Vec>());
 
-      dst.setSignature(op == OpcodeVR::kExtractU64 ? a64::GpX::kSignature : a64::GpW::kSignature);
+      dst.setSignature(op == OpcodeVR::kExtractU64 ?
+        asmjit::RegTraits<RegType::kGp64>::kSignature :
+        asmjit::RegTraits<RegType::kGp32>::kSignature);
       vec_set_type_and_index(src, opInfo.dstElement, idx);
 
       cc->mov(dst, src);
@@ -4036,7 +4040,7 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
           tmp = newSimilarReg(dst, "@tmp");
         }
 
-        a64::VecD tmpD = tmp.d();
+        a64::Vec tmpD = tmp.d();
 
         vec_set_type(tmp, opInfo.dstElement);
         vec_set_type(tmpD, opInfo.dstElement);

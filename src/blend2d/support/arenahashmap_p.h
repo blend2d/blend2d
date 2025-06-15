@@ -18,10 +18,10 @@ namespace bl {
 //! \name Arena Allocated Hash Map
 //! \{
 
-//! Node used by `ZoneHash<>` template.
+//! Node used by `ArenaHash<>` template.
 //!
 //! You must provide function `bool eq(const Key& key)` in order to make
-//! `ZoneHash::get()` working.
+//! `ArenaHash::get()` working.
 class ArenaHashMapNode {
 public:
   BL_NONCOPYABLE(ArenaHashMapNode)

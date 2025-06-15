@@ -30,25 +30,22 @@ namespace bl::Pipeline::JIT {
 using asmjit::AlignMode;
 using asmjit::CpuFeatures;
 using asmjit::InstId;
-using asmjit::RegMask;
-using asmjit::RegType;
-using asmjit::RegGroup;
 using asmjit::imm;
 using asmjit::Imm;
+using asmjit::JumpAnnotation;
 using asmjit::Label;
 using asmjit::Operand;
 using asmjit::Operand_;
 using asmjit::OperandSignature;
-using asmjit::JumpAnnotation;
+using asmjit::Reg;
+using asmjit::RegMask;
+using asmjit::RegType;
+using asmjit::RegGroup;
 
 #if defined(BL_JIT_ARCH_X86)
 namespace x86 { using namespace ::asmjit::x86; }
-using Reg = x86::Reg;
 using Gp = x86::Gp;
 using Vec = x86::Vec;
-using Xmm = x86::Xmm;
-using Ymm = x86::Ymm;
-using Zmm = x86::Zmm;
 using KReg = x86::KReg;
 using Mem = x86::Mem;
 using CondCode = x86::CondCode;
@@ -60,7 +57,6 @@ static BL_INLINE_NODEBUG Mem mem_ptr(const Gp& base, const Gp& index, uint32_t s
 
 #if defined(BL_JIT_ARCH_A64)
 namespace a64 { using namespace ::asmjit::a64; }
-using Reg = a64::Reg;
 using Gp = a64::Gp;
 using Vec = a64::Vec;
 using Mem = a64::Mem;
@@ -120,16 +116,16 @@ namespace VecWidthUtils {
 static BL_INLINE OperandSignature signatureOf(VecWidth vw) noexcept {
 #if defined(BL_JIT_ARCH_X86)
   static const OperandSignature table[] = {
-    OperandSignature{asmjit::x86::Xmm::kSignature},
-    OperandSignature{asmjit::x86::Ymm::kSignature},
-    OperandSignature{asmjit::x86::Zmm::kSignature}
+    OperandSignature{asmjit::RegTraits<asmjit::RegType::kVec128>::kSignature},
+    OperandSignature{asmjit::RegTraits<asmjit::RegType::kVec256>::kSignature},
+    OperandSignature{asmjit::RegTraits<asmjit::RegType::kVec512>::kSignature}
   };
   return table[size_t(vw)];
 #endif
 
 #if defined(BL_JIT_ARCH_A64)
   blUnused(vw);
-  return OperandSignature{asmjit::a64::VecV::kSignature};
+  return OperandSignature{asmjit::RegTraits<asmjit::RegType::kVec128>::kSignature};
 #endif
 }
 
@@ -166,7 +162,7 @@ static BL_INLINE_NODEBUG uint32_t vecCountForByteCount(VecWidth maxVecWidth, uin
 }
 
 static BL_INLINE_NODEBUG VecWidth vecWidthOf(const Vec& reg) noexcept {
-  return VecWidth(uint32_t(reg.type()) - uint32_t(RegType::kVec128));
+  return VecWidth(uint32_t(reg.regType()) - uint32_t(RegType::kVec128));
 }
 
 static BL_INLINE_NODEBUG VecWidth vecWidthOf(VecWidth vw, DataWidth dataWidth, uint32_t n) noexcept {
@@ -542,16 +538,16 @@ public:
   }
 
   BL_INLINE_NODEBUG VecArray cloneAs(VecWidth vw) const noexcept { return cloneAs(VecWidthUtils::signatureOf(vw)); }
-  BL_INLINE_NODEBUG VecArray cloneAs(const asmjit::BaseReg& reg) const noexcept { return cloneAs(reg.signature()); }
+  BL_INLINE_NODEBUG VecArray cloneAs(const asmjit::Reg& reg) const noexcept { return cloneAs(reg.signature()); }
 
   BL_INLINE_NODEBUG bool isVec128() const noexcept { return v[0].isVec128(); }
   BL_INLINE_NODEBUG bool isVec256() const noexcept { return v[0].isVec256(); }
   BL_INLINE_NODEBUG bool isVec512() const noexcept { return v[0].isVec512(); }
 
 #if defined(BL_JIT_ARCH_X86)
-  BL_INLINE_NODEBUG VecArray xmm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Xmm::kSignature}); }
-  BL_INLINE_NODEBUG VecArray ymm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Ymm::kSignature}); }
-  BL_INLINE_NODEBUG VecArray zmm() const noexcept { return cloneAs(asmjit::OperandSignature{x86::Zmm::kSignature}); }
+  BL_INLINE_NODEBUG VecArray xmm() const noexcept { return cloneAs(asmjit::OperandSignature{asmjit::RegTraits<asmjit::RegType::kVec128>::kSignature}); }
+  BL_INLINE_NODEBUG VecArray ymm() const noexcept { return cloneAs(asmjit::OperandSignature{asmjit::RegTraits<asmjit::RegType::kVec256>::kSignature}); }
+  BL_INLINE_NODEBUG VecArray zmm() const noexcept { return cloneAs(asmjit::OperandSignature{asmjit::RegTraits<asmjit::RegType::kVec512>::kSignature}); }
 #endif
 
   // Iterator compatibility.
@@ -576,7 +572,7 @@ static BL_INLINE void resetVarArray(T* array, size_t size) noexcept {
 
 template<typename T>
 static BL_INLINE void resetVarStruct(T* data, size_t size = sizeof(T)) noexcept {
-  resetVarArray(reinterpret_cast<asmjit::BaseReg*>(data), size / sizeof(asmjit::BaseReg));
+  resetVarArray(reinterpret_cast<asmjit::Reg*>(data), size / sizeof(asmjit::Reg));
 }
 
 static BL_INLINE_NODEBUG const Operand_& firstOp(const Operand_& operand) noexcept { return operand; }

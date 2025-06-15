@@ -90,7 +90,7 @@ static void passVecCoverage(
   dst._size = vecCount;
   for (uint32_t i = 0; i < vecCount; i++) {
     dst.v[i].reset();
-    dst.v[i].as<asmjit::BaseReg>().setSignatureAndId(VecWidthUtils::signatureOf(vecWidth), src.v[i].id());
+    dst.v[i].as<asmjit::Reg>().setSignatureAndId(VecWidthUtils::signatureOf(vecWidth), src.v[i].id());
   }
 }
 
@@ -817,7 +817,7 @@ void FillAnalyticPart::compile(const PipeFunction& fn) noexcept {
     passVecCoverage(compCov, m, PixelCount(4), pixelType, coverageFormat);
     compOpPart()->vMaskProcStoreAdvance(dstPtr, PixelCount(4), compCov, PixelCoverageFlags::kImmutable);
     if (pixelType == PixelType::kRGBA32) {
-      if (m[0].isZmm())
+      if (m[0].isVec512())
         pc->cc->vshufi32x4(m[0], m[0], m[0], x86::shuffleImm(3, 2, 3, 2)); //   m[0] = [a7 a7 a7 a7 a6 a6 a6 a6|a5 a5 a5 a5 a4 a4 a4 a4]
       else
         pc->v_mov(m[0], m[1]);                               //   m[0] = [a7 a7 a7 a7 a6 a6 a6 a6|a5 a5 a5 a5 a4 a4 a4 a4]

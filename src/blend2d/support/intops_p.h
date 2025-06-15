@@ -606,8 +606,9 @@ static BL_INLINE_CONSTEXPR bool isAligned(const X& x, const Y& alignment) noexce
 template<typename T>
 [[nodiscard]]
 static BL_INLINE_CONSTEXPR bool isPowerOf2(const T& x) noexcept {
-  using U = UIntByType<T>;
-  return x && !(U(x) & (U(x) - U(1)));
+  using U = std::make_unsigned_t<T>;
+  U x_minus_1 = U(U(x) - U(1));
+  return U(U(x) ^ x_minus_1) > x_minus_1;
 }
 
 template<typename X, typename Y>

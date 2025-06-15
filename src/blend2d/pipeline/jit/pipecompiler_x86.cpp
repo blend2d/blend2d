@@ -21,13 +21,13 @@ namespace Inst { using namespace x86::Inst; }
 // ======================================
 
 static constexpr OperandSignature signatureOfXmmYmmZmm[] = {
-  OperandSignature{x86::Xmm::kSignature},
-  OperandSignature{x86::Ymm::kSignature},
-  OperandSignature{x86::Zmm::kSignature}
+  OperandSignature{asmjit::RegTraits<RegType::kVec128>::kSignature},
+  OperandSignature{asmjit::RegTraits<RegType::kVec256>::kSignature},
+  OperandSignature{asmjit::RegTraits<RegType::kVec512>::kSignature}
 };
 
 static BL_INLINE RegType simdRegTypeFromWidth(VecWidth vw) noexcept {
-  return RegType(uint32_t(RegType::kX86_Xmm) + uint32_t(vw));
+  return RegType(uint32_t(RegType::kVec128) + uint32_t(vw));
 }
 
 // bl::Pipeline::PipeCompiler - Construction & Destruction
@@ -128,8 +128,8 @@ VecWidth PipeCompiler::maxVecWidthFromCpuFeatures() noexcept {
 void PipeCompiler::initVecWidth(VecWidth vw) noexcept {
   _vecWidth = vw;
   _vecRegType = simdRegTypeFromWidth(vw);
-  _vecTypeId = asmjit::ArchTraits::byArch(cc->arch()).regTypeToTypeId(_vecRegType);
-  _vecMultiplier = uint8_t(1u << (uint32_t(_vecRegType) - uint32_t(RegType::kX86_Xmm)));
+  _vecTypeId = asmjit::RegUtils::typeIdOf(_vecRegType);
+  _vecMultiplier = uint8_t(1u << (uint32_t(_vecRegType) - uint32_t(RegType::kVec128)));
 }
 
 bool PipeCompiler::hasMaskedAccessOf(uint32_t dataSize) const noexcept {
@@ -236,14 +236,14 @@ Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, VecWidth constWid
 }
 
 Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept {
-  VecWidth constWidth = VecWidth(uint32_t(similarTo.type()) - uint32_t(asmjit::RegType::kX86_Xmm));
+  VecWidth constWidth = VecWidth(uint32_t(similarTo.regType()) - uint32_t(asmjit::RegType::kVec128));
   return simdConst(c, bcstWidth, constWidth);
 }
 
 Operand PipeCompiler::simdConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept {
   BL_ASSERT(!similarTo.empty());
 
-  VecWidth constWidth = VecWidth(uint32_t(similarTo[0].type()) - uint32_t(asmjit::RegType::kX86_Xmm));
+  VecWidth constWidth = VecWidth(uint32_t(similarTo[0].regType()) - uint32_t(asmjit::RegType::kVec128));
   return simdConst(c, bcstWidth, constWidth);
 }
 
@@ -258,14 +258,14 @@ Vec PipeCompiler::simdVecConst(const void* c, Bcst bcstWidth, VecWidth constWidt
 }
 
 Vec PipeCompiler::simdVecConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept {
-  VecWidth constWidth = VecWidth(uint32_t(similarTo.type()) - uint32_t(asmjit::RegType::kX86_Xmm));
+  VecWidth constWidth = VecWidth(uint32_t(similarTo.regType()) - uint32_t(asmjit::RegType::kVec128));
   return simdVecConst(c, bcstWidth, constWidth);
 }
 
 Vec PipeCompiler::simdVecConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept {
   BL_ASSERT(!similarTo.empty());
 
-  VecWidth constWidth = VecWidth(uint32_t(similarTo[0].type()) - uint32_t(asmjit::RegType::kX86_Xmm));
+  VecWidth constWidth = VecWidth(uint32_t(similarTo[0].regType()) - uint32_t(asmjit::RegType::kVec128));
   return simdVecConst(c, bcstWidth, constWidth);
 }
 
@@ -288,14 +288,14 @@ x86::Mem PipeCompiler::simdMemConst(const void* c, Bcst bcstWidth, VecWidth cons
 }
 
 x86::Mem PipeCompiler::simdMemConst(const void* c, Bcst bcstWidth, const Vec& similarTo) noexcept {
-  VecWidth constWidth = VecWidth(uint32_t(similarTo.type()) - uint32_t(asmjit::RegType::kX86_Xmm));
+  VecWidth constWidth = VecWidth(uint32_t(similarTo.regType()) - uint32_t(asmjit::RegType::kVec128));
   return simdMemConst(c, bcstWidth, constWidth);
 }
 
 x86::Mem PipeCompiler::simdMemConst(const void* c, Bcst bcstWidth, const VecArray& similarTo) noexcept {
   BL_ASSERT(!similarTo.empty());
 
-  VecWidth constWidth = VecWidth(uint32_t(similarTo[0].type()) - uint32_t(asmjit::RegType::kX86_Xmm));
+  VecWidth constWidth = VecWidth(uint32_t(similarTo[0].regType()) - uint32_t(asmjit::RegType::kVec128));
   return simdMemConst(c, bcstWidth, constWidth);
 }
 
@@ -509,7 +509,7 @@ public:
 void PipeCompiler::emit_mov(const Gp& dst, const Operand_& src) noexcept {
   if (src.isImm() && src.as<Imm>().value() == 0) {
     Gp r(dst);
-    if (r.isGpq())
+    if (r.isGp64())
       r = r.r32();
     cc->xor_(r, r);
   }
@@ -567,7 +567,7 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
     case OpcodeRM::kLoadU8:
     case OpcodeRM::kLoadU16:
     case OpcodeRM::kLoadU32:
-      r.setSignature(x86::RegTraits<RegType::kGp32>::kSignature);
+      r.setSignature(asmjit::RegTraits<RegType::kGp32>::kSignature);
       if (size < 4)
         instId = Inst::kIdMovzx;
       break;
@@ -578,12 +578,12 @@ void PipeCompiler::emit_rm(OpcodeRM op, const Gp& dst, const Mem& src) noexcept 
       break;
 
     case OpcodeRM::kLoadI32:
-      instId = dst.isGpq() ? Inst::kIdMovsxd : Inst::kIdMov;
+      instId = dst.isGp64() ? Inst::kIdMovsxd : Inst::kIdMov;
       break;
 
     case OpcodeRM::kLoadI64:
     case OpcodeRM::kLoadU64:
-      BL_ASSERT(dst.isGpq());
+      BL_ASSERT(dst.isGp64());
       m.setSize(8);
       break;
 
@@ -2562,7 +2562,7 @@ static BL_NOINLINE void PipeCompiler_loadInto(PipeCompiler* pc, const Vec& vec, 
     else if (pc->hasAVX())
       cc->vmovdqu(vec, m);
     else
-      cc->movdqu(vec.as<Xmm>(), m);
+      cc->movdqu(vec, m);
   }
 }
 
@@ -2802,14 +2802,14 @@ static BL_NOINLINE void sse_int_widen(PipeCompiler* pc, const Vec& dst, const Ve
   switch (cvt) {
     case WideningOp::kI8ToI16: {
       cc->overwrite().emit(cvtInfo.unpackLo, dst, src);
-      cc->psraw(dst.as<Xmm>(), 8);
+      cc->psraw(dst, 8);
       return;
     }
 
     case WideningOp::kI8ToI32: {
       cc->overwrite().emit(Inst::kIdPunpcklbw, dst, src);
-      cc->punpcklwd(dst.as<Xmm>(), dst.as<Xmm>());
-      cc->psrad(dst.as<Xmm>(), 24);
+      cc->punpcklwd(dst, dst);
+      cc->psrad(dst, 24);
       return;
     }
 
@@ -2834,7 +2834,7 @@ static BL_NOINLINE void sse_int_widen(PipeCompiler* pc, const Vec& dst, const Ve
 
     case WideningOp::kI16ToI32: {
       cc->overwrite().emit(cvtInfo.unpackLo, dst, src);
-      cc->psrad(dst.as<Xmm>(), 16);
+      cc->psrad(dst, 16);
       return;
     }
 
@@ -2842,8 +2842,8 @@ static BL_NOINLINE void sse_int_widen(PipeCompiler* pc, const Vec& dst, const Ve
       Vec tmp = pc->newSimilarReg(dst, "@tmp");
       sseMov(pc, tmp, src);
       sseMov(pc, dst, src);
-      cc->psrad(tmp.as<Xmm>(), 31);
-      cc->punpckldq(dst.as<Xmm>(), tmp.as<Xmm>());
+      cc->psrad(tmp, 31);
+      cc->punpckldq(dst, tmp);
       return;
     }
 
@@ -2896,18 +2896,18 @@ static BL_NOINLINE void sseRound(PipeCompiler* pc, const Vec& dst, const Operand
       sseFMov(pc, dst, src, fm);
 
       if (fm == FloatMode::kF32S)
-        cc->cvttss2si(r, dst.as<Xmm>());
+        cc->cvttss2si(r, dst);
       else
-        cc->cvttsd2si(r, dst.as<Xmm>());
+        cc->cvttsd2si(r, dst);
 
       cc->emit(fi.fmov, t2, msb);
       cc->emit(fi.fandn, t2, dst);
       cc->emit(fi.fxor, t1, t1);
 
       if (fm == FloatMode::kF32S)
-        cc->cvtsi2ss(t1.as<Xmm>(), r);
+        cc->cvtsi2ss(t1, r);
       else
-        cc->cvtsi2sd(t1.as<Xmm>(), r);
+        cc->cvtsi2sd(t1, r);
 
       cc->emit(fi.fcmp, t2, maxn, x86::CmpImm::kLT);
       cc->emit(fi.fand, t1, t2);
@@ -2961,10 +2961,10 @@ static BL_NOINLINE void sseRound(PipeCompiler* pc, const Vec& dst, const Operand
       msb = pc->simdConst(&pc->ct.f32_sgn, Bcst::k32, dst);
       sseFMov(pc, dst, src, fm);
 
-      cc->cvttps2dq(t1.as<Xmm>(), dst.as<Xmm>());
+      cc->cvttps2dq(t1, dst);
       cc->emit(fi.fmov, t2, msb);
       cc->emit(fi.fandn, t2, dst);
-      cc->cvtdq2ps(t1.as<Xmm>(), t1.as<Xmm>());
+      cc->cvtdq2ps(t1, t1);
 
       cc->emit(fi.fcmp, t2, maxn, x86::CmpImm::kLT);
       cc->emit(fi.fand, t1, t2);
@@ -3796,7 +3796,8 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
           }
           else {
             OperandSignature srcSgn = OperandSignature{
-              elementSize == ElementSize::k8 ? x86::RegTraits<RegType::kGp8Lo>::kSignature : x86::RegTraits<RegType::kGp16>::kSignature};
+              elementSize == ElementSize::k8 ? asmjit::RegTraits<RegType::kGp8Lo>::kSignature : asmjit::RegTraits<RegType::kGp16>::kSignature
+            };
             src.as<Gp>().setSignature(srcSgn);
             cc->movzx(tmp, src.as<Gp>());
             cc->imul(tmp, tmp, mulBy);
@@ -3957,7 +3958,7 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
         }
 
         if (src.isMem()) {
-          cc->movd(dst.as<Xmm>(), src.as<Mem>());
+          cc->movd(dst, src.as<Mem>());
           src = dst;
         }
 
@@ -3970,7 +3971,7 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
       case OpcodeVV::kCvtU16HiToU32:
       case OpcodeVV::kCvtU32HiToU64:
         if (src.isVec() && dst.id() != src.id() && hasSSE4_1()) {
-          cc->pshufd(dst.as<Xmm>(), src.as<Xmm>(), x86::shuffleImm(3, 2, 3, 2));
+          cc->pshufd(dst, src.as<Vec>(), x86::shuffleImm(3, 2, 3, 2));
           cc->emit(instId, dst, dst);
           return;
         }
@@ -3983,37 +3984,37 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
 
           switch (op) {
             case OpcodeVV::kCvtI8HiToI16: {
-              cc->punpckhbw(dst.as<Xmm>(), dst.as<Xmm>());
-              cc->psraw(dst.as<Xmm>(), 8);
+              cc->punpckhbw(dst, dst);
+              cc->psraw(dst, 8);
               break;
             }
 
             case OpcodeVV::kCvtU8HiToU16: {
-              cc->emit(Inst::kIdPunpckhbw, dst.as<Xmm>(), simdConst(&ct.i_0000000000000000, Bcst::kNA, dst));
+              cc->emit(Inst::kIdPunpckhbw, dst, simdConst(&ct.i_0000000000000000, Bcst::kNA, dst));
               break;
             }
 
             case OpcodeVV::kCvtI16HiToI32: {
-              cc->punpckhwd(dst.as<Xmm>(), dst.as<Xmm>());
-              cc->psrad(dst.as<Xmm>(), 16);
+              cc->punpckhwd(dst, dst);
+              cc->psrad(dst, 16);
               break;
             }
 
             case OpcodeVV::kCvtU16HiToU32: {
-              cc->emit(Inst::kIdPunpckhwd, dst.as<Xmm>(), simdConst(&ct.i_0000000000000000, Bcst::kNA, dst));
+              cc->emit(Inst::kIdPunpckhwd, dst, simdConst(&ct.i_0000000000000000, Bcst::kNA, dst));
               break;
             }
 
             case OpcodeVV::kCvtI32HiToI64: {
               Vec tmp = newV128("@tmp");
               sseMov(this, tmp, dst);
-              cc->psrad(tmp.as<Xmm>(), 31);
-              cc->punpckhdq(dst.as<Xmm>(), tmp.as<Xmm>());
+              cc->psrad(tmp, 31);
+              cc->punpckhdq(dst, tmp);
               break;
             }
 
             case OpcodeVV::kCvtU32HiToU64: {
-              cc->emit(Inst::kIdPunpckhdq, dst.as<Xmm>(), simdConst(&ct.i_0000000000000000, Bcst::kNA, dst));
+              cc->emit(Inst::kIdPunpckhdq, dst, simdConst(&ct.i_0000000000000000, Bcst::kNA, dst));
               break;
             }
 
@@ -4045,7 +4046,7 @@ void PipeCompiler::emit_2v(OpcodeVV op, const Operand_& dst_, const Operand_& sr
         }
 
         if (src.isMem()) {
-          cc->movq(dst.as<Xmm>(), src.as<Mem>());
+          cc->movq(dst, src.as<Mem>());
           src = dst;
         }
 
@@ -4373,7 +4374,7 @@ void PipeCompiler::emit_2vi(OpcodeVVI op, const Operand_& dst_, const Operand_& 
 
         if (src.isMem()) {
           src.as<Mem>().addOffset(imm * 16u);
-          v_loadu128(dst.as<Xmm>(), src.as<Mem>());
+          v_loadu128(dst, src.as<Mem>());
           return;
         }
 
@@ -4660,12 +4661,12 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
           dst = dst.as<Gp>().r32();
 
         if (op == OpcodeVR::kExtractU32 && idx == 0) {
-          cc->vmovd(dst.as<Gp>(), src.as<Xmm>());
+          cc->vmovd(dst.as<Gp>(), src.as<Vec>());
           return;
         }
 
         if (op == OpcodeVR::kExtractU64) {
-          cc->vmovq(dst.as<Gp>(), src.as<Xmm>());
+          cc->vmovq(dst.as<Gp>(), src.as<Vec>());
           return;
         }
 
@@ -4763,35 +4764,35 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
         }
         else if (op == OpcodeVR::kInsertU8) {
           Gp tmp = newGp32("@tmp");
-          cc->pextrw(tmp, dst.as<Xmm>(), idx / 2u);
+          cc->pextrw(tmp, dst.as<Vec>(), idx / 2u);
           if (idx & 1)
             cc->mov(tmp.r8Hi(), src.as<Gp>().r8());
           else
             cc->mov(tmp.r8(), src.as<Gp>().r8());
-          cc->pinsrw(dst.as<Xmm>(), tmp, idx / 2u);
+          cc->pinsrw(dst.as<Vec>(), tmp, idx / 2u);
         }
         else if (op == OpcodeVR::kInsertU32) {
           if (idx == 0) {
             Vec tmp = newV128("@tmp");
-            cc->movd(tmp.as<Xmm>(), src.as<Gp>());
-            cc->movss(dst.as<Xmm>(), tmp.as<Xmm>());
+            cc->movd(tmp, src.as<Gp>());
+            cc->movss(dst.as<Vec>(), tmp);
           }
           else {
             Gp tmp = newGp32("@tmp");
-            cc->pinsrw(dst.as<Xmm>(), src.as<Gp>(), idx * 2u);
+            cc->pinsrw(dst.as<Vec>(), src.as<Gp>(), idx * 2u);
             cc->mov(tmp.as<Gp>(), src.as<Gp>());
             cc->shr(tmp.as<Gp>(), 16);
-            cc->pinsrw(dst.as<Xmm>(), tmp, idx * 2u + 1u);
+            cc->pinsrw(dst.as<Vec>(), tmp, idx * 2u + 1u);
           }
         }
         else {
           Vec tmp = newV128("@tmp");
-          cc->movq(tmp.as<Xmm>(), src.as<Gp>());
+          cc->movq(tmp, src.as<Gp>());
 
           if (idx == 0)
-            cc->movsd(dst.as<Xmm>(), tmp.as<Xmm>());
+            cc->movsd(dst.as<Vec>(), tmp);
           else
-            cc->punpcklqdq(dst.as<Xmm>(), tmp.as<Xmm>());
+            cc->punpcklqdq(dst.as<Vec>(), tmp);
         }
 
         return;
@@ -4808,16 +4809,16 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
           dst = dst.as<Gp>().r32();
 
         if (op == OpcodeVR::kExtractU32 && idx == 0) {
-          cc->movd(dst.as<Gp>(), src.as<Xmm>());
+          cc->movd(dst.as<Gp>(), src.as<Vec>());
         }
         else if (op == OpcodeVR::kExtractU64 && idx == 0) {
-          cc->movq(dst.as<Gp>(), src.as<Xmm>());
+          cc->movq(dst.as<Gp>(), src.as<Vec>());
         }
         else if (hasSSEExt(SSEExt(opInfo.sseExt))) {
           cc->emit(opInfo.sseInstId, dst, src, idx);
         }
         else if (op == OpcodeVR::kExtractU8) {
-          cc->pextrw(dst.as<Gp>(), src.as<Xmm>(), idx / 2u);
+          cc->pextrw(dst.as<Gp>(), src.as<Vec>(), idx / 2u);
           if (idx & 1)
             cc->shr(dst.as<Gp>(), 8);
           else
@@ -4825,13 +4826,13 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
         }
         else if (op == OpcodeVR::kExtractU32) {
           Vec tmp = newSimilarReg(dst.as<Vec>(), "@tmp");
-          cc->pshufd(tmp.as<Xmm>(), src.as<Xmm>(), x86::shuffleImm(idx, idx, idx, idx));
-          cc->movd(dst.as<Gp>(), tmp.as<Xmm>());
+          cc->pshufd(tmp, src.as<Vec>(), x86::shuffleImm(idx, idx, idx, idx));
+          cc->movd(dst.as<Gp>(), tmp);
         }
         else {
           Vec tmp = newSimilarReg(dst.as<Vec>(), "@tmp");
-          cc->pshufd(tmp.as<Xmm>(), src.as<Xmm>(), x86::shuffleImm(3, 2, 3, 2));
-          cc->movq(dst.as<Gp>(), tmp.as<Xmm>());
+          cc->pshufd(tmp, src.as<Vec>(), x86::shuffleImm(3, 2, 3, 2));
+          cc->movq(dst.as<Gp>(), tmp);
         }
 
         return;
@@ -4840,7 +4841,7 @@ void PipeCompiler::emit_2vs(OpcodeVR op, const Operand_& dst_, const Operand_& s
       case OpcodeVR::kCvtIntToF32:
       case OpcodeVR::kCvtIntToF64: {
         dst = dst.as<Vec>().xmm();
-        cc->pxor(dst.as<Xmm>(), dst.as<Xmm>());
+        cc->pxor(dst.as<Vec>(), dst.as<Vec>());
         cc->emit(opInfo.sseInstId, dst, src);
         return;
       }
@@ -4879,7 +4880,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
         dst = dst.xmm();
         src.setSize(1);
         avxZero(this, dst);
-        cc->vpinsrb(dst.as<Xmm>(), dst.as<Xmm>(), src, 0);
+        cc->vpinsrb(dst, dst, src, 0);
         return;
       }
 
@@ -4888,7 +4889,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
           dst = dst.xmm();
           src.setSize(1);
           avxZero(this, dst);
-          cc->vpinsrw(dst.as<Xmm>(), dst.as<Xmm>(), src, 0);
+          cc->vpinsrw(dst, dst, src, 0);
         }
         [[fallthrough]];
       case OpcodeVM::kLoad32_U32:
@@ -4963,7 +4964,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
       case OpcodeVM::kLoadCvt32_U32ToU64: {
         dst.setSignature(signatureOfXmmYmmZmm[0]);
         src.setSize(4);
-        cc->vmovd(dst.as<Xmm>(), src);
+        cc->vmovd(dst, src);
         cc->emit(opInfo.avxInstId, dst, dst);
         return;
       }
@@ -5016,9 +5017,9 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
         }
         else {
           if (idx == 0)
-            cc->vmovlpd(dst.as<Xmm>(), dst.as<Xmm>(), src);
+            cc->vmovlpd(dst, dst, src);
           else
-            cc->vmovhpd(dst.as<Xmm>(), dst.as<Xmm>(), src);
+            cc->vmovhpd(dst, dst, src);
         }
         return;
       }
@@ -5054,21 +5055,21 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
         src.setSize(1);
 
         if (hasSSE4_1()) {
-          cc->xorps(dst.as<Xmm>(), dst.as<Xmm>());
-          cc->pinsrb(dst.as<Xmm>(), src, 0);
+          cc->xorps(dst, dst);
+          cc->pinsrb(dst, src, 0);
         }
         else {
           Gp tmp = newGp32("@tmp");
           cc->movzx(tmp, src);
-          cc->movd(dst.as<Xmm>(), tmp);
+          cc->movd(dst, tmp);
         }
         return;
       }
 
       case OpcodeVM::kLoad16_U16: {
         src.setSize(2);
-        cc->xorps(dst.as<Xmm>(), dst.as<Xmm>());
-        cc->pinsrw(dst.as<Xmm>(), src, 0);
+        cc->xorps(dst, dst);
+        cc->pinsrw(dst, src, 0);
         return;
       }
 
@@ -5106,11 +5107,11 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
           src.setSize(1);
           Gp tmp = newGp32("@tmp");
           cc->movzx(tmp, src);
-          cc->movd(dst.as<Xmm>(), tmp);
+          cc->movd(dst, tmp);
 
           src.addOffset(1);
           cc->movzx(tmp, src);
-          cc->pinsrw(dst.as<Xmm>(), src, 4);
+          cc->pinsrw(dst, src, 4);
         }
         return;
       }
@@ -5132,7 +5133,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
       case OpcodeVM::kLoadCvt32_I32ToI64:
       case OpcodeVM::kLoadCvt32_U32ToU64: {
         src.setSize(4);
-        cc->vmovd(dst.as<Xmm>(), src);
+        cc->vmovd(dst, src);
         sse_int_widen(this, dst, dst, WideningOp(opInfo.cvt));
         return;
       }
@@ -5155,7 +5156,7 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
           cc->emit(inst, dst, src);
         }
         else {
-          cc->movq(dst.as<Xmm>(), src);
+          cc->movq(dst, src);
           sse_int_widen(this, dst, dst, WideningOp(opInfo.cvt));
         }
         return;
@@ -5180,51 +5181,51 @@ void PipeCompiler::emit_vm(OpcodeVM op, const Vec& dst_, const Mem& src_, uint32
         if (op == OpcodeVM::kLoadInsertU8) {
           Gp tmp = newGp32("@tmp");
           src.setSize(1);
-          cc->pextrw(tmp, dst.as<Xmm>(), idx / 2u);
+          cc->pextrw(tmp, dst, idx / 2u);
           if (idx & 1)
             cc->mov(tmp.r8Hi(), src);
           else
             cc->mov(tmp.r8(), src);
-          cc->pinsrw(dst.as<Xmm>(), tmp, idx / 2u);
+          cc->pinsrw(dst, tmp, idx / 2u);
           return;
         }
 
         if (op == OpcodeVM::kLoadInsertU32) {
           if (idx == 0) {
             Vec tmp = newV128("@tmp");
-            cc->movd(tmp.as<Xmm>(), src);
-            cc->movss(dst.as<Xmm>(), tmp.as<Xmm>());
+            cc->movd(tmp, src);
+            cc->movss(dst, tmp);
           }
           else {
-            cc->pinsrw(dst.as<Xmm>(), src, idx * 2u);
+            cc->pinsrw(dst, src, idx * 2u);
             src.addOffset(2);
-            cc->pinsrw(dst.as<Xmm>(), src, idx * 2u + 1);
+            cc->pinsrw(dst, src, idx * 2u + 1);
           }
           return;
         }
 
         BL_ASSERT(op == OpcodeVM::kLoadInsertU64);
         if (idx == 0)
-          cc->movlpd(dst.as<Xmm>(), src);
+          cc->movlpd(dst, src);
         else
-          cc->movhpd(dst.as<Xmm>(), src);
+          cc->movhpd(dst, src);
 
         return;
       }
 
       case OpcodeVM::kLoadInsertF32x2: {
         if (idx == 0)
-          cc->movlps(dst.as<Xmm>(), src);
+          cc->movlps(dst, src);
         else
-          cc->movhps(dst.as<Xmm>(), src);
+          cc->movhps(dst, src);
         return;
       }
 
       case OpcodeVM::kLoadInsertF64: {
         if (idx == 0)
-          cc->movlpd(dst.as<Xmm>(), src);
+          cc->movlpd(dst, src);
         else
-          cc->movhpd(dst.as<Xmm>(), src);
+          cc->movhpd(dst, src);
         return;
       }
 
@@ -5405,18 +5406,18 @@ void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const Vec& src_, uint32
 
         if (op == OpcodeMV::kStoreExtractU32) {
           if (idx == 0) {
-            cc->vmovd(dst, src.as<Xmm>());
+            cc->vmovd(dst, src);
             return;
           }
         }
 
         if (op == OpcodeMV::kStoreExtractU64) {
           if (idx == 0) {
-            cc->vmovq(dst, src.as<Xmm>());
+            cc->vmovq(dst, src);
             return;
           }
           else if (!is64Bit()) {
-            cc->vmovhpd(dst, src.as<Xmm>());
+            cc->vmovhpd(dst, src);
             return;
           }
         }
@@ -5440,11 +5441,11 @@ void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const Vec& src_, uint32
         dst.setSize(1);
 
         if (hasSSE4_1()) {
-          cc->pextrb(dst, src.as<Xmm>(), 0);
+          cc->pextrb(dst, src, 0);
         }
         else {
           Gp tmp = newGp32("@tmp");
-          cc->movd(tmp, src.as<Xmm>());
+          cc->movd(tmp, src);
           cc->mov(dst, tmp.r8());
         }
         return;
@@ -5453,11 +5454,11 @@ void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const Vec& src_, uint32
       case OpcodeMV::kStore16_U16: {
         dst.setSize(2);
         if (hasSSE4_1()) {
-          cc->pextrw(dst, src.as<Xmm>(), 0);
+          cc->pextrw(dst, src, 0);
         }
         else {
           Gp tmp = newGp32("@tmp");
-          cc->movd(tmp, src.as<Xmm>());
+          cc->movd(tmp, src);
           cc->mov(dst, tmp.r16());
         }
         return;
@@ -5552,19 +5553,19 @@ void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const Vec& src_, uint32
       case OpcodeMV::kStoreExtractU64: {
         if (op == OpcodeMV::kStoreExtractU32) {
           if (idx == 0) {
-            cc->movd(dst, src.as<Xmm>());
+            cc->movd(dst, src);
             return;
           }
         }
 
         if (op == OpcodeMV::kStoreExtractU64) {
           if (idx == 0) {
-            cc->movq(dst, src.as<Xmm>());
+            cc->movq(dst, src);
             return;
           }
 
           if (idx == 1) {
-            cc->movhps(dst, src.as<Xmm>());
+            cc->movhps(dst, src);
             return;
           }
         }
@@ -5579,15 +5580,15 @@ void PipeCompiler::emit_mv(OpcodeMV op, const Mem& dst_, const Vec& src_, uint32
         // this instruction was added by SSE4.1 as well (there are actually two forms of PEXTRW).
         if (op == OpcodeMV::kStoreExtractU16) {
           Gp tmp = newGp32("@pextrw_tmp");
-          cc->pextrw(tmp, src.as<Xmm>(), idx);
+          cc->pextrw(tmp, src, idx);
           cc->mov(dst, tmp);
           return;
         }
 
         if (op == OpcodeMV::kStoreExtractU32) {
           Vec tmp = newV128("@pextrd_tmp");
-          cc->pshufd(tmp.as<Xmm>(), src.as<Xmm>(), x86::shuffleImm(idx, idx, idx, idx));
-          cc->movd(dst, tmp.as<Xmm>());
+          cc->pshufd(tmp, src, x86::shuffleImm(idx, idx, idx, idx));
+          cc->movd(dst, tmp);
           return;
         }
 
@@ -6542,11 +6543,11 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
           if (isSameVec(dst, src1v)) {
             Vec tmp = cc->newSimilarReg(dst, "@tmp");
             v_swap_f64(tmp, dst);
-            cc->addpd(dst.as<Xmm>(), tmp.as<Xmm>());
+            cc->addpd(dst, tmp);
           }
           else {
             v_swap_f64(dst, src1v);
-            cc->addpd(dst.as<Xmm>(), src1v.as<Xmm>());
+            cc->addpd(dst, src1v);
           }
         }
         else {
@@ -6558,26 +6559,26 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
 
             sseMov(this, dst, src1v);
             v_swap_f64(tmp, dst);
-            cc->movhpd(dst.as<Xmm>(), m);
+            cc->movhpd(dst, m);
 
             m.addOffset(8);
-            cc->movhpd(tmp.as<Xmm>(), m);
-            cc->addpd(dst.as<Xmm>(), tmp.as<Xmm>());
+            cc->movhpd(tmp, m);
+            cc->addpd(dst, tmp);
           }
           else if (isSameVec(dst, src2)) {
             sseMov(this, tmp, src1v);
-            cc->unpcklpd(tmp.as<Xmm>(), src2.as<Xmm>());
-            cc->movhlps(dst.as<Xmm>(), src1v.as<Xmm>());
-            cc->addpd(dst.as<Xmm>(), tmp.as<Xmm>());
+            cc->unpcklpd(tmp, src2.as<Vec>());
+            cc->movhlps(dst, src1v);
+            cc->addpd(dst, tmp);
           }
           else {
             sseMov(this, tmp, src1v);
-            cc->unpckhpd(tmp.as<Xmm>(), src2.as<Xmm>());
+            cc->unpckhpd(tmp, src2.as<Vec>());
 
             sseMov(this, dst, src1v);
-            cc->unpcklpd(dst.as<Xmm>(), src2.as<Xmm>());
+            cc->unpcklpd(dst, src2.as<Vec>());
 
-            cc->addpd(dst.as<Xmm>(), tmp.as<Xmm>());
+            cc->addpd(dst, tmp);
           }
         }
         return;
@@ -6695,15 +6696,15 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
         m_data.setSize(1);
         m_pred.setSize(1);
 
-        cc->movaps(m_data, src1v.as<Xmm>());
+        cc->movaps(m_data, src1v);
 
         // The trick is to AND all indexes by 0x0F and then to do unsigned minimum so all indexes are in [0, 17) range,
         // where index 16 maps to zero.
         Vec tmp = newSimilarReg(dst, "@tmp");
-        cc->vmovaps(tmp.as<Xmm>(), simdMemConst(&ct.i_0F0F0F0F0F0F0F0F, Bcst::kNA, tmp));
-        cc->pand(tmp.as<Xmm>(), src2.as<Xmm>());
-        cc->pminub(tmp.as<Xmm>(), simdMemConst(&ct.i_1010101010101010, Bcst::kNA, tmp));
-        cc->movaps(m_pred, tmp.as<Xmm>());
+        cc->vmovaps(tmp, simdMemConst(&ct.i_0F0F0F0F0F0F0F0F, Bcst::kNA, tmp));
+        cc->pand(tmp, src2.as<Vec>());
+        cc->pminub(tmp, simdMemConst(&ct.i_1010101010101010, Bcst::kNA, tmp));
+        cc->movaps(m_pred, tmp);
         cc->mov(m_data.cloneAdjusted(16), 0);
 
         Gp acc = newGpPtr("@acc");
@@ -6721,9 +6722,9 @@ void PipeCompiler::emit_3v(OpcodeVVV op, const Operand_& dst_, const Operand_& s
           cc->mov(acc.r8Hi(), m_data);
 
           if (i == 0)
-            cc->movd(dst.as<Xmm>(), acc.r32());
+            cc->movd(dst, acc.r32());
           else
-            cc->pinsrw(dst.as<Xmm>(), acc.r32(), i);
+            cc->pinsrw(dst, acc.r32(), i);
         }
 
         return;

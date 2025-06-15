@@ -45,7 +45,7 @@ public:
 
   template<typename T>
   BL_INLINE T* newPartT() noexcept {
-    void* p = _zone.alloc(sizeof(T), 8);
+    void* p = _zone.alloc(asmjit::Zone::alignedSizeOf<T>());
     if (BL_UNLIKELY(!p))
       return nullptr;
     return new(BLInternal::PlacementNew{p}) T(&_pc);
@@ -53,7 +53,7 @@ public:
 
   template<typename T, typename... Args>
   BL_INLINE T* newPartT(Args&&... args) noexcept {
-    void* p = _zone.alloc(sizeof(T), 8);
+    void* p = _zone.alloc(asmjit::Zone::alignedSizeOf<T>());
     if (BL_UNLIKELY(!p))
       return nullptr;
     return new(BLInternal::PlacementNew{p}) T(&_pc, BLInternal::forward<Args>(args)...);

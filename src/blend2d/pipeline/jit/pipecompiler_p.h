@@ -1358,12 +1358,12 @@ public:
 
   //! Tests whether a scalar operation is zeroing the rest of the destination register (AArch64).
   BL_INLINE_NODEBUG bool isScalarOpZeroing() const noexcept { return _scalarOpBehavior == ScalarOpBehavior::kZeroing; }
-  //! Tests whether a scalar operation is preserving the low 128-bit part of the destination register (X86, X86_64).
+  //! Tests whether a scalar operation is preserving the low 128-bit part of the destination register (X86|X86_64).
   BL_INLINE_NODEBUG bool isScalarOpPreservingVec128() const noexcept { return _scalarOpBehavior == ScalarOpBehavior::kPreservingVec128; }
 
   //! Tests whether a floating point min/max operation selects a finite value if one of the values is NaN (AArch64).
   BL_INLINE_NODEBUG bool isFMinMaxFinite() const noexcept { return _fMinMaxOpBehavior == FMinMaxOpBehavior::kFiniteValue; }
-  //! Tests whether a floating point min/max operation works as a ternary if - `if a <|> b ? a : b` (X86, X86_64).
+  //! Tests whether a floating point min/max operation works as a ternary if - `if a <|> b ? a : b` (X86|X86_64).
   BL_INLINE_NODEBUG bool isFMinMaxTernary() const noexcept { return _fMinMaxOpBehavior == FMinMaxOpBehavior::kTernaryLogic; }
 
   //! Tests whether a floating point mul+add operation is fused (uses FMA).
@@ -1424,12 +1424,12 @@ public:
 
   BL_INLINE void rename(const OpArray& opArray, const char* name) noexcept {
     for (uint32_t i = 0; i < opArray.size(); i++)
-      cc->rename(opArray[i].as<asmjit::BaseReg>(), "%s%u", name, unsigned(i));
+      cc->rename(opArray[i].as<asmjit::Reg>(), "%s%u", name, unsigned(i));
   }
 
   BL_INLINE void rename(const OpArray& opArray, const char* prefix, const char* name) noexcept {
     for (uint32_t i = 0; i < opArray.size(); i++)
-      cc->rename(opArray[i].as<asmjit::BaseReg>(), "%s%s%u", prefix, name, unsigned(i));
+      cc->rename(opArray[i].as<asmjit::Reg>(), "%s%s%u", prefix, name, unsigned(i));
   }
 
   //! \}
@@ -1482,7 +1482,7 @@ public:
     BL_ASSERT(n <= OpArray::kMaxSize);
     dst._size = n;
     for (uint32_t i = 0; i < n; i++) {
-      cc->_newRegFmt(&dst[i].as<asmjit::BaseReg>(), typeId, "%s%u", name, i);
+      cc->_newRegFmt(&dst[i].as<asmjit::Reg>(), typeId, "%s%u", name, i);
     }
   }
 
@@ -1490,23 +1490,23 @@ public:
     BL_ASSERT(n <= OpArray::kMaxSize);
     dst._size = n;
     for (uint32_t i = 0; i < n; i++) {
-      cc->_newRegFmt(&dst[i].as<asmjit::BaseReg>(), typeId, "%s%s%u", prefix, name, i);
+      cc->_newRegFmt(&dst[i].as<asmjit::Reg>(), typeId, "%s%s%u", prefix, name, i);
     }
   }
 
-  BL_NOINLINE void newRegArray(OpArray& dst, uint32_t n, const asmjit::BaseReg& ref, const char* name) noexcept {
+  BL_NOINLINE void newRegArray(OpArray& dst, uint32_t n, const asmjit::Reg& ref, const char* name) noexcept {
     BL_ASSERT(n <= OpArray::kMaxSize);
     dst._size = n;
     for (uint32_t i = 0; i < n; i++) {
-      cc->_newRegFmt(&dst[i].as<asmjit::BaseReg>(), ref, "%s%u", name, i);
+      cc->_newRegFmt(&dst[i].as<asmjit::Reg>(), ref, "%s%u", name, i);
     }
   }
 
-  BL_NOINLINE void newRegArray(OpArray& dst, uint32_t n, const asmjit::BaseReg& ref, const char* prefix, const char* name) noexcept {
+  BL_NOINLINE void newRegArray(OpArray& dst, uint32_t n, const asmjit::Reg& ref, const char* prefix, const char* name) noexcept {
     BL_ASSERT(n <= OpArray::kMaxSize);
     dst._size = n;
     for (uint32_t i = 0; i < n; i++) {
-      cc->_newRegFmt(&dst[i].as<asmjit::BaseReg>(), ref, "%s%s%u", prefix, name, i);
+      cc->_newRegFmt(&dst[i].as<asmjit::Reg>(), ref, "%s%s%u", prefix, name, i);
     }
   }
 

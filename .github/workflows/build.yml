@@ -17,112 +17,96 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { title: "linux/analyze-build", host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Debug"  , diagnostics: "analyze-build" }
-          - { title: "linux/asan"         , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", diagnostics: "asan", defs: "BLEND2D_TEST=1" }
-          - { title: "linux/msan"         , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", diagnostics: "msan", defs: "BLEND2D_TEST=1,BLEND2D_NO_JIT=1" }
-          - { title: "linux/tsan"         , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", diagnostics: "tsan", defs: "BLEND2D_TEST=1" }
-          - { title: "linux/tsan/no-futex", host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", diagnostics: "tsan", defs: "BLEND2D_TEST=1,BLEND2D_NO_FUTEX=1" }
-          - { title: "linux/ubsan"        , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", diagnostics: "ubsan", defs: "BLEND2D_TEST=1" }
-          - { title: "linux/hardened"     , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", diagnostics: "hardened", defs: "BLEND2D_TEST=1" }
-          - { title: "linux/valgrind"     , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-19", conf: "Release", diagnostics: "valgrind", defs: "BLEND2D_TEST=1" }
-
-          - { title: "linux/no-futex"     , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_FUTEX=1" }
-          - { title: "linux/no-intrin"    , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_INTRINSICS=1" }
-          - { title: "linux/no-jit"       , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_JIT=1" }
-          - { title: "linux/no-tls"       , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_TLS=1" }
-
-          # NOTE: We cannot force AVX-512 as there is no way to enforce AVX-512 presence on CI.
-          - { title: "linux/force-sse4.2" , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,CMAKE_CXX_FLAGS=-msse4.2" }
-          - { title: "linux/force-avx"    , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,CMAKE_CXX_FLAGS=-mavx" }
-          - { title: "linux/force-avx2"   , host: "ubuntu-latest" , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,CMAKE_CXX_FLAGS=-mavx2" }
-
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "gcc-9"   , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "gcc-9"   , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "gcc-9"   , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "gcc-9"   , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "gcc-10"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "gcc-10"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "gcc-10"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "gcc-10"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "gcc-11"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "gcc-11"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "gcc-11"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "gcc-11"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "gcc-12"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "gcc-12"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "gcc-12"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "gcc-12"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "gcc-13"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "gcc-13"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "gcc-13"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "gcc-13"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "gcc-14"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "gcc-14"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "gcc-14"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "gcc-14"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-22.04"  , arch: "x86"    , cc: "clang-11", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-22.04"  , arch: "x86"    , cc: "clang-11", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-22.04"  , arch: "x64"    , cc: "clang-11", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-22.04"  , arch: "x64"    , cc: "clang-11", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-22.04"  , arch: "x86"    , cc: "clang-12", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-22.04"  , arch: "x86"    , cc: "clang-12", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-22.04"  , arch: "x64"    , cc: "clang-12", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-22.04"  , arch: "x64"    , cc: "clang-12", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-22.04"  , arch: "x86"    , cc: "clang-13", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-22.04"  , arch: "x86"    , cc: "clang-13", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-22.04"  , arch: "x64"    , cc: "clang-13", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-22.04"  , arch: "x64"    , cc: "clang-13", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "clang-14", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "clang-14", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-14", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-14", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "clang-15", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "clang-15", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-15", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-15", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "clang-16", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "clang-14", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-16", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-16", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "clang-17", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "clang-17", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-17", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-17", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "clang-18", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "clang-18", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-18", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-18", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "clang-19", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x86"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-19", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "linux"              , host: "ubuntu-24.04"  , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "macos"              , host: "macos-13"      , arch: "x64"    , cc: "gcc-14"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "macos"              , host: "macos-13"      , arch: "x64"    , cc: "gcc-14"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "macos"              , host: "macos-13"      , arch: "x64"    , cc: "clang"   , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "macos"              , host: "macos-13"      , arch: "x64"    , cc: "clang"   , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "macos"              , host: "macos-14"      , arch: "arm64"  , cc: "clang"   , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "macos"              , host: "macos-14"      , arch: "arm64"  , cc: "clang"   , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "windows"            , host: "windows-2022"  , arch: "x86"    , cc: "vs2022"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "windows"            , host: "windows-2022"  , arch: "x86"    , cc: "vs2022"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-          - { title: "windows"            , host: "windows-2022"  , arch: "x64"    , cc: "vs2022"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
-          - { title: "windows"            , host: "windows-2022"  , arch: "x64"    , cc: "vs2022"  , conf: "Release", defs: "BLEND2D_TEST=1" }
-
-          # Cross compiled, cannot run tests (Windows/ARM64).
-          - { title: "windows"            , host: "windows-2022"  , arch: "arm64"  , cc: "vs2022"  , conf: "Debug"  , defs: "BLEND2D_TEST=0" }
-          - { title: "windows"            , host: "windows-2022"  , arch: "arm64"  , cc: "vs2022"  , conf: "Release", defs: "BLEND2D_TEST=0" }
+          - { title: "linux/analyze-build", host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Debug"  , defs: "BLEND2D_TEST=0"                   , diagnostics: "analyze-build" }
+          - { title: "linux/asan"         , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1"                   , diagnostics: "asan" }
+          - { title: "linux/msan/no-jit"  , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_JIT=1"  , diagnostics: "msan" }
+          - { title: "linux/tsan"         , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1"                   , diagnostics: "tsan" }
+          - { title: "linux/tsan/no-futex", host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_FUTEX=1", diagnostics: "tsan" }
+          - { title: "linux/ubsan"        , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1"                   , diagnostics: "ubsan" }
+          - { title: "linux/hardened"     , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1"                   , diagnostics: "hardened" }
+          - { title: "linux/valgrind"     , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1"                   , diagnostics: "valgrind" }
+          - { title: "linux/no-futex"     , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_FUTEX=1" }
+          - { title: "linux/no-intrin"    , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_INTRINSICS=1" }
+          - { title: "linux/no-jit"       , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_JIT=1" }
+          - { title: "linux/no-tls"       , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,BLEND2D_NO_TLS=1" }
+          - { title: "linux/use-c++20"    , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Debug"  , defs: "BLEND2D_TEST=1,CMAKE_CXX_FLAGS=-std=c++20" }
+          - { title: "linux/use-c++23"    , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Debug"  , defs: "BLEND2D_TEST=1,CMAKE_CXX_FLAGS=-std=c++23" }
+          - { title: "linux/use-sse4.2"   , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,CMAKE_CXX_FLAGS=-msse4.2" }
+          - { title: "linux/use-avx"      , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,CMAKE_CXX_FLAGS=-mavx" }
+          - { title: "linux/use-avx2"     , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1,CMAKE_CXX_FLAGS=-mavx2" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "gcc-9"   , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "gcc-9"   , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "gcc-9"   , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "gcc-9"   , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "gcc-10"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "gcc-10"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "gcc-10"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "gcc-10"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "gcc-11"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "gcc-11"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "gcc-11"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "gcc-11"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "gcc-12"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "gcc-12"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "gcc-12"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "gcc-12"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "gcc-13"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "gcc-13"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "gcc-13"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "gcc-13"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "gcc-14"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "gcc-14"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "gcc-14"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "gcc-14"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "clang-14", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "clang-14", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-14", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-14", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "clang-15", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "clang-15", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-15", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-15", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "clang-16", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "clang-16", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-16", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-16", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "clang-17", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "clang-17", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-17", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-17", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "clang-18", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "clang-18", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-18", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-18", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "clang-19", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x86"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04"    , arch: "x64"    , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04-arm", arch: "arm64"  , cc: "clang-19", conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "linux"              , host: "ubuntu-24.04-arm", arch: "arm64"  , cc: "clang-19", conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "macos"              , host: "macos-13"        , arch: "x64"    , cc: "gcc-14"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "macos"              , host: "macos-13"        , arch: "x64"    , cc: "gcc-14"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "macos"              , host: "macos-13"        , arch: "x64"    , cc: "clang"   , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "macos"              , host: "macos-13"        , arch: "x64"    , cc: "clang"   , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "macos"              , host: "macos-14"        , arch: "arm64"  , cc: "clang"   , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "macos"              , host: "macos-14"        , arch: "arm64"  , cc: "clang"   , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "windows"            , host: "windows-2022"    , arch: "x86"    , cc: "vs2022"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "windows"            , host: "windows-2022"    , arch: "x86"    , cc: "vs2022"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "windows"            , host: "windows-2022"    , arch: "x64"    , cc: "vs2022"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "windows"            , host: "windows-2022"    , arch: "x64"    , cc: "vs2022"  , conf: "Release", defs: "BLEND2D_TEST=1" }
+          - { title: "windows"            , host: "windows-11-arm"  , arch: "arm64"  , cc: "vs2022"  , conf: "Debug"  , defs: "BLEND2D_TEST=1" }
+          - { title: "windows"            , host: "windows-11-arm"  , arch: "arm64"  , cc: "vs2022"  , conf: "Release", defs: "BLEND2D_TEST=1" }
 
           # Cross compiled, cannot run tests (Windows/UWP).
           - { title: "windows/uwp"        , host: "windows-2022"  , arch: "x64"    , cc: "vs2022"  , conf: "Release", defs: "BLEND2D_TEST=0,CMAKE_SYSTEM_NAME=WindowsStore,CMAKE_SYSTEM_VERSION=10.0" }
 
-          - { title: "freebsd"            , host: "ubuntu-latest" , arch: "x64"    , cc: "clang"   , conf: "Release", vm: "freebsd", vm_ver: "14.1", defs: "BLEND2D_TEST=1" }
-          - { title: "freebsd"            , host: "ubuntu-latest" , arch: "arm64"  , cc: "clang"   , conf: "Release", vm: "freebsd", vm_ver: "14.1", defs: "BLEND2D_TEST=1" }
-          - { title: "netbsd"             , host: "ubuntu-latest" , arch: "x64"    , cc: "clang"   , conf: "Release", vm: "netbsd" , vm_ver: "10.0", defs: "BLEND2D_TEST=1" }
-          - { title: "netbsd"             , host: "ubuntu-latest" , arch: "arm64"  , cc: "clang"   , conf: "Release", vm: "netbsd" , vm_ver: "10.0", defs: "BLEND2D_TEST=1" }
+          - { title: "freebsd"            , host: "ubuntu-latest" , arch: "x64"    , cc: "clang"   , conf: "Release", vm: "freebsd", vm_ver: "14.2", defs: "BLEND2D_TEST=1" }
+          - { title: "freebsd"            , host: "ubuntu-latest" , arch: "arm64"  , cc: "clang"   , conf: "Release", vm: "freebsd", vm_ver: "14.2", defs: "BLEND2D_TEST=1" }
+          - { title: "netbsd"             , host: "ubuntu-latest" , arch: "x64"    , cc: "clang"   , conf: "Release", vm: "netbsd" , vm_ver: "10.1", defs: "BLEND2D_TEST=1" }
+          - { title: "netbsd"             , host: "ubuntu-latest" , arch: "arm64"  , cc: "clang"   , conf: "Release", vm: "netbsd" , vm_ver: "10.1", defs: "BLEND2D_TEST=1" }
           - { title: "openbsd"            , host: "ubuntu-latest" , arch: "x64"    , cc: "clang"   , conf: "Release", vm: "openbsd", vm_ver: "7.4" , defs: "BLEND2D_TEST=1" }
           - { title: "openbsd"            , host: "ubuntu-latest" , arch: "arm64"  , cc: "clang"   , conf: "Release", vm: "openbsd", vm_ver: "7.4" , defs: "BLEND2D_TEST=1" }
-
           - { title: "debian"             , host: "ubuntu-latest" , arch: "arm/v7" , cc: "clang"   , conf: "Release", vm: "debian:unstable", defs: "BLEND2D_TEST=1" }
-          - { title: "debian"             , host: "ubuntu-latest" , arch: "arm64"  , cc: "clang"   , conf: "Release", vm: "debian:unstable", defs: "BLEND2D_TEST=1" }
           - { title: "debian"             , host: "ubuntu-latest" , arch: "riscv64", cc: "clang"   , conf: "Release", vm: "debian:unstable", defs: "BLEND2D_TEST=1" }
           - { title: "debian"             , host: "ubuntu-latest" , arch: "ppc64le", cc: "clang"   , conf: "Release", vm: "debian:unstable", defs: "BLEND2D_TEST=1" }
 
