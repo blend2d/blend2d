@@ -807,7 +807,7 @@ elseif(BLEND2D_ARCH_AARCH32 OR BLEND2D_ARCH_AARCH64)
   else()
     blend2d_detect_cflags(BLEND2D_CFLAGS_ASIMD -mfpu=neon-vfpv4)
     if (BLEND2D_ARCH_AARCH64)
-      blend2d_detect_cflags(BLEND2D_CFLAGS_ASIMD_CRYPTO -march=armv8-a+aes+crc)
+      blend2d_detect_cflags(BLEND2D_CFLAGS_ASIMD_CRYPTO -march=armv8-a+aes+crc+crypto)
     endif()
   endif()
 
