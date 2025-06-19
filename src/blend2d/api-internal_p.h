@@ -603,6 +603,14 @@ static BL_INLINE_NODEBUG void blAssignFunc(T** dst, F f) noexcept { *(void**)dst
 // Miscellaneous Internals
 // =======================
 
+template<typename T>
+static BL_INLINE_NODEBUG constexpr void blSetFlag(T& x, const T& y, bool on) noexcept {
+    if (on)
+        ((typename std::underlying_type<T>::type&)(x) |= (typename std::underlying_type<T>::type)(y));
+    else
+        ((typename std::underlying_type<T>::type&)(x) &= ~(typename std::underlying_type<T>::type)(y));
+}
+
 //! Checks whether `dataAccessFlags` is valid.
 static BL_INLINE_NODEBUG bool blDataAccessFlagsIsValid(uint32_t dataAccessFlags) noexcept {
   return dataAccessFlags == BL_DATA_ACCESS_READ ||

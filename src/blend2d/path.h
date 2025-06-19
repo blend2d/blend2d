@@ -1344,6 +1344,11 @@ public:
 
   //! \}
 
+  BLPath united(const BLPath& path) const noexcept;
+  BLPath intersected(const BLPath& path) const noexcept;
+  BLPath subtracted(const BLPath& path) const noexcept;
+  BLPath symmetricDifference(const BLPath& path) const noexcept;
+
   //! \name Hit Testing
   //! \{
 
